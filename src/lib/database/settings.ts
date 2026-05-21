@@ -5,6 +5,14 @@ import { RedisKeys, RedisTTL } from '#lib/redis.js';
 export type ReadonlyGuildData = Readonly<Guild>;
 
 /**
+ * Checks if the dashboard integration is enabled for a guild.
+ */
+export async function isDashboardEnabled(guildId: string): Promise<boolean> {
+	const value = await readModuleConfig(guildId, 'core', 'dashboard_enabled');
+	return value === undefined || value === null ? true : Boolean(value);
+}
+
+/**
  * Reads settings for a guild from Redis cache or Postgres database.
  * Mimics Skyra's architectural pattern for unified settings access.
  */

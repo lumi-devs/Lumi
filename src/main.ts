@@ -3,7 +3,6 @@ import '#lib/setup.js';
 import { container } from '@sapphire/framework';
 import { envIsDefined, envParseBoolean, envParseString } from '@skyra/env-utilities';
 import * as Sentry from '@sentry/node';
-import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { EmberClient } from './EmberClient.js';
 
 if (envParseBoolean('SENTRY_ENABLED', false) && envIsDefined('SENTRY_DSN')) {
@@ -16,12 +15,10 @@ if (envParseBoolean('SENTRY_ENABLED', false) && envIsDefined('SENTRY_DSN')) {
 			Sentry.onUncaughtExceptionIntegration(),
 			Sentry.onUnhandledRejectionIntegration(),
 			Sentry.httpIntegration({ breadcrumbs: true }),
-			Sentry.prismaIntegration(),
-			nodeProfilingIntegration()
+			Sentry.prismaIntegration()
 		],
 		environment: envParseString('NODE_ENV'),
 		tracesSampleRate: 1.0,
-		profilesSampleRate: 1.0,
 		sendDefaultPii: true
 	});
 }

@@ -4,6 +4,7 @@ import type { Channel, ConsumeMessage } from 'amqplib';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import { container } from '@sapphire/framework';
+import { isDashboardEnabled } from '#lib/database/settings.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Job queue: enqueue/handle delayed and immediate jobs.
@@ -116,6 +117,11 @@ export function registerRpcHandler<TIn, TOut>(action: string, handler: RpcHandle
 async function dispatchRpc<T = unknown>(req: RpcRequest): Promise<RpcResponse<T>> {
 	const handler = rpcHandlers.get(req.action);
 	if (!handler) return { id: req.id, ok: false, error: `Unknown action: ${req.action}` };
+
+	// If the request is scoped to a guild, verify that the dashboard integration is enabled.
+	if (req.guildId && !(await isDashboardEnabled(req.guildId))) {
+		return { id: req.id, ok: false, error: 'Dashboard integration is disabled for this server.' };
+	}
 
 	try {
 		const data = (await handler(req)) as T;

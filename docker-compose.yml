@@ -94,11 +94,9 @@ services:
       POSTGRES_USER: ember
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ember}
     volumes:
-      - postgres-data:/var/lib/postgresql/data:z
+      - postgres-data:/var/lib/postgresql/data
     networks:
       - ember-net
-    ports:
-      - "${PROMETHEUS_PORT:-9090}:${PROMETHEUS_PORT:-9090}"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ember -d ember"]
@@ -123,11 +121,9 @@ services:
       --maxmemory-policy allkeys-lru
       --requirepass ${REDIS_PASSWORD:-ember}
     volumes:
-      - redis-data:/data:z
+      - redis-data:/data
     networks:
       - ember-net
-    ports:
-      - "${PROMETHEUS_PORT:-9090}:${PROMETHEUS_PORT:-9090}"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-ember}", "ping"]
@@ -150,11 +146,9 @@ services:
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-ember}
       RABBITMQ_DEFAULT_VHOST: /
     volumes:
-      - rabbitmq-data:/var/lib/rabbitmq:z
+      - rabbitmq-data:/var/lib/rabbitmq
     networks:
       - ember-net
-    ports:
-      - "${PROMETHEUS_PORT:-9090}:${PROMETHEUS_PORT:-9090}"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
