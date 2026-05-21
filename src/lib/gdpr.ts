@@ -1,0 +1,6 @@
+export enum RequesterType {
+	DISCORD_DELETED_USER = 'DISCORD_DELETED_USER',
+	OWNER = 'OWNER',
+	USER = 'USER',
+	USER_STRICT = 'USER_STRICT'
+}

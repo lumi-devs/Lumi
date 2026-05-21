@@ -1,0 +1,211 @@
+// Ember — Prisma schema
+// Single file, partitioned by domain. Module-owned tables live alongside the
+// module section that owns them; only Core types live in the Core section.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
+  engineType      = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CORE — global + guild config, permissions, moderation, blocklist, ignore
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Global {
+  id                 Int      @id @default(1)
+  botName            String   @default("Ember") @map("bot_name") @db.VarChar(64)
+  defaultPrefix      String   @default(",")     @map("default_prefix") @db.VarChar(5)
+  maintenanceMode    Boolean  @default(false)   @map("maintenance_mode")
+  maintenanceMessage String?  @map("maintenance_message") @db.VarChar(500)
+  inviteUrl          String?  @map("invite_url") @db.VarChar(200)
+  supportGuildId     String?  @map("support_guild_id") @db.VarChar(20)
+  extra              Json?
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("global_config")
+}
+
+model GlobalModuleState {
+  moduleName String   @id @map("module_name") @db.VarChar(64)
+  enabled    Boolean  @default(true)
+  reason     String?  @db.VarChar(200)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("global_module_state")
+}
+
+model Guild {
+  id              String   @id @map("guild_id") @db.VarChar(20)
+  prefix          String?  @db.VarChar(5)
+  modRoleId       String?  @map("mod_role_id") @db.VarChar(20)
+  adminRoleId     String?  @map("admin_role_id") @db.VarChar(20)
+  modLogChannelId String?  @map("mod_log_channel_id") @db.VarChar(20)
+  muteRoleId      String?  @map("mute_role_id") @db.VarChar(20)
+  locale          String   @default("en-US") @db.VarChar(10)
+  timezone        String   @default("UTC")   @db.VarChar(64)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  moduleStates  GuildModuleState[]
+  moduleConfigs GuildModuleConfig[]
+  permissions   PermissionOverride[]
+  cases         ModerationCase[]
+  caseCounter   GuildCaseCounter?
+  afkEntries    AfkEntry[]
+  lockdown      RaidLockdown?
+  ignoreEntries IgnoreEntry[]
+
+  @@map("guilds")
+}
+
+model User {
+  id           String  @id @db.VarChar(20)
+  moderationDM Boolean @default(true) @map("moderation_dm")
+  locale       String? @db.VarChar(10)
+
+  @@map("users")
+}
+
+model GuildModuleState {
+  guildId    String   @map("guild_id") @db.VarChar(20)
+  moduleName String   @map("module_name") @db.VarChar(64)
+  enabled    Boolean  @default(true)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@id([guildId, moduleName])
+  @@index([moduleName])
+  @@map("guild_module_state")
+}
+
+model GuildModuleConfig {
+  guildId    String   @map("guild_id") @db.VarChar(20)
+  moduleName String   @map("module_name") @db.VarChar(64)
+  configKey  String   @map("config_key") @db.VarChar(64)
+  value      Json     @map("value_json")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@id([guildId, moduleName, configKey])
+  @@index([guildId, moduleName])
+  @@map("guild_module_config")
+}
+
+model PermissionOverride {
+  guildId     String   @map("guild_id")    @db.VarChar(20)
+  commandPath String   @map("command_path") @db.VarChar(128)
+  modelType   String   @map("model_type")   @db.VarChar(16)
+  modelId     String   @map("model_id")     @db.VarChar(20)
+  allow       Boolean
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@id([guildId, commandPath, modelType, modelId])
+  @@index([guildId, commandPath])
+  @@map("permission_overrides")
+}
+
+// Atomic per-guild case-number counter to avoid duplicate caseNumber races.
+model GuildCaseCounter {
+  guildId String @id @map("guild_id") @db.VarChar(20)
+  next    Int    @default(1)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@map("guild_case_counter")
+}
+
+model ModerationCase {
+  id          Int       @id @default(autoincrement())
+  guildId     String    @map("guild_id")     @db.VarChar(20)
+  caseNumber  Int       @map("case_number")
+  userId      String    @map("user_id")      @db.VarChar(20) // '0' = anonymized (GDPR)
+  moderatorId String    @map("moderator_id") @db.VarChar(20) // '0' = anonymized (GDPR)
+  action      String    @db.VarChar(32)
+  reason      String?   @db.VarChar(1000)
+  duration    Int?      @map("duration_seconds")
+  expiresAt   DateTime? @map("expires_at")
+  messageId   String?   @map("message_id") @db.VarChar(20)
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, caseNumber], name: "uq_cases_guild_number")
+  @@index([guildId, userId])
+  @@index([guildId, createdAt])
+  @@index([userId])
+  @@index([guildId, active, expiresAt]) // expiry sweep
+  @@map("moderation_cases")
+}
+
+// Nullable guildId: null = global blocklist. Partial unique index handles dedup.
+model Blocklist {
+  id        Int      @id @default(autoincrement())
+  userId    String   @map("user_id")  @db.VarChar(20)
+  guildId   String?  @map("guild_id") @db.VarChar(20)
+  reason    String?  @db.VarChar(500)
+  blockedBy String   @map("blocked_by") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, guildId], name: "uq_blocklist_user_guild")
+  @@index([userId])
+  @@index([guildId])
+  @@map("blocklist")
+}
+
+// Nullable channelId: null = whole guild ignored.
+model IgnoreEntry {
+  id        Int      @id @default(autoincrement())
+  guildId   String   @map("guild_id")   @db.VarChar(20)
+  channelId String?  @map("channel_id") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, channelId], name: "uq_ignore_guild_channel")
+  @@index([guildId])
+  @@map("ignore_list")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODULE: afk
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AfkEntry {
+  userId  String   @map("user_id")  @db.VarChar(20)
+  guildId String   @map("guild_id") @db.VarChar(20)
+  reason  String   @default("AFK") @db.VarChar(100)
+  since   DateTime @default(now())
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@id([userId, guildId])
+  @@index([userId]) // GDPR cross-guild deletes
+  @@map("afk_entries")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODULE: raids
+// ─────────────────────────────────────────────────────────────────────────────
+
+model RaidLockdown {
+  guildId       String   @id @map("guild_id") @db.VarChar(20)
+  originalLevel Int      @map("original_level")
+  unlocksAt     DateTime @map("unlocks_at")
+  triggeredBy   String   @default("0") @map("triggered_by") @db.VarChar(20)
+  createdAt     DateTime @default(now())     @map("created_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([unlocksAt]) // expiry sweep
+  @@map("raid_lockdowns")
+}

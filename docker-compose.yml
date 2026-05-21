@@ -1,0 +1,171 @@
+networks:
+  ember-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+
+services:
+  # ── Bot (development — default, no profile needed) ───────────────────────────
+  ember-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: ember-dev
+    env_file: .env
+    environment:
+      REDIS_HOST: redis
+      POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@postgres/ember
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-ember}:${RABBITMQ_PASSWORD:-ember}@rabbitmq:5672
+      RABBITMQ_ENABLED: "true"
+      PROMETHEUS_ENABLED: "${PROMETHEUS_ENABLED:-false}"
+      PROMETHEUS_PORT: "${PROMETHEUS_PORT:-9090}"
+      SENTRY_ENABLED: "${SENTRY_ENABLED:-false}"
+      SENTRY_DSN: "${SENTRY_DSN:-}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - .:/app:z
+      - /app/node_modules
+    networks:
+      - ember-net
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:${PROMETHEUS_PORT:-9090}"
+    stdin_open: true
+    tty: true
+    restart: "no"
+
+  # ── Bot (production) ─────────────────────────────────────────────────────────
+  ember:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: ember-bot
+    env_file: .env
+    environment:
+      REDIS_HOST: redis
+      POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@postgres/ember
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-ember}:${RABBITMQ_PASSWORD:-ember}@rabbitmq:5672
+      RABBITMQ_ENABLED: "true"
+      PROMETHEUS_ENABLED: "${PROMETHEUS_ENABLED:-false}"
+      PROMETHEUS_PORT: "${PROMETHEUS_PORT:-9090}"
+      SENTRY_ENABLED: "${SENTRY_ENABLED:-false}"
+      SENTRY_DSN: "${SENTRY_DSN:-}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ember-net
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:${PROMETHEUS_PORT:-9090}"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '1.0'
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    profiles:
+      - production
+
+  # ── Postgres ─────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: ember-postgres
+    environment:
+      POSTGRES_DB: ember
+      POSTGRES_USER: ember
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ember}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data:z
+    networks:
+      - ember-net
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:${PROMETHEUS_PORT:-9090}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ember -d ember"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  # ── Redis ─────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ember-redis
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:-ember}
+    volumes:
+      - redis-data:/data:z
+    networks:
+      - ember-net
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:${PROMETHEUS_PORT:-9090}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-ember}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 160m
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  # ── RabbitMQ ──────────────────────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: ember-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ember}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-ember}
+      RABBITMQ_DEFAULT_VHOST: /
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq:z
+    networks:
+      - ember-net
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:${PROMETHEUS_PORT:-9090}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    ports:
+      - "127.0.0.1:5672:5672"    # AMQP
+      - "127.0.0.1:15672:15672"  # Management UI → http://localhost:15672
