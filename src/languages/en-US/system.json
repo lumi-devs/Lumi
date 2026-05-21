@@ -1,0 +1,5 @@
+{
+	"COMMAND_SUCCESS": "Successfully executed command.",
+	"COMMAND_ERROR": "An error occurred while executing this command.",
+	"COMMAND_DENIED": "You do not have permission to use this command."
+}
