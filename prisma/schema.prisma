@@ -194,7 +194,35 @@ model AfkEntry {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MODULE: raids
+// MODULE: downloader
+// ─────────────────────────────────────────────────────────────────────────────
+
+model DownloaderRepo {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(64)
+  url       String   @db.VarChar(200)
+  branch    String   @default("master") @db.VarChar(64)
+  commit    String?  @db.VarChar(40) // Pinned commit hash
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  installedModules DownloaderModule[]
+
+  @@map("downloader_repos")
+}
+
+model DownloaderModule {
+  repoId     Int      @map("repo_id")
+  moduleName String   @map("module_name") @db.VarChar(64)
+  version    String?  @db.VarChar(32)
+  commit     String?  @db.VarChar(40) // Commit at time of install
+  installedAt DateTime @default(now()) @map("installed_at")
+
+  repo DownloaderRepo @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@id([repoId, moduleName])
+  @@map("downloader_modules")
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 model RaidLockdown {
