@@ -22,10 +22,6 @@ export const meta: ModuleMeta = {
 		}
 	],
 	onLoad: () => {
-		// Register core RPC handlers for the dashboard
-		registerRpcHandler('guild.config.get', async (req) => {
-			if (!req.guildId) throw new Error('guildId is required');
-			return readSettings(req.guildId);
-		});
+		// Core onLoad logic (if any)
 	}
 };

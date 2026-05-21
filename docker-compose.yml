@@ -6,6 +6,8 @@ volumes:
   postgres-data:
   redis-data:
   rabbitmq-data:
+  prometheus-data:
+  grafana-data:
 
 services:
   # ── Bot (development — default, no profile needed) ───────────────────────────
@@ -118,7 +120,7 @@ services:
       redis-server
       --appendonly yes
       --maxmemory 128mb
-      --maxmemory-policy allkeys-lru
+      --maxmemory-policy noeviction
       --requirepass ${REDIS_PASSWORD:-ember}
     volumes:
       - redis-data:/data
@@ -163,3 +165,35 @@ services:
     ports:
       - "127.0.0.1:5672:5672"    # AMQP
       - "127.0.0.1:15672:15672"  # Management UI → http://localhost:15672
+
+  # ── Prometheus (Metrics Scraper) ──────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ember-prometheus
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:z
+      - prometheus-data:/prometheus:z
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - ember-net
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9091:9090" # Local access: http://localhost:9091
+
+  # ── Grafana (Visualization) ──────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: ember-grafana
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:z
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - ember-net
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000" # UI access: http://localhost:3000
