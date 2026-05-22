@@ -36,11 +36,7 @@ export class AfkCommand extends EmberCommand {
 				.setName(this.name)
 				.setDescription(this.description)
 				.addStringOption((option) =>
-					option
-						.setName('reason')
-						.setDescription('The reason for being AFK')
-						.setMaxLength(AFK_MAX_REASON_LENGTH)
-						.setRequired(false)
+					option.setName('reason').setDescription('The reason for being AFK').setMaxLength(AFK_MAX_REASON_LENGTH).setRequired(false)
 				)
 		);
 	}
@@ -49,7 +45,7 @@ export class AfkCommand extends EmberCommand {
 		const reason = sanitizeReason(interaction.options.getString('reason') ?? 'AFK');
 		const { guildId } = interaction;
 		const userId = interaction.user.id;
-		
+
 		const existing = await getAfk(guildId!, userId);
 
 		let title: string;
@@ -67,7 +63,12 @@ export class AfkCommand extends EmberCommand {
 			body = `You are now AFK: **${reason}**`;
 
 			const { member } = interaction;
-			if (member && (member as any).displayName && !(member as any).displayName.startsWith(NICK_PREFIX) && (await isAfkNickPrefixEnabled(guildId!))) {
+			if (
+				member &&
+				(member as any).displayName &&
+				!(member as any).displayName.startsWith(NICK_PREFIX) &&
+				(await isAfkNickPrefixEnabled(guildId!))
+			) {
 				void (member as any).setNickname(`${NICK_PREFIX}${(member as any).displayName}`.slice(0, 32)).catch(() => null);
 			}
 		}
@@ -106,9 +107,7 @@ export class AfkCommand extends EmberCommand {
 		await armCooldown(RedisKeys.afkRemovalCooldown(guildId, userId), AFK_REMOVAL_COOLDOWN_MS);
 
 		if (!message.channel.isSendable()) return;
-		const sent = await message.channel
-			.send({ ...makeWarningCard(title, body), allowedMentions: { parse: [] } })
-			.catch(() => null);
+		const sent = await message.channel.send({ ...makeWarningCard(title, body), allowedMentions: { parse: [] } }).catch(() => null);
 		if (sent) setTimeout(() => sent.delete().catch(() => null), 20_000);
 	}
 }

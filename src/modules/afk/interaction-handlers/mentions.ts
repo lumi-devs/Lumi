@@ -4,7 +4,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, type ButtonInteraction } 
 import { EmberColors } from '#lib/branding.js';
 import { ephemeralCard, makeCard, makeErrorCard } from '#lib/cards.js';
 import { getAfkMentions, type AfkMention } from '../index.js';
-import { humanizeTimedelta } from '#lib/formatting.js';
+import { humanizeDelta } from '#lib/time.js';
 
 const PAGE_SIZE = 10;
 
@@ -34,9 +34,7 @@ export class AfkMentionsHandler extends InteractionHandler {
 		{ guildId, userId, page, isNavigation }: { guildId: string; userId: string; page: number; isNavigation: boolean }
 	) {
 		if (interaction.user.id !== userId) {
-			return interaction.reply(
-				ephemeralCard(makeErrorCard('Not Yours', 'Only the user who was AFK can view their mention list.'))
-			);
+			return interaction.reply(ephemeralCard(makeErrorCard('Not Yours', 'Only the user who was AFK can view their mention list.')));
 		}
 
 		const mentions = await getAfkMentions(guildId, userId);
@@ -80,6 +78,6 @@ export class AfkMentionsHandler extends InteractionHandler {
 
 function renderMention(guildId: string, m: AfkMention, n: number): string {
 	const link = `https://discord.com/channels/${guildId}/${m.channelId}/${m.messageId}`;
-	const ago = humanizeTimedelta(Math.max(0, Math.floor(Date.now() / 1000 - m.ts)));
+	const ago = humanizeDelta(Math.max(0, Math.floor(Date.now() / 1000 - m.ts)));
 	return `${n}. <@${m.authorId}> mentioned you **${ago}** ago\n　<#${m.channelId}> · [Jump](${link})`;
 }

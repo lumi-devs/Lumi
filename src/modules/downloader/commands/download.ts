@@ -25,7 +25,9 @@ export class DownloadCommand extends EmberCommand {
 		try {
 			const repo = await this.container.prisma.downloaderRepo.findUnique({ where: { name: repoName } });
 			if (!repo) {
-				await message.reply({ ...makeErrorCard('Unknown Repository', `Repository **${repoName}** has not been added. Use \`,repo add\` first.`) });
+				await message.reply({
+					...makeErrorCard('Unknown Repository', `Repository **${repoName}** has not been added. Use \`,repo add\` first.`)
+				});
 				return;
 			}
 
@@ -40,7 +42,9 @@ export class DownloadCommand extends EmberCommand {
 			await this.container.moduleManager.discover();
 			await this.container.moduleManager.load(moduleName);
 
-			await message.reply({ ...makeSuccessCard('Module Installed', `Successfully installed and loaded **${moduleName}** from **${repoName}**.`) });
+			await message.reply({
+				...makeSuccessCard('Module Installed', `Successfully installed and loaded **${moduleName}** from **${repoName}**.`)
+			});
 		} catch (err) {
 			await message.reply({ ...makeErrorCard('Failed to Install Module', String(err)) });
 		}

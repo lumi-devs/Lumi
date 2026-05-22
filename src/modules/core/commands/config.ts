@@ -119,16 +119,26 @@ export class ConfigCommand extends EmberSubcommand {
 		}
 		const field = meta.configFields?.find((f) => f.key === key);
 		if (!field) {
-			await this.reply(interaction, ephemeralCard(makeErrorCard('Unknown Key', `\`${key}\` is not a valid config key for **${meta.displayName}**.`)));
+			await this.reply(
+				interaction,
+				ephemeralCard(makeErrorCard('Unknown Key', `\`${key}\` is not a valid config key for **${meta.displayName}**.`))
+			);
 			return;
 		}
 
 		const value = await readModuleConfig(guildId, moduleName, key);
-		const display = value === undefined || value === null ? field.default ?? '*not set*' : String(value);
+		const display =
+			value === undefined || value === null
+				? field.default === undefined || field.default === null
+					? '*not set*'
+					: String(field.default)
+				: String(value);
 
 		await this.reply(
 			interaction,
-			ephemeralCard(makeInfoCard(`${meta.emoji} ${meta.displayName} › \`${key}\``, `**${field.label}**: ${display}`, { footer: `Type: ${field.type}` }))
+			ephemeralCard(
+				makeInfoCard(`${meta.emoji} ${meta.displayName} › \`${key}\``, `**${field.label}**: ${display}`, { footer: `Type: ${field.type}` })
+			)
 		);
 	}
 
@@ -146,7 +156,10 @@ export class ConfigCommand extends EmberSubcommand {
 		}
 		const field = meta.configFields?.find((f) => f.key === key);
 		if (!field) {
-			await this.reply(interaction, ephemeralCard(makeErrorCard('Unknown Key', `\`${key}\` is not a valid config key for **${meta.displayName}**.`)));
+			await this.reply(
+				interaction,
+				ephemeralCard(makeErrorCard('Unknown Key', `\`${key}\` is not a valid config key for **${meta.displayName}**.`))
+			);
 			return;
 		}
 
@@ -175,10 +188,7 @@ export class ConfigCommand extends EmberSubcommand {
 		}
 
 		await writeModuleConfig(guildId, moduleName, key, coerced);
-		await this.reply(
-			interaction,
-			ephemeralCard(makeSuccessCard('Config Updated', `**${field.label}** set to \`${String(coerced)}\`.`))
-		);
+		await this.reply(interaction, ephemeralCard(makeSuccessCard('Config Updated', `**${field.label}** set to \`${String(coerced)}\`.`)));
 	}
 
 	public async chatInputEnable(interaction: Subcommand.ChatInputCommandInteraction): Promise<void> {
@@ -227,7 +237,12 @@ export class ConfigCommand extends EmberSubcommand {
 		const uiFields = await Promise.all(
 			fields.map(async (f) => {
 				const value = await readModuleConfig(guildId, meta.name, f.key);
-				const display = value === undefined || value === null ? f.default ?? '*not set*' : String(value);
+				const display =
+					value === undefined || value === null
+						? f.default === undefined || f.default === null
+							? '*not set*'
+							: String(f.default)
+						: String(value);
 				return {
 					name: f.label,
 					value: `\`${f.key}\`: ${display}\n*Type: ${f.type}*`
@@ -235,10 +250,7 @@ export class ConfigCommand extends EmberSubcommand {
 			})
 		);
 
-		await this.reply(
-			interaction,
-			ephemeralCard(makeFieldsCard(`${meta.emoji} ${meta.displayName} Configuration`, uiFields))
-		);
+		await this.reply(interaction, ephemeralCard(makeFieldsCard(`${meta.emoji} ${meta.displayName} Configuration`, uiFields)));
 	}
 
 	async #globalToggle(interaction: Subcommand.ChatInputCommandInteraction, enable: boolean): Promise<void> {
@@ -284,7 +296,12 @@ export class ConfigCommand extends EmberSubcommand {
 			const verb = enable ? 'enabled' : 'disabled';
 			await this.reply(
 				interaction,
-				ephemeralCard(makeInfoCard(`Already ${enable ? 'Enabled' : 'Disabled'}`, `**${meta.emoji} ${meta.displayName}** is already ${verb} in this server.`))
+				ephemeralCard(
+					makeInfoCard(
+						`Already ${enable ? 'Enabled' : 'Disabled'}`,
+						`**${meta.emoji} ${meta.displayName}** is already ${verb} in this server.`
+					)
+				)
 			);
 			return;
 		}

@@ -1,10 +1,6 @@
 import { Command } from '@sapphire/framework';
 import { Subcommand } from '@sapphire/plugin-subcommands';
-import type {
-	ChatInputCommandInteraction,
-	InteractionEditReplyOptions,
-	InteractionReplyOptions
-} from 'discord.js';
+import type { ChatInputCommandInteraction, InteractionEditReplyOptions, InteractionReplyOptions } from 'discord.js';
 import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard } from '#lib/cards.js';
 
 interface ReplyOptions {
@@ -50,15 +46,19 @@ abstract class WithRepliesMixin extends Command {
 	protected reply(interaction: ChatInputCommandInteraction, payload: InteractionReplyOptions) {
 		return sendReply(interaction, payload);
 	}
+
 	protected replySuccess(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
 		return replySuccess(interaction, title, body, opts);
 	}
+
 	protected replyError(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
 		return replyError(interaction, title, body, opts);
 	}
+
 	protected replyWarning(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
 		return replyWarning(interaction, title, body, opts);
 	}
+
 	protected replyInfo(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
 		return replyInfo(interaction, title, body, opts);
 	}
@@ -68,9 +68,11 @@ export abstract class EmberCommand extends WithRepliesMixin {
 	protected get prisma() {
 		return this.container.prisma;
 	}
+
 	protected get redis() {
 		return this.container.redis;
 	}
+
 	protected get moduleManager() {
 		return this.container.moduleManager;
 	}
@@ -80,24 +82,31 @@ export abstract class EmberSubcommand extends Subcommand {
 	protected get prisma() {
 		return this.container.prisma;
 	}
+
 	protected get redis() {
 		return this.container.redis;
 	}
+
 	protected get moduleManager() {
 		return this.container.moduleManager;
 	}
+
 	protected reply(interaction: ChatInputCommandInteraction, payload: InteractionReplyOptions) {
 		return sendReply(interaction, payload);
 	}
+
 	protected replySuccess(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
 		return replySuccess(interaction, title, body, opts);
 	}
+
 	protected replyError(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
 		return replyError(interaction, title, body, opts);
 	}
+
 	protected replyWarning(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
 		return replyWarning(interaction, title, body, opts);
 	}
+
 	protected replyInfo(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
 		return replyInfo(interaction, title, body, opts);
 	}

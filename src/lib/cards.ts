@@ -88,11 +88,7 @@ export function makeCard(color: number, title: string, body: string | string[], 
 	return wrap(buildContainer(color, title, body, opts));
 }
 
-export function makeFieldsCard(
-	title: string,
-	fields: { name: string; value: string }[],
-	opts?: CardOptions
-): CardReply {
+export function makeFieldsCard(title: string, fields: { name: string; value: string }[], opts?: CardOptions): CardReply {
 	const body = fields.map((f) => `**${f.name}**: ${f.value}`).join('\n');
 	return wrap(buildContainer(EmberColors.PRIMARY, title, body, opts));
 }

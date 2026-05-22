@@ -1,12 +1,6 @@
-import {
-	SapphireClient,
-	LogLevel,
-	container,
-	ApplicationCommandRegistries,
-	RegisterBehavior
-} from '@sapphire/framework';
+import { SapphireClient, LogLevel, container, ApplicationCommandRegistries, RegisterBehavior } from '@sapphire/framework';
 import { GatewayIntentBits, Partials, ActivityType, type Message } from 'discord.js';
-import { envParseString, envParseInteger } from '@skyra/env-utilities';
+import { envParseString, envParseInteger } from '#lib/env.js';
 import { prisma } from '#lib/db.js';
 
 import { createRedisClient, parseRedisConnectionOption } from '#lib/redis.js';
@@ -15,8 +9,8 @@ import { RabbitClient } from '#lib/rabbit.js';
 import { InvalidationBus } from '#lib/redis.js';
 import { RedisKeys, RedisTTL } from '#lib/redis.js';
 import { readSettings } from '#lib/database/settings.js';
+import { db } from '#lib/database/module-data.js';
 import { WorkerManager } from '#lib/workers/WorkerManager.js';
-import { PrometheusManager } from '#lib/metrics/Prometheus.js';
 
 /**
  * The Ember Discord client.
@@ -76,14 +70,10 @@ export class EmberClient extends SapphireClient {
 		Reflect.set(container, 'prisma', prisma);
 		Reflect.set(container, 'redis', createRedisClient());
 		Reflect.set(container, 'invalidation', new InvalidationBus(createRedisClient()));
+		Reflect.set(container, 'db', db);
 		Reflect.set(container, 'modules', Object.create(null));
-		Reflect.set(
-			container,
-			'moduleManager',
-			new ModuleManager(new URL('modules/', import.meta.url))
-		);
+		Reflect.set(container, 'moduleManager', new ModuleManager(new URL('modules/', import.meta.url)));
 		Reflect.set(container, 'workers', new WorkerManager());
-		Reflect.set(container, 'prometheus', new PrometheusManager());
 
 		ApplicationCommandRegistries.setDefaultBehaviorWhenNotIdentical(RegisterBehavior.BulkOverwrite);
 
@@ -134,10 +124,7 @@ export class EmberClient extends SapphireClient {
 		await container.moduleManager.loadAll();
 		container.logger.info('[Startup] ✓ Modules loaded');
 
-		// 5. Prometheus
-		container.prometheus.start();
-
-		// 6. Connect to Discord
+		// 5. Connect to Discord
 		return super.login(token);
 	}
 
@@ -146,7 +133,6 @@ export class EmberClient extends SapphireClient {
 		await container.moduleManager.unloadAll();
 		await super.destroy();
 		await container.workers.destroy();
-		container.prometheus.stop();
 		await container.rabbit?.close();
 		await container.invalidation.stop();
 		await container.redis.quit().catch(() => undefined);

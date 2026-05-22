@@ -8,7 +8,7 @@ import { buildOverviewCard, buildDetailCard, type PingCategory } from '../lib/pi
 	interactionHandlerType: InteractionHandlerTypes.Button
 })
 export class PingInteractionHandler extends InteractionHandler {
-	public override async parse(interaction: ButtonInteraction) {
+	public override parse(interaction: ButtonInteraction) {
 		if (!interaction.customId.startsWith('ping:')) return this.none();
 
 		const [prefix, category, userId] = interaction.customId.split(':');
@@ -16,16 +16,16 @@ export class PingInteractionHandler extends InteractionHandler {
 
 		// For "Overview" button (if we still have one), we'd want to edit the original message.
 		// But per user request, category buttons should open NEW ephemerals.
-		
+
 		return this.some({ category: category as PingCategory | 'overview', userId });
 	}
 
 	public override async run(interaction: ButtonInteraction, result: { category: PingCategory | 'overview'; userId: string }) {
 		// Security check: Only the original invoker can interact
 		if (interaction.user.id !== result.userId) {
-			return interaction.reply({ 
-				content: '❌ Only the original invoker can use these buttons.', 
-				ephemeral: true 
+			return interaction.reply({
+				content: '❌ Only the original invoker can use these buttons.',
+				ephemeral: true
 			});
 		}
 

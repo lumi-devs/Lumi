@@ -1,4 +1,4 @@
-import { container, Result, UserError } from '@sapphire/framework';
+import { Result, UserError } from '@sapphire/framework';
 import type { Guild, GuildMember, Role, GuildBasedChannel } from 'discord.js';
 
 /**
@@ -6,24 +6,25 @@ import type { Guild, GuildMember, Role, GuildBasedChannel } from 'discord.js';
  */
 export async function resolveFuzzyMember(parameter: string, guild: Guild): Promise<Result<GuildMember, UserError>> {
 	const lowercaseParameter = parameter.toLowerCase();
-	
+
 	// 1. Precise check (ID or mention)
 	const precise = await guild.members.fetch(parameter.replace(/[<@!>]/g, '')).catch(() => null);
 	if (precise) return Result.ok(precise);
 
 	// 2. Fuzzy check (Name or Nickname)
 	const members = await guild.members.fetch();
-	const match = members.find((m) => 
-		m.displayName.toLowerCase().includes(lowercaseParameter) || 
-		m.user.username.toLowerCase().includes(lowercaseParameter)
+	const match = members.find(
+		(m) => m.displayName.toLowerCase().includes(lowercaseParameter) || m.user.username.toLowerCase().includes(lowercaseParameter)
 	);
 
 	if (match) return Result.ok(match);
 
-	return Result.err(new UserError({
-		identifier: 'MemberNotFound',
-		message: `I couldn't find any member matching \`${parameter}\`.`
-	}));
+	return Result.err(
+		new UserError({
+			identifier: 'MemberNotFound',
+			message: `I couldn't find any member matching \`${parameter}\`.`
+		})
+	);
 }
 
 /**
@@ -31,7 +32,7 @@ export async function resolveFuzzyMember(parameter: string, guild: Guild): Promi
  */
 export function resolveFuzzyRole(parameter: string, guild: Guild): Result<Role, UserError> {
 	const lowercaseParameter = parameter.toLowerCase();
-	
+
 	// 1. Precise check (ID or mention)
 	const precise = guild.roles.cache.get(parameter.replace(/[<@&>]/g, ''));
 	if (precise) return Result.ok(precise);
@@ -40,10 +41,12 @@ export function resolveFuzzyRole(parameter: string, guild: Guild): Result<Role, 
 	const match = guild.roles.cache.find((r) => r.name.toLowerCase().includes(lowercaseParameter));
 	if (match) return Result.ok(match);
 
-	return Result.err(new UserError({
-		identifier: 'RoleNotFound',
-		message: `I couldn't find any role matching \`${parameter}\`.`
-	}));
+	return Result.err(
+		new UserError({
+			identifier: 'RoleNotFound',
+			message: `I couldn't find any role matching \`${parameter}\`.`
+		})
+	);
 }
 
 /**
@@ -51,7 +54,7 @@ export function resolveFuzzyRole(parameter: string, guild: Guild): Result<Role, 
  */
 export function resolveFuzzyChannel(parameter: string, guild: Guild): Result<GuildBasedChannel, UserError> {
 	const lowercaseParameter = parameter.toLowerCase();
-	
+
 	// 1. Precise check (ID or mention)
 	const precise = guild.channels.cache.get(parameter.replace(/[<@#>]/g, ''));
 	if (precise) return Result.ok(precise);
@@ -60,8 +63,10 @@ export function resolveFuzzyChannel(parameter: string, guild: Guild): Result<Gui
 	const match = guild.channels.cache.find((c) => c.name.toLowerCase().includes(lowercaseParameter));
 	if (match) return Result.ok(match);
 
-	return Result.err(new UserError({
-		identifier: 'ChannelNotFound',
-		message: `I couldn't find any channel matching \`${parameter}\`.`
-	}));
+	return Result.err(
+		new UserError({
+			identifier: 'ChannelNotFound',
+			message: `I couldn't find any channel matching \`${parameter}\`.`
+		})
+	);
 }

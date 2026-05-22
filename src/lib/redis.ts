@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import { envParseInteger, envParseString } from '@skyra/env-utilities';
+import { envParseInteger, envParseString } from '#lib/env.js';
 import { Redis, type RedisOptions } from 'ioredis';
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import type { Message } from 'discord.js';
 import { EmberCommand } from '#lib/commands.js';
 import { PermissionLevel, resolvePermissionLevel } from '#lib/permissions.js';
 import { makeSuccessCard, makeInfoCard, makeErrorCard } from '#lib/cards.js';
-import { envParseString } from '@skyra/env-utilities';
+import { envParseString } from '#lib/env.js';
 import { readSettings, writeSettings } from '#lib/database/settings.js';
 
 @ApplyOptions<Command.Options>({

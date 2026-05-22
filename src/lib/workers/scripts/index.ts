@@ -1,12 +1,12 @@
-/// <reference lib="webworker" />
-declare const self: Worker;
+// / <reference lib="webworker" />
+declare const self: any;
 
 import type { WorkerRequest, WorkerResponse } from '../WorkerManager.js';
 import { WorkerAction } from '../WorkerManager.js';
 
-self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
-	const { id, action, payload } = event.data;
-	
+self.onmessage = (event: MessageEvent<WorkerRequest>) => {
+	const { id, action } = event.data;
+
 	try {
 		let data: any;
 

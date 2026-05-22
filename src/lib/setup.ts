@@ -3,11 +3,6 @@
 
 process.env['NODE_ENV'] ??= 'development';
 
-import { setup } from '@skyra/env-utilities';
-
-// Load .env relative to the project root.
-setup(new URL('../../.env', import.meta.url));
-
 import '@sapphire/plugin-logger/register';
 import '@sapphire/plugin-scheduled-tasks/register';
 import '@sapphire/plugin-subcommands/register';

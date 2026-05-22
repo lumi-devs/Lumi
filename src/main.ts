@@ -1,11 +1,11 @@
 import '#lib/setup.js';
 
 import { container } from '@sapphire/framework';
-import { envIsDefined, envParseBoolean, envParseString } from '@skyra/env-utilities';
+import { envIsDefined, envParseString } from '#lib/env.js';
 import * as Sentry from '@sentry/node';
 import { EmberClient } from './EmberClient.js';
 
-if (envParseBoolean('SENTRY_ENABLED', false) && envIsDefined('SENTRY_DSN')) {
+if (envParseString('SENTRY_ENABLED', 'false') === 'true' && envIsDefined('SENTRY_DSN')) {
 	Sentry.init({
 		dsn: envParseString('SENTRY_DSN'),
 		integrations: [
