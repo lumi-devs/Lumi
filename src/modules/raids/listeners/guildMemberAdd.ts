@@ -2,7 +2,7 @@ import { Listener, Events, container } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 import type { GuildMember } from 'discord.js';
 import { checkRaidJoin } from '../index.js';
-import { readModuleConfig } from '#lib/database/settings.js';
+import { readModuleConfig } from '#database/settings/guild.js';
 
 @ApplyOptions<Listener.Options>({ event: Events.GuildMemberAdd })
 export class GuildMemberAddListener extends Listener<typeof Events.GuildMemberAdd> {

@@ -207,8 +207,6 @@ Ember validates the environment at boot. Below are the key configuration options
 | `LOG_LEVEL` | No | `info` | Minimum log severity to output (`debug`, `info`, `warn`, `error`). |
 | `SENTRY_ENABLED` | No | `false` | Enable Sentry application telemetry and error tracking. |
 | `SENTRY_DSN` | No | — | Endpoint address for your Sentry workspace. |
-| `PROMETHEUS_ENABLED` | No | `false` | Enable Prometheus metric scraping endpoints. |
-| `PROMETHEUS_PORT` | No | `9090` | Port exposing Prometheus telemetry data. |
 | `EMBER_CACHE_TTL` | No | `60` | Duration (seconds) for caching guild configuration records in Redis. |
 
 ---

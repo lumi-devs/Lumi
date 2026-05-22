@@ -16,7 +16,7 @@ The name *Ember* was chosen to represent a small, concentrated spark of power th
 Ember has undergone several major evolutions. 
 - **The Spark:** Originally built on a simple command handler.
 - **The Forge:** Rebuilt with Sapphire Framework to introduce piece-based architecture.
-- **The Inferno:** The current iteration, powered by Bun and a hybrid messaging fabric, representing the peak of modular intelligence.
+- **The Inferno:** The current iteration, powered by Bun and a hybrid messaging fabric, boasting a non-removable built-in core module with integrated downloader utilities, a distinct framework-free database client layer, and clean isolated feature modules.
 
 ## 🏛️ The Collective's Vision
 

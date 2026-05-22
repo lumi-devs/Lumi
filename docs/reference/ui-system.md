@@ -2,9 +2,9 @@
 
 Ember has moved beyond traditional Discord Embeds, embracing the **Components V2** philosophy. This system leverages Discord's modern layout primitives—`ContainerBuilder`, `TextDisplayBuilder`, and `SeparatorBuilder`—to create interfaces that feel like native application views rather than "chat bubbles."
 
-## The Philosophy of `src/lib/cards.ts`
+## The Philosophy of `src/utilities/cards.ts`
 
-The project mandates a strict **"Never `new EmbedBuilder()`"** policy. Traditional embeds are treated as legacy technology. Instead, all UI is constructed using the factories in `src/lib/cards.ts`.
+The project mandates a strict **"Never `new EmbedBuilder()`"** policy. Traditional embeds are treated as legacy technology. Instead, all UI is constructed using the factories in `src/utilities/cards.ts`.
 
 ### Why Components V2?
 

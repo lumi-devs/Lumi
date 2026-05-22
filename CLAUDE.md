@@ -9,29 +9,35 @@ Ember is a modular Discord bot built with **Sapphire Framework v5**, **discord.j
 ```
 src/
   main.ts                       Entry point: DB connect → RPC bridge → client.login()
-  EmberClient.ts                createEmberClient() + startRpcBridge()
-  core/
+  client/
+    EmberClient.ts              EmberClient initialization & RabbitMQ setup
+    setup.ts                    env, Redis, Sentry, RabbitMQ, and i18n setup
+  core/                         Built-in non-removable module (isCore = true)
+    index.ts                    Core module configuration & Downloader commands load
+    commands/                   ping, config, dashboard, permissions, prefix, download, repo, module
+    lib/                        ping-cards, ping-collect, downloader/resolver, downloader/types
+    listeners/                  ready, errors, diagnostics, events/guildAvailable, events/memberJoin/Leave
+    module-system/              Module base class, ModuleStore
+    permissions/                PermissionLevel enum, preconditions (GuildOnly, ModuleEnabled, etc.)
+    rabbitmq/                   RabbitClient event & job queue integration
+    sentry/                     SentryBreadcrumb debug log integration
+    types/                      Augments.ts / common.ts type definitions
+  database/                     Prisma & Redis database access
+    prisma.ts                   Prisma Client singleton
+    redis.ts                    createRedisClient() + RedisKeys & RedisTTL registry + InvalidationBus
+    settings/                   afk.ts, raids.ts, guild.ts, module.ts CRUD settings layers
+  languages/                    i18n translation system JSON structures (system.json, etc.)
+  modules/                      Optional Feature modules (afk, raids, …)
+  utilities/                    Framework-free utilities & helpers
     branding.ts                 EmberColors, EmberIcons constants
-    errors.ts                   Typed error hierarchy (throw these, never send manually)
-    permissions.ts              PermissionLevel enum + resolvePermissionLevel()
-  lib/
-    extensions/EmberCommand.ts  Base class for all commands (replySuccess / replyError etc.)
-    structures/ModuleRegistry.ts ModuleMeta registry — owns GDPR delete
-    structures/AntiSpam.ts      Sliding-window spam detection
-    types/Augments.ts         Container / ScheduledTasks / Env type augmentation
-    util/cards.ts               ALL UI — makeSuccessCard, makeListCard, etc.
-    util/formatting.ts          humanizeDuration, snowflakeToDate, etc.
-    setup/                      env.ts, redis.ts, all.ts (imported first)
-  db/
-    index.ts                    PrismaClient instance + getPrisma()
-  redis/
-    index.ts                    createRedisClient()
-    keys.ts                     RedisKeys + RedisTTL — single source of truth
-    rpc.ts                      createRpcBridge() + registerRpcHandler()
-  commands/admin/               /config and /permissions commands
-  preconditions/                GuildOnly, ModuleEnabled, MinimumPermissionLevel, etc.
-  listeners/                    ready.ts, guildCreate.ts
-  modules/                      Feature modules (raids, afk, …)
+    cards.ts                    ALL UI — makeSuccessCard, makeListCard, etc.
+    formatting.ts               humanizeDuration, snowflakeToDate, etc.
+    gdpr.ts                     Standard GDPR deletion types
+    time.ts                     sleep and Date helpers
+    resolvers/                  duration.ts, fuzzy.ts parameter parsing
+  workers/                      Asynchronous background jobs
+    WorkerManager.ts            Main job scheduler/worker manager
+    scripts/                    Task scripts executed by workers
 
 prisma/
   schema.prisma                 Single source of truth for the database schema
@@ -62,23 +68,24 @@ This project runs on **[Bun](https://bun.sh)** — not Node. Bun understands Typ
 
 ## Four golden rules
 
-1. **Never `new EmbedBuilder()`** — every user-facing reply goes through `lib/util/cards.ts` factories.
+1. **Never `new EmbedBuilder()`** — every user-facing reply goes through `src/utilities/cards.ts` factories.
 2. **Use `container.prisma` directly** — all database access goes through Prisma Client. No more wrapper slop.
 3. **All slash commands in groups** — `/birthday set`, never `/birthday_set`. Prefix commands are reserved for owner/admin tooling and a small number of legacy modules (AFK).
-4. **Throw errors, never send them** — `src/listeners/errors.ts` catches typed errors and renders the right card.
+4. **Throw errors, never send them** — core command listeners catch standard/typed errors and render the right card automatically.
 
 ---
 
 ## Module system
 
-Each feature lives in `src/modules/{name}/`. Zero coupling across modules.
+Optional feature modules live in `src/modules/{name}/`. Zero coupling across modules.
 
 ### Module isolation rules
 
 - No imports from sibling modules (`raids` must not import from `afk`)
-- Each module owns its own concrete Prisma tables (if needed) and Redis key namespace
+- Each module must extend the custom `Module` base class and register with the `ModuleStore`.
+- Shared logic must be promoted to `src/utilities/` or `src/database/`.
 - All user data must be deletable via `deleteUserData(userId, requester: RequesterType)` (GDPR)
-- New ScheduledTask names must be declared in `Augments.ts`
+- New ScheduledTask names must be declared in `Augments` or `src/core/types/common.ts`.
 
 ### GDPR / data deletion
 
@@ -122,13 +129,13 @@ Snowflakes are stored as `String` in the database but mapped to `text` or `varch
 
 ## Redis
 
-All keys flow through `RedisKeys` in `src/redis/keys.ts`. **Never hard-code a key string.**
+All keys flow through `RedisKeys` in `src/database/redis.ts`. **Never hard-code a key string.**
 
 ---
 
 ## RPC Bridge (bot ↔ dashboard)
 
-Register handlers in `src/redis/rpc.ts`. All handlers work over both Redis and RabbitMQ transports.
+Register handlers in `src/core/rabbitmq/index.ts`. All handlers work over both Redis and RabbitMQ transports.
 
 ---
 
@@ -148,8 +155,8 @@ Register handlers in `src/redis/rpc.ts`. All handlers work over both Redis and R
 
 ## What NOT to do
 
-- **`new EmbedBuilder()`** — always use card factories from `#lib/util/cards.js`
-- **Hard-coded Redis key strings** — always use `RedisKeys.*` from `#redis/keys.js`
+- **`new EmbedBuilder()`** — always use card factories from `src/utilities/cards.ts`
+- **Hard-coded Redis key strings** — always use `RedisKeys.*` from `src/database/redis.ts`
 - **`awaitMessageComponent()`** — use an `InteractionHandler` piece instead
 - **Cross-module imports** — modules may not import from a sibling module.
 - **Prefix commands for new user features** — prefer slash.

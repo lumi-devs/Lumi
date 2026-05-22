@@ -21,8 +21,6 @@ services:
       POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@postgres/ember
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-ember}:${RABBITMQ_PASSWORD:-ember}@rabbitmq:5672
       RABBITMQ_ENABLED: "true"
-      PROMETHEUS_ENABLED: "${PROMETHEUS_ENABLED:-false}"
-      PROMETHEUS_PORT: "${PROMETHEUS_PORT:-9090}"
       SENTRY_ENABLED: "${SENTRY_ENABLED:-false}"
       SENTRY_DSN: "${SENTRY_DSN:-}"
     depends_on:
@@ -37,8 +35,6 @@ services:
       - /app/node_modules
     networks:
       - ember-net
-    ports:
-      - "${PROMETHEUS_PORT:-9090}:${PROMETHEUS_PORT:-9090}"
     stdin_open: true
     tty: true
     restart: "no"
@@ -56,8 +52,6 @@ services:
       POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@postgres/ember
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-ember}:${RABBITMQ_PASSWORD:-ember}@rabbitmq:5672
       RABBITMQ_ENABLED: "true"
-      PROMETHEUS_ENABLED: "${PROMETHEUS_ENABLED:-false}"
-      PROMETHEUS_PORT: "${PROMETHEUS_PORT:-9090}"
       SENTRY_ENABLED: "${SENTRY_ENABLED:-false}"
       SENTRY_DSN: "${SENTRY_DSN:-}"
     depends_on:
@@ -70,8 +64,6 @@ services:
     restart: unless-stopped
     networks:
       - ember-net
-    ports:
-      - "${PROMETHEUS_PORT:-9090}:${PROMETHEUS_PORT:-9090}"
     deploy:
       resources:
         limits:

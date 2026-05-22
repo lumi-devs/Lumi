@@ -1,11 +1,11 @@
 import { Listener, Events, container } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
-import { raidUnlock, scheduleRaidUnlock } from '../index.js';
+import { raidUnlock, scheduleRaidUnlock, getAllLockdowns } from '../index.js';
 
 @ApplyOptions<Listener.Options>({ name: 'raids.ready', event: Events.ClientReady, once: true })
 export class RaidsReadyListener extends Listener<typeof Events.ClientReady> {
 	public async run() {
-		const lockdowns = await container.prisma.raidLockdown.findMany();
+		const lockdowns = await getAllLockdowns();
 
 		for (const record of lockdowns) {
 			const guild = container.client.guilds.cache.get(record.guildId);
@@ -15,7 +15,7 @@ export class RaidsReadyListener extends Listener<typeof Events.ClientReady> {
 			if (unlocksAt.getTime() <= Date.now()) {
 				await raidUnlock(guild, record.originalLevel);
 			} else {
-				scheduleRaidUnlock(guild, record.originalLevel, unlocksAt);
+				scheduleRaidUnlock(guild.id, record.originalLevel, unlocksAt);
 			}
 		}
 	}

@@ -1,24 +1,28 @@
 import { Listener, Events } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, type Message, PermissionsBitField } from 'discord.js';
-import { EmberColors } from '#lib/branding.js';
-import { makeCard, makeWarningCard } from '#lib/cards.js';
-import { RedisKeys } from '#lib/redis.js';
+import { EmberColors } from '#utilities/branding.js';
+import { makeCard, makeWarningCard } from '#utilities/cards.js';
 import {
 	AFK_MENTION_COOLDOWN_MS,
 	AFK_NICK_EDIT_COOLDOWN_MS,
 	AFK_WELCOME_COOLDOWN_MS,
 	NICK_PREFIX,
 	afkDurationSince,
-	armCooldown,
 	clearAfkMentions,
 	getAfk,
 	getAfkMentions,
 	isAfkEnabled,
-	isCooldownActive,
 	recordAfkMention,
 	removeAfk,
-	sanitizeReason
+	sanitizeReason,
+	isRemovalCooldownActive,
+	isWelcomeCooldownActive,
+	armWelcomeCooldown,
+	isMentionCooldownActive,
+	armMentionCooldown,
+	isNickEditCooldownActive,
+	armNickEditCooldown
 } from '../index.js';
 
 @ApplyOptions<Listener.Options>({ event: Events.MessageCreate })
@@ -29,7 +33,7 @@ export class AFKMessageCreateListener extends Listener<typeof Events.MessageCrea
 
 		const ownEntry = await getAfk(message.guildId, message.author.id);
 		if (ownEntry) {
-			const onCooldown = await isCooldownActive(RedisKeys.afkRemovalCooldown(message.guildId, message.author.id));
+			const onCooldown = await isRemovalCooldownActive(message.guildId, message.author.id);
 			if (!onCooldown) await this.#removeAfk(message, ownEntry.since);
 		}
 
@@ -50,9 +54,8 @@ export class AFKMessageCreateListener extends Listener<typeof Events.MessageCrea
 			void this.#editNick(userId, () => member.setNickname(newNick || null));
 		}
 
-		const welcomeKey = RedisKeys.afkWelcomeCooldown(channelId);
-		if (await isCooldownActive(welcomeKey)) return;
-		await armCooldown(welcomeKey, AFK_WELCOME_COOLDOWN_MS);
+		if (await isWelcomeCooldownActive(channelId)) return;
+		await armWelcomeCooldown(channelId, AFK_WELCOME_COOLDOWN_MS);
 
 		if (!message.channel.isSendable() || !this.#canSpeak(message)) return;
 
@@ -91,8 +94,7 @@ export class AFKMessageCreateListener extends Listener<typeof Events.MessageCrea
 	}
 
 	async #notifyMentioned(message: Message<true>): Promise<void> {
-		const mentionKey = RedisKeys.afkMentionCooldown(message.channelId);
-		const channelOnCooldown = await isCooldownActive(mentionKey);
+		const channelOnCooldown = await isMentionCooldownActive(message.channelId);
 		let firstNotified = false;
 
 		// Iterate every mentioned AFK user. Always record the mention (for the button),
@@ -127,7 +129,7 @@ export class AFKMessageCreateListener extends Listener<typeof Events.MessageCrea
 				})
 				.catch(() => null);
 			if (sent) setTimeout(() => sent.delete().catch(() => null), 600_000);
-			await armCooldown(mentionKey, AFK_MENTION_COOLDOWN_MS);
+			await armMentionCooldown(message.channelId, AFK_MENTION_COOLDOWN_MS);
 			firstNotified = true;
 		}
 	}
@@ -141,9 +143,8 @@ export class AFKMessageCreateListener extends Listener<typeof Events.MessageCrea
 	}
 
 	async #editNick(userId: string, fn: () => Promise<unknown>): Promise<void> {
-		const key = RedisKeys.afkNickEditCooldown(userId);
-		if (await isCooldownActive(key)) return;
-		await armCooldown(key, AFK_NICK_EDIT_COOLDOWN_MS);
+		if (await isNickEditCooldownActive(userId)) return;
+		await armNickEditCooldown(userId, AFK_NICK_EDIT_COOLDOWN_MS);
 		await fn().catch(() => undefined);
 	}
 }
