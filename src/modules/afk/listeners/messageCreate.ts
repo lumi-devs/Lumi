@@ -112,8 +112,7 @@ export class AFKMessageCreateListener extends Listener<typeof Events.MessageCrea
 
 			if (firstNotified || channelOnCooldown) continue;
 
-			const displayName =
-				(await message.guild.members.fetch(mentioned.id).catch(() => null))?.displayName ?? mentioned.username;
+			const displayName = (await message.guild.members.fetch(mentioned.id).catch(() => null))?.displayName ?? mentioned.username;
 			const cleanName = displayName.startsWith(NICK_PREFIX) ? displayName.slice(NICK_PREFIX.length) : displayName;
 
 			if (!message.channel.isSendable() || !this.#canSpeak(message)) continue;

@@ -13,76 +13,76 @@ const MODULE_ROOT = path.join(process.cwd(), 'data', '3rd-party-modules');
  * and resolving dependencies.
  */
 export class DownloadResolver {
-  public async addRepo(name: string, url: string, branch = 'master'): Promise<void> {
-    const repoPath = path.join(MODULE_ROOT, name);
-    
-    // Clone or pull
-    if (await this._exists(repoPath)) {
-      container.logger.info(`[Downloader] Updating repo: ${name}`);
-      await execAsync(`git -C ${repoPath} pull origin ${branch}`);
-    } else {
-      container.logger.info(`[Downloader] Cloning repo: ${url}`);
-      await execAsync(`git clone -b ${branch} ${url} ${repoPath}`);
-    }
-  }
+	public async addRepo(name: string, url: string, branch = 'master'): Promise<void> {
+		const repoPath = path.join(MODULE_ROOT, name);
 
-  public async getModulesInRepo(repoName: string): Promise<ModuleInfo[]> {
-    const repoPath = path.join(MODULE_ROOT, repoName);
-    const entries = await fs.readdir(repoPath, { withFileTypes: true });
-    
-    const modules: ModuleInfo[] = [];
-    for (const entry of entries) {
-      if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name.startsWith('_')) continue;
-      
-      const infoPath = path.join(repoPath, entry.name, 'info.json');
-      if (await this._exists(infoPath)) {
-        try {
-          const info = JSON.parse(await fs.readFile(infoPath, 'utf8')) as ModuleInfo;
-          modules.push(info);
-        } catch (err) {
-          container.logger.warn(`[Downloader] Failed to parse info.json for ${entry.name}:`, err);
-        }
-      }
-    }
-    return modules;
-  }
+		// Clone or pull
+		if (await this._exists(repoPath)) {
+			container.logger.info(`[Downloader] Updating repo: ${name}`);
+			await execAsync(`git -C ${repoPath} pull origin ${branch}`);
+		} else {
+			container.logger.info(`[Downloader] Cloning repo: ${url}`);
+			await execAsync(`git clone -b ${branch} ${url} ${repoPath}`);
+		}
+	}
 
-  public async installModule(repoName: string, moduleName: string): Promise<void> {
-    const sourcePath = path.join(MODULE_ROOT, repoName, moduleName);
-    const targetPath = path.join(process.cwd(), 'src', 'modules', moduleName);
+	public async getModulesInRepo(repoName: string): Promise<ModuleInfo[]> {
+		const repoPath = path.join(MODULE_ROOT, repoName);
+		const entries = await fs.readdir(repoPath, { withFileTypes: true });
 
-    if (!(await this._exists(sourcePath))) {
-      throw new Error(`Module ${moduleName} not found in repo ${repoName}`);
-    }
+		const modules: ModuleInfo[] = [];
+		for (const entry of entries) {
+			if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name.startsWith('_')) continue;
 
-    // Read info.json for requirements
-    const infoPath = path.join(sourcePath, 'info.json');
-    const info = JSON.parse(await fs.readFile(infoPath, 'utf8')) as ModuleInfo;
+			const infoPath = path.join(repoPath, entry.name, 'info.json');
+			if (await this._exists(infoPath)) {
+				try {
+					const info = JSON.parse(await fs.readFile(infoPath, 'utf8')) as ModuleInfo;
+					modules.push(info);
+				} catch (err) {
+					container.logger.warn(`[Downloader] Failed to parse info.json for ${entry.name}:`, err);
+				}
+			}
+		}
+		return modules;
+	}
 
-    // Install npm requirements if any
-    if (info.requirements?.length) {
-      container.logger.info(`[Downloader] Installing requirements for ${moduleName}: ${info.requirements.join(', ')}`);
-      await execAsync(`bun add ${info.requirements.join(' ')}`);
-    }
+	public async installModule(repoName: string, moduleName: string): Promise<void> {
+		const sourcePath = path.join(MODULE_ROOT, repoName, moduleName);
+		const targetPath = path.join(process.cwd(), 'src', 'modules', moduleName);
 
-    // Create a symlink from data/ to src/modules/
-    // This allows the ModuleManager to discover it naturally.
-    if (await this._exists(targetPath)) {
-        await fs.unlink(targetPath);
-    }
-    await fs.symlink(sourcePath, targetPath, 'dir');
-    
-    container.logger.info(`[Downloader] Installed ${moduleName} from ${repoName}`);
-  }
+		if (!(await this._exists(sourcePath))) {
+			throw new Error(`Module ${moduleName} not found in repo ${repoName}`);
+		}
 
-  private async _exists(p: string): Promise<boolean> {
-    try {
-      await fs.access(p);
-      return true;
-    } catch {
-      return false;
-    }
-  }
+		// Read info.json for requirements
+		const infoPath = path.join(sourcePath, 'info.json');
+		const info = JSON.parse(await fs.readFile(infoPath, 'utf8')) as ModuleInfo;
+
+		// Install npm requirements if any
+		if (info.requirements?.length) {
+			container.logger.info(`[Downloader] Installing requirements for ${moduleName}: ${info.requirements.join(', ')}`);
+			await execAsync(`bun add ${info.requirements.join(' ')}`);
+		}
+
+		// Create a symlink from data/ to src/modules/
+		// This allows the ModuleManager to discover it naturally.
+		if (await this._exists(targetPath)) {
+			await fs.unlink(targetPath);
+		}
+		await fs.symlink(sourcePath, targetPath, 'dir');
+
+		container.logger.info(`[Downloader] Installed ${moduleName} from ${repoName}`);
+	}
+
+	private async _exists(p: string): Promise<boolean> {
+		try {
+			await fs.access(p);
+			return true;
+		} catch {
+			return false;
+		}
+	}
 }
 
 export const resolver = new DownloadResolver();

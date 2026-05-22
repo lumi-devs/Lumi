@@ -14,7 +14,7 @@ export async function isDashboardEnabled(guildId: string): Promise<boolean> {
 
 /**
  * Reads settings for a guild from Redis cache or Postgres database.
- * Mimics Skyra's architectural pattern for unified settings access.
+ * Provides unified settings access.
  */
 export async function readSettings(guildId: string): Promise<ReadonlyGuildData> {
 	const cacheKey = RedisKeys.guildSettings(guildId);
@@ -47,10 +47,7 @@ export async function writeSettings(guildId: string, data: Partial<Omit<Guild, '
 		data
 	});
 
-	await container.invalidation.invalidate(
-		RedisKeys.guildSettings(guildId),
-		RedisKeys.guildPrefixes(guildId)
-	);
+	await container.invalidation.invalidate(RedisKeys.guildSettings(guildId), RedisKeys.guildPrefixes(guildId));
 
 	return updated;
 }

@@ -8,7 +8,7 @@ const adapter = new PrismaPg(pool);
 /**
  * Standard Prisma Client with Postgres adapter.
  * We avoid custom extensions like .fetch() or .set() to remain idiomatic
- * and prefer centralized setting managers (Skyra-style).
+ * and prefer centralized setting managers.
  */
 export const prisma = new PrismaClient({ adapter });
 

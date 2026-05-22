@@ -1,9 +1,12 @@
-import type { IntegerString } from '@skyra/env-utilities';
 import type { Redis } from 'ioredis';
 import type { prisma } from '#lib/db.js';
 import type { ModuleManager } from '#lib/module-system.js';
 import type { RabbitClient } from '#lib/rabbit.js';
 import type { InvalidationBus } from '#lib/redis.js';
+import type { db } from '#lib/database/module-data.js';
+import type { WorkerManager } from '#lib/workers/WorkerManager.js';
+
+export type IntegerString = `${number}`;
 
 /**
  * Module → service-instance map.
@@ -42,6 +45,8 @@ declare module '@sapphire/pieces' {
 		readonly redis: Redis;
 		readonly invalidation: InvalidationBus;
 		readonly moduleManager: ModuleManager;
+		readonly db: typeof db;
+		readonly workers: WorkerManager;
 
 		/** Global bot stats (identifies, resumes, message count). */
 		stats: {
@@ -64,7 +69,7 @@ declare module '@sapphire/framework' {
 	interface ScheduledTasks extends EmberScheduledTasks {}
 }
 
-declare module '@skyra/env-utilities' {
+declare module '#lib/env.js' {
 	interface Env {
 		BOT_TOKEN: string;
 		CLIENT_ID: string;
@@ -83,5 +88,10 @@ declare module '@skyra/env-utilities' {
 		REDIS_TASK_DB: IntegerString;
 
 		RABBITMQ_URL: string;
+
+		SENTRY_ENABLED: boolean | string;
+		SENTRY_DSN: string;
+
+		WORKER_COUNT: IntegerString;
 	}
 }

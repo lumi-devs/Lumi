@@ -61,9 +61,7 @@ export async function raidLockdown(guild: Guild, config: RaidConfig): Promise<vo
 
 export function scheduleRaidUnlock(guild: Guild, originalLevel: GuildVerificationLevel, at: Date): void {
 	if (!container.rabbit) {
-		container.logger.warn(
-			`[Raids] Cannot schedule unlock for guild ${guild.id} — RabbitMQ not configured. Manual unlock required.`
-		);
+		container.logger.warn(`[Raids] Cannot schedule unlock for guild ${guild.id} — RabbitMQ not configured. Manual unlock required.`);
 		return;
 	}
 	const delay = Math.max(0, at.getTime() - Date.now());
@@ -82,14 +80,37 @@ export const meta: ModuleMeta = {
 	name: 'raids',
 	displayName: 'Raid Protection',
 	emoji: '🛡️',
-	description:
-		'Detects mass-join raids and automatically raises server verification to Highest for a configurable duration.',
+	description: 'Detects mass-join raids and automatically raises server verification to Highest for a configurable duration.',
 	configFields: [
 		{ key: 'enabled', label: 'Enabled', type: FieldType.BOOLEAN, description: 'Enable automatic raid detection and lockdown.', default: false },
-		{ key: 'joinWindowSeconds', label: 'Join Window (seconds)', type: FieldType.NUMBER, description: 'Rolling time window used to measure join velocity.', default: 10 },
-		{ key: 'joinThreshold', label: 'Join Threshold', type: FieldType.NUMBER, description: 'Number of joins within the window that triggers lockdown.', default: 10 },
-		{ key: 'lockdownMinutes', label: 'Lockdown Duration (minutes)', type: FieldType.NUMBER, description: 'How long to hold the server at Highest verification before auto-restoring.', default: 30 },
-		{ key: 'notifyChannelId', label: 'Alert Channel', type: FieldType.CHANNEL, description: 'Channel to post a lockdown alert in. Leave unset to skip notifications.', required: false }
+		{
+			key: 'joinWindowSeconds',
+			label: 'Join Window (seconds)',
+			type: FieldType.NUMBER,
+			description: 'Rolling time window used to measure join velocity.',
+			default: 10
+		},
+		{
+			key: 'joinThreshold',
+			label: 'Join Threshold',
+			type: FieldType.NUMBER,
+			description: 'Number of joins within the window that triggers lockdown.',
+			default: 10
+		},
+		{
+			key: 'lockdownMinutes',
+			label: 'Lockdown Duration (minutes)',
+			type: FieldType.NUMBER,
+			description: 'How long to hold the server at Highest verification before auto-restoring.',
+			default: 30
+		},
+		{
+			key: 'notifyChannelId',
+			label: 'Alert Channel',
+			type: FieldType.CHANNEL,
+			description: 'Channel to post a lockdown alert in. Leave unset to skip notifications.',
+			required: false
+		}
 	],
 	onLoad() {
 		registerJobHandler('UNLOCK_GUILD', async (data) => {

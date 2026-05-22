@@ -8,11 +8,11 @@ export const EmberColors = {
 	GOLD: 0xffc800,
 
 	// Aesthetic Palette
-	SAKURA: 0xffb7c5,     // Soft Pink (Optimal)
-	LEMON: 0xfff44f,      // Soft Yellow (Fair)
-	ROSE: 0xf43f5e,       // Vibrant Rose
-	AMBER: 0xf59e0b,      // Warm Amber
-	PEACH: 0xfba190,      // Soft Peach
-	LAVENDER: 0xa78bfa,   // Soft Purple
-	MINT: 0x34d399        // Soft Green
+	SAKURA: 0xffb7c5, // Soft Pink (Optimal)
+	LEMON: 0xfff44f, // Soft Yellow (Fair)
+	ROSE: 0xf43f5e, // Vibrant Rose
+	AMBER: 0xf59e0b, // Warm Amber
+	PEACH: 0xfba190, // Soft Peach
+	LAVENDER: 0xa78bfa, // Soft Purple
+	MINT: 0x34d399 // Soft Green
 } as const;

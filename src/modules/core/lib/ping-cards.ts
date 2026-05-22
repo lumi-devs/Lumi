@@ -18,6 +18,7 @@ import {
 } from 'discord.js';
 import type { PingData } from './ping-collect.js';
 import { EmberColors } from '#lib/branding.js';
+import { formatUptime } from '#lib/time.js';
 
 // ── Re-exports for convenience ────────────────────────────────────────────────
 
@@ -44,20 +45,6 @@ function fmtKB(bytes: bigint | number): string {
 	return `${n} B`;
 }
 
-function fmtUptime(secs: number): string {
-	const s = Math.floor(secs);
-	const m = Math.floor(s / 60) % 60;
-	const h = Math.floor(s / 3600) % 24;
-	const d = Math.floor(s / 86400);
-	if (d > 0) return `${d}d ${h}h ${m}m`;
-	if (h > 0) return `${h}h ${m}m`;
-	return `${m}m ${s % 60}s`;
-}
-
-function fmtUptimeMs(ms: number): string {
-	return fmtUptime(ms / 1000);
-}
-
 function sep(divider = true) {
 	return new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(divider);
 }
@@ -66,7 +53,7 @@ function txt(content: string) {
 	return new TextDisplayBuilder().setContent(content);
 }
 
-/** 
+/**
  * Stacked Executive Layout:
  * - Simple Header
  * - Blockquote wrapper
@@ -119,12 +106,10 @@ function header(d: PingData, subtitle?: string): SectionBuilder {
 	const sub = subtitle ? `\n*${subtitle}*` : '';
 	// Invisible width anchor: ensures the card stays at maximum width even when detail content is sparse.
 	// Uses \u2800 (Braille Blank) which is more reliably invisible than Hangul fillers.
-	const anchor = '-# ' + '\u2800'.repeat(55);
+	const anchor = `-# ${'\u2800'.repeat(55)}`;
 	return new SectionBuilder()
 		.addTextDisplayComponents(txt(`## ${d.botName}${sub}\n${anchor}`))
-		.setThumbnailAccessory(
-			new ThumbnailBuilder().setURL(d.avatarURL || 'https://cdn.discordapp.com/embed/avatars/0.png')
-		);
+		.setThumbnailAccessory(new ThumbnailBuilder().setURL(d.avatarURL || 'https://cdn.discordapp.com/embed/avatars/0.png'));
 }
 
 // ── Overview card (Stacked Executive) ─────────────────────────────────────────
@@ -147,7 +132,7 @@ export function buildOverviewCard(d: PingData, userId: string): ContainerBuilder
 		txt(
 			[
 				executiveSection(
-					'Network Performance', 
+					'Network Performance',
 					[
 						['Primary Latency', rtStr],
 						['WebSocket Ping', fmtMs(d.wsPing)],
@@ -156,7 +141,7 @@ export function buildOverviewCard(d: PingData, userId: string): ContainerBuilder
 					`Hub: ${node} | Jitter: ±${d.jitterMs.toFixed(1)}ms`
 				),
 				executiveSection(
-					'Infrastructure Vitals', 
+					'Infrastructure Vitals',
 					[
 						['Runtime Version', d.runtime],
 						['Process Memory', `${fmtMB(d.rss)} RSS`],
@@ -165,7 +150,7 @@ export function buildOverviewCard(d: PingData, userId: string): ContainerBuilder
 					`Active system handles: ${d.activeHandles}`
 				),
 				executiveSection(
-					'Data Throughput', 
+					'Data Throughput',
 					[
 						['Interaction Rate', `${d.commandsPerSec.toFixed(2)} cmd/s`],
 						['Database Latency', fmtMs(d.prismaMs)],
@@ -200,15 +185,15 @@ export function buildGatewayCard(d: PingData): ContainerBuilder {
 		txt(
 			[
 				executiveSection(
-					'Connection Stability', 
+					'Connection Stability',
 					[
 						['Average Latency', fmtMs(d.wsPing)],
 						['Heartbeat Jitter', `±${d.jitterMs.toFixed(2)}ms`]
 					],
-					d.jitterMs < 5 ? 'Rating: Excellent' : 'Rating: Nominal' 
+					d.jitterMs < 5 ? 'Rating: Excellent' : 'Rating: Nominal'
 				),
 				executiveSection(
-					'Session Lifecycle', 
+					'Session Lifecycle',
 					[
 						['Handshake Count', `${d.identifies} Identities`],
 						['Resume Attempts', `${d.resumes} Successful`],
@@ -217,7 +202,7 @@ export function buildGatewayCard(d: PingData): ContainerBuilder {
 					`Connected <t:${Math.floor(Date.now() / 1000 - d.uptime / 1000)}:R>`
 				),
 				executiveSection(
-					'Traffic Density', 
+					'Traffic Density',
 					[
 						['Observed Ingress', `${d.messagesPerMin.toFixed(0)} msg/min`],
 						['Active Requests', `${d.activeRequests} Concurrent`]
@@ -227,11 +212,11 @@ export function buildGatewayCard(d: PingData): ContainerBuilder {
 			].join('\n')
 		)
 	);
-	
+
 	if (d.shards.length > 0) {
 		c.addSeparatorComponents(sep(true));
 		c.addTextDisplayComponents(txt('### 🧊 CLUSTER SHARD MATRIX'));
-		const shardLines = d.shards.map(s => `> **Shard ${s.id}**\n> ┕ ***${fmtMs(s.ping)}*** | *${s.status}* | Seq ${s.sequence || 0}`).join('\n');
+		const shardLines = d.shards.map((s) => `> **Shard ${s.id}**\n> ┕ ***${fmtMs(s.ping)}*** | *${s.status}* | Seq ${s.sequence || 0}`).join('\n');
 		c.addTextDisplayComponents(txt(shardLines));
 	}
 
@@ -251,7 +236,7 @@ export function buildEngineCard(d: PingData): ContainerBuilder {
 		txt(
 			[
 				executiveSection(
-					'Memory Allocation', 
+					'Memory Allocation',
 					[
 						['JS Heap Used', `${fmtMB(d.heapUsed)} (${heapPct}%)`],
 						['External Heap', fmtMB(d.external)],
@@ -260,7 +245,7 @@ export function buildEngineCard(d: PingData): ContainerBuilder {
 					`ArrayBuffers: ${fmtMB(d.arrayBuffers)}`
 				),
 				executiveSection(
-					'Execution Lag', 
+					'Execution Lag',
 					[
 						['Event Loop Lag', `${d.loopLagMs.toFixed(3)}ms`],
 						['Timer Handles', `${d.activeHandles} Active`]
@@ -268,7 +253,7 @@ export function buildEngineCard(d: PingData): ContainerBuilder {
 					'Primary responsiveness metric'
 				),
 				executiveSection(
-					'Core Environment', 
+					'Core Environment',
 					[
 						['Engine Runtime', d.runtime],
 						['Library Stack', `D.JS v${d.djsVersion} | Sapphire v${d.sapphireVersion}`]
@@ -294,16 +279,16 @@ export function buildHostCard(d: PingData): ContainerBuilder {
 		txt(
 			[
 				executiveSection(
-					'Processing Architecture', 
+					'Processing Architecture',
 					[
 						['CPU Model', d.cpuModel],
 						['Core Topology', `${d.cpuCores} Logic Cores | ${d.arch}`],
 						['Instruction Flags', d.cpuFlags]
 					],
-					`IO Wait: ${d.ioWait} cycles` 
+					`IO Wait: ${d.ioWait} cycles`
 				),
 				executiveSection(
-					'Resource Saturation', 
+					'Resource Saturation',
 					[
 						['RAM Utilization', `${(d.ramUsed / 1024 / 1024 / 1024).toFixed(2)}GB / ${(d.ramTotal / 1024 / 1024 / 1024).toFixed(2)}GB`],
 						['Total Swap Used', `${(d.swapUsedKb / 1024).toFixed(0)}MB`]
@@ -311,15 +296,15 @@ export function buildHostCard(d: PingData): ContainerBuilder {
 					`Saturation: ${((d.ramUsed / d.ramTotal) * 100).toFixed(1)}%`
 				),
 				executiveSection(
-					'Host System State', 
+					'Host System State',
 					[
 						['Kernel Version', `${d.platform} ${d.kernel}`],
-						['Processor Temp', d.thermalCelsius ? d.thermalCelsius.toFixed(1) + '°C' : 'N/A']
+						['Processor Temp', d.thermalCelsius ? `${d.thermalCelsius.toFixed(1)}°C` : 'N/A']
 					],
-					`Uptime: ${fmtUptime(d.osUptimeSecs)}`
+					`Uptime: ${formatUptime(d.osUptimeSecs * 1000)}`
 				),
 				executiveSection(
-					'Process I/O Metrics', 
+					'Process I/O Metrics',
 					[
 						['Cumulative Read', fmtKB(d.diskReadBytes)],
 						['Cumulative Write', fmtKB(d.diskWriteBytes)]
@@ -345,7 +330,7 @@ export function buildPostgresCard(d: PingData): ContainerBuilder {
 		txt(
 			[
 				executiveSection(
-					'Database Throughput', 
+					'Database Throughput',
 					[
 						['Transaction Rate', `${d.txRate.toFixed(1)} ops/sec`],
 						['Query Latency', fmtMs(d.prismaMs)]
@@ -353,10 +338,10 @@ export function buildPostgresCard(d: PingData): ContainerBuilder {
 					`Commits: ${d.dbCommits?.toLocaleString()}`
 				),
 				executiveSection(
-					'Storage Intelligence', 
+					'Storage Intelligence',
 					[
 						['Total DB Size', d.dbSize ?? 'N/A'],
-						['Server Uptime', d.dbUptimeSecs ? fmtUptime(d.dbUptimeSecs) : 'N/A']
+						['Server Uptime', d.dbUptimeSecs ? formatUptime(d.dbUptimeSecs * 1000) : 'N/A']
 					],
 					`Prisma v${d.prismaVersion} | Monitoring active`
 				)
@@ -367,7 +352,9 @@ export function buildPostgresCard(d: PingData): ContainerBuilder {
 	if (d.tableSizes.length > 0) {
 		c.addSeparatorComponents(sep(true));
 		c.addTextDisplayComponents(txt('### 📊 HIGH-DENSITY TABLE BREAKDOWN'));
-		const tableLines = d.tableSizes.map(t => `> **${t.name}**\n> ┕ ***${fmtKB(t.bytes)}***${t.deadTuples > 0n ? ` (⚠️ ${t.deadTuples.toLocaleString()} dead)` : ''}`).join('\n');
+		const tableLines = d.tableSizes
+			.map((t) => `> **${t.name}**\n> ┕ ***${fmtKB(t.bytes)}***${t.deadTuples > 0n ? ` (⚠️ ${t.deadTuples.toLocaleString()} dead)` : ''}`)
+			.join('\n');
 		c.addTextDisplayComponents(txt(tableLines));
 	}
 
@@ -386,7 +373,7 @@ export function buildRedisCard(d: PingData): ContainerBuilder {
 		txt(
 			[
 				executiveSection(
-					'Memory Utilization', 
+					'Memory Utilization',
 					[
 						['Current Used', fmtMB(d.redisMemUsedBytes)],
 						['Recorded Peak', fmtMB(d.redisMemPeakBytes)],
@@ -395,7 +382,7 @@ export function buildRedisCard(d: PingData): ContainerBuilder {
 					`Evicted Keys: ${d.redisEvicted.toLocaleString()}`
 				),
 				executiveSection(
-					'Cache Efficiency', 
+					'Cache Efficiency',
 					[
 						['Hit Ratio', `${d.redisHitRatio.toFixed(2)}%`],
 						['Total Keys', `${d.redisTotalKeys.toLocaleString()} Managed`]
@@ -403,12 +390,12 @@ export function buildRedisCard(d: PingData): ContainerBuilder {
 					`Hits: ${d.redisHits.toLocaleString()} | Misses: ${d.redisMisses.toLocaleString()}`
 				),
 				executiveSection(
-					'Connectivity & State', 
+					'Connectivity & State',
 					[
 						['Version Info', `Redis v${d.redisVersion}`],
 						['Active Clients', `${d.redisClients} Connected`]
 					],
-					`Latency: ${fmtMs(d.redisReadMs)} / ${fmtMs(d.redisWriteMs)} | Up: ${fmtUptime(d.redisUptimeSecs)}`
+					`Latency: ${fmtMs(d.redisReadMs)} / ${fmtMs(d.redisWriteMs)} | Up: ${formatUptime(d.redisUptimeSecs * 1000)}`
 				)
 			].join('\n')
 		)
@@ -426,21 +413,25 @@ export function buildRabbitCard(d: PingData): ContainerBuilder {
 	c.addSeparatorComponents(sep(true));
 
 	if (!d.rabbitConnected) {
-		c.addTextDisplayComponents(txt('### 🔴 PIPELINE OFFLINE\n> **Critical connection failure detected for RabbitMQ.**\n┕ -# Background tasks and inter-module RPC are suspended.'));
+		c.addTextDisplayComponents(
+			txt(
+				'### 🔴 PIPELINE OFFLINE\n> **Critical connection failure detected for RabbitMQ.**\n┕ -# Background tasks and inter-module RPC are suspended.'
+			)
+		);
 	} else {
 		c.addTextDisplayComponents(
 			txt(
 				[
 					executiveSection(
-						'Connection Integrity', 
+						'Connection Integrity',
 						[
 							['Status', 'Connected & Operational'],
 							['Node Heartbeat', 'Active']
 						],
-						'Monitoring primary exchange synchronization' 
+						'Monitoring primary exchange synchronization'
 					),
 					executiveSection(
-						'Message Saturation', 
+						'Message Saturation',
 						[
 							['Pending Jobs', `${d.rabbitQueued} Messages`],
 							['Active Consumers', `${d.rabbitConsumers} Workers`]
@@ -468,7 +459,7 @@ export function buildBotCard(d: PingData): ContainerBuilder {
 		txt(
 			[
 				executiveSection(
-					'Interaction Analytics', 
+					'Interaction Analytics',
 					[
 						['Command Rate', `${d.commandsPerSec.toFixed(2)}/sec`],
 						['Message Traffic', `${d.messagesPerMin.toFixed(0)}/min`]
@@ -476,15 +467,15 @@ export function buildBotCard(d: PingData): ContainerBuilder {
 					`Total Session: ${d.sessionCommandCount.toLocaleString()}`
 				),
 				executiveSection(
-					'Efficiency Metrics', 
+					'Efficiency Metrics',
 					[
 						['Memory/Guild', `${memPerGuild} MB`],
 						['System RSS', fmtMB(d.rss)]
 					],
-					`Process Uptime: ${fmtUptimeMs(d.uptime)}`
+					`Process Uptime: ${formatUptime(d.uptime)}`
 				),
 				executiveSection(
-					'Software Architecture', 
+					'Software Architecture',
 					[
 						['Source Lines', `${d.codeLines.toLocaleString()} TS`],
 						['Feature Modules', `${d.modules.length} Loaded`]
@@ -503,24 +494,27 @@ export function buildBotCard(d: PingData): ContainerBuilder {
 export function buildDetailCard(category: PingCategory, d: PingData, userId: string): ContainerBuilder {
 	const c = ((): ContainerBuilder => {
 		switch (category) {
-			case 'gateway':  return buildGatewayCard(d);
-			case 'engine':   return buildEngineCard(d);
-			case 'host':     return buildHostCard(d);
-			case 'postgres': return buildPostgresCard(d);
-			case 'redis':    return buildRedisCard(d);
-			case 'rabbitmq': return buildRabbitCard(d);
-			case 'bot':      return buildBotCard(d);
+			case 'gateway':
+				return buildGatewayCard(d);
+			case 'engine':
+				return buildEngineCard(d);
+			case 'host':
+				return buildHostCard(d);
+			case 'postgres':
+				return buildPostgresCard(d);
+			case 'redis':
+				return buildRedisCard(d);
+			case 'rabbitmq':
+				return buildRabbitCard(d);
+			case 'bot':
+				return buildBotCard(d);
 		}
 	})();
 
 	c.addSeparatorComponents(sep(true));
 	c.addActionRowComponents(
 		new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-			new ButtonBuilder()
-				.setCustomId(`ping:overview:${userId}`)
-				.setLabel('Back to Overview')
-				.setEmoji('⬅️')
-				.setStyle(ButtonStyle.Secondary)
+			new ButtonBuilder().setCustomId(`ping:overview:${userId}`).setLabel('Back to Overview').setEmoji('⬅️').setStyle(ButtonStyle.Secondary)
 		)
 	);
 

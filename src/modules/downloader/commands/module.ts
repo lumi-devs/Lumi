@@ -6,6 +6,8 @@ import { MessageFlags } from 'discord.js';
 import { ephemeralCard, makeSuccessCard, makeErrorCard } from '#lib/cards.js';
 import { Subcommand } from '@sapphire/plugin-subcommands';
 import { resolver } from '../lib/resolver.js';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 
 @ApplyOptions<Subcommand.Options>({
 	name: 'module',
@@ -47,7 +49,10 @@ export class ModuleCommand extends EmberSubcommand {
 		try {
 			const repo = await this.container.prisma.downloaderRepo.findUnique({ where: { name: repoName } });
 			if (!repo) {
-				await this.reply(interaction, ephemeralCard(makeErrorCard('Unknown Repository', `Repository **${repoName}** has not been added. Use \`/repo add\` first.`)));
+				await this.reply(
+					interaction,
+					ephemeralCard(makeErrorCard('Unknown Repository', `Repository **${repoName}** has not been added. Use \`/repo add\` first.`))
+				);
 				return;
 			}
 
@@ -59,11 +64,13 @@ export class ModuleCommand extends EmberSubcommand {
 				create: { repoId: repo.id, moduleName }
 			});
 
-			// Dynamically discover and load the new module
 			await this.container.moduleManager.discover();
 			await this.container.moduleManager.load(moduleName);
 
-			await this.reply(interaction, ephemeralCard(makeSuccessCard('Module Installed', `Successfully installed and loaded **${moduleName}** from **${repoName}**.`)));
+			await this.reply(
+				interaction,
+				ephemeralCard(makeSuccessCard('Module Installed', `Successfully installed and loaded **${moduleName}** from **${repoName}**.`))
+			);
 		} catch (err) {
 			await this.reply(interaction, ephemeralCard(makeErrorCard('Failed to Install Module', String(err))));
 		}
@@ -74,24 +81,26 @@ export class ModuleCommand extends EmberSubcommand {
 		const moduleName = interaction.options.getString('module', true);
 
 		try {
-			// Find it in the DB to ensure it's a downloaded module
 			const installed = await this.container.prisma.downloaderModule.findFirst({
 				where: { moduleName }
 			});
 
 			if (!installed) {
-				await this.reply(interaction, ephemeralCard(makeErrorCard('Unknown Module', `Module **${moduleName}** was not installed via the downloader.`)));
+				await this.reply(
+					interaction,
+					ephemeralCard(makeErrorCard('Unknown Module', `Module **${moduleName}** was not installed via the downloader.`))
+				);
 				return;
 			}
 
 			await this.container.moduleManager.unload(moduleName);
 
-			const fs = (await import('node:fs')).promises;
-			const path = (await import('node:path')).default;
 			const targetPath = path.join(process.cwd(), 'src', 'modules', moduleName);
-			
-			if (await fs.stat(targetPath).catch(() => null)) {
-				await fs.unlink(targetPath);
+
+			try {
+				await fs.rm(targetPath, { recursive: true, force: true });
+			} catch (err) {
+				this.container.logger.error(`[ModuleCommand] failed to remove files:`, err);
 			}
 
 			await this.container.prisma.downloaderModule.delete({

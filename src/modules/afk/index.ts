@@ -2,7 +2,7 @@ import { container } from '@sapphire/framework';
 import type { AfkEntry } from '@prisma/client';
 import { FieldType, type ModuleMeta } from '#lib/module-system.js';
 import { RedisKeys, RedisTTL } from '#lib/redis.js';
-import { humanizeTimedelta } from '#lib/formatting.js';
+import { humanizeDelta } from '#lib/time.js';
 import { readModuleConfig } from '#lib/database/settings.js';
 
 export const NICK_PREFIX = '[AFK] ';
@@ -27,7 +27,7 @@ export function sanitizeReason(input: string | null | undefined): string {
 }
 
 export function afkDurationSince(since: Date): string {
-	return humanizeTimedelta(Math.max(0, Math.floor((Date.now() - since.getTime()) / 1000)));
+	return humanizeDelta(Math.max(0, Math.floor((Date.now() - since.getTime()) / 1000)));
 }
 
 // ── Data access (cache-aside: Redis hot path, Postgres canonical) ───────────
@@ -81,11 +81,7 @@ export interface AfkMention {
 
 const AFK_MENTIONS_MAX = 25;
 
-export async function recordAfkMention(
-	guildId: string,
-	afkUserId: string,
-	mention: AfkMention
-): Promise<void> {
+export async function recordAfkMention(guildId: string, afkUserId: string, mention: AfkMention): Promise<void> {
 	const key = RedisKeys.afkMentions(guildId, afkUserId);
 	await container.redis
 		.multi()
@@ -120,11 +116,7 @@ export async function removeAfkAllForUser(userId: string): Promise<number> {
 }
 
 async function cacheAfk(entry: AfkEntry): Promise<void> {
-	await container.redis.setex(
-		RedisKeys.afk(entry.guildId, entry.userId),
-		RedisTTL.afkEntry,
-		JSON.stringify(entry)
-	);
+	await container.redis.setex(RedisKeys.afk(entry.guildId, entry.userId), RedisTTL.afkEntry, JSON.stringify(entry));
 }
 
 // ── Cooldown primitive (millisecond-precision Redis SET PX) ─────────────────

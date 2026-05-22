@@ -20,7 +20,7 @@ export class PingCommand extends EmberCommand {
 
 	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
 		const data = await collectPingData();
-		
+
 		// Initial send
 		const response = await interaction.reply({
 			flags: PING_FLAGS,

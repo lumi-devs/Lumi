@@ -1,6 +1,4 @@
 import { FieldType, type ModuleMeta } from '#lib/module-system.js';
-import { registerRpcHandler } from '#lib/rabbit.js';
-import { readSettings } from '#lib/database/settings.js';
 
 /**
  * Core module — framework-level commands, listeners, preconditions, and

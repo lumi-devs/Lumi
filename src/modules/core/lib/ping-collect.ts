@@ -149,7 +149,7 @@ export function recordInvocation(wsPing: number): void {
 		// Sample rates
 		cachedCommandsPerSec = (sessionCommandCount - lastCmdCount) / delta;
 		cachedMessagesPerMin = ((container.stats.messages - lastMsgCount) / delta) * 60;
-		
+
 		lastCmdCount = sessionCommandCount;
 		lastMsgCount = container.stats.messages;
 		lastSampleTime = now;
@@ -215,7 +215,9 @@ async function probeRedisWrite(redis: Redis): Promise<number> {
 	return Date.now() - t;
 }
 
-type RawPrisma = { $queryRawUnsafe: <T = unknown[]>(q: string, ...vals: unknown[]) => Promise<T> };
+interface RawPrisma {
+	$queryRawUnsafe: <T = unknown[]>(q: string, ...vals: unknown[]) => Promise<T>;
+}
 
 async function probePrisma(): Promise<number> {
 	const t = Date.now();
@@ -269,7 +271,27 @@ async function postgresStats(): Promise<Pick<PingData, 'dbSize' | 'dbUptimeSecs'
 	}
 }
 
-async function redisStats(redis: Redis): Promise<Omit<Pick<PingData, 'redisVersion' | 'redisUptimeSecs' | 'redisMemUsedBytes' | 'redisMemPeakBytes' | 'redisFragRatio' | 'redisHitRatio' | 'redisHits' | 'redisMisses' | 'redisEvicted' | 'redisClients' | 'redisTotalKeys'>, never>> {
+async function redisStats(
+	redis: Redis
+): Promise<
+	Omit<
+		Pick<
+			PingData,
+			| 'redisVersion'
+			| 'redisUptimeSecs'
+			| 'redisMemUsedBytes'
+			| 'redisMemPeakBytes'
+			| 'redisFragRatio'
+			| 'redisHitRatio'
+			| 'redisHits'
+			| 'redisMisses'
+			| 'redisEvicted'
+			| 'redisClients'
+			| 'redisTotalKeys'
+		>,
+		never
+	>
+> {
 	try {
 		const raw = await redis.info();
 		const info = parseRedisInfo(raw);
@@ -292,16 +314,36 @@ async function redisStats(redis: Redis): Promise<Omit<Pick<PingData, 'redisVersi
 		};
 	} catch {
 		return {
-			redisVersion: 'unknown', redisUptimeSecs: 0,
-			redisMemUsedBytes: 0, redisMemPeakBytes: 0,
-			redisFragRatio: 1, redisHitRatio: 0,
-			redisHits: 0, redisMisses: 0, redisEvicted: 0,
-			redisClients: 0, redisTotalKeys: 0
+			redisVersion: 'unknown',
+			redisUptimeSecs: 0,
+			redisMemUsedBytes: 0,
+			redisMemPeakBytes: 0,
+			redisFragRatio: 1,
+			redisHitRatio: 0,
+			redisHits: 0,
+			redisMisses: 0,
+			redisEvicted: 0,
+			redisClients: 0,
+			redisTotalKeys: 0
 		};
 	}
 }
 
-async function hostStats(): Promise<Pick<PingData, 'kernel' | 'swapUsedKb' | 'swapTotalKb' | 'ctxSwitchVol' | 'ctxSwitchNonvol' | 'diskReadBytes' | 'diskWriteBytes' | 'thermalCelsius' | 'cpuFlags' | 'ioWait'>> {
+async function hostStats(): Promise<
+	Pick<
+		PingData,
+		| 'kernel'
+		| 'swapUsedKb'
+		| 'swapTotalKb'
+		| 'ctxSwitchVol'
+		| 'ctxSwitchNonvol'
+		| 'diskReadBytes'
+		| 'diskWriteBytes'
+		| 'thermalCelsius'
+		| 'cpuFlags'
+		| 'ioWait'
+	>
+> {
 	const [meminfo, status, io, thermal, cpuinfo, stat] = await Promise.all([
 		readProcFile('/proc/meminfo'),
 		readProcFile('/proc/self/status'),
@@ -312,14 +354,20 @@ async function hostStats(): Promise<Pick<PingData, 'kernel' | 'swapUsedKb' | 'sw
 	]);
 
 	const swapTotalKb = parseInt((meminfo['SwapTotal'] ?? '0 kB').replace(/\s*kB.*/, ''), 10);
-	const swapFreeKb  = parseInt((meminfo['SwapFree']  ?? '0 kB').replace(/\s*kB.*/, ''), 10);
-	const swapUsedKb  = swapTotalKb - swapFreeKb;
+	const swapFreeKb = parseInt((meminfo['SwapFree'] ?? '0 kB').replace(/\s*kB.*/, ''), 10);
+	const swapUsedKb = swapTotalKb - swapFreeKb;
 
 	const flagsMatch = cpuinfo.match(/^flags\s*:\s*(.*)$/m);
-	const flags = flagsMatch ? flagsMatch[1].split(' ').filter(f => ['avx2', 'sse4_2', 'aes', 'rdseed'].includes(f)).join(' ').toUpperCase() : 'N/A';
+	const flags = flagsMatch
+		? flagsMatch[1]
+				.split(' ')
+				.filter((f) => ['avx2', 'sse4_2', 'aes', 'rdseed'].includes(f))
+				.join(' ')
+				.toUpperCase()
+		: 'N/A';
 
 	const statLines = stat.split('\n');
-	const cpuLine = statLines.find(l => l.startsWith('cpu '));
+	const cpuLine = statLines.find((l) => l.startsWith('cpu '));
 	let ioWait = 0;
 	if (cpuLine) {
 		const parts = cpuLine.split(/\s+/);
@@ -332,8 +380,8 @@ async function hostStats(): Promise<Pick<PingData, 'kernel' | 'swapUsedKb' | 'sw
 		swapTotalKb,
 		ctxSwitchVol: parseInt(status['voluntary_ctxt_switches'] ?? '0', 10),
 		ctxSwitchNonvol: parseInt(status['nonvoluntary_ctxt_switches'] ?? '0', 10),
-		diskReadBytes: parseInt(io['rchar'] ?? '0', 10),
-		diskWriteBytes: parseInt(io['wchar'] ?? '0', 10),
+		diskReadBytes: parseInt(io.rchar ?? '0', 10),
+		diskWriteBytes: parseInt(io.wchar ?? '0', 10),
 		thermalCelsius: thermal ? parseInt(thermal.trim(), 10) / 1000 : null,
 		cpuFlags: flags || 'STANDARD',
 		ioWait
@@ -353,7 +401,10 @@ async function countCodeLines(): Promise<number> {
 		const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
 		for (const e of entries) {
 			const full = path.join(dir, e.name);
-			if (e.isDirectory()) { await walk(full); continue; }
+			if (e.isDirectory()) {
+				await walk(full);
+				continue;
+			}
 			if (!e.name.endsWith('.ts')) continue;
 			const content = await fs.readFile(full, 'utf-8').catch(() => '');
 			total += content.split('\n').length;
@@ -388,19 +439,18 @@ export async function collectPingData(): Promise<Omit<PingData, 'roundTrip'>> {
 	const cpuBefore = process.cpuUsage();
 	const nsBefore = process.hrtime.bigint();
 
-	const [loopLagMs, prismaMs, redisReadMs, redisWriteMs, pgStats, rdStats, hostData, depCount, codeLines, gatewayNode] =
-		await Promise.all([
-			measureLoopLag(),
-			probePrisma().catch(() => null),
-			probeRedisRead(redis).catch(() => null),
-			probeRedisWrite(redis).catch(() => null),
-			postgresStats(),
-			redisStats(redis),
-			hostStats(),
-			countDeps(),
-			countCodeLines(),
-			getGatewayNode()
-		]);
+	const [loopLagMs, prismaMs, redisReadMs, redisWriteMs, pgStats, rdStats, hostData, depCount, codeLines, gatewayNode] = await Promise.all([
+		measureLoopLag(),
+		probePrisma().catch(() => null),
+		probeRedisRead(redis).catch(() => null),
+		probeRedisWrite(redis).catch(() => null),
+		postgresStats(),
+		redisStats(redis),
+		hostStats(),
+		countDeps(),
+		countCodeLines(),
+		getGatewayNode()
+	]);
 
 	const cpuDelta = process.cpuUsage(cpuBefore);
 	const nsElapsed = Number(process.hrtime.bigint() - nsBefore);
@@ -412,12 +462,22 @@ export async function collectPingData(): Promise<Omit<PingData, 'roundTrip'>> {
 	const shards: ShardInfo[] = [];
 	const ws = client.ws as unknown as { shards: Map<number, { ping: number; status: number; sequence?: number }> };
 	for (const [id, shard] of ws.shards ?? new Map()) {
-		const statusMap: Record<number, string> = { 0: 'Ready', 1: 'Connecting', 2: 'Reconnecting', 3: 'Idle', 4: 'Nearly', 5: 'Disconnected', 6: 'Waiting for Guilds', 7: 'Identifying', 8: 'Resuming' };
-		shards.push({ 
-			id, 
-			ping: shard.ping < 0 ? -1 : shard.ping, 
-			status: statusMap[shard.status] ?? 'Unknown', 
-			sequence: shard.sequence ?? 0 
+		const statusMap: Record<number, string> = {
+			0: 'Ready',
+			1: 'Connecting',
+			2: 'Reconnecting',
+			3: 'Idle',
+			4: 'Nearly',
+			5: 'Disconnected',
+			6: 'Waiting for Guilds',
+			7: 'Identifying',
+			8: 'Resuming'
+		};
+		shards.push({
+			id,
+			ping: shard.ping < 0 ? -1 : shard.ping,
+			status: statusMap[shard.status] ?? 'Unknown',
+			sequence: shard.sequence ?? 0
 		});
 	}
 
@@ -434,7 +494,9 @@ export async function collectPingData(): Promise<Omit<PingData, 'roundTrip'>> {
 			const q = await rabbit.channel.checkQueue('ember.jobs.active');
 			rabbitQueued = q.messageCount;
 			rabbitConsumers = q.consumerCount;
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 	}
 
 	return {
@@ -474,7 +536,7 @@ export async function collectPingData(): Promise<Omit<PingData, 'roundTrip'>> {
 		redisWriteMs,
 		...rdStats,
 
-		rabbitConnected: !!rabbit,
+		rabbitConnected: Boolean(rabbit),
 		rabbitQueued,
 		rabbitConsumers,
 

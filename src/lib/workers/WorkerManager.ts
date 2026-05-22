@@ -1,7 +1,7 @@
 import { container } from '@sapphire/framework';
-import { envParseInteger } from '@skyra/env-utilities';
-import { join } from 'node:path';
-import { v4 as uuidv4 } from 'uuid';
+import { envParseInteger } from '#lib/env.js';
+import { fileURLToPath } from 'node:url';
+import { join, dirname } from 'node:path';
 
 export enum WorkerAction {
 	PING = 'PING',
@@ -27,12 +27,12 @@ export class WorkerManager {
 	private _nextWorker = 0;
 
 	public constructor(count: number = envParseInteger('WORKER_COUNT', 2)) {
-		const scriptPath = join(import.meta.dir, 'scripts/index.ts');
-		
+		const scriptPath = join(dirname(fileURLToPath(import.meta.url)), 'scripts/index.ts');
+
 		for (let i = 0; i < count; i++) {
 			const worker = new Worker(scriptPath);
-			
-			worker.addEventListener('message', (event) => {
+
+			worker.addEventListener('message', (event: MessageEvent) => {
 				const response = event.data as WorkerResponse;
 				const resolver = this._pending.get(response.id);
 				if (resolver) {
@@ -41,20 +41,20 @@ export class WorkerManager {
 				}
 			});
 
-			worker.addEventListener('error', (err) => {
+			worker.addEventListener('error', (err: ErrorEvent) => {
 				container.logger.error(`[Worker ${i}] Error:`, err);
 			});
 
 			this._workers.push(worker);
 		}
-		
+
 		container.logger.info(`[WorkerManager] Initialized with ${count} workers.`);
 	}
 
 	public async send<T = any>(action: WorkerAction, payload: any): Promise<T> {
-		const id = uuidv4();
+		const id = crypto.randomUUID();
 		const request: WorkerRequest = { id, action, payload };
-		
+
 		const promise = new Promise<WorkerResponse>((resolve) => {
 			this._pending.set(id, resolve);
 		});
@@ -62,7 +62,7 @@ export class WorkerManager {
 		// Simple round-robin
 		const worker = this._workers[this._nextWorker];
 		this._nextWorker = (this._nextWorker + 1) % this._workers.length;
-		
+
 		worker.postMessage(request);
 
 		const response = await promise;
@@ -73,7 +73,7 @@ export class WorkerManager {
 		return response.data as T;
 	}
 
-	public async destroy() {
+	public destroy() {
 		for (const worker of this._workers) {
 			worker.terminate();
 		}

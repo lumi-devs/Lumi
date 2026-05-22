@@ -30,7 +30,7 @@ export function registerJobHandler<T extends string>(type: T, handler: (data: Em
 }
 
 export async function enqueueJob<T extends string>(type: T, data: EmberJobData<T>, delayMs?: number): Promise<void> {
-	const rabbit = container.rabbit;
+	const { rabbit } = container;
 	if (!rabbit) throw new Error(`[Jobs] Cannot enqueue "${type}" — RabbitMQ not configured`);
 
 	const envelope: JobEnvelope = { type, data: data as Record<string, unknown> };
@@ -234,11 +234,7 @@ export class RabbitClient {
 				resolve(response);
 			});
 
-			void this.channel.sendToQueue(
-				'ember.rpc.requests',
-				{ action, ...payload },
-				{ correlationId, replyTo: 'amq.rabbitmq.reply-to' }
-			);
+			void this.channel.sendToQueue('ember.rpc.requests', { action, ...payload }, { correlationId, replyTo: 'amq.rabbitmq.reply-to' });
 		});
 	}
 

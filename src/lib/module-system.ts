@@ -28,6 +28,12 @@ export interface ConfigField {
 	choices?: string[];
 }
 
+export interface DashboardConfig {
+	tabs?: string[];
+	widgets?: string[];
+	[key: string]: unknown;
+}
+
 export interface ModuleMeta {
 	/** Unique kebab-case identifier. Used as DB key, Redis namespace, RPC scope. */
 	name: string;
@@ -36,6 +42,7 @@ export interface ModuleMeta {
 	description: string;
 	version?: string;
 	configFields?: ConfigField[];
+	dashboard?: DashboardConfig;
 
 	/** Modules that must be loaded before this one. */
 	dependencies?: string[];
@@ -234,8 +241,7 @@ export class ModuleManager {
 		if (pieceErrors.length) {
 			record.pieceErrors = pieceErrors;
 			record.error = new Error(
-				`${pieceErrors.length} piece file(s) failed to import:\n` +
-					pieceErrors.map((e) => `  - ${e.path}: ${e.error.message}`).join('\n')
+				`${pieceErrors.length} piece file(s) failed to import:\n${pieceErrors.map((e) => `  - ${e.path}: ${e.error.message}`).join('\n')}`
 			);
 			record.state = 'failed';
 			container.logger.error(`[Modules] ${name}: ${record.error.message}`);
@@ -262,13 +268,9 @@ export class ModuleManager {
 		if (!record || record.state !== 'loaded') return false;
 
 		// Refuse to unload while dependents are still loaded
-		const dependents = this.all().filter(
-			(r) => r.state === 'loaded' && (r.meta.dependencies ?? []).includes(name)
-		);
+		const dependents = this.all().filter((r) => r.state === 'loaded' && (r.meta.dependencies ?? []).includes(name));
 		if (dependents.length) {
-			container.logger.warn(
-				`[Modules] cannot unload "${name}" — dependents loaded: ${dependents.map((d) => d.meta.name).join(', ')}`
-			);
+			container.logger.warn(`[Modules] cannot unload "${name}" — dependents loaded: ${dependents.map((d) => d.meta.name).join(', ')}`);
 			return false;
 		}
 
@@ -346,12 +348,7 @@ export class ModuleManager {
 	 * otherwise (no `index.ts` but contains subdirs) it's treated as a category
 	 * and we recurse exactly one level deeper.
 	 */
-	private async _walk(
-		dir: string,
-		found: Map<string, ModuleRecord>,
-		globalState: Map<string, boolean>,
-		depth = 0
-	): Promise<void> {
+	private async _walk(dir: string, found: Map<string, ModuleRecord>, globalState: Map<string, boolean>, depth = 0): Promise<void> {
 		let entries: string[];
 		try {
 			entries = await fs.readdir(dir);
@@ -383,12 +380,7 @@ export class ModuleManager {
 		return null;
 	}
 
-	private async _ingest(
-		dir: string,
-		indexPath: string,
-		found: Map<string, ModuleRecord>,
-		globalState: Map<string, boolean>
-	): Promise<void> {
+	private async _ingest(dir: string, indexPath: string, found: Map<string, ModuleRecord>, globalState: Map<string, boolean>): Promise<void> {
 		const indexUrl = pathToFileURL(indexPath).href;
 		try {
 			const mod = (await import(indexUrl)) as { meta?: ModuleMeta; default?: { meta?: ModuleMeta } };
@@ -398,9 +390,7 @@ export class ModuleManager {
 				return;
 			}
 			if (found.has(meta.name)) {
-				container.logger.warn(
-					`[Modules] duplicate module name "${meta.name}" — keeping ${found.get(meta.name)!.dir}, ignoring ${dir}`
-				);
+				container.logger.warn(`[Modules] duplicate module name "${meta.name}" — keeping ${found.get(meta.name)!.dir}, ignoring ${dir}`);
 				return;
 			}
 			found.set(meta.name, {
@@ -442,9 +432,7 @@ export class ModuleManager {
 				const other = this._records.get(conflictName);
 				if (other && other.state !== 'skipped-conflict') {
 					other.state = 'skipped-conflict';
-					container.logger.warn(
-						`[Modules] "${conflictName}" conflicts with "${record.meta.name}" — skipping ${conflictName}`
-					);
+					container.logger.warn(`[Modules] "${conflictName}" conflicts with "${record.meta.name}" — skipping ${conflictName}`);
 				}
 			}
 		}

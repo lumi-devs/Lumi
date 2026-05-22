@@ -4,6 +4,7 @@
 
 generator client {
   provider        = "prisma-client-js"
+  output          = "./generated/client"
   previewFeatures = ["fullTextSearchPostgres"]
   engineType      = "library"
 }
@@ -59,6 +60,9 @@ model Guild {
   afkEntries    AfkEntry[]
   lockdown      RaidLockdown?
   ignoreEntries IgnoreEntry[]
+  roleMappings  RoleMapping[]
+  tabPermissions TabPermission[]
+  auditLedgers  AuditLedger[]
 
   @@map("guilds")
 }
@@ -236,4 +240,71 @@ model RaidLockdown {
 
   @@index([unlocksAt]) // expiry sweep
   @@map("raid_lockdowns")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RBAC & DASHBOARD TABS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model RoleMapping {
+  guildId         String   @map("guild_id") @db.VarChar(20)
+  discordRoleId   String   @map("discord_role_id") @db.VarChar(20)
+  permissionLevel Int      @map("permission_level") // Ember PermissionLevel enum value
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@id([guildId, discordRoleId])
+  @@map("role_mappings")
+}
+
+model TabPermission {
+  guildId     String   @map("guild_id") @db.VarChar(20)
+  roleId      String   @map("role_id") @db.VarChar(20) // Discord Role ID
+  tabId       String   @map("tab_id") @db.VarChar(64)
+  allow       Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@id([guildId, roleId, tabId])
+  @@index([guildId, roleId])
+  @@map("tab_permissions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUDIT LEDGER
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AuditLedger {
+  id        Int      @id @default(autoincrement())
+  guildId   String   @map("guild_id") @db.VarChar(20)
+  userId    String   @map("user_id") @db.VarChar(20)
+  action    String   @db.VarChar(128)
+  platform  String   @db.VarChar(32) // "discord" or "web"
+  details   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, createdAt])
+  @@index([guildId, userId])
+  @@map("audit_ledger")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODULE DATA (KV STORE)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ModuleData {
+  guildId    String  @map("guild_id") @db.VarChar(20)
+  moduleName String  @map("module_name") @db.VarChar(64)
+  targetId   String  @map("target_id") @db.VarChar(20) // User ID, Channel ID, or 'global'
+  key        String  @db.VarChar(64)
+  value      Json    // The dynamic payload
+
+  @@id([guildId, moduleName, targetId, key])
+  @@map("module_dynamic_data")
 }

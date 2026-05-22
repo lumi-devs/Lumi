@@ -19,7 +19,7 @@ export const meta: ModuleMeta = {
 			if (!name || !url) throw new Error('Missing name or url');
 
 			await resolver.addRepo(name, url, branch);
-			
+
 			// Save to DB
 			const repo = await container.prisma.downloaderRepo.upsert({
 				where: { name },
@@ -44,18 +44,18 @@ export const meta: ModuleMeta = {
 			if (!repoName) throw new Error('Missing repoName');
 
 			const modules = await resolver.getModulesInRepo(repoName);
-			
+
 			// Get installed modules for this repo to indicate status
 			const repo = await container.prisma.downloaderRepo.findUnique({
 				where: { name: repoName },
 				include: { installedModules: true }
 			});
 
-			const installedMap = new Set(repo?.installedModules.map(m => m.moduleName) || []);
+			const installedMap = new Set(repo?.installedModules.map((m) => m.moduleName) || []);
 
-			return { 
-				repoName, 
-				modules: modules.map(m => ({
+			return {
+				repoName,
+				modules: modules.map((m) => ({
 					...m,
 					isInstalled: installedMap.has(m.name)
 				}))
@@ -102,7 +102,7 @@ export const meta: ModuleMeta = {
 			const fs = (await import('node:fs')).promises;
 			const path = (await import('node:path')).default;
 			const targetPath = path.join(process.cwd(), 'src', 'modules', moduleName);
-			
+
 			try {
 				await fs.unlink(targetPath);
 			} catch (err) {

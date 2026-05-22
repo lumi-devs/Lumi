@@ -32,11 +32,7 @@ export class RepoCommand extends EmberSubcommand {
 						.addStringOption((opt) => opt.setName('url').setDescription('The Git URL of the repository').setRequired(true))
 						.addStringOption((opt) => opt.setName('branch').setDescription('Branch to track (default: master)').setRequired(false))
 				)
-				.addSubcommand((sub) =>
-					sub
-						.setName('list')
-						.setDescription('List all added repositories')
-				)
+				.addSubcommand((sub) => sub.setName('list').setDescription('List all added repositories'))
 				.addSubcommand((sub) =>
 					sub
 						.setName('modules')
@@ -54,14 +50,22 @@ export class RepoCommand extends EmberSubcommand {
 
 		try {
 			await resolver.addRepo(name, url, branch);
-			
+
 			await this.container.prisma.downloaderRepo.upsert({
 				where: { name },
 				update: { url, branch },
 				create: { name, url, branch }
 			});
 
-			await this.reply(interaction, ephemeralCard(makeSuccessCard('Repository Added', `Successfully cloned/updated repository **${name}**.\nYou can now use \`/repo modules repo:${name}\` to view available modules.`)));
+			await this.reply(
+				interaction,
+				ephemeralCard(
+					makeSuccessCard(
+						'Repository Added',
+						`Successfully cloned/updated repository **${name}**.\nYou can now use \`/repo modules repo:${name}\` to view available modules.`
+					)
+				)
+			);
 		} catch (err) {
 			await this.reply(interaction, ephemeralCard(makeErrorCard('Failed to Add Repository', String(err))));
 		}
@@ -69,14 +73,14 @@ export class RepoCommand extends EmberSubcommand {
 
 	public async chatInputList(interaction: Subcommand.ChatInputCommandInteraction): Promise<void> {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-		
+
 		const repos = await this.container.prisma.downloaderRepo.findMany();
 		if (!repos.length) {
 			await this.reply(interaction, ephemeralCard(makeErrorCard('No Repositories', 'No third-party repositories have been added yet.')));
 			return;
 		}
 
-		const list = repos.map(r => `**${r.name}** (\`${r.branch}\`)\n<${r.url}>`);
+		const list = repos.map((r) => `**${r.name}** (\`${r.branch}\`)\n<${r.url}>`);
 		await this.reply(interaction, ephemeralCard(makeListCard('Added Repositories', list)));
 	}
 
@@ -86,13 +90,18 @@ export class RepoCommand extends EmberSubcommand {
 
 		try {
 			const modules = await resolver.getModulesInRepo(repoName);
-			
+
 			if (!modules.length) {
-				await this.reply(interaction, ephemeralCard(makeErrorCard('No Modules Found', `Repository **${repoName}** contains no discoverable modules with an \`info.json\` file.`)));
+				await this.reply(
+					interaction,
+					ephemeralCard(
+						makeErrorCard('No Modules Found', `Repository **${repoName}** contains no discoverable modules with an \`info.json\` file.`)
+					)
+				);
 				return;
 			}
 
-			const list = modules.map(m => `**${m.name}** (v${m.version})\n*${m.short}*`);
+			const list = modules.map((m) => `**${m.name}** (v${m.version})\n*${m.short}*`);
 			await this.reply(interaction, ephemeralCard(makeListCard(`Modules in ${repoName}`, list)));
 		} catch (err) {
 			await this.reply(interaction, ephemeralCard(makeErrorCard('Failed to Read Repository', String(err))));

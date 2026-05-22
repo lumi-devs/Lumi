@@ -13,10 +13,7 @@ export class ConfigBoolHandler extends InteractionHandler {
 		return this.some({ moduleName, key, guildId });
 	}
 
-	public async run(
-		interaction: StringSelectMenuInteraction,
-		{ moduleName, key, guildId }: { moduleName: string; key: string; guildId: string }
-	) {
+	public async run(interaction: StringSelectMenuInteraction, { moduleName, key, guildId }: { moduleName: string; key: string; guildId: string }) {
 		await interaction.deferUpdate();
 
 		const value = interaction.values[0] === 'true';
