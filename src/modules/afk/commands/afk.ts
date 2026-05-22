@@ -1,10 +1,10 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { Args, Command, container } from '@sapphire/framework';
+import { Args, Command } from '@sapphire/framework';
 import type { Message } from 'discord.js';
 import { EmberCommand } from '#lib/commands.js';
 import { PermissionLevel } from '#lib/permissions.js';
-import { EmberColors } from '#lib/branding.js';
-import { makeCard, makeInfoCard, makeSuccessCard, makeWarningCard } from '#lib/cards.js';
+import { EmberColors } from '#utilities/branding.js';
+import { makeCard, makeInfoCard, makeSuccessCard, makeWarningCard } from '#utilities/cards.js';
 import {
 	NICK_PREFIX,
 	AFK_MAX_REASON_LENGTH,
@@ -15,9 +15,11 @@ import {
 	removeAfk,
 	sanitizeReason,
 	setAfk,
-	armCooldown
+	armRemovalCooldown,
+	getAfkEntriesForGuild,
+	getAfkStats,
+	getAllAfkEntries
 } from '../index.js';
-import { RedisKeys } from '#lib/redis.js';
 
 const OWNER_ONLY = {
 	name: 'MinimumPermissionLevel' as const,
@@ -73,7 +75,7 @@ export class AfkCommand extends EmberCommand {
 			}
 		}
 
-		await armCooldown(RedisKeys.afkRemovalCooldown(guildId!, userId), AFK_REMOVAL_COOLDOWN_MS);
+		await armRemovalCooldown(guildId!, userId, AFK_REMOVAL_COOLDOWN_MS);
 		return this.replySuccess(interaction, title, body, { ephemeral: true });
 	}
 
@@ -104,7 +106,7 @@ export class AfkCommand extends EmberCommand {
 				void member.setNickname(`${NICK_PREFIX}${member.displayName}`.slice(0, 32)).catch(() => null);
 			}
 		}
-		await armCooldown(RedisKeys.afkRemovalCooldown(guildId, userId), AFK_REMOVAL_COOLDOWN_MS);
+		await armRemovalCooldown(guildId, userId, AFK_REMOVAL_COOLDOWN_MS);
 
 		if (!message.channel.isSendable()) return;
 		const sent = await message.channel.send({ ...makeWarningCard(title, body), allowedMentions: { parse: [] } }).catch(() => null);
@@ -120,10 +122,7 @@ export class AfkCommand extends EmberCommand {
 export class AfkListCommand extends EmberCommand {
 	public override async messageRun(message: Message): Promise<void> {
 		if (!message.inGuild()) return;
-		const entries = await this.container.prisma.afkEntry.findMany({
-			where: { guildId: message.guildId },
-			take: 50
-		});
+		const entries = await getAfkEntriesForGuild(message.guildId!);
 		if (entries.length === 0) {
 			await message.reply({
 				...makeInfoCard('AFK List', 'No users are currently AFK in this server.'),
@@ -148,9 +147,8 @@ export class AfkListCommand extends EmberCommand {
 })
 export class AfkStatsCommand extends EmberCommand {
 	public override async messageRun(message: Message): Promise<void> {
-		const keys = await this.container.redis.keys('ember:afk:*');
-		const cdKeys = await this.container.redis.keys('ember:afk:cd:*');
-		const body = `**Active AFK entries:** ${keys.length}\n**Active cooldowns:** ${cdKeys.length}`;
+		const stats = await getAfkStats();
+		const body = `**Active AFK entries:** ${stats.activeEntries}\n**Active cooldowns:** ${stats.activeCooldowns}`;
 		await message.reply({ ...makeCard(EmberColors.PRIMARY, '📊 AFK System Stats', body), allowedMentions: { parse: [] } });
 	}
 }
@@ -167,7 +165,7 @@ export class AfkCleanCommand extends EmberCommand {
 				.send({ ...makeInfoCard('AFK Cleanup', 'Cleaning up AFK entries…'), allowedMentions: { parse: [] } })
 				.catch(() => null);
 		}
-		const entries = await container.prisma.afkEntry.findMany();
+		const entries = await getAllAfkEntries();
 		let removed = 0;
 		for (const entry of entries) {
 			if (this.container.client.users.cache.has(entry.userId)) continue;

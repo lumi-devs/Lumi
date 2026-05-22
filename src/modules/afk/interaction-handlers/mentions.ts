@@ -1,10 +1,10 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, type ButtonInteraction } from 'discord.js';
-import { EmberColors } from '#lib/branding.js';
-import { ephemeralCard, makeCard, makeErrorCard } from '#lib/cards.js';
+import { EmberColors } from '#utilities/branding.js';
+import { ephemeralCard, makeCard, makeErrorCard } from '#utilities/cards.js';
 import { getAfkMentions, type AfkMention } from '../index.js';
-import { humanizeDelta } from '#lib/time.js';
+import { humanizeDelta } from '#utilities/time.js';
 
 const PAGE_SIZE = 10;
 

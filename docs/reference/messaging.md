@@ -7,7 +7,7 @@ Ember employs a **Hybrid Messaging Architecture** to handle high-concurrency ope
 Redis serves as the bot's primary high-speed data store. It is used for more than just simple caching; it acts as the "nerve center" for the cluster.
 
 ### Key Registry
-Ember uses a strictly-typed `RedisKeys` registry in `src/lib/redis.ts`. Hard-coding string keys in feature code is forbidden. This ensures that every part of the system uses the same namespace and key patterns, preventing collisions.
+Ember uses a strictly-typed `RedisKeys` registry in `src/database/redis.ts`. Hard-coding string keys in feature code is forbidden. This ensures that every part of the system uses the same namespace and key patterns, preventing collisions.
 
 ### Cluster-Wide Invalidation
 When a setting is updated (e.g., via the dashboard), Ember uses a **Pub/Sub Invalidation Bus**.
@@ -30,7 +30,7 @@ While Redis handles state, RabbitMQ handles **Intent**. It is the backbone for R
 | `ember.jobs.delayed` | `queue` | A "waiting room" for scheduled tasks, utilizing TTL and Dead Letter Exchanges (DLX) to requeue jobs after a delay. |
 
 ### RPC System (Direct Reply-To)
-Ember implements a transport-agnostic RPC bridge. The dashboard sends a JSON payload to `ember.rpc.requests` with a `replyTo` property set to `amq.rabbitmq.reply-to`. The bot processes the request and sends the response directly back to the temporary virtual queue, allowing for high-performance, stateless communication between the web frontend and the Discord backend.
+Ember implements a transport-agnostic RPC bridge managed by `src/core/rabbitmq/index.ts`. The dashboard sends a JSON payload to `ember.rpc.requests` with a `replyTo` property set to `amq.rabbitmq.reply-to`. The bot processes the request and sends the response directly back to the temporary virtual queue, allowing for high-performance, stateless communication between the web frontend and the Discord backend.
 
 ### Job Workers
 Jobs are defined via declaration merging into the `EmberJobs` interface. This provides full TypeScript autocomplete and type safety when enqueuing or handling jobs across different modules. The system supports:

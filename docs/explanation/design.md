@@ -46,7 +46,7 @@ Every interface must pass the 'Elite' filter:
 
 ## 🛠️ Implementation
 
-To maintain consistency, developers **must** use the UI factories provided in `src/lib/cards.ts`. Direct instantiation of Discord builders is forbidden to ensure that the Ember Design Language remains pure across all modules.
+To maintain consistency, developers **must** use the UI factories provided in `src/utilities/cards.ts`. Direct instantiation of Discord builders is forbidden to ensure that the Ember Design Language remains pure across all modules.
 
 ```typescript
 // Example: Creating a success card with the Mint palette

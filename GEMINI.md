@@ -5,43 +5,59 @@ Ember is a modular Discord bot built with the **Sapphire Framework v5**, **disco
 ## Project Overview
 
 - **Runtime:** [Bun](https://bun.sh) (runs TypeScript directly, no compile step needed).
-- **Framework:** [Sapphire Framework](https://www.sapphirejs.dev/) (modular, piece-based architecture).
-- **Database:** [Prisma ORM](https://www.prisma.io/) with Postgres.
-- **Messaging:** Redis (caching/RPC) and RabbitMQ (events/jobs).
-- **Architecture:** Feature-based modularity. Each feature lives in `src/modules/{name}/` and is isolated from others.
+- **Framework:** [Sapphire Framework](https://www.sapphirejs.dev/) (modular, custom piece-based architecture).
+- **Database:** Prisma with Postgres (pure data access client layer).
+- **Messaging:** Redis (caching/RPC/invalidation) and RabbitMQ (events/delayed and immediate jobs).
+- **Architecture:** Feature-based modularity with a non-removable built-in `core` module and optional feature modules extending a custom `Module` piece class.
 
 ## Core Mandates & Rules
 
-1.  **Never `new EmbedBuilder()`:** Use UI factories in `src/lib/util/cards.ts` (`makeSuccessCard`, `makeErrorCard`, etc.).
-2.  **Prisma Everywhere:** Always use `this.container.prisma`. The schema is central and strictly typed.
-3.  **Modular Isolation:** Modules in `src/modules/` must not import from each other. Shared logic goes in `src/lib/`.
-4.  **Error Handling:** Throw typed errors from `src/core/errors.ts`. A global listener catches and renders them as error cards.
-5.  **Slash Commands First:** All user-facing features must be slash commands. Prefix commands (`,`) are for admin/owner tools.
-6.  **Redis Keys:** Never hardcode strings. Use `RedisKeys` from `src/redis/keys.ts`.
+1.  **Never `new EmbedBuilder()`:** Use UI factories in `src/utilities/cards.ts` (`makeSuccessCard`, `makeErrorCard`, etc.).
+2.  **Prisma Everywhere:** Always use `this.container.prisma` directly. No wrapper slop.
+3.  **Modular Isolation:** Feature modules in `src/modules/` must not import from each other. Shared logic goes in `src/utilities/` or `src/database/`.
+4.  **Error Handling:** Throw standard or typed errors. Global command/error listeners in `src/core/listeners/` capture and render them elegantly as error cards.
+5.  **Slash Commands First:** All user-facing features must be slash commands. Prefix commands are reserved for owner/admin tools.
+6.  **Redis Keys:** Never hardcode strings. Use strictly typed `RedisKeys` from `src/database/redis.ts`.
 
 ## Project Structure
 
 ```text
 src/
 ├── main.ts                       # Entry point: DB connect -> RPC -> login
-├── EmberClient.ts                # Client initialization & RabbitMQ setup
-├── core/                         # Branding, Typed Errors, Permissions
-├── db/                           # Prisma client initialization
-├── lib/                          # Extensions, shared structures, utils
-│   ├── extensions/EmberCommand.ts # Base class for all commands
-│   └── setup/                    # Initialization (env, redis, etc.)
-├── modules/                      # Feature modules (afk, raids, etc.)
+├── client/                       # Client setup and Sapphire client init
+│   ├── EmberClient.ts            # Client initialization
+│   └── setup.ts                  # Env, Redis, Sentry, RabbitMQ, and i18n setup
+├── core/                         # Non-removable built-in core module
+│   ├── index.ts                  # Built-in non-removable core Module piece
+│   ├── commands/                 # Core commands (ping, config, downloader, etc.)
+│   ├── lib/                      # Core module libraries (ping cards, downloader resolver)
+│   ├── listeners/                # Core listeners (command events, ready, errors, diagnostics)
+│   ├── module-system/            # Module base class and custom ModuleStore
+│   ├── permissions/              # Custom preconditions and PermissionLevel resolution
+│   ├── rabbitmq/                 # Optional RabbitMQ manager and job broker
+│   ├── sentry/                   # Sentry integration breadcrumbs
+│   └── types/                    # Core shared types & container augments
+├── database/                     # Prisma & Redis client initialization
+│   ├── prisma.ts                 # Prisma Client singleton
+│   ├── redis.ts                  # Redis Client, RPC, and Invalidation Bus
+│   └── settings/                 # Database settings modules (guild configs, afk, raids)
+├── languages/                    # Localization system jsons (i18n)
+├── modules/                      # Optional Feature modules (afk, raids, etc.)
 │   └── {module}/
-│       ├── index.ts              # Module metadata & lifecycle hooks
-│       ├── commands/             # Slash commands
-│       ├── lib/                  # Module-specific logic
-│       └── listeners/            # Event listeners
-├── redis/                        # Redis client & RPC bridge
-└── rabbitmq/                     # RabbitMQ manager & job handlers
-
-prisma/
-├── schema.prisma                 # Database schema definition
-└── migrations/                   # SQL migration history
+│       ├── index.ts              # Extends Module base class, registers module service
+│       ├── commands/             # Feature slash commands
+│       ├── lib/                  # Feature-specific logic (settings, helpers)
+│       └── listeners/            # Feature event listeners
+├── utilities/                    # Framework-free utilities & UI cards
+│   ├── branding.ts               # Core visual tokens (colors, icons)
+│   ├── cards.ts                  # UI Factories (Success, Error, List cards)
+│   ├── formatting.ts             # Time, size, ID, and percentage helpers
+│   ├── gdpr.ts                   # Standard data deletion types
+│   ├── time.ts                   # Sleep and date helper functions
+│   └── resolvers/                # Duration and fuzzy search input resolvers
+└── workers/                      # Asynchronous job workers
+    ├── WorkerManager.ts          # Worker controller/manager
+    └── scripts/                  # Background worker task scripts
 ```
 
 ## Key Commands
@@ -55,7 +71,6 @@ prisma/
 | **Push Schema** | `bun run db:push` |
 | **Run Migrations** | `bun run db:migrate` |
 | **DB Studio** | `bun run db:studio` |
-| **Build** | `bun run build` |
 
 ## RPC Actions (Dashboard Integration)
 
