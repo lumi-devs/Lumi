@@ -24,6 +24,8 @@
     "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
     "verbatimModuleSyntax": false,
     "incremental": false,
     "noEmit": true

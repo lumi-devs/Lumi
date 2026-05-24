@@ -8,7 +8,6 @@ volumes:
   rabbitmq-data:
 
 services:
-  # ── Bot (development — default, no profile needed) ───────────────────────────
   ember-dev:
     build:
       context: .
@@ -37,9 +36,7 @@ services:
       - ember-net
     stdin_open: true
     tty: true
-    restart: "no"
 
-  # ── Bot (production) ─────────────────────────────────────────────────────────
   ember:
     build:
       context: .
@@ -77,7 +74,6 @@ services:
     profiles:
       - production
 
-  # ── Postgres ─────────────────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
     container_name: ember-postgres
@@ -102,16 +98,10 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
 
-  # ── Redis ─────────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: ember-redis
-    command: >
-      redis-server
-      --appendonly yes
-      --maxmemory 128mb
-      --maxmemory-policy noeviction
-      --requirepass ${REDIS_PASSWORD:-ember}
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction --requirepass ${REDIS_PASSWORD:-ember}
     volumes:
       - redis-data:/data
     networks:
@@ -129,7 +119,6 @@ services:
     ports:
       - "127.0.0.1:6379:6379"
 
-  # ── RabbitMQ ──────────────────────────────────────────────────────────────────
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: ember-rabbitmq
@@ -153,5 +142,26 @@ services:
         limits:
           memory: 256m
     ports:
-      - "127.0.0.1:5672:5672"    # AMQP
-      - "127.0.0.1:15672:15672"  # Management UI → http://localhost:15672
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+
+  dashboard:
+    build:
+      context: ../ember-dashboard
+      dockerfile: Dockerfile
+    container_name: ember-dashboard
+    environment:
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-ember}:${RABBITMQ_PASSWORD:-ember}@rabbitmq:5672
+      - DISCORD_CLIENT_ID=${CLIENT_ID}
+      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-placeholder}
+      - AUTH_SECRET=${AUTH_SECRET:-secret}
+      - AUTH_URL=http://localhost:3000
+      - AUTH_TRUST_HOST=true
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ember-net
+    ports:
+      - "127.0.0.1:3000:3000"

@@ -1,97 +1,71 @@
-import type { Redis } from 'ioredis';
-import type { prisma } from '#database/prisma.js';
-import type { ModuleManager } from '#lib/module-system.js';
-import type { RabbitClient } from '#lib/rabbit.js';
-import type { InvalidationBus } from '#database/redis.js';
-import type { db } from '#database/settings/module.js';
-import type { WorkerManager } from '#workers/WorkerManager.js';
+import type { Redis } from "ioredis";
+import type { prisma } from "#database/prisma.js";
+import type { ModuleStore } from "#core/module-system/ModuleStore.js";
+import type { RabbitClient } from "#lib/rabbit.js";
+import type { InvalidationBus } from "#database/redis.js";
+import type { WorkerManager } from "#workers/WorkerManager.js";
+import type { DatabaseService } from "#root/prisma/DatabaseService.js";
 
 export type IntegerString = `${number}`;
 
-/**
- * Module → service-instance map.
- *
- * Empty by default. Each module's `index.ts` augments this with its own entry
- * via declaration merging, e.g.:
- *
- *   declare module '#lib/types.js' {
- *     interface ModuleServiceMap { afk: AfkModule }
- *   }
- *
- * Doing it that way keeps the framework (loader / container / Augments) free
- * of any knowledge of specific modules — drop a module dir in `modules/` and
- * its types attach themselves. Pure plugin pattern.
- */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ModuleServiceMap {}
+export interface DatabaseRepositories extends DatabaseService {}
 
-/** Runtime accessor type — declared services are typed, unknown ones are `unknown`. */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- declaration merging target for modules to extend
+export interface ModuleServiceMap {}
 export type ModuleServiceStore = ModuleServiceMap & Record<string, unknown>;
 
-/**
- * Scheduled-task payload map. Modules augment via declaration merging too,
- * e.g.:
- *
- *   declare module '#lib/types.js' {
- *     interface EmberScheduledTasks { 'raids:unlock': { guildId: string } }
- *   }
- */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- declaration merging target for scheduled tasks plugin
 export interface EmberScheduledTasks {}
 
-declare module '@sapphire/pieces' {
-	interface Container {
-		readonly prisma: typeof prisma;
-		readonly redis: Redis;
-		readonly invalidation: InvalidationBus;
-		readonly moduleManager: ModuleManager;
-		readonly db: typeof db;
-		readonly workers: WorkerManager;
+declare module "@sapphire/pieces" {
+  interface Container {
+    readonly prisma: typeof prisma;
+    readonly redis: Redis;
+    readonly invalidation: InvalidationBus;
+    readonly db: DatabaseRepositories;
+    readonly workers: WorkerManager;
+    readonly moduleStore: ModuleStore;
 
-		/** Global bot stats (identifies, resumes, message count). */
-		stats: {
-			messages: number;
-			identifies: number;
-			resumes: number;
-			lastIdentify: Date | null;
-			lastResume: Date | null;
-		};
+    stats: {
+      messages: number;
+      identifies: number;
+      resumes: number;
+      lastIdentify: Date | null;
+      lastResume: Date | null;
+    };
 
-		/** Plugin-discovered module services. Module names are arbitrary strings. */
-		readonly modules: ModuleServiceStore;
-
-		/** RabbitMQ is optional — every consumer must null-check before use. */
-		rabbit?: RabbitClient;
-	}
+    readonly modules: ModuleServiceStore;
+    rabbit?: RabbitClient;
+  }
 }
 
-declare module '@sapphire/framework' {
-	interface ScheduledTasks extends EmberScheduledTasks {}
+import type { ServiceStore } from "#core/module-system/ServiceStore.js";
+
+declare module "@sapphire/framework" {
+  interface ScheduledTasks extends EmberScheduledTasks {}
+  interface StoreRegistryEntries {
+    services: ServiceStore;
+  }
 }
 
-declare module '#lib/env.js' {
-	interface Env {
-		BOT_TOKEN: string;
-		CLIENT_ID: string;
-		OWNER_IDS: string;
-
-		DEFAULT_PREFIX: string;
-		NODE_ENV: 'development' | 'production' | 'test';
-		LOG_LEVEL: 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
-
-		POSTGRES_URL: string;
-
-		REDIS_HOST: string;
-		REDIS_PORT: IntegerString;
-		REDIS_PASSWORD: string;
-		REDIS_CACHE_DB: IntegerString;
-		REDIS_TASK_DB: IntegerString;
-
-		RABBITMQ_URL: string;
-
-		SENTRY_ENABLED: boolean | string;
-		SENTRY_DSN: string;
-
-		WORKER_COUNT: IntegerString;
-	}
+declare module "#lib/env.js" {
+  interface Env {
+    BOT_TOKEN: string;
+    CLIENT_ID: string;
+    OWNER_IDS: string;
+    DEFAULT_PREFIX: string;
+    NODE_ENV: "development" | "production" | "test";
+    LOG_LEVEL: "trace" | "debug" | "info" | "warn" | "error" | "fatal";
+    POSTGRES_URL: string;
+    REDIS_HOST: string;
+    REDIS_PORT: IntegerString;
+    REDIS_PASSWORD: string;
+    REDIS_CACHE_DB: IntegerString;
+    REDIS_TASK_DB: IntegerString;
+    RABBITMQ_URL: string;
+    SENTRY_ENABLED: boolean | string;
+    SENTRY_DSN: string;
+    WORKER_COUNT: IntegerString;
+    API_ORIGIN: string;
+  }
 }

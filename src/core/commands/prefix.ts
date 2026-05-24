@@ -1,73 +1,115 @@
-import { ApplyOptions } from '@sapphire/decorators';
-import { Args, Command } from '@sapphire/framework';
-import type { Message } from 'discord.js';
-import { EmberCommand } from '#lib/commands.js';
-import { PermissionLevel, resolvePermissionLevel } from '#lib/permissions.js';
-import { makeSuccessCard, makeInfoCard, makeErrorCard } from '#utilities/cards.js';
-import { envParseString } from '#lib/env.js';
-import { readSettings, writeSettings } from '#database/settings/guild.js';
+import { ApplyOptions } from "@sapphire/decorators";
+import { ApplicationCommandRegistry, container } from "@sapphire/framework";
+import {
+  ApplicationIntegrationType,
+  type ChatInputCommandInteraction,
+} from "discord.js";
+import { EmberSubcommand } from "#lib/commands.js";
+import { PermissionLevel } from "#lib/permissions.js";
+import { makeSuccessCard } from "#utilities/cards.js";
+import { EmberEmojis } from "#utilities/assets.js";
 
-@ApplyOptions<Command.Options>({
-	name: 'prefix',
-	description: 'View or change the bot prefix for this server.',
-	preconditions: ['GuildOnly']
+import { Subcommand } from "@sapphire/plugin-subcommands";
+
+@ApplyOptions<Subcommand.Options>({
+  name: "prefix",
+  description: "View or change the command prefix for this server",
+  preconditions: ["GuildOnly"],
+  subcommands: [
+    { name: "view", chatInputRun: "chatInputView" },
+    { name: "set", chatInputRun: "chatInputSet" },
+    { name: "reset", chatInputRun: "chatInputReset" },
+  ],
 })
-export class PrefixCommand extends EmberCommand {
-	public override async messageRun(message: Message, args: Args): Promise<void> {
-		const sub = await args.pick('string').catch(() => null);
+export class PrefixCommand extends EmberSubcommand {
+  public override registerApplicationCommands(
+    registry: ApplicationCommandRegistry,
+  ) {
+    registry.registerChatInputCommand((builder) =>
+      builder
+        .setName(this.name)
+        .setDescription(this.description)
+        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
+        .setContexts(...this.contexts)
+        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall])
+        .addSubcommand((sub) =>
+          sub
+            .setName("set")
+            .setDescription("Set a new prefix")
+            .addStringOption((opt) =>
+              opt
+                .setName("new_prefix")
+                .setDescription("The new prefix (max 5 chars)")
+                .setRequired(true),
+            ),
+        )
+        .addSubcommand((sub) =>
+          sub
+            .setName("reset")
+            .setDescription("Reset the prefix to the default"),
+        )
+        .addSubcommand((sub) =>
+          sub.setName("view").setDescription("View the current prefix"),
+        ),
+    );
+  }
 
-		if (!sub) {
-			return this.#show(message);
-		}
+  private get guildSettingsService(): import("#core/services/GuildSettingsService.js").GuildSettingsService {
+    return this.container.stores
+      .get("services")
+      .get(
+        "guild-settings",
+      ) as import("#core/services/GuildSettingsService.js").GuildSettingsService;
+  }
 
-		if (sub === 'set') {
-			const newPrefix = await args.pick('string').catch(() => null);
-			if (!newPrefix) {
-				await message.reply({ ...makeErrorCard('Missing argument', 'Usage: `,prefix set <new_prefix>`') });
-				return;
-			}
-			return this.#set(message, newPrefix);
-		}
+  public async chatInputView(interaction: ChatInputCommandInteraction) {
+    const guildId = interaction.guildId!;
+    const settings = await container.db.getGuildSettings(guildId);
+    return interaction.reply(
+      makeSuccessCard(
+        "Current Prefix",
+        `The current prefix for this server is \`${settings.prefix ?? ","}\`.`,
+      ),
+    );
+  }
 
-		if (sub === 'reset') {
-			return this.#reset(message);
-		}
+  public async chatInputSet(interaction: ChatInputCommandInteraction) {
+    await this.checkPermission(interaction, PermissionLevel.ADMIN);
+    const guildId = interaction.guildId!;
+    const newPrefix = interaction.options.getString("new_prefix", true);
 
-		await message.reply({ ...makeErrorCard('Unknown subcommand', 'Usage: `,prefix`, `,prefix set <new>`, `,prefix reset`') });
-	}
+    try {
+      await this.guildSettingsService.setPrefix(guildId, newPrefix);
+      this.container.logger.debug(
+        `[Prefix] ${EmberEmojis.GEAR} Guild ${guildId} prefix changed to '${newPrefix}' by ${interaction.user.tag}`,
+      );
+      return interaction.reply(
+        makeSuccessCard(
+          `${EmberEmojis.GEAR} Prefix Updated`,
+          `The prefix for this server has been set to \`${newPrefix}\`.`,
+        ),
+      );
+    } catch (err: unknown) {
+      const error = err as Error;
+      return this.replyError(interaction, "Update Failed", error.message, {
+        ephemeral: true,
+      });
+    }
+  }
 
-	async #show(message: Message): Promise<void> {
-		const guildId = message.guild!.id;
-		const settings = await readSettings(guildId);
-		const defaultPrefix = envParseString('DEFAULT_PREFIX', ',');
-		const current = settings.prefix ?? defaultPrefix;
-		await message.reply({ ...makeInfoCard('Current Prefix', `The prefix for this server is \`${current}\`.`) });
-	}
+  public async chatInputReset(interaction: ChatInputCommandInteraction) {
+    await this.checkPermission(interaction, PermissionLevel.ADMIN);
+    const guildId = interaction.guildId!;
 
-	async #set(message: Message, newPrefix: string): Promise<void> {
-		const level = await resolvePermissionLevel(message, this.container);
-		if (level < PermissionLevel.ADMIN) {
-			await message.reply({ ...makeErrorCard('Forbidden', 'You need ADMIN permission to change the prefix.') });
-			return;
-		}
-		if (newPrefix.length > 5) {
-			await message.reply({ ...makeErrorCard('Invalid prefix', 'Prefix must be 5 characters or fewer.') });
-			return;
-		}
-		const guildId = message.guild!.id;
-		await writeSettings(guildId, { prefix: newPrefix });
-		await message.reply({ ...makeSuccessCard('Prefix updated', `Server prefix is now \`${newPrefix}\`.`) });
-	}
-
-	async #reset(message: Message): Promise<void> {
-		const level = await resolvePermissionLevel(message, this.container);
-		if (level < PermissionLevel.ADMIN) {
-			await message.reply({ ...makeErrorCard('Forbidden', 'You need ADMIN permission to reset the prefix.') });
-			return;
-		}
-		const guildId = message.guild!.id;
-		await writeSettings(guildId, { prefix: null });
-		const defaultPrefix = envParseString('DEFAULT_PREFIX', ',');
-		await message.reply({ ...makeSuccessCard('Prefix reset', `Server prefix reset to \`${defaultPrefix}\`.`) });
-	}
+    await this.guildSettingsService.resetPrefix(guildId);
+    this.container.logger.debug(
+      `[Prefix] ${EmberEmojis.GEAR} Guild ${guildId} prefix reset by ${interaction.user.tag}`,
+    );
+    return interaction.reply(
+      makeSuccessCard(
+        `${EmberEmojis.GEAR} Prefix Reset`,
+        "The prefix for this server has been reset to the default.",
+      ),
+    );
+  }
 }

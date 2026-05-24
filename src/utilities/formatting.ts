@@ -1,17 +1,14 @@
-/** Truncate a string to maxLen, appending ellipsis if cut. */
-export function truncate(str: string, maxLen: number): string {
-	return str.length <= maxLen ? str : `${str.slice(0, maxLen - 1)}…`;
-}
+import { cutText } from "@sapphire/utilities";
+import { escapeMarkdown } from "@discordjs/formatters";
 
-/** Format a bigint Discord ID as a string. */
-export function fmtId(id: bigint | string | null | undefined): string {
-	if (id === null || id === undefined) {
-		return 'unknown';
-	}
-	return String(id);
-}
+export const truncate = (str: string, maxLength: number): string =>
+  cutText(str, maxLength);
 
-/** Escape Discord markdown characters. */
-export function escapeMarkdown(text: string): string {
-	return text.replace(/([*_`~|\\])/g, '\\$1');
-}
+/**
+ * Formats an unknown ID into a string. Returns 'unknown' if the ID is falsy.
+ * @param id - The ID to format.
+ * @returns The formatted ID string.
+ */
+export const fmtId = (id: unknown): string => (id ? String(id) : "unknown");
+
+export { escapeMarkdown };

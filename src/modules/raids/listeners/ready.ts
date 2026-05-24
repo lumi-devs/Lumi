@@ -1,22 +1,15 @@
-import { Listener, Events, container } from '@sapphire/framework';
-import { ApplyOptions } from '@sapphire/decorators';
-import { raidUnlock, scheduleRaidUnlock, getAllLockdowns } from '../index.js';
+import { Listener, Events } from "@sapphire/framework";
+import { ApplyOptions } from "@sapphire/decorators";
+import { getAllRaidLockdowns, scheduleRaidUnlock } from "../data.js";
 
-@ApplyOptions<Listener.Options>({ name: 'raids.ready', event: Events.ClientReady, once: true })
-export class RaidsReadyListener extends Listener<typeof Events.ClientReady> {
-	public async run() {
-		const lockdowns = await getAllLockdowns();
-
-		for (const record of lockdowns) {
-			const guild = container.client.guilds.cache.get(record.guildId);
-			if (!guild) continue;
-
-			const unlocksAt = new Date(record.unlocksAt);
-			if (unlocksAt.getTime() <= Date.now()) {
-				await raidUnlock(guild, record.originalLevel);
-			} else {
-				scheduleRaidUnlock(guild.id, record.originalLevel, unlocksAt);
-			}
-		}
-	}
+@ApplyOptions<Listener.Options>({ event: Events.ClientReady })
+export default class RaidsReadyListener extends Listener<
+  typeof Events.ClientReady
+> {
+  public async run() {
+    const lockdowns = await getAllRaidLockdowns();
+    for (const lock of lockdowns) {
+      scheduleRaidUnlock(lock.guildId, lock.originalLevel, lock.unlocksAt);
+    }
+  }
 }
