@@ -34,26 +34,22 @@ export class PingInteractionHandler extends EmberInteractionHandler {
   ) {
     if (!(await this.checkSecurity(interaction, result.userId))) return;
 
-    try {
-      await this.acknowledge(interaction);
-      const data = await collectPingData();
+    await this.acknowledge(interaction);
+    const data = await collectPingData();
 
-      if (result.category === "overview") {
-        return interaction.editReply({
-          components: [
-            buildOverviewCard({ roundTrip: null, ...data }, result.userId),
-          ],
-        });
-      }
-
-      const card = buildDetailCard(
-        result.category as PingCategory,
-        { roundTrip: null, ...data },
-        result.userId,
-      );
-      return interaction.editReply({ components: [card] });
-    } catch (error) {
-      return this.handleError(interaction, error);
+    if (result.category === "overview") {
+      return interaction.editReply({
+        components: [
+          buildOverviewCard({ roundTrip: null, ...data }, result.userId),
+        ],
+      });
     }
+
+    const card = buildDetailCard(
+      result.category as PingCategory,
+      { roundTrip: null, ...data },
+      result.userId,
+    );
+    return interaction.editReply({ components: [card] });
   }
 }

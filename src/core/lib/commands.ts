@@ -62,7 +62,7 @@ export const replySuccess = (
   title: string,
   body: string,
   opts: ReplyOptions = {},
-) =>
+): Promise<void> =>
   sendReply(
     interaction,
     opts.ephemeral === false
@@ -75,7 +75,7 @@ export const replyError = (
   title: string,
   body: string,
   opts: ReplyOptions = {},
-) =>
+): Promise<void> =>
   sendReply(
     interaction,
     opts.ephemeral === false
@@ -88,7 +88,7 @@ export const replyWarning = (
   title: string,
   body: string,
   opts: ReplyOptions = {},
-) =>
+): Promise<void> =>
   sendReply(
     interaction,
     opts.ephemeral === false
@@ -101,7 +101,7 @@ export const replyInfo = (
   title: string,
   body: string,
   opts: ReplyOptions = {},
-) =>
+): Promise<void> =>
   sendReply(
     interaction,
     opts.ephemeral === false
@@ -164,7 +164,7 @@ export abstract class EmberCommand extends Command {
   public reply(
     interaction: ChatInputCommandInteraction,
     payload: InteractionReplyOptions,
-  ) {
+  ): Promise<void> {
     return sendReply(interaction, payload);
   }
 
@@ -173,7 +173,7 @@ export abstract class EmberCommand extends Command {
     title: string,
     body: string,
     opts?: ReplyOptions,
-  ) {
+  ): Promise<void> {
     return replySuccess(interaction, title, body, opts);
   }
 
@@ -182,7 +182,7 @@ export abstract class EmberCommand extends Command {
     title: string,
     body: string,
     opts?: ReplyOptions,
-  ) {
+  ): Promise<void> {
     return replyError(interaction, title, body, opts);
   }
 
@@ -191,7 +191,7 @@ export abstract class EmberCommand extends Command {
     title: string,
     body: string,
     opts?: ReplyOptions,
-  ) {
+  ): Promise<void> {
     return replyWarning(interaction, title, body, opts);
   }
 
@@ -200,7 +200,7 @@ export abstract class EmberCommand extends Command {
     title: string,
     body: string,
     opts?: ReplyOptions,
-  ) {
+  ): Promise<void> {
     return replyInfo(interaction, title, body, opts);
   }
 
@@ -277,7 +277,7 @@ export abstract class EmberSubcommand extends Subcommand {
   public reply(
     interaction: ChatInputCommandInteraction,
     payload: InteractionReplyOptions,
-  ) {
+  ): Promise<void> {
     return sendReply(interaction, payload);
   }
 
@@ -286,7 +286,7 @@ export abstract class EmberSubcommand extends Subcommand {
     title: string,
     body: string,
     opts?: ReplyOptions,
-  ) {
+  ): Promise<void> {
     return replySuccess(interaction, title, body, opts);
   }
 
@@ -295,7 +295,7 @@ export abstract class EmberSubcommand extends Subcommand {
     title: string,
     body: string,
     opts?: ReplyOptions,
-  ) {
+  ): Promise<void> {
     return replyError(interaction, title, body, opts);
   }
 
@@ -304,7 +304,7 @@ export abstract class EmberSubcommand extends Subcommand {
     title: string,
     body: string,
     opts?: ReplyOptions,
-  ) {
+  ): Promise<void> {
     return replyWarning(interaction, title, body, opts);
   }
 
@@ -313,7 +313,7 @@ export abstract class EmberSubcommand extends Subcommand {
     title: string,
     body: string,
     opts?: ReplyOptions,
-  ) {
+  ): Promise<void> {
     return replyInfo(interaction, title, body, opts);
   }
 

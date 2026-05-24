@@ -14,6 +14,7 @@ const LIVE_UPDATE_INTERVAL = 10_000;
 
 @ApplyOptions<Command.Options>({
   name: "ping",
+  aliases: ["pong", "latency"],
   description: "Check the bot status, latency, and system health.",
 })
 export class PingCommand extends EmberCommand {
@@ -31,22 +32,24 @@ export class PingCommand extends EmberCommand {
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
     const data = await collectPingData();
 
-    await interaction.reply({
+    const response = await interaction.reply({
       flags: PING_FLAGS,
       components: [
         buildOverviewCard({ roundTrip: null, ...data }, interaction.user.id),
       ],
+      allowedMentions: {},
+      withResponse: true,
     });
 
-    const response = await interaction.fetchReply();
+    const msg = response.resource!.message!;
+    const roundTrip = msg.createdTimestamp - interaction.createdTimestamp;
 
-    const roundTrip = response.createdTimestamp - interaction.createdTimestamp;
-
-    const msg = await interaction.editReply({
+    await interaction.editReply({
       flags: PING_FLAGS,
       components: [
         buildOverviewCard({ roundTrip, ...data }, interaction.user.id),
       ],
+      allowedMentions: {},
     });
 
     void this.#startLiveUpdates(interaction.user.id, msg);
@@ -62,6 +65,7 @@ export class PingCommand extends EmberCommand {
       components: [
         buildOverviewCard({ roundTrip: null, ...data }, message.author.id),
       ],
+      allowedMentions: {},
     });
 
     const roundTrip = msg.createdTimestamp - message.createdTimestamp;
@@ -71,6 +75,7 @@ export class PingCommand extends EmberCommand {
       components: [
         buildOverviewCard({ roundTrip, ...data }, message.author.id),
       ],
+      allowedMentions: {},
     });
 
     void this.#startLiveUpdates(message.author.id, msg);
@@ -89,6 +94,7 @@ export class PingCommand extends EmberCommand {
         .edit({
           flags: PING_FLAGS,
           components: [buildOverviewCard({ roundTrip: null, ...data }, userId)],
+          allowedMentions: {},
         })
         .catch(() => clearInterval(interval));
     }, LIVE_UPDATE_INTERVAL);

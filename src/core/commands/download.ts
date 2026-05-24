@@ -25,8 +25,8 @@ export class DownloadCommand extends EmberCommand {
     message: Message,
     args: Args,
   ): Promise<void> {
-    const repoName = await args.pick("string").catch(() => null);
-    const moduleName = await args.pick("string").catch(() => null);
+    const repoName = await args.pick("string" as any).catch(() => null);
+    const moduleName = await args.pick("string" as any).catch(() => null);
 
     if (!repoName || !moduleName) {
       await message.reply({

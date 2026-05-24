@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.git/
+.antigravitycli/
+.env
+*.log
+docker/
+docs/
+tests/

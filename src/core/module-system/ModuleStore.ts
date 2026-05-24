@@ -268,9 +268,8 @@ export class ModuleStore extends Store<Module> {
       const indexPath = await this._findIndex(sub);
       if (indexPath) {
         await this._ingest(sub, indexPath, found, globalState);
-      } else if (depth === 0) {
-        await this._walk(sub, found, globalState, depth + 1);
       }
+      await this._walk(sub, found, globalState, depth + 1);
     }
   }
 

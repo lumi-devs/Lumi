@@ -1,5 +1,5 @@
 import type { Redis } from "ioredis";
-import type { prisma } from "#database/prisma.js";
+import type { EmberPrismaClient } from "#database/client.js";
 import type { ModuleStore } from "#core/module-system/ModuleStore.js";
 import type { RabbitClient } from "#lib/rabbit.js";
 import type { InvalidationBus } from "#database/redis.js";
@@ -19,7 +19,7 @@ export interface EmberScheduledTasks {}
 
 declare module "@sapphire/pieces" {
   interface Container {
-    readonly prisma: typeof prisma;
+    readonly prisma: EmberPrismaClient;
     readonly redis: Redis;
     readonly invalidation: InvalidationBus;
     readonly db: DatabaseRepositories;

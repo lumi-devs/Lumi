@@ -13,13 +13,11 @@ import {
   type Message,
 } from "discord.js";
 import { EmberCommand } from "#lib/commands.js";
-import { EmberColors } from "#utilities/branding.js";
 import { AFK_MAX_REASON_LENGTH, sanitizeReason } from "../index.js";
 import { EmberEmojis } from "#utilities/assets.js";
 
 function afkCard(title: string, body: string) {
   const c = new ContainerBuilder();
-  c.setAccentColor(EmberColors.PRIMARY);
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(`**${title}**`),
   );
@@ -102,10 +100,7 @@ export default class AfkCommand extends EmberCommand {
   public override async messageRun(message: Message, args: Args) {
     if (!message.inGuild()) return;
 
-    const reason =
-      args.getOption("reason") ??
-      (await args.rest("string").catch(() => undefined)) ??
-      "AFK";
+    const reason = (await args.rest("string").catch(() => undefined)) ?? "AFK";
     const cleanedReason = sanitizeReason(reason);
     const { member } = message;
     const user = message.author;

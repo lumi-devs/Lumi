@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 import { container } from "@sapphire/framework";
 import type { Redis } from "ioredis";
 import type { ModuleRecord } from "#core/module-system/ModuleStore.js";
+import { logError } from "#utilities/errors.js";
 
 export interface ShardInfo {
   id: number;
@@ -182,7 +183,7 @@ async function getGatewayNode() {
     );
     return res.match(/colo=([A-Z0-9]+)/)?.[1] ?? "Unknown";
   } catch (err: unknown) {
-    container.logger.warn("[Ping] Gateway node lookup failed:", err);
+    logError("Ping: Gateway node lookup failed", err);
     return "Unknown";
   }
 }
@@ -256,7 +257,7 @@ async function postgresStats() {
       txRate: cachedTxRate,
     };
   } catch (err: unknown) {
-    container.logger.warn("[Ping] Postgres stats failed:", err);
+    logError("Ping: Postgres stats failed", err);
     return {
       dbSize: null,
       dbUptimeSecs: null,
@@ -290,7 +291,7 @@ async function redisStats(redis: Redis) {
       redisTotalKeys: dbSize,
     };
   } catch (err: unknown) {
-    container.logger.warn("[Ping] Redis stats failed:", err);
+    logError("Ping: Redis stats failed", err);
     return {
       redisVersion: "unknown",
       redisUptimeSecs: 0,
@@ -354,13 +355,19 @@ async function hostStats() {
   };
 }
 
+let cachedDepCount: number | null = null;
+let cachedCodeLines: number | null = null;
+
 async function countDeps() {
+  if (cachedDepCount !== null) return cachedDepCount;
   const nmPath = path.join(process.cwd(), "node_modules");
   const dirs = await fs.readdir(nmPath).catch(() => []);
-  return dirs.filter((d) => !d.startsWith(".")).length;
+  cachedDepCount = dirs.filter((d) => !d.startsWith(".")).length;
+  return cachedDepCount;
 }
 
 async function countCodeLines() {
+  if (cachedCodeLines !== null) return cachedCodeLines;
   const srcPath = path.join(process.cwd(), "src");
   let total = 0;
   const walk = async (dir: string): Promise<void> => {
@@ -379,7 +386,8 @@ async function countCodeLines() {
     }
   };
   await walk(srcPath);
-  return total;
+  cachedCodeLines = total;
+  return cachedCodeLines;
 }
 
 const _req = createRequire(import.meta.url);
@@ -401,7 +409,7 @@ export function getRuntimeLabel() {
 
 export async function collectPingData(): Promise<Omit<PingData, "roundTrip">> {
   const { client, redis, moduleStore, stats, rabbit } = container;
-  const wsPing = client.ping ?? 0;
+  const wsPing = client.ws.ping ?? 0;
 
   recordInvocation(wsPing);
 
@@ -441,32 +449,14 @@ export async function collectPingData(): Promise<Omit<PingData, "roundTrip">> {
   const cpus = os.cpus();
 
   const shards: ShardInfo[] = [];
-  const wsShards =
-    (
-      client.ws as unknown as {
-        shards?: Map<
-          number,
-          { ping: number; status: number; sequence: number }
-        >;
-      }
-    ).shards ?? new Map();
-  for (const [id, shard] of wsShards) {
-    const statusMap: Record<number, string> = {
-      0: "Ready",
-      1: "Connecting",
-      2: "Reconnecting",
-      3: "Idle",
-      4: "Nearly",
-      5: "Disconnected",
-      6: "Waiting for Guilds",
-      7: "Identifying",
-      8: "Resuming",
-    };
+  const shardIds = client.options.shards ?? [0];
+  const ids = Array.isArray(shardIds) ? shardIds : [0];
+  for (const id of ids) {
     shards.push({
-      id,
-      ping: shard.ping < 0 ? -1 : shard.ping,
-      status: statusMap[shard.status] ?? "Unknown",
-      sequence: shard.sequence ?? 0,
+      id: Number(id),
+      ping: wsPing < 0 ? -1 : wsPing,
+      status: client.isReady() ? "Ready" : "Disconnected",
+      sequence: 0,
     });
   }
 
@@ -483,7 +473,7 @@ export async function collectPingData(): Promise<Omit<PingData, "roundTrip">> {
       rabbitQueued = q.messageCount;
       rabbitConsumers = q.consumerCount;
     } catch (err: unknown) {
-      container.logger.warn("[Ping] RabbitMQ queue check failed:", err);
+      logError("Ping: RabbitMQ queue check failed", err);
     }
   }
 
@@ -530,7 +520,7 @@ export async function collectPingData(): Promise<Omit<PingData, "roundTrip">> {
 
     uptime: client.uptime ?? 0,
     guilds: client.guilds.cache.size,
-    users: client.users.cache.size,
+    users: client.guilds.cache.reduce((acc, g) => acc + g.memberCount, 0),
     channels: client.channels.cache.size,
     modules: moduleStore.loaded(),
     avatarURL:

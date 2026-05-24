@@ -35,7 +35,7 @@ export function cardFor(error: unknown): {
 export async function respond(
   interaction: RepliableInteraction,
   options: InteractionReplyOptions,
-) {
+): Promise<Message | undefined> {
   if (interaction.replied || interaction.deferred) {
     // Note: editReply ignores 'flags'. If the original reply wasn't ephemeral,
     // we can't make this one ephemeral. We filter 'flags' out to prevent D.JS warnings.
@@ -55,7 +55,7 @@ export async function respond(
 export async function respondMessage(
   message: Message,
   options: MessageReplyOptions,
-) {
+): Promise<Message | undefined> {
   const reply = await message.reply(options);
   setTimeout(() => {
     reply.delete().catch(() => null);
@@ -70,7 +70,7 @@ export async function handleDenied(
     | ChatInputCommandDeniedPayload
     | ContextMenuCommandDeniedPayload
     | MessageCommandDeniedPayload,
-) {
+): Promise<Message | undefined> {
   const content = payload.context.silent ? undefined : error.message;
   if (!content) return;
 

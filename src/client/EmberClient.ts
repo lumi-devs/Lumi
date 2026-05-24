@@ -12,7 +12,7 @@ import {
   InteractionContextType,
 } from "discord-api-types/v10";
 import { envParseString, envParseInteger } from "#lib/env.js";
-import { prisma } from "#database/prisma.js";
+import { prisma } from "#database/client.js";
 import {
   createRedisClient,
   parseRedisConnectionOption,
@@ -38,14 +38,12 @@ export class EmberClient extends SapphireClient {
         ReactionManager: 0,
         GuildMemberManager: 50,
       }),
-      ws: {
-        shardIds: process.env.SHARD_LIST
-          ? process.env.SHARD_LIST.split(",").map(Number)
-          : ("auto" as any),
-        shardCount: process.env.TOTAL_SHARDS
-          ? parseInt(process.env.TOTAL_SHARDS, 10)
-          : undefined,
-      },
+      shards: process.env.SHARD_LIST
+        ? process.env.SHARD_LIST.split(",").map(Number)
+        : "auto",
+      ...(process.env.TOTAL_SHARDS
+        ? { shardCount: parseInt(process.env.TOTAL_SHARDS, 10) }
+        : {}),
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
@@ -119,7 +117,11 @@ export class EmberClient extends SapphireClient {
       prisma,
       redis: createRedisClient(),
       invalidation: new InvalidationBus(createRedisClient()),
-      db: new DatabaseService(prisma, createRedisClient(), container.logger),
+      db: new DatabaseService(
+        prisma as any,
+        createRedisClient(),
+        container.logger,
+      ),
       modules: Object.create(null),
       moduleStore,
       workers: new WorkerManager(),
@@ -161,6 +163,23 @@ export class EmberClient extends SapphireClient {
     this.on("messageCreate", (m) => {
       if (!m.author.bot) container.stats.messages++;
     });
+
+    // 4. Graceful Shutdown Hooks
+    process.on("SIGINT", async () => {
+      container.logger.info(
+        "[Process] Received SIGINT, initiating graceful shutdown...",
+      );
+      await this.destroy();
+      process.exit(0);
+    });
+
+    process.on("SIGTERM", async () => {
+      container.logger.info(
+        "[Process] Received SIGTERM, initiating graceful shutdown...",
+      );
+      await this.destroy();
+      process.exit(0);
+    });
   }
 
   public override async login(token?: string) {
@@ -196,6 +215,15 @@ export class EmberClient extends SapphireClient {
     if (container.rabbit.connected) {
       container.rabbit.startConsumers();
     }
+
+    // 3. Database Liveness Check
+    setInterval(async () => {
+      try {
+        await container.prisma.$queryRaw`SELECT 1`;
+      } catch (err: unknown) {
+        container.logger.error("[Database] Liveness check failed:", err);
+      }
+    }, 60_000);
 
     return result;
   }

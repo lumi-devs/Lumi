@@ -7,6 +7,7 @@ import type { Channel, ConsumeMessage } from "amqplib";
 import { EventEmitter } from "node:events";
 import { randomUUID } from "node:crypto";
 import { container } from "@sapphire/framework";
+import { logError, errorFrom } from "#utilities/errors.js";
 
 // ── Job Queue ───────────────────────────────────────────────────────────────
 
@@ -74,8 +75,8 @@ function handleJob(ch: Channel, msg: ConsumeMessage | null) {
         ]);
       }
       ch.ack(msg);
-    } catch (err) {
-      container.logger.error(`[Jobs] ${msg.fields.routingKey} failed:`, err);
+    } catch (err: unknown) {
+      logError(`Jobs: ${msg.fields.routingKey} failed`, err);
       ch.nack(msg, false, !msg.fields.redelivered);
     }
   })();
@@ -122,9 +123,12 @@ async function dispatchRpc(req: RpcRequest): Promise<RpcResponse> {
   try {
     return { id: req.id, ok: true, data: await handler(req) };
   } catch (err: unknown) {
-    const error = err as Error;
-    container.logger.error(`[RPC] ${req.action} error:`, error);
-    return { id: req.id, ok: false, error: error.message ?? "Internal error" };
+    logError(`RPC: ${req.action} error`, err);
+    return {
+      id: req.id,
+      ok: false,
+      error: errorFrom(err).message ?? "Internal error",
+    };
   }
 }
 
@@ -145,7 +149,7 @@ function handleRpc(ch: Channel, msg: ConsumeMessage | null) {
       }
       ch.ack(msg);
     } catch (err: unknown) {
-      container.logger.error("[RabbitMQ] Failed to handle RPC message:", err);
+      logError("RabbitMQ: Failed to handle RPC message", err);
       ch.nack(msg, false, false);
     }
   })();
@@ -211,13 +215,11 @@ export class RabbitClient {
   public async close() {
     await this.channel
       .close()
-      .catch((err) =>
-        container.logger.warn("[RabbitMQ] Channel close failed:", err),
-      );
+      .catch((err: unknown) => logError("RabbitMQ: Channel close failed", err));
     await this.connection
       .close()
-      .catch((err) =>
-        container.logger.warn("[RabbitMQ] Connection close failed:", err),
+      .catch((err: unknown) =>
+        logError("RabbitMQ: Connection close failed", err),
       );
   }
 
@@ -228,8 +230,8 @@ export class RabbitClient {
       if (data.event) {
         this._replies.emit(`event:${data.event}`, data);
       }
-    } catch (err) {
-      container.logger.error("[RabbitMQ] Event parse failed", err);
+    } catch (err: unknown) {
+      logError("RabbitMQ: Event parse failed", err);
     }
   }
 

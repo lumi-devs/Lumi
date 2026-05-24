@@ -28,26 +28,22 @@ export default class AfkMentionsHandler extends EmberInteractionHandler {
   ) {
     if (!(await this.checkSecurity(interaction, userId))) return;
 
-    try {
-      await this.acknowledge(interaction);
-      const mentions = await getAfkMentions(interaction.guildId!, userId);
+    await this.acknowledge(interaction);
+    const mentions = await getAfkMentions(interaction.guildId!, userId);
 
-      const card = makeListCard(
-        ((s: string) =>
-          s) as unknown as import("@sapphire/plugin-i18next").TFunction,
-        `${EmberEmojis.MAIL} Recent Mentions`,
-        mentions.map(
-          (m) =>
-            `<@${m.authorId}> in <#${m.channelId}> — ${formatUptime(Date.now() - m.ts * 1000)} ago\n[Jump to Message](https://discord.com/channels/${interaction.guildId}/${m.channelId}/${m.messageId})`,
-        ),
-        page,
-        PAGE_SIZE,
-        `afk:mentions:${userId}`,
-      );
+    const card = makeListCard(
+      ((s: string) =>
+        s) as unknown as import("@sapphire/plugin-i18next").TFunction,
+      `${EmberEmojis.MAIL} Recent Mentions`,
+      mentions.map(
+        (m) =>
+          `<@${m.authorId}> in <#${m.channelId}> — ${formatUptime(Date.now() - m.ts * 1000)} ago\n[Jump to Message](https://discord.com/channels/${interaction.guildId}/${m.channelId}/${m.messageId})`,
+      ),
+      page,
+      PAGE_SIZE,
+      `afk:mentions:${userId}`,
+    );
 
-      await interaction.editReply(card);
-    } catch (error) {
-      await this.handleError(interaction, error);
-    }
+    await interaction.editReply(card);
   }
 }
