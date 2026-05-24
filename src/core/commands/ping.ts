@@ -1,61 +1,96 @@
-import { ApplyOptions } from '@sapphire/decorators';
-import { Command } from '@sapphire/framework';
-import { type ChatInputCommandInteraction, type Message } from 'discord.js';
-import { EmberCommand } from '#lib/commands.js';
-import { collectPingData } from '../lib/ping-collect.js';
-import { buildOverviewCard, PING_FLAGS } from '../lib/ping-cards.js';
+import { ApplyOptions } from "@sapphire/decorators";
+import { Command } from "@sapphire/framework";
+import {
+  type ChatInputCommandInteraction,
+  type Message,
+  ApplicationIntegrationType,
+} from "discord.js";
+import { EmberCommand } from "#lib/commands.js";
+import { collectPingData } from "../lib/ping-collect.js";
+import { buildOverviewCard, PING_FLAGS } from "../lib/ping-cards.js";
+
+const LIVE_UPDATES_DURATION = 60_000;
+const LIVE_UPDATE_INTERVAL = 10_000;
 
 @ApplyOptions<Command.Options>({
-	name: 'ping',
-	description: 'Check the bot status, latency, and system health.'
+  name: "ping",
+  description: "Check the bot status, latency, and system health.",
 })
 export class PingCommand extends EmberCommand {
-	public override registerApplicationCommands(registry: Command.Registry) {
-		registry.registerChatInputCommand((builder) =>
-			builder //
-				.setName(this.name)
-				.setDescription(this.description)
-		);
-	}
+  public override registerApplicationCommands(registry: Command.Registry) {
+    registry.registerChatInputCommand((builder) =>
+      builder //
+        .setName(this.name)
+        .setDescription(this.description)
+        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
+        .setContexts(...this.contexts)
+        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall]),
+    );
+  }
 
-	public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-		const data = await collectPingData();
+  public override async chatInputRun(interaction: ChatInputCommandInteraction) {
+    const data = await collectPingData();
 
-		// Initial send
-		const response = await interaction.reply({
-			flags: PING_FLAGS,
-			components: [buildOverviewCard({ roundTrip: null, ...data }, interaction.user.id)],
-			fetchReply: true
-		});
+    await interaction.reply({
+      flags: PING_FLAGS,
+      components: [
+        buildOverviewCard({ roundTrip: null, ...data }, interaction.user.id),
+      ],
+    });
 
-		// Calculate round-trip
-		const roundTrip = response.createdTimestamp - interaction.createdTimestamp;
+    const response = await interaction.fetchReply();
 
-		// Update with round-trip
-		await interaction.editReply({
-			flags: PING_FLAGS,
-			components: [buildOverviewCard({ roundTrip, ...data }, interaction.user.id)]
-		});
-	}
+    const roundTrip = response.createdTimestamp - interaction.createdTimestamp;
 
-	public override async messageRun(message: Message) {
-		if (!message.channel.isSendable()) return;
+    const msg = await interaction.editReply({
+      flags: PING_FLAGS,
+      components: [
+        buildOverviewCard({ roundTrip, ...data }, interaction.user.id),
+      ],
+    });
 
-		const data = await collectPingData();
+    void this.#startLiveUpdates(interaction.user.id, msg);
+  }
 
-		// Initial send
-		const sent = await message.channel.send({
-			flags: PING_FLAGS,
-			components: [buildOverviewCard({ roundTrip: null, ...data }, message.author.id)]
-		});
+  public override async messageRun(message: Message) {
+    if (!message.channel.isSendable()) return;
 
-		// Calculate round-trip
-		const roundTrip = sent.createdTimestamp - message.createdTimestamp;
+    const data = await collectPingData();
 
-		// Update with round-trip
-		await sent.edit({
-			flags: PING_FLAGS,
-			components: [buildOverviewCard({ roundTrip, ...data }, message.author.id)]
-		});
-	}
+    let msg = await message.reply({
+      flags: PING_FLAGS,
+      components: [
+        buildOverviewCard({ roundTrip: null, ...data }, message.author.id),
+      ],
+    });
+
+    const roundTrip = msg.createdTimestamp - message.createdTimestamp;
+
+    msg = await msg.edit({
+      flags: PING_FLAGS,
+      components: [
+        buildOverviewCard({ roundTrip, ...data }, message.author.id),
+      ],
+    });
+
+    void this.#startLiveUpdates(message.author.id, msg);
+  }
+
+  #startLiveUpdates(userId: string, msg: Message) {
+    const start = Date.now();
+    const interval = setInterval(async () => {
+      if (Date.now() - start >= LIVE_UPDATES_DURATION) {
+        clearInterval(interval);
+        return;
+      }
+
+      const data = await collectPingData();
+      await msg
+        .edit({
+          flags: PING_FLAGS,
+          components: [buildOverviewCard({ roundTrip: null, ...data }, userId)],
+        })
+        .catch(() => clearInterval(interval));
+    }, LIVE_UPDATE_INTERVAL);
+  }
 }

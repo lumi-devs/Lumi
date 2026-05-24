@@ -1,62 +1,81 @@
-import { ApplyOptions } from '@sapphire/decorators';
-import { ApplicationCommandRegistry } from '@sapphire/framework';
-import { Subcommand } from '@sapphire/plugin-subcommands';
-import { EmberSubcommand } from '#lib/commands.js';
-import { PermissionLevel } from '#lib/permissions.js';
-import { MessageFlags } from 'discord.js';
-import { ephemeralCard, makeSuccessCard, makeErrorCard } from '#utilities/cards.js';
-import { writeModuleConfig } from '#database/settings/guild.js';
+import { ApplyOptions } from "@sapphire/decorators";
+import { ApplicationCommandRegistry } from "@sapphire/framework";
+import { Subcommand } from "@sapphire/plugin-subcommands";
+import { EmberSubcommand } from "#lib/commands.js";
+import { PermissionLevel } from "#lib/permissions.js";
+import { MessageFlags, ApplicationIntegrationType } from "discord.js";
+import { ephemeralCard, makeSuccessCard } from "#utilities/cards.js";
+import { EmberEmojis } from "#utilities/assets.js";
 
-@ApplyOptions<Subcommand.Options>({
-	name: 'dashboard',
-	description: 'Manage dashboard configuration and layout',
-	preconditions: ['GuildOnly', { name: 'MinimumPermissionLevel', context: { minimumPermissionLevel: PermissionLevel.GUILD_OWNER } }],
-	subcommands: [{ name: 'layout', chatInputRun: 'chatInputLayout' }]
+@ApplyOptions<EmberSubcommand.Options>({
+  name: "dashboard",
+  description: "Manage dashboard configuration and layout",
+  preconditions: ["GuildOnly"],
+  permissionLevel: PermissionLevel.GUILD_OWNER,
+  subcommands: [{ name: "layout", chatInputRun: "chatInputLayout" }],
 })
 export class DashboardCommand extends EmberSubcommand {
-	public override registerApplicationCommands(registry: ApplicationCommandRegistry): void {
-		registry.registerChatInputCommand((builder) =>
-			builder
-				.setName('dashboard')
-				.setDescription('Manage dashboard configuration and layout')
-				.setDMPermission(false)
-				.addSubcommand((sub) =>
-					sub
-						.setName('layout')
-						.setDescription('Set the widget layout for the dashboard')
-						.addStringOption((opt) => opt.setName('layout').setDescription('JSON array of module widgets').setRequired(true))
-				)
-		);
-	}
+  public override registerApplicationCommands(
+    registry: ApplicationCommandRegistry,
+  ): void {
+    registry.registerChatInputCommand((builder) =>
+      builder
+        .setName("dashboard")
+        .setDescription("Manage dashboard configuration and layout")
+        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
+        .setContexts(...this.contexts)
+        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall])
+        .addSubcommand((sub) =>
+          sub
+            .setName("layout")
+            .setDescription("Set the widget layout for the dashboard")
+            .addStringOption((opt) =>
+              opt
+                .setName("layout")
+                .setDescription("JSON array of module widgets")
+                .setRequired(true),
+            ),
+        ),
+    );
+  }
 
-	public async chatInputLayout(interaction: Subcommand.ChatInputCommandInteraction): Promise<void> {
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-		const guildId = interaction.guild!.id;
-		const rawLayout = interaction.options.getString('layout', true);
+  private get guildSettingsService(): import("#core/services/GuildSettingsService.js").GuildSettingsService {
+    return this.container.stores
+      .get("services")
+      .get(
+        "guild-settings",
+      ) as import("#core/services/GuildSettingsService.js").GuildSettingsService;
+  }
 
-		let layout;
-		try {
-			layout = JSON.parse(rawLayout);
-			if (!Array.isArray(layout)) throw new Error('Layout must be a JSON array');
-		} catch (err) {
-			await this.reply(interaction, ephemeralCard(makeErrorCard('Invalid JSON', 'The layout must be a valid JSON array of widget names.')));
-			return;
-		}
+  public async chatInputLayout(
+    interaction: Subcommand.ChatInputCommandInteraction,
+  ): Promise<void> {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const guildId = interaction.guild!.id;
+    const rawLayout = interaction.options.getString("layout", true);
 
-		// Store layout in core module config
-		await writeModuleConfig(guildId, 'core', 'dashboard_layout', layout);
-
-		// Broadcast layout change to dashboard via SSE (RabbitMQ fanout)
-		if (this.container.rabbit) {
-			await this.container.rabbit.publishEvent('dashboard.layout.updated', {
-				guildId,
-				layout
-			});
-		}
-
-		await this.reply(
-			interaction,
-			ephemeralCard(makeSuccessCard('Layout Updated', `Dashboard layout updated successfully to: \`${JSON.stringify(layout)}\``))
-		);
-	}
+    try {
+      const layout = await this.guildSettingsService.setDashboardLayout(
+        guildId,
+        rawLayout,
+      );
+      this.container.logger.info(
+        `[Dashboard] ${EmberEmojis.GEAR} Layout updated for guild ${guildId} by ${interaction.user.tag}`,
+      );
+      await this.reply(
+        interaction,
+        ephemeralCard(
+          makeSuccessCard(
+            `${EmberEmojis.GEAR} Layout Updated`,
+            `Dashboard layout updated successfully to: \`${JSON.stringify(layout)}\``,
+          ),
+        ),
+      );
+    } catch (err: unknown) {
+      const error = err as Error;
+      return this.replyError(interaction, "Validation Failed", error.message, {
+        ephemeral: true,
+      });
+    }
+  }
 }

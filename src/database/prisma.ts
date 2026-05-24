@@ -1,8 +1,13 @@
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
-const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URL,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+});
 const adapter = new PrismaPg(pool);
 
 /**
@@ -12,4 +17,4 @@ const adapter = new PrismaPg(pool);
  */
 export const prisma = new PrismaClient({ adapter });
 
-export * from '@prisma/client';
+export * from "@prisma/client";

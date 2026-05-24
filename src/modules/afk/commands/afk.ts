@@ -1,179 +1,139 @@
-import { ApplyOptions } from '@sapphire/decorators';
-import { Args, Command } from '@sapphire/framework';
-import type { Message } from 'discord.js';
-import { EmberCommand } from '#lib/commands.js';
-import { PermissionLevel } from '#lib/permissions.js';
-import { EmberColors } from '#utilities/branding.js';
-import { makeCard, makeInfoCard, makeSuccessCard, makeWarningCard } from '#utilities/cards.js';
+import { ApplyOptions } from "@sapphire/decorators";
+import { Args, Command } from "@sapphire/framework";
 import {
-	NICK_PREFIX,
-	AFK_MAX_REASON_LENGTH,
-	AFK_REMOVAL_COOLDOWN_MS,
-	afkDurationSince,
-	getAfk,
-	isAfkNickPrefixEnabled,
-	removeAfk,
-	sanitizeReason,
-	setAfk,
-	armRemovalCooldown,
-	getAfkEntriesForGuild,
-	getAfkStats,
-	getAllAfkEntries
-} from '../index.js';
+  ContainerBuilder,
+  SeparatorBuilder,
+  TextDisplayBuilder,
+} from "@discordjs/builders";
+import {
+  ApplicationIntegrationType,
+  MessageFlags,
+  SeparatorSpacingSize,
+  type GuildMember,
+  type Message,
+} from "discord.js";
+import { EmberCommand } from "#lib/commands.js";
+import { EmberColors } from "#utilities/branding.js";
+import { AFK_MAX_REASON_LENGTH, sanitizeReason } from "../index.js";
+import { EmberEmojis } from "#utilities/assets.js";
 
-const OWNER_ONLY = {
-	name: 'MinimumPermissionLevel' as const,
-	context: { minimumPermissionLevel: PermissionLevel.BOT_OWNER }
-};
-
-@ApplyOptions<Command.Options>({
-	name: 'afk',
-	description: 'Set yourself AFK with an optional reason.',
-	preconditions: ['GuildOnly', 'ModuleEnabled']
-})
-export class AfkCommand extends EmberCommand {
-	public override registerApplicationCommands(registry: Command.Registry) {
-		registry.registerChatInputCommand((builder) =>
-			builder
-				.setName(this.name)
-				.setDescription(this.description)
-				.addStringOption((option) =>
-					option.setName('reason').setDescription('The reason for being AFK').setMaxLength(AFK_MAX_REASON_LENGTH).setRequired(false)
-				)
-		);
-	}
-
-	public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
-		const reason = sanitizeReason(interaction.options.getString('reason') ?? 'AFK');
-		const { guildId } = interaction;
-		const userId = interaction.user.id;
-
-		const existing = await getAfk(guildId!, userId);
-
-		let title: string;
-		let body: string;
-		if (existing) {
-			if (existing.reason === reason) {
-				return this.replySuccess(interaction, 'Already AFK', `You are already AFK with the reason: **${reason}**`, { ephemeral: true });
-			}
-			await setAfk(guildId!, userId, reason);
-			title = '✏️ AFK Updated';
-			body = `AFK reason updated to: **${reason}**`;
-		} else {
-			await setAfk(guildId!, userId, reason);
-			title = '✅ AFK Set';
-			body = `You are now AFK: **${reason}**`;
-
-			const { member } = interaction;
-			if (
-				member &&
-				(member as any).displayName &&
-				!(member as any).displayName.startsWith(NICK_PREFIX) &&
-				(await isAfkNickPrefixEnabled(guildId!))
-			) {
-				void (member as any).setNickname(`${NICK_PREFIX}${(member as any).displayName}`.slice(0, 32)).catch(() => null);
-			}
-		}
-
-		await armRemovalCooldown(guildId!, userId, AFK_REMOVAL_COOLDOWN_MS);
-		return this.replySuccess(interaction, title, body, { ephemeral: true });
-	}
-
-	public override async messageRun(message: Message, args: Args): Promise<void> {
-		if (!message.inGuild()) return;
-
-		const reason = sanitizeReason(await args.rest('string').catch(() => 'AFK'));
-		void message.delete().catch(() => null);
-
-		const { guildId } = message;
-		const userId = message.author.id;
-		const existing = await getAfk(guildId, userId);
-
-		let title: string;
-		let body: string;
-		if (existing) {
-			if (existing.reason === reason) return;
-			await setAfk(guildId, userId, reason);
-			title = '✏️ AFK Updated';
-			body = `${message.author.toString()}, AFK reason updated to: **${reason}**`;
-		} else {
-			await setAfk(guildId, userId, reason);
-			title = '✅ AFK Set';
-			body = `${message.author.toString()}, you are now AFK: **${reason}**`;
-
-			const { member } = message;
-			if (member && !member.displayName.startsWith(NICK_PREFIX) && (await isAfkNickPrefixEnabled(guildId))) {
-				void member.setNickname(`${NICK_PREFIX}${member.displayName}`.slice(0, 32)).catch(() => null);
-			}
-		}
-		await armRemovalCooldown(guildId, userId, AFK_REMOVAL_COOLDOWN_MS);
-
-		if (!message.channel.isSendable()) return;
-		const sent = await message.channel.send({ ...makeWarningCard(title, body), allowedMentions: { parse: [] } }).catch(() => null);
-		if (sent) setTimeout(() => sent.delete().catch(() => null), 20_000);
-	}
+function afkCard(title: string, body: string) {
+  const c = new ContainerBuilder();
+  c.setAccentColor(EmberColors.PRIMARY);
+  c.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(`**${title}**`),
+  );
+  c.addSeparatorComponents(
+    new SeparatorBuilder()
+      .setSpacing(SeparatorSpacingSize.Small)
+      .setDivider(true),
+  );
+  c.addTextDisplayComponents(new TextDisplayBuilder().setContent(body));
+  return { flags: MessageFlags.IsComponentsV2 as number, components: [c] };
 }
 
 @ApplyOptions<Command.Options>({
-	name: 'afklist',
-	description: 'List users currently AFK in this server (owner only).',
-	preconditions: ['GuildOnly', OWNER_ONLY]
+  name: "afk",
+  description: "Set yourself AFK with an optional reason.",
+  preconditions: ["GuildOnly", "ModuleEnabled"],
+  module: "afk",
 })
-export class AfkListCommand extends EmberCommand {
-	public override async messageRun(message: Message): Promise<void> {
-		if (!message.inGuild()) return;
-		const entries = await getAfkEntriesForGuild(message.guildId!);
-		if (entries.length === 0) {
-			await message.reply({
-				...makeInfoCard('AFK List', 'No users are currently AFK in this server.'),
-				allowedMentions: { parse: [] }
-			});
-			return;
-		}
-		const lines = entries.map((e) => `<@${e.userId}> — \`${e.reason}\` *(for ${afkDurationSince(e.since)})*`);
-		await message.reply({
-			...makeWarningCard('📜 AFK List', lines.join('\n'), {
-				footer: `Total AFK in this server: ${entries.length}`
-			}),
-			allowedMentions: { parse: [] }
-		});
-	}
-}
+export default class AfkCommand extends EmberCommand {
+  public override registerApplicationCommands(registry: Command.Registry) {
+    registry.registerChatInputCommand((builder) =>
+      builder
+        .setName(this.name)
+        .setDescription(this.description)
+        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
+        .setContexts(...this.contexts)
+        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall])
+        .addStringOption((opt) =>
+          opt
+            .setName("reason")
+            .setDescription("The reason for being AFK")
+            .setMaxLength(AFK_MAX_REASON_LENGTH)
+            .setRequired(false),
+        ),
+    );
+  }
 
-@ApplyOptions<Command.Options>({
-	name: 'afkstats',
-	description: 'Show AFK system stats (owner only).',
-	preconditions: [OWNER_ONLY]
-})
-export class AfkStatsCommand extends EmberCommand {
-	public override async messageRun(message: Message): Promise<void> {
-		const stats = await getAfkStats();
-		const body = `**Active AFK entries:** ${stats.activeEntries}\n**Active cooldowns:** ${stats.activeCooldowns}`;
-		await message.reply({ ...makeCard(EmberColors.PRIMARY, '📊 AFK System Stats', body), allowedMentions: { parse: [] } });
-	}
-}
+  private get afkService(): import("../services/AfkService.js").default {
+    return this.container.stores
+      .get("services")
+      .get("afk") as import("../services/AfkService.js").default;
+  }
 
-@ApplyOptions<Command.Options>({
-	name: 'afkclean',
-	description: 'Remove AFK entries whose users are no longer cached (owner only).',
-	preconditions: [OWNER_ONLY]
-})
-export class AfkCleanCommand extends EmberCommand {
-	public override async messageRun(message: Message): Promise<void> {
-		if (message.channel.isSendable()) {
-			await message.channel
-				.send({ ...makeInfoCard('AFK Cleanup', 'Cleaning up AFK entries…'), allowedMentions: { parse: [] } })
-				.catch(() => null);
-		}
-		const entries = await getAllAfkEntries();
-		let removed = 0;
-		for (const entry of entries) {
-			if (this.container.client.users.cache.has(entry.userId)) continue;
-			if (await removeAfk(entry.guildId, entry.userId).catch(() => false)) removed++;
-		}
-		await message.reply({
-			...makeSuccessCard('AFK Cleanup', `Removed ${removed} stale AFK entries.`),
-			allowedMentions: { parse: [] }
-		});
-	}
+  public override async chatInputRun(
+    interaction: Command.ChatInputCommandInteraction,
+  ) {
+    const reason = sanitizeReason(
+      interaction.options.getString("reason") ?? "AFK",
+    );
+    const guildId = interaction.guildId!;
+    const member = interaction.member as GuildMember | null;
+
+    const { status } = await this.afkService.setAfk(
+      guildId,
+      member,
+      interaction.user,
+      reason,
+    );
+
+    const title =
+      status === "ALREADY_AFK"
+        ? "Already AFK"
+        : status === "UPDATED_AFK"
+          ? `${EmberEmojis.EDIT} AFK Updated`
+          : `${EmberEmojis.AFK} AFK Set`;
+    const body =
+      status === "ALREADY_AFK"
+        ? `You are already AFK with the reason: **${reason}**`
+        : status === "UPDATED_AFK"
+          ? `AFK reason updated to: **${reason}**`
+          : `You are now AFK: **${reason}**`;
+
+    const card = afkCard(title, body);
+    return this.reply(interaction, {
+      ...card,
+      flags: card.flags | MessageFlags.Ephemeral,
+    });
+  }
+
+  public override async messageRun(message: Message, args: Args) {
+    if (!message.inGuild()) return;
+
+    const reason =
+      args.getOption("reason") ??
+      (await args.rest("string").catch(() => undefined)) ??
+      "AFK";
+    const cleanedReason = sanitizeReason(reason);
+    const { member } = message;
+    const user = message.author;
+
+    const { status } = await this.afkService.setAfk(
+      message.guildId,
+      member,
+      user,
+      cleanedReason,
+    );
+
+    const title =
+      status === "ALREADY_AFK"
+        ? "Already AFK"
+        : status === "UPDATED_AFK"
+          ? `${EmberEmojis.EDIT} AFK Updated`
+          : `${EmberEmojis.AFK} AFK Set`;
+    const body =
+      status === "ALREADY_AFK"
+        ? `You are already AFK with the reason: **${cleanedReason}**`
+        : status === "UPDATED_AFK"
+          ? `AFK reason updated to: **${cleanedReason}**`
+          : `You are now AFK: **${cleanedReason}**`;
+
+    const card = afkCard(title, body);
+    return message.reply({
+      ...card,
+      allowedMentions: {},
+    });
+  }
 }

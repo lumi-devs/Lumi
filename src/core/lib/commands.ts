@@ -1,113 +1,354 @@
-import { Command } from '@sapphire/framework';
-import { Subcommand } from '@sapphire/plugin-subcommands';
-import type { ChatInputCommandInteraction, InteractionEditReplyOptions, InteractionReplyOptions } from 'discord.js';
-import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard } from '#utilities/cards.js';
+import { Command, UserError } from "@sapphire/framework";
+import { Subcommand } from "@sapphire/plugin-subcommands";
+import type {
+  ChatInputCommandInteraction,
+  InteractionEditReplyOptions,
+  InteractionReplyOptions,
+} from "discord.js";
+import {
+  PermissionFlagsBits,
+  ApplicationIntegrationType,
+  InteractionContextType,
+} from "discord.js";
+import {
+  ephemeralCard,
+  makeErrorCard,
+  makeInfoCard,
+  makeSuccessCard,
+  makeWarningCard,
+} from "#utilities/cards.js";
+import {
+  PermissionLevel,
+  resolvePermissionLevel,
+  PERMISSION_LEVEL_NAMES,
+} from "#lib/permissions.js";
+
+function mapPermissionLevelToDiscordPermission(
+  level: PermissionLevel | undefined,
+): bigint | undefined {
+  if (level === undefined || level <= PermissionLevel.USER) return undefined;
+  switch (level) {
+    case PermissionLevel.BOT_OWNER:
+    case PermissionLevel.GUILD_OWNER:
+      return 0n;
+    case PermissionLevel.ADMIN:
+      return PermissionFlagsBits.ManageGuild;
+    case PermissionLevel.MOD:
+      return PermissionFlagsBits.ManageMessages;
+    default:
+      return undefined;
+  }
+}
 
 interface ReplyOptions {
-	ephemeral?: boolean;
+  ephemeral?: boolean;
 }
 
-// ── Free reply helpers ──────────────────────────────────────────────────────
-// Shared by EmberCommand, EmberSubcommand, and ad-hoc callers.
-
-export async function sendReply(interaction: ChatInputCommandInteraction, payload: InteractionReplyOptions): Promise<void> {
-	if (interaction.replied) {
-		await interaction.followUp(payload);
-	} else if (interaction.deferred) {
-		await interaction.editReply(payload as InteractionEditReplyOptions);
-	} else {
-		await interaction.reply(payload);
-	}
+export async function sendReply(
+  interaction: ChatInputCommandInteraction,
+  payload: InteractionReplyOptions,
+): Promise<void> {
+  if (interaction.replied) {
+    await interaction.followUp(payload);
+  } else if (interaction.deferred) {
+    await interaction.editReply(payload as InteractionEditReplyOptions);
+  } else {
+    await interaction.reply(payload);
+  }
 }
 
-export function replySuccess(interaction: ChatInputCommandInteraction, title: string, body: string, opts: ReplyOptions = {}) {
-	const card = makeSuccessCard(title, body);
-	return sendReply(interaction, opts.ephemeral === false ? card : ephemeralCard(card));
-}
+export const replySuccess = (
+  interaction: ChatInputCommandInteraction,
+  title: string,
+  body: string,
+  opts: ReplyOptions = {},
+) =>
+  sendReply(
+    interaction,
+    opts.ephemeral === false
+      ? makeSuccessCard(title, body)
+      : ephemeralCard(makeSuccessCard(title, body)),
+  );
 
-export function replyError(interaction: ChatInputCommandInteraction, title: string, body: string, opts: ReplyOptions = {}) {
-	const card = makeErrorCard(title, body);
-	return sendReply(interaction, opts.ephemeral === false ? card : ephemeralCard(card));
-}
+export const replyError = (
+  interaction: ChatInputCommandInteraction,
+  title: string,
+  body: string,
+  opts: ReplyOptions = {},
+) =>
+  sendReply(
+    interaction,
+    opts.ephemeral === false
+      ? makeErrorCard(title, body)
+      : ephemeralCard(makeErrorCard(title, body)),
+  );
 
-export function replyWarning(interaction: ChatInputCommandInteraction, title: string, body: string, opts: ReplyOptions = {}) {
-	const card = makeWarningCard(title, body);
-	return sendReply(interaction, opts.ephemeral === false ? card : ephemeralCard(card));
-}
+export const replyWarning = (
+  interaction: ChatInputCommandInteraction,
+  title: string,
+  body: string,
+  opts: ReplyOptions = {},
+) =>
+  sendReply(
+    interaction,
+    opts.ephemeral === false
+      ? makeWarningCard(title, body)
+      : ephemeralCard(makeWarningCard(title, body)),
+  );
 
-export function replyInfo(interaction: ChatInputCommandInteraction, title: string, body: string, opts: ReplyOptions = {}) {
-	const card = makeInfoCard(title, body);
-	return sendReply(interaction, opts.ephemeral === false ? card : ephemeralCard(card));
-}
+export const replyInfo = (
+  interaction: ChatInputCommandInteraction,
+  title: string,
+  body: string,
+  opts: ReplyOptions = {},
+) =>
+  sendReply(
+    interaction,
+    opts.ephemeral === false
+      ? makeInfoCard(title, body)
+      : ephemeralCard(makeInfoCard(title, body)),
+  );
 
-// ── Base classes ────────────────────────────────────────────────────────────
+export abstract class EmberCommand extends Command {
+  public readonly permissionLevel: PermissionLevel;
+  public readonly integrationTypes: ApplicationIntegrationType[];
+  public readonly contexts: InteractionContextType[];
+  public readonly defaultMemberPermissions: bigint | undefined;
 
-abstract class WithRepliesMixin extends Command {
-	protected reply(interaction: ChatInputCommandInteraction, payload: InteractionReplyOptions) {
-		return sendReply(interaction, payload);
-	}
+  public constructor(
+    context: Command.LoaderContext,
+    options: EmberCommand.Options,
+  ) {
+    const discordPerm = mapPermissionLevelToDiscordPermission(
+      options.permissionLevel,
+    );
 
-	protected replySuccess(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
-		return replySuccess(interaction, title, body, opts);
-	}
+    const isGuildOnly = options.preconditions?.includes("GuildOnly") ?? false;
+    const integrationTypes = options.integrationTypes ?? [
+      ApplicationIntegrationType.GuildInstall,
+    ];
+    const contexts = options.contexts ?? [
+      InteractionContextType.Guild,
+      ...(isGuildOnly
+        ? []
+        : [
+            InteractionContextType.BotDM,
+            InteractionContextType.PrivateChannel,
+          ]),
+    ];
 
-	protected replyError(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
-		return replyError(interaction, title, body, opts);
-	}
+    super(context, {
+      ...options,
+    });
 
-	protected replyWarning(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
-		return replyWarning(interaction, title, body, opts);
-	}
+    this.permissionLevel = options.permissionLevel ?? PermissionLevel.USER;
+    this.integrationTypes = integrationTypes;
+    this.contexts = contexts;
+    this.defaultMemberPermissions =
+      options.defaultMemberPermissions ?? discordPerm;
+  }
 
-	protected replyInfo(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
-		return replyInfo(interaction, title, body, opts);
-	}
-}
+  public async checkPermission(
+    interaction: ChatInputCommandInteraction,
+    level: PermissionLevel,
+  ) {
+    const actual = await resolvePermissionLevel(interaction);
+    if (actual < level) {
+      throw new UserError({
+        identifier: "PermissionDenied",
+        message: `You need at least **${PERMISSION_LEVEL_NAMES[level]}** level to use this.`,
+      });
+    }
+  }
 
-export abstract class EmberCommand extends WithRepliesMixin {
-	protected get prisma() {
-		return this.container.prisma;
-	}
+  public reply(
+    interaction: ChatInputCommandInteraction,
+    payload: InteractionReplyOptions,
+  ) {
+    return sendReply(interaction, payload);
+  }
 
-	protected get redis() {
-		return this.container.redis;
-	}
+  public replySuccess(
+    interaction: ChatInputCommandInteraction,
+    title: string,
+    body: string,
+    opts?: ReplyOptions,
+  ) {
+    return replySuccess(interaction, title, body, opts);
+  }
 
-	protected get moduleManager() {
-		return this.container.moduleManager;
-	}
+  public replyError(
+    interaction: ChatInputCommandInteraction,
+    title: string,
+    body: string,
+    opts?: ReplyOptions,
+  ) {
+    return replyError(interaction, title, body, opts);
+  }
+
+  public replyWarning(
+    interaction: ChatInputCommandInteraction,
+    title: string,
+    body: string,
+    opts?: ReplyOptions,
+  ) {
+    return replyWarning(interaction, title, body, opts);
+  }
+
+  public replyInfo(
+    interaction: ChatInputCommandInteraction,
+    title: string,
+    body: string,
+    opts?: ReplyOptions,
+  ) {
+    return replyInfo(interaction, title, body, opts);
+  }
+
+  protected override parseConstructorPreConditions(
+    options: EmberCommand.Options,
+  ): void {
+    super.parseConstructorPreConditions(options);
+    const level = options.permissionLevel ?? PermissionLevel.USER;
+
+    if (level === PermissionLevel.BOT_OWNER) {
+      this.preconditions.append("BotOwner");
+    } else if (level === PermissionLevel.GUILD_OWNER) {
+      this.preconditions.append("GuildOwner");
+    } else if (level === PermissionLevel.ADMIN) {
+      this.preconditions.append("Administrator");
+    } else if (level === PermissionLevel.MOD) {
+      this.preconditions.append("Moderator");
+    }
+  }
 }
 
 export abstract class EmberSubcommand extends Subcommand {
-	protected get prisma() {
-		return this.container.prisma;
-	}
+  public readonly permissionLevel: PermissionLevel;
+  public readonly integrationTypes: ApplicationIntegrationType[];
+  public readonly contexts: InteractionContextType[];
+  public readonly defaultMemberPermissions: bigint | undefined;
 
-	protected get redis() {
-		return this.container.redis;
-	}
+  public constructor(
+    context: Subcommand.LoaderContext,
+    options: EmberSubcommand.Options,
+  ) {
+    const discordPerm = mapPermissionLevelToDiscordPermission(
+      options.permissionLevel,
+    );
 
-	protected get moduleManager() {
-		return this.container.moduleManager;
-	}
+    const isGuildOnly = options.preconditions?.includes("GuildOnly") ?? false;
+    const integrationTypes = options.integrationTypes ?? [
+      ApplicationIntegrationType.GuildInstall,
+    ];
+    const contexts = options.contexts ?? [
+      InteractionContextType.Guild,
+      ...(isGuildOnly
+        ? []
+        : [
+            InteractionContextType.BotDM,
+            InteractionContextType.PrivateChannel,
+          ]),
+    ];
 
-	protected reply(interaction: ChatInputCommandInteraction, payload: InteractionReplyOptions) {
-		return sendReply(interaction, payload);
-	}
+    super(context, {
+      ...options,
+    });
 
-	protected replySuccess(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
-		return replySuccess(interaction, title, body, opts);
-	}
+    this.permissionLevel = options.permissionLevel ?? PermissionLevel.USER;
+    this.integrationTypes = integrationTypes;
+    this.contexts = contexts;
+    this.defaultMemberPermissions =
+      options.defaultMemberPermissions ?? discordPerm;
+  }
 
-	protected replyError(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
-		return replyError(interaction, title, body, opts);
-	}
+  public async checkPermission(
+    interaction: ChatInputCommandInteraction,
+    level: PermissionLevel,
+  ) {
+    const actual = await resolvePermissionLevel(interaction);
+    if (actual < level) {
+      throw new UserError({
+        identifier: "PermissionDenied",
+        message: `You need at least **${PERMISSION_LEVEL_NAMES[level]}** level to use this.`,
+      });
+    }
+  }
 
-	protected replyWarning(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
-		return replyWarning(interaction, title, body, opts);
-	}
+  public reply(
+    interaction: ChatInputCommandInteraction,
+    payload: InteractionReplyOptions,
+  ) {
+    return sendReply(interaction, payload);
+  }
 
-	protected replyInfo(interaction: ChatInputCommandInteraction, title: string, body: string, opts?: ReplyOptions) {
-		return replyInfo(interaction, title, body, opts);
-	}
+  public replySuccess(
+    interaction: ChatInputCommandInteraction,
+    title: string,
+    body: string,
+    opts?: ReplyOptions,
+  ) {
+    return replySuccess(interaction, title, body, opts);
+  }
+
+  public replyError(
+    interaction: ChatInputCommandInteraction,
+    title: string,
+    body: string,
+    opts?: ReplyOptions,
+  ) {
+    return replyError(interaction, title, body, opts);
+  }
+
+  public replyWarning(
+    interaction: ChatInputCommandInteraction,
+    title: string,
+    body: string,
+    opts?: ReplyOptions,
+  ) {
+    return replyWarning(interaction, title, body, opts);
+  }
+
+  public replyInfo(
+    interaction: ChatInputCommandInteraction,
+    title: string,
+    body: string,
+    opts?: ReplyOptions,
+  ) {
+    return replyInfo(interaction, title, body, opts);
+  }
+
+  protected override parseConstructorPreConditions(
+    options: EmberSubcommand.Options,
+  ): void {
+    super.parseConstructorPreConditions(options);
+    const level = options.permissionLevel ?? PermissionLevel.USER;
+
+    if (level === PermissionLevel.BOT_OWNER) {
+      this.preconditions.append("BotOwner");
+    } else if (level === PermissionLevel.GUILD_OWNER) {
+      this.preconditions.append("GuildOwner");
+    } else if (level === PermissionLevel.ADMIN) {
+      this.preconditions.append("Administrator");
+    } else if (level === PermissionLevel.MOD) {
+      this.preconditions.append("Moderator");
+    }
+  }
+}
+
+export namespace EmberCommand {
+  export type Options = Command.Options & {
+    permissionLevel?: PermissionLevel;
+    integrationTypes?: ApplicationIntegrationType[];
+    contexts?: InteractionContextType[];
+    defaultMemberPermissions?: bigint | null;
+  };
+}
+
+export namespace EmberSubcommand {
+  export type Options = Subcommand.Options & {
+    permissionLevel?: PermissionLevel;
+    integrationTypes?: ApplicationIntegrationType[];
+    contexts?: InteractionContextType[];
+    defaultMemberPermissions?: bigint | null;
+  };
 }

@@ -1,163 +1,238 @@
-import { SapphireClient, LogLevel, container, ApplicationCommandRegistries, RegisterBehavior } from '@sapphire/framework';
-import { GatewayIntentBits, Partials, ActivityType, type Message } from 'discord.js';
-import { envParseString, envParseInteger } from '#lib/env.js';
-import { prisma } from '#database/prisma.js';
+import {
+  SapphireClient,
+  LogLevel,
+  container,
+  ApplicationCommandRegistries,
+  RegisterBehavior,
+} from "@sapphire/framework";
+import { GatewayIntentBits, Partials, type Message, Options } from "discord.js";
+import { SlashCommandBuilder } from "@discordjs/builders";
+import {
+  ApplicationIntegrationType,
+  InteractionContextType,
+} from "discord-api-types/v10";
+import { envParseString, envParseInteger } from "#lib/env.js";
+import { prisma } from "#database/prisma.js";
+import {
+  createRedisClient,
+  parseRedisConnectionOption,
+  InvalidationBus,
+  RedisKeys,
+  RedisTTL,
+} from "#database/redis.js";
+import { RabbitClient } from "#lib/rabbit.js";
+import { WorkerManager } from "#workers/WorkerManager.js";
+import { ModuleStore } from "#core/module-system/ModuleStore.js";
 
-import { createRedisClient, parseRedisConnectionOption } from '#database/redis.js';
-import { ModuleManager } from '#lib/module-system.js';
-import { RabbitClient } from '#lib/rabbit.js';
-import { InvalidationBus } from '#database/redis.js';
-import { RedisKeys, RedisTTL } from '#database/redis.js';
-import { readSettings } from '#database/settings/guild.js';
-import { db } from '#database/settings/module.js';
-import { WorkerManager } from '#workers/WorkerManager.js';
-import { ModuleStore } from '#core/module-system/ModuleStore.js';
+import { DatabaseService } from "#root/prisma/DatabaseService.js";
+import { ServiceStore } from "#core/module-system/ServiceStore.js";
+import { BotConfig } from "#utilities/config.js";
 
-/**
- * The Ember Discord client.
- *
- * Owns the entire lifecycle:
- *   constructor → wire container services (sync)
- *   login()     → connect Postgres / Redis / RabbitMQ, load modules, log in
- *   destroy()   → flush modules, close transports, disconnect
- *
- * `main.ts` is a 12-line entrypoint. All orchestration lives here.
- */
 export class EmberClient extends SapphireClient {
-	public constructor() {
-		super({
-			shards: 'auto',
-			intents: [
-				GatewayIntentBits.Guilds,
-				GatewayIntentBits.GuildMembers,
-				GatewayIntentBits.GuildMessages,
-				GatewayIntentBits.GuildVoiceStates,
-				GatewayIntentBits.MessageContent
-			],
-			partials: [Partials.Channel, Partials.GuildMember],
-			allowedMentions: { parse: ['users'], repliedUser: true },
-			presence: { activities: [{ name: 'the server', type: ActivityType.Watching }] },
-			loadMessageCommandListeners: true,
-			loadDefaultErrorListeners: false,
-			loadScheduledTaskErrorListeners: false,
-			baseUserDirectory: new URL('../', import.meta.url),
-			defaultPrefix: envParseString('DEFAULT_PREFIX', ','),
-			fetchPrefix: (message) => this._fetchPrefix(message),
-			logger: {
-				level: envParseString('NODE_ENV', 'development') === 'production' ? LogLevel.Info : LogLevel.Debug
-			},
-			i18n: {
-				fetchLanguage: async (context) => {
-					if (!context.guild) return 'en-US';
-					const settings = await readSettings(context.guild.id);
-					return settings.locale;
-				}
-			},
-			tasks: {
-				bull: {
-					connection: {
-						...parseRedisConnectionOption(),
-						db: envParseInteger('REDIS_TASK_DB', 1)
-					}
-				}
-			}
-		});
+  public constructor() {
+    super({
+      makeCache: Options.cacheWithLimits({
+        ...Options.DefaultMakeCacheSettings,
+        MessageManager: 0,
+        PresenceManager: 0,
+        ReactionManager: 0,
+        GuildMemberManager: 50,
+      }),
+      ws: {
+        shardIds: process.env.SHARD_LIST
+          ? process.env.SHARD_LIST.split(",").map(Number)
+          : ("auto" as any),
+        shardCount: process.env.TOTAL_SHARDS
+          ? parseInt(process.env.TOTAL_SHARDS, 10)
+          : undefined,
+      },
+      intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.MessageContent,
+      ],
+      partials: [Partials.Channel, Partials.GuildMember],
+      allowedMentions: { parse: ["users"], repliedUser: true },
+      presence: {
+        activities: [
+          {
+            name: BotConfig.presence.activityText,
+            type: BotConfig.presence.activityType,
+          },
+        ],
+        status: BotConfig.presence.status as any,
+      },
+      loadMessageCommandListeners: true,
+      loadDefaultErrorListeners: false,
+      loadScheduledTaskErrorListeners: false,
+      baseUserDirectory: new URL("../", import.meta.url),
+      defaultPrefix: envParseString("DEFAULT_PREFIX", ","),
+      fetchPrefix: (m) => this._fetchPrefix(m),
+      logger: {
+        level:
+          envParseString("NODE_ENV", "development") === "production"
+            ? LogLevel.Info
+            : LogLevel.Debug,
+      },
+      i18n: {
+        fetchLanguage: async (ctx) => {
+          if (!ctx.guild) return "en-US";
+          const settings = await container.db.getGuildSettings(ctx.guild.id);
+          return settings.locale;
+        },
+        i18next: {
+          debug: false,
+        },
+      },
+      tasks: {
+        bull: {
+          connection: {
+            ...parseRedisConnectionOption(),
+            db: envParseInteger("REDIS_TASK_DB", 1),
+          },
+        },
+      },
+      api: {
+        prefix: "/",
+        origin: envParseString("API_ORIGIN", "http://localhost:4000"),
+        listenOptions: {
+          port: envParseInteger("API_PORT", 4000),
+        },
+      },
+    });
 
-		this.stores.register(new ModuleStore());
+    // 1. Module system setup
+    const moduleStore = new ModuleStore();
+    moduleStore.addRoot(new URL("../modules/", import.meta.url));
+    this.stores.register(new ServiceStore());
+    this.stores.register(moduleStore);
+    this.stores.registerPath(new URL("../core/", import.meta.url));
+    this.stores.registerPath(new URL("../core/permissions/", import.meta.url));
+    this.stores
+      .get("listeners")
+      .registerPath(new URL("../core/sentry/", import.meta.url));
 
-		// ── Synchronous DI wiring ────────────────────────────────────────────
-		// Anything async (connect / handshake) happens in login(), not here.
-		// Prisma 7: connection URL is no longer in schema.prisma — it goes through
-		// a driver adapter on the client. `prisma.config.ts` provides the URL to
-		// the Prisma CLI; the runtime client needs its own adapter instance.
-		Reflect.set(container, 'prisma', prisma);
-		Reflect.set(container, 'redis', createRedisClient());
-		Reflect.set(container, 'invalidation', new InvalidationBus(createRedisClient()));
-		Reflect.set(container, 'db', db);
-		Reflect.set(container, 'modules', Object.create(null));
-		Reflect.set(container, 'moduleManager', new ModuleManager(new URL('../modules/', import.meta.url)));
-		Reflect.set(container, 'workers', new WorkerManager());
+    // 2. Container injection
+    Object.assign(container, {
+      prisma,
+      redis: createRedisClient(),
+      invalidation: new InvalidationBus(createRedisClient()),
+      db: new DatabaseService(prisma, createRedisClient(), container.logger),
+      modules: Object.create(null),
+      moduleStore,
+      workers: new WorkerManager(),
+      stats: {
+        messages: 0,
+        identifies: 0,
+        resumes: 0,
+        lastIdentify: null,
+        lastResume: null,
+      },
+    });
 
-		// Register core pieces path so CoreModule is discovered and loaded
-		this.stores.registerPath(new URL('../core/', import.meta.url));
+    ApplicationCommandRegistries.setDefaultBehaviorWhenNotIdentical(
+      RegisterBehavior.BulkOverwrite,
+    );
 
-		ApplicationCommandRegistries.setDefaultBehaviorWhenNotIdentical(RegisterBehavior.BulkOverwrite);
+    // Patch toJSON to ensure Discord-side synchronization
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    const originalToJSON = SlashCommandBuilder.prototype.toJSON;
+    SlashCommandBuilder.prototype.toJSON = function toJSON() {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const json = originalToJSON.call(this);
 
-		// ── Global Stats Tracking ───────────────────────────────────────────
-		container.stats = {
-			messages: 0,
-			identifies: 0,
-			resumes: 0,
-			lastIdentify: null as Date | null,
-			lastResume: null as Date | null
-		};
+      // Discord defaults integration_types to [GuildInstall]
+      json.integration_types ??= [ApplicationIntegrationType.GuildInstall];
 
-		this.on('messageCreate', () => container.stats.messages++);
-		this.on('shardReady', () => {
-			container.stats.identifies++;
-			container.stats.lastIdentify = new Date();
-		});
-		this.on('shardResume', () => {
-			container.stats.resumes++;
-			container.stats.lastResume = new Date();
-		});
-	}
+      // We explicitly call setContexts and setDefaultMemberPermissions on the builder now,
+      // so we only need to provide absolute defaults here if they are missing.
+      json.contexts ??= [
+        InteractionContextType.Guild,
+        InteractionContextType.BotDM,
+        InteractionContextType.PrivateChannel,
+      ];
 
-	public override async login(token?: string): Promise<string> {
-		// 1. Postgres
-		await container.prisma.$connect();
-		container.logger.info('[Startup] ✓ Prisma connected');
+      return json;
+    };
 
-		// 2. Redis cache + invalidation pub/sub
-		await container.invalidation.start();
-		container.logger.info('[Startup] ✓ Redis invalidation bus listening');
+    // 3. Stats tracking
+    this.on("messageCreate", (m) => {
+      if (!m.author.bot) container.stats.messages++;
+    });
+  }
 
-		// 3. RabbitMQ (optional)
-		const rabbitUrl = envParseString('RABBITMQ_URL', '');
-		if (rabbitUrl) {
-			container.rabbit = new RabbitClient(rabbitUrl);
-			await container.rabbit.waitForConnect();
-			container.logger.info('[Startup] ✓ RabbitMQ connected (RPC + job queue)');
-		} else {
-			container.logger.info('[Startup] · RabbitMQ skipped (no RABBITMQ_URL)');
-		}
+  public override async login(token?: string) {
+    await container.prisma.$connect();
+    await container.invalidation.start();
 
-		// 4. Modules — discover, register pieces with Sapphire stores, then run
-		//    each module's onLoad hook. Must happen BEFORE super.login() so the
-		//    stores see the piece dirs when they boot.
-		await container.moduleManager.discover();
-		container.moduleManager.registerPieces();
-		await container.moduleManager.loadAll();
-		container.logger.info('[Startup] ✓ Modules loaded');
+    const rabbitUrl = envParseString("RABBITMQ_URL");
+    container.rabbit = new RabbitClient(rabbitUrl);
 
-		// 5. Connect to Discord
-		return super.login(token);
-	}
+    // 1. Wait for connection with a 15s timeout
+    try {
+      await Promise.race([
+        container.rabbit.waitForConnect(),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error("RabbitMQ connection timeout")),
+            15_000,
+          ),
+        ),
+      ]);
+    } catch (err: unknown) {
+      container.logger.error(
+        "[RabbitMQ] Connection failed or timed out. Background tasks will be unavailable.",
+        err,
+      );
+    }
 
-	public override async destroy(): Promise<void> {
-		container.logger.info('[Shutdown] Tearing down…');
-		await container.moduleManager.unloadAll();
-		await super.destroy();
-		await container.workers.destroy();
-		await container.rabbit?.close();
-		await container.invalidation.stop();
-		await container.redis.quit().catch(() => undefined);
-		await container.prisma.$disconnect().catch(() => undefined);
-		container.logger.info('[Shutdown] ✓ Clean exit');
-	}
+    await this.stores.get("modules").discover();
 
-	private async _fetchPrefix(message: Message): Promise<string | string[] | null> {
-		const guildId = message.guild?.id;
-		const fallback = envParseString('DEFAULT_PREFIX', ',');
-		if (!guildId) return fallback;
+    const result = await super.login(token);
 
-		const cacheKey = RedisKeys.guildPrefixes(guildId);
-		const cached = await container.redis.get(cacheKey);
-		if (cached) return JSON.parse(cached) as string[];
+    // 2. Start consumers if connected
+    if (container.rabbit.connected) {
+      container.rabbit.startConsumers();
+    }
 
-		const settings = await readSettings(guildId);
-		const prefixes = settings.prefix ? [settings.prefix, fallback] : [fallback];
-		await container.redis.setex(cacheKey, RedisTTL.guildPrefix, JSON.stringify(prefixes));
-		return prefixes;
-	}
+    return result;
+  }
+
+  public override async destroy() {
+    await super.destroy();
+    await container.workers.destroy();
+    await container.rabbit?.close();
+    await container.invalidation.stop();
+    await container.redis
+      .quit()
+      .catch((err) =>
+        container.logger.warn("[Client] Redis quit failed:", err),
+      );
+    await container.prisma
+      .$disconnect()
+      .catch((err) =>
+        container.logger.warn("[Client] Prisma disconnect failed:", err),
+      );
+  }
+
+  private async _fetchPrefix(message: Message) {
+    if (!message.guild) return envParseString("DEFAULT_PREFIX", ",");
+
+    const cacheKey = RedisKeys.guildPrefixes(message.guild.id);
+    const cached = await container.redis.get(cacheKey);
+    if (cached) return JSON.parse(cached) as string[];
+
+    const settings = await container.db.getGuildSettings(message.guild.id);
+    const fallback = envParseString("DEFAULT_PREFIX", ",");
+    const prefixes = settings.prefix ? [settings.prefix] : [fallback];
+
+    await container.redis.setex(
+      cacheKey,
+      RedisTTL.guildPrefix,
+      JSON.stringify(prefixes),
+    );
+    return prefixes;
+  }
 }

@@ -1,114 +1,150 @@
-import { ApplyOptions } from '@sapphire/decorators';
-import { Module, type ModuleOptions } from '#core/module-system/Module.js';
-import { container } from '@sapphire/framework';
-import { GuildVerificationLevel, type Guild } from 'discord.js';
-import { FieldType, type ModuleMeta } from '#lib/module-system.js';
-import { registerJobHandler } from '#lib/rabbit.js';
-import { addRaidJoin, isRaidLocked, setRaidLocked, clearRaidLockdown, scheduleRaidUnlock, type RaidConfig } from '#database/settings/raids.js';
+import { Module, EmberModule, FieldType } from "#core/module-system/Module.js";
+import type { RequesterType } from "#core/lib/gdpr.js";
+import { container } from "@sapphire/framework";
+import { GuildVerificationLevel, type Guild } from "discord.js";
+import { registerJobHandler } from "#lib/rabbit.js";
+import { EmberEmojis } from "#utilities/assets.js";
+import {
+  recordRaidJoin,
+  isGuildRaidLocked,
+  lockGuildForRaid,
+  unlockGuildFromRaid,
+  scheduleRaidUnlock,
+} from "./data.js";
 
-export * from '#database/settings/raids.js';
-
-declare module '#lib/rabbit.js' {
-	interface EmberJobs {
-		UNLOCK_GUILD: { guildId: string; originalLevel: GuildVerificationLevel };
-	}
+declare module "#lib/rabbit.js" {
+  interface EmberJobs {
+    UNLOCK_GUILD: { guildId: string; originalLevel: GuildVerificationLevel };
+  }
 }
 
-export { RaidConfig };
-
-// ── Detection ───────────────────────────────────────────────────────────────
-/**
- * Records a member join for velocity tracking.
- * Returns `true` if this join triggered a new lockdown.
- */
-export async function checkRaidJoin(guild: Guild, config: RaidConfig): Promise<boolean> {
-	const inWindow = await addRaidJoin(guild.id, config.joinWindowSeconds);
-	if (inWindow < config.joinThreshold) return false;
-
-	if (await isRaidLocked(guild.id)) return false;
-
-	await raidLockdown(guild, config);
-	return true;
+export interface RaidConfig {
+  joinWindowSeconds: number;
+  joinThreshold: number;
+  lockdownMinutes: number;
 }
 
-// ── Lockdown lifecycle ──────────────────────────────────────────────────────
-export async function raidLockdown(guild: Guild, config: RaidConfig): Promise<void> {
-	const originalLevel = guild.verificationLevel;
-	const unlocksAt = new Date(Date.now() + config.lockdownMinutes * 60_000);
+export async function readRaidConfig(guildId: string): Promise<RaidConfig> {
+  const [joinWindowSeconds, joinThreshold, lockdownMinutes] = await Promise.all(
+    [
+      container.db
+        .getModuleConfig(guildId, "raids", "join_window")
+        .then((v) => Number(v ?? 10)),
+      container.db
+        .getModuleConfig(guildId, "raids", "join_threshold")
+        .then((v) => Number(v ?? 10)),
+      container.db
+        .getModuleConfig(guildId, "raids", "lockdown_duration")
+        .then((v) => Number(v ?? 60)),
+    ],
+  );
 
-	await setRaidLocked(guild.id, originalLevel, config.lockdownMinutes);
-	await guild.setVerificationLevel(GuildVerificationLevel.VeryHigh, 'Raid detected — auto lockdown');
-
-	scheduleRaidUnlock(guild.id, originalLevel, unlocksAt);
+  return { joinWindowSeconds, joinThreshold, lockdownMinutes };
 }
 
-export async function raidUnlock(guild: Guild, originalLevel: GuildVerificationLevel): Promise<void> {
-	await guild.setVerificationLevel(originalLevel, 'Raid lockdown expired — auto restore');
-	await clearRaidLockdown(guild.id);
-	container.logger.info(`[Raids] Lockdown lifted in guild ${guild.name} (${guild.id})`);
+export async function checkRaidJoin(
+  guild: Guild,
+  config: RaidConfig,
+): Promise<boolean> {
+  const inWindow = await recordRaidJoin(guild.id, config.joinWindowSeconds);
+  if (inWindow < config.joinThreshold) return false;
+
+  if (await isGuildRaidLocked(guild.id)) return false;
+
+  await raidLockdown(guild, config);
+  return true;
 }
 
-// ── Module meta ─────────────────────────────────────────────────────────────
-export const meta: ModuleMeta = {
-	name: 'raids',
-	displayName: 'Raid Protection',
-	emoji: '🛡️',
-	description: 'Detects mass-join raids and automatically raises server verification to Highest for a configurable duration.',
-	configFields: [
-		{ key: 'enabled', label: 'Enabled', type: FieldType.BOOLEAN, description: 'Enable automatic raid detection and lockdown.', default: false },
-		{
-			key: 'joinWindowSeconds',
-			label: 'Join Window (seconds)',
-			type: FieldType.NUMBER,
-			description: 'Rolling time window used to measure join velocity.',
-			default: 10
-		},
-		{
-			key: 'joinThreshold',
-			label: 'Join Threshold',
-			type: FieldType.NUMBER,
-			description: 'Number of joins within the window that triggers lockdown.',
-			default: 10
-		},
-		{
-			key: 'lockdownMinutes',
-			label: 'Lockdown Duration (minutes)',
-			type: FieldType.NUMBER,
-			description: 'How long to hold the server at Highest verification before auto-restoring.',
-			default: 30
-		},
-		{
-			key: 'notifyChannelId',
-			label: 'Alert Channel',
-			type: FieldType.CHANNEL,
-			description: 'Channel to post a lockdown alert in. Leave unset to skip notifications.',
-			required: false
-		}
-	],
-	onLoad() {
-		registerJobHandler('UNLOCK_GUILD', async (data) => {
-			const guild = container.client.guilds.cache.get(data.guildId);
-			if (!guild) return;
-			await raidUnlock(guild, data.originalLevel);
-		});
-	},
-	async deleteUserData() {
-		// No PII stored by this module.
-	}
-};
+export async function raidLockdown(
+  guild: Guild,
+  config: RaidConfig,
+): Promise<void> {
+  const originalLevel = guild.verificationLevel;
+  const unlocksAt = new Date(Date.now() + config.lockdownMinutes * 60_000);
 
-@ApplyOptions<ModuleOptions>({
-	name: 'raids',
-	displayName: 'Raid Protection',
-	emoji: '🛡️',
-	description: 'Detects mass-join raids and automatically raises server verification to Highest for a configurable duration.'
+  await lockGuildForRaid(guild.id, originalLevel, config.lockdownMinutes);
+  await guild.setVerificationLevel(
+    GuildVerificationLevel.VeryHigh,
+    "Raid detected — auto lockdown",
+  );
+
+  scheduleRaidUnlock(guild.id, originalLevel, unlocksAt);
+}
+
+export async function raidUnlock(
+  guild: Guild,
+  originalLevel: GuildVerificationLevel,
+): Promise<void> {
+  await guild.setVerificationLevel(
+    originalLevel,
+    "Raid lockdown expired — auto restore",
+  );
+  await unlockGuildFromRaid(guild.id);
+  container.logger.info(
+    `[Raids] Lockdown lifted in guild ${guild.name} (${guild.id})`,
+  );
+}
+
+@EmberModule({
+  name: "raids",
+  displayName: "Raids",
+  emoji: EmberEmojis.RAID,
+  version: "1.0.0",
+  description:
+    "Detect rapid join bursts and automatically lock down the server.",
+  configFields: [
+    {
+      key: "join_window",
+      label: "Join Window (seconds)",
+      type: FieldType.NUMBER,
+      description: "Rolling window to count new joins.",
+      default: 10,
+    },
+    {
+      key: "join_threshold",
+      label: "Join Threshold",
+      type: FieldType.NUMBER,
+      description: "Number of joins within the window to trigger lockdown.",
+      default: 10,
+    },
+    {
+      key: "lockdown_duration",
+      label: "Lockdown Duration (minutes)",
+      type: FieldType.NUMBER,
+      description: "How long to keep the server in high-verification mode.",
+      default: 60,
+    },
+  ],
 })
-export class RaidModule extends Module {
-	public override onLoad() {
-		registerJobHandler('UNLOCK_GUILD', async (data) => {
-			const guild = this.container.client.guilds.cache.get(data.guildId);
-			if (!guild) return;
-			await raidUnlock(guild, data.originalLevel);
-		});
-	}
+export class RaidsModule extends Module {
+  public registerServices() {}
+
+  public override async deleteUserData(
+    _userId: string,
+    _requester: RequesterType,
+  ): Promise<void> {
+    // Raids module doesn't store user-specific data — all data is guild-keyed
+  }
+
+  public override onLoad() {
+    // 1. Worker job handler (acts as the primary scheduler pickup)
+    registerJobHandler("UNLOCK_GUILD", async (data) => {
+      // Instead of acting directly, we broadcast a fanout event
+      // so that ALL shards receive it. The shard that has the guild
+      // in its cache will then perform the actual unlock.
+      await this.container.rabbit?.publishEvent("raids:unlock", data);
+    });
+
+    // 2. Broadcast listener (cluster-wide sync)
+    this.container.rabbit?.onEvent("raids:unlock", async (data: unknown) => {
+      const { guildId, originalLevel } = data as {
+        guildId: string;
+        originalLevel: import("discord.js").GuildVerificationLevel;
+      };
+      const guild = this.container.client.guilds.cache.get(guildId);
+      if (!guild) return; // Guild not on this shard, ignore.
+
+      await raidUnlock(guild, originalLevel);
+    });
+  }
 }

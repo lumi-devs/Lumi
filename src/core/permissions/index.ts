@@ -1,74 +1,79 @@
-import { container, type Container } from '@sapphire/framework';
-import { envParseString } from '#lib/env.js';
-import type { Guild, GuildMember, Message, ChatInputCommandInteraction, ContextMenuCommandInteraction } from 'discord.js';
-import { readSettings } from '#database/settings/guild.js';
+import { envParseString } from "#lib/env.js";
+import { container } from "@sapphire/framework";
+import type {
+  Message,
+  ChatInputCommandInteraction,
+  ContextMenuCommandInteraction,
+  PermissionsBitField,
+  GuildMemberRoleManager,
+} from "discord.js";
+import { BotConfig } from "#utilities/config.js";
 
 export enum PermissionLevel {
-	USER = 0,
-	MOD = 5,
-	ADMIN = 7,
-	GUILD_OWNER = 8,
-	BOT_OWNER = 10
+  USER = 0,
+  MOD = 5,
+  ADMIN = 7,
+  GUILD_OWNER = 8,
+  BOT_OWNER = 10,
 }
 
 export const PERMISSION_LEVEL_NAMES: Record<PermissionLevel, string> = {
-	[PermissionLevel.USER]: 'User',
-	[PermissionLevel.MOD]: 'Moderator',
-	[PermissionLevel.ADMIN]: 'Administrator',
-	[PermissionLevel.GUILD_OWNER]: 'Server Owner',
-	[PermissionLevel.BOT_OWNER]: 'Bot Owner'
+  [PermissionLevel.USER]: BotConfig.permissions.names.USER,
+  [PermissionLevel.MOD]: BotConfig.permissions.names.MOD,
+  [PermissionLevel.ADMIN]: BotConfig.permissions.names.ADMIN,
+  [PermissionLevel.GUILD_OWNER]: BotConfig.permissions.names.GUILD_OWNER,
+  [PermissionLevel.BOT_OWNER]: BotConfig.permissions.names.BOT_OWNER,
 };
 
-export type PermissionModelType = 'role' | 'user' | 'channel' | 'category' | 'everyone';
+export type PermissionModelType =
+  | "user"
+  | "role"
+  | "channel"
+  | "category"
+  | "everyone";
 
-export interface PermissionContext {
-	userId: string;
-	guild: { id: string; ownerId: string };
-	member: {
-		roles: { cache: { has: (id: string) => boolean } };
-		permissions: { has: (perm: unknown) => boolean };
-	};
-}
-
-/**
- * Resolves the permission level of a user within a guild context.
- */
 export async function resolvePermissionLevel(
-	interactionOrMessage: Message | ChatInputCommandInteraction | ContextMenuCommandInteraction | PermissionContext,
-	_container: Container = container
+  interactionOrMessage:
+    | Message
+    | ChatInputCommandInteraction
+    | ContextMenuCommandInteraction
+    | { userId: string; guild?: any; member?: any }, // Support test mock
 ): Promise<PermissionLevel> {
-	const userId =
-		'author' in interactionOrMessage
-			? interactionOrMessage.author.id
-			: 'user' in interactionOrMessage
-				? interactionOrMessage.user.id
-				: interactionOrMessage.userId;
-	const guild = 'guild' in interactionOrMessage ? (interactionOrMessage.guild as Guild | { id: string; ownerId: string } | null) : null;
-	const member = 'member' in interactionOrMessage ? (interactionOrMessage.member as GuildMember | PermissionContext['member'] | null) : null;
+  const user =
+    "author" in interactionOrMessage
+      ? interactionOrMessage.author
+      : "user" in interactionOrMessage
+        ? interactionOrMessage.user
+        : undefined;
+  const userId = user?.id ?? ("userId" in interactionOrMessage ? interactionOrMessage.userId : undefined);
+  const ownerIds = envParseString("OWNER_IDS", "")
+    .split(",")
+    .map((id) => id.trim());
 
-	// ── Bot owner check ───────────────────────────────────────────────────────
-	const owners = envParseString('OWNER_IDS', '')
-		.split(',')
-		.map((s) => s.trim());
-	if (owners.includes(userId)) return PermissionLevel.BOT_OWNER;
+  if (userId && ownerIds.includes(userId)) return PermissionLevel.BOT_OWNER;
 
-	if (!guild || !member) return PermissionLevel.USER;
+  const { guild, member } = interactionOrMessage;
+  if (!guild || !member) return PermissionLevel.USER;
 
-	if (guild.ownerId === userId) return PermissionLevel.GUILD_OWNER;
-	if (member.permissions.has('Administrator')) return PermissionLevel.ADMIN;
+  const perms = member.permissions as PermissionsBitField;
+  const roles = member.roles as GuildMemberRoleManager;
 
-	try {
-		const settings = await readSettings(guild.id);
-		if (settings.adminRoleId && member.roles.cache.has(settings.adminRoleId)) {
-			return PermissionLevel.ADMIN;
-		}
-		if (member.permissions.has('ManageMessages')) return PermissionLevel.MOD;
-		if (settings.modRoleId && member.roles.cache.has(settings.modRoleId)) {
-			return PermissionLevel.MOD;
-		}
-	} catch {
-		// Database unavailable — fallback to basic Discord permissions
-	}
+  if (userId && guild.ownerId === userId) return PermissionLevel.GUILD_OWNER;
+  if (perms.has("Administrator")) return PermissionLevel.ADMIN;
 
-	return PermissionLevel.USER;
+  try {
+    const settings = await container.db.getGuildSettings(guild.id);
+    if (settings.adminRoleId && roles.cache.has(settings.adminRoleId))
+      return PermissionLevel.ADMIN;
+    if (perms.has("ManageMessages")) return PermissionLevel.MOD;
+    if (settings.modRoleId && roles.cache.has(settings.modRoleId))
+      return PermissionLevel.MOD;
+  } catch (err: unknown) {
+    container.logger.error(
+      "[Permissions] Failed to fetch guild settings:",
+      err,
+    );
+  }
+
+  return PermissionLevel.USER;
 }

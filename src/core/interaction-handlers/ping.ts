@@ -1,50 +1,59 @@
-import { ApplyOptions } from '@sapphire/decorators';
-import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import { type ButtonInteraction } from 'discord.js';
-import { collectPingData } from '../lib/ping-collect.js';
-import { buildOverviewCard, buildDetailCard, type PingCategory } from '../lib/ping-cards.js';
+import { ApplyOptions } from "@sapphire/decorators";
+import {
+  InteractionHandlerTypes,
+  InteractionHandler,
+} from "@sapphire/framework";
+import { type ButtonInteraction } from "discord.js";
+import { collectPingData } from "../lib/ping-collect.js";
+import {
+  buildOverviewCard,
+  buildDetailCard,
+  type PingCategory,
+} from "../lib/ping-cards.js";
+import { EmberInteractionHandler } from "../lib/interaction-handler.js";
 
 @ApplyOptions<InteractionHandler.Options>({
-	interactionHandlerType: InteractionHandlerTypes.Button
+  interactionHandlerType: InteractionHandlerTypes.Button,
 })
-export class PingInteractionHandler extends InteractionHandler {
-	public override parse(interaction: ButtonInteraction) {
-		if (!interaction.customId.startsWith('ping:')) return this.none();
+export class PingInteractionHandler extends EmberInteractionHandler {
+  public override parse(interaction: ButtonInteraction) {
+    if (!interaction.customId.startsWith("ping:")) return this.none();
 
-		const [prefix, category, userId] = interaction.customId.split(':');
-		if (prefix !== 'ping' || !category || !userId) return this.none();
+    const [prefix, category, userId] = interaction.customId.split(":");
+    if (prefix !== "ping" || !category || !userId) return this.none();
 
-		// For "Overview" button (if we still have one), we'd want to edit the original message.
-		// But per user request, category buttons should open NEW ephemerals.
+    return this.some({
+      category: category as PingCategory | "overview",
+      userId,
+    });
+  }
 
-		return this.some({ category: category as PingCategory | 'overview', userId });
-	}
+  public override async run(
+    interaction: ButtonInteraction,
+    result: { category: PingCategory | "overview"; userId: string },
+  ) {
+    if (!(await this.checkSecurity(interaction, result.userId))) return;
 
-	public override async run(interaction: ButtonInteraction, result: { category: PingCategory | 'overview'; userId: string }) {
-		// Security check: Only the original invoker can interact
-		if (interaction.user.id !== result.userId) {
-			return interaction.reply({
-				content: '❌ Only the original invoker can use these buttons.',
-				ephemeral: true
-			});
-		}
+    try {
+      await this.acknowledge(interaction);
+      const data = await collectPingData();
 
-		// Acknowledge the interaction immediately by updating the original message
-		await interaction.deferUpdate();
-		const data = await collectPingData();
+      if (result.category === "overview") {
+        return interaction.editReply({
+          components: [
+            buildOverviewCard({ roundTrip: null, ...data }, result.userId),
+          ],
+        });
+      }
 
-		// Overview button: show the main dashboard
-		if (result.category === 'overview') {
-			return interaction.editReply({
-				components: [buildOverviewCard({ roundTrip: null, ...data }, result.userId)]
-			});
-		}
-
-		// Category buttons: show the specific detail card
-		const card = buildDetailCard(result.category as PingCategory, { roundTrip: null, ...data }, result.userId);
-
-		return interaction.editReply({
-			components: [card]
-		});
-	}
+      const card = buildDetailCard(
+        result.category as PingCategory,
+        { roundTrip: null, ...data },
+        result.userId,
+      );
+      return interaction.editReply({ components: [card] });
+    } catch (error) {
+      return this.handleError(interaction, error);
+    }
+  }
 }
