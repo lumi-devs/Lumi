@@ -45,7 +45,11 @@ export async function resolvePermissionLevel(
       : "user" in interactionOrMessage
         ? interactionOrMessage.user
         : undefined;
-  const userId = user?.id ?? ("userId" in interactionOrMessage ? interactionOrMessage.userId : undefined);
+  const userId =
+    user?.id ??
+    ("userId" in interactionOrMessage
+      ? interactionOrMessage.userId
+      : undefined);
   const ownerIds = envParseString("OWNER_IDS", "")
     .split(",")
     .map((id) => id.trim());

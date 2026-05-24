@@ -1,6 +1,7 @@
 import { container } from "@sapphire/framework";
 import { envParseInteger, envParseString } from "#lib/env.js";
 import { Redis, type RedisOptions } from "ioredis";
+import { logError } from "#utilities/errors.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Redis key registry — single source of truth for every key pattern.
@@ -27,6 +28,7 @@ export const RedisKeys = {
     `ember:perms:${commandPath}:${guildId}`,
   blocked: (guildId: string | null, userId: string) =>
     `ember:block:${guildId ?? "global"}:${userId}`,
+  blockedPattern: (userId: string) => `ember:block:*:${userId}`,
   guildIgnored: (guildId: string) => `ember:ignore:guild:${guildId}`,
   channelIgnored: (guildId: string, channelId: string) =>
     `ember:ignore:channel:${guildId}:${channelId}`,
@@ -55,10 +57,6 @@ export const RedisKeys = {
   afkMentions: (guildId: string, userId: string) =>
     `ember:afk:mentions:${guildId}:${userId}`,
 
-  // ── Module: raids ──────────────────────────────────────────────────────
-  raidJoins: (guildId: string) => `ember:raid:joins:${guildId}`,
-  raidLocked: (guildId: string) => `ember:raid:locked:${guildId}`,
-
   // ── Module: tempvc ─────────────────────────────────────────────────────
   tempVc: (channelId: string) => `ember:tempvc:${channelId}`,
 } as const;
@@ -72,7 +70,6 @@ export const RedisTTL = {
   blockedCache: 300,
   ignoreCache: 300,
   botStats: 15,
-  raidWindow: 60,
   afkEntry: 24 * 60 * 60,
   afkMentions: 24 * 60 * 60,
 } as const;
@@ -98,7 +95,7 @@ export function createRedisClient(): Redis {
     enableReadyCheck: true,
   });
 
-  client.on("error", (err) => container.logger.error("[Redis]", err));
+  client.on("error", (err) => logError("Redis", err));
   client.on("connect", () => container.logger.debug("[Redis] Connected"));
   client.on("reconnecting", () =>
     container.logger.warn("[Redis] Reconnecting..."),
@@ -150,7 +147,7 @@ export class InvalidationBus {
         const { keys } = JSON.parse(payload) as { keys: string[] };
         for (const fn of this._listeners) fn(keys);
       } catch (err: unknown) {
-        container.logger.warn("[Invalidation] malformed payload:", err);
+        logError("Invalidation: malformed payload", err);
       }
     });
     this._started = true;
@@ -170,8 +167,10 @@ export class InvalidationBus {
     if (!this._started) return;
     await this._subscriber
       .unsubscribe(INVALIDATION_CHANNEL)
-      .catch(() => undefined);
-    await this._subscriber.quit().catch(() => undefined);
+      .catch((err: unknown) => logError("Redis: unsubscribe failed", err));
+    await this._subscriber
+      .quit()
+      .catch((err: unknown) => logError("Redis: quit failed", err));
     this._started = false;
   }
 }

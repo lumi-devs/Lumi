@@ -48,11 +48,7 @@ const defaultEmojis = {
   EDIT: "✏️",
   CLOCK: "🕐",
 
-  /** Raids module */
-  RAID: "🛡️",
   WARNING_SIGN: "⚠️",
-  LOCKDOWN: "🚨",
-  UNLOCK_SIGN: "🔓",
 
   /** Guild / Admin */
   GUILD: "🏰",

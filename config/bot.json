@@ -1,0 +1,35 @@
+{
+  "presence": {
+    "activityType": 3,
+    "activityText": "the server",
+    "status": "online"
+  },
+  "branding": {
+    "colors": {
+      "PRIMARY": 5793266,
+      "SUCCESS": 5763719,
+      "ERROR": 15548997,
+      "WARNING": 16705372,
+      "INFO": 5793266,
+      "NEUTRAL": 5198940,
+      "GOLD": 16762880
+    },
+    "links": {
+      "supportServer": "",
+      "website": "",
+      "github": ""
+    }
+  },
+  "permissions": {
+    "names": {
+      "USER": "User",
+      "MOD": "Moderator",
+      "ADMIN": "Administrator",
+      "GUILD_OWNER": "Server Owner",
+      "BOT_OWNER": "Bot Owner"
+    }
+  },
+  "ui": {
+    "defaultListPerPage": 10
+  }
+}

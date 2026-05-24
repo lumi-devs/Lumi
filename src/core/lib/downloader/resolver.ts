@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { ModuleInfo } from "./types.js";
 import { z } from "zod";
+import { logError } from "#utilities/errors.js";
 
 const repoSchema = z.string().regex(/^[a-zA-Z0-9_-]+$/); // Disallow dots to prevent traversal
 const branchSchema = z.string().regex(/^[a-zA-Z0-9_.-]+$/);
@@ -128,7 +129,15 @@ export class DownloadResolver {
     try {
       await fs.access(filePath);
       return true;
-    } catch {
+    } catch (err: unknown) {
+      if (
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        (err as { code: unknown }).code !== "ENOENT"
+      ) {
+        logError("DownloaderResolver._exists", err);
+      }
       return false;
     }
   }

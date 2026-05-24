@@ -1,15 +1,14 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry } from "@sapphire/framework";
+import type { Args } from "@sapphire/framework";
 import { EmberSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import { MessageFlags, ApplicationIntegrationType } from "discord.js";
+import type { Message } from "discord.js";
 import {
-  ephemeralCard,
   makeSuccessCard,
   makeErrorCard,
+  makeInfoCard,
 } from "#utilities/cards.js";
 import { EmberEmojis } from "#utilities/assets.js";
-import { Subcommand } from "@sapphire/plugin-subcommands";
 
 @ApplyOptions<EmberSubcommand.Options>({
   name: "module",
@@ -17,54 +16,11 @@ import { Subcommand } from "@sapphire/plugin-subcommands";
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.BOT_OWNER,
   subcommands: [
-    { name: "install", chatInputRun: "chatInputInstall" },
-    { name: "uninstall", chatInputRun: "chatInputUninstall" },
+    { name: "install", messageRun: "messageRunInstall" },
+    { name: "uninstall", messageRun: "messageRunUninstall" },
   ],
 })
 export class ModuleCommand extends EmberSubcommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ): void {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName("module")
-        .setDescription(
-          "Manage installation of third-party modules (Bot Owner Only)",
-        )
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall])
-        .addSubcommand((sub) =>
-          sub
-            .setName("install")
-            .setDescription("Install a module from an added repository")
-            .addStringOption((opt) =>
-              opt
-                .setName("repo")
-                .setDescription("The repository name")
-                .setRequired(true),
-            )
-            .addStringOption((opt) =>
-              opt
-                .setName("module")
-                .setDescription("The module name")
-                .setRequired(true),
-            ),
-        )
-        .addSubcommand((sub) =>
-          sub
-            .setName("uninstall")
-            .setDescription("Uninstall a third-party module")
-            .addStringOption((opt) =>
-              opt
-                .setName("module")
-                .setDescription("The module name")
-                .setRequired(true),
-            ),
-        ),
-    );
-  }
-
   private get downloaderService(): import("#core/services/DownloaderService.js").DownloaderService {
     return this.container.stores
       .get("services")
@@ -73,25 +29,36 @@ export class ModuleCommand extends EmberSubcommand {
       ) as import("#core/services/DownloaderService.js").DownloaderService;
   }
 
-  public async chatInputInstall(
-    interaction: Subcommand.ChatInputCommandInteraction,
-  ): Promise<void> {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const repoName = interaction.options.getString("repo", true);
-    const moduleName = interaction.options.getString("module", true);
+  public async messageRunInstall(message: Message, args: Args): Promise<void> {
+    const repoName = await args.pick("string").catch(() => null);
+    const moduleName = await args.pick("string").catch(() => null);
+
+    if (!repoName || !moduleName) {
+      await message.reply(
+        makeErrorCard(
+          "Missing Arguments",
+          "Usage: `,module install <repo> <module>`",
+        ),
+      );
+      return;
+    }
+
+    const msg = await message.reply(
+      makeInfoCard(
+        "Installing Module",
+        `Installing **${moduleName}** from **${repoName}**...`,
+      ),
+    );
 
     try {
       await this.downloaderService.installModule(repoName, moduleName);
       this.container.logger.debug(
-        `[Module] ${EmberEmojis.INSTALL} Installed: ${moduleName} from ${repoName} by ${interaction.user.tag}`,
+        `[Module] ${EmberEmojis.INSTALL} Installed: ${moduleName} from ${repoName} by ${message.author.tag}`,
       );
-      await this.reply(
-        interaction,
-        ephemeralCard(
-          makeSuccessCard(
-            `${EmberEmojis.INSTALL} Module Installed`,
-            `Successfully installed and loaded **${moduleName}** from **${repoName}**.`,
-          ),
+      await msg.edit(
+        makeSuccessCard(
+          `${EmberEmojis.INSTALL} Module Installed`,
+          `Successfully installed and loaded **${moduleName}** from **${repoName}**.`,
         ),
       );
     } catch (err: unknown) {
@@ -99,36 +66,44 @@ export class ModuleCommand extends EmberSubcommand {
       this.container.logger.warn(
         `[Module] ${EmberEmojis.ERROR} Install failed: ${moduleName} — ${error.message}`,
       );
-      await this.reply(
-        interaction,
-        ephemeralCard(
-          makeErrorCard(
-            `${EmberEmojis.ERROR} Failed to Install Module`,
-            error.message,
-          ),
+      await msg.edit(
+        makeErrorCard(
+          `${EmberEmojis.ERROR} Failed to Install Module`,
+          error.message,
         ),
       );
     }
   }
 
-  public async chatInputUninstall(
-    interaction: Subcommand.ChatInputCommandInteraction,
+  public async messageRunUninstall(
+    message: Message,
+    args: Args,
   ): Promise<void> {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const moduleName = interaction.options.getString("module", true);
+    const moduleName = await args.pick("string").catch(() => null);
+
+    if (!moduleName) {
+      await message.reply(
+        makeErrorCard(
+          "Missing Arguments",
+          "Usage: `,module uninstall <module>`",
+        ),
+      );
+      return;
+    }
+
+    const msg = await message.reply(
+      makeInfoCard("Uninstalling Module", `Uninstalling **${moduleName}**...`),
+    );
 
     try {
       await this.downloaderService.uninstallModule(moduleName);
       this.container.logger.debug(
-        `[Module] ${EmberEmojis.UNINSTALL} Uninstalled: ${moduleName} by ${interaction.user.tag}`,
+        `[Module] ${EmberEmojis.UNINSTALL} Uninstalled: ${moduleName} by ${message.author.tag}`,
       );
-      await this.reply(
-        interaction,
-        ephemeralCard(
-          makeSuccessCard(
-            `${EmberEmojis.UNINSTALL} Module Uninstalled`,
-            `Successfully uninstalled **${moduleName}**.`,
-          ),
+      await msg.edit(
+        makeSuccessCard(
+          `${EmberEmojis.UNINSTALL} Module Uninstalled`,
+          `Successfully uninstalled **${moduleName}**.`,
         ),
       );
     } catch (err: unknown) {
@@ -136,13 +111,10 @@ export class ModuleCommand extends EmberSubcommand {
       this.container.logger.warn(
         `[Module] ${EmberEmojis.ERROR} Uninstall failed: ${moduleName} — ${error.message}`,
       );
-      await this.reply(
-        interaction,
-        ephemeralCard(
-          makeErrorCard(
-            `${EmberEmojis.ERROR} Failed to Uninstall Module`,
-            error.message,
-          ),
+      await msg.edit(
+        makeErrorCard(
+          `${EmberEmojis.ERROR} Failed to Uninstall Module`,
+          error.message,
         ),
       );
     }

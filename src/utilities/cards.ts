@@ -2,6 +2,7 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ContainerBuilder,
+  MediaGalleryBuilder,
   SeparatorBuilder,
   TextDisplayBuilder,
   type MessageActionRowComponentBuilder,
@@ -16,6 +17,7 @@ export interface CardOptions {
   thumbnail?: string;
   divider?: boolean;
   actionRows?: ActionRowBuilder<MessageActionRowComponentBuilder>[];
+  mediaGallery?: MediaGalleryBuilder;
 }
 
 export interface CardReply {
@@ -29,13 +31,15 @@ export const ephemeralCard = (card: CardReply): CardReply => ({
 });
 
 function buildContainer(
-  color: number,
+  color: number | null,
   title: string,
   body: string | string[],
   opts: CardOptions = {},
 ) {
   const c = new ContainerBuilder();
-  c.setAccentColor(color);
+  if (color !== null) {
+    c.setAccentColor(color);
+  }
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(`## ${title}`),
   );
@@ -47,15 +51,16 @@ function buildContainer(
 
   const parts = Array.isArray(body) ? body : [body];
   for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
     if (i > 0)
       c.addSeparatorComponents(
         new SeparatorBuilder()
           .setSpacing(SeparatorSpacingSize.Small)
           .setDivider(true),
       );
-    c.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(parts[i] ?? ""),
-    );
+    if (part && part.length > 0) {
+      c.addTextDisplayComponents(new TextDisplayBuilder().setContent(part));
+    }
   }
 
   if (opts.footer) {
@@ -68,7 +73,15 @@ function buildContainer(
       new TextDisplayBuilder().setContent(`-# ${opts.footer}`),
     );
   }
-  for (const row of opts.actionRows ?? []) c.addActionRowComponents(row);
+  if (opts.mediaGallery) {
+    c.addMediaGalleryComponents(opts.mediaGallery);
+  }
+  for (const row of opts.actionRows ?? []) {
+    c.addActionRowComponents((builder) => {
+      builder.addComponents(...row.components);
+      return builder;
+    });
+  }
   return c;
 }
 
@@ -96,7 +109,7 @@ export const makeInfoCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(EmberColors.INFO, title, body, opts));
+) => wrap(buildContainer(null, title, body, opts));
 export const makeCard = (
   color: number,
   title: string,

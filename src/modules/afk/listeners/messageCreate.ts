@@ -16,6 +16,7 @@ import {
 } from "discord.js";
 import { EmberColors } from "#utilities/branding.js";
 import { makeCard } from "#utilities/cards.js";
+import { logError } from "#utilities/errors.js";
 import { RedisKeys } from "#database/redis.js";
 import { EmberEmojis } from "#utilities/assets.js";
 import {
@@ -73,8 +74,8 @@ export default class AFKMessageCreateListener extends Listener<
     const userId = message.author.id;
 
     const mentions = await getAfkMentions(guildId, userId);
-    await clearAfkEntry(guildId, userId).catch((err) =>
-      this.container.logger.warn("[AFK] Clear entry failed:", err),
+    await clearAfkEntry(guildId, userId).catch((err: unknown) =>
+      logError("AFK: Clear entry failed", err),
     );
 
     if (message.member?.displayName.startsWith(NICK_PREFIX)) {
@@ -105,7 +106,6 @@ export default class AFKMessageCreateListener extends Listener<
       : null;
 
     const welcomeCard = new ContainerBuilder();
-    welcomeCard.setAccentColor(EmberColors.PRIMARY);
     welcomeCard.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         `**${EmberEmojis.WAVE} Welcome Back!**`,
@@ -129,22 +129,24 @@ export default class AFKMessageCreateListener extends Listener<
         components: [welcomeCard],
         allowedMentions: {},
       })
-      .catch(() => null);
+      .catch((err: unknown) => {
+        logError("AFK: Welcome reply failed", err);
+        return null;
+      });
 
     if (sent) {
       setTimeout(() => {
-        void sent
-          .delete()
-          .catch((err) =>
-            this.container.logger.warn("[AFK] Delete welcome msg failed:", err),
-          );
-        void clearAfkMentions(guildId, userId).catch((err) =>
-          this.container.logger.warn("[AFK] Clear mentions failed:", err),
+        void sent.delete().catch((err: any) => {
+          if (err?.code === 10008 || err?.code === 10003) return;
+          logError("AFK: Delete welcome msg failed", err);
+        });
+        void clearAfkMentions(guildId, userId).catch((err: unknown) =>
+          logError("AFK: Clear mentions failed", err),
         );
       }, 20_000);
     } else {
-      await clearAfkMentions(guildId, userId).catch((err) =>
-        this.container.logger.warn("[AFK] Clear mentions failed:", err),
+      await clearAfkMentions(guildId, userId).catch((err: unknown) =>
+        logError("AFK: Clear mentions failed", err),
       );
     }
   }
@@ -173,7 +175,10 @@ export default class AFKMessageCreateListener extends Listener<
 
       const member = await message.guild.members
         .fetch(user.id)
-        .catch(() => null);
+        .catch((err: unknown) => {
+          logError("AFK: Fetch member failed", err);
+          return null;
+        });
       const name = member?.displayName.startsWith(NICK_PREFIX)
         ? member.displayName.slice(NICK_PREFIX.length)
         : (member?.displayName ?? user.username);
@@ -188,19 +193,18 @@ export default class AFKMessageCreateListener extends Listener<
           ),
           allowedMentions: { repliedUser: true },
         })
-        .catch(() => null);
+        .catch((err: unknown) => {
+          logError("AFK: Mention reply failed", err);
+          return null;
+        });
 
       if (sent)
         setTimeout(
           () =>
-            sent
-              .delete()
-              .catch((err) =>
-                this.container.logger.warn(
-                  "[AFK] Delete mention reply failed:",
-                  err,
-                ),
-              ),
+            sent.delete().catch((err: any) => {
+              if (err?.code === 10008 || err?.code === 10003) return;
+              logError("AFK: Delete mention reply failed", err);
+            }),
           600_000,
         );
       await setAfkCooldown(
@@ -227,8 +231,8 @@ export default class AFKMessageCreateListener extends Listener<
       RedisKeys.afkNickEditCooldown(userId),
       AFK_NICK_EDIT_COOLDOWN_MS,
     );
-    await fn().catch((err) =>
-      this.container.logger.warn("[AFK] Nickname edit failed:", err),
+    await fn().catch((err: unknown) =>
+      logError("AFK: Nickname edit failed", err),
     );
   }
 }

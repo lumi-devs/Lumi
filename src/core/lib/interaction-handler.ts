@@ -1,7 +1,7 @@
 import {
   InteractionHandler,
-  type InteractionHandlerOptions,
-  container,
+  InteractionHandlerOptions,
+  UserError,
 } from "@sapphire/framework";
 import type {
   ButtonInteraction,
@@ -11,8 +11,6 @@ import type {
   MentionableSelectMenuInteraction,
   ChannelSelectMenuInteraction,
 } from "discord.js";
-import { MessageFlags } from "discord.js";
-import { makeErrorCard } from "#utilities/cards.js";
 import { EmberEmojis } from "#utilities/assets.js";
 
 export type AnyInteraction =
@@ -38,20 +36,17 @@ export abstract class EmberInteractionHandler extends InteractionHandler {
    * @param ownerId The ID of the user who is allowed to interact.
    * @returns True if the user is allowed, false otherwise (replies with an error card).
    */
+  // eslint-disable-next-line @typescript-eslint/require-await
   protected async checkSecurity(
     interaction: AnyInteraction,
     ownerId: string,
   ): Promise<boolean> {
     if (interaction.user.id === ownerId) return true;
 
-    await interaction.reply({
-      ...makeErrorCard(
-        "Access Denied",
-        `${EmberEmojis.CROSS} Only the original invoker can use these components.`,
-      ),
-      flags: MessageFlags.Ephemeral,
+    throw new UserError({
+      identifier: "AccessDenied",
+      message: `${EmberEmojis.CROSS} Only the original invoker can use these components.`,
     });
-    return false;
   }
 
   /**
@@ -65,33 +60,6 @@ export abstract class EmberInteractionHandler extends InteractionHandler {
       !interaction.deferred
     ) {
       await interaction.deferUpdate();
-    }
-  }
-
-  /**
-   * Standard error handler for interactions.
-   * @param interaction The interaction.
-   * @param error The error that occurred.
-   */
-  protected async handleError(interaction: AnyInteraction, error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    container.logger.error(
-      `[InteractionHandler] Error in ${this.name}:`,
-      error,
-    );
-
-    const payload = {
-      ...makeErrorCard(
-        "Interaction Error",
-        `An error occurred while processing your request: \`${message}\``,
-      ),
-      components: [],
-    };
-
-    if (interaction.replied || interaction.deferred) {
-      await interaction.editReply(payload);
-    } else {
-      await interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
     }
   }
 }

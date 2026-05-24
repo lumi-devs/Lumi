@@ -1,10 +1,9 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry } from "@sapphire/framework";
-import { Subcommand } from "@sapphire/plugin-subcommands";
+import type { Args } from "@sapphire/framework";
 import { EmberSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import { MessageFlags, ApplicationIntegrationType } from "discord.js";
-import { ephemeralCard, makeSuccessCard } from "#utilities/cards.js";
+import type { Message } from "discord.js";
+import { makeSuccessCard, makeErrorCard } from "#utilities/cards.js";
 import { EmberEmojis } from "#utilities/assets.js";
 
 @ApplyOptions<EmberSubcommand.Options>({
@@ -12,33 +11,9 @@ import { EmberEmojis } from "#utilities/assets.js";
   description: "Manage dashboard configuration and layout",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.GUILD_OWNER,
-  subcommands: [{ name: "layout", chatInputRun: "chatInputLayout" }],
+  subcommands: [{ name: "layout", messageRun: "messageRunLayout" }],
 })
 export class DashboardCommand extends EmberSubcommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ): void {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName("dashboard")
-        .setDescription("Manage dashboard configuration and layout")
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall])
-        .addSubcommand((sub) =>
-          sub
-            .setName("layout")
-            .setDescription("Set the widget layout for the dashboard")
-            .addStringOption((opt) =>
-              opt
-                .setName("layout")
-                .setDescription("JSON array of module widgets")
-                .setRequired(true),
-            ),
-        ),
-    );
-  }
-
   private get guildSettingsService(): import("#core/services/GuildSettingsService.js").GuildSettingsService {
     return this.container.stores
       .get("services")
@@ -47,12 +22,19 @@ export class DashboardCommand extends EmberSubcommand {
       ) as import("#core/services/GuildSettingsService.js").GuildSettingsService;
   }
 
-  public async chatInputLayout(
-    interaction: Subcommand.ChatInputCommandInteraction,
-  ): Promise<void> {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const guildId = interaction.guild!.id;
-    const rawLayout = interaction.options.getString("layout", true);
+  public async messageRunLayout(message: Message, args: Args): Promise<void> {
+    const guildId = message.guild!.id;
+    const rawLayout = await args.rest("string").catch(() => null);
+
+    if (!rawLayout) {
+      await message.reply(
+        makeErrorCard(
+          "Missing Arguments",
+          "Usage: `,dashboard layout <json_array>`",
+        ),
+      );
+      return;
+    }
 
     try {
       const layout = await this.guildSettingsService.setDashboardLayout(
@@ -60,22 +42,19 @@ export class DashboardCommand extends EmberSubcommand {
         rawLayout,
       );
       this.container.logger.info(
-        `[Dashboard] ${EmberEmojis.GEAR} Layout updated for guild ${guildId} by ${interaction.user.tag}`,
+        `[Dashboard] ${EmberEmojis.GEAR} Layout updated for guild ${guildId} by ${message.author.tag}`,
       );
-      await this.reply(
-        interaction,
-        ephemeralCard(
-          makeSuccessCard(
-            `${EmberEmojis.GEAR} Layout Updated`,
-            `Dashboard layout updated successfully to: \`${JSON.stringify(layout)}\``,
-          ),
+      await message.reply(
+        makeSuccessCard(
+          `${EmberEmojis.GEAR} Layout Updated`,
+          `Dashboard layout updated successfully to: \`${JSON.stringify(layout)}\``,
         ),
       );
     } catch (err: unknown) {
       const error = err as Error;
-      return this.replyError(interaction, "Validation Failed", error.message, {
-        ephemeral: true,
-      });
+      await message.reply(
+        makeErrorCard("Failed to Update Layout", error.message),
+      );
     }
   }
 }
