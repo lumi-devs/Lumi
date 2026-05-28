@@ -1,0 +1,134 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "schemaVersion": 39,
+  "title": "Ember — Service Overview",
+  "tags": ["ember"],
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(ember_commands_total, service)",
+        "includeAll": true,
+        "multi": true,
+        "refresh": 2
+      }
+    ]
+  },
+  "panels": [
+    {
+      "title": "Command rate (RED — rate)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(ember_commands_total{service=~\"$service\"}[5m])) by (command)",
+          "legendFormat": "{{command}}"
+        }
+      ]
+    },
+    {
+      "title": "Command errors (RED — errors)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(ember_commands_total{service=~\"$service\",status=\"error\"}[5m])) by (command)",
+          "legendFormat": "{{command}}"
+        }
+      ]
+    },
+    {
+      "title": "Command p95 latency (RED — duration)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ember_command_duration_seconds_bucket{service=~\"$service\"}[5m])) by (le, command))",
+          "legendFormat": "{{command}}"
+        }
+      ]
+    },
+    {
+      "title": "Shard latency (ms)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "ember_shard_latency_ms{service=~\"$service\"}",
+          "legendFormat": "{{service}} shard {{shard}}"
+        }
+      ]
+    },
+    {
+      "title": "Queue depth",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "ember_queue_depth{service=~\"$service\"}",
+          "legendFormat": "{{queue}}"
+        }
+      ]
+    },
+    {
+      "title": "REST 429 rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(ember_rest_429_total{service=~\"$service\"}[5m])) by (route)",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "title": "Cache hit ratio",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "sum(rate(ember_cache_hits_total{service=~\"$service\"}[5m])) / clamp_min(sum(rate(ember_cache_hits_total{service=~\"$service\"}[5m])) + sum(rate(ember_cache_misses_total{service=~\"$service\"}[5m])), 1)",
+          "legendFormat": "hit ratio"
+        }
+      ]
+    },
+    {
+      "title": "DB pool utilisation",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "ember_pg_pool_used{service=~\"$service\"}", "legendFormat": "{{service}} used" },
+        { "expr": "ember_pg_pool_size{service=~\"$service\"}", "legendFormat": "{{service}} size" },
+        { "expr": "ember_pg_pool_waiting{service=~\"$service\"}", "legendFormat": "{{service}} waiting" }
+      ]
+    },
+    {
+      "title": "Process heap (MB)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "decmbytes" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "ember_nodejs_heap_size_used_bytes{service=~\"$service\"} / 1024 / 1024",
+          "legendFormat": "{{service}}"
+        }
+      ]
+    }
+  ]
+}

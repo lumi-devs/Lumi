@@ -1,0 +1,19 @@
+{
+  "name": "@ember/worker",
+  "version": "2.1.1",
+  "description": "Worker service — runs the full Ember bot (gateway + features + scheduler) in one process.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./main": "./src/main.ts"
+  },
+  "scripts": {
+    "start": "bun src/main.ts",
+    "dev": "bun --watch src/main.ts"
+  },
+  "dependencies": {
+    "@ember/core": "workspace:*",
+    "@sapphire/framework": "^5.5.0",
+    "@sentry/node": "^10.53.1"
+  }
+}

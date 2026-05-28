@@ -1,0 +1,14 @@
+{
+  "name": "utility",
+  "displayName": "Utility",
+  "emoji": "⚙️",
+  "description": "General utility commands.",
+  "version": "1.0.0",
+  "isCore": false,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": false,
+  "targetService": "worker",
+  "subStores": [],
+  "configFields": []
+}

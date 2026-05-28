@@ -1,203 +1,58 @@
-# ember-wizard
+# Ember Module Wizard — scaffolding a new feature
 
-Architect-mode development guidance for Ember features, bug fixes, and refactoring. Applies systematic planning, Ember-first patterns, adversarial self-review, and quality gates. Use when implementing features, fixing bugs, or making multi-file changes that require careful planning.
+Step-by-step for adding a feature module to Ember. See the `ember-*` skills in `~/.claude/skills/` for depth.
 
----
+## 1. Create the module directory
 
-## 1. Core Identity
+```
+src/modules/<name>/
+  index.ts              # @EmberModule class (REQUIRED)
+  commands/             # EmberCommand / EmberSubcommand pieces
+  listeners/            # Sapphire Listener pieces
+  interaction-handlers/ # buttons / selects / modals
+  services/             # Service singletons
+  scheduled-tasks/      # BullMQ ScheduledTask pieces  ← NEVER name this "tasks/"
+  data.ts / keys.ts / lib/ / ui/   # plain helpers (not pieces)
+```
 
-**Think Systemically, Not Locally**
-- Don't ask "How do I fix this bug?" Ask "Why does this bug exist? What systemic issue allowed it? Where else does this pattern appear?"
-- Map the entire subsystem: What other methods touch this data? What are all the concurrent access paths? What invariants must hold across ALL of them?
-
-**Quality Over Velocity** — A senior architect spends 70% understanding and 30% coding.
-
-**Be Your Own Adversary** — Before committing ANY code, attack it:
-- "What happens if this runs twice concurrently?"
-- "What if this field is null? Zero? Negative?"
-- "What assumptions am I making that could be wrong?"
-- "What invariants must hold? How would I break them?"
-
----
-
-## 2. Phase-Based Workflow
-
-### Phase 1: Planning
-
-1. Read `AGENTS.md` thoroughly
-2. Load relevant Ember skills (ember-sapphire-patterns, ember-module-system, ember-config-system, etc.)
-3. Create a todo list with phases
-4. Assess task complexity:
-   - **Simple**: Single file, obvious fix, < 50 lines
-   - **Medium**: 2-3 files, clear scope
-   - **Complex**: 4+ files, architectural impact, module creation
-
-### Phase 2: Exploration
-
-1. Search for similar implementations — methods, patterns, conventions
-2. Verify all references exist — NEVER assume
-3. Identify patterns to follow:
-   - Existing command structure (EmberSubcommand vs Command)
-   - Existing card factory usage
-   - Existing data access patterns
-   - Existing interaction handler patterns
-4. List files to modify
-
-### Phase 3: Implementation
-
-Always follow Ember's non-negotiable conventions:
-
-| Rule | File / Pattern |
-|---|---|
-| Never `new EmbedBuilder()` | Use `makeSuccessCard`, `makeErrorCard`, `makeListCard` from `#utilities/cards.js` |
-| Never hard-code Redis keys | Use `RedisKeys.*` from `src/database/redis.ts` |
-| Never `awaitMessageComponent()` | Use `InteractionHandler` piece |
-| Throw errors, never send them | Global listeners catch and render error cards |
-| Slash commands in groups | `/foo bar`, never `/foo_bar` |
-| No cross-module imports | Module data stays in module |
-| Module-specific utilities stay in module | Don't pollute `src/utilities/` |
-
-### Phase 4: Verification
-
-1. `bun run lint` — ESLint must pass
-2. `bun run typecheck` — tsc must pass
-3. Run relevant tests — `bun run test` or specific file
-4. No regressions allowed
-
-### Phase 5: Pre-Commit Review
-
-**Self-Review Checklist:**
-- [ ] All acceptance criteria addressed
-- [ ] No hard-coded values that should be constants/RedisKeys
-- [ ] All references verified with grep (never assumed)
-- [ ] All edge cases handled (null, empty, zero, missing guild, missing user)
-- [ ] Error handling uses thrown errors, not sent messages
-- [ ] UI uses card factories, not raw EmbedBuilder
-- [ ] Tests cover new functionality
-- [ ] `bun run lint` passes
-- [ ] `bun run typecheck` passes
-- [ ] No cross-module imports introduced
-
----
-
-## 3. Ember-Specific Patterns Reference
-
-### Commands
+## 2. `index.ts`
 
 ```typescript
-@ApplyOptions<Command.Options>({
-    name: 'foo',
-    description: 'Does something'
-})
-export class FooCommand extends Command {
-    public override registerApplicationCommands(registry: Command.Registry) {
-        registry.registerChatInputCommand((builder) =>
-            builder
-                .setName('foo')
-                .setDescription('Does something')
-                .addSubcommand((sub) => sub.setName('bar').setDescription('Sub-action'))
-        );
-    }
+import { Module, EmberModule, FieldType } from "#core/module-system/Module.js";
 
-    public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
-        const guildId = interaction.guildId!;
-        throw new Error('Not implemented'); // Errors auto-render as error cards
-    }
+@EmberModule({
+  name: "<name>",
+  displayName: "<Display>",
+  emoji: "✨",
+  version: "1.0.0",
+  description: "<one line>",
+  configFields: [ /* optional */ ],
+  // dependencies, conflicts, isCore as needed
+})
+export class <Name>Module extends Module {
+  // optional: onLoad/onUnload, deleteUserData(userId, requester)
 }
 ```
 
-### Subcommands (grouped — `/foo bar` never `/foo_bar`)
+The `ModuleStore` auto-discovers this and loads the sub-stores. Don't manually `registerPath` the standard sub-stores.
 
-```typescript
-@ApplyOptions<Subcommand.Options>({
-    name: 'foo',
-    subcommands: [
-        { name: 'bar', chatInputRun: 'chatInputBar', default: true },
-        { name: 'baz', chatInputRun: 'chatInputBaz' }
-    ]
-})
-export class FooCommand extends EmberSubcommand {
-    public async chatInputBar(interaction: Subcommand.ChatInputCommandInteraction) { }
-    public async chatInputBaz(interaction: Subcommand.ChatInputCommandInteraction) { }
-}
-```
+## 3. Wiring checklist
 
-### Interaction Handlers (never awaitMessageComponent)
+- **Commands**: extend `EmberCommand`; set `permissionLevel`; call `.setDefaultMemberPermissions(this.defaultMemberPermissions ?? null).setContexts(...this.contexts).setIntegrationTypes(this.integrationTypes)` on every builder.
+- **Replies**: card factories only (`#utilities/cards.js`) — no raw embeds.
+- **Data**: `container.db` only — never `container.prisma` from a module. New Prisma tables → edit `prisma/schema.prisma` + `bun run db:generate`/`db:push`.
+- **Redis**: add keys to `RedisKeys` (or module `keys.ts` with the `ember:` prefix); bust via `InvalidationBus`.
+- **Config reload**: register `container.configChangeHooks.set("<name>:<key>", fn)` in `onLoad`, delete in `onUnload`.
+- **Scheduled tasks**: piece in `scheduled-tasks/` + payload type in `EmberScheduledTasks` (`src/core/types/common.ts`) + `container.tasks.create` with a stable `jobId`. Re-arm on load if needed.
+- **GDPR**: implement `deleteUserData` if the module stores per-user data.
+- **Dashboard**: expose operations via `registerRpcHandler` in `onLoad` (Zod-validate payloads).
 
-```typescript
-@ApplyOptions<InteractionHandler.Options>({
-    interactionHandlerType: InteractionHandlerTypes.Button
-})
-export class FooHandler extends InteractionHandler {
-    public override async run(interaction: ButtonInteraction, parsed: ParsedData) { }
-}
-```
-
-### Data Access
-
-- Modules access `container.prisma` and `container.redis` directly in `src/modules/<name>/data.ts`
-- Never route module data through `DatabaseService`
-- Use `container.db` for shared config/settings access
-
-### Cards UI
-
-```typescript
-import { makeSuccessCard, makeErrorCard, makeListCard } from '#utilities/cards.js';
-
-const card = makeSuccessCard('Done!', 'Operation completed.');
-await interaction.reply(card);
-```
-
-### Config System
-
-- Config fields defined in `@EmberModule({ configFields: [...] })`
-- Guild-specific config stored in module config storage
-- `/config` command auto-generated for bool fields
-
----
-
-## 4. Adversarial Questions
-
-Before committing, ask:
-
-1. **What if this runs twice concurrently?** — Is there a race? Need AsyncQueue or atomic DB update?
-2. **What if guildId is null?** — Early return if `!interaction.guildId`
-3. **What if the Discord API returns an error?** — Is there proper error handling?
-4. **What if Redis is down?** — Does the code degrade gracefully?
-5. **What if the user doesn't exist in the DB?** — Null checks?
-6. **What assumptions am I making about data shape?** — Verify with types and runtime checks
-7. **Am I following the pattern of existing similar pieces?** — Grep for examples first
-
----
-
-## 5. Verification Commands
+## 4. Verify
 
 ```bash
-bun run lint          # ESLint (must pass)
-bun run typecheck     # tsc (must pass)
-bun run test          # vitest
-bun run dev           # Start dev server
+bun run typecheck
+bun run lint
+bun test
 ```
 
----
-
-## 6. Test Strategy by Change Type
-
-| Change Type | Strategy |
-|---|---|
-| Single file fix, < 20 lines | Related test class only |
-| Single file, 20-50 lines | Related tests + quick sanity |
-| New command/handler | Unit test for that piece |
-| New module | Full module test suite |
-| Database/schema changes | All affected test modules |
-| Cross-cutting changes | All affected modules |
-
----
-
-## 7. Summary Output
-
-After completing, provide:
-1. **What was built** — Brief description
-2. **Files modified** — List
-3. **Verification** — lint, typecheck, test results
-4. **Next steps** — Any follow-up work
+Then enable with `/module enable <name>` and test the golden path in a guild.

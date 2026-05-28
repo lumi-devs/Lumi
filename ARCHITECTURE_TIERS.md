@@ -76,27 +76,28 @@ These modules serve niche use cases, "fun" commands, or highly specific communit
 
 ## RabbitMQ Architecture Integration
 
-While most bot features are lightweight responses to commands or events, some require slow or resource-intensive processing. For these, a message queue is the ideal architecture to offload work from the main bot process, ensuring continued responsiveness. RabbitMQ is a strategic component of this project, reserved for these specific use cases.
+RabbitMQ carries exactly two things today; the general-purpose fire-and-forget job
+queue (`registerJobHandler`/`enqueueJob` + the delayed-queue/DLX) was removed because
+nothing used it.
 
-It is important to distinguish its role from the Redis-backed scheduler:
--   **Redis-based Scheduled Tasks**: Used for **time-based** jobs (e.g., "run this task every 15 minutes").
--   **RabbitMQ Message Queue**: Used for **event-based** jobs that need to be processed asynchronously by a separate worker service (e.g., "a user requested a report, generate it now").
+-   **Fanout events** — cross-process broadcasts (`ember.events`), so peer processes/shards can react to each other.
+-   **RPC bridge** — request/response between the bot and the web dashboard (`ember.rpc.requests`), gated by `isDashboardEnabled`.
 
-The following modules are prime candidates for leveraging a RabbitMQ-based worker architecture.
+Background work is handled without a Rabbit job queue:
 
-### Prime Candidates for RabbitMQ
+-   **Time-based / durable jobs** → **BullMQ** scheduled tasks (Redis DB 1). Delayed, exact-time, or repeated jobs that survive restarts. Overdue-after-downtime behaviour is governed per task by the `catchUp` policy (see `src/core/lib/scheduled-tasks.ts`).
+-   **CPU-bound work** → **`WorkerManager`** worker threads, called directly by the feature that needs them (e.g. `FilterService`). No broker hop.
 
-| Module | Use Case & Justification |
-| :--- | :--- |
-| **`ai_integrations`** | **Heavy Processing.** When a user prompts the bot for an AI task (e.g., image generation), the main bot would publish a `generate_image` job to a queue. A dedicated worker service would pick up the job, perform the slow API call to an external AI service, and publish the result back. This prevents the main bot from freezing while waiting for the AI API. |
-| **`mydata`** (Export) | **Slow I/O & Database Load.** A GDPR data export must query every table in the database. For a user active across many servers, this is a slow operation. Offloading this to a "ReportGenerator" worker via RabbitMQ prevents the main bot from lagging and allows the worker to compile the data and deliver it when ready. |
-| **`music`** | **Heavy Processing & External APIs.** Downloading tracks, transcoding them to the correct audio format, and streaming are all resource-intensive. The bot would publish a `play_track` job, and a dedicated music worker would handle the download, encoding, and voice connection, keeping the main process free. |
-| **`economy`** | **Complex & Auditable Transactions.** For features like a virtual stock market or item trading, RabbitMQ can ensure complex, multi-step transactions are processed reliably and in order. A `transaction_worker` can process a queue, ensuring each step is completed and logged before moving to the next. |
-| **`leveling`** (Analytics) | **Data Aggregation & Analysis.** If the leveling system includes generating detailed analytics reports (e.g., "activity heatmap for the last 30 days"), this slow data aggregation is a perfect job to offload to a worker. |
+### Future: candidates for a dedicated worker service
 
-### Possible Candidates (for Enhanced Resilience)
+These modules don't exist yet. If/when they do, slow or resource-intensive work
+would justify reintroducing a durable work queue (or, per the roadmap, the
+Redis Streams event bus) — not the deleted in-process Rabbit queue.
 
 | Module | Use Case & Justification |
 | :--- | :--- |
-| **`reports`** (and other logging)| **Guaranteed Delivery.** For maximum resilience, the bot could publish reports to a durable RabbitMQ queue instead of writing directly to the database. A `database_writer` worker would then pull from this queue, retrying if the database is momentarily down. |
-| **`giveaways`** | **Reliable Winner Selection.** For a large giveaway, the "end giveaway" task could be published as a job. A worker then fetches all entrants, performs the random selection, and announces the winner, ensuring a potentially slow query doesn't block the main bot. |
+| **`ai_integrations`** | **Heavy Processing.** Publish a `generate_image` job; a dedicated worker performs the slow external API call and publishes the result back, so the main process never blocks. |
+| **`music`** | **Heavy Processing & External APIs.** Track download, transcoding, and streaming run on a dedicated music worker, keeping the main process free. |
+| **`economy`** | **Complex & Auditable Transactions.** A `transaction_worker` processes multi-step transactions reliably and in order, logging each step. |
+| **`leveling`** (Analytics) | **Data Aggregation.** Offload slow report aggregation (e.g. 30-day activity heatmaps) to a worker. |
+| **`reports`** / **`giveaways`** | **Guaranteed Delivery / Reliable Selection.** Durable queueing for at-least-once delivery and slow winner-selection queries. |

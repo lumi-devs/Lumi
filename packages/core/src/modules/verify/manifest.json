@@ -1,0 +1,52 @@
+{
+  "name": "verify",
+  "displayName": "Verification",
+  "emoji": "✅",
+  "description": "Math captcha verification for new members.",
+  "version": "1.0.0",
+  "isCore": false,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": false,
+  "targetService": "worker",
+  "subStores": [
+    "commands",
+    "listeners",
+    "interaction-handlers",
+    "scheduled-tasks"
+  ],
+  "configFields": [
+    {
+      "key": "pending_role_id",
+      "type": "ROLE",
+      "label": "Pending Role",
+      "description": "Role assigned to unverified members."
+    },
+    {
+      "key": "verified_role_id",
+      "type": "ROLE",
+      "label": "Verified Role",
+      "description": "Role granted after passing the captcha."
+    },
+    {
+      "key": "timeout_minutes",
+      "type": "NUMBER",
+      "label": "Timeout (minutes)",
+      "description": "Minutes before an unverified member is kicked.",
+      "default": 5
+    },
+    {
+      "key": "kick_on_timeout",
+      "type": "BOOLEAN",
+      "label": "Kick on Timeout",
+      "description": "Whether to kick members who don't verify in time.",
+      "default": true
+    },
+    {
+      "key": "log_channel_id",
+      "type": "CHANNEL",
+      "label": "Log Channel",
+      "description": "Channel to post verification events."
+    }
+  ]
+}

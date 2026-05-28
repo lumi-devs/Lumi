@@ -1,0 +1,44 @@
+{
+  "name": "thread_cleaner",
+  "displayName": "Thread Cleaner",
+  "emoji": "🧹",
+  "description": "Automatically archives threads after a period of inactivity.",
+  "version": "1.0.0",
+  "isCore": false,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": false,
+  "targetService": "worker",
+  "subStores": [
+    "commands",
+    "listeners",
+    "scheduled-tasks"
+  ],
+  "configFields": [
+    {
+      "key": "enabled_channels",
+      "type": "STRING",
+      "label": "Enabled Channels",
+      "description": "A comma-separated list of channel IDs where new threads should be tracked.",
+      "list": true
+    },
+    {
+      "key": "inactive_duration",
+      "type": "STRING",
+      "label": "Inactivity Duration",
+      "description": "The duration of inactivity before a thread is archived (e.g., '24h', '3d', '1w').",
+      "default": "3d"
+    },
+    {
+      "key": "action",
+      "type": "ENUM",
+      "label": "Cleanup Action",
+      "description": "The action to perform on the thread after the duration.",
+      "default": "archive",
+      "choices": [
+        "archive",
+        "lock"
+      ]
+    }
+  ]
+}

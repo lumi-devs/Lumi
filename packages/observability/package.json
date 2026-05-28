@@ -1,0 +1,28 @@
+{
+  "name": "@ember/observability",
+  "version": "2.1.1",
+  "description": "Cross-service telemetry for Ember: pino structured logging with trace/correlation propagation, OpenTelemetry tracing, and Prometheus metrics. Zero discord.js deps.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./tracing": "./src/tracing.ts"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/context-async-hooks": "^2.0.0",
+    "@opentelemetry/core": "^2.0.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.214.0",
+    "@opentelemetry/instrumentation": "^0.214.0",
+    "@opentelemetry/instrumentation-amqplib": "^0.61.0",
+    "@opentelemetry/instrumentation-http": "^0.214.0",
+    "@opentelemetry/instrumentation-ioredis": "^0.66.0",
+    "@opentelemetry/instrumentation-pg": "^0.66.0",
+    "@opentelemetry/resources": "^2.0.0",
+    "@opentelemetry/sdk-trace-node": "^2.0.0",
+    "@opentelemetry/semantic-conventions": "^1.41.0",
+    "pino": "^9.0.0",
+    "pino-pretty": "^13.0.0",
+    "prom-client": "^15.0.0"
+  }
+}

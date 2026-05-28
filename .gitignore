@@ -2,6 +2,9 @@ node_modules/
 dist/
 .antigravitycli/
 prisma/
+# prisma/ above is unanchored; keep our hand-written data layer (the generated
+# client is ignored separately via /src/generated/prisma below).
+!/src/prisma/
 .env
 *.log
 logs/

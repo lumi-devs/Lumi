@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: ember
+    orgId: 1
+    folder: Ember
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

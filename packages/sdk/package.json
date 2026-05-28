@@ -1,0 +1,14 @@
+{
+  "name": "@ember/sdk",
+  "version": "2.1.1",
+  "description": "Stable addon-facing API for Ember. Addons import from here instead of reaching into @ember/core internals.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ember/contracts": "workspace:*",
+    "@ember/core": "workspace:*"
+  }
+}

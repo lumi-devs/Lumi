@@ -14,7 +14,15 @@
     "declarationMap": true,
     "sourceMap": true,
     "paths": {
-      "@prisma/client": ["./prisma/generated/client"]
+      "@prisma/client": ["./prisma/generated/client"],
+      "@ember/contracts": ["./packages/contracts/src/index.ts"],
+      "@ember/event-bus": ["./packages/event-bus/src/index.ts"],
+      "@ember/observability": ["./packages/observability/src/index.ts"],
+      "@ember/observability/tracing": ["./packages/observability/src/tracing.ts"],
+      "@ember/core": ["./packages/core/index.ts"],
+      "@ember/sdk": ["./packages/sdk/src/index.ts"],
+      "@ember/sharding": ["./packages/sharding/src/index.ts"],
+      "@ember/worker/main": ["./apps/worker/src/main.ts"]
     },
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
