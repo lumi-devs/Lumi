@@ -39,45 +39,40 @@ Ember is a highly optimized, state-of-the-art modular Discord bot platform. Rath
 
 ## 🏛️ Architecture Overview
 
-Unlike traditional monolithic Discord bots that struggle under heavy concurrent events due to single-threaded event loops, Ember implements a **Wick/Dyno-class microservice topology** coordinate via Bun workspaces:
+Unlike traditional monolithic Discord bots that struggle under heavy concurrent events due to single-threaded event loops, Ember implements a **Wick/Dyno-class microservice topology** coordinated via Bun workspaces:
 
 ```mermaid
-graph TD
-    subgraph Discord API & Gateway
-        D[Discord Gateway] <-->|WebSocket| G[Gateway Service]
+graph LR
+    %% Column 1: Discord & Gateway
+    D[Discord Gateway API] <-->|WebSocket| G[Gateway Service]
+
+    %% Column 2: Event Transport
+    G -->|Raw Packets| EB[(Redis Streams Event Bus)]
+
+    %% Column 3: Stateless Workers
+    EB -->|Replay Packets| W[Stateless Workers Pool]
+
+    %% Column 4: State, Telemetry, and Auxiliary Services
+    subgraph Data & State
+        W <-->|Cache-Aside / Mutex Locks| R[(Redis Caching & Locks)]
+        W <-->|Prisma ORM & PgBouncer| DB[(PostgreSQL Database)]
     end
 
-    subgraph Messaging & Event Transport
-        G -->|Patched handlePacket: Raw Packets| EB[(Event Bus: Redis Streams)]
-        EB -->|Consume & Replay| W1[Worker Service: Replica 1]
-        EB -->|Consume & Replay| W2[Worker Service: Replica 2]
+    subgraph Distributed Task Scheduler
+        W -->|RequestEnvelope| S[Scheduler Service]
+        S -->|BullMQ Queue| R
+        S -->|FireEnvelope| W
     end
 
-    subgraph State & Persistence
-        W1 <-->|Cache-Aside / Locks| R[(Redis Cache-Aside)]
-        W2 <-->|Cache-Aside / Locks| R
-        W1 <-->|Prisma ORM / PgBouncer| DB[(PostgreSQL)]
-        W2 <-->|Prisma ORM / PgBouncer| DB
-    end
-
-    subgraph Distributed Scheduler
-        S[Scheduler Service] <-->|BullMQ Queue| R
-        W1 -->|RequestEnvelope| S
-        W2 -->|RequestEnvelope| S
-        S -->|FireEnvelope| W1
-        S -->|FireEnvelope| W2
-    end
-
-    subgraph Outbound REST Gating
-        W1 -->|REST Actions| RP(Central REST Proxy: nirn-proxy)
-        W2 -->|REST Actions| RP
-        RP <-->|Coordinated Bucket Rate-Limits| D
+    subgraph Outbound REST Flow
+        W -->|REST Actions| RP[Central REST Proxy: nirn-proxy]
+        RP <-->|Coordinated Rate Limits| D
     end
 
     classDef services fill:#a78bfa,stroke:#1e1e2f,stroke-width:2px,color:#fff;
     classDef brokers fill:#ffb7c5,stroke:#1e1e2f,stroke-width:2px,color:#000;
     classDef dbs fill:#34d399,stroke:#1e1e2f,stroke-width:2px,color:#000;
-    class G,W1,W2,S services;
+    class G,W,S services;
     class EB brokers;
     class DB,R,RP dbs;
 ```
