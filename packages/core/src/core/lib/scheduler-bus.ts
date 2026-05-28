@@ -16,7 +16,9 @@ export const SCHEDULER_REQUEST_STREAM = "ember.scheduler.request";
 
 export const taskFireStream = (name: string) => `ember.scheduler.fire:${name}`;
 
-export interface CreateRequest<N extends keyof EmberScheduledTasks = keyof EmberScheduledTasks> {
+export interface CreateRequest<
+  N extends keyof EmberScheduledTasks = keyof EmberScheduledTasks,
+> {
   action: "create";
   name: N;
   payload: EmberScheduledTasks[N];
@@ -49,7 +51,9 @@ export interface DeleteRequest {
 
 export type RequestEnvelope = CreateRequest | DeleteRequest;
 
-export interface FireEnvelope<N extends keyof EmberScheduledTasks = keyof EmberScheduledTasks> {
+export interface FireEnvelope<
+  N extends keyof EmberScheduledTasks = keyof EmberScheduledTasks,
+> {
   name: N;
   payload: EmberScheduledTasks[N];
 }

@@ -44,28 +44,28 @@ Unlike traditional monolithic Discord bots that struggle under heavy concurrent 
 ```mermaid
 graph LR
     %% Column 1: Discord & Gateway
-    D[Discord Gateway API] <-->|WebSocket| G[Gateway Service]
+    D[Discord Platform] <-->|WebSocket Connection| G[Gateway: Traffic Receiver]
 
     %% Column 2: Event Transport
-    G -->|Raw Packets| EB[(Redis Streams Event Bus)]
+    G -->|Pushes Payloads| EB[(Event Bus: Redis Streams Queue)]
 
     %% Column 3: Stateless Workers
-    EB -->|Replay Packets| W[Stateless Workers Pool]
+    EB -->|Replays Payloads| W[Worker Pool: Feature Executor]
 
     %% Column 4: State, Telemetry, and Auxiliary Services
     subgraph Data & State
-        W <-->|Cache-Aside / Mutex Locks| R[(Redis Caching & Locks)]
-        W <-->|Prisma ORM & PgBouncer| DB[(PostgreSQL Database)]
+        W <-->|Cache-Aside / Mutex Locks| R[(Redis: Fast Memory & Locks)]
+        W <-->|Prisma ORM & PgBouncer| DB[(PostgreSQL: Main Storage)]
     end
 
     subgraph Distributed Task Scheduler
-        W -->|RequestEnvelope| S[Scheduler Service]
+        W -->|Schedule Timer| S[Scheduler: Alarm Clock]
         S -->|BullMQ Queue| R
-        S -->|FireEnvelope| W
+        S -->|Trigger Timer Event| W
     end
 
     subgraph Outbound REST Flow
-        W -->|REST Actions| RP[Central REST Proxy: nirn-proxy]
+        W -->|REST Actions| RP[REST Proxy: Rate Limit Safeguard]
         RP <-->|Coordinated Rate Limits| D
     end
 
@@ -77,71 +77,56 @@ graph LR
     class DB,R,RP dbs;
 ```
 
-### Microservice Responsibilities:
-1.  **`gateway` (`apps/gateway`)**: A zero-Sapphire, ultra-lightweight client whose sole job is maintaining Discord WebSockets, decoding gateway payloads, and publishing raw dispatches (op: 0) to **Redis Streams**. It is completely isolated and survives worker recycles.
-2.  **`worker` (`apps/worker`)**: Stateless processing nodes that suppress their WebSocket connection and consume from the Redis Streams event bus, replaying raw packets into local Sapphire clients. Scales horizontally based on queue consumer lag.
-3.  **`scheduler` (`apps/scheduler`)**: Owns the BullMQ worker and Redis DB 1. It orchestrates all time-based durable tasks (mutes, bans, captcha expiries) and triggers events across workers.
-4.  **`api` (`apps/api`)**: Translates JSON-RPC 2.0 requests between the bot and the web dashboard over RabbitMQ.
-5.  **`rest-proxy` (`nirn-proxy`)**: A centralized proxy coordinating outbound Discord REST rate limits. Every worker routes REST actions through the proxy, ensuring a shared global rate-limit bucket budget.
-
 ---
 
-## 📂 Monorepo Structure
+### 📦 Microservice Responsibilities (Explained Simply)
 
-Ember is organized under **Bun Workspaces** to guarantee absolute boundary separation and clean code sharing:
+To make Ember ultra-reliable, we split it into five isolated services. Here is what they do technically, and what that means for your server in plain English:
 
-```text
-├── apps/
-│   ├── api/             # JSON-RPC 2.0 Server for dashboard integration
-│   ├── gateway/         # Zero-Sapphire, WS gateway publisher (TRANSPORT=streams)
-│   ├── scheduler/       # BullMQ durable task coordinator
-│   └── worker/          # Stateless, Sapphire-driven module handler
-├── packages/
-│   ├── contracts/       # Shared TypeScript RPC and Bus schemas (zero runtime deps)
-│   ├── core/            # Core framework glue, module registry, and repositories
-│   ├── event-bus/       # Redis Streams consumer group and in-proc transport
-│   ├── observability/   # Prometheus metrics server and OpenTelemetry tracing
-│   ├── sdk/             # Public SDK for loading external modules
-│   └── sharding/        # Bucketed IDENTIFY cluster coordinator & session manager
-├── config/              # Grafana, Tempo, Prometheus, and OTel collector configs
-├── prisma/              # Schema definition fronted by PgBouncer transaction pooling
-└── scripts/             # Chaos injection, load-testing, and manifest generators
-```
+1.  **`gateway` (`apps/gateway`)**
+    *   **Plain English (The "Traffic Officer")**: Always stays active listening for events from Discord (like messages or joins). Even if the rest of the bot has to restart or updates code, the officer stays online, meaning **the bot never drops offline or misses an event.**
+    *   **Developer Info**: Zero-Sapphire, WS gateway publisher (`TRANSPORT=streams`).
+2.  **`worker` (`apps/worker`)**
+    *   **Plain English (The "Worker Bees")**: Does the actual work (like running filters, moderation, and command responses). If a massive rush of users joins, we can simply spin up more worker bees to divide the load, making **command responses instant under heavy traffic.**
+    *   **Developer Info**: Stateless, Sapphire-driven module handler.
+3.  **`scheduler` (`apps/scheduler`)**
+    *   **Plain English (The "Durable Alarm Clock")**: Manages delayed actions like a 1-hour mute or a 5-minute verification captcha expiry. If the entire server crashes or restarts, **the alarm clock remembers the exact second to unmute users on boot.**
+    *   **Developer Info**: BullMQ scheduler-as-a-service.
+4.  **`api` (`apps/api`)**
+    *   **Plain English (The "Dashboard Bridge")**: Safely translates configurations made on your web dashboard straight to the bot processes in real-time.
+    *   **Developer Info**: JSON-RPC 2.0 broker over RabbitMQ.
+5.  **`rest-proxy` (`nirn-proxy`)**
+    *   **Plain English (The "Rate Limit Shield")**: Discord restricts how fast a bot can talk. The rate limit shield coordinates all bot actions through a single choke point, ensuring **your bot never gets blocked or banned by Discord for talking too fast.**
+    *   **Developer Info**: Outbound REST bucket coordinator.
 
 ---
 
 ## ⚡ Core Architectural Highlights
 
-*   **Redis Streams Event Bus**: Utilizes `XADD`, `XREADGROUP`, and `XACK` with consumer groups for horizontals workers. Runs a background `XAUTOCLAIM` loop to claim stale unacknowledged messages (fault-tolerance) and routes failures to a Dead Letter Queue (DLQ) after 5 failed deliveries.
-*   **Distributed Mutex Locking**: Per-process memory locks are replaced by a **Redis Distributed Lock** engine (`SET NX PX` with Lua-fenced releases), ensuring mutual exclusion on guild configurations and state modifications across multiple worker replicas.
-*   **Consensus-Driven Sharding Coordinator**: Gateway instances join a Redis-backed cluster (`ember:cluster:<name>:members`), maintaining heartbeats via ZSETs. A temporary cluster leader is elected using a Redis lock to partition shard ranges evenly among active replicas, minimizing session churn during scaling.
-*   **Redis Session Resumption**: Persists `SessionInfo` globally in Redis (`ember:cluster:<name>:session:<shard>`) with a 1s batch flushing loop. Shards take over other processes' sessions and `RESUME` seamlessly without burning Discord `IDENTIFY` quotas.
-*   **Centralized Outbound REST Gating**: Routes outbound REST through a central proxy, disabling local discord.js limiters (`globalRequestsPerSecond: Infinity`) to eliminate double-throttling latency while guarding against CloudFlare bans.
+*   **Redis Streams Event Queue**: *What this means*: If a worker crashes mid-task, other workers automatically pick up the task where it left off (zero lost actions). *Technical*: Utilizes `XADD`/`XREADGROUP` consumer groups with `XAUTOCLAIM` stale-claiming.
+*   **Redis Distributed Mutex Locks**: *What this means*: Prevents dual-action bugs (like accidentally charging a user's wallet twice or generating duplicate case numbers). *Technical*: Implements `SET NX PX` Redis locks with Lua-fenced releases.
+*   **Consensus-Driven Sharding Coordinator**: *What this means*: Gateway replicas automatically coordinate who manages which server groups. If one gateway replica dies, the others instantly share the workload without any server downtime. *Technical*: Heartbeat-driven cluster coordinator utilizing ZSET structures.
+*   **Smart Database Pooling (PgBouncer)**: *What this means*: Shares database connection slots efficiently so the system never clogs up or runs out of database handles during massive traffic spikes. *Technical*: Frontend transaction-mode pooling.
 
 ---
 
 ## 🛡️ Audited Feature Modules
 
-Each module lives in `packages/core/src/modules/` and is discovered *manifest-first* at runtime without early code execution, making hot-reloads and dependency resolution rock-solid.
-
 ### 🤖 Multi-Threaded Word Filter (`filter`)
-*   **Facts**: Uses a highly optimized **Aho-Corasick multi-pattern search automaton**.
-*   **Offloading**: Automaton compilation (`FILTER_BUILD`) and searching (`FILTER_MATCH`) are entirely offloaded to native **Bun Worker threads**, keeping the gateway event loop completely unblocked.
-*   **Self-Healing**: If a worker node crashes or respawns, a cache-miss triggers an automatic broadcast rebuild across all worker threads before retrying.
+*   **Non-Developer Benefit**: An ultra-fast word filter that scans messages for blocked words in a single glance. It operates in the background, meaning **it never lags the bot's normal chat interactions, even on massive 100,000-user servers.**
+*   **Technical Implementation**: Uses an optimized **Aho-Corasick multi-pattern search automaton** offloaded to native **Bun Worker threads**, running background compilation and match actions with self-healing cache-miss recovery.
 
 ### ✅ Interactive Captcha Sequence (`verify`)
-*   **Facts**: Provides a highly polished **emoji-sequence math verification sequence** using Discord button components.
-*   **State Control**: Captcha sequence progress, attempts remaining, and correct emoji answers are stored strictly in Redis under `VerifyKeys.seqState` with a strict `EXAT` TTL.
-*   **Reliability**: A background `captcha-expiry` Sweeper sweeps inactive sessions, executing a kick action on timeout if configured.
+*   **Non-Developer Benefit**: Gated captcha verification for new members. It presents a highly polished, interactive sequence of clicking matching emojis in an exact order using Discord buttons, providing a **visually premium and highly secure way to stop automated raid bots.**
+*   **Technical Implementation**: Captcha sequence progress, attempts, and emoji keys are stored in Redis under strict `EXAT` absolute time-to-live expirations, with automated `captcha-expiry` background task sweeps.
 
-### 🔨 Robust Moderation & GDPR Compliance (`mod`)
-*   **Facts**: Features `ban`, `kick`, `timeout`, `quarantine`, and `sanitize` commands with an atomic `GuildCaseCounter` to prevent duplicate case number generation.
-*   **GDPR Privacy**: Implements strict data purges (`deleteUserData`). Moderation cases are kept for audit integrity but **anonymize** both the subject's and moderator's Snowflake strings to `'0'`.
-*   **State Reconciler**: Implements `reconcileScheduledJobs` on startup, checking Postgres against BullMQ to re-arm pending unmutes/unbans after downtimes.
+### 🔨 Robust Moderation & GDPR Anonymization (`mod`)
+*   **Non-Developer Benefit**: Absolute legal safety for user privacy. If a user requests their data to be deleted under GDPR, **the bot fully purges their personal details but preserves case histories and numbers by replacing all user details with '0', keeping your moderation logs clean and intact.**
+*   **Technical Implementation**: Features `ban`/`kick`/`timeout`/`quarantine` with atomic `GuildCaseCounter` generators. Integrates `deleteUserData` hooks that purge blocklists/audit ledgers while anonymizing moderation cases.
 
-### ⚙️ Granular RBAC Overrides (`permissions_mgr`)
-*   **Facts**: Extends Sapphire's `AllFlowsPrecondition` to check permission overrides per command path and guild.
-*   **Priority Chain**: Overrides are evaluated in a strict precedence order:
+### ⚙️ Granular Role & Channel Overrides (`permissions_mgr`)
+*   **Non-Developer Benefit**: Total control over who can use what. You can allow or deny specific commands for specific users, specific roles, specific channels, or entire channel categories on a highly granular basis.
+*   **Technical Implementation**: Extends Sapphire's `AllFlowsPrecondition` to check overrides per command path in a strict priority precedence:
     $$\text{User Overrides} > \text{Channel Overrides} > \text{Category Overrides} > \text{Role Position (Highest first)} > \text{@everyone}$$
 
 ---
