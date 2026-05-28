@@ -1,0 +1,14 @@
+{
+  "name": "@ember/api",
+  "version": "2.1.1",
+  "description": "Thin api entrypoint — boots @ember/worker until the real service split (Part II).",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun src/main.ts",
+    "dev": "bun --watch src/main.ts"
+  },
+  "dependencies": {
+    "@ember/worker": "workspace:*"
+  }
+}

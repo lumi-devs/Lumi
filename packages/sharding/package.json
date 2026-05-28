@@ -1,0 +1,21 @@
+{
+  "name": "@ember/sharding",
+  "version": "2.1.1",
+  "description": "Shard topology + IDENTIFY orchestration shared between gateway, worker, and monolith. Calls /gateway/bot, plans shard ranges, and supplies IdentifyThrottlers.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@discordjs/rest": "^2.6.0",
+    "@discordjs/ws": "^1.2.3",
+    "discord-api-types": "^0.38.30"
+  },
+  "peerDependencies": {
+    "ioredis": "^5.4.0"
+  },
+  "peerDependenciesMeta": {
+    "ioredis": { "optional": true }
+  }
+}

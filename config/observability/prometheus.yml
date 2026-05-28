@@ -1,0 +1,31 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: ember
+    metrics_path: /metrics
+    static_configs:
+      # All four services share one image and expose /metrics on :9090. In the
+      # thin phase only `worker` runs; the others are listed for the scale phase.
+      - targets:
+          - worker:9090
+          - gateway:9090
+          - scheduler:9090
+          - api:9090
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # S4: nirn-proxy exposes its own /metrics on :9000 (per-bucket queue depth,
+  # 429 counts, retry-after dist). Only resolvable when the `scale` profile is
+  # up (the service lives in that profile). Prometheus surfaces a `down` series
+  # for the target otherwise — harmless.
+  - job_name: nirn-proxy
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["nirn-proxy:9000"]

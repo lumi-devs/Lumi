@@ -1,0 +1,20 @@
+{
+  "name": "tempvc",
+  "displayName": "Temp Voice Channels",
+  "emoji": "🔊",
+  "description": "On-demand temporary voice channels that delete themselves once empty, with an owner control panel.",
+  "version": "1.0.0",
+  "isCore": false,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": false,
+  "targetService": "worker",
+  "subStores": [
+    "commands",
+    "listeners",
+    "interaction-handlers",
+    "services",
+    "scheduled-tasks"
+  ],
+  "configFields": []
+}

@@ -1,0 +1,25 @@
+{
+  "name": "filter",
+  "displayName": "Filter",
+  "emoji": "🚫",
+  "description": "Aho-Corasick word filter — O(n+m) pattern matching per message.",
+  "version": "1.0.0",
+  "isCore": false,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": false,
+  "targetService": "worker",
+  "subStores": [
+    "listeners",
+    "services"
+  ],
+  "configFields": [
+    {
+      "key": "terms",
+      "type": "STRING",
+      "label": "Filtered Terms",
+      "description": "Comma-separated list of words/phrases to block.",
+      "list": true
+    }
+  ]
+}

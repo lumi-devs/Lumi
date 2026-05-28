@@ -47,10 +47,12 @@ model Guild {
   adminRoleId     String?  @map("admin_role_id") @db.VarChar(20)
   modLogChannelId String?  @map("mod_log_channel_id") @db.VarChar(20)
   muteRoleId      String?  @map("mute_role_id") @db.VarChar(20)
-  locale          String   @default("en-US") @db.VarChar(10)
-  timezone        String   @default("UTC")   @db.VarChar(64)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+  locale                String   @default("en-US") @db.VarChar(10)
+  timezone              String   @default("UTC")   @db.VarChar(64)
+  noMentionSpamWindowMs Int?     @map("no_mention_spam_window_ms")
+  noMentionSpamLimit    Int?     @map("no_mention_spam_limit")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
 
   moduleStates  GuildModuleState[]
   moduleConfigs GuildModuleConfig[]
@@ -322,4 +324,40 @@ model ModuleData {
 
   @@id([guildId, moduleName, targetId, key])
   @@map("module_dynamic_data")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONFIG HISTORY (#10)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ModuleConfigHistory {
+  id         String   @id @default(cuid())
+  guildId    String   @map("guild_id")    @db.VarChar(20)
+  moduleName String   @map("module_name") @db.VarChar(64)
+  key        String   @db.VarChar(64)
+  oldValue   Json?    @map("old_value")
+  newValue   Json     @map("new_value")
+  actorId    String   @map("actor_id")   @db.VarChar(20)
+  createdAt  DateTime @default(now())    @map("created_at")
+
+  @@index([guildId, moduleName])
+  @@map("module_config_history")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONFIG OVERRIDES (#11)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ModuleConfigOverride {
+  id         String @id @default(cuid())
+  guildId    String @map("guild_id")    @db.VarChar(20)
+  moduleName String @map("module_name") @db.VarChar(64)
+  key        String @db.VarChar(64)
+  modelType  String @map("model_type")  @db.VarChar(16) // channel | role | user | category
+  modelId    String @map("model_id")    @db.VarChar(20)
+  value      Json
+
+  @@unique([guildId, moduleName, key, modelType, modelId], name: "uq_config_override")
+  @@index([guildId, moduleName])
+  @@map("module_config_overrides")
 }

@@ -1,0 +1,419 @@
+// Redis Streams transport — consumer groups give us at-least-once delivery,
+// horizontal worker scaling (each consumer claims a partition of the pending
+// list), and bounded memory via MAXLEN ~. This is the production transport
+// once the gateway/worker split flips on (TRANSPORT=streams).
+//
+// Layout:
+//   - One stream per gateway event type (`ember:gw:message_create`, etc.).
+//     Per-type streams give us per-event backpressure + independent MAXLEN
+//     and let lag dashboards point at noisy events directly.
+//   - One consumer group per logical worker pool (default `ember-workers`).
+//   - Bodies are JSON-encoded into a single `b` field — XADD takes flat
+//     field/value pairs but we don't need the field-level structure.
+//
+// Slice 3 additions:
+//   - Stale-consumer claim via XAUTOCLAIM. A background loop walks each stream
+//     and claims entries idle longer than `claimMinIdleMs`, redelivering them
+//     to the handler with `deliveryCount > 1` so callers can dedupe if needed.
+//   - DLQ. Once an entry's delivery count exceeds `maxDeliveries`, we XADD it
+//     onto `<stream>:dlq` (preserving the original id + body) and XACK the
+//     original to drain the pending list. DLQ entries are kept for inspection;
+//     they are NOT auto-replayed.
+//   - Stats callback. Periodically reports XLEN (stream depth) and pending
+//     count (group lag) so observability can update gauges without leaking
+//     prom-client into this package.
+//
+// Exactly-once is still out of scope — at-least-once + idempotent handlers is
+// the contract.
+//
+// Discord raw-packet handlers must use the dispatch sequence (`d.s`) for
+// dedupe rather than the stream id, since redelivery yields a new stream id.
+
+import type { Redis } from "ioredis";
+import type {
+  BusMessage,
+  ConsumeOptions,
+  EventBus,
+  PublishOptions,
+} from "./types.js";
+
+export interface StreamStats {
+  /** Stream key (e.g. `ember:gw:message_create`). */
+  stream: string;
+  /** Consumer group reading from `stream`. */
+  group: string;
+  /** Total entries in the stream right now (XLEN). */
+  length: number;
+  /** Entries pending ack for this group (XPENDING summary count). */
+  pending: number;
+  /** DLQ length (XLEN on `<stream>:dlq`). 0 if the DLQ has never been written. */
+  dlqLength: number;
+}
+
+export interface RedisStreamsBusOptions {
+  /** Dedicated ioredis connection for *publishes*. Must NOT be shared with the consumer connection. */
+  publisher: Redis;
+  /** Dedicated ioredis connection for *blocking reads*. ioredis multiplexes commands, but XREADGROUP BLOCK blocks the socket. */
+  subscriber: Redis;
+  /** Default per-stream cap. ~ is approximate (cheap); use 100k unless told otherwise. */
+  defaultMaxLen?: number;
+  /** Optional structured logger. */
+  log?: (level: "info" | "warn" | "error", msg: string, meta?: object) => void;
+  /**
+   * Max delivery attempts before an entry is routed to the per-stream DLQ
+   * (`<stream>:dlq`) and acked off the live stream. Default 5.
+   */
+  maxDeliveries?: number;
+  /**
+   * How long an entry must sit unacked in the pending list before it becomes
+   * eligible for XAUTOCLAIM. Set this above the slowest legitimate handler
+   * latency so healthy slow work isn't stolen. Default 60_000ms.
+   */
+  claimMinIdleMs?: number;
+  /**
+   * How often each consumer wakes to run XAUTOCLAIM against its streams.
+   * Default 30_000ms. Set 0 to disable claiming (tests only).
+   */
+  claimIntervalMs?: number;
+  /**
+   * Optional periodic-stats callback. Receives a snapshot per stream every
+   * `statsIntervalMs`. Used by observability to set Prometheus gauges.
+   */
+  onStats?: (stats: StreamStats) => void;
+  /** How often `onStats` is invoked per stream. Default 10_000ms. */
+  statsIntervalMs?: number;
+}
+
+export class RedisStreamsBus implements EventBus {
+  private readonly publisher: Redis;
+  private readonly subscriber: Redis;
+  private readonly defaultMaxLen: number;
+  private readonly knownGroups = new Set<string>();
+  private readonly log: NonNullable<RedisStreamsBusOptions["log"]>;
+  private readonly maxDeliveries: number;
+  private readonly claimMinIdleMs: number;
+  private readonly claimIntervalMs: number;
+  private readonly onStats: RedisStreamsBusOptions["onStats"];
+  private readonly statsIntervalMs: number;
+  private readonly timers = new Set<NodeJS.Timeout>();
+  private closed = false;
+
+  public constructor(opts: RedisStreamsBusOptions) {
+    this.publisher = opts.publisher;
+    this.subscriber = opts.subscriber;
+    this.defaultMaxLen = opts.defaultMaxLen ?? 100_000;
+    this.log = opts.log ?? (() => undefined);
+    this.maxDeliveries = opts.maxDeliveries ?? 5;
+    this.claimMinIdleMs = opts.claimMinIdleMs ?? 60_000;
+    this.claimIntervalMs = opts.claimIntervalMs ?? 30_000;
+    this.onStats = opts.onStats;
+    this.statsIntervalMs = opts.statsIntervalMs ?? 10_000;
+  }
+
+  public async publish<T>(
+    stream: string,
+    body: T,
+    opts?: PublishOptions,
+  ): Promise<string> {
+    if (this.closed) throw new Error("RedisStreamsBus closed");
+    const maxLen = opts?.maxLen ?? this.defaultMaxLen;
+    const id = await this.publisher.xadd(
+      stream,
+      "MAXLEN",
+      "~",
+      String(maxLen),
+      "*",
+      "b",
+      JSON.stringify(body),
+    );
+    if (!id) throw new Error(`XADD on ${stream} returned null`);
+    return id;
+  }
+
+  public async consume<T>(
+    streams: readonly string[],
+    opts: ConsumeOptions,
+    handler: (msg: BusMessage<T>) => Promise<void>,
+  ): Promise<() => Promise<void>> {
+    const blockMs = opts.blockMs ?? 5000;
+    const batchSize = opts.batchSize ?? 16;
+    for (const stream of streams) await this.ensureGroup(stream, opts.group);
+
+    let stopped = false;
+    const loop = async () => {
+      while (!stopped && !this.closed) {
+        // XREADGROUP GROUP <group> <consumer> COUNT <n> BLOCK <ms> STREAMS s1 s2 > >
+        const args: (string | number)[] = [
+          "GROUP",
+          opts.group,
+          opts.consumer,
+          "COUNT",
+          batchSize,
+          "BLOCK",
+          blockMs,
+          "STREAMS",
+          ...streams,
+          ...streams.map(() => ">"),
+        ];
+        let resp: unknown;
+        try {
+          resp = await (
+            this.subscriber as unknown as {
+              xreadgroup: (...a: unknown[]) => Promise<unknown>;
+            }
+          ).xreadgroup(...args);
+        } catch (err) {
+          if (this.closed || stopped) return;
+          this.log("error", "xreadgroup failed", { err: String(err) });
+          await sleep(500);
+          continue;
+        }
+        if (!resp) continue;
+
+        for (const [stream, entries] of resp as Array<
+          [string, Array<[string, string[]]>]
+        >) {
+          for (const [id, fields] of entries) {
+            await this.deliver(stream, opts.group, id, fields, 1, handler);
+          }
+        }
+      }
+    };
+    void loop();
+
+    // Stale-consumer claim loop. Runs alongside the main read loop on the same
+    // consumer id; XAUTOCLAIM scans the group's pending list and hands us back
+    // any entries idle > claimMinIdleMs that we then redeliver locally.
+    if (this.claimIntervalMs > 0) {
+      const claimTimer = setInterval(() => {
+        if (stopped || this.closed) return;
+        void this.runClaim(streams, opts, handler).catch((err) => {
+          this.log("error", "xautoclaim loop failed", { err: String(err) });
+        });
+      }, this.claimIntervalMs);
+      this.timers.add(claimTimer);
+    }
+
+    // Stats loop. Idempotent and cheap (XLEN + XPENDING summary).
+    if (this.onStats && this.statsIntervalMs > 0) {
+      const statsTimer = setInterval(() => {
+        if (stopped || this.closed) return;
+        void this.runStats(streams, opts.group).catch((err) => {
+          this.log("error", "stats loop failed", { err: String(err) });
+        });
+      }, this.statsIntervalMs);
+      this.timers.add(statsTimer);
+    }
+
+    return async () => {
+      stopped = true;
+    };
+  }
+
+  public async close(): Promise<void> {
+    this.closed = true;
+    for (const t of this.timers) clearInterval(t);
+    this.timers.clear();
+    // Owned-connection lifecycle is the caller's (createEventBus closes them).
+  }
+
+  /**
+   * One-shot delivery to the handler. Centralized so the main-read path and
+   * the claim path share DLQ + ack semantics.
+   */
+  private async deliver<T>(
+    stream: string,
+    group: string,
+    id: string,
+    fields: string[],
+    deliveryCount: number,
+    handler: (msg: BusMessage<T>) => Promise<void>,
+  ): Promise<void> {
+    // Deliveries beyond the limit go straight to the DLQ — don't even invoke
+    // the handler again. The entry has already been redelivered N times; we
+    // know it's poison.
+    if (deliveryCount > this.maxDeliveries) {
+      await this.sendToDlq(stream, id, fields, deliveryCount);
+      await this.publisher.xack(stream, group, id);
+      this.log("warn", "dropped poison message to DLQ", {
+        stream,
+        id,
+        deliveryCount,
+      });
+      return;
+    }
+
+    const body = decodeBody<T>(fields);
+    const msg: BusMessage<T> = {
+      id,
+      body,
+      deliveryCount,
+      ack: async () => {
+        await this.publisher.xack(stream, group, id);
+      },
+      nack: async () => {
+        // No-op — leaving the entry unacked makes it eligible for XAUTOCLAIM
+        // after claimMinIdleMs.
+      },
+    };
+    try {
+      await handler(msg);
+    } catch (err) {
+      this.log("error", "handler threw; leaving entry pending", {
+        stream,
+        id,
+        deliveryCount,
+        err: String(err),
+      });
+    }
+  }
+
+  private async runClaim<T>(
+    streams: readonly string[],
+    opts: ConsumeOptions,
+    handler: (msg: BusMessage<T>) => Promise<void>,
+  ): Promise<void> {
+    for (const stream of streams) {
+      // XAUTOCLAIM <key> <group> <consumer> <min-idle-time> <start> [COUNT n]
+      // → [next-cursor, [[id, [field, value, ...]], ...], [deleted-ids]]
+      let cursor = "0-0";
+      // Bound the loop — claim up to ~128 entries per tick, then yield.
+      for (let i = 0; i < 8; i++) {
+        const resp = (await (
+          this.subscriber as unknown as {
+            xautoclaim: (...a: unknown[]) => Promise<unknown>;
+          }
+        ).xautoclaim(
+          stream,
+          opts.group,
+          opts.consumer,
+          this.claimMinIdleMs,
+          cursor,
+          "COUNT",
+          16,
+        )) as [string, Array<[string, string[]]>, string[]] | null;
+        if (!resp) break;
+        const [nextCursor, entries] = resp;
+        for (const [id, fields] of entries) {
+          // XPENDING for delivery count. XAUTOCLAIM increments it for us;
+          // we read it back to drive the DLQ threshold.
+          const deliveryCount = await this.pendingDeliveryCount(
+            stream,
+            opts.group,
+            id,
+          );
+          await this.deliver(
+            stream,
+            opts.group,
+            id,
+            fields,
+            deliveryCount,
+            handler,
+          );
+        }
+        cursor = nextCursor;
+        if (cursor === "0-0") break;
+      }
+    }
+  }
+
+  private async pendingDeliveryCount(
+    stream: string,
+    group: string,
+    id: string,
+  ): Promise<number> {
+    // XPENDING <key> <group> IDLE 0 <start> <end> 1
+    const resp = (await (
+      this.publisher as unknown as {
+        xpending: (...a: unknown[]) => Promise<unknown>;
+      }
+    ).xpending(stream, group, "IDLE", 0, id, id, 1)) as Array<
+      [string, string, number, number]
+    > | null;
+    if (!resp || resp.length === 0) return 1;
+    const entry = resp[0]!;
+    // [id, consumer, idle-ms, delivery-count]
+    return Number(entry[3]) || 1;
+  }
+
+  private async sendToDlq(
+    stream: string,
+    id: string,
+    fields: string[],
+    deliveryCount: number,
+  ): Promise<void> {
+    const dlq = `${stream}:dlq`;
+    const body = fields[1] ?? "";
+    await this.publisher.xadd(
+      dlq,
+      "MAXLEN",
+      "~",
+      String(this.defaultMaxLen),
+      "*",
+      "b",
+      body,
+      "src_id",
+      id,
+      "src_stream",
+      stream,
+      "delivery_count",
+      String(deliveryCount),
+      "dead_at",
+      String(Date.now()),
+    );
+  }
+
+  private async runStats(
+    streams: readonly string[],
+    group: string,
+  ): Promise<void> {
+    if (!this.onStats) return;
+    for (const stream of streams) {
+      const [length, pending, dlqLength] = await Promise.all([
+        this.publisher.xlen(stream).catch(() => 0),
+        this.pendingCount(stream, group),
+        this.publisher.xlen(`${stream}:dlq`).catch(() => 0),
+      ]);
+      this.onStats({ stream, group, length, pending, dlqLength });
+    }
+  }
+
+  private async pendingCount(stream: string, group: string): Promise<number> {
+    try {
+      // XPENDING <key> <group> → [count, min-id, max-id, [[consumer, count], ...]]
+      const resp = (await (
+        this.publisher as unknown as {
+          xpending: (...a: unknown[]) => Promise<unknown>;
+        }
+      ).xpending(stream, group)) as [number, ...unknown[]] | null;
+      if (!resp) return 0;
+      return Number(resp[0]) || 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  private async ensureGroup(stream: string, group: string): Promise<void> {
+    const key = `${stream}::${group}`;
+    if (this.knownGroups.has(key)) return;
+    try {
+      await this.publisher.xgroup("CREATE", stream, group, "$", "MKSTREAM");
+    } catch (err) {
+      const msg = String(err);
+      if (!msg.includes("BUSYGROUP")) throw err;
+    }
+    this.knownGroups.add(key);
+  }
+}
+
+function decodeBody<T>(fields: string[]): T {
+  // XADD wrote ["b", "<json>"]. Find the `b` field defensively in case more are added later.
+  for (let i = 0; i < fields.length; i += 2) {
+    if (fields[i] === "b") return JSON.parse(fields[i + 1]!) as T;
+  }
+  throw new Error("RedisStreamsBus: message missing `b` field");
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@ember/gateway",
+  "version": "2.1.1",
+  "description": "Gateway service — Discord WS connection + event-bus publisher (Part II S2).",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun src/main.ts",
+    "dev": "bun --watch src/main.ts"
+  },
+  "dependencies": {
+    "@ember/contracts": "workspace:*",
+    "@ember/event-bus": "workspace:*",
+    "@ember/observability": "workspace:*",
+    "@ember/sharding": "workspace:*",
+    "@discordjs/rest": "^2.6.0",
+    "discord-api-types": "^0.38.30",
+    "discord.js": "^14.20.0"
+  }
+}

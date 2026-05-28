@@ -2,9 +2,11 @@
 
 # 🔥 Ember
 
-### **The Next-Generation Modular Discord Intelligence Engine**
+### **A modular Discord bot built on Bun and Sapphire**
 
-Ember is an ultra-premium, high-performance modular Discord bot built for massive scale, visual sophistication, and zero-compromise developer autonomy. Powered by the raw speed of the **Bun** runtime, structural elegance of **Sapphire v5**, and a state-of-the-art **Redis + RabbitMQ messaging fabric**, Ember sets the benchmark for modern Discord intelligence.
+Ember is a modular Discord bot. Each feature lives in its own isolated module with its own commands, listeners, storage, and config. It runs on the **Bun** runtime, uses the **Sapphire v5** framework, and coordinates state across processes with **Redis** and **RabbitMQ**.
+
+> **Status:** In active development. The module system, config, permissions, and messaging infrastructure are in place; several feature modules are still being built out.
 
 ---
 
@@ -16,35 +18,30 @@ Ember is an ultra-premium, high-performance modular Discord bot built for massiv
 [![Redis](https://img.shields.io/badge/Cache-Redis%20v7-dc382d?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ed?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 
-**Modular Isolation • Elite Performance • Modern Aesthetics • Event-Driven Autonomy**
+**Modular isolation • Bun runtime • Redis + RabbitMQ • Component-based UI**
 
 </div>
 
 ---
 
-## 🌟 The Vision
+## 🏛️ Architecture
 
-Ember is not just another utility bot; it is a **highly optimized, resilient micro-framework** engineered for modern server infrastructure. It operates on the philosophy that Discord bots shouldn't just respond to commands—they should function as full-fledged, distributed systems.
+### 1. 📦 Feature-based modularity
+Every feature is a self-contained module under `src/modules/`. Modules:
+- Avoid cross-module imports — shared code lives in `src/core/` and `src/utilities/`.
+- Own their database tables (Prisma) and Redis key namespaces.
+- Implement a `deleteUserData` hook for GDPR-style data removal.
+- Declare config fields and metadata via the `@EmberModule` decorator.
 
-By using **Bun's native TypeScript support**, Ember cuts startup times and memory footprints to a fraction of traditional Node.js bots. By enforcing a **zero-coupling feature architecture**, features remain strictly isolated, guaranteeing that bug regressions stay contained and maintenance scales infinitely. Ember moves beyond outdated embeds and text-heavy command walls, adopting an elite **visual system** driven by interactive custom UI components.
+The module store discovers modules at runtime, resolves dependencies, and detects conflicts.
 
----
+### 2. 🎛️ Messaging
+Ember uses two transports:
+- **Redis** — caching and config storage, plus **BullMQ** for durable scheduled tasks (delayed/exact-time/repeated jobs that survive restarts).
+- **RabbitMQ** — cross-process fanout events and the RPC bridge for low-latency request/response with the web dashboard.
 
-## 🏛️ Key Architectural Pillars
-
-### 1. 📦 Strict Feature-Based Modularity
-Every feature (such as Raid Protection, AFK tracking, or Media Downloads) is an autonomous capsule living in `src/modules/`. Modules:
-- Are strictly isolated: **Zero cross-module imports** allowed.
-- Manage their own concrete database tables (Prisma) and key schemas (Redis).
-- Fully comply with privacy standards using unified, module-specific **GDPR delete protocols** (`deleteUserData`).
-
-### 2. 🎛️ Hybrid Messaging Fabric
-Ember features a highly robust dual-protocol communication stack:
-- **Redis (RPC Bridge)**: Facilitates low-latency, real-time command, statistics, and configuration synchronization with administrative dashboards.
-- **RabbitMQ (AMQP Event Bus & Job Queue)**: Guarantees resilient task execution, distributed state listeners, and reliable delayed job scheduling (such as guild unlocks) that survive bot restarts.
-
-### 3. 🎨 Visual Customization & Brand Identity
-Built on a high-contrast aesthetic, Ember rejects generic browser colors in favor of a gorgeous, tailored color palette designed to impress at first glance:
+### 3. 🎨 Card-based UI
+User-facing output is built through card factories in `src/utilities/cards.ts` (using Discord's components, not classic embeds), with a shared color palette:
 
 | Color | Hex Value | Purpose |
 | :--- | :--- | :--- |
@@ -60,55 +57,59 @@ Built on a high-contrast aesthetic, Ember rejects generic browser colors in favo
 
 ## 📂 Directory Structure
 
-Below is the layout of the project, separating global infrastructure, databases, and the isolated module ecosystem:
-
 ```text
 src/
-├── main.ts                    # Entry point: DB connects, builds RPC, logs client in
-├── EmberClient.ts             # Client custom initialization & RabbitMQ manager
-├── lib/                       # Shared architecture, utilities, and extensions
-│   ├── branding.ts            # Palette configuration (Sakura, Lavender, Mint, etc.)
-│   ├── cards.ts               # Core UI engine (makeSuccessCard, makeErrorCard, etc.)
-│   ├── extensions/            # Base Command/Subcommand classes (EmberCommand)
-│   ├── setup/                 # Env validation, prisma client & Redis setup
-│   └── structures/            # Shared logic (AntiSpam, ModuleRegistry)
-├── redis/                     # Redis cache settings & RPC client bridge
-├── rabbitmq/                  # RabbitMQ manager, queues, and job handlers
-└── modules/                   # Autonomous feature capsules
-    ├── core/                  # Core bot parameters, commands, & overrides
-    ├── afk/                   # Custom AFK states & mention notification interceptors
-    ├── downloader/            # On-the-fly repository & module downloader
-    └── raids/                 # Velocity-based anti-raid system & auto-lockdown
+├── main.ts          # Entry point
+├── client/          # EmberClient setup and login
+├── core/            # Shared infrastructure
+│   ├── module-system/   # Module base class, ModuleStore, Service base
+│   ├── services/        # ConfigService, PermissionService, DownloaderService
+│   ├── commands/        # Core admin commands (config, permissions, module, help)
+│   ├── rabbitmq/        # Job queue manager and handlers
+│   ├── routes/          # HTTP routes (health)
+│   └── lib/             # Shared helpers (gdpr, ping, downloader, etc.)
+├── database/        # Prisma client and Redis setup
+├── utilities/       # cards, assets, branding, errors, config
+├── tasks/           # Scheduled tasks
+├── workers/         # Worker thread management
+├── languages/       # i18n resources
+└── modules/         # Feature modules
+    ├── afk/             # AFK states and mention digests
+    ├── dashboard/       # Dashboard RPC handlers
+    ├── emoji-stealer/   # Emoji import utilities
+    ├── filter/          # Word filter (config scaffold)
+    ├── mod/             # Moderation commands (ban, kick, timeout, cases, etc.)
+    ├── utility/         # Misc utilities (purge, nick, media, thread cleaner)
+    └── verify/          # Member verification (config scaffold)
 ```
 
 ---
 
-## ⚡ Core Modules & Features
+## ⚡ Modules & Features
 
-Every module operates autonomously and registers its own slash commands, database tables, and event listeners.
+Each module registers its own commands, listeners, and storage.
 
-### 🛡️ Raid Protection (`raids`)
-Protects communities from coordinated mass-join attacks.
-- **Velocity Tracking**: Utilizes Redis sorted sets to log rolling join events over configurable time windows.
-- **Auto-Lockdown**: If join velocity triggers the threshold, the bot escalates the Discord Server Verification Level to `Very High` instantly.
-- **Resilient Restoration**: Schedules an `UNLOCK_GUILD` event on the RabbitMQ queue, restoring original server verification settings even if the bot process restarts.
+### ⚙️ Core operations
+Built into `src/core/`, available on every install.
+- **Permissions** — restrict commands by role or member via `/permissions`, layered over built-in permission levels.
+- **Config** — view and change module settings at runtime via `/config`.
+- **Modules** — install and hot-reload modules from tracked Git repositories (`/repo`, `,download`, `/module`).
+- **Health & ping** — `/ping` latency checks and an HTTP health route.
 
-### 📥 Dynamic Downloader (`downloader`)
-Enables zero-downtime functional expansion.
-- **Repository Management**: Tracks remote Git repositories using `/repo add`, `/repo list`, and `/repo modules`.
-- **Hot-loading**: Downloads, registers, and loads new modules from Git in real time via prefix commands (`,download`), updating database records dynamically.
+### 📬 AFK (`afk`)
+- Sets AFK status via `/afk` and tracks elapsed time.
+- Catches mentions while away and compiles a digest.
+- Auto-clears when the user next sends a message.
 
-### 📬 AFK State Manager (`afk`)
-Keeps members updated about away statuses.
-- **Activity Interception**: Activates AFK states via `/afk` and tracks how long users have been away.
-- **Mentions Digest**: Safely catches mentions when away, compiling a clean, beautiful notification log.
-- **Intelligent Auto-clear**: Clears the AFK status when the user sends their next active message.
+### 🔨 Moderation (`mod`)
+- `ban`, `kick`, `timeout`, `quarantine`, `sanitize` actions with audit logging.
+- Case tracking via `cases`.
 
-### ⚙️ Core Operations (`core`)
-Maintains base bot administration and dashboards.
-- **Granular Permissions**: Restricts commands by roles or individual members using `/permissions`.
-- **System Config**: Dynamically updates features and parameters on the fly via `/config`.
-- **Real-Time Synchronizer**: Connects Discord actions to dashboard clients with `/dashboard` and performs ultra-fast `/ping` checks utilizing the Sakura/Rose theme.
+### 🧰 Utility (`utility`)
+- `purge` with bulk/slow-delete fallback, `nick`, user media tools, and a thread cleaner.
+
+### 🧩 Scaffolds
+`filter` (word filter) and `verify` (captcha verification) currently define their config schema only — behavior is not yet implemented.
 
 ---
 
@@ -235,11 +236,18 @@ Use these scripts during development and deployment:
 
 To contribute or write custom extensions for Ember, you **MUST** follow these core guidelines:
 
-1. 🚫 **No direct `EmbedBuilder` calls**: Never call `new EmbedBuilder()` or `new MessageEmbed()`. Always route interfaces through the UI factory methods located in `src/lib/util/cards.ts` to enforce uniform high-contrast design.
-2. 🛢️ **Utilize direct client containers**: Always access database collections via `this.container.prisma`. Do not wrap Prisma operations in intermediate layers.
-3. 📦 **Enforce strict isolation boundaries**: Code residing inside `src/modules/{name}/` must not import anything from `src/modules/{sibling}/`. Shared structures belong in `src/lib/`.
-4. 📬 **Throw typed errors**: Never reply directly with error alerts inside commands. Instead, throw typed error structures from `src/core/errors.ts` (e.g. `UserError`, `PermissionError`). The global listener automatically catches and presents these errors in a premium layout.
-5. ⚡ **Command registration standards**: User-facing features must register as grouped Slash Commands (e.g., `/permissions set`). Prefix command characters are restricted exclusively to owner admin utilities.
+1. 🚫 **No direct `EmbedBuilder` calls**: Build user-facing output through the card factories in `src/utilities/cards.ts` (e.g. `makeSuccessCard`, `makeErrorCard`) rather than constructing embeds directly.
+2. 🛢️ **Access storage through the container**: Use `this.container.db` / `this.container.prisma` and `this.container.redis`. Don't add intermediate wrapper layers.
+3. 📦 **Respect isolation boundaries**: Code in `src/modules/{name}/` must not import from a sibling module. Shared code belongs in `src/core/` or `src/utilities/`.
+4. ⚡ **Command registration**: User-facing features register as slash commands (grouped where it makes sense, e.g. `/permissions set`). Prefix commands are reserved for bot-owner admin utilities.
+
+---
+
+## 📄 License
+
+This project is licensed under the **Apache License 2.0**. 
+
+Under this license, you are free to use, modify, distribute, and commercially exploit the codebase. However, per **Section 6 (Trademarks)**, this license does **NOT** grant you permission to use the "Ember" brand, trademarks, logos, or product names. Any modified or redistributed versions of this software **must be completely renamed and rebranded**.
 
 ---
 

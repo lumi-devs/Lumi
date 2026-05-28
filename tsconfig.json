@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "rootDir": "."
+  },
+  "include": [
+    "packages/contracts/src",
+    "packages/event-bus/src",
+    "packages/observability/src",
+    "packages/core/index.ts",
+    "packages/core/src",
+    "packages/sdk/src",
+    "packages/sharding/src",
+    "apps/worker/src",
+    "apps/gateway/src",
+    "apps/scheduler/src",
+    "apps/api/src",
+    "scripts"
+  ]
+}

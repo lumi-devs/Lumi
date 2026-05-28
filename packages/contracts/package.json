@@ -1,0 +1,13 @@
+{
+  "name": "@ember/contracts",
+  "version": "2.1.1",
+  "description": "Shared wire contracts (bus events, RPC payloads, module manifest, config fields) for all Ember services.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "discord.js": "^14.20.0"
+  }
+}

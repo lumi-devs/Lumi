@@ -1,0 +1,28 @@
+{
+  "name": "afk",
+  "displayName": "AFK",
+  "emoji": "💤",
+  "description": "Set yourself AFK; mentions notify others and a prefix is added to your nickname.",
+  "version": "1.0.0",
+  "isCore": false,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": false,
+  "targetService": "worker",
+  "subStores": [
+    "commands",
+    "listeners",
+    "interaction-handlers",
+    "services",
+    "scheduled-tasks"
+  ],
+  "configFields": [
+    {
+      "key": "nick_prefix_enabled",
+      "type": "BOOLEAN",
+      "label": "Nickname Prefix",
+      "description": "Prepend [AFK] to nickname while AFK.",
+      "default": true
+    }
+  ]
+}

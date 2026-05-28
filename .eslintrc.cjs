@@ -4,7 +4,7 @@ module.exports = {
   parser: '@typescript-eslint/parser',
   extends: ['@sapphire'],
   parserOptions: {
-    project: './src/tsconfig.json',
+    project: './tsconfig.json',
     tsconfigRootDir: __dirname,
   },
   rules: {
@@ -26,7 +26,7 @@ module.exports = {
   overrides: [
     {
       // The module's own files are allowed to use relative paths within their tree.
-      files: ['src/modules/*/**/*.ts'],
+      files: ['packages/core/src/modules/*/**/*.ts'],
       rules: {
         'no-restricted-imports': [
           'error',

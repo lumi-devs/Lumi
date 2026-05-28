@@ -6,6 +6,9 @@ volumes:
   postgres-data:
   redis-data:
   rabbitmq-data:
+  prometheus-data:
+  grafana-data:
+  tempo-data:
 
 services:
   ember-dev:
@@ -17,12 +20,26 @@ services:
     env_file: .env
     environment:
       REDIS_HOST: redis
-      POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@postgres/ember
+      POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@pgbouncer:6432/ember
+      # Migrations bypass PgBouncer (transaction pooling can't hold DDL/advisory locks).
+      DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@postgres/ember
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-ember}:${RABBITMQ_PASSWORD:-ember}@rabbitmq:5672
       RABBITMQ_ENABLED: "true"
       SENTRY_ENABLED: "${SENTRY_ENABLED:-false}"
       SENTRY_DSN: "${SENTRY_DSN:-}"
+      # Telemetry: apps always expose /metrics and emit OTLP traces. The OTLP
+      # endpoint only resolves when the `observability` profile is up; the batch
+      # exporter degrades quietly when the collector is absent.
+      OTEL_ENABLED: "${OTEL_ENABLED:-true}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
+      OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
+      METRICS_ENABLED: "${METRICS_ENABLED:-true}"
+      METRICS_PORT: "9090"
+      LOG_FORMAT: "${LOG_FORMAT:-pretty}"
+      LOG_LEVEL: "${LOG_LEVEL:-debug}"
     depends_on:
+      pgbouncer:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:
@@ -37,21 +54,42 @@ services:
     stdin_open: true
     tty: true
 
-  ember:
+  # Shared config for the four deployable services. They all run from the same
+  # image; each sets its own `command:`. NOTE (thin phase F6): gateway/scheduler/api
+  # currently boot the full worker (apps/*/src/main.ts → import "@ember/worker/main"),
+  # so only `worker` should run with the live bot token until the real service split
+  # (Part II, S2/S5). The other three are scaffolding kept under the `scale` profile.
+  x-ember-service: &ember-service
     build:
       context: .
       dockerfile: Dockerfile
       target: production
-    container_name: ember-bot
     env_file: .env
-    environment:
+    environment: &ember-env
       REDIS_HOST: redis
-      POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@postgres/ember
+      POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@pgbouncer:6432/ember
+      # Migrations bypass PgBouncer (transaction pooling can't hold DDL/advisory locks).
+      DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@postgres/ember
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-ember}:${RABBITMQ_PASSWORD:-ember}@rabbitmq:5672
       RABBITMQ_ENABLED: "true"
       SENTRY_ENABLED: "${SENTRY_ENABLED:-false}"
       SENTRY_DSN: "${SENTRY_DSN:-}"
+      # Telemetry: production services emit OTLP + expose /metrics on :9090.
+      OTEL_ENABLED: "${OTEL_ENABLED:-true}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
+      OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
+      METRICS_ENABLED: "${METRICS_ENABLED:-true}"
+      METRICS_PORT: "9090"
+      LOG_FORMAT: "${LOG_FORMAT:-json}"
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
+      # S4: route all outbound discord.js REST through the shared nirn-proxy so
+      # one global + per-route bucket budget is shared across every worker
+      # replica. Defaults to empty (talk to discord.com directly); the scale
+      # profile services below opt in by pointing at the `nirn-proxy` container.
+      DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-}"
     depends_on:
+      pgbouncer:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:
@@ -71,16 +109,104 @@ services:
       options:
         max-size: 10m
         max-file: "3"
+
+  worker:
+    <<: *ember-service
+    container_name: ember-worker
+    command: ["sh", "-c", "bunx prisma migrate deploy && bun apps/worker/src/main.ts"]
+    environment:
+      <<: *ember-env
+      # `production` profile: worker is the monolith (holds its own WS).
+      # `scale` profile: EMBER_ROLE=worker (no WS, consumes raw packets from the
+      # bus) — set in the `worker` block under the scale profile below.
+      EMBER_ROLE: "${EMBER_ROLE:-monolith}"
     profiles:
       - production
 
+  # Scale-profile services. When `docker compose --profile scale up` is used,
+  # split topology comes online: gateway owns the WS, worker drops its WS and
+  # consumes raw packets from the bus.
+  worker-scale:
+    <<: *ember-service
+    container_name: ember-worker-scale
+    command: ["sh", "-c", "bunx prisma migrate deploy && bun apps/worker/src/main.ts"]
+    environment:
+      <<: *ember-env
+      EMBER_ROLE: "worker"
+      TRANSPORT: "streams"
+      EMBER_CONSUMER_ID: "${EMBER_CONSUMER_ID:-worker-1}"
+      INTERACTION_DEFER_AT_GATEWAY: "${INTERACTION_DEFER_AT_GATEWAY:-true}"
+      DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-http://nirn-proxy:8080}"
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      nirn-proxy:
+        condition: service_started
+    profiles:
+      - scale
+
+  gateway:
+    <<: *ember-service
+    container_name: ember-gateway
+    command: ["bun", "apps/gateway/src/main.ts"]
+    environment:
+      <<: *ember-env
+      EMBER_ROLE: "gateway"
+      TRANSPORT: "streams"
+      INTERACTION_DEFER_AT_GATEWAY: "${INTERACTION_DEFER_AT_GATEWAY:-true}"
+      DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-http://nirn-proxy:8080}"
+    depends_on:
+      worker-scale:
+        condition: service_started
+      nirn-proxy:
+        condition: service_started
+    profiles:
+      - scale
+
+  scheduler:
+    <<: *ember-service
+    container_name: ember-scheduler
+    command: ["bun", "apps/scheduler/src/main.ts"]
+    environment:
+      <<: *ember-env
+      EMBER_ROLE: "scheduler"
+      TRANSPORT: "streams"
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    profiles:
+      - scale
+
+  api:
+    <<: *ember-service
+    container_name: ember-api
+    command: ["bun", "apps/api/src/main.ts"]
+    depends_on:
+      worker-scale:
+        condition: service_started
+    profiles:
+      - scale
+
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17
     container_name: ember-postgres
     environment:
       POSTGRES_DB: ember
       POSTGRES_USER: ember
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ember}
+      POSTGRES_INITDB_ARGS: "--auth-local=scram-sha-256 --auth-host=scram-sha-256"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
@@ -98,8 +224,48 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
 
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: ember-pgbouncer
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ember
+      DB_USER: ${POSTGRES_USER:-ember}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-ember}
+      # Listen on 6432 to match the healthcheck, port map, and POSTGRES_URL.
+      LISTEN_PORT: "6432"
+      # Transaction pooling: a server backend is held only for the duration of a
+      # transaction, so many short-lived client connections share few real
+      # Postgres backends. Required for the stateless-worker fan-out (Part II).
+      POOL_MODE: transaction
+      AUTH_TYPE: scram-sha-256
+      # Total client slots PgBouncer accepts across all workers.
+      MAX_CLIENT_CONN: "1000"
+      # Real Postgres backends per (user, db) — the actual cap on Postgres.
+      DEFAULT_POOL_SIZE: "20"
+      # Transaction pooling cannot keep session-level prepared statements.
+      MAX_PREPARED_STATEMENTS: "0"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ember-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U ${POSTGRES_USER:-ember}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 64m
+    ports:
+      - "127.0.0.1:6432:6432"
+
   redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
     container_name: ember-redis
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction --requirepass ${REDIS_PASSWORD:-ember}
     volumes:
@@ -120,7 +286,7 @@ services:
       - "127.0.0.1:6379:6379"
 
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:4-management-alpine
     container_name: ember-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ember}
@@ -128,6 +294,8 @@ services:
       RABBITMQ_DEFAULT_VHOST: /
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+      - ./config/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./config/advanced.config:/etc/rabbitmq/advanced.config:ro
     networks:
       - ember-net
     restart: unless-stopped
@@ -144,6 +312,48 @@ services:
     ports:
       - "127.0.0.1:5672:5672"
       - "127.0.0.1:15672:15672"
+
+  # S4: Shared outbound REST proxy. nirn-proxy presents a Discord-API-compatible
+  # surface at :8080 and globally serialises buckets + the 50/s global limit
+  # across every connected worker so 1000s of stateless workers can't trigger a
+  # CloudFlare ban. Each worker still sends its own Authorization header; the
+  # proxy keys buckets by (token, route). Lean default (in-memory, no clustering)
+  # — flip to `REDIS_URL` if you run multiple nirn-proxy instances behind an LB.
+  # Only spun up under the `scale` profile; single-host monolith hits Discord
+  # directly (DISCORD_PROXY_URL stays empty).
+  nirn-proxy:
+    image: ghcr.io/germanoeich/nirn-proxy:latest
+    container_name: ember-nirn-proxy
+    environment:
+      LOG_LEVEL: "${NIRN_LOG_LEVEL:-info}"
+      PORT: "8080"
+      METRICS_PORT: "9000"
+      # Global per-token RPS cap (Discord allows 50/s; nirn enforces ~95% by
+      # default to leave headroom for clock skew between bot processes).
+      BIND_IP: "0.0.0.0"
+      REQUEST_TIMEOUT: "10000"
+      BUFFER_SIZE: "200"
+    networks:
+      - ember-net
+    restart: unless-stopped
+    healthcheck:
+      # nirn-proxy doesn't expose /healthz; a successful TCP connect on :8080 is
+      # the documented liveness probe.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/nirn/v1/buckets > /dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    ports:
+      # Bound to localhost for the loadtest script + prom scrape from the host.
+      - "127.0.0.1:18080:8080"
+      - "127.0.0.1:19000:9000"
+    profiles:
+      - scale
 
   dashboard:
     build:
@@ -165,3 +375,91 @@ services:
       - ember-net
     ports:
       - "127.0.0.1:3000:3000"
+
+  # ── Observability stack (LGTM-ish) ──────────────────────────────────────────
+  # Opt-in: `docker compose --profile observability up`. A plain `up` stays lean.
+  # Pipeline: apps → OTLP → otel-collector → Tempo (traces) ; Prometheus scrapes
+  # app /metrics ; Grafana provisions datasources + dashboards + alert rules.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.116.0
+    container_name: ember-otel-collector
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./config/observability/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    networks:
+      - ember-net
+    restart: unless-stopped
+    profiles:
+      - observability
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    ports:
+      - "127.0.0.1:4318:4318"
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: ember-tempo
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./config/observability/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    networks:
+      - ember-net
+    restart: unless-stopped
+    profiles:
+      - observability
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    container_name: ember-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./config/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config/observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - ember-net
+    restart: unless-stopped
+    profiles:
+      - observability
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    ports:
+      - "127.0.0.1:9091:9090"
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: ember-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./config/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./config/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - tempo
+    networks:
+      - ember-net
+    restart: unless-stopped
+    profiles:
+      - observability
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    ports:
+      - "127.0.0.1:3001:3000"

@@ -1,0 +1,15 @@
+{
+  "name": "@ember/event-bus",
+  "version": "2.1.1",
+  "description": "Cross-service event bus (Redis Streams + in-process) for the gateway/worker split. Carries raw Discord gateway packets and domain bus events with W3C trace propagation.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ember/contracts": "workspace:*",
+    "@ember/observability": "workspace:*",
+    "ioredis": "^5.4.0"
+  }
+}

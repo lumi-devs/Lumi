@@ -1,0 +1,36 @@
+{
+  "name": "mod",
+  "displayName": "Moderation",
+  "emoji": "🛡️",
+  "description": "Staff moderation: warn, mute, kick, ban — with case logging.",
+  "version": "1.0.0",
+  "isCore": false,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": false,
+  "targetService": "worker",
+  "subStores": [
+    "commands",
+    "scheduled-tasks"
+  ],
+  "configFields": [
+    {
+      "key": "log_channel_id",
+      "type": "CHANNEL",
+      "label": "Mod Log Channel",
+      "description": "Channel where moderation action embeds are posted."
+    },
+    {
+      "key": "quarantine_role_id",
+      "type": "ROLE",
+      "label": "Quarantine Role",
+      "description": "Role assigned when a member is quarantined (replaces all their roles)."
+    },
+    {
+      "key": "warn_thresholds",
+      "type": "STRING",
+      "label": "Warn Thresholds",
+      "description": "JSON map of warn count → action. E.g. {\"3\":{\"action\":\"mute\",\"duration\":\"1h\"},\"5\":{\"action\":\"ban\"}}"
+    }
+  ]
+}
