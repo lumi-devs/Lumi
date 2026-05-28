@@ -6,7 +6,7 @@
 
 ### **A Production-Grade, Microservices-Based Discord Framework Built on Bun, Sapphire, and Redis Streams**
 
-Lumi (formerly Ember) is a highly optimized, state-of-the-art modular Discord bot platform. Rather than running a heavyweight monolithic process, Lumi splits gateway operations, scheduled tasks, REST rate-limiting, and modular command handling into isolated, horizontally scalable microservices. It runs on the ultra-fast **Bun** runtime, utilizes the **Sapphire v5** framework, and coordinates cluster state over **Redis Streams**, **RabbitMQ**, and **PgBouncer**.
+Lumi (formerly Lumi) is a highly optimized, state-of-the-art modular Discord bot platform. Rather than running a heavyweight monolithic process, Lumi splits gateway operations, scheduled tasks, REST rate-limiting, and modular command handling into isolated, horizontally scalable microservices. It runs on the ultra-fast **Bun** runtime, utilizes the **Sapphire v5** framework, and coordinates cluster state over **Redis Streams**, **RabbitMQ**, and **PgBouncer**.
 
 ---
 
@@ -41,7 +41,7 @@ Lumi (formerly Ember) is a highly optimized, state-of-the-art modular Discord bo
 
 ## 🏛️ Architecture Overview
 
-Unlike traditional monolithic Discord bots that struggle under heavy concurrent events due to single-threaded event loops, Ember implements a **Wick/Dyno-class microservice topology** coordinated via Bun workspaces:
+Unlike traditional monolithic Discord bots that struggle under heavy concurrent events due to single-threaded event loops, Lumi implements a **Wick/Dyno-class microservice topology** coordinated via Bun workspaces:
 
 ```mermaid
 graph LR
@@ -83,7 +83,7 @@ graph LR
 
 ### 📦 Microservice Responsibilities (Explained Simply)
 
-To make Ember ultra-reliable, we split it into five isolated services. Here is what they do technically, and what that means for your server in plain English:
+To make Lumi ultra-reliable, we split it into five isolated services. Here is what they do technically, and what that means for your server in plain English:
 
 1.  **`gateway` (`apps/gateway`)**
     *   **Plain English (The "Traffic Officer")**: Always stays active listening for events from Discord (like messages or joins). Even if the rest of the bot has to restart or updates code, the officer stays online, meaning **the bot never drops offline or misses an event.**
@@ -140,7 +140,7 @@ Docker Compose boots the entire microservices cluster, databases, telemetry coll
 
 1.  **Clone the Repository**:
     ```bash
-    git clone https://github.com/ember-hq/bot.git
+    git clone https://github.com/lumi-hq/bot.git
     cd bot
     ```
 2.  **Configure Environment**:
@@ -178,7 +178,7 @@ Requires **Bun (v1.1+)**, **PostgreSQL (v16)**, and **Redis (v7)** running local
 
 ## ⚙️ Environment Configuration
 
-Ember strictly validates all variables at boot. Below are the key environment configurations:
+Lumi strictly validates all variables at boot. Below are the key environment configurations:
 
 ### 🔑 Authentication & Core
 *   `BOT_TOKEN`: Discord Bot Token.
@@ -197,7 +197,7 @@ Ember strictly validates all variables at boot. Below are the key environment co
 
 ## 📈 Telemetry & Observability
 
-Ember features a production-grade observability stack scraped via `/metrics` (Port `9090`):
+Lumi features a production-grade observability stack scraped via `/metrics` (Port `9090`):
 
 *   **RED metrics**: Tracks command rate, error rates, and duration histograms.
 *   **Queue Lag**: Exposes `ember_stream_length`, `ember_stream_consumer_lag{stream,group}`, and `ember_stream_dlq_length` to trigger alerts on worker backlog surges.
@@ -224,7 +224,7 @@ Use these scripts during development and deployment:
 
 ## ⚜️ Developer Golden Mandates
 
-To contribute or write custom extensions for Ember, you **MUST** follow these core guidelines:
+To contribute or write custom extensions for Lumi, you **MUST** follow these core guidelines:
 
 1.  🚫 **No direct `EmbedBuilder` calls**: Build user-facing output through the card factories in `packages/core/src/utilities/cards.ts` (e.g. `makeSuccessCard`, `makeErrorCard`) rather than constructing embeds directly.
 2.  🛢️ **No direct `prisma` calls in modules**: All database access in modules must route through `this.container.db.<repository>` (`packages/core/src/prisma/repositories/`).
@@ -237,10 +237,10 @@ To contribute or write custom extensions for Ember, you **MUST** follow these co
 
 This project is licensed under the **Apache License 2.0**.
 
-Under this license, you are free to use, modify, distribute, and commercially exploit the codebase. However, per **Section 6 (Trademarks)**, this license does **NOT** grant you permission to use the "Ember" brand, trademarks, logos, or product names. Any modified or redistributed versions of this software **must be completely renamed and rebranded**.
+Under this license, you are free to use, modify, distribute, and commercially exploit the codebase. However, per **Section 6 (Trademarks)**, this license does **NOT** grant you permission to use the "Lumi" brand, trademarks, logos, or product names. Any modified or redistributed versions of this software **must be completely renamed and rebranded**.
 
 ---
 
 <div align="center">
-  <p>Engineered with ❤️ by the Ember Core Team.</p>
+  <p>Engineered with ❤️ by the Lumi Core Team.</p>
 </div>
