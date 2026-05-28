@@ -79,7 +79,7 @@ graph TD
     classDef dbs fill:#34d399,stroke:#1e1e2f,stroke-width:2px,color:#000;
     class G,W1,W2,S services;
     class EB brokers;
-    class DB,R,RP,dbs;
+    class DB,R,RP dbs;
 ```
 
 ### Microservice Responsibilities:
