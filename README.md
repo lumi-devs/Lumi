@@ -1,12 +1,10 @@
 <div align="center">
 
-> ⚠️ **Note:** If you are reading this on GitHub, please note that this is a read-only mirror. Primary development, pull requests, and issue tracking occur on [Codeberg](https://codeberg.org/lumi-project/lumi).
-
 # ✨ Lumi: Horizontally Scalable Modular Discord Bot Platform
 
 ### **A Production-Grade, Microservices-Based Discord Framework Built on Bun, Sapphire, and Redis Streams**
 
-Lumi (formerly Lumi) is a highly optimized, state-of-the-art modular Discord bot platform. Rather than running a heavyweight monolithic process, Lumi splits gateway operations, scheduled tasks, REST rate-limiting, and modular command handling into isolated, horizontally scalable microservices. It runs on the ultra-fast **Bun** runtime, utilizes the **Sapphire v5** framework, and coordinates cluster state over **Redis Streams**, **RabbitMQ**, and **PgBouncer**.
+Lumi (formerly Ember) is a highly optimized, state-of-the-art modular Discord bot platform. Rather than running a heavyweight monolithic process, Lumi splits gateway operations, scheduled tasks, REST rate-limiting, and modular command handling into isolated, horizontally scalable microservices. It runs on the ultra-fast **Bun** runtime, utilizes the **Sapphire v5** framework, and coordinates cluster state over **Redis Streams**, **RabbitMQ**, and **PgBouncer**.
 
 ---
 
