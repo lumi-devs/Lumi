@@ -1,214 +1,226 @@
 <div align="center">
 
-# 🔥 Ember
+# 🔥 Ember: Horizontally Scalable Modular Discord Bot Platform
 
-### **A modular Discord bot built on Bun and Sapphire**
+### **A Production-Grade, Microservices-Based Discord Framework Built on Bun, Sapphire, and Redis Streams**
 
-Ember is a modular Discord bot. Each feature lives in its own isolated module with its own commands, listeners, storage, and config. It runs on the **Bun** runtime, uses the **Sapphire v5** framework, and coordinates state across processes with **Redis** and **RabbitMQ**.
-
-> **Status:** In active development. The module system, config, permissions, and messaging infrastructure are in place; several feature modules are still being built out.
+Ember is a highly optimized, state-of-the-art modular Discord bot platform. Rather than running a heavyweight monolithic process, Ember splits gateway operations, scheduled tasks, REST rate-limiting, and modular command handling into isolated, horizontally scalable microservices. It runs on the ultra-fast **Bun** runtime, utilizes the **Sapphire v5** framework, and coordinates cluster state over **Redis Streams**, **RabbitMQ**, and **PgBouncer**.
 
 ---
 
-[![Bun](https://img.shields.io/badge/Runtime-Bun%20v1.1%2B-000000?style=for-the-badge&logo=bun&logoColor=white)](https://bun.sh)
-[![Sapphire](https://img.shields.io/badge/Framework-Sapphire%20v5-24bdf3?style=for-the-badge&logo=sapphire&logoColor=white)](https://www.sapphirejs.dev/)
+[![Bun Runtime](https://img.shields.io/badge/Runtime-Bun%20v1.1%2B-000000?style=for-the-badge&logo=bun&logoColor=white)](https://bun.sh)
+[![Sapphire Framework](https://img.shields.io/badge/Framework-Sapphire%20v5-24bdf3?style=for-the-badge&logo=sapphire&logoColor=white)](https://www.sapphirejs.dev/)
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript%20v5.7-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Prisma](https://img.shields.io/badge/Database-Prisma%20v7.8-2d3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io/)
-[![RabbitMQ](https://img.shields.io/badge/Messaging-RabbitMQ%20v3-ff6600?style=for-the-badge&logo=rabbitmq&logoColor=white)](https://www.rabbitmq.com/)
-[![Redis](https://img.shields.io/badge/Cache-Redis%20v7-dc382d?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ed?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Prisma ORM](https://img.shields.io/badge/Database-Prisma%20v7.8-2d3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io/)
+[![Redis Streams](https://img.shields.io/badge/Bus-Redis%20Streams-dc382d?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
+[![RabbitMQ RPC](https://img.shields.io/badge/Messaging-RabbitMQ%20v3-ff6600?style=for-the-badge&logo=rabbitmq&logoColor=white)](https://www.rabbitmq.com/)
+[![Docker Ready](https://img.shields.io/badge/Docker-Production%20Ready-2496ed?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 
-**Modular isolation • Bun runtime • Redis + RabbitMQ • Component-based UI**
+**Modular Isolation • Gateway/Worker Split • Centralized Rate-Limits • Clustered Sharding • Telemetry-Guided**
 
 </div>
 
 ---
 
-## 🏛️ Architecture
+## 📖 Table of Contents
 
-### 1. 📦 Feature-based modularity
-Every feature is a self-contained module under `src/modules/`. Modules:
-- Avoid cross-module imports — shared code lives in `src/core/` and `src/utilities/`.
-- Own their database tables (Prisma) and Redis key namespaces.
-- Implement a `deleteUserData` hook for GDPR-style data removal.
-- Declare config fields and metadata via the `@EmberModule` decorator.
-
-The module store discovers modules at runtime, resolves dependencies, and detects conflicts.
-
-### 2. 🎛️ Messaging
-Ember uses two transports:
-- **Redis** — caching and config storage, plus **BullMQ** for durable scheduled tasks (delayed/exact-time/repeated jobs that survive restarts).
-- **RabbitMQ** — cross-process fanout events and the RPC bridge for low-latency request/response with the web dashboard.
-
-### 3. 🎨 Card-based UI
-User-facing output is built through card factories in `src/utilities/cards.ts` (using Discord's components, not classic embeds), with a shared color palette:
-
-| Color | Hex Value | Purpose |
-| :--- | :--- | :--- |
-| **Blurple** | `#5865f2` | Primary branding, buttons, and notifications |
-| **Sakura** | `#ffb7c5` | Soft Pink — Optimal network latency & performance dashboards |
-| **Lavender** | `#a78bfa` | Soft Purple — Information cards, stats overview |
-| **Mint** | `#34d399` | Soft Green — Guild configuration & healthy systems |
-| **Peach** | `#fba190` | Soft Peach — Minor warning states and transient statuses |
-| **Rose** | `#f43f5e` | Vibrant Rose — Severe performance lag & critical errors |
-| **Amber** | `#f59e0b` | Warm Amber — Moderate warning thresholds |
+*   [🏛️ Architecture Overview](#️-architecture-overview)
+*   [📂 Monorepo Structure](#-monorepo-structure)
+*   [⚡ Core Architectural Highlights](#-core-architectural-highlights)
+*   [🛡️ Audited Feature Modules](#️-audited-feature-modules)
+*   [🚀 Getting Started](#-getting-started)
+*   [⚙️ Environment Configuration](#️-environment-configuration)
+*   [📈 Telemetry & Observability](#-telemetry---observability)
+*   [🛠️ Developer Scripts Reference](#️-developer-scripts-reference)
+*   [⚜️ Developer Golden Mandates](#️-developer-golden-mandates)
+*   [📄 License](#-license)
 
 ---
 
-## 📂 Directory Structure
+## 🏛️ Architecture Overview
+
+Unlike traditional monolithic Discord bots that struggle under heavy concurrent events due to single-threaded event loops, Ember implements a **Wick/Dyno-class microservice topology** coordinate via Bun workspaces:
+
+```mermaid
+graph TD
+    subgraph Discord API & Gateway
+        D[Discord Gateway] <-->|WebSocket| G[Gateway Service]
+    end
+
+    subgraph Messaging & Event Transport
+        G -->|Patched handlePacket: Raw Packets| EB[(Event Bus: Redis Streams)]
+        EB -->|Consume & Replay| W1[Worker Service: Replica 1]
+        EB -->|Consume & Replay| W2[Worker Service: Replica 2]
+    end
+
+    subgraph State & Persistence
+        W1 <-->|Cache-Aside / Locks| R[(Redis Cache-Aside)]
+        W2 <-->|Cache-Aside / Locks| R
+        W1 <-->|Prisma ORM / PgBouncer| DB[(PostgreSQL)]
+        W2 <-->|Prisma ORM / PgBouncer| DB
+    end
+
+    subgraph Distributed Scheduler
+        S[Scheduler Service] <-->|BullMQ Queue| R
+        W1 -->|RequestEnvelope| S
+        W2 -->|RequestEnvelope| S
+        S -->|FireEnvelope| W1
+        S -->|FireEnvelope| W2
+    end
+
+    subgraph Outbound REST Gating
+        W1 -->|REST Actions| RP(Central REST Proxy: nirn-proxy)
+        W2 -->|REST Actions| RP
+        RP <-->|Coordinated Bucket Rate-Limits| D
+    end
+
+    classDef services fill:#a78bfa,stroke:#1e1e2f,stroke-width:2px,color:#fff;
+    classDef brokers fill:#ffb7c5,stroke:#1e1e2f,stroke-width:2px,color:#000;
+    classDef dbs fill:#34d399,stroke:#1e1e2f,stroke-width:2px,color:#000;
+    class G,W1,W2,S services;
+    class EB brokers;
+    class DB,R,RP,dbs;
+```
+
+### Microservice Responsibilities:
+1.  **`gateway` (`apps/gateway`)**: A zero-Sapphire, ultra-lightweight client whose sole job is maintaining Discord WebSockets, decoding gateway payloads, and publishing raw dispatches (op: 0) to **Redis Streams**. It is completely isolated and survives worker recycles.
+2.  **`worker` (`apps/worker`)**: Stateless processing nodes that suppress their WebSocket connection and consume from the Redis Streams event bus, replaying raw packets into local Sapphire clients. Scales horizontally based on queue consumer lag.
+3.  **`scheduler` (`apps/scheduler`)**: Owns the BullMQ worker and Redis DB 1. It orchestrates all time-based durable tasks (mutes, bans, captcha expiries) and triggers events across workers.
+4.  **`api` (`apps/api`)**: Translates JSON-RPC 2.0 requests between the bot and the web dashboard over RabbitMQ.
+5.  **`rest-proxy` (`nirn-proxy`)**: A centralized proxy coordinating outbound Discord REST rate limits. Every worker routes REST actions through the proxy, ensuring a shared global rate-limit bucket budget.
+
+---
+
+## 📂 Monorepo Structure
+
+Ember is organized under **Bun Workspaces** to guarantee absolute boundary separation and clean code sharing:
 
 ```text
-src/
-├── main.ts          # Entry point
-├── client/          # EmberClient setup and login
-├── core/            # Shared infrastructure
-│   ├── module-system/   # Module base class, ModuleStore, Service base
-│   ├── services/        # ConfigService, PermissionService, DownloaderService
-│   ├── commands/        # Core admin commands (config, permissions, module, help)
-│   ├── rabbitmq/        # Job queue manager and handlers
-│   ├── routes/          # HTTP routes (health)
-│   └── lib/             # Shared helpers (gdpr, ping, downloader, etc.)
-├── database/        # Prisma client and Redis setup
-├── utilities/       # cards, assets, branding, errors, config
-├── tasks/           # Scheduled tasks
-├── workers/         # Worker thread management
-├── languages/       # i18n resources
-└── modules/         # Feature modules
-    ├── afk/             # AFK states and mention digests
-    ├── dashboard/       # Dashboard RPC handlers
-    ├── emoji-stealer/   # Emoji import utilities
-    ├── filter/          # Word filter (config scaffold)
-    ├── mod/             # Moderation commands (ban, kick, timeout, cases, etc.)
-    ├── utility/         # Misc utilities (purge, nick, media, thread cleaner)
-    └── verify/          # Member verification (config scaffold)
+├── apps/
+│   ├── api/             # JSON-RPC 2.0 Server for dashboard integration
+│   ├── gateway/         # Zero-Sapphire, WS gateway publisher (TRANSPORT=streams)
+│   ├── scheduler/       # BullMQ durable task coordinator
+│   └── worker/          # Stateless, Sapphire-driven module handler
+├── packages/
+│   ├── contracts/       # Shared TypeScript RPC and Bus schemas (zero runtime deps)
+│   ├── core/            # Core framework glue, module registry, and repositories
+│   ├── event-bus/       # Redis Streams consumer group and in-proc transport
+│   ├── observability/   # Prometheus metrics server and OpenTelemetry tracing
+│   ├── sdk/             # Public SDK for loading external modules
+│   └── sharding/        # Bucketed IDENTIFY cluster coordinator & session manager
+├── config/              # Grafana, Tempo, Prometheus, and OTel collector configs
+├── prisma/              # Schema definition fronted by PgBouncer transaction pooling
+└── scripts/             # Chaos injection, load-testing, and manifest generators
 ```
 
 ---
 
-## ⚡ Modules & Features
+## ⚡ Core Architectural Highlights
 
-Each module registers its own commands, listeners, and storage.
-
-### ⚙️ Core operations
-Built into `src/core/`, available on every install.
-- **Permissions** — restrict commands by role or member via `/permissions`, layered over built-in permission levels.
-- **Config** — view and change module settings at runtime via `/config`.
-- **Modules** — install and hot-reload modules from tracked Git repositories (`/repo`, `,download`, `/module`).
-- **Health & ping** — `/ping` latency checks and an HTTP health route.
-
-### 📬 AFK (`afk`)
-- Sets AFK status via `/afk` and tracks elapsed time.
-- Catches mentions while away and compiles a digest.
-- Auto-clears when the user next sends a message.
-
-### 🔨 Moderation (`mod`)
-- `ban`, `kick`, `timeout`, `quarantine`, `sanitize` actions with audit logging.
-- Case tracking via `cases`.
-
-### 🧰 Utility (`utility`)
-- `purge` with bulk/slow-delete fallback, `nick`, user media tools, and a thread cleaner.
-
-### 🧩 Scaffolds
-`filter` (word filter) and `verify` (captcha verification) currently define their config schema only — behavior is not yet implemented.
+*   **Redis Streams Event Bus**: Utilizes `XADD`, `XREADGROUP`, and `XACK` with consumer groups for horizontals workers. Runs a background `XAUTOCLAIM` loop to claim stale unacknowledged messages (fault-tolerance) and routes failures to a Dead Letter Queue (DLQ) after 5 failed deliveries.
+*   **Distributed Mutex Locking**: Per-process memory locks are replaced by a **Redis Distributed Lock** engine (`SET NX PX` with Lua-fenced releases), ensuring mutual exclusion on guild configurations and state modifications across multiple worker replicas.
+*   **Consensus-Driven Sharding Coordinator**: Gateway instances join a Redis-backed cluster (`ember:cluster:<name>:members`), maintaining heartbeats via ZSETs. A temporary cluster leader is elected using a Redis lock to partition shard ranges evenly among active replicas, minimizing session churn during scaling.
+*   **Redis Session Resumption**: Persists `SessionInfo` globally in Redis (`ember:cluster:<name>:session:<shard>`) with a 1s batch flushing loop. Shards take over other processes' sessions and `RESUME` seamlessly without burning Discord `IDENTIFY` quotas.
+*   **Centralized Outbound REST Gating**: Routes outbound REST through a central proxy, disabling local discord.js limiters (`globalRequestsPerSecond: Infinity`) to eliminate double-throttling latency while guarding against CloudFlare bans.
 
 ---
 
-## 🚀 Installation & Deployment
+## 🛡️ Audited Feature Modules
 
-Ember supports two setup types depending on your hosting requirements.
+Each module lives in `packages/core/src/modules/` and is discovered *manifest-first* at runtime without early code execution, making hot-reloads and dependency resolution rock-solid.
+
+### 🤖 Multi-Threaded Word Filter (`filter`)
+*   **Facts**: Uses a highly optimized **Aho-Corasick multi-pattern search automaton**.
+*   **Offloading**: Automaton compilation (`FILTER_BUILD`) and searching (`FILTER_MATCH`) are entirely offloaded to native **Bun Worker threads**, keeping the gateway event loop completely unblocked.
+*   **Self-Healing**: If a worker node crashes or respawns, a cache-miss triggers an automatic broadcast rebuild across all worker threads before retrying.
+
+### ✅ Interactive Captcha Sequence (`verify`)
+*   **Facts**: Provides a highly polished **emoji-sequence math verification sequence** using Discord button components.
+*   **State Control**: Captcha sequence progress, attempts remaining, and correct emoji answers are stored strictly in Redis under `VerifyKeys.seqState` with a strict `EXAT` TTL.
+*   **Reliability**: A background `captcha-expiry` Sweeper sweeps inactive sessions, executing a kick action on timeout if configured.
+
+### 🔨 Robust Moderation & GDPR Compliance (`mod`)
+*   **Facts**: Features `ban`, `kick`, `timeout`, `quarantine`, and `sanitize` commands with an atomic `GuildCaseCounter` to prevent duplicate case number generation.
+*   **GDPR Privacy**: Implements strict data purges (`deleteUserData`). Moderation cases are kept for audit integrity but **anonymize** both the subject's and moderator's Snowflake strings to `'0'`.
+*   **State Reconciler**: Implements `reconcileScheduledJobs` on startup, checking Postgres against BullMQ to re-arm pending unmutes/unbans after downtimes.
+
+### ⚙️ Granular RBAC Overrides (`permissions_mgr`)
+*   **Facts**: Extends Sapphire's `AllFlowsPrecondition` to check permission overrides per command path and guild.
+*   **Priority Chain**: Overrides are evaluated in a strict precedence order:
+    $$\text{User Overrides} > \text{Channel Overrides} > \text{Category Overrides} > \text{Role Position (Highest first)} > \text{@everyone}$$
+
+---
+
+## 🚀 Getting Started
 
 ### Option A: Docker Compose (Recommended)
-Docker Compose automatically boots the database, cache, message broker, and the bot runtime in isolated networks.
+Docker Compose boots the entire microservices cluster, databases, telemetry collectors, and proxies on your local machine with a single command.
 
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/your-username/ember-ts.git
-   cd ember-ts
-   ```
-
-2. **Configure Environment Variables**:
-   Create a `.env` file by copying the template and supplying your Discord tokens:
-   ```bash
-   cp .env.example .env
-   ```
-   *(Ensure `BOT_TOKEN` and `CLIENT_ID` are configured inside `.env`)*
-
-3. **Start in Development Mode**:
-   Development mode supports hot-reloading (bot code reloads instantly on file changes) and binds local folders:
-   ```bash
-   docker compose up
-   ```
-
-4. **Start in Production Mode**:
-   Production mode compiles a single-bundle target, optimizes garbage collection, and monitors resource boundaries:
-   ```bash
-   docker compose --profile production up -d
-   ```
-
-*Note: During startup, database migrations are automatically pushed and the Prisma client is updated.*
-
----
+1.  **Clone the Repository**:
+    ```bash
+    git clone https://github.com/ember-hq/bot.git
+    cd bot
+    ```
+2.  **Configure Environment**:
+    ```bash
+    cp .env.example .env
+    # Supply your Discord BOT_TOKEN and CLIENT_ID
+    ```
+3.  **Start in Development Mode** (Hot-reloads on file changes):
+    ```bash
+    docker compose up
+    ```
+4.  **Start in Production Mode** (Autoscales workers, enables PgBouncer transaction pooling):
+    ```bash
+    docker compose --profile production up -d
+    ```
 
 ### Option B: Bare-Metal Setup
-To run Ember locally without Docker, you must have **Bun (v1.1+)**, **PostgreSQL (v16)**, and **Redis (v7)** installed on your machine. RabbitMQ is optional (Ember will gracefully switch to Redis-only mode if RabbitMQ is unavailable).
+Requires **Bun (v1.1+)**, **PostgreSQL (v16)**, and **Redis (v7)** running locally.
 
-1. **Install Dependencies**:
-   ```bash
-   bun install
-   ```
-
-2. **Configure Local Services**:
-   Copy `.env.example` to `.env` and specify local host addresses:
-   ```bash
-   cp .env.example .env
-   ```
-
-3. **Initialize Database Schema**:
-   Sync your local PostgreSQL database with the Prisma schema and generate types:
-   ```bash
-   bun run db:generate
-   bun run db:push
-   ```
-
-4. **Launch the Engine**:
-   Start the bot with hot-reloading:
-   ```bash
-   bun run dev
-   ```
+1.  **Install Workspaces**:
+    ```bash
+    bun install
+    ```
+2.  **Generate Client & Push Database Schema**:
+    ```bash
+    bun run db:generate
+    bun run db:push
+    ```
+3.  **Run Worker**:
+    ```bash
+    bun run dev
+    ```
 
 ---
 
 ## ⚙️ Environment Configuration
 
-Ember validates the environment at boot. Below are the key configuration options:
+Ember strictly validates all variables at boot. Below are the key environment configurations:
 
 ### 🔑 Authentication & Core
-| Variable | Required | Default | Purpose |
-| :--- | :---: | :--- | :--- |
-| `BOT_TOKEN` | **Yes** | — | Discord application bot authorization token. |
-| `CLIENT_ID` | **Yes** | — | Discord Application ID used for slash command registration. |
-| `OWNER_IDS` | No | — | Comma-separated Discord User IDs representing Bot Owners. |
-| `DEFAULT_PREFIX` | No | `,` | Legacy character used for system administration commands. |
-| `NODE_ENV` | No | `development` | Operating environment (`development` or `production`). |
+*   `BOT_TOKEN`: Discord Bot Token.
+*   `CLIENT_ID`: Discord Application Client ID.
+*   `OWNER_IDS`: Comma-separated list of Bot Owner Discord User IDs.
+*   `EMBER_ROLE`: The role of this process (`monolith` | `gateway` | `worker` | `scheduler`).
+*   `TRANSPORT`: The event bus driver (`inproc` | `streams`).
 
-### 🛢️ Databases & Microservices
-| Variable | Required | Default | Purpose |
-| :--- | :---: | :--- | :--- |
-| `POSTGRES_URL` | **Yes** | `postgresql://...` | Connection URI for the main PostgreSQL storage engine. |
-| `REDIS_HOST` | **Yes** | `localhost` | Host address of your Redis memory store. |
-| `REDIS_PORT` | No | `6379` | Port bound to the Redis caching instance. |
-| `REDIS_PASSWORD` | No | `ember` | Authorization password for Redis. |
-| `REDIS_CACHE_DB` | No | `0` | Database index allocated for caching and configuration data. |
-| `REDIS_TASK_DB` | No | `1` | Database index allocated for Sapphire scheduled events. |
-| `RABBITMQ_URL` | No | `amqp://...` | Connection string for RabbitMQ. If omitted, queues run on Redis. |
+### 🛢️ Services & Proxies
+*   `POSTGRES_URL`: Connection string for the PostgreSQL database (should point to PgBouncer port `6432` in production).
+*   `DIRECT_POSTGRES_URL`: Direct PostgreSQL connection bypass string (required for Prisma migrations).
+*   `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`: Credentials for the Redis database.
+*   `DISCORD_PROXY_URL`: Centralized rate-limit proxy base address (e.g. `http://nirn-proxy:8080`).
 
-### 📈 Metrics, Logs & Cache
-| Variable | Required | Default | Purpose |
-| :--- | :---: | :--- | :--- |
-| `LOG_LEVEL` | No | `info` | Minimum log severity to output (`debug`, `info`, `warn`, `error`). |
-| `SENTRY_ENABLED` | No | `false` | Enable Sentry application telemetry and error tracking. |
-| `SENTRY_DSN` | No | — | Endpoint address for your Sentry workspace. |
-| `EMBER_CACHE_TTL` | No | `60` | Duration (seconds) for caching guild configuration records in Redis. |
+---
+
+## 📈 Telemetry & Observability
+
+Ember features a production-grade observability stack scraped via `/metrics` (Port `9090`):
+
+*   **RED metrics**: Tracks command rate, error rates, and duration histograms.
+*   **Queue Lag**: Exposes `ember_stream_length`, `ember_stream_consumer_lag{stream,group}`, and `ember_stream_dlq_length` to trigger alerts on worker backlog surges.
+*   **REST Gating Metrics**: Gauges `ember_rest_retry_after_seconds` and `ember_rest_invalid_request_warnings_total` to track rate limit trends.
+*   **OpenTelemetry Tracing**: Integrates W3C context propagation across the Redis event bus, mapping a single command span across gateway, streams, and worker completion.
 
 ---
 
@@ -216,19 +228,15 @@ Ember validates the environment at boot. Below are the key configuration options
 
 Use these scripts during development and deployment:
 
-| Command | Action | Execution Scope |
+| Command | Action | Scope |
 | :--- | :--- | :--- |
-| `bun run dev` | `bun --watch src/main.ts` | Launches the hot-reloading development server. |
-| `bun run start` | `bun src/main.ts` | Runs the bot directly in TypeScript (optimized for Bun). |
-| `bun run build` | `bun build ...` | Generates a single-file production bundle in `dist/`. |
-| `bun run start:dist` | `bun dist/main.js` | Launches the pre-bundled production javascript package. |
-| `bun run typecheck` | `tsc --noEmit` | Validates TypeScript types across all source folders. |
-| `bun run lint` | `eslint src` | Checks formatting and code style, auto-fixing when possible. |
-| `bun run db:generate` | `prisma generate` | Generates the strongly typed local Prisma client. |
-| `bun run db:push` | `prisma db push` | Pushes the local schema directly to Postgres (avoids migrations). |
-| `bun run db:migrate` | `prisma migrate dev`| Creates and tracks production-grade SQL migrations. |
-| `bun run db:studio` | `prisma studio` | Launches a web database GUI at `http://localhost:5555`. |
-| `bun run clean` | `rimraf dist/` | Removes pre-existing compilation artifacts. |
+| `bun run dev` | Runs the active app in hot-reloading watch mode | Workspace |
+| `bun run typecheck` | Validates TypeScript compilation across the monorepo | Workspace |
+| `bun run lint` | Runs strict ESLint checks and formats the files | Workspace |
+| `bun run db:migrate` | Creates a production-grade SQL schema migration | Database |
+| `bun run db:studio` | Launches a local database GUI explorer | Database |
+| `bun run modules:manifest` | Generates static `manifest.json` files for modules | Framework |
+| `bun test` | Runs the Vitest test suite | Test |
 
 ---
 
@@ -236,16 +244,16 @@ Use these scripts during development and deployment:
 
 To contribute or write custom extensions for Ember, you **MUST** follow these core guidelines:
 
-1. 🚫 **No direct `EmbedBuilder` calls**: Build user-facing output through the card factories in `src/utilities/cards.ts` (e.g. `makeSuccessCard`, `makeErrorCard`) rather than constructing embeds directly.
-2. 🛢️ **Access storage through the container**: Use `this.container.db` / `this.container.prisma` and `this.container.redis`. Don't add intermediate wrapper layers.
-3. 📦 **Respect isolation boundaries**: Code in `src/modules/{name}/` must not import from a sibling module. Shared code belongs in `src/core/` or `src/utilities/`.
-4. ⚡ **Command registration**: User-facing features register as slash commands (grouped where it makes sense, e.g. `/permissions set`). Prefix commands are reserved for bot-owner admin utilities.
+1.  🚫 **No direct `EmbedBuilder` calls**: Build user-facing output through the card factories in `packages/core/src/utilities/cards.ts` (e.g. `makeSuccessCard`, `makeErrorCard`) rather than constructing embeds directly.
+2.  🛢️ **No direct `prisma` calls in modules**: All database access in modules must route through `this.container.db.<repository>` (`packages/core/src/prisma/repositories/`).
+3.  📦 **Respect isolation boundaries**: Code in `src/modules/{name}/` must not import from a sibling module. Shared code belongs in `packages/core/src/core/` or `packages/core/src/utilities/`.
+4.  ⚡ **Command registration**: User-facing features register as slash commands (grouped where it makes sense, e.g. `/permissions set`). Prefix commands are reserved for bot-owner admin utilities.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **Apache License 2.0**. 
+This project is licensed under the **Apache License 2.0**.
 
 Under this license, you are free to use, modify, distribute, and commercially exploit the codebase. However, per **Section 6 (Trademarks)**, this license does **NOT** grant you permission to use the "Ember" brand, trademarks, logos, or product names. Any modified or redistributed versions of this software **must be completely renamed and rebranded**.
 
