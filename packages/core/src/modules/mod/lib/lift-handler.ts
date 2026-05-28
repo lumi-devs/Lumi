@@ -4,7 +4,9 @@
 import { container } from "@sapphire/framework";
 import type { ModLiftPayload } from "../scheduled-tasks/ModLiftTask.js";
 
-export async function handleModLiftFire(payload: ModLiftPayload): Promise<void> {
+export async function handleModLiftFire(
+  payload: ModLiftPayload,
+): Promise<void> {
   const c = await container.db.moderation.getModerationCaseById(payload.caseId);
   // Already lifted (e.g. manual unmute/unban) or deleted — nothing to do.
   if (!c?.active) return;

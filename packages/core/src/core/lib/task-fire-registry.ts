@@ -18,10 +18,7 @@
 import { container } from "@sapphire/framework";
 import type { EventBus, BusMessage } from "@ember/event-bus";
 import type { EmberScheduledTasks } from "#core/types/common.js";
-import {
-  taskFireStream,
-  type FireEnvelope,
-} from "#lib/scheduler-bus.js";
+import { taskFireStream, type FireEnvelope } from "#lib/scheduler-bus.js";
 
 export type TaskFireMode = "unicast" | "broadcast";
 
@@ -29,7 +26,9 @@ export type TaskFireHandler<N extends keyof EmberScheduledTasks> = (
   payload: EmberScheduledTasks[N],
 ) => Promise<void>;
 
-interface Registration<N extends keyof EmberScheduledTasks = keyof EmberScheduledTasks> {
+interface Registration<
+  N extends keyof EmberScheduledTasks = keyof EmberScheduledTasks,
+> {
   name: N;
   mode: TaskFireMode;
   handler: TaskFireHandler<N>;

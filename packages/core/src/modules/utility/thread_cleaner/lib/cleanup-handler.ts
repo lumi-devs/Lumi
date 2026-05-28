@@ -8,9 +8,7 @@ export async function handleThreadCleanerFire(): Promise<void> {
 
   const expiredThreads = await getExpiredThreads();
   if (expiredThreads.length === 0) {
-    container.logger.info(
-      "[ThreadCleanerTask] No expired threads to process.",
-    );
+    container.logger.info("[ThreadCleanerTask] No expired threads to process.");
     return;
   }
 
