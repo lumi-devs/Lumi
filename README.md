@@ -1,6 +1,6 @@
 <div align="center">
 
-> ⚠️ **Note:** This repository is a read-only mirror. Primary development and issue tracking occur on [Codeberg](https://codeberg.org/lumi-project/lumi).
+> ⚠️ **Note:** If you are reading this on GitHub, please note that this is a read-only mirror. Primary development, pull requests, and issue tracking occur on [Codeberg](https://codeberg.org/lumi-project/lumi).
 
 # ✨ Lumi: Horizontally Scalable Modular Discord Bot Platform
 
