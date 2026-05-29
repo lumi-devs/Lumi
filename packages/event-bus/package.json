@@ -10,6 +10,7 @@
   "dependencies": {
     "@ember/contracts": "workspace:*",
     "@ember/observability": "workspace:*",
-    "ioredis": "^5.4.0"
+    "ioredis": "^5.4.0",
+    "nats": "^2.29.0"
   }
 }

@@ -83,3 +83,18 @@ groups:
         annotations:
           summary: "Command error rate >5% on {{ $labels.service }}"
           description: "More than 5% of commands have errored over the last 5 minutes."
+
+      # S7: V8 heap headroom. `nodejs_heap_size_limit_bytes` is the
+      # --max-old-space-size cap; sustained >85% means GC pauses dominate and
+      # the next allocation spike will OOM. Bump the budget or shed load.
+      - alert: NodeHeapPressure
+        expr: |
+          max(ember_nodejs_heap_size_used_bytes) by (service)
+          /
+          clamp_min(max(ember_nodejs_heap_size_limit_bytes) by (service), 1) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "V8 heap >85% on {{ $labels.service }}"
+          description: "Heap pressure sustained. Either the service has a leak or the NODE_OPTIONS=--max-old-space-size cap is too small for the workload — see docs/explanation/capacity-planning.md."

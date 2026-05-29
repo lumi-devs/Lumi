@@ -1,5 +1,13 @@
 import { Module, EmberModule, cfg } from "#core/module-system/Module.js";
+import {
+  registerWorkerHandler,
+  unregisterWorkerHandler,
+} from "#workers/registry.js";
 import type { FilterService } from "./services/FilterService.js";
+
+const FILTER_WORKER_ACTION = "FILTER";
+const FILTER_WORKER_PATH = new URL("./workers/aho-corasick.ts", import.meta.url)
+  .href;
 
 @EmberModule({
   name: "filter",
@@ -18,6 +26,7 @@ import type { FilterService } from "./services/FilterService.js";
 })
 export class FilterModule extends Module {
   public override onLoad() {
+    registerWorkerHandler(FILTER_WORKER_ACTION, FILTER_WORKER_PATH);
     this.container.configChangeHooks.set(
       "filter:terms",
       async (guildId, _key) => {
@@ -31,6 +40,7 @@ export class FilterModule extends Module {
   }
 
   public override onUnload() {
+    unregisterWorkerHandler(FILTER_WORKER_ACTION);
     this.container.configChangeHooks.delete("filter:terms");
     return super.onUnload();
   }

@@ -99,3 +99,61 @@ function extractGuildId(d: unknown): string | undefined {
   const v = (d as { guild_id?: unknown }).guild_id;
   return typeof v === "string" ? v : undefined;
 }
+
+/**
+ * S8 slice 2: proxy-mode publisher. Hooks `@discordjs/ws` `WebSocketManager`
+ * directly via the `Dispatch` event — no discord.js `Client`, no entity
+ * managers, no caches. Used by `apps/gateway` once the proxy cutover lands.
+ *
+ * Same envelope shape as `RawGatewayPublisher`; the worker side
+ * (`RawGatewayConsumer`) is identical.
+ */
+export interface AttachProxyPublisherOptions extends RawGatewayPublisherOptions {
+  /** Override dispatch event name. Defaults to "dispatch". */
+  dispatchEvent?: string;
+}
+
+interface DispatchEmitterLike {
+  on(
+    event: string,
+    listener: (payload: RawGatewayPacket, shardId: number) => void,
+  ): unknown;
+  off(
+    event: string,
+    listener: (payload: RawGatewayPacket, shardId: number) => void,
+  ): unknown;
+}
+
+export function attachProxyPublisher(
+  bus: EventBus,
+  manager: DispatchEmitterLike,
+  opts: AttachProxyPublisherOptions = {},
+): () => void {
+  const ignore = opts.ignoreDispatchTypes ?? new Set();
+  const log = opts.log ?? (() => undefined);
+  const event = opts.dispatchEvent ?? "dispatch";
+  const listener = (data: RawGatewayPacket, shardId: number) => {
+    // WebSocketManager only emits this event for op=0 dispatches, so we don't
+    // re-check op here; trust `data.t` to be present.
+    if (!data?.t || ignore.has(data.t)) return;
+    const guildId = extractGuildId(data.d);
+    const envelope: RawGatewayEnvelope = {
+      shardId,
+      packet: data,
+      ts: Date.now(),
+      guildId,
+      ...injectTraceContext(),
+    };
+    const stream = rawGatewayStream(data.t);
+    bus.publish(stream, envelope, { maxLen: opts.maxLen }).catch((err) =>
+      log("error", "raw-gateway publish failed", {
+        stream,
+        err: String(err),
+      }),
+    );
+  };
+  manager.on(event, listener);
+  return () => {
+    manager.off(event, listener);
+  };
+}

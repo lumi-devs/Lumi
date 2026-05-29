@@ -14,7 +14,8 @@
     "@ember/observability": "workspace:*",
     "@ember/sharding": "workspace:*",
     "@discordjs/rest": "^2.6.0",
+    "@discordjs/ws": "^2.0.0",
     "discord-api-types": "^0.38.30",
-    "discord.js": "^14.20.0"
+    "ioredis": "^5.4.0"
   }
 }

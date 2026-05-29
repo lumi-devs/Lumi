@@ -1,0 +1,193 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "schemaVersion": 39,
+  "title": "Ember — Cost & Efficiency",
+  "tags": ["ember", "cost", "s7"],
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "cost_per_replica_hour",
+        "label": "$ per replica·hour",
+        "type": "textbox",
+        "query": "0.05",
+        "current": { "value": "0.05", "text": "0.05" },
+        "description": "Your blended infra cost per replica per hour (cpu+mem+storage). Used to derive $/guild estimates."
+      },
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(ember_commands_total, service)",
+        "includeAll": true,
+        "multi": true,
+        "refresh": 2
+      }
+    ]
+  },
+  "panels": [
+    {
+      "title": "Estimated $ / 1k guilds / hour",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 3 }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "($cost_per_replica_hour * count(count by (instance) (ember_commands_total))) / (sum(ember_guild_count) / 1000)",
+          "legendFormat": "$ / 1k guilds / hour"
+        }
+      ],
+      "description": "Sum of guilds across the gateway, divided by total replicas × cost-per-replica·hour. The denominator only includes replicas reporting metrics, so a scale-down shows up immediately."
+    },
+    {
+      "title": "Cluster guild count",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "sum(ember_guild_count)",
+          "legendFormat": "guilds"
+        }
+      ]
+    },
+    {
+      "title": "Active replicas (per service)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "count by (service) (up{job=\"ember\"} == 1)",
+          "legendFormat": "{{service}}"
+        }
+      ],
+      "description": "What KEDA is actually running. Compare to ember_stream_consumer_lag — if lag is climbing while this is flat, the autoscaler isn't reacting."
+    },
+    {
+      "title": "RSS per service",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "avg by (service) (ember_process_resident_memory_bytes{service=~\"$service\"})",
+          "legendFormat": "{{service}} avg"
+        },
+        {
+          "expr": "max by (service) (ember_process_resident_memory_bytes{service=~\"$service\"})",
+          "legendFormat": "{{service}} max"
+        }
+      ]
+    },
+    {
+      "title": "V8 heap utilization (% of --max-old-space-size)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.7 },
+              { "color": "red", "value": 0.85 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "max by (service) (ember_nodejs_heap_size_used_bytes{service=~\"$service\"}) / clamp_min(max by (service) (ember_nodejs_heap_size_limit_bytes{service=~\"$service\"}), 1)",
+          "legendFormat": "{{service}}"
+        }
+      ],
+      "description": "Tracks the NodeHeapPressure alert. >85% sustained means GC pauses dominate; bump the budget in capacity-planning.md or shed load."
+    },
+    {
+      "title": "Memory per cached guild (gateway)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "decbytes" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "sum(ember_process_resident_memory_bytes{service=\"gateway\"}) / clamp_min(sum(ember_guild_count{service=\"gateway\"}), 1)",
+          "legendFormat": "bytes/guild"
+        }
+      ],
+      "description": "Sanity-check vs the 25 KB/guild budget in docs/explanation/capacity-planning.md §3."
+    },
+    {
+      "title": "Cache hit ratio (cache-aside reads)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1, "min": 0 }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "sum by (cache) (rate(ember_cache_hits_total[5m])) / clamp_min(sum by (cache) (rate(ember_cache_hits_total[5m])) + sum by (cache) (rate(ember_cache_misses_total[5m])), 1)",
+          "legendFormat": "{{cache}}"
+        }
+      ],
+      "description": "Hit ratios below 80% on hot caches mean DatabaseService.getOrSet's TTL is shorter than the read cadence — tune RedisTTL in src/database/redis.ts."
+    },
+    {
+      "title": "Postgres pool saturation (%)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1, "min": 0 }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "max by (service) (ember_pg_pool_used) / clamp_min(max by (service) (ember_pg_pool_size), 1)",
+          "legendFormat": "{{service}} used"
+        },
+        {
+          "expr": "max by (service) (ember_pg_pool_waiting)",
+          "legendFormat": "{{service}} waiting"
+        }
+      ],
+      "description": "POSTGRES_POOL_MAX caps clients-per-process; PgBouncer DEFAULT_POOL_SIZE caps real Postgres backends. Saturation here means raise POSTGRES_POOL_MAX (and then maybe DEFAULT_POOL_SIZE)."
+    },
+    {
+      "title": "Stream consumer lag (autoscaler input)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 250 },
+              { "color": "red", "value": 500 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(ember_stream_consumer_lag{group=\"ember-workers\"})",
+          "legendFormat": "ember-workers pending"
+        },
+        {
+          "expr": "sum by (stream) (ember_stream_consumer_lag{group=\"ember-workers\"})",
+          "legendFormat": "{{stream}}"
+        }
+      ],
+      "description": "Mirrors deploy/k8s/worker-scaledobject.yaml — the KEDA Prometheus trigger fires at threshold 500. Sustained lag past that should be followed by replica count climbing above."
+    }
+  ]
+}

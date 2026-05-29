@@ -9,6 +9,9 @@ COPY package.json bun.lock* ./
 COPY packages/contracts/package.json ./packages/contracts/
 COPY packages/core/package.json ./packages/core/
 COPY packages/sdk/package.json ./packages/sdk/
+COPY packages/event-bus/package.json ./packages/event-bus/
+COPY packages/observability/package.json ./packages/observability/
+COPY packages/sharding/package.json ./packages/sharding/
 COPY apps/worker/package.json ./apps/worker/
 COPY apps/gateway/package.json ./apps/gateway/
 COPY apps/scheduler/package.json ./apps/scheduler/
@@ -47,6 +50,9 @@ COPY --chown=bun:bun package.json bun.lock* ./
 COPY --chown=bun:bun packages/contracts/package.json ./packages/contracts/
 COPY --chown=bun:bun packages/core/package.json ./packages/core/
 COPY --chown=bun:bun packages/sdk/package.json ./packages/sdk/
+COPY --chown=bun:bun packages/event-bus/package.json ./packages/event-bus/
+COPY --chown=bun:bun packages/observability/package.json ./packages/observability/
+COPY --chown=bun:bun packages/sharding/package.json ./packages/sharding/
 COPY --chown=bun:bun apps/worker/package.json ./apps/worker/
 COPY --chown=bun:bun apps/gateway/package.json ./apps/gateway/
 COPY --chown=bun:bun apps/scheduler/package.json ./apps/scheduler/

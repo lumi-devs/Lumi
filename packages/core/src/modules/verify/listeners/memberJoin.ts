@@ -94,17 +94,17 @@ export class VerifyMemberJoinListener extends Listener {
       attempts: MAX_ATTEMPTS,
       expiresAt,
     };
-    await this.container.redis.set(
-      VerifyKeys.seqState(member.guild.id, member.id),
-      JSON.stringify(state),
-      "EXAT",
-      Math.floor(expiresAt / 1000),
-    );
-    await this.container.redis.zadd(
-      VerifyKeys.pendingSet(member.guild.id),
-      expiresAt,
-      member.id,
-    );
+    // S7: pipeline state-set + pending-zadd — one round-trip per join.
+    await this.container.redis
+      .multi()
+      .set(
+        VerifyKeys.seqState(member.guild.id, member.id),
+        JSON.stringify(state),
+        "EXAT",
+        Math.floor(expiresAt / 1000),
+      )
+      .zadd(VerifyKeys.pendingSet(member.guild.id), expiresAt, member.id)
+      .exec();
 
     const seqDisplay = sequence.map((i) => EMOJI_POOL[i]).join("  ");
     const rows = buildRows(member.guild.id, member.id, buttons, new Set());

@@ -10,6 +10,7 @@ import {
   Registry,
 } from "prom-client";
 import { createServer, type Server } from "node:http";
+import { runReadinessProbes } from "./readiness.js";
 
 export const registry = new Registry();
 
@@ -195,8 +196,27 @@ export function startMetricsServer(port: number): Server | null {
       return;
     }
     if (req.url === "/healthz") {
+      // Liveness: process is up. No deep checks — k8s uses this to decide
+      // whether to restart the container.
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end('{"status":"ok"}');
+      return;
+    }
+    if (req.url === "/readyz") {
+      // Readiness: gates traffic / shard assignment. 503 if any dependency
+      // probe fails so the orchestrator pulls us out of rotation without a
+      // restart.
+      runReadinessProbes()
+        .then((report) => {
+          res.writeHead(report.ready ? 200 : 503, {
+            "Content-Type": "application/json",
+          });
+          res.end(JSON.stringify(report));
+        })
+        .catch((err) => {
+          res.writeHead(503, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ready: false, error: String(err) }));
+        });
       return;
     }
     res.writeHead(404);

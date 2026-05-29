@@ -95,8 +95,12 @@ export class CaptchaInteractionHandler extends InteractionHandler {
 
       if (state.progress === state.sequence.length) {
         // ── All correct — verify the member ──────────────────────────────
-        await this.container.redis.del(key);
-        await this.container.redis.zrem(VerifyKeys.pendingSet(guildId), userId);
+        // S7: pipeline the two cleanup writes — one round-trip.
+        await this.container.redis
+          .multi()
+          .del(key)
+          .zrem(VerifyKeys.pendingSet(guildId), userId)
+          .exec();
 
         const guild = this.container.client.guilds.cache.get(guildId);
         const member = await guild?.members.fetch(userId).catch(() => null);
@@ -155,8 +159,11 @@ export class CaptchaInteractionHandler extends InteractionHandler {
       state.attempts--;
 
       if (state.attempts <= 0) {
-        await this.container.redis.del(key);
-        await this.container.redis.zrem(VerifyKeys.pendingSet(guildId), userId);
+        await this.container.redis
+          .multi()
+          .del(key)
+          .zrem(VerifyKeys.pendingSet(guildId), userId)
+          .exec();
         await interaction.update(
           makeErrorCard(
             "Failed",

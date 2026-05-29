@@ -140,6 +140,7 @@ export class RedisStreamsBus implements EventBus {
     for (const stream of streams) await this.ensureGroup(stream, opts.group);
 
     let stopped = false;
+    let loopDone: Promise<void> = Promise.resolve();
     const loop = async () => {
       while (!stopped && !this.closed) {
         // XREADGROUP GROUP <group> <consumer> COUNT <n> BLOCK <ms> STREAMS s1 s2 > >
@@ -179,7 +180,8 @@ export class RedisStreamsBus implements EventBus {
         }
       }
     };
-    void loop();
+    loopDone = loop();
+    loopDone.catch(() => undefined);
 
     // Stale-consumer claim loop. Runs alongside the main read loop on the same
     // consumer id; XAUTOCLAIM scans the group's pending list and hands us back
@@ -207,6 +209,12 @@ export class RedisStreamsBus implements EventBus {
 
     return async () => {
       stopped = true;
+      // Wait for the read loop to actually exit. The current XREADGROUP BLOCK
+      // returns within `blockMs`, and any in-flight `deliver()` (handler +
+      // XACK) finishes its iteration before the loop re-checks `stopped`.
+      // Without this await, callers can close the underlying Redis connection
+      // mid-XACK and leak pending entries until XAUTOCLAIM picks them up.
+      await loopDone.catch(() => undefined);
     };
   }
 

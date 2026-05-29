@@ -39,8 +39,12 @@ export async function handleCaptchaExpiryFire(): Promise<void> {
               .catch(() => null);
           }
         }
-        await container.redis.zrem(VerifyKeys.pendingSet(guildId), userId);
-        await container.redis.del(VerifyKeys.seqState(guildId, userId));
+        // S7: pipeline the two cleanup writes — one round-trip instead of two.
+        await container.redis
+          .multi()
+          .zrem(VerifyKeys.pendingSet(guildId), userId)
+          .del(VerifyKeys.seqState(guildId, userId))
+          .exec();
       } catch (err: unknown) {
         container.logger.error(
           `[CaptchaExpiryTask] Failed for ${guildId}/${userId}:`,

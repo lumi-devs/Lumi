@@ -9,7 +9,7 @@ import "./service-name.js";
 import "@ember/core/setup";
 
 import { container } from "@sapphire/framework";
-import { shutdownTracing } from "@ember/observability";
+import { shutdownTracing, runDrainSequence } from "@ember/observability";
 import * as Sentry from "@sentry/node";
 import { EmberClient, envIsDefined, envParseString } from "@ember/core";
 
@@ -31,13 +31,27 @@ if (
 
 const client = await EmberClient.bootstrap({ role: "scheduler" });
 
+let shuttingDown = false;
 ["SIGINT", "SIGTERM"].forEach((sig) => {
   process.once(sig, async () => {
-    container.logger.info(`[Shutdown] ${sig} received`);
-    await client
-      .destroy()
-      .catch((err) => container.logger.error("[Shutdown] Failed:", err));
-    await shutdownTracing();
+    if (shuttingDown) return;
+    shuttingDown = true;
+    const log = (
+      level: "info" | "warn" | "error",
+      msg: string,
+      meta?: object,
+    ) => container.logger[level](`[Shutdown] ${msg}`, meta ?? "");
+    log("info", `${sig} received`);
+    await runDrainSequence(
+      [
+        // EmberClient.destroy() releases the scheduler leader lock first
+        // (so a follower can SET NX EX it inside the poll interval) before
+        // closing the BullMQ queues/workers + transports.
+        { name: "client-destroy", run: () => client.destroy() },
+        { name: "tracing-shutdown", run: () => shutdownTracing() },
+      ],
+      { log, preCloseGraceMs: 5_000, deadlineMs: 30_000 },
+    );
     process.exit(0);
   });
 });

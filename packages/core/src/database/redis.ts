@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { envParseInteger, envParseString } from "#lib/env.js";
+import { envIsDefined, envParseInteger, envParseString } from "#lib/env.js";
 import { Redis, type RedisOptions } from "ioredis";
 import { logError } from "#utilities/errors.js";
 
@@ -42,6 +42,23 @@ export const RedisKeys = {
 
   // ── Queues ─────────────────────────────────────────────────────────────
   auditLogsQueue: () => "ember:queue:audit_logs",
+
+  // ── Leader election ───────────────────────────────────────────────────
+  // Held by the single active `scheduler` replica when
+  // SCHEDULER_LEADER_LOCK=true; followers poll-block until it lapses.
+  schedulerLeader: () => "ember:scheduler:leader",
+
+  // ── S8 entity cache ───────────────────────────────────────────────────
+  // Minimal projections of Discord entities, populated by the gateway-event
+  // listener and read by modules that previously hit `client.guilds.cache`.
+  // Hashes — one key per entity. Field set kept narrow (id/name/permissions/
+  // owner/parent) so 1M+ guilds at ~256 B/entity fit a single Redis db.
+  entityGuild: (guildId: string) => `ember:ent:guild:${guildId}`,
+  entityChannel: (channelId: string) => `ember:ent:channel:${channelId}`,
+  entityRole: (roleId: string) => `ember:ent:role:${roleId}`,
+  entityUser: (userId: string) => `ember:ent:user:${userId}`,
+  entityMember: (guildId: string, userId: string) =>
+    `ember:ent:member:${guildId}:${userId}`,
 } as const;
 
 export const RedisTTL = {
@@ -53,18 +70,69 @@ export const RedisTTL = {
   blockedCache: 300,
   ignoreCache: 300,
   botStats: 15,
+  // Entity projections refreshed on every relevant gateway dispatch, but the
+  // TTL guards against orphaned records when this worker missed the DELETE.
+  // 24h is conservative; raise for read-heavy quiet servers, lower if the
+  // memory budget tightens.
+  entity: 60 * 60 * 24,
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Client factories
 // ─────────────────────────────────────────────────────────────────────────────
 
-function baseConnection(): RedisOptions {
+/**
+ * Build Redis connection options. When `REDIS_SENTINELS` is set (HA mode),
+ * returns Sentinel-aware options (`sentinels` + `name`); otherwise returns
+ * direct host/port. Exported so call sites that need to build their own
+ * Redis clients (event-bus, cluster coordinator) stay HA-aware too.
+ *
+ * `REDIS_SENTINELS`: comma-separated `host:port` list of Sentinel nodes,
+ * e.g. `sentinel-1:26379,sentinel-2:26379,sentinel-3:26379`.
+ * `REDIS_SENTINEL_NAME`: master name as registered with Sentinel
+ * (default `mymaster`).
+ * `REDIS_SENTINEL_PASSWORD`: password for connecting to Sentinels themselves
+ * when they require auth (separate from `REDIS_PASSWORD` for the master).
+ */
+export function redisConnectionOptions(): RedisOptions {
+  const password = envParseString("REDIS_PASSWORD", "") || undefined;
+  if (envIsDefined("REDIS_SENTINELS")) {
+    const sentinels = envParseString("REDIS_SENTINELS")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .map((entry) => {
+        const [host, port] = entry.split(":");
+        if (!host || !port) {
+          throw new Error(`[Redis] Invalid REDIS_SENTINELS entry: ${entry}`);
+        }
+        const portNum = Number(port);
+        if (!Number.isFinite(portNum)) {
+          throw new Error(`[Redis] Invalid REDIS_SENTINELS port: ${entry}`);
+        }
+        return { host, port: portNum };
+      });
+    if (sentinels.length === 0) {
+      throw new Error("[Redis] REDIS_SENTINELS is empty");
+    }
+    const sentinelPassword =
+      envParseString("REDIS_SENTINEL_PASSWORD", "") || undefined;
+    return {
+      sentinels,
+      name: envParseString("REDIS_SENTINEL_NAME", "mymaster"),
+      ...(password && { password }),
+      ...(sentinelPassword && { sentinelPassword }),
+    };
+  }
   return {
     host: envParseString("REDIS_HOST", "localhost"),
     port: envParseInteger("REDIS_PORT", 6379),
-    password: envParseString("REDIS_PASSWORD", "") || undefined,
+    ...(password && { password }),
   };
+}
+
+function baseConnection(): RedisOptions {
+  return redisConnectionOptions();
 }
 
 export function createRedisClient(): Redis {

@@ -38,6 +38,8 @@ declare module "@sapphire/pieces" {
     readonly db: DatabaseRepositories;
     readonly eventBus: EventBus;
     readonly eventBusTransport: TransportKind;
+    /** S8 slice 3: read-through projection of guilds/channels/roles/members. */
+    readonly entityCache: import("#core/entity-cache/RedisEntityCache.js").RedisEntityCache;
     readonly workers: WorkerManager;
     readonly moduleStore: ModuleStore;
 
@@ -84,13 +86,33 @@ declare module "#lib/env.js" {
     REDIS_PASSWORD: string;
     REDIS_CACHE_DB: IntegerString;
     REDIS_TASK_DB: IntegerString;
+    /** S5 HA: comma-separated `host:port` Sentinel list. When set, all
+     * Redis clients (cache, BullMQ, streams, leader-lock) talk to Sentinels
+     * for master discovery + failover. Unset → direct REDIS_HOST/PORT. */
+    REDIS_SENTINELS: string;
+    /** Sentinel master name. Default "mymaster". */
+    REDIS_SENTINEL_NAME: string;
+    /** Password for Sentinel processes themselves (distinct from REDIS_PASSWORD for the master). */
+    REDIS_SENTINEL_PASSWORD: string;
+    /** S5 HA: when "true" on a `scheduler` replica, acquire a Redis-backed
+     * leader lock before login(); followers block until it lapses. Default
+     * "false" — rely on BullMQ's per-job locks for safety, accept the
+     * coordination overhead of multiple active schedulers. */
+    SCHEDULER_LEADER_LOCK: "true" | "false";
+    SCHEDULER_LEADER_LOCK_TTL_MS: IntegerString;
+    SCHEDULER_LEADER_LOCK_RENEW_MS: IntegerString;
+    SCHEDULER_LEADER_LOCK_POLL_MS: IntegerString;
     RABBITMQ_URL: string;
     SENTRY_ENABLED: boolean | string;
     SENTRY_DSN: string;
     WORKER_COUNT: IntegerString;
-    API_ORIGIN: string;
-    /** "inproc" (default) | "streams" — selects @ember/event-bus transport. */
-    TRANSPORT: "inproc" | "streams";
+    /** "inproc" (default) | "streams" | "nats" — selects @ember/event-bus transport. */
+    TRANSPORT: "inproc" | "streams" | "nats";
+    /** NATS server URL(s), comma-separated. Required when TRANSPORT=nats. */
+    NATS_URL: string;
+    NATS_SERVERS: string;
+    NATS_USER: string;
+    NATS_PASSWORD: string;
     /** Approximate per-stream cap for raw gateway events. Default 100000. */
     EVENT_STREAM_MAXLEN: IntegerString;
     /** Which service this process plays in the split topology. Default "monolith". */
