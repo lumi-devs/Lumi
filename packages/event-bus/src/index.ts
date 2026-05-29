@@ -18,6 +18,10 @@ export {
   type StreamStats,
 } from "./RedisStreamsBus.js";
 export {
+  NatsJetStreamBus,
+  type NatsJetStreamBusOptions,
+} from "./NatsJetStreamBus.js";
+export {
   createEventBus,
   type CreateEventBusOptions,
   type OwnedEventBus,
@@ -25,6 +29,8 @@ export {
 export {
   RawGatewayPublisher,
   type RawGatewayPublisherOptions,
+  attachProxyPublisher,
+  type AttachProxyPublisherOptions,
 } from "./RawGatewayPublisher.js";
 export {
   RawGatewayConsumer,

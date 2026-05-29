@@ -1,0 +1,45 @@
+# Non-secret env shared by every Ember pod. Secrets (BOT_TOKEN, POSTGRES_PASSWORD,
+# REDIS_PASSWORD, RABBITMQ_PASSWORD, SENTRY_DSN, DISCORD_CLIENT_SECRET) live in
+# `secret.example.yaml`.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ember-env
+  namespace: ember
+data:
+  TRANSPORT: "streams"
+  REDIS_HOST: "redis.ember.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_CACHE_DB: "0"
+
+  # Postgres goes through PgBouncer (transaction pooling). DIRECT_POSTGRES_URL
+  # bypasses it for migrations — DDL/advisory locks can't ride a tx-pooled proxy.
+  POSTGRES_URL: "postgresql://ember@pgbouncer.ember.svc.cluster.local:6432/ember"
+  DIRECT_POSTGRES_URL: "postgresql://ember@postgres.ember.svc.cluster.local:5432/ember"
+  POSTGRES_POOL_MAX: "10"
+
+  RABBITMQ_URL: "amqp://ember@rabbitmq.ember.svc.cluster.local:5672"
+  RABBITMQ_ENABLED: "true"
+
+  OTEL_ENABLED: "true"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability:4318"
+  OTEL_TRACES_SAMPLE_RATIO: "0.1"
+
+  METRICS_ENABLED: "true"
+  METRICS_PORT: "9090"
+
+  LOG_FORMAT: "json"
+  LOG_LEVEL: "info"
+
+  # S4 — every worker REST call goes through the shared rate-limit proxy.
+  DISCORD_PROXY_URL: "http://nirn-proxy.ember.svc.cluster.local:8080"
+
+  # S3 — cluster coordinator. Stable name => shared assignment in Redis.
+  CLUSTER_NAME: "ember-prod"
+
+  # S2 — gateway pre-defers interactions so workers see them already acknowledged.
+  INTERACTION_DEFER_AT_GATEWAY: "true"
+
+  # S5 — single-active scheduler. The Deployment runs 1 replica anyway; the lock
+  # makes that explicit and prevents a rolling deploy from briefly running two.
+  SCHEDULER_LEADER_LOCK: "true"

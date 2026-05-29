@@ -61,4 +61,4 @@ export interface EventBus {
   close(): Promise<void>;
 }
 
-export type TransportKind = "inproc" | "streams";
+export type TransportKind = "inproc" | "streams" | "nats";

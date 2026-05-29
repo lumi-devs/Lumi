@@ -10,6 +10,8 @@ export * from "./boot.js";
 export * from "./context.js";
 export * from "./logger.js";
 export * from "./metrics.js";
+export * from "./readiness.js";
+export * from "./shutdown.js";
 export {
   getTracer,
   withSpan,

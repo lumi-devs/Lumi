@@ -9,6 +9,67 @@ volumes:
   prometheus-data:
   grafana-data:
   tempo-data:
+  nats-data:
+
+# Shared config for the four deployable services. They all run from the same
+# image; each sets its own `command:`. NOTE (thin phase F6): gateway/scheduler/api
+# currently boot the full worker (apps/*/src/main.ts → import "@ember/worker/main"),
+# so only `worker` should run with the live bot token until the real service split
+# (Part II, S2/S5). The other three are scaffolding kept under the `scale` profile.
+x-ember-service: &ember-service
+  build:
+    context: .
+    dockerfile: Dockerfile
+    target: production
+  env_file: .env
+  environment: &ember-env
+    REDIS_HOST: redis
+    POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@pgbouncer:6432/ember
+    # Migrations bypass PgBouncer (transaction pooling can't hold DDL/advisory locks).
+    DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@postgres/ember
+    RABBITMQ_URL: amqp://${RABBITMQ_USER:-ember}:${RABBITMQ_PASSWORD:-ember}@rabbitmq:5672
+    RABBITMQ_ENABLED: "true"
+    SENTRY_ENABLED: "${SENTRY_ENABLED:-false}"
+    SENTRY_DSN: "${SENTRY_DSN:-}"
+    # Telemetry: production services emit OTLP + expose /metrics on :9090.
+    OTEL_ENABLED: "${OTEL_ENABLED:-true}"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
+    OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
+    METRICS_ENABLED: "${METRICS_ENABLED:-true}"
+    METRICS_PORT: "9090"
+    LOG_FORMAT: "${LOG_FORMAT:-json}"
+    LOG_LEVEL: "${LOG_LEVEL:-info}"
+    # S7: per-service V8 heap cap. Worker default is 384 MiB (≈75% of the 512 MiB
+    # container limit below); gateway/api override this in their own blocks.
+    # See docs/explanation/capacity-planning.md §7.
+    NODE_OPTIONS: "${NODE_OPTIONS:---max-old-space-size=384}"
+    # S4: route all outbound discord.js REST through the shared nirn-proxy so
+    # one global + per-route bucket budget is shared across every worker
+    # replica. Defaults to empty (talk to discord.com directly); the scale
+    # profile services below opt in by pointing at the `nirn-proxy` container.
+    DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-}"
+  depends_on:
+    pgbouncer:
+      condition: service_healthy
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+  restart: unless-stopped
+  networks:
+    - ember-net
+  deploy:
+    resources:
+      limits:
+        memory: 512m
+        cpus: '1.0'
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
 
 services:
   ember-dev:
@@ -53,62 +114,8 @@ services:
       - ember-net
     stdin_open: true
     tty: true
-
-  # Shared config for the four deployable services. They all run from the same
-  # image; each sets its own `command:`. NOTE (thin phase F6): gateway/scheduler/api
-  # currently boot the full worker (apps/*/src/main.ts → import "@ember/worker/main"),
-  # so only `worker` should run with the live bot token until the real service split
-  # (Part II, S2/S5). The other three are scaffolding kept under the `scale` profile.
-  x-ember-service: &ember-service
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: production
-    env_file: .env
-    environment: &ember-env
-      REDIS_HOST: redis
-      POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@pgbouncer:6432/ember
-      # Migrations bypass PgBouncer (transaction pooling can't hold DDL/advisory locks).
-      DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@postgres/ember
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-ember}:${RABBITMQ_PASSWORD:-ember}@rabbitmq:5672
-      RABBITMQ_ENABLED: "true"
-      SENTRY_ENABLED: "${SENTRY_ENABLED:-false}"
-      SENTRY_DSN: "${SENTRY_DSN:-}"
-      # Telemetry: production services emit OTLP + expose /metrics on :9090.
-      OTEL_ENABLED: "${OTEL_ENABLED:-true}"
-      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
-      OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
-      METRICS_ENABLED: "${METRICS_ENABLED:-true}"
-      METRICS_PORT: "9090"
-      LOG_FORMAT: "${LOG_FORMAT:-json}"
-      LOG_LEVEL: "${LOG_LEVEL:-info}"
-      # S4: route all outbound discord.js REST through the shared nirn-proxy so
-      # one global + per-route bucket budget is shared across every worker
-      # replica. Defaults to empty (talk to discord.com directly); the scale
-      # profile services below opt in by pointing at the `nirn-proxy` container.
-      DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-}"
-    depends_on:
-      pgbouncer:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - ember-net
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-          cpus: '1.0'
-    logging:
-      driver: json-file
-      options:
-        max-size: 10m
-        max-file: "3"
+    profiles:
+      - development
 
   worker:
     <<: *ember-service
@@ -161,11 +168,19 @@ services:
       TRANSPORT: "streams"
       INTERACTION_DEFER_AT_GATEWAY: "${INTERACTION_DEFER_AT_GATEWAY:-true}"
       DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-http://nirn-proxy:8080}"
+      # S7: gateway holds the Discord cache (≈25 KB/guild); raise heap above the
+      # 384 MiB worker default. See capacity-planning.md §7.
+      NODE_OPTIONS: "--max-old-space-size=768"
     depends_on:
       worker-scale:
         condition: service_started
       nirn-proxy:
         condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 1024m
+          cpus: '2.0'
     profiles:
       - scale
 
@@ -193,9 +208,18 @@ services:
     <<: *ember-service
     container_name: ember-api
     command: ["bun", "apps/api/src/main.ts"]
+    environment:
+      <<: *ember-env
+      # S7: api is a thin RPC handler; smaller heap budget than the worker.
+      NODE_OPTIONS: "--max-old-space-size=256"
     depends_on:
       worker-scale:
         condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+          cpus: '0.5'
     profiles:
       - scale
 
@@ -375,6 +399,42 @@ services:
       - ember-net
     ports:
       - "127.0.0.1:3000:3000"
+
+  # S8 slice 1: NATS JetStream — the high-throughput cutover from Redis Streams.
+  # See docs/explanation/transport-cutover.md for the threshold and procedure.
+  # Opt-in: only under `--profile scale-nats`, since Redis Streams is the
+  # documented default for the scale profile (NATS is overkill until >20k evt/s).
+  # JetStream stores its state on disk; the volume survives container restarts.
+  nats:
+    image: nats:2.10-alpine
+    container_name: ember-nats
+    command:
+      - "-js"
+      - "-sd"
+      - "/data"
+      - "-m"
+      - "8222"
+    volumes:
+      - nats-data:/data
+    networks:
+      - ember-net
+    restart: unless-stopped
+    healthcheck:
+      # The monitoring port serves /healthz; lean-and-supported.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8222/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    ports:
+      - "127.0.0.1:14222:4222"
+      - "127.0.0.1:18222:8222"
+    profiles:
+      - scale-nats
 
   # ── Observability stack (LGTM-ish) ──────────────────────────────────────────
   # Opt-in: `docker compose --profile observability up`. A plain `up` stays lean.

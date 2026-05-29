@@ -9,8 +9,13 @@ import {
   type GuildMember,
   type VoiceBasedChannel,
 } from "discord.js";
-import { logError } from "#utilities/errors.js";
+import { Routes } from "discord-api-types/v10";
+import { errorCode, logError } from "#utilities/errors.js";
 import { scheduleTask } from "#lib/schedule-task.js";
+import {
+  clearVoiceChannelOccupancy,
+  isVoiceChannelEmpty,
+} from "../lib/voice-occupancy.js";
 import {
   TEMPVC_CLEANUP_DELAY_MS,
   TEMPVC_CREATE_COOLDOWN_MS,
@@ -21,6 +26,7 @@ import {
   listVcRecords,
   removeVcRecord,
   setVcRecord,
+  listGenerators,
   type GeneratorConfig,
   type VcRecord,
 } from "../data.js";
@@ -101,12 +107,113 @@ export default class TempVcService extends Service {
       };
       await setVcRecord(guild.id, vc.id, record);
 
+      if (generator.parentId) {
+        const { parentId } = generator;
+        setTimeout(() => {
+          void this.reorderChannels(guild, parentId).catch((err: unknown) => {
+            logError("TempVC: reorder channels failed", err);
+          });
+        }, 1000);
+      }
+
       void vc.send(buildPanel(vc, record)).catch((err: unknown) => {
         logError("TempVC: panel send failed", err);
       });
     } finally {
       queue.shift();
       if (queue.remaining === 0) creationQueues.delete(generator.id);
+    }
+  }
+
+  /**
+   * Sorts voice channels in the category to group generators first, managed
+   * channels next (sorted by Duo/Trio/Squad/Other, then by number), and static
+   * channels last.
+   */
+  public async reorderChannels(
+    guild: Guild,
+    categoryId: string,
+  ): Promise<void> {
+    try {
+      const categoryChannels = [...guild.channels.cache.values()].filter(
+        (c) => c.parentId === categoryId && c.isVoiceBased(),
+      ) as VoiceBasedChannel[];
+
+      if (categoryChannels.length === 0) return;
+
+      const [recordsMap, generatorsMap] = await Promise.all([
+        listVcRecords(guild.id),
+        listGenerators(guild.id),
+      ]);
+
+      const generators: VoiceBasedChannel[] = [];
+      const managedVcs: VoiceBasedChannel[] = [];
+      const staticVcs: VoiceBasedChannel[] = [];
+
+      for (const channel of categoryChannels) {
+        if (generatorsMap.has(channel.id)) {
+          generators.push(channel);
+        } else if (recordsMap.has(channel.id)) {
+          managedVcs.push(channel);
+        } else {
+          staticVcs.push(channel);
+        }
+      }
+
+      generators.sort((a, b) => a.position - b.position);
+      staticVcs.sort((a, b) => a.position - b.position);
+
+      const getVcType = (name: string): string => {
+        const clean = name.trim().toLowerCase();
+        if (/\bduo\b/.test(clean)) return "Duo";
+        if (/\btrio\b/.test(clean)) return "Trio";
+        if (/\bsquad\b/.test(clean)) return "Squad";
+        return "Other";
+      };
+
+      const typeOrder: Record<string, number> = {
+        Duo: 1,
+        Trio: 2,
+        Squad: 3,
+        Other: 4,
+      };
+
+      managedVcs.sort((a, b) => {
+        const recA = recordsMap.get(a.id);
+        const recB = recordsMap.get(b.id);
+        if (!recA || !recB) return 0;
+
+        const genA = recA.generatorId
+          ? generatorsMap.get(recA.generatorId)
+          : null;
+        const genB = recB.generatorId
+          ? generatorsMap.get(recB.generatorId)
+          : null;
+
+        const typeA = getVcType(genA?.name ?? recA.name);
+        const typeB = getVcType(genB?.name ?? recB.name);
+
+        const orderA = typeOrder[typeA] ?? 4;
+        const orderB = typeOrder[typeB] ?? 4;
+
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+        return recA.number - recB.number;
+      });
+
+      const finalOrder = [...generators, ...managedVcs, ...staticVcs];
+      const positions = finalOrder.map((c, index) => ({
+        channel: c.id,
+        position: index,
+      }));
+
+      const needsReorder = finalOrder.some((c, index) => c.position !== index);
+      if (needsReorder) {
+        await guild.channels.setPositions(positions);
+      }
+    } catch (err: unknown) {
+      logError("TempVC: reorder channels failed", err);
     }
   }
 
@@ -133,7 +240,13 @@ export default class TempVcService extends Service {
     ).catch((err: unknown) => logError("TempVC: schedule cleanup failed", err));
   }
 
-  /** Job handler: delete the channel if it still exists and is empty. */
+  /**
+   * Job handler: delete the channel if it's empty (per the Redis voice-state
+   * projection) via REST. The voice-state cache is disabled, so we don't read
+   * `channel.members.size`; instead we trust the projection maintained by
+   * `lib/voice-occupancy` and let Discord be authoritative for channel existence
+   * (404 from DELETE = already gone = drop the record).
+   */
   public async runCleanup(data: {
     guildId: string;
     channelId: string;
@@ -142,32 +255,37 @@ export default class TempVcService extends Service {
     const record = await getVcRecord(guildId, channelId);
     if (!record) return;
 
-    const channel = this.container.client.channels.cache.get(channelId);
-    if (!channel || !channel.isVoiceBased()) {
-      await removeVcRecord(guildId, channelId);
-      return;
-    }
-    if (channel.members.size > 0) return;
+    if (!(await isVoiceChannelEmpty(channelId))) return;
 
-    const deleted = await channel
-      .delete("Empty temp VC cleanup")
-      .then(() => true)
-      .catch(() => false);
-    if (deleted) await removeVcRecord(guildId, channelId);
+    try {
+      await this.container.client.rest.delete(Routes.channel(channelId), {
+        reason: "Empty temp VC cleanup",
+      });
+      await removeVcRecord(guildId, channelId);
+      await clearVoiceChannelOccupancy(channelId);
+    } catch (err: unknown) {
+      const code = errorCode(err);
+      // 10003 Unknown Channel — already deleted out from under us. 50013 Missing
+      // Permissions — we can't touch it; drop the record so we stop trying.
+      if (code === 10003 || code === 50013) {
+        await removeVcRecord(guildId, channelId);
+        await clearVoiceChannelOccupancy(channelId);
+        return;
+      }
+      throw err;
+    }
   }
 
-  /** Removes orphaned records and schedules cleanup for empty channels. */
+  /**
+   * Boot-time reconciliation. Schedules a cleanup for every persisted record;
+   * the cleanup task itself reconciles state (REST 404 → drop record, empty →
+   * delete + drop record, occupied → no-op). The 8s cleanup delay gives the
+   * GUILD_CREATE voice-state seed time to land before the empty check runs.
+   */
   public async reconcileGuild(guild: Guild): Promise<void> {
     const records = await listVcRecords(guild.id);
     for (const [channelId] of records) {
-      const channel = guild.channels.cache.get(channelId);
-      if (!channel || !channel.isVoiceBased()) {
-        await removeVcRecord(guild.id, channelId);
-        continue;
-      }
-      if (channel.members.size === 0) {
-        await this.scheduleCleanup(guild.id, channelId);
-      }
+      await this.scheduleCleanup(guild.id, channelId);
     }
   }
 

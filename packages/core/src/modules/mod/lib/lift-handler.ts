@@ -1,7 +1,15 @@
 // Worker-side fire handler for the `mod-lift` scheduled task. Registered by
 // ModModule.onLoad() via `registerTaskFireHandler`.
+//
+// Reaches Discord via REST (through nirn-proxy when DISCORD_PROXY_URL is set),
+// not via `client.guilds.cache`. In the worker role any given guild may not be
+// in this process's local cache — a shared `ember-workers` consumer group
+// round-robins raw gateway events, so cache locality is not guaranteed for the
+// target guild. The REST path is correct under every topology.
 
 import { container } from "@sapphire/framework";
+import { Routes } from "discord-api-types/v10";
+import { errorCode } from "#utilities/errors.js";
 import type { ModLiftPayload } from "../scheduled-tasks/ModLiftTask.js";
 
 export async function handleModLiftFire(
@@ -11,21 +19,32 @@ export async function handleModLiftFire(
   // Already lifted (e.g. manual unmute/unban) or deleted — nothing to do.
   if (!c?.active) return;
 
+  const { rest } = container.client;
+  const reason = `[AutoLift] ${c.action === "mute" ? "Mute" : "Ban"} case #${c.caseNumber} expired`;
+
   try {
     if (c.action === "mute") {
-      const guild = container.client.guilds.cache.get(c.guildId);
-      const member = await guild?.members.fetch(c.userId).catch(() => null);
-      if (member?.isCommunicationDisabled()) {
-        await member.timeout(
-          null,
-          `[AutoLift] Mute case #${c.caseNumber} expired`,
-        );
-      }
+      // Clear communication_disabled_until. 10007 = Unknown Member (left guild)
+      // and 50013 = Missing Permissions are both acceptable terminal states.
+      await rest
+        .patch(Routes.guildMember(c.guildId, c.userId), {
+          body: { communication_disabled_until: null },
+          reason,
+        })
+        .catch((err: unknown) => {
+          const code = errorCode(err);
+          if (code === 10007 || code === 50013) return;
+          throw err;
+        });
     } else if (c.action === "ban") {
-      const guild = container.client.guilds.cache.get(c.guildId);
-      await guild?.bans
-        .remove(c.userId, `[AutoLift] Ban case #${c.caseNumber} expired`)
-        .catch(() => null);
+      // 10026 = Unknown Ban (already unbanned manually).
+      await rest
+        .delete(Routes.guildBan(c.guildId, c.userId), { reason })
+        .catch((err: unknown) => {
+          const code = errorCode(err);
+          if (code === 10026 || code === 50013) return;
+          throw err;
+        });
     }
 
     await container.db.moderation.liftModerationCase(c.id);

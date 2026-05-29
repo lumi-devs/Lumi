@@ -1,25 +1,39 @@
-// Gateway service — Part II S2 slice 2.
+// Gateway service — Part II S8 slice 2 (proxy cutover).
 //
-// Sole responsibilities:
-//   1. Maintain Discord WS (sharded) and feed events through the event bus.
-//   2. (Optional, path-a) Pre-ack INTERACTION_CREATE via REST within Discord's
-//      3s deadline so worker followups always succeed regardless of bus latency.
+// Drops discord.js `Client` entirely. We open the WS via `@discordjs/ws`
+// `WebSocketManager` directly and publish raw dispatch packets onto the bus.
+// No Sapphire stores, no entity managers, no client-level caches — the gateway
+// process is now a thin decode + publish loop.
 //
-// Explicitly NOT here: Sapphire stores, modules, Prisma, RabbitMQ, repositories.
-// Workers consume from the bus and run all business logic.
+// What this buys at scale:
+//   - Memory: a 100-shard gateway no longer holds a `Client` with its dozens
+//     of managers and ~25 KB/guild bookkeeping. RSS is essentially the WS
+//     buffer + the bus publisher.
+//   - Honesty: there is no "but the gateway might still load a module" foot-
+//     gun. Modules cannot be wired here; there is no Sapphire to load them.
+//
+// Still here (carried over from S2 slice 2):
+//   - planShards / clustered IDENTIFY throttle / Redis-backed session store.
+//   - INTERACTION_DEFER_AT_GATEWAY (REST pre-ack via shared @discordjs/rest).
+//   - drain sequence + readiness probes for rolling deploys.
+//   - REST telemetry (rate-limit + invalid-request warnings).
 import "./telemetry.js";
-import {
-  Client,
-  GatewayIntentBits,
-  Partials,
-  Options,
-  type ClientOptions,
-} from "discord.js";
 import { REST } from "@discordjs/rest";
-import { Routes, InteractionResponseType } from "discord-api-types/v10";
+import {
+  WebSocketManager,
+  WebSocketShardEvents,
+  type SessionInfo,
+} from "@discordjs/ws";
+import {
+  GatewayIntentBits,
+  GatewayOpcodes,
+  Routes,
+  InteractionResponseType,
+  type GatewayDispatchPayload,
+} from "discord-api-types/v10";
 import {
   createEventBus,
-  RawGatewayPublisher,
+  attachProxyPublisher,
   type OwnedEventBus,
 } from "@ember/event-bus";
 import { rawGatewayStream, type RawGatewayEnvelope } from "@ember/contracts";
@@ -31,15 +45,18 @@ import {
   rest429Total,
   restRetryAfterSeconds,
   restInvalidRequestWarnings,
+  registerReadinessProbe,
+  runDrainSequence,
 } from "@ember/observability";
 import {
   planShards,
   buildSimpleThrottlerFactory,
   attachCluster,
+  ClusterReadyTracker,
+  DynamicShardingStrategy,
   type ClusterBootstrap,
 } from "@ember/sharding";
 import { Redis } from "ioredis";
-import type { SessionInfo } from "@discordjs/ws";
 
 const env = (k: string, def?: string): string => {
   const v = process.env[k];
@@ -52,20 +69,14 @@ const envInt = (k: string, def: number) =>
 
 const TOKEN = env("BOT_TOKEN");
 const TRANSPORT = env("TRANSPORT", "streams");
-if (TRANSPORT !== "streams") {
-  // Gateway-as-its-own-process only makes sense when the bus is real; otherwise
-  // the monolith path (apps/worker) is the right entrypoint.
+if (TRANSPORT !== "streams" && TRANSPORT !== "nats") {
   console.error(
-    `[Gateway] TRANSPORT=${TRANSPORT} — gateway service requires TRANSPORT=streams. Exiting.`,
+    `[Gateway] TRANSPORT=${TRANSPORT} — gateway service requires TRANSPORT=streams or TRANSPORT=nats. Exiting.`,
   );
   process.exit(1);
 }
 const DEFER_AT_GATEWAY = process.env["INTERACTION_DEFER_AT_GATEWAY"] === "true";
 const MAXLEN = envInt("EVENT_STREAM_MAXLEN", 100_000);
-// S4: optional shared REST proxy (nirn-proxy) base URL. Empty/unset → talk to
-// discord.com directly. Declared up here because both `clientOptions.rest`
-// (constructed below) and the standalone `new REST()` for defer-at-gateway
-// need it.
 const PROXY_URL =
   process.env["DISCORD_PROXY_URL"]?.trim().replace(/\/+$/, "") || null;
 
@@ -77,16 +88,23 @@ const log = (level: "info" | "warn" | "error", msg: string, meta?: object) => {
   console[fn](line);
 };
 
-// S3 slice 1: ask Discord for the recommended shard count + session-start
-// budget *before* opening the WS so we (a) log it, (b) bail on exhausted
-// IDENTIFY budget instead of burning it on a restart loop, (c) feed the real
-// max_concurrency to the IdentifyThrottler.
+// REST: shared between defer-at-gateway pre-acks and the WebSocketManager's
+// own gateway/bot fetch. One token, one bucket budget, one set of metrics.
+const rest = new REST({
+  version: "10",
+  ...(PROXY_URL && {
+    api: `${PROXY_URL}/api`,
+    globalRequestsPerSecond: Number.POSITIVE_INFINITY,
+  }),
+  invalidRequestWarningInterval: 500,
+}).setToken(TOKEN);
+if (PROXY_URL) log("info", "REST proxy enabled", { url: PROXY_URL });
+
+// Pre-flight: ask Discord for shard count + IDENTIFY budget before we open
+// any socket.
 const shardPlan = await planShards({ token: TOKEN, log });
 
-// S3 slice 2/3: if CLUSTER_NAME is set, join the cluster coordinator and use
-// the shared session store + Redis-backed IDENTIFY throttler. Otherwise we
-// remain on the single-replica path (SHARD_LIST from the plan, in-process
-// SimpleIdentifyThrottler, sessions not persisted across restarts).
+// Optional cluster coordinator (multi-replica gateway).
 const CLUSTER_NAME = process.env["CLUSTER_NAME"]?.trim() || null;
 const REPLICA_ID =
   process.env["EMBER_CONSUMER_ID"] ||
@@ -118,15 +136,11 @@ if (CLUSTER_NAME) {
     replicaId: REPLICA_ID,
     log,
     onRebalance: (delta) => {
-      // In-place mid-flight reshard is not safe with @discordjs/ws's cached
-      // shardIds, so we drain instead. The next process boot will read the
-      // assignment, RESUME sessions still in the 5-minute window, and
-      // IDENTIFY only the truly new ones — bucketed via the Redis throttler.
-      log("warn", "shard assignment changed — draining for restart", {
+      log("info", "shard assignment changed — applying in place", {
         added: delta.added,
         removed: delta.removed,
       });
-      void shutdown("REBALANCE");
+      void applyRebalance(delta.added, delta.removed);
     },
   });
   log("info", "joined cluster", {
@@ -136,77 +150,29 @@ if (CLUSTER_NAME) {
   });
 }
 
-// ClientOptions is augmented by @sapphire/plugin-scheduled-tasks (pulled in
-// transitively via workspace deps) which requires `tasks`. The gateway never
-// loads sapphire, so the field is dead weight here.
-const clientOptions = {
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.MessageContent,
-  ],
-  partials: [Partials.Channel, Partials.GuildMember],
-  makeCache: Options.cacheWithLimits({
-    ...Options.DefaultMakeCacheSettings,
-    MessageManager: 0,
-    PresenceManager: 0,
-    ReactionManager: 0,
-    GuildMemberManager: 0,
-    ThreadManager: 0,
-    UserManager: 1,
-    StageInstanceManager: 0,
-    VoiceStateManager: 0,
-    GuildScheduledEventManager: 0,
-    AutoModerationRuleManager: 0,
-    GuildBanManager: 0,
-    GuildInviteManager: 0,
-    GuildEmojiManager: 0,
-    GuildStickerManager: 0,
-    BaseGuildEmojiManager: 0,
-    ApplicationCommandManager: 0,
-    ApplicationEmojiManager: 0,
-  }),
-  shardCount: shardPlan.shardCount,
-  ...((cluster?.shards ?? shardPlan.shards) && {
-    shards: [...(cluster?.shards ?? shardPlan.shards!)],
-  }),
-  ws: {
-    buildIdentifyThrottler:
-      cluster?.throttlerFactory ?? buildSimpleThrottlerFactory(shardPlan),
-    ...(cluster && {
-      retrieveSessionInfo: (shardId: number) =>
-        cluster!.sessionStore.retrieve(shardId),
-      updateSessionInfo: (shardId: number, info: SessionInfo | null) =>
-        cluster!.sessionStore.update(shardId, info),
-    }),
-  },
-  // S4: route the gateway client's internal REST (used by `/gateway/bot`
-  // probes, REST-based shard ops, etc.) through the proxy too.
-  rest: {
-    ...(PROXY_URL && {
-      api: `${PROXY_URL}/api`,
-      globalRequestsPerSecond: Number.POSITIVE_INFINITY,
-    }),
-    invalidRequestWarningInterval: 500,
-  },
-} satisfies Partial<ClientOptions>;
-const client = new Client(clientOptions as unknown as ClientOptions);
+const assignedShards = cluster?.shards ?? shardPlan.shards ?? null;
+// Mutable view of currently-owned shards, kept in sync with the strategy across
+// rebalances so readiness probes + ready-tracker math reflect the live set.
+const ownedShards = new Set<number>(
+  Array.isArray(assignedShards)
+    ? assignedShards
+    : Array.from({ length: shardPlan.shardCount }, (_, i) => i),
+);
 
+// Bus connection (Redis Streams or NATS JetStream). Streams uses the redis
+// opts; NATS reads NATS_URL out of env via createEventBus.
 const ownedBus: OwnedEventBus = createEventBus({
-  transport: "streams",
+  transport: TRANSPORT as "streams" | "nats",
   redis: {
     host: env("REDIS_HOST", "localhost"),
     port: envInt("REDIS_PORT", 6379),
     password: env("REDIS_PASSWORD", ""),
     db: envInt("REDIS_CACHE_DB", 0),
   },
+  natsServers: process.env["NATS_URL"] ?? process.env["NATS_SERVERS"],
+  natsUser: process.env["NATS_USER"],
+  natsPass: process.env["NATS_PASSWORD"],
   defaultMaxLen: MAXLEN,
-  // Gateway is publish-only; consume-side stats fire on the worker. But XLEN
-  // and DLQ length are publish-side observable, so report them from here too
-  // (only fires if a consume() is wired up, which gateway does not — left in
-  // place so a future gateway-side bus consumer picks it up for free).
   onStats: (s) => {
     streamLength.set({ stream: s.stream }, s.length);
     streamConsumerLag.set({ stream: s.stream, group: s.group }, s.pending);
@@ -215,30 +181,98 @@ const ownedBus: OwnedEventBus = createEventBus({
   log,
 });
 
-// S4: standalone REST instance for defer-at-gateway. Shares the same proxy
-// config as `clientOptions.rest` above so the gateway speaks through the same
-// bucket state as the workers.
-const rest = new REST({
-  version: "10",
-  ...(PROXY_URL && {
-    api: `${PROXY_URL}/api`,
-    // Proxy is authoritative; local 50/s throttle is dead weight (and would
-    // serialise gateway's own pre-acks against worker traffic invisibly).
-    globalRequestsPerSecond: Number.POSITIVE_INFINITY,
+// WebSocketManager: no Client wrapper. We own the WS directly.
+let dynamicStrategy: DynamicShardingStrategy | null = null;
+const manager = new WebSocketManager({
+  token: TOKEN,
+  rest,
+  // Match the intents the workers need — anything we DON'T list here, Discord
+  // doesn't send. Worker-side code can grep these to know what's available.
+  intents:
+    GatewayIntentBits.Guilds |
+    GatewayIntentBits.GuildMembers |
+    GatewayIntentBits.GuildMessages |
+    GatewayIntentBits.GuildVoiceStates |
+    GatewayIntentBits.MessageContent,
+  shardCount: shardPlan.shardCount,
+  ...(assignedShards && { shardIds: [...assignedShards] }),
+  buildIdentifyThrottler: async () =>
+    cluster?.throttlerFactory
+      ? cluster.throttlerFactory()
+      : buildSimpleThrottlerFactory(shardPlan)(),
+  // Custom strategy: in-place add/remove on rebalance instead of restart.
+  // Only enabled when clustered; the single-replica path doesn't need it and
+  // the standard SimpleShardingStrategy stays the default.
+  ...(cluster && {
+    // `mgr` is typed against discord.js's nested @discordjs/ws copy, but the
+    // top-level @discordjs/ws is what we actually run against — same code,
+    // duplicate type identity. Structural cast through unknown silences the
+    // duplicate-import diagnostic without smuggling any runtime change.
+    buildStrategy: ((mgr: unknown) => {
+      dynamicStrategy = new DynamicShardingStrategy(
+        mgr as ConstructorParameters<typeof DynamicShardingStrategy>[0],
+      );
+      return dynamicStrategy;
+    }) as never,
   }),
-  invalidRequestWarningInterval: 500,
-}).setToken(TOKEN);
-if (PROXY_URL) log("info", "REST proxy enabled", { url: PROXY_URL });
+  ...(cluster && {
+    retrieveSessionInfo: (shardId: number) =>
+      cluster!.sessionStore.retrieve(shardId),
+    updateSessionInfo: (shardId: number, info: SessionInfo | null) =>
+      cluster!.sessionStore.update(shardId, info),
+  }),
+});
+
+async function applyRebalance(
+  added: readonly number[],
+  removed: readonly number[],
+): Promise<void> {
+  // Pre-restart fallback: if the cluster path isn't on a dynamic strategy
+  // (e.g. someone disabled CLUSTER_NAME mid-flight), fall back to draining.
+  if (!dynamicStrategy) {
+    log("warn", "no dynamic strategy — falling back to restart", {
+      added,
+      removed,
+    });
+    void shutdown("REBALANCE");
+    return;
+  }
+  try {
+    if (removed.length > 0) {
+      for (const id of removed) {
+        ownedShards.delete(id);
+        shardReady.delete(id);
+        expectedShards.delete(id);
+      }
+      await dynamicStrategy.removeShards(removed, { code: 1000 });
+    }
+    if (added.length > 0) {
+      for (const id of added) {
+        ownedShards.add(id);
+        expectedShards.add(id);
+      }
+      await dynamicStrategy.addShards(added);
+    }
+    publishReady();
+    log("info", "in-place rebalance applied", {
+      owned: [...ownedShards].sort((a, b) => a - b),
+    });
+  } catch (err) {
+    log("error", "in-place rebalance failed — falling back to restart", {
+      err: String(err),
+    });
+    void shutdown("REBALANCE");
+  }
+}
 
 interface InteractionPayload {
   id: string;
   token: string;
   type: number;
+  guild_id?: string;
 }
 
 async function deferInteraction(d: InteractionPayload): Promise<void> {
-  // type: 2 = APPLICATION_COMMAND, 3 = MESSAGE_COMPONENT, 4 = AUTOCOMPLETE,
-  //       5 = MODAL_SUBMIT. Type 4 cannot be deferred (must return choices).
   let responseType: InteractionResponseType | null = null;
   if (d.type === 2 || d.type === 5) {
     responseType = InteractionResponseType.DeferredChannelMessageWithSource;
@@ -261,47 +295,50 @@ async function deferInteraction(d: InteractionPayload): Promise<void> {
   }
 }
 
-const publisher = new RawGatewayPublisher(
+// Bus publisher: hook the WebSocketManager's Dispatch event. When
+// DEFER_AT_GATEWAY is on, INTERACTION_CREATE is handled by the separate
+// interceptor below (defer then publish) so the proxy publisher ignores it.
+const detachPublisher = attachProxyPublisher(
   ownedBus.bus,
-  client as unknown as {
-    ws: {
-      handlePacket: (packet: unknown, shard: { id: number }) => boolean;
-    };
+  manager as unknown as {
+    on(
+      event: string,
+      l: (p: GatewayDispatchPayload, shardId: number) => void,
+    ): unknown;
+    off(
+      event: string,
+      l: (p: GatewayDispatchPayload, shardId: number) => void,
+    ): unknown;
   },
   {
     log,
     maxLen: MAXLEN,
-    // INTERACTION_CREATE is handled by our own interceptor below when
-    // DEFER_AT_GATEWAY is on (defer-then-publish in series).
+    dispatchEvent: WebSocketShardEvents.Dispatch,
     ignoreDispatchTypes: DEFER_AT_GATEWAY
       ? new Set(["INTERACTION_CREATE"])
       : undefined,
   },
 );
-publisher.attach();
 
 if (DEFER_AT_GATEWAY) {
-  const ws = client.ws as unknown as {
-    handlePacket: (packet: unknown, shard: { id: number }) => boolean;
-  };
-  const orig = ws.handlePacket.bind(ws);
-  ws.handlePacket = (packet: unknown, shard: { id: number }) => {
-    const p = packet as
-      | {
-          op?: number;
-          t?: string;
-          d?: InteractionPayload & { guild_id?: string };
-        }
-      | undefined;
-    if (p?.op === 0 && p.t === "INTERACTION_CREATE" && p.d) {
+  manager.on(
+    WebSocketShardEvents.Dispatch,
+    (data: GatewayDispatchPayload, shardId: number) => {
+      if (data.t !== "INTERACTION_CREATE") return;
+      const d = data.d as InteractionPayload;
       const envelope: RawGatewayEnvelope = {
-        shardId: shard.id,
-        packet: p as RawGatewayEnvelope["packet"],
+        shardId,
+        packet: {
+          op: GatewayOpcodes.Dispatch,
+          t: data.t,
+          s: (data as { s?: number }).s ?? 0,
+          d: data.d as RawGatewayEnvelope["packet"]["d"],
+        },
         ts: Date.now(),
-        guildId: p.d.guild_id,
+        guildId: d.guild_id,
         ...injectTraceContext(),
       };
-      void deferInteraction(p.d).then(() =>
+      void deferInteraction(d).then(() =>
         ownedBus.bus
           .publish(rawGatewayStream("INTERACTION_CREATE"), envelope, {
             maxLen: MAXLEN,
@@ -310,31 +347,18 @@ if (DEFER_AT_GATEWAY) {
             log("error", "interaction publish failed", { err: String(err) }),
           ),
       );
-      return true;
-    }
-    return orig(packet, shard);
-  };
+    },
+  );
   log("info", "INTERACTION_DEFER_AT_GATEWAY=true — gateway will pre-ack");
 }
 
-// S4: surface the same REST telemetry the worker emits (rate-limit hits,
-// retry-after distribution, invalid-request warnings) from the gateway's
-// internal REST client too — gateway shares the per-token bucket budget so
-// the metrics need to add up across services.
+// REST telemetry — same surface the worker emits.
 const restLabels = (info: { route: string; method: string; global: boolean }) =>
   ({
     route: info.route,
     method: info.method,
     global: String(info.global),
   }) as const;
-client.rest.on("rateLimited", (info) => {
-  rest429Total.inc(restLabels(info));
-  restRetryAfterSeconds.observe(restLabels(info), info.timeToReset / 1000);
-});
-client.rest.on("invalidRequestWarning", () => {
-  restInvalidRequestWarnings.inc();
-});
-// Same listeners on the standalone REST used by defer-at-gateway.
 rest.on("rateLimited", (info) => {
   rest429Total.inc(restLabels(info));
   restRetryAfterSeconds.observe(restLabels(info), info.timeToReset / 1000);
@@ -343,29 +367,132 @@ rest.on("invalidRequestWarning", () => {
   restInvalidRequestWarnings.inc();
 });
 
-client.on("ready", () => {
-  log("info", `Gateway online as ${client.user?.tag ?? "<unknown>"}`);
-});
-client.on("shardError", (err, id) =>
-  log("error", `shard ${id} error`, { err: String(err) }),
+// Track readiness: count shards reporting Ready/Resumed → mark gateway healthy
+// once every owned shard has connected.
+const shardReady = new Set<number>();
+const expectedShards = new Set<number>(
+  Array.isArray(assignedShards)
+    ? assignedShards
+    : Array.from({ length: shardPlan.shardCount }, (_, i) => i),
 );
-client.on("error", (err) => log("error", "client error", { err: String(err) }));
+// Cluster ready tracker: workers gate raw-gateway consumption on this flag
+// so they don't process events while shards are mid-IDENTIFY.
+const readyTracker =
+  CLUSTER_NAME && clusterRedis
+    ? new ClusterReadyTracker({
+        redis: clusterRedis,
+        clusterName: CLUSTER_NAME,
+      })
+    : null;
+let readyHeartbeat: ReturnType<typeof setInterval> | null = null;
+const publishReady = () => {
+  if (!readyTracker) return;
+  const allReady =
+    expectedShards.size > 0 && shardReady.size === expectedShards.size;
+  readyTracker
+    .publishReady(allReady)
+    .catch((err) =>
+      log("warn", "publishReady failed", { ready: allReady, err: String(err) }),
+    );
+};
+manager.on(WebSocketShardEvents.Ready, (_data, shardId: number) => {
+  shardReady.add(shardId);
+  log("info", `shard ${shardId} READY`);
+  publishReady();
+});
+manager.on(WebSocketShardEvents.Resumed, (shardId: number) => {
+  shardReady.add(shardId);
+  log("info", `shard ${shardId} RESUMED`);
+  publishReady();
+});
+manager.on(WebSocketShardEvents.Closed, (code: number, shardId: number) => {
+  shardReady.delete(shardId);
+  log("warn", `shard ${shardId} closed`, { code });
+  publishReady();
+});
+manager.on(WebSocketShardEvents.Error, (error: Error, shardId: number) => {
+  log("error", `shard ${shardId} error`, { err: String(error) });
+});
+if (readyTracker) {
+  // Refresh the TTL while we remain ready, so a crashed gateway flips the
+  // flag back to not-ready within ~30s without any cleanup logic.
+  readyHeartbeat = setInterval(publishReady, 10_000);
+}
+
+registerReadinessProbe("discord-ws", () => {
+  const ready = shardReady.size;
+  const expected = expectedShards.size;
+  return ready === expected
+    ? { status: "ok" }
+    : { status: "fail", detail: `${ready}/${expected} shards ready` };
+});
+registerReadinessProbe("event-bus", async () => {
+  if (!ownedBus.publisher) {
+    // NATS transport: no Redis publisher to ping. We could ping NATS here,
+    // but the bus is built lazily and a synchronous status is fine — if the
+    // connection later drops, publish() will surface the error and dispatch
+    // events will pile up in @discordjs/ws's emit queue (bounded by GC).
+    return { status: "ok" };
+  }
+  try {
+    const pong = await ownedBus.publisher.ping();
+    return pong === "PONG"
+      ? { status: "ok" }
+      : { status: "fail", detail: `unexpected ping reply: ${pong}` };
+  } catch (err) {
+    return { status: "fail", detail: String(err) };
+  }
+});
+if (cluster) {
+  registerReadinessProbe("cluster-joined", () =>
+    cluster!.shards && cluster!.shards.length > 0
+      ? { status: "ok" }
+      : { status: "fail", detail: "no shards assigned" },
+  );
+}
 
 let shuttingDown = false;
 async function shutdown(sig: string) {
   if (shuttingDown) return;
   shuttingDown = true;
   log("info", `${sig} received — shutting down`);
-  try {
-    publisher.detach();
-    await client.destroy();
-    await ownedBus.close();
-    if (cluster) await cluster.close();
-    if (clusterRedis) await clusterRedis.quit().catch(() => undefined);
-    if (clusterSub) await clusterSub.quit().catch(() => undefined);
-  } catch (err) {
-    log("error", "shutdown failure", { err: String(err) });
+  const isRebalance = sig === "REBALANCE";
+  if (readyHeartbeat) {
+    clearInterval(readyHeartbeat);
+    readyHeartbeat = null;
   }
+  await runDrainSequence(
+    [
+      {
+        name: "ready-flag-clear",
+        run: async () => {
+          if (readyTracker) await readyTracker.publishReady(false);
+        },
+      },
+      {
+        name: "cluster-leave",
+        run: async () => {
+          if (cluster) await cluster.close();
+        },
+      },
+      { name: "publisher-detach", run: async () => detachPublisher() },
+      {
+        name: "ws-destroy",
+        run: async () => {
+          await manager.destroy({ code: 1000 });
+        },
+      },
+      { name: "event-bus-close", run: () => ownedBus.close() },
+      {
+        name: "cluster-redis-quit",
+        run: async () => {
+          if (clusterRedis) await clusterRedis.quit().catch(() => undefined);
+          if (clusterSub) await clusterSub.quit().catch(() => undefined);
+        },
+      },
+    ],
+    { log, preCloseGraceMs: isRebalance ? 0 : 5_000, deadlineMs: 30_000 },
+  );
   process.exit(0);
 }
 ["SIGINT", "SIGTERM"].forEach((sig) =>
@@ -373,10 +500,13 @@ async function shutdown(sig: string) {
 );
 
 try {
-  await client.login(TOKEN);
-  log("info", "WS connected; publishing raw gateway events");
+  await manager.connect();
+  log("info", "WS connected; publishing raw gateway events", {
+    shards: [...expectedShards],
+    transport: TRANSPORT,
+  });
 } catch (err) {
-  log("error", "fatal login failure", { err: String(err) });
+  log("error", "fatal connect failure", { err: String(err) });
   await ownedBus.close().catch(() => undefined);
   process.exit(1);
 }

@@ -1,7 +1,7 @@
 import "./telemetry.js";
 import "@ember/core/setup";
 import { container } from "@sapphire/framework";
-import { shutdownTracing } from "@ember/observability";
+import { shutdownTracing, runDrainSequence } from "@ember/observability";
 import * as Sentry from "@sentry/node";
 import { EmberClient, envIsDefined, envParseString } from "@ember/core";
 
@@ -23,13 +23,29 @@ if (
 
 const client = await EmberClient.bootstrap();
 
+let shuttingDown = false;
 ["SIGINT", "SIGTERM"].forEach((sig) => {
   process.once(sig, async () => {
-    container.logger.info(`[Shutdown] ${sig} received`);
-    await client
-      .destroy()
-      .catch((err) => container.logger.error("[Shutdown] Failed:", err));
-    await shutdownTracing();
+    if (shuttingDown) return;
+    shuttingDown = true;
+    const log = (
+      level: "info" | "warn" | "error",
+      msg: string,
+      meta?: object,
+    ) => container.logger[level](`[Shutdown] ${msg}`, meta ?? "");
+    log("info", `${sig} received`);
+    await runDrainSequence(
+      [
+        // EmberClient.destroy() walks the right sequence internally:
+        // stops the raw-gateway consumer (no new XREADGROUP polls), drains
+        // task-fire + scheduler-request consumers, closes the event bus,
+        // RabbitMQ, workers, prisma, redis. In-flight handlers finish before
+        // the bus is torn down because stopConsuming() awaits in-flight acks.
+        { name: "client-destroy", run: () => client.destroy() },
+        { name: "tracing-shutdown", run: () => shutdownTracing() },
+      ],
+      { log, preCloseGraceMs: 5_000, deadlineMs: 30_000 },
+    );
     process.exit(0);
   });
 });

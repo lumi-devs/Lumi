@@ -126,3 +126,26 @@ rss(api)    ≈ 250 MB each
 
 Total cluster RSS for the bot tier: ~3.5 GB. Postgres/Redis/RabbitMQ sit
 alongside; size those by query/connection load rather than guild count.
+
+## 7. Enforced per-service budgets (S7)
+
+Every service ships with a V8 heap cap (`NODE_OPTIONS=--max-old-space-size`)
+set below its container memory limit. The headroom (off-heap allocations,
+Bun runtime, native modules) is what keeps the OOM killer dormant when GC
+has a chance to recover.
+
+| Service     | Container limit | Heap cap (`--max-old-space-size`) | Why                                                                     |
+| ----------- | --------------- | --------------------------------- | ----------------------------------------------------------------------- |
+| `worker`    | 512 MiB         | 384 MiB                           | No discord.js cache once split; modules + Prisma + ioredis only.        |
+| `gateway`   | 1 GiB           | 768 MiB                           | discord.js Client + per-shard caches (see §3 for the per-shard math).    |
+| `scheduler` | 512 MiB         | 384 MiB                           | BullMQ worker + Sapphire stores; no Discord cache.                       |
+| `api`       | 384 MiB         | 256 MiB                           | RabbitMQ RPC consumer only — smallest footprint.                         |
+
+The `NodeHeapPressure` alert (`config/observability/alerts.yml`) fires when
+any service sustains >85% of its heap cap for 5 minutes. That's the signal
+to either (a) bump the budget if the workload genuinely grew, or (b) hunt
+the leak (`/debug/heap` snapshot via the metrics port, dev only).
+
+Compose mirrors the same caps in `docker-compose.yml`; k8s manifests under
+`deploy/k8s/` set both the container `resources.limits.memory` and the
+matching `NODE_OPTIONS` env so the floor matches production.

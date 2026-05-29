@@ -30,10 +30,12 @@ import { prisma } from "#database/client.js";
 import {
   createRedisClient,
   parseRedisConnectionOption,
+  redisConnectionOptions,
   InvalidationBus,
   RedisKeys,
   RedisTTL,
 } from "#database/redis.js";
+import { SchedulerLeaderLock } from "#core/lib/scheduler-leader-lock.js";
 import { RabbitClient } from "#lib/rabbit.js";
 import {
   createEventBus,
@@ -43,6 +45,8 @@ import {
 import { installPreDeferredInteractions } from "#core/lib/pre-deferred-interactions.js";
 import { buildRestOptions } from "#core/lib/discord-rest.js";
 import { WorkerManager } from "#workers/WorkerManager.js";
+import { RedisEntityCache } from "#core/entity-cache/RedisEntityCache.js";
+import { installEntityPopulator } from "#core/entity-cache/entity-populator.js";
 import { ModuleStore } from "#core/module-system/ModuleStore.js";
 
 import { DatabaseService } from "#root/prisma/DatabaseService.js";
@@ -53,11 +57,13 @@ import {
   streamLength,
   streamConsumerLag,
   streamDlqLength,
+  registerReadinessProbe,
 } from "@ember/observability";
 import {
   planShards,
   buildSimpleThrottlerFactory,
   attachCluster,
+  ClusterReadyTracker,
   type ShardPlan,
   type ClusterBootstrap,
 } from "@ember/sharding";
@@ -90,8 +96,10 @@ export class EmberClient extends SapphireClient {
   private _livenessInterval: ReturnType<typeof setInterval> | null = null;
   private _ownedEventBus: OwnedEventBus | null = null;
   private _rawConsumer: RawGatewayConsumer | null = null;
+  private _detachEntityPopulator: (() => void) | null = null;
   private _schedulerRequestConsumer: SchedulerRequestConsumer | null = null;
   private _taskFireConsumer: TaskFireConsumer | null = null;
+  private _schedulerLeaderLock: SchedulerLeaderLock | null = null;
   private _cluster: ClusterBootstrap | null = null;
   private _clusterRedis: { redis: Redis; subscriber: Redis } | null = null;
   public readonly role: EmberRole;
@@ -139,9 +147,7 @@ export class EmberClient extends SapphireClient {
     // gracefully exit; the orchestrator will bring a new process up which
     // RESUMEs via the shared session store (S3.3).
     const redisOpts = {
-      host: envParseString("REDIS_HOST", "localhost"),
-      port: envParseInteger("REDIS_PORT", 6379),
-      password: envParseString("REDIS_PASSWORD", ""),
+      ...redisConnectionOptions(),
       db: envParseInteger("REDIS_CACHE_DB", 0),
       lazyConnect: true,
       maxRetriesPerRequest: null,
@@ -274,13 +280,6 @@ export class EmberClient extends SapphireClient {
       // when DISCORD_PROXY_URL is set. The proxy holds the authoritative
       // bucket state across every worker replica.
       rest: buildRestOptions(),
-      api: {
-        prefix: "/",
-        origin: envParseString("API_ORIGIN", "http://localhost:4000"),
-        listenOptions: {
-          port: envParseInteger("API_PORT", 4000),
-        },
-      },
     });
 
     // 1. Module system setup
@@ -302,14 +301,21 @@ export class EmberClient extends SapphireClient {
     // Streams mode is wired but not yet driving dispatch — see TODO.md S2 slice 2.
     this._ownedEventBus = createEventBus({
       redis: {
-        host: envParseString("REDIS_HOST", "localhost"),
-        port: envParseInteger("REDIS_PORT", 6379),
-        password: envParseString("REDIS_PASSWORD", ""),
+        ...redisConnectionOptions(),
         db: envParseInteger("REDIS_CACHE_DB", 0),
       },
+      // S8 slice 1: NATS JetStream is the high-throughput cutover from Redis
+      // Streams. createEventBus picks the transport off TRANSPORT (or the
+      // explicit `transport:` override). NATS_URL must be set when nats is
+      // selected — defaults to nats://nats:4222 in the docker-compose scale
+      // profile. See docs/explanation/transport-cutover.md for when to flip.
+      natsServers: process.env["NATS_URL"] ?? process.env["NATS_SERVERS"],
+      natsUser: process.env["NATS_USER"],
+      natsPass: process.env["NATS_PASSWORD"],
       defaultMaxLen: envParseInteger("EVENT_STREAM_MAXLEN", 100_000),
       maxDeliveries: envParseInteger("EVENT_STREAM_MAX_DELIVERIES", 5),
       claimMinIdleMs: envParseInteger("EVENT_STREAM_CLAIM_MIN_IDLE_MS", 60_000),
+      ackWaitMs: envParseInteger("EVENT_STREAM_CLAIM_MIN_IDLE_MS", 60_000),
       claimIntervalMs: envParseInteger(
         "EVENT_STREAM_CLAIM_INTERVAL_MS",
         30_000,
@@ -331,6 +337,7 @@ export class EmberClient extends SapphireClient {
       redis,
       invalidation: new InvalidationBus(createRedisClient()),
       db: new DatabaseService(prisma, redis, container.logger),
+      entityCache: new RedisEntityCache(redis),
       eventBus: this._ownedEventBus.bus,
       eventBusTransport: this._ownedEventBus.transport,
       modules: Object.create(
@@ -365,6 +372,33 @@ export class EmberClient extends SapphireClient {
   public override async login(token?: string) {
     await container.prisma.$connect();
     await container.invalidation.start();
+
+    // S5 HA: optional single-active-scheduler leader election. Only the
+    // `scheduler` role honours this; the monolith is single-replica by
+    // construction. Followers block here until the leader's TTL lapses.
+    if (
+      this.role === "scheduler" &&
+      envParseString("SCHEDULER_LEADER_LOCK", "false") === "true"
+    ) {
+      this._schedulerLeaderLock = new SchedulerLeaderLock({
+        redis: createRedisClient(),
+        replicaId: getConsumerId(),
+        ttlMs: envParseInteger("SCHEDULER_LEADER_LOCK_TTL_MS", 30_000),
+        renewIntervalMs: envParseInteger(
+          "SCHEDULER_LEADER_LOCK_RENEW_MS",
+          10_000,
+        ),
+        pollIntervalMs: envParseInteger("SCHEDULER_LEADER_LOCK_POLL_MS", 2_000),
+        log: (level, msg, meta) => container.logger[level](msg, meta),
+        onLost: (reason) => {
+          container.logger.fatal(
+            `[Scheduler] Leadership lost (${reason}); exiting for orchestrator restart`,
+          );
+          process.exit(1);
+        },
+      });
+      await this._schedulerLeaderLock.acquire();
+    }
 
     const rabbitUrl = envParseString("RABBITMQ_URL");
     container.rabbit = new RabbitClient(rabbitUrl);
@@ -434,6 +468,23 @@ export class EmberClient extends SapphireClient {
 
     // 3. Start raw-gateway consumer (only when the bus carries packets to us).
     if (this.role === "worker" && container.eventBusTransport === "streams") {
+      // Gate consumption on the cluster-ready flag (multi-replica gateway only).
+      // Prevents workers from processing partial-state events while shards are
+      // mid-IDENTIFY. Single-gateway / monolith paths skip this transparently.
+      const clusterName = getClusterName();
+      if (clusterName) {
+        const tracker = new ClusterReadyTracker({
+          redis: container.redis,
+          clusterName,
+        });
+        if (!(await tracker.isReady())) {
+          container.logger.info(
+            `[Worker] Waiting for cluster '${clusterName}' to report ready before consuming...`,
+          );
+          await tracker.waitForReady();
+          container.logger.info("[Worker] Cluster ready; starting consumer.");
+        }
+      }
       this._rawConsumer = new RawGatewayConsumer(
         container.eventBus,
         this as unknown as {
@@ -453,6 +504,16 @@ export class EmberClient extends SapphireClient {
       );
     }
 
+    // S8 slice 3: keep the Redis entity-cache projection up-to-date. Any role
+    // that observes raw dispatches (monolith via its own WS, worker via the
+    // bus consumer) maintains the projection. Cooperative: many workers each
+    // write idempotently; last-write-wins.
+    if (this.role === "monolith" || this.role === "worker") {
+      this._detachEntityPopulator = installEntityPopulator(
+        container.entityCache,
+      );
+    }
+
     // 3. Database Liveness Check
     this._livenessInterval = setInterval(async () => {
       try {
@@ -462,7 +523,82 @@ export class EmberClient extends SapphireClient {
       }
     }, 60_000);
 
+    this._registerReadinessProbes();
+
     return result;
+  }
+
+  // S6 slice 1: per-role readiness probes. /readyz aggregates these; the
+  // orchestrator pulls a replica out of rotation when any probe fails.
+  private _registerReadinessProbes() {
+    registerReadinessProbe("postgres", async () => {
+      try {
+        await container.prisma.$queryRaw`SELECT 1`;
+        return { status: "ok" };
+      } catch (err) {
+        return { status: "fail", detail: String(err) };
+      }
+    });
+
+    registerReadinessProbe("redis", async () => {
+      try {
+        const pong = await container.redis.ping();
+        return pong === "PONG"
+          ? { status: "ok" }
+          : { status: "fail", detail: `unexpected ping reply: ${pong}` };
+      } catch (err) {
+        return { status: "fail", detail: String(err) };
+      }
+    });
+
+    // RabbitMQ carries dashboard RPC; in monolith/worker/scheduler/api the
+    // connection is initialised in login(). Treat a disconnected rabbit as
+    // not-ready since the dashboard surface is gone.
+    registerReadinessProbe("rabbitmq", () =>
+      container.rabbit?.connected
+        ? { status: "ok" }
+        : { status: "fail", detail: "not connected" },
+    );
+
+    // Discord WS only opens on roles that actually hold one (monolith). Worker
+    // and scheduler ride the event bus; their Discord readiness is irrelevant
+    // and would always report "not ready" if naïvely probed.
+    if (this.role === "monolith") {
+      registerReadinessProbe("discord", () =>
+        this.isReady()
+          ? { status: "ok" }
+          : { status: "fail", detail: "client not ready" },
+      );
+    }
+
+    // S2: worker consumes raw gateway packets from Redis Streams. Without an
+    // attached consumer the worker has no source of dispatches.
+    if (this.role === "worker" && container.eventBusTransport === "streams") {
+      registerReadinessProbe("raw-gateway-consumer", () =>
+        this._rawConsumer
+          ? { status: "ok" }
+          : { status: "fail", detail: "consumer not started" },
+      );
+    }
+
+    // S5: scheduler is the BullMQ owner. When the optional leader lock is on,
+    // followers hold here in acquire() until they win — but if a held lock is
+    // ever lost we exit, so reaching this probe means "i am the leader" or
+    // "lock not enabled".
+    if (roleOwnsScheduler(this.role)) {
+      registerReadinessProbe("scheduler-tasks", () =>
+        container.tasks
+          ? { status: "ok" }
+          : { status: "fail", detail: "tasks store missing" },
+      );
+      if (this._schedulerLeaderLock) {
+        registerReadinessProbe("scheduler-leader", () =>
+          this._schedulerLeaderLock?.isLeader()
+            ? { status: "ok" }
+            : { status: "fail", detail: "not leader" },
+        );
+      }
+    }
   }
 
   private _installWorkerPatches() {
@@ -485,6 +621,10 @@ export class EmberClient extends SapphireClient {
     if (this._livenessInterval) {
       clearInterval(this._livenessInterval);
       this._livenessInterval = null;
+    }
+    if (this._detachEntityPopulator) {
+      this._detachEntityPopulator();
+      this._detachEntityPopulator = null;
     }
     if (this._rawConsumer) {
       await this._rawConsumer
@@ -512,6 +652,17 @@ export class EmberClient extends SapphireClient {
           ),
         );
       this._schedulerRequestConsumer = null;
+    }
+    if (this._schedulerLeaderLock) {
+      await this._schedulerLeaderLock
+        .release()
+        .catch((err) =>
+          container.logger.warn(
+            "[Client] SchedulerLeaderLock release failed:",
+            err,
+          ),
+        );
+      this._schedulerLeaderLock = null;
     }
     await super.destroy();
     await container.workers.destroy();

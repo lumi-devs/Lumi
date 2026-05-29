@@ -1,0 +1,99 @@
+# Gateway owns the Discord WS connections. StatefulSet (not Deployment) gives
+# each pod a stable hostname (`gateway-0`, `gateway-1`, …) which the cluster
+# coordinator uses as the replica id. Restart of `gateway-0` keeps the same
+# id so session RESUME works for the shards it owned.
+#
+# Scaling is *manual* and tied to shard count (see docs/explanation/capacity-planning.md):
+# one replica per ~32 shards before event-loop lag bites. Don't autoscale this
+# — adding a replica forces a cluster rebalance that drains the joiner's
+# old peers (graceful, but unnecessary if it's just a flap).
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: gateway
+  namespace: ember
+spec:
+  serviceName: gateway-headless
+  replicas: 1
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: gateway
+          image: ghcr.io/your-org/ember:latest
+          imagePullPolicy: IfNotPresent
+          command: ["bun", "apps/gateway/src/main.ts"]
+          envFrom:
+            - configMapRef:
+                name: ember-env
+            - secretRef:
+                name: ember-secrets
+          env:
+            - name: EMBER_ROLE
+              value: "gateway"
+            - name: EMBER_CONSUMER_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            # Heap: the gateway holds the discord.js Client + per-shard caches;
+            # budget ~6 MiB per shard + 25 KiB per cached guild. 768 MiB heap
+            # → fits ~32 shards / ~50k guilds (see capacity-planning).
+            - name: NODE_OPTIONS
+              value: "--max-old-space-size=768"
+          ports:
+            - name: metrics
+              containerPort: 9090
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: metrics
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 4
+          lifecycle:
+            preStop:
+              # Extra grace so the cluster coordinator's `leave()` finishes
+              # publishing the rebalance before kubelet sends SIGKILL.
+              exec:
+                command: ["sh", "-c", "sleep 15"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-headless
+  namespace: ember
+spec:
+  clusterIP: None
+  selector:
+    app: gateway
+  ports:
+    - name: metrics
+      port: 9090
+      targetPort: metrics
