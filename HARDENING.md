@@ -187,6 +187,15 @@ guarantee"** and **"Cross-cutting gates"** at the bottom of `TODO.md` is still `
   `packages/*` + `apps/*` workspace — update or add a monorepo note.
 - [ ] **P4.2 — Update `TODO.md`'s bottom gates** to reflect real status once P0–P2 land.
 
+### P5 — AI-Audit Security & Architecture Fixes
+
+- [ ] **P5.1 — Purge Hallucinated Dependencies.** Remove the fake/typosquatted `sapphire-plugin-modal-commands` (~100 downloads on npm) and the hallucinated Zod version `zod@^3.25.76` from `packages/core/package.json`.
+- [ ] **P5.2 — Fix Channel Slicing Bug.** In `TempVcService.ts`, replace `.slice(0, 100)` with a surrogate-safe truncation method to prevent Discord API validation crashes when slicing multi-byte emojis.
+- [ ] **P5.3 — Patch Gateway Resilience.** In `apps/gateway/src/main.ts`, fix the `publishReady()` logic. A single shard reconnecting (`shardReady.size === expectedShards.size`) currently pauses event processing for the entire cluster.
+- [ ] **P5.4 — Secure NATS DLQ & Fix Workers.** Remove the unneeded `void stream;` quirk and the redundant `tryDecodeRaw` fallback in `NatsJetStreamBus.ts`. In `filter/workers/aho-corasick.ts`, avoid blind `as Payload` casting of `unknown` to prevent object poisoning if unvalidated events hit the worker.
+- [ ] **P5.5 — Fix the Phantom Control Panel.** In `TempVcService.ts`, check the result of `member.voice.setChannel(vc)`. If it fails (user disconnected), delete the newly created channel immediately instead of building an orphaned control panel and relying on the 8-second delayed cleanup.
+- [ ] **P5.6 — Remove Hardcoded AI Bloat.** In `TempVcService.ts`, strip the hyper-specific `getVcType` regex logic (`\bduo\b`, `\btrio\b`) inside `reorderChannels` and replace it with configurable tags/prefixes.
+
 ---
 
 ## Constraints & conventions (do not break)
