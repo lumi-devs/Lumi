@@ -10,6 +10,11 @@
 
 **Legend:** `[ ]` todo · `[~]` in progress · `[x]` done · `⚠` breaking · `🔬` needs verify · `🔗` cross-service
 
+> ⚠️ **Status reality check.** `[x]` here means *implemented*, not *runtime-verified* — many items
+> note "🔬 not re-run here". As of 2026-05-30 the tree has lint + test failures and `docker compose up`
+> doesn't start the bot. The grounded, prioritized punch-list to actually finish this lives in
+> [`HARDENING.md`](./HARDENING.md). Work that, not these checkboxes, to harden for production.
+
 ---
 
 ## Decisions captured (from scoping)
