@@ -40,20 +40,21 @@ export function installPreDeferredInteractions(
   if (installed) return;
   installed = true;
 
-  const skipDeferReply = async function (
-    this: MutableInteraction,
-    opts?: DeferOpts,
-  ) {
-    if (this.deferred || this.replied) return undefined as never;
+  // Non-`async`: these replace Promise-returning prototype methods but do no
+  // IO, so they return a resolved promise directly rather than `await` nothing.
+  const skipDeferReply = function (this: MutableInteraction, opts?: DeferOpts) {
+    if (this.deferred || this.replied)
+      return Promise.resolve(undefined as never);
     this.deferred = true;
     this.ephemeral = (opts?.flags ?? 0) & MessageFlags.Ephemeral ? true : false;
-    return undefined as never;
+    return Promise.resolve(undefined as never);
   };
 
-  const skipDeferUpdate = async function (this: MutableInteraction) {
-    if (this.deferred || this.replied) return undefined as never;
+  const skipDeferUpdate = function (this: MutableInteraction) {
+    if (this.deferred || this.replied)
+      return Promise.resolve(undefined as never);
     this.deferred = true;
-    return undefined as never;
+    return Promise.resolve(undefined as never);
   };
 
   (

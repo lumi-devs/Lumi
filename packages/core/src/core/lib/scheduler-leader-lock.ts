@@ -99,6 +99,30 @@ export class SchedulerLeaderLock {
     }
   }
 
+  /** Release the lock on graceful shutdown. Safe to call when not leader. */
+  public async release(): Promise<void> {
+    this.released = true;
+    this.stopRenewal();
+    if (this.state !== "leader") return;
+    this.state = "idle";
+    try {
+      await this.redis.eval(
+        `if redis.call("GET", KEYS[1]) == ARGV[1] then
+           return redis.call("DEL", KEYS[1])
+         else
+           return 0
+         end`,
+        1,
+        this.key,
+        this.replicaId,
+      );
+    } catch (err: unknown) {
+      this.log("warn", "[SchedulerLock] Release error (ignored)", {
+        err: String(err),
+      });
+    }
+  }
+
   private startRenewal(): void {
     this.renewTimer = setInterval(() => {
       void this.renew();
@@ -142,30 +166,6 @@ export class SchedulerLeaderLock {
     if (this.renewTimer) {
       clearInterval(this.renewTimer);
       this.renewTimer = null;
-    }
-  }
-
-  /** Release the lock on graceful shutdown. Safe to call when not leader. */
-  public async release(): Promise<void> {
-    this.released = true;
-    this.stopRenewal();
-    if (this.state !== "leader") return;
-    this.state = "idle";
-    try {
-      await this.redis.eval(
-        `if redis.call("GET", KEYS[1]) == ARGV[1] then
-           return redis.call("DEL", KEYS[1])
-         else
-           return 0
-         end`,
-        1,
-        this.key,
-        this.replicaId,
-      );
-    } catch (err: unknown) {
-      this.log("warn", "[SchedulerLock] Release error (ignored)", {
-        err: String(err),
-      });
     }
   }
 }

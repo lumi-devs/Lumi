@@ -93,6 +93,7 @@ export interface EmberClientOptions {
 }
 
 export class EmberClient extends SapphireClient {
+  public readonly role: EmberRole;
   private _livenessInterval: ReturnType<typeof setInterval> | null = null;
   private _ownedEventBus: OwnedEventBus | null = null;
   private _rawConsumer: RawGatewayConsumer | null = null;
@@ -102,88 +103,6 @@ export class EmberClient extends SapphireClient {
   private _schedulerLeaderLock: SchedulerLeaderLock | null = null;
   private _cluster: ClusterBootstrap | null = null;
   private _clusterRedis: { redis: Redis; subscriber: Redis } | null = null;
-  public readonly role: EmberRole;
-
-  /**
-   * Async factory that resolves a shard plan via `/gateway/bot` before
-   * constructing the client. For the `worker` role (WS disabled), shard
-   * planning is skipped. Use this from app entrypoints; the bare constructor
-   * is fine in tests where you can stub the plan.
-   */
-  public static async bootstrap(
-    options: EmberClientOptions = {},
-  ): Promise<EmberClient> {
-    const role = options.role ?? getEmberRole();
-    if (
-      role === "worker" ||
-      role === "scheduler" ||
-      options.shardPlan !== undefined
-    ) {
-      return new EmberClient(options);
-    }
-    const log = (
-      level: "info" | "warn" | "error",
-      msg: string,
-      meta?: object,
-    ) => {
-      const line = meta
-        ? `[EmberClient] ${msg} ${JSON.stringify(meta)}`
-        : `[EmberClient] ${msg}`;
-      const fn =
-        level === "error" ? "error" : level === "warn" ? "warn" : "log";
-      console[fn](line);
-    };
-    const shardPlan = await planShards({
-      token: envParseString("BOT_TOKEN"),
-      log,
-    });
-
-    const clusterName = getClusterName();
-    if (!clusterName) {
-      return new EmberClient({ ...options, shardPlan });
-    }
-
-    // Monolith + cluster: build a Redis pair and join. On a rebalance we
-    // gracefully exit; the orchestrator will bring a new process up which
-    // RESUMEs via the shared session store (S3.3).
-    const redisOpts = {
-      ...redisConnectionOptions(),
-      db: envParseInteger("REDIS_CACHE_DB", 0),
-      lazyConnect: true,
-      maxRetriesPerRequest: null,
-      enableReadyCheck: false,
-    };
-    const redis = new Redis(redisOpts);
-    const subscriber = new Redis(redisOpts);
-    await redis.connect();
-    await subscriber.connect();
-    const replicaId =
-      process.env["EMBER_CONSUMER_ID"] ||
-      process.env["HOSTNAME"] ||
-      `monolith-${process.pid}`;
-    const cluster = await attachCluster({
-      plan: shardPlan,
-      redis,
-      subscriber,
-      clusterName,
-      replicaId,
-      log,
-    });
-    const client = new EmberClient({
-      ...options,
-      shardPlan,
-      cluster,
-      _clusterRedis: { redis, subscriber },
-    });
-    cluster.coordinator.onRebalance((delta) => {
-      log("warn", "shard assignment changed — draining for restart", {
-        added: delta.added,
-        removed: delta.removed,
-      });
-      void client.destroy().finally(() => process.exit(0));
-    });
-    return client;
-  }
 
   public constructor(options: EmberClientOptions = {}) {
     const role = options.role ?? getEmberRole();
@@ -528,95 +447,6 @@ export class EmberClient extends SapphireClient {
     return result;
   }
 
-  // S6 slice 1: per-role readiness probes. /readyz aggregates these; the
-  // orchestrator pulls a replica out of rotation when any probe fails.
-  private _registerReadinessProbes() {
-    registerReadinessProbe("postgres", async () => {
-      try {
-        await container.prisma.$queryRaw`SELECT 1`;
-        return { status: "ok" };
-      } catch (err) {
-        return { status: "fail", detail: String(err) };
-      }
-    });
-
-    registerReadinessProbe("redis", async () => {
-      try {
-        const pong = await container.redis.ping();
-        return pong === "PONG"
-          ? { status: "ok" }
-          : { status: "fail", detail: `unexpected ping reply: ${pong}` };
-      } catch (err) {
-        return { status: "fail", detail: String(err) };
-      }
-    });
-
-    // RabbitMQ carries dashboard RPC; in monolith/worker/scheduler/api the
-    // connection is initialised in login(). Treat a disconnected rabbit as
-    // not-ready since the dashboard surface is gone.
-    registerReadinessProbe("rabbitmq", () =>
-      container.rabbit?.connected
-        ? { status: "ok" }
-        : { status: "fail", detail: "not connected" },
-    );
-
-    // Discord WS only opens on roles that actually hold one (monolith). Worker
-    // and scheduler ride the event bus; their Discord readiness is irrelevant
-    // and would always report "not ready" if naïvely probed.
-    if (this.role === "monolith") {
-      registerReadinessProbe("discord", () =>
-        this.isReady()
-          ? { status: "ok" }
-          : { status: "fail", detail: "client not ready" },
-      );
-    }
-
-    // S2: worker consumes raw gateway packets from Redis Streams. Without an
-    // attached consumer the worker has no source of dispatches.
-    if (this.role === "worker" && container.eventBusTransport === "streams") {
-      registerReadinessProbe("raw-gateway-consumer", () =>
-        this._rawConsumer
-          ? { status: "ok" }
-          : { status: "fail", detail: "consumer not started" },
-      );
-    }
-
-    // S5: scheduler is the BullMQ owner. When the optional leader lock is on,
-    // followers hold here in acquire() until they win — but if a held lock is
-    // ever lost we exit, so reaching this probe means "i am the leader" or
-    // "lock not enabled".
-    if (roleOwnsScheduler(this.role)) {
-      registerReadinessProbe("scheduler-tasks", () =>
-        container.tasks
-          ? { status: "ok" }
-          : { status: "fail", detail: "tasks store missing" },
-      );
-      if (this._schedulerLeaderLock) {
-        registerReadinessProbe("scheduler-leader", () =>
-          this._schedulerLeaderLock?.isLeader()
-            ? { status: "ok" }
-            : { status: "fail", detail: "not leader" },
-        );
-      }
-    }
-  }
-
-  private _installWorkerPatches() {
-    // 1. No-op the WS connect: super.login() won't open a socket.
-    const ws = this.ws as unknown as { connect: () => Promise<void> };
-    ws.connect = async () => {
-      container.logger.info(
-        "[Worker] ws.connect() suppressed — packets arrive via event bus",
-      );
-    };
-
-    // 2. If the gateway pre-acks interactions, patch Interaction.deferReply/Update
-    //    so worker handlers don't double-ack and 40060.
-    if (isInteractionDeferAtGateway()) {
-      installPreDeferredInteractions((msg) => container.logger.info(msg));
-    }
-  }
-
   public override async destroy() {
     if (this._livenessInterval) {
       clearInterval(this._livenessInterval);
@@ -701,6 +531,96 @@ export class EmberClient extends SapphireClient {
       );
   }
 
+  // S6 slice 1: per-role readiness probes. /readyz aggregates these; the
+  // orchestrator pulls a replica out of rotation when any probe fails.
+  private _registerReadinessProbes() {
+    registerReadinessProbe("postgres", async () => {
+      try {
+        await container.prisma.$queryRaw`SELECT 1`;
+        return { status: "ok" };
+      } catch (err) {
+        return { status: "fail", detail: String(err) };
+      }
+    });
+
+    registerReadinessProbe("redis", async () => {
+      try {
+        const pong = await container.redis.ping();
+        return pong === "PONG"
+          ? { status: "ok" }
+          : { status: "fail", detail: `unexpected ping reply: ${pong}` };
+      } catch (err) {
+        return { status: "fail", detail: String(err) };
+      }
+    });
+
+    // RabbitMQ carries dashboard RPC; in monolith/worker/scheduler/api the
+    // connection is initialised in login(). Treat a disconnected rabbit as
+    // not-ready since the dashboard surface is gone.
+    registerReadinessProbe("rabbitmq", () =>
+      container.rabbit?.connected
+        ? { status: "ok" }
+        : { status: "fail", detail: "not connected" },
+    );
+
+    // Discord WS only opens on roles that actually hold one (monolith). Worker
+    // and scheduler ride the event bus; their Discord readiness is irrelevant
+    // and would always report "not ready" if naïvely probed.
+    if (this.role === "monolith") {
+      registerReadinessProbe("discord", () =>
+        this.isReady()
+          ? { status: "ok" }
+          : { status: "fail", detail: "client not ready" },
+      );
+    }
+
+    // S2: worker consumes raw gateway packets from Redis Streams. Without an
+    // attached consumer the worker has no source of dispatches.
+    if (this.role === "worker" && container.eventBusTransport === "streams") {
+      registerReadinessProbe("raw-gateway-consumer", () =>
+        this._rawConsumer
+          ? { status: "ok" }
+          : { status: "fail", detail: "consumer not started" },
+      );
+    }
+
+    // S5: scheduler is the BullMQ owner. When the optional leader lock is on,
+    // followers hold here in acquire() until they win — but if a held lock is
+    // ever lost we exit, so reaching this probe means "i am the leader" or
+    // "lock not enabled".
+    if (roleOwnsScheduler(this.role)) {
+      registerReadinessProbe("scheduler-tasks", () =>
+        container.tasks
+          ? { status: "ok" }
+          : { status: "fail", detail: "tasks store missing" },
+      );
+      if (this._schedulerLeaderLock) {
+        registerReadinessProbe("scheduler-leader", () =>
+          this._schedulerLeaderLock?.isLeader()
+            ? { status: "ok" }
+            : { status: "fail", detail: "not leader" },
+        );
+      }
+    }
+  }
+
+  private _installWorkerPatches() {
+    // 1. No-op the WS connect: super.login() won't open a socket.
+    const ws = this.ws as unknown as { connect: () => Promise<void> };
+    ws.connect = () => {
+      container.logger.info(
+        "[Worker] ws.connect() suppressed — packets arrive via event bus",
+      );
+      return Promise.resolve();
+    };
+
+    // 2. If the gateway pre-acks interactions, patch Interaction.deferReply/Update
+    //    so worker handlers don't double-ack and 40060.
+    if (isInteractionDeferAtGateway()) {
+      installPreDeferredInteractions((msg) => container.logger.info(msg));
+    }
+  }
+
   private async _fetchPrefix(message: Message) {
     if (!message.guild) return envParseString("DEFAULT_PREFIX", ",");
 
@@ -720,5 +640,86 @@ export class EmberClient extends SapphireClient {
       JSON.stringify(prefixes),
     );
     return prefixes;
+  }
+
+  /**
+   * Async factory that resolves a shard plan via `/gateway/bot` before
+   * constructing the client. For the `worker` role (WS disabled), shard
+   * planning is skipped. Use this from app entrypoints; the bare constructor
+   * is fine in tests where you can stub the plan.
+   */
+  public static async bootstrap(
+    options: EmberClientOptions = {},
+  ): Promise<EmberClient> {
+    const role = options.role ?? getEmberRole();
+    if (
+      role === "worker" ||
+      role === "scheduler" ||
+      options.shardPlan !== undefined
+    ) {
+      return new EmberClient(options);
+    }
+    const log = (
+      level: "info" | "warn" | "error",
+      msg: string,
+      meta?: object,
+    ) => {
+      const line = meta
+        ? `[EmberClient] ${msg} ${JSON.stringify(meta)}`
+        : `[EmberClient] ${msg}`;
+      const fn =
+        level === "error" ? "error" : level === "warn" ? "warn" : "log";
+      console[fn](line);
+    };
+    const shardPlan = await planShards({
+      token: envParseString("BOT_TOKEN"),
+      log,
+    });
+
+    const clusterName = getClusterName();
+    if (!clusterName) {
+      return new EmberClient({ ...options, shardPlan });
+    }
+
+    // Monolith + cluster: build a Redis pair and join. On a rebalance we
+    // gracefully exit; the orchestrator will bring a new process up which
+    // RESUMEs via the shared session store (S3.3).
+    const redisOpts = {
+      ...redisConnectionOptions(),
+      db: envParseInteger("REDIS_CACHE_DB", 0),
+      lazyConnect: true,
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+    };
+    const redis = new Redis(redisOpts);
+    const subscriber = new Redis(redisOpts);
+    await redis.connect();
+    await subscriber.connect();
+    const replicaId =
+      process.env["EMBER_CONSUMER_ID"] ||
+      process.env["HOSTNAME"] ||
+      `monolith-${process.pid}`;
+    const cluster = await attachCluster({
+      plan: shardPlan,
+      redis,
+      subscriber,
+      clusterName,
+      replicaId,
+      log,
+    });
+    const client = new EmberClient({
+      ...options,
+      shardPlan,
+      cluster,
+      _clusterRedis: { redis, subscriber },
+    });
+    cluster.coordinator.onRebalance((delta) => {
+      log("warn", "shard assignment changed — draining for restart", {
+        added: delta.added,
+        removed: delta.removed,
+      });
+      void client.destroy().finally(() => process.exit(0));
+    });
+    return client;
   }
 }

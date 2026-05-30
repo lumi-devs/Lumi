@@ -22,6 +22,7 @@ describe('time.ts', () => {
 	});
 
 	it('shortTimestamp', () => {
-		expect(shortTimestamp(1000000)).toBe('<t:1000:T>');
+		// Discord style `t` = ShortTime ("14:30"); `T` = LongTime. The helper uses ShortTime.
+		expect(shortTimestamp(1000000)).toBe('<t:1000:t>');
 	});
 });

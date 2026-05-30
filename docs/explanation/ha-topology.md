@@ -1,10 +1,19 @@
 # HA topology (`ha` profile)
 
-Lumi's `docker compose --profile ha up` brings up a replicated copy of every
-stateful dependency on a single host. The default (no profile) is still a
-single-node setup; the `ha` profile is opt-in and meant either for staging-style
-load tests on one box, or as a copy-pasteable starting point for a real
-multi-host deploy.
+> **Status (2026-05-30): PLANNED — not yet wired into `docker-compose.yml`.**
+> The config files this doc references (`config/postgres/*`, `config/redis/*`,
+> `config/rabbitmq/*`) ship today, but the `postgres-replica` / `redis-replica` /
+> `redis-sentinel-1..3` / `rabbitmq-2..3` / `rabbitmq-ha-policy` **service blocks were
+> never added**, so `docker compose --profile ha up` currently starts only the default
+> single-node set — it is a no-op alias of the default profile. This document is the
+> **design spec** for that wiring; read every "brings up / adds" below as the intended
+> end state, not current behavior. Tracking: HARDENING.md P1.3.
+
+Lumi's `docker compose --profile ha up` **is designed to** bring up a replicated
+copy of every stateful dependency on a single host. The default (no profile) is
+still a single-node setup; the `ha` profile is opt-in and meant either for
+staging-style load tests on one box, or as a copy-pasteable starting point for a
+real multi-host deploy.
 
 ## What it adds
 

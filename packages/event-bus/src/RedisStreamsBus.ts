@@ -218,11 +218,12 @@ export class RedisStreamsBus implements EventBus {
     };
   }
 
-  public async close(): Promise<void> {
+  public close(): Promise<void> {
     this.closed = true;
     for (const t of this.timers) clearInterval(t);
     this.timers.clear();
     // Owned-connection lifecycle is the caller's (createEventBus closes them).
+    return Promise.resolve();
   }
 
   /**

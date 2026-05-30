@@ -27,12 +27,15 @@ vi.mock('@sapphire/framework', () => ({
       exists: vi.fn(),
       set: vi.fn()
     },
-    prisma: {
-      afkEntry: {
-        findUnique: vi.fn(),
-        upsert: vi.fn(),
-        delete: vi.fn(),
-        deleteMany: vi.fn()
+    db: {
+      afk: {
+        findEntry: vi.fn(),
+        upsertEntry: vi.fn(),
+        deleteEntry: vi.fn(),
+        deleteAllForUser: vi.fn(),
+        findAll: vi.fn(),
+        findForGuild: vi.fn(),
+        countAll: vi.fn()
       }
     },
     logger: {
@@ -56,12 +59,12 @@ describe('AFK Data Module', () => {
     const result = await getAfkEntry('guild-1', 'user-1');
     expect(result).toBeDefined();
     expect(result!.reason).toBe('lunch');
-    expect(container.prisma.afkEntry.findUnique).not.toHaveBeenCalled();
+    expect(container.db.afk.findEntry).not.toHaveBeenCalled();
   });
 
   it('setAfkEntry upserts entry in DB and caches it', async () => {
     const mockEntry = { guildId: 'g1', userId: 'u1', reason: 'brb', since: new Date() };
-    (container.prisma.afkEntry.upsert as any).mockResolvedValue(mockEntry);
+    (container.db.afk.upsertEntry as any).mockResolvedValue(mockEntry);
 
     const result = await setAfkEntry('g1', 'u1', 'brb');
     expect(result).toBe(mockEntry);
@@ -69,15 +72,15 @@ describe('AFK Data Module', () => {
   });
 
   it('clearAfkEntry deletes from DB and redis', async () => {
-    (container.prisma.afkEntry.delete as any).mockResolvedValue({});
+    (container.db.afk.deleteEntry as any).mockResolvedValue(undefined);
     const res = await clearAfkEntry('g1', 'u1');
     expect(res).toBe(true);
-    expect(container.prisma.afkEntry.delete).toHaveBeenCalled();
+    expect(container.db.afk.deleteEntry).toHaveBeenCalled();
     expect(container.redis.del).toHaveBeenCalled();
   });
 
   it('clearAllAfkForUser handles multiple guild afk entries', async () => {
-    (container.prisma.afkEntry.deleteMany as any).mockResolvedValue({ count: 2 });
+    (container.db.afk.deleteAllForUser as any).mockResolvedValue(2);
     (container.redis.scan as any).mockResolvedValueOnce(['0', ['key1', 'key2']]).mockResolvedValueOnce(['0', []]);
     
     const count = await clearAllAfkForUser('u1');

@@ -2,6 +2,7 @@ export class SortedCollection<
   K extends number | string | bigint,
   V,
 > implements Map<K, V> {
+  public readonly [Symbol.toStringTag]: string = "SortedCollection";
   readonly #entries: [K, V][] = [];
   readonly #comparator: (a: K, b: K) => number;
 
@@ -91,10 +92,6 @@ export class SortedCollection<
     thisArg?: unknown,
   ): void {
     for (const [k, v] of this.#entries) cb.call(thisArg, v, k, this);
-  }
-
-  public get [Symbol.toStringTag](): string {
-    return "SortedCollection";
   }
 
   #findIndex(key: K): number {

@@ -6,7 +6,6 @@ process.env["NODE_ENV"] ??= "development";
 import "@sapphire/plugin-logger/register";
 import "@sapphire/plugin-subcommands/register";
 import "@sapphire/plugin-editable-commands/register";
-import "sapphire-plugin-modal-commands/register";
 
 // S5: only the BullMQ-owning roles (scheduler, monolith) register the
 // scheduled-tasks plugin. On worker / gateway it stays unregistered so the

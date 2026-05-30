@@ -67,7 +67,6 @@
     "discord.js": "^14.20.0",
     "ioredis": "^5.10.1",
     "pg": "^8.21.0",
-    "sapphire-plugin-modal-commands": "^2.0.2",
     "zod": "^3.25.76"
   }
 }

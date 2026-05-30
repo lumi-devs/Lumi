@@ -1,6 +1,6 @@
 # Ember × Sapphire v5 — framework quick reference
 
-Ember runs **Sapphire v5** (`@sapphire/framework ^5.5.0`) on **Bun**, with plugins: `plugin-subcommands`, `plugin-scheduled-tasks`, `plugin-i18next`, `plugin-api`. The client is `EmberClient` (`src/client/EmberClient.ts`).
+Ember runs **Sapphire v5** (`@sapphire/framework ^5.5.0`) on **Bun**, with plugins: `plugin-subcommands`, `plugin-scheduled-tasks`, `plugin-i18next`. The client is `EmberClient` (`packages/core/src/client/EmberClient.ts`). (`@sapphire/plugin-api` was removed — liveness/readiness are now `/healthz` + `/readyz` on the metrics port; see CLAUDE.md _Runtime roles & scale-out_.)
 
 ## Container (augmented)
 

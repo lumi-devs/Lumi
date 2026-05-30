@@ -142,6 +142,6 @@ export async function planShards(
 export function buildSimpleThrottlerFactory(
   plan: Pick<ShardPlan, "maxConcurrency">,
 ) {
-  return async (): Promise<IIdentifyThrottler> =>
-    new SimpleIdentifyThrottler(plan.maxConcurrency);
+  return (): Promise<IIdentifyThrottler> =>
+    Promise.resolve(new SimpleIdentifyThrottler(plan.maxConcurrency));
 }
