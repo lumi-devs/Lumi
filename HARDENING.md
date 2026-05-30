@@ -47,14 +47,14 @@ docker compose config --services                    # what `docker compose up` a
 
 ---
 
-## Verified current state — 2026-05-30 (P0.1–P0.3 done; all three gates green — typecheck 0, lint 0 errors/6 warnings, vitest 36/36 across 7 suites. Also this session: P1.3 resolved (ha demoted to PLANNED), P2.1 chaos runner + CI added, P4.2 cross-cutting gate synced. Remaining open items all need live external infra — see P1.2 / P2.2 / P2.3)
+## Verified current state — 2026-05-30 (P0–P2 done; all three gates green — typecheck 0, lint 0 errors/6 warnings, vitest 36/36 across 7 suites. **Latest session (Docker available locally): the whole distributed-path chaos suite ran GREEN against ephemeral Docker Redis + JetStream NATS — `verify:chaos` 8/8** (6 Redis + 2 NATS). P2.1 confirmed green; P2.2 done — exercising the never-run NATS path surfaced **3 real bugs, all fixed** (consumer-teardown hang, per-message `ackAck` latency blowout, DLQ off-by-one) + a new `chaos-nats-dlq.ts` parity test, NATS promoted to a hard CI gate; P2.3 confirmed covered by `chaos-rolling-deploy.ts` phase 5. **P1.2 default-profile runtime smoke now PASSED** — `docker compose up` (the monolith) booted the real bot to a live Discord READY (17 global commands synced, a gateway session consumed) with `/readyz`=200 and every dependency probe ok (postgres·redis·rabbitmq·**discord**·scheduler-tasks), then torn down clean; the other 5 profiles' runtime boot stays a manual/staging step. **P1.4 found & fixed this session** — the smoke surfaced a fresh-volume schema-bootstrap gap (the prod `prisma migrate deploy` created **0** app tables because the repo committed **no migrations**); fixed by generating the `0_init` baseline migration and **re-verified on a genuinely fresh volume** (migration applies → 22 tables → bot READY + `/readyz`=200). **P1.5 (more severe, surfaced fixing P1.4's `.gitignore`):** the entire `packages/core/src/prisma/` data layer — 15 files incl. `DatabaseService` (`container.db`) — was **untracked** by an over-broad `prisma/` ignore rule, so a fresh clone couldn't build (local Docker only worked because `.dockerignore` ≠ `.gitignore`); fixed by anchoring the prisma ignore rules and committing the data layer.)
 
 | Gate | Result | Detail |
 |---|---|---|
 | `typecheck` | ✅ **clean** | 0 TS errors across the workspace. |
 | `lint` | ✅ **0 errors, 6 warnings** | **P0.3 done.** All 26 errors fixed (require-await→`Promise.resolve`, member-ordering moves, `no-this-alias`→arrow, class-literal→field). 6 pre-existing **warnings** remain (`no-negated-condition`×3, `switch-exhaustiveness`, `func-names`, `no-eq-null`) — non-blocking; `eslint` exits 0. |
 | `test` (vitest) | ✅ **36 pass / 7 suites, 0 fail** | **P0.2 done.** All 15 failures were **test staleness**, not code bugs — fixed test-only (+ one stale `time.ts` docstring), no production-logic change. Stale flat `container.prisma`/`container.db` mocks → namespaced `.afk`/`.config`/`.permissions`/`.modules`; `WorkerManager` lazy-spawn `__INIT__` handshake; `module_store` rewritten for true-private `#records`/manifest-driven discovery; `permissions` import-crash fixed (import-time `OWNER_IDS` parse). NB: the canonical runner is **`bun run test` (vitest)** — `bun test` (Bun native) ignores `vi.mock` and reports different numbers. |
-| `docker compose up` | ✅ **bot in default set** | **P1.1 done.** Default (no-profile) services are now `postgres, pgbouncer, redis, rabbitmq, dashboard, worker` (verified via `docker compose config --services`). `worker` (`EMBER_ROLE=monolith`) holds its own WS. Not booted runtime here (needs a live `BOT_TOKEN`), but the wiring is proven. |
+| `docker compose up` | ✅ **bot in default set** | **P1.1 done.** Default (no-profile) services are now `postgres, pgbouncer, redis, rabbitmq, dashboard, worker` (verified via `docker compose config --services`). `worker` (`EMBER_ROLE=monolith`) holds its own WS. **Runtime-booted 2026-05-30** with the real `BOT_TOKEN`: reached Discord READY and `/readyz`=200 (P1.2 default-profile smoke — see below). |
 
 > **P0.1 corrected diagnosis.** The "Polyfills for Sapphire" block was **not** in the published
 > `discord.js@14.26.4` (the npm tarball is a clean 254-line `index.js`); it was **local pollution**
@@ -167,8 +167,9 @@ guarantee"** and **"Cross-cutting gates"** at the bottom of `TODO.md` is still `
     **not** the prod worker). `--profile production up` stays backward-compatible (worker is always-on,
     so the profile is now a no-op alias of default).
   - **Acceptance:** ✅ `docker compose up` brings the bot into the boot set; it will fail only for a
-    missing `BOT_TOKEN`, not missing wiring (not runtime-booted here — no live token). Updated
-    `TODO.md`'s "Single-instance guarantee" boxes + status note and the README "Getting Started".
+    missing `BOT_TOKEN`, not missing wiring (**now runtime-booted 2026-05-30** — reached Discord READY +
+    `/readyz`=200, see P1.2). Updated `TODO.md`'s "Single-instance guarantee" boxes + status note and the
+    README "Getting Started".
 
 - [~] **P1.2 — Smoke every profile.** `default`, `production`, `scale`, `ha`, `observability`,
   `scale-nats`. For each: `docker compose --profile <p> config` parses, then `up` reaches healthy.
@@ -184,8 +185,24 @@ guarantee"** and **"Cross-cutting gates"** at the bottom of `TODO.md` is still `
     | `observability` | ✅ | 10 | default 6 + `otel-collector, tempo, prometheus, grafana`. |
     | `scale-nats` | ✅ | 7 | default 6 + `nats` (JetStream transport). |
 
-  - **Runtime "reaches healthy": NOT verified here** (needs a live `BOT_TOKEN` + booting heavy infra;
-    `ha` would also need ~1.5 GB extra RAM per `ha-topology.md`). Left as a manual/staging step.
+  - **Runtime "reaches healthy": `default` profile PASSED (2026-05-30).** `docker compose up` (the monolith
+    `worker`, `EMBER_ROLE=monolith`) booted against real Docker infra (postgres·pgbouncer·redis·rabbitmq all
+    healthy) with the **real `BOT_TOKEN`**: Prisma migrate-deploy ran, the shard plan resolved, a gateway
+    session was consumed (`sessionStart.remaining` 1000→999), `[Startup] Online` fired, and **17 global
+    application commands synced** (`[CommandSync] Global commands are in sync.`) — command registration only
+    runs *after* the client `ready` event, so this is a confirmed live Discord READY. `/readyz`→**200**
+    `{"ready":true,"draining":false}` with every probe `ok` (postgres·redis·rabbitmq·**discord**·scheduler-tasks);
+    `/healthz`→200. Torn down clean (`docker compose down`). *(A transient early-boot `WebSocket … Failed to
+    connect` appeared on one cold cycle and self-resolved on the next restart — egress from the container to
+    `gateway.discord.gg` is fine; not a code issue.)* This first run reused an existing `lumi_postgres-data`
+    volume (schema from a prior dev `db push`), which surfaced the **P1.4** bootstrap gap; **after fixing P1.4
+    the smoke was re-run on a genuinely fresh volume** (`docker compose down -v` → rebuild → `up`) — the baked
+    `0_init` migration created the schema (22 tables) and the bot reached READY + `/readyz`=200 against it, so
+    the smoke no longer depends on a pre-existing volume.
+  - **Only the `default` (monolith) profile was runtime-booted** — deliberately, as it's the single-instance
+    guarantee that matters most. The other 5 stay config-parse-only: `production` is a no-op alias of default;
+    `scale`/`observability`/`scale-nats` boot extra services but weren't run here; `ha` additionally needs the
+    P1.3 compose wiring + ~1.5 GB extra RAM per `ha-topology.md`. Left as a manual/staging step.
 
 - [x] **P1.3 — The `ha` profile is empty (services never wired into compose).** ✅ **RESOLVED 2026-05-30 via option (b) — docs demoted to "planned."** Re-confirmed the gap (`--profile ha config --services` → only the default 6; `postgres-replica` 0 hits in compose and never in `git log -S`; the `config/{postgres,redis,rabbitmq}/*` files do exist). Since option (a) — wiring streaming replication + a 3-sentinel quorum + a 3-node Rabbit cluster — is a substantial feature build that is **runtime-unverifiable in this environment** (no multi-node infra; ~1.5 GB extra RAM per the doc) and the doc itself says "don't fabricate," I made the docs honest instead: added a **PLANNED status banner** to `docs/explanation/ha-topology.md` (reframed every "brings up" as intended design), and demoted the three false `[x]` claims in `TODO.md` (Part II Slice 3, the "no SPOF" gate, and the single-instance parenthetical) to `[~]` "config shipped, compose wiring pending." Option (a) remains the deliberate future build — the config files are the building blocks, only the `services:` blocks (tagged `profiles: [ha]`) and a staging boot are outstanding. Original detail below.
   - **Evidence / framing:** `docs/explanation/ha-topology.md`
@@ -203,10 +220,76 @@ guarantee"** and **"Cross-cutting gates"** at the bottom of `TODO.md` is still `
     (a) is a substantial, **runtime-unverifiable-here** feature build (streaming replication, sentinel quorum,
     Rabbit clustering) — scope it deliberately, don't fabricate. **Not done this session** (exceeds "smoke every profile").
 
+- [x] **P1.4 — Fresh-volume schema bootstrap was broken → FIXED 2026-05-30 (option a, baseline migration).**
+  ✅ Generated `prisma/migrations/0_init/migration.sql` (373 lines, 22 `CREATE TABLE`, via `prisma migrate diff
+  --from-empty --to-schema prisma/schema.prisma --script`) + `prisma/migrations/migration_lock.toml`
+  (`provider = "postgresql"`). **Verified end-to-end on a genuinely fresh volume**: `docker compose down -v`,
+  rebuilt the image (`Dockerfile:31`'s `COPY prisma ./prisma` bakes the dir — **no Dockerfile change needed**),
+  then `docker compose up` → boot logged `1 migration found` → `Applying migration 0_init` → `All migrations
+  have been successfully applied`; `_prisma_migrations` = `0_init -> applied`; **22 app tables** created; the
+  bot then reached Discord READY (17 commands synced) with `/readyz`=200 (all probes ok) — i.e. the app runs
+  correctly against the migrate-deploy-created schema, no `db push`. The prod CMD was already `migrate deploy`;
+  it simply had no baseline to apply. **New files are in the working tree, not yet committed** (awaiting
+  go-ahead). *Original finding (for the record):* The production boot
+  command is `bunx prisma migrate deploy` (`Dockerfile:38`, used by the default `worker`), but **the repo
+  commits zero migrations** — there is no `prisma/migrations/` directory *at all*, only `prisma/schema.prisma`,
+  and `prisma.config.ts` points `migrations.path` at that missing dir. The dev path uses `prisma db push
+  --accept-data-loss` (`Dockerfile:69`) instead, so the schema only ever exists on volumes a dev/`db push`
+  already touched.
+  - **Empirically proven (2026-05-30)** — exact prod cmd vs the dev cmd, each against a *fresh* `postgres:17`
+    (no volume):
+
+    | Path (fresh DB) | App tables created |
+    |---|---|
+    | `prisma migrate deploy` (**production CMD**) | **0** — only `_prisma_migrations`; logs `No migration found in prisma/migrations` / `No pending migrations to apply`. |
+    | `prisma db push --accept-data-loss` (dev CMD) | **22** — full schema. |
+
+  - **Impact:** breaks the single-instance guarantee *for a new self-hoster*. `docker compose up` on a clean
+    machine creates an empty schema (just `_prisma_migrations`); the bot then fails on its first real query.
+    The P1.2 smoke above only passed because `lumi_postgres-data` already held the schema from an earlier dev
+    `db push` — the "working bot" was an artifact of a dirty volume, not the prod boot path. **Definition-of-
+    done #2 has this hole.**
+  - **Fix options (a decision — deliberately not auto-applied):**
+    a. **Commit an initial migration baseline** (standard prod path): generate `prisma/migrations/0_init/
+       migration.sql` (`prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script`),
+       commit it; `migrate deploy` then creates the schema on fresh volumes and tracks future changes. Best
+       long-term — establishes migration history; dev can keep `db push` for iteration or move to `migrate dev`.
+    b. **Switch the prod CMD to `prisma db push`** (match dev): one-line Dockerfile change, no migration files
+       — but loses migration history and `--accept-data-loss` in prod is risky on a destructive schema change.
+    c. **Guarded fallback**: `migrate deploy`, then `db push` only when `prisma/migrations` is empty — pragmatic
+       stopgap, ugly.
+  - **Acceptance:** a fresh `postgres` volume under default `docker compose up` ends with the full app schema
+    (22 tables) *before* the bot serves traffic, verified by a table count on a clean volume.
+
+- [x] **P1.5 — The core data-access layer was NOT in version control (fixed 2026-05-30).** Surfaced while
+  fixing P1.4's `.gitignore`: the **entire `packages/core/src/prisma/` directory was untracked** — 15 source
+  files (`DatabaseService.ts` + 14 repositories: `Config/Module/Access/Permission/Downloader/Audit/User/
+  ConfigHistory/ConfigOverride/GuildKV/Moderation/Afk/Thread/Repository`). This is `container.db`, which
+  CLAUDE.md calls *"the only sanctioned data-access layer for features"*; it's imported by tracked code
+  (`config-panel.ts`, `core/types/common.ts`, every module). **A fresh `git clone` was missing the whole data
+  layer and could not build.**
+  - **Root cause:** the unanchored `.gitignore` rule `prisma/` (line 4) matched a `prisma/` directory at *any*
+    depth — so it silently swallowed `packages/core/src/prisma/` (and root `prisma/migrations/`, → P1.4). The
+    author's intended rescue `!/src/prisma/` was **dead**: root-anchored at `/src/prisma`, it never matched the
+    monorepo path `packages/core/src/prisma` (pre-monorepo-stale). `schema.prisma` survived only by having been
+    committed *before* the rule (grandfathered).
+  - **Why it went unnoticed:** local Docker builds work because **`.dockerignore` ≠ `.gitignore`** — it has no
+    prisma rule, so `COPY packages ./packages` bakes the on-disk (untracked) data layer into the image. Only a
+    clean checkout (CI from scratch, a new contributor) would hit the missing modules.
+  - **Fix:** replaced the broad `prisma/` with anchored, artifact-only rules (`/prisma/generated/`,
+    `/prisma/*.db`, `/.ai-knowledge/prisma/`) and committed all 15 data-layer files. Verified via
+    `git check-ignore`: `packages/core/src/prisma/**` + `prisma/migrations/**` + `schema.prisma` now tracked;
+    `prisma/generated/**` + the `.ai-knowledge/prisma` embedded repo stay ignored.
+  - **Acceptance:** `git ls-files packages/core/src/prisma | wc -l` = 15 (was 0); a fresh clone contains the
+    data layer and typechecks.
+
 ### P2 — Prove the distributed paths (the unrun 🔬 tests)
 
-- [~] **P2.1 — Make the chaos/verify scripts repeatable + CI-run.** ✅ **Scaffolding done 2026-05-30;**
-  the first *green* run is the GitHub-mirror CI's job (no Redis/NATS in the authoring env to prove "green").
+- [x] **P2.1 — Make the chaos/verify scripts repeatable + CI-run.** ✅ **DONE — ran GREEN locally 2026-05-30**
+  against an ephemeral Docker Redis (`redis:7-alpine`, password matching `.env`): `bun run verify:chaos` →
+  **6/6 Redis legs PASS** (streams DLQ, cluster assign/resume, rolling-deploy drain w/ 7700 events zero-loss,
+  autoscale KEDA, gateway-proxy streams p99 71ms ≤ 200ms, scheduler catch-up). The "first green run" is no
+  longer hypothetical — the runner *and its assertions* are proven, not just scaffolded.
   - **`bun run verify:chaos`** — new `scripts/verify-chaos.ts` aggregate runner: runs the six Redis-backed
     legs sequentially (`chaos-streams`, `chaos-cluster`, `chaos-rolling-deploy`, `chaos-autoscale`,
     `chaos-gateway-proxy`[streams], `verify-scheduler-catchup`), classifies each by the scripts' own exit
@@ -223,24 +306,43 @@ guarantee"** and **"Cross-cutting gates"** at the bottom of `TODO.md` is still `
     job** (CI never ran `bun run test` before — the whole P0.2 suite was ungated; runs `db:generate` first)
     and switched the **`lint` job** from `bun run lint` (`eslint --fix` → auto-fixes-then-passes, gating
     nothing) to the read-only bare `bunx eslint packages/*/src apps/*/src --ext ts`.
-  - **Acceptance:** ⚠ **partially met** — the documented command + ephemeral-infra CI exist and the runner
-    is proven, but "**suite green against ephemeral infra**" can only be confirmed once `chaos.yml` actually
-    runs on the mirror (first push/nightly). Flip to `[x]` after that run is green (or fix whatever the real
-    Redis surfaces).
+  - **Acceptance:** ✅ **met** — suite runs green against ephemeral Docker Redis locally (6/6, and 8/8 with
+    NATS). CI (`chaos.yml`) replays the identical command on the mirror; the runner classifies INFRA-down
+    (exit 2) vs FAIL distinctly, so a red CI run means a real regression, not missing infra.
 
-- [ ] **P2.2 — Exercise the NATS path.** `chaos-gateway-proxy.ts` and the `NatsJetStreamBus` were
-  **never run** (no local NATS server in the authoring session). Bring up `--profile scale-nats`
-  and run `TRANSPORT=nats NATS_URL=… bun scripts/chaos-gateway-proxy.ts`.
-  - **Harness now exists (landed in P2.1):** `.github/workflows/chaos.yml` starts a JetStream NATS
-    (`nats:2.10-alpine -js`) and runs the NATS leg as `continue-on-error`; locally `bun run verify:chaos:nats`
-    (or `WITH_NATS=1 NATS_URL=… bun run verify:chaos`) drives it. **Remaining:** confirm a real run is green and
-    meets the SLO/DLQ-parity acceptance, then promote the leg from informational to a hard gate.
-  - **Acceptance:** the NATS transport drains events with the same p99 SLO (≤200 ms) the Redis path
-    hit, and DLQ/redelivery behave identically.
+- [x] **P2.2 — Exercise the NATS path.** ✅ **DONE 2026-05-30** — brought up a JetStream NATS
+  (`nats:2.10-alpine -js`) and actually ran `NatsJetStreamBus` for the first time. It worked **only after
+  fixing 3 real bugs in never-executed code** (`packages/event-bus/src/NatsJetStreamBus.ts`):
+  1. **Consumer-teardown hang (would hang every graceful NATS-worker shutdown).** `consumer.consume()` parks
+     `for await` waiting for the next message; the returned `stop()` only flipped a `stopped` flag, but the
+     in-loop check never re-runs once the stream is drained (no message arrives to re-enter the body), so
+     `await stop()` blocked forever. Fix: track the live `ConsumerMessages` iterators and call `msgs.stop()`
+     on them from `stop()`/`close()` directly (a flag can't interrupt a parked pull). Symptom before fix: the
+     leg published+consumed all 2000 events then hung 3+ min until killed (the `tail`-pipe masked it as exit 0).
+  2. **`ackAck()` latency blowout — p99 229 ms (> 200 ms SLO).** Per-message `await m.ackAck()` waits a server
+     round-trip to confirm the ack; awaited sequentially in the consume loop it throttled throughput and backed
+     up the queue. Switched to fire-and-forget `m.ack()` (matches Redis `XACK` + the at-least-once/idempotent
+     contract). **p99 229 ms → 3 ms** (now *faster* than the Redis path's 71 ms).
+  3. **DLQ off-by-one.** `deliveryCount = m.info.redeliveryCount + 1`, but nats.js sets `redeliveryCount =
+     num_delivered` which is already 1-based — so every message counted one delivery high and DLQ'd a
+     redelivery early (handler ran `maxDeliveries-1` times, not `maxDeliveries`). Dropped the `+1` to match
+     `RedisStreamsBus` (first delivery = 1).
+  - **New parity test:** `scripts/chaos-nats-dlq.ts` — the NATS mirror of `chaos-streams.ts` scenario 2 (poison
+    message → redelivered with climbing `deliveryCount` → DLQ after `maxDeliveries`). Wired into `verify:chaos`'s
+    NATS legs; `chaos.yml` **promoted NATS from `continue-on-error` to the authoritative gate**.
+  - **Acceptance:** ✅ met. `verify:chaos` (WITH_NATS) → **8/8**; NATS gateway-proxy **p99 3 ms ≤ 200 ms**, all
+    2000 consumed, entity cache populated; DLQ/redelivery now byte-for-byte identical to the Redis path.
 
-- [ ] **P2.3 — The deferred multi-worker chaos.** S1's "kill a worker mid-command, another picks
-  up, no double-effect" was deferred into S2/S6 scripts. Confirm it's genuinely covered by
-  `chaos-rolling-deploy.ts` + `chaos-streams.ts` on a **multi-replica** run, not just single-proc.
+- [x] **P2.3 — The deferred multi-worker chaos.** ✅ **CONFIRMED COVERED 2026-05-30** (ran green). S1's "kill a
+  worker mid-command, another picks up, no double-effect" is exercised by `chaos-rolling-deploy.ts` **phase 5**:
+  two workers (`wk-a`/`wk-b`) on **separate Redis connections + distinct consumer ids** sharing one consumer
+  group (genuine multi-replica semantics — Redis can't tell they're one proc), a 200-event burst, `wk-a` killed
+  mid-burst **without a clean stop** (pending list left populated), and `wk-b` reclaiming via XAUTOCLAIM. Run
+  asserted **zero loss** (`acked 200/200`) and logged the redelivery (`deliveryCount > 1`). "No double-effect"
+  is correctly *not* a transport guarantee here — the bus is at-least-once + idempotent-handler by contract;
+  the test verifies redelivery works and exposes `deliveryCount` for handler-side dedupe (the `chaos-streams.ts`
+  DLQ leg + the new `chaos-nats-dlq.ts` cover the poison/DLQ tail). `chaos-streams.ts` covers the
+  single-stream claim/redelivery/DLQ path; together they close S1's deferred 🔬.
 
 ### P3 — Pay down documented debt
 
