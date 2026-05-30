@@ -7,7 +7,7 @@ import "@sapphire/plugin-logger/register";
 import "@sapphire/plugin-subcommands/register";
 import "@sapphire/plugin-editable-commands/register";
 
-// S5: only the BullMQ-owning roles (scheduler, monolith) register the
+// Only the BullMQ-owning roles (scheduler, monolith) register the
 // scheduled-tasks plugin. On worker / gateway it stays unregistered so the
 // process doesn't spin up a competing BullMQ Worker — task fires arrive over
 // the scheduler bus instead (see @ember/core/lib/scheduler-bus.ts).

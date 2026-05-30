@@ -1,25 +1,13 @@
-// S8 slice 3: Redis-backed entity cache.
+// Redis-backed entity cache: a minimal projection of Discord entities (id, name,
+// owner, parent, permission bits, position, type) so workers don't each hold a full
+// `client.guilds.cache` — the dominant per-worker memory line at ~25 KB/guild. The
+// projection is ~256 B/entity and deliberately not shaped like discord.js's cache,
+// so modules can't lean on fields it doesn't carry; it is not a drop-in for
+// `client.guilds.cache.get(id)`.
 //
-// Why exist: at horizontal-scale, every worker process holding its own copy of
-// `client.guilds.cache` is the dominant per-worker memory line (~25 KB/guild
-// at typical settings). Workers become stateless re: Discord entities by
-// reading the projection here on demand instead.
-//
-// What this is: a *minimal* projection — id, name, owner, parent, permission
-// bits, position, type. Everything a permission check / channel resolution
-// needs, none of the audit-log metadata / presence / voice-state shadow that
-// discord.js keeps. ~256 B/entity is the design budget; 1M guilds fits one
-// Redis db.
-//
-// What this is NOT: a drop-in replacement for `client.guilds.cache.get(id)`.
-// The shape is intentionally different so modules can't accidentally lean on
-// fields that aren't here. Migration to the new accessor is mechanical but
-// not free; see docs/explanation/entity-cache.md.
-//
-// Population: the worker-side gateway-dispatch listener (entity-populator.ts)
-// writes on GUILD_CREATE/UPDATE/DELETE, CHANNEL_*, GUILD_ROLE_*, GUILD_MEMBER_*.
-// The cache is cooperative — whichever worker consumes a given event populates
-// for the whole fleet; the keys are TTL-bounded against orphan accumulation.
+// Populated cooperatively by the worker-side gateway-dispatch listener
+// (entity-populator.ts) on GUILD_*/CHANNEL_*/GUILD_ROLE_*/GUILD_MEMBER_* — whichever
+// worker consumes an event writes for the fleet; keys are TTL-bounded.
 
 import type { Redis } from "ioredis";
 import { RedisKeys, RedisTTL } from "#database/redis.js";

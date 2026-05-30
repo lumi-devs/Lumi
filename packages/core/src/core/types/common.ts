@@ -21,7 +21,7 @@ export interface EmberScheduledTasks {
   "mod-lift": import("#modules/mod/scheduled-tasks/ModLiftTask.js").ModLiftPayload;
   "tempvc-cleanup": import("#modules/utility/tempvc/scheduled-tasks/CleanupTask.js").TempVcCleanupPayload;
   // Periodic sweepers — no payload, registered here so they can be relayed
-  // through the scheduler bus (S5) without weakening the type registry.
+  // through the scheduler bus without weakening the type registry.
   "captcha-expiry": Record<string, never>;
   "thread-cleaner-task": Record<string, never>;
   "flush-logs": Record<string, never>;
@@ -38,7 +38,7 @@ declare module "@sapphire/pieces" {
     readonly db: DatabaseRepositories;
     readonly eventBus: EventBus;
     readonly eventBusTransport: TransportKind;
-    /** S8 slice 3: read-through projection of guilds/channels/roles/members. */
+    /** Read-through projection of guilds/channels/roles/members. */
     readonly entityCache: import("#core/entity-cache/RedisEntityCache.js").RedisEntityCache;
     readonly workers: WorkerManager;
     readonly moduleStore: ModuleStore;
@@ -86,7 +86,7 @@ declare module "#lib/env.js" {
     REDIS_PASSWORD: string;
     REDIS_CACHE_DB: IntegerString;
     REDIS_TASK_DB: IntegerString;
-    /** S5 HA: comma-separated `host:port` Sentinel list. When set, all
+    /** Comma-separated `host:port` Sentinel list. When set, all
      * Redis clients (cache, BullMQ, streams, leader-lock) talk to Sentinels
      * for master discovery + failover. Unset → direct REDIS_HOST/PORT. */
     REDIS_SENTINELS: string;
@@ -94,7 +94,7 @@ declare module "#lib/env.js" {
     REDIS_SENTINEL_NAME: string;
     /** Password for Sentinel processes themselves (distinct from REDIS_PASSWORD for the master). */
     REDIS_SENTINEL_PASSWORD: string;
-    /** S5 HA: when "true" on a `scheduler` replica, acquire a Redis-backed
+    /** When "true" on a `scheduler` replica, acquire a Redis-backed
      * leader lock before login(); followers block until it lapses. Default
      * "false" — rely on BullMQ's per-job locks for safety, accept the
      * coordination overhead of multiple active schedulers. */

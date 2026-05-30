@@ -39,7 +39,7 @@ export async function handleCaptchaExpiryFire(): Promise<void> {
               .catch(() => null);
           }
         }
-        // S7: pipeline the two cleanup writes — one round-trip instead of two.
+        // Pipeline the two cleanup writes — one round-trip instead of two.
         await container.redis
           .multi()
           .zrem(VerifyKeys.pendingSet(guildId), userId)

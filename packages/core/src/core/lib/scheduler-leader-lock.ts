@@ -1,26 +1,15 @@
-// Single-active-scheduler leader election via Redis SET NX EX.
+// Single-active-scheduler leader election via Redis SET NX EX. Multiple `scheduler`
+// replicas can run for HA, but only the holder of `ember:scheduler:leader` owns the
+// BullMQ Queue + Worker init path; followers block on `acquire()` until the key's TTL
+// lapses. The leader renews every `renewIntervalMs` (well under the TTL); if a renewal
+// fails or finds the key no longer ours (partition, manual DEL, Sentinel failover) we
+// call `onLost` so the caller can exit and let the orchestrator restart it back into
+// the polling loop.
 //
-// Multiple `scheduler` replicas can run for HA; only the holder of
-// `ember:scheduler:leader` actually owns the BullMQ Queue + Worker
-// initialisation path. Followers block on `acquire()` until the leader's
-// key TTL lapses, then take over.
-//
-// Loss-of-leadership semantics: while the leader is alive it renews the
-// key every `renewIntervalMs` (well under the TTL). If a renewal fails or
-// returns "no longer the holder" — network partition, manual DEL,
-// Sentinel failover that dropped the key — we invoke `onLost` so the
-// caller can exit the process. The orchestrator restarts it and it
-// re-enters the polling loop from `acquire()`.
-//
-// Why a custom lock rather than BullMQ's own job locks? BullMQ already
-// serialises job *execution* across multiple Workers via per-job Redis
-// locks, so duplicate fires are not possible. But running multiple
-// schedulers means multiple bull `Worker`s reading from the same queues,
-// multiple repeat-job evaluators, and multiple SchedulerRequestConsumers
-// translating `create()` calls — all harmless functionally but wasteful.
-// The leader lock collapses that to one active replica with the others
-// hot-standby. Set `SCHEDULER_LEADER_LOCK=true` to enable; default is
-// off (rely on BullMQ job locks).
+// BullMQ's per-job locks already prevent duplicate execution, so this isn't about
+// correctness — it collapses N redundant Workers / repeat-job evaluators /
+// request-consumers down to one active replica with the rest hot-standby. Enable with
+// `SCHEDULER_LEADER_LOCK=true`; off by default.
 
 import type { Redis } from "ioredis";
 import { RedisKeys } from "#database/redis.js";

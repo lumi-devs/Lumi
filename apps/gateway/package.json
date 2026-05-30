@@ -1,7 +1,7 @@
 {
   "name": "@ember/gateway",
   "version": "2.1.1",
-  "description": "Gateway service — Discord WS connection + event-bus publisher (Part II S2).",
+  "description": "Gateway service — Discord WS connection + event-bus publisher.",
   "type": "module",
   "private": true,
   "scripts": {

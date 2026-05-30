@@ -1,13 +1,13 @@
-# Kubernetes deploy (Phase S7)
+# Kubernetes deploy
 
-These manifests are the **horizontally-scaling** path for Ember. Single-host
+These manifests are the **horizontally-scaling** path for Lumi. Single-host
 operators stay on `docker compose up` (see root `docker-compose.yml`); compose
 runs every service at `replicas: 1` and **does not autoscale**.
 
 The k8s manifests assume:
 
 - A cluster with [KEDA](https://keda.sh) v2.13+ installed (`kubectl get crd scaledobjects.keda.sh`).
-- The Ember observability stack reachable in-cluster as `prometheus.observability:9090`
+- The observability stack reachable in-cluster as `prometheus.observability:9090`
   (override via `KEDA_PROMETHEUS_URL` on the `ScaledObject` if your Prometheus
   lives elsewhere).
 - Postgres + Redis + RabbitMQ provided externally (managed services, or the
@@ -50,7 +50,7 @@ sum(ember_stream_consumer_lag{group="ember-workers"})
   Crossing 500 with N replicas → scale to N+1; sustained drop → scale down.
 - `minReplicaCount: 2` — survive a single pod restart without lag spike.
 - `maxReplicaCount: 20` — guardrail; revisit when Postgres pool tuning lets us
-  go higher (see `docs/explanation/capacity-planning.md`).
+  go higher.
 - `pollingInterval: 15s` — matches Prometheus' scrape interval, so we don't
   poll faster than the data updates.
 - `cooldownPeriod: 300s` — wait 5 min after the metric falls below threshold

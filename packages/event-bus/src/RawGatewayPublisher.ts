@@ -1,14 +1,10 @@
 // Gateway-side hook: every raw Discord dispatch packet handled by the local
-// discord.js client is also published to the bus, partitioned by guild_id so
-// a guild's events stay ordered through the consumer group.
-//
-// In slice 1 we hook by wrapping `client.ws.handlePacket` so the publish is
-// fire-and-forget alongside local dispatch — this lets the monolith run with
-// TRANSPORT=streams *and* keep its own listeners, useful for shadow-traffic
-// validation before flipping the worker to consume-only.
-//
-// In a future slice the dedicated gateway app won't load Sapphire at all and
-// `handlePacket` will only publish (local dispatch becomes a no-op).
+// discord.js client is also published to the bus, partitioned by guild_id so a
+// guild's events stay ordered through the consumer group. Wrapping
+// `client.ws.handlePacket` keeps the publish fire-and-forget alongside local
+// dispatch, so the monolith can run TRANSPORT=streams while keeping its own
+// listeners (useful for shadow-traffic validation). The dedicated gateway app uses
+// `RawGatewayProxyPublisher` below instead — no Sapphire, publish-only.
 
 import type { EventBus } from "./types.js";
 import {
@@ -103,7 +99,7 @@ function extractGuildId(d: unknown): string | undefined {
 }
 
 /**
- * S8 slice 2: proxy-mode publisher. Hooks `@discordjs/ws` `WebSocketManager`
+ * Proxy-mode publisher. Hooks `@discordjs/ws` `WebSocketManager`
  * directly via the `Dispatch` event — no discord.js `Client`, no entity
  * managers, no caches. Used by `apps/gateway` once the proxy cutover lands.
  *

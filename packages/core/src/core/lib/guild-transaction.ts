@@ -5,7 +5,7 @@ import { RedisKeys } from "#database/redis.js";
 import { acquireRedisLock } from "#core/lib/redis-lock.js";
 
 // Redis-backed locks: mutual exclusion across N stateless workers, not the
-// per-process AsyncQueue we had pre-S1. Lock keys live under `ember:lock:*`
+// per-process AsyncQueue used previously. Lock keys live under `ember:lock:*`
 // so they're easy to inspect (`KEYS ember:lock:*`) and never collide with
 // cache keys.
 

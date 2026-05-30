@@ -1,15 +1,13 @@
-// In-process bus — for the monolith path (TRANSPORT=inproc) and for tests.
-// Mirrors RedisStreamsBus's *surface* (publish/consume/ack) so swapping is a
-// config flip. But there is no broker: every publish synchronously fans out to
-// every consumer registered for that stream. `ack()` is a no-op — there is no
-// pending list to drain, because delivery already happened in-process.
+// In-process bus — for the monolith path (TRANSPORT=inproc) and for tests. Mirrors
+// RedisStreamsBus's surface (publish/consume/ack) so swapping is a config flip, but
+// there's no broker: every publish synchronously fans out to every consumer registered
+// for that stream, and `ack()` is a no-op since delivery already happened in-process.
+// It is not durable, cross-process, or backpressured — use streams for that.
 //
-// What this is NOT: durable, cross-process, or backpressured. Use streams for that.
-//
-// The methods are non-`async` and return resolved promises directly: the
-// `EventBus` interface is async (Redis/NATS impls genuinely await IO), but this
-// in-memory impl has nothing to await. Wrapping in `Promise.resolve` keeps the
-// polymorphic signature without a meaningless `async`.
+// The methods are non-`async` and return resolved promises directly: the `EventBus`
+// interface is async (the Redis/NATS impls genuinely await IO) but this in-memory impl
+// has nothing to await, so wrapping in `Promise.resolve` keeps the signature without a
+// meaningless `async`.
 
 import { EventEmitter } from "node:events";
 import type {

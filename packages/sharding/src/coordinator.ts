@@ -1,40 +1,14 @@
-// Part II Phase S3 — Slice 2: cluster shard assignment.
+// Cluster shard assignment via Redis: turns N gateway replicas + a shard count
+// into a stable mapping of replica -> shard ids, with no separate control plane.
+// Redis-only; callers (apps/gateway, EmberClient) wire the delta to ws.connect/destroy.
 //
-// `ClusterCoordinator` is the piece that turns N gateway replicas + a known
-// shard count into a *stable, observable* assignment: which replica owns
-// which shard ids. It uses Redis as the single source of truth so every
-// replica converges on the same view without a separate control plane.
-//
-// Protocol (per cluster, namespaced by CLUSTER_NAME):
-//
-//   ember:cluster:<name>:members        ZSET  member=replicaId  score=heartbeatTs
-//   ember:cluster:<name>:assignment     STR   JSON { epoch, total, byReplica }
-//   ember:cluster:<name>:leader-lock    STR   SET NX EX  (5s)
-//   ember:cluster:<name>:rebalance      pubsub channel, payload=epoch number
-//
-// Lifecycle for one replica:
-//   1. join():
-//      - ZADD self with heartbeat=now in `:members`
-//      - SUBSCRIBE `:rebalance`
-//      - read (or recompute) the assignment; return our shard list
-//   2. heartbeat loop (default every 5s):
-//      - refresh own ZSET score
-//      - drop expired members (score < now - memberTtlMs)
-//      - if topology changed AND we can grab the leader lock: recompute
-//        assignment, write it, PUBLISH the new epoch
-//   3. on `:rebalance` message (or detected epoch bump): re-read assignment,
-//      diff against our current shard set, fire `onAssignmentChange(delta)`
-//   4. leave(): ZREM self, recompute if leader.
-//
-// Assignment strategy: sort live replicaIds lexicographically, divide [0..N)
-// into balanced contiguous chunks. Contiguous-by-sorted-id keeps churn small
-// when a single replica joins/leaves — each chunk shifts by at most one
-// element rather than every shard hopping to a new owner (modulo would do
-// the latter). It also means session-resumption (S3.3) hits warm sessions
-// for most shards across a single replica change.
-//
-// This file is intentionally Redis-only — it doesn't know about discord.js.
-// Callers (apps/gateway, EmberClient) wire the delta to ws.connect/destroy.
+// Keys (namespaced by CLUSTER_NAME): `:members` ZSET (replicaId -> heartbeat ts),
+// `:assignment` STR (JSON { epoch, total, byReplica }), `:leader-lock` (SET NX EX 5s),
+// `:rebalance` pubsub (payload = epoch). The leader recomputes the assignment on
+// topology change — balanced contiguous chunks over lexicographically-sorted
+// replicaIds, so a single join/leave shifts each chunk by at most one (keeping
+// session-resumption warm) — then publishes the new epoch; every replica diffs it
+// against its current shard set and fires onAssignmentChange.
 
 import type { Redis } from "ioredis";
 

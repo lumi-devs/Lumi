@@ -1,26 +1,15 @@
-// Part II Phase S3 — Slice 1: /gateway/bot pre-flight + bucketed IDENTIFY.
+// /gateway/bot pre-flight + bucketed IDENTIFY.
 //
-// Discord's GET /gateway/bot returns the *recommended* shard count plus a
-// session-start-limit bucket: how many IDENTIFY ops are left in the rolling
-// window, how soon the bucket resets, and the `max_concurrency` we must
-// bucket-IDENTIFY by (shardId % max_concurrency).
+// GET /gateway/bot returns the recommended shard count and the session-start limit
+// (IDENTIFYs left in the rolling window, reset time, and `max_concurrency` for
+// bucketed IDENTIFY by shardId % max_concurrency). Calling it explicitly lets us log
+// capacity on boot, refuse to start when `remaining < shardsToIdentify` (so a
+// crash-loop can't burn the daily budget and get the bot 401'd), and hand a real
+// `max_concurrency` to the IDENTIFY throttler.
 //
-// discord.js calls this internally when `shardCount` is unset, but doing it
-// explicitly here lets us:
-//   - log shard count + remaining session starts on every boot for capacity
-//     planning,
-//   - refuse to start when `remaining < shardsToIdentify` so a crash-loop
-//     can't burn the daily IDENTIFY budget and get the bot 401'd, and
-//   - hand a real `max_concurrency` to `SimpleIdentifyThrottler` (slice 2
-//     will swap this for a Redis-backed throttler keyed by the same value
-//     so multiple gateway replicas share one IDENTIFY queue).
-//
-// Env contract:
-//   SHARD_LIST="0,1,2"        pin shards this replica owns (cluster-managed in S3.2)
-//   TOTAL_SHARDS=10           pin total shard count
-//   TOTAL_SHARDS=auto         use the value Discord recommends
-//   (both unset)              use the value Discord recommends
-//   SHARD_IDENTIFY_FORCE=true bypass the session-start-limit refusal
+// Env: SHARD_LIST pins the shards this replica owns (cluster-managed); TOTAL_SHARDS
+// pins the total (`auto` or unset = Discord's recommendation); SHARD_IDENTIFY_FORCE
+// bypasses the session-start-limit refusal.
 
 import { REST } from "@discordjs/rest";
 import { Routes, type APIGatewayBotInfo } from "discord-api-types/v10";
@@ -136,7 +125,7 @@ export async function planShards(
 /**
  * Build a `buildIdentifyThrottler` factory for `ClientOptions.ws` that returns
  * an in-process `SimpleIdentifyThrottler` bucketed by the plan's
- * `max_concurrency`. Slice 2 will swap this for a Redis-backed throttler so
+ * `max_concurrency`. The cluster path swaps this for a Redis-backed throttler so
  * multiple gateway replicas share a single IDENTIFY queue.
  */
 export function buildSimpleThrottlerFactory(

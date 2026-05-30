@@ -31,15 +31,15 @@ data:
   LOG_FORMAT: "json"
   LOG_LEVEL: "info"
 
-  # S4 — every worker REST call goes through the shared rate-limit proxy.
+  # Every worker REST call goes through the shared rate-limit proxy.
   DISCORD_PROXY_URL: "http://nirn-proxy.ember.svc.cluster.local:8080"
 
-  # S3 — cluster coordinator. Stable name => shared assignment in Redis.
+  # Cluster coordinator. Stable name => shared assignment in Redis.
   CLUSTER_NAME: "ember-prod"
 
-  # S2 — gateway pre-defers interactions so workers see them already acknowledged.
+  # Gateway pre-defers interactions so workers see them already acknowledged.
   INTERACTION_DEFER_AT_GATEWAY: "true"
 
-  # S5 — single-active scheduler. The Deployment runs 1 replica anyway; the lock
+  # Single-active scheduler. The Deployment runs 1 replica anyway; the lock
   # makes that explicit and prevents a rolling deploy from briefly running two.
   SCHEDULER_LEADER_LOCK: "true"

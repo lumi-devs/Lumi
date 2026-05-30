@@ -1,25 +1,16 @@
-// Per-channel message-delete coalescer.
+// Per-channel message-delete coalescer. Modules that soft-delete (e.g.
+// `afk-delete-message`) emit one DELETE per message; with many users AFK in a channel
+// that's a REST call each. Batching into bulkDelete
+// (`POST /channels/{id}/messages/bulk-delete`, up to 100 ids) collapses N calls into
+// ⌈N/100⌉, cutting the budget the shared nirn-proxy spends.
 //
-// Background: every worker that fires `afk-delete-message` (and any module
-// that wants a soft-delete) emits one DELETE per message. With many users AFK
-// in the same channel, that's a separate REST call per message. Coalescing
-// them into bulkDelete (`POST /channels/{id}/messages/bulk-delete`, up to 100
-// IDs per call) collapses N calls into ⌈N/100⌉, which materially cuts the
-// REST budget the gateway-shared nirn-proxy has to spend.
-//
-// What this DOES NOT do:
-//   - Replace bulkDelete in the purge flow (purge already does its own
-//     batching against fetched-message pages — coalescing buys nothing).
-//   - Coalesce across channels: bulkDelete is per-channel.
-//   - Coalesce across processes: the trade-off is that a tight in-process
-//     window already captures the common case (same worker handling a burst).
-//
-// Fallbacks: any message older than 14 days, plus single-message flushes,
-// fall through to a single DELETE — bulkDelete rejects both with 50034.
-//
-// Failure mode: a bulkDelete failure resolves every entry with an error so
-// callers can decide; we don't retry inline because every caller already has
-// its own error policy (AFK swallows 10008/10003/50001, etc).
+// It coalesces only within one process and one channel (bulkDelete is per-channel; a
+// tight in-process window already catches the common burst — the same worker handling
+// it) and leaves the purge flow alone, since purge already batches its own fetched
+// pages. Messages older than 14 days and single-message flushes fall through to a plain
+// DELETE — bulkDelete rejects both with 50034. A bulkDelete failure resolves every
+// entry with an error rather than retrying inline, since each caller has its own policy
+// (AFK swallows 10008/10003/50001, etc).
 
 import { container } from "@sapphire/framework";
 import { Routes } from "discord-api-types/v10";

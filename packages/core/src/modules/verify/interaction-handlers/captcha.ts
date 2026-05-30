@@ -95,7 +95,7 @@ export class CaptchaInteractionHandler extends InteractionHandler {
 
       if (state.progress === state.sequence.length) {
         // ── All correct — verify the member ──────────────────────────────
-        // S7: pipeline the two cleanup writes — one round-trip.
+        // Pipeline the two cleanup writes — one round-trip.
         await this.container.redis
           .multi()
           .del(key)
