@@ -5,9 +5,7 @@
 //
 // `shard` discord.js wants is a `WebSocketShard` instance from its own
 // internals, but in practice handlePacket only reads `shard.id`. We pass a
-// synthetic with the id from the envelope; that's enough for slice 1.
-// When we add full session-resume + shard rebalancing (S3), shards become
-// first-class and this stub goes away.
+// synthetic with the id from the envelope.
 
 import { extractTraceContext, otelContext } from "@ember/observability";
 import { context as otelApiContext } from "@opentelemetry/api";
@@ -36,7 +34,7 @@ export interface RawGatewayConsumerOptions {
   log?: (level: "info" | "warn" | "error", msg: string, meta?: object) => void;
 }
 
-/** Conservative default: enough to drive command/listener flows in slice 1 smoke tests. */
+/** Conservative default: enough to drive command/listener flows. */
 export const DEFAULT_RAW_DISPATCH_TYPES = [
   "READY",
   "RESUMED",
@@ -104,7 +102,7 @@ export class RawGatewayConsumer {
         t: env.packet.t,
         err: String(err),
       });
-      // Leave pending — slice 3's XAUTOCLAIM loop will surface it.
+      // Leave pending — the XAUTOCLAIM loop will surface it.
     }
   }
 }

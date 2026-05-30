@@ -1,4 +1,4 @@
-// Part II Phase S3 — Slice 2 (cluster IDENTIFY throttling).
+// Cluster IDENTIFY throttling.
 //
 // Discord's IDENTIFY limit is `max_concurrency` per 5-second window, bucketed
 // by `shardId % max_concurrency`. With a single process, `SimpleIdentifyThrottler`

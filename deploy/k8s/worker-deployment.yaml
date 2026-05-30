@@ -47,7 +47,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            # S7: cap the V8 heap below the container memory limit so the OOM
+            # Cap the V8 heap below the container memory limit so the OOM
             # killer fires after V8 has a chance to GC. 384 MiB heap inside a
             # 512 MiB pod leaves ~128 MiB for off-heap allocations + Bun/node.
             - name: NODE_OPTIONS

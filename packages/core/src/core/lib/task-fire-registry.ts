@@ -1,19 +1,15 @@
-// Worker-side: dispatch `FireEnvelope`s from the bus to a per-task handler.
+// Worker-side: dispatch `FireEnvelope`s from the bus to a per-task handler. Modules
+// register their effect-executor with `registerTaskFireHandler(name, mode, handler)`
+// (at file top or during setup); on worker/monolith boot, EmberClient starts a
+// `TaskFireConsumer` that subscribes to every registered fire-stream and runs the
+// handler.
 //
-// Modules register their effect-executor at the top of their file (or during
-// module setup) by calling `registerTaskFireHandler(name, mode, handler)`.
-// On worker / monolith boot, EmberClient starts a `TaskFireConsumer` that
-// subscribes to every registered fire-stream and runs the handler.
-//
-// `mode` drives consumer-group naming:
-//   - "unicast"   → all workers share one group, exactly one handles each fire.
-//                  Right for one-shot side-effects (mod-lift, afk-delete-message,
-//                  tempvc-cleanup).
-//   - "broadcast" → each worker gets its own group, so every worker processes
-//                  every fire (and iterates its own guilds.cache). Right for
-//                  periodic sweepers (captcha-expiry, thread-cleaner) and for
-//                  pure-DB sweepers that can no-op safely under N consumers
-//                  (flush-logs).
+// `mode` drives consumer-group naming. "unicast" puts all workers in one group so
+// exactly one handles each fire — right for one-shot side-effects (mod-lift,
+// afk-delete-message, tempvc-cleanup). "broadcast" gives each worker its own group so
+// every worker processes every fire and iterates its own guilds.cache — right for
+// periodic sweepers (captcha-expiry, thread-cleaner) and DB sweepers that no-op safely
+// under N consumers (flush-logs).
 
 import { container } from "@sapphire/framework";
 import type { EventBus, BusMessage } from "@ember/event-bus";

@@ -1,4 +1,4 @@
-// Scheduler bus contracts (S5).
+// Scheduler bus contracts.
 //
 // Workers do not run BullMQ. They publish `RequestEnvelope`s on
 // `SCHEDULER_REQUEST_STREAM` and the scheduler app converts them into

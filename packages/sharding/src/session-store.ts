@@ -1,24 +1,13 @@
-// Part II Phase S3 — Slice 3: session resumption.
+// Session resumption. `@discordjs/ws` calls `retrieveSessionInfo(shardId)` before
+// opening each shard; returning a recent `SessionInfo` makes the gateway RESUME
+// instead of IDENTIFY (no budget consumed, missed dispatches replayed, near-free
+// shard handoff). We persist SessionInfo to shared Redis keyed by shardId so a
+// restarted process — or a replica taking over a shard — resumes the prior session.
 //
-// `@discordjs/ws` calls `retrieveSessionInfo(shardId)` *before* opening each
-// shard. If we return a recent `SessionInfo`, the gateway sends RESUME instead
-// of IDENTIFY — no IDENTIFY budget consumed, missed dispatches replayed by
-// Discord, and shard handoff between replicas is nearly free.
-//
-// We persist `SessionInfo` to shared Redis keyed by shardId so:
-//   - a restarted process resumes its own sessions, and
-//   - a replica taking over a shard (S3.2 rebalance) resumes the previous
-//     owner's session.
-//
-// TTL bound: Discord invalidates session ids that have been disconnected for
-// "a few minutes" (no published constant). We default to 5 minutes; longer
-// than that and the RESUME will fail with code 4007/4009 and the WS shard
-// will fall back to IDENTIFY automatically.
-//
-// Sequence number is the hot path: `updateSessionInfo` fires after *every*
-// dispatch. We coalesce writes — only flush every `flushIntervalMs` (default
-// 1s) — to avoid hammering Redis. The last in-memory value is always
-// authoritative; on shutdown we synchronously flush.
+// TTL defaults to 5 minutes: Discord invalidates sessions disconnected for "a few
+// minutes", after which RESUME fails 4007/4009 and the shard falls back to IDENTIFY.
+// `updateSessionInfo` fires after every dispatch, so writes are coalesced (flush
+// every `flushIntervalMs`, default 1s) with a synchronous flush on shutdown.
 
 import type { Redis } from "ioredis";
 import type { SessionInfo } from "@discordjs/ws";

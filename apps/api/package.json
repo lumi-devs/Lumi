@@ -1,7 +1,7 @@
 {
   "name": "@ember/api",
   "version": "2.1.1",
-  "description": "Thin api entrypoint — boots @ember/worker until the real service split (Part II).",
+  "description": "Thin api entrypoint — boots @ember/worker until the real service split.",
   "type": "module",
   "private": true,
   "scripts": {

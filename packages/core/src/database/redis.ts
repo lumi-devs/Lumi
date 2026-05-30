@@ -48,7 +48,7 @@ export const RedisKeys = {
   // SCHEDULER_LEADER_LOCK=true; followers poll-block until it lapses.
   schedulerLeader: () => "ember:scheduler:leader",
 
-  // ── S8 entity cache ───────────────────────────────────────────────────
+  // ── Entity cache ──────────────────────────────────────────────────────
   // Minimal projections of Discord entities, populated by the gateway-event
   // listener and read by modules that previously hit `client.guilds.cache`.
   // Hashes — one key per entity. Field set kept narrow (id/name/permissions/

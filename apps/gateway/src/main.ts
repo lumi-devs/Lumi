@@ -1,22 +1,14 @@
-// Gateway service — Part II S8 slice 2 (proxy cutover).
+// Gateway service.
 //
-// Drops discord.js `Client` entirely. We open the WS via `@discordjs/ws`
+// Drops discord.js `Client` entirely: we open the WS via `@discordjs/ws`
 // `WebSocketManager` directly and publish raw dispatch packets onto the bus.
 // No Sapphire stores, no entity managers, no client-level caches — the gateway
-// process is now a thin decode + publish loop.
+// is a thin decode + publish loop, so a 100-shard gateway no longer holds a
+// `Client` with its managers and ~25 KB/guild of bookkeeping.
 //
-// What this buys at scale:
-//   - Memory: a 100-shard gateway no longer holds a `Client` with its dozens
-//     of managers and ~25 KB/guild bookkeeping. RSS is essentially the WS
-//     buffer + the bus publisher.
-//   - Honesty: there is no "but the gateway might still load a module" foot-
-//     gun. Modules cannot be wired here; there is no Sapphire to load them.
-//
-// Still here (carried over from S2 slice 2):
-//   - planShards / clustered IDENTIFY throttle / Redis-backed session store.
-//   - INTERACTION_DEFER_AT_GATEWAY (REST pre-ack via shared @discordjs/rest).
-//   - drain sequence + readiness probes for rolling deploys.
-//   - REST telemetry (rate-limit + invalid-request warnings).
+// It still runs: planShards + clustered IDENTIFY throttle + Redis session store,
+// INTERACTION_DEFER_AT_GATEWAY (REST pre-ack), the drain sequence and readiness
+// probes for rolling deploys, and REST telemetry.
 import "./telemetry.js";
 import { REST } from "@discordjs/rest";
 import {

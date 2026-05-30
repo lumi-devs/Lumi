@@ -1,4 +1,4 @@
-// Real scheduler entrypoint (S5). Boots a full EmberClient in the `scheduler`
+// Real scheduler entrypoint. Boots a full EmberClient in the `scheduler`
 // role: no Discord WebSocket (ws.connect is patched out), but BullMQ Queue +
 // Worker are active. Workers and the monolith publish RequestEnvelopes onto
 // `ember.scheduler.request` (workers) or call `container.tasks.create()`

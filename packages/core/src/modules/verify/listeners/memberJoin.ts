@@ -94,7 +94,7 @@ export class VerifyMemberJoinListener extends Listener {
       attempts: MAX_ATTEMPTS,
       expiresAt,
     };
-    // S7: pipeline state-set + pending-zadd — one round-trip per join.
+    // Pipeline state-set + pending-zadd — one round-trip per join.
     await this.container.redis
       .multi()
       .set(

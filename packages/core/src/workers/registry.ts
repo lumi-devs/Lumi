@@ -1,19 +1,14 @@
-// Registry of compute-offload handlers loaded into the worker thread pool.
+// Registry of compute-offload handlers loaded into the worker thread pool. The old
+// model hardcoded a switch in `scripts/index.ts` for the two filter actions and gave
+// no other module a way to add work; this lets any module contribute a handler from
+// its own directory without the central script importing module code (which would
+// re-introduce the cross-module dependency the module system forbids).
 //
-// The historical model hardcoded a switch in `scripts/index.ts` for the
-// two filter actions and gave no other module a way to add work. This
-// registry lets any module contribute a handler from its own directory
-// without the central script importing module code (which would re-introduce
-// the cross-module dependency the module system already forbids).
-//
-// Lifecycle:
-//   1. Modules call `registerWorkerHandler` from `onLoad`.
-//   2. WorkerManager defers worker-thread spawn until the first `send()` so
-//      every registration has landed before workers boot.
-//   3. On spawn, WorkerManager sends each worker a single `__INIT__` message
-//      with the (action, modulePath) list.
-//   4. The worker dynamic-imports each path and stores the default export in
-//      its dispatch map. Unknown actions throw at dispatch time.
+// Modules call `registerWorkerHandler` from `onLoad`; WorkerManager defers the
+// worker-thread spawn until the first `send()` so every registration has landed, then
+// sends each worker one `__INIT__` message with the (action, modulePath) list. The
+// worker dynamic-imports each path into its dispatch map; unknown actions throw at
+// dispatch time.
 
 interface WorkerHandlerRegistration {
   action: string;

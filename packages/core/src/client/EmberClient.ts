@@ -195,7 +195,7 @@ export class EmberClient extends SapphireClient {
           },
         },
       },
-      // S4: route all of discord.js' internal REST through the shared proxy
+      // Route all of discord.js' internal REST through the shared proxy
       // when DISCORD_PROXY_URL is set. The proxy holds the authoritative
       // bucket state across every worker replica.
       rest: buildRestOptions(),
@@ -217,17 +217,16 @@ export class EmberClient extends SapphireClient {
     const redis = createRedisClient();
     // Event bus: inproc by default (no behavioral change vs the monolith). Set
     // TRANSPORT=streams to publish/consume raw gateway packets via Redis Streams.
-    // Streams mode is wired but not yet driving dispatch — see TODO.md S2 slice 2.
+    // Streams mode is wired but not yet driving dispatch.
     this._ownedEventBus = createEventBus({
       redis: {
         ...redisConnectionOptions(),
         db: envParseInteger("REDIS_CACHE_DB", 0),
       },
-      // S8 slice 1: NATS JetStream is the high-throughput cutover from Redis
-      // Streams. createEventBus picks the transport off TRANSPORT (or the
-      // explicit `transport:` override). NATS_URL must be set when nats is
-      // selected — defaults to nats://nats:4222 in the docker-compose scale
-      // profile. See docs/explanation/transport-cutover.md for when to flip.
+      // NATS JetStream is the high-throughput alternative to Redis Streams.
+      // createEventBus picks the transport off TRANSPORT (or the explicit
+      // `transport:` override). NATS_URL must be set when nats is selected
+      // (defaults to nats://nats:4222 in the docker-compose scale profile).
       natsServers: process.env["NATS_URL"] ?? process.env["NATS_SERVERS"],
       natsUser: process.env["NATS_USER"],
       natsPass: process.env["NATS_PASSWORD"],
@@ -292,7 +291,7 @@ export class EmberClient extends SapphireClient {
     await container.prisma.$connect();
     await container.invalidation.start();
 
-    // S5 HA: optional single-active-scheduler leader election. Only the
+    // Optional single-active-scheduler leader election. Only the
     // `scheduler` role honours this; the monolith is single-replica by
     // construction. Followers block here until the leader's TTL lapses.
     if (
@@ -344,7 +343,7 @@ export class EmberClient extends SapphireClient {
     await this.stores.get("modules").discover();
 
     // In `worker` and `scheduler` roles we don't open a Discord WS — packets
-    // arrive via the event bus (S2 slice 2). We still want everything Sapphire
+    // arrive via the event bus. We still want everything Sapphire
     // does at login (load stores, sync application commands on READY, etc.),
     // so we keep `super.login()` but monkey-patch `ws.connect` to a no-op. The
     // gateway service is the only process holding a WS connection.
@@ -359,7 +358,7 @@ export class EmberClient extends SapphireClient {
       container.rabbit.startConsumers();
     }
 
-    // S5: Scheduler request consumer — translates RequestEnvelopes (workers
+    // Scheduler request consumer — translates RequestEnvelopes (workers
     // asking to enqueue/cancel BullMQ jobs) into local container.tasks calls.
     // Runs only where BullMQ is owned (scheduler, monolith).
     if (roleOwnsScheduler(this.role)) {
@@ -373,7 +372,7 @@ export class EmberClient extends SapphireClient {
       );
     }
 
-    // S5: Task-fire consumer — receives FireEnvelopes published by the
+    // Task-fire consumer — receives FireEnvelopes published by the
     // scheduler when a BullMQ job comes due, and runs the registered
     // worker-side handler (Discord + DB side-effects). Runs on roles that
     // execute task effects (worker, monolith).
@@ -423,7 +422,7 @@ export class EmberClient extends SapphireClient {
       );
     }
 
-    // S8 slice 3: keep the Redis entity-cache projection up-to-date. Any role
+    // Keep the Redis entity-cache projection up-to-date. Any role
     // that observes raw dispatches (monolith via its own WS, worker via the
     // bus consumer) maintains the projection. Cooperative: many workers each
     // write idempotently; last-write-wins.
@@ -531,7 +530,7 @@ export class EmberClient extends SapphireClient {
       );
   }
 
-  // S6 slice 1: per-role readiness probes. /readyz aggregates these; the
+  // Per-role readiness probes. /readyz aggregates these; the
   // orchestrator pulls a replica out of rotation when any probe fails.
   private _registerReadinessProbes() {
     registerReadinessProbe("postgres", async () => {
@@ -574,7 +573,7 @@ export class EmberClient extends SapphireClient {
       );
     }
 
-    // S2: worker consumes raw gateway packets from Redis Streams. Without an
+    // Worker consumes raw gateway packets from Redis Streams. Without an
     // attached consumer the worker has no source of dispatches.
     if (this.role === "worker" && container.eventBusTransport === "streams") {
       registerReadinessProbe("raw-gateway-consumer", () =>
@@ -584,7 +583,7 @@ export class EmberClient extends SapphireClient {
       );
     }
 
-    // S5: scheduler is the BullMQ owner. When the optional leader lock is on,
+    // Scheduler is the BullMQ owner. When the optional leader lock is on,
     // followers hold here in acquire() until they win — but if a held lock is
     // ever lost we exit, so reaching this probe means "i am the leader" or
     // "lock not enabled".
@@ -683,7 +682,7 @@ export class EmberClient extends SapphireClient {
 
     // Monolith + cluster: build a Redis pair and join. On a rebalance we
     // gracefully exit; the orchestrator will bring a new process up which
-    // RESUMEs via the shared session store (S3.3).
+    // RESUMEs via the shared session store.
     const redisOpts = {
       ...redisConnectionOptions(),
       db: envParseInteger("REDIS_CACHE_DB", 0),

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Chaos test for the Redis Streams transport (TODO.md Part II, S1's deferred 🔬 test).
+// Chaos test for the Redis Streams transport.
 //
 // Simulates a worker crashing mid-handler under streams transport, and verifies:
 //   1. A peer claims the pending entry via XAUTOCLAIM after the idle window.

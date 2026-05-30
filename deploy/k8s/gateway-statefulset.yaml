@@ -3,7 +3,7 @@
 # coordinator uses as the replica id. Restart of `gateway-0` keeps the same
 # id so session RESUME works for the shards it owned.
 #
-# Scaling is *manual* and tied to shard count (see docs/explanation/capacity-planning.md):
+# Scaling is *manual* and tied to shard count:
 # one replica per ~32 shards before event-loop lag bites. Don't autoscale this
 # — adding a replica forces a cluster rebalance that drains the joiner's
 # old peers (graceful, but unnecessary if it's just a flap).

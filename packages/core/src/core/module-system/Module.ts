@@ -107,10 +107,10 @@ export abstract class Module extends Piece {
    * a restart (mute lifts, captcha expiries, etc.). Called once per module load.
    * Override in modules that create one-shot delayed tasks; the base is a no-op.
    *
-   * Why: BullMQ persists jobs in Redis, but a job whose row was written before
-   * the worker that scheduled it crashed may have lost its in-memory bookkeeping
-   * (or, post-S5 split, be owned by a peer process). This hook is the single
-   * place each module reconciles "what should be scheduled" against "what is".
+   * BullMQ persists jobs in Redis, but a job whose row was written before the worker
+   * that scheduled it crashed may have lost its in-memory bookkeeping (or, once the
+   * service split lands, be owned by a peer process). This hook is the single place
+   * each module reconciles "what should be scheduled" against "what is".
    */
   public reconcileScheduledJobs(): Awaitable<void> {
     return undefined;

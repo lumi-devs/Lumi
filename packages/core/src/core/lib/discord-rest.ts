@@ -1,4 +1,4 @@
-// S4: Discord REST client options factory.
+// Discord REST client options factory.
 //
 // When `DISCORD_PROXY_URL` is set, every outbound REST call (from discord.js
 // internals and from any standalone `new REST()` we construct) is routed

@@ -1,15 +1,14 @@
 node_modules/
 dist/
+tmp/
 .antigravitycli/
-# Prisma: ignore build artifacts ONLY. The schema, migrations, and the hand-written
-# data layer (packages/*/src/prisma — DatabaseService + repositories) are SOURCE and
-# MUST be tracked. The old unanchored `prisma/` rule silently un-tracked BOTH
-# packages/core/src/prisma AND prisma/migrations (migrate deploy needs the committed
-# baseline to bootstrap a fresh DB) — see HARDENING P1.4/P1.5. Anchored rules fix it.
+# Prisma: ignore only the generated client and any local dev DB. The schema,
+# migrations, and the data layer (packages/*/src/prisma) are tracked source.
 /prisma/generated/
 /prisma/*.db
-# AI reference clones under .ai-knowledge are embedded git repos, not our source.
-/.ai-knowledge/prisma/
+# Local tooling / reference clones, never part of the repo.
+/.ai-knowledge/
+.claude/
 .env
 *.log
 logs/

@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
-// Chaos test for the Phase S3.2/3.3 cluster coordinator
-// (TODO.md Part II, S3 🔬 test).
+// Chaos test for the cluster coordinator.
 //
 // Requires a live Redis. Reads REDIS_HOST/PORT/PASSWORD/DB from env. Run:
 //   bun scripts/chaos-cluster.ts

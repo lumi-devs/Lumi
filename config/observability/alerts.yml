@@ -58,7 +58,7 @@ groups:
           summary: "DLQ has entries on {{ $labels.stream }}"
           description: "Stream {{ $labels.stream }}:dlq is non-empty — a message exceeded max-deliveries and was parked. Inspect with XRANGE."
 
-      # S4: Discord IP-bans the bot at 10k invalid (401/403/429) responses in
+      # Discord IP-bans the bot at 10k invalid (401/403/429) responses in
       # a 10-minute window. invalidRequestWarningInterval=500 → each emit is
       # 500 invalid responses; 1/min sustained projects to 30k/10min = ban
       # territory. Fire at 0.1/s (= 60/min in emits → 30k invalid/10min), well
@@ -84,7 +84,7 @@ groups:
           summary: "Command error rate >5% on {{ $labels.service }}"
           description: "More than 5% of commands have errored over the last 5 minutes."
 
-      # S7: V8 heap headroom. `nodejs_heap_size_limit_bytes` is the
+      # V8 heap headroom. `nodejs_heap_size_limit_bytes` is the
       # --max-old-space-size cap; sustained >85% means GC pauses dominate and
       # the next allocation spike will OOM. Bump the budget or shed load.
       - alert: NodeHeapPressure
@@ -97,4 +97,4 @@ groups:
           severity: warning
         annotations:
           summary: "V8 heap >85% on {{ $labels.service }}"
-          description: "Heap pressure sustained. Either the service has a leak or the NODE_OPTIONS=--max-old-space-size cap is too small for the workload — see docs/explanation/capacity-planning.md."
+          description: "Heap pressure sustained. Either the service has a leak or the NODE_OPTIONS=--max-old-space-size cap is too small for the workload."

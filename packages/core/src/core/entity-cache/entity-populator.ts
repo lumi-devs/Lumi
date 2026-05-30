@@ -1,21 +1,11 @@
-// S8 slice 3: cooperative gateway-dispatch listener that maintains the
-// `RedisEntityCache` projection.
+// Cooperative gateway-dispatch listener that maintains the `RedisEntityCache`
+// projection. Runs worker-side: gateway-side population would couple the publish
+// hot loop to Redis latency. Each handler computes a deterministic projection from
+// the payload, so two workers consuming the same event (e.g. XAUTOCLAIM redelivery)
+// write the same row — last-write-wins.
 //
-// Why on the worker side: gateway-side population would couple the
-// publish-fast hot loop to Redis latency, which defeats the gateway's job of
-// shedding work. Workers already pay the consume cost; the put() calls fan
-// onto the same Redis db they read from for everything else.
-//
-// Idempotency: every event handler computes a deterministic projection from
-// the dispatch payload. Two workers consuming the same GUILD_CREATE (e.g. via
-// XAUTOCLAIM redelivery) write the same row; last-write-wins is fine.
-//
-// What we don't update here:
-//   - voice state (worker doesn't need a cached projection of who's in which
-//     VC; tempvc reads the live discord.js state via the join/leave events).
-//   - presence (no PRESENCE_UPDATE intent in S2/S8 scope).
-//   - emoji/sticker/AutoMod rules — out of cache budget; modules that need
-//     these still pay a REST fetch.
+// Not cached here: voice state (tempvc reads live discord.js state), presence (no
+// intent), and emoji/sticker/AutoMod rules (out of budget — modules REST-fetch those).
 
 import { container } from "@sapphire/framework";
 import type {

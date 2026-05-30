@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// S6 Slice 4 — synthetic-load rolling-deploy chaos test.
+// Synthetic-load rolling-deploy chaos test.
 //
 // Drives the same code paths a production rolling deploy hits, against a real
 // Redis, without spinning up Discord:
@@ -9,8 +9,8 @@
 //      the shardId of the gateway that owns the shard at publish time.
 //   2. Two "workers" XREADGROUP-consume the stream via a shared consumer group
 //      (RedisStreamsBus), acking each message.
-//   3. Mid-load we drain gateway-A (coord.leave() — what Slice 2 wires SIGTERM
-//      to). Gateway-B picks up A's shards; the producer follows ownership.
+//   3. Mid-load we drain gateway-A (coord.leave() — what the SIGTERM handler
+//      calls). Gateway-B picks up A's shards; the producer follows ownership.
 //      Asserts:
 //        * zero dropped events between publish and ack (no rolling-deploy gap)
 //        * gateway-B's onRebalance shows {added=A's old shards, removed=∅} —

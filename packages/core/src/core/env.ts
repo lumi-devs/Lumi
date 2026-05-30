@@ -55,7 +55,7 @@ export const isInteractionDeferAtGateway = () =>
   process.env["INTERACTION_DEFER_AT_GATEWAY"] === "true";
 
 /**
- * Cluster name turns on the Redis-backed S3.2 cluster coordinator (shard
+ * Cluster name turns on the Redis-backed cluster coordinator (shard
  * range assignment + session resumption + shared IDENTIFY throttling).
  * Unset → single-replica path: SHARD_LIST honored, sessions not persisted.
  */
@@ -63,7 +63,7 @@ export const getClusterName = (): string | null =>
   process.env["CLUSTER_NAME"]?.trim() || null;
 
 /**
- * S4: Base URL of the shared outbound REST proxy (nirn-proxy or equivalent).
+ * Base URL of the shared outbound REST proxy (nirn-proxy or equivalent).
  * Unset / empty → discord.js talks to discord.com directly (safe for a single
  * worker; required to opt in once multiple workers share a bot token).
  * Trailing slashes are tolerated; pass the proxy root, e.g.

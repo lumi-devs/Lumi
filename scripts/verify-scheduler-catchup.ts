@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-// Verification for TODO.md S5 🔬: "Restart scheduler with overdue jobs;
-// `catchUp` behaves per policy, no duplicates."
+// Verifies scheduler catch-up: restart with overdue jobs and `catchUp`
+// behaves per policy, with no duplicates.
 //
 // Drives BullMQ directly (same Queue name as the live scheduler would use)
 // against a real Redis. Schedules four jobs that cross the catch-up policy

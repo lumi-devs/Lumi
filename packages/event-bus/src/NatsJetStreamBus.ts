@@ -1,29 +1,7 @@
-// NATS JetStream transport — Part II S8 slice 1.
-//
-// Why exist: Redis Streams saturates a single Redis CPU at very high event
-// rates (single-threaded command processing, our raw-gateway envelopes are
-// fan-out heavy). NATS JetStream is the documented cutover (see
-// docs/explanation/transport-cutover.md): subject-based, multi-server clustered,
-// pull consumers with explicit ack — the same at-least-once + idempotent-handler
-// contract the bus already promises.
-//
-// Surface match with RedisStreamsBus:
-//   - publish(stream, body)         → js.publish(subject, json(body))
-//   - consume(streams[], opts, h)   → pull consumer per (subject, group)
-//   - ack / nack / deliveryCount    → JetStream AckExplicit + redeliverCount
-//   - DLQ                           → on redeliver > maxDeliveries we republish
-//                                     onto `<subject>.dlq` and ack the original
-//   - stream stats                  → onStats from streams.info/consumer.info
-//
-// Mapping rules (bus key → NATS subject):
-//   `ember:gw:message_create` → `ember.gw.message_create`
-//   `<stream>:dlq`            → `<stream>.dlq`
-//   We swap `:` → `.` at the boundary; nothing inside the bus has to know.
-//
-// Lifecycle: the factory owns the NATS connection; this class consumes it. The
-// JetStream stream + per-group consumers are created lazily on first
-// publish/consume call (idempotent — JetStream returns `stream name already in
-// use` which we swallow).
+// NATS JetStream transport. Mirrors RedisStreamsBus: at-least-once publish/consume
+// with explicit ack, one durable consumer per (subject, group), and a DLQ after
+// maxDeliveries. Bus keys map to subjects by swapping ":" for ".". The factory owns
+// the connection; the stream and consumers are created lazily and idempotently.
 
 import type {
   ConsumerMessages,
@@ -74,13 +52,8 @@ export class NatsJetStreamBus implements EventBus {
   private readonly onStats: NatsJetStreamBusOptions["onStats"];
   private readonly statsIntervalMs: number;
   private readonly timers = new Set<NodeJS.Timeout>();
-  /**
-   * Live pull iterators from in-flight consume() loops. consumer.consume()
-   * keeps a pull request open and parks `for await` waiting for the next
-   * message; when the stream is drained the in-loop `stopped` check never runs
-   * again (no message arrives to re-enter the body), so flipping a flag can't
-   * end the loop — stop()/close() must call msgs.stop() on the iterator itself.
-   */
+  // Live pull iterators from in-flight consume() loops. A parked `for await` can't
+  // be ended by a flag once the stream drains, so stop()/close() call msgs.stop().
   private readonly activeConsumers = new Set<ConsumerMessages>();
   private js: JetStreamClient | null = null;
   private jsm: JetStreamManager | null = null;
@@ -143,11 +116,8 @@ export class NatsJetStreamBus implements EventBus {
 
     for (const { subject, durable } of consumers) {
       const loop = async () => {
-        // consumer.consume() returns an async iterator that keeps a pull
-        // request open against the server and blocks `for await` waiting for
-        // the next message. Stopping therefore can't rely on the in-loop flag
-        // check alone (it only runs when a message is yielded) — stop()/close()
-        // call msgs.stop() on the live iterator (tracked below) to end it.
+        // consume() parks `for await` on an open pull request, so the in-loop flag
+        // only trips when a message arrives; stop()/close() end it via msgs.stop().
         while (!stopped && !this.closed) {
           let msgs: ConsumerMessages | undefined;
           try {
@@ -218,10 +188,8 @@ export class NatsJetStreamBus implements EventBus {
     m: JsMsg,
     handler: (msg: BusMessage<T>) => Promise<void>,
   ): Promise<void> {
-    // nats.js sets info.redeliveryCount = JetStream's `num_delivered`, which is
-    // already 1-based (1 on the first delivery, 2 on the first redelivery, …) —
-    // the same convention RedisStreamsBus uses (first delivery = 1). Do NOT add
-    // 1, or every message counts one delivery high and DLQs a redelivery early.
+    // redeliveryCount = num_delivered, already 1-based (first delivery = 1), same
+    // as RedisStreamsBus. Don't add 1 or a message DLQs one delivery early.
     const deliveryCount = m.info.redeliveryCount;
     if (deliveryCount > this.maxDeliveries) {
       await this.sendToDlq(subject, m, deliveryCount).catch((err) =>
@@ -259,11 +227,9 @@ export class NatsJetStreamBus implements EventBus {
       body,
       deliveryCount,
       ack: () => {
-        // Fire-and-forget ack — mirrors Redis XACK and the bus's at-least-once
-        // + idempotent-handler contract. ackAck() adds a server round-trip per
-        // message, which (awaited sequentially in the consume loop) throttles
-        // throughput and pushes end-to-end latency past SLO. A lost ack simply
-        // redelivers, which the idempotent handler already tolerates.
+        // Fire-and-forget, like Redis XACK. ackAck() adds a per-message round-trip
+        // that blows the latency SLO; a lost ack just redelivers, which the
+        // idempotent handler tolerates.
         m.ack();
         return Promise.resolve();
       },
