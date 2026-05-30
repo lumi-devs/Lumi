@@ -1,23 +1,28 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { resolvePermissionLevel, PermissionLevel } from '#lib/permissions.js';
-import { envParseString } from '#lib/env.js';
 import { container } from '@sapphire/framework';
 
+// OWNER_IDS is parsed once at import from envParseString("OWNER_IDS", ""), so the
+// mock must return the default string (not undefined) to avoid a load-time crash.
+// Bot-owner identity is therefore tested via container.client.application.owner.
 vi.mock('#lib/env.js', () => ({
-	envParseString: vi.fn(),
+	envParseString: vi.fn((_key: string, def = '') => def),
 	envParseInteger: vi.fn(),
 	envIsDefined: vi.fn()
 }));
 
 describe('resolvePermissionLevel', () => {
 	beforeEach(() => {
-	        vi.resetAllMocks();
-	        container.db = {
-	                getGuildSettings: vi.fn().mockResolvedValue({})
-	        } as any;
+		vi.resetAllMocks();
+		container.db = {
+			config: { getGuildSettings: vi.fn().mockResolvedValue({}) }
+		} as any;
+		container.logger = { error: vi.fn() } as any;
+		(container as any).client = undefined;
 	});
-	it('should return BOT_OWNER if user ID is in OWNER_IDS', async () => {
-		(envParseString as Mock).mockReturnValue('123, 456');
+
+	it('should return BOT_OWNER if user is an application owner', async () => {
+		(container as any).client = { application: { owner: { id: '123' } } };
 
 		const context = {
 			userId: '123',
@@ -33,8 +38,6 @@ describe('resolvePermissionLevel', () => {
 	});
 
 	it('should return GUILD_OWNER if user is guild owner', async () => {
-		(envParseString as Mock).mockReturnValue('999');
-
 		const context = {
 			userId: '123',
 			guild: { id: 'G1', ownerId: '123' },
@@ -49,8 +52,6 @@ describe('resolvePermissionLevel', () => {
 	});
 
 	it('should return ADMIN if user has Administrator permission', async () => {
-		(envParseString as Mock).mockReturnValue('999');
-
 		const context = {
 			userId: '123',
 			guild: { id: 'G1', ownerId: '789' },
@@ -67,8 +68,7 @@ describe('resolvePermissionLevel', () => {
 	});
 
 	it('should return ADMIN if user has admin role', async () => {
-		(envParseString as Mock).mockReturnValue('999');
-		(container.db.getGuildSettings as Mock).mockResolvedValue({ adminRoleId: 'R_ADMIN' } as any);
+		(container.db.config.getGuildSettings as Mock).mockResolvedValue({ adminRoleId: 'R_ADMIN' } as any);
 		const context = {
 			userId: '123',
 			guild: { id: 'G1', ownerId: '789' },
@@ -83,8 +83,6 @@ describe('resolvePermissionLevel', () => {
 	});
 
 	it('should return MOD if user has ManageMessages permission', async () => {
-		(envParseString as Mock).mockReturnValue('999');
-
 		const context = {
 			userId: '123',
 			guild: { id: 'G1', ownerId: '789' },
@@ -101,8 +99,7 @@ describe('resolvePermissionLevel', () => {
 	});
 
 	it('should return MOD if user has mod role', async () => {
-		(envParseString as Mock).mockReturnValue('999');
-		(container.db.getGuildSettings as Mock).mockResolvedValue({ modRoleId: 'R_MOD' } as any);
+		(container.db.config.getGuildSettings as Mock).mockResolvedValue({ modRoleId: 'R_MOD' } as any);
 		const context = {
 			userId: '123',
 			guild: { id: 'G1', ownerId: '789' },
@@ -117,8 +114,6 @@ describe('resolvePermissionLevel', () => {
 	});
 
 	it('should return USER by default', async () => {
-		(envParseString as Mock).mockReturnValue('999');
-
 		const context = {
 			userId: '123',
 			guild: { id: 'G1', ownerId: '789' },
@@ -133,8 +128,6 @@ describe('resolvePermissionLevel', () => {
 	});
 
 	it('should fallback to USER if guild or member is missing', async () => {
-		(envParseString as Mock).mockReturnValue('999');
-
 		const context = {
 			userId: '123'
 		};

@@ -5,7 +5,7 @@ Step-by-step for adding a feature module to Ember. See the `ember-*` skills in `
 ## 1. Create the module directory
 
 ```
-src/modules/<name>/
+packages/core/src/modules/<name>/
   index.ts              # @EmberModule class (REQUIRED)
   commands/             # EmberCommand / EmberSubcommand pieces
   listeners/            # Sapphire Listener pieces
@@ -18,7 +18,7 @@ src/modules/<name>/
 ## 2. `index.ts`
 
 ```typescript
-import { Module, EmberModule, FieldType } from "#core/module-system/Module.js";
+import { Module, EmberModule, cfg } from "#core/module-system/Module.js";
 
 @EmberModule({
   name: "<name>",
@@ -26,7 +26,10 @@ import { Module, EmberModule, FieldType } from "#core/module-system/Module.js";
   emoji: "✨",
   version: "1.0.0",
   description: "<one line>",
-  configFields: [ /* optional */ ],
+  // Zod-first: declare a configSchema; the flat ConfigField[] is DERIVED from
+  // it. Never hand-author `configFields`. Build fields with the cfg.* helpers
+  // (cfg.boolean / number / string / enum / channel / role / user).
+  configSchema: cfg.object({ /* optional */ }),
   // dependencies, conflicts, isCore as needed
 })
 export class <Name>Module extends Module {
@@ -52,7 +55,7 @@ The `ModuleStore` auto-discovers this and loads the sub-stores. Don't manually `
 ```bash
 bun run typecheck
 bun run lint
-bun test
+bun run test   # vitest — NOT `bun test` (that's Bun's own runner)
 ```
 
 Then enable with `/module enable <name>` and test the golden path in a guild.

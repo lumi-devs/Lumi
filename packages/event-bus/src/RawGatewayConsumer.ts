@@ -94,7 +94,7 @@ export class RawGatewayConsumer {
         })
       : otelContext.active();
     try {
-      await otelApiContext.with(ctx, async () => {
+      await otelApiContext.with(ctx, () => {
         this.client.ws.handlePacket(env.packet, { id: env.shardId });
       });
       await msg.ack();

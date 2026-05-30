@@ -1,0 +1,68 @@
+name: Chaos & verify (distributed paths)
+
+# HARDENING P2.1 — runs the chaos/verify suite against ephemeral infra. The Redis
+# suite (`bun run verify:chaos`) is the authoritative gate; the NATS/JetStream leg
+# is informational (continue-on-error) until P2.2 confirms the transport in CI.
+#
+# Not on every PR (chaos is slow): master pushes, a nightly schedule, and manual.
+on:
+  push:
+    branches: [master]
+  schedule:
+    - cron: "0 4 * * *" # nightly 04:00 UTC
+  workflow_dispatch:
+
+jobs:
+  chaos:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    env:
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
+      NATS_URL: nats://127.0.0.1:4222
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - run: bun install
+      # Some scenarios import @ember/core, which needs the generated Prisma client
+      # (no DB connection required for `prisma generate`).
+      - run: bun run db:generate
+
+      # JetStream-enabled NATS for the (informational) NATS leg. Service containers
+      # can't override the image command, so run it as a step.
+      - name: Start NATS (JetStream)
+        run: |
+          docker run -d --name nats -p 4222:4222 -p 8222:8222 nats:2.10-alpine -js -m 8222
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8222/healthz >/dev/null; then echo "NATS ready"; exit 0; fi
+            sleep 1
+          done
+          echo "NATS did not become ready in time" >&2
+          docker logs nats || true
+          exit 1
+
+      # Authoritative gate: the Redis-backed chaos/verify suite.
+      - name: verify:chaos (Redis suite)
+        run: bun run verify:chaos
+
+      # Informational until P2.2: the NATS/JetStream gateway-proxy leg.
+      - name: chaos-gateway-proxy (NATS / JetStream)
+        continue-on-error: true
+        env:
+          TRANSPORT: nats
+        run: bun scripts/chaos-gateway-proxy.ts
+
+      - name: NATS logs (on failure)
+        if: failure()
+        run: docker logs nats || true

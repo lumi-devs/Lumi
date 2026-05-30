@@ -39,7 +39,7 @@ export function relativeTimestamp(date: Date | number = new Date()): string {
   return time(d, TimestampStyles.RelativeTime);
 }
 
-/** Discord short-time timestamp markup: `<t:EPOCH:T>` → "14:30:00". */
+/** Discord short-time timestamp markup: `<t:EPOCH:t>` → "14:30". */
 export function shortTimestamp(date: Date | number = new Date()): string {
   const d = typeof date === "number" ? new Date(date) : date;
   return time(d, TimestampStyles.ShortTime);

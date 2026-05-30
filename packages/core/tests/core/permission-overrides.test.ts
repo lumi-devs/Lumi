@@ -17,11 +17,11 @@ describe('PermissionOverridesPrecondition', () => {
         beforeEach(() => {
                 vi.resetAllMocks();
 
-                // Manually populate container with mocks
+                // Manually populate container with mocks.
+                // DatabaseService is namespaced — the precondition reads via container.db.permissions.*
                 (container as any).redis = { get: vi.fn(), set: vi.fn() };
-                (container as any).prisma = { permissionOverride: { findMany: vi.fn() } };
                 (container as any).db = {
-                        getPermissionOverrides: vi.fn().mockResolvedValue([])
+                        permissions: { getPermissionOverrides: vi.fn().mockResolvedValue([]) }
                 };
 
                 precondition = new PermissionOverridesPrecondition({ name: 'PermissionOverrides', store: { name: 'preconditions' } as any }, { position: 22 } as any);
@@ -59,7 +59,7 @@ describe('PermissionOverridesPrecondition', () => {
 		};
 
 		(container.redis.get as Mock).mockResolvedValue(null);
-		(container.db.getPermissionOverrides as Mock).mockResolvedValue([
+		(container.db.permissions.getPermissionOverrides as Mock).mockResolvedValue([
 		        { modelType: 'user', modelId: 'U1', allow: false }
 		]);
 		const result = await precondition.chatInputRun(interaction as any);
@@ -88,7 +88,7 @@ describe('PermissionOverridesPrecondition', () => {
 		};
 
 		(container.redis.get as Mock).mockResolvedValue(null);
-		(container.db.getPermissionOverrides as Mock).mockResolvedValue([
+		(container.db.permissions.getPermissionOverrides as Mock).mockResolvedValue([
 		        { modelType: 'everyone', modelId: 'G1', allow: false },
 		        { modelType: 'role', modelId: 'R1', allow: true }
 		]);
@@ -118,7 +118,7 @@ describe('PermissionOverridesPrecondition', () => {
 		};
 
 		(container.redis.get as Mock).mockResolvedValue(null);
-		(container.db.getPermissionOverrides as Mock).mockResolvedValue([
+		(container.db.permissions.getPermissionOverrides as Mock).mockResolvedValue([
 		        { modelType: 'role', modelId: 'R_LOW', allow: true },
 		        { modelType: 'role', modelId: 'R_HIGH', allow: false }
 		]);
@@ -143,7 +143,7 @@ describe('PermissionOverridesPrecondition', () => {
 		};
 
 		(container.redis.get as Mock).mockResolvedValue(null);
-		(container.db.getPermissionOverrides as Mock).mockResolvedValue([
+		(container.db.permissions.getPermissionOverrides as Mock).mockResolvedValue([
 		        { modelType: 'category', modelId: 'CAT1', allow: false }
 		]);
 		const result = await precondition.chatInputRun(interaction as any);

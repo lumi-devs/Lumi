@@ -123,12 +123,12 @@ services:
     command: ["sh", "-c", "bunx prisma migrate deploy && bun apps/worker/src/main.ts"]
     environment:
       <<: *ember-env
-      # `production` profile: worker is the monolith (holds its own WS).
-      # `scale` profile: EMBER_ROLE=worker (no WS, consumes raw packets from the
-      # bus) — set in the `worker` block under the scale profile below.
+      # Default (no-profile) service: the single-instance monolith bot. A bare
+      # `docker compose up` brings it online (holds its own Discord WS) — this is
+      # the self-hoster's "one command → working bot" path (roadmap guarantee).
+      # The `scale` profile instead runs `worker-scale` (EMBER_ROLE=worker, no WS,
+      # consumes raw gateway packets from the bus) — see below.
       EMBER_ROLE: "${EMBER_ROLE:-monolith}"
-    profiles:
-      - production
 
   # Scale-profile services. When `docker compose --profile scale up` is used,
   # split topology comes online: gateway owns the WS, worker drops its WS and

@@ -1,196 +1,103 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ModuleStore } from '../../src/core/module-system/ModuleStore.js';
 import { container } from '@sapphire/framework';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+
+// Discovery is manifest-driven: #walk → readManifest → #ingestManifest, with no
+// module code imported. Mock the manifest layer and drive the FS walk so we test
+// the real walk/topo/conflict pipeline through the public API.
+const { readManifest, metaFromManifest } = vi.hoisted(() => ({
+	readManifest: vi.fn(),
+	metaFromManifest: vi.fn()
+}));
+
+vi.mock('../../src/core/module-system/manifest.js', () => ({ readManifest, metaFromManifest }));
+
+import { ModuleStore } from '../../src/core/module-system/ModuleStore.js';
+
+type ModSpec = { dependencies?: string[]; conflicts?: string[]; isCore?: boolean };
+
+/**
+ * Wire the mocked FS + manifest layer so `discover()` finds one module dir per
+ * key under /test/modules. `order` sets the readdir order (to exercise topo sort).
+ */
+function setupModules(mods: Record<string, ModSpec>, order: string[] = Object.keys(mods)) {
+	const names = Object.keys(mods);
+	vi.spyOn(fs, 'access').mockResolvedValue(undefined);
+	vi.spyOn(fs, 'readdir').mockImplementation(
+		async (p: any) => (names.includes(path.basename(String(p))) ? [] : order) as any
+	);
+	vi.spyOn(fs, 'stat').mockImplementation(
+		async (p: any) =>
+			({
+				isDirectory: () => names.includes(path.basename(String(p))),
+				isFile: () => false
+			}) as any
+	);
+	readManifest.mockImplementation(async (dir: string) => {
+		const name = path.basename(dir);
+		return names.includes(name) ? { name, ...mods[name] } : null;
+	});
+}
 
 describe('ModuleStore', () => {
 	let store: any;
 
 	beforeEach(() => {
 		vi.restoreAllMocks();
+		metaFromManifest.mockImplementation((m: any) => ({
+			name: m.name,
+			displayName: m.name,
+			dependencies: m.dependencies ?? [],
+			conflicts: m.conflicts ?? [],
+			isCore: m.isCore ?? false
+		}));
 
-		// Setup container mocks directly on the real container
-		container.prisma = {
-			globalModuleState: {
-				findMany: vi.fn().mockResolvedValue([])
-			}
-		} as any;
-
+		// DatabaseService is namespaced — ModuleStore reads via container.db.modules.*
 		container.db = {
-			getGlobalModuleStates: vi.fn().mockResolvedValue(new Map()),
-			isModuleGlobalEnabled: vi.fn(),
-			setModuleGlobalEnabled: vi.fn()
-		} as any;
-
-		container.stores = {
-			registerPath: vi.fn(),
-			values: function () {
-				return [this];
+			modules: {
+				getGlobalModuleStates: vi.fn().mockResolvedValue(new Map()),
+				isModuleGlobalEnabled: vi.fn(),
+				setModuleGlobalEnabled: vi.fn()
 			}
 		} as any;
-
-		container.logger = {
-			info: vi.fn(),
-			warn: vi.fn(),
-			error: vi.fn(),
-			debug: vi.fn()
-		} as any;
+		container.stores = { registerPath: vi.fn() } as any;
+		container.logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as any;
 
 		store = new ModuleStore();
-		store.load = vi.fn().mockResolvedValue(null);
-		
-		// Mock _ingest to avoid real dynamic imports in tests
-		store._ingest = vi.fn().mockImplementation(async (dir: string, indexPath: string, found: Map<string, any>, globalState: Map<string, boolean>) => {
-			const name = path.basename(dir);
-			found.set(name, {
-				name,
-				dir,
-				indexUrl: `file://${indexPath}`,
-				enabled: globalState.get(name) ?? true,
-				meta: { name, dependencies: [], conflicts: [] }
-			});
-		});
+		store.addRoot(new URL('file:///test/modules'));
 	});
 
 	it('should discover modules in a root directory', async () => {
-		store.addRoot(new URL('file:///test/modules'));
-
-		vi.spyOn(fs, 'access').mockResolvedValue(undefined);
-		vi.spyOn(fs, 'readdir').mockImplementation(async (p: any) => {
-			const normalized = path.resolve(p);
-			if (normalized === '/test/modules') {
-				return ['afk', 'raids'];
-			}
-			return [];
-		});
-		vi.spyOn(fs, 'stat').mockImplementation(async (p: any) => {
-			const normalized = path.resolve(p);
-			return {
-				isDirectory: () => normalized === '/test/modules/afk' || normalized === '/test/modules/raids',
-				isFile: () => false
-			} as any;
-		});
-
-		// Mock _findIndex to return index.ts for each folder
-		store._findIndex = vi.fn().mockImplementation(async (dir) => path.join(dir, 'index.ts'));
-
+		setupModules({ afk: {}, raids: {} });
 		await store.discover();
 
-		expect(store._records.has('afk')).toBe(true);
-		expect(store._records.has('raids')).toBe(true);
+		expect(store.getRecord('afk')).toBeDefined();
+		expect(store.getRecord('raids')).toBeDefined();
 		expect(container.stores.registerPath).toHaveBeenCalledTimes(2);
 	});
 
 	it('should handle topological sort for dependencies', async () => {
-		store.addRoot(new URL('file:///test/modules'));
-		vi.spyOn(fs, 'access').mockResolvedValue(undefined);
-		vi.spyOn(fs, 'readdir').mockImplementation(async (p: any) => {
-			const normalized = path.resolve(p);
-			if (normalized === '/test/modules') {
-				return ['a', 'b'];
-			}
-			return [];
-		});
-		vi.spyOn(fs, 'stat').mockImplementation(async (p: any) => {
-			const normalized = path.resolve(p);
-			return {
-				isDirectory: () => normalized === '/test/modules/a' || normalized === '/test/modules/b',
-				isFile: () => false
-			} as any;
-		});
-		store._findIndex = vi.fn().mockImplementation(async (dir) => path.join(dir, 'index.ts'));
-
-		// Custom _ingest to add dependencies
-		store._ingest = vi.fn().mockImplementation(async (dir: string, indexPath: string, found: Map<string, any>, globalState: Map<string, boolean>) => {
-			const name = path.basename(dir);
-			found.set(name, {
-				name,
-				dir,
-				indexUrl: `file://${indexPath}`,
-				enabled: true,
-				meta: { name, dependencies: name === 'b' ? ['a'] : [] }
-			});
-		});
-
+		// Discovered b-first; topo must still register a before b.
+		setupModules({ b: { dependencies: ['a'] }, a: {} }, ['b', 'a']);
 		await store.discover();
 
-		const registerCalls = (container.stores.registerPath as any).mock.calls;
-		const order = registerCalls.map((call: any) => {
-			try {
-				return path.basename(fileURLToPath(call[0]));
-			} catch (e) {
-				return path.basename(call[0]);
-			}
-		});
-
+		const order = (container.stores.registerPath as any).mock.calls.map((c: any[]) =>
+			path.basename(String(c[0]))
+		);
 		expect(order).toEqual(['a', 'b']);
 	});
 
 	it('should throw on circular dependencies', async () => {
-		store.addRoot(new URL('file:///test/modules'));
-		vi.spyOn(fs, 'access').mockResolvedValue(undefined);
-		vi.spyOn(fs, 'readdir').mockImplementation(async (p: any) => {
-			const normalized = path.resolve(p);
-			if (normalized === '/test/modules') {
-				return ['a', 'b'];
-			}
-			return [];
-		});
-		vi.spyOn(fs, 'stat').mockImplementation(async (p: any) => {
-			const normalized = path.resolve(p);
-			return {
-				isDirectory: () => normalized === '/test/modules/a' || normalized === '/test/modules/b',
-				isFile: () => false
-			} as any;
-		});
-		store._findIndex = vi.fn().mockImplementation(async (dir) => path.join(dir, 'index.ts'));
-
-		store._ingest = vi.fn().mockImplementation(async (dir: string, indexPath: string, found: Map<string, any>) => {
-			const name = path.basename(dir);
-			found.set(name, {
-				name,
-				dir,
-				meta: { name, dependencies: [name === 'a' ? 'b' : 'a'] }
-			});
-		});
-
+		setupModules({ a: { dependencies: ['b'] }, b: { dependencies: ['a'] } });
 		await expect(store.discover()).rejects.toThrow(/Circular dependency/);
 	});
 
 	it('should handle conflicts', async () => {
-		store.addRoot(new URL('file:///test/modules'));
-		vi.spyOn(fs, 'access').mockResolvedValue(undefined);
-		vi.spyOn(fs, 'readdir').mockImplementation(async (p: any) => {
-			const normalized = path.resolve(p);
-			if (normalized === '/test/modules') {
-				return ['a', 'b'];
-			}
-			return [];
-		});
-		vi.spyOn(fs, 'stat').mockImplementation(async (p: any) => {
-			const normalized = path.resolve(p);
-			return {
-				isDirectory: () => normalized === '/test/modules/a' || normalized === '/test/modules/b',
-				isFile: () => false
-			} as any;
-		});
-		store._findIndex = vi.fn().mockImplementation(async (dir) => path.join(dir, 'index.ts'));
-
-		store._ingest = vi.fn().mockImplementation(async (dir: string, indexPath: string, found: Map<string, any>) => {
-			const name = path.basename(dir);
-			found.set(name, {
-				name,
-				dir,
-				enabled: true,
-				meta: { name, conflicts: name === 'a' ? ['b'] : [] }
-			});
-		});
-
+		setupModules({ a: { conflicts: ['b'] }, b: {} });
 		await store.discover();
 
-		expect(store._records.get('a').enabled).toBe(true);
-		expect(store._records.get('b').enabled).toBe(false);
+		expect(store.getRecord('a').enabled).toBe(true);
+		expect(store.getRecord('b').enabled).toBe(false);
 	});
 });

@@ -134,7 +134,7 @@ To make Lumi ultra-reliable, we split it into five isolated services. Here is wh
 ## 🚀 Getting Started
 
 ### Option A: Docker Compose (Recommended)
-Docker Compose boots the entire microservices cluster, databases, telemetry collectors, and proxies on your local machine with a single command.
+A bare `docker compose up` boots the **single-instance monolith** — the bot plus Postgres, PgBouncer, Redis, and RabbitMQ — on one host with a single command. Telemetry, REST proxy, and the horizontal scale-out topology are opt-in profiles (see below).
 
 1.  **Clone the Repository**:
     ```bash
@@ -146,14 +146,19 @@ Docker Compose boots the entire microservices cluster, databases, telemetry coll
     cp .env.example .env
     # Supply your Discord BOT_TOKEN and CLIENT_ID
     ```
-3.  **Start in Development Mode** (Hot-reloads on file changes):
+3.  **Start the bot**:
     ```bash
-    docker compose up
+    docker compose up          # monolith bot + Postgres + PgBouncer + Redis + RabbitMQ
     ```
-4.  **Start in Production Mode** (Autoscales workers, enables PgBouncer transaction pooling):
+    For containerized hot-reload while developing, start the dev service by name instead — it mounts your source and does **not** start the prod worker (avoiding a duplicate gateway login on the same token):
     ```bash
-    docker compose --profile production up -d
+    docker compose up ember-dev
     ```
+4.  **Scale out** (optional) — split the gateway from the workers, add autoscaling and a shared REST proxy. Run detached:
+    ```bash
+    docker compose --profile scale up -d
+    ```
+    Other opt-in profiles: `observability` (Prometheus/Grafana/Tempo), `ha` (replicated Postgres/Redis/RabbitMQ, ~1.5 GB extra RAM), `scale-nats` (NATS JetStream transport).
 
 ### Option B: Bare-Metal Setup
 Requires **Bun (v1.1+)**, **PostgreSQL (v16)**, and **Redis (v7)** running locally.

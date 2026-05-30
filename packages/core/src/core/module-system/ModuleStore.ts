@@ -278,6 +278,44 @@ export class ModuleStore extends Store<Module> {
     this.attachModuleGuards();
   }
 
+  /**
+   * Resolve a module's Zod `configSchema` for write-time validation. Manifest-
+   * driven discovery never imports module code, so the schema is loaded lazily
+   * (and cached) the first time a config write needs it.
+   */
+  public async getConfigSchema(
+    name: string,
+  ): Promise<z.ZodObject<z.ZodRawShape> | undefined> {
+    if (this.#schemaCache.has(name)) return this.#schemaCache.get(name);
+
+    const record = this.#records.get(name);
+    if (!record) return undefined;
+    if (record.meta.configSchema) {
+      this.#schemaCache.set(name, record.meta.configSchema);
+      return record.meta.configSchema;
+    }
+
+    try {
+      const mod = await import(record.indexUrl);
+      const meta: ModuleMeta | undefined =
+        mod.meta ??
+        mod.default?.meta ??
+        (
+          Object.values(mod).find(
+            (v: unknown) => (v as { meta?: ModuleMeta })?.meta,
+          ) as { meta?: ModuleMeta }
+        )?.meta;
+      this.#schemaCache.set(name, meta?.configSchema);
+      return meta?.configSchema;
+    } catch (err: unknown) {
+      container.logger.error(
+        `[ModuleStore] Failed to load configSchema for ${name}:`,
+        err,
+      );
+      return undefined;
+    }
+  }
+
   // ── Internals ─────────────────────────────────────────────────────────
 
   #setupInvalidationListener() {
@@ -419,44 +457,6 @@ export class ModuleStore extends Store<Module> {
       });
     } catch (err: unknown) {
       container.logger.error(`[ModuleStore] Import failed: ${indexPath}`, err);
-    }
-  }
-
-  /**
-   * Resolve a module's Zod `configSchema` for write-time validation. Manifest-
-   * driven discovery never imports module code, so the schema is loaded lazily
-   * (and cached) the first time a config write needs it.
-   */
-  public async getConfigSchema(
-    name: string,
-  ): Promise<z.ZodObject<z.ZodRawShape> | undefined> {
-    if (this.#schemaCache.has(name)) return this.#schemaCache.get(name);
-
-    const record = this.#records.get(name);
-    if (!record) return undefined;
-    if (record.meta.configSchema) {
-      this.#schemaCache.set(name, record.meta.configSchema);
-      return record.meta.configSchema;
-    }
-
-    try {
-      const mod = await import(record.indexUrl);
-      const meta: ModuleMeta | undefined =
-        mod.meta ??
-        mod.default?.meta ??
-        (
-          Object.values(mod).find(
-            (v: unknown) => (v as { meta?: ModuleMeta })?.meta,
-          ) as { meta?: ModuleMeta }
-        )?.meta;
-      this.#schemaCache.set(name, meta?.configSchema);
-      return meta?.configSchema;
-    } catch (err: unknown) {
-      container.logger.error(
-        `[ModuleStore] Failed to load configSchema for ${name}:`,
-        err,
-      );
-      return undefined;
     }
   }
 
