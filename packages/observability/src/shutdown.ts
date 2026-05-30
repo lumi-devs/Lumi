@@ -1,16 +1,10 @@
-// Graceful shutdown orchestration (S6 slice 2).
-//
-// Each app's SIGTERM handler walks a fixed sequence:
-//   1. markDraining() — /readyz flips to 503 immediately
-//   2. wait `preCloseGraceMs` — gives the orchestrator / LB time to notice
-//      the readiness change and stop sending new work
-//   3. run drain steps (each with its own internal timeout)
-//   4. exit
-//
-// `runDrainSteps` enforces a hard `deadlineMs` ceiling: if a step hangs the
-// process still exits within bounded time. Steps run sequentially because
-// closing order usually matters (e.g. detach WS handler → drain queue → close
-// bus → close redis).
+// Graceful shutdown orchestration. Each app's SIGTERM handler runs a fixed sequence:
+// markDraining() (so /readyz flips to 503 immediately), then a `preCloseGraceMs` wait
+// giving the orchestrator / LB time to notice and stop sending new work, then the drain
+// steps (each with its own internal timeout), then exit. `runDrainSteps` enforces a
+// hard `deadlineMs` ceiling so a hung step can't block exit forever; steps run
+// sequentially because closing order usually matters (detach WS handler → drain queue
+// → close bus → close redis).
 
 import { markDraining } from "./readiness.js";
 

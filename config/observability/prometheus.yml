@@ -21,7 +21,7 @@ scrape_configs:
     static_configs:
       - targets: ["localhost:9090"]
 
-  # S4: nirn-proxy exposes its own /metrics on :9000 (per-bucket queue depth,
+  # nirn-proxy exposes its own /metrics on :9000 (per-bucket queue depth,
   # 429 counts, retry-after dist). Only resolvable when the `scale` profile is
   # up (the service lives in that profile). Prometheus surfaces a `down` series
   # for the target otherwise — harmless.

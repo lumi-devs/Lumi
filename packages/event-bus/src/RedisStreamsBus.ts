@@ -1,33 +1,19 @@
-// Redis Streams transport — consumer groups give us at-least-once delivery,
-// horizontal worker scaling (each consumer claims a partition of the pending
-// list), and bounded memory via MAXLEN ~. This is the production transport
-// once the gateway/worker split flips on (TRANSPORT=streams).
+// Redis Streams transport: consumer groups give at-least-once delivery, horizontal
+// worker scaling (each consumer claims a partition of the pending list), and bounded
+// memory via MAXLEN ~. This is the production transport once the gateway/worker split
+// flips on (TRANSPORT=streams). There's one stream per gateway event type
+// (`ember:gw:message_create`, etc.) for per-event backpressure, independent MAXLEN and
+// targeted lag dashboards; one consumer group per worker pool (default
+// `ember-workers`); and bodies JSON-encoded into a single `b` field.
 //
-// Layout:
-//   - One stream per gateway event type (`ember:gw:message_create`, etc.).
-//     Per-type streams give us per-event backpressure + independent MAXLEN
-//     and let lag dashboards point at noisy events directly.
-//   - One consumer group per logical worker pool (default `ember-workers`).
-//   - Bodies are JSON-encoded into a single `b` field — XADD takes flat
-//     field/value pairs but we don't need the field-level structure.
-//
-// Slice 3 additions:
-//   - Stale-consumer claim via XAUTOCLAIM. A background loop walks each stream
-//     and claims entries idle longer than `claimMinIdleMs`, redelivering them
-//     to the handler with `deliveryCount > 1` so callers can dedupe if needed.
-//   - DLQ. Once an entry's delivery count exceeds `maxDeliveries`, we XADD it
-//     onto `<stream>:dlq` (preserving the original id + body) and XACK the
-//     original to drain the pending list. DLQ entries are kept for inspection;
-//     they are NOT auto-replayed.
-//   - Stats callback. Periodically reports XLEN (stream depth) and pending
-//     count (group lag) so observability can update gauges without leaking
-//     prom-client into this package.
-//
-// Exactly-once is still out of scope — at-least-once + idempotent handlers is
-// the contract.
-//
-// Discord raw-packet handlers must use the dispatch sequence (`d.s`) for
-// dedupe rather than the stream id, since redelivery yields a new stream id.
+// A background XAUTOCLAIM loop reclaims entries idle past `claimMinIdleMs` and
+// redelivers them with `deliveryCount > 1` so callers can dedupe; once that exceeds
+// `maxDeliveries` the entry is XADDed onto `<stream>:dlq` (kept for inspection, never
+// auto-replayed) and XACKed off the live stream. A periodic stats callback reports
+// XLEN + pending count so observability can update gauges without pulling prom-client
+// into this package. Exactly-once is out of scope — the contract is at-least-once plus
+// idempotent handlers, so raw-packet handlers dedupe on the dispatch sequence (`d.s`),
+// not the stream id (redelivery yields a new one).
 
 import type { Redis } from "ioredis";
 import type {

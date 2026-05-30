@@ -1,13 +1,10 @@
-// Redis-backed voice channel occupancy tracker for tempvc.
-//
-// Why: tempvc-cleanup runs on a worker. The discord.js voice-state cache is
-// disabled (VoiceStateManager: 0 in EmberClient), so neither
-// `channel.members.size` nor `oldState.channelId` are reliable signals. We
-// maintain the projection ourselves from the raw VOICE_STATE_UPDATE dispatch
-// (one user per event) plus the voice_states array on GUILD_CREATE (boot seed).
-//
-// Shape: a SET of user IDs per channel plus a reverse user→channel pointer so
-// raw events (which only carry the new channel) can find what to SREM from.
+// Redis-backed voice channel occupancy tracker for tempvc. tempvc-cleanup runs on a
+// worker where the discord.js voice-state cache is disabled (VoiceStateManager: 0 in
+// EmberClient), so neither `channel.members.size` nor `oldState.channelId` is reliable;
+// we maintain the projection ourselves from raw VOICE_STATE_UPDATE dispatches (one user
+// per event) plus the voice_states array on GUILD_CREATE (boot seed). It's a SET of
+// user ids per channel plus a reverse user→channel pointer, so raw events (which carry
+// only the new channel) can find what to SREM from.
 
 import { container } from "@sapphire/framework";
 

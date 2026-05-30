@@ -1,23 +1,15 @@
-// Cluster-wide "all shards ready" signal.
+// Cluster-wide "all shards ready" signal. During a multi-replica gateway's startup,
+// workers consuming the raw-gateway bus can receive events while some shards are still
+// IDENTIFYing, so their view of guild/channel/member state is partial. Most handlers
+// tolerate that (REST + entity cache on demand), but cooperative populators and
+// cache-seeding flows want a clean "cluster has converged" signal.
 //
-// Workers consuming the raw-gateway bus during a multi-replica gateway's
-// startup can receive events while some shards are still IDENTIFYing — at
-// which point the worker's view of guild/channel/member state is partial.
-// Most handlers are robust to this (they fetch from REST + entity cache on
-// demand), but cooperative populators (S8 slice 3) and cache-seeding flows
-// benefit from a clean "wait until the cluster has converged" signal.
-//
-// Protocol (per cluster, namespaced by clusterName):
-//   ember:cluster:<name>:ready  STR  "1" when every gateway replica reports
-//                                    all its shards Ready/Resumed; absent or
-//                                    "0" otherwise. TTL refreshed on each
-//                                    heartbeat so a crashed gateway flips it
-//                                    back to not-ready within `ttlMs`.
-//
-// Gateways call `publishReady(true)` from the WSManager Ready/Resumed handler
-// once `shardReady.size === expectedShards.size`, and `publishReady(false)`
-// on any Close/Error. Workers call `waitForReady()` before starting their
-// raw-gateway consumer loops.
+// `ember:cluster:<name>:ready` holds "1" once every gateway replica reports all its
+// shards Ready/Resumed (absent or "0" otherwise); the TTL is refreshed on each
+// heartbeat so a crashed gateway flips back to not-ready within `ttlMs`. Gateways call
+// `publishReady(true)` from the Ready/Resumed handler when
+// `shardReady.size === expectedShards.size` and `publishReady(false)` on Close/Error;
+// workers call `waitForReady()` before starting their consumer loops.
 
 import type { Redis } from "ioredis";
 

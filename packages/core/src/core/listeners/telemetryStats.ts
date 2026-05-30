@@ -35,7 +35,7 @@ export class TelemetryStatsListener extends Listener<
       restRetryAfterSeconds.observe(labels(info), info.timeToReset / 1000);
     });
 
-    // S4: discord.js emits this every `invalidRequestWarningInterval` 401/403/429s
+    // discord.js emits this every `invalidRequestWarningInterval` 401/403/429s
     // in a rolling 10-min window. Each emit = N invalid requests; the counter is
     // unitless emit-count (alerts compute rate). Discord IP-bans the bot at
     // 10k invalid/10min — `info.remainingTime` is the time to the window reset.

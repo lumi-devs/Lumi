@@ -1,15 +1,11 @@
-// Thin glue layer used by apps/gateway and EmberClient. Given a ShardPlan and
-// Redis connections, returns a fully wired cluster topology:
-//
-//   - shards owned by *this* replica (from ClusterCoordinator.join())
-//   - the coordinator (for rebalance subscriptions + shutdown)
-//   - the session store (passed into ws.{retrieve,update}SessionInfo)
-//   - an IDENTIFY throttler factory shared across replicas
-//
-// Single source of "are we clustered?": when `clusterName` and Redis are
-// supplied, all three Redis-backed pieces are installed. Otherwise this
-// function returns null and the caller stays on the existing single-process
-// path (SHARD_LIST + SimpleIdentifyThrottler + no session persistence).
+// Thin glue layer used by apps/gateway and EmberClient. Given a ShardPlan and Redis
+// connections it returns a fully wired cluster topology: the shards this replica owns
+// (from ClusterCoordinator.join()), the coordinator (for rebalance subscriptions +
+// shutdown), the session store (passed into ws.{retrieve,update}SessionInfo), and an
+// IDENTIFY throttler factory shared across replicas. It's the single source of "are we
+// clustered?": with `clusterName` and Redis supplied, all three Redis-backed pieces are
+// installed; otherwise it returns null and the caller stays on the single-process path
+// (SHARD_LIST + SimpleIdentifyThrottler + no session persistence).
 
 import type { Redis } from "ioredis";
 import type { IIdentifyThrottler } from "@discordjs/ws";

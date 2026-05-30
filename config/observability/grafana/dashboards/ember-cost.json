@@ -3,7 +3,7 @@
   "editable": true,
   "schemaVersion": 39,
   "title": "Ember — Cost & Efficiency",
-  "tags": ["ember", "cost", "s7"],
+  "tags": ["ember", "cost"],
   "time": { "from": "now-6h", "to": "now" },
   "templating": {
     "list": [
@@ -124,7 +124,7 @@
           "legendFormat": "bytes/guild"
         }
       ],
-      "description": "Sanity-check vs the 25 KB/guild budget in docs/explanation/capacity-planning.md §3."
+      "description": "Sanity-check vs the 25 KB/guild memory budget."
     },
     {
       "title": "Cache hit ratio (cache-aside reads)",

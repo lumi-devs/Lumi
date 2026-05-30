@@ -119,7 +119,7 @@ export const rest429Total = new Counter({
   registers: [registry],
 });
 
-// S4: per-route retry-after distribution surfaced from discord.js' `rateLimited`
+// Per-route retry-after distribution surfaced from discord.js' `rateLimited`
 // event. Used to detect a single hot endpoint dominating the bucket budget
 // (high p99 on a specific route is the smoking gun for needing per-route work).
 export const restRetryAfterSeconds = new Histogram({
@@ -131,7 +131,7 @@ export const restRetryAfterSeconds = new Histogram({
   registers: [registry],
 });
 
-// S4: invalid-request counter — each emit is N (configured warning interval)
+// Invalid-request counter — each emit is N (configured warning interval)
 // 401/403/429 responses in a rolling 10-minute window. Discord IP-bans the bot
 // at 10k/10min; we set the interval to 500, so each tick = 500 invalid reqs.
 // Alerts should fire well before the rate would project past 10k.

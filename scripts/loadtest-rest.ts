@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// S4 🔬 — Shared REST proxy load test.
+// Shared REST proxy load test.
 //
 // Verifies that with N simulated worker processes hammering Discord REST
 // concurrently through the shared nirn-proxy, none of them observe a 429

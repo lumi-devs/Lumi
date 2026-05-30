@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Chaos test for Phase S7's autoscale signal (TODO.md S7 🔬).
+// Chaos test for the KEDA autoscale signal.
 //
 // What it proves:
 //   1. From idle (no traffic) the consumer-group lag stays at ~0 — so KEDA

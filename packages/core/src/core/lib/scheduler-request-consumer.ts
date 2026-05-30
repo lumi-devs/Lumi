@@ -2,9 +2,9 @@
 // translate them into the local BullMQ-backed `container.tasks` operations.
 // Started by EmberClient.login() when `roleOwnsScheduler(role)` is true.
 //
-// Idempotency: workers stamp `customJobOptions.jobId` for cancel/replace, and
-// BullMQ deduplicates by jobId — so a redelivery (deliveryCount >= 2) is safe
-// to re-apply as long as we don't error out on "already exists".
+// Redeliveries are safe: workers stamp `customJobOptions.jobId` for cancel/replace
+// and BullMQ deduplicates by jobId, so re-applying a redelivery (deliveryCount >= 2)
+// is fine as long as we don't error out on "already exists".
 
 import { container } from "@sapphire/framework";
 import type { EventBus, BusMessage } from "@ember/event-bus";

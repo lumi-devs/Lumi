@@ -12,10 +12,10 @@ volumes:
   nats-data:
 
 # Shared config for the four deployable services. They all run from the same
-# image; each sets its own `command:`. NOTE (thin phase F6): gateway/scheduler/api
-# currently boot the full worker (apps/*/src/main.ts → import "@ember/worker/main"),
-# so only `worker` should run with the live bot token until the real service split
-# (Part II, S2/S5). The other three are scaffolding kept under the `scale` profile.
+# image; each sets its own `command:`. NOTE: gateway/scheduler/api currently boot
+# the full worker (apps/*/src/main.ts → import "@ember/worker/main"), so only
+# `worker` should run with the live bot token until the real service split. The
+# other three are scaffolding kept under the `scale` profile.
 x-ember-service: &ember-service
   build:
     context: .
@@ -39,11 +39,10 @@ x-ember-service: &ember-service
     METRICS_PORT: "9090"
     LOG_FORMAT: "${LOG_FORMAT:-json}"
     LOG_LEVEL: "${LOG_LEVEL:-info}"
-    # S7: per-service V8 heap cap. Worker default is 384 MiB (≈75% of the 512 MiB
+    # Per-service V8 heap cap. Worker default is 384 MiB (≈75% of the 512 MiB
     # container limit below); gateway/api override this in their own blocks.
-    # See docs/explanation/capacity-planning.md §7.
     NODE_OPTIONS: "${NODE_OPTIONS:---max-old-space-size=384}"
-    # S4: route all outbound discord.js REST through the shared nirn-proxy so
+    # Route all outbound discord.js REST through the shared nirn-proxy so
     # one global + per-route bucket budget is shared across every worker
     # replica. Defaults to empty (talk to discord.com directly); the scale
     # profile services below opt in by pointing at the `nirn-proxy` container.
@@ -125,7 +124,7 @@ services:
       <<: *ember-env
       # Default (no-profile) service: the single-instance monolith bot. A bare
       # `docker compose up` brings it online (holds its own Discord WS) — this is
-      # the self-hoster's "one command → working bot" path (roadmap guarantee).
+      # the self-hoster's "one command → working bot" path.
       # The `scale` profile instead runs `worker-scale` (EMBER_ROLE=worker, no WS,
       # consumes raw gateway packets from the bus) — see below.
       EMBER_ROLE: "${EMBER_ROLE:-monolith}"
@@ -168,7 +167,7 @@ services:
       TRANSPORT: "streams"
       INTERACTION_DEFER_AT_GATEWAY: "${INTERACTION_DEFER_AT_GATEWAY:-true}"
       DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-http://nirn-proxy:8080}"
-      # S7: gateway holds the Discord cache (≈25 KB/guild); raise heap above the
+      # Gateway holds the Discord cache (≈25 KB/guild); raise heap above the
       # 384 MiB worker default. See capacity-planning.md §7.
       NODE_OPTIONS: "--max-old-space-size=768"
     depends_on:
@@ -210,7 +209,7 @@ services:
     command: ["bun", "apps/api/src/main.ts"]
     environment:
       <<: *ember-env
-      # S7: api is a thin RPC handler; smaller heap budget than the worker.
+      # api is a thin RPC handler; smaller heap budget than the worker.
       NODE_OPTIONS: "--max-old-space-size=256"
     depends_on:
       worker-scale:
@@ -261,7 +260,7 @@ services:
       LISTEN_PORT: "6432"
       # Transaction pooling: a server backend is held only for the duration of a
       # transaction, so many short-lived client connections share few real
-      # Postgres backends. Required for the stateless-worker fan-out (Part II).
+      # Postgres backends. Required for the stateless-worker fan-out.
       POOL_MODE: transaction
       AUTH_TYPE: scram-sha-256
       # Total client slots PgBouncer accepts across all workers.
@@ -337,7 +336,7 @@ services:
       - "127.0.0.1:5672:5672"
       - "127.0.0.1:15672:15672"
 
-  # S4: Shared outbound REST proxy. nirn-proxy presents a Discord-API-compatible
+  # Shared outbound REST proxy. nirn-proxy presents a Discord-API-compatible
   # surface at :8080 and globally serialises buckets + the 50/s global limit
   # across every connected worker so 1000s of stateless workers can't trigger a
   # CloudFlare ban. Each worker still sends its own Authorization header; the
@@ -400,8 +399,7 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
 
-  # S8 slice 1: NATS JetStream — the high-throughput cutover from Redis Streams.
-  # See docs/explanation/transport-cutover.md for the threshold and procedure.
+  # NATS JetStream — the high-throughput alternative to Redis Streams.
   # Opt-in: only under `--profile scale-nats`, since Redis Streams is the
   # documented default for the scale profile (NATS is overkill until >20k evt/s).
   # JetStream stores its state on disk; the volume survives container restarts.

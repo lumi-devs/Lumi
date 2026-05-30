@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Chaos / latency test for the S8 gateway-proxy cutover.
+// Chaos / latency test for the gateway-proxy cutover.
 //
 // What we verify (no Discord token required):
 //   1. End-to-end latency from "gateway publishes raw envelope" to "worker
