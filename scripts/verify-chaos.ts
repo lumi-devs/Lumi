@@ -11,10 +11,12 @@
  * Exit-code contract honored from the individual scripts:
  *   0 → PASS · 2 → INFRA unreachable (Redis/NATS down) · anything else → FAIL.
  *
+ * The NATS/JetStream legs (HARDENING P2.2) are opt-in via WITH_NATS=1 / NATS_URL=…
+ * and need a JetStream-enabled NATS server: the gateway-proxy throughput/SLO leg
+ * and the DLQ/redelivery parity leg.
+ *
  * NOT included here (need credentials / extra infra — run them by hand):
- *   - scripts/loadtest-rest.ts          → needs a real BOT_TOKEN + a running nirn-proxy.
- *   - chaos-gateway-proxy TRANSPORT=nats → opt-in via WITH_NATS=1 / NATS_URL=… (the
- *     JetStream leg, HARDENING P2.2); needs a JetStream-enabled NATS server.
+ *   - scripts/loadtest-rest.ts → needs a real BOT_TOKEN + a running nirn-proxy.
  *
  * Usage:
  *   REDIS_HOST=127.0.0.1 REDIS_PORT=6379 bun run verify:chaos
@@ -43,11 +45,17 @@ const REDIS_STEPS: Step[] = [
   { name: "scheduler catch-up", script: "scripts/verify-scheduler-catchup.ts" },
 ];
 
-const NATS_STEP: Step = {
-  name: "gateway-proxy (nats / JetStream)",
-  script: "scripts/chaos-gateway-proxy.ts",
-  env: { TRANSPORT: "nats" },
-};
+const NATS_STEPS: Step[] = [
+  {
+    name: "gateway-proxy (nats / JetStream)",
+    script: "scripts/chaos-gateway-proxy.ts",
+    env: { TRANSPORT: "nats" },
+  },
+  {
+    name: "nats DLQ / redelivery",
+    script: "scripts/chaos-nats-dlq.ts",
+  },
+];
 
 function classify(code: number): Outcome {
   if (code === 0) return "PASS";
@@ -74,7 +82,7 @@ function run(step: Step): Outcome {
 
 const steps = [...REDIS_STEPS];
 if (process.env["WITH_NATS"] === "1" || process.env["NATS_URL"]) {
-  steps.push(NATS_STEP);
+  steps.push(...NATS_STEPS);
 }
 
 const results: Array<{ step: Step; outcome: Outcome }> = [];
