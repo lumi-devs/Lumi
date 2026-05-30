@@ -6,7 +6,7 @@ rule_files:
   - /etc/prometheus/alerts.yml
 
 scrape_configs:
-  - job_name: ember
+  - job_name: lumi
     metrics_path: /metrics
     static_configs:
       # All four services share one image and expose /metrics on :9090. In the

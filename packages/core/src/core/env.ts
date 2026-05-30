@@ -21,10 +21,10 @@ export function envParseInteger(key: string, defaultValue?: number): number {
 
 export const envIsDefined = (key: string) => Boolean(process.env[key]);
 
-export type EmberRole = "monolith" | "gateway" | "worker" | "scheduler";
+export type ServiceRole = "monolith" | "gateway" | "worker" | "scheduler";
 
-export function getEmberRole(): EmberRole {
-  const raw = process.env["EMBER_ROLE"];
+export function getServiceRole(): ServiceRole {
+  const raw = process.env["LUMI_ROLE"];
   if (
     raw === "gateway" ||
     raw === "worker" ||
@@ -36,16 +36,16 @@ export function getEmberRole(): EmberRole {
 }
 
 /** Roles that own the BullMQ Worker (consume jobs and fire tasks). */
-export const roleOwnsScheduler = (r: EmberRole) =>
+export const roleOwnsScheduler = (r: ServiceRole) =>
   r === "scheduler" || r === "monolith";
 
 /** Roles that execute task effects (Discord-side work) on the bus. */
-export const roleExecutesTaskEffects = (r: EmberRole) =>
+export const roleExecutesTaskEffects = (r: ServiceRole) =>
   r === "worker" || r === "monolith";
 
 export function getConsumerId(): string {
   return (
-    process.env["EMBER_CONSUMER_ID"] ??
+    process.env["LUMI_CONSUMER_ID"] ??
     process.env["HOSTNAME"] ??
     `worker-${process.pid}`
   );

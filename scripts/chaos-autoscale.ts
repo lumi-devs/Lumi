@@ -5,7 +5,7 @@
 //   1. From idle (no traffic) the consumer-group lag stays at ~0 — so KEDA
 //      scales down to `minReplicaCount` and doesn't hold extra replicas just
 //      because workers exist.
-//   2. A synthetic burst pushes `sum(ember_stream_consumer_lag{...})` past the
+//   2. A synthetic burst pushes `sum(lumi_stream_consumer_lag{...})` past the
 //      `worker-scaledobject.yaml` threshold of 500 within seconds. In a real
 //      cluster KEDA would observe this on the next poll (≤15s) and scale up.
 //   3. Once the burst drains, lag returns to 0 and the cooldown window (300s
@@ -21,8 +21,8 @@
 
 import { Redis } from "ioredis";
 
-const TEST_STREAM = `ember:chaos:autoscale:${Date.now()}`;
-const GROUP = "ember-workers"; // match the KEDA query's `group` label
+const TEST_STREAM = `lumi:chaos:autoscale:${Date.now()}`;
+const GROUP = "lumi-workers"; // match the KEDA query's `group` label
 const KEDA_THRESHOLD = 500; // mirror deploy/k8s/worker-scaledobject.yaml
 const BURST_SIZE = 1500; // ~3× threshold so we cross it unambiguously
 
@@ -50,9 +50,9 @@ async function lagSamples(
   ms: number,
   intervalMs = 100,
 ): Promise<number[]> {
-  // Mirrors how @ember/observability's gauge is populated: XPENDING summary
+  // Mirrors how @lumi/observability's gauge is populated: XPENDING summary
   // returns [count, minId, maxId, [[consumer, count], ...]] — element 0 is the
-  // pending count, which is exactly `ember_stream_consumer_lag`.
+  // pending count, which is exactly `lumi_stream_consumer_lag`.
   const samples: number[] = [];
   const end = Date.now() + ms;
   while (Date.now() < end) {

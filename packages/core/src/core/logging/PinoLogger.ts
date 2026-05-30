@@ -1,9 +1,9 @@
 // Sapphire ILogger backed by pino, so `container.logger` emits structured,
 // trace-correlated JSON instead of plain console lines. The pino instance owns
-// level filtering + the correlation/trace mixin (see @ember/observability).
+// level filtering + the correlation/trace mixin (see @lumi/observability).
 
 import { LogLevel, type ILogger } from "@sapphire/framework";
-import { createPinoLogger, type PinoLogger } from "@ember/observability";
+import { createPinoLogger, type PinoLogger } from "@lumi/observability";
 import { envParseString } from "#lib/env.js";
 
 type PinoLevelName = "trace" | "debug" | "info" | "warn" | "error" | "fatal";

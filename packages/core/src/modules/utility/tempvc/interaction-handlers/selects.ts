@@ -9,8 +9,8 @@ import {
   type GuildMember,
   type VoiceBasedChannel,
 } from "discord.js";
-import { EmberInteractionHandler } from "#core/lib/interaction-handler.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
+import { Emojis } from "#utilities/assets.js";
 import { makeSuccessCard } from "#utilities/cards.js";
 import { getVcRecord, type VcRecord } from "../data.js";
 import { TVC } from "../keys.js";
@@ -22,7 +22,7 @@ const ACTIONS = new Set(["ksel", "tsel", "usel", "bsel", "ubsel", "xsel"]);
   name: "tempvc-selects",
   interactionHandlerType: InteractionHandlerTypes.SelectMenu,
 })
-export default class TempVcSelectHandler extends EmberInteractionHandler {
+export default class TempVcSelectHandler extends BaseInteractionHandler {
   private get service(): TempVcService {
     return this.container.stores.get("services").get("tempvc") as TempVcService;
   }
@@ -52,7 +52,7 @@ export default class TempVcSelectHandler extends EmberInteractionHandler {
     ) {
       throw new UserError({
         identifier: "TempVcNotOwner",
-        message: `${EmberEmojis.CROSS} Only the channel owner can use these controls.`,
+        message: `${Emojis.CROSS} Only the channel owner can use these controls.`,
       });
     }
 

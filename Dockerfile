@@ -62,8 +62,8 @@ RUN bun install --frozen-lockfile
 COPY --chown=bun:bun prisma ./prisma
 RUN bunx prisma generate
 
-# `bun install` runs with the source bind-mounted so it (re)creates the @ember/*
+# `bun install` runs with the source bind-mounted so it (re)creates the @lumi/*
 # workspace symlinks in the anonymous node_modules volume — without it
-# `@ember/core` won't resolve and `--filter` matches nothing. Boot the worker
+# `@lumi/core` won't resolve and `--filter` matches nothing. Boot the worker
 # directly (no --filter) with --watch for hot reload. Push schema for quick iter.
 CMD ["sh", "-c", "bun install && bunx prisma db push --accept-data-loss && bun --watch apps/worker/src/main.ts"]

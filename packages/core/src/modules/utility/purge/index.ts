@@ -1,10 +1,10 @@
-import { Module, EmberModule } from "#core/module-system/Module.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Module, DefineModule } from "#core/module-system/Module.js";
+import { Emojis } from "#utilities/assets.js";
 
-@EmberModule({
+@DefineModule({
   name: "purge",
   displayName: "Purge",
-  emoji: EmberEmojis.CLEANUP,
+  emoji: Emojis.CLEANUP,
   version: "1.0.0",
   description: "Bulk message deletion commands.",
 })

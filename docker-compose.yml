@@ -1,5 +1,5 @@
 networks:
-  ember-net:
+  lumi-net:
     driver: bridge
 
 volumes:
@@ -13,21 +13,21 @@ volumes:
 
 # Shared config for the four deployable services. They all run from the same
 # image; each sets its own `command:`. NOTE: gateway/scheduler/api currently boot
-# the full worker (apps/*/src/main.ts → import "@ember/worker/main"), so only
+# the full worker (apps/*/src/main.ts → import "@lumi/worker/main"), so only
 # `worker` should run with the live bot token until the real service split. The
 # other three are scaffolding kept under the `scale` profile.
-x-ember-service: &ember-service
+x-lumi-service: &lumi-service
   build:
     context: .
     dockerfile: Dockerfile
     target: production
   env_file: .env
-  environment: &ember-env
+  environment: &lumi-env
     REDIS_HOST: redis
-    POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@pgbouncer:6432/ember
+    POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
     # Migrations bypass PgBouncer (transaction pooling can't hold DDL/advisory locks).
-    DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@postgres/ember
-    RABBITMQ_URL: amqp://${RABBITMQ_USER:-ember}:${RABBITMQ_PASSWORD:-ember}@rabbitmq:5672
+    DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
+    RABBITMQ_URL: amqp://${RABBITMQ_USER:-lumi}:${RABBITMQ_PASSWORD:-lumi}@rabbitmq:5672
     RABBITMQ_ENABLED: "true"
     SENTRY_ENABLED: "${SENTRY_ENABLED:-false}"
     SENTRY_DSN: "${SENTRY_DSN:-}"
@@ -58,7 +58,7 @@ x-ember-service: &ember-service
       condition: service_healthy
   restart: unless-stopped
   networks:
-    - ember-net
+    - lumi-net
   deploy:
     resources:
       limits:
@@ -71,19 +71,19 @@ x-ember-service: &ember-service
       max-file: "3"
 
 services:
-  ember-dev:
+  lumi-dev:
     build:
       context: .
       dockerfile: Dockerfile
       target: development
-    container_name: ember-dev
+    container_name: lumi-dev
     env_file: .env
     environment:
       REDIS_HOST: redis
-      POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@pgbouncer:6432/ember
+      POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
       # Migrations bypass PgBouncer (transaction pooling can't hold DDL/advisory locks).
-      DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-ember}:${POSTGRES_PASSWORD:-ember}@postgres/ember
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-ember}:${RABBITMQ_PASSWORD:-ember}@rabbitmq:5672
+      DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-lumi}:${RABBITMQ_PASSWORD:-lumi}@rabbitmq:5672
       RABBITMQ_ENABLED: "true"
       SENTRY_ENABLED: "${SENTRY_ENABLED:-false}"
       SENTRY_DSN: "${SENTRY_DSN:-}"
@@ -110,37 +110,37 @@ services:
       - .:/app:z
       - /app/node_modules
     networks:
-      - ember-net
+      - lumi-net
     stdin_open: true
     tty: true
     profiles:
       - development
 
   worker:
-    <<: *ember-service
-    container_name: ember-worker
+    <<: *lumi-service
+    container_name: lumi-worker
     command: ["sh", "-c", "bunx prisma migrate deploy && bun apps/worker/src/main.ts"]
     environment:
-      <<: *ember-env
+      <<: *lumi-env
       # Default (no-profile) service: the single-instance monolith bot. A bare
       # `docker compose up` brings it online (holds its own Discord WS) — this is
       # the self-hoster's "one command → working bot" path.
-      # The `scale` profile instead runs `worker-scale` (EMBER_ROLE=worker, no WS,
+      # The `scale` profile instead runs `worker-scale` (LUMI_ROLE=worker, no WS,
       # consumes raw gateway packets from the bus) — see below.
-      EMBER_ROLE: "${EMBER_ROLE:-monolith}"
+      LUMI_ROLE: "${LUMI_ROLE:-monolith}"
 
   # Scale-profile services. When `docker compose --profile scale up` is used,
   # split topology comes online: gateway owns the WS, worker drops its WS and
   # consumes raw packets from the bus.
   worker-scale:
-    <<: *ember-service
-    container_name: ember-worker-scale
+    <<: *lumi-service
+    container_name: lumi-worker-scale
     command: ["sh", "-c", "bunx prisma migrate deploy && bun apps/worker/src/main.ts"]
     environment:
-      <<: *ember-env
-      EMBER_ROLE: "worker"
+      <<: *lumi-env
+      LUMI_ROLE: "worker"
       TRANSPORT: "streams"
-      EMBER_CONSUMER_ID: "${EMBER_CONSUMER_ID:-worker-1}"
+      LUMI_CONSUMER_ID: "${LUMI_CONSUMER_ID:-worker-1}"
       INTERACTION_DEFER_AT_GATEWAY: "${INTERACTION_DEFER_AT_GATEWAY:-true}"
       DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-http://nirn-proxy:8080}"
     depends_on:
@@ -158,12 +158,12 @@ services:
       - scale
 
   gateway:
-    <<: *ember-service
-    container_name: ember-gateway
+    <<: *lumi-service
+    container_name: lumi-gateway
     command: ["bun", "apps/gateway/src/main.ts"]
     environment:
-      <<: *ember-env
-      EMBER_ROLE: "gateway"
+      <<: *lumi-env
+      LUMI_ROLE: "gateway"
       TRANSPORT: "streams"
       INTERACTION_DEFER_AT_GATEWAY: "${INTERACTION_DEFER_AT_GATEWAY:-true}"
       DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-http://nirn-proxy:8080}"
@@ -184,12 +184,12 @@ services:
       - scale
 
   scheduler:
-    <<: *ember-service
-    container_name: ember-scheduler
+    <<: *lumi-service
+    container_name: lumi-scheduler
     command: ["bun", "apps/scheduler/src/main.ts"]
     environment:
-      <<: *ember-env
-      EMBER_ROLE: "scheduler"
+      <<: *lumi-env
+      LUMI_ROLE: "scheduler"
       TRANSPORT: "streams"
     depends_on:
       pgbouncer:
@@ -204,11 +204,11 @@ services:
       - scale
 
   api:
-    <<: *ember-service
-    container_name: ember-api
+    <<: *lumi-service
+    container_name: lumi-api
     command: ["bun", "apps/api/src/main.ts"]
     environment:
-      <<: *ember-env
+      <<: *lumi-env
       # api is a thin RPC handler; smaller heap budget than the worker.
       NODE_OPTIONS: "--max-old-space-size=256"
     depends_on:
@@ -224,19 +224,19 @@ services:
 
   postgres:
     image: postgres:17
-    container_name: ember-postgres
+    container_name: lumi-postgres
     environment:
-      POSTGRES_DB: ember
-      POSTGRES_USER: ember
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ember}
+      POSTGRES_DB: lumi
+      POSTGRES_USER: lumi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lumi}
       POSTGRES_INITDB_ARGS: "--auth-local=scram-sha-256 --auth-host=scram-sha-256"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
-      - ember-net
+      - lumi-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ember -d ember"]
+      test: ["CMD-SHELL", "pg_isready -U lumi -d lumi"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -249,13 +249,13 @@ services:
 
   pgbouncer:
     image: edoburu/pgbouncer:latest
-    container_name: ember-pgbouncer
+    container_name: lumi-pgbouncer
     environment:
       DB_HOST: postgres
       DB_PORT: "5432"
-      DB_NAME: ember
-      DB_USER: ${POSTGRES_USER:-ember}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-ember}
+      DB_NAME: lumi
+      DB_USER: ${POSTGRES_USER:-lumi}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-lumi}
       # Listen on 6432 to match the healthcheck, port map, and POSTGRES_URL.
       LISTEN_PORT: "6432"
       # Transaction pooling: a server backend is held only for the duration of a
@@ -273,10 +273,10 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - ember-net
+      - lumi-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U ${POSTGRES_USER:-ember}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U ${POSTGRES_USER:-lumi}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -289,15 +289,15 @@ services:
 
   redis:
     image: redis:7.4-alpine
-    container_name: ember-redis
-    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction --requirepass ${REDIS_PASSWORD:-ember}
+    container_name: lumi-redis
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction --requirepass ${REDIS_PASSWORD:-lumi}
     volumes:
       - redis-data:/data
     networks:
-      - ember-net
+      - lumi-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-ember}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-lumi}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -310,17 +310,17 @@ services:
 
   rabbitmq:
     image: rabbitmq:4-management-alpine
-    container_name: ember-rabbitmq
+    container_name: lumi-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ember}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-ember}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-lumi}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-lumi}
       RABBITMQ_DEFAULT_VHOST: /
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
       - ./config/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
       - ./config/advanced.config:/etc/rabbitmq/advanced.config:ro
     networks:
-      - ember-net
+      - lumi-net
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
@@ -346,7 +346,7 @@ services:
   # directly (DISCORD_PROXY_URL stays empty).
   nirn-proxy:
     image: ghcr.io/germanoeich/nirn-proxy:latest
-    container_name: ember-nirn-proxy
+    container_name: lumi-nirn-proxy
     environment:
       LOG_LEVEL: "${NIRN_LOG_LEVEL:-info}"
       PORT: "8080"
@@ -357,7 +357,7 @@ services:
       REQUEST_TIMEOUT: "10000"
       BUFFER_SIZE: "200"
     networks:
-      - ember-net
+      - lumi-net
     restart: unless-stopped
     healthcheck:
       # nirn-proxy doesn't expose /healthz; a successful TCP connect on :8080 is
@@ -380,11 +380,11 @@ services:
 
   dashboard:
     build:
-      context: ../ember-dashboard
+      context: ../lumi-dashboard
       dockerfile: Dockerfile
-    container_name: ember-dashboard
+    container_name: lumi-dashboard
     environment:
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-ember}:${RABBITMQ_PASSWORD:-ember}@rabbitmq:5672
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-lumi}:${RABBITMQ_PASSWORD:-lumi}@rabbitmq:5672
       - DISCORD_CLIENT_ID=${CLIENT_ID}
       - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-placeholder}
       - AUTH_SECRET=${AUTH_SECRET:-secret}
@@ -395,7 +395,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - ember-net
+      - lumi-net
     ports:
       - "127.0.0.1:3000:3000"
 
@@ -405,7 +405,7 @@ services:
   # JetStream stores its state on disk; the volume survives container restarts.
   nats:
     image: nats:2.10-alpine
-    container_name: ember-nats
+    container_name: lumi-nats
     command:
       - "-js"
       - "-sd"
@@ -415,7 +415,7 @@ services:
     volumes:
       - nats-data:/data
     networks:
-      - ember-net
+      - lumi-net
     restart: unless-stopped
     healthcheck:
       # The monitoring port serves /healthz; lean-and-supported.
@@ -440,12 +440,12 @@ services:
   # app /metrics ; Grafana provisions datasources + dashboards + alert rules.
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.116.0
-    container_name: ember-otel-collector
+    container_name: lumi-otel-collector
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
       - ./config/observability/otel-collector.yaml:/etc/otelcol/config.yaml:ro
     networks:
-      - ember-net
+      - lumi-net
     restart: unless-stopped
     profiles:
       - observability
@@ -458,13 +458,13 @@ services:
 
   tempo:
     image: grafana/tempo:2.6.1
-    container_name: ember-tempo
+    container_name: lumi-tempo
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     volumes:
       - ./config/observability/tempo.yaml:/etc/tempo/tempo.yaml:ro
       - tempo-data:/var/tempo
     networks:
-      - ember-net
+      - lumi-net
     restart: unless-stopped
     profiles:
       - observability
@@ -475,7 +475,7 @@ services:
 
   prometheus:
     image: prom/prometheus:v3.0.1
-    container_name: ember-prometheus
+    container_name: lumi-prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -485,7 +485,7 @@ services:
       - ./config/observability/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus-data:/prometheus
     networks:
-      - ember-net
+      - lumi-net
     restart: unless-stopped
     profiles:
       - observability
@@ -498,7 +498,7 @@ services:
 
   grafana:
     image: grafana/grafana:11.4.0
-    container_name: ember-grafana
+    container_name: lumi-grafana
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
@@ -511,7 +511,7 @@ services:
       - prometheus
       - tempo
     networks:
-      - ember-net
+      - lumi-net
     restart: unless-stopped
     profiles:
       - observability

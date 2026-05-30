@@ -23,7 +23,7 @@ export interface RedisSessionStoreOptions {
 }
 
 const sessionKey = (cluster: string, shardId: number) =>
-  `ember:cluster:${cluster}:session:${shardId}`;
+  `lumi:cluster:${cluster}:session:${shardId}`;
 
 export class RedisSessionStore {
   private readonly opts: Required<Omit<RedisSessionStoreOptions, "log">> & {

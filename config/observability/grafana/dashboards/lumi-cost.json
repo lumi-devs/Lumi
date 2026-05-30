@@ -2,8 +2,8 @@
   "annotations": { "list": [] },
   "editable": true,
   "schemaVersion": 39,
-  "title": "Ember — Cost & Efficiency",
-  "tags": ["ember", "cost"],
+  "title": "Lumi — Cost & Efficiency",
+  "tags": ["lumi", "cost"],
   "time": { "from": "now-6h", "to": "now" },
   "templating": {
     "list": [
@@ -19,7 +19,7 @@
         "name": "service",
         "type": "query",
         "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "query": "label_values(ember_commands_total, service)",
+        "query": "label_values(lumi_commands_total, service)",
         "includeAll": true,
         "multi": true,
         "refresh": 2
@@ -35,7 +35,7 @@
       "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 3 }, "overrides": [] },
       "targets": [
         {
-          "expr": "($cost_per_replica_hour * count(count by (instance) (ember_commands_total))) / (sum(ember_guild_count) / 1000)",
+          "expr": "($cost_per_replica_hour * count(count by (instance) (lumi_commands_total))) / (sum(lumi_guild_count) / 1000)",
           "legendFormat": "$ / 1k guilds / hour"
         }
       ],
@@ -49,7 +49,7 @@
       "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
       "targets": [
         {
-          "expr": "sum(ember_guild_count)",
+          "expr": "sum(lumi_guild_count)",
           "legendFormat": "guilds"
         }
       ]
@@ -62,11 +62,11 @@
       "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
       "targets": [
         {
-          "expr": "count by (service) (up{job=\"ember\"} == 1)",
+          "expr": "count by (service) (up{job=\"lumi\"} == 1)",
           "legendFormat": "{{service}}"
         }
       ],
-      "description": "What KEDA is actually running. Compare to ember_stream_consumer_lag — if lag is climbing while this is flat, the autoscaler isn't reacting."
+      "description": "What KEDA is actually running. Compare to lumi_stream_consumer_lag — if lag is climbing while this is flat, the autoscaler isn't reacting."
     },
     {
       "title": "RSS per service",
@@ -76,11 +76,11 @@
       "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
       "targets": [
         {
-          "expr": "avg by (service) (ember_process_resident_memory_bytes{service=~\"$service\"})",
+          "expr": "avg by (service) (lumi_process_resident_memory_bytes{service=~\"$service\"})",
           "legendFormat": "{{service}} avg"
         },
         {
-          "expr": "max by (service) (ember_process_resident_memory_bytes{service=~\"$service\"})",
+          "expr": "max by (service) (lumi_process_resident_memory_bytes{service=~\"$service\"})",
           "legendFormat": "{{service}} max"
         }
       ]
@@ -106,7 +106,7 @@
       },
       "targets": [
         {
-          "expr": "max by (service) (ember_nodejs_heap_size_used_bytes{service=~\"$service\"}) / clamp_min(max by (service) (ember_nodejs_heap_size_limit_bytes{service=~\"$service\"}), 1)",
+          "expr": "max by (service) (lumi_nodejs_heap_size_used_bytes{service=~\"$service\"}) / clamp_min(max by (service) (lumi_nodejs_heap_size_limit_bytes{service=~\"$service\"}), 1)",
           "legendFormat": "{{service}}"
         }
       ],
@@ -120,7 +120,7 @@
       "fieldConfig": { "defaults": { "unit": "decbytes" }, "overrides": [] },
       "targets": [
         {
-          "expr": "sum(ember_process_resident_memory_bytes{service=\"gateway\"}) / clamp_min(sum(ember_guild_count{service=\"gateway\"}), 1)",
+          "expr": "sum(lumi_process_resident_memory_bytes{service=\"gateway\"}) / clamp_min(sum(lumi_guild_count{service=\"gateway\"}), 1)",
           "legendFormat": "bytes/guild"
         }
       ],
@@ -134,7 +134,7 @@
       "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1, "min": 0 }, "overrides": [] },
       "targets": [
         {
-          "expr": "sum by (cache) (rate(ember_cache_hits_total[5m])) / clamp_min(sum by (cache) (rate(ember_cache_hits_total[5m])) + sum by (cache) (rate(ember_cache_misses_total[5m])), 1)",
+          "expr": "sum by (cache) (rate(lumi_cache_hits_total[5m])) / clamp_min(sum by (cache) (rate(lumi_cache_hits_total[5m])) + sum by (cache) (rate(lumi_cache_misses_total[5m])), 1)",
           "legendFormat": "{{cache}}"
         }
       ],
@@ -148,11 +148,11 @@
       "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1, "min": 0 }, "overrides": [] },
       "targets": [
         {
-          "expr": "max by (service) (ember_pg_pool_used) / clamp_min(max by (service) (ember_pg_pool_size), 1)",
+          "expr": "max by (service) (lumi_pg_pool_used) / clamp_min(max by (service) (lumi_pg_pool_size), 1)",
           "legendFormat": "{{service}} used"
         },
         {
-          "expr": "max by (service) (ember_pg_pool_waiting)",
+          "expr": "max by (service) (lumi_pg_pool_waiting)",
           "legendFormat": "{{service}} waiting"
         }
       ],
@@ -179,11 +179,11 @@
       },
       "targets": [
         {
-          "expr": "sum(ember_stream_consumer_lag{group=\"ember-workers\"})",
-          "legendFormat": "ember-workers pending"
+          "expr": "sum(lumi_stream_consumer_lag{group=\"lumi-workers\"})",
+          "legendFormat": "lumi-workers pending"
         },
         {
-          "expr": "sum by (stream) (ember_stream_consumer_lag{group=\"ember-workers\"})",
+          "expr": "sum by (stream) (lumi_stream_consumer_lag{group=\"lumi-workers\"})",
           "legendFormat": "{{stream}}"
         }
       ],

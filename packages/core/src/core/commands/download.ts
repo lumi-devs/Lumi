@@ -1,18 +1,18 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Args } from "@sapphire/framework";
 import type { Message } from "discord.js";
-import { EmberCommand } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import { makeSuccessCard, makeErrorCard } from "#utilities/cards.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 
-@ApplyOptions<EmberCommand.Options>({
+@ApplyOptions<BaseCommand.Options>({
   name: "download",
   aliases: ["dl"],
   description: "Install a module from a repository (Bot Owner Only)",
   permissionLevel: PermissionLevel.BOT_OWNER,
 })
-export class DownloadCommand extends EmberCommand {
+export class DownloadCommand extends BaseCommand {
   private get downloaderService(): import("#core/services/DownloaderService.js").DownloaderService {
     return this.container.stores
       .get("services")
@@ -41,22 +41,22 @@ export class DownloadCommand extends EmberCommand {
     try {
       await this.downloaderService.installModule(repoName, moduleName);
       this.container.logger.info(
-        `[Download] ${EmberEmojis.DOWNLOAD} Installed ${moduleName} from ${repoName} via message command`,
+        `[Download] ${Emojis.DOWNLOAD} Installed ${moduleName} from ${repoName} via message command`,
       );
       await message.reply({
         ...makeSuccessCard(
-          `${EmberEmojis.INSTALL} Module Installed`,
+          `${Emojis.INSTALL} Module Installed`,
           `Successfully installed and loaded **${moduleName}** from **${repoName}**.`,
         ),
       });
     } catch (err: unknown) {
       const error = err as Error;
       this.container.logger.warn(
-        `[Download] ${EmberEmojis.ERROR} Install failed: ${moduleName} — ${error.message}`,
+        `[Download] ${Emojis.ERROR} Install failed: ${moduleName} — ${error.message}`,
       );
       await message.reply({
         ...makeErrorCard(
-          `${EmberEmojis.ERROR} Failed to Install Module`,
+          `${Emojis.ERROR} Failed to Install Module`,
           error.message,
         ),
       });

@@ -10,7 +10,7 @@ import {
   restInvalidRequestWarnings,
   shardLatency,
   shardStatus,
-} from "@ember/observability";
+} from "@lumi/observability";
 import { isRestProxyEnabled } from "#core/lib/discord-rest.js";
 
 const REFRESH_MS = 15_000;

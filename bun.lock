@@ -21,59 +21,59 @@
       },
     },
     "apps/api": {
-      "name": "@ember/api",
+      "name": "@lumi/api",
       "version": "2.1.1",
       "dependencies": {
-        "@ember/worker": "workspace:*",
+        "@lumi/worker": "workspace:*",
       },
     },
     "apps/gateway": {
-      "name": "@ember/gateway",
+      "name": "@lumi/gateway",
       "version": "2.1.1",
       "dependencies": {
         "@discordjs/rest": "^2.6.0",
         "@discordjs/ws": "^2.0.0",
-        "@ember/contracts": "workspace:*",
-        "@ember/event-bus": "workspace:*",
-        "@ember/observability": "workspace:*",
-        "@ember/sharding": "workspace:*",
+        "@lumi/contracts": "workspace:*",
+        "@lumi/event-bus": "workspace:*",
+        "@lumi/observability": "workspace:*",
+        "@lumi/sharding": "workspace:*",
         "discord-api-types": "^0.38.30",
         "ioredis": "^5.4.0",
       },
     },
     "apps/scheduler": {
-      "name": "@ember/scheduler",
+      "name": "@lumi/scheduler",
       "version": "2.1.1",
       "dependencies": {
-        "@ember/worker": "workspace:*",
+        "@lumi/worker": "workspace:*",
       },
     },
     "apps/worker": {
-      "name": "@ember/worker",
+      "name": "@lumi/worker",
       "version": "2.1.1",
       "dependencies": {
-        "@ember/core": "workspace:*",
+        "@lumi/core": "workspace:*",
         "@sapphire/framework": "^5.5.0",
         "@sentry/node": "^10.53.1",
       },
     },
     "packages/contracts": {
-      "name": "@ember/contracts",
+      "name": "@lumi/contracts",
       "version": "2.1.1",
       "peerDependencies": {
         "discord.js": "^14.20.0",
       },
     },
     "packages/core": {
-      "name": "@ember/core",
+      "name": "@lumi/core",
       "version": "2.1.1",
       "dependencies": {
         "@discordjs/builders": "^1.10.0",
         "@discordjs/formatters": "^0.6.0",
-        "@ember/contracts": "workspace:*",
-        "@ember/event-bus": "workspace:*",
-        "@ember/observability": "workspace:*",
-        "@ember/sharding": "workspace:*",
+        "@lumi/contracts": "workspace:*",
+        "@lumi/event-bus": "workspace:*",
+        "@lumi/observability": "workspace:*",
+        "@lumi/sharding": "workspace:*",
         "@prisma/adapter-pg": "^7.8.0",
         "@prisma/client": "^7.8.0",
         "@sapphire/async-queue": "^1.5.5",
@@ -107,17 +107,17 @@
       },
     },
     "packages/event-bus": {
-      "name": "@ember/event-bus",
+      "name": "@lumi/event-bus",
       "version": "2.1.1",
       "dependencies": {
-        "@ember/contracts": "workspace:*",
-        "@ember/observability": "workspace:*",
+        "@lumi/contracts": "workspace:*",
+        "@lumi/observability": "workspace:*",
         "ioredis": "^5.4.0",
         "nats": "^2.29.0",
       },
     },
     "packages/observability": {
-      "name": "@ember/observability",
+      "name": "@lumi/observability",
       "version": "2.1.1",
       "dependencies": {
         "@opentelemetry/api": "^1.9.0",
@@ -138,15 +138,15 @@
       },
     },
     "packages/sdk": {
-      "name": "@ember/sdk",
+      "name": "@lumi/sdk",
       "version": "2.1.1",
       "dependencies": {
-        "@ember/contracts": "workspace:*",
-        "@ember/core": "workspace:*",
+        "@lumi/contracts": "workspace:*",
+        "@lumi/core": "workspace:*",
       },
     },
     "packages/sharding": {
-      "name": "@ember/sharding",
+      "name": "@lumi/sharding",
       "version": "2.1.1",
       "dependencies": {
         "@discordjs/collection": "^2.1.1",
@@ -181,26 +181,6 @@
 
     "@electric-sql/pglite-tools": ["@electric-sql/pglite-tools@0.3.1", "", { "peerDependencies": { "@electric-sql/pglite": "0.4.1" } }, "sha512-C+T3oivmy9bpQvSxVqXA1UDY8cB9Eb9vZHL9zxWwEUfDixbXv4G3r2LjoTdR33LD8aomR3O9ZXEO3XEwr/cUCA=="],
 
-    "@ember/api": ["@ember/api@workspace:apps/api"],
-
-    "@ember/contracts": ["@ember/contracts@workspace:packages/contracts"],
-
-    "@ember/core": ["@ember/core@workspace:packages/core"],
-
-    "@ember/event-bus": ["@ember/event-bus@workspace:packages/event-bus"],
-
-    "@ember/gateway": ["@ember/gateway@workspace:apps/gateway"],
-
-    "@ember/observability": ["@ember/observability@workspace:packages/observability"],
-
-    "@ember/scheduler": ["@ember/scheduler@workspace:apps/scheduler"],
-
-    "@ember/sdk": ["@ember/sdk@workspace:packages/sdk"],
-
-    "@ember/sharding": ["@ember/sharding@workspace:packages/sharding"],
-
-    "@ember/worker": ["@ember/worker@workspace:apps/worker"],
-
     "@emnapi/core": ["@emnapi/core@1.10.0", "", { "dependencies": { "@emnapi/wasi-threads": "1.2.1", "tslib": "^2.4.0" } }, "sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw=="],
 
     "@emnapi/runtime": ["@emnapi/runtime@1.10.0", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-ewvYlk86xUoGI0zQRNq/mC+16R1QeDlKQy21Ki3oSYXNgLb45GV1P6A0M+/s6nyCuNDqe5VpaY84BzXGwVbwFA=="],
@@ -230,6 +210,26 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 
     "@kurkle/color": ["@kurkle/color@0.3.4", "", {}, "sha512-M5UknZPHRu3DEDWoipU6sE8PdkZ6Z/S+v4dD+Ke8IaNlpdSQah50lz1KtcFBa2vsdOnwbbnxJwVM4wty6udA5w=="],
+
+    "@lumi/api": ["@lumi/api@workspace:apps/api"],
+
+    "@lumi/contracts": ["@lumi/contracts@workspace:packages/contracts"],
+
+    "@lumi/core": ["@lumi/core@workspace:packages/core"],
+
+    "@lumi/event-bus": ["@lumi/event-bus@workspace:packages/event-bus"],
+
+    "@lumi/gateway": ["@lumi/gateway@workspace:apps/gateway"],
+
+    "@lumi/observability": ["@lumi/observability@workspace:packages/observability"],
+
+    "@lumi/scheduler": ["@lumi/scheduler@workspace:apps/scheduler"],
+
+    "@lumi/sdk": ["@lumi/sdk@workspace:packages/sdk"],
+
+    "@lumi/sharding": ["@lumi/sharding@workspace:packages/sharding"],
+
+    "@lumi/worker": ["@lumi/worker@workspace:apps/worker"],
 
     "@msgpackr-extract/msgpackr-extract-darwin-arm64": ["@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.3", "", { "os": "darwin", "cpu": "arm64" }, "sha512-QZHtlVgbAdy2zAqNA9Gu1UpIuI8Xvsd1v8ic6B2pZmeFnFcMWiPLfWXh7TVw4eGEZ/C9TH281KwhVoeQUKbyjw=="],
 
@@ -1365,13 +1365,13 @@
 
     "zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
-    "@ember/sharding/@discordjs/ws": ["@discordjs/ws@1.2.3", "", { "dependencies": { "@discordjs/collection": "^2.1.0", "@discordjs/rest": "^2.5.1", "@discordjs/util": "^1.1.0", "@sapphire/async-queue": "^1.5.2", "@types/ws": "^8.5.10", "@vladfrangu/async_event_emitter": "^2.2.4", "discord-api-types": "^0.38.1", "tslib": "^2.6.2", "ws": "^8.17.0" } }, "sha512-wPlQDxEmlDg5IxhJPuxXr3Vy9AjYq5xCvFWGJyD7w7Np8ZGu+Mc+97LCoEc/+AYCo2IDpKioiH0/c/mj5ZR9Uw=="],
-
     "@eslint/eslintrc/strip-json-comments": ["strip-json-comments@3.1.1", "", {}, "sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig=="],
 
     "@fastify/otel/@opentelemetry/instrumentation": ["@opentelemetry/instrumentation@0.212.0", "", { "dependencies": { "@opentelemetry/api-logs": "0.212.0", "import-in-the-middle": "^2.0.6", "require-in-the-middle": "^8.0.0" }, "peerDependencies": { "@opentelemetry/api": "^1.3.0" } }, "sha512-IyXmpNnifNouMOe0I/gX7ENfv2ZCNdYTF0FpCsoBcpbIHzk81Ww9rQTYTnvghszCg7qGrIhNvWC8dhEifgX9Jg=="],
 
     "@fastify/otel/minimatch": ["minimatch@10.2.5", "", { "dependencies": { "brace-expansion": "^5.0.5" } }, "sha512-MULkVLfKGYDFYejP07QOurDLLQpcjk7Fw+7jXS2R2czRQzR56yHRveU5NDJEOviH+hETZKSkIk5c+T23GjFUMg=="],
+
+    "@lumi/sharding/@discordjs/ws": ["@discordjs/ws@1.2.3", "", { "dependencies": { "@discordjs/collection": "^2.1.0", "@discordjs/rest": "^2.5.1", "@discordjs/util": "^1.1.0", "@sapphire/async-queue": "^1.5.2", "@types/ws": "^8.5.10", "@vladfrangu/async_event_emitter": "^2.2.4", "discord-api-types": "^0.38.1", "tslib": "^2.6.2", "ws": "^8.17.0" } }, "sha512-wPlQDxEmlDg5IxhJPuxXr3Vy9AjYq5xCvFWGJyD7w7Np8ZGu+Mc+97LCoEc/+AYCo2IDpKioiH0/c/mj5ZR9Uw=="],
 
     "@opentelemetry/exporter-trace-otlp-http/@opentelemetry/core": ["@opentelemetry/core@2.6.1", "", { "dependencies": { "@opentelemetry/semantic-conventions": "^1.29.0" }, "peerDependencies": { "@opentelemetry/api": ">=1.0.0 <1.10.0" } }, "sha512-8xHSGWpJP9wBxgBpnqGL0R3PbdWQndL1Qp50qrg71+B28zK5OQmUgcDKLJgzyAAV38t4tOyLMGDD60LneR5W8g=="],
 

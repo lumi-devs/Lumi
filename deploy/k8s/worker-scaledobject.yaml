@@ -15,7 +15,7 @@ apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: worker
-  namespace: ember
+  namespace: lumi
 spec:
   scaleTargetRef:
     name: worker
@@ -43,16 +43,16 @@ spec:
     - type: prometheus
       metadata:
         serverAddress: http://prometheus.observability.svc.cluster.local:9090
-        metricName: ember_stream_consumer_lag_workers
+        metricName: lumi_stream_consumer_lag_workers
         threshold: "500"
         query: |
-          sum(ember_stream_consumer_lag{group="ember-workers"})
+          sum(lumi_stream_consumer_lag{group="lumi-workers"})
     # Belt-and-braces second trigger: scale on DLQ growth too, so a poison
     # message that pegs one replica's handler doesn't hide the backlog.
     - type: prometheus
       metadata:
         serverAddress: http://prometheus.observability.svc.cluster.local:9090
-        metricName: ember_stream_dlq_length_workers
+        metricName: lumi_stream_dlq_length_workers
         threshold: "10"
         query: |
-          sum(ember_stream_dlq_length)
+          sum(lumi_stream_dlq_length)

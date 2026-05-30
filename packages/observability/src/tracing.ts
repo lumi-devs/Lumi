@@ -31,7 +31,7 @@ import {
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
 
-const TRACER_NAME = "ember";
+const TRACER_NAME = "lumi";
 let provider: NodeTracerProvider | null = null;
 
 export interface TracingOptions {

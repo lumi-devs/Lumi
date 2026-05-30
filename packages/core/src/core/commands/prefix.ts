@@ -9,16 +9,16 @@ import {
   type ChatInputCommandInteraction,
   type Message,
 } from "discord.js";
-import { EmberSubcommand } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel, resolvePermissionLevel } from "#lib/permissions.js";
 import {
   makeSuccessCard,
   makeErrorCard,
   ephemeralCard,
 } from "#utilities/cards.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 
-@ApplyOptions<EmberSubcommand.Options>({
+@ApplyOptions<BaseSubcommand.Options>({
   name: "prefix",
   description: "View or change the command prefix for this server",
   preconditions: ["GuildOnly"],
@@ -36,7 +36,7 @@ import { EmberEmojis } from "#utilities/assets.js";
     },
   ],
 })
-export class PrefixCommand extends EmberSubcommand {
+export class PrefixCommand extends BaseSubcommand {
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {
@@ -116,11 +116,11 @@ export class PrefixCommand extends EmberSubcommand {
 
     await this.guildSettingsService.setPrefix(guildId, newPrefix);
     this.container.logger.debug(
-      `[Prefix] ${EmberEmojis.GEAR} Guild ${guildId} prefix changed to '${newPrefix}' by ${message.author.tag}`,
+      `[Prefix] ${Emojis.GEAR} Guild ${guildId} prefix changed to '${newPrefix}' by ${message.author.tag}`,
     );
     return message.reply(
       makeSuccessCard(
-        `${EmberEmojis.GEAR} Prefix Updated`,
+        `${Emojis.GEAR} Prefix Updated`,
         `The prefix for this server has been set to \`${newPrefix}\`.`,
       ),
     );
@@ -141,11 +141,11 @@ export class PrefixCommand extends EmberSubcommand {
 
     await this.guildSettingsService.resetPrefix(guildId);
     this.container.logger.debug(
-      `[Prefix] ${EmberEmojis.GEAR} Guild ${guildId} prefix reset by ${message.author.tag}`,
+      `[Prefix] ${Emojis.GEAR} Guild ${guildId} prefix reset by ${message.author.tag}`,
     );
     return message.reply(
       makeSuccessCard(
-        `${EmberEmojis.GEAR} Prefix Reset`,
+        `${Emojis.GEAR} Prefix Reset`,
         "The prefix for this server has been reset to the default.",
       ),
     );
@@ -182,12 +182,12 @@ export class PrefixCommand extends EmberSubcommand {
 
     await this.guildSettingsService.setPrefix(guildId, newPrefix);
     this.container.logger.debug(
-      `[Prefix] ${EmberEmojis.GEAR} Guild ${guildId} prefix changed to '${newPrefix}' by ${interaction.user.tag}`,
+      `[Prefix] ${Emojis.GEAR} Guild ${guildId} prefix changed to '${newPrefix}' by ${interaction.user.tag}`,
     );
     return interaction.reply({
       ...ephemeralCard(
         makeSuccessCard(
-          `${EmberEmojis.GEAR} Prefix Updated`,
+          `${Emojis.GEAR} Prefix Updated`,
           `The prefix for this server has been set to \`${newPrefix}\`.`,
         ),
       ),
@@ -200,12 +200,12 @@ export class PrefixCommand extends EmberSubcommand {
 
     await this.guildSettingsService.resetPrefix(guildId);
     this.container.logger.debug(
-      `[Prefix] ${EmberEmojis.GEAR} Guild ${guildId} prefix reset by ${interaction.user.tag}`,
+      `[Prefix] ${Emojis.GEAR} Guild ${guildId} prefix reset by ${interaction.user.tag}`,
     );
     return interaction.reply({
       ...ephemeralCard(
         makeSuccessCard(
-          `${EmberEmojis.GEAR} Prefix Reset`,
+          `${Emojis.GEAR} Prefix Reset`,
           "The prefix for this server has been reset to the default.",
         ),
       ),

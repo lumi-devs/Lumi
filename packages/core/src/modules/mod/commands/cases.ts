@@ -8,7 +8,7 @@ import {
   type Message,
   MessageFlags,
 } from "discord.js";
-import { EmberSubcommand } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import {
   makeInfoCard,
@@ -18,7 +18,7 @@ import {
 } from "#utilities/cards.js";
 import { decrementWarnCount } from "../lib/thresholds.js";
 
-@ApplyOptions<EmberSubcommand.Options>({
+@ApplyOptions<BaseSubcommand.Options>({
   name: "cases",
   description: "View or modify moderation cases",
   preconditions: ["GuildOnly"],
@@ -37,7 +37,7 @@ import { decrementWarnCount } from "../lib/thresholds.js";
     },
   ],
 })
-export class CasesCommand extends EmberSubcommand {
+export class CasesCommand extends BaseSubcommand {
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {

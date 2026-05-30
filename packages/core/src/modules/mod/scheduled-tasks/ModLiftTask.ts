@@ -19,3 +19,9 @@ export class ModLiftTask extends ScheduledTask<"mod-lift"> {
     await publishTaskFire("mod-lift", payload);
   }
 }
+
+declare module "@sapphire/plugin-scheduled-tasks" {
+  interface ScheduledTasks {
+    "mod-lift": ModLiftPayload;
+  }
+}

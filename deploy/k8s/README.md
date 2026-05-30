@@ -12,7 +12,7 @@ The k8s manifests assume:
   lives elsewhere).
 - Postgres + Redis + RabbitMQ provided externally (managed services, or the
   in-cluster `ha` profile) — these manifests do **not** ship the data plane.
-- A `ember` namespace; create with `kubectl apply -f namespace.yaml`.
+- A `lumi` namespace; create with `kubectl apply -f namespace.yaml`.
 
 ## Topology
 
@@ -38,12 +38,12 @@ kubectl apply -f api-deployment.yaml
 ## How the autoscaler decides
 
 `worker-scaledobject.yaml` uses KEDA's **Prometheus trigger** against the
-metric our worker emits today (`ember_stream_consumer_lag`, exported on
-`:9090/metrics` by `@ember/observability`). The query sums pending entries
-across every gateway stream for the `ember-workers` consumer group:
+metric our worker emits today (`lumi_stream_consumer_lag`, exported on
+`:9090/metrics` by `@lumi/observability`). The query sums pending entries
+across every gateway stream for the `lumi-workers` consumer group:
 
 ```promql
-sum(ember_stream_consumer_lag{group="ember-workers"})
+sum(lumi_stream_consumer_lag{group="lumi-workers"})
 ```
 
 - `threshold: 500` — KEDA targets one replica per 500 pending entries.
@@ -61,8 +61,8 @@ sum(ember_stream_consumer_lag{group="ember-workers"})
 ## Verifying
 
 ```bash
-kubectl -n ember get scaledobject worker -o jsonpath='{.status}' | jq
-kubectl -n ember describe hpa keda-hpa-worker
+kubectl -n lumi get scaledobject worker -o jsonpath='{.status}' | jq
+kubectl -n lumi describe hpa keda-hpa-worker
 ```
 
 For the local equivalent (compose), see `scripts/chaos-autoscale.ts` — it

@@ -1,19 +1,19 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Args } from "@sapphire/framework";
-import { EmberSubcommand } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import type { Message } from "discord.js";
 import { makeSuccessCard, makeErrorCard } from "#utilities/cards.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 
-@ApplyOptions<EmberSubcommand.Options>({
+@ApplyOptions<BaseSubcommand.Options>({
   name: "dashboard",
   description: "Manage dashboard configuration and layout",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.GUILD_OWNER,
   subcommands: [{ name: "layout", messageRun: "messageRunLayout" }],
 })
-export class DashboardCommand extends EmberSubcommand {
+export class DashboardCommand extends BaseSubcommand {
   private get guildSettingsService(): import("#core/services/GuildSettingsService.js").GuildSettingsService {
     return this.container.stores
       .get("services")
@@ -42,11 +42,11 @@ export class DashboardCommand extends EmberSubcommand {
         rawLayout,
       );
       this.container.logger.info(
-        `[Dashboard] ${EmberEmojis.GEAR} Layout updated for guild ${guildId} by ${message.author.tag}`,
+        `[Dashboard] ${Emojis.GEAR} Layout updated for guild ${guildId} by ${message.author.tag}`,
       );
       await message.reply(
         makeSuccessCard(
-          `${EmberEmojis.GEAR} Layout Updated`,
+          `${Emojis.GEAR} Layout Updated`,
           `Dashboard layout updated successfully to: \`${JSON.stringify(layout)}\``,
         ),
       );

@@ -7,8 +7,8 @@ import type { ButtonInteraction } from "discord.js";
 import { userMention, channelMention } from "@discordjs/formatters";
 import { makeListCard } from "#utilities/cards.js";
 import { formatUptime } from "#utilities/time.js";
-import { EmberInteractionHandler } from "#core/lib/interaction-handler.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
+import { Emojis } from "#utilities/assets.js";
 import { getAfkMentions } from "../data/afk.js";
 
 const PAGE_SIZE = 5;
@@ -16,7 +16,7 @@ const PAGE_SIZE = 5;
 @ApplyOptions<InteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,
 })
-export default class AfkMentionsHandler extends EmberInteractionHandler {
+export default class AfkMentionsHandler extends BaseInteractionHandler {
   public override parse(interaction: ButtonInteraction) {
     if (!interaction.customId.startsWith("afk:mentions:")) return this.none();
     const [, , userId, page] = interaction.customId.split(":");
@@ -33,7 +33,7 @@ export default class AfkMentionsHandler extends EmberInteractionHandler {
     const mentions = await getAfkMentions(interaction.guildId!, userId);
 
     const card = makeListCard(
-      `${EmberEmojis.MAIL} Recent Mentions`,
+      `${Emojis.MAIL} Recent Mentions`,
       mentions.map(
         (m) =>
           `${userMention(m.authorId)} in ${channelMention(m.channelId)} — ${formatUptime(Date.now() - m.ts * 1000)} ago\n[Jump to Message](https://discord.com/channels/${interaction.guildId}/${m.channelId}/${m.messageId})`,

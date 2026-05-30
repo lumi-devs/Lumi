@@ -1,12 +1,12 @@
-import { Module, EmberModule, cfg } from "#core/module-system/Module.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
+import { Emojis } from "#utilities/assets.js";
 import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
 import { handleThreadCleanerFire } from "./lib/cleanup-handler.js";
 
-@EmberModule({
+@DefineModule({
   name: "thread_cleaner",
   displayName: "Thread Cleaner",
-  emoji: EmberEmojis.CLEANUP,
+  emoji: Emojis.CLEANUP,
   version: "1.0.0",
   description: "Automatically archives threads after a period of inactivity.",
   configSchema: cfg.object({

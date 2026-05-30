@@ -1,13 +1,13 @@
 // Scheduler-side: consume `RequestEnvelope`s published by other roles and
 // translate them into the local BullMQ-backed `container.tasks` operations.
-// Started by EmberClient.login() when `roleOwnsScheduler(role)` is true.
+// Started by LumiClient.login() when `roleOwnsScheduler(role)` is true.
 //
 // Redeliveries are safe: workers stamp `customJobOptions.jobId` for cancel/replace
 // and BullMQ deduplicates by jobId, so re-applying a redelivery (deliveryCount >= 2)
 // is fine as long as we don't error out on "already exists".
 
 import { container } from "@sapphire/framework";
-import type { EventBus, BusMessage } from "@ember/event-bus";
+import type { EventBus, BusMessage } from "@lumi/event-bus";
 import {
   SCHEDULER_REQUEST_STREAM,
   type RequestEnvelope,
@@ -32,7 +32,7 @@ export class SchedulerRequestConsumer {
     this.stop = await this.bus.consume<RequestEnvelope>(
       [SCHEDULER_REQUEST_STREAM],
       {
-        group: this.opts.group ?? "ember-scheduler",
+        group: this.opts.group ?? "lumi-scheduler",
         consumer: this.opts.consumerId,
         blockMs: this.opts.blockMs,
         batchSize: this.opts.batchSize,

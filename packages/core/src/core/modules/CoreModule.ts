@@ -10,14 +10,14 @@ import {
   type RepoModulesPayload,
   type ModuleInstallPayload,
   type ModuleUninstallPayload,
-} from "@ember/contracts";
+} from "@lumi/contracts";
 import { resolver } from "../lib/downloader/resolver.js";
 import {
   executeGdprDeletion,
   GdprDeletionError,
   RequesterType,
 } from "../lib/gdpr.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
@@ -62,7 +62,7 @@ export class CoreModule extends Module {
       isCore: true,
       displayName: "Core",
       description: "The built-in core module.",
-      emoji: EmberEmojis.SHIELD,
+      emoji: Emojis.SHIELD,
     });
   }
 

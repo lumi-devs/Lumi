@@ -11,8 +11,8 @@ import {
   rawGatewayStream,
   type RawGatewayEnvelope,
   type RawGatewayPacket,
-} from "@ember/contracts";
-import { injectTraceContext } from "@ember/observability";
+} from "@lumi/contracts";
+import { injectTraceContext } from "@lumi/observability";
 
 interface DjsShardLike {
   id: number;

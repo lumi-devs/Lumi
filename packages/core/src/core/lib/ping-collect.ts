@@ -207,13 +207,13 @@ function parseRedisInfo(raw: string) {
 
 async function probeRedisRead(redis: Redis) {
   const t = Date.now();
-  await redis.get("ember:ping:probe");
+  await redis.get("lumi:ping:probe");
   return Date.now() - t;
 }
 
 async function probeRedisWrite(redis: Redis) {
   const t = Date.now();
-  await redis.set("ember:ping:probe", "1", "EX", 30);
+  await redis.set("lumi:ping:probe", "1", "EX", 30);
   return Date.now() - t;
 }
 
@@ -493,7 +493,7 @@ export async function collectPingData(): Promise<Omit<PingData, "roundTrip">> {
   let rabbitConsumers = 0;
   if (rabbit) {
     try {
-      const q = await rabbit.channel.checkQueue("ember.rpc.requests");
+      const q = await rabbit.channel.checkQueue("lumi.rpc.requests");
       rabbitQueued = q.messageCount;
       rabbitConsumers = q.consumerCount;
     } catch (err: unknown) {
@@ -549,7 +549,7 @@ export async function collectPingData(): Promise<Omit<PingData, "roundTrip">> {
     modules: moduleStore.loaded(),
     avatarURL:
       client.user?.displayAvatarURL({ size: 256, extension: "png" }) ?? "",
-    botName: client.user?.username ?? "Ember",
+    botName: client.user?.username ?? "Lumi",
     botId: client.user?.id ?? "",
     sessionCommandCount,
     depCount,

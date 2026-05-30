@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ChannelType } from "discord.js";
-import { FieldType, type ConfigField } from "@ember/contracts";
+import { FieldType, type ConfigField } from "@lumi/contracts";
 
 export { FieldType, type ConfigField };
 

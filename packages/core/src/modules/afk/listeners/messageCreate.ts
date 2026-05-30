@@ -14,12 +14,12 @@ import {
   type Message,
   PermissionsBitField,
 } from "discord.js";
-import { EmberColors } from "#utilities/branding.js";
+import { Colors } from "#utilities/branding.js";
 import { makeCard } from "#utilities/cards.js";
 import { logError } from "#utilities/errors.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import { AfkKeys } from "../keys.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 import {
   AFK_MENTION_COOLDOWN_MS,
   AFK_NICK_EDIT_COOLDOWN_MS,
@@ -101,16 +101,14 @@ export default class AFKMessageCreateListener extends Listener<
           new ButtonBuilder()
             .setCustomId(`afk:mentions:${guildId}:${userId}`)
             .setLabel(`View Mentions (${mentions.length})`)
-            .setEmoji(EmberEmojis.parse(EmberEmojis.MAIL))
+            .setEmoji(Emojis.parse(Emojis.MAIL))
             .setStyle(ButtonStyle.Secondary),
         )
       : null;
 
     const welcomeCard = new ContainerBuilder();
     welcomeCard.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `**${EmberEmojis.WAVE} Welcome Back!**`,
-      ),
+      new TextDisplayBuilder().setContent(`**${Emojis.WAVE} Welcome Back!**`),
     );
     welcomeCard.addSeparatorComponents(
       new SeparatorBuilder()
@@ -208,8 +206,8 @@ export default class AFKMessageCreateListener extends Listener<
     const sent = await message
       .reply({
         ...makeCard(
-          EmberColors.GOLD,
-          `${EmberEmojis.AFK} ${name} is AFK`,
+          Colors.GOLD,
+          `${Emojis.AFK} ${name} is AFK`,
           `**Reason:** ${sanitizeReason(entry.reason)}\n**AFK for:** ${afkDurationSince(entry.since)}`,
         ),
         allowedMentions: { repliedUser: true },

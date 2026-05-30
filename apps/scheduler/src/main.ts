@@ -1,17 +1,17 @@
-// Real scheduler entrypoint. Boots a full EmberClient in the `scheduler`
+// Real scheduler entrypoint. Boots a full LumiClient in the `scheduler`
 // role: no Discord WebSocket (ws.connect is patched out), but BullMQ Queue +
 // Worker are active. Workers and the monolith publish RequestEnvelopes onto
-// `ember.scheduler.request` (workers) or call `container.tasks.create()`
+// `lumi.scheduler.request` (workers) or call `container.tasks.create()`
 // directly (monolith); when a BullMQ job fires, each ScheduledTask piece
-// re-publishes the effect onto `ember.scheduler.fire:<name>` for workers to
+// re-publishes the effect onto `lumi.scheduler.fire:<name>` for workers to
 // execute (see packages/core/src/core/lib/scheduler-bus.ts).
 import "./service-name.js";
-import "@ember/core/setup";
+import "@lumi/core/setup";
 
 import { container } from "@sapphire/framework";
-import { shutdownTracing, runDrainSequence } from "@ember/observability";
+import { shutdownTracing, runDrainSequence } from "@lumi/observability";
 import * as Sentry from "@sentry/node";
-import { EmberClient, envIsDefined, envParseString } from "@ember/core";
+import { LumiClient, envIsDefined, envParseString } from "@lumi/core";
 
 if (
   envParseString("SENTRY_ENABLED", "false") === "true" &&
@@ -29,7 +29,7 @@ if (
   });
 }
 
-const client = await EmberClient.bootstrap({ role: "scheduler" });
+const client = await LumiClient.bootstrap({ role: "scheduler" });
 
 let shuttingDown = false;
 ["SIGINT", "SIGTERM"].forEach((sig) => {
@@ -44,7 +44,7 @@ let shuttingDown = false;
     log("info", `${sig} received`);
     await runDrainSequence(
       [
-        // EmberClient.destroy() releases the scheduler leader lock first
+        // LumiClient.destroy() releases the scheduler leader lock first
         // (so a follower can SET NX EX it inside the poll interval) before
         // closing the BullMQ queues/workers + transports.
         { name: "client-destroy", run: () => client.destroy() },

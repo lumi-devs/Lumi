@@ -7,7 +7,7 @@ import {
   type GuildMember,
   MessageFlags,
 } from "discord.js";
-import { EmberCommand } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import {
   makeSuccessCard,
@@ -23,13 +23,13 @@ function sanitizeName(name: string): string {
   return dehoisted.length >= 2 ? dehoisted : "Sanitized User";
 }
 
-@ApplyOptions<EmberCommand.Options>({
+@ApplyOptions<BaseCommand.Options>({
   name: "sanitize",
   description: "Remove hoisting characters from a member's nickname",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.MOD,
 })
-export class SanitizeCommand extends EmberCommand {
+export class SanitizeCommand extends BaseCommand {
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {

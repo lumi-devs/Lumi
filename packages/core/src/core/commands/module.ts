@@ -1,6 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Args } from "@sapphire/framework";
-import { EmberSubcommand } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle, type Message } from "discord.js";
@@ -10,11 +10,11 @@ import {
   makeWarningCard,
   makeInfoCard,
 } from "#utilities/cards.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 import { errorFrom } from "#utilities/errors.js";
 import { ModuleAlreadyInstalledError } from "#core/services/DownloaderService.js";
 
-@ApplyOptions<EmberSubcommand.Options>({
+@ApplyOptions<BaseSubcommand.Options>({
   name: "module",
   description: "Manage installation of third-party modules",
   preconditions: ["GuildOnly"],
@@ -26,7 +26,7 @@ import { ModuleAlreadyInstalledError } from "#core/services/DownloaderService.js
     { name: "help", messageRun: "messageRunHelp", default: true },
   ],
 })
-export class ModuleCommand extends EmberSubcommand {
+export class ModuleCommand extends BaseSubcommand {
   private get downloaderService(): import("#core/services/DownloaderService.js").DownloaderService {
     return this.container.stores
       .get("services")
@@ -59,11 +59,11 @@ export class ModuleCommand extends EmberSubcommand {
     try {
       await this.downloaderService.installModule(repoName, moduleName);
       this.container.logger.debug(
-        `[Module] ${EmberEmojis.INSTALL} Installed: ${moduleName} from ${repoName} by ${message.author.tag}`,
+        `[Module] ${Emojis.INSTALL} Installed: ${moduleName} from ${repoName} by ${message.author.tag}`,
       );
       await msg.edit(
         makeSuccessCard(
-          `${EmberEmojis.INSTALL} Module Installed`,
+          `${Emojis.INSTALL} Module Installed`,
           `Successfully installed and loaded **${moduleName}** from **${repoName}**.`,
         ),
       );
@@ -73,12 +73,12 @@ export class ModuleCommand extends EmberSubcommand {
           new ButtonBuilder()
             .setCustomId(`module:update:${moduleName}:${message.author.id}`)
             .setLabel("Update Module")
-            .setEmoji(EmberEmojis.parse(EmberEmojis.DOWNLOAD))
+            .setEmoji(Emojis.parse(Emojis.DOWNLOAD))
             .setStyle(ButtonStyle.Primary),
         );
         await msg.edit(
           makeWarningCard(
-            `${EmberEmojis.WARNING} Already Installed`,
+            `${Emojis.WARNING} Already Installed`,
             `**${moduleName}** is already installed. Would you like to update it instead?`,
             { actionRows: [updateRow] },
           ),
@@ -88,11 +88,11 @@ export class ModuleCommand extends EmberSubcommand {
 
       const error = err as Error;
       this.container.logger.warn(
-        `[Module] ${EmberEmojis.ERROR} Install failed: ${moduleName} — ${error.message}`,
+        `[Module] ${Emojis.ERROR} Install failed: ${moduleName} — ${error.message}`,
       );
       await msg.edit(
         makeErrorCard(
-          `${EmberEmojis.ERROR} Failed to Install Module`,
+          `${Emojis.ERROR} Failed to Install Module`,
           error.message,
         ),
       );
@@ -122,22 +122,22 @@ export class ModuleCommand extends EmberSubcommand {
     try {
       await this.downloaderService.uninstallModule(moduleName);
       this.container.logger.debug(
-        `[Module] ${EmberEmojis.UNINSTALL} Uninstalled: ${moduleName} by ${message.author.tag}`,
+        `[Module] ${Emojis.UNINSTALL} Uninstalled: ${moduleName} by ${message.author.tag}`,
       );
       await msg.edit(
         makeSuccessCard(
-          `${EmberEmojis.UNINSTALL} Module Uninstalled`,
+          `${Emojis.UNINSTALL} Module Uninstalled`,
           `Successfully uninstalled **${moduleName}**.`,
         ),
       );
     } catch (err: unknown) {
       const error = err as Error;
       this.container.logger.warn(
-        `[Module] ${EmberEmojis.ERROR} Uninstall failed: ${moduleName} — ${error.message}`,
+        `[Module] ${Emojis.ERROR} Uninstall failed: ${moduleName} — ${error.message}`,
       );
       await msg.edit(
         makeErrorCard(
-          `${EmberEmojis.ERROR} Failed to Uninstall Module`,
+          `${Emojis.ERROR} Failed to Uninstall Module`,
           error.message,
         ),
       );
@@ -160,7 +160,7 @@ export class ModuleCommand extends EmberSubcommand {
       const msg = await message.reply(
         makeInfoCard(
           "Updating Module",
-          `${EmberEmojis.LOADING} Checking and downloading updates for **${moduleName}**...`,
+          `${Emojis.LOADING} Checking and downloading updates for **${moduleName}**...`,
         ),
       );
 
@@ -173,14 +173,14 @@ export class ModuleCommand extends EmberSubcommand {
 
           await msg.edit(
             makeSuccessCard(
-              `${EmberEmojis.DOWNLOAD} Module Updated`,
+              `${Emojis.DOWNLOAD} Module Updated`,
               `Successfully updated and hot-reloaded **${moduleName}**!\n\n${changelogStr}`,
             ),
           );
         } else {
           await msg.edit(
             makeSuccessCard(
-              `${EmberEmojis.CHECK} Module Up-To-Date`,
+              `${Emojis.CHECK} Module Up-To-Date`,
               `**${moduleName}** is already running the latest version!`,
             ),
           );
@@ -188,14 +188,14 @@ export class ModuleCommand extends EmberSubcommand {
       } catch (err: unknown) {
         const error = err as Error;
         await msg.edit(
-          makeErrorCard(`${EmberEmojis.ERROR} Update Failed`, error.message),
+          makeErrorCard(`${Emojis.ERROR} Update Failed`, error.message),
         );
       }
     } else {
       const msg = await message.reply(
         makeInfoCard(
           "Updating All Modules",
-          `${EmberEmojis.LOADING} Scanning and updating all installed modules...`,
+          `${Emojis.LOADING} Scanning and updating all installed modules...`,
         ),
       );
 
@@ -245,10 +245,7 @@ export class ModuleCommand extends EmberSubcommand {
       } catch (err: unknown) {
         const error = err as Error;
         await msg.edit(
-          makeErrorCard(
-            `${EmberEmojis.ERROR} Multi-Update Failed`,
-            error.message,
-          ),
+          makeErrorCard(`${Emojis.ERROR} Multi-Update Failed`, error.message),
         );
       }
     }

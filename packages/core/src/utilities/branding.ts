@@ -1,3 +1,3 @@
 import { BotConfig } from "./config.js";
 
-export const EmberColors = BotConfig.branding.colors;
+export const Colors = BotConfig.branding.colors;

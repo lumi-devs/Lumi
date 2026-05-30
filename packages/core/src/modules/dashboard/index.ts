@@ -1,11 +1,11 @@
-import { Module, EmberModule } from "#core/module-system/Module.js";
+import { Module, DefineModule } from "#core/module-system/Module.js";
 import { container } from "@sapphire/framework";
 import { registerRpcHandler, deregisterRpcHandler } from "#lib/rabbit.js";
 import {
   RPC_ACTIONS,
   type ModuleTogglePayload,
   type ConfigSetPayload,
-} from "@ember/contracts";
+} from "@lumi/contracts";
 import { z } from "zod";
 
 const SnowflakeSchema = z.string().regex(/^\d{17,20}$/);
@@ -21,13 +21,13 @@ const ConfigSetSchema: z.ZodType<ConfigSetPayload> = z.object({
   value: z.unknown(),
 });
 
-@EmberModule({
+@DefineModule({
   name: "dashboard",
   displayName: "Dashboard",
   emoji: "🖥️",
   version: "1.0.0",
   description:
-    "Integrates the bot with the Ember Web Dashboard. Provides RPC endpoints for management.",
+    "Integrates the bot with the Lumi Web Dashboard. Provides RPC endpoints for management.",
 })
 export class DashboardModule extends Module {
   public override onLoad() {

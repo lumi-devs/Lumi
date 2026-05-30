@@ -27,8 +27,8 @@ import {
   createEventBus,
   attachProxyPublisher,
   type OwnedEventBus,
-} from "@ember/event-bus";
-import { rawGatewayStream, type RawGatewayEnvelope } from "@ember/contracts";
+} from "@lumi/event-bus";
+import { rawGatewayStream, type RawGatewayEnvelope } from "@lumi/contracts";
 import {
   injectTraceContext,
   streamLength,
@@ -39,7 +39,7 @@ import {
   restInvalidRequestWarnings,
   registerReadinessProbe,
   runDrainSequence,
-} from "@ember/observability";
+} from "@lumi/observability";
 import {
   planShards,
   buildSimpleThrottlerFactory,
@@ -47,7 +47,7 @@ import {
   ClusterReadyTracker,
   DynamicShardingStrategy,
   type ClusterBootstrap,
-} from "@ember/sharding";
+} from "@lumi/sharding";
 import { Redis } from "ioredis";
 
 const env = (k: string, def?: string): string => {
@@ -99,7 +99,7 @@ const shardPlan = await planShards({ token: TOKEN, log });
 // Optional cluster coordinator (multi-replica gateway).
 const CLUSTER_NAME = process.env["CLUSTER_NAME"]?.trim() || null;
 const REPLICA_ID =
-  process.env["EMBER_CONSUMER_ID"] ||
+  process.env["LUMI_CONSUMER_ID"] ||
   process.env["HOSTNAME"] ||
   `gateway-${process.pid}`;
 

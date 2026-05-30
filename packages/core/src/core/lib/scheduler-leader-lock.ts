@@ -1,5 +1,5 @@
 // Single-active-scheduler leader election via Redis SET NX EX. Multiple `scheduler`
-// replicas can run for HA, but only the holder of `ember:scheduler:leader` owns the
+// replicas can run for HA, but only the holder of `lumi:scheduler:leader` owns the
 // BullMQ Queue + Worker init path; followers block on `acquire()` until the key's TTL
 // lapses. The leader renews every `renewIntervalMs` (well under the TTL); if a renewal
 // fails or finds the key no longer ours (partition, manual DEL, Sentinel failover) we

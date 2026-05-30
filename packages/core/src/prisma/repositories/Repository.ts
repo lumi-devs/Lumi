@@ -1,7 +1,7 @@
 import type { Redis } from "ioredis";
 import { type ILogger, container } from "@sapphire/framework";
-import { cacheHits, cacheMisses } from "@ember/observability";
-import type { EmberPrismaClient } from "#database/client.js";
+import { cacheHits, cacheMisses } from "@lumi/observability";
+import type { DatabaseClient } from "#database/client.js";
 import type { DatabaseService } from "#root/prisma/DatabaseService.js";
 
 /**
@@ -14,7 +14,7 @@ import type { DatabaseService } from "#root/prisma/DatabaseService.js";
  */
 export abstract class Repository {
   public constructor(
-    protected readonly prisma: EmberPrismaClient,
+    protected readonly prisma: DatabaseClient,
     protected readonly redis: Redis,
     protected readonly logger: ILogger,
     protected readonly db: DatabaseService,

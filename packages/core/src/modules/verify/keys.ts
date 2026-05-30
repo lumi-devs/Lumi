@@ -1,7 +1,7 @@
 export const VerifyKeys = {
   seqState: (guildId: string, userId: string) =>
-    `ember:verify:${guildId}:${userId}:seq`,
-  pendingSet: (guildId: string) => `ember:verify:${guildId}:pending`,
+    `lumi:verify:${guildId}:${userId}:seq`,
+  pendingSet: (guildId: string) => `lumi:verify:${guildId}:pending`,
 } as const;
 
 // 12 visually distinct emoji — indices used in button custom IDs

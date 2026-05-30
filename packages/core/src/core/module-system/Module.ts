@@ -2,7 +2,7 @@ import { Piece } from "@sapphire/framework";
 import type { Awaitable } from "@sapphire/utilities";
 import type { RequesterType } from "../lib/gdpr.js";
 import { ApplyOptions } from "@sapphire/decorators";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 import type { z } from "zod";
 import { fieldsFromSchema, type ConfigField } from "./config-schema.js";
 
@@ -27,7 +27,7 @@ export interface ModuleMeta {
   isCore?: boolean;
   conflicts?: string[];
   dependencies?: string[];
-  /** Derived from `configSchema` by the `EmberModule` decorator — not hand-authored. */
+  /** Derived from `configSchema` by the `DefineModule` decorator — not hand-authored. */
   configFields?: ConfigField[];
   configSchema?: z.ZodObject<z.ZodRawShape>;
   configOverrides?: boolean;
@@ -42,7 +42,7 @@ export interface ModuleOptions extends Piece.Options {
   version?: string;
   conflicts?: string[];
   dependencies?: string[];
-  /** Derived from `configSchema` by the `EmberModule` decorator — not hand-authored. */
+  /** Derived from `configSchema` by the `DefineModule` decorator — not hand-authored. */
   configFields?: ConfigField[];
   configSchema?: z.ZodObject<z.ZodRawShape>;
   configOverrides?: boolean;
@@ -53,7 +53,7 @@ export interface ModuleOptions extends Piece.Options {
  * Decorator to attach metadata to a Module piece. Derives the flat `configFields`
  * (consumed by the `/config` panel and dashboard RPC) from the Zod `configSchema`.
  */
-export function EmberModule(options: ModuleOptions) {
+export function DefineModule(options: ModuleOptions) {
   if (options.configSchema) {
     options.configFields = fieldsFromSchema(options.configSchema);
   }
@@ -84,7 +84,7 @@ export abstract class Module extends Piece {
   ) {
     super(context, options);
     this.displayName = options.displayName ?? this.name;
-    this.emoji = options.emoji ?? EmberEmojis.GEAR;
+    this.emoji = options.emoji ?? Emojis.GEAR;
     this.description = options.description ?? "";
     this.version = options.version ?? "0.0.0";
     this.isCore = options.isCore ?? false;

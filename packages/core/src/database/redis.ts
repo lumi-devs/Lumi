@@ -5,60 +5,60 @@ import { logError } from "#utilities/errors.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Redis key registry — single source of truth for every key pattern.
-// Format: `ember:{namespace}:{...discriminants}`.
+// Format: `lumi:{namespace}:{...discriminants}`.
 // Never hard-code a key in feature code; always import from here.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const RedisKeys = {
   // ── Core config ────────────────────────────────────────────────────────
-  guildSettings: (guildId: string) => `ember:settings:guild:${guildId}`,
+  guildSettings: (guildId: string) => `lumi:settings:guild:${guildId}`,
   guildConfig: (module: string, guildId: string) =>
-    `ember:cfg:${module}:guild:${guildId}`,
-  globalConfig: () => "ember:cfg:global",
-  guildPrefixes: (guildId: string) => `ember:prefix:guild:${guildId}`,
+    `lumi:cfg:${module}:guild:${guildId}`,
+  globalConfig: () => "lumi:cfg:global",
+  guildPrefixes: (guildId: string) => `lumi:prefix:guild:${guildId}`,
 
   // ── Module enable state ────────────────────────────────────────────────
   moduleEnabled: (module: string, guildId: string) =>
-    `ember:module:enabled:${module}:${guildId}`,
+    `lumi:module:enabled:${module}:${guildId}`,
   moduleGlobalEnabled: (module: string) =>
-    `ember:module:global:enabled:${module}`,
+    `lumi:module:global:enabled:${module}`,
 
   // ── Permissions / access control ──────────────────────────────────────
   permOverrides: (commandPath: string, guildId: string) =>
-    `ember:perms:${commandPath}:${guildId}`,
+    `lumi:perms:${commandPath}:${guildId}`,
   blocked: (guildId: string | null, userId: string) =>
-    `ember:block:${guildId ?? "global"}:${userId}`,
-  blockedPattern: (userId: string) => `ember:block:*:${userId}`,
-  guildIgnored: (guildId: string) => `ember:ignore:guild:${guildId}`,
+    `lumi:block:${guildId ?? "global"}:${userId}`,
+  blockedPattern: (userId: string) => `lumi:block:*:${userId}`,
+  guildIgnored: (guildId: string) => `lumi:ignore:guild:${guildId}`,
   channelIgnored: (guildId: string, channelId: string) =>
-    `ember:ignore:channel:${guildId}:${channelId}`,
+    `lumi:ignore:channel:${guildId}:${channelId}`,
 
   // ── Cooldowns ─────────────────────────────────────────────────────────
   cooldown: (commandName: string, userId: string) =>
-    `ember:cd:${commandName}:user:${userId}`,
+    `lumi:cd:${commandName}:user:${userId}`,
 
   // ── Stats ──────────────────────────────────────────────────────────────
-  botStats: () => "ember:stats:bot",
+  botStats: () => "lumi:stats:bot",
 
   // ── Queues ─────────────────────────────────────────────────────────────
-  auditLogsQueue: () => "ember:queue:audit_logs",
+  auditLogsQueue: () => "lumi:queue:audit_logs",
 
   // ── Leader election ───────────────────────────────────────────────────
   // Held by the single active `scheduler` replica when
   // SCHEDULER_LEADER_LOCK=true; followers poll-block until it lapses.
-  schedulerLeader: () => "ember:scheduler:leader",
+  schedulerLeader: () => "lumi:scheduler:leader",
 
   // ── Entity cache ──────────────────────────────────────────────────────
   // Minimal projections of Discord entities, populated by the gateway-event
   // listener and read by modules that previously hit `client.guilds.cache`.
   // Hashes — one key per entity. Field set kept narrow (id/name/permissions/
   // owner/parent) so 1M+ guilds at ~256 B/entity fit a single Redis db.
-  entityGuild: (guildId: string) => `ember:ent:guild:${guildId}`,
-  entityChannel: (channelId: string) => `ember:ent:channel:${channelId}`,
-  entityRole: (roleId: string) => `ember:ent:role:${roleId}`,
-  entityUser: (userId: string) => `ember:ent:user:${userId}`,
+  entityGuild: (guildId: string) => `lumi:ent:guild:${guildId}`,
+  entityChannel: (channelId: string) => `lumi:ent:channel:${channelId}`,
+  entityRole: (roleId: string) => `lumi:ent:role:${roleId}`,
+  entityUser: (userId: string) => `lumi:ent:user:${userId}`,
   entityMember: (guildId: string, userId: string) =>
-    `ember:ent:member:${guildId}:${userId}`,
+    `lumi:ent:member:${guildId}:${userId}`,
 } as const;
 
 export const RedisTTL = {
@@ -168,11 +168,11 @@ export function parseRedisConnectionOption(): RedisOptions {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Cluster-wide cache invalidation (pub/sub)
-// One channel: `ember:cache:invalidate`. Payload: JSON `{ keys: string[] }`.
+// One channel: `lumi:cache:invalidate`. Payload: JSON `{ keys: string[] }`.
 // Locally DEL is immediate; the broadcast tells peers to drop their memos.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const INVALIDATION_CHANNEL = "ember:cache:invalidate";
+const INVALIDATION_CHANNEL = "lumi:cache:invalidate";
 
 export class InvalidationBus {
   readonly #subscriber: Redis;

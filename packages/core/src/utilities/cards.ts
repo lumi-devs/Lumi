@@ -13,8 +13,8 @@ import {
   SeparatorSpacingSize,
   type MessageMentionOptions,
 } from "discord.js";
-import { EmberColors } from "#utilities/branding.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Colors } from "#utilities/branding.js";
+import { Emojis } from "#utilities/assets.js";
 import { BotConfig } from "./config.js";
 
 export interface CardOptions {
@@ -106,17 +106,17 @@ export const makeSuccessCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(EmberColors.SUCCESS, title, body, opts));
+) => wrap(buildContainer(Colors.SUCCESS, title, body, opts));
 export const makeErrorCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(EmberColors.ERROR, title, body, opts));
+) => wrap(buildContainer(Colors.ERROR, title, body, opts));
 export const makeWarningCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(EmberColors.WARNING, title, body, opts));
+) => wrap(buildContainer(Colors.WARNING, title, body, opts));
 export const makeInfoCard = (
   title: string,
   body: string | string[],
@@ -144,7 +144,7 @@ export function makeListCard(
       ? `Page ${page + 1}/${totalPages} · ${items.length} items`
       : `${items.length} items`;
 
-  const c = buildContainer(EmberColors.PRIMARY, title, body, { footer });
+  const c = buildContainer(Colors.PRIMARY, title, body, { footer });
 
   if (customIdPrefix && totalPages > 1) {
     c.addActionRowComponents(
@@ -152,13 +152,13 @@ export function makeListCard(
         new ButtonBuilder()
           .setCustomId(`${customIdPrefix}:prev:${page}`)
           .setLabel("◀ Prev")
-          .setEmoji(EmberEmojis.parse(EmberEmojis.ARROW_LEFT))
+          .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(page <= 0),
         new ButtonBuilder()
           .setCustomId(`${customIdPrefix}:next:${page}`)
           .setLabel("Next ▶")
-          .setEmoji(EmberEmojis.parse(EmberEmojis.ARROW_RIGHT))
+          .setEmoji(Emojis.parse(Emojis.ARROW_RIGHT))
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(page >= totalPages - 1),
       ),

@@ -1,9 +1,9 @@
 /**
- * Centralized Brand Assets and Emojis for Ember
+ * Centralized Brand Assets and Emojis for Lumi
  *
  * All emojis used throughout the codebase MUST come from this file.
  * Supports custom Discord emoji IDs with built-in Unicode fallbacks.
- * Use `EmberEmojis.custom('<:name:id>', '🔷')` to resolve a custom emoji with a safe fallback.
+ * Use `Emojis.custom('<:name:id>', '🔷')` to resolve a custom emoji with a safe fallback.
  */
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
@@ -94,7 +94,7 @@ try {
   }
 }
 
-export const EmberEmojis = {
+export const Emojis = {
   ...defaultEmojis,
   ...customEmojis,
 
@@ -108,7 +108,7 @@ export const EmberEmojis = {
   },
 
   /**
-   * Parses an EmberEmoji string into a format suitable for Discord.js `setEmoji`.
+   * Parses an Emoji string into a format suitable for Discord.js `setEmoji`.
    * @param emoji The emoji string to parse
    */
   parse(emoji: string): { name: string; id?: string; animated?: boolean } {
@@ -124,4 +124,4 @@ export const EmberEmojis = {
   },
 } as const;
 
-export type EmberEmojiKey = keyof typeof EmberEmojis;
+export type EmojiKey = keyof typeof Emojis;

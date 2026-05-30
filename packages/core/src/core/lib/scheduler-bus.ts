@@ -10,18 +10,18 @@
 // writes, DB updates, …).
 
 import { container } from "@sapphire/framework";
-import type { EmberScheduledTasks } from "#core/types/common.js";
+import type { ScheduledTasks } from "#core/types/common.js";
 
-export const SCHEDULER_REQUEST_STREAM = "ember.scheduler.request";
+export const SCHEDULER_REQUEST_STREAM = "lumi.scheduler.request";
 
-export const taskFireStream = (name: string) => `ember.scheduler.fire:${name}`;
+export const taskFireStream = (name: string) => `lumi.scheduler.fire:${name}`;
 
 export interface CreateRequest<
-  N extends keyof EmberScheduledTasks = keyof EmberScheduledTasks,
+  N extends keyof ScheduledTasks = keyof ScheduledTasks,
 > {
   action: "create";
   name: N;
-  payload: EmberScheduledTasks[N];
+  payload: ScheduledTasks[N];
   /**
    * Forwarded verbatim to `container.tasks.create(task, options)`. Either a ms
    * delay (number) or the full options bag with `customJobOptions.jobId` for
@@ -52,10 +52,10 @@ export interface DeleteRequest {
 export type RequestEnvelope = CreateRequest | DeleteRequest;
 
 export interface FireEnvelope<
-  N extends keyof EmberScheduledTasks = keyof EmberScheduledTasks,
+  N extends keyof ScheduledTasks = keyof ScheduledTasks,
 > {
   name: N;
-  payload: EmberScheduledTasks[N];
+  payload: ScheduledTasks[N];
 }
 
 /**
@@ -63,9 +63,9 @@ export interface FireEnvelope<
  * by ModModule.reconcileScheduledJobs(). Safe to call from any role: on
  * monolith the same process consumes it almost immediately.
  */
-export async function publishCreateRequest<N extends keyof EmberScheduledTasks>(
+export async function publishCreateRequest<N extends keyof ScheduledTasks>(
   name: N,
-  payload: EmberScheduledTasks[N],
+  payload: ScheduledTasks[N],
   options?: CreateRequest["options"],
 ): Promise<void> {
   const env: CreateRequest<N> = { action: "create", name, payload, options };
@@ -82,9 +82,9 @@ export async function publishDeleteRequest(jobId: string): Promise<void> {
  * the monolith) consume the corresponding stream and run the registered
  * fire-handler.
  */
-export async function publishTaskFire<N extends keyof EmberScheduledTasks>(
+export async function publishTaskFire<N extends keyof ScheduledTasks>(
   name: N,
-  payload: EmberScheduledTasks[N],
+  payload: ScheduledTasks[N],
 ): Promise<void> {
   const env: FireEnvelope<N> = { name, payload };
   await container.eventBus.publish(taskFireStream(name), env);

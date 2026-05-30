@@ -5,7 +5,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api
-  namespace: ember
+  namespace: lumi
 spec:
   replicas: 2
   strategy:
@@ -28,16 +28,16 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: api
-          image: ghcr.io/your-org/ember:latest
+          image: ghcr.io/your-org/lumi:latest
           imagePullPolicy: IfNotPresent
           command: ["bun", "apps/api/src/main.ts"]
           envFrom:
             - configMapRef:
-                name: ember-env
+                name: lumi-env
             - secretRef:
-                name: ember-secrets
+                name: lumi-secrets
           env:
-            - name: EMBER_ROLE
+            - name: LUMI_ROLE
               value: "api"
             - name: NODE_OPTIONS
               value: "--max-old-space-size=256"

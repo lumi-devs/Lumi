@@ -8,7 +8,7 @@ import {
   type Message,
   MessageFlags,
 } from "discord.js";
-import { EmberSubcommand } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import {
   makeSuccessCard,
@@ -18,7 +18,7 @@ import {
 import { formatAuditReason } from "#utilities/audit.js";
 import { logToChannel } from "../lib/helpers.js";
 
-@ApplyOptions<EmberSubcommand.Options>({
+@ApplyOptions<BaseSubcommand.Options>({
   name: "ban",
   description: "Ban or unban a user",
   preconditions: ["GuildOnly"],
@@ -36,7 +36,7 @@ import { logToChannel } from "../lib/helpers.js";
     },
   ],
 })
-export class BanCommand extends EmberSubcommand {
+export class BanCommand extends BaseSubcommand {
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {

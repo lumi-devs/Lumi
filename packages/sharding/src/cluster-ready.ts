@@ -4,7 +4,7 @@
 // tolerate that (REST + entity cache on demand), but cooperative populators and
 // cache-seeding flows want a clean "cluster has converged" signal.
 //
-// `ember:cluster:<name>:ready` holds "1" once every gateway replica reports all its
+// `lumi:cluster:<name>:ready` holds "1" once every gateway replica reports all its
 // shards Ready/Resumed (absent or "0" otherwise); the TTL is refreshed on each
 // heartbeat so a crashed gateway flips back to not-ready within `ttlMs`. Gateways call
 // `publishReady(true)` from the Ready/Resumed handler when
@@ -13,7 +13,7 @@
 
 import type { Redis } from "ioredis";
 
-const readyKey = (name: string) => `ember:cluster:${name}:ready`;
+const readyKey = (name: string) => `lumi:cluster:${name}:ready`;
 
 export interface ClusterReadyTrackerOptions {
   redis: Redis;

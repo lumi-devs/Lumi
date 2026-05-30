@@ -2,20 +2,20 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { userMention } from "@discordjs/formatters";
 import { chunk } from "@sapphire/utilities";
 import type { Message } from "discord.js";
-import { EmberCommand } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import { makeInfoCard, makeWarningCard } from "#utilities/cards.js";
 import { afkDurationSince } from "../index.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 
-@ApplyOptions<EmberCommand.Options>({
+@ApplyOptions<BaseCommand.Options>({
   name: "afklist",
   description: "List users currently AFK in this server (owner only).",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.BOT_OWNER,
   module: "afk",
 })
-export default class AfkListCommand extends EmberCommand {
+export default class AfkListCommand extends BaseCommand {
   private get afkService(): import("../services/AfkService.js").default {
     return this.container.stores
       .get("services")
@@ -46,7 +46,7 @@ export default class AfkListCommand extends EmberCommand {
         ? `Page 1/${pages.length} • Total AFK in this server: ${entries.length}`
         : `Total AFK in this server: ${entries.length}`;
     return message.reply({
-      ...makeWarningCard(`${EmberEmojis.PAGES} AFK List`, body, { footer }),
+      ...makeWarningCard(`${Emojis.PAGES} AFK List`, body, { footer }),
     });
   }
 }

@@ -6,9 +6,9 @@ import {
   KNOWN_SUBSTORES,
   type ModuleManifest,
   type TargetService,
-} from "@ember/contracts";
+} from "@lumi/contracts";
 
-// Manifest types live in @ember/contracts (shared with the dashboard); re-exported
+// Manifest types live in @lumi/contracts (shared with the dashboard); re-exported
 // here so existing `./manifest.js` importers keep resolving them.
 export { KNOWN_SUBSTORES, type ModuleManifest, type TargetService };
 

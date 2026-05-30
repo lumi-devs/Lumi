@@ -15,8 +15,8 @@
 import { Redis } from "ioredis";
 import { RedisStreamsBus } from "../packages/event-bus/src/RedisStreamsBus.js";
 
-const TEST_STREAM = `ember:chaos:${Date.now()}`;
-const GROUP = "ember-chaos";
+const TEST_STREAM = `lumi:chaos:${Date.now()}`;
+const GROUP = "lumi-chaos";
 const CLAIM_MIN_IDLE_MS = 500; // tight for the test; production is 60s
 const MAX_DELIVERIES = 3;
 
@@ -150,7 +150,7 @@ async function main(): Promise<void> {
 
   // ── Scenario 2: poison message → DLQ after maxDeliveries.
   // Use a fresh group so the post-scenario-1 pending list doesn't muddy state.
-  const POISON_GROUP = "ember-chaos-poison";
+  const POISON_GROUP = "lumi-chaos-poison";
   const POISON_STREAM = `${TEST_STREAM}:poison`;
   let poisonAttempts = 0;
   const pubP = redis();

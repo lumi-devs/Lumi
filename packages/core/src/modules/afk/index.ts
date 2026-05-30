@@ -1,8 +1,8 @@
-import { Module, EmberModule, cfg } from "#core/module-system/Module.js";
+import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
 import type { RequesterType } from "#core/lib/gdpr.js";
 import { container } from "@sapphire/framework";
 import { humanizeDelta } from "#utilities/time.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 import { clearAllAfkForUser } from "./data/afk.js";
 import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
 import { handleAfkDeleteMessageFire } from "./lib/delete-handler.js";
@@ -52,10 +52,10 @@ export async function isAfkNickPrefixEnabled(
   return value !== false;
 }
 
-@EmberModule({
+@DefineModule({
   name: "afk",
   displayName: "AFK",
-  emoji: EmberEmojis.AFK,
+  emoji: Emojis.AFK,
   version: "1.0.0",
   description:
     "Set yourself AFK; mentions notify others and a prefix is added to your nickname.",

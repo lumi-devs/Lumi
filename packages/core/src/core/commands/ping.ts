@@ -5,7 +5,7 @@ import {
   type Message,
   ApplicationIntegrationType,
 } from "discord.js";
-import { EmberCommand } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
 import { collectPingData } from "../lib/ping-collect.js";
 import {
   buildOverviewCard,
@@ -25,7 +25,7 @@ const activeIntervals = new Map<string, ReturnType<typeof setInterval>>();
   cooldownDelay: 10_000,
   cooldownScope: BucketScope.User,
 })
-export class PingCommand extends EmberCommand {
+export class PingCommand extends BaseCommand {
   public override registerApplicationCommands(registry: Command.Registry) {
     registry.registerChatInputCommand((builder) =>
       builder //

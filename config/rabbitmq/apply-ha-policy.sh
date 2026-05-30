@@ -10,8 +10,8 @@
 set -eu
 
 HOST="${RABBITMQ_HOST:-rabbitmq}"
-USER="${RABBITMQ_USER:-ember}"
-PASS="${RABBITMQ_PASSWORD:-ember}"
+USER="${RABBITMQ_USER:-lumi}"
+PASS="${RABBITMQ_PASSWORD:-lumi}"
 
 echo "[ha-policy] waiting for ${HOST} management API..."
 until curl -sf -u "${USER}:${PASS}" "http://${HOST}:15672/api/overview" >/dev/null; do
