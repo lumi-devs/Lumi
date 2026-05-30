@@ -16,9 +16,9 @@ export type WarnThresholds = Record<string, ThresholdEntry>;
 // ── Redis keys ────────────────────────────────────────────────────────────────
 
 export const thresholdKey = (guildId: string) =>
-  `ember:mod:${guildId}:thresholds`;
+  `lumi:mod:${guildId}:thresholds`;
 export const warnCountKey = (guildId: string, userId: string) =>
-  `ember:mod:${guildId}:warns:${userId}`;
+  `lumi:mod:${guildId}:warns:${userId}`;
 
 const THRESHOLD_TTL = 300; // 5 min cache — invalidated on config write
 

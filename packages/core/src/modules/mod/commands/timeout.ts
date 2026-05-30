@@ -8,7 +8,7 @@ import {
   type GuildMember,
   MessageFlags,
 } from "discord.js";
-import { EmberSubcommand } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import {
   makeSuccessCard,
@@ -25,7 +25,7 @@ import {
 
 const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000;
 
-@ApplyOptions<EmberSubcommand.Options>({
+@ApplyOptions<BaseSubcommand.Options>({
   name: "timeout",
   description: "Timeout or untimeout a member",
   preconditions: ["GuildOnly"],
@@ -43,7 +43,7 @@ const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000;
     },
   ],
 })
-export class TimeoutCommand extends EmberSubcommand {
+export class TimeoutCommand extends BaseSubcommand {
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {

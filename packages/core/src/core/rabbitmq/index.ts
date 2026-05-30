@@ -16,9 +16,9 @@ import {
   otelContext,
   runWithContext,
   withSpan,
-} from "@ember/observability";
+} from "@lumi/observability";
 import { logError, errorFrom } from "#utilities/errors.js";
-import type { RpcRequest, RpcResponse, RpcHandler } from "@ember/contracts";
+import type { RpcRequest, RpcResponse, RpcHandler } from "@lumi/contracts";
 
 export type { RpcRequest, RpcResponse, RpcHandler };
 
@@ -151,11 +151,11 @@ export class RabbitClient {
       const { queue: eventQueue } = await ch.assertQueue("", {
         exclusive: true,
       });
-      await ch.bindQueue(eventQueue, "ember.events", "");
+      await ch.bindQueue(eventQueue, "lumi.events", "");
       await ch.consume(eventQueue, (m) => this.#handleEvent(ch, m));
 
       // 2. Shared RPC request queue (load balanced across processes)
-      await ch.consume("ember.rpc.requests", (m) => handleRpc(ch, m));
+      await ch.consume("lumi.rpc.requests", (m) => handleRpc(ch, m));
     });
   }
 
@@ -163,7 +163,7 @@ export class RabbitClient {
     busEventsPublished.inc({ event });
     const carrier = injectTraceContext();
     return this.channel.publish(
-      "ember.events",
+      "lumi.events",
       "",
       Buffer.from(
         JSON.stringify({
@@ -222,8 +222,8 @@ export class RabbitClient {
 
   async #setup(ch: Channel) {
     await Promise.all([
-      ch.assertExchange("ember.events", "fanout", { durable: true }),
-      ch.assertQueue("ember.rpc.requests", { durable: true }),
+      ch.assertExchange("lumi.events", "fanout", { durable: true }),
+      ch.assertQueue("lumi.rpc.requests", { durable: true }),
       ch.consume(
         "amq.rabbitmq.reply-to",
         (m) => {

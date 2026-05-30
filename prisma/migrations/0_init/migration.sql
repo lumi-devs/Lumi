@@ -4,7 +4,7 @@ CREATE SCHEMA IF NOT EXISTS "public";
 -- CreateTable
 CREATE TABLE "global_config" (
     "id" INTEGER NOT NULL DEFAULT 1,
-    "bot_name" VARCHAR(64) NOT NULL DEFAULT 'Ember',
+    "bot_name" VARCHAR(64) NOT NULL DEFAULT 'Lumi',
     "default_prefix" VARCHAR(5) NOT NULL DEFAULT ',',
     "maintenance_mode" BOOLEAN NOT NULL DEFAULT false,
     "maintenance_message" VARCHAR(500),

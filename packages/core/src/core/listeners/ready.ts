@@ -1,7 +1,7 @@
 import { Listener, Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { bold, green, cyan, gray } from "colorette";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 
 @ApplyOptions<Listener.Options>({ once: true, event: Events.ClientReady })
 export class ReadyListener extends Listener<typeof Events.ClientReady> {
@@ -24,7 +24,7 @@ export class ReadyListener extends Listener<typeof Events.ClientReady> {
     // ── Terminal Separator Banner (colorette for stdout) ─────────────────
     logger.debug(gray("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     logger.debug(
-      `${bold(green(` ${EmberEmojis.FIRE} Ember `))} ${cyan(tag)} ${gray("|")} ${guilds} guilds`,
+      `${bold(green(` ${Emojis.FIRE} Lumi `))} ${cyan(tag)} ${gray("|")} ${guilds} guilds`,
     );
     logger.debug(
       `${gray(" Modules:")}  ${modules} ${gray("|")} Commands: ${commands}`,

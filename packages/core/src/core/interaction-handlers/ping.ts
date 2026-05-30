@@ -10,12 +10,12 @@ import {
   buildDetailCard,
   type PingCategory,
 } from "../lib/ping-cards.js";
-import { EmberInteractionHandler } from "../lib/interaction-handler.js";
+import { BaseInteractionHandler } from "../lib/interaction-handler.js";
 
 @ApplyOptions<InteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,
 })
-export class PingInteractionHandler extends EmberInteractionHandler {
+export class PingInteractionHandler extends BaseInteractionHandler {
   public override parse(interaction: ButtonInteraction) {
     if (!interaction.customId.startsWith("ping:")) return this.none();
 

@@ -4,19 +4,19 @@ import {
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import { type ButtonInteraction } from "discord.js";
-import { EmberInteractionHandler } from "#core/lib/interaction-handler.js";
+import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
 import {
   makeSuccessCard,
   makeErrorCard,
   makeInfoCard,
 } from "#utilities/cards.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 import type { DownloaderService } from "#core/services/DownloaderService.js";
 
 @ApplyOptions<InteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,
 })
-export class ModuleUpdateInteractionHandler extends EmberInteractionHandler {
+export class ModuleUpdateInteractionHandler extends BaseInteractionHandler {
   private get downloaderService(): DownloaderService {
     return this.container.stores
       .get("services")
@@ -43,7 +43,7 @@ export class ModuleUpdateInteractionHandler extends EmberInteractionHandler {
     await interaction.editReply(
       makeInfoCard(
         "Updating Module",
-        `${EmberEmojis.LOADING} Checking and downloading updates for **${moduleName}**...`,
+        `${Emojis.LOADING} Checking and downloading updates for **${moduleName}**...`,
       ),
     );
 
@@ -57,14 +57,14 @@ export class ModuleUpdateInteractionHandler extends EmberInteractionHandler {
 
         await interaction.editReply(
           makeSuccessCard(
-            `${EmberEmojis.DOWNLOAD} Module Updated`,
+            `${Emojis.DOWNLOAD} Module Updated`,
             `Successfully updated and hot-reloaded **${moduleName}**!\n\n${changelogStr}`,
           ),
         );
       } else {
         await interaction.editReply(
           makeSuccessCard(
-            `${EmberEmojis.CHECK} Module Up-To-Date`,
+            `${Emojis.CHECK} Module Up-To-Date`,
             `**${moduleName}** is already running the latest version!`,
           ),
         );
@@ -72,7 +72,7 @@ export class ModuleUpdateInteractionHandler extends EmberInteractionHandler {
     } catch (err: unknown) {
       const error = err as Error;
       await interaction.editReply(
-        makeErrorCard(`${EmberEmojis.ERROR} Update Failed`, error.message),
+        makeErrorCard(`${Emojis.ERROR} Update Failed`, error.message),
       );
     }
   }

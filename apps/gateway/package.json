@@ -1,6 +1,7 @@
 {
-  "name": "@ember/gateway",
+  "name": "@lumi/gateway",
   "version": "2.1.1",
+  "license": "Apache-2.0",
   "description": "Gateway service — Discord WS connection + event-bus publisher.",
   "type": "module",
   "private": true,
@@ -9,10 +10,10 @@
     "dev": "bun --watch src/main.ts"
   },
   "dependencies": {
-    "@ember/contracts": "workspace:*",
-    "@ember/event-bus": "workspace:*",
-    "@ember/observability": "workspace:*",
-    "@ember/sharding": "workspace:*",
+    "@lumi/contracts": "workspace:*",
+    "@lumi/event-bus": "workspace:*",
+    "@lumi/observability": "workspace:*",
+    "@lumi/sharding": "workspace:*",
     "@discordjs/rest": "^2.6.0",
     "@discordjs/ws": "^2.0.0",
     "discord-api-types": "^0.38.30",

@@ -1,7 +1,7 @@
 # Lumi
 
 A modular Discord bot built on [Bun](https://bun.sh) and [Sapphire v5](https://www.sapphirejs.dev/).
-Lumi (formerly Ember) runs as a single process by default, but the same build can split into
+Lumi runs as a single process by default, but the same build can split into
 separate gateway, worker, and scheduler roles for horizontal scale-out.
 
 ## Stack
@@ -18,7 +18,7 @@ The repo is a Bun-workspace monorepo.
 
 ```
 packages/
-  core            the bot itself (@ember/core) — commands, modules, services, data layer
+  core            the bot itself (@lumi/core) — commands, modules, services, data layer
   event-bus       pluggable transport (in-process, Redis Streams, or NATS JetStream)
   observability   logging, tracing, and metrics primitives
   sharding        cluster coordinator and shard planner
@@ -30,7 +30,7 @@ apps/
   api             dashboard RPC bridge
 ```
 
-Each process picks its role from `EMBER_ROLE` (`monolith` by default, or `gateway` / `worker` /
+Each process picks its role from `LUMI_ROLE` (`monolith` by default, or `gateway` / `worker` /
 `scheduler`). `TRANSPORT` selects the event bus backend: `inproc` for a self-contained monolith,
 `streams` or `nats` to carry events between split roles.
 
@@ -50,7 +50,7 @@ For hot reload while developing, start the dev service by name so it mounts your
 not also launch the production worker (which would log in twice on the same token):
 
 ```bash
-docker compose up ember-dev
+docker compose up lumi-dev
 ```
 
 Scale-out and extras are opt-in profiles:
@@ -81,7 +81,7 @@ Environment variables are validated at boot. The important ones:
 | `BOT_TOKEN` | Discord bot token |
 | `CLIENT_ID` | Discord application client ID |
 | `OWNER_IDS` | Comma-separated bot-owner user IDs |
-| `EMBER_ROLE` | Process role: `monolith` \| `gateway` \| `worker` \| `scheduler` |
+| `LUMI_ROLE` | Process role: `monolith` \| `gateway` \| `worker` \| `scheduler` |
 | `TRANSPORT` | Event bus: `inproc` \| `streams` \| `nats` |
 | `POSTGRES_URL` | Postgres connection (PgBouncer port `6432` in production) |
 | `DIRECT_POSTGRES_URL` | Direct Postgres connection (used for migrations) |

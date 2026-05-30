@@ -20,3 +20,9 @@ export class TempVcCleanupTask extends ScheduledTask<"tempvc-cleanup"> {
     await publishTaskFire("tempvc-cleanup", payload);
   }
 }
+
+declare module "@sapphire/plugin-scheduled-tasks" {
+  interface ScheduledTasks {
+    "tempvc-cleanup": TempVcCleanupPayload;
+  }
+}

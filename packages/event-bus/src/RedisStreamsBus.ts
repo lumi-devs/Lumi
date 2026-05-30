@@ -2,9 +2,9 @@
 // worker scaling (each consumer claims a partition of the pending list), and bounded
 // memory via MAXLEN ~. This is the production transport once the gateway/worker split
 // flips on (TRANSPORT=streams). There's one stream per gateway event type
-// (`ember:gw:message_create`, etc.) for per-event backpressure, independent MAXLEN and
+// (`lumi:gw:message_create`, etc.) for per-event backpressure, independent MAXLEN and
 // targeted lag dashboards; one consumer group per worker pool (default
-// `ember-workers`); and bodies JSON-encoded into a single `b` field.
+// `lumi-workers`); and bodies JSON-encoded into a single `b` field.
 //
 // A background XAUTOCLAIM loop reclaims entries idle past `claimMinIdleMs` and
 // redelivers them with `deliveryCount > 1` so callers can dedupe; once that exceeds
@@ -24,7 +24,7 @@ import type {
 } from "./types.js";
 
 export interface StreamStats {
-  /** Stream key (e.g. `ember:gw:message_create`). */
+  /** Stream key (e.g. `lumi:gw:message_create`). */
   stream: string;
   /** Consumer group reading from `stream`. */
   group: string;

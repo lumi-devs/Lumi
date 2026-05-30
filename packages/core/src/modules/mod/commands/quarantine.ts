@@ -8,7 +8,7 @@ import {
   type GuildMember,
   MessageFlags,
 } from "discord.js";
-import { EmberSubcommand } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import {
   makeSuccessCard,
@@ -18,11 +18,11 @@ import {
 import { formatAuditReason } from "#utilities/audit.js";
 import { logToChannel } from "../lib/helpers.js";
 
-// Redis key: ember:mod:{guildId}:quarantine:{userId} → JSON array of role IDs
+// Redis key: lumi:mod:{guildId}:quarantine:{userId} → JSON array of role IDs
 const quarantineKey = (guildId: string, userId: string) =>
-  `ember:mod:${guildId}:quarantine:${userId}`;
+  `lumi:mod:${guildId}:quarantine:${userId}`;
 
-@ApplyOptions<EmberSubcommand.Options>({
+@ApplyOptions<BaseSubcommand.Options>({
   name: "quarantine",
   description: "Quarantine or release a member",
   preconditions: ["GuildOnly"],
@@ -40,7 +40,7 @@ const quarantineKey = (guildId: string, userId: string) =>
     },
   ],
 })
-export class QuarantineCommand extends EmberSubcommand {
+export class QuarantineCommand extends BaseSubcommand {
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {

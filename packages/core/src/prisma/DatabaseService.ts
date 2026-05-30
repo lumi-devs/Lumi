@@ -5,7 +5,7 @@ import {
   createGuildTransaction,
   GuildWriteTransaction,
 } from "#lib/guild-transaction.js";
-import type { EmberPrismaClient } from "#database/client.js";
+import type { DatabaseClient } from "#database/client.js";
 import { ConfigRepository } from "#root/prisma/repositories/ConfigRepository.js";
 import { ModuleRepository } from "#root/prisma/repositories/ModuleRepository.js";
 import { GuildKVRepository } from "#root/prisma/repositories/GuildKVRepository.js";
@@ -52,7 +52,7 @@ export class DatabaseService {
   public readonly threads: ThreadRepository;
 
   public constructor(
-    private readonly prisma: EmberPrismaClient,
+    private readonly prisma: DatabaseClient,
     private readonly redis: Redis,
     logger: ILogger,
   ) {

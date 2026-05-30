@@ -5,8 +5,8 @@ import {
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { GuildMember, ModalSubmitInteraction } from "discord.js";
-import { EmberInteractionHandler } from "#core/lib/interaction-handler.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
+import { Emojis } from "#utilities/assets.js";
 import {
   ephemeralCard,
   makeErrorCard,
@@ -23,7 +23,7 @@ const KINDS = new Set(["namem", "limitm"]);
   name: "tempvc-modals",
   interactionHandlerType: InteractionHandlerTypes.ModalSubmit,
 })
-export default class TempVcModalHandler extends EmberInteractionHandler {
+export default class TempVcModalHandler extends BaseInteractionHandler {
   private get service(): TempVcService {
     return this.container.stores.get("services").get("tempvc") as TempVcService;
   }
@@ -53,7 +53,7 @@ export default class TempVcModalHandler extends EmberInteractionHandler {
     ) {
       throw new UserError({
         identifier: "TempVcNotOwner",
-        message: `${EmberEmojis.CROSS} Only the channel owner can use these controls.`,
+        message: `${Emojis.CROSS} Only the channel owner can use these controls.`,
       });
     }
 

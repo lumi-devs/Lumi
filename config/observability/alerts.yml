@@ -1,8 +1,8 @@
 groups:
-  - name: ember-slo
+  - name: lumi-slo
     rules:
       - alert: ShardDown
-        expr: min(ember_shard_status) by (service) == 0
+        expr: min(lumi_shard_status) by (service) == 0
         for: 1m
         labels:
           severity: critical
@@ -11,7 +11,7 @@ groups:
           description: "At least one shard has reported status 0 for over a minute."
 
       - alert: QueueLagGrowing
-        expr: max(ember_queue_depth) by (service, queue) > 1000
+        expr: max(lumi_queue_depth) by (service, queue) > 1000
         for: 5m
         labels:
           severity: warning
@@ -20,7 +20,7 @@ groups:
           description: "Queue depth has exceeded 1000 for 5 minutes — consumers are falling behind."
 
       - alert: Rest429Spike
-        expr: sum(rate(ember_rest_429_total[5m])) by (service) > 1
+        expr: sum(rate(lumi_rest_429_total[5m])) by (service) > 1
         for: 2m
         labels:
           severity: warning
@@ -30,9 +30,9 @@ groups:
 
       - alert: DbPoolSaturation
         expr: |
-          max(ember_pg_pool_waiting) by (service) > 0
+          max(lumi_pg_pool_waiting) by (service) > 0
           or
-          (max(ember_pg_pool_used) by (service) / max(ember_pg_pool_size) by (service)) > 0.9
+          (max(lumi_pg_pool_used) by (service) / max(lumi_pg_pool_size) by (service)) > 0.9
         for: 3m
         labels:
           severity: warning
@@ -41,7 +41,7 @@ groups:
           description: "Postgres pool is >90% used or has waiters for 3 minutes."
 
       - alert: StreamConsumerLag
-        expr: max(ember_stream_consumer_lag) by (stream, group) > 1000
+        expr: max(lumi_stream_consumer_lag) by (stream, group) > 1000
         for: 5m
         labels:
           severity: warning
@@ -50,7 +50,7 @@ groups:
           description: "Pending (unacked) entries have exceeded 1000 for 5 minutes — consumers are not keeping up."
 
       - alert: StreamDlqGrowing
-        expr: max(ember_stream_dlq_length) by (stream) > 0
+        expr: max(lumi_stream_dlq_length) by (stream) > 0
         for: 1m
         labels:
           severity: warning
@@ -64,19 +64,19 @@ groups:
       # territory. Fire at 0.1/s (= 60/min in emits → 30k invalid/10min), well
       # below the ban threshold.
       - alert: RestInvalidRequestSurge
-        expr: sum(rate(ember_rest_invalid_request_warnings_total[5m])) by (service) > 0.1
+        expr: sum(rate(lumi_rest_invalid_request_warnings_total[5m])) by (service) > 0.1
         for: 2m
         labels:
           severity: critical
         annotations:
           summary: "Invalid REST request surge on {{ $labels.service }}"
-          description: "401/403/429 rate is on track for the 10k/10min CloudFlare ban. Check `ember_rest_429_total` and `ember_rest_retry_after_seconds` by route."
+          description: "401/403/429 rate is on track for the 10k/10min CloudFlare ban. Check `lumi_rest_429_total` and `lumi_rest_retry_after_seconds` by route."
 
       - alert: CommandErrorRate
         expr: |
-          sum(rate(ember_commands_total{status="error"}[5m])) by (service)
+          sum(rate(lumi_commands_total{status="error"}[5m])) by (service)
           /
-          clamp_min(sum(rate(ember_commands_total[5m])) by (service), 1) > 0.05
+          clamp_min(sum(rate(lumi_commands_total[5m])) by (service), 1) > 0.05
         for: 5m
         labels:
           severity: warning
@@ -89,9 +89,9 @@ groups:
       # the next allocation spike will OOM. Bump the budget or shed load.
       - alert: NodeHeapPressure
         expr: |
-          max(ember_nodejs_heap_size_used_bytes) by (service)
+          max(lumi_nodejs_heap_size_used_bytes) by (service)
           /
-          clamp_min(max(ember_nodejs_heap_size_limit_bytes) by (service), 1) > 0.85
+          clamp_min(max(lumi_nodejs_heap_size_limit_bytes) by (service), 1) > 0.85
         for: 5m
         labels:
           severity: warning

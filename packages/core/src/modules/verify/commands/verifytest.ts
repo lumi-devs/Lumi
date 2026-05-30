@@ -10,7 +10,7 @@ import {
   type ChatInputCommandInteraction,
   type Message,
 } from "discord.js";
-import { EmberCommand } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
 import {
   makeInfoCard,
   makeSuccessCard,
@@ -76,7 +76,7 @@ function buildRows(
   preconditions: ["GuildOnly", "ModuleEnabled"],
   module: "verify",
 })
-export default class VerifyTestCommand extends EmberCommand {
+export default class VerifyTestCommand extends BaseCommand {
   public override registerApplicationCommands(registry: Command.Registry) {
     registry.registerChatInputCommand((builder) =>
       builder

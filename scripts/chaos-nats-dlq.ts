@@ -23,7 +23,7 @@ import { connect, type NatsConnection } from "nats";
 import { createEventBus } from "../packages/event-bus/src/factory.ts";
 
 const NATS_URL = process.env["NATS_URL"] ?? "nats://127.0.0.1:4222";
-const STREAM_NAME = "EMBER_EVENTS"; // matches NatsJetStreamBus.STREAM_NAME
+const STREAM_NAME = "LUMI_EVENTS"; // matches NatsJetStreamBus.STREAM_NAME
 const MAX_DELIVERIES = 2;
 const ACK_WAIT_MS = 800; // tight so redelivery fires fast (production is 60s)
 
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
   log("env", `transport=nats url=${NATS_URL} maxDeliveries=${MAX_DELIVERIES}`);
 
   // Unique key per run so reruns don't share a durable/DLQ with a prior run.
-  const busKey = `ember:chaos:natsdlq:${Date.now()}`;
+  const busKey = `lumi:chaos:natsdlq:${Date.now()}`;
   const dlqSubject = `${busKey.replace(/:/g, ".")}.dlq`;
 
   const owned = createEventBus({
@@ -100,7 +100,7 @@ async function main(): Promise<void> {
   let maxDeliveryCount = 0;
   const stop = await bus.consume<{ payload: string }>(
     [busKey],
-    { group: "ember-chaos-dlq", consumer: "worker-poison", blockMs: 200 },
+    { group: "lumi-chaos-dlq", consumer: "worker-poison", blockMs: 200 },
     (msg) => {
       attempts++;
       maxDeliveryCount = Math.max(maxDeliveryCount, msg.deliveryCount);

@@ -33,7 +33,7 @@ export function buildRestOptions(
     opts.proxyUrl !== undefined ? opts.proxyUrl : getDiscordProxyUrl();
 
   const base: Partial<RESTOptions> = {
-    // Warn (and increment ember_rest_invalid_request_warning_total) every 500
+    // Warn (and increment lumi_rest_invalid_request_warning_total) every 500
     // 401/403/429s in a rolling 10-min window. Discord bans the bot's IP at
     // 10k in 10 min; 500 gives us 20× headroom to react.
     invalidRequestWarningInterval: 500,

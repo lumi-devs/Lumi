@@ -16,9 +16,9 @@ import {
 import { time, TimestampStyles } from "@discordjs/formatters";
 import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
 import type { PingData } from "./ping-collect.js";
-import { EmberColors } from "#utilities/branding.js";
+import { Colors } from "#utilities/branding.js";
 import { formatUptime } from "#utilities/time.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 
 // ── Re-exports for convenience ────────────────────────────────────────────────
 
@@ -90,9 +90,9 @@ function getStatusColor(data: PingData): number {
     data.redisReadMs ?? 0,
   );
   const lagBad = data.loopLagMs > 10;
-  if (worst > 250 || lagBad) return EmberColors.ROSE;
-  if (worst > 100) return EmberColors.LEMON;
-  return EmberColors.SAKURA;
+  if (worst > 250 || lagBad) return Colors.ROSE;
+  if (worst > 100) return Colors.LEMON;
+  return Colors.SAKURA;
 }
 
 function header(data: PingData, subtitle?: string): SectionBuilder {
@@ -119,19 +119,19 @@ export function buildOverviewCard(
   c.setAccentColor(getStatusColor(data));
 
   const E = {
-    online: EmberEmojis.SUCCESS,
-    space: EmberEmojis.SPACE,
-    latency: EmberEmojis.LATENCY,
-    uptime: EmberEmojis.UPTIME,
-    trade: EmberEmojis.TRADE,
-    memory: EmberEmojis.MEMORY,
-    cpu: EmberEmojis.CPU,
-    position: EmberEmojis.POSITION,
-    servers: EmberEmojis.SERVERS,
-    members: EmberEmojis.MEMBERS,
-    redis: EmberEmojis.REDIS,
-    sql: EmberEmojis.SQL,
-    rabbit: EmberEmojis.RABBIT,
+    online: Emojis.SUCCESS,
+    space: Emojis.SPACE,
+    latency: Emojis.LATENCY,
+    uptime: Emojis.UPTIME,
+    trade: Emojis.TRADE,
+    memory: Emojis.MEMORY,
+    cpu: Emojis.CPU,
+    position: Emojis.POSITION,
+    servers: Emojis.SERVERS,
+    members: Emojis.MEMBERS,
+    redis: Emojis.REDIS,
+    sql: Emojis.SQL,
+    rabbit: Emojis.RABBIT,
   };
 
   const fmtCount = (count: number) =>
@@ -169,7 +169,7 @@ export function buildOverviewCard(
 
 export function buildGatewayCard(data: PingData): ContainerBuilder {
   const c = new ContainerBuilder();
-  c.setAccentColor(EmberColors.LAVENDER);
+  c.setAccentColor(Colors.LAVENDER);
   c.addSectionComponents(header(data, "📡 Gateway Diagnostics Engine"));
   c.addSeparatorComponents(sep(true));
 
@@ -226,7 +226,7 @@ export function buildGatewayCard(data: PingData): ContainerBuilder {
 
 export function buildEngineCard(data: PingData): ContainerBuilder {
   const c = new ContainerBuilder();
-  c.setAccentColor(EmberColors.LEMON);
+  c.setAccentColor(Colors.LEMON);
   c.addSectionComponents(header(data, "🏎️ Runtime Performance Audit"));
   c.addSeparatorComponents(sep(true));
 
@@ -273,9 +273,9 @@ export function buildEngineCard(data: PingData): ContainerBuilder {
 
 export function buildHostCard(data: PingData): ContainerBuilder {
   const c = new ContainerBuilder();
-  c.setAccentColor(EmberColors.AMBER);
+  c.setAccentColor(Colors.AMBER);
   c.addSectionComponents(
-    header(data, `${EmberEmojis.CPU} Bare Metal Infrastructure`),
+    header(data, `${Emojis.CPU} Bare Metal Infrastructure`),
   );
   c.addSeparatorComponents(sep(true));
 
@@ -334,9 +334,9 @@ export function buildHostCard(data: PingData): ContainerBuilder {
 
 export function buildPostgresCard(data: PingData): ContainerBuilder {
   const c = new ContainerBuilder();
-  c.setAccentColor(EmberColors.PEACH);
+  c.setAccentColor(Colors.PEACH);
   c.addSectionComponents(
-    header(data, `${EmberEmojis.DATABASE} Relational Database Audit`),
+    header(data, `${Emojis.DATABASE} Relational Database Audit`),
   );
   c.addSeparatorComponents(sep(true));
 
@@ -371,12 +371,12 @@ export function buildPostgresCard(data: PingData): ContainerBuilder {
   if (data.tableSizes.length > 0) {
     c.addSeparatorComponents(sep(true));
     c.addTextDisplayComponents(
-      txt(`### ${EmberEmojis.ANALYTICS} HIGH-DENSITY TABLE BREAKDOWN`),
+      txt(`### ${Emojis.ANALYTICS} HIGH-DENSITY TABLE BREAKDOWN`),
     );
     const tableLines = data.tableSizes
       .map(
         (t) =>
-          `> **${t.name}**\n> ┕ ***${fmtKB(t.bytes)}***${t.deadTuples > 0n ? ` (${EmberEmojis.WARNING_SIGN} ${t.deadTuples.toLocaleString()} dead)` : ""}`,
+          `> **${t.name}**\n> ┕ ***${fmtKB(t.bytes)}***${t.deadTuples > 0n ? ` (${Emojis.WARNING_SIGN} ${t.deadTuples.toLocaleString()} dead)` : ""}`,
       )
       .join("\n");
     c.addTextDisplayComponents(txt(tableLines));
@@ -389,9 +389,9 @@ export function buildPostgresCard(data: PingData): ContainerBuilder {
 
 export function buildRedisCard(data: PingData): ContainerBuilder {
   const c = new ContainerBuilder();
-  c.setAccentColor(EmberColors.ROSE);
+  c.setAccentColor(Colors.ROSE);
   c.addSectionComponents(
-    header(data, `${EmberEmojis.CACHE} In-Memory Cache Performance`),
+    header(data, `${Emojis.CACHE} In-Memory Cache Performance`),
   );
   c.addSeparatorComponents(sep(true));
 
@@ -434,9 +434,9 @@ export function buildRedisCard(data: PingData): ContainerBuilder {
 
 export function buildRabbitCard(data: PingData): ContainerBuilder {
   const c = new ContainerBuilder();
-  c.setAccentColor(EmberColors.MINT);
+  c.setAccentColor(Colors.MINT);
   c.addSectionComponents(
-    header(data, `${EmberEmojis.QUEUE} Distributed Event Pipeline`),
+    header(data, `${Emojis.QUEUE} Distributed Event Pipeline`),
   );
   c.addSeparatorComponents(sep(true));
 
@@ -458,7 +458,7 @@ export function buildRabbitCard(data: PingData): ContainerBuilder {
               ["Pending Requests", `${data.rabbitQueued} Messages`],
               ["Active Consumers", `${data.rabbitConsumers} Workers`],
             ],
-            "Monitoring ember.rpc.requests saturation",
+            "Monitoring lumi.rpc.requests saturation",
           ),
         ].join("\n"),
       ),
@@ -466,7 +466,7 @@ export function buildRabbitCard(data: PingData): ContainerBuilder {
   } else {
     c.addTextDisplayComponents(
       txt(
-        `### ${EmberEmojis.CROSS} PIPELINE OFFLINE\n> **Critical connection failure detected for RabbitMQ.**\n┕ -# Background tasks and inter-module RPC are suspended.`,
+        `### ${Emojis.CROSS} PIPELINE OFFLINE\n> **Critical connection failure detected for RabbitMQ.**\n┕ -# Background tasks and inter-module RPC are suspended.`,
       ),
     );
   }
@@ -478,9 +478,9 @@ export function buildRabbitCard(data: PingData): ContainerBuilder {
 
 export function buildBotCard(data: PingData): ContainerBuilder {
   const c = new ContainerBuilder();
-  c.setAccentColor(EmberColors.SAKURA);
+  c.setAccentColor(Colors.SAKURA);
   c.addSectionComponents(
-    header(data, `${EmberEmojis.BOT} Core Intelligence Diagnostics`),
+    header(data, `${Emojis.BOT} Core Intelligence Diagnostics`),
   );
   c.addSeparatorComponents(sep(true));
 
@@ -552,7 +552,7 @@ export function buildDetailCard(
       new ButtonBuilder()
         .setCustomId(`ping:overview:${userId}`)
         .setLabel("Back to Overview")
-        .setEmoji(EmberEmojis.parse(EmberEmojis.ARROW_LEFT))
+        .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
         .setStyle(ButtonStyle.Secondary),
     ),
   );

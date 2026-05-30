@@ -28,8 +28,7 @@ export class NotIgnoredPrecondition extends AllFlowsPrecondition {
       guildId,
       channelId,
     );
-    if (guild)
-      return this.error({ message: "This server is not using Ember." });
+    if (guild) return this.error({ message: "This server is not using Lumi." });
     if (channel)
       return this.error({ message: "Commands are disabled in this channel." });
     return this.ok();

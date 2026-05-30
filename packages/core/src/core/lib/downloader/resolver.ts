@@ -148,7 +148,7 @@ export class DownloadResolver {
       const localPackageJsonPath = path.join(sourcePath, "package.json");
       if (!(await this._exists(localPackageJsonPath))) {
         const localPackageJson = {
-          name: `ember-module-${moduleName}`,
+          name: `lumi-module-${moduleName}`,
           version: "1.0.0",
           private: true,
         };

@@ -8,19 +8,19 @@ import {
   type GuildMember,
   MessageFlags,
 } from "discord.js";
-import { EmberCommand } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import { makeSuccessCard, makeErrorCard } from "#utilities/cards.js";
 import { logToChannel } from "../lib/helpers.js";
 import { incrementWarnCount, checkThresholds } from "../lib/thresholds.js";
 
-@ApplyOptions<EmberCommand.Options>({
+@ApplyOptions<BaseCommand.Options>({
   name: "warn",
   description: "Warn a member",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.MOD,
 })
-export class WarnCommand extends EmberCommand {
+export class WarnCommand extends BaseCommand {
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {

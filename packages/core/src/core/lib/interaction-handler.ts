@@ -11,7 +11,7 @@ import type {
   MentionableSelectMenuInteraction,
   ChannelSelectMenuInteraction,
 } from "discord.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 
 export type AnyInteraction =
   | ButtonInteraction
@@ -21,7 +21,7 @@ export type AnyInteraction =
   | MentionableSelectMenuInteraction
   | ChannelSelectMenuInteraction;
 
-export abstract class EmberInteractionHandler extends InteractionHandler {
+export abstract class BaseInteractionHandler extends InteractionHandler {
   public constructor(
     context: InteractionHandler.LoaderContext,
     options: InteractionHandlerOptions,
@@ -45,7 +45,7 @@ export abstract class EmberInteractionHandler extends InteractionHandler {
 
     throw new UserError({
       identifier: "AccessDenied",
-      message: `${EmberEmojis.CROSS} Only the original invoker can use these components.`,
+      message: `${Emojis.CROSS} Only the original invoker can use these components.`,
     });
   }
 

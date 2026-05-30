@@ -12,9 +12,9 @@ import {
   type GuildMember,
   type Message,
 } from "discord.js";
-import { EmberCommand } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
 import { AFK_MAX_REASON_LENGTH, sanitizeReason } from "../index.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 
 function afkCard(title: string, body: string) {
   const c = new ContainerBuilder();
@@ -36,7 +36,7 @@ function afkCard(title: string, body: string) {
   preconditions: ["GuildOnly", "ModuleEnabled"],
   module: "afk",
 })
-export default class AfkCommand extends EmberCommand {
+export default class AfkCommand extends BaseCommand {
   public override registerApplicationCommands(registry: Command.Registry) {
     registry.registerChatInputCommand((builder) =>
       builder
@@ -81,8 +81,8 @@ export default class AfkCommand extends EmberCommand {
       status === "ALREADY_AFK"
         ? "Already AFK"
         : status === "UPDATED_AFK"
-          ? `${EmberEmojis.EDIT} AFK Updated`
-          : `${EmberEmojis.AFK} AFK Set`;
+          ? `${Emojis.EDIT} AFK Updated`
+          : `${Emojis.AFK} AFK Set`;
     const body =
       status === "ALREADY_AFK"
         ? `You are already AFK with the reason: **${reason}**`
@@ -116,8 +116,8 @@ export default class AfkCommand extends EmberCommand {
       status === "ALREADY_AFK"
         ? "Already AFK"
         : status === "UPDATED_AFK"
-          ? `${EmberEmojis.EDIT} AFK Updated`
-          : `${EmberEmojis.AFK} AFK Set`;
+          ? `${Emojis.EDIT} AFK Updated`
+          : `${Emojis.AFK} AFK Set`;
     const body =
       status === "ALREADY_AFK"
         ? `You are already AFK with the reason: **${cleanedReason}**`

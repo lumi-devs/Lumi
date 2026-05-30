@@ -20,8 +20,8 @@ import {
   type GuildMember,
   type VoiceBasedChannel,
 } from "discord.js";
-import { EmberInteractionHandler } from "#core/lib/interaction-handler.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
+import { Emojis } from "#utilities/assets.js";
 import {
   ephemeralCard,
   makeErrorCard,
@@ -55,7 +55,7 @@ const SELECT_PLACEHOLDER: Record<string, string> = {
   name: "tempvc-buttons",
   interactionHandlerType: InteractionHandlerTypes.Button,
 })
-export default class TempVcButtonHandler extends EmberInteractionHandler {
+export default class TempVcButtonHandler extends BaseInteractionHandler {
   private get service(): TempVcService {
     return this.container.stores.get("services").get("tempvc") as TempVcService;
   }
@@ -76,14 +76,14 @@ export default class TempVcButtonHandler extends EmberInteractionHandler {
     if (!channel || !channel.isVoiceBased()) {
       throw new UserError({
         identifier: "TempVcGone",
-        message: `${EmberEmojis.CROSS} This voice channel no longer exists.`,
+        message: `${Emojis.CROSS} This voice channel no longer exists.`,
       });
     }
     const record = await getVcRecord(interaction.guildId, channelId);
     if (!record) {
       throw new UserError({
         identifier: "TempVcUnmanaged",
-        message: `${EmberEmojis.CROSS} This channel is no longer managed.`,
+        message: `${Emojis.CROSS} This channel is no longer managed.`,
       });
     }
 
@@ -141,7 +141,7 @@ export default class TempVcButtonHandler extends EmberInteractionHandler {
     if (this.service.canManage(member, channel)) return;
     throw new UserError({
       identifier: "TempVcNotOwner",
-      message: `${EmberEmojis.CROSS} Only the channel owner can use these controls.`,
+      message: `${Emojis.CROSS} Only the channel owner can use these controls.`,
     });
   }
 
@@ -289,19 +289,19 @@ export default class TempVcButtonHandler extends EmberInteractionHandler {
     if (member.voice.channelId !== channel.id) {
       throw new UserError({
         identifier: "TempVcClaimNotIn",
-        message: `${EmberEmojis.CROSS} You must be in the channel to claim it.`,
+        message: `${Emojis.CROSS} You must be in the channel to claim it.`,
       });
     }
     const owner = channel.members.get(record.ownerId);
     if (owner) {
       throw new UserError({
         identifier: "TempVcOwnerPresent",
-        message: `${EmberEmojis.CROSS} The owner is still here — you can't claim it.`,
+        message: `${Emojis.CROSS} The owner is still here — you can't claim it.`,
       });
     }
 
     const guard = await this.service.redis.set(
-      `ember:tempvc:claim:${channel.id}`,
+      `lumi:tempvc:claim:${channel.id}`,
       member.id,
       "PX",
       3000,
@@ -310,7 +310,7 @@ export default class TempVcButtonHandler extends EmberInteractionHandler {
     if (guard === null) {
       throw new UserError({
         identifier: "TempVcClaimRace",
-        message: `${EmberEmojis.LOADING} Someone else is claiming — try again.`,
+        message: `${Emojis.LOADING} Someone else is claiming — try again.`,
       });
     }
 

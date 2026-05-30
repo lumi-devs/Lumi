@@ -1,7 +1,7 @@
-// @ember/core public surface. Apps import the client + setup side-effect from here;
-// @ember/sdk re-exports the addon-facing pieces below. Deep paths stay internal.
+// @lumi/core public surface. Apps import the client + setup side-effect from here;
+// @lumi/sdk re-exports the addon-facing pieces below. Deep paths stay internal.
 
-export { EmberClient } from "./src/client/EmberClient.js";
+export { LumiClient } from "./src/client/LumiClient.js";
 
 // Env helpers
 export {
@@ -14,7 +14,7 @@ export {
 // Module system
 export {
   Module,
-  EmberModule,
+  DefineModule,
   cfg,
   parseConfigList,
   FieldType,
@@ -26,8 +26,8 @@ export { Service } from "./src/core/module-system/Service.js";
 
 // Commands
 export {
-  EmberCommand,
-  EmberSubcommand,
+  BaseCommand,
+  BaseSubcommand,
   sendReply,
   replySuccess,
   replyError,
@@ -59,7 +59,7 @@ export {
 } from "./src/utilities/cards.js";
 
 // Assets
-export { EmberEmojis, type EmberEmojiKey } from "./src/utilities/assets.js";
+export { Emojis, type EmojiKey } from "./src/utilities/assets.js";
 
 // Shared wire contracts
-export * from "@ember/contracts";
+export * from "@lumi/contracts";

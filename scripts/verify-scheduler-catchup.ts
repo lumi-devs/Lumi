@@ -46,8 +46,8 @@ function shouldRunNow(
   return false;
 }
 
-const QUEUE_NAME = `ember-verify-catchup-${Date.now()}`;
-const EFFECT_KEY = `ember:verify:catchup:effects:${Date.now()}`;
+const QUEUE_NAME = `lumi-verify-catchup-${Date.now()}`;
+const EFFECT_KEY = `lumi:verify:catchup:effects:${Date.now()}`;
 const GRACE_MS = 60_000;
 const OVERDUE_MS = 5 * 60_000;
 const FRESH_DELAY_MS = 200;

@@ -1,10 +1,10 @@
-import { Module, EmberModule } from "#core/module-system/Module.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Module, DefineModule } from "#core/module-system/Module.js";
+import { Emojis } from "#utilities/assets.js";
 
-@EmberModule({
+@DefineModule({
   name: "nick",
   displayName: "Nickname",
-  emoji: EmberEmojis.GEAR,
+  emoji: Emojis.GEAR,
   version: "1.0.0",
   description: "Nickname management commands.",
   dependencies: ["utility"],

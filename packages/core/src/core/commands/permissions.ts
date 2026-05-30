@@ -4,7 +4,7 @@ import {
   container,
   type Args,
 } from "@sapphire/framework";
-import { EmberSubcommand } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel, type PermissionModelType } from "#lib/permissions.js";
 import {
   ApplicationIntegrationType,
@@ -24,7 +24,7 @@ import {
   makeSuccessCard,
   ephemeralCard,
 } from "#utilities/cards.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 
 const MODEL_TYPES = [
   "role",
@@ -43,7 +43,7 @@ interface PermissionOverrideRow {
 }
 
 function formatOverride(row: PermissionOverrideRow): string {
-  const emoji = row.allow ? EmberEmojis.CHECK : EmberEmojis.CROSS;
+  const emoji = row.allow ? Emojis.CHECK : Emojis.CROSS;
   let mention: string;
   if (row.modelType === "everyone") mention = "@everyone";
   else if (row.modelType === "role") mention = roleMention(row.modelId);
@@ -54,7 +54,7 @@ function formatOverride(row: PermissionOverrideRow): string {
   return `${emoji} \`${row.commandPath}\` — ${row.modelType} ${mention}`;
 }
 
-@ApplyOptions<EmberSubcommand.Options>({
+@ApplyOptions<BaseSubcommand.Options>({
   name: "permissions",
   description: "Manage command permission overrides for this guild.",
   preconditions: ["GuildOnly"],
@@ -82,7 +82,7 @@ function formatOverride(row: PermissionOverrideRow): string {
     },
   ],
 })
-export class PermissionsCommand extends EmberSubcommand {
+export class PermissionsCommand extends BaseSubcommand {
   private get permissionService(): import("#core/services/PermissionService.js").PermissionService {
     const svc = this.container.stores.get("services").get("permissions") as
       | import("#core/services/PermissionService.js").PermissionService

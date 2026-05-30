@@ -19,3 +19,9 @@ export class AfkDeleteMessageTask extends ScheduledTask<"afk-delete-message"> {
     await publishTaskFire("afk-delete-message", payload);
   }
 }
+
+declare module "@sapphire/plugin-scheduled-tasks" {
+  interface ScheduledTasks {
+    "afk-delete-message": AfkDeleteMessagePayload;
+  }
+}

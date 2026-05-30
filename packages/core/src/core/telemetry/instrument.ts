@@ -13,7 +13,7 @@ import {
   commandsTotal,
   runWithContext,
   withSpan,
-} from "@ember/observability";
+} from "@lumi/observability";
 
 type RunMethod = "chatInputRun" | "messageRun" | "contextMenuRun";
 
@@ -60,8 +60,8 @@ async function instrumentedRun(
       withSpan(
         `command ${command}`,
         async (span) => {
-          span.setAttribute("ember.command", command);
-          span.setAttribute("ember.command.type", type);
+          span.setAttribute("lumi.command", command);
+          span.setAttribute("lumi.command.type", type);
           if (guildId) span.setAttribute("discord.guild.id", guildId);
           if (userId) span.setAttribute("discord.user.id", userId);
           try {

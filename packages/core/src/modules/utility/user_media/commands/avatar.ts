@@ -1,16 +1,16 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Args, Command } from "@sapphire/framework";
 import { Message, type ChatInputCommandInteraction } from "discord.js";
-import { EmberCommand } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
 import { handleMediaRequest } from "../media-utils.js";
 
-@ApplyOptions<EmberCommand.Options>({
+@ApplyOptions<BaseCommand.Options>({
   name: "avatar",
   aliases: ["av"],
   description: "Displays a user's avatar.",
   preconditions: ["GuildOnly"],
 })
-export class AvatarCommand extends EmberCommand {
+export class AvatarCommand extends BaseCommand {
   public override registerApplicationCommands(registry: Command.Registry) {
     registry.registerChatInputCommand((builder) =>
       builder

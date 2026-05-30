@@ -4,13 +4,13 @@ import {
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { ButtonInteraction, MessageFlags } from "discord.js";
-import { EmberInteractionHandler } from "#core/lib/interaction-handler.js";
+import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
 import { handleMediaRequest } from "../media-utils.js";
 
 @ApplyOptions<InteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,
 })
-export default class UserMediaViewHandler extends EmberInteractionHandler {
+export default class UserMediaViewHandler extends BaseInteractionHandler {
   public override parse(interaction: ButtonInteraction) {
     if (!interaction.customId.startsWith("user-media:view:"))
       return this.none();

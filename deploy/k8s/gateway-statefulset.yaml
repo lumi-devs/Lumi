@@ -11,7 +11,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: gateway
-  namespace: ember
+  namespace: lumi
 spec:
   serviceName: gateway-headless
   replicas: 1
@@ -31,18 +31,18 @@ spec:
       terminationGracePeriodSeconds: 60
       containers:
         - name: gateway
-          image: ghcr.io/your-org/ember:latest
+          image: ghcr.io/your-org/lumi:latest
           imagePullPolicy: IfNotPresent
           command: ["bun", "apps/gateway/src/main.ts"]
           envFrom:
             - configMapRef:
-                name: ember-env
+                name: lumi-env
             - secretRef:
-                name: ember-secrets
+                name: lumi-secrets
           env:
-            - name: EMBER_ROLE
+            - name: LUMI_ROLE
               value: "gateway"
-            - name: EMBER_CONSUMER_ID
+            - name: LUMI_CONSUMER_ID
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
@@ -88,7 +88,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: gateway-headless
-  namespace: ember
+  namespace: lumi
 spec:
   clusterIP: None
   selector:

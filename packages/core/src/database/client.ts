@@ -3,7 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { container } from "@sapphire/framework";
 import { Stopwatch } from "@sapphire/stopwatch";
-import { pgPoolSize, pgPoolUsed, pgPoolWaiting } from "@ember/observability";
+import { pgPoolSize, pgPoolUsed, pgPoolWaiting } from "@lumi/observability";
 
 // Per-process client-connection cap. Behind a transaction-pooled PgBouncer this
 // is how many PgBouncer client slots a single process holds — keep it small so N
@@ -56,6 +56,6 @@ const createPrismaClient = () => {
 
 export const prisma = createPrismaClient();
 
-export type EmberPrismaClient = typeof prisma;
+export type DatabaseClient = typeof prisma;
 
 export * from "@prisma/client";

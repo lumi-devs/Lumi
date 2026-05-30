@@ -1,6 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Args } from "@sapphire/framework";
-import { EmberSubcommand } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import type { Message } from "discord.js";
 import {
@@ -9,9 +9,9 @@ import {
   makeListCard,
   makeInfoCard,
 } from "#utilities/cards.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 
-@ApplyOptions<EmberSubcommand.Options>({
+@ApplyOptions<BaseSubcommand.Options>({
   name: "repo",
   description: "Manage third-party module repositories",
   preconditions: ["GuildOnly"],
@@ -23,7 +23,7 @@ import { EmberEmojis } from "#utilities/assets.js";
     { name: "help", messageRun: "messageRunHelp", default: true },
   ],
 })
-export class RepoCommand extends EmberSubcommand {
+export class RepoCommand extends BaseSubcommand {
   private get downloaderService(): import("#core/services/DownloaderService.js").DownloaderService {
     return this.container.stores
       .get("services")
@@ -63,22 +63,22 @@ export class RepoCommand extends EmberSubcommand {
     try {
       await this.downloaderService.addRepo(name, url, branch);
       this.container.logger.info(
-        `[Repo] ${EmberEmojis.REPO} Added repository: ${name} (${url}@${branch}) by ${message.author.tag}`,
+        `[Repo] ${Emojis.REPO} Added repository: ${name} (${url}@${branch}) by ${message.author.tag}`,
       );
       await msg.edit(
         makeSuccessCard(
-          `${EmberEmojis.REPO} Repository Added`,
+          `${Emojis.REPO} Repository Added`,
           `Successfully cloned/updated repository **${name}**.\nYou can now use \`,repo modules ${name}\` to view available modules.`,
         ),
       );
     } catch (err: unknown) {
       const error = err as Error;
       this.container.logger.warn(
-        `[Repo] ${EmberEmojis.ERROR} Failed to add repo: ${name} — ${error.message}`,
+        `[Repo] ${Emojis.ERROR} Failed to add repo: ${name} — ${error.message}`,
       );
       await msg.edit(
         makeErrorCard(
-          `${EmberEmojis.ERROR} Failed to Add Repository`,
+          `${Emojis.ERROR} Failed to Add Repository`,
           error.message,
         ),
       );

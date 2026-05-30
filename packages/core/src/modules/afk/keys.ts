@@ -1,15 +1,15 @@
 export const AfkKeys = {
-  afk: (guildId: string, userId: string) => `ember:afk:${guildId}:${userId}`,
-  mentionCooldown: (channelId: string) => `ember:afk:cd:mention:${channelId}`,
+  afk: (guildId: string, userId: string) => `lumi:afk:${guildId}:${userId}`,
+  mentionCooldown: (channelId: string) => `lumi:afk:cd:mention:${channelId}`,
   welcomeCooldown: (channelId: string, userId: string) =>
-    `ember:afk:cd:welcome:${channelId}:${userId}`,
+    `lumi:afk:cd:welcome:${channelId}:${userId}`,
   removalCooldown: (guildId: string, userId: string) =>
-    `ember:afk:cd:removal:${guildId}:${userId}`,
-  removalCooldownPattern: () => "ember:afk:cd:removal:*",
-  nickEditCooldown: (userId: string) => `ember:afk:cd:nick:${userId}`,
-  allForUserPattern: (userId: string) => `ember:afk:*:${userId}`,
+    `lumi:afk:cd:removal:${guildId}:${userId}`,
+  removalCooldownPattern: () => "lumi:afk:cd:removal:*",
+  nickEditCooldown: (userId: string) => `lumi:afk:cd:nick:${userId}`,
+  allForUserPattern: (userId: string) => `lumi:afk:*:${userId}`,
   mentions: (guildId: string, userId: string) =>
-    `ember:afk:mentions:${guildId}:${userId}`,
+    `lumi:afk:mentions:${guildId}:${userId}`,
 } as const;
 
 export const AfkTTL = {

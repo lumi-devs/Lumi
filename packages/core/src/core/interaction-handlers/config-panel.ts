@@ -15,8 +15,8 @@ import {
   type AnySelectMenuInteraction,
   type ModalSubmitInteraction,
 } from "discord.js";
-import { EmberInteractionHandler } from "../lib/interaction-handler.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { BaseInteractionHandler } from "../lib/interaction-handler.js";
+import { Emojis } from "#utilities/assets.js";
 import { ephemeralCard, makeErrorCard } from "#utilities/cards.js";
 import { FieldType } from "#core/module-system/Module.js";
 import type { ConfigService } from "#core/services/ConfigService.js";
@@ -36,7 +36,7 @@ const OVERRIDE_TYPES = new Set(["channel", "role", "user", "category"]);
 const accessDenied = () =>
   new UserError({
     identifier: "AccessDenied",
-    message: `${EmberEmojis.CROSS} You need the Admin permission level to manage configuration.`,
+    message: `${Emojis.CROSS} You need the Admin permission level to manage configuration.`,
   });
 
 // ── Buttons ────────────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ const accessDenied = () =>
   name: "config-panel-button",
   interactionHandlerType: InteractionHandlerTypes.Button,
 })
-export class ConfigPanelButtonHandler extends EmberInteractionHandler {
+export class ConfigPanelButtonHandler extends BaseInteractionHandler {
   private get cfg(): ConfigService {
     return this.container.stores.get("services").get("config") as ConfigService;
   }
@@ -162,7 +162,7 @@ export class ConfigPanelButtonHandler extends EmberInteractionHandler {
     if (!detail)
       throw new UserError({
         identifier: "UnknownModule",
-        message: `${EmberEmojis.CROSS} Module \`${moduleName}\` no longer exists.`,
+        message: `${Emojis.CROSS} Module \`${moduleName}\` no longer exists.`,
       });
     return detail;
   }
@@ -246,7 +246,7 @@ export class ConfigPanelButtonHandler extends EmberInteractionHandler {
   name: "config-panel-select",
   interactionHandlerType: InteractionHandlerTypes.SelectMenu,
 })
-export class ConfigPanelSelectHandler extends EmberInteractionHandler {
+export class ConfigPanelSelectHandler extends BaseInteractionHandler {
   private get cfg(): ConfigService {
     return this.container.stores.get("services").get("config") as ConfigService;
   }

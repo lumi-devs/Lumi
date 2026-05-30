@@ -1,7 +1,8 @@
 {
-  "name": "ember",
+  "name": "lumi",
   "version": "2.1.1",
-  "description": "Ember — modular Discord bot (TypeScript / Sapphire / Postgres / Redis). Monorepo root.",
+  "license": "Apache-2.0",
+  "description": "Lumi — modular Discord bot (TypeScript / Sapphire / Postgres / Redis). Monorepo root.",
   "private": true,
   "type": "module",
   "workspaces": ["packages/*", "apps/*"],
@@ -23,8 +24,8 @@
     "#lib/module-check.js": "./packages/core/src/core/lib/module-check.ts"
   },
   "scripts": {
-    "dev": "bun install && bun run db:generate && bun --filter @ember/worker run dev",
-    "start": "bun --filter @ember/worker run start",
+    "dev": "bun install && bun run db:generate && bun --filter @lumi/worker run dev",
+    "start": "bun --filter @lumi/worker run start",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint packages/*/src apps/*/src --ext ts --fix",
     "db:generate": "prisma generate",

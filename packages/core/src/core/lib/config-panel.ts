@@ -30,8 +30,8 @@ import {
   type ModuleMeta,
 } from "#core/module-system/Module.js";
 import { makeCard, noPingCard, type CardReply } from "#utilities/cards.js";
-import { EmberColors } from "#utilities/branding.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Colors } from "#utilities/branding.js";
+import { Emojis } from "#utilities/assets.js";
 import type {
   ConfigHistoryEntry,
   ConfigOverrideEntry,
@@ -111,7 +111,7 @@ export function formatFieldValue(field: ConfigField, value: unknown): string {
     case FieldType.USER:
       return userMention(String(val));
     case FieldType.BOOLEAN:
-      return val ? `${EmberEmojis.CHECK} Yes` : `${EmberEmojis.CROSS} No`;
+      return val ? `${Emojis.CHECK} Yes` : `${Emojis.CROSS} No`;
     default:
       return `\`${cutText(String(val), 120)}\``;
   }
@@ -140,7 +140,7 @@ export function buildFeatureListView(
   const pageFeatures = sorted.slice(start, start + FEATURES_PER_PAGE);
 
   const lines = pageFeatures.map((f) => {
-    const dot = f.guildEnabled ? EmberEmojis.SUCCESS : EmberEmojis.ERROR;
+    const dot = f.guildEnabled ? Emojis.SUCCESS : Emojis.ERROR;
     return `${dot} ${f.meta.emoji} **${f.meta.displayName}**`;
   });
 
@@ -158,7 +158,7 @@ export function buildFeatureListView(
                   ? cutText(f.meta.description, 100)
                   : "No description",
               )
-              .setEmoji(EmberEmojis.parse(f.meta.emoji)),
+              .setEmoji(Emojis.parse(f.meta.emoji)),
           )
         : [
             new StringSelectMenuOptionBuilder()
@@ -176,13 +176,13 @@ export function buildFeatureListView(
         new ButtonBuilder()
           .setCustomId(`cfg:page:${safePage - 1}`)
           .setLabel("Prev")
-          .setEmoji(EmberEmojis.parse(EmberEmojis.ARROW_LEFT))
+          .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(safePage <= 0),
         new ButtonBuilder()
           .setCustomId(`cfg:page:${safePage + 1}`)
           .setLabel("Next")
-          .setEmoji(EmberEmojis.parse(EmberEmojis.ARROW_RIGHT))
+          .setEmoji(Emojis.parse(Emojis.ARROW_RIGHT))
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(safePage >= totalPages - 1),
       ),
@@ -190,8 +190,8 @@ export function buildFeatureListView(
   }
 
   return makeCard(
-    EmberColors.PRIMARY,
-    `${EmberEmojis.GEAR} Server Config`,
+    Colors.PRIMARY,
+    `${Emojis.GEAR} Server Config`,
     lines.length ? lines.join("\n") : "*No features registered.*",
     {
       footer:
@@ -212,8 +212,8 @@ export function buildFeatureDetailView(
 ): CardReply {
   const fields = meta.configFields ?? [];
   const statusLine = guildEnabled
-    ? `${EmberEmojis.SUCCESS} **Enabled**`
-    : `${EmberEmojis.ERROR} **Disabled**`;
+    ? `${Emojis.SUCCESS} **Enabled**`
+    : `${Emojis.ERROR} **Disabled**`;
 
   const fieldLines = [`**Status:** ${statusLine}`];
   for (const f of fields) {
@@ -244,7 +244,7 @@ export function buildFeatureDetailView(
     new ButtonBuilder()
       .setCustomId(`cfg:rst:${meta.name}`)
       .setLabel("Reset")
-      .setEmoji(EmberEmojis.parse(EmberEmojis.UNINSTALL))
+      .setEmoji(Emojis.parse(Emojis.UNINSTALL))
       .setStyle(ButtonStyle.Secondary),
   );
   rows.push(row(...primary));
@@ -254,7 +254,7 @@ export function buildFeatureDetailView(
     new ButtonBuilder()
       .setCustomId(`cfg:hist:${meta.name}`)
       .setLabel("History")
-      .setEmoji(EmberEmojis.parse(EmberEmojis.CLOCK))
+      .setEmoji(Emojis.parse(Emojis.CLOCK))
       .setStyle(ButtonStyle.Secondary),
   ];
   if (meta.configOverrides) {
@@ -262,7 +262,7 @@ export function buildFeatureDetailView(
       new ButtonBuilder()
         .setCustomId(`cfg:ovr:${meta.name}`)
         .setLabel("Overrides")
-        .setEmoji(EmberEmojis.parse(EmberEmojis.SHIELD))
+        .setEmoji(Emojis.parse(Emojis.SHIELD))
         .setStyle(ButtonStyle.Secondary),
     );
   }
@@ -270,7 +270,7 @@ export function buildFeatureDetailView(
     new ButtonBuilder()
       .setCustomId("cfg:back")
       .setLabel("Back")
-      .setEmoji(EmberEmojis.parse(EmberEmojis.ARROW_LEFT))
+      .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
       .setStyle(ButtonStyle.Secondary),
   );
   rows.push(row(...secondary));
@@ -287,7 +287,7 @@ export function buildFeatureDetailView(
           return new ButtonBuilder()
             .setCustomId(`cfg:bool:${meta.name}:${f.key}`)
             .setLabel(
-              `${on ? EmberEmojis.CHECK : EmberEmojis.CROSS} ${cutText(f.label, 60)}`,
+              `${on ? Emojis.CHECK : Emojis.CROSS} ${cutText(f.label, 60)}`,
             )
             .setStyle(on ? ButtonStyle.Success : ButtonStyle.Secondary);
         }),
@@ -351,7 +351,7 @@ export function buildFeatureDetailView(
 
   return noPingCard(
     makeCard(
-      guildEnabled ? EmberColors.SUCCESS : EmberColors.ERROR,
+      guildEnabled ? Colors.SUCCESS : Colors.ERROR,
       `${meta.emoji} ${meta.displayName}`,
       [meta.description || "No description.", fieldLines.join("\n")],
       { actionRows: rows },
@@ -413,15 +413,15 @@ export function buildHistoryView(
       new ButtonBuilder()
         .setCustomId(`cfg:open:${meta.name}`)
         .setLabel("Back")
-        .setEmoji(EmberEmojis.parse(EmberEmojis.ARROW_LEFT))
+        .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
         .setStyle(ButtonStyle.Secondary),
     ),
   );
 
   return noPingCard(
     makeCard(
-      EmberColors.PRIMARY,
-      `${EmberEmojis.CLOCK} ${meta.displayName} • History`,
+      Colors.PRIMARY,
+      `${Emojis.CLOCK} ${meta.displayName} • History`,
       lines.join("\n"),
       { actionRows: rows },
     ),
@@ -478,20 +478,20 @@ export function buildOverridesView(
       new ButtonBuilder()
         .setCustomId(`cfg:ovadd:${meta.name}`)
         .setLabel("Add Override")
-        .setEmoji(EmberEmojis.parse(EmberEmojis.EDIT))
+        .setEmoji(Emojis.parse(Emojis.EDIT))
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
         .setCustomId(`cfg:open:${meta.name}`)
         .setLabel("Back")
-        .setEmoji(EmberEmojis.parse(EmberEmojis.ARROW_LEFT))
+        .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
         .setStyle(ButtonStyle.Secondary),
     ),
   );
 
   return noPingCard(
     makeCard(
-      EmberColors.PRIMARY,
-      `${EmberEmojis.SHIELD} ${meta.displayName} • Overrides`,
+      Colors.PRIMARY,
+      `${Emojis.SHIELD} ${meta.displayName} • Overrides`,
       [
         lines.join("\n"),
         "-# Overrides apply a config value for a specific channel, role, user, or category.",

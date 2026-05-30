@@ -1,10 +1,10 @@
-import { Module, EmberModule, cfg } from "#core/module-system/Module.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
+import { Emojis } from "#utilities/assets.js";
 
-@EmberModule({
+@DefineModule({
   name: "user_media",
   displayName: "User Media",
-  emoji: EmberEmojis.MEMBERS,
+  emoji: Emojis.MEMBERS,
   version: "1.0.0",
   description: "Commands to display user avatars and banners.",
   configSchema: cfg.object({

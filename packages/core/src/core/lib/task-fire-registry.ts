@@ -1,6 +1,6 @@
 // Worker-side: dispatch `FireEnvelope`s from the bus to a per-task handler. Modules
 // register their effect-executor with `registerTaskFireHandler(name, mode, handler)`
-// (at file top or during setup); on worker/monolith boot, EmberClient starts a
+// (at file top or during setup); on worker/monolith boot, LumiClient starts a
 // `TaskFireConsumer` that subscribes to every registered fire-stream and runs the
 // handler.
 //
@@ -12,27 +12,25 @@
 // under N consumers (flush-logs).
 
 import { container } from "@sapphire/framework";
-import type { EventBus, BusMessage } from "@ember/event-bus";
-import type { EmberScheduledTasks } from "#core/types/common.js";
+import type { EventBus, BusMessage } from "@lumi/event-bus";
+import type { ScheduledTasks } from "#core/types/common.js";
 import { taskFireStream, type FireEnvelope } from "#lib/scheduler-bus.js";
 
 export type TaskFireMode = "unicast" | "broadcast";
 
-export type TaskFireHandler<N extends keyof EmberScheduledTasks> = (
-  payload: EmberScheduledTasks[N],
+export type TaskFireHandler<N extends keyof ScheduledTasks> = (
+  payload: ScheduledTasks[N],
 ) => Promise<void>;
 
-interface Registration<
-  N extends keyof EmberScheduledTasks = keyof EmberScheduledTasks,
-> {
+interface Registration<N extends keyof ScheduledTasks = keyof ScheduledTasks> {
   name: N;
   mode: TaskFireMode;
   handler: TaskFireHandler<N>;
 }
 
-const registry = new Map<keyof EmberScheduledTasks, Registration>();
+const registry = new Map<keyof ScheduledTasks, Registration>();
 
-export function registerTaskFireHandler<N extends keyof EmberScheduledTasks>(
+export function registerTaskFireHandler<N extends keyof ScheduledTasks>(
   name: N,
   mode: TaskFireMode,
   handler: TaskFireHandler<N>,
@@ -52,7 +50,7 @@ export function getRegisteredFireHandlers(): readonly Registration[] {
 
 export interface TaskFireConsumerOptions {
   consumerId: string;
-  /** Group name for "unicast" subscriptions. Default "ember-workers". */
+  /** Group name for "unicast" subscriptions. Default "lumi-workers". */
   unicastGroup?: string;
   blockMs?: number;
   batchSize?: number;
@@ -74,13 +72,13 @@ export class TaskFireConsumer {
       );
       return;
     }
-    const unicastGroup = this.opts.unicastGroup ?? "ember-workers";
+    const unicastGroup = this.opts.unicastGroup ?? "lumi-workers";
 
     for (const reg of handlers) {
       const stream = taskFireStream(String(reg.name));
       const group =
         reg.mode === "broadcast"
-          ? `ember-worker:${this.opts.consumerId}`
+          ? `lumi-worker:${this.opts.consumerId}`
           : unicastGroup;
       const stop = await this.bus.consume<FireEnvelope>(
         [stream],
@@ -109,7 +107,7 @@ export class TaskFireConsumer {
     msg: BusMessage<FireEnvelope>,
   ): Promise<void> {
     try {
-      await (reg.handler as TaskFireHandler<keyof EmberScheduledTasks>)(
+      await (reg.handler as TaskFireHandler<keyof ScheduledTasks>)(
         msg.body.payload,
       );
       await msg.ack();

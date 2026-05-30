@@ -1,9 +1,9 @@
 import "./telemetry.js";
-import "@ember/core/setup";
+import "@lumi/core/setup";
 import { container } from "@sapphire/framework";
-import { shutdownTracing, runDrainSequence } from "@ember/observability";
+import { shutdownTracing, runDrainSequence } from "@lumi/observability";
 import * as Sentry from "@sentry/node";
-import { EmberClient, envIsDefined, envParseString } from "@ember/core";
+import { LumiClient, envIsDefined, envParseString } from "@lumi/core";
 
 if (
   envParseString("SENTRY_ENABLED", "false") === "true" &&
@@ -21,7 +21,7 @@ if (
   });
 }
 
-const client = await EmberClient.bootstrap();
+const client = await LumiClient.bootstrap();
 
 let shuttingDown = false;
 ["SIGINT", "SIGTERM"].forEach((sig) => {
@@ -36,7 +36,7 @@ let shuttingDown = false;
     log("info", `${sig} received`);
     await runDrainSequence(
       [
-        // EmberClient.destroy() walks the right sequence internally:
+        // LumiClient.destroy() walks the right sequence internally:
         // stops the raw-gateway consumer (no new XREADGROUP polls), drains
         // task-fire + scheduler-request consumers, closes the event bus,
         // RabbitMQ, workers, prisma, redis. In-flight handlers finish before

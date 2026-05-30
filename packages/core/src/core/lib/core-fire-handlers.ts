@@ -1,5 +1,5 @@
 // Fire handlers for ScheduledTask pieces that live outside any module
-// (currently just `flush-logs`). Wired up by EmberClient on worker/monolith
+// (currently just `flush-logs`). Wired up by LumiClient on worker/monolith
 // roles, before TaskFireConsumer starts.
 
 import { container } from "@sapphire/framework";
