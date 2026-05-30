@@ -15,6 +15,8 @@
 
 ### Layout
 
+**Monorepo** — Bun workspaces: `packages/*` (`@ember/core`, `@ember/event-bus`, `@ember/observability`, `@ember/contracts`, `@ember/sharding`, `@ember/sdk`) + `apps/*` (`@ember/gateway`, `@ember/worker`, `@ember/scheduler`, `@ember/api`). The bot itself is **`@ember/core`** (`packages/core/`); every `src/…` path below is rooted at **`packages/core/src/`**. `apps/*` are thin deployment entrypoints (see _Runtime roles_), `packages/*` are the libraries they compose; cross-package imports use the `@ember/*` names, never relative paths between packages.
+
 - `src/core/` — framework glue, registered as a Sapphire base path. Holds the command/listener/precondition/service base classes, the module system, the DB & Redis layers, the RabbitMQ bridge, and the core commands (`/config`, `/module`, `/permissions`, `/help`, `/ping`, `/prefix`, `/dashboard`, `/download`, `/repo`).
 - `src/modules/` — feature modules (see below). The `ModuleStore` root.
 - `src/database/` — `client.ts` (Prisma) and `redis.ts` (`RedisKeys`, `RedisTTL`, `createRedisClient`, `InvalidationBus`).
@@ -24,7 +26,7 @@
 
 ### Path aliases (package.json `imports`)
 
-`#core/*`, `#modules/*`, `#database/*`, `#utilities/*`, `#workers/*`, `#root/*` (= `src/*`), and the `#lib/*` aliases: `#lib/commands.js`, `#lib/env.js`, `#lib/permissions.js`, `#lib/rabbit.js`, `#lib/guild-transaction.js`, `#lib/module-check.js`, `#lib/types.js`, `#lib/module-system.js`. Always import via these, never deep relative paths across layers. Note the `.js` suffix on specifiers even though sources are `.ts`.
+These resolve **within `@ember/core`** (`packages/core/package.json` `imports`): `#core/*`, `#modules/*`, `#database/*`, `#utilities/*`, `#workers/*`, `#root/*` (= `packages/core/src/*`), and the `#lib/*` aliases: `#lib/commands.js`, `#lib/env.js`, `#lib/permissions.js`, `#lib/rabbit.js`, `#lib/guild-transaction.js`, `#lib/module-check.js`, `#lib/types.js`, `#lib/module-system.js`, `#lib/schedule-task.js`, `#lib/scheduler-bus.js`. Always import via these inside `packages/core`, never deep relative paths across layers; from other packages/apps import the `@ember/*` package name. Note the `.js` suffix on specifiers even though sources are `.ts`.
 
 ### Module system
 
@@ -60,6 +62,17 @@ Extend `Service` (`#core/module-system/Service.js`); they expose `this.logger`, 
 - Use **`container.db`** (`DatabaseService`) for all persistence in features — never call `container.prisma` directly from a module. KV helpers: `getModuleData`/`setModuleData` (keyed `guildId+module+targetId+key`); config: `getModuleConfig`/`setModuleConfig`.
 - All Redis keys come from **`RedisKeys`** in `src/database/redis.ts`; never hard-code a key string. TTLs live in `RedisTTL`.
 - Cache-aside reads go through `DatabaseService.getOrSet`. Cache busts go through `InvalidationBus` (`#invalidate`) so peer processes drop their copies too — never `redis.del` a shared cache key directly.
+- **`container.entityCache`** (`RedisEntityCache`, `#core/entity-cache/RedisEntityCache.js`) is a Redis projection of core gateway entities (guild/channel/role/user/member), written by the entity-populator on the `monolith` + `worker` roles. It is **provisioned-ahead infra for a future `GuildManager: 0` step, not yet a read path** — the accessors (`guild()/channel()/role()/user()/member()`) exist but have zero callers, there is no enumerate-all, and it holds no action methods. Keep reading from discord.js's own caches; don't migrate call sites onto it until that step is actually taken (it needs `GuildManager: 0` + an enumerate accessor + a REST-for-actions policy first).
+
+### Runtime roles & scale-out
+
+The same `@ember/core` build runs in one of four roles selected by **`EMBER_ROLE`** (`monolith` default | `gateway` | `worker` | `scheduler`); the helpers live in `#lib/env.js` (`getEmberRole`, `roleOwnsScheduler`, `roleExecutesTaskEffects`). **`docker compose up` with no profile boots a single `monolith`** (full WS + BullMQ + all module work in one process) — that path is sacred; the split roles are opt-in for scale-out.
+
+- **monolith** — everything in-process. **gateway** (`apps/gateway`) holds the Discord WebSocket and publishes every raw dispatch packet onto the event bus; runs no module logic. **worker** (`apps/worker`) has no WS (`ws.connect` is patched to a no-op), consumes raw packets off the bus to populate its cache, and runs all command/module work — it's the canonical full-client entrypoint (`EmberClient.bootstrap()`, role from env). **scheduler** (`apps/scheduler`) has no WS, owns the BullMQ Queue + Worker, and re-publishes task effects onto `ember.scheduler.fire:<name>` for workers to execute (`#lib/scheduler-bus.js`). `apps/api` is currently a thin stub that re-imports `@ember/worker/main` until the real api split lands.
+- **`TRANSPORT`** (`inproc` default | `streams` | `nats`) selects the `@ember/event-bus` backend via `createEventBus`. `inproc` keeps a monolith self-contained; `streams` (Redis Streams) / `nats` (JetStream) carry events between split roles.
+- **`CLUSTER_NAME`** turns on the Redis-backed cluster coordinator (shard-range assignment, session resumption, shared IDENTIFY throttling). Unset → single-replica path (`SHARD_LIST` honored, sessions not persisted).
+- **HA (S5):** `REDIS_SENTINELS` (comma-separated `host:port`) points every Redis client at Sentinel for master discovery + failover (`REDIS_SENTINEL_NAME`, default `mymaster`); `SCHEDULER_LEADER_LOCK=true` makes a `scheduler` replica acquire a Redis leader lock before `login()` so only one fires jobs (hot-standby), followers poll-block until it lapses.
+- **Readiness & graceful shutdown** (`@ember/observability`): each role registers dependency probes with `registerReadinessProbe(name, fn)`; `/healthz` (liveness, always 200 if up) and `/readyz` (readiness — 503 while draining or if any probe fails) are served on the **metrics port** (`METRICS_PORT`, default `9090`). The old Sapphire `@sapphire/plugin-api` `HealthRoute` is **gone**. SIGTERM handlers call `runDrainSequence(steps, opts)` — `markDraining()` → pre-close grace → bounded sequential drain steps under a hard deadline.
 
 ### Background work — two distinct systems
 
@@ -68,11 +81,11 @@ Extend `Service` (`#core/module-system/Service.js`); they expose `this.logger`, 
 
 ### Observability (`@ember/observability`)
 
-Cross-service telemetry primitives — zero discord.js deps. App entrypoints call `bootstrapTelemetry("<service>")` from `apps/<svc>/src/telemetry.ts` **before any other import** (ESM hoisting: tracing must register before http/pg/ioredis/amqplib load). Thin apps (`gateway`/`scheduler`/`api`) just set `SERVICE_NAME` in `service-name.ts` and re-import `@ember/worker/main`.
+Cross-service telemetry primitives — zero discord.js deps. App entrypoints call `bootstrapTelemetry("<service>")` from `apps/<svc>/src/telemetry.ts` **before any other import** (ESM hoisting: tracing must register before http/pg/ioredis/amqplib load). `apps/gateway` + `apps/worker` bootstrap full telemetry in `telemetry.ts`; `apps/scheduler` + `apps/api` only set `SERVICE_NAME` in `service-name.ts` before importing `@ember/core/setup` (`apps/api` then re-imports `@ember/worker/main`).
 
 - **Logger**: `PinoSapphireLogger` adapter (set on the Sapphire client). `createPinoLogger` injects `correlationId`/`traceId`/`spanId`/`guildId`/`userId` from the AsyncLocalStorage context. `LOG_LEVEL`, `LOG_FORMAT=json|pretty`.
 - **Tracing**: `startTracing()` (gated on `OTEL_ENABLED`) registers a `NodeTracerProvider` + W3C propagator + auto-instrumentations. `withSpan(name, fn, options)` for manual spans. Command base class (`EmberCommand`/`EmberSubcommand`) wraps `chatInputRun`/`messageRun`/`contextMenuRun` so each invocation is one trace with child DB/Redis/HTTP spans nested. RabbitMQ `publishEvent` stamps `traceparent` on the envelope; consumers + `dispatchRpc` continue the trace.
-- **Metrics**: prom-client registry, `/metrics` on `METRICS_PORT` (default `9090`). `commandsTotal{command,type,status}`, `commandDuration{command,type}` (RED); `busEventsPublished/Consumed{event}`, `queueDepth{queue}`, `shardLatency{shard}`/`shardStatus{shard}`/`guildCount`, `rest429Total{route,method,global}`, `cacheHits/Misses{cache}`, `pgPoolSize/Used/Waiting`. **Don't hand-create new metrics in modules** — add to `packages/observability/src/metrics.ts` so labels stay consistent.
+- **Metrics**: prom-client registry, `/metrics` (plus `/healthz` + `/readyz`, see _Runtime roles & scale-out_) on `METRICS_PORT` (default `9090`). `commandsTotal{command,type,status}`, `commandDuration{command,type}` (RED); `busEventsPublished/Consumed{event}`, `queueDepth{queue}`, `shardLatency{shard}`/`shardStatus{shard}`/`guildCount`, `rest429Total{route,method,global}`, `cacheHits/Misses{cache}`, `pgPoolSize/Used/Waiting`. **Don't hand-create new metrics in modules** — add to `packages/observability/src/metrics.ts` so labels stay consistent.
 - **Context**: `runWithContext({correlationId, source, guildId, userId})` to start a unit-of-work; `injectTraceContext()`/`extractTraceContext(carrier)` for new transport hops (envelope, RPC).
 - **Stack**: opt-in via `docker compose --profile observability up` — Prometheus + Grafana + Tempo + OTel Collector with provisioned datasources/dashboards/alert rules in `config/observability/`. Apps always emit OTLP + serve `/metrics`; with the profile down the batch exporter degrades quietly.
 - **Don't enable `OTEL_ENABLED` and `SENTRY_ENABLED` together** — Sentry v10 registers its own TracerProvider and will conflict.

@@ -5,6 +5,11 @@
 // pending list to drain, because delivery already happened in-process.
 //
 // What this is NOT: durable, cross-process, or backpressured. Use streams for that.
+//
+// The methods are non-`async` and return resolved promises directly: the
+// `EventBus` interface is async (Redis/NATS impls genuinely await IO), but this
+// in-memory impl has nothing to await. Wrapping in `Promise.resolve` keeps the
+// polymorphic signature without a meaningless `async`.
 
 import { EventEmitter } from "node:events";
 import type {
@@ -25,18 +30,18 @@ export class InProcBus implements EventBus {
     this.emitter.setMaxListeners(0);
   }
 
-  public async publish<T>(
+  public publish<T>(
     stream: string,
     body: T,
     _opts?: PublishOptions,
   ): Promise<string> {
-    if (this.closed) throw new Error("InProcBus closed");
+    if (this.closed) return Promise.reject(new Error("InProcBus closed"));
     const id = `${Date.now()}-${this.nextSeq++}`;
     this.emitter.emit(stream, id, body);
-    return id;
+    return Promise.resolve(id);
   }
 
-  public async consume<T>(
+  public consume<T>(
     streams: readonly string[],
     _opts: ConsumeOptions,
     handler: (msg: BusMessage<T>) => Promise<void>,
@@ -48,8 +53,8 @@ export class InProcBus implements EventBus {
           id: id as string,
           body: body as T,
           deliveryCount: 1,
-          ack: async () => undefined,
-          nack: async () => undefined,
+          ack: () => Promise.resolve(),
+          nack: () => Promise.resolve(),
         };
         // Fire and forget; handler errors logged by the caller's try/catch
         // (InProcBus has no DLQ — that's a streams-only concern).
@@ -58,13 +63,15 @@ export class InProcBus implements EventBus {
       this.emitter.on(stream, fn);
       listeners.push([stream, fn as (...args: unknown[]) => void]);
     }
-    return async () => {
+    return Promise.resolve(() => {
       for (const [stream, fn] of listeners) this.emitter.off(stream, fn);
-    };
+      return Promise.resolve();
+    });
   }
 
-  public async close(): Promise<void> {
+  public close(): Promise<void> {
     this.closed = true;
     this.emitter.removeAllListeners();
+    return Promise.resolve();
   }
 }

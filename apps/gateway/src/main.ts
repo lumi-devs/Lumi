@@ -385,15 +385,25 @@ const readyTracker =
       })
     : null;
 let readyHeartbeat: ReturnType<typeof setInterval> | null = null;
+// Latches true the first time every owned shard has connected. See publishReady.
+let everReady = false;
 const publishReady = () => {
   if (!readyTracker) return;
   const allReady =
     expectedShards.size > 0 && shardReady.size === expectedShards.size;
-  readyTracker
-    .publishReady(allReady)
-    .catch((err) =>
-      log("warn", "publishReady failed", { ready: allReady, err: String(err) }),
-    );
+  if (allReady) everReady = true;
+  // Require every shard for the *initial* cluster-ready, but afterwards tolerate
+  // a single shard transiently reconnecting (Closed→Resumed) so a per-shard blip
+  // can't pause raw-event consumption fleet-wide (workers gate on this flag).
+  // Only a total outage (no shards up) or gateway death (heartbeat TTL lapses)
+  // flips the cluster back to not-ready.
+  const clusterReady = everReady && shardReady.size > 0;
+  readyTracker.publishReady(clusterReady).catch((err) =>
+    log("warn", "publishReady failed", {
+      ready: clusterReady,
+      err: String(err),
+    }),
+  );
 };
 manager.on(WebSocketShardEvents.Ready, (_data, shardId: number) => {
   shardReady.add(shardId);
@@ -475,7 +485,10 @@ async function shutdown(sig: string) {
           if (cluster) await cluster.close();
         },
       },
-      { name: "publisher-detach", run: async () => detachPublisher() },
+      {
+        name: "publisher-detach",
+        run: () => Promise.resolve(detachPublisher()),
+      },
       {
         name: "ws-destroy",
         run: async () => {

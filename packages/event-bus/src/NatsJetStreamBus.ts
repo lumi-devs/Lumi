@@ -129,7 +129,7 @@ export class NatsJetStreamBus implements EventBus {
     let stopped = false;
     const loopDones: Promise<void>[] = [];
 
-    for (const { stream, subject, durable } of consumers) {
+    for (const { subject, durable } of consumers) {
       const loop = async () => {
         // consumer.consume() returns an async iterator that keeps a pull
         // request open against the server. We poll inside it so stopping is
@@ -143,7 +143,7 @@ export class NatsJetStreamBus implements EventBus {
                 msgs.stop();
                 break;
               }
-              await this.deliver<T>(stream, subject, durable, m, handler);
+              await this.deliver<T>(subject, durable, m, handler);
             }
           } catch (err) {
             if (this.closed || stopped) return;
@@ -177,15 +177,15 @@ export class NatsJetStreamBus implements EventBus {
     };
   }
 
-  public async close(): Promise<void> {
+  public close(): Promise<void> {
     this.closed = true;
     for (const t of this.timers) clearInterval(t);
     this.timers.clear();
     // Connection close is the factory's responsibility (mirrors RedisStreamsBus).
+    return Promise.resolve();
   }
 
   private async deliver<T>(
-    stream: string,
     subject: string,
     durable: string,
     m: JsMsg,
@@ -237,10 +237,11 @@ export class NatsJetStreamBus implements EventBus {
           });
         }
       },
-      nack: async () => {
+      nack: () => {
         // JetStream supports explicit NAK with redeliver delay; mirror Redis
         // semantics by leaving it for ackWait to expire.
         m.nak();
+        return Promise.resolve();
       },
     };
 
@@ -255,10 +256,6 @@ export class NatsJetStreamBus implements EventBus {
         err: String(err),
       });
     }
-
-    // Hint to the server that we're still alive on long handlers? Not needed
-    // for the typical sub-ackWait handler. Skipped to keep the path cheap.
-    void stream;
   }
 
   private async sendToDlq(

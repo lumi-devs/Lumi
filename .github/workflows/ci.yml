@@ -15,7 +15,9 @@ jobs:
         with:
           bun-version: latest
       - run: bun install
-      - run: bun run lint
+      # Read-only measure: the `bun run lint` script is `eslint --fix` (mutates +
+      # would auto-fix-then-pass in CI, gating nothing). Use the bare form here.
+      - run: bunx eslint packages/*/src apps/*/src --ext ts
 
   typecheck:
     runs-on: ubuntu-latest
@@ -26,3 +28,17 @@ jobs:
           bun-version: latest
       - run: bun install
       - run: bun run typecheck
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - run: bun install
+      # Prisma client is referenced (type-only) across the tree; generate it so a
+      # fresh CI checkout can transform every import without a generated-client miss.
+      - run: bun run db:generate
+      # Canonical runner is vitest (`bun run test`); `bun test` (Bun native) ignores vi.mock.
+      - run: bun run test

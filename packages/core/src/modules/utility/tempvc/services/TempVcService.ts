@@ -80,11 +80,14 @@ export default class TempVcService extends Service {
         (id) => guild.channels.cache.has(id),
       );
       const template = config.name.trim();
-      const name = (
-        template.includes("{}")
-          ? template.replace("{}", String(number))
-          : `${template} ${number}`
-      ).slice(0, 100);
+      const rawName = template.includes("{}")
+        ? template.replace("{}", String(number))
+        : `${template} ${number}`;
+      // Discord caps channel names at 100 chars. Slice on code-point boundaries
+      // (spread iterates code points, not UTF-16 units) so a multi-byte emoji at
+      // the boundary can't be cut into a lone surrogate — which Discord's API
+      // rejects as an invalid-form-body validation error.
+      const name = [...rawName].slice(0, 100).join("");
 
       const vc = await guild.channels.create({
         name,
@@ -94,7 +97,17 @@ export default class TempVcService extends Service {
         reason: `Temp VC created by ${member.user.tag}`,
       });
 
-      await member.voice.setChannel(vc).catch(() => null);
+      // If the member left voice before we could move them, setChannel rejects.
+      // Don't leave an orphaned channel + control panel for the empty-VC reaper
+      // to mop up later — tear it down now and bail.
+      const moved = await member.voice
+        .setChannel(vc)
+        .then(() => true)
+        .catch(() => false);
+      if (!moved) {
+        await vc.delete("Temp VC owner left before move").catch(() => null);
+        return;
+      }
 
       const record: VcRecord = {
         ownerId: member.id,
@@ -163,42 +176,25 @@ export default class TempVcService extends Service {
       generators.sort((a, b) => a.position - b.position);
       staticVcs.sort((a, b) => a.position - b.position);
 
-      const getVcType = (name: string): string => {
-        const clean = name.trim().toLowerCase();
-        if (/\bduo\b/.test(clean)) return "Duo";
-        if (/\btrio\b/.test(clean)) return "Trio";
-        if (/\bsquad\b/.test(clean)) return "Squad";
-        return "Other";
-      };
-
-      const typeOrder: Record<string, number> = {
-        Duo: 1,
-        Trio: 2,
-        Squad: 3,
-        Other: 4,
-      };
+      // Group managed VCs by the generator they spawned from, ordered by that
+      // generator's channel position (admin-controlled), then by spawn number
+      // within each group. Replaces the old hardcoded Duo/Trio/Squad name-regex:
+      // grouping keys off the record's generatorId (structured data we already
+      // store) instead of guessing a "type" from the channel name.
+      const genPosition = new Map<string, number>();
+      generators.forEach((g, i) => genPosition.set(g.id, i));
 
       managedVcs.sort((a, b) => {
         const recA = recordsMap.get(a.id);
         const recB = recordsMap.get(b.id);
         if (!recA || !recB) return 0;
 
-        const genA = recA.generatorId
-          ? generatorsMap.get(recA.generatorId)
-          : null;
-        const genB = recB.generatorId
-          ? generatorsMap.get(recB.generatorId)
-          : null;
+        const posA =
+          genPosition.get(recA.generatorId) ?? Number.MAX_SAFE_INTEGER;
+        const posB =
+          genPosition.get(recB.generatorId) ?? Number.MAX_SAFE_INTEGER;
+        if (posA !== posB) return posA - posB;
 
-        const typeA = getVcType(genA?.name ?? recA.name);
-        const typeB = getVcType(genB?.name ?? recB.name);
-
-        const orderA = typeOrder[typeA] ?? 4;
-        const orderB = typeOrder[typeB] ?? 4;
-
-        if (orderA !== orderB) {
-          return orderA - orderB;
-        }
         return recA.number - recB.number;
       });
 
@@ -336,10 +332,14 @@ export default class TempVcService extends Service {
     record: VcRecord,
     newOwnerId: string,
   ): Promise<VcRecord> {
-    const oldOwner = channel.guild.members.cache.get(record.ownerId);
-    if (oldOwner) {
+    // The previous owner's id is already on the record — no member lookup
+    // needed (and `permissionOverwrites.edit` takes a raw id). Gate on the
+    // channel's own overwrite cache (channel-local, always populated) rather
+    // than the member cache: that also clears the overwrite in the cold-cache
+    // case where the old member wasn't resolvable and it would otherwise leak.
+    if (channel.permissionOverwrites.cache.has(record.ownerId)) {
       await channel.permissionOverwrites
-        .edit(oldOwner.id, { ManageChannels: null })
+        .edit(record.ownerId, { ManageChannels: null })
         .catch(() => null);
     }
     await channel.permissionOverwrites

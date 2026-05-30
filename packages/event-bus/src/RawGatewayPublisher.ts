@@ -56,13 +56,15 @@ export class RawGatewayPublisher {
     if (this.attached) return;
     const original = this.client.ws.handlePacket.bind(this.client.ws);
     this.original = original;
-    const self = this;
-    this.client.ws.handlePacket = function patched(packet, shard) {
+    // Arrow keeps `this` lexically bound to the publisher (no `self` alias);
+    // `original` is already bound to the ws manager, so the patched fn never
+    // needs its own `this`.
+    this.client.ws.handlePacket = (packet, shard) => {
       // Publish only DISPATCH packets we know how to identify; other ops
       // (HELLO, HEARTBEAT_ACK, RECONNECT, etc.) are connection bookkeeping
       // discord.js handles internally and the worker doesn't reconstruct.
       const p = packet as RawGatewayPacket | undefined;
-      if (p?.op === 0 && p.t && !self.ignore.has(p.t)) {
+      if (p?.op === 0 && p.t && !this.ignore.has(p.t)) {
         const guildId = extractGuildId(p.d);
         const envelope: RawGatewayEnvelope = {
           shardId: shard.id,
@@ -72,10 +74,10 @@ export class RawGatewayPublisher {
           ...injectTraceContext(),
         };
         const stream = rawGatewayStream(p.t);
-        self.bus
-          .publish(stream, envelope, { maxLen: self.opts.maxLen })
+        this.bus
+          .publish(stream, envelope, { maxLen: this.opts.maxLen })
           .catch((err) =>
-            self.log("error", "raw-gateway publish failed", {
+            this.log("error", "raw-gateway publish failed", {
               stream,
               err: String(err),
             }),

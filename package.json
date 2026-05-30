@@ -32,7 +32,9 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "modules:manifest": "bun scripts/generate-manifests.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify:chaos": "bun scripts/verify-chaos.ts",
+    "verify:chaos:nats": "WITH_NATS=1 bun scripts/verify-chaos.ts"
   },
   "devDependencies": {
     "@sapphire/eslint-config": "^5.0.6",
