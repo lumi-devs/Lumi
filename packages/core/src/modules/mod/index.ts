@@ -1,11 +1,11 @@
-import { Module, EmberModule, cfg } from "#core/module-system/Module.js";
+import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
 import type { RequesterType } from "#core/lib/gdpr.js";
 import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
 import { invalidateThresholds } from "./lib/thresholds.js";
 import { scheduleCaseLift } from "./lib/helpers.js";
 import { handleModLiftFire } from "./lib/lift-handler.js";
 
-@EmberModule({
+@DefineModule({
   name: "mod",
   displayName: "Moderation",
   emoji: "🛡️",

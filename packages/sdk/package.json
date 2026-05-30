@@ -1,14 +1,15 @@
 {
-  "name": "@ember/sdk",
+  "name": "@lumi/sdk",
   "version": "2.1.1",
-  "description": "Stable addon-facing API for Ember. Addons import from here instead of reaching into @ember/core internals.",
+  "license": "Apache-2.0",
+  "description": "Stable addon-facing API for Lumi. Addons import from here instead of reaching into @lumi/core internals.",
   "type": "module",
   "private": true,
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@ember/contracts": "workspace:*",
-    "@ember/core": "workspace:*"
+    "@lumi/contracts": "workspace:*",
+    "@lumi/core": "workspace:*"
   }
 }

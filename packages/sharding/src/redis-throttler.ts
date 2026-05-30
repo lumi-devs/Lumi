@@ -27,7 +27,7 @@ export interface RedisIdentifyThrottlerOptions {
 }
 
 const bucketKey = (cluster: string, bucket: number) =>
-  `ember:cluster:${cluster}:identify-bucket:${bucket}`;
+  `lumi:cluster:${cluster}:identify-bucket:${bucket}`;
 
 export class RedisIdentifyThrottler implements IIdentifyThrottler {
   public constructor(private readonly opts: RedisIdentifyThrottlerOptions) {}

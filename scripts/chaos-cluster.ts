@@ -137,7 +137,7 @@ async function pingOrExit(): Promise<void> {
 async function cleanup(): Promise<void> {
   const r = new Redis(redisOpts());
   await r.connect();
-  const keys = await r.keys(`ember:cluster:${CLUSTER}:*`);
+  const keys = await r.keys(`lumi:cluster:${CLUSTER}:*`);
   if (keys.length) await r.del(...keys);
   await r.quit();
 }

@@ -1,4 +1,4 @@
-// @ember/event-bus — cross-service bus for the gateway/worker split.
+// @lumi/event-bus — cross-service bus for the gateway/worker split.
 // Transports behind one interface: in-process EventEmitter (monolith / tests),
 // Redis Streams, and NATS JetStream. Selected by the TRANSPORT env via
 // createEventBus().

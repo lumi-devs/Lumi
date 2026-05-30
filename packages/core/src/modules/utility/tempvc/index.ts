@@ -1,4 +1,4 @@
-import { Module, EmberModule } from "#core/module-system/Module.js";
+import { Module, DefineModule } from "#core/module-system/Module.js";
 import type { RequesterType } from "#core/lib/gdpr.js";
 import { checkModulesEnabled } from "#lib/module-check.js";
 import { MODULE_NAME, TempVcData } from "./keys.js";
@@ -15,7 +15,7 @@ export async function isTempVcEnabled(guildId: string): Promise<boolean> {
   return states.get(MODULE_NAME) ?? false;
 }
 
-@EmberModule({
+@DefineModule({
   name: MODULE_NAME,
   displayName: "Temp Voice Channels",
   emoji: "🔊",

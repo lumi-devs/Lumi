@@ -1,6 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
-import { EmberSubcommand } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import {
   ApplicationIntegrationType,
@@ -20,7 +20,7 @@ import {
 } from "../data.js";
 import { buildPanel } from "../ui/panel.js";
 
-@ApplyOptions<EmberSubcommand.Options>({
+@ApplyOptions<BaseSubcommand.Options>({
   name: "tempvc",
   description: "Temporary voice channel controls.",
   preconditions: ["GuildOnly", "ModuleEnabled"],
@@ -39,7 +39,7 @@ import { buildPanel } from "../ui/panel.js";
     },
   ],
 })
-export class TempVcCommand extends EmberSubcommand {
+export class TempVcCommand extends BaseSubcommand {
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {

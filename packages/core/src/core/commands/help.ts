@@ -17,9 +17,9 @@ import {
   SeparatorSpacingSize,
   ApplicationIntegrationType,
 } from "discord.js";
-import { EmberCommand } from "#lib/commands.js";
-import { EmberColors } from "#utilities/branding.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { BaseCommand } from "#lib/commands.js";
+import { Colors } from "#utilities/branding.js";
+import { Emojis } from "#utilities/assets.js";
 
 export function buildHelpCard(
   containerInstance: typeof container,
@@ -29,9 +29,9 @@ export function buildHelpCard(
 ) {
   const commands = [
     ...containerInstance.stores.get("commands").values(),
-  ] as EmberCommand[];
+  ] as BaseCommand[];
 
-  const categories: Record<string, EmberCommand[]> = {};
+  const categories: Record<string, BaseCommand[]> = {};
   let totalCommandsCount = 0;
 
   for (const cmd of commands) {
@@ -59,11 +59,11 @@ export function buildHelpCard(
   const categoryCommands = categories[categoryName] || [];
 
   const c = new ContainerBuilder();
-  c.setAccentColor(EmberColors.PRIMARY);
+  c.setAccentColor(Colors.PRIMARY);
 
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `## ${EmberEmojis.SHIELD} Ember Command Reference`,
+      `## ${Emojis.SHIELD} Lumi Command Reference`,
     ),
   );
   c.addSeparatorComponents(
@@ -103,7 +103,7 @@ export function buildHelpCard(
         new ButtonBuilder()
           .setCustomId(`help:page:${userId}:${activePage - 1}`)
           .setLabel("Previous")
-          .setEmoji(EmberEmojis.parse(EmberEmojis.ARROW_LEFT))
+          .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(activePage <= 0),
         new ButtonBuilder()
@@ -114,7 +114,7 @@ export function buildHelpCard(
         new ButtonBuilder()
           .setCustomId(`help:page:${userId}:${activePage + 1}`)
           .setLabel("Next")
-          .setEmoji(EmberEmojis.parse(EmberEmojis.ARROW_RIGHT))
+          .setEmoji(Emojis.parse(Emojis.ARROW_RIGHT))
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(activePage >= totalCategories - 1),
       );
@@ -135,7 +135,7 @@ export function buildHelpCard(
   name: "help",
   description: "Display all available commands with dynamic pagination.",
 })
-export class HelpCommand extends EmberCommand {
+export class HelpCommand extends BaseCommand {
   public override registerApplicationCommands(registry: Command.Registry) {
     registry.registerChatInputCommand((builder) =>
       builder

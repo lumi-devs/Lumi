@@ -7,13 +7,13 @@
 // internals, but in practice handlePacket only reads `shard.id`. We pass a
 // synthetic with the id from the envelope.
 
-import { extractTraceContext, otelContext } from "@ember/observability";
+import { extractTraceContext, otelContext } from "@lumi/observability";
 import { context as otelApiContext } from "@opentelemetry/api";
 import {
   RAW_GATEWAY_CONSUMER_GROUP,
   rawGatewayStream,
   type RawGatewayEnvelope,
-} from "@ember/contracts";
+} from "@lumi/contracts";
 import type { BusMessage, EventBus } from "./types.js";
 
 interface DjsClientLike {
@@ -27,7 +27,7 @@ export interface RawGatewayConsumerOptions {
   dispatchTypes?: readonly string[];
   /** Stable per-worker id. Survives restarts so XPENDING claims its own pending msgs. */
   consumerId: string;
-  /** Consumer group; defaults to the canonical ember worker pool. */
+  /** Consumer group; defaults to the canonical lumi worker pool. */
   group?: string;
   blockMs?: number;
   batchSize?: number;

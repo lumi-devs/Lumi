@@ -15,13 +15,13 @@ import {
 import {
   envParseString,
   envParseInteger,
-  getEmberRole,
+  getServiceRole,
   getConsumerId,
   getClusterName,
   isInteractionDeferAtGateway,
   roleOwnsScheduler,
   roleExecutesTaskEffects,
-  type EmberRole,
+  type ServiceRole,
 } from "#lib/env.js";
 import { SchedulerRequestConsumer } from "#core/lib/scheduler-request-consumer.js";
 import { TaskFireConsumer } from "#core/lib/task-fire-registry.js";
@@ -41,7 +41,7 @@ import {
   createEventBus,
   RawGatewayConsumer,
   type OwnedEventBus,
-} from "@ember/event-bus";
+} from "@lumi/event-bus";
 import { installPreDeferredInteractions } from "#core/lib/pre-deferred-interactions.js";
 import { buildRestOptions } from "#core/lib/discord-rest.js";
 import { WorkerManager } from "#workers/WorkerManager.js";
@@ -58,7 +58,7 @@ import {
   streamConsumerLag,
   streamDlqLength,
   registerReadinessProbe,
-} from "@ember/observability";
+} from "@lumi/observability";
 import {
   planShards,
   buildSimpleThrottlerFactory,
@@ -66,25 +66,25 @@ import {
   ClusterReadyTracker,
   type ShardPlan,
   type ClusterBootstrap,
-} from "@ember/sharding";
+} from "@lumi/sharding";
 import { Redis } from "ioredis";
 import type { SessionInfo } from "@discordjs/ws";
 
-export interface EmberClientOptions {
-  /** Override the role derived from EMBER_ROLE. */
-  role?: EmberRole;
+export interface LumiClientOptions {
+  /** Override the role derived from LUMI_ROLE. */
+  role?: ServiceRole;
   /**
-   * Pre-fetched shard plan from `@ember/sharding`. Required for the monolith
+   * Pre-fetched shard plan from `@lumi/sharding`. Required for the monolith
    * role (it drives `shardCount`/`shards`/`buildIdentifyThrottler`). Workers
    * never open a Discord WS so the plan is ignored there.
-   * Use `EmberClient.bootstrap()` to fetch it for you.
+   * Use `LumiClient.bootstrap()` to fetch it for you.
    */
   shardPlan?: ShardPlan;
   /**
    * Optional cluster bootstrap from `attachCluster()`. When supplied, its
    * `shards` override the plan's, its `sessionStore` drives
    * retrieve/updateSessionInfo, and its `throttlerFactory` replaces the
-   * single-process SimpleIdentifyThrottler. Built by `EmberClient.bootstrap()`
+   * single-process SimpleIdentifyThrottler. Built by `LumiClient.bootstrap()`
    * when `CLUSTER_NAME` is set.
    */
   cluster?: ClusterBootstrap;
@@ -92,8 +92,8 @@ export interface EmberClientOptions {
   _clusterRedis?: { redis: Redis; subscriber: Redis };
 }
 
-export class EmberClient extends SapphireClient {
-  public readonly role: EmberRole;
+export class LumiClient extends SapphireClient {
+  public readonly role: ServiceRole;
   private _livenessInterval: ReturnType<typeof setInterval> | null = null;
   private _ownedEventBus: OwnedEventBus | null = null;
   private _rawConsumer: RawGatewayConsumer | null = null;
@@ -104,8 +104,8 @@ export class EmberClient extends SapphireClient {
   private _cluster: ClusterBootstrap | null = null;
   private _clusterRedis: { redis: Redis; subscriber: Redis } | null = null;
 
-  public constructor(options: EmberClientOptions = {}) {
-    const role = options.role ?? getEmberRole();
+  public constructor(options: LumiClientOptions = {}) {
+    const role = options.role ?? getServiceRole();
     super({
       makeCache: Options.cacheWithLimits({
         ...Options.DefaultMakeCacheSettings,
@@ -648,15 +648,15 @@ export class EmberClient extends SapphireClient {
    * is fine in tests where you can stub the plan.
    */
   public static async bootstrap(
-    options: EmberClientOptions = {},
-  ): Promise<EmberClient> {
-    const role = options.role ?? getEmberRole();
+    options: LumiClientOptions = {},
+  ): Promise<LumiClient> {
+    const role = options.role ?? getServiceRole();
     if (
       role === "worker" ||
       role === "scheduler" ||
       options.shardPlan !== undefined
     ) {
-      return new EmberClient(options);
+      return new LumiClient(options);
     }
     const log = (
       level: "info" | "warn" | "error",
@@ -664,8 +664,8 @@ export class EmberClient extends SapphireClient {
       meta?: object,
     ) => {
       const line = meta
-        ? `[EmberClient] ${msg} ${JSON.stringify(meta)}`
-        : `[EmberClient] ${msg}`;
+        ? `[LumiClient] ${msg} ${JSON.stringify(meta)}`
+        : `[LumiClient] ${msg}`;
       const fn =
         level === "error" ? "error" : level === "warn" ? "warn" : "log";
       console[fn](line);
@@ -677,7 +677,7 @@ export class EmberClient extends SapphireClient {
 
     const clusterName = getClusterName();
     if (!clusterName) {
-      return new EmberClient({ ...options, shardPlan });
+      return new LumiClient({ ...options, shardPlan });
     }
 
     // Monolith + cluster: build a Redis pair and join. On a rebalance we
@@ -695,7 +695,7 @@ export class EmberClient extends SapphireClient {
     await redis.connect();
     await subscriber.connect();
     const replicaId =
-      process.env["EMBER_CONSUMER_ID"] ||
+      process.env["LUMI_CONSUMER_ID"] ||
       process.env["HOSTNAME"] ||
       `monolith-${process.pid}`;
     const cluster = await attachCluster({
@@ -706,7 +706,7 @@ export class EmberClient extends SapphireClient {
       replicaId,
       log,
     });
-    const client = new EmberClient({
+    const client = new LumiClient({
       ...options,
       shardPlan,
       cluster,

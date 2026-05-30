@@ -145,7 +145,7 @@ function buildNatsBus(
       pass: opts.natsPass,
       reconnect: true,
       maxReconnectAttempts: -1,
-      name: process.env["EMBER_CONSUMER_ID"] ?? "ember-bus",
+      name: process.env["LUMI_CONSUMER_ID"] ?? "lumi-bus",
     });
     return new NatsJetStreamBus({
       connection: nc,

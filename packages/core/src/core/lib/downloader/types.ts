@@ -1,5 +1,5 @@
 /**
- * Every Ember module in a remote repository must have an info.json file
+ * Every Lumi module in a remote repository must have an info.json file
  * in its root directory to be recognized by the Downloader.
  */
 export interface ModuleInfo {

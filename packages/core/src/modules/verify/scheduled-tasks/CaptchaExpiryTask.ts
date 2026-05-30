@@ -13,3 +13,9 @@ export class CaptchaExpiryTask extends ScheduledTask {
     await publishTaskFire("captcha-expiry", {});
   }
 }
+
+declare module "@sapphire/plugin-scheduled-tasks" {
+  interface ScheduledTasks {
+    "captcha-expiry": Record<string, never>;
+  }
+}

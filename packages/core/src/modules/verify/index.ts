@@ -1,8 +1,8 @@
-import { Module, EmberModule, cfg } from "#core/module-system/Module.js";
+import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
 import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
 import { handleCaptchaExpiryFire } from "./lib/captcha-expiry-handler.js";
 
-@EmberModule({
+@DefineModule({
   name: "verify",
   displayName: "Verification",
   emoji: "✅",

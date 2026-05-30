@@ -29,8 +29,8 @@ import { RedisStreamsBus } from "../packages/event-bus/src/RedisStreamsBus.js";
 
 const RUN_ID = Date.now();
 const CLUSTER = `chaos-roll-${RUN_ID}`;
-const STREAM = `ember:chaos:roll:${RUN_ID}`;
-const GROUP = "ember-chaos-roll";
+const STREAM = `lumi:chaos:roll:${RUN_ID}`;
+const GROUP = "lumi-chaos-roll";
 const SHARD_COUNT = 10;
 const PUBLISH_RATE_HZ = 200; // events/sec across all live shards
 const CLAIM_MIN_IDLE_MS = 500;
@@ -87,7 +87,7 @@ async function cleanup(): Promise<void> {
   const r = newRedis();
   await r.connect();
   const streamKeys = await r.keys(`${STREAM}*`);
-  const clusterKeys = await r.keys(`ember:cluster:${CLUSTER}:*`);
+  const clusterKeys = await r.keys(`lumi:cluster:${CLUSTER}:*`);
   const all = [...streamKeys, ...clusterKeys];
   if (all.length) await r.del(...all);
   await r.quit();

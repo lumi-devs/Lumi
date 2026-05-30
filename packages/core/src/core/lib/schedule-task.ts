@@ -8,20 +8,20 @@
 // these so the same source compiles for monolith and split topologies.
 
 import { container } from "@sapphire/framework";
-import { getEmberRole, roleOwnsScheduler } from "#lib/env.js";
+import { getServiceRole, roleOwnsScheduler } from "#lib/env.js";
 import {
   publishCreateRequest,
   publishDeleteRequest,
   type CreateRequest,
 } from "#lib/scheduler-bus.js";
-import type { EmberScheduledTasks } from "#core/types/common.js";
+import type { ScheduledTasks } from "#core/types/common.js";
 
-export async function scheduleTask<N extends keyof EmberScheduledTasks>(
+export async function scheduleTask<N extends keyof ScheduledTasks>(
   name: N,
-  payload: EmberScheduledTasks[N],
+  payload: ScheduledTasks[N],
   options?: CreateRequest["options"],
 ): Promise<void> {
-  if (roleOwnsScheduler(getEmberRole())) {
+  if (roleOwnsScheduler(getServiceRole())) {
     await container.tasks.create(
       { name, payload } as Parameters<typeof container.tasks.create>[0],
       options as Parameters<typeof container.tasks.create>[1],
@@ -32,7 +32,7 @@ export async function scheduleTask<N extends keyof EmberScheduledTasks>(
 }
 
 export async function cancelTask(jobId: string): Promise<void> {
-  if (roleOwnsScheduler(getEmberRole())) {
+  if (roleOwnsScheduler(getServiceRole())) {
     await container.tasks.delete(jobId);
     return;
   }

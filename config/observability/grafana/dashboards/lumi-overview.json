@@ -2,8 +2,8 @@
   "annotations": { "list": [] },
   "editable": true,
   "schemaVersion": 39,
-  "title": "Ember — Service Overview",
-  "tags": ["ember"],
+  "title": "Lumi — Service Overview",
+  "tags": ["lumi"],
   "time": { "from": "now-1h", "to": "now" },
   "templating": {
     "list": [
@@ -11,7 +11,7 @@
         "name": "service",
         "type": "query",
         "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "query": "label_values(ember_commands_total, service)",
+        "query": "label_values(lumi_commands_total, service)",
         "includeAll": true,
         "multi": true,
         "refresh": 2
@@ -26,7 +26,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(rate(ember_commands_total{service=~\"$service\"}[5m])) by (command)",
+          "expr": "sum(rate(lumi_commands_total{service=~\"$service\"}[5m])) by (command)",
           "legendFormat": "{{command}}"
         }
       ]
@@ -38,7 +38,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(rate(ember_commands_total{service=~\"$service\",status=\"error\"}[5m])) by (command)",
+          "expr": "sum(rate(lumi_commands_total{service=~\"$service\",status=\"error\"}[5m])) by (command)",
           "legendFormat": "{{command}}"
         }
       ]
@@ -51,7 +51,7 @@
       "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(ember_command_duration_seconds_bucket{service=~\"$service\"}[5m])) by (le, command))",
+          "expr": "histogram_quantile(0.95, sum(rate(lumi_command_duration_seconds_bucket{service=~\"$service\"}[5m])) by (le, command))",
           "legendFormat": "{{command}}"
         }
       ]
@@ -64,7 +64,7 @@
       "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
       "targets": [
         {
-          "expr": "ember_shard_latency_ms{service=~\"$service\"}",
+          "expr": "lumi_shard_latency_ms{service=~\"$service\"}",
           "legendFormat": "{{service}} shard {{shard}}"
         }
       ]
@@ -76,7 +76,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "ember_queue_depth{service=~\"$service\"}",
+          "expr": "lumi_queue_depth{service=~\"$service\"}",
           "legendFormat": "{{queue}}"
         }
       ]
@@ -88,7 +88,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(rate(ember_rest_429_total{service=~\"$service\"}[5m])) by (route)",
+          "expr": "sum(rate(lumi_rest_429_total{service=~\"$service\"}[5m])) by (route)",
           "legendFormat": "{{route}}"
         }
       ]
@@ -101,7 +101,7 @@
       "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] },
       "targets": [
         {
-          "expr": "sum(rate(ember_cache_hits_total{service=~\"$service\"}[5m])) / clamp_min(sum(rate(ember_cache_hits_total{service=~\"$service\"}[5m])) + sum(rate(ember_cache_misses_total{service=~\"$service\"}[5m])), 1)",
+          "expr": "sum(rate(lumi_cache_hits_total{service=~\"$service\"}[5m])) / clamp_min(sum(rate(lumi_cache_hits_total{service=~\"$service\"}[5m])) + sum(rate(lumi_cache_misses_total{service=~\"$service\"}[5m])), 1)",
           "legendFormat": "hit ratio"
         }
       ]
@@ -112,9 +112,9 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
-        { "expr": "ember_pg_pool_used{service=~\"$service\"}", "legendFormat": "{{service}} used" },
-        { "expr": "ember_pg_pool_size{service=~\"$service\"}", "legendFormat": "{{service}} size" },
-        { "expr": "ember_pg_pool_waiting{service=~\"$service\"}", "legendFormat": "{{service}} waiting" }
+        { "expr": "lumi_pg_pool_used{service=~\"$service\"}", "legendFormat": "{{service}} used" },
+        { "expr": "lumi_pg_pool_size{service=~\"$service\"}", "legendFormat": "{{service}} size" },
+        { "expr": "lumi_pg_pool_waiting{service=~\"$service\"}", "legendFormat": "{{service}} waiting" }
       ]
     },
     {
@@ -125,7 +125,7 @@
       "fieldConfig": { "defaults": { "unit": "decmbytes" }, "overrides": [] },
       "targets": [
         {
-          "expr": "ember_nodejs_heap_size_used_bytes{service=~\"$service\"} / 1024 / 1024",
+          "expr": "lumi_nodejs_heap_size_used_bytes{service=~\"$service\"} / 1024 / 1024",
           "legendFormat": "{{service}}"
         }
       ]

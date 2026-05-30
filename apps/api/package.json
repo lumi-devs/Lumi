@@ -1,7 +1,8 @@
 {
-  "name": "@ember/api",
+  "name": "@lumi/api",
   "version": "2.1.1",
-  "description": "Thin api entrypoint — boots @ember/worker until the real service split.",
+  "license": "Apache-2.0",
+  "description": "Thin api entrypoint — boots @lumi/worker until the real service split.",
   "type": "module",
   "private": true,
   "scripts": {
@@ -9,6 +10,6 @@
     "dev": "bun --watch src/main.ts"
   },
   "dependencies": {
-    "@ember/worker": "workspace:*"
+    "@lumi/worker": "workspace:*"
   }
 }

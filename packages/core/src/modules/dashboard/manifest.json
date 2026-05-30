@@ -2,7 +2,7 @@
   "name": "dashboard",
   "displayName": "Dashboard",
   "emoji": "🖥️",
-  "description": "Integrates the bot with the Ember Web Dashboard. Provides RPC endpoints for management.",
+  "description": "Integrates the bot with the Lumi Web Dashboard. Provides RPC endpoints for management.",
   "version": "1.0.0",
   "isCore": false,
   "dependencies": [],

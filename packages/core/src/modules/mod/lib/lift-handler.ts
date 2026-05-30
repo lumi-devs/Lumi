@@ -3,7 +3,7 @@
 //
 // Reaches Discord via REST (through nirn-proxy when DISCORD_PROXY_URL is set),
 // not via `client.guilds.cache`. In the worker role any given guild may not be
-// in this process's local cache — a shared `ember-workers` consumer group
+// in this process's local cache — a shared `lumi-workers` consumer group
 // round-robins raw gateway events, so cache locality is not guaranteed for the
 // target guild. The REST path is correct under every topology.
 

@@ -12,7 +12,7 @@ import {
   type VoiceBasedChannel,
 } from "discord.js";
 import { channelMention, userMention } from "@discordjs/formatters";
-import { EmberColors } from "#utilities/branding.js";
+import { Colors } from "#utilities/branding.js";
 import { TVC } from "../keys.js";
 import type { VcRecord } from "../data.js";
 
@@ -52,7 +52,7 @@ export function buildPanel(
   const lockIcon = record.locked ? "🔒" : "🔓";
   const hideIcon = record.hidden ? "🕵️" : "👀";
 
-  const c = new ContainerBuilder().setAccentColor(EmberColors.PRIMARY);
+  const c = new ContainerBuilder().setAccentColor(Colors.PRIMARY);
 
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent("## 🔊 Voice Channel Controls"),

@@ -323,7 +323,7 @@ export class ModuleStore extends Store<Module> {
     this.#invalidationListenerSet = true;
 
     container.invalidation.onInvalidate(async (keys) => {
-      const prefix = "ember:module:global:enabled:";
+      const prefix = "lumi:module:global:enabled:";
 
       for (const key of keys) {
         if (!key.startsWith(prefix)) continue;

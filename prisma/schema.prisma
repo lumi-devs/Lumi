@@ -1,4 +1,4 @@
-// Ember — Prisma schema
+// Lumi — Prisma schema
 // Single file, partitioned by domain. Module-owned tables live alongside the
 // module section that owns them; only Core types live in the Core section.
 
@@ -19,7 +19,7 @@ datasource db {
 
 model Global {
   id                 Int      @id @default(1)
-  botName            String   @default("Ember") @map("bot_name") @db.VarChar(64)
+  botName            String   @default("Lumi") @map("bot_name") @db.VarChar(64)
   defaultPrefix      String   @default(",")     @map("default_prefix") @db.VarChar(5)
   maintenanceMode    Boolean  @default(false)   @map("maintenance_mode")
   maintenanceMessage String?  @map("maintenance_message") @db.VarChar(500)
@@ -251,7 +251,7 @@ model RaidLockdown {
 model RoleMapping {
   guildId         String   @map("guild_id") @db.VarChar(20)
   discordRoleId   String   @map("discord_role_id") @db.VarChar(20)
-  permissionLevel Int      @map("permission_level") // Ember PermissionLevel enum value
+  permissionLevel Int      @map("permission_level") // Lumi PermissionLevel enum value
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 

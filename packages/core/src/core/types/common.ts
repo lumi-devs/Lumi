@@ -1,9 +1,9 @@
 import type { Redis } from "ioredis";
-import type { EmberPrismaClient } from "#database/client.js";
+import type { DatabaseClient } from "#database/client.js";
 import type { ModuleStore } from "#core/module-system/ModuleStore.js";
 import type { RabbitClient } from "#lib/rabbit.js";
 import type { InvalidationBus } from "#database/redis.js";
-import type { EventBus, TransportKind } from "@ember/event-bus";
+import type { EventBus, TransportKind } from "@lumi/event-bus";
 import type { WorkerManager } from "#workers/WorkerManager.js";
 import type { DatabaseService } from "#root/prisma/DatabaseService.js";
 
@@ -15,24 +15,18 @@ export type DatabaseRepositories = DatabaseService;
 export interface ModuleServiceMap {}
 export type ModuleServiceStore = ModuleServiceMap & Record<string, unknown>;
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- declaration merging target for scheduled tasks plugin
-export interface EmberScheduledTasks {
-  "afk-delete-message": import("#modules/afk/scheduled-tasks/AfkDeleteMessageTask.js").AfkDeleteMessagePayload;
-  "mod-lift": import("#modules/mod/scheduled-tasks/ModLiftTask.js").ModLiftPayload;
-  "tempvc-cleanup": import("#modules/utility/tempvc/scheduled-tasks/CleanupTask.js").TempVcCleanupPayload;
-  // Periodic sweepers — no payload, registered here so they can be relayed
-  // through the scheduler bus without weakening the type registry.
-  "captcha-expiry": Record<string, never>;
-  "thread-cleaner-task": Record<string, never>;
-  "flush-logs": Record<string, never>;
-}
+// Scheduled-task registry. Each task registers its own name -> payload on Sapphire's
+// `ScheduledTasks` interface via declaration merging, co-located in its own piece file
+// (e.g. afk/scheduled-tasks/AfkDeleteMessageTask.ts) — so third-party/addon modules
+// extend it the same way without touching core. Re-exported so our helpers key off it.
+export type { ScheduledTasks } from "@sapphire/plugin-scheduled-tasks";
 
 /** Modules register per-key invalidation callbacks here instead of patching ConfigService. */
 export type ConfigChangeHook = (guildId: string, key: string) => Promise<void>;
 
 declare module "@sapphire/pieces" {
   interface Container {
-    readonly prisma: EmberPrismaClient;
+    readonly prisma: DatabaseClient;
     readonly redis: Redis;
     readonly invalidation: InvalidationBus;
     readonly db: DatabaseRepositories;
@@ -62,14 +56,9 @@ declare module "@sapphire/pieces" {
 import type { ServiceStore } from "#core/module-system/ServiceStore.js";
 
 declare module "@sapphire/framework" {
-  interface ScheduledTasks extends EmberScheduledTasks {}
   interface StoreRegistryEntries {
     services: ServiceStore;
   }
-}
-
-declare module "@sapphire/plugin-scheduled-tasks" {
-  interface ScheduledTasks extends EmberScheduledTasks {}
 }
 
 declare module "#lib/env.js" {
@@ -106,7 +95,7 @@ declare module "#lib/env.js" {
     SENTRY_ENABLED: boolean | string;
     SENTRY_DSN: string;
     WORKER_COUNT: IntegerString;
-    /** "inproc" (default) | "streams" | "nats" — selects @ember/event-bus transport. */
+    /** "inproc" (default) | "streams" | "nats" — selects @lumi/event-bus transport. */
     TRANSPORT: "inproc" | "streams" | "nats";
     /** NATS server URL(s), comma-separated. Required when TRANSPORT=nats. */
     NATS_URL: string;
@@ -116,9 +105,9 @@ declare module "#lib/env.js" {
     /** Approximate per-stream cap for raw gateway events. Default 100000. */
     EVENT_STREAM_MAXLEN: IntegerString;
     /** Which service this process plays in the split topology. Default "monolith". */
-    EMBER_ROLE: "monolith" | "gateway" | "worker" | "scheduler";
+    LUMI_ROLE: "monolith" | "gateway" | "worker" | "scheduler";
     /** Stable per-replica consumer id for the worker pool. Falls back to $HOSTNAME, then pid. */
-    EMBER_CONSUMER_ID: string;
+    LUMI_CONSUMER_ID: string;
     /** When "true", the gateway pre-acks INTERACTION_CREATE via REST before publishing. */
     INTERACTION_DEFER_AT_GATEWAY: "true" | "false";
   }

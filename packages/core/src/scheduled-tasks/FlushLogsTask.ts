@@ -13,3 +13,9 @@ export class FlushLogsTask extends ScheduledTask {
     await publishTaskFire("flush-logs", {});
   }
 }
+
+declare module "@sapphire/plugin-scheduled-tasks" {
+  interface ScheduledTasks {
+    "flush-logs": Record<string, never>;
+  }
+}

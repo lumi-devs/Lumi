@@ -1,17 +1,17 @@
 import type { Guild } from "@prisma/client";
-import type { EmberPrismaClient } from "#database/client.js";
+import type { DatabaseClient } from "#database/client.js";
 import type { Redis } from "ioredis";
 import { RedisKeys } from "#database/redis.js";
 import { acquireRedisLock } from "#core/lib/redis-lock.js";
 
 // Redis-backed locks: mutual exclusion across N stateless workers, not the
-// per-process AsyncQueue used previously. Lock keys live under `ember:lock:*`
-// so they're easy to inspect (`KEYS ember:lock:*`) and never collide with
+// per-process AsyncQueue used previously. Lock keys live under `lumi:lock:*`
+// so they're easy to inspect (`KEYS lumi:lock:*`) and never collide with
 // cache keys.
 
-const GUILD_LOCK = (guildId: string) => `ember:lock:guild:${guildId}`;
+const GUILD_LOCK = (guildId: string) => `lumi:lock:guild:${guildId}`;
 const CONFIG_LOCK = (guildId: string, moduleName: string) =>
-  `ember:lock:cfg:${moduleName}:${guildId}`;
+  `lumi:lock:cfg:${moduleName}:${guildId}`;
 
 export async function configLock(
   guildId: string,
@@ -40,7 +40,7 @@ export class GuildWriteTransaction {
     private readonly release: () => Promise<void>,
     private readonly guildId: string,
     private readonly redis: Redis,
-    private readonly prisma: EmberPrismaClient,
+    private readonly prisma: DatabaseClient,
   ) {}
 
   public get hasChanges() {
@@ -100,7 +100,7 @@ export class GuildWriteTransaction {
 export async function createGuildTransaction(
   guildId: string,
   redis: Redis,
-  prisma: EmberPrismaClient,
+  prisma: DatabaseClient,
 ): Promise<GuildWriteTransaction> {
   const release = await acquireRedisLock(redis, GUILD_LOCK(guildId), {
     ttlMs: 15_000,

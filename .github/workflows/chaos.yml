@@ -36,7 +36,7 @@ jobs:
         with:
           bun-version: latest
       - run: bun install
-      # Some scenarios import @ember/core, which needs the generated Prisma client
+      # Some scenarios import @lumi/core, which needs the generated Prisma client
       # (no DB connection required for `prisma generate`).
       - run: bun run db:generate
 

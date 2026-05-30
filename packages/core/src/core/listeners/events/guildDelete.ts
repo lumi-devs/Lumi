@@ -22,8 +22,8 @@ export class GuildDeleteEventBusListener extends Listener<
     ];
 
     const patterns = [
-      `ember:cfg:*:guild:${guild.id}`,
-      `ember:module:enabled:*:${guild.id}`,
+      `lumi:cfg:*:guild:${guild.id}`,
+      `lumi:module:enabled:*:${guild.id}`,
     ];
 
     const dynamicKeys: string[] = [];

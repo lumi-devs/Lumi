@@ -32,7 +32,7 @@ export interface RawGatewayEnvelope {
 
 /** Stream name per dispatch type — keeps fan-out and per-type backpressure independent. */
 export const rawGatewayStream = (eventType: string) =>
-  `ember:gw:${eventType.toLowerCase()}`;
+  `lumi:gw:${eventType.toLowerCase()}`;
 
 /** Single consumer group for the worker pool. */
-export const RAW_GATEWAY_CONSUMER_GROUP = "ember-workers";
+export const RAW_GATEWAY_CONSUMER_GROUP = "lumi-workers";

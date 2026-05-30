@@ -4,7 +4,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: worker
-  namespace: ember
+  namespace: lumi
   labels:
     app: worker
 spec:
@@ -31,19 +31,19 @@ spec:
       terminationGracePeriodSeconds: 45
       containers:
         - name: worker
-          image: ghcr.io/your-org/ember:latest  # replace with your registry
+          image: ghcr.io/your-org/lumi:latest  # replace with your registry
           imagePullPolicy: IfNotPresent
           command: ["sh", "-c", "bunx prisma migrate deploy && bun apps/worker/src/main.ts"]
           envFrom:
             - configMapRef:
-                name: ember-env
+                name: lumi-env
             - secretRef:
-                name: ember-secrets
+                name: lumi-secrets
           env:
-            - name: EMBER_ROLE
+            - name: LUMI_ROLE
               value: "worker"
             # Stable per-pod consumer id so XAUTOCLAIM can tell pods apart.
-            - name: EMBER_CONSUMER_ID
+            - name: LUMI_CONSUMER_ID
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name

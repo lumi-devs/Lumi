@@ -1,4 +1,4 @@
-import { Module, EmberModule, cfg } from "#core/module-system/Module.js";
+import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
 import {
   registerWorkerHandler,
   unregisterWorkerHandler,
@@ -9,7 +9,7 @@ const FILTER_WORKER_ACTION = "FILTER";
 const FILTER_WORKER_PATH = new URL("./workers/aho-corasick.ts", import.meta.url)
   .href;
 
-@EmberModule({
+@DefineModule({
   name: "filter",
   displayName: "Filter",
   emoji: "🚫",

@@ -25,7 +25,7 @@ import { rawGatewayStream } from "../packages/contracts/src/gateway-packet.ts";
 // real `RedisEntityCache` pulls in transitively (Sapphire container → djs).
 // The shape and TTL match `packages/core/src/core/entity-cache/RedisEntityCache.ts`.
 const ENTITY_TTL = 60 * 60 * 24;
-const entityGuildKey = (id: string) => `ember:ent:guild:${id}`;
+const entityGuildKey = (id: string) => `lumi:ent:guild:${id}`;
 async function putGuildRaw(
   r: Redis,
   g: { id: string; name: string; ownerId: string; cachedAt: number },
@@ -115,7 +115,7 @@ async function runScenario(transport: "streams" | "nats"): Promise<void> {
   const stop = await bus.consume<{ ts: number; packet: { d: { id: string } } }>(
     [stream],
     {
-      group: "ember-chaos",
+      group: "lumi-chaos",
       consumer: `worker-${transport}-1`,
       blockMs: 200,
       batchSize: 32,

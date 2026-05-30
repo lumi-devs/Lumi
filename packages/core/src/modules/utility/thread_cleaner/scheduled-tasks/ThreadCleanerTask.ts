@@ -14,3 +14,9 @@ export class ThreadCleanerTask extends ScheduledTask {
     await publishTaskFire("thread-cleaner-task", {});
   }
 }
+
+declare module "@sapphire/plugin-scheduled-tasks" {
+  interface ScheduledTasks {
+    "thread-cleaner-task": Record<string, never>;
+  }
+}

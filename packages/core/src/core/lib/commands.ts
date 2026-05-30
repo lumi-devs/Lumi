@@ -110,7 +110,7 @@ export const replyInfo = (
       : ephemeralCard(makeInfoCard(title, body)),
   );
 
-export abstract class EmberCommand extends Command {
+export abstract class BaseCommand extends Command {
   public readonly permissionLevel: PermissionLevel;
   public readonly integrationTypes: ApplicationIntegrationType[];
   public readonly contexts: InteractionContextType[];
@@ -118,7 +118,7 @@ export abstract class EmberCommand extends Command {
 
   public constructor(
     context: Command.LoaderContext,
-    options: EmberCommand.Options,
+    options: BaseCommand.Options,
   ) {
     const discordPerm = mapPermissionLevelToDiscordPermission(
       options.permissionLevel,
@@ -208,7 +208,7 @@ export abstract class EmberCommand extends Command {
   }
 
   protected override parseConstructorPreConditions(
-    options: EmberCommand.Options,
+    options: BaseCommand.Options,
   ): void {
     super.parseConstructorPreConditions(options);
     const level = options.permissionLevel ?? PermissionLevel.USER;
@@ -225,7 +225,7 @@ export abstract class EmberCommand extends Command {
   }
 }
 
-export abstract class EmberSubcommand extends Subcommand {
+export abstract class BaseSubcommand extends Subcommand {
   public readonly permissionLevel: PermissionLevel;
   public readonly integrationTypes: ApplicationIntegrationType[];
   public readonly contexts: InteractionContextType[];
@@ -233,7 +233,7 @@ export abstract class EmberSubcommand extends Subcommand {
 
   public constructor(
     context: Subcommand.LoaderContext,
-    options: EmberSubcommand.Options,
+    options: BaseSubcommand.Options,
   ) {
     const discordPerm = mapPermissionLevelToDiscordPermission(
       options.permissionLevel,
@@ -323,7 +323,7 @@ export abstract class EmberSubcommand extends Subcommand {
   }
 
   protected override parseConstructorPreConditions(
-    options: EmberSubcommand.Options,
+    options: BaseSubcommand.Options,
   ): void {
     super.parseConstructorPreConditions(options);
     const level = options.permissionLevel ?? PermissionLevel.USER;
@@ -340,7 +340,7 @@ export abstract class EmberSubcommand extends Subcommand {
   }
 }
 
-export namespace EmberCommand {
+export namespace BaseCommand {
   export type Options = Command.Options & {
     permissionLevel?: PermissionLevel;
     integrationTypes?: ApplicationIntegrationType[];
@@ -349,7 +349,7 @@ export namespace EmberCommand {
   };
 }
 
-export namespace EmberSubcommand {
+export namespace BaseSubcommand {
   export type Options = Subcommand.Options & {
     permissionLevel?: PermissionLevel;
     integrationTypes?: ApplicationIntegrationType[];

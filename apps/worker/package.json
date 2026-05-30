@@ -1,7 +1,8 @@
 {
-  "name": "@ember/worker",
+  "name": "@lumi/worker",
   "version": "2.1.1",
-  "description": "Worker service — runs the full Ember bot (gateway + features + scheduler) in one process.",
+  "license": "Apache-2.0",
+  "description": "Worker service — runs the full Lumi bot (gateway + features + scheduler) in one process.",
   "type": "module",
   "private": true,
   "exports": {
@@ -12,7 +13,7 @@
     "dev": "bun --watch src/main.ts"
   },
   "dependencies": {
-    "@ember/core": "workspace:*",
+    "@lumi/core": "workspace:*",
     "@sapphire/framework": "^5.5.0",
     "@sentry/node": "^10.53.1"
   }

@@ -1,6 +1,6 @@
 // Cluster shard assignment via Redis: turns N gateway replicas + a shard count
 // into a stable mapping of replica -> shard ids, with no separate control plane.
-// Redis-only; callers (apps/gateway, EmberClient) wire the delta to ws.connect/destroy.
+// Redis-only; callers (apps/gateway, LumiClient) wire the delta to ws.connect/destroy.
 //
 // Keys (namespaced by CLUSTER_NAME): `:members` ZSET (replicaId -> heartbeat ts),
 // `:assignment` STR (JSON { epoch, total, byReplica }), `:leader-lock` (SET NX EX 5s),
@@ -116,10 +116,10 @@ function diff(prev: readonly number[], next: readonly number[]): ShardDelta {
   return { added, removed, unchanged };
 }
 
-const membersKey = (name: string) => `ember:cluster:${name}:members`;
-const assignmentKey = (name: string) => `ember:cluster:${name}:assignment`;
-const leaderLockKey = (name: string) => `ember:cluster:${name}:leader-lock`;
-const rebalanceChannel = (name: string) => `ember:cluster:${name}:rebalance`;
+const membersKey = (name: string) => `lumi:cluster:${name}:members`;
+const assignmentKey = (name: string) => `lumi:cluster:${name}:assignment`;
+const leaderLockKey = (name: string) => `lumi:cluster:${name}:leader-lock`;
+const rebalanceChannel = (name: string) => `lumi:cluster:${name}:rebalance`;
 
 export class ClusterCoordinator {
   private readonly opts: Required<Omit<ClusterCoordinatorOptions, "log">> & {

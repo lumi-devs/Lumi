@@ -8,7 +8,7 @@ import {
   type GuildMember,
   MessageFlags,
 } from "discord.js";
-import { EmberCommand } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import {
   makeSuccessCard,
@@ -18,13 +18,13 @@ import {
 import { formatAuditReason } from "#utilities/audit.js";
 import { logToChannel } from "../lib/helpers.js";
 
-@ApplyOptions<EmberCommand.Options>({
+@ApplyOptions<BaseCommand.Options>({
   name: "kick",
   description: "Kick a member from the server",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.MOD,
 })
-export class KickCommand extends EmberCommand {
+export class KickCommand extends BaseCommand {
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {

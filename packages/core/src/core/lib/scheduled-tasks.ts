@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 
 /**
- * Catch-up metadata every Ember scheduled-task payload may carry. Adapted from
+ * Catch-up metadata every Lumi scheduled-task payload may carry. Adapted from
  * Skyra's `catchUp` semantics: BullMQ will happily fire a delayed job the moment
  * a worker comes back up, even if its target time elapsed during a long downtime.
  * For some jobs that is correct (lift an expired mute); for others it produces a

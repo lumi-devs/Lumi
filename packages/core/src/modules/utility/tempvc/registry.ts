@@ -12,7 +12,7 @@ interface ManagedVc {
 // InvalidationBus pseudo-keys. We piggyback on the existing cluster pub/sub so
 // peer processes converge. VC adds/removes carry their payload in the key and
 // apply incrementally (no DB re-read); generator changes signal a re-hydrate.
-const SIG_PREFIX = "ember:tempvc:sig:";
+const SIG_PREFIX = "lumi:tempvc:sig:";
 const sig = {
   vcAdd: (g: string, c: string, gen: string, n: number) =>
     `${SIG_PREFIX}vcadd:${g}:${c}:${gen}:${n}`,
