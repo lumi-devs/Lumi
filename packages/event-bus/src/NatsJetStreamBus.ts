@@ -26,6 +26,7 @@
 // use` which we swallow).
 
 import type {
+  ConsumerMessages,
   JetStreamClient,
   JetStreamManager,
   JsMsg,
@@ -73,6 +74,14 @@ export class NatsJetStreamBus implements EventBus {
   private readonly onStats: NatsJetStreamBusOptions["onStats"];
   private readonly statsIntervalMs: number;
   private readonly timers = new Set<NodeJS.Timeout>();
+  /**
+   * Live pull iterators from in-flight consume() loops. consumer.consume()
+   * keeps a pull request open and parks `for await` waiting for the next
+   * message; when the stream is drained the in-loop `stopped` check never runs
+   * again (no message arrives to re-enter the body), so flipping a flag can't
+   * end the loop — stop()/close() must call msgs.stop() on the iterator itself.
+   */
+  private readonly activeConsumers = new Set<ConsumerMessages>();
   private js: JetStreamClient | null = null;
   private jsm: JetStreamManager | null = null;
   private streamReady: Promise<void> | null = null;
@@ -128,21 +137,26 @@ export class NatsJetStreamBus implements EventBus {
 
     let stopped = false;
     const loopDones: Promise<void>[] = [];
+    // Live iterators owned by *this* consume() call, so stop() interrupts only
+    // its own loops (close() drains all of them via this.activeConsumers).
+    const active = new Set<ConsumerMessages>();
 
     for (const { subject, durable } of consumers) {
       const loop = async () => {
         // consumer.consume() returns an async iterator that keeps a pull
-        // request open against the server. We poll inside it so stopping is
-        // cheap (next iteration breaks out).
+        // request open against the server and blocks `for await` waiting for
+        // the next message. Stopping therefore can't rely on the in-loop flag
+        // check alone (it only runs when a message is yielded) — stop()/close()
+        // call msgs.stop() on the live iterator (tracked below) to end it.
         while (!stopped && !this.closed) {
+          let msgs: ConsumerMessages | undefined;
           try {
             const consumer = await js.consumers.get(STREAM_NAME, durable);
-            const msgs = await consumer.consume({ max_messages: batchSize });
+            msgs = await consumer.consume({ max_messages: batchSize });
+            this.activeConsumers.add(msgs);
+            active.add(msgs);
             for await (const m of msgs) {
-              if (stopped || this.closed) {
-                msgs.stop();
-                break;
-              }
+              if (stopped || this.closed) break;
               await this.deliver<T>(subject, durable, m, handler);
             }
           } catch (err) {
@@ -152,6 +166,12 @@ export class NatsJetStreamBus implements EventBus {
               err: String(err),
             });
             await sleep(500);
+          } finally {
+            if (msgs) {
+              this.activeConsumers.delete(msgs);
+              active.delete(msgs);
+              msgs.stop(); // idempotent; tears down the server-side pull
+            }
           }
         }
       };
@@ -173,6 +193,9 @@ export class NatsJetStreamBus implements EventBus {
 
     return async () => {
       stopped = true;
+      // Break the parked `for await` loops by stopping their live iterators;
+      // otherwise awaiting loopDones would hang once the stream is drained.
+      for (const msgs of active) msgs.stop();
       await Promise.allSettled(loopDones);
     };
   }
@@ -181,6 +204,10 @@ export class NatsJetStreamBus implements EventBus {
     this.closed = true;
     for (const t of this.timers) clearInterval(t);
     this.timers.clear();
+    // Stop any still-running consume() iterators so their loops observe `closed`
+    // and exit — otherwise the factory's nc.drain() blocks on live pulls.
+    for (const msgs of this.activeConsumers) msgs.stop();
+    this.activeConsumers.clear();
     // Connection close is the factory's responsibility (mirrors RedisStreamsBus).
     return Promise.resolve();
   }
@@ -191,7 +218,11 @@ export class NatsJetStreamBus implements EventBus {
     m: JsMsg,
     handler: (msg: BusMessage<T>) => Promise<void>,
   ): Promise<void> {
-    const deliveryCount = m.info.redeliveryCount + 1;
+    // nats.js sets info.redeliveryCount = JetStream's `num_delivered`, which is
+    // already 1-based (1 on the first delivery, 2 on the first redelivery, …) —
+    // the same convention RedisStreamsBus uses (first delivery = 1). Do NOT add
+    // 1, or every message counts one delivery high and DLQs a redelivery early.
+    const deliveryCount = m.info.redeliveryCount;
     if (deliveryCount > this.maxDeliveries) {
       await this.sendToDlq(subject, m, deliveryCount).catch((err) =>
         this.log("error", "dlq publish failed", {
@@ -227,15 +258,14 @@ export class NatsJetStreamBus implements EventBus {
       id: String(m.info.streamSequence),
       body,
       deliveryCount,
-      ack: async () => {
-        try {
-          await m.ackAck();
-        } catch (err) {
-          this.log("warn", "ackAck failed", {
-            subject,
-            err: String(err),
-          });
-        }
+      ack: () => {
+        // Fire-and-forget ack — mirrors Redis XACK and the bus's at-least-once
+        // + idempotent-handler contract. ackAck() adds a server round-trip per
+        // message, which (awaited sequentially in the consume loop) throttles
+        // throughput and pushes end-to-end latency past SLO. A lost ack simply
+        // redelivers, which the idempotent handler already tolerates.
+        m.ack();
+        return Promise.resolve();
       },
       nack: () => {
         // JetStream supports explicit NAK with redeliver delay; mirror Redis

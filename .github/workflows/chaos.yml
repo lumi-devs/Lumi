@@ -1,8 +1,9 @@
 name: Chaos & verify (distributed paths)
 
-# HARDENING P2.1 — runs the chaos/verify suite against ephemeral infra. The Redis
-# suite (`bun run verify:chaos`) is the authoritative gate; the NATS/JetStream leg
-# is informational (continue-on-error) until P2.2 confirms the transport in CI.
+# HARDENING P2.1 + P2.2 — runs the chaos/verify suite against ephemeral infra.
+# `bun run verify:chaos` is the authoritative gate: the six Redis-backed legs plus
+# (because NATS_URL is set below) the two NATS/JetStream legs — gateway-proxy
+# throughput/SLO and DLQ/redelivery parity. Both transports are now hard-gated.
 #
 # Not on every PR (chaos is slow): master pushes, a nightly schedule, and manual.
 on:
@@ -52,16 +53,10 @@ jobs:
           docker logs nats || true
           exit 1
 
-      # Authoritative gate: the Redis-backed chaos/verify suite.
-      - name: verify:chaos (Redis suite)
+      # Authoritative gate: the six Redis-backed legs + the two NATS/JetStream
+      # legs (verify:chaos appends them because NATS_URL is set in the job env).
+      - name: verify:chaos (Redis + NATS suite)
         run: bun run verify:chaos
-
-      # Informational until P2.2: the NATS/JetStream gateway-proxy leg.
-      - name: chaos-gateway-proxy (NATS / JetStream)
-        continue-on-error: true
-        env:
-          TRANSPORT: nats
-        run: bun scripts/chaos-gateway-proxy.ts
 
       - name: NATS logs (on failure)
         if: failure()
