@@ -115,7 +115,7 @@ General-purpose helpers. Import what you need; tree-shaken.
 | Null / undefined check | `isNullish(v)` |
 | Null / undefined / empty check | `isNullishOrEmpty(v)` |
 | Type-safe `filter(Boolean)` | `.filter(filterNullish)` |
-| Safe JSON parse (returns null on error) | `tryParseJSON<T>(str)` |
+| Safe JSON parse — never throws; returns the input string (not null) on failure | `tryParseJSON(str)` — not generic; cast `as T \| null` and guard |
 | `charAt(0).toUpperCase() + …` | `capitalizeFirstLetter(str)` |
 | `str.charAt(0).toUpper + …Lower` | `toTitleCase(str)` |
 | Split array into pages | `chunk(arr, size)` |

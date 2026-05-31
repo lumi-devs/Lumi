@@ -9,6 +9,7 @@ import {
   type GuildMember,
   type VoiceBasedChannel,
 } from "discord.js";
+import { userMention } from "@discordjs/formatters";
 import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
 import { Emojis } from "#utilities/assets.js";
 import { makeSuccessCard } from "#utilities/cards.js";
@@ -106,7 +107,7 @@ export default class TempVcSelectHandler extends BaseInteractionHandler {
             await channel.permissionOverwrites.delete(id);
             break;
         }
-        done.push(`<@${id}>`);
+        done.push(userMention(id));
       } catch {
         // skip members we can't act on
       }

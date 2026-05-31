@@ -3,6 +3,7 @@ import {
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
+import { tryParseJSON } from "@sapphire/utilities";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -77,7 +78,8 @@ export class CaptchaInteractionHandler extends InteractionHandler {
     const key = VerifyKeys.seqState(guildId, userId);
     const raw = await this.container.redis.get(key);
 
-    if (!raw) {
+    const state = raw ? (tryParseJSON(raw) as SeqState | null) : null;
+    if (!state) {
       await interaction.update(
         makeErrorCard(
           "Expired",
@@ -87,7 +89,6 @@ export class CaptchaInteractionHandler extends InteractionHandler {
       return;
     }
 
-    const state = JSON.parse(raw) as SeqState;
     const expected = state.sequence[state.progress];
 
     if (clickedIdx === expected) {

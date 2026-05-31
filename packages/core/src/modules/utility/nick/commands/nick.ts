@@ -1,20 +1,21 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { Command, Args } from "@sapphire/framework";
+import type { Args } from "@sapphire/framework";
 import { Message, PermissionFlagsBits } from "discord.js";
+import { BaseCommand } from "#lib/commands.js";
 import {
   makeErrorCard,
   makeWarningCard,
   makeSuccessCard,
 } from "#utilities/cards.js";
 
-@ApplyOptions<Command.Options>({
+@ApplyOptions<BaseCommand.Options>({
   name: "nick",
   description: "Change a member's nickname.",
   preconditions: ["GuildOnly"],
   requiredClientPermissions: [PermissionFlagsBits.ManageNicknames],
   requiredUserPermissions: [PermissionFlagsBits.ManageNicknames],
 })
-export class UserCommand extends Command {
+export class UserCommand extends BaseCommand {
   public override async messageRun(message: Message, args: Args) {
     const member = await args.pick("member").catch(() => null);
     if (!member) {

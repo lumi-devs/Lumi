@@ -1,5 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { Args, Command } from "@sapphire/framework";
+import type { Args } from "@sapphire/framework";
+import { BaseCommand } from "#lib/commands.js";
+import { PermissionLevel } from "#lib/permissions.js";
 import {
   Message,
   PermissionFlagsBits,
@@ -18,14 +20,14 @@ import {
 } from "#utilities/cards.js";
 import { logError, errorCode } from "#utilities/errors.js";
 
-@ApplyOptions<Command.Options>({
+@ApplyOptions<BaseCommand.Options>({
   name: "purge",
   description: "Bulk delete messages in a channel.",
   preconditions: ["GuildOnly"],
-  requiredUserPermissions: [PermissionFlagsBits.ManageMessages],
+  permissionLevel: PermissionLevel.MOD,
   requiredClientPermissions: [PermissionFlagsBits.ManageMessages],
 })
-export class PurgeCommand extends Command {
+export class PurgeCommand extends BaseCommand {
   public override async messageRun(message: Message, args: Args) {
     const amountResult = await args.pickResult("integer");
 
