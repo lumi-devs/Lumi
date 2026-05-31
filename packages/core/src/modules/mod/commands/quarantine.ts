@@ -1,5 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry, type Args } from "@sapphire/framework";
+import { tryParseJSON } from "@sapphire/utilities";
 import {
   ApplicationIntegrationType,
   Colors,
@@ -250,7 +251,10 @@ export class QuarantineCommand extends BaseSubcommand {
         ),
       );
 
-    const rolesToRestore = JSON.parse(saved) as string[];
+    const parsedRoles = tryParseJSON(saved);
+    const rolesToRestore = Array.isArray(parsedRoles)
+      ? (parsedRoles as string[])
+      : [];
     const actor = await this.container.client.users.fetch(actorId);
 
     const validRoles = rolesToRestore.filter((id) =>

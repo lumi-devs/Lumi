@@ -33,7 +33,7 @@ async function getOrSet<T>(
   key: string,
   ttl: number,
   fetcher: () => Promise<T>,
-  parser: (data: string) => T = JSON.parse,
+  parser: (data: string) => T,
 ): Promise<T> {
   const cached = await container.redis.get(key);
   if (cached) return parser(cached);
@@ -54,7 +54,7 @@ export async function getAfkEntry(
     AfkTTL.entry,
     () => container.db.afk.findEntry(guildId, userId),
     (data: string) => {
-      const parsed = JSON.parse(data);
+      const parsed = tryParseJSON(data) as AfkEntry | null;
       if (!parsed) return null;
       return { ...parsed, since: new Date(parsed.since) };
     },

@@ -29,7 +29,10 @@ export async function getThresholds(
   guildId: string,
 ): Promise<WarnThresholds> {
   const cached = await container.redis.get(thresholdKey(guildId));
-  if (cached) return JSON.parse(cached) as WarnThresholds;
+  if (cached) {
+    const parsedCache = tryParseJSON(cached) as WarnThresholds | null;
+    if (parsedCache) return parsedCache;
+  }
 
   const raw = await container.db.config.getModuleConfig(
     guildId,
