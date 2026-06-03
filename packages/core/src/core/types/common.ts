@@ -3,8 +3,7 @@ import type { DatabaseClient } from "#database/client.js";
 import type { ModuleStore } from "#core/module-system/ModuleStore.js";
 import type { RabbitClient } from "#lib/rabbit.js";
 import type { InvalidationBus } from "#database/redis.js";
-import type { EventBus, TransportKind } from "@lumi/event-bus";
-import type { WorkerManager } from "#workers/WorkerManager.js";
+import type { EventBus, TransportKind } from "@lumi-devs/event-bus";
 import type { DatabaseService } from "#root/prisma/DatabaseService.js";
 
 export type IntegerString = `${number}`;
@@ -21,6 +20,14 @@ export type ModuleServiceStore = ModuleServiceMap & Record<string, unknown>;
 // extend it the same way without touching core. Re-exported so our helpers key off it.
 export type { ScheduledTasks } from "@sapphire/plugin-scheduled-tasks";
 
+// Core task augmentations co-located here so they're visible whenever common.ts
+// is imported (augmentation files are only loaded if they're in the import chain).
+declare module "@sapphire/plugin-scheduled-tasks" {
+  interface ScheduledTasks {
+    "flush-logs": Record<string, never>;
+  }
+}
+
 /** Modules register per-key invalidation callbacks here instead of patching ConfigService. */
 export type ConfigChangeHook = (guildId: string, key: string) => Promise<void>;
 
@@ -34,7 +41,6 @@ declare module "@sapphire/pieces" {
     readonly eventBusTransport: TransportKind;
     /** Read-through projection of guilds/channels/roles/members. */
     readonly entityCache: import("#core/entity-cache/RedisEntityCache.js").RedisEntityCache;
-    readonly workers: WorkerManager;
     readonly moduleStore: ModuleStore;
 
     stats: {
@@ -104,6 +110,8 @@ declare module "#lib/env.js" {
     NATS_PASSWORD: string;
     /** Approximate per-stream cap for raw gateway events. Default 100000. */
     EVENT_STREAM_MAXLEN: IntegerString;
+    /** NATS ackWait / Redis Streams consumer idle threshold in ms. Default 60000. */
+    EVENT_STREAM_ACK_WAIT_MS: IntegerString;
     /** Which service this process plays in the split topology. Default "monolith". */
     LUMI_ROLE: "monolith" | "gateway" | "worker" | "scheduler";
     /** Stable per-replica consumer id for the worker pool. Falls back to $HOSTNAME, then pid. */
