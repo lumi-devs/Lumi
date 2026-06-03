@@ -8,14 +8,16 @@ import {
   UserSelectMenuBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { ButtonStyle, ChannelType, GuildMember } from "discord.js";
+import {
+  ButtonStyle,
+  ChannelType,
+  GuildMember,
+  type ButtonInteraction,
+  type AnySelectMenuInteraction,
+  type ModalSubmitInteraction,
+} from "discord.js";
 import { container } from "@sapphire/framework";
 import { PermissionLevel, resolvePermissionLevel } from "#lib/permissions.js";
-import type {
-  ButtonInteraction,
-  AnySelectMenuInteraction,
-  ModalSubmitInteraction,
-} from "discord.js";
 import {
   channelMention,
   roleMention,
