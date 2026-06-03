@@ -65,6 +65,7 @@ export function coalesceMessageDelete(
     }
     if (!q.timer) {
       q.timer = setTimeout(() => void flush(channelId), FLUSH_DELAY_MS);
+      q.timer.unref?.();
     }
   });
 }
@@ -108,9 +109,12 @@ async function flush(channelId: string): Promise<void> {
   }
 
   q.flushing = false;
-  if (q.entries.length === 0) queues.delete(channelId);
-  else if (!q.timer)
+  if (q.entries.length === 0) {
+    queues.delete(channelId);
+  } else if (!q.timer) {
     q.timer = setTimeout(() => void flush(channelId), FLUSH_DELAY_MS);
+    q.timer.unref?.();
+  }
 }
 
 async function singleDelete(

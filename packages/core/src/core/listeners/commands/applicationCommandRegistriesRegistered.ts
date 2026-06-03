@@ -72,7 +72,12 @@ export class ApplicationCommandRegistriesRegisteredListener extends Listener {
         );
 
         if (!isExpected) {
-          await cmd.delete().catch(() => {});
+          await cmd.delete().catch((err: unknown) =>
+            logger.warn(
+              `${gray("[CommandSync]")} Failed to delete guild command ${cmd.name} in ${guild.id}:`,
+              err,
+            ),
+          );
           guildCmdCount++;
         }
       }

@@ -8,7 +8,7 @@ import {
   UserSelectMenuBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { ButtonStyle, ChannelType } from "discord.js";
+import { ButtonStyle, ChannelType, GuildMember } from "discord.js";
 import { container } from "@sapphire/framework";
 import { PermissionLevel, resolvePermissionLevel } from "#lib/permissions.js";
 import type {
@@ -82,11 +82,16 @@ export async function hasPanelAccess(
     | ModalSubmitInteraction,
 ): Promise<boolean> {
   if (!interaction.guild || !interaction.member) return false;
+  // interaction.member may be a partial APIInteractionGuildMember (REST shape with
+  // roles: string[]) rather than the full GuildMember. Only pass it through the
+  // PermissionContext path when it's the resolved cache object with the full
+  // GuildMemberRoleManager; otherwise fall back to userId-only resolution.
+  const member =
+    interaction.member instanceof GuildMember ? interaction.member : null;
   const level = await resolvePermissionLevel({
     userId: interaction.user.id,
     guild: interaction.guild,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GuildMember shape satisfies PermissionContext.member at runtime
-    member: interaction.member as any,
+    member,
   });
   return level >= PermissionLevel.ADMIN;
 }
