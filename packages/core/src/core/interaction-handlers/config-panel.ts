@@ -412,7 +412,16 @@ export class ConfigPanelModalHandler extends InteractionHandler {
     interaction: ModalSubmitInteraction,
     { kind, moduleName }: { kind: string; moduleName: string },
   ) {
-    if (!interaction.inGuild() || !(await hasPanelAccess(interaction))) return;
+    if (!interaction.inGuild() || !(await hasPanelAccess(interaction))) {
+      return interaction.reply(
+        ephemeralCard(
+          makeErrorCard(
+            "Permission Denied",
+            "You need the Admin permission level to manage configuration.",
+          ),
+        ),
+      );
+    }
     const { guildId } = interaction;
     const record = this.container.moduleStore.getRecord(moduleName);
     if (!record) {

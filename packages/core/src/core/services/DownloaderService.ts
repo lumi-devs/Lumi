@@ -271,9 +271,8 @@ export class DownloaderService extends Service {
     const guildData = new Map<string, object[]>();
 
     for (const command of commandStore.values()) {
-      const registry = (command as unknown as { applicationCommandRegistry?: RegistryInternal })
-        .applicationCommandRegistry;
-      const apiCalls = registry?.apiCalls ?? [];
+      const apiCalls =
+        (command.applicationCommandRegistry as unknown as RegistryInternal).apiCalls ?? [];
       for (const call of apiCalls) {
         if (call.registerOptions?.guildIds?.length) {
           for (const guildId of call.registerOptions.guildIds) {
