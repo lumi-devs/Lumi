@@ -77,7 +77,7 @@ export interface LumiClientOptions {
   /** Override the role derived from LUMI_ROLE. */
   role?: ServiceRole;
   /**
-   * Pre-fetched shard plan from `@lumi/sharding`. Required for the monolith
+   * Pre-fetched shard plan from `@lumi-devs/sharding`. Required for the monolith
    * role (it drives `shardCount`/`shards`/`buildIdentifyThrottler`). Workers
    * never open a Discord WS so the plan is ignored there.
    * Use `LumiClient.bootstrap()` to fetch it for you.

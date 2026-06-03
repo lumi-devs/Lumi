@@ -101,7 +101,7 @@ declare module "#lib/env.js" {
     SENTRY_ENABLED: boolean | string;
     SENTRY_DSN: string;
     WORKER_COUNT: IntegerString;
-    /** "inproc" (default) | "streams" | "nats" — selects @lumi/event-bus transport. */
+    /** "inproc" (default) | "streams" | "nats" — selects @lumi-devs/event-bus transport. */
     TRANSPORT: "inproc" | "streams" | "nats";
     /** NATS server URL(s), comma-separated. Required when TRANSPORT=nats. */
     NATS_URL: string;
