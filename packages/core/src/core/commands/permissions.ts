@@ -25,6 +25,7 @@ import {
   ephemeralCard,
 } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
+import { errorFrom } from "#utilities/errors.js";
 
 const MODEL_TYPES = [
   "role",
@@ -271,7 +272,7 @@ export class PermissionsCommand extends BaseSubcommand {
       );
     } catch (err: unknown) {
       await message.reply(
-        makeErrorCard("Reset Failed", (err as Error).message),
+        makeErrorCard("Reset Failed", errorFrom(err).message),
       );
     }
   }
@@ -327,7 +328,7 @@ export class PermissionsCommand extends BaseSubcommand {
       );
     } catch (err: unknown) {
       await interaction.editReply(
-        ephemeralCard(makeErrorCard("Reset Failed", (err as Error).message)),
+        ephemeralCard(makeErrorCard("Reset Failed", errorFrom(err).message)),
       );
     }
   }
@@ -398,7 +399,7 @@ export class PermissionsCommand extends BaseSubcommand {
       );
     } catch (err: unknown) {
       await message.reply(
-        makeErrorCard("Invalid target", (err as Error).message),
+        makeErrorCard("Invalid target", errorFrom(err).message),
       );
     }
   }
@@ -431,7 +432,7 @@ export class PermissionsCommand extends BaseSubcommand {
       );
     } catch (err: unknown) {
       await interaction.editReply(
-        ephemeralCard(makeErrorCard("Invalid target", (err as Error).message)),
+        ephemeralCard(makeErrorCard("Invalid target", errorFrom(err).message)),
       );
     }
   }

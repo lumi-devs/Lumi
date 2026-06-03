@@ -23,6 +23,7 @@ import { ModuleAlreadyInstalledError } from "#core/services/DownloaderService.js
     { name: "install", messageRun: "messageRunInstall" },
     { name: "uninstall", messageRun: "messageRunUninstall" },
     { name: "update", messageRun: "messageRunUpdate" },
+    { name: "reload", messageRun: "messageRunReload" },
     { name: "help", messageRun: "messageRunHelp", default: true },
   ],
 })
@@ -86,15 +87,12 @@ export class ModuleCommand extends BaseSubcommand {
         return;
       }
 
-      const error = err as Error;
+      const msg_ = errorFrom(err).message;
       this.container.logger.warn(
-        `[Module] ${Emojis.ERROR} Install failed: ${moduleName} — ${error.message}`,
+        `[Module] ${Emojis.ERROR} Install failed: ${moduleName} — ${msg_}`,
       );
       await msg.edit(
-        makeErrorCard(
-          `${Emojis.ERROR} Failed to Install Module`,
-          error.message,
-        ),
+        makeErrorCard(`${Emojis.ERROR} Failed to Install Module`, msg_),
       );
     }
   }
@@ -131,16 +129,51 @@ export class ModuleCommand extends BaseSubcommand {
         ),
       );
     } catch (err: unknown) {
-      const error = err as Error;
+      const msg_ = errorFrom(err).message;
       this.container.logger.warn(
-        `[Module] ${Emojis.ERROR} Uninstall failed: ${moduleName} — ${error.message}`,
+        `[Module] ${Emojis.ERROR} Uninstall failed: ${moduleName} — ${msg_}`,
       );
       await msg.edit(
-        makeErrorCard(
-          `${Emojis.ERROR} Failed to Uninstall Module`,
-          error.message,
+        makeErrorCard(`${Emojis.ERROR} Failed to Uninstall Module`, msg_),
+      );
+    }
+  }
+
+  public async messageRunReload(message: Message, args: Args): Promise<void> {
+    const moduleName = await args.pick("string").catch(() => null);
+
+    if (!moduleName) {
+      await message.reply(
+        makeErrorCard("Missing Arguments", "Usage: `,module reload <module>`"),
+      );
+      return;
+    }
+
+    const msg = await message.reply(
+      makeInfoCard(
+        "Reloading Module",
+        `${Emojis.LOADING} Unloading and reloading **${moduleName}**...`,
+      ),
+    );
+
+    try {
+      await this.container.moduleStore.reload(moduleName);
+      await this.downloaderService.syncApplicationCommands();
+      this.container.logger.info(
+        `[Module] Reloaded: ${moduleName} by ${message.author.tag}`,
+      );
+      await msg.edit(
+        makeSuccessCard(
+          `${Emojis.CHECK} Module Reloaded`,
+          `**${moduleName}** has been reloaded. Slash commands (if any) have been re-synced.\n\n> Note: to pick up TypeScript source changes, run with \`bun --watch\` or restart the bot.`,
         ),
       );
+    } catch (err: unknown) {
+      const msg_ = errorFrom(err).message;
+      this.container.logger.warn(
+        `[Module] Reload failed: ${moduleName} — ${msg_}`,
+      );
+      await msg.edit(makeErrorCard(`${Emojis.ERROR} Reload Failed`, msg_));
     }
   }
 
@@ -148,7 +181,12 @@ export class ModuleCommand extends BaseSubcommand {
     await message.reply(
       makeInfoCard(
         "Module Management",
-        "Available subcommands:\n- `,module install <repo> <module>`\n- `,module uninstall <module>`\n- `,module update [module]`",
+        [
+          "- `,module install <repo> <module>`",
+          "- `,module uninstall <module>`",
+          "- `,module update [module]`",
+          "- `,module reload <module>`",
+        ].join("\n"),
       ),
     );
   }
@@ -186,9 +224,8 @@ export class ModuleCommand extends BaseSubcommand {
           );
         }
       } catch (err: unknown) {
-        const error = err as Error;
         await msg.edit(
-          makeErrorCard(`${Emojis.ERROR} Update Failed`, error.message),
+          makeErrorCard(`${Emojis.ERROR} Update Failed`, errorFrom(err).message),
         );
       }
     } else {
@@ -243,9 +280,8 @@ export class ModuleCommand extends BaseSubcommand {
           makeSuccessCard("Multi-Module Update Report", report.join("\n\n")),
         );
       } catch (err: unknown) {
-        const error = err as Error;
         await msg.edit(
-          makeErrorCard(`${Emojis.ERROR} Multi-Update Failed`, error.message),
+          makeErrorCard(`${Emojis.ERROR} Multi-Update Failed`, errorFrom(err).message),
         );
       }
     }

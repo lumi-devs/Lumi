@@ -10,6 +10,7 @@ import {
   makeInfoCard,
 } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
+import { errorFrom } from "#utilities/errors.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "repo",
@@ -18,6 +19,8 @@ import { Emojis } from "#utilities/assets.js";
   permissionLevel: PermissionLevel.BOT_OWNER,
   subcommands: [
     { name: "add", messageRun: "messageRunAdd" },
+    { name: "remove", messageRun: "messageRunRemove" },
+    { name: "update", messageRun: "messageRunUpdate" },
     { name: "list", messageRun: "messageRunList" },
     { name: "modules", messageRun: "messageRunModules" },
     { name: "help", messageRun: "messageRunHelp", default: true },
@@ -36,7 +39,13 @@ export class RepoCommand extends BaseSubcommand {
     await message.reply(
       makeInfoCard(
         "Repository Management",
-        "Available subcommands:\n- `,repo add <name> <url> [branch]`\n- `,repo list`\n- `,repo modules <repo_name>`",
+        [
+          "- `,repo add <name> <url> [branch]`",
+          "- `,repo remove <name>`",
+          "- `,repo update <name>`",
+          "- `,repo list`",
+          "- `,repo modules <repo_name>`",
+        ].join("\n"),
       ),
     );
   }
@@ -72,15 +81,81 @@ export class RepoCommand extends BaseSubcommand {
         ),
       );
     } catch (err: unknown) {
-      const error = err as Error;
+      const msg_ = errorFrom(err).message;
       this.container.logger.warn(
-        `[Repo] ${Emojis.ERROR} Failed to add repo: ${name} — ${error.message}`,
+        `[Repo] ${Emojis.ERROR} Failed to add repo: ${name} — ${msg_}`,
       );
       await msg.edit(
-        makeErrorCard(
-          `${Emojis.ERROR} Failed to Add Repository`,
-          error.message,
+        makeErrorCard(`${Emojis.ERROR} Failed to Add Repository`, msg_),
+      );
+    }
+  }
+
+  public async messageRunRemove(message: Message, args: Args): Promise<void> {
+    const name = await args.pick("string").catch(() => null);
+
+    if (!name) {
+      await message.reply(
+        makeErrorCard("Missing Arguments", "Usage: `,repo remove <name>`"),
+      );
+      return;
+    }
+
+    const msg = await message.reply(
+      makeInfoCard("Removing Repository", `Removing **${name}** and its installed modules...`),
+    );
+
+    try {
+      await this.downloaderService.removeRepo(name);
+      this.container.logger.info(
+        `[Repo] Removed repository: ${name} by ${message.author.tag}`,
+      );
+      await msg.edit(
+        makeSuccessCard(
+          `${Emojis.REPO} Repository Removed`,
+          `Repository **${name}** and all its installed modules have been removed.`,
         ),
+      );
+    } catch (err: unknown) {
+      await msg.edit(makeErrorCard("Failed to Remove Repository", errorFrom(err).message));
+    }
+  }
+
+  public async messageRunUpdate(message: Message, args: Args): Promise<void> {
+    const name = await args.pick("string").catch(() => null);
+
+    if (!name) {
+      await message.reply(
+        makeErrorCard("Missing Arguments", "Usage: `,repo update <name>`"),
+      );
+      return;
+    }
+
+    const msg = await message.reply(
+      makeInfoCard(
+        "Updating Repository",
+        `Pulling latest changes for **${name}**...`,
+      ),
+    );
+
+    try {
+      await this.downloaderService.updateRepo(name);
+      this.container.logger.info(
+        `[Repo] ${Emojis.REPO} Updated repository: ${name} by ${message.author.tag}`,
+      );
+      await msg.edit(
+        makeSuccessCard(
+          `${Emojis.REPO} Repository Updated`,
+          `Successfully updated repository **${name}** to the latest commit.`,
+        ),
+      );
+    } catch (err: unknown) {
+      const msg_ = errorFrom(err).message;
+      this.container.logger.warn(
+        `[Repo] ${Emojis.ERROR} Failed to update repo: ${name} — ${msg_}`,
+      );
+      await msg.edit(
+        makeErrorCard(`${Emojis.ERROR} Failed to Update Repository`, msg_),
       );
     }
   }
@@ -118,7 +193,10 @@ export class RepoCommand extends BaseSubcommand {
     }
 
     try {
-      const modules = await this.downloaderService.getModulesInRepo(repoName);
+      const [modules, installed] = await Promise.all([
+        this.downloaderService.getModulesInRepo(repoName),
+        this.downloaderService.getInstalledModules(),
+      ]);
 
       if (!modules.length) {
         await message.reply(
@@ -130,14 +208,17 @@ export class RepoCommand extends BaseSubcommand {
         return;
       }
 
-      const list = modules.map(
-        (m) => `**${m.name}** (v${m.version})\n*${m.short}*`,
-      );
+      const installedNames = new Set(installed.map((m) => m.moduleName));
+      const list = modules
+        .filter((m) => !m.hidden)
+        .map((m) => {
+          const badge = installedNames.has(m.name) ? " ✓ installed" : "";
+          return `**${m.name}** (v${m.version})${badge}\n*${m.short}*`;
+        });
       await message.reply(makeListCard(`Modules in ${repoName}`, list));
     } catch (err: unknown) {
-      const error = err as Error;
       await message.reply(
-        makeErrorCard("Failed to Read Repository", error.message),
+        makeErrorCard("Failed to Read Repository", errorFrom(err).message),
       );
     }
   }
