@@ -5,6 +5,7 @@ import { PermissionLevel } from "#lib/permissions.js";
 import type { Message } from "discord.js";
 import { makeSuccessCard, makeErrorCard } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
+import { errorFrom } from "#utilities/errors.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "dashboard",
@@ -51,9 +52,8 @@ export class DashboardCommand extends BaseSubcommand {
         ),
       );
     } catch (err: unknown) {
-      const error = err as Error;
       await message.reply(
-        makeErrorCard("Failed to Update Layout", error.message),
+        makeErrorCard("Failed to Update Layout", errorFrom(err).message),
       );
     }
   }

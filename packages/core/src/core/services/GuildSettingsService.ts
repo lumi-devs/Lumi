@@ -5,12 +5,13 @@ import type { Piece } from "@sapphire/framework";
 @ApplyOptions<Piece.Options>({ name: "guild-settings" })
 export class GuildSettingsService extends Service {
   public async setDashboardLayout(guildId: string, rawLayout: string) {
-    let layout;
+    let layout: unknown;
     try {
       layout = JSON.parse(rawLayout);
-      if (!Array.isArray(layout))
-        throw new Error("Layout must be a JSON array");
-    } catch (err: unknown) {
+    } catch {
+      throw new Error("The layout must be valid JSON (parse failed).");
+    }
+    if (!Array.isArray(layout)) {
       throw new Error("The layout must be a valid JSON array of widget names.");
     }
 
