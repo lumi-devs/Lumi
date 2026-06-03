@@ -12,8 +12,8 @@ export function envParseInteger(key: string, defaultValue?: number): number {
   const raw = process.env[key];
   if (raw !== undefined) {
     const n = Number(raw);
-    if (!isNaN(n)) return n;
-    throw new Error(`[ENV] Invalid: ${key}=${raw}`);
+    if (!isNaN(n) && Number.isInteger(n)) return n;
+    throw new Error(`[ENV] Invalid integer: ${key}=${raw}`);
   }
   if (defaultValue !== undefined) return defaultValue;
   throw new Error(`[ENV] Missing: ${key}`);
@@ -55,12 +55,40 @@ export const isInteractionDeferAtGateway = () =>
   process.env["INTERACTION_DEFER_AT_GATEWAY"] === "true";
 
 /**
+ * Whether to run the Redis entity-cache populator. The projection is
+ * provisioned-ahead infra for a future `GuildManager: 0` step and currently has
+ * zero read callers, so populating it is pure write overhead on every dispatch.
+ * Default off; opt in only when actively building the cache-backed read path.
+ */
+export const isEntityCachePopulateEnabled = () =>
+  process.env["ENTITY_CACHE_POPULATE"] === "true";
+
+/**
  * Cluster name turns on the Redis-backed cluster coordinator (shard
  * range assignment + session resumption + shared IDENTIFY throttling).
  * Unset → single-replica path: SHARD_LIST honored, sessions not persisted.
  */
 export const getClusterName = (): string | null =>
   process.env["CLUSTER_NAME"]?.trim() || null;
+
+/**
+ * Comma- or colon-separated list of absolute directory paths to add as extra
+ * ModuleStore roots at startup — the Lumi equivalent of RedBot's `--cog-path`.
+ *
+ * Example: `LUMI_DEV_PATHS=/home/dev/my-modules:/home/dev/other-modules`
+ *
+ * Paths are non-persistent (env var only). Use for development and local testing;
+ * never set in production. Modules in these directories are discovered and loaded
+ * exactly like bundled modules — they just live outside the repo.
+ */
+export function getDevModulePaths(): string[] {
+  const raw = process.env["LUMI_DEV_PATHS"]?.trim();
+  if (!raw) return [];
+  return raw
+    .split(/[,:]/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
 
 /**
  * Base URL of the shared outbound REST proxy (nirn-proxy or equivalent).
