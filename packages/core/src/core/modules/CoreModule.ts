@@ -10,8 +10,8 @@ import {
   type RepoModulesPayload,
   type ModuleInstallPayload,
   type ModuleUninstallPayload,
-} from "@lumi/contracts";
-import { resolver } from "../lib/downloader/resolver.js";
+} from "@lumi-devs/contracts";
+import { resolver, ADDON_MODULES_ROOT } from "../lib/downloader/resolver.js";
 import {
   executeGdprDeletion,
   GdprDeletionError,
@@ -188,20 +188,15 @@ export class CoreModule extends Module {
 
       await container.moduleStore.unload(moduleName);
 
-      const targetPath = path.join(
-        process.cwd(),
-        "packages",
-        "core",
-        "src",
-        "modules",
-        moduleName,
-      );
-
+      // Addon modules live as symlinks (or dirs) under ADDON_MODULES_ROOT, not
+      // inside packages/core/src/modules/. Use fs.rm with force so a missing
+      // entry (e.g. manually removed) is treated as success rather than an error.
+      const targetPath = path.join(ADDON_MODULES_ROOT, moduleName);
       try {
-        await fs.unlink(targetPath);
+        await fs.rm(targetPath, { recursive: true, force: true });
       } catch (err: unknown) {
         container.logger.warn(
-          `[Downloader] Could not unlink ${targetPath}:`,
+          `[Downloader] Could not remove ${targetPath}:`,
           err,
         );
       }
