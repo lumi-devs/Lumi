@@ -1,5 +1,6 @@
 import { RedisKeys, RedisTTL } from "#database/redis.js";
 import { container } from "@sapphire/framework";
+import { tryParseJSON } from "@sapphire/utilities";
 import { Repository } from "#root/prisma/repositories/Repository.js";
 
 /**
@@ -130,7 +131,7 @@ export class ModuleRepository extends Repository {
           continue;
         }
       } else {
-        const globalEnabled = JSON.parse(globalRaw) as boolean;
+        const globalEnabled = tryParseJSON(globalRaw) === true;
         if (!globalEnabled) {
           result.set(name, false);
           continue;
@@ -147,7 +148,7 @@ export class ModuleRepository extends Repository {
           continue;
         }
       } else {
-        const guildEnabled = JSON.parse(guildRaw) as boolean;
+        const guildEnabled = tryParseJSON(guildRaw) === true;
         if (!guildEnabled) {
           result.set(name, false);
           continue;

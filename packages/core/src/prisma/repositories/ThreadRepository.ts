@@ -1,4 +1,5 @@
 import type { TrackedThread } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { Repository } from "#root/prisma/repositories/Repository.js";
 
 /**
@@ -19,11 +20,18 @@ export class ThreadRepository extends Repository {
 
   /** Untracks a thread; silently ignores an already-removed record. */
   public async untrack(threadId: string): Promise<void> {
-    await this.prisma.trackedThread
-      .delete({ where: { threadId } })
-      .catch(() => {
-        // Already untracked — nothing to do.
-      });
+    await this.prisma.trackedThread.delete({ where: { threadId } }).catch(
+      (err: unknown) => {
+        // P2025 = record not found — already untracked, nothing to do.
+        // Re-throw anything else (connection errors, constraint violations, …).
+        if (
+          !(err instanceof Prisma.PrismaClientKnownRequestError) ||
+          err.code !== "P2025"
+        ) {
+          throw err;
+        }
+      },
+    );
   }
 
   /** Tracked threads whose archival timestamp has passed. */

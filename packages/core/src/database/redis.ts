@@ -59,6 +59,13 @@ export const RedisKeys = {
   entityUser: (userId: string) => `lumi:ent:user:${userId}`,
   entityMember: (guildId: string, userId: string) =>
     `lumi:ent:member:${guildId}:${userId}`,
+
+  // ── Dashboard api (apps/api) ──────────────────────────────────────────
+  // Opaque session id → JSON session blob; short-lived OAuth state → CSRF nonce.
+  // Owned by the api service; listed here so the api reuses one key registry
+  // instead of hard-coding strings (CLAUDE.md: never hand-roll a Redis key).
+  apiSession: (sessionId: string) => `lumi:api:session:${sessionId}`,
+  apiOAuthState: (state: string) => `lumi:api:oauth:state:${state}`,
 } as const;
 
 export const RedisTTL = {
@@ -75,6 +82,10 @@ export const RedisTTL = {
   // 24h is conservative; raise for read-heavy quiet servers, lower if the
   // memory budget tightens.
   entity: 60 * 60 * 24,
+  // api login session (sliding — refreshed on each authenticated request).
+  apiSession: 60 * 60 * 24 * 7,
+  // OAuth CSRF state: only needs to survive the round-trip to Discord and back.
+  apiOAuthState: 60 * 10,
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -131,13 +142,9 @@ export function redisConnectionOptions(): RedisOptions {
   };
 }
 
-function baseConnection(): RedisOptions {
-  return redisConnectionOptions();
-}
-
 export function createRedisClient(): Redis {
   const client = new Redis({
-    ...baseConnection(),
+    ...redisConnectionOptions(),
     db: envParseInteger("REDIS_CACHE_DB", 0),
     lazyConnect: true,
     maxRetriesPerRequest: 3,
@@ -160,7 +167,7 @@ export function createRedisClient(): Redis {
  */
 export function parseRedisConnectionOption(): RedisOptions {
   return {
-    ...baseConnection(),
+    ...redisConnectionOptions(),
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
   };
@@ -178,6 +185,7 @@ export class InvalidationBus {
   readonly #subscriber: Redis;
   #listeners = new Set<(keys: string[]) => void>();
   #started = false;
+  #startPromise: Promise<void> | null = null;
 
   public constructor(subscriber: Redis) {
     this.#subscriber = subscriber;
@@ -188,7 +196,16 @@ export class InvalidationBus {
     return () => this.#listeners.delete(fn);
   }
 
-  public async start(): Promise<void> {
+  public start(): Promise<void> {
+    if (this.#started) return Promise.resolve();
+    // Deduplicate concurrent start() calls — only one subscription is issued.
+    this.#startPromise ??= this.#doStart().finally(() => {
+      this.#startPromise = null;
+    });
+    return this.#startPromise;
+  }
+
+  async #doStart(): Promise<void> {
     if (this.#started) return;
     await this.#subscriber.subscribe(INVALIDATION_CHANNEL);
     this.#subscriber.on("message", (_channel, payload) => {

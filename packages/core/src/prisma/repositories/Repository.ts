@@ -1,6 +1,6 @@
 import type { Redis } from "ioredis";
 import { type ILogger, container } from "@sapphire/framework";
-import { cacheHits, cacheMisses } from "@lumi/observability";
+import { cacheHits, cacheMisses } from "@lumi-devs/observability";
 import type { DatabaseClient } from "#database/client.js";
 import type { DatabaseService } from "#root/prisma/DatabaseService.js";
 
@@ -31,11 +31,23 @@ export abstract class Repository {
     fetcher: () => Promise<T>,
     parser: (data: string) => T = JSON.parse,
   ): Promise<T> {
-    const cache = key.split(":", 1)[0] ?? "unknown";
+    // Keys are `lumi:{namespace}:…` — split on the second colon to get the
+    // namespace segment as the metric label (e.g. "settings", "cfg", "perms").
+    const cache = key.split(":")[1] ?? "unknown";
     const cached = await this.redis.get(key);
     if (cached) {
-      cacheHits.inc({ cache });
-      return parser(cached);
+      try {
+        const value = parser(cached);
+        cacheHits.inc({ cache });
+        return value;
+      } catch (err: unknown) {
+        // Corrupt/stale cache entry — discard, treat as a miss, and recompute
+        // (the fetch below overwrites the bad value) rather than throwing.
+        this.logger.warn(
+          `[cache] Unparseable entry for ${key}, recomputing:`,
+          err,
+        );
+      }
     }
     cacheMisses.inc({ cache });
 

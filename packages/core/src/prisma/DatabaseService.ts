@@ -94,30 +94,27 @@ export class DatabaseService {
    * hooks have run.  Spans several repositories' tables, so it lives on the
    * facade:
    *
-   *  - User            : delete the profile row
-   *  - Blocklist       : delete entries where this user is the subject
-   *  - AuditLedger     : delete all action records for the user
-   *  - ModerationCase  : anonymize userId + moderatorId → '0'
-   *                      (cases are retained for audit integrity per schema comment)
+   *  - User        : delete the profile row
+   *  - Blocklist   : delete entries where this user is the subject
+   *  - AuditLedger : delete all action records for the user
    *
    * IgnoreEntry has no userId column.  AfkEntry is handled by the AFK module
-   * hook.  Blocklist Redis keys are scanned and invalidated last.
+   * hook.  ModerationCase anonymization is handled by the mod module hook
+   * (ModerationRepository.anonymizeUser) — do not duplicate it here.
+   * Blocklist Redis keys are scanned and invalidated last.
    */
   public async deleteUserData(userId: string): Promise<void> {
-    await Promise.all([
+    // One atomic transaction: a mid-sequence failure must not leave the user's
+    // PII half-deleted (e.g. profile gone but audit rows orphaned). The array
+    // form runs all three writes in a single DB transaction.
+    await this.prisma.$transaction([
       this.prisma.blocklist.deleteMany({ where: { userId } }),
       this.prisma.auditLedger.deleteMany({ where: { userId } }),
       this.prisma.user.deleteMany({ where: { id: userId } }),
-      this.prisma.moderationCase.updateMany({
-        where: { userId },
-        data: { userId: "0" },
-      }),
-      this.prisma.moderationCase.updateMany({
-        where: { moderatorId: userId },
-        data: { moderatorId: "0" },
-      }),
     ]);
 
+    // Cache invalidation runs only after the DB commit succeeds — no point
+    // dropping cached entries for writes that may have rolled back.
     let cursor = "0";
     const keys: string[] = [];
     do {

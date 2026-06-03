@@ -3,8 +3,23 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { container } from "@sapphire/framework";
 import { Stopwatch } from "@sapphire/stopwatch";
-import { pgPoolSize, pgPoolUsed, pgPoolWaiting } from "@lumi/observability";
+import { pgPoolSize, pgPoolUsed, pgPoolWaiting } from "@lumi-devs/observability";
 
+// Pooling-mode decision (settled before the `worker` role fans out):
+// **transaction** pooling, not session. Our access pattern is compatible:
+//   - Every `$transaction` (incl. the interactive callback form, e.g.
+//     ModerationRepository.createModerationCase) is a short single BEGIN..COMMIT.
+//     Transaction-mode PgBouncer pins one server backend for the transaction's
+//     duration, so interactive transactions are safe — they never span pooled
+//     backends.
+//   - We hold no cross-transaction session state: cross-worker mutual exclusion
+//     is Redis-backed (acquireRedisLock), not pg advisory locks, and nothing
+//     LISTEN/NOTIFYs or `SET`s on this pool.
+//   - The pg adapter issues unnamed (extended-protocol) statements, so there is
+//     no prepared-statement cache to corrupt across backends — the classic
+//     Prisma+PgBouncer footgun. Keep it that way; if Prisma ever starts naming
+//     statements, append `?pgbouncer=true` to POSTGRES_URL.
+//
 // Per-process client-connection cap. Behind a transaction-pooled PgBouncer this
 // is how many PgBouncer client slots a single process holds — keep it small so N
 // workers stay under PgBouncer's `max_client_conn`. PgBouncer's
@@ -42,7 +57,8 @@ const createPrismaClient = () => {
           sw.stop();
 
           if (sw.duration > 1000) {
-            container.logger.warn(
+            // Guard: container.logger may not be set during early bootstrap.
+            container.logger?.warn(
               `[Prisma Diagnostic] Query exceeded 1000ms: ${model}.${operation} took ${sw}`,
             );
           }
