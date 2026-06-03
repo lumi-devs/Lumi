@@ -18,7 +18,9 @@ import {
   getServiceRole,
   getConsumerId,
   getClusterName,
+  getDevModulePaths,
   isInteractionDeferAtGateway,
+  isEntityCachePopulateEnabled,
   roleOwnsScheduler,
   roleExecutesTaskEffects,
   type ServiceRole,
@@ -41,13 +43,14 @@ import {
   createEventBus,
   RawGatewayConsumer,
   type OwnedEventBus,
-} from "@lumi/event-bus";
+} from "@lumi-devs/event-bus";
 import { installPreDeferredInteractions } from "#core/lib/pre-deferred-interactions.js";
 import { buildRestOptions } from "#core/lib/discord-rest.js";
-import { WorkerManager } from "#workers/WorkerManager.js";
 import { RedisEntityCache } from "#core/entity-cache/RedisEntityCache.js";
 import { installEntityPopulator } from "#core/entity-cache/entity-populator.js";
 import { ModuleStore } from "#core/module-system/ModuleStore.js";
+import { ADDON_MODULES_ROOT } from "#core/lib/downloader/resolver.js";
+import { pathToFileURL } from "node:url";
 
 import { DatabaseService } from "#root/prisma/DatabaseService.js";
 import { ServiceStore } from "#core/module-system/ServiceStore.js";
@@ -58,7 +61,7 @@ import {
   streamConsumerLag,
   streamDlqLength,
   registerReadinessProbe,
-} from "@lumi/observability";
+} from "@lumi-devs/observability";
 import {
   planShards,
   buildSimpleThrottlerFactory,
@@ -66,7 +69,7 @@ import {
   ClusterReadyTracker,
   type ShardPlan,
   type ClusterBootstrap,
-} from "@lumi/sharding";
+} from "@lumi-devs/sharding";
 import { Redis } from "ioredis";
 import type { SessionInfo } from "@discordjs/ws";
 
@@ -193,6 +196,19 @@ export class LumiClient extends SapphireClient {
             ...parseRedisConnectionOption(),
             db: envParseInteger("REDIS_TASK_DB", 1),
           },
+          // Fleet-wide retry + retention policy for every scheduled job. BullMQ
+          // otherwise defaults to a single attempt (one transient 5xx/blip drops
+          // an auto-lift until the next reboot reconcile) and unbounded
+          // completed/failed sets (e.g. the 15-min ThreadCleaner grows forever).
+          // Per-job `customJobOptions` still override these where a job needs to.
+          // Discord-facing retries also honour Retry-After at the REST layer
+          // (@discordjs/rest: 429 → sleep(retryAfter), 5xx → retry).
+          defaultJobOptions: {
+            attempts: 5,
+            backoff: { type: "exponential", delay: 5_000 },
+            removeOnComplete: 1_000,
+            removeOnFail: 5_000,
+          },
         },
       },
       // Route all of discord.js' internal REST through the shared proxy
@@ -204,6 +220,10 @@ export class LumiClient extends SapphireClient {
     // 1. Module system setup
     const moduleStore = new ModuleStore();
     moduleStore.addRoot(new URL("../modules/", import.meta.url));
+    moduleStore.addRoot(pathToFileURL(ADDON_MODULES_ROOT + "/"));
+    for (const devPath of getDevModulePaths()) {
+      moduleStore.addRoot(pathToFileURL(devPath + "/"));
+    }
     this.stores.register(new ServiceStore());
     this.stores.register(moduleStore);
     this.stores.registerPath(new URL("../core/", import.meta.url));
@@ -233,7 +253,7 @@ export class LumiClient extends SapphireClient {
       defaultMaxLen: envParseInteger("EVENT_STREAM_MAXLEN", 100_000),
       maxDeliveries: envParseInteger("EVENT_STREAM_MAX_DELIVERIES", 5),
       claimMinIdleMs: envParseInteger("EVENT_STREAM_CLAIM_MIN_IDLE_MS", 60_000),
-      ackWaitMs: envParseInteger("EVENT_STREAM_CLAIM_MIN_IDLE_MS", 60_000),
+      ackWaitMs: envParseInteger("EVENT_STREAM_ACK_WAIT_MS", 60_000),
       claimIntervalMs: envParseInteger(
         "EVENT_STREAM_CLAIM_INTERVAL_MS",
         30_000,
@@ -262,7 +282,6 @@ export class LumiClient extends SapphireClient {
         null,
       ) as import("#core/types/common.js").ModuleServiceStore,
       moduleStore,
-      workers: new WorkerManager(),
       configChangeHooks: new Map(),
       stats: {
         messages: 0,
@@ -422,11 +441,16 @@ export class LumiClient extends SapphireClient {
       );
     }
 
-    // Keep the Redis entity-cache projection up-to-date. Any role
-    // that observes raw dispatches (monolith via its own WS, worker via the
-    // bus consumer) maintains the projection. Cooperative: many workers each
-    // write idempotently; last-write-wins.
-    if (this.role === "monolith" || this.role === "worker") {
+    // Keep the Redis entity-cache projection up-to-date. Any role that observes
+    // raw dispatches (monolith via its own WS, worker via the bus consumer) can
+    // maintain the projection. Cooperative: many workers each write
+    // idempotently; last-write-wins. Off by default — the projection has no read
+    // callers yet (provisioned-ahead infra), so populating it is pure write
+    // overhead until the GuildManager:0 step lands. Opt in via ENTITY_CACHE_POPULATE.
+    if (
+      (this.role === "monolith" || this.role === "worker") &&
+      isEntityCachePopulateEnabled()
+    ) {
       this._detachEntityPopulator = installEntityPopulator(
         container.entityCache,
       );
@@ -494,7 +518,6 @@ export class LumiClient extends SapphireClient {
       this._schedulerLeaderLock = null;
     }
     await super.destroy();
-    await container.workers.destroy();
     await container.rabbit?.close();
     await this._ownedEventBus
       ?.close()
@@ -666,9 +689,9 @@ export class LumiClient extends SapphireClient {
       const line = meta
         ? `[LumiClient] ${msg} ${JSON.stringify(meta)}`
         : `[LumiClient] ${msg}`;
-      const fn =
-        level === "error" ? "error" : level === "warn" ? "warn" : "log";
-      console[fn](line);
+      if (level === "error") console.error(line);
+      else if (level === "warn") console.warn(line);
+      else console.info(line);
     };
     const shardPlan = await planShards({
       token: envParseString("BOT_TOKEN"),
