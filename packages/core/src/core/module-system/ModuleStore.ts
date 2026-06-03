@@ -108,7 +108,7 @@ export class ModuleStore extends Store<Module> {
     this.#setupInvalidationListener();
   }
 
-  public async discover(force = false) {
+  public async discover(force = false, bustCache = false) {
     if (this.#discovered && !force) return;
 
     const globalState = await container.db.modules.getGlobalModuleStates();
@@ -117,7 +117,7 @@ export class ModuleStore extends Store<Module> {
     for (const root of this.#roots) {
       const rootPath = fileURLToPath(root);
       if (await this.#exists(rootPath)) {
-        await this.#walk(rootPath, found, globalState);
+        await this.#walk(rootPath, found, globalState, 0, bustCache);
       }
     }
 
@@ -136,6 +136,24 @@ export class ModuleStore extends Store<Module> {
     }
 
     this.#discovered = true;
+  }
+
+  /**
+   * Unload a module, re-discover it (with ESM cache-busting so code changes
+   * on disk are picked up), then re-load it. Used by `,module reload` and the
+   * downloader update flow.
+   */
+  public async reload(name: string) {
+    const record = this.#records.get(name);
+    if (!record) throw new Error(`Module "${name}" not found or not yet loaded`);
+    if (record.meta.isCore)
+      throw new Error(`Cannot reload core module "${name}"`);
+
+    await this.unload(name);
+    // bustCache=true appends ?t=<timestamp> to index imports so Bun/Node ESM
+    // treats them as new URLs and re-evaluates updated source on disk.
+    await this.discover(true, true);
+    await this.loadModule(name);
   }
 
   public override async unload(nameOrPiece: string | Module): Promise<Module> {
@@ -168,14 +186,15 @@ export class ModuleStore extends Store<Module> {
   }
 
   public async setEnabled(name: string, enabled: boolean, reason?: string) {
-    const module = this.get(name);
     const record = this.#records.get(name);
     if (!record) throw new Error(`Unknown module: ${name}`);
     if (record.meta.isCore && !enabled) throw new Error("Cannot disable Core");
+    if (record.enabled === enabled) return; // already in desired state
 
     await container.db.modules.setModuleGlobalEnabled(name, enabled, reason);
 
     record.enabled = enabled;
+    const module = this.get(name);
     if (module) module.enabled = enabled;
 
     if (enabled) {
@@ -371,6 +390,7 @@ export class ModuleStore extends Store<Module> {
     found: Map<string, ModuleRecord>,
     globalState: Map<string, boolean>,
     depth = 0,
+    bustCache = false,
   ) {
     const entries = await fs.readdir(dir).catch(() => []);
 
@@ -389,10 +409,10 @@ export class ModuleStore extends Store<Module> {
           // Fallback for modules/addons without a generated manifest: import the
           // index to read its in-code `meta`. This is the only discovery-time
           // code execution and is avoided entirely once a manifest exists.
-          await this.#ingest(sub, indexPath, found, globalState);
+          await this.#ingest(sub, indexPath, found, globalState, bustCache);
         }
       }
-      await this.#walk(sub, found, globalState, depth + 1);
+      await this.#walk(sub, found, globalState, depth + 1, bustCache);
     }
   }
 
@@ -428,9 +448,14 @@ export class ModuleStore extends Store<Module> {
     indexPath: string,
     found: Map<string, ModuleRecord>,
     globalState: Map<string, boolean>,
+    bustCache = false,
   ) {
     try {
-      const mod = await import(pathToFileURL(indexPath).href);
+      const baseUrl = pathToFileURL(indexPath).href;
+      // Append a timestamp query param to force ESM cache bypass on reload,
+      // so file changes on disk (dev edits, git-pulled addon updates) take effect.
+      const importUrl = bustCache ? `${baseUrl}?t=${Date.now()}` : baseUrl;
+      const mod = await import(importUrl);
       const meta =
         mod.meta ??
         mod.default?.meta ??
@@ -486,6 +511,14 @@ export class ModuleStore extends Store<Module> {
       const record = this.#records.get(name);
       if (!record) {
         container.logger.error(`[ModuleStore] Missing dependency: ${name}`);
+        return;
+      }
+
+      // Skip dependency traversal for disabled modules — their deps may not be
+      // present, and there is nothing to order if the module won't be loaded.
+      if (!record.enabled) {
+        visited.add(name);
+        order.push(name);
         return;
       }
 
