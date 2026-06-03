@@ -28,18 +28,25 @@ export class GuildDeleteEventBusListener extends Listener<
 
     const dynamicKeys: string[] = [];
     for (const pattern of patterns) {
-      let cursor = "0";
-      do {
-        const [next, found] = await this.container.redis.scan(
-          cursor,
-          "MATCH",
-          pattern,
-          "COUNT",
-          100,
+      try {
+        let cursor = "0";
+        do {
+          const [next, found] = await this.container.redis.scan(
+            cursor,
+            "MATCH",
+            pattern,
+            "COUNT",
+            100,
+          );
+          cursor = next;
+          dynamicKeys.push(...found);
+        } while (cursor !== "0");
+      } catch (err: unknown) {
+        this.container.logger.warn(
+          `[GuildDelete] Redis SCAN failed for pattern ${pattern}:`,
+          err,
         );
-        cursor = next;
-        dynamicKeys.push(...found);
-      } while (cursor !== "0");
+      }
     }
 
     const allKeys = [...staticKeys, ...dynamicKeys];
