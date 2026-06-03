@@ -67,7 +67,7 @@ export class CoreModule extends Module {
   }
 
   public override onLoad() {
-    super.onLoad();
+    const result = super.onLoad();
     container.logger.info("[Core] Initializing Core RPC handlers...");
 
     // ── GDPR Deletion Endpoint ───────────────────────────────────────────
@@ -205,6 +205,8 @@ export class CoreModule extends Module {
 
       return { success: true, moduleName };
     });
+
+    return result;
   }
 
   public override onUnload() {
