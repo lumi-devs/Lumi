@@ -1,9 +1,13 @@
 import { container } from "@sapphire/framework";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import type { ModuleInfo } from "./types.js";
 import { z } from "zod";
 import { logError } from "#utilities/errors.js";
+
+const execFileAsync = promisify(execFile);
 
 const repoSchema = z.string().regex(/^[a-zA-Z0-9_-]+$/); // Disallow dots to prevent traversal
 const branchSchema = z.string().regex(/^[a-zA-Z0-9_.-]+$/);
@@ -32,7 +36,9 @@ const urlSchema = z.string().refine(
 );
 const reqsSchema = z.array(z.string().regex(/^[a-zA-Z0-9_.@/-]+$/));
 
-const MODULE_ROOT = path.join(process.cwd(), "data", "3rd-party-modules");
+export const MODULE_ROOT = path.join(process.cwd(), "data", "3rd-party-modules");
+/** Where symlinks for installed addons live — registered as a second ModuleStore root. */
+export const ADDON_MODULES_ROOT = path.join(process.cwd(), "data", "installed-modules");
 
 /**
  * Handles the logic of cloning repositories, verifying info.json,
@@ -53,38 +59,49 @@ export class DownloadResolver {
     // Clone or pull
     if (await this._exists(repoPath)) {
       container.logger.info(`[Downloader] Updating repo: ${name}`);
-      const pullArgs = ["git", "-C", repoPath, "pull"];
-      if (branch !== "default") pullArgs.push("origin", branch);
-      const pullProc = Bun.spawn(pullArgs, { stdout: "pipe", stderr: "pipe" });
-      const pullCode = await pullProc.exited;
-      if (pullCode !== 0) {
-        const stderr = await new Response(pullProc.stderr).text();
-        throw new Error(`Git pull failed (exit ${pullCode}): ${stderr.trim()}`);
-      }
+      const pullArgs = branch !== "default" ? ["-C", repoPath, "pull", "origin", branch] : ["-C", repoPath, "pull"];
+      await execFileAsync("git", pullArgs).catch((err: NodeJS.ErrnoException & { stderr?: string }) => {
+        throw new Error(`Git pull failed: ${(err.stderr ?? err.message).trim()}`);
+      });
     } else {
       container.logger.info(`[Downloader] Cloning repo: ${url}`);
-      const cloneArgs = ["git", "clone"];
+      const cloneArgs = ["clone"];
       if (branch !== "default") cloneArgs.push("-b", branch);
       cloneArgs.push(url, repoPath);
-      const cloneProc = Bun.spawn(cloneArgs, {
-        stdout: "pipe",
-        stderr: "pipe",
+      await execFileAsync("git", cloneArgs).catch((err: NodeJS.ErrnoException & { stderr?: string }) => {
+        throw new Error(`Git clone failed: ${(err.stderr ?? err.message).trim()}`);
       });
-      const cloneCode = await cloneProc.exited;
-      if (cloneCode !== 0) {
-        const stderr = await new Response(cloneProc.stderr).text();
-        throw new Error(
-          `Git clone failed (exit ${cloneCode}): ${stderr.trim()}`,
-        );
-      }
     }
   }
 
   public async getModulesInRepo(repoName: string): Promise<ModuleInfo[]> {
     repoName = repoSchema.parse(repoName);
     const repoPath = path.join(MODULE_ROOT, repoName);
-    const entries = await fs.readdir(repoPath, { withFileTypes: true });
 
+    if (!(await this._exists(repoPath))) {
+      throw new Error(
+        `Repository **${repoName}** has not been cloned locally. Run \`,repo add\` first.`,
+      );
+    }
+
+    // Fast path: root-level modules.json index
+    const indexPath = path.join(repoPath, "modules.json");
+    if (await this._exists(indexPath)) {
+      try {
+        const index = JSON.parse(await fs.readFile(indexPath, "utf8")) as {
+          modules?: ModuleInfo[];
+        };
+        if (Array.isArray(index.modules)) return index.modules;
+      } catch (err: unknown) {
+        container.logger.warn(
+          `[Downloader] Failed to parse modules.json in ${repoName}, falling back to scan:`,
+          err,
+        );
+      }
+    }
+
+    // Fallback: walk subdirectories for info.json files
+    const entries = await fs.readdir(repoPath, { withFileTypes: true });
     const modules: ModuleInfo[] = [];
     for (const entry of entries) {
       if (
@@ -115,19 +132,12 @@ export class DownloadResolver {
   public async installModule(
     repoName: string,
     moduleName: string,
-  ): Promise<void> {
+  ): Promise<ModuleInfo> {
     repoName = repoSchema.parse(repoName);
     moduleName = repoSchema.parse(moduleName); // Reuse repoSchema for module names
 
     const sourcePath = path.join(MODULE_ROOT, repoName, moduleName);
-    const targetPath = path.join(
-      process.cwd(),
-      "packages",
-      "core",
-      "src",
-      "modules",
-      moduleName,
-    );
+    const targetPath = path.join(ADDON_MODULES_ROOT, moduleName);
 
     if (!(await this._exists(sourcePath))) {
       throw new Error(`Module ${moduleName} not found in repo ${repoName}`);
@@ -135,7 +145,13 @@ export class DownloadResolver {
 
     // Read info.json for requirements
     const infoPath = path.join(sourcePath, "info.json");
+    if (!(await this._exists(infoPath))) {
+      throw new Error(`Module ${moduleName} has no info.json — cannot install`);
+    }
     const info = JSON.parse(await fs.readFile(infoPath, "utf8")) as ModuleInfo;
+
+    // Ensure the installed-modules root exists
+    await fs.mkdir(ADDON_MODULES_ROOT, { recursive: true });
 
     // Install npm requirements if any
     if (info.requirements?.length) {
@@ -159,30 +175,25 @@ export class DownloadResolver {
       }
 
       // Run 'bun add' inside the module's own folder to keep dependencies completely isolated
-      const addProc = Bun.spawn(["bun", "add", ...reqs], {
-        cwd: sourcePath,
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const addCode = await addProc.exited;
-      if (addCode !== 0) {
-        const stderr = await new Response(addProc.stderr).text();
-        throw new Error(
-          `Requirement installation failed (exit ${addCode}): ${stderr.trim()}`,
-        );
-      }
+      await execFileAsync("bun", ["add", ...reqs], { cwd: sourcePath }).catch(
+        (err: NodeJS.ErrnoException & { stderr?: string }) => {
+          throw new Error(
+            `Requirement installation failed: ${(err.stderr ?? err.message).trim()}`,
+          );
+        },
+      );
     }
 
-    // Create a symlink from data/ to src/modules/
-    // This allows the ModuleManager to discover it naturally.
+    // Symlink into the installed-modules root so ModuleStore discovers it.
     if (await this._exists(targetPath)) {
-      await fs.rm(targetPath, { recursive: true, force: true });
+      await fs.unlink(targetPath);
     }
     await fs.symlink(sourcePath, targetPath, "dir");
 
     container.logger.info(
       `[Downloader] Installed ${moduleName} from ${repoName}`,
     );
+    return info;
   }
 
   private async _exists(filePath: string): Promise<boolean> {
