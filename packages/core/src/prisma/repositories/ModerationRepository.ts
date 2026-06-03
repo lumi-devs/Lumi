@@ -15,6 +15,13 @@ export class ModerationRepository extends Repository {
     durationSeconds?: number;
     expiresAt?: Date;
   }): Promise<ModerationCase> {
+    // Isolation contract (do not break when refactoring): the counter
+    // read-and-increment MUST stay inside the same transaction as the case
+    // insert. The atomic `increment` takes a row lock on the guild's counter
+    // row, so concurrent creates for one guild serialize and hand out
+    // contiguous case numbers — that's what keeps the `@@unique([guildId,
+    // caseNumber])` constraint from tripping P2002 under parallel moderation.
+    // See tests/modules/mod/case-number-concurrency.test.ts.
     return this.prisma.$transaction(async (tx) => {
       const counter = await tx.guildCaseCounter.upsert({
         where: { guildId: data.guildId },
@@ -47,6 +54,22 @@ export class ModerationRepository extends Repository {
       where: { guildId, userId, ...(action ? { action } : {}) },
       orderBy: { caseNumber: "desc" },
       take: 10,
+    });
+  }
+
+  /**
+   * Active (un-lifted) cases for a user, newest first. Optionally filtered by
+   * action. Used to clear a prior active mute before applying a new one and to
+   * let the lift handler skip a stale job that a re-mute has superseded.
+   */
+  public getActiveCases(
+    guildId: string,
+    userId: string,
+    action?: string,
+  ): Promise<ModerationCase[]> {
+    return this.prisma.moderationCase.findMany({
+      where: { guildId, userId, active: true, ...(action ? { action } : {}) },
+      orderBy: { caseNumber: "desc" },
     });
   }
 

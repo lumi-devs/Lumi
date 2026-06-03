@@ -21,12 +21,13 @@ export class ConfigRepository extends Repository {
       RedisKeys.guildSettings(guildId),
       RedisTTL.guildConfig,
       async () => {
-        let settings = await this.prisma.guild.findUnique({
+        // Use upsert so concurrent first-accesses for a new guild don't race
+        // between findUnique → create and hit a P2002 unique violation.
+        return this.prisma.guild.upsert({
           where: { id: guildId },
+          create: { id: guildId },
+          update: {},
         });
-        if (!settings)
-          settings = await this.prisma.guild.create({ data: { id: guildId } });
-        return settings;
       },
       (raw) => {
         const parsed = JSON.parse(raw) as Guild;

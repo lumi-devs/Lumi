@@ -64,7 +64,13 @@ export class AuditRepository extends Repository {
       try {
         const idx = fields.indexOf("payload");
         const raw = idx === -1 ? undefined : fields[idx + 1];
-        if (raw !== undefined) payloads.push(JSON.parse(raw));
+        if (raw === undefined) {
+          this.logger.warn(
+            `[AuditRepository] Entry ${id} is missing the "payload" field — skipping.`,
+          );
+        } else {
+          payloads.push(JSON.parse(raw));
+        }
       } catch (err: unknown) {
         this.logger.error(
           "[AuditRepository] Malformed audit log entry:",
