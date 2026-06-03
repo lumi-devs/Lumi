@@ -11,6 +11,7 @@ import {
   makeInfoCard,
 } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
+import { errorFrom } from "#utilities/errors.js";
 import type { DownloaderService } from "#core/services/DownloaderService.js";
 
 @ApplyOptions<InteractionHandler.Options>({
@@ -70,9 +71,8 @@ export class ModuleUpdateInteractionHandler extends BaseInteractionHandler {
         );
       }
     } catch (err: unknown) {
-      const error = err as Error;
       await interaction.editReply(
-        makeErrorCard(`${Emojis.ERROR} Update Failed`, error.message),
+        makeErrorCard(`${Emojis.ERROR} Update Failed`, errorFrom(err).message),
       );
     }
   }
