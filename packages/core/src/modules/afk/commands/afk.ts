@@ -1,33 +1,35 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Args, Command } from "@sapphire/framework";
 import {
-  ContainerBuilder,
-  SeparatorBuilder,
-  TextDisplayBuilder,
-} from "@discordjs/builders";
-import {
   ApplicationIntegrationType,
-  MessageFlags,
-  SeparatorSpacingSize,
   type GuildMember,
   type Message,
 } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
+import { makeInfoCard, ephemeralCard } from "#utilities/cards.js";
 import { AFK_MAX_REASON_LENGTH, sanitizeReason } from "../index.js";
 import { Emojis } from "#utilities/assets.js";
 
-function afkCard(title: string, body: string) {
-  const c = new ContainerBuilder();
-  c.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(`**${title}**`),
-  );
-  c.addSeparatorComponents(
-    new SeparatorBuilder()
-      .setSpacing(SeparatorSpacingSize.Small)
-      .setDivider(true),
-  );
-  c.addTextDisplayComponents(new TextDisplayBuilder().setContent(body));
-  return { flags: MessageFlags.IsComponentsV2 as number, components: [c] };
+function afkStatusText(
+  status: "ALREADY_AFK" | "UPDATED_AFK" | "NEW_AFK",
+  reason: string,
+): { title: string; body: string } {
+  if (status === "ALREADY_AFK") {
+    return {
+      title: "Already AFK",
+      body: `You are already AFK with the reason: **${reason}**`,
+    };
+  }
+  if (status === "UPDATED_AFK") {
+    return {
+      title: `${Emojis.EDIT} AFK Updated`,
+      body: `AFK reason updated to: **${reason}**`,
+    };
+  }
+  return {
+    title: `${Emojis.AFK} AFK Set`,
+    body: `You are now AFK: **${reason}**`,
+  };
 }
 
 @ApplyOptions<Command.Options>({
@@ -77,24 +79,8 @@ export default class AfkCommand extends BaseCommand {
       reason,
     );
 
-    const title =
-      status === "ALREADY_AFK"
-        ? "Already AFK"
-        : status === "UPDATED_AFK"
-          ? `${Emojis.EDIT} AFK Updated`
-          : `${Emojis.AFK} AFK Set`;
-    const body =
-      status === "ALREADY_AFK"
-        ? `You are already AFK with the reason: **${reason}**`
-        : status === "UPDATED_AFK"
-          ? `AFK reason updated to: **${reason}**`
-          : `You are now AFK: **${reason}**`;
-
-    const card = afkCard(title, body);
-    return this.reply(interaction, {
-      ...card,
-      flags: card.flags | MessageFlags.Ephemeral,
-    });
+    const { title, body } = afkStatusText(status, reason);
+    return this.reply(interaction, ephemeralCard(makeInfoCard(title, body)));
   }
 
   public override async messageRun(message: Message, args: Args) {
@@ -112,23 +98,7 @@ export default class AfkCommand extends BaseCommand {
       cleanedReason,
     );
 
-    const title =
-      status === "ALREADY_AFK"
-        ? "Already AFK"
-        : status === "UPDATED_AFK"
-          ? `${Emojis.EDIT} AFK Updated`
-          : `${Emojis.AFK} AFK Set`;
-    const body =
-      status === "ALREADY_AFK"
-        ? `You are already AFK with the reason: **${cleanedReason}**`
-        : status === "UPDATED_AFK"
-          ? `AFK reason updated to: **${cleanedReason}**`
-          : `You are now AFK: **${cleanedReason}**`;
-
-    const card = afkCard(title, body);
-    return message.reply({
-      ...card,
-      allowedMentions: {},
-    });
+    const { title, body } = afkStatusText(status, cleanedReason);
+    return message.reply({ ...makeInfoCard(title, body), allowedMentions: {} });
   }
 }

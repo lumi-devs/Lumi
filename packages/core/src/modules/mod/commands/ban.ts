@@ -16,6 +16,7 @@ import {
   type CardReply,
 } from "#utilities/cards.js";
 import { formatAuditReason } from "#utilities/audit.js";
+import { logError } from "#utilities/errors.js";
 import { logToChannel } from "../lib/helpers.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
@@ -166,7 +167,8 @@ export class BanCommand extends BaseSubcommand {
         reason: formatAuditReason(actor, reason),
         deleteMessageSeconds: deleteDays * 86400,
       });
-    } catch {
+    } catch (err: unknown) {
+      logError(`ban: guild=${guildId} target=${userId}`, err);
       return reply(
         makeErrorCard(
           "Failed",
@@ -218,7 +220,8 @@ export class BanCommand extends BaseSubcommand {
     const actor = await this.container.client.users.fetch(actorId);
     try {
       await guild.bans.remove(userId, formatAuditReason(actor, reason));
-    } catch {
+    } catch (err: unknown) {
+      logError(`unban: guild=${guildId} target=${userId}`, err);
       return reply(
         makeErrorCard("Failed", "User is not banned or bot lacks permissions."),
       );

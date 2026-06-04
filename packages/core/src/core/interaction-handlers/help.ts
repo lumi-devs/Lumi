@@ -24,7 +24,7 @@ export class HelpInteractionHandler extends BaseInteractionHandler {
     interaction: ButtonInteraction,
     result: { userId: string; pageIndex: number },
   ) {
-    if (!(await this.checkSecurity(interaction, result.userId))) return;
+    if (!this.checkSecurity(interaction, result.userId)) return;
 
     await this.acknowledge(interaction);
 

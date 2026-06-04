@@ -30,17 +30,13 @@ export abstract class BaseInteractionHandler extends InteractionHandler {
   }
 
   /**
-   * Standardized security check for interactions.
    * Ensures only the original invoker can use the interaction.
-   * @param interaction The interaction to check.
-   * @param ownerId The ID of the user who is allowed to interact.
-   * @returns True if the user is allowed, false otherwise (replies with an error card).
+   * Throws UserError (caught by the framework's denied handler) if the user doesn't match.
    */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  protected async checkSecurity(
+  protected checkSecurity(
     interaction: AnyInteraction,
     ownerId: string,
-  ): Promise<boolean> {
+  ): boolean {
     if (interaction.user.id === ownerId) return true;
 
     throw new UserError({

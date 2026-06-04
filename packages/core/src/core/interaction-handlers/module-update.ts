@@ -37,7 +37,7 @@ export class ModuleUpdateInteractionHandler extends BaseInteractionHandler {
     interaction: ButtonInteraction,
     { moduleName, userId }: { moduleName: string; userId: string },
   ) {
-    if (!(await this.checkSecurity(interaction, userId))) return;
+    if (!this.checkSecurity(interaction, userId)) return;
 
     await this.acknowledge(interaction);
 

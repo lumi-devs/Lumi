@@ -147,8 +147,8 @@ export function makeListCard(
   const c = buildContainer(Colors.PRIMARY, title, body, { footer });
 
   if (customIdPrefix && totalPages > 1) {
-    c.addActionRowComponents(
-      new ActionRowBuilder<ButtonBuilder>().addComponents(
+    c.addActionRowComponents((row) =>
+      row.addComponents(
         new ButtonBuilder()
           .setCustomId(`${customIdPrefix}:prev:${page}`)
           .setLabel("◀ Prev")
