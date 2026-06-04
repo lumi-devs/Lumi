@@ -41,7 +41,8 @@ function mapPermissionLevelToDiscordPermission(
   }
 }
 
-interface ReplyOptions {
+export interface ReplyOptions {
+  /** Explicitly opt out of ephemeral. Replies are ephemeral by default. */
   ephemeral?: boolean;
 }
 
@@ -110,7 +111,67 @@ export const replyInfo = (
       : ephemeralCard(makeInfoCard(title, body)),
   );
 
-export abstract class BaseCommand extends Command {
+// ── Shared precondition registration ────────────────────────────────────────
+
+function appendPermissionPrecondition(
+  instance: { preconditions: { append(name: string): void } },
+  level: PermissionLevel,
+): void {
+  if (level === PermissionLevel.BOT_OWNER) {
+    instance.preconditions.append("BotOwner");
+  } else if (level === PermissionLevel.GUILD_OWNER) {
+    instance.preconditions.append("GuildOwner");
+  } else if (level === PermissionLevel.ADMIN) {
+    instance.preconditions.append("Administrator");
+  } else if (level === PermissionLevel.MOD) {
+    instance.preconditions.append("Moderator");
+  }
+}
+
+// ── Shared interface — ensures both base classes stay in sync ────────────────
+
+interface CommandLike {
+  readonly permissionLevel: PermissionLevel;
+  readonly integrationTypes: ApplicationIntegrationType[];
+  readonly contexts: InteractionContextType[];
+  readonly defaultMemberPermissions: bigint | undefined;
+  checkPermission(
+    interaction: ChatInputCommandInteraction,
+    level: PermissionLevel,
+  ): Promise<void>;
+  reply(
+    interaction: ChatInputCommandInteraction,
+    payload: InteractionReplyOptions,
+  ): Promise<void>;
+  replySuccess(
+    interaction: ChatInputCommandInteraction,
+    title: string,
+    body: string,
+    opts?: ReplyOptions,
+  ): Promise<void>;
+  replyError(
+    interaction: ChatInputCommandInteraction,
+    title: string,
+    body: string,
+    opts?: ReplyOptions,
+  ): Promise<void>;
+  replyWarning(
+    interaction: ChatInputCommandInteraction,
+    title: string,
+    body: string,
+    opts?: ReplyOptions,
+  ): Promise<void>;
+  replyInfo(
+    interaction: ChatInputCommandInteraction,
+    title: string,
+    body: string,
+    opts?: ReplyOptions,
+  ): Promise<void>;
+}
+
+// ── BaseCommand ──────────────────────────────────────────────────────────────
+
+export abstract class BaseCommand extends Command implements CommandLike {
   public readonly permissionLevel: PermissionLevel;
   public readonly integrationTypes: ApplicationIntegrationType[];
   public readonly contexts: InteractionContextType[];
@@ -154,7 +215,7 @@ export abstract class BaseCommand extends Command {
   public async checkPermission(
     interaction: ChatInputCommandInteraction,
     level: PermissionLevel,
-  ) {
+  ): Promise<void> {
     const actual = await resolvePermissionLevel(interaction);
     if (actual < level) {
       throw new UserError({
@@ -211,21 +272,16 @@ export abstract class BaseCommand extends Command {
     options: BaseCommand.Options,
   ): void {
     super.parseConstructorPreConditions(options);
-    const level = options.permissionLevel ?? PermissionLevel.USER;
-
-    if (level === PermissionLevel.BOT_OWNER) {
-      this.preconditions.append("BotOwner");
-    } else if (level === PermissionLevel.GUILD_OWNER) {
-      this.preconditions.append("GuildOwner");
-    } else if (level === PermissionLevel.ADMIN) {
-      this.preconditions.append("Administrator");
-    } else if (level === PermissionLevel.MOD) {
-      this.preconditions.append("Moderator");
-    }
+    appendPermissionPrecondition(
+      this,
+      options.permissionLevel ?? PermissionLevel.USER,
+    );
   }
 }
 
-export abstract class BaseSubcommand extends Subcommand {
+// ── BaseSubcommand ───────────────────────────────────────────────────────────
+
+export abstract class BaseSubcommand extends Subcommand implements CommandLike {
   public readonly permissionLevel: PermissionLevel;
   public readonly integrationTypes: ApplicationIntegrationType[];
   public readonly contexts: InteractionContextType[];
@@ -269,7 +325,7 @@ export abstract class BaseSubcommand extends Subcommand {
   public async checkPermission(
     interaction: ChatInputCommandInteraction,
     level: PermissionLevel,
-  ) {
+  ): Promise<void> {
     const actual = await resolvePermissionLevel(interaction);
     if (actual < level) {
       throw new UserError({
@@ -326,17 +382,10 @@ export abstract class BaseSubcommand extends Subcommand {
     options: BaseSubcommand.Options,
   ): void {
     super.parseConstructorPreConditions(options);
-    const level = options.permissionLevel ?? PermissionLevel.USER;
-
-    if (level === PermissionLevel.BOT_OWNER) {
-      this.preconditions.append("BotOwner");
-    } else if (level === PermissionLevel.GUILD_OWNER) {
-      this.preconditions.append("GuildOwner");
-    } else if (level === PermissionLevel.ADMIN) {
-      this.preconditions.append("Administrator");
-    } else if (level === PermissionLevel.MOD) {
-      this.preconditions.append("Moderator");
-    }
+    appendPermissionPrecondition(
+      this,
+      options.permissionLevel ?? PermissionLevel.USER,
+    );
   }
 }
 

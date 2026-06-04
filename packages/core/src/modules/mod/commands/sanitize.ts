@@ -14,6 +14,7 @@ import {
   makeErrorCard,
   type CardReply,
 } from "#utilities/cards.js";
+import { logError } from "#utilities/errors.js";
 
 // Chars that sort before letters, used for hoisting in member lists
 const DEHOIST_REGEX = /^[\x21-\x40\x5B-\x60\x7B-\x7E\s]+/u;
@@ -88,7 +89,8 @@ export class SanitizeCommand extends BaseCommand {
         sanitized,
         "Sanitize: removed hoisting characters",
       );
-    } catch {
+    } catch (err: unknown) {
+      logError(`sanitize: guild=${member.guild.id} target=${member.id}`, err);
       return reply(
         makeErrorCard(
           "Failed",

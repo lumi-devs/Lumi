@@ -37,10 +37,9 @@ export function buildHelpCard(
   for (const cmd of commands) {
     if ((cmd.options as { hidden?: boolean }).hidden) continue;
 
-    const rawModule = cmd.options.module ?? "core";
-    let moduleName = toTitleCase(rawModule);
-    if (moduleName === "Afk") moduleName = "AFK";
-    if (moduleName === "Mod") moduleName = "Moderation";
+    const rawModule = (cmd.options.module as string | undefined) ?? "core";
+    const record = containerInstance.moduleStore.getRecord(rawModule);
+    const moduleName = record?.meta.displayName ?? toTitleCase(rawModule);
 
     if (!categories[moduleName]) categories[moduleName] = [];
     categories[moduleName]!.push(cmd);

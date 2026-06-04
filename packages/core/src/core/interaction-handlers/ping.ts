@@ -32,7 +32,7 @@ export class PingInteractionHandler extends BaseInteractionHandler {
     interaction: ButtonInteraction,
     result: { category: PingCategory | "overview"; userId: string },
   ) {
-    if (!(await this.checkSecurity(interaction, result.userId))) return;
+    if (!this.checkSecurity(interaction, result.userId)) return;
 
     await this.acknowledge(interaction);
     const data = await collectPingData();

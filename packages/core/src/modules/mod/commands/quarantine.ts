@@ -17,6 +17,7 @@ import {
   type CardReply,
 } from "#utilities/cards.js";
 import { formatAuditReason } from "#utilities/audit.js";
+import { logError } from "#utilities/errors.js";
 import { logToChannel } from "../lib/helpers.js";
 
 // Redis key: lumi:mod:{guildId}:quarantine:{userId} → JSON array of role IDs
@@ -192,7 +193,8 @@ export class QuarantineCommand extends BaseSubcommand {
         [guildId, quarantineRoleId],
         formatAuditReason(actor, reason),
       );
-    } catch {
+    } catch (err: unknown) {
+      logError(`quarantine add: guild=${guildId} target=${member.id}`, err);
       return reply(
         makeErrorCard(
           "Failed",
@@ -265,7 +267,8 @@ export class QuarantineCommand extends BaseSubcommand {
         [guildId, ...validRoles],
         formatAuditReason(actor, reason),
       );
-    } catch {
+    } catch (err: unknown) {
+      logError(`quarantine remove: guild=${guildId} target=${member.id}`, err);
       return reply(
         makeErrorCard(
           "Failed",

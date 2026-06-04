@@ -16,6 +16,7 @@ import {
   type CardReply,
 } from "#utilities/cards.js";
 import { formatAuditReason } from "#utilities/audit.js";
+import { logError } from "#utilities/errors.js";
 import { logToChannel } from "../lib/helpers.js";
 
 @ApplyOptions<BaseCommand.Options>({
@@ -93,7 +94,8 @@ export class KickCommand extends BaseCommand {
     const actor = await this.container.client.users.fetch(actorId);
     try {
       await member.kick(formatAuditReason(actor, reason));
-    } catch {
+    } catch (err: unknown) {
+      logError(`kick: guild=${guildId} target=${member.id}`, err);
       return reply(
         makeErrorCard(
           "Failed",
