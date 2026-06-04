@@ -16,6 +16,7 @@ import {
   type CardReply,
 } from "#utilities/cards.js";
 import { formatAuditReason } from "#utilities/audit.js";
+import { logError } from "#utilities/errors.js";
 import {
   parseDuration,
   formatDuration,
@@ -199,7 +200,8 @@ export class TimeoutCommand extends BaseSubcommand {
     const actor = await this.container.client.users.fetch(actorId);
     try {
       await member.timeout(until.getTime(), formatAuditReason(actor, reason));
-    } catch {
+    } catch (err: unknown) {
+      logError(`timeout add: guild=${guildId} target=${member.id}`, err);
       return reply(
         makeErrorCard("Failed", "Could not apply timeout. Check permissions."),
       );
@@ -242,7 +244,8 @@ export class TimeoutCommand extends BaseSubcommand {
     const actor = await this.container.client.users.fetch(actorId);
     try {
       await member.timeout(null, formatAuditReason(actor, reason));
-    } catch {
+    } catch (err: unknown) {
+      logError(`timeout remove: guild=${guildId} target=${member.id}`, err);
       return reply(
         makeErrorCard("Failed", "Could not remove timeout. Check permissions."),
       );

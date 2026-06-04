@@ -140,47 +140,48 @@ export class ConfigService extends Service {
       categoryId?: string;
     },
   ): Promise<unknown> {
-    const base = await this.container.db.config.getModuleConfig(
-      guildId,
-      moduleName,
-      key,
-    );
-    if (!ctx) return base;
+    if (!ctx) {
+      return this.container.db.config.getModuleConfig(guildId, moduleName, key);
+    }
 
-    const overrides =
-      await this.container.db.configOverrides.getConfigOverrides(
+    const [base, overrides] = await Promise.all([
+      this.container.db.config.getModuleConfig(guildId, moduleName, key),
+      this.container.db.configOverrides.getConfigOverrides(
         guildId,
         moduleName,
         key,
-      );
+      ),
+    ]);
     if (overrides.length === 0) return base;
 
-    // Priority: user > channel > role > category > guild
+    // Single-pass priority resolution: user > channel > role > category > guild.
+    const PRIORITY: Record<string, number> = {
+      user: 0,
+      channel: 1,
+      role: 2,
+      category: 3,
+    };
+    let bestPriority = Infinity;
+    let bestValue: unknown = base;
+
     for (const o of overrides) {
-      if (o.modelType === "user" && ctx.userId && o.modelId === ctx.userId)
-        return o.value;
+      const p = PRIORITY[o.modelType];
+      if (p === undefined || p >= bestPriority) continue;
+
+      const matches =
+        (o.modelType === "user" && ctx.userId === o.modelId) ||
+        (o.modelType === "channel" && ctx.channelId === o.modelId) ||
+        (o.modelType === "role" && ctx.roleIds?.includes(o.modelId)) ||
+        (o.modelType === "category" && ctx.categoryId === o.modelId);
+
+      if (matches) {
+        bestPriority = p;
+        bestValue = o.value;
+        if (p === 0) break; // user is highest — no need to keep scanning
+      }
     }
-    for (const o of overrides) {
-      if (
-        o.modelType === "channel" &&
-        ctx.channelId &&
-        o.modelId === ctx.channelId
-      )
-        return o.value;
-    }
-    for (const o of overrides) {
-      if (o.modelType === "role" && ctx.roleIds?.includes(o.modelId))
-        return o.value;
-    }
-    for (const o of overrides) {
-      if (
-        o.modelType === "category" &&
-        ctx.categoryId &&
-        o.modelId === ctx.categoryId
-      )
-        return o.value;
-    }
-    return base;
+
+    return bestValue;
   }
 
   /**

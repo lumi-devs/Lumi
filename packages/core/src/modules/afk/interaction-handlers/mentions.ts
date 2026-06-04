@@ -27,7 +27,7 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
     interaction: ButtonInteraction,
     { userId, page }: { userId: string; page: number },
   ) {
-    if (!(await this.checkSecurity(interaction, userId))) return;
+    if (!this.checkSecurity(interaction, userId)) return;
 
     await this.acknowledge(interaction);
     const mentions = await getAfkMentions(interaction.guildId!, userId);

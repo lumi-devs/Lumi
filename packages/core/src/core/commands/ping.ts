@@ -118,7 +118,7 @@ export class PingCommand extends BaseCommand {
         clearInterval(interval);
         activeIntervals.delete(userId);
       }
-    }, LIVE_UPDATE_INTERVAL);
+    }, LIVE_UPDATE_INTERVAL).unref();
 
     activeIntervals.set(userId, interval);
   }

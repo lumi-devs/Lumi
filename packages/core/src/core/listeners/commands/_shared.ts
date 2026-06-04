@@ -13,14 +13,26 @@ import {
   type MessageReplyOptions,
 } from "discord.js";
 import { ephemeralCard, makeErrorCard } from "#utilities/cards.js";
+import { swallow } from "#utilities/errors.js";
+
+const ERROR_TITLES: Partial<Record<string, string>> = {
+  PermissionDenied: "Permission Denied",
+  AccessDenied: "Access Denied",
+  GuildOnly: "Server Only",
+  CooldownExpired: "Slow Down",
+  ModuleEnabled: "Feature Disabled",
+  NotBlocked: "Cannot Block",
+  NotIgnored: "Cannot Ignore",
+};
 
 export function cardFor(error: unknown): {
   card: import("#utilities/cards.js").CardReply;
   expected: boolean;
 } {
   if (error instanceof UserError) {
+    const title = ERROR_TITLES[error.identifier] ?? "Command Error";
     return {
-      card: ephemeralCard(makeErrorCard("Permission Denied", error.message)),
+      card: ephemeralCard(makeErrorCard(title, error.message)),
       expected: true,
     };
   }
@@ -48,8 +60,8 @@ export async function respond(
   await interaction.reply({ ...options, flags } as InteractionReplyOptions);
 
   setTimeout(() => {
-    interaction.deleteReply().catch(() => null);
-  }, 5_000);
+    interaction.deleteReply().catch(swallow("deleteReply after command error"));
+  }, 5_000).unref();
   return undefined;
 }
 export async function respondMessage(
@@ -58,8 +70,8 @@ export async function respondMessage(
 ): Promise<Message | undefined> {
   const reply = await message.reply(options);
   setTimeout(() => {
-    reply.delete().catch(() => null);
-  }, 5_000);
+    reply.delete().catch(swallow("delete message after command error"));
+  }, 5_000).unref();
   return reply;
 }
 
@@ -74,7 +86,8 @@ export async function handleDenied(
   const content = payload.context.silent ? undefined : error.message;
   if (!content) return;
 
-  const card = ephemeralCard(makeErrorCard("Permission Denied", content));
+  const title = ERROR_TITLES[error.identifier] ?? "Command Error";
+  const card = ephemeralCard(makeErrorCard(title, content));
 
   try {
     if ("showModal" in interactionOrMessage) {
