@@ -13,6 +13,7 @@ import {
 import { Emojis } from "#utilities/assets.js";
 import { errorFrom } from "#utilities/errors.js";
 import { ModuleAlreadyInstalledError } from "#core/services/DownloaderService.js";
+import { scheduleProcessRestart } from "#core/lib/restart.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "module",
@@ -165,7 +166,7 @@ export class ModuleCommand extends BaseSubcommand {
       await msg.edit(
         makeSuccessCard(
           `${Emojis.CHECK} Module Reloaded`,
-          `**${moduleName}** has been reloaded. Slash commands (if any) have been re-synced.\n\n> Note: to pick up TypeScript source changes, run with \`bun --watch\` or restart the bot.`,
+          `**${moduleName}** has been reloaded. Its full source subtree was re-evaluated and slash commands (if any) re-synced.`,
         ),
       );
     } catch (err: unknown) {
@@ -209,12 +210,22 @@ export class ModuleCommand extends BaseSubcommand {
             ? `### Pull Changelog:\n\`\`\`git\n${result.changelog}\n\`\`\``
             : "No changelog details provided.";
 
-          await msg.edit(
-            makeSuccessCard(
-              `${Emojis.DOWNLOAD} Module Updated`,
-              `Successfully updated and hot-reloaded **${moduleName}**!\n\n${changelogStr}`,
-            ),
-          );
+          if (result.needsRestart) {
+            await msg.edit(
+              makeSuccessCard(
+                `${Emojis.DOWNLOAD} Module Updated`,
+                `Updated **${moduleName}** — restarting now to apply the new code (back online in a few seconds).\n\n${changelogStr}`,
+              ),
+            );
+            scheduleProcessRestart(`,module update ${moduleName}`);
+          } else {
+            await msg.edit(
+              makeSuccessCard(
+                `${Emojis.DOWNLOAD} Module Updated`,
+                `Successfully updated and hot-reloaded **${moduleName}**!\n\n${changelogStr}`,
+              ),
+            );
+          }
         } else {
           await msg.edit(
             makeSuccessCard(
@@ -251,6 +262,7 @@ export class ModuleCommand extends BaseSubcommand {
         const succeeded: string[] = [];
         const skipped: string[] = [];
         const failed: string[] = [];
+        let needsRestart = false;
 
         for (const item of installed) {
           try {
@@ -258,7 +270,10 @@ export class ModuleCommand extends BaseSubcommand {
               item.moduleName,
             );
             if (result.updated) {
-              succeeded.push(`✅ **${item.moduleName}** (hot-reloaded)`);
+              needsRestart ||= result.needsRestart ?? false;
+              succeeded.push(
+                `✅ **${item.moduleName}**${result.needsRestart ? "" : " (hot-reloaded)"}`,
+              );
             } else {
               skipped.push(`➖ **${item.moduleName}** (up-to-date)`);
             }
@@ -275,10 +290,17 @@ export class ModuleCommand extends BaseSubcommand {
         if (skipped.length > 0)
           report.push(`### Up-To-Date:\n${skipped.join("\n")}`);
         if (failed.length > 0) report.push(`### Failed:\n${failed.join("\n")}`);
+        if (needsRestart)
+          report.push(
+            "_Restarting now to apply the updated code (back online in a few seconds)._",
+          );
 
         await msg.edit(
           makeSuccessCard("Multi-Module Update Report", report.join("\n\n")),
         );
+
+        // One restart applies every pulled module at once (commits already recorded).
+        if (needsRestart) scheduleProcessRestart(",module update (all)");
       } catch (err: unknown) {
         await msg.edit(
           makeErrorCard(`${Emojis.ERROR} Multi-Update Failed`, errorFrom(err).message),
