@@ -5,7 +5,7 @@ import {
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { RepliableInteraction } from "discord.js";
-import { cardFor, respond } from "./_shared.js";
+import { cardFor, respond } from "#utilities/command-response.js";
 
 @ApplyOptions<Listener.Options>({ event: Events.ContextMenuCommandError })
 export class ContextMenuCommandErrorListener extends Listener<

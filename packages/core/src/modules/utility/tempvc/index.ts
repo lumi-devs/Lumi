@@ -1,6 +1,5 @@
 import { Module, DefineModule } from "#core/module-system/Module.js";
 import type { RequesterType } from "#core/lib/gdpr.js";
-import { checkModulesEnabled } from "#lib/module-check.js";
 import { MODULE_NAME, TempVcData } from "./keys.js";
 import { tempVcRegistry } from "./registry.js";
 import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
@@ -9,11 +8,6 @@ import { handleTempVcCleanupFire } from "./lib/cleanup-handler.js";
 export const TEMPVC_CREATE_COOLDOWN_MS = 30_000;
 export const TEMPVC_CLEANUP_DELAY_MS = 8_000;
 export const TEMPVC_MAX_GENERATORS = 25;
-
-export async function isTempVcEnabled(guildId: string): Promise<boolean> {
-  const states = await checkModulesEnabled(guildId, [MODULE_NAME]);
-  return states.get(MODULE_NAME) ?? false;
-}
 
 @DefineModule({
   name: MODULE_NAME,

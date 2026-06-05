@@ -5,7 +5,7 @@ import {
   type ChatInputCommandDeniedPayload,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
-import { handleDenied } from "./_shared.js";
+import { handleDenied } from "#utilities/command-response.js";
 
 @ApplyOptions<Listener.Options>({ event: Events.ChatInputCommandDenied })
 export class ChatInputCommandDeniedListener extends Listener<

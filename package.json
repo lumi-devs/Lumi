@@ -17,7 +17,6 @@
     "#lib/guild-transaction.js": "./packages/core/src/core/lib/guild-transaction.ts",
     "#database/*.js": "./packages/core/src/database/*.ts",
     "#utilities/*.js": "./packages/core/src/utilities/*.ts",
-    "#workers/*.js": "./packages/core/src/workers/*.ts",
     "#core/*.js": "./packages/core/src/core/*.ts",
     "#root/*.js": "./packages/core/src/*.ts",
     "#modules/*.js": "./packages/core/src/modules/*.ts",

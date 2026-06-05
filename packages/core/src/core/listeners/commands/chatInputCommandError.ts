@@ -4,7 +4,7 @@ import {
   type ChatInputCommandErrorPayload,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
-import { cardFor, respond } from "./_shared.js";
+import { cardFor, respond } from "#utilities/command-response.js";
 
 @ApplyOptions<Listener.Options>({ event: Events.ChatInputCommandError })
 export class ChatInputCommandErrorListener extends Listener<

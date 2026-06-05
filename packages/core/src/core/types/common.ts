@@ -3,10 +3,26 @@ import type { DatabaseClient } from "#database/client.js";
 import type { ModuleStore } from "#core/module-system/ModuleStore.js";
 import type { RabbitClient } from "#lib/rabbit.js";
 import type { InvalidationBus } from "#database/redis.js";
-import type { EventBus, TransportKind } from "@lumi-devs/event-bus";
+import type { EventBus, TransportKind } from "@lumi/event-bus";
 import type { DatabaseService } from "#root/prisma/DatabaseService.js";
+import type { Message } from "discord.js";
 
 export type IntegerString = `${number}`;
+
+/** A Discord message that is guaranteed to be from a guild and from a non-bot user. */
+export type GuildMessage = Message<true>;
+
+/** Custom events emitted by the Lumi client, separate from discord.js built-ins. */
+export const LumiEvents = {
+  /** Fired for every guild message from a non-bot, non-webhook user. */
+  GuildUserMessage: "lumiGuildUserMessage",
+} as const;
+
+declare module "discord.js" {
+  interface ClientEvents {
+    lumiGuildUserMessage: [message: Message<true>];
+  }
+}
 
 export type DatabaseRepositories = DatabaseService;
 
@@ -101,7 +117,7 @@ declare module "#lib/env.js" {
     SENTRY_ENABLED: boolean | string;
     SENTRY_DSN: string;
     WORKER_COUNT: IntegerString;
-    /** "inproc" (default) | "streams" | "nats" — selects @lumi-devs/event-bus transport. */
+    /** "inproc" (default) | "streams" | "nats" — selects @lumi/event-bus transport. */
     TRANSPORT: "inproc" | "streams" | "nats";
     /** NATS server URL(s), comma-separated. Required when TRANSPORT=nats. */
     NATS_URL: string;

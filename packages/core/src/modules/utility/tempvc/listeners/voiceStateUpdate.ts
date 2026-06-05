@@ -2,7 +2,8 @@ import { Listener, Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { VoiceState } from "discord.js";
 import { logError } from "#utilities/errors.js";
-import { isTempVcEnabled, TEMPVC_CREATE_COOLDOWN_MS } from "../index.js";
+import { isModuleEnabled } from "#utilities/listeners.js";
+import { TEMPVC_CREATE_COOLDOWN_MS } from "../index.js";
 import { tempVcRegistry } from "../registry.js";
 import type TempVcService from "../services/TempVcService.js";
 import {
@@ -55,7 +56,7 @@ export default class TempVcVoiceStateListener extends Listener<
         newState.channelId,
       );
       if (generator) {
-        if (!(await isTempVcEnabled(guildId))) return;
+        if (!(await isModuleEnabled(guildId, "tempvc"))) return;
 
         if (await this.service.onCreateCooldown(guildId, member.id)) {
           await member.voice.disconnect().catch(() => null);
