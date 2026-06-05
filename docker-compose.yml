@@ -10,6 +10,11 @@ volumes:
   grafana-data:
   tempo-data:
   nats-data:
+  # Holds downloaded 3rd-party modules: git clones (data/3rd-party-modules/) and
+  # the symlinks ModuleStore discovers (data/installed-modules/). Without this,
+  # a container recreate wipes every installed addon while Postgres still lists
+  # them — leaving the bot with DB records but no files ("piece does not exist").
+  lumi-data:
 
 # Shared config for the four deployable services. They all run from the same
 # image; each sets its own `command:`. NOTE: gateway/scheduler/api currently boot
@@ -56,6 +61,9 @@ x-lumi-service: &lumi-service
       condition: service_healthy
     rabbitmq:
       condition: service_healthy
+  # Persist downloaded modules across container recreation (see `lumi-data` note).
+  volumes:
+    - lumi-data:/app/data
   restart: unless-stopped
   networks:
     - lumi-net
@@ -378,26 +386,26 @@ services:
     profiles:
       - scale
 
-  dashboard:
-    build:
-      context: ../lumi-dashboard
-      dockerfile: Dockerfile
-    container_name: lumi-dashboard
-    environment:
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-lumi}:${RABBITMQ_PASSWORD:-lumi}@rabbitmq:5672
-      - DISCORD_CLIENT_ID=${CLIENT_ID}
-      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-placeholder}
-      - AUTH_SECRET=${AUTH_SECRET:-secret}
-      - AUTH_URL=http://localhost:3000
-      - AUTH_TRUST_HOST=true
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - lumi-net
-    ports:
-      - "127.0.0.1:3000:3000"
+#   dashboard:
+#     build:
+#       context: ../lumi-dashboard
+#       dockerfile: Dockerfile
+#     container_name: lumi-dashboard
+#     environment:
+#       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-lumi}:${RABBITMQ_PASSWORD:-lumi}@rabbitmq:5672
+#       - DISCORD_CLIENT_ID=${CLIENT_ID}
+#       - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-placeholder}
+#       - AUTH_SECRET=${AUTH_SECRET:-secret}
+#       - AUTH_URL=http://localhost:3000
+#       - AUTH_TRUST_HOST=true
+#     depends_on:
+#       rabbitmq:
+#         condition: service_healthy
+#     restart: unless-stopped
+#     networks:
+#       - lumi-net
+#     ports:
+#       - "127.0.0.1:3000:3000"
 
   # NATS JetStream — the high-throughput alternative to Redis Streams.
   # Opt-in: only under `--profile scale-nats`, since Redis Streams is the
