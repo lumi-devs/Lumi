@@ -2,7 +2,7 @@ import { Listener, Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Client } from "discord.js";
 import { logError } from "#utilities/errors.js";
-import { isTempVcEnabled } from "../index.js";
+import { isModuleEnabled } from "#utilities/listeners.js";
 import { tempVcRegistry } from "../registry.js";
 import type TempVcService from "../services/TempVcService.js";
 
@@ -22,7 +22,7 @@ export default class TempVcReadyListener extends Listener<
     tempVcRegistry.wire();
 
     for (const guild of client.guilds.cache.values()) {
-      if (!(await isTempVcEnabled(guild.id))) continue;
+      if (!(await isModuleEnabled(guild.id, "tempvc"))) continue;
       await service
         .reconcileGuild(guild)
         .catch((err: unknown) =>

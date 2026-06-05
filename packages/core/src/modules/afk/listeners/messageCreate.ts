@@ -1,4 +1,3 @@
-import { Listener, Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   ActionRowBuilder,
@@ -11,12 +10,13 @@ import {
   ButtonStyle,
   MessageFlags,
   SeparatorSpacingSize,
-  type Message,
-  PermissionsBitField,
 } from "discord.js";
+import { GuildMessageListener } from "#core/module-system/GuildMessageListener.js";
+import type { GuildMessage } from "#lib/types.js";
 import { Colors } from "#utilities/branding.js";
 import { makeCard } from "#utilities/cards.js";
 import { logError } from "#utilities/errors.js";
+import { canSendMessages } from "#utilities/listeners.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import { AfkKeys } from "../keys.js";
 import { Emojis } from "#utilities/assets.js";
@@ -26,7 +26,6 @@ import {
   AFK_WELCOME_COOLDOWN_MS,
   NICK_PREFIX,
   afkDurationSince,
-  isAfkEnabled,
   sanitizeReason,
 } from "../index.js";
 import {
@@ -39,17 +38,12 @@ import {
   addAfkMentionsBatch,
 } from "../data/afk.js";
 
-@ApplyOptions<Listener.Options>({
+@ApplyOptions<GuildMessageListener.Options>({
   name: "afkMessageCreate",
-  event: Events.MessageCreate,
+  module: "afk",
 })
-export default class AFKMessageCreateListener extends Listener<
-  typeof Events.MessageCreate
-> {
-  public async run(message: Message) {
-    if (!message.inGuild() || message.author.bot) return;
-    if (!(await isAfkEnabled(message.guildId))) return;
-
+export default class AFKMessageCreateListener extends GuildMessageListener {
+  protected async handle(message: GuildMessage): Promise<void> {
     const entry = await getAfkEntry(message.guildId, message.author.id);
     if (entry) {
       // Don't remove AFK if it's a command
@@ -70,7 +64,7 @@ export default class AFKMessageCreateListener extends Listener<
     if (message.mentions.users.size) await this.#notifyMentioned(message);
   }
 
-  async #removeAfk(message: Message<true>, since: Date) {
+  async #removeAfk(message: GuildMessage, since: Date) {
     const { guildId, channelId } = message;
     const userId = message.author.id;
 
@@ -94,7 +88,7 @@ export default class AFKMessageCreateListener extends Listener<
       AfkKeys.welcomeCooldown(channelId, userId),
       AFK_WELCOME_COOLDOWN_MS,
     );
-    if (!message.channel.isSendable() || !this.#canSpeak(message)) return;
+    if (!message.channel.isSendable() || !canSendMessages(message)) return;
 
     const row = mentions.length
       ? new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -154,7 +148,7 @@ export default class AFKMessageCreateListener extends Listener<
     }
   }
 
-  async #notifyMentioned(message: Message<true>) {
+  async #notifyMentioned(message: GuildMessage) {
     const onCooldown = await isAfkOnCooldown(
       AfkKeys.mentionCooldown(message.channelId),
     );
@@ -167,7 +161,6 @@ export default class AFKMessageCreateListener extends Listener<
       ts: Math.floor(message.createdTimestamp / 1000),
     };
 
-    // Collect AFK entries for all mentioned users first, so we can batch-write.
     interface AfkHit {
       userId: string;
       entry: NonNullable<Awaited<ReturnType<typeof getAfkEntry>>>;
@@ -202,7 +195,7 @@ export default class AFKMessageCreateListener extends Listener<
       ? member.displayName.slice(NICK_PREFIX.length)
       : (member?.displayName ?? userId);
 
-    if (!message.channel.isSendable() || !this.#canSpeak(message)) return;
+    if (!message.channel.isSendable() || !canSendMessages(message)) return;
     const sent = await message
       .reply({
         ...makeCard(
@@ -233,16 +226,6 @@ export default class AFKMessageCreateListener extends Listener<
     await setAfkCooldown(
       AfkKeys.mentionCooldown(message.channelId),
       AFK_MENTION_COOLDOWN_MS,
-    );
-  }
-
-  #canSpeak(message: Message<true>) {
-    const { me } = message.guild.members;
-    if (!me) return false;
-    return (
-      message.channel
-        .permissionsFor(me)
-        ?.has(PermissionsBitField.Flags.SendMessages) ?? false
     );
   }
 

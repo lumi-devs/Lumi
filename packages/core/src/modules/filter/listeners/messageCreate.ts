@@ -1,35 +1,26 @@
-import { Listener, Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
-import { type Message, PermissionsBitField } from "discord.js";
+import { PermissionsBitField } from "discord.js";
+import { GuildMessageListener } from "#core/module-system/GuildMessageListener.js";
+import type { GuildMessage } from "#lib/types.js";
 import type { FilterService } from "../services/FilterService.js";
-import { checkModulesEnabled } from "#lib/module-check.js";
 import { swallow } from "#utilities/errors.js";
 
-@ApplyOptions<Listener.Options>({ event: Events.MessageCreate })
-export class FilterMessageListener extends Listener {
+@ApplyOptions<GuildMessageListener.Options>({ module: "filter" })
+export class FilterMessageListener extends GuildMessageListener {
   private get filterService(): FilterService {
     return this.container.stores.get("services").get("filter") as FilterService;
   }
 
-  public async run(message: Message): Promise<void> {
-    if (!message.inGuild() || message.author.bot) return;
-
-    const states = await checkModulesEnabled(message.guildId, ["filter"]);
-    if (!states.get("filter")) return;
-
+  protected async handle(message: GuildMessage): Promise<void> {
     const { member } = message;
     if (member?.permissions.has(PermissionsBitField.Flags.ManageMessages))
       return;
 
-    // Lazily load the guild's matcher on first message if not already warm
     if (!this.filterService.has(message.guildId)) {
       await this.filterService.loadGuild(message.guildId);
     }
 
-    const matched = await this.filterService.test(
-      message.guildId,
-      message.content,
-    );
+    const matched = this.filterService.test(message.guildId, message.content);
     if (!matched) return;
 
     await message.delete().catch(swallow("Filter: delete filtered message"));
@@ -44,6 +35,6 @@ export class FilterMessageListener extends Listener {
       setTimeout(
         () => warn.delete().catch(swallow("Filter: delete warning")),
         5_000,
-      );
+      ).unref();
   }
 }

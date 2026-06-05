@@ -114,7 +114,7 @@ export const replyInfo = (
 // ── Shared precondition registration ────────────────────────────────────────
 
 function appendPermissionPrecondition(
-  instance: { preconditions: { append(name: string): void } },
+  instance: { preconditions: Command["preconditions"] },
   level: PermissionLevel,
 ): void {
   if (level === PermissionLevel.BOT_OWNER) {

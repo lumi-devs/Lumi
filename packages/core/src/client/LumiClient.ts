@@ -43,7 +43,7 @@ import {
   createEventBus,
   RawGatewayConsumer,
   type OwnedEventBus,
-} from "@lumi-devs/event-bus";
+} from "@lumi/event-bus";
 import { installPreDeferredInteractions } from "#core/lib/pre-deferred-interactions.js";
 import { buildRestOptions } from "#core/lib/discord-rest.js";
 import { RedisEntityCache } from "#core/entity-cache/RedisEntityCache.js";
@@ -61,7 +61,7 @@ import {
   streamConsumerLag,
   streamDlqLength,
   registerReadinessProbe,
-} from "@lumi-devs/observability";
+} from "@lumi/observability";
 import {
   planShards,
   buildSimpleThrottlerFactory,
@@ -69,7 +69,7 @@ import {
   ClusterReadyTracker,
   type ShardPlan,
   type ClusterBootstrap,
-} from "@lumi-devs/sharding";
+} from "@lumi/sharding";
 import { Redis } from "ioredis";
 import type { SessionInfo } from "@discordjs/ws";
 
@@ -77,7 +77,7 @@ export interface LumiClientOptions {
   /** Override the role derived from LUMI_ROLE. */
   role?: ServiceRole;
   /**
-   * Pre-fetched shard plan from `@lumi-devs/sharding`. Required for the monolith
+   * Pre-fetched shard plan from `@lumi/sharding`. Required for the monolith
    * role (it drives `shardCount`/`shards`/`buildIdentifyThrottler`). Workers
    * never open a Discord WS so the plan is ignored there.
    * Use `LumiClient.bootstrap()` to fetch it for you.

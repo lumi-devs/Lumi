@@ -10,7 +10,7 @@ import {
   type RepoModulesPayload,
   type ModuleInstallPayload,
   type ModuleUninstallPayload,
-} from "@lumi-devs/contracts";
+} from "@lumi/contracts";
 import { resolver, ADDON_MODULES_ROOT } from "../lib/downloader/resolver.js";
 import {
   executeGdprDeletion,

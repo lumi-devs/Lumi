@@ -1,6 +1,6 @@
 import type { Redis } from "ioredis";
 import { type ILogger, container } from "@sapphire/framework";
-import { cacheHits, cacheMisses } from "@lumi-devs/observability";
+import { cacheHits, cacheMisses } from "@lumi/observability";
 import type { DatabaseClient } from "#database/client.js";
 import type { DatabaseService } from "#root/prisma/DatabaseService.js";
 
