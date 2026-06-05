@@ -13,7 +13,7 @@ import {
 import { Emojis } from "#utilities/assets.js";
 import { errorFrom } from "#utilities/errors.js";
 import { ModuleAlreadyInstalledError } from "#core/services/DownloaderService.js";
-import { scheduleProcessRestart } from "#core/lib/restart.js";
+import { restartChoiceRow } from "#core/lib/restart.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "module",
@@ -214,10 +214,10 @@ export class ModuleCommand extends BaseSubcommand {
             await msg.edit(
               makeSuccessCard(
                 `${Emojis.DOWNLOAD} Module Updated`,
-                `Updated **${moduleName}** — restarting now to apply the new code (back online in a few seconds).\n\n${changelogStr}`,
+                `Updated **${moduleName}** on disk. Bun can't hot-swap module code, so a restart is needed to load it.\n\n${changelogStr}`,
+                { actionRows: [restartChoiceRow(message.author.id)] },
               ),
             );
-            scheduleProcessRestart(`,module update ${moduleName}`);
           } else {
             await msg.edit(
               makeSuccessCard(
@@ -292,15 +292,16 @@ export class ModuleCommand extends BaseSubcommand {
         if (failed.length > 0) report.push(`### Failed:\n${failed.join("\n")}`);
         if (needsRestart)
           report.push(
-            "_Restarting now to apply the updated code (back online in a few seconds)._",
+            "_New code is on disk. A restart is needed to load it — one restart applies every updated module._",
           );
 
         await msg.edit(
-          makeSuccessCard("Multi-Module Update Report", report.join("\n\n")),
+          makeSuccessCard("Multi-Module Update Report", report.join("\n\n"), {
+            actionRows: needsRestart
+              ? [restartChoiceRow(message.author.id)]
+              : undefined,
+          }),
         );
-
-        // One restart applies every pulled module at once (commits already recorded).
-        if (needsRestart) scheduleProcessRestart(",module update (all)");
       } catch (err: unknown) {
         await msg.edit(
           makeErrorCard(`${Emojis.ERROR} Multi-Update Failed`, errorFrom(err).message),
