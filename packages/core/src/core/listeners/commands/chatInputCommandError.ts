@@ -4,7 +4,7 @@ import {
   type ChatInputCommandErrorPayload,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
-import { cardFor, respond } from "#utilities/command-response.js";
+import { errorCard, respond } from "#utilities/command-response.js";
 
 @ApplyOptions<Listener.Options>({ event: Events.ChatInputCommandError })
 export class ChatInputCommandErrorListener extends Listener<
@@ -14,9 +14,7 @@ export class ChatInputCommandErrorListener extends Listener<
     error: unknown,
     { interaction, command }: ChatInputCommandErrorPayload,
   ) {
-    const { card, expected } = cardFor(error);
-    if (!expected)
-      this.container.logger.error(`[Command:${command.name}]`, error);
+    const { card } = errorCard(`Command:${command.name}`, error);
     try {
       await respond(interaction, card);
     } catch (err: unknown) {
