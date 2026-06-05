@@ -4,7 +4,7 @@ import {
   type MessageCommandErrorPayload,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
-import { cardFor, respondMessage } from "./_shared.js";
+import { cardFor, respondMessage } from "#utilities/command-response.js";
 
 @ApplyOptions<Listener.Options>({ event: Events.MessageCommandError })
 export class MessageCommandErrorListener extends Listener<

@@ -34,13 +34,6 @@ export function afkDurationSince(since: Date): string {
   );
 }
 
-import { checkModulesEnabled } from "#lib/module-check.js";
-
-export async function isAfkEnabled(guildId: string): Promise<boolean> {
-  const states = await checkModulesEnabled(guildId, ["afk"]);
-  return states.get("afk") ?? false;
-}
-
 export async function isAfkNickPrefixEnabled(
   guildId: string,
 ): Promise<boolean> {

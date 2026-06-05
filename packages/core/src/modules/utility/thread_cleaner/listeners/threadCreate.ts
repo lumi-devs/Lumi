@@ -4,6 +4,7 @@ import { ThreadChannel } from "discord.js";
 import { trackThread } from "../data.js";
 import { parseDuration } from "#utilities/time.js";
 import { parseConfigList } from "#core/module-system/Module.js";
+import { isModuleEnabled } from "#utilities/listeners.js";
 
 @ApplyOptions<Listener.Options>({
   event: Events.ThreadCreate,
@@ -11,12 +12,7 @@ import { parseConfigList } from "#core/module-system/Module.js";
 export class ThreadCreateListener extends Listener {
   public async run(thread: ThreadChannel) {
     if (!thread.guild) return;
-
-    const isEnabled = await this.container.db.modules.isModuleEnabled(
-      thread.guild.id,
-      "thread_cleaner",
-    );
-    if (!isEnabled) return;
+    if (!(await isModuleEnabled(thread.guild.id, "thread_cleaner"))) return;
 
     const enabledChannels = parseConfigList(
       await this.container.db.config.getModuleConfig(

@@ -3,7 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { container } from "@sapphire/framework";
 import { Stopwatch } from "@sapphire/stopwatch";
-import { pgPoolSize, pgPoolUsed, pgPoolWaiting } from "@lumi-devs/observability";
+import { pgPoolSize, pgPoolUsed, pgPoolWaiting } from "@lumi/observability";
 
 // Pooling-mode decision (settled before the `worker` role fans out):
 // **transaction** pooling, not session. Our access pattern is compatible:

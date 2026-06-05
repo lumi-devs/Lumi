@@ -49,13 +49,10 @@ export async function respond(
   options: InteractionReplyOptions,
 ): Promise<Message | undefined> {
   if (interaction.replied || interaction.deferred) {
-    // Note: editReply ignores 'flags'. If the original reply wasn't ephemeral,
-    // we can't make this one ephemeral. We filter 'flags' out to prevent D.JS warnings.
     const { flags: _flags, ...editOptions } = options;
     return interaction.editReply(editOptions);
   }
 
-  // For new replies, default to Ephemeral if not explicitly set otherwise
   const flags = options.flags ?? MessageFlags.Ephemeral;
   await interaction.reply({ ...options, flags } as InteractionReplyOptions);
 
@@ -64,6 +61,7 @@ export async function respond(
   }, 5_000).unref();
   return undefined;
 }
+
 export async function respondMessage(
   message: Message,
   options: MessageReplyOptions,

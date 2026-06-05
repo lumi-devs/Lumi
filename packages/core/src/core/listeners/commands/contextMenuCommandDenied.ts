@@ -5,7 +5,7 @@ import {
   type ContextMenuCommandDeniedPayload,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
-import { handleDenied } from "./_shared.js";
+import { handleDenied } from "#utilities/command-response.js";
 import { type RepliableInteraction } from "discord.js";
 
 @ApplyOptions<Listener.Options>({ event: Events.ContextMenuCommandDenied })

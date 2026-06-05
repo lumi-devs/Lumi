@@ -24,8 +24,7 @@ export type { RpcRequest, RpcResponse, RpcHandler };
 
 // RabbitMQ carries two things only: fanout events (broadcasts between processes)
 // and the dashboard RPC bridge. Durable/time-based work lives in BullMQ
-// (scheduled-tasks); CPU-bound work goes straight to WorkerManager. There is no
-// general-purpose fire-and-forget job queue.
+// (scheduled-tasks). There is no general-purpose fire-and-forget job queue.
 
 // ── RPC Registry ────────────────────────────────────────────────────────────
 
