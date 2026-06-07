@@ -2,7 +2,6 @@ import { Command, UserError } from "@sapphire/framework";
 import { Subcommand } from "@sapphire/plugin-subcommands";
 import type {
   ChatInputCommandInteraction,
-  InteractionEditReplyOptions,
   InteractionReplyOptions,
 } from "discord.js";
 import {
@@ -23,6 +22,7 @@ import {
   PERMISSION_LEVEL_NAMES,
 } from "#lib/permissions.js";
 import { instrumentCommandPiece } from "#core/telemetry/instrument.js";
+import { sendInteractionReply } from "#utilities/command-response.js";
 
 function mapPermissionLevelToDiscordPermission(
   level: PermissionLevel | undefined,
@@ -50,13 +50,9 @@ export async function sendReply(
   interaction: ChatInputCommandInteraction,
   payload: InteractionReplyOptions,
 ): Promise<void> {
-  if (interaction.replied) {
-    await interaction.followUp(payload);
-  } else if (interaction.deferred) {
-    await interaction.editReply(payload as InteractionEditReplyOptions);
-  } else {
-    await interaction.reply(payload);
-  }
+  // Delegates to the single interaction-reply primitive; "followUp" preserves
+  // the prior behavior of appending when a reply already exists.
+  await sendInteractionReply(interaction, payload, "followUp");
 }
 
 export const replySuccess = (
@@ -128,6 +124,76 @@ function appendPermissionPrecondition(
   }
 }
 
+// ── Shared constructor resolution ────────────────────────────────────────────
+// BaseCommand extends Command and BaseSubcommand extends Subcommand, so they
+// cannot share a parent. These free helpers hold the identical option-resolution
+// and permission-check logic so it lives in exactly one place (mirrors Skyra's
+// `BaseSkyraCommandUtilities`).
+
+interface SharedCommandOptions {
+  permissionLevel?: PermissionLevel;
+  integrationTypes?: ApplicationIntegrationType[];
+  contexts?: InteractionContextType[];
+  defaultMemberPermissions?: bigint | null;
+  preconditions?: Command.Options["preconditions"];
+}
+
+interface ResolvedCommandDefaults {
+  permissionLevel: PermissionLevel;
+  integrationTypes: ApplicationIntegrationType[];
+  contexts: InteractionContextType[];
+  defaultMemberPermissions: bigint | undefined;
+}
+
+function resolveCommandDefaults(
+  options: SharedCommandOptions,
+): ResolvedCommandDefaults {
+  const discordPerm = mapPermissionLevelToDiscordPermission(
+    options.permissionLevel,
+  );
+  // GuildOnly may be declared as a bare string or as an object entry
+  // (`{ name: "GuildOnly", ... }`); detect both. `.includes("GuildOnly")` alone
+  // silently misses the object form.
+  const isGuildOnly =
+    Array.isArray(options.preconditions) &&
+    options.preconditions.some((p) =>
+      typeof p === "string"
+        ? p === "GuildOnly"
+        : typeof p === "object" && p !== null && "name" in p
+          ? p.name === "GuildOnly"
+          : false,
+    );
+  return {
+    permissionLevel: options.permissionLevel ?? PermissionLevel.USER,
+    integrationTypes: options.integrationTypes ?? [
+      ApplicationIntegrationType.GuildInstall,
+    ],
+    contexts: options.contexts ?? [
+      InteractionContextType.Guild,
+      ...(isGuildOnly
+        ? []
+        : [
+            InteractionContextType.BotDM,
+            InteractionContextType.PrivateChannel,
+          ]),
+    ],
+    defaultMemberPermissions: options.defaultMemberPermissions ?? discordPerm,
+  };
+}
+
+async function assertPermissionLevel(
+  interaction: ChatInputCommandInteraction,
+  level: PermissionLevel,
+): Promise<void> {
+  const actual = await resolvePermissionLevel(interaction);
+  if (actual < level) {
+    throw new UserError({
+      identifier: "PermissionDenied",
+      message: `You need at least **${PERMISSION_LEVEL_NAMES[level]}** level to use this.`,
+    });
+  }
+}
+
 // ── Shared interface — ensures both base classes stay in sync ────────────────
 
 interface CommandLike {
@@ -170,6 +236,12 @@ interface CommandLike {
 }
 
 // ── BaseCommand ──────────────────────────────────────────────────────────────
+// NOTE: BaseCommand and BaseSubcommand intentionally duplicate their (trivial,
+// delegating) instance bodies. They can't share a parent — BaseCommand extends
+// Command, BaseSubcommand extends Subcommand — and a mixin can't be used either:
+// `declaration: true` rejects an exported class extending an anonymous mixin
+// that carries Sapphire's protected members (TS4094). The real logic lives once
+// in the free functions above; these wrappers are pure delegation.
 
 export abstract class BaseCommand extends Command implements CommandLike {
   public readonly permissionLevel: PermissionLevel;
@@ -181,48 +253,20 @@ export abstract class BaseCommand extends Command implements CommandLike {
     context: Command.LoaderContext,
     options: BaseCommand.Options,
   ) {
-    const discordPerm = mapPermissionLevelToDiscordPermission(
-      options.permissionLevel,
-    );
-
-    const isGuildOnly = options.preconditions?.includes("GuildOnly") ?? false;
-    const integrationTypes = options.integrationTypes ?? [
-      ApplicationIntegrationType.GuildInstall,
-    ];
-    const contexts = options.contexts ?? [
-      InteractionContextType.Guild,
-      ...(isGuildOnly
-        ? []
-        : [
-            InteractionContextType.BotDM,
-            InteractionContextType.PrivateChannel,
-          ]),
-    ];
-
-    super(context, {
-      ...options,
-    });
-
-    this.permissionLevel = options.permissionLevel ?? PermissionLevel.USER;
-    this.integrationTypes = integrationTypes;
-    this.contexts = contexts;
-    this.defaultMemberPermissions =
-      options.defaultMemberPermissions ?? discordPerm;
-
+    const defaults = resolveCommandDefaults(options);
+    super(context, { ...options });
+    this.permissionLevel = defaults.permissionLevel;
+    this.integrationTypes = defaults.integrationTypes;
+    this.contexts = defaults.contexts;
+    this.defaultMemberPermissions = defaults.defaultMemberPermissions;
     instrumentCommandPiece(this);
   }
 
-  public async checkPermission(
+  public checkPermission(
     interaction: ChatInputCommandInteraction,
     level: PermissionLevel,
   ): Promise<void> {
-    const actual = await resolvePermissionLevel(interaction);
-    if (actual < level) {
-      throw new UserError({
-        identifier: "PermissionDenied",
-        message: `You need at least **${PERMISSION_LEVEL_NAMES[level]}** level to use this.`,
-      });
-    }
+    return assertPermissionLevel(interaction, level);
   }
 
   public reply(
@@ -291,48 +335,20 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
     context: Subcommand.LoaderContext,
     options: BaseSubcommand.Options,
   ) {
-    const discordPerm = mapPermissionLevelToDiscordPermission(
-      options.permissionLevel,
-    );
-
-    const isGuildOnly = options.preconditions?.includes("GuildOnly") ?? false;
-    const integrationTypes = options.integrationTypes ?? [
-      ApplicationIntegrationType.GuildInstall,
-    ];
-    const contexts = options.contexts ?? [
-      InteractionContextType.Guild,
-      ...(isGuildOnly
-        ? []
-        : [
-            InteractionContextType.BotDM,
-            InteractionContextType.PrivateChannel,
-          ]),
-    ];
-
-    super(context, {
-      ...options,
-    });
-
-    this.permissionLevel = options.permissionLevel ?? PermissionLevel.USER;
-    this.integrationTypes = integrationTypes;
-    this.contexts = contexts;
-    this.defaultMemberPermissions =
-      options.defaultMemberPermissions ?? discordPerm;
-
+    const defaults = resolveCommandDefaults(options);
+    super(context, { ...options });
+    this.permissionLevel = defaults.permissionLevel;
+    this.integrationTypes = defaults.integrationTypes;
+    this.contexts = defaults.contexts;
+    this.defaultMemberPermissions = defaults.defaultMemberPermissions;
     instrumentCommandPiece(this);
   }
 
-  public async checkPermission(
+  public checkPermission(
     interaction: ChatInputCommandInteraction,
     level: PermissionLevel,
   ): Promise<void> {
-    const actual = await resolvePermissionLevel(interaction);
-    if (actual < level) {
-      throw new UserError({
-        identifier: "PermissionDenied",
-        message: `You need at least **${PERMISSION_LEVEL_NAMES[level]}** level to use this.`,
-      });
-    }
+    return assertPermissionLevel(interaction, level);
   }
 
   public reply(

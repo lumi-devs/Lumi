@@ -7,6 +7,7 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { errorFrom } from "#utilities/errors.js";
+import { isAutoRestartEnabled } from "#core/lib/restart.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -119,7 +120,7 @@ export class DownloaderService extends Service {
 
   public async updateModule(
     moduleName: string,
-  ): Promise<{ updated: boolean; changelog?: string }> {
+  ): Promise<{ updated: boolean; changelog?: string; needsRestart?: boolean }> {
     const installed =
       await this.container.db.downloader.readInstalledDownloaderModule(
         moduleName,
@@ -149,12 +150,22 @@ export class DownloaderService extends Service {
       await this.updateRepo(repo.name);
     }
 
-    // 1. Fetch from remote (ignore errors — offline or unreachable gracefully fails later)
-    await execFileAsync("git", ["-C", repoPath, "fetch", "origin"]).catch(() => {});
+    // 1. Fetch from remote. A failed fetch means we only know the stale local
+    //    refs — surface it via log so an "up-to-date" result is never silently
+    //    based on unreachable-remote state.
+    const fetchFailed = await execFileAsync("git", ["-C", repoPath, "fetch", "origin"])
+      .then(() => false)
+      .catch((err: NodeJS.ErrnoException & { stderr?: string }) => {
+        this.container.logger.warn(
+          `[DownloaderService] git fetch failed for ${repo.name}; update check uses stale refs: ${(err.stderr ?? err.message).trim()}`,
+        );
+        return true;
+      });
 
-    // 2. Get local hash and tracked remote branch
-    const { stdout: localOut } = await execFileAsync("git", ["-C", repoPath, "rev-parse", "HEAD"]);
-    const localHash = localOut.trim();
+    // 2. Resolve the remote hash from the tracked upstream (or origin/<branch>).
+    const localHash = (
+      await execFileAsync("git", ["-C", repoPath, "rev-parse", "HEAD"])
+    ).stdout.trim();
 
     const remoteRefResult = await execFileAsync("git", ["-C", repoPath, "rev-parse", "--abbrev-ref", "@{u}"]).catch(() => ({ stdout: "" }));
     const remoteRef = remoteRefResult.stdout.trim();
@@ -167,37 +178,73 @@ export class DownloaderService extends Service {
     const { stdout: remoteOut } = await execFileAsync("git", ["-C", repoPath, "rev-parse", targetRef]);
     const remoteHash = remoteOut.trim();
 
-    if (localHash === remoteHash) {
+    // 3. "Needs update" compares what we actually have installed/loaded
+    //    (the recorded commit) against the remote — NOT the disk HEAD, which can
+    //    drift from the loaded module (e.g. an out-of-band `,repo update` pulled
+    //    the clone while the live module stayed stale). A null recorded commit
+    //    (installed before commit tracking) forces a reload to resync.
+    const installedHash = installed.commit ?? null;
+    const upToDate =
+      installedHash !== null &&
+      installedHash === remoteHash &&
+      localHash === remoteHash;
+
+    if (upToDate) {
       return { updated: false };
     }
 
-    // 3. Extract changelog (git log --oneline HEAD..remoteRef)
+    if (fetchFailed && localHash === remoteHash) {
+      // Couldn't reach the remote and disk already matches the (stale) ref —
+      // nothing actionable; reconcile the recorded commit so we stop re-pulling.
+      await this.container.db.downloader.updateInstalledDownloaderModuleCommit(
+        repo.id,
+        moduleName,
+        remoteHash,
+      );
+      return { updated: false };
+    }
+
+    // 4. Extract changelog (git log --oneline HEAD..remoteRef)
     const { stdout: logOut } = await execFileAsync("git", ["-C", repoPath, "log", "--oneline", `HEAD..${targetRef}`]).catch(() => ({ stdout: "" }));
     const changelog = logOut.trim();
 
-    // 4. Perform pull
+    // 5. Perform pull
     const pullArgs = ["-C", repoPath, "pull"];
     if (branch !== "default") pullArgs.push("origin", branch);
     await execFileAsync("git", pullArgs).catch((err: NodeJS.ErrnoException & { stderr?: string }) => {
       throw new Error(`Git pull failed: ${(err.stderr ?? err.message).trim()}`);
     });
 
-    // 5. Re-run resolver installation (isolated dependencies + symlinks)
+    // 6. Re-run resolver installation (isolated dependencies + symlinks)
     await resolver.installModule(repo.name, moduleName);
 
-    // 6. Reload module in store with ESM cache-busting so updated source on disk takes effect
-    this.container.logger.info(`[DownloaderService] Reloading module ${moduleName} (update)...`);
-    await this.container.moduleStore.reload(moduleName);
-    this.container.logger.info("[DownloaderService] Syncing commands (update)...");
-    await this.syncApplicationCommands();
-
-
-    // 7. Update database commit hash
+    // 7. Record the new commit BEFORE applying, so a restart-on-update boots
+    //    straight into the new code without re-detecting it as pending.
     await this.container.db.downloader.updateInstalledDownloaderModuleCommit(
       repo.id,
       moduleName,
       remoteHash,
     );
+
+    // 8. Apply the new code. Bun's ESM loader can't purge a module's transitive
+    //    imports (see lib/restart.ts), so an in-process reload would only swap the
+    //    entry pieces and keep running the old `lib/` — the bug behind "I updated
+    //    but it still runs old code". When auto-restart is enabled the caller
+    //    restarts the process to load the pulled source cleanly (the volume
+    //    persists it across the restart). Otherwise best-effort hot-reload and let
+    //    the user restart. The DB commit is already recorded (step 7), so a restart
+    //    boots straight into the new code.
+    if (isAutoRestartEnabled()) {
+      this.container.logger.info(
+        `[DownloaderService] ${moduleName} updated on disk; restart required to apply.`,
+      );
+      return { updated: true, changelog, needsRestart: true };
+    }
+
+    this.container.logger.info(`[DownloaderService] Reloading module ${moduleName} (update)...`);
+    await this.container.moduleStore.reload(moduleName);
+    this.container.logger.info("[DownloaderService] Syncing commands (update)...");
+    await this.syncApplicationCommands();
 
     return { updated: true, changelog };
   }
