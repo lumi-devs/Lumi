@@ -5,7 +5,7 @@ import {
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { RepliableInteraction } from "discord.js";
-import { cardFor, respond } from "#utilities/command-response.js";
+import { errorCard, respond } from "#utilities/command-response.js";
 
 @ApplyOptions<Listener.Options>({ event: Events.ContextMenuCommandError })
 export class ContextMenuCommandErrorListener extends Listener<
@@ -15,9 +15,7 @@ export class ContextMenuCommandErrorListener extends Listener<
     error: unknown,
     { interaction, command }: ContextMenuCommandErrorPayload,
   ) {
-    const { card, expected } = cardFor(error);
-    if (!expected)
-      this.container.logger.error(`[ContextMenu:${command.name}]`, error);
+    const { card } = errorCard(`ContextMenu:${command.name}`, error);
     try {
       await respond(interaction as RepliableInteraction, card);
     } catch (err: unknown) {

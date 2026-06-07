@@ -12,6 +12,7 @@ import {
 } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
 import { errorFrom } from "#utilities/errors.js";
+import { restartChoiceRow } from "#core/lib/restart.js";
 import type { DownloaderService } from "#core/services/DownloaderService.js";
 
 @ApplyOptions<InteractionHandler.Options>({
@@ -56,12 +57,22 @@ export class ModuleUpdateInteractionHandler extends BaseInteractionHandler {
           ? `### Pull Changelog:\n\`\`\`git\n${result.changelog}\n\`\`\``
           : "No changelog details provided.";
 
-        await interaction.editReply(
-          makeSuccessCard(
-            `${Emojis.DOWNLOAD} Module Updated`,
-            `Successfully updated and hot-reloaded **${moduleName}**!\n\n${changelogStr}`,
-          ),
-        );
+        if (result.needsRestart) {
+          await interaction.editReply(
+            makeSuccessCard(
+              `${Emojis.DOWNLOAD} Module Updated`,
+              `Updated **${moduleName}** on disk. Bun can't hot-swap module code, so a restart is needed to load it.\n\n${changelogStr}`,
+              { actionRows: [restartChoiceRow(userId)] },
+            ),
+          );
+        } else {
+          await interaction.editReply(
+            makeSuccessCard(
+              `${Emojis.DOWNLOAD} Module Updated`,
+              `Successfully updated and hot-reloaded **${moduleName}**!\n\n${changelogStr}`,
+            ),
+          );
+        }
       } else {
         await interaction.editReply(
           makeSuccessCard(

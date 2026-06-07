@@ -4,6 +4,7 @@ import { GuildMessageListener } from "#core/module-system/GuildMessageListener.j
 import type { GuildMessage } from "#lib/types.js";
 import type { FilterService } from "../services/FilterService.js";
 import { swallow } from "#utilities/errors.js";
+import { deleteMessageLater } from "#utilities/temporary-message.js";
 
 @ApplyOptions<GuildMessageListener.Options>({ module: "filter" })
 export class FilterMessageListener extends GuildMessageListener {
@@ -31,10 +32,6 @@ export class FilterMessageListener extends GuildMessageListener {
       )
       .catch(swallow("Filter: send warning"));
 
-    if (warn)
-      setTimeout(
-        () => warn.delete().catch(swallow("Filter: delete warning")),
-        5_000,
-      ).unref();
+    if (warn) deleteMessageLater(warn, undefined, "Filter: delete warning");
   }
 }

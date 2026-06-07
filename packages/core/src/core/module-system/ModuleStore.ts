@@ -145,11 +145,19 @@ export class ModuleStore extends Store<Module> {
    */
   public async reload(name: string) {
     const record = this.#records.get(name);
-    if (!record) throw new Error(`Module "${name}" not found or not yet loaded`);
-    if (record.meta.isCore)
+    if (record?.meta.isCore)
       throw new Error(`Cannot reload core module "${name}"`);
 
-    await this.unload(name);
+    // Tolerate a module that is recorded but not currently loaded as a store
+    // piece — e.g. it failed to load at boot, or its files were restored after
+    // a container wipe. We still want to re-discover + load it fresh, so a
+    // missing piece must not abort the reload (mirrors uninstallModule).
+    try {
+      await this.unload(name);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes("does not exist")) throw err;
+    }
     // bustCache=true appends ?t=<timestamp> to index imports so Bun/Node ESM
     // treats them as new URLs and re-evaluates updated source on disk.
     await this.discover(true, true);

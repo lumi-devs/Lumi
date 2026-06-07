@@ -8,7 +8,12 @@ export class GuildUserMessageRouterListener extends Listener<
   typeof Events.MessageCreate
 > {
   public run(message: Message): void {
-    if (!message.inGuild() || message.author.bot) return;
+    // Mirror Skyra's messageCreate guards: drop webhooks, system messages, bots,
+    // and anything outside a guild before fanning out to module listeners.
+    if (message.webhookId !== null) return;
+    if (message.system) return;
+    if (message.author.bot) return;
+    if (!message.inGuild()) return;
     this.container.client.emit(LumiEvents.GuildUserMessage, message);
   }
 }

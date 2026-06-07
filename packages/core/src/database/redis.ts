@@ -186,6 +186,15 @@ export class InvalidationBus {
   #listeners = new Set<(keys: string[]) => void>();
   #started = false;
   #startPromise: Promise<void> | null = null;
+  #handlerAttached = false;
+  #onMessage = (_channel: string, payload: string) => {
+    try {
+      const { keys } = JSON.parse(payload) as { keys: string[] };
+      for (const fn of this.#listeners) fn(keys);
+    } catch (err: unknown) {
+      logError("Invalidation: malformed payload", err);
+    }
+  };
 
   public constructor(subscriber: Redis) {
     this.#subscriber = subscriber;
@@ -207,15 +216,13 @@ export class InvalidationBus {
 
   async #doStart(): Promise<void> {
     if (this.#started) return;
+    // Attach the message handler exactly once for the lifetime of this bus —
+    // start()/stop() cycles must not stack duplicate listeners.
+    if (!this.#handlerAttached) {
+      this.#subscriber.on("message", this.#onMessage);
+      this.#handlerAttached = true;
+    }
     await this.#subscriber.subscribe(INVALIDATION_CHANNEL);
-    this.#subscriber.on("message", (_channel, payload) => {
-      try {
-        const { keys } = JSON.parse(payload) as { keys: string[] };
-        for (const fn of this.#listeners) fn(keys);
-      } catch (err: unknown) {
-        logError("Invalidation: malformed payload", err);
-      }
-    });
     this.#started = true;
   }
 
@@ -229,14 +236,24 @@ export class InvalidationBus {
     );
   }
 
+  /**
+   * Pause delivery: unsubscribe and reset state, but keep the connection (and
+   * the message handler) alive so a subsequent start() can resume on the same
+   * client. Use close() for permanent teardown at shutdown.
+   */
   public async stop(): Promise<void> {
     if (!this.#started) return;
     await this.#subscriber
       .unsubscribe(INVALIDATION_CHANNEL)
       .catch((err: unknown) => logError("Redis: unsubscribe failed", err));
+    this.#started = false;
+  }
+
+  /** Permanent teardown — pause, then quit the owned subscriber connection. */
+  public async close(): Promise<void> {
+    await this.stop();
     await this.#subscriber
       .quit()
       .catch((err: unknown) => logError("Redis: quit failed", err));
-    this.#started = false;
   }
 }
