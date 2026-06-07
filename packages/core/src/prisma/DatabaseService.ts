@@ -18,7 +18,6 @@ import { ModerationRepository } from "#root/prisma/repositories/ModerationReposi
 import { ConfigHistoryRepository } from "#root/prisma/repositories/ConfigHistoryRepository.js";
 import { ConfigOverrideRepository } from "#root/prisma/repositories/ConfigOverrideRepository.js";
 import { AfkRepository } from "#root/prisma/repositories/AfkRepository.js";
-import { ThreadRepository } from "#root/prisma/repositories/ThreadRepository.js";
 
 // Re-export the row/payload shapes so existing importers keep working.
 export type { CachedOverride } from "#root/prisma/repositories/PermissionRepository.js";
@@ -49,7 +48,6 @@ export class DatabaseService {
   public readonly configHistory: ConfigHistoryRepository;
   public readonly configOverrides: ConfigOverrideRepository;
   public readonly afk: AfkRepository;
-  public readonly threads: ThreadRepository;
 
   public constructor(
     private readonly prisma: DatabaseClient,
@@ -78,7 +76,6 @@ export class DatabaseService {
       this,
     );
     this.afk = new AfkRepository(prisma, redis, logger, this);
-    this.threads = new ThreadRepository(prisma, redis, logger, this);
   }
 
   public async publishBotStats(stats: Record<string, unknown>): Promise<void> {
