@@ -146,12 +146,18 @@ export class RabbitClient {
     void this.channel.addSetup(async (ch: Channel) => {
       await ch.prefetch(8);
 
-      // 1. Exclusive fanout queue for this shard/process to receive broadcasts
+      // 1. Exclusive fanout queue for this shard/process to receive broadcasts.
+      //    These are best-effort broadcasts — consume with noAck so a delivery
+      //    is acked on receipt. Without it the queue grows unbounded on the
+      //    broker (the fanout keeps routing while #handleEvent never acks) and
+      //    delivery stalls once prefetch is hit.
       const { queue: eventQueue } = await ch.assertQueue("", {
         exclusive: true,
       });
       await ch.bindQueue(eventQueue, "lumi.events", "");
-      await ch.consume(eventQueue, (m) => this.#handleEvent(ch, m));
+      await ch.consume(eventQueue, (m) => this.#handleEvent(ch, m), {
+        noAck: true,
+      });
 
       // 2. Shared RPC request queue (load balanced across processes)
       await ch.consume("lumi.rpc.requests", (m) => handleRpc(ch, m));

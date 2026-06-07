@@ -151,10 +151,18 @@ function resolveCommandDefaults(
   const discordPerm = mapPermissionLevelToDiscordPermission(
     options.permissionLevel,
   );
+  // GuildOnly may be declared as a bare string or as an object entry
+  // (`{ name: "GuildOnly", ... }`); detect both. `.includes("GuildOnly")` alone
+  // silently misses the object form.
   const isGuildOnly =
-    (Array.isArray(options.preconditions) &&
-      options.preconditions.includes("GuildOnly")) ??
-    false;
+    Array.isArray(options.preconditions) &&
+    options.preconditions.some((p) =>
+      typeof p === "string"
+        ? p === "GuildOnly"
+        : typeof p === "object" && p !== null && "name" in p
+          ? p.name === "GuildOnly"
+          : false,
+    );
   return {
     permissionLevel: options.permissionLevel ?? PermissionLevel.USER,
     integrationTypes: options.integrationTypes ?? [
@@ -228,6 +236,12 @@ interface CommandLike {
 }
 
 // ── BaseCommand ──────────────────────────────────────────────────────────────
+// NOTE: BaseCommand and BaseSubcommand intentionally duplicate their (trivial,
+// delegating) instance bodies. They can't share a parent — BaseCommand extends
+// Command, BaseSubcommand extends Subcommand — and a mixin can't be used either:
+// `declaration: true` rejects an exported class extending an anonymous mixin
+// that carries Sapphire's protected members (TS4094). The real logic lives once
+// in the free functions above; these wrappers are pure delegation.
 
 export abstract class BaseCommand extends Command implements CommandLike {
   public readonly permissionLevel: PermissionLevel;
