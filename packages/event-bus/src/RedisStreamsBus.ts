@@ -70,9 +70,22 @@ export interface RedisStreamsBusOptions {
   statsIntervalMs?: number;
 }
 
+// ioredis types the stream commands (XREADGROUP/XAUTOCLAIM/XPENDING) with a
+// pile of overloads that don't accept a spread `unknown[]`, so calling them
+// dynamically needs a cast. Centralize that one unsafe shape here and cast each
+// connection exactly once (pubStream/subStream) instead of at every call site.
+interface RedisStreamCommands {
+  xreadgroup(...args: unknown[]): Promise<unknown>;
+  xautoclaim(...args: unknown[]): Promise<unknown>;
+  xpending(...args: unknown[]): Promise<unknown>;
+}
+
 export class RedisStreamsBus implements EventBus {
   private readonly publisher: Redis;
   private readonly subscriber: Redis;
+  /** Typed views of the two connections for the awkwardly-overloaded stream commands. */
+  private readonly pubStream: RedisStreamCommands;
+  private readonly subStream: RedisStreamCommands;
   private readonly defaultMaxLen: number;
   private readonly knownGroups = new Set<string>();
   private readonly log: NonNullable<RedisStreamsBusOptions["log"]>;
@@ -87,6 +100,8 @@ export class RedisStreamsBus implements EventBus {
   public constructor(opts: RedisStreamsBusOptions) {
     this.publisher = opts.publisher;
     this.subscriber = opts.subscriber;
+    this.pubStream = this.publisher as unknown as RedisStreamCommands;
+    this.subStream = this.subscriber as unknown as RedisStreamCommands;
     this.defaultMaxLen = opts.defaultMaxLen ?? 100_000;
     this.log = opts.log ?? (() => undefined);
     this.maxDeliveries = opts.maxDeliveries ?? 5;
@@ -144,11 +159,7 @@ export class RedisStreamsBus implements EventBus {
         ];
         let resp: unknown;
         try {
-          resp = await (
-            this.subscriber as unknown as {
-              xreadgroup: (...a: unknown[]) => Promise<unknown>;
-            }
-          ).xreadgroup(...args);
+          resp = await this.subStream.xreadgroup(...args);
         } catch (err) {
           if (this.closed || stopped) return;
           this.log("error", "xreadgroup failed", { err: String(err) });
@@ -274,11 +285,7 @@ export class RedisStreamsBus implements EventBus {
       let cursor = "0-0";
       // Bound the loop — claim up to ~128 entries per tick, then yield.
       for (let i = 0; i < 8; i++) {
-        const resp = (await (
-          this.subscriber as unknown as {
-            xautoclaim: (...a: unknown[]) => Promise<unknown>;
-          }
-        ).xautoclaim(
+        const resp = (await this.subStream.xautoclaim(
           stream,
           opts.group,
           opts.consumer,
@@ -318,13 +325,15 @@ export class RedisStreamsBus implements EventBus {
     id: string,
   ): Promise<number> {
     // XPENDING <key> <group> IDLE 0 <start> <end> 1
-    const resp = (await (
-      this.publisher as unknown as {
-        xpending: (...a: unknown[]) => Promise<unknown>;
-      }
-    ).xpending(stream, group, "IDLE", 0, id, id, 1)) as Array<
-      [string, string, number, number]
-    > | null;
+    const resp = (await this.pubStream.xpending(
+      stream,
+      group,
+      "IDLE",
+      0,
+      id,
+      id,
+      1,
+    )) as Array<[string, string, number, number]> | null;
     if (!resp || resp.length === 0) return 1;
     const entry = resp[0]!;
     // [id, consumer, idle-ms, delivery-count]
@@ -376,11 +385,9 @@ export class RedisStreamsBus implements EventBus {
   private async pendingCount(stream: string, group: string): Promise<number> {
     try {
       // XPENDING <key> <group> → [count, min-id, max-id, [[consumer, count], ...]]
-      const resp = (await (
-        this.publisher as unknown as {
-          xpending: (...a: unknown[]) => Promise<unknown>;
-        }
-      ).xpending(stream, group)) as [number, ...unknown[]] | null;
+      const resp = (await this.pubStream.xpending(stream, group)) as
+        | [number, ...unknown[]]
+        | null;
       if (!resp) return 0;
       return Number(resp[0]) || 0;
     } catch {

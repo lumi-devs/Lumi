@@ -71,6 +71,7 @@ import {
   type ClusterBootstrap,
 } from "@lumi/sharding";
 import { Redis } from "ioredis";
+import { tryParseJSON } from "@sapphire/utilities";
 import type { SessionInfo } from "@discordjs/ws";
 
 export interface LumiClientOptions {
@@ -540,7 +541,7 @@ export class LumiClient extends SapphireClient {
       ]);
       this._clusterRedis = null;
     }
-    await container.invalidation.stop();
+    await container.invalidation.close();
     await container.redis
       .quit()
       .catch((err) =>
@@ -648,7 +649,13 @@ export class LumiClient extends SapphireClient {
 
     const cacheKey = RedisKeys.guildPrefixes(message.guild.id);
     const cached = await container.redis.get(cacheKey);
-    if (cached) return JSON.parse(cached) as string[];
+    if (cached) {
+      // tryParseJSON returns the raw string (not null) on malformed input — a
+      // corrupt cache entry must not throw and break prefix resolution; treat
+      // anything that isn't a string[] as a miss and recompute below.
+      const parsed = tryParseJSON(cached) as string[] | null;
+      if (Array.isArray(parsed)) return parsed;
+    }
 
     const settings = await container.db.config.getGuildSettings(
       message.guild.id,
