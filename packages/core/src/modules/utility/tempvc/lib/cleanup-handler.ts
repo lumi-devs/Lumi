@@ -2,7 +2,7 @@
 
 import { container } from "@sapphire/framework";
 import type TempVcService from "../services/TempVcService.js";
-import type { TempVcCleanupPayload } from "../scheduled-tasks/CleanupTask.js";
+import type { TempVcCleanupPayload } from "../scheduled-tasks/cleanup.js";
 
 export async function handleTempVcCleanupFire(
   payload: TempVcCleanupPayload,

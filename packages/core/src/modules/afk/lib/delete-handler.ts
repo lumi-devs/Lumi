@@ -9,7 +9,7 @@ import { container } from "@sapphire/framework";
 import { errorCode } from "#utilities/errors.js";
 import { coalesceMessageDelete } from "#core/lib/rest-coalesce.js";
 import { clearAfkMentions } from "../data/afk.js";
-import type { AfkDeleteMessagePayload } from "../scheduled-tasks/AfkDeleteMessageTask.js";
+import type { AfkDeleteMessagePayload } from "../scheduled-tasks/afkDeleteMessage.js";
 
 export async function handleAfkDeleteMessageFire(
   payload: AfkDeleteMessagePayload,
