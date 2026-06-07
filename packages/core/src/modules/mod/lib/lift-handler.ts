@@ -10,7 +10,7 @@
 import { container } from "@sapphire/framework";
 import { Routes } from "discord-api-types/v10";
 import { errorCode } from "#utilities/errors.js";
-import type { ModLiftPayload } from "../scheduled-tasks/ModLiftTask.js";
+import type { ModLiftPayload } from "../scheduled-tasks/modLift.js";
 
 export async function handleModLiftFire(
   payload: ModLiftPayload,
