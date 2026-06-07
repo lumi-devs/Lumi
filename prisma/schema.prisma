@@ -297,21 +297,6 @@ model AuditLedger {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MODULE: thread_cleaner
-// ─────────────────────────────────────────────────────────────────────────────
-
-model TrackedThread {
-  threadId  String   @id @map("thread_id") @db.VarChar(20)
-  guildId   String   @map("guild_id") @db.VarChar(20)
-  channelId String   @map("channel_id") @db.VarChar(20)
-  archiveAt DateTime @map("archive_at")
-
-  @@index([guildId])
-  @@index([archiveAt])
-  @@map("tracked_threads")
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // MODULE DATA (KV STORE)
 // ─────────────────────────────────────────────────────────────────────────────
 
