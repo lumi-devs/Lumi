@@ -8,7 +8,7 @@
 // exactly one handles each fire — right for one-shot side-effects (mod-lift,
 // afk-delete-message, tempvc-cleanup). "broadcast" gives each worker its own group so
 // every worker processes every fire and iterates its own guilds.cache — right for
-// periodic sweepers (captcha-expiry, thread-cleaner) and DB sweepers that no-op safely
+// periodic sweepers (captcha-expiry) and DB sweepers that no-op safely
 // under N consumers (flush-logs).
 
 import { container } from "@sapphire/framework";
