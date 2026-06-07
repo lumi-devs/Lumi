@@ -1,4 +1,8 @@
-import { AllFlowsPrecondition, container } from "@sapphire/framework";
+import {
+  AllFlowsPrecondition,
+  container,
+  type Command,
+} from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type {
   ChatInputCommandInteraction,
@@ -38,21 +42,20 @@ export class PermissionOverridesPrecondition extends AllFlowsPrecondition {
     });
   }
 
-  public override async messageRun(m: Message) {
+  public override async messageRun(m: Message, command: Command) {
     if (!m.guild) return this.ok();
     const level = await resolvePermissionLevel(m);
     if (level >= PermissionLevel.BOT_OWNER || m.guild.ownerId === m.author.id)
       return this.ok();
-    return this.#check(
-      m.guild.id,
-      m.content.split(" ")[0]?.replace(/^,/, "") ?? "",
-      {
-        userId: m.author.id,
-        channelId: m.channelId,
-        roleIds: new Set(m.member?.roles.cache.keys() ?? []),
-        guild: m.guild,
-      },
-    );
+    // Use the resolved command name, not a content-prefix strip — the prefix is
+    // guild-configurable, so parsing `m.content` with a hardcoded `,` keyed
+    // overrides under the wrong path and silently bypassed every deny.
+    return this.#check(m.guild.id, command.name, {
+      userId: m.author.id,
+      channelId: m.channelId,
+      roleIds: new Set(m.member?.roles.cache.keys() ?? []),
+      guild: m.guild,
+    });
   }
 
   public override async contextMenuRun(i: ContextMenuCommandInteraction) {
@@ -99,7 +102,10 @@ export class PermissionOverridesPrecondition extends AllFlowsPrecondition {
     if (user)
       return user.allow
         ? this.ok()
-        : this.error({ message: "You are not permitted to use this command." });
+        : this.error({
+            identifier: "AccessDenied",
+            message: "You are not permitted to use this command.",
+          });
 
     const chan = overrides.find(
       (o) => o.modelType === "channel" && o.modelId === channelId,
@@ -108,6 +114,7 @@ export class PermissionOverridesPrecondition extends AllFlowsPrecondition {
       return chan.allow
         ? this.ok()
         : this.error({
+            identifier: "AccessDenied",
             message: "This command is not permitted in this channel.",
           });
 
@@ -123,6 +130,7 @@ export class PermissionOverridesPrecondition extends AllFlowsPrecondition {
           return cat.allow
             ? this.ok()
             : this.error({
+                identifier: "AccessDenied",
                 message: "This command is not permitted in this category.",
               });
       }
@@ -141,6 +149,7 @@ export class PermissionOverridesPrecondition extends AllFlowsPrecondition {
         return m.allow
           ? this.ok()
           : this.error({
+              identifier: "AccessDenied",
               message: "You are not permitted to use this command.",
             });
     }
@@ -149,7 +158,10 @@ export class PermissionOverridesPrecondition extends AllFlowsPrecondition {
     if (every)
       return every.allow
         ? this.ok()
-        : this.error({ message: "This command has been disabled." });
+        : this.error({
+            identifier: "AccessDenied",
+            message: "This command has been disabled.",
+          });
 
     return this.ok();
   }
