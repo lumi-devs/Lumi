@@ -9,8 +9,10 @@ import { logError } from "#utilities/errors.js";
 
 const execFileAsync = promisify(execFile);
 
-const repoSchema = z.string().regex(/^[a-zA-Z0-9_-]+$/); // Disallow dots to prevent traversal
-const branchSchema = z.string().regex(/^[a-zA-Z0-9_.-]+$/);
+// Disallow dots to prevent traversal, and a leading `-` so a value can never be
+// parsed as a flag when spread into an execFile() argv (argument injection).
+const repoSchema = z.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
+const branchSchema = z.string().regex(/^[a-zA-Z0-9_.][a-zA-Z0-9_.-]*$/);
 const urlSchema = z.string().refine(
   (val) => {
     if (val.startsWith("http://") || val.startsWith("https://")) {
@@ -34,7 +36,9 @@ const urlSchema = z.string().refine(
       "Must be a valid HTTP/HTTPS URL, file URL, or Git SSH URL (git@github.com:owner/repo.git)",
   },
 );
-const reqsSchema = z.array(z.string().regex(/^[a-zA-Z0-9_.@/-]+$/));
+// Same leading-dash guard: a requirement must not start with `-` or it could be
+// interpreted as a flag to `bun add`.
+const reqsSchema = z.array(z.string().regex(/^[a-zA-Z0-9_.@/][a-zA-Z0-9_.@/-]*$/));
 
 export const MODULE_ROOT = path.join(process.cwd(), "data", "3rd-party-modules");
 /** Where symlinks for installed addons live — registered as a second ModuleStore root. */
@@ -67,7 +71,8 @@ export class DownloadResolver {
       container.logger.info(`[Downloader] Cloning repo: ${url}`);
       const cloneArgs = ["clone"];
       if (branch !== "default") cloneArgs.push("-b", branch);
-      cloneArgs.push(url, repoPath);
+      // `--` terminates option parsing: url/repoPath can never be read as flags.
+      cloneArgs.push("--", url, repoPath);
       await execFileAsync("git", cloneArgs).catch((err: NodeJS.ErrnoException & { stderr?: string }) => {
         throw new Error(`Git clone failed: ${(err.stderr ?? err.message).trim()}`);
       });

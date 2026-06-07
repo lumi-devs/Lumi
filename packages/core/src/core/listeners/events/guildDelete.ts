@@ -51,8 +51,11 @@ export class GuildDeleteEventBusListener extends Listener<
 
     const allKeys = [...staticKeys, ...dynamicKeys];
     if (allKeys.length) {
-      await this.container.redis
-        .del(...allKeys)
+      // Route through the InvalidationBus (not a raw redis.del) so peer
+      // processes drop any in-process memos too — e.g. the FilterService
+      // matcher evicted below lives on every replica.
+      await this.container.invalidation
+        .invalidate(...allKeys)
         .catch((err: unknown) =>
           this.container.logger.warn(
             "[GuildDelete] Redis eviction failed:",

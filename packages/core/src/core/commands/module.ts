@@ -13,6 +13,7 @@ import {
 import { Emojis } from "#utilities/assets.js";
 import { errorFrom } from "#utilities/errors.js";
 import { ModuleAlreadyInstalledError } from "#core/services/DownloaderService.js";
+import { restartChoiceRow } from "#core/lib/restart.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "module",
@@ -165,7 +166,7 @@ export class ModuleCommand extends BaseSubcommand {
       await msg.edit(
         makeSuccessCard(
           `${Emojis.CHECK} Module Reloaded`,
-          `**${moduleName}** has been reloaded. Slash commands (if any) have been re-synced.\n\n> Note: to pick up TypeScript source changes, run with \`bun --watch\` or restart the bot.`,
+          `**${moduleName}** has been reloaded. Its full source subtree was re-evaluated and slash commands (if any) re-synced.`,
         ),
       );
     } catch (err: unknown) {
@@ -209,12 +210,22 @@ export class ModuleCommand extends BaseSubcommand {
             ? `### Pull Changelog:\n\`\`\`git\n${result.changelog}\n\`\`\``
             : "No changelog details provided.";
 
-          await msg.edit(
-            makeSuccessCard(
-              `${Emojis.DOWNLOAD} Module Updated`,
-              `Successfully updated and hot-reloaded **${moduleName}**!\n\n${changelogStr}`,
-            ),
-          );
+          if (result.needsRestart) {
+            await msg.edit(
+              makeSuccessCard(
+                `${Emojis.DOWNLOAD} Module Updated`,
+                `Updated **${moduleName}** on disk. Bun can't hot-swap module code, so a restart is needed to load it.\n\n${changelogStr}`,
+                { actionRows: [restartChoiceRow(message.author.id)] },
+              ),
+            );
+          } else {
+            await msg.edit(
+              makeSuccessCard(
+                `${Emojis.DOWNLOAD} Module Updated`,
+                `Successfully updated and hot-reloaded **${moduleName}**!\n\n${changelogStr}`,
+              ),
+            );
+          }
         } else {
           await msg.edit(
             makeSuccessCard(
@@ -251,6 +262,7 @@ export class ModuleCommand extends BaseSubcommand {
         const succeeded: string[] = [];
         const skipped: string[] = [];
         const failed: string[] = [];
+        let needsRestart = false;
 
         for (const item of installed) {
           try {
@@ -258,7 +270,10 @@ export class ModuleCommand extends BaseSubcommand {
               item.moduleName,
             );
             if (result.updated) {
-              succeeded.push(`✅ **${item.moduleName}** (hot-reloaded)`);
+              needsRestart ||= result.needsRestart ?? false;
+              succeeded.push(
+                `✅ **${item.moduleName}**${result.needsRestart ? "" : " (hot-reloaded)"}`,
+              );
             } else {
               skipped.push(`➖ **${item.moduleName}** (up-to-date)`);
             }
@@ -275,9 +290,17 @@ export class ModuleCommand extends BaseSubcommand {
         if (skipped.length > 0)
           report.push(`### Up-To-Date:\n${skipped.join("\n")}`);
         if (failed.length > 0) report.push(`### Failed:\n${failed.join("\n")}`);
+        if (needsRestart)
+          report.push(
+            "_New code is on disk. A restart is needed to load it — one restart applies every updated module._",
+          );
 
         await msg.edit(
-          makeSuccessCard("Multi-Module Update Report", report.join("\n\n")),
+          makeSuccessCard("Multi-Module Update Report", report.join("\n\n"), {
+            actionRows: needsRestart
+              ? [restartChoiceRow(message.author.id)]
+              : undefined,
+          }),
         );
       } catch (err: unknown) {
         await msg.edit(
