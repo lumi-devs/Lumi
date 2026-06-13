@@ -42,6 +42,8 @@
     "@prisma/client": "^7.8.0",
     "@sapphire/async-queue": "^1.5.5",
     "@sapphire/decorators": "^6.2.0",
+    "@sapphire/discord.js-utilities": "^7.3.3",
+    "@sapphire/fetch": "^3.0.5",
     "@sapphire/framework": "^5.5.0",
     "@sapphire/plugin-scheduled-tasks": "^10.0.4",
     "@sapphire/plugin-subcommands": "^7.0.1",
