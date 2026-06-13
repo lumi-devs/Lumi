@@ -1,3 +1,4 @@
+import { isGuildBasedChannel } from "@sapphire/discord.js-utilities";
 import { checkModulesEnabled } from "#lib/module-check.js";
 import { PermissionsBitField, type Message } from "discord.js";
 
@@ -10,6 +11,8 @@ export async function isModuleEnabled(
 }
 
 export function canSendMessages(message: Message<true>): boolean {
+  if (!isGuildBasedChannel(message.channel)) return false;
+
   const me = message.guild.members.me;
   if (!me) return false;
   return (
