@@ -3,6 +3,7 @@ import path from "node:path";
 import { promises as fs } from "node:fs";
 import { createRequire } from "node:module";
 import { container } from "@sapphire/framework";
+import { fetch, FetchResultTypes } from "@sapphire/fetch";
 import { Prisma } from "@prisma/client";
 import type { Redis } from "ioredis";
 import type { ModuleRecord } from "#core/module-system/ModuleStore.js";
@@ -181,13 +182,12 @@ let cachedGatewayNode: string | null = null;
 async function getGatewayNode() {
   if (cachedGatewayNode !== null) return cachedGatewayNode;
   try {
-    const res = await fetch("https://discord.com/cdn-cgi/trace", {
+    const text = await fetch("https://discord.com/cdn-cgi/trace", FetchResultTypes.Text, {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
       },
     });
-    const text = await res.text();
     cachedGatewayNode = text.match(/colo=([A-Z0-9]+)/)?.[1] ?? "Unknown";
   } catch {
     cachedGatewayNode = "Unknown";
