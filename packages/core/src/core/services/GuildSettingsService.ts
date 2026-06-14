@@ -1,6 +1,11 @@
 import { Service } from "#core/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
+import {
+  DEFAULT_LANGUAGE,
+  isSupportedLanguage,
+  SUPPORTED_LANGUAGES,
+} from "#core/i18n/index.js";
 
 @ApplyOptions<Piece.Options>({ name: "guild-settings" })
 export class GuildSettingsService extends Service {
@@ -54,6 +59,36 @@ export class GuildSettingsService extends Service {
         throw new Error("Prefix is already unset (using default).");
       }
       await tx.write({ prefix: null }).submit();
+    } finally {
+      tx.dispose();
+    }
+  }
+
+  public async setLanguage(guildId: string, language: string) {
+    if (!isSupportedLanguage(language)) {
+      throw new Error(
+        `Unsupported language. Supported: ${SUPPORTED_LANGUAGES.join(", ")}.`,
+      );
+    }
+
+    const tx = await this.container.db.transaction(guildId);
+    try {
+      if (tx.settings.locale === language) {
+        throw new Error(`Language is already set to ${language}.`);
+      }
+      await tx.write({ locale: language }).submit();
+    } finally {
+      tx.dispose();
+    }
+  }
+
+  public async resetLanguage(guildId: string) {
+    const tx = await this.container.db.transaction(guildId);
+    try {
+      if (tx.settings.locale === DEFAULT_LANGUAGE) {
+        throw new Error(`Language is already set to ${DEFAULT_LANGUAGE}.`);
+      }
+      await tx.write({ locale: DEFAULT_LANGUAGE }).submit();
     } finally {
       tx.dispose();
     }
