@@ -6,6 +6,7 @@ process.env["NODE_ENV"] ??= "development";
 // Logger is provided explicitly via LumiClient's `logger.instance`
 // (PinoSapphireLogger), so @sapphire/plugin-logger is intentionally not used.
 import "@sapphire/plugin-subcommands/register";
+import "@sapphire/plugin-i18next/register";
 
 // Only the BullMQ-owning roles (scheduler, monolith) register the
 // scheduled-tasks plugin. On worker / gateway it stays unregistered so the

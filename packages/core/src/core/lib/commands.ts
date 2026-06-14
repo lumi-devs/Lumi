@@ -1,8 +1,11 @@
 import { Command, UserError } from "@sapphire/framework";
 import { Subcommand } from "@sapphire/plugin-subcommands";
+import { fetchT } from "@sapphire/plugin-i18next";
+import type { LumiT } from "#core/i18n/index.js";
 import type {
   ChatInputCommandInteraction,
   InteractionReplyOptions,
+  Message,
 } from "discord.js";
 import {
   PermissionFlagsBits,
@@ -233,6 +236,12 @@ interface CommandLike {
     body: string,
     opts?: ReplyOptions,
   ): Promise<void>;
+  /**
+   * Resolves the localized translation function for the target's language
+   * (guild language → Discord locale → en-US). Pass an interaction or a
+   * message; returns an i18next `TFunction` bound to the resolved language.
+   */
+  fetchT(target: ChatInputCommandInteraction | Message): Promise<LumiT>;
 }
 
 // ── BaseCommand ──────────────────────────────────────────────────────────────
@@ -310,6 +319,12 @@ export abstract class BaseCommand extends Command implements CommandLike {
     opts?: ReplyOptions,
   ): Promise<void> {
     return replyInfo(interaction, title, body, opts);
+  }
+
+  public fetchT(
+    target: ChatInputCommandInteraction | Message,
+  ): Promise<LumiT> {
+    return fetchT(target) as unknown as Promise<LumiT>;
   }
 
   protected override parseConstructorPreConditions(
@@ -392,6 +407,12 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
     opts?: ReplyOptions,
   ): Promise<void> {
     return replyInfo(interaction, title, body, opts);
+  }
+
+  public fetchT(
+    target: ChatInputCommandInteraction | Message,
+  ): Promise<LumiT> {
+    return fetchT(target) as unknown as Promise<LumiT>;
   }
 
   protected override parseConstructorPreConditions(
