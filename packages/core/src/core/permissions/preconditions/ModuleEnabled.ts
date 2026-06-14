@@ -34,9 +34,14 @@ export class ModuleEnabledPrecondition extends Precondition {
     );
     if (!enabled) {
       return this.error({
+        identifier: "ModuleEnabled",
         message: guildId
-          ? "This feature is disabled in this server."
+          ? `The **${moduleName}** module is disabled in this server.`
           : "This feature is currently disabled.",
+        context: {
+          i18nKey: "preconditions:moduleDisabled",
+          module: moduleName,
+        },
       });
     }
 

@@ -22,7 +22,9 @@ export class GuildOwnerPrecondition extends Precondition {
     return actual >= PermissionLevel.GUILD_OWNER
       ? this.ok()
       : this.error({
+          identifier: "PermissionDenied",
           message: `You need at least **Server Owner** level to use this.`,
+          context: { i18nKey: "preconditions:guildOwner" },
         });
   }
 }

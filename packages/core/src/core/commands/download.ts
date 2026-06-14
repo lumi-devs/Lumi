@@ -14,7 +14,8 @@ import { errorFrom } from "#utilities/errors.js";
 @ApplyOptions<BaseSubcommand.Options>({
   name: "download",
   aliases: ["dl"],
-  description: "Install or uninstall a module from a repository (Bot Owner Only)",
+  description:
+    "Install or uninstall a module from a repository (Bot Owner Only)",
   permissionLevel: PermissionLevel.BOT_OWNER,
   subcommands: [
     { name: "install", messageRun: "messageRunInstall", default: true },
@@ -45,7 +46,10 @@ export class DownloadCommand extends BaseSubcommand {
     }
 
     const msg = await message.reply(
-      makeInfoCard("Installing Module", `Installing **${moduleName}** from **${repoName}**...`),
+      makeInfoCard(
+        "Installing Module",
+        `Installing **${moduleName}** from **${repoName}**...`,
+      ),
     );
 
     try {

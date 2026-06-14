@@ -22,7 +22,9 @@ export class AdministratorPrecondition extends Precondition {
     return actual >= PermissionLevel.ADMIN
       ? this.ok()
       : this.error({
+          identifier: "PermissionDenied",
           message: `You need at least **Administrator** level to use this.`,
+          context: { i18nKey: "preconditions:administrator" },
         });
   }
 }

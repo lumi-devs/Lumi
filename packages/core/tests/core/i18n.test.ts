@@ -76,6 +76,26 @@ describe("i18n framework", () => {
     expect(t("preconditions:administrator")).toContain("Administrator");
   });
 
+  it("resolves every i18n key referenced by the denial path", () => {
+    // These keys are passed as UserError context.i18nKey by the preconditions
+    // and resolved by handleDenied. A typo here would silently fall back to the
+    // English message, so assert they exist (don't return the missing-key tag).
+    const t = handler.getT(DEFAULT_LANGUAGE);
+    const keys = [
+      "preconditions:administrator",
+      "preconditions:moderator",
+      "preconditions:guildOwner",
+      "preconditions:botOwner",
+      "preconditions:moduleDisabled",
+      "common:permissionDenied",
+    ];
+    for (const key of keys) {
+      const value = t(key, { level: "X", module: "y" });
+      expect(value).not.toBe("");
+      expect(value).not.toContain("has not been localized");
+    }
+  });
+
   it("keeps every language at key parity with en-US", async () => {
     const reference = await namespaceKeys(DEFAULT_LANGUAGE);
     for (const lang of SUPPORTED_LANGUAGES) {

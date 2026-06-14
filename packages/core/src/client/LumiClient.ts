@@ -223,9 +223,9 @@ export class LumiClient extends SapphireClient {
     // 1. Module system setup
     const moduleStore = new ModuleStore();
     moduleStore.addRoot(new URL("../modules/", import.meta.url));
-    moduleStore.addRoot(pathToFileURL(ADDON_MODULES_ROOT + "/"));
+    moduleStore.addRoot(pathToFileURL(`${ADDON_MODULES_ROOT}/`));
     for (const devPath of getDevModulePaths()) {
-      moduleStore.addRoot(pathToFileURL(devPath + "/"));
+      moduleStore.addRoot(pathToFileURL(`${devPath}/`));
     }
     this.stores.register(new ServiceStore());
     this.stores.register(moduleStore);

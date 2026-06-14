@@ -6,11 +6,7 @@ import {
   SeparatorBuilder,
   TextDisplayBuilder,
 } from "@discordjs/builders";
-import {
-  ButtonStyle,
-  MessageFlags,
-  SeparatorSpacingSize,
-} from "discord.js";
+import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
 import { GuildMessageListener } from "#core/module-system/GuildMessageListener.js";
 import type { GuildMessage } from "#lib/types.js";
 import { Colors } from "#utilities/branding.js";

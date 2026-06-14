@@ -22,7 +22,9 @@ export class ModeratorPrecondition extends Precondition {
     return actual >= PermissionLevel.MOD
       ? this.ok()
       : this.error({
+          identifier: "PermissionDenied",
           message: `You need at least **Moderator** level to use this.`,
+          context: { i18nKey: "preconditions:moderator" },
         });
   }
 }

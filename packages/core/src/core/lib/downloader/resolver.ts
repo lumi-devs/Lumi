@@ -38,11 +38,21 @@ const urlSchema = z.string().refine(
 );
 // Same leading-dash guard: a requirement must not start with `-` or it could be
 // interpreted as a flag to `bun add`.
-const reqsSchema = z.array(z.string().regex(/^[a-zA-Z0-9_.@/][a-zA-Z0-9_.@/-]*$/));
+const reqsSchema = z.array(
+  z.string().regex(/^[a-zA-Z0-9_.@/][a-zA-Z0-9_.@/-]*$/),
+);
 
-export const MODULE_ROOT = path.join(process.cwd(), "data", "3rd-party-modules");
+export const MODULE_ROOT = path.join(
+  process.cwd(),
+  "data",
+  "3rd-party-modules",
+);
 /** Where symlinks for installed addons live — registered as a second ModuleStore root. */
-export const ADDON_MODULES_ROOT = path.join(process.cwd(), "data", "installed-modules");
+export const ADDON_MODULES_ROOT = path.join(
+  process.cwd(),
+  "data",
+  "installed-modules",
+);
 
 /**
  * Handles the logic of cloning repositories, verifying info.json,
@@ -63,19 +73,30 @@ export class DownloadResolver {
     // Clone or pull
     if (await this._exists(repoPath)) {
       container.logger.info(`[Downloader] Updating repo: ${name}`);
-      const pullArgs = branch !== "default" ? ["-C", repoPath, "pull", "origin", branch] : ["-C", repoPath, "pull"];
-      await execFileAsync("git", pullArgs).catch((err: NodeJS.ErrnoException & { stderr?: string }) => {
-        throw new Error(`Git pull failed: ${(err.stderr ?? err.message).trim()}`);
-      });
+      const pullArgs =
+        branch !== "default"
+          ? ["-C", repoPath, "pull", "origin", branch]
+          : ["-C", repoPath, "pull"];
+      await execFileAsync("git", pullArgs).catch(
+        (err: NodeJS.ErrnoException & { stderr?: string }) => {
+          throw new Error(
+            `Git pull failed: ${(err.stderr ?? err.message).trim()}`,
+          );
+        },
+      );
     } else {
       container.logger.info(`[Downloader] Cloning repo: ${url}`);
       const cloneArgs = ["clone"];
       if (branch !== "default") cloneArgs.push("-b", branch);
       // `--` terminates option parsing: url/repoPath can never be read as flags.
       cloneArgs.push("--", url, repoPath);
-      await execFileAsync("git", cloneArgs).catch((err: NodeJS.ErrnoException & { stderr?: string }) => {
-        throw new Error(`Git clone failed: ${(err.stderr ?? err.message).trim()}`);
-      });
+      await execFileAsync("git", cloneArgs).catch(
+        (err: NodeJS.ErrnoException & { stderr?: string }) => {
+          throw new Error(
+            `Git clone failed: ${(err.stderr ?? err.message).trim()}`,
+          );
+        },
+      );
     }
   }
 
