@@ -15,6 +15,10 @@ jobs:
         with:
           bun-version: latest
       - run: bun install
+      # Type-aware ESLint (parserOptions.project) resolves the TS program, which
+      # path-maps @prisma/client to ./prisma/generated/client — generate it first
+      # or a fresh checkout fails to resolve every Prisma import.
+      - run: bun run db:generate
       # Read-only measure: the `bun run lint` script is `eslint --fix` (mutates +
       # would auto-fix-then-pass in CI, gating nothing). Use the bare form here.
       - run: bunx eslint packages/*/src apps/*/src --ext ts
@@ -27,6 +31,9 @@ jobs:
         with:
           bun-version: latest
       - run: bun install
+      # typecheck path-maps @prisma/client to the generated client; without this
+      # a fresh checkout errors with missing Prisma exports (User, Prisma, …).
+      - run: bun run db:generate
       - run: bun run typecheck
 
   test:
