@@ -7,6 +7,7 @@
 - **Discord**: discord.js v14 + `@discordjs/builders` + `@discordjs/formatters`
 - **DB**: Prisma + PostgreSQL (pg adapter), ioredis
 - **Messaging**: RabbitMQ (amqplib) + BullMQ (`@sapphire/plugin-scheduled-tasks`, Redis-backed)
+- **i18n**: `@sapphire/plugin-i18next` (per-guild locale, typed keys)
 - **Validation**: Zod
 
 ---
@@ -56,6 +57,15 @@ Extend `Service` (`#core/module-system/Service.js`); they expose `this.logger`, 
 ### Config
 
 **Zod-first.** Declare a single `configSchema: cfg.object({ ... })` in the module meta, building each field with the `cfg.*` helpers from `#core/module-system/Module.js` (`cfg.boolean / number / string / enum / channel / role / user`). The schema is the source of truth: the flat `ConfigField[]` the `/config` panel and dashboard RPC consume is **derived** from it (`fieldsFromSchema`, run by the `DefineModule` decorator) — never hand-author `configFields`. `/config` reads/writes via `ConfigService`, which `coerce()`s the raw string to the field type, then **validates the coerced value against the schema**, and stores JSON. **`STRING` fields are stored verbatim**; for comma-separated values pass `cfg.string({ ..., list: true })` and read them as `string[]` via `ConfigService.getConfigList` (the one shared `parseConfigList` transform) — never split inline. Register a cache-invalidation/reload hook with `container.configChangeHooks.set("<module>:<key>", fn)` instead of patching `ConfigService`. Per-scope overrides (user > channel > role > category > guild) via `ConfigService.getConfig(..., ctx)`.
+
+### Internationalization (i18n)
+
+**`@sapphire/plugin-i18next`.** Translations live in `src/languages/<locale>/<namespace>.json`; the shipping locale is **`en-US`** and the namespaces are `common` (default), `commands`, `preconditions`. Config is centralised in **`#core/i18n/index.js`** (`buildI18nOptions`, wired into `LumiClient`; the plugin is registered in `client/setup.ts`). Language is resolved per-guild via `fetchLanguage` (reads `Guild.locale` through `container.db.config.getGuildSettings`), falling back to Discord's `guild.preferredLocale` → `en-US`.
+
+- **Adding a language is additive**: drop a `src/languages/<locale>/` dir with the same keys as `en-US`, then add the locale to `SUPPORTED_LANGUAGES` in `#core/i18n/index.js`. The `i18n.test.ts` key-parity guard fails if a locale drifts from `en-US`.
+- **Keys are typed** via the `CustomTypeOptions` augmentation (`#core/i18n/augmentations.d.ts`) — `t("commands:foo")` autocompletes and type-checks.
+- In commands, get a translator with **`await this.fetchT(interactionOrMessage)`** (returns a `LumiT` bound to every namespace). Localize slash-command name/description with `applyLocalizedBuilder(builder, "commands:<root>")` (auto-appends `Name`/`Description`). For one-off lookups outside a command use `resolveKey(target, key, options)`.
+- Set a guild's language with `/language` or `GuildSettingsService.setLanguage` (validates against `SUPPORTED_LANGUAGES`, cache-busts via the guild transaction).
 
 ### Data & cache
 
