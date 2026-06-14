@@ -179,15 +179,19 @@ async function readProcFile(file: string) {
 }
 
 let cachedGatewayNode: string | null = null;
-async function getGatewayNode() {
+async function getGatewayNode(): Promise<string> {
   if (cachedGatewayNode !== null) return cachedGatewayNode;
   try {
-    const text = await fetch("https://discord.com/cdn-cgi/trace", FetchResultTypes.Text, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    const text = await fetch(
+      "https://discord.com/cdn-cgi/trace",
+      {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        },
       },
-    });
+      FetchResultTypes.Text,
+    );
     cachedGatewayNode = text.match(/colo=([A-Z0-9]+)/)?.[1] ?? "Unknown";
   } catch {
     cachedGatewayNode = "Unknown";
