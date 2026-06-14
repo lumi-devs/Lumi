@@ -1,0 +1,19 @@
+{
+  "default": "La clave {{key}} aún no se ha traducido al español.",
+  "yes": "Sí",
+  "no": "No",
+  "none": "Ninguno",
+  "enabled": "Activado",
+  "disabled": "Desactivado",
+  "unknown": "Desconocido",
+  "loading": "Cargando…",
+  "success": "Éxito",
+  "error": "Error",
+  "warning": "Advertencia",
+  "info": "Información",
+  "nothingHere": "*Aún no hay nada aquí.*",
+  "pagination": "Página {{page}}/{{total}} · {{count}} elementos",
+  "permissionDenied": "Necesitas al menos el nivel **{{level}}** para usar esto.",
+  "guildOnly": "Este comando solo se puede usar en un servidor.",
+  "unexpectedError": "Algo salió mal al ejecutar ese comando. El error ha sido registrado."
+}
