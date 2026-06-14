@@ -25,7 +25,9 @@ import { ButtonStyle } from "discord.js";
  * back to the legacy best-effort in-process hot-reload instead.
  */
 export function isAutoRestartEnabled(): boolean {
-  return (process.env.MODULE_UPDATE_AUTO_RESTART ?? "true").toLowerCase() !== "false";
+  return (
+    (process.env.MODULE_UPDATE_AUTO_RESTART ?? "true").toLowerCase() !== "false"
+  );
 }
 
 /**
@@ -63,7 +65,9 @@ export function scheduleProcessRestart(reason: string, delayMs = 2_000): void {
   );
 
   const timer = setTimeout(() => {
-    container.logger.warn(`[Restart] Sending SIGTERM to self (pid ${process.pid})`);
+    container.logger.warn(
+      `[Restart] Sending SIGTERM to self (pid ${process.pid})`,
+    );
     // The role's SIGTERM handler drains and exits 0; the supervisor restarts us.
     process.kill(process.pid, "SIGTERM");
   }, delayMs);

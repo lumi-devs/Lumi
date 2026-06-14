@@ -13,7 +13,7 @@ export async function isModuleEnabled(
 export function canSendMessages(message: Message<true>): boolean {
   if (!isGuildBasedChannel(message.channel)) return false;
 
-  const me = message.guild.members.me;
+  const { me } = message.guild.members;
   if (!me) return false;
   return (
     message.channel

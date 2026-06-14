@@ -236,7 +236,10 @@ export class ModuleCommand extends BaseSubcommand {
         }
       } catch (err: unknown) {
         await msg.edit(
-          makeErrorCard(`${Emojis.ERROR} Update Failed`, errorFrom(err).message),
+          makeErrorCard(
+            `${Emojis.ERROR} Update Failed`,
+            errorFrom(err).message,
+          ),
         );
       }
     } else {
@@ -304,7 +307,10 @@ export class ModuleCommand extends BaseSubcommand {
         );
       } catch (err: unknown) {
         await msg.edit(
-          makeErrorCard(`${Emojis.ERROR} Multi-Update Failed`, errorFrom(err).message),
+          makeErrorCard(
+            `${Emojis.ERROR} Multi-Update Failed`,
+            errorFrom(err).message,
+          ),
         );
       }
     }

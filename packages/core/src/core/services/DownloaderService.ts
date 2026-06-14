@@ -1,7 +1,11 @@
 import { Service } from "#core/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { type Piece } from "@sapphire/framework";
-import { resolver, ADDON_MODULES_ROOT, MODULE_ROOT } from "#core/lib/downloader/resolver.js";
+import {
+  resolver,
+  ADDON_MODULES_ROOT,
+  MODULE_ROOT,
+} from "#core/lib/downloader/resolver.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { execFile } from "node:child_process";
@@ -48,7 +52,9 @@ export class DownloaderService extends Service {
 
     this.container.logger.info("[DownloaderService] Discovering modules...");
     await this.container.moduleStore.discover(true);
-    this.container.logger.info(`[DownloaderService] Loading module ${moduleName}...`);
+    this.container.logger.info(
+      `[DownloaderService] Loading module ${moduleName}...`,
+    );
     await this.container.moduleStore.loadModule(moduleName);
     this.container.logger.info("[DownloaderService] Syncing commands...");
     await this.syncApplicationCommands();
@@ -153,7 +159,12 @@ export class DownloaderService extends Service {
     // 1. Fetch from remote. A failed fetch means we only know the stale local
     //    refs — surface it via log so an "up-to-date" result is never silently
     //    based on unreachable-remote state.
-    const fetchFailed = await execFileAsync("git", ["-C", repoPath, "fetch", "origin"])
+    const fetchFailed = await execFileAsync("git", [
+      "-C",
+      repoPath,
+      "fetch",
+      "origin",
+    ])
       .then(() => false)
       .catch((err: NodeJS.ErrnoException & { stderr?: string }) => {
         this.container.logger.warn(
@@ -167,7 +178,13 @@ export class DownloaderService extends Service {
       await execFileAsync("git", ["-C", repoPath, "rev-parse", "HEAD"])
     ).stdout.trim();
 
-    const remoteRefResult = await execFileAsync("git", ["-C", repoPath, "rev-parse", "--abbrev-ref", "@{u}"]).catch(() => ({ stdout: "" }));
+    const remoteRefResult = await execFileAsync("git", [
+      "-C",
+      repoPath,
+      "rev-parse",
+      "--abbrev-ref",
+      "@{u}",
+    ]).catch(() => ({ stdout: "" }));
     const remoteRef = remoteRefResult.stdout.trim();
 
     const targetRef =
@@ -175,7 +192,12 @@ export class DownloaderService extends Service {
         ? remoteRef
         : `origin/${branch === "default" ? "master" : branch}`;
 
-    const { stdout: remoteOut } = await execFileAsync("git", ["-C", repoPath, "rev-parse", targetRef]);
+    const { stdout: remoteOut } = await execFileAsync("git", [
+      "-C",
+      repoPath,
+      "rev-parse",
+      targetRef,
+    ]);
     const remoteHash = remoteOut.trim();
 
     // 3. "Needs update" compares what we actually have installed/loaded
@@ -205,15 +227,25 @@ export class DownloaderService extends Service {
     }
 
     // 4. Extract changelog (git log --oneline HEAD..remoteRef)
-    const { stdout: logOut } = await execFileAsync("git", ["-C", repoPath, "log", "--oneline", `HEAD..${targetRef}`]).catch(() => ({ stdout: "" }));
+    const { stdout: logOut } = await execFileAsync("git", [
+      "-C",
+      repoPath,
+      "log",
+      "--oneline",
+      `HEAD..${targetRef}`,
+    ]).catch(() => ({ stdout: "" }));
     const changelog = logOut.trim();
 
     // 5. Perform pull
     const pullArgs = ["-C", repoPath, "pull"];
     if (branch !== "default") pullArgs.push("origin", branch);
-    await execFileAsync("git", pullArgs).catch((err: NodeJS.ErrnoException & { stderr?: string }) => {
-      throw new Error(`Git pull failed: ${(err.stderr ?? err.message).trim()}`);
-    });
+    await execFileAsync("git", pullArgs).catch(
+      (err: NodeJS.ErrnoException & { stderr?: string }) => {
+        throw new Error(
+          `Git pull failed: ${(err.stderr ?? err.message).trim()}`,
+        );
+      },
+    );
 
     // 6. Re-run resolver installation (isolated dependencies + symlinks)
     await resolver.installModule(repo.name, moduleName);
@@ -241,9 +273,13 @@ export class DownloaderService extends Service {
       return { updated: true, changelog, needsRestart: true };
     }
 
-    this.container.logger.info(`[DownloaderService] Reloading module ${moduleName} (update)...`);
+    this.container.logger.info(
+      `[DownloaderService] Reloading module ${moduleName} (update)...`,
+    );
     await this.container.moduleStore.reload(moduleName);
-    this.container.logger.info("[DownloaderService] Syncing commands (update)...");
+    this.container.logger.info(
+      "[DownloaderService] Syncing commands (update)...",
+    );
     await this.syncApplicationCommands();
 
     return { updated: true, changelog };
@@ -254,7 +290,8 @@ export class DownloaderService extends Service {
   }
 
   public async removeRepo(name: string) {
-    const repo = await this.container.db.downloader.readDownloaderRepoWithModules(name);
+    const repo =
+      await this.container.db.downloader.readDownloaderRepoWithModules(name);
     if (!repo) {
       throw new Error(`Repository **${name}** not found.`);
     }
@@ -291,16 +328,18 @@ export class DownloaderService extends Service {
     // registered yet (empty apiCalls), then bulk-overwrite Discord.
     // Sapphire's `apiCalls` array is an internal detail not exposed in public
     // types; we access it via a typed-unknown narrow to avoid littering `any`.
-    type ApiCall = {
+    interface ApiCall {
       registerOptions: { guildIds?: string[] };
       builtData: object;
-    };
-    type RegistryInternal = { apiCalls?: ApiCall[] };
+    }
+    interface RegistryInternal {
+      apiCalls?: ApiCall[];
+    }
 
     for (const command of commandStore.values()) {
       if (typeof command.registerApplicationCommands !== "function") continue;
       const registry = command.applicationCommandRegistry;
-      const apiCalls = (registry as unknown as RegistryInternal).apiCalls;
+      const { apiCalls } = registry as unknown as RegistryInternal;
       if (!apiCalls?.length) {
         try {
           await command.registerApplicationCommands(registry);
@@ -319,7 +358,8 @@ export class DownloaderService extends Service {
 
     for (const command of commandStore.values()) {
       const apiCalls =
-        (command.applicationCommandRegistry as unknown as RegistryInternal).apiCalls ?? [];
+        (command.applicationCommandRegistry as unknown as RegistryInternal)
+          .apiCalls ?? [];
       for (const call of apiCalls) {
         if (call.registerOptions?.guildIds?.length) {
           for (const guildId of call.registerOptions.guildIds) {

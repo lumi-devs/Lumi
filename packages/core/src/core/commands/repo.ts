@@ -102,7 +102,10 @@ export class RepoCommand extends BaseSubcommand {
     }
 
     const msg = await message.reply(
-      makeInfoCard("Removing Repository", `Removing **${name}** and its installed modules...`),
+      makeInfoCard(
+        "Removing Repository",
+        `Removing **${name}** and its installed modules...`,
+      ),
     );
 
     try {
@@ -117,7 +120,9 @@ export class RepoCommand extends BaseSubcommand {
         ),
       );
     } catch (err: unknown) {
-      await msg.edit(makeErrorCard("Failed to Remove Repository", errorFrom(err).message));
+      await msg.edit(
+        makeErrorCard("Failed to Remove Repository", errorFrom(err).message),
+      );
     }
   }
 

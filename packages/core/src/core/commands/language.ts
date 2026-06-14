@@ -1,5 +1,8 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { type ApplicationCommandRegistry, container } from "@sapphire/framework";
+import {
+  type ApplicationCommandRegistry,
+  container,
+} from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import {
   ApplicationIntegrationType,

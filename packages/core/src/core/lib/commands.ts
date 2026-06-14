@@ -321,9 +321,7 @@ export abstract class BaseCommand extends Command implements CommandLike {
     return replyInfo(interaction, title, body, opts);
   }
 
-  public fetchT(
-    target: ChatInputCommandInteraction | Message,
-  ): Promise<LumiT> {
+  public fetchT(target: ChatInputCommandInteraction | Message): Promise<LumiT> {
     return fetchT(target) as unknown as Promise<LumiT>;
   }
 
@@ -409,9 +407,7 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
     return replyInfo(interaction, title, body, opts);
   }
 
-  public fetchT(
-    target: ChatInputCommandInteraction | Message,
-  ): Promise<LumiT> {
+  public fetchT(target: ChatInputCommandInteraction | Message): Promise<LumiT> {
     return fetchT(target) as unknown as Promise<LumiT>;
   }
 
