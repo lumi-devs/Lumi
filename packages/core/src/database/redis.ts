@@ -187,14 +187,6 @@ export class InvalidationBus {
   #started = false;
   #startPromise: Promise<void> | null = null;
   #handlerAttached = false;
-  #onMessage = (_channel: string, payload: string) => {
-    try {
-      const { keys } = JSON.parse(payload) as { keys: string[] };
-      for (const fn of this.#listeners) fn(keys);
-    } catch (err: unknown) {
-      logError("Invalidation: malformed payload", err);
-    }
-  };
 
   public constructor(subscriber: Redis) {
     this.#subscriber = subscriber;
@@ -212,18 +204,6 @@ export class InvalidationBus {
       this.#startPromise = null;
     });
     return this.#startPromise;
-  }
-
-  async #doStart(): Promise<void> {
-    if (this.#started) return;
-    // Attach the message handler exactly once for the lifetime of this bus —
-    // start()/stop() cycles must not stack duplicate listeners.
-    if (!this.#handlerAttached) {
-      this.#subscriber.on("message", this.#onMessage);
-      this.#handlerAttached = true;
-    }
-    await this.#subscriber.subscribe(INVALIDATION_CHANNEL);
-    this.#started = true;
   }
 
   /** Delete locally and broadcast to peers. */
@@ -256,4 +236,25 @@ export class InvalidationBus {
       .quit()
       .catch((err: unknown) => logError("Redis: quit failed", err));
   }
+
+  async #doStart(): Promise<void> {
+    if (this.#started) return;
+    // Attach the message handler exactly once for the lifetime of this bus —
+    // start()/stop() cycles must not stack duplicate listeners.
+    if (!this.#handlerAttached) {
+      this.#subscriber.on("message", this.#onMessage);
+      this.#handlerAttached = true;
+    }
+    await this.#subscriber.subscribe(INVALIDATION_CHANNEL);
+    this.#started = true;
+  }
+
+  #onMessage = (_channel: string, payload: string) => {
+    try {
+      const { keys } = JSON.parse(payload) as { keys: string[] };
+      for (const fn of this.#listeners) fn(keys);
+    } catch (err: unknown) {
+      logError("Invalidation: malformed payload", err);
+    }
+  };
 }

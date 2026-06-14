@@ -4,6 +4,7 @@ import { container, type Piece } from "@sapphire/framework";
 import { time, TimestampStyles, userMention } from "@discordjs/formatters";
 import { Colors } from "discord.js";
 import { makeCard } from "#utilities/cards.js";
+import { isNullish } from "@sapphire/utilities";
 import type { AuditEntry } from "#core/lib/loggable.js";
 
 @ApplyOptions<Piece.Options>({ name: "guild-log" })
@@ -20,10 +21,9 @@ export class GuildLogService extends Service {
     const channel = container.client.channels.cache.get(logChannelId);
     if (!channel?.isTextBased() || !("send" in channel)) return;
 
-    const title =
-      entry.caseNumber != null
-        ? `${entry.action} — Case #${entry.caseNumber}`
-        : entry.action;
+    const title = isNullish(entry.caseNumber)
+      ? entry.action
+      : `${entry.action} — Case #${entry.caseNumber}`;
 
     const lines = [
       `**Target**: ${userMention(entry.targetId)} (${entry.targetId})`,
