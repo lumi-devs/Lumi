@@ -39,7 +39,9 @@ export function isSupportedLanguage(
 
 // Absolute path to the language directory. The plugin reads
 // `<root>/<lng>/<ns>.json`, so this points at `packages/core/src/languages/`.
-const LANGUAGE_ROOT = fileURLToPath(new URL("../../languages/", import.meta.url));
+const LANGUAGE_ROOT = fileURLToPath(
+  new URL("../../languages/", import.meta.url),
+);
 
 /**
  * Resolves the language for a translation target. Guild context wins (so a whole

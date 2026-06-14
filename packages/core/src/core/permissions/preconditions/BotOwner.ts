@@ -22,7 +22,9 @@ export class BotOwnerPrecondition extends Precondition {
     return actual >= PermissionLevel.BOT_OWNER
       ? this.ok()
       : this.error({
+          identifier: "PermissionDenied",
           message: `You need at least **Bot Owner** level to use this.`,
+          context: { i18nKey: "preconditions:botOwner" },
         });
   }
 }

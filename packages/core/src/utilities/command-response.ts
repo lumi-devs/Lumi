@@ -5,6 +5,7 @@ import {
   type ContextMenuCommandDeniedPayload,
   type MessageCommandDeniedPayload,
 } from "@sapphire/framework";
+import { resolveKey } from "@sapphire/plugin-i18next";
 import {
   MessageFlags,
   type RepliableInteraction,
@@ -109,7 +110,26 @@ export async function handleDenied(
   if (payload.context.silent) return;
 
   const title = ERROR_TITLES[error.identifier] ?? "Command Error";
-  const card = ephemeralCard(makeErrorCard(title, error.message));
+
+  // Preconditions/commands may attach an i18n key (and interpolation vars) in
+  // the UserError context. When present we render the body in the target's
+  // language; the English `error.message` is the fallback if the key is missing.
+  const ctx = error.context as
+    | ({ i18nKey?: string } & Record<string, unknown>)
+    | undefined;
+  let body = error.message;
+  if (ctx?.i18nKey) {
+    try {
+      body = await resolveKey(interactionOrMessage, ctx.i18nKey, {
+        ...ctx,
+        defaultValue: error.message,
+      });
+    } catch (err: unknown) {
+      container.logger.warn("[CommandDenied] i18n resolve failed:", err);
+    }
+  }
+
+  const card = ephemeralCard(makeErrorCard(title, body));
 
   try {
     if ("showModal" in interactionOrMessage) {
