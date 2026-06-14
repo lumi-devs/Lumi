@@ -1,0 +1,8 @@
+{
+  "moderator": "Necesitas al menos el nivel **Moderador** para usar esto.",
+  "administrator": "Necesitas al menos el nivel **Administrador** para usar esto.",
+  "guildOwner": "Solo el propietario del servidor puede usar esto.",
+  "botOwner": "Solo el propietario del bot puede usar esto.",
+  "moduleDisabled": "El módulo **{{module}}** está desactivado en este servidor.",
+  "permissionDenied": "No tienes permiso para usar esto aquí."
+}

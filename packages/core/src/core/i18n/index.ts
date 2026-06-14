@@ -26,7 +26,7 @@ export const DEFAULT_LANGUAGE = "en-US";
  *
  * Adding a language is purely additive: drop in the directory, list it here.
  */
-export const SUPPORTED_LANGUAGES = ["en-US"] as const;
+export const SUPPORTED_LANGUAGES = ["en-US", "de", "es-ES", "fr"] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 const supported = new Set<string>(SUPPORTED_LANGUAGES);
