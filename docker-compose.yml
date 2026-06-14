@@ -217,6 +217,10 @@ services:
     command: ["bun", "apps/api/src/main.ts"]
     environment:
       <<: *lumi-env
+      # api re-imports @lumi/worker/main; run it in the worker role so it has no
+      # Discord WS. Without this it defaults to `monolith` and opens a second
+      # gateway session with the bot token, conflicting with the worker.
+      LUMI_ROLE: "worker"
       # api is a thin RPC handler; smaller heap budget than the worker.
       NODE_OPTIONS: "--max-old-space-size=256"
     depends_on:
