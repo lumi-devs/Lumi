@@ -18,5 +18,27 @@
   "languageReset": "The language for this server has been reset to the default (**{{language}}**).",
   "languageUnsupportedTitle": "Unsupported Language",
   "languageUnsupported": "**{{language}}** is not supported. Supported languages: {{list}}.",
-  "languageAlreadySet": "This server already uses **{{language}}**."
+  "languageAlreadySet": "This server already uses **{{language}}**.",
+
+  "prefixName": "prefix",
+  "prefixDescription": "View or change the command prefix for this server",
+  "prefixViewName": "view",
+  "prefixViewDescription": "View the current prefix",
+  "prefixSetName": "set",
+  "prefixSetDescription": "Set a new prefix",
+  "prefixResetName": "reset",
+  "prefixResetDescription": "Reset the prefix to the default",
+  "prefixOptionName": "new_prefix",
+  "prefixOptionDescription": "The new prefix (max 5 chars)",
+
+  "prefixCurrentTitle": "Current Prefix",
+  "prefixCurrent": "The current prefix for this server is `{{prefix}}`.",
+  "prefixUpdatedTitle": "Prefix Updated",
+  "prefixUpdated": "The prefix for this server has been set to `{{prefix}}`.",
+  "prefixResetTitle": "Prefix Reset",
+  "prefixReset": "The prefix for this server has been reset to the default.",
+  "prefixTooLongTitle": "Invalid Prefix",
+  "prefixTooLong": "Prefix must be 5 characters or less.",
+  "prefixMissingTitle": "Missing Arguments",
+  "prefixMissing": "Usage: `{{usage}}`"
 }
