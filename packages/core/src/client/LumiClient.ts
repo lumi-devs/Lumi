@@ -55,6 +55,7 @@ import { pathToFileURL } from "node:url";
 import { DatabaseService } from "#root/prisma/DatabaseService.js";
 import { ServiceStore } from "#core/module-system/ServiceStore.js";
 import { BotConfig } from "#utilities/config.js";
+import { buildI18nOptions } from "#core/i18n/index.js";
 import { PinoSapphireLogger } from "#core/logging/PinoLogger.js";
 import {
   streamLength,
@@ -191,6 +192,7 @@ export class LumiClient extends SapphireClient {
       logger: {
         instance: new PinoSapphireLogger(),
       },
+      i18n: buildI18nOptions(),
       tasks: {
         bull: {
           connection: {

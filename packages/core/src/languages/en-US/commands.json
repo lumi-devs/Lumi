@@ -1,0 +1,22 @@
+{
+  "languageName": "language",
+  "languageDescription": "View or change the language Lumi uses in this server",
+  "languageViewName": "view",
+  "languageViewDescription": "Show the language currently used in this server",
+  "languageSetName": "set",
+  "languageSetDescription": "Set the language Lumi uses in this server",
+  "languageResetName": "reset",
+  "languageResetDescription": "Reset the language to the server default",
+  "languageOptionName": "language",
+  "languageOptionDescription": "The language to use",
+
+  "languageCurrentTitle": "Server Language",
+  "languageCurrent": "This server currently uses **{{language}}**.",
+  "languageUpdatedTitle": "Language Updated",
+  "languageUpdated": "The language for this server has been set to **{{language}}**.",
+  "languageResetTitle": "Language Reset",
+  "languageReset": "The language for this server has been reset to the default (**{{language}}**).",
+  "languageUnsupportedTitle": "Unsupported Language",
+  "languageUnsupported": "**{{language}}** is not supported. Supported languages: {{list}}.",
+  "languageAlreadySet": "This server already uses **{{language}}**."
+}
