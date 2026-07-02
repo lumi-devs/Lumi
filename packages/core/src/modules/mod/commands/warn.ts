@@ -1,7 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry, type Args } from "@sapphire/framework";
 import {
-  ApplicationIntegrationType,
   Colors,
   type ChatInputCommandInteraction,
   type Message,
@@ -10,7 +9,11 @@ import {
 } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import { makeSuccessCard, makeErrorCard } from "#utilities/cards.js";
+import {
+  makeSuccessCard,
+  makeErrorCard,
+  type CardReply,
+} from "#utilities/cards.js";
 import { logToChannel } from "../lib/helpers.js";
 import { incrementWarnCount, checkThresholds } from "../lib/thresholds.js";
 
@@ -30,7 +33,7 @@ export class WarnCommand extends BaseCommand {
         .setDescription(this.description)
         .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
         .setContexts(...this.contexts)
-        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall])
+        .setIntegrationTypes(this.integrationTypes)
         .addUserOption((o) =>
           o
             .setName("member")
@@ -84,7 +87,7 @@ export class WarnCommand extends BaseCommand {
     member: GuildMember,
     actorId: string,
     reason: string,
-    reply: (card: ReturnType<typeof makeSuccessCard>) => Promise<unknown>,
+    reply: (card: CardReply) => unknown,
   ) {
     const actor = await this.container.client.users.fetch(actorId);
     const c = await this.container.db.moderation.createModerationCase({

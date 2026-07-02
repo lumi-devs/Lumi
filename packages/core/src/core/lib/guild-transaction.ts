@@ -1,3 +1,4 @@
+import { container } from "@sapphire/framework";
 import type { Guild } from "@prisma/client";
 import type { DatabaseClient } from "#database/client.js";
 import type { Redis } from "ioredis";
@@ -17,7 +18,6 @@ export async function configLock(
   guildId: string,
   moduleName: string,
 ): Promise<() => void> {
-  const { container } = await import("@sapphire/framework");
   const release = await acquireRedisLock(
     container.redis,
     CONFIG_LOCK(guildId, moduleName),
@@ -39,7 +39,6 @@ export class GuildWriteTransaction {
     public readonly settings: Readonly<Guild>,
     private readonly release: () => Promise<void>,
     private readonly guildId: string,
-    private readonly redis: Redis,
     private readonly prisma: DatabaseClient,
   ) {}
 
@@ -72,7 +71,9 @@ export class GuildWriteTransaction {
       const keysToInvalidate = [RedisKeys.guildSettings(this.guildId)];
       if ("prefix" in this.#changes)
         keysToInvalidate.push(RedisKeys.guildPrefixes(this.guildId));
-      await this.redis.del(...keysToInvalidate);
+      // Use the InvalidationBus (delete + broadcast) so peer processes drop
+      // their cached copies too — a raw redis.del only evicts locally.
+      await container.invalidation.invalidate(...keysToInvalidate);
 
       this.#hasChanges = false;
     } finally {
@@ -113,7 +114,7 @@ export async function createGuildTransaction(
       settings = await prisma.guild.create({ data: { id: guildId } });
     }
 
-    return new GuildWriteTransaction(settings, release, guildId, redis, prisma);
+    return new GuildWriteTransaction(settings, release, guildId, prisma);
   } catch (err) {
     await release();
     throw err;

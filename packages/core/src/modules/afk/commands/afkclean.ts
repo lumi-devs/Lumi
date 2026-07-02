@@ -4,6 +4,7 @@ import type { Message } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import { makeInfoCard, makeSuccessCard } from "#utilities/cards.js";
+import type AfkService from "../services/AfkService.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "afkclean",
@@ -13,10 +14,8 @@ import { makeInfoCard, makeSuccessCard } from "#utilities/cards.js";
   module: "afk",
 })
 export default class AfkCleanCommand extends BaseCommand {
-  private get afkService(): import("../services/AfkService.js").default {
-    return this.container.stores
-      .get("services")
-      .get("afk") as import("../services/AfkService.js").default;
+  private get afkService(): AfkService {
+    return this.container.stores.get("services").get("afk") as AfkService;
   }
 
   public override async messageRun(message: Message) {

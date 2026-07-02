@@ -15,7 +15,7 @@ import {
   type AnySelectMenuInteraction,
   type ModalSubmitInteraction,
 } from "discord.js";
-import { BaseInteractionHandler } from "../lib/interaction-handler.js";
+import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
 import { Emojis } from "#utilities/assets.js";
 import { ephemeralCard, makeErrorCard } from "#utilities/cards.js";
 import { FieldType } from "#core/module-system/Module.js";
@@ -39,7 +39,6 @@ const accessDenied = () =>
     message: `${Emojis.CROSS} You need the Admin permission level to manage configuration.`,
   });
 
-// ── Buttons ────────────────────────────────────────────────────────────────
 
 @ApplyOptions<InteractionHandler.Options>({
   name: "config-panel-button",

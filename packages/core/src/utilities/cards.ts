@@ -42,6 +42,11 @@ export const noPingCard = (card: CardReply): CardReply => ({
   allowedMentions: { parse: [] },
 });
 
+const smallSeparator = (divider: boolean): SeparatorBuilder =>
+  new SeparatorBuilder()
+    .setSpacing(SeparatorSpacingSize.Small)
+    .setDivider(divider);
+
 function buildContainer(
   color: number | null,
   title: string,
@@ -55,32 +60,19 @@ function buildContainer(
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(`## ${title}`),
   );
-  c.addSeparatorComponents(
-    new SeparatorBuilder()
-      .setSpacing(SeparatorSpacingSize.Small)
-      .setDivider(opts.divider ?? true),
-  );
+  c.addSeparatorComponents(smallSeparator(opts.divider ?? true));
 
   const parts = Array.isArray(body) ? body : [body];
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
-    if (i > 0)
-      c.addSeparatorComponents(
-        new SeparatorBuilder()
-          .setSpacing(SeparatorSpacingSize.Small)
-          .setDivider(true),
-      );
+    if (i > 0) c.addSeparatorComponents(smallSeparator(true));
     if (part && part.length > 0) {
       c.addTextDisplayComponents(new TextDisplayBuilder().setContent(part));
     }
   }
 
   if (opts.footer) {
-    c.addSeparatorComponents(
-      new SeparatorBuilder()
-        .setSpacing(SeparatorSpacingSize.Small)
-        .setDivider(false),
-    );
+    c.addSeparatorComponents(smallSeparator(false));
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(`-# ${opts.footer}`),
     );

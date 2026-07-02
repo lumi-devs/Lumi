@@ -70,13 +70,14 @@ export default class AfkService extends Service {
     const entries = await getAllAfkEntries();
     let removed = 0;
 
+    const shardCount = this.container.client.shard?.count ?? 1;
+    const myShards = this.container.client.shard?.ids ?? [0];
+
     for (const entry of entries) {
-      const shardCount = this.container.client.shard?.count ?? 1;
       const shardId = Number(
         (BigInt(entry.guildId) >> 22n) % BigInt(shardCount),
       );
-      if (!(this.container.client.shard?.ids ?? [0]).includes(shardId))
-        continue;
+      if (!myShards.includes(shardId)) continue;
 
       const guild = this.container.client.guilds.cache.get(entry.guildId);
       if (!guild) {

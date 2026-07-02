@@ -109,6 +109,19 @@ function header(data: PingData, subtitle?: string): SectionBuilder {
     );
 }
 
+/** Shared scaffold for every detail card: accent color, header section, divider. */
+function detailCard(
+  color: number,
+  subtitle: string,
+  data: PingData,
+): ContainerBuilder {
+  const c = new ContainerBuilder();
+  c.setAccentColor(color);
+  c.addSectionComponents(header(data, subtitle));
+  c.addSeparatorComponents(sep(true));
+  return c;
+}
+
 // ── Overview card (Stacked Executive) ─────────────────────────────────────────
 
 export function buildOverviewCard(
@@ -168,10 +181,7 @@ export function buildOverviewCard(
 // ── Gateway detail (Stacked Executive) ────────────────────────────────────────
 
 export function buildGatewayCard(data: PingData): ContainerBuilder {
-  const c = new ContainerBuilder();
-  c.setAccentColor(Colors.LAVENDER);
-  c.addSectionComponents(header(data, "📡 Gateway Diagnostics Engine"));
-  c.addSeparatorComponents(sep(true));
+  const c = detailCard(Colors.LAVENDER, "📡 Gateway Diagnostics Engine", data);
 
   const node = data.gatewayNode === "Unknown" ? "Analyzing…" : data.gatewayNode;
 
@@ -225,10 +235,7 @@ export function buildGatewayCard(data: PingData): ContainerBuilder {
 // ── Engine detail (Stacked Executive) ─────────────────────────────────────────
 
 export function buildEngineCard(data: PingData): ContainerBuilder {
-  const c = new ContainerBuilder();
-  c.setAccentColor(Colors.LEMON);
-  c.addSectionComponents(header(data, "🏎️ Runtime Performance Audit"));
-  c.addSeparatorComponents(sep(true));
+  const c = detailCard(Colors.LEMON, "🏎️ Runtime Performance Audit", data);
 
   const heapPct = ((data.heapUsed / data.heapTotal) * 100).toFixed(1);
   c.addTextDisplayComponents(
@@ -272,12 +279,11 @@ export function buildEngineCard(data: PingData): ContainerBuilder {
 // ── Host detail (Stacked Executive) ───────────────────────────────────────────
 
 export function buildHostCard(data: PingData): ContainerBuilder {
-  const c = new ContainerBuilder();
-  c.setAccentColor(Colors.AMBER);
-  c.addSectionComponents(
-    header(data, `${Emojis.CPU} Bare Metal Infrastructure`),
+  const c = detailCard(
+    Colors.AMBER,
+    `${Emojis.CPU} Bare Metal Infrastructure`,
+    data,
   );
-  c.addSeparatorComponents(sep(true));
 
   c.addTextDisplayComponents(
     txt(
@@ -333,12 +339,11 @@ export function buildHostCard(data: PingData): ContainerBuilder {
 // ── Postgres detail (Stacked Executive) ───────────────────────────────────────
 
 export function buildPostgresCard(data: PingData): ContainerBuilder {
-  const c = new ContainerBuilder();
-  c.setAccentColor(Colors.PEACH);
-  c.addSectionComponents(
-    header(data, `${Emojis.DATABASE} Relational Database Audit`),
+  const c = detailCard(
+    Colors.PEACH,
+    `${Emojis.DATABASE} Relational Database Audit`,
+    data,
   );
-  c.addSeparatorComponents(sep(true));
 
   c.addTextDisplayComponents(
     txt(
@@ -388,12 +393,11 @@ export function buildPostgresCard(data: PingData): ContainerBuilder {
 // ── Redis detail (Stacked Executive) ──────────────────────────────────────────
 
 export function buildRedisCard(data: PingData): ContainerBuilder {
-  const c = new ContainerBuilder();
-  c.setAccentColor(Colors.ROSE);
-  c.addSectionComponents(
-    header(data, `${Emojis.CACHE} In-Memory Cache Performance`),
+  const c = detailCard(
+    Colors.ROSE,
+    `${Emojis.CACHE} In-Memory Cache Performance`,
+    data,
   );
-  c.addSeparatorComponents(sep(true));
 
   c.addTextDisplayComponents(
     txt(
@@ -433,12 +437,11 @@ export function buildRedisCard(data: PingData): ContainerBuilder {
 // ── RabbitMQ detail (Stacked Executive) ───────────────────────────────────────
 
 export function buildRabbitCard(data: PingData): ContainerBuilder {
-  const c = new ContainerBuilder();
-  c.setAccentColor(Colors.MINT);
-  c.addSectionComponents(
-    header(data, `${Emojis.QUEUE} Distributed Event Pipeline`),
+  const c = detailCard(
+    Colors.MINT,
+    `${Emojis.QUEUE} Distributed Event Pipeline`,
+    data,
   );
-  c.addSeparatorComponents(sep(true));
 
   if (data.rabbitConnected) {
     c.addTextDisplayComponents(
@@ -477,12 +480,11 @@ export function buildRabbitCard(data: PingData): ContainerBuilder {
 // ── Bot Intelligence detail (Stacked Executive) ───────────────────────────────
 
 export function buildBotCard(data: PingData): ContainerBuilder {
-  const c = new ContainerBuilder();
-  c.setAccentColor(Colors.SAKURA);
-  c.addSectionComponents(
-    header(data, `${Emojis.BOT} Core Intelligence Diagnostics`),
+  const c = detailCard(
+    Colors.SAKURA,
+    `${Emojis.BOT} Core Intelligence Diagnostics`,
+    data,
   );
-  c.addSeparatorComponents(sep(true));
 
   const memPerGuild =
     data.guilds > 0 ? (data.rss / 1024 / 1024 / data.guilds).toFixed(2) : "0";

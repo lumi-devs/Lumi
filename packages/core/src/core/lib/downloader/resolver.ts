@@ -9,6 +9,13 @@ import { logError } from "#utilities/errors.js";
 
 const execFileAsync = promisify(execFile);
 
+/** Rejection handler that rethrows a git/bun execFile failure as a clean Error with stderr. */
+const execError =
+  (context: string) =>
+  (err: NodeJS.ErrnoException & { stderr?: string }): never => {
+    throw new Error(`${context}: ${(err.stderr ?? err.message).trim()}`);
+  };
+
 // Disallow dots to prevent traversal, and a leading `-` so a value can never be
 // parsed as a flag when spread into an execFile() argv (argument injection).
 const repoSchema = z.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
@@ -77,13 +84,7 @@ export class DownloadResolver {
         branch !== "default"
           ? ["-C", repoPath, "pull", "origin", branch]
           : ["-C", repoPath, "pull"];
-      await execFileAsync("git", pullArgs).catch(
-        (err: NodeJS.ErrnoException & { stderr?: string }) => {
-          throw new Error(
-            `Git pull failed: ${(err.stderr ?? err.message).trim()}`,
-          );
-        },
-      );
+      await execFileAsync("git", pullArgs).catch(execError("Git pull failed"));
     } else {
       container.logger.info(`[Downloader] Cloning repo: ${url}`);
       const cloneArgs = ["clone"];
@@ -91,11 +92,7 @@ export class DownloadResolver {
       // `--` terminates option parsing: url/repoPath can never be read as flags.
       cloneArgs.push("--", url, repoPath);
       await execFileAsync("git", cloneArgs).catch(
-        (err: NodeJS.ErrnoException & { stderr?: string }) => {
-          throw new Error(
-            `Git clone failed: ${(err.stderr ?? err.message).trim()}`,
-          );
-        },
+        execError("Git clone failed"),
       );
     }
   }
@@ -202,11 +199,7 @@ export class DownloadResolver {
 
       // Run 'bun add' inside the module's own folder to keep dependencies completely isolated
       await execFileAsync("bun", ["add", ...reqs], { cwd: sourcePath }).catch(
-        (err: NodeJS.ErrnoException & { stderr?: string }) => {
-          throw new Error(
-            `Requirement installation failed: ${(err.stderr ?? err.message).trim()}`,
-          );
-        },
+        execError("Requirement installation failed"),
       );
     }
 

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/member-ordering -- registerRpcHandler calls ordered by RPC command semantics, not class member order */
-import { Module } from "../module-system/Module.js";
+import { Module } from "#core/module-system/Module.js";
 import { container, type Piece } from "@sapphire/framework";
 import type { DownloaderService } from "#core/services/DownloaderService.js";
 import { registerRpcHandler, deregisterRpcHandler } from "#lib/rabbit.js";
@@ -11,20 +11,30 @@ import {
   type ModuleInstallPayload,
   type ModuleUninstallPayload,
 } from "@lumi/contracts";
-import { resolver, ADDON_MODULES_ROOT } from "../lib/downloader/resolver.js";
+import {
+  resolver,
+  ADDON_MODULES_ROOT,
+} from "#core/lib/downloader/resolver.js";
 import {
   executeGdprDeletion,
   GdprDeletionError,
   RequesterType,
-} from "../lib/gdpr.js";
+} from "#core/lib/gdpr.js";
 import { Emojis } from "#utilities/assets.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 
-import "../sentry/breadcrumb.js";
+import "#core/sentry/breadcrumb.js";
 
 const SnowflakeSchema = z.string().regex(/^\d{17,20}$/);
+
+/** Validate an RPC payload against its schema, throwing a uniform error on mismatch. */
+function parsePayload<T>(schema: z.ZodType<T>, data: unknown): T {
+  const parsed = schema.safeParse(data);
+  if (!parsed.success) throw new Error(`Bad payload: ${parsed.error.message}`);
+  return parsed.data;
+}
 
 const GdprDeleteSchema: z.ZodType<GdprDeletePayload> = z.object({
   userId: SnowflakeSchema,
@@ -72,10 +82,7 @@ export class CoreModule extends Module {
 
     // ── GDPR Deletion Endpoint ───────────────────────────────────────────
     registerRpcHandler(RPC_ACTIONS.gdprDelete, async (req) => {
-      const parsed = GdprDeleteSchema.safeParse(req.data);
-      if (!parsed.success)
-        throw new Error(`Bad payload: ${parsed.error.message}`);
-      const { userId, requester } = parsed.data;
+      const { userId, requester } = parsePayload(GdprDeleteSchema, req.data);
 
       try {
         await executeGdprDeletion(userId, requester as RequesterType);
@@ -90,10 +97,7 @@ export class CoreModule extends Module {
 
     // ── 1. Add Repository ────────────────────────────────────────────────
     registerRpcHandler(RPC_ACTIONS.repoAdd, async (req) => {
-      const parsed = RepoAddSchema.safeParse(req.data);
-      if (!parsed.success)
-        throw new Error(`Bad payload: ${parsed.error.message}`);
-      const { name, url, branch } = parsed.data;
+      const { name, url, branch } = parsePayload(RepoAddSchema, req.data);
 
       const service = container.stores
         .get("services")
@@ -111,10 +115,7 @@ export class CoreModule extends Module {
 
     // ── 3. List Modules in Repo ──────────────────────────────────────────
     registerRpcHandler(RPC_ACTIONS.repoModules, async (req) => {
-      const parsed = RepoModulesSchema.safeParse(req.data);
-      if (!parsed.success)
-        throw new Error(`Bad payload: ${parsed.error.message}`);
-      const { repoName } = parsed.data;
+      const { repoName } = parsePayload(RepoModulesSchema, req.data);
 
       const modules = await resolver.getModulesInRepo(repoName);
 
@@ -138,10 +139,10 @@ export class CoreModule extends Module {
 
     // ── 4. Install Module ────────────────────────────────────────────────
     registerRpcHandler(RPC_ACTIONS.moduleInstall, async (req) => {
-      const parsed = ModuleInstallSchema.safeParse(req.data);
-      if (!parsed.success)
-        throw new Error(`Bad payload: ${parsed.error.message}`);
-      const { repoName, moduleName } = parsed.data;
+      const { repoName, moduleName } = parsePayload(
+        ModuleInstallSchema,
+        req.data,
+      );
 
       const repo = await container.db.downloader.readDownloaderRepo(repoName);
       if (!repo)
@@ -181,10 +182,7 @@ export class CoreModule extends Module {
 
     // ── 5. Uninstall Module ──────────────────────────────────────────────
     registerRpcHandler(RPC_ACTIONS.moduleUninstall, async (req) => {
-      const parsed = ModuleUninstallSchema.safeParse(req.data);
-      if (!parsed.success)
-        throw new Error(`Bad payload: ${parsed.error.message}`);
-      const { moduleName } = parsed.data;
+      const { moduleName } = parsePayload(ModuleUninstallSchema, req.data);
 
       await container.moduleStore.unload(moduleName);
 

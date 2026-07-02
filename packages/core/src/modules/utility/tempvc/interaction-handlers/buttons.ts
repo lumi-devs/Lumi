@@ -30,7 +30,7 @@ import {
 } from "#utilities/cards.js";
 import { getVcRecord, removeVcRecord, type VcRecord } from "../data.js";
 import { buildPanel } from "../ui/panel.js";
-import { TVC } from "../keys.js";
+import { TVC, TempVcKeys } from "../keys.js";
 import type TempVcService from "../services/TempVcService.js";
 
 const SELECT_ACTIONS: Record<string, string> = {
@@ -301,7 +301,7 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
     }
 
     const guard = await this.service.redis.set(
-      `lumi:tempvc:claim:${channel.id}`,
+      TempVcKeys.claimGuard(channel.id),
       member.id,
       "PX",
       3000,

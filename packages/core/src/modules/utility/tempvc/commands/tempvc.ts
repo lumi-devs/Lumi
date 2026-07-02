@@ -3,7 +3,6 @@ import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import {
-  ApplicationIntegrationType,
   ChannelType,
   MessageFlags,
   channelMention,
@@ -49,7 +48,7 @@ export class TempVcCommand extends BaseSubcommand {
         .setDescription(this.description)
         .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
         .setContexts(...this.contexts)
-        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall])
+        .setIntegrationTypes(this.integrationTypes)
         .addSubcommand((sub) =>
           sub
             .setName("panel")

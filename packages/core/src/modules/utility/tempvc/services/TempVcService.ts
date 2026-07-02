@@ -285,44 +285,48 @@ export default class TempVcService extends Service {
     }
   }
 
-  public async setLock(
+  public setLock(
     channel: VoiceBasedChannel,
     record: VcRecord,
     locked: boolean,
   ): Promise<VcRecord> {
-    const { everyone } = channel.guild.roles;
-    await channel.permissionOverwrites.edit(everyone, {
-      Connect: locked ? false : null,
-    });
-    if (locked) {
-      for (const m of channel.members.values()) {
-        await channel.permissionOverwrites
-          .edit(m.id, { Connect: true })
-          .catch(() => null);
-      }
-    }
-    const next = { ...record, locked };
-    await setVcRecord(channel.guild.id, channel.id, next);
-    return next;
+    return this.#setRestriction(channel, record, "Connect", locked, { locked });
   }
 
-  public async setHide(
+  public setHide(
     channel: VoiceBasedChannel,
     record: VcRecord,
     hidden: boolean,
   ): Promise<VcRecord> {
+    return this.#setRestriction(channel, record, "ViewChannel", hidden, {
+      hidden,
+    });
+  }
+
+  /**
+   * Toggle a per-channel restriction: deny `permission` for @everyone (or clear
+   * the override when inactive) and, while active, explicitly grant it to the
+   * current members so they keep access. Persists `patch` onto the record.
+   */
+  async #setRestriction(
+    channel: VoiceBasedChannel,
+    record: VcRecord,
+    permission: "Connect" | "ViewChannel",
+    active: boolean,
+    patch: Partial<VcRecord>,
+  ): Promise<VcRecord> {
     const { everyone } = channel.guild.roles;
     await channel.permissionOverwrites.edit(everyone, {
-      ViewChannel: hidden ? false : null,
+      [permission]: active ? false : null,
     });
-    if (hidden) {
+    if (active) {
       for (const m of channel.members.values()) {
         await channel.permissionOverwrites
-          .edit(m.id, { ViewChannel: true })
+          .edit(m.id, { [permission]: true })
           .catch(() => null);
       }
     }
-    const next = { ...record, hidden };
+    const next = { ...record, ...patch };
     await setVcRecord(channel.guild.id, channel.id, next);
     return next;
   }

@@ -60,17 +60,8 @@ export class ConfigRepository extends Repository {
     moduleName: string,
     key: string,
   ): Promise<unknown> {
-    const cacheKey = RedisKeys.guildConfig(moduleName, guildId);
-    const map = await this.getOrSet(
-      cacheKey,
-      RedisTTL.guildConfig,
-      async () => {
-        const configs = await this.prisma.guildModuleConfig.findMany({
-          where: { guildId, moduleName },
-        });
-        return Object.fromEntries(configs.map((c) => [c.configKey, c.value]));
-      },
-    );
+    // Same cache key + fetcher as getAllModuleConfig — delegate and index.
+    const map = await this.getAllModuleConfig(guildId, moduleName);
     return map[key] ?? null;
   }
 

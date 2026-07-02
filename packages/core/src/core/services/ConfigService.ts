@@ -17,9 +17,7 @@ export class ConfigService extends Service {
     const meta = this.container.moduleStore.getRecord(moduleName)?.meta;
     if (!meta) throw new Error(`No module named \`${moduleName}\`.`);
 
-    const field = meta.configFields?.find(
-      (f: import("#core/module-system/Module.js").ConfigField) => f.key === key,
-    );
+    const field = meta.configFields?.find((f) => f.key === key);
     if (!field) {
       throw new Error(
         `\`${key}\` is not a valid config key for **${moduleName}**.`,
