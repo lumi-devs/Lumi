@@ -11,7 +11,7 @@
 // pins the total (`auto` or unset = Discord's recommendation); SHARD_IDENTIFY_FORCE
 // bypasses the session-start-limit refusal.
 
-import { REST } from "@discordjs/rest";
+import { REST, DiscordAPIError } from "@discordjs/rest";
 import { Routes, type APIGatewayBotInfo } from "discord-api-types/v10";
 import { SimpleIdentifyThrottler } from "@discordjs/ws";
 import type { IIdentifyThrottler } from "@discordjs/ws";
@@ -38,7 +38,22 @@ export async function planShards(
   const env = opts.env ?? process.env;
 
   const rest = new REST({ version: "10" }).setToken(opts.token);
-  const info = (await rest.get(Routes.gatewayBot())) as APIGatewayBotInfo;
+  let info: APIGatewayBotInfo;
+  try {
+    info = (await rest.get(Routes.gatewayBot())) as APIGatewayBotInfo;
+  } catch (err) {
+    // This is the first Discord call any WS-holding role makes; surface the
+    // two overwhelmingly common first-run failures as clean, actionable errors
+    // instead of an uncaught DiscordAPIError stack.
+    if (err instanceof DiscordAPIError && err.status === 401) {
+      throw new Error(
+        "[ShardPlanner] Discord rejected the bot token (401 Unauthorized). Check BOT_TOKEN in your .env.",
+      );
+    }
+    throw new Error(
+      `[ShardPlanner] GET /gateway/bot failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
 
   const recommendedShards = info.shards;
   const ssl = info.session_start_limit;

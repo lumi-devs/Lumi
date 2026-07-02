@@ -21,7 +21,14 @@ if (
   });
 }
 
-const client = await LumiClient.bootstrap();
+const client = await LumiClient.bootstrap().catch((err: unknown): never => {
+  // Pre-login failures (shard planning, cluster join) happen before the
+  // Sapphire logger exists; log the message cleanly and exit non-zero.
+  console.error(
+    `[Startup] Fatal during bootstrap: ${err instanceof Error ? err.message : String(err)}`,
+  );
+  process.exit(1);
+});
 
 let shuttingDown = false;
 ["SIGINT", "SIGTERM"].forEach((sig) => {
