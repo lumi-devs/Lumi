@@ -6,7 +6,6 @@ import {
 } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import {
-  ApplicationIntegrationType,
   type ChatInputCommandInteraction,
   type Message,
 } from "discord.js";
@@ -18,6 +17,7 @@ import {
   ephemeralCard,
 } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
+import type { GuildSettingsService } from "#core/services/GuildSettingsService.js";
 
 const DEFAULT_PREFIX = ",";
 
@@ -47,7 +47,7 @@ export class PrefixCommand extends BaseSubcommand {
       applyLocalizedBuilder(builder, "commands:prefix")
         .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
         .setContexts(...this.contexts)
-        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall])
+        .setIntegrationTypes(this.integrationTypes)
         .addSubcommand((sub) =>
           applyLocalizedBuilder(sub, "commands:prefixSet").addStringOption(
             (opt) =>
@@ -65,12 +65,10 @@ export class PrefixCommand extends BaseSubcommand {
     );
   }
 
-  private get guildSettingsService(): import("#core/services/GuildSettingsService.js").GuildSettingsService {
+  private get guildSettingsService(): GuildSettingsService {
     return this.container.stores
       .get("services")
-      .get(
-        "guild-settings",
-      ) as import("#core/services/GuildSettingsService.js").GuildSettingsService;
+      .get("guild-settings") as GuildSettingsService;
   }
 
   public async messageRunView(message: Message) {

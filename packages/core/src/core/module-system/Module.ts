@@ -1,6 +1,6 @@
 import { Piece } from "@sapphire/framework";
 import type { Awaitable } from "@sapphire/utilities";
-import type { RequesterType } from "../lib/gdpr.js";
+import type { RequesterType } from "#core/lib/gdpr.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Emojis } from "#utilities/assets.js";
 import type { z } from "zod";

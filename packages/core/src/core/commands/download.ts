@@ -10,6 +10,7 @@ import {
 } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
 import { errorFrom } from "#utilities/errors.js";
+import type { DownloaderService } from "#core/services/DownloaderService.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "download",
@@ -23,12 +24,10 @@ import { errorFrom } from "#utilities/errors.js";
   ],
 })
 export class DownloadCommand extends BaseSubcommand {
-  private get downloaderService(): import("#core/services/DownloaderService.js").DownloaderService {
+  private get downloaderService(): DownloaderService {
     return this.container.stores
       .get("services")
-      .get(
-        "downloader",
-      ) as import("#core/services/DownloaderService.js").DownloaderService;
+      .get("downloader") as DownloaderService;
   }
 
   public async messageRunInstall(message: Message, args: Args): Promise<void> {

@@ -131,6 +131,6 @@ export default class TempVcSelectHandler extends BaseInteractionHandler {
     const target = channel.members.get(newOwnerId);
     if (!target) return "That member is no longer in the channel.";
     await this.service.setOwner(channel, record, newOwnerId);
-    return `Ownership transferred to <@${newOwnerId}>.`;
+    return `Ownership transferred to ${userMention(newOwnerId)}.`;
   }
 }

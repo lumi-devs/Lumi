@@ -21,6 +21,18 @@ function chatInputCommandPath(i: ChatInputCommandInteraction): string {
   return parts.join(":");
 }
 
+/**
+ * Collect a member's role IDs across both shapes: the REST/API form (`roles` is
+ * a `string[]`) and the gateway form (`roles` is a `GuildMemberRoleManager`).
+ */
+function memberRoleIds(
+  member: { roles: string[] | GuildMemberRoleManager } | null | undefined,
+): Set<string> {
+  const roles = member?.roles;
+  if (Array.isArray(roles)) return new Set(roles);
+  return new Set(roles?.cache.keys() ?? []);
+}
+
 @ApplyOptions<AllFlowsPrecondition.Options>({ position: 22 })
 export class PermissionOverridesPrecondition extends AllFlowsPrecondition {
   public override async chatInputRun(i: ChatInputCommandInteraction) {
@@ -30,14 +42,7 @@ export class PermissionOverridesPrecondition extends AllFlowsPrecondition {
     return this.#check(i.guild.id, chatInputCommandPath(i), {
       userId: i.user.id,
       channelId: i.channelId,
-      roleIds: new Set(
-        i.member?.roles instanceof Array
-          ? i.member.roles
-          : [
-              ...((i.member?.roles as GuildMemberRoleManager)?.cache.keys() ??
-                []),
-            ],
-      ),
+      roleIds: memberRoleIds(i.member),
       guild: i.guild,
     });
   }
@@ -53,7 +58,7 @@ export class PermissionOverridesPrecondition extends AllFlowsPrecondition {
     return this.#check(m.guild.id, command.name, {
       userId: m.author.id,
       channelId: m.channelId,
-      roleIds: new Set(m.member?.roles.cache.keys() ?? []),
+      roleIds: memberRoleIds(m.member),
       guild: m.guild,
     });
   }
@@ -66,14 +71,7 @@ export class PermissionOverridesPrecondition extends AllFlowsPrecondition {
     return this.#check(i.guild.id, i.commandName, {
       userId: i.user.id,
       channelId: i.channelId,
-      roleIds: new Set(
-        i.member?.roles instanceof Array
-          ? i.member.roles
-          : [
-              ...((i.member?.roles as GuildMemberRoleManager)?.cache.keys() ??
-                []),
-            ],
-      ),
+      roleIds: memberRoleIds(i.member),
       guild: i.guild,
     });
   }

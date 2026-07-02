@@ -3,15 +3,14 @@ import { BucketScope, Command } from "@sapphire/framework";
 import {
   type ChatInputCommandInteraction,
   type Message,
-  ApplicationIntegrationType,
 } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
-import { collectPingData } from "../lib/ping-collect.js";
+import { collectPingData } from "#core/lib/ping-collect.js";
 import {
   buildOverviewCard,
   PING_FLAGS,
   EPHEMERAL_FLAGS,
-} from "../lib/ping-cards.js";
+} from "#core/lib/ping-cards.js";
 
 const LIVE_UPDATES_DURATION = 60_000;
 const LIVE_UPDATE_INTERVAL = 10_000;
@@ -33,7 +32,7 @@ export class PingCommand extends BaseCommand {
         .setDescription(this.description)
         .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
         .setContexts(...this.contexts)
-        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall]),
+        .setIntegrationTypes(this.integrationTypes),
     );
   }
 

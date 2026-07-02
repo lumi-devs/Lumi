@@ -5,7 +5,7 @@ import {
 } from "@sapphire/framework";
 import { type ButtonInteraction } from "discord.js";
 import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
-import { buildHelpCard } from "../commands/help.js";
+import { buildHelpCard } from "#core/commands/help.js";
 
 @ApplyOptions<InteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,

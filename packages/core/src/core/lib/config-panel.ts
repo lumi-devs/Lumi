@@ -105,6 +105,14 @@ const row = (...components: MessageActionRowComponentBuilder[]): Row =>
     ...components,
   );
 
+/** The shared "← Back" navigation button; only the target customId varies. */
+const backButton = (customId: string): ButtonBuilder =>
+  new ButtonBuilder()
+    .setCustomId(customId)
+    .setLabel("Back")
+    .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+    .setStyle(ButtonStyle.Secondary);
+
 // ── Value formatting ──────────────────────────────────────────────────────
 
 export function formatFieldValue(field: ConfigField, value: unknown): string {
@@ -273,13 +281,7 @@ export function buildFeatureDetailView(
         .setStyle(ButtonStyle.Secondary),
     );
   }
-  secondary.push(
-    new ButtonBuilder()
-      .setCustomId("cfg:back")
-      .setLabel("Back")
-      .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
-      .setStyle(ButtonStyle.Secondary),
-  );
+  secondary.push(backButton("cfg:back"));
   rows.push(row(...secondary));
 
   // Boolean toggles (up to 5 per row)
@@ -415,15 +417,7 @@ export function buildHistoryView(
       ),
     );
   }
-  rows.push(
-    row(
-      new ButtonBuilder()
-        .setCustomId(`cfg:open:${meta.name}`)
-        .setLabel("Back")
-        .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
-        .setStyle(ButtonStyle.Secondary),
-    ),
-  );
+  rows.push(row(backButton(`cfg:open:${meta.name}`)));
 
   return noPingCard(
     makeCard(
@@ -487,11 +481,7 @@ export function buildOverridesView(
         .setLabel("Add Override")
         .setEmoji(Emojis.parse(Emojis.EDIT))
         .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`cfg:open:${meta.name}`)
-        .setLabel("Back")
-        .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
-        .setStyle(ButtonStyle.Secondary),
+      backButton(`cfg:open:${meta.name}`),
     ),
   );
 

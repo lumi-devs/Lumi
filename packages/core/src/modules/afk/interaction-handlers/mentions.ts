@@ -4,7 +4,12 @@ import {
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ButtonInteraction } from "discord.js";
-import { userMention, channelMention } from "@discordjs/formatters";
+import {
+  userMention,
+  channelMention,
+  hyperlink,
+  messageLink,
+} from "@discordjs/formatters";
 import { makeListCard } from "#utilities/cards.js";
 import { formatUptime } from "#utilities/time.js";
 import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
@@ -36,7 +41,7 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
       `${Emojis.MAIL} Recent Mentions`,
       mentions.map(
         (m) =>
-          `${userMention(m.authorId)} in ${channelMention(m.channelId)} — ${formatUptime(Date.now() - m.ts * 1000)} ago\n[Jump to Message](https://discord.com/channels/${interaction.guildId}/${m.channelId}/${m.messageId})`,
+          `${userMention(m.authorId)} in ${channelMention(m.channelId)} — ${formatUptime(Date.now() - m.ts * 1000)} ago\n${hyperlink("Jump to Message", messageLink(m.channelId, m.messageId, interaction.guildId!))}`,
       ),
       page,
       PAGE_SIZE,

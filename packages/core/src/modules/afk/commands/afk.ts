@@ -1,14 +1,11 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Args, Command } from "@sapphire/framework";
-import {
-  ApplicationIntegrationType,
-  type GuildMember,
-  type Message,
-} from "discord.js";
+import { type GuildMember, type Message } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
 import { makeInfoCard, ephemeralCard } from "#utilities/cards.js";
 import { AFK_MAX_REASON_LENGTH, sanitizeReason } from "../index.js";
 import { Emojis } from "#utilities/assets.js";
+import type AfkService from "../services/AfkService.js";
 
 function afkStatusText(
   status: "ALREADY_AFK" | "UPDATED_AFK" | "NEW_AFK",
@@ -46,7 +43,7 @@ export default class AfkCommand extends BaseCommand {
         .setDescription(this.description)
         .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
         .setContexts(...this.contexts)
-        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall])
+        .setIntegrationTypes(this.integrationTypes)
         .addStringOption((opt) =>
           opt
             .setName("reason")
@@ -57,10 +54,8 @@ export default class AfkCommand extends BaseCommand {
     );
   }
 
-  private get afkService(): import("../services/AfkService.js").default {
-    return this.container.stores
-      .get("services")
-      .get("afk") as import("../services/AfkService.js").default;
+  private get afkService(): AfkService {
+    return this.container.stores.get("services").get("afk") as AfkService;
   }
 
   public override async chatInputRun(

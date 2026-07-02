@@ -6,9 +6,24 @@ import {
   type ModuleTogglePayload,
   type ConfigSetPayload,
 } from "@lumi/contracts";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 const SnowflakeSchema = z.string().regex(/^\d{17,20}$/);
+
+/** Validate the RPC request's guildId, narrowing it to a non-null snowflake. */
+function requireGuildId(guildId: string | null | undefined): string {
+  if (!guildId || !SnowflakeSchema.safeParse(guildId).success)
+    throw new Error("guildId is required and must be a valid snowflake");
+  return guildId;
+}
+
+/** Validate an RPC payload against its schema, throwing a uniform error on mismatch. */
+function parsePayload<T>(schema: z.ZodType<T>, data: unknown): T {
+  const parsed = schema.safeParse(data);
+  if (!parsed.success) throw new Error(`Bad payload: ${parsed.error.message}`);
+  return parsed.data;
+}
 
 const ModuleToggleSchema: z.ZodType<ModuleTogglePayload> = z.object({
   moduleName: z.string().min(1),
@@ -35,19 +50,18 @@ export class DashboardModule extends Module {
 
     // ── 1. Get Guild Context ─────────────────────────────────────────────
     registerRpcHandler(RPC_ACTIONS.guildDashboardGet, async (req) => {
-      if (!req.guildId || !SnowflakeSchema.safeParse(req.guildId).success)
-        throw new Error("guildId is required and must be a valid snowflake");
+      const guildId = requireGuildId(req.guildId);
 
-      const guild = container.client.guilds.cache.get(req.guildId);
+      const guild = container.client.guilds.cache.get(guildId);
       if (!guild) throw new Error("Guild not found in bot cache");
 
-      const settings = await container.db.config.getGuildSettings(req.guildId);
+      const settings = await container.db.config.getGuildSettings(guildId);
       const modules = container.stores
         .get("modules")
         .loaded()
         .map(async (m) => {
           const enabled = await container.db.modules.isModuleGuildEnabled(
-            req.guildId!,
+            guildId,
             m.meta.name,
           );
 
@@ -55,7 +69,7 @@ export class DashboardModule extends Module {
           if (m.meta.configFields) {
             for (const field of m.meta.configFields) {
               config[field.key] = await container.db.config.getModuleConfig(
-                req.guildId!,
+                guildId,
                 m.meta.name,
                 field.key,
               );
@@ -83,19 +97,14 @@ export class DashboardModule extends Module {
 
     // ── 2. Toggle Module ─────────────────────────────────────────────────
     registerRpcHandler(RPC_ACTIONS.guildModuleToggle, async (req) => {
-      if (!req.guildId || !SnowflakeSchema.safeParse(req.guildId).success)
-        throw new Error("guildId is required and must be a valid snowflake");
-
-      const parsed = ModuleToggleSchema.safeParse(req.data);
-      if (!parsed.success)
-        throw new Error(`Bad payload: ${parsed.error.message}`);
-      const { moduleName, enabled } = parsed.data;
+      const guildId = requireGuildId(req.guildId);
+      const { moduleName, enabled } = parsePayload(ModuleToggleSchema, req.data);
 
       if (moduleName === "core")
         throw new Error("Cannot disable the core module");
 
       await container.db.modules.setModuleGuildEnabled(
-        req.guildId,
+        guildId,
         moduleName,
         enabled,
       );
@@ -104,19 +113,14 @@ export class DashboardModule extends Module {
 
     // ── 3. Update Config ─────────────────────────────────────────────────
     registerRpcHandler(RPC_ACTIONS.guildConfigSet, async (req) => {
-      if (!req.guildId || !SnowflakeSchema.safeParse(req.guildId).success)
-        throw new Error("guildId is required and must be a valid snowflake");
-
-      const parsed = ConfigSetSchema.safeParse(req.data);
-      if (!parsed.success)
-        throw new Error(`Bad payload: ${parsed.error.message}`);
-      const { moduleName, key, value } = parsed.data;
+      const guildId = requireGuildId(req.guildId);
+      const { moduleName, key, value } = parsePayload(ConfigSetSchema, req.data);
 
       await container.db.config.setModuleConfig(
-        req.guildId,
+        guildId,
         moduleName,
         key,
-        value as import("@prisma/client").Prisma.InputJsonValue,
+        value as Prisma.InputJsonValue,
       );
       return { success: true, key, value };
     });

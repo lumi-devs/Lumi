@@ -63,6 +63,15 @@ export interface CachedMember {
 export class RedisEntityCache {
   public constructor(private readonly redis: Redis) {}
 
+  /** Write a hash projection and (re)apply the shared entity TTL atomically. */
+  #putHash(key: string, fields: Record<string, string>): Promise<unknown> {
+    return this.redis
+      .multi()
+      .hmset(key, fields)
+      .expire(key, RedisTTL.entity)
+      .exec();
+  }
+
   public async guild(id: string): Promise<CachedGuild | null> {
     const h = await this.redis.hgetall(RedisKeys.entityGuild(id));
     if (!h.id) return null;
@@ -76,18 +85,13 @@ export class RedisEntityCache {
   }
 
   public async putGuild(g: CachedGuild): Promise<void> {
-    const k = RedisKeys.entityGuild(g.id);
-    await this.redis
-      .multi()
-      .hmset(k, {
-        id: g.id,
-        name: g.name,
-        ownerId: g.ownerId,
-        ...(g.locale ? { locale: g.locale } : {}),
-        cachedAt: String(g.cachedAt),
-      })
-      .expire(k, RedisTTL.entity)
-      .exec();
+    await this.#putHash(RedisKeys.entityGuild(g.id), {
+      id: g.id,
+      name: g.name,
+      ownerId: g.ownerId,
+      ...(g.locale ? { locale: g.locale } : {}),
+      cachedAt: String(g.cachedAt),
+    });
   }
 
   public async deleteGuild(id: string): Promise<void> {
@@ -108,19 +112,14 @@ export class RedisEntityCache {
   }
 
   public async putChannel(c: CachedChannel): Promise<void> {
-    const k = RedisKeys.entityChannel(c.id);
-    await this.redis
-      .multi()
-      .hmset(k, {
-        id: c.id,
-        guildId: c.guildId,
-        name: c.name,
-        type: String(c.type),
-        ...(c.parentId ? { parentId: c.parentId } : {}),
-        cachedAt: String(c.cachedAt),
-      })
-      .expire(k, RedisTTL.entity)
-      .exec();
+    await this.#putHash(RedisKeys.entityChannel(c.id), {
+      id: c.id,
+      guildId: c.guildId,
+      name: c.name,
+      type: String(c.type),
+      ...(c.parentId ? { parentId: c.parentId } : {}),
+      cachedAt: String(c.cachedAt),
+    });
   }
 
   public async deleteChannel(id: string): Promise<void> {
@@ -141,19 +140,14 @@ export class RedisEntityCache {
   }
 
   public async putRole(r: CachedRole): Promise<void> {
-    const k = RedisKeys.entityRole(r.id);
-    await this.redis
-      .multi()
-      .hmset(k, {
-        id: r.id,
-        guildId: r.guildId,
-        name: r.name,
-        permissions: r.permissions,
-        position: String(r.position),
-        cachedAt: String(r.cachedAt),
-      })
-      .expire(k, RedisTTL.entity)
-      .exec();
+    await this.#putHash(RedisKeys.entityRole(r.id), {
+      id: r.id,
+      guildId: r.guildId,
+      name: r.name,
+      permissions: r.permissions,
+      position: String(r.position),
+      cachedAt: String(r.cachedAt),
+    });
   }
 
   public async deleteRole(id: string): Promise<void> {
@@ -173,18 +167,13 @@ export class RedisEntityCache {
   }
 
   public async putUser(u: CachedUser): Promise<void> {
-    const k = RedisKeys.entityUser(u.id);
-    await this.redis
-      .multi()
-      .hmset(k, {
-        id: u.id,
-        username: u.username,
-        ...(u.discriminator ? { discriminator: u.discriminator } : {}),
-        ...(u.bot ? { bot: "1" } : {}),
-        cachedAt: String(u.cachedAt),
-      })
-      .expire(k, RedisTTL.entity)
-      .exec();
+    await this.#putHash(RedisKeys.entityUser(u.id), {
+      id: u.id,
+      username: u.username,
+      ...(u.discriminator ? { discriminator: u.discriminator } : {}),
+      ...(u.bot ? { bot: "1" } : {}),
+      cachedAt: String(u.cachedAt),
+    });
   }
 
   public async member(
@@ -203,18 +192,13 @@ export class RedisEntityCache {
   }
 
   public async putMember(m: CachedMember): Promise<void> {
-    const k = RedisKeys.entityMember(m.guildId, m.userId);
-    await this.redis
-      .multi()
-      .hmset(k, {
-        userId: m.userId,
-        guildId: m.guildId,
-        roleIds: m.roleIds.join(","),
-        ...(m.nick ? { nick: m.nick } : {}),
-        cachedAt: String(m.cachedAt),
-      })
-      .expire(k, RedisTTL.entity)
-      .exec();
+    await this.#putHash(RedisKeys.entityMember(m.guildId, m.userId), {
+      userId: m.userId,
+      guildId: m.guildId,
+      roleIds: m.roleIds.join(","),
+      ...(m.nick ? { nick: m.nick } : {}),
+      cachedAt: String(m.cachedAt),
+    });
   }
 
   public async deleteMember(guildId: string, userId: string): Promise<void> {

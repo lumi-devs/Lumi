@@ -12,7 +12,6 @@ import {
   type Message,
   type ChatInputCommandInteraction,
   MessageFlags,
-  ApplicationIntegrationType,
 } from "discord.js";
 import {
   type CardReply,
@@ -24,15 +23,17 @@ import {
 } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
 import { errorFrom } from "#utilities/errors.js";
-import { ModuleAlreadyInstalledError } from "#core/services/DownloaderService.js";
+import {
+  ModuleAlreadyInstalledError,
+  type DownloaderService,
+} from "#core/services/DownloaderService.js";
 import { restartChoiceRow } from "#core/lib/restart.js";
+import {
+  moduleUpdateResultCard,
+  type ModuleUpdateResult,
+} from "#core/lib/downloader/cards.js";
 
 type CardReplyHandler = (card: CardReply) => Promise<unknown>;
-interface ModuleUpdateResult {
-  updated: boolean;
-  changelog?: string;
-  needsRestart?: boolean;
-}
 
 function getModulePiecesInfo(
   containerInstance: typeof container,
@@ -54,6 +55,13 @@ function getModulePiecesInfo(
     }
   }
   return { piecesByStore, totalPieces };
+}
+
+/** Map a module's runtime state to its status indicator emoji. */
+function stateEmoji(state: string | undefined): string {
+  if (state === "loaded") return Emojis.SUCCESS;
+  if (state === "failed") return Emojis.WARNING;
+  return Emojis.CROSS;
 }
 
 @ApplyOptions<BaseSubcommand.Options>({
@@ -120,7 +128,7 @@ export class ModuleCommand extends BaseSubcommand {
         .setDescription(this.description)
         .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
         .setContexts(...this.contexts)
-        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall])
+        .setIntegrationTypes(this.integrationTypes)
         .addSubcommand((s) =>
           s
             .setName("list")
@@ -586,12 +594,10 @@ export class ModuleCommand extends BaseSubcommand {
 
   // Internals
 
-  private get downloaderService(): import("#core/services/DownloaderService.js").DownloaderService {
+  private get downloaderService(): DownloaderService {
     return this.container.stores
       .get("services")
-      .get(
-        "downloader",
-      ) as import("#core/services/DownloaderService.js").DownloaderService;
+      .get("downloader") as DownloaderService;
   }
 
   private buildModuleListCard() {
@@ -605,12 +611,7 @@ export class ModuleCommand extends BaseSubcommand {
       const globalStatus = record.enabled ? "Enabled" : "Disabled";
       const stateLabel = record.state ? `[${record.state}]` : "";
       const isCoreLabel = record.meta.isCore ? " (Core)" : " (Addon)";
-      const statusEmoji =
-        record.state === "loaded"
-          ? Emojis.SUCCESS
-          : record.state === "failed"
-            ? Emojis.WARNING
-            : Emojis.CROSS;
+      const statusEmoji = stateEmoji(record.state);
       return `${statusEmoji} **${record.meta.emoji} ${record.meta.displayName}** (\`${record.name}\` v${record.meta.version})${isCoreLabel}\n  - Status: ${globalStatus} ${stateLabel}${record.failureReason ? ` (Error: ${record.failureReason})` : ""}`;
     });
 
@@ -635,12 +636,7 @@ export class ModuleCommand extends BaseSubcommand {
     const isCoreLabel = record.meta.isCore ? "Yes (Core)" : "No (Addon)";
     const globalStatus = record.enabled ? "Enabled" : "Disabled";
     const stateLabel = record.state ? `${record.state}` : "unknown";
-    const statusEmoji =
-      record.state === "loaded"
-        ? Emojis.SUCCESS
-        : record.state === "failed"
-          ? Emojis.WARNING
-          : Emojis.CROSS;
+    const statusEmoji = stateEmoji(record.state);
 
     const detailLines = [
       `**Display Name:** ${record.meta.displayName}`,
@@ -748,35 +744,7 @@ export class ModuleCommand extends BaseSubcommand {
     reply: CardReplyHandler,
     userId: string,
   ) {
-    if (result.updated) {
-      const changelogStr = result.changelog
-        ? `### Pull Changelog:\n\`\`\`git\n${result.changelog}\n\`\`\``
-        : "No changelog details provided.";
-
-      if (result.needsRestart) {
-        await reply(
-          makeSuccessCard(
-            `${Emojis.DOWNLOAD} Module Updated`,
-            `Updated **${moduleName}** on disk. Bun can't hot-swap module code, so a restart is needed to load it.\n\n${changelogStr}`,
-            { actionRows: [restartChoiceRow(userId)] },
-          ),
-        );
-      } else {
-        await reply(
-          makeSuccessCard(
-            `${Emojis.DOWNLOAD} Module Updated`,
-            `Successfully updated and hot-reloaded **${moduleName}**!\n\n${changelogStr}`,
-          ),
-        );
-      }
-    } else {
-      await reply(
-        makeSuccessCard(
-          `${Emojis.CHECK} Module Up-To-Date`,
-          `**${moduleName}** is already running the latest version!`,
-        ),
-      );
-    }
+    await reply(moduleUpdateResultCard(result, moduleName, userId));
   }
 
   private async runAllModulesUpdate(reply: CardReplyHandler, userId: string) {

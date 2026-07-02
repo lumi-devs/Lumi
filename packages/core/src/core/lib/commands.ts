@@ -18,6 +18,7 @@ import {
   makeInfoCard,
   makeSuccessCard,
   makeWarningCard,
+  type CardReply,
 } from "#utilities/cards.js";
 import {
   PermissionLevel,
@@ -58,57 +59,29 @@ export async function sendReply(
   await sendInteractionReply(interaction, payload, "followUp");
 }
 
-export const replySuccess = (
-  interaction: ChatInputCommandInteraction,
-  title: string,
-  body: string,
-  opts: ReplyOptions = {},
-): Promise<void> =>
-  sendReply(
-    interaction,
-    opts.ephemeral === false
-      ? makeSuccessCard(title, body)
-      : ephemeralCard(makeSuccessCard(title, body)),
-  );
+// All four reply helpers share the same ephemeral-branching shape and differ
+// only by which card factory they call, so they're generated from one factory.
+type CardFactory = (title: string, body: string) => CardReply;
 
-export const replyError = (
-  interaction: ChatInputCommandInteraction,
-  title: string,
-  body: string,
-  opts: ReplyOptions = {},
-): Promise<void> =>
-  sendReply(
-    interaction,
-    opts.ephemeral === false
-      ? makeErrorCard(title, body)
-      : ephemeralCard(makeErrorCard(title, body)),
-  );
+function makeReplyHelper(factory: CardFactory) {
+  return (
+    interaction: ChatInputCommandInteraction,
+    title: string,
+    body: string,
+    opts: ReplyOptions = {},
+  ): Promise<void> =>
+    sendReply(
+      interaction,
+      opts.ephemeral === false
+        ? factory(title, body)
+        : ephemeralCard(factory(title, body)),
+    );
+}
 
-export const replyWarning = (
-  interaction: ChatInputCommandInteraction,
-  title: string,
-  body: string,
-  opts: ReplyOptions = {},
-): Promise<void> =>
-  sendReply(
-    interaction,
-    opts.ephemeral === false
-      ? makeWarningCard(title, body)
-      : ephemeralCard(makeWarningCard(title, body)),
-  );
-
-export const replyInfo = (
-  interaction: ChatInputCommandInteraction,
-  title: string,
-  body: string,
-  opts: ReplyOptions = {},
-): Promise<void> =>
-  sendReply(
-    interaction,
-    opts.ephemeral === false
-      ? makeInfoCard(title, body)
-      : ephemeralCard(makeInfoCard(title, body)),
-  );
+export const replySuccess = makeReplyHelper(makeSuccessCard);
+export const replyError = makeReplyHelper(makeErrorCard);
+export const replyWarning = makeReplyHelper(makeWarningCard);
+export const replyInfo = makeReplyHelper(makeInfoCard);
 
 // ── Shared precondition registration ────────────────────────────────────────
 
@@ -133,11 +106,14 @@ function appendPermissionPrecondition(
 // and permission-check logic so it lives in exactly one place (mirrors Skyra's
 // `BaseSkyraCommandUtilities`).
 
-interface SharedCommandOptions {
+interface LumiCommandExtras {
   permissionLevel?: PermissionLevel;
   integrationTypes?: ApplicationIntegrationType[];
   contexts?: InteractionContextType[];
   defaultMemberPermissions?: bigint | null;
+}
+
+interface SharedCommandOptions extends LumiCommandExtras {
   preconditions?: Command.Options["preconditions"];
 }
 
@@ -195,6 +171,12 @@ async function assertPermissionLevel(
       message: `You need at least **${PERMISSION_LEVEL_NAMES[level]}** level to use this.`,
     });
   }
+}
+
+function fetchTyped(
+  target: ChatInputCommandInteraction | Message,
+): Promise<LumiT> {
+  return fetchT(target) as unknown as Promise<LumiT>;
 }
 
 // ── Shared interface — ensures both base classes stay in sync ────────────────
@@ -322,7 +304,7 @@ export abstract class BaseCommand extends Command implements CommandLike {
   }
 
   public fetchT(target: ChatInputCommandInteraction | Message): Promise<LumiT> {
-    return fetchT(target) as unknown as Promise<LumiT>;
+    return fetchTyped(target);
   }
 
   protected override parseConstructorPreConditions(
@@ -408,7 +390,7 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
   }
 
   public fetchT(target: ChatInputCommandInteraction | Message): Promise<LumiT> {
-    return fetchT(target) as unknown as Promise<LumiT>;
+    return fetchTyped(target);
   }
 
   protected override parseConstructorPreConditions(
@@ -423,19 +405,9 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
 }
 
 export namespace BaseCommand {
-  export type Options = Command.Options & {
-    permissionLevel?: PermissionLevel;
-    integrationTypes?: ApplicationIntegrationType[];
-    contexts?: InteractionContextType[];
-    defaultMemberPermissions?: bigint | null;
-  };
+  export type Options = Command.Options & LumiCommandExtras;
 }
 
 export namespace BaseSubcommand {
-  export type Options = Subcommand.Options & {
-    permissionLevel?: PermissionLevel;
-    integrationTypes?: ApplicationIntegrationType[];
-    contexts?: InteractionContextType[];
-    defaultMemberPermissions?: bigint | null;
-  };
+  export type Options = Subcommand.Options & LumiCommandExtras;
 }

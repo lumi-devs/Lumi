@@ -1,6 +1,7 @@
 import { Service } from "#core/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
+import type { Guild } from "@prisma/client";
 import {
   DEFAULT_LANGUAGE,
   isSupportedLanguage,
@@ -41,27 +42,21 @@ export class GuildSettingsService extends Service {
     if (newPrefix.length > 5)
       throw new Error("Prefix must be 5 characters or less.");
 
-    const tx = await this.container.db.transaction(guildId);
-    try {
-      if (tx.settings.prefix === newPrefix) {
-        throw new Error(`Prefix is already set to \`${newPrefix}\`.`);
-      }
-      await tx.write({ prefix: newPrefix }).submit();
-    } finally {
-      tx.dispose();
-    }
+    await this.applyGuildUpdate(
+      guildId,
+      { prefix: newPrefix },
+      (s) => s.prefix === newPrefix,
+      `Prefix is already set to \`${newPrefix}\`.`,
+    );
   }
 
   public async resetPrefix(guildId: string) {
-    const tx = await this.container.db.transaction(guildId);
-    try {
-      if (tx.settings.prefix === null) {
-        throw new Error("Prefix is already unset (using default).");
-      }
-      await tx.write({ prefix: null }).submit();
-    } finally {
-      tx.dispose();
-    }
+    await this.applyGuildUpdate(
+      guildId,
+      { prefix: null },
+      (s) => s.prefix === null,
+      "Prefix is already unset (using default).",
+    );
   }
 
   public async setLanguage(guildId: string, language: string) {
@@ -71,24 +66,38 @@ export class GuildSettingsService extends Service {
       );
     }
 
-    const tx = await this.container.db.transaction(guildId);
-    try {
-      if (tx.settings.locale === language) {
-        throw new Error(`Language is already set to ${language}.`);
-      }
-      await tx.write({ locale: language }).submit();
-    } finally {
-      tx.dispose();
-    }
+    await this.applyGuildUpdate(
+      guildId,
+      { locale: language },
+      (s) => s.locale === language,
+      `Language is already set to ${language}.`,
+    );
   }
 
   public async resetLanguage(guildId: string) {
+    await this.applyGuildUpdate(
+      guildId,
+      { locale: DEFAULT_LANGUAGE },
+      (s) => s.locale === DEFAULT_LANGUAGE,
+      `Language is already set to ${DEFAULT_LANGUAGE}.`,
+    );
+  }
+
+  /**
+   * Shared guild-settings write: opens a guild transaction, rejects the change
+   * as a no-op when `isUnchanged`, otherwise applies `patch`. Always disposes
+   * the underlying lock.
+   */
+  private async applyGuildUpdate(
+    guildId: string,
+    patch: Partial<Guild>,
+    isUnchanged: (current: Readonly<Guild>) => boolean,
+    unchangedMessage: string,
+  ): Promise<void> {
     const tx = await this.container.db.transaction(guildId);
     try {
-      if (tx.settings.locale === DEFAULT_LANGUAGE) {
-        throw new Error(`Language is already set to ${DEFAULT_LANGUAGE}.`);
-      }
-      await tx.write({ locale: DEFAULT_LANGUAGE }).submit();
+      if (isUnchanged(tx.settings)) throw new Error(unchangedMessage);
+      await tx.write(patch).submit();
     } finally {
       tx.dispose();
     }

@@ -5,7 +5,6 @@ import {
 } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import {
-  ApplicationIntegrationType,
   type ChatInputCommandInteraction,
   type Message,
 } from "discord.js";
@@ -18,6 +17,7 @@ import {
   makeSuccessCard,
 } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
+import type { GuildSettingsService } from "#core/services/GuildSettingsService.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "language",
@@ -41,7 +41,7 @@ export class LanguageCommand extends BaseSubcommand {
       applyLocalizedBuilder(builder, "commands:language")
         .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
         .setContexts(...this.contexts)
-        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall])
+        .setIntegrationTypes(this.integrationTypes)
         .addSubcommand((sub) =>
           applyLocalizedBuilder(sub, "commands:languageView"),
         )
@@ -64,12 +64,10 @@ export class LanguageCommand extends BaseSubcommand {
     );
   }
 
-  private get settings(): import("#core/services/GuildSettingsService.js").GuildSettingsService {
+  private get settings(): GuildSettingsService {
     return this.container.stores
       .get("services")
-      .get(
-        "guild-settings",
-      ) as import("#core/services/GuildSettingsService.js").GuildSettingsService;
+      .get("guild-settings") as GuildSettingsService;
   }
 
   public async chatInputView(interaction: ChatInputCommandInteraction) {

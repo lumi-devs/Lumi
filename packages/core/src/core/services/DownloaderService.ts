@@ -31,7 +31,7 @@ export class DownloaderService extends Service {
       await this.container.db.downloader.readDownloaderRepo(repoName);
     if (!repo) {
       throw new Error(
-        `Repository **${repoName}** has not been added. Use \`/repo add\` first.`,
+        `Repository **${repoName}** has not been added. Use \`,repo add\` first.`,
       );
     }
 
