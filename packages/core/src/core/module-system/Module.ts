@@ -58,11 +58,18 @@ export function DefineModule(options: ModuleOptions) {
     options.configFields = fieldsFromSchema(options.configSchema);
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- abstract class constructor signature requires any[] params
-  return (ctor: abstract new (...args: any[]) => any) => {
-    ApplyOptions<ModuleOptions>(options)(
-      ctor as new (...args: never[]) => Module,
-    );
-    (ctor as unknown as { meta: ModuleOptions }).meta = options;
+  return <T extends abstract new (...args: any[]) => any>(ctor: T): T => {
+    // ApplyOptions works by RETURNING a proxied constructor whose construct
+    // trap merges `options` into the piece options. That proxy must be handed
+    // back to the decorator machinery — discarding it means the options
+    // (including the piece `name`) never apply, every module piece falls back
+    // to its filename ("index"), and each module load evicts the previous one
+    // from the store.
+    const proxied = ApplyOptions<ModuleOptions>(options)(
+      ctor as unknown as new (...args: never[]) => Module,
+    ) as unknown as T;
+    (proxied as unknown as { meta: ModuleOptions }).meta = options;
+    return proxied;
   };
 }
 
