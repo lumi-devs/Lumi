@@ -27,9 +27,11 @@ The k8s manifests assume:
 
 ```bash
 kubectl apply -f namespace.yaml
-kubectl apply -f configmap.yaml secret.example.yaml   # edit secret first!
+kubectl apply -f configmap.yaml -f secret.example.yaml   # edit secret first!
+kubectl apply -f lumi-data-pvc.yaml    # shared RWX volume for downloaded addons
+kubectl apply -f migrate-job.yaml      # run + wait for Prisma migrations
 kubectl apply -f scheduler-deployment.yaml
-kubectl apply -f gateway-statefulset.yaml gateway-service.yaml
+kubectl apply -f gateway-statefulset.yaml   # includes the headless Service
 kubectl apply -f worker-deployment.yaml
 kubectl apply -f worker-scaledobject.yaml
 kubectl apply -f api-deployment.yaml
