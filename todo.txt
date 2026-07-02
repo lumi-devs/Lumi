@@ -1,0 +1,13 @@
+  Verification through Nix shell:
+
+  - nix develop --command bun run typecheck passes.
+  - nix develop --command bun run test passes: 47 tests.
+  - nix develop --command bun run lint exits 0 with the same 5 unrelated warnings.
+
+  Rating after these fixes: around 7/10 for production readiness. The core is serious and
+  structured, but the service split still has stubs, K8s needs real storage-class decisions
+  for RWX module data, and dynamic third-party code loading remains inherently high-risk.
+
+  Tree structure: I would not do a big restructure now. The monorepo layout is reasonable.
+  The better next step is finishing the actual apps/api split and moving deployment docs/
+  manifests toward explicit “monolith vs scale” modes, not reshuffling folders.

@@ -44,20 +44,29 @@ export class DownloaderService extends Service {
     }
 
     const info = await resolver.installModule(repoName, moduleName);
-    await this.container.db.downloader.writeInstalledDownloaderModule(
-      repo.id,
-      moduleName,
-      info.version,
-    );
-
-    this.container.logger.info("[DownloaderService] Discovering modules...");
-    await this.container.moduleStore.discover(true);
-    this.container.logger.info(
-      `[DownloaderService] Loading module ${moduleName}...`,
-    );
-    await this.container.moduleStore.loadModule(moduleName);
-    this.container.logger.info("[DownloaderService] Syncing commands...");
-    await this.syncApplicationCommands();
+    try {
+      this.container.logger.info("[DownloaderService] Discovering modules...");
+      await this.container.moduleStore.discover(true);
+      this.container.logger.info(
+        `[DownloaderService] Loading module ${moduleName}...`,
+      );
+      await this.container.moduleStore.loadModule(moduleName);
+      this.container.logger.info("[DownloaderService] Syncing commands...");
+      await this.syncApplicationCommands();
+      await this.container.db.downloader.writeInstalledDownloaderModule(
+        repo.id,
+        moduleName,
+        info.version,
+      );
+    } catch (err: unknown) {
+      await this.container.moduleStore
+        .unload(moduleName)
+        .catch(() => undefined);
+      await fs
+        .unlink(path.join(ADDON_MODULES_ROOT, moduleName))
+        .catch(() => undefined);
+      throw err;
+    }
   }
 
   public async uninstallModule(moduleName: string) {

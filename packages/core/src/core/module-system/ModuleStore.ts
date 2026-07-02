@@ -125,6 +125,14 @@ export class ModuleStore extends Store<Module> {
       this.#records.set(name, record);
     }
 
+    if (force) {
+      for (const [name, record] of this.#records) {
+        if (await this.#exists(record.dir)) continue;
+        this.#records.delete(name);
+        this.#schemaCache.delete(name);
+      }
+    }
+
     this.#applyConflicts();
 
     const topo = this.#topoSort();
@@ -177,7 +185,7 @@ export class ModuleStore extends Store<Module> {
         if (store === this) continue;
 
         for (const piece of [...store.values()]) {
-          if (piece.location.full.startsWith(record.dir)) {
+          if (this.#isInsideModule(record, piece.location.full)) {
             await store.unload(piece.name);
           }
         }
@@ -188,6 +196,11 @@ export class ModuleStore extends Store<Module> {
 
     if (record && !(await this.#exists(record.dir))) {
       this.#records.delete(name);
+      this.#schemaCache.delete(name);
+    } else if (record) {
+      record.enabled = false;
+      record.state = "disabled";
+      record.failureReason = undefined;
     }
 
     return result as Module;
@@ -199,17 +212,22 @@ export class ModuleStore extends Store<Module> {
     if (record.meta.isCore && !enabled) throw new Error("Cannot disable Core");
     if (record.enabled === enabled) return; // already in desired state
 
-    await container.db.modules.setModuleGlobalEnabled(name, enabled, reason);
-
-    record.enabled = enabled;
-    const module = this.get(name);
-    if (module) module.enabled = enabled;
-
     if (enabled) {
       await this.loadModule(name);
     } else {
-      await this.unload(name);
+      await this.unload(name).catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!msg.includes("does not exist")) throw err;
+      });
     }
+
+    await container.db.modules.setModuleGlobalEnabled(name, enabled, reason);
+
+    record.enabled = enabled;
+    record.state = enabled ? "loaded" : "disabled";
+    record.failureReason = undefined;
+    const module = this.get(name);
+    if (module) module.enabled = enabled;
   }
 
   public all() {
@@ -274,6 +292,7 @@ export class ModuleStore extends Store<Module> {
   public async loadModule(name: string) {
     const record = this.#records.get(name);
     if (!record) throw new Error(`Module ${name} not found`);
+    const failures: Error[] = [];
 
     for (const store of container.stores.values()) {
       if (store === this) continue;
@@ -288,21 +307,44 @@ export class ModuleStore extends Store<Module> {
           !file.endsWith(".mts")
         )
           continue;
-        await store
-          .load(storePath, file)
-          .catch((err: unknown) =>
-            container.logger.error(
-              `[ModuleStore] Failed to load piece ${file} for module ${name}:`,
-              err,
-            ),
+        try {
+          await store.load(storePath, file);
+        } catch (err: unknown) {
+          const error = err instanceof Error ? err : new Error(String(err));
+          failures.push(error);
+          container.logger.error(
+            `[ModuleStore] Failed to load piece ${file} for module ${name}:`,
+            err,
           );
+        }
       }
     }
 
     const indexPath = await this.#findIndex(record.dir);
-    if (indexPath) await this.load(record.dir, path.basename(indexPath));
+    try {
+      if (indexPath) await this.load(record.dir, path.basename(indexPath));
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      failures.push(error);
+      container.logger.error(
+        `[ModuleStore] Failed to load module index for ${name}:`,
+        err,
+      );
+    }
+
+    if (failures.length > 0) {
+      const failureReason = failures.map((err) => err.message).join("; ");
+      await this.unload(name).catch(() => undefined);
+      record.enabled = false;
+      record.state = "failed";
+      record.failureReason = failureReason;
+      throw new Error(`Module ${name} failed to load: ${record.failureReason}`);
+    }
 
     this.attachModuleGuards();
+    record.enabled = true;
+    record.state = "loaded";
+    record.failureReason = undefined;
   }
 
   /**
@@ -391,6 +433,12 @@ export class ModuleStore extends Store<Module> {
       .access(p)
       .then(() => true)
       .catch(() => false);
+  }
+
+  #isInsideModule(record: ModuleRecord, fullPath: string): boolean {
+    return (
+      fullPath === record.dir || fullPath.startsWith(`${record.dir}${path.sep}`)
+    );
   }
 
   async #walk(
