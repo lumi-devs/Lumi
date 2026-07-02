@@ -15,7 +15,6 @@ COPY packages/sharding/package.json ./packages/sharding/
 COPY apps/worker/package.json ./apps/worker/
 COPY apps/gateway/package.json ./apps/gateway/
 COPY apps/scheduler/package.json ./apps/scheduler/
-COPY apps/api/package.json ./apps/api/
 RUN bun install --frozen-lockfile
 
 COPY prisma ./prisma
@@ -56,7 +55,6 @@ COPY --chown=bun:bun packages/sharding/package.json ./packages/sharding/
 COPY --chown=bun:bun apps/worker/package.json ./apps/worker/
 COPY --chown=bun:bun apps/gateway/package.json ./apps/gateway/
 COPY --chown=bun:bun apps/scheduler/package.json ./apps/scheduler/
-COPY --chown=bun:bun apps/api/package.json ./apps/api/
 RUN bun install --frozen-lockfile
 
 COPY --chown=bun:bun prisma ./prisma

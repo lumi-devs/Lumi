@@ -59,13 +59,6 @@ export const RedisKeys = {
   entityUser: (userId: string) => `lumi:ent:user:${userId}`,
   entityMember: (guildId: string, userId: string) =>
     `lumi:ent:member:${guildId}:${userId}`,
-
-  // ── Dashboard api (apps/api) ──────────────────────────────────────────
-  // Opaque session id → JSON session blob; short-lived OAuth state → CSRF nonce.
-  // Owned by the api service; listed here so the api reuses one key registry
-  // instead of hard-coding strings (CLAUDE.md: never hand-roll a Redis key).
-  apiSession: (sessionId: string) => `lumi:api:session:${sessionId}`,
-  apiOAuthState: (state: string) => `lumi:api:oauth:state:${state}`,
 } as const;
 
 export const RedisTTL = {
@@ -82,10 +75,6 @@ export const RedisTTL = {
   // 24h is conservative; raise for read-heavy quiet servers, lower if the
   // memory budget tightens.
   entity: 60 * 60 * 24,
-  // api login session (sliding — refreshed on each authenticated request).
-  apiSession: 60 * 60 * 24 * 7,
-  // OAuth CSRF state: only needs to survive the round-trip to Discord and back.
-  apiOAuthState: 60 * 10,
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
