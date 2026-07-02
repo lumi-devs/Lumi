@@ -29,7 +29,14 @@ if (
   });
 }
 
-const client = await LumiClient.bootstrap({ role: "scheduler" });
+const client = await LumiClient.bootstrap({ role: "scheduler" }).catch(
+  (err: unknown): never => {
+    console.error(
+      `[Scheduler] Fatal during bootstrap: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    process.exit(1);
+  },
+);
 
 let shuttingDown = false;
 ["SIGINT", "SIGTERM"].forEach((sig) => {

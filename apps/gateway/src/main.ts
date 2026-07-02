@@ -94,7 +94,14 @@ if (PROXY_URL) log("info", "REST proxy enabled", { url: PROXY_URL });
 
 // Pre-flight: ask Discord for shard count + IDENTIFY budget before we open
 // any socket.
-const shardPlan = await planShards({ token: TOKEN, log });
+const shardPlan = await planShards({ token: TOKEN, log }).catch(
+  (err: unknown): never => {
+    log("error", "fatal: shard planning failed", {
+      err: err instanceof Error ? err.message : String(err),
+    });
+    process.exit(1);
+  },
+);
 
 // Optional cluster coordinator (multi-replica gateway).
 const CLUSTER_NAME = process.env["CLUSTER_NAME"]?.trim() || null;
