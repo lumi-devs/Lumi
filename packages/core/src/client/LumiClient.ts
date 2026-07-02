@@ -171,6 +171,12 @@ export class LumiClient extends SapphireClient {
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.MessageContent,
+        // GuildPresences is privileged and off by default — a bot without the
+        // portal toggle would fail IDENTIFY with "disallowed intents". Opt in
+        // for presence-driven addons (e.g. activity-roles).
+        ...(envParseString("PRESENCE_INTENT", "false") === "true"
+          ? [GatewayIntentBits.GuildPresences]
+          : []),
       ],
       partials: [Partials.Channel, Partials.GuildMember],
       allowedMentions: { parse: ["users"], repliedUser: true },

@@ -20,7 +20,9 @@
     "#core/*.js": "./packages/core/src/core/*.ts",
     "#root/*.js": "./packages/core/src/*.ts",
     "#modules/*.js": "./packages/core/src/modules/*.ts",
-    "#lib/module-check.js": "./packages/core/src/core/lib/module-check.ts"
+    "#lib/module-check.js": "./packages/core/src/core/lib/module-check.ts",
+    "#lib/scheduler-bus.js": "./packages/core/src/core/lib/scheduler-bus.ts",
+    "#lib/schedule-task.js": "./packages/core/src/core/lib/schedule-task.ts"
   },
   "scripts": {
     "dev": "bun install && bun run db:generate && bun --filter @lumi/worker run dev",

@@ -4,6 +4,8 @@ import { fetchT } from "@sapphire/plugin-i18next";
 import type { LumiT } from "#core/i18n/index.js";
 import type {
   ChatInputCommandInteraction,
+  MessageContextMenuCommandInteraction,
+  UserContextMenuCommandInteraction,
   InteractionReplyOptions,
   Message,
 } from "discord.js";
@@ -50,8 +52,14 @@ export interface ReplyOptions {
   ephemeral?: boolean;
 }
 
+/** Interactions the card reply helpers accept — slash and context-menu commands. */
+export type CommandReplyTarget =
+  | ChatInputCommandInteraction
+  | MessageContextMenuCommandInteraction
+  | UserContextMenuCommandInteraction;
+
 export async function sendReply(
-  interaction: ChatInputCommandInteraction,
+  interaction: CommandReplyTarget,
   payload: InteractionReplyOptions,
 ): Promise<void> {
   // Delegates to the single interaction-reply primitive; "followUp" preserves
@@ -65,7 +73,7 @@ type CardFactory = (title: string, body: string) => CardReply;
 
 function makeReplyHelper(factory: CardFactory) {
   return (
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     title: string,
     body: string,
     opts: ReplyOptions = {},
@@ -191,29 +199,29 @@ interface CommandLike {
     level: PermissionLevel,
   ): Promise<void>;
   reply(
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     payload: InteractionReplyOptions,
   ): Promise<void>;
   replySuccess(
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     title: string,
     body: string,
     opts?: ReplyOptions,
   ): Promise<void>;
   replyError(
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     title: string,
     body: string,
     opts?: ReplyOptions,
   ): Promise<void>;
   replyWarning(
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     title: string,
     body: string,
     opts?: ReplyOptions,
   ): Promise<void>;
   replyInfo(
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     title: string,
     body: string,
     opts?: ReplyOptions,
@@ -261,14 +269,14 @@ export abstract class BaseCommand extends Command implements CommandLike {
   }
 
   public reply(
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     payload: InteractionReplyOptions,
   ): Promise<void> {
     return sendReply(interaction, payload);
   }
 
   public replySuccess(
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     title: string,
     body: string,
     opts?: ReplyOptions,
@@ -277,7 +285,7 @@ export abstract class BaseCommand extends Command implements CommandLike {
   }
 
   public replyError(
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     title: string,
     body: string,
     opts?: ReplyOptions,
@@ -286,7 +294,7 @@ export abstract class BaseCommand extends Command implements CommandLike {
   }
 
   public replyWarning(
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     title: string,
     body: string,
     opts?: ReplyOptions,
@@ -295,7 +303,7 @@ export abstract class BaseCommand extends Command implements CommandLike {
   }
 
   public replyInfo(
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     title: string,
     body: string,
     opts?: ReplyOptions,
@@ -347,14 +355,14 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
   }
 
   public reply(
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     payload: InteractionReplyOptions,
   ): Promise<void> {
     return sendReply(interaction, payload);
   }
 
   public replySuccess(
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     title: string,
     body: string,
     opts?: ReplyOptions,
@@ -363,7 +371,7 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
   }
 
   public replyError(
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     title: string,
     body: string,
     opts?: ReplyOptions,
@@ -372,7 +380,7 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
   }
 
   public replyWarning(
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     title: string,
     body: string,
     opts?: ReplyOptions,
@@ -381,7 +389,7 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
   }
 
   public replyInfo(
-    interaction: ChatInputCommandInteraction,
+    interaction: CommandReplyTarget,
     title: string,
     body: string,
     opts?: ReplyOptions,
