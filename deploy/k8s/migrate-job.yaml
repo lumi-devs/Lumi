@@ -1,0 +1,26 @@
+# Run before rolling out application Deployments when a new image includes
+# Prisma migrations. Keeping migrations out of worker pod startup avoids every
+# scaled worker racing the same DDL path during deploy/autoscale events.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  namespace: lumi
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: migrate
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: ghcr.io/your-org/lumi:latest
+          imagePullPolicy: IfNotPresent
+          command: ["bunx", "prisma", "migrate", "deploy"]
+          envFrom:
+            - configMapRef:
+                name: lumi-env
+            - secretRef:
+                name: lumi-secrets
