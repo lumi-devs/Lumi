@@ -1,0 +1,18 @@
+# Shared module data for downloader-installed addons.
+#
+# This must be backed by storage that supports ReadWriteMany when more than one
+# worker/scheduler/api pod can run. Downloader metadata lives in Postgres, but
+# the cloned repos and installed-module symlinks live under /app/data; without a
+# shared persistent volume, a restarted or different pod sees DB rows for addons
+# whose files do not exist locally.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lumi-data
+  namespace: lumi
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi

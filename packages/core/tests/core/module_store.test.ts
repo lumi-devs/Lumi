@@ -100,4 +100,29 @@ describe('ModuleStore', () => {
 		expect(store.getRecord('a').enabled).toBe(true);
 		expect(store.getRecord('b').enabled).toBe(false);
 	});
+
+	it('should fail module load when any owned piece fails to load', async () => {
+		setupModules({ broken: {} });
+		await store.discover();
+
+		const failingStore = {
+			name: 'commands',
+			load: vi.fn().mockRejectedValue(new Error('bad command')),
+			values: vi.fn().mockReturnValue([]),
+			paths: new Set()
+		};
+		container.stores = {
+			values: vi.fn().mockReturnValue([failingStore]),
+			get: vi.fn()
+		} as any;
+		(fs.readdir as any).mockImplementation(async (p: any) => {
+			const parts = String(p).split(path.sep);
+			if (parts.at(-1) === 'commands') return ['bad.ts'];
+			return ['broken'];
+		});
+
+		await expect(store.loadModule('broken')).rejects.toThrow(/bad command/);
+		expect(store.getRecord('broken').state).toBe('failed');
+		expect(store.getRecord('broken').enabled).toBe(false);
+	});
 });
