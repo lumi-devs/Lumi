@@ -17,16 +17,20 @@ volumes:
   lumi-data:
 
 # Shared config for the four deployable services. They all run from the same
-# image; each sets its own `command:`. NOTE: gateway/scheduler/api currently boot
-# the full worker (apps/*/src/main.ts → import "@lumi/worker/main"), so only
-# `worker` should run with the live bot token until the real service split. The
-# other three are scaffolding kept under the `scale` profile.
+# image; each sets its own `command:`. gateway/worker/scheduler are real split
+# roles (see apps/*); only `api` is still a stub that re-imports the worker
+# entrypoint (in the `worker` role, so it never opens a Discord WS).
 x-lumi-service: &lumi-service
   build:
     context: .
     dockerfile: Dockerfile
     target: production
-  env_file: .env
+  # Optional so a fresh clone gets the bot's own actionable "BOT_TOKEN missing/
+  # invalid" fatal instead of compose refusing to parse anything. Create it with
+  # `cp .env.example .env` (see README).
+  env_file:
+    - path: .env
+      required: false
   environment: &lumi-env
     REDIS_HOST: redis
     POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
@@ -85,7 +89,9 @@ services:
       dockerfile: Dockerfile
       target: development
     container_name: lumi-dev
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
     environment:
       REDIS_HOST: redis
       POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
