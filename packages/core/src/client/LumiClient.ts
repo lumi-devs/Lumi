@@ -239,8 +239,10 @@ export class LumiClient extends SapphireClient {
     //    the constructor may initialise these; everywhere else they are immutable).
     const redis = createRedisClient();
     // Event bus: inproc by default (no behavioral change vs the monolith). Set
-    // TRANSPORT=streams to publish/consume raw gateway packets via Redis Streams.
-    // Streams mode is wired but not yet driving dispatch.
+    // TRANSPORT=streams to publish/consume raw gateway packets via Redis
+    // Streams — in the worker role the RawGatewayConsumer (started in login())
+    // feeds those packets straight into ws.handlePacket, i.e. streams drives
+    // dispatch.
     this._ownedEventBus = createEventBus({
       redis: {
         ...redisConnectionOptions(),
