@@ -20,13 +20,6 @@
         "vitest": "^4.1.7",
       },
     },
-    "apps/api": {
-      "name": "@lumi/api",
-      "version": "2.1.1",
-      "dependencies": {
-        "@lumi/worker": "workspace:*",
-      },
-    },
     "apps/gateway": {
       "name": "@lumi/gateway",
       "version": "2.1.1",
@@ -206,8 +199,6 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 
     "@kurkle/color": ["@kurkle/color@0.3.4", "", {}, "sha512-M5UknZPHRu3DEDWoipU6sE8PdkZ6Z/S+v4dD+Ke8IaNlpdSQah50lz1KtcFBa2vsdOnwbbnxJwVM4wty6udA5w=="],
-
-    "@lumi/api": ["@lumi/api@workspace:apps/api"],
 
     "@lumi/contracts": ["@lumi/contracts@workspace:packages/contracts"],
 

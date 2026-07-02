@@ -45,7 +45,7 @@ apply cleanly against the compose Postgres, all four compose profiles
 
 | Part | State | Recommendation |
 |---|---|---|
-| `apps/api` | Stub: re-imports `@lumi/worker/main`, runs as a second worker. | Either build the real thin RPC-only entrypoint (Rabbit RPC consumer without module/event work) or drop the service from compose/k8s until it exists. |
+| `apps/api` | **Removed (2026-07-02).** Was a stub re-importing `@lumi/worker/main`. Dashboard RPC is served by every worker via RabbitMQ competing consumers, so the service added nothing. | Reintroduce only if RPC needs isolation from event processing. |
 | `RedisEntityCache` | Write path exists but is **off by default** (`ENTITY_CACHE_POPULATE`); accessors have zero read callers. Provisioned-ahead for a future `GuildManager: 0` step. | Keep (documented as such) or delete until the step lands. Harmless either way. |
 | Dashboard | Bot-side RPC handlers are real; the web app (`../lumi-dashboard`) is a separate repo and its compose service is commented out. | Fine as-is; the RPC surface is only reachable when the dashboard repo is deployed. |
 | Stale comments | compose header claims "gateway/scheduler/api currently boot the full worker" (only api does); `LumiClient` says "Streams mode … not yet driving dispatch" (RawGatewayConsumer does drive dispatch). | Fix comments. |
@@ -79,5 +79,5 @@ tempvc controls → leveling → the rest.
 1. Defect 2 (clean fatal on bad token) — smallest, biggest first-run UX win.
 2. Defect 1 (optional env_file or better failure message).
 3. Comment/docs drift (compose header, LumiClient comment, k8s README).
-4. Decide `apps/api`: build the real split or remove the stub service.
+4. ~~Decide `apps/api`~~ — removed; workers serve dashboard RPC.
 5. Then feature work per §4.

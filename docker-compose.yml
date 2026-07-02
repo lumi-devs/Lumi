@@ -17,9 +17,8 @@ volumes:
   lumi-data:
 
 # Shared config for the four deployable services. They all run from the same
-# image; each sets its own `command:`. gateway/worker/scheduler are real split
-# roles (see apps/*); only `api` is still a stub that re-imports the worker
-# entrypoint (in the `worker` role, so it never opens a Discord WS).
+# image; each sets its own `command:`. gateway/worker/scheduler are the split
+# roles (see apps/*); dashboard RPC is served by the workers themselves.
 x-lumi-service: &lumi-service
   build:
     context: .
@@ -217,28 +216,11 @@ services:
     profiles:
       - scale
 
-  api:
-    <<: *lumi-service
-    container_name: lumi-api
-    command: ["bun", "apps/api/src/main.ts"]
-    environment:
-      <<: *lumi-env
-      # api re-imports @lumi/worker/main; run it in the worker role so it has no
-      # Discord WS. Without this it defaults to `monolith` and opens a second
-      # gateway session with the bot token, conflicting with the worker.
-      LUMI_ROLE: "worker"
-      # api is a thin RPC handler; smaller heap budget than the worker.
-      NODE_OPTIONS: "--max-old-space-size=256"
-    depends_on:
-      worker-scale:
-        condition: service_started
-    deploy:
-      resources:
-        limits:
-          memory: 384m
-          cpus: '0.5'
-    profiles:
-      - scale
+  # NOTE: there is intentionally no dedicated `api` service. Dashboard RPC
+  # (RabbitMQ request/response) is served by every worker via competing
+  # consumers — CoreModule + DashboardModule register the handlers on load.
+  # Reintroduce a dedicated api role only when RPC needs isolation from event
+  # processing (it would need the worker's bus-fed cache to answer guild RPCs).
 
   postgres:
     image: postgres:17
