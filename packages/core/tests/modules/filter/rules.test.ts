@@ -1,0 +1,140 @@
+import { describe, expect, it } from "vitest";
+import {
+  capsPercent,
+  compileRegexRules,
+  compileRules,
+  evaluate,
+  findBlockedInvite,
+  findBlockedLink,
+  MAX_REGEX_LENGTH,
+  type RuleConfig,
+} from "../../../src/modules/filter/lib/rules.js";
+
+const baseConfig: RuleConfig = {
+  terms: [],
+  regexRules: [],
+  blockInvites: false,
+  inviteAllowlist: [],
+  blockLinks: false,
+  linkAllowlist: [],
+  maxMentions: 0,
+  maxCapsPercent: 0,
+  capsMinLength: 12,
+};
+
+const rules = (overrides: Partial<RuleConfig>) =>
+  compileRules({ ...baseConfig, ...overrides });
+
+describe("findBlockedInvite", () => {
+  it("matches discord.gg, discord.com/invite, discordapp.com/invite", () => {
+    expect(findBlockedInvite("join discord.gg/abc123", [])).toBe("abc123");
+    expect(findBlockedInvite("https://discord.com/invite/xYz-9", [])).toBe(
+      "xYz-9",
+    );
+    expect(findBlockedInvite("discordapp.com/invite/old", [])).toBe("old");
+  });
+
+  it("respects the allowlist case-insensitively", () => {
+    expect(findBlockedInvite("discord.gg/MyServer", ["myserver"])).toBeNull();
+    expect(findBlockedInvite("discord.gg/other", ["myserver"])).toBe("other");
+  });
+
+  it("ignores plain text", () => {
+    expect(findBlockedInvite("no invites here", [])).toBeNull();
+  });
+});
+
+describe("findBlockedLink", () => {
+  it("finds non-allowlisted hosts", () => {
+    expect(findBlockedLink("see https://evil.example/x", [])).toBe(
+      "evil.example",
+    );
+  });
+
+  it("allows allowlisted domains and their subdomains", () => {
+    expect(
+      findBlockedLink("https://youtube.com/watch", ["youtube.com"]),
+    ).toBeNull();
+    expect(
+      findBlockedLink("https://www.youtube.com/watch", ["youtube.com"]),
+    ).toBeNull();
+    expect(
+      findBlockedLink("https://notyoutube.com/watch", ["youtube.com"]),
+    ).toBe("notyoutube.com");
+  });
+
+  it("returns the first blocked host among several links", () => {
+    expect(
+      findBlockedLink("https://ok.com/a https://bad.com/b", ["ok.com"]),
+    ).toBe("bad.com");
+  });
+});
+
+describe("capsPercent", () => {
+  it("counts only cased letters", () => {
+    expect(capsPercent("ABCD")).toBe(100);
+    expect(capsPercent("abcd")).toBe(0);
+    expect(capsPercent("AbCd")).toBe(50);
+    expect(capsPercent("1234 !!")).toBe(0);
+  });
+});
+
+describe("compileRegexRules", () => {
+  it("skips invalid and oversized patterns, reporting them", () => {
+    const errors: string[] = [];
+    const compiled = compileRegexRules(
+      ["valid\\d+", "([unclosed", "x".repeat(MAX_REGEX_LENGTH + 1)],
+      (p) => errors.push(p),
+    );
+    expect(compiled).toHaveLength(1);
+    expect(errors).toHaveLength(2);
+  });
+});
+
+describe("evaluate", () => {
+  it("matches terms case-insensitively via the automaton", () => {
+    const r = rules({ terms: ["badword"] });
+    expect(evaluate(r, "well BADWORD indeed", 0)).toEqual({
+      rule: "term",
+      detail: "badword",
+    });
+    expect(evaluate(r, "clean message", 0)).toBeNull();
+  });
+
+  it("matches regex rules", () => {
+    const r = rules({ regexRules: ["fr[e3]{2}\\s+nitro"] });
+    expect(evaluate(r, "FR33  NITRO click here", 0)?.rule).toBe("regex");
+  });
+
+  it("blocks invites unless allowlisted", () => {
+    const r = rules({ blockInvites: true, inviteAllowlist: ["ours"] });
+    expect(evaluate(r, "discord.gg/theirs", 0)?.rule).toBe("invite");
+    expect(evaluate(r, "discord.gg/ours", 0)).toBeNull();
+  });
+
+  it("blocks links unless allowlisted", () => {
+    const r = rules({ blockLinks: true, linkAllowlist: ["github.com"] });
+    expect(evaluate(r, "https://scam.io/free", 0)?.rule).toBe("link");
+    expect(evaluate(r, "https://github.com/lumi-devs", 0)).toBeNull();
+  });
+
+  it("enforces the mention limit only when enabled", () => {
+    expect(evaluate(rules({ maxMentions: 3 }), "hi", 4)?.rule).toBe(
+      "mentions",
+    );
+    expect(evaluate(rules({ maxMentions: 3 }), "hi", 3)).toBeNull();
+    expect(evaluate(rules({ maxMentions: 0 }), "hi", 40)).toBeNull();
+  });
+
+  it("enforces the caps rule with the min-length floor", () => {
+    const r = rules({ maxCapsPercent: 70 });
+    expect(evaluate(r, "STOP SHOUTING AT ME", 0)?.rule).toBe("caps");
+    expect(evaluate(r, "OK", 0)).toBeNull(); // below capsMinLength
+    expect(evaluate(r, "perfectly calm message", 0)).toBeNull();
+  });
+
+  it("prefers term hits over later rules", () => {
+    const r = rules({ terms: ["spam"], blockInvites: true });
+    expect(evaluate(r, "spam discord.gg/x", 0)?.rule).toBe("term");
+  });
+});

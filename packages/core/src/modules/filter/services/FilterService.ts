@@ -1,38 +1,83 @@
 import { Service } from "#core/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
-// @ts-expect-error - ahocorasick does not provide type declarations
-import AhoCorasick from "ahocorasick";
 import { parseConfigList } from "#core/module-system/Module.js";
-
-interface AhoMatcher {
-  search(text: string): Array<[number, string[]]>;
-}
+import {
+  compileRules,
+  evaluate,
+  DEFAULT_CAPS_MIN_LENGTH,
+  type CompiledRules,
+  type FilterHit,
+  type RuleConfig,
+} from "../lib/rules.js";
 
 @ApplyOptions<Piece.Options>({ name: "filter" })
 export class FilterService extends Service {
-  // Per-guild compiled automaton. `null` means "loaded, but no terms" — distinct
-  // from "not loaded yet" (absent key), so a guild with an empty filter doesn't
-  // trigger a reload on every message. Insertion order doubles as LRU order;
-  // touch() re-inserts to mark recency.
-  private readonly _guilds = new Map<string, AhoMatcher | null>();
+  // Per-guild compiled rule set. `null` means "loaded, but nothing enabled" —
+  // distinct from "not loaded yet" (absent key), so a guild with no filter
+  // config doesn't trigger a reload on every message. Insertion order doubles
+  // as LRU order; touch() re-inserts to mark recency.
+  private readonly _guilds = new Map<string, CompiledRules | null>();
 
   public async loadGuild(guildId: string): Promise<void> {
-    const terms = parseConfigList(
-      await this.container.db.config.getModuleConfig(
-        guildId,
-        "filter",
-        "terms",
-      ),
-    );
-    this.rebuild(guildId, terms);
+    const cfg = this.container.db.config;
+    const [
+      terms,
+      regexRules,
+      blockInvites,
+      inviteAllowlist,
+      blockLinks,
+      linkAllowlist,
+      maxMentions,
+      maxCapsPercent,
+      capsMinLength,
+    ] = await Promise.all([
+      cfg.getModuleConfig(guildId, "filter", "terms"),
+      cfg.getModuleConfig(guildId, "filter", "regex_rules"),
+      cfg.getModuleConfig(guildId, "filter", "block_invites"),
+      cfg.getModuleConfig(guildId, "filter", "invite_allowlist"),
+      cfg.getModuleConfig(guildId, "filter", "block_links"),
+      cfg.getModuleConfig(guildId, "filter", "link_allowlist"),
+      cfg.getModuleConfig(guildId, "filter", "max_mentions"),
+      cfg.getModuleConfig(guildId, "filter", "max_caps_percent"),
+      cfg.getModuleConfig(guildId, "filter", "caps_min_length"),
+    ]);
+
+    this.rebuild(guildId, {
+      terms: parseConfigList(terms),
+      regexRules: parseConfigList(regexRules),
+      blockInvites: blockInvites === true,
+      inviteAllowlist: parseConfigList(inviteAllowlist),
+      blockLinks: blockLinks === true,
+      linkAllowlist: parseConfigList(linkAllowlist),
+      maxMentions: typeof maxMentions === "number" ? maxMentions : 0,
+      maxCapsPercent: typeof maxCapsPercent === "number" ? maxCapsPercent : 0,
+      capsMinLength:
+        typeof capsMinLength === "number"
+          ? capsMinLength
+          : DEFAULT_CAPS_MIN_LENGTH,
+    });
   }
 
-  public rebuild(guildId: string, terms: string[]): void {
+  public rebuild(guildId: string, config: RuleConfig): void {
+    const enabled =
+      config.terms.length > 0 ||
+      config.regexRules.length > 0 ||
+      config.blockInvites ||
+      config.blockLinks ||
+      config.maxMentions > 0 ||
+      config.maxCapsPercent > 0;
+
     this._guilds.delete(guildId);
     this._guilds.set(
       guildId,
-      terms.length > 0 ? (new AhoCorasick(terms) as AhoMatcher) : null,
+      enabled
+        ? compileRules(config, (pattern, reason) =>
+            this.container.logger.warn(
+              `[Filter] Skipping invalid regex rule in guild ${guildId}: /${pattern}/ (${reason})`,
+            ),
+          )
+        : null,
     );
     this.#evictIfNeeded();
   }
@@ -41,24 +86,27 @@ export class FilterService extends Service {
     return this._guilds.has(guildId);
   }
 
-  public test(guildId: string, text: string): string | null {
+  public test(
+    guildId: string,
+    content: string,
+    mentionCount: number,
+  ): FilterHit | null {
     if (!this._guilds.has(guildId)) return null;
-    const matcher = this.#touch(guildId);
-    if (!matcher) return null;
-    const results = matcher.search(text.toLowerCase());
-    return results[0]?.[1]?.[0] ?? null;
+    const rules = this.#touch(guildId);
+    if (!rules) return null;
+    return evaluate(rules, content, mentionCount);
   }
 
   public evict(guildId: string): void {
     this._guilds.delete(guildId);
   }
 
-  /** Mark a guild as most-recently-used and return its matcher. */
-  #touch(guildId: string): AhoMatcher | null {
-    const matcher = this._guilds.get(guildId) ?? null;
+  /** Mark a guild as most-recently-used and return its rule set. */
+  #touch(guildId: string): CompiledRules | null {
+    const rules = this._guilds.get(guildId) ?? null;
     this._guilds.delete(guildId);
-    this._guilds.set(guildId, matcher);
-    return matcher;
+    this._guilds.set(guildId, rules);
+    return rules;
   }
 
   #evictIfNeeded(): void {
@@ -70,7 +118,7 @@ export class FilterService extends Service {
     }
   }
 
-  // Cap the number of resident automatons so a bot in many guilds can't grow
+  // Cap the number of resident rule sets so a bot in many guilds can't grow
   // _guilds without bound. Eviction is LRU: when full, the least-recently-used
   // guild is dropped and simply reloaded from config on its next message (a
   // cache miss, not a correctness change).
