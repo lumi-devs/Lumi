@@ -21,7 +21,9 @@ The k8s manifests assume:
 | `worker`    | `Deployment`  | autoscaled by KEDA   | Stateless. Pulls raw gateway events from Redis Streams, runs modules.      |
 | `gateway`   | `StatefulSet` | 1+ (manual)          | Owns Discord WS; stable identity is needed for the cluster coordinator.    |
 | `scheduler` | `Deployment`  | 1 (with leader lock) | Owns BullMQ. `SCHEDULER_LEADER_LOCK=true` makes scale-out safe but pointless. |
-| `api`       | `Deployment`  | 2+                   | Stateless RabbitMQ RPC consumer for the dashboard.                         |
+
+There is no dedicated `api` workload: dashboard RPC (RabbitMQ request/response)
+is served by every worker via competing consumers.
 
 ## Apply order
 
@@ -34,7 +36,6 @@ kubectl apply -f scheduler-deployment.yaml
 kubectl apply -f gateway-statefulset.yaml   # includes the headless Service
 kubectl apply -f worker-deployment.yaml
 kubectl apply -f worker-scaledobject.yaml
-kubectl apply -f api-deployment.yaml
 ```
 
 ## How the autoscaler decides
