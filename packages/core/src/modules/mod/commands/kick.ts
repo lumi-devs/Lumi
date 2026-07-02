@@ -1,7 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry, type Args } from "@sapphire/framework";
 import {
-  ApplicationIntegrationType,
   Colors,
   type ChatInputCommandInteraction,
   type Message,
@@ -35,7 +34,7 @@ export class KickCommand extends BaseCommand {
         .setDescription(this.description)
         .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
         .setContexts(...this.contexts)
-        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall])
+        .setIntegrationTypes(this.integrationTypes)
         .addUserOption((o) =>
           o
             .setName("member")

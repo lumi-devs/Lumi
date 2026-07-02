@@ -4,13 +4,13 @@ import {
   InteractionHandler,
 } from "@sapphire/framework";
 import { type ButtonInteraction } from "discord.js";
-import { collectPingData } from "../lib/ping-collect.js";
+import { collectPingData } from "#core/lib/ping-collect.js";
 import {
   buildOverviewCard,
   buildDetailCard,
   type PingCategory,
-} from "../lib/ping-cards.js";
-import { BaseInteractionHandler } from "../lib/interaction-handler.js";
+} from "#core/lib/ping-cards.js";
+import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
 
 @ApplyOptions<InteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,

@@ -3,7 +3,6 @@ import { ApplicationCommandRegistry, type Args } from "@sapphire/framework";
 import { time, TimestampStyles, userMention } from "@discordjs/formatters";
 import { chunk } from "@sapphire/utilities";
 import {
-  ApplicationIntegrationType,
   type ChatInputCommandInteraction,
   type Message,
   MessageFlags,
@@ -47,7 +46,7 @@ export class CasesCommand extends BaseSubcommand {
         .setDescription(this.description)
         .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
         .setContexts(...this.contexts)
-        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall])
+        .setIntegrationTypes(this.integrationTypes)
         .addSubcommand((s) =>
           s
             .setName("view")

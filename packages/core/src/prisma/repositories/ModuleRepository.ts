@@ -77,19 +77,8 @@ export class ModuleRepository extends Repository {
       // General guild toggle (/config enable/disable)
       if (!(await this.isModuleGuildEnabled(guildId, moduleName))) return false;
 
-      // Specific "enabled" config field (some modules use this as a master switch)
-      const configEnabled = await this.db.config.getModuleConfig(
-        guildId,
-        moduleName,
-        "enabled",
-      );
-      if (configEnabled !== null && configEnabled !== undefined)
-        return configEnabled !== false;
-
-      // Fallback to module's default if not set in DB
-      const record = container.moduleStore?.getRecord(moduleName);
-      const field = record?.meta.configFields?.find((f) => f.key === "enabled");
-      if (field) return field.default !== false;
+      // Config-level "enabled" master switch (explicit value or module default).
+      return this.#configLevelEnabled(guildId, moduleName);
     }
 
     return true;
@@ -155,24 +144,30 @@ export class ModuleRepository extends Repository {
         }
       }
 
-      // Config-level "enabled" key check
-      const configEnabled = await this.db.config.getModuleConfig(
-        guildId,
-        name,
-        "enabled",
-      );
-      if (configEnabled !== null && configEnabled !== undefined) {
-        result.set(name, configEnabled !== false);
-        continue;
-      }
-
-      // Module default
-      const record = container.moduleStore?.getRecord(name);
-      const field = record?.meta.configFields?.find((f) => f.key === "enabled");
-      result.set(name, field ? field.default !== false : true);
+      // Config-level "enabled" master switch (explicit value or module default).
+      result.set(name, await this.#configLevelEnabled(guildId, name));
     }
 
     return result;
+  }
+
+  /**
+   * Resolve a module's config-level enable state for a guild: an explicit
+   * `enabled` config value wins, otherwise the module's declared default,
+   * otherwise enabled.
+   */
+  async #configLevelEnabled(guildId: string, name: string): Promise<boolean> {
+    const configEnabled = await this.db.config.getModuleConfig(
+      guildId,
+      name,
+      "enabled",
+    );
+    if (configEnabled !== null && configEnabled !== undefined) {
+      return configEnabled !== false;
+    }
+    const record = container.moduleStore?.getRecord(name);
+    const field = record?.meta.configFields?.find((f) => f.key === "enabled");
+    return field ? field.default !== false : true;
   }
 
   public async setModuleGuildEnabled(

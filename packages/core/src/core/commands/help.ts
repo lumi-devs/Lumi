@@ -15,7 +15,6 @@ import {
   ButtonStyle,
   MessageFlags,
   SeparatorSpacingSize,
-  ApplicationIntegrationType,
 } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
 import { Colors } from "#utilities/branding.js";
@@ -142,7 +141,7 @@ export class HelpCommand extends BaseCommand {
         .setDescription(this.description)
         .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
         .setContexts(...this.contexts)
-        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall]),
+        .setIntegrationTypes(this.integrationTypes),
     );
   }
 

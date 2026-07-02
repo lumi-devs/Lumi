@@ -7,7 +7,6 @@ import {
 import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel, type PermissionModelType } from "#lib/permissions.js";
 import {
-  ApplicationIntegrationType,
   type AutocompleteInteraction,
   type ChatInputCommandInteraction,
   type Message,
@@ -26,6 +25,7 @@ import {
 } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
 import { errorFrom } from "#utilities/errors.js";
+import type { PermissionService } from "#core/services/PermissionService.js";
 
 const MODEL_TYPES = [
   "role",
@@ -84,9 +84,9 @@ function formatOverride(row: PermissionOverrideRow): string {
   ],
 })
 export class PermissionsCommand extends BaseSubcommand {
-  private get permissionService(): import("#core/services/PermissionService.js").PermissionService {
+  private get permissionService(): PermissionService {
     const svc = this.container.stores.get("services").get("permissions") as
-      | import("#core/services/PermissionService.js").PermissionService
+      | PermissionService
       | undefined;
     if (!svc) throw new Error("PermissionService is not loaded");
     return svc;
@@ -103,7 +103,7 @@ export class PermissionsCommand extends BaseSubcommand {
         .setDescription(this.description)
         .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
         .setContexts(...this.contexts)
-        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall])
+        .setIntegrationTypes(this.integrationTypes)
         .addSubcommand((sub) =>
           sub
             .setName("allow")

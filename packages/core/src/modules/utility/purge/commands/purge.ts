@@ -19,6 +19,7 @@ import {
   makeWarningCard,
 } from "#utilities/cards.js";
 import { logError, errorCode } from "#utilities/errors.js";
+import { deleteMessageLater } from "#utilities/temporary-message.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "purge",
@@ -30,21 +31,9 @@ import { logError, errorCode } from "#utilities/errors.js";
 export class PurgeCommand extends BaseCommand {
   public override async messageRun(message: Message, args: Args) {
     const amountResult = await args.pickResult("integer");
+    const amount = amountResult.isOk() ? amountResult.unwrap() : NaN;
 
-    if (amountResult.isErr()) {
-      await message.reply({
-        ...makeErrorCard(
-          "Invalid Amount",
-          "Please provide a number between 1 and 1000.",
-        ),
-        allowedMentions: {},
-      });
-      return;
-    }
-
-    const amount = amountResult.unwrap();
-
-    if (amount <= 0 || amount > 1000) {
+    if (Number.isNaN(amount) || amount <= 0 || amount > 1000) {
       await message.reply({
         ...makeErrorCard(
           "Invalid Amount",
@@ -223,15 +212,7 @@ export class PurgeCommand extends BaseCommand {
         ),
         allowedMentions: {},
       });
-      setTimeout(
-        () =>
-          completedCard
-            .delete()
-            .catch((err: unknown) =>
-              logError("Purge: Failed to delete completedCard", err),
-            ),
-        5000,
-      );
+      deleteMessageLater(completedCard, undefined, "Purge: delete completedCard");
     } catch (err: unknown) {
       this.container.logger.error(
         "[Purge] Background purge execution failed:",
@@ -296,14 +277,10 @@ export class PurgeCommand extends BaseCommand {
           "The purge operation was cancelled.",
         ),
       });
-      setTimeout(
-        () =>
-          confirmation.message
-            .delete()
-            .catch((err: unknown) =>
-              logError("Purge: Failed to delete confirmation message", err),
-            ),
-        5000,
+      deleteMessageLater(
+        confirmation.message,
+        undefined,
+        "Purge: delete confirmation message",
       );
       return { prompt, confirmed: false };
     } catch (e) {
@@ -313,14 +290,10 @@ export class PurgeCommand extends BaseCommand {
           "The confirmation request timed out.",
         ),
       });
-      setTimeout(
-        () =>
-          prompt
-            .delete()
-            .catch((err: unknown) =>
-              logError("Purge: Failed to delete prompt after timeout", err),
-            ),
-        5000,
+      deleteMessageLater(
+        prompt,
+        undefined,
+        "Purge: delete prompt after timeout",
       );
       return { prompt, confirmed: false };
     }

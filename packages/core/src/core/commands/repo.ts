@@ -11,6 +11,7 @@ import {
 } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
 import { errorFrom } from "#utilities/errors.js";
+import type { DownloaderService } from "#core/services/DownloaderService.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "repo",
@@ -27,12 +28,10 @@ import { errorFrom } from "#utilities/errors.js";
   ],
 })
 export class RepoCommand extends BaseSubcommand {
-  private get downloaderService(): import("#core/services/DownloaderService.js").DownloaderService {
+  private get downloaderService(): DownloaderService {
     return this.container.stores
       .get("services")
-      .get(
-        "downloader",
-      ) as import("#core/services/DownloaderService.js").DownloaderService;
+      .get("downloader") as DownloaderService;
   }
 
   public async messageRunHelp(message: Message): Promise<void> {
@@ -178,8 +177,7 @@ export class RepoCommand extends BaseSubcommand {
     }
 
     const list = repos.map(
-      (r: import("@prisma/client").DownloaderRepo) =>
-        `**${r.name}** (\`${r.branch}\`)\n<${r.url}>`,
+      (r) => `**${r.name}** (\`${r.branch}\`)\n<${r.url}>`,
     );
     await message.reply(makeListCard("Added Repositories", list));
   }

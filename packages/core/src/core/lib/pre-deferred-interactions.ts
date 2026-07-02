@@ -57,27 +57,17 @@ export function installPreDeferredInteractions(
     return Promise.resolve(undefined as never);
   };
 
-  (
-    ChatInputCommandInteraction.prototype as unknown as { deferReply: unknown }
-  ).deferReply = skipDeferReply;
-  (
-    ContextMenuCommandInteraction.prototype as unknown as {
-      deferReply: unknown;
-    }
-  ).deferReply = skipDeferReply;
-  (
-    ModalSubmitInteraction.prototype as unknown as { deferReply: unknown }
-  ).deferReply = skipDeferReply;
-  (
-    MessageComponentInteraction.prototype as unknown as {
-      deferReply: unknown;
-    }
-  ).deferReply = skipDeferReply;
-  (
-    MessageComponentInteraction.prototype as unknown as {
-      deferUpdate: unknown;
-    }
-  ).deferUpdate = skipDeferUpdate;
+  // Replace each prototype's deferral method with the no-op shims above; the
+  // cast sidesteps discord.js' readonly method types.
+  const patch = (proto: object, method: string, fn: unknown): void => {
+    (proto as Record<string, unknown>)[method] = fn;
+  };
+
+  patch(ChatInputCommandInteraction.prototype, "deferReply", skipDeferReply);
+  patch(ContextMenuCommandInteraction.prototype, "deferReply", skipDeferReply);
+  patch(ModalSubmitInteraction.prototype, "deferReply", skipDeferReply);
+  patch(MessageComponentInteraction.prototype, "deferReply", skipDeferReply);
+  patch(MessageComponentInteraction.prototype, "deferUpdate", skipDeferUpdate);
   // Autocomplete cannot be pre-acked (gateway must not defer type-4 interactions).
   void AutocompleteInteraction;
 

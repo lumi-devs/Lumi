@@ -485,55 +485,37 @@ export class LumiClient extends SapphireClient {
     if (this._rawConsumer) {
       await this._rawConsumer
         .stopConsuming()
-        .catch((err) =>
-          container.logger.warn("[Client] RawConsumer stop failed:", err),
-        );
+        .catch(this._warnOnCleanupError("RawConsumer stop"));
       this._rawConsumer = null;
     }
     if (this._taskFireConsumer) {
       await this._taskFireConsumer
         .stopConsuming()
-        .catch((err) =>
-          container.logger.warn("[Client] TaskFireConsumer stop failed:", err),
-        );
+        .catch(this._warnOnCleanupError("TaskFireConsumer stop"));
       this._taskFireConsumer = null;
     }
     if (this._schedulerRequestConsumer) {
       await this._schedulerRequestConsumer
         .stopConsuming()
-        .catch((err) =>
-          container.logger.warn(
-            "[Client] SchedulerRequestConsumer stop failed:",
-            err,
-          ),
-        );
+        .catch(this._warnOnCleanupError("SchedulerRequestConsumer stop"));
       this._schedulerRequestConsumer = null;
     }
     if (this._schedulerLeaderLock) {
       await this._schedulerLeaderLock
         .release()
-        .catch((err) =>
-          container.logger.warn(
-            "[Client] SchedulerLeaderLock release failed:",
-            err,
-          ),
-        );
+        .catch(this._warnOnCleanupError("SchedulerLeaderLock release"));
       this._schedulerLeaderLock = null;
     }
     await super.destroy();
     await container.rabbit?.close();
     await this._ownedEventBus
       ?.close()
-      .catch((err) =>
-        container.logger.warn("[Client] EventBus close failed:", err),
-      );
+      .catch(this._warnOnCleanupError("EventBus close"));
     this._ownedEventBus = null;
     if (this._cluster) {
       await this._cluster
         .close()
-        .catch((err) =>
-          container.logger.warn("[Client] Cluster close failed:", err),
-        );
+        .catch(this._warnOnCleanupError("Cluster close"));
       this._cluster = null;
     }
     if (this._clusterRedis) {
@@ -546,14 +528,16 @@ export class LumiClient extends SapphireClient {
     await container.invalidation.close();
     await container.redis
       .quit()
-      .catch((err) =>
-        container.logger.warn("[Client] Redis quit failed:", err),
-      );
+      .catch(this._warnOnCleanupError("Redis quit"));
     await container.prisma
       .$disconnect()
-      .catch((err) =>
-        container.logger.warn("[Client] Prisma disconnect failed:", err),
-      );
+      .catch(this._warnOnCleanupError("Prisma disconnect"));
+  }
+
+  /** Cleanup-error handler used throughout destroy(): log at warn, never throw. */
+  private _warnOnCleanupError(what: string) {
+    return (err: unknown) =>
+      container.logger.warn(`[Client] ${what} failed:`, err);
   }
 
   // Per-role readiness probes. /readyz aggregates these; the

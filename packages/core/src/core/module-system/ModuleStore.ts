@@ -32,6 +32,38 @@ export interface ModuleRecord {
   failureReason?: string;
 }
 
+/** True when `child` is `parent` itself or a path nested beneath it. */
+function isPathInside(child: string, parent: string): boolean {
+  return child === parent || child.startsWith(parent + path.sep);
+}
+
+/**
+ * Sapphire throws "<store> piece '<name>' does not exist" when unloading a piece
+ * that was never loaded. Several flows unload defensively and must tolerate that
+ * specific case while still surfacing genuine errors.
+ */
+function isMissingPieceError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.includes("does not exist");
+}
+
+/** Resolve a module's `meta` export from a dynamically imported index module. */
+function extractModuleMeta(mod: {
+  meta?: ModuleMeta;
+  default?: { meta?: ModuleMeta };
+  [key: string]: unknown;
+}): ModuleMeta | undefined {
+  return (
+    mod.meta ??
+    mod.default?.meta ??
+    (
+      Object.values(mod).find(
+        (v: unknown) => (v as { meta?: ModuleMeta })?.meta,
+      ) as { meta?: ModuleMeta } | undefined
+    )?.meta
+  );
+}
+
 export class ModuleStore extends Store<Module> {
   readonly #roots: URL[] = [];
   #discovered = false;
@@ -58,11 +90,7 @@ export class ModuleStore extends Store<Module> {
     const removedPaths: string[] = [];
     for (const p of this.paths) {
       const resolvedP = path.resolve(p);
-      if (
-        rootPaths.some(
-          (root) => resolvedP === root || resolvedP.startsWith(root + path.sep),
-        )
-      ) {
+      if (rootPaths.some((root) => isPathInside(resolvedP, root))) {
         removedPaths.push(p);
       }
     }
@@ -163,8 +191,7 @@ export class ModuleStore extends Store<Module> {
     try {
       await this.unload(name);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!msg.includes("does not exist")) throw err;
+      if (!isMissingPieceError(err)) throw err;
     }
     // bustCache=true appends ?t=<timestamp> to index imports so Bun/Node ESM
     // treats them as new URLs and re-evaluates updated source on disk.
@@ -216,8 +243,7 @@ export class ModuleStore extends Store<Module> {
       await this.loadModule(name);
     } else {
       await this.unload(name).catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        if (!msg.includes("does not exist")) throw err;
+        if (!isMissingPieceError(err)) throw err;
       });
     }
 
@@ -245,10 +271,7 @@ export class ModuleStore extends Store<Module> {
   public moduleNameForLocation(fullPath: string): string | null {
     let best: ModuleRecord | null = null;
     for (const record of this.#records.values()) {
-      if (
-        fullPath === record.dir ||
-        fullPath.startsWith(record.dir + path.sep)
-      ) {
+      if (this.#isInsideModule(record, fullPath)) {
         if (!best || record.dir.length > best.dir.length) best = record;
       }
     }
@@ -366,14 +389,7 @@ export class ModuleStore extends Store<Module> {
 
     try {
       const mod = await import(record.indexUrl);
-      const meta: ModuleMeta | undefined =
-        mod.meta ??
-        mod.default?.meta ??
-        (
-          Object.values(mod).find(
-            (v: unknown) => (v as { meta?: ModuleMeta })?.meta,
-          ) as { meta?: ModuleMeta }
-        )?.meta;
+      const meta = extractModuleMeta(mod);
       this.#schemaCache.set(name, meta?.configSchema);
       return meta?.configSchema;
     } catch (err: unknown) {
@@ -436,9 +452,7 @@ export class ModuleStore extends Store<Module> {
   }
 
   #isInsideModule(record: ModuleRecord, fullPath: string): boolean {
-    return (
-      fullPath === record.dir || fullPath.startsWith(`${record.dir}${path.sep}`)
-    );
+    return isPathInside(fullPath, record.dir);
   }
 
   async #walk(
@@ -512,14 +526,7 @@ export class ModuleStore extends Store<Module> {
       // so file changes on disk (dev edits, git-pulled addon updates) take effect.
       const importUrl = bustCache ? `${baseUrl}?t=${Date.now()}` : baseUrl;
       const mod = await import(importUrl);
-      const meta =
-        mod.meta ??
-        mod.default?.meta ??
-        (
-          Object.values(mod).find(
-            (v: unknown) => (v as { meta?: ModuleMeta })?.meta,
-          ) as { meta?: ModuleMeta }
-        )?.meta;
+      const meta = extractModuleMeta(mod);
 
       if (!meta || found.has(meta.name)) return;
 

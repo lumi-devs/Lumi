@@ -16,6 +16,7 @@ import {
 import { makeErrorCard, makeInfoCard } from "#utilities/cards.js";
 import { container } from "@sapphire/framework";
 import { capitalizeFirstLetter } from "@sapphire/utilities";
+import { deleteMessageLater } from "#utilities/temporary-message.js";
 
 interface MediaRequestContext {
   context: Message | RepliableInteraction;
@@ -61,7 +62,7 @@ export async function handleMediaRequest({
           ...makeErrorCard("Cooldown", reply),
           allowedMentions: {},
         });
-        setTimeout(() => msg.delete().catch(() => {}), 5000);
+        deleteMessageLater(msg, undefined, "user_media: delete cooldown notice");
         return;
       }
       if (context.deferred || context.replied) {
@@ -92,26 +93,17 @@ export async function handleMediaRequest({
 
   const shouldShowMedia = isSelf || isButton;
 
-  if (shouldShowMedia) {
-    if (mediaType === "avatar" && fetchedUser.avatar) {
-      actionRows.push(
-        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-          new ButtonBuilder()
-            .setLabel("Avatar Link")
-            .setStyle(ButtonStyle.Link)
-            .setURL(mediaUrl!),
-        ),
-      );
-    } else if (mediaType === "banner" && fetchedUser.banner) {
-      actionRows.push(
-        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-          new ButtonBuilder()
-            .setLabel("Banner Link")
-            .setStyle(ButtonStyle.Link)
-            .setURL(mediaUrl!),
-        ),
-      );
-    }
+  // `mediaUrl` is already null when the user has no avatar/banner, so it doubles
+  // as the "is there media to link" guard for both the avatar and banner cases.
+  if (shouldShowMedia && mediaUrl) {
+    actionRows.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        new ButtonBuilder()
+          .setLabel(`${capitalizeFirstLetter(mediaType)} Link`)
+          .setStyle(ButtonStyle.Link)
+          .setURL(mediaUrl),
+      ),
+    );
   } else if (mediaUrl) {
     actionRows.push(
       new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(

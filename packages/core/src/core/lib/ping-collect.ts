@@ -4,6 +4,7 @@ import { promises as fs } from "node:fs";
 import { createRequire } from "node:module";
 import { container } from "@sapphire/framework";
 import { fetch, FetchResultTypes } from "@sapphire/fetch";
+import { Stopwatch } from "@sapphire/stopwatch";
 import { Prisma } from "@prisma/client";
 import type { Redis } from "ioredis";
 import type { ModuleRecord } from "#core/module-system/ModuleStore.js";
@@ -210,29 +211,47 @@ function parseRedisInfo(raw: string) {
 }
 
 async function probeRedisRead(redis: Redis) {
-  const t = Date.now();
+  const sw = new Stopwatch();
   await redis.get("lumi:ping:probe");
-  return Date.now() - t;
+  return sw.stop().duration;
 }
 
 async function probeRedisWrite(redis: Redis) {
-  const t = Date.now();
+  const sw = new Stopwatch();
   await redis.set("lumi:ping:probe", "1", "EX", 30);
-  return Date.now() - t;
+  return sw.stop().duration;
 }
 
 const STAT_TTL_MS = 5_000;
 
-let pgStatCache: ReturnType<typeof postgresStats> | null = null;
-let pgStatAt = 0;
+interface TtlCache<T> {
+  value: T | null;
+  at: number;
+}
 
-let rdStatCache: ReturnType<typeof redisStats> | null = null;
-let rdStatAt = 0;
+/** Memoize an expensive stat fetch for STAT_TTL_MS, caching the in-flight promise. */
+function ttlCached<T>(cache: TtlCache<T>, fn: () => T): T {
+  const now = Date.now();
+  if (!cache.value || now - cache.at > STAT_TTL_MS) {
+    cache.at = now;
+    cache.value = fn();
+  }
+  return cache.value!;
+}
+
+const pgStat: TtlCache<ReturnType<typeof postgresStats>> = {
+  value: null,
+  at: 0,
+};
+const rdStat: TtlCache<ReturnType<typeof redisStats>> = {
+  value: null,
+  at: 0,
+};
 
 async function probePrisma() {
-  const t = Date.now();
+  const sw = new Stopwatch();
   await container.prisma.$queryRaw(Prisma.sql`SELECT 1`);
-  return Date.now() - t;
+  return sw.stop().duration;
 }
 
 async function postgresStats() {
@@ -447,22 +466,8 @@ export async function collectPingData(): Promise<Omit<PingData, "roundTrip">> {
     probePrisma().catch(() => null),
     probeRedisRead(redis).catch(() => null),
     probeRedisWrite(redis).catch(() => null),
-    (() => {
-      const now = Date.now();
-      if (!pgStatCache || now - pgStatAt > STAT_TTL_MS) {
-        pgStatAt = now;
-        pgStatCache = postgresStats();
-      }
-      return pgStatCache;
-    })(),
-    (() => {
-      const now = Date.now();
-      if (!rdStatCache || now - rdStatAt > STAT_TTL_MS) {
-        rdStatAt = now;
-        rdStatCache = redisStats(redis);
-      }
-      return rdStatCache;
-    })(),
+    ttlCached(pgStat, postgresStats),
+    ttlCached(rdStat, () => redisStats(redis)),
     hostStats(),
     countDeps(),
     countCodeLines(),

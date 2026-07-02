@@ -6,6 +6,7 @@ import type { Message } from "discord.js";
 import { makeSuccessCard, makeErrorCard } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
 import { errorFrom } from "#utilities/errors.js";
+import type { GuildSettingsService } from "#core/services/GuildSettingsService.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "dashboard",
@@ -15,12 +16,10 @@ import { errorFrom } from "#utilities/errors.js";
   subcommands: [{ name: "layout", messageRun: "messageRunLayout" }],
 })
 export class DashboardCommand extends BaseSubcommand {
-  private get guildSettingsService(): import("#core/services/GuildSettingsService.js").GuildSettingsService {
+  private get guildSettingsService(): GuildSettingsService {
     return this.container.stores
       .get("services")
-      .get(
-        "guild-settings",
-      ) as import("#core/services/GuildSettingsService.js").GuildSettingsService;
+      .get("guild-settings") as GuildSettingsService;
   }
 
   public async messageRunLayout(message: Message, args: Args): Promise<void> {
