@@ -34,36 +34,25 @@ module.exports = {
         ],
       },
     ],
-    // Ephemerality is owned by the reply helpers (ephemeralCard, ctx.reply,
-    // this.reply*) — never OR the flag in feature code.
-    'no-restricted-syntax': [
-      'error',
-      {
-        selector: 'MemberExpression[object.name="MessageFlags"][property.name="Ephemeral"]',
-        message: 'Do not use MessageFlags.Ephemeral directly — wrap the card with ephemeralCard() or use the reply helpers.',
-      },
-    ],
   },
   overrides: [
     {
-      // The reply primitives themselves implement ephemerality.
-      files: [
-        'packages/core/src/utilities/cards.ts',
-        'packages/core/src/utilities/command-response.ts',
-        'packages/core/src/core/lib/command-context.ts',
-      ],
-      rules: { 'no-restricted-syntax': 'off' },
-    },
-    {
       // Commands reply through CommandContext / the Base* helpers so slash and
-      // prefix behave identically; raw interaction replies bypass that.
+      // prefix behave identically; raw interaction replies bypass that, and
+      // ephemerality is owned by the reply helpers (ephemeralCard, ctx.reply,
+      // this.reply*) — never OR the flag in a command. Low-level card/flag
+      // primitives (cards.ts, ping-cards.ts, pre-deferred-interactions.ts) are
+      // intentionally not commands and define the flags the helpers apply.
       files: ['packages/core/src/**/commands/*.ts'],
       rules: {
         'no-restricted-syntax': [
           'error',
           {
-            selector: 'MemberExpression[object.name="MessageFlags"][property.name="Ephemeral"]',
-            message: 'Do not use MessageFlags.Ephemeral directly — wrap the card with ephemeralCard() or use the reply helpers.',
+            // Ephemerality of a *reply* is owned by the helpers — never OR the
+            // flag into a reply/editReply/followUp payload. (deferReply legitimately
+            // takes { flags: Ephemeral } and has no card, so it is not matched.)
+            selector: 'CallExpression[callee.property.name=/^(reply|editReply|followUp)$/] MemberExpression[object.name="MessageFlags"][property.name="Ephemeral"]',
+            message: 'Do not OR MessageFlags.Ephemeral into a reply — wrap the card with ephemeralCard() or use the reply helpers.',
           },
           {
             selector: 'CallExpression[callee.object.name="interaction"][callee.property.name="reply"]',
