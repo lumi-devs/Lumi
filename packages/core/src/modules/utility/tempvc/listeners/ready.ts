@@ -1,10 +1,10 @@
 import { Listener, Events } from "@sapphire/framework";
+import { getService } from "#core/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Client } from "discord.js";
 import { logError } from "#utilities/errors.js";
 import { isModuleEnabled } from "#utilities/listeners.js";
 import { tempVcRegistry } from "../registry.js";
-import type TempVcService from "../services/TempVcService.js";
 
 @ApplyOptions<Listener.Options>({
   name: "tempvcReady",
@@ -15,9 +15,7 @@ export default class TempVcReadyListener extends Listener<
   typeof Events.ClientReady
 > {
   public async run(client: Client<true>) {
-    const service = this.container.stores
-      .get("services")
-      .get("tempvc") as TempVcService;
+    const service = getService("tempvc");
 
     tempVcRegistry.wire();
 

@@ -1,4 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
+import { getService } from "#core/module-system/Service.js";
 import type { Args } from "@sapphire/framework";
 import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
@@ -29,9 +30,7 @@ import type { DownloaderService } from "#core/services/DownloaderService.js";
 })
 export class RepoCommand extends BaseSubcommand {
   private get downloaderService(): DownloaderService {
-    return this.container.stores
-      .get("services")
-      .get("downloader") as DownloaderService;
+    return getService("downloader");
   }
 
   public async messageRunHelp(message: Message): Promise<void> {

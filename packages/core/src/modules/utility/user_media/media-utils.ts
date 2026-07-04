@@ -62,7 +62,11 @@ export async function handleMediaRequest({
           ...makeErrorCard("Cooldown", reply),
           allowedMentions: {},
         });
-        deleteMessageLater(msg, undefined, "user_media: delete cooldown notice");
+        deleteMessageLater(
+          msg,
+          undefined,
+          "user_media: delete cooldown notice",
+        );
         return;
       }
       if (context.deferred || context.replied) {

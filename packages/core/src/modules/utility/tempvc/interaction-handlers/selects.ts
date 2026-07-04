@@ -3,6 +3,7 @@ import {
   InteractionHandler,
   UserError,
 } from "@sapphire/framework";
+import { getService } from "#core/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   type AnySelectMenuInteraction,
@@ -25,7 +26,7 @@ const ACTIONS = new Set(["ksel", "tsel", "usel", "bsel", "ubsel", "xsel"]);
 })
 export default class TempVcSelectHandler extends BaseInteractionHandler {
   private get service(): TempVcService {
-    return this.container.stores.get("services").get("tempvc") as TempVcService;
+    return getService("tempvc");
   }
 
   public override parse(interaction: AnySelectMenuInteraction) {

@@ -1,9 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { BucketScope, Command } from "@sapphire/framework";
-import {
-  type ChatInputCommandInteraction,
-  type Message,
-} from "discord.js";
+import { type ChatInputCommandInteraction, type Message } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
 import { collectPingData } from "#core/lib/ping-collect.js";
 import {
@@ -29,10 +26,7 @@ export class PingCommand extends BaseCommand {
     registry.registerChatInputCommand((builder) =>
       builder //
         .setName(this.name)
-        .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes),
+        .setDescription(this.description),
     );
   }
 

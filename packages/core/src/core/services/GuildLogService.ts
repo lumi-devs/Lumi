@@ -50,3 +50,9 @@ export class GuildLogService extends Service {
     await channel.send(card).catch(() => null);
   }
 }
+
+declare module "#core/module-system/Service.js" {
+  interface Services {
+    "guild-log": GuildLogService;
+  }
+}

@@ -49,9 +49,6 @@ export class QuarantineCommand extends BaseSubcommand {
       b
         .setName(this.name)
         .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes)
         .addSubcommand((s) =>
           s
             .setName("add")
@@ -218,7 +215,6 @@ export class QuarantineCommand extends BaseSubcommand {
       reason,
     });
     await logToChannel(
-      this.container,
       guildId,
       "🔒 Quarantined",
       Colors.Orange,
@@ -286,7 +282,6 @@ export class QuarantineCommand extends BaseSubcommand {
       reason,
     });
     await logToChannel(
-      this.container,
       guildId,
       "🔓 Released",
       Colors.Green,

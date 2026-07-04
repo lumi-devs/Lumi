@@ -4,12 +4,11 @@ import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import {
   ChannelType,
-  MessageFlags,
   channelMention,
   type ChatInputCommandInteraction,
   type GuildMember,
 } from "discord.js";
-import { makeListCard } from "#utilities/cards.js";
+import { ephemeralCard, makeListCard } from "#utilities/cards.js";
 import { TEMPVC_MAX_GENERATORS } from "../index.js";
 import {
   getVcRecord,
@@ -46,9 +45,6 @@ export class TempVcCommand extends BaseSubcommand {
       builder
         .setName(this.name)
         .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes)
         .addSubcommand((sub) =>
           sub
             .setName("panel")
@@ -131,10 +127,7 @@ export class TempVcCommand extends BaseSubcommand {
     }
 
     const panel = buildPanel(channel, record);
-    await interaction.reply({
-      ...panel,
-      flags: panel.flags | MessageFlags.Ephemeral,
-    });
+    await this.reply(interaction, ephemeralCard(panel));
   }
 
   public async chatInputGenAdd(
@@ -202,9 +195,6 @@ export class TempVcCommand extends BaseSubcommand {
         `${channelMention(id)} — **${cfg.name}** · limit ${cfg.limit || "∞"}`,
     );
     const card = makeListCard("🔊 Temp VC Generators", lines);
-    await interaction.reply({
-      ...card,
-      flags: card.flags | MessageFlags.Ephemeral,
-    });
+    await this.reply(interaction, ephemeralCard(card));
   }
 }

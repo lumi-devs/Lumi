@@ -1,4 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
+import { getService } from "#core/module-system/Service.js";
 
 import type { Message } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
@@ -15,7 +16,7 @@ import type AfkService from "../services/AfkService.js";
 })
 export default class AfkCleanCommand extends BaseCommand {
   private get afkService(): AfkService {
-    return this.container.stores.get("services").get("afk") as AfkService;
+    return getService("afk");
   }
 
   public override async messageRun(message: Message) {

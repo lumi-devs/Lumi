@@ -212,7 +212,11 @@ export class PurgeCommand extends BaseCommand {
         ),
         allowedMentions: {},
       });
-      deleteMessageLater(completedCard, undefined, "Purge: delete completedCard");
+      deleteMessageLater(
+        completedCard,
+        undefined,
+        "Purge: delete completedCard",
+      );
     } catch (err: unknown) {
       this.container.logger.error(
         "[Purge] Background purge execution failed:",

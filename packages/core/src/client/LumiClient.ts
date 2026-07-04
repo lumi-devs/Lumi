@@ -171,6 +171,8 @@ export class LumiClient extends SapphireClient {
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.MessageContent,
+        // Ban/unban events for the logging module (not privileged).
+        GatewayIntentBits.GuildModeration,
         // GuildPresences is privileged and off by default — a bot without the
         // portal toggle would fail IDENTIFY with "disallowed intents". Opt in
         // for presence-driven addons (e.g. activity-roles).
@@ -178,7 +180,9 @@ export class LumiClient extends SapphireClient {
           ? [GatewayIntentBits.GuildPresences]
           : []),
       ],
-      partials: [Partials.Channel, Partials.GuildMember],
+      // Partials.Message lets MessageDelete/Update fire for uncached messages
+      // (the logging module renders them with "unknown content").
+      partials: [Partials.Channel, Partials.GuildMember, Partials.Message],
       allowedMentions: { parse: ["users"], repliedUser: true },
       presence: {
         activities: [
@@ -289,9 +293,6 @@ export class LumiClient extends SapphireClient {
       entityCache: new RedisEntityCache(redis),
       eventBus: this._ownedEventBus.bus,
       eventBusTransport: this._ownedEventBus.transport,
-      modules: Object.create(
-        null,
-      ) as import("#core/types/common.js").ModuleServiceStore,
       moduleStore,
       configChangeHooks: new Map(),
       stats: {
@@ -534,9 +535,7 @@ export class LumiClient extends SapphireClient {
       this._clusterRedis = null;
     }
     await container.invalidation.close();
-    await container.redis
-      .quit()
-      .catch(this._warnOnCleanupError("Redis quit"));
+    await container.redis.quit().catch(this._warnOnCleanupError("Redis quit"));
     await container.prisma
       .$disconnect()
       .catch(this._warnOnCleanupError("Prisma disconnect"));

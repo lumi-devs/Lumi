@@ -26,10 +26,6 @@ declare module "discord.js" {
 
 export type DatabaseRepositories = DatabaseService;
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- declaration merging target for modules to extend
-export interface ModuleServiceMap {}
-export type ModuleServiceStore = ModuleServiceMap & Record<string, unknown>;
-
 // Scheduled-task registry. Each task registers its own name -> payload on Sapphire's
 // `ScheduledTasks` interface via declaration merging, co-located in its own piece file
 // (e.g. afk/scheduled-tasks/AfkDeleteMessageTask.ts) — so third-party/addon modules
@@ -67,7 +63,6 @@ declare module "@sapphire/pieces" {
       lastResume: Date | null;
     };
 
-    readonly modules: ModuleServiceStore;
     rabbit?: RabbitClient;
 
     /** Key format: `"<moduleName>:<configKey>"` */

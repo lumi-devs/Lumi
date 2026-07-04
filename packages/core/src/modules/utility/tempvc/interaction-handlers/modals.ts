@@ -3,6 +3,7 @@ import {
   InteractionHandler,
   UserError,
 } from "@sapphire/framework";
+import { getService } from "#core/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { GuildMember, ModalSubmitInteraction } from "discord.js";
 import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
@@ -25,7 +26,7 @@ const KINDS = new Set(["namem", "limitm"]);
 })
 export default class TempVcModalHandler extends BaseInteractionHandler {
   private get service(): TempVcService {
-    return this.container.stores.get("services").get("tempvc") as TempVcService;
+    return getService("tempvc");
   }
 
   public override parse(interaction: ModalSubmitInteraction) {

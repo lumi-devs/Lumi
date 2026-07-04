@@ -1,4 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
+import { getService } from "#core/module-system/Service.js";
 import type { Args } from "@sapphire/framework";
 import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
@@ -17,9 +18,7 @@ import type { GuildSettingsService } from "#core/services/GuildSettingsService.j
 })
 export class DashboardCommand extends BaseSubcommand {
   private get guildSettingsService(): GuildSettingsService {
-    return this.container.stores
-      .get("services")
-      .get("guild-settings") as GuildSettingsService;
+    return getService("guild-settings");
   }
 
   public async messageRunLayout(message: Message, args: Args): Promise<void> {

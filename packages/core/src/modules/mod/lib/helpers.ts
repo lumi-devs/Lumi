@@ -1,7 +1,7 @@
 import type { Container } from "@sapphire/framework";
+import { tryGetService } from "#core/module-system/Service.js";
 import { type User } from "discord.js";
 import { Duration } from "@sapphire/time-utilities";
-import type { GuildLogService } from "#core/services/GuildLogService.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 
 /** Parse a duration string like "10m", "2h30m", "7d" into milliseconds. Returns null if unparseable. */
@@ -48,7 +48,6 @@ export async function scheduleCaseLift(
 }
 
 export async function logToChannel(
-  container: Container,
   guildId: string,
   action: string,
   color: number,
@@ -57,9 +56,7 @@ export async function logToChannel(
   reason: string,
   caseNumber: number,
 ): Promise<void> {
-  const logService = container.stores.get("services").get("guild-log") as
-    | GuildLogService
-    | undefined;
+  const logService = tryGetService("guild-log");
   await logService?.dispatch({
     guildId,
     moduleName: "mod",
