@@ -93,7 +93,10 @@ export class TimeoutCommand extends BaseSubcommand {
 
     const until = new Date(Date.now() + ms);
     try {
-      await member.timeout(until.getTime(), formatAuditReason(ctx.user, reason));
+      await member.timeout(
+        until.getTime(),
+        formatAuditReason(ctx.user, reason),
+      );
     } catch (err: unknown) {
       logError(`timeout add: guild=${ctx.guildId} target=${member.id}`, err);
       return ctx.replyError(

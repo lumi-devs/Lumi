@@ -60,16 +60,6 @@ export class CommandContext {
     private readonly args: Args | null,
   ) {}
 
-  public static fromInteraction(
-    interaction: ChatInputCommandInteraction,
-  ): CommandContext {
-    return new CommandContext(interaction, null);
-  }
-
-  public static fromMessage(message: Message, args: Args): CommandContext {
-    return new CommandContext(message, args);
-  }
-
   // ── Shape ──────────────────────────────────────────────────────────────────
 
   public get isSlash(): boolean {
@@ -301,5 +291,17 @@ export class CommandContext {
         message: `You need at least **${PERMISSION_LEVEL_NAMES[level]}** level to use this.`,
       });
     }
+  }
+
+  // ── Factories ────────────────────────────────────────────────────────────────
+
+  public static fromInteraction(
+    interaction: ChatInputCommandInteraction,
+  ): CommandContext {
+    return new CommandContext(interaction, null);
+  }
+
+  public static fromMessage(message: Message, args: Args): CommandContext {
+    return new CommandContext(message, args);
   }
 }

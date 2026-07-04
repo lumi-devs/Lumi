@@ -21,6 +21,9 @@ export class ConfigCommand extends BaseCommand {
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
     const features = await loadFeatures(interaction.guild!.id);
-    return interaction.reply(ephemeralCard(buildFeatureListView(features)));
+    return this.reply(
+      interaction,
+      ephemeralCard(buildFeatureListView(features)),
+    );
   }
 }

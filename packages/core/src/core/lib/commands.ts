@@ -189,15 +189,15 @@ function defineCtxWrappers(
   runNames: Set<string>,
   prefixEnabled: boolean,
 ): void {
-  const self = piece as Record<string, unknown>;
+  const target = piece as Record<string, unknown>;
   for (const name of runNames) {
-    const handler = self[name];
+    const handler = target[name];
     if (typeof handler !== "function") {
       throw new Error(
         `Subcommand mapping "run: ${name}" does not match a method on ${piece.constructor.name}.`,
       );
     }
-    self[`${CTX_WRAPPER_PREFIX.chat}${name}`] = (
+    target[`${CTX_WRAPPER_PREFIX.chat}${name}`] = (
       interaction: ChatInputCommandInteraction,
     ) =>
       (handler as CtxHandler).call(
@@ -205,7 +205,7 @@ function defineCtxWrappers(
         CommandContext.fromInteraction(interaction),
       );
     if (prefixEnabled) {
-      self[`${CTX_WRAPPER_PREFIX.message}${name}`] = (
+      target[`${CTX_WRAPPER_PREFIX.message}${name}`] = (
         message: Message,
         args: Args,
       ) =>
@@ -414,13 +414,6 @@ export abstract class BaseCommand extends Command implements CommandLike {
   public readonly contexts: InteractionContextType[];
   public readonly defaultMemberPermissions: bigint | undefined;
 
-  /**
-   * Single-source handler: implement this instead of `chatInputRun` /
-   * `messageRun` and the constructor generates both bridges (message only
-   * when `prefixEnabled`).
-   */
-  public run?(ctx: CommandContext): Awaited<unknown> | Promise<unknown>;
-
   public constructor(
     context: Command.LoaderContext,
     options: BaseCommand.Options,
@@ -442,6 +435,13 @@ export abstract class BaseCommand extends Command implements CommandLike {
     instrumentCommandPiece(this);
     autoApplyCommandDefaults(this);
   }
+
+  /**
+   * Single-source handler: implement this instead of `chatInputRun` /
+   * `messageRun` and the constructor generates both bridges (message only
+   * when `prefixEnabled`).
+   */
+  public run?(ctx: CommandContext): Awaited<unknown> | Promise<unknown>;
 
   public checkPermission(
     interaction: ChatInputCommandInteraction,

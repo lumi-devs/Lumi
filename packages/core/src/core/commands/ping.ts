@@ -33,6 +33,10 @@ export class PingCommand extends BaseCommand {
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
     const data = await collectPingData();
 
+    // Raw reply is required here: the Components-v2 flag must be set at message
+    // creation (deferReply can't carry it), and `withResponse` gives the message
+    // needed to measure true round-trip latency. The reply helpers cover neither.
+    // eslint-disable-next-line no-restricted-syntax
     const response = await interaction.reply({
       flags: EPHEMERAL_FLAGS,
       components: [
