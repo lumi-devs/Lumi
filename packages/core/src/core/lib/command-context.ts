@@ -13,6 +13,11 @@ import {
 } from "discord.js";
 import type { LumiT } from "#core/i18n/index.js";
 import {
+  PERMISSION_LEVEL_NAMES,
+  resolvePermissionLevel,
+  type PermissionLevel,
+} from "#lib/permissions.js";
+import {
   ephemeralCard,
   makeErrorCard,
   makeInfoCard,
@@ -241,11 +246,13 @@ export class CommandContext {
       );
       return;
     }
+    // Never ping from card bodies that may interpolate user input.
+    const payload = { ...card, allowedMentions: {} };
     if (this.#lastPrefixReply) {
-      await this.#lastPrefixReply.edit(card);
+      await this.#lastPrefixReply.edit(payload);
       return;
     }
-    this.#lastPrefixReply = await this.message.reply(card);
+    this.#lastPrefixReply = await this.message.reply(payload);
   }
 
   public replySuccess(
@@ -283,5 +290,16 @@ export class CommandContext {
   /** Localized translator for the invoker's guild language. */
   public fetchT(): Promise<LumiT> {
     return fetchT(this.source) as unknown as Promise<LumiT>;
+  }
+
+  /** Per-subcommand permission elevation — throws a rendered denial. */
+  public async checkPermission(level: PermissionLevel): Promise<void> {
+    const actual = await resolvePermissionLevel(this.source);
+    if (actual < level) {
+      throw new UserError({
+        identifier: "PermissionDenied",
+        message: `You need at least **${PERMISSION_LEVEL_NAMES[level]}** level to use this.`,
+      });
+    }
   }
 }

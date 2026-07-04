@@ -1,11 +1,11 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { getService } from "#core/module-system/Service.js";
+import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { userMention } from "@discordjs/formatters";
 import { chunk } from "@sapphire/utilities";
-import type { Message } from "discord.js";
-import { BaseCommand } from "#lib/commands.js";
+import { BaseCommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import { makeInfoCard, makeWarningCard } from "#utilities/cards.js";
+import { makeWarningCard } from "#utilities/cards.js";
 import { afkDurationSince } from "../index.js";
 import { Emojis } from "#utilities/assets.js";
 import type AfkService from "../services/AfkService.js";
@@ -18,21 +18,26 @@ import type AfkService from "../services/AfkService.js";
   module: "afk",
 })
 export default class AfkListCommand extends BaseCommand {
+  public override registerApplicationCommands(
+    registry: ApplicationCommandRegistry,
+  ) {
+    registry.registerChatInputCommand((b) =>
+      b.setName(this.name).setDescription(this.description),
+    );
+  }
+
   private get afkService(): AfkService {
     return getService("afk");
   }
 
-  public override async messageRun(message: Message) {
-    if (!message.inGuild()) return;
-    const entries = await this.afkService.getAfkList(message.guildId);
+  public override async run(ctx: CommandContext) {
+    const entries = await this.afkService.getAfkList(ctx.guildId!);
 
     if (entries.length === 0) {
-      return message.reply({
-        ...makeInfoCard(
-          "AFK List",
-          "No users are currently AFK in this server.",
-        ),
-      });
+      return ctx.replyInfo(
+        "AFK List",
+        "No users are currently AFK in this server.",
+      );
     }
 
     const lines = entries.map(
@@ -45,8 +50,8 @@ export default class AfkListCommand extends BaseCommand {
       pages.length > 1
         ? `Page 1/${pages.length} • Total AFK in this server: ${entries.length}`
         : `Total AFK in this server: ${entries.length}`;
-    return message.reply({
-      ...makeWarningCard(`${Emojis.PAGES} AFK List`, body, { footer }),
-    });
+    return ctx.reply(
+      makeWarningCard(`${Emojis.PAGES} AFK List`, body, { footer }),
+    );
   }
 }

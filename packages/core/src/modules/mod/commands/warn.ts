@@ -1,19 +1,10 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry, type Args } from "@sapphire/framework";
-import {
-  Colors,
-  type ChatInputCommandInteraction,
-  type Message,
-  type GuildMember,
-  MessageFlags,
-} from "discord.js";
-import { BaseCommand } from "#lib/commands.js";
+import { type ApplicationCommandRegistry } from "@sapphire/framework";
+import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
+import { Colors } from "discord.js";
+import { BaseCommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import {
-  makeSuccessCard,
-  makeErrorCard,
-  type CardReply,
-} from "#utilities/cards.js";
+import { makeSuccessCard } from "#utilities/cards.js";
 import { logToChannel } from "../lib/helpers.js";
 import { incrementWarnCount, checkThresholds } from "../lib/thresholds.js";
 
@@ -22,75 +13,41 @@ import { incrementWarnCount, checkThresholds } from "../lib/thresholds.js";
   description: "Warn a member",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.MOD,
+  prefixEnabled: true,
 })
 export class WarnCommand extends BaseCommand {
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {
     registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
+      applyLocalizedBuilder(b, "commands:warn")
         .addUserOption((o) =>
-          o
-            .setName("member")
-            .setDescription("Member to warn")
-            .setRequired(true),
+          applyLocalizedBuilder(o, "commands:warnMember").setRequired(true),
         )
         .addStringOption((o) =>
-          o.setName("reason").setDescription("Reason").setRequired(false),
+          applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
         ),
     );
   }
 
-  public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const member = interaction.options.getMember(
-      "member",
-    ) as GuildMember | null;
+  public override async run(ctx: CommandContext) {
+    await ctx.defer();
+    const t = await ctx.fetchT();
+    const member = await ctx.getMember("member");
     const reason =
-      interaction.options.getString("reason") ?? "No reason provided.";
-    if (!member)
-      return interaction.editReply(
-        makeErrorCard("Not Found", "Member not in this server."),
+      (await ctx.getString("reason", { rest: true })) ??
+      t("commands:modNoReason");
+    if (!member) {
+      return ctx.replyError(
+        t("commands:modMemberNotFoundTitle"),
+        t("commands:modMemberNotFound"),
       );
-    return this.#execute(
-      interaction.guildId!,
-      member,
-      interaction.user.id,
-      reason,
-      (card) => interaction.editReply(card),
-    );
-  }
+    }
 
-  public override async messageRun(message: Message, args: Args) {
-    const member = await args.pick("member").catch(() => null);
-    const reason = await args.rest("string").catch(() => "No reason provided.");
-    if (!member)
-      return message.reply(
-        makeErrorCard("Not Found", "Provide a valid member mention or ID."),
-      );
-    return this.#execute(
-      message.guildId!,
-      member,
-      message.author.id,
-      reason,
-      (card) => message.reply(card),
-    );
-  }
-
-  async #execute(
-    guildId: string,
-    member: GuildMember,
-    actorId: string,
-    reason: string,
-    reply: (card: CardReply) => unknown,
-  ) {
-    const actor = await this.container.client.users.fetch(actorId);
     const c = await this.container.db.moderation.createModerationCase({
-      guildId,
+      guildId: ctx.guildId!,
       userId: member.id,
-      moderatorId: actorId,
+      moderatorId: ctx.user.id,
       action: "warn",
       reason,
     });
@@ -105,11 +62,11 @@ export class WarnCommand extends BaseCommand {
       .catch(() => null);
 
     await logToChannel(
-      guildId,
+      ctx.guildId!,
       "⚠️ Warned",
       Colors.Yellow,
       member.id,
-      actor,
+      ctx.user,
       reason,
       c.caseNumber,
     ).catch((err: unknown) =>
@@ -118,19 +75,22 @@ export class WarnCommand extends BaseCommand {
 
     const warnCount = await incrementWarnCount(
       this.container,
-      guildId,
+      ctx.guildId!,
       member.id,
     );
-    checkThresholds(this.container, guildId, member.id, warnCount).catch(
+    checkThresholds(this.container, ctx.guildId!, member.id, warnCount).catch(
       (err: unknown) =>
         this.container.logger.error("[Warn] Threshold check failed:", err),
     );
 
-    return reply(
-      makeSuccessCard(
-        "⚠️ Warned",
-        `${member} warned.\n**Reason:** ${reason}\n**Case #${c.caseNumber}** — ${warnCount} total warn(s).`,
-      ),
+    return ctx.replySuccess(
+      t("commands:warnSuccessTitle"),
+      t("commands:warnSuccess", {
+        user: member.user.username,
+        reason,
+        caseNumber: c.caseNumber,
+        count: warnCount,
+      }),
     );
   }
 }
