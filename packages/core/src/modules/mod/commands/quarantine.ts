@@ -1,20 +1,10 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry, type Args } from "@sapphire/framework";
+import { type ApplicationCommandRegistry } from "@sapphire/framework";
+import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { tryParseJSON } from "@sapphire/utilities";
-import {
-  Colors,
-  type ChatInputCommandInteraction,
-  type Message,
-  type GuildMember,
-  MessageFlags,
-} from "discord.js";
-import { BaseSubcommand } from "#lib/commands.js";
+import { Colors, type GuildMember } from "discord.js";
+import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import {
-  makeSuccessCard,
-  makeErrorCard,
-  type CardReply,
-} from "#utilities/cards.js";
 import { formatAuditReason } from "#utilities/audit.js";
 import { logError } from "#utilities/errors.js";
 import { logToChannel } from "../lib/helpers.js";
@@ -28,17 +18,10 @@ const quarantineKey = (guildId: string, userId: string) =>
   description: "Quarantine or release a member",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.MOD,
+  prefixEnabled: true,
   subcommands: [
-    {
-      name: "add",
-      chatInputRun: "chatInputRunAdd",
-      messageRun: "messageRunAdd",
-    },
-    {
-      name: "remove",
-      chatInputRun: "chatInputRunRemove",
-      messageRun: "messageRunRemove",
-    },
+    { name: "add", run: "add", default: true },
+    { name: "remove", run: "remove" },
   ],
 })
 export class QuarantineCommand extends BaseSubcommand {
@@ -46,156 +29,81 @@ export class QuarantineCommand extends BaseSubcommand {
     registry: ApplicationCommandRegistry,
   ) {
     registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
+      applyLocalizedBuilder(b, "commands:quarantine")
         .addSubcommand((s) =>
-          s
-            .setName("add")
-            .setDescription("Put a member into quarantine")
+          applyLocalizedBuilder(s, "commands:quarantineAdd")
             .addUserOption((o) =>
-              o
-                .setName("member")
-                .setDescription("Member to quarantine")
-                .setRequired(true),
+              applyLocalizedBuilder(o, "commands:quarantineMember").setRequired(
+                true,
+              ),
             )
             .addStringOption((o) =>
-              o.setName("reason").setDescription("Reason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
             ),
         )
         .addSubcommand((s) =>
-          s
-            .setName("remove")
-            .setDescription("Release a member from quarantine")
+          applyLocalizedBuilder(s, "commands:quarantineRemove")
             .addUserOption((o) =>
-              o
-                .setName("member")
-                .setDescription("Member to release")
-                .setRequired(true),
+              applyLocalizedBuilder(o, "commands:quarantineMember").setRequired(
+                true,
+              ),
             )
             .addStringOption((o) =>
-              o.setName("reason").setDescription("Reason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
             ),
         ),
     );
   }
 
-  public async chatInputRunAdd(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const member = interaction.options.getMember(
-      "member",
-    ) as GuildMember | null;
+  public async add(ctx: CommandContext) {
+    await ctx.defer();
+    const t = await ctx.fetchT();
+    const member = await ctx.getMember("member");
     const reason =
-      interaction.options.getString("reason") ?? "No reason provided.";
-    if (!member)
-      return interaction.editReply(
-        makeErrorCard("Not Found", "Member not in this server."),
+      (await ctx.getString("reason", { rest: true })) ??
+      t("commands:modNoReason");
+    if (!member) {
+      return ctx.replyError(
+        t("commands:modMemberNotFoundTitle"),
+        t("commands:modMemberNotFound"),
       );
-    return this.#add(
-      interaction.guildId!,
-      member,
-      interaction.user.id,
-      reason,
-      (c) => interaction.editReply(c),
-    );
-  }
+    }
+    const guildId = ctx.guildId!;
 
-  public async messageRunAdd(message: Message, args: Args) {
-    const member = await args.pick("member").catch(() => null);
-    const reason = await args.rest("string").catch(() => "No reason provided.");
-    if (!member)
-      return message.reply(
-        makeErrorCard("Not Found", "Provide a valid member."),
-      );
-    return this.#add(message.guildId!, member, message.author.id, reason, (c) =>
-      message.reply(c),
-    );
-  }
-
-  public async chatInputRunRemove(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const member = interaction.options.getMember(
-      "member",
-    ) as GuildMember | null;
-    const reason =
-      interaction.options.getString("reason") ?? "No reason provided.";
-    if (!member)
-      return interaction.editReply(
-        makeErrorCard("Not Found", "Member not in this server."),
-      );
-    return this.#remove(
-      interaction.guildId!,
-      member,
-      interaction.user.id,
-      reason,
-      (c) => interaction.editReply(c),
-    );
-  }
-
-  public async messageRunRemove(message: Message, args: Args) {
-    const member = await args.pick("member").catch(() => null);
-    const reason = await args.rest("string").catch(() => "No reason provided.");
-    if (!member)
-      return message.reply(
-        makeErrorCard("Not Found", "Provide a valid member."),
-      );
-    return this.#remove(
-      message.guildId!,
-      member,
-      message.author.id,
-      reason,
-      (c) => message.reply(c),
-    );
-  }
-
-  async #add(
-    guildId: string,
-    member: GuildMember,
-    actorId: string,
-    reason: string,
-    reply: (c: CardReply) => unknown,
-  ) {
     const quarantineRoleId = await this.container.db.config.getModuleConfig(
       guildId,
       "mod",
       "quarantine_role_id",
     );
     if (!quarantineRoleId || typeof quarantineRoleId !== "string") {
-      return reply(
-        makeErrorCard(
-          "Not Configured",
-          "No quarantine role set. Use `/config set mod quarantine_role_id <role>`.",
-        ),
+      return ctx.replyError(
+        t("commands:quarantineUnconfiguredTitle"),
+        t("commands:quarantineUnconfigured"),
       );
     }
 
     const key = quarantineKey(guildId, member.id);
-    const alreadyQuarantined = await this.container.redis.exists(key);
-    if (alreadyQuarantined)
-      return reply(
-        makeErrorCard(
-          "Already Quarantined",
-          `${member.user.username} is already in quarantine.`,
-        ),
+    if (await this.container.redis.exists(key)) {
+      return ctx.replyError(
+        t("commands:quarantineAlreadyTitle"),
+        t("commands:quarantineAlready", { user: member.user.username }),
       );
+    }
 
     const savedRoles = member.roles.cache
       .filter((r) => r.id !== guildId && r.id !== quarantineRoleId)
       .map((r) => r.id);
 
-    const actor = await this.container.client.users.fetch(actorId);
     try {
       await member.roles.set(
         [guildId, quarantineRoleId],
-        formatAuditReason(actor, reason),
+        formatAuditReason(ctx.user, reason),
       );
     } catch (err: unknown) {
       logError(`quarantine add: guild=${guildId} target=${member.id}`, err);
-      return reply(
-        makeErrorCard(
-          "Failed",
-          "Could not apply quarantine. Check permissions and hierarchy.",
-        ),
+      return ctx.replyError(
+        t("commands:modActionFailedTitle"),
+        t("commands:modActionFailed"),
       );
     }
 
@@ -210,7 +118,7 @@ export class QuarantineCommand extends BaseSubcommand {
     const c = await this.container.db.moderation.createModerationCase({
       guildId,
       userId: member.id,
-      moderatorId: actorId,
+      moderatorId: ctx.user.id,
       action: "mute",
       reason,
     });
@@ -219,56 +127,61 @@ export class QuarantineCommand extends BaseSubcommand {
       "🔒 Quarantined",
       Colors.Orange,
       member.id,
-      actor,
+      ctx.user,
       reason,
       c.caseNumber,
     );
-    return reply(
-      makeSuccessCard(
-        "🔒 Quarantined",
-        `${member.user.username} has been quarantined.\n**Reason:** ${reason}\n**Case #${c.caseNumber}**`,
-      ),
+    return ctx.replySuccess(
+      t("commands:quarantineSuccessTitle"),
+      t("commands:quarantineSuccess", {
+        user: member.user.username,
+        reason,
+        caseNumber: c.caseNumber,
+      }),
     );
   }
 
-  async #remove(
-    guildId: string,
-    member: GuildMember,
-    actorId: string,
-    reason: string,
-    reply: (c: CardReply) => unknown,
-  ) {
+  public async remove(ctx: CommandContext) {
+    await ctx.defer();
+    const t = await ctx.fetchT();
+    const member = await ctx.getMember("member");
+    const reason =
+      (await ctx.getString("reason", { rest: true })) ??
+      t("commands:modNoReason");
+    if (!member) {
+      return ctx.replyError(
+        t("commands:modMemberNotFoundTitle"),
+        t("commands:modMemberNotFound"),
+      );
+    }
+    const guildId = ctx.guildId!;
+
     const key = quarantineKey(guildId, member.id);
     const saved = await this.container.redis.get(key);
-    if (!saved)
-      return reply(
-        makeErrorCard(
-          "Not Quarantined",
-          `${member.user.username} is not in quarantine.`,
-        ),
+    if (!saved) {
+      return ctx.replyError(
+        t("commands:quarantineNotTitle"),
+        t("commands:quarantineNot", { user: member.user.username }),
       );
+    }
 
     const parsedRoles = tryParseJSON(saved);
     const rolesToRestore = Array.isArray(parsedRoles)
       ? (parsedRoles as string[])
       : [];
-    const actor = await this.container.client.users.fetch(actorId);
-
     const validRoles = rolesToRestore.filter((id) =>
-      member.guild.roles.cache.has(id),
+      (member as GuildMember).guild.roles.cache.has(id),
     );
     try {
       await member.roles.set(
         [guildId, ...validRoles],
-        formatAuditReason(actor, reason),
+        formatAuditReason(ctx.user, reason),
       );
     } catch (err: unknown) {
       logError(`quarantine remove: guild=${guildId} target=${member.id}`, err);
-      return reply(
-        makeErrorCard(
-          "Failed",
-          "Could not restore roles. Check permissions and hierarchy.",
-        ),
+      return ctx.replyError(
+        t("commands:modActionFailedTitle"),
+        t("commands:modActionFailed"),
       );
     }
 
@@ -277,7 +190,7 @@ export class QuarantineCommand extends BaseSubcommand {
     const c = await this.container.db.moderation.createModerationCase({
       guildId,
       userId: member.id,
-      moderatorId: actorId,
+      moderatorId: ctx.user.id,
       action: "unmute",
       reason,
     });
@@ -286,15 +199,17 @@ export class QuarantineCommand extends BaseSubcommand {
       "🔓 Released",
       Colors.Green,
       member.id,
-      actor,
+      ctx.user,
       reason,
       c.caseNumber,
     );
-    return reply(
-      makeSuccessCard(
-        "🔓 Released",
-        `${member.user.username} has been released from quarantine.\n**Reason:** ${reason}\n**Case #${c.caseNumber}**`,
-      ),
+    return ctx.replySuccess(
+      t("commands:quarantineReleasedTitle"),
+      t("commands:quarantineReleased", {
+        user: member.user.username,
+        reason,
+        caseNumber: c.caseNumber,
+      }),
     );
   }
 }

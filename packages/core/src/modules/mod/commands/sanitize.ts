@@ -1,18 +1,8 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry, type Args } from "@sapphire/framework";
-import {
-  type ChatInputCommandInteraction,
-  type Message,
-  type GuildMember,
-  MessageFlags,
-} from "discord.js";
-import { BaseCommand } from "#lib/commands.js";
+import { type ApplicationCommandRegistry } from "@sapphire/framework";
+import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
+import { BaseCommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import {
-  makeSuccessCard,
-  makeErrorCard,
-  type CardReply,
-} from "#utilities/cards.js";
 import { logError } from "#utilities/errors.js";
 
 // Chars that sort before letters, used for hoisting in member lists
@@ -28,55 +18,37 @@ function sanitizeName(name: string): string {
   description: "Remove hoisting characters from a member's nickname",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.MOD,
+  prefixEnabled: true,
 })
 export class SanitizeCommand extends BaseCommand {
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {
     registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
-        .addUserOption((o) =>
-          o
-            .setName("member")
-            .setDescription("Member to sanitize")
-            .setRequired(true),
-        ),
+      applyLocalizedBuilder(b, "commands:sanitize").addUserOption((o) =>
+        applyLocalizedBuilder(o, "commands:sanitizeMember").setRequired(true),
+      ),
     );
   }
 
-  public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const member = interaction.options.getMember(
-      "member",
-    ) as GuildMember | null;
-    if (!member)
-      return interaction.editReply(
-        makeErrorCard("Not Found", "Member not in this server."),
+  public override async run(ctx: CommandContext) {
+    await ctx.defer();
+    const t = await ctx.fetchT();
+    const member = await ctx.getMember("member");
+    if (!member) {
+      return ctx.replyError(
+        t("commands:modMemberNotFoundTitle"),
+        t("commands:modMemberNotFound"),
       );
-    return this.#execute(member, (c) => interaction.editReply(c));
-  }
+    }
 
-  public override async messageRun(message: Message, args: Args) {
-    const member = await args.pick("member").catch(() => null);
-    if (!member)
-      return message.reply(
-        makeErrorCard("Not Found", "Provide a valid member."),
-      );
-    return this.#execute(member, (c) => message.reply(c));
-  }
-
-  async #execute(member: GuildMember, reply: (c: CardReply) => unknown) {
     const current = member.nickname ?? member.user.username;
     const sanitized = sanitizeName(current);
 
     if (sanitized === current) {
-      return reply(
-        makeErrorCard(
-          "Nothing to Do",
-          `${member.user.username}'s name has no hoisting characters.`,
-        ),
+      return ctx.replyError(
+        t("commands:sanitizeNothingTitle"),
+        t("commands:sanitizeNothing", { user: member.user.username }),
       );
     }
 
@@ -87,19 +59,19 @@ export class SanitizeCommand extends BaseCommand {
       );
     } catch (err: unknown) {
       logError(`sanitize: guild=${member.guild.id} target=${member.id}`, err);
-      return reply(
-        makeErrorCard(
-          "Failed",
-          "Could not change nickname. Check permissions and hierarchy.",
-        ),
+      return ctx.replyError(
+        t("commands:modActionFailedTitle"),
+        t("commands:modActionFailed"),
       );
     }
 
-    return reply(
-      makeSuccessCard(
-        "Sanitized",
-        `${member.user.username}'s nickname changed: \`${current}\` → \`${sanitized}\``,
-      ),
+    return ctx.replySuccess(
+      t("commands:sanitizeSuccessTitle"),
+      t("commands:sanitizeSuccess", {
+        user: member.user.username,
+        before: current,
+        after: sanitized,
+      }),
     );
   }
 }
