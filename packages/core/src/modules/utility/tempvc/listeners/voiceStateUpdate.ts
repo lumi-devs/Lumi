@@ -1,4 +1,5 @@
 import { Listener, Events } from "@sapphire/framework";
+import { getService } from "#core/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { VoiceState } from "discord.js";
 import { logError } from "#utilities/errors.js";
@@ -19,7 +20,7 @@ export default class TempVcVoiceStateListener extends Listener<
   typeof Events.VoiceStateUpdate
 > {
   private get service(): TempVcService {
-    return this.container.stores.get("services").get("tempvc") as TempVcService;
+    return getService("tempvc");
   }
 
   public async run(oldState: VoiceState, newState: VoiceState) {

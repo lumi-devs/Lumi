@@ -32,9 +32,6 @@ export class KickCommand extends BaseCommand {
       b
         .setName(this.name)
         .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes)
         .addUserOption((o) =>
           o
             .setName("member")
@@ -110,7 +107,6 @@ export class KickCommand extends BaseCommand {
       reason,
     });
     await logToChannel(
-      this.container,
       guildId,
       "👢 Kicked",
       Colors.Red,

@@ -1,4 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
+import { getService } from "#core/module-system/Service.js";
 import {
   ApplicationCommandRegistry,
   container,
@@ -85,11 +86,7 @@ function formatOverride(row: PermissionOverrideRow): string {
 })
 export class PermissionsCommand extends BaseSubcommand {
   private get permissionService(): PermissionService {
-    const svc = this.container.stores.get("services").get("permissions") as
-      | PermissionService
-      | undefined;
-    if (!svc) throw new Error("PermissionService is not loaded");
-    return svc;
+    return getService("permissions");
   }
 
   // ── Application Command Registration ───────────────────────────────────────
@@ -101,9 +98,6 @@ export class PermissionsCommand extends BaseSubcommand {
       builder
         .setName(this.name)
         .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes)
         .addSubcommand((sub) =>
           sub
             .setName("allow")

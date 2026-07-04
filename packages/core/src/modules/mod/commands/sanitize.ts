@@ -37,9 +37,6 @@ export class SanitizeCommand extends BaseCommand {
       b
         .setName(this.name)
         .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes)
         .addUserOption((o) =>
           o
             .setName("member")

@@ -61,3 +61,9 @@ export class PermissionService extends Service {
     return deleted;
   }
 }
+
+declare module "#core/module-system/Service.js" {
+  interface Services {
+    permissions: PermissionService;
+  }
+}

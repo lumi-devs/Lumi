@@ -36,7 +36,7 @@ Each feature lives in `src/modules/<name>/` with an `index.ts` exporting a class
 Sub-store directories inside a module (each optional):
 
 - `commands/` — `BaseCommand` / `BaseSubcommand` pieces
-- `listeners/` — Sapphire `Listener` pieces
+- `listeners/` — extend `ModuleListener` (`#core/module-system/ModuleListener.js`; guild resolution + module-enabled gate built in, implement `handle()`), or `GuildMessageListener` for user messages (router-fed: webhooks/system/bots/DMs pre-filtered). Raw Sapphire `Listener` only when the listener must run while its module is disabled (e.g. tempvc leftover cleanup).
 - `interaction-handlers/` — buttons / selects / modals
 - `services/` — `Service` pieces (singletons, see below)
 - **`scheduled-tasks/`** — BullMQ `ScheduledTask` pieces. **The directory MUST be named `scheduled-tasks/`** (the `ScheduledTaskStore`'s name). A dir named `tasks/` is silently never scanned — `StoreRegistry.registerPath(dir)` appends each store's `.name` to the path. Same rule for `src/scheduled-tasks/` at the root.
@@ -48,7 +48,7 @@ Per-user data cleanup: override `deleteUserData(userId, requester)` on the modul
 
 ### Services
 
-Extend `Service` (`#core/module-system/Service.js`); they expose `this.logger`, `this.db`, `this.redis`. Decorate with `@ApplyOptions<Piece.Options>({ name: "<svc>" })` and retrieve with `container.stores.get("services").get("<svc>")`. Services are the place for stateful/singleton logic (e.g. `FilterService` per-guild matchers, `TempVcService`).
+Extend `Service` (`#core/module-system/Service.js`); they expose `this.logger`, `this.db`, `this.redis`. Decorate with `@ApplyOptions<Piece.Options>({ name: "<svc>" })`, augment the `Services` interface in the same file (`declare module "#core/module-system/Service.js" { interface Services { "<svc>": MyService } }`), and retrieve with `getService("<svc>")` — typed, throws if not loaded — or `tryGetService("<svc>")` where a missing piece is expected (module disabled, boot order). Never `stores.get("services").get(...) as X`. Services are the place for stateful/singleton logic (e.g. `FilterService` per-guild matchers, `TempVcService`).
 
 ### Permissions
 
@@ -86,7 +86,7 @@ The same `@lumi/core` build runs in one of four roles selected by **`LUMI_ROLE`*
 
 ### Background work — two distinct systems
 
-1. **Scheduled tasks** (BullMQ, Redis DB 1): delayed / exact-time / repeated jobs that must survive restarts. Define a `ScheduledTask` piece in `scheduled-tasks/`, register its payload type in `ScheduledTasks` (`src/core/types/common.ts`), schedule with `container.tasks.create(...)` using a stable `customJobOptions.jobId` for idempotency. Re-arm outstanding jobs on module load if needed (see `ModModule.reconcileExpiryJobs`). For jobs that may come due during downtime, control whether they fire-on-boot or are dropped via the `catchUp` policy: extend the payload with `CatchUpMeta` and call `shouldRunNow()` at the top of `run` (`src/core/lib/scheduled-tasks.ts`). CPU-bound work is offloaded directly to `WorkerManager` (worker threads), called by the feature that needs it — not via a broker.
+1. **Scheduled tasks** (BullMQ, Redis DB 1): delayed / exact-time / repeated jobs that must survive restarts. Define the piece in `scheduled-tasks/` by extending **`RelayTask<"name">`** (`#core/lib/scheduled-tasks.js`) with an empty body — it applies the payload's `catchUp` policy (`shouldRunNow`) then relays the fire onto the bus for workers; the Discord-touching work lives in a `lib/` handler registered via `registerTaskFireHandler`. Augment the payload type on the plugin's `ScheduledTasks` interface in the piece file, schedule with `container.tasks.create(...)` using a stable `customJobOptions.jobId` for idempotency. Re-arm outstanding jobs on module load if needed (see `ModModule.reconcileExpiryJobs`). For jobs that may come due during downtime, control fire-on-boot vs drop by extending the payload with `CatchUpMeta` and setting `catchUp: false` + `scheduledFor` at creation. CPU-bound work is offloaded directly to `WorkerManager` (worker threads), called by the feature that needs it — not via a broker.
 2. **RabbitMQ events & RPC** (`#lib/rabbit.js`): cross-process **fanout events** (`publishEvent`/`onEvent` on `lumi.events`) and the request/response **RPC bridge** to the web dashboard (`registerRpcHandler`, gated by `isDashboardEnabled`). There is **no fire-and-forget job queue** — it was removed; use system 1 for background work.
 
 ### Observability (`@lumi/observability`)
@@ -205,12 +205,15 @@ const createdAt = DiscordSnowflake.timestampFrom(id); // ms epoch
 ## Commands and base classes
 
 All commands extend `BaseCommand` (not raw `Command`) or `BaseSubcommand`.
-Every `registerApplicationCommands` builder must call:
-```ts
-.setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-.setContexts(...this.contexts)
-.setIntegrationTypes(this.integrationTypes)
-```
+`defaultMemberPermissions`, `contexts` and `integrationTypes` are applied to
+every registered builder **automatically** (the base ctor shadows
+`registerApplicationCommands` — see `autoApplyCommandDefaults` in
+`#lib/commands.js`); never call the three setters in a builder chain unless a
+command intentionally overrides one of them. Reply with `this.replySuccess` /
+`replyError` / `replyWarning` / `replyInfo` (ephemeral card by default) or
+`this.reply(interaction, payload)` — never raw `interaction.reply` with a
+hand-spread card, and never OR `MessageFlags.Ephemeral` yourself (use
+`ephemeralCard(card)`).
 
 ## Card system
 

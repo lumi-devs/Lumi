@@ -15,12 +15,7 @@ import { buildFeatureListView, loadFeatures } from "#core/lib/config-panel.js";
 export class ConfigCommand extends BaseCommand {
   public override registerApplicationCommands(registry: Command.Registry) {
     registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes),
+      builder.setName(this.name).setDescription(this.description),
     );
   }
 

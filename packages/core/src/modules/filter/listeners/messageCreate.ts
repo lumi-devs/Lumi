@@ -1,10 +1,10 @@
 import { ApplyOptions } from "@sapphire/decorators";
+import { getService, tryGetService } from "#core/module-system/Service.js";
 import { Colors, PermissionsBitField } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
 import { cutText } from "@sapphire/utilities";
 import { GuildMessageListener } from "#core/module-system/GuildMessageListener.js";
 import type { GuildMessage } from "#lib/types.js";
-import type { GuildLogService } from "#core/services/GuildLogService.js";
 import type { FilterService } from "../services/FilterService.js";
 import {
   DEFAULT_WARN_MESSAGE,
@@ -18,7 +18,7 @@ import { deleteMessageLater } from "#utilities/temporary-message.js";
 @ApplyOptions<GuildMessageListener.Options>({ module: "filter" })
 export class FilterMessageListener extends GuildMessageListener {
   private get filterService(): FilterService {
-    return this.container.stores.get("services").get("filter") as FilterService;
+    return getService("filter");
   }
 
   protected async handle(message: GuildMessage): Promise<void> {
@@ -100,9 +100,7 @@ export class FilterMessageListener extends GuildMessageListener {
   }
 
   async #log(message: GuildMessage, hit: FilterHit): Promise<void> {
-    const logService = this.container.stores
-      .get("services")
-      .get("guild-log") as GuildLogService | undefined;
+    const logService = tryGetService("guild-log");
     await logService?.dispatch({
       guildId: message.guildId,
       moduleName: "filter",

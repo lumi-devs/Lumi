@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/member-ordering -- registerRpcHandler calls ordered by RPC command semantics, not class member order */
 import { Module } from "#core/module-system/Module.js";
 import { container, type Piece } from "@sapphire/framework";
-import type { DownloaderService } from "#core/services/DownloaderService.js";
+import { getService } from "#core/module-system/Service.js";
 import { registerRpcHandler, deregisterRpcHandler } from "#lib/rabbit.js";
 import {
   RPC_ACTIONS,
@@ -11,10 +11,7 @@ import {
   type ModuleInstallPayload,
   type ModuleUninstallPayload,
 } from "@lumi/contracts";
-import {
-  resolver,
-  ADDON_MODULES_ROOT,
-} from "#core/lib/downloader/resolver.js";
+import { resolver, ADDON_MODULES_ROOT } from "#core/lib/downloader/resolver.js";
 import {
   executeGdprDeletion,
   GdprDeletionError,
@@ -99,9 +96,7 @@ export class CoreModule extends Module {
     registerRpcHandler(RPC_ACTIONS.repoAdd, async (req) => {
       const { name, url, branch } = parsePayload(RepoAddSchema, req.data);
 
-      const service = container.stores
-        .get("services")
-        .get("downloader") as DownloaderService;
+      const service = getService("downloader");
       const repo = await service.addRepo(name, url, branch || "default");
 
       return { success: true, repo };

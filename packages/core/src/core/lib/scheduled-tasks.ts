@@ -1,4 +1,7 @@
 import { container } from "@sapphire/framework";
+import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
+import type { ScheduledTasks } from "#core/types/common.js";
+import { publishTaskFire } from "#lib/scheduler-bus.js";
 
 /**
  * Catch-up metadata every Lumi scheduled-task payload may carry. Adapted from
@@ -43,4 +46,27 @@ export function shouldRunNow(
     `[ScheduledTask] Dropping overdue '${taskName}' job (overdue ${overdueBy}ms, catchUp=false).`,
   );
   return false;
+}
+
+/**
+ * Scheduler-side relay task: applies the payload's catch-up policy, then
+ * re-publishes the fire onto the bus (`lumi.scheduler.fire:<name>`) for a
+ * worker/monolith to execute via `registerTaskFireHandler`. Every Lumi task is
+ * this shape — the Discord-touching work never lives in the piece itself — so
+ * subclasses declare nothing but the name (via `@ApplyOptions`) and payload
+ * type: `export class FooTask extends RelayTask<"foo"> {}`.
+ */
+export abstract class RelayTask<
+  K extends keyof ScheduledTasks,
+> extends ScheduledTask<K> {
+  // Parameter type mirrors the plugin's `run` signature exactly (interval
+  // tasks receive `undefined`).
+  public async run(
+    payload: ScheduledTasks[K] extends never ? undefined : ScheduledTasks[K],
+  ): Promise<void> {
+    const name = this.name as K;
+    const resolved = (payload ?? {}) as ScheduledTasks[K];
+    if (!shouldRunNow(name, resolved as CatchUpMeta)) return;
+    await publishTaskFire(name, resolved);
+  }
 }

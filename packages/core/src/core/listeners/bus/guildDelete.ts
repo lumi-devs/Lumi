@@ -1,8 +1,8 @@
 import { Listener, Events } from "@sapphire/framework";
+import { tryGetService } from "#core/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Guild } from "discord.js";
 import { RedisKeys } from "#database/redis.js";
-import type { FilterService } from "#modules/filter/services/FilterService.js";
 
 @ApplyOptions<Listener.Options>({ event: Events.GuildDelete })
 export class GuildDeleteEventBusListener extends Listener<
@@ -65,9 +65,7 @@ export class GuildDeleteEventBusListener extends Listener<
     }
 
     // Evict in-process FilterService Aho-Corasick matcher for this guild
-    const filterSvc = this.container.stores.get("services").get("filter") as
-      | FilterService
-      | undefined;
+    const filterSvc = tryGetService("filter");
     filterSvc?.evict(guild.id);
 
     if (!this.container.rabbit) return;

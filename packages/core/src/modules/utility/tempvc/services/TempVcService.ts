@@ -364,3 +364,9 @@ export default class TempVcService extends Service {
     return MODULE_NAME;
   }
 }
+
+declare module "#core/module-system/Service.js" {
+  interface Services {
+    tempvc: TempVcService;
+  }
+}

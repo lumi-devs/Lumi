@@ -403,3 +403,9 @@ export class DownloaderService extends Service {
     }
   }
 }
+
+declare module "#core/module-system/Service.js" {
+  interface Services {
+    downloader: DownloaderService;
+  }
+}

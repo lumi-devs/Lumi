@@ -1,7 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
-import { shouldRunNow, type CatchUpMeta } from "#core/lib/scheduled-tasks.js";
-import { publishTaskFire } from "#lib/scheduler-bus.js";
+import { RelayTask, type CatchUpMeta } from "#core/lib/scheduled-tasks.js";
 
 export interface AfkDeleteMessagePayload extends CatchUpMeta {
   channelId: string;
@@ -10,15 +9,10 @@ export interface AfkDeleteMessagePayload extends CatchUpMeta {
   clearMentions?: { guildId: string; userId: string };
 }
 
+// Scheduler-side relay; the actual delete happens on a worker
+// (see afk/lib/delete-handler.ts), which has the Discord client.
 @ApplyOptions<ScheduledTask.Options>({ name: "afk-delete-message" })
-export class AfkDeleteMessageTask extends ScheduledTask<"afk-delete-message"> {
-  // Scheduler-side: relay onto the bus; the actual delete happens on a worker
-  // (see afk/lib/delete-handler.ts), which has the Discord client.
-  public async run(payload: AfkDeleteMessagePayload): Promise<void> {
-    if (!shouldRunNow("afk-delete-message", payload)) return;
-    await publishTaskFire("afk-delete-message", payload);
-  }
-}
+export class AfkDeleteMessageTask extends RelayTask<"afk-delete-message"> {}
 
 declare module "@sapphire/plugin-scheduled-tasks" {
   interface ScheduledTasks {

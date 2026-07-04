@@ -3,6 +3,7 @@ import {
   InteractionHandler,
   UserError,
 } from "@sapphire/framework";
+import { getService } from "#core/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   ActionRowBuilder,
@@ -57,7 +58,7 @@ const SELECT_PLACEHOLDER: Record<string, string> = {
 })
 export default class TempVcButtonHandler extends BaseInteractionHandler {
   private get service(): TempVcService {
-    return this.container.stores.get("services").get("tempvc") as TempVcService;
+    return getService("tempvc");
   }
 
   public override parse(interaction: ButtonInteraction) {

@@ -98,7 +98,10 @@ export class DashboardModule extends Module {
     // ── 2. Toggle Module ─────────────────────────────────────────────────
     registerRpcHandler(RPC_ACTIONS.guildModuleToggle, async (req) => {
       const guildId = requireGuildId(req.guildId);
-      const { moduleName, enabled } = parsePayload(ModuleToggleSchema, req.data);
+      const { moduleName, enabled } = parsePayload(
+        ModuleToggleSchema,
+        req.data,
+      );
 
       if (moduleName === "core")
         throw new Error("Cannot disable the core module");
@@ -114,7 +117,10 @@ export class DashboardModule extends Module {
     // ── 3. Update Config ─────────────────────────────────────────────────
     registerRpcHandler(RPC_ACTIONS.guildConfigSet, async (req) => {
       const guildId = requireGuildId(req.guildId);
-      const { moduleName, key, value } = parsePayload(ConfigSetSchema, req.data);
+      const { moduleName, key, value } = parsePayload(
+        ConfigSetSchema,
+        req.data,
+      );
 
       await container.db.config.setModuleConfig(
         guildId,

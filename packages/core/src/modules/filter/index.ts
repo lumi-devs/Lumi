@@ -1,6 +1,6 @@
 import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
+import { tryGetService } from "#core/module-system/Service.js";
 import { ChannelType } from "discord.js";
-import type { FilterService } from "./services/FilterService.js";
 import { DEFAULT_WARN_MESSAGE } from "./lib/rules.js";
 
 /** Config keys the FilterService compiles into its per-guild rule set —
@@ -115,9 +115,7 @@ export class FilterModule extends Module {
       this.container.configChangeHooks.set(
         `filter:${key}`,
         async (guildId, _key) => {
-          const svc = this.container.stores.get("services").get("filter") as
-            | FilterService
-            | undefined;
+          const svc = tryGetService("filter");
           await svc?.loadGuild(guildId);
         },
       );

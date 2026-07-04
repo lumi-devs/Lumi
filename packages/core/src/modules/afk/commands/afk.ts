@@ -1,4 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
+import { getService } from "#core/module-system/Service.js";
 import { Args, Command } from "@sapphire/framework";
 import { type GuildMember, type Message } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
@@ -41,9 +42,6 @@ export default class AfkCommand extends BaseCommand {
       builder
         .setName(this.name)
         .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes)
         .addStringOption((opt) =>
           opt
             .setName("reason")
@@ -55,7 +53,7 @@ export default class AfkCommand extends BaseCommand {
   }
 
   private get afkService(): AfkService {
-    return this.container.stores.get("services").get("afk") as AfkService;
+    return getService("afk");
   }
 
   public override async chatInputRun(
