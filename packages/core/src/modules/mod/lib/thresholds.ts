@@ -149,7 +149,6 @@ export async function checkThresholds(
     });
     await scheduleCaseLift(container, c);
     await logToChannel(
-      container,
       guildId,
       "🔇 Auto-Muted",
       Colors.Orange,
@@ -170,7 +169,6 @@ export async function checkThresholds(
       reason,
     });
     await logToChannel(
-      container,
       guildId,
       "👢 Auto-Kicked",
       Colors.Red,
@@ -191,7 +189,6 @@ export async function checkThresholds(
       reason,
     });
     await logToChannel(
-      container,
       guildId,
       "🔨 Auto-Banned",
       Colors.DarkRed,

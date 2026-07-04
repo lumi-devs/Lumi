@@ -51,9 +51,6 @@ export class TimeoutCommand extends BaseSubcommand {
       b
         .setName(this.name)
         .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes)
         .addSubcommand((s) =>
           s
             .setName("add")
@@ -216,7 +213,6 @@ export class TimeoutCommand extends BaseSubcommand {
     });
     await scheduleCaseLift(this.container, c);
     await logToChannel(
-      this.container,
       guildId,
       "🔇 Timed Out",
       Colors.Orange,

@@ -45,7 +45,7 @@ export async function executeGdprDeletion(
           );
         }
       } catch (err: unknown) {
-        const message = errorFrom(err).message;
+        const { message } = errorFrom(err);
         container.logger.error(
           `[GDPR] Module '${module.name}' failed to process deletion for ${userId}:`,
           err,
@@ -59,7 +59,7 @@ export async function executeGdprDeletion(
   try {
     await container.db.deleteUserData(userId);
   } catch (err: unknown) {
-    const message = errorFrom(err).message;
+    const { message } = errorFrom(err);
     container.logger.error(
       `[GDPR] Core database/cache deletion failed for ${userId}:`,
       err,

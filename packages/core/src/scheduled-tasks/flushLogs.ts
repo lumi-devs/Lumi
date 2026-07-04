@@ -1,21 +1,12 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
-import { publishTaskFire } from "#lib/scheduler-bus.js";
+import { RelayTask } from "#core/lib/scheduled-tasks.js";
 
+// Scheduler-side relay. Workers (unicast — exactly one drains the global Redis
+// audit-log queue per tick) run `handleFlushLogsFire`. The payload type is
+// registered in core/types/common.ts.
 @ApplyOptions<ScheduledTask.Options>({
   name: "flush-logs",
   interval: 5000,
 })
-export class FlushLogsTask extends ScheduledTask {
-  // Scheduler-side: relay onto the bus. Workers (unicast — exactly one drains
-  // the global Redis audit-log queue per tick) run `handleFlushLogsFire`.
-  public async run(): Promise<void> {
-    await publishTaskFire("flush-logs", {});
-  }
-}
-
-declare module "@sapphire/plugin-scheduled-tasks" {
-  interface ScheduledTasks {
-    "flush-logs": Record<string, never>;
-  }
-}
+export class FlushLogsTask extends RelayTask<"flush-logs"> {}

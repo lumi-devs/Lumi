@@ -44,9 +44,6 @@ export class BanCommand extends BaseSubcommand {
       b
         .setName(this.name)
         .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes)
         .addSubcommand((s) =>
           s
             .setName("add")
@@ -183,7 +180,6 @@ export class BanCommand extends BaseSubcommand {
       reason,
     });
     await logToChannel(
-      this.container,
       guildId,
       "🔨 Banned",
       Colors.DarkRed,

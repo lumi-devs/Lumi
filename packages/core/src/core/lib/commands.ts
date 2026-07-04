@@ -1,4 +1,8 @@
-import { Command, UserError } from "@sapphire/framework";
+import {
+  Command,
+  UserError,
+  type ApplicationCommandRegistry,
+} from "@sapphire/framework";
 import { Subcommand } from "@sapphire/plugin-subcommands";
 import { fetchT } from "@sapphire/plugin-i18next";
 import type { LumiT } from "#core/i18n/index.js";
@@ -187,6 +191,76 @@ function fetchTyped(
   return fetchT(target) as unknown as Promise<LumiT>;
 }
 
+// ── Automatic builder defaults ───────────────────────────────────────────────
+
+/** Minimal structural view of the builders the shared defaults apply to. */
+interface DefaultsApplicableBuilder {
+  setDefaultMemberPermissions(permissions: bigint | null): unknown;
+  setContexts(...contexts: InteractionContextType[]): unknown;
+  setIntegrationTypes(...types: ApplicationIntegrationType[]): unknown;
+}
+
+/**
+ * Shadow `registerApplicationCommands` (the same instance-shadowing pattern as
+ * {@link instrumentCommandPiece}) so every chat-input / context-menu builder
+ * receives the shared defaults — `defaultMemberPermissions`, `contexts`,
+ * `integrationTypes` — before the subclass's builder callback runs. Commands
+ * never repeat the setter trio, and can still override any of the three by
+ * calling the setter themselves inside their builder chain.
+ */
+function autoApplyCommandDefaults(piece: BaseCommand | BaseSubcommand): void {
+  // eslint-disable-next-line @typescript-eslint/unbound-method -- bound to `piece` on the next line
+  const method = piece.registerApplicationCommands;
+  if (typeof method !== "function") return;
+  const original = method.bind(piece);
+
+  const applyDefaults = <T>(builder: T): T => {
+    const b = builder as unknown as DefaultsApplicableBuilder;
+    b.setDefaultMemberPermissions(piece.defaultMemberPermissions ?? null);
+    b.setContexts(...piece.contexts);
+    b.setIntegrationTypes(...piece.integrationTypes);
+    return builder;
+  };
+
+  // Callbacks get a pre-defaulted builder; prebuilt builders are defaulted
+  // directly; plain command-data objects pass through untouched.
+  const wrapInput = <I>(input: I): I => {
+    if (typeof input === "function") {
+      const fn = input as unknown as (builder: unknown) => unknown;
+      return ((builder: unknown) => fn(applyDefaults(builder))) as unknown as I;
+    }
+    if (
+      typeof input === "object" &&
+      input !== null &&
+      "setIntegrationTypes" in input
+    ) {
+      return applyDefaults(input);
+    }
+    return input;
+  };
+
+  Object.defineProperty(piece, "registerApplicationCommands", {
+    configurable: true,
+    writable: true,
+    async value(registry: ApplicationCommandRegistry): Promise<void> {
+      /* eslint-disable @typescript-eslint/unbound-method -- saved for restoration; always invoked via .call(registry) */
+      const chat = registry.registerChatInputCommand;
+      const menu = registry.registerContextMenuCommand;
+      /* eslint-enable @typescript-eslint/unbound-method */
+      registry.registerChatInputCommand = (input, options) =>
+        chat.call(registry, wrapInput(input), options);
+      registry.registerContextMenuCommand = (input, options) =>
+        menu.call(registry, wrapInput(input), options);
+      try {
+        await original(registry);
+      } finally {
+        registry.registerChatInputCommand = chat;
+        registry.registerContextMenuCommand = menu;
+      }
+    },
+  });
+}
+
 // ── Shared interface — ensures both base classes stay in sync ────────────────
 
 interface CommandLike {
@@ -259,6 +333,7 @@ export abstract class BaseCommand extends Command implements CommandLike {
     this.contexts = defaults.contexts;
     this.defaultMemberPermissions = defaults.defaultMemberPermissions;
     instrumentCommandPiece(this);
+    autoApplyCommandDefaults(this);
   }
 
   public checkPermission(
@@ -345,6 +420,7 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
     this.contexts = defaults.contexts;
     this.defaultMemberPermissions = defaults.defaultMemberPermissions;
     instrumentCommandPiece(this);
+    autoApplyCommandDefaults(this);
   }
 
   public checkPermission(

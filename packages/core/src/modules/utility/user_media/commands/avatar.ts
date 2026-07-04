@@ -16,9 +16,6 @@ export class AvatarCommand extends BaseCommand {
       builder
         .setName(this.name)
         .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes)
         .addUserOption((option) =>
           option
             .setName("user")

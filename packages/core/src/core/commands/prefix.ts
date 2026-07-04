@@ -1,21 +1,15 @@
 import { ApplyOptions } from "@sapphire/decorators";
+import { getService } from "#core/module-system/Service.js";
 import {
   type ApplicationCommandRegistry,
   container,
   type Args,
 } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import {
-  type ChatInputCommandInteraction,
-  type Message,
-} from "discord.js";
+import { type ChatInputCommandInteraction, type Message } from "discord.js";
 import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel, resolvePermissionLevel } from "#lib/permissions.js";
-import {
-  makeSuccessCard,
-  makeErrorCard,
-  ephemeralCard,
-} from "#utilities/cards.js";
+import { makeSuccessCard, makeErrorCard } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
 import type { GuildSettingsService } from "#core/services/GuildSettingsService.js";
 
@@ -45,9 +39,6 @@ export class PrefixCommand extends BaseSubcommand {
   ) {
     registry.registerChatInputCommand((builder) =>
       applyLocalizedBuilder(builder, "commands:prefix")
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes)
         .addSubcommand((sub) =>
           applyLocalizedBuilder(sub, "commands:prefixSet").addStringOption(
             (opt) =>
@@ -66,9 +57,7 @@ export class PrefixCommand extends BaseSubcommand {
   }
 
   private get guildSettingsService(): GuildSettingsService {
-    return this.container.stores
-      .get("services")
-      .get("guild-settings") as GuildSettingsService;
+    return getService("guild-settings");
   }
 
   public async messageRunView(message: Message) {
@@ -143,16 +132,13 @@ export class PrefixCommand extends BaseSubcommand {
     const settings = await container.db.config.getGuildSettings(
       interaction.guildId!,
     );
-    return interaction.reply({
-      ...ephemeralCard(
-        makeSuccessCard(
-          t("commands:prefixCurrentTitle"),
-          t("commands:prefixCurrent", {
-            prefix: settings.prefix ?? DEFAULT_PREFIX,
-          }),
-        ),
-      ),
-    });
+    return this.replySuccess(
+      interaction,
+      t("commands:prefixCurrentTitle"),
+      t("commands:prefixCurrent", {
+        prefix: settings.prefix ?? DEFAULT_PREFIX,
+      }),
+    );
   }
 
   public async chatInputSet(interaction: ChatInputCommandInteraction) {
@@ -161,25 +147,19 @@ export class PrefixCommand extends BaseSubcommand {
     const newPrefix = interaction.options.getString("new_prefix", true);
 
     if (newPrefix.length > 5) {
-      return interaction.reply({
-        ...ephemeralCard(
-          makeErrorCard(
-            t("commands:prefixTooLongTitle"),
-            t("commands:prefixTooLong"),
-          ),
-        ),
-      });
+      return this.replyError(
+        interaction,
+        t("commands:prefixTooLongTitle"),
+        t("commands:prefixTooLong"),
+      );
     }
 
     await this.guildSettingsService.setPrefix(interaction.guildId!, newPrefix);
-    return interaction.reply({
-      ...ephemeralCard(
-        makeSuccessCard(
-          `${Emojis.GEAR} ${t("commands:prefixUpdatedTitle")}`,
-          t("commands:prefixUpdated", { prefix: newPrefix }),
-        ),
-      ),
-    });
+    return this.replySuccess(
+      interaction,
+      `${Emojis.GEAR} ${t("commands:prefixUpdatedTitle")}`,
+      t("commands:prefixUpdated", { prefix: newPrefix }),
+    );
   }
 
   public async chatInputReset(interaction: ChatInputCommandInteraction) {
@@ -187,13 +167,10 @@ export class PrefixCommand extends BaseSubcommand {
     const t = await this.fetchT(interaction);
 
     await this.guildSettingsService.resetPrefix(interaction.guildId!);
-    return interaction.reply({
-      ...ephemeralCard(
-        makeSuccessCard(
-          `${Emojis.GEAR} ${t("commands:prefixResetTitle")}`,
-          t("commands:prefixReset"),
-        ),
-      ),
-    });
+    return this.replySuccess(
+      interaction,
+      `${Emojis.GEAR} ${t("commands:prefixResetTitle")}`,
+      t("commands:prefixReset"),
+    );
   }
 }

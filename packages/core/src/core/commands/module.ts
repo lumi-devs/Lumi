@@ -1,4 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
+import { getService } from "#core/module-system/Service.js";
 import {
   ApplicationCommandRegistry,
   type Args,
@@ -126,9 +127,6 @@ export class ModuleCommand extends BaseSubcommand {
       b
         .setName(this.name)
         .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes)
         .addSubcommand((s) =>
           s
             .setName("list")
@@ -595,9 +593,7 @@ export class ModuleCommand extends BaseSubcommand {
   // Internals
 
   private get downloaderService(): DownloaderService {
-    return this.container.stores
-      .get("services")
-      .get("downloader") as DownloaderService;
+    return getService("downloader");
   }
 
   private buildModuleListCard() {

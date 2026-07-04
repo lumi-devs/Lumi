@@ -44,9 +44,6 @@ export class CasesCommand extends BaseSubcommand {
       b
         .setName(this.name)
         .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes)
         .addSubcommand((s) =>
           s
             .setName("view")

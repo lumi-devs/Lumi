@@ -223,3 +223,9 @@ export class ConfigService extends Service {
     }
   }
 }
+
+declare module "#core/module-system/Service.js" {
+  interface Services {
+    config: ConfigService;
+  }
+}

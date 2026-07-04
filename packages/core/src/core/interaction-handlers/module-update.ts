@@ -1,4 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
+import { getService } from "#core/module-system/Service.js";
 import {
   InteractionHandler,
   InteractionHandlerTypes,
@@ -16,9 +17,7 @@ import type { DownloaderService } from "#core/services/DownloaderService.js";
 })
 export class ModuleUpdateInteractionHandler extends BaseInteractionHandler {
   private get downloaderService(): DownloaderService {
-    return this.container.stores
-      .get("services")
-      .get("downloader") as DownloaderService;
+    return getService("downloader");
   }
 
   public override parse(interaction: ButtonInteraction) {

@@ -1,4 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
+import { getService } from "#core/module-system/Service.js";
 import { Args } from "@sapphire/framework";
 import type { Message } from "discord.js";
 import { BaseSubcommand } from "#lib/commands.js";
@@ -25,9 +26,7 @@ import type { DownloaderService } from "#core/services/DownloaderService.js";
 })
 export class DownloadCommand extends BaseSubcommand {
   private get downloaderService(): DownloaderService {
-    return this.container.stores
-      .get("services")
-      .get("downloader") as DownloaderService;
+    return getService("downloader");
   }
 
   public async messageRunInstall(message: Message, args: Args): Promise<void> {

@@ -124,3 +124,9 @@ export class FilterService extends Service {
   // cache miss, not a correctness change).
   private static readonly MAX_GUILDS = 10_000;
 }
+
+declare module "#core/module-system/Service.js" {
+  interface Services {
+    filter: FilterService;
+  }
+}

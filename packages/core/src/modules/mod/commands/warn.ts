@@ -31,9 +31,6 @@ export class WarnCommand extends BaseCommand {
       b
         .setName(this.name)
         .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes)
         .addUserOption((o) =>
           o
             .setName("member")
@@ -108,7 +105,6 @@ export class WarnCommand extends BaseCommand {
       .catch(() => null);
 
     await logToChannel(
-      this.container,
       guildId,
       "⚠️ Warned",
       Colors.Yellow,

@@ -97,3 +97,9 @@ export default class AfkService extends Service {
     return removed;
   }
 }
+
+declare module "#core/module-system/Service.js" {
+  interface Services {
+    afk: AfkService;
+  }
+}

@@ -1,21 +1,15 @@
 import { ApplyOptions } from "@sapphire/decorators";
+import { getService } from "#core/module-system/Service.js";
 import {
   type ApplicationCommandRegistry,
   container,
 } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import {
-  type ChatInputCommandInteraction,
-  type Message,
-} from "discord.js";
+import { type ChatInputCommandInteraction, type Message } from "discord.js";
 import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel, resolvePermissionLevel } from "#lib/permissions.js";
 import { SUPPORTED_LANGUAGES } from "#core/i18n/index.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeSuccessCard,
-} from "#utilities/cards.js";
+import { makeErrorCard, makeSuccessCard } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
 import type { GuildSettingsService } from "#core/services/GuildSettingsService.js";
 
@@ -39,9 +33,6 @@ export class LanguageCommand extends BaseSubcommand {
   ) {
     registry.registerChatInputCommand((builder) =>
       applyLocalizedBuilder(builder, "commands:language")
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes)
         .addSubcommand((sub) =>
           applyLocalizedBuilder(sub, "commands:languageView"),
         )
@@ -65,9 +56,7 @@ export class LanguageCommand extends BaseSubcommand {
   }
 
   private get settings(): GuildSettingsService {
-    return this.container.stores
-      .get("services")
-      .get("guild-settings") as GuildSettingsService;
+    return getService("guild-settings");
   }
 
   public async chatInputView(interaction: ChatInputCommandInteraction) {
@@ -75,14 +64,11 @@ export class LanguageCommand extends BaseSubcommand {
     const current = await container.db.config.getGuildSettings(
       interaction.guildId!,
     );
-    return interaction.reply({
-      ...ephemeralCard(
-        makeSuccessCard(
-          t("commands:languageCurrentTitle"),
-          t("commands:languageCurrent", { language: current.locale }),
-        ),
-      ),
-    });
+    return this.replySuccess(
+      interaction,
+      t("commands:languageCurrentTitle"),
+      t("commands:languageCurrent", { language: current.locale }),
+    );
   }
 
   public async chatInputSet(interaction: ChatInputCommandInteraction) {
@@ -93,26 +79,20 @@ export class LanguageCommand extends BaseSubcommand {
     try {
       await this.settings.setLanguage(interaction.guildId!, language);
     } catch (err) {
-      return interaction.reply({
-        ...ephemeralCard(
-          makeErrorCard(
-            t("commands:languageUnsupportedTitle"),
-            (err as Error).message,
-          ),
-        ),
-      });
+      return this.replyError(
+        interaction,
+        t("commands:languageUnsupportedTitle"),
+        (err as Error).message,
+      );
     }
 
     // Re-resolve T so the confirmation is shown in the newly chosen language.
     const tNext = await this.fetchT(interaction);
-    return interaction.reply({
-      ...ephemeralCard(
-        makeSuccessCard(
-          `${Emojis.GEAR} ${tNext("commands:languageUpdatedTitle")}`,
-          tNext("commands:languageUpdated", { language }),
-        ),
-      ),
-    });
+    return this.replySuccess(
+      interaction,
+      `${Emojis.GEAR} ${tNext("commands:languageUpdatedTitle")}`,
+      tNext("commands:languageUpdated", { language }),
+    );
   }
 
   public async chatInputReset(interaction: ChatInputCommandInteraction) {
@@ -126,14 +106,11 @@ export class LanguageCommand extends BaseSubcommand {
     const settings = await container.db.config.getGuildSettings(
       interaction.guildId!,
     );
-    return interaction.reply({
-      ...ephemeralCard(
-        makeSuccessCard(
-          `${Emojis.GEAR} ${t("commands:languageResetTitle")}`,
-          t("commands:languageReset", { language: settings.locale }),
-        ),
-      ),
-    });
+    return this.replySuccess(
+      interaction,
+      `${Emojis.GEAR} ${t("commands:languageResetTitle")}`,
+      t("commands:languageReset", { language: settings.locale }),
+    );
   }
 
   public async messageView(message: Message) {

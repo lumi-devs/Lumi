@@ -3,6 +3,7 @@ import {
   InteractionHandler,
   UserError,
 } from "@sapphire/framework";
+import { getService } from "#core/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   ActionRowBuilder,
@@ -39,14 +40,13 @@ const accessDenied = () =>
     message: `${Emojis.CROSS} You need the Admin permission level to manage configuration.`,
   });
 
-
 @ApplyOptions<InteractionHandler.Options>({
   name: "config-panel-button",
   interactionHandlerType: InteractionHandlerTypes.Button,
 })
 export class ConfigPanelButtonHandler extends BaseInteractionHandler {
   private get cfg(): ConfigService {
-    return this.container.stores.get("services").get("config") as ConfigService;
+    return getService("config");
   }
 
   public override parse(interaction: ButtonInteraction) {
@@ -247,7 +247,7 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
 })
 export class ConfigPanelSelectHandler extends BaseInteractionHandler {
   private get cfg(): ConfigService {
-    return this.container.stores.get("services").get("config") as ConfigService;
+    return getService("config");
   }
 
   public override parse(interaction: AnySelectMenuInteraction) {
@@ -394,7 +394,7 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
 })
 export class ConfigPanelModalHandler extends InteractionHandler {
   private get cfg(): ConfigService {
-    return this.container.stores.get("services").get("config") as ConfigService;
+    return getService("config");
   }
 
   public override parse(interaction: ModalSubmitInteraction) {

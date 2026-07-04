@@ -103,3 +103,9 @@ export class GuildSettingsService extends Service {
     }
   }
 }
+
+declare module "#core/module-system/Service.js" {
+  interface Services {
+    "guild-settings": GuildSettingsService;
+  }
+}
