@@ -1,20 +1,11 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry, type Args } from "@sapphire/framework";
+import { type ApplicationCommandRegistry } from "@sapphire/framework";
+import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { time, TimestampStyles, userMention } from "@discordjs/formatters";
 import { chunk } from "@sapphire/utilities";
-import {
-  type ChatInputCommandInteraction,
-  type Message,
-  MessageFlags,
-} from "discord.js";
-import { BaseSubcommand } from "#lib/commands.js";
+import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import {
-  makeInfoCard,
-  makeSuccessCard,
-  makeErrorCard,
-  type CardReply,
-} from "#utilities/cards.js";
+import { makeInfoCard } from "#utilities/cards.js";
 import { decrementWarnCount } from "../lib/thresholds.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
@@ -22,18 +13,11 @@ import { decrementWarnCount } from "../lib/thresholds.js";
   description: "View or modify moderation cases",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.MOD,
+  prefixEnabled: true,
   subcommands: [
-    {
-      name: "view",
-      chatInputRun: "chatInputRunView",
-      messageRun: "messageRunView",
-      default: true,
-    },
-    {
-      name: "modify",
-      chatInputRun: "chatInputRunModify",
-      messageRun: "messageRunModify",
-    },
+    { name: "view", run: "view", default: true },
+    { name: "modify", run: "modify" },
+    { name: "delete", run: "delete" },
   ],
 })
 export class CasesCommand extends BaseSubcommand {
@@ -41,29 +25,21 @@ export class CasesCommand extends BaseSubcommand {
     registry: ApplicationCommandRegistry,
   ) {
     registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
+      applyLocalizedBuilder(b, "commands:cases")
         .addSubcommand((s) =>
-          s
-            .setName("view")
-            .setDescription("View cases for a member or a specific case")
+          applyLocalizedBuilder(s, "commands:casesView")
             .addUserOption((o) =>
-              o
-                .setName("member")
-                .setDescription("Member to look up")
-                .setRequired(false),
+              applyLocalizedBuilder(o, "commands:casesMember").setRequired(
+                false,
+              ),
             )
             .addIntegerOption((o) =>
-              o
-                .setName("case_number")
-                .setDescription("Specific case number")
-                .setRequired(false),
+              applyLocalizedBuilder(o, "commands:casesNumber").setRequired(
+                false,
+              ),
             )
             .addStringOption((o) =>
-              o
-                .setName("action")
-                .setDescription("Filter by action")
+              applyLocalizedBuilder(o, "commands:casesAction")
                 .setRequired(false)
                 .addChoices(
                   { name: "warn", value: "warn" },
@@ -74,98 +50,133 @@ export class CasesCommand extends BaseSubcommand {
             ),
         )
         .addSubcommand((s) =>
-          s
-            .setName("modify")
-            .setDescription("Edit the reason of a case")
+          applyLocalizedBuilder(s, "commands:casesModify")
             .addIntegerOption((o) =>
-              o
-                .setName("case_number")
-                .setDescription("Case number to edit")
-                .setRequired(true),
+              applyLocalizedBuilder(o, "commands:casesNumber").setRequired(
+                true,
+              ),
             )
             .addStringOption((o) =>
-              o
-                .setName("reason")
-                .setDescription("New reason")
-                .setRequired(true),
+              applyLocalizedBuilder(o, "commands:casesNewReason").setRequired(
+                true,
+              ),
             ),
+        )
+        .addSubcommand((s) =>
+          applyLocalizedBuilder(s, "commands:casesDelete").addIntegerOption(
+            (o) =>
+              applyLocalizedBuilder(o, "commands:casesNumber").setRequired(
+                true,
+              ),
+          ),
         ),
     );
   }
 
   // ── view ───────────────────────────────────────────────────────────────────
 
-  public async chatInputRunView(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const caseNumber = interaction.options.getInteger("case_number");
-    if (caseNumber !== null)
-      return this.#viewOne(interaction.guildId!, caseNumber, (c) =>
-        interaction.editReply(c),
-      );
+  public async view(ctx: CommandContext) {
+    await ctx.defer();
+    let caseNumber: number | null = null;
+    let userId: string | undefined;
+    let action: string | undefined;
 
-    const user = interaction.options.getUser("member");
-    const action = interaction.options.getString("action") ?? undefined;
-    return this.#viewList(interaction.guildId!, user?.id, action, (c) =>
-      interaction.editReply(c),
-    );
-  }
-
-  public async messageRunView(message: Message, args: Args) {
-    const first = await args.pick("string").catch(() => null);
-    if (first && /^\d+$/.test(first) && first.length < 8) {
-      return this.#viewOne(message.guildId!, parseInt(first, 10), (c) =>
-        message.reply(c),
-      );
-    }
-    const member = first
-      ? await message
+    if (ctx.isSlash) {
+      caseNumber = await ctx.getInteger("case_number");
+      userId = (await ctx.getUser("member"))?.id;
+      action = (await ctx.getString("action")) ?? undefined;
+    } else {
+      // Prefix heuristic: a short number is a case lookup, anything else is a
+      // member reference.
+      const first = await ctx.getString("member");
+      if (first && /^\d+$/.test(first) && first.length < 8) {
+        caseNumber = parseInt(first, 10);
+      } else if (first) {
+        const member = await ctx
           .guild!.members.fetch(first.replace(/\D/g, ""))
-          .catch(() => null)
-      : null;
-    return this.#viewList(message.guildId!, member?.id, undefined, (c) =>
-      message.reply(c),
-    );
+          .catch(() => null);
+        userId = member?.id;
+      }
+    }
+
+    if (caseNumber !== null) return this.#viewOne(ctx, caseNumber);
+    return this.#viewList(ctx, userId, action);
   }
 
   // ── modify ─────────────────────────────────────────────────────────────────
 
-  public async chatInputRunModify(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const caseNumber = interaction.options.getInteger("case_number", true);
-    const reason = interaction.options.getString("reason", true);
-    return this.#modify(interaction.guildId!, caseNumber, reason, (c) =>
-      interaction.editReply(c),
-    );
-  }
-
-  public async messageRunModify(message: Message, args: Args) {
-    const caseNumberStr = await args.pick("string").catch(() => null);
-    const reason = await args.rest("string").catch(() => null);
-    if (!caseNumberStr || !reason)
-      return message.reply(
-        makeErrorCard("Usage", "`,cases modify <case_number> <reason>`"),
+  public async modify(ctx: CommandContext) {
+    await ctx.defer();
+    const t = await ctx.fetchT();
+    const caseNumber = ctx.isSlash
+      ? await ctx.getInteger("case_number", { required: true })
+      : await ctx.getInteger("case_number");
+    const reason = await ctx.getString("reason", { rest: true });
+    if (caseNumber === null || !reason) {
+      return ctx.replyError(
+        t("commands:casesUsageTitle"),
+        t("commands:casesModifyUsage"),
       );
-    return this.#modify(
-      message.guildId!,
-      parseInt(caseNumberStr, 10),
-      reason,
-      (c) => message.reply(c),
-    );
-  }
+    }
 
-  async #viewOne(
-    guildId: string,
-    caseNumber: number,
-    reply: (c: CardReply) => unknown,
-  ) {
-    const c = await this.container.db.moderation.getModerationCase(
-      guildId,
+    const existing = await this.container.db.moderation.getModerationCase(
+      ctx.guildId!,
       caseNumber,
     );
-    if (!c)
-      return reply(
-        makeErrorCard("Not Found", `Case #${caseNumber} does not exist.`),
+    if (!existing) {
+      return ctx.replyError(
+        t("commands:casesNotFoundTitle"),
+        t("commands:casesNotFound", { caseNumber }),
       );
+    }
+
+    await this.container.db.moderation.updateCaseReason(existing.id, reason);
+    return ctx.replySuccess(
+      t("commands:casesUpdatedTitle"),
+      t("commands:casesUpdated", { caseNumber, reason }),
+    );
+  }
+
+  public async delete(ctx: CommandContext) {
+    await ctx.defer();
+    const t = await ctx.fetchT();
+    const caseNumber = await ctx.getInteger("case_number", { required: true });
+    const existing = await this.container.db.moderation.getModerationCase(
+      ctx.guildId!,
+      caseNumber!,
+    );
+    if (!existing) {
+      return ctx.replyError(
+        t("commands:casesNotFoundTitle"),
+        t("commands:casesNotFound", { caseNumber }),
+      );
+    }
+
+    if (existing.action === "warn") {
+      await decrementWarnCount(this.container, ctx.guildId!, existing.userId);
+    }
+    await this.container.db.moderation.deleteModerationCase(
+      ctx.guildId!,
+      caseNumber!,
+    );
+    return ctx.replySuccess(
+      t("commands:casesDeletedTitle"),
+      t("commands:casesDeleted", { caseNumber }),
+    );
+  }
+
+  async #viewOne(ctx: CommandContext, caseNumber: number) {
+    const t = await ctx.fetchT();
+    const c = await this.container.db.moderation.getModerationCase(
+      ctx.guildId!,
+      caseNumber,
+    );
+    if (!c) {
+      return ctx.replyError(
+        t("commands:casesNotFoundTitle"),
+        t("commands:casesNotFound", { caseNumber }),
+      );
+    }
     const lines = [
       `**Action:** ${c.action}`,
       `**Target:** ${userMention(c.userId)} (${c.userId})`,
@@ -178,26 +189,32 @@ export class CasesCommand extends BaseSubcommand {
     ]
       .filter(Boolean)
       .join("\n");
-    return reply(makeInfoCard(`Case #${caseNumber}`, lines));
+    return ctx.reply(makeInfoCard(`Case #${caseNumber}`, lines));
   }
 
   async #viewList(
-    guildId: string,
+    ctx: CommandContext,
     userId: string | undefined,
     action: string | undefined,
-    reply: (c: CardReply) => unknown,
   ) {
-    if (!userId)
-      return reply(
-        makeErrorCard("Missing", "Provide a member or case number."),
+    const t = await ctx.fetchT();
+    if (!userId) {
+      return ctx.replyError(
+        t("commands:casesUsageTitle"),
+        t("commands:casesViewUsage"),
       );
+    }
     const cases = await this.container.db.moderation.getModerationCases(
-      guildId,
+      ctx.guildId!,
       userId,
       action,
     );
-    if (cases.length === 0)
-      return reply(makeInfoCard("No Cases", "No cases found for this member."));
+    if (cases.length === 0) {
+      return ctx.replyInfo(
+        t("commands:casesNoneTitle"),
+        t("commands:casesNone"),
+      );
+    }
     const lines = cases.map(
       (c) =>
         `**#${c.caseNumber}** \`${c.action}\` — ${c.reason ?? "—"} ${time(c.createdAt, TimestampStyles.RelativeTime)}`,
@@ -208,48 +225,8 @@ export class CasesCommand extends BaseSubcommand {
       pages.length > 1
         ? `Page 1/${pages.length} • ${cases.length} total cases`
         : undefined;
-    return reply(
+    return ctx.reply(
       makeInfoCard(`Cases for ${userMention(userId)}`, body, { footer }),
-    );
-  }
-
-  async #modify(
-    guildId: string,
-    caseNumber: number,
-    reason: string,
-    reply: (c: CardReply) => unknown,
-  ) {
-    const existing = await this.container.db.moderation.getModerationCase(
-      guildId,
-      caseNumber,
-    );
-    if (!existing)
-      return reply(
-        makeErrorCard("Not Found", `Case #${caseNumber} does not exist.`),
-      );
-
-    await this.container.db.moderation.updateCaseReason(existing.id, reason);
-
-    // Decrement warn counter if we're deleting a warn case
-    if (existing.action === "warn") {
-      await decrementWarnCount(this.container, guildId, existing.userId);
-      await this.container.db.moderation.deleteModerationCase(
-        guildId,
-        caseNumber,
-      );
-      return reply(
-        makeSuccessCard(
-          "Case Deleted",
-          `Case #${caseNumber} has been removed.`,
-        ),
-      );
-    }
-
-    return reply(
-      makeSuccessCard(
-        "Case Updated",
-        `Case #${caseNumber} reason updated to: ${reason}`,
-      ),
     );
   }
 }

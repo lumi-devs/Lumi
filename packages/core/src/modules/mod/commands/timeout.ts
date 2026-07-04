@@ -1,19 +1,9 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry, type Args } from "@sapphire/framework";
-import {
-  Colors,
-  type ChatInputCommandInteraction,
-  type Message,
-  type GuildMember,
-  MessageFlags,
-} from "discord.js";
-import { BaseSubcommand } from "#lib/commands.js";
+import { type ApplicationCommandRegistry } from "@sapphire/framework";
+import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
+import { Colors } from "discord.js";
+import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import {
-  makeSuccessCard,
-  makeErrorCard,
-  type CardReply,
-} from "#utilities/cards.js";
 import { formatAuditReason } from "#utilities/audit.js";
 import { logError } from "#utilities/errors.js";
 import {
@@ -30,17 +20,10 @@ const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000;
   description: "Timeout or untimeout a member",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.MOD,
+  prefixEnabled: true,
   subcommands: [
-    {
-      name: "add",
-      chatInputRun: "chatInputRunAdd",
-      messageRun: "messageRunAdd",
-    },
-    {
-      name: "remove",
-      chatInputRun: "chatInputRunRemove",
-      messageRun: "messageRunRemove",
-    },
+    { name: "add", run: "add", default: true },
+    { name: "remove", run: "remove" },
   ],
 })
 export class TimeoutCommand extends BaseSubcommand {
@@ -48,164 +31,81 @@ export class TimeoutCommand extends BaseSubcommand {
     registry: ApplicationCommandRegistry,
   ) {
     registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
+      applyLocalizedBuilder(b, "commands:timeout")
         .addSubcommand((s) =>
-          s
-            .setName("add")
-            .setDescription("Time a member out from your server")
+          applyLocalizedBuilder(s, "commands:timeoutAdd")
             .addUserOption((o) =>
-              o
-                .setName("member")
-                .setDescription("Member to timeout")
-                .setRequired(true),
+              applyLocalizedBuilder(o, "commands:timeoutMember").setRequired(
+                true,
+              ),
             )
             .addStringOption((o) =>
-              o
-                .setName("duration")
-                .setDescription("Duration e.g. 10m, 2h, 1d (max 28d)")
-                .setRequired(true),
+              applyLocalizedBuilder(o, "commands:timeoutDuration").setRequired(
+                true,
+              ),
             )
             .addStringOption((o) =>
-              o.setName("reason").setDescription("Reason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
             ),
         )
         .addSubcommand((s) =>
-          s
-            .setName("remove")
-            .setDescription("Remove the timeout of a member")
+          applyLocalizedBuilder(s, "commands:timeoutRemove")
             .addUserOption((o) =>
-              o
-                .setName("member")
-                .setDescription("Member to untimeout")
-                .setRequired(true),
+              applyLocalizedBuilder(o, "commands:timeoutMember").setRequired(
+                true,
+              ),
             )
             .addStringOption((o) =>
-              o.setName("reason").setDescription("Reason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
             ),
         ),
     );
   }
 
-  public async chatInputRunAdd(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const member = interaction.options.getMember(
-      "member",
-    ) as GuildMember | null;
-    const durationStr = interaction.options.getString("duration", true);
+  public async add(ctx: CommandContext) {
+    await ctx.defer();
+    const t = await ctx.fetchT();
+    const member = await ctx.getMember("member");
+    const durationStr = await ctx.getString("duration");
     const reason =
-      interaction.options.getString("reason") ?? "No reason provided.";
-    if (!member)
-      return interaction.editReply(
-        makeErrorCard("Not Found", "Member not in this server."),
-      );
-    return this.#add(
-      interaction.guildId!,
-      member,
-      interaction.user.id,
-      durationStr,
-      reason,
-      (c) => interaction.editReply(c),
-    );
-  }
+      (await ctx.getString("reason", { rest: true })) ??
+      t("commands:modNoReason");
 
-  public async messageRunAdd(message: Message, args: Args) {
-    const member = await args.pick("member").catch(() => null);
-    const durationStr = await args.pick("string").catch(() => null);
-    const reason = await args.rest("string").catch(() => "No reason provided.");
-    if (!member)
-      return message.reply(
-        makeErrorCard("Not Found", "Provide a valid member."),
-      );
-    if (!durationStr)
-      return message.reply(
-        makeErrorCard(
-          "Missing Duration",
-          "Provide a duration e.g. `10m`, `2h`.",
-        ),
-      );
-    return this.#add(
-      message.guildId!,
-      member,
-      message.author.id,
-      durationStr,
-      reason,
-      (c) => message.reply(c),
-    );
-  }
-
-  public async chatInputRunRemove(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const member = interaction.options.getMember(
-      "member",
-    ) as GuildMember | null;
-    const reason =
-      interaction.options.getString("reason") ?? "No reason provided.";
-    if (!member)
-      return interaction.editReply(
-        makeErrorCard("Not Found", "Member not in this server."),
-      );
-    return this.#remove(
-      interaction.guildId!,
-      member,
-      interaction.user.id,
-      reason,
-      (c) => interaction.editReply(c),
-    );
-  }
-
-  public async messageRunRemove(message: Message, args: Args) {
-    const member = await args.pick("member").catch(() => null);
-    const reason = await args.rest("string").catch(() => "No reason provided.");
-    if (!member)
-      return message.reply(
-        makeErrorCard("Not Found", "Provide a valid member."),
-      );
-    return this.#remove(
-      message.guildId!,
-      member,
-      message.author.id,
-      reason,
-      (c) => message.reply(c),
-    );
-  }
-
-  async #add(
-    guildId: string,
-    member: GuildMember,
-    actorId: string,
-    durationStr: string,
-    reason: string,
-    reply: (c: CardReply) => unknown,
-  ) {
-    const ms = parseDuration(durationStr);
-    if (!ms)
-      return reply(
-        makeErrorCard(
-          "Invalid Duration",
-          "Use formats like `10m`, `2h`, `1d`. Max 28d.",
-        ),
-      );
-    if (ms > MAX_TIMEOUT_MS)
-      return reply(
-        makeErrorCard("Too Long", "Discord limits timeouts to 28 days."),
-      );
-
-    const until = new Date(Date.now() + ms);
-    const actor = await this.container.client.users.fetch(actorId);
-    try {
-      await member.timeout(until.getTime(), formatAuditReason(actor, reason));
-    } catch (err: unknown) {
-      logError(`timeout add: guild=${guildId} target=${member.id}`, err);
-      return reply(
-        makeErrorCard("Failed", "Could not apply timeout. Check permissions."),
+    if (!member) {
+      return ctx.replyError(
+        t("commands:modMemberNotFoundTitle"),
+        t("commands:modMemberNotFound"),
       );
     }
+    const ms = durationStr ? parseDuration(durationStr) : null;
+    if (!ms) {
+      return ctx.replyError(
+        t("commands:timeoutInvalidDurationTitle"),
+        t("commands:timeoutInvalidDuration"),
+      );
+    }
+    if (ms > MAX_TIMEOUT_MS) {
+      return ctx.replyError(
+        t("commands:timeoutTooLongTitle"),
+        t("commands:timeoutTooLong"),
+      );
+    }
+
+    const until = new Date(Date.now() + ms);
+    try {
+      await member.timeout(until.getTime(), formatAuditReason(ctx.user, reason));
+    } catch (err: unknown) {
+      logError(`timeout add: guild=${ctx.guildId} target=${member.id}`, err);
+      return ctx.replyError(
+        t("commands:modActionFailedTitle"),
+        t("commands:modActionFailed"),
+      );
+    }
+
     const c = await this.container.db.moderation.createModerationCase({
-      guildId,
+      guildId: ctx.guildId!,
       userId: member.id,
-      moderatorId: actorId,
+      moderatorId: ctx.user.id,
       action: "mute",
       reason,
       durationSeconds: Math.floor(ms / 1000),
@@ -213,50 +113,60 @@ export class TimeoutCommand extends BaseSubcommand {
     });
     await scheduleCaseLift(this.container, c);
     await logToChannel(
-      guildId,
+      ctx.guildId!,
       "🔇 Timed Out",
       Colors.Orange,
       member.id,
-      actor,
+      ctx.user,
       reason,
       c.caseNumber,
     );
-    return reply(
-      makeSuccessCard(
-        "🔇 Timed Out",
-        `${member} timed out for **${formatDuration(ms)}**.\n**Reason:** ${reason}\n**Case #${c.caseNumber}**`,
-      ),
+    return ctx.replySuccess(
+      t("commands:timeoutSuccessTitle"),
+      t("commands:timeoutSuccess", {
+        user: member.user.username,
+        duration: formatDuration(ms),
+        reason,
+        caseNumber: c.caseNumber,
+      }),
     );
   }
 
-  async #remove(
-    guildId: string,
-    member: GuildMember,
-    actorId: string,
-    reason: string,
-    reply: (c: CardReply) => unknown,
-  ) {
-    const actor = await this.container.client.users.fetch(actorId);
-    try {
-      await member.timeout(null, formatAuditReason(actor, reason));
-    } catch (err: unknown) {
-      logError(`timeout remove: guild=${guildId} target=${member.id}`, err);
-      return reply(
-        makeErrorCard("Failed", "Could not remove timeout. Check permissions."),
+  public async remove(ctx: CommandContext) {
+    await ctx.defer();
+    const t = await ctx.fetchT();
+    const member = await ctx.getMember("member");
+    const reason =
+      (await ctx.getString("reason", { rest: true })) ??
+      t("commands:modNoReason");
+
+    if (!member) {
+      return ctx.replyError(
+        t("commands:modMemberNotFoundTitle"),
+        t("commands:modMemberNotFound"),
       );
     }
+
+    try {
+      await member.timeout(null, formatAuditReason(ctx.user, reason));
+    } catch (err: unknown) {
+      logError(`timeout remove: guild=${ctx.guildId} target=${member.id}`, err);
+      return ctx.replyError(
+        t("commands:modActionFailedTitle"),
+        t("commands:modActionFailed"),
+      );
+    }
+
     await this.container.db.moderation.createModerationCase({
-      guildId,
+      guildId: ctx.guildId!,
       userId: member.id,
-      moderatorId: actorId,
+      moderatorId: ctx.user.id,
       action: "unmute",
       reason,
     });
-    return reply(
-      makeSuccessCard(
-        "🔊 Timeout Removed",
-        `${member}'s timeout has been removed.`,
-      ),
+    return ctx.replySuccess(
+      t("commands:timeoutRemovedTitle"),
+      t("commands:timeoutRemoved", { user: member.user.username }),
     );
   }
 }

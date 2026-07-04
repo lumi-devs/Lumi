@@ -1,10 +1,8 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { getService } from "#core/module-system/Service.js";
-
-import type { Message } from "discord.js";
-import { BaseCommand } from "#lib/commands.js";
+import { type ApplicationCommandRegistry } from "@sapphire/framework";
+import { BaseCommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import { makeInfoCard, makeSuccessCard } from "#utilities/cards.js";
 import type AfkService from "../services/AfkService.js";
 
 @ApplyOptions<BaseCommand.Options>({
@@ -15,24 +13,24 @@ import type AfkService from "../services/AfkService.js";
   module: "afk",
 })
 export default class AfkCleanCommand extends BaseCommand {
+  public override registerApplicationCommands(
+    registry: ApplicationCommandRegistry,
+  ) {
+    registry.registerChatInputCommand((b) =>
+      b.setName(this.name).setDescription(this.description),
+    );
+  }
+
   private get afkService(): AfkService {
     return getService("afk");
   }
 
-  public override async messageRun(message: Message) {
-    if (message.channel.isSendable()) {
-      void message.channel.send({
-        ...makeInfoCard("AFK Cleanup", "Cleaning up AFK entries…"),
-      });
-    }
-
+  public override async run(ctx: CommandContext) {
+    await ctx.defer();
     const removed = await this.afkService.cleanStaleEntries();
-
-    return message.reply({
-      ...makeSuccessCard(
-        "AFK Cleanup",
-        `Removed ${removed} stale AFK entries.`,
-      ),
-    });
+    return ctx.replySuccess(
+      "AFK Cleanup",
+      `Removed ${removed} stale AFK entries.`,
+    );
   }
 }

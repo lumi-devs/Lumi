@@ -1,19 +1,10 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry, type Args } from "@sapphire/framework";
+import { type ApplicationCommandRegistry } from "@sapphire/framework";
+import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { userMention } from "@discordjs/formatters";
-import {
-  Colors,
-  type ChatInputCommandInteraction,
-  type Message,
-  MessageFlags,
-} from "discord.js";
-import { BaseSubcommand } from "#lib/commands.js";
+import { Colors } from "discord.js";
+import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import {
-  makeSuccessCard,
-  makeErrorCard,
-  type CardReply,
-} from "#utilities/cards.js";
 import { formatAuditReason } from "#utilities/audit.js";
 import { logError } from "#utilities/errors.js";
 import { logToChannel } from "../lib/helpers.js";
@@ -23,17 +14,10 @@ import { logToChannel } from "../lib/helpers.js";
   description: "Ban or unban a user",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.MOD,
+  prefixEnabled: true,
   subcommands: [
-    {
-      name: "add",
-      chatInputRun: "chatInputRunAdd",
-      messageRun: "messageRunAdd",
-    },
-    {
-      name: "remove",
-      chatInputRun: "chatInputRunRemove",
-      messageRun: "messageRunRemove",
-    },
+    { name: "add", run: "add", default: true },
+    { name: "remove", run: "remove" },
   ],
 })
 export class BanCommand extends BaseSubcommand {
@@ -41,195 +25,128 @@ export class BanCommand extends BaseSubcommand {
     registry: ApplicationCommandRegistry,
   ) {
     registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
+      applyLocalizedBuilder(b, "commands:ban")
         .addSubcommand((s) =>
-          s
-            .setName("add")
-            .setDescription("Ban a member from your server")
+          applyLocalizedBuilder(s, "commands:banAdd")
             .addUserOption((o) =>
-              o.setName("user").setDescription("User to ban").setRequired(true),
+              applyLocalizedBuilder(o, "commands:banUser").setRequired(true),
             )
             .addStringOption((o) =>
-              o.setName("reason").setDescription("Reason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
             )
             .addIntegerOption((o) =>
-              o
-                .setName("delete_days")
-                .setDescription("Days of messages to delete (0–7)")
+              applyLocalizedBuilder(o, "commands:banDeleteDays")
                 .setMinValue(0)
                 .setMaxValue(7)
                 .setRequired(false),
             ),
         )
         .addSubcommand((s) =>
-          s
-            .setName("remove")
-            .setDescription("Unban a user from your server")
+          applyLocalizedBuilder(s, "commands:banRemove")
             .addStringOption((o) =>
-              o
-                .setName("user_id")
-                .setDescription("User ID to unban")
-                .setRequired(true),
+              applyLocalizedBuilder(o, "commands:banUserId").setRequired(true),
             )
             .addStringOption((o) =>
-              o.setName("reason").setDescription("Reason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
             ),
         ),
     );
   }
 
-  public async chatInputRunAdd(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const user = interaction.options.getUser("user", true);
+  public async add(ctx: CommandContext) {
+    await ctx.defer();
+    const t = await ctx.fetchT();
+    const user = await ctx.getUser("user");
+    if (!user) {
+      return ctx.replyError(
+        t("commands:modMemberNotFoundTitle"),
+        t("commands:modMemberNotFound"),
+      );
+    }
+    const deleteDays = ctx.isSlash
+      ? ((await ctx.getInteger("delete_days")) ?? 0)
+      : 0;
     const reason =
-      interaction.options.getString("reason") ?? "No reason provided.";
-    const deleteDays = interaction.options.getInteger("delete_days") ?? 0;
-    return this.#ban(
-      interaction.guildId!,
-      user.id,
-      interaction.user.id,
-      reason,
-      deleteDays,
-      (c) => interaction.editReply(c),
-    );
-  }
+      (await ctx.getString("reason", { rest: true })) ??
+      t("commands:modNoReason");
 
-  public async messageRunAdd(message: Message, args: Args) {
-    const user = await args.pick("user").catch(() => null);
-    const reason = await args.rest("string").catch(() => "No reason provided.");
-    if (!user)
-      return message.reply(
-        makeErrorCard("Not Found", "Provide a valid user mention or ID."),
-      );
-    return this.#ban(
-      message.guildId!,
-      user.id,
-      message.author.id,
-      reason,
-      0,
-      (c) => message.reply(c),
-    );
-  }
-
-  public async chatInputRunRemove(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const userId = interaction.options.getString("user_id", true).trim();
-    const reason =
-      interaction.options.getString("reason") ?? "No reason provided.";
-    return this.#unban(
-      interaction.guildId!,
-      userId,
-      interaction.user.id,
-      reason,
-      (c) => interaction.editReply(c),
-    );
-  }
-
-  public async messageRunRemove(message: Message, args: Args) {
-    const userId =
-      (await args.pick("string").catch(() => null))?.replace(/\D/g, "") ?? null;
-    const reason = await args.rest("string").catch(() => "No reason provided.");
-    if (!userId)
-      return message.reply(
-        makeErrorCard("Missing", "Provide a user ID to unban."),
-      );
-    return this.#unban(
-      message.guildId!,
-      userId,
-      message.author.id,
-      reason,
-      (c) => message.reply(c),
-    );
-  }
-
-  async #ban(
-    guildId: string,
-    userId: string,
-    actorId: string,
-    reason: string,
-    deleteDays: number,
-    reply: (c: CardReply) => unknown,
-  ) {
-    const guild = this.container.client.guilds.cache.get(guildId);
-    if (!guild)
-      return reply(
-        makeErrorCard("Internal Error", "Guild not found in cache."),
-      );
-    const actor = await this.container.client.users.fetch(actorId);
+    const guild = ctx.guild!;
     try {
-      await guild.members.ban(userId, {
-        reason: formatAuditReason(actor, reason),
+      await guild.members.ban(user.id, {
+        reason: formatAuditReason(ctx.user, reason),
         deleteMessageSeconds: deleteDays * 86400,
       });
     } catch (err: unknown) {
-      logError(`ban: guild=${guildId} target=${userId}`, err);
-      return reply(
-        makeErrorCard(
-          "Failed",
-          "Could not ban. Check bot permissions and hierarchy.",
-        ),
+      logError(`ban: guild=${guild.id} target=${user.id}`, err);
+      return ctx.replyError(
+        t("commands:modActionFailedTitle"),
+        t("commands:modActionFailed"),
       );
     }
+
     const c = await this.container.db.moderation.createModerationCase({
-      guildId,
-      userId,
-      moderatorId: actorId,
+      guildId: guild.id,
+      userId: user.id,
+      moderatorId: ctx.user.id,
       action: "ban",
       reason,
     });
     await logToChannel(
-      guildId,
+      guild.id,
       "🔨 Banned",
       Colors.DarkRed,
-      userId,
-      actor,
+      user.id,
+      ctx.user,
       reason,
       c.caseNumber,
     );
-    return reply(
-      makeSuccessCard(
-        "🔨 Banned",
-        `${userMention(userId)} has been banned.\n**Reason:** ${reason}\n**Case #${c.caseNumber}**`,
-      ),
+    return ctx.replySuccess(
+      t("commands:banSuccessTitle"),
+      t("commands:banSuccess", {
+        user: userMention(user.id),
+        reason,
+        caseNumber: c.caseNumber,
+      }),
     );
   }
 
-  async #unban(
-    guildId: string,
-    userId: string,
-    actorId: string,
-    reason: string,
-    reply: (c: CardReply) => unknown,
-  ) {
-    if (!/^\d{17,20}$/.test(userId))
-      return reply(
-        makeErrorCard("Invalid ID", "Provide a valid Discord user ID."),
-      );
-    const guild = this.container.client.guilds.cache.get(guildId);
-    if (!guild)
-      return reply(
-        makeErrorCard("Internal Error", "Guild not found in cache."),
-      );
-    const actor = await this.container.client.users.fetch(actorId);
-    try {
-      await guild.bans.remove(userId, formatAuditReason(actor, reason));
-    } catch (err: unknown) {
-      logError(`unban: guild=${guildId} target=${userId}`, err);
-      return reply(
-        makeErrorCard("Failed", "User is not banned or bot lacks permissions."),
+  public async remove(ctx: CommandContext) {
+    await ctx.defer();
+    const t = await ctx.fetchT();
+    const rawId = await ctx.getString("user_id", { required: true });
+    const userId = rawId!.replace(/\D/g, "");
+    const reason =
+      (await ctx.getString("reason", { rest: true })) ??
+      t("commands:modNoReason");
+
+    if (!/^\d{17,20}$/.test(userId)) {
+      return ctx.replyError(
+        t("commands:banInvalidIdTitle"),
+        t("commands:banInvalidId"),
       );
     }
+
+    const guild = ctx.guild!;
+    try {
+      await guild.bans.remove(userId, formatAuditReason(ctx.user, reason));
+    } catch (err: unknown) {
+      logError(`unban: guild=${guild.id} target=${userId}`, err);
+      return ctx.replyError(
+        t("commands:modActionFailedTitle"),
+        t("commands:banRemoveFailed"),
+      );
+    }
+
     await this.container.db.moderation.createModerationCase({
-      guildId,
+      guildId: guild.id,
       userId,
-      moderatorId: actorId,
+      moderatorId: ctx.user.id,
       action: "unban",
       reason,
     });
-    return reply(
-      makeSuccessCard("Unbanned", `${userMention(userId)} has been unbanned.`),
+    return ctx.replySuccess(
+      t("commands:banRemoveSuccessTitle"),
+      t("commands:banRemoveSuccess", { user: userMention(userId) }),
     );
   }
 }

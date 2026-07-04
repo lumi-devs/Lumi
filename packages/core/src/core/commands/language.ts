@@ -5,11 +5,9 @@ import {
   container,
 } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import { type ChatInputCommandInteraction, type Message } from "discord.js";
-import { BaseSubcommand } from "#lib/commands.js";
-import { PermissionLevel, resolvePermissionLevel } from "#lib/permissions.js";
+import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
+import { PermissionLevel } from "#lib/permissions.js";
 import { SUPPORTED_LANGUAGES } from "#core/i18n/index.js";
-import { makeErrorCard, makeSuccessCard } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
 import type { GuildSettingsService } from "#core/services/GuildSettingsService.js";
 
@@ -18,13 +16,9 @@ import type { GuildSettingsService } from "#core/services/GuildSettingsService.j
   description: "View or change the language Lumi uses in this server",
   preconditions: ["GuildOnly"],
   subcommands: [
-    { name: "view", messageRun: "messageView", chatInputRun: "chatInputView" },
-    { name: "set", messageRun: "messageSet", chatInputRun: "chatInputSet" },
-    {
-      name: "reset",
-      messageRun: "messageReset",
-      chatInputRun: "chatInputReset",
-    },
+    { name: "view", run: "view" },
+    { name: "set", run: "set" },
+    { name: "reset", run: "reset" },
   ],
 })
 export class LanguageCommand extends BaseSubcommand {
@@ -59,122 +53,49 @@ export class LanguageCommand extends BaseSubcommand {
     return getService("guild-settings");
   }
 
-  public async chatInputView(interaction: ChatInputCommandInteraction) {
-    const t = await this.fetchT(interaction);
-    const current = await container.db.config.getGuildSettings(
-      interaction.guildId!,
-    );
-    return this.replySuccess(
-      interaction,
+  public async view(ctx: CommandContext) {
+    const t = await ctx.fetchT();
+    const current = await container.db.config.getGuildSettings(ctx.guildId!);
+    return ctx.replySuccess(
       t("commands:languageCurrentTitle"),
       t("commands:languageCurrent", { language: current.locale }),
     );
   }
 
-  public async chatInputSet(interaction: ChatInputCommandInteraction) {
-    await this.checkPermission(interaction, PermissionLevel.ADMIN);
-    const t = await this.fetchT(interaction);
-    const language = interaction.options.getString("language", true);
+  public async set(ctx: CommandContext) {
+    await ctx.checkPermission(PermissionLevel.ADMIN);
+    const t = await ctx.fetchT();
+    const language = (await ctx.getString("language", { required: true }))!;
 
     try {
-      await this.settings.setLanguage(interaction.guildId!, language);
+      await this.settings.setLanguage(ctx.guildId!, language);
     } catch (err) {
-      return this.replyError(
-        interaction,
+      return ctx.replyError(
         t("commands:languageUnsupportedTitle"),
         (err as Error).message,
       );
     }
 
     // Re-resolve T so the confirmation is shown in the newly chosen language.
-    const tNext = await this.fetchT(interaction);
-    return this.replySuccess(
-      interaction,
+    const tNext = await ctx.fetchT();
+    return ctx.replySuccess(
       `${Emojis.GEAR} ${tNext("commands:languageUpdatedTitle")}`,
       tNext("commands:languageUpdated", { language }),
     );
   }
 
-  public async chatInputReset(interaction: ChatInputCommandInteraction) {
-    await this.checkPermission(interaction, PermissionLevel.ADMIN);
+  public async reset(ctx: CommandContext) {
+    await ctx.checkPermission(PermissionLevel.ADMIN);
     try {
-      await this.settings.resetLanguage(interaction.guildId!);
+      await this.settings.resetLanguage(ctx.guildId!);
     } catch {
       // Already default — fall through to the (now-default-language) confirmation.
     }
-    const t = await this.fetchT(interaction);
-    const settings = await container.db.config.getGuildSettings(
-      interaction.guildId!,
-    );
-    return this.replySuccess(
-      interaction,
+    const t = await ctx.fetchT();
+    const settings = await container.db.config.getGuildSettings(ctx.guildId!);
+    return ctx.replySuccess(
       `${Emojis.GEAR} ${t("commands:languageResetTitle")}`,
       t("commands:languageReset", { language: settings.locale }),
-    );
-  }
-
-  public async messageView(message: Message) {
-    const t = await this.fetchT(message);
-    const current = await container.db.config.getGuildSettings(
-      message.guildId!,
-    );
-    return message.reply(
-      makeSuccessCard(
-        t("commands:languageCurrentTitle"),
-        t("commands:languageCurrent", { language: current.locale }),
-      ),
-    );
-  }
-
-  public async messageSet(message: Message) {
-    if ((await resolvePermissionLevel(message)) < PermissionLevel.ADMIN) {
-      const t = await this.fetchT(message);
-      return message.reply(
-        makeErrorCard(t("common:error"), t("preconditions:administrator")),
-      );
-    }
-    const t = await this.fetchT(message);
-    const language = message.content.trim().split(/\s+/).pop() ?? "";
-    try {
-      await this.settings.setLanguage(message.guildId!, language);
-    } catch (err) {
-      return message.reply(
-        makeErrorCard(
-          t("commands:languageUnsupportedTitle"),
-          (err as Error).message,
-        ),
-      );
-    }
-    const tNext = await this.fetchT(message);
-    return message.reply(
-      makeSuccessCard(
-        `${Emojis.GEAR} ${tNext("commands:languageUpdatedTitle")}`,
-        tNext("commands:languageUpdated", { language }),
-      ),
-    );
-  }
-
-  public async messageReset(message: Message) {
-    if ((await resolvePermissionLevel(message)) < PermissionLevel.ADMIN) {
-      const t = await this.fetchT(message);
-      return message.reply(
-        makeErrorCard(t("common:error"), t("preconditions:administrator")),
-      );
-    }
-    try {
-      await this.settings.resetLanguage(message.guildId!);
-    } catch {
-      // Already default.
-    }
-    const t = await this.fetchT(message);
-    const settings = await container.db.config.getGuildSettings(
-      message.guildId!,
-    );
-    return message.reply(
-      makeSuccessCard(
-        `${Emojis.GEAR} ${t("commands:languageResetTitle")}`,
-        t("commands:languageReset", { language: settings.locale }),
-      ),
     );
   }
 }
