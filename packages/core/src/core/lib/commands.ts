@@ -2,8 +2,10 @@ import {
   Command,
   UserError,
   type ApplicationCommandRegistry,
+  type Args,
 } from "@sapphire/framework";
 import { Subcommand } from "@sapphire/plugin-subcommands";
+import { CommandContext } from "#core/lib/command-context.js";
 import { fetchT } from "@sapphire/plugin-i18next";
 import type { LumiT } from "#core/i18n/index.js";
 import type {
@@ -123,6 +125,96 @@ interface LumiCommandExtras {
   integrationTypes?: ApplicationIntegrationType[];
   contexts?: InteractionContextType[];
   defaultMemberPermissions?: bigint | null;
+  /**
+   * Opt the command into prefix (message) invocation. Slash-only by default;
+   * single-source handlers (`run(ctx)` / subcommand `run:` mappings) get their
+   * message bridge generated only when this is set.
+   */
+  prefixEnabled?: boolean;
+}
+
+// ── Single-source handler bridges ────────────────────────────────────────────
+// Commands implement one handler taking a CommandContext; the base classes
+// generate the chatInputRun/messageRun bridges (message only when
+// `prefixEnabled`). Subcommands declare `{ name, run: "method" }` mappings.
+
+const CTX_WRAPPER_PREFIX = { chat: "__ctxCi$", message: "__ctxMsg$" } as const;
+
+type CtxHandler = (ctx: CommandContext) => unknown;
+
+/** Structural view of a subcommand mapping entry that may carry `run`. */
+interface RunMappingEntry {
+  run?: string;
+  type?: string;
+  entries?: RunMappingEntry[];
+  chatInputRun?: unknown;
+  messageRun?: unknown;
+  [key: string]: unknown;
+}
+
+/**
+ * Rewrite `{ run: "method" }` mapping entries to point at the generated
+ * wrapper method names. Collects the referenced method names so the
+ * constructor can define the wrappers after `super()`.
+ */
+function transformRunMappings(
+  entries: RunMappingEntry[] | undefined,
+  prefixEnabled: boolean,
+  collected: Set<string>,
+): RunMappingEntry[] | undefined {
+  if (!entries) return entries;
+  return entries.map((entry) => {
+    if (entry.type === "group") {
+      return {
+        ...entry,
+        entries: transformRunMappings(entry.entries, prefixEnabled, collected),
+      };
+    }
+    if (!entry.run) return entry;
+    const { run, ...rest } = entry;
+    collected.add(run);
+    return {
+      ...rest,
+      chatInputRun: `${CTX_WRAPPER_PREFIX.chat}${run}`,
+      ...(prefixEnabled
+        ? { messageRun: `${CTX_WRAPPER_PREFIX.message}${run}` }
+        : {}),
+    };
+  });
+}
+
+/** Define the instance wrapper methods the rewritten mappings reference. */
+function defineCtxWrappers(
+  piece: object,
+  runNames: Set<string>,
+  prefixEnabled: boolean,
+): void {
+  const self = piece as Record<string, unknown>;
+  for (const name of runNames) {
+    const handler = self[name];
+    if (typeof handler !== "function") {
+      throw new Error(
+        `Subcommand mapping "run: ${name}" does not match a method on ${piece.constructor.name}.`,
+      );
+    }
+    self[`${CTX_WRAPPER_PREFIX.chat}${name}`] = (
+      interaction: ChatInputCommandInteraction,
+    ) =>
+      (handler as CtxHandler).call(
+        piece,
+        CommandContext.fromInteraction(interaction),
+      );
+    if (prefixEnabled) {
+      self[`${CTX_WRAPPER_PREFIX.message}${name}`] = (
+        message: Message,
+        args: Args,
+      ) =>
+        (handler as CtxHandler).call(
+          piece,
+          CommandContext.fromMessage(message, args),
+        );
+    }
+  }
 }
 
 interface SharedCommandOptions extends LumiCommandExtras {
@@ -322,6 +414,13 @@ export abstract class BaseCommand extends Command implements CommandLike {
   public readonly contexts: InteractionContextType[];
   public readonly defaultMemberPermissions: bigint | undefined;
 
+  /**
+   * Single-source handler: implement this instead of `chatInputRun` /
+   * `messageRun` and the constructor generates both bridges (message only
+   * when `prefixEnabled`).
+   */
+  public run?(ctx: CommandContext): Awaited<unknown> | Promise<unknown>;
+
   public constructor(
     context: Command.LoaderContext,
     options: BaseCommand.Options,
@@ -332,6 +431,14 @@ export abstract class BaseCommand extends Command implements CommandLike {
     this.integrationTypes = defaults.integrationTypes;
     this.contexts = defaults.contexts;
     this.defaultMemberPermissions = defaults.defaultMemberPermissions;
+    if (typeof this.run === "function") {
+      this.chatInputRun = (interaction: ChatInputCommandInteraction) =>
+        this.run!(CommandContext.fromInteraction(interaction));
+      if (options.prefixEnabled) {
+        this.messageRun = (message: Message, args: Args) =>
+          this.run!(CommandContext.fromMessage(message, args));
+      }
+    }
     instrumentCommandPiece(this);
     autoApplyCommandDefaults(this);
   }
@@ -414,11 +521,21 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
     options: BaseSubcommand.Options,
   ) {
     const defaults = resolveCommandDefaults(options);
-    super(context, { ...options });
+    const runNames = new Set<string>();
+    const subcommands = transformRunMappings(
+      options.subcommands as RunMappingEntry[] | undefined,
+      options.prefixEnabled ?? false,
+      runNames,
+    );
+    super(context, {
+      ...options,
+      subcommands: subcommands as BaseSubcommand.Options["subcommands"],
+    });
     this.permissionLevel = defaults.permissionLevel;
     this.integrationTypes = defaults.integrationTypes;
     this.contexts = defaults.contexts;
     this.defaultMemberPermissions = defaults.defaultMemberPermissions;
+    defineCtxWrappers(this, runNames, options.prefixEnabled ?? false);
     instrumentCommandPiece(this);
     autoApplyCommandDefaults(this);
   }
@@ -492,6 +609,20 @@ export namespace BaseCommand {
   export type Options = Command.Options & LumiCommandExtras;
 }
 
+/** Subcommand mapping entries may declare `run: "method"` — a single-source
+ * handler `(ctx: CommandContext) => unknown` bridged to slash (and prefix when
+ * `prefixEnabled`) by the constructor. */
+type LumiSubcommandMappings = NonNullable<Subcommand.Options["subcommands"]>;
+type LumiMappingEntry = LumiSubcommandMappings[number];
+type WithRun<T> = T extends { entries: infer E extends readonly unknown[] }
+  ? Omit<T, "entries"> & { entries: Array<WithRun<E[number]>> }
+  : T & { run?: string };
+
 export namespace BaseSubcommand {
-  export type Options = Subcommand.Options & LumiCommandExtras;
+  export type Options = Omit<Subcommand.Options, "subcommands"> &
+    LumiCommandExtras & {
+      subcommands?: Array<WithRun<LumiMappingEntry>>;
+    };
 }
+
+export { CommandContext } from "#core/lib/command-context.js";
