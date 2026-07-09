@@ -19,9 +19,17 @@ import {
 } from "discord.js";
 import { getService } from "#core/module-system/Service.js";
 import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
-import { PermissionLevel, resolvePermissionLevel } from "#lib/permissions.js";
+import {
+  PermissionLevel,
+  resolvePermissionLevel,
+  type PermissionModelType,
+} from "#lib/permissions.js";
 import { Emojis } from "#utilities/assets.js";
-import { ephemeralCard, makeErrorCard } from "#utilities/cards.js";
+import {
+  ephemeralCard,
+  makeErrorCard,
+  type CardReply,
+} from "#utilities/cards.js";
 import { loadFeatures, buildFeatureListView } from "#core/lib/config-panel.js";
 import {
   buildHubView,
@@ -31,6 +39,18 @@ import {
   DEFAULT_PREFIX,
 } from "#core/lib/hub-panel.js";
 import type { GuildSettingsService } from "#core/services/GuildSettingsService.js";
+import type { PermissionService } from "#core/services/PermissionService.js";
+
+const PERMISSION_MODEL_TYPES = [
+  "role",
+  "user",
+  "channel",
+  "category",
+  "everyone",
+] as const satisfies readonly PermissionModelType[];
+
+const isModelType = (v: string): v is PermissionModelType =>
+  (PERMISSION_MODEL_TYPES as readonly string[]).includes(v);
 
 const accessDenied = () =>
   new UserError({
@@ -82,6 +102,15 @@ async function renderSettings(
   );
 }
 
+async function renderPermissions(
+  interaction: ButtonInteraction | AnySelectMenuInteraction,
+) {
+  const overrides = await container.db.permissions.getAllPermissionOverrides(
+    interaction.guildId!,
+  );
+  return interaction.editReply(buildPermissionsView(overrides));
+}
+
 // ── Buttons ─────────────────────────────────────────────────────────────────
 
 @ApplyOptions<InteractionHandler.Options>({
@@ -110,6 +139,8 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
     // Modal-opening actions must respond with showModal (no prior ack).
     if (action === "prefix" && sub === "set")
       return this.#openPrefixModal(interaction);
+    if (action === "perm" && (sub === "allow" || sub === "deny"))
+      return this.#openPermModal(interaction, sub === "allow");
 
     await this.acknowledge(interaction);
 
@@ -135,13 +166,8 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
         const features = await loadFeatures(interaction.guildId!);
         return interaction.editReply(buildFeatureListView(features));
       }
-      case "permissions": {
-        const overrides =
-          await container.db.permissions.getAllPermissionOverrides(
-            interaction.guildId!,
-          );
-        return interaction.editReply(buildPermissionsView(overrides));
-      }
+      case "permissions":
+        return renderPermissions(interaction);
       case "settings":
         return renderSettings(interaction);
       case "addons":
@@ -168,6 +194,43 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
       );
     return interaction.showModal(modal);
   }
+
+  #openPermModal(interaction: ButtonInteraction, allow: boolean) {
+    const field = (
+      id: string,
+      label: string,
+      placeholder: string,
+      required: boolean,
+    ) =>
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId(id)
+          .setLabel(label)
+          .setStyle(TextInputStyle.Short)
+          .setRequired(required)
+          .setPlaceholder(placeholder.slice(0, 100)),
+      );
+
+    const modal = new ModalBuilder()
+      .setCustomId(`lumi:permmodal:${allow ? "allow" : "deny"}`)
+      .setTitle(allow ? "Allow a Command" : "Deny a Command")
+      .addComponents(
+        field("command", "Command", "e.g. ban or config set", true),
+        field(
+          "type",
+          "Target type",
+          "role, user, channel, category, or everyone",
+          true,
+        ),
+        field(
+          "target",
+          "Target ID or mention",
+          "leave blank for everyone",
+          false,
+        ),
+      );
+    return interaction.showModal(modal);
+  }
 }
 
 // ── Select menus ──────────────────────────────────────────────────────────────
@@ -181,24 +244,41 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
     return getService("guild-settings");
   }
 
-  public override parse(interaction: AnySelectMenuInteraction) {
-    if (interaction.customId !== "lumi:setlang") return this.none();
-    return this.some();
+  private get perms(): PermissionService {
+    return getService("permissions");
   }
 
-  public async run(interaction: AnySelectMenuInteraction) {
+  public override parse(interaction: AnySelectMenuInteraction) {
+    if (interaction.customId === "lumi:setlang") return this.some("lang");
+    if (interaction.customId === "lumi:permrm") return this.some("permrm");
+    return this.none();
+  }
+
+  public async run(interaction: AnySelectMenuInteraction, kind: string) {
     if (!interaction.inGuild() || !interaction.isStringSelectMenu()) return;
     if ((await resolveLevel(interaction)) < PermissionLevel.ADMIN)
       throw accessDenied();
     await this.acknowledge(interaction);
 
-    const language = interaction.values[0];
-    if (language) {
-      await this.settings
-        .setLanguage(interaction.guildId, language)
+    if (kind === "lang") {
+      const language = interaction.values[0];
+      if (language)
+        await this.settings
+          .setLanguage(interaction.guildId, language)
+          .catch(() => {});
+      return renderSettings(interaction);
+    }
+
+    // permrm — value is "<modelType>|<modelId>|<commandPath>"
+    const parts = (interaction.values[0] ?? "").split("|");
+    const [modelType, modelId] = parts;
+    const commandPath = parts.slice(2).join("|");
+    if (commandPath && modelId && modelType && isModelType(modelType)) {
+      await this.perms
+        .resetOverride(interaction.guildId, commandPath, modelType, modelId)
         .catch(() => {});
     }
-    return renderSettings(interaction);
+    return renderPermissions(interaction);
   }
 }
 
@@ -213,46 +293,114 @@ export class HubPanelModalHandler extends InteractionHandler {
     return getService("guild-settings");
   }
 
-  public override parse(interaction: ModalSubmitInteraction) {
-    if (interaction.customId !== "lumi:prefixmodal") return this.none();
-    return this.some();
+  private get perms(): PermissionService {
+    return getService("permissions");
   }
 
-  public async run(interaction: ModalSubmitInteraction) {
-    if (!interaction.inGuild()) return;
-    if ((await resolveLevel(interaction)) < PermissionLevel.ADMIN) {
-      return interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Permission Denied",
-            "You need the Admin permission level to manage this server.",
-          ),
-        ),
-      );
-    }
+  public override parse(interaction: ModalSubmitInteraction) {
+    if (interaction.customId === "lumi:prefixmodal")
+      return this.some({ kind: "prefix" as const });
+    if (interaction.customId === "lumi:permmodal:allow")
+      return this.some({ kind: "perm" as const, allow: true });
+    if (interaction.customId === "lumi:permmodal:deny")
+      return this.some({ kind: "perm" as const, allow: false });
+    return this.none();
+  }
 
+  public async run(
+    interaction: ModalSubmitInteraction,
+    data: { kind: "prefix" } | { kind: "perm"; allow: boolean },
+  ) {
+    if (!interaction.inGuild()) return;
+    if ((await resolveLevel(interaction)) < PermissionLevel.ADMIN)
+      return this.#deny(interaction);
+
+    return data.kind === "prefix"
+      ? this.#submitPrefix(interaction)
+      : this.#submitPermission(interaction, data.allow);
+  }
+
+  async #submitPrefix(interaction: ModalSubmitInteraction) {
     const prefix = interaction.fields.getTextInputValue("prefix").trim();
     try {
-      await this.settings.setPrefix(interaction.guildId, prefix);
+      await this.settings.setPrefix(interaction.guildId!, prefix);
     } catch (err) {
-      return interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Invalid Prefix",
-            err instanceof Error ? err.message : String(err),
-          ),
-        ),
-      );
+      return this.#error(interaction, "Invalid Prefix", err);
     }
 
     const settings = await container.db.config.getGuildSettings(
-      interaction.guildId,
+      interaction.guildId!,
     );
-    const view = buildSettingsView({
-      prefix: settings.prefix,
-      locale: settings.locale,
-    });
+    return this.#render(
+      interaction,
+      buildSettingsView({ prefix: settings.prefix, locale: settings.locale }),
+    );
+  }
+
+  async #submitPermission(interaction: ModalSubmitInteraction, allow: boolean) {
+    const command = interaction.fields
+      .getTextInputValue("command")
+      .trim()
+      .toLowerCase();
+    const type = interaction.fields
+      .getTextInputValue("type")
+      .trim()
+      .toLowerCase();
+    const target =
+      interaction.fields.getTextInputValue("target").trim() || null;
+
+    if (!isModelType(type))
+      return this.#error(
+        interaction,
+        "Invalid Type",
+        "Target type must be one of: role, user, channel, category, everyone.",
+      );
+
+    const root = command.split(/\s+/)[0];
+    if (!root || !this.container.stores.get("commands").has(root))
+      return this.#error(
+        interaction,
+        "Unknown Command",
+        `\`${command}\` is not a registered command.`,
+      );
+
+    try {
+      await this.perms.addOverride(
+        interaction.guildId!,
+        command,
+        type,
+        target,
+        allow,
+      );
+    } catch (err) {
+      return this.#error(interaction, "Invalid Target", err);
+    }
+
+    const overrides = await container.db.permissions.getAllPermissionOverrides(
+      interaction.guildId!,
+    );
+    return this.#render(interaction, buildPermissionsView(overrides));
+  }
+
+  #render(interaction: ModalSubmitInteraction, view: CardReply) {
     if (interaction.isFromMessage()) return interaction.update(view);
     return interaction.reply(ephemeralCard(view));
+  }
+
+  #deny(interaction: ModalSubmitInteraction) {
+    return interaction.reply(
+      ephemeralCard(
+        makeErrorCard(
+          "Permission Denied",
+          "You need the Admin permission level to manage this server.",
+        ),
+      ),
+    );
+  }
+
+  #error(interaction: ModalSubmitInteraction, title: string, err: unknown) {
+    const message =
+      err instanceof Error ? err.message : String(err ?? "Unknown error");
+    return interaction.reply(ephemeralCard(makeErrorCard(title, message)));
   }
 }

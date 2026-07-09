@@ -196,15 +196,52 @@ const formatOverride = (o: PermissionOverrideRow): string => {
   return `${dot} \`${o.commandPath}\` — ${o.modelType} ${mention}`;
 };
 
+const overrideLabel = (o: PermissionOverrideRow): string => {
+  const target = o.modelType === "everyone" ? "everyone" : o.modelId;
+  return `${o.allow ? "✓" : "✕"} ${o.commandPath} · ${o.modelType} ${target}`;
+};
+
 export function buildPermissionsView(
   overrides: PermissionOverrideRow[],
 ): CardReply {
-  const shown = overrides.slice(0, 20);
+  const shown = overrides.slice(0, 25);
   const lines = shown.length
     ? shown.map(formatOverride)
     : [
         "*No permission overrides set — every command uses its default access.*",
       ];
+
+  const addRow = row(
+    new ButtonBuilder()
+      .setCustomId("lumi:perm:allow")
+      .setLabel("Allow…")
+      .setEmoji(Emojis.parse(Emojis.CHECK))
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId("lumi:perm:deny")
+      .setLabel("Deny…")
+      .setEmoji(Emojis.parse(Emojis.CROSS))
+      .setStyle(ButtonStyle.Danger),
+  );
+
+  const rows: Row[] = [tabRow("permissions"), addRow];
+  if (shown.length) {
+    rows.push(
+      row(
+        new StringSelectMenuBuilder()
+          .setCustomId("lumi:permrm")
+          .setPlaceholder("Remove an override…")
+          .addOptions(
+            shown.map((o) =>
+              new StringSelectMenuOptionBuilder()
+                .setLabel(overrideLabel(o).slice(0, 100))
+                .setValue(`${o.modelType}|${o.modelId}|${o.commandPath}`)
+                .setEmoji(Emojis.parse(o.allow ? Emojis.CHECK : Emojis.CROSS)),
+            ),
+          ),
+      ),
+    );
+  }
 
   return noPingCard(
     makeCard(
@@ -212,14 +249,14 @@ export function buildPermissionsView(
       `${Emojis.SHIELD} Command Permissions`,
       [
         lines.join("\n"),
-        `-# ${Emojis.CHECK} allow · ${Emojis.CROSS} deny. Manage with \`/permissions allow\`, \`/permissions deny\`, and \`/permissions reset\`.`,
+        `-# ${Emojis.CHECK} allow · ${Emojis.CROSS} deny. Overrides take priority over a command's default access level.`,
       ],
       {
         footer:
           overrides.length > shown.length
-            ? `Showing ${shown.length} of ${overrides.length} overrides · use /permissions list for the full list.`
+            ? `Showing ${shown.length} of ${overrides.length} overrides.`
             : `${overrides.length} override${overrides.length === 1 ? "" : "s"}`,
-        actionRows: [tabRow("permissions")],
+        actionRows: rows,
       },
     ),
   );

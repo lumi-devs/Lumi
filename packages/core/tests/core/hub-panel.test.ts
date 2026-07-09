@@ -119,14 +119,16 @@ describe("hub-panel views", () => {
     expect(findComponent(custom, "lumi:prefix:reset")?.disabled).toBe(false);
   });
 
-  it("permissions view lists overrides and paginates the hint past the cap", () => {
-    const many = Array.from({ length: 25 }, (_, i) => ({
+  it("permissions view caps the list and notes how many are hidden", () => {
+    const many = Array.from({ length: 30 }, (_, i) => ({
       commandPath: `cmd${i}`,
       modelType: "role",
       modelId: "123456789012345678",
       allow: i % 2 === 0,
     }));
     const json = serialize(buildPermissionsView(many));
-    expect(json).toContain("Showing 20 of 25 overrides");
+    expect(json).toContain("Showing 25 of 30 overrides");
+    // The remove-select is present with exactly the capped number of options.
+    expect(json).toContain("lumi:permrm");
   });
 });
