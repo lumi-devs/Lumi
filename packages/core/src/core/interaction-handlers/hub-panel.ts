@@ -55,16 +55,18 @@ async function resolveLevel(
   });
 }
 
-async function renderHub(
-  interaction: ButtonInteraction,
-  level: PermissionLevel,
-) {
-  const features = await loadFeatures(interaction.guildId!);
+async function renderHub(interaction: ButtonInteraction) {
+  const guildId = interaction.guildId!;
+  const [features, settings] = await Promise.all([
+    loadFeatures(guildId),
+    container.db.config.getGuildSettings(guildId),
+  ]);
   return interaction.editReply(
     buildHubView({
       moduleCount: features.length,
       enabledCount: features.filter((f) => f.guildEnabled).length,
-      showAddons: level >= PermissionLevel.BOT_OWNER,
+      prefix: settings.prefix,
+      locale: settings.locale,
     }),
   );
 }
@@ -113,9 +115,9 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
 
     switch (action) {
       case "home":
-        return renderHub(interaction, level);
+        return renderHub(interaction);
       case "tab":
-        return this.#renderTab(interaction, sub, level);
+        return this.#renderTab(interaction, sub);
       case "prefix":
         if (sub === "reset") {
           await this.settings.resetPrefix(interaction.guildId).catch(() => {});
@@ -127,11 +129,7 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
     }
   }
 
-  async #renderTab(
-    interaction: ButtonInteraction,
-    tab: string | undefined,
-    level: PermissionLevel,
-  ) {
+  async #renderTab(interaction: ButtonInteraction, tab: string | undefined) {
     switch (tab) {
       case "modules": {
         const features = await loadFeatures(interaction.guildId!);
@@ -147,7 +145,6 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
       case "settings":
         return renderSettings(interaction);
       case "addons":
-        if (level < PermissionLevel.BOT_OWNER) throw accessDenied();
         return interaction.editReply(buildAddonsView());
       default:
         return undefined;
