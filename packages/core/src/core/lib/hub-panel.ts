@@ -25,81 +25,120 @@ const row = (...components: MessageActionRowComponentBuilder[]): Row =>
     ...components,
   );
 
-const homeButton = (): ButtonBuilder =>
-  new ButtonBuilder()
-    .setCustomId("lumi:home")
-    .setLabel("Control Panel")
-    .setEmoji(Emojis.parse(Emojis.BOT))
-    .setStyle(ButtonStyle.Secondary);
+// ── Navigation ───────────────────────────────────────────────────────────────
 
-// ── Hub root ───────────────────────────────────────────────────────────────
+export type HubTab =
+  | "overview"
+  | "modules"
+  | "permissions"
+  | "settings"
+  | "addons";
 
-export interface HubStats {
+interface TabDef {
+  tab: HubTab;
+  customId: string;
+  label: string;
+  emoji: string;
+}
+
+const TABS: readonly TabDef[] = [
+  {
+    tab: "overview",
+    customId: "lumi:home",
+    label: "Overview",
+    emoji: Emojis.BOT,
+  },
+  {
+    tab: "modules",
+    customId: "lumi:tab:modules",
+    label: "Modules",
+    emoji: Emojis.GEAR,
+  },
+  {
+    tab: "permissions",
+    customId: "lumi:tab:permissions",
+    label: "Permissions",
+    emoji: Emojis.SHIELD,
+  },
+  {
+    tab: "settings",
+    customId: "lumi:tab:settings",
+    label: "Settings",
+    emoji: Emojis.GUILD,
+  },
+  {
+    tab: "addons",
+    customId: "lumi:tab:addons",
+    label: "Addons",
+    emoji: Emojis.REPO,
+  },
+];
+
+/**
+ * The persistent hub navigation bar. Rendered at the top of every top-level
+ * view; the active tab is highlighted (Primary) and the rest are muted.
+ */
+export function tabRow(active: HubTab): Row {
+  return row(
+    ...TABS.map((t) =>
+      new ButtonBuilder()
+        .setCustomId(t.customId)
+        .setLabel(t.label)
+        .setEmoji(Emojis.parse(t.emoji))
+        .setStyle(
+          t.tab === active ? ButtonStyle.Primary : ButtonStyle.Secondary,
+        ),
+    ),
+  );
+}
+
+// ── Overview ─────────────────────────────────────────────────────────────────
+
+export interface HubOverview {
   moduleCount: number;
   enabledCount: number;
-  showAddons: boolean;
+  prefix: string | null;
+  locale: string;
 }
 
-/** The tab strip shown at the top of every hub view. */
-const tabRow = (showAddons: boolean): Row => {
-  const buttons = [
-    new ButtonBuilder()
-      .setCustomId("lumi:tab:modules")
-      .setLabel("Modules")
-      .setEmoji(Emojis.parse(Emojis.GEAR))
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId("lumi:tab:permissions")
-      .setLabel("Permissions")
-      .setEmoji(Emojis.parse(Emojis.SHIELD))
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId("lumi:tab:settings")
-      .setLabel("Settings")
-      .setEmoji(Emojis.parse(Emojis.GUILD))
-      .setStyle(ButtonStyle.Primary),
-  ];
-  if (showAddons) {
-    buttons.push(
-      new ButtonBuilder()
-        .setCustomId("lumi:tab:addons")
-        .setLabel("Addons")
-        .setEmoji(Emojis.parse(Emojis.REPO))
-        .setStyle(ButtonStyle.Primary),
-    );
-  }
-  return row(...buttons);
-};
+export function buildHubView(o: HubOverview): CardReply {
+  const glance = [
+    `${Emojis.GEAR} **${o.enabledCount}** of **${o.moduleCount}** modules enabled`,
+    `${Emojis.GUILD} Language \`${o.locale}\`  •  Prefix \`${o.prefix ?? DEFAULT_PREFIX}\``,
+  ].join("\n");
 
-export function buildHubView(stats: HubStats): CardReply {
-  const body = [
-    "Everything you need to run this server lives here — no scattered commands.",
+  const tabs = [
+    `${Emojis.GEAR} **Modules** — enable, disable, and configure every feature`,
+    `${Emojis.SHIELD} **Permissions** — per-command allow / deny overrides`,
+    `${Emojis.GUILD} **Settings** — server language and command prefix`,
+    `${Emojis.REPO} **Addons** — extend Lumi with add-on modules`,
+  ].join("\n");
+
+  return makeCard(
+    Colors.PRIMARY,
+    `${Emojis.BOT} Lumi Control Panel`,
     [
-      `${Emojis.GEAR} **Modules** — enable, disable, and configure features (${stats.enabledCount}/${stats.moduleCount} enabled)`,
-      `${Emojis.SHIELD} **Permissions** — per-command allow / deny overrides`,
-      `${Emojis.GUILD} **Settings** — language and command prefix`,
-      ...(stats.showAddons
-        ? [`${Emojis.REPO} **Addons** — install and manage add-on modules`]
-        : []),
-    ].join("\n"),
-  ];
-
-  return makeCard(Colors.PRIMARY, `${Emojis.BOT} Lumi Control Panel`, body, {
-    footer: "Pick a tab below to get started.",
-    actionRows: [tabRow(stats.showAddons)],
-  });
+      "Manage everything for this server from one place — no scattered commands to remember.",
+      glance,
+      tabs,
+    ],
+    {
+      footer: "Select a tab below to continue.",
+      actionRows: [tabRow("overview")],
+    },
+  );
 }
 
-// ── Settings tab ───────────────────────────────────────────────────────────
+// ── Settings ─────────────────────────────────────────────────────────────────
 
 export function buildSettingsView(settings: {
   prefix: string | null;
   locale: string;
 }): CardReply {
   const body = [
-    `**Language:** \`${settings.locale}\``,
-    `**Prefix:** \`${settings.prefix ?? DEFAULT_PREFIX}\`${
-      settings.prefix ? "" : " -# *(default)*"
+    `${Emojis.GUILD} **Language** — \`${settings.locale}\``,
+    `${Emojis.TERMINAL} **Prefix** — \`${settings.prefix ?? DEFAULT_PREFIX}\`${
+      settings.prefix ? "" : "  -# *(default)*"
     }`,
   ].join("\n");
 
@@ -123,19 +162,20 @@ export function buildSettingsView(settings: {
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId("lumi:prefix:reset")
-      .setLabel("Reset Prefix")
+      .setLabel("Reset to Default")
       .setEmoji(Emojis.parse(Emojis.UNINSTALL))
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(settings.prefix === null),
-    homeButton(),
   );
 
   return makeCard(Colors.PRIMARY, `${Emojis.GUILD} Server Settings`, body, {
-    actionRows: [row(langSelect), prefixButtons],
+    footer:
+      "Prefix commands work for a curated set of moderation and utility commands.",
+    actionRows: [tabRow("settings"), row(langSelect), prefixButtons],
   });
 }
 
-// ── Permissions tab ────────────────────────────────────────────────────────
+// ── Permissions ──────────────────────────────────────────────────────────────
 
 export interface PermissionOverrideRow {
   commandPath: string;
@@ -159,36 +199,46 @@ const formatOverride = (o: PermissionOverrideRow): string => {
 export function buildPermissionsView(
   overrides: PermissionOverrideRow[],
 ): CardReply {
-  const lines = overrides.length
-    ? overrides.slice(0, 25).map(formatOverride)
-    : ["*No permission overrides set.*"];
-
-  const body = [
-    lines.join("\n"),
-    "-# Add or remove overrides with `/permissions allow`, `/permissions deny`, and `/permissions reset`.",
-  ];
+  const shown = overrides.slice(0, 20);
+  const lines = shown.length
+    ? shown.map(formatOverride)
+    : [
+        "*No permission overrides set — every command uses its default access.*",
+      ];
 
   return noPingCard(
-    makeCard(Colors.PRIMARY, `${Emojis.SHIELD} Command Permissions`, body, {
-      footer:
-        overrides.length > 25
-          ? `Showing 25 of ${overrides.length} overrides — use /permissions list to see all.`
-          : undefined,
-      actionRows: [row(homeButton())],
-    }),
+    makeCard(
+      Colors.PRIMARY,
+      `${Emojis.SHIELD} Command Permissions`,
+      [
+        lines.join("\n"),
+        `-# ${Emojis.CHECK} allow · ${Emojis.CROSS} deny. Manage with \`/permissions allow\`, \`/permissions deny\`, and \`/permissions reset\`.`,
+      ],
+      {
+        footer:
+          overrides.length > shown.length
+            ? `Showing ${shown.length} of ${overrides.length} overrides · use /permissions list for the full list.`
+            : `${overrides.length} override${overrides.length === 1 ? "" : "s"}`,
+        actionRows: [tabRow("permissions")],
+      },
+    ),
   );
 }
 
-// ── Addons tab ─────────────────────────────────────────────────────────────
+// ── Addons ───────────────────────────────────────────────────────────────────
 
 export function buildAddonsView(): CardReply {
   const body = [
-    "Add-on modules extend Lumi with community-built features that install like first-party modules — configured from the **Modules** tab once added.",
-    `-# Manage add-on repositories with ${Emojis.REPO} \`/repo\`.`,
+    "Add-ons are community-built modules that install and behave exactly like first-party features — once added, they appear in the **Modules** tab with full config, permissions, and enable/disable support.",
+    [
+      `${Emojis.REPO} **Repositories** — add or remove sources with \`/repo\``,
+      `${Emojis.DOWNLOAD} **Install** — pull a module from a configured repository`,
+      `${Emojis.SHIELD} **Sandboxed** — add-ons follow the same permission model as core`,
+    ].join("\n"),
   ];
 
   return makeCard(Colors.PRIMARY, `${Emojis.REPO} Addons`, body, {
-    footer: "Installed add-ons appear alongside core modules.",
-    actionRows: [row(homeButton())],
+    footer: "Add-on management requires the Bot Owner permission level.",
+    actionRows: [tabRow("addons")],
   });
 }

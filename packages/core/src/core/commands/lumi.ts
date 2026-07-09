@@ -1,8 +1,8 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { Command } from "@sapphire/framework";
+import { Command, container } from "@sapphire/framework";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
-import { PermissionLevel, resolvePermissionLevel } from "#lib/permissions.js";
+import { PermissionLevel } from "#lib/permissions.js";
 import { ephemeralCard } from "#utilities/cards.js";
 import { buildHubView } from "#core/lib/hub-panel.js";
 import { loadFeatures } from "#core/lib/config-panel.js";
@@ -21,9 +21,10 @@ export class LumiCommand extends BaseCommand {
   }
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-    const [features, level] = await Promise.all([
-      loadFeatures(interaction.guild!.id),
-      resolvePermissionLevel(interaction),
+    const guildId = interaction.guild!.id;
+    const [features, settings] = await Promise.all([
+      loadFeatures(guildId),
+      container.db.config.getGuildSettings(guildId),
     ]);
     return this.reply(
       interaction,
@@ -31,7 +32,8 @@ export class LumiCommand extends BaseCommand {
         buildHubView({
           moduleCount: features.length,
           enabledCount: features.filter((f) => f.guildEnabled).length,
-          showAddons: level >= PermissionLevel.BOT_OWNER,
+          prefix: settings.prefix,
+          locale: settings.locale,
         }),
       ),
     );
