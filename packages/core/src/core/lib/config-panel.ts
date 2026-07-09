@@ -204,6 +204,17 @@ export function buildFeatureListView(
     );
   }
 
+  // Deep-link back to the /lumi hub (works whether opened from /config or the hub).
+  rows.push(
+    row(
+      new ButtonBuilder()
+        .setCustomId("lumi:home")
+        .setLabel("Control Panel")
+        .setEmoji(Emojis.parse(Emojis.BOT))
+        .setStyle(ButtonStyle.Secondary),
+    ),
+  );
+
   return makeCard(
     Colors.PRIMARY,
     `${Emojis.GEAR} Server Config`,
