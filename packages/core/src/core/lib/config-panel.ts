@@ -32,6 +32,7 @@ import {
   type ModuleMeta,
 } from "#core/module-system/Module.js";
 import { makeCard, noPingCard, type CardReply } from "#utilities/cards.js";
+import { tabRow } from "#core/lib/hub-panel.js";
 import { Colors } from "#utilities/branding.js";
 import { Emojis } from "#utilities/assets.js";
 import type {
@@ -204,26 +205,18 @@ export function buildFeatureListView(
     );
   }
 
-  // Deep-link back to the /lumi hub (works whether opened from /config or the hub).
-  rows.push(
-    row(
-      new ButtonBuilder()
-        .setCustomId("lumi:home")
-        .setLabel("Control Panel")
-        .setEmoji(Emojis.parse(Emojis.BOT))
-        .setStyle(ButtonStyle.Secondary),
-    ),
-  );
+  // The Modules list is the "modules" tab of the /lumi hub — carry the nav bar.
+  rows.push(tabRow("modules"));
 
   return makeCard(
     Colors.PRIMARY,
-    `${Emojis.GEAR} Server Config`,
+    `${Emojis.GEAR} Modules`,
     lines.length ? lines.join("\n") : "*No features registered.*",
     {
       footer:
         totalPages > 1
-          ? `Page ${safePage + 1}/${totalPages} • Select a feature below to enable, disable, or configure it.`
-          : "Select a feature below to enable, disable, or configure it.",
+          ? `Page ${safePage + 1}/${totalPages} • Select a module to enable, disable, or configure it.`
+          : "Select a module to enable, disable, or configure it.",
       actionRows: rows,
     },
   );
