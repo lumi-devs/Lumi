@@ -222,6 +222,32 @@ services:
   # Reintroduce a dedicated api role only when RPC needs isolation from event
   # processing (it would need the worker's bus-fed cache to answer guild RPCs).
 
+  # Web admin dashboard (apps/dashboard) — Discord OAuth + auto-generated config
+  # forms. Stateless front-end: it talks to the workers ONLY over the RabbitMQ RPC
+  # bridge (no DB/Redis of its own). Opt-in via `docker compose --profile dashboard up`.
+  # Requires the OAuth + session env vars below; the app exits with an actionable
+  # error if any are unset.
+  dashboard:
+    <<: *lumi-service
+    container_name: lumi-dashboard
+    command: ["bun", "apps/dashboard/src/main.ts"]
+    environment:
+      <<: *lumi-env
+      DASHBOARD_HOST: "0.0.0.0"
+      DASHBOARD_PORT: "8080"
+      DASHBOARD_SESSION_SECRET: "${DASHBOARD_SESSION_SECRET:-}"
+      DASHBOARD_SECURE_COOKIES: "${DASHBOARD_SECURE_COOKIES:-false}"
+      DISCORD_OAUTH2_CLIENT_ID: "${DISCORD_OAUTH2_CLIENT_ID:-}"
+      DISCORD_OAUTH2_CLIENT_SECRET: "${DISCORD_OAUTH2_CLIENT_SECRET:-}"
+      DISCORD_OAUTH2_REDIRECT_URI: "${DISCORD_OAUTH2_REDIRECT_URI:-}"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "${DASHBOARD_PORT:-8080}:8080"
+    profiles:
+      - dashboard
+
   postgres:
     image: postgres:17
     container_name: lumi-postgres
