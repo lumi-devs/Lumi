@@ -34,6 +34,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "modules:manifest": "bun scripts/generate-manifests.ts",
+    "validate": "bun scripts/validate-addon.ts",
     "test": "vitest run",
     "verify:chaos": "bun scripts/verify-chaos.ts",
     "verify:chaos:nats": "WITH_NATS=1 bun scripts/verify-chaos.ts"
