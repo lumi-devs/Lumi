@@ -1,0 +1,24 @@
+{
+  "name": "@lumi/dashboard",
+  "version": "1.0.0",
+  "license": "Apache-2.0",
+  "description": "Web admin dashboard — Discord OAuth login + auto-generated config forms, served over the RabbitMQ RPC bridge.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./main": "./src/main.ts"
+  },
+  "scripts": {
+    "start": "bun src/main.ts",
+    "dev": "bun --watch src/main.ts"
+  },
+  "dependencies": {
+    "@lumi/contracts": "workspace:*",
+    "@lumi/observability": "workspace:*",
+    "amqp-connection-manager": "^4.1.14",
+    "amqplib": "^0.10.4"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  }
+}
