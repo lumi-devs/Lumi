@@ -4,6 +4,7 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ModuleInfo } from "./types.js";
+import { validateAddon } from "./validate.js";
 import { z } from "zod";
 import { logError } from "#utilities/errors.js";
 
@@ -172,6 +173,15 @@ export class DownloadResolver {
       throw new Error(`Module ${moduleName} has no info.json — cannot install`);
     }
     const info = JSON.parse(await fs.readFile(infoPath, "utf8")) as ModuleInfo;
+
+    // Structural gate: reject a malformed addon before its code is ever loaded
+    // (same checks the `bun run validate` CLI runs).
+    const { errors } = await validateAddon(sourcePath);
+    if (errors.length) {
+      throw new Error(
+        `Module **${moduleName}** failed validation:\n${errors.map((e) => `• ${e}`).join("\n")}`,
+      );
+    }
 
     // Ensure the installed-modules root exists
     await fs.mkdir(ADDON_MODULES_ROOT, { recursive: true });
