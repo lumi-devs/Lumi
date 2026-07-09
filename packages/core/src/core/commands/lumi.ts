@@ -2,17 +2,18 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { Command } from "@sapphire/framework";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions.js";
+import { PermissionLevel, resolvePermissionLevel } from "#lib/permissions.js";
 import { ephemeralCard } from "#utilities/cards.js";
-import { buildFeatureListView, loadFeatures } from "#core/lib/config-panel.js";
+import { buildHubView } from "#core/lib/hub-panel.js";
+import { loadFeatures } from "#core/lib/config-panel.js";
 
 @ApplyOptions<BaseCommand.Options>({
-  name: "config",
-  description: "Open the interactive configuration panel for this server",
+  name: "lumi",
+  description: "Open the Lumi control panel for this server",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.ADMIN,
 })
-export class ConfigCommand extends BaseCommand {
+export class LumiCommand extends BaseCommand {
   public override registerApplicationCommands(registry: Command.Registry) {
     registry.registerChatInputCommand((builder) =>
       builder.setName(this.name).setDescription(this.description),
@@ -20,10 +21,19 @@ export class ConfigCommand extends BaseCommand {
   }
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-    const features = await loadFeatures(interaction.guild!.id);
+    const [features, level] = await Promise.all([
+      loadFeatures(interaction.guild!.id),
+      resolvePermissionLevel(interaction),
+    ]);
     return this.reply(
       interaction,
-      ephemeralCard(buildFeatureListView(features)),
+      ephemeralCard(
+        buildHubView({
+          moduleCount: features.length,
+          enabledCount: features.filter((f) => f.guildEnabled).length,
+          showAddons: level >= PermissionLevel.BOT_OWNER,
+        }),
+      ),
     );
   }
 }
