@@ -1,6 +1,3 @@
-# Non-secret env shared by every Lumi pod. Secrets (BOT_TOKEN, POSTGRES_PASSWORD,
-# REDIS_PASSWORD, RABBITMQ_PASSWORD, SENTRY_DSN, DISCORD_CLIENT_SECRET) live in
-# `secret.example.yaml`.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -12,8 +9,6 @@ data:
   REDIS_PORT: "6379"
   REDIS_CACHE_DB: "0"
 
-  # Postgres goes through PgBouncer (transaction pooling). DIRECT_POSTGRES_URL
-  # bypasses it for migrations — DDL/advisory locks can't ride a tx-pooled proxy.
   POSTGRES_URL: "postgresql://lumi@pgbouncer.lumi.svc.cluster.local:6432/lumi"
   DIRECT_POSTGRES_URL: "postgresql://lumi@postgres.lumi.svc.cluster.local:5432/lumi"
   POSTGRES_POOL_MAX: "10"
@@ -31,15 +26,10 @@ data:
   LOG_FORMAT: "json"
   LOG_LEVEL: "info"
 
-  # Every worker REST call goes through the shared rate-limit proxy.
   DISCORD_PROXY_URL: "http://nirn-proxy.lumi.svc.cluster.local:8080"
 
-  # Cluster coordinator. Stable name => shared assignment in Redis.
   CLUSTER_NAME: "lumi-prod"
 
-  # Gateway pre-defers interactions so workers see them already acknowledged.
   INTERACTION_DEFER_AT_GATEWAY: "true"
 
-  # Single-active scheduler. The Deployment runs 1 replica anyway; the lock
-  # makes that explicit and prevents a rolling deploy from briefly running two.
   SCHEDULER_LEADER_LOCK: "true"
