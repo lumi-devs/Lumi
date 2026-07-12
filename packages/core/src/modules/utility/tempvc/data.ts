@@ -19,12 +19,6 @@ export interface VcRecord {
   createdAt: number;
 }
 
-export async function getGenerator(
-  guildId: string,
-  channelId: string,
-): Promise<GeneratorConfig | null> {
-  return tempVcRegistry.getGenerator(guildId, channelId);
-}
 
 export async function setGenerator(
   guildId: string,

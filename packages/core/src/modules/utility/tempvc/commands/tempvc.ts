@@ -1,6 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseSubcommand } from "#lib/commands.js";
+import { BaseSubcommand, replyError, sendReply, assertPermissionLevel, replySuccess } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
 import {
   ChannelType,
@@ -111,7 +111,7 @@ export class TempVcCommand extends BaseSubcommand {
     const member = interaction.member as GuildMember | null;
     const channel = member?.voice.channel;
     if (!channel) {
-      return this.replyError(
+      return replyError(
         interaction,
         "Not in a Voice Channel",
         "Join your temp VC first, then run this command.",
@@ -120,7 +120,7 @@ export class TempVcCommand extends BaseSubcommand {
 
     const record = await getVcRecord(interaction.guildId!, channel.id);
     if (!record) {
-      return this.replyError(
+      return replyError(
         interaction,
         "Unmanaged Channel",
         "This voice channel is not a temp VC managed by the bot.",
@@ -128,13 +128,13 @@ export class TempVcCommand extends BaseSubcommand {
     }
 
     const panel = buildPanel(channel, record);
-    await this.reply(interaction, ephemeralCard(panel));
+    await sendReply(interaction, ephemeralCard(panel));
   }
 
   public async chatInputGenAdd(
     interaction: ChatInputCommandInteraction,
   ): Promise<void> {
-    await this.checkPermission(interaction, PermissionLevel.ADMIN);
+    await assertPermissionLevel(interaction, PermissionLevel.ADMIN);
     const guildId = interaction.guildId!;
 
     const channel = interaction.options.getChannel("channel", true);
@@ -142,7 +142,7 @@ export class TempVcCommand extends BaseSubcommand {
     const limit = interaction.options.getInteger("limit") ?? 0;
 
     if (!name) {
-      return this.replyError(
+      return replyError(
         interaction,
         "Invalid Name",
         "Provide a non-empty name template.",
@@ -151,7 +151,7 @@ export class TempVcCommand extends BaseSubcommand {
 
     const existing = await listGenerators(guildId);
     if (!existing.has(channel.id) && existing.size >= TEMPVC_MAX_GENERATORS) {
-      return this.replyError(
+      return replyError(
         interaction,
         "Too Many Generators",
         `You can configure at most ${TEMPVC_MAX_GENERATORS} generators.`,
@@ -159,7 +159,7 @@ export class TempVcCommand extends BaseSubcommand {
     }
 
     await setGenerator(guildId, channel.id, { name, limit });
-    return this.replySuccess(
+    return replySuccess(
       interaction,
       "Generator Saved",
       `${channelMention(channel.id)} will now spawn temp VCs using the template **${name}** with a limit of **${limit || "∞"}**.`,
@@ -169,17 +169,17 @@ export class TempVcCommand extends BaseSubcommand {
   public async chatInputGenRemove(
     interaction: ChatInputCommandInteraction,
   ): Promise<void> {
-    await this.checkPermission(interaction, PermissionLevel.ADMIN);
+    await assertPermissionLevel(interaction, PermissionLevel.ADMIN);
     const channel = interaction.options.getChannel("channel", true);
     const removed = await removeGenerator(interaction.guildId!, channel.id);
     if (!removed) {
-      return this.replyError(
+      return replyError(
         interaction,
         "Not a Generator",
         `${channelMention(channel.id)} is not a configured generator.`,
       );
     }
-    return this.replySuccess(
+    return replySuccess(
       interaction,
       "Generator Removed",
       `${channelMention(channel.id)} is no longer a generator.`,
@@ -189,7 +189,7 @@ export class TempVcCommand extends BaseSubcommand {
   public async chatInputGenList(
     interaction: ChatInputCommandInteraction,
   ): Promise<void> {
-    await this.checkPermission(interaction, PermissionLevel.ADMIN);
+    await assertPermissionLevel(interaction, PermissionLevel.ADMIN);
     const generators = await listGenerators(interaction.guildId!);
     const lines = [...generators.entries()].map(
       ([id, cfg]) =>

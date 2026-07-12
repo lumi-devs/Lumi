@@ -22,24 +22,21 @@ import type { RpcRequest, RpcResponse, RpcHandler } from "@lumi/contracts";
 
 export type { RpcRequest, RpcResponse, RpcHandler };
 
-const rpc = new Map<string, RpcHandler<unknown, unknown>>();
+export const rpcHandlers = new Map<string, RpcHandler<unknown, unknown>>();
 
-export function deregisterRpcHandler(action: string) {
-  rpc.delete(action);
-}
 
 export function registerRpcHandler<TIn, TOut>(
   action: string,
   handler: RpcHandler<TIn, TOut>,
 ) {
-  if (rpc.has(action)) {
+  if (rpcHandlers.has(action)) {
     container.logger.warn(`[RPC] Overwriting existing handler: ${action}`);
   }
-  rpc.set(action, handler as RpcHandler<unknown, unknown>);
+  rpcHandlers.set(action, handler as RpcHandler<unknown, unknown>);
 }
 
-async function dispatchRpc(req: RpcRequest): Promise<RpcResponse> {
-  const handler = rpc.get(req.action);
+function dispatchRpc(req: RpcRequest): Promise<RpcResponse> {
+  const handler = rpcHandlers.get(req.action);
   if (!handler)
     return { id: req.id, ok: false, error: `Missing action: ${req.action}` };
 
@@ -125,10 +122,6 @@ export class RabbitClient {
 
   public get connected() {
     return this.connection.isConnected();
-  }
-
-  public waitForConnect() {
-    return this.channel.waitForConnect();
   }
 
   public startConsumers() {

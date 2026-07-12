@@ -4,7 +4,7 @@ import { container, type Piece } from "@sapphire/framework";
 import { getService } from "#lib/module-system/Service.js";
 import {
   registerRpcHandler,
-  deregisterRpcHandler,
+  rpcHandlers,
 } from "#lib/rabbitmq/index.js";
 import { RPC_ACTIONS } from "@lumi/contracts";
 import { resolver, ADDON_MODULES_ROOT } from "#lib/downloader/resolver.js";
@@ -193,12 +193,12 @@ export class CoreModule extends Module {
 
   public override onUnload() {
     container.logger.info("[Core] Unloading Core RPC handlers...");
-    deregisterRpcHandler(RPC_ACTIONS.gdprDelete);
-    deregisterRpcHandler(RPC_ACTIONS.repoAdd);
-    deregisterRpcHandler(RPC_ACTIONS.repoList);
-    deregisterRpcHandler(RPC_ACTIONS.repoModules);
-    deregisterRpcHandler(RPC_ACTIONS.moduleInstall);
-    deregisterRpcHandler(RPC_ACTIONS.moduleUninstall);
+    rpcHandlers.delete(RPC_ACTIONS.gdprDelete);
+    rpcHandlers.delete(RPC_ACTIONS.repoAdd);
+    rpcHandlers.delete(RPC_ACTIONS.repoList);
+    rpcHandlers.delete(RPC_ACTIONS.repoModules);
+    rpcHandlers.delete(RPC_ACTIONS.moduleInstall);
+    rpcHandlers.delete(RPC_ACTIONS.moduleUninstall);
     return super.onUnload();
   }
 }

@@ -12,7 +12,7 @@ import {
   ButtonBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { BaseCommand } from "#lib/commands.js";
+import { BaseCommand, sendReply } from "#lib/commands.js";
 import { Colors } from "#lib/utilities/branding.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { makeCard } from "#lib/utilities/cards.js";
@@ -32,7 +32,7 @@ export class ServerInfoCommand extends BaseCommand {
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
     const card = await this.buildServerCard(interaction);
-    await this.reply(interaction, card);
+    await sendReply(interaction, card as any);
   }
 
   public override async messageRun(message: Message) {

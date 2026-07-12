@@ -344,44 +344,7 @@ interface CommandLike {
   readonly integrationTypes: ApplicationIntegrationType[];
   readonly contexts: InteractionContextType[];
   readonly defaultMemberPermissions: bigint | undefined;
-  checkPermission(
-    interaction: ChatInputCommandInteraction,
-    level: PermissionLevel,
-  ): Promise<void>;
-  reply(
-    interaction: CommandReplyTarget,
-    payload: InteractionReplyOptions,
-  ): Promise<void>;
-  replySuccess(
-    interaction: CommandReplyTarget,
-    title: string,
-    body: string,
-    opts?: ReplyOptions,
-  ): Promise<void>;
-  replyError(
-    interaction: CommandReplyTarget,
-    title: string,
-    body: string,
-    opts?: ReplyOptions,
-  ): Promise<void>;
-  replyWarning(
-    interaction: CommandReplyTarget,
-    title: string,
-    body: string,
-    opts?: ReplyOptions,
-  ): Promise<void>;
-  replyInfo(
-    interaction: CommandReplyTarget,
-    title: string,
-    body: string,
-    opts?: ReplyOptions,
-  ): Promise<void>;
-  /**
-   * Resolves the localized translation function for the target's language
-   * (guild language → Discord locale → en-US). Pass an interaction or a
-   * message; returns an i18next `TFunction` bound to the resolved language.
-   */
-  fetchT(target: ChatInputCommandInteraction | Message): Promise<LumiT>;
+
 }
 
 /**
@@ -424,59 +387,7 @@ export abstract class BaseCommand extends Command implements CommandLike {
    */
   public run?(ctx: CommandContext): Awaited<unknown> | Promise<unknown>;
 
-  public checkPermission(
-    interaction: ChatInputCommandInteraction,
-    level: PermissionLevel,
-  ): Promise<void> {
-    return assertPermissionLevel(interaction, level);
-  }
 
-  public reply(
-    interaction: CommandReplyTarget,
-    payload: InteractionReplyOptions,
-  ): Promise<void> {
-    return sendReply(interaction, payload);
-  }
-
-  public replySuccess(
-    interaction: CommandReplyTarget,
-    title: string,
-    body: string,
-    opts?: ReplyOptions,
-  ): Promise<void> {
-    return replySuccess(interaction, title, body, opts);
-  }
-
-  public replyError(
-    interaction: CommandReplyTarget,
-    title: string,
-    body: string,
-    opts?: ReplyOptions,
-  ): Promise<void> {
-    return replyError(interaction, title, body, opts);
-  }
-
-  public replyWarning(
-    interaction: CommandReplyTarget,
-    title: string,
-    body: string,
-    opts?: ReplyOptions,
-  ): Promise<void> {
-    return replyWarning(interaction, title, body, opts);
-  }
-
-  public replyInfo(
-    interaction: CommandReplyTarget,
-    title: string,
-    body: string,
-    opts?: ReplyOptions,
-  ): Promise<void> {
-    return replyInfo(interaction, title, body, opts);
-  }
-
-  public fetchT(target: ChatInputCommandInteraction | Message): Promise<LumiT> {
-    return fetchTyped(target);
-  }
 
   protected override parseConstructorPreConditions(
     options: BaseCommand.Options,
@@ -523,59 +434,7 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
     autoApplyCommandDefaults(this);
   }
 
-  public checkPermission(
-    interaction: ChatInputCommandInteraction,
-    level: PermissionLevel,
-  ): Promise<void> {
-    return assertPermissionLevel(interaction, level);
-  }
 
-  public reply(
-    interaction: CommandReplyTarget,
-    payload: InteractionReplyOptions,
-  ): Promise<void> {
-    return sendReply(interaction, payload);
-  }
-
-  public replySuccess(
-    interaction: CommandReplyTarget,
-    title: string,
-    body: string,
-    opts?: ReplyOptions,
-  ): Promise<void> {
-    return replySuccess(interaction, title, body, opts);
-  }
-
-  public replyError(
-    interaction: CommandReplyTarget,
-    title: string,
-    body: string,
-    opts?: ReplyOptions,
-  ): Promise<void> {
-    return replyError(interaction, title, body, opts);
-  }
-
-  public replyWarning(
-    interaction: CommandReplyTarget,
-    title: string,
-    body: string,
-    opts?: ReplyOptions,
-  ): Promise<void> {
-    return replyWarning(interaction, title, body, opts);
-  }
-
-  public replyInfo(
-    interaction: CommandReplyTarget,
-    title: string,
-    body: string,
-    opts?: ReplyOptions,
-  ): Promise<void> {
-    return replyInfo(interaction, title, body, opts);
-  }
-
-  public fetchT(target: ChatInputCommandInteraction | Message): Promise<LumiT> {
-    return fetchTyped(target);
-  }
 
   protected override parseConstructorPreConditions(
     options: BaseSubcommand.Options,

@@ -49,15 +49,7 @@ function fmtKB(bytes: bigint | number): string {
   return `${n} B`;
 }
 
-function sep(divider = true) {
-  return new SeparatorBuilder()
-    .setSpacing(SeparatorSpacingSize.Small)
-    .setDivider(divider);
-}
 
-function txt(content: string) {
-  return new TextDisplayBuilder().setContent(content);
-}
 
 /**
  * Stacked Executive Layout:
@@ -95,7 +87,7 @@ function header(data: PingData, subtitle?: string): SectionBuilder {
   const sub = subtitle ? `\n*${subtitle}*` : "";
   const anchor = `-# ${"\u2800".repeat(55)}`;
   return new SectionBuilder()
-    .addTextDisplayComponents(txt(`## ${data.botName}${sub}\n${anchor}`))
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(`## ${data.botName}${sub}\n${anchor}`))
     .setThumbnailAccessory(
       new ThumbnailBuilder().setURL(
         data.avatarURL || "https://cdn.discordapp.com/embed/avatars/0.png",
@@ -112,7 +104,7 @@ function detailCard(
   const c = new ContainerBuilder();
   c.setAccentColor(color);
   c.addSectionComponents(header(data, subtitle));
-  c.addSeparatorComponents(sep(true));
+  c.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true));
   return c;
 }
 
@@ -151,7 +143,7 @@ export function buildOverviewCard(
     const ping = shard.ping < 0 ? "Analyzing…" : `${shard.ping}ms`;
     content += `${E.online} Shard [${shard.id}]:\n`;
     content += `${E.space}${E.latency} Latency: ${ping}\n`;
-    content += `${E.space}${E.uptime} Uptime: ${container.utilities.time.formatUptime(data.uptime)}\n`;
+    content += `${E.space}${E.uptime} Uptime: ${container.utilities.time.formatDuration(data.uptime)}\n`;
     content += `${E.space}${E.trade} Resources:\n`;
     content += `${E.space}${E.space}${E.memory} RAM: ${fmtMB(data.rss)}\n`;
     content += `${E.space}${E.space}${E.cpu} CPU: ${data.cpuPercent.toFixed(2)}%\n`;
@@ -165,7 +157,7 @@ export function buildOverviewCard(
   content += `${E.sql} **SQL**: ${fmtMs(data.prismaMs)} | Load: ${data.txRate.toFixed(1)} tx/s\n`;
   content += `${E.rabbit} **RabbitMQ**: ${data.rabbitConnected ? `Connected (${data.rabbitQueued} queued)` : "Offline"}\n`;
 
-  c.addTextDisplayComponents(txt(content));
+  c.addTextDisplayComponents(new TextDisplayBuilder().setContent(content));
 
   return c;
 }
@@ -176,7 +168,7 @@ export function buildGatewayCard(data: PingData): ContainerBuilder {
   const node = data.gatewayNode === "Unknown" ? "Analyzing…" : data.gatewayNode;
 
   c.addTextDisplayComponents(
-    txt(
+    new TextDisplayBuilder().setContent(
       [
         executiveSection(
           "Connection Stability",
@@ -208,15 +200,15 @@ export function buildGatewayCard(data: PingData): ContainerBuilder {
   );
 
   if (data.shards.length > 0) {
-    c.addSeparatorComponents(sep(true));
-    c.addTextDisplayComponents(txt("### 🧊 CLUSTER SHARD MATRIX"));
+    c.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true));
+    c.addTextDisplayComponents(new TextDisplayBuilder().setContent("### 🧊 CLUSTER SHARD MATRIX"));
     const shardLines = data.shards
       .map(
         (s) =>
           `> **Shard ${s.id}**\n> ┕ ***${fmtMs(s.ping)}*** | *${s.status}* | Seq ${s.sequence || 0}`,
       )
       .join("\n");
-    c.addTextDisplayComponents(txt(shardLines));
+    c.addTextDisplayComponents(new TextDisplayBuilder().setContent(shardLines));
   }
 
   return c;
@@ -227,7 +219,7 @@ export function buildEngineCard(data: PingData): ContainerBuilder {
 
   const heapPct = ((data.heapUsed / data.heapTotal) * 100).toFixed(1);
   c.addTextDisplayComponents(
-    txt(
+    new TextDisplayBuilder().setContent(
       [
         executiveSection(
           "Memory Allocation",
@@ -272,7 +264,7 @@ export function buildHostCard(data: PingData): ContainerBuilder {
   );
 
   c.addTextDisplayComponents(
-    txt(
+    new TextDisplayBuilder().setContent(
       [
         executiveSection(
           "Processing Architecture",
@@ -305,7 +297,7 @@ export function buildHostCard(data: PingData): ContainerBuilder {
                 : "N/A",
             ],
           ],
-          `Uptime: ${container.utilities.time.formatUptime(data.osUptimeSecs * 1000)}`,
+          `Uptime: ${container.utilities.time.formatDuration(data.osUptimeSecs * 1000)}`,
         ),
         executiveSection(
           "Process I/O Metrics",
@@ -330,7 +322,7 @@ export function buildPostgresCard(data: PingData): ContainerBuilder {
   );
 
   c.addTextDisplayComponents(
-    txt(
+    new TextDisplayBuilder().setContent(
       [
         executiveSection(
           "Database Throughput",
@@ -347,7 +339,7 @@ export function buildPostgresCard(data: PingData): ContainerBuilder {
             [
               "Server Uptime",
               data.dbUptimeSecs
-                ? container.utilities.time.formatUptime(data.dbUptimeSecs * 1000)
+                ? container.utilities.time.formatDuration(data.dbUptimeSecs * 1000)
                 : "N/A",
             ],
           ],
@@ -358,9 +350,9 @@ export function buildPostgresCard(data: PingData): ContainerBuilder {
   );
 
   if (data.tableSizes.length > 0) {
-    c.addSeparatorComponents(sep(true));
+    c.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true));
     c.addTextDisplayComponents(
-      txt(`### ${Emojis.ANALYTICS} HIGH-DENSITY TABLE BREAKDOWN`),
+      new TextDisplayBuilder().setContent(`### ${Emojis.ANALYTICS} HIGH-DENSITY TABLE BREAKDOWN`),
     );
     const tableLines = data.tableSizes
       .map(
@@ -368,7 +360,7 @@ export function buildPostgresCard(data: PingData): ContainerBuilder {
           `> **${t.name}**\n> ┕ ***${fmtKB(t.bytes)}***${t.deadTuples > 0n ? ` (${Emojis.WARNING_SIGN} ${t.deadTuples.toLocaleString()} dead)` : ""}`,
       )
       .join("\n");
-    c.addTextDisplayComponents(txt(tableLines));
+    c.addTextDisplayComponents(new TextDisplayBuilder().setContent(tableLines));
   }
 
   return c;
@@ -382,7 +374,7 @@ export function buildRedisCard(data: PingData): ContainerBuilder {
   );
 
   c.addTextDisplayComponents(
-    txt(
+    new TextDisplayBuilder().setContent(
       [
         executiveSection(
           "Memory Utilization",
@@ -407,7 +399,7 @@ export function buildRedisCard(data: PingData): ContainerBuilder {
             ["Version Info", `Redis v${data.redisVersion}`],
             ["Active Clients", `${data.redisClients} Connected`],
           ],
-          `Latency: ${fmtMs(data.redisReadMs)} / ${fmtMs(data.redisWriteMs)} | Up: ${container.utilities.time.formatUptime(data.redisUptimeSecs * 1000)}`,
+          `Latency: ${fmtMs(data.redisReadMs)} / ${fmtMs(data.redisWriteMs)} | Up: ${container.utilities.time.formatDuration(data.redisUptimeSecs * 1000)}`,
         ),
       ].join("\n"),
     ),
@@ -425,7 +417,7 @@ export function buildRabbitCard(data: PingData): ContainerBuilder {
 
   if (data.rabbitConnected) {
     c.addTextDisplayComponents(
-      txt(
+      new TextDisplayBuilder().setContent(
         [
           executiveSection(
             "Connection Integrity",
@@ -448,7 +440,7 @@ export function buildRabbitCard(data: PingData): ContainerBuilder {
     );
   } else {
     c.addTextDisplayComponents(
-      txt(
+      new TextDisplayBuilder().setContent(
         `### ${Emojis.CROSS} PIPELINE OFFLINE\n> **Critical connection failure detected for RabbitMQ.**\n┕ -# Background tasks and inter-module RPC are suspended.`,
       ),
     );
@@ -467,7 +459,7 @@ export function buildBotCard(data: PingData): ContainerBuilder {
   const memPerGuild =
     data.guilds > 0 ? (data.rss / 1024 / 1024 / data.guilds).toFixed(2) : "0";
   c.addTextDisplayComponents(
-    txt(
+    new TextDisplayBuilder().setContent(
       [
         executiveSection(
           "Interaction Analytics",
@@ -483,7 +475,7 @@ export function buildBotCard(data: PingData): ContainerBuilder {
             ["Memory/Guild", `${memPerGuild} MB`],
             ["System RSS", fmtMB(data.rss)],
           ],
-          `Process Uptime: ${container.utilities.time.formatUptime(data.uptime)}`,
+          `Process Uptime: ${container.utilities.time.formatDuration(data.uptime)}`,
         ),
         executiveSection(
           "Software Architecture",
@@ -524,7 +516,7 @@ export function buildDetailCard(
     }
   })();
 
-  c.addSeparatorComponents(sep(true));
+  c.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true));
   c.addActionRowComponents(
     new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
       new ButtonBuilder()
