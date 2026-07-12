@@ -5,6 +5,7 @@ import {
   type Message,
   ButtonStyle,
   ChannelType,
+  type InteractionReplyOptions,
 } from "discord.js";
 import { time, TimestampStyles } from "@discordjs/formatters";
 import {
@@ -32,7 +33,7 @@ export class ServerInfoCommand extends BaseCommand {
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
     const card = await this.buildServerCard(interaction);
-    await sendReply(interaction, card as any);
+    await sendReply(interaction, card as InteractionReplyOptions);
   }
 
   public override async messageRun(message: Message) {
