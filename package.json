@@ -1,7 +1,7 @@
 {
   "name": "lumi",
   "version": "1.0.0",
-  "license": "Apache-2.0",
+  "license": "AGPL-3.0-only",
   "description": "Lumi — modular Discord bot (TypeScript / Sapphire / Postgres / Redis). Monorepo root.",
   "private": true,
   "type": "module",
@@ -24,8 +24,7 @@
     "modules:manifest": "bun scripts/generate-manifests.ts",
     "validate": "bun scripts/validate-addon.ts",
     "test": "vitest run",
-    "verify:chaos": "bun scripts/verify-chaos.ts",
-    "verify:chaos:nats": "WITH_NATS=1 bun scripts/verify-chaos.ts"
+    "verify:chaos": "bun scripts/verify-chaos.ts"
   },
   "devDependencies": {
     "@sapphire/eslint-config": "^5.0.6",

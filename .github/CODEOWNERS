@@ -1,0 +1,35 @@
+# CODEOWNERS
+# Each line maps a path pattern to the GitHub user(s) who own that area.
+# Owners are automatically requested as reviewers when a PR touches their files.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global catch-all — maintainers review everything by default
+* @lumi-devs/maintainers
+
+# Core framework glue and shared libraries
+/packages/core/src/lib/ @lumi-devs/maintainers
+
+# Feature modules — module authors own their own directories
+/packages/core/src/modules/core/       @lumi-devs/maintainers
+/packages/core/src/modules/mod/        @lumi-devs/maintainers
+/packages/core/src/modules/filter/     @lumi-devs/maintainers
+/packages/core/src/modules/logging/    @lumi-devs/maintainers
+/packages/core/src/modules/afk/        @lumi-devs/maintainers
+/packages/core/src/modules/utility/    @lumi-devs/maintainers
+/packages/core/src/modules/dashboard/  @lumi-devs/maintainers
+
+# Infrastructure and deployment
+/deploy/          @lumi-devs/maintainers
+/Dockerfile       @lumi-devs/maintainers
+/docker-compose.yml @lumi-devs/maintainers
+
+# Database schema — always needs a maintainer review
+/prisma/ @lumi-devs/maintainers
+
+# Event bus and observability packages
+/packages/event-bus/     @lumi-devs/maintainers
+/packages/observability/ @lumi-devs/maintainers
+/packages/sharding/      @lumi-devs/maintainers
+
+# CI/CD
+/.github/ @lumi-devs/maintainers

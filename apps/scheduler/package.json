@@ -1,7 +1,7 @@
 {
   "name": "@lumi/scheduler",
   "version": "1.0.0",
-  "license": "Apache-2.0",
+  "license": "AGPL-3.0-only",
   "description": "Thin scheduler entrypoint — boots @lumi/worker until the real service split.",
   "type": "module",
   "private": true,

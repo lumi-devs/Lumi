@@ -16,8 +16,8 @@ await rpc.waitForConnect();
 const reaper = startSessionReaper();
 const server = createServer(rpc);
 
-console.log(
-  `[dashboard] listening on http://${config.host}:${config.port} (RPC → ${config.rabbitUrl.replace(/:[^:@]*@/, ":***@")})`,
+process.stdout.write(
+  `[dashboard] listening on http://${config.host}:${config.port} (RPC → ${config.rabbitUrl.replace(/:[^:@]*@/, ":***@")})\n`,
 );
 
 async function shutdown() {
