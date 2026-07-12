@@ -22,8 +22,6 @@ if (
 }
 
 const client = await LumiClient.bootstrap().catch((err: unknown): never => {
-  // Pre-login failures (shard planning, cluster join) happen before the
-  // Sapphire logger exists; log the message cleanly and exit non-zero.
   console.error(
     `[Startup] Fatal during bootstrap: ${err instanceof Error ? err.message : String(err)}`,
   );
@@ -43,11 +41,6 @@ let shuttingDown = false;
     log("info", `${sig} received`);
     await runDrainSequence(
       [
-        // LumiClient.destroy() walks the right sequence internally:
-        // stops the raw-gateway consumer (no new XREADGROUP polls), drains
-        // task-fire + scheduler-request consumers, closes the event bus,
-        // RabbitMQ, workers, prisma, redis. In-flight handlers finish before
-        // the bus is torn down because stopConsuming() awaits in-flight acks.
         { name: "client-destroy", run: () => client.destroy() },
         { name: "tracing-shutdown", run: () => shutdownTracing() },
       ],

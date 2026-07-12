@@ -3,9 +3,9 @@ import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { Colors } from "discord.js";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions.js";
-import { formatAuditReason } from "#utilities/audit.js";
-import { logError } from "#utilities/errors.js";
+import { PermissionLevel } from "#lib/permissions/index.js";
+import { formatAuditReason } from "#lib/utilities/audit.js";
+import { logError } from "#lib/utilities/errors.js";
 import {
   parseDuration,
   formatDuration,
@@ -13,7 +13,7 @@ import {
   scheduleCaseLift,
 } from "../lib/helpers.js";
 
-import { makeErrorCard } from "#utilities/cards.js";
+import { makeErrorCard } from "#lib/utilities/cards.js";
 
 const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000;
 

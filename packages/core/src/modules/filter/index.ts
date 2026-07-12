@@ -1,5 +1,5 @@
-import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
-import { tryGetService } from "#core/module-system/Service.js";
+import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
+import { tryGetService } from "#lib/module-system/Service.js";
 import { ChannelType } from "discord.js";
 import { DEFAULT_WARN_MESSAGE } from "./lib/rules.js";
 

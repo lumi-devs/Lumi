@@ -3,7 +3,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { Colors, type Message, type PartialMessage } from "discord.js";
 import { channelMention, userMention } from "@discordjs/formatters";
 import { cutText } from "@sapphire/utilities";
-import { ModuleListener } from "#core/module-system/ModuleListener.js";
+import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { isIgnoredChannel, isToggleEnabled, sendLog } from "../lib/send.js";
 
 @ApplyOptions<ModuleListener.Options>({
@@ -19,7 +19,6 @@ export class LoggingMessageUpdateListener extends ModuleListener<
     newMessage: Message | PartialMessage,
   ): Promise<void> {
     if (!newMessage.content || newMessage.author?.bot) return;
-    // Embed unfurls and pin changes also fire MessageUpdate — only log real edits.
     if (oldMessage.content === newMessage.content) return;
     const guildId = newMessage.guildId!;
     if (!(await isToggleEnabled(guildId, "message_edits"))) return;

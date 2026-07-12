@@ -1,4 +1,3 @@
-// / <reference types="bun-types" />
 import { RPC_ACTIONS } from "@lumi/contracts";
 import { config } from "./config.js";
 import type { RpcClient } from "./rpc.js";
@@ -72,7 +71,6 @@ export function createServer(rpc: RpcClient) {
       const cookies = req.headers.get("cookie");
       const session = readSession(cookies);
 
-      // ── Auth routes ──────────────────────────────────────────────────────
       if (path === "/login") {
         const { state, cookie } = issueState();
         return redirect(authorizeUrl(state), { "Set-Cookie": cookie });
@@ -109,7 +107,6 @@ export function createServer(rpc: RpcClient) {
         }
       }
 
-      // ── Everything below requires a session ──────────────────────────────
       if (!session) {
         if (path === "/") return html(loginPage());
         return redirect("/");
@@ -117,7 +114,6 @@ export function createServer(rpc: RpcClient) {
 
       if (path === "/") return html(guildPicker(session, session.guilds));
 
-      // ── Guild config page ────────────────────────────────────────────────
       const guildMatch = /^\/guild\/(\d{17,20})$/.exec(path);
       if (guildMatch && req.method === "GET") {
         const guildId = guildMatch[1]!;
@@ -133,7 +129,6 @@ export function createServer(rpc: RpcClient) {
         }
       }
 
-      // ── Mutations (JSON API) ─────────────────────────────────────────────
       const apiMatch = /^\/api\/guild\/(\d{17,20})\/(config|module)$/.exec(
         path,
       );

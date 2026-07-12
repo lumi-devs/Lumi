@@ -1,7 +1,7 @@
 // @lumi/core public surface. Apps import the client + setup side-effect from here;
 // @lumi/sdk re-exports the addon-facing pieces below. Deep paths stay internal.
 
-export { LumiClient } from "./src/client/LumiClient.js";
+export { LumiClient } from "./src/lib/client/LumiClient.js";
 
 // Env helpers
 export {
@@ -9,7 +9,7 @@ export {
   envParseInteger,
   envIsDefined,
   type Env,
-} from "./src/core/env.js";
+} from "./src/lib/env.js";
 
 // Module system
 export {
@@ -21,8 +21,8 @@ export {
   type ConfigField,
   type ModuleMeta,
   type ModuleOptions,
-} from "./src/core/module-system/Module.js";
-export { Service } from "./src/core/module-system/Service.js";
+} from "./src/lib/module-system/Module.js";
+export { Service } from "./src/lib/module-system/Service.js";
 
 // Commands
 export {
@@ -33,7 +33,7 @@ export {
   replyError,
   replyWarning,
   replyInfo,
-} from "./src/core/lib/commands.js";
+} from "./src/lib/commands.js";
 
 // Permissions
 export {
@@ -42,7 +42,7 @@ export {
   resolvePermissionLevel,
   type PermissionContext,
   type PermissionModelType,
-} from "./src/core/permissions/index.js";
+} from "./src/lib/permissions/index.js";
 
 // Cards
 export {
@@ -56,16 +56,16 @@ export {
   noPingCard,
   type CardOptions,
   type CardReply,
-} from "./src/utilities/cards.js";
+} from "./src/lib/utilities/cards.js";
 
 // Assets
-export { Emojis, type EmojiKey } from "./src/utilities/assets.js";
+export { Emojis, type EmojiKey } from "./src/lib/utilities/assets.js";
 
 // Addon utilities
-export { checkModulesEnabled } from "./src/core/lib/module-check.js";
-export { relativeTimestamp, shortTimestamp } from "./src/utilities/time.js";
-export { swallow, logError, errorFrom } from "./src/utilities/errors.js";
-export { RequesterType } from "./src/core/lib/gdpr.js";
+export { checkModulesEnabled } from "./src/lib/module-check.js";
+export { relativeTimestamp, shortTimestamp } from "./src/lib/utilities/time.js";
+export { swallow, logError, errorFrom } from "./src/lib/utilities/errors.js";
+export { RequesterType } from "./src/lib/gdpr.js";
 
 // Discord formatters — re-exported so addons import from @lumi/sdk only
 export {
@@ -95,5 +95,5 @@ export {
   paginateList,
   type PaginationOptions,
   type PaginateListOptions,
-} from "./src/utilities/pagination.js";
-export { LanguageKeys, CommonKeys, PreconditionsKeys, CommandsKeys } from "./src/core/i18n/keys.js";
+} from "./src/lib/utilities/pagination.js";
+export { LanguageKeys, CommonKeys, PreconditionsKeys, CommandsKeys } from "./src/lib/i18n/keys.js";

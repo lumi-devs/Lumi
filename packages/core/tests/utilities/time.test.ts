@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { humanizeDelta, formatUptime, parseDuration, relativeTimestamp, shortTimestamp } from '#utilities/time.js';
+import { humanizeDelta, formatUptime, parseDuration, relativeTimestamp, shortTimestamp } from '#lib/utilities/time.js';
 
 describe('time.ts', () => {
 	it('humanizeDelta', () => {

@@ -5,12 +5,8 @@ import type { Session } from "./types.js";
 const COOKIE_NAME = "lumi_dash";
 const STATE_COOKIE = "lumi_oauth_state";
 
-// In-memory session store. Sessions are ephemeral by design — a dashboard
-// restart simply asks admins to log in again. Swap for Redis if horizontal
-// scaling of the dashboard itself is ever needed.
 const store = new Map<string, Session>();
 
-// ── Cookie signing ───────────────────────────────────────────────────────────
 
 function sign(value: string): string {
   const sig = createHmac("sha256", config.sessionSecret)
@@ -54,7 +50,6 @@ function readCookie(header: string | null, name: string): string | null {
   return null;
 }
 
-// ── Sessions ─────────────────────────────────────────────────────────────────
 
 export function createSession(data: Omit<Session, "expiresAt">): string {
   const id = randomBytes(32).toString("base64url");
@@ -94,7 +89,6 @@ export function clearSessionCookie(): string {
   return serializeCookie(COOKIE_NAME, "", 0);
 }
 
-// ── OAuth CSRF state ─────────────────────────────────────────────────────────
 
 export function issueState(): { state: string; cookie: string } {
   const state = randomBytes(16).toString("base64url");

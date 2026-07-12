@@ -3,8 +3,8 @@ import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { Colors } from "discord.js";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions.js";
-import { makeSuccessCard } from "#utilities/cards.js";
+import { PermissionLevel } from "#lib/permissions/index.js";
+import { makeSuccessCard } from "#lib/utilities/cards.js";
 import { logToChannel } from "../lib/helpers.js";
 import { incrementWarnCount, checkThresholds } from "../lib/thresholds.js";
 

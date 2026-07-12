@@ -8,7 +8,7 @@ import {
   DEFAULT_LANGUAGE,
   isSupportedLanguage,
   SUPPORTED_LANGUAGES,
-} from "#core/i18n/index.js";
+} from "#lib/i18n/index.js";
 
 const LANGUAGE_ROOT = fileURLToPath(
   new URL("../../src/languages/", import.meta.url),

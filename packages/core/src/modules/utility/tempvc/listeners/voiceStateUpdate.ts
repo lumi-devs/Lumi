@@ -1,9 +1,9 @@
 import { Listener, Events } from "@sapphire/framework";
-import { getService } from "#core/module-system/Service.js";
+import { getService } from "#lib/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { VoiceState } from "discord.js";
-import { logError } from "#utilities/errors.js";
-import { isModuleEnabled } from "#utilities/listeners.js";
+import { logError } from "#lib/utilities/errors.js";
+import { isModuleEnabled } from "#lib/utilities/listeners.js";
 import { TEMPVC_CREATE_COOLDOWN_MS } from "../index.js";
 import { tempVcRegistry } from "../registry.js";
 import type TempVcService from "../services/TempVcService.js";
@@ -30,15 +30,11 @@ export default class TempVcVoiceStateListener extends Listener<
 
     const guildId = (newState.guild ?? oldState.guild).id;
 
-    // Track the voice state transition in Redis
     const { prevChannelId } = await trackVoiceState(
       member.id,
       newState.channelId,
     );
 
-    // Left a managed VC that is now empty → debounced cleanup. Checked against
-    // the in-memory index (no I/O), and intentionally not gated on the module
-    // being enabled so leftover channels still get cleaned up.
     if (
       prevChannelId &&
       (await tempVcRegistry.isManagedVc(guildId, prevChannelId))
@@ -48,9 +44,6 @@ export default class TempVcVoiceStateListener extends Listener<
       }
     }
 
-    // Joined a generator → create a temp VC. The generator lookup is the
-    // in-memory index; the enabled check (a Redis hit) only runs once we know
-    // this is actually a generator channel.
     if (newState.channelId) {
       const generator = await tempVcRegistry.getGenerator(
         guildId,

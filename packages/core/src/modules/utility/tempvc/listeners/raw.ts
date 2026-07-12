@@ -1,14 +1,7 @@
-// Boot-time seed for the voice-state Redis projection.
-//
-// On GUILD_CREATE the dispatch carries the full `voice_states` array. We seed
-// the projection from it so the cleanup task (which fires 8s after the listener
-// thinks a channel emptied) has a correct picture for the channels that were
-// already occupied when this worker came up.
-
 import { Listener } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { GatewayDispatchPayload, APIGuild } from "discord-api-types/v10";
-import { logError } from "#utilities/errors.js";
+import { logError } from "#lib/utilities/errors.js";
 import {
   seedVoiceStates,
   clearVoiceChannelOccupancy,
@@ -29,7 +22,6 @@ export default class TempVcRawListener extends Listener {
       }>;
     };
 
-    // Clear stale Redis occupancy sets for managed VCs on boot
     const records = await listVcRecords(g.id).catch(() => new Map());
     await Promise.all(
       [...records.keys()].map((channelId) =>

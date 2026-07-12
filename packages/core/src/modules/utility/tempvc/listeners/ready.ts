@@ -1,9 +1,9 @@
 import { Listener, Events } from "@sapphire/framework";
-import { getService } from "#core/module-system/Service.js";
+import { getService } from "#lib/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Client } from "discord.js";
-import { logError } from "#utilities/errors.js";
-import { isModuleEnabled } from "#utilities/listeners.js";
+import { logError } from "#lib/utilities/errors.js";
+import { isModuleEnabled } from "#lib/utilities/listeners.js";
 import { tempVcRegistry } from "../registry.js";
 
 @ApplyOptions<Listener.Options>({

@@ -3,16 +3,16 @@ import {
   InteractionHandler,
   UserError,
 } from "@sapphire/framework";
-import { getService } from "#core/module-system/Service.js";
+import { getService } from "#lib/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { GuildMember, ModalSubmitInteraction } from "discord.js";
-import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
-import { Emojis } from "#utilities/assets.js";
+import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import {
   ephemeralCard,
   makeErrorCard,
   makeSuccessCard,
-} from "#utilities/cards.js";
+} from "#lib/utilities/cards.js";
 import { getVcRecord, setVcRecord } from "../data.js";
 import { buildPanel } from "../ui/panel.js";
 import { TVC } from "../keys.js";

@@ -1,8 +1,8 @@
-import { Module, DefineModule } from "#core/module-system/Module.js";
-import type { RequesterType } from "#core/lib/gdpr.js";
+import { Module, DefineModule } from "#lib/module-system/Module.js";
+import type { RequesterType } from "#lib/gdpr.js";
 import { MODULE_NAME, TempVcData } from "./keys.js";
 import { tempVcRegistry } from "./registry.js";
-import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
+import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleTempVcCleanupFire } from "./lib/cleanup-handler.js";
 
 export const TEMPVC_CREATE_COOLDOWN_MS = 30_000;
@@ -31,8 +31,6 @@ export class TempVcModule extends Module {
     userId: string,
     _requester: RequesterType,
   ): Promise<void> {
-    // Drop ownership records for this user; the channels themselves are
-    // cleaned up normally once empty.
     const rows = await this.container.db.guildKV.listModuleData<{
       ownerId?: string;
     }>({
@@ -46,8 +44,6 @@ export class TempVcModule extends Module {
       TempVcData.RECORD,
       owned.map((r) => ({ guildId: r.guildId, targetId: r.targetId })),
     );
-    // Bulk delete bypasses removeVcRecord, so refresh the in-memory index on
-    // whichever process owns each affected guild.
     for (const guildId of new Set(owned.map((r) => r.guildId))) {
       await tempVcRegistry.reloadVcs(guildId);
     }

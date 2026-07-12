@@ -1,39 +1,44 @@
-import { Module, DefineModule } from "#core/module-system/Module.js";
+import { Module, DefineModule } from "#lib/module-system/Module.js";
 import { container } from "@sapphire/framework";
-import { registerRpcHandler, deregisterRpcHandler } from "#lib/rabbit.js";
 import {
-  RPC_ACTIONS,
-  type ModuleTogglePayload,
-  type ConfigSetPayload,
-} from "@lumi/contracts";
+  registerRpcHandler,
+  deregisterRpcHandler,
+} from "#lib/rabbitmq/index.js";
+import { RPC_ACTIONS } from "@lumi/contracts";
 import type { Prisma } from "@prisma/client";
-import { z } from "zod";
+import { s, type BaseValidator } from "@sapphire/shapeshift";
 
-const SnowflakeSchema = z.string().regex(/^\d{17,20}$/);
+const SnowflakeSchema = s.string().regex(/^\d{17,20}$/);
 
 /** Validate the RPC request's guildId, narrowing it to a non-null snowflake. */
 function requireGuildId(guildId: string | null | undefined): string {
-  if (!guildId || !SnowflakeSchema.safeParse(guildId).success)
+  try {
+    if (!guildId) throw new Error();
+    SnowflakeSchema.parse(guildId);
+    return guildId;
+  } catch {
     throw new Error("guildId is required and must be a valid snowflake");
-  return guildId;
+  }
 }
 
 /** Validate an RPC payload against its schema, throwing a uniform error on mismatch. */
-function parsePayload<T>(schema: z.ZodType<T>, data: unknown): T {
-  const parsed = schema.safeParse(data);
-  if (!parsed.success) throw new Error(`Bad payload: ${parsed.error.message}`);
-  return parsed.data;
+function parsePayload<T>(schema: BaseValidator<T>, data: unknown): T {
+  try {
+    return schema.parse(data);
+  } catch (err: any) {
+    throw new Error(`Bad payload: ${err.message}`);
+  }
 }
 
-const ModuleToggleSchema: z.ZodType<ModuleTogglePayload> = z.object({
-  moduleName: z.string().min(1),
-  enabled: z.boolean(),
+const ModuleToggleSchema = s.object({
+  moduleName: s.string().lengthGreaterThanOrEqual(1),
+  enabled: s.boolean(),
 });
 
-const ConfigSetSchema: z.ZodType<ConfigSetPayload> = z.object({
-  moduleName: z.string().min(1),
-  key: z.string().min(1),
-  value: z.unknown(),
+const ConfigSetSchema = s.object({
+  moduleName: s.string().lengthGreaterThanOrEqual(1),
+  key: s.string().lengthGreaterThanOrEqual(1),
+  value: s.any(),
 });
 
 @DefineModule({
@@ -48,7 +53,6 @@ export class DashboardModule extends Module {
   public override onLoad() {
     container.logger.info("[Dashboard] Initializing RPC handlers...");
 
-    // ── 1. Get Guild Context ─────────────────────────────────────────────
     registerRpcHandler(RPC_ACTIONS.guildDashboardGet, async (req) => {
       const guildId = requireGuildId(req.guildId);
 
@@ -95,7 +99,6 @@ export class DashboardModule extends Module {
       };
     });
 
-    // ── 2. Toggle Module ─────────────────────────────────────────────────
     registerRpcHandler(RPC_ACTIONS.guildModuleToggle, async (req) => {
       const guildId = requireGuildId(req.guildId);
       const { moduleName, enabled } = parsePayload(
@@ -114,7 +117,6 @@ export class DashboardModule extends Module {
       return { success: true, enabled };
     });
 
-    // ── 3. Update Config ─────────────────────────────────────────────────
     registerRpcHandler(RPC_ACTIONS.guildConfigSet, async (req) => {
       const guildId = requireGuildId(req.guildId);
       const { moduleName, key, value } = parsePayload(

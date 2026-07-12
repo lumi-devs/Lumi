@@ -1,5 +1,5 @@
 import type { Container } from "@sapphire/framework";
-import { tryGetService } from "#core/module-system/Service.js";
+import { tryGetService } from "#lib/module-system/Service.js";
 import { type User } from "discord.js";
 import { Duration } from "@sapphire/time-utilities";
 import { scheduleTask } from "#lib/schedule-task.js";

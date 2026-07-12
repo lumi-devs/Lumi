@@ -1,6 +1,4 @@
-// Worker-side fire handler for the `tempvc-cleanup` scheduled task.
-
-import { tryGetService } from "#core/module-system/Service.js";
+import { tryGetService } from "#lib/module-system/Service.js";
 import type { TempVcCleanupPayload } from "../scheduled-tasks/cleanup.js";
 
 export async function handleTempVcCleanupFire(
