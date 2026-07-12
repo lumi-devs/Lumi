@@ -13,10 +13,10 @@ import {
   MediaGalleryItemBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { makeErrorCard, makeInfoCard } from "#utilities/cards.js";
+import { makeErrorCard, makeInfoCard } from "#lib/utilities/cards.js";
 import { container } from "@sapphire/framework";
 import { capitalizeFirstLetter } from "@sapphire/utilities";
-import { deleteMessageLater } from "#utilities/temporary-message.js";
+import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 
 interface MediaRequestContext {
   context: Message | RepliableInteraction;
@@ -37,7 +37,6 @@ export async function handleMediaRequest({
 
   const isButton = context instanceof ButtonInteraction;
 
-  // Cooldown Check
   if (!isButton) {
     const cooldownSeconds =
       ((await container.db.config.getModuleConfig(
@@ -97,8 +96,6 @@ export async function handleMediaRequest({
 
   const shouldShowMedia = isSelf || isButton;
 
-  // `mediaUrl` is already null when the user has no avatar/banner, so it doubles
-  // as the "is there media to link" guard for both the avatar and banner cases.
   if (shouldShowMedia && mediaUrl) {
     actionRows.push(
       new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(

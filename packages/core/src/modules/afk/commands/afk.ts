@@ -1,11 +1,11 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { getService } from "#core/module-system/Service.js";
+import { getService } from "#lib/module-system/Service.js";
 import { Command } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import type { LumiT } from "#core/i18n/index.js";
+import type { LumiT } from "#lib/i18n/index.js";
 import { AFK_MAX_REASON_LENGTH, sanitizeReason } from "../index.js";
-import { Emojis } from "#utilities/assets.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import type AfkService from "../services/AfkService.js";
 
 function afkStatusText(

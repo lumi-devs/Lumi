@@ -3,7 +3,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { Colors, type Message, type PartialMessage } from "discord.js";
 import { channelMention, userMention } from "@discordjs/formatters";
 import { cutText } from "@sapphire/utilities";
-import { ModuleListener } from "#core/module-system/ModuleListener.js";
+import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { isIgnoredChannel, isToggleEnabled, sendLog } from "../lib/send.js";
 
 @ApplyOptions<ModuleListener.Options>({

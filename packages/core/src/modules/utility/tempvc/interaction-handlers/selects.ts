@@ -3,7 +3,7 @@ import {
   InteractionHandler,
   UserError,
 } from "@sapphire/framework";
-import { getService } from "#core/module-system/Service.js";
+import { getService } from "#lib/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   type AnySelectMenuInteraction,
@@ -11,9 +11,9 @@ import {
   type VoiceBasedChannel,
 } from "discord.js";
 import { userMention } from "@discordjs/formatters";
-import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
-import { Emojis } from "#utilities/assets.js";
-import { makeSuccessCard } from "#utilities/cards.js";
+import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { Emojis } from "#lib/utilities/assets.js";
+import { makeSuccessCard } from "#lib/utilities/cards.js";
 import { getVcRecord, type VcRecord } from "../data.js";
 import { TVC } from "../keys.js";
 import type TempVcService from "../services/TempVcService.js";
@@ -109,9 +109,7 @@ export default class TempVcSelectHandler extends BaseInteractionHandler {
             break;
         }
         done.push(userMention(id));
-      } catch {
-        // skip members we can't act on
-      }
+      } catch {}
     }
     if (done.length === 0) return "No changes applied.";
     const verb = {

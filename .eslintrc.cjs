@@ -1,4 +1,3 @@
-/* eslint-env node */
 module.exports = {
   root: true,
   parser: '@typescript-eslint/parser',
@@ -8,8 +7,7 @@ module.exports = {
     tsconfigRootDir: __dirname,
   },
   rules: {
-    // Modules must be self-contained: no reaching into a sibling module.
-    // Shared code lives under src/lib/, src/core/, src/db/, src/redis/, src/storage/.
+    // Ensure modules are self-contained.
     'no-restricted-imports': [
       'error',
       {
@@ -37,20 +35,13 @@ module.exports = {
   },
   overrides: [
     {
-      // Commands reply through CommandContext / the Base* helpers so slash and
-      // prefix behave identically; raw interaction replies bypass that, and
-      // ephemerality is owned by the reply helpers (ephemeralCard, ctx.reply,
-      // this.reply*) — never OR the flag in a command. Low-level card/flag
-      // primitives (cards.ts, ping-cards.ts, pre-deferred-interactions.ts) are
-      // intentionally not commands and define the flags the helpers apply.
+      // Enforce CommandContext reply helper conventions.
       files: ['packages/core/src/**/commands/*.ts'],
       rules: {
         'no-restricted-syntax': [
           'error',
           {
-            // Ephemerality of a *reply* is owned by the helpers — never OR the
-            // flag into a reply/editReply/followUp payload. (deferReply legitimately
-            // takes { flags: Ephemeral } and has no card, so it is not matched.)
+            // Ephemerality is owned by helpers.
             selector: 'CallExpression[callee.property.name=/^(reply|editReply|followUp)$/] MemberExpression[object.name="MessageFlags"][property.name="Ephemeral"]',
             message: 'Do not OR MessageFlags.Ephemeral into a reply — wrap the card with ephemeralCard() or use the reply helpers.',
           },
@@ -62,7 +53,7 @@ module.exports = {
       },
     },
     {
-      // The module's own files are allowed to use relative paths within their tree.
+      // Allow relative imports within a module's own folder.
       files: ['packages/core/src/modules/*/**/*.ts'],
       rules: {
         'no-restricted-imports': [

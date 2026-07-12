@@ -4,7 +4,7 @@ import {
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { ButtonInteraction, MessageFlags } from "discord.js";
-import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
+import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { handleMediaRequest } from "../media-utils.js";
 
 @ApplyOptions<InteractionHandler.Options>({

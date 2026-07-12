@@ -1,18 +1,18 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { getService, tryGetService } from "#core/module-system/Service.js";
+import { getService, tryGetService } from "#lib/module-system/Service.js";
 import { Colors, PermissionsBitField } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
 import { cutText } from "@sapphire/utilities";
-import { GuildMessageListener } from "#core/module-system/GuildMessageListener.js";
-import type { GuildMessage } from "#lib/types.js";
+import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
+import type { GuildMessage } from "#lib/types/common.js";
 import type { FilterService } from "../services/FilterService.js";
 import {
   DEFAULT_WARN_MESSAGE,
   HIT_REASONS,
   type FilterHit,
 } from "../lib/rules.js";
-import { swallow } from "#utilities/errors.js";
-import { deleteMessageLater } from "#utilities/temporary-message.js";
+import { swallow } from "#lib/utilities/errors.js";
+import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 
 @ApplyOptions<GuildMessageListener.Options>({ module: "filter" })
 export class FilterMessageListener extends GuildMessageListener {
@@ -29,7 +29,6 @@ export class FilterMessageListener extends GuildMessageListener {
       await this.filterService.loadGuild(message.guildId);
     }
 
-    // Mentions counted once here so lib/rules.ts stays discord.js-free.
     const mentionCount =
       message.mentions.users.size + message.mentions.roles.size;
     const hit = this.filterService.test(

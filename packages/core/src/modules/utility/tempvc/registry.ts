@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { logError } from "#utilities/errors.js";
+import { logError } from "#lib/utilities/errors.js";
 import { MODULE_NAME, TempVcData } from "./keys.js";
 import type { GeneratorConfig } from "./data.js";
 
@@ -9,9 +9,6 @@ interface ManagedVc {
   number: number;
 }
 
-// InvalidationBus pseudo-keys. We piggyback on the existing cluster pub/sub so
-// peer processes converge. VC adds/removes carry their payload in the key and
-// apply incrementally (no DB re-read); generator changes signal a re-hydrate.
 const SIG_PREFIX = "lumi:tempvc:sig:";
 const sig = {
   vcAdd: (g: string, c: string, gen: string, n: number) =>
@@ -61,8 +58,6 @@ class TempVcRegistry {
     });
   }
 
-  // ── Reads (hot path) ─────────────────────────────────────────────────────
-
   public async getGenerator(
     guildId: string,
     channelId: string,
@@ -102,8 +97,6 @@ class TempVcRegistry {
     return n;
   }
 
-  // ── Writes (mirror DB mutations) ───────────────────────────────────────────
-
   public async addVc(
     guildId: string,
     channelId: string,
@@ -133,8 +126,6 @@ class TempVcRegistry {
     this.#vcsLoaded.delete(guildId);
     await this.#broadcast(sig.vcReload(guildId));
   }
-
-  // ── Internals ──────────────────────────────────────────────────────────────
 
   #localAddVc(guildId: string, channelId: string, vc: ManagedVc): void {
     let map = this.#vcs.get(guildId);

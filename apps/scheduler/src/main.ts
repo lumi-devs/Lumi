@@ -1,10 +1,3 @@
-// Real scheduler entrypoint. Boots a full LumiClient in the `scheduler`
-// role: no Discord WebSocket (ws.connect is patched out), but BullMQ Queue +
-// Worker are active. Workers and the monolith publish RequestEnvelopes onto
-// `lumi.scheduler.request` (workers) or call `container.tasks.create()`
-// directly (monolith); when a BullMQ job fires, each ScheduledTask piece
-// re-publishes the effect onto `lumi.scheduler.fire:<name>` for workers to
-// execute (see packages/core/src/core/lib/scheduler-bus.ts).
 import "./service-name.js";
 import "@lumi/core/setup";
 
@@ -51,9 +44,6 @@ let shuttingDown = false;
     log("info", `${sig} received`);
     await runDrainSequence(
       [
-        // LumiClient.destroy() releases the scheduler leader lock first
-        // (so a follower can SET NX EX it inside the poll interval) before
-        // closing the BullMQ queues/workers + transports.
         { name: "client-destroy", run: () => client.destroy() },
         { name: "tracing-shutdown", run: () => shutdownTracing() },
       ],

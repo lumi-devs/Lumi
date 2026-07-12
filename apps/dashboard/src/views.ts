@@ -617,7 +617,7 @@ export function loginPage(): string {
           Continue with Discord
         </a>
       </div>
-    </div>`
+    </div>`,
   );
 }
 
@@ -687,7 +687,6 @@ function fieldInput(
     case FieldType.NUMBER:
       return `<input type="number" ${attrs} data-kind="num" value="${value === null || value === undefined ? "" : escapeHtml(value)}">`;
     default: {
-      // STRING / CHANNEL / ROLE / USER — free text (IDs for entity fields).
       const shown = Array.isArray(value) ? value.join(", ") : (value ?? "");
       const ph =
         field.type === FieldType.CHANNEL
@@ -724,10 +723,9 @@ export function guildConfigPage(
   const modules = data.modules
     .map((m) => {
       const fields = m.configFields
-        .map(
-          (f) => {
-            const inputId = `f_${escapeHtml(m.name)}_${escapeHtml(f.key)}`;
-            return `<div class="field">
+        .map((f) => {
+          const inputId = `f_${escapeHtml(m.name)}_${escapeHtml(f.key)}`;
+          return `<div class="field">
               <div class="field-header">
                 <label for="${inputId}">${escapeHtml(f.label)}</label>
                 <span class="save-status" id="status_${inputId}"></span>
@@ -735,8 +733,7 @@ export function guildConfigPage(
               ${fieldInput(m.name, f, m.config[f.key])}
               ${f.description ? `<span class="hint">${escapeHtml(f.description)}</span>` : ""}
             </div>`;
-          }
-        )
+        })
         .join("");
       const checked = m.enabled ? " checked" : "";
       const core = m.name === "core";
@@ -760,7 +757,7 @@ export function guildConfigPage(
 
   const guildIcon = data.icon
     ? `<img src="${escapeHtml(guildIconUrl(guildId, data.icon))}" style="width: 48px; height: 48px; border-radius: 12px; object-fit: cover;">`
-    : `<div class="ico" style="width: 48px; height: 48px; border-radius: 12px; font-weight:700; font-size: 18px; display:flex; align-items:center; justify-content:center; background-color: ${getGuildColor(guildId)}; color:#fff;">${escapeHtml(data.name.slice(0,1).toUpperCase())}</div>`;
+    : `<div class="ico" style="width: 48px; height: 48px; border-radius: 12px; font-weight:700; font-size: 18px; display:flex; align-items:center; justify-content:center; background-color: ${getGuildColor(guildId)}; color:#fff;">${escapeHtml(data.name.slice(0, 1).toUpperCase())}</div>`;
 
   const body = `
     <div class="config-layout">
@@ -823,7 +820,6 @@ const CLIENT_SCRIPT = `<script>
   }
   var gid=window.__GUILD_ID;
   
-  // Toggle modules
   document.querySelectorAll("[data-toggle]").forEach(function(el){
     el.addEventListener("change",async function(){
       var modName = el.dataset.module;
@@ -844,7 +840,6 @@ const CLIENT_SCRIPT = `<script>
     });
   });
 
-  // Save config settings
   document.querySelectorAll("[data-key]").forEach(function(el){
     el.addEventListener("change",async function(){
       var v;
@@ -877,7 +872,6 @@ const CLIENT_SCRIPT = `<script>
     });
   });
 
-  // Tab navigation functions
   window.showModule = function(moduleName) {
     document.querySelectorAll('.config-content .card').forEach(function(card) {
       if (card.dataset.mod === moduleName) {
@@ -898,7 +892,6 @@ const CLIENT_SCRIPT = `<script>
     } catch(e) {}
   };
 
-  // Search modules
   window.filterModules = function() {
     var query = document.getElementById('moduleSearch').value.toLowerCase();
     document.querySelectorAll('.mod-nav-item').forEach(function(el) {
@@ -912,7 +905,6 @@ const CLIENT_SCRIPT = `<script>
     });
   };
 
-  // Initialize tabs
   var hash = location.hash.substring(1);
   var firstModEl = document.querySelector('.config-content .card');
   var firstMod = firstModEl ? firstModEl.dataset.mod : null;

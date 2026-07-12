@@ -36,10 +36,7 @@ function row(...buttons: ButtonBuilder[]): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons);
 }
 
-/**
- * Builds the owner control panel for a temp VC. The panel is stateless beyond
- * the channel id baked into each custom id, so it keeps working across restarts.
- */
+/** Builds the owner control panel for a temporary voice channel. */
 export function buildPanel(
   channel: VoiceBasedChannel,
   record: VcRecord,

@@ -1,14 +1,8 @@
-// Shared dispatch for the logging module's listeners: check the event's
-// toggle is on and a log channel is set — then send the card (never pinging
-// anyone). The module-enabled gate lives in ModuleListener, not here. All
-// reads go through the cached config layer, so this is cheap enough to run
-// per gateway event.
-
 import { container } from "@sapphire/framework";
 import { time, TimestampStyles } from "@discordjs/formatters";
-import { getService } from "#core/module-system/Service.js";
-import { makeCard, noPingCard, type CardReply } from "#utilities/cards.js";
-import { swallow } from "#utilities/errors.js";
+import { getService } from "#lib/module-system/Service.js";
+import { makeCard, noPingCard, type CardReply } from "#lib/utilities/cards.js";
+import { swallow } from "#lib/utilities/errors.js";
 
 const MODULE = "logging";
 

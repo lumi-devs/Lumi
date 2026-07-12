@@ -108,7 +108,6 @@ export class RpcClient {
             JSON.parse(msg.content.toString()) as RpcResponse,
           );
         } catch {
-          // Malformed reply — the pending caller will time out.
         }
       },
       { noAck: true },

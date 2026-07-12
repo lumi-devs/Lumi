@@ -1,14 +1,3 @@
-// Gateway service.
-//
-// Drops discord.js `Client` entirely: we open the WS via `@discordjs/ws`
-// `WebSocketManager` directly and publish raw dispatch packets onto the bus.
-// No Sapphire stores, no entity managers, no client-level caches — the gateway
-// is a thin decode + publish loop, so a 100-shard gateway no longer holds a
-// `Client` with its managers and ~25 KB/guild of bookkeeping.
-//
-// It still runs: planShards + clustered IDENTIFY throttle + Redis session store,
-// INTERACTION_DEFER_AT_GATEWAY (REST pre-ack), the drain sequence and readiness
-// probes for rolling deploys, and REST telemetry.
 import "./telemetry.js";
 import { REST } from "@discordjs/rest";
 import {
@@ -90,8 +79,6 @@ const log = (level: "info" | "warn" | "error", msg: string, meta?: object) => {
   console[fn](line);
 };
 
-// REST: shared between defer-at-gateway pre-acks and the WebSocketManager's
-// own gateway/bot fetch. One token, one bucket budget, one set of metrics.
 const rest = new REST({
   version: "10",
   ...(PROXY_URL && {
@@ -102,8 +89,6 @@ const rest = new REST({
 }).setToken(TOKEN);
 if (PROXY_URL) log("info", "REST proxy enabled", { url: PROXY_URL });
 
-// Pre-flight: ask Discord for shard count + IDENTIFY budget before we open
-// any socket.
 const shardPlan = await planShards({ token: TOKEN, log }).catch(
   (err: unknown): never => {
     log("error", "fatal: shard planning failed", {
@@ -113,7 +98,6 @@ const shardPlan = await planShards({ token: TOKEN, log }).catch(
   },
 );
 
-// Optional cluster coordinator (multi-replica gateway).
 const CLUSTER_NAME = process.env["CLUSTER_NAME"]?.trim() || null;
 const REPLICA_ID =
   process.env["LUMI_CONSUMER_ID"] ||
@@ -160,16 +144,12 @@ if (CLUSTER_NAME) {
 }
 
 const assignedShards = cluster?.shards ?? shardPlan.shards ?? null;
-// Mutable view of currently-owned shards, kept in sync with the strategy across
-// rebalances so readiness probes + ready-tracker math reflect the live set.
 const ownedShards = new Set<number>(
   Array.isArray(assignedShards)
     ? assignedShards
     : Array.from({ length: shardPlan.shardCount }, (_, i) => i),
 );
 
-// Bus connection (Redis Streams or NATS JetStream). Streams uses the redis
-// opts; NATS reads NATS_URL out of env via createEventBus.
 const ownedBus: OwnedEventBus = createEventBus({
   transport: TRANSPORT as "streams" | "nats",
   redis: {
@@ -190,13 +170,10 @@ const ownedBus: OwnedEventBus = createEventBus({
   log,
 });
 
-// WebSocketManager: no Client wrapper. We own the WS directly.
 let dynamicStrategy: DynamicShardingStrategy | null = null;
 const manager = new WebSocketManager({
   token: TOKEN,
   rest,
-  // Match the intents the workers need — anything we DON'T list here, Discord
-  // doesn't send. Worker-side code can grep these to know what's available.
   intents:
     GatewayIntentBits.Guilds |
     GatewayIntentBits.GuildMembers |
@@ -209,14 +186,7 @@ const manager = new WebSocketManager({
     cluster?.throttlerFactory
       ? cluster.throttlerFactory()
       : buildSimpleThrottlerFactory(shardPlan)(),
-  // Custom strategy: in-place add/remove on rebalance instead of restart.
-  // Only enabled when clustered; the single-replica path doesn't need it and
-  // the standard SimpleShardingStrategy stays the default.
   ...(cluster && {
-    // `mgr` is typed against discord.js's nested @discordjs/ws copy, but the
-    // top-level @discordjs/ws is what we actually run against — same code,
-    // duplicate type identity. Structural cast through unknown silences the
-    // duplicate-import diagnostic without smuggling any runtime change.
     buildStrategy: ((mgr: unknown) => {
       dynamicStrategy = new DynamicShardingStrategy(
         mgr as ConstructorParameters<typeof DynamicShardingStrategy>[0],
@@ -236,8 +206,6 @@ async function applyRebalance(
   added: readonly number[],
   removed: readonly number[],
 ): Promise<void> {
-  // Pre-restart fallback: if the cluster path isn't on a dynamic strategy
-  // (e.g. someone disabled CLUSTER_NAME mid-flight), fall back to draining.
   if (!dynamicStrategy) {
     log("warn", "no dynamic strategy — falling back to restart", {
       added,
@@ -304,9 +272,6 @@ async function deferInteraction(d: InteractionPayload): Promise<void> {
   }
 }
 
-// Bus publisher: hook the WebSocketManager's Dispatch event. When
-// DEFER_AT_GATEWAY is on, INTERACTION_CREATE is handled by the separate
-// interceptor below (defer then publish) so the proxy publisher ignores it.
 const detachPublisher = attachProxyPublisher(
   ownedBus.bus,
   manager as unknown as {
@@ -361,7 +326,6 @@ if (DEFER_AT_GATEWAY) {
   log("info", "INTERACTION_DEFER_AT_GATEWAY=true — gateway will pre-ack");
 }
 
-// REST telemetry — same surface the worker emits.
 const restLabels = (info: { route: string; method: string; global: boolean }) =>
   ({
     route: info.route,
@@ -376,16 +340,12 @@ rest.on("invalidRequestWarning", () => {
   restInvalidRequestWarnings.inc();
 });
 
-// Track readiness: count shards reporting Ready/Resumed → mark gateway healthy
-// once every owned shard has connected.
 const shardReady = new Set<number>();
 const expectedShards = new Set<number>(
   Array.isArray(assignedShards)
     ? assignedShards
     : Array.from({ length: shardPlan.shardCount }, (_, i) => i),
 );
-// Cluster ready tracker: workers gate raw-gateway consumption on this flag
-// so they don't process events while shards are mid-IDENTIFY.
 const readyTracker =
   CLUSTER_NAME && clusterRedis
     ? new ClusterReadyTracker({
@@ -394,18 +354,12 @@ const readyTracker =
       })
     : null;
 let readyHeartbeat: ReturnType<typeof setInterval> | null = null;
-// Latches true the first time every owned shard has connected. See publishReady.
 let everReady = false;
 const publishReady = () => {
   if (!readyTracker) return;
   const allReady =
     expectedShards.size > 0 && shardReady.size === expectedShards.size;
   if (allReady) everReady = true;
-  // Require every shard for the *initial* cluster-ready, but afterwards tolerate
-  // a single shard transiently reconnecting (Closed→Resumed) so a per-shard blip
-  // can't pause raw-event consumption fleet-wide (workers gate on this flag).
-  // Only a total outage (no shards up) or gateway death (heartbeat TTL lapses)
-  // flips the cluster back to not-ready.
   const clusterReady = everReady && shardReady.size > 0;
   readyTracker.publishReady(clusterReady).catch((err) =>
     log("warn", "publishReady failed", {
@@ -433,8 +387,6 @@ manager.on(WebSocketShardEvents.Error, (error: Error, shardId: number) => {
   log("error", `shard ${shardId} error`, { err: String(error) });
 });
 if (readyTracker) {
-  // Refresh the TTL while we remain ready, so a crashed gateway flips the
-  // flag back to not-ready within ~30s without any cleanup logic.
   readyHeartbeat = setInterval(publishReady, 10_000);
 }
 
@@ -447,10 +399,6 @@ registerReadinessProbe("discord-ws", () => {
 });
 registerReadinessProbe("event-bus", async () => {
   if (!ownedBus.publisher) {
-    // NATS transport: no Redis publisher to ping. We could ping NATS here,
-    // but the bus is built lazily and a synchronous status is fine — if the
-    // connection later drops, publish() will surface the error and dispatch
-    // events will pile up in @discordjs/ws's emit queue (bounded by GC).
     return { status: "ok" };
   }
   try {

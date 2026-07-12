@@ -1,7 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Args } from "@sapphire/framework";
 import { BaseCommand } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions.js";
+import { PermissionLevel } from "#lib/permissions/index.js";
 import {
   Message,
   PermissionFlagsBits,
@@ -17,9 +17,9 @@ import {
   makeErrorCard,
   makeSuccessCard,
   makeWarningCard,
-} from "#utilities/cards.js";
-import { logError, errorCode } from "#utilities/errors.js";
-import { deleteMessageLater } from "#utilities/temporary-message.js";
+} from "#lib/utilities/cards.js";
+import { logError, errorCode } from "#lib/utilities/errors.js";
+import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "purge",
@@ -47,7 +47,6 @@ export class PurgeCommand extends BaseCommand {
     const channel = message.channel as GuildTextBasedChannel;
     let prompt: Message;
 
-    // Delete the trigger command message immediately to keep the channel clean and prevent trigger collisions
     await message
       .delete()
       .catch((err: unknown) =>
@@ -72,7 +71,6 @@ export class PurgeCommand extends BaseCommand {
       });
     }
 
-    // Run the purge asynchronously in the background
     void this.executePurge(channel, amount, prompt);
   }
 
@@ -124,13 +122,11 @@ export class PurgeCommand extends BaseCommand {
         const fetchOptions: FetchMessagesOptions = { limit };
         if (lastMessageId) fetchOptions.before = lastMessageId;
 
-        // Fetch message batch using pagination to avoid API replication lag
         const messages = (await channel.messages
           .fetch(fetchOptions)
           .catch(() => null)) as Collection<string, Message> | null;
         if (!messages || messages.size === 0) break;
 
-        // Track the oldest message in this batch to use as "before" in the next pass
         const oldestMessage = messages.last();
         if (oldestMessage) {
           lastMessageId = oldestMessage.id;
@@ -143,7 +139,6 @@ export class PurgeCommand extends BaseCommand {
         const oldMessages: Message[] = [];
 
         for (const msg of messages.values()) {
-          // Skip the status message itself to avoid deleting our status card too early
           if (msg.id === prompt.id) continue;
 
           if (msg.createdTimestamp > fourteenDaysAgo) {
@@ -153,7 +148,6 @@ export class PurgeCommand extends BaseCommand {
           }
         }
 
-        // 1. Bulk delete messages under 14 days old
         if (youngMessages.length > 0) {
           try {
             const numDeleted = await safeBulkDelete(youngMessages);
@@ -168,7 +162,6 @@ export class PurgeCommand extends BaseCommand {
           }
         }
 
-        // 2. Individually delete messages over 14 days old (Throttled)
         if (oldMessages.length > 0) {
           for (const msg of oldMessages) {
             const success = await msg
@@ -176,7 +169,6 @@ export class PurgeCommand extends BaseCommand {
               .then(() => true)
               .catch((err: unknown) => {
                 if (errorCode(err) === 10008) {
-                  // Message was already deleted, count as success!
                   return true;
                 }
                 this.container.logger.error(
@@ -193,13 +185,11 @@ export class PurgeCommand extends BaseCommand {
           }
         }
 
-        // Break if no messages were found/processed to prevent infinite loop
         if (youngMessages.length === 0 && oldMessages.length === 0) {
           break;
         }
       }
 
-      // Deletion complete — clean up status and send success confirmation card
       await prompt
         .delete()
         .catch((err: unknown) =>

@@ -15,8 +15,8 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { BaseCommand } from "#lib/commands.js";
-import { Colors } from "#utilities/branding.js";
-import { makeCard, makeErrorCard } from "#utilities/cards.js";
+import { Colors } from "#lib/utilities/branding.js";
+import { makeCard, makeErrorCard } from "#lib/utilities/cards.js";
 
 const KEY_PERMISSIONS = [
   { flag: PermissionFlagsBits.Administrator, name: "Administrator" },
@@ -121,7 +121,6 @@ export class WhoisCommand extends BaseCommand {
 
       body.push(`### Member Information\n${joinedSec}`);
 
-      // Roles
       const sortedRoles = member.roles.cache
         .filter((r) => r.id !== guildId)
         .sort((a, b) => b.position - a.position);
@@ -144,7 +143,6 @@ export class WhoisCommand extends BaseCommand {
       }
       body.push(`### Roles [${sortedRoles.size}]\n${rolesText}`);
 
-      // Permissions
       let keyPermsText = "None";
       if (member.permissions.has(PermissionFlagsBits.Administrator)) {
         keyPermsText = "Administrator (All Permissions)";
@@ -159,7 +157,6 @@ export class WhoisCommand extends BaseCommand {
       body.push(`### Key Permissions\n${keyPermsText}`);
     }
 
-    // Action buttons
     const avatarUrl = user.displayAvatarURL({ size: 4096, extension: "png" });
     const buttons = [
       new ButtonBuilder()

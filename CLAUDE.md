@@ -48,7 +48,7 @@ Per-user data cleanup: override `deleteUserData(userId, requester)` on the modul
 
 ### Services
 
-Extend `Service` (`#core/module-system/Service.js`); they expose `this.logger`, `this.db`, `this.redis`. Decorate with `@ApplyOptions<Piece.Options>({ name: "<svc>" })`, augment the `Services` interface in the same file (`declare module "#core/module-system/Service.js" { interface Services { "<svc>": MyService } }`), and retrieve with `getService("<svc>")` — typed, throws if not loaded — or `tryGetService("<svc>")` where a missing piece is expected (module disabled, boot order). Never `stores.get("services").get(...) as X`. Services are the place for stateful/singleton logic (e.g. `FilterService` per-guild matchers, `TempVcService`).
+Extend `Service` (`#core/module-system/Service.js`); they expose `this.logger`, `this.db`, `this.redis`. Decorate with `@ApplyOptions<Piece.Options>({ name: "<svc>" })`, augment the `Services` interface in the same file (`declare module "#lib/module-system/Service.js" { interface Services { "<svc>": MyService } }`), and retrieve with `getService("<svc>")` — typed, throws if not loaded — or `tryGetService("<svc>")` where a missing piece is expected (module disabled, boot order). Never `stores.get("services").get(...) as X`. Services are the place for stateful/singleton logic (e.g. `FilterService` per-guild matchers, `TempVcService`).
 
 ### Permissions
 
