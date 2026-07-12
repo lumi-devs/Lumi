@@ -73,7 +73,6 @@ import {
 } from "@lumi/sharding";
 import { Redis } from "ioredis";
 import { tryParseJSON } from "@sapphire/utilities";
-import type { SessionInfo } from "@discordjs/ws";
 
 export interface LumiClientOptions {
   /** Override the role derived from LUMI_ROLE. */
@@ -166,8 +165,12 @@ export class LumiClient extends SapphireClient {
             options.cluster?.throttlerFactory ??
             buildSimpleThrottlerFactory(options.shardPlan),
           ...(options.cluster && {
-            retrieveSessionInfo: options.cluster!.sessionStore.retrieve.bind(options.cluster!.sessionStore),
-            updateSessionInfo: options.cluster!.sessionStore.update.bind(options.cluster!.sessionStore),
+            retrieveSessionInfo: options.cluster!.sessionStore.retrieve.bind(
+              options.cluster!.sessionStore,
+            ),
+            updateSessionInfo: options.cluster!.sessionStore.update.bind(
+              options.cluster!.sessionStore,
+            ),
           }),
         },
       }),
@@ -198,7 +201,6 @@ export class LumiClient extends SapphireClient {
       loadScheduledTaskErrorListeners: false,
       baseUserDirectory: new URL("../../", import.meta.url),
       defaultPrefix: envParseString("DEFAULT_PREFIX", ","),
-      fetchPrefix: this.fetchPrefix.bind(this),
       logger: {
         level: process.env["NODE_ENV"] === "development" ? 20 : 30,
       },
@@ -509,6 +511,30 @@ export class LumiClient extends SapphireClient {
   }
 
   /** Cleanup-error handler used throughout destroy(): log at warn, never throw. */
+  public override fetchPrefix = async (message: Message) => {
+    if (!message.guild) return envParseString("DEFAULT_PREFIX", ",");
+
+    const cacheKey = RedisKeys.guildPrefixes(message.guild.id);
+    const cached = await container.redis.get(cacheKey);
+    if (cached) {
+      const parsed = tryParseJSON(cached) as string[] | null;
+      if (Array.isArray(parsed)) return parsed;
+    }
+
+    const settings = await container.db.config.getGuildSettings(
+      message.guild.id,
+    );
+    const fallback = envParseString("DEFAULT_PREFIX", ",");
+    const prefixes = settings.prefix ? [settings.prefix] : [fallback];
+
+    await container.redis.setex(
+      cacheKey,
+      RedisTTL.guildPrefix,
+      JSON.stringify(prefixes),
+    );
+    return prefixes;
+  }
+
   private _warnOnCleanupError(what: string) {
     return (err: unknown) =>
       container.logger.warn(`[Client] ${what} failed:`, err);
@@ -587,30 +613,6 @@ export class LumiClient extends SapphireClient {
         container.logger.info(msg),
       );
     }
-  }
-
-  public override async fetchPrefix(message: Message) {
-    if (!message.guild) return envParseString("DEFAULT_PREFIX", ",");
-
-    const cacheKey = RedisKeys.guildPrefixes(message.guild.id);
-    const cached = await container.redis.get(cacheKey);
-    if (cached) {
-      const parsed = tryParseJSON(cached) as string[] | null;
-      if (Array.isArray(parsed)) return parsed;
-    }
-
-    const settings = await container.db.config.getGuildSettings(
-      message.guild.id,
-    );
-    const fallback = envParseString("DEFAULT_PREFIX", ",");
-    const prefixes = settings.prefix ? [settings.prefix] : [fallback];
-
-    await container.redis.setex(
-      cacheKey,
-      RedisTTL.guildPrefix,
-      JSON.stringify(prefixes),
-    );
-    return prefixes;
   }
 
   /**
