@@ -7,7 +7,7 @@ import {
   buildPermissionsView,
   buildAddonsView,
   type HubTab,
-} from "#lib/lib/hub-panel.js";
+} from "#lib/hub-panel.js";
 
 const TAB_IDS: Record<HubTab, string> = {
   overview: "lumi:home",

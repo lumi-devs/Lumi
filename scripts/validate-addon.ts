@@ -8,7 +8,7 @@
  * directory or a repo root containing several. Exit code 1 if any errors.
  */
 import path from "node:path";
-import { validateAddonOrRepo } from "../packages/core/src/core/lib/downloader/validate.js";
+import { validateAddonOrRepo } from "../packages/core/src/lib/downloader/validate.js";
 
 const RED = "\x1b[31m";
 const YELLOW = "\x1b[33m";

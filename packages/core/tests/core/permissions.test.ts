@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { resolvePermissionLevel, PermissionLevel } from '#lib/permissions.js';
+import { resolvePermissionLevel, PermissionLevel } from '#lib/permissions/index.js';
 import { container } from '@sapphire/framework';
 
 // OWNER_IDS is parsed once at import from envParseString("OWNER_IDS", ""), so the

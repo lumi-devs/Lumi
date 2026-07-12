@@ -1,6 +1,6 @@
 {
   "name": "@lumi/contracts",
-  "version": "2.1.1",
+  "version": "1.0.0",
   "license": "Apache-2.0",
   "description": "Shared wire contracts (bus events, RPC payloads, module manifest, config fields) for all Lumi services.",
   "type": "module",

@@ -1,8 +1,7 @@
 import type { Container } from "@sapphire/framework";
 import { tryParseJSON } from "@sapphire/utilities";
-import { formatAuditReason } from "#lib/utilities/audit.js";
-import { parseDuration, logToChannel, scheduleCaseLift } from "./helpers.js";
-import { Colors } from "discord.js";
+import { parseDuration } from "./helpers.js";
+import { BanAction, MuteAction, KickAction } from "./actions/index.js";
 
 export type ThresholdAction = "mute" | "kick" | "ban";
 
@@ -123,68 +122,37 @@ export async function checkThresholds(
     const member = await guild.members.fetch(userId).catch(() => null);
     if (!member) return;
     const ms = entry.duration ? parseDuration(entry.duration) : null;
-    const until = ms ? new Date(Date.now() + ms) : null;
-    await member
-      .timeout(ms, formatAuditReason(botUser, reason))
-      .catch(() => null);
-    const c = await container.db.moderation.createModerationCase({
-      guildId,
-      userId,
-      moderatorId: botUser.id,
-      action: "mute",
+    if (!ms) return;
+    await MuteAction.apply({
+      guild,
+      targetMember: member,
+      moderator: botUser,
       reason,
-      durationSeconds: ms ? Math.floor(ms / 1000) : undefined,
-      expiresAt: until ?? undefined,
+      durationMs: ms,
+    }).catch((err) => {
+      container.logger.error(`[Thresholds] Auto-mute failed for ${userId}:`, err);
     });
-    await scheduleCaseLift(container, c);
-    await logToChannel(
-      guildId,
-      "🔇 Auto-Muted",
-      Colors.Orange,
-      userId,
-      botUser,
-      reason,
-      c.caseNumber,
-    );
   } else if (entry.action === "kick") {
     const member = await guild.members.fetch(userId).catch(() => null);
     if (!member) return;
-    await member.kick(formatAuditReason(botUser, reason)).catch(() => null);
-    const c = await container.db.moderation.createModerationCase({
-      guildId,
-      userId,
-      moderatorId: botUser.id,
-      action: "kick",
+    await KickAction.apply({
+      guild,
+      targetMember: member,
+      moderator: botUser,
       reason,
+    }).catch((err) => {
+      container.logger.error(`[Thresholds] Auto-kick failed for ${userId}:`, err);
     });
-    await logToChannel(
-      guildId,
-      "👢 Auto-Kicked",
-      Colors.Red,
-      userId,
-      botUser,
-      reason,
-      c.caseNumber,
-    );
   } else if (entry.action === "ban") {
-    await guild.members
-      .ban(userId, { reason: formatAuditReason(botUser, reason) })
-      .catch(() => null);
-    const c = await container.db.moderation.createModerationCase({
-      guildId,
-      userId,
-      moderatorId: botUser.id,
-      action: "ban",
+    const user = await container.client.users.fetch(userId).catch(() => null);
+    if (!user) return;
+    await BanAction.apply({
+      guild,
+      targetUser: user,
+      moderator: botUser,
       reason,
+    }).catch((err) => {
+      container.logger.error(`[Thresholds] Auto-ban failed for ${userId}:`, err);
     });
-    await logToChannel(
-      guildId,
-      "🔨 Auto-Banned",
-      Colors.DarkRed,
-      userId,
-      botUser,
-      reason,
-      c.caseNumber,
-    );
   }
 }

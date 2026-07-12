@@ -23,7 +23,7 @@ import { Queue, Worker, type Job } from "bullmq";
 import { Redis } from "ioredis";
 
 // Inlined copy of the helper from
-// packages/core/src/core/lib/scheduled-tasks.ts. Importing the source pulls
+// packages/core/src/lib/scheduled-tasks.ts. Importing the source pulls
 // the whole Sapphire/discord.js graph into this script for no reason — and
 // breaks under Bun because discord.js' index.js reassigns frozen formatters.
 // If the production helper's contract changes, mirror it here.

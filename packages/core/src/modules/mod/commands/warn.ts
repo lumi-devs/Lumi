@@ -1,12 +1,9 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import { Colors } from "discord.js";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
-import { makeSuccessCard } from "#lib/utilities/cards.js";
-import { logToChannel } from "../lib/helpers.js";
-import { incrementWarnCount, checkThresholds } from "../lib/thresholds.js";
+import { WarnAction } from "../lib/actions/index.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "warn",
@@ -44,51 +41,19 @@ export class WarnCommand extends BaseCommand {
       );
     }
 
-    const c = await this.container.db.moderation.createModerationCase({
-      guildId: ctx.guildId!,
-      userId: member.id,
-      moderatorId: ctx.user.id,
-      action: "warn",
+    const { caseRecord, warnCount } = await WarnAction.apply({
+      guild: ctx.guild!,
+      targetMember: member,
+      moderator: ctx.user,
       reason,
     });
-
-    await member
-      .send(
-        makeSuccessCard(
-          `⚠️ Warning — ${member.guild.name}`,
-          `**Reason:** ${reason}\n-# Case #${c.caseNumber}`,
-        ),
-      )
-      .catch(() => null);
-
-    await logToChannel(
-      ctx.guildId!,
-      "⚠️ Warned",
-      Colors.Yellow,
-      member.id,
-      ctx.user,
-      reason,
-      c.caseNumber,
-    ).catch((err: unknown) =>
-      this.container.logger.warn("[Warn] Log channel send failed:", err),
-    );
-
-    const warnCount = await incrementWarnCount(
-      this.container,
-      ctx.guildId!,
-      member.id,
-    );
-    checkThresholds(this.container, ctx.guildId!, member.id, warnCount).catch(
-      (err: unknown) =>
-        this.container.logger.error("[Warn] Threshold check failed:", err),
-    );
 
     return ctx.replySuccess(
       t("commands:warnSuccessTitle"),
       t("commands:warnSuccess", {
         user: member.user.username,
         reason,
-        caseNumber: c.caseNumber,
+        caseNumber: caseRecord.caseNumber,
         count: warnCount,
       }),
     );

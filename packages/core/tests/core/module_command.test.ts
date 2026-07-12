@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { container } from '@sapphire/framework';
-import { ModuleCommand } from '../../src/core/commands/module.js';
+import { ModuleCommand } from '#modules/core/commands/module.js';
 
 describe('ModuleCommand', () => {
 	let command: ModuleCommand;

@@ -1,5 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { getService } from "#lib/module-system/Service.js";
+
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { userMention } from "@discordjs/formatters";
 import { chunk } from "@sapphire/utilities";

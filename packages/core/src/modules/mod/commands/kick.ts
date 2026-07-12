@@ -1,14 +1,10 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import { Colors } from "discord.js";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
-import { formatAuditReason } from "#lib/utilities/audit.js";
 import { logError } from "#lib/utilities/errors.js";
-import { logToChannel } from "../lib/helpers.js";
-
-import { makeErrorCard } from "#lib/utilities/cards.js";
+import { KickAction } from "../lib/actions/index.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "kick",
@@ -46,14 +42,14 @@ export class KickCommand extends BaseCommand {
       );
     }
 
-    const dm = makeErrorCard(
-      `👢 Kicked — ${member.guild.name}`,
-      `You have been kicked from **${member.guild.name}**.\n\n**Reason:** ${reason}`,
-    );
-    await member.send(dm).catch(() => null);
-
+    let c;
     try {
-      await member.kick(formatAuditReason(ctx.user, reason));
+      c = await KickAction.apply({
+        guild: ctx.guild!,
+        targetMember: member,
+        moderator: ctx.user,
+        reason,
+      });
     } catch (err: unknown) {
       logError(`kick: guild=${ctx.guildId} target=${member.id}`, err);
       return ctx.replyError(
@@ -61,23 +57,6 @@ export class KickCommand extends BaseCommand {
         t("commands:modActionFailed"),
       );
     }
-
-    const c = await this.container.db.moderation.createModerationCase({
-      guildId: ctx.guildId!,
-      userId: member.id,
-      moderatorId: ctx.user.id,
-      action: "kick",
-      reason,
-    });
-    await logToChannel(
-      ctx.guildId!,
-      "👢 Kicked",
-      Colors.Red,
-      member.id,
-      ctx.user,
-      reason,
-      c.caseNumber,
-    );
     return ctx.replySuccess(
       t("commands:kickSuccessTitle"),
       t("commands:kickSuccess", {

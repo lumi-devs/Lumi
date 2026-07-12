@@ -10,7 +10,7 @@
 import "@lumi/core/setup";
 import { container } from "@sapphire/framework";
 import { LumiClient, envParseString } from "@lumi/core";
-import type { DownloaderService } from "../packages/core/src/core/services/DownloaderService.js";
+import type { DownloaderService } from "../packages/core/src/lib/services/DownloaderService.js";
 
 const repoUrl =
   process.argv[2] ?? "https://github.com/lumi-devs/lumi-addons.git";

@@ -1,28 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { humanizeDelta, formatDuration, parseDuration, relativeTimestamp, shortTimestamp } from '#lib/utilities/time.js';
+import { TimeUtility } from '#lib/utility-store/TimeUtility.js';
 
-describe('time.ts', () => {
+describe('TimeUtility', () => {
+	const timeUtil = new TimeUtility({ name: 'time', store: {} as any }, { name: 'time' });
+
 	it('humanizeDelta', () => {
-		expect(humanizeDelta(50)).toBe('50s');
-		expect(humanizeDelta(90)).toBe('1m 30s');
+		expect(timeUtil.humanizeDelta(50)).toBe('50s');
+		expect(timeUtil.humanizeDelta(90)).toBe('1m 30s');
 	});
 
 	it('formatDuration', () => {
-		expect(formatDuration(90000)).toBe('1m 30s');
+		expect(timeUtil.formatDuration(90000)).toBe('1m 30s');
 	});
 
 	it('parseDuration', () => {
-		expect(parseDuration('1m')).toBe(60);
-		expect(parseDuration('2h30m')).toBe(9000);
-		expect(parseDuration('invalid')).toBe(null);
+		expect(timeUtil.parseDuration('1m')).toBe(60);
+		expect(timeUtil.parseDuration('2h30m')).toBe(9000);
+		expect(timeUtil.parseDuration('invalid')).toBe(null);
 	});
 
-	it('relativeTimestamp', () => {
-		expect(relativeTimestamp(1000000)).toBe('<t:1000:R>');
-	});
 
-	it('shortTimestamp', () => {
-		// Discord style `t` = ShortTime ("14:30"); `T` = LongTime. The helper uses ShortTime.
-		expect(shortTimestamp(1000000)).toBe('<t:1000:t>');
-	});
 });

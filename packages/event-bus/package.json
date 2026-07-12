@@ -1,6 +1,6 @@
 {
   "name": "@lumi/event-bus",
-  "version": "2.1.1",
+  "version": "1.0.0",
   "license": "Apache-2.0",
   "description": "Cross-service event bus (Redis Streams + in-process) for the gateway/worker split. Carries raw Discord gateway packets and domain bus events with W3C trace propagation.",
   "type": "module",

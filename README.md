@@ -27,7 +27,7 @@ apps/
   gateway         holds the Discord WebSocket, publishes raw events onto the bus
   worker          runs all command and module logic (no WebSocket of its own)
   scheduler       owns the BullMQ queue for delayed and repeated jobs
-  api             dashboard RPC bridge
+  dashboard       dashboard RPC bridge
 ```
 
 Each process picks its role from `LUMI_ROLE` (`monolith` by default, or `gateway` / `worker` /
