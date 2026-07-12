@@ -46,10 +46,6 @@ export function registerReadinessProbe(name: string, fn: ProbeFn): void {
   probes.set(name, { name, fn });
 }
 
-export function unregisterReadinessProbe(name: string): void {
-  probes.delete(name);
-}
-
 export interface ReadinessReport {
   ready: boolean;
   draining: boolean;
