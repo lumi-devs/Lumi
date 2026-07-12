@@ -1,7 +1,3 @@
-# BullMQ owner. Always 1 replica — `SCHEDULER_LEADER_LOCK=true` enforces
-# single-active even during a rolling deploy. (BullMQ would serialise job
-# execution via per-job locks regardless, but the leader lock keeps the
-# scheduler's repeat-job evaluator + RabbitMQ task-fire consumer single-active.)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -10,8 +6,6 @@ metadata:
 spec:
   replicas: 1
   strategy:
-    # Recreate (not RollingUpdate): we want the old pod's leader-lock to lapse
-    # cleanly before the new one acquires, rather than two pods racing.
     type: Recreate
   selector:
     matchLabels:
