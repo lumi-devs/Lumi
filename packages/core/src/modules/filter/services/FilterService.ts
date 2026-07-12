@@ -1,7 +1,6 @@
-import { Service } from "#core/module-system/Service.js";
+import { Service, getService } from "#core/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
-import { parseConfigList } from "#core/module-system/Module.js";
 import {
   compileRules,
   evaluate,
@@ -20,7 +19,9 @@ export class FilterService extends Service {
   private readonly _guilds = new Map<string, CompiledRules | null>();
 
   public async loadGuild(guildId: string): Promise<void> {
-    const cfg = this.container.db.config;
+    const configService = getService("config");
+    const get = (key: string) =>
+      this.container.db.config.getModuleConfig(guildId, "filter", key);
     const [
       terms,
       regexRules,
@@ -32,24 +33,24 @@ export class FilterService extends Service {
       maxCapsPercent,
       capsMinLength,
     ] = await Promise.all([
-      cfg.getModuleConfig(guildId, "filter", "terms"),
-      cfg.getModuleConfig(guildId, "filter", "regex_rules"),
-      cfg.getModuleConfig(guildId, "filter", "block_invites"),
-      cfg.getModuleConfig(guildId, "filter", "invite_allowlist"),
-      cfg.getModuleConfig(guildId, "filter", "block_links"),
-      cfg.getModuleConfig(guildId, "filter", "link_allowlist"),
-      cfg.getModuleConfig(guildId, "filter", "max_mentions"),
-      cfg.getModuleConfig(guildId, "filter", "max_caps_percent"),
-      cfg.getModuleConfig(guildId, "filter", "caps_min_length"),
+      configService.getConfigList(guildId, "filter", "terms"),
+      configService.getConfigList(guildId, "filter", "regex_rules"),
+      get("block_invites"),
+      configService.getConfigList(guildId, "filter", "invite_allowlist"),
+      get("block_links"),
+      configService.getConfigList(guildId, "filter", "link_allowlist"),
+      get("max_mentions"),
+      get("max_caps_percent"),
+      get("caps_min_length"),
     ]);
 
     this.rebuild(guildId, {
-      terms: parseConfigList(terms),
-      regexRules: parseConfigList(regexRules),
+      terms,
+      regexRules,
       blockInvites: blockInvites === true,
-      inviteAllowlist: parseConfigList(inviteAllowlist),
+      inviteAllowlist,
       blockLinks: blockLinks === true,
-      linkAllowlist: parseConfigList(linkAllowlist),
+      linkAllowlist,
       maxMentions: typeof maxMentions === "number" ? maxMentions : 0,
       maxCapsPercent: typeof maxCapsPercent === "number" ? maxCapsPercent : 0,
       capsMinLength:

@@ -1,13 +1,11 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { getService } from "#core/module-system/Service.js";
-import type { Args } from "@sapphire/framework";
-import { BaseSubcommand } from "#lib/commands.js";
+import { BaseSubcommand, CommandContext } from "#lib/commands.js";
+import { paginateList } from "#utilities/pagination.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import type { Message } from "discord.js";
 import {
   makeSuccessCard,
   makeErrorCard,
-  makeListCard,
   makeInfoCard,
 } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
@@ -19,13 +17,14 @@ import type { DownloaderService } from "#core/services/DownloaderService.js";
   description: "Manage third-party module repositories",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.BOT_OWNER,
+  prefixEnabled: true,
   subcommands: [
-    { name: "add", messageRun: "messageRunAdd" },
-    { name: "remove", messageRun: "messageRunRemove" },
-    { name: "update", messageRun: "messageRunUpdate" },
-    { name: "list", messageRun: "messageRunList" },
-    { name: "modules", messageRun: "messageRunModules" },
-    { name: "help", messageRun: "messageRunHelp", default: true },
+    { name: "add", run: "add" },
+    { name: "remove", run: "remove" },
+    { name: "update", run: "update" },
+    { name: "list", run: "list" },
+    { name: "modules", run: "modules" },
+    { name: "help", run: "help", default: true },
   ],
 })
 export class RepoCommand extends BaseSubcommand {
@@ -33,8 +32,8 @@ export class RepoCommand extends BaseSubcommand {
     return getService("downloader");
   }
 
-  public async messageRunHelp(message: Message): Promise<void> {
-    await message.reply(
+  public async help(ctx: CommandContext): Promise<void> {
+    await ctx.reply(
       makeInfoCard(
         "Repository Management",
         [
@@ -48,31 +47,22 @@ export class RepoCommand extends BaseSubcommand {
     );
   }
 
-  public async messageRunAdd(message: Message, args: Args): Promise<void> {
-    const name = await args.pick("string").catch(() => null);
-    const url = await args.pick("string").catch(() => null);
-    const branch = await args.pick("string").catch(() => "default");
+  public async add(ctx: CommandContext): Promise<void> {
+    const name = (await ctx.getString("name", { required: true }))!;
+    const url = (await ctx.getString("url", { required: true }))!;
+    const branch =
+      (await ctx.getString("branch", { required: false })) ?? "default";
 
-    if (!name || !url) {
-      await message.reply(
-        makeErrorCard(
-          "Missing Arguments",
-          "Usage: `,repo add <name> <url> [branch]`",
-        ),
-      );
-      return;
-    }
-
-    const msg = await message.reply(
+    await ctx.reply(
       makeInfoCard("Adding Repository", `Cloning/updating **${name}**...`),
     );
 
     try {
       await this.downloaderService.addRepo(name, url, branch);
       this.container.logger.info(
-        `[Repo] ${Emojis.REPO} Added repository: ${name} (${url}@${branch}) by ${message.author.tag}`,
+        `[Repo] ${Emojis.REPO} Added repository: ${name} (${url}@${branch}) by ${ctx.user.tag}`,
       );
-      await msg.edit(
+      await ctx.reply(
         makeSuccessCard(
           `${Emojis.REPO} Repository Added`,
           `Successfully cloned/updated repository **${name}**.\nYou can now use \`,repo modules ${name}\` to view available modules.`,
@@ -83,23 +73,16 @@ export class RepoCommand extends BaseSubcommand {
       this.container.logger.warn(
         `[Repo] ${Emojis.ERROR} Failed to add repo: ${name} — ${msg_}`,
       );
-      await msg.edit(
+      await ctx.reply(
         makeErrorCard(`${Emojis.ERROR} Failed to Add Repository`, msg_),
       );
     }
   }
 
-  public async messageRunRemove(message: Message, args: Args): Promise<void> {
-    const name = await args.pick("string").catch(() => null);
+  public async remove(ctx: CommandContext): Promise<void> {
+    const name = (await ctx.getString("name", { required: true }))!;
 
-    if (!name) {
-      await message.reply(
-        makeErrorCard("Missing Arguments", "Usage: `,repo remove <name>`"),
-      );
-      return;
-    }
-
-    const msg = await message.reply(
+    await ctx.reply(
       makeInfoCard(
         "Removing Repository",
         `Removing **${name}** and its installed modules...`,
@@ -109,32 +92,25 @@ export class RepoCommand extends BaseSubcommand {
     try {
       await this.downloaderService.removeRepo(name);
       this.container.logger.info(
-        `[Repo] Removed repository: ${name} by ${message.author.tag}`,
+        `[Repo] Removed repository: ${name} by ${ctx.user.tag}`,
       );
-      await msg.edit(
+      await ctx.reply(
         makeSuccessCard(
           `${Emojis.REPO} Repository Removed`,
           `Repository **${name}** and all its installed modules have been removed.`,
         ),
       );
     } catch (err: unknown) {
-      await msg.edit(
+      await ctx.reply(
         makeErrorCard("Failed to Remove Repository", errorFrom(err).message),
       );
     }
   }
 
-  public async messageRunUpdate(message: Message, args: Args): Promise<void> {
-    const name = await args.pick("string").catch(() => null);
+  public async update(ctx: CommandContext): Promise<void> {
+    const name = (await ctx.getString("name", { required: true }))!;
 
-    if (!name) {
-      await message.reply(
-        makeErrorCard("Missing Arguments", "Usage: `,repo update <name>`"),
-      );
-      return;
-    }
-
-    const msg = await message.reply(
+    await ctx.reply(
       makeInfoCard(
         "Updating Repository",
         `Pulling latest changes for **${name}**...`,
@@ -144,9 +120,9 @@ export class RepoCommand extends BaseSubcommand {
     try {
       await this.downloaderService.updateRepo(name);
       this.container.logger.info(
-        `[Repo] ${Emojis.REPO} Updated repository: ${name} by ${message.author.tag}`,
+        `[Repo] ${Emojis.REPO} Updated repository: ${name} by ${ctx.user.tag}`,
       );
-      await msg.edit(
+      await ctx.reply(
         makeSuccessCard(
           `${Emojis.REPO} Repository Updated`,
           `Successfully updated repository **${name}** to the latest commit.`,
@@ -157,16 +133,16 @@ export class RepoCommand extends BaseSubcommand {
       this.container.logger.warn(
         `[Repo] ${Emojis.ERROR} Failed to update repo: ${name} — ${msg_}`,
       );
-      await msg.edit(
+      await ctx.reply(
         makeErrorCard(`${Emojis.ERROR} Failed to Update Repository`, msg_),
       );
     }
   }
 
-  public async messageRunList(message: Message): Promise<void> {
+  public async list(ctx: CommandContext): Promise<void> {
     const repos = await this.downloaderService.listRepos();
     if (!repos.length) {
-      await message.reply(
+      await ctx.reply(
         makeErrorCard(
           "No Repositories",
           "No third-party repositories have been added yet.",
@@ -178,21 +154,17 @@ export class RepoCommand extends BaseSubcommand {
     const list = repos.map(
       (r) => `**${r.name}** (\`${r.branch}\`)\n<${r.url}>`,
     );
-    await message.reply(makeListCard("Added Repositories", list));
+    await paginateList({
+      interactionOrMessage: ctx.source,
+      userId: ctx.user.id,
+      title: "Added Repositories",
+      items: list,
+      perPage: 5,
+    });
   }
 
-  public async messageRunModules(message: Message, args: Args): Promise<void> {
-    const repoName = await args.pick("string").catch(() => null);
-
-    if (!repoName) {
-      await message.reply(
-        makeErrorCard(
-          "Missing Arguments",
-          "Usage: `,repo modules <repo_name>`",
-        ),
-      );
-      return;
-    }
+  public async modules(ctx: CommandContext): Promise<void> {
+    const repoName = (await ctx.getString("repo", { required: true }))!;
 
     try {
       const [modules, installed] = await Promise.all([
@@ -201,7 +173,7 @@ export class RepoCommand extends BaseSubcommand {
       ]);
 
       if (!modules.length) {
-        await message.reply(
+        await ctx.reply(
           makeErrorCard(
             "No Modules Found",
             `Repository **${repoName}** contains no discoverable modules with an \`info.json\` file.`,
@@ -217,9 +189,15 @@ export class RepoCommand extends BaseSubcommand {
           const badge = installedNames.has(m.name) ? " ✓ installed" : "";
           return `**${m.name}** (v${m.version})${badge}\n*${m.short}*`;
         });
-      await message.reply(makeListCard(`Modules in ${repoName}`, list));
+      await paginateList({
+        interactionOrMessage: ctx.source,
+        userId: ctx.user.id,
+        title: `Modules in ${repoName}`,
+        items: list,
+        perPage: 5,
+      });
     } catch (err: unknown) {
-      await message.reply(
+      await ctx.reply(
         makeErrorCard("Failed to Read Repository", errorFrom(err).message),
       );
     }

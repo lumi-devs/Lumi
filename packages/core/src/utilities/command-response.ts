@@ -56,12 +56,26 @@ export async function sendInteractionReply(
 ): Promise<Message | undefined> {
   if (interaction.replied) {
     if (mode === "followUp") return interaction.followUp(options);
-    const { flags: _flags, ...editOptions } = options;
-    return interaction.editReply(editOptions);
+    const { flags, ...editOptions } = options;
+    const cleanFlags =
+      flags === undefined
+        ? undefined
+        : Number(flags) & MessageFlags.IsComponentsV2;
+    return interaction.editReply({
+      ...editOptions,
+      ...(cleanFlags ? { flags: cleanFlags } : {}),
+    } as any);
   }
   if (interaction.deferred) {
-    const { flags: _flags, ...editOptions } = options;
-    return interaction.editReply(editOptions);
+    const { flags, ...editOptions } = options;
+    const cleanFlags =
+      flags === undefined
+        ? undefined
+        : Number(flags) & MessageFlags.IsComponentsV2;
+    return interaction.editReply({
+      ...editOptions,
+      ...(cleanFlags ? { flags: cleanFlags } : {}),
+    } as any);
   }
   await interaction.reply(options);
   return undefined;

@@ -57,10 +57,20 @@ const env = (k: string, def?: string): string => {
   throw new Error(`[Gateway] Missing env: ${k}`);
 };
 const envInt = (k: string, def: number) =>
-  process.env[k] !== undefined ? Number(process.env[k]) : def;
+  process.env[k] === undefined ? def : Number(process.env[k]);
 
-const TOKEN = env("BOT_TOKEN");
-const TRANSPORT = env("TRANSPORT", "streams");
+let TOKEN: string;
+let TRANSPORT: string;
+try {
+  TOKEN = env("BOT_TOKEN");
+  TRANSPORT = env("TRANSPORT", "streams");
+} catch (err: unknown) {
+  console.error(
+    `[Gateway] Fatal startup error: ${err instanceof Error ? err.message : String(err)}`,
+  );
+  process.exit(1);
+}
+
 if (TRANSPORT !== "streams" && TRANSPORT !== "nats") {
   console.error(
     `[Gateway] TRANSPORT=${TRANSPORT} — gateway service requires TRANSPORT=streams or TRANSPORT=nats. Exiting.`,

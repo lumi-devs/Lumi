@@ -1,6 +1,7 @@
 import { Precondition } from "@sapphire/framework";
 import type { ChatInputCommandInteraction, Message } from "discord.js";
 import { PermissionLevel, resolvePermissionLevel } from "#lib/permissions.js";
+import { LanguageKeys } from "#core/i18n/keys.js";
 
 declare module "@sapphire/framework" {
   interface Preconditions {
@@ -24,7 +25,7 @@ export class AdministratorPrecondition extends Precondition {
       : this.error({
           identifier: "PermissionDenied",
           message: `You need at least **Administrator** level to use this.`,
-          context: { i18nKey: "preconditions:administrator" },
+          context: { i18nKey: LanguageKeys.Preconditions.Administrator },
         });
   }
 }

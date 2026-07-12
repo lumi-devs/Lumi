@@ -303,7 +303,7 @@ model AuditLedger {
 model ModuleData {
   guildId    String  @map("guild_id") @db.VarChar(20)
   moduleName String  @map("module_name") @db.VarChar(64)
-  targetId   String  @map("target_id") @db.VarChar(20) // User ID, Channel ID, or 'global'
+  targetId   String  @map("target_id") @db.VarChar(191) // User/Channel ID, 'global', or a module-defined key (prefixed id, author hash, …)
   key        String  @db.VarChar(64)
   value      Json    // The dynamic payload
 

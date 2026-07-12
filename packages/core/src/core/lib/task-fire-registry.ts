@@ -84,6 +84,7 @@ export class TaskFireConsumer {
   ) {}
 
   public async start(): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias, consistent-this
     activeConsumer = this;
     const handlers = getRegisteredFireHandlers();
     if (handlers.length === 0) {

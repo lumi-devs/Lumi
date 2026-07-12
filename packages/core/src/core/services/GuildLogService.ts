@@ -18,8 +18,10 @@ export class GuildLogService extends Service {
 
     if (!logChannelId || typeof logChannelId !== "string") return;
 
-    const channel = container.client.channels.cache.get(logChannelId);
-    if (!channel?.isTextBased() || !("send" in channel)) return;
+    const channel =
+      container.client.channels.cache.get(logChannelId) ??
+      (await container.client.channels.fetch(logChannelId).catch(() => null));
+    if (!channel || !channel.isTextBased() || !("send" in channel)) return;
 
     const title = isNullish(entry.caseNumber)
       ? entry.action

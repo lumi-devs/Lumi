@@ -1,0 +1,89 @@
+{
+  "name": "logging",
+  "displayName": "Logging",
+  "emoji": "📋",
+  "description": "Server event logs: message deletes/edits, joins, leaves, bans, unbans, nickname and role changes.",
+  "version": "1.0.0",
+  "isCore": false,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": false,
+  "targetService": "worker",
+  "subStores": [
+    "listeners"
+  ],
+  "configFields": [
+    {
+      "key": "log_channel_id",
+      "type": "CHANNEL",
+      "label": "Log Channel",
+      "description": "Channel where server events are logged.",
+      "channelTypes": [
+        0
+      ]
+    },
+    {
+      "key": "message_deletes",
+      "type": "BOOLEAN",
+      "label": "Message Deletes",
+      "description": "Log deleted messages.",
+      "default": true
+    },
+    {
+      "key": "message_edits",
+      "type": "BOOLEAN",
+      "label": "Message Edits",
+      "description": "Log edited messages (before/after).",
+      "default": true
+    },
+    {
+      "key": "member_joins",
+      "type": "BOOLEAN",
+      "label": "Member Joins",
+      "description": "Log members joining the server.",
+      "default": true
+    },
+    {
+      "key": "member_leaves",
+      "type": "BOOLEAN",
+      "label": "Member Leaves",
+      "description": "Log members leaving the server.",
+      "default": true
+    },
+    {
+      "key": "member_bans",
+      "type": "BOOLEAN",
+      "label": "Member Bans",
+      "description": "Log bans.",
+      "default": true
+    },
+    {
+      "key": "member_unbans",
+      "type": "BOOLEAN",
+      "label": "Member Unbans",
+      "description": "Log unbans.",
+      "default": true
+    },
+    {
+      "key": "nickname_changes",
+      "type": "BOOLEAN",
+      "label": "Nickname Changes",
+      "description": "Log nickname changes.",
+      "default": true
+    },
+    {
+      "key": "role_changes",
+      "type": "BOOLEAN",
+      "label": "Role Changes",
+      "description": "Log member role additions/removals.",
+      "default": true
+    },
+    {
+      "key": "ignored_channels",
+      "type": "STRING",
+      "label": "Ignored Channel IDs",
+      "description": "Comma-separated channel IDs whose message events are not logged.",
+      "list": true
+    }
+  ]
+}

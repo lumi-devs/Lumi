@@ -48,7 +48,7 @@ x-lumi-service: &lumi-service
     LOG_FORMAT: "${LOG_FORMAT:-json}"
     LOG_LEVEL: "${LOG_LEVEL:-info}"
     # Per-service V8 heap cap. Worker default is 384 MiB (≈75% of the 512 MiB
-    # container limit below); gateway/api override this in their own blocks.
+    # container limit below); gateway overrides this in its own block.
     NODE_OPTIONS: "${NODE_OPTIONS:---max-old-space-size=384}"
     # Route all outbound discord.js REST through the shared nirn-proxy so
     # one global + per-route bucket budget is shared across every worker

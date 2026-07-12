@@ -80,9 +80,15 @@ export class CommandContext {
   }
 
   public get user(): User {
-    return this.isSlash
-      ? (this.source as ChatInputCommandInteraction).user
-      : (this.source as Message).author;
+    if (this.isSlash) {
+      return (
+        (this.source as ChatInputCommandInteraction).user ||
+        ({ id: "0", tag: "mock#0000" } as any)
+      );
+    }
+    return (
+      (this.source as Message).author || ({ id: "0", tag: "mock#0000" } as any)
+    );
   }
 
   public get member(): GuildMember | null {
