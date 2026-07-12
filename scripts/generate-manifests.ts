@@ -6,8 +6,8 @@ import {
   manifestFromMeta,
   writeManifest,
   type ModuleManifest,
-} from "../packages/core/src/core/module-system/manifest.js";
-import type { ModuleMeta, ModuleOptions } from "../packages/core/src/core/module-system/Module.js";
+} from "../packages/core/src/lib/module-system/manifest.js";
+import type { ModuleMeta, ModuleOptions } from "../packages/core/src/lib/module-system/Module.js";
 
 // Build-time generator for per-module `manifest.json`. Imports each module's
 // `index.ts` to read its in-code `meta` (the Zod `configSchema` stays the single
@@ -19,7 +19,7 @@ const ROOT = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 /** Roots to scan. Extra dirs (e.g. addon checkouts) may be passed as argv. */
 const ROOTS = [
   path.join(ROOT, "packages/core/src/modules"),
-  path.join(ROOT, "packages/core/src/core/modules"),
+  path.join(ROOT, "packages/core/src/lib/modules"),
   ...process.argv.slice(2).map((p) => path.resolve(p)),
 ];
 

@@ -34,7 +34,7 @@ export function registerRpcHandler<TIn, TOut>(
   rpcHandlers.set(action, handler as RpcHandler<unknown, unknown>);
 }
 
-function dispatchRpc(req: RpcRequest): Promise<RpcResponse> {
+async function dispatchRpc(req: RpcRequest): Promise<RpcResponse> {
   const handler = rpcHandlers.get(req.action);
   if (!handler)
     return { id: req.id, ok: false, error: `Missing action: ${req.action}` };

@@ -13,6 +13,9 @@ import {
 } from "../lib/rules.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
+import { checkDomain } from "@sapphire/phisherman";
+
+const URL_RE = /https?:\/\/([^\s/<>"']+)/gi;
 
 @ApplyOptions<GuildMessageListener.Options>({ module: "filter" })
 export class FilterMessageListener extends GuildMessageListener {
@@ -31,11 +34,46 @@ export class FilterMessageListener extends GuildMessageListener {
 
     const mentionCount =
       message.mentions.users.size + message.mentions.roles.size;
-    const hit = this.filterService.test(
+    let hit = this.filterService.test(
       message.guildId,
       message.content,
       mentionCount,
     );
+
+    if (!hit && process.env.PHISHERMAN_API_KEY) {
+      const domains: string[] = [];
+      for (const match of message.content.matchAll(URL_RE)) {
+        const host = match[1]?.split(":")[0]?.toLowerCase();
+        if (host) domains.push(host);
+      }
+
+      if (domains.length > 0) {
+        const linkAllowlist = await getService("config").getConfigList(
+          message.guildId,
+          "filter",
+          "link_allowlist",
+        );
+        const uniqueDomains = [...new Set(domains)].filter((host) => {
+          return !linkAllowlist.some((domain) => {
+            const d = domain.toLowerCase();
+            return host === d || host.endsWith(`.${d}`);
+          });
+        });
+
+        for (const domain of uniqueDomains) {
+          try {
+            const res = await checkDomain(domain, process.env.PHISHERMAN_API_KEY);
+            if (res.verifiedPhish || res.isScam || res.classification === "malicious" || res.classification === "suspicious") {
+              hit = { rule: "phish", detail: domain };
+              break;
+            }
+          } catch (err: unknown) {
+            this.container.logger.error(`[Filter] Phisherman check failed for ${domain}:`, err);
+          }
+        }
+      }
+    }
+
     if (!hit) return;
 
     if (await this.#isExempt(message)) return;

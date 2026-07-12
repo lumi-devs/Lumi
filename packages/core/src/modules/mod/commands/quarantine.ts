@@ -1,16 +1,10 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import { tryParseJSON } from "@sapphire/utilities";
-import { Colors, type GuildMember } from "discord.js";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
-import { formatAuditReason } from "#lib/utilities/audit.js";
 import { logError } from "#lib/utilities/errors.js";
-import { logToChannel } from "../lib/helpers.js";
-
-const quarantineKey = (guildId: string, userId: string) =>
-  `lumi:mod:${guildId}:quarantine:${userId}`;
+import { QuarantineAction } from "../lib/actions/index.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "quarantine",
@@ -69,36 +63,27 @@ export class QuarantineCommand extends BaseSubcommand {
     }
     const guildId = ctx.guildId!;
 
-    const quarantineRoleId = await this.container.db.config.getModuleConfig(
-      guildId,
-      "mod",
-      "quarantine_role_id",
-    );
-    if (!quarantineRoleId || typeof quarantineRoleId !== "string") {
-      return ctx.replyError(
-        t("commands:quarantineUnconfiguredTitle"),
-        t("commands:quarantineUnconfigured"),
-      );
-    }
-
-    const key = quarantineKey(guildId, member.id);
-    if (await this.container.redis.exists(key)) {
-      return ctx.replyError(
-        t("commands:quarantineAlreadyTitle"),
-        t("commands:quarantineAlready", { user: member.user.username }),
-      );
-    }
-
-    const savedRoles = member.roles.cache
-      .filter((r) => r.id !== guildId && r.id !== quarantineRoleId)
-      .map((r) => r.id);
-
+    let c;
     try {
-      await member.roles.set(
-        [guildId, quarantineRoleId],
-        formatAuditReason(ctx.user, reason),
-      );
+      c = await QuarantineAction.apply({
+        guild: ctx.guild!,
+        targetMember: member,
+        moderator: ctx.user,
+        reason,
+      });
     } catch (err: unknown) {
+      if (err instanceof Error && err.message === "UNCONFIGURED") {
+        return ctx.replyError(
+          t("commands:quarantineUnconfiguredTitle"),
+          t("commands:quarantineUnconfigured"),
+        );
+      }
+      if (err instanceof Error && err.message === "ALREADY_QUARANTINED") {
+        return ctx.replyError(
+          t("commands:quarantineAlreadyTitle"),
+          t("commands:quarantineAlready", { user: member.user.username }),
+        );
+      }
       logError(`quarantine add: guild=${guildId} target=${member.id}`, err);
       return ctx.replyError(
         t("commands:modActionFailedTitle"),
@@ -106,29 +91,6 @@ export class QuarantineCommand extends BaseSubcommand {
       );
     }
 
-    await this.container.redis.set(
-      key,
-      JSON.stringify(savedRoles),
-      "EX",
-      30 * 24 * 60 * 60,
-    );
-
-    const c = await this.container.db.moderation.createModerationCase({
-      guildId,
-      userId: member.id,
-      moderatorId: ctx.user.id,
-      action: "mute",
-      reason,
-    });
-    await logToChannel(
-      guildId,
-      "🔒 Quarantined",
-      Colors.Orange,
-      member.id,
-      ctx.user,
-      reason,
-      c.caseNumber,
-    );
     return ctx.replySuccess(
       t("commands:quarantineSuccessTitle"),
       t("commands:quarantineSuccess", {
@@ -154,28 +116,21 @@ export class QuarantineCommand extends BaseSubcommand {
     }
     const guildId = ctx.guildId!;
 
-    const key = quarantineKey(guildId, member.id);
-    const saved = await this.container.redis.get(key);
-    if (!saved) {
-      return ctx.replyError(
-        t("commands:quarantineNotTitle"),
-        t("commands:quarantineNot", { user: member.user.username }),
-      );
-    }
-
-    const parsedRoles = tryParseJSON(saved);
-    const rolesToRestore = Array.isArray(parsedRoles)
-      ? (parsedRoles as string[])
-      : [];
-    const validRoles = rolesToRestore.filter((id) =>
-      (member as GuildMember).guild.roles.cache.has(id),
-    );
+    let c;
     try {
-      await member.roles.set(
-        [guildId, ...validRoles],
-        formatAuditReason(ctx.user, reason),
-      );
+      c = await QuarantineAction.undo({
+        guild: ctx.guild!,
+        targetMember: member,
+        moderator: ctx.user,
+        reason,
+      });
     } catch (err: unknown) {
+      if (err instanceof Error && err.message === "NOT_QUARANTINED") {
+        return ctx.replyError(
+          t("commands:quarantineNotTitle"),
+          t("commands:quarantineNot", { user: member.user.username }),
+        );
+      }
       logError(`quarantine remove: guild=${guildId} target=${member.id}`, err);
       return ctx.replyError(
         t("commands:modActionFailedTitle"),
@@ -183,24 +138,6 @@ export class QuarantineCommand extends BaseSubcommand {
       );
     }
 
-    await this.container.redis.del(key);
-
-    const c = await this.container.db.moderation.createModerationCase({
-      guildId,
-      userId: member.id,
-      moderatorId: ctx.user.id,
-      action: "unmute",
-      reason,
-    });
-    await logToChannel(
-      guildId,
-      "🔓 Released",
-      Colors.Green,
-      member.id,
-      ctx.user,
-      reason,
-      c.caseNumber,
-    );
     return ctx.replySuccess(
       t("commands:quarantineReleasedTitle"),
       t("commands:quarantineReleased", {

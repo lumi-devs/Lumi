@@ -2,14 +2,10 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { userMention } from "@discordjs/formatters";
-import { Colors } from "discord.js";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
-import { formatAuditReason } from "#lib/utilities/audit.js";
 import { logError } from "#lib/utilities/errors.js";
-import { logToChannel } from "../lib/helpers.js";
-
-import { makeErrorCard } from "#lib/utilities/cards.js";
+import { BanAction } from "../lib/actions/index.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "ban",
@@ -74,15 +70,13 @@ export class BanCommand extends BaseSubcommand {
 
     const guild = ctx.guild!;
 
-    const dm = makeErrorCard(
-      `🔨 Banned — ${guild.name}`,
-      `You have been banned from **${guild.name}**.\n\n**Reason:** ${reason}`,
-    );
-    await user.send(dm).catch(() => null);
-
+    let c;
     try {
-      await guild.members.ban(user.id, {
-        reason: formatAuditReason(ctx.user, reason),
+      c = await BanAction.apply({
+        guild,
+        targetUser: user,
+        moderator: ctx.user,
+        reason,
         deleteMessageSeconds: deleteDays * 86400,
       });
     } catch (err: unknown) {
@@ -93,22 +87,6 @@ export class BanCommand extends BaseSubcommand {
       );
     }
 
-    const c = await this.container.db.moderation.createModerationCase({
-      guildId: guild.id,
-      userId: user.id,
-      moderatorId: ctx.user.id,
-      action: "ban",
-      reason,
-    });
-    await logToChannel(
-      guild.id,
-      "🔨 Banned",
-      Colors.DarkRed,
-      user.id,
-      ctx.user,
-      reason,
-      c.caseNumber,
-    );
     return ctx.replySuccess(
       t("commands:banSuccessTitle"),
       t("commands:banSuccess", {
@@ -137,7 +115,12 @@ export class BanCommand extends BaseSubcommand {
 
     const guild = ctx.guild!;
     try {
-      await guild.bans.remove(userId, formatAuditReason(ctx.user, reason));
+      await BanAction.undo({
+        guild,
+        targetId: userId,
+        moderator: ctx.user,
+        reason,
+      });
     } catch (err: unknown) {
       logError(`unban: guild=${guild.id} target=${userId}`, err);
       return ctx.replyError(
@@ -146,13 +129,6 @@ export class BanCommand extends BaseSubcommand {
       );
     }
 
-    await this.container.db.moderation.createModerationCase({
-      guildId: guild.id,
-      userId,
-      moderatorId: ctx.user.id,
-      action: "unban",
-      reason,
-    });
     return ctx.replySuccess(
       t("commands:banRemoveSuccessTitle"),
       t("commands:banRemoveSuccess", { user: userMention(userId) }),

@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { PermissionOverridesPrecondition } from '../../src/core/permissions/preconditions/PermissionOverrides.js';
+import { PermissionOverridesPrecondition } from '#lib/permissions/preconditions/PermissionOverrides.js';
 import { container } from '@sapphire/framework';
 
-vi.mock('#lib/permissions.js', async (importOriginal) => {
+vi.mock('#lib/permissions/index.js', async (importOriginal) => {
 	const actual = await importOriginal() as any;
 	return {
 		...actual,
 		resolvePermissionLevel: vi.fn()
 	};
 });
-import { PermissionLevel, resolvePermissionLevel } from '#lib/permissions.js';
+import { PermissionLevel, resolvePermissionLevel } from '#lib/permissions/index.js';
 
 describe('PermissionOverridesPrecondition', () => {
         let precondition: any;

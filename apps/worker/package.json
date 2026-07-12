@@ -1,6 +1,6 @@
 {
   "name": "@lumi/worker",
-  "version": "2.1.1",
+  "version": "1.0.0",
   "license": "Apache-2.0",
   "description": "Worker service — runs the full Lumi bot (gateway + features + scheduler) in one process.",
   "type": "module",

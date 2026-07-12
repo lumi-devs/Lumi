@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ModerationRepository } from "#root/prisma/repositories/ModerationRepository.js";
+import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
 
 // Backs the "do not break when refactoring" contract on
 // ModerationRepository.createModerationCase: the counter read-and-increment

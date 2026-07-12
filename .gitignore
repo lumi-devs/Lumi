@@ -12,10 +12,7 @@ tmp/
 .env
 *.log
 logs/
-drizzle/*.sql
-# keep drizzle/ folder but not committed migration SQL (generate them fresh)
-!drizzle/.gitkeep
-
+indirections.txt
 /src/generated/prisma
 .aider*
 
