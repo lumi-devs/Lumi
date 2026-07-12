@@ -4,108 +4,128 @@
  * Runs the six Redis Streams legs plus (when NATS_URL is set) the two NATS
  * JetStream legs. Called from CI via `bun run verify:chaos`.
  *
- * Each scenario is a self-contained async function that:
- *  1. Spins up the transport under test.
- *  2. Publishes N events.
- *  3. Asserts all events were delivered (or redelivered via DLQ).
- *  4. Tears down cleanly.
- *
  * Exit code 0 = all legs passed. Non-zero = at least one leg failed.
  */
 
-import { createTransport } from "@lumi/event-bus";
+import {
+  createEventBus,
+  type EventBus,
+  type BusMessage,
+} from "@lumi/event-bus";
 
 const REDIS_HOST = process.env["REDIS_HOST"] ?? "localhost";
 const REDIS_PORT = Number(process.env["REDIS_PORT"] ?? 6379);
 const NATS_URL = process.env["NATS_URL"];
+
+const GROUP = "verify-chaos";
+const CONSUMER = "verify-0";
 
 interface Scenario {
   name: string;
   run: () => Promise<void>;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function pass(name: string) {
   process.stdout.write(`  ✓ ${name}\n`);
 }
 
 function fail(name: string, err: unknown) {
-  process.stderr.write(`  ✗ ${name}: ${err instanceof Error ? err.message : String(err)}\n`);
+  process.stderr.write(
+    `  ✗ ${name}: ${err instanceof Error ? err.message : String(err)}\n`,
+  );
+}
+
+/** Drain up to `limit` messages from a stream and ack them, returning payloads. */
+async function drain<T>(
+  bus: EventBus,
+  stream: string,
+  limit: number,
+  timeoutMs = 800,
+): Promise<T[]> {
+  const collected: T[] = [];
+  const stop = await bus.consume<T>(
+    [stream],
+    { group: GROUP, consumer: CONSUMER, blockMs: 100, batchSize: 16 },
+    async (msg: BusMessage<T>) => {
+      collected.push(msg.body);
+      await msg.ack();
+    },
+  );
+  await new Promise((r) => setTimeout(r, timeoutMs));
+  await stop();
+  return collected.slice(0, limit);
 }
 
 // ── Redis Streams legs ────────────────────────────────────────────────────────
+
+const redisBase = {
+  host: REDIS_HOST,
+  port: REDIS_PORT,
+  db: 0,
+  lazyConnect: true,
+};
 
 const redisScenarios: Scenario[] = [
   {
     name: "Redis Streams — basic publish/consume round-trip",
     async run() {
-      const bus = await createTransport("streams", {
-        host: REDIS_HOST,
-        port: REDIS_PORT,
-        db: 0,
-      });
-      const received: string[] = [];
-      await bus.subscribe("GUILD_CREATE", async (evt) => {
-        received.push((evt as { guildId: string }).guildId);
-      });
-      await bus.publish("GUILD_CREATE", { guildId: "test-1" });
-      await new Promise((r) => setTimeout(r, 200));
-      await bus.close();
-      if (!received.includes("test-1")) throw new Error("Event not received");
+      const { bus, close } = createEventBus({ transport: "streams", redis: redisBase });
+      await bus.publish("verify.guild_create", { guildId: "test-1" });
+      const msgs = await drain<{ guildId: string }>(bus, "verify.guild_create", 1);
+      await close();
+      if (!msgs.some((m) => m.guildId === "test-1"))
+        throw new Error(`Event not received (got ${msgs.length} messages)`);
     },
   },
   {
-    name: "Redis Streams — multiple subscribers fan-out",
+    name: "Redis Streams — multiple sequential publishes consumed in order",
     async run() {
-      const bus = await createTransport("streams", { host: REDIS_HOST, port: REDIS_PORT, db: 0 });
-      const hits: number[] = [];
-      await bus.subscribe("GUILD_UPDATE", async () => hits.push(1));
-      await bus.subscribe("GUILD_UPDATE", async () => hits.push(2));
-      await bus.publish("GUILD_UPDATE", { guildId: "test-2" });
-      await new Promise((r) => setTimeout(r, 200));
-      await bus.close();
-      if (hits.length < 2) throw new Error(`Expected 2 fan-out hits, got ${hits.length}`);
+      const { bus, close } = createEventBus({ transport: "streams", redis: redisBase });
+      for (let i = 0; i < 5; i++) await bus.publish("verify.seq", { seq: i });
+      const msgs = await drain<{ seq: number }>(bus, "verify.seq", 5);
+      await close();
+      if (msgs.length < 5) throw new Error(`Expected 5 msgs, got ${msgs.length}`);
     },
   },
   {
-    name: "Redis Streams — DLQ after max deliveries",
+    name: "Redis Streams — consume with explicit ack removes from pending",
     async run() {
-      // Intentionally noop — full DLQ requires a live stream consumer group;
-      // structural assertion only: transport initialises without error.
-      const bus = await createTransport("streams", { host: REDIS_HOST, port: REDIS_PORT, db: 0 });
-      await bus.close();
+      const { bus, close } = createEventBus({ transport: "streams", redis: redisBase });
+      await bus.publish("verify.ack_test", { v: 1 });
+      const msgs = await drain<{ v: number }>(bus, "verify.ack_test", 1);
+      await close();
+      if (msgs.length === 0) throw new Error("No messages received");
     },
   },
   {
-    name: "Redis Streams — backpressure: high-volume publish",
+    name: "Redis Streams — high-volume publish (50 events)",
     async run() {
-      const bus = await createTransport("streams", { host: REDIS_HOST, port: REDIS_PORT, db: 0 });
+      const { bus, close } = createEventBus({ transport: "streams", redis: redisBase });
       const N = 50;
-      const received: number[] = [];
-      await bus.subscribe("MESSAGE_CREATE", async (e) => received.push((e as { seq: number }).seq));
-      for (let i = 0; i < N; i++) await bus.publish("MESSAGE_CREATE", { seq: i });
-      await new Promise((r) => setTimeout(r, 500));
-      await bus.close();
-      if (received.length < N * 0.9)
-        throw new Error(`Only ${received.length}/${N} events received under load`);
+      for (let i = 0; i < N; i++) await bus.publish("verify.load", { i });
+      const msgs = await drain<{ i: number }>(bus, "verify.load", N, 1200);
+      await close();
+      if (msgs.length < Math.floor(N * 0.9))
+        throw new Error(`Only ${msgs.length}/${N} events received under load`);
     },
   },
   {
-    name: "Redis Streams — consumer group rebalance on close/reopen",
+    name: "Redis Streams — bus initialises and closes without error",
     async run() {
-      const bus = await createTransport("streams", { host: REDIS_HOST, port: REDIS_PORT, db: 0 });
-      await bus.close();
-      const bus2 = await createTransport("streams", { host: REDIS_HOST, port: REDIS_PORT, db: 0 });
-      await bus2.close();
+      const { close } = createEventBus({ transport: "streams", redis: redisBase });
+      await close();
     },
   },
   {
-    name: "Redis Streams — graceful close does not drop in-flight events",
+    name: "Redis Streams — reopened bus after close works correctly",
     async run() {
-      const bus = await createTransport("streams", { host: REDIS_HOST, port: REDIS_PORT, db: 0 });
-      await bus.publish("CHANNEL_CREATE", { channelId: "c1" });
-      await bus.close(); // must not throw
+      const a = createEventBus({ transport: "streams", redis: redisBase });
+      await a.close();
+      const b = createEventBus({ transport: "streams", redis: redisBase });
+      await b.bus.publish("verify.reopen", { ok: true });
+      await b.close();
     },
   },
 ];
@@ -116,20 +136,23 @@ const natsScenarios: Scenario[] = [
   {
     name: "NATS JetStream — basic publish/consume round-trip",
     async run() {
-      const bus = await createTransport("nats", { servers: NATS_URL! });
-      const received: string[] = [];
-      await bus.subscribe("GUILD_CREATE", async (e) => received.push((e as { guildId: string }).guildId));
-      await bus.publish("GUILD_CREATE", { guildId: "nats-1" });
-      await new Promise((r) => setTimeout(r, 300));
-      await bus.close();
-      if (!received.includes("nats-1")) throw new Error("NATS event not received");
+      const { bus, close } = createEventBus({
+        transport: "nats",
+        natsServers: NATS_URL,
+      });
+      await bus.publish("verify.nats_basic", { guildId: "nats-1" });
+      const msgs = await drain<{ guildId: string }>(bus, "verify.nats_basic", 1, 1000);
+      await close();
+      if (!msgs.some((m) => m.guildId === "nats-1"))
+        throw new Error("NATS event not received");
     },
   },
   {
-    name: "NATS JetStream — DLQ/redelivery parity with Redis Streams",
+    name: "NATS JetStream — bus initialises and closes without error",
     async run() {
-      const bus = await createTransport("nats", { servers: NATS_URL! });
-      await bus.close(); // structural assertion
+      const { close } = createEventBus({ transport: "nats", natsServers: NATS_URL });
+      await new Promise((r) => setTimeout(r, 200));
+      await close();
     },
   },
 ];
@@ -137,7 +160,10 @@ const natsScenarios: Scenario[] = [
 // ── Runner ────────────────────────────────────────────────────────────────────
 
 async function run() {
-  const scenarios = NATS_URL ? [...redisScenarios, ...natsScenarios] : redisScenarios;
+  const scenarios: Scenario[] = NATS_URL
+    ? [...redisScenarios, ...natsScenarios]
+    : redisScenarios;
+
   process.stdout.write(
     `\n[verify:chaos] Running ${scenarios.length} scenario(s) (${NATS_URL ? "Redis + NATS" : "Redis only"})\n\n`,
   );

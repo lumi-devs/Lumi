@@ -14,8 +14,6 @@ import {
 import { swallow } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 
-const URL_RE = /https?:\/\/([^\s/<>"']+)/gi;
-
 @ApplyOptions<GuildMessageListener.Options>({ module: "filter" })
 export class FilterMessageListener extends GuildMessageListener {
   private get filterService(): FilterService {
