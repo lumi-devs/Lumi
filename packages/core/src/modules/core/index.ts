@@ -2,10 +2,7 @@
 import { Module } from "#lib/module-system/Module.js";
 import { container, type Piece } from "@sapphire/framework";
 import { getService } from "#lib/module-system/Service.js";
-import {
-  registerRpcHandler,
-  rpcHandlers,
-} from "#lib/rabbitmq/index.js";
+import { registerRpcHandler, rpcHandlers } from "#lib/rabbitmq/index.js";
 import { RPC_ACTIONS } from "@lumi/contracts";
 import { resolver, ADDON_MODULES_ROOT } from "#lib/downloader/resolver.js";
 import {

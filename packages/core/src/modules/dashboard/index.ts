@@ -1,9 +1,6 @@
 import { Module, DefineModule } from "#lib/module-system/Module.js";
 import { container } from "@sapphire/framework";
-import {
-  registerRpcHandler,
-  rpcHandlers,
-} from "#lib/rabbitmq/index.js";
+import { registerRpcHandler, rpcHandlers } from "#lib/rabbitmq/index.js";
 import { RPC_ACTIONS } from "@lumi/contracts";
 import type { Prisma } from "@prisma/client";
 import { s, type BaseValidator } from "@sapphire/shapeshift";
