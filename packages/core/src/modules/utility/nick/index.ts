@@ -1,5 +1,5 @@
-import { Module, DefineModule } from "#core/module-system/Module.js";
-import { Emojis } from "#utilities/assets.js";
+import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { Emojis } from "#lib/utilities/assets.js";
 
 @DefineModule({
   name: "nick",

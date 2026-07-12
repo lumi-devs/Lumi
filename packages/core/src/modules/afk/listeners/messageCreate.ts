@@ -7,15 +7,15 @@ import {
   TextDisplayBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
-import { GuildMessageListener } from "#core/module-system/GuildMessageListener.js";
-import type { GuildMessage } from "#lib/types.js";
-import { Colors } from "#utilities/branding.js";
-import { makeCard } from "#utilities/cards.js";
-import { logError } from "#utilities/errors.js";
-import { canSendMessages } from "#utilities/listeners.js";
+import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
+import type { GuildMessage } from "#lib/types/common.js";
+import { Colors } from "#lib/utilities/branding.js";
+import { makeCard } from "#lib/utilities/cards.js";
+import { logError } from "#lib/utilities/errors.js";
+import { canSendMessages } from "#lib/utilities/listeners.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import { AfkKeys } from "../keys.js";
-import { Emojis } from "#utilities/assets.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import {
   AFK_MENTION_COOLDOWN_MS,
   AFK_NICK_EDIT_COOLDOWN_MS,
@@ -42,7 +42,6 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
   protected async handle(message: GuildMessage): Promise<void> {
     const entry = await getAfkEntry(message.guildId, message.author.id);
     if (entry) {
-      // Don't remove AFK if it's a command
       const prefixes = await this.container.client.fetchPrefix(message);
       const prefixList = Array.isArray(prefixes) ? prefixes : [prefixes];
       const isCommand = prefixList.some((p) => message.content.startsWith(p));
@@ -171,7 +170,6 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
 
     if (!hits.length) return;
 
-    // Batch all mention writes in a single Redis pipeline.
     await addAfkMentionsBatch(
       message.guildId,
       hits.map(({ userId }) => ({ userId, mention: mentionBase })),
@@ -179,7 +177,6 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
 
     if (onCooldown) return;
 
-    // Send a notification for the first AFK hit only.
     const { userId, entry } = hits[0]!;
     const member = await message.guild.members
       .fetch(userId)

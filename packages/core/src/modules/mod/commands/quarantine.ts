@@ -4,12 +4,11 @@ import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { tryParseJSON } from "@sapphire/utilities";
 import { Colors, type GuildMember } from "discord.js";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions.js";
-import { formatAuditReason } from "#utilities/audit.js";
-import { logError } from "#utilities/errors.js";
+import { PermissionLevel } from "#lib/permissions/index.js";
+import { formatAuditReason } from "#lib/utilities/audit.js";
+import { logError } from "#lib/utilities/errors.js";
 import { logToChannel } from "../lib/helpers.js";
 
-// Redis key: lumi:mod:{guildId}:quarantine:{userId} → JSON array of role IDs
 const quarantineKey = (guildId: string, userId: string) =>
   `lumi:mod:${guildId}:quarantine:${userId}`;
 
@@ -107,7 +106,6 @@ export class QuarantineCommand extends BaseSubcommand {
       );
     }
 
-    // 30-day TTL prevents orphaned keys if the member leaves or is banned while quarantined
     await this.container.redis.set(
       key,
       JSON.stringify(savedRoles),

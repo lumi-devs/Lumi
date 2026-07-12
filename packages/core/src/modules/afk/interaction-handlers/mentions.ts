@@ -1,6 +1,7 @@
 import {
   InteractionHandlerTypes,
   InteractionHandler,
+  container,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ButtonInteraction } from "discord.js";
@@ -10,10 +11,9 @@ import {
   hyperlink,
   messageLink,
 } from "@discordjs/formatters";
-import { makeListCard } from "#utilities/cards.js";
-import { formatUptime } from "#utilities/time.js";
-import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
-import { Emojis } from "#utilities/assets.js";
+import { makeListCard } from "#lib/utilities/cards.js";
+import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import { getAfkMentions } from "../data/afk.js";
 
 const PAGE_SIZE = 5;
@@ -41,7 +41,7 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
       `${Emojis.MAIL} Recent Mentions`,
       mentions.map(
         (m) =>
-          `${userMention(m.authorId)} in ${channelMention(m.channelId)} — ${formatUptime(Date.now() - m.ts * 1000)} ago\n${hyperlink("Jump to Message", messageLink(m.channelId, m.messageId, interaction.guildId!))}`,
+          `${userMention(m.authorId)} in ${channelMention(m.channelId)} — ${container.utilities.time.formatUptime(Date.now() - m.ts * 1000)} ago\n${hyperlink("Jump to Message", messageLink(m.channelId, m.messageId, interaction.guildId!))}`,
       ),
       page,
       PAGE_SIZE,

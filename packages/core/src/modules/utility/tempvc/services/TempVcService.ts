@@ -1,16 +1,17 @@
-import { Service } from "#core/module-system/Service.js";
+import { Service } from "#lib/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import { AsyncQueue } from "@sapphire/async-queue";
 import {
   ChannelType,
+  Collection,
   PermissionFlagsBits,
   type Guild,
   type GuildMember,
   type VoiceBasedChannel,
 } from "discord.js";
 import { Routes } from "discord-api-types/v10";
-import { errorCode, logError } from "#utilities/errors.js";
+import { errorCode, logError } from "#lib/utilities/errors.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import {
   clearVoiceChannelOccupancy,
@@ -33,7 +34,7 @@ import {
 import { tempVcRegistry } from "../registry.js";
 import { buildPanel } from "../ui/panel.js";
 
-const creationQueues = new Map<string, AsyncQueue>();
+const creationQueues = new Collection<string, AsyncQueue>();
 
 const cleanupJobId = (guildId: string, channelId: string) =>
   `tempvc-cleanup:${guildId}:${channelId}`;
@@ -55,11 +56,7 @@ export default class TempVcService extends Service {
     return set === null;
   }
 
-  /**
-   * Creates a temp VC for `member` from a generator channel, moves them in, and
-   * posts the control panel. Numbering is serialized per-generator to avoid
-   * duplicate names under concurrent joins.
-   */
+  /** Creates a temporary voice channel and moves the member in. */
   public async createVc(
     member: GuildMember,
     generator: VoiceBasedChannel,
@@ -83,10 +80,6 @@ export default class TempVcService extends Service {
       const rawName = template.includes("{}")
         ? template.replace("{}", String(number))
         : `${template} ${number}`;
-      // Discord caps channel names at 100 chars. Slice on code-point boundaries
-      // (spread iterates code points, not UTF-16 units) so a multi-byte emoji at
-      // the boundary can't be cut into a lone surrogate — which Discord's API
-      // rejects as an invalid-form-body validation error.
       const name = [...rawName].slice(0, 100).join("");
 
       const vc = await guild.channels.create({
@@ -97,9 +90,6 @@ export default class TempVcService extends Service {
         reason: `Temp VC created by ${member.user.tag}`,
       });
 
-      // If the member left voice before we could move them, setChannel rejects.
-      // Don't leave an orphaned channel + control panel for the empty-VC reaper
-      // to mop up later — tear it down now and bail.
       const moved = await member.voice
         .setChannel(vc)
         .then(() => true)
@@ -138,11 +128,7 @@ export default class TempVcService extends Service {
     }
   }
 
-  /**
-   * Sorts voice channels in the category to group generators first, managed
-   * channels next (sorted by Duo/Trio/Squad/Other, then by number), and static
-   * channels last.
-   */
+  /** Sorts voice channels by grouping generators, managed VCs, and static VCs. */
   public async reorderChannels(
     guild: Guild,
     categoryId: string,
@@ -176,11 +162,6 @@ export default class TempVcService extends Service {
       generators.sort((a, b) => a.position - b.position);
       staticVcs.sort((a, b) => a.position - b.position);
 
-      // Group managed VCs by the generator they spawned from, ordered by that
-      // generator's channel position (admin-controlled), then by spawn number
-      // within each group. Replaces the old hardcoded Duo/Trio/Squad name-regex:
-      // grouping keys off the record's generatorId (structured data we already
-      // store) instead of guessing a "type" from the channel name.
       const genPosition = new Map<string, number>();
       generators.forEach((g, i) => genPosition.set(g.id, i));
 
@@ -213,10 +194,7 @@ export default class TempVcService extends Service {
     }
   }
 
-  /**
-   * Debounced empty-channel cleanup via the persisted (Redis-backed) task queue.
-   * Keyed by channel so re-scheduling is idempotent and the job survives restarts.
-   */
+  /** Schedules a debounced channel cleanup task. */
   public async scheduleCleanup(
     guildId: string,
     channelId: string,
@@ -236,13 +214,7 @@ export default class TempVcService extends Service {
     ).catch((err: unknown) => logError("TempVC: schedule cleanup failed", err));
   }
 
-  /**
-   * Job handler: delete the channel if it's empty (per the Redis voice-state
-   * projection) via REST. The voice-state cache is disabled, so we don't read
-   * `channel.members.size`; instead we trust the projection maintained by
-   * `lib/voice-occupancy` and let Discord be authoritative for channel existence
-   * (404 from DELETE = already gone = drop the record).
-   */
+  /** Deletes the channel if it is empty. */
   public async runCleanup(data: {
     guildId: string;
     channelId: string;
@@ -261,8 +233,6 @@ export default class TempVcService extends Service {
       await clearVoiceChannelOccupancy(channelId);
     } catch (err: unknown) {
       const code = errorCode(err);
-      // 10003 Unknown Channel — already deleted out from under us. 50013 Missing
-      // Permissions — we can't touch it; drop the record so we stop trying.
       if (code === 10003 || code === 50013) {
         await removeVcRecord(guildId, channelId);
         await clearVoiceChannelOccupancy(channelId);
@@ -272,12 +242,7 @@ export default class TempVcService extends Service {
     }
   }
 
-  /**
-   * Boot-time reconciliation. Schedules a cleanup for every persisted record;
-   * the cleanup task itself reconciles state (REST 404 → drop record, empty →
-   * delete + drop record, occupied → no-op). The 8s cleanup delay gives the
-   * GUILD_CREATE voice-state seed time to land before the empty check runs.
-   */
+  /** Reconciles channel cleanup at startup. */
   public async reconcileGuild(guild: Guild): Promise<void> {
     const records = await listVcRecords(guild.id);
     for (const [channelId] of records) {
@@ -308,11 +273,6 @@ export default class TempVcService extends Service {
     record: VcRecord,
     newOwnerId: string,
   ): Promise<VcRecord> {
-    // The previous owner's id is already on the record — no member lookup
-    // needed (and `permissionOverwrites.edit` takes a raw id). Gate on the
-    // channel's own overwrite cache (channel-local, always populated) rather
-    // than the member cache: that also clears the overwrite in the cold-cache
-    // case where the old member wasn't resolvable and it would otherwise leak.
     if (channel.permissionOverwrites.cache.has(record.ownerId)) {
       await channel.permissionOverwrites
         .edit(record.ownerId, { ManageChannels: null })
@@ -336,11 +296,7 @@ export default class TempVcService extends Service {
     return MODULE_NAME;
   }
 
-  /**
-   * Toggle a per-channel restriction: deny `permission` for @everyone (or clear
-   * the override when inactive) and, while active, explicitly grant it to the
-   * current members so they keep access. Persists `patch` onto the record.
-   */
+  /** Toggles per-channel connection or visibility restriction. */
   async #setRestriction(
     channel: VoiceBasedChannel,
     record: VcRecord,
@@ -365,7 +321,7 @@ export default class TempVcService extends Service {
   }
 }
 
-declare module "#core/module-system/Service.js" {
+declare module "#lib/module-system/Service.js" {
   interface Services {
     tempvc: TempVcService;
   }

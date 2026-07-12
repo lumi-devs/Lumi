@@ -19,8 +19,6 @@ export interface VcRecord {
   createdAt: number;
 }
 
-// ── Generators ───────────────────────────────────────────────────────────────
-
 export async function getGenerator(
   guildId: string,
   channelId: string,
@@ -68,9 +66,7 @@ export async function listGenerators(
   return new Map(rows.map((r) => [r.targetId, r.value]));
 }
 
-// ── Active VC records ──────────────────────────────────────────────────────────
-
-export async function getVcRecord(
+export function getVcRecord(
   guildId: string,
   channelId: string,
 ): Promise<VcRecord | null> {

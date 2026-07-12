@@ -7,25 +7,13 @@
   "type": "module",
   "exports": {
     ".": "./index.ts",
-    "./setup": "./src/client/setup.ts",
-    "./client": "./src/client/LumiClient.ts"
+    "./setup": "./src/lib/client/setup.ts",
+    "./client": "./src/lib/client/LumiClient.ts"
   },
   "imports": {
-    "#lib/commands.js": "./src/core/lib/commands.ts",
-    "#lib/env.js": "./src/core/env.ts",
-    "#lib/permissions.js": "./src/core/permissions/index.ts",
-    "#lib/module-system.js": "./src/core/module-system/Module.ts",
-    "#lib/rabbit.js": "./src/core/rabbitmq/index.ts",
-    "#lib/types.js": "./src/core/types/common.ts",
-    "#lib/guild-transaction.js": "./src/core/lib/guild-transaction.ts",
-    "#database/*.js": "./src/database/*.ts",
-    "#utilities/*.js": "./src/utilities/*.ts",
-    "#core/*.js": "./src/core/*.ts",
+    "#lib/*.js": "./src/lib/*.ts",
     "#root/*.js": "./src/*.ts",
-    "#modules/*.js": "./src/modules/*.ts",
-    "#lib/module-check.js": "./src/core/lib/module-check.ts",
-    "#lib/scheduler-bus.js": "./src/core/lib/scheduler-bus.ts",
-    "#lib/schedule-task.js": "./src/core/lib/schedule-task.ts"
+    "#modules/*.js": "./src/modules/*.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -45,9 +33,17 @@
     "@sapphire/discord.js-utilities": "^7.3.3",
     "@sapphire/fetch": "^3.0.5",
     "@sapphire/framework": "^5.5.0",
+    "@sapphire/plugin-hmr": "^3.0.2",
     "@sapphire/plugin-i18next": "^7.1.3",
+    "@sapphire/plugin-logger": "^4.1.0",
+    "@sapphire/plugin-editable-commands": "latest",
+    "@sapphire/plugin-pattern-commands": "latest",
+    "@sapphire/plugin-utilities-store": "latest",
+    "@sapphire/ratelimits": "latest",
+    "@sapphire/timestamp": "latest",
     "@sapphire/plugin-scheduled-tasks": "^10.0.4",
     "@sapphire/plugin-subcommands": "^7.0.1",
+    "@sapphire/shapeshift": "^4.0.0",
     "@sapphire/snowflake": "^3.5.5",
     "@sapphire/stopwatch": "^1.5.4",
     "@sapphire/time-utilities": "^1.7.14",
@@ -60,7 +56,6 @@
     "colorette": "^2.0.20",
     "discord.js": "^14.20.0",
     "ioredis": "^5.10.1",
-    "pg": "^8.21.0",
-    "zod": "^3.25.76"
+    "pg": "^8.21.0"
   }
 }

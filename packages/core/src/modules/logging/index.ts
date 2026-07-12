@@ -1,4 +1,4 @@
-import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
+import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
 import { ChannelType } from "discord.js";
 
 @DefineModule({
@@ -65,9 +65,6 @@ import { ChannelType } from "discord.js";
 export class LoggingModule extends Module {
   public override async deleteUserData(
     _userId: string,
-    _requester: import("#core/lib/gdpr.js").RequesterType,
-  ): Promise<void> {
-    // No-op: this module persists nothing — events are rendered straight to
-    // the configured Discord channel.
-  }
+    _requester: import("#lib/gdpr.js").RequesterType,
+  ): Promise<void> {}
 }

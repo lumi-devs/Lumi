@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { validateAddon } from "#core/lib/downloader/validate.js";
+import { validateAddon } from "#lib/lib/downloader/validate.js";
 
 let root: string;
 
@@ -13,7 +13,7 @@ const GOOD_INFO = JSON.stringify({
   short: "Sample.",
   version: "1.0.0",
 });
-const GOOD_INDEX = `import { Module, DefineModule } from "#core/module-system/Module.js";
+const GOOD_INDEX = `import { Module, DefineModule } from "#lib/module-system/Module.js";
 @DefineModule({ name: "sample", displayName: "Sample", emoji: "🧪", version: "1.0.0", description: "d" })
 export class SampleModule extends Module {}
 `;
@@ -117,7 +117,7 @@ describe("validateAddon", () => {
     const dir = await makeAddon("aliases", {
       "info.json": JSON.stringify({ name: "aliases", author: ["T"], description: "d", short: "s", version: "1.0.0" }),
       "index.ts": GOOD_INDEX,
-      "lib/x.ts": `import { makeInfoCard } from "#utilities/cards.js";\nimport { Service } from "#core/module-system/Service.js";\nexport { makeInfoCard, Service };\n`,
+      "lib/x.ts": `import { makeInfoCard } from "#lib/utilities/cards.js";\nimport { Service } from "#lib/module-system/Service.js";\nexport { makeInfoCard, Service };\n`,
     });
     const { errors } = await validateAddon(dir);
     expect(errors).toEqual([]);

@@ -3,7 +3,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { Colors, type GuildMember, type PartialGuildMember } from "discord.js";
 import { roleMention, userMention } from "@discordjs/formatters";
 import { escapeMarkdown } from "@discordjs/formatters";
-import { ModuleListener } from "#core/module-system/ModuleListener.js";
+import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { isToggleEnabled, sendLog } from "../lib/send.js";
 
 @ApplyOptions<ModuleListener.Options>({
@@ -20,7 +20,6 @@ export class LoggingMemberUpdateListener extends ModuleListener<
   ): Promise<void> {
     const guildId = newMember.guild.id;
 
-    // Nickname change (skip partial oldMember — its nickname is unknown).
     if (!oldMember.partial && oldMember.nickname !== newMember.nickname) {
       if (await isToggleEnabled(guildId, "nickname_changes")) {
         await sendLog(guildId, Colors.Blue, "Nickname Changed", [
@@ -31,7 +30,6 @@ export class LoggingMemberUpdateListener extends ModuleListener<
       }
     }
 
-    // Role changes (also unknowable when oldMember is partial).
     if (!oldMember.partial) {
       const added = newMember.roles.cache.filter(
         (r) => !oldMember.roles.cache.has(r.id),

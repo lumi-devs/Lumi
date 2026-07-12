@@ -3,7 +3,7 @@ import {
   InteractionHandler,
   UserError,
 } from "@sapphire/framework";
-import { getService } from "#core/module-system/Service.js";
+import { getService } from "#lib/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   ActionRowBuilder,
@@ -21,14 +21,14 @@ import {
   type GuildMember,
   type VoiceBasedChannel,
 } from "discord.js";
-import { BaseInteractionHandler } from "#core/lib/interaction-handler.js";
-import { Emojis } from "#utilities/assets.js";
+import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import {
   ephemeralCard,
   makeErrorCard,
   makeInfoCard,
   makeSuccessCard,
-} from "#utilities/cards.js";
+} from "#lib/utilities/cards.js";
 import { getVcRecord, removeVcRecord, type VcRecord } from "../data.js";
 import { buildPanel } from "../ui/panel.js";
 import { TVC, TempVcKeys } from "../keys.js";
@@ -90,7 +90,6 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
 
     const member = interaction.member as GuildMember;
 
-    // Claim is the only action usable by non-owners.
     if (action === "claim") return this.#claim(interaction, channel, record);
 
     this.#assertOwner(member, channel, record.ownerId);

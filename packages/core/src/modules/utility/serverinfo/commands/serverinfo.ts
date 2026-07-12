@@ -13,9 +13,9 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { BaseCommand } from "#lib/commands.js";
-import { Colors } from "#utilities/branding.js";
-import { Emojis } from "#utilities/assets.js";
-import { makeCard } from "#utilities/cards.js";
+import { Colors } from "#lib/utilities/branding.js";
+import { Emojis } from "#lib/utilities/assets.js";
+import { makeCard } from "#lib/utilities/cards.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "serverinfo",
@@ -47,7 +47,6 @@ export class ServerInfoCommand extends BaseCommand {
   protected async buildServerCard(ctx: ChatInputCommandInteraction | Message) {
     const guild = ctx.guild!;
 
-    // Fetch owner
     const owner = await guild.fetchOwner();
     const channels = guild.channels.cache;
     const textChannels = channels.filter(
@@ -90,7 +89,6 @@ export class ServerInfoCommand extends BaseCommand {
         `**Verification Level**: ***${guild.verificationLevel}***`,
     ];
 
-    // Server icon action button
     const buttons = [];
     const iconUrl = guild.iconURL({ size: 4096, extension: "png" });
     if (iconUrl) {

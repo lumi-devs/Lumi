@@ -1,8 +1,3 @@
-// Pure rule-evaluation logic for the filter module. No discord.js, no
-// container — everything here is unit-testable with plain values. The
-// service compiles a guild's config into a `CompiledRules` once and the
-// listener evaluates each message against it.
-
 // @ts-expect-error - ahocorasick does not provide type declarations
 import AhoCorasick from "ahocorasick";
 
@@ -50,7 +45,6 @@ export const DEFAULT_WARN_MESSAGE =
 /** Regex patterns longer than this are rejected at compile time. */
 export const MAX_REGEX_LENGTH = 256;
 
-// Both canonical invite hosts plus the shorthand. Code charset per Discord.
 const INVITE_RE =
   /(?:discord\.(?:gg|com\/invite)|discordapp\.com\/invite)\/([\w-]+)/i;
 

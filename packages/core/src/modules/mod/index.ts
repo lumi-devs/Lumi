@@ -1,6 +1,6 @@
-import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
-import type { RequesterType } from "#core/lib/gdpr.js";
-import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
+import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
+import type { RequesterType } from "#lib/gdpr.js";
+import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { invalidateThresholds } from "./lib/thresholds.js";
 import { scheduleCaseLift } from "./lib/helpers.js";
 import { handleModLiftFire } from "./lib/lift-handler.js";

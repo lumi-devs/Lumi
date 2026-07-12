@@ -4,8 +4,8 @@ import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { time, TimestampStyles, userMention } from "@discordjs/formatters";
 import { chunk } from "@sapphire/utilities";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions.js";
-import { makeInfoCard } from "#utilities/cards.js";
+import { PermissionLevel } from "#lib/permissions/index.js";
+import { makeInfoCard } from "#lib/utilities/cards.js";
 import { decrementWarnCount } from "../lib/thresholds.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
@@ -73,8 +73,6 @@ export class CasesCommand extends BaseSubcommand {
     );
   }
 
-  // ── view ───────────────────────────────────────────────────────────────────
-
   public async view(ctx: CommandContext) {
     await ctx.defer();
     let caseNumber: number | null = null;
@@ -86,8 +84,6 @@ export class CasesCommand extends BaseSubcommand {
       userId = (await ctx.getUser("member"))?.id;
       action = (await ctx.getString("action")) ?? undefined;
     } else {
-      // Prefix heuristic: a short number is a case lookup, anything else is a
-      // member reference.
       const first = await ctx.getString("member");
       if (first && /^\d+$/.test(first) && first.length < 8) {
         caseNumber = parseInt(first, 10);
@@ -102,8 +98,6 @@ export class CasesCommand extends BaseSubcommand {
     if (caseNumber !== null) return this.#viewOne(ctx, caseNumber);
     return this.#viewList(ctx, userId, action);
   }
-
-  // ── modify ─────────────────────────────────────────────────────────────────
 
   public async modify(ctx: CommandContext) {
     await ctx.defer();

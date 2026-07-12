@@ -1,4 +1,4 @@
-import { Service } from "#core/module-system/Service.js";
+import { Service } from "#lib/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import type { GuildMember, User } from "discord.js";
@@ -98,7 +98,7 @@ export default class AfkService extends Service {
   }
 }
 
-declare module "#core/module-system/Service.js" {
+declare module "#lib/module-system/Service.js" {
   interface Services {
     afk: AfkService;
   }

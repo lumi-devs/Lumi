@@ -1,4 +1,4 @@
-import { Service, getService } from "#core/module-system/Service.js";
+import { Service, getService } from "#lib/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import {
@@ -12,10 +12,6 @@ import {
 
 @ApplyOptions<Piece.Options>({ name: "filter" })
 export class FilterService extends Service {
-  // Per-guild compiled rule set. `null` means "loaded, but nothing enabled" —
-  // distinct from "not loaded yet" (absent key), so a guild with no filter
-  // config doesn't trigger a reload on every message. Insertion order doubles
-  // as LRU order; touch() re-inserts to mark recency.
   private readonly _guilds = new Map<string, CompiledRules | null>();
 
   public async loadGuild(guildId: string): Promise<void> {
@@ -112,21 +108,16 @@ export class FilterService extends Service {
 
   #evictIfNeeded(): void {
     while (this._guilds.size > FilterService.MAX_GUILDS) {
-      // Map iteration order is insertion order → first key is LRU.
       const oldest = this._guilds.keys().next().value;
       if (oldest === undefined) break;
       this._guilds.delete(oldest);
     }
   }
 
-  // Cap the number of resident rule sets so a bot in many guilds can't grow
-  // _guilds without bound. Eviction is LRU: when full, the least-recently-used
-  // guild is dropped and simply reloaded from config on its next message (a
-  // cache miss, not a correctness change).
   private static readonly MAX_GUILDS = 10_000;
 }
 
-declare module "#core/module-system/Service.js" {
+declare module "#lib/module-system/Service.js" {
   interface Services {
     filter: FilterService;
   }

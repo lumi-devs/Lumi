@@ -103,13 +103,11 @@ export async function clearAllAfkForUser(userId: string): Promise<number> {
   return count;
 }
 
-export async function getAllAfkEntries(): Promise<AfkEntry[]> {
+export function getAllAfkEntries(): Promise<AfkEntry[]> {
   return container.db.afk.findAll();
 }
 
-export async function getAfkEntriesForGuild(
-  guildId: string,
-): Promise<AfkEntry[]> {
+export function getAfkEntriesForGuild(guildId: string): Promise<AfkEntry[]> {
   return container.db.afk.findForGuild(guildId);
 }
 

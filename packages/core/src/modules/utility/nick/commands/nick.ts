@@ -6,7 +6,7 @@ import {
   makeErrorCard,
   makeWarningCard,
   makeSuccessCard,
-} from "#utilities/cards.js";
+} from "#lib/utilities/cards.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "nick",

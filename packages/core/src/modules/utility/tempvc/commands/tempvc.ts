@@ -1,15 +1,15 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions.js";
+import { PermissionLevel } from "#lib/permissions/index.js";
 import {
   ChannelType,
   channelMention,
   type ChatInputCommandInteraction,
   type GuildMember,
 } from "discord.js";
-import { ephemeralCard } from "#utilities/cards.js";
-import { paginateList } from "#utilities/pagination.js";
+import { ephemeralCard } from "#lib/utilities/cards.js";
+import { paginateList } from "#lib/utilities/pagination.js";
 import { TEMPVC_MAX_GENERATORS } from "../index.js";
 import {
   getVcRecord,

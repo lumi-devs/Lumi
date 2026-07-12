@@ -1,11 +1,3 @@
-// Redis-backed voice channel occupancy tracker for tempvc. tempvc-cleanup runs on a
-// worker where the discord.js voice-state cache is disabled (VoiceStateManager: 0 in
-// LumiClient), so neither `channel.members.size` nor `oldState.channelId` is reliable;
-// we maintain the projection ourselves from raw VOICE_STATE_UPDATE dispatches (one user
-// per event) plus the voice_states array on GUILD_CREATE (boot seed). It's a SET of
-// user ids per channel plus a reverse user→channel pointer, so raw events (which carry
-// only the new channel) can find what to SREM from.
-
 import { container } from "@sapphire/framework";
 
 const TTL_SECONDS = 24 * 60 * 60;

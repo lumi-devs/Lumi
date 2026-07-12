@@ -17,10 +17,7 @@
             bun
             nodejs_22
 
-            # Prisma query engine binaries need OpenSSL on Linux.
-            openssl
-
-            # Handy for poking at the local stack from docker-compose.
+            openssl # Required for Prisma query engine
             postgresql
             redis
           ];

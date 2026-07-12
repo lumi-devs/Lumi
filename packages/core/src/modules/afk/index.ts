@@ -1,10 +1,9 @@
-import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
-import type { RequesterType } from "#core/lib/gdpr.js";
+import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
+import type { RequesterType } from "#lib/gdpr.js";
 import { container } from "@sapphire/framework";
-import { humanizeDelta } from "#utilities/time.js";
-import { Emojis } from "#utilities/assets.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import { clearAllAfkForUser } from "./data/afk.js";
-import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
+import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleAfkDeleteMessageFire } from "./lib/delete-handler.js";
 
 export const NICK_PREFIX = "[AFK] ";
@@ -29,7 +28,7 @@ export const AFK_REMOVAL_COOLDOWN_MS = 2_000;
 export const AFK_NICK_EDIT_COOLDOWN_MS = 1_000;
 
 export function afkDurationSince(since: Date): string {
-  return humanizeDelta(
+  return container.utilities.time.humanizeDelta(
     Math.max(0, Math.floor((Date.now() - since.getTime()) / 1000)),
   );
 }

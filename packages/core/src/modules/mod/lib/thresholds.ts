@@ -1,6 +1,6 @@
 import type { Container } from "@sapphire/framework";
 import { tryParseJSON } from "@sapphire/utilities";
-import { formatAuditReason } from "#utilities/audit.js";
+import { formatAuditReason } from "#lib/utilities/audit.js";
 import { parseDuration, logToChannel, scheduleCaseLift } from "./helpers.js";
 import { Colors } from "discord.js";
 
@@ -13,16 +13,12 @@ export interface ThresholdEntry {
 
 export type WarnThresholds = Record<string, ThresholdEntry>;
 
-// ── Redis keys ────────────────────────────────────────────────────────────────
-
 export const thresholdKey = (guildId: string) =>
   `lumi:mod:${guildId}:thresholds`;
 export const warnCountKey = (guildId: string, userId: string) =>
   `lumi:mod:${guildId}:warns:${userId}`;
 
 const THRESHOLD_TTL = 300; // 5 min cache — invalidated on config write
-
-// ── Threshold config cache ────────────────────────────────────────────────────
 
 export async function getThresholds(
   container: Container,
@@ -59,8 +55,6 @@ export async function invalidateThresholds(
   await container.redis.del(thresholdKey(guildId));
 }
 
-// ── Warn counter ──────────────────────────────────────────────────────────────
-
 const WARN_COUNT_TTL = 365 * 24 * 3600; // 1 year — reset on each increment
 
 export async function incrementWarnCount(
@@ -72,7 +66,6 @@ export async function incrementWarnCount(
   const exists = await container.redis.exists(key);
 
   if (!exists) {
-    // Cold start — seed from DB (new warn already written by caller)
     const cases = await container.db.moderation.getModerationCases(
       guildId,
       userId,
@@ -94,8 +87,6 @@ export async function decrementWarnCount(
   guildId: string,
   userId: string,
 ): Promise<void> {
-  // Atomic conditional decrement: only decrement when the counter exists and is
-  // > 0, so concurrent unwarns can't drive the count below zero.
   await container.redis.eval(
     "local v = tonumber(redis.call('GET', KEYS[1])); if v and v > 0 then return redis.call('DECR', KEYS[1]) end return v or 0",
     1,
@@ -110,8 +101,6 @@ export async function resetWarnCount(
 ): Promise<void> {
   await container.redis.del(warnCountKey(guildId, userId));
 }
-
-// ── Threshold check ───────────────────────────────────────────────────────────
 
 export async function checkThresholds(
   container: Container,

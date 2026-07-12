@@ -2,7 +2,7 @@ import { Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Colors, type GuildMember } from "discord.js";
 import { time, TimestampStyles, userMention } from "@discordjs/formatters";
-import { ModuleListener } from "#core/module-system/ModuleListener.js";
+import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { isToggleEnabled, sendLog } from "../lib/send.js";
 
 @ApplyOptions<ModuleListener.Options>({
