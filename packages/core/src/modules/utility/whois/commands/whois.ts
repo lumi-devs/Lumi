@@ -14,7 +14,7 @@ import {
   ButtonBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { BaseCommand } from "#lib/commands.js";
+import { BaseCommand, sendReply } from "#lib/commands.js";
 import { Colors } from "#lib/utilities/branding.js";
 import { makeCard, makeErrorCard } from "#lib/utilities/cards.js";
 
@@ -58,7 +58,7 @@ export class WhoisCommand extends BaseCommand {
       (await interaction.guild!.members.fetch(user.id).catch(() => null));
 
     const card = this.buildWhoisCard(user, member, interaction.guildId!);
-    await this.reply(interaction, card);
+    await sendReply(interaction, card as any);
   }
 
   public override async messageRun(message: Message, args: Args) {

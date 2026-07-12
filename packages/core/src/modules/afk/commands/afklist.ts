@@ -8,7 +8,7 @@ import { PermissionLevel } from "#lib/permissions/index.js";
 import { makeWarningCard } from "#lib/utilities/cards.js";
 import { afkDurationSince } from "../index.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import type AfkService from "../services/AfkService.js";
+import { getAfkEntriesForGuild } from "../data/afk.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "afklist",
@@ -26,12 +26,8 @@ export default class AfkListCommand extends BaseCommand {
     );
   }
 
-  private get afkService(): AfkService {
-    return getService("afk");
-  }
-
   public override async run(ctx: CommandContext) {
-    const entries = await this.afkService.getAfkList(ctx.guildId!);
+    const entries = await getAfkEntriesForGuild(ctx.guildId!);
 
     if (entries.length === 0) {
       return ctx.replyInfo(
