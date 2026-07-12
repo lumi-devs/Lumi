@@ -170,14 +170,7 @@ function buildNatsBus(
       const b = await ready;
       return b.consume(streams, consumeOpts, handler);
     },
-    close: async () => {
-      try {
-        const b = await ready;
-        await b.close();
-      } catch {
-        /* connect failed; nothing to close */
-      }
-    },
+    close: async () => (await ready).close(),
   };
 
   return {
