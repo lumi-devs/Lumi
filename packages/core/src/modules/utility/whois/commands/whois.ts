@@ -7,6 +7,7 @@ import {
   PermissionFlagsBits,
   GuildMember,
   User,
+  type InteractionReplyOptions,
 } from "discord.js";
 import { time, TimestampStyles } from "@discordjs/formatters";
 import {
@@ -54,11 +55,11 @@ export class WhoisCommand extends BaseCommand {
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
     const user = interaction.options.getUser("user") ?? interaction.user;
     const member =
-      (interaction.options.getMember("user") as GuildMember) ??
+      (interaction.options.getMember("user") as GuildMember | null) ??
       (await interaction.guild!.members.fetch(user.id).catch(() => null));
 
     const card = this.buildWhoisCard(user, member, interaction.guildId!);
-    await sendReply(interaction, card as any);
+    await sendReply(interaction, card as InteractionReplyOptions);
   }
 
   public override async messageRun(message: Message, args: Args) {
