@@ -61,7 +61,7 @@ Lumi is designed to be self-hosted. You retain full control over your data, your
 
 The easiest way to get up and running:
 
-1. Clone the repository: `git clone https://github.com/your-username/lumi.git && cd lumi`
+1. Clone the repository: `git clone https://github.com/lumi-devs/lumi.git && cd lumi`
 2. Copy the environment template: `cp .env.example .env`
 3. Edit `.env` to include your `BOT_TOKEN` and `CLIENT_ID`.
 4. Start the stack:
@@ -113,7 +113,7 @@ You can run Lumi as a `monolith` (default), or scale horizontally by setting the
 > No. Third-party addons executed by Lumi have NO strict sandboxing. They run with the same privileges as the bot process (access to token, database, and filesystem). **Only install addons from sources you trust completely.**
 
 **Q: I found a bug! Where can I report it?**
-Please open an issue on our [GitHub Issues](https://github.com/your-username/lumi/issues) page. Provide as much detail as possible, including logs and reproduction steps.
+Please open an issue on our [GitHub Issues](https://github.com/lumi-devs/lumi/issues) page. Provide as much detail as possible, including logs and reproduction steps.
 
 ---
 
