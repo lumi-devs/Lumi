@@ -1,16 +1,3 @@
-# KEDA: scale the worker pool on aggregated Redis Streams consumer-group lag.
-#
-# We use the Prometheus trigger (not redis-streams) so the autoscaler sums
-# pending entries across *every* gateway stream — that's the right signal,
-# since one busy event (e.g. MESSAGE_CREATE on a noisy guild) is what
-# actually fills the worker's consumer-group backlog.
-#
-# Threshold math:
-#   - One worker handles ~250 dispatch/s steady-state (capacity-planning.md).
-#   - 500 pending entries in the consumer group ≈ 2s of work for one worker;
-#     past that, adding a replica halves the drain time.
-#   - We sum across streams: same dimensional units (entries) and the worker
-#     pool drains them all from the shared consumer group.
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
@@ -47,8 +34,6 @@ spec:
         threshold: "500"
         query: |
           sum(lumi_stream_consumer_lag{group="lumi-workers"})
-    # Belt-and-braces second trigger: scale on DLQ growth too, so a poison
-    # message that pegs one replica's handler doesn't hide the backlog.
     - type: prometheus
       metadata:
         serverAddress: http://prometheus.observability.svc.cluster.local:9090
