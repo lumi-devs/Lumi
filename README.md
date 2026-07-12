@@ -21,7 +21,6 @@
 Lumi is a powerful, highly scalable, and modular Discord bot built for communities that need flexibility. 
 
 - **🧩 Truly Modular**: Enable or disable features per-server. Don't need the economy module? Turn it off.
-- **🛡️ Phishing Protection**: Built-in `@sapphire/phisherman` integration to keep your server safe from malicious domains.
 - **📈 Built to Scale**: Run it as a monolith out of the box, or split it into separate Gateway, Worker, and Scheduler processes powered by RabbitMQ and BullMQ.
 - **🔌 Third-Party Addons**: A powerful downloader service allows you to install and run third-party modules dynamically.
 - **🗣️ Internationalization**: Fully translated into multiple languages (en-US, de, es-ES, fr).

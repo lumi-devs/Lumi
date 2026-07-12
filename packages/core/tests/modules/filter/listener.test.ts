@@ -2,11 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { FilterMessageListener } from "#modules/filter/listeners/messageCreate.js";
 import { container } from "@sapphire/framework";
 import { getService, tryGetService } from "#lib/module-system/Service.js";
-import { checkDomain } from "@sapphire/phisherman";
-
-vi.mock("@sapphire/phisherman", () => ({
-  checkDomain: vi.fn(),
-}));
 
 vi.mock("#lib/module-system/Service.js", () => ({
   getService: vi.fn(),
@@ -22,8 +17,6 @@ describe("FilterMessageListener", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    originalApiKey = process.env.PHISHERMAN_API_KEY;
-    process.env.PHISHERMAN_API_KEY = "test-api-key";
 
     mockFilterService = {
       has: vi.fn().mockReturnValue(true),
@@ -78,9 +71,6 @@ describe("FilterMessageListener", () => {
     );
   });
 
-  afterEach(() => {
-    process.env.PHISHERMAN_API_KEY = originalApiKey;
-  });
 
   it("should do nothing if member has ManageMessages permission", async () => {
     const mockMessage = {
@@ -95,75 +85,5 @@ describe("FilterMessageListener", () => {
     expect(mockFilterService.test).not.toHaveBeenCalled();
   });
 
-  it("should call Phisherman API check for domains in message when static rules pass", async () => {
-    const mockMessage = {
-      guildId: "guild-123",
-      content: "check out https://dangerous-link.com/scam",
-      author: {
-        id: "user-123",
-        toString: () => "<@user-123>",
-      },
-      mentions: {
-        users: { size: 0 },
-        roles: { size: 0 },
-      },
-      member: {
-        permissions: {
-          has: vi.fn().mockReturnValue(false),
-        },
-      },
-      delete: vi.fn().mockResolvedValue({}),
-      channel: {
-        send: vi.fn().mockResolvedValue({}),
-      },
-    };
 
-    vi.mocked(checkDomain).mockResolvedValue({
-      isScam: true,
-      verifiedPhish: true,
-      classification: "malicious",
-    });
-
-    await (listener as any).handle(mockMessage);
-
-    expect(checkDomain).toHaveBeenCalledWith("dangerous-link.com", "test-api-key");
-    expect(mockMessage.delete).toHaveBeenCalled();
-    expect(mockGuildLogService.dispatch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: "Filter — phish",
-        reason: "dangerous-link.com",
-      })
-    );
-  });
-
-  it("should ignore domains that are on the link allowlist", async () => {
-    const mockMessage = {
-      guildId: "guild-123",
-      content: "check out https://safe-domain.com/index",
-      author: {
-        id: "user-123",
-        toString: () => "<@user-123>",
-      },
-      mentions: {
-        users: { size: 0 },
-        roles: { size: 0 },
-      },
-      member: {
-        permissions: {
-          has: vi.fn().mockReturnValue(false),
-        },
-      },
-      delete: vi.fn().mockResolvedValue({}),
-    };
-
-    mockConfigService.getConfigList.mockImplementation((guildId: string, module: string, key: string) => {
-      if (key === "link_allowlist") return ["safe-domain.com"];
-      return [];
-    });
-
-    await (listener as any).handle(mockMessage);
-
-    expect(checkDomain).not.toHaveBeenCalled();
-    expect(mockMessage.delete).not.toHaveBeenCalled();
-  });
 });
