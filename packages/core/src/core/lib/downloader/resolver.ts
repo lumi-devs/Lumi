@@ -82,9 +82,9 @@ export class DownloadResolver {
     if (await this._exists(repoPath)) {
       container.logger.info(`[Downloader] Updating repo: ${name}`);
       const pullArgs =
-        branch !== "default"
-          ? ["-C", repoPath, "pull", "origin", branch]
-          : ["-C", repoPath, "pull"];
+        branch === "default"
+          ? ["-C", repoPath, "pull"]
+          : ["-C", repoPath, "pull", "origin", branch];
       await execFileAsync("git", pullArgs).catch(execError("Git pull failed"));
     } else {
       container.logger.info(`[Downloader] Cloning repo: ${url}`);

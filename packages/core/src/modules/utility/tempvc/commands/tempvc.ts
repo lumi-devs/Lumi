@@ -8,7 +8,8 @@ import {
   type ChatInputCommandInteraction,
   type GuildMember,
 } from "discord.js";
-import { ephemeralCard, makeListCard } from "#utilities/cards.js";
+import { ephemeralCard } from "#utilities/cards.js";
+import { paginateList } from "#utilities/pagination.js";
 import { TEMPVC_MAX_GENERATORS } from "../index.js";
 import {
   getVcRecord,
@@ -194,7 +195,13 @@ export class TempVcCommand extends BaseSubcommand {
       ([id, cfg]) =>
         `${channelMention(id)} — **${cfg.name}** · limit ${cfg.limit || "∞"}`,
     );
-    const card = makeListCard("🔊 Temp VC Generators", lines);
-    await this.reply(interaction, ephemeralCard(card));
+    await paginateList({
+      interactionOrMessage: interaction,
+      userId: interaction.user.id,
+      title: "🔊 Temp VC Generators",
+      items: lines,
+      perPage: 5,
+      ephemeral: true,
+    });
   }
 }

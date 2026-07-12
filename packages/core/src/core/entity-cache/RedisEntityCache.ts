@@ -63,15 +63,6 @@ export interface CachedMember {
 export class RedisEntityCache {
   public constructor(private readonly redis: Redis) {}
 
-  /** Write a hash projection and (re)apply the shared entity TTL atomically. */
-  #putHash(key: string, fields: Record<string, string>): Promise<unknown> {
-    return this.redis
-      .multi()
-      .hmset(key, fields)
-      .expire(key, RedisTTL.entity)
-      .exec();
-  }
-
   public async guild(id: string): Promise<CachedGuild | null> {
     const h = await this.redis.hgetall(RedisKeys.entityGuild(id));
     if (!h.id) return null;
@@ -203,5 +194,14 @@ export class RedisEntityCache {
 
   public async deleteMember(guildId: string, userId: string): Promise<void> {
     await this.redis.del(RedisKeys.entityMember(guildId, userId));
+  }
+
+  /** Write a hash projection and (re)apply the shared entity TTL atomically. */
+  #putHash(key: string, fields: Record<string, string>): Promise<unknown> {
+    return this.redis
+      .multi()
+      .hmset(key, fields)
+      .expire(key, RedisTTL.entity)
+      .exec();
   }
 }

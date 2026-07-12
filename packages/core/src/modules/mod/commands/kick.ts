@@ -8,6 +8,8 @@ import { formatAuditReason } from "#utilities/audit.js";
 import { logError } from "#utilities/errors.js";
 import { logToChannel } from "../lib/helpers.js";
 
+import { makeErrorCard } from "#utilities/cards.js";
+
 @ApplyOptions<BaseCommand.Options>({
   name: "kick",
   description: "Kick a member from the server",
@@ -43,6 +45,12 @@ export class KickCommand extends BaseCommand {
         t("commands:modMemberNotFound"),
       );
     }
+
+    const dm = makeErrorCard(
+      `👢 Kicked — ${member.guild.name}`,
+      `You have been kicked from **${member.guild.name}**.\n\n**Reason:** ${reason}`,
+    );
+    await member.send(dm).catch(() => null);
 
     try {
       await member.kick(formatAuditReason(ctx.user, reason));

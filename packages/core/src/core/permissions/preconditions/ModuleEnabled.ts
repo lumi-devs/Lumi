@@ -4,6 +4,7 @@ import type {
   ContextMenuCommandInteraction,
   Message,
 } from "discord.js";
+import { LanguageKeys } from "#core/i18n/keys.js";
 
 export class ModuleEnabledPrecondition extends Precondition {
   public override async chatInputRun(
@@ -39,7 +40,7 @@ export class ModuleEnabledPrecondition extends Precondition {
           ? `The **${moduleName}** module is disabled in this server.`
           : "This feature is currently disabled.",
         context: {
-          i18nKey: "preconditions:moduleDisabled",
+          i18nKey: LanguageKeys.Preconditions.ModuleDisabled,
           module: moduleName,
         },
       });

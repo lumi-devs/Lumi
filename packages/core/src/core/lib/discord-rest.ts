@@ -30,7 +30,7 @@ export function buildRestOptions(
 ): Partial<RESTOptions> {
   const enableProxy = opts.enableProxy ?? true;
   const proxyUrl =
-    opts.proxyUrl !== undefined ? opts.proxyUrl : getDiscordProxyUrl();
+    opts.proxyUrl === undefined ? getDiscordProxyUrl() : opts.proxyUrl;
 
   const base: Partial<RESTOptions> = {
     // Warn (and increment lumi_rest_invalid_request_warning_total) every 500

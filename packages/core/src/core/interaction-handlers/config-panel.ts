@@ -173,7 +173,11 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
   ) {
     const detail = await this.#requireDetail(guildId, moduleName);
     const fields = (detail.meta.configFields ?? [])
-      .filter((f) => f.type === FieldType.STRING || f.type === FieldType.NUMBER)
+      .filter(
+        (f) =>
+          (f.type === FieldType.STRING && !f.list) ||
+          f.type === FieldType.NUMBER,
+      )
       .slice(0, 5);
     if (fields.length === 0) {
       return interaction.reply(
@@ -294,13 +298,13 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
       case "role":
       case "user": {
         if (!key) return;
-        const id = interaction.values[0];
-        if (id) {
+        if (interaction.values.length > 0) {
+          const valStr = interaction.values.join(",");
           await this.cfg.setConfig(
             guildId,
             moduleName,
             key,
-            id,
+            valStr,
             interaction.user.id,
           );
         } else {

@@ -11,7 +11,6 @@ import {
   HIT_REASONS,
   type FilterHit,
 } from "../lib/rules.js";
-import { parseConfigList } from "#core/module-system/Module.js";
 import { swallow } from "#utilities/errors.js";
 import { deleteMessageLater } from "#utilities/temporary-message.js";
 
@@ -50,12 +49,10 @@ export class FilterMessageListener extends GuildMessageListener {
   }
 
   async #isExempt(message: GuildMessage): Promise<boolean> {
-    const exemptRoles = parseConfigList(
-      await this.container.db.config.getModuleConfig(
-        message.guildId,
-        "filter",
-        "exempt_roles",
-      ),
+    const exemptRoles = await getService("config").getConfigList(
+      message.guildId,
+      "filter",
+      "exempt_roles",
     );
     if (exemptRoles.length === 0) return false;
     const roles = message.member?.roles.cache;

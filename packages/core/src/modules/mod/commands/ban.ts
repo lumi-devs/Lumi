@@ -9,6 +9,8 @@ import { formatAuditReason } from "#utilities/audit.js";
 import { logError } from "#utilities/errors.js";
 import { logToChannel } from "../lib/helpers.js";
 
+import { makeErrorCard } from "#utilities/cards.js";
+
 @ApplyOptions<BaseSubcommand.Options>({
   name: "ban",
   description: "Ban or unban a user",
@@ -71,6 +73,13 @@ export class BanCommand extends BaseSubcommand {
       t("commands:modNoReason");
 
     const guild = ctx.guild!;
+
+    const dm = makeErrorCard(
+      `🔨 Banned — ${guild.name}`,
+      `You have been banned from **${guild.name}**.\n\n**Reason:** ${reason}`,
+    );
+    await user.send(dm).catch(() => null);
+
     try {
       await guild.members.ban(user.id, {
         reason: formatAuditReason(ctx.user, reason),

@@ -151,6 +151,20 @@ export class ModuleRepository extends Repository {
     return result;
   }
 
+  public async setModuleGuildEnabled(
+    guildId: string,
+    name: string,
+    enabled: boolean,
+  ) {
+    const updated = await this.prisma.guildModuleState.upsert({
+      where: { guildId_moduleName: { guildId, moduleName: name } },
+      update: { enabled },
+      create: { guildId, moduleName: name, enabled },
+    });
+    await this.invalidate(RedisKeys.moduleEnabled(name, guildId));
+    return updated;
+  }
+
   /**
    * Resolve a module's config-level enable state for a guild: an explicit
    * `enabled` config value wins, otherwise the module's declared default,
@@ -168,19 +182,5 @@ export class ModuleRepository extends Repository {
     const record = container.moduleStore?.getRecord(name);
     const field = record?.meta.configFields?.find((f) => f.key === "enabled");
     return field ? field.default !== false : true;
-  }
-
-  public async setModuleGuildEnabled(
-    guildId: string,
-    name: string,
-    enabled: boolean,
-  ) {
-    const updated = await this.prisma.guildModuleState.upsert({
-      where: { guildId_moduleName: { guildId, moduleName: name } },
-      update: { enabled },
-      create: { guildId, moduleName: name, enabled },
-    });
-    await this.invalidate(RedisKeys.moduleEnabled(name, guildId));
-    return updated;
   }
 }

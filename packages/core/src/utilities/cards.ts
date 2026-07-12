@@ -54,7 +54,10 @@ function buildContainer(
   opts: CardOptions = {},
 ) {
   const c = new ContainerBuilder();
-  if (color !== null) {
+  // Blank sidebar for neutral/informational cards: the blurple accent
+  // (PRIMARY === INFO) reads as a heavy blue bar, so we render those with no
+  // accent at all. Semantic colours (success/error/warning) are kept as signals.
+  if (color !== null && color !== Colors.PRIMARY) {
     c.setAccentColor(color);
   }
   c.addTextDisplayComponents(

@@ -150,7 +150,7 @@ describe('ModuleCommand', () => {
 				root: '/path/to/commands',
 				store: { name: 'commands' } as any
 			} as any,
-			{}
+			{ prefixEnabled: true }
 		);
 	});
 
@@ -167,10 +167,15 @@ describe('ModuleCommand', () => {
 	describe('list', () => {
 		it('should list all discovered modules with status and versions', async () => {
 			const mockMessage = {
-				reply: vi.fn()
+				author: { id: '0' },
+				reply: vi.fn().mockResolvedValue({
+					createMessageComponentCollector: vi.fn().mockReturnValue({
+						on: vi.fn()
+					})
+				})
 			} as any;
 
-			await command.messageRunList(mockMessage);
+			await (command as any).__ctxMsg$list(mockMessage);
 			expect(mockMessage.reply).toHaveBeenCalled();
 
 			const replyArg = mockMessage.reply.mock.calls[0][0];
@@ -192,7 +197,7 @@ describe('ModuleCommand', () => {
 				pick: vi.fn().mockResolvedValue('afk')
 			} as any;
 
-			await command.messageRunInfo(mockMessage, mockArgs);
+			await (command as any).__ctxMsg$info(mockMessage, mockArgs);
 			expect(mockMessage.reply).toHaveBeenCalled();
 
 			const replyArg = mockMessage.reply.mock.calls[0][0];
@@ -213,7 +218,7 @@ describe('ModuleCommand', () => {
 				pick: vi.fn().mockResolvedValue('unknown_module')
 			} as any;
 
-			await command.messageRunInfo(mockMessage, mockArgs);
+			await (command as any).__ctxMsg$info(mockMessage, mockArgs);
 			expect(mockMessage.reply).toHaveBeenCalled();
 
 			const replyArg = mockMessage.reply.mock.calls[0][0];
@@ -231,7 +236,7 @@ describe('ModuleCommand', () => {
 				pick: vi.fn().mockResolvedValue('afk')
 			} as any;
 
-			await command.messageRunEnable(mockMessage, mockArgs);
+			await (command as any).__ctxMsg$enable(mockMessage, mockArgs);
 			expect(mockModuleStore.setEnabled).toHaveBeenCalledWith('afk', true);
 			expect(mockMessage.reply).toHaveBeenCalled();
 
@@ -248,7 +253,7 @@ describe('ModuleCommand', () => {
 				pick: vi.fn().mockResolvedValue('mod')
 			} as any;
 
-			await command.messageRunDisable(mockMessage, mockArgs);
+			await (command as any).__ctxMsg$disable(mockMessage, mockArgs);
 			expect(mockModuleStore.setEnabled).not.toHaveBeenCalled();
 			expect(mockMessage.reply).toHaveBeenCalled();
 
