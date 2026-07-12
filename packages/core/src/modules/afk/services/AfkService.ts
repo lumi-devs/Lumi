@@ -56,7 +56,6 @@ export default class AfkService extends Service {
     };
   }
 
-
   public async cleanStaleEntries() {
     const entries = await getAllAfkEntries();
     let removed = 0;
