@@ -1,5 +1,6 @@
 import { Utility } from "@sapphire/plugin-utilities-store";
 import { Timestamp } from "@sapphire/timestamp";
+import { Duration } from "@sapphire/time-utilities";
 
 export class TimeUtility extends Utility {
   public constructor(context: Utility.Context, options: Utility.Options) {
@@ -37,8 +38,10 @@ export class TimeUtility extends Utility {
   }
 
   public parseDuration(input: string): number | null {
-    const duration = new (require("@sapphire/time-utilities").Duration)(input).offset;
-    return isNaN(duration) || duration <= 0 ? null : Math.floor(duration / 1000);
+    const duration = new Duration(input).offset;
+    return isNaN(duration) || duration <= 0
+      ? null
+      : Math.floor(duration / 1000);
   }
 }
 
