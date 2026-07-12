@@ -41,7 +41,7 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
       `${Emojis.MAIL} Recent Mentions`,
       mentions.map(
         (m) =>
-          `${userMention(m.authorId)} in ${channelMention(m.channelId)} — ${container.utilities.time.formatUptime(Date.now() - m.ts * 1000)} ago\n${hyperlink("Jump to Message", messageLink(m.channelId, m.messageId, interaction.guildId!))}`,
+          `${userMention(m.authorId)} in ${channelMention(m.channelId)} — ${container.utilities.time.formatDuration(Date.now() - m.ts * 1000)} ago\n${hyperlink("Jump to Message", messageLink(m.channelId, m.messageId, interaction.guildId!))}`,
       ),
       page,
       PAGE_SIZE,

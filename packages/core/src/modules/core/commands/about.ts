@@ -13,7 +13,7 @@ import {
   ButtonBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { BaseCommand } from "#lib/commands.js";
+import { BaseCommand, sendReply } from "#lib/commands.js";
 import { LumiInfo, Colors } from "#lib/utilities/branding.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { BotConfig } from "#lib/utilities/config.js";
@@ -35,7 +35,7 @@ export class AboutCommand extends BaseCommand {
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
     const card = await this.buildAboutCard();
-    await this.reply(interaction, ephemeralCard(card));
+    await sendReply(interaction, ephemeralCard(card));
   }
 
   public override async messageRun(message: Message) {

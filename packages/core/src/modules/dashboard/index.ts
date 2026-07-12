@@ -2,7 +2,7 @@ import { Module, DefineModule } from "#lib/module-system/Module.js";
 import { container } from "@sapphire/framework";
 import {
   registerRpcHandler,
-  deregisterRpcHandler,
+  rpcHandlers,
 } from "#lib/rabbitmq/index.js";
 import { RPC_ACTIONS } from "@lumi/contracts";
 import type { Prisma } from "@prisma/client";
@@ -138,9 +138,9 @@ export class DashboardModule extends Module {
 
   public override onUnload() {
     container.logger.info("[Dashboard] Unloading RPC handlers...");
-    deregisterRpcHandler(RPC_ACTIONS.guildDashboardGet);
-    deregisterRpcHandler(RPC_ACTIONS.guildModuleToggle);
-    deregisterRpcHandler(RPC_ACTIONS.guildConfigSet);
+    rpcHandlers.delete(RPC_ACTIONS.guildDashboardGet);
+    rpcHandlers.delete(RPC_ACTIONS.guildModuleToggle);
+    rpcHandlers.delete(RPC_ACTIONS.guildConfigSet);
     return super.onUnload();
   }
 }

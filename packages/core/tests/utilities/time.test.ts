@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { humanizeDelta, formatUptime, parseDuration, relativeTimestamp, shortTimestamp } from '#lib/utilities/time.js';
+import { humanizeDelta, formatDuration, parseDuration, relativeTimestamp, shortTimestamp } from '#lib/utilities/time.js';
 
 describe('time.ts', () => {
 	it('humanizeDelta', () => {
@@ -7,8 +7,8 @@ describe('time.ts', () => {
 		expect(humanizeDelta(90)).toBe('1m 30s');
 	});
 
-	it('formatUptime', () => {
-		expect(formatUptime(90000)).toBe('1m 30s');
+	it('formatDuration', () => {
+		expect(formatDuration(90000)).toBe('1m 30s');
 	});
 
 	it('parseDuration', () => {

@@ -36,10 +36,6 @@ export class TimeUtility extends Utility {
     return this.formatDuration(seconds * 1000);
   }
 
-  public formatUptime(ms: number): string {
-    return this.formatDuration(ms);
-  }
-
   public parseDuration(input: string): number | null {
     const duration = new (require("@sapphire/time-utilities").Duration)(input).offset;
     return isNaN(duration) || duration <= 0 ? null : Math.floor(duration / 1000);

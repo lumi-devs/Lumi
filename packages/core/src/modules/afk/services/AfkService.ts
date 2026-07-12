@@ -12,8 +12,6 @@ import {
   getAfkEntry,
   setAfkEntry,
   setAfkCooldown,
-  getAfkEntriesForGuild,
-  getAfkStats,
   getAllAfkEntries,
   clearAfkEntry,
 } from "../data/afk.js";
@@ -58,13 +56,6 @@ export default class AfkService extends Service {
     };
   }
 
-  public async getAfkList(guildId: string) {
-    return getAfkEntriesForGuild(guildId);
-  }
-
-  public async getAfkStats() {
-    return getAfkStats();
-  }
 
   public async cleanStaleEntries() {
     const entries = await getAllAfkEntries();

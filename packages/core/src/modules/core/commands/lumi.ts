@@ -1,7 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Command, container } from "@sapphire/framework";
 import type { ChatInputCommandInteraction } from "discord.js";
-import { BaseCommand } from "#lib/commands.js";
+import { BaseCommand, sendReply } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
 import { ephemeralCard } from "#lib/utilities/cards.js";
 import { buildHubView } from "#lib/hub-panel.js";
@@ -26,7 +26,7 @@ export class LumiCommand extends BaseCommand {
       loadFeatures(guildId),
       container.db.config.getGuildSettings(guildId),
     ]);
-    return this.reply(
+    return sendReply(
       interaction,
       ephemeralCard(
         buildHubView({
