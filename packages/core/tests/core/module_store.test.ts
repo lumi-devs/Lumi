@@ -11,9 +11,9 @@ const { readManifest, metaFromManifest } = vi.hoisted(() => ({
 	metaFromManifest: vi.fn()
 }));
 
-vi.mock('../../src/core/module-system/manifest.js', () => ({ readManifest, metaFromManifest }));
+vi.mock('#lib/module-system/manifest.js', () => ({ readManifest, metaFromManifest }));
 
-import { ModuleStore } from '../../src/core/module-system/ModuleStore.js';
+import { ModuleStore } from '#lib/module-system/ModuleStore.js';
 
 type ModSpec = { dependencies?: string[]; conflicts?: string[]; isCore?: boolean };
 

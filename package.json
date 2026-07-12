@@ -1,6 +1,6 @@
 {
   "name": "lumi",
-  "version": "2.1.1",
+  "version": "1.0.0",
   "license": "Apache-2.0",
   "description": "Lumi — modular Discord bot (TypeScript / Sapphire / Postgres / Redis). Monorepo root.",
   "private": true,
@@ -8,21 +8,9 @@
   "workspaces": ["packages/*", "apps/*"],
   "comment:imports": "Safety net for downloaded addons: they are symlinked into packages/core/src/modules but live (realpath) under data/3rd-party-modules, so their #core/#lib/#utilities specifiers resolve up to THIS root package.json. Mirrors packages/core/package.json's imports map.",
   "imports": {
-    "#lib/commands.js": "./packages/core/src/core/lib/commands.ts",
-    "#lib/env.js": "./packages/core/src/core/env.ts",
-    "#lib/permissions.js": "./packages/core/src/core/permissions/index.ts",
-    "#lib/module-system.js": "./packages/core/src/core/module-system/Module.ts",
-    "#lib/rabbit.js": "./packages/core/src/core/rabbitmq/index.ts",
-    "#lib/types.js": "./packages/core/src/core/types/common.ts",
-    "#lib/guild-transaction.js": "./packages/core/src/core/lib/guild-transaction.ts",
-    "#lib/database/*.js": "./packages/core/src/database/*.ts",
-    "#lib/utilities/*.js": "./packages/core/src/utilities/*.ts",
-    "#lib/*.js": "./packages/core/src/core/*.ts",
+    "#lib/*.js": "./packages/core/src/lib/*.ts",
     "#root/*.js": "./packages/core/src/*.ts",
-    "#modules/*.js": "./packages/core/src/modules/*.ts",
-    "#lib/module-check.js": "./packages/core/src/core/lib/module-check.ts",
-    "#lib/scheduler-bus.js": "./packages/core/src/core/lib/scheduler-bus.ts",
-    "#lib/schedule-task.js": "./packages/core/src/core/lib/schedule-task.ts"
+    "#modules/*.js": "./packages/core/src/modules/*.ts"
   },
   "scripts": {
     "dev": "bun install && bun run db:generate && bun --filter @lumi/worker run dev",

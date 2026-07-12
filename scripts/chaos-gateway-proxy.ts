@@ -23,7 +23,7 @@ import { rawGatewayStream } from "../packages/contracts/src/gateway-packet.ts";
 
 // Inlined to keep this script free of the discord.js import chain that the
 // real `RedisEntityCache` pulls in transitively (Sapphire container → djs).
-// The shape and TTL match `packages/core/src/core/entity-cache/RedisEntityCache.ts`.
+// The shape and TTL match `packages/core/src/lib/entity-cache/RedisEntityCache.ts`.
 const ENTITY_TTL = 60 * 60 * 24;
 const entityGuildKey = (id: string) => `lumi:ent:guild:${id}`;
 async function putGuildRaw(

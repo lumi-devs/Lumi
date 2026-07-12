@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { validateAddon } from "#lib/lib/downloader/validate.js";
+import { validateAddon } from "#lib/downloader/validate.js";
 
 let root: string;
 

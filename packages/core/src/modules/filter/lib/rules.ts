@@ -7,7 +7,7 @@ interface AhoMatcher {
 
 /** Which rule fired and what it matched — drives the warning + log copy. */
 export interface FilterHit {
-  rule: "term" | "regex" | "invite" | "link" | "mentions" | "caps";
+  rule: "term" | "regex" | "invite" | "link" | "mentions" | "caps" | "phish";
   /** The matched term/pattern/code/domain, or a human summary for counters. */
   detail: string;
 }
@@ -195,4 +195,5 @@ export const HIT_REASONS: Record<FilterHit["rule"], string> = {
   link: "a link that is not allowed here",
   mentions: "too many mentions",
   caps: "excessive caps",
+  phish: "a known phishing/scam link",
 };

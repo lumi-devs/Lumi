@@ -1,6 +1,6 @@
 {
   "name": "@lumi/sharding",
-  "version": "2.1.1",
+  "version": "1.0.0",
   "license": "Apache-2.0",
   "description": "Shard topology + IDENTIFY orchestration shared between gateway, worker, and monolith. Calls /gateway/bot, plans shard ranges, and supplies IdentifyThrottlers.",
   "type": "module",
