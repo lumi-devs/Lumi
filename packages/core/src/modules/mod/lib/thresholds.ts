@@ -136,7 +136,7 @@ export async function checkThresholds(
     const ms = entry.duration ? parseDuration(entry.duration) : null;
     const until = ms ? new Date(Date.now() + ms) : null;
     await member
-      .timeout(until?.getTime() ?? null, formatAuditReason(botUser, reason))
+      .timeout(ms, formatAuditReason(botUser, reason))
       .catch(() => null);
     const c = await container.db.moderation.createModerationCase({
       guildId,

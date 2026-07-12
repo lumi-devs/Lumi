@@ -2,8 +2,8 @@
   "name": "filter",
   "displayName": "Filter",
   "emoji": "🚫",
-  "description": "Aho-Corasick word filter — O(n+m) pattern matching per message.",
-  "version": "1.0.0",
+  "description": "Automod rule engine: filtered terms (Aho-Corasick), regex rules, invite/link blocking with allowlists, mention-spam and caps limits, with configurable punishment and logging.",
+  "version": "2.0.0",
   "isCore": false,
   "dependencies": [],
   "conflicts": [],
@@ -20,6 +20,92 @@
       "label": "Filtered Terms",
       "description": "Comma-separated list of words/phrases to block.",
       "list": true
+    },
+    {
+      "key": "regex_rules",
+      "type": "STRING",
+      "label": "Regex Rules",
+      "description": "Comma-separated regular expressions to block (case-insensitive, max 256 chars each). Invalid patterns are skipped.",
+      "list": true
+    },
+    {
+      "key": "block_invites",
+      "type": "BOOLEAN",
+      "label": "Block Invites",
+      "description": "Delete messages containing Discord server invites.",
+      "default": false
+    },
+    {
+      "key": "invite_allowlist",
+      "type": "STRING",
+      "label": "Allowed Invite Codes",
+      "description": "Comma-separated invite codes that are always allowed (e.g. your own server's).",
+      "list": true
+    },
+    {
+      "key": "block_links",
+      "type": "BOOLEAN",
+      "label": "Block Links",
+      "description": "Delete messages containing links, except allowlisted domains.",
+      "default": false
+    },
+    {
+      "key": "link_allowlist",
+      "type": "STRING",
+      "label": "Allowed Link Domains",
+      "description": "Comma-separated domains exempt from link blocking (subdomains included), e.g. youtube.com, github.com.",
+      "list": true
+    },
+    {
+      "key": "max_mentions",
+      "type": "NUMBER",
+      "label": "Max Mentions",
+      "description": "Maximum user+role mentions per message. 0 disables the rule.",
+      "default": 0
+    },
+    {
+      "key": "max_caps_percent",
+      "type": "NUMBER",
+      "label": "Max Caps %",
+      "description": "Delete messages whose letters are more than this % uppercase. 0 disables the rule.",
+      "default": 0
+    },
+    {
+      "key": "caps_min_length",
+      "type": "NUMBER",
+      "label": "Caps Min Length",
+      "description": "Messages shorter than this never trip the caps rule.",
+      "default": 12
+    },
+    {
+      "key": "exempt_roles",
+      "type": "STRING",
+      "label": "Exempt Role IDs",
+      "description": "Comma-separated role IDs that bypass all filter rules (members with Manage Messages are always exempt).",
+      "list": true
+    },
+    {
+      "key": "timeout_minutes",
+      "type": "NUMBER",
+      "label": "Timeout (minutes)",
+      "description": "Timeout the author for this many minutes on a filter hit. 0 disables punishment.",
+      "default": 0
+    },
+    {
+      "key": "warn_message",
+      "type": "STRING",
+      "label": "Warning Message",
+      "description": "Transient warning sent after a deletion. Placeholders: {user}, {reason}. Empty disables the warning.",
+      "default": "{user}, your message was removed for containing {reason}."
+    },
+    {
+      "key": "log_channel_id",
+      "type": "CHANNEL",
+      "label": "Log Channel",
+      "description": "Channel where filter hits are logged.",
+      "channelTypes": [
+        0
+      ]
     }
   ]
 }

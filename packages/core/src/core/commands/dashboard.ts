@@ -1,9 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { getService } from "#core/module-system/Service.js";
-import type { Args } from "@sapphire/framework";
-import { BaseSubcommand } from "#lib/commands.js";
+import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import type { Message } from "discord.js";
 import { makeSuccessCard, makeErrorCard } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
 import { errorFrom } from "#utilities/errors.js";
@@ -14,43 +12,36 @@ import type { GuildSettingsService } from "#core/services/GuildSettingsService.j
   description: "Manage dashboard configuration and layout",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.GUILD_OWNER,
-  subcommands: [{ name: "layout", messageRun: "messageRunLayout" }],
+  prefixEnabled: true,
+  subcommands: [{ name: "layout", run: "layout" }],
 })
 export class DashboardCommand extends BaseSubcommand {
   private get guildSettingsService(): GuildSettingsService {
     return getService("guild-settings");
   }
 
-  public async messageRunLayout(message: Message, args: Args): Promise<void> {
-    const guildId = message.guild!.id;
-    const rawLayout = await args.rest("string").catch(() => null);
-
-    if (!rawLayout) {
-      await message.reply(
-        makeErrorCard(
-          "Missing Arguments",
-          "Usage: `,dashboard layout <json_array>`",
-        ),
-      );
-      return;
-    }
+  public async layout(ctx: CommandContext): Promise<void> {
+    const rawLayout = (await ctx.getString("layout", {
+      rest: true,
+      required: true,
+    }))!;
 
     try {
       const layout = await this.guildSettingsService.setDashboardLayout(
-        guildId,
+        ctx.guildId!,
         rawLayout,
       );
       this.container.logger.info(
-        `[Dashboard] ${Emojis.GEAR} Layout updated for guild ${guildId} by ${message.author.tag}`,
+        `[Dashboard] ${Emojis.GEAR} Layout updated for guild ${ctx.guildId} by ${ctx.user.tag}`,
       );
-      await message.reply(
+      await ctx.reply(
         makeSuccessCard(
           `${Emojis.GEAR} Layout Updated`,
           `Dashboard layout updated successfully to: \`${JSON.stringify(layout)}\``,
         ),
       );
     } catch (err: unknown) {
-      await message.reply(
+      await ctx.reply(
         makeErrorCard("Failed to Update Layout", errorFrom(err).message),
       );
     }

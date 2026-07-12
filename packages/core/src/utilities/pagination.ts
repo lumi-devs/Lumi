@@ -1,0 +1,205 @@
+import {
+  type ChatInputCommandInteraction,
+  type Message,
+  ButtonStyle,
+  ComponentType,
+  MessageFlags,
+  SeparatorSpacingSize,
+} from "discord.js";
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ContainerBuilder,
+  SeparatorBuilder,
+  TextDisplayBuilder,
+  type MessageActionRowComponentBuilder,
+} from "@discordjs/builders";
+import { Emojis } from "#utilities/assets.js";
+
+export interface PaginationOptions {
+  interactionOrMessage: ChatInputCommandInteraction | Message;
+  totalPages: number;
+  userId: string;
+  /** Custom ID prefix for the buttons. Defaults to "page". */
+  customIdPrefix?: string;
+  /** Timeout in milliseconds. Defaults to 60000 (1 minute). */
+  time?: number;
+  /** Ephemeral reply flag for interactions. */
+  ephemeral?: boolean;
+  /** Callback to render the page content. */
+  render: (pageIndex: number, c: ContainerBuilder) => void | Promise<void>;
+}
+
+export async function paginateContainer(options: PaginationOptions) {
+  const {
+    interactionOrMessage,
+    totalPages,
+    userId,
+    customIdPrefix = "page",
+    time = 60_000,
+    ephemeral = false,
+    render,
+  } = options;
+
+  let activePage = 0;
+
+  const buildPage = async (
+    pageIndex: number,
+    disabled = false,
+  ): Promise<{ flags: number; components: [ContainerBuilder] }> => {
+    const c = new ContainerBuilder();
+    await render(pageIndex, c);
+
+    if (totalPages > 1) {
+      const row =
+        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`${customIdPrefix}:prev`)
+            .setLabel("Previous")
+            .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(disabled || pageIndex <= 0),
+          new ButtonBuilder()
+            .setCustomId(`${customIdPrefix}:indicator`)
+            .setLabel(`Page ${pageIndex + 1}/${totalPages}`)
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(true),
+          new ButtonBuilder()
+            .setCustomId(`${customIdPrefix}:next`)
+            .setLabel("Next")
+            .setEmoji(Emojis.parse(Emojis.ARROW_RIGHT))
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(disabled || pageIndex >= totalPages - 1),
+        );
+
+      c.addActionRowComponents((builder) => {
+        builder.addComponents(...row.components);
+        return builder;
+      });
+    }
+
+    let flags = MessageFlags.IsComponentsV2 as number;
+    if (ephemeral) {
+      flags |= MessageFlags.Ephemeral;
+    }
+
+    return {
+      flags,
+      components: [c],
+    };
+  };
+
+  const isInteraction = "editReply" in interactionOrMessage;
+
+  if (isInteraction) {
+    const interaction = interactionOrMessage as ChatInputCommandInteraction;
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral });
+    }
+  }
+
+  const initialCard = await buildPage(activePage);
+
+  let msg: Message;
+  if (isInteraction) {
+    msg = (await (
+      interactionOrMessage as ChatInputCommandInteraction
+    ).editReply(initialCard)) as Message;
+  } else {
+    msg = await (interactionOrMessage as Message).reply(initialCard);
+  }
+
+  const collector = msg.createMessageComponentCollector({
+    componentType: ComponentType.Button,
+    time,
+    filter: (i) => i.user.id === userId,
+  });
+
+  collector.on("collect", async (i) => {
+    if (i.customId === `${customIdPrefix}:prev`) {
+      activePage = Math.max(0, activePage - 1);
+    } else if (i.customId === `${customIdPrefix}:next`) {
+      activePage = Math.min(totalPages - 1, activePage + 1);
+    } else {
+      return;
+    }
+    const newCard = await buildPage(activePage);
+    await i.update(newCard);
+  });
+
+  collector.on("end", async () => {
+    const disabledCard = await buildPage(activePage, true);
+    if (isInteraction) {
+      await (interactionOrMessage as ChatInputCommandInteraction)
+        .editReply(disabledCard)
+        .catch(() => null);
+    } else {
+      await msg.edit(disabledCard).catch(() => null);
+    }
+  });
+}
+
+export interface PaginateListOptions {
+  interactionOrMessage: ChatInputCommandInteraction | Message;
+  userId: string;
+  title: string;
+  items: string[];
+  perPage?: number;
+  ephemeral?: boolean;
+  customIdPrefix?: string;
+  time?: number;
+}
+
+export async function paginateList(options: PaginateListOptions) {
+  const {
+    interactionOrMessage,
+    userId,
+    title,
+    items,
+    perPage = 10,
+    ephemeral = false,
+    customIdPrefix = "list",
+    time = 60_000,
+  } = options;
+
+  const totalPages = Math.max(1, Math.ceil(items.length / perPage));
+
+  return paginateContainer({
+    interactionOrMessage,
+    userId,
+    totalPages,
+    ephemeral,
+    customIdPrefix,
+    time,
+    render: (pageIndex, c) => {
+      c.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(`## ${title}`),
+      );
+      c.addSeparatorComponents(
+        new SeparatorBuilder()
+          .setSpacing(SeparatorSpacingSize.Small)
+          .setDivider(true),
+      );
+
+      const slice = items.slice(pageIndex * perPage, (pageIndex + 1) * perPage);
+      const body = slice.length ? slice.join("\n") : "*Nothing here yet.*";
+
+      c.addTextDisplayComponents(new TextDisplayBuilder().setContent(body));
+
+      c.addSeparatorComponents(
+        new SeparatorBuilder()
+          .setSpacing(SeparatorSpacingSize.Small)
+          .setDivider(false),
+      );
+
+      const footer =
+        totalPages > 1
+          ? `Page ${pageIndex + 1} of ${totalPages} · Total ${items.length} items`
+          : `Total ${items.length} items`;
+
+      c.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(`-# ${footer}`),
+      );
+    },
+  });
+}

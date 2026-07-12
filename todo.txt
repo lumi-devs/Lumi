@@ -1,13 +1,24 @@
-  Verification through Nix shell:
+discord.js (source) - A powerful Node.js module for interacting with the Discord API
+create-discord-bot (source) - A CLI tool to quickly scaffold a Discord bot project
+@discordjs/brokers (source) - A collection of brokers for use with discord.js
+@discordjs/builders (source) - A utility package for easily building Discord API payloads
+@discordjs/collection (source) - A powerful utility data structure
+@discordjs/core (source) - A thinly abstracted wrapper around the core components of the Discord API
+@discordjs/formatters (source) - A collection of functions for formatting strings
+@discordjs/proxy (source) - A wrapper around @discordjs/rest for running an HTTP proxy
+@discordjs/rest (source) - A module for interacting with the Discord REST API
+@discordjs/structures (source) - A wrapper around Discord's structures
+@discordjs/util (source) - A collection of utility functions
+@discordjs/voice (source) - A module for interacting with the Discord Voice API
+@discordjs/ws (source) - A wrapper around Discord's gateway 
 
-  - nix develop --command bun run typecheck passes.
-  - nix develop --command bun run test passes: 47 tests.
-  - nix develop --command bun run lint exits 0 with the same 5 unrelated warnings.
+use these where needed
 
-  Rating after these fixes: around 7/10 for production readiness. The core is serious and
-  structured, but the service split still has stubs, K8s needs real storage-class decisions
-  for RWX module data, and dynamic third-party code loading remains inherently high-risk.
+you should also use these
+git clone https://github.com/sapphiredev/utilities
 
-  Tree structure: I would not do a big restructure now. The monorepo layout is reasonable.
-  The better next step is finishing the actual apps/api split and moving deployment docs/
-  manifests toward explicit “monolith vs scale” modes, not reshuffling folders.
+https://github.com/sapphiredev/plugins
+https://github.com/sapphiredev/shapeshift
+https://github.com/sapphiredev/awesome-sapphire 
+
+check their readmes many good shit there useful for our project

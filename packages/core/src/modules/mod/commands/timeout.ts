@@ -13,6 +13,8 @@ import {
   scheduleCaseLift,
 } from "../lib/helpers.js";
 
+import { makeErrorCard } from "#utilities/cards.js";
+
 const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000;
 
 @ApplyOptions<BaseSubcommand.Options>({
@@ -92,11 +94,15 @@ export class TimeoutCommand extends BaseSubcommand {
     }
 
     const until = new Date(Date.now() + ms);
+
+    const dm = makeErrorCard(
+      `🔇 Muted — ${member.guild.name}`,
+      `You have been timed out in **${member.guild.name}** for **${formatDuration(ms)}**.\n\n**Reason:** ${reason}`,
+    );
+    await member.send(dm).catch(() => null);
+
     try {
-      await member.timeout(
-        until.getTime(),
-        formatAuditReason(ctx.user, reason),
-      );
+      await member.timeout(ms, formatAuditReason(ctx.user, reason));
     } catch (err: unknown) {
       logError(`timeout add: guild=${ctx.guildId} target=${member.id}`, err);
       return ctx.replyError(

@@ -119,6 +119,35 @@ const backButton = (customId: string): ButtonBuilder =>
 export function formatFieldValue(field: ConfigField, value: unknown): string {
   const val = value ?? field.default ?? null;
   if (val === null || val === undefined || val === "") return "-# *(not set)*";
+
+  if (
+    field.list ||
+    (field.type === FieldType.STRING &&
+      typeof val === "string" &&
+      /^\d{17,20}(?:,\s*\d{17,20})*$/.test(val))
+  ) {
+    const ids =
+      typeof val === "string"
+        ? val
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean)
+        : Array.isArray(val)
+          ? val
+          : [];
+    if (ids.length > 0) {
+      if (field.key.includes("role")) {
+        return ids.map((id) => roleMention(id)).join(", ");
+      }
+      if (field.key.includes("channel")) {
+        return ids.map((id) => channelMention(id)).join(", ");
+      }
+      if (field.key.includes("user")) {
+        return ids.map((id) => userMention(id)).join(", ");
+      }
+    }
+  }
+
   switch (field.type) {
     case FieldType.CHANNEL:
       return channelMention(String(val));
@@ -184,7 +213,7 @@ export function buildFeatureListView(
     )
     .setDisabled(pageFeatures.length === 0);
 
-  const rows: Row[] = [row(select)];
+  const rows: Row[] = [tabRow("modules"), row(select)];
 
   if (totalPages > 1) {
     rows.push(
@@ -204,9 +233,6 @@ export function buildFeatureListView(
       ),
     );
   }
-
-  // The Modules list is the "modules" tab of the /lumi hub — carry the nav bar.
-  rows.push(tabRow("modules"));
 
   return makeCard(
     Colors.PRIMARY,
@@ -249,6 +275,7 @@ export function buildFeatureDetailView(
     new ButtonBuilder()
       .setCustomId(`cfg:tog:${meta.name}`)
       .setLabel(guildEnabled ? "Disable" : "Enable")
+      .setEmoji(Emojis.parse(guildEnabled ? Emojis.CROSS : Emojis.CHECK))
       .setStyle(guildEnabled ? ButtonStyle.Danger : ButtonStyle.Success),
   ];
   if (hasFieldType(meta, FieldType.STRING, FieldType.NUMBER)) {
@@ -256,6 +283,7 @@ export function buildFeatureDetailView(
       new ButtonBuilder()
         .setCustomId(`cfg:cfg:${meta.name}`)
         .setLabel("Configure…")
+        .setEmoji(Emojis.parse(Emojis.EDIT))
         .setStyle(ButtonStyle.Secondary),
     );
   }
@@ -270,6 +298,7 @@ export function buildFeatureDetailView(
 
   // Secondary actions
   const secondary = [
+    backButton("cfg:back"),
     new ButtonBuilder()
       .setCustomId(`cfg:hist:${meta.name}`)
       .setLabel("History")
@@ -285,7 +314,6 @@ export function buildFeatureDetailView(
         .setStyle(ButtonStyle.Secondary),
     );
   }
-  secondary.push(backButton("cfg:back"));
   rows.push(row(...secondary));
 
   // Boolean toggles (up to 5 per row)
@@ -310,36 +338,49 @@ export function buildFeatureDetailView(
 
   // Select-based fields (one row each)
   for (const f of fields) {
-    if (f.type === FieldType.CHANNEL) {
+    const isRoleList = f.list && f.key.includes("role");
+    const isChannelList = f.list && f.key.includes("channel");
+    const isUserList = f.list && f.key.includes("user");
+
+    if (f.type === FieldType.CHANNEL || isChannelList) {
       const chBuilder = new ChannelSelectMenuBuilder()
         .setCustomId(`cfg:ch:${meta.name}:${f.key}`)
         .setPlaceholder(`Set: ${cutText(f.label, 80)}`)
         .setMinValues(0)
-        .setMaxValues(1);
+        .setMaxValues(isChannelList ? 25 : 1);
       if (f.channelTypes?.length) {
         chBuilder.setChannelTypes(...f.channelTypes);
+      } else if (
+        f.key.includes("base") ||
+        f.key.includes("voice") ||
+        f.key.includes("lounge")
+      ) {
+        chBuilder.setChannelTypes(
+          ChannelType.GuildVoice,
+          ChannelType.GuildStageVoice,
+        );
       } else {
         chBuilder.setChannelTypes(ChannelType.GuildText);
       }
       rows.push(row(chBuilder));
-    } else if (f.type === FieldType.ROLE) {
+    } else if (f.type === FieldType.ROLE || isRoleList) {
       rows.push(
         row(
           new RoleSelectMenuBuilder()
             .setCustomId(`cfg:role:${meta.name}:${f.key}`)
             .setPlaceholder(`Set: ${cutText(f.label, 80)}`)
             .setMinValues(0)
-            .setMaxValues(1),
+            .setMaxValues(isRoleList ? 25 : 1),
         ),
       );
-    } else if (f.type === FieldType.USER) {
+    } else if (f.type === FieldType.USER || isUserList) {
       rows.push(
         row(
           new UserSelectMenuBuilder()
             .setCustomId(`cfg:user:${meta.name}:${f.key}`)
             .setPlaceholder(`Set: ${cutText(f.label, 80)}`)
             .setMinValues(0)
-            .setMaxValues(1),
+            .setMaxValues(isUserList ? 25 : 1),
         ),
       );
     } else if (f.type === FieldType.ENUM && f.choices?.length) {
@@ -480,12 +521,12 @@ export function buildOverridesView(
   }
   rows.push(
     row(
+      backButton(`cfg:open:${meta.name}`),
       new ButtonBuilder()
         .setCustomId(`cfg:ovadd:${meta.name}`)
         .setLabel("Add Override")
         .setEmoji(Emojis.parse(Emojis.EDIT))
         .setStyle(ButtonStyle.Primary),
-      backButton(`cfg:open:${meta.name}`),
     ),
   );
 

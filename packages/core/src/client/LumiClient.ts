@@ -115,13 +115,11 @@ export class LumiClient extends SapphireClient {
       makeCache: Options.cacheWithLimits({
         ...Options.DefaultMakeCacheSettings,
         MessageManager: 50,
-        PresenceManager: 0,
         ReactionManager: 0,
         GuildMemberManager: 50,
         ThreadManager: 25,
         UserManager: 200,
         StageInstanceManager: 0,
-        VoiceStateManager: 0,
         GuildScheduledEventManager: 0,
         AutoModerationRuleManager: 0,
         GuildBanManager: 0,
@@ -693,10 +691,15 @@ export class LumiClient extends SapphireClient {
       else if (level === "warn") console.warn(line);
       else console.info(line);
     };
-    const shardPlan = await planShards({
-      token: envParseString("BOT_TOKEN"),
-      log,
-    });
+    let shardPlan;
+    try {
+      shardPlan = await planShards({
+        token: envParseString("BOT_TOKEN"),
+        log,
+      });
+    } catch (err: unknown) {
+      throw new Error(err instanceof Error ? err.message : String(err));
+    }
 
     const clusterName = getClusterName();
     if (!clusterName) {

@@ -303,34 +303,6 @@ export default class TempVcService extends Service {
     });
   }
 
-  /**
-   * Toggle a per-channel restriction: deny `permission` for @everyone (or clear
-   * the override when inactive) and, while active, explicitly grant it to the
-   * current members so they keep access. Persists `patch` onto the record.
-   */
-  async #setRestriction(
-    channel: VoiceBasedChannel,
-    record: VcRecord,
-    permission: "Connect" | "ViewChannel",
-    active: boolean,
-    patch: Partial<VcRecord>,
-  ): Promise<VcRecord> {
-    const { everyone } = channel.guild.roles;
-    await channel.permissionOverwrites.edit(everyone, {
-      [permission]: active ? false : null,
-    });
-    if (active) {
-      for (const m of channel.members.values()) {
-        await channel.permissionOverwrites
-          .edit(m.id, { [permission]: true })
-          .catch(() => null);
-      }
-    }
-    const next = { ...record, ...patch };
-    await setVcRecord(channel.guild.id, channel.id, next);
-    return next;
-  }
-
   public async setOwner(
     channel: VoiceBasedChannel,
     record: VcRecord,
@@ -362,6 +334,34 @@ export default class TempVcService extends Service {
 
   public get moduleName() {
     return MODULE_NAME;
+  }
+
+  /**
+   * Toggle a per-channel restriction: deny `permission` for @everyone (or clear
+   * the override when inactive) and, while active, explicitly grant it to the
+   * current members so they keep access. Persists `patch` onto the record.
+   */
+  async #setRestriction(
+    channel: VoiceBasedChannel,
+    record: VcRecord,
+    permission: "Connect" | "ViewChannel",
+    active: boolean,
+    patch: Partial<VcRecord>,
+  ): Promise<VcRecord> {
+    const { everyone } = channel.guild.roles;
+    await channel.permissionOverwrites.edit(everyone, {
+      [permission]: active ? false : null,
+    });
+    if (active) {
+      for (const m of channel.members.values()) {
+        await channel.permissionOverwrites
+          .edit(m.id, { [permission]: true })
+          .catch(() => null);
+      }
+    }
+    const next = { ...record, ...patch };
+    await setVcRecord(channel.guild.id, channel.id, next);
+    return next;
   }
 }
 

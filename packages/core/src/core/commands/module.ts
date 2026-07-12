@@ -1,26 +1,17 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { getService } from "#core/module-system/Service.js";
-import {
-  ApplicationCommandRegistry,
-  type Args,
-  container,
-} from "@sapphire/framework";
-import { BaseSubcommand } from "#lib/commands.js";
+import { ApplicationCommandRegistry, container } from "@sapphire/framework";
+import { BaseSubcommand, CommandContext } from "#lib/commands.js";
+import { paginateList } from "#utilities/pagination.js";
 import { PermissionLevel } from "#lib/permissions.js";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
-import {
-  ButtonStyle,
-  type Message,
-  type ChatInputCommandInteraction,
-  MessageFlags,
-} from "discord.js";
+import { ButtonStyle } from "discord.js";
 import {
   type CardReply,
   makeSuccessCard,
   makeErrorCard,
   makeWarningCard,
   makeInfoCard,
-  makeListCard,
 } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
 import { errorFrom } from "#utilities/errors.js";
@@ -70,53 +61,17 @@ function stateEmoji(state: string | undefined): string {
   description: "Manage system and third-party modules",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.BOT_OWNER,
+  prefixEnabled: true,
   subcommands: [
-    {
-      name: "list",
-      chatInputRun: "chatInputRunList",
-      messageRun: "messageRunList",
-    },
-    {
-      name: "info",
-      chatInputRun: "chatInputRunInfo",
-      messageRun: "messageRunInfo",
-    },
-    {
-      name: "enable",
-      chatInputRun: "chatInputRunEnable",
-      messageRun: "messageRunEnable",
-    },
-    {
-      name: "disable",
-      chatInputRun: "chatInputRunDisable",
-      messageRun: "messageRunDisable",
-    },
-    {
-      name: "install",
-      chatInputRun: "chatInputRunInstall",
-      messageRun: "messageRunInstall",
-    },
-    {
-      name: "uninstall",
-      chatInputRun: "chatInputRunUninstall",
-      messageRun: "messageRunUninstall",
-    },
-    {
-      name: "update",
-      chatInputRun: "chatInputRunUpdate",
-      messageRun: "messageRunUpdate",
-    },
-    {
-      name: "reload",
-      chatInputRun: "chatInputRunReload",
-      messageRun: "messageRunReload",
-    },
-    {
-      name: "help",
-      chatInputRun: "chatInputRunHelp",
-      messageRun: "messageRunHelp",
-      default: true,
-    },
+    { name: "list", run: "list" },
+    { name: "info", run: "info" },
+    { name: "enable", run: "enable" },
+    { name: "disable", run: "disable" },
+    { name: "install", run: "install" },
+    { name: "uninstall", run: "uninstall" },
+    { name: "reload", run: "reloadModuleCmd" },
+    { name: "update", run: "update" },
+    { name: "help", run: "help", default: true },
   ],
 })
 export class ModuleCommand extends BaseSubcommand {
@@ -227,379 +182,11 @@ export class ModuleCommand extends BaseSubcommand {
 
   // Subcommand: List
 
-  public async messageRunList(message: Message): Promise<void> {
-    const card = this.buildModuleListCard();
-    await message.reply(card);
-  }
-
-  public async chatInputRunList(
-    interaction: ChatInputCommandInteraction,
-  ): Promise<void> {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const card = this.buildModuleListCard();
-    await interaction.editReply(card);
-  }
-
-  // Subcommand: Info
-
-  public async messageRunInfo(message: Message, args: Args): Promise<void> {
-    const name = await args.pick("string").catch(() => null);
-    if (!name) {
-      await message.reply(
-        makeErrorCard("Missing Argument", "Usage: `,module info <module>`"),
-      );
-      return;
-    }
-    const card = this.buildModuleInfoCard(name);
-    await message.reply(card);
-  }
-
-  public async chatInputRunInfo(
-    interaction: ChatInputCommandInteraction,
-  ): Promise<void> {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const name = interaction.options.getString("module", true);
-    const card = this.buildModuleInfoCard(name);
-    await interaction.editReply(card);
-  }
-
-  // Subcommand: Enable
-
-  public async messageRunEnable(message: Message, args: Args): Promise<void> {
-    const name = await args.pick("string").catch(() => null);
-    if (!name) {
-      await message.reply(
-        makeErrorCard("Missing Argument", "Usage: `,module enable <module>`"),
-      );
-      return;
-    }
-    const result = await this.setModuleEnabledState(name, true);
-    await message.reply(result);
-  }
-
-  public async chatInputRunEnable(
-    interaction: ChatInputCommandInteraction,
-  ): Promise<void> {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const name = interaction.options.getString("module", true);
-    const result = await this.setModuleEnabledState(name, true);
-    await interaction.editReply(result);
-  }
-
-  // Subcommand: Disable
-
-  public async messageRunDisable(message: Message, args: Args): Promise<void> {
-    const name = await args.pick("string").catch(() => null);
-    if (!name) {
-      await message.reply(
-        makeErrorCard("Missing Argument", "Usage: `,module disable <module>`"),
-      );
-      return;
-    }
-    const result = await this.setModuleEnabledState(name, false);
-    await message.reply(result);
-  }
-
-  public async chatInputRunDisable(
-    interaction: ChatInputCommandInteraction,
-  ): Promise<void> {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const name = interaction.options.getString("module", true);
-    const result = await this.setModuleEnabledState(name, false);
-    await interaction.editReply(result);
-  }
-
-  // Subcommand: Install
-
-  public async messageRunInstall(message: Message, args: Args): Promise<void> {
-    const repoName = await args.pick("string").catch(() => null);
-    const moduleName = await args.pick("string").catch(() => null);
-
-    if (!repoName || !moduleName) {
-      await message.reply(
-        makeErrorCard(
-          "Missing Arguments",
-          "Usage: `,module install <repo> <module>`",
-        ),
-      );
-      return;
-    }
-
-    const msg = await message.reply(
-      makeInfoCard(
-        "Installing Module",
-        `Installing **${moduleName}** from **${repoName}**...`,
-      ),
-    );
-
-    try {
-      await this.downloaderService.installModule(repoName, moduleName);
-      this.container.logger.debug(
-        `[Module] ${Emojis.INSTALL} Installed: ${moduleName} from ${repoName} by ${message.author.tag}`,
-      );
-      await msg.edit(
-        makeSuccessCard(
-          `${Emojis.INSTALL} Module Installed`,
-          `Successfully installed and loaded **${moduleName}** from **${repoName}**.`,
-        ),
-      );
-    } catch (err: unknown) {
-      await this.handleInstallError(
-        err,
-        moduleName,
-        (c) => msg.edit(c),
-        message.author.id,
-      );
-    }
-  }
-
-  public async chatInputRunInstall(
-    interaction: ChatInputCommandInteraction,
-  ): Promise<void> {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const repoName = interaction.options.getString("repo", true);
-    const moduleName = interaction.options.getString("module", true);
-
-    try {
-      await this.downloaderService.installModule(repoName, moduleName);
-      this.container.logger.debug(
-        `[Module] ${Emojis.INSTALL} Installed: ${moduleName} from ${repoName} by ${interaction.user.tag}`,
-      );
-      await interaction.editReply(
-        makeSuccessCard(
-          `${Emojis.INSTALL} Module Installed`,
-          `Successfully installed and loaded **${moduleName}** from **${repoName}**.`,
-        ),
-      );
-    } catch (err: unknown) {
-      await this.handleInstallError(
-        err,
-        moduleName,
-        (c) => interaction.editReply(c),
-        interaction.user.id,
-      );
-    }
-  }
-
-  // Subcommand: Uninstall
-
-  public async messageRunUninstall(
-    message: Message,
-    args: Args,
-  ): Promise<void> {
-    const moduleName = await args.pick("string").catch(() => null);
-
-    if (!moduleName) {
-      await message.reply(
-        makeErrorCard(
-          "Missing Arguments",
-          "Usage: `,module uninstall <module>`",
-        ),
-      );
-      return;
-    }
-
-    const msg = await message.reply(
-      makeInfoCard("Uninstalling Module", `Uninstalling **${moduleName}**...`),
-    );
-
-    try {
-      await this.downloaderService.uninstallModule(moduleName);
-      this.container.logger.debug(
-        `[Module] ${Emojis.UNINSTALL} Uninstalled: ${moduleName} by ${message.author.tag}`,
-      );
-      await msg.edit(
-        makeSuccessCard(
-          `${Emojis.UNINSTALL} Module Uninstalled`,
-          `Successfully uninstalled **${moduleName}**.`,
-        ),
-      );
-    } catch (err: unknown) {
-      const msg_ = errorFrom(err).message;
-      this.container.logger.warn(
-        `[Module] ${Emojis.ERROR} Uninstall failed: ${moduleName} - ${msg_}`,
-      );
-      await msg.edit(
-        makeErrorCard(`${Emojis.ERROR} Failed to Uninstall Module`, msg_),
-      );
-    }
-  }
-
-  public async chatInputRunUninstall(
-    interaction: ChatInputCommandInteraction,
-  ): Promise<void> {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const moduleName = interaction.options.getString("module", true);
-
-    try {
-      await this.downloaderService.uninstallModule(moduleName);
-      this.container.logger.debug(
-        `[Module] ${Emojis.UNINSTALL} Uninstalled: ${moduleName} by ${interaction.user.tag}`,
-      );
-      await interaction.editReply(
-        makeSuccessCard(
-          `${Emojis.UNINSTALL} Module Uninstalled`,
-          `Successfully uninstalled **${moduleName}**.`,
-        ),
-      );
-    } catch (err: unknown) {
-      const msg_ = errorFrom(err).message;
-      this.container.logger.warn(
-        `[Module] ${Emojis.ERROR} Uninstall failed: ${moduleName} - ${msg_}`,
-      );
-      await interaction.editReply(
-        makeErrorCard(`${Emojis.ERROR} Failed to Uninstall Module`, msg_),
-      );
-    }
-  }
-
-  // Subcommand: Reload
-
-  public async messageRunReload(message: Message, args: Args): Promise<void> {
-    const moduleName = await args.pick("string").catch(() => null);
-
-    if (!moduleName) {
-      await message.reply(
-        makeErrorCard("Missing Arguments", "Usage: `,module reload <module>`"),
-      );
-      return;
-    }
-
-    const msg = await message.reply(
-      makeInfoCard(
-        "Reloading Module",
-        `${Emojis.LOADING} Unloading and reloading **${moduleName}**...`,
-      ),
-    );
-
-    await this.reloadModule(moduleName, message.author.tag, (c) => msg.edit(c));
-  }
-
-  public async chatInputRunReload(
-    interaction: ChatInputCommandInteraction,
-  ): Promise<void> {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const moduleName = interaction.options.getString("module", true);
-
-    await this.reloadModule(moduleName, interaction.user.tag, (c) =>
-      interaction.editReply(c),
-    );
-  }
-
-  // Subcommand: Update
-
-  public async messageRunUpdate(message: Message, args: Args): Promise<void> {
-    const moduleName = await args.pick("string").catch(() => null);
-
-    if (moduleName) {
-      const msg = await message.reply(
-        makeInfoCard(
-          "Updating Module",
-          `${Emojis.LOADING} Checking and downloading updates for **${moduleName}**...`,
-        ),
-      );
-
-      try {
-        const result = await this.downloaderService.updateModule(moduleName);
-        await this.handleUpdateResult(
-          result,
-          moduleName,
-          (c) => msg.edit(c),
-          message.author.id,
-        );
-      } catch (err: unknown) {
-        await msg.edit(
-          makeErrorCard(
-            `${Emojis.ERROR} Update Failed`,
-            errorFrom(err).message,
-          ),
-        );
-      }
-    } else {
-      const msg = await message.reply(
-        makeInfoCard(
-          "Updating All Modules",
-          `${Emojis.LOADING} Scanning and updating all installed modules...`,
-        ),
-      );
-      try {
-        await this.runAllModulesUpdate((c) => msg.edit(c), message.author.id);
-      } catch (err: unknown) {
-        await msg.edit(
-          makeErrorCard(
-            `${Emojis.ERROR} Multi-Update Failed`,
-            errorFrom(err).message,
-          ),
-        );
-      }
-    }
-  }
-
-  public async chatInputRunUpdate(
-    interaction: ChatInputCommandInteraction,
-  ): Promise<void> {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const moduleName = interaction.options.getString("module", false);
-
-    if (moduleName) {
-      try {
-        const result = await this.downloaderService.updateModule(moduleName);
-        await this.handleUpdateResult(
-          result,
-          moduleName,
-          (c) => interaction.editReply(c),
-          interaction.user.id,
-        );
-      } catch (err: unknown) {
-        await interaction.editReply(
-          makeErrorCard(
-            `${Emojis.ERROR} Update Failed`,
-            errorFrom(err).message,
-          ),
-        );
-      }
-    } else {
-      try {
-        await this.runAllModulesUpdate(
-          (c) => interaction.editReply(c),
-          interaction.user.id,
-        );
-      } catch (err: unknown) {
-        await interaction.editReply(
-          makeErrorCard(
-            `${Emojis.ERROR} Multi-Update Failed`,
-            errorFrom(err).message,
-          ),
-        );
-      }
-    }
-  }
-
-  // Subcommand: Help
-
-  public async messageRunHelp(message: Message): Promise<void> {
-    const card = this.buildHelpCard();
-    await message.reply(card);
-  }
-
-  public async chatInputRunHelp(
-    interaction: ChatInputCommandInteraction,
-  ): Promise<void> {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const card = this.buildHelpCard();
-    await interaction.editReply(card);
-  }
-
-  // Internals
-
-  private get downloaderService(): DownloaderService {
-    return getService("downloader");
-  }
-
-  private buildModuleListCard() {
+  public async list(ctx: CommandContext): Promise<void> {
     const records = this.container.moduleStore.all();
     if (!records.length) {
-      return makeInfoCard("Modules", "No modules discovered.");
+      await ctx.reply(makeInfoCard("Modules", "No modules discovered."));
+      return;
     }
 
     const sorted = [...records].sort((a, b) => a.name.localeCompare(b.name));
@@ -611,7 +198,200 @@ export class ModuleCommand extends BaseSubcommand {
       return `${statusEmoji} **${record.meta.emoji} ${record.meta.displayName}** (\`${record.name}\` v${record.meta.version})${isCoreLabel}\n  - Status: ${globalStatus} ${stateLabel}${record.failureReason ? ` (Error: ${record.failureReason})` : ""}`;
     });
 
-    return makeListCard("Discovered Modules", list);
+    await paginateList({
+      interactionOrMessage: ctx.source,
+      userId: ctx.user.id,
+      title: "Discovered Modules",
+      items: list,
+      perPage: 5,
+    });
+  }
+
+  // Subcommand: Info
+
+  public async info(ctx: CommandContext): Promise<void> {
+    await ctx.defer();
+    const name = (await ctx.getString("module", { required: true }))!;
+    const card = this.buildModuleInfoCard(name);
+    await ctx.reply(card);
+  }
+
+  // Subcommand: Enable
+
+  public async enable(ctx: CommandContext): Promise<void> {
+    await ctx.defer();
+    const name = (await ctx.getString("module", { required: true }))!;
+    const result = await this.setModuleEnabledState(name, true);
+    await ctx.reply(result);
+  }
+
+  // Subcommand: Disable
+
+  public async disable(ctx: CommandContext): Promise<void> {
+    await ctx.defer();
+    const name = (await ctx.getString("module", { required: true }))!;
+    const result = await this.setModuleEnabledState(name, false);
+    await ctx.reply(result);
+  }
+
+  // Subcommand: Install
+
+  public async install(ctx: CommandContext): Promise<void> {
+    await ctx.defer();
+    const repoName = (await ctx.getString("repo", { required: true }))!;
+    const moduleName = (await ctx.getString("module", { required: true }))!;
+
+    if (!ctx.isSlash) {
+      await ctx.reply(
+        makeInfoCard(
+          "Installing Module",
+          `Installing **${moduleName}** from **${repoName}**...`,
+        ),
+      );
+    }
+
+    try {
+      await this.downloaderService.installModule(repoName, moduleName);
+      this.container.logger.debug(
+        `[Module] ${Emojis.INSTALL} Installed: ${moduleName} from ${repoName} by ${ctx.user.tag}`,
+      );
+      await ctx.reply(
+        makeSuccessCard(
+          `${Emojis.INSTALL} Module Installed`,
+          `Successfully installed and loaded **${moduleName}** from **${repoName}**.`,
+        ),
+      );
+    } catch (err: unknown) {
+      await this.handleInstallError(
+        err,
+        moduleName,
+        (c) => ctx.reply(c),
+        ctx.user.id,
+      );
+    }
+  }
+
+  // Subcommand: Uninstall
+
+  public async uninstall(ctx: CommandContext): Promise<void> {
+    await ctx.defer();
+    const moduleName = (await ctx.getString("module", { required: true }))!;
+
+    if (!ctx.isSlash) {
+      await ctx.reply(
+        makeInfoCard(
+          "Uninstalling Module",
+          `Uninstalling **${moduleName}**...`,
+        ),
+      );
+    }
+
+    try {
+      await this.downloaderService.uninstallModule(moduleName);
+      this.container.logger.debug(
+        `[Module] ${Emojis.UNINSTALL} Uninstalled: ${moduleName} by ${ctx.user.tag}`,
+      );
+      await ctx.reply(
+        makeSuccessCard(
+          `${Emojis.UNINSTALL} Module Uninstalled`,
+          `Successfully uninstalled **${moduleName}**.`,
+        ),
+      );
+    } catch (err: unknown) {
+      const msg_ = errorFrom(err).message;
+      this.container.logger.warn(
+        `[Module] ${Emojis.ERROR} Uninstall failed: ${moduleName} - ${msg_}`,
+      );
+      await ctx.reply(
+        makeErrorCard(`${Emojis.ERROR} Failed to Uninstall Module`, msg_),
+      );
+    }
+  }
+
+  // Subcommand: Reload
+
+  public async reloadModuleCmd(ctx: CommandContext): Promise<void> {
+    await ctx.defer();
+    const moduleName = (await ctx.getString("module", { required: true }))!;
+
+    if (!ctx.isSlash) {
+      await ctx.reply(
+        makeInfoCard(
+          "Reloading Module",
+          `${Emojis.LOADING} Unloading and reloading **${moduleName}**...`,
+        ),
+      );
+    }
+
+    await this.reloadModule(moduleName, ctx.user.tag, (c) => ctx.reply(c));
+  }
+
+  // Subcommand: Update
+
+  public async update(ctx: CommandContext): Promise<void> {
+    await ctx.defer();
+    const moduleName = await ctx.getString("module", { required: false });
+
+    if (moduleName) {
+      if (!ctx.isSlash) {
+        await ctx.reply(
+          makeInfoCard(
+            "Updating Module",
+            `${Emojis.LOADING} Checking and downloading updates for **${moduleName}**...`,
+          ),
+        );
+      }
+
+      try {
+        const result = await this.downloaderService.updateModule(moduleName);
+        await this.handleUpdateResult(
+          result,
+          moduleName,
+          (c) => ctx.reply(c),
+          ctx.user.id,
+        );
+      } catch (err: unknown) {
+        await ctx.reply(
+          makeErrorCard(
+            `${Emojis.ERROR} Update Failed`,
+            errorFrom(err).message,
+          ),
+        );
+      }
+    } else {
+      if (!ctx.isSlash) {
+        await ctx.reply(
+          makeInfoCard(
+            "Updating All Modules",
+            `${Emojis.LOADING} Scanning and updating all installed modules...`,
+          ),
+        );
+      }
+      try {
+        await this.runAllModulesUpdate((c) => ctx.reply(c), ctx.user.id);
+      } catch (err: unknown) {
+        await ctx.reply(
+          makeErrorCard(
+            `${Emojis.ERROR} Multi-Update Failed`,
+            errorFrom(err).message,
+          ),
+        );
+      }
+    }
+  }
+
+  // Subcommand: Help
+
+  public async help(ctx: CommandContext): Promise<void> {
+    await ctx.defer();
+    const card = this.buildHelpCard();
+    await ctx.reply(card);
+  }
+
+  // Internals
+
+  private get downloaderService(): DownloaderService {
+    return getService("downloader");
   }
 
   private buildModuleInfoCard(name: string) {

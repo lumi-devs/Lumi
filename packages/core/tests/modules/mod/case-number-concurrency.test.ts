@@ -75,6 +75,19 @@ class FakePrisma {
   };
 
   moderationCase = {
+    findFirst: async ({
+      where,
+    }: {
+      where: { guildId: string };
+      orderBy: { caseNumber: "desc" };
+      select: { caseNumber: boolean };
+    }) => {
+      await yieldOnce();
+      const guildCases = this.cases.filter((c) => c.guildId === where.guildId);
+      if (guildCases.length === 0) return null;
+      const sorted = [...guildCases].sort((a, b) => b.caseNumber - a.caseNumber);
+      return { caseNumber: sorted[0].caseNumber };
+    },
     create: async ({
       data,
     }: {

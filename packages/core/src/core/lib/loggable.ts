@@ -31,7 +31,7 @@ export function loggable(
 ): PropertyDescriptor {
   const original = descriptor.value as (...args: unknown[]) => unknown;
 
-  descriptor.value = async function (this: unknown, ...args: unknown[]) {
+  descriptor.value = async function value(this: unknown, ...args: unknown[]) {
     const result = await original.apply(this, args);
 
     if (isAuditEntry(result)) {

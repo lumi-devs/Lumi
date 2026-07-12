@@ -1,0 +1,16 @@
+{
+  "name": "serverinfo",
+  "displayName": "Server Info",
+  "emoji": "🏰",
+  "description": "Displays detailed information about the server.",
+  "version": "1.0.0",
+  "isCore": false,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": false,
+  "targetService": "worker",
+  "subStores": [
+    "commands"
+  ],
+  "configFields": []
+}

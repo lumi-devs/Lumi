@@ -6,7 +6,7 @@
 
 import { container } from "@sapphire/framework";
 import { time, TimestampStyles } from "@discordjs/formatters";
-import { parseConfigList } from "#core/module-system/Module.js";
+import { getService } from "#core/module-system/Service.js";
 import { makeCard, noPingCard, type CardReply } from "#utilities/cards.js";
 import { swallow } from "#utilities/errors.js";
 
@@ -29,12 +29,10 @@ export async function isIgnoredChannel(
   guildId: string,
   channelId: string,
 ): Promise<boolean> {
-  const ignored = parseConfigList(
-    await container.db.config.getModuleConfig(
-      guildId,
-      MODULE,
-      "ignored_channels",
-    ),
+  const ignored = await getService("config").getConfigList(
+    guildId,
+    MODULE,
+    "ignored_channels",
   );
   return ignored.includes(channelId);
 }
@@ -52,8 +50,10 @@ export async function sendLog(
   );
   if (!channelId || typeof channelId !== "string") return;
 
-  const channel = container.client.channels.cache.get(channelId);
-  if (!channel?.isTextBased() || !("send" in channel)) return;
+  const channel =
+    container.client.channels.cache.get(channelId) ??
+    (await container.client.channels.fetch(channelId).catch(() => null));
+  if (!channel || !channel.isTextBased() || !("send" in channel)) return;
 
   const card: CardReply = noPingCard(
     makeCard(color, title, lines.join("\n"), {

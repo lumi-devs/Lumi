@@ -23,12 +23,29 @@ export class ModerationRepository extends Repository {
     // caseNumber])` constraint from tripping P2002 under parallel moderation.
     // See tests/modules/mod/case-number-concurrency.test.ts.
     return this.prisma.$transaction(async (tx) => {
+      const maxCase = await tx.moderationCase.findFirst({
+        where: { guildId: data.guildId },
+        orderBy: { caseNumber: "desc" },
+        select: { caseNumber: true },
+      });
+
+      const maxNum = maxCase?.caseNumber ?? 0;
+
       const counter = await tx.guildCaseCounter.upsert({
         where: { guildId: data.guildId },
-        create: { guildId: data.guildId, next: 2 },
+        create: { guildId: data.guildId, next: maxNum + 2 },
         update: { next: { increment: 1 } },
       });
-      const caseNumber = counter.next - 1;
+
+      const caseNumber = Math.max(counter.next - 1, maxNum + 1);
+
+      if (caseNumber >= counter.next) {
+        await tx.guildCaseCounter.update({
+          where: { guildId: data.guildId },
+          data: { next: caseNumber + 1 },
+        });
+      }
+
       return tx.moderationCase.create({
         data: {
           guildId: data.guildId,
