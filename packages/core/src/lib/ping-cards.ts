@@ -49,8 +49,6 @@ function fmtKB(bytes: bigint | number): string {
   return `${n} B`;
 }
 
-
-
 /**
  * Stacked Executive Layout:
  * - Simple Header
@@ -87,7 +85,11 @@ function header(data: PingData, subtitle?: string): SectionBuilder {
   const sub = subtitle ? `\n*${subtitle}*` : "";
   const anchor = `-# ${"\u2800".repeat(55)}`;
   return new SectionBuilder()
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent(`## ${data.botName}${sub}\n${anchor}`))
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        `## ${data.botName}${sub}\n${anchor}`,
+      ),
+    )
     .setThumbnailAccessory(
       new ThumbnailBuilder().setURL(
         data.avatarURL || "https://cdn.discordapp.com/embed/avatars/0.png",
@@ -104,7 +106,11 @@ function detailCard(
   const c = new ContainerBuilder();
   c.setAccentColor(color);
   c.addSectionComponents(header(data, subtitle));
-  c.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true));
+  c.addSeparatorComponents(
+    new SeparatorBuilder()
+      .setSpacing(SeparatorSpacingSize.Small)
+      .setDivider(true),
+  );
   return c;
 }
 
@@ -200,8 +206,14 @@ export function buildGatewayCard(data: PingData): ContainerBuilder {
   );
 
   if (data.shards.length > 0) {
-    c.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true));
-    c.addTextDisplayComponents(new TextDisplayBuilder().setContent("### 🧊 CLUSTER SHARD MATRIX"));
+    c.addSeparatorComponents(
+      new SeparatorBuilder()
+        .setSpacing(SeparatorSpacingSize.Small)
+        .setDivider(true),
+    );
+    c.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent("### 🧊 CLUSTER SHARD MATRIX"),
+    );
     const shardLines = data.shards
       .map(
         (s) =>
@@ -339,7 +351,9 @@ export function buildPostgresCard(data: PingData): ContainerBuilder {
             [
               "Server Uptime",
               data.dbUptimeSecs
-                ? container.utilities.time.formatDuration(data.dbUptimeSecs * 1000)
+                ? container.utilities.time.formatDuration(
+                    data.dbUptimeSecs * 1000,
+                  )
                 : "N/A",
             ],
           ],
@@ -350,9 +364,15 @@ export function buildPostgresCard(data: PingData): ContainerBuilder {
   );
 
   if (data.tableSizes.length > 0) {
-    c.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true));
+    c.addSeparatorComponents(
+      new SeparatorBuilder()
+        .setSpacing(SeparatorSpacingSize.Small)
+        .setDivider(true),
+    );
     c.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(`### ${Emojis.ANALYTICS} HIGH-DENSITY TABLE BREAKDOWN`),
+      new TextDisplayBuilder().setContent(
+        `### ${Emojis.ANALYTICS} HIGH-DENSITY TABLE BREAKDOWN`,
+      ),
     );
     const tableLines = data.tableSizes
       .map(
@@ -516,7 +536,11 @@ export function buildDetailCard(
     }
   })();
 
-  c.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true));
+  c.addSeparatorComponents(
+    new SeparatorBuilder()
+      .setSpacing(SeparatorSpacingSize.Small)
+      .setDivider(true),
+  );
   c.addActionRowComponents(
     new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
       new ButtonBuilder()
