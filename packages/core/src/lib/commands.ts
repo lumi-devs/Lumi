@@ -254,7 +254,7 @@ function resolveCommandDefaults(
   };
 }
 
-async function assertPermissionLevel(
+export async function assertPermissionLevel(
   interaction: ChatInputCommandInteraction,
   level: PermissionLevel,
 ): Promise<void> {
@@ -267,7 +267,7 @@ async function assertPermissionLevel(
   }
 }
 
-function fetchTyped(
+export function fetchTyped(
   target: ChatInputCommandInteraction | Message,
 ): Promise<LumiT> {
   return fetchT(target) as unknown as Promise<LumiT>;
@@ -344,7 +344,6 @@ interface CommandLike {
   readonly integrationTypes: ApplicationIntegrationType[];
   readonly contexts: InteractionContextType[];
   readonly defaultMemberPermissions: bigint | undefined;
-
 }
 
 /**
@@ -386,8 +385,6 @@ export abstract class BaseCommand extends Command implements CommandLike {
    * when `prefixEnabled`).
    */
   public run?(ctx: CommandContext): Awaited<unknown> | Promise<unknown>;
-
-
 
   protected override parseConstructorPreConditions(
     options: BaseCommand.Options,
@@ -433,8 +430,6 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
     instrumentCommandPiece(this);
     autoApplyCommandDefaults(this);
   }
-
-
 
   protected override parseConstructorPreConditions(
     options: BaseSubcommand.Options,
