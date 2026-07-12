@@ -143,7 +143,7 @@ Duration parsing and formatting.
 | Format ms → human string | `new DurationFormatter().format(ms)` |
 
 > **Note**: `DurationFormatter` produces verbose output ("1 hour 30 minutes").
-> Use the custom `formatDuration()` in `src/utilities/time.ts` for compact uptime format.
+> Use `container.utilities.time.formatDuration()` for compact uptime format.
 
 ### `@sapphire/stopwatch`
 Timing measurements. Replaces `performance.now()` pairs.
@@ -209,9 +209,9 @@ All commands extend `BaseCommand` (not raw `Command`) or `BaseSubcommand`.
 every registered builder **automatically** (the base ctor shadows
 `registerApplicationCommands` — see `autoApplyCommandDefaults` in
 `#lib/commands.js`); never call the three setters in a builder chain unless a
-command intentionally overrides one of them. Reply with `this.replySuccess` /
-`replyError` / `replyWarning` / `replyInfo` (ephemeral card by default) or
-`this.reply(interaction, payload)` — never raw `interaction.reply` with a
+command intentionally overrides one of them. Reply with `sendSuccess` /
+`sendError` / `sendWarning` / `sendInfo` from `#lib/commands.js` (ephemeral card by default) or
+`sendReply(interaction, payload)` — never raw `interaction.reply` with a
 hand-spread card, and never OR `MessageFlags.Ephemeral` yourself (use
 `ephemeralCard(card)`).
 
