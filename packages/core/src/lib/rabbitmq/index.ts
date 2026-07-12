@@ -24,7 +24,6 @@ export type { RpcRequest, RpcResponse, RpcHandler };
 
 export const rpcHandlers = new Map<string, RpcHandler<unknown, unknown>>();
 
-
 export function registerRpcHandler<TIn, TOut>(
   action: string,
   handler: RpcHandler<TIn, TOut>,
