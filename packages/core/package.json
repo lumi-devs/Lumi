@@ -41,7 +41,6 @@
     "@sapphire/plugin-utilities-store": "latest",
     "@sapphire/ratelimits": "latest",
     "@sapphire/timestamp": "latest",
-    "@sapphire/phisherman": "latest",
     "@sapphire/plugin-scheduled-tasks": "^10.0.4",
     "@sapphire/plugin-subcommands": "^7.0.1",
     "@sapphire/shapeshift": "^4.0.0",
