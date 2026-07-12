@@ -19,7 +19,6 @@ export interface VcRecord {
   createdAt: number;
 }
 
-
 export async function setGenerator(
   guildId: string,
   channelId: string,
