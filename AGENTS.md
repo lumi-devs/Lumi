@@ -23,7 +23,7 @@
 - **Database**: Prisma + PostgreSQL (pg adapter), ioredis
 - **Messaging**: RabbitMQ (amqplib) + BullMQ (`@sapphire/plugin-scheduled-tasks`, Redis-backed)
 - **i18n**: `@sapphire/plugin-i18next` (per-guild locale, typed keys)
-- **Validation**: Zod (Note: transitioning to `@sapphire/shapeshift` where applicable)
+- **Validation**: `@sapphire/shapeshift`
 
 ---
 
@@ -33,7 +33,7 @@
 
 Lumi-TS operates as a **Monorepo** using Bun workspaces: 
 - `packages/*` (`@lumi/core`, `@lumi/event-bus`, `@lumi/observability`, `@lumi/contracts`, `@lumi/sharding`, `@lumi/sdk`)
-- `apps/*` (`@lumi/gateway`, `@lumi/worker`, `@lumi/scheduler`)
+- `apps/*` (`@lumi/dashboard`, `@lumi/gateway`, `@lumi/scheduler`, `@lumi/worker`)
 
 The bot itself resides in **`@lumi/core`** (`packages/core/`). Every `src/…` path mentioned below is rooted at `packages/core/src/`.
 `apps/*` are thin deployment entrypoints. `packages/*` are the libraries they compose. 
@@ -42,16 +42,14 @@ The bot itself resides in **`@lumi/core`** (`packages/core/`). Every `src/…` p
 > Cross-package imports must use the `@lumi/*` names. **Never** use relative paths between packages.
 
 ### Core Directories (`packages/core/src/`)
-- `core/` — Framework glue. Holds base classes, the module system, DB/Redis layers, RabbitMQ bridge, and core commands (`/lumi`).
+- `lib/` — Framework glue. Holds base classes, the module system, DB/Redis layers, RabbitMQ bridge, utilities, and Prisma setup.
 - `modules/` — Feature modules. The root for `ModuleStore`.
-- `database/` — Prisma (`client.ts`) and Redis (`redis.ts`) setup.
-- `prisma/` — Contains `DatabaseService.ts`, the **only** sanctioned data-access layer for features.
-- `utilities/` — Helpers like `cards.ts`, `time.ts`, `errors.ts`.
-- `workers/` — `WorkerManager` for CPU-bound jobs.
+- `languages/` — Translations for i18n.
+- `scheduled-tasks/` — BullMQ `ScheduledTask` definitions.
 
 ### Path Aliases
 Within `@lumi/core`, use the following `imports` defined in `package.json`:
-`#core/*`, `#modules/*`, `#database/*`, `#utilities/*`, `#workers/*`, `#root/*` (maps to `packages/core/src/*`).
+`#lib/*`, `#modules/*`, `#root/*` (maps to `packages/core/src/*`).
 Library aliases: `#lib/commands.js`, `#lib/env.js`, `#lib/permissions.js`, `#lib/rabbit.js`, `#lib/guild-transaction.js`, `#lib/module-check.js`, `#lib/types.js`, `#lib/module-system.js`, `#lib/schedule-task.js`, `#lib/scheduler-bus.js`.
 
 > [!TIP]
@@ -80,10 +78,10 @@ Each feature lives in `src/modules/<name>/`. The `index.ts` exports a class deco
 - **`scheduled-tasks/`** — BullMQ `ScheduledTask` pieces. (Must be exactly named).
 
 > [!CAUTION]
-> **Zero cross-module imports.** Modules must never import from sibling modules. Shared logic goes in `src/core/` or `src/utilities/`.
+> **Zero cross-module imports.** Modules must never import from sibling modules. Shared logic goes in `src/lib/` or `src/lib/utilities/`.
 
 ### Services
-Extend `Service` (`#core/module-system/Service.js`). They expose `this.logger`, `this.db`, `this.redis`. 
+Extend `Service` (`#lib/module-system/Service.js`). They expose `this.logger`, `this.db`, `this.redis`. 
 Always retrieve with `getService("<svc>")` or `tryGetService("<svc>")`.
 
 ### Permissions
@@ -95,18 +93,18 @@ Permission levels are defined as: `USER(0) < MOD(5) < ADMIN(7) < GUILD_OWNER(8) 
 
 ### Database & Cache
 - Use **`container.db`** (`DatabaseService`) for all persistence. **Never** call `container.prisma` directly from a module.
-- Redis keys must come from `RedisKeys` in `src/database/redis.ts`.
-- Cache busts go through `InvalidationBus` (`#invalidate`). **Never** `redis.del` a shared cache key directly.
+- Redis keys must come from `RedisKeys` in `src/lib/database/redis.ts`.
+- Cache busts go through `InvalidationBus`. **Never** `redis.del` a shared cache key directly.
 - **`container.entityCache`**: This is provisioned-ahead infra for a future `GuildManager: 0` step. Do not migrate call sites onto it until that step is taken.
 
 ### Config
-Config uses a **Zod-first** approach. Declare a single `configSchema` in the module meta using `cfg.*` helpers. The flat `ConfigField[]` is derived from this schema. Use `ConfigService.getConfigList` to read lists. Register a cache-invalidation hook with `container.configChangeHooks.set("<module>:<key>", fn)` instead of patching `ConfigService`.
+Config uses a **Shapeshift-first** approach. Declare a single `configSchema` in the module meta using `cfg.*` helpers. The flat `ConfigField[]` is derived from this schema. Use `ConfigService.getConfigList` to read lists. Register a cache-invalidation hook with `container.configChangeHooks.set("<module>:<key>", fn)` instead of patching `ConfigService`.
 
 ---
 
 ## ⚙️ Background Work
 
-1. **Scheduled Tasks** (BullMQ): Extend `RelayTask<"name">`. The directory must be `scheduled-tasks/`. CPU-bound work is offloaded to `WorkerManager`.
+1. **Scheduled Tasks** (BullMQ): Extend `RelayTask<"name">`. The directory must be `scheduled-tasks/`.
 2. **RabbitMQ Events & RPC**: Cross-process fanout events (`publishEvent`/`onEvent`) and RPC bridge (`registerRpcHandler`). There is no fire-and-forget job queue here; use BullMQ for that.
 
 ---
@@ -124,7 +122,7 @@ Config uses a **Zod-first** approach. Declare a single `configSchema` in the mod
 ### Commands & UI
 - All commands must extend `BaseCommand` or `BaseSubcommand`.
 - Do not manually apply `defaultMemberPermissions`, `contexts`, or `integrationTypes` in the builder unless intentionally overriding.
-- **Card System**: Never construct raw embeds. Use `makeInfoCard`, `makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeListCard` from `src/utilities/cards.ts`. Reply using `sendSuccess`, `sendError`, etc.
+- **Card System**: Never construct raw embeds. Use `makeInfoCard`, `makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeListCard` from `src/lib/utilities/cards.ts`. Reply using `sendSuccess`, `sendError`, etc.
 - **Pagination**: Use `chunk(lines, N)` from `@sapphire/utilities`. Do not use `PaginatedMessage`.
 
 ### i18n
@@ -167,7 +165,7 @@ Do not hand-roll functionality that already exists in our integrated libraries.
 ### Other Specifics
 - **Fetch**: Use `@sapphire/fetch` instead of raw `fetch()`.
 - **Timing**: Use `@sapphire/stopwatch` instead of `performance.now()`.
-- **Durations**: Use `@sapphire/time-utilities` or `container.utilities.time.formatDuration()`.
+- **Durations**: Use `@sapphire/time-utilities` or `container.utilities.time.humanizeDelta()`.
 
 > [!WARNING]
 > **Strict Anti-Patterns**:
