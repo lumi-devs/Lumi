@@ -13,7 +13,8 @@ import {
   ButtonBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { BaseCommand, sendReply } from "#lib/commands.js";
+import { BaseCommand, sendReply, fetchTyped } from "#lib/commands.js";
+import type { LumiT } from "#lib/i18n/index.js";
 import { Colors } from "#lib/utilities/branding.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { makeCard } from "#lib/utilities/cards.js";
@@ -32,20 +33,22 @@ export class ServerInfoCommand extends BaseCommand {
   }
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-    const card = await this.buildServerCard(interaction);
+    const t = await fetchTyped(interaction);
+    const card = await this.buildServerCard(interaction, t);
     await sendReply(interaction, card as InteractionReplyOptions);
   }
 
   public override async messageRun(message: Message) {
     if (!message.channel.isSendable()) return;
-    const card = await this.buildServerCard(message);
+    const t = await fetchTyped(message);
+    const card = await this.buildServerCard(message, t);
     await message.reply({
       ...card,
       allowedMentions: {},
     });
   }
 
-  protected async buildServerCard(ctx: ChatInputCommandInteraction | Message) {
+  protected async buildServerCard(ctx: ChatInputCommandInteraction | Message, t: LumiT) {
     const guild = ctx.guild!;
 
     const owner = await guild.fetchOwner();
@@ -63,31 +66,35 @@ export class ServerInfoCommand extends BaseCommand {
     const emojiCount = guild.emojis.cache.size;
     const roleCount = guild.roles.cache.size;
 
-    const formatCount = (count: number) =>
-      count >= 1000 ? `${(count / 1000).toFixed(1)}K` : count.toString();
 
     const body = [
-      `**Server Owner**: ${owner.user.toString()} (ID: \`${owner.id}\`)\n` +
-        `**Created At**: ${time(guild.createdAt, TimestampStyles.RelativeTime)} (${time(guild.createdAt, TimestampStyles.ShortDate)})\n` +
-        `**Guild ID**: \`${guild.id}\``,
+      `${t("commands:serverinfoOwner", { owner: owner.user.toString(), id: owner.id })}\n` +
+        `${t("commands:serverinfoCreatedAt", {
+          relative: time(guild.createdAt, TimestampStyles.RelativeTime),
+          short: time(guild.createdAt, TimestampStyles.ShortDate),
+        })}\n` +
+        `${t("commands:serverinfoGuildId", { id: guild.id })}`,
 
-      `### ${Emojis.MEMBERS} MEMBERS\n` +
-        `**Total Members**: ***${formatCount(guild.memberCount)}***\n${
+      `### ${Emojis.MEMBERS} ${t("commands:serverinfoMembersTitle")}\n` +
+        `${t("commands:serverinfoTotalMembers", { count: guild.memberCount })}\n${
           guild.premiumSubscriptionCount
-            ? `**Server Boosts**: ***${guild.premiumSubscriptionCount}*** (Level ${guild.premiumTier})\n`
+            ? `${t("commands:serverinfoServerBoosts", {
+                count: guild.premiumSubscriptionCount,
+                tier: guild.premiumTier,
+              })}\n`
             : ""
         }`,
 
-      `### ${Emojis.GATEWAY} CHANNELS\n` +
-        `**Text Channels**: ***${textChannels}***\n` +
-        `**Voice Channels**: ***${voiceChannels}***\n` +
-        `**Categories**: ***${categoryChannels}***\n` +
-        `**Total Channels**: ***${channels.size}***`,
+      `### ${Emojis.GATEWAY} ${t("commands:serverinfoChannelsTitle")}\n` +
+        `${t("commands:serverinfoTextChannels", { count: textChannels })}\n` +
+        `${t("commands:serverinfoVoiceChannels", { count: voiceChannels })}\n` +
+        `${t("commands:serverinfoCategories", { count: categoryChannels })}\n` +
+        `${t("commands:serverinfoTotalChannels", { count: channels.size })}`,
 
-      `### ${Emojis.GEAR} FEATURES\n` +
-        `**Roles**: ***${roleCount}***\n` +
-        `**Emojis**: ***${emojiCount}***\n` +
-        `**Verification Level**: ***${guild.verificationLevel}***`,
+      `### ${Emojis.GEAR} ${t("commands:serverinfoFeaturesTitle")}\n` +
+        `${t("commands:serverinfoRoles", { count: roleCount })}\n` +
+        `${t("commands:serverinfoEmojis", { count: emojiCount })}\n` +
+        `${t("commands:serverinfoVerificationLevel", { level: guild.verificationLevel })}`,
     ];
 
     const buttons = [];
@@ -95,7 +102,7 @@ export class ServerInfoCommand extends BaseCommand {
     if (iconUrl) {
       buttons.push(
         new ButtonBuilder()
-          .setLabel("Server Icon Link")
+          .setLabel(t("commands:serverinfoIconLink"))
           .setStyle(ButtonStyle.Link)
           .setURL(iconUrl)
           .setEmoji({ name: "🖼️" }),

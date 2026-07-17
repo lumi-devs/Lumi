@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { WhoisCommand } from '../../../src/modules/utility/whois/commands/whois.js';
+import { WhoisCommand } from '../../../src/modules/utility/commands/whois.js';
 import { container } from '@sapphire/framework';
 import type { User, GuildMember } from 'discord.js';
 
@@ -60,7 +60,7 @@ describe('WhoisCommand', () => {
       },
     } as unknown as GuildMember;
 
-    const card = (command as any).buildWhoisCard(mockUser, mockMember, 'guild1');
+    const card = (command as any).buildWhoisCard(mockUser, mockMember, 'guild1', vi.fn((k, opts) => k + (opts ? ' ' + JSON.stringify(opts) : '')));
     
     expect(card).toBeDefined();
     expect(card.components).toBeDefined();
@@ -73,9 +73,9 @@ describe('WhoisCommand', () => {
     expect(userSec).toContain('12345');
 
     const memberSec = json.components[4].content;
-    expect(memberSec).toContain('Member Information');
+    expect(memberSec).toContain('whoisMemberInfoTitle');
 
     const rolesSec = json.components[6].content;
-    expect(rolesSec).toContain('Roles [1]');
+    expect(rolesSec).toContain('whoisRolesTitle');
   });
 });
