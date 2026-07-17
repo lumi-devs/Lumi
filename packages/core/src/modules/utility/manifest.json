@@ -9,6 +9,17 @@
   "conflicts": [],
   "configOverrides": false,
   "targetService": "worker",
-  "subStores": [],
-  "configFields": []
+  "subStores": [
+    "commands",
+    "interaction-handlers"
+  ],
+  "configFields": [
+    {
+      "key": "cooldown_seconds",
+      "type": "NUMBER",
+      "label": "Cooldown (seconds)",
+      "description": "Rate limit per user for avatar/banner commands.",
+      "default": 10
+    }
+  ]
 }

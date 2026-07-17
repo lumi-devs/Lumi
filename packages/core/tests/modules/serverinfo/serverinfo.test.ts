@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ServerInfoCommand } from '../../../src/modules/utility/serverinfo/commands/serverinfo.js';
+import { ServerInfoCommand } from '../../../src/modules/utility/commands/serverinfo.js';
 import { container } from '@sapphire/framework';
 
 describe('ServerInfoCommand', () => {
@@ -67,7 +67,7 @@ describe('ServerInfoCommand', () => {
       guild: mockGuild,
     } as any;
 
-    const card = await (command as any).buildServerCard(mockCtx);
+    const card = await (command as any).buildServerCard(mockCtx, vi.fn((k, opts) => k + (opts ? ' ' + JSON.stringify(opts) : '')));
     
     expect(card).toBeDefined();
     expect(card.components).toBeDefined();
@@ -79,9 +79,9 @@ describe('ServerInfoCommand', () => {
     expect(ownerSec).toContain('owner1');
 
     const memberSec = json.components[4].content;
-    expect(memberSec).toContain('Total Members');
+    expect(memberSec).toContain('serverinfoTotalMembers');
 
     const channelSec = json.components[6].content;
-    expect(channelSec).toContain('Channels');
+    expect(channelSec).toContain('serverinfoChannelsTitle');
   });
 });

@@ -1,6 +1,6 @@
 import { UserError, ResultError, container } from "@sapphire/framework";
 import { DiscordAPIError, HTTPError, RESTJSONErrorCodes } from "discord.js";
-import * as Sentry from "@sentry/node";
+import { trace, SpanStatusCode } from "@opentelemetry/api";
 import { errorFrom } from "#lib/utilities/errors.js";
 
 /**
@@ -29,7 +29,7 @@ export interface ResolvedCommandError {
    * `false` for genuine unhandled bugs.
    */
   expected: boolean;
-  /** Sentry event id for unexpected errors, surfaced to the user as a reference. */
+  /** OTEL trace id for unexpected errors, surfaced to the user as a reference. */
   report?: string;
 }
 
@@ -74,13 +74,19 @@ function messageForHttpStatus(status: number): string | null {
   }
 }
 
-/** Capture an unexpected error to Sentry and return its event id, if any. */
-function reportUnexpected(label: string, error: unknown): string | undefined {
+/** Capture an unexpected error to the active OTEL span and return its trace id, if any. */
+function reportUnexpected(_label: string, error: unknown): string | undefined {
   try {
-    return Sentry.captureException(error, { tags: { command: label } });
+    const span = trace.getActiveSpan();
+    if (span) {
+      span.recordException(error as Error);
+      span.setStatus({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : String(error) });
+      return span.spanContext().traceId;
+    }
   } catch {
-    return undefined;
+    // ignore
   }
+  return undefined;
 }
 
 /**
@@ -89,7 +95,7 @@ function reportUnexpected(label: string, error: unknown): string | undefined {
  *
  * Mirrors Skyra's `flattenError`: unwrap `ResultError`, translate `UserError`,
  * map Discord API/HTTP/abort failures to friendly messages, and capture genuine
- * unhandled errors to Sentry with a reference id for the user.
+ * unhandled errors to OTEL with a trace id for the user.
  *
  * @param label A short identifier for the source (e.g. `"Command:ban"`).
  */
