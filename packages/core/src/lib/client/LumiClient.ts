@@ -234,9 +234,6 @@ export class LumiClient extends SapphireClient {
     this.stores.register(new ServiceStore());
     this.stores.register(moduleStore);
     this.stores.registerPath(new URL("../permissions/", import.meta.url));
-    this.stores
-      .get("listeners")!
-      .registerPath(new URL("../sentry/", import.meta.url));
     (this.stores
       .get("utilities") as any)
       .registerPath(new URL("../utility-store/", import.meta.url));

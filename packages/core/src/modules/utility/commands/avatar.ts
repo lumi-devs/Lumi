@@ -2,15 +2,15 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { Args, Command } from "@sapphire/framework";
 import { Message, type ChatInputCommandInteraction } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
-import { handleMediaRequest } from "../media-utils.js";
+import { handleMediaRequest } from "../lib/media-utils.js";
 
 @ApplyOptions<BaseCommand.Options>({
-  name: "banner",
-  aliases: ["b"],
-  description: "Displays a user's banner.",
+  name: "avatar",
+  aliases: ["av"],
+  description: "Displays a user's avatar.",
   preconditions: ["GuildOnly"],
 })
-export class BannerCommand extends BaseCommand {
+export class AvatarCommand extends BaseCommand {
   public override registerApplicationCommands(registry: Command.Registry) {
     registry.registerChatInputCommand((builder) =>
       builder
@@ -20,7 +20,7 @@ export class BannerCommand extends BaseCommand {
           option
             .setName("user")
             .setDescription(
-              "The user whose banner to display (defaults to you).",
+              "The user whose avatar to display (defaults to you).",
             ),
         ),
     );
@@ -31,7 +31,7 @@ export class BannerCommand extends BaseCommand {
     return handleMediaRequest({
       context: message,
       targetUser: user,
-      mediaType: "banner",
+      mediaType: "avatar",
       container: this.container,
     });
   }
@@ -41,7 +41,7 @@ export class BannerCommand extends BaseCommand {
     return handleMediaRequest({
       context: interaction,
       targetUser: user,
-      mediaType: "banner",
+      mediaType: "avatar",
       container: this.container,
     });
   }

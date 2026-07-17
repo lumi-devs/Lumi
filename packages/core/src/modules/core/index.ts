@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/member-ordering -- registerRpcHandler calls ordered by RPC command semantics, not class member order */
-import { Module } from "#lib/module-system/Module.js";
+import { Module, DefineModule } from "#lib/module-system/Module.js";
 import { container, type Piece } from "@sapphire/framework";
 import { getService } from "#lib/module-system/Service.js";
 import { registerRpcHandler, rpcHandlers } from "#lib/rabbitmq/index.js";
@@ -14,8 +14,6 @@ import { Emojis } from "#lib/utilities/assets.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { s, type BaseValidator } from "@sapphire/shapeshift";
-
-import "#lib/sentry/breadcrumb.js";
 
 const SnowflakeSchema = s.string().regex(/^\d{17,20}$/);
 
@@ -52,6 +50,14 @@ const ModuleUninstallSchema = s.object({
   moduleName: s.string().lengthGreaterThanOrEqual(1),
 });
 
+@DefineModule({
+  name: "core",
+  displayName: "Core",
+  description: "The built-in core module.",
+  emoji: Emojis.SHIELD,
+  isCore: true,
+  version: "1.0.0",
+})
 export class CoreModule extends Module {
   public constructor(
     context: Piece.LoaderContext,
@@ -59,7 +65,7 @@ export class CoreModule extends Module {
   ) {
     super(context, {
       ...options,
-      name: "Core",
+      name: "core",
       enabled: true,
       isCore: true,
       displayName: "Core",

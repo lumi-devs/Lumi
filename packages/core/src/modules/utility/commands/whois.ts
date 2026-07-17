@@ -15,7 +15,8 @@ import {
   ButtonBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { BaseCommand, sendReply } from "#lib/commands.js";
+import { BaseCommand, sendReply, fetchTyped } from "#lib/commands.js";
+import type { LumiT } from "#lib/i18n/index.js";
 import { Colors } from "#lib/utilities/branding.js";
 import { makeCard, makeErrorCard } from "#lib/utilities/cards.js";
 
@@ -58,12 +59,14 @@ export class WhoisCommand extends BaseCommand {
       (interaction.options.getMember("user") as GuildMember | null) ??
       (await interaction.guild!.members.fetch(user.id).catch(() => null));
 
-    const card = this.buildWhoisCard(user, member, interaction.guildId!);
+    const t = await fetchTyped(interaction);
+    const card = this.buildWhoisCard(user, member, interaction.guildId!, t);
     await sendReply(interaction, card as InteractionReplyOptions);
   }
 
   public override async messageRun(message: Message, args: Args) {
     if (!message.channel.isSendable()) return;
+    const t = await fetchTyped(message);
 
     let user = message.author;
     if (!args.finished) {
@@ -73,8 +76,8 @@ export class WhoisCommand extends BaseCommand {
       } else {
         await message.reply({
           ...makeErrorCard(
-            "User Not Found",
-            "Please specify a valid user mention or ID.",
+            t("commands:whoisUserNotFoundTitle"),
+            t("commands:whoisUserNotFound"),
           ),
           allowedMentions: {},
         });
@@ -85,7 +88,7 @@ export class WhoisCommand extends BaseCommand {
     const member = await message
       .guild!.members.fetch(user.id)
       .catch(() => null);
-    const card = this.buildWhoisCard(user, member, message.guildId!);
+    const card = this.buildWhoisCard(user, member, message.guildId!, t);
     await message.reply({
       ...card,
       allowedMentions: {},
@@ -96,6 +99,7 @@ export class WhoisCommand extends BaseCommand {
     user: User,
     member: GuildMember | null,
     guildId: string,
+    t: LumiT,
   ) {
     const userTag =
       user.discriminator === "0"
@@ -104,9 +108,12 @@ export class WhoisCommand extends BaseCommand {
     const botBadge = user.bot ? ` [BOT]` : "";
 
     const userSec =
-      `**User Mention**: ${user.toString()}\n` +
-      `**Account ID**: \`${user.id}\`\n` +
-      `**Created At**: ${time(user.createdAt, TimestampStyles.RelativeTime)} (${time(user.createdAt, TimestampStyles.ShortDate)})`;
+      `${t("commands:whoisUserMention", { mention: user.toString() })}\n` +
+      `${t("commands:whoisAccountId", { id: user.id })}\n` +
+      `${t("commands:whoisCreatedAt", {
+        relative: time(user.createdAt, TimestampStyles.RelativeTime),
+        short: time(user.createdAt, TimestampStyles.ShortDate),
+      })}`;
 
     const body = [userSec];
 
@@ -114,19 +121,24 @@ export class WhoisCommand extends BaseCommand {
 
     if (member) {
       color = member.displayColor || Colors.PRIMARY || 0x5865f2;
-      const joinedSec = `**Joined Server**: ${time(member.joinedAt!, TimestampStyles.RelativeTime)} (${time(member.joinedAt!, TimestampStyles.ShortDate)})\n${
+      const joinedSec = `${t("commands:whoisJoinedServer", {
+        relative: time(member.joinedAt!, TimestampStyles.RelativeTime),
+        short: time(member.joinedAt!, TimestampStyles.ShortDate),
+      })}\n${
         member.premiumSince
-          ? `**Server Boosting Since**: ${time(member.premiumSince, TimestampStyles.RelativeTime)}`
+          ? `${t("commands:whoisServerBoosting", {
+              relative: time(member.premiumSince, TimestampStyles.RelativeTime),
+            })}`
           : ""
       }`;
 
-      body.push(`### Member Information\n${joinedSec}`);
+      body.push(`### ${t("commands:whoisMemberInfoTitle")}\n${joinedSec}`);
 
       const sortedRoles = member.roles.cache
         .filter((r) => r.id !== guildId)
         .sort((a, b) => b.position - a.position);
 
-      let rolesText = "No roles";
+      let rolesText = t("commands:whoisRolesNone");
       if (sortedRoles.size > 0) {
         const mentions = sortedRoles.map((role) => role.toString());
         if (mentions.join(" ").length > 800) {
@@ -137,16 +149,16 @@ export class WhoisCommand extends BaseCommand {
             current += (current ? " " : "") + mention;
             count++;
           }
-          rolesText = `${current} ...and ${sortedRoles.size - count} more`;
+          rolesText = t("commands:whoisRolesMore", { roles: current, count: sortedRoles.size - count });
         } else {
           rolesText = mentions.join(" ");
         }
       }
-      body.push(`### Roles [${sortedRoles.size}]\n${rolesText}`);
+      body.push(`### ${t("commands:whoisRolesTitle", { count: sortedRoles.size })}\n${rolesText}`);
 
-      let keyPermsText = "None";
+      let keyPermsText = t("commands:whoisPermissionsNone");
       if (member.permissions.has(PermissionFlagsBits.Administrator)) {
-        keyPermsText = "Administrator (All Permissions)";
+        keyPermsText = t("commands:whoisPermissionsAdmin");
       } else {
         const perms = KEY_PERMISSIONS.filter((p) =>
           member.permissions.has(p.flag),
@@ -155,13 +167,13 @@ export class WhoisCommand extends BaseCommand {
           keyPermsText = perms.join(", ");
         }
       }
-      body.push(`### Key Permissions\n${keyPermsText}`);
+      body.push(`### ${t("commands:whoisPermissionsTitle")}\n${keyPermsText}`);
     }
 
     const avatarUrl = user.displayAvatarURL({ size: 4096, extension: "png" });
     const buttons = [
       new ButtonBuilder()
-        .setLabel("View Profile")
+        .setLabel(t("commands:whoisViewProfile"))
         .setStyle(ButtonStyle.Link)
         .setURL(`discord://-/users/${user.id}`)
         .setEmoji({ name: "👤" }),
@@ -170,7 +182,7 @@ export class WhoisCommand extends BaseCommand {
     if (avatarUrl) {
       buttons.push(
         new ButtonBuilder()
-          .setLabel("Avatar Link")
+          .setLabel(t("commands:whoisAvatarLink"))
           .setStyle(ButtonStyle.Link)
           .setURL(avatarUrl)
           .setEmoji({ name: "🖼️" }),
