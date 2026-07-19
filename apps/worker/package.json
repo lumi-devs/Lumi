@@ -15,6 +15,6 @@
   "dependencies": {
     "@lumi/core": "workspace:*",
     "@sapphire/framework": "^5.5.0",
-    "@sentry/node": "^10.53.1"
+    "@sentry/node": "^10.66.0"
   }
 }

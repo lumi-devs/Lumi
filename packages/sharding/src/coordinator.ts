@@ -150,7 +150,7 @@ export class ClusterCoordinator {
             : `[ClusterCoordinator:${options.replicaId}] ${msg}`;
           const fn =
             lvl === "error" ? "error" : lvl === "warn" ? "warn" : "log";
-          // eslint-disable-next-line no-console
+           
           console[fn](line);
         }),
     };
@@ -243,7 +243,7 @@ export class ClusterCoordinator {
       membersKey(this.opts.clusterName),
       0,
       -1,
-    )) as string[];
+    ));
     const current = await this.readAssignment();
     const wantByReplica = assignShards(liveIds, this.opts.shardCount);
     const needsRewrite =

@@ -15,11 +15,7 @@ import type { BaseValidator } from "@sapphire/shapeshift";
  * Represents the current lifecycle state of a module in the store.
  */
 export type ModuleState =
-  | "discovered"
-  | "loaded"
-  | "failed"
-  | "disabled"
-  | "skipped-conflict";
+  "discovered" | "loaded" | "failed" | "disabled" | "skipped-conflict";
 
 /**
  * Represents a discovered module and its metadata within the {@link ModuleStore}.
@@ -247,7 +243,7 @@ export class ModuleStore extends Store<Module> {
       record.failureReason = undefined;
     }
 
-    return result as Module;
+    return result;
   }
 
   /**
@@ -262,7 +258,7 @@ export class ModuleStore extends Store<Module> {
     const record = this.#records.get(name);
     if (!record) throw new Error(`Unknown module: ${name}`);
     if (record.meta.isCore && !enabled) throw new Error("Cannot disable Core");
-    if (record.enabled === enabled) return; // already in desired state
+    if (record.enabled === enabled) return;
 
     if (enabled) {
       await this.loadModule(name);

@@ -165,11 +165,11 @@ export class LumiClient extends SapphireClient {
             options.cluster?.throttlerFactory ??
             buildSimpleThrottlerFactory(options.shardPlan),
           ...(options.cluster && {
-            retrieveSessionInfo: options.cluster!.sessionStore.retrieve.bind(
-              options.cluster!.sessionStore,
+            retrieveSessionInfo: options.cluster.sessionStore.retrieve.bind(
+              options.cluster.sessionStore,
             ),
-            updateSessionInfo: options.cluster!.sessionStore.update.bind(
-              options.cluster!.sessionStore,
+            updateSessionInfo: options.cluster.sessionStore.update.bind(
+              options.cluster.sessionStore,
             ),
           }),
         },
@@ -234,9 +234,12 @@ export class LumiClient extends SapphireClient {
     this.stores.register(new ServiceStore());
     this.stores.register(moduleStore);
     this.stores.registerPath(new URL("../permissions/", import.meta.url));
-    (this.stores
-      .get("utilities") as any)
-      .registerPath(new URL("../utility-store/", import.meta.url));
+    (this.stores.get("services") as any).registerPath(
+      new URL("../services/", import.meta.url),
+    );
+    (this.stores.get("utilities") as any).registerPath(
+      new URL("../utility-store/", import.meta.url),
+    );
 
     const redis = createRedisClient();
     this._ownedEventBus = createEventBus({
@@ -530,7 +533,7 @@ export class LumiClient extends SapphireClient {
       JSON.stringify(prefixes),
     );
     return prefixes;
-  }
+  };
 
   private _warnOnCleanupError(what: string) {
     return (err: unknown) =>

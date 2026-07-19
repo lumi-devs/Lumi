@@ -15,7 +15,6 @@ import {
 } from "@discordjs/builders";
 import { BaseCommand, sendReply, fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { Colors } from "#lib/utilities/branding.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { makeCard } from "#lib/utilities/cards.js";
 
@@ -35,7 +34,7 @@ export class ServerInfoCommand extends BaseCommand {
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
     const t = await fetchTyped(interaction);
     const card = await this.buildServerCard(interaction, t);
-    await sendReply(interaction, card as InteractionReplyOptions);
+    await sendReply(interaction, card);
   }
 
   public override async messageRun(message: Message) {
@@ -48,7 +47,10 @@ export class ServerInfoCommand extends BaseCommand {
     });
   }
 
-  protected async buildServerCard(ctx: ChatInputCommandInteraction | Message, t: LumiT) {
+  protected async buildServerCard(
+    ctx: ChatInputCommandInteraction | Message,
+    t: LumiT,
+  ) {
     const guild = ctx.guild!;
 
     const owner = await guild.fetchOwner();
@@ -65,7 +67,6 @@ export class ServerInfoCommand extends BaseCommand {
 
     const emojiCount = guild.emojis.cache.size;
     const roleCount = guild.roles.cache.size;
-
 
     const body = [
       `${t("commands:serverinfoOwner", { owner: owner.user.toString(), id: owner.id })}\n` +
@@ -118,7 +119,7 @@ export class ServerInfoCommand extends BaseCommand {
           ]
         : undefined;
 
-    return makeCard(Colors.PRIMARY || 0x5865f2, guild.name, body, {
+    return makeCard(0 || 0x5865f2, guild.name, body, {
       actionRows,
     });
   }

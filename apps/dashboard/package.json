@@ -15,8 +15,8 @@
   "dependencies": {
     "@lumi/contracts": "workspace:*",
     "@lumi/observability": "workspace:*",
-    "amqp-connection-manager": "^4.1.14",
-    "amqplib": "^0.10.4"
+    "amqp-connection-manager": "^5.0.0",
+    "amqplib": "^2.0.1"
   },
   "devDependencies": {
     "bun-types": "latest"

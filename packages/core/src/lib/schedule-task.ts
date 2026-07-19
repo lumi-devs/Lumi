@@ -14,7 +14,7 @@ export async function scheduleTask<N extends keyof ScheduledTasks>(
 ): Promise<void> {
   if (roleOwnsScheduler(getServiceRole())) {
     await container.tasks.create(
-      { name, payload } as Parameters<typeof container.tasks.create>[0],
+      { name, payload },
       options as Parameters<typeof container.tasks.create>[1],
     );
     return;

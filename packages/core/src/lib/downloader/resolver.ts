@@ -148,7 +148,7 @@ export class DownloadResolver {
     moduleName: string,
   ): Promise<ModuleInfo> {
     repoName = repoSchema.parse(repoName);
-    moduleName = repoSchema.parse(moduleName); // Reuse repoSchema for module names
+    moduleName = repoSchema.parse(moduleName);
 
     const sourcePath = path.join(MODULE_ROOT, repoName, moduleName);
     const targetPath = path.join(ADDON_MODULES_ROOT, moduleName);
@@ -216,7 +216,7 @@ export class DownloadResolver {
         err &&
         typeof err === "object" &&
         "code" in err &&
-        (err as { code: unknown }).code !== "ENOENT"
+        (err).code !== "ENOENT"
       ) {
         logError("DownloaderResolver._exists", err);
       }

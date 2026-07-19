@@ -30,4 +30,4 @@ export const config = {
 } as const;
 
 /** How long a login session stays valid before re-authentication is required. */
-export const SESSION_TTL_MS = 1000 * 60 * 60 * 8; // 8 hours
+export const SESSION_TTL_MS = 1000 * 60 * 60 * 8;

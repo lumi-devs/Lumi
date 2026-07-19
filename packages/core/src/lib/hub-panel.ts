@@ -12,7 +12,6 @@ import {
   userMention,
 } from "@discordjs/formatters";
 import { makeCard, noPingCard, type CardReply } from "#lib/utilities/cards.js";
-import { Colors } from "#lib/utilities/branding.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { SUPPORTED_LANGUAGES } from "#lib/i18n/index.js";
 
@@ -25,68 +24,38 @@ const row = (...components: MessageActionRowComponentBuilder[]): Row =>
     ...components,
   );
 
-export type HubTab =
-  | "overview"
-  | "modules"
-  | "permissions"
-  | "settings"
-  | "addons";
-
-interface TabDef {
-  tab: HubTab;
-  customId: string;
-  label: string;
-  emoji: string;
+export function hubRow(): Row {
+  return row(
+    new ButtonBuilder()
+      .setCustomId("lumi:tab:modules")
+      .setLabel("Modules")
+      .setEmoji(Emojis.parse(Emojis.GEAR))
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId("lumi:tab:permissions")
+      .setLabel("Permissions")
+      .setEmoji(Emojis.parse(Emojis.SHIELD))
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId("lumi:tab:settings")
+      .setLabel("Settings")
+      .setEmoji(Emojis.parse(Emojis.GUILD))
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId("lumi:tab:addons")
+      .setLabel("Addons")
+      .setEmoji(Emojis.parse(Emojis.REPO))
+      .setStyle(ButtonStyle.Primary),
+  );
 }
 
-const TABS: readonly TabDef[] = [
-  {
-    tab: "overview",
-    customId: "lumi:home",
-    label: "Overview",
-    emoji: Emojis.BOT,
-  },
-  {
-    tab: "modules",
-    customId: "lumi:tab:modules",
-    label: "Modules",
-    emoji: Emojis.GEAR,
-  },
-  {
-    tab: "permissions",
-    customId: "lumi:tab:permissions",
-    label: "Permissions",
-    emoji: Emojis.SHIELD,
-  },
-  {
-    tab: "settings",
-    customId: "lumi:tab:settings",
-    label: "Settings",
-    emoji: Emojis.GUILD,
-  },
-  {
-    tab: "addons",
-    customId: "lumi:tab:addons",
-    label: "Addons",
-    emoji: Emojis.REPO,
-  },
-];
-
-/**
- * The persistent hub navigation bar. Rendered at the top of every top-level
- * view; the active tab is highlighted (Primary) and the rest are muted.
- */
-export function tabRow(active: HubTab): Row {
+export function backToHubRow(): Row {
   return row(
-    ...TABS.map((t) =>
-      new ButtonBuilder()
-        .setCustomId(t.customId)
-        .setLabel(t.label)
-        .setEmoji(Emojis.parse(t.emoji))
-        .setStyle(
-          t.tab === active ? ButtonStyle.Primary : ButtonStyle.Secondary,
-        ),
-    ),
+    new ButtonBuilder()
+      .setCustomId("lumi:home")
+      .setLabel("Back to Hub")
+      .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+      .setStyle(ButtonStyle.Secondary),
   );
 }
 
@@ -111,7 +80,7 @@ export function buildHubView(o: HubOverview): CardReply {
   ].join("\n");
 
   return makeCard(
-    Colors.PRIMARY,
+    0,
     `${Emojis.BOT} Lumi Control Panel`,
     [
       "Manage everything for this server from one place — no scattered commands to remember.",
@@ -119,8 +88,8 @@ export function buildHubView(o: HubOverview): CardReply {
       tabs,
     ],
     {
-      footer: "Select a tab below to continue.",
-      actionRows: [tabRow("overview")],
+      footer: "Select an option below to continue.",
+      actionRows: [hubRow()],
     },
   );
 }
@@ -162,10 +131,10 @@ export function buildSettingsView(settings: {
       .setDisabled(settings.prefix === null),
   );
 
-  return makeCard(Colors.PRIMARY, `${Emojis.GUILD} Server Settings`, body, {
+  return makeCard(0, `${Emojis.GUILD} Server Settings`, body, {
     footer:
       "Prefix commands work for a curated set of moderation and utility commands.",
-    actionRows: [tabRow("settings"), row(langSelect), prefixButtons],
+    actionRows: [backToHubRow(), row(langSelect), prefixButtons],
   });
 }
 
@@ -216,7 +185,7 @@ export function buildPermissionsView(
       .setStyle(ButtonStyle.Danger),
   );
 
-  const rows: Row[] = [tabRow("permissions"), addRow];
+  const rows: Row[] = [backToHubRow(), addRow];
   if (shown.length) {
     rows.push(
       row(
@@ -237,7 +206,7 @@ export function buildPermissionsView(
 
   return noPingCard(
     makeCard(
-      Colors.PRIMARY,
+      0,
       `${Emojis.SHIELD} Command Permissions`,
       [
         lines.join("\n"),
@@ -258,14 +227,45 @@ export function buildAddonsView(): CardReply {
   const body = [
     "Add-ons are community-built modules that install and behave exactly like first-party features — once added, they appear in the **Modules** tab with full config, permissions, and enable/disable support.",
     [
-      `${Emojis.REPO} **Repositories** — add or remove sources with \`/repo\``,
-      `${Emojis.DOWNLOAD} **Install** — pull a module from a configured repository`,
+      `${Emojis.REPO} **Repositories** — add, remove, or update sources`,
+      `${Emojis.DOWNLOAD} **Modules** — install or uninstall modules`,
       `${Emojis.SHIELD} **Sandboxed** — add-ons follow the same permission model as core`,
     ].join("\n"),
   ];
 
-  return makeCard(Colors.PRIMARY, `${Emojis.REPO} Addons`, body, {
+  const repoButtons = row(
+    new ButtonBuilder()
+      .setCustomId("lumi:addon:add_repo")
+      .setLabel("Add Repo")
+      .setEmoji(Emojis.parse(Emojis.REPO))
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId("lumi:addon:rm_repo")
+      .setLabel("Remove Repo")
+      .setEmoji(Emojis.parse(Emojis.UNINSTALL))
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId("lumi:addon:update_repo")
+      .setLabel("Update Repo")
+      .setEmoji(Emojis.parse("🔄"))
+      .setStyle(ButtonStyle.Secondary),
+  );
+
+  const moduleButtons = row(
+    new ButtonBuilder()
+      .setCustomId("lumi:addon:install")
+      .setLabel("Install Module")
+      .setEmoji(Emojis.parse(Emojis.DOWNLOAD))
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId("lumi:addon:uninstall")
+      .setLabel("Uninstall Module")
+      .setEmoji(Emojis.parse(Emojis.CROSS))
+      .setStyle(ButtonStyle.Danger),
+  );
+
+  return makeCard(0, `${Emojis.REPO} Addons`, body, {
     footer: "Add-on management requires the Bot Owner permission level.",
-    actionRows: [tabRow("addons")],
+    actionRows: [backToHubRow(), repoButtons, moduleButtons],
   });
 }

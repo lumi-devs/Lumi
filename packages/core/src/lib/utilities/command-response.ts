@@ -52,7 +52,7 @@ export async function sendInteractionReply(
     return interaction.editReply({
       ...editOptions,
       ...(cleanFlags ? { flags: cleanFlags } : {}),
-    } as any);
+    });
   }
   if (interaction.deferred) {
     const { flags, ...editOptions } = options;
@@ -63,7 +63,7 @@ export async function sendInteractionReply(
     return interaction.editReply({
       ...editOptions,
       ...(cleanFlags ? { flags: cleanFlags } : {}),
-    } as any);
+    });
   }
   await interaction.reply(options);
   return undefined;
@@ -108,8 +108,7 @@ export async function handleDenied(
   const title = ERROR_TITLES[error.identifier] ?? "Command Error";
 
   const ctx = error.context as
-    | ({ i18nKey?: string } & Record<string, unknown>)
-    | undefined;
+    ({ i18nKey?: string } & Record<string, unknown>) | undefined;
   let body = error.message;
   if (ctx?.i18nKey) {
     try {
@@ -126,7 +125,7 @@ export async function handleDenied(
 
   try {
     if ("showModal" in interactionOrMessage) {
-      return await respond(interactionOrMessage as RepliableInteraction, card);
+      return await respond(interactionOrMessage, card);
     }
     return await respondMessage(interactionOrMessage as Message, card);
   } catch (err: unknown) {

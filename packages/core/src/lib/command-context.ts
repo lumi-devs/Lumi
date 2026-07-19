@@ -229,7 +229,7 @@ export class CommandContext {
       const payload = opts.ephemeral === false ? card : ephemeralCard(card);
       await sendInteractionReply(
         this.interaction,
-        payload as InteractionReplyOptions,
+        payload,
         "edit",
       );
       return;

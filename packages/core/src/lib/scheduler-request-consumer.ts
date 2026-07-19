@@ -43,9 +43,7 @@ export class SchedulerRequestConsumer {
     try {
       if (env.action === "create") {
         await container.tasks.create(
-          { name: env.name, payload: env.payload } as Parameters<
-            typeof container.tasks.create
-          >[0],
+          { name: env.name, payload: env.payload },
           env.options as Parameters<typeof container.tasks.create>[1],
         );
       } else if (env.action === "delete") {

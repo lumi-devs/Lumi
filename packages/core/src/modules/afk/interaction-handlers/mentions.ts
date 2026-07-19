@@ -4,14 +4,14 @@ import {
   container,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
-import type { ButtonInteraction } from "discord.js";
+import { ButtonInteraction, MessageFlags } from "discord.js";
 import {
   userMention,
   channelMention,
   hyperlink,
   messageLink,
 } from "@discordjs/formatters";
-import { makeListCard } from "#lib/utilities/cards.js";
+import { makeListCard, ephemeralCard } from "#lib/utilities/cards.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { getAfkMentions } from "../data/afk.js";
@@ -34,7 +34,6 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
   ) {
     if (!this.checkSecurity(interaction, userId)) return;
 
-    await this.acknowledge(interaction);
     const mentions = await getAfkMentions(interaction.guildId!, userId);
 
     const card = makeListCard(
@@ -48,6 +47,10 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
       `afk:mentions:${userId}`,
     );
 
-    await interaction.editReply(card);
+    if (interaction.message.flags.has(MessageFlags.Ephemeral)) {
+      await interaction.update(card);
+    } else {
+      await interaction.reply(ephemeralCard(card));
+    }
   }
 }

@@ -4,6 +4,7 @@ import {
   ContainerBuilder,
   SeparatorBuilder,
   TextDisplayBuilder,
+  StringSelectMenuBuilder,
 } from "@discordjs/builders";
 import {
   ButtonStyle,
@@ -68,34 +69,36 @@ export function buildPanel(
     new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large),
   );
 
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId(`${TVC}:panelmenu:${channel.id}`)
+    .setPlaceholder("Manage Channel...")
+    .addOptions(
+      { label: "Rename Channel", value: "name", emoji: { name: "👤" } },
+      { label: "Set User Limit", value: "limit", emoji: { name: "👥" } },
+      {
+        label: record.locked ? "Unlock Channel" : "Lock Channel",
+        value: "lock",
+        emoji: { name: record.locked ? "🔓" : "🔒" },
+      },
+      {
+        label: record.hidden ? "Unhide Channel" : "Hide Channel",
+        value: "hide",
+        emoji: { name: record.hidden ? "👀" : "🕵️" },
+      },
+      { label: "Kick Members", value: "kick", emoji: { name: "👢" } },
+      { label: "Trust Member", value: "trust", emoji: { name: "✅" } },
+      { label: "Untrust Member", value: "untrust", emoji: { name: "❎" } },
+      { label: "Block Member", value: "block", emoji: { name: "🚫" } },
+      { label: "Unblock Member", value: "unblock", emoji: { name: "♻️" } },
+      { label: "Transfer Ownership", value: "transfer", emoji: { name: "🔄" } },
+      { label: "Delete Channel", value: "delete", emoji: { name: "🗑️" } },
+    );
+
   c.addActionRowComponents(
-    row(
-      btn("name", channel.id, "👤 Name"),
-      btn("limit", channel.id, "👥 Limit"),
-      btn("delete", channel.id, "🗑️ Delete", ButtonStyle.Danger),
-    ),
+    new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu),
   );
-  c.addActionRowComponents(
-    row(
-      btn("lock", channel.id, record.locked ? "🔓 Unlock" : "🔒 Lock"),
-      btn("hide", channel.id, record.hidden ? "👀 Unhide" : "🕵️ Hide"),
-      btn("kick", channel.id, "👢 Kick"),
-    ),
-  );
-  c.addActionRowComponents(
-    row(
-      btn("trust", channel.id, "✅ Trust"),
-      btn("untrust", channel.id, "❎ Untrust"),
-      btn("block", channel.id, "🚫 Block"),
-      btn("unblock", channel.id, "♻️ Unblock"),
-    ),
-  );
-  c.addActionRowComponents(
-    row(
-      btn("transfer", channel.id, "🔄 Transfer"),
-      btn("claim", channel.id, "🎯 Claim"),
-    ),
-  );
+
+  c.addActionRowComponents(row(btn("claim", channel.id, "🎯 Claim Ownership")));
 
   c.addSeparatorComponents(
     new SeparatorBuilder()
@@ -104,9 +107,9 @@ export function buildPanel(
   );
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "-# Only the channel owner can use these controls",
+      "-# Settings are restricted to the owner. Anyone can claim if the owner leaves.",
     ),
   );
 
-  return { flags: MessageFlags.IsComponentsV2 as number, components: [c] };
+  return { flags: MessageFlags.IsComponentsV2, components: [c] };
 }

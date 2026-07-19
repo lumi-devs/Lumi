@@ -13,6 +13,10 @@ const LIVE_UPDATES_DURATION = 60_000;
 const LIVE_UPDATE_INTERVAL = 10_000;
 /** Per-user live-update interval handles; ensures at most one active interval per user. */
 const activeIntervals = new Map<string, ReturnType<typeof setInterval>>();
+export const pingViewStates = new Map<
+  string,
+  import("#lib/ping-cards.js").PingCategory | "overview"
+>();
 
 @ApplyOptions<Command.Options>({
   name: "ping",
@@ -24,9 +28,7 @@ const activeIntervals = new Map<string, ReturnType<typeof setInterval>>();
 export class PingCommand extends BaseCommand {
   public override registerApplicationCommands(registry: Command.Registry) {
     registry.registerChatInputCommand((builder) =>
-      builder //
-        .setName(this.name)
-        .setDescription(this.description),
+      builder.setName(this.name).setDescription(this.description),
     );
   }
 
@@ -85,6 +87,8 @@ export class PingCommand extends BaseCommand {
     const existing = activeIntervals.get(userId);
     if (existing) clearInterval(existing);
 
+    pingViewStates.set(userId, "overview");
+
     const start = Date.now();
     const interval = setInterval(async () => {
       if (Date.now() - start >= LIVE_UPDATES_DURATION) {
@@ -95,12 +99,17 @@ export class PingCommand extends BaseCommand {
 
       try {
         const data = await collectPingData();
+        const state = pingViewStates.get(userId) || "overview";
+        const { buildDetailCard } = await import("#lib/ping-cards.js");
+        const card =
+          state === "overview"
+            ? buildOverviewCard({ roundTrip: null, ...data }, userId)
+            : buildDetailCard(state, { roundTrip: null, ...data }, userId);
+
         await msg
           .edit({
             flags: PING_FLAGS,
-            components: [
-              buildOverviewCard({ roundTrip: null, ...data }, userId),
-            ],
+            components: [card],
             allowedMentions: {},
           })
           .catch(() => {

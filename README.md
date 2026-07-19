@@ -92,9 +92,11 @@ bun run dev
 Lumi operates as a Bun-workspace monorepo, separating core logic from infrastructure:
 
 *   **`@lumi/core`**: The brain of the bot (Commands, Modules, Services).
-*   **`@lumi/event-bus`**: Pluggable transport layer (In-process, Redis Streams, or NATS).
+*   **`@lumi/event-bus`**: Pluggable transport layer (`inproc`, Redis Streams, or NATS).
 *   **`@lumi/observability`**: Telemetry, tracing, and metrics (Prometheus & Grafana ready).
 *   **`@lumi/sharding`**: Cluster coordinator and shard planner.
+*   **`@lumi/contracts`**: Shared interfaces and types across the monorepo.
+*   **`@lumi/sdk`**: Developer SDK for interacting with Lumi services.
 
 ### Runtime Roles
 You can run Lumi as a `monolith` (default), or scale horizontally by setting the `LUMI_ROLE` environment variable:
@@ -123,3 +125,11 @@ Lumi is licensed under the **GNU AGPL v3.0 License**. See the [LICENSE](LICENSE)
 
 > [!IMPORTANT]
 > **Trademark Notice**: The "Lumi" name, branding, and mascot are reserved. If you fork, modify, or host your own public instance of this bot, you **MUST** rename it and use your own branding so as not to impersonate the official Lumi bot or mislead users.
+
+---
+
+## Contributors
+
+Please make sure to read the [Contributing Guide](CONTRIBUTING.md) before making a pull request.
+
+Thank you to all the people who already contributed to the Lumi Project!

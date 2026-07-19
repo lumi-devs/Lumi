@@ -14,7 +14,7 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { BaseCommand, sendReply } from "#lib/commands.js";
-import { LumiInfo, Colors } from "#lib/utilities/branding.js";
+import { LumiInfo } from "#lib/utilities/branding.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { BotConfig } from "#lib/utilities/config.js";
 import { collectPingData } from "#lib/ping-collect.js";
@@ -170,7 +170,7 @@ export class AboutCommand extends BaseCommand {
       );
     }
 
-    return makeCard(Colors.PRIMARY || 0x5865f2, `Lumi — Command Center`, body, {
+    return makeCard(0 || 0x5865f2, `Lumi — Command Center`, body, {
       actionRows,
     });
   }

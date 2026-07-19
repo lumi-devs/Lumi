@@ -29,10 +29,7 @@ export type RpcHandler<TIn = unknown, TOut = unknown> = (
 
 /** GDPR requester provenance (wire values of the bot's `RequesterType` enum). */
 export type GdprRequester =
-  | "DISCORD_DELETED_USER"
-  | "OWNER"
-  | "USER"
-  | "USER_STRICT";
+  "DISCORD_DELETED_USER" | "OWNER" | "USER" | "USER_STRICT";
 
 export interface GdprDeletePayload {
   userId: string;

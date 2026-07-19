@@ -27,7 +27,7 @@ export interface ModuleMeta {
   conflicts?: string[];
   dependencies?: string[];
   configFields?: ConfigField[];
-  configSchema?: any; // Replaced z.ZodObject<z.ZodRawShape> with any to avoid tight coupling or use BaseValidator<any>
+  configSchema?: any;
   configOverrides?: boolean;
   onLoad?: () => void;
   onUnload?: () => void;
@@ -60,7 +60,7 @@ export function DefineModule(options: ModuleOptions) {
   if (options.configSchema) {
     options.configFields = fieldsFromSchema(options.configSchema);
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- abstract class constructor signature requires any[] params
+   
   return <T extends abstract new (...args: any[]) => any>(ctor: T): T => {
     const proxied = ApplyOptions<ModuleOptions>(options)(
       ctor as unknown as new (...args: never[]) => Module,

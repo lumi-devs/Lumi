@@ -3,7 +3,6 @@ import {
   InteractionHandlerTypes,
   InteractionHandler,
 } from "@sapphire/framework";
-import { type ButtonInteraction } from "discord.js";
 import { collectPingData } from "#lib/ping-collect.js";
 import {
   buildOverviewCard,
@@ -13,28 +12,40 @@ import {
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 
 @ApplyOptions<InteractionHandler.Options>({
-  interactionHandlerType: InteractionHandlerTypes.Button,
+  interactionHandlerType: InteractionHandlerTypes.MessageComponent,
 })
 export class PingInteractionHandler extends BaseInteractionHandler {
-  public override parse(interaction: ButtonInteraction) {
+  public override parse(interaction: import("discord.js").Interaction) {
+    if (!interaction.isMessageComponent()) return this.none();
     if (!interaction.customId.startsWith("ping:")) return this.none();
 
-    const [prefix, category, userId] = interaction.customId.split(":");
-    if (prefix !== "ping" || !category || !userId) return this.none();
+    const [prefix, cat, userId] = interaction.customId.split(":");
+    if (prefix !== "ping" || !cat || !userId) return this.none();
+
+    let category = cat;
+    if (category === "select" && interaction.isStringSelectMenu()) {
+      category = interaction.values[0]!;
+    }
 
     return this.some({
       category: category as PingCategory | "overview",
       userId,
+      interaction,
     });
   }
 
   public override async run(
-    interaction: ButtonInteraction,
+    interaction: import("discord.js").Interaction,
     result: { category: PingCategory | "overview"; userId: string },
   ) {
+    if (!interaction.isMessageComponent()) return;
     if (!this.checkSecurity(interaction, result.userId)) return;
 
     await this.acknowledge(interaction);
+
+    const { pingViewStates } = await import("../commands/ping.js");
+    pingViewStates.set(result.userId, result.category);
+
     const data = await collectPingData();
 
     if (result.category === "overview") {
@@ -46,7 +57,7 @@ export class PingInteractionHandler extends BaseInteractionHandler {
     }
 
     const card = buildDetailCard(
-      result.category as PingCategory,
+      result.category,
       { roundTrip: null, ...data },
       result.userId,
     );

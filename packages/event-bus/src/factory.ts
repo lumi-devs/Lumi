@@ -85,7 +85,7 @@ export function createEventBus(
     }
     // Import lazily — nats is only a dep when this transport is actually used,
     // and lazy import keeps inproc/streams users out of the import graph.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     return buildNatsBus(opts, servers);
   }
 

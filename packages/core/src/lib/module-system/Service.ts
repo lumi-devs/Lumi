@@ -12,7 +12,7 @@ import { container, Piece } from "@sapphire/framework";
  * }
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- declaration merging target
+ 
 export interface Services {}
 
 /** Typed lookup for service pieces — use instead of `stores.get("services").get(...) as X`. */

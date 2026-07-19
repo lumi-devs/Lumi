@@ -6,6 +6,7 @@ import type { InvalidationBus } from "#lib/database/redis.js";
 import type { EventBus, TransportKind } from "@lumi/event-bus";
 import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 import type { Message } from "discord.js";
+import "@sapphire/pieces";
 
 export type IntegerString = `${number}`;
 
