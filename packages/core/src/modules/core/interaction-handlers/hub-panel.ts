@@ -28,6 +28,7 @@ import { Emojis } from "#lib/utilities/assets.js";
 import {
   ephemeralCard,
   makeErrorCard,
+  makeSuccessCard,
   type CardReply,
 } from "#lib/utilities/cards.js";
 import { loadFeatures, buildFeatureListView } from "#lib/config-panel.js";
@@ -40,6 +41,7 @@ import {
 } from "#lib/hub-panel.js";
 import type { GuildSettingsService } from "#lib/services/GuildSettingsService.js";
 import type { PermissionService } from "#lib/services/PermissionService.js";
+import type { DownloaderService } from "#lib/services/DownloaderService.js";
 
 const PERMISSION_MODEL_TYPES = [
   "role",
@@ -61,9 +63,7 @@ const accessDenied = () =>
 /** Resolves the interacting member's permission level within this guild. */
 export async function resolveLevel(
   interaction:
-    | ButtonInteraction
-    | AnySelectMenuInteraction
-    | ModalSubmitInteraction,
+    ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction,
 ): Promise<PermissionLevel> {
   if (!interaction.guild) return PermissionLevel.USER;
   const member =
@@ -138,6 +138,15 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
       return this.#openPrefixModal(interaction);
     if (action === "perm" && (sub === "allow" || sub === "deny"))
       return this.#openPermModal(interaction, sub === "allow");
+    if (action === "addon" && sub) {
+      const bLevel = await resolveLevel(interaction);
+      if (bLevel < PermissionLevel.BOT_OWNER)
+        throw new UserError({
+          identifier: "AccessDenied",
+          message: "Only Bot Owners can manage addons.",
+        });
+      return this.#openAddonModal(interaction, sub);
+    }
 
     await this.acknowledge(interaction);
 
@@ -228,6 +237,55 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
       );
     return interaction.showModal(modal);
   }
+
+  #openAddonModal(interaction: ButtonInteraction, action: string) {
+    const field = (
+      id: string,
+      label: string,
+      placeholder: string,
+      required: boolean = true,
+    ) =>
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId(id)
+          .setLabel(label)
+          .setStyle(TextInputStyle.Short)
+          .setRequired(required)
+          .setPlaceholder(placeholder),
+      );
+
+    const modal = new ModalBuilder().setCustomId(`lumi:addonmodal:${action}`);
+
+    if (action === "add_repo") {
+      modal
+        .setTitle("Add Repository")
+        .addComponents(
+          field("name", "Repository Name", "e.g. lumi-addons"),
+          field("url", "Repository URL", "e.g. https://github.com/..."),
+          field("branch", "Branch", "default: main", false),
+        );
+    } else if (action === "rm_repo") {
+      modal
+        .setTitle("Remove Repository")
+        .addComponents(field("name", "Repository Name", "e.g. lumi-addons"));
+    } else if (action === "update_repo") {
+      modal
+        .setTitle("Update Repository")
+        .addComponents(field("name", "Repository Name", "e.g. lumi-addons"));
+    } else if (action === "install") {
+      modal
+        .setTitle("Install Module")
+        .addComponents(
+          field("repo", "Repository Name", "e.g. lumi-addons"),
+          field("module", "Module Name", "e.g. activity-roles"),
+        );
+    } else if (action === "uninstall") {
+      modal
+        .setTitle("Uninstall Module")
+        .addComponents(field("module", "Module Name", "e.g. activity-roles"));
+    }
+    return interaction.showModal(modal);
+  }
 }
 
 @ApplyOptions<InteractionHandler.Options>({
@@ -296,20 +354,39 @@ export class HubPanelModalHandler extends InteractionHandler {
       return this.some({ kind: "perm" as const, allow: true });
     if (interaction.customId === "lumi:permmodal:deny")
       return this.some({ kind: "perm" as const, allow: false });
+    if (interaction.customId.startsWith("lumi:addonmodal:"))
+      return this.some({
+        kind: "addon" as const,
+        action: interaction.customId.split(":")[2],
+      });
     return this.none();
   }
 
   public async run(
     interaction: ModalSubmitInteraction,
-    data: { kind: "prefix" } | { kind: "perm"; allow: boolean },
+    data:
+      | { kind: "prefix" }
+      | { kind: "perm"; allow: boolean }
+      | { kind: "addon"; action: string },
   ) {
     if (!interaction.inGuild()) return;
-    if ((await resolveLevel(interaction)) < PermissionLevel.ADMIN)
-      return this.#deny(interaction);
+    const level = await resolveLevel(interaction);
+
+    if (data.kind === "addon") {
+      if (level < PermissionLevel.BOT_OWNER)
+        return this.#deny(interaction, "Only Bot Owners can manage addons.");
+      return this.#submitAddon(interaction, data.action);
+    }
+
+    if (level < PermissionLevel.ADMIN)
+      return this.#deny(
+        interaction,
+        "You need the Admin permission level to manage this server.",
+      );
 
     return data.kind === "prefix"
       ? this.#submitPrefix(interaction)
-      : this.#submitPermission(interaction, data.allow);
+      : this.#submitPermission(interaction, (data as { allow: boolean }).allow);
   }
 
   async #submitPrefix(interaction: ModalSubmitInteraction) {
@@ -379,14 +456,88 @@ export class HubPanelModalHandler extends InteractionHandler {
     return interaction.reply(ephemeralCard(view));
   }
 
-  #deny(interaction: ModalSubmitInteraction) {
-    return interaction.reply(
-      ephemeralCard(
-        makeErrorCard(
-          "Permission Denied",
-          "You need the Admin permission level to manage this server.",
+  private get downloader(): DownloaderService {
+    return getService("downloader");
+  }
+
+  async #submitAddon(interaction: ModalSubmitInteraction, action: string) {
+    await interaction.deferReply({ ephemeral: true });
+    try {
+      if (action === "add_repo") {
+        const name = interaction.fields.getTextInputValue("name").trim();
+        const url = interaction.fields.getTextInputValue("url").trim();
+        const branch =
+          interaction.fields.getTextInputValue("branch")?.trim() || "main";
+        await this.downloader.addRepo(name, url, branch);
+        await interaction.editReply(
+          ephemeralCard(
+            makeSuccessCard(
+              "Repository Added",
+              `Successfully added/updated **${name}**.`,
+            ),
+          ),
+        );
+      } else if (action === "rm_repo") {
+        const name = interaction.fields.getTextInputValue("name").trim();
+        await this.downloader.removeRepo(name);
+        await interaction.editReply(
+          ephemeralCard(
+            makeSuccessCard(
+              "Repository Removed",
+              `Successfully removed **${name}**.`,
+            ),
+          ),
+        );
+      } else if (action === "update_repo") {
+        const name = interaction.fields.getTextInputValue("name").trim();
+        await this.downloader.updateRepo(name);
+        await interaction.editReply(
+          ephemeralCard(
+            makeSuccessCard(
+              "Repository Updated",
+              `Successfully updated **${name}**.`,
+            ),
+          ),
+        );
+      } else if (action === "install") {
+        const repo = interaction.fields.getTextInputValue("repo").trim();
+        const module = interaction.fields.getTextInputValue("module").trim();
+        await this.downloader.installModule(repo, module);
+        await interaction.editReply(
+          ephemeralCard(
+            makeSuccessCard(
+              "Module Installed",
+              `Successfully installed **${module}** from ${repo}.`,
+            ),
+          ),
+        );
+      } else if (action === "uninstall") {
+        const module = interaction.fields.getTextInputValue("module").trim();
+        await this.downloader.uninstallModule(module);
+        await interaction.editReply(
+          ephemeralCard(
+            makeSuccessCard(
+              "Module Uninstalled",
+              `Successfully uninstalled **${module}**.`,
+            ),
+          ),
+        );
+      }
+    } catch (err) {
+      await interaction.editReply(
+        ephemeralCard(
+          makeErrorCard(
+            "Addon Error",
+            err instanceof Error ? err.message : String(err),
+          ),
         ),
-      ),
+      );
+    }
+  }
+
+  #deny(interaction: ModalSubmitInteraction, msg: string) {
+    return interaction.reply(
+      ephemeralCard(makeErrorCard("Permission Denied", msg)),
     );
   }
 

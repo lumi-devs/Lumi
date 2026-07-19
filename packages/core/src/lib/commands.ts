@@ -289,7 +289,7 @@ interface DefaultsApplicableBuilder {
  * calling the setter themselves inside their builder chain.
  */
 function autoApplyCommandDefaults(piece: BaseCommand | BaseSubcommand): void {
-  // eslint-disable-next-line @typescript-eslint/unbound-method -- bound to `piece` on the next line
+   
   const method = piece.registerApplicationCommands;
   if (typeof method !== "function") return;
   const original = method.bind(piece);
@@ -321,10 +321,10 @@ function autoApplyCommandDefaults(piece: BaseCommand | BaseSubcommand): void {
     configurable: true,
     writable: true,
     async value(registry: ApplicationCommandRegistry): Promise<void> {
-      /* eslint-disable @typescript-eslint/unbound-method -- saved for restoration; always invoked via .call(registry) */
+       
       const chat = registry.registerChatInputCommand;
       const menu = registry.registerContextMenuCommand;
-      /* eslint-enable @typescript-eslint/unbound-method */
+       
       registry.registerChatInputCommand = (input, options) =>
         chat.call(registry, wrapInput(input), options);
       registry.registerContextMenuCommand = (input, options) =>

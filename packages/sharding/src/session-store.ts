@@ -48,7 +48,7 @@ export class RedisSessionStore {
             : `[SessionStore] ${msg}`;
           const fn =
             lvl === "error" ? "error" : lvl === "warn" ? "warn" : "log";
-          // eslint-disable-next-line no-console
+           
           console[fn](line);
         }),
     };

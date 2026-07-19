@@ -52,7 +52,7 @@ function authorizedGuild(session: Session, guildId: string): boolean {
 /** Reject cross-origin state-changing requests (defence-in-depth CSRF guard). */
 function sameOrigin(req: Request): boolean {
   const origin = req.headers.get("origin");
-  if (!origin) return true; // non-browser / same-origin fetch without Origin
+  if (!origin) return true;
   try {
     return new URL(origin).host === new URL(req.url).host;
   } catch {
@@ -65,7 +65,7 @@ export function createServer(rpc: RpcClient) {
     hostname: config.host,
     port: config.port,
     idleTimeout: 30,
-    async fetch(req) {
+    async fetch(req: Request) {
       const url = new URL(req.url);
       const path = url.pathname;
       const cookies = req.headers.get("cookie");

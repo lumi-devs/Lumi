@@ -126,7 +126,7 @@ export function capsPercent(content: string): number {
   for (const ch of content) {
     const lower = ch.toLowerCase();
     const upperCh = ch.toUpperCase();
-    if (lower === upperCh) continue; // not a cased letter
+    if (lower === upperCh) continue;
     letters++;
     if (ch === upperCh) upper++;
   }

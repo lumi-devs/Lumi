@@ -7,7 +7,7 @@ export type ThresholdAction = "mute" | "kick" | "ban";
 
 export interface ThresholdEntry {
   action: ThresholdAction;
-  duration?: string; // e.g. "1h", "7d" — only for mute/ban
+  duration?: string;
 }
 
 export type WarnThresholds = Record<string, ThresholdEntry>;
@@ -17,7 +17,7 @@ export const thresholdKey = (guildId: string) =>
 export const warnCountKey = (guildId: string, userId: string) =>
   `lumi:mod:${guildId}:warns:${userId}`;
 
-const THRESHOLD_TTL = 300; // 5 min cache — invalidated on config write
+const THRESHOLD_TTL = 300;
 
 export async function getThresholds(
   container: Container,
@@ -54,7 +54,7 @@ export async function invalidateThresholds(
   await container.redis.del(thresholdKey(guildId));
 }
 
-const WARN_COUNT_TTL = 365 * 24 * 3600; // 1 year — reset on each increment
+const WARN_COUNT_TTL = 365 * 24 * 3600;
 
 export async function incrementWarnCount(
   container: Container,
@@ -130,7 +130,10 @@ export async function checkThresholds(
       reason,
       durationMs: ms,
     }).catch((err) => {
-      container.logger.error(`[Thresholds] Auto-mute failed for ${userId}:`, err);
+      container.logger.error(
+        `[Thresholds] Auto-mute failed for ${userId}:`,
+        err,
+      );
     });
   } else if (entry.action === "kick") {
     const member = await guild.members.fetch(userId).catch(() => null);
@@ -141,7 +144,10 @@ export async function checkThresholds(
       moderator: botUser,
       reason,
     }).catch((err) => {
-      container.logger.error(`[Thresholds] Auto-kick failed for ${userId}:`, err);
+      container.logger.error(
+        `[Thresholds] Auto-kick failed for ${userId}:`,
+        err,
+      );
     });
   } else if (entry.action === "ban") {
     const user = await container.client.users.fetch(userId).catch(() => null);
@@ -152,7 +158,10 @@ export async function checkThresholds(
       moderator: botUser,
       reason,
     }).catch((err) => {
-      container.logger.error(`[Thresholds] Auto-ban failed for ${userId}:`, err);
+      container.logger.error(
+        `[Thresholds] Auto-ban failed for ${userId}:`,
+        err,
+      );
     });
   }
 }

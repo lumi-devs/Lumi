@@ -80,7 +80,10 @@ function reportUnexpected(_label: string, error: unknown): string | undefined {
     const span = trace.getActiveSpan();
     if (span) {
       span.recordException(error as Error);
-      span.setStatus({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : String(error) });
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: error instanceof Error ? error.message : String(error),
+      });
       return span.spanContext().traceId;
     }
   } catch {

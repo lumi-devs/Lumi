@@ -16,26 +16,19 @@ import {
 import { time, TimestampStyles } from "@discordjs/formatters";
 import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
 import type { PingData } from "./ping-collect.js";
-import { Colors } from "#lib/utilities/branding.js";
 import { container } from "@sapphire/framework";
 import { Emojis } from "#lib/utilities/assets.js";
 
-export const PING_FLAGS = MessageFlags.IsComponentsV2 as number;
+export const PING_FLAGS = MessageFlags.IsComponentsV2;
 export const EPHEMERAL_FLAGS =
-  (MessageFlags.IsComponentsV2 as number) | (MessageFlags.Ephemeral as number);
+  (MessageFlags.IsComponentsV2) | (MessageFlags.Ephemeral);
 
 export type PingCategory =
-  | "gateway"
-  | "engine"
-  | "host"
-  | "postgres"
-  | "redis"
-  | "rabbitmq"
-  | "bot";
+  "gateway" | "engine" | "host" | "postgres" | "redis" | "rabbitmq" | "bot";
 
 function fmtMs(n: number | null): string {
   if (n === null || n < 0) return "Analyzing…";
-  return `${n}ms`;
+  return `${Math.round(n)}ms`;
 }
 
 function fmtMB(bytes: number): string {
@@ -59,14 +52,16 @@ function fmtKB(bytes: bigint | number): string {
 function executiveSection(
   title: string,
   fields: [string, string][],
-  insight?: string,
+  _insight?: string,
 ): string {
-  const header = `### ${title.toUpperCase()}`;
+  const header = `${Emojis.SPACE}__${title}__:`;
   const lines = fields
-    .map(([label, value]) => `> **${label}**\n> ┕ ***${value}***`)
+    .map(
+      ([label, value]) =>
+        `${Emojis.SPACE}${Emojis.SPACE}**${label}:** ${value}`,
+    )
     .join("\n");
-  const footer = insight ? `\n> -# *${insight}*` : "";
-  return `${header}\n${lines}${footer}`;
+  return `${header}\n${lines}`;
 }
 
 function getStatusColor(data: PingData): number {
@@ -76,9 +71,9 @@ function getStatusColor(data: PingData): number {
     data.redisReadMs ?? 0,
   );
   const lagBad = data.loopLagMs > 10;
-  if (worst > 250 || lagBad) return Colors.ROSE;
-  if (worst > 100) return Colors.LEMON;
-  return Colors.SAKURA;
+  if (worst > 250 || lagBad) return 0;
+  if (worst > 100) return 0;
+  return 0;
 }
 
 function header(data: PingData, subtitle?: string): SectionBuilder {
@@ -146,19 +141,19 @@ export function buildOverviewCard(
     data.shards.length > 0 ? data.shards : [{ id: 0, ping: data.wsPing }];
 
   for (const shard of shards) {
-    const ping = shard.ping < 0 ? "Analyzing…" : `${shard.ping}ms`;
-    content += `${E.online} Shard [${shard.id}]:\n`;
-    content += `${E.space}${E.latency} Latency: ${ping}\n`;
-    content += `${E.space}${E.uptime} Uptime: ${container.utilities.time.formatDuration(data.uptime)}\n`;
-    content += `${E.space}${E.trade} Resources:\n`;
-    content += `${E.space}${E.space}${E.memory} RAM: ${fmtMB(data.rss)}\n`;
-    content += `${E.space}${E.space}${E.cpu} CPU: ${data.cpuPercent.toFixed(2)}%\n`;
-    content += `${E.space}${E.position} Size:\n`;
-    content += `${E.space}${E.space}${E.servers} Servers: ${fmtCount(data.guilds)}\n`;
-    content += `${E.space}${E.space}${E.members} Members: ${fmtCount(data.users)}\n\n`;
+    const ping = shard.ping < 0 ? "Analyzing…" : `${Math.round(shard.ping)}ms`;
+    content += `### __Shard [${shard.id}]__\n`;
+    content += `${E.space}${E.latency} **Latency**: ${ping}\n`;
+    content += `${E.space}${E.uptime} **Uptime**: ${container.utilities.time.formatDuration(data.uptime)}\n`;
+    content += `${E.space}${E.trade} __Resources__:\n`;
+    content += `${E.space}${E.space}${E.memory} **RAM**: ${fmtMB(data.rss)}\n`;
+    content += `${E.space}${E.space}${E.cpu} **CPU**: ${Math.round(data.cpuPercent)}%\n`;
+    content += `${E.space}${E.position} __Size__:\n`;
+    content += `${E.space}${E.space}${E.servers} **Servers**: ${fmtCount(data.guilds)}\n`;
+    content += `${E.space}${E.space}${E.members} **Members**: ${fmtCount(data.users)}\n\n`;
   }
 
-  content += `### External Services\n`;
+  content += `### __External Services__\n`;
   content += `${E.redis} **Redis**: ${fmtMs(data.redisReadMs)} | Hit Ratio: ${data.redisHitRatio.toFixed(1)}%\n`;
   content += `${E.sql} **SQL**: ${fmtMs(data.prismaMs)} | Load: ${data.txRate.toFixed(1)} tx/s\n`;
   content += `${E.rabbit} **RabbitMQ**: ${data.rabbitConnected ? `Connected (${data.rabbitQueued} queued)` : "Offline"}\n`;
@@ -169,7 +164,7 @@ export function buildOverviewCard(
 }
 
 export function buildGatewayCard(data: PingData): ContainerBuilder {
-  const c = detailCard(Colors.LAVENDER, "📡 Gateway Diagnostics Engine", data);
+  const c = detailCard(0, "📡 Gateway Diagnostics Engine", data);
 
   const node = data.gatewayNode === "Unknown" ? "Analyzing…" : data.gatewayNode;
 
@@ -180,7 +175,7 @@ export function buildGatewayCard(data: PingData): ContainerBuilder {
           "Connection Stability",
           [
             ["Average Latency", fmtMs(data.wsPing)],
-            ["Heartbeat Jitter", `±${data.jitterMs.toFixed(2)}ms`],
+            ["Heartbeat Jitter", `±${Math.round(data.jitterMs)}ms`],
           ],
           data.jitterMs < 5 ? "Rating: Excellent" : "Rating: Nominal",
         ),
@@ -212,12 +207,14 @@ export function buildGatewayCard(data: PingData): ContainerBuilder {
         .setDivider(true),
     );
     c.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent("### 🧊 CLUSTER SHARD MATRIX"),
+      new TextDisplayBuilder().setContent(
+        `${Emojis.SPACE}__Cluster Shard Matrix__:`,
+      ),
     );
     const shardLines = data.shards
       .map(
         (s) =>
-          `> **Shard ${s.id}**\n> ┕ ***${fmtMs(s.ping)}*** | *${s.status}* | Seq ${s.sequence || 0}`,
+          `${Emojis.SPACE}${Emojis.SPACE}**Shard ${s.id}:** ${fmtMs(s.ping)} | ${s.status} | Seq ${s.sequence || 0}`,
       )
       .join("\n");
     c.addTextDisplayComponents(new TextDisplayBuilder().setContent(shardLines));
@@ -227,7 +224,7 @@ export function buildGatewayCard(data: PingData): ContainerBuilder {
 }
 
 export function buildEngineCard(data: PingData): ContainerBuilder {
-  const c = detailCard(Colors.LEMON, "🏎️ Runtime Performance Audit", data);
+  const c = detailCard(0, "🏎️ Runtime Performance Audit", data);
 
   const heapPct = ((data.heapUsed / data.heapTotal) * 100).toFixed(1);
   c.addTextDisplayComponents(
@@ -245,7 +242,7 @@ export function buildEngineCard(data: PingData): ContainerBuilder {
         executiveSection(
           "Execution Lag",
           [
-            ["Event Loop Lag", `${data.loopLagMs.toFixed(3)}ms`],
+            ["Event Loop Lag", `${Math.round(data.loopLagMs)}ms`],
             ["Timer Handles", `${data.activeHandles} Active`],
           ],
           "Primary responsiveness metric",
@@ -269,11 +266,7 @@ export function buildEngineCard(data: PingData): ContainerBuilder {
 }
 
 export function buildHostCard(data: PingData): ContainerBuilder {
-  const c = detailCard(
-    Colors.AMBER,
-    `${Emojis.CPU} Bare Metal Infrastructure`,
-    data,
-  );
+  const c = detailCard(0, `${Emojis.CPU} Bare Metal Infrastructure`, data);
 
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
@@ -327,11 +320,7 @@ export function buildHostCard(data: PingData): ContainerBuilder {
 }
 
 export function buildPostgresCard(data: PingData): ContainerBuilder {
-  const c = detailCard(
-    Colors.PEACH,
-    `${Emojis.DATABASE} Relational Database Audit`,
-    data,
-  );
+  const c = detailCard(0, `${Emojis.DATABASE} Relational Database Audit`, data);
 
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
@@ -371,13 +360,13 @@ export function buildPostgresCard(data: PingData): ContainerBuilder {
     );
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `### ${Emojis.ANALYTICS} HIGH-DENSITY TABLE BREAKDOWN`,
+        `${Emojis.SPACE}__${Emojis.ANALYTICS} Table Breakdown__:`,
       ),
     );
     const tableLines = data.tableSizes
       .map(
         (t) =>
-          `> **${t.name}**\n> ┕ ***${fmtKB(t.bytes)}***${t.deadTuples > 0n ? ` (${Emojis.WARNING_SIGN} ${t.deadTuples.toLocaleString()} dead)` : ""}`,
+          `${Emojis.SPACE}${Emojis.SPACE}**${t.name}:** ${fmtKB(t.bytes)}${t.deadTuples > 0n ? ` (${Emojis.WARNING_SIGN} ${t.deadTuples.toLocaleString()} dead)` : ""}`,
       )
       .join("\n");
     c.addTextDisplayComponents(new TextDisplayBuilder().setContent(tableLines));
@@ -387,11 +376,7 @@ export function buildPostgresCard(data: PingData): ContainerBuilder {
 }
 
 export function buildRedisCard(data: PingData): ContainerBuilder {
-  const c = detailCard(
-    Colors.ROSE,
-    `${Emojis.CACHE} In-Memory Cache Performance`,
-    data,
-  );
+  const c = detailCard(0, `${Emojis.CACHE} In-Memory Cache Performance`, data);
 
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
@@ -429,11 +414,7 @@ export function buildRedisCard(data: PingData): ContainerBuilder {
 }
 
 export function buildRabbitCard(data: PingData): ContainerBuilder {
-  const c = detailCard(
-    Colors.MINT,
-    `${Emojis.QUEUE} Distributed Event Pipeline`,
-    data,
-  );
+  const c = detailCard(0, `${Emojis.QUEUE} Distributed Event Pipeline`, data);
 
   if (data.rabbitConnected) {
     c.addTextDisplayComponents(
@@ -470,11 +451,7 @@ export function buildRabbitCard(data: PingData): ContainerBuilder {
 }
 
 export function buildBotCard(data: PingData): ContainerBuilder {
-  const c = detailCard(
-    Colors.SAKURA,
-    `${Emojis.BOT} Core Intelligence Diagnostics`,
-    data,
-  );
+  const c = detailCard(0, `${Emojis.BOT} Core Intelligence Diagnostics`, data);
 
   const memPerGuild =
     data.guilds > 0 ? (data.rss / 1024 / 1024 / data.guilds).toFixed(2) : "0";
@@ -484,8 +461,8 @@ export function buildBotCard(data: PingData): ContainerBuilder {
         executiveSection(
           "Interaction Analytics",
           [
-            ["Command Rate", `${data.commandsPerSec.toFixed(2)}/sec`],
-            ["Message Traffic", `${data.messagesPerMin.toFixed(0)}/min`],
+            ["Command Rate", `${Math.round(data.commandsPerSec)}/sec`],
+            ["Message Traffic", `${Math.round(data.messagesPerMin)}/min`],
           ],
           `Total Session: ${data.sessionCommandCount.toLocaleString()}`,
         ),

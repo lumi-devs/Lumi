@@ -66,7 +66,7 @@ export class TaskFireConsumer {
   ) {}
 
   public async start(): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias, consistent-this
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     activeConsumer = this;
     const handlers = getRegisteredFireHandlers();
     if (handlers.length === 0) {
@@ -127,7 +127,7 @@ export class TaskFireConsumer {
       return;
     }
     try {
-      await (reg.handler as TaskFireHandler<keyof ScheduledTasks>)(
+      await (reg.handler)(
         msg.body.payload,
       );
       await msg.ack();

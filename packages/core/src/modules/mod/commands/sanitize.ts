@@ -41,7 +41,7 @@ export class SanitizeCommand extends BaseCommand {
       );
     }
 
-    const current = member.nickname ?? member.user.username;
+    const current = member.nickname ?? member.user.username ?? "Unknown";
     const sanitized = sanitizeName(current);
 
     if (sanitized === current) {

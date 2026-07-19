@@ -59,7 +59,7 @@ export class InProcBus implements EventBus {
         void handler(msg).catch(() => undefined);
       };
       this.emitter.on(stream, fn);
-      listeners.push([stream, fn as (...args: unknown[]) => void]);
+      listeners.push([stream, fn]);
     }
     return Promise.resolve(() => {
       for (const [stream, fn] of listeners) this.emitter.off(stream, fn);

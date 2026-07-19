@@ -23,7 +23,7 @@ export default class UserMediaViewHandler extends BaseInteractionHandler {
     { userId, type }: { userId: string; type: string },
   ) {
     await interaction.deferReply({
-      flags: MessageFlags.Ephemeral | (MessageFlags.IsComponentsV2 as number),
+      flags: MessageFlags.Ephemeral | (MessageFlags.IsComponentsV2),
     });
     await handleMediaRequest({
       context: interaction,

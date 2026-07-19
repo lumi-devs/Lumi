@@ -9,7 +9,6 @@ import {
 import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
 import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
 import type { GuildMessage } from "#lib/types/common.js";
-import { Colors } from "#lib/utilities/branding.js";
 import { makeCard } from "#lib/utilities/cards.js";
 import { logError } from "#lib/utilities/errors.js";
 import { canSendMessages } from "#lib/utilities/listeners.js";
@@ -88,7 +87,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
     const row = mentions.length
       ? new ActionRowBuilder<ButtonBuilder>().addComponents(
           new ButtonBuilder()
-            .setCustomId(`afk:mentions:${guildId}:${userId}`)
+            .setCustomId(`afk:mentions:${userId}`)
             .setLabel(`View Mentions (${mentions.length})`)
             .setEmoji(Emojis.parse(Emojis.MAIL))
             .setStyle(ButtonStyle.Secondary),
@@ -113,7 +112,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
 
     const sent = await message
       .reply({
-        flags: MessageFlags.IsComponentsV2 as number,
+        flags: MessageFlags.IsComponentsV2,
         components: [welcomeCard],
         allowedMentions: {},
       })
@@ -192,7 +191,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
     const sent = await message
       .reply({
         ...makeCard(
-          Colors.GOLD,
+          0,
           `${Emojis.AFK} ${name} is AFK`,
           `**Reason:** ${sanitizeReason(entry.reason)}\n**AFK for:** ${afkDurationSince(entry.since)}`,
         ),

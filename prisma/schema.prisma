@@ -60,10 +60,7 @@ model Guild {
   cases         ModerationCase[]
   caseCounter   GuildCaseCounter?
   afkEntries    AfkEntry[]
-  lockdown      RaidLockdown?
   ignoreEntries IgnoreEntry[]
-  roleMappings  RoleMapping[]
-  tabPermissions TabPermission[]
   auditLedgers  AuditLedger[]
 
   @@map("guilds")
@@ -229,53 +226,6 @@ model DownloaderModule {
   @@id([repoId, moduleName])
   @@map("downloader_modules")
 }
-// ─────────────────────────────────────────────────────────────────────────────
-
-model RaidLockdown {
-  guildId       String   @id @map("guild_id") @db.VarChar(20)
-  originalLevel Int      @map("original_level")
-  unlocksAt     DateTime @map("unlocks_at")
-  triggeredBy   String   @default("0") @map("triggered_by") @db.VarChar(20)
-  createdAt     DateTime @default(now())     @map("created_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@index([unlocksAt]) // expiry sweep
-  @@map("raid_lockdowns")
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RBAC & DASHBOARD TABS
-// ─────────────────────────────────────────────────────────────────────────────
-
-model RoleMapping {
-  guildId         String   @map("guild_id") @db.VarChar(20)
-  discordRoleId   String   @map("discord_role_id") @db.VarChar(20)
-  permissionLevel Int      @map("permission_level") // Lumi PermissionLevel enum value
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@id([guildId, discordRoleId])
-  @@map("role_mappings")
-}
-
-model TabPermission {
-  guildId     String   @map("guild_id") @db.VarChar(20)
-  roleId      String   @map("role_id") @db.VarChar(20) // Discord Role ID
-  tabId       String   @map("tab_id") @db.VarChar(64)
-  allow       Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@id([guildId, roleId, tabId])
-  @@index([guildId, roleId])
-  @@map("tab_permissions")
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // AUDIT LEDGER
 // ─────────────────────────────────────────────────────────────────────────────

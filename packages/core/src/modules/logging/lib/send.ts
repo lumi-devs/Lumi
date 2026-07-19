@@ -15,7 +15,7 @@ export async function isToggleEnabled(
     MODULE,
     toggleKey,
   );
-  return toggle !== false; // unset counts as the schema default (true)
+  return toggle !== false;
 }
 
 /** Message events in these channels are skipped (e.g. staff/log channels). */

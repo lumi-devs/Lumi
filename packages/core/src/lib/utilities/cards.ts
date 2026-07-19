@@ -13,7 +13,6 @@ import {
   SeparatorSpacingSize,
   type MessageMentionOptions,
 } from "discord.js";
-import { Colors } from "#lib/utilities/branding.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { BotConfig } from "./config.js";
 
@@ -48,15 +47,12 @@ const smallSeparator = (divider: boolean): SeparatorBuilder =>
     .setDivider(divider);
 
 function buildContainer(
-  color: number | null,
+  _color: number | null,
   title: string,
   body: string | string[],
   opts: CardOptions = {},
 ) {
   const c = new ContainerBuilder();
-  if (color !== null && color !== Colors.PRIMARY) {
-    c.setAccentColor(color);
-  }
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(`## ${title}`),
   );
@@ -90,7 +86,7 @@ function buildContainer(
 }
 
 const wrap = (c: ContainerBuilder): CardReply => ({
-  flags: MessageFlags.IsComponentsV2 as number,
+  flags: MessageFlags.IsComponentsV2,
   components: [c],
 });
 
@@ -98,17 +94,17 @@ export const makeSuccessCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(Colors.SUCCESS, title, body, opts));
+) => wrap(buildContainer(0, title, body, opts));
 export const makeErrorCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(Colors.ERROR, title, body, opts));
+) => wrap(buildContainer(0, title, body, opts));
 export const makeWarningCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(Colors.WARNING, title, body, opts));
+) => wrap(buildContainer(0, title, body, opts));
 export const makeInfoCard = (
   title: string,
   body: string | string[],
@@ -136,7 +132,7 @@ export function makeListCard(
       ? `Page ${page + 1}/${totalPages} · ${items.length} items`
       : `${items.length} items`;
 
-  const c = buildContainer(Colors.PRIMARY, title, body, { footer });
+  const c = buildContainer(0, title, body, { footer });
 
   if (customIdPrefix && totalPages > 1) {
     c.addActionRowComponents((row) =>

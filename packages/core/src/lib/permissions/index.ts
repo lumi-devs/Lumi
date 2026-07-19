@@ -33,11 +33,7 @@ export const PERMISSION_LEVEL_NAMES: Record<PermissionLevel, string> = {
 };
 
 export type PermissionModelType =
-  | "user"
-  | "role"
-  | "channel"
-  | "category"
-  | "everyone";
+  "user" | "role" | "channel" | "category" | "everyone";
 
 export interface PermissionContext {
   userId: string;

@@ -17,7 +17,7 @@ import {
 import {
   ButtonStyle,
   TextInputStyle,
-  type ButtonInteraction,
+  type MessageComponentInteraction,
   type GuildMember,
   type VoiceBasedChannel,
 } from "discord.js";
@@ -54,24 +54,36 @@ const SELECT_PLACEHOLDER: Record<string, string> = {
 
 @ApplyOptions<InteractionHandler.Options>({
   name: "tempvc-buttons",
-  interactionHandlerType: InteractionHandlerTypes.Button,
+  interactionHandlerType: InteractionHandlerTypes.MessageComponent,
 })
 export default class TempVcButtonHandler extends BaseInteractionHandler {
   private get service(): TempVcService {
     return getService("tempvc");
   }
 
-  public override parse(interaction: ButtonInteraction) {
+  public override parse(interaction: import("discord.js").Interaction) {
+    if (!interaction.isMessageComponent()) return this.none();
     if (!interaction.customId.startsWith(`${TVC}:`)) return this.none();
-    const [, action, channelId] = interaction.customId.split(":");
+    const parts = interaction.customId.split(":");
+    let action = parts[1];
+    const channelId = parts[2];
+
+    if (action === "panelmenu" && interaction.isStringSelectMenu()) {
+      action = interaction.values[0]!;
+    }
+
     if (!action || !channelId) return this.none();
-    return this.some({ action, channelId });
+    if (["ksel", "tsel", "usel", "bsel", "ubsel", "xsel"].includes(action))
+      return this.none();
+
+    return this.some({ action, channelId, interaction });
   }
 
   public async run(
-    interaction: ButtonInteraction,
+    interaction: import("discord.js").Interaction,
     { action, channelId }: { action: string; channelId: string },
   ) {
+    if (!interaction.isMessageComponent()) return;
     if (!interaction.inGuild()) return;
     const channel = interaction.guild?.channels.cache.get(channelId);
     if (!channel || !channel.isVoiceBased()) {
@@ -146,7 +158,7 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
   }
 
   async #openRenameModal(
-    interaction: ButtonInteraction,
+    interaction: MessageComponentInteraction,
     channel: VoiceBasedChannel,
   ) {
     const modal = new ModalBuilder()
@@ -167,7 +179,7 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
   }
 
   async #openLimitModal(
-    interaction: ButtonInteraction,
+    interaction: MessageComponentInteraction,
     channel: VoiceBasedChannel,
   ) {
     const modal = new ModalBuilder()
@@ -187,7 +199,7 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
     return interaction.showModal(modal);
   }
 
-  #confirmDelete(interaction: ButtonInteraction, channelId: string) {
+  #confirmDelete(interaction: MessageComponentInteraction, channelId: string) {
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`${TVC}:delyes:${channelId}`)
@@ -205,7 +217,10 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
     );
   }
 
-  async #doDelete(interaction: ButtonInteraction, channel: VoiceBasedChannel) {
+  async #doDelete(
+    interaction: MessageComponentInteraction,
+    channel: VoiceBasedChannel,
+  ) {
     await interaction.deferUpdate();
     const { id, guildId } = channel;
     await channel.delete("Deleted by owner via panel").catch(() => null);
@@ -218,7 +233,7 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
   }
 
   async #openKickSelect(
-    interaction: ButtonInteraction,
+    interaction: MessageComponentInteraction,
     channel: VoiceBasedChannel,
     record: VcRecord,
   ) {
@@ -259,7 +274,7 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
   }
 
   async #openUserSelect(
-    interaction: ButtonInteraction,
+    interaction: MessageComponentInteraction,
     channelId: string,
     action: string,
   ) {
@@ -281,7 +296,7 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
   }
 
   async #claim(
-    interaction: ButtonInteraction,
+    interaction: MessageComponentInteraction,
     channel: VoiceBasedChannel,
     record: { ownerId: string },
   ) {

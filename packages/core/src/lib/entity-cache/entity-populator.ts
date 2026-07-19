@@ -35,7 +35,7 @@ async function handle(
   switch (t) {
     case "GUILD_CREATE":
     case "GUILD_UPDATE": {
-      const g = data.d as APIGuild;
+      const g = data.d;
       await cache.putGuild({
         id: g.id,
         name: g.name,
@@ -102,7 +102,7 @@ async function handle(
     }
     case "GUILD_ROLE_CREATE":
     case "GUILD_ROLE_UPDATE": {
-      const p = data.d as { guild_id: string; role: APIRole };
+      const p = data.d;
       await cache.putRole({
         id: p.role.id,
         guildId: p.guild_id,
@@ -114,7 +114,7 @@ async function handle(
       return;
     }
     case "GUILD_ROLE_DELETE": {
-      const p = data.d as { guild_id: string; role_id: string };
+      const p = data.d;
       await cache.deleteRole(p.role_id);
       return;
     }
@@ -139,12 +139,12 @@ async function handle(
       return;
     }
     case "GUILD_MEMBER_REMOVE": {
-      const p = data.d as { guild_id: string; user: APIUser };
+      const p = data.d;
       await cache.deleteMember(p.guild_id, p.user.id);
       return;
     }
     case "USER_UPDATE": {
-      const u = data.d as APIUser;
+      const u = data.d;
       await cache.putUser({
         id: u.id,
         username: u.username,
