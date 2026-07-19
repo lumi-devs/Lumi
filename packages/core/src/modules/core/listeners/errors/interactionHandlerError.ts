@@ -17,7 +17,7 @@ export class InteractionHandlerErrorListener extends Listener<
       error,
     );
     if ("interaction" in payload && payload.interaction.isRepliable()) {
-      await respond(payload.interaction as RepliableInteraction, card);
+      await respond(payload.interaction, card);
     }
   }
 }

@@ -89,9 +89,7 @@ export class QuarantineAction {
     const rolesToRestore = Array.isArray(parsedRoles)
       ? (parsedRoles as string[])
       : [];
-    const validRoles = rolesToRestore.filter((id) =>
-      guild.roles.cache.has(id),
-    );
+    const validRoles = rolesToRestore.filter((id) => guild.roles.cache.has(id));
 
     await targetMember.roles.set(
       [guild.id, ...validRoles],

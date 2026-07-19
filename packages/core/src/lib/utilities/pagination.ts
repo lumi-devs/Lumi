@@ -78,7 +78,7 @@ export async function paginateContainer(options: PaginationOptions) {
       });
     }
 
-    let flags = MessageFlags.IsComponentsV2 as number;
+    let flags = MessageFlags.IsComponentsV2;
     if (ephemeral) {
       flags |= MessageFlags.Ephemeral;
     }
@@ -92,7 +92,7 @@ export async function paginateContainer(options: PaginationOptions) {
   const isInteraction = "editReply" in interactionOrMessage;
 
   if (isInteraction) {
-    const interaction = interactionOrMessage as ChatInputCommandInteraction;
+    const interaction = interactionOrMessage;
     if (!interaction.deferred && !interaction.replied) {
       await interaction.deferReply({ ephemeral });
     }
@@ -103,10 +103,10 @@ export async function paginateContainer(options: PaginationOptions) {
   let msg: Message;
   if (isInteraction) {
     msg = (await (
-      interactionOrMessage as ChatInputCommandInteraction
-    ).editReply(initialCard)) as Message;
+      interactionOrMessage
+    ).editReply(initialCard));
   } else {
-    msg = await (interactionOrMessage as Message).reply(initialCard);
+    msg = await (interactionOrMessage).reply(initialCard);
   }
 
   const collector = msg.createMessageComponentCollector({
@@ -130,7 +130,7 @@ export async function paginateContainer(options: PaginationOptions) {
   collector.on("end", async () => {
     const disabledCard = await buildPage(activePage, true);
     if (isInteraction) {
-      await (interactionOrMessage as ChatInputCommandInteraction)
+      await (interactionOrMessage)
         .editReply(disabledCard)
         .catch(() => null);
     } else {

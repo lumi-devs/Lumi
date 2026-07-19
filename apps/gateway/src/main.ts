@@ -151,7 +151,7 @@ const ownedShards = new Set<number>(
 );
 
 const ownedBus: OwnedEventBus = createEventBus({
-  transport: TRANSPORT as "streams" | "nats",
+  transport: TRANSPORT,
   redis: {
     host: env("REDIS_HOST", "localhost"),
     port: envInt("REDIS_PORT", 6379),
@@ -192,13 +192,13 @@ const manager = new WebSocketManager({
         mgr as ConstructorParameters<typeof DynamicShardingStrategy>[0],
       );
       return dynamicStrategy;
-    }) as never,
+    }),
   }),
   ...(cluster && {
     retrieveSessionInfo: (shardId: number) =>
-      cluster!.sessionStore.retrieve(shardId),
+      cluster.sessionStore.retrieve(shardId),
     updateSessionInfo: (shardId: number, info: SessionInfo | null) =>
-      cluster!.sessionStore.update(shardId, info),
+      cluster.sessionStore.update(shardId, info),
   }),
 });
 
@@ -274,16 +274,7 @@ async function deferInteraction(d: InteractionPayload): Promise<void> {
 
 const detachPublisher = attachProxyPublisher(
   ownedBus.bus,
-  manager as unknown as {
-    on(
-      event: string,
-      l: (p: GatewayDispatchPayload, shardId: number) => void,
-    ): unknown;
-    off(
-      event: string,
-      l: (p: GatewayDispatchPayload, shardId: number) => void,
-    ): unknown;
-  },
+  manager,
   {
     log,
     maxLen: MAXLEN,
@@ -306,7 +297,7 @@ if (DEFER_AT_GATEWAY) {
           op: GatewayOpcodes.Dispatch,
           t: data.t,
           s: (data as { s?: number }).s ?? 0,
-          d: data.d as RawGatewayEnvelope["packet"]["d"],
+          d: data.d,
         },
         ts: Date.now(),
         guildId: d.guild_id,
@@ -412,7 +403,7 @@ registerReadinessProbe("event-bus", async () => {
 });
 if (cluster) {
   registerReadinessProbe("cluster-joined", () =>
-    cluster!.shards && cluster!.shards.length > 0
+    cluster.shards && cluster.shards.length > 0
       ? { status: "ok" }
       : { status: "fail", detail: "no shards assigned" },
   );

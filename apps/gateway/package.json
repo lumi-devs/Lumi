@@ -14,9 +14,9 @@
     "@lumi/event-bus": "workspace:*",
     "@lumi/observability": "workspace:*",
     "@lumi/sharding": "workspace:*",
-    "@discordjs/rest": "^2.6.0",
-    "@discordjs/ws": "^2.0.0",
-    "discord-api-types": "^0.38.30",
-    "ioredis": "^5.4.0"
+    "@discordjs/rest": "^2.6.2",
+    "@discordjs/ws": "^2.0.4",
+    "discord-api-types": "^0.38.50",
+    "ioredis": "^5.11.1"
   }
 }

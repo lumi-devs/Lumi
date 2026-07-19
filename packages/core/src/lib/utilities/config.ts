@@ -96,7 +96,7 @@ try {
   const configPath = join(process.cwd(), "config", "bot.json");
   const file = await fs.readFile(configPath, "utf-8");
   const parsed = JSON.parse(file) as unknown;
-  userConfig = userConfigSchema.parse(parsed) as Record<string, any>;
+  userConfig = userConfigSchema.parse(parsed);
 } catch (err: any) {
   if (err.name === "ValidationError") {
     console.error("[Config] Invalid config/bot.json:", err.message);

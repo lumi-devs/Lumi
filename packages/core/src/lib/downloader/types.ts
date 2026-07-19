@@ -8,7 +8,7 @@ export interface ModuleInfo {
   description: string;
   short: string;
   version: string;
-  requirements?: string[]; // npm packages to install
+  requirements?: string[];
   tags?: string[];
   min_bot_version?: string;
   hidden?: boolean;

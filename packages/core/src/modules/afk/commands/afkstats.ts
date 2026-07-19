@@ -2,7 +2,6 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
-import { Colors } from "#lib/utilities/branding.js";
 import { makeCard } from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { getAfkStats } from "../data/afk.js";
@@ -26,7 +25,7 @@ export default class AfkStatsCommand extends BaseCommand {
     const { activeEntries, activeCooldowns } = await getAfkStats();
     return ctx.reply(
       makeCard(
-        Colors.PRIMARY,
+        0,
         `${Emojis.ANALYTICS} AFK System Stats`,
         `**Active AFK entries:** ${activeEntries}\n**Active cooldowns:** ${activeCooldowns}`,
       ),

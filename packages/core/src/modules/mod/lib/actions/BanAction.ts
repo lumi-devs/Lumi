@@ -23,7 +23,13 @@ export interface BanUndoOptions {
 
 export class BanAction {
   public static async apply(options: BanApplyOptions) {
-    const { guild, targetUser, moderator, reason, deleteMessageSeconds = 0 } = options;
+    const {
+      guild,
+      targetUser,
+      moderator,
+      reason,
+      deleteMessageSeconds = 0,
+    } = options;
 
     const dm = makeErrorCard(
       `🔨 Banned — ${guild.name}`,
@@ -73,7 +79,11 @@ export class BanAction {
     return c;
   }
 
-  public static async undoRaw(guildId: string, targetId: string, reason: string): Promise<void> {
+  public static async undoRaw(
+    guildId: string,
+    targetId: string,
+    reason: string,
+  ): Promise<void> {
     await container.client.rest
       .delete(Routes.guildBan(guildId, targetId), { reason })
       .catch((err: unknown) => {

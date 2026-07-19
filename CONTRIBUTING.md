@@ -48,7 +48,8 @@ bun run dev
 
 ## Architecture
 
-Before writing any code, read **[AGENTS.md](AGENTS.md)**. It is the single source of truth for:
+> [!IMPORTANT]
+> Before writing any code, read **[AGENTS.md](AGENTS.md)**. It is the single source of truth for:
 
 - The monorepo layout and package boundaries
 - The module system (`@DefineModule`, `BaseCommand`, `Service`, `ModuleListener`)

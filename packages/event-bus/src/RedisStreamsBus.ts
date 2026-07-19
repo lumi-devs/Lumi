@@ -100,8 +100,8 @@ export class RedisStreamsBus implements EventBus {
   public constructor(opts: RedisStreamsBusOptions) {
     this.publisher = opts.publisher;
     this.subscriber = opts.subscriber;
-    this.pubStream = this.publisher as unknown as RedisStreamCommands;
-    this.subStream = this.subscriber as unknown as RedisStreamCommands;
+    this.pubStream = this.publisher;
+    this.subStream = this.subscriber;
     this.defaultMaxLen = opts.defaultMaxLen ?? 100_000;
     this.log = opts.log ?? (() => undefined);
     this.maxDeliveries = opts.maxDeliveries ?? 5;
@@ -386,8 +386,7 @@ export class RedisStreamsBus implements EventBus {
     try {
       // XPENDING <key> <group> → [count, min-id, max-id, [[consumer, count], ...]]
       const resp = (await this.pubStream.xpending(stream, group)) as
-        | [number, ...unknown[]]
-        | null;
+        [number, ...unknown[]] | null;
       if (!resp) return 0;
       return Number(resp[0]) || 0;
     } catch {

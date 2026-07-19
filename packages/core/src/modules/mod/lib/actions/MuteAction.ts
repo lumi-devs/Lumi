@@ -32,7 +32,10 @@ export class MuteAction {
     );
     await targetMember.send(dm).catch(() => null);
 
-    await targetMember.timeout(durationMs, formatAuditReason(moderator, reason));
+    await targetMember.timeout(
+      durationMs,
+      formatAuditReason(moderator, reason),
+    );
 
     const c = await container.db.moderation.createModerationCase({
       guildId: guild.id,
@@ -75,7 +78,11 @@ export class MuteAction {
     return c;
   }
 
-  public static async undoRaw(guildId: string, targetId: string, reason: string): Promise<void> {
+  public static async undoRaw(
+    guildId: string,
+    targetId: string,
+    reason: string,
+  ): Promise<void> {
     await container.client.rest
       .patch(Routes.guildMember(guildId, targetId), {
         body: { communication_disabled_until: null },

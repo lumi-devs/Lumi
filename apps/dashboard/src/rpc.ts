@@ -38,7 +38,7 @@ export class RpcClient {
     this.#connection = amqp.connect([url]);
     this.#channel = this.#connection.createChannel({
       json: false,
-      setup: (ch: Channel) => this.#setup(ch),
+      setup: (ch: any) => this.#setup(ch),
     });
   }
 
@@ -107,8 +107,7 @@ export class RpcClient {
             msg.properties.correlationId,
             JSON.parse(msg.content.toString()) as RpcResponse,
           );
-        } catch {
-        }
+        } catch {}
       },
       { noAck: true },
     );

@@ -171,7 +171,7 @@ export class ConfigService extends Service {
       if (matches) {
         bestPriority = p;
         bestValue = o.value;
-        if (p === 0) break; // user is highest — no need to keep scanning
+        if (p === 0) break;
       }
     }
 

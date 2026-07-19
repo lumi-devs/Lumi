@@ -17,7 +17,6 @@ import {
 } from "@discordjs/builders";
 import { BaseCommand, sendReply, fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { Colors } from "#lib/utilities/branding.js";
 import { makeCard, makeErrorCard } from "#lib/utilities/cards.js";
 
 const KEY_PERMISSIONS = [
@@ -61,7 +60,7 @@ export class WhoisCommand extends BaseCommand {
 
     const t = await fetchTyped(interaction);
     const card = this.buildWhoisCard(user, member, interaction.guildId!, t);
-    await sendReply(interaction, card as InteractionReplyOptions);
+    await sendReply(interaction, card);
   }
 
   public override async messageRun(message: Message, args: Args) {
@@ -117,10 +116,10 @@ export class WhoisCommand extends BaseCommand {
 
     const body = [userSec];
 
-    let color = Colors.NEUTRAL || 0x4f545c;
+    let color = 0 || 0x4f545c;
 
     if (member) {
-      color = member.displayColor || Colors.PRIMARY || 0x5865f2;
+      color = member.displayColor || 0 || 0x5865f2;
       const joinedSec = `${t("commands:whoisJoinedServer", {
         relative: time(member.joinedAt!, TimestampStyles.RelativeTime),
         short: time(member.joinedAt!, TimestampStyles.ShortDate),
@@ -149,12 +148,17 @@ export class WhoisCommand extends BaseCommand {
             current += (current ? " " : "") + mention;
             count++;
           }
-          rolesText = t("commands:whoisRolesMore", { roles: current, count: sortedRoles.size - count });
+          rolesText = t("commands:whoisRolesMore", {
+            roles: current,
+            count: sortedRoles.size - count,
+          });
         } else {
           rolesText = mentions.join(" ");
         }
       }
-      body.push(`### ${t("commands:whoisRolesTitle", { count: sortedRoles.size })}\n${rolesText}`);
+      body.push(
+        `### ${t("commands:whoisRolesTitle", { count: sortedRoles.size })}\n${rolesText}`,
+      );
 
       let keyPermsText = t("commands:whoisPermissionsNone");
       if (member.permissions.has(PermissionFlagsBits.Administrator)) {

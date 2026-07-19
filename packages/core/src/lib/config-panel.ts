@@ -35,8 +35,7 @@ import {
   type ModuleMeta,
 } from "#lib/module-system/Module.js";
 import { makeCard, noPingCard, type CardReply } from "#lib/utilities/cards.js";
-import { tabRow } from "#lib/hub-panel.js";
-import { Colors } from "#lib/utilities/branding.js";
+import { backToHubRow } from "#lib/hub-panel.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import type {
   ConfigHistoryEntry,
@@ -81,9 +80,7 @@ export async function loadDetail(
 /** Re-checks that the interacting user still has ADMIN in this guild. */
 export async function hasPanelAccess(
   interaction:
-    | ButtonInteraction
-    | AnySelectMenuInteraction
-    | ModalSubmitInteraction,
+    ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction,
 ): Promise<boolean> {
   if (!interaction.guild || !interaction.member) return false;
   const member =
@@ -206,7 +203,7 @@ export function buildFeatureListView(
     )
     .setDisabled(pageFeatures.length === 0);
 
-  const rows: Row[] = [tabRow("modules"), row(select)];
+  const rows: Row[] = [backToHubRow(), row(select)];
 
   if (totalPages > 1) {
     rows.push(
@@ -228,7 +225,7 @@ export function buildFeatureListView(
   }
 
   return makeCard(
-    Colors.PRIMARY,
+    0,
     `${Emojis.GEAR} Modules`,
     lines.length ? lines.join("\n") : "*No features registered.*",
     {
@@ -392,7 +389,7 @@ export function buildFeatureDetailView(
 
   return noPingCard(
     makeCard(
-      guildEnabled ? Colors.SUCCESS : Colors.ERROR,
+      guildEnabled ? 0 : 0,
       `${meta.emoji} ${meta.displayName}`,
       [meta.description || "No description.", fieldLines.join("\n")],
       { actionRows: rows },
@@ -451,7 +448,7 @@ export function buildHistoryView(
 
   return noPingCard(
     makeCard(
-      Colors.PRIMARY,
+      0,
       `${Emojis.CLOCK} ${meta.displayName} • History`,
       lines.join("\n"),
       { actionRows: rows },
@@ -515,7 +512,7 @@ export function buildOverridesView(
 
   return noPingCard(
     makeCard(
-      Colors.PRIMARY,
+      0,
       `${Emojis.SHIELD} ${meta.displayName} • Overrides`,
       [
         lines.join("\n"),

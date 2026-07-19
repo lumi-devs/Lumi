@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/member-ordering -- registerRpcHandler calls ordered by RPC command semantics, not class member order */
+ 
 import { Module, DefineModule } from "#lib/module-system/Module.js";
 import { container, type Piece } from "@sapphire/framework";
 import { getService } from "#lib/module-system/Service.js";
@@ -82,7 +82,7 @@ export class CoreModule extends Module {
       const { userId, requester } = parsePayload(GdprDeleteSchema, req.data);
 
       try {
-        await executeGdprDeletion(userId, requester as RequesterType);
+        await executeGdprDeletion(userId, requester);
         return { success: true };
       } catch (err: unknown) {
         if (err instanceof GdprDeletionError) {

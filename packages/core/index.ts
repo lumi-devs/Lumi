@@ -3,6 +3,8 @@
 
 export { LumiClient } from "./src/lib/client/LumiClient.js";
 
+import "./src/lib/types/common.js";
+
 // Env helpers
 export {
   envParseString,

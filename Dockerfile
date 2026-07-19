@@ -15,9 +15,8 @@ COPY packages/sharding/package.json ./packages/sharding/
 COPY apps/worker/package.json ./apps/worker/
 COPY apps/gateway/package.json ./apps/gateway/
 COPY apps/scheduler/package.json ./apps/scheduler/
-RUN bun install --frozen-lockfile
-
 COPY prisma ./prisma
+RUN bun install --no-frozen-lockfile
 RUN bunx prisma generate
 
 FROM base AS production

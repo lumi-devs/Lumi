@@ -64,7 +64,7 @@ export abstract class RelayTask<
   ): Promise<void> {
     const name = this.name as K;
     const resolved = (payload ?? {}) as ScheduledTasks[K];
-    if (!shouldRunNow(name, resolved as CatchUpMeta)) return;
+    if (!shouldRunNow(name, resolved)) return;
     await publishTaskFire(name, resolved);
   }
 }

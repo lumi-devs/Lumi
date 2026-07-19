@@ -7,7 +7,6 @@ const STATE_COOKIE = "lumi_oauth_state";
 
 const store = new Map<string, Session>();
 
-
 function sign(value: string): string {
   const sig = createHmac("sha256", config.sessionSecret)
     .update(value)
@@ -50,7 +49,6 @@ function readCookie(header: string | null, name: string): string | null {
   return null;
 }
 
-
 export function createSession(data: Omit<Session, "expiresAt">): string {
   const id = randomBytes(32).toString("base64url");
   store.set(id, { ...data, expiresAt: Date.now() + SESSION_TTL_MS });
@@ -88,7 +86,6 @@ export function sessionCookie(id: string): string {
 export function clearSessionCookie(): string {
   return serializeCookie(COOKIE_NAME, "", 0);
 }
-
 
 export function issueState(): { state: string; cookie: string } {
   const state = randomBytes(16).toString("base64url");

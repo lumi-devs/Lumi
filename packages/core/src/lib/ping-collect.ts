@@ -228,7 +228,7 @@ function ttlCached<T>(cache: TtlCache<T>, fn: () => T): T {
     cache.at = now;
     cache.value = fn();
   }
-  return cache.value!;
+  return cache.value;
 }
 
 const pgStat: TtlCache<ReturnType<typeof postgresStats>> = {

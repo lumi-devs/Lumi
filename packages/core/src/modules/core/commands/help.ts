@@ -23,7 +23,7 @@ function getCategories(containerInstance: typeof container) {
   for (const cmd of commands) {
     if ((cmd.options as { hidden?: boolean }).hidden) continue;
 
-    const rawModule = (cmd.options.module as string | undefined) ?? "core";
+    const rawModule = (cmd.options.module) ?? "core";
     const record = containerInstance.moduleStore.getRecord(rawModule);
     const moduleName = record?.meta.displayName ?? toTitleCase(rawModule);
 

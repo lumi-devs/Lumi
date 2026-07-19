@@ -27,9 +27,7 @@ export class ConfigHistoryRepository extends Repository {
         guildId: data.guildId,
         moduleName: data.moduleName,
         key: data.key,
-        oldValue: (data.oldValue ?? undefined) as
-          | Prisma.InputJsonValue
-          | undefined,
+        oldValue: (data.oldValue ?? undefined),
         newValue: data.newValue as Prisma.InputJsonValue,
         actorId: data.actorId,
       },
