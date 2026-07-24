@@ -280,9 +280,6 @@ export class NatsJetStreamBus implements EventBus {
     this.streamReady = (async () => {
       this.js = this.nc.jetstream();
       this.jsm = await this.nc.jetstreamManager();
-      // Idempotent: re-add returns the existing config or errors with "stream
-      // name already in use" which we ignore. We don't try to widen max_msgs
-      // on a re-add — operator owns capacity policy after first create.
       try {
         await this.jsm.streams.add({
           name: STREAM_NAME,
@@ -294,8 +291,11 @@ export class NatsJetStreamBus implements EventBus {
         const msg = String(err);
         if (
           !msg.includes("already in use") &&
-          !msg.includes("stream name already")
+          !msg.includes("stream name already") &&
+          !msg.includes("subjects overlap") &&
+          !msg.includes("stream name in use")
         ) {
+          this.streamReady = null;
           throw err;
         }
       }

@@ -42,7 +42,7 @@ async function drain<T>(
   bus: EventBus,
   stream: string,
   limit: number,
-  timeoutMs = 800,
+  timeoutMs = 2000,
 ): Promise<T[]> {
   const collected: T[] = [];
   const stop = await bus.consume<T>(
