@@ -87,7 +87,7 @@ export function getDevModulePaths(): string[] {
   return raw
     .split(/[,:]/)
     .map((p) => p.trim())
-    .filter(Boolean);
+    .filter((p) => p.length > 0);
 }
 
 /**

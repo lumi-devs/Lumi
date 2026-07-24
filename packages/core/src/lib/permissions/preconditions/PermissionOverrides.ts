@@ -14,6 +14,7 @@ import {
   PermissionLevel,
   resolvePermissionLevel,
 } from "#lib/permissions/index.js";
+import type { CachedOverride } from "#lib/prisma/repositories/PermissionRepository.js";
 
 function chatInputCommandPath(i: ChatInputCommandInteraction): string {
   const parts = [i.commandName];
@@ -95,7 +96,7 @@ export class PermissionOverridesPrecondition extends AllFlowsPrecondition {
     const { userId, channelId, roleIds, guild } = ctx;
 
     const user = overrides.find(
-      (o: any) => o.modelType === "user" && o.modelId === userId,
+      (o: CachedOverride) => o.modelType === "user" && o.modelId === userId,
     );
     if (user)
       return user.allow
@@ -106,7 +107,8 @@ export class PermissionOverridesPrecondition extends AllFlowsPrecondition {
           });
 
     const chan = overrides.find(
-      (o: any) => o.modelType === "channel" && o.modelId === channelId,
+      (o: CachedOverride) =>
+        o.modelType === "channel" && o.modelId === channelId,
     );
     if (chan)
       return chan.allow
@@ -122,7 +124,8 @@ export class PermissionOverridesPrecondition extends AllFlowsPrecondition {
       const catId = channel?.parentId;
       if (catId) {
         const cat = overrides.find(
-          (o: any) => o.modelType === "category" && o.modelId === catId,
+          (o: CachedOverride) =>
+            o.modelType === "category" && o.modelId === catId,
         );
         if (cat)
           return cat.allow
@@ -141,7 +144,7 @@ export class PermissionOverridesPrecondition extends AllFlowsPrecondition {
 
     for (const { id } of roles) {
       const m = overrides.find(
-        (o: any) => o.modelType === "role" && o.modelId === id,
+        (o: CachedOverride) => o.modelType === "role" && o.modelId === id,
       );
       if (m)
         return m.allow
@@ -152,7 +155,9 @@ export class PermissionOverridesPrecondition extends AllFlowsPrecondition {
             });
     }
 
-    const every = overrides.find((o: any) => o.modelType === "everyone");
+    const every = overrides.find(
+      (o: CachedOverride) => o.modelType === "everyone",
+    );
     if (every)
       return every.allow
         ? this.ok()

@@ -21,7 +21,7 @@ import { Emojis } from "#lib/utilities/assets.js";
 
 export const PING_FLAGS = MessageFlags.IsComponentsV2;
 export const EPHEMERAL_FLAGS =
-  (MessageFlags.IsComponentsV2) | (MessageFlags.Ephemeral);
+  MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral;
 
 export type PingCategory =
   "gateway" | "engine" | "host" | "postgres" | "redis" | "rabbitmq" | "bot";

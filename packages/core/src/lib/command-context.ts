@@ -6,7 +6,6 @@ import {
   type Guild,
   type GuildBasedChannel,
   type GuildMember,
-  type InteractionReplyOptions,
   type Message,
   type Role,
   type User,
@@ -227,11 +226,7 @@ export class CommandContext {
   ): Promise<void> {
     if (this.isSlash) {
       const payload = opts.ephemeral === false ? card : ephemeralCard(card);
-      await sendInteractionReply(
-        this.interaction,
-        payload,
-        "edit",
-      );
+      await sendInteractionReply(this.interaction, payload, "edit");
       return;
     }
     const payload = { ...card, allowedMentions: {} };

@@ -16,7 +16,7 @@
     "dev": "bun install && bun run db:generate && bun --filter @lumi/worker run dev",
     "start": "bun --filter @lumi/worker run start",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "eslint packages/*/src apps/*/src --ext ts --fix",
+    "lint": "eslint packages/*/src apps/*/src --fix",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
@@ -60,7 +60,6 @@
     "typescript": "5",
     "typescript-eslint": "^8.64.0",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^4.1.10",
-    "zod": "*"
+    "vitest": "^4.1.10"
   }
 }

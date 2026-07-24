@@ -216,7 +216,7 @@ export class DownloadResolver {
         err &&
         typeof err === "object" &&
         "code" in err &&
-        (err).code !== "ENOENT"
+        err.code !== "ENOENT"
       ) {
         logError("DownloaderResolver._exists", err);
       }

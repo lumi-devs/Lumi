@@ -5,7 +5,6 @@ import type {
   APIRole,
   APIGuild,
   APIGuildMember,
-  APIUser,
 } from "discord-api-types/v10";
 import type { RedisEntityCache } from "./RedisEntityCache.js";
 

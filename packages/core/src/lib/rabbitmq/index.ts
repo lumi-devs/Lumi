@@ -18,6 +18,7 @@ import {
   withSpan,
 } from "@lumi/observability";
 import { logError, errorFrom } from "#lib/utilities/errors.js";
+import { tryParseJSON } from "@sapphire/utilities";
 import type { RpcRequest, RpcResponse, RpcHandler } from "@lumi/contracts";
 
 export type { RpcRequest, RpcResponse, RpcHandler };
@@ -209,11 +210,12 @@ export class RabbitClient {
       ch.consume(
         "amq.rabbitmq.reply-to",
         (m) => {
-          if (m?.properties.correlationId)
-            this.#replies.emit(
-              m.properties.correlationId,
-              JSON.parse(m.content.toString()),
-            );
+          if (m?.properties.correlationId) {
+            const parsed = tryParseJSON(m.content.toString());
+            if (parsed !== null) {
+              this.#replies.emit(m.properties.correlationId, parsed);
+            }
+          }
         },
         { noAck: true },
       ),

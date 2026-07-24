@@ -150,7 +150,7 @@ export class ClusterCoordinator {
             : `[ClusterCoordinator:${options.replicaId}] ${msg}`;
           const fn =
             lvl === "error" ? "error" : lvl === "warn" ? "warn" : "log";
-           
+
           console[fn](line);
         }),
     };
@@ -239,11 +239,11 @@ export class ClusterCoordinator {
   }
 
   private async reconcileAssignment(force: boolean): Promise<void> {
-    const liveIds = (await this.opts.redis.zrange(
+    const liveIds = await this.opts.redis.zrange(
       membersKey(this.opts.clusterName),
       0,
       -1,
-    ));
+    );
     const current = await this.readAssignment();
     const wantByReplica = assignShards(liveIds, this.opts.shardCount);
     const needsRewrite =

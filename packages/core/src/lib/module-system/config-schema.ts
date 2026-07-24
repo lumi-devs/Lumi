@@ -4,6 +4,9 @@ import { FieldType, type ConfigField } from "@lumi/contracts";
 
 export { FieldType, type ConfigField };
 
+/** A validated object schema produced by `cfg.object(...)`. */
+export type ModuleConfigSchema = BaseValidator<Record<string, unknown>>;
+
 type FieldMeta = Omit<ConfigField, "key">;
 
 /** UI/coercion metadata keyed by the exact Shapeshift schema instance it decorates. */
@@ -109,12 +112,15 @@ export const cfg = {
   },
 };
 
+type ObjectLike = { shape?: Record<string, BaseValidator<unknown>> };
+
 /** Derive the flat `ConfigField[]` the panel/dashboard consume from a module's schema. */
-export function fieldsFromSchema(schema: any): ConfigField[] {
+export function fieldsFromSchema(schema: ModuleConfigSchema): ConfigField[] {
   const fields: ConfigField[] = [];
-  if (schema.shape) {
-    for (const [key, field] of Object.entries(schema.shape)) {
-      const meta = REGISTRY.get(field as BaseValidator<any>);
+  const { shape } = schema as unknown as ObjectLike;
+  if (shape) {
+    for (const [key, field] of Object.entries(shape)) {
+      const meta = REGISTRY.get(field);
       if (!meta) continue;
       fields.push({ key, ...meta });
     }
@@ -130,6 +136,6 @@ export function parseConfigList(raw: unknown): string[] {
     return raw
       .split(",")
       .map((t) => t.trim())
-      .filter(Boolean);
+      .filter((t) => t.length > 0);
   return [];
 }

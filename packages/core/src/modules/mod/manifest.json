@@ -9,10 +9,7 @@
   "conflicts": [],
   "configOverrides": false,
   "targetService": "worker",
-  "subStores": [
-    "commands",
-    "scheduled-tasks"
-  ],
+  "subStores": ["commands", "scheduled-tasks"],
   "configFields": [
     {
       "key": "log_channel_id",
