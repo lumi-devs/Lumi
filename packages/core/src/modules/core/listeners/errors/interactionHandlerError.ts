@@ -4,7 +4,6 @@ import {
   type InteractionHandlerError,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
-import type { RepliableInteraction } from "discord.js";
 import { errorCard, respond } from "#lib/utilities/command-response.js";
 
 @ApplyOptions<Listener.Options>({ event: Events.InteractionHandlerError })

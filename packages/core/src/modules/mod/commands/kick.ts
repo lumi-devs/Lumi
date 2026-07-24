@@ -12,6 +12,8 @@ import { KickAction } from "../lib/actions/index.js";
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.MOD,
   prefixEnabled: true,
+  cooldownLimit: 3,
+  cooldownDelay: 5000,
 })
 export class KickCommand extends BaseCommand {
   public override registerApplicationCommands(

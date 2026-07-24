@@ -37,6 +37,8 @@ function afkStatusText(
   preconditions: ["GuildOnly", "ModuleEnabled"],
   module: "afk",
   prefixEnabled: true,
+  cooldownLimit: 2,
+  cooldownDelay: 5000,
 })
 export default class AfkCommand extends BaseCommand {
   public override registerApplicationCommands(registry: Command.Registry) {
