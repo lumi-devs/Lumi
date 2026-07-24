@@ -9,10 +9,7 @@
   "conflicts": [],
   "configOverrides": false,
   "targetService": "worker",
-  "subStores": [
-    "commands",
-    "interaction-handlers"
-  ],
+  "subStores": ["commands", "interaction-handlers"],
   "configFields": [
     {
       "key": "cooldown_seconds",

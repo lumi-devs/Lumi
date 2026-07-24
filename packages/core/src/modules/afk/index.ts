@@ -70,7 +70,9 @@ export class AfkModule extends Module {
   }
 
   public override onUnload() {
-    this.container.logger.info("[AfkModule] Unloaded AFK module task handlers.");
+    this.container.logger.info(
+      "[AfkModule] Unloaded AFK module task handlers.",
+    );
     return super.onUnload();
   }
 

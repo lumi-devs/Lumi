@@ -1,5 +1,9 @@
 import { Service } from "#lib/module-system/Service.js";
-import { FieldType, parseConfigList } from "#lib/module-system/Module.js";
+import {
+  FieldType,
+  parseConfigList,
+  type ModuleConfigSchema,
+} from "#lib/module-system/Module.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import type { Prisma } from "@prisma/client";
@@ -34,11 +38,23 @@ export class ConfigService extends Service {
     }
 
     const schema = await this.container.moduleStore.getConfigSchema(moduleName);
-    const schemaField = (schema as any)?.shape?.[key];
+    const schemaField = (
+      schema as unknown as ModuleConfigSchema & {
+        shape?: Record<
+          string,
+          {
+            safeParse(v: unknown): {
+              success: boolean;
+              error?: { errors: { message: string }[] };
+            };
+          }
+        >;
+      }
+    )?.shape?.[key];
     if (schemaField) {
       const result = schemaField.safeParse(coerced);
       if (!result.success) {
-        const msg = result.error.errors.map((e: any) => e.message).join("; ");
+        const msg = result.error!.errors.map((e) => e.message).join("; ");
         throw new Error(`Invalid value for \`${key}\`: ${msg}`);
       }
     }
@@ -66,7 +82,12 @@ export class ConfigService extends Service {
             newValue: coerced,
             actorId,
           })
-          .catch(() => null);
+          .catch((err: unknown) =>
+            this.container.logger.warn(
+              `[ConfigService] Failed to write audit history for ${moduleName}:${key}:`,
+              err,
+            ),
+          );
       }
       const hook = this.container.configChangeHooks.get(`${moduleName}:${key}`);
       if (hook) {

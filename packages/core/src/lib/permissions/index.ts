@@ -13,7 +13,7 @@ const OWNER_IDS: ReadonlySet<string> = new Set(
   envParseString("OWNER_IDS", "")
     .split(",")
     .map((id) => id.trim())
-    .filter(Boolean),
+    .filter((id) => id.length > 0),
 );
 
 export enum PermissionLevel {

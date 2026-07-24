@@ -9,10 +9,7 @@
   "conflicts": [],
   "configOverrides": false,
   "targetService": "worker",
-  "subStores": [
-    "listeners",
-    "services"
-  ],
+  "subStores": ["listeners", "services"],
   "configFields": [
     {
       "key": "terms",
@@ -103,9 +100,7 @@
       "type": "CHANNEL",
       "label": "Log Channel",
       "description": "Channel where filter hits are logged.",
-      "channelTypes": [
-        0
-      ]
+      "channelTypes": [0]
     }
   ]
 }

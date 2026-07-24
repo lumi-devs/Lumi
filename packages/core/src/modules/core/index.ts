@@ -1,4 +1,3 @@
- 
 import { Module, DefineModule } from "#lib/module-system/Module.js";
 import { container, type Piece } from "@sapphire/framework";
 import { getService } from "#lib/module-system/Service.js";

@@ -21,7 +21,7 @@ jobs:
       - run: bun run db:generate
       # Read-only measure: the `bun run lint` script is `eslint --fix` (mutates +
       # would auto-fix-then-pass in CI, gating nothing). Use the bare form here.
-      - run: bunx eslint packages/*/src apps/*/src --ext ts
+      - run: bunx eslint packages/*/src apps/*/src
 
   typecheck:
     runs-on: ubuntu-latest

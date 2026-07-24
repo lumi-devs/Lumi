@@ -133,7 +133,7 @@ export class TaskFireConsumer {
     });
     await otelContext.with(parent, async () => {
       try {
-        await (reg.handler)(msg.body.payload);
+        await reg.handler(msg.body.payload);
         await msg.ack();
       } catch (err) {
         container.logger.error(

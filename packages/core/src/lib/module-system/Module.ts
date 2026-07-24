@@ -65,7 +65,7 @@ export function DefineModule(options: ModuleOptions) {
   if (options.configSchema) {
     options.configFields = fieldsFromSchema(options.configSchema);
   }
-   
+
   return <T extends abstract new (...args: any[]) => any>(ctor: T): T => {
     const proxied = ApplyOptions<ModuleOptions>(options)(
       ctor as unknown as new (...args: never[]) => Module,

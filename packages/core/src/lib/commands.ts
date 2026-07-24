@@ -298,7 +298,6 @@ interface DefaultsApplicableBuilder {
  * calling the setter themselves inside their builder chain.
  */
 function autoApplyCommandDefaults(piece: BaseCommand | BaseSubcommand): void {
-   
   const method = piece.registerApplicationCommands;
   if (typeof method !== "function") return;
   const original = method.bind(piece);
@@ -330,10 +329,9 @@ function autoApplyCommandDefaults(piece: BaseCommand | BaseSubcommand): void {
     configurable: true,
     writable: true,
     async value(registry: ApplicationCommandRegistry): Promise<void> {
-       
       const chat = registry.registerChatInputCommand;
       const menu = registry.registerContextMenuCommand;
-       
+
       registry.registerChatInputCommand = (input, options) =>
         chat.call(registry, wrapInput(input), options);
       registry.registerContextMenuCommand = (input, options) =>

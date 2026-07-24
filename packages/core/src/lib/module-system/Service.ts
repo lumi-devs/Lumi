@@ -12,7 +12,7 @@ import { container, Piece } from "@sapphire/framework";
  * }
  * ```
  */
- 
+
 export interface Services {}
 
 /** Typed lookup for service pieces — use instead of `stores.get("services").get(...) as X`. */
