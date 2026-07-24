@@ -2,6 +2,8 @@ import type { Prisma } from "@prisma/client";
 import { RedisKeys } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
+import { tryParseJSON } from "@sapphire/utilities";
+
 export interface AuditLogPayload {
   guildId: string;
   userId: string;
@@ -22,6 +24,16 @@ export class AuditRepository extends Repository {
       "payload",
       JSON.stringify(payload),
     );
+  }
+
+  public async queueAuditLogsBatch(payloads: AuditLogPayload[]) {
+    if (!payloads.length) return;
+    const pipeline = this.redis.pipeline();
+    const key = RedisKeys.auditLogsQueue();
+    for (const payload of payloads) {
+      pipeline.xadd(key, "*", "payload", JSON.stringify(payload));
+    }
+    await pipeline.exec();
   }
 
   public async flushAuditLogsToPostgres(batchSize = 500) {
@@ -69,7 +81,8 @@ export class AuditRepository extends Repository {
             `[AuditRepository] Entry ${id} is missing the "payload" field — skipping.`,
           );
         } else {
-          payloads.push(JSON.parse(raw));
+          const parsed = tryParseJSON(raw);
+          if (parsed) payloads.push(parsed as AuditLogPayload);
         }
       } catch (err: unknown) {
         this.logger.error(
