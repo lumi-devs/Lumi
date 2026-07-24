@@ -104,7 +104,6 @@ declare module "#lib/env.js" {
     SCHEDULER_LEADER_LOCK_RENEW_MS: IntegerString;
     SCHEDULER_LEADER_LOCK_POLL_MS: IntegerString;
     RABBITMQ_URL: string;
-    WORKER_COUNT: IntegerString;
     /** "inproc" (default) | "streams" | "nats" — selects @lumi/event-bus transport. */
     TRANSPORT: "inproc" | "streams" | "nats";
     /** NATS server URL(s), comma-separated. Required when TRANSPORT=nats. */
