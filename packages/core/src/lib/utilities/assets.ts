@@ -77,11 +77,16 @@ const defaultEmojis = {
   RABBIT: "🐇",
 };
 
+import { tryParseJSON } from "@sapphire/utilities";
+
 let customEmojis = {};
 try {
   const configPath = join(process.cwd(), "config", "emojis.json");
   const file = await fs.readFile(configPath, "utf-8");
-  customEmojis = JSON.parse(file);
+  const parsed = tryParseJSON(file);
+  if (parsed && typeof parsed === "object") {
+    customEmojis = parsed;
+  }
 } catch (err: unknown) {
   if (errorCode(err) !== "ENOENT") {
     console.error("[Assets] Failed to load config/emojis.json:", err);
