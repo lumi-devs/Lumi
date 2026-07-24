@@ -398,7 +398,7 @@ export class RedisStreamsBus implements EventBus {
     const key = `${stream}::${group}`;
     if (this.knownGroups.has(key)) return;
     try {
-      await this.publisher.xgroup("CREATE", stream, group, "$", "MKSTREAM");
+      await this.publisher.xgroup("CREATE", stream, group, "0", "MKSTREAM");
     } catch (err) {
       const msg = String(err);
       if (!msg.includes("BUSYGROUP")) throw err;
