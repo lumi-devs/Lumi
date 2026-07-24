@@ -2,6 +2,7 @@ import { container } from "@sapphire/framework";
 import type { EventBus, BusMessage } from "@lumi/event-bus";
 import type { ScheduledTasks } from "#lib/types/common.js";
 import { taskFireStream, type FireEnvelope } from "#lib/scheduler-bus.js";
+import { extractTraceContext, otelContext } from "@lumi/observability";
 
 export type TaskFireMode = "unicast" | "broadcast";
 
@@ -126,17 +127,21 @@ export class TaskFireConsumer {
       await msg.ack();
       return;
     }
-    try {
-      await (reg.handler)(
-        msg.body.payload,
-      );
-      await msg.ack();
-    } catch (err) {
-      container.logger.error(
-        `[TaskFireConsumer] Handler for '${String(name)}' failed (id=${msg.id}, deliveryCount=${msg.deliveryCount}):`,
-        err,
-      );
-      await msg.nack();
-    }
+    const parent = extractTraceContext({
+      traceparent: msg.body.traceparent,
+      tracestate: msg.body.tracestate,
+    });
+    await otelContext.with(parent, async () => {
+      try {
+        await (reg.handler)(msg.body.payload);
+        await msg.ack();
+      } catch (err) {
+        container.logger.error(
+          `[TaskFireConsumer] Handler for '${String(name)}' failed (id=${msg.id}, deliveryCount=${msg.deliveryCount}):`,
+          err,
+        );
+        await msg.nack();
+      }
+    });
   }
 }
