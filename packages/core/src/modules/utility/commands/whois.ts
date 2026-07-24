@@ -7,7 +7,6 @@ import {
   PermissionFlagsBits,
   GuildMember,
   User,
-  type InteractionReplyOptions,
 } from "discord.js";
 import { time, TimestampStyles } from "@discordjs/formatters";
 import {

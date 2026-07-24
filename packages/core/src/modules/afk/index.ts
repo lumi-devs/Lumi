@@ -14,7 +14,7 @@ export function sanitizeReason(reason: string): string {
     reason
       ?.split("\n")
       .map((l) => l.trim())
-      .filter(Boolean)
+      .filter((l) => l.length > 0)
       .join(" ")
       .replace(/\s+/g, " ") || "AFK";
   return f.length > AFK_MAX_REASON_LENGTH
@@ -67,6 +67,11 @@ export class AfkModule extends Module {
       handleAfkDeleteMessageFire,
     );
     return super.onLoad();
+  }
+
+  public override onUnload() {
+    this.container.logger.info("[AfkModule] Unloaded AFK module task handlers.");
+    return super.onUnload();
   }
 
   public override async deleteUserData(
