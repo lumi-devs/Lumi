@@ -181,7 +181,7 @@ export class CasesCommand extends BaseSubcommand {
         ? `**Expires:** ${time(c.expiresAt, TimestampStyles.RelativeTime)}`
         : "",
     ]
-      .filter(Boolean)
+      .filter((line) => line.length > 0)
       .join("\n");
     return ctx.reply(makeInfoCard(`Case #${caseNumber}`, lines));
   }

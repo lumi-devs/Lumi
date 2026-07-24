@@ -13,6 +13,8 @@ import { BanAction } from "../lib/actions/index.js";
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.MOD,
   prefixEnabled: true,
+  cooldownLimit: 3,
+  cooldownDelay: 5000,
   subcommands: [
     { name: "add", run: "add", default: true },
     { name: "remove", run: "remove" },
