@@ -165,7 +165,9 @@ export class RedisEntityCache {
     return {
       userId: h.userId,
       guildId: h.guildId ?? guildId,
-      roleIds: h.roleIds ? h.roleIds.split(",").filter(Boolean) : [],
+      roleIds: h.roleIds
+        ? h.roleIds.split(",").filter((id) => id.length > 0)
+        : [],
       nick: h.nick || undefined,
       cachedAt: Number(h.cachedAt) || 0,
     };

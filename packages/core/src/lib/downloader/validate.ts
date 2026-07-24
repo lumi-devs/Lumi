@@ -58,7 +58,10 @@ const EMBED_IMPORT_RE =
   /import\s*(?:type\s*)?\{[^}]*\bEmbedBuilder\b[^}]*\}\s*from\s*["'](?:discord\.js|@discordjs\/builders)["']/;
 
 function parseSemver(v: string): [number, number, number] {
-  const parts = v.replace(/^v/, "").split(".").map((n) => Number(n) || 0);
+  const parts = v
+    .replace(/^v/, "")
+    .split(".")
+    .map((n) => Number(n) || 0);
   return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0];
 }
 

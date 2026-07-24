@@ -18,6 +18,7 @@ import { ModerationRepository } from "#lib/prisma/repositories/ModerationReposit
 import { ConfigHistoryRepository } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
 import { ConfigOverrideRepository } from "#lib/prisma/repositories/ConfigOverrideRepository.js";
 import { AfkRepository } from "#lib/prisma/repositories/AfkRepository.js";
+import { GlobalRepository } from "#lib/prisma/repositories/GlobalRepository.js";
 
 export type { CachedOverride } from "#lib/prisma/repositories/PermissionRepository.js";
 export type { AuditLogPayload } from "#lib/prisma/repositories/AuditRepository.js";
@@ -35,6 +36,7 @@ export type { ConfigOverrideEntry } from "#lib/prisma/repositories/ConfigOverrid
  * `publishBotStats`) live on the facade itself because they span repositories.
  */
 export class DatabaseService {
+  public readonly global: GlobalRepository;
   public readonly config: ConfigRepository;
   public readonly modules: ModuleRepository;
   public readonly guildKV: GuildKVRepository;
@@ -53,6 +55,7 @@ export class DatabaseService {
     private readonly redis: Redis,
     logger: ILogger,
   ) {
+    this.global = new GlobalRepository(prisma, redis, logger, this);
     this.config = new ConfigRepository(prisma, redis, logger, this);
     this.modules = new ModuleRepository(prisma, redis, logger, this);
     this.guildKV = new GuildKVRepository(prisma, redis, logger, this);

@@ -102,11 +102,9 @@ export async function paginateContainer(options: PaginationOptions) {
 
   let msg: Message;
   if (isInteraction) {
-    msg = (await (
-      interactionOrMessage
-    ).editReply(initialCard));
+    msg = await interactionOrMessage.editReply(initialCard);
   } else {
-    msg = await (interactionOrMessage).reply(initialCard);
+    msg = await interactionOrMessage.reply(initialCard);
   }
 
   const collector = msg.createMessageComponentCollector({
@@ -130,9 +128,7 @@ export async function paginateContainer(options: PaginationOptions) {
   collector.on("end", async () => {
     const disabledCard = await buildPage(activePage, true);
     if (isInteraction) {
-      await (interactionOrMessage)
-        .editReply(disabledCard)
-        .catch(() => null);
+      await interactionOrMessage.editReply(disabledCard).catch(() => null);
     } else {
       await msg.edit(disabledCard).catch(() => null);
     }

@@ -72,7 +72,7 @@ export function redisConnectionOptions(): RedisOptions {
     const sentinels = envParseString("REDIS_SENTINELS")
       .split(",")
       .map((entry) => entry.trim())
-      .filter(Boolean)
+      .filter((entry) => entry.length > 0)
       .map((entry) => {
         const [host, port] = entry.split(":");
         if (!host || !port) {

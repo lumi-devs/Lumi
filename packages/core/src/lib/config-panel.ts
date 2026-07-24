@@ -123,7 +123,7 @@ export function formatFieldValue(field: ConfigField, value: unknown): string {
         ? val
             .split(",")
             .map((id) => id.trim())
-            .filter(Boolean)
+            .filter((id) => id.length > 0)
         : Array.isArray(val)
           ? val
           : [];

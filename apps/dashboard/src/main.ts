@@ -1,9 +1,19 @@
 import "./telemetry.js";
-import { registerReadinessProbe, runDrainSequence } from "@lumi/observability";
+import {
+  createPinoLogger,
+  registerReadinessProbe,
+  runDrainSequence,
+} from "@lumi/observability";
 import { config } from "./config.js";
 import { RpcClient } from "./rpc.js";
 import { createServer } from "./server.js";
 import { startSessionReaper } from "./sessions.js";
+
+const pino = createPinoLogger({
+  service: "dashboard",
+  level: process.env["NODE_ENV"] === "development" ? "debug" : "info",
+  format: process.env["NODE_ENV"] === "development" ? "pretty" : "json",
+});
 
 const rpc = new RpcClient(config.rabbitUrl);
 
@@ -16,8 +26,8 @@ await rpc.waitForConnect();
 const reaper = startSessionReaper();
 const server = createServer(rpc);
 
-process.stdout.write(
-  `[dashboard] listening on http://${config.host}:${config.port} (RPC → ${config.rabbitUrl.replace(/:[^:@]*@/, ":***@")})\n`,
+pino.info(
+  `listening on http://${config.host}:${config.port} (RPC → ${config.rabbitUrl.replace(/:[^:@]*@/, ":***@")})`,
 );
 
 async function shutdown() {
@@ -28,8 +38,10 @@ async function shutdown() {
       { name: "rpc", run: () => rpc.close() },
     ],
     {
-      log: (level, msg, meta) =>
-        console[level](`[dashboard] ${msg}`, meta ?? ""),
+      log: (level, msg, meta) => {
+        if (meta) pino[level](meta, msg);
+        else pino[level](msg);
+      },
       preCloseGraceMs: 0,
       deadlineMs: 10_000,
     },

@@ -88,6 +88,14 @@ export const streamDlqLength = new Gauge({
   registers: [registry],
 });
 
+/** Counts BullMQ jobs that exhausted all retry attempts, labelled by task name. */
+export const failedJobsTotal = new Counter({
+  name: "lumi_scheduled_jobs_failed_total",
+  help: "BullMQ scheduled jobs that exhausted all retry attempts",
+  labelNames: ["task"] as const,
+  registers: [registry],
+});
+
 // ── Gateway / shard ───────────────────────────────────────────────────────────
 
 export const shardLatency = new Gauge({

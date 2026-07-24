@@ -3,7 +3,9 @@ import {
   container,
   ApplicationCommandRegistries,
   RegisterBehavior,
+  LogLevel,
 } from "@sapphire/framework";
+import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
 import {
   GatewayIntentBits,
   Partials,
@@ -37,6 +39,7 @@ import {
   RedisKeys,
   RedisTTL,
 } from "#lib/database/redis.js";
+import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
 import { SchedulerLeaderLock } from "#lib/scheduler-leader-lock.js";
 import { RabbitClient } from "#lib/rabbitmq/index.js";
 import {
@@ -61,6 +64,7 @@ import {
   streamLength,
   streamConsumerLag,
   streamDlqLength,
+  failedJobsTotal,
   registerReadinessProbe,
 } from "@lumi/observability";
 import {
@@ -181,9 +185,7 @@ export class LumiClient extends SapphireClient {
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildModeration,
-        ...(envParseString("PRESENCE_INTENT", "false") === "true"
-          ? [GatewayIntentBits.GuildPresences]
-          : []),
+        GatewayIntentBits.GuildPresences,
       ],
       partials: [Partials.Channel, Partials.GuildMember, Partials.Message],
       allowedMentions: { parse: ["users"], repliedUser: true },
@@ -202,7 +204,12 @@ export class LumiClient extends SapphireClient {
       baseUserDirectory: new URL("../../", import.meta.url),
       defaultPrefix: envParseString("DEFAULT_PREFIX", ","),
       logger: {
-        level: process.env["NODE_ENV"] === "development" ? 20 : 30,
+        instance: new PinoSapphireLogger(
+          process.env["SERVICE_NAME"] ?? getServiceRole(),
+          process.env["NODE_ENV"] === "development"
+            ? LogLevel.Debug
+            : LogLevel.Info,
+        ),
       },
       hmr: {
         enabled: process.env["NODE_ENV"] === "development",
@@ -381,6 +388,32 @@ export class LumiClient extends SapphireClient {
       container.logger.info(
         `[Scheduler] Request consumer started (consumerId=${getConsumerId()})`,
       );
+
+      const bullWorker = (
+        container.tasks as unknown as {
+          worker?: {
+            on(event: string, fn: (...args: unknown[]) => void): void;
+          };
+        }
+      ).worker;
+      if (bullWorker) {
+        bullWorker.on("failed", (job: unknown, err: unknown) => {
+          const taskName =
+            (job as { name?: string } | undefined)?.name ?? "unknown";
+          const attemptsMade =
+            (job as { attemptsMade?: number } | undefined)?.attemptsMade ?? 0;
+          const maxAttempts =
+            (job as { opts?: { attempts?: number } } | undefined)?.opts
+              ?.attempts ?? 0;
+          if (attemptsMade >= maxAttempts) {
+            failedJobsTotal.inc({ task: taskName });
+            container.logger.error(
+              `[Scheduler] Job '${taskName}' failed after ${attemptsMade} attempt(s):`,
+              err,
+            );
+          }
+        });
+      }
     }
 
     if (roleExecutesTaskEffects(this.role)) {
@@ -485,6 +518,9 @@ export class LumiClient extends SapphireClient {
       this._schedulerLeaderLock = null;
     }
     await super.destroy();
+    await flushAllMessageDeletes().catch(
+      this._warnOnCleanupError("flushAllMessageDeletes"),
+    );
     await container.rabbit?.close();
     await this._ownedEventBus
       ?.close()
@@ -512,7 +548,13 @@ export class LumiClient extends SapphireClient {
 
   /** Cleanup-error handler used throughout destroy(): log at warn, never throw. */
   public override fetchPrefix = async (message: Message) => {
-    if (!message.guild) return envParseString("DEFAULT_PREFIX", ",");
+    const globalConfig = await container.db.global
+      .getGlobalConfig()
+      .catch(() => null);
+    const envFallback = envParseString("DEFAULT_PREFIX", ",");
+    const globalDefault = globalConfig?.defaultPrefix ?? envFallback;
+
+    if (!message.guild) return globalDefault;
 
     const cacheKey = RedisKeys.guildPrefixes(message.guild.id);
     const cached = await container.redis.get(cacheKey);
@@ -524,8 +566,7 @@ export class LumiClient extends SapphireClient {
     const settings = await container.db.config.getGuildSettings(
       message.guild.id,
     );
-    const fallback = envParseString("DEFAULT_PREFIX", ",");
-    const prefixes = settings.prefix ? [settings.prefix] : [fallback];
+    const prefixes = settings.prefix ? [settings.prefix] : [globalDefault];
 
     await container.redis.setex(
       cacheKey,

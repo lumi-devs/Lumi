@@ -1,21 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { ButtonStyle } from "discord.js";
 import {
-  tabRow,
+  hubRow,
+  backToHubRow,
   buildHubView,
   buildSettingsView,
   buildPermissionsView,
   buildAddonsView,
-  type HubTab,
 } from "#lib/hub-panel.js";
-
-const TAB_IDS: Record<HubTab, string> = {
-  overview: "lumi:home",
-  modules: "lumi:tab:modules",
-  permissions: "lumi:tab:permissions",
-  settings: "lumi:tab:settings",
-  addons: "lumi:tab:addons",
-};
 
 const buttonsOf = (rowJson: { components: unknown[] }) =>
   rowJson.components as {
@@ -25,10 +17,9 @@ const buttonsOf = (rowJson: { components: unknown[] }) =>
   }[];
 
 describe("hub-panel navigation", () => {
-  it("tabRow renders all five tabs in a stable order", () => {
-    const buttons = buttonsOf(tabRow("overview").toJSON());
+  it("hubRow renders all module tabs in a stable order", () => {
+    const buttons = buttonsOf(hubRow().toJSON());
     expect(buttons.map((b) => b.custom_id)).toEqual([
-      "lumi:home",
       "lumi:tab:modules",
       "lumi:tab:permissions",
       "lumi:tab:settings",
@@ -36,18 +27,10 @@ describe("hub-panel navigation", () => {
     ]);
   });
 
-  it.each(Object.keys(TAB_IDS) as HubTab[])(
-    "highlights only the active tab (%s)",
-    (active) => {
-      const buttons = buttonsOf(tabRow(active).toJSON());
-      for (const b of buttons) {
-        const isActive = b.custom_id === TAB_IDS[active];
-        expect(b.style).toBe(
-          isActive ? ButtonStyle.Primary : ButtonStyle.Secondary,
-        );
-      }
-    },
-  );
+  it("backToHubRow renders back to home button", () => {
+    const buttons = buttonsOf(backToHubRow().toJSON());
+    expect(buttons[0]?.custom_id).toBe("lumi:home");
+  });
 });
 
 describe("hub-panel views", () => {
@@ -76,22 +59,23 @@ describe("hub-panel views", () => {
     return undefined;
   };
 
-  it("every top-level view carries the tab bar", () => {
-    const views = {
-      overview: buildHubView({
-        moduleCount: 3,
-        enabledCount: 2,
-        prefix: null,
-        locale: "en-US",
-      }),
-      settings: buildSettingsView({ prefix: "!", locale: "de" }),
-      permissions: buildPermissionsView([]),
-      addons: buildAddonsView(),
-    };
-    for (const view of Object.values(views)) {
+  it("sub-views carry navigation buttons", () => {
+    const hubView = buildHubView({
+      moduleCount: 3,
+      enabledCount: 2,
+      prefix: null,
+      locale: "en-US",
+    });
+    expect(serialize(hubView)).toContain("lumi:tab:modules");
+
+    const subViews = [
+      buildSettingsView({ prefix: "!", locale: "de" }),
+      buildPermissionsView([]),
+      buildAddonsView(),
+    ];
+    for (const view of subViews) {
       const json = serialize(view);
       expect(json).toContain("lumi:home");
-      expect(json).toContain("lumi:tab:modules");
     }
   });
 

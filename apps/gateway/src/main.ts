@@ -19,6 +19,7 @@ import {
 } from "@lumi/event-bus";
 import { rawGatewayStream, type RawGatewayEnvelope } from "@lumi/contracts";
 import {
+  createPinoLogger,
   injectTraceContext,
   streamLength,
   streamConsumerLag,
@@ -71,12 +72,15 @@ const MAXLEN = envInt("EVENT_STREAM_MAXLEN", 100_000);
 const PROXY_URL =
   process.env["DISCORD_PROXY_URL"]?.trim().replace(/\/+$/, "") || null;
 
+const pino = createPinoLogger({
+  service: "gateway",
+  level: process.env["NODE_ENV"] === "development" ? "debug" : "info",
+  format: process.env["NODE_ENV"] === "development" ? "pretty" : "json",
+});
+
 const log = (level: "info" | "warn" | "error", msg: string, meta?: object) => {
-  const line = meta
-    ? `[Gateway] ${msg} ${JSON.stringify(meta)}`
-    : `[Gateway] ${msg}`;
-  const fn = level === "error" ? "error" : level === "warn" ? "warn" : "log";
-  console[fn](line);
+  if (meta) pino[level](meta, msg);
+  else pino[level](msg);
 };
 
 const rest = new REST({
@@ -179,7 +183,8 @@ const manager = new WebSocketManager({
     GatewayIntentBits.GuildMembers |
     GatewayIntentBits.GuildMessages |
     GatewayIntentBits.GuildVoiceStates |
-    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.MessageContent |
+    GatewayIntentBits.GuildPresences,
   shardCount: shardPlan.shardCount,
   ...(assignedShards && { shardIds: [...assignedShards] }),
   buildIdentifyThrottler: async () =>
@@ -187,12 +192,12 @@ const manager = new WebSocketManager({
       ? cluster.throttlerFactory()
       : buildSimpleThrottlerFactory(shardPlan)(),
   ...(cluster && {
-    buildStrategy: ((mgr: unknown) => {
+    buildStrategy: (mgr: unknown) => {
       dynamicStrategy = new DynamicShardingStrategy(
         mgr as ConstructorParameters<typeof DynamicShardingStrategy>[0],
       );
       return dynamicStrategy;
-    }),
+    },
   }),
   ...(cluster && {
     retrieveSessionInfo: (shardId: number) =>
@@ -272,18 +277,14 @@ async function deferInteraction(d: InteractionPayload): Promise<void> {
   }
 }
 
-const detachPublisher = attachProxyPublisher(
-  ownedBus.bus,
-  manager,
-  {
-    log,
-    maxLen: MAXLEN,
-    dispatchEvent: WebSocketShardEvents.Dispatch,
-    ignoreDispatchTypes: DEFER_AT_GATEWAY
-      ? new Set(["INTERACTION_CREATE"])
-      : undefined,
-  },
-);
+const detachPublisher = attachProxyPublisher(ownedBus.bus, manager, {
+  log,
+  maxLen: MAXLEN,
+  dispatchEvent: WebSocketShardEvents.Dispatch,
+  ignoreDispatchTypes: DEFER_AT_GATEWAY
+    ? new Set(["INTERACTION_CREATE"])
+    : undefined,
+});
 
 if (DEFER_AT_GATEWAY) {
   manager.on(
