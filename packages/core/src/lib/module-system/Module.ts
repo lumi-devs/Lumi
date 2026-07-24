@@ -4,11 +4,16 @@ import type { RequesterType } from "#lib/gdpr.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Emojis } from "#lib/utilities/assets.js";
 
-import { fieldsFromSchema, type ConfigField } from "./config-schema.js";
+import {
+  fieldsFromSchema,
+  type ConfigField,
+  type ModuleConfigSchema,
+} from "./config-schema.js";
 
 export {
   FieldType,
   type ConfigField,
+  type ModuleConfigSchema,
   cfg,
   parseConfigList,
 } from "./config-schema.js";
@@ -27,7 +32,7 @@ export interface ModuleMeta {
   conflicts?: string[];
   dependencies?: string[];
   configFields?: ConfigField[];
-  configSchema?: any;
+  configSchema?: ModuleConfigSchema;
   configOverrides?: boolean;
   onLoad?: () => void;
   onUnload?: () => void;
@@ -44,7 +49,7 @@ export interface ModuleOptions extends Piece.Options {
   conflicts?: string[];
   dependencies?: string[];
   configFields?: ConfigField[];
-  configSchema?: any;
+  configSchema?: ModuleConfigSchema;
   configOverrides?: boolean;
   isCore?: boolean;
 }
@@ -141,5 +146,9 @@ export abstract class Module extends Piece {
       },
     );
     return super.onLoad();
+  }
+
+  public override onUnload(): Awaitable<unknown> {
+    return super.onUnload();
   }
 }
