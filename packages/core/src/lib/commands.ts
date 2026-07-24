@@ -1,6 +1,7 @@
 import {
   Command,
   UserError,
+  BucketScope,
   type ApplicationCommandRegistry,
   type Args,
 } from "@sapphire/framework";
@@ -129,6 +130,14 @@ interface LumiCommandExtras {
    * message bridge generated only when this is set.
    */
   prefixEnabled?: boolean;
+  /** Number of command executions allowed within the cooldown duration window. */
+  cooldownLimit?: number;
+  /** Cooldown duration in milliseconds. */
+  cooldownDelay?: number;
+  /** Cooldown scope bucket: User (default), Guild, Channel, or Global. */
+  cooldownScope?: BucketScope;
+  /** User IDs exempt from cooldown limits. */
+  cooldownFilteredUsers?: string[];
 }
 
 const CTX_WRAPPER_PREFIX = { chat: "__ctxCi$", message: "__ctxMsg$" } as const;
@@ -463,3 +472,4 @@ export namespace BaseSubcommand {
 }
 
 export { CommandContext } from "#lib/command-context.js";
+export { BucketScope };
