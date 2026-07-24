@@ -57,6 +57,23 @@ const IMPORT_RE = /(?:import|export)[^"'`]*?["']([^"'`]+)["']/g;
 const EMBED_IMPORT_RE =
   /import\s*(?:type\s*)?\{[^}]*\bEmbedBuilder\b[^}]*\}\s*from\s*["'](?:discord\.js|@discordjs\/builders)["']/;
 
+function parseSemver(v: string): [number, number, number] {
+  const parts = v.replace(/^v/, "").split(".").map((n) => Number(n) || 0);
+  return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0];
+}
+
+export function isVersionCompatible(
+  minVersion: string,
+  currentVersion = "1.0.0",
+): boolean {
+  const [minMajor, minMinor, minPatch] = parseSemver(minVersion);
+  const [curMajor, curMinor, curPatch] = parseSemver(currentVersion);
+
+  if (curMajor !== minMajor) return curMajor > minMajor;
+  if (curMinor !== minMinor) return curMinor > minMinor;
+  return curPatch >= minPatch;
+}
+
 /** Validate a single addon directory. Returns collected errors + warnings. */
 export async function validateAddon(dir: string): Promise<ValidationResult> {
   const errors: string[] = [];
@@ -75,6 +92,11 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
         if (val.name !== base) {
           errors.push(
             `info.json "name" (${val.name}) must match the directory name (${base}).`,
+          );
+        }
+        if (val.min_bot_version && !isVersionCompatible(val.min_bot_version)) {
+          errors.push(
+            `info.json "min_bot_version" (${val.min_bot_version}) exceeds current Lumi version (1.0.0).`,
           );
         }
       }
