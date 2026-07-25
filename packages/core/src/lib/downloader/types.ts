@@ -8,6 +8,9 @@ export interface ModuleInfo {
   description: string;
   short: string;
   version: string;
+  emoji?: string;
+  dependencies?: string[];
+  conflicts?: string[];
   requirements?: string[];
   tags?: string[];
   min_bot_version?: string;
