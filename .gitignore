@@ -1,6 +1,9 @@
 node_modules/
 dist/
 tmp/
+coverage/
+.turbo/
+*.tsbuildinfo
 .antigravitycli/
 # Prisma: ignore only the generated client and any local dev DB. The schema,
 # migrations, and the data layer (packages/*/src/prisma) are tracked source.
