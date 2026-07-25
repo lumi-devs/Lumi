@@ -28,7 +28,7 @@ jobs:
       NATS_URL: nats://127.0.0.1:4222
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v1
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - run: bun install
