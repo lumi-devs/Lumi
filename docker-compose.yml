@@ -10,7 +10,6 @@ volumes:
   grafana-data:
   tempo-data:
   nats-data:
-  lumi-data:
 
 x-lumi-service: &lumi-service
   build:
@@ -44,8 +43,6 @@ x-lumi-service: &lumi-service
       condition: service_healthy
     rabbitmq:
       condition: service_healthy
-  volumes:
-    - lumi-data:/app/data
   restart: unless-stopped
   networks:
     - lumi-net
@@ -94,7 +91,6 @@ services:
         condition: service_healthy
     volumes:
       - .:/app:z
-      - /app/node_modules
     networks:
       - lumi-net
     stdin_open: true
