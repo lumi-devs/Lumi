@@ -254,10 +254,19 @@ export class ModuleStore extends Store<Module> {
    * @param enabled - Whether the module should be enabled or disabled.
    * @param reason - An optional reason for the state change, typically used for logging or auditing.
    */
+  /** Checks whether a module can be disabled. Core or non-disableable modules return false. */
+  public isModuleDisableable(name: string): boolean {
+    const record = this.#records.get(name);
+    if (!record) return name.toLowerCase() !== "core";
+    return !record.meta.isCore && record.meta.disableable !== false;
+  }
+
   public async setEnabled(name: string, enabled: boolean, reason?: string) {
     const record = this.#records.get(name);
     if (!record) throw new Error(`Unknown module: ${name}`);
-    if (record.meta.isCore && !enabled) throw new Error("Cannot disable Core");
+    if (!enabled && !this.isModuleDisableable(name)) {
+      throw new Error(`Module '${name}' is essential and cannot be disabled.`);
+    }
     if (record.enabled === enabled) return;
 
     if (enabled) {

@@ -6,6 +6,9 @@ import { Repository } from "#lib/prisma/repositories/Repository.js";
 /** Repository for global and guild-specific module enabled states. */
 export class ModuleRepository extends Repository {
   public isModuleGlobalEnabled(name: string): Promise<boolean> {
+    if (container.moduleStore && !container.moduleStore.isModuleDisableable(name)) {
+      return Promise.resolve(true);
+    }
     return this.getOrSet(
       RedisKeys.moduleGlobalEnabled(name),
       RedisTTL.moduleEnabledCache,
@@ -23,6 +26,9 @@ export class ModuleRepository extends Repository {
     enabled: boolean,
     reason?: string | null,
   ) {
+    if (!enabled && container.moduleStore && !container.moduleStore.isModuleDisableable(name)) {
+      throw new Error(`Module '${name}' is essential and cannot be disabled.`);
+    }
     await this.prisma.globalModuleState.upsert({
       where: { moduleName: name },
       update: { enabled, reason: reason ?? null },
@@ -46,6 +52,9 @@ export class ModuleRepository extends Repository {
   }
 
   public isModuleGuildEnabled(guildId: string, name: string): Promise<boolean> {
+    if (container.moduleStore && !container.moduleStore.isModuleDisableable(name)) {
+      return Promise.resolve(true);
+    }
     return this.getOrSet(
       RedisKeys.moduleEnabled(name, guildId),
       RedisTTL.moduleEnabledCache,
@@ -132,6 +141,9 @@ export class ModuleRepository extends Repository {
     name: string,
     enabled: boolean,
   ) {
+    if (!enabled && container.moduleStore && !container.moduleStore.isModuleDisableable(name)) {
+      throw new Error(`Module '${name}' is essential and cannot be disabled.`);
+    }
     const updated = await this.prisma.guildModuleState.upsert({
       where: { guildId_moduleName: { guildId, moduleName: name } },
       update: { enabled },
