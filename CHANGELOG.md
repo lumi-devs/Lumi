@@ -5,6 +5,20 @@ All notable changes to Lumi are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Enabled GitHub Discussions (`/discussions`) for community Q&A, feature ideas, and support.
+- Modernized GitHub Issue Forms in `.github/ISSUE_TEMPLATE/` (`bug_report.yml`, `feature_request.yml`, `module_proposal.yml`, `config.yml`).
+- Path-based PR Auto-Labeler workflow (`.github/workflows/labeler.yml` and `.github/labeler.yml`).
+- Automated Stale issue and PR lifecycle management workflow (`.github/workflows/stale.yml`).
+- Expanded Black-Box E2E test suite in `tests/e2e/dashboard.test.ts`.
+
+### Changed
+- Upgraded Bun runtime support to Bun 1.3+ and Turborepo build system to 2.10+.
+- Updated GitHub Actions setup-bun workflow steps to `oven-sh/setup-bun@v2`.
+- Updated container default image tags in `docker-compose.yml` (`redis:7-alpine`, `nats:2-alpine`).
+
 ---
 
 ## [2.1.1] — 2026-07-12 — *Elysian* (First Public Release)

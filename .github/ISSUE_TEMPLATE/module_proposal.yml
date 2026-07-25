@@ -1,0 +1,47 @@
+name: 🧩 Module Proposal
+description: Propose a new feature module for packages/core/src/modules/
+title: "[Module]: "
+labels: ["module-proposal", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature modules in Lumi-TS live in `packages/core/src/modules/<name>/`.
+        Use this template to outline new bot capabilities, sub-stores, and permissions.
+  - type: input
+    id: module_name
+    attributes:
+      label: Proposed Module Name
+      description: Lowercase alphanumeric identifier (e.g. moderation, leveler, ticketing)
+      placeholder: e.g. ticketing
+    validations:
+      required: true
+  - type: textarea
+    id: overview
+    attributes:
+      label: Module Overview & Purpose
+      description: What does this feature module do? Who are the target users?
+    validations:
+      required: true
+  - type: checkboxes
+    id: components
+    attributes:
+      label: Required Sub-stores & Components
+      description: Select all sub-stores that this module will implement
+      options:
+        - label: Commands (`commands/`)
+        - label: Subcommands (`subcommands/`)
+        - label: Module Listeners (`listeners/`)
+        - label: Interaction Handlers (`interaction-handlers/`)
+        - label: Services (`services/`)
+        - label: Scheduled Tasks (`scheduled-tasks/`)
+  - type: textarea
+    id: config_schema
+    attributes:
+      label: Config Schema & Key Settings
+      description: List the configurable settings and defaults for this module
+  - type: textarea
+    id: permissions
+    attributes:
+      label: Permissions & Access Control
+      description: Define required permission levels (USER, MOD, ADMIN, GUILD_OWNER, BOT_OWNER)
