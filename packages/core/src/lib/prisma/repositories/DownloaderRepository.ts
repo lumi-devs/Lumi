@@ -58,6 +58,12 @@ export class DownloaderRepository extends Repository {
     return this.prisma.downloaderModule.findMany();
   }
 
+  public readAllInstalledDownloaderModulesWithRepo() {
+    return this.prisma.downloaderModule.findMany({
+      include: { repo: true },
+    });
+  }
+
   public readDownloaderRepoById(id: number) {
     return this.prisma.downloaderRepo.findUnique({ where: { id } });
   }

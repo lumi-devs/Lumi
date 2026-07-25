@@ -560,9 +560,24 @@ export class ModuleCommand extends BaseSubcommand {
   }
 
   private buildHelpCard() {
+    const panelRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId("lumi:tab:modules")
+        .setLabel("Open Modules Panel")
+        .setEmoji(Emojis.parse(Emojis.GEAR))
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId("lumi:tab:addons")
+        .setLabel("Open Add-ons Manager")
+        .setEmoji(Emojis.parse(Emojis.REPO))
+        .setStyle(ButtonStyle.Secondary),
+    );
+
     return makeInfoCard(
       "Module Management Commands",
       [
+        "Tip: if you prefer buttons and menus, use the panel buttons below.",
+        "",
         "**Global & Local Module Commands:**",
         "- `,module list` or `/module list` - List all discovered modules and their status.",
         "- `,module info <name>` or `/module info <name>` - Show detailed info and registered pieces.",
@@ -575,6 +590,7 @@ export class ModuleCommand extends BaseSubcommand {
         "- `,module uninstall <module>` or `/module uninstall` - Uninstall a downloader module.",
         "- `,module update [module]` or `/module update` - Update an installed module (or all).",
       ].join("\n"),
+      { actionRows: [panelRow] },
     );
   }
 

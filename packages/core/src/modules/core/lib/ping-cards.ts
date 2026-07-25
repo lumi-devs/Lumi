@@ -64,18 +64,6 @@ function executiveSection(
   return `${header}\n${lines}`;
 }
 
-function getStatusColor(data: PingData): number {
-  const worst = Math.max(
-    data.wsPing,
-    data.prismaMs ?? 0,
-    data.redisReadMs ?? 0,
-  );
-  const lagBad = data.loopLagMs > 10;
-  if (worst > 250 || lagBad) return 0;
-  if (worst > 100) return 0;
-  return 0;
-}
-
 function header(data: PingData, subtitle?: string): SectionBuilder {
   const sub = subtitle ? `\n*${subtitle}*` : "";
   const anchor = `-# ${"\u2800".repeat(55)}`;
