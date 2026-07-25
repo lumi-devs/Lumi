@@ -11,6 +11,7 @@ import { logError } from "#lib/utilities/errors.js";
 const execFileAsync = promisify(execFile);
 const execGit = (args: string[]) =>
   execFileAsync("git", args, {
+    timeout: 30000,
     env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
   });
 
@@ -24,6 +25,7 @@ const execError =
 const repoSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
 const branchSchema = s.string().regex(/^[a-zA-Z0-9_.][a-zA-Z0-9_.-]*$/);
 function parseUrl(val: string): string {
+  val = val.trim().replace(/^<|>$/g, "");
   if (val.startsWith("http://") || val.startsWith("https://")) {
     try {
       new URL(val);
@@ -75,22 +77,49 @@ export class DownloadResolver {
     branch = branchSchema.parse(branch);
 
     const repoPath = path.join(MODULE_ROOT, name);
+    const gitFolder = path.join(repoPath, ".git");
 
     if (await this._exists(repoPath)) {
-      container.logger.info(`[Downloader] Updating repo: ${name}`);
+      if (!(await this._exists(gitFolder))) {
+        container.logger?.warn(
+          `[Downloader] ${name} exists at ${repoPath} but is not a valid git repository. Cleaning up...`,
+        );
+        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+      }
+    }
+
+    const isExisting =
+      (await this._exists(repoPath)) && (await this._exists(gitFolder));
+
+    if (isExisting) {
+      container.logger?.info(`[Downloader] Updating repo: ${name}`);
       const pullArgs =
         branch === "default"
           ? ["-C", repoPath, "pull"]
           : ["-C", repoPath, "pull", "origin", branch];
-      await execGit(pullArgs).catch(execError("Git pull failed"));
+      await execGit(pullArgs).catch(async () => {
+        container.logger?.warn(
+          `[Downloader] Git pull failed for ${name}, attempting clean clone fallback...`,
+        );
+        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+        const cloneArgs = ["clone"];
+        if (branch !== "default") cloneArgs.push("-b", branch);
+        cloneArgs.push("--", url, repoPath);
+        await execGit(cloneArgs).catch(async (cloneErr) => {
+          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+          execError("Git clone failed")(cloneErr);
+        });
+      });
     } else {
-      container.logger.info(`[Downloader] Cloning repo: ${url}`);
+      container.logger?.info(`[Downloader] Cloning repo: ${url}`);
+      await fs.mkdir(MODULE_ROOT, { recursive: true });
       const cloneArgs = ["clone"];
       if (branch !== "default") cloneArgs.push("-b", branch);
       cloneArgs.push("--", url, repoPath);
-      await execGit(cloneArgs).catch(
-        execError("Git clone failed"),
-      );
+      await execGit(cloneArgs).catch(async (err) => {
+        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+        execError("Git clone failed")(err);
+      });
     }
   }
 
@@ -112,7 +141,7 @@ export class DownloadResolver {
         };
         if (Array.isArray(index.modules)) return index.modules;
       } catch (err: unknown) {
-        container.logger.warn(
+        container.logger?.warn(
           `[Downloader] Failed to parse modules.json in ${repoName}, falling back to scan:`,
           err,
         );
@@ -137,7 +166,7 @@ export class DownloadResolver {
           ) as ModuleInfo;
           modules.push(info);
         } catch (err: unknown) {
-          container.logger.warn(
+          container.logger?.warn(
             `[Downloader] Failed to parse info.json for ${entry.name}:`,
             err,
           );
@@ -177,7 +206,7 @@ export class DownloadResolver {
     await fs.mkdir(ADDON_MODULES_ROOT, { recursive: true });
 
     if (info.requirements?.length) {
-      container.logger.info(
+      container.logger?.info(
         `[Downloader] Installing isolated requirements for ${moduleName}: ${info.requirements.join(", ")}`,
       );
       const reqs = reqsSchema.parse(info.requirements);
@@ -195,17 +224,17 @@ export class DownloadResolver {
         );
       }
 
-      await execFileAsync("bun", ["add", ...reqs], { cwd: sourcePath }).catch(
+      await execFileAsync("bun", ["add", ...reqs], { cwd: sourcePath, timeout: 60000 }).catch(
         execError("Requirement installation failed"),
       );
     }
 
     if (await this._exists(targetPath)) {
-      await fs.unlink(targetPath);
+      await fs.rm(targetPath, { recursive: true, force: true }).catch(() => {});
     }
     await fs.symlink(sourcePath, targetPath, "dir");
 
-    container.logger.info(
+    container.logger?.info(
       `[Downloader] Installed ${moduleName} from ${repoName}`,
     );
     return info;
