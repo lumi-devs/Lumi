@@ -134,8 +134,13 @@ export function buildSettingsView(settings: {
   const updateButtons = row(
     new ButtonBuilder()
       .setCustomId("lumi:update_all")
-      .setLabel("Check & Fetch Updates")
+      .setLabel("Update Addons")
       .setEmoji(Emojis.parse("🔄"))
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId("lumi:update_core")
+      .setLabel("Update Lumi Core")
+      .setEmoji(Emojis.parse(Emojis.BOT))
       .setStyle(ButtonStyle.Primary),
   );
 
