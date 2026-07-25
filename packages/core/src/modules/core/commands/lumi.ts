@@ -1,5 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { container } from "@sapphire/framework";
+import { ApplicationCommandRegistry, container } from "@sapphire/framework";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
 import {
@@ -25,6 +25,26 @@ import { restartChoiceRow } from "#lib/restart.js";
   ],
 })
 export class LumiCommand extends BaseSubcommand {
+  public override registerApplicationCommands(
+    registry: ApplicationCommandRegistry,
+  ) {
+    registry.registerChatInputCommand((b) =>
+      b
+        .setName(this.name)
+        .setDescription(this.description)
+        .addSubcommand((s) =>
+          s
+            .setName("panel")
+            .setDescription("Open the Lumi control panel"),
+        )
+        .addSubcommand((s) =>
+          s
+            .setName("update")
+            .setDescription("Update Lumi core to the latest version"),
+        ),
+    );
+  }
+
   public async panel(ctx: CommandContext): Promise<void> {
     const guildId = ctx.guildId!;
     const [features, settings] = await Promise.all([

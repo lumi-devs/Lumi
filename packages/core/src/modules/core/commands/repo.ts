@@ -1,5 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { getService } from "#lib/module-system/Service.js";
+import { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { paginateList } from "#lib/utilities/pagination.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
@@ -34,6 +35,64 @@ import type { DownloaderService } from "#lib/services/DownloaderService.js";
   ],
 })
 export class RepoCommand extends BaseSubcommand {
+  public override registerApplicationCommands(
+    registry: ApplicationCommandRegistry,
+  ) {
+    registry.registerChatInputCommand((b) =>
+      b
+        .setName(this.name)
+        .setDescription(this.description)
+        .addSubcommand((s) =>
+          s
+            .setName("help")
+            .setDescription("Open Repository Management help and panel"),
+        )
+        .addSubcommand((s) =>
+          s
+            .setName("list")
+            .setDescription("List all added repositories"),
+        )
+        .addSubcommand((s) =>
+          s
+            .setName("add")
+            .setDescription("Add a repository")
+            .addStringOption((o) =>
+              o.setName("name").setDescription("Unique repo name").setRequired(true),
+            )
+            .addStringOption((o) =>
+              o.setName("url").setDescription("Git clone URL").setRequired(true),
+            )
+            .addStringOption((o) =>
+              o.setName("branch").setDescription("Branch name (default: default)").setRequired(false),
+            ),
+        )
+        .addSubcommand((s) =>
+          s
+            .setName("remove")
+            .setDescription("Remove an added repository")
+            .addStringOption((o) =>
+              o.setName("name").setDescription("Repo name to remove").setRequired(true),
+            ),
+        )
+        .addSubcommand((s) =>
+          s
+            .setName("update")
+            .setDescription("Update/pull latest changes for a repository")
+            .addStringOption((o) =>
+              o.setName("name").setDescription("Repo name to update (or 'all')").setRequired(true),
+            ),
+        )
+        .addSubcommand((s) =>
+          s
+            .setName("modules")
+            .setDescription("List available modules inside a repository")
+            .addStringOption((o) =>
+              o.setName("repo_name").setDescription("Repository name").setRequired(true),
+            ),
+        ),
+    );
+  }
+
   private get downloaderService(): DownloaderService {
     return getService("downloader");
   }
