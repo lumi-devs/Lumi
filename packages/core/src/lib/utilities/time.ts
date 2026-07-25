@@ -11,3 +11,19 @@ export function shortTimestamp(date: Date | number = new Date()): string {
   const d = typeof date === "number" ? new Date(date) : date;
   return time(d, TimestampStyles.ShortTime);
 }
+
+import { Duration } from "@sapphire/time-utilities";
+
+/** Parse a duration string like "10m", "2h30m", "7d" into milliseconds. Returns null if unparseable. */
+export function parseDuration(str: string): number | null {
+  const ms = new Duration(str).offset;
+  return Number.isNaN(ms) || ms <= 0 ? null : ms;
+}
+
+export function formatDuration(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}d`;
+}

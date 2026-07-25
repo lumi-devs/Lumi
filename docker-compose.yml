@@ -34,6 +34,7 @@ x-lumi-service: &lumi-service
     LOG_LEVEL: "${LOG_LEVEL:-info}"
     NODE_OPTIONS: "${NODE_OPTIONS:---max-old-space-size=384}"
     DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-}"
+    LUMI_DEV_PATHS: "${LUMI_DEV_PATHS:-/lumi-addons}"
   depends_on:
     pgbouncer:
       condition: service_healthy
@@ -91,6 +92,7 @@ services:
         condition: service_healthy
     volumes:
       - .:/app:z
+      - ../lumi-addons:/lumi-addons:z
     networks:
       - lumi-net
     stdin_open: true
@@ -105,6 +107,9 @@ services:
     environment:
       <<: *lumi-env
       LUMI_ROLE: "${LUMI_ROLE:-monolith}"
+    volumes:
+      - .:/app:z
+      - ../lumi-addons:/lumi-addons:z
 
   worker-scale:
     <<: *lumi-service

@@ -534,6 +534,8 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
     if (interaction.customId === "lumi:permrm") return this.some("permrm");
     if (interaction.customId === "lumi:addon:repo_pick")
       return this.some("addon_repo_pick");
+    if (interaction.customId.startsWith("lumi:addon:mod_action:"))
+      return this.some("addon_mod_action");
     return this.none();
   }
 
@@ -550,6 +552,56 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
           .setLanguage(interaction.guildId, language)
           .catch(() => {});
       return renderSettings(interaction);
+    }
+
+    if (kind === "addon_mod_action") {
+      if ((await resolveLevel(interaction)) < PermissionLevel.BOT_OWNER) {
+        throw new UserError({
+          identifier: "AccessDenied",
+          message: "Only Bot Owners can manage add-ons.",
+        });
+      }
+
+      const val = interaction.values[0] ?? "";
+      const [act, repoName, moduleName] = val.split(":");
+      if (!act || !repoName || !moduleName) return;
+
+      const downloader = getService("downloader");
+      try {
+        if (act === "install") {
+          await downloader.installModule(repoName, moduleName);
+        } else if (act === "uninstall") {
+          await downloader.uninstallModule(moduleName);
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return interaction.followUp(
+          ephemeralCard(makeErrorCard("Action Failed", msg)),
+        );
+      }
+
+      const [modules, installedDetailed] = await Promise.all([
+        downloader.getModulesInRepo(repoName),
+        downloader.getInstalledModulesDetailed(),
+      ]);
+      const installed = new Set(
+        installedDetailed
+          .filter((row) => row.repo.name === repoName)
+          .map((row) => row.moduleName),
+      );
+
+      return interaction.editReply(
+        buildAddonRepoModulesView(
+          repoName,
+          modules.map((moduleInfo) => ({
+            name: moduleInfo.name,
+            version: moduleInfo.version,
+            short: moduleInfo.short,
+            hidden: moduleInfo.hidden,
+            isInstalled: installed.has(moduleInfo.name),
+          })),
+        ),
+      );
     }
 
     if (kind === "addon_repo_pick") {

@@ -16,7 +16,7 @@
           packages = with pkgs; [
             bun
             nodejs_22
-
+            turbo
             openssl # Required for Prisma query engine
             postgresql
             redis

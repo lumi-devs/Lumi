@@ -1,5 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { getService } from "#lib/module-system/Service.js";
+import { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
 import {
@@ -31,6 +32,49 @@ import type { DownloaderService } from "#lib/services/DownloaderService.js";
   ],
 })
 export class DownloadCommand extends BaseSubcommand {
+  public override registerApplicationCommands(
+    registry: ApplicationCommandRegistry,
+  ) {
+    registry.registerChatInputCommand((b) =>
+      b
+        .setName(this.name)
+        .setDescription(this.description)
+        .addSubcommand((s) =>
+          s
+            .setName("panel")
+            .setDescription("Open the Add-ons Manager panel"),
+        )
+        .addSubcommand((s) =>
+          s
+            .setName("install")
+            .setDescription("Install a module from a repository")
+            .addStringOption((o) =>
+              o
+                .setName("repo")
+                .setDescription("Repository name")
+                .setRequired(true),
+            )
+            .addStringOption((o) =>
+              o
+                .setName("module")
+                .setDescription("Module name")
+                .setRequired(true),
+            ),
+        )
+        .addSubcommand((s) =>
+          s
+            .setName("uninstall")
+            .setDescription("Uninstall an installed module")
+            .addStringOption((o) =>
+              o
+                .setName("module")
+                .setDescription("Module name to uninstall")
+                .setRequired(true),
+            ),
+        ),
+    );
+  }
+
   private get downloaderService(): DownloaderService {
     return getService("downloader");
   }
