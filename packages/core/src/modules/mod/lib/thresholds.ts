@@ -1,7 +1,7 @@
 import type { Container } from "@sapphire/framework";
 import { tryParseJSON } from "@sapphire/utilities";
 import { parseDuration } from "./helpers.js";
-import { BanAction, MuteAction, KickAction } from "./actions/index.js";
+import { BanAction, MuteAction, KickAction } from "../actions/index.js";
 
 export type ThresholdAction = "mute" | "kick" | "ban";
 

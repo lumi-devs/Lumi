@@ -2,7 +2,7 @@ import { container } from "@sapphire/framework";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { formatAuditReason } from "#lib/utilities/misc.js";
 import { makeErrorCard } from "#lib/utilities/cards.js";
-import { logToChannel } from "../helpers.js";
+import { logToChannel } from "../lib/helpers.js";
 
 export interface KickApplyOptions {
   guild: Guild;

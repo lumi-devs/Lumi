@@ -5,7 +5,7 @@ import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
 import { logError } from "#lib/utilities/errors.js";
 import { parseDuration, formatDuration } from "../lib/helpers.js";
-import { MuteAction } from "../lib/actions/index.js";
+import { MuteAction } from "../actions/index.js";
 
 const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000;
 

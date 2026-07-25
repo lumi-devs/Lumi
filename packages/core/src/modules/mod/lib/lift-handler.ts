@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import type { ModLiftPayload } from "../scheduled-tasks/modLift.js";
-import { MuteAction, BanAction } from "./actions/index.js";
+import { MuteAction, BanAction } from "../actions/index.js";
 
 export async function handleModLiftFire(
   payload: ModLiftPayload,

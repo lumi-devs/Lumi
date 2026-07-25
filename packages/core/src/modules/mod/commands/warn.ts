@@ -3,7 +3,7 @@ import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
-import { WarnAction } from "../lib/actions/index.js";
+import { WarnAction } from "../actions/index.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "warn",

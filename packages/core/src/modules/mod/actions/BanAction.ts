@@ -3,7 +3,7 @@ import { type Guild, type User, Colors } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { formatAuditReason } from "#lib/utilities/misc.js";
 import { makeErrorCard } from "#lib/utilities/cards.js";
-import { logToChannel } from "../helpers.js";
+import { logToChannel } from "../lib/helpers.js";
 import { errorCode } from "#lib/utilities/errors.js";
 
 export interface BanApplyOptions {

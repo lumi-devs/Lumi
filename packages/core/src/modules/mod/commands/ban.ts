@@ -5,7 +5,7 @@ import { userMention } from "@discordjs/formatters";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
 import { logError } from "#lib/utilities/errors.js";
-import { BanAction } from "../lib/actions/index.js";
+import { BanAction } from "../actions/index.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "ban",
