@@ -183,8 +183,7 @@ const manager = new WebSocketManager({
     GatewayIntentBits.GuildMembers |
     GatewayIntentBits.GuildMessages |
     GatewayIntentBits.GuildVoiceStates |
-    GatewayIntentBits.MessageContent |
-    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.MessageContent,
   shardCount: shardPlan.shardCount,
   ...(assignedShards && { shardIds: [...assignedShards] }),
   buildIdentifyThrottler: async () =>
