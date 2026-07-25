@@ -6,6 +6,7 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
+import { cutText } from "@sapphire/utilities";
 import {
   channelMention,
   roleMention,
@@ -138,6 +139,11 @@ export function buildSettingsView(settings: {
       .setEmoji(Emojis.parse("🔄"))
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
+      .setCustomId("lumi:check_core")
+      .setLabel("Check Core")
+      .setEmoji(Emojis.parse(Emojis.BOT))
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
       .setCustomId("lumi:update_core")
       .setLabel("Update Lumi Core")
       .setEmoji(Emojis.parse(Emojis.BOT))
@@ -236,35 +242,87 @@ export function buildPermissionsView(
   );
 }
 
-export function buildAddonsView(): CardReply {
+export interface AddonDashboardStats {
+  repoCount: number;
+  installedCount: number;
+}
+
+export interface AddonRepoRow {
+  name: string;
+  url: string;
+  branch: string;
+  installedCount: number;
+}
+
+export interface AddonInstalledRow {
+  moduleName: string;
+  version: string | null;
+  repoName: string;
+  installedAt: Date;
+}
+
+export interface AddonRepoModuleRow {
+  name: string;
+  version: string;
+  short?: string;
+  hidden?: boolean;
+  isInstalled: boolean;
+}
+
+export function buildAddonsView(stats: AddonDashboardStats): CardReply {
   const body = [
-    "Add-ons are community-built modules that install and behave exactly like first-party features — once added, they appear in the **Modules** tab with full config, permissions, and enable/disable support.",
+    "Add-ons are community-built modules that install and behave exactly like first-party features. Once installed, they show up in the Modules tab for regular enable/disable and configuration.",
+    `${Emojis.REPO} **Repositories tracked:** ${stats.repoCount}`,
+    `${Emojis.DOWNLOAD} **Installed add-on modules:** ${stats.installedCount}`,
     [
-      `${Emojis.REPO} **Repositories** — add, remove, or update sources`,
-      `${Emojis.DOWNLOAD} **Modules** — install or uninstall modules`,
-      `${Emojis.SHIELD} **Sandboxed** — add-ons follow the same permission model as core`,
+      `${Emojis.REPO} **Browse Repositories** — see all tracked sources and pick one to inspect`,
+      `${Emojis.DOWNLOAD} **Browse Modules** — see available modules in a selected repository`,
+      `${Emojis.GEAR} **Installed Modules** — review what is currently installed`,
     ].join("\n"),
   ];
 
-  const repoButtons = row(
+  const browseButtons = row(
+    new ButtonBuilder()
+      .setCustomId("lumi:addon:refresh")
+      .setLabel("Refresh")
+      .setEmoji(Emojis.parse("🔄"))
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId("lumi:addon:repos")
+      .setLabel("Repositories")
+      .setEmoji(Emojis.parse(Emojis.REPO))
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId("lumi:addon:modules")
+      .setLabel("Repo Modules")
+      .setEmoji(Emojis.parse(Emojis.GEAR))
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId("lumi:addon:installed")
+      .setLabel("Installed")
+      .setEmoji(Emojis.parse(Emojis.DOWNLOAD))
+      .setStyle(ButtonStyle.Primary),
+  );
+
+  const repoActions = row(
     new ButtonBuilder()
       .setCustomId("lumi:addon:add_repo")
-      .setLabel("Add Repo")
+      .setLabel("Add Repository")
       .setEmoji(Emojis.parse(Emojis.REPO))
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId("lumi:addon:rm_repo")
-      .setLabel("Remove Repo")
+      .setLabel("Remove Repository")
       .setEmoji(Emojis.parse(Emojis.UNINSTALL))
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId("lumi:addon:update_repo")
-      .setLabel("Update Repo")
+      .setLabel("Update Repository")
       .setEmoji(Emojis.parse("🔄"))
       .setStyle(ButtonStyle.Secondary),
   );
 
-  const moduleButtons = row(
+  const moduleActions = row(
     new ButtonBuilder()
       .setCustomId("lumi:addon:install")
       .setLabel("Install Module")
@@ -275,10 +333,156 @@ export function buildAddonsView(): CardReply {
       .setLabel("Uninstall Module")
       .setEmoji(Emojis.parse(Emojis.CROSS))
       .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId("lumi:update_all")
+      .setLabel("Update All Add-ons")
+      .setEmoji(Emojis.parse("🔄"))
+      .setStyle(ButtonStyle.Secondary),
+  );
+
+  const coreActions = row(
+    new ButtonBuilder()
+      .setCustomId("lumi:check_core")
+      .setLabel("Check Core Updates")
+      .setEmoji(Emojis.parse(Emojis.BOT))
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId("lumi:update_core")
+      .setLabel("Update Lumi Core")
+      .setEmoji(Emojis.parse(Emojis.BOT))
+      .setStyle(ButtonStyle.Primary),
   );
 
   return makeCard(0, `${Emojis.REPO} Addons`, body, {
-    footer: "Add-on management requires the Bot Owner permission level.",
-    actionRows: [backToHubRow(), repoButtons, moduleButtons],
+    footer:
+      "Add-on and core update management requires Bot Owner permission.",
+    actionRows: [backToHubRow(), browseButtons, repoActions, moduleActions, coreActions],
+  });
+}
+
+export function buildAddonReposView(repos: AddonRepoRow[]): CardReply {
+  const sorted = [...repos].sort((a, b) => a.name.localeCompare(b.name));
+  const lines = sorted.length
+    ? sorted.map(
+        (repo) =>
+          `**${repo.name}** (${repo.branch})\n${repo.url}\nInstalled from this repo: **${repo.installedCount}** module(s)`,
+      )
+    : ["No repositories added yet. Add one to start browsing modules."];
+
+  const rows: Row[] = [
+    row(
+      new ButtonBuilder()
+        .setCustomId("lumi:tab:addons")
+        .setLabel("Back to Add-ons")
+        .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId("lumi:addon:refresh")
+        .setLabel("Refresh")
+        .setEmoji(Emojis.parse("🔄"))
+        .setStyle(ButtonStyle.Secondary),
+    ),
+  ];
+
+  if (sorted.length > 0) {
+    rows.push(
+      row(
+        new StringSelectMenuBuilder()
+          .setCustomId("lumi:addon:repo_pick")
+          .setPlaceholder("Select a repository to view modules...")
+          .addOptions(
+            sorted.slice(0, 25).map((repo) =>
+              new StringSelectMenuOptionBuilder()
+                .setLabel(cutText(repo.name, 100))
+                .setValue(repo.name)
+                .setDescription(
+                  cutText(
+                    `${repo.installedCount} installed • ${repo.branch}`,
+                    100,
+                  ),
+                ),
+            ),
+          ),
+      ),
+    );
+  }
+
+  return makeCard(0, `${Emojis.REPO} Repositories`, lines, {
+    footer:
+      "Tip: pick a repository from the menu to list available modules.",
+    actionRows: rows,
+  });
+}
+
+export function buildAddonInstalledView(
+  installed: AddonInstalledRow[],
+): CardReply {
+  const sorted = [...installed].sort((a, b) =>
+    a.moduleName.localeCompare(b.moduleName),
+  );
+  const lines = sorted.length
+    ? sorted.map(
+        (mod) =>
+          `**${mod.moduleName}** (${mod.version ?? "unknown version"})\nRepository: **${mod.repoName}**\nInstalled: <t:${Math.floor(mod.installedAt.getTime() / 1000)}:R>`,
+      )
+    : ["No add-on modules are installed yet."];
+
+  return makeCard(0, `${Emojis.DOWNLOAD} Installed Add-ons`, lines, {
+    footer: "Use uninstall if you no longer need a module.",
+    actionRows: [
+      row(
+        new ButtonBuilder()
+          .setCustomId("lumi:tab:addons")
+          .setLabel("Back to Add-ons")
+          .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId("lumi:addon:refresh")
+          .setLabel("Refresh")
+          .setEmoji(Emojis.parse("🔄"))
+          .setStyle(ButtonStyle.Secondary),
+      ),
+    ],
+  });
+}
+
+export function buildAddonRepoModulesView(
+  repoName: string,
+  modules: AddonRepoModuleRow[],
+): CardReply {
+  const visible = modules.filter((moduleInfo) => !moduleInfo.hidden);
+  const sorted = [...visible].sort((a, b) => a.name.localeCompare(b.name));
+  const lines = sorted.length
+    ? sorted.map((moduleInfo) => {
+        const marker = moduleInfo.isInstalled ? "Installed" : "Available";
+        const desc = moduleInfo.short
+          ? cutText(moduleInfo.short, 120)
+          : "No description provided.";
+        return `**${moduleInfo.name}** (v${moduleInfo.version}) - ${marker}\n${desc}`;
+      })
+    : ["No visible modules were found in this repository."];
+
+  return makeCard(0, `${Emojis.GEAR} Modules in ${repoName}`, lines, {
+    footer:
+      "Use Install Module for a first install, or Update All Add-ons for bulk updates.",
+    actionRows: [
+      row(
+        new ButtonBuilder()
+          .setCustomId("lumi:addon:repos")
+          .setLabel("Back to Repositories")
+          .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId("lumi:addon:install")
+          .setLabel("Install Module")
+          .setEmoji(Emojis.parse(Emojis.DOWNLOAD))
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId("lumi:addon:refresh")
+          .setLabel("Refresh")
+          .setEmoji(Emojis.parse("🔄"))
+          .setStyle(ButtonStyle.Secondary),
+      ),
+    ],
   });
 }

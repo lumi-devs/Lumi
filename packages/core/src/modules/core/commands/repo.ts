@@ -4,6 +4,12 @@ import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { paginateList } from "#lib/utilities/pagination.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  type MessageActionRowComponentBuilder,
+} from "@discordjs/builders";
+import { ButtonStyle } from "discord.js";
+import {
   makeSuccessCard,
   makeErrorCard,
   makeInfoCard,
@@ -33,17 +39,26 @@ export class RepoCommand extends BaseSubcommand {
   }
 
   public async help(ctx: CommandContext): Promise<void> {
+    const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId("lumi:tab:addons")
+        .setLabel("Open Add-ons Manager")
+        .setEmoji(Emojis.parse(Emojis.REPO))
+        .setStyle(ButtonStyle.Primary),
+    );
+
     await ctx.reply(
-      makeInfoCard(
-        "Repository Management",
-        [
-          "- `,repo add <name> <url> [branch]`",
-          "- `,repo remove <name>`",
-          "- `,repo update <name>`",
-          "- `,repo list`",
-          "- `,repo modules <repo_name>`",
-        ].join("\n"),
-      ),
+      makeInfoCard("Repository Management", [
+        "Use the Add-ons Manager for the smoothest workflow: browse repositories, inspect modules, and install in a few clicks.",
+        "Quick command fallback:",
+        "- `,repo add <name> <url> [branch]`",
+        "- `,repo remove <name>`",
+        "- `,repo update <name>`",
+        "- `,repo list`",
+        "- `,repo modules <repo_name>`",
+      ], {
+        actionRows: [row],
+      }),
     );
   }
 

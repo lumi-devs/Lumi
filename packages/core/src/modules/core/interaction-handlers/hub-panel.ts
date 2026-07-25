@@ -29,18 +29,22 @@ import { Emojis } from "#lib/utilities/assets.js";
 import {
   ephemeralCard,
   makeErrorCard,
+  makeInfoCard,
   makeSuccessCard,
   makeWarningCard,
   type CardReply,
 } from "#lib/utilities/cards.js";
 import { restartChoiceRow } from "#lib/restart.js";
-import { updateLumiCore } from "#lib/utilities/self-update.js";
+import { getCoreUpdateStatus, updateLumiCore } from "#lib/utilities/self-update.js";
 import { loadFeatures, buildFeatureListView } from "#modules/core/lib/config-panel.js";
 import {
   buildHubView,
   buildSettingsView,
   buildPermissionsView,
   buildAddonsView,
+  buildAddonInstalledView,
+  buildAddonRepoModulesView,
+  buildAddonReposView,
   DEFAULT_PREFIX,
 } from "#modules/core/lib/hub-panel.js";
 import type { GuildSettingsService } from "#lib/services/GuildSettingsService.js";
@@ -120,6 +124,14 @@ async function renderPermissions(
   interactionHandlerType: InteractionHandlerTypes.Button,
 })
 export class HubPanelButtonHandler extends BaseInteractionHandler {
+  private static readonly ADDON_MODAL_ACTIONS = new Set([
+    "add_repo",
+    "rm_repo",
+    "update_repo",
+    "install",
+    "uninstall",
+  ]);
+
   private get settings(): GuildSettingsService {
     return getService("guild-settings");
   }
@@ -142,7 +154,11 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
       return this.#openPrefixModal(interaction);
     if (action === "perm" && (sub === "allow" || sub === "deny"))
       return this.#openPermModal(interaction, sub === "allow");
-    if (action === "addon" && sub) {
+    if (
+      action === "addon" &&
+      sub &&
+      HubPanelButtonHandler.ADDON_MODAL_ACTIONS.has(sub)
+    ) {
       const bLevel = await resolveLevel(interaction);
       if (bLevel < PermissionLevel.BOT_OWNER)
         throw new UserError({
@@ -166,6 +182,12 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
         }
         return undefined;
       case "update_all": {
+        if (level < PermissionLevel.BOT_OWNER)
+          throw new UserError({
+            identifier: "AccessDenied",
+            message: "Only Bot Owners can update add-ons.",
+          });
+
         const downloader = getService("downloader");
         const installed = await downloader.getInstalledModules();
         if (!installed.length) {
@@ -206,7 +228,66 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
           ),
         );
       }
+      case "check_core": {
+        if (level < PermissionLevel.BOT_OWNER)
+          throw new UserError({
+            identifier: "AccessDenied",
+            message: "Only Bot Owners can check core update status.",
+          });
+
+        const status = await getCoreUpdateStatus();
+        if (status.error) {
+          return interaction.editReply(
+            ephemeralCard(makeErrorCard("Update Check Failed", status.error)),
+          );
+        }
+
+        if (status.upToDate) {
+          return interaction.editReply(
+            ephemeralCard(
+              makeSuccessCard(
+                "Lumi Core Is Up To Date",
+                [
+                  `Branch: **${status.branch}**`,
+                  `Commit: \`${status.currentCommit}\``,
+                  status.currentVersion
+                    ? `Version file: **${status.currentVersion}**`
+                    : "Version file: not found",
+                ].join("\n"),
+              ),
+            ),
+          );
+        }
+
+        const lines = [
+          `Branch: **${status.branch}**`,
+          `Current commit: \`${status.currentCommit}\``,
+          `Latest commit: \`${status.latestCommit ?? "unknown"}\``,
+          `Behind by: **${status.behindBy}** commit(s)`,
+        ];
+
+        if (status.currentVersion || status.remoteVersion) {
+          lines.push(
+            `Local version file: **${status.currentVersion ?? "not found"}**`,
+            `Remote version file: **${status.remoteVersion ?? "not found"}**`,
+          );
+        }
+
+        return interaction.editReply(
+          ephemeralCard(
+            makeInfoCard("Core Update Available", lines, {
+              footer: "Use 'Update Lumi Core' when you are ready.",
+            }),
+          ),
+        );
+      }
       case "update_core": {
+        if (level < PermissionLevel.BOT_OWNER)
+          throw new UserError({
+            identifier: "AccessDenied",
+            message: "Only Bot Owners can update Lumi core.",
+          });
+
         const res = await updateLumiCore();
         if (res.error) {
           return interaction.editReply(
@@ -236,6 +317,23 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
           ),
         );
       }
+      case "addon": {
+        if (level < PermissionLevel.BOT_OWNER)
+          throw new UserError({
+            identifier: "AccessDenied",
+            message: "Only Bot Owners can manage add-ons.",
+          });
+        if (sub === "repos" || sub === "modules") {
+          return this.#renderAddonRepos(interaction);
+        }
+        if (sub === "installed") {
+          return this.#renderAddonInstalled(interaction);
+        }
+        if (sub === "refresh") {
+          return this.#renderAddonDashboard(interaction);
+        }
+        return undefined;
+      }
       default:
         return undefined;
     }
@@ -252,10 +350,65 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
       case "settings":
         return renderSettings(interaction);
       case "addons":
-        return interaction.editReply(buildAddonsView());
+        return this.#renderAddonDashboard(interaction);
       default:
         return undefined;
     }
+  }
+
+  async #renderAddonDashboard(interaction: ButtonInteraction) {
+    const [repos, installed] = await Promise.all([
+      this.downloader.listRepos(),
+      this.downloader.getInstalledModulesDetailed(),
+    ]);
+    return interaction.editReply(
+      buildAddonsView({
+        repoCount: repos.length,
+        installedCount: installed.length,
+      }),
+    );
+  }
+
+  async #renderAddonRepos(interaction: ButtonInteraction) {
+    const [repos, installed] = await Promise.all([
+      this.downloader.listRepos(),
+      this.downloader.getInstalledModulesDetailed(),
+    ]);
+
+    const installedByRepo = new Map<number, number>();
+    for (const row of installed) {
+      installedByRepo.set(row.repoId, (installedByRepo.get(row.repoId) ?? 0) + 1);
+    }
+
+    return interaction.editReply(
+      buildAddonReposView(
+        repos.map((repo) => ({
+          name: repo.name,
+          url: repo.url,
+          branch: repo.branch,
+          installedCount: installedByRepo.get(repo.id) ?? 0,
+        })),
+      ),
+    );
+  }
+
+  async #renderAddonInstalled(interaction: ButtonInteraction) {
+    const installed = await this.downloader.getInstalledModulesDetailed();
+
+    return interaction.editReply(
+      buildAddonInstalledView(
+        installed.map((row) => ({
+          moduleName: row.moduleName,
+          version: row.version,
+          repoName: row.repo.name,
+          installedAt: row.installedAt,
+        })),
+      ),
+    );
+  }
+
+  private get downloader(): DownloaderService {
+    return getService("downloader");
   }
 
   #openPrefixModal(interaction: ButtonInteraction) {
@@ -379,6 +532,8 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
   public override parse(interaction: AnySelectMenuInteraction) {
     if (interaction.customId === "lumi:setlang") return this.some("lang");
     if (interaction.customId === "lumi:permrm") return this.some("permrm");
+    if (interaction.customId === "lumi:addon:repo_pick")
+      return this.some("addon_repo_pick");
     return this.none();
   }
 
@@ -395,6 +550,48 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
           .setLanguage(interaction.guildId, language)
           .catch(() => {});
       return renderSettings(interaction);
+    }
+
+    if (kind === "addon_repo_pick") {
+      if ((await resolveLevel(interaction)) < PermissionLevel.BOT_OWNER) {
+        throw new UserError({
+          identifier: "AccessDenied",
+          message: "Only Bot Owners can manage add-ons.",
+        });
+      }
+
+      const repoName = interaction.values[0];
+      if (!repoName) {
+        return interaction.editReply(
+          ephemeralCard(
+            makeWarningCard("Missing Repository", "Please pick a repository."),
+          ),
+        );
+      }
+
+      const downloader = getService("downloader");
+      const [modules, installedDetailed] = await Promise.all([
+        downloader.getModulesInRepo(repoName),
+        downloader.getInstalledModulesDetailed(),
+      ]);
+      const installed = new Set(
+        installedDetailed
+          .filter((row) => row.repo.name === repoName)
+          .map((row) => row.moduleName),
+      );
+
+      return interaction.editReply(
+        buildAddonRepoModulesView(
+          repoName,
+          modules.map((moduleInfo) => ({
+            name: moduleInfo.name,
+            version: moduleInfo.version,
+            short: moduleInfo.short,
+            hidden: moduleInfo.hidden,
+            isInstalled: installed.has(moduleInfo.name),
+          })),
+        ),
+      );
     }
 
     const parts = (interaction.values[0] ?? "").split("|");
@@ -536,7 +733,9 @@ export class HubPanelModalHandler extends InteractionHandler {
   }
 
   async #submitAddon(interaction: ModalSubmitInteraction, action: string) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    await interaction.deferReply({
+      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+    });
     try {
       if (action === "add_repo") {
         const name = interaction.fields.getTextInputValue("name").trim();
@@ -548,7 +747,7 @@ export class HubPanelModalHandler extends InteractionHandler {
           ephemeralCard(
             makeSuccessCard(
               "Repository Added",
-              `Successfully added/updated **${name}**.`,
+              `You're all set. **${name}** was added (or refreshed if it already existed).`,
             ),
           ),
         );
@@ -559,7 +758,7 @@ export class HubPanelModalHandler extends InteractionHandler {
           ephemeralCard(
             makeSuccessCard(
               "Repository Removed",
-              `Successfully removed **${name}**.`,
+              `Removed **${name}** and any modules that were installed from it.`,
             ),
           ),
         );
@@ -570,7 +769,7 @@ export class HubPanelModalHandler extends InteractionHandler {
           ephemeralCard(
             makeSuccessCard(
               "Repository Updated",
-              `Successfully updated **${name}**.`,
+              `Fetched the latest changes for **${name}**.`,
             ),
           ),
         );
@@ -582,7 +781,7 @@ export class HubPanelModalHandler extends InteractionHandler {
           ephemeralCard(
             makeSuccessCard(
               "Module Installed",
-              `Successfully installed **${module}** from ${repo}.`,
+              `Installed **${module}** from **${repo}**. You can now find it in the Modules tab.`,
             ),
           ),
         );
@@ -593,7 +792,7 @@ export class HubPanelModalHandler extends InteractionHandler {
           ephemeralCard(
             makeSuccessCard(
               "Module Uninstalled",
-              `Successfully uninstalled **${module}**.`,
+              `Uninstalled **${module}** and removed it from active modules.`,
             ),
           ),
         );
