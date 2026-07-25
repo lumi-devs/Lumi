@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { promises as fs } from "node:fs";
 import { container } from "@sapphire/framework";
 
 const execFileAsync = promisify(execFile);
@@ -16,6 +17,94 @@ export interface CoreUpdateResult {
   commitsCount?: number;
   changelog?: string;
   error?: string;
+}
+
+export interface CoreUpdateStatus {
+  upToDate: boolean;
+  branch: string;
+  currentCommit: string;
+  latestCommit?: string;
+  behindBy: number;
+  currentVersion?: string;
+  remoteVersion?: string;
+  error?: string;
+}
+
+const VERSION_FILE = "version.txt";
+
+async function readLocalVersionFile(): Promise<string | undefined> {
+  try {
+    const content = await fs.readFile(VERSION_FILE, "utf8");
+    const value = content.trim();
+    return value.length > 0 ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function readRemoteVersionFile(
+  branch: string,
+): Promise<string | undefined> {
+  try {
+    const output = await execGit(["show", `origin/${branch}:${VERSION_FILE}`]);
+    const value = output.stdout.trim();
+    return value.length > 0 ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Checks local and remote core status without mutating the current checkout.
+ */
+export async function getCoreUpdateStatus(): Promise<CoreUpdateStatus> {
+  try {
+    const currentHashOutput = await execGit(["rev-parse", "--short", "HEAD"]);
+    const currentCommit = currentHashOutput.stdout.trim();
+
+    const branchOutput = await execGit(["rev-parse", "--abbrev-ref", "HEAD"]);
+    const branch = branchOutput.stdout.trim() || "master";
+
+    await execGit(["fetch", "origin", branch]);
+
+    const remoteHashOutput = await execGit([
+      "rev-parse",
+      "--short",
+      `origin/${branch}`,
+    ]);
+    const latestCommit = remoteHashOutput.stdout.trim();
+
+    const countOutput = await execGit([
+      "rev-list",
+      "--count",
+      `${currentCommit}..origin/${branch}`,
+    ]);
+    const behindBy = parseInt(countOutput.stdout.trim(), 10) || 0;
+
+    const [currentVersion, remoteVersion] = await Promise.all([
+      readLocalVersionFile(),
+      readRemoteVersionFile(branch),
+    ]);
+
+    return {
+      upToDate: behindBy === 0,
+      branch,
+      currentCommit,
+      latestCommit,
+      behindBy,
+      currentVersion,
+      remoteVersion,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      upToDate: false,
+      branch: "unknown",
+      currentCommit: "unknown",
+      behindBy: 0,
+      error: msg,
+    };
+  }
 }
 
 /**

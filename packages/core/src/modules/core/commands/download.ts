@@ -3,6 +3,12 @@ import { getService } from "#lib/module-system/Service.js";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  type MessageActionRowComponentBuilder,
+} from "@discordjs/builders";
+import { ButtonStyle } from "discord.js";
+import {
   makeSuccessCard,
   makeErrorCard,
   makeInfoCard,
@@ -19,13 +25,32 @@ import type { DownloaderService } from "#lib/services/DownloaderService.js";
   permissionLevel: PermissionLevel.BOT_OWNER,
   prefixEnabled: true,
   subcommands: [
-    { name: "install", run: "install", default: true },
+    { name: "panel", run: "panel", default: true },
+    { name: "install", run: "install" },
     { name: "uninstall", run: "uninstall" },
   ],
 })
 export class DownloadCommand extends BaseSubcommand {
   private get downloaderService(): DownloaderService {
     return getService("downloader");
+  }
+
+  public async panel(ctx: CommandContext): Promise<void> {
+    const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId("lumi:tab:addons")
+        .setLabel("Open Add-ons Manager")
+        .setEmoji(Emojis.parse(Emojis.REPO))
+        .setStyle(ButtonStyle.Primary),
+    );
+
+    await ctx.reply(
+      makeInfoCard(
+        "Add-on Downloads",
+        "Open the Add-ons Manager to browse repositories, inspect available modules, and install or remove modules from one place.",
+        { actionRows: [row] },
+      ),
+    );
   }
 
   public async install(ctx: CommandContext): Promise<void> {
@@ -47,7 +72,7 @@ export class DownloadCommand extends BaseSubcommand {
       await ctx.reply(
         makeSuccessCard(
           `${Emojis.INSTALL} Module Installed`,
-          `Successfully installed and loaded **${moduleName}** from **${repoName}**.\nSlash commands (if any) have been synced to Discord.`,
+          `Installed **${moduleName}** from **${repoName}** and synced its slash commands (if any).`,
         ),
       );
     } catch (err: unknown) {
@@ -76,7 +101,7 @@ export class DownloadCommand extends BaseSubcommand {
       await ctx.reply(
         makeSuccessCard(
           "Module Uninstalled",
-          `**${moduleName}** has been unloaded and removed.`,
+          `Removed **${moduleName}** from active modules and local addon storage.`,
         ),
       );
     } catch (err: unknown) {
