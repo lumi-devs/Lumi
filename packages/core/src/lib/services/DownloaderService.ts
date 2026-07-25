@@ -265,6 +265,10 @@ export class DownloaderService extends Service {
     return this.container.db.downloader.readAllInstalledDownloaderModules();
   }
 
+  public getInstalledModulesDetailed() {
+    return this.container.db.downloader.readAllInstalledDownloaderModulesWithRepo();
+  }
+
   public async removeRepo(name: string) {
     const repo =
       await this.container.db.downloader.readDownloaderRepoWithModules(name);
