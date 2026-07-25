@@ -70,13 +70,13 @@ describe("TempVcService", () => {
 
   describe("onCreateCooldown", () => {
     it("returns false if NX set succeeds (no cooldown)", async () => {
-      vi.mocked(container.redis.set).mockResolvedValue("OK");
+      (container.redis.set as any).mockResolvedValue("OK");
       const result = await service.onCreateCooldown("guild-1", "user-1");
       expect(result).toBe(false);
     });
 
     it("returns true if NX set returns null (cooldown active)", async () => {
-      vi.mocked(container.redis.set).mockResolvedValue(null);
+      (container.redis.set as any).mockResolvedValue(null);
       const result = await service.onCreateCooldown("guild-1", "user-1");
       expect(result).toBe(true);
     });
@@ -118,9 +118,9 @@ describe("TempVcService", () => {
         isVoiceBased: () => true,
       };
 
-      vi.mocked(tempVcRegistry.nextNumber).mockResolvedValue(2);
-      vi.mocked(listVcRecords).mockResolvedValue(new Map());
-      vi.mocked(listGenerators).mockResolvedValue(new Map());
+      (tempVcRegistry.nextNumber as any).mockResolvedValue(2);
+      (listVcRecords as any).mockResolvedValue(new Map());
+      (listGenerators as any).mockResolvedValue(new Map());
 
       await service.createVc(mockMember as any, mockGenerator as any, {
         name: "Gaming {}",
@@ -187,7 +187,7 @@ describe("TempVcService", () => {
         isVoiceBased: () => true,
       };
 
-      vi.mocked(tempVcRegistry.nextNumber).mockResolvedValue(2);
+      (tempVcRegistry.nextNumber as any).mockResolvedValue(2);
 
       await service.createVc(mockMember as any, mockGenerator as any, {
         name: "Gaming {}",
@@ -219,14 +219,14 @@ describe("TempVcService", () => {
         },
       };
 
-      vi.mocked(listVcRecords).mockResolvedValue(
+      (listVcRecords as any).mockResolvedValue(
         new Map([
           ["managed-1", { generatorId: "gen-1", number: 1 } as any],
           ["managed-2", { generatorId: "gen-1", number: 2 } as any],
         ])
       );
 
-      vi.mocked(listGenerators).mockResolvedValue(
+      (listGenerators as any).mockResolvedValue(
         new Map([
           ["gen-1", { name: "Gaming", limit: 5 }],
         ])
@@ -259,7 +259,7 @@ describe("TempVcService", () => {
 
   describe("runCleanup", () => {
     it("does not delete channel if not registered", async () => {
-      vi.mocked(getVcRecord).mockResolvedValue(null);
+      (getVcRecord as any).mockResolvedValue(null);
 
       await service.runCleanup({ guildId: "guild-1", channelId: "vc-123" });
 
@@ -268,8 +268,8 @@ describe("TempVcService", () => {
     });
 
     it("does not delete channel if it is not empty", async () => {
-      vi.mocked(getVcRecord).mockResolvedValue({ ownerId: "owner-1" } as any);
-      vi.mocked(isVoiceChannelEmpty).mockResolvedValue(false);
+      (getVcRecord as any).mockResolvedValue({ ownerId: "owner-1" } as any);
+      (isVoiceChannelEmpty as any).mockResolvedValue(false);
 
       await service.runCleanup({ guildId: "guild-1", channelId: "vc-123" });
 
@@ -277,9 +277,9 @@ describe("TempVcService", () => {
     });
 
     it("deletes empty channel and removes record", async () => {
-      vi.mocked(getVcRecord).mockResolvedValue({ ownerId: "owner-1" } as any);
-      vi.mocked(isVoiceChannelEmpty).mockResolvedValue(true);
-      vi.mocked(container.client.rest.delete).mockResolvedValue({} as any);
+      (getVcRecord as any).mockResolvedValue({ ownerId: "owner-1" } as any);
+      (isVoiceChannelEmpty as any).mockResolvedValue(true);
+      (container.client.rest.delete as any).mockResolvedValue({} as any);
 
       await service.runCleanup({ guildId: "guild-1", channelId: "vc-123" });
 

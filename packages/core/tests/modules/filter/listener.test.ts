@@ -32,13 +32,13 @@ describe("FilterMessageListener", () => {
       dispatch: vi.fn().mockResolvedValue(undefined),
     };
 
-    vi.mocked(getService).mockImplementation((name: string) => {
+    (getService as any).mockImplementation((name: string) => {
       if (name === "filter") return mockFilterService;
       if (name === "config") return mockConfigService;
       return null as any;
     });
 
-    vi.mocked(tryGetService).mockImplementation((name: string) => {
+    (tryGetService as any).mockImplementation((name: string) => {
       if (name === "guild-log") return mockGuildLogService;
       return null as any;
     });

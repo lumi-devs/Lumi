@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { truncate, fmtId, escapeMarkdown } from '#lib/utilities/formatting.js';
+import { truncate, fmtId, escapeMarkdown } from '#lib/utilities/misc.js';
 
 describe('formatting.ts', () => {
 	it('truncate', () => {
