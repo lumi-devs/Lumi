@@ -10,35 +10,22 @@ volumes:
   grafana-data:
   tempo-data:
   nats-data:
-  # Holds downloaded 3rd-party modules: git clones (data/3rd-party-modules/) and
-  # the symlinks ModuleStore discovers (data/installed-modules/). Without this,
-  # a container recreate wipes every installed addon while Postgres still lists
-  # them — leaving the bot with DB records but no files ("piece does not exist").
   lumi-data:
 
-# Shared config for the four deployable services. They all run from the same
-# image; each sets its own `command:`. gateway/worker/scheduler are the split
-# roles (see apps/*); dashboard RPC is served by the workers themselves.
 x-lumi-service: &lumi-service
   build:
     context: .
     dockerfile: Dockerfile
     target: production
-  # Optional so a fresh clone gets the bot's own actionable "BOT_TOKEN missing/
-  # invalid" fatal instead of compose refusing to parse anything. Create it with
-  # `cp .env.example .env` (see README).
   env_file:
     - path: .env
       required: false
   environment: &lumi-env
     REDIS_HOST: redis
     POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
-    # Migrations bypass PgBouncer (transaction pooling can't hold DDL/advisory locks).
     DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
     RABBITMQ_URL: amqp://${RABBITMQ_USER:-lumi}:${RABBITMQ_PASSWORD:-lumi}@rabbitmq:5672
     RABBITMQ_ENABLED: "true"
-
-    # Telemetry: production services emit OTLP + expose /metrics on :9090.
     OTEL_ENABLED: "${OTEL_ENABLED:-true}"
     OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
     OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
@@ -46,13 +33,7 @@ x-lumi-service: &lumi-service
     METRICS_PORT: "9090"
     LOG_FORMAT: "${LOG_FORMAT:-json}"
     LOG_LEVEL: "${LOG_LEVEL:-info}"
-    # Per-service V8 heap cap. Worker default is 384 MiB (≈75% of the 512 MiB
-    # container limit below); gateway overrides this in its own block.
     NODE_OPTIONS: "${NODE_OPTIONS:---max-old-space-size=384}"
-    # Route all outbound discord.js REST through the shared nirn-proxy so
-    # one global + per-route bucket budget is shared across every worker
-    # replica. Defaults to empty (talk to discord.com directly); the scale
-    # profile services below opt in by pointing at the `nirn-proxy` container.
     DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-}"
   depends_on:
     pgbouncer:
@@ -63,7 +44,6 @@ x-lumi-service: &lumi-service
       condition: service_healthy
     rabbitmq:
       condition: service_healthy
-  # Persist downloaded modules across container recreation (see `lumi-data` note).
   volumes:
     - lumi-data:/app/data
   restart: unless-stopped
@@ -93,14 +73,9 @@ services:
     environment:
       REDIS_HOST: redis
       POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
-      # Migrations bypass PgBouncer (transaction pooling can't hold DDL/advisory locks).
       DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-lumi}:${RABBITMQ_PASSWORD:-lumi}@rabbitmq:5672
       RABBITMQ_ENABLED: "true"
-
-      # Telemetry: apps always expose /metrics and emit OTLP traces. The OTLP
-      # endpoint only resolves when the `observability` profile is up; the batch
-      # exporter degrades quietly when the collector is absent.
       OTEL_ENABLED: "${OTEL_ENABLED:-true}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
       OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
@@ -133,16 +108,8 @@ services:
     command: ["sh", "-c", "bunx prisma migrate deploy && bun apps/worker/src/main.ts"]
     environment:
       <<: *lumi-env
-      # Default (no-profile) service: the single-instance monolith bot. A bare
-      # `docker compose up` brings it online (holds its own Discord WS) — this is
-      # the self-hoster's "one command → working bot" path.
-      # The `scale` profile instead runs `worker-scale` (LUMI_ROLE=worker, no WS,
-      # consumes raw gateway packets from the bus) — see below.
       LUMI_ROLE: "${LUMI_ROLE:-monolith}"
 
-  # Scale-profile services. When `docker compose --profile scale up` is used,
-  # split topology comes online: gateway owns the WS, worker drops its WS and
-  # consumes raw packets from the bus.
   worker-scale:
     <<: *lumi-service
     container_name: lumi-worker-scale
@@ -178,8 +145,6 @@ services:
       TRANSPORT: "streams"
       INTERACTION_DEFER_AT_GATEWAY: "${INTERACTION_DEFER_AT_GATEWAY:-true}"
       DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-http://nirn-proxy:8080}"
-      # Gateway holds the Discord cache (≈25 KB/guild); raise heap above the
-      # 384 MiB worker default. See capacity-planning.md §7.
       NODE_OPTIONS: "--max-old-space-size=768"
     depends_on:
       worker-scale:
@@ -214,17 +179,6 @@ services:
     profiles:
       - scale
 
-  # NOTE: there is intentionally no dedicated `api` service. Dashboard RPC
-  # (RabbitMQ request/response) is served by every worker via competing
-  # consumers — CoreModule + DashboardModule register the handlers on load.
-  # Reintroduce a dedicated api role only when RPC needs isolation from event
-  # processing (it would need the worker's bus-fed cache to answer guild RPCs).
-
-  # Web admin dashboard (apps/dashboard) — Discord OAuth + auto-generated config
-  # forms. Stateless front-end: it talks to the workers ONLY over the RabbitMQ RPC
-  # bridge (no DB/Redis of its own). Opt-in via `docker compose --profile dashboard up`.
-  # Requires the OAuth + session env vars below; the app exits with an actionable
-  # error if any are unset.
   dashboard:
     <<: *lumi-service
     container_name: lumi-dashboard
@@ -280,18 +234,11 @@ services:
       DB_NAME: lumi
       DB_USER: ${POSTGRES_USER:-lumi}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-lumi}
-      # Listen on 6432 to match the healthcheck, port map, and POSTGRES_URL.
       LISTEN_PORT: "6432"
-      # Transaction pooling: a server backend is held only for the duration of a
-      # transaction, so many short-lived client connections share few real
-      # Postgres backends. Required for the stateless-worker fan-out.
       POOL_MODE: transaction
       AUTH_TYPE: scram-sha-256
-      # Total client slots PgBouncer accepts across all workers.
       MAX_CLIENT_CONN: "1000"
-      # Real Postgres backends per (user, db) — the actual cap on Postgres.
       DEFAULT_POOL_SIZE: "20"
-      # Transaction pooling cannot keep session-level prepared statements.
       MAX_PREPARED_STATEMENTS: "0"
     depends_on:
       postgres:
@@ -360,14 +307,6 @@ services:
       - "127.0.0.1:5672:5672"
       - "127.0.0.1:15672:15672"
 
-  # Shared outbound REST proxy. nirn-proxy presents a Discord-API-compatible
-  # surface at :8080 and globally serialises buckets + the 50/s global limit
-  # across every connected worker so 1000s of stateless workers can't trigger a
-  # CloudFlare ban. Each worker still sends its own Authorization header; the
-  # proxy keys buckets by (token, route). Lean default (in-memory, no clustering)
-  # — flip to `REDIS_URL` if you run multiple nirn-proxy instances behind an LB.
-  # Only spun up under the `scale` profile; single-host monolith hits Discord
-  # directly (DISCORD_PROXY_URL stays empty).
   nirn-proxy:
     image: ghcr.io/germanoeich/nirn-proxy:latest
     container_name: lumi-nirn-proxy
@@ -375,8 +314,6 @@ services:
       LOG_LEVEL: "${NIRN_LOG_LEVEL:-info}"
       PORT: "8080"
       METRICS_PORT: "9000"
-      # Global per-token RPS cap (Discord allows 50/s; nirn enforces ~95% by
-      # default to leave headroom for clock skew between bot processes).
       BIND_IP: "0.0.0.0"
       REQUEST_TIMEOUT: "10000"
       BUFFER_SIZE: "200"
@@ -384,8 +321,6 @@ services:
       - lumi-net
     restart: unless-stopped
     healthcheck:
-      # nirn-proxy doesn't expose /healthz; a successful TCP connect on :8080 is
-      # the documented liveness probe.
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/nirn/v1/buckets > /dev/null || exit 1"]
       interval: 15s
       timeout: 5s
@@ -396,37 +331,11 @@ services:
         limits:
           memory: 128m
     ports:
-      # Bound to localhost for the loadtest script + prom scrape from the host.
       - "127.0.0.1:18080:8080"
       - "127.0.0.1:19000:9000"
     profiles:
       - scale
 
-#   dashboard:
-#     build:
-#       context: ../lumi-dashboard
-#       dockerfile: Dockerfile
-#     container_name: lumi-dashboard
-#     environment:
-#       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-lumi}:${RABBITMQ_PASSWORD:-lumi}@rabbitmq:5672
-#       - DISCORD_CLIENT_ID=${CLIENT_ID}
-#       - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-placeholder}
-#       - AUTH_SECRET=${AUTH_SECRET:-secret}
-#       - AUTH_URL=http://localhost:3000
-#       - AUTH_TRUST_HOST=true
-#     depends_on:
-#       rabbitmq:
-#         condition: service_healthy
-#     restart: unless-stopped
-#     networks:
-#       - lumi-net
-#     ports:
-#       - "127.0.0.1:3000:3000"
-
-  # NATS JetStream — the high-throughput alternative to Redis Streams.
-  # Opt-in: only under `--profile scale-nats`, since Redis Streams is the
-  # documented default for the scale profile (NATS is overkill until >20k evt/s).
-  # JetStream stores its state on disk; the volume survives container restarts.
   nats:
     image: nats:2.10-alpine
     container_name: lumi-nats
@@ -442,7 +351,6 @@ services:
       - lumi-net
     restart: unless-stopped
     healthcheck:
-      # The monitoring port serves /healthz; lean-and-supported.
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8222/healthz"]
       interval: 10s
       timeout: 5s
@@ -458,10 +366,6 @@ services:
     profiles:
       - scale-nats
 
-  # ── Observability stack (LGTM-ish) ──────────────────────────────────────────
-  # Opt-in: `docker compose --profile observability up`. A plain `up` stays lean.
-  # Pipeline: apps → OTLP → otel-collector → Tempo (traces) ; Prometheus scrapes
-  # app /metrics ; Grafana provisions datasources + dashboards + alert rules.
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.116.0
     container_name: lumi-otel-collector
