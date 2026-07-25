@@ -105,7 +105,7 @@ services:
   worker:
     <<: *lumi-service
     container_name: lumi-worker
-    command: ["sh", "-c", "bunx prisma migrate deploy && bun apps/worker/src/main.ts"]
+    command: ["sh", "-c", "bunx prisma db push --accept-data-loss && bun apps/worker/src/main.ts"]
     environment:
       <<: *lumi-env
       LUMI_ROLE: "${LUMI_ROLE:-monolith}"
@@ -113,7 +113,7 @@ services:
   worker-scale:
     <<: *lumi-service
     container_name: lumi-worker-scale
-    command: ["sh", "-c", "bunx prisma migrate deploy && bun apps/worker/src/main.ts"]
+    command: ["sh", "-c", "bunx prisma db push --accept-data-loss && bun apps/worker/src/main.ts"]
     environment:
       <<: *lumi-env
       LUMI_ROLE: "worker"
