@@ -22,7 +22,7 @@ import type { StreamStats } from "./RedisStreamsBus.js";
 /** Capture all bus events under one JetStream stream — keeps ops simple. */
 const STREAM_NAME = "LUMI_EVENTS";
 /** Wildcard subject the JetStream stream binds to. */
-const STREAM_SUBJECTS = ["lumi.>"];
+const STREAM_SUBJECTS = ["lumi.>", "verify.>"];
 
 export interface NatsJetStreamBusOptions {
   /** Live NATS connection (factory owns its lifecycle). */
