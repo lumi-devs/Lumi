@@ -126,7 +126,7 @@ function mergeDeep(
       if (key in target) {
         output[key] = mergeDeep(
           target[key] as Record<string, unknown>,
-          source[key] as Record<string, unknown>,
+          source[key],
         );
       } else {
         output[key] = source[key];

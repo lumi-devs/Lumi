@@ -10,7 +10,6 @@ import {
   GatewayOpcodes,
   Routes,
   InteractionResponseType,
-  type GatewayDispatchPayload,
 } from "discord-api-types/v10";
 import {
   createEventBus,
@@ -289,7 +288,7 @@ const detachPublisher = attachProxyPublisher(ownedBus.bus, manager, {
 if (DEFER_AT_GATEWAY) {
   manager.on(
     WebSocketShardEvents.Dispatch,
-    (data: GatewayDispatchPayload, shardId: number) => {
+    (data: any, shardId: number) => {
       if (data.t !== "INTERACTION_CREATE") return;
       const d = data.d as InteractionPayload;
       const envelope: RawGatewayEnvelope = {
