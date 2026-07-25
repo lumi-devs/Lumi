@@ -508,19 +508,26 @@ export class ModuleStore extends Store<Module> {
     const entries = await fs.readdir(dir).catch(() => []);
 
     for (const name of entries) {
-      if (name.startsWith("_") || name.startsWith(".")) continue;
+      if (
+        name.startsWith("_") ||
+        name.startsWith(".") ||
+        name === "node_modules" ||
+        name === "scripts" ||
+        name === "dist"
+      )
+        continue;
       const sub = path.join(dir, name);
       const stat = await fs.stat(sub).catch(() => null);
       if (!stat?.isDirectory()) continue;
 
       const indexPath = await this.#findIndex(sub);
-      if (indexPath) {
-        const manifest = await readManifest(sub);
-        if (manifest) {
-          this.#ingestManifest(sub, indexPath, manifest, found, globalState);
-        } else {
-          await this.#ingest(sub, indexPath, found, globalState, bustCache);
-        }
+      const manifest = await readManifest(sub);
+
+      if (manifest) {
+        const effectiveIndex = indexPath || path.join(sub, "manifest.json");
+        this.#ingestManifest(sub, effectiveIndex, manifest, found, globalState);
+      } else if (indexPath) {
+        await this.#ingest(sub, indexPath, found, globalState, bustCache);
       }
       await this.#walk(sub, found, globalState, depth + 1, bustCache);
     }

@@ -11,7 +11,22 @@
     "./client": "./src/lib/client/LumiClient.ts"
   },
   "imports": {
+    "#lib/commands.js": "./src/lib/commands.ts",
+    "#lib/env.js": "./src/lib/env.ts",
+    "#lib/permissions.js": "./src/lib/permissions/index.ts",
+    "#lib/module-system.js": "./src/lib/module-system/Module.ts",
+    "#lib/rabbit.js": "./src/lib/rabbitmq/index.ts",
+    "#lib/types.js": "./src/lib/types/common.ts",
+    "#lib/guild-transaction.js": "./src/lib/guild-transaction.ts",
+    "#lib/module-check.js": "./src/lib/module-check.ts",
+    "#lib/scheduler-bus.js": "./src/lib/scheduler-bus.ts",
+    "#lib/schedule-task.js": "./src/lib/schedule-task.ts",
     "#lib/*.js": "./src/lib/*.ts",
+    "#database/*.js": "./src/lib/database/*.ts",
+    "#utilities/*.js": "./src/lib/utilities/*.ts",
+    "#core/lib/*.js": "./src/lib/*.ts",
+    "#core/module-system/*.js": "./src/lib/module-system/*.ts",
+    "#core/*.js": "./src/lib/*.ts",
     "#root/*.js": "./src/*.ts",
     "#modules/*.js": "./src/modules/*.ts"
   },
