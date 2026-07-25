@@ -29,8 +29,10 @@ import {
   ephemeralCard,
   makeErrorCard,
   makeSuccessCard,
+  makeWarningCard,
   type CardReply,
 } from "#lib/utilities/cards.js";
+import { restartChoiceRow } from "#lib/restart.js";
 import { loadFeatures, buildFeatureListView } from "#modules/core/lib/config-panel.js";
 import {
   buildHubView,
@@ -161,6 +163,47 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
           return renderSettings(interaction);
         }
         return undefined;
+      case "update_all": {
+        const downloader = getService("downloader");
+        const installed = await downloader.getInstalledModules();
+        if (!installed.length) {
+          return interaction.editReply(
+            ephemeralCard(
+              makeWarningCard(
+                "No Addon Modules",
+                "No third-party addon modules are installed. Core system modules update automatically with the host process.",
+              ),
+            ),
+          );
+        }
+
+        let updatedCount = 0;
+        let needsRestart = false;
+        for (const mod of installed) {
+          try {
+            const res = await downloader.updateModule(mod.moduleName);
+            if (res.updated) {
+              updatedCount++;
+              if (res.needsRestart) needsRestart = true;
+            }
+          } catch {}
+        }
+
+        const msg =
+          updatedCount > 0
+            ? `Successfully updated **${updatedCount}** module(s).`
+            : "All modules and repositories are up to date!";
+
+        return interaction.editReply(
+          ephemeralCard(
+            makeSuccessCard("Update Check Complete", msg, {
+              actionRows: needsRestart
+                ? [restartChoiceRow(interaction.user.id)]
+                : undefined,
+            }),
+          ),
+        );
+      }
       default:
         return undefined;
     }

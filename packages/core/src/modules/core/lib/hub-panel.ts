@@ -131,10 +131,18 @@ export function buildSettingsView(settings: {
       .setDisabled(settings.prefix === null),
   );
 
+  const updateButtons = row(
+    new ButtonBuilder()
+      .setCustomId("lumi:update_all")
+      .setLabel("Check & Fetch Updates")
+      .setEmoji(Emojis.parse("🔄"))
+      .setStyle(ButtonStyle.Primary),
+  );
+
   return makeCard(0, `${Emojis.GUILD} Server Settings`, body, {
     footer:
       "Prefix commands work for a curated set of moderation and utility commands.",
-    actionRows: [backToHubRow(), row(langSelect), prefixButtons],
+    actionRows: [backToHubRow(), row(langSelect), prefixButtons, updateButtons],
   });
 }
 
