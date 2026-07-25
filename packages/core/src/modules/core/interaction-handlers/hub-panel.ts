@@ -12,6 +12,7 @@ import {
 } from "@discordjs/builders";
 import {
   GuildMember,
+  MessageFlags,
   TextInputStyle,
   type ButtonInteraction,
   type AnySelectMenuInteraction,
@@ -535,7 +536,7 @@ export class HubPanelModalHandler extends InteractionHandler {
   }
 
   async #submitAddon(interaction: ModalSubmitInteraction, action: string) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {
       if (action === "add_repo") {
         const name = interaction.fields.getTextInputValue("name").trim();
