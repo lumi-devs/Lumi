@@ -26,6 +26,76 @@ export class ModuleAlreadyInstalledError extends Error {
 
 @ApplyOptions<Piece.Options>({ name: "downloader" })
 export class DownloaderService extends Service {
+  public override async onLoad() {
+    super.onLoad();
+    await this.syncInstalledModulesOnStartup().catch((err) => {
+      this.container.logger.error(
+        "[DownloaderService] Failed to sync installed modules on startup:",
+        err,
+      );
+    });
+  }
+
+  public async syncInstalledModulesOnStartup() {
+    await fs.mkdir(ADDON_MODULES_ROOT, { recursive: true });
+    const installed =
+      await this.container.db.downloader.readAllInstalledDownloaderModulesWithRepo();
+    if (!installed.length) return;
+
+    let restoredAny = false;
+    for (const item of installed) {
+      const sourcePath = path.join(
+        MODULE_ROOT,
+        item.repo.name,
+        item.moduleName,
+      );
+      const targetPath = path.join(ADDON_MODULES_ROOT, item.moduleName);
+
+      try {
+        const sourceExists = await fs
+          .access(sourcePath)
+          .then(() => true)
+          .catch(() => false);
+        if (!sourceExists) {
+          this.container.logger.info(
+            `[DownloaderService] Restoring repo ${item.repo.name} for module ${item.moduleName}...`,
+          );
+          await resolver
+            .addRepo(item.repo.name, item.repo.url, item.repo.branch || "default")
+            .catch(() => {});
+        }
+
+        const targetExists = await fs
+          .access(targetPath)
+          .then(() => true)
+          .catch(() => false);
+        if (
+          !targetExists &&
+          (await fs
+            .access(sourcePath)
+            .then(() => true)
+            .catch(() => false))
+        ) {
+          await fs.rm(targetPath, { recursive: true, force: true }).catch(() => {});
+          await fs.symlink(sourcePath, targetPath, "dir");
+          restoredAny = true;
+          this.container.logger.info(
+            `[DownloaderService] Restored addon symlink for ${item.moduleName}`,
+          );
+        }
+      } catch (err) {
+        this.container.logger.warn(
+          `[DownloaderService] Failed to restore symlink for ${item.moduleName}:`,
+          err,
+        );
+      }
+    }
+
+    if (restoredAny) {
+      await this.container.moduleStore.discover(true);
+    }
+  }
+
   public async installModule(repoName: string, moduleName: string) {
     const repo =
       await this.container.db.downloader.readDownloaderRepo(repoName);
