@@ -25,12 +25,16 @@ interface MediaRequestContext {
   container: typeof container;
 }
 
+import { fetchT } from "@sapphire/plugin-i18next";
+import { LanguageKeys } from "#lib/i18n/keys.js";
+
 export async function handleMediaRequest({
   context,
   targetUser,
   mediaType,
   container,
 }: MediaRequestContext) {
+  const t = await fetchT(context);
   const interactionUser =
     context instanceof Message ? context.author : context.user;
   const { guildId } = context;
@@ -54,11 +58,12 @@ export async function handleMediaRequest({
         (lastUsed + cooldownSeconds * 1000 - now) /
         1000
       ).toFixed(1);
-      const reply = `Please wait ${timeLeft} more seconds before using this command again.`;
+      const title = t(LanguageKeys.Commands.MediaCooldownTitle);
+      const reply = t(LanguageKeys.Commands.MediaCooldown, { timeLeft });
 
       if (context instanceof Message) {
         const msg = await context.reply({
-          ...makeErrorCard("Cooldown", reply),
+          ...makeErrorCard(title, reply),
           allowedMentions: {},
         });
         deleteMessageLater(
@@ -69,10 +74,10 @@ export async function handleMediaRequest({
         return;
       }
       if (context.deferred || context.replied) {
-        return context.editReply(makeErrorCard("Cooldown", reply));
+        return context.editReply(makeErrorCard(title, reply));
       }
       return context.reply({
-        ...makeErrorCard("Cooldown", reply),
+        ...makeErrorCard(title, reply),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -100,7 +105,7 @@ export async function handleMediaRequest({
     actionRows.push(
       new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
         new ButtonBuilder()
-          .setLabel(`${capitalizeFirstLetter(mediaType)} Link`)
+          .setLabel(t(LanguageKeys.Commands.MediaLinkBtn, { mediaType: capitalizeFirstLetter(mediaType) }))
           .setStyle(ButtonStyle.Link)
           .setURL(mediaUrl),
       ),
@@ -110,13 +115,14 @@ export async function handleMediaRequest({
       new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(`user-media:view:${fetchedUser.id}:${mediaType}`)
-          .setLabel(`View ${capitalizeFirstLetter(mediaType)}`)
+          .setLabel(t(LanguageKeys.Commands.MediaViewBtn, { mediaType: capitalizeFirstLetter(mediaType) }))
           .setStyle(ButtonStyle.Primary),
       ),
     );
   }
 
-  const card = makeInfoCard(`${displayName}'s ${mediaType}`, "", {
+  const cardTitle = t(LanguageKeys.Commands.MediaCardTitle, { displayName, mediaType: capitalizeFirstLetter(mediaType) });
+  const card = makeInfoCard(cardTitle, "", {
     actionRows,
     mediaGallery:
       shouldShowMedia && mediaUrl

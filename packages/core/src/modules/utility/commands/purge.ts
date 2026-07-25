@@ -1,6 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Args } from "@sapphire/framework";
-import { BaseCommand } from "#lib/commands.js";
+import { BaseCommand, fetchTyped } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
 import {
   Message,
@@ -20,6 +20,7 @@ import {
 } from "#lib/utilities/cards.js";
 import { logError, errorCode } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
+import { LanguageKeys } from "#lib/i18n/keys.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "purge",
@@ -30,14 +31,15 @@ import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 })
 export class PurgeCommand extends BaseCommand {
   public override async messageRun(message: Message, args: Args) {
+    const t = await fetchTyped(message);
     const amountResult = await args.pickResult("integer");
     const amount = amountResult.isOk() ? amountResult.unwrap() : NaN;
 
     if (Number.isNaN(amount) || amount <= 0 || amount > 1000) {
       await message.reply({
         ...makeErrorCard(
-          "Invalid Amount",
-          "Please provide a number between 1 and 1000.",
+          t(LanguageKeys.Commands.PurgeInvalidAmountTitle),
+          t(LanguageKeys.Commands.PurgeInvalidAmount),
         ),
         allowedMentions: {},
       });
@@ -58,26 +60,28 @@ export class PurgeCommand extends BaseCommand {
         channel,
         message.author.id,
         amount,
+        t,
       );
       if (!res.confirmed) return;
       prompt = res.prompt;
     } else {
       prompt = await channel.send({
         ...makeSuccessCard(
-          "Purging...",
-          `Initiating deletion of ${amount} messages.`,
+          t(LanguageKeys.Commands.PurgeInitiatingTitle),
+          t(LanguageKeys.Commands.PurgeInitiating, { amount }),
         ),
         allowedMentions: {},
       });
     }
 
-    void this.executePurge(channel, amount, prompt);
+    void this.executePurge(channel, amount, prompt, t);
   }
 
   private async executePurge(
     channel: GuildTextBasedChannel,
     amount: number,
     prompt: Message,
+    t: Awaited<ReturnType<typeof fetchTyped>>,
   ) {
     let deletedCount = 0;
     let remaining = amount;
@@ -197,8 +201,8 @@ export class PurgeCommand extends BaseCommand {
         );
       const completedCard = await channel.send({
         ...makeSuccessCard(
-          "Purge Complete",
-          `✅ Deleted **${deletedCount}** messages.`,
+          t(LanguageKeys.Commands.PurgeCompleteTitle),
+          t(LanguageKeys.Commands.PurgeComplete, { count: deletedCount }),
         ),
         allowedMentions: {},
       });
@@ -224,24 +228,25 @@ export class PurgeCommand extends BaseCommand {
     channel: GuildTextBasedChannel,
     authorId: string,
     amount: number,
+    t: Awaited<ReturnType<typeof fetchTyped>>,
   ): Promise<{ prompt: Message; confirmed: boolean }> {
     const actionRows = [
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId("purge-confirm")
-          .setLabel("Confirm")
+          .setLabel(t(LanguageKeys.Commands.PurgeConfirmBtn))
           .setStyle(ButtonStyle.Danger),
         new ButtonBuilder()
           .setCustomId("purge-cancel")
-          .setLabel("Cancel")
+          .setLabel(t(LanguageKeys.Commands.PurgeCancelBtn))
           .setStyle(ButtonStyle.Secondary),
       ),
     ];
 
     const prompt = await channel.send({
       ...makeWarningCard(
-        "Confirmation Required",
-        `Are you sure you want to delete the last ${amount} messages?`,
+        t(LanguageKeys.Commands.PurgeConfirmTitle),
+        t(LanguageKeys.Commands.PurgeConfirmText, { amount }),
         { actionRows },
       ),
       allowedMentions: {},
@@ -258,8 +263,8 @@ export class PurgeCommand extends BaseCommand {
       if (confirmation.customId === "purge-confirm") {
         await confirmation.update({
           ...makeSuccessCard(
-            "Purging...",
-            `Proceeding with deletion of ${amount} messages.`,
+            t(LanguageKeys.Commands.PurgeInitiatingTitle),
+            t(LanguageKeys.Commands.PurgeProceeding, { amount }),
           ),
         });
         return { prompt, confirmed: true };
@@ -267,8 +272,8 @@ export class PurgeCommand extends BaseCommand {
 
       await confirmation.update({
         ...makeErrorCard(
-          "Purge Cancelled",
-          "The purge operation was cancelled.",
+          t(LanguageKeys.Commands.PurgeCancelledTitle),
+          t(LanguageKeys.Commands.PurgeCancelledText),
         ),
       });
       deleteMessageLater(
@@ -280,8 +285,8 @@ export class PurgeCommand extends BaseCommand {
     } catch (e) {
       await prompt.edit({
         ...makeErrorCard(
-          "Purge Cancelled",
-          "The confirmation request timed out.",
+          t(LanguageKeys.Commands.PurgeCancelledTitle),
+          t(LanguageKeys.Commands.PurgeTimeoutText),
         ),
       });
       deleteMessageLater(

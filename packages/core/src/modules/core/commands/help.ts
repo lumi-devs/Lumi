@@ -8,9 +8,10 @@ import {
   MessageFlags,
   SeparatorSpacingSize,
 } from "discord.js";
-import { BaseCommand } from "#lib/commands.js";
+import { BaseCommand, fetchTyped } from "#lib/commands.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { paginateContainer } from "#lib/utilities/pagination.js";
+import { LanguageKeys } from "#lib/i18n/keys.js";
 
 function getCategories(containerInstance: typeof container) {
   const commands = [
@@ -54,6 +55,7 @@ export class HelpCommand extends BaseCommand {
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const t = await fetchTyped(interaction);
 
     let prefix = ",";
     if (interaction.guildId) {
@@ -78,7 +80,7 @@ export class HelpCommand extends BaseCommand {
 
         c.addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            `## ${Emojis.SHIELD} Lumi Command Reference`,
+            `## ${Emojis.SHIELD} ${t(LanguageKeys.Commands.HelpTitle)}`,
           ),
         );
         c.addSeparatorComponents(
@@ -89,14 +91,14 @@ export class HelpCommand extends BaseCommand {
 
         const commandListText = categoryCommands
           .map((cmd) => {
-            const desc = cmd.description || "No description provided.";
+            const desc = cmd.description || t(LanguageKeys.Commands.HelpNoDescription);
             return `• **\`${prefix}${cmd.name}\`** or **\`/${cmd.name}\`**\n  ┕ *${desc}*`;
           })
           .join("\n\n");
 
         c.addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            `### **${categoryName.toUpperCase()} MODULE**\n\n${commandListText || "No commands loaded."}`,
+            `### **${t(LanguageKeys.Commands.HelpModuleHeader, { category: categoryName.toUpperCase() })}**\n\n${commandListText || t(LanguageKeys.Commands.HelpNoCommands)}`,
           ),
         );
 
@@ -108,7 +110,7 @@ export class HelpCommand extends BaseCommand {
 
         c.addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            `-# Page ${pageIndex + 1} of ${sortedCategories.length} • Total ${totalCommandsCount} commands`,
+            `-# ${t(LanguageKeys.Commands.HelpFooter, { page: pageIndex + 1, total: sortedCategories.length, count: totalCommandsCount })}`,
           ),
         );
       },
@@ -116,6 +118,7 @@ export class HelpCommand extends BaseCommand {
   }
 
   public override async messageRun(message: Message) {
+    const t = await fetchTyped(message);
     let prefix = ",";
     if (message.guildId) {
       const settings = await this.container.db.config.getGuildSettings(
@@ -139,7 +142,7 @@ export class HelpCommand extends BaseCommand {
 
         c.addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            `## ${Emojis.SHIELD} Lumi Command Reference`,
+            `## ${Emojis.SHIELD} ${t(LanguageKeys.Commands.HelpTitle)}`,
           ),
         );
         c.addSeparatorComponents(
@@ -150,14 +153,14 @@ export class HelpCommand extends BaseCommand {
 
         const commandListText = categoryCommands
           .map((cmd) => {
-            const desc = cmd.description || "No description provided.";
+            const desc = cmd.description || t(LanguageKeys.Commands.HelpNoDescription);
             return `• **\`${prefix}${cmd.name}\`** or **\`/${cmd.name}\`**\n  ┕ *${desc}*`;
           })
           .join("\n\n");
 
         c.addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            `### **${categoryName.toUpperCase()} MODULE**\n\n${commandListText || "No commands loaded."}`,
+            `### **${t(LanguageKeys.Commands.HelpModuleHeader, { category: categoryName.toUpperCase() })}**\n\n${commandListText || t(LanguageKeys.Commands.HelpNoCommands)}`,
           ),
         );
 
@@ -169,7 +172,7 @@ export class HelpCommand extends BaseCommand {
 
         c.addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            `-# Page ${pageIndex + 1} of ${sortedCategories.length} • Total ${totalCommandsCount} commands`,
+            `-# ${t(LanguageKeys.Commands.HelpFooter, { page: pageIndex + 1, total: sortedCategories.length, count: totalCommandsCount })}`,
           ),
         );
       },
