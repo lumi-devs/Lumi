@@ -4,7 +4,7 @@ import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
 import { logError } from "#lib/utilities/errors.js";
-import { QuarantineAction } from "../lib/actions/index.js";
+import { QuarantineAction } from "../actions/index.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "quarantine",

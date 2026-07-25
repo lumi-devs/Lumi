@@ -9,11 +9,11 @@ import {
   resetWarnCount,
   checkThresholds
 } from '#modules/mod/lib/thresholds.js';
-import { BanAction } from '#modules/mod/lib/actions/BanAction.js';
-import { MuteAction } from '#modules/mod/lib/actions/MuteAction.js';
-import { KickAction } from '#modules/mod/lib/actions/KickAction.js';
-import { WarnAction } from '#modules/mod/lib/actions/WarnAction.js';
-import { QuarantineAction } from '#modules/mod/lib/actions/QuarantineAction.js';
+import { BanAction } from '#modules/mod/actions/BanAction.js';
+import { MuteAction } from '#modules/mod/actions/MuteAction.js';
+import { KickAction } from '#modules/mod/actions/KickAction.js';
+import { WarnAction } from '#modules/mod/actions/WarnAction.js';
+import { QuarantineAction } from '#modules/mod/actions/QuarantineAction.js';
 
 vi.mock('@sapphire/framework', () => ({
   container: {
