@@ -7,7 +7,7 @@ import {
   buildSettingsView,
   buildPermissionsView,
   buildAddonsView,
-} from "#lib/hub-panel.js";
+} from "#modules/core/lib/hub-panel.js";
 
 const buttonsOf = (rowJson: { components: unknown[] }) =>
   rowJson.components as {
