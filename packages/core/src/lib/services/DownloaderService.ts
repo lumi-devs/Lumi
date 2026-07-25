@@ -90,16 +90,12 @@ export class DownloaderService extends Service {
     }
 
     const targetPath = path.join(ADDON_MODULES_ROOT, moduleName);
-    try {
-      await fs.unlink(targetPath);
-    } catch (err: unknown) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
-        this.container.logger.error(
-          `[DownloaderService] failed to remove symlink:`,
-          err,
-        );
-      }
-    }
+    await fs.rm(targetPath, { recursive: true, force: true }).catch((err) => {
+      this.container.logger.error(
+        `[DownloaderService] failed to remove symlink/directory at ${targetPath}:`,
+        err,
+      );
+    });
 
     await this.container.db.downloader.deleteInstalledDownloaderModule(
       moduleName,
