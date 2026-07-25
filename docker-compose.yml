@@ -260,7 +260,7 @@ services:
       - "127.0.0.1:6432:6432"
 
   redis:
-    image: redis:7.4-alpine
+    image: redis:7-alpine
     container_name: lumi-redis
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction --requirepass ${REDIS_PASSWORD:-lumi}
     volumes:
@@ -338,7 +338,7 @@ services:
       - scale
 
   nats:
-    image: nats:2.10-alpine
+    image: nats:2-alpine
     container_name: lumi-nats
     command:
       - "-js"
