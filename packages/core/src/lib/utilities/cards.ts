@@ -47,7 +47,6 @@ const smallSeparator = (divider: boolean): SeparatorBuilder =>
     .setDivider(divider);
 
 function buildContainer(
-  _color: number | null,
   title: string,
   body: string | string[],
   opts: CardOptions = {},
@@ -88,34 +87,35 @@ function buildContainer(
 const wrap = (c: ContainerBuilder): CardReply => ({
   flags: MessageFlags.IsComponentsV2,
   components: [c],
+  allowedMentions: { parse: [] },
 });
 
 export const makeSuccessCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(0, title, body, opts));
+) => wrap(buildContainer(title, body, opts));
 export const makeErrorCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(0, title, body, opts));
+) => wrap(buildContainer(title, body, opts));
 export const makeWarningCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(0, title, body, opts));
+) => wrap(buildContainer(title, body, opts));
 export const makeInfoCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(null, title, body, opts));
+) => wrap(buildContainer(title, body, opts));
 export const makeCard = (
-  color: number,
+  _color: number,
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(color, title, body, opts));
+) => wrap(buildContainer(title, body, opts));
 
 export function makeListCard(
   title: string,
@@ -132,7 +132,7 @@ export function makeListCard(
       ? `Page ${page + 1}/${totalPages} · ${items.length} items`
       : `${items.length} items`;
 
-  const c = buildContainer(0, title, body, { footer });
+  const c = buildContainer(title, body, { footer });
 
   if (customIdPrefix && totalPages > 1) {
     c.addActionRowComponents((row) =>

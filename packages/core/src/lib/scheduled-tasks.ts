@@ -33,13 +33,15 @@ export const DEFAULT_CATCHUP_GRACE_MS = 60_000;
  */
 export function shouldRunNow(
   taskName: string,
-  payload: CatchUpMeta,
+  payload?: unknown,
   graceMs = DEFAULT_CATCHUP_GRACE_MS,
 ): boolean {
-  if (payload.catchUp !== false) return true;
-  if (payload.scheduledFor === undefined) return true;
+  if (!payload || typeof payload !== "object") return true;
+  const meta = payload as CatchUpMeta;
+  if (meta.catchUp !== false) return true;
+  if (meta.scheduledFor === undefined) return true;
 
-  const overdueBy = Date.now() - payload.scheduledFor;
+  const overdueBy = Date.now() - meta.scheduledFor;
   if (overdueBy <= graceMs) return true;
 
   container.logger.debug(

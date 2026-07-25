@@ -1,5 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { getService } from "#lib/module-system/Service.js";
+import { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
 import { makeSuccessCard, makeErrorCard } from "#lib/utilities/cards.js";
@@ -16,6 +17,27 @@ import type { GuildSettingsService } from "#lib/services/GuildSettingsService.js
   subcommands: [{ name: "layout", run: "layout" }],
 })
 export class DashboardCommand extends BaseSubcommand {
+  public override registerApplicationCommands(
+    registry: ApplicationCommandRegistry,
+  ) {
+    registry.registerChatInputCommand((b) =>
+      b
+        .setName(this.name)
+        .setDescription(this.description)
+        .addSubcommand((s) =>
+          s
+            .setName("layout")
+            .setDescription("Set dashboard layout configuration")
+            .addStringOption((o) =>
+              o
+                .setName("layout")
+                .setDescription("Layout string or JSON")
+                .setRequired(true),
+            ),
+        ),
+    );
+  }
+
   private get guildSettingsService(): GuildSettingsService {
     return getService("guild-settings");
   }

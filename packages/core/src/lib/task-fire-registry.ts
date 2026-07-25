@@ -31,7 +31,7 @@ export function registerTaskFireHandler<N extends keyof ScheduledTasks>(
       `[TaskFireRegistry] Overwriting handler for task '${String(name)}'`,
     );
   }
-  registry.set(name, { name, mode, handler } as Registration);
+  registry.set(name, { name, mode, handler } as unknown as Registration);
 
   if (activeConsumer) {
     void activeConsumer

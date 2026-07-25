@@ -39,22 +39,15 @@ export class ConfigService extends Service {
 
     const schema = await this.container.moduleStore.getConfigSchema(moduleName);
     const schemaField = (
-      schema as unknown as ModuleConfigSchema & {
-        shape?: Record<
-          string,
-          {
-            safeParse(v: unknown): {
-              success: boolean;
-              error?: { errors: { message: string }[] };
-            };
-          }
-        >;
+      schema as unknown as {
+        shape?: Record<string, { parse(v: unknown): unknown }>;
       }
     )?.shape?.[key];
     if (schemaField) {
-      const result = schemaField.safeParse(coerced);
-      if (!result.success) {
-        const msg = result.error!.errors.map((e) => e.message).join("; ");
+      try {
+        schemaField.parse(coerced);
+      } catch (err: any) {
+        const msg = err.message || String(err);
         throw new Error(`Invalid value for \`${key}\`: ${msg}`);
       }
     }

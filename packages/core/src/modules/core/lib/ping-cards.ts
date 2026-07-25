@@ -80,9 +80,8 @@ function header(data: PingData, subtitle?: string): SectionBuilder {
     );
 }
 
-/** Shared scaffold for every detail card: accent color, header section, divider. */
+/** Shared scaffold for every detail card: header section, divider. */
 function detailCard(
-  _color: number,
   subtitle: string,
   data: PingData,
 ): ContainerBuilder {
@@ -128,21 +127,21 @@ export function buildOverviewCard(
 
   for (const shard of shards) {
     const ping = shard.ping < 0 ? "Analyzing…" : `${Math.round(shard.ping)}ms`;
-    content += `### __Shard [${shard.id}]__\n`;
+    content += `### __Shard ${shard.id}__\n`;
     content += `${E.space}${E.latency} **Latency**: ${ping}\n`;
     content += `${E.space}${E.uptime} **Uptime**: ${container.utilities.time.formatDuration(data.uptime)}\n`;
-    content += `${E.space}${E.trade} __Resources__:\n`;
+    content += `${E.space}${E.trade} __System Resources__:\n`;
     content += `${E.space}${E.space}${E.memory} **RAM**: ${fmtMB(data.rss)}\n`;
     content += `${E.space}${E.space}${E.cpu} **CPU**: ${Math.round(data.cpuPercent)}%\n`;
-    content += `${E.space}${E.position} __Size__:\n`;
+    content += `${E.space}${E.position} __Community Size__:\n`;
     content += `${E.space}${E.space}${E.servers} **Servers**: ${fmtCount(data.guilds)}\n`;
     content += `${E.space}${E.space}${E.members} **Members**: ${fmtCount(data.users)}\n\n`;
   }
 
   content += `### __External Services__\n`;
-  content += `${E.redis} **Redis**: ${fmtMs(data.redisReadMs)} | Hit Ratio: ${data.redisHitRatio.toFixed(1)}%\n`;
-  content += `${E.sql} **SQL**: ${fmtMs(data.prismaMs)} | Load: ${data.txRate.toFixed(1)} tx/s\n`;
-  content += `${E.rabbit} **RabbitMQ**: ${data.rabbitConnected ? `Connected (${data.rabbitQueued} queued)` : "Offline"}\n`;
+  content += `${E.redis} **Redis Cache**: ${fmtMs(data.redisReadMs)} | Hit Ratio: ${data.redisHitRatio.toFixed(1)}%\n`;
+  content += `${E.sql} **Database**: ${fmtMs(data.prismaMs)} | Load: ${data.txRate.toFixed(1)} tx/s\n`;
+  content += `${E.rabbit} **Message Queue**: ${data.rabbitConnected ? `Connected (${data.rabbitQueued} queued)` : "Offline"}\n`;
 
   c.addTextDisplayComponents(new TextDisplayBuilder().setContent(content));
 
@@ -150,7 +149,7 @@ export function buildOverviewCard(
 }
 
 export function buildGatewayCard(data: PingData): ContainerBuilder {
-  const c = detailCard(0, "📡 Gateway Diagnostics Engine", data);
+  const c = detailCard("📡 Gateway & Connection Status", data);
 
   const node = data.gatewayNode === "Unknown" ? "Analyzing…" : data.gatewayNode;
 
@@ -158,29 +157,28 @@ export function buildGatewayCard(data: PingData): ContainerBuilder {
     new TextDisplayBuilder().setContent(
       [
         executiveSection(
-          "Connection Stability",
+          "Connection Health",
           [
             ["Average Latency", fmtMs(data.wsPing)],
-            ["Heartbeat Jitter", `±${Math.round(data.jitterMs)}ms`],
+            ["Jitter", `±${Math.round(data.jitterMs)}ms`],
           ],
-          data.jitterMs < 5 ? "Rating: Excellent" : "Rating: Nominal",
+          data.jitterMs < 5 ? "Status: Excellent" : "Status: Normal",
         ),
         executiveSection(
-          "Session Lifecycle",
+          "Session Details",
           [
-            ["Handshake Count", `${data.identifies} Identities`],
-            ["Resume Attempts", `${data.resumes} Successful`],
+            ["Initial Handshakes", `${data.identifies} times`],
+            ["Successful Resumes", `${data.resumes} times`],
             ["Regional Gateway", `${node} Hub`],
           ],
           `Connected ${time(new Date(Date.now() - data.uptime), TimestampStyles.RelativeTime)}`,
         ),
         executiveSection(
-          "Traffic Density",
+          "Traffic Activity",
           [
-            ["Observed Ingress", `${data.messagesPerMin.toFixed(0)} msg/min`],
-            ["Active Requests", `${data.activeRequests} Concurrent`],
+            ["Incoming Messages", `${data.messagesPerMin.toFixed(0)} msg/min`],
+            ["Active Requests", `${data.activeRequests} concurrent`],
           ],
-          "Real-time aggregation from regional endpoints",
         ),
       ].join("\n"),
     ),
@@ -194,13 +192,13 @@ export function buildGatewayCard(data: PingData): ContainerBuilder {
     );
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `${Emojis.SPACE}__Cluster Shard Matrix__:`,
+        `${Emojis.SPACE}__Active Shards__:`,
       ),
     );
     const shardLines = data.shards
       .map(
         (s) =>
-          `${Emojis.SPACE}${Emojis.SPACE}**Shard ${s.id}:** ${fmtMs(s.ping)} | ${s.status} | Seq ${s.sequence || 0}`,
+          `${Emojis.SPACE}${Emojis.SPACE}**Shard ${s.id}:** ${fmtMs(s.ping)} | ${s.status} | Sequence ${s.sequence || 0}`,
       )
       .join("\n");
     c.addTextDisplayComponents(new TextDisplayBuilder().setContent(shardLines));
@@ -210,7 +208,7 @@ export function buildGatewayCard(data: PingData): ContainerBuilder {
 }
 
 export function buildEngineCard(data: PingData): ContainerBuilder {
-  const c = detailCard(0, "🏎️ Runtime Performance Audit", data);
+  const c = detailCard("🏎️ Performance & Memory", data);
 
   const heapPct = ((data.heapUsed / data.heapTotal) * 100).toFixed(1);
   c.addTextDisplayComponents(
@@ -252,51 +250,40 @@ export function buildEngineCard(data: PingData): ContainerBuilder {
 }
 
 export function buildHostCard(data: PingData): ContainerBuilder {
-  const c = detailCard(0, `${Emojis.CPU} Bare Metal Infrastructure`, data);
+  const c = detailCard(`${Emojis.CPU} System Infrastructure`, data);
 
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       [
         executiveSection(
-          "Processing Architecture",
+          "Processor Topology",
           [
             ["CPU Model", data.cpuModel],
-            ["Core Topology", `${data.cpuCores} Logic Cores | ${data.arch}`],
-            ["Instruction Flags", data.cpuFlags],
+            ["Logic Cores", `${data.cpuCores} Cores (${data.arch})`],
           ],
-          `IO Wait: ${data.ioWait} cycles`,
         ),
         executiveSection(
-          "Resource Saturation",
+          "Memory & Swap",
           [
             [
-              "RAM Utilization",
-              `${(data.ramUsed / 1024 / 1024 / 1024).toFixed(2)}GB / ${(data.ramTotal / 1024 / 1024 / 1024).toFixed(2)}GB`,
+              "System RAM",
+              `${(data.ramUsed / 1024 / 1024 / 1024).toFixed(2)} GB / ${(data.ramTotal / 1024 / 1024 / 1024).toFixed(2)} GB`,
             ],
-            ["Total Swap Used", `${(data.swapUsedKb / 1024).toFixed(0)}MB`],
+            ["Swap Used", `${(data.swapUsedKb / 1024).toFixed(0)} MB`],
           ],
-          `Saturation: ${((data.ramUsed / data.ramTotal) * 100).toFixed(1)}%`,
         ),
         executiveSection(
-          "Host System State",
+          "Host Environment",
           [
-            ["Kernel Version", `${data.platform} ${data.kernel}`],
+            ["OS / Kernel", `${data.platform} ${data.kernel}`],
             [
-              "Processor Temp",
+              "CPU Temp",
               data.thermalCelsius
                 ? `${data.thermalCelsius.toFixed(1)}°C`
                 : "N/A",
             ],
           ],
-          `Uptime: ${container.utilities.time.formatDuration(data.osUptimeSecs * 1000)}`,
-        ),
-        executiveSection(
-          "Process I/O Metrics",
-          [
-            ["Cumulative Read", fmtKB(data.diskReadBytes)],
-            ["Cumulative Write", fmtKB(data.diskWriteBytes)],
-          ],
-          `Context Switches: ${data.ctxSwitchVol.toLocaleString()}`,
+          `System Uptime: ${container.utilities.time.formatDuration(data.osUptimeSecs * 1000)}`,
         ),
       ].join("\n"),
     ),
@@ -306,25 +293,24 @@ export function buildHostCard(data: PingData): ContainerBuilder {
 }
 
 export function buildPostgresCard(data: PingData): ContainerBuilder {
-  const c = detailCard(0, `${Emojis.DATABASE} Relational Database Audit`, data);
+  const c = detailCard(`${Emojis.DATABASE} Database Health`, data);
 
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       [
         executiveSection(
-          "Database Throughput",
+          "Performance",
           [
-            ["Transaction Rate", `${data.txRate.toFixed(1)} ops/sec`],
-            ["Query Latency", fmtMs(data.prismaMs)],
+            ["Transaction Speed", `${data.txRate.toFixed(1)} ops/sec`],
+            ["Query Response", fmtMs(data.prismaMs)],
           ],
-          `Commits: ${data.dbCommits?.toLocaleString()}`,
         ),
         executiveSection(
-          "Storage Intelligence",
+          "Database Details",
           [
-            ["Total DB Size", data.dbSize ?? "N/A"],
+            ["Database Size", data.dbSize ?? "N/A"],
             [
-              "Server Uptime",
+              "Database Uptime",
               data.dbUptimeSecs
                 ? container.utilities.time.formatDuration(
                     data.dbUptimeSecs * 1000,
@@ -332,7 +318,7 @@ export function buildPostgresCard(data: PingData): ContainerBuilder {
                 : "N/A",
             ],
           ],
-          `Prisma v${data.prismaVersion} | Monitoring active`,
+          `Prisma ORM v${data.prismaVersion}`,
         ),
       ].join("\n"),
     ),
@@ -346,13 +332,13 @@ export function buildPostgresCard(data: PingData): ContainerBuilder {
     );
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `${Emojis.SPACE}__${Emojis.ANALYTICS} Table Breakdown__:`,
+        `${Emojis.SPACE}__${Emojis.ANALYTICS} Table Storage__:`,
       ),
     );
     const tableLines = data.tableSizes
       .map(
         (t) =>
-          `${Emojis.SPACE}${Emojis.SPACE}**${t.name}:** ${fmtKB(t.bytes)}${t.deadTuples > 0n ? ` (${Emojis.WARNING_SIGN} ${t.deadTuples.toLocaleString()} dead)` : ""}`,
+          `${Emojis.SPACE}${Emojis.SPACE}**${t.name}:** ${fmtKB(t.bytes)}`,
       )
       .join("\n");
     c.addTextDisplayComponents(new TextDisplayBuilder().setContent(tableLines));
@@ -362,35 +348,33 @@ export function buildPostgresCard(data: PingData): ContainerBuilder {
 }
 
 export function buildRedisCard(data: PingData): ContainerBuilder {
-  const c = detailCard(0, `${Emojis.CACHE} In-Memory Cache Performance`, data);
+  const c = detailCard(`${Emojis.CACHE} Cache Performance`, data);
 
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       [
         executiveSection(
-          "Memory Utilization",
+          "Memory Usage",
           [
-            ["Current Used", fmtMB(data.redisMemUsedBytes)],
-            ["Recorded Peak", fmtMB(data.redisMemPeakBytes)],
-            ["Frag. Ratio", `${data.redisFragRatio.toFixed(2)}x`],
+            ["Current Usage", fmtMB(data.redisMemUsedBytes)],
+            ["Peak Usage", fmtMB(data.redisMemPeakBytes)],
           ],
-          `Evicted Keys: ${data.redisEvicted.toLocaleString()}`,
         ),
         executiveSection(
-          "Cache Efficiency",
+          "Cache Hits & Efficiency",
           [
             ["Hit Ratio", `${data.redisHitRatio.toFixed(2)}%`],
-            ["Total Keys", `${data.redisTotalKeys.toLocaleString()} Managed`],
+            ["Tracked Keys", `${data.redisTotalKeys.toLocaleString()}`],
           ],
           `Hits: ${data.redisHits.toLocaleString()} | Misses: ${data.redisMisses.toLocaleString()}`,
         ),
         executiveSection(
-          "Connectivity & State",
+          "Connection",
           [
-            ["Version Info", `Redis v${data.redisVersion}`],
-            ["Active Clients", `${data.redisClients} Connected`],
+            ["Redis Version", `v${data.redisVersion}`],
+            ["Active Clients", `${data.redisClients} connected`],
           ],
-          `Latency: ${fmtMs(data.redisReadMs)} / ${fmtMs(data.redisWriteMs)} | Up: ${container.utilities.time.formatDuration(data.redisUptimeSecs * 1000)}`,
+          `Latency: ${fmtMs(data.redisReadMs)} read / ${fmtMs(data.redisWriteMs)} write`,
         ),
       ].join("\n"),
     ),
@@ -400,27 +384,24 @@ export function buildRedisCard(data: PingData): ContainerBuilder {
 }
 
 export function buildRabbitCard(data: PingData): ContainerBuilder {
-  const c = detailCard(0, `${Emojis.QUEUE} Distributed Event Pipeline`, data);
+  const c = detailCard(`${Emojis.QUEUE} Message Queue Pipeline`, data);
 
   if (data.rabbitConnected) {
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
           executiveSection(
-            "Connection Integrity",
+            "Connection Status",
             [
-              ["Status", "Connected & Operational"],
-              ["Node Heartbeat", "Active"],
+              ["Status", "Connected and healthy"],
             ],
-            "Monitoring primary exchange synchronization",
           ),
           executiveSection(
-            "RPC Saturation",
+            "Queue Load",
             [
-              ["Pending Requests", `${data.rabbitQueued} Messages`],
-              ["Active Consumers", `${data.rabbitConsumers} Workers`],
+              ["Pending Messages", `${data.rabbitQueued}`],
+              ["Active Worker Processes", `${data.rabbitConsumers}`],
             ],
-            "Monitoring lumi.rpc.requests saturation",
           ),
         ].join("\n"),
       ),
@@ -428,7 +409,7 @@ export function buildRabbitCard(data: PingData): ContainerBuilder {
   } else {
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `### ${Emojis.CROSS} PIPELINE OFFLINE\n> **Critical connection failure detected for RabbitMQ.**\n┕ -# Background tasks and inter-module RPC are suspended.`,
+        `### ${Emojis.CROSS} Message Queue Offline\n> Background tasks and event queues are currently suspended.`,
       ),
     );
   }
@@ -437,7 +418,7 @@ export function buildRabbitCard(data: PingData): ContainerBuilder {
 }
 
 export function buildBotCard(data: PingData): ContainerBuilder {
-  const c = detailCard(0, `${Emojis.BOT} Core Intelligence Diagnostics`, data);
+  const c = detailCard(`${Emojis.BOT} Bot System Summary`, data);
 
   const memPerGuild =
     data.guilds > 0 ? (data.rss / 1024 / 1024 / data.guilds).toFixed(2) : "0";
