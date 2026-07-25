@@ -33,6 +33,7 @@ import {
   type CardReply,
 } from "#lib/utilities/cards.js";
 import { restartChoiceRow } from "#lib/restart.js";
+import { updateLumiCore } from "#lib/utilities/self-update.js";
 import { loadFeatures, buildFeatureListView } from "#modules/core/lib/config-panel.js";
 import {
   buildHubView,
@@ -201,6 +202,36 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
                 ? [restartChoiceRow(interaction.user.id)]
                 : undefined,
             }),
+          ),
+        );
+      }
+      case "update_core": {
+        const res = await updateLumiCore();
+        if (res.error) {
+          return interaction.editReply(
+            ephemeralCard(
+              makeErrorCard("Core Update Failed", res.error),
+            ),
+          );
+        }
+
+        if (res.updated) {
+          const body = `Successfully updated Lumi core codebase! (**${res.commitsCount}** new commit(s) pulled).\n\n**New Commit:** \`${res.latestCommit}\` (from \`${res.currentCommit}\`)\n\n**Changelog:**\n\`\`\`\n${res.changelog}\n\`\`\``;
+          return interaction.editReply(
+            ephemeralCard(
+              makeSuccessCard(`${Emojis.BOT} Lumi Core Updated`, body, {
+                actionRows: [restartChoiceRow(interaction.user.id)],
+              }),
+            ),
+          );
+        }
+
+        return interaction.editReply(
+          ephemeralCard(
+            makeSuccessCard(
+              `${Emojis.BOT} Lumi Core Up to Date`,
+              `Lumi core is already running the latest commit (\`${res.currentCommit}\`).`,
+            ),
           ),
         );
       }

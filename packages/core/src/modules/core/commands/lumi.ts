@@ -1,40 +1,77 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { Command, container } from "@sapphire/framework";
-import type { ChatInputCommandInteraction } from "discord.js";
-import { BaseCommand, sendReply } from "#lib/commands.js";
+import { container } from "@sapphire/framework";
+import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
-import { ephemeralCard } from "#lib/utilities/cards.js";
+import {
+  makeSuccessCard,
+  makeErrorCard,
+  makeInfoCard,
+} from "#lib/utilities/cards.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import { buildHubView } from "#modules/core/lib/hub-panel.js";
 import { loadFeatures } from "#modules/core/lib/config-panel.js";
+import { updateLumiCore } from "#lib/utilities/self-update.js";
+import { restartChoiceRow } from "#lib/restart.js";
 
-@ApplyOptions<BaseCommand.Options>({
+@ApplyOptions<BaseSubcommand.Options>({
   name: "lumi",
-  description: "Open the Lumi control panel for this server",
+  description: "Open the Lumi control panel or update Lumi core",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.ADMIN,
+  prefixEnabled: true,
+  subcommands: [
+    { name: "update", run: "update" },
+    { name: "panel", run: "panel", default: true },
+  ],
 })
-export class LumiCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: Command.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder.setName(this.name).setDescription(this.description),
-    );
-  }
-
-  public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-    const guildId = interaction.guild!.id;
+export class LumiCommand extends BaseSubcommand {
+  public async panel(ctx: CommandContext): Promise<void> {
+    const guildId = ctx.guildId!;
     const [features, settings] = await Promise.all([
       loadFeatures(guildId),
       container.db.config.getGuildSettings(guildId),
     ]);
-    return sendReply(
-      interaction,
-      ephemeralCard(
-        buildHubView({
-          moduleCount: features.length,
-          enabledCount: features.filter((f) => f.guildEnabled).length,
-          prefix: settings.prefix,
-          locale: settings.locale,
+    await ctx.reply(
+      buildHubView({
+        moduleCount: features.length,
+        enabledCount: features.filter((f) => f.guildEnabled).length,
+        prefix: settings.prefix,
+        locale: settings.locale,
+      }),
+    );
+  }
+
+  public async update(ctx: CommandContext): Promise<void> {
+    await ctx.checkPermission(PermissionLevel.BOT_OWNER);
+    await ctx.reply(
+      makeInfoCard(
+        "Updating Lumi Core",
+        `${Emojis.LOADING} Checking and pulling latest Lumi core codebase...`,
+      ),
+    );
+
+    const res = await updateLumiCore();
+    if (res.error) {
+      await ctx.reply(
+        makeErrorCard(`${Emojis.ERROR} Core Update Failed`, res.error),
+      );
+      return;
+    }
+
+    if (res.updated) {
+      const body = `Successfully updated Lumi core codebase! (**${res.commitsCount}** new commit(s) pulled).\n\n**New Commit:** \`${res.latestCommit}\` (from \`${res.currentCommit}\`)\n\n**Changelog:**\n\`\`\`\n${res.changelog}\n\`\`\``;
+      await ctx.reply(
+        makeSuccessCard(`${Emojis.BOT} Lumi Core Updated`, body, {
+          actionRows: [restartChoiceRow(ctx.user.id)],
         }),
+      );
+      return;
+    }
+
+    await ctx.reply(
+      makeSuccessCard(
+        `${Emojis.BOT} Lumi Core Up to Date`,
+        `Lumi core is already running the latest commit (\`${res.currentCommit}\`).`,
       ),
     );
   }
