@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Community Support & Questions
+    url: https://github.com/lumi-devs/lumi/discussions
+    about: Ask questions, get help with setup or configuration, or join community discussions.
+  - name: 💡 Feature Ideas & Feature Proposals
+    url: https://github.com/lumi-devs/lumi/discussions/new?category=ideas
+    about: Share ideas or feature proposals before creating formal issue tracking.

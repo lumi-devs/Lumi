@@ -1,0 +1,41 @@
+# Configuration for actions/labeler
+'pkg:core':
+  - 'packages/core/**'
+
+'pkg:event-bus':
+  - 'packages/event-bus/**'
+
+'pkg:sharding':
+  - 'packages/sharding/**'
+
+'pkg:observability':
+  - 'packages/observability/**'
+
+'pkg:contracts':
+  - 'packages/contracts/**'
+
+'pkg:sdk':
+  - 'packages/sdk/**'
+
+'app:dashboard':
+  - 'apps/dashboard/**'
+
+'app:gateway':
+  - 'apps/gateway/**'
+
+'app:worker':
+  - 'apps/worker/**'
+
+'app:scheduler':
+  - 'apps/scheduler/**'
+
+'area:ci':
+  - '.github/**'
+
+'area:docs':
+  - '**/*.md'
+  - 'docs/**'
+
+'area:docker':
+  - 'docker-compose*.yml'
+  - 'Dockerfile*'
