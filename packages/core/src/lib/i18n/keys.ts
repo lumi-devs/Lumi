@@ -367,6 +367,104 @@ export const CommandsKeys = {
   AfkSetTitle: "commands:afkSetTitle",
   /** Value: `commands:afkSet` */
   AfkSet: "commands:afkSet",
+  /** Value: `commands:nickUsageTitle` */
+  NickUsageTitle: "commands:nickUsageTitle",
+  /** Value: `commands:nickUsage` */
+  NickUsage: "commands:nickUsage",
+  /** Value: `commands:nickInvalidTargetTitle` */
+  NickInvalidTargetTitle: "commands:nickInvalidTargetTitle",
+  /** Value: `commands:nickInvalidTarget` */
+  NickInvalidTarget: "commands:nickInvalidTarget",
+  /** Value: `commands:nickPermissionDeniedTitle` */
+  NickPermissionDeniedTitle: "commands:nickPermissionDeniedTitle",
+  /** Value: `commands:nickRoleHierarchy` */
+  NickRoleHierarchy: "commands:nickRoleHierarchy",
+  /** Value: `commands:nickSuccessTitle` */
+  NickSuccessTitle: "commands:nickSuccessTitle",
+  /** Value: `commands:nickResetTitle` */
+  NickResetTitle: "commands:nickResetTitle",
+  /** Value: `commands:nickChangedDesc` */
+  NickChangedDesc: "commands:nickChangedDesc",
+  /** Value: `commands:nickResetDesc` */
+  NickResetDesc: "commands:nickResetDesc",
+  /** Value: `commands:nickFailed` */
+  NickFailed: "commands:nickFailed",
+  /** Value: `commands:purgeInvalidAmountTitle` */
+  PurgeInvalidAmountTitle: "commands:purgeInvalidAmountTitle",
+  /** Value: `commands:purgeInvalidAmount` */
+  PurgeInvalidAmount: "commands:purgeInvalidAmount",
+  /** Value: `commands:purgeInitiatingTitle` */
+  PurgeInitiatingTitle: "commands:purgeInitiatingTitle",
+  /** Value: `commands:purgeInitiating` */
+  PurgeInitiating: "commands:purgeInitiating",
+  /** Value: `commands:purgeProceeding` */
+  PurgeProceeding: "commands:purgeProceeding",
+  /** Value: `commands:purgeCompleteTitle` */
+  PurgeCompleteTitle: "commands:purgeCompleteTitle",
+  /** Value: `commands:purgeComplete` */
+  PurgeComplete: "commands:purgeComplete",
+  /** Value: `commands:purgeConfirmTitle` */
+  PurgeConfirmTitle: "commands:purgeConfirmTitle",
+  /** Value: `commands:purgeConfirmText` */
+  PurgeConfirmText: "commands:purgeConfirmText",
+  /** Value: `commands:purgeConfirmBtn` */
+  PurgeConfirmBtn: "commands:purgeConfirmBtn",
+  /** Value: `commands:purgeCancelBtn` */
+  PurgeCancelBtn: "commands:purgeCancelBtn",
+  /** Value: `commands:purgeCancelledTitle` */
+  PurgeCancelledTitle: "commands:purgeCancelledTitle",
+  /** Value: `commands:purgeCancelledText` */
+  PurgeCancelledText: "commands:purgeCancelledText",
+  /** Value: `commands:purgeTimeoutText` */
+  PurgeTimeoutText: "commands:purgeTimeoutText",
+  /** Value: `commands:mediaCooldownTitle` */
+  MediaCooldownTitle: "commands:mediaCooldownTitle",
+  /** Value: `commands:mediaCooldown` */
+  MediaCooldown: "commands:mediaCooldown",
+  /** Value: `commands:mediaLinkBtn` */
+  MediaLinkBtn: "commands:mediaLinkBtn",
+  /** Value: `commands:mediaViewBtn` */
+  MediaViewBtn: "commands:mediaViewBtn",
+  /** Value: `commands:mediaCardTitle` */
+  MediaCardTitle: "commands:mediaCardTitle",
+  /** Value: `commands:moduleNotFoundTitle` */
+  ModuleNotFoundTitle: "commands:moduleNotFoundTitle",
+  /** Value: `commands:moduleNotFound` */
+  ModuleNotFound: "commands:moduleNotFound",
+  /** Value: `commands:moduleForbiddenTitle` */
+  ModuleForbiddenTitle: "commands:moduleForbiddenTitle",
+  /** Value: `commands:moduleCannotDisableCore` */
+  ModuleCannotDisableCore: "commands:moduleCannotDisableCore",
+  /** Value: `commands:moduleCannotDisableEssential` */
+  ModuleCannotDisableEssential: "commands:moduleCannotDisableEssential",
+  /** Value: `commands:moduleEnabledTitle` */
+  ModuleEnabledTitle: "commands:moduleEnabledTitle",
+  /** Value: `commands:moduleDisabledTitle` */
+  ModuleDisabledTitle: "commands:moduleDisabledTitle",
+  /** Value: `commands:moduleEnabledSuccess` */
+  ModuleEnabledSuccess: "commands:moduleEnabledSuccess",
+  /** Value: `commands:moduleDisabledSuccess` */
+  ModuleDisabledSuccess: "commands:moduleDisabledSuccess",
+  /** Value: `commands:helpTitle` */
+  HelpTitle: "commands:helpTitle",
+  /** Value: `commands:helpModuleHeader` */
+  HelpModuleHeader: "commands:helpModuleHeader",
+  /** Value: `commands:helpNoDescription` */
+  HelpNoDescription: "commands:helpNoDescription",
+  /** Value: `commands:helpNoCommands` */
+  HelpNoCommands: "commands:helpNoCommands",
+  /** Value: `commands:helpFooter` */
+  HelpFooter: "commands:helpFooter",
+  /** Value: `commands:aboutTitle` */
+  AboutTitle: "commands:aboutTitle",
+  /** Value: `commands:aboutTagline` */
+  AboutTagline: "commands:aboutTagline",
+  /** Value: `commands:aboutInstanceStats` */
+  AboutInstanceStats: "commands:aboutInstanceStats",
+  /** Value: `commands:aboutCoreArch` */
+  AboutCoreArch: "commands:aboutCoreArch",
+  /** Value: `commands:aboutLoadedModules` */
+  AboutLoadedModules: "commands:aboutLoadedModules",
 } as const;
 
 export const LanguageKeys = {

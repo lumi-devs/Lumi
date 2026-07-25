@@ -13,7 +13,8 @@ import {
   ButtonBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { BaseCommand, sendReply } from "#lib/commands.js";
+import { BaseCommand, sendReply, fetchTyped } from "#lib/commands.js";
+import { LanguageKeys } from "#lib/i18n/keys.js";
 import { LumiInfo } from "#lib/utilities/misc.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { BotConfig } from "#lib/utilities/config.js";
@@ -34,19 +35,20 @@ export class AboutCommand extends BaseCommand {
   }
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-    const card = await this.buildAboutCard();
+    const card = await this.buildAboutCard(interaction);
     await sendReply(interaction, ephemeralCard(card));
   }
 
   public override async messageRun(message: Message) {
     if (!message.channel.isSendable()) return;
-    const card = await this.buildAboutCard();
+    const card = await this.buildAboutCard(message);
     await message.reply({
       ...card,
     });
   }
 
-  private async buildAboutCard() {
+  private async buildAboutCard(target: ChatInputCommandInteraction | Message) {
+    const t = await fetchTyped(target);
     const data = await collectPingData();
 
     const ageDays = LumiInfo.getAgeInDays();
@@ -67,25 +69,30 @@ export class AboutCommand extends BaseCommand {
       .map((m) => m.meta.displayName)
       .join(", ");
 
+    const tagline = t(LanguageKeys.Commands.AboutTagline);
+    const instanceStatsHeader = t(LanguageKeys.Commands.AboutInstanceStats);
+    const coreArchHeader = t(LanguageKeys.Commands.AboutCoreArch);
+    const loadedModulesHeader = t(LanguageKeys.Commands.AboutLoadedModules);
+
     const body = [
-      `${Emojis.BOT} **${LumiInfo.tagline}** (Codename: *${LumiInfo.codename}*)\n` +
+      `${Emojis.BOT} **${tagline}** (Codename: *${LumiInfo.codename}*)\n` +
         `Bringing modular harmony to Discord since 11 Jul 2026 (over ${ageText}!).`,
 
-      `### ${Emojis.ANALYTICS} INSTANCE STATISTICS\n` +
+      `### ${Emojis.ANALYTICS} ${instanceStatsHeader}\n` +
         `> **Uptime**\n> ┕ ${time(bootTime, TimestampStyles.RelativeTime)}\n` +
         `> **Host Uptime**\n> ┕ ${time(hostBootTime, TimestampStyles.RelativeTime)}\n` +
         `> **Servers**\n> ┕ ***${fmtCount(serverCount)}***\n` +
         `> **Members**\n> ┕ ***${fmtCount(userCount)}***\n` +
         `> **Channels**\n> ┕ ***${fmtCount(channelCount)}***`,
 
-      `### ${Emojis.GEAR} CORE ARCHITECTURE\n` +
+      `### ${Emojis.GEAR} ${coreArchHeader}\n` +
         `> **Lumi Version**\n> ┕ ***v${LumiInfo.version}***\n` +
         `> **Runtime Environment**\n> ┕ ***${data.runtime}***\n` +
         `> **Core Libraries**\n> ┕ ***discord.js v${data.djsVersion} | Sapphire v${data.sapphireVersion}***\n` +
         `> **Storage & Cache**\n> ┕ ***Prisma v${data.prismaVersion} | Redis v${data.redisVersion}***\n` +
         `> **Event Pipeline**\n> ┕ ***RabbitMQ (${data.rabbitConnected ? "Connected" : "Offline"}) | BullMQ***`,
 
-      `### ${Emojis.REPO} LOADED MODULES\n` +
+      `### ${Emojis.REPO} ${loadedModulesHeader}\n` +
         `┕ *${loadedModulesList || "None"}*`,
     ];
 

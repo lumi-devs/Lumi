@@ -1,12 +1,13 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Args } from "@sapphire/framework";
 import { Message, PermissionFlagsBits } from "discord.js";
-import { BaseCommand } from "#lib/commands.js";
+import { BaseCommand, fetchTyped } from "#lib/commands.js";
 import {
   makeErrorCard,
   makeWarningCard,
   makeSuccessCard,
 } from "#lib/utilities/cards.js";
+import { LanguageKeys } from "#lib/i18n/keys.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "nick",
@@ -17,10 +18,15 @@ import {
 })
 export class UserCommand extends BaseCommand {
   public override async messageRun(message: Message, args: Args) {
+    const t = await fetchTyped(message);
+
     const member = await args.pick("member").catch(() => null);
     if (!member) {
       return message.reply({
-        ...makeErrorCard("Usage", "`,nick @user [new_nick]`"),
+        ...makeErrorCard(
+          t(LanguageKeys.Commands.NickUsageTitle),
+          t(LanguageKeys.Commands.NickUsage),
+        ),
         allowedMentions: {},
       });
     }
@@ -30,8 +36,8 @@ export class UserCommand extends BaseCommand {
     if (member.id === message.author.id) {
       return message.reply({
         ...makeWarningCard(
-          "Invalid Target",
-          "You cannot change your own nickname this way.",
+          t(LanguageKeys.Commands.NickInvalidTargetTitle),
+          t(LanguageKeys.Commands.NickInvalidTarget),
         ),
         allowedMentions: {},
       });
@@ -44,8 +50,8 @@ export class UserCommand extends BaseCommand {
     ) {
       return message.reply({
         ...makeErrorCard(
-          "Permission Denied",
-          "Cannot change nickname of someone equal to or above my role.",
+          t(LanguageKeys.Commands.NickPermissionDeniedTitle),
+          t(LanguageKeys.Commands.NickRoleHierarchy),
         ),
         allowedMentions: {},
       });
@@ -55,22 +61,29 @@ export class UserCommand extends BaseCommand {
       const oldNick = member.displayName;
       await member.setNickname(newNick);
 
-      const action = newNick
-        ? `**${oldNick}** → **${newNick}**`
-        : `**${oldNick}**'s nickname reset.`;
-      const title = newNick ? "Nickname Changed" : "Nickname Reset";
-
-      const finalDesc = `${action}\n\n-# Changed by ${message.author.tag}`;
+      const title = newNick
+        ? t(LanguageKeys.Commands.NickSuccessTitle)
+        : t(LanguageKeys.Commands.NickResetTitle);
+      const desc = newNick
+        ? t(LanguageKeys.Commands.NickChangedDesc, {
+            oldNick,
+            newNick,
+            tag: message.author.tag,
+          })
+        : t(LanguageKeys.Commands.NickResetDesc, {
+            oldNick,
+            tag: message.author.tag,
+          });
 
       return message.reply({
-        ...makeSuccessCard(title, finalDesc),
+        ...makeSuccessCard(title, desc),
         allowedMentions: {},
       });
     } catch {
       return message.reply({
         ...makeErrorCard(
-          "Permission Denied",
-          "Missing permissions to change that nickname.",
+          t(LanguageKeys.Commands.NickPermissionDeniedTitle),
+          t(LanguageKeys.Commands.NickFailed),
         ),
         allowedMentions: {},
       });
