@@ -2,12 +2,12 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { BucketScope, Command } from "@sapphire/framework";
 import { type ChatInputCommandInteraction, type Message } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
-import { collectPingData } from "#lib/ping-collect.js";
+import { collectPingData } from "#modules/core/lib/ping-collect.js";
 import {
   buildOverviewCard,
   PING_FLAGS,
   EPHEMERAL_FLAGS,
-} from "#lib/ping-cards.js";
+} from "#modules/core/lib/ping-cards.js";
 
 const LIVE_UPDATES_DURATION = 60_000;
 const LIVE_UPDATE_INTERVAL = 10_000;
@@ -15,7 +15,7 @@ const LIVE_UPDATE_INTERVAL = 10_000;
 const activeIntervals = new Map<string, ReturnType<typeof setInterval>>();
 export const pingViewStates = new Map<
   string,
-  import("#lib/ping-cards.js").PingCategory | "overview"
+  import("#modules/core/lib/ping-cards.js").PingCategory | "overview"
 >();
 
 @ApplyOptions<Command.Options>({
@@ -100,7 +100,7 @@ export class PingCommand extends BaseCommand {
       try {
         const data = await collectPingData();
         const state = pingViewStates.get(userId) || "overview";
-        const { buildDetailCard } = await import("#lib/ping-cards.js");
+        const { buildDetailCard } = await import("#modules/core/lib/ping-cards.js");
         const card =
           state === "overview"
             ? buildOverviewCard({ roundTrip: null, ...data }, userId)

@@ -35,7 +35,7 @@ import {
   type ModuleMeta,
 } from "#lib/module-system/Module.js";
 import { makeCard, noPingCard, type CardReply } from "#lib/utilities/cards.js";
-import { backToHubRow } from "#lib/hub-panel.js";
+import { backToHubRow } from "#modules/core/lib/hub-panel.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import type {
   ConfigHistoryEntry,

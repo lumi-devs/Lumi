@@ -30,7 +30,7 @@ import {
   loadDetail,
   loadFeatures,
   type FeatureDetail,
-} from "#lib/config-panel.js";
+} from "#modules/core/lib/config-panel.js";
 
 const OVERRIDE_TYPES = new Set(["channel", "role", "user", "category"]);
 

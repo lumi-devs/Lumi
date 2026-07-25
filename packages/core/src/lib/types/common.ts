@@ -1,5 +1,5 @@
 import type { Redis } from "ioredis";
-import type { DatabaseClient } from "#lib/database/client.js";
+import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { ModuleStore } from "#lib/module-system/ModuleStore.js";
 import type { RabbitClient } from "#lib/rabbitmq/index.js";
 import type { InvalidationBus } from "#lib/database/redis.js";

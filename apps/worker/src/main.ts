@@ -2,24 +2,7 @@ import "./telemetry.js";
 import "@lumi/core/setup";
 import { container } from "@sapphire/framework";
 import { shutdownTracing, runDrainSequence } from "@lumi/observability";
-import * as Sentry from "@sentry/node";
-import { LumiClient, envIsDefined, envParseString } from "@lumi/core";
-
-if (
-  envParseString("SENTRY_ENABLED", "false") === "true" &&
-  envIsDefined("SENTRY_DSN")
-) {
-  Sentry.init({
-    dsn: envParseString("SENTRY_DSN"),
-    integrations: [
-      Sentry.consoleIntegration(),
-      Sentry.httpIntegration({ breadcrumbs: true }),
-      Sentry.prismaIntegration(),
-    ],
-    environment: envParseString("NODE_ENV"),
-    tracesSampleRate: 0.1,
-  });
-}
+import { LumiClient, envParseString } from "@lumi/core";
 
 const client = await LumiClient.bootstrap().catch((err: unknown): never => {
   console.error(

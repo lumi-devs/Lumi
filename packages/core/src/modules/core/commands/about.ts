@@ -14,10 +14,10 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { BaseCommand, sendReply } from "#lib/commands.js";
-import { LumiInfo } from "#lib/utilities/branding.js";
+import { LumiInfo } from "#lib/utilities/misc.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { BotConfig } from "#lib/utilities/config.js";
-import { collectPingData } from "#lib/ping-collect.js";
+import { collectPingData } from "#modules/core/lib/ping-collect.js";
 import { makeCard, ephemeralCard } from "#lib/utilities/cards.js";
 
 @ApplyOptions<Command.Options>({

@@ -5,7 +5,7 @@ import {
   createGuildTransaction,
   GuildWriteTransaction,
 } from "#lib/guild-transaction.js";
-import type { DatabaseClient } from "#lib/database/client.js";
+import type { DatabaseClient } from "#lib/prisma/client.js";
 import { ConfigRepository } from "#lib/prisma/repositories/ConfigRepository.js";
 import { ModuleRepository } from "#lib/prisma/repositories/ModuleRepository.js";
 import { GuildKVRepository } from "#lib/prisma/repositories/GuildKVRepository.js";

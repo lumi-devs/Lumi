@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import type { Guild } from "@prisma/client";
-import type { DatabaseClient } from "#lib/database/client.js";
+import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { Redis } from "ioredis";
 import { RedisKeys } from "#lib/database/redis.js";
 import { acquireRedisLock } from "#lib/redis-lock.js";

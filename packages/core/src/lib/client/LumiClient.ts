@@ -30,7 +30,7 @@ import {
 import { SchedulerRequestConsumer } from "#lib/scheduler-request-consumer.js";
 import { TaskFireConsumer } from "#lib/task-fire-registry.js";
 import { registerCoreFireHandlers } from "#lib/core-fire-handlers.js";
-import { prisma } from "#lib/database/client.js";
+import { prisma } from "#lib/prisma/client.js";
 import {
   createRedisClient,
   parseRedisConnectionOption,

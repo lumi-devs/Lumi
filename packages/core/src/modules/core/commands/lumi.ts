@@ -4,8 +4,8 @@ import type { ChatInputCommandInteraction } from "discord.js";
 import { BaseCommand, sendReply } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
 import { ephemeralCard } from "#lib/utilities/cards.js";
-import { buildHubView } from "#lib/hub-panel.js";
-import { loadFeatures } from "#lib/config-panel.js";
+import { buildHubView } from "#modules/core/lib/hub-panel.js";
+import { loadFeatures } from "#modules/core/lib/config-panel.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "lumi",
