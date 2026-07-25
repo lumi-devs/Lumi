@@ -27,6 +27,7 @@ export interface ModuleManifest {
   description: string;
   version: string;
   isCore?: boolean;
+  disableable?: boolean;
   dependencies?: string[];
   conflicts?: string[];
   configOverrides?: boolean;

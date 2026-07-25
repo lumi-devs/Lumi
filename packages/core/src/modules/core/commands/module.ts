@@ -443,10 +443,10 @@ export class ModuleCommand extends BaseSubcommand {
           `Module **${name}** was not discovered.`,
         );
       }
-      if (record.meta.isCore && !enabled) {
+      if (!enabled && !this.container.moduleStore.isModuleDisableable(name)) {
         return makeErrorCard(
           "Forbidden",
-          `Cannot disable Core module **${name}**.`,
+          `Module **${record.meta.displayName}** is essential and cannot be disabled.`,
         );
       }
       await this.container.moduleStore.setEnabled(name, enabled);

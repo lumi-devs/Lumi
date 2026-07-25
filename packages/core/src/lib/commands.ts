@@ -401,6 +401,7 @@ export abstract class BaseCommand extends Command implements CommandLike {
       this,
       options.permissionLevel ?? PermissionLevel.USER,
     );
+    this.preconditions.append("ModuleEnabled");
   }
 }
 
@@ -446,6 +447,7 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
       this,
       options.permissionLevel ?? PermissionLevel.USER,
     );
+    this.preconditions.append("ModuleEnabled");
   }
 }
 
