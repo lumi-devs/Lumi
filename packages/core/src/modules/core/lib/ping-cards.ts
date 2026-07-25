@@ -94,12 +94,11 @@ function header(data: PingData, subtitle?: string): SectionBuilder {
 
 /** Shared scaffold for every detail card: accent color, header section, divider. */
 function detailCard(
-  color: number,
+  _color: number,
   subtitle: string,
   data: PingData,
 ): ContainerBuilder {
   const c = new ContainerBuilder();
-  c.setAccentColor(color);
   c.addSectionComponents(header(data, subtitle));
   c.addSeparatorComponents(
     new SeparatorBuilder()
@@ -114,7 +113,6 @@ export function buildOverviewCard(
   _userId: string,
 ): ContainerBuilder {
   const c = new ContainerBuilder();
-  c.setAccentColor(getStatusColor(data));
 
   const E = {
     online: Emojis.SUCCESS,
