@@ -393,6 +393,25 @@ export abstract class BaseCommand extends Command implements CommandLike {
    */
   public run?(ctx: CommandContext): Awaited<unknown> | Promise<unknown>;
 
+  public reply(target: CommandReplyTarget, payload: InteractionReplyOptions): Promise<void> {
+    return sendReply(target, payload);
+  }
+  public replySuccess(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
+    return replySuccess(target, title, body, opts);
+  }
+  public replyError(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
+    return replyError(target, title, body, opts);
+  }
+  public replyWarning(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
+    return replyWarning(target, title, body, opts);
+  }
+  public replyInfo(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
+    return replyInfo(target, title, body, opts);
+  }
+  public checkPermission(interaction: ChatInputCommandInteraction, level: PermissionLevel): Promise<void> {
+    return assertPermissionLevel(interaction, level);
+  }
+
   protected override parseConstructorPreConditions(
     options: BaseCommand.Options,
   ): void {
@@ -437,6 +456,25 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
     defineCtxWrappers(this, runNames, options.prefixEnabled ?? false);
     instrumentCommandPiece(this);
     autoApplyCommandDefaults(this);
+  }
+
+  public reply(target: CommandReplyTarget, payload: InteractionReplyOptions): Promise<void> {
+    return sendReply(target, payload);
+  }
+  public replySuccess(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
+    return replySuccess(target, title, body, opts);
+  }
+  public replyError(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
+    return replyError(target, title, body, opts);
+  }
+  public replyWarning(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
+    return replyWarning(target, title, body, opts);
+  }
+  public replyInfo(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
+    return replyInfo(target, title, body, opts);
+  }
+  public checkPermission(interaction: ChatInputCommandInteraction, level: PermissionLevel): Promise<void> {
+    return assertPermissionLevel(interaction, level);
   }
 
   protected override parseConstructorPreConditions(

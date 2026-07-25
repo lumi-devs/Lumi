@@ -5,6 +5,7 @@ import {
   RegisterBehavior,
   LogLevel,
 } from "@sapphire/framework";
+import "@sapphire/plugin-hmr/register";
 import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
 import {
   GatewayIntentBits,

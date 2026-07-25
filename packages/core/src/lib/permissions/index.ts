@@ -9,6 +9,17 @@ import type {
 } from "discord.js";
 import { BotConfig } from "#lib/utilities/config.js";
 
+import "./preconditions/Administrator.js";
+import "./preconditions/BotOwner.js";
+import "./preconditions/GuildOwner.js";
+import "./preconditions/MaintenanceMode.js";
+import "./preconditions/Moderator.js";
+import "./preconditions/ModuleEnabled.js";
+import "./preconditions/NotBlocked.js";
+import "./preconditions/NotIgnored.js";
+import "./preconditions/PermissionOverrides.js";
+
+
 const OWNER_IDS: ReadonlySet<string> = new Set(
   envParseString("OWNER_IDS", "")
     .split(",")
