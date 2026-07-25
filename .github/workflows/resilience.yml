@@ -1,11 +1,7 @@
-name: Chaos & verify (distributed paths)
+name: Resilience & Fault Tolerance Verification
 
-# HARDENING P2.1 + P2.2 — runs the chaos/verify suite against ephemeral infra.
-# `bun run verify:chaos` is the authoritative gate: the six Redis-backed legs plus
-# (because NATS_URL is set below) the two NATS/JetStream legs — gateway-proxy
-# throughput/SLO and DLQ/redelivery parity. Both transports are now hard-gated.
-#
-# Not on every PR (chaos is slow): master pushes, a nightly schedule, and manual.
+# Runs the distributed resilience & fault-tolerance verification suite against ephemeral infrastructure.
+# `bun run verify:resilience` tests message delivery, ordering, ACK removal, burst concurrency, and multi-transport recovery.
 on:
   push:
     branches: [master]
@@ -14,7 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  chaos:
+  resilience:
     runs-on: ubuntu-latest
     services:
       redis:
@@ -36,12 +32,8 @@ jobs:
         with:
           bun-version: latest
       - run: bun install
-      # Some scenarios import @lumi/core, which needs the generated Prisma client
-      # (no DB connection required for `prisma generate`).
       - run: bun run db:generate
 
-      # JetStream-enabled NATS for the (informational) NATS leg. Service containers
-      # can't override the image command, so run it as a step.
       - name: Start NATS (JetStream)
         run: |
           docker run -d --name nats -p 4222:4222 -p 8222:8222 nats:2.10-alpine -js -m 8222
@@ -53,10 +45,8 @@ jobs:
           docker logs nats || true
           exit 1
 
-      # Authoritative gate: the six Redis-backed legs + the two NATS/JetStream
-      # legs (verify:chaos appends them because NATS_URL is set in the job env).
-      - name: verify:chaos (Redis + NATS suite)
-        run: bun run verify:chaos
+      - name: verify:resilience (Redis + NATS suite)
+        run: bun run verify:resilience
 
       - name: NATS logs (on failure)
         if: failure()

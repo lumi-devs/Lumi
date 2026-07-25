@@ -23,7 +23,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Shard cluster coordinator (Redis-backed range assignment + session resumption).
 - OpenTelemetry tracing, Prometheus metrics, optional Grafana/Sentry integration.
 - GDPR user-data deletion path (`gdpr.ts`).
-- Chaos/verify CI suite covering Redis Streams DLQ and NATS JetStream transport legs.
+- Resilience & fault-tolerance CI suite covering Redis Streams DLQ and NATS JetStream transport legs.
 - Full i18n for `en-US`, `de`, `es-ES`, `fr`.
 
 ### Changed
