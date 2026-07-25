@@ -13,10 +13,12 @@
     "#modules/*.js": "./packages/core/src/modules/*.ts"
   },
   "scripts": {
-    "dev": "bun install && bun run db:generate && bun --filter @lumi/worker run dev",
+    "dev": "turbo run dev",
     "start": "bun --filter @lumi/worker run start",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "eslint packages/*/src apps/*/src --fix",
+    "typecheck": "turbo run typecheck:all",
+    "lint": "turbo run lint:all",
+    "typecheck:all": "tsc --noEmit -p tsconfig.json",
+    "lint:all": "eslint packages/*/src apps/*/src --fix",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
@@ -24,6 +26,7 @@
     "modules:manifest": "bun scripts/generate-manifests.ts",
     "validate": "bun scripts/validate-addon.ts",
     "test": "vitest run",
+    "test:e2e": "vitest run -c vitest.e2e.config.ts",
     "verify:chaos": "bun scripts/verify-chaos.ts"
   },
   "overrides": {
@@ -57,8 +60,10 @@
     "i18next": "*",
     "prettier": "^3.9.5",
     "prisma": "^7.8.0",
+    "turbo": "^2.10.3",
     "typescript": "5",
     "typescript-eslint": "^8.64.0",
     "vitest": "^4.1.10"
-  }
+  },
+  "packageManager": "bun@1.3.13"
 }
