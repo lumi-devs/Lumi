@@ -7,6 +7,11 @@ import type { ModuleInfo } from "./types.js";
 import { validateAddon } from "./validate.js";
 import { s } from "@sapphire/shapeshift";
 import { logError } from "#lib/utilities/errors.js";
+import {
+  detectSubStores,
+  writeManifest,
+  type ModuleManifest,
+} from "#lib/module-system/manifest.js";
 
 const execFileAsync = promisify(execFile);
 const execGit = (args: string[]) =>
@@ -201,6 +206,26 @@ export class DownloadResolver {
       throw new Error(
         `Module **${moduleName}** failed validation:\n${errors.map((e) => `• ${e}`).join("\n")}`,
       );
+    }
+
+    const manifestPath = path.join(sourcePath, "manifest.json");
+    if (!(await this._exists(manifestPath))) {
+      const manifest: ModuleManifest = {
+        name: info.name || moduleName,
+        displayName: info.short || info.name || moduleName,
+        emoji: info.emoji || "📦",
+        description: info.description || "",
+        version: info.version || "1.0.0",
+        isCore: false,
+        disableable: true,
+        dependencies: info.dependencies || [],
+        conflicts: info.conflicts || [],
+        configOverrides: false,
+        targetService: "worker",
+        subStores: await detectSubStores(sourcePath),
+        configFields: [],
+      };
+      await writeManifest(sourcePath, manifest);
     }
 
     await fs.mkdir(ADDON_MODULES_ROOT, { recursive: true });
