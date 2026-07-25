@@ -11,7 +11,7 @@ import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js
 import type { GuildMessage } from "#lib/types/common.js";
 import { makeCard } from "#lib/utilities/cards.js";
 import { logError } from "#lib/utilities/errors.js";
-import { canSendMessages } from "#lib/utilities/listeners.js";
+import { canSendMessages } from "#lib/utilities/misc.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import { AfkKeys } from "../keys.js";
 import { Emojis } from "#lib/utilities/assets.js";

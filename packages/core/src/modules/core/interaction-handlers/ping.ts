@@ -3,12 +3,12 @@ import {
   InteractionHandlerTypes,
   InteractionHandler,
 } from "@sapphire/framework";
-import { collectPingData } from "#lib/ping-collect.js";
+import { collectPingData } from "#modules/core/lib/ping-collect.js";
 import {
   buildOverviewCard,
   buildDetailCard,
   type PingCategory,
-} from "#lib/ping-cards.js";
+} from "#modules/core/lib/ping-cards.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 
 @ApplyOptions<InteractionHandler.Options>({

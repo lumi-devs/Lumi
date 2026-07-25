@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { Routes } from "discord-api-types/v10";
-import { formatAuditReason } from "#lib/utilities/audit.js";
+import { formatAuditReason } from "#lib/utilities/misc.js";
 import { makeErrorCard } from "#lib/utilities/cards.js";
 import { logToChannel, scheduleCaseLift, formatDuration } from "../helpers.js";
 import { errorCode } from "#lib/utilities/errors.js";

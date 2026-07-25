@@ -1,7 +1,7 @@
 import { Listener } from "@sapphire/framework";
 import type { Awaitable } from "@sapphire/utilities";
 import type { ClientEvents } from "discord.js";
-import { isModuleEnabled } from "#lib/utilities/listeners.js";
+import { isModuleEnabled } from "#lib/utilities/misc.js";
 
 export interface ModuleListenerOptions extends Listener.Options {
   /** Module whose enabled state gates this listener (checked per event). */

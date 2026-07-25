@@ -3,7 +3,7 @@ import { getService } from "#lib/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Client } from "discord.js";
 import { logError } from "#lib/utilities/errors.js";
-import { isModuleEnabled } from "#lib/utilities/listeners.js";
+import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { tempVcRegistry } from "../registry.js";
 
 @ApplyOptions<Listener.Options>({

@@ -3,8 +3,6 @@
 // auto-instrument. Each Discord event/command gets one span; with traceparent
 // propagation (see context.ts) that span continues across the bus into workers.
 //
-// NOTE: Sentry v10 is itself OTel-native and registers its own TracerProvider.
-// Run at most ONE of OTEL_ENABLED / SENTRY_ENABLED as the trace pipeline.
 
 import {
   diag,
