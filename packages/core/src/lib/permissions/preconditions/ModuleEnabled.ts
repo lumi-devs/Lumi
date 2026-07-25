@@ -29,6 +29,10 @@ export class ModuleEnabledPrecondition extends Precondition {
     const moduleName = this.#getModuleName(command);
     if (!moduleName) return this.ok();
 
+    if (container.moduleStore && !container.moduleStore.isModuleDisableable(moduleName)) {
+      return this.ok();
+    }
+
     const enabled = await container.db.modules.isModuleEnabled(
       guildId,
       moduleName,

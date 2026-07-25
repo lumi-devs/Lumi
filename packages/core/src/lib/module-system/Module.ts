@@ -29,6 +29,7 @@ export interface ModuleMeta {
   description: string;
   version: string;
   isCore?: boolean;
+  disableable?: boolean;
   conflicts?: string[];
   dependencies?: string[];
   configFields?: ConfigField[];
@@ -52,6 +53,7 @@ export interface ModuleOptions extends Piece.Options {
   configSchema?: ModuleConfigSchema;
   configOverrides?: boolean;
   isCore?: boolean;
+  disableable?: boolean;
 }
 
 /**

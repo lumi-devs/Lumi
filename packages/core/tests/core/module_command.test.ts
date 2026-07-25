@@ -83,6 +83,11 @@ describe('ModuleCommand', () => {
 				return null;
 			}),
 			setEnabled: vi.fn().mockResolvedValue(undefined),
+			isModuleDisableable: vi.fn().mockImplementation((name: string) => {
+				const rec = mockModuleStore.getRecord(name);
+				if (!rec) return true;
+				return !rec.meta.isCore && rec.meta.disableable !== false;
+			}),
 			moduleNameForLocation: vi.fn().mockImplementation((path: string) => {
 				if (path.includes('afk')) return 'afk';
 				if (path.includes('mod')) return 'mod';
