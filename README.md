@@ -8,9 +8,10 @@
   <p><b>Your Modern, Modular, and Magical Discord Companion</b></p>
 
   <div align="center">
-    <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.1+-black?style=for-the-badge&logo=bun" alt="Bun"></a>
+    <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.3+-black?style=for-the-badge&logo=bun" alt="Bun"></a>
     <a href="https://sapphirejs.dev"><img src="https://img.shields.io/badge/Sapphire-v5-blue?style=for-the-badge" alt="Sapphire"></a>
     <a href="https://discord.js.org"><img src="https://img.shields.io/badge/Discord.js-v14-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord.js"></a>
+    <a href="https://github.com/lumi-devs/lumi/discussions"><img src="https://img.shields.io/badge/Discussions-Enabled-brightgreen?style=for-the-badge&logo=github" alt="GitHub Discussions"></a>
     <img src="https://img.shields.io/badge/License-AGPL%20v3.0-green?style=for-the-badge" alt="License">
   </div>
   <br />
@@ -140,20 +141,26 @@ The easiest way to get up and running:
    docker compose up -d
    ```
 
-### 💻 Method 2: Bare Metal
+### 💻 Method 2: Bare Metal / Nix Shell
 
-For developers or advanced users who prefer a direct deployment. Requires [Bun 1.1+](https://bun.sh), PostgreSQL 16, and Redis 7.
+For developers or advanced users who prefer a direct deployment. Requires [Bun 1.3+](https://bun.sh), PostgreSQL 17, and Redis 7. You can also run commands inside reproducible Nix shells:
 
 ```bash
-# 1. Install dependencies
-bun install
+# 1. Install workspace dependencies
+nix-shell -p bun nodejs --run "bun install"
 
-# 2. Push database schema
-bun run db:generate
-bun run db:push
+# 2. Push database schema & generate Prisma client
+nix-shell -p bun nodejs --run "bun run db:generate"
+nix-shell -p bun nodejs --run "bun run db:push"
 
-# 3. Start the bot
-bun run dev
+# 3. Execute test suites & resilience verification
+nix-shell -p bun nodejs --run "bun run typecheck"
+nix-shell -p bun nodejs --run "bun run test"
+nix-shell -p bun nodejs --run "bun run test:e2e"
+nix-shell -p bun nodejs --run "bun run verify:resilience"
+
+# 4. Start the development bot process
+nix-shell -p bun nodejs --run "bun run dev"
 ```
 
 ---

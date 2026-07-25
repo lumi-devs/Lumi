@@ -8,10 +8,10 @@ Thank you for considering a contribution! This document explains how to get set 
 
 | Tool | Version | Notes |
 |------|---------|-------|
-| [Bun](https://bun.sh) | 1.1+ | Runtime and package manager |
-| PostgreSQL | 16+ | Local or Docker |
+| [Bun](https://bun.sh) | 1.3+ | Runtime and package manager |
+| PostgreSQL | 17+ | Local or Docker |
 | Redis | 7+ | Local or Docker |
-| RabbitMQ | 3.12+ | Local or Docker (only needed for gateway/worker split) |
+| RabbitMQ | 4+ | Local or Docker (only needed for gateway/worker split) |
 
 The easiest way to get all dependencies running is via Docker:
 
@@ -21,27 +21,27 @@ docker compose up -d postgres redis rabbitmq
 
 ---
 
-## Local Setup
+## Local Setup & Nix Shell
 
 ```bash
 # 1. Fork and clone
 git clone https://github.com/lumi-devs/lumi.git && cd lumi
 
-# 2. Install dependencies
-bun install
+# 2. Install dependencies (bare metal or nix-shell)
+nix-shell -p bun nodejs --run "bun install"
 
 # 3. Generate the Prisma client (required before typecheck/test)
-bun run db:generate
+nix-shell -p bun nodejs --run "bun run db:generate"
 
 # 4. Push the DB schema (dev only — use migrations in production)
-bun run db:push
+nix-shell -p bun nodejs --run "bun run db:push"
 
 # 5. Copy and fill in your environment
 cp .env.example .env
 # Edit .env: set BOT_TOKEN and CLIENT_ID at minimum
 
 # 6. Start the bot (monolith mode)
-bun run dev
+nix-shell -p bun nodejs --run "bun run dev"
 ```
 
 ---
@@ -61,23 +61,26 @@ Violating these will result in a PR being sent back for revision.
 
 ---
 
-## Running Checks
+## Running Checks & Verification
 
 ```bash
 # Type-check the whole monorepo
-bun run typecheck
+nix-shell -p bun nodejs --run "bun run typecheck"
 
 # Lint (auto-fixes where possible)
-bun run lint
+nix-shell -p bun nodejs --run "bun run lint"
 
-# Run the full test suite
-bun run test
+# Run unit & integration test suite
+nix-shell -p bun nodejs --run "bun run test"
 
-# Run a single test file
-bunx vitest run packages/core/tests/modules/afk/afk.test.ts
+# Run Black-Box E2E test suite
+nix-shell -p bun nodejs --run "bun run test:e2e"
+
+# Run Resilience & Fault Tolerance suite
+nix-shell -p bun nodejs --run "bun run verify:resilience"
 ```
 
-All three checks (`typecheck`, lint, tests) must pass before a PR will be reviewed.
+All checks (`typecheck`, `lint`, `test`, `test:e2e`, `verify:resilience`) must pass before a PR will be reviewed.
 
 ---
 
