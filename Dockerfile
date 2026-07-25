@@ -30,7 +30,7 @@ COPY --chown=bun:bun apps ./apps
 COPY --chown=bun:bun prisma ./prisma
 COPY --chown=bun:bun package.json tsconfig.base.json tsconfig.json turbo.json eslint.config.mjs prisma.config.ts ./
 
-RUN mkdir -p /app/data && chown -R bun:bun /app
+RUN bun install --frozen-lockfile && mkdir -p /app/data && chown -R bun:bun /app
 USER bun
 
 CMD ["sh", "-c", "bunx prisma migrate deploy && bun apps/worker/src/main.ts"]
