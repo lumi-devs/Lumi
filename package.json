@@ -42,7 +42,7 @@
     "validate": "bun scripts/validate-addon.ts",
     "test": "vitest run",
     "test:e2e": "vitest run -c vitest.e2e.config.ts",
-    "verify:chaos": "bun scripts/verify-chaos.ts"
+    "verify:resilience": "bun scripts/verify-resilience.ts"
   },
   "overrides": {
     "@opentelemetry/semantic-conventions": "1.42.0"

@@ -76,7 +76,7 @@ export type RebalanceListener = (
  * Divide `shardCount` contiguous ids across `replicaIds` (sorted) as evenly
  * as possible. The first `shardCount % n` replicas get one extra shard.
  *
- * Exported for tests + the chaos script.
+ * Exported for tests and the resilience suite.
  */
 export function assignShards(
   replicaIds: readonly string[],
