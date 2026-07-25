@@ -269,11 +269,13 @@ export interface AddonRepoModuleRow {
   isInstalled: boolean;
 }
 
-export function buildAddonsView(stats: AddonDashboardStats): CardReply {
+export function buildAddonsView(
+  stats: AddonDashboardStats = { repoCount: 0, installedCount: 0 },
+): CardReply {
   const body = [
     "Add-ons let you expand Lumi with community modules. Every installed add-on works seamlessly alongside built-in features.",
-    `${Emojis.REPO} **Tracked Repositories:** ${stats.repoCount}`,
-    `${Emojis.DOWNLOAD} **Installed Add-ons:** ${stats.installedCount}`,
+    `${Emojis.REPO} **Tracked Repositories:** ${stats?.repoCount ?? 0}`,
+    `${Emojis.DOWNLOAD} **Installed Add-ons:** ${stats?.installedCount ?? 0}`,
     [
       `• **Repositories** — View all downloaded repositories and explore their modules`,
       `• **Installed Add-ons** — Manage and review currently installed add-ons`,

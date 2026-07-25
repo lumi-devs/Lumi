@@ -1,9 +1,5 @@
 import { Service } from "#lib/module-system/Service.js";
-import {
-  FieldType,
-  parseConfigList,
-  type ModuleConfigSchema,
-} from "#lib/module-system/Module.js";
+import { FieldType, parseConfigList } from "#lib/module-system/Module.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import type { Prisma } from "@prisma/client";
