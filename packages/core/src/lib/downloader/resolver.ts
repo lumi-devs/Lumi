@@ -9,6 +9,10 @@ import { s } from "@sapphire/shapeshift";
 import { logError } from "#lib/utilities/errors.js";
 
 const execFileAsync = promisify(execFile);
+const execGit = (args: string[]) =>
+  execFileAsync("git", args, {
+    env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+  });
 
 /** Rejection handler that rethrows a git/bun execFile failure as a clean Error with stderr. */
 const execError =
@@ -78,13 +82,13 @@ export class DownloadResolver {
         branch === "default"
           ? ["-C", repoPath, "pull"]
           : ["-C", repoPath, "pull", "origin", branch];
-      await execFileAsync("git", pullArgs).catch(execError("Git pull failed"));
+      await execGit(pullArgs).catch(execError("Git pull failed"));
     } else {
       container.logger.info(`[Downloader] Cloning repo: ${url}`);
       const cloneArgs = ["clone"];
       if (branch !== "default") cloneArgs.push("-b", branch);
       cloneArgs.push("--", url, repoPath);
-      await execFileAsync("git", cloneArgs).catch(
+      await execGit(cloneArgs).catch(
         execError("Git clone failed"),
       );
     }
