@@ -37,8 +37,7 @@ x-lumi-service: &lumi-service
     DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
     RABBITMQ_URL: amqp://${RABBITMQ_USER:-lumi}:${RABBITMQ_PASSWORD:-lumi}@rabbitmq:5672
     RABBITMQ_ENABLED: "true"
-    SENTRY_ENABLED: "${SENTRY_ENABLED:-false}"
-    SENTRY_DSN: "${SENTRY_DSN:-}"
+
     # Telemetry: production services emit OTLP + expose /metrics on :9090.
     OTEL_ENABLED: "${OTEL_ENABLED:-true}"
     OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
@@ -98,8 +97,7 @@ services:
       DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-lumi}:${RABBITMQ_PASSWORD:-lumi}@rabbitmq:5672
       RABBITMQ_ENABLED: "true"
-      SENTRY_ENABLED: "${SENTRY_ENABLED:-false}"
-      SENTRY_DSN: "${SENTRY_DSN:-}"
+
       # Telemetry: apps always expose /metrics and emit OTLP traces. The OTLP
       # endpoint only resolves when the `observability` profile is up; the batch
       # exporter degrades quietly when the collector is absent.

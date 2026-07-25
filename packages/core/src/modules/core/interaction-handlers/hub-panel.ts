@@ -31,14 +31,14 @@ import {
   makeSuccessCard,
   type CardReply,
 } from "#lib/utilities/cards.js";
-import { loadFeatures, buildFeatureListView } from "#lib/config-panel.js";
+import { loadFeatures, buildFeatureListView } from "#modules/core/lib/config-panel.js";
 import {
   buildHubView,
   buildSettingsView,
   buildPermissionsView,
   buildAddonsView,
   DEFAULT_PREFIX,
-} from "#lib/hub-panel.js";
+} from "#modules/core/lib/hub-panel.js";
 import type { GuildSettingsService } from "#lib/services/GuildSettingsService.js";
 import type { PermissionService } from "#lib/services/PermissionService.js";
 import type { DownloaderService } from "#lib/services/DownloaderService.js";

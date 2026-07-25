@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { tryParseJSON } from "@sapphire/utilities";
-import { formatAuditReason } from "#lib/utilities/audit.js";
+import { formatAuditReason } from "#lib/utilities/misc.js";
 import { logToChannel } from "../helpers.js";
 
 export interface QuarantineApplyOptions {
