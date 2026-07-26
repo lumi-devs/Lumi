@@ -10,7 +10,7 @@
     <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.3+-black?style=flat-square&logo=bun" alt="Bun"></a>
     <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
     <a href="https://sapphirejs.dev"><img src="https://img.shields.io/badge/Sapphire-Framework-blue?style=flat-square&logo=discord" alt="Sapphire Framework"></a>
-    <a href="https://crowdin.com/project/lumi-bot"><img src="https://d322cqt584bo4o.cloudfront.net/lumi-bot/localized.svg" alt="Crowdin"></a>
+    <a href="https://crowdin.com/project/lumi-bot"><img src="https://support.crowdin.com/assets/logos/symbol/svg/crowdin-symbol-cDark.svg" alt="Crowdin"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-green?style=flat-square" alt="AGPL v3"></a>
   </p>
 
