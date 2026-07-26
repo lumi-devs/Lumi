@@ -22,3 +22,4 @@ indirections.txt
 # Runtime-downloaded 3rd-party module repos (cloned by /repo at runtime). Contains
 # embedded git repos — never commit, never add as a submodule.
 /data/
+.agents/
