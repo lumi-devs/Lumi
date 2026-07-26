@@ -1,17 +1,19 @@
 <div align="center">
-  <br />
   <img src="assets/banner.png" alt="Lumi" width="800">
-  <br /><br />
+
+  <p><strong>Fully modular, hot-swappable, self-hosted — built for communities that want control.</strong></p>
 
   <p>
     <a href="https://github.com/lumi-devs/lumi/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/lumi-devs/lumi/ci.yml?branch=main&style=flat-square&label=CI&logo=github" alt="CI"></a>
     <a href="https://github.com/lumi-devs/lumi/actions/workflows/security.yml"><img src="https://img.shields.io/github/actions/workflow/status/lumi-devs/lumi/security.yml?branch=main&style=flat-square&label=Security&logo=github" alt="Security"></a>
     <a href="https://github.com/lumi-devs/lumi/actions/workflows/resilience.yml"><img src="https://img.shields.io/github/actions/workflow/status/lumi-devs/lumi/resilience.yml?branch=main&style=flat-square&label=Resilience&logo=github" alt="Resilience"></a>
-    <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.3+-black?style=flat-square&logo=bun" alt="Bun"></a>
+    <a href="https://codecov.io/gh/lumi-devs/lumi"><img src="https://codecov.io/gh/lumi-devs/lumi/branch/main/graph/badge.svg" alt="Coverage"></a>
+  </p>
+
+  <p>
+    <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.3+-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun"></a>
     <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
-    <a href="https://sapphirejs.dev"><img src="https://img.shields.io/badge/Sapphire-Framework-blue?style=flat-square&logo=discord" alt="Sapphire Framework"></a>
-    <a href="https://crowdin.com/project/lumi-bot"><img src="https://support.crowdin.com/assets/logos/symbol/svg/crowdin-symbol-cDark.svg" alt="Crowdin"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-green?style=flat-square" alt="AGPL v3"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-A42E2B?style=flat-square&logo=gnu&logoColor=white" alt="AGPL v3"></a>
   </p>
 
   <p>
@@ -30,13 +32,20 @@
 
 Lumi is a self-hosted, modular Discord bot built for communities that demand full control and high performance. Every feature is a hot-swappable module — toggle, configure, and extend without restarting the bot or touching core code.
 
-Built with **Bun**, **TypeScript**, **Discord.js v14**, and the **Sapphire Framework**. Backed by **PostgreSQL 17** and **Redis 7**.
+Built with **Bun**, **TypeScript**, **discord.js v14**, and the **[Sapphire Framework](https://sapphirejs.dev)**. Backed by **PostgreSQL 17** and **Redis 7**.
 
 ---
 
 ## Self-Hosting
 
-> **Prerequisites:** Bun 1.3+, Docker & Docker Compose, PostgreSQL 17, Redis 7
+### Requirements
+
+- [**Bun**](https://bun.sh) 1.3+ — runtime and package manager
+- [**Docker**](https://docs.docker.com/get-docker/) & [**Docker Compose**](https://docs.docker.com/compose/install/) — for containerized services
+- [**PostgreSQL**](https://www.postgresql.org/download/) 17 — primary datastore
+- [**Redis**](https://redis.io/download/) 7 — caching, queues, and cross-process event streaming
+
+### Quick Start
 
 ```sh
 git clone https://github.com/lumi-devs/lumi.git && cd lumi
@@ -106,9 +115,9 @@ Inter-process event streaming and RPC bridging operate on **Redis Streams**. Det
 
 ---
 
-## Translations <a href="https://crowdin.com/project/lumi-bot" target="_blank"><img src="https://support.crowdin.com/assets/logos/crowdin-core-logo.png" align="right" width="20%"></a>
+## Translations
 
-Lumi utilizes **Crowdin** to manage localization across multiple languages. All localized strings are managed centrally in `packages/core/src/languages/en-US/`. 
+Lumi utilizes **Crowdin** to manage localization across multiple languages. All localized strings are managed centrally in `packages/core/src/languages/en-US/`.
 
 To help translate Lumi into your native language or refine existing translations, join our project on [**Crowdin**](https://crowdin.com/project/lumi-bot).
 
@@ -122,13 +131,15 @@ We welcome community contributions! Please read [CONTRIBUTING.md](CONTRIBUTING.m
 - Maintain isolated, modular scope (one feature/fix per PR)
 - Refer to [AGENTS.md](AGENTS.md) for architectural guidelines and design principles
 
----
+Thank you to everyone who has contributed to Lumi:
+
+<a href="https://github.com/lumi-devs/lumi/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=lumi-devs/lumi" alt="Lumi contributors">
+</a>
 
 ## Security
 
 Security vulnerabilities should be reported responsibly. Review [SECURITY.md](SECURITY.md) or use [GitHub's Private Vulnerability Reporting](https://github.com/lumi-devs/lumi/security/advisories/new).
-
----
 
 ## License
 
