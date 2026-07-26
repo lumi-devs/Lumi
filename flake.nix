@@ -17,16 +17,24 @@
             bun
             nodejs_22
             turbo
-            openssl # Required for Prisma query engine
+            openssl
+            prisma-engines
             postgresql
             redis
+            rabbitmq-server
           ];
 
+          env = {
+            PRISMA_QUERY_ENGINE_LIBRARY = "${pkgs.prisma-engines}/lib/libquery_engine.node";
+            PRISMA_SCHEMA_ENGINE_BINARY = "${pkgs.prisma-engines}/bin/schema-engine";
+          };
+
           shellHook = ''
-            export PRISMA_QUERY_ENGINE_LIBRARY="${pkgs.prisma-engines}/lib/libquery_engine.node"
-            export PRISMA_SCHEMA_ENGINE_BINARY="${pkgs.prisma-engines}/bin/schema-engine"
+            echo "Lumi dev shell - bun $(bun --version), node $(node --version), turbo $(turbo --version)"
           '';
         };
       });
+
+      formatter = forEachSystem (pkgs: pkgs.nixpkgs-fmt);
     };
 }

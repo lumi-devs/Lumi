@@ -1,7 +1,7 @@
 import type { ChannelType } from "discord.js";
 
-// Wire shape of a single configurable module setting. Derived in core from each
-// module's Zod `configSchema`; consumed by the /config panel and the dashboard.
+// Module configuration schema contracts.
+
 
 export enum FieldType {
   BOOLEAN = "BOOLEAN",

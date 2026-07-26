@@ -1,16 +1,8 @@
-// Cluster shard assignment via Redis: turns N gateway replicas + a shard count
-// into a stable mapping of replica -> shard ids, with no separate control plane.
-// Redis-only; callers (apps/gateway, LumiClient) wire the delta to ws.connect/destroy.
-//
-// Keys (namespaced by CLUSTER_NAME): `:members` ZSET (replicaId -> heartbeat ts),
-// `:assignment` STR (JSON { epoch, total, byReplica }), `:leader-lock` (SET NX EX 5s),
-// `:rebalance` pubsub (payload = epoch). The leader recomputes the assignment on
-// topology change — balanced contiguous chunks over lexicographically-sorted
-// replicaIds, so a single join/leave shifts each chunk by at most one (keeping
-// session-resumption warm) — then publishes the new epoch; every replica diffs it
-// against its current shard set and fires onAssignmentChange.
+// Redis-based cluster shard assignment coordinator.
+// Maps gateway replicas to shard IDs without a separate control plane.
 
 import type { Redis } from "ioredis";
+import { tryParseJSON } from "@sapphire/utilities";
 
 export interface ShardDelta {
   /** Shard ids this replica should START owning (spawn + identify/resume). */
@@ -204,21 +196,12 @@ export class ClusterCoordinator {
         membersKey(this.opts.clusterName),
         this.opts.replicaId,
       );
-    } catch {
-      /* swallow — best effort on shutdown */
-    }
-    try {
       await this.opts.subscriber.unsubscribe(
         rebalanceChannel(this.opts.clusterName),
       );
+      await this.reconcileAssignment(true);
     } catch {
-      /* idem */
-    }
-    // Best-effort: nudge surviving replicas to rebalance now.
-    try {
-      await this.reconcileAssignment(/* force*/ true);
-    } catch {
-      /* idem */
+      /* swallow — best effort on shutdown */
     }
   }
 
@@ -305,11 +288,7 @@ export class ClusterCoordinator {
   private async readAssignment(): Promise<ClusterAssignment | null> {
     const raw = await this.opts.redis.get(assignmentKey(this.opts.clusterName));
     if (!raw) return null;
-    try {
-      return JSON.parse(raw) as ClusterAssignment;
-    } catch {
-      return null;
-    }
+    return (tryParseJSON(raw) as ClusterAssignment | null) ?? null;
   }
 
   private async applyAssignmentFromRedis(): Promise<void> {

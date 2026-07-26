@@ -1,6 +1,5 @@
-// pino structured logger. Every line carries the service name and, when inside a
-// request context, the correlationId/guildId and the active trace/span ids — so
-// logs join up with traces and follow work across the (future) service split.
+// Pino structured logger factory with request context and OpenTelemetry trace propagation.
+
 
 import { pino, type Logger as PinoLogger } from "pino";
 import PinoPretty from "pino-pretty";

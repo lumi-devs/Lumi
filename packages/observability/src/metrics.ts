@@ -1,6 +1,5 @@
-// Prometheus metrics. One registry per process, labelled with the service name.
-// Apps scrape /metrics (startMetricsServer). RED metrics on command handling plus
-// the scale-relevant signals: queue depth/lag, shard latency, REST 429s, cache hits.
+// Prometheus metrics registry and HTTP server for telemetry scraping.
+
 
 import {
   collectDefaultMetrics,
