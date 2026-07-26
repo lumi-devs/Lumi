@@ -1,6 +1,8 @@
 import type { Redis } from "ioredis";
 import { type ILogger, container } from "@sapphire/framework";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { Stopwatch } from "@sapphire/stopwatch";
+import { Prisma } from "@prisma/client";
 import {
   createGuildTransaction,
   GuildWriteTransaction,
@@ -130,5 +132,37 @@ export class DatabaseService {
 
   public transaction(guildId: string): Promise<GuildWriteTransaction> {
     return createGuildTransaction(guildId, this.redis, this.prisma);
+  }
+
+  public async probePrisma(): Promise<number> {
+    const sw = new Stopwatch();
+    await this.prisma.$queryRaw(Prisma.sql`SELECT 1`);
+    return sw.stop().duration;
+  }
+
+  public async getPostgresStats(): Promise<{
+    overview?: { size: string; uptime_secs: string };
+    tables: { relname: string; bytes: string; dead: string }[];
+    tx?: { commits: string; rollbacks: string };
+  }> {
+    const [[ov], tables, [tx]] = await Promise.all([
+      this.prisma.$queryRaw<{ size: string; uptime_secs: string }[]>(
+        Prisma.sql`SELECT pg_size_pretty(pg_database_size(current_database())) AS size, extract(epoch from (now() - pg_postmaster_start_time()))::int::text AS uptime_secs`,
+      ),
+      this.prisma.$queryRaw<
+        { relname: string; bytes: string; dead: string }[]
+      >(
+        Prisma.sql`SELECT relname, pg_total_relation_size(relid)::text AS bytes, n_dead_tup::text AS dead FROM pg_stat_user_tables ORDER BY pg_total_relation_size(relid) DESC LIMIT 6`,
+      ),
+      this.prisma.$queryRaw<{ commits: string; rollbacks: string }[]>(
+        Prisma.sql`SELECT xact_commit::text AS commits, xact_rollback::text AS rollbacks FROM pg_stat_database WHERE datname = current_database()`,
+      ),
+    ]);
+
+    return {
+      overview: ov,
+      tables: tables ?? [],
+      tx,
+    };
   }
 }

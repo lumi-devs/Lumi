@@ -65,6 +65,5 @@ import { ChannelType } from "discord.js";
 export class LoggingModule extends Module {
   public override async deleteUserData(
     _userId: string,
-    _requester: import("#lib/gdpr.js").RequesterType,
   ): Promise<void> {}
 }

@@ -5,11 +5,15 @@
   "description": "General utility commands.",
   "version": "1.0.0",
   "isCore": false,
+  "disableable": true,
   "dependencies": [],
   "conflicts": [],
   "configOverrides": false,
   "targetService": "worker",
-  "subStores": ["commands", "interaction-handlers"],
+  "subStores": [
+    "commands",
+    "interaction-handlers"
+  ],
   "configFields": [
     {
       "key": "cooldown_seconds",

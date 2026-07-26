@@ -1,0 +1,19 @@
+{
+  "name": "core",
+  "displayName": "Core",
+  "emoji": "🛡️",
+  "description": "The built-in core module.",
+  "version": "1.0.0",
+  "isCore": true,
+  "disableable": false,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": false,
+  "targetService": "worker",
+  "subStores": [
+    "commands",
+    "listeners",
+    "interaction-handlers"
+  ],
+  "configFields": []
+}

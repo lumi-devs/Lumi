@@ -8,7 +8,7 @@ import {
   shardLatency,
   shardStatus,
 } from "@lumi/observability";
-import { isRestProxyEnabled } from "#lib/discord-rest.js";
+import { getDiscordProxyUrl } from "#lib/env.js";
 
 const REFRESH_MS = 15_000;
 
@@ -35,7 +35,7 @@ export class TelemetryStatsListener extends Listener<
       restInvalidRequestWarnings.inc();
     });
 
-    if (isRestProxyEnabled()) {
+    if (getDiscordProxyUrl() !== null) {
       this.container.logger.info(
         "[REST] Routing through DISCORD_PROXY_URL — local global throttle disabled",
       );

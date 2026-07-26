@@ -1,6 +1,5 @@
 import { Piece } from "@sapphire/framework";
 import type { Awaitable } from "@sapphire/utilities";
-import type { RequesterType } from "#lib/gdpr.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Emojis } from "#lib/utilities/assets.js";
 
@@ -126,7 +125,7 @@ export abstract class Module extends Piece {
    */
   public deleteUserData(
     _userId: string,
-    _requester: RequesterType,
+    _requester?: string,
   ): Awaitable<void> {
     return undefined;
   }

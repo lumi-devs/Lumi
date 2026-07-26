@@ -35,6 +35,10 @@ export function registerRpcHandler<TIn, TOut>(
   rpcHandlers.set(action, handler as RpcHandler<unknown, unknown>);
 }
 
+export function deregisterRpcHandler(action: string) {
+  rpcHandlers.delete(action);
+}
+
 async function dispatchRpc(req: RpcRequest): Promise<RpcResponse> {
   const handler = rpcHandlers.get(req.action);
   if (!handler)

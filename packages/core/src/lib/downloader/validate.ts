@@ -22,6 +22,42 @@ const infoSchema = s.object({
   hidden: s.boolean().optional(),
 });
 
+const configFieldSchema = s.object({
+  key: s.string().lengthGreaterThanOrEqual(1),
+  label: s.string(),
+  type: s.enum([
+    "BOOLEAN",
+    "NUMBER",
+    "STRING",
+    "ENUM",
+    "CHANNEL",
+    "ROLE",
+    "USER",
+  ]),
+  description: s.string(),
+  default: s.unknown().optional(),
+  choices: s.array(s.string()).optional(),
+  required: s.boolean().optional(),
+  channelTypes: s.array(s.number()).optional(),
+  list: s.boolean().optional(),
+});
+
+const manifestSchema = s.object({
+  name: s.string().regex(/^[a-z0-9][a-z0-9-]*$/),
+  displayName: s.string().lengthGreaterThanOrEqual(1),
+  emoji: s.string(),
+  description: s.string(),
+  version: s.string().regex(/^\d+\.\d+\.\d+/),
+  isCore: s.boolean().optional(),
+  disableable: s.boolean().optional(),
+  dependencies: s.array(s.string()).optional(),
+  conflicts: s.array(s.string()).optional(),
+  configOverrides: s.boolean().optional(),
+  targetService: s.enum(["worker", "gateway", "scheduler", "api"]),
+  subStores: s.array(s.string()),
+  configFields: s.array(configFieldSchema),
+});
+
 const IGNORED_DIRS = new Set(["node_modules", ".git", "dist", "build"]);
 
 async function pathExists(p: string): Promise<boolean> {
@@ -65,7 +101,7 @@ function parseSemver(v: string): [number, number, number] {
   return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0];
 }
 
-export function isVersionCompatible(
+function isVersionCompatible(
   minVersion: string,
   currentVersion = "1.0.0",
 ): boolean {
@@ -110,6 +146,30 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
     }
   } else {
     errors.push("Missing info.json (Downloader metadata).");
+  }
+
+  const manifestPath = path.join(dir, "manifest.json");
+  if (await pathExists(manifestPath)) {
+    try {
+      const manifest = JSON.parse(
+        await fs.readFile(manifestPath, "utf8"),
+      ) as unknown;
+      const parsed = manifestSchema.run(manifest);
+      if (parsed.isErr()) {
+        errors.push(`manifest.json: (root) — ${parsed.error.message}`);
+      } else {
+        const val = parsed.unwrap();
+        if (val.name !== base) {
+          errors.push(
+            `manifest.json "name" (${val.name}) must match the directory name (${base}).`,
+          );
+        }
+      }
+    } catch (err) {
+      errors.push(
+        `manifest.json is not valid JSON: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   const indexPath = path.join(dir, "index.ts");

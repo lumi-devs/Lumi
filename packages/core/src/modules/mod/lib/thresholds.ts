@@ -51,7 +51,11 @@ export async function invalidateThresholds(
   container: Container,
   guildId: string,
 ): Promise<void> {
-  await container.redis.del(thresholdKey(guildId));
+  if (container.invalidation) {
+    await container.invalidation.invalidate(thresholdKey(guildId));
+  } else {
+    await container.redis.del(thresholdKey(guildId));
+  }
 }
 
 const WARN_COUNT_TTL = 365 * 24 * 3600;
@@ -98,7 +102,11 @@ export async function resetWarnCount(
   guildId: string,
   userId: string,
 ): Promise<void> {
-  await container.redis.del(warnCountKey(guildId, userId));
+  if (container.invalidation) {
+    await container.invalidation.invalidate(warnCountKey(guildId, userId));
+  } else {
+    await container.redis.del(warnCountKey(guildId, userId));
+  }
 }
 
 export async function checkThresholds(

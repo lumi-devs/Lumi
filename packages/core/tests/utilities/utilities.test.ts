@@ -3,10 +3,20 @@ import { errorFrom, errorCode, logError, swallow } from '#lib/utilities/errors.j
 import { resolveDuration, resolveDurationDate } from '#lib/utilities/resolvers/duration.js';
 import { container } from '@sapphire/framework';
 
-vi.mock('@sapphire/framework', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@sapphire/framework')>();
+vi.mock('@sapphire/framework', async (importOriginal?: () => Promise<any>) => {
+  if (typeof importOriginal === 'function') {
+    const actual = await importOriginal<typeof import('@sapphire/framework')>();
+    return {
+      ...actual,
+      container: {
+        logger: {
+          error: vi.fn(),
+          debug: vi.fn()
+        }
+      }
+    };
+  }
   return {
-    ...actual,
     container: {
       logger: {
         error: vi.fn(),

@@ -4,11 +4,6 @@ import { getService } from "#lib/module-system/Service.js";
 import { registerRpcHandler, rpcHandlers } from "#lib/rabbitmq/index.js";
 import { RPC_ACTIONS } from "@lumi/contracts";
 import { resolver, ADDON_MODULES_ROOT } from "#lib/downloader/resolver.js";
-import {
-  executeGdprDeletion,
-  GdprDeletionError,
-  RequesterType,
-} from "#lib/gdpr.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -27,7 +22,7 @@ function parsePayload<T>(schema: BaseValidator<T>, data: unknown): T {
 
 const GdprDeleteSchema = s.object({
   userId: SnowflakeSchema,
-  requester: s.nativeEnum(RequesterType),
+  requester: s.string().optional(),
 });
 
 const RepoAddSchema = s.object({
@@ -78,17 +73,9 @@ export class CoreModule extends Module {
     container.logger.info("[Core] Initializing Core RPC handlers...");
 
     registerRpcHandler(RPC_ACTIONS.gdprDelete, async (req) => {
-      const { userId, requester } = parsePayload(GdprDeleteSchema, req.data);
-
-      try {
-        await executeGdprDeletion(userId, requester);
-        return { success: true };
-      } catch (err: unknown) {
-        if (err instanceof GdprDeletionError) {
-          return { success: false, failures: err.failures };
-        }
-        throw err;
-      }
+      const { userId } = parsePayload(GdprDeleteSchema, req.data);
+      await container.db.deleteUserData(userId);
+      return { success: true };
     });
 
     registerRpcHandler(RPC_ACTIONS.repoAdd, async (req) => {

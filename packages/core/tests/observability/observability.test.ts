@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   runWithContext,
   getRequestContext,
@@ -8,7 +8,8 @@ import {
   registerReadinessProbe,
   runReadinessProbes,
   markDraining,
-  isDraining
+  isDraining,
+  bootstrapTelemetry
 } from '@lumi/observability';
 
 describe('Observability Context Tests', () => {
@@ -63,3 +64,44 @@ describe('Observability Readiness Probes Tests', () => {
     expect(report.ready).toBe(false);
   });
 });
+
+describe('bootstrapTelemetry Tests', () => {
+  const origService = process.env.SERVICE_NAME;
+  const origRole = process.env.LUMI_ROLE;
+  const origMetrics = process.env.METRICS_ENABLED;
+
+  beforeEach(() => {
+    process.env.METRICS_ENABLED = 'false';
+  });
+
+  afterEach(() => {
+    process.env.SERVICE_NAME = origService;
+    process.env.LUMI_ROLE = origRole;
+    process.env.METRICS_ENABLED = origMetrics;
+  });
+
+  it('sets process.env.SERVICE_NAME when explicit serviceName parameter is passed', () => {
+    delete process.env.SERVICE_NAME;
+    delete process.env.LUMI_ROLE;
+
+    bootstrapTelemetry('custom-service');
+    expect(process.env.SERVICE_NAME).toBe('custom-service');
+  });
+
+  it('defaults serviceName to LUMI_ROLE if serviceName is omitted and SERVICE_NAME unset', () => {
+    delete process.env.SERVICE_NAME;
+    process.env.LUMI_ROLE = 'scheduler-role';
+
+    bootstrapTelemetry();
+    expect(process.env.SERVICE_NAME).toBe('scheduler-role');
+  });
+
+  it('defaults serviceName to "lumi" if serviceName, SERVICE_NAME, and LUMI_ROLE are unset', () => {
+    delete process.env.SERVICE_NAME;
+    delete process.env.LUMI_ROLE;
+
+    bootstrapTelemetry();
+    expect(process.env.SERVICE_NAME).toBe('lumi');
+  });
+});
+
