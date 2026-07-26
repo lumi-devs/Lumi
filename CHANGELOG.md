@@ -13,11 +13,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Path-based PR Auto-Labeler workflow (`.github/workflows/labeler.yml` and `.github/labeler.yml`).
 - Automated Stale issue and PR lifecycle management workflow (`.github/workflows/stale.yml`).
 - Expanded Black-Box E2E test suite in `tests/e2e/dashboard.test.ts`.
+- Manifest definitions for core module (`packages/core/src/modules/core/manifest.json`) and scheduler telemetry (`apps/scheduler/src/telemetry.ts`).
 
 ### Changed
 - Upgraded Bun runtime support to Bun 1.3+ and Turborepo build system to 2.10+.
 - Updated GitHub Actions setup-bun workflow steps to `oven-sh/setup-bun@v2`.
 - Updated container default image tags in `docker-compose.yml` (`redis:7-alpine`, `nats:2-alpine`).
+- Standardized imports across `@lumi/core` with strict path aliases (`#lib/*`, `#modules/*`, `#root/*`) and `.js` specifiers.
+- Consolidated duplicate duration helpers (`parseDuration`/`formatDuration`) into `#lib/utilities/time.js`.
+- Migrated module cache invalidation from direct `redis.del` calls to `container.invalidation.invalidate(...)`.
 
 ---
 
