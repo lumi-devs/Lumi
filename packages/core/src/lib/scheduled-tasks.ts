@@ -31,7 +31,7 @@ export const DEFAULT_CATCHUP_GRACE_MS = 60_000;
  * Call at the top of a `ScheduledTask.run`; returns `false` (and logs) only when
  * the job opted out of catch-up and is overdue beyond `graceMs`.
  */
-function shouldRunNow(
+export function shouldRunNow(
   taskName: string,
   payload?: unknown,
   graceMs = DEFAULT_CATCHUP_GRACE_MS,

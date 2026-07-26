@@ -1,143 +1,261 @@
 # Contributing to Lumi
 
-Thank you for considering a contribution! This document explains how to get set up, what conventions to follow, and what the review process looks like.
-
----
-
-## Prerequisites
-
-| Tool | Version | Notes |
-|------|---------|-------|
-| [Bun](https://bun.sh) | 1.3+ | Runtime and package manager |
-| PostgreSQL | 17+ | Local or Docker |
-| Redis | 7+ | Local or Docker |
-| RabbitMQ | 4+ | Local or Docker (only needed for gateway/worker split) |
-
-The easiest way to get all dependencies running is via Docker:
-
-```bash
-docker compose up -d postgres redis rabbitmq
-```
-
----
-
-## Local Setup & Nix Shell
-
-```bash
-# 1. Fork and clone
-git clone https://github.com/lumi-devs/lumi.git && cd lumi
-
-# 2. Install dependencies (bare metal or nix-shell)
-nix-shell -p bun nodejs --run "bun install"
-
-# 3. Generate the Prisma client (required before typecheck/test)
-nix-shell -p bun nodejs --run "bun run db:generate"
-
-# 4. Push the DB schema (dev only — use migrations in production)
-nix-shell -p bun nodejs --run "bun run db:push"
-
-# 5. Copy and fill in your environment
-cp .env.example .env
-# Edit .env: set BOT_TOKEN and CLIENT_ID at minimum
-
-# 6. Start the bot (monolith mode)
-nix-shell -p bun nodejs --run "bun run dev"
-```
-
----
-
-## Architecture
+Thank you for your interest in contributing to Lumi! This guide provides complete instructions for setting up your local environment, adhering to project architecture standards, submitting Pull Requests, and verifying your changes.
 
 > [!IMPORTANT]
-> Before writing any code, read **[AGENTS.md](AGENTS.md)**. It is the single source of truth for:
-
-- The monorepo layout and package boundaries
-- The module system (`@DefineModule`, `BaseCommand`, `Service`, `ModuleListener`)
-- Data access rules (`container.db` — never `container.prisma` directly)
-- The card system (never raw embeds)
-- Permission levels and i18n conventions
-
-Violating these will result in a PR being sent back for revision.
+> Before writing code, review **[AGENTS.md](AGENTS.md)**. It serves as the single source of truth for repository layout, architectural boundaries, module contracts, and UI card standards.
 
 ---
 
-## Running Checks & Verification
+## Toolchain & Prerequisites
+
+Ensure the following prerequisites are installed on your workstation:
+
+| Dependency | Minimum Version | Recommended Installation | Notes |
+| :--- | :--- | :--- | :--- |
+| **[Bun](https://bun.sh)** | `1.3.0+` | `curl -fsSL https://bun.sh/install \| bash` | Primary JavaScript runtime, package manager, and test runner |
+| **Node.js** | `26.0.0+` | `nvm install 26` | Required for tooling compatibility and typechecking |
+| **PostgreSQL** | `17.0+` | Docker / Native | Relational database (uses PgBouncer connection pooler) |
+| **Redis** | `7.0+` | Docker / Native | High-speed cache, rate limiting, and Redis Streams event bus |
+| **RabbitMQ** | `4.0+` | Docker / Native | Inter-service message broker (Gateway / Worker decoupled scale profile) |
+| **Nix** | Optional | [Nix Package Manager](https://nixos.org) | Declarative shell environment via `nix-shell` |
+
+---
+
+## Local Environment Setup
+
+### 1. Repository Setup
+
+Clone the repository and install dependencies:
 
 ```bash
-# Type-check the whole monorepo
-nix-shell -p bun nodejs --run "bun run typecheck"
+git clone https://github.com/lumi-devs/lumi.git
+cd lumi
 
-# Lint (auto-fixes where possible)
-nix-shell -p bun nodejs --run "bun run lint"
+# Install workspace dependencies using Bun
+bun install
 
-# Run unit & integration test suite
-nix-shell -p bun nodejs --run "bun run test"
-
-# Run Black-Box E2E test suite
-nix-shell -p bun nodejs --run "bun run test:e2e"
-
-# Run Resilience & Fault Tolerance suite
-nix-shell -p bun nodejs --run "bun run verify:resilience"
+# Alternatively, if using Nix:
+nix-shell -p bun nodejs --run "bun install"
 ```
 
-All checks (`typecheck`, `lint`, `test`, `test:e2e`, `verify:resilience`) must pass before a PR will be reviewed.
+### 2. Infrastructure Backends (Docker Compose)
+
+Start PostgreSQL, PgBouncer, Redis, and RabbitMQ containerized services:
+
+```bash
+docker compose up -d postgres pgbouncer redis rabbitmq
+```
+
+### 3. Database Schema Provisioning
+
+Generate the Prisma Client types and synchronize the schema to your development database:
+
+```bash
+# Generate Prisma Client code
+bun run db:generate
+
+# Push schema directly to dev database (for local development)
+bun run db:push
+
+# For production-style migration workflows:
+bun run db:migrate
+```
+
+### 4. Environment Configuration (`.env`)
+
+Copy `.env.example` to `.env` and fill in required secrets:
+
+```bash
+cp .env.example .env
+```
+
+#### Essential Environment Variables
+
+| Variable | Required | Description | Example |
+| :--- | :--- | :--- | :--- |
+| `BOT_TOKEN` | **Yes** | Discord Bot User Token from Developer Portal | `MTI...` |
+| `CLIENT_ID` | **Yes** | Discord Application Client ID | `123456789012345678` |
+| `POSTGRES_URL` | **Yes** | Database connection string via PgBouncer | `postgresql://lumi:lumi@localhost:6432/lumi` |
+| `DIRECT_POSTGRES_URL` | **Yes** | Direct database connection string (for migrations) | `postgresql://lumi:lumi@localhost:5432/lumi` |
+| `REDIS_HOST` | **Yes** | Hostname of Redis instance | `localhost` |
+| `REDIS_PASSWORD` | **Yes** | Password for Redis authentication | `lumi` |
+| `RABBITMQ_URL` | Optional | Connection string for RabbitMQ AMQP broker | `amqp://lumi:lumi@localhost:5672` |
+| `METRICS_ENABLED` | Optional | Enable Prometheus `/metrics` HTTP endpoint | `true` |
+| `OTEL_ENABLED` | Optional | Enable OpenTelemetry tracing pipeline | `true` |
+
+### 5. Launch Development Server
+
+Start Lumi in monolithic development mode:
+
+```bash
+bun run dev
+```
 
 ---
 
-## Commit Convention
+## Code Standards & Architectural Rules
 
-Commits follow the [Conventional Commits](https://www.conventionalcommits.org/) spec:
+To maintain high software quality across the monorepo, all contributions must strictly conform to these core development rules:
 
-```
-<type>(<scope>): <short summary>
+> [!WARNING]
+> PRs that violate module boundaries or data layer abstractions will be requested to make architectural revisions before code review.
+
+### 1. Module Isolation Boundary
+
+Modules inside `packages/core/src/modules/` **must never** import code directly from sibling modules.
+
+```ts
+// ❌ Disallowed: Cross-module direct import
+import { MuteService } from "../moderation/services/MuteService.js";
+
+// ✅ Allowed: Inter-module communication via global EventBus or shared Services
+import { container } from "@sapphire/framework";
+const eventBus = container.stores.get("services").get("event-bus");
 ```
 
-| Type | When to use |
-|------|-------------|
-| `feat` | New feature or command |
-| `fix` | Bug fix |
-| `refactor` | Code change with no functional effect |
-| `docs` | Documentation only |
-| `test` | Adding or fixing tests |
-| `chore` | Build, CI, dependency updates |
-| `perf` | Performance improvement |
+### 2. Data Access Layer Abstraction
 
-**Examples:**
+Never use `container.prisma` directly inside commands or modules. Always route database operations through `container.db` (the repository abstraction layer).
+
+```ts
+// ❌ Disallowed
+const guild = await container.prisma.guild.findUnique({ where: { id: guildId } });
+
+// ✅ Allowed
+const guild = await container.db.guilds.get(guildId);
 ```
-feat(mod): add /quarantine command with role-lock
-fix(filter): prevent false positives on quoted URLs
-docs(contributing): add commit convention section
+
+### 3. Card UI System (`@lumi/ui-cards`)
+
+Raw Discord embeds (`EmbedBuilder`) are strictly prohibited in user-facing command responses. Always construct UI responses using Lumi's standardized card primitives:
+
+```ts
+import { makeSuccessCard, makeErrorCard, makeListCard } from "@lumi/ui-cards";
+
+// Respond with standardized success feedback
+await interaction.reply({
+  embeds: [makeSuccessCard({ title: "Settings Saved", description: "Updated moderation threshold." })],
+});
 ```
+
+### 4. Code Hygiene & Utility Functions
+
+* **JSON Parsing**: Never place raw `JSON.parse()` calls inside generic `try/catch` blocks. Use `tryParseJSON` from `@sapphire/utilities`.
+* **Array Filtering**: Do not filter typed arrays using `.filter(Boolean)`. Use `.filter(filterNullish)` from `@lumi/shared`.
+* **Configuration Validation**: All module configurations must define a strict Zod schema inside `@DefineModule`.
+
+### 5. Internationalization (i18n)
+
+All user-facing strings must be localized using Sapphire's `@sapphire/plugin-i18next`. Every command string key must exist in all four supported locales:
+
+* `en-US` (English - US)
+* `de` (German)
+* `es-ES` (Spanish)
+* `fr` (French)
+
+Translation files reside in `packages/i18n/src/locales/<locale>/`.
 
 ---
 
-## Pull Requests
+## Step-by-Step: Adding a New Module
 
-1. Create a branch from `master`: `git checkout -b feat/my-feature`.
-2. Make your changes, following all conventions in `AGENTS.md`.
-3. Push and open a PR — the template will guide you through the checklist.
-4. CI must be green (lint, typecheck, tests).
-5. At least one maintainer review is required before merge.
+1. **Create Directory Structure**: Create a directory under `packages/core/src/modules/<module-name>/`.
+2. **Define Module Metadata**: Create `index.ts` with the `@DefineModule` decorator:
+   ```ts
+   import { DefineModule, BaseModule } from "#lib/module-system.js";
+   import { z } from "zod";
 
-### Key rules
-- **No cross-module imports.** A module must never import from a sibling module. Shared code goes in `src/lib/`.
-- **No raw embeds.** Use `makeInfoCard`, `makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeListCard`.
-- **No `JSON.parse` in try/catch.** Use `tryParseJSON` from `@sapphire/utilities`.
-- **No `.filter(Boolean)` on typed arrays.** Use `.filter(filterNullish)`.
-- **All user-facing strings must be i18n'd** in all four locales: `en-US`, `de`, `es-ES`, `fr`.
+   @DefineModule({
+     name: "utility",
+     description: "General utility commands",
+     defaultEnabled: true,
+     configSchema: z.object({
+       enablePing: z.boolean().default(true),
+     }),
+   })
+   export default class UtilityModule extends BaseModule {}
+   ```
+3. **Add Components**: Add subdirectories as needed:
+   * `commands/` — Sapphire commands inheriting from `BaseCommand`
+   * `listeners/` — Event listeners inheriting from `ModuleListener`
+   * `services/` — Business logic services
+   * `scheduled-tasks/` — Sapphire scheduled tasks
+4. **Generate Static Manifest**: Run the manifest generator script:
+   ```bash
+   bun run modules:manifest
+   ```
+5. **Add Localizations**: Add translation keys into `packages/i18n/src/locales/<locale>/<module-name>.json` for all 4 supported languages.
+6. **Write Tests**: Create corresponding unit tests in `packages/core/tests/modules/<module-name>/`.
 
 ---
 
-## Adding a New Module
+## Verification & Testing Suite
 
-1. Create `src/modules/<name>/` with an `index.ts` that exports a class decorated with `@DefineModule`.
-2. Add sub-directories as needed: `commands/`, `listeners/`, `interaction-handlers/`, `services/`, `scheduled-tasks/`.
-3. Generate a manifest: `bun run modules:manifest`.
-4. Add translations to `src/languages/<locale>/<name>.json` for all four locales.
-5. Write tests in `packages/core/tests/modules/<name>/`.
+Run the full verification suite locally prior to pushing your branch:
+
+```bash
+# 1. Monorepo TypeScript compilation check
+bun run typecheck
+
+# 2. ESLint linting with auto-fixes
+bun run lint
+
+# 3. Unit and integration tests (Vitest)
+bun run test
+
+# 4. End-to-end black-box tests
+bun run test:e2e
+
+# 5. Fault tolerance & event bus resilience verification
+bun run verify:resilience
+```
+
+| Verification Command | Execution Tool | Target / Description |
+| :--- | :--- | :--- |
+| `bun run typecheck` | `tsc` | Monorepo-wide type checking without emitting files |
+| `bun run lint` | `eslint` | Code style enforcement and linting auto-fixes |
+| `bun run test` | `vitest` | Fast unit and integration tests across packages |
+| `bun run test:e2e` | `vitest` | Black-box E2E tests executing full bot flows |
+| `bun run verify:resilience` | Bun TS | Redis Streams and NATS message queue fault tolerance test suite |
 
 ---
 
-## Questions?
+## Commit & PR Conventions
 
-Open a [Discussion](https://github.com/lumi-devs/lumi/discussions) or file an [Issue](https://github.com/lumi-devs/lumi/issues) with the `question` label.
+### Git Commit Guidelines
+
+Lumi uses the [Conventional Commits](https://www.conventionalcommits.org/) format:
+
+```text
+<type>(<scope>): <short description>
+```
+
+#### Commit Types
+
+| Type | Purpose | Example |
+| :--- | :--- | :--- |
+| `feat` | New feature or command | `feat(moderation): add /quarantine command` |
+| `fix` | Bug fix | `fix(gateway): resolve heartbeat timeout reconnect loop` |
+| `refactor` | Code change that neither fixes a bug nor adds a feature | `refactor(db): optimize guild query caching` |
+| `docs` | Documentation updates | `docs(config): document tempo tracing pipeline` |
+| `test` | Adding or updating tests | `test(resilience): add NATS JetStream burst test` |
+| `chore` | Build tasks, package management, dependencies | `chore(deps): update sapphire framework packages` |
+| `perf` | Code changes that improve performance | `perf(event-bus): reduce stream consumer allocation overhead` |
+
+### Pull Request Checklist
+
+When opening a Pull Request:
+
+1. Create a descriptive branch name: `feat/my-feature` or `fix/my-bugfix`.
+2. Ensure all 5 verification commands (`typecheck`, `lint`, `test`, `test:e2e`, `verify:resilience`) pass without errors.
+3. Verify that `bun run modules:manifest` was executed if any module schemas or command signatures changed.
+4. Ensure new user-facing strings are localized across `en-US`, `de`, `es-ES`, and `fr`.
+5. Link relevant GitHub Issues in your PR description.
+
+---
+
+## Community & Support
+
+* **Bug Reports & Feature Requests**: Submit an issue on [GitHub Issues](https://github.com/lumi-devs/lumi/issues).
+* **Architectural Discussions**: Start a topic on [GitHub Discussions](https://github.com/lumi-devs/lumi/discussions).

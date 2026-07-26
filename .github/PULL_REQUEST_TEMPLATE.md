@@ -1,28 +1,35 @@
 ## Description
 
-<!-- A clear summary of what this PR changes and why. Link related issues with "Closes #<issue>". -->
+<!-- Provide a clear, concise summary of the changes introduced in this pull request and why they were made. -->
 
 Closes #
 
-## Type of change
+## Type of Change
 
-- [ ] Bug fix (non-breaking change that fixes an issue)
-- [ ] New feature (non-breaking change that adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to break)
-- [ ] Documentation update
-- [ ] Refactor / chore (no functional change)
+- [ ] 🐛 Bug fix (non-breaking change fixing an issue)
+- [ ] ✨ New feature (non-breaking change adding functionality)
+- [ ] 💥 Breaking change (fix or feature causing existing functionality to break)
+- [ ] 📚 Documentation update
+- [ ] 🎨 Refactor / Chore / Infrastructure update
 
-## Checklist
+## Quality & Compliance Checklist
 
-- [ ] I have read [AGENTS.md](../AGENTS.md) and my changes comply with the architecture guidelines.
-- [ ] `bun run typecheck` passes with no errors.
-- [ ] `bun run lint` passes with no errors.
-- [ ] `bun run test` passes with no regressions.
-- [ ] New functionality includes tests (or is covered by an existing test).
-- [ ] I have not added cross-module imports (modules must never import from sibling modules).
-- [ ] Any new Discord UI uses the card helpers (`makeInfoCard`, `makeSuccessCard`, etc.) — not raw embeds.
-- [ ] Any new user-facing strings have been added to all four locales (`en-US`, `de`, `es-ES`, `fr`).
+- [ ] I have read [AGENTS.md](../AGENTS.md) and verified my changes comply with core architecture guidelines.
+- [ ] `bun run typecheck` passes with zero errors.
+- [ ] `bun run lint` passes with zero errors.
+- [ ] `bun run test` passes with zero regressions.
+- [ ] Unit or integration tests have been added/updated for new behavior.
+- [ ] **Module Integrity**: No cross-module internal imports added (modules must only interface via exports or events).
+- [ ] **Discord UI Standard**: Any new Discord UI elements use card helpers (`makeInfoCard`, `makeSuccessCard`, etc.) instead of raw embeds.
+- [ ] **Localization**: User-facing strings are added to all supported locales (`en-US`, `de`, `es-ES`, `fr`).
 
-## Screenshots / recordings (if UI changed)
+## Testing Instructions
 
-<!-- Paste screenshots or a short recording here. -->
+<!-- Detail step-by-step instructions for testing and verifying these changes locally or in a staging environment. -->
+
+1. 
+2. 
+
+## Screenshots / Evidence (if UI changed)
+
+<!-- Paste screenshots, gifs, or terminal output demonstrating the changes. -->
