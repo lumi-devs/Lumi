@@ -29,7 +29,7 @@ The **Lumi Worker** (`@lumi/worker`) is the primary stateless execution engine o
 
 The worker application serves as the core processing engine in both monolithic and microservices deployments:
 
-- **WS-Suppressed Worker Execution**: In distributed mode (`LUMI_ROLE=worker`), WebSocket connection initiation is completely disabled. Packets arrive asynchronously via `RawGatewayConsumer` over Redis Streams or NATS JetStream.
+- **WS-Suppressed Worker Execution**: In distributed mode (`LUMI_ROLE=worker`), WebSocket connection initiation is completely disabled. Packets arrive asynchronously via `RawGatewayConsumer` over Redis Streams.
 - **Sapphire Framework Foundation**: Built on Sapphire Framework v5, providing modular command registration, listener stores, argument parsing, and command execution pipelines.
 - **Dynamic Module Store**: Loads built-in feature modules (`afk`, `core`, `dashboard`, `filter`, `logging`, `mod`, `tempvc`, `utility`) and dynamically mounts external third-party addons from `/lumi-addons` or custom development paths (`LUMI_DEV_PATHS`).
 - **Dashboard RPC Handler**: Serves asynchronous RabbitMQ RPC requests emitted by `@lumi/dashboard` to fetch live guild configurations and apply module state changes.
@@ -45,7 +45,7 @@ The worker application serves as the core processing engine in both monolithic a
 ```mermaid
 flowchart TD
     subgraph Event Transport Backplane
-        EB{Redis Streams / NATS JetStream<br/>rawGatewayStream}
+        EB{Redis Streams<br/>rawGatewayStream}
     end
 
     subgraph Worker Process (apps/worker)
@@ -102,7 +102,7 @@ Configure `@lumi/worker` using environment variables:
 |---|:---:|:---:|---|
 | `BOT_TOKEN` | **Yes** | — | Discord Bot Token from the Discord Developer Portal. |
 | `LUMI_ROLE` | No | `monolith` | Service role (`monolith` \| `worker`). |
-| `TRANSPORT` | No | `streams` | Event bus transport mechanism (`streams` \| `nats` \| `inprocess`). |
+| `TRANSPORT` | No | `streams` | Event bus transport mechanism (`streams`). |
 | `LUMI_CONSUMER_ID` | No | `worker-1` | Unique consumer ID for stream consumer group tracking. |
 | `POSTGRES_URL` | **Yes** | — | PostgreSQL pooled connection string (PgBouncer). |
 | `DIRECT_POSTGRES_URL` | **Yes** | — | PostgreSQL direct connection string (used for schema migrations). |
