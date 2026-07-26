@@ -10,6 +10,7 @@
     "dev": "bun --watch src/main.ts"
   },
   "dependencies": {
-    "@lumi/worker": "workspace:*"
+    "@lumi/core": "workspace:*",
+    "@lumi/observability": "workspace:*"
   }
 }

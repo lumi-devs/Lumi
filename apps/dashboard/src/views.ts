@@ -3,7 +3,7 @@ import { guildIconUrl } from "./discord.js";
 import type { DashboardData, OAuthGuild, Session } from "./types.js";
 import { config } from "./config.js";
 
-export function escapeHtml(value: unknown): string {
+function escapeHtml(value: unknown): string {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -889,7 +889,9 @@ const CLIENT_SCRIPT = `<script>
     });
     try {
       history.replaceState(null, null, '#' + moduleName);
-    } catch(e) {}
+    } catch (err) {
+      console.warn('Failed to update location hash:', err);
+    }
   };
 
   window.filterModules = function() {

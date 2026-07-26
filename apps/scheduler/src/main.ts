@@ -1,9 +1,10 @@
-import "./service-name.js";
+import "./telemetry.js";
 import "@lumi/core/setup";
 
 import { container } from "@sapphire/framework";
 import { shutdownTracing, runDrainSequence } from "@lumi/observability";
-import { LumiClient, envParseString } from "@lumi/core";
+import { LumiClient } from "@lumi/core";
+import { envParseString } from "#lib/env.js";
 
 const client = await LumiClient.bootstrap({ role: "scheduler" }).catch(
   (err: unknown): never => {
