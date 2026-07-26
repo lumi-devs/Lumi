@@ -3,6 +3,8 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { DownloadResolver, MODULE_ROOT, ADDON_MODULES_ROOT } from "#lib/downloader/resolver.js";
+// CI trigger comment
+
 
 describe("DownloadResolver Edge Cases", () => {
   let resolver: DownloadResolver;
