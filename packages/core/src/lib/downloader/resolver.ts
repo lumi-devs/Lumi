@@ -125,9 +125,10 @@ export class DownloadResolver {
       cloneArgs.push("--", url, repoPath);
       await execGit(cloneArgs).catch(async (err) => {
         await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
-        execError("Git clone failed")(err);
+        throw new Error(`Git clone failed: ${(err.stderr ?? err.message ?? String(err)).trim()}`);
       });
     }
+
   }
 
   public async getModulesInRepo(repoName: string): Promise<ModuleInfo[]> {

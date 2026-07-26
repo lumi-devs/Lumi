@@ -23,8 +23,9 @@ describe("DownloadResolver Edge Cases", () => {
     // Should not throw URL parsing error for bracketed URLs
     await expect(
       resolver.addRepo("test_bracket", "<https://github.com/invalid-org/nonexistent-repo-12345.git>"),
-    ).rejects.toThrow(/(?:Git clone failed|fatal:)/);
+    ).rejects.toThrow("Git clone failed");
   });
+
 
 
   it("cleans up incomplete repository folder on clone failure", async () => {
