@@ -12,7 +12,9 @@
       "@lumi/core/setup": ["./packages/core/src/lib/client/setup.ts"],
       "@lumi/sdk": ["./packages/sdk/src/index.ts"],
       "@lumi/sharding": ["./packages/sharding/src/index.ts"],
-      "@lumi/worker/main": ["./apps/worker/src/main.ts"]
+      "@lumi/worker/main": ["./apps/worker/src/main.ts"],
+      "#lib/env.js": ["./packages/core/src/lib/env.ts"],
+      "#lib/*.js": ["./packages/core/src/lib/*.ts"]
     }
   }
 }

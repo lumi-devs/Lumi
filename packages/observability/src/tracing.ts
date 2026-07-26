@@ -1,8 +1,5 @@
-// OpenTelemetry tracing bootstrap. Import + call startTracing() as early as
-// possible (before the instrumented libs are used) so http/pg/ioredis/amqplib
-// auto-instrument. Each Discord event/command gets one span; with traceparent
-// propagation (see context.ts) that span continues across the bus into workers.
-//
+// OpenTelemetry tracing setup and helpers.
+
 
 import {
   diag,

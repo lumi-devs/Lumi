@@ -1,8 +1,7 @@
 import type { ConfigField } from "./config.js";
 
-// Static, serialisable module contract. `manifest.json` carries everything module
-// discovery needs WITHOUT executing module code, so a service can answer "which
-// service loads which module?" before importing discord.js.
+// Serializable module manifest contract for discovery and lifecycle metadata.
+
 
 /** Which deployable service runs a module. Workers run feature modules. */
 export type TargetService = "worker" | "gateway" | "scheduler" | "api";

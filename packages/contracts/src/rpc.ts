@@ -1,5 +1,5 @@
-// Dashboard RPC bridge wire types (RabbitMQ request/response).
-// Shared between the bot (handler side) and the web dashboard (caller side).
+// Dashboard RPC bridge wire types and action definitions.
+
 
 export interface RpcRequest<T = unknown> {
   id: string;

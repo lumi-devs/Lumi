@@ -1,5 +1,5 @@
-// Cross-process fanout event envelope (RabbitMQ `lumi.events`, later Redis Streams).
-// Producers stamp `event` + `ts`; the rest of the payload is event-specific.
+// Cross-process fanout event envelope contracts.
+
 
 export interface BusEventEnvelope<T = Record<string, unknown>> {
   event: string;

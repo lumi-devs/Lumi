@@ -5,9 +5,17 @@
 import { startTracing } from "./tracing.js";
 import { initMetrics, startMetricsServer } from "./metrics.js";
 
-export function bootstrapTelemetry(service: string): void {
+export function bootstrapTelemetry(serviceName?: string): void {
+  const name =
+    (serviceName && serviceName.trim().length > 0
+      ? serviceName
+      : undefined) ??
+    process.env["SERVICE_NAME"] ??
+    process.env["LUMI_ROLE"] ??
+    "lumi";
+
   // Pin the service name so the (later-constructed) pino logger agrees with traces/metrics.
-  process.env["SERVICE_NAME"] ??= service;
+  process.env["SERVICE_NAME"] ??= name;
   const svc = process.env["SERVICE_NAME"];
 
   startTracing({

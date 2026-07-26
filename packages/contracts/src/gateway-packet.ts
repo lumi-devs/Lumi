@@ -1,9 +1,5 @@
-// Wire envelope for one raw Discord gateway dispatch packet, carried gateway→worker
-// over the event bus (Redis Streams in production, in-process for the monolith).
-//
-// We deliberately keep this minimal — the bus is opaque transport, not a re-encoding
-// of discord.js's API. The worker re-injects `packet` into `client.ws.handlePacket`,
-// so anything discord.js's dispatcher understands round-trips unchanged.
+// Discord gateway dispatch packet envelope contracts for event bus transport.
+
 
 export interface RawGatewayPacket {
   /** Gateway opcode (always `0` / DISPATCH for the packets we forward). */

@@ -21,8 +21,6 @@ import type { StreamStats } from "./RedisStreamsBus.js";
 
 /** Capture all bus events under one JetStream stream — keeps ops simple. */
 const STREAM_NAME = "LUMI_EVENTS";
-/** Wildcard subject the JetStream stream binds to. */
-const STREAM_SUBJECTS = ["lumi.>", "verify.>"];
 
 export interface NatsJetStreamBusOptions {
   /** Live NATS connection (factory owns its lifecycle). */
@@ -41,6 +39,8 @@ export interface NatsJetStreamBusOptions {
   onStats?: (stats: StreamStats) => void;
   /** Stats poll interval. Default 10_000. */
   statsIntervalMs?: number;
+  /** Wildcard subjects the JetStream stream binds to. Default ["lumi.>", "verify.>"]. */
+  streamSubjects?: string[];
 }
 
 export class NatsJetStreamBus implements EventBus {
@@ -51,6 +51,7 @@ export class NatsJetStreamBus implements EventBus {
   private readonly ackWaitNs: number;
   private readonly onStats: NatsJetStreamBusOptions["onStats"];
   private readonly statsIntervalMs: number;
+  private readonly streamSubjects: string[];
   private readonly timers = new Set<NodeJS.Timeout>();
   // Live pull iterators from in-flight consume() loops. A parked `for await` can't
   // be ended by a flag once the stream drains, so stop()/close() call msgs.stop().
@@ -69,6 +70,7 @@ export class NatsJetStreamBus implements EventBus {
     this.ackWaitNs = (opts.ackWaitMs ?? 60_000) * 1_000_000;
     this.onStats = opts.onStats;
     this.statsIntervalMs = opts.statsIntervalMs ?? 10_000;
+    this.streamSubjects = opts.streamSubjects ?? ["lumi.>", "verify.>"];
   }
 
   public async publish<T>(
@@ -283,7 +285,7 @@ export class NatsJetStreamBus implements EventBus {
       try {
         await this.jsm.streams.add({
           name: STREAM_NAME,
-          subjects: STREAM_SUBJECTS,
+          subjects: this.streamSubjects,
           retention: RetentionPolicy.Limits,
           max_msgs: maxLen,
         });
