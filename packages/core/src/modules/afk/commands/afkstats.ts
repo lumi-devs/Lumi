@@ -27,12 +27,13 @@ export default class AfkStatsCommand extends BaseCommand {
   }
 
   public override async run(ctx: CommandContext) {
+    const t = await ctx.fetchT();
     const { activeEntries, activeCooldowns } = await this.afkService.getStats();
     return ctx.reply(
       makeCard(
         0,
-        `${Emojis.ANALYTICS} AFK System Stats`,
-        `**Active AFK entries:** ${activeEntries}\n**Active cooldowns:** ${activeCooldowns}`,
+        `${Emojis.ANALYTICS} ${t("afk:statsTitle")}`,
+        t("afk:statsBody", { activeEntries, activeCooldowns }),
       ),
     );
   }

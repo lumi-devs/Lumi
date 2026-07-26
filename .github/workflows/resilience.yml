@@ -1,10 +1,10 @@
 name: Resilience & Fault Tolerance Verification
 
 # Runs the distributed resilience & fault-tolerance verification suite against ephemeral infrastructure.
-# `bun run verify:resilience` tests message delivery, ordering, ACK removal, burst concurrency, and multi-transport recovery.
+# `bun run verify:resilience` tests message delivery, ordering, ACK removal, and burst concurrency.
 on:
   push:
-    branches: [master]
+    branches: [main]
   schedule:
     - cron: "0 4 * * *" # nightly 04:00 UTC
   workflow_dispatch:
@@ -25,7 +25,6 @@ jobs:
     env:
       REDIS_HOST: localhost
       REDIS_PORT: "6379"
-      NATS_URL: nats://127.0.0.1:4222
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
@@ -34,20 +33,5 @@ jobs:
       - run: bun install
       - run: bun run db:generate
 
-      - name: Start NATS (JetStream)
-        run: |
-          docker run -d --name nats -p 4222:4222 -p 8222:8222 nats:2.10-alpine -js -m 8222
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:8222/healthz >/dev/null; then echo "NATS ready"; exit 0; fi
-            sleep 1
-          done
-          echo "NATS did not become ready in time" >&2
-          docker logs nats || true
-          exit 1
-
-      - name: verify:resilience (Redis + NATS suite)
+      - name: verify:resilience (Redis suite)
         run: bun run verify:resilience
-
-      - name: NATS logs (on failure)
-        if: failure()
-        run: docker logs nats || true

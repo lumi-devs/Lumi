@@ -18,6 +18,7 @@ import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
 import type { PingData } from "./ping-collect.js";
 import { container } from "@sapphire/framework";
 import { Emojis } from "#lib/utilities/assets.js";
+import type { LumiT } from "#lib/i18n/index.js";
 
 export const PING_FLAGS = MessageFlags.IsComponentsV2;
 export const EPHEMERAL_FLAGS =
@@ -148,7 +149,7 @@ export function buildOverviewCard(
   return c;
 }
 
-export function buildGatewayCard(data: PingData): ContainerBuilder {
+export function buildGatewayCard(data: PingData, t?: LumiT): ContainerBuilder {
   const c = detailCard("📡 Gateway & Connection Status", data);
 
   const node = data.gatewayNode === "Unknown" ? "Analyzing…" : data.gatewayNode;
@@ -157,15 +158,15 @@ export function buildGatewayCard(data: PingData): ContainerBuilder {
     new TextDisplayBuilder().setContent(
       [
         executiveSection(
-          "Connection Health",
+          t ? t("core:pingHealth") : "Connection Health",
           [
-            ["Average Latency", fmtMs(data.wsPing)],
-            ["Jitter", `±${Math.round(data.jitterMs)}ms`],
+            [t ? t("core:pingAvgLatency") : "Average Latency", fmtMs(data.wsPing)],
+            [t ? t("core:pingJitter") : "Jitter", `±${Math.round(data.jitterMs)}ms`],
           ],
           data.jitterMs < 5 ? "Status: Excellent" : "Status: Normal",
         ),
         executiveSection(
-          "Session Details",
+          t ? t("core:pingSessionDetails") : "Session Details",
           [
             ["Initial Handshakes", `${data.identifies} times`],
             ["Successful Resumes", `${data.resumes} times`],
@@ -174,7 +175,7 @@ export function buildGatewayCard(data: PingData): ContainerBuilder {
           `Connected ${time(new Date(Date.now() - data.uptime), TimestampStyles.RelativeTime)}`,
         ),
         executiveSection(
-          "Traffic Activity",
+          t ? t("core:pingTrafficActivity") : "Traffic Activity",
           [
             ["Incoming Messages", `${data.messagesPerMin.toFixed(0)} msg/min`],
             ["Active Requests", `${data.activeRequests} concurrent`],
@@ -192,7 +193,7 @@ export function buildGatewayCard(data: PingData): ContainerBuilder {
     );
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `${Emojis.SPACE}__Active Shards__:`,
+        `${Emojis.SPACE}__${t ? t("core:pingActiveShards") : "Active Shards"}__:`,
       ),
     );
     const shardLines = data.shards
@@ -207,7 +208,7 @@ export function buildGatewayCard(data: PingData): ContainerBuilder {
   return c;
 }
 
-export function buildEngineCard(data: PingData): ContainerBuilder {
+export function buildEngineCard(data: PingData, t?: LumiT): ContainerBuilder {
   const c = detailCard("🏎️ Performance & Memory", data);
 
   const heapPct = ((data.heapUsed / data.heapTotal) * 100).toFixed(1);
@@ -215,7 +216,7 @@ export function buildEngineCard(data: PingData): ContainerBuilder {
     new TextDisplayBuilder().setContent(
       [
         executiveSection(
-          "Memory Allocation",
+          t ? t("core:pingMemoryAllocation") : "Memory Allocation",
           [
             ["JS Heap Used", `${fmtMB(data.heapUsed)} (${heapPct}%)`],
             ["External Heap", fmtMB(data.external)],
@@ -224,7 +225,7 @@ export function buildEngineCard(data: PingData): ContainerBuilder {
           `ArrayBuffers: ${fmtMB(data.arrayBuffers)}`,
         ),
         executiveSection(
-          "Execution Lag",
+          t ? t("core:pingExecutionLag") : "Execution Lag",
           [
             ["Event Loop Lag", `${Math.round(data.loopLagMs)}ms`],
             ["Timer Handles", `${data.activeHandles} Active`],
@@ -249,21 +250,21 @@ export function buildEngineCard(data: PingData): ContainerBuilder {
   return c;
 }
 
-export function buildHostCard(data: PingData): ContainerBuilder {
+export function buildHostCard(data: PingData, t?: LumiT): ContainerBuilder {
   const c = detailCard(`${Emojis.CPU} System Infrastructure`, data);
 
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       [
         executiveSection(
-          "Processor Topology",
+          t ? t("core:pingProcessorTopology") : "Processor Topology",
           [
             ["CPU Model", data.cpuModel],
             ["Logic Cores", `${data.cpuCores} Cores (${data.arch})`],
           ],
         ),
         executiveSection(
-          "Memory & Swap",
+          t ? t("core:pingMemorySwap") : "Memory & Swap",
           [
             [
               "System RAM",
@@ -292,8 +293,8 @@ export function buildHostCard(data: PingData): ContainerBuilder {
   return c;
 }
 
-export function buildPostgresCard(data: PingData): ContainerBuilder {
-  const c = detailCard(`${Emojis.DATABASE} Database Health`, data);
+export function buildPostgresCard(data: PingData, t?: LumiT): ContainerBuilder {
+  const c = detailCard(`${Emojis.DATABASE} ${t ? t("core:pingDbHealth") : "Database Health"}`, data);
 
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
@@ -347,8 +348,8 @@ export function buildPostgresCard(data: PingData): ContainerBuilder {
   return c;
 }
 
-export function buildRedisCard(data: PingData): ContainerBuilder {
-  const c = detailCard(`${Emojis.CACHE} Cache Performance`, data);
+export function buildRedisCard(data: PingData, t?: LumiT): ContainerBuilder {
+  const c = detailCard(`${Emojis.CACHE} ${t ? t("core:pingCachePerformance") : "Cache Performance"}`, data);
 
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
@@ -383,8 +384,8 @@ export function buildRedisCard(data: PingData): ContainerBuilder {
   return c;
 }
 
-export function buildRabbitCard(data: PingData): ContainerBuilder {
-  const c = detailCard(`${Emojis.QUEUE} Message Queue Pipeline`, data);
+export function buildRabbitCard(data: PingData, t?: LumiT): ContainerBuilder {
+  const c = detailCard(`${Emojis.QUEUE} ${t ? t("core:pingMsgQueuePipeline") : "Message Queue Pipeline"}`, data);
 
   if (data.rabbitConnected) {
     c.addTextDisplayComponents(
@@ -417,8 +418,8 @@ export function buildRabbitCard(data: PingData): ContainerBuilder {
   return c;
 }
 
-export function buildBotCard(data: PingData): ContainerBuilder {
-  const c = detailCard(`${Emojis.BOT} Bot System Summary`, data);
+export function buildBotCard(data: PingData, t?: LumiT): ContainerBuilder {
+  const c = detailCard(`${Emojis.BOT} ${t ? t("core:pingSummary") : "Bot System Summary"}`, data);
 
   const memPerGuild =
     data.guilds > 0 ? (data.rss / 1024 / 1024 / data.guilds).toFixed(2) : "0";
@@ -460,23 +461,24 @@ export function buildDetailCard(
   category: PingCategory,
   data: PingData,
   userId: string,
+  t?: LumiT,
 ): ContainerBuilder {
   const c = ((): ContainerBuilder => {
     switch (category) {
       case "gateway":
-        return buildGatewayCard(data);
+        return buildGatewayCard(data, t);
       case "engine":
-        return buildEngineCard(data);
+        return buildEngineCard(data, t);
       case "host":
-        return buildHostCard(data);
+        return buildHostCard(data, t);
       case "postgres":
-        return buildPostgresCard(data);
+        return buildPostgresCard(data, t);
       case "redis":
-        return buildRedisCard(data);
+        return buildRedisCard(data, t);
       case "rabbitmq":
-        return buildRabbitCard(data);
+        return buildRabbitCard(data, t);
       case "bot":
-        return buildBotCard(data);
+        return buildBotCard(data, t);
     }
   })();
 
@@ -489,7 +491,7 @@ export function buildDetailCard(
     new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`ping:overview:${userId}`)
-        .setLabel("Back to Overview")
+        .setLabel(t ? t("core:btnBack") : "Back to Overview")
         .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
         .setStyle(ButtonStyle.Secondary),
     ),

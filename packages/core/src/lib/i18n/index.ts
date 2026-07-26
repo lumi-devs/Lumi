@@ -11,7 +11,16 @@ import { fileURLToPath } from "node:url";
  * cross-namespace prefixed keys (e.g. `t("commands:foo")`). Extend this when a
  * new namespace JSON is added under `src/languages/<lng>/`.
  */
-export type LumiNamespaces = ["common", "commands", "preconditions"];
+export type LumiNamespaces = [
+  "common",
+  "commands",
+  "preconditions",
+  "core",
+  "tempvc",
+  "afk",
+  "logging",
+  "filter",
+];
 
 /** A translation function bound to every Lumi namespace. */
 export type LumiT = TFunction<LumiNamespaces>;
@@ -26,7 +35,7 @@ export const DEFAULT_LANGUAGE = "en-US";
  *
  * Adding a language is purely additive: drop in the directory, list it here.
  */
-export const SUPPORTED_LANGUAGES = ["en-US", "de", "es-ES", "fr"] as const;
+export const SUPPORTED_LANGUAGES = ["en-US"] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 const supported = new Set<string>(SUPPORTED_LANGUAGES);

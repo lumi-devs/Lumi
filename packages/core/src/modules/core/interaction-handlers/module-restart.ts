@@ -8,6 +8,7 @@ import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { makeSuccessCard, makeInfoCard } from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { scheduleProcessRestart } from "#lib/restart.js";
+import { fetchTyped } from "#lib/commands.js";
 
 /**
  * Handles the "Restart Now / Cancel" choice shown after a module update that
@@ -35,12 +36,13 @@ export class ModuleRestartInteractionHandler extends BaseInteractionHandler {
   ) {
     if (!this.checkSecurity(interaction, userId)) return;
     await this.acknowledge(interaction);
+    const t = await fetchTyped(interaction);
 
     if (action === "cancel") {
       await interaction.editReply(
         makeInfoCard(
-          `${Emojis.CROSS} Restart Cancelled`,
-          "The new code is on disk but **not loaded yet**. Run the update again and choose **Restart Now**, or restart the bot, to apply it.",
+          `${Emojis.CROSS} ${t("core:restartCancelledTitle")}`,
+          t("core:restartCancelledText"),
         ),
       );
       return;
@@ -48,8 +50,8 @@ export class ModuleRestartInteractionHandler extends BaseInteractionHandler {
 
     await interaction.editReply(
       makeSuccessCard(
-        `${Emojis.LOADING} Restarting`,
-        "Restarting now to load the updated code — back online in a few seconds.",
+        `${Emojis.LOADING} ${t("core:restartingTitle")}`,
+        t("core:restartingText"),
       ),
     );
     scheduleProcessRestart(`bot owner ${userId} via update button`);

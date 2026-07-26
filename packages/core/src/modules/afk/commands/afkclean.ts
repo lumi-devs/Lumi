@@ -26,11 +26,12 @@ export default class AfkCleanCommand extends BaseCommand {
   }
 
   public override async run(ctx: CommandContext) {
+    const t = await ctx.fetchT();
     await ctx.defer();
     const removed = await this.afkService.cleanStaleEntries();
     return ctx.replySuccess(
-      "AFK Cleanup",
-      `Removed ${removed} stale AFK entries.`,
+      t("afk:cleanTitle"),
+      t("afk:cleanSuccess", { count: removed }),
     );
   }
 }

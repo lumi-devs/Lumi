@@ -80,31 +80,33 @@ export class DownloadCommand extends BaseSubcommand {
   }
 
   public async panel(ctx: CommandContext): Promise<void> {
+    const t = await ctx.fetchT();
     const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId("lumi:tab:addons")
-        .setLabel("Open Add-ons Manager")
+        .setLabel(t("core:openAddonsManager"))
         .setEmoji(Emojis.parse(Emojis.REPO))
         .setStyle(ButtonStyle.Primary),
     );
 
     await ctx.reply(
       makeInfoCard(
-        "Add-on Downloads",
-        "Open the Add-ons Manager to browse repositories, inspect available modules, and install or remove modules from one place.",
+        t("core:addonDownloadsTitle"),
+        t("core:addonDownloadsText"),
         { actionRows: [row] },
       ),
     );
   }
 
   public async install(ctx: CommandContext): Promise<void> {
+    const t = await ctx.fetchT();
     const repoName = (await ctx.getString("repo", { required: true }))!;
     const moduleName = (await ctx.getString("module", { required: true }))!;
 
     await ctx.reply(
       makeInfoCard(
-        "Installing Module",
-        `Installing **${moduleName}** from **${repoName}**...`,
+        t("core:installingModuleTitle"),
+        t("core:installingModuleText", { moduleName, repoName }),
       ),
     );
 
@@ -115,8 +117,8 @@ export class DownloadCommand extends BaseSubcommand {
       );
       await ctx.reply(
         makeSuccessCard(
-          `${Emojis.INSTALL} Module Installed`,
-          `Installed **${moduleName}** from **${repoName}** and synced its slash commands (if any).`,
+          `${Emojis.INSTALL} ${t("core:moduleInstalledTitle")}`,
+          t("core:moduleInstalledText", { moduleName, repoName }),
         ),
       );
     } catch (err: unknown) {
@@ -125,16 +127,17 @@ export class DownloadCommand extends BaseSubcommand {
         `[Download] ${Emojis.ERROR} Install failed: ${moduleName} — ${msg_}`,
       );
       await ctx.reply(
-        makeErrorCard(`${Emojis.ERROR} Failed to Install Module`, msg_),
+        makeErrorCard(`${Emojis.ERROR} ${t("core:failedInstallModuleTitle")}`, msg_),
       );
     }
   }
 
   public async uninstall(ctx: CommandContext): Promise<void> {
+    const t = await ctx.fetchT();
     const moduleName = (await ctx.getString("module", { required: true }))!;
 
     await ctx.reply(
-      makeInfoCard("Uninstalling Module", `Removing **${moduleName}**...`),
+      makeInfoCard(t("core:uninstallingModuleTitle"), t("core:uninstallingModuleText", { moduleName })),
     );
 
     try {
@@ -144,8 +147,8 @@ export class DownloadCommand extends BaseSubcommand {
       );
       await ctx.reply(
         makeSuccessCard(
-          "Module Uninstalled",
-          `Removed **${moduleName}** from active modules and local addon storage.`,
+          t("core:moduleUninstalledTitle"),
+          t("core:moduleUninstalledText", { moduleName }),
         ),
       );
     } catch (err: unknown) {
@@ -153,7 +156,7 @@ export class DownloadCommand extends BaseSubcommand {
       this.container.logger.warn(
         `[Download] Uninstall failed: ${moduleName} — ${msg_}`,
       );
-      await ctx.reply(makeErrorCard("Failed to Uninstall Module", msg_));
+      await ctx.reply(makeErrorCard(t("core:failedUninstallModuleTitle"), msg_));
     }
   }
 }

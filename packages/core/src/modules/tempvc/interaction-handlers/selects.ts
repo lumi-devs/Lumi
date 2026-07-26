@@ -17,6 +17,7 @@ import { makeSuccessCard } from "#lib/utilities/cards.js";
 import { getVcRecord, type VcRecord } from "../data.js";
 import { TVC } from "../keys.js";
 import type TempVcService from "../services/TempVcService.js";
+import { fetchTyped } from "#lib/commands.js";
 
 const ACTIONS = new Set(["ksel", "tsel", "usel", "bsel", "ubsel", "xsel"]);
 
@@ -48,13 +49,14 @@ export default class TempVcSelectHandler extends BaseInteractionHandler {
     if (!record) return;
 
     const member = interaction.member as GuildMember;
+    const t = await fetchTyped(interaction);
     if (
       member.id !== record.ownerId &&
       !this.service.canManage(member, channel)
     ) {
       throw new UserError({
         identifier: "TempVcNotOwner",
-        message: `${Emojis.CROSS} Only the channel owner can use these controls.`,
+        message: `${Emojis.CROSS} ${t("tempvc:onlyOwner")}`,
       });
     }
 
@@ -63,11 +65,11 @@ export default class TempVcSelectHandler extends BaseInteractionHandler {
 
     const result =
       action === "xsel"
-        ? await this.#transfer(channel, record, interaction.values[0]!)
-        : await this.#applyAccess(channel, action, ids);
+        ? await this.#transfer(channel, record, interaction.values[0]!, t)
+        : await this.#applyAccess(channel, action, ids, t);
 
     await interaction.editReply({
-      ...makeSuccessCard("✅ Done", result),
+      ...makeSuccessCard(t("tempvc:doneTitle"), result),
       components: [],
     });
   }
@@ -76,6 +78,7 @@ export default class TempVcSelectHandler extends BaseInteractionHandler {
     channel: VoiceBasedChannel,
     action: string,
     ids: string[],
+    t: import("#lib/i18n/index.js").LumiT,
   ): Promise<string> {
     const done: string[] = [];
     for (const id of ids) {
@@ -111,7 +114,7 @@ export default class TempVcSelectHandler extends BaseInteractionHandler {
         done.push(userMention(id));
       } catch {}
     }
-    if (done.length === 0) return "No changes applied.";
+    if (done.length === 0) return t("tempvc:noChangesApplied");
     const verb = {
       ksel: "Kicked",
       tsel: "Trusted",
@@ -126,10 +129,11 @@ export default class TempVcSelectHandler extends BaseInteractionHandler {
     channel: VoiceBasedChannel,
     record: VcRecord,
     newOwnerId: string,
+    t: import("#lib/i18n/index.js").LumiT,
   ): Promise<string> {
     const target = channel.members.get(newOwnerId);
-    if (!target) return "That member is no longer in the channel.";
+    if (!target) return t("tempvc:memberNoLongerInChannel");
     await this.service.setOwner(channel, record, newOwnerId);
-    return `Ownership transferred to ${userMention(newOwnerId)}.`;
+    return t("tempvc:ownershipTransferred", { user: userMention(newOwnerId) });
   }
 }

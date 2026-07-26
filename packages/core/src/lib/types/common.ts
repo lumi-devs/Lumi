@@ -104,16 +104,11 @@ declare module "#lib/env.js" {
     SCHEDULER_LEADER_LOCK_RENEW_MS: IntegerString;
     SCHEDULER_LEADER_LOCK_POLL_MS: IntegerString;
     RABBITMQ_URL: string;
-    /** "inproc" (default) | "streams" | "nats" — selects @lumi/event-bus transport. */
-    TRANSPORT: "inproc" | "streams" | "nats";
-    /** NATS server URL(s), comma-separated. Required when TRANSPORT=nats. */
-    NATS_URL: string;
-    NATS_SERVERS: string;
-    NATS_USER: string;
-    NATS_PASSWORD: string;
+    /** "streams" — @lumi/event-bus transport (Redis Streams). */
+    TRANSPORT: "streams";
     /** Approximate per-stream cap for raw gateway events. Default 100000. */
     EVENT_STREAM_MAXLEN: IntegerString;
-    /** NATS ackWait / Redis Streams consumer idle threshold in ms. Default 60000. */
+    /** Redis Streams consumer idle threshold in ms. Default 60000. */
     EVENT_STREAM_ACK_WAIT_MS: IntegerString;
     /** Which service this process plays in the split topology. Default "monolith". */
     LUMI_ROLE: "monolith" | "gateway" | "worker" | "scheduler";

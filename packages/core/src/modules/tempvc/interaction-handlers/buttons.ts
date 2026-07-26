@@ -33,6 +33,7 @@ import { getVcRecord, removeVcRecord, type VcRecord } from "../data.js";
 import { buildPanel } from "../ui/panel.js";
 import { TVC, TempVcKeys } from "../keys.js";
 import type TempVcService from "../services/TempVcService.js";
+import { fetchTyped } from "#lib/commands.js";
 
 const SELECT_ACTIONS: Record<string, string> = {
   kick: "ksel",
@@ -45,16 +46,16 @@ const SELECT_ACTIONS: Record<string, string> = {
 
 const SELECT_PLACEHOLDER: Record<string, string> = {
   ksel: "Select members to kick…",
-  tsel: "Select members to trust…",
-  usel: "Select members to untrust…",
-  bsel: "Select members to block…",
-  ubsel: "Select members to unblock…",
-  xsel: "Select the new owner…",
+  tsel: "Select member to trust…",
+  usel: "Select member to untrust…",
+  bsel: "Select member to block…",
+  ubsel: "Select member to unblock…",
+  xsel: "Select new channel owner…",
 };
 
 @ApplyOptions<InteractionHandler.Options>({
   name: "tempvc-buttons",
-  interactionHandlerType: InteractionHandlerTypes.MessageComponent,
+  interactionHandlerType: InteractionHandlerTypes.Button,
 })
 export default class TempVcButtonHandler extends BaseInteractionHandler {
   private get service(): TempVcService {
@@ -62,21 +63,11 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
   }
 
   public override parse(interaction: import("discord.js").Interaction) {
-    if (!interaction.isMessageComponent()) return this.none();
+    if (!interaction.isButton()) return this.none();
     if (!interaction.customId.startsWith(`${TVC}:`)) return this.none();
-    const parts = interaction.customId.split(":");
-    let action = parts[1];
-    const channelId = parts[2];
-
-    if (action === "panelmenu" && interaction.isStringSelectMenu()) {
-      action = interaction.values[0]!;
-    }
-
+    const [, action, channelId] = interaction.customId.split(":");
     if (!action || !channelId) return this.none();
-    if (["ksel", "tsel", "usel", "bsel", "ubsel", "xsel"].includes(action))
-      return this.none();
-
-    return this.some({ action, channelId, interaction });
+    return this.some({ action, channelId });
   }
 
   public async run(
@@ -85,18 +76,19 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
   ) {
     if (!interaction.isMessageComponent()) return;
     if (!interaction.inGuild()) return;
+    const t = await fetchTyped(interaction);
     const channel = interaction.guild?.channels.cache.get(channelId);
     if (!channel || !channel.isVoiceBased()) {
       throw new UserError({
         identifier: "TempVcGone",
-        message: `${Emojis.CROSS} This voice channel no longer exists.`,
+        message: `${Emojis.CROSS} ${t("tempvc:channelNoLongerExists")}`,
       });
     }
     const record = await getVcRecord(interaction.guildId, channelId);
     if (!record) {
       throw new UserError({
         identifier: "TempVcUnmanaged",
-        message: `${Emojis.CROSS} This channel is no longer managed.`,
+        message: `${Emojis.CROSS} ${t("tempvc:channelNoLongerManaged")}`,
       });
     }
 
@@ -104,24 +96,24 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
 
     if (action === "claim") return this.#claim(interaction, channel, record);
 
-    this.#assertOwner(member, channel, record.ownerId);
+    this.#assertOwner(member, channel, record.ownerId, t);
 
     switch (action) {
       case "name":
-        return this.#openRenameModal(interaction, channel);
+        return this.#openRenameModal(interaction, channel, t);
       case "limit":
-        return this.#openLimitModal(interaction, channel);
+        return this.#openLimitModal(interaction, channel, t);
       case "delete":
-        return this.#confirmDelete(interaction, channelId);
+        return this.#confirmDelete(interaction, channelId, t);
       case "delyes":
-        return this.#doDelete(interaction, channel);
+        return this.#doDelete(interaction, channel, t);
       case "lock": {
         const next = await this.service.setLock(
           channel,
           record,
           !record.locked,
         );
-        return interaction.update(buildPanel(channel, next));
+        return interaction.update(buildPanel(channel, next, t));
       }
       case "hide": {
         const next = await this.service.setHide(
@@ -129,10 +121,10 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
           record,
           !record.hidden,
         );
-        return interaction.update(buildPanel(channel, next));
+        return interaction.update(buildPanel(channel, next, t));
       }
       case "kick":
-        return this.#openKickSelect(interaction, channel, record);
+        return this.#openKickSelect(interaction, channel, record, t);
       case "trust":
       case "untrust":
       case "block":
@@ -148,27 +140,29 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
     member: GuildMember,
     channel: VoiceBasedChannel,
     ownerId: string,
+    t?: import("#lib/i18n/index.js").LumiT,
   ) {
     if (member.id === ownerId) return;
     if (this.service.canManage(member, channel)) return;
     throw new UserError({
       identifier: "TempVcNotOwner",
-      message: `${Emojis.CROSS} Only the channel owner can use these controls.`,
+      message: `${Emojis.CROSS} ${t ? t("tempvc:onlyOwner") : "Only the channel owner can use these controls."}`,
     });
   }
 
   async #openRenameModal(
     interaction: MessageComponentInteraction,
     channel: VoiceBasedChannel,
+    t?: import("#lib/i18n/index.js").LumiT,
   ) {
     const modal = new ModalBuilder()
       .setCustomId(`${TVC}:namem:${channel.id}`)
-      .setTitle("Rename Voice Channel")
+      .setTitle(t ? t("tempvc:modalRenameTitle") : "Rename Voice Channel")
       .addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(
           new TextInputBuilder()
             .setCustomId("name")
-            .setLabel("New name")
+            .setLabel(t ? t("tempvc:modalRenameLabel") : "New name")
             .setStyle(TextInputStyle.Short)
             .setMaxLength(100)
             .setValue(channel.name)
@@ -181,15 +175,20 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
   async #openLimitModal(
     interaction: MessageComponentInteraction,
     channel: VoiceBasedChannel,
+    t?: import("#lib/i18n/index.js").LumiT,
   ) {
     const modal = new ModalBuilder()
       .setCustomId(`${TVC}:limitm:${channel.id}`)
-      .setTitle("Set User Limit")
+      .setTitle(t ? t("tempvc:modalLimitTitle") : "Set User Limit")
       .addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(
           new TextInputBuilder()
             .setCustomId("limit")
-            .setLabel("User limit (0–99, 0 = unlimited)")
+            .setLabel(
+              t
+                ? t("tempvc:modalLimitLabel")
+                : "User limit (0–99, 0 = unlimited)",
+            )
             .setStyle(TextInputStyle.Short)
             .setMaxLength(2)
             .setValue(String(channel.userLimit || 0))
@@ -199,18 +198,24 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
     return interaction.showModal(modal);
   }
 
-  #confirmDelete(interaction: MessageComponentInteraction, channelId: string) {
+  #confirmDelete(
+    interaction: MessageComponentInteraction,
+    channelId: string,
+    t?: import("#lib/i18n/index.js").LumiT,
+  ) {
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`${TVC}:delyes:${channelId}`)
-        .setLabel("Confirm Delete")
+        .setLabel(t ? t("tempvc:confirmDeleteButton") : "Confirm Delete")
         .setStyle(ButtonStyle.Danger),
     );
     return interaction.reply(
       ephemeralCard(
         makeErrorCard(
-          "🗑️ Delete Channel?",
-          "This permanently deletes the voice channel.",
+          t ? t("tempvc:deleteCardTitle") : "🗑️ Delete Channel?",
+          t
+            ? t("tempvc:deleteCardText")
+            : "This permanently deletes the voice channel.",
           { actionRows: [row] },
         ),
       ),
@@ -220,6 +225,7 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
   async #doDelete(
     interaction: MessageComponentInteraction,
     channel: VoiceBasedChannel,
+    t?: import("#lib/i18n/index.js").LumiT,
   ) {
     await interaction.deferUpdate();
     const { id, guildId } = channel;
@@ -227,7 +233,10 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
     if (guildId) await removeVcRecord(guildId, id);
     await interaction
       .editReply({
-        ...makeSuccessCard("✅ Deleted", "Voice channel deleted."),
+        ...makeSuccessCard(
+          t ? t("tempvc:deletedTitle") : "✅ Deleted",
+          t ? t("tempvc:deletedMessage") : "Voice channel deleted.",
+        ),
       })
       .catch(() => null);
   }
@@ -236,6 +245,7 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
     interaction: MessageComponentInteraction,
     channel: VoiceBasedChannel,
     record: VcRecord,
+    t?: import("#lib/i18n/index.js").LumiT,
   ) {
     const eligible = [...channel.members.values()].filter(
       (m) => !m.user.bot && m.id !== record.ownerId,
@@ -244,15 +254,19 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
       return interaction.reply(
         ephemeralCard(
           makeErrorCard(
-            "Nobody to Kick",
-            "There's no one else in the channel.",
+            t ? t("tempvc:nobodyToKickTitle") : "Nobody to Kick",
+            t
+              ? t("tempvc:nobodyToKickMessage")
+              : "There's no one else in the channel.",
           ),
         ),
       );
     }
     const menu = new StringSelectMenuBuilder()
       .setCustomId(`${TVC}:ksel:${channel.id}`)
-      .setPlaceholder("Select members to kick…")
+      .setPlaceholder(
+        t ? t("tempvc:selectKickPlaceholder") : "Select members to kick…",
+      )
       .setMinValues(1)
       .setMaxValues(eligible.length)
       .addOptions(
@@ -264,11 +278,17 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
       );
     return interaction.reply(
       ephemeralCard(
-        makeInfoCard("Kick Members", "Select members to kick:", {
-          actionRows: [
-            new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu),
-          ],
-        }),
+        makeInfoCard(
+          t ? t("tempvc:kickMembersTitle") : "Kick Members",
+          t ? t("tempvc:kickMembersMessage") : "Select members to kick:",
+          {
+            actionRows: [
+              new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+                menu,
+              ),
+            ],
+          },
+        ),
       ),
     );
   }
@@ -300,18 +320,19 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
     channel: VoiceBasedChannel,
     record: { ownerId: string },
   ) {
+    const t = await fetchTyped(interaction);
     const member = interaction.member as GuildMember;
     if (member.voice.channelId !== channel.id) {
       throw new UserError({
         identifier: "TempVcClaimNotIn",
-        message: `${Emojis.CROSS} You must be in the channel to claim it.`,
+        message: `${Emojis.CROSS} ${t("tempvc:mustBeInChannelToClaim")}`,
       });
     }
     const owner = channel.members.get(record.ownerId);
     if (owner) {
       throw new UserError({
         identifier: "TempVcOwnerPresent",
-        message: `${Emojis.CROSS} The owner is still here — you can't claim it.`,
+        message: `${Emojis.CROSS} ${t("tempvc:ownerStillHere")}`,
       });
     }
 
@@ -325,12 +346,12 @@ export default class TempVcButtonHandler extends BaseInteractionHandler {
     if (guard === null) {
       throw new UserError({
         identifier: "TempVcClaimRace",
-        message: `${Emojis.LOADING} Someone else is claiming — try again.`,
+        message: `${Emojis.LOADING} ${t("tempvc:someoneElseClaiming")}`,
       });
     }
 
     const fullRecord = (await getVcRecord(interaction.guildId!, channel.id))!;
     const next = await this.service.setOwner(channel, fullRecord, member.id);
-    await interaction.update(buildPanel(channel, next));
+    await interaction.update(buildPanel(channel, next, t));
   }
 }

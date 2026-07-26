@@ -6,13 +6,10 @@ import { cutText } from "@sapphire/utilities";
 import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
 import type { GuildMessage } from "#lib/types/common.js";
 import type { FilterService } from "../services/FilterService.js";
-import {
-  DEFAULT_WARN_MESSAGE,
-  HIT_REASONS,
-  type FilterHit,
-} from "../lib/rules.js";
+import { getHitReason, type FilterHit } from "../lib/rules.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
+import { fetchTyped } from "#lib/commands.js";
 
 @ApplyOptions<GuildMessageListener.Options>({ module: "filter" })
 export class FilterMessageListener extends GuildMessageListener {
@@ -61,16 +58,19 @@ export class FilterMessageListener extends GuildMessageListener {
 
   /** Transient warning with the configurable template; empty string disables. */
   async #warn(message: GuildMessage, hit: FilterHit): Promise<void> {
+    const t = await fetchTyped(message);
     const template = await this.container.db.config.getModuleConfig(
       message.guildId,
       "filter",
       "warn_message",
     );
+    const defaultTemplate = t("filter:defaultWarnMessage");
+    const reasonText = getHitReason(t, hit.rule);
     const text = (
-      typeof template === "string" ? template : DEFAULT_WARN_MESSAGE
+      typeof template === "string" ? template : defaultTemplate
     )
       .replaceAll("{user}", message.author.toString())
-      .replaceAll("{reason}", HIT_REASONS[hit.rule])
+      .replaceAll("{reason}", reasonText)
       .trim();
     if (!text) return;
 

@@ -5,6 +5,7 @@ import { channelMention, userMention } from "@discordjs/formatters";
 import { cutText } from "@sapphire/utilities";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { isIgnoredChannel, isToggleEnabled, sendLog } from "../lib/send.js";
+import { fetchT } from "#lib/commands.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "loggingMessageDelete",
@@ -20,14 +21,15 @@ export class LoggingMessageDeleteListener extends ModuleListener<
     if (!(await isToggleEnabled(guildId, "message_deletes"))) return;
     if (await isIgnoredChannel(guildId, message.channelId)) return;
 
+    const t = await fetchT(message.channel);
     const lines = [
-      `**Author**: ${message.author ? `${userMention(message.author.id)} (${message.author.id})` : "unknown (uncached message)"}`,
-      `**Channel**: ${channelMention(message.channelId)}`,
-      `**Content**: ${message.content ? cutText(message.content, 900) : "*unknown (uncached message)*"}`,
+      `**${t("logging:author")}**: ${message.author ? `${userMention(message.author.id)} (${message.author.id})` : t("logging:unknownUncached")}`,
+      `**${t("logging:channel")}**: ${channelMention(message.channelId)}`,
+      `**${t("logging:content")}**: ${message.content ? cutText(message.content, 900) : `*${t("logging:unknownUncached")}*`}`,
     ];
     if (message.attachments?.size) {
-      lines.push(`**Attachments**: ${message.attachments.size}`);
+      lines.push(`**${t("logging:attachments")}**: ${message.attachments.size}`);
     }
-    await sendLog(guildId, Colors.Red, "Message Deleted", lines);
+    await sendLog(guildId, Colors.Red, t("logging:messageDeleted"), lines);
   }
 }

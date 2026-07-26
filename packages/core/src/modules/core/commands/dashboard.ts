@@ -43,6 +43,7 @@ export class DashboardCommand extends BaseSubcommand {
   }
 
   public async layout(ctx: CommandContext): Promise<void> {
+    const t = await ctx.fetchT();
     const rawLayout = (await ctx.getString("layout", {
       rest: true,
       required: true,
@@ -58,13 +59,16 @@ export class DashboardCommand extends BaseSubcommand {
       );
       await ctx.reply(
         makeSuccessCard(
-          `${Emojis.GEAR} Layout Updated`,
-          `Dashboard layout updated successfully to: \`${JSON.stringify(layout)}\``,
+          `${Emojis.GEAR} ${t("core:layoutUpdatedTitle")}`,
+          t("core:layoutUpdatedMessage", { layout: JSON.stringify(layout) }),
         ),
       );
     } catch (err: unknown) {
       await ctx.reply(
-        makeErrorCard("Failed to Update Layout", errorFrom(err).message),
+        makeErrorCard(
+          t("core:failedUpdateLayoutTitle"),
+          errorFrom(err).message,
+        ),
       );
     }
   }

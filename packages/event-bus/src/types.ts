@@ -1,9 +1,6 @@
-// Bus interface — same surface for both Redis Streams (cross-service) and
-// in-process EventEmitter (monolith / tests). Consumers don't know the transport.
-//
+// Bus interface — Redis Streams event bus abstraction.
 // Semantics target Redis Streams' consumer groups: at-least-once delivery,
-// per-consumer pending list, explicit ack. The in-proc impl mirrors this by
-// requiring `ack()` on every message even though delivery is local.
+// per-consumer pending list, explicit ack.
 
 export interface BusMessage<T = unknown> {
   /** Unique message id (Redis stream id, e.g. `1718550000000-0`). */
@@ -61,4 +58,4 @@ export interface EventBus {
   close(): Promise<void>;
 }
 
-export type TransportKind = "inproc" | "streams" | "nats";
+export type TransportKind = "streams";

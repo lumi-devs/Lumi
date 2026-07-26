@@ -98,16 +98,17 @@ export class RepoCommand extends BaseSubcommand {
   }
 
   public async help(ctx: CommandContext): Promise<void> {
+    const t = await ctx.fetchT();
     const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId("lumi:tab:addons")
-        .setLabel("Open Add-ons Manager")
+        .setLabel(t("core:openAddonsManager"))
         .setEmoji(Emojis.parse(Emojis.REPO))
         .setStyle(ButtonStyle.Primary),
     );
 
     await ctx.reply(
-      makeInfoCard("Repository Management", [
+      makeInfoCard(t("core:repoManagementTitle"), [
         "Use the Add-ons Manager for the smoothest workflow: browse repositories, inspect modules, and install in a few clicks.",
         "Quick command fallback:",
         "- `,repo add <name> <url> [branch]`",
@@ -122,13 +123,14 @@ export class RepoCommand extends BaseSubcommand {
   }
 
   public async add(ctx: CommandContext): Promise<void> {
+    const t = await ctx.fetchT();
     const name = (await ctx.getString("name", { required: true }))!;
     const url = (await ctx.getString("url", { required: true }))!;
     const branch =
       (await ctx.getString("branch", { required: false })) ?? "default";
 
     await ctx.reply(
-      makeInfoCard("Adding Repository", `Cloning/updating **${name}**...`),
+      makeInfoCard(t("core:addingRepoTitle"), t("core:addingRepoText", { name })),
     );
 
     try {
@@ -138,8 +140,8 @@ export class RepoCommand extends BaseSubcommand {
       );
       await ctx.reply(
         makeSuccessCard(
-          `${Emojis.REPO} Repository Added`,
-          `Successfully cloned/updated repository **${name}**.\nYou can now use \`,repo modules ${name}\` to view available modules.`,
+          `${Emojis.REPO} ${t("core:repoAddedTitle")}`,
+          t("core:repoAddedText", { name }),
         ),
       );
     } catch (err: unknown) {
@@ -148,18 +150,19 @@ export class RepoCommand extends BaseSubcommand {
         `[Repo] ${Emojis.ERROR} Failed to add repo: ${name} — ${msg_}`,
       );
       await ctx.reply(
-        makeErrorCard(`${Emojis.ERROR} Failed to Add Repository`, msg_),
+        makeErrorCard(`${Emojis.ERROR} ${t("core:failedAddRepoTitle")}`, msg_),
       );
     }
   }
 
   public async remove(ctx: CommandContext): Promise<void> {
+    const t = await ctx.fetchT();
     const name = (await ctx.getString("name", { required: true }))!;
 
     await ctx.reply(
       makeInfoCard(
-        "Removing Repository",
-        `Removing **${name}** and its installed modules...`,
+        t("core:removingRepoTitle"),
+        t("core:removingRepoText", { name }),
       ),
     );
 
@@ -170,24 +173,25 @@ export class RepoCommand extends BaseSubcommand {
       );
       await ctx.reply(
         makeSuccessCard(
-          `${Emojis.REPO} Repository Removed`,
-          `Repository **${name}** and all its installed modules have been removed.`,
+          `${Emojis.REPO} ${t("core:repoRemovedTitle")}`,
+          t("core:repoRemovedText", { name }),
         ),
       );
     } catch (err: unknown) {
       await ctx.reply(
-        makeErrorCard("Failed to Remove Repository", errorFrom(err).message),
+        makeErrorCard(t("core:failedRemoveRepoTitle"), errorFrom(err).message),
       );
     }
   }
 
   public async update(ctx: CommandContext): Promise<void> {
+    const t = await ctx.fetchT();
     const name = (await ctx.getString("name", { required: true }))!;
 
     await ctx.reply(
       makeInfoCard(
-        "Updating Repository",
-        `Pulling latest changes for **${name}**...`,
+        t("core:updatingRepoTitle"),
+        t("core:updatingRepoText", { name }),
       ),
     );
 
@@ -198,8 +202,8 @@ export class RepoCommand extends BaseSubcommand {
       );
       await ctx.reply(
         makeSuccessCard(
-          `${Emojis.REPO} Repository Updated`,
-          `Successfully updated repository **${name}** to the latest commit.`,
+          `${Emojis.REPO} ${t("core:repoUpdatedTitle")}`,
+          t("core:repoUpdatedText", { name }),
         ),
       );
     } catch (err: unknown) {
@@ -208,18 +212,19 @@ export class RepoCommand extends BaseSubcommand {
         `[Repo] ${Emojis.ERROR} Failed to update repo: ${name} — ${msg_}`,
       );
       await ctx.reply(
-        makeErrorCard(`${Emojis.ERROR} Failed to Update Repository`, msg_),
+        makeErrorCard(`${Emojis.ERROR} ${t("core:failedUpdateRepoTitle")}`, msg_),
       );
     }
   }
 
   public async list(ctx: CommandContext): Promise<void> {
+    const t = await ctx.fetchT();
     const repos = await this.downloaderService.listRepos();
     if (!repos.length) {
       await ctx.reply(
         makeErrorCard(
-          "No Repositories",
-          "No third-party repositories have been added yet.",
+          t("core:noReposTitle"),
+          t("core:noReposText"),
         ),
       );
       return;
@@ -231,13 +236,14 @@ export class RepoCommand extends BaseSubcommand {
     await paginateList({
       interactionOrMessage: ctx.source,
       userId: ctx.user.id,
-      title: "Added Repositories",
+      title: t("core:addedReposTitle"),
       items: list,
       perPage: 5,
     });
   }
 
   public async modules(ctx: CommandContext): Promise<void> {
+    const t = await ctx.fetchT();
     const repoName = (await ctx.getString("repo", { required: true }))!;
 
     try {
@@ -249,8 +255,8 @@ export class RepoCommand extends BaseSubcommand {
       if (!modules.length) {
         await ctx.reply(
           makeErrorCard(
-            "No Modules Found",
-            `Repository **${repoName}** contains no discoverable modules with an \`info.json\` file.`,
+            t("core:noModulesFoundTitle"),
+            t("core:noModulesFoundText", { repoName }),
           ),
         );
         return;
@@ -260,19 +266,19 @@ export class RepoCommand extends BaseSubcommand {
       const list = modules
         .filter((m) => !m.hidden)
         .map((m) => {
-          const badge = installedNames.has(m.name) ? " ✓ installed" : "";
+          const badge = installedNames.has(m.name) ? t("core:installedBadge") : "";
           return `**${m.name}** (v${m.version})${badge}\n*${m.short}*`;
         });
       await paginateList({
         interactionOrMessage: ctx.source,
         userId: ctx.user.id,
-        title: `Modules in ${repoName}`,
+        title: t("core:modulesInRepoTitle", { repoName }),
         items: list,
         perPage: 5,
       });
     } catch (err: unknown) {
       await ctx.reply(
-        makeErrorCard("Failed to Read Repository", errorFrom(err).message),
+        makeErrorCard(t("core:failedReadRepoTitle"), errorFrom(err).message),
       );
     }
   }

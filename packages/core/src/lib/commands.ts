@@ -8,6 +8,7 @@ import {
 import { Subcommand } from "@sapphire/plugin-subcommands";
 import { CommandContext } from "#lib/command-context.js";
 import { fetchT } from "@sapphire/plugin-i18next";
+export { fetchT };
 import type { LumiT } from "#lib/i18n/index.js";
 import type {
   ChatInputCommandInteraction,
@@ -277,7 +278,7 @@ export async function assertPermissionLevel(
 }
 
 export function fetchTyped(
-  target: ChatInputCommandInteraction | Message,
+  target: Parameters<typeof fetchT>[0],
 ): Promise<LumiT> {
   return fetchT(target) as unknown as Promise<LumiT>;
 }
