@@ -1,41 +1,62 @@
-# Configuration for actions/labeler
+# Configuration for actions/labeler v5+
 'pkg:core':
-  - 'packages/core/**'
+  - changed-files:
+      - any-glob-to-any-file: 'packages/core/**'
 
 'pkg:event-bus':
-  - 'packages/event-bus/**'
+  - changed-files:
+      - any-glob-to-any-file: 'packages/event-bus/**'
 
 'pkg:sharding':
-  - 'packages/sharding/**'
+  - changed-files:
+      - any-glob-to-any-file: 'packages/sharding/**'
 
 'pkg:observability':
-  - 'packages/observability/**'
+  - changed-files:
+      - any-glob-to-any-file: 'packages/observability/**'
 
 'pkg:contracts':
-  - 'packages/contracts/**'
+  - changed-files:
+      - any-glob-to-any-file: 'packages/contracts/**'
 
 'pkg:sdk':
-  - 'packages/sdk/**'
+  - changed-files:
+      - any-glob-to-any-file: 'packages/sdk/**'
 
 'app:dashboard':
-  - 'apps/dashboard/**'
+  - changed-files:
+      - any-glob-to-any-file: 'apps/dashboard/**'
 
 'app:gateway':
-  - 'apps/gateway/**'
+  - changed-files:
+      - any-glob-to-any-file: 'apps/gateway/**'
 
 'app:worker':
-  - 'apps/worker/**'
+  - changed-files:
+      - any-glob-to-any-file: 'apps/worker/**'
 
 'app:scheduler':
-  - 'apps/scheduler/**'
+  - changed-files:
+      - any-glob-to-any-file: 'apps/scheduler/**'
+
+'area:i18n':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'packages/core/src/languages/**'
+          - 'crowdin.yml'
 
 'area:ci':
-  - '.github/**'
+  - changed-files:
+      - any-glob-to-any-file: '.github/**'
 
 'area:docs':
-  - '**/*.md'
-  - 'docs/**'
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - 'docs/**'
 
 'area:docker':
-  - 'docker-compose*.yml'
-  - 'Dockerfile*'
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docker-compose*.yml'
+          - 'Dockerfile*'
