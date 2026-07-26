@@ -63,25 +63,31 @@ export class LumiCommand extends BaseSubcommand {
 
   public async update(ctx: CommandContext): Promise<void> {
     await ctx.checkPermission(PermissionLevel.BOT_OWNER);
+    const t = await ctx.fetchT();
     await ctx.reply(
       makeInfoCard(
-        "Updating Lumi Core",
-        `${Emojis.LOADING} Checking and pulling latest Lumi core codebase...`,
+        t("core:updatingCoreTitle"),
+        `${Emojis.LOADING} ${t("core:updatingCoreText")}`,
       ),
     );
 
     const res = await updateLumiCore();
     if (res.error) {
       await ctx.reply(
-        makeErrorCard(`${Emojis.ERROR} Core Update Failed`, res.error),
+        makeErrorCard(`${Emojis.ERROR} ${t("core:coreUpdateFailedTitle")}`, res.error),
       );
       return;
     }
 
     if (res.updated) {
-      const body = `Successfully updated Lumi core codebase! (**${res.commitsCount}** new commit(s) pulled).\n\n**New Commit:** \`${res.latestCommit}\` (from \`${res.currentCommit}\`)\n\n**Changelog:**\n\`\`\`\n${res.changelog}\n\`\`\``;
+      const body = t("core:coreUpdatedText", {
+        commitsCount: res.commitsCount,
+        latestCommit: res.latestCommit,
+        currentCommit: res.currentCommit,
+        changelog: res.changelog,
+      });
       await ctx.reply(
-        makeSuccessCard(`${Emojis.BOT} Lumi Core Updated`, body, {
+        makeSuccessCard(`${Emojis.BOT} ${t("core:coreUpdatedTitle")}`, body, {
           actionRows: [restartChoiceRow(ctx.user.id)],
         }),
       );
@@ -90,8 +96,8 @@ export class LumiCommand extends BaseSubcommand {
 
     await ctx.reply(
       makeSuccessCard(
-        `${Emojis.BOT} Lumi Core Up to Date`,
-        `Lumi core is already running the latest commit (\`${res.currentCommit}\`).`,
+        `${Emojis.BOT} ${t("core:coreUpToDateTitle")}`,
+        t("core:coreUpToDateText", { currentCommit: res.currentCommit }),
       ),
     );
   }

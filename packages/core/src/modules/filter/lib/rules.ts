@@ -1,5 +1,6 @@
 // @ts-expect-error - ahocorasick does not provide type declarations
 import AhoCorasick from "ahocorasick";
+import type { LumiT } from "#lib/i18n/index.js";
 
 interface AhoMatcher {
   search(text: string): Array<[number, string[]]>;
@@ -197,3 +198,22 @@ export const HIT_REASONS: Record<FilterHit["rule"], string> = {
   caps: "excessive caps",
   phish: "a known phishing/scam link",
 };
+
+export function getHitReason(t: LumiT, rule: FilterHit["rule"]): string {
+  switch (rule) {
+    case "term":
+      return t("filter:reasonFilteredTerm");
+    case "regex":
+      return t("filter:reasonFilteredPattern");
+    case "invite":
+      return t("filter:reasonInviteLink");
+    case "link":
+      return t("filter:reasonLinkNotAllowed");
+    case "mentions":
+      return t("filter:reasonTooManyMentions");
+    case "caps":
+      return t("filter:reasonExcessiveCaps");
+    case "phish":
+      return t("filter:reasonPhishingLink");
+  }
+}

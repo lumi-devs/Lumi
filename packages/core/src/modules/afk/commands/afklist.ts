@@ -32,27 +32,32 @@ export default class AfkListCommand extends BaseCommand {
   }
 
   public override async run(ctx: CommandContext) {
+    const t = await ctx.fetchT();
     const entries = await this.afkService.getGuildEntries(ctx.guildId!);
 
     if (entries.length === 0) {
       return ctx.replyInfo(
-        "AFK List",
-        "No users are currently AFK in this server.",
+        t("afk:listTitle"),
+        t("afk:listEmpty"),
       );
     }
 
     const lines = entries.map(
       (e) =>
-        `${userMention(e.userId)} — \`${e.reason}\` *(for ${afkDurationSince(e.since)})*`,
+        `${userMention(e.userId)} — \`${e.reason}\` *${t("afk:listDuration", { duration: afkDurationSince(e.since) })}*`,
     );
     const pages = chunk(lines, 15);
     const body = pages[0]!.join("\n");
     const footer =
       pages.length > 1
-        ? `Page 1/${pages.length} • Total AFK in this server: ${entries.length}`
-        : `Total AFK in this server: ${entries.length}`;
+        ? t("afk:listFooterPages", {
+            page: 1,
+            totalPages: pages.length,
+            total: entries.length,
+          })
+        : t("afk:listFooter", { total: entries.length });
     return ctx.reply(
-      makeWarningCard(`${Emojis.PAGES} AFK List`, body, { footer }),
+      makeWarningCard(`${Emojis.PAGES} ${t("afk:listTitle")}`, body, { footer }),
     );
   }
 }

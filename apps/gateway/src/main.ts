@@ -50,9 +50,9 @@ import {
 const TOKEN = envParseString("BOT_TOKEN");
 const TRANSPORT = envParseString("TRANSPORT", "streams");
 
-if (TRANSPORT !== "streams" && TRANSPORT !== "nats") {
+if (TRANSPORT !== "streams") {
   console.error(
-    `[Gateway] TRANSPORT=${TRANSPORT} — gateway service requires TRANSPORT=streams or TRANSPORT=nats. Exiting.`,
+    `[Gateway] TRANSPORT=${TRANSPORT} — gateway service requires TRANSPORT=streams. Exiting.`,
   );
   process.exit(1);
 }
@@ -147,9 +147,6 @@ const ownedBus: OwnedEventBus = createEventBus({
     password: envParseString("REDIS_PASSWORD", ""),
     db: envParseInteger("REDIS_CACHE_DB", 0),
   },
-  natsServers: process.env["NATS_URL"] ?? process.env["NATS_SERVERS"],
-  natsUser: process.env["NATS_USER"],
-  natsPass: process.env["NATS_PASSWORD"],
   defaultMaxLen: MAXLEN,
   onStats: (s) => {
     streamLength.set({ stream: s.stream }, s.length);

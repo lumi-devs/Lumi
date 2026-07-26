@@ -33,6 +33,8 @@ import {
   addAfkMentionsBatch,
 } from "../data/afk.js";
 
+import { fetchTyped } from "#lib/commands.js";
+
 @ApplyOptions<GuildMessageListener.Options>({
   name: "afkMessageCreate",
   module: "afk",
@@ -84,11 +86,13 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
     );
     if (!message.channel.isSendable() || !canSendMessages(message)) return;
 
+    const t = await fetchTyped(message);
+
     const row = mentions.length
       ? new ActionRowBuilder<ButtonBuilder>().addComponents(
           new ButtonBuilder()
             .setCustomId(`afk:mentions:${userId}`)
-            .setLabel(`View Mentions (${mentions.length})`)
+            .setLabel(t("afk:viewMentionsButton", { count: mentions.length }))
             .setEmoji(Emojis.parse(Emojis.MAIL))
             .setStyle(ButtonStyle.Secondary),
         )
@@ -96,7 +100,9 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
 
     const welcomeCard = new ContainerBuilder();
     welcomeCard.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(`**${Emojis.WAVE} Welcome Back!**`),
+      new TextDisplayBuilder().setContent(
+        `**${Emojis.WAVE} ${t("afk:welcomeBackTitle")}**`,
+      ),
     );
     welcomeCard.addSeparatorComponents(
       new SeparatorBuilder()
@@ -105,7 +111,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
     );
     welcomeCard.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `AFK removed.\nAFK for **${afkDurationSince(since)}**.`,
+        t("afk:welcomeBackBody", { duration: afkDurationSince(since) }),
       ),
     );
     if (row) welcomeCard.addActionRowComponents(row);

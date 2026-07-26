@@ -53,7 +53,9 @@ export class AboutCommand extends BaseCommand {
 
     const ageDays = LumiInfo.getAgeInDays();
     const ageText =
-      ageDays === 0 ? "today" : `${ageDays} day${ageDays > 1 ? "s" : ""} ago`;
+      ageDays === 0
+        ? t("core:today")
+        : t("core:daysAgo", { count: ageDays });
 
     const serverCount = data.guilds;
     const userCount = data.users;
@@ -76,24 +78,24 @@ export class AboutCommand extends BaseCommand {
 
     const body = [
       `${Emojis.BOT} **${tagline}** (Codename: *${LumiInfo.codename}*)\n` +
-        `Bringing modular harmony to Discord since 11 Jul 2026 (over ${ageText}!).`,
+        t("core:aboutTagline", { age: ageText }),
 
       `### ${Emojis.ANALYTICS} ${instanceStatsHeader}\n` +
-        `> **Uptime**\n> ┕ ${time(bootTime, TimestampStyles.RelativeTime)}\n` +
-        `> **Host Uptime**\n> ┕ ${time(hostBootTime, TimestampStyles.RelativeTime)}\n` +
-        `> **Servers**\n> ┕ ***${fmtCount(serverCount)}***\n` +
-        `> **Members**\n> ┕ ***${fmtCount(userCount)}***\n` +
-        `> **Channels**\n> ┕ ***${fmtCount(channelCount)}***`,
+        `> **${t("core:uptime")}**\n> ┕ ${time(bootTime, TimestampStyles.RelativeTime)}\n` +
+        `> **${t("core:hostUptime")}**\n> ┕ ${time(hostBootTime, TimestampStyles.RelativeTime)}\n` +
+        `> **${t("core:servers")}**\n> ┕ ***${fmtCount(serverCount)}***\n` +
+        `> **${t("core:members")}**\n> ┕ ***${fmtCount(userCount)}***\n` +
+        `> **${t("core:channels")}**\n> ┕ ***${fmtCount(channelCount)}***`,
 
       `### ${Emojis.GEAR} ${coreArchHeader}\n` +
-        `> **Lumi Version**\n> ┕ ***v${LumiInfo.version}***\n` +
-        `> **Runtime Environment**\n> ┕ ***${data.runtime}***\n` +
-        `> **Core Libraries**\n> ┕ ***discord.js v${data.djsVersion} | Sapphire v${data.sapphireVersion}***\n` +
-        `> **Storage & Cache**\n> ┕ ***Prisma v${data.prismaVersion} | Redis v${data.redisVersion}***\n` +
-        `> **Event Pipeline**\n> ┕ ***RabbitMQ (${data.rabbitConnected ? "Connected" : "Offline"}) | BullMQ***`,
+        `> **${t("core:lumiVersion")}**\n> ┕ ***v${LumiInfo.version}***\n` +
+        `> **${t("core:runtimeEnvironment")}**\n> ┕ ***${data.runtime}***\n` +
+        `> **${t("core:coreLibraries")}**\n> ┕ ***discord.js v${data.djsVersion} | Sapphire v${data.sapphireVersion}***\n` +
+        `> **${t("core:storageCache")}**\n> ┕ ***Prisma v${data.prismaVersion} | Redis v${data.redisVersion}***\n` +
+        `> **${t("core:eventPipeline")}**\n> ┕ ***RabbitMQ (${data.rabbitConnected ? t("core:connected") : t("core:offline")}) | BullMQ***`,
 
       `### ${Emojis.REPO} ${loadedModulesHeader}\n` +
-        `┕ *${loadedModulesList || "None"}*`,
+        `┕ *${loadedModulesList || t("core:none")}*`,
     ];
 
     const buttons: ButtonBuilder[] = [];
@@ -102,7 +104,7 @@ export class AboutCommand extends BaseCommand {
     if (supportServer) {
       buttons.push(
         new ButtonBuilder()
-          .setLabel("Support Server")
+          .setLabel(t("core:supportServer"))
           .setStyle(ButtonStyle.Link)
           .setURL(supportServer)
           .setEmoji({ name: "🆘" }),
@@ -113,7 +115,7 @@ export class AboutCommand extends BaseCommand {
     if (githubUrl) {
       buttons.push(
         new ButtonBuilder()
-          .setLabel("GitHub")
+          .setLabel(t("core:github"))
           .setStyle(ButtonStyle.Link)
           .setURL(githubUrl)
           .setEmoji(
@@ -126,7 +128,7 @@ export class AboutCommand extends BaseCommand {
     if (website) {
       buttons.push(
         new ButtonBuilder()
-          .setLabel("Website")
+          .setLabel(t("core:website"))
           .setStyle(ButtonStyle.Link)
           .setURL(website)
           .setEmoji({ name: "🌐" }),
@@ -161,7 +163,7 @@ export class AboutCommand extends BaseCommand {
     if (inviteUrl) {
       buttons.push(
         new ButtonBuilder()
-          .setLabel("Invite Bot")
+          .setLabel(t("core:inviteBot"))
           .setStyle(ButtonStyle.Link)
           .setURL(inviteUrl)
           .setEmoji({ name: "🎉" }),
@@ -177,7 +179,7 @@ export class AboutCommand extends BaseCommand {
       );
     }
 
-    return makeCard(0 || 0x5865f2, `Lumi — Command Center`, body, {
+    return makeCard(0 || 0x5865f2, t("core:commandCenter"), body, {
       actionRows,
     });
   }

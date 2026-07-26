@@ -17,6 +17,7 @@ import { getVcRecord, setVcRecord } from "../data.js";
 import { buildPanel } from "../ui/panel.js";
 import { TVC } from "../keys.js";
 import type TempVcService from "../services/TempVcService.js";
+import { fetchTyped } from "#lib/commands.js";
 
 const KINDS = new Set(["namem", "limitm"]);
 
@@ -46,15 +47,15 @@ export default class TempVcModalHandler extends BaseInteractionHandler {
 
     const record = await getVcRecord(interaction.guildId, channelId);
     if (!record) return;
-
     const member = interaction.member as GuildMember;
+    const t = await fetchTyped(interaction);
     if (
       member.id !== record.ownerId &&
       !this.service.canManage(member, channel)
     ) {
       throw new UserError({
         identifier: "TempVcNotOwner",
-        message: `${Emojis.CROSS} Only the channel owner can use these controls.`,
+        message: `${Emojis.CROSS} ${t("tempvc:onlyOwner")}`,
       });
     }
 
@@ -63,7 +64,10 @@ export default class TempVcModalHandler extends BaseInteractionHandler {
       if (!name) {
         return interaction.reply(
           ephemeralCard(
-            makeErrorCard("Invalid Name", "Provide a non-empty name."),
+            makeErrorCard(
+              t("tempvc:invalidNameTitle"),
+              t("tempvc:modalProvideNonEmptyName"),
+            ),
           ),
         );
       }
@@ -78,7 +82,10 @@ export default class TempVcModalHandler extends BaseInteractionHandler {
       if (Number.isNaN(limit) || limit < 0 || limit > 99) {
         return interaction.reply(
           ephemeralCard(
-            makeErrorCard("Invalid Limit", "Enter a number between 0 and 99."),
+            makeErrorCard(
+              t("tempvc:modalLimitTitle"),
+              t("tempvc:modalEnterValidLimit"),
+            ),
           ),
         );
       }
@@ -87,10 +94,12 @@ export default class TempVcModalHandler extends BaseInteractionHandler {
 
     const fresh = await getVcRecord(interaction.guildId, channelId);
     if (interaction.isFromMessage() && fresh) {
-      return interaction.update(buildPanel(channel, fresh));
+      return interaction.update(buildPanel(channel, fresh, t));
     }
     return interaction.reply(
-      ephemeralCard(makeSuccessCard("✅ Updated", "Channel updated.")),
+      ephemeralCard(
+        makeSuccessCard(t("tempvc:updatedTitle"), t("tempvc:updatedMessage")),
+      ),
     );
   }
 }

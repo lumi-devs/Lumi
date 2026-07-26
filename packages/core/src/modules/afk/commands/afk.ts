@@ -58,7 +58,7 @@ export default class AfkCommand extends BaseCommand {
   public override async run(ctx: CommandContext) {
     const t = await ctx.fetchT();
     const reason = sanitizeReason(
-      (await ctx.getString("reason", { rest: true })) ?? "AFK",
+      (await ctx.getString("reason", { rest: true })) ?? t("afk:defaultReason"),
     );
 
     const { status } = await this.afkService.setAfk(

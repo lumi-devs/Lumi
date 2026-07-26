@@ -16,6 +16,8 @@ import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { getAfkMentions } from "../data/afk.js";
 
+import { fetchTyped } from "#lib/commands.js";
+
 const PAGE_SIZE = 5;
 
 @ApplyOptions<InteractionHandler.Options>({
@@ -34,14 +36,26 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
   ) {
     if (!this.checkSecurity(interaction, userId)) return;
 
+    const t = await fetchTyped(interaction);
     const mentions = await getAfkMentions(interaction.guildId!, userId);
 
     const card = makeListCard(
-      `${Emojis.MAIL} Recent Mentions`,
-      mentions.map(
-        (m) =>
-          `${userMention(m.authorId)} in ${channelMention(m.channelId)} — ${container.utilities.time.formatDuration(Date.now() - m.ts * 1000)} ago\n${hyperlink("Jump to Message", messageLink(m.channelId, m.messageId, interaction.guildId!))}`,
-      ),
+      `${Emojis.MAIL} ${t("afk:mentionsTitle")}`,
+      mentions.map((m) => {
+        const duration = container.utilities.time.formatDuration(
+          Date.now() - m.ts * 1000,
+        );
+        const link = hyperlink(
+          t("afk:jumpToMessage"),
+          messageLink(m.channelId, m.messageId, interaction.guildId!),
+        );
+        return t("afk:mentionLine", {
+          user: userMention(m.authorId),
+          channel: channelMention(m.channelId),
+          duration,
+          link,
+        });
+      }),
       page,
       PAGE_SIZE,
       `afk:mentions:${userId}`,

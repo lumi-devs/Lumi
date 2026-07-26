@@ -6,6 +6,7 @@ import {
   sendReply,
   assertPermissionLevel,
   replySuccess,
+  fetchTyped,
 } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions/index.js";
 import {
@@ -115,13 +116,14 @@ export class TempVcCommand extends BaseSubcommand {
   public async chatInputPanel(
     interaction: ChatInputCommandInteraction,
   ): Promise<void> {
+    const t = await fetchTyped(interaction);
     const member = interaction.member as GuildMember | null;
     const channel = member?.voice.channel;
     if (!channel) {
       return replyError(
         interaction,
-        "Not in a Voice Channel",
-        "Join your temp VC first, then run this command.",
+        t("tempvc:notInVcTitle"),
+        t("tempvc:notInVcMessage"),
       );
     }
 
@@ -129,12 +131,12 @@ export class TempVcCommand extends BaseSubcommand {
     if (!record) {
       return replyError(
         interaction,
-        "Unmanaged Channel",
-        "This voice channel is not a temp VC managed by the bot.",
+        t("tempvc:unmanagedChannelTitle"),
+        t("tempvc:unmanagedChannelMessage"),
       );
     }
 
-    const panel = buildPanel(channel, record);
+    const panel = buildPanel(channel, record, t);
     await sendReply(interaction, ephemeralCard(panel));
   }
 
@@ -142,6 +144,7 @@ export class TempVcCommand extends BaseSubcommand {
     interaction: ChatInputCommandInteraction,
   ): Promise<void> {
     await assertPermissionLevel(interaction, PermissionLevel.ADMIN);
+    const t = await fetchTyped(interaction);
     const guildId = interaction.guildId!;
 
     const channel = interaction.options.getChannel("channel", true);
@@ -151,8 +154,8 @@ export class TempVcCommand extends BaseSubcommand {
     if (!name) {
       return replyError(
         interaction,
-        "Invalid Name",
-        "Provide a non-empty name template.",
+        t("tempvc:invalidNameTitle"),
+        t("tempvc:invalidNameMessage"),
       );
     }
 
@@ -160,16 +163,20 @@ export class TempVcCommand extends BaseSubcommand {
     if (!existing.has(channel.id) && existing.size >= TEMPVC_MAX_GENERATORS) {
       return replyError(
         interaction,
-        "Too Many Generators",
-        `You can configure at most ${TEMPVC_MAX_GENERATORS} generators.`,
+        t("tempvc:tooManyGeneratorsTitle"),
+        t("tempvc:tooManyGeneratorsMessage", { max: TEMPVC_MAX_GENERATORS }),
       );
     }
 
     await this.tempVcService.addGenerator(guildId, channel.id, { name, limit });
     return replySuccess(
       interaction,
-      "Generator Saved",
-      `${channelMention(channel.id)} will now spawn temp VCs using the template **${name}** with a limit of **${limit || "∞"}**.`,
+      t("tempvc:generatorSavedTitle"),
+      t("tempvc:generatorSavedMessage", {
+        channel: channelMention(channel.id),
+        name,
+        limit: limit || t("tempvc:unlimited"),
+      }),
     );
   }
 
@@ -177,6 +184,7 @@ export class TempVcCommand extends BaseSubcommand {
     interaction: ChatInputCommandInteraction,
   ): Promise<void> {
     await assertPermissionLevel(interaction, PermissionLevel.ADMIN);
+    const t = await fetchTyped(interaction);
     const channel = interaction.options.getChannel("channel", true);
     const removed = await this.tempVcService.removeGenerator(
       interaction.guildId!,
@@ -185,14 +193,18 @@ export class TempVcCommand extends BaseSubcommand {
     if (!removed) {
       return replyError(
         interaction,
-        "Not a Generator",
-        `${channelMention(channel.id)} is not a configured generator.`,
+        t("tempvc:notAGeneratorTitle"),
+        t("tempvc:notAGeneratorMessage", {
+          channel: channelMention(channel.id),
+        }),
       );
     }
     return replySuccess(
       interaction,
-      "Generator Removed",
-      `${channelMention(channel.id)} is no longer a generator.`,
+      t("tempvc:generatorRemovedTitle"),
+      t("tempvc:generatorRemovedMessage", {
+        channel: channelMention(channel.id),
+      }),
     );
   }
 
@@ -200,17 +212,18 @@ export class TempVcCommand extends BaseSubcommand {
     interaction: ChatInputCommandInteraction,
   ): Promise<void> {
     await assertPermissionLevel(interaction, PermissionLevel.ADMIN);
+    const t = await fetchTyped(interaction);
     const generators = await this.tempVcService.listGenerators(
       interaction.guildId!,
     );
     const lines = [...generators.entries()].map(
       ([id, cfg]) =>
-        `${channelMention(id)} — **${cfg.name}** · limit ${cfg.limit || "∞"}`,
+        `${channelMention(id)} — **${cfg.name}** · limit ${cfg.limit || t("tempvc:unlimited")}`,
     );
     await paginateList({
       interactionOrMessage: interaction,
       userId: interaction.user.id,
-      title: "🔊 Temp VC Generators",
+      title: t("tempvc:generatorsListTitle"),
       items: lines,
       perPage: 5,
       ephemeral: true,

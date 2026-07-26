@@ -1,8 +1,0 @@
-{
-  "moderator": "Vous devez avoir au moins le niveau **Modérateur** pour utiliser ceci.",
-  "administrator": "Vous devez avoir au moins le niveau **Administrateur** pour utiliser ceci.",
-  "guildOwner": "Seul le propriétaire du serveur peut utiliser ceci.",
-  "botOwner": "Seul le propriétaire du bot peut utiliser ceci.",
-  "moduleDisabled": "Le module **{{module}}** est désactivé sur ce serveur.",
-  "permissionDenied": "Vous n'avez pas la permission d'utiliser ceci ici."
-}

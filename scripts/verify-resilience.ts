@@ -2,7 +2,7 @@
  * Distributed Resilience & Fault Tolerance Suite.
  *
  * Validates message delivery semantics, consumer group isolation, burst concurrency,
- * and lifecycle durability across Redis Streams and NATS JetStream event-bus backends.
+ * and lifecycle durability across Redis Streams event-bus backend.
  *
  * Invoked via: `bun run verify:resilience`
  */
@@ -15,7 +15,6 @@ import {
 
 const REDIS_HOST = process.env["REDIS_HOST"] ?? "localhost";
 const REDIS_PORT = Number(process.env["REDIS_PORT"] ?? 6379);
-const NATS_URL = process.env["NATS_URL"];
 
 const GROUP_ALPHA = "verify-resilience-alpha";
 const GROUP_BETA = "verify-resilience-beta";
@@ -204,52 +203,13 @@ const redisScenarios: Scenario[] = [
   },
 ];
 
-// ── NATS JetStream Scenarios ─────────────────────────────────────────────────
-
-const natsScenarios: Scenario[] = [
-  {
-    name: "NATS JetStream — basic publish & consume round-trip",
-    async run() {
-      const { bus, close } = createEventBus({
-        transport: "nats",
-        natsServers: NATS_URL,
-      });
-      await bus.publish("verify.nats_basic", { guildId: "nats-resilience-1" });
-      const msgs = await drainStream<{ guildId: string }>(
-        bus,
-        "verify.nats_basic",
-        1,
-        GROUP_ALPHA,
-        1000,
-      );
-      await close();
-      if (!msgs.some((m) => m.guildId === "nats-resilience-1")) {
-        throw new Error("NATS JetStream message delivery verification failed");
-      }
-    },
-  },
-  {
-    name: "NATS JetStream — lifecycle initialization and graceful shutdown",
-    async run() {
-      const { close } = createEventBus({
-        transport: "nats",
-        natsServers: NATS_URL,
-      });
-      await new Promise((r) => setTimeout(r, 200));
-      await close();
-    },
-  },
-];
-
 // ── Main Runner ──────────────────────────────────────────────────────────────
 
 async function executeResilienceSuite(): Promise<void> {
-  const activeScenarios = NATS_URL
-    ? [...redisScenarios, ...natsScenarios]
-    : redisScenarios;
+  const activeScenarios = redisScenarios;
 
   process.stdout.write(
-    `\n[verify:resilience] Running ${activeScenarios.length} scenario(s) (${NATS_URL ? "Redis + NATS" : "Redis Streams"})\n\n`,
+    `\n[verify:resilience] Running ${activeScenarios.length} scenario(s) (Redis Streams)\n\n`,
   );
 
   let failureCount = 0;
