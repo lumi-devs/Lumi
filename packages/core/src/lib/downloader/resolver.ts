@@ -123,11 +123,12 @@ export class DownloadResolver {
       const cloneArgs = ["clone"];
       if (branch !== "default") cloneArgs.push("-b", branch);
       cloneArgs.push("--", url, repoPath);
-      await execGit(cloneArgs).catch(async (err) => {
+      await execGit(cloneArgs).catch(async () => {
         await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
-        throw new Error(`Git clone failed: ${(err.stderr ?? err.message ?? String(err)).trim()}`);
+        throw new Error("Git clone failed");
       });
     }
+
 
   }
 
