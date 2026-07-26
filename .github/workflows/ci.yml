@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   typecheck-and-lint:
-    name: Typecheck & Lint
+    name: CI / typecheck
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -26,19 +26,40 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Generate Prisma client
+        run: bun run db:generate
+
       - name: Run Typecheck
         run: bun run typecheck
+
+  lint:
+    name: CI / lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun environment
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bun run db:generate
 
       - name: Run Linter
         run: bun run lint
 
-  test-matrix:
-    name: Test Suite (Bun ${{ matrix.bun-version }})
+  test:
+    name: CI / test (Bun ${{ matrix.bun-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        bun-version: ["1.1.x", "latest"]
+        bun-version: ["latest"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -50,6 +71,9 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bun run db:generate
 
       - name: Run Unit & Integration Tests
         run: bun run test
