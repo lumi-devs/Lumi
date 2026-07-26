@@ -8,7 +8,7 @@
 
 import { Redis, type RedisOptions } from "ioredis";
 import { InProcBus } from "./InProcBus.js";
-import { RedisStreamsBus } from "./RedisStreamsBus.js";
+import { RedisStreamsBus, type StreamStats } from "./RedisStreamsBus.js";
 import { NatsJetStreamBus } from "./NatsJetStreamBus.js";
 import type { EventBus, TransportKind } from "./types.js";
 
@@ -37,9 +37,11 @@ export interface CreateEventBusOptions {
   /** See RedisStreamsBusOptions.claimIntervalMs. Streams only. */
   claimIntervalMs?: number;
   /** See RedisStreamsBusOptions.onStats. Streams/NATS. */
-  onStats?: (stats: import("./RedisStreamsBus.js").StreamStats) => void;
+  onStats?: (stats: StreamStats) => void;
   /** See RedisStreamsBusOptions.statsIntervalMs. Streams/NATS. */
   statsIntervalMs?: number;
+  /** See NatsJetStreamBusOptions.streamSubjects. NATS only. */
+  streamSubjects?: string[];
 }
 
 export interface OwnedEventBus {
@@ -155,13 +157,14 @@ function buildNatsBus(
       ackWaitMs: opts.ackWaitMs ?? opts.claimMinIdleMs,
       onStats: opts.onStats,
       statsIntervalMs: opts.statsIntervalMs,
+      streamSubjects: opts.streamSubjects,
     });
   })();
   ready.catch((err) =>
     opts.log?.("error", "NATS connect failed", { err: String(err) }),
   );
 
-  const bus: import("./types.js").EventBus = {
+  const bus: EventBus = {
     publish: async (stream, body, pubOpts) => {
       const b = await ready;
       return b.publish(stream, body, pubOpts);
