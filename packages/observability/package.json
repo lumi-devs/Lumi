@@ -18,7 +18,7 @@
     "@opentelemetry/instrumentation-amqplib": "^0.67.0",
     "@opentelemetry/instrumentation-http": "^0.220.0",
     "@opentelemetry/instrumentation-ioredis": "^0.69.0",
-    "@opentelemetry/instrumentation-pg": "^0.72.0",
+    "@opentelemetry/instrumentation-pg": "^0.73.0",
     "@opentelemetry/resources": "^2.9.0",
     "@opentelemetry/sdk-trace-node": "^2.9.0",
     "@opentelemetry/semantic-conventions": "^1.43.0",
