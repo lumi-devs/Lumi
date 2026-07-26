@@ -88,12 +88,13 @@ export class DownloadResolver {
 
     if (await this._exists(repoPath)) {
       if (!(await this._exists(gitFolder))) {
-        container.logger?.warn(
+        container.logger?.warn?.(
           `[Downloader] ${name} exists at ${repoPath} but is not a valid git repository. Cleaning up...`,
         );
         await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
       }
     }
+
 
     const isExisting =
       (await this._exists(repoPath)) && (await this._exists(gitFolder));
