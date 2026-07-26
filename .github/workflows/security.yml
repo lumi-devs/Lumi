@@ -3,8 +3,19 @@ name: Security Analysis & Audit
 on:
   push:
     branches: [main]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/security.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'bun.lock'
   schedule:
     - cron: '0 2 * * 0' # Weekly Sunday 02:00 UTC
 

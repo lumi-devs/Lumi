@@ -5,6 +5,10 @@ name: Resilience & Fault Tolerance Verification
 on:
   push:
     branches: [main]
+    paths:
+      - 'packages/event-bus/**'
+      - 'scripts/verify-resilience.ts'
+      - '.github/workflows/resilience.yml'
   schedule:
     - cron: "0 4 * * *" # nightly 04:00 UTC
   workflow_dispatch:

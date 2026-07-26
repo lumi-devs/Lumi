@@ -3,8 +3,28 @@ name: CI Pipeline
 on:
   push:
     branches: [main, develop, "release/*"]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'prisma/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'tsconfig*.json'
+      - 'eslint.config.*'
+      - 'turbo.json'
   pull_request:
     branches: [main, develop]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'prisma/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'tsconfig*.json'
+      - 'eslint.config.*'
+      - 'turbo.json'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
