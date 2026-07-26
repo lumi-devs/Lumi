@@ -1,62 +1,64 @@
-# Configuration for actions/labeler v5+
+# Configuration for actions/labeler@v7
+# Syntax: label → list of match objects → changed-files at same indent as list item
+
 'pkg:core':
-  - changed-files:
-      - any-glob-to-any-file: 'packages/core/**'
+- changed-files:
+  - any-glob-to-any-file: 'packages/core/**'
 
 'pkg:event-bus':
-  - changed-files:
-      - any-glob-to-any-file: 'packages/event-bus/**'
+- changed-files:
+  - any-glob-to-any-file: 'packages/event-bus/**'
 
 'pkg:sharding':
-  - changed-files:
-      - any-glob-to-any-file: 'packages/sharding/**'
+- changed-files:
+  - any-glob-to-any-file: 'packages/sharding/**'
 
 'pkg:observability':
-  - changed-files:
-      - any-glob-to-any-file: 'packages/observability/**'
+- changed-files:
+  - any-glob-to-any-file: 'packages/observability/**'
 
 'pkg:contracts':
-  - changed-files:
-      - any-glob-to-any-file: 'packages/contracts/**'
+- changed-files:
+  - any-glob-to-any-file: 'packages/contracts/**'
 
 'pkg:sdk':
-  - changed-files:
-      - any-glob-to-any-file: 'packages/sdk/**'
+- changed-files:
+  - any-glob-to-any-file: 'packages/sdk/**'
 
 'app:dashboard':
-  - changed-files:
-      - any-glob-to-any-file: 'apps/dashboard/**'
+- changed-files:
+  - any-glob-to-any-file: 'apps/dashboard/**'
 
 'app:gateway':
-  - changed-files:
-      - any-glob-to-any-file: 'apps/gateway/**'
+- changed-files:
+  - any-glob-to-any-file: 'apps/gateway/**'
 
 'app:worker':
-  - changed-files:
-      - any-glob-to-any-file: 'apps/worker/**'
+- changed-files:
+  - any-glob-to-any-file: 'apps/worker/**'
 
 'app:scheduler':
-  - changed-files:
-      - any-glob-to-any-file: 'apps/scheduler/**'
+- changed-files:
+  - any-glob-to-any-file: 'apps/scheduler/**'
 
 'area:i18n':
-  - changed-files:
-      - any-glob-to-any-file:
-          - 'packages/core/src/languages/**'
-          - 'crowdin.yml'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'packages/core/src/languages/**'
+    - 'crowdin.yml'
 
 'area:ci':
-  - changed-files:
-      - any-glob-to-any-file: '.github/**'
+- changed-files:
+  - any-glob-to-any-file: '.github/**'
 
 'area:docs':
-  - changed-files:
-      - any-glob-to-any-file:
-          - '**/*.md'
-          - 'docs/**'
+- changed-files:
+  - any-glob-to-any-file:
+    - '**/*.md'
+    - 'docs/**'
 
 'area:docker':
-  - changed-files:
-      - any-glob-to-any-file:
-          - 'docker-compose*.yml'
-          - 'Dockerfile*'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'docker-compose*.yml'
+    - 'Dockerfile*'
