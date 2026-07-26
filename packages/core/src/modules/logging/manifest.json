@@ -5,18 +5,23 @@
   "description": "Server event logs: message deletes/edits, joins, leaves, bans, unbans, nickname and role changes.",
   "version": "1.0.0",
   "isCore": false,
+  "disableable": true,
   "dependencies": [],
   "conflicts": [],
   "configOverrides": false,
   "targetService": "worker",
-  "subStores": ["listeners"],
+  "subStores": [
+    "listeners"
+  ],
   "configFields": [
     {
       "key": "log_channel_id",
       "type": "CHANNEL",
       "label": "Log Channel",
       "description": "Channel where server events are logged.",
-      "channelTypes": [0]
+      "channelTypes": [
+        0
+      ]
     },
     {
       "key": "message_deletes",

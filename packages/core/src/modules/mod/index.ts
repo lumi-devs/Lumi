@@ -1,5 +1,4 @@
 import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
-import type { RequesterType } from "#lib/gdpr.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { invalidateThresholds } from "./lib/thresholds.js";
 import { scheduleCaseLift } from "./lib/helpers.js";
@@ -44,7 +43,6 @@ export class ModModule extends Module {
 
   public override async deleteUserData(
     userId: string,
-    _requester: RequesterType,
   ): Promise<void> {
     await this.container.db.moderation.anonymizeUser(userId);
   }

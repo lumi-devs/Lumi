@@ -17,12 +17,9 @@ import {
 import { ephemeralCard } from "#lib/utilities/cards.js";
 import { paginateList } from "#lib/utilities/pagination.js";
 import { TEMPVC_MAX_GENERATORS } from "../index.js";
-import {
-  getVcRecord,
-  listGenerators,
-  removeGenerator,
-  setGenerator,
-} from "../data.js";
+import { getService } from "#lib/module-system/Service.js";
+import type TempVcService from "../services/TempVcService.js";
+import { getVcRecord } from "../data.js";
 import { buildPanel } from "../ui/panel.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
@@ -111,6 +108,10 @@ export class TempVcCommand extends BaseSubcommand {
     );
   }
 
+  private get tempVcService(): TempVcService {
+    return getService("tempvc");
+  }
+
   public async chatInputPanel(
     interaction: ChatInputCommandInteraction,
   ): Promise<void> {
@@ -155,7 +156,7 @@ export class TempVcCommand extends BaseSubcommand {
       );
     }
 
-    const existing = await listGenerators(guildId);
+    const existing = await this.tempVcService.listGenerators(guildId);
     if (!existing.has(channel.id) && existing.size >= TEMPVC_MAX_GENERATORS) {
       return replyError(
         interaction,
@@ -164,7 +165,7 @@ export class TempVcCommand extends BaseSubcommand {
       );
     }
 
-    await setGenerator(guildId, channel.id, { name, limit });
+    await this.tempVcService.addGenerator(guildId, channel.id, { name, limit });
     return replySuccess(
       interaction,
       "Generator Saved",
@@ -177,7 +178,10 @@ export class TempVcCommand extends BaseSubcommand {
   ): Promise<void> {
     await assertPermissionLevel(interaction, PermissionLevel.ADMIN);
     const channel = interaction.options.getChannel("channel", true);
-    const removed = await removeGenerator(interaction.guildId!, channel.id);
+    const removed = await this.tempVcService.removeGenerator(
+      interaction.guildId!,
+      channel.id,
+    );
     if (!removed) {
       return replyError(
         interaction,
@@ -196,7 +200,9 @@ export class TempVcCommand extends BaseSubcommand {
     interaction: ChatInputCommandInteraction,
   ): Promise<void> {
     await assertPermissionLevel(interaction, PermissionLevel.ADMIN);
-    const generators = await listGenerators(interaction.guildId!);
+    const generators = await this.tempVcService.listGenerators(
+      interaction.guildId!,
+    );
     const lines = [...generators.entries()].map(
       ([id, cfg]) =>
         `${channelMention(id)} — **${cfg.name}** · limit ${cfg.limit || "∞"}`,

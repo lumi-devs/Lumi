@@ -3,15 +3,12 @@ import { container } from '@sapphire/framework';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-// Discovery is manifest-driven: #walk → readManifest → #ingestManifest, with no
-// module code imported. Mock the manifest layer and drive the FS walk so we test
-// the real walk/topo/conflict pipeline through the public API.
-const { readManifest, metaFromManifest } = vi.hoisted(() => ({
+vi.mock('#lib/module-system/manifest.js', () => ({
 	readManifest: vi.fn(),
 	metaFromManifest: vi.fn()
 }));
 
-vi.mock('#lib/module-system/manifest.js', () => ({ readManifest, metaFromManifest }));
+import { readManifest, metaFromManifest } from '#lib/module-system/manifest.js';
 
 import { ModuleStore } from '#lib/module-system/ModuleStore.js';
 

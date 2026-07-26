@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import { ActivityType } from "discord.js";
 import { s } from "@sapphire/shapeshift";
+import { mergeDefault, tryParseJSON } from "@sapphire/utilities";
 
 const colorRecord = s.record(s.number().int()).optional();
 
@@ -92,53 +93,16 @@ const defaultConfig = {
 
 let userConfig: Record<string, any> = {};
 
-import { tryParseJSON } from "@sapphire/utilities";
-
-try {
-  const configPath = join(process.cwd(), "config", "bot.json");
-  const file = await fs.readFile(configPath, "utf-8");
+const configPath = join(process.cwd(), "config", "bot.json");
+const file = await fs.readFile(configPath, "utf-8").catch(() => null);
+if (file !== null) {
   const parsed = tryParseJSON(file);
   if (parsed !== null) {
     userConfig = userConfigSchema.parse(parsed);
   }
-} catch (err: any) {
-  if (err.name === "ValidationError") {
-    console.error("[Config] Invalid config/bot.json:", err.message);
-  } else if (
-    err instanceof Error &&
-    (err as NodeJS.ErrnoException).code !== "ENOENT"
-  ) {
-    console.error("[Config] Failed to load config/bot.json:", err);
-  }
 }
 
-function isObject(item: unknown): item is Record<string, unknown> {
-  return item !== null && typeof item === "object" && !Array.isArray(item);
-}
-
-function mergeDeep(
-  target: Record<string, unknown>,
-  source: Record<string, unknown>,
-): Record<string, unknown> {
-  const output: Record<string, unknown> = Object.assign({}, target);
-  for (const key of Object.keys(source)) {
-    if (isObject(source[key])) {
-      if (key in target) {
-        output[key] = mergeDeep(
-          target[key] as Record<string, unknown>,
-          source[key],
-        );
-      } else {
-        output[key] = source[key];
-      }
-    } else {
-      output[key] = source[key];
-    }
-  }
-  return output;
-}
-
-export const BotConfig = mergeDeep(
+export const BotConfig = mergeDefault(
   defaultConfig,
   userConfig,
 ) as typeof defaultConfig;

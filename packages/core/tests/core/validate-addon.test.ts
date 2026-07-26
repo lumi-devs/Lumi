@@ -122,4 +122,42 @@ describe("validateAddon", () => {
     const { errors } = await validateAddon(dir);
     expect(errors).toEqual([]);
   });
+
+  it("validates a valid manifest.json contract", async () => {
+    const dir = await makeAddon("valid-manifest", {
+      "info.json": JSON.stringify({ name: "valid-manifest", author: ["T"], description: "d", short: "s", version: "1.0.0" }),
+      "index.ts": `import { Module, DefineModule } from "#lib/module-system/Module.js";\n@DefineModule({ name: "valid-manifest", displayName: "M", emoji: "🧪", version: "1.0.0", description: "d" })\nexport class MModule extends Module {}\n`,
+      "manifest.json": JSON.stringify({
+        name: "valid-manifest",
+        displayName: "M",
+        emoji: "🧪",
+        description: "d",
+        version: "1.0.0",
+        targetService: "worker",
+        subStores: [],
+        configFields: [],
+      }),
+    });
+    const { errors } = await validateAddon(dir);
+    expect(errors).toEqual([]);
+  });
+
+  it("flags an invalid manifest.json schema or mismatched name", async () => {
+    const dir = await makeAddon("bad-manifest", {
+      "info.json": JSON.stringify({ name: "bad-manifest", author: ["T"], description: "d", short: "s", version: "1.0.0" }),
+      "index.ts": `import { Module, DefineModule } from "#lib/module-system/Module.js";\n@DefineModule({ name: "bad-manifest", displayName: "B", emoji: "🧪", version: "1.0.0", description: "d" })\nexport class BModule extends Module {}\n`,
+      "manifest.json": JSON.stringify({
+        name: "mismatched-name",
+        displayName: "B",
+        emoji: "🧪",
+        description: "d",
+        version: "1.0.0",
+        targetService: "invalid-service",
+        subStores: [],
+        configFields: [],
+      }),
+    });
+    const { errors } = await validateAddon(dir);
+    expect(errors.some((e) => e.includes("manifest.json"))).toBe(true);
+  });
 });

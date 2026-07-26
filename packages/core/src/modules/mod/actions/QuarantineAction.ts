@@ -96,7 +96,11 @@ export class QuarantineAction {
       formatAuditReason(moderator, reason),
     );
 
-    await container.redis.del(key);
+    if (container.invalidation) {
+      await container.invalidation.invalidate(key);
+    } else {
+      await container.redis.del(key);
+    }
 
     const c = await container.db.moderation.createModerationCase({
       guildId: guild.id,

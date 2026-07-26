@@ -5,7 +5,6 @@ import { createRequire } from "node:module";
 import { container } from "@sapphire/framework";
 import { fetch, FetchResultTypes } from "@sapphire/fetch";
 import { Stopwatch } from "@sapphire/stopwatch";
-import { Prisma } from "@prisma/client";
 import type { Redis } from "ioredis";
 import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
 import { logError } from "#lib/utilities/errors.js";
@@ -241,26 +240,12 @@ const rdStat: TtlCache<ReturnType<typeof redisStats>> = {
 };
 
 async function probePrisma() {
-  const sw = new Stopwatch();
-  await container.prisma.$queryRaw(Prisma.sql`SELECT 1`);
-  return sw.stop().duration;
+  return container.db.probePrisma();
 }
 
 async function postgresStats() {
   try {
-    const [[ov], tables, [tx]] = await Promise.all([
-      container.prisma.$queryRaw<{ size: string; uptime_secs: string }[]>(
-        Prisma.sql`SELECT pg_size_pretty(pg_database_size(current_database())) AS size, extract(epoch from (now() - pg_postmaster_start_time()))::int::text AS uptime_secs`,
-      ),
-      container.prisma.$queryRaw<
-        { relname: string; bytes: string; dead: string }[]
-      >(
-        Prisma.sql`SELECT relname, pg_total_relation_size(relid)::text AS bytes, n_dead_tup::text AS dead FROM pg_stat_user_tables ORDER BY pg_total_relation_size(relid) DESC LIMIT 6`,
-      ),
-      container.prisma.$queryRaw<{ commits: string; rollbacks: string }[]>(
-        Prisma.sql`SELECT xact_commit::text AS commits, xact_rollback::text AS rollbacks FROM pg_stat_database WHERE datname = current_database()`,
-      ),
-    ]);
+    const { overview: ov, tables, tx } = await container.db.getPostgresStats();
 
     const commits = tx ? parseInt(tx.commits, 10) : 0;
     const now = Date.now();

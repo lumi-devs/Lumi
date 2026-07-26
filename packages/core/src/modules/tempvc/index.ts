@@ -1,5 +1,4 @@
 import { Module, DefineModule } from "#lib/module-system/Module.js";
-import type { RequesterType } from "#lib/gdpr.js";
 import { MODULE_NAME, TempVcData } from "./keys.js";
 import { tempVcRegistry } from "./registry.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
@@ -29,7 +28,6 @@ export class TempVcModule extends Module {
 
   public override async deleteUserData(
     userId: string,
-    _requester: RequesterType,
   ): Promise<void> {
     const rows = await this.container.db.guildKV.listModuleData<{
       ownerId?: string;

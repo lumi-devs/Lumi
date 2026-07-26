@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { InProcBus, createEventBus } from '@lumi/event-bus';
+import { InProcBus, NatsJetStreamBus, createEventBus } from '@lumi/event-bus';
 
 describe('InProcBus & createEventBus Tests', () => {
   it('InProcBus publishes and consumes events in memory', async () => {
@@ -74,5 +74,20 @@ describe('InProcBus & createEventBus Tests', () => {
 
   it('createEventBus throws error when streams transport lacks redis config', () => {
     expect(() => createEventBus({ transport: 'streams' })).toThrow(/`redis` options required/);
+  });
+
+  it('createEventBus throws error when nats transport lacks natsServers', () => {
+    expect(() => createEventBus({ transport: 'nats' })).toThrow(/`natsServers` \(or NATS_URL\) required/);
+  });
+
+  it('NatsJetStreamBus respects custom streamSubjects or default fallback', () => {
+    const defaultBus = new NatsJetStreamBus({ connection: {} as any });
+    expect((defaultBus as any).streamSubjects).toEqual(['lumi.>', 'verify.>']);
+
+    const customBus = new NatsJetStreamBus({
+      connection: {} as any,
+      streamSubjects: ['custom.stream.>'],
+    });
+    expect((customBus as any).streamSubjects).toEqual(['custom.stream.>']);
   });
 });

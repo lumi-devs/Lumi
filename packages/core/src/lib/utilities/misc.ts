@@ -4,7 +4,6 @@ import { isGuildBasedChannel } from "@sapphire/discord.js-utilities";
 import { checkModulesEnabled } from "#lib/module-check.js";
 import { AsyncQueue } from "@sapphire/async-queue";
 
-// audit.ts
 export function formatAuditReason(
   actor: User,
   reason: string | null,
@@ -14,7 +13,6 @@ export function formatAuditReason(
   return (prefix + (reason ?? "No reason provided.")).slice(0, maxLen);
 }
 
-// branding.ts
 export const LumiInfo = {
   version: "2.1.1",
   codename: "Elysian",
@@ -27,16 +25,11 @@ export const LumiInfo = {
   },
 };
 
-// formatting.ts
-export { cutText as truncate } from "@sapphire/utilities";
-export { escapeMarkdown } from "@discordjs/formatters";
-
 /**
  * Formats an unknown ID into a string. Returns 'unknown' if the ID is falsy.
  */
 export const fmtId = (id: unknown): string => (id ? String(id) : "unknown");
 
-// listeners.ts
 export async function isModuleEnabled(
   guildId: string,
   module: string,

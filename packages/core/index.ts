@@ -68,7 +68,6 @@ export { Emojis, type EmojiKey } from "./src/lib/utilities/assets.js";
 export { checkModulesEnabled } from "./src/lib/module-check.js";
 export { relativeTimestamp, shortTimestamp } from "./src/lib/utilities/time.js";
 export { swallow, logError, errorFrom } from "./src/lib/utilities/errors.js";
-export { RequesterType } from "./src/lib/gdpr.js";
 
 // Discord formatters — re-exported so addons import from @lumi/sdk only
 export {
