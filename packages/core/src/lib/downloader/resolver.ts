@@ -24,8 +24,10 @@ const execGit = (args: string[]) =>
 const execError =
   (context: string) =>
   (err: NodeJS.ErrnoException & { stderr?: string }): never => {
-    throw new Error(`${context}: ${(err.stderr ?? err.message).trim()}`);
+    const msg = (err.stderr || err.message || String(err)).trim();
+    throw new Error(`${context}${msg ? `: ${msg}` : ""}`);
   };
+
 
 const repoSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
 const branchSchema = s.string().regex(/^[a-zA-Z0-9_.][a-zA-Z0-9_.-]*$/);
