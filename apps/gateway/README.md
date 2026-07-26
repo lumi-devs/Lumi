@@ -5,7 +5,7 @@
   <img src="https://img.shields.io/badge/Bun-1.3+-black?style=for-the-badge&logo=bun" alt="Bun">
   <img src="https://img.shields.io/badge/TypeScript-5.9-blue?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Role-gateway-purple?style=for-the-badge" alt="Role">
-  <img src="https://img.shields.io/badge/Transport-Streams%20%7C%20NATS-blueviolet?style=for-the-badge" alt="Transport">
+  <img src="https://img.shields.io/badge/Transport-Redis%20Streams-blueviolet?style=for-the-badge" alt="Transport">
 </div>
 
 <br />
@@ -32,10 +32,10 @@ The gateway process isolates connection management from command and event logic 
 - **Dynamic Cluster Sharding**: Uses `@lumi/sharding` to automatically calculate shard assignments, persist session state in Redis, and execute zero-downtime shard rebalancing when scaling gateway replicas.
 - **Pre-Deferred Interactions**: When `INTERACTION_DEFER_AT_GATEWAY=true`, the gateway immediately responds to incoming Discord interaction events with a pre-acknowledgment (`DeferredChannelMessageWithSource` or `DeferredMessageUpdate`) before publishing to the stream, preventing 3-second Discord interaction timeouts.
 - **Rate-Limit Proxy Integration**: Connects with REST rate-limit proxies such as `nirn-proxy` (`DISCORD_PROXY_URL`) to share global REST bucket state across instances.
-- **High-Throughput Event Backplane**: Publishes raw gateway envelopes (`rawGatewayStream`) to Redis Streams or NATS JetStream for consumption by worker pools.
+- **High-Throughput Event Backplane**: Publishes raw gateway envelopes (`rawGatewayStream`) to Redis Streams for consumption by worker pools.
 
 > [!NOTE]
-> Standalone gateway instances require `TRANSPORT=streams` or `TRANSPORT=nats`. In-process event bus transport is only supported when running in monolithic mode.
+> Standalone gateway instances require `TRANSPORT=streams`.
 
 ---
 
@@ -61,7 +61,7 @@ flowchart TD
     end
 
     subgraph Event Backplane
-        EB{Redis Streams / NATS JetStream<br/>rawGatewayStream}
+        EB{Redis Streams<br/>rawGatewayStream}
     end
 
     subgraph Processing Layer
@@ -96,7 +96,7 @@ Configure `@lumi/gateway` using environment variables:
 |---|:---:|:---:|---|
 | `BOT_TOKEN` | **Yes** | — | Discord Bot Token from the Discord Developer Portal. |
 | `LUMI_ROLE` | **Yes** | `gateway` | Identifies the process role (`gateway`). |
-| `TRANSPORT` | No | `streams` | Event bus transport driver (`streams` \| `nats`). |
+| `TRANSPORT` | No | `streams` | Event bus transport driver (`streams`). |
 | `LUMI_CLUSTER_NAME` | No | — | Cluster identifier for multi-replica sharded gateway deployments. |
 | `LUMI_CONSUMER_ID` | No | `gateway-1` | Unique replica identifier within the cluster (defaults to hostname/pid). |
 | `INTERACTION_DEFER_AT_GATEWAY` | No | `true` | When `true`, gateway sends immediate pre-acknowledgments to Discord interactions. |
@@ -106,7 +106,6 @@ Configure `@lumi/gateway` using environment variables:
 | `REDIS_PORT` | No | `6379` | Redis server network port. |
 | `REDIS_PASSWORD` | No | — | Redis authentication password. |
 | `REDIS_CACHE_DB` | No | `0` | Redis database index for cluster state and session storage. |
-| `NATS_URL` | No | — | NATS server connection URL (required when `TRANSPORT=nats`). |
 | `METRICS_ENABLED` | No | `true` | Enables HTTP metrics and health check server. |
 | `METRICS_PORT` | No | `9090` | Network port for Prometheus metrics and health probes. |
 
@@ -151,5 +150,5 @@ The gateway exposes an HTTP server on `METRICS_PORT` (default `9090`).
 ### Registered Readiness Probes
 
 - `discord-ws`: Verifies that all expected shards allocated to this instance are in the `READY` state.
-- `event-bus`: Pings the active event bus transport (Redis or NATS).
+- `event-bus`: Pings the active event bus transport (Redis Streams).
 - `cluster-joined`: Confirms that the gateway instance has successfully joined the Redis cluster coordinator.

@@ -13,7 +13,7 @@ Copy `.env.example` to `.env` and fill in the required values.
 | `REDIS_URL` | `redis://localhost:6379` | ✅ | Redis connection string |
 | `RABBITMQ_URL` | `amqp://lumi:lumi@localhost:5672` | ✅ | RabbitMQ URI |
 | `LUMI_ROLE` | `monolith` | — | `monolith` / `gateway` / `worker` / `scheduler` |
-| `TRANSPORT` | `inproc` | — | `inproc` / `streams` (Redis) / `nats` |
+| `TRANSPORT` | `streams` | — | `streams` (Redis Streams) |
 | `OTEL_ENABLED` | `false` | — | Enable OpenTelemetry tracing |
 | `METRICS_ENABLED` | `true` | — | Enable Prometheus metrics |
 | `METRICS_PORT` | `9090` | — | Prometheus `/metrics` port |
@@ -31,7 +31,6 @@ Copy `.env.example` to `.env` and fill in the required values.
 | :--- | :--- |
 | `default` | Worker + Postgres + PgBouncer + Redis + RabbitMQ |
 | `scale` | Gateway + Worker pool + Scheduler + Rate-limit proxy |
-| `scale-nats` | Same as `scale` but uses NATS JetStream |
 | `dashboard` | Web admin panel on `:8080` |
 | `observability` | OTel Collector + Prometheus + Grafana + Tempo |
 

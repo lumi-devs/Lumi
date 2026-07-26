@@ -16,7 +16,7 @@ graph TD
     end
 
     subgraph Event Transport Backplane
-        EB{packages/event-bus<br/>InProc / Redis Streams / NATS JetStream}
+        EB{packages/event-bus<br/>Redis Streams}
     end
 
     subgraph Processing Pool
@@ -88,7 +88,7 @@ sequenceDiagram
 | | `apps/scheduler` | Background task scheduler, BullMQ queues |
 | | `apps/dashboard` | Web admin panel on `:8080`, Discord OAuth2 |
 | **Packages** | `@lumi/core` | Core framework, modules, Prisma models, i18n |
-| | `@lumi/event-bus` | Transport abstraction (InProc / Redis / NATS) |
+| | `@lumi/event-bus` | Redis Streams event bus |
 | | `@lumi/observability` | Pino logger, OpenTelemetry, Prometheus `:9090` |
 | | `@lumi/sharding` | Discord cluster coordinator & shard planner |
 | | `@lumi/contracts` | Shared TypeScript interfaces, event schemas |
