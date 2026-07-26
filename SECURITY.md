@@ -2,27 +2,44 @@
 
 ## Supported Versions
 
-Currently, the `main` branch of Lumi receives security updates. Older or unsupported forks will not receive official security updates.
+The following table details which versions of Lumi are currently supported with security updates and patches.
+
+| Version | Supported          | Security Maintenance |
+| ------- | ------------------ | -------------------- |
+| 1.x.x   | :white_check_mark: | Active Development   |
+| < 1.0   | :x:                | End of Life (EOL)    |
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within Lumi, please do NOT report it in a public issue. Instead, we make use of GitHub's private vulnerability reporting feature (More information can be found [here](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing/privately-reporting-a-security-vulnerability)).
-This ensures that all maintainers have access to the reported vulnerability before it is disclosed publicly.
+We take the security of Lumi very seriously. If you suspect or discover a security vulnerability in this project, please report it immediately through private channels. **Do not submit public GitHub issues, pull requests, or forum posts for security vulnerabilities.**
 
-### Opening a Vulnerability Report
+### Disclosure Process
 
-To open a vulnerability report, please navigate to the "Security" tab of this repository and select "Report a vulnerability" or fill out the appropriate form in the Advisories section. Alternatively, send an email to `security@lumi-devs.org`.
+1. **Private Vulnerability Reporting**:
+   - Prefer using GitHub's **Private Vulnerability Reporting** feature via the [Security tab](../../security/advisories/new) of this repository.
+   - Alternatively, email the maintenance team directly at `security@lumi-devs.org` with details.
 
-You will be asked to provide a summary, details, and proof of concept for your vulnerability report. We ask that you fill out this form to the best of your ability, with as many details as possible.
+2. **Information to Include**:
+   - Detailed description of the vulnerability and its potential impact.
+   - Step-by-step reproduction steps or a minimal Proof-of-Concept (PoC).
+   - Affected components, versions, and configuration settings.
+   - Any proposed remediation or patch if available.
 
-### Timeline
+3. **Response Timeline**:
+   - **Acknowledgment**: Within 48 hours of receipt.
+   - **Triage & Assessment**: Within 7 business days.
+   - **Patch Delivery & Release**: Coordinated disclosure within 30 days depending on severity.
 
-We will try to answer your report within 7 days. If you haven't received an answer by then, we suggest you reach out to us privately via our [Discord server](https://discord.gg/YOUR_INVITE), by contacting a maintainer.
-
-## Addons and Sandboxing
+## Addons and Sandboxing Policy
 
 > [!WARNING]
-> Third-party addons executed by Lumi have NO strict sandboxing (such as `vm2` or `isolated-vm`). 
-> Addons run with the same privileges as the bot process, meaning they have access to the bot token, database credentials, and file system.
-> Only install addons from sources and authors you trust completely.
+> Third-party addons executed by Lumi run in the same process environment as the core bot.
+> There is **NO** strict sandboxing (e.g., V8 isolate boundary) for downloaded third-party modules.
+> Addons have full access to process environment variables (including bot token, database URIs, and API keys), system network interfaces, and file storage.
+> Only install and activate addons from source repositories and authors you fully trust.
 
+## Security Best Practices for Operators
+
+- Store all secrets (tokens, DB credentials, NATS/RabbitMQ passwords) in environment variables or standard `.env` files with restricted file permissions (`600`).
+- Ensure Redis and PostgreSQL instances require authentication and are network-isolated.
+- Keep dependencies updated via Dependabot alerts.

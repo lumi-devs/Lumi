@@ -1,17 +1,17 @@
 name: 💡 Feature Request
-description: Suggest an idea or new capability for the framework
+description: Propose a new feature, enhancement, or architectural improvement
 title: "[Feat]: "
 labels: ["enhancement", "triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Have an idea for a feature or enhancement? Fill out the form below!
+        Have an idea for a feature or framework improvement? Fill out the form below to propose it!
   - type: dropdown
     id: scope
     attributes:
       label: Target Scope / Subsystem
-      description: Where should this feature live?
+      description: Where should this feature be implemented?
       options:
         - "@lumi/core (Framework Core & Base Engine)"
         - "New Core Module (packages/core/src/modules/)"
@@ -27,24 +27,24 @@ body:
   - type: textarea
     id: problem
     attributes:
-      label: Is your feature request related to a problem? Please describe.
-      description: A clear description of what the problem or limitation is (e.g. "I'm frustrated when...")
+      label: Problem Statement / Motivation
+      description: Describe the problem, limitation, or use case that motivates this feature request.
     validations:
       required: true
   - type: textarea
     id: solution
     attributes:
-      label: Describe the Solution You'd Like
-      description: A clear and concise description of what you want to happen.
+      label: Proposed Solution
+      description: Clear and detailed description of the proposed feature or capability.
     validations:
       required: true
   - type: textarea
     id: alternatives
     attributes:
-      label: Describe Alternatives You've Considered
-      description: Any alternative solutions or features you've considered.
+      label: Alternatives Considered
+      description: Any alternative solutions or workarounds you have considered.
   - type: textarea
     id: context
     attributes:
       label: Additional Context
-      description: Add any mockups, API design ideas, or related issues here.
+      description: Add any mockups, visual examples, API designs, or reference links.

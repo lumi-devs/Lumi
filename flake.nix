@@ -1,5 +1,5 @@
 {
-  description = "Lumi — dev shell (Bun / TypeScript / Prisma / Postgres / Redis / RabbitMQ)";
+  description = "Lumi — Production-ready multi-platform dev shell (Bun / Node / Git / GH / JQ / Postgres / Redis / RabbitMQ)";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -15,7 +15,11 @@
         default = pkgs.mkShell {
           packages = with pkgs; [
             bun
-            nodejs_22
+            nodejs
+            git
+            gh
+            jq
+            coreutils
             turbo
             openssl
             prisma-engines
@@ -30,7 +34,16 @@
           };
 
           shellHook = ''
-            echo "Lumi dev shell - bun $(bun --version), node $(node --version), turbo $(turbo --version)"
+            echo "========================================="
+            echo "  Lumi Multi-Platform Dev Shell (Flake)  "
+            echo "========================================="
+            echo "  Bun:        $(bun --version 2>/dev/null || echo 'N/A')"
+            echo "  Node:       $(node --version 2>/dev/null || echo 'N/A')"
+            echo "  Git:        $(git --version 2>/dev/null || echo 'N/A')"
+            echo "  GitHub CLI: $(gh --version 2>/dev/null | head -n1 || echo 'N/A')"
+            echo "  jq:         $(jq --version 2>/dev/null || echo 'N/A')"
+            echo "  Turbo:      $(turbo --version 2>/dev/null || echo 'N/A')"
+            echo "========================================="
           '';
         };
       });
