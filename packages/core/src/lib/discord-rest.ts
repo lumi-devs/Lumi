@@ -30,6 +30,3 @@ export function buildRestOptions(
     globalRequestsPerSecond: Number.POSITIVE_INFINITY,
   };
 }
-
-/** Convenience: true iff `DISCORD_PROXY_URL` is configured. */
-export const isRestProxyEnabled = (): boolean => getDiscordProxyUrl() !== null;

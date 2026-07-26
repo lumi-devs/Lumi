@@ -149,7 +149,7 @@ describe("TempVcService", () => {
       expect(mockChannel.send).toHaveBeenCalled();
 
       // Check reordering scheduled
-      await vi.advanceTimersByTimeAsync(1000);
+      vi.advanceTimersByTime(1000);
       expect(listVcRecords).toHaveBeenCalled();
     });
 

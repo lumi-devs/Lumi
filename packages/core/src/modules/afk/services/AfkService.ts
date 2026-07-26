@@ -14,6 +14,8 @@ import {
   setAfkCooldown,
   getAllAfkEntries,
   clearAfkEntry,
+  getAfkEntriesForGuild,
+  getAfkStats,
 } from "../data/afk.js";
 
 @ApplyOptions<Piece.Options>({ name: "afk" })
@@ -85,6 +87,14 @@ export default class AfkService extends Service {
     }
 
     return removed;
+  }
+
+  public async getGuildEntries(guildId: string) {
+    return getAfkEntriesForGuild(guildId);
+  }
+
+  public async getStats(_guildId?: string) {
+    return getAfkStats();
   }
 }
 

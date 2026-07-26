@@ -1,22 +1,10 @@
 import type { Container } from "@sapphire/framework";
 import { tryGetService } from "#lib/module-system/Service.js";
 import { type User } from "discord.js";
-import { Duration } from "@sapphire/time-utilities";
 import { scheduleTask } from "#lib/schedule-task.js";
+import { parseDuration, formatDuration } from "#lib/utilities/time.js";
 
-/** Parse a duration string like "10m", "2h30m", "7d" into milliseconds. Returns null if unparseable. */
-export function parseDuration(str: string): number | null {
-  const ms = new Duration(str).offset;
-  return Number.isNaN(ms) || ms <= 0 ? null : ms;
-}
-
-export function formatDuration(ms: number): string {
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  return `${Math.floor(s / 86400)}d`;
-}
+export { parseDuration, formatDuration };
 
 const liftJobId = (caseId: number) => `mod-lift:${caseId}`;
 

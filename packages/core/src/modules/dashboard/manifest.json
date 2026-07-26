@@ -5,6 +5,7 @@
   "description": "Integrates the bot with the Lumi Web Dashboard. Provides RPC endpoints for management.",
   "version": "1.0.0",
   "isCore": false,
+  "disableable": true,
   "dependencies": [],
   "conflicts": [],
   "configOverrides": false,

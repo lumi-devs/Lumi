@@ -5,11 +5,15 @@
   "description": "Staff moderation: warn, mute, kick, ban — with case logging.",
   "version": "1.0.0",
   "isCore": false,
+  "disableable": true,
   "dependencies": [],
   "conflicts": [],
   "configOverrides": false,
   "targetService": "worker",
-  "subStores": ["commands", "scheduled-tasks"],
+  "subStores": [
+    "commands",
+    "scheduled-tasks"
+  ],
   "configFields": [
     {
       "key": "log_channel_id",

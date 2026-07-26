@@ -85,7 +85,11 @@ export async function clearAfkEntry(
 ): Promise<boolean> {
   try {
     await container.db.afk.deleteEntry(guildId, userId);
-    await container.redis.del(AfkKeys.afk(guildId, userId));
+    if (container.invalidation) {
+      await container.invalidation.invalidate(AfkKeys.afk(guildId, userId));
+    } else {
+      await container.redis.del(AfkKeys.afk(guildId, userId));
+    }
     return true;
   } catch (err: unknown) {
     container.logger.error(
@@ -99,7 +103,13 @@ export async function clearAfkEntry(
 export async function clearAllAfkForUser(userId: string): Promise<number> {
   const count = await container.db.afk.deleteAllForUser(userId);
   const keys = await scanKeys(AfkKeys.allForUserPattern(userId));
-  if (keys.length) await container.redis.del(...keys);
+  if (keys.length) {
+    if (container.invalidation) {
+      await container.invalidation.invalidate(...keys);
+    } else {
+      await container.redis.del(...keys);
+    }
+  }
   return count;
 }
 
@@ -152,7 +162,11 @@ export async function clearAfkMentions(
   guildId: string,
   userId: string,
 ): Promise<void> {
-  await container.redis.del(AfkKeys.mentions(guildId, userId));
+  if (container.invalidation) {
+    await container.invalidation.invalidate(AfkKeys.mentions(guildId, userId));
+  } else {
+    await container.redis.del(AfkKeys.mentions(guildId, userId));
+  }
 }
 
 export async function isAfkOnCooldown(key: string): Promise<boolean> {

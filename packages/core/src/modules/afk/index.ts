@@ -1,5 +1,4 @@
 import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
-import type { RequesterType } from "#lib/gdpr.js";
 import { container } from "@sapphire/framework";
 import { Emojis } from "#lib/utilities/assets.js";
 import { clearAllAfkForUser } from "./data/afk.js";
@@ -78,7 +77,6 @@ export class AfkModule extends Module {
 
   public override async deleteUserData(
     userId: string,
-    _requester: RequesterType,
   ): Promise<void> {
     await clearAllAfkForUser(userId);
   }

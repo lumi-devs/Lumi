@@ -5,11 +5,15 @@
   "description": "Automod rule engine: filtered terms (Aho-Corasick), regex rules, invite/link blocking with allowlists, mention-spam and caps limits, with configurable punishment and logging.",
   "version": "2.0.0",
   "isCore": false,
+  "disableable": true,
   "dependencies": [],
   "conflicts": [],
   "configOverrides": false,
   "targetService": "worker",
-  "subStores": ["listeners", "services"],
+  "subStores": [
+    "listeners",
+    "services"
+  ],
   "configFields": [
     {
       "key": "terms",
@@ -100,7 +104,9 @@
       "type": "CHANNEL",
       "label": "Log Channel",
       "description": "Channel where filter hits are logged.",
-      "channelTypes": [0]
+      "channelTypes": [
+        0
+      ]
     }
   ]
 }

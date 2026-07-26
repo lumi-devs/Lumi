@@ -28,6 +28,8 @@ import {
   removeVcRecord,
   setVcRecord,
   listGenerators,
+  setGenerator,
+  removeGenerator,
   type GeneratorConfig,
   type VcRecord,
 } from "../data.js";
@@ -294,6 +296,27 @@ export default class TempVcService extends Service {
 
   public get moduleName() {
     return MODULE_NAME;
+  }
+
+  public async addGenerator(
+    guildId: string,
+    channelId: string,
+    config: GeneratorConfig,
+  ): Promise<void> {
+    await setGenerator(guildId, channelId, config);
+  }
+
+  public async removeGenerator(
+    guildId: string,
+    channelId: string,
+  ): Promise<boolean> {
+    return removeGenerator(guildId, channelId);
+  }
+
+  public async listGenerators(
+    guildId: string,
+  ): Promise<Map<string, GeneratorConfig>> {
+    return listGenerators(guildId);
   }
 
   /** Toggles per-channel connection or visibility restriction. */

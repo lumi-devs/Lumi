@@ -1,5 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 
+import { getService } from "#lib/module-system/Service.js";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { userMention } from "@discordjs/formatters";
 import { chunk } from "@sapphire/utilities";
@@ -8,7 +9,7 @@ import { PermissionLevel } from "#lib/permissions/index.js";
 import { makeWarningCard } from "#lib/utilities/cards.js";
 import { afkDurationSince } from "../index.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { getAfkEntriesForGuild } from "../data/afk.js";
+import type AfkService from "../services/AfkService.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "afklist",
@@ -26,8 +27,12 @@ export default class AfkListCommand extends BaseCommand {
     );
   }
 
+  private get afkService(): AfkService {
+    return getService("afk");
+  }
+
   public override async run(ctx: CommandContext) {
-    const entries = await getAfkEntriesForGuild(ctx.guildId!);
+    const entries = await this.afkService.getGuildEntries(ctx.guildId!);
 
     if (entries.length === 0) {
       return ctx.replyInfo(

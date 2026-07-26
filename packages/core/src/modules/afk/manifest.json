@@ -5,6 +5,7 @@
   "description": "Set yourself AFK; mentions notify others and a prefix is added to your nickname.",
   "version": "1.0.0",
   "isCore": false,
+  "disableable": true,
   "dependencies": [],
   "conflicts": [],
   "configOverrides": false,
