@@ -99,13 +99,13 @@ export class DownloadResolver {
       (await this._exists(repoPath)) && (await this._exists(gitFolder));
 
     if (isExisting) {
-      container.logger?.info(`[Downloader] Updating repo: ${name}`);
+      container.logger?.info?.(`[Downloader] Updating repo: ${name}`);
       const pullArgs =
         branch === "default"
           ? ["-C", repoPath, "pull"]
           : ["-C", repoPath, "pull", "origin", branch];
       await execGit(pullArgs).catch(async () => {
-        container.logger?.warn(
+        container.logger?.warn?.(
           `[Downloader] Git pull failed for ${name}, attempting clean clone fallback...`,
         );
         await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
@@ -118,7 +118,7 @@ export class DownloadResolver {
         });
       });
     } else {
-      container.logger?.info(`[Downloader] Cloning repo: ${url}`);
+      container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
       await fs.mkdir(MODULE_ROOT, { recursive: true });
       const cloneArgs = ["clone"];
       if (branch !== "default") cloneArgs.push("-b", branch);
@@ -128,6 +128,7 @@ export class DownloadResolver {
         throw new Error("Git clone failed");
       });
     }
+
 
 
   }
@@ -150,7 +151,7 @@ export class DownloadResolver {
         };
         if (Array.isArray(index.modules)) return index.modules;
       } catch (err: unknown) {
-        container.logger?.warn(
+        container.logger?.warn?.(
           `[Downloader] Failed to parse modules.json in ${repoName}, falling back to scan:`,
           err,
         );
@@ -175,7 +176,7 @@ export class DownloadResolver {
           ) as ModuleInfo;
           modules.push(info);
         } catch (err: unknown) {
-          container.logger?.warn(
+          container.logger?.warn?.(
             `[Downloader] Failed to parse info.json for ${entry.name}:`,
             err,
           );
@@ -235,7 +236,7 @@ export class DownloadResolver {
     await fs.mkdir(ADDON_MODULES_ROOT, { recursive: true });
 
     if (info.requirements?.length) {
-      container.logger?.info(
+      container.logger?.info?.(
         `[Downloader] Installing isolated requirements for ${moduleName}: ${info.requirements.join(", ")}`,
       );
       const reqs = reqsSchema.parse(info.requirements);
@@ -263,9 +264,10 @@ export class DownloadResolver {
     }
     await fs.symlink(sourcePath, targetPath, "dir");
 
-    container.logger?.info(
+    container.logger?.info?.(
       `[Downloader] Installed ${moduleName} from ${repoName}`,
     );
+
     return info;
   }
 
