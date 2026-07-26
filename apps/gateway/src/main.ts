@@ -38,27 +38,17 @@ import {
   type ClusterBootstrap,
 } from "@lumi/sharding";
 import { Redis } from "ioredis";
+import {
+  envParseString,
+  envParseInteger,
+  isInteractionDeferAtGateway,
+  getClusterName,
+  getConsumerId,
+  getDiscordProxyUrl,
+} from "#lib/env.js";
 
-const env = (k: string, def?: string): string => {
-  const v = process.env[k];
-  if (v !== undefined) return v;
-  if (def !== undefined) return def;
-  throw new Error(`[Gateway] Missing env: ${k}`);
-};
-const envInt = (k: string, def: number) =>
-  process.env[k] === undefined ? def : Number(process.env[k]);
-
-let TOKEN: string;
-let TRANSPORT: string;
-try {
-  TOKEN = env("BOT_TOKEN");
-  TRANSPORT = env("TRANSPORT", "streams");
-} catch (err: unknown) {
-  console.error(
-    `[Gateway] Fatal startup error: ${err instanceof Error ? err.message : String(err)}`,
-  );
-  process.exit(1);
-}
+const TOKEN = envParseString("BOT_TOKEN");
+const TRANSPORT = envParseString("TRANSPORT", "streams");
 
 if (TRANSPORT !== "streams" && TRANSPORT !== "nats") {
   console.error(
@@ -66,10 +56,9 @@ if (TRANSPORT !== "streams" && TRANSPORT !== "nats") {
   );
   process.exit(1);
 }
-const DEFER_AT_GATEWAY = process.env["INTERACTION_DEFER_AT_GATEWAY"] === "true";
-const MAXLEN = envInt("EVENT_STREAM_MAXLEN", 100_000);
-const PROXY_URL =
-  process.env["DISCORD_PROXY_URL"]?.trim().replace(/\/+$/, "") || null;
+const DEFER_AT_GATEWAY = isInteractionDeferAtGateway();
+const MAXLEN = envParseInteger("EVENT_STREAM_MAXLEN", 100_000);
+const PROXY_URL = getDiscordProxyUrl();
 
 const pino = createPinoLogger({
   service: "gateway",
@@ -101,21 +90,18 @@ const shardPlan = await planShards({ token: TOKEN, log }).catch(
   },
 );
 
-const CLUSTER_NAME = process.env["CLUSTER_NAME"]?.trim() || null;
-const REPLICA_ID =
-  process.env["LUMI_CONSUMER_ID"] ||
-  process.env["HOSTNAME"] ||
-  `gateway-${process.pid}`;
+const CLUSTER_NAME = getClusterName();
+const REPLICA_ID = getConsumerId();
 
 let cluster: ClusterBootstrap | null = null;
 let clusterRedis: Redis | null = null;
 let clusterSub: Redis | null = null;
 if (CLUSTER_NAME) {
   const redisOpts = {
-    host: env("REDIS_HOST", "localhost"),
-    port: envInt("REDIS_PORT", 6379),
-    password: env("REDIS_PASSWORD", ""),
-    db: envInt("REDIS_CACHE_DB", 0),
+    host: envParseString("REDIS_HOST", "localhost"),
+    port: envParseInteger("REDIS_PORT", 6379),
+    password: envParseString("REDIS_PASSWORD", ""),
+    db: envParseInteger("REDIS_CACHE_DB", 0),
     lazyConnect: true,
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
@@ -156,10 +142,10 @@ const ownedShards = new Set<number>(
 const ownedBus: OwnedEventBus = createEventBus({
   transport: TRANSPORT,
   redis: {
-    host: env("REDIS_HOST", "localhost"),
-    port: envInt("REDIS_PORT", 6379),
-    password: env("REDIS_PASSWORD", ""),
-    db: envInt("REDIS_CACHE_DB", 0),
+    host: envParseString("REDIS_HOST", "localhost"),
+    port: envParseInteger("REDIS_PORT", 6379),
+    password: envParseString("REDIS_PASSWORD", ""),
+    db: envParseInteger("REDIS_CACHE_DB", 0),
   },
   natsServers: process.env["NATS_URL"] ?? process.env["NATS_SERVERS"],
   natsUser: process.env["NATS_USER"],
