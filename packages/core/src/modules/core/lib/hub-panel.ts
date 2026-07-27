@@ -15,6 +15,7 @@ import {
 import { makeCard, noPingCard, type CardReply } from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { SUPPORTED_LANGUAGES } from "#lib/i18n/index.js";
+import { createStringSelectMenu } from "#utilities/panels.js";
 
 export const formatSubtitle = (text: string) => `-# ${text}`;
 
@@ -108,17 +109,16 @@ export function buildSettingsView(settings: {
     }`,
   ].join("\n");
 
-  const langSelect = new StringSelectMenuBuilder()
-    .setCustomId("lumi:setlang")
-    .setPlaceholder("Change language…")
-    .addOptions(
-      SUPPORTED_LANGUAGES.map((lang) =>
-        new StringSelectMenuOptionBuilder()
-          .setLabel(lang)
-          .setValue(lang)
-          .setDefault(lang === settings.locale),
-      ),
-    );
+  const langSelect = createStringSelectMenu({
+    customId: "lumi:setlang",
+    placeholder: "Change language…",
+    options: SUPPORTED_LANGUAGES.slice(0, 25).map((lang) =>
+      new StringSelectMenuOptionBuilder()
+        .setLabel(lang)
+        .setValue(lang)
+        .setDefault(lang === settings.locale),
+    ),
+  });
 
   const prefixButtons = row(
     new ButtonBuilder()
