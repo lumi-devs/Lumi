@@ -59,9 +59,9 @@ x-lumi-service: &lumi-service
       max-file: "3"
 
 services:
-  monolith:
+  worker:
     <<: *lumi-service
-    container_name: lumi-monolith
+    container_name: lumi-worker
     command: ["sh", "-c", "bunx prisma db push --accept-data-loss && bun apps/worker/src/main.ts"]
     environment:
       <<: *lumi-env
@@ -108,9 +108,9 @@ services:
     profiles:
       - development
 
-  worker:
+  worker-scale:
     <<: *lumi-service
-    container_name: lumi-worker
+    container_name: lumi-worker-scale
     command: ["sh", "-c", "bunx prisma db push --accept-data-loss && bun apps/worker/src/main.ts"]
     environment:
       <<: *lumi-env
@@ -128,7 +128,7 @@ services:
       LUMI_ROLE: "gateway"
       NODE_OPTIONS: "--max-old-space-size=768"
     depends_on:
-      worker:
+      worker-scale:
         condition: service_started
     deploy:
       resources:
