@@ -57,20 +57,23 @@ bun run dev            # Start bot in monolith mode
 ```
 
 <details>
-<summary><strong>Production Deployment (Docker)</strong></summary>
+<summary><strong>Production Deployment (Docker & GHCR)</strong></summary>
 
 ```sh
 cp .env.example .env
 # Edit .env — set BOT_TOKEN, CLIENT_ID, DATABASE_URL, REDIS_URL, NODE_ENV=production
 
-# Boot core production services (Monolith Bot + Postgres + Redis)
-docker compose --profile default up -d
+# Pull latest pre-built container image from GitHub Container Registry (GHCR)
+docker pull ghcr.io/lumi-devs/lumi:latest
+
+# Boot core production services (Monolith Bot + Postgres + Redis) using GHCR image
+docker compose up -d
 
 # Optional: Boot with Web Dashboard included
 docker compose --profile dashboard up -d
 ```
 
-For scaled-out / distributed deployments (`gateway` + `worker` + `scheduler`), specify `LUMI_ROLE` per container node. Refer to [docs/architecture.md](docs/architecture.md).
+For scaled-out / distributed deployments (`gateway` + `worker` + `scheduler`), specify `LUMI_ROLE` per container node. Pre-built Docker images are automatically built and published to GHCR on official release tags (`v*`) and via manual `workflow_dispatch`. Refer to [docs/architecture.md](docs/architecture.md).
 
 </details>
 
