@@ -4,7 +4,7 @@ import { container } from "@sapphire/framework";
 import { tempVcRegistry } from "#modules/tempvc/registry.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import { isVoiceChannelEmpty, clearVoiceChannelOccupancy } from "#modules/tempvc/lib/voice-occupancy.js";
-import { setVcRecord, listVcRecords, listGenerators, removeVcRecord, getVcRecord } from "#modules/tempvc/data.js";
+import { setVcRecord, listVcRecords, listGenerators, removeVcRecord, getVcRecord, setGenerator, removeGenerator } from "#modules/tempvc/data.js";
 
 vi.mock("#lib/schedule-task.js", () => ({
   scheduleTask: vi.fn().mockResolvedValue(undefined),
@@ -21,6 +21,8 @@ vi.mock("#modules/tempvc/data.js", () => ({
   listGenerators: vi.fn(),
   removeVcRecord: vi.fn(),
   getVcRecord: vi.fn(),
+  setGenerator: vi.fn(),
+  removeGenerator: vi.fn(),
 }));
 
 vi.mock("#modules/tempvc/registry.js", () => ({
@@ -403,6 +405,176 @@ describe("TempVcService", () => {
 
       const result = service.canManage(mockMember as any, mockChannel as any);
       expect(result).toBe(false);
+    });
+  });
+
+  describe("onLoad & moduleName", () => {
+    it("onLoad executes without throwing and moduleName returns 'tempvc'", () => {
+      expect(() => service.onLoad()).not.toThrow();
+      expect(service.moduleName).toBe("tempvc");
+    });
+  });
+
+  describe("reconcileGuild", () => {
+    it("scans guild vc records and schedules cleanup for each channel", async () => {
+      const mockGuild = { id: "guild-1" };
+      (listVcRecords as any).mockResolvedValue(
+        new Map([
+          ["vc-1", {} as any],
+          ["vc-2", {} as any],
+        ])
+      );
+
+      await service.reconcileGuild(mockGuild as any);
+
+      expect(scheduleTask).toHaveBeenCalledWith(
+        "tempvc-cleanup",
+        { guildId: "guild-1", channelId: "vc-1" },
+        expect.any(Object)
+      );
+      expect(scheduleTask).toHaveBeenCalledWith(
+        "tempvc-cleanup",
+        { guildId: "guild-1", channelId: "vc-2" },
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe("runCleanup error handling", () => {
+    it("handles Discord API error codes 10003 and 50013 gracefully without rethrowing", async () => {
+      (getVcRecord as any).mockResolvedValue({ ownerId: "owner-1" } as any);
+      (isVoiceChannelEmpty as any).mockResolvedValue(true);
+
+      const err10003: any = new Error("Unknown Channel");
+      err10003.code = 10003;
+      (container.client.rest.delete as any).mockRejectedValueOnce(err10003);
+
+      await service.runCleanup({ guildId: "guild-1", channelId: "vc-10003" });
+      expect(removeVcRecord).toHaveBeenCalledWith("guild-1", "vc-10003");
+      expect(clearVoiceChannelOccupancy).toHaveBeenCalledWith("vc-10003");
+
+      const err50013: any = new Error("Missing Permissions");
+      err50013.code = 50013;
+      (container.client.rest.delete as any).mockRejectedValueOnce(err50013);
+
+      await service.runCleanup({ guildId: "guild-1", channelId: "vc-50013" });
+      expect(removeVcRecord).toHaveBeenCalledWith("guild-1", "vc-50013");
+      expect(clearVoiceChannelOccupancy).toHaveBeenCalledWith("vc-50013");
+    });
+
+    it("rethrows unexpected API errors during cleanup", async () => {
+      (getVcRecord as any).mockResolvedValue({ ownerId: "owner-1" } as any);
+      (isVoiceChannelEmpty as any).mockResolvedValue(true);
+
+      const unexpectedErr: any = new Error("Internal Error");
+      unexpectedErr.code = 50000;
+      (container.client.rest.delete as any).mockRejectedValueOnce(unexpectedErr);
+
+      await expect(
+        service.runCleanup({ guildId: "guild-1", channelId: "vc-err" })
+      ).rejects.toThrow("Internal Error");
+    });
+  });
+
+  describe("generator management", () => {
+    it("addGenerator calls setGenerator", async () => {
+      const config = { name: "Gen", limit: 0 };
+      await service.addGenerator("guild-1", "chan-1", config);
+      expect(setGenerator).toHaveBeenCalledWith("guild-1", "chan-1", config);
+    });
+
+    it("removeGenerator calls removeGenerator", async () => {
+      (removeGenerator as any).mockResolvedValue(true);
+      const res = await service.removeGenerator("guild-1", "chan-1");
+      expect(res).toBe(true);
+      expect(removeGenerator).toHaveBeenCalledWith("guild-1", "chan-1");
+    });
+
+    it("listGenerators calls listGenerators data function", async () => {
+      const expected = new Map([["chan-1", { name: "Gen", limit: 0 }]]);
+      (listGenerators as any).mockResolvedValue(expected);
+      const res = await service.listGenerators("guild-1");
+      expect(res).toBe(expected);
+    });
+  });
+
+  describe("reorderChannels edge cases", () => {
+    it("returns early when no category channels exist", async () => {
+      const mockGuild = {
+        id: "guild-1",
+        channels: {
+          cache: new Map(),
+        },
+      };
+
+      await service.reorderChannels(mockGuild as any, "cat-empty");
+      expect(listVcRecords).not.toHaveBeenCalled();
+    });
+
+    it("skips position update when channels are already ordered", async () => {
+      const genChan = { id: "gen-1", parentId: "cat-1", isVoiceBased: () => true, position: 0 };
+      const mockGuild = {
+        id: "guild-1",
+        channels: {
+          cache: new Map([["gen-1", genChan]]),
+          setPositions: vi.fn(),
+        },
+      };
+      (listVcRecords as any).mockResolvedValue(new Map());
+      (listGenerators as any).mockResolvedValue(new Map([["gen-1", {} as any]]));
+
+      await service.reorderChannels(mockGuild as any, "cat-1");
+      expect(mockGuild.channels.setPositions).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("setLock and setHide with active members", () => {
+    it("grants active channel members explicit connect permission when locking", async () => {
+      const mockMember1 = { id: "mem-1" };
+      const mockMember2 = { id: "mem-2" };
+
+      const mockChannel = {
+        guild: {
+          id: "guild-1",
+          roles: { everyone: { id: "everyone-id" } },
+        },
+        id: "vc-123",
+        members: new Map([
+          ["mem-1", mockMember1],
+          ["mem-2", mockMember2],
+        ]),
+        permissionOverwrites: {
+          edit: vi.fn().mockResolvedValue(true),
+        },
+      };
+
+      const record: any = { ownerId: "owner-1", generatorId: "gen-1", locked: false };
+      await service.setLock(mockChannel as any, record, true);
+
+      expect(mockChannel.permissionOverwrites.edit).toHaveBeenCalledWith("mem-1", { Connect: true });
+      expect(mockChannel.permissionOverwrites.edit).toHaveBeenCalledWith("mem-2", { Connect: true });
+    });
+  });
+
+  describe("setOwner when old owner is not cached in permissionOverwrites", () => {
+    it("only edits new owner permission overwrite", async () => {
+      const mockChannel = {
+        guild: { id: "guild-1" },
+        id: "vc-123",
+        permissionOverwrites: {
+          cache: new Map(),
+          edit: vi.fn().mockResolvedValue(true),
+        },
+      };
+
+      const record: any = { ownerId: "old-owner-not-in-cache" };
+      const result = await service.setOwner(mockChannel as any, record, "new-owner");
+
+      expect(mockChannel.permissionOverwrites.edit).toHaveBeenCalledTimes(1);
+      expect(mockChannel.permissionOverwrites.edit).toHaveBeenCalledWith("new-owner", {
+        ManageChannels: true,
+      });
+      expect(result.ownerId).toBe("new-owner");
     });
   });
 });

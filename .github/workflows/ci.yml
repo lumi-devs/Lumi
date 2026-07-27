@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
       - 'prisma/**'
       - 'scripts/**'
       - 'package.json'
-      - '.github/workflows/**'
+      - '.github/workflows/ci.yml'
       - 'bun.lock'
       - 'tsconfig*.json'
       - 'eslint.config.*'
@@ -21,7 +21,7 @@ on:
       - 'packages/**'
       - 'prisma/**'
       - 'scripts/**'
-      - '.github/workflows/**'
+      - '.github/workflows/ci.yml'
       - 'package.json'
       - 'bun.lock'
       - 'tsconfig*.json'
@@ -32,36 +32,21 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  typecheck-and-lint:
-    name: CI / typecheck
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Setup Bun environment
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: bun run db:generate
-
-      - name: Run Typecheck
-        run: bun run typecheck
-
   lint:
-    name: CI / lint
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Setup Bun environment
+      - name: Add ESLint problem matcher
+        run: echo "::add-matcher::.github/problemMatchers/eslint.json"
+
+      - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -75,21 +60,20 @@ jobs:
       - name: Run Linter
         run: bun run lint
 
-  test:
-    name: CI / test (Bun ${{ matrix.bun-version }})
+  typecheck:
+    name: Typecheck
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        bun-version: ["latest"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Setup Bun environment
+      - name: Add TypeScript problem matcher
+        run: echo "::add-matcher::.github/problemMatchers/tsc.json"
+
+      - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: ${{ matrix.bun-version }}
+          bun-version: latest
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -97,12 +81,34 @@ jobs:
       - name: Generate Prisma client
         run: bun run db:generate
 
-      - name: Run Unit & Integration Tests
-        run: bun test --coverage --coverage-reporter=lcov
+      - name: Run Typecheck
+        run: bun run typecheck
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          files: ./coverage/lcov.info
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: false
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bun run db:generate
+
+      - name: Run tests with coverage
+        run: bun run test -- --coverage
+
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/lcov.info
+          retention-days: 1
+          if-no-files-found: warn

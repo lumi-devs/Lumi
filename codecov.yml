@@ -1,0 +1,33 @@
+coverage:
+  # Project-level coverage target: fail if overall drops below 70%
+  status:
+    project:
+      default:
+        target: 70%
+        threshold: 1%   # Allow 1% slip before failing
+        if_not_found: success
+    patch:
+      default:
+        target: 70%
+        threshold: 2%
+        if_not_found: success
+
+comment:
+  # Only comment on PRs that actually change coverage — no noise
+  require_changes: true
+  layout: "reach, diff, flags, files"
+  behavior: default
+
+ignore:
+  # Test files
+  - "**/*.test.ts"
+  - "**/*.spec.ts"
+  - "**/tests/**"
+  # Generated files
+  - "**/generated/**"
+  - "node_modules/**"
+  # Config / tooling
+  - "**/*.config.ts"
+  - "**/*.config.js"
+  - "scripts/**"
+  - "prisma/**"

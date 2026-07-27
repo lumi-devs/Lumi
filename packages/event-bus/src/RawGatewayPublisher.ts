@@ -60,7 +60,7 @@ export class RawGatewayPublisher {
       // (HELLO, HEARTBEAT_ACK, RECONNECT, etc.) are connection bookkeeping
       // discord.js handles internally and the worker doesn't reconstruct.
       const p = packet as RawGatewayPacket | undefined;
-      if (p?.op === 0 && p.t && !this.ignore.has(p.t)) {
+      if (p?.op === 0 && typeof p.t === "string" && !this.ignore.has(p.t)) {
         const guildId = extractGuildId(p.d);
         const envelope: RawGatewayEnvelope = {
           shardId: shard.id,
@@ -133,7 +133,7 @@ export function attachProxyPublisher(
   const listener = (data: RawGatewayPacket, shardId: number) => {
     // WebSocketManager only emits this event for op=0 dispatches, so we don't
     // re-check op here; trust `data.t` to be present.
-    if (!data?.t || ignore.has(data.t)) return;
+    if (!data?.t || typeof data.t !== "string" || ignore.has(data.t)) return;
     const guildId = extractGuildId(data.d);
     const envelope: RawGatewayEnvelope = {
       shardId,
