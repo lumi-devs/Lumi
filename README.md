@@ -5,13 +5,14 @@
   
   <h1>✨ Lumi</h1>
   
-  <p><b>Your Modern, Modular, and Magical Discord Companion</b></p>
+  <p><b>Your Modern, Modular, and Microservice-Ready Discord Companion</b></p>
 
   <div align="center">
     <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.1+-black?style=for-the-badge&logo=bun" alt="Bun"></a>
     <a href="https://sapphirejs.dev"><img src="https://img.shields.io/badge/Sapphire-v5-blue?style=for-the-badge" alt="Sapphire"></a>
     <a href="https://discord.js.org"><img src="https://img.shields.io/badge/Discord.js-v14-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord.js"></a>
-    <img src="https://img.shields.io/badge/License-AGPL%20v3.0-green?style=for-the-badge" alt="License">
+    <a href="https://opentelemetry.io"><img src="https://img.shields.io/badge/OpenTelemetry-Enabled-purple?style=for-the-badge" alt="OpenTelemetry"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3.0-green?style=for-the-badge" alt="License"></a>
   </div>
   <br />
 </div>
@@ -21,9 +22,11 @@
   <ol>
     <li><a href="#-introduction">Introduction</a></li>
     <li><a href="#-key-features">Key Features</a></li>
-    <li><a href="#-core-modules--addons">Core Modules & Addons</a></li>
-    <li><a href="#-getting-started">Getting Started</a></li>
-    <li><a href="#-architecture--development">Architecture & Development</a></li>
+    <li><a href="#-microservices-architecture">Microservices Architecture</a></li>
+    <li><a href="#-quick-start">Quick Start</a></li>
+    <li><a href="#-documentation-sitemap">Documentation Sitemap</a></li>
+    <li><a href="#-built-in-modules">Built-in Modules</a></li>
+    <li><a href="#-monorepo-subpackages">Monorepo Subpackages</a></li>
     <li><a href="#-faq--support">FAQ & Support</a></li>
     <li><a href="#-license--trademark">License & Trademark</a></li>
   </ol>
@@ -33,149 +36,152 @@
 
 ## 🌟 Introduction
 
-Lumi is a **powerful**, **highly scalable**, and **fully modular** Discord bot built for communities of all sizes. Inspired by the flexibility of bots like Red-DiscordBot, Lumi allows server administrators to enable *only* the features they need. It can transform from a simple utility bot into a complex moderation powerhouse, an economy game, or whatever your server requires.
+Lumi is an **open-standard**, **highly scalable**, and **fully modular** Discord bot engineered for server management, moderation, and community engagement. Inspired by open reference standards like Skyra and Red-DiscordBot, Lumi provides an adaptable framework where server administrators enable only the feature modules they need.
 
-Built on top of modern web technologies—**Bun**, **Sapphire Framework**, and **Discord.js**—Lumi is engineered for maximum performance, whether you're hosting it for a single server or scaling it across a massive distributed infrastructure.
+Built on **Bun**, **Sapphire Framework v5**, **Discord.js v14**, **Prisma PostgreSQL**, **Redis**, and **RabbitMQ**, Lumi runs seamlessly as a single-process `monolith` or scales out into a distributed cluster of `Gateway`, `Worker`, and `Scheduler` microservices.
 
 ---
 
 ## ✨ Key Features
 
-- **🧩 Fully Modular Architecture**  
-  Built around dynamic modules. Enable or disable entire feature sets per-guild. Don't want the levelling system? Simply turn it off.
-
-- **📈 Enterprise-Grade Scalability**  
-  Start simple with a monolith deployment, or scale out to millions of users by splitting Lumi into separate `Gateway`, `Worker`, and `Scheduler` processes using RabbitMQ and BullMQ.
-
-- **🔌 Dynamic Addon System**  
-  Easily install and run third-party modules dynamically via the downloader service. Extend Lumi to do anything you can code!
-
-- **🗣️ Internationalization (i18n)**  
-  Fully translated into multiple languages (`en-US`, `de`, `es-ES`, `fr`) out of the box, with per-server language selection.
-
-- **🛡️ Built-in Moderation & Safety**  
-  Powerful moderation tools, regex-based message filtering, and detailed audit logging keep your community safe.
-
-- **📊 Deep Observability**  
-  OpenTelemetry integration with Prometheus and Grafana dashboards ready for production monitoring.
+- **🧩 Dynamic Module System**: Per-guild feature toggles and configuration with auto-derived Shapeshift schemas. Zero cross-module dependencies.
+- **⚡ Distributed Event Bus**: Decoupled Gateway-to-Worker event streaming via `Redis Streams` or `NATS JetStream` (with `inproc` fallback for monoliths).
+- **🐇 RabbitMQ RPC & Fanout**: Inter-process communication for web dashboard configuration and cross-service notifications.
+- **⏰ BullMQ Scheduled Tasks**: Reliable background task processing with grace-period catch-up evaluation (`RelayTask`).
+- **🛡️ Enterprise Moderation & Auto-Filter**: Full moderation suite (ban, kick, timeout, quarantine, warn) and regex-based message filter with action thresholds.
+- **🌐 Web Dashboard**: Browser-based admin interface (`apps/dashboard`) communicating statelessly over RabbitMQ RPC.
+- **🗣️ Multi-Locale i18n**: Built-in translation support (`en-US`, `de`, `es-ES`, `fr`) using `@sapphire/plugin-i18next`.
+- **📊 OpenTelemetry & Metrics**: Native OpenTelemetry tracing and Prometheus metrics endpoint (`METRICS_PORT=9090`).
 
 ---
 
-## ⚡ Core Modules & Addons
+## 🏛️ Microservices Architecture
 
-Lumi comes with a rich set of built-in modules. Explore what's available out of the box:
+Lumi supports two execution topologies based on the `LUMI_ROLE` environment variable:
 
-<details>
-<summary><b>⚙️ Core System</b></summary>
-<br>
+1. **Monolith Mode** (`LUMI_ROLE=monolith`): All WebSocket handling, module execution, task scheduling, and database access take place in a single process.
+2. **Distributed Microservices Mode**:
+   - **`apps/gateway`**: Manages Discord WebSocket shards and streams `RawGatewayEnvelope` payloads over `@lumi/event-bus`.
+   - **`apps/worker`**: Stateless nodes consuming Gateway payloads, executing commands, running module listeners, and responding to RPC.
+   - **`apps/scheduler`**: Owns BullMQ queues, evaluates task catch-up policies, and fires execution events.
+   - **`apps/dashboard`**: Web portal providing OAuth2 login and sending configuration updates over RabbitMQ RPC.
 
-Manage the bot's foundational settings, configure modules, and set permissions.
-
-> **Key Commands:**
-> <code>/lumi</code> &nbsp;&middot;&nbsp; <code>/module</code> &nbsp;&middot;&nbsp; <code>/permissions</code> &nbsp;&middot;&nbsp; <code>/prefix</code>
-
-</details>
-
-<details>
-<summary><b>🔨 Moderation</b></summary>
-<br>
-
-Keep your server safe with an advanced suite of moderation tools, including timed mutes, bans, kicks, and quarantine zones.
-
-> **Key Commands:**
-> <code>/ban</code> &nbsp;&middot;&nbsp; <code>/kick</code> &nbsp;&middot;&nbsp; <code>/timeout</code> &nbsp;&middot;&nbsp; <code>/warn</code> &nbsp;&middot;&nbsp; <code>/quarantine</code>
-
-</details>
-
-<details>
-<summary><b>🛡️ Auto-Filter</b></summary>
-<br>
-
-Powerful automated, regex-based message filtering that stops spam, invites, and bad words before they hit the chat.
-
-> **Configuration:**
-> Fully managed via the interactive <code>/lumi panel</code>
-
-</details>
-
-<details>
-<summary><b>🔧 Utility Tools</b></summary>
-<br>
-
-Helpful tools for everyday server management, checking user stats, server metrics, and handling away-from-keyboard (AFK) statuses.
-
-> **Key Commands:**
-> <code>/serverinfo</code> &nbsp;&middot;&nbsp; <code>/whois</code> &nbsp;&middot;&nbsp; <code>/afk</code>
-
-</details>
-
-<br>
-
-> *Note: Use the `/help` command in Discord for a complete, up-to-date list of commands tailored to your server's currently enabled modules.*
+```
+                           ┌──────────────────────────┐
+                           │   Discord Gateway WS     │
+                           └─────────────┬────────────┘
+                                         │
+                                         ▼
+                                ┌─────────────────┐
+                                │  apps/gateway   │
+                                └────────┬────────┘
+                                         │ (@lumi/event-bus)
+                                         │ Redis Streams / NATS JetStream
+                                         ▼
+                                ┌─────────────────┐
+  ┌──────────────────┐  RPC     │   apps/worker   │ ◄── Task Fire Events
+  │  apps/dashboard  ├─────────►│   (Stateless)   │ (lumi.scheduler.fire)
+  └──────────────────┘ RabbitMQ └────────┬────────┘
+                                         │
+                                         ▼
+                               ┌───────────────────┐
+                               │ PostgreSQL / Redis│
+                               └───────────────────┘
+                                         ▲
+                                         │ BullMQ Queue
+                                ┌────────┴─────────┐
+                                │  apps/scheduler  │
+                                └──────────────────┘
+```
 
 ---
 
-## 🚀 Getting Started
-
-Lumi is designed to be self-hosted. You retain full control over your data, your configuration, and your community.
-
-> [!TIP]
-> **New to self-hosting?** Docker is the recommended way to run Lumi as it bundles the bot, Postgres, Redis, and RabbitMQ seamlessly.
+## 🚀 Quick Start
 
 ### 🐳 Method 1: Docker Compose (Recommended)
 
-The easiest way to get up and running:
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/lumi-devs/lumi.git && cd lumi
-   ```
-2. **Copy the environment template:**
-   ```bash
-   cp .env.example .env
-   ```
-3. **Edit `.env`** to include your `BOT_TOKEN` and `CLIENT_ID`.
-4. **Start the stack:**
-   ```bash
-   docker compose up -d
-   ```
-
-### 💻 Method 2: Bare Metal
-
-For developers or advanced users who prefer a direct deployment. Requires [Bun 1.1+](https://bun.sh), PostgreSQL 16, and Redis 7.
+Run the full Lumi stack (PostgreSQL, Redis, RabbitMQ, and Lumi Monolith):
 
 ```bash
-# 1. Install dependencies
+# 1. Clone repo and copy environment template
+git clone https://github.com/lumi-devs/lumi.git && cd lumi
+cp .env.example .env
+
+# 2. Configure credentials in .env
+# Set BOT_TOKEN and CLIENT_ID
+
+# 3. Launch single-node monolith stack
+docker compose up -d
+
+# Or launch the distributed profile (Gateway + Worker + Scheduler + Dashboard)
+docker compose --profile distributed up -d
+```
+
+### 💻 Method 2: Bare Metal (Development)
+
+Requires [Bun 1.1+](https://bun.sh), PostgreSQL 16+, and Redis 7+:
+
+```bash
+# 1. Install workspace dependencies
 bun install
 
-# 2. Push database schema
+# 2. Generate Prisma client & push schema
 bun run db:generate
 bun run db:push
 
-# 3. Start the bot
+# 3. Start development monolith
 bun run dev
 ```
 
 ---
 
-## 🏗️ Architecture & Development
+## 🗺️ Documentation Sitemap
 
-Lumi operates as a Bun-workspace monorepo, separating core logic from infrastructure:
+For in-depth guides, configuration details, architectural specifications, and reference documentation, consult the core documentation suite in `docs/`:
 
-- **`@lumi/core`**: The brain of the bot (Commands, Modules, Services).
-- **`@lumi/event-bus`**: Pluggable transport layer (`inproc`, Redis Streams, or NATS).
-- **`@lumi/observability`**: Telemetry, tracing, and metrics (Prometheus & Grafana ready).
-- **`@lumi/sharding`**: Cluster coordinator and shard planner.
-- **`@lumi/contracts`**: Shared interfaces and types across the monorepo.
-- **`@lumi/sdk`**: Developer SDK for interacting with Lumi services.
+| Guide | Description |
+|---|---|
+| 📐 **[Architecture Guide](docs/architecture.md)** | Microservices topology, sequence flow diagrams (Gateway event dispatching, Dashboard RPC, BullMQ `RelayTask`), and monorepo package breakdown. |
+| 🛠️ **[Module Development Guide](docs/module-development.md)** | Step-by-step developer guide covering `@DefineModule`, `BaseCommand`, `Service`, `ModuleListener`, card utilities, permissions, i18n, and strict anti-patterns. |
+| 📜 **[Command & Module Reference](docs/command-reference.md)** | Exhaustive catalog for all 8 built-in modules (`afk`, `core`, `dashboard`, `filter`, `logging`, `mod`, `tempvc`, `utility`) detailing commands, subcommands, options, and background tasks. |
+| ⚙️ **[Configuration Reference](docs/configuration.md)** | Master environment variable index, transport matrix (`inproc`, `streams`, `nats`), and Shapeshift schema rules. |
+| 🚢 **[Deployment Guide](docs/deployment.md)** | Production deployment workflows for Docker Compose, distributed roles, Kubernetes/KEDA scaling (`deploy/k8s/`), and Prisma DB push vs migrations. |
+| 🔒 **[Security & Privacy Policy](docs/security-and-privacy.md)** | Security model notice (addon trust & process privilege), Discord data privacy policy (retention, stored fields, deletion handling), and DB/Redis standards. |
 
-### 🔄 Runtime Roles
-You can run Lumi as a `monolith` (default), or scale horizontally by setting the `LUMI_ROLE` environment variable:
-- **`gateway`**: Holds the Discord WebSocket, publishes raw events onto the bus.
-- **`worker`**: Runs all command and module logic (no WebSocket of its own).
-- **`scheduler`**: Owns the BullMQ queue for delayed and repeated jobs.
+---
 
-> For developers looking to contribute or create addons, please read our comprehensive [Architecture Guidelines (AGENTS.md)](AGENTS.md).
+## 📦 Built-in Modules
+
+Lumi includes 8 core modules out of the box:
+
+- **`afk`**: User AFK status tracking with automatic mention alerts and activity reset.
+- **`core`**: Core system configuration (`/lumi panel`, `/module enable|disable|list`).
+- **`dashboard`**: RabbitMQ RPC service adapter connecting `@lumi/dashboard` with worker nodes.
+- **`filter`**: Automated regex-based chat filtering, invite link blocking, and spam prevention.
+- **`logging`**: Comprehensive guild audit logging for message, member, and moderation events.
+- **`mod`**: Advanced moderation suite (`/ban`, `/kick`, `/timeout`, `/warn`, `/quarantine`, `/purge`) with timed auto-reversals.
+- **`tempvc`**: Dynamic temporary voice channel generation on user join and automated cleanup on empty.
+- **`utility`**: Essential community utility commands (`/serverinfo`, `/whois`, `/avatar`, `/ping`, `/help`, `/botinfo`).
+
+---
+
+## 📂 Monorepo Subpackages
+
+| Path | Package / App | Description |
+|---|---|---|
+| `apps/dashboard` | `@lumi/dashboard` | Web dashboard application providing browser-based guild configuration over RabbitMQ RPC. |
+| `apps/gateway` | `@lumi/gateway` | Lightweight Discord WebSocket manager streaming raw events to event bus. |
+| `apps/scheduler` | `@lumi/scheduler` | Owns BullMQ scheduled task queues and publishes execution events. |
+| `apps/worker` | `@lumi/worker` | Stateless event & command processing worker node. |
+| `packages/contracts` | `@lumi/contracts` | Shared wire contracts, RPC action maps, and manifest schemas. |
+| `packages/core` | `@lumi/core` | Core framework library, `LumiClient`, module store, DB facade, and cards. |
+| `packages/event-bus` | `@lumi/event-bus` | Pluggable event bus abstraction (`inproc`, `streams`, `nats`). |
+| `packages/observability` | `@lumi/observability` | OpenTelemetry tracing, Pino logger, Prometheus metrics, and drain handlers. |
+| `packages/sdk` | `@lumi/sdk` | Public developer SDK for constructing third-party Lumi addons. |
+| `packages/sharding` | `@lumi/sharding` | Redis-backed sharding coordinator and dynamic websocket strategy. |
+| `config/` | — | Global infrastructure & bot configuration files (`bot.json`, `emojis.json`). |
+| `deploy/k8s/` | — | Kubernetes deployment manifests and KEDA scaling definitions. |
+| `scripts/` | — | Build, manifest generation, addon validation, and chaos testing scripts. |
 
 ---
 
@@ -186,30 +192,28 @@ You can run Lumi as a `monolith` (default), or scale horizontally by setting the
 <br>
 
 > [!WARNING]
-> No. Third-party addons executed by Lumi have **NO strict sandboxing**. They run with the same privileges as the bot process (access to token, database, and filesystem). **Only install addons from sources you trust completely.**
-
+> No. Addons run in the same process space as Lumi with full access to tokens, database, and filesystem. Only install addons from sources you trust completely. Read [docs/security-and-privacy.md](docs/security-and-privacy.md) for details.
 </details>
 
 <details>
-<summary><b>I found a bug! Where can I report it?</b></summary>
+<summary><b>How do I contribute new features or modules?</b></summary>
 <br>
 
-Please open an issue on our [GitHub Issues](https://github.com/lumi-devs/lumi/issues) page. Provide as much detail as possible, including logs and reproduction steps.
-
+Please read our **[CONTRIBUTING.md](CONTRIBUTING.md)** and **[docs/module-development.md](docs/module-development.md)** before submitting pull requests.
 </details>
 
 ---
 
 ## ⚖️ License & Trademark
 
-Lumi is licensed under the **GNU AGPL v3.0 License**. See the [LICENSE](LICENSE) file for more details. 
+Lumi is licensed under the **GNU AGPL v3.0 License**. See the [LICENSE](LICENSE) file for details.
 
 > [!IMPORTANT]
-> **Trademark Notice**: The "Lumi" name, branding, and mascot are reserved. If you fork, modify, or host your own public instance of this bot, you **MUST** rename it and use your own branding so as not to impersonate the official Lumi bot or mislead users.
+> **Trademark Notice**: The "Lumi" name, branding, and mascot are reserved. If you host a public instance or fork this repository, you **MUST** rename your bot and use your own branding.
 
 ---
 
 <div align="center">
   Made with ❤️ by the Lumi Project Contributors.<br>
-  Please read the <a href="CONTRIBUTING.md">Contributing Guide</a> before making a pull request.
+  Review <a href="CONTRIBUTING.md">CONTRIBUTING.md</a> and <a href="docs/architecture.md">Architecture Guide</a> before getting started.
 </div>

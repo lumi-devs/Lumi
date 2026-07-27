@@ -87,18 +87,18 @@ export async function resolvePermissionLevel(
   const { guild, member } = interactionOrMessage;
   if (!guild || !member) return PermissionLevel.USER;
 
-  const perms = member.permissions as PermissionsBitField;
-  const roles = member.roles as GuildMemberRoleManager;
+  const perms = member.permissions as PermissionsBitField | undefined;
+  const roles = member.roles as GuildMemberRoleManager | undefined;
 
   if (userId && guild.ownerId === userId) return PermissionLevel.GUILD_OWNER;
-  if (perms.has("Administrator")) return PermissionLevel.ADMIN;
+  if (perms?.has?.("Administrator")) return PermissionLevel.ADMIN;
 
   try {
     const settings = await container.db.config.getGuildSettings(guild.id);
-    if (settings.adminRoleId && roles.cache.has(settings.adminRoleId))
+    if (settings.adminRoleId && roles?.cache?.has?.(settings.adminRoleId))
       return PermissionLevel.ADMIN;
-    if (perms.has("ManageMessages")) return PermissionLevel.MOD;
-    if (settings.modRoleId && roles.cache.has(settings.modRoleId))
+    if (perms?.has?.("ManageMessages")) return PermissionLevel.MOD;
+    if (settings.modRoleId && roles?.cache?.has?.(settings.modRoleId))
       return PermissionLevel.MOD;
   } catch (err: unknown) {
     container.logger.error(

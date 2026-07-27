@@ -2,7 +2,7 @@
 // asserts each one registers as a loaded ModuleStore record with its pieces,
 // then uninstalls it again. Exit 0 = all pass, 1 = any failure.
 //
-//   bun scripts/verify-addons.ts [repo-url]
+//   bun scripts/test-remote-addons.ts [repo-url]
 //
 // Defaults to the public lumi-addons repo; pass a file:// URL to verify a
 // local working copy before pushing. Requires the compose datastores

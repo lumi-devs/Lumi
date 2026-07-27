@@ -2,7 +2,7 @@
   "name": "@lumi/scheduler",
   "version": "1.0.0",
   "license": "AGPL-3.0-only",
-  "description": "Thin scheduler entrypoint — boots @lumi/worker until the real service split.",
+  "description": "Scheduler service — owns BullMQ queue and worker, re-publishes task effects.",
   "type": "module",
   "private": true,
   "scripts": {
@@ -10,6 +10,7 @@
     "dev": "bun --watch src/main.ts"
   },
   "dependencies": {
-    "@lumi/worker": "workspace:*"
+    "@lumi/core": "workspace:*",
+    "@lumi/observability": "workspace:*"
   }
 }

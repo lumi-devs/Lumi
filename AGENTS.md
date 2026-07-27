@@ -111,8 +111,8 @@ Config uses a **Shapeshift-first** approach. Declare a single `configSchema` in 
 
 ## 📊 Observability (`@lumi/observability`)
 
-- **Logger**: Uses `PinoSapphireLogger`.
-- **Tracing**: Managed via `startTracing()`. Do not enable `OTEL_ENABLED` and `SENTRY_ENABLED` together.
+- **Logger**: Uses `PinoSapphireLogger` (located in `@lumi/core`).
+- **Tracing**: Managed via `startTracing()` when `OTEL_ENABLED` is set.
 - **Metrics**: Prom-client registry on `METRICS_PORT` (default 9090). Do not hand-create new metrics inside modules; add them to `packages/observability/src/metrics.ts`.
 
 ---
@@ -122,7 +122,7 @@ Config uses a **Shapeshift-first** approach. Declare a single `configSchema` in 
 ### Commands & UI
 - All commands must extend `BaseCommand` or `BaseSubcommand`.
 - Do not manually apply `defaultMemberPermissions`, `contexts`, or `integrationTypes` in the builder unless intentionally overriding.
-- **Card System**: Never construct raw embeds. Use `makeInfoCard`, `makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeListCard` from `src/lib/utilities/cards.ts`. Reply using `sendSuccess`, `sendError`, etc.
+- **Card System**: Never construct raw embeds. Use `makeInfoCard`, `makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeListCard` from `src/lib/utilities/cards.ts`. Reply using `replySuccess`, `replyError`, `replyWarning`, `replyInfo`, `sendReply`.
 - **Pagination**: Use `chunk(lines, N)` from `@sapphire/utilities`. Do not use `PaginatedMessage`.
 
 ### i18n

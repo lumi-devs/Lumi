@@ -2,6 +2,7 @@ import { Service } from "#lib/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import type { Guild } from "@prisma/client";
+import { tryParseJSON } from "@sapphire/utilities";
 import {
   DEFAULT_LANGUAGE,
   isSupportedLanguage,
@@ -11,13 +12,11 @@ import {
 @ApplyOptions<Piece.Options>({ name: "guild-settings" })
 export class GuildSettingsService extends Service {
   public async setDashboardLayout(guildId: string, rawLayout: string) {
-    let layout: unknown;
-    try {
-      layout = JSON.parse(rawLayout);
-    } catch {
+    const parsed = tryParseJSON(rawLayout);
+    if (typeof parsed !== "object" || parsed === null) {
       throw new Error("The layout must be valid JSON (parse failed).");
     }
-    if (!Array.isArray(layout)) {
+    if (!Array.isArray(parsed)) {
       throw new Error("The layout must be a valid JSON array of widget names.");
     }
 
@@ -25,17 +24,17 @@ export class GuildSettingsService extends Service {
       guildId,
       "core",
       "dashboard_layout",
-      layout,
+      parsed,
     );
 
     if (this.container.rabbit) {
       await this.container.rabbit.publishEvent("dashboard.layout.updated", {
         guildId,
-        layout,
+        layout: parsed,
       });
     }
 
-    return layout;
+    return parsed;
   }
 
   public async setPrefix(guildId: string, newPrefix: string) {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import { container } from '@sapphire/framework';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
@@ -6,10 +6,8 @@ import path from 'node:path';
 // Discovery is manifest-driven: #walk → readManifest → #ingestManifest, with no
 // module code imported. Mock the manifest layer and drive the FS walk so we test
 // the real walk/topo/conflict pipeline through the public API.
-const { readManifest, metaFromManifest } = vi.hoisted(() => ({
-	readManifest: vi.fn(),
-	metaFromManifest: vi.fn()
-}));
+const readManifest = vi.fn();
+const metaFromManifest = vi.fn();
 
 vi.mock('#lib/module-system/manifest.js', () => ({ readManifest, metaFromManifest }));
 
@@ -66,6 +64,14 @@ describe('ModuleStore', () => {
 
 		store = new ModuleStore();
 		store.addRoot(new URL('file:///test/modules'));
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	afterAll(() => {
+		vi.restoreAllMocks();
 	});
 
 	it('should discover modules in a root directory', async () => {

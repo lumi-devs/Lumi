@@ -1,4 +1,5 @@
 import type { Redis } from "ioredis";
+import { sleep } from "@sapphire/utilities";
 import { RedisKeys } from "#lib/database/redis.js";
 
 export interface SchedulerLeaderLockOptions {
@@ -141,8 +142,4 @@ export class SchedulerLeaderLock {
       this.renewTimer = null;
     }
   }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

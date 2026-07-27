@@ -1,19 +1,29 @@
 # Contributing to Lumi
 
-Thank you for considering a contribution! This document explains how to get set up, what conventions to follow, and what the review process looks like.
+Thank you for considering a contribution to Lumi! This document outlines our setup process, architectural conventions, coding guidelines, and review standards.
 
 ---
 
-## Prerequisites
+## 📖 Key Documentation References
+
+Before writing code or opening pull requests, review these core documentation guides:
+
+- 📐 **[docs/architecture.md](docs/architecture.md)** — Microservices topology, event bus streaming, RabbitMQ RPC, and runtime roles.
+- 🛠️ **[docs/module-development.md](docs/module-development.md)** — Comprehensive step-by-step module developer guide, `@DefineModule`, Sapphire commands, services, cards, permissions, and i18n.
+- ⚙️ **[docs/configuration.md](docs/configuration.md)** — Environment variable specifications and Shapeshift config schema rules.
+
+---
+
+## 🛠️ Prerequisites
 
 | Tool | Version | Notes |
-|------|---------|-------|
-| [Bun](https://bun.sh) | 1.1+ | Runtime and package manager |
-| PostgreSQL | 16+ | Local or Docker |
-| Redis | 7+ | Local or Docker |
-| RabbitMQ | 3.12+ | Local or Docker (only needed for gateway/worker split) |
+|---|---|---|
+| [Bun](https://bun.sh) | 1.1+ | Primary runtime and workspace package manager |
+| PostgreSQL | 16+ | Database persistence (Local or Docker) |
+| Redis | 7+ | Cache & Redis Streams event bus (Local or Docker) |
+| RabbitMQ | 3.12+ | RPC bridge & event fanout (Local or Docker) |
 
-The easiest way to get all dependencies running is via Docker:
+Quickly launch all infrastructure services via Docker:
 
 ```bash
 docker compose up -d postgres redis rabbitmq
@@ -21,120 +31,98 @@ docker compose up -d postgres redis rabbitmq
 
 ---
 
-## Local Setup
+## 💻 Local Setup
 
 ```bash
-# 1. Fork and clone
+# 1. Fork and clone the repository
 git clone https://github.com/lumi-devs/lumi.git && cd lumi
 
-# 2. Install dependencies
+# 2. Install workspace dependencies
 bun install
 
-# 3. Generate the Prisma client (required before typecheck/test)
+# 3. Generate Prisma client
 bun run db:generate
 
-# 4. Push the DB schema (dev only — use migrations in production)
+# 4. Push database schema (development sync)
 bun run db:push
 
-# 5. Copy and fill in your environment
+# 5. Copy environment template and set credentials
 cp .env.example .env
-# Edit .env: set BOT_TOKEN and CLIENT_ID at minimum
+# Set BOT_TOKEN and CLIENT_ID in .env
 
-# 6. Start the bot (monolith mode)
+# 6. Start Lumi in monolith development mode
 bun run dev
 ```
 
 ---
 
-## Architecture
+## 🏗️ Monorepo & Architectural Guidelines
 
-> [!IMPORTANT]
-> Before writing any code, read **[AGENTS.md](AGENTS.md)**. It is the single source of truth for:
+### 1. Cross-Package Imports
+Lumi operates as a Bun workspace monorepo (`packages/*` and `apps/*`).
+- **RULE**: Cross-package imports MUST use `@lumi/<package>` specifiers (e.g., `import { RpcRequest } from "@lumi/contracts"`).
+- **PROHIBITED**: **Never** use relative paths between workspace packages (e.g., `import ... from "../../packages/contracts"` is forbidden).
+- **Extension Rule**: Always append `.js` to internal package specifiers and aliased imports (e.g., `import { BaseCommand } from "#lib/commands.js"`), even though source files end in `.ts`.
 
-- The monorepo layout and package boundaries
-- The module system (`@DefineModule`, `BaseCommand`, `Service`, `ModuleListener`)
-- Data access rules (`container.db` — never `container.prisma` directly)
-- The card system (never raw embeds)
-- Permission levels and i18n conventions
-
-Violating these will result in a PR being sent back for revision.
+### 2. Module System Guardrails
+All feature modules reside in `packages/core/src/modules/<name>/`.
+- **Zero Cross-Module Imports**: A module MUST NEVER import directly from a sibling module. All shared capabilities must be refactored into `packages/core/src/lib/` or shared utilities.
+- **Service Pattern**: Module services must extend `Service` (`#lib/module-system/Service.js`) and be accessed via `getService("<svc>")` or `tryGetService("<svc>")`.
+- **Database Access**: Always use `container.db` (`DatabaseService`). Never call `container.prisma` directly inside module code.
+- **Card System**: Never construct raw Discord embeds. Use standard card builders from `src/lib/utilities/cards.ts` (`makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeInfoCard`, `makeListCard`) and reply helpers (`replySuccess`, `replyError`, `replyWarning`, `replyInfo`).
+- **Safe JSON & Utilities**: Never use `JSON.parse` inside try/catch blocks; use `tryParseJSON` from `@sapphire/utilities`. Use `.filter(filterNullish)` instead of `.filter(Boolean)` on typed arrays.
+- **i18n Requirement**: All user-facing interaction responses must be translated in all four shipping locales (`en-US`, `de`, `es-ES`, `fr`) in `packages/core/src/languages/`.
 
 ---
 
-## Running Checks
+## 🧪 Running Checks
 
 ```bash
-# Type-check the whole monorepo
+# Type-check the monorepo workspace
 bun run typecheck
 
-# Lint (auto-fixes where possible)
+# Execute ESLint checks (with auto-fix)
 bun run lint
 
-# Run the full test suite
+# Run the test suite
 bun run test
 
-# Run a single test file
+# Run a specific module test file
 bunx vitest run packages/core/tests/modules/afk/afk.test.ts
 ```
 
-All three checks (`typecheck`, lint, tests) must pass before a PR will be reviewed.
-
 ---
 
-## Commit Convention
+## 📝 Commit Convention
 
-Commits follow the [Conventional Commits](https://www.conventionalcommits.org/) spec:
+Lumi follows the [Conventional Commits](https://www.conventionalcommits.org/) specification:
 
 ```
 <type>(<scope>): <short summary>
 ```
 
-| Type | When to use |
-|------|-------------|
-| `feat` | New feature or command |
-| `fix` | Bug fix |
-| `refactor` | Code change with no functional effect |
-| `docs` | Documentation only |
-| `test` | Adding or fixing tests |
-| `chore` | Build, CI, dependency updates |
-| `perf` | Performance improvement |
-
-**Examples:**
-```
-feat(mod): add /quarantine command with role-lock
-fix(filter): prevent false positives on quoted URLs
-docs(contributing): add commit convention section
-```
+| Type | Description | Example |
+|---|---|---|
+| `feat` | New feature or command | `feat(mod): add /quarantine command with role-lock` |
+| `fix` | Bug fix | `fix(filter): prevent false positives on quoted URLs` |
+| `docs` | Documentation update | `docs(contributing): update monorepo guidelines` |
+| `refactor` | Code change without behavioral change | `refactor(event-bus): optimize stream claim logic` |
+| `test` | Adding or updating tests | `test(afk): add test case for auto-clear on speak` |
+| `chore` | Build scripts or dependency updates | `chore(deps): update sapphire framework packages` |
 
 ---
 
-## Pull Requests
+## 🚀 Pull Request Checklist
 
-1. Create a branch from `master`: `git checkout -b feat/my-feature`.
-2. Make your changes, following all conventions in `AGENTS.md`.
-3. Push and open a PR — the template will guide you through the checklist.
-4. CI must be green (lint, typecheck, tests).
-5. At least one maintainer review is required before merge.
-
-### Key rules
-- **No cross-module imports.** A module must never import from a sibling module. Shared code goes in `src/lib/`.
-- **No raw embeds.** Use `makeInfoCard`, `makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeListCard`.
-- **No `JSON.parse` in try/catch.** Use `tryParseJSON` from `@sapphire/utilities`.
-- **No `.filter(Boolean)` on typed arrays.** Use `.filter(filterNullish)`.
-- **All user-facing strings must be i18n'd** in all four locales: `en-US`, `de`, `es-ES`, `fr`.
+1. Create a feature branch off `master`: `git checkout -b feat/my-feature`.
+2. Implement your changes adhering to `docs/module-development.md` standards.
+3. If adding a new module, generate static manifests using `bun run modules:manifest`.
+4. Ensure all checks pass: `bun run typecheck`, `bun run lint`, and `bun run test`.
+5. Open a Pull Request on GitHub with a thorough description of changes and verification steps.
+6. Acknowledge and resolve maintainer review feedback prior to merge.
 
 ---
 
-## Adding a New Module
+## ❓ Questions & Support
 
-1. Create `src/modules/<name>/` with an `index.ts` that exports a class decorated with `@DefineModule`.
-2. Add sub-directories as needed: `commands/`, `listeners/`, `interaction-handlers/`, `services/`, `scheduled-tasks/`.
-3. Generate a manifest: `bun run modules:manifest`.
-4. Add translations to `src/languages/<locale>/<name>.json` for all four locales.
-5. Write tests in `packages/core/tests/modules/<name>/`.
-
----
-
-## Questions?
-
-Open a [Discussion](https://github.com/lumi-devs/lumi/discussions) or file an [Issue](https://github.com/lumi-devs/lumi/issues) with the `question` label.
+For questions, open a [GitHub Discussion](https://github.com/lumi-devs/lumi/discussions) or create an issue with the `question` label.

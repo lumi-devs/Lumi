@@ -1,69 +1,66 @@
-# @lumi/dashboard
+# `@lumi/dashboard` (`apps/dashboard`)
 
-Browser-based admin panel for Lumi. Log in with Discord, pick a server, and
-configure any module — the same settings surfaced by `/lumi`, in a web UI with
-no commands required.
+<div align="center">
+  <img src="https://img.shields.io/badge/Role-Web%20Dashboard-blue?style=for-the-badge" alt="Role">
+  <img src="https://img.shields.io/badge/Transport-RabbitMQ%20RPC-orange?style=for-the-badge" alt="Transport">
+  <img src="https://img.shields.io/badge/Stateless-Yes-brightgreen?style=for-the-badge" alt="Stateless">
+</div>
 
-## What it does
+> Browser-based administrative web panel for Lumi-TS providing Discord OAuth2 authentication and dynamic guild configuration over RabbitMQ RPC.
 
-- **Discord OAuth2 login** — only surfaces servers where you have **Manage
-  Server**.
-- **Auto-generated config forms** — every module's fields are rendered from the
-  live feature registry (`guild.dashboard.get`), so new modules appear
-  automatically with no dashboard changes.
-- **Auto-save** — toggles and fields persist on change; no Save button.
-- **Stateless** — it holds no database or Redis of its own. All reads and writes
-  go to the bot workers over the existing **RabbitMQ RPC bridge**
-  (`guild.dashboard.get` / `guild.module.toggle` / `guild.config.set`). Sessions
-  live in memory; a restart just asks admins to log in again.
+---
 
-## Architecture
+## 📦 Role & Overview
+
+`apps/dashboard` is the internet-facing web application of the Lumi-TS ecosystem. It allows server administrators to manage feature modules, set channel mappings, and adjust configuration fields via a web UI without issuing Discord slash commands.
+
+### Key Responsibilities
+- **Discord OAuth2 Login**: Authenticates users and filters the server list to only those where the user possesses **Manage Server** or **Administrator** permissions.
+- **Auto-Generated Config Forms**: Queries module schemas dynamically via RPC (`guild.dashboard.get`), rendering form fields derived from `@sapphire/shapeshift` schemas.
+- **Stateless Architecture**: Operates without a direct database or Redis connection. All reads and writes are proxied to worker processes over RabbitMQ RPC.
+- **Security Isolation**: Keeps web-facing traffic entirely isolated from the process holding the Discord bot token and database credentials.
+
+---
+
+## 🏛️ Monorepo Architecture Position
 
 ```
-browser ──HTTP──▶ apps/dashboard ──RabbitMQ RPC──▶ worker (DashboardModule) ──▶ DB
+Browser (Admin) ──HTTP/OAuth2──▶ apps/dashboard ──RabbitMQ RPC──▶ apps/worker (DashboardModule) ──▶ PostgreSQL
 ```
 
-The dashboard never imports `@lumi/core` or touches Discord/Postgres directly —
-it only speaks the `@lumi/contracts` RPC actions. This keeps the public,
-internet-facing surface isolated from the process that holds the bot token.
+`apps/dashboard` imports `@lumi/contracts` for wire RPC schemas (`RPC_ACTIONS`). It never imports `@lumi/core` or touches Prisma directly.
 
-## Configuration
+---
 
-| Variable | Required | Default | Notes |
+## ⚙️ Environment Variables
+
+| Variable | Description | Required / Default | Notes |
 |---|---|---|---|
-| `RABBITMQ_URL` | ✅ | — | Same broker the workers use. |
-| `DISCORD_OAUTH2_CLIENT_ID` | ✅ | — | From your Discord app → OAuth2. |
-| `DISCORD_OAUTH2_CLIENT_SECRET` | ✅ | — | |
-| `DISCORD_OAUTH2_REDIRECT_URI` | ✅ | — | Must match a registered redirect, e.g. `https://dash.example.com/callback`. |
-| `DASHBOARD_SESSION_SECRET` | ✅ | — | HMAC key for signed cookies. `openssl rand -hex 32`. |
-| `DASHBOARD_HOST` | | `0.0.0.0` | |
-| `DASHBOARD_PORT` | | `8080` | |
-| `DASHBOARD_SECURE_COOKIES` | | `false` | Set `true` behind HTTPS. |
+| `RABBITMQ_URL` | RabbitMQ URI for RPC communication | ✅ **Required** | Must match worker broker |
+| `DISCORD_OAUTH2_CLIENT_ID` | Discord OAuth2 Client ID | ✅ **Required** | From Developer Portal |
+| `DISCORD_OAUTH2_CLIENT_SECRET` | Discord OAuth2 Client Secret | ✅ **Required** | From Developer Portal |
+| `DISCORD_OAUTH2_REDIRECT_URI` | OAuth2 callback URL | ✅ **Required** | e.g. `https://dash.example.com/callback` |
+| `DASHBOARD_SESSION_SECRET` | Secret key for signed cookies | ✅ **Required** | Generate via `openssl rand -hex 32` |
+| `DASHBOARD_HOST` | HTTP listen address | `0.0.0.0` | Host binding |
+| `DASHBOARD_PORT` | HTTP listen port | `8080` | Service port |
+| `DASHBOARD_SECURE_COOKIES` | Enforce HTTPS secure cookies | `false` | Set `true` behind reverse proxy |
+| `METRICS_PORT` | Prometheus metrics port | `9090` | Serves `/healthz`, `/readyz`, `/metrics` |
 
-Health and metrics are served on `METRICS_PORT` (default `9090`) — `/healthz`,
-`/readyz` (reports the RabbitMQ connection), and `/metrics`.
+---
 
-## Running
+## 💻 Usage & Execution Snippet
 
 ```bash
-# Local dev (workers + RabbitMQ already up)
+# Local development (Worker + RabbitMQ must be running)
 bun apps/dashboard/src/main.ts
 
-# Docker — starts the dashboard alongside the default services
-docker compose --profile dashboard up
+# Docker Compose execution
+docker compose --profile dashboard up -d
 ```
 
-### Discord OAuth2 setup
+### Reverse Proxy Configuration (Nginx / Caddy)
 
-1. https://discord.com/developers/applications → your app → **OAuth2** →
-   **Redirects** → add your `DISCORD_OAUTH2_REDIRECT_URI`.
-2. Copy the **Client ID** and **Client Secret** into the env vars above.
-
-### Behind a reverse proxy (recommended for production)
-
-Terminate TLS at nginx/Caddy and set `DASHBOARD_SECURE_COOKIES=true`.
-
-```
+```caddy
 dash.example.com {
     reverse_proxy localhost:8080
 }

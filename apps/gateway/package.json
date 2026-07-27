@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@lumi/contracts": "workspace:*",
+    "@lumi/core": "workspace:*",
     "@lumi/event-bus": "workspace:*",
     "@lumi/observability": "workspace:*",
     "@lumi/sharding": "workspace:*",

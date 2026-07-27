@@ -39,6 +39,10 @@ export const RedisKeys = {
   entityUser: (userId: string) => `lumi:ent:user:${userId}`,
   entityMember: (guildId: string, userId: string) =>
     `lumi:ent:member:${guildId}:${userId}`,
+
+  userMediaCooldown: (userId: string) => `cooldown:user_media:${userId}`,
+  tempvcVoiceOcc: (channelId: string) => `lumi:tempvc:voice:occ:${channelId}`,
+  tempvcVoiceUser: (userId: string) => `lumi:tempvc:voice:user:${userId}`,
 } as const;
 
 export const RedisTTL = {

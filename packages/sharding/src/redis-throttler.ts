@@ -15,6 +15,7 @@
 
 import type { Redis } from "ioredis";
 import type { IIdentifyThrottler } from "@discordjs/ws";
+import { sleep } from "@sapphire/utilities";
 
 const WINDOW_MS = 5_000;
 
@@ -51,25 +52,10 @@ export class RedisIdentifyThrottler implements IIdentifyThrottler {
       if (ok === "OK") return;
       const pttl = await this.opts.redis.pttl(key);
       const waitMs = pttl > 0 ? Math.min(pttl + 25, WINDOW_MS) : 250;
-      await sleep(waitMs, signal);
+      await sleep(waitMs, undefined, { signal });
     }
     throw new Error("RedisIdentifyThrottler aborted");
   }
-}
-
-function sleep(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) return reject(new Error("aborted"));
-    const t = setTimeout(resolve, ms);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(t);
-        reject(new Error("aborted"));
-      },
-      { once: true },
-    );
-  });
 }
 
 export function buildRedisThrottlerFactory(

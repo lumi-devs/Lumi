@@ -2,40 +2,38 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { PermissionOverridesPrecondition } from '#lib/permissions/preconditions/PermissionOverrides.js';
 import { container } from '@sapphire/framework';
 
-vi.mock('#lib/permissions/index.js', async (importOriginal) => {
-	const actual = await importOriginal() as any;
-	return {
-		...actual,
-		resolvePermissionLevel: vi.fn()
-	};
-});
-import { PermissionLevel, resolvePermissionLevel } from '#lib/permissions/index.js';
+import { PermissionLevel } from '#lib/permissions/index.js';
 
 describe('PermissionOverridesPrecondition', () => {
         let precondition: any;
 
         beforeEach(() => {
                 vi.resetAllMocks();
+                process.env.OWNER_IDS = 'BOT_OWNER_ID';
 
                 // Manually populate container with mocks.
-                // DatabaseService is namespaced — the precondition reads via container.db.permissions.*
+                (container as any).logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
                 (container as any).redis = { get: vi.fn(), set: vi.fn() };
                 (container as any).db = {
-                        permissions: { getPermissionOverrides: vi.fn().mockResolvedValue([]) }
+                        permissions: { getPermissionOverrides: vi.fn().mockResolvedValue([]) },
+                        config: { getGuildSettings: vi.fn().mockResolvedValue({}) }
                 };
 
                 precondition = new PermissionOverridesPrecondition({ name: 'PermissionOverrides', store: { name: 'preconditions' } as any }, { position: 22 } as any);
         });
 	it('should return ok for bot owner', async () => {
-		(resolvePermissionLevel as Mock).mockResolvedValue(PermissionLevel.BOT_OWNER);
-		const interaction = { guild: { id: 'G1' }, user: { id: 'U1' } };
+		const interaction = {
+			guild: { id: 'G1' },
+			user: { id: 'BOT_OWNER_ID' },
+			commandName: 'test',
+			options: { getSubcommandGroup: () => null, getSubcommand: () => null }
+		};
 		
 		const result = await precondition.chatInputRun(interaction as any);
 		expect(result.isOk()).toBe(true);
 	});
 
 	it('should return ok for guild owner', async () => {
-		(resolvePermissionLevel as Mock).mockResolvedValue(PermissionLevel.USER);
 		const interaction = { guild: { id: 'G1', ownerId: 'U1' }, user: { id: 'U1' } };
 		
 		const result = await precondition.chatInputRun(interaction as any);
@@ -43,7 +41,6 @@ describe('PermissionOverridesPrecondition', () => {
 	});
 
 	it('should handle user-specific override (deny)', async () => {
-		(resolvePermissionLevel as Mock).mockResolvedValue(PermissionLevel.USER);
 		const interaction = {
 			guild: {
 				id: 'G1',
@@ -72,7 +69,6 @@ describe('PermissionOverridesPrecondition', () => {
 	});
 
 	it('should handle role override (allow wins over everyone deny)', async () => {
-		(resolvePermissionLevel as Mock).mockResolvedValue(PermissionLevel.USER);
 		const interaction = {
 			guild: {
 				id: 'G1',
@@ -97,7 +93,6 @@ describe('PermissionOverridesPrecondition', () => {
 	});
 
 	it('should handle highest role priority (deny wins over allow)', async () => {
-		(resolvePermissionLevel as Mock).mockResolvedValue(PermissionLevel.USER);
 		const interaction = {
 			guild: {
 				id: 'G1',
@@ -127,7 +122,6 @@ describe('PermissionOverridesPrecondition', () => {
 	});
 
 	it('should handle category override', async () => {
-		(resolvePermissionLevel as Mock).mockResolvedValue(PermissionLevel.USER);
 		const interaction = {
 			guild: {
 				id: 'G1',

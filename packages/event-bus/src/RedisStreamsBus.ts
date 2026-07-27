@@ -16,6 +16,7 @@
 // not the stream id (redelivery yields a new one).
 
 import type { Redis } from "ioredis";
+import { sleep } from "@sapphire/utilities";
 import type {
   BusMessage,
   ConsumeOptions,
@@ -413,8 +414,4 @@ function decodeBody<T>(fields: string[]): T {
     if (fields[i] === "b") return JSON.parse(fields[i + 1]!) as T;
   }
   throw new Error("RedisStreamsBus: message missing `b` field");
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
 }

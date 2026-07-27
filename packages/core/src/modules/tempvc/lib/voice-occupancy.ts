@@ -1,9 +1,10 @@
 import { container } from "@sapphire/framework";
+import { RedisKeys } from "#lib/database/redis.js";
 
 const TTL_SECONDS = 24 * 60 * 60;
 
-const occKey = (channelId: string) => `lumi:tempvc:voice:occ:${channelId}`;
-const userKey = (userId: string) => `lumi:tempvc:voice:user:${userId}`;
+const occKey = RedisKeys.tempvcVoiceOcc;
+const userKey = RedisKeys.tempvcVoiceUser;
 
 /** Move `userId` from their previous channel to `newChannelId` (null = disconnected). */
 export async function trackVoiceState(

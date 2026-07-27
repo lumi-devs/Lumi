@@ -27,6 +27,7 @@ interface MediaRequestContext {
 
 import { fetchT } from "@sapphire/plugin-i18next";
 import { LanguageKeys } from "#lib/i18n/keys.js";
+import { RedisKeys } from "#lib/database/redis.js";
 
 export async function handleMediaRequest({
   context,
@@ -45,11 +46,11 @@ export async function handleMediaRequest({
     const cooldownSeconds =
       ((await container.db.config.getModuleConfig(
         guildId!,
-        "user_media",
+        "utility",
         "cooldown_seconds",
       )) as number | null) ?? 10;
     const now = Date.now();
-    const redisKey = `cooldown:user_media:${interactionUser.id}`;
+    const redisKey = RedisKeys.userMediaCooldown(interactionUser.id);
     const lastUsedStr = await container.redis.get(redisKey);
     const lastUsed = lastUsedStr ? parseInt(lastUsedStr, 10) : 0;
 

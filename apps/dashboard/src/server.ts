@@ -108,7 +108,10 @@ export function createServer(rpc: RpcClient) {
       }
 
       if (!session) {
-        if (path === "/") return html(loginPage());
+        if (path === "/") return redirect("/login");
+        if (!path.startsWith("/guild") && !path.startsWith("/api")) {
+          return new Response("Not found", { status: 404 });
+        }
         return redirect("/");
       }
 

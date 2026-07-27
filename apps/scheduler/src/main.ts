@@ -1,4 +1,4 @@
-import "./service-name.js";
+import "./telemetry.js";
 import "@lumi/core/setup";
 
 import { container } from "@sapphire/framework";

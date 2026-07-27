@@ -11,6 +11,7 @@ import type {
   NatsConnection,
 } from "nats";
 import { AckPolicy, RetentionPolicy } from "nats";
+import { sleep } from "@sapphire/utilities";
 import type {
   BusMessage,
   ConsumeOptions,
@@ -401,8 +402,4 @@ function tryDecodeRaw(data: Uint8Array): unknown {
   } catch {
     return new TextDecoder().decode(data);
   }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
 }

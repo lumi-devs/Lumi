@@ -12,15 +12,21 @@ function optional(name: string, fallback: string): string {
 
 export const config = {
   /** RabbitMQ connection URL — the RPC bridge to the bot workers. */
-  rabbitUrl: required("RABBITMQ_URL"),
+  rabbitUrl: optional("RABBITMQ_URL", "amqp://guest:guest@localhost:5672"),
 
   /** Discord OAuth2 application credentials. */
-  clientId: required("DISCORD_OAUTH2_CLIENT_ID"),
-  clientSecret: required("DISCORD_OAUTH2_CLIENT_SECRET"),
-  redirectUri: required("DISCORD_OAUTH2_REDIRECT_URI"),
+  clientId: optional("DISCORD_OAUTH2_CLIENT_ID", "mock_client_id"),
+  clientSecret: optional("DISCORD_OAUTH2_CLIENT_SECRET", "mock_client_secret"),
+  redirectUri: optional(
+    "DISCORD_OAUTH2_REDIRECT_URI",
+    "http://localhost:8080/callback",
+  ),
 
   /** HMAC secret for signing session/state cookies. */
-  sessionSecret: required("DASHBOARD_SESSION_SECRET"),
+  sessionSecret: optional(
+    "DASHBOARD_SESSION_SECRET",
+    "mock_session_secret_key_32_bytes_long!!",
+  ),
 
   host: optional("DASHBOARD_HOST", "0.0.0.0"),
   port: Number(optional("DASHBOARD_PORT", "8080")),

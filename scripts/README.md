@@ -1,32 +1,47 @@
-# Lumi-TS Build & Ecosystem Scripts
+# Lumi Utility & Build Scripts (`scripts/`)
 
-This directory contains utility scripts that support the Lumi-TS ecosystem. These scripts are typically invoked via `bun run` or through `package.json` aliases and are essential for addon management and structural validation.
+<div align="center">
+  <img src="https://img.shields.io/badge/Directory-Scripts-blue?style=for-the-badge" alt="Directory">
+  <img src="https://img.shields.io/badge/Runtime-Bun-black?style=for-the-badge" alt="Bun">
+</div>
+
+> Ecosystem utility scripts supporting static manifest generation, third-party addon validation, remote repository testing, event bus chaos testing, and QA environment setup.
 
 ---
 
-## `generate-manifests.ts`
+## 📜 Script Reference Catalog
 
-**Usage:** `bun run modules:manifest`
+### 1. `generate-manifests.ts`
+- **Usage**: `bun run modules:manifest`
+- **Description**: Build-time utility that generates static `manifest.json` contracts for all modules in `packages/core/src/modules/`. It parses `@DefineModule` metadata, options, and Shapeshift schemas without invoking module runtime code, allowing `ModuleStore` to inspect constraints securely during client initialization.
 
-A build-time utility that generates a static `manifest.json` for every module in the codebase. It parses each module's `index.ts` to extract its `@DefineModule` metadata, including configuration schemas, default enabled status, and permissions. This static contract allows the runtime module discovery system (`ModuleStore`) to read configuration constraints without executing module code, ensuring a secure and efficient initialization phase.
+### 2. `validate-addon.ts`
+- **Usage**: `bun run validate <path-to-addon>`
+- **Description**: CLI tool to perform structural validation on third-party addons. Asserts presence of `info.json`, validates `@DefineModule` export in `index.ts`, verifies that background tasks reside strictly in `scheduled-tasks/`, and flags forbidden patterns (such as cross-module imports).
 
-## `validate-addon.ts`
+### 3. `test-remote-addons.ts`
+- **Usage**: `bun scripts/test-remote-addons.ts [repo-url]`
+- **Description**: Integration test runner that clones remote addon repositories (defaulting to official `lumi-addons`), provisions a local monolith runtime, and sequentially installs, validates, and uninstalls exposed modules.
 
-**Usage:** `bun run validate <path>`
+### 4. `verify-chaos.ts`
+- **Usage**: `bun run verify:chaos`
+- **Description**: Chaos verification suite testing event bus delivery resiliency, consumer group fanout, stream lag metrics, and reconnect scenarios across Redis Streams and NATS JetStream backends.
 
-A command-line tool to perform structural validation on local third-party addons. It runs the same strict checks that the Downloader service applies at runtime:
-- Verifies the presence and validity of `info.json`
-- Ensures a valid `@DefineModule` export in `index.ts`
-- Asserts that all Scheduled Tasks are placed in the strictly required `scheduled-tasks/` directory
-- Validates that the addon does not perform cross-module imports or other banned architectural patterns
+### 5. `qa-setup.ts`
+- **Usage**: `bun scripts/qa-setup.ts`
+- **Description**: Provisions a Discord guild testing environment by connecting via `BOT_TOKEN` and setting up designated QA test roles and channel permission overrides.
 
-Use this script during local development to ensure an addon is structurally sound before attempting to load it in production.
+---
 
-## `test-remote-addons.ts`
+## 💻 Execution Examples
 
-**Usage:** `bun scripts/test-remote-addons.ts [repo-url]`
+```bash
+# Generate static module manifests
+bun run modules:manifest
 
-An integration testing script that validates remote addon repositories. It provisions a local monolith runtime, downloads a target addon repository (defaulting to the public `lumi-addons` repo), and sequentially installs every module exposed by it.
-The script verifies that each addon successfully registers with the `ModuleStore` without runtime faults or missing dependencies, and then cleanly uninstalls them.
+# Validate a local third-party addon
+bun run validate ./path/to/addon
 
-**Note:** Requires a local `.env` with a valid `BOT_TOKEN` and the backing datastores (PostgreSQL, Redis, RabbitMQ) to be running.
+# Run event bus chaos tests
+bun run verify:chaos
+```

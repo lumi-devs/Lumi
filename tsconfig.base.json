@@ -2,6 +2,7 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./packages/typescript-config/base.json",
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
     "paths": {
       "@prisma/client": ["./prisma/generated/client"],
       "@lumi/contracts": ["./packages/contracts/src/index.ts"],
@@ -11,8 +12,7 @@
       "@lumi/core": ["./packages/core/index.ts"],
       "@lumi/core/setup": ["./packages/core/src/lib/client/setup.ts"],
       "@lumi/sdk": ["./packages/sdk/src/index.ts"],
-      "@lumi/sharding": ["./packages/sharding/src/index.ts"],
-      "@lumi/worker/main": ["./apps/worker/src/main.ts"]
+      "@lumi/sharding": ["./packages/sharding/src/index.ts"]
     }
   }
 }

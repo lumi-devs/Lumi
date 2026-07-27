@@ -1,28 +1,40 @@
-# Configuration
+# Lumi Infrastructure & Application Configuration (`config/`)
 
-Two files control what a self-hoster usually wants to change. Both are optional —
-the bot ships with working defaults and merges your values on top, so you only set
-the keys you care about.
+<div align="center">
+  <img src="https://img.shields.io/badge/Directory-Configuration-blue?style=for-the-badge" alt="Directory">
+  <img src="https://img.shields.io/badge/Defaults-Merging-brightgreen?style=for-the-badge" alt="Defaults">
+</div>
 
-## `bot.json`
-
-Presence, colors, links, permission-tier names, and UI defaults.
-
-- `presence` — `activityType` (0 Playing, 1 Streaming, 2 Listening, 3 Watching, 5 Competing), `activityText`, `status` (`online`/`idle`/`dnd`/`invisible`)
-- `branding.colors` — embed/card colors as decimal integers (e.g. `0x5865F2` = `5793266`)
-- `branding.links` — `supportServer` / `website` / `github` URLs surfaced in help
-- `permissions.names` — display labels for the permission tiers
-- `ui.defaultListPerPage` — page size for paginated lists
-
-## `emojis.json`
-
-Overrides for named emojis. A value can be a unicode glyph (`🟢`) or a custom
-Discord emoji in `<:name:id>` form. Any key you omit falls back to the built-in
-unicode set, so this file is safe to trim. To use your own server's emoji, paste
-its `<:name:id>` (right-click → Copy, or `\:emoji:` in chat).
+> Master configuration directory housing bot branding profiles, custom emojis, infrastructure settings, and Docker service configurations.
 
 ---
 
-The rest of this directory (`postgres/`, `redis/`, `rabbitmq*`, `observability/`,
-`advanced.config`) is infrastructure config for the Docker/Compose stack, not bot
-settings.
+## 📦 Overview
+
+The `config/` directory manages bot UI branding defaults and Docker infrastructure service settings. Both `bot.json` and `emojis.json` are optional — Lumi loads built-in defaults and merges any user-specified overrides on top.
+
+---
+
+## 📄 Application Configuration Files
+
+### `bot.json`
+Controls presence, embed color schemes, support links, permission tier names, and UI default settings:
+
+- **`presence`**: `activityType` (0 Playing, 1 Streaming, 2 Listening, 3 Watching, 5 Competing), `activityText`, `status` (`online`, `idle`, `dnd`, `invisible`).
+- **`branding.colors`**: Embed & card colors as decimal integers (e.g. `0x5865F2` = `5793266`).
+- **`branding.links`**: `supportServer`, `website`, and `github` URLs surfaced in `/help` and `/about`.
+- **`permissions.names`**: Display labels for permission tiers.
+- **`ui.defaultListPerPage`**: Page size for paginated list cards.
+
+### `emojis.json`
+Overrides named emojis used in card headers and UI elements. Values can be unicode glyphs (`🟢`) or custom Discord emoji strings (`<:name:id>`). Unspecified keys fall back to unicode defaults.
+
+---
+
+## 🏗️ Infrastructure Service Directories
+
+The sub-directories in `config/` host configuration templates for containerized infrastructure:
+- `postgres/`: PostgreSQL initialization scripts and tuning configs.
+- `redis/`: Redis persistence (`redis.conf`) and stream capping configuration.
+- `rabbitmq/`: RabbitMQ definitions and exchange/queue binding configs.
+- `observability/`: OpenTelemetry collector, Prometheus (`prometheus.yml`), and Grafana dashboard provisioning.

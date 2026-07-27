@@ -9,7 +9,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@lumi/contracts": "workspace:*",
     "@lumi/core": "workspace:*"
   }
 }

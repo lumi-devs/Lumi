@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Redis } from "ioredis";
+import { sleep } from "@sapphire/utilities";
 
 /**
  * Lightweight Redis-backed mutex. Mutual exclusion across processes; a
@@ -44,8 +45,6 @@ const DEFAULTS: Required<RedisLockOptions> = {
   retryDelayMs: 25,
   maxRetryDelayMs: 250,
 };
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function acquireRedisLock(
   redis: Redis,
