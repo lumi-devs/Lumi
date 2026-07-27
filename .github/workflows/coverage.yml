@@ -21,18 +21,18 @@ jobs:
     # Only run when CI passes — no point uploading failing coverage
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
       - name: Download coverage artifact
-        uses: actions/download-artifact@v4
+        id: download
+        uses: actions/download-artifact@v8
         with:
           name: coverage-report
           path: coverage
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
+        continue-on-error: true
 
       - name: Upload to Codecov
+        if: steps.download.outcome == 'success'
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
