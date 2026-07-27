@@ -3,53 +3,17 @@
 This directory contains the operational and infrastructure configurations for Lumi. Configuration in Lumi is partitioned into **Application-Level Settings** (`bot.json`, `emojis.json`) and **Infrastructure-Level Stack Configurations** (`postgres/`, `redis/`, `rabbitmq/`, `observability/`, `advanced.config`).
 
 > [!NOTE]
-> Application configuration files (`bot.json` and `emojis.json`) are optional. Lumi ships with production-grade defaults compiled directly into the binary. Any values provided in `config/bot.json` or `config/emojis.json` are deeply merged on top of internal defaults at boot time.
+> Application configuration files (`bot.ts` and `emojis.ts`) are optional. Lumi ships with production-grade defaults compiled directly into the binary. Any values provided in `config/bot.ts` or `config/emojis.ts` are deeply merged on top of internal defaults at boot time.
 
 ---
 
 ## Application Configuration
 
-### `bot.json`
+### `bot.ts`
 
-The `bot.json` file configures runtime presence, color schemes, external links, permission tier titles, and user interface pagination defaults.
+The `bot.ts` file configures runtime presence, color schemes, external links, permission tier titles, and user interface pagination defaults.
 
-```json
-{
-  "presence": {
-    "activityType": 3,
-    "activityText": "the server",
-    "status": "online"
-  },
-  "branding": {
-    "colors": {
-      "PRIMARY": 5793266,
-      "SUCCESS": 5763719,
-      "ERROR": 15548997,
-      "WARNING": 16705372,
-      "INFO": 5793266,
-      "NEUTRAL": 5198940,
-      "GOLD": 16762880
-    },
-    "links": {
-      "supportServer": "",
-      "website": "",
-      "github": ""
-    }
-  },
-  "permissions": {
-    "names": {
-      "USER": "User",
-      "MOD": "Moderator",
-      "ADMIN": "Administrator",
-      "GUILD_OWNER": "Server Owner",
-      "BOT_OWNER": "Bot Owner"
-    }
-  },
-  "ui": {
-    "defaultListPerPage": 10
-  }
-}
-```
+All available options are documented as comments in the file. Uncomment and edit what you need — everything is optional.
 
 #### Configuration Options
 
@@ -58,7 +22,7 @@ The `bot.json` file configures runtime presence, color schemes, external links, 
 | `presence.activityType` | `number` | Discord activity type enumeration | `0` (Playing), `1` (Streaming), `2` (Listening), `3` (Watching), `5` (Competing) |
 | `presence.activityText` | `string` | Text displayed in the bot status activity line | `"the server"` |
 | `presence.status` | `string` | Gateway client online status | `"online"`, `"idle"`, `"dnd"`, `"invisible"` |
-| `branding.colors.*` | `number` | Decimal integer representations of embed accent colors | e.g. `5793266` (`#5865F2` Blurple), `5763719` (`#57F287` Green), `15548997` (`#ED4245` Red) |
+| `branding.colors.*` | `number` | Hex integer representations of embed accent colors | e.g. `0x5865F2` (Blurple), `0x57F287` (Green), `0xED4245` (Red) |
 | `branding.links.supportServer` | `string` | Discord invite URL surfaced in help and information cards | `""` |
 | `branding.links.website` | `string` | Official website URL surfaced in bot metadata | `""` |
 | `branding.links.github` | `string` | Source code repository URL | `""` |
@@ -67,44 +31,14 @@ The `bot.json` file configures runtime presence, color schemes, external links, 
 
 ---
 
-### `emojis.json`
+### `emojis.ts`
 
-`emojis.json` defines named emoji identifiers used across cards, status messages, and command responses. Values can be unicode glyphs or custom Discord emojis formatted as `<:name:id>` (or `<a:name:id>` for animated emojis).
+`emojis.ts` defines named emoji identifiers used across cards, status messages, and command responses. Values can be unicode glyphs or custom Discord emojis formatted as `<:name:id>` (or `<a:name:id>` for animated emojis).
 
 > [!TIP]
-> Any key omitted from `emojis.json` automatically falls back to Lumi's built-in unicode emoji mapping. You only need to declare keys you wish to override.
+> Any key omitted from `emojis.ts` automatically falls back to Lumi's built-in unicode emoji mapping. You only need to declare keys you wish to override.
 
-```json
-{
-  "SUCCESS": "🟢",
-  "CHECK": "✅",
-  "ERROR": "🔴",
-  "CROSS": "❌",
-  "WARNING": "🟡",
-  "INFO": "🔵",
-  "ADMIN": "🛡️",
-  "SHIELD": "🛡️",
-  "RAID": "🚨",
-  "BOT": "🤖",
-  "ARROW_RIGHT": "➡️",
-  "CLOCK": "🕐",
-  "TERMINAL": "💻",
-  "CROWN": "👑",
-  "WARNING_SIGN": "⚠️",
-  "LOCKDOWN": "🔒",
-  "GUILD": "🏰",
-  "SPACE": "⠀",
-  "LATENCY": "📡",
-  "UPTIME": "⏱️",
-  "TRADE": "📊",
-  "MEMORY": "🧠",
-  "POSITION": "📈",
-  "SERVERS": "🏰",
-  "MEMBERS": "👥",
-  "REDIS": "🔴",
-  "SQL": "🐘",
-  "RABBIT": "🐇"
-}
+All defined emoji keys are listed as comments in the file. Uncomment and edit what you need.
 ```
 
 ---
@@ -116,8 +50,8 @@ The subdirectories within `config/` house operational parameters and initializat
 ```
 config/
 ├── advanced.config           # RabbitMQ legacy metrics Permit configuration
-├── bot.json                  # Application presence, branding, & UI settings
-├── emojis.json               # Application emoji symbol mappings
+├── bot.ts                    # Application presence, branding, & UI settings
+├── emojis.ts                 # Application emoji symbol mappings
 ├── rabbitmq.conf             # RabbitMQ single-node base configuration
 ├── postgres/
 │   ├── init-replication.sh   # Primary DB bootstrap script (creates replicator role)

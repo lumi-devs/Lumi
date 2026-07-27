@@ -50,11 +50,11 @@ Built with **Bun**, **TypeScript**, **discord.js v14**, and the **[Sapphire Fram
 ```sh
 git clone https://github.com/lumi-devs/lumi.git && cd lumi
 cp .env.example .env   # Configure BOT_TOKEN and CLIENT_ID
-make setup             # Install dependencies, boot container services, run migrations
-make dev               # Start bot in monolith mode
+bun install            # Install workspace dependencies
+docker compose up -d postgres pgbouncer redis rabbitmq  # Boot backing services
+bun run db:push        # Sync database schema
+bun run dev            # Start bot in monolith mode
 ```
-
-Run `make help` for a complete list of available commands.
 
 <details>
 <summary><strong>Production Deployment (Docker)</strong></summary>
@@ -91,7 +91,7 @@ bun install
 bun run db:generate
 
 # Launch hot-reloading development server
-make dev
+bun run dev
 ```
 
 Check out [CONTRIBUTING.md](CONTRIBUTING.md) for contribution rules, code conventions, and module development.

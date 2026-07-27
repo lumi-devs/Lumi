@@ -15,7 +15,7 @@ This directory contains CLI tools, build-time code generators, integration testi
 | `validate-addon.ts` | `bun run validate <path>` | Structural and architectural validator for local third-party addons | Offline CLI |
 | `test-remote-addons.ts` | `bun scripts/test-remote-addons.ts` | Integration tester for remote/git addon repositories | `.env`, DB, Redis, RabbitMQ |
 | `qa-setup.ts` | `bun scripts/qa-setup.ts` | Discord server QA environment automated setup script | `BOT_TOKEN`, Discord Guild |
-| `verify-resilience.ts` | `bun run verify:resilience` | Fault-tolerance & event-bus message durability test suite | Redis / NATS JetStream |
+| `verify-resilience.ts` | `bun run verify:resilience` | Fault-tolerance & event-bus message durability test suite | Redis Streams |
 
 ---
 
@@ -140,7 +140,7 @@ bun scripts/qa-setup.ts
 
 **Command:** `bun run verify:resilience`
 
-A fault-tolerance and distributed event-bus verification suite that tests message delivery semantics, consumer group isolation, high-concurrency burst loads, and connection failure recovery across **Redis Streams** and **NATS JetStream** backends.
+A fault-tolerance and distributed event-bus verification suite that tests message delivery semantics, consumer group isolation, high-concurrency burst loads, and connection failure recovery across **Redis Streams**.
 
 #### Test Scenarios
 
@@ -152,17 +152,16 @@ A fault-tolerance and distributed event-bus verification suite that tests messag
 | **Redis Streams** | High-throughput burst load | 100 parallel message dispatches with >=90% delivery assertion |
 | **Redis Streams** | Lifecycle & graceful shutdown | Clean socket disconnects without unhandled rejections |
 | **Redis Streams** | Bus re-initialization | Re-establishment of stream consumers after connection drop |
-| **NATS JetStream** | Basic publish & consume round-trip | Verified JetStream stream delivery (when `NATS_URL` is set) |
-| **NATS JetStream** | Lifecycle & graceful shutdown | Clean JetStream client teardown (when `NATS_URL` is set) |
+
 
 #### Usage Examples
 
 ```bash
 # Run resilience verification suite against local Redis (default localhost:6379)
 bun run verify:resilience
+# Run resilience suite with custom Redis host
 
-# Run resilience suite with custom Redis host and optional NATS JetStream server
-REDIS_HOST=127.0.0.1 REDIS_PORT=6379 NATS_URL=nats://localhost:4222 bun run verify:resilience
+REDIS_HOST=127.0.0.1 REDIS_PORT=6379 bun run verify:resilience
 ```
 
 ---

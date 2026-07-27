@@ -5,7 +5,6 @@
  * Supports custom Discord emoji IDs with built-in Unicode fallbacks.
  * Use `Emojis.custom('<:name:id>', '🔷')` to resolve a custom emoji with a safe fallback.
  */
-import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import { errorCode } from "#lib/utilities/errors.js";
 
@@ -77,19 +76,18 @@ const defaultEmojis = {
   RABBIT: "🐇",
 };
 
-import { tryParseJSON } from "@sapphire/utilities";
-
 let customEmojis = {};
 try {
-  const configPath = join(process.cwd(), "config", "emojis.json");
-  const file = await fs.readFile(configPath, "utf-8");
-  const parsed = tryParseJSON(file);
-  if (parsed && typeof parsed === "object") {
-    customEmojis = parsed;
+  const configPath = join(process.cwd(), "config", "emojis.ts");
+  const mod = await import(configPath);
+  const raw: unknown = mod?.default ?? {};
+  if (typeof raw === "object" && raw !== null) {
+    customEmojis = raw;
   }
 } catch (err: unknown) {
-  if (errorCode(err) !== "ENOENT") {
-    console.error("[Assets] Failed to load config/emojis.json:", err);
+  const code = errorCode(err);
+  if (code !== "ERR_MODULE_NOT_FOUND" && code !== "ENOENT") {
+    console.error("[Assets] Failed to load config/emojis.ts:", err);
   }
 }
 

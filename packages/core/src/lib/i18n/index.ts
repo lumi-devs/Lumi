@@ -34,8 +34,19 @@ export const DEFAULT_LANGUAGE = "en-US";
  *  - have a matching `src/languages/<locale>/` directory of namespace files.
  *
  * Adding a language is purely additive: drop in the directory, list it here.
+ * Translations are managed via Crowdin; untranslated stubs fall back to en-US.
  */
-export const SUPPORTED_LANGUAGES = ["en-US"] as const;
+export const SUPPORTED_LANGUAGES = [
+  "cs-CZ", "da-DK", "de-DE", "el-GR",
+  "en-US", "es-ES", "fi-FI", "fr-FR",
+  "hu-HU", "it-IT",
+  "ja-JP", "ko-KR",
+  "nl-NL", "no-NO",
+  "pl-PL", "pt-BR",
+  "ro-RO", "ru-RU",
+  "sv-SE", "tr-TR", "uk-UA", "vi-VN",
+  "zh-CN", "zh-TW",
+] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 const supported = new Set<string>(SUPPORTED_LANGUAGES);

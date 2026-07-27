@@ -18,7 +18,7 @@ body:
         - "@lumi/worker (Event Worker Engine)"
         - "@lumi/scheduler (BullMQ Task Engine)"
         - "@lumi/dashboard (Web Dashboard)"
-        - "@lumi/event-bus (Redis / NATS Event Infrastructure)"
+        - "@lumi/event-bus (Redis Streams Event Infrastructure)"
         - "@lumi/sharding (Sharding Coordinator)"
         - "@lumi/contracts / @lumi/sdk"
         - "Other / Unknown"

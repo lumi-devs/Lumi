@@ -47,7 +47,7 @@ The scheduler service guarantees accurate execution of time-sensitive operations
 sequenceDiagram
     autonumber
     participant Worker as apps/worker
-    participant EB as Event Bus (Redis/NATS)
+    participant EB as Event Bus (Redis Streams)
     participant Sched as apps/scheduler (Leader)
     participant Redis as Redis (DB 1 - BullMQ)
     participant DB as PostgreSQL 17

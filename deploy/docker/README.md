@@ -50,7 +50,6 @@ flowchart TD
         PG[(lumi-postgres<br/>PostgreSQL 17)]
         Redis[(lumi-redis<br/>Redis 7)]
         RMQ[(lumi-rabbitmq<br/>RabbitMQ 4 Management)]
-        NATS[(lumi-nats<br/>NATS 2 JetStream)]
     end
 
     subgraph Telemetry & Observability Stack
@@ -119,7 +118,6 @@ Services are organized into distinct Compose **profiles** so you only run what y
 | `redis` | *(core)* | `127.0.0.1:6379:6379` | Redis 7 data store for entity caching and event streams. |
 | `rabbitmq` | *(core)* | `127.0.0.1:5672`, `:15672` | RabbitMQ 4 broker with Management UI. |
 | `nirn-proxy` | `scale` | `127.0.0.1:18080`, `:19000` | Discord REST rate-limiting proxy. |
-| `nats` | `scale-nats` | `127.0.0.1:14222`, `:18222` | NATS 2 JetStream event server. |
 | `otel-collector` | `observability` | `127.0.0.1:4318:4318` | OpenTelemetry Collector endpoint (OTLP HTTP). |
 | `prometheus` | `observability` | `127.0.0.1:9091:9090` | Prometheus metrics collector and alerting engine. |
 | `tempo` | `observability` | — | Grafana Tempo distributed tracing storage engine. |

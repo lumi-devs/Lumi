@@ -6,7 +6,6 @@ export type {
   ConsumeOptions,
   EventBus,
   PublishOptions,
-  TransportKind,
 } from "./types.js";
 export {
   RedisStreamsBus,

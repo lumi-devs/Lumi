@@ -102,6 +102,7 @@ Within `@lumi/core` (and symlinked third-party modules), imports are mapped via 
 | `#utilities/*.js` | `./packages/core/src/lib/utilities/*.ts` | Cards, formatters, time helpers, utilities |
 | `#core/lib/*.js` | `./packages/core/src/lib/*.ts` | Alias for core library imports |
 | `#core/module-system/*.js`| `./packages/core/src/lib/module-system/*.ts` | Module store, Service, listener bases |
+| `#core/*.js` | `./packages/core/src/lib/*.ts` | Alias for core library imports (catch-all) |
 | `#root/*.js` | `./packages/core/src/*.ts` | Root source directory |
 | `#modules/*.js` | `./packages/core/src/modules/*.ts` | Module sub-stores and feature code |
 
@@ -120,7 +121,7 @@ Because Bun resolves symlinks to their realpath (`data/3rd-party-modules/<addon>
 - `worker`: WebSocket-less event consumer handling command, listener, and module execution.
 - `scheduler`: Leader-locked process managing BullMQ queues and delayed jobs.
 
-`TRANSPORT` selects the event bus transport backend (`inproc`, `streams` [Redis], `nats` [JetStream]).
+The event bus uses Redis Streams for cross-process message delivery.
 
 ---
 
@@ -132,7 +133,7 @@ Because Bun resolves symlinks to their realpath (`data/3rd-party-modules/<addon>
 - **Discord**: Discord.js v14 + `@discordjs/builders` + `@discordjs/formatters`
 - **Database**: PostgreSQL 17 + Prisma ORM (`@prisma/client`) + PgBouncer
 - **Cache & Queues**: Redis 7 (ioredis) + BullMQ (`@sapphire/plugin-scheduled-tasks`)
-- **Messaging**: RabbitMQ (`amqplib`) RPC bridge + Event Bus
+- **Messaging**: RabbitMQ (`amqplib`) RPC bridge
 - **Validation & i18n**: `@sapphire/shapeshift` + `@sapphire/plugin-i18next`
 
 ### 3.2 Approved Helper Libraries
@@ -222,16 +223,15 @@ export class MyModule extends Module {}
 ## 6. ⚙️ Background Processing & Event Bus
 
 1. **Scheduled Tasks (BullMQ)**: Place task definitions in `src/modules/<name>/scheduled-tasks/` extending `RelayTask`.
-2. **RabbitMQ Event Bus & RPC**:
-   - Inter-process events: `publishEvent` and `onEvent`.
-   - Web RPC Bridge: Register handlers via `registerRpcHandler` for web panel communication (`apps/dashboard`).
+2. **Event Bus (Redis Streams)**: Inter-process event streaming via `packages/event-bus`. `LUMI_ROLE=gateway` publishes raw Discord dispatches; workers consume them.
+3. **RabbitMQ RPC Bridge**: Dashboard-to-worker communication via RabbitMQ. Register handlers via `registerRpcHandler` for web panel communication (`apps/dashboard`).
 
 ---
 
 ## 7. 📊 Observability & Telemetry
 
 - **Logging**: Use `this.logger` (backed by `PinoSapphireLogger`).
-- **OpenTelemetry**: Enabled via `OTEL_ENABLED=true`. Note: `OTEL_ENABLED` and `SENTRY_ENABLED` are mutually exclusive.
+- **OpenTelemetry**: Enabled via `OTEL_ENABLED=true`.
 - **Metrics Exporter**: Prometheus registry exposed on `METRICS_PORT` (`:9090`). Custom metrics **must** be registered in `packages/observability/src/metrics.ts`.
 
 ---
@@ -243,11 +243,11 @@ Lumi enforces a consistent visual design language across all Discord replies.
 
 - ❌ **Forbidden**: Constructing raw `EmbedBuilder` instances inside commands.
 - ✅ **Mandatory**: Use Card System helpers: `makeInfoCard`, `makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeListCard`.
-- Reply using interaction helpers: `sendSuccess(interaction, message)`, `sendError(interaction, message)`.
+- Reply using interaction helpers: `replySuccess(interaction, message)`, `replyError(interaction, message)`.
 
 ### 8.2 Pagination & i18n
 - **Pagination**: Use `chunk(array, pageSize)` from `@sapphire/utilities`. Do not use `PaginatedMessage`.
-- **Localization**: Translation files reside in `packages/core/src/languages/<locale>/<namespace>.json`. Supported locales: `en-US`, `de`, `es-ES`, `fr`. Fetch translators via `await this.fetchT(interaction)`.
+- **Localization**: Translation files reside in `packages/core/src/languages/<locale>/<namespace>.json`. Supported locales: 30 Discord locales from `af-ZA` to `zh-TW`. Translations sourced via Crowdin; untranslated stubs fall back to `en-US`. Fetch translators via `await this.fetchT(interaction)`.
 
 ---
 

@@ -282,7 +282,6 @@ export class LumiClient extends SapphireClient {
       db: new DatabaseService(prisma, redis, container.logger),
       entityCache: new RedisEntityCache(redis),
       eventBus: this._ownedEventBus.bus,
-      eventBusTransport: this._ownedEventBus.transport,
       moduleStore,
       configChangeHooks: new Map(),
       stats: {
@@ -422,7 +421,7 @@ export class LumiClient extends SapphireClient {
       await this._taskFireConsumer.start();
     }
 
-    if (this.role === "worker" && container.eventBusTransport === "streams") {
+    if (this.role === "worker") {
       const clusterName = getClusterName();
       if (clusterName) {
         const tracker = new ClusterReadyTracker({
@@ -614,7 +613,7 @@ export class LumiClient extends SapphireClient {
       );
     }
 
-    if (this.role === "worker" && container.eventBusTransport === "streams") {
+    if (this.role === "worker") {
       registerReadinessProbe("raw-gateway-consumer", () =>
         this._rawConsumer
           ? { status: "ok" }

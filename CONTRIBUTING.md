@@ -131,30 +131,24 @@ const guild = await container.db.guilds.get(guildId);
 Raw Discord embeds (`EmbedBuilder`) are strictly prohibited in user-facing command responses. Always construct UI responses using Lumi's standardized card primitives:
 
 ```ts
-import { makeSuccessCard, makeErrorCard, makeListCard } from "@lumi/ui-cards";
+import { makeSuccessCard, makeErrorCard } from "#utilities/cards.js";
+import { replySuccess } from "#lib/commands.js";
 
 // Respond with standardized success feedback
-await interaction.reply({
-  embeds: [makeSuccessCard({ title: "Settings Saved", description: "Updated moderation threshold." })],
-});
+await replySuccess(interaction, "Settings Saved", "Updated moderation threshold.");
 ```
 
 ### 4. Code Hygiene & Utility Functions
 
 * **JSON Parsing**: Never place raw `JSON.parse()` calls inside generic `try/catch` blocks. Use `tryParseJSON` from `@sapphire/utilities`.
-* **Array Filtering**: Do not filter typed arrays using `.filter(Boolean)`. Use `.filter(filterNullish)` from `@lumi/shared`.
-* **Configuration Validation**: All module configurations must define a strict Zod schema inside `@DefineModule`.
+* **Array Filtering**: Do not filter typed arrays using `.filter(Boolean)`. Use `.filter(filterNullish)` from `@sapphire/utilities`.
+* **Configuration Validation**: All module configurations must define a strict schema using `@sapphire/shapeshift` `cfg.*` helpers inside `@DefineModule`.
 
 ### 5. Internationalization (i18n)
 
-All user-facing strings must be localized using Sapphire's `@sapphire/plugin-i18next`. Every command string key must exist in all four supported locales:
+All user-facing strings must be localized using Sapphire's `@sapphire/plugin-i18next`. Every command string key must exist in `en-US` at minimum; translations for other locales are sourced via Crowdin. 30 Discord locales are supported (from `af-ZA` to `zh-TW`), falling back to `en-US` for untranslated strings.
 
-* `en-US` (English - US)
-* `de` (German)
-* `es-ES` (Spanish)
-* `fr` (French)
-
-Translation files reside in `packages/i18n/src/locales/<locale>/`.
+Translation files reside in `packages/core/src/languages/<locale>/`.
 
 ---
 
@@ -163,18 +157,18 @@ Translation files reside in `packages/i18n/src/locales/<locale>/`.
 1. **Create Directory Structure**: Create a directory under `packages/core/src/modules/<module-name>/`.
 2. **Define Module Metadata**: Create `index.ts` with the `@DefineModule` decorator:
    ```ts
-   import { DefineModule, BaseModule } from "#lib/module-system.js";
-   import { z } from "zod";
+   import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
 
    @DefineModule({
-     name: "utility",
+     id: "utility",
+     name: "Utility",
      description: "General utility commands",
      defaultEnabled: true,
-     configSchema: z.object({
-       enablePing: z.boolean().default(true),
-     }),
+     configSchema: {
+       enablePing: cfg.boolean.default(true),
+     },
    })
-   export default class UtilityModule extends BaseModule {}
+   export class UtilityModule extends Module {}
    ```
 3. **Add Components**: Add subdirectories as needed:
    * `commands/` — Sapphire commands inheriting from `BaseCommand`
@@ -185,7 +179,7 @@ Translation files reside in `packages/i18n/src/locales/<locale>/`.
    ```bash
    bun run modules:manifest
    ```
-5. **Add Localizations**: Add translation keys into `packages/i18n/src/locales/<locale>/<module-name>.json` for all 4 supported languages.
+5. **Add Localizations**: Add translation keys into `packages/core/src/languages/<locale>/<module-name>.json` for `en-US` at minimum. Other locales are populated via Crowdin.
 6. **Write Tests**: Create corresponding unit tests in `packages/core/tests/modules/<module-name>/`.
 
 ---
@@ -217,7 +211,7 @@ bun run verify:resilience
 | `bun run lint` | `eslint` | Code style enforcement and linting auto-fixes |
 | `bun run test` | `vitest` | Fast unit and integration tests across packages |
 | `bun run test:e2e` | `vitest` | Black-box E2E tests executing full bot flows |
-| `bun run verify:resilience` | Bun TS | Redis Streams and NATS message queue fault tolerance test suite |
+| `bun run verify:resilience` | Bun TS | Redis Streams event bus fault tolerance test suite |
 
 ---
 
@@ -239,7 +233,7 @@ Lumi uses the [Conventional Commits](https://www.conventionalcommits.org/) forma
 | `fix` | Bug fix | `fix(gateway): resolve heartbeat timeout reconnect loop` |
 | `refactor` | Code change that neither fixes a bug nor adds a feature | `refactor(db): optimize guild query caching` |
 | `docs` | Documentation updates | `docs(config): document tempo tracing pipeline` |
-| `test` | Adding or updating tests | `test(resilience): add NATS JetStream burst test` |
+| `test` | Adding or updating tests | `test(resilience): add event-bus burst test` |
 | `chore` | Build tasks, package management, dependencies | `chore(deps): update sapphire framework packages` |
 | `perf` | Code changes that improve performance | `perf(event-bus): reduce stream consumer allocation overhead` |
 
@@ -250,7 +244,7 @@ When opening a Pull Request:
 1. Create a descriptive branch name: `feat/my-feature` or `fix/my-bugfix`.
 2. Ensure all 5 verification commands (`typecheck`, `lint`, `test`, `test:e2e`, `verify:resilience`) pass without errors.
 3. Verify that `bun run modules:manifest` was executed if any module schemas or command signatures changed.
-4. Ensure new user-facing strings are localized across `en-US`, `de`, `es-ES`, and `fr`.
+4. Ensure new user-facing strings are localized in `en-US` at minimum. Crowdin handles distribution to all 30 supported locales.
 5. Link relevant GitHub Issues in your PR description.
 
 ---

@@ -44,7 +44,6 @@ describe("createEventBus", () => {
     const logSpy = vi.fn();
 
     const owned = createEventBus({
-      transport: "streams",
       redis: { host: "localhost", port: 6379 },
       defaultMaxLen: 50000,
       maxDeliveries: 3,
@@ -55,7 +54,6 @@ describe("createEventBus", () => {
       log: logSpy,
     });
 
-    expect(owned.transport).toBe("streams");
     expect(owned.bus).toBeInstanceOf(RedisStreamsBus);
     expect(owned.publisher).toBeDefined();
 

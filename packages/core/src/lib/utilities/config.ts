@@ -1,8 +1,7 @@
-import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import { ActivityType } from "discord.js";
 import { s } from "@sapphire/shapeshift";
-import { mergeDefault, tryParseJSON } from "@sapphire/utilities";
+import { mergeDefault } from "@sapphire/utilities";
 
 const colorRecord = s.record(s.number().int()).optional();
 
@@ -93,12 +92,17 @@ const defaultConfig = {
 
 let userConfig: Record<string, any> = {};
 
-const configPath = join(process.cwd(), "config", "bot.json");
-const file = await fs.readFile(configPath, "utf-8").catch(() => null);
-if (file !== null) {
-  const parsed = tryParseJSON(file);
-  if (parsed !== null) {
-    userConfig = userConfigSchema.parse(parsed);
+try {
+  const configPath = join(process.cwd(), "config", "bot.ts");
+  const mod = await import(configPath);
+  const raw: unknown = mod?.default ?? {};
+  if (typeof raw === "object" && raw !== null) {
+    userConfig = userConfigSchema.parse(raw);
+  }
+} catch (err: unknown) {
+  const e = err as NodeJS.ErrnoException;
+  if (e?.code !== "ERR_MODULE_NOT_FOUND" && e?.code !== "ENOENT") {
+    console.error("[Config] Failed to load config/bot.ts:", err);
   }
 }
 

@@ -6,11 +6,9 @@
 
 import { Redis, type RedisOptions } from "ioredis";
 import { RedisStreamsBus, type StreamStats } from "./RedisStreamsBus.js";
-import type { EventBus, TransportKind } from "./types.js";
+import type { EventBus } from "./types.js";
 
 export interface CreateEventBusOptions {
-  /** Optional transport kind, standardized on "streams". */
-  transport?: TransportKind;
   /** Connection options for Redis Streams. Required when creating an event bus. */
   redis?: RedisOptions;
   /** Default per-stream MAXLEN cap. */
@@ -32,7 +30,6 @@ export interface CreateEventBusOptions {
 
 export interface OwnedEventBus {
   bus: EventBus;
-  transport: TransportKind;
   /**
    * Underlying publisher Redis client.
    * Exposed so readiness probes can PING the same connection the bus
@@ -73,7 +70,6 @@ export function createEventBus(
 
   return {
     bus,
-    transport: "streams",
     publisher,
     close: async () => {
       await bus.close();

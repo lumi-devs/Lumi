@@ -58,4 +58,4 @@ export interface EventBus {
   close(): Promise<void>;
 }
 
-export type TransportKind = "streams";
+

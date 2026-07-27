@@ -18,7 +18,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 - Upgraded Bun runtime support to Bun 1.3+ and Turborepo build system to 2.10+.
 - Updated GitHub Actions setup-bun workflow steps to `oven-sh/setup-bun@v2`.
-- Updated container default image tags in `docker-compose.yml` (`redis:7-alpine`, `nats:2-alpine`).
+- Updated container default image tags in `docker-compose.yml` (`redis:7-alpine`).
 - Standardized imports across `@lumi/core` with strict path aliases (`#lib/*`, `#modules/*`, `#root/*`) and `.js` specifiers.
 - Consolidated duplicate duration helpers (`parseDuration`/`formatDuration`) into `#lib/utilities/time.js`.
 - Migrated module cache invalidation from direct `redis.del` calls to `container.invalidation.invalidate(...)`.
@@ -30,7 +30,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 - Full monorepo workspace layout: `@lumi/core`, `@lumi/event-bus`, `@lumi/observability`, `@lumi/sharding`, `@lumi/contracts`, `@lumi/sdk`.
 - Four runtime roles: `monolith`, `gateway`, `worker`, `scheduler` (selected via `LUMI_ROLE`).
-- Three pluggable event-bus transports: `inproc` (default), Redis Streams, NATS JetStream.
+- Redis Streams event bus for cross-process messaging.
 - Per-guild module enable/disable system (`ModuleStore` + `@DefineModule`).
 - Dynamic third-party addon loading and unloading at runtime (`Downloader` + `validate-addon` script).
 - Built-in modules: **Core**, **Moderation**, **Auto-Filter**, **Utility** (serverinfo, whois, afk), **Logging**, **Dashboard**.
@@ -39,10 +39,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Redis Sentinel support for high-availability cache/task backends.
 - BullMQ scheduler with optional Redis leader-lock election.
 - Shard cluster coordinator (Redis-backed range assignment + session resumption).
-- OpenTelemetry tracing, Prometheus metrics, optional Grafana/Sentry integration.
-- GDPR user-data deletion path (`gdpr.ts`).
-- Resilience & fault-tolerance CI suite covering Redis Streams DLQ and NATS JetStream transport legs.
-- Full i18n for `en-US`, `de`, `es-ES`, `fr`.
+- OpenTelemetry tracing, Prometheus metrics, Grafana dashboards.
+- Resilience & fault-tolerance CI suite covering Redis Streams event bus.
+- Full i18n with 30 Discord locales (Crowdin-managed).
 
 ### Changed
 - Migrated from Zod to `@sapphire/shapeshift` for config validation.

@@ -48,14 +48,6 @@ import {
 } from "#lib/env.js";
 
 const TOKEN = envParseString("BOT_TOKEN");
-const TRANSPORT = envParseString("TRANSPORT", "streams");
-
-if (TRANSPORT !== "streams") {
-  console.error(
-    `[Gateway] TRANSPORT=${TRANSPORT} — gateway service requires TRANSPORT=streams. Exiting.`,
-  );
-  process.exit(1);
-}
 const DEFER_AT_GATEWAY = isInteractionDeferAtGateway();
 const MAXLEN = envParseInteger("EVENT_STREAM_MAXLEN", 100_000);
 const PROXY_URL = getDiscordProxyUrl();
@@ -140,7 +132,6 @@ const ownedShards = new Set<number>(
 );
 
 const ownedBus: OwnedEventBus = createEventBus({
-  transport: TRANSPORT,
   redis: {
     host: envParseString("REDIS_HOST", "localhost"),
     port: envParseInteger("REDIS_PORT", 6379),
@@ -447,7 +438,6 @@ try {
   await manager.connect();
   log("info", "WS connected; publishing raw gateway events", {
     shards: [...expectedShards],
-    transport: TRANSPORT,
   });
 } catch (err) {
   log("error", "fatal connect failure", { err: String(err) });
