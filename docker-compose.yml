@@ -59,6 +59,14 @@ x-lumi-service: &lumi-service
       max-file: "3"
 
 services:
+  monolith:
+    <<: *lumi-service
+    container_name: lumi-monolith
+    command: ["sh", "-c", "bunx prisma db push --accept-data-loss && bun apps/worker/src/main.ts"]
+    environment:
+      <<: *lumi-env
+      LUMI_ROLE: "monolith"
+
   lumi-dev:
     build:
       context: .
@@ -106,33 +114,8 @@ services:
     command: ["sh", "-c", "bunx prisma db push --accept-data-loss && bun apps/worker/src/main.ts"]
     environment:
       <<: *lumi-env
-      LUMI_ROLE: "${LUMI_ROLE:-monolith}"
-    volumes:
-      - .:/app:z
-      - ../lumi-addons:/lumi-addons:z
-
-  worker-scale:
-    <<: *lumi-service
-    container_name: lumi-worker-scale
-    command: ["sh", "-c", "bunx prisma db push --accept-data-loss && bun apps/worker/src/main.ts"]
-    environment:
-      <<: *lumi-env
       LUMI_ROLE: "worker"
-      TRANSPORT: "streams"
       LUMI_CONSUMER_ID: "${LUMI_CONSUMER_ID:-worker-1}"
-      INTERACTION_DEFER_AT_GATEWAY: "${INTERACTION_DEFER_AT_GATEWAY:-true}"
-      DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-http://nirn-proxy:8080}"
-    depends_on:
-      pgbouncer:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      nirn-proxy:
-        condition: service_started
     profiles:
       - scale
 
@@ -143,14 +126,9 @@ services:
     environment:
       <<: *lumi-env
       LUMI_ROLE: "gateway"
-      TRANSPORT: "streams"
-      INTERACTION_DEFER_AT_GATEWAY: "${INTERACTION_DEFER_AT_GATEWAY:-true}"
-      DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-http://nirn-proxy:8080}"
       NODE_OPTIONS: "--max-old-space-size=768"
     depends_on:
-      worker-scale:
-        condition: service_started
-      nirn-proxy:
+      worker:
         condition: service_started
     deploy:
       resources:
@@ -167,15 +145,12 @@ services:
     environment:
       <<: *lumi-env
       LUMI_ROLE: "scheduler"
-      TRANSPORT: "streams"
     depends_on:
       pgbouncer:
         condition: service_healthy
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      rabbitmq:
         condition: service_healthy
     profiles:
       - scale
