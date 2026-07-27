@@ -30,6 +30,8 @@
 
 ## Overview
 
+> ⚠️ **Pre-Alpha Notice:** Lumi is currently in **pre-alpha**. Several components  including but not limited to the dashboard, Lumi Downloader, and various commands — are undocumented and subject to radical changes without notice. Expect breaking changes between updates.
+
 Lumi is a self-hosted, modular Discord bot built for communities that demand full control and high performance. Every feature is a hot-swappable module — toggle, configure, and extend without restarting the bot or touching core code.
 
 Built with **Bun**, **TypeScript**, **discord.js v14**, and the **[Sapphire Framework](https://sapphirejs.dev)**. Backed by **PostgreSQL 17** and **Redis 7**.
