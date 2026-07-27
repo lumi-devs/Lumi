@@ -16,13 +16,11 @@ RUN bunx prisma generate
 FROM base AS runner
 ENV NODE_ENV=production
 
-COPY package.json bun.lock ./
-COPY prisma/ prisma/
-
-RUN bun install --frozen-lockfile --production
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma/generated ./prisma/generated
 COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/apps ./apps
+COPY package.json ./
 
 RUN mkdir -p /app/data
 USER bun
