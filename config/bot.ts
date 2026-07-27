@@ -25,13 +25,6 @@ export default {
   //     INFO:      0x5865f2,   // blurple
   //     NEUTRAL:   0x4f545c,   // gray
   //     GOLD:      0xffc800,   // gold
-  //     SAKURA:    0xffb7c5,   // pink
-  //     LEMON:     0xfff44f,   // lemon yellow
-  //     ROSE:      0xf43f5e,   // rose red
-  //     AMBER:     0xf59e0b,   // amber
-  //     PEACH:     0xfba190,   // peach
-  //     LAVENDER:  0xa78bfa,   // lavender
-  //     MINT:      0x34d399,   // mint green
   //   },
   //   links: {
   //     supportServer: "",

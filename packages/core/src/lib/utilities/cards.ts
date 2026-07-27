@@ -50,8 +50,12 @@ function buildContainer(
   title: string,
   body: string | string[],
   opts: CardOptions = {},
+  accentColor?: number,
 ) {
   const c = new ContainerBuilder();
+  if (accentColor) {
+    c.setAccentColor(accentColor);
+  }
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(`## ${title}`),
   );
@@ -94,28 +98,28 @@ export const makeSuccessCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(title, body, opts));
+) => wrap(buildContainer(title, body, opts, BotConfig.branding.colors.SUCCESS));
 export const makeErrorCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(title, body, opts));
+) => wrap(buildContainer(title, body, opts, BotConfig.branding.colors.ERROR));
 export const makeWarningCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(title, body, opts));
+) => wrap(buildContainer(title, body, opts, BotConfig.branding.colors.WARNING));
 export const makeInfoCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(title, body, opts));
+) => wrap(buildContainer(title, body, opts, BotConfig.branding.colors.INFO));
 export const makeCard = (
-  _color: number,
+  color: number,
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(title, body, opts));
+) => wrap(buildContainer(title, body, opts, color || undefined));
 
 export function makeListCard(
   title: string,

@@ -15,6 +15,7 @@ import {
 import { BaseCommand, sendReply, fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { Emojis } from "#lib/utilities/assets.js";
+import { BotConfig } from "#lib/utilities/config.js";
 import { makeCard } from "#lib/utilities/cards.js";
 
 @ApplyOptions<BaseCommand.Options>({
@@ -118,7 +119,7 @@ export class ServerInfoCommand extends BaseCommand {
           ]
         : undefined;
 
-    return makeCard(0 || 0x5865f2, guild.name, body, {
+    return makeCard(BotConfig.branding.colors.PRIMARY, guild.name, body, {
       actionRows,
     });
   }

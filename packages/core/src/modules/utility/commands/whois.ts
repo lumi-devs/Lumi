@@ -16,6 +16,7 @@ import {
 } from "@discordjs/builders";
 import { BaseCommand, sendReply, fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
+import { BotConfig } from "#lib/utilities/config.js";
 import { makeCard, makeErrorCard } from "#lib/utilities/cards.js";
 
 const KEY_PERMISSIONS = [
@@ -115,10 +116,10 @@ export class WhoisCommand extends BaseCommand {
 
     const body = [userSec];
 
-    let color = 0 || 0x4f545c;
+    let color = BotConfig.branding.colors.NEUTRAL;
 
     if (member) {
-      color = member.displayColor || 0 || 0x5865f2;
+      color = member.displayColor || BotConfig.branding.colors.PRIMARY;
       const joinedSec = `${t("commands:whoisJoinedServer", {
         relative: time(member.joinedAt!, TimestampStyles.RelativeTime),
         short: time(member.joinedAt!, TimestampStyles.ShortDate),

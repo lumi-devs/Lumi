@@ -179,7 +179,7 @@ export class AboutCommand extends BaseCommand {
       );
     }
 
-    return makeCard(0 || 0x5865f2, t("core:commandCenter"), body, {
+    return makeCard(BotConfig.branding.colors.PRIMARY, t("core:commandCenter"), body, {
       actionRows,
     });
   }
