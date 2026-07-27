@@ -18,7 +18,7 @@ interface Registration<N extends keyof ScheduledTasks = keyof ScheduledTasks> {
 
 const registry = new Map<keyof ScheduledTasks, Registration>();
 
-/** The consumer currently running on this process, if any (worker/monolith). */
+/** The consumer currently running on this process, if any (consumer/worker). */
 let activeConsumer: TaskFireConsumer | null = null;
 
 export function registerTaskFireHandler<N extends keyof ScheduledTasks>(

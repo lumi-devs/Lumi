@@ -37,7 +37,7 @@ spec:
                 name: lumi-secrets
           env:
             - name: LUMI_ROLE
-              value: "worker"
+              value: "consumer"
             - name: LUMI_CONSUMER_ID
               valueFrom:
                 fieldRef:

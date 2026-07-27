@@ -278,7 +278,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       await expect(
         resolver.addRepo("test_ssh", "git@github.com:owner/repo.git")
       ).rejects.toThrow("Git clone failed");
-    });
+    }, 30000);
   });
 
   describe("DownloadResolver Module Querying & Installation", () => {

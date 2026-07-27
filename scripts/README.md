@@ -79,14 +79,14 @@ bun run validate ./my-addons-repository
 
 **Command:** `bun scripts/test-remote-addons.ts [repo-url]`
 
-An integration testing harness that boots a full Lumi monolithic client, connects to a remote Git addon repository, and verifies that every module in the repository can be installed, loaded into Sapphire stores, and cleanly uninstalled without runtime errors.
+An integration testing harness that boots a full Lumi worker client, connects to a remote Git addon repository, and verifies that every module in the repository can be installed, loaded into Sapphire stores, and cleanly uninstalled without runtime errors.
 
 > [!IMPORTANT]
 > Running this script requires an active PostgreSQL, Redis, and RabbitMQ instance, along with a valid `BOT_TOKEN` in `.env`.
 
 #### Workflow
 
-1. Initializes `LumiClient` in monolithic mode and logs into Discord Gateway.
+1. Initializes `LumiClient` in standalone worker mode and logs into Discord Gateway.
 2. Clones or fetches the target Git repository (defaults to `https://github.com/lumi-devs/lumi-addons.git`).
 3. Enumerates all modules exposed by the repository.
 4. For each module:

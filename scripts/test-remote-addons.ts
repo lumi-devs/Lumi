@@ -1,4 +1,4 @@
-// Boots a monolith, adds an addons repo, installs every module it exposes,
+// Boots a worker, adds an addons repo, installs every module it exposes,
 // asserts each one registers as a loaded ModuleStore record with its pieces,
 // then uninstalls it again. Exit 0 = all pass, 1 = any failure.
 //

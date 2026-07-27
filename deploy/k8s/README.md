@@ -29,7 +29,7 @@ This directory contains production-ready **Kubernetes manifests** for deploying 
 In Kubernetes, Lumi decomposes into discrete, specialized workloads rather than running as a single monolith:
 
 - **`gateway` (StatefulSet)**: Manages Discord WebSocket connections and pre-defers interaction payloads. Uses a StatefulSet to maintain predictable pod identity for shard clustering.
-- **`worker` (Deployment)**: Executes stateless bot commands, module logic, and event handling. Autoscaled elastically by KEDA between 2 and 20 pods based on Redis Stream consumer lag.
+- **`worker` (Deployment)**: Runs in split `consumer` mode (`LUMI_ROLE=consumer`) to execute stateless bot commands, module logic, and event handling. Autoscaled elastically by KEDA between 2 and 20 pods based on Redis Stream consumer lag.
 - **`scheduler` (Deployment)**: Runs as a single replica (or HA leader-locked setup) managing BullMQ delayed job queues and task fire triggers.
 - **`migrate` (Job)**: Executes one-shot database schema synchronization (`bunx prisma db push`) prior to launching application services.
 

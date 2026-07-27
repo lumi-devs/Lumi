@@ -103,9 +103,9 @@ Lumi scales seamlessly from a single process to a distributed cluster using `LUM
 
 | Role | Purpose |
 |---|---|
-| `monolith` | Default single-process mode. Runs gateway, workers, and scheduler together. |
+| `worker` | Default single-process mode. Runs gateway, workers, and scheduler together. |
 | `gateway` | High-performance Discord WebSocket gateway receiver. |
-| `worker` | Event processing worker pool for slash commands, triggers, and listeners. |
+| `consumer` | Event processing worker pool for slash commands, triggers, and listeners. |
 | `scheduler` | Queue processor for scheduled tasks and recurring cron jobs. |
 
 Inter-process event streaming and RPC bridging operate on **Redis Streams**. Detailed specifications are in [docs/architecture.md](docs/architecture.md).

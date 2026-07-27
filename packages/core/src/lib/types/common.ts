@@ -109,8 +109,8 @@ declare module "#lib/env.js" {
     EVENT_STREAM_MAXLEN: IntegerString;
     /** Redis Streams consumer idle threshold in ms. Default 60000. */
     EVENT_STREAM_ACK_WAIT_MS: IntegerString;
-    /** Which service this process plays in the split topology. Default "monolith". */
-    LUMI_ROLE: "monolith" | "gateway" | "worker" | "scheduler";
+    /** Which service this process plays in the split topology. Default "worker". */
+    LUMI_ROLE: "worker" | "gateway" | "consumer" | "scheduler";
     /** Stable per-replica consumer id for the worker pool. Falls back to $HOSTNAME, then pid. */
     LUMI_CONSUMER_ID: string;
     /** When "true", the gateway pre-acks INTERACTION_CREATE via REST before publishing. */

@@ -65,7 +65,7 @@ services:
     command: ["sh", "-c", "bunx prisma db push --accept-data-loss && bun apps/worker/src/main.ts"]
     environment:
       <<: *lumi-env
-      LUMI_ROLE: "monolith"
+      LUMI_ROLE: "worker"
 
   lumi-dev:
     build:
@@ -114,7 +114,7 @@ services:
     command: ["sh", "-c", "bunx prisma db push --accept-data-loss && bun apps/worker/src/main.ts"]
     environment:
       <<: *lumi-env
-      LUMI_ROLE: "worker"
+      LUMI_ROLE: "consumer"
       LUMI_CONSUMER_ID: "${LUMI_CONSUMER_ID:-worker-1}"
     profiles:
       - scale

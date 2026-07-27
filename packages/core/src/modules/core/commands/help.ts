@@ -29,7 +29,7 @@ function getCategories(containerInstance: typeof container) {
     const moduleName = record?.meta.displayName ?? toTitleCase(rawModule);
 
     if (!categories[moduleName]) categories[moduleName] = [];
-    categories[moduleName].push(cmd);
+    categories[moduleName]!.push(cmd);
     totalCommandsCount++;
   }
 

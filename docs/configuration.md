@@ -12,7 +12,7 @@ Copy `.env.example` to `.env` and fill in the required values.
 | `DIRECT_POSTGRES_URL` | same | ✅ | Direct URI for Prisma migrations |
 | `REDIS_URL` | `redis://localhost:6379` | ✅ | Redis connection string |
 | `RABBITMQ_URL` | `amqp://lumi:lumi@localhost:5672` | ✅ | RabbitMQ URI |
-| `LUMI_ROLE` | `monolith` | — | `monolith` / `gateway` / `worker` / `scheduler` |
+| `LUMI_ROLE` | `worker` | — | `worker` / `gateway` / `consumer` / `scheduler` |
 | `TRANSPORT` | `streams` | — | `streams` (Redis Streams) |
 | `OTEL_ENABLED` | `false` | — | Enable OpenTelemetry tracing |
 | `METRICS_ENABLED` | `true` | — | Enable Prometheus metrics |

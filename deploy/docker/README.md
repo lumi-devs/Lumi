@@ -26,7 +26,7 @@ This directory documents the containerization strategy, **Dockerfile multi-stage
 
 ## 🌟 Overview & Container Architecture
 
-Lumi's container setup provides complete flexibility: run a simple single-container bot monolith or launch a fully orchestrated 10+ container microservices stack with rate-limiting proxies, event streams, database connection pooling, and OpenTelemetry tracing.
+Lumi's container setup provides complete flexibility: run a simple single-container standalone bot or launch a fully orchestrated 10+ container microservices stack with rate-limiting proxies, event streams, database connection pooling, and OpenTelemetry tracing.
 
 ### Docker Compose Architecture Diagram
 
@@ -105,10 +105,10 @@ Services are organized into distinct Compose **profiles** so you only run what y
 
 | Service Name | Profile | Ports / Interfaces | Description |
 |---|---|---|---|
-| `worker` | *(default)* | — | Default Lumi bot process (`LUMI_ROLE=monolith`). Runs gateway, workers, and scheduler in a single process. |
+| `worker` | *(default)* | — | Default Lumi bot process (`LUMI_ROLE=worker`). Runs gateway, workers, and scheduler in a single process. |
 | `lumi-dev` | `development` | — | Interactive development container with live volume mounts and watch mode. |
 | `gateway` | `scale` | — | Standalone Gateway edge service for Discord WebSockets. |
-| `worker-scale` | `scale` | — | Scaled Worker node reading events from Redis Streams (`LUMI_ROLE=worker`). |
+| `worker-scale` | `scale` | — | Scaled Worker node reading events from Redis Streams (`LUMI_ROLE=consumer`). |
 | `scheduler` | `scale` | — | Task Scheduler managing BullMQ background tasks. |
 | `dashboard` | `dashboard` | `8080:8080` | Web Administration Dashboard UI. |
 | `postgres` | *(core)* | `127.0.0.1:5432:5432` | PostgreSQL 17 primary database server. |

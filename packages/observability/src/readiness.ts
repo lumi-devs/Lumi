@@ -5,7 +5,7 @@
 // without killing it.
 //
 // Each app registers the probes it needs: gateway — redis bus, Discord WS, cluster
-// joined; worker — postgres, redis, bus consumer, Discord (if monolith); scheduler —
+// joined; consumer — postgres, redis, bus consumer; worker — same + Discord; scheduler —
 // postgres, redis, BullMQ, leader-lock (if enabled); api — postgres, redis, rabbitmq.
 
 export type ProbeStatus = "ok" | "fail" | "skip";

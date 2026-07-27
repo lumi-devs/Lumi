@@ -5,7 +5,7 @@
   <img src="https://img.shields.io/badge/Bun-1.3+-black?style=for-the-badge&logo=bun" alt="Bun">
   <img src="https://img.shields.io/badge/TypeScript-5.9-blue?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Framework-Sapphire_v5-blue?style=for-the-badge" alt="Sapphire">
-  <img src="https://img.shields.io/badge/Role-worker%20%7C%20monolith-purple?style=for-the-badge" alt="Role">
+  <img src="https://img.shields.io/badge/Role-worker%20%7C%20consumer-purple?style=for-the-badge" alt="Role">
 </div>
 
 <br />
@@ -27,9 +27,9 @@ The **Lumi Worker** (`@lumi/worker`) is the primary stateless execution engine o
 
 ## 🌟 Overview
 
-The worker application serves as the core processing engine in both monolithic and microservices deployments:
+The worker application serves as the core processing engine in both standalone and microservices deployments:
 
-- **WS-Suppressed Worker Execution**: In distributed mode (`LUMI_ROLE=worker`), WebSocket connection initiation is completely disabled. Packets arrive asynchronously via `RawGatewayConsumer` over Redis Streams.
+- **WS-Suppressed Consumer Execution**: In distributed mode (`LUMI_ROLE=consumer`), WebSocket connection initiation is completely disabled. Packets arrive asynchronously via `RawGatewayConsumer` over Redis Streams.
 - **Sapphire Framework Foundation**: Built on Sapphire Framework v5, providing modular command registration, listener stores, argument parsing, and command execution pipelines.
 - **Dynamic Module Store**: Loads built-in feature modules (`afk`, `core`, `dashboard`, `filter`, `logging`, `mod`, `tempvc`, `utility`) and dynamically mounts external third-party addons from `/lumi-addons` or custom development paths (`LUMI_DEV_PATHS`).
 - **Dashboard RPC Handler**: Serves asynchronous RabbitMQ RPC requests emitted by `@lumi/dashboard` to fetch live guild configurations and apply module state changes.
@@ -101,7 +101,7 @@ Configure `@lumi/worker` using environment variables:
 | Environment Variable | Required | Default | Description |
 |---|:---:|:---:|---|
 | `BOT_TOKEN` | **Yes** | — | Discord Bot Token from the Discord Developer Portal. |
-| `LUMI_ROLE` | No | `monolith` | Service role (`monolith` \| `worker`). |
+| `LUMI_ROLE` | No | `worker` | Service role (`worker` \| `consumer`). |
 | `TRANSPORT` | No | `streams` | Event bus transport mechanism (`streams`). |
 | `LUMI_CONSUMER_ID` | No | `worker-1` | Unique consumer ID for stream consumer group tracking. |
 | `POSTGRES_URL` | **Yes** | — | PostgreSQL pooled connection string (PgBouncer). |
@@ -119,21 +119,21 @@ Configure `@lumi/worker` using environment variables:
 
 ## 🚀 Development & Running Instructions
 
-### Monolithic Development Mode (Single Process)
+### Standalone Development Mode (Single Process)
 
-In development, a worker can run in monolithic mode (`LUMI_ROLE=monolith`), maintaining its own Discord Gateway WebSocket connection:
+In development, a worker can run in standalone mode (`LUMI_ROLE=worker`), maintaining its own Discord Gateway WebSocket connection:
 
 ```bash
-# Run monolithic bot worker
+# Run standalone bot worker
 bun apps/worker/src/main.ts
 ```
 
-### Distributed Worker Mode (Production)
+### Distributed Consumer Mode (Production)
 
-In production, run workers with `LUMI_ROLE=worker` behind `@lumi/gateway`:
+In production, run workers with `LUMI_ROLE=consumer` behind `@lumi/gateway`:
 
 ```bash
-LUMI_ROLE="worker" TRANSPORT="streams" LUMI_CONSUMER_ID="worker-node-1" bun apps/worker/src/main.ts
+LUMI_ROLE="consumer" TRANSPORT="streams" LUMI_CONSUMER_ID="worker-node-1" bun apps/worker/src/main.ts
 ```
 
 ### Docker Compose

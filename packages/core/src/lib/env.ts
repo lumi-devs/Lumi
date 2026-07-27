@@ -21,27 +21,27 @@ export function envParseInteger(key: string, defaultValue?: number): number {
 
 export const envIsDefined = (key: string) => Boolean(process.env[key]);
 
-export type ServiceRole = "monolith" | "gateway" | "worker" | "scheduler";
+export type ServiceRole = "worker" | "gateway" | "consumer" | "scheduler";
 
 export function getServiceRole(): ServiceRole {
   const raw = process.env["LUMI_ROLE"];
   if (
     raw === "gateway" ||
+    raw === "consumer" ||
     raw === "worker" ||
-    raw === "monolith" ||
     raw === "scheduler"
   )
     return raw;
-  return "monolith";
+  return "worker";
 }
 
 /** Roles that own the BullMQ Worker (consume jobs and fire tasks). */
 export const roleOwnsScheduler = (r: ServiceRole) =>
-  r === "scheduler" || r === "monolith";
+  r === "scheduler" || r === "worker";
 
 /** Roles that execute task effects (Discord-side work) on the bus. */
 export const roleExecutesTaskEffects = (r: ServiceRole) =>
-  r === "worker" || r === "monolith";
+  r === "consumer" || r === "worker";
 
 export function getConsumerId(): string {
   return (

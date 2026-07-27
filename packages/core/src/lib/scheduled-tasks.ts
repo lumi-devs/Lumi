@@ -53,7 +53,7 @@ export function shouldRunNow(
 /**
  * Scheduler-side relay task: applies the payload's catch-up policy, then
  * re-publishes the fire onto the bus (`lumi.scheduler.fire:<name>`) for a
- * worker/monolith to execute via `registerTaskFireHandler`. Every Lumi task is
+ * consumer/worker to execute via `registerTaskFireHandler`. Every Lumi task is
  * this shape — the Discord-touching work never lives in the piece itself — so
  * subclasses declare nothing but the name (via `@ApplyOptions`) and payload
  * type: `export class FooTask extends RelayTask<"foo"> {}`.

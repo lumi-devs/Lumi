@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { execFile } from "node:child_process";
+import child_process from "node:child_process";
 import { promisify } from "node:util";
 import type { ModuleInfo } from "./types.js";
 import { validateAddon } from "./validate.js";
@@ -13,9 +13,13 @@ import {
   type ModuleManifest,
 } from "#lib/module-system/manifest.js";
 
-const execFileAsync = promisify(execFile);
+const execFileAsync = (
+  file: string,
+  args: string[],
+  options?: child_process.ExecFileOptions,
+) => promisify(child_process.execFile)(file, args, options);
 const execGit = (args: string[]) =>
-  execFileAsync("git", args, {
+  execFileAsync("git", ["-c", "connect.timeout=3", ...args], {
     timeout: 30000,
     env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
   });
@@ -130,8 +134,7 @@ export class DownloadResolver {
       });
     }
 
-
-
+    await this._ensureAllPackageJsonImports(repoPath);
   }
 
   public async getModulesInRepo(repoName: string): Promise<ModuleInfo[]> {
@@ -207,6 +210,8 @@ export class DownloadResolver {
     }
     const info = JSON.parse(await fs.readFile(infoPath, "utf8")) as ModuleInfo;
 
+    await this._ensureAllPackageJsonImports(sourcePath);
+
     const { errors } = await validateAddon(sourcePath);
     if (errors.length) {
       throw new Error(
@@ -253,11 +258,13 @@ export class DownloadResolver {
           localPackageJsonPath,
           JSON.stringify(localPackageJson, null, 2),
         );
+        await this._ensureAllPackageJsonImports(sourcePath);
       }
 
       await execFileAsync("bun", ["add", ...reqs], { cwd: sourcePath, timeout: 60000 }).catch(
         execError("Requirement installation failed"),
       );
+      await this._ensureAllPackageJsonImports(sourcePath);
     }
 
     if (await this._exists(targetPath)) {
@@ -270,6 +277,55 @@ export class DownloadResolver {
     );
 
     return info;
+  }
+
+  private async _ensureAllPackageJsonImports(rootPath: string): Promise<void> {
+    if (!(await this._exists(rootPath))) return;
+
+    let rootPkg: { imports?: Record<string, string> } | null = null;
+    try {
+      const rootPkgPath = path.join(process.cwd(), "package.json");
+      rootPkg = JSON.parse(await fs.readFile(rootPkgPath, "utf8"));
+    } catch {
+      return;
+    }
+    if (!rootPkg?.imports) return;
+
+    const processDir = async (dir: string) => {
+      const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
+      for (const entry of entries) {
+        if (entry.name === "node_modules" || entry.name === ".git") continue;
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          await processDir(fullPath);
+        } else if (entry.name === "package.json") {
+          try {
+            const content = await fs.readFile(fullPath, "utf8");
+            const pkg = JSON.parse(content) as { imports?: Record<string, string> };
+            pkg.imports = pkg.imports || {};
+            let modified = false;
+            for (const [key, val] of Object.entries(rootPkg.imports!)) {
+              const absTarget = path.resolve(process.cwd(), val);
+              let relTarget = path.relative(dir, absTarget);
+              if (!relTarget.startsWith(".")) {
+                relTarget = "./" + relTarget;
+              }
+              if (pkg.imports[key] !== relTarget) {
+                pkg.imports[key] = relTarget;
+                modified = true;
+              }
+            }
+            if (modified) {
+              await fs.writeFile(fullPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+            }
+          } catch (e) {
+            logError("DownloaderResolver._ensureAllPackageJsonImports", e);
+          }
+        }
+      }
+    };
+
+    await processDir(rootPath);
   }
 
   private async _exists(filePath: string): Promise<boolean> {

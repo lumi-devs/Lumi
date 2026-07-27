@@ -86,7 +86,7 @@ cp .env.example .env
 
 ### 5. Launch Development Server
 
-Start Lumi in monolithic development mode:
+Start Lumi in standalone worker development mode:
 
 ```bash
 bun run dev

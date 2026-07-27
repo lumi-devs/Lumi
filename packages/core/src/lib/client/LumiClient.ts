@@ -83,8 +83,8 @@ export interface LumiClientOptions {
   /** Override the role derived from LUMI_ROLE. */
   role?: ServiceRole;
   /**
-   * Pre-fetched shard plan from `@lumi/sharding`. Required for the monolith
-   * role (it drives `shardCount`/`shards`/`buildIdentifyThrottler`). Workers
+   * Pre-fetched shard plan from `@lumi/sharding`. Required for the worker
+   * role (it drives `shardCount`/`shards`/`buildIdentifyThrottler`). Consumers
    * never open a Discord WS so the plan is ignored there.
    * Use `LumiClient.bootstrap()` to fetch it for you.
    */
@@ -421,7 +421,7 @@ export class LumiClient extends SapphireClient {
       await this._taskFireConsumer.start();
     }
 
-    if (this.role === "worker") {
+    if (this.role === "consumer") {
       const clusterName = getClusterName();
       if (clusterName) {
         const tracker = new ClusterReadyTracker({
@@ -456,7 +456,7 @@ export class LumiClient extends SapphireClient {
     }
 
     if (
-      (this.role === "monolith" || this.role === "worker") &&
+      (this.role === "worker" || this.role === "consumer") &&
       isEntityCachePopulateEnabled()
     ) {
       this._detachEntityPopulator = installEntityPopulator(
@@ -605,7 +605,7 @@ export class LumiClient extends SapphireClient {
         : { status: "fail", detail: "not connected" },
     );
 
-    if (this.role === "monolith") {
+    if (this.role === "worker") {
       registerReadinessProbe("discord", () =>
         this.isReady()
           ? { status: "ok" }
@@ -613,7 +613,7 @@ export class LumiClient extends SapphireClient {
       );
     }
 
-    if (this.role === "worker") {
+    if (this.role === "consumer") {
       registerReadinessProbe("raw-gateway-consumer", () =>
         this._rawConsumer
           ? { status: "ok" }
@@ -713,7 +713,7 @@ export class LumiClient extends SapphireClient {
     const replicaId =
       process.env["LUMI_CONSUMER_ID"] ||
       process.env["HOSTNAME"] ||
-      `monolith-${process.pid}`;
+      `worker-${process.pid}`;
     const cluster = await attachCluster({
       plan: shardPlan,
       redis,

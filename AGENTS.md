@@ -116,9 +116,9 @@ Because Bun resolves symlinks to their realpath (`data/3rd-party-modules/<addon>
 
 ### 2.4 Runtime Roles (`LUMI_ROLE`) & Transports (`TRANSPORT`)
 `LUMI_ROLE` controls process behavior:
-- `monolith` (default): Monolithic worker process running WebSockets, commands, and scheduled tasks in one process.
+- `worker` (default): Standalone worker process running WebSockets, commands, and scheduled tasks in one process.
 - `gateway`: Dedicated Discord WebSocket receiver publishing raw events onto the transport bus.
-- `worker`: WebSocket-less event consumer handling command, listener, and module execution.
+- `consumer`: WebSocket-less event consumer handling command, listener, and module execution.
 - `scheduler`: Leader-locked process managing BullMQ queues and delayed jobs.
 
 The event bus uses Redis Streams for cross-process message delivery.

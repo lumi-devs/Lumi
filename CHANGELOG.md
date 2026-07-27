@@ -29,7 +29,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 - Full monorepo workspace layout: `@lumi/core`, `@lumi/event-bus`, `@lumi/observability`, `@lumi/sharding`, `@lumi/contracts`, `@lumi/sdk`.
-- Four runtime roles: `monolith`, `gateway`, `worker`, `scheduler` (selected via `LUMI_ROLE`).
+- Four runtime roles: `worker`, `gateway`, `consumer`, `scheduler` (selected via `LUMI_ROLE`).
 - Redis Streams event bus for cross-process messaging.
 - Per-guild module enable/disable system (`ModuleStore` + `@DefineModule`).
 - Dynamic third-party addon loading and unloading at runtime (`Downloader` + `validate-addon` script).
