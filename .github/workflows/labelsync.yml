@@ -2,7 +2,7 @@ name: Label Sync
 
 on:
   schedule:
-    - cron: '0 3 * * 1'  # Weekly Monday 03:00 UTC
+    - cron: '0 3 * * 1'
   push:
     branches: [main]
     paths:
@@ -16,14 +16,11 @@ permissions:
 
 jobs:
   labelsync:
-    name: Sync labels from .github/labels.yml
+    name: Sync labels
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Sync labels
-        uses: crazy-max/ghaction-github-labeler@v5
+      - uses: actions/checkout@v7
+      - uses: crazy-max/ghaction-github-labeler@v5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           yaml-file: .github/labels.yml

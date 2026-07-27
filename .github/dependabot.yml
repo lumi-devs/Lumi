@@ -1,40 +1,23 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: npm
+    directory: /
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:00"
-    open-pull-requests-limit: 5
-    target-branch: "develop"
-    labels:
-      - "dependencies"
-      - "npm"
-    commit-message:
-      prefix: "chore(deps)"
+      interval: weekly
+    target-branch: develop
     groups:
-      # Batch all non-major npm updates into a single PR
       npm-minor-patch:
         update-types:
-          - "minor"
-          - "patch"
+          - minor
+          - patch
 
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:00"
-    open-pull-requests-limit: 3
-    target-branch: "develop"
-    labels:
-      - "dependencies"
-      - "actions"
-    commit-message:
-      prefix: "ci(actions)"
+      interval: weekly
+    target-branch: develop
     groups:
-      # Batch all GitHub Actions updates into one PR
-      github-actions:
-        patterns:
-          - "*"
+      actions-minor-patch:
+        update-types:
+          - minor
+          - patch

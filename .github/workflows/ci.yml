@@ -40,94 +40,55 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Add ESLint problem matcher
-        run: echo "::add-matcher::.github/problemMatchers/eslint.json"
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v7
+      - run: echo "::add-matcher::.github/problemMatchers/eslint.json"
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
           restore-keys: ${{ runner.os }}-bun-
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: bun run db:generate
-
-      - name: Run Linter
-        run: bun run lint
+      - run: bun install --frozen-lockfile
+      - run: bun run db:generate
+      - run: bun run lint
 
   typecheck:
     name: Typecheck
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Add TypeScript problem matcher
-        run: echo "::add-matcher::.github/problemMatchers/tsc.json"
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v7
+      - run: echo "::add-matcher::.github/problemMatchers/tsc.json"
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
           restore-keys: ${{ runner.os }}-bun-
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: bun run db:generate
-
-      - name: Run Typecheck
-        run: bun run typecheck
+      - run: bun install --frozen-lockfile
+      - run: bun run db:generate
+      - run: bun run typecheck
 
   test:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
           restore-keys: ${{ runner.os }}-bun-
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: bun run db:generate
-
-      - name: Run tests with coverage
-        run: bun run test -- --coverage
-
-      - name: Upload coverage report artifact
-        uses: actions/upload-artifact@v7
+      - run: bun install --frozen-lockfile
+      - run: bun run db:generate
+      - run: bun run test -- --coverage
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: coverage/lcov.info

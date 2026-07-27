@@ -1,6 +1,3 @@
-# Configuration for actions/labeler@v7
-# Syntax: label → list of match objects → changed-files at same indent as list item
-
 'pkg:core':
 - changed-files:
   - any-glob-to-any-file: 'packages/core/**'
@@ -63,7 +60,6 @@
     - 'docker-compose*.yml'
     - 'Dockerfile*'
 
-# Applied only when ALL changed files are documentation — no code touched
 'docs-only':
 - changed-files:
   - any-glob-to-all-files:

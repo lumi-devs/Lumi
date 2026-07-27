@@ -1,13 +1,7 @@
-# .github/labels.yml — Label definitions as code (synced daily by labelsync.yml)
-# Format: name, color (hex without #), description
-# Run `gh workflow run labelsync.yml` to sync manually
-
-# ── Triage & Status ────────────────────────────────────────────────────────────
 - name: "Status: Needs Triage"
   color: "E4E669"
   description: "Newly opened issue, needs maintainer review"
 
-# ── Type ───────────────────────────────────────────────────────────────────────
 - name: "bug"
   color: "d73a4a"
   description: "Something isn't working"
@@ -44,7 +38,6 @@
   color: "0E8A16"
   description: "Performance improvement"
 
-# ── Workflow ───────────────────────────────────────────────────────────────────
 - name: "good first issue"
   color: "7057ff"
   description: "Good for newcomers"
@@ -73,7 +66,6 @@
   color: "ededed"
   description: "No recent activity"
 
-# ── Dependencies ───────────────────────────────────────────────────────────────
 - name: "dependencies"
   color: "0366D6"
   description: "Dependency bumps"
@@ -86,7 +78,6 @@
   color: "2088FF"
   description: "GitHub Actions changes"
 
-# ── PR Size ────────────────────────────────────────────────────────────────────
 - name: "size:S"
   color: "6DB96D"
   description: "Small PR (<50 lines)"
@@ -103,7 +94,6 @@
   color: "E11D48"
   description: "XL PR (500+ lines)"
 
-# ── Area ───────────────────────────────────────────────────────────────────────
 - name: "area:ci"
   color: "FEF2C0"
   description: "CI/CD and automation changes"
@@ -124,7 +114,6 @@
   color: "0075CA"
   description: "PR only changes documentation files"
 
-# ── Package ────────────────────────────────────────────────────────────────────
 - name: "pkg:core"
   color: "1D76DB"
   description: "Changes in packages/core"
@@ -149,7 +138,6 @@
   color: "1D76DB"
   description: "Changes in packages/sdk"
 
-# ── App ────────────────────────────────────────────────────────────────────────
 - name: "app:dashboard"
   color: "5319E7"
   description: "Changes in apps/dashboard"
