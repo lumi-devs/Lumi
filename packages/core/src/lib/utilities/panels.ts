@@ -1,0 +1,269 @@
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ChannelSelectMenuBuilder,
+  RoleSelectMenuBuilder,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
+  UserSelectMenuBuilder,
+  type AnyComponentBuilder,
+  type MessageActionRowComponentBuilder,
+} from "@discordjs/builders";
+import {
+  ButtonStyle,
+  ChannelType,
+  type APIMessageComponentEmoji,
+} from "discord.js";
+import { container } from "@sapphire/framework";
+import { Emojis } from "#utilities/assets.js";
+
+// ==========================================
+// Select Menu Builder Options & Helpers
+// ==========================================
+
+export interface CreateUserSelectMenuOptions {
+  customId: string;
+  placeholder?: string;
+  minValues?: number;
+  maxValues?: number;
+  disabled?: boolean;
+}
+
+export interface CreateRoleSelectMenuOptions {
+  customId: string;
+  placeholder?: string;
+  minValues?: number;
+  maxValues?: number;
+  disabled?: boolean;
+}
+
+export interface CreateChannelSelectMenuOptions {
+  customId: string;
+  placeholder?: string;
+  channelTypes?: ChannelType[];
+  minValues?: number;
+  maxValues?: number;
+  disabled?: boolean;
+}
+
+export interface StringSelectOptionInput {
+  label: string;
+  value: string;
+  description?: string;
+  emoji?: string | APIMessageComponentEmoji;
+  default?: boolean;
+}
+
+export interface CreateStringSelectMenuOptions {
+  customId: string;
+  placeholder?: string;
+  options?: (StringSelectOptionInput | StringSelectMenuOptionBuilder)[];
+  minValues?: number;
+  maxValues?: number;
+  disabled?: boolean;
+}
+
+export function createUserSelectMenu(
+  options: CreateUserSelectMenuOptions,
+): UserSelectMenuBuilder {
+  const menu = new UserSelectMenuBuilder().setCustomId(options.customId);
+  if (options.placeholder) menu.setPlaceholder(options.placeholder);
+  if (options.minValues !== undefined) menu.setMinValues(options.minValues);
+  if (options.maxValues !== undefined) menu.setMaxValues(options.maxValues);
+  if (options.disabled !== undefined) menu.setDisabled(options.disabled);
+  return menu;
+}
+
+export function createRoleSelectMenu(
+  options: CreateRoleSelectMenuOptions,
+): RoleSelectMenuBuilder {
+  const menu = new RoleSelectMenuBuilder().setCustomId(options.customId);
+  if (options.placeholder) menu.setPlaceholder(options.placeholder);
+  if (options.minValues !== undefined) menu.setMinValues(options.minValues);
+  if (options.maxValues !== undefined) menu.setMaxValues(options.maxValues);
+  if (options.disabled !== undefined) menu.setDisabled(options.disabled);
+  return menu;
+}
+
+export function createChannelSelectMenu(
+  options: CreateChannelSelectMenuOptions,
+): ChannelSelectMenuBuilder {
+  const menu = new ChannelSelectMenuBuilder().setCustomId(options.customId);
+  if (options.placeholder) menu.setPlaceholder(options.placeholder);
+  if (options.channelTypes && options.channelTypes.length > 0) {
+    menu.setChannelTypes(options.channelTypes);
+  }
+  if (options.minValues !== undefined) menu.setMinValues(options.minValues);
+  if (options.maxValues !== undefined) menu.setMaxValues(options.maxValues);
+  if (options.disabled !== undefined) menu.setDisabled(options.disabled);
+  return menu;
+}
+
+export function createStringSelectMenu(
+  options: CreateStringSelectMenuOptions,
+): StringSelectMenuBuilder {
+  const menu = new StringSelectMenuBuilder().setCustomId(options.customId);
+  if (options.placeholder) menu.setPlaceholder(options.placeholder);
+  if (options.minValues !== undefined) menu.setMinValues(options.minValues);
+  if (options.maxValues !== undefined) menu.setMaxValues(options.maxValues);
+  if (options.disabled !== undefined) menu.setDisabled(options.disabled);
+
+  if (options.options && options.options.length > 0) {
+    const formattedOptions = options.options.map((opt) => {
+      if (opt instanceof StringSelectMenuOptionBuilder) {
+        return opt;
+      }
+      const optionBuilder = new StringSelectMenuOptionBuilder()
+        .setLabel(opt.label)
+        .setValue(opt.value);
+      if (opt.description) optionBuilder.setDescription(opt.description);
+      if (opt.emoji) {
+        if (typeof opt.emoji === "string") {
+          optionBuilder.setEmoji(Emojis.parse(opt.emoji));
+        } else {
+          optionBuilder.setEmoji(opt.emoji);
+        }
+      }
+      if (opt.default !== undefined) optionBuilder.setDefault(opt.default);
+      return optionBuilder;
+    });
+    menu.addOptions(formattedOptions);
+  }
+
+  return menu;
+}
+
+export interface CreateActionButtonOptions {
+  customId: string;
+  label?: string;
+  style?: ButtonStyle;
+  emoji?: string | APIMessageComponentEmoji;
+  disabled?: boolean;
+}
+
+export interface CreatePaginationRowOptions {
+  customIdPrefix: string;
+  currentPage: number;
+  totalPages: number;
+  disabled?: boolean;
+}
+
+export function createBackButton(
+  customId: string,
+  label = "← Back",
+): ButtonBuilder {
+  return new ButtonBuilder()
+    .setCustomId(customId)
+    .setLabel(label)
+    .setStyle(ButtonStyle.Secondary);
+}
+
+export function createActionButton(
+  options: CreateActionButtonOptions,
+): ButtonBuilder {
+  const button = new ButtonBuilder().setCustomId(options.customId);
+  if (options.label) button.setLabel(options.label);
+  button.setStyle(options.style ?? ButtonStyle.Primary);
+  if (options.emoji) {
+    if (typeof options.emoji === "string") {
+      button.setEmoji(Emojis.parse(options.emoji));
+    } else {
+      button.setEmoji(options.emoji);
+    }
+  }
+  if (options.disabled !== undefined) button.setDisabled(options.disabled);
+  return button;
+}
+
+export function createPaginationRow(
+  options: CreatePaginationRowOptions,
+): ActionRowBuilder<ButtonBuilder> {
+  const { customIdPrefix, currentPage, totalPages, disabled = false } = options;
+  const safeTotalPages = Math.max(1, totalPages);
+  const isFirstPage = currentPage <= 0;
+  const isLastPage = currentPage >= safeTotalPages - 1;
+
+  const prevBtn = new ButtonBuilder()
+    .setCustomId(`${customIdPrefix}:prev:${Math.max(0, currentPage - 1)}`)
+    .setLabel("Prev")
+    .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(disabled || isFirstPage);
+
+  const indicatorBtn = new ButtonBuilder()
+    .setCustomId(`${customIdPrefix}:indicator`)
+    .setLabel(`${currentPage + 1} / ${safeTotalPages}`)
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(true);
+
+  const nextBtn = new ButtonBuilder()
+    .setCustomId(`${customIdPrefix}:next:${currentPage + 1}`)
+    .setLabel("Next")
+    .setEmoji(Emojis.parse(Emojis.ARROW_RIGHT))
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(disabled || isLastPage);
+
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    prevBtn,
+    indicatorBtn,
+    nextBtn,
+  );
+}
+
+export function buildSafeActionRows<
+  T extends AnyComponentBuilder = MessageActionRowComponentBuilder,
+>(rows: (ActionRowBuilder<T> | any)[]): ActionRowBuilder<T>[] {
+  const MAX_ROWS = 5;
+  if (!rows || !Array.isArray(rows)) return [];
+
+  if (rows.length > MAX_ROWS) {
+    const warningMsg = `[PanelSafety] ActionRow limit exceeded (${rows.length} > ${MAX_ROWS}). Truncating to first ${MAX_ROWS} rows.`;
+    try {
+      container.logger?.warn(warningMsg);
+    } catch {
+      console.warn(warningMsg);
+    }
+  }
+
+  return rows.slice(0, MAX_ROWS);
+}
+
+export function formatBreadcrumbHeader(crumbs: string[]): string {
+
+  if (!crumbs || crumbs.length === 0) return "";
+  return crumbs
+    .map((crumb, idx) =>
+      idx === crumbs.length - 1 ? `**${crumb}**` : `\`${crumb}\``,
+    )
+    .join(" ❯ ");
+}
+
+export interface CategoryTab {
+  id: string;
+  label: string;
+  emoji?: string;
+  count?: number;
+}
+
+export function createCategorySubmenuRow(
+  customId: string,
+  categories: CategoryTab[],
+  activeCategoryId?: string,
+  placeholder = "Select Submenu Category...",
+): ActionRowBuilder<StringSelectMenuBuilder> {
+  const options = categories.map((cat) => ({
+    label: cat.count !== undefined ? `${cat.label} (${cat.count})` : cat.label,
+    value: cat.id,
+    emoji: cat.emoji,
+    default: cat.id === activeCategoryId,
+  }));
+
+  const menu = createStringSelectMenu({
+    customId,
+    placeholder,
+    options,
+  });
+
+  return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
+}
+

@@ -1,104 +1,79 @@
 import {
   ActionRowBuilder,
   ButtonBuilder,
-  ContainerBuilder,
-  SeparatorBuilder,
-  TextDisplayBuilder,
   StringSelectMenuBuilder,
 } from "@discordjs/builders";
 import {
   ButtonStyle,
-  MessageFlags,
-  SeparatorSpacingSize,
   type VoiceBasedChannel,
 } from "discord.js";
 import { channelMention, userMention } from "@discordjs/formatters";
 import { TVC } from "../keys.js";
 import type { VcRecord } from "../data.js";
-
 import type { LumiT } from "#lib/i18n/index.js";
+import {
+  makeCard,
+  makeInfoCard,
+  makeErrorCard,
+  CARD_ACCENTS,
+  formatStatusBadge,
+  type CardReply,
+} from "#utilities/cards.js";
+import {
+  createUserSelectMenu,
+  createRoleSelectMenu,
+  createStringSelectMenu,
+  createBackButton,
+  createActionButton,
+  buildSafeActionRows,
+} from "#utilities/panels.js";
 
-export interface PanelMessage {
-  readonly flags: number;
-  readonly components: ContainerBuilder[];
-}
+export type PanelMessage = CardReply;
 
-function btn(
-  action: string,
-  channelId: string,
-  label: string,
-  style: ButtonStyle = ButtonStyle.Secondary,
-): ButtonBuilder {
-  return new ButtonBuilder()
-    .setCustomId(`${TVC}:${action}:${channelId}`)
-    .setLabel(label)
-    .setStyle(style);
-}
-
-function row(...buttons: ButtonBuilder[]): ActionRowBuilder<ButtonBuilder> {
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons);
-}
-
-/** Builds the owner control panel for a temporary voice channel. */
+/** Builds the SaaS owner control panel for a temporary voice channel. */
 export function buildPanel(
   channel: VoiceBasedChannel,
   record: VcRecord,
   t?: LumiT,
 ): PanelMessage {
-  const limit =
+  const limitStr =
     channel.userLimit && channel.userLimit > 0
       ? String(channel.userLimit)
       : t
         ? t("tempvc:unlimited")
         : "Unlimited";
-  const lockIcon = record.locked ? "🔒" : "🔓";
-  const hideIcon = record.hidden ? "🕵️" : "👀";
 
-  const c = new ContainerBuilder();
+  const title = t ? t("tempvc:panelHeader") : "🔊 Voice Channel Controls";
 
-  c.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      t ? t("tempvc:panelHeader") : "## 🔊 Voice Channel Controls",
-    ),
+  const lockBadge = formatStatusBadge(
+    record.locked ? "disabled" : "enabled",
+    record.locked ? "LOCKED" : "UNLOCKED",
   );
-  c.addSeparatorComponents(
-    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small),
-  );
-  c.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      t
-        ? t("tempvc:panelContent", {
-            channel: channelMention(channel.id),
-            owner: userMention(record.ownerId),
-            limit,
-            lockIcon,
-            hideIcon,
-          })
-        : `**Channel:** ${channelMention(channel.id)}\n` +
-            `**Owner:** ${userMention(record.ownerId)}\n` +
-            `**Limit:** ${limit}\n` +
-            `**Lock:** ${lockIcon} · **Hide:** ${hideIcon}`,
-    ),
-  );
-  c.addSeparatorComponents(
-    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large),
+  const hideBadge = formatStatusBadge(
+    record.hidden ? "disabled" : "enabled",
+    record.hidden ? "HIDDEN" : "VISIBLE",
   );
 
-  const menu = new StringSelectMenuBuilder()
-    .setCustomId(`${TVC}:panelmenu:${channel.id}`)
-    .setPlaceholder(
-      t ? t("tempvc:panelSelectPlaceholder") : "Manage Channel...",
-    )
-    .addOptions(
+  const body = [
+    `**Channel:** ${channelMention(channel.id)}`,
+    `**Owner:** ${userMention(record.ownerId)}`,
+    `**Limit:** \`${limitStr}\``,
+    `**Status:** ${lockBadge} · ${hideBadge}`,
+  ];
+
+  const menu = createStringSelectMenu({
+    customId: `${TVC}:panelmenu:${channel.id}`,
+    placeholder: t ? t("tempvc:panelSelectPlaceholder") : "Manage Channel…",
+    options: [
       {
         label: t ? t("tempvc:panelOptRename") : "Rename Channel",
         value: "name",
-        emoji: { name: "👤" },
+        emoji: "👤",
       },
       {
         label: t ? t("tempvc:panelOptLimit") : "Set User Limit",
         value: "limit",
-        emoji: { name: "👥" },
+        emoji: "👥",
       },
       {
         label: record.locked
@@ -109,7 +84,7 @@ export function buildPanel(
             ? t("tempvc:panelOptLock")
             : "Lock Channel",
         value: "lock",
-        emoji: { name: record.locked ? "🔓" : "🔒" },
+        emoji: record.locked ? "🔓" : "🔒",
       },
       {
         label: record.hidden
@@ -120,71 +95,284 @@ export function buildPanel(
             ? t("tempvc:panelOptHide")
             : "Hide Channel",
         value: "hide",
-        emoji: { name: record.hidden ? "👀" : "🕵️" },
+        emoji: record.hidden ? "👀" : "🕵️",
       },
       {
         label: t ? t("tempvc:panelOptKick") : "Kick Members",
         value: "kick",
-        emoji: { name: "👢" },
+        emoji: "👢",
       },
       {
-        label: t ? t("tempvc:panelOptTrust") : "Trust Member",
+        label: t ? t("tempvc:panelOptTrust") : "Trust Member / Role",
         value: "trust",
-        emoji: { name: "✅" },
+        emoji: "✅",
       },
       {
-        label: t ? t("tempvc:panelOptUntrust") : "Untrust Member",
+        label: t ? t("tempvc:panelOptUntrust") : "Untrust Member / Role",
         value: "untrust",
-        emoji: { name: "❎" },
+        emoji: "❎",
       },
       {
-        label: t ? t("tempvc:panelOptBlock") : "Block Member",
+        label: t ? t("tempvc:panelOptBlock") : "Block Member / Role",
         value: "block",
-        emoji: { name: "🚫" },
+        emoji: "🚫",
       },
       {
-        label: t ? t("tempvc:panelOptUnblock") : "Unblock Member",
+        label: t ? t("tempvc:panelOptUnblock") : "Unblock Member / Role",
         value: "unblock",
-        emoji: { name: "♻️" },
+        emoji: "♻️",
       },
       {
         label: t ? t("tempvc:panelOptTransfer") : "Transfer Ownership",
         value: "transfer",
-        emoji: { name: "🔄" },
+        emoji: "🔄",
       },
       {
         label: t ? t("tempvc:panelOptDelete") : "Delete Channel",
         value: "delete",
-        emoji: { name: "🗑️" },
+        emoji: "🗑️",
       },
-    );
+    ],
+  });
 
-  c.addActionRowComponents(
+  const claimBtn = createActionButton({
+    customId: `${TVC}:claim:${channel.id}`,
+    label: t ? t("tempvc:panelClaimButton") : "🎯 Claim Ownership",
+    style: ButtonStyle.Primary,
+  });
+
+  const rows = buildSafeActionRows([
     new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu),
-  );
+    new ActionRowBuilder<ButtonBuilder>().addComponents(claimBtn),
+  ]);
 
-  c.addActionRowComponents(
-    row(
-      btn(
-        "claim",
-        channel.id,
-        t ? t("tempvc:panelClaimButton") : "🎯 Claim Ownership",
-      ),
-    ),
-  );
+  const footer = t
+    ? t("tempvc:panelFooter")
+    : "Settings are restricted to the owner. Anyone can claim if the owner leaves.";
 
-  c.addSeparatorComponents(
-    new SeparatorBuilder()
-      .setSpacing(SeparatorSpacingSize.Small)
-      .setDivider(false),
-  );
-  c.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      t
-        ? t("tempvc:panelFooter")
-        : "-# Settings are restricted to the owner. Anyone can claim if the owner leaves.",
-    ),
-  );
+  return makeCard(CARD_ACCENTS.PRIMARY, title, body, {
+    footer,
+    actionRows: rows,
+  });
+}
 
-  return { flags: MessageFlags.IsComponentsV2, components: [c] };
+/** Builds the sub-action view for kicking channel members. */
+export function buildKickView(
+  channel: VoiceBasedChannel,
+  _record: VcRecord,
+  t?: LumiT,
+): PanelMessage {
+  const userSelect = createUserSelectMenu({
+    customId: `${TVC}:select_kick:${channel.id}`,
+    placeholder: t ? t("tempvc:selectKickPlaceholder") : "Select member(s) to kick…",
+    minValues: 1,
+    maxValues: 10,
+  });
+
+  const backLabel = "← Back to Panel";
+  const backBtn = createBackButton(`${TVC}:panel:${channel.id}`, backLabel);
+
+  const rows = buildSafeActionRows([
+    new ActionRowBuilder().addComponents(userSelect),
+    new ActionRowBuilder().addComponents(backBtn),
+  ]);
+
+  return makeInfoCard(
+    t ? t("tempvc:kickMembersTitle") : "👢 Kick Members",
+    t ? t("tempvc:kickMembersMessage") : "Select members to disconnect from this voice channel:",
+    { actionRows: rows },
+  );
+}
+
+/** Builds the sub-action view for trusting users or roles. */
+export function buildTrustView(
+  channel: VoiceBasedChannel,
+  _record: VcRecord,
+  _t?: LumiT,
+): PanelMessage {
+  const userSelect = createUserSelectMenu({
+    customId: `${TVC}:select_trust:${channel.id}`,
+    placeholder: "Select user(s) to trust…",
+    minValues: 1,
+    maxValues: 10,
+  });
+
+  const roleSelect = createRoleSelectMenu({
+    customId: `${TVC}:select_trust_role:${channel.id}`,
+    placeholder: "Select role(s) to trust…",
+    minValues: 1,
+    maxValues: 10,
+  });
+
+  const backBtn = createBackButton(`${TVC}:panel:${channel.id}`, "← Back to Panel");
+
+  const rows = buildSafeActionRows([
+    new ActionRowBuilder().addComponents(userSelect),
+    new ActionRowBuilder().addComponents(roleSelect),
+    new ActionRowBuilder().addComponents(backBtn),
+  ]);
+
+  return makeInfoCard(
+    "✅ Trust User or Role",
+    "Select users or roles to grant access (connect, view, speak) to this channel:",
+    { actionRows: rows },
+  );
+}
+
+/** Builds the sub-action view for untrusting users or roles. */
+export function buildUntrustView(
+  channel: VoiceBasedChannel,
+  _record: VcRecord,
+  _t?: LumiT,
+): PanelMessage {
+  const userSelect = createUserSelectMenu({
+    customId: `${TVC}:select_untrust:${channel.id}`,
+    placeholder: "Select user(s) to untrust…",
+    minValues: 1,
+    maxValues: 10,
+  });
+
+  const roleSelect = createRoleSelectMenu({
+    customId: `${TVC}:select_untrust_role:${channel.id}`,
+    placeholder: "Select role(s) to untrust…",
+    minValues: 1,
+    maxValues: 10,
+  });
+
+  const backBtn = createBackButton(`${TVC}:panel:${channel.id}`, "← Back to Panel");
+
+  const rows = buildSafeActionRows([
+    new ActionRowBuilder().addComponents(userSelect),
+    new ActionRowBuilder().addComponents(roleSelect),
+    new ActionRowBuilder().addComponents(backBtn),
+  ]);
+
+  return makeInfoCard(
+    "❎ Untrust User or Role",
+    "Select users or roles to remove custom permissions from this channel:",
+    { actionRows: rows },
+  );
+}
+
+/** Builds the sub-action view for blocking users or roles. */
+export function buildBlockView(
+  channel: VoiceBasedChannel,
+  _record: VcRecord,
+  _t?: LumiT,
+): PanelMessage {
+  const userSelect = createUserSelectMenu({
+    customId: `${TVC}:select_block:${channel.id}`,
+    placeholder: "Select user(s) to block…",
+    minValues: 1,
+    maxValues: 10,
+  });
+
+  const roleSelect = createRoleSelectMenu({
+    customId: `${TVC}:select_block_role:${channel.id}`,
+    placeholder: "Select role(s) to block…",
+    minValues: 1,
+    maxValues: 10,
+  });
+
+  const backBtn = createBackButton(`${TVC}:panel:${channel.id}`, "← Back to Panel");
+
+  const rows = buildSafeActionRows([
+    new ActionRowBuilder().addComponents(userSelect),
+    new ActionRowBuilder().addComponents(roleSelect),
+    new ActionRowBuilder().addComponents(backBtn),
+  ]);
+
+  return makeInfoCard(
+    "🚫 Block User or Role",
+    "Select users or roles to block from joining this voice channel:",
+    { actionRows: rows },
+  );
+}
+
+/** Builds the sub-action view for unblocking users or roles. */
+export function buildUnblockView(
+  channel: VoiceBasedChannel,
+  _record: VcRecord,
+  _t?: LumiT,
+): PanelMessage {
+  const userSelect = createUserSelectMenu({
+    customId: `${TVC}:select_unblock:${channel.id}`,
+    placeholder: "Select user(s) to unblock…",
+    minValues: 1,
+    maxValues: 10,
+  });
+
+  const roleSelect = createRoleSelectMenu({
+    customId: `${TVC}:select_unblock_role:${channel.id}`,
+    placeholder: "Select role(s) to unblock…",
+    minValues: 1,
+    maxValues: 10,
+  });
+
+  const backBtn = createBackButton(`${TVC}:panel:${channel.id}`, "← Back to Panel");
+
+  const rows = buildSafeActionRows([
+    new ActionRowBuilder().addComponents(userSelect),
+    new ActionRowBuilder().addComponents(roleSelect),
+    new ActionRowBuilder().addComponents(backBtn),
+  ]);
+
+  return makeInfoCard(
+    "♻️ Unblock User or Role",
+    "Select users or roles to remove block restrictions from this channel:",
+    { actionRows: rows },
+  );
+}
+
+/** Builds the sub-action view for transferring ownership. */
+export function buildTransferView(
+  channel: VoiceBasedChannel,
+  _record: VcRecord,
+  _t?: LumiT,
+): PanelMessage {
+  const userSelect = createUserSelectMenu({
+    customId: `${TVC}:select_transfer:${channel.id}`,
+    placeholder: "Select new channel owner…",
+    minValues: 1,
+    maxValues: 1,
+  });
+
+  const backBtn = createBackButton(`${TVC}:panel:${channel.id}`, "← Back to Panel");
+
+  const rows = buildSafeActionRows([
+    new ActionRowBuilder().addComponents(userSelect),
+    new ActionRowBuilder().addComponents(backBtn),
+  ]);
+
+  return makeInfoCard(
+    "🔄 Transfer Ownership",
+    "Select a new owner for this voice channel:",
+    { actionRows: rows },
+  );
+}
+
+/** Builds the confirmation card for channel deletion. */
+export function buildDeleteConfirmView(
+  channel: VoiceBasedChannel,
+  t?: LumiT,
+): PanelMessage {
+  const confirmBtn = createActionButton({
+    customId: `${TVC}:delyes:${channel.id}`,
+    label: t ? t("tempvc:confirmDeleteButton") : "Confirm Delete",
+    style: ButtonStyle.Danger,
+  });
+
+  const backBtn = createBackButton(`${TVC}:panel:${channel.id}`, "← Back to Panel");
+
+  const rows = buildSafeActionRows([
+    new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn, backBtn),
+  ]);
+
+  return makeErrorCard(
+    t ? t("tempvc:deleteCardTitle") : "🗑️ Delete Channel?",
+    t
+      ? t("tempvc:deleteCardText")
+      : "This permanently deletes the voice channel.",
+    { actionRows: rows },
+  );
 }

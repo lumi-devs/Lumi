@@ -16,6 +16,8 @@ import { makeCard, noPingCard, type CardReply } from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { SUPPORTED_LANGUAGES } from "#lib/i18n/index.js";
 
+export const formatSubtitle = (text: string) => `-# ${text}`;
+
 export const DEFAULT_PREFIX = ",";
 
 type Row = ActionRowBuilder<MessageActionRowComponentBuilder>;

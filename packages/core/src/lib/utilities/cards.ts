@@ -16,6 +16,66 @@ import {
 import { Emojis } from "#lib/utilities/assets.js";
 import { BotConfig } from "./config.js";
 
+/** Standard palette of UI accent colors for SaaS cards and panels. */
+export const CARD_ACCENTS = {
+  PRIMARY: 0x5865f2,
+  INFO: 0x3498db,
+  SUCCESS: 0x2ecc71,
+  WARNING: 0xf1c40f,
+  ERROR: 0xe74c3c,
+  PURPLE: 0x9b59b6,
+  CYAN: 0x1abc9c,
+} as const;
+
+export function formatStatusBadge(status: string, label?: string): string {
+  const normalized = status.toLowerCase();
+  let icon = "⚪";
+  switch (normalized) {
+    case "online":
+    case "success":
+    case "enabled":
+    case "active":
+      icon = "🟢";
+      break;
+    case "idle":
+    case "warning":
+    case "pending":
+      icon = "🟡";
+      break;
+    case "dnd":
+    case "error":
+    case "disabled":
+    case "failed":
+      icon = "🔴";
+      break;
+    case "offline":
+    case "inactive":
+      icon = "⚪";
+      break;
+    default:
+      icon = "🔘";
+      break;
+  }
+  const text = label ?? status.toUpperCase();
+  return `${icon} \`${text}\``;
+}
+
+export const makeStatusBadge = formatStatusBadge;
+
+export function formatSubtitle(text: string, icon?: string): string {
+  const formatted = icon ? `${icon} ${text}` : text;
+  return `-# ${formatted}`;
+}
+
+export function formatBreadcrumbs(crumbs: string[], separator = " ❯ "): string {
+  if (!crumbs || crumbs.length === 0) return "";
+  return crumbs
+    .map((crumb, idx) =>
+      idx === crumbs.length - 1 ? `**${crumb}**` : `\`${crumb}\``,
+    )
+    .join(separator);
+}
+
 export interface CardOptions {
   footer?: string;
   thumbnail?: string;

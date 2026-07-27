@@ -1,11 +1,6 @@
 import {
   ActionRowBuilder,
-  ButtonBuilder,
-  ChannelSelectMenuBuilder,
-  RoleSelectMenuBuilder,
-  StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
-  UserSelectMenuBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import {
@@ -34,9 +29,30 @@ import {
   type ConfigField,
   type ModuleMeta,
 } from "#lib/module-system/Module.js";
-import { makeCard, noPingCard, type CardReply } from "#lib/utilities/cards.js";
+import {
+  makeCard,
+  noPingCard,
+  CARD_ACCENTS,
+  type CardReply,
+} from "#utilities/cards.js";
+
+const formatSubtitle = (text: string) => `-# ${text}`;
+const formatStatusBadge = (status: "enabled" | "disabled") =>
+  status === "enabled"
+    ? `${Emojis.SUCCESS} \`ENABLED\``
+    : `${Emojis.ERROR} \`DISABLED\``;
 import { backToHubRow } from "#modules/core/lib/hub-panel.js";
-import { Emojis } from "#lib/utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
+import {
+  createActionButton,
+  createBackButton,
+  createChannelSelectMenu,
+  createPaginationRow,
+  createRoleSelectMenu,
+  createStringSelectMenu,
+  createUserSelectMenu,
+  buildSafeActionRows,
+} from "#utilities/panels.js";
 import type {
   ConfigHistoryEntry,
   ConfigOverrideEntry,
@@ -94,19 +110,6 @@ export async function hasPanelAccess(
 }
 
 type Row = ActionRowBuilder<MessageActionRowComponentBuilder>;
-
-const row = (...components: MessageActionRowComponentBuilder[]): Row =>
-  new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-    ...components,
-  );
-
-/** The shared "← Back" navigation button; only the target customId varies. */
-const backButton = (customId: string): ButtonBuilder =>
-  new ButtonBuilder()
-    .setCustomId(customId)
-    .setLabel("Back")
-    .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
-    .setStyle(ButtonStyle.Secondary);
 
 export function formatFieldValue(field: ConfigField, value: unknown): string {
   const val = value ?? field.default ?? null;
@@ -179,61 +182,57 @@ export function buildFeatureListView(
     return `${dot} ${f.meta.emoji} **${f.meta.displayName}**`;
   });
 
-  const select = new StringSelectMenuBuilder()
-    .setCustomId("cfg:sel")
-    .setPlaceholder("Select a feature to configure…")
-    .addOptions(
-      pageFeatures.length
-        ? pageFeatures.map((f) =>
-            new StringSelectMenuOptionBuilder()
-              .setLabel(cutText(f.meta.displayName, 100))
-              .setValue(f.meta.name)
-              .setDescription(
-                f.meta.description
-                  ? cutText(f.meta.description, 100)
-                  : "No description",
-              )
-              .setEmoji(Emojis.parse(f.meta.emoji)),
-          )
-        : [
-            new StringSelectMenuOptionBuilder()
-              .setLabel("No features registered")
-              .setValue("_none"),
-          ],
-    )
-    .setDisabled(pageFeatures.length === 0);
+  const select = createStringSelectMenu({
+    customId: `cfg:sel:${safePage}`,
+    placeholder: "Select a feature to configure…",
+    disabled: pageFeatures.length === 0,
+    options: pageFeatures.length
+      ? pageFeatures.map((f) =>
+          new StringSelectMenuOptionBuilder()
+            .setLabel(cutText(f.meta.displayName, 100))
+            .setValue(f.meta.name)
+            .setDescription(
+              f.meta.description
+                ? cutText(f.meta.description, 100)
+                : "No description",
+            )
+            .setEmoji(Emojis.parse(f.meta.emoji)),
+        )
+      : [
+          new StringSelectMenuOptionBuilder()
+            .setLabel("No features registered")
+            .setValue("_none"),
+        ],
+  });
 
-  const rows: Row[] = [backToHubRow(), row(select)];
+  const rows: Row[] = [
+    backToHubRow(),
+    new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(select),
+  ];
 
   if (totalPages > 1) {
     rows.push(
-      row(
-        new ButtonBuilder()
-          .setCustomId(`cfg:page:${safePage - 1}`)
-          .setLabel("Prev")
-          .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
-          .setStyle(ButtonStyle.Secondary)
-          .setDisabled(safePage <= 0),
-        new ButtonBuilder()
-          .setCustomId(`cfg:page:${safePage + 1}`)
-          .setLabel("Next")
-          .setEmoji(Emojis.parse(Emojis.ARROW_RIGHT))
-          .setStyle(ButtonStyle.Secondary)
-          .setDisabled(safePage >= totalPages - 1),
-      ),
+      createPaginationRow({
+        customIdPrefix: "cfg:page",
+        currentPage: safePage,
+        totalPages,
+      }),
     );
   }
 
   return makeCard(
-    0,
-    `${Emojis.GEAR} Modules`,
-    lines.length ? lines.join("\n") : "*No features registered.*",
+    CARD_ACCENTS.PRIMARY,
+    `${Emojis.GEAR} Feature Modules`,
+    [
+      formatSubtitle("Browse and configure feature modules enabled for this server."),
+      lines.length ? lines.join("\n") : "*No features registered.*",
+    ],
     {
       footer:
         totalPages > 1
           ? `Page ${safePage + 1}/${totalPages} • Select a module to enable, disable, or configure it.`
           : "Select a module to enable, disable, or configure it.",
-      actionRows: rows,
+      actionRows: buildSafeActionRows(rows),
     },
   );
 }
@@ -242,13 +241,12 @@ export function buildFeatureDetailView(
   meta: ModuleMeta,
   config: Record<string, unknown>,
   guildEnabled: boolean,
+  page = 0,
 ): CardReply {
   const fields = meta.configFields ?? [];
-  const statusLine = guildEnabled
-    ? `${Emojis.SUCCESS} **Enabled**`
-    : `${Emojis.ERROR} **Disabled**`;
+  const statusBadge = formatStatusBadge(guildEnabled ? "enabled" : "disabled");
 
-  const fieldLines = [`**Status:** ${statusLine}`];
+  const fieldLines = [`**Status:** ${statusBadge}`];
   for (const f of fields) {
     const req = f.required ? " *(required)*" : "";
     fieldLines.push(
@@ -258,141 +256,162 @@ export function buildFeatureDetailView(
 
   const rows: Row[] = [];
 
-  const primary = [
-    new ButtonBuilder()
-      .setCustomId(`cfg:tog:${meta.name}`)
-      .setLabel(guildEnabled ? "Disable" : "Enable")
-      .setEmoji(Emojis.parse(guildEnabled ? Emojis.CROSS : Emojis.CHECK))
-      .setStyle(guildEnabled ? ButtonStyle.Danger : ButtonStyle.Success),
+  const primaryComponents: MessageActionRowComponentBuilder[] = [
+    createActionButton({
+      customId: `cfg:tog:${meta.name}:${page}`,
+      label: guildEnabled ? "Disable Module" : "Enable Module",
+      emoji: guildEnabled ? Emojis.CROSS : Emojis.CHECK,
+      style: guildEnabled ? ButtonStyle.Danger : ButtonStyle.Success,
+    }),
   ];
+
   if (hasFieldType(meta, FieldType.STRING, FieldType.NUMBER)) {
-    primary.push(
-      new ButtonBuilder()
-        .setCustomId(`cfg:cfg:${meta.name}`)
-        .setLabel("Configure…")
-        .setEmoji(Emojis.parse(Emojis.EDIT))
-        .setStyle(ButtonStyle.Secondary),
+    primaryComponents.push(
+      createActionButton({
+        customId: `cfg:cfg:${meta.name}:${page}`,
+        label: "Configure…",
+        emoji: Emojis.EDIT,
+        style: ButtonStyle.Secondary,
+      }),
     );
   }
-  primary.push(
-    new ButtonBuilder()
-      .setCustomId(`cfg:rst:${meta.name}`)
-      .setLabel("Reset")
-      .setEmoji(Emojis.parse(Emojis.UNINSTALL))
-      .setStyle(ButtonStyle.Secondary),
+
+  primaryComponents.push(
+    createActionButton({
+      customId: `cfg:rst:${meta.name}:${page}`,
+      label: "Reset",
+      emoji: Emojis.UNINSTALL,
+      style: ButtonStyle.Secondary,
+    }),
   );
-  rows.push(row(...primary));
 
-  const secondary = [
-    backButton("cfg:back"),
-    new ButtonBuilder()
-      .setCustomId(`cfg:hist:${meta.name}`)
-      .setLabel("History")
-      .setEmoji(Emojis.parse(Emojis.CLOCK))
-      .setStyle(ButtonStyle.Secondary),
+  rows.push(
+    new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(...primaryComponents),
+  );
+
+  const secondaryComponents: MessageActionRowComponentBuilder[] = [
+    createBackButton(`cfg:back:${page}`, "← Back to Modules"),
+    createActionButton({
+      customId: `cfg:hist:${meta.name}:${page}`,
+      label: "History",
+      emoji: Emojis.CLOCK,
+      style: ButtonStyle.Secondary,
+    }),
   ];
+
   if (meta.configOverrides) {
-    secondary.push(
-      new ButtonBuilder()
-        .setCustomId(`cfg:ovr:${meta.name}`)
-        .setLabel("Overrides")
-        .setEmoji(Emojis.parse(Emojis.SHIELD))
-        .setStyle(ButtonStyle.Secondary),
+    secondaryComponents.push(
+      createActionButton({
+        customId: `cfg:ovr:${meta.name}:${page}`,
+        label: "Overrides",
+        emoji: Emojis.SHIELD,
+        style: ButtonStyle.Secondary,
+      }),
     );
   }
-  rows.push(row(...secondary));
 
+  rows.push(
+    new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(...secondaryComponents),
+  );
+
+  // Chunk boolean fields (up to 5 boolean buttons per row)
   const boolFields = fields.filter((f) => f.type === FieldType.BOOLEAN);
   for (let i = 0; i < boolFields.length; i += 5) {
     const chunk = boolFields.slice(i, i + 5);
     rows.push(
-      row(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
         ...chunk.map((f) => {
           const def = f.default === undefined ? false : Boolean(f.default);
           const on = Boolean(config[f.key] ?? def);
-          return new ButtonBuilder()
-            .setCustomId(`cfg:bool:${meta.name}:${f.key}`)
-            .setLabel(
-              `${on ? Emojis.CHECK : Emojis.CROSS} ${cutText(f.label, 60)}`,
-            )
-            .setStyle(on ? ButtonStyle.Success : ButtonStyle.Secondary);
+          return createActionButton({
+            customId: `cfg:bool:${meta.name}:${f.key}:${page}`,
+            label: `${on ? Emojis.CHECK : Emojis.CROSS} ${cutText(f.label, 40)}`,
+            style: on ? ButtonStyle.Success : ButtonStyle.Secondary,
+          });
         }),
       ),
     );
   }
 
+  // Interactive entity select menus for Channel, Role, User, and Enum fields
   for (const f of fields) {
     const isRoleList = f.list && f.key.includes("role");
     const isChannelList = f.list && f.key.includes("channel");
     const isUserList = f.list && f.key.includes("user");
 
     if (f.type === FieldType.CHANNEL || isChannelList) {
-      const chBuilder = new ChannelSelectMenuBuilder()
-        .setCustomId(`cfg:ch:${meta.name}:${f.key}`)
-        .setPlaceholder(`Set: ${cutText(f.label, 80)}`)
-        .setMinValues(0)
-        .setMaxValues(isChannelList ? 25 : 1);
-      if (f.channelTypes?.length) {
-        chBuilder.setChannelTypes(...f.channelTypes);
-      } else if (
-        f.key.includes("base") ||
-        f.key.includes("voice") ||
-        f.key.includes("lounge")
-      ) {
-        chBuilder.setChannelTypes(
-          ChannelType.GuildVoice,
-          ChannelType.GuildStageVoice,
-        );
-      } else {
-        chBuilder.setChannelTypes(ChannelType.GuildText);
+      let channelTypes: ChannelType[] | undefined = f.channelTypes;
+      if (!channelTypes || channelTypes.length === 0) {
+        if (
+          f.key.includes("base") ||
+          f.key.includes("voice") ||
+          f.key.includes("lounge")
+        ) {
+          channelTypes = [
+            ChannelType.GuildVoice,
+            ChannelType.GuildStageVoice,
+          ];
+        } else {
+          channelTypes = [ChannelType.GuildText];
+        }
       }
-      rows.push(row(chBuilder));
-    } else if (f.type === FieldType.ROLE || isRoleList) {
+      const chBuilder = createChannelSelectMenu({
+        customId: `cfg:ch:${meta.name}:${f.key}:${page}`,
+        placeholder: `Set: ${cutText(f.label, 80)}`,
+        channelTypes,
+        minValues: 0,
+        maxValues: isChannelList ? 25 : 1,
+      });
       rows.push(
-        row(
-          new RoleSelectMenuBuilder()
-            .setCustomId(`cfg:role:${meta.name}:${f.key}`)
-            .setPlaceholder(`Set: ${cutText(f.label, 80)}`)
-            .setMinValues(0)
-            .setMaxValues(isRoleList ? 25 : 1),
-        ),
+        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(chBuilder),
+      );
+    } else if (f.type === FieldType.ROLE || isRoleList) {
+      const roleBuilder = createRoleSelectMenu({
+        customId: `cfg:role:${meta.name}:${f.key}:${page}`,
+        placeholder: `Set: ${cutText(f.label, 80)}`,
+        minValues: 0,
+        maxValues: isRoleList ? 25 : 1,
+      });
+      rows.push(
+        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(roleBuilder),
       );
     } else if (f.type === FieldType.USER || isUserList) {
+      const userBuilder = createUserSelectMenu({
+        customId: `cfg:user:${meta.name}:${f.key}:${page}`,
+        placeholder: `Set: ${cutText(f.label, 80)}`,
+        minValues: 0,
+        maxValues: isUserList ? 25 : 1,
+      });
       rows.push(
-        row(
-          new UserSelectMenuBuilder()
-            .setCustomId(`cfg:user:${meta.name}:${f.key}`)
-            .setPlaceholder(`Set: ${cutText(f.label, 80)}`)
-            .setMinValues(0)
-            .setMaxValues(isUserList ? 25 : 1),
-        ),
+        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(userBuilder),
       );
     } else if (f.type === FieldType.ENUM && f.choices?.length) {
       const current = config[f.key];
-      rows.push(
-        row(
-          new StringSelectMenuBuilder()
-            .setCustomId(`cfg:enum:${meta.name}:${f.key}`)
-            .setPlaceholder(`Set: ${cutText(f.label, 80)}`)
-            .addOptions(
-              f.choices.slice(0, 25).map((choice) =>
-                new StringSelectMenuOptionBuilder()
-                  .setLabel(cutText(choice, 100))
-                  .setValue(choice)
-                  .setDefault(choice === current),
-              ),
-            ),
+      const enumBuilder = createStringSelectMenu({
+        customId: `cfg:enum:${meta.name}:${f.key}:${page}`,
+        placeholder: `Set: ${cutText(f.label, 80)}`,
+        options: f.choices.slice(0, 25).map((choice) =>
+          new StringSelectMenuOptionBuilder()
+            .setLabel(cutText(choice, 100))
+            .setValue(choice)
+            .setDefault(choice === current),
         ),
+      });
+      rows.push(
+        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(enumBuilder),
       );
     }
   }
 
   return noPingCard(
     makeCard(
-      guildEnabled ? 0 : 0,
+      guildEnabled ? CARD_ACCENTS.PRIMARY : CARD_ACCENTS.WARNING,
       `${meta.emoji} ${meta.displayName}`,
-      [meta.description || "No description.", fieldLines.join("\n")],
-      { actionRows: rows },
+      [
+        formatSubtitle(meta.description || "No description provided."),
+        fieldLines.join("\n"),
+      ],
+      { actionRows: buildSafeActionRows(rows) },
     ),
   );
 }
@@ -400,6 +419,7 @@ export function buildFeatureDetailView(
 export function buildHistoryView(
   meta: ModuleMeta,
   entries: ConfigHistoryEntry[],
+  page = 0,
 ): CardReply {
   const fieldByKey = new Map(
     (meta.configFields ?? []).map((f) => [f.key, f] as const),
@@ -425,33 +445,40 @@ export function buildHistoryView(
   const rollbackable = entries.filter(
     (e) => e.oldValue !== null && e.oldValue !== undefined,
   );
+
+  rows.push(
+    new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+      createBackButton(`cfg:open:${meta.name}:${page}`, "← Back to Feature"),
+    ),
+  );
+
   if (rollbackable.length) {
-    rows.push(
-      row(
-        new StringSelectMenuBuilder()
-          .setCustomId(`cfg:rb:${meta.name}`)
-          .setPlaceholder("Roll back a change…")
-          .addOptions(
-            rollbackable.slice(0, 25).map((e) =>
-              new StringSelectMenuOptionBuilder()
-                .setLabel(cutText(`Restore ${labelFor(e.key)}`, 100))
-                .setValue(e.id)
-                .setDescription(
-                  cutText(`Roll back to its previous value`, 100),
-                ),
-            ),
+    const rbSelect = createStringSelectMenu({
+      customId: `cfg:rb:${meta.name}:${page}`,
+      placeholder: "Roll back a change…",
+      options: rollbackable.slice(0, 25).map((e) =>
+        new StringSelectMenuOptionBuilder()
+          .setLabel(cutText(`Restore ${labelFor(e.key)}`, 100))
+          .setValue(e.id)
+          .setDescription(
+            cutText(`Roll back to its previous value`, 100),
           ),
       ),
+    });
+    rows.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(rbSelect),
     );
   }
-  rows.push(row(backButton(`cfg:open:${meta.name}`)));
 
   return noPingCard(
     makeCard(
-      0,
+      CARD_ACCENTS.INFO,
       `${Emojis.CLOCK} ${meta.displayName} • History`,
-      lines.join("\n"),
-      { actionRows: rows },
+      [
+        formatSubtitle("Configuration change log and rollback history."),
+        lines.join("\n"),
+      ],
+      { actionRows: buildSafeActionRows(rows) },
     ),
   );
 }
@@ -473,6 +500,7 @@ const overrideTargetMention = (o: ConfigOverrideEntry) => {
 export function buildOverridesView(
   meta: ModuleMeta,
   overrides: ConfigOverrideEntry[],
+  page = 0,
 ): CardReply {
   const lines = overrides.length
     ? overrides.map(
@@ -482,43 +510,109 @@ export function buildOverridesView(
     : ["*No overrides set for this feature.*"];
 
   const rows: Row[] = [];
-  if (overrides.length) {
-    rows.push(
-      row(
-        new StringSelectMenuBuilder()
-          .setCustomId(`cfg:ovrm:${meta.name}`)
-          .setPlaceholder("Remove an override…")
-          .addOptions(
-            overrides.slice(0, 25).map((o) =>
-              new StringSelectMenuOptionBuilder()
-                .setLabel(cutText(`${o.key} • ${o.modelType}`, 100))
-                .setValue(`${o.modelType}|${o.modelId}|${o.key}`)
-                .setDescription(cutText(String(o.value), 100)),
-            ),
-          ),
-      ),
-    );
-  }
+
   rows.push(
-    row(
-      backButton(`cfg:open:${meta.name}`),
-      new ButtonBuilder()
-        .setCustomId(`cfg:ovadd:${meta.name}`)
-        .setLabel("Add Override")
-        .setEmoji(Emojis.parse(Emojis.EDIT))
-        .setStyle(ButtonStyle.Primary),
+    new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+      createBackButton(`cfg:open:${meta.name}:${page}`, "← Back to Feature"),
+      createActionButton({
+        customId: `cfg:ovadd:${meta.name}:${page}`,
+        label: "Add Override…",
+        emoji: Emojis.EDIT,
+        style: ButtonStyle.Primary,
+      }),
     ),
   );
 
+  if (overrides.length) {
+    const rmSelect = createStringSelectMenu({
+      customId: `cfg:ovrm:${meta.name}:${page}`,
+      placeholder: "Remove an override…",
+      options: overrides.slice(0, 25).map((o) =>
+        new StringSelectMenuOptionBuilder()
+          .setLabel(cutText(`${o.key} • ${o.modelType}`, 100))
+          .setValue(`${o.modelType}|${o.modelId}|${o.key}`)
+          .setDescription(cutText(String(o.value), 100)),
+      ),
+    });
+    rows.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(rmSelect),
+    );
+  }
+
   return noPingCard(
     makeCard(
-      0,
+      CARD_ACCENTS.PURPLE,
       `${Emojis.SHIELD} ${meta.displayName} • Overrides`,
       [
+        formatSubtitle("Targeted configuration overrides for channels, roles, and users."),
         lines.join("\n"),
         "-# Overrides apply a config value for a specific channel, role, user, or category.",
       ],
-      { actionRows: rows },
+      { actionRows: buildSafeActionRows(rows) },
     ),
+  );
+}
+
+/**
+ * Interactive target & field selection view for creating module overrides.
+ * Replaces manual text ID input modals with native Discord entity select menus.
+ */
+export function buildAddOverrideTargetView(
+  meta: ModuleMeta,
+  page = 0,
+): CardReply {
+  const fields = meta.configFields ?? [];
+  const keyMenu = createStringSelectMenu({
+    customId: `cfg:ov:pick_key:${meta.name}:${page}`,
+    placeholder: "Select Config Key to Override…",
+    options: fields.length
+      ? fields.slice(0, 25).map((f) =>
+          new StringSelectMenuOptionBuilder()
+            .setLabel(cutText(f.label, 100))
+            .setValue(f.key)
+            .setDescription(cutText(`Key: ${f.key}`, 100)),
+        )
+      : [
+          new StringSelectMenuOptionBuilder()
+            .setLabel("No configurable keys")
+            .setValue("_none"),
+        ],
+  });
+
+  const roleMenu = createRoleSelectMenu({
+    customId: `cfg:ov:pick_role:${meta.name}:${page}`,
+    placeholder: "Select Target Role for Override…",
+  });
+
+  const channelMenu = createChannelSelectMenu({
+    customId: `cfg:ov:pick_channel:${meta.name}:${page}`,
+    placeholder: "Select Target Channel for Override…",
+  });
+
+  const userMenu = createUserSelectMenu({
+    customId: `cfg:ov:pick_user:${meta.name}:${page}`,
+    placeholder: "Select Target User for Override…",
+  });
+
+  const backRow = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+    createBackButton(`cfg:ovr:${meta.name}:${page}`, "← Back to Overrides"),
+  );
+
+  return makeCard(
+    CARD_ACCENTS.PURPLE,
+    `${Emojis.SHIELD} Add Override • ${meta.displayName}`,
+    [
+      formatSubtitle("Select target role, channel, or user via select menus."),
+      "Pick a target entity below to apply a custom config override.",
+    ],
+    {
+      actionRows: buildSafeActionRows([
+        backRow,
+        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(keyMenu),
+        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(roleMenu),
+        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(channelMenu),
+        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(userMenu),
+      ]),
+    },
   );
 }
