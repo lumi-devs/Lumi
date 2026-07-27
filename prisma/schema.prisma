@@ -4,7 +4,6 @@
 
 generator client {
   provider        = "prisma-client-js"
-  output          = "./generated/client"
   previewFeatures = ["fullTextSearchPostgres"]
   engineType      = "library"
 }

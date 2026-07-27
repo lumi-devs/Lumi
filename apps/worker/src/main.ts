@@ -2,8 +2,8 @@ import "./telemetry.js";
 import "@lumi/core/setup";
 import { container } from "@sapphire/framework";
 import { shutdownTracing, runDrainSequence } from "@lumi/observability";
-import { LumiClient } from "@lumi/core";
-import { envParseString } from "#lib/env.js";
+import { LumiClient, envParseString } from "@lumi/core";
+
 
 const client = await LumiClient.bootstrap().catch((err: unknown): never => {
   console.error(
