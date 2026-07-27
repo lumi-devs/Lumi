@@ -15,7 +15,7 @@ x-lumi-service: &lumi-service
   build:
     context: .
     dockerfile: Dockerfile
-    target: production
+    target: runner
   env_file:
     - path: .env
       required: false
