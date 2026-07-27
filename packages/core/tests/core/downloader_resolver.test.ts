@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import child_process from "node:child_process";
 import { DownloadResolver, MODULE_ROOT, ADDON_MODULES_ROOT } from "#lib/downloader/resolver.js";
 // CI trigger comment
 
@@ -13,6 +14,18 @@ describe("DownloadResolver Edge Cases", () => {
   beforeAll(async () => {
     resolver = new DownloadResolver();
     testDir = await fs.mkdtemp(path.join(os.tmpdir(), "lumi-downloader-test-"));
+  });
+
+  beforeEach(() => {
+    vi.spyOn(child_process, "execFile").mockImplementation((...args: any[]) => {
+      const cb = args[args.length - 1];
+      if (typeof cb === "function") {
+        const error: any = new Error("Git clone failed");
+        error.stderr = "Git clone failed";
+        cb(error, "", "Git clone failed");
+      }
+      return {} as any;
+    });
   });
 
   afterAll(async () => {

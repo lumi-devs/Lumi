@@ -172,7 +172,11 @@ export class RedisStreamsBus implements EventBus {
           [string, Array<[string, string[]]>]
         >) {
           for (const [id, fields] of entries) {
-            await this.deliver(stream, opts.group, id, fields, 1, handler);
+            try {
+              await this.deliver(stream, opts.group, id, fields, 1, handler);
+            } catch (err) {
+              this.log("error", "deliver failed", { stream, id, err: String(err) });
+            }
           }
         }
       }
@@ -183,8 +187,9 @@ export class RedisStreamsBus implements EventBus {
     // Stale-consumer claim loop. Runs alongside the main read loop on the same
     // consumer id; XAUTOCLAIM scans the group's pending list and hands us back
     // any entries idle > claimMinIdleMs that we then redeliver locally.
+    let claimTimer: NodeJS.Timeout | undefined;
     if (this.claimIntervalMs > 0) {
-      const claimTimer = setInterval(() => {
+      claimTimer = setInterval(() => {
         if (stopped || this.closed) return;
         void this.runClaim(streams, opts, handler).catch((err) => {
           this.log("error", "xautoclaim loop failed", { err: String(err) });
@@ -194,8 +199,9 @@ export class RedisStreamsBus implements EventBus {
     }
 
     // Stats loop. Idempotent and cheap (XLEN + XPENDING summary).
+    let statsTimer: NodeJS.Timeout | undefined;
     if (this.onStats && this.statsIntervalMs > 0) {
-      const statsTimer = setInterval(() => {
+      statsTimer = setInterval(() => {
         if (stopped || this.closed) return;
         void this.runStats(streams, opts.group).catch((err) => {
           this.log("error", "stats loop failed", { err: String(err) });
@@ -206,6 +212,14 @@ export class RedisStreamsBus implements EventBus {
 
     return async () => {
       stopped = true;
+      if (claimTimer) {
+        clearInterval(claimTimer);
+        this.timers.delete(claimTimer);
+      }
+      if (statsTimer) {
+        clearInterval(statsTimer);
+        this.timers.delete(statsTimer);
+      }
       // Wait for the read loop to actually exit. The current XREADGROUP BLOCK
       // returns within `blockMs`, and any in-flight `deliver()` (handler +
       // XACK) finishes its iteration before the loop re-checks `stopped`.
@@ -249,7 +263,20 @@ export class RedisStreamsBus implements EventBus {
       return;
     }
 
-    const body = decodeBody<T>(fields);
+    let body: T;
+    try {
+      body = decodeBody<T>(fields);
+    } catch (err) {
+      this.log("error", "malformed payload JSON or missing fields", {
+        stream,
+        id,
+        err: String(err),
+      });
+      await this.sendToDlq(stream, id, fields, deliveryCount);
+      await this.publisher.xack(stream, group, id);
+      return;
+    }
+
     const msg: BusMessage<T> = {
       id,
       body,
@@ -304,14 +331,22 @@ export class RedisStreamsBus implements EventBus {
             opts.group,
             id,
           );
-          await this.deliver(
-            stream,
-            opts.group,
-            id,
-            fields,
-            deliveryCount,
-            handler,
-          );
+          try {
+            await this.deliver(
+              stream,
+              opts.group,
+              id,
+              fields,
+              deliveryCount,
+              handler,
+            );
+          } catch (err) {
+            this.log("error", "claim deliver failed", {
+              stream,
+              id,
+              err: String(err),
+            });
+          }
         }
         cursor = nextCursor;
         if (cursor === "0-0") break;
