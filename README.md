@@ -49,11 +49,11 @@ Built with **Bun**, **TypeScript**, **discord.js v14**, and the **[Sapphire Fram
 
 ```sh
 git clone https://github.com/lumi-devs/lumi.git && cd lumi
-cp .env.example .env   # Configure BOT_TOKEN and CLIENT_ID
-bun install            # Install workspace dependencies
-docker compose up -d postgres pgbouncer redis rabbitmq  # Boot backing services
-bun run db:push        # Sync database schema
-bun run dev            # Start bot in monolith mode
+cp .env.example .env
+bun install
+docker compose up -d postgres pgbouncer redis rabbitmq
+bun run db:push
+bun run dev
 ```
 
 <details>
@@ -61,17 +61,16 @@ bun run dev            # Start bot in monolith mode
 
 ```sh
 cp .env.example .env
-# Edit .env — set BOT_TOKEN, CLIENT_ID, DATABASE_URL, REDIS_URL, NODE_ENV=production
 
-# Option A: Pull latest pre-built container image from GitHub Container Registry (GHCR)
+# Option A: Pull latest pre-built container image from GHCR
 docker pull ghcr.io/lumi-devs/lumi:latest
 docker compose up -d
 
-# Option B: Build your own local Docker container image
+# Option B: Build local container image
 docker compose build
 docker compose up -d
 
-# Optional: Boot with Web Dashboard included
+# Optional: Include Web Dashboard
 docker compose --profile dashboard up -d
 ```
 
@@ -82,20 +81,11 @@ For scaled-out / distributed deployments (`gateway` + `worker` + `scheduler`), s
 <details>
 <summary><strong>Development Setup & Nix Environment</strong></summary>
 
-For local development with hot-reloading, type checking, and isolated tooling:
-
 ```sh
-# Enter the multi-platform Nix dev shell (pre-packaged Bun, Node, GH CLI, Turbo, Prisma)
 nix develop
 
-# Or using legacy nix-shell
-nix-shell
-
-# Install dependencies and generate database clients
 bun install
 bun run db:generate
-
-# Launch hot-reloading development server
 bun run dev
 ```
 
