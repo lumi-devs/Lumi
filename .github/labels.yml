@@ -1,0 +1,167 @@
+# .github/labels.yml — Label definitions as code (synced daily by labelsync.yml)
+# Format: name, color (hex without #), description
+# Run `gh workflow run labelsync.yml` to sync manually
+
+# ── Triage & Status ────────────────────────────────────────────────────────────
+- name: "Status: Needs Triage"
+  color: "E4E669"
+  description: "Newly opened issue, needs maintainer review"
+
+# ── Type ───────────────────────────────────────────────────────────────────────
+- name: "bug"
+  color: "d73a4a"
+  description: "Something isn't working"
+
+- name: "enhancement"
+  color: "a2eeef"
+  description: "New feature or request"
+
+- name: "documentation"
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+
+- name: "question"
+  color: "d876e3"
+  description: "Further information is requested"
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "This issue or pull request already exists"
+
+- name: "invalid"
+  color: "e4e669"
+  description: "This doesn't seem right"
+
+- name: "wontfix"
+  color: "ffffff"
+  description: "This will not be worked on"
+
+- name: "breaking change"
+  color: "B60205"
+  description: "Introduces breaking change"
+
+- name: "performance"
+  color: "0E8A16"
+  description: "Performance improvement"
+
+# ── Workflow ───────────────────────────────────────────────────────────────────
+- name: "good first issue"
+  color: "7057ff"
+  description: "Good for newcomers"
+
+- name: "help wanted"
+  color: "008672"
+  description: "Extra attention is needed"
+
+- name: "pinned"
+  color: "0075CA"
+  description: "Pinned - exempt from stale"
+
+- name: "security"
+  color: "D93F0B"
+  description: "Security related"
+
+- name: "no-stale"
+  color: "1D76DB"
+  description: "Exempt from stale bot"
+
+- name: "blocked"
+  color: "E4E669"
+  description: "Blocked by something"
+
+- name: "stale"
+  color: "ededed"
+  description: "No recent activity"
+
+# ── Dependencies ───────────────────────────────────────────────────────────────
+- name: "dependencies"
+  color: "0366D6"
+  description: "Dependency bumps"
+
+- name: "npm"
+  color: "CB3837"
+  description: "npm package changes"
+
+- name: "actions"
+  color: "2088FF"
+  description: "GitHub Actions changes"
+
+# ── PR Size ────────────────────────────────────────────────────────────────────
+- name: "size:S"
+  color: "6DB96D"
+  description: "Small PR (<50 lines)"
+
+- name: "size:M"
+  color: "FBCA04"
+  description: "Medium PR (<200 lines)"
+
+- name: "size:L"
+  color: "F66A0A"
+  description: "Large PR (<500 lines)"
+
+- name: "size:XL"
+  color: "E11D48"
+  description: "XL PR (500+ lines)"
+
+# ── Area ───────────────────────────────────────────────────────────────────────
+- name: "area:ci"
+  color: "FEF2C0"
+  description: "CI/CD and automation changes"
+
+- name: "area:docs"
+  color: "0075CA"
+  description: "Documentation changes"
+
+- name: "area:docker"
+  color: "0052CC"
+  description: "Docker / container changes"
+
+- name: "area:i18n"
+  color: "0E8A16"
+  description: "Localization and translation updates"
+
+- name: "docs-only"
+  color: "0075CA"
+  description: "PR only changes documentation files"
+
+# ── Package ────────────────────────────────────────────────────────────────────
+- name: "pkg:core"
+  color: "1D76DB"
+  description: "Changes in packages/core"
+
+- name: "pkg:event-bus"
+  color: "1D76DB"
+  description: "Changes in packages/event-bus"
+
+- name: "pkg:sharding"
+  color: "1D76DB"
+  description: "Changes in packages/sharding"
+
+- name: "pkg:observability"
+  color: "1D76DB"
+  description: "Changes in packages/observability"
+
+- name: "pkg:contracts"
+  color: "1D76DB"
+  description: "Changes in packages/contracts"
+
+- name: "pkg:sdk"
+  color: "1D76DB"
+  description: "Changes in packages/sdk"
+
+# ── App ────────────────────────────────────────────────────────────────────────
+- name: "app:dashboard"
+  color: "5319E7"
+  description: "Changes in apps/dashboard"
+
+- name: "app:gateway"
+  color: "5319E7"
+  description: "Changes in apps/gateway"
+
+- name: "app:worker"
+  color: "5319E7"
+  description: "Changes in apps/worker"
+
+- name: "app:scheduler"
+  color: "5319E7"
+  description: "Changes in apps/scheduler"
