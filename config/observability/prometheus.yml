@@ -13,6 +13,7 @@ scrape_configs:
       # thin phase only `worker` runs; the others are listed for the scale phase.
       - targets:
           - worker:9090
+          - worker-scale:9090
           - gateway:9090
           - scheduler:9090
           - api:9090

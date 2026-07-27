@@ -3,8 +3,8 @@
   "extends": "./packages/typescript-config/base.json",
   "compilerOptions": {
     "paths": {
-      "@prisma/client": ["./prisma/generated/client"],
       "@lumi/contracts": ["./packages/contracts/src/index.ts"],
+
       "@lumi/event-bus": ["./packages/event-bus/src/index.ts"],
       "@lumi/observability": ["./packages/observability/src/index.ts"],
       "@lumi/observability/tracing": ["./packages/observability/src/tracing.ts"],

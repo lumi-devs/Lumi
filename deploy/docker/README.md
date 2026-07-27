@@ -42,7 +42,7 @@ flowchart TD
         WS[lumi-worker-scale<br/>Profile: scale]
         Sched[lumi-scheduler<br/>Profile: scale]
         Dev[lumi-dev<br/>Profile: development]
-        Mono[lumi-worker<br/>Default Monolith]
+        Mono[lumi-worker<br/>Default Worker]
     end
 
     subgraph Data & Messaging Plane
@@ -83,21 +83,19 @@ flowchart TD
 
 ## 🏗️ Dockerfile Multi-Stage Target Pipeline
 
-The root [`Dockerfile`](../../Dockerfile) uses a 4-stage optimization pipeline based on `oven/bun:1-alpine`:
+The root [`Dockerfile`](../../Dockerfile) uses a 3-stage optimization pipeline based on `oven/bun:1-alpine`:
 
 ```mermaid
 graph LR
-    base[base<br/>oven/bun:1-alpine] --> deps[deps<br/>Install workspace & generate Prisma]
-    deps --> production[production<br/>Optimized runtime image]
-    base --> development[development<br/>Hot-reload dev container]
+    base[base<br/>oven/bun:1-alpine] --> builder[builder<br/>Install workspace & generate Prisma]
+    builder --> runner[runner<br/>Optimized runtime image]
 ```
 
 ### Stage Summary
 
-1. **`base`**: Installs minimal Alpine utilities (`git`).
-2. **`deps`**: Copies workspace `package.json` files and executes `bun install` + `bunx prisma generate`.
-3. **`production`**: Copies built dependencies, mounts `/app/data` for addons, switches to unprivileged user `bun`, and executes production main targets.
-4. **`development`**: Mounts live source code volumes and runs `bun --watch` for hot-reloading.
+1. **`base`**: Installs minimal Alpine utilities (`git`, `dumb-init`).
+2. **`builder`**: Copies workspace `package.json` files, source code, and Prisma schema; executes `bun install` + `bunx prisma generate`.
+3. **`runner`**: Copies built dependencies including the full `prisma/` directory and `prisma.config.ts`, mounts `/app/data` for addons, switches to unprivileged user `bun`, and executes production main targets.
 
 ---
 
@@ -107,10 +105,10 @@ Services are organized into distinct Compose **profiles** so you only run what y
 
 | Service Name | Profile | Ports / Interfaces | Description |
 |---|---|---|---|
-| `worker` | *(default)* | — | Monolithic Lumi bot process (`LUMI_ROLE=monolith`). |
+| `worker` | *(default)* | — | Default Lumi bot process (`LUMI_ROLE=monolith`). Runs gateway, workers, and scheduler in a single process. |
 | `lumi-dev` | `development` | — | Interactive development container with live volume mounts and watch mode. |
 | `gateway` | `scale` | — | Standalone Gateway edge service for Discord WebSockets. |
-| `worker-scale` | `scale` | — | Scaled Worker node reading events from Redis Streams. |
+| `worker-scale` | `scale` | — | Scaled Worker node reading events from Redis Streams (`LUMI_ROLE=worker`). |
 | `scheduler` | `scale` | — | Task Scheduler managing BullMQ background tasks. |
 | `dashboard` | `dashboard` | `8080:8080` | Web Administration Dashboard UI. |
 | `postgres` | *(core)* | `127.0.0.1:5432:5432` | PostgreSQL 17 primary database server. |
@@ -154,9 +152,9 @@ cp .env.example .env
 
 ## 🚀 Execution & Operation Commands
 
-### 1. Default Monolithic Stack
+### 1. Default Stack
 
-Run Lumi in single-container monolith mode alongside PostgreSQL, PgBouncer, Redis, and RabbitMQ:
+Run Lumi in single-container mode alongside PostgreSQL, PgBouncer, Redis, and RabbitMQ:
 
 ```bash
 docker compose up -d
