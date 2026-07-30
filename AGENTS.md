@@ -284,14 +284,43 @@ Feature modules organize code into sub-store folders:
 - **Feature Branches**: Create feature branches (`git checkout -b feat/<name>`).
 - **Commit Formatting**: Use Conventional Commits (`feat(mod): ...`, `fix(core): ...`, `docs: ...`).
 
-### 8.2 Pull Request (PR) Protocol
+### 8.2 Pull Request (PR) & ChatOps Protocol
 
 - **PR Creation**: Create PRs via `gh pr create --title '...' --body '...'`.
+- **ChatOps Slash Commands**:
+  - `/format` — Runs `eslint --fix` and automatically commits/pushes style fixes back to the PR branch.
+  - `/retest` — Re-triggers failing CI test suites.
 - **Merge Queues**: PRs pass through GitHub Merge Queue (`merge-group.yml`) before landing on `main`.
 
 ### 8.3 Pre-Commit Hooks (`lefthook.yml`)
 
 - **Fast Pre-Commit Hook**: `lefthook` executes `typecheck` (filtered with `glob: "*.{ts,tsx,cts,mts}"`) and staged linting. Non-TypeScript commits execute in **0.02 seconds**.
+
+### 8.4 Full Inventory of Lumi's 21 GitHub Automations
+
+| Workflow | Category | Bot Purpose |
+| :--- | :--- | :--- |
+| `changeset-check.yml` | Quality Gate | Enforces changeset file inclusion on code PRs |
+| `release.yml` | Release | Consumes changesets, updates `CHANGELOG.md`, opens version PRs & publishes releases |
+| `ci.yml` | CI | Runs linting, typechecking, tests & Nix flake evaluation with Turborepo Git diffing |
+| `slash-commands.yml` | ChatOps | Executes `/format` (auto-formatting PR branches) and `/retest` |
+| `comment.yml` | ChatOps | Adds instant reaction (`👀`) on `/lumi` or `@lumi-devs` comments |
+| `review.yml` | PR Hygiene | Automatically minimizes/collapses dismissed bot comments via GraphQL |
+| `pr-comment-summary.yml` | PR Hygiene | Posts & updates a sticky PR status overview comment |
+| `auto-assign.yml` | PR Routing | Auto-assigns maintainers to incoming PRs based on `.github/auto_assign.yml` |
+| `lock-threads.yml` | Maintenance | Automatically locks closed inactive issues & PRs after 60 days |
+| `dependabot-auto-merge.yml` | Dependencies | Auto-approves and merges safe patch dependency PRs |
+| `size-label.yml` | PR Triage | Auto-labels PR line diffs (`size:XS` to `size:XL`) |
+| `labeler.yml` | PR Triage | Auto-labels PRs by modified path (`area:core`, `area:gateway`, etc.) |
+| `labelsync.yml` | Repository | Syncs master 40-label taxonomy across the GitHub repository |
+| `update-flake-lock.yml` | Nix | Bumps `flake.lock` inputs weekly via automated PRs |
+| `security.yml` | Security | Runs GitHub CodeQL static analysis and `bun audit` |
+| `docker.yml` | Packaging | Multi-arch Docker Buildx packaging pushed to GHCR |
+| `welcome.yml` | Community | Greets first-time contributors submitting PRs |
+| `stale.yml` | Maintenance | Marks inactive issues & PRs stale after 30 days |
+| `triage.yml` | Maintenance | Appends `status: needs-triage` to new issue form submissions |
+| `resilience.yml` | Testing | Runs Redis Streams chaos & fault-tolerance tests |
+| `coverage.yml` | Testing | Generates Vitest code coverage reports and uploads LCOV artifacts |
 
 ---
 

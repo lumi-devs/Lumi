@@ -1,0 +1,22 @@
+name: Dependabot Auto-Merge
+
+on:
+  pull_request_target:
+    types: [labeled, opened, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  auto-merge:
+    name: Auto-Merge Dependabot PRs
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]' || github.actor == 'renovate[bot]'
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Auto-approve and enable auto-merge
+        uses: fastify/github-action-merge-dependabot@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          target: patch
