@@ -2,7 +2,6 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions/index.js";
 import { logError } from "#lib/utilities/errors.js";
 
 const DEHOIST_REGEX = /^[\x21-\x40\x5B-\x60\x7B-\x7E\s]+/u;
@@ -16,7 +15,7 @@ function sanitizeName(name: string): string {
   name: "sanitize",
   description: "Remove hoisting characters from a member's nickname",
   preconditions: ["GuildOnly"],
-  permissionLevel: PermissionLevel.MOD,
+  requiredPermit: "mod.*",
   prefixEnabled: true,
 })
 export class SanitizeCommand extends BaseCommand {
@@ -41,7 +40,7 @@ export class SanitizeCommand extends BaseCommand {
       );
     }
 
-    const current = member.nickname ?? member.user.username ?? "Unknown";
+    const current = member.nickname ?? member.user.username;
     const sanitized = sanitizeName(current);
 
     if (sanitized === current) {

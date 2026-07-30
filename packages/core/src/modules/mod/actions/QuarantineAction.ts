@@ -2,6 +2,7 @@ import { container } from "@sapphire/framework";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { tryParseJSON } from "@sapphire/utilities";
 import { formatAuditReason } from "#lib/utilities/misc.js";
+import { RedisKeys } from "#database/redis.js";
 import { logToChannel } from "../lib/helpers.js";
 
 export interface QuarantineApplyOptions {
@@ -96,10 +97,12 @@ export class QuarantineAction {
       formatAuditReason(moderator, reason),
     );
 
+    const permKey = RedisKeys.targetPermits(guild.id, "user", targetMember.id);
     if (container.invalidation) {
       await container.invalidation.invalidate(key);
+      await container.invalidation.invalidate(permKey);
     } else {
-      await container.redis.del(key);
+      await container.redis.del(key, permKey);
     }
 
     const c = await container.db.moderation.createModerationCase({

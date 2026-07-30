@@ -1,43 +1,149 @@
-- name: "Status: Needs Triage"
-  color: "E4E669"
-  description: "Newly opened issue, needs maintainer review"
-
-- name: "bug"
+# Type Labels
+- name: "type: bug"
   color: "d73a4a"
-  description: "Something isn't working"
+  description: "Something isn't working or producing incorrect results"
 
-- name: "enhancement"
+- name: "type: feature"
   color: "a2eeef"
-  description: "New feature or request"
+  description: "New feature or enhancement request"
 
-- name: "documentation"
+- name: "type: docs"
   color: "0075ca"
   description: "Improvements or additions to documentation"
 
-- name: "question"
-  color: "d876e3"
-  description: "Further information is requested"
+- name: "type: chore"
+  color: "707880"
+  description: "Maintenance, build, or repository tasks"
 
-- name: "duplicate"
-  color: "cfd3d7"
-  description: "This issue or pull request already exists"
+- name: "type: refactor"
+  color: "a371f7"
+  description: "Code restructuring without behavior changes"
 
-- name: "invalid"
+- name: "type: perf"
+  color: "0e8a16"
+  description: "Performance optimization"
+
+# Priority Labels
+- name: "priority: critical"
+  color: "b60205"
+  description: "Urgent issue blocking functionality or security"
+
+- name: "priority: high"
+  color: "d93f0b"
+  description: "Important issue needing near-term attention"
+
+- name: "priority: medium"
+  color: "fbca04"
+  description: "Standard priority feature or fix"
+
+- name: "priority: low"
+  color: "0e8a16"
+  description: "Low priority or nice-to-have improvement"
+
+# Status Labels
+- name: "status: needs-triage"
   color: "e4e669"
-  description: "This doesn't seem right"
+  description: "Newly opened issue, needs maintainer review"
 
-- name: "wontfix"
+- name: "status: blocked"
+  color: "e4e669"
+  description: "Blocked by an upstream dependency or another issue"
+
+- name: "status: wontfix"
   color: "ffffff"
   description: "This will not be worked on"
 
-- name: "breaking change"
-  color: "B60205"
-  description: "Introduces breaking change"
+- name: "status: in-progress"
+  color: "0052cc"
+  description: "Actively being worked on"
 
-- name: "performance"
-  color: "0E8A16"
-  description: "Performance improvement"
+- name: "status: ready-for-review"
+  color: "0e8a16"
+  description: "Pull request is complete and ready for code review"
 
+# Area Labels (Modules & Workspaces)
+- name: "area:core"
+  color: "1d76db"
+  description: "Changes in packages/core framework code"
+
+- name: "area:event-bus"
+  color: "1d76db"
+  description: "Changes in packages/event-bus messaging"
+
+- name: "area:sharding"
+  color: "1d76db"
+  description: "Changes in packages/sharding cluster management"
+
+- name: "area:observability"
+  color: "1d76db"
+  description: "Changes in packages/observability telemetry and metrics"
+
+- name: "area:contracts"
+  color: "1d76db"
+  description: "Changes in packages/contracts schema definitions"
+
+- name: "area:sdk"
+  color: "1d76db"
+  description: "Changes in packages/sdk integration code"
+
+- name: "area:dashboard"
+  color: "5319e7"
+  description: "Changes in apps/dashboard web interface"
+
+- name: "area:gateway"
+  color: "5319e7"
+  description: "Changes in apps/gateway Discord WebSocket receiver"
+
+- name: "area:worker"
+  color: "5319e7"
+  description: "Changes in apps/worker event consumer"
+
+- name: "area:scheduler"
+  color: "5319e7"
+  description: "Changes in apps/scheduler task queue executor"
+
+- name: "area:ci"
+  color: "fef2c0"
+  description: "CI/CD workflows and automation"
+
+- name: "area:docs"
+  color: "0075ca"
+  description: "Documentation files and guides"
+
+- name: "area:docker"
+  color: "0052cc"
+  description: "Docker Compose, Dockerfiles, and container configs"
+
+- name: "area:i18n"
+  color: "0e8a16"
+  description: "Localization, Crowdin, and translation strings"
+
+- name: "area:deps"
+  color: "0366d6"
+  description: "Dependency updates and package manager changes"
+
+# Size Labels (PR Diff Size)
+- name: "size:XS"
+  color: "3cb371"
+  description: "Extra small PR (<10 lines changed)"
+
+- name: "size:S"
+  color: "6db96d"
+  description: "Small PR (<50 lines changed)"
+
+- name: "size:M"
+  color: "fbca04"
+  description: "Medium PR (<200 lines changed)"
+
+- name: "size:L"
+  color: "f66a0a"
+  description: "Large PR (<500 lines changed)"
+
+- name: "size:XL"
+  color: "e11d48"
+  description: "Extra large PR (500+ lines changed)"
+
+# Meta / Helper Labels
 - name: "good first issue"
   color: "7057ff"
   description: "Good for newcomers"
@@ -46,110 +152,14 @@
   color: "008672"
   description: "Extra attention is needed"
 
-- name: "pinned"
-  color: "0075CA"
-  description: "Pinned - exempt from stale"
-
 - name: "security"
-  color: "D93F0B"
-  description: "Security related"
+  color: "d93f0b"
+  description: "Security related vulnerability or fix"
 
-- name: "no-stale"
-  color: "1D76DB"
-  description: "Exempt from stale bot"
-
-- name: "blocked"
-  color: "E4E669"
-  description: "Blocked by something"
+- name: "breaking change"
+  color: "b60205"
+  description: "Introduces a breaking API or schema change"
 
 - name: "stale"
   color: "ededed"
   description: "No recent activity"
-
-- name: "dependencies"
-  color: "0366D6"
-  description: "Dependency bumps"
-
-- name: "npm"
-  color: "CB3837"
-  description: "npm package changes"
-
-- name: "actions"
-  color: "2088FF"
-  description: "GitHub Actions changes"
-
-- name: "size:S"
-  color: "6DB96D"
-  description: "Small PR (<50 lines)"
-
-- name: "size:M"
-  color: "FBCA04"
-  description: "Medium PR (<200 lines)"
-
-- name: "size:L"
-  color: "F66A0A"
-  description: "Large PR (<500 lines)"
-
-- name: "size:XL"
-  color: "E11D48"
-  description: "XL PR (500+ lines)"
-
-- name: "area:ci"
-  color: "FEF2C0"
-  description: "CI/CD and automation changes"
-
-- name: "area:docs"
-  color: "0075CA"
-  description: "Documentation changes"
-
-- name: "area:docker"
-  color: "0052CC"
-  description: "Docker / container changes"
-
-- name: "area:i18n"
-  color: "0E8A16"
-  description: "Localization and translation updates"
-
-- name: "docs-only"
-  color: "0075CA"
-  description: "PR only changes documentation files"
-
-- name: "pkg:core"
-  color: "1D76DB"
-  description: "Changes in packages/core"
-
-- name: "pkg:event-bus"
-  color: "1D76DB"
-  description: "Changes in packages/event-bus"
-
-- name: "pkg:sharding"
-  color: "1D76DB"
-  description: "Changes in packages/sharding"
-
-- name: "pkg:observability"
-  color: "1D76DB"
-  description: "Changes in packages/observability"
-
-- name: "pkg:contracts"
-  color: "1D76DB"
-  description: "Changes in packages/contracts"
-
-- name: "pkg:sdk"
-  color: "1D76DB"
-  description: "Changes in packages/sdk"
-
-- name: "app:dashboard"
-  color: "5319E7"
-  description: "Changes in apps/dashboard"
-
-- name: "app:gateway"
-  color: "5319E7"
-  description: "Changes in apps/gateway"
-
-- name: "app:worker"
-  color: "5319E7"
-  description: "Changes in apps/worker"
-
-- name: "app:scheduler"
-  color: "5319E7"
-  description: "Changes in apps/scheduler"

@@ -129,10 +129,6 @@ export class ModuleStore extends Store<Module> {
     try {
       const stateMap = await container.db.modules.getGlobalModuleStates();
       for (const module of this.values()) {
-        if (module.isCore) {
-          module.enabled = true;
-          continue;
-        }
         module.enabled = stateMap.get(module.name) ?? true;
       }
     } catch (err: unknown) {
@@ -188,15 +184,10 @@ export class ModuleStore extends Store<Module> {
 
   /**
    * Reloads a specific module dynamically by unloading and re-discovering it.
-   * Core modules cannot be reloaded.
    *
    * @param name - The name of the module to reload.
    */
   public async reload(name: string) {
-    const record = this.#records.get(name);
-    if (record?.meta.isCore)
-      throw new Error(`Cannot reload core module "${name}"`);
-
     try {
       await this.unload(name);
     } catch (err: unknown) {
@@ -247,18 +238,11 @@ export class ModuleStore extends Store<Module> {
   }
 
   /**
-   * Toggles the enabled state of a module globally.
-   * Loads the module if enabled, unloads it if disabled, and persists the state.
-   *
-   * @param name - The name of the module to toggle.
-   * @param enabled - Whether the module should be enabled or disabled.
-   * @param reason - An optional reason for the state change, typically used for logging or auditing.
+   * Checks whether a module can be disabled.
    */
-  /** Checks whether a module can be disabled. Core or non-disableable modules return false. */
   public isModuleDisableable(name: string): boolean {
     const record = this.#records.get(name);
-    if (!record) return name.toLowerCase() !== "core";
-    return !record.meta.isCore && record.meta.disableable !== false;
+    return record ? record.meta.disableable !== false : true;
   }
 
   public async setEnabled(name: string, enabled: boolean, reason?: string) {
@@ -459,7 +443,7 @@ export class ModuleStore extends Store<Module> {
         const module = this.get(name);
         const record = this.#records.get(name);
 
-        if (record && !record.meta.isCore) {
+        if (record) {
           const newEnabled =
             await container.db.modules.isModuleGlobalEnabled(name);
           if (record.enabled !== newEnabled) {
@@ -595,7 +579,7 @@ export class ModuleStore extends Store<Module> {
     for (const record of this.#records.values()) {
       for (const conflict of record.meta.conflicts ?? []) {
         const other = this.#records.get(conflict);
-        if (other?.enabled && !other.meta.isCore) {
+        if (other?.enabled) {
           container.logger.warn(
             `[ModuleStore] Disabling conflicting module: ${conflict} (conflict with ${record.name})`,
           );

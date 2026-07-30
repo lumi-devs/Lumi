@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices",
+    ":preserveSemverRanges",
+    ":rebaseStalePrs"
+  ],
+  "enabledManagers": ["bun", "npm", "github-actions", "nix"],
+  "bun": {
+    "fileMatch": ["(^|/)package\\.json$"]
+  },
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["^@sapphire/"],
+      "groupName": "Sapphire Framework",
+      "groupSlug": "sapphire"
+    },
+    {
+      "matchPackagePatterns": ["^@discordjs/", "^discord\\.js"],
+      "groupName": "Discord.js ecosystem",
+      "groupSlug": "discordjs"
+    },
+    {
+      "matchPackagePatterns": ["^@prisma/", "^prisma"],
+      "groupName": "Prisma ORM",
+      "groupSlug": "prisma"
+    },
+    {
+      "matchPackagePatterns": ["^@types/"],
+      "groupName": "TypeScript definitions",
+      "groupSlug": "types"
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "non-major dependencies",
+      "groupSlug": "all-minor-patch"
+    }
+  ],
+  "labels": ["area:deps"]
+}

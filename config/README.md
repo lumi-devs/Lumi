@@ -26,7 +26,7 @@ All available options are documented as comments in the file. Uncomment and edit
 | `branding.links.supportServer` | `string` | Discord invite URL surfaced in help and information cards | `""` |
 | `branding.links.website` | `string` | Official website URL surfaced in bot metadata | `""` |
 | `branding.links.github` | `string` | Source code repository URL | `""` |
-| `permissions.names.*` | `string` | Display labels for internal permission hierarchy levels | Human-readable strings (`"User"`, `"Moderator"`, `"Administrator"`, etc.) |
+| *(removed)* | — | Permission level names — legacy tier system replaced by Wick-style Permit nodes | Use granular permit nodes (`"mod.*"`, `"admin.*"`) in `requiredPermit` command options instead |
 | `ui.defaultListPerPage` | `number` | Default number of items per page in paginated UI components | `10` |
 
 ---

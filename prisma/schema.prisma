@@ -6,6 +6,7 @@ generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["fullTextSearchPostgres"]
   engineType      = "library"
+  binaryTargets   = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -53,14 +54,16 @@ model Guild {
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
 
-  moduleStates  GuildModuleState[]
-  moduleConfigs GuildModuleConfig[]
-  permissions   PermissionOverride[]
-  cases         ModerationCase[]
-  caseCounter   GuildCaseCounter?
-  afkEntries    AfkEntry[]
-  ignoreEntries IgnoreEntry[]
-  auditLedgers  AuditLedger[]
+  moduleStates    GuildModuleState[]
+  moduleConfigs   GuildModuleConfig[]
+  enforcedPermits EnforcedPermit[]
+  customPermits   CustomPermit[]
+  cases           ModerationCase[]
+  caseCounter     GuildCaseCounter?
+  afkEntries      AfkEntry[]
+  ignoreEntries   IgnoreEntry[]
+  auditLedgers    AuditLedger[]
+  warnThresholds  WarnThreshold[]
 
   @@map("guilds")
 }
@@ -100,19 +103,44 @@ model GuildModuleConfig {
   @@map("guild_module_config")
 }
 
-model PermissionOverride {
-  guildId     String   @map("guild_id")    @db.VarChar(20)
-  commandPath String   @map("command_path") @db.VarChar(128)
-  modelType   String   @map("model_type")   @db.VarChar(16)
-  modelId     String   @map("model_id")     @db.VarChar(20)
-  allow       Boolean
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+// ─────────────────────────────────────────────────────────────────────────────
+// PERMITS (Wick-style Permit System)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Un-quarantinable system-level permits assigned to roles or users in a guild.
+model EnforcedPermit {
+  id         Int      @id @default(autoincrement())
+  guildId    String   @map("guild_id")    @db.VarChar(20)
+  targetType String   @map("target_type") @db.VarChar(16) // "role" | "user"
+  targetId   String   @map("target_id")   @db.VarChar(20)
+  permit     String   @map("permit_node") @db.VarChar(128)
+  createdAt  DateTime @default(now())     @map("created_at")
+  updatedAt  DateTime @default(now())     @updatedAt @map("updated_at")
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
-  @@id([guildId, commandPath, modelType, modelId])
-  @@index([guildId, commandPath])
-  @@map("permission_overrides")
+  @@unique([guildId, targetType, targetId, permit], name: "uq_enforced_permit")
+  @@index([guildId, targetType, targetId])
+  @@index([guildId, permit])
+  @@map("enforced_permits")
+}
+
+/// Granular node-based permits assigned to roles or users (stripped during Anti-Nuke Quarantine).
+model CustomPermit {
+  id         Int      @id @default(autoincrement())
+  guildId    String   @map("guild_id")    @db.VarChar(20)
+  targetType String   @map("target_type") @db.VarChar(16) // "role" | "user"
+  targetId   String   @map("target_id")   @db.VarChar(20)
+  permit     String   @map("permit_node") @db.VarChar(128)
+  createdAt  DateTime @default(now())     @map("created_at")
+  updatedAt  DateTime @default(now())     @updatedAt @map("updated_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, targetType, targetId, permit], name: "uq_custom_permit")
+  @@index([guildId, targetType, targetId])
+  @@index([guildId, permit])
+  @@map("custom_permits")
 }
 
 // Atomic per-guild case-number counter to avoid duplicate caseNumber races.
@@ -294,4 +322,22 @@ model ModuleConfigOverride {
   @@unique([guildId, moduleName, key, modelType, modelId], name: "uq_config_override")
   @@index([guildId, moduleName])
   @@map("module_config_overrides")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODULE: mod (Warn Threshold Rules)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model WarnThreshold {
+  guildId   String   @map("guild_id") @db.VarChar(20)
+  warnCount Int      @map("warn_count")
+  action    String   @db.VarChar(32) // "mute" | "kick" | "ban" | "quarantine" | "vcmute"
+  duration  String?  @db.VarChar(32) // "1h", "24h", "7d", etc.
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@id([guildId, warnCount])
+  @@map("warn_thresholds")
 }

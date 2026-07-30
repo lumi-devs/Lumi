@@ -3,7 +3,6 @@ import { DownloaderService, ModuleAlreadyInstalledError } from "#lib/services/Do
 import { container } from "@sapphire/framework";
 import { resolver } from "#lib/downloader/resolver.js";
 import { promises as fs } from "node:fs";
-import { isAutoRestartEnabled } from "#lib/restart.js";
 import child_process from "node:child_process";
 
 vi.mock("#lib/downloader/resolver.js", () => ({
@@ -14,10 +13,6 @@ vi.mock("#lib/downloader/resolver.js", () => ({
   },
   ADDON_MODULES_ROOT: "/mock/addon_modules",
   MODULE_ROOT: "/mock/modules",
-}));
-
-vi.mock("#lib/restart.js", () => ({
-  isAutoRestartEnabled: vi.fn().mockReturnValue(false),
 }));
 
 vi.mock("node:fs", () => ({
@@ -331,31 +326,8 @@ describe("DownloaderService", () => {
       });
 
       const res = await service.updateModule("m1");
-      expect(res).toEqual({ updated: true, changelog: "feat: new feature" });
-      expect(mockModuleStore.reload).toHaveBeenCalledWith("m1");
-      expect(mockDb.downloader.updateInstalledDownloaderModuleCommit).toHaveBeenCalledWith("r1-id", "m1", "newhash");
-    });
-
-    it("returns needsRestart: true when auto restart is enabled", async () => {
-      (isAutoRestartEnabled as any).mockReturnValue(true);
-      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ repoId: "r1-id", commit: "oldhash" });
-      mockDb.downloader.readDownloaderRepoById.mockResolvedValue({ id: "r1-id", name: "repo1", branch: "main" });
-
-      (fs.access as any).mockResolvedValue(true);
-      mockExecFile.mockImplementation((file: string, args: string[], cb: any) => {
-        if (args.includes("rev-parse") && args.includes("HEAD")) {
-          cb(null, { stdout: "oldhash\n", stderr: "" });
-        } else if (args.includes("rev-parse") && args.includes("origin/main")) {
-          cb(null, { stdout: "newhash\n", stderr: "" });
-        } else if (args.includes("log")) {
-          cb(null, { stdout: "feat: new feature\n", stderr: "" });
-        } else {
-          cb(null, { stdout: "", stderr: "" });
-        }
-      });
-
-      const res = await service.updateModule("m1");
       expect(res).toEqual({ updated: true, changelog: "feat: new feature", needsRestart: true });
+      expect(mockDb.downloader.updateInstalledDownloaderModuleCommit).toHaveBeenCalledWith("r1-id", "m1", "newhash");
     });
 
     it("throws error when git pull fails", async () => {

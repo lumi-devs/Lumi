@@ -42,24 +42,20 @@ export async function sendInteractionReply(
   options: InteractionReplyOptions,
   mode: "followUp" | "edit" = "followUp",
 ): Promise<Message | undefined> {
+  const { flags, ...editOptions } = options;
+  const cleanFlags =
+    flags === undefined
+      ? undefined
+      : Number(flags) & MessageFlags.IsComponentsV2;
+
   if (interaction.replied) {
     if (mode === "followUp") return interaction.followUp(options);
-    const { flags, ...editOptions } = options;
-    const cleanFlags =
-      flags === undefined
-        ? undefined
-        : Number(flags) & MessageFlags.IsComponentsV2;
     return interaction.editReply({
       ...editOptions,
       ...(cleanFlags ? { flags: cleanFlags } : {}),
     });
   }
   if (interaction.deferred) {
-    const { flags, ...editOptions } = options;
-    const cleanFlags =
-      flags === undefined
-        ? undefined
-        : Number(flags) & MessageFlags.IsComponentsV2;
     return interaction.editReply({
       ...editOptions,
       ...(cleanFlags ? { flags: cleanFlags } : {}),

@@ -3,7 +3,6 @@ import { getService } from "#lib/module-system/Service.js";
 import { ApplicationCommandRegistry, container } from "@sapphire/framework";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { paginateList } from "#lib/utilities/pagination.js";
-import { PermissionLevel } from "#lib/permissions/index.js";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 import {
@@ -60,7 +59,7 @@ function stateEmoji(state: string | undefined): string {
   name: "module",
   description: "Manage system and third-party modules",
   preconditions: ["GuildOnly"],
-  permissionLevel: PermissionLevel.BOT_OWNER,
+  requiredPermit: "owner.*",
   prefixEnabled: true,
   subcommands: [
     { name: "list", run: "list" },
@@ -191,7 +190,7 @@ export class ModuleCommand extends BaseSubcommand {
     const list = sorted.map((record) => {
       const globalStatus = record.enabled ? "Enabled" : "Disabled";
       const stateLabel = record.state ? `[${record.state}]` : "";
-      const isCoreLabel = record.meta.isCore ? " (Core)" : " (Addon)";
+      const isCoreLabel = record.name === "core" ? " (Core)" : " (Addon)";
       const statusEmoji = stateEmoji(record.state);
       return `${statusEmoji} **${record.meta.emoji} ${record.meta.displayName}** (\`${record.name}\` v${record.meta.version})${isCoreLabel}\n  - Status: ${globalStatus} ${stateLabel}${record.failureReason ? ` (Error: ${record.failureReason})` : ""}`;
     });
@@ -389,7 +388,7 @@ export class ModuleCommand extends BaseSubcommand {
     );
 
     const description = record.meta.description || "No description provided.";
-    const isCoreLabel = record.meta.isCore ? "Yes (Core)" : "No (Addon)";
+    const isCoreLabel = record.name === "core" ? "Yes (Core)" : "No (Addon)";
     const globalStatus = record.enabled ? "Enabled" : "Disabled";
     const stateLabel = record.state ? `${record.state}` : "unknown";
     const statusEmoji = stateEmoji(record.state);

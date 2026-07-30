@@ -26,19 +26,7 @@ const userConfigSchema = s
           .optional(),
       })
       .optional(),
-    permissions: s
-      .object({
-        names: s
-          .object({
-            USER: s.string().optional(),
-            MOD: s.string().optional(),
-            ADMIN: s.string().optional(),
-            GUILD_OWNER: s.string().optional(),
-            BOT_OWNER: s.string().optional(),
-          })
-          .optional(),
-      })
-      .optional(),
+
     ui: s
       .object({
         defaultListPerPage: s.number().int().greaterThan(0).optional(),
@@ -69,21 +57,13 @@ const defaultConfig = {
       github: "",
     },
   },
-  permissions: {
-    names: {
-      USER: "User",
-      MOD: "Moderator",
-      ADMIN: "Administrator",
-      GUILD_OWNER: "Server Owner",
-      BOT_OWNER: "Bot Owner",
-    },
-  },
+
   ui: {
     defaultListPerPage: 10,
   },
 };
 
-let userConfig: Record<string, any> = {};
+let userConfig: Record<string, unknown> = {};
 
 try {
   const configPath = join(process.cwd(), "config", "bot.ts");

@@ -1,138 +1,104 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { resolvePermissionLevel, PermissionLevel } from '#lib/permissions/index.js';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { PermitResolver, evaluateNodeMatch } from '#lib/permissions/PermitResolver.js';
 import { container } from '@sapphire/framework';
 
-// OWNER_IDS is parsed once at import from envParseString("OWNER_IDS", ""), so the
-// mock must return the default string (not undefined) to avoid a load-time crash.
-// Bot-owner identity is therefore tested via container.client.application.owner.
 vi.mock('#lib/env.js', () => ({
-	envParseString: vi.fn((_key: string, def = '') => def),
-	envParseInteger: vi.fn(),
-	envIsDefined: vi.fn()
+  envParseString: vi.fn((_key: string, def = '') => def),
+  envParseInteger: vi.fn(),
+  envIsDefined: vi.fn()
 }));
 
-describe('resolvePermissionLevel', () => {
-	beforeEach(() => {
-		vi.resetAllMocks();
-		container.db = {
-			config: { getGuildSettings: vi.fn().mockResolvedValue({}) }
-		} as any;
-		container.logger = { error: vi.fn() } as any;
-		(container as any).client = undefined;
-	});
+describe('PermitResolver', () => {
+  let resolver: PermitResolver;
 
-	it('should return BOT_OWNER if user is an application owner', async () => {
-		(container as any).client = { application: { owner: { id: '123' } } };
+  beforeEach(() => {
+    vi.resetAllMocks();
+    resolver = new PermitResolver();
+  });
 
-		const context = {
-			userId: '123',
-			guild: { id: 'G1', ownerId: '789' },
-			member: {
-				roles: { cache: { has: () => false } },
-				permissions: { has: () => false }
-			}
-		};
+  describe('isBotOwner', () => {
+    it('should return false when no owner IDs configured', () => {
+      expect(PermitResolver.isBotOwner('123')).toBe(false);
+    });
+  });
 
-		const level = await resolvePermissionLevel(context as any);
-		expect(level).toBe(PermissionLevel.BOT_OWNER);
-	});
+  describe('isGuildOwner', () => {
+    it('should return true when userId matches guildOwnerId', () => {
+      expect(PermitResolver.isGuildOwner('123', '123')).toBe(true);
+    });
 
-	it('should return GUILD_OWNER if user is guild owner', async () => {
-		const context = {
-			userId: '123',
-			guild: { id: 'G1', ownerId: '123' },
-			member: {
-				roles: { cache: { has: () => false } },
-				permissions: { has: () => false }
-			}
-		};
+    it('should return false when userId does not match guildOwnerId', () => {
+      expect(PermitResolver.isGuildOwner('123', '456')).toBe(false);
+    });
 
-		const level = await resolvePermissionLevel(context as any);
-		expect(level).toBe(PermissionLevel.GUILD_OWNER);
-	});
+    it('should return false when guildOwnerId is null', () => {
+      expect(PermitResolver.isGuildOwner(null, '123')).toBe(false);
+    });
+  });
 
-	it('should return ADMIN if user has Administrator permission', async () => {
-		const context = {
-			userId: '123',
-			guild: { id: 'G1', ownerId: '789' },
-			member: {
-				roles: { cache: { has: () => false } },
-				permissions: {
-					has: (perm: string) => perm === 'Administrator'
-				}
-			}
-		};
+  describe('evaluateNodeMatch', () => {
+    it('should match exact node names', () => {
+      expect(evaluateNodeMatch('mod.ban', 'mod.ban')).toBe(true);
+      expect(evaluateNodeMatch('mod.ban', 'mod.kick')).toBe(false);
+    });
 
-		const level = await resolvePermissionLevel(context as any);
-		expect(level).toBe(PermissionLevel.ADMIN);
-	});
+    it('should match global wildcard *', () => {
+      expect(evaluateNodeMatch('*', 'mod.ban')).toBe(true);
+    });
 
-	it('should return ADMIN if user has admin role', async () => {
-		(container.db.config.getGuildSettings as Mock).mockResolvedValue({ adminRoleId: 'R_ADMIN' } as any);
-		const context = {
-			userId: '123',
-			guild: { id: 'G1', ownerId: '789' },
-			member: {
-				roles: { cache: { has: (id: string) => id === 'R_ADMIN' } },
-				permissions: { has: () => false }
-			}
-		};
+    it('should match section wildcards', () => {
+      expect(evaluateNodeMatch('mod.*', 'mod.ban')).toBe(true);
+      expect(evaluateNodeMatch('mod.*', 'config.prefix')).toBe(false);
+    });
+  });
 
-		const level = await resolvePermissionLevel(context as any);
-		expect(level).toBe(PermissionLevel.ADMIN);
-	});
+  describe('hasPermit', () => {
+    it('should grant access to guild owner regardless of permits', async () => {
+      const allowed = await resolver.hasPermit({
+        guildId: 'G1',
+        userId: 'OWNER',
+        permitNode: 'mod.ban',
+        guildOwnerId: 'OWNER',
+      });
+      expect(allowed).toBe(true);
+    });
 
-	it('should return MOD if user has ManageMessages permission', async () => {
-		const context = {
-			userId: '123',
-			guild: { id: 'G1', ownerId: '789' },
-			member: {
-				roles: { cache: { has: () => false } },
-				permissions: {
-					has: (perm: string) => perm === 'ManageMessages'
-				}
-			}
-		};
+    it('should check custom permits when not quarantined', async () => {
+      (container as any).db = {
+        getUserPermits: vi.fn().mockResolvedValue({
+          customPermits: new Set(['mod.warn']),
+          enforcedPermits: new Set(),
+          isQuarantined: false,
+        }),
+      };
 
-		const level = await resolvePermissionLevel(context as any);
-		expect(level).toBe(PermissionLevel.MOD);
-	});
+      expect(await resolver.hasPermit({ guildId: 'G1', userId: 'U1', permitNode: 'mod.warn' })).toBe(true);
+      expect(await resolver.hasPermit({ guildId: 'G1', userId: 'U1', permitNode: 'mod.ban' })).toBe(false);
+    });
 
-	it('should return MOD if user has mod role', async () => {
-		(container.db.config.getGuildSettings as Mock).mockResolvedValue({ modRoleId: 'R_MOD' } as any);
-		const context = {
-			userId: '123',
-			guild: { id: 'G1', ownerId: '789' },
-			member: {
-				roles: { cache: { has: (id: string) => id === 'R_MOD' } },
-				permissions: { has: () => false }
-			}
-		};
+    it('should strip custom permits when quarantined', async () => {
+      (container as any).db = {
+        getUserPermits: vi.fn().mockResolvedValue({
+          customPermits: new Set(['mod.warn']),
+          enforcedPermits: new Set(),
+          isQuarantined: true,
+        }),
+      };
 
-		const level = await resolvePermissionLevel(context as any);
-		expect(level).toBe(PermissionLevel.MOD);
-	});
+      expect(await resolver.hasPermit({ guildId: 'G1', userId: 'U1', permitNode: 'mod.warn' })).toBe(false);
+    });
 
-	it('should return USER by default', async () => {
-		const context = {
-			userId: '123',
-			guild: { id: 'G1', ownerId: '789' },
-			member: {
-				roles: { cache: { has: () => false } },
-				permissions: { has: () => false }
-			}
-		};
+    it('should preserve enforced permits when quarantined', async () => {
+      (container as any).db = {
+        getUserPermits: vi.fn().mockResolvedValue({
+          customPermits: new Set(['mod.warn']),
+          enforcedPermits: new Set(['system.emergency']),
+          isQuarantined: true,
+        }),
+      };
 
-		const level = await resolvePermissionLevel(context as any);
-		expect(level).toBe(PermissionLevel.USER);
-	});
-
-	it('should fallback to USER if guild or member is missing', async () => {
-		const context = {
-			userId: '123'
-		};
-
-		const level = await resolvePermissionLevel(context as any);
-		expect(level).toBe(PermissionLevel.USER);
-	});
+      expect(await resolver.hasPermit({ guildId: 'G1', userId: 'U1', permitNode: 'system.emergency' })).toBe(true);
+      expect(await resolver.hasPermit({ guildId: 'G1', userId: 'U1', permitNode: 'mod.warn' })).toBe(false);
+    });
+  });
 });

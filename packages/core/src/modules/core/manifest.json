@@ -4,11 +4,10 @@
   "emoji": "🛡️",
   "description": "The built-in core module.",
   "version": "1.0.0",
-  "isCore": true,
-  "disableable": false,
+  "disableable": true,
   "dependencies": [],
   "conflicts": [],
-  "configOverrides": false,
+  "configOverrides": true,
   "targetService": "worker",
   "subStores": [
     "commands",

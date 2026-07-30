@@ -1,6 +1,5 @@
 import { Piece } from "@sapphire/framework";
 import type { Awaitable } from "@sapphire/utilities";
-import { ApplyOptions } from "@sapphire/decorators";
 import { Emojis } from "#lib/utilities/assets.js";
 
 import {
@@ -27,7 +26,6 @@ export interface ModuleMeta {
   emoji: string;
   description: string;
   version: string;
-  isCore?: boolean;
   disableable?: boolean;
   conflicts?: string[];
   dependencies?: string[];
@@ -42,6 +40,7 @@ export interface ModuleMeta {
  * Configuration options provided to the `@DefineModule` decorator or the `Module` constructor.
  */
 export interface ModuleOptions extends Piece.Options {
+  name?: string;
   displayName?: string;
   emoji?: string;
   description?: string;
@@ -51,35 +50,43 @@ export interface ModuleOptions extends Piece.Options {
   configFields?: ConfigField[];
   configSchema?: ModuleConfigSchema;
   configOverrides?: boolean;
-  isCore?: boolean;
   disableable?: boolean;
 }
 
 /**
  * A class decorator to attach metadata to a {@link Module} piece.
  * Automatically parses configuration schemas into runtime config fields.
- *
- * @param options - The metadata options for the module.
- * @returns A decorated class constructor.
  */
 export function DefineModule(options: ModuleOptions) {
-  if (options.configSchema) {
-    options.configFields = fieldsFromSchema(options.configSchema);
-  }
+  return function <T extends abstract new (...args: any[]) => Module>(
+    target: T,
+  ) {
+    const fields =
+      options.configFields ??
+      (options.configSchema ? fieldsFromSchema(options.configSchema) : []);
 
-  return <T extends abstract new (...args: any[]) => any>(ctor: T): T => {
-    const proxied = ApplyOptions<ModuleOptions>(options)(
-      ctor as unknown as new (...args: never[]) => Module,
-    ) as unknown as T;
-    (proxied as unknown as { meta: ModuleOptions }).meta = options;
-    return proxied;
+    const meta: ModuleMeta = {
+      name: options.name ?? target.name.toLowerCase().replace(/module$/, ""),
+      displayName: options.displayName ?? options.name ?? target.name,
+      emoji: options.emoji ?? Emojis.GEAR,
+      description: options.description ?? "",
+      version: options.version ?? "0.0.0",
+      disableable: options.disableable ?? true,
+      conflicts: options.conflicts ?? [],
+      dependencies: options.dependencies ?? [],
+      configFields: fields,
+      configSchema: options.configSchema,
+      configOverrides: options.configOverrides ?? true,
+    };
+
+    (target as any).meta = meta;
+    return target;
   };
 }
 
 /**
- * The base class that all feature modules must extend.
- * Modules act as organizational units for commands, listeners, and services,
- * providing a centralized lifecycle and configuration interface.
+ * Abstract base class for all Lumi feature modules.
+ * Inherits from Sapphire's `Piece` to allow registration within Sapphire stores.
  */
 export abstract class Module extends Piece {
   public readonly displayName: string;
@@ -89,7 +96,6 @@ export abstract class Module extends Piece {
   public readonly conflicts: string[];
   public readonly dependencies: string[];
   public readonly configFields: ConfigField[];
-  public readonly isCore: boolean;
 
   public override enabled = true;
 
@@ -108,11 +114,11 @@ export abstract class Module extends Piece {
     this.emoji = options.emoji ?? Emojis.GEAR;
     this.description = options.description ?? "";
     this.version = options.version ?? "0.0.0";
-    this.isCore = options.isCore ?? false;
     this.conflicts = options.conflicts ?? [];
     this.dependencies = options.dependencies ?? [];
     this.configFields =
       options.configFields ??
+      (this.constructor as any).meta?.configFields ??
       (options.configSchema ? fieldsFromSchema(options.configSchema) : []);
   }
 

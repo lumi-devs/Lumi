@@ -30,29 +30,16 @@ import {
   makeWarningCard,
   type CardReply,
 } from "#lib/utilities/cards.js";
-import {
-  PermissionLevel,
-  resolvePermissionLevel,
-  PERMISSION_LEVEL_NAMES,
-} from "#lib/permissions/index.js";
 import { instrumentCommandPiece } from "#lib/telemetry/instrument.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
 
-function mapPermissionLevelToDiscordPermission(
-  level: PermissionLevel | undefined,
+function mapRequiredPermitToDiscordPermission(
+  permit: string | undefined,
 ): bigint | undefined {
-  if (level === undefined || level <= PermissionLevel.USER) return undefined;
-  switch (level) {
-    case PermissionLevel.BOT_OWNER:
-    case PermissionLevel.GUILD_OWNER:
-      return 0n;
-    case PermissionLevel.ADMIN:
-      return PermissionFlagsBits.ManageGuild;
-    case PermissionLevel.MOD:
-      return PermissionFlagsBits.ManageMessages;
-    default:
-      return undefined;
-  }
+  if (!permit) return undefined;
+  if (permit.startsWith("admin")) return PermissionFlagsBits.ManageGuild;
+  if (permit.startsWith("mod")) return PermissionFlagsBits.ManageMessages;
+  return undefined;
 }
 
 export interface ReplyOptions {
@@ -105,23 +92,17 @@ export const replyWarning = makeReplyHelper(makeWarningCard);
 /** Helper to send a standardized informational card reply. */
 export const replyInfo = makeReplyHelper(makeInfoCard);
 
-function appendPermissionPrecondition(
+function appendPermitPrecondition(
   instance: { preconditions: Command["preconditions"] },
-  level: PermissionLevel,
+  permitNode: string | undefined,
 ): void {
-  if (level === PermissionLevel.BOT_OWNER) {
-    instance.preconditions.append("BotOwner");
-  } else if (level === PermissionLevel.GUILD_OWNER) {
-    instance.preconditions.append("GuildOwner");
-  } else if (level === PermissionLevel.ADMIN) {
-    instance.preconditions.append("Administrator");
-  } else if (level === PermissionLevel.MOD) {
-    instance.preconditions.append("Moderator");
+  if (permitNode) {
+    instance.preconditions.append("RequirePermit");
   }
 }
 
 interface LumiCommandExtras {
-  permissionLevel?: PermissionLevel;
+  requiredPermit?: string;
   integrationTypes?: ApplicationIntegrationType[];
   contexts?: InteractionContextType[];
   defaultMemberPermissions?: bigint | null;
@@ -137,8 +118,6 @@ interface LumiCommandExtras {
   cooldownDelay?: number;
   /** Cooldown scope bucket: User (default), Guild, Channel, or Global. */
   cooldownScope?: BucketScope;
-  /** User IDs exempt from cooldown limits. */
-  cooldownFilteredUsers?: string[];
 }
 
 const CTX_WRAPPER_PREFIX = { chat: "__ctxCi$", message: "__ctxMsg$" } as const;
@@ -225,7 +204,7 @@ interface SharedCommandOptions extends LumiCommandExtras {
 }
 
 interface ResolvedCommandDefaults {
-  permissionLevel: PermissionLevel;
+  requiredPermit: string | undefined;
   integrationTypes: ApplicationIntegrationType[];
   contexts: InteractionContextType[];
   defaultMemberPermissions: bigint | undefined;
@@ -234,8 +213,8 @@ interface ResolvedCommandDefaults {
 function resolveCommandDefaults(
   options: SharedCommandOptions,
 ): ResolvedCommandDefaults {
-  const discordPerm = mapPermissionLevelToDiscordPermission(
-    options.permissionLevel,
+  const discordPerm = mapRequiredPermitToDiscordPermission(
+    options.requiredPermit,
   );
   const isGuildOnly =
     Array.isArray(options.preconditions) &&
@@ -247,7 +226,7 @@ function resolveCommandDefaults(
           : false,
     );
   return {
-    permissionLevel: options.permissionLevel ?? PermissionLevel.USER,
+    requiredPermit: options.requiredPermit,
     integrationTypes: options.integrationTypes ?? [
       ApplicationIntegrationType.GuildInstall,
     ],
@@ -264,15 +243,27 @@ function resolveCommandDefaults(
   };
 }
 
-export async function assertPermissionLevel(
+export async function assertPermit(
   interaction: ChatInputCommandInteraction,
-  level: PermissionLevel,
+  permitNode: string,
 ): Promise<void> {
-  const actual = await resolvePermissionLevel(interaction);
-  if (actual < level) {
+  const { container } = await import("@sapphire/framework");
+  const userId = interaction.user.id;
+  const guildId = interaction.guild?.id;
+  const roles = interaction.member?.roles;
+  const roleIds = Array.isArray(roles) ? roles : Array.from(roles?.cache.keys() ?? []);
+  const guildOwnerId = interaction.guild?.ownerId;
+  const hasPermit = await container.permitResolver.hasPermit({
+    guildId: guildId!,
+    userId,
+    roleIds,
+    permitNode,
+    guildOwnerId,
+  });
+  if (!hasPermit) {
     throw new UserError({
       identifier: "PermissionDenied",
-      message: `You need at least **${PERMISSION_LEVEL_NAMES[level]}** level to use this.`,
+      message: `You lack the required permit (\`${permitNode}\`) to use this.`,
     });
   }
 }
@@ -348,7 +339,7 @@ function autoApplyCommandDefaults(piece: BaseCommand | BaseSubcommand): void {
 }
 
 interface CommandLike {
-  readonly permissionLevel: PermissionLevel;
+  readonly requiredPermit: string | undefined;
   readonly integrationTypes: ApplicationIntegrationType[];
   readonly contexts: InteractionContextType[];
   readonly defaultMemberPermissions: bigint | undefined;
@@ -360,7 +351,7 @@ interface CommandLike {
  * permissions, context types, and integrations.
  */
 export abstract class BaseCommand extends Command implements CommandLike {
-  public readonly permissionLevel: PermissionLevel;
+  public readonly requiredPermit: string | undefined;
   public readonly integrationTypes: ApplicationIntegrationType[];
   public readonly contexts: InteractionContextType[];
   public readonly defaultMemberPermissions: bigint | undefined;
@@ -371,7 +362,7 @@ export abstract class BaseCommand extends Command implements CommandLike {
   ) {
     const defaults = resolveCommandDefaults(options);
     super(context, { ...options });
-    this.permissionLevel = defaults.permissionLevel;
+    this.requiredPermit = defaults.requiredPermit;
     this.integrationTypes = defaults.integrationTypes;
     this.contexts = defaults.contexts;
     this.defaultMemberPermissions = defaults.defaultMemberPermissions;
@@ -409,17 +400,17 @@ export abstract class BaseCommand extends Command implements CommandLike {
   public replyInfo(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
     return replyInfo(target, title, body, opts);
   }
-  public checkPermission(interaction: ChatInputCommandInteraction, level: PermissionLevel): Promise<void> {
-    return assertPermissionLevel(interaction, level);
+  public checkPermit(interaction: ChatInputCommandInteraction, permitNode: string): Promise<void> {
+    return assertPermit(interaction, permitNode);
   }
 
   protected override parseConstructorPreConditions(
     options: BaseCommand.Options,
   ): void {
     super.parseConstructorPreConditions(options);
-    appendPermissionPrecondition(
+    appendPermitPrecondition(
       this,
-      options.permissionLevel ?? PermissionLevel.USER,
+      options.requiredPermit,
     );
     this.preconditions.append("ModuleEnabled");
   }
@@ -430,7 +421,7 @@ export abstract class BaseCommand extends Command implements CommandLike {
  * Like {@link BaseCommand}, this bridges context automatically for handlers defined via string mapping (`run: "methodName"`).
  */
 export abstract class BaseSubcommand extends Subcommand implements CommandLike {
-  public readonly permissionLevel: PermissionLevel;
+  public readonly requiredPermit: string | undefined;
   public readonly integrationTypes: ApplicationIntegrationType[];
   public readonly contexts: InteractionContextType[];
   public readonly defaultMemberPermissions: bigint | undefined;
@@ -450,7 +441,7 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
       ...options,
       subcommands: subcommands as BaseSubcommand.Options["subcommands"],
     });
-    this.permissionLevel = defaults.permissionLevel;
+    this.requiredPermit = defaults.requiredPermit;
     this.integrationTypes = defaults.integrationTypes;
     this.contexts = defaults.contexts;
     this.defaultMemberPermissions = defaults.defaultMemberPermissions;
@@ -474,17 +465,17 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
   public replyInfo(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
     return replyInfo(target, title, body, opts);
   }
-  public checkPermission(interaction: ChatInputCommandInteraction, level: PermissionLevel): Promise<void> {
-    return assertPermissionLevel(interaction, level);
+  public checkPermit(interaction: ChatInputCommandInteraction, permitNode: string): Promise<void> {
+    return assertPermit(interaction, permitNode);
   }
 
   protected override parseConstructorPreConditions(
     options: BaseSubcommand.Options,
   ): void {
     super.parseConstructorPreConditions(options);
-    appendPermissionPrecondition(
+    appendPermitPrecondition(
       this,
-      options.permissionLevel ?? PermissionLevel.USER,
+      options.requiredPermit,
     );
     this.preconditions.append("ModuleEnabled");
   }

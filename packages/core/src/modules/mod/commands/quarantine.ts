@@ -2,7 +2,6 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions/index.js";
 import { logError } from "#lib/utilities/errors.js";
 import { QuarantineAction } from "../actions/index.js";
 
@@ -10,7 +9,7 @@ import { QuarantineAction } from "../actions/index.js";
   name: "quarantine",
   description: "Quarantine or release a member",
   preconditions: ["GuildOnly"],
-  permissionLevel: PermissionLevel.MOD,
+  requiredPermit: "mod.*",
   prefixEnabled: true,
   subcommands: [
     { name: "add", run: "add", default: true },

@@ -1,9 +1,9 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
+import { isNullish } from "@sapphire/utilities";
 import { userMention } from "@discordjs/formatters";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions/index.js";
 import { logError } from "#lib/utilities/errors.js";
 import { BanAction } from "../actions/index.js";
 
@@ -11,7 +11,7 @@ import { BanAction } from "../actions/index.js";
   name: "ban",
   description: "Ban or unban a user",
   preconditions: ["GuildOnly"],
-  permissionLevel: PermissionLevel.MOD,
+  requiredPermit: "mod.*",
   prefixEnabled: true,
   cooldownLimit: 3,
   cooldownDelay: 5000,
@@ -57,7 +57,7 @@ export class BanCommand extends BaseSubcommand {
     await ctx.defer();
     const t = await ctx.fetchT();
     const user = await ctx.getUser("user");
-    if (!user) {
+    if (isNullish(user)) {
       return ctx.replyError(
         t("commands:modMemberNotFoundTitle"),
         t("commands:modMemberNotFound"),

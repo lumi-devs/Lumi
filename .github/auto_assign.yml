@@ -1,0 +1,10 @@
+addReviewers: true
+addAssignees: true
+reviewers:
+  - lumi-devs/maintainers
+numberOfReviewers: 1
+numberOfAssignees: 1
+useReviewRequest: true
+skipKeywords:
+  - "[wip]"
+  - "[draft]"

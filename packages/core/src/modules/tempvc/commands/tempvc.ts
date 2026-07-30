@@ -3,12 +3,10 @@ import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import {
   BaseSubcommand,
   replyError,
-  sendReply,
-  assertPermissionLevel,
+  sendReply, assertPermit,
   replySuccess,
   fetchTyped,
 } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions/index.js";
 import {
   ChannelType,
   channelMention,
@@ -27,9 +25,7 @@ import { buildPanel } from "../ui/panel.js";
   name: "tempvc",
   description: "Temporary voice channel controls.",
   preconditions: ["GuildOnly", "ModuleEnabled"],
-  module: "tempvc",
-  permissionLevel: PermissionLevel.USER,
-  subcommands: [
+  module: "tempvc",  subcommands: [
     { name: "panel", chatInputRun: "chatInputPanel" },
     {
       name: "generator",
@@ -143,7 +139,7 @@ export class TempVcCommand extends BaseSubcommand {
   public async chatInputGenAdd(
     interaction: ChatInputCommandInteraction,
   ): Promise<void> {
-    await assertPermissionLevel(interaction, PermissionLevel.ADMIN);
+    await assertPermit(interaction, "admin.*");
     const t = await fetchTyped(interaction);
     const guildId = interaction.guildId!;
 
@@ -183,7 +179,7 @@ export class TempVcCommand extends BaseSubcommand {
   public async chatInputGenRemove(
     interaction: ChatInputCommandInteraction,
   ): Promise<void> {
-    await assertPermissionLevel(interaction, PermissionLevel.ADMIN);
+    await assertPermit(interaction, "admin.*");
     const t = await fetchTyped(interaction);
     const channel = interaction.options.getChannel("channel", true);
     const removed = await this.tempVcService.removeGenerator(
@@ -211,7 +207,7 @@ export class TempVcCommand extends BaseSubcommand {
   public async chatInputGenList(
     interaction: ChatInputCommandInteraction,
   ): Promise<void> {
-    await assertPermissionLevel(interaction, PermissionLevel.ADMIN);
+    await assertPermit(interaction, "admin.*");
     const t = await fetchTyped(interaction);
     const generators = await this.tempVcService.listGenerators(
       interaction.guildId!,

@@ -115,7 +115,7 @@ describe("Panel & Card Utility Standardization", () => {
   describe("Submenu & Breadcrumb Builders", () => {
     it("formatBreadcrumbHeader builds active path string", () => {
       const header = formatBreadcrumbHeader(["Settings", "Modules", "Moderation"]);
-      expect(header).toBe("`Settings` ❯ `Modules` ❯ **Moderation**");
+      expect(header).toBe("Settings ❯ Modules ❯ **Moderation**");
     });
 
     it("createCategorySubmenuRow generates category selection menu", () => {
@@ -228,7 +228,7 @@ describe("Panel & Card Utility Standardization", () => {
 
     it("formatBreadcrumbs formats panel navigation path", () => {
       expect(formatBreadcrumbs(["Settings", "Security", "2FA"])).toBe(
-        "`Settings` ❯ `Security` ❯ **2FA**",
+        "Settings ❯ Security ❯ **2FA**",
       );
     });
   });

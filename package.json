@@ -38,11 +38,14 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
+    "db:seed": "bun scripts/seed.ts",
     "modules:manifest": "bun scripts/generate-manifests.ts",
     "validate": "bun scripts/validate-addon.ts",
     "test": "vitest run",
     "test:e2e": "vitest run -c vitest.e2e.config.ts",
-    "verify:resilience": "bun scripts/verify-resilience.ts"
+    "changeset": "bunx changeset",
+    "verify:resilience": "bun scripts/verify-resilience.ts",
+    "bench": "bun scripts/benchmark.ts"
   },
   "overrides": {
     "@opentelemetry/semantic-conventions": "1.42.0"
@@ -92,6 +95,7 @@
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-prettier": "^5.5.6",
     "i18next": "^26.3.6",
+    "lefthook": "^2.1.10",
     "prettier": "^3.9.6",
     "prisma": "^7.9.0",
     "turbo": "^2.10.7",

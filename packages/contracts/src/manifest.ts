@@ -25,7 +25,6 @@ export interface ModuleManifest {
   emoji: string;
   description: string;
   version: string;
-  isCore?: boolean;
   disableable?: boolean;
   dependencies?: string[];
   conflicts?: string[];

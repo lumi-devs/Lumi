@@ -1,22 +1,20 @@
 import {
   ActionRowBuilder,
-  ButtonBuilder,
   ContainerBuilder,
   MediaGalleryBuilder,
-  SeparatorBuilder,
+  SectionBuilder,
   TextDisplayBuilder,
+  ThumbnailBuilder,
+
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import {
-  ButtonStyle,
-  MessageFlags,
-  SeparatorSpacingSize,
-  type MessageMentionOptions,
-} from "discord.js";
-import { Emojis } from "#lib/utilities/assets.js";
+import { MessageFlags } from "discord.js";
 import { BotConfig } from "./config.js";
+import { badge, formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "./ui/layout.js";
+import type { CardReply } from "./ui/types.js";
 
-/** Standard palette of UI accent colors for SaaS cards and panels. */
+export type { CardReply } from "./ui/types.js";
+
 export const CARD_ACCENTS = {
   PRIMARY: 0x5865f2,
   INFO: 0x3498db,
@@ -27,84 +25,31 @@ export const CARD_ACCENTS = {
   CYAN: 0x1abc9c,
 } as const;
 
-export function formatStatusBadge(status: string, label?: string): string {
-  const normalized = status.toLowerCase();
-  let icon = "⚪";
-  switch (normalized) {
-    case "online":
-    case "success":
-    case "enabled":
-    case "active":
-      icon = "🟢";
-      break;
-    case "idle":
-    case "warning":
-    case "pending":
-      icon = "🟡";
-      break;
-    case "dnd":
-    case "error":
-    case "disabled":
-    case "failed":
-      icon = "🔴";
-      break;
-    case "offline":
-    case "inactive":
-      icon = "⚪";
-      break;
-    default:
-      icon = "🔘";
-      break;
-  }
-  const text = label ?? status.toUpperCase();
-  return `${icon} \`${text}\``;
-}
-
+export { formatStatusBadge, formatSubtitle, formatBreadcrumbs, badge };
 export const makeStatusBadge = formatStatusBadge;
 
-export function formatSubtitle(text: string, icon?: string): string {
-  const formatted = icon ? `${icon} ${text}` : text;
-  return `-# ${formatted}`;
-}
-
-export function formatBreadcrumbs(crumbs: string[], separator = " ❯ "): string {
-  if (!crumbs || crumbs.length === 0) return "";
-  return crumbs
-    .map((crumb, idx) =>
-      idx === crumbs.length - 1 ? `**${crumb}**` : `\`${crumb}\``,
-    )
-    .join(separator);
-}
-
 export interface CardOptions {
+  subtitle?: string;
+  breadcrumbs?: string[];
+  statusBadge?: { status: string; label?: string };
   footer?: string;
   thumbnail?: string;
+  thumbnailUrl?: string;
   divider?: boolean;
-  actionRows?: ActionRowBuilder<MessageActionRowComponentBuilder>[];
+  sections?: SectionBuilder[];
+  actionRows?: ActionRowBuilder<MessageActionRowComponentBuilder | any>[];
   mediaGallery?: MediaGalleryBuilder;
-}
-
-export interface CardReply {
-  readonly flags: number;
-  readonly components: ContainerBuilder[];
-  readonly allowedMentions?: MessageMentionOptions;
 }
 
 export const ephemeralCard = (card: CardReply): CardReply => ({
   ...card,
-  flags: card.flags | MessageFlags.Ephemeral,
+  flags: (card.flags ?? MessageFlags.IsComponentsV2) | MessageFlags.Ephemeral,
 });
 
-/** Renders mentions as text without pinging anyone. */
 export const noPingCard = (card: CardReply): CardReply => ({
   ...card,
   allowedMentions: { parse: [] },
 });
-
-const smallSeparator = (divider: boolean): SeparatorBuilder =>
-  new SeparatorBuilder()
-    .setSpacing(SeparatorSpacingSize.Small)
-    .setDivider(divider);
 
 function buildContainer(
   title: string,
@@ -116,35 +61,81 @@ function buildContainer(
   if (accentColor) {
     c.setAccentColor(accentColor);
   }
+
+  // Optional Header Breadcrumbs & Status Badges
+  const headerParts: string[] = [];
+  if (opts.breadcrumbs && opts.breadcrumbs.length > 0) {
+    headerParts.push(formatBreadcrumbs(opts.breadcrumbs));
+  }
+  if (opts.statusBadge) {
+    headerParts.push(formatStatusBadge(opts.statusBadge.status, opts.statusBadge.label));
+  }
+  if (headerParts.length > 0) {
+    c.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(headerParts.join(" · ")),
+    );
+  }
+
+  // Main Title & Subtitle
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(`## ${title}`),
   );
-  c.addSeparatorComponents(smallSeparator(opts.divider ?? true));
+  if (opts.subtitle) {
+    c.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(formatSubtitle(opts.subtitle)),
+    );
+  }
 
+  c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(opts.divider ?? true));
+
+  // Sections if provided
+  if (opts.sections && opts.sections.length > 0) {
+    for (const sec of opts.sections) {
+      c.addSectionComponents(sec);
+    }
+  }
+
+  // Main Body Parts
   const parts = Array.isArray(body) ? body : [body];
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
-    if (i > 0) c.addSeparatorComponents(smallSeparator(true));
+    if (i > 0) c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
     if (part && part.length > 0) {
       c.addTextDisplayComponents(new TextDisplayBuilder().setContent(part));
     }
   }
 
+  // Thumbnail accessory section if URL provided without explicit sections
+  const thumbUrl = opts.thumbnailUrl ?? opts.thumbnail;
+  if (thumbUrl && (!opts.sections || opts.sections.length === 0)) {
+    const thumbSec = new SectionBuilder().setThumbnailAccessory(
+      new ThumbnailBuilder().setURL(thumbUrl),
+    );
+    thumbSec.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# Thumbnail Preview`));
+    c.addSectionComponents(thumbSec);
+  }
+
+  // Footer
   if (opts.footer) {
-    c.addSeparatorComponents(smallSeparator(false));
+    c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(false));
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(`-# ${opts.footer}`),
     );
   }
+
+  // Media Gallery
   if (opts.mediaGallery) {
     c.addMediaGalleryComponents(opts.mediaGallery);
   }
+
+  // Action Rows & Component Selects
   for (const row of opts.actionRows ?? []) {
     c.addActionRowComponents((builder) => {
       builder.addComponents(...row.components);
       return builder;
     });
   }
+
   return c;
 }
 
@@ -159,21 +150,25 @@ export const makeSuccessCard = (
   body: string | string[],
   opts?: CardOptions,
 ) => wrap(buildContainer(title, body, opts, BotConfig.branding.colors.SUCCESS));
+
 export const makeErrorCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
 ) => wrap(buildContainer(title, body, opts, BotConfig.branding.colors.ERROR));
+
 export const makeWarningCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
 ) => wrap(buildContainer(title, body, opts, BotConfig.branding.colors.WARNING));
+
 export const makeInfoCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
 ) => wrap(buildContainer(title, body, opts, BotConfig.branding.colors.INFO));
+
 export const makeCard = (
   color: number,
   title: string,
@@ -184,38 +179,15 @@ export const makeCard = (
 export function makeListCard(
   title: string,
   items: string[],
-  page = 0,
-  perPage = BotConfig.ui.defaultListPerPage,
-  customIdPrefix?: string,
-) {
-  const totalPages = Math.max(1, Math.ceil(items.length / perPage));
-  const slice = items.slice(page * perPage, (page + 1) * perPage);
-  const body = slice.length ? slice.join("\n") : "*Nothing here yet.*";
-  const footer =
-    totalPages > 1
-      ? `Page ${page + 1}/${totalPages} · ${items.length} items`
-      : `${items.length} items`;
-
-  const c = buildContainer(title, body, { footer });
-
-  if (customIdPrefix && totalPages > 1) {
-    c.addActionRowComponents((row) =>
-      row.addComponents(
-        new ButtonBuilder()
-          .setCustomId(`${customIdPrefix}:prev:${page}`)
-          .setLabel("◀ Prev")
-          .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
-          .setStyle(ButtonStyle.Secondary)
-          .setDisabled(page <= 0),
-        new ButtonBuilder()
-          .setCustomId(`${customIdPrefix}:next:${page}`)
-          .setLabel("Next ▶")
-          .setEmoji(Emojis.parse(Emojis.ARROW_RIGHT))
-          .setStyle(ButtonStyle.Secondary)
-          .setDisabled(page >= totalPages - 1),
-      ),
-    );
+  opts: CardOptions = {},
+): CardReply {
+  const bodyParts: string[] = [];
+  if (items.length === 0) {
+    bodyParts.push("-# *No items to display.*");
+  } else {
+    for (const item of items) {
+      bodyParts.push(`• ${item}`);
+    }
   }
-
-  return wrap(c);
+  return makeInfoCard(title, bodyParts, opts);
 }

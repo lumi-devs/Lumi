@@ -1,10 +1,7 @@
 import { Precondition } from "@sapphire/framework";
 import type { ChatInputCommandInteraction, Message } from "discord.js";
-import {
-  PermissionLevel,
-  resolvePermissionLevel,
-} from "#lib/permissions/index.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
+import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 
 declare module "@sapphire/framework" {
   interface Preconditions {
@@ -14,20 +11,21 @@ declare module "@sapphire/framework" {
 
 export class GuildOwnerPrecondition extends Precondition {
   public override messageRun(message: Message) {
-    return this.#check(message);
+    if (!message.guild) return this.ok();
+    return this.#check(message.author.id, message.guild.ownerId);
   }
 
   public override chatInputRun(interaction: ChatInputCommandInteraction) {
-    return this.#check(interaction);
+    if (!interaction.guild) return this.ok();
+    return this.#check(interaction.user.id, interaction.guild.ownerId);
   }
 
-  async #check(ctx: ChatInputCommandInteraction | Message) {
-    const actual = await resolvePermissionLevel(ctx);
-    return actual >= PermissionLevel.GUILD_OWNER
+  async #check(userId: string, guildOwnerId: string) {
+    return PermitResolver.isGuildOwner(guildOwnerId, userId)
       ? this.ok()
       : this.error({
           identifier: "PermissionDenied",
-          message: `You need at least **Server Owner** level to use this.`,
+          message: "You need at least **Server Owner** level to use this.",
           context: { i18nKey: LanguageKeys.Preconditions.GuildOwner },
         });
   }

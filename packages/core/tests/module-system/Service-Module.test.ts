@@ -25,7 +25,6 @@ const DummyModule = DefineModule({
   emoji: "🎮",
   description: "A dummy module for testing",
   version: "1.0.0",
-  isCore: false,
   configSchema: cfg.object({
     enabled: cfg.boolean({ label: "Enabled", description: "Enable feature" }),
   }),

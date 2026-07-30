@@ -4,14 +4,15 @@
   "emoji": "🛡️",
   "description": "Staff moderation: warn, mute, kick, ban — with case logging.",
   "version": "1.0.0",
-  "isCore": false,
   "disableable": true,
   "dependencies": [],
   "conflicts": [],
-  "configOverrides": false,
+  "configOverrides": true,
   "targetService": "worker",
   "subStores": [
     "commands",
+    "listeners",
+    "interaction-handlers",
     "scheduled-tasks"
   ],
   "configFields": [

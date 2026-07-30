@@ -3,7 +3,6 @@ import { getService } from "#lib/module-system/Service.js";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { paginateList } from "#lib/utilities/pagination.js";
-import { PermissionLevel } from "#lib/permissions/index.js";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -23,7 +22,7 @@ import type { DownloaderService } from "#lib/services/DownloaderService.js";
   name: "repo",
   description: "Manage third-party module repositories",
   preconditions: ["GuildOnly"],
-  permissionLevel: PermissionLevel.BOT_OWNER,
+  requiredPermit: "owner.*",
   prefixEnabled: true,
   subcommands: [
     { name: "add", run: "add" },

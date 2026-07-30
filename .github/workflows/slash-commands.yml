@@ -1,0 +1,118 @@
+name: ChatOps Slash Commands
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+jobs:
+  format-command:
+    name: Execute /format Slash Command
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '/format')
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Add eyes reaction
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'eyes'
+            });
+
+      - name: Checkout PR Branch
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
+
+      - name: Setup Bun Environment
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies & Run ESLint Fix
+        run: |
+          bun install --frozen-lockfile
+          bun run lint --fix || true
+
+      - name: Commit & Push Formatted Code
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style(repo): auto-format code via /format slash command"
+
+  retest-command:
+    name: Execute /retest Slash Command
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '/retest')
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Add rocket reaction
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+  bench-command:
+    name: Execute /bench Slash Command
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '/bench')
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Add rocket reaction
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      - name: Checkout PR Branch
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
+
+      - name: Setup Bun Environment
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run Performance Benchmark Suite
+        id: bench
+        run: |
+          OUTPUT=$(bun run bench)
+          echo "BENCH_OUTPUT<<EOF" >> $GITHUB_ENV
+          echo "$OUTPUT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Post Benchmark Results Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const message = process.env.BENCH_OUTPUT + `\n\n*Triggered via \`/bench\` slash command by @${context.payload.comment.user.login}*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: message
+            });

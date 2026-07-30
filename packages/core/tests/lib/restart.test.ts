@@ -2,14 +2,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { container } from "@sapphire/framework";
 import { ButtonStyle } from "discord.js";
 import {
-  isAutoRestartEnabled,
   restartChoiceRow,
   scheduleProcessRestart,
 } from "#lib/restart.js";
 
 describe("Bot Restart & State Management Utilities", () => {
-  const originalEnv = process.env.MODULE_UPDATE_AUTO_RESTART;
-
   beforeEach(() => {
     container.logger = {
       info: vi.fn(),
@@ -21,32 +18,8 @@ describe("Bot Restart & State Management Utilities", () => {
   });
 
   afterEach(() => {
-    process.env.MODULE_UPDATE_AUTO_RESTART = originalEnv;
     vi.useRealTimers();
     vi.restoreAllMocks();
-  });
-
-  describe("isAutoRestartEnabled", () => {
-    it("returns true by default when env var is not set", () => {
-      delete process.env.MODULE_UPDATE_AUTO_RESTART;
-      expect(isAutoRestartEnabled()).toBe(true);
-    });
-
-    it("returns true when env var is set to 'true' or 'TRUE'", () => {
-      process.env.MODULE_UPDATE_AUTO_RESTART = "true";
-      expect(isAutoRestartEnabled()).toBe(true);
-
-      process.env.MODULE_UPDATE_AUTO_RESTART = "TRUE";
-      expect(isAutoRestartEnabled()).toBe(true);
-    });
-
-    it("returns false when env var is set to 'false' or 'False'", () => {
-      process.env.MODULE_UPDATE_AUTO_RESTART = "false";
-      expect(isAutoRestartEnabled()).toBe(false);
-
-      process.env.MODULE_UPDATE_AUTO_RESTART = "False";
-      expect(isAutoRestartEnabled()).toBe(false);
-    });
   });
 
   describe("restartChoiceRow", () => {
@@ -74,9 +47,6 @@ describe("Bot Restart & State Management Utilities", () => {
   describe("scheduleProcessRestart", () => {
     it("schedules process restart and is idempotent when called multiple times", () => {
       const killSpy = vi.spyOn(process, "kill").mockImplementation(() => true);
-
-      // Explicit assertion for isAutoRestartEnabled status
-      expect(isAutoRestartEnabled()).toBe(true);
 
       // First call schedules restart
       scheduleProcessRestart("First attempt", 1500);

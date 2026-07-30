@@ -48,7 +48,6 @@ const manifestSchema = s.object({
   emoji: s.string(),
   description: s.string(),
   version: s.string().regex(/^\d+\.\d+\.\d+/),
-  isCore: s.boolean().optional(),
   disableable: s.boolean().optional(),
   dependencies: s.array(s.string()).optional(),
   conflicts: s.array(s.string()).optional(),

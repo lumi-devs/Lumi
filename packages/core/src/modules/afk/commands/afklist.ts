@@ -1,21 +1,19 @@
 import { ApplyOptions } from "@sapphire/decorators";
 
-import { getService } from "#lib/module-system/Service.js";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { userMention } from "@discordjs/formatters";
 import { chunk } from "@sapphire/utilities";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions/index.js";
 import { makeWarningCard } from "#lib/utilities/cards.js";
 import { afkDurationSince } from "../index.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import type AfkService from "../services/AfkService.js";
+import { getAfkEntriesForGuild } from "../data/afk.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "afklist",
   description: "List users currently AFK in this server (owner only).",
   preconditions: ["GuildOnly"],
-  permissionLevel: PermissionLevel.BOT_OWNER,
+  requiredPermit: "owner.*",
   module: "afk",
 })
 export default class AfkListCommand extends BaseCommand {
@@ -27,13 +25,9 @@ export default class AfkListCommand extends BaseCommand {
     );
   }
 
-  private get afkService(): AfkService {
-    return getService("afk");
-  }
-
   public override async run(ctx: CommandContext) {
     const t = await ctx.fetchT();
-    const entries = await this.afkService.getGuildEntries(ctx.guildId!);
+    const entries = await getAfkEntriesForGuild(ctx.guildId!);
 
     if (entries.length === 0) {
       return ctx.replyInfo(

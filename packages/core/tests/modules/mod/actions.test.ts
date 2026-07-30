@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { container } from '@sapphire/framework';
-import { parseDuration, formatDuration, scheduleCaseLift } from '#modules/mod/lib/helpers.js';
+import { scheduleCaseLift } from '#modules/mod/lib/helpers.js';
+import { parseDuration, formatDuration } from '#lib/utilities/time.js';
 import {
   getThresholds,
   invalidateThresholds,
@@ -32,7 +33,11 @@ vi.mock('@sapphire/framework', () => ({
       },
       moderation: {
         getModerationCases: vi.fn(),
-        createModerationCase: vi.fn()
+        createModerationCase: vi.fn(),
+        getWarnThresholds: vi.fn(),
+        setWarnThreshold: vi.fn(),
+        removeWarnThreshold: vi.fn(),
+        resetWarnThresholds: vi.fn()
       }
     },
     tasks: {
@@ -100,12 +105,14 @@ describe('Mod Thresholds Logic', () => {
     (container.redis.get as any).mockResolvedValue(JSON.stringify({ '3': { action: 'kick' } }));
     const thresholds = await getThresholds(container, 'g-1');
     expect(thresholds).toEqual({ '3': { action: 'kick' } });
-    expect(container.db.config.getModuleConfig).not.toHaveBeenCalled();
+    expect(container.db.moderation.getWarnThresholds).not.toHaveBeenCalled();
   });
 
   it('getThresholds fetches DB when cache miss occurs', async () => {
     (container.redis.get as any).mockResolvedValue(null);
-    (container.db.config.getModuleConfig as any).mockResolvedValue(JSON.stringify({ '5': { action: 'ban' } }));
+    (container.db.moderation.getWarnThresholds as any).mockResolvedValue([
+      { warnCount: 5, action: 'ban', duration: null }
+    ]);
     const thresholds = await getThresholds(container, 'g-1');
     expect(thresholds).toEqual({ '5': { action: 'ban' } });
     expect(container.redis.setex).toHaveBeenCalled();

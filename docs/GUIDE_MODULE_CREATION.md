@@ -27,7 +27,7 @@ packages/core/src/modules/<your-module>/
 `packages/core/src/modules/<your-module>/index.ts`:
 
 ```typescript
-import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
+import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
 import { Emojis } from "#lib/utilities/assets.js";
 
 @DefineModule({
@@ -36,18 +36,15 @@ import { Emojis } from "#lib/utilities/assets.js";
   emoji: Emojis.GEAR,           // icon from assets
   version: "1.0.0",
   description: "What this module does.",
-  configSchema: cfg.object({
-    some_setting: cfg.boolean({
-      label: "Some Setting",
-      description: "Controls feature X.",
-      default: true,
-    }),
-  }),
+  defaultEnabled: true,
+  configSchema: {
+    some_setting: cfg.boolean.default(true),
+  },
 })
 export class MyModule extends Module {}
 ```
 
-Config fields use `cfg.*` builders from `@sapphire/shapeshift` via `#lib/module-system/Module.js`. Available types: `cfg.boolean`, `cfg.number`, `cfg.string`, `cfg.channel`, `cfg.role`.
+Config fields use `cfg.*` builders from `@sapphire/shapeshift` via `#core/module-system/Module.js`.
 
 ## Step 3: Add Commands
 

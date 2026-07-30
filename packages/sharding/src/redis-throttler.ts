@@ -74,7 +74,7 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
 
 export function buildRedisThrottlerFactory(
   opts: RedisIdentifyThrottlerOptions,
-) {
+): () => Promise<IIdentifyThrottler> {
   // eslint-disable-next-line @typescript-eslint/require-await
   return async (): Promise<IIdentifyThrottler> =>
     new RedisIdentifyThrottler(opts);

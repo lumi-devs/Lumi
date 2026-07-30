@@ -19,16 +19,7 @@ import { ButtonStyle } from "discord.js";
  * `MODULE_UPDATE_AUTO_RESTART=false` to keep the bot up and restart by hand.
  */
 
-/**
- * Whether a code-changing module update should defer to a restart to apply (the
- * Bun-correct path). Default true; set `MODULE_UPDATE_AUTO_RESTART=false` to fall
- * back to the legacy best-effort in-process hot-reload instead.
- */
-export function isAutoRestartEnabled(): boolean {
-  return (
-    (process.env.MODULE_UPDATE_AUTO_RESTART ?? "true").toLowerCase() !== "false"
-  );
-}
+
 
 /**
  * The "Restart Now / Cancel" choice presented to the bot owner after an update

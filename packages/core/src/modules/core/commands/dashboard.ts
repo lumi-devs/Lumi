@@ -2,7 +2,6 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { getService } from "#lib/module-system/Service.js";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions/index.js";
 import { makeSuccessCard, makeErrorCard } from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
@@ -12,7 +11,7 @@ import type { GuildSettingsService } from "#lib/services/GuildSettingsService.js
   name: "dashboard",
   description: "Manage dashboard configuration and layout",
   preconditions: ["GuildOnly"],
-  permissionLevel: PermissionLevel.GUILD_OWNER,
+  requiredPermit: "admin.*",
   prefixEnabled: true,
   subcommands: [{ name: "layout", run: "layout" }],
 })

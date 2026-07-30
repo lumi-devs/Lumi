@@ -1,0 +1,176 @@
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
+} from "@discordjs/builders";
+import { ButtonStyle } from "discord.js";
+import { badge, makeInfoCard, type CardReply } from "#lib/utilities/cards.js";
+import type { View, ViewContext } from "#lib/utilities/ui/types.js";
+
+export interface WarnThresholds {
+  [count: string]: {
+    action: string;
+    duration?: string;
+  };
+}
+
+export interface WarnThresholdsPanelOptions {
+  selectedCount?: number;
+  selectedAction?: string;
+  selectedDuration?: string;
+}
+
+export function buildWarnThresholdsPanelView(
+  thresholds: WarnThresholds,
+  decayDays: number = 30,
+  options: WarnThresholdsPanelOptions = {},
+): View {
+  const selectedCount = options.selectedCount ?? 3;
+  const selectedAction = options.selectedAction ?? "mute";
+  const selectedDuration = options.selectedDuration ?? "1h";
+
+  return {
+    id: "warnthresholds",
+    label: "Warn Escalation Control Center",
+    render: (_ctx: ViewContext): CardReply => {
+      const entries = Object.entries(thresholds).sort(([a], [b]) => Number(a) - Number(b));
+      const ruleBadges = entries.length > 0
+        ? entries
+            .map(([cnt, entry]) => {
+              const actionEmoji =
+                entry.action === "mute"
+                  ? "🔇"
+                  : entry.action === "kick"
+                  ? "👢"
+                  : entry.action === "ban"
+                  ? "🔨"
+                  : entry.action === "quarantine"
+                  ? "☣️"
+                  : "🛡️";
+              const dur = entry.duration ? ` (${entry.duration})` : "";
+              const badgeColor =
+                entry.action === "ban"
+                  ? "red"
+                  : entry.action === "kick"
+                  ? "purple"
+                  : entry.action === "quarantine"
+                  ? "yellow"
+                  : "blue";
+              return `• **${cnt} Warn${Number(cnt) === 1 ? "" : "s"}** ➔ ${badge(
+                entry.action.toUpperCase(),
+                badgeColor,
+              )} ${actionEmoji}${dur}`;
+            })
+            .join("\n")
+        : "-# *No active threshold escalation rules configured.*";
+
+      const currentRuleForSelected = thresholds[String(selectedCount)];
+      const currentRuleDesc = currentRuleForSelected
+        ? `\`${currentRuleForSelected.action.toUpperCase()}\`${
+            currentRuleForSelected.duration ? ` (${currentRuleForSelected.duration})` : ""
+          }`
+        : "`NONE`";
+
+      const bodyText = [
+        "Configure dynamic automated moderation actions when members reach warning thresholds.",
+        "",
+        "### Active Escalation Rules",
+        ruleBadges,
+        "",
+        "### ⚙️ Rule Builder State",
+        `• **Target Count:** \`${selectedCount} Warn${selectedCount === 1 ? "" : "s"}\``,
+        `• **Selected Action:** \`${selectedAction.toUpperCase()}\`${selectedDuration ? ` (${selectedDuration})` : ""}`,
+        `• **Saved Rule for ${selectedCount} Warns:** ${currentRuleDesc}`,
+        "",
+        `**Decay Schedule:** ${badge(`${decayDays} Days`, "green")} -# *(Warning points decay automatically)*`,
+      ].join("\n");
+
+      // Row 1: Warn Count Select (1 to 10)
+      const countSelectOptions: StringSelectMenuOptionBuilder[] = [];
+      for (let i = 1; i <= 10; i++) {
+        countSelectOptions.push(
+          new StringSelectMenuOptionBuilder()
+            .setLabel(`${i} Warn${i === 1 ? "" : "s"}`)
+            .setValue(`count:${i}`)
+            .setDescription(`Set action when a user reaches ${i} warning point${i === 1 ? "" : "s"}`)
+            .setDefault(i === selectedCount),
+        );
+      }
+
+      const row1 = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId(`wt:select_count:${selectedCount}:${selectedAction}:${selectedDuration}`)
+          .setPlaceholder(`⚡ Select Warn Count Threshold (1 to 10)... Currently [${selectedCount}]`)
+          .addOptions(countSelectOptions),
+      );
+
+      // Row 2: Action & Duration Select
+      const row2 = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId(`wt:select_action:${selectedCount}:${selectedAction}:${selectedDuration}`)
+          .setPlaceholder("🛡️ Select Punishment Action & Duration...")
+          .addOptions(
+            new StringSelectMenuOptionBuilder()
+              .setLabel("🔇 Mute — 1 Hour")
+              .setValue("action:mute:1h")
+              .setDescription("Timeout member for 1 Hour"),
+            new StringSelectMenuOptionBuilder()
+              .setLabel("🔇 Mute — 24 Hours")
+              .setValue("action:mute:24h")
+              .setDescription("Timeout member for 24 Hours"),
+            new StringSelectMenuOptionBuilder()
+              .setLabel("🔇 Mute — 7 Days")
+              .setValue("action:mute:7d")
+              .setDescription("Timeout member for 7 Days"),
+            new StringSelectMenuOptionBuilder()
+              .setLabel("👢 Kick Member")
+              .setValue("action:kick")
+              .setDescription("Kick member from server"),
+            new StringSelectMenuOptionBuilder()
+              .setLabel("🔨 Ban Member (Permanent)")
+              .setValue("action:ban")
+              .setDescription("Permanently ban member"),
+            new StringSelectMenuOptionBuilder()
+              .setLabel("🔨 Tempban — 7 Days")
+              .setValue("action:tempban:7d")
+              .setDescription("Ban member with scheduled 7-day unban"),
+            new StringSelectMenuOptionBuilder()
+              .setLabel("🔨 Tempban — 30 Days")
+              .setValue("action:tempban:30d")
+              .setDescription("Ban member with scheduled 30-day unban"),
+            new StringSelectMenuOptionBuilder()
+              .setLabel("☣️ Quarantine Member")
+              .setValue("action:quarantine")
+              .setDescription("Apply Anti-Nuke Quarantine role"),
+          ),
+      );
+
+      // Row 3: Save, Remove, Preset, Reset All
+      const row3 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`wt:save_rule:${selectedCount}:${selectedAction}:${selectedDuration}`)
+          .setLabel(`➕ Save Rule for ${selectedCount} Warns`)
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId(`wt:remove_rule:${selectedCount}`)
+          .setLabel(`🗑️ Remove ${selectedCount} Warns Rule`)
+          .setStyle(ButtonStyle.Danger)
+          .setDisabled(!currentRuleForSelected),
+        new ButtonBuilder()
+          .setCustomId("wt:preset_standard")
+          .setLabel("⚡ Apply 3-5-10 Preset")
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId("wt:clear_all")
+          .setLabel("🧹 Reset All")
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(entries.length === 0),
+      );
+
+      return makeInfoCard("⚡ Warning Threshold Control Center", bodyText, {
+        actionRows: [row1, row2, row3],
+      });
+    },
+  };
+}

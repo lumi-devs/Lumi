@@ -16,7 +16,7 @@ We take the security of Lumi very seriously. If you suspect or discover a securi
 ### Disclosure Process
 
 1. **Private Vulnerability Reporting**:
-   - Prefer using GitHub's **Private Vulnerability Reporting** feature via the [Security tab](../../security/advisories/new) of this repository.
+   - Prefer using GitHub's **Private Vulnerability Reporting** feature via the [Security tab](https://github.com/lumi-devs/lumi/security/advisories/new) of this repository.
    - Alternatively, email the maintenance team directly at `security@lumi-devs.org` with details.
 
 2. **Information to Include**:

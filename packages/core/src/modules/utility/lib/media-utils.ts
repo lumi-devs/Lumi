@@ -27,6 +27,18 @@ interface MediaRequestContext {
 
 import { fetchT } from "@sapphire/plugin-i18next";
 import { LanguageKeys } from "#lib/i18n/keys.js";
+import { RateLimitManager } from "@sapphire/ratelimits";
+
+const mediaRateLimitManagers = new Map<number, RateLimitManager>();
+
+function getMediaRateLimitManager(seconds: number): RateLimitManager {
+  let mgr = mediaRateLimitManagers.get(seconds);
+  if (!mgr) {
+    mgr = new RateLimitManager(seconds * 1000, 1);
+    mediaRateLimitManagers.set(seconds, mgr);
+  }
+  return mgr;
+}
 
 export async function handleMediaRequest({
   context,
@@ -48,16 +60,11 @@ export async function handleMediaRequest({
         "user_media",
         "cooldown_seconds",
       )) as number | null) ?? 10;
-    const now = Date.now();
-    const redisKey = `cooldown:user_media:${interactionUser.id}`;
-    const lastUsedStr = await container.redis.get(redisKey);
-    const lastUsed = lastUsedStr ? parseInt(lastUsedStr, 10) : 0;
 
-    if (now - lastUsed < cooldownSeconds * 1000) {
-      const timeLeft = (
-        (lastUsed + cooldownSeconds * 1000 - now) /
-        1000
-      ).toFixed(1);
+    const rateLimit = getMediaRateLimitManager(cooldownSeconds).acquire(interactionUser.id);
+
+    if (rateLimit.limited) {
+      const timeLeft = (rateLimit.remainingTime / 1000).toFixed(1);
       const title = t(LanguageKeys.Commands.MediaCooldownTitle);
       const reply = t(LanguageKeys.Commands.MediaCooldown, { timeLeft });
 
@@ -81,7 +88,7 @@ export async function handleMediaRequest({
         flags: MessageFlags.Ephemeral,
       });
     }
-    await container.redis.set(redisKey, now.toString(), "EX", cooldownSeconds);
+    rateLimit.consume();
   }
 
   const fetchedUser =
@@ -135,7 +142,7 @@ export async function handleMediaRequest({
   const replyOptions = {
     ...card,
     allowedMentions: {},
-    flags: card.flags | (isSelf ? 0 : MessageFlags.Ephemeral),
+    flags: (card.flags ?? 0) | (isSelf ? 0 : MessageFlags.Ephemeral),
   };
 
   if (context instanceof Message) {

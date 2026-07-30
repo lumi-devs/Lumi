@@ -4,7 +4,6 @@ export * from "#utilities/command-errors.js";
 export * from "#utilities/command-response.js";
 export * from "#utilities/config.js";
 export * from "#utilities/errors.js";
-export * from "#utilities/listeners.js";
 export * from "#utilities/misc.js";
 export * from "#utilities/pagination.js";
 export {
@@ -16,7 +15,6 @@ export {
   createActionButton,
   createPaginationRow,
   buildSafeActionRows,
-  formatBreadcrumbHeader,
   createCategorySubmenuRow,
   type CreateUserSelectMenuOptions,
   type CreateRoleSelectMenuOptions,
@@ -27,6 +25,7 @@ export {
   type StringSelectOptionInput,
   type CategoryTab,
 } from "#utilities/panels.js";
+export { formatBreadcrumbHeader } from "#lib/utilities/ui/layout.js";
 export * from "#utilities/self-update.js";
 export * from "#utilities/temporary-message.js";
 export * from "#utilities/time.js";

@@ -4,7 +4,6 @@ import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { time, TimestampStyles, userMention } from "@discordjs/formatters";
 import { chunk } from "@sapphire/utilities";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions/index.js";
 import { makeInfoCard } from "#lib/utilities/cards.js";
 import { decrementWarnCount } from "../lib/thresholds.js";
 
@@ -12,7 +11,7 @@ import { decrementWarnCount } from "../lib/thresholds.js";
   name: "cases",
   description: "View or modify moderation cases",
   preconditions: ["GuildOnly"],
-  permissionLevel: PermissionLevel.MOD,
+  requiredPermit: "mod.*",
   prefixEnabled: true,
   subcommands: [
     { name: "view", run: "view", default: true },

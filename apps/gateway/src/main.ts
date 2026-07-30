@@ -1,4 +1,5 @@
 import "./telemetry.js";
+import { isNullish } from "@sapphire/utilities";
 import { REST } from "@discordjs/rest";
 import {
   WebSocketManager,
@@ -262,7 +263,7 @@ const detachPublisher = attachProxyPublisher(ownedBus.bus, manager, {
 if (DEFER_AT_GATEWAY) {
   manager.on(
     WebSocketShardEvents.Dispatch,
-    (data: any, shardId: number) => {
+    (data: { t?: string; d?: unknown; s?: number }, shardId: number) => {
       if (data.t !== "INTERACTION_CREATE") return;
       const d = data.d as InteractionPayload;
       const envelope: RawGatewayEnvelope = {
@@ -270,7 +271,7 @@ if (DEFER_AT_GATEWAY) {
         packet: {
           op: GatewayOpcodes.Dispatch,
           t: data.t,
-          s: (data as { s?: number }).s ?? 0,
+          s: data.s ?? 0,
           d: data.d,
         },
         ts: Date.now(),
@@ -321,7 +322,7 @@ const readyTracker =
 let readyHeartbeat: ReturnType<typeof setInterval> | null = null;
 let everReady = false;
 const publishReady = () => {
-  if (!readyTracker) return;
+  if (isNullish(readyTracker)) return;
   const allReady =
     expectedShards.size > 0 && shardReady.size === expectedShards.size;
   if (allReady) everReady = true;

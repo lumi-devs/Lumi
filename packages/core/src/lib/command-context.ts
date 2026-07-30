@@ -1,4 +1,4 @@
-import { UserError, type Args } from "@sapphire/framework";
+import { container, UserError, type Args } from "@sapphire/framework";
 import { fetchT } from "@sapphire/plugin-i18next";
 import {
   MessageFlags,
@@ -11,11 +11,6 @@ import {
   type User,
 } from "discord.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import {
-  PERMISSION_LEVEL_NAMES,
-  resolvePermissionLevel,
-  type PermissionLevel,
-} from "#lib/permissions/index.js";
 import {
   ephemeralCard,
   makeErrorCard,
@@ -274,13 +269,29 @@ export class CommandContext {
     return fetchT(this.source) as unknown as Promise<LumiT>;
   }
 
-  /** Per-subcommand permission elevation — throws a rendered denial. */
-  public async checkPermission(level: PermissionLevel): Promise<void> {
-    const actual = await resolvePermissionLevel(this.source);
-    if (actual < level) {
+  /** Per-subcommand permit check — throws a rendered denial. */
+  public async checkPermit(permitNode: string): Promise<void> {
+    const userId = this.user.id;
+    const guildId = this.guildId;
+    if (!guildId) {
       throw new UserError({
         identifier: "PermissionDenied",
-        message: `You need at least **${PERMISSION_LEVEL_NAMES[level]}** level to use this.`,
+        message: "This command can only be used in a server.",
+      });
+    }
+    const roleIds = Array.from(this.member?.roles.cache.keys() ?? []);
+    const guildOwnerId = this.guild?.ownerId;
+    const hasPermit = await container.permitResolver.hasPermit({
+      guildId,
+      userId,
+      roleIds,
+      permitNode,
+      guildOwnerId,
+    });
+    if (!hasPermit) {
+      throw new UserError({
+        identifier: "PermissionDenied",
+        message: `You lack the required permit (\`${permitNode}\`) to use this.`,
       });
     }
   }

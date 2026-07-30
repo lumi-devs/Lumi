@@ -1,0 +1,39 @@
+name: PR Summary Comment
+
+on:
+  pull_request:
+    types: [opened, synchronized, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  summary-comment:
+    name: Post Sticky PR Overview Comment
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Post or Update Sticky PR Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: lumi-pr-summary
+          message: |
+            ### 🤖 Lumi Bot PR Overview
+
+            | Verification Check | Status | Info |
+            | :--- | :---: | :--- |
+            | **Changeset Enforcer** | 📦 | Verified via `.changeset/` |
+            | **Turborepo Diffing** | ⚡ | Scoped to changed packages |
+            | **Nix Flake Check** | ❄️ | Evaluated via `nix-installer` |
+
+            ---
+
+            > [!TIP]
+            > - Run `bun run typecheck && bun run lint && bun run test` locally before pushing.
+            > - Need a changeset for code edits? Run `bunx changeset` locally.

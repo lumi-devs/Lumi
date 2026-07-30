@@ -47,7 +47,7 @@ describe("createEventBus", () => {
       redis: { host: "localhost", port: 6379 },
       defaultMaxLen: 50000,
       maxDeliveries: 3,
-      ackWaitMs: 45000, // tests legacy alias fallback
+      claimMinIdleMs: 45000,
       claimIntervalMs: 15000,
       onStats: onStatsSpy,
       statsIntervalMs: 5000,

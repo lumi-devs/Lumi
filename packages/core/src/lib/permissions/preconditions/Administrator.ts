@@ -1,10 +1,5 @@
-import { Precondition } from "@sapphire/framework";
+import { Precondition, container } from "@sapphire/framework";
 import type { ChatInputCommandInteraction, Message } from "discord.js";
-import {
-  PermissionLevel,
-  resolvePermissionLevel,
-} from "#lib/permissions/index.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 
 declare module "@sapphire/framework" {
   interface Preconditions {
@@ -12,23 +7,40 @@ declare module "@sapphire/framework" {
   }
 }
 
+function memberRoleIds(member: unknown): string[] {
+  if (!member || typeof member !== "object") return [];
+  const roles = (member as { roles?: unknown }).roles;
+  if (Array.isArray(roles)) return roles as string[];
+  const cache = (roles as { cache?: { keys?: () => Iterable<string> } })?.cache;
+  if (cache && typeof cache.keys === "function") return Array.from(cache.keys());
+  if (cache && typeof cache === "object") return Object.keys(cache);
+  return [];
+}
+
 export class AdministratorPrecondition extends Precondition {
   public override messageRun(message: Message) {
-    return this.#check(message);
+    if (!message.guild) return this.ok();
+    return this.#check(message.guild.id, message.author.id, memberRoleIds(message.member));
   }
 
   public override chatInputRun(interaction: ChatInputCommandInteraction) {
-    return this.#check(interaction);
+    if (!interaction.guild) return this.ok();
+    return this.#check(interaction.guild.id, interaction.user.id, memberRoleIds(interaction.member));
   }
 
-  async #check(ctx: ChatInputCommandInteraction | Message) {
-    const actual = await resolvePermissionLevel(ctx);
-    return actual >= PermissionLevel.ADMIN
+  async #check(guildId: string, userId: string, roleIds: string[]) {
+    const hasPermit = await container.permitResolver.hasPermit({
+      guildId,
+      userId,
+      roleIds,
+      permitNode: "admin.*",
+      guildOwnerId: "",
+    });
+    return hasPermit
       ? this.ok()
       : this.error({
           identifier: "PermissionDenied",
-          message: `You need at least **Administrator** level to use this.`,
-          context: { i18nKey: LanguageKeys.Preconditions.Administrator },
+          message: "You need at least **Administrator** level to use this.",
         });
   }
 }

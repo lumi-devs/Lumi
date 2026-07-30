@@ -3,7 +3,8 @@ import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { formatAuditReason } from "#lib/utilities/misc.js";
 import { makeErrorCard } from "#lib/utilities/cards.js";
-import { logToChannel, scheduleCaseLift, formatDuration } from "../lib/helpers.js";
+import { logToChannel, scheduleCaseLift } from "../lib/helpers.js";
+import { formatDuration } from "#lib/utilities/time.js";
 import { errorCode } from "#lib/utilities/errors.js";
 
 export interface MuteApplyOptions {

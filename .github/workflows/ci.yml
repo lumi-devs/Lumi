@@ -3,44 +3,56 @@ name: CI
 on:
   push:
     branches: [main, develop, "release/*"]
-    paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'prisma/**'
-      - 'scripts/**'
-      - 'package.json'
-      - '.github/workflows/ci.yml'
-      - 'bun.lock'
-      - 'tsconfig*.json'
-      - 'eslint.config.*'
-      - 'turbo.json'
   pull_request:
     branches: [main, develop]
-    paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'prisma/**'
-      - 'scripts/**'
-      - '.github/workflows/ci.yml'
-      - 'package.json'
-      - 'bun.lock'
-      - 'tsconfig*.json'
-      - 'eslint.config.*'
-      - 'turbo.json'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
+  changes:
+    name: Detect Changed Paths
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+      nix: ${{ steps.filter.outputs.nix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - 'apps/**'
+              - 'packages/**'
+              - 'prisma/**'
+              - 'scripts/**'
+              - 'package.json'
+              - 'bun.lock'
+              - 'tsconfig*.json'
+              - 'eslint.config.*'
+              - 'turbo.json'
+            nix:
+              - 'flake.nix'
+              - 'flake.lock'
+
   lint:
     name: Lint
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - run: echo "::add-matcher::.github/problemMatchers/eslint.json"
       - uses: oven-sh/setup-bun@v2
         with:
@@ -52,13 +64,25 @@ jobs:
           restore-keys: ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - run: bun run db:generate
-      - run: bun run lint
+      - name: Turbo Filtered Lint
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            bun turbo run lint:all --filter=[origin/${{ github.base_ref }}...HEAD] || bun run lint
+          else
+            bun run lint
+          fi
 
   typecheck:
     name: Typecheck
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - run: echo "::add-matcher::.github/problemMatchers/tsc.json"
       - uses: oven-sh/setup-bun@v2
         with:
@@ -70,13 +94,23 @@ jobs:
           restore-keys: ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - run: bun run db:generate
-      - run: bun run typecheck
+      - name: Turbo Filtered Typecheck
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            bun turbo run typecheck:all --filter=[origin/${{ github.base_ref }}...HEAD] || bun run typecheck
+          else
+            bun run typecheck
+          fi
 
   test:
     name: Test
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -88,9 +122,23 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run db:generate
       - run: bun run test -- --coverage
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage/lcov.info
           retention-days: 1
           if-no-files-found: error
+
+  nix-check:
+    name: Nix Flake Evaluation
+    needs: changes
+    if: ${{ needs.changes.outputs.nix == 'true' || github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/magic-nix-cache-action@v9
+      - name: Verify Nix Flake Output
+        run: nix flake check --extra-experimental-features "nix-command flakes"

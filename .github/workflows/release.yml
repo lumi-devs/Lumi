@@ -1,56 +1,41 @@
-name: Release Workflow
+name: Release & Versioning
 
 on:
   push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      tag_name:
-        description: 'Release tag (e.g. v1.0.0)'
-        required: true
-        type: string
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
-  packages: write
+  pull-requests: write
 
 jobs:
-  release:
-    name: Build & Create Release
+  version-or-release:
+    name: Manage Version PR & GitHub Releases
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - name: Checkout Repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Bun environment
+      - name: Setup Bun Environment
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: bun install --frozen-lockfile
 
-      - name: Generate Prisma client
-        run: bun run db:generate
-
-      - name: Run Verification (Typecheck & Lint)
-        run: |
-          bun run typecheck
-          bun run lint
-
-      - name: Run Test Suite
-        run: bun run test
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v3
+      - name: Create Version PR or Create Release Notes
+        uses: changesets/action@v1
         with:
-          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
-          name: Release ${{ github.event.inputs.tag_name || github.ref_name }}
-          generate_release_notes: true
-          draft: false
-          prerelease: false
+          version: bunx changeset version
+          commit: "chore: version packages"
+          title: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
