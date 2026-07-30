@@ -7,20 +7,23 @@
 
 ## 📖 Table of Contents
 
-1. [Phased Task Execution Lifecycle & Handoff Standard](#1-phased-task-execution-lifecycle--handoff-standard)
+1. [Phased Task Execution Lifecycle, Context Window Rules & Safety Guardrails](#1-phased-task-execution-lifecycle-context-window-rules--safety-guardrails)
 2. [Changeset Creation & Release Workflow Protocols](#2-changeset-creation--release-workflow-protocols)
 3. [Monorepo Architecture & Path Resolution Spec](#3-monorepo-architecture--path-resolution-spec)
-4. [Module System & Component Laws](#4-module-system--component-laws)
-5. [Database, Seeding & Storage Management](#5-database-seeding--storage-management)
-6. [Git, PR & CI Automation Protocols](#6-git-pr--ci-automation-protocols)
-7. [UI Card System, i18n & Helper Libraries](#7-ui-card-system-i18n--helper-libraries)
-8. [Observability, Resilience & Verification Command Matrix](#8-observability-resilience--verification-command-matrix)
+4. [Tech Stack & Approved Helper Libraries](#4-tech-stack--approved-helper-libraries)
+5. [Module System & Component Laws](#5-module-system--component-laws)
+6. [Database, Seeding & Storage Management](#6-database-seeding--storage-management)
+7. [Background Processing, Event Bus & RabbitMQ RPC Bridge](#7-background-processing-event-bus--rabbitmq-rpc-bridge)
+8. [Git, PR & CI Automation Protocols](#8-git-pr--ci-automation-protocols)
+9. [UI Card System & i18n Rules](#9-ui-card-system--i18n-rules)
+10. [Observability & Telemetry](#10-observability--telemetry)
+11. [Verification Command Matrix & Anti-Pattern Index](#11-verification-command-matrix--anti-pattern-index)
 
 ---
 
-## 1. 🤖 Phased Task Execution Lifecycle & Handoff Standard
+## 1. 🤖 Phased Task Execution Lifecycle, Context Window Rules & Safety Guardrails
 
-To ensure predictable, reliable, and transparent agent operations, all Lumi agents must strictly adhere to a standardized 5-Phase Task Execution Lifecycle and utilize a structured 5-Component Handoff Report Protocol. This methodology ensures state is preserved across agent sessions and inter-agent collaboration is seamless.
+To ensure predictable, reliable, and transparent agent operations, all Lumi agents must strictly adhere to a standardized 5-Phase Task Execution Lifecycle and utilize a structured 5-Component Handoff Report Protocol.
 
 ### 1.1 5-Phase Task Execution Lifecycle
 
@@ -33,7 +36,7 @@ All tasks, regardless of size, must proceed through the following 5 chronologica
 │ Phase 1       │ Ingestion & Briefing Analysis (Read-Only)                   │
 │               │ Inspect code, locate exact lines, read briefing/progress.  │
 ├───────────────┼─────────────────────────────────────────────────────────────┤
-│ Phase 2       │ Exploration & Planning                                      │
+│ Phase 2       │ Exploration & Architectural Alignment                       │
 │               │ Verify monorepo boundaries, module rules & draft plan.      │
 ├───────────────┼─────────────────────────────────────────────────────────────┤
 │ Phase 3       │ Focused Minimal Implementation                              │
@@ -58,12 +61,31 @@ All tasks, regardless of size, must proceed through the following 5 chronologica
 5. **Phase 5: Handoff & Documentation**
    - Generate required Changesets (`bunx changeset`). Update `progress.md` and output the 5-Component Handoff Report.
 
-### 1.2 Persistent Working Memory (`progress.md` & `BRIEFING.md`)
+### 1.2 Context Window & Information Retrieval Optimization
+
+To maintain context window efficiency and prevent token exhaustion:
+- **Tool Hierarchy**: Use low-overhead search tools first.
+  1. `grep_search` — Exact string or regex pattern search.
+  2. `find_by_name` — Target filename or pattern search.
+  3. `view_file` — Targeted inspection using explicit `StartLine` and `EndLine`.
+- **Line & Slice Discipline**: Never dump large files (>800 lines) into context without line slicing.
+- **Diff Minimization**: Make surgical, minimal-change edits. Blanket file auto-formatting or wholesale file replacements are strictly prohibited.
+
+### 1.3 Tool Safety Constraints & Security Guardrails
+
+AI agents must strictly respect safety constraints during tool execution:
+- ❌ **Forbidden Bash Operations**:
+  - Destructive filesystem commands: `rm -rf /`, `rm -rf .git`, unapproved mass deletion.
+  - Raw secret exposure: Printing contents of `.env` or logging API keys/tokens to output.
+  - Production database mutation: Executing `prisma db push` or `prisma migrate reset` against production databases (`NODE_ENV=production`).
+- ⚡ **Prerequisite Execution Law**: Run `bun run db:generate` before typechecking schema changes and `bun run modules:manifest` after modifying `@DefineModule` metadata.
+
+### 1.4 Persistent Working Memory (`progress.md` & `BRIEFING.md`)
 
 - **`BRIEFING.md`**: The Immutable Source of Truth containing core system architecture, constraints, and dependency rules.
 - **`progress.md`**: The Mutable Scratchpad tracking immediate task queues, completed checklists, and blockers.
 
-### 1.3 5-Component Handoff Report Protocol
+### 1.5 5-Component Handoff Report Protocol
 
 All agent handoff reports must contain the following 5 sections:
 1. **Observation**: Verbatim file paths, line numbers, exact errors, and tool output quotes.
@@ -147,14 +169,55 @@ The root `package.json` contains a safety-net `"imports"` mapping that mirrors `
 
 ---
 
-## 4. 🧩 Module System & Component Laws
+## 4. 🧰 Tech Stack & Approved Helper Libraries
 
-### 4.1 `@DefineModule` Metadata Schema
+### 4.1 Approved Framework Libraries
+
+- **Runtime & Package Manager**: [Bun](https://bun.sh) (`1.3.0+`).
+- **Discord Framework**: [@sapphire/framework](https://www.sapphirejs.dev/) (`5.3.0+`) & [discord.js](https://discord.js.org/) (`v14.18.0+`).
+- **Schema Validation**: `@sapphire/shapeshift` (`cfg.*` builders).
+- **ORM & Relational DB**: Prisma Client & PgBouncer PostgreSQL connection pooler.
+- **Cache & Message Bus**: Redis 7 (Redis Streams, ioredis) & RabbitMQ.
+
+### 4.2 Core Utility Reference Tables
+
+#### `@discordjs/formatters`
+| Helper Function | Approved Use Case | Example |
+| :--- | :--- | :--- |
+| `time(date, style?)` | Relative or styled timestamps | `time(date, 'R')` ➔ `<t:…:R>` |
+| `userMention(id)` | Ping user | `userMention(id)` ➔ `<@id>` |
+| `roleMention(id)` | Ping role | `roleMention(id)` ➔ `<@&id>` |
+| `channelMention(id)` | Link channel | `channelMention(id)` ➔ `<#id>` |
+| `inlineCode(text)` | Inline code snippet | `` inlineCode('foo') `` |
+| `codeBlock(lang, text)`| Syntax-highlighted code block | `codeBlock('ts', code)` |
+
+#### `@sapphire/utilities`
+| Helper Function | Approved Use Case | Notes |
+| :--- | :--- | :--- |
+| `cutText(str, n)` | Truncate string to N chars | Prevents Discord 2000-char message error |
+| `isNullish(v)` | Type-safe null/undefined check | Replaces loose `!v` checks |
+| `filter(filterNullish)` | Type-safe array filtering | ❌ Replaces banned `.filter(Boolean)` |
+| `tryParseJSON(str)` | Safe JSON parsing | ❌ Replaces `JSON.parse` inside try/catch |
+| `chunk(arr, size)` | Array pagination chunking | Pagination for lists and tables |
+| `regExpEsc(str)` | Escape regex metacharacters | Escapes user input for regex filters |
+| `toTitleCase(str)` | Capitalize string words | Clean UI headers |
+
+#### Helper Utilities
+- **HTTP Fetch**: Use `@sapphire/fetch` (`fetch(...)`) instead of global `fetch()`.
+- **Performance Stopwatch**: Use `@sapphire/stopwatch` (`new Stopwatch()`) instead of `performance.now()`.
+- **Duration Formatting**: Use `container.utilities.time.humanizeDelta()`.
+
+---
+
+## 5. 🧩 Module System & Component Laws
+
+### 5.1 `@DefineModule` Metadata Schema
 
 Every module entrypoint (`index.ts`) must export a module class decorated with `@DefineModule`:
 
 ```typescript
 import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
+import { Emojis } from "#lib/utilities/assets.js";
 
 @DefineModule({
   name: "my_module",            // lowercase snake_case id
@@ -170,35 +233,35 @@ import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
 export class MyModule extends Module {}
 ```
 
-### 4.2 Sub-Store Directories
+### 5.2 Sub-Store Directories
 
 Feature modules organize code into sub-store folders:
 - `commands/` — Extend `BaseCommand` or `BaseSubcommand`.
 - `listeners/` — Extend `ModuleListener` or `GuildMessageListener`.
 - `interaction-handlers/` — Extend Sapphire `InteractionHandler`.
-- `services/` — Extend `Service` singleton class.
+- `services/` — Extend `Service` singleton class (`getService("<name>")` / `tryGetService("<name>")`).
 - **`scheduled-tasks/`** — Extend `RelayTask` (placed in `scheduled-tasks/` exactly).
 
-### 4.3 Zero Cross-Module Import Law & Permits
+### 5.3 Zero Cross-Module Import Law & Permits
 
 - **Zero Cross-Module Import Law**: Feature modules must **NEVER** import code directly from sibling modules (e.g. `import { foo } from '../other_module/service.js'` is strictly forbidden). Shared code belongs in `#lib/*`, `#database/*`, or `#utilities/*`.
-- **Wick-style Permits**: Commands declare a required permit string node (e.g. `"mod.*"`). `PermitResolver` evaluates granted permits with wildcard matching, bot/guild owner bypasses, and Anti-Nuke Quarantine interception.
+- **Wick-style Permits**: Commands declare a required permit string node (e.g. `"mod.*"`, `"admin.*"`). `PermitResolver` evaluates granted permits with wildcard matching, bot/guild owner bypasses, and Anti-Nuke Quarantine interception. Permits are stored as `CustomPermit` or `EnforcedPermit`.
 
 ---
 
-## 5. 💾 Database, Seeding & Storage Management
+## 6. 💾 Database, Seeding & Storage Management
 
-### 5.1 Database Access Law (`container.db`)
+### 6.1 Database Access Law (`container.db`)
 
 - **Mandate**: All database queries must go through **`container.db`** (`DatabaseService`).
 - ❌ **Absolute Ban**: Modules must **NEVER** access `container.prisma` directly.
 
-### 5.2 Cache Invalidation (`InvalidationBus`)
+### 6.2 Cache Invalidation (`InvalidationBus`)
 
 - All Redis key names must be registered in `RedisKeys` (`#database/redis.js`).
 - Cache invalidations **must** pass through `InvalidationBus` (`container.invalidation`). Never call `redis.del` directly on shared keys.
 
-### 5.3 Database Seeding & Environment Guardrails
+### 6.3 Database Seeding & Environment Guardrails
 
 - **Seeding Script**: Execute `bun run db:seed` (`scripts/seed.ts`).
 - **QA Guild Target**: Seeds sample data under QA Test Guild ID `123456789012345678`.
@@ -206,52 +269,40 @@ Feature modules organize code into sub-store folders:
 
 ---
 
-## 6. 🐙 Git, PR & CI Automation Protocols
+## 7. ⚙️ Background Processing, Event Bus & RabbitMQ RPC Bridge
 
-### 6.1 Branching & Commit Conventions
+1. **Scheduled Tasks (BullMQ)**: Place task definitions in `src/modules/<name>/scheduled-tasks/` extending `RelayTask`.
+2. **Event Bus (Redis Streams)**: Inter-process event streaming via `packages/event-bus`. `LUMI_ROLE=gateway` publishes raw Discord dispatches; workers consume them.
+3. **RabbitMQ RPC Bridge**: Dashboard-to-worker communication via RabbitMQ. Register handlers via `registerRpcHandler` for web panel communication (`apps/dashboard`).
+
+---
+
+## 8. 🐙 Git, PR & CI Automation Protocols
+
+### 8.1 Branching & Commit Conventions
 
 - **Feature Branches**: Create feature branches (`git checkout -b feat/<name>`).
 - **Commit Formatting**: Use Conventional Commits (`feat(mod): ...`, `fix(core): ...`, `docs: ...`).
 
-### 6.2 Pull Request (PR) Protocol
+### 8.2 Pull Request (PR) Protocol
 
 - **PR Creation**: Create PRs via `gh pr create --title '...' --body '...'`.
 - **Merge Queues**: PRs pass through GitHub Merge Queue (`merge-group.yml`) before landing on `main`.
 
-### 6.3 Pre-Commit Hooks (`lefthook.yml`)
+### 8.3 Pre-Commit Hooks (`lefthook.yml`)
 
 - **Fast Pre-Commit Hook**: `lefthook` executes `typecheck` (filtered with `glob: "*.{ts,tsx,cts,mts}"`) and staged linting. Non-TypeScript commits execute in **0.02 seconds**.
 
 ---
 
-## 7. 💻 UI Card System, i18n & Helper Libraries
+## 9. 💻 UI Card System & i18n Rules
 
-### 7.1 UI Card System (`#utilities/cards.js`)
+### 9.1 UI Card System (`#utilities/cards.js`)
 
 - ❌ **Forbidden**: Constructing raw `EmbedBuilder` instances inside commands or services.
 - ✅ **Mandatory**: Use Card System helpers: `makeInfoCard`, `makeSuccessCard`, `makeErrorCard`, `replySuccess(interaction, text)`, `replyError(interaction, text)`.
 
-### 7.2 Core Helper Libraries Reference
-
-#### `@discordjs/formatters`
-| Helper Function | Use Case |
-| :--- | :--- |
-| `time(date, style?)` | Relative or styled timestamps (`<t:…:R>`) |
-| `userMention(id)` | Ping user (`<@id>`) |
-| `roleMention(id)` | Ping role (`<@&id>`) |
-| `channelMention(id)` | Link channel (`<#id>`) |
-| `inlineCode(text)` | Inline code snippet |
-
-#### `@sapphire/utilities`
-| Helper Function | Approved Use Case |
-| :--- | :--- |
-| `cutText(str, n)` | Truncate string to N chars |
-| `isNullish(v)` | Check null / undefined |
-| `filter(filterNullish)` | Type-safe array filtering |
-| `tryParseJSON(str)` | Safe JSON parsing |
-| `chunk(arr, size)` | Array pagination chunking |
-
-### 7.3 Internationalization (i18n)
+### 9.2 Internationalization (i18n)
 
 - Translation files reside in `packages/core/src/languages/<locale>/<namespace>.json`.
 - Fetch translators via `const t = await this.fetchT(interaction);`.
@@ -259,9 +310,17 @@ Feature modules organize code into sub-store folders:
 
 ---
 
-## 8. ✅ Verification Command Matrix & Anti-Pattern Index
+## 10. 📊 Observability & Telemetry
 
-### 8.1 Verification Command Matrix
+- **Logging**: Use `this.logger` or `container.logger` (backed by `PinoSapphireLogger`). Banned raw `console.log`.
+- **OpenTelemetry**: Enabled via `OTEL_ENABLED=true`. Traces HTTP requests, Prisma DB calls, and Redis Stream messages.
+- **Metrics Exporter**: Prometheus registry exposed on `METRICS_PORT` (`:9090`). Custom metrics **must** be registered in `packages/observability/src/metrics.ts`.
+
+---
+
+## 11. ✅ Verification Command Matrix & Anti-Pattern Index
+
+### 11.1 Verification Command Matrix
 
 | Change Scope | Required Verification Command(s) |
 | :--- | :--- |
@@ -275,7 +334,7 @@ Feature modules organize code into sub-store folders:
 | **System Resilience & Chaos** | `bun run verify:resilience` |
 | **Third-Party Addon Package** | `bun run validate <path/to/addon>` |
 
-### 8.2 Anti-Pattern Index
+### 11.2 Anti-Pattern Index
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
