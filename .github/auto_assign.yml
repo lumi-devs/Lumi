@@ -2,7 +2,7 @@ addReviewers: true
 addAssignees: true
 reviewers:
   - Damien-12
-  - rebiz
+  - rebizzz
 numberOfReviewers: 1
 numberOfAssignees: 1
 useReviewRequest: true
