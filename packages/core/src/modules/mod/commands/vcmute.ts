@@ -1,5 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
+import { isNullish } from "@sapphire/utilities";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { VoiceMuteAction } from "../actions/VoiceMuteAction.js";
 import { parseDuration } from "#lib/utilities/time.js";
@@ -18,25 +19,27 @@ import { parseDuration } from "#lib/utilities/time.js";
 })
 export class VcMuteCommand extends BaseSubcommand {
   public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
-    registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
-        .addSubcommand((s) =>
-          s
-            .setName("add")
-            .setDescription("Voice mute a member")
-            .addUserOption((o) => o.setName("target").setDescription("Member to voice mute").setRequired(true))
-            .addStringOption((o) => o.setName("duration").setDescription("Duration e.g. 1h, 1d"))
-            .addStringOption((o) => o.setName("reason").setDescription("Reason for voice mute")),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("remove")
-            .setDescription("Unmute a member in voice")
-            .addUserOption((o) => o.setName("target").setDescription("Member to unmute").setRequired(true))
-            .addStringOption((o) => o.setName("reason").setDescription("Reason for unmute")),
-        ),
+    registry.registerChatInputCommand(
+      (builder) =>
+        builder
+          .setName(this.name)
+          .setDescription(this.description)
+          .addSubcommand((sub) =>
+            sub
+              .setName("add")
+              .setDescription("Voice mute a member")
+              .addUserOption((opt) => opt.setName("target").setDescription("Target member").setRequired(true))
+              .addStringOption((opt) => opt.setName("duration").setDescription("Mute duration (e.g. 1h, 1d)"))
+              .addStringOption((opt) => opt.setName("reason").setDescription("Mute reason")),
+          )
+          .addSubcommand((sub) =>
+            sub
+              .setName("remove")
+              .setDescription("Unmute a member in voice")
+              .addUserOption((opt) => opt.setName("target").setDescription("Target member").setRequired(true))
+              .addStringOption((opt) => opt.setName("reason").setDescription("Unmute reason")),
+          ),
+      { guildIds: [] },
     );
   }
 
@@ -46,12 +49,12 @@ export class VcMuteCommand extends BaseSubcommand {
     const durationStr = await ctx.getString("duration");
     const reason = (await ctx.getString("reason")) ?? "No reason provided.";
 
-    if (!user) {
+    if (isNullish(user)) {
       return ctx.replyError("User Required", "Please specify a target user.");
     }
 
     const member = await guild.members.fetch(user.id).catch(() => null);
-    if (!member) {
+    if (isNullish(member)) {
       return ctx.replyError("Member Not Found", "That user is not in this server.");
     }
 

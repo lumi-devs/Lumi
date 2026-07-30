@@ -2,6 +2,9 @@ import tseslint from 'typescript-eslint';
 import baseConfig from './packages/eslint-config/index.js';
 
 export default tseslint.config(
+  {
+    ignores: ['scripts/**', 'dist/**', 'coverage/**'],
+  },
   ...baseConfig,
   {
     languageOptions: {

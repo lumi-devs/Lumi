@@ -1,6 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
+import { isNullish } from "@sapphire/utilities";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
 import { logError } from "#lib/utilities/errors.js";
 import { KickAction } from "../actions/index.js";
@@ -19,12 +20,24 @@ export class KickCommand extends BaseCommand {
     registry: ApplicationCommandRegistry,
   ) {
     registry.registerChatInputCommand((b) =>
-      applyLocalizedBuilder(b, "commands:kick")
+      applyLocalizedBuilder(
+        b,
+        "commands:kick.name",
+        "commands:kick.description",
+      )
         .addUserOption((o) =>
-          applyLocalizedBuilder(o, "commands:kickMember").setRequired(true),
+          applyLocalizedBuilder(
+            o,
+            "commands:kick.options.member.name",
+            "commands:kick.options.member.description",
+          ).setRequired(true),
         )
         .addStringOption((o) =>
-          applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
+          applyLocalizedBuilder(
+            o,
+            "commands:kick.options.reason.name",
+            "commands:kick.options.reason.description",
+          ),
         ),
     );
   }
@@ -36,7 +49,7 @@ export class KickCommand extends BaseCommand {
     const reason =
       (await ctx.getString("reason", { rest: true })) ??
       t("commands:modNoReason");
-    if (!member) {
+    if (isNullish(member)) {
       return ctx.replyError(
         t("commands:modMemberNotFoundTitle"),
         t("commands:modMemberNotFound"),

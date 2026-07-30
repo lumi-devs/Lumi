@@ -94,6 +94,27 @@ All agent handoff reports must contain the following 5 sections:
 4. **Conclusion**: Clear, actionable assessment supported by logic.
 5. **Verification Method**: Exact commands and file paths to independently verify work.
 
+### 1.6 Anti-AI Code Slop Law
+
+AI agents must NEVER write "AI code slop". Code submitted to Lumi must be clean, idiomatic, self-documenting TypeScript:
+
+- ❌ **No Trivial Comments**: Banned comments explaining *what* code does (e.g. `// increment count`, `// return the user`, `// initialize variable`). Write self-documenting variable and function names. Only use comments for non-obvious *why* architecture decisions.
+- ❌ **No Redundant `try-catch` Wrappers**: Never wrap non-throwing synchronous statements or simple object property lookups in defensive `try-catch` blocks that log and rethrow. Centralize error handling in framework handlers.
+- ❌ **No AI Conversational Chatter in Source Files**: Never leave introductory AI text inside code comments (e.g. `// Here is the implementation of...`, `// Note: make sure to update...`).
+- ❌ **No Re-invented Helpers**: Never re-implement utility functions already present in `@sapphire/utilities` (`isNullish`, `cutText`, `filterNullish`) or `#utilities/cards.js`.
+- ❌ **No Over-Engineered Single-Use Abstractions**: Never create unnecessary factory classes, wrapper abstractions, or multi-level indirection for single-use functions.
+
+### 1.7 TypeScript & Discord.js Anti-Slop Giveaways
+
+The following 6 giveaways indicate low-quality AI-generated Discord.js/TypeScript code and are **strictly banned**:
+
+1. ❌ **`as any` / `as unknown as X` Lazy Force-Casting**: Never force-cast to `any` to silence compiler errors. Use type guards (`instanceof`, `typeof`), `unknown`, or `@sapphire/shapeshift` schema validation.
+2. ❌ **Raw `EmbedBuilder` Instantiations**: Never use `new EmbedBuilder()`. All Discord card UI MUST use `#utilities/cards.js` (`makeInfoCard`, `makeSuccessCard`, `replyError`).
+3. ❌ **Hardcoded Mention Strings (`<@${id}>`, `<#${id}>`)**: Never write raw string interpolation for pings. Use `@discordjs/formatters` (`userMention()`, `roleMention()`, `channelMention()`).
+4. ❌ **Loose Falsy `!x` Checks**: Never use loose `!x` on objects or booleans. Use `@sapphire/utilities` (`isNullish(x)`).
+5. ❌ **Raw Ephemeral Bitfield Flag Magic (`MessageFlags.Ephemeral`)**: Never OR `MessageFlags.Ephemeral` manually in replies. Use `ephemeralCard()` or `replyError`.
+6. ❌ **Redundant Local Try-Catch Swallowing**: Never wrap Discord interaction replies in local try-catches that swallow exceptions. Let Sapphire framework handle interaction lifecycle errors.
+
 ---
 
 ## 2. 📦 Changeset Creation & Release Workflow Protocols
@@ -290,10 +311,7 @@ Feature modules organize code into sub-store folders:
 - **ChatOps Slash Commands**:
   - `/format` — Runs `eslint --fix` and automatically commits/pushes style fixes back to the PR branch.
   - `/retest` — Re-triggers failing CI test suites.
-  - `/label <name>` — Adds requested labels to issue or PR.
-  - `/unlabel <name>` — Removes requested labels from issue or PR.
-  - `/assign <user>` — Assigns issue or PR to requested GitHub user.
-  - `/bench` — Executes Redis Streams resilience benchmark suite & posts a latency/throughput summary comment.
+  - `/bench` — Executes the benchmark suite (`bun run bench`) and posts latency/throughput performance results.
 - **Merge Queues**: PRs pass through GitHub Merge Queue (`merge-group.yml`) before landing on `main`.
 
 ### 8.3 Pre-Commit Hooks (`lefthook.yml`)
@@ -307,7 +325,7 @@ Feature modules organize code into sub-store folders:
 | `changeset-check.yml` | Quality Gate | Enforces changeset file inclusion on code PRs |
 | `release.yml` | Release | Consumes changesets, updates `CHANGELOG.md`, opens version PRs & publishes releases |
 | `ci.yml` | CI | Runs linting, typechecking, tests & Nix flake evaluation with Turborepo Git diffing |
-| `slash-commands.yml` | ChatOps | Executes `/format`, `/retest`, `/label`, `/unlabel`, `/assign`, and `/bench` |
+| `slash-commands.yml` | ChatOps | Executes `/format`, `/retest`, and `/bench` |
 | `comment.yml` | ChatOps | Adds instant reaction (`👀`) on `/lumi` or `@lumi-devs` comments |
 | `review.yml` | PR Hygiene | Automatically minimizes/collapses dismissed bot comments via GraphQL |
 | `pr-comment-summary.yml` | PR Hygiene | Posts & updates a sticky PR status overview comment |
@@ -360,6 +378,7 @@ Feature modules organize code into sub-store folders:
 | **Prisma Schema Changes** | `bun run db:generate` |
 | **Module Metadata / `@DefineModule`** | `bun run modules:manifest` |
 | **Development Database Seeding** | `bun run db:seed` |
+| **Performance Benchmark Suite** | `bun run bench` |
 | **TypeScript Code & Types** | `bun run typecheck` |
 | **Code Style & Linting** | `bun run lint` |
 | **Unit & Integration Tests** | `bun run test` |
@@ -379,10 +398,14 @@ Feature modules organize code into sub-store folders:
 │ Cross-Module Imports       │ ❌ Banned. Move shared code to #lib/           │
 │ Direct container.prisma    │ ❌ Banned. Use container.db (DatabaseService)  │
 │ Direct redis.del           │ ❌ Banned. Use container.invalidation          │
+│ Trivial Obvious Comments   │ ❌ Banned. Use self-documenting names           │
+│ Redundant try-catch        │ ❌ Banned. Centralize error handling            │
+│ AI Conversational Chatter  │ ❌ Banned. Remove introductory AI text in code │
+│ Lazy `as any` Force Casts  │ ❌ Banned. Use interfaces, type guards, unknown │
+│ Raw mention strings <@ID>  │ ❌ Banned. Use userMention/channelMention      │
+│ Loose `!x` falsy checks    │ ❌ Banned. Use isNullish(x) / filterNullish     │
+│ Raw MessageFlags.Ephemeral │ ❌ Banned. Use ephemeralCard() / replyError     │
 │ Missing Changesets on PR   │ ❌ Banned. Run bunx changeset for package code │
-│ Raw <@ID> string formatting│ ❌ Banned. Use userMention(id) from formatters │
-│ .filter(Boolean) on arrays │ ❌ Banned. Use .filter(filterNullish)          │
-│ JSON.parse in try/catch    │ ❌ Banned. Use tryParseJSON(str)               │
 │ Extensionless # imports    │ ❌ Banned. Always append .js extension         │
 │ Context Window Dumping     │ ❌ Banned. Use grep_search and line slicing   │
 │ Unverified Handoffs        │ ❌ Banned. Provide 5-Component Handoff Report │

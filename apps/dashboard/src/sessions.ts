@@ -1,4 +1,5 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
+import { isNullish } from "@sapphire/utilities";
 import { config, SESSION_TTL_MS } from "./config.js";
 import type { Session } from "./types.js";
 
@@ -56,7 +57,7 @@ export function readSession(cookieHeader: string | null): Session | null {
   const id = readCookie(cookieHeader, COOKIE_NAME);
   if (!id) return null;
   const session = store.get(id);
-  if (!session) return null;
+  if (isNullish(session)) return null;
   if (Date.now() > session.expiresAt) {
     store.delete(id);
     return null;

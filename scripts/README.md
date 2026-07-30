@@ -14,6 +14,7 @@ This directory contains CLI tools, build-time code generators, integration testi
 | `generate-manifests.ts` | `bun run modules:manifest` | Build-time manifest generator for internal & external modules | Node/Bun file system |
 | `validate-addon.ts` | `bun run validate <path>` | Structural and architectural validator for local third-party addons | Offline CLI |
 | `seed.ts` | `bun run db:seed` | Populates local PostgreSQL database with QA test guilds & config | PostgreSQL |
+| `benchmark.ts` | `bun run bench` | Performance benchmark suite measuring PermitResolver, Card UI, & formatters | Offline CLI |
 | `verify-resilience.ts` | `bun run verify:resilience` | Fault-tolerance & event-bus message durability test suite | Redis Streams |
 
 ---

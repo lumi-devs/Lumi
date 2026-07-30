@@ -1,4 +1,5 @@
 import "./telemetry.js";
+import { isNullish } from "@sapphire/utilities";
 import { REST } from "@discordjs/rest";
 import {
   WebSocketManager,
@@ -321,7 +322,7 @@ const readyTracker =
 let readyHeartbeat: ReturnType<typeof setInterval> | null = null;
 let everReady = false;
 const publishReady = () => {
-  if (!readyTracker) return;
+  if (isNullish(readyTracker)) return;
   const allReady =
     expectedShards.size > 0 && shardReady.size === expectedShards.size;
   if (allReady) everReady = true;

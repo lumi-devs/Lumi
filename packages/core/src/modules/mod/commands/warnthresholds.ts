@@ -42,7 +42,7 @@ export class WarnThresholdsCommand extends BaseSubcommand {
       sessionId: `wt:${ctx.guildId}:${ctx.user.id}`,
       guildId: ctx.guildId!,
       userId: ctx.user.id,
-      moduleStore: container.stores.get("modules") as any,
+      moduleStore: container.stores.get("modules"),
     };
 
     const rendered = await view.render(renderCtx);
