@@ -37,8 +37,14 @@ jobs:
             const pr = context.payload.pull_request;
             const labels = (pr.labels || []).map(l => l.name);
 
+            // Auto-exempt Dependabot / Renovate / automated PRs
+            if (context.actor === 'dependabot[bot]' || context.actor === 'renovate[bot]' || pr.user.login.includes('bot')) {
+              core.info(`PR submitted by bot (${pr.user.login}) — skipping changeset requirement.`);
+              return;
+            }
+
             // Exclude PRs labeled as docs-only, area:docs, area:ci, or area:deps
-            const exemptLabels = ['docs-only', 'area:docs', 'area:ci', 'area:deps'];
+            const exemptLabels = ['docs-only', 'area:docs', 'area:ci', 'area:deps', 'dependencies'];
             const isExempt = labels.some(l => exemptLabels.includes(l));
 
             if (isExempt) {

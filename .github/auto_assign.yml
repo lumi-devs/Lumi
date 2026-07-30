@@ -1,7 +1,7 @@
 addReviewers: true
 addAssignees: true
 reviewers:
-  - lumi-devs/maintainers
+  - Damien-12
 numberOfReviewers: 1
 numberOfAssignees: 1
 useReviewRequest: true
