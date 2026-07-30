@@ -2,7 +2,7 @@ name: PR Summary Comment
 
 on:
   pull_request:
-    types: [opened, synchronized, reopened]
+    types: [opened, synchronize, reopened]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,16 +24,12 @@ jobs:
         with:
           header: lumi-pr-summary
           message: |
-            ### 🤖 Lumi Bot PR Overview
+            ### Monorepo Build Matrix
 
-            | Verification Check | Status | Info |
-            | :--- | :---: | :--- |
-            | **Changeset Enforcer** | 📦 | Verified via `.changeset/` |
-            | **Turborepo Diffing** | ⚡ | Scoped to changed packages |
-            | **Nix Flake Check** | ❄️ | Evaluated via `nix-installer` |
+            | Subsystem | Scope | Workflow Target |
+            | :--- | :--- | :--- |
+            | `packages/` | Workspace Core | `bun run check:all` |
+            | `apps/` | Distributed Services | `docker.yml` |
+            | `.changeset/` | Versioning Gate | `release.yml` |
 
-            ---
-
-            > [!TIP]
-            > - Run `bun run typecheck && bun run lint && bun run test` locally before pushing.
-            > - Need a changeset for code edits? Run `bunx changeset` locally.
+            *Automated CI report for PR #${{ github.event.pull_request.number }} (`${{ github.event.pull_request.head.sha }}`).*
