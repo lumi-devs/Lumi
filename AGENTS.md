@@ -121,12 +121,37 @@ The following 6 giveaways indicate low-quality AI-generated Discord.js/TypeScrip
 
 Lumi utilizes a monorepo architecture leveraging Changesets (`@changesets/cli` + `@changesets/action`) for version management, automated changelog generation, and GitHub Release publishing.
 
-### 2.1 Changeset Creation Protocol
+### 2.1 Step-by-Step Changeset Release Pipeline
 
-Whenever an agent modifies source code within `packages/` or `apps/`, it is **mandatory** to generate a corresponding changeset file before concluding the task.
+```
+  ┌───────────────────────┐
+  │  Step 1: Contributor  │ ──► Creates code edit in packages/ or apps/
+  │  Runs bunx changeset  │     Generates .changeset/*.md file with version bump choice
+  └───────────┬───────────┘
+              │ PR Merged to main
+  ┌───────────▼───────────┐
+  │   Step 2: release.yml │ ──► Reads pending .changeset/*.md files
+  │   Automated Action    │     Bumps version in package.json & CHANGELOG.md
+  └───────────┬───────────┘     Opens automated "Version Packages" PR
+              │ Maintainer Merges Version PR
+  ┌───────────▼───────────┐
+  │  Step 3: GitHub       │ ──► Cuts official GitHub Releases
+  │  Release Published    │     Creates git version tags (e.g. v1.0.1)
+  └───────────────────────┘     Publishes package releases to registry
+```
 
-- **Command**: `bunx changeset` (or programmatic creation of `.changeset/*.md`).
-- **CI Enforcement**: `.github/workflows/changeset-check.yml` automatically blocks PRs touching package/app code without a changeset.
+- **Step 1: Contributor Creates a Change (`bunx changeset`)**
+  When an AI agent or contributor edits code in `packages/` or `apps/`, run:
+  ```bash
+  bunx changeset
+  ```
+  Select the package(s) changed, select the semver bump type (`patch`, `minor`, `major`), and write a human-readable summary. This generates a file under `.changeset/*.md` to commit with the PR.
+
+- **Step 2: PR Merged ➔ Automated "Version Packages" PR**
+  When a PR merges into `main`, [`.github/workflows/release.yml`](file://.github/workflows/release.yml) executes `bunx @changesets/cli version`. It reads pending `.changeset/*.md` files, updates `package.json` versions and `CHANGELOG.md` files, deletes consumed changeset files, and opens (or updates) an automated PR titled **Version Packages**.
+
+- **Step 3: Maintainer Merges Version PR ➔ Automated Release**
+  When a maintainer merges the automated **Version Packages** PR into `main`, `@changesets/action` cuts official GitHub Releases, creates git version tags (e.g. `v1.0.1`), and publishes packages automatically.
 
 ### 2.2 Changeset Markdown Schema
 
@@ -152,6 +177,20 @@ Detailed human-readable summary of the changes for CHANGELOG.md.
 Changesets are exempt for commits strictly modifying:
 - Documentation files (`area:docs` / `docs-only` label, `docs/` directory, `*.md`).
 - Workflow & CI files (`area:ci` label, `.github/workflows/`, `flake.nix`, `lefthook.yml`).
+
+### 2.5 GitHub Actions Bot Capabilities & Automation Suite
+
+The Lumi repository leverages a full GitHub Actions automation bot suite across 21 workflow triggers:
+1. **ChatOps Slash Commands (`slash-commands.yml` & `comment.yml`)**:
+   - `/format`: Automatically runs ESLint `--fix` on the PR code and pushes a clean format commit directly back to the contributor's PR branch.
+   - `/bench`: Runs `bun run bench` inside GitHub Actions and posts a live micro-benchmark comment (ops/sec, P99 latency, RSS memory) matching pnpm standards.
+   - `/retest`: Re-triggers failed CI jobs without needing manual workflow dispatch privileges.
+2. **Automated PR Hygiene & Triage (`pr-comment-summary.yml`, `review.yml`, `size-label.yml`, `labeler.yml`)**:
+   - Updates a sticky PR summary status comment with test coverage and lint results.
+   - Minimizes/collapses outdated bot comments via GitHub GraphQL API.
+   - Computes PR diff line sizes (`size:XS` to `size:XL`) and labels packages (`area:core`, `area:gateway`).
+3. **Resilience & Chaos Testing (`resilience.yml`)**:
+   - Runs simulated Redis Stream failures and network partitions (`bun scripts/verify-resilience.ts`) to ensure fault tolerance before code hits production.
 
 ---
 
