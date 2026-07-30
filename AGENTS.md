@@ -7,32 +7,34 @@
 
 ## 📖 Table of Contents
 
-1. [AI Agent Operational Protocols & Safety Guardrails](#1-ai-agent-operational-protocols--safety-guardrails)
-2. [Monorepo Architecture & Path Resolution](#2-monorepo-architecture--path-resolution)
-3. [Tech Stack & Approved Libraries](#3-tech-stack--approved-libraries)
+1. [Phased Task Execution Lifecycle & Handoff Standard](#1-phased-task-execution-lifecycle--handoff-standard)
+2. [Changeset Creation & Release Workflow Protocols](#2-changeset-creation--release-workflow-protocols)
+3. [Monorepo Architecture & Path Resolution Spec](#3-monorepo-architecture--path-resolution-spec)
 4. [Module System & Component Laws](#4-module-system--component-laws)
-5. [Data, State & Config Management](#5-data-state--config-management)
-6. [Background Processing & Event Bus](#6-background-processing--event-bus)
-7. [Observability & Telemetry](#7-observability--telemetry)
-8. [UI Card System & i18n Rules](#8-ui-card-system--i18n-rules)
-9. [Verification Command Matrix & Anti-Pattern Index](#9-verification-command-matrix--anti-pattern-index)
+5. [Database, Seeding & Storage Management](#5-database-seeding--storage-management)
+6. [Git, PR & CI Automation Protocols](#6-git-pr--ci-automation-protocols)
+7. [UI Card System, i18n & Helper Libraries](#7-ui-card-system-i18n--helper-libraries)
+8. [Observability, Resilience & Verification Command Matrix](#8-observability-resilience--verification-command-matrix)
 
 ---
 
-## 1. 🤖 AI Agent Operational Protocols & Safety Guardrails
+## 1. 🤖 Phased Task Execution Lifecycle & Handoff Standard
 
-### 1.1 Phased Task Execution Lifecycle
-Every AI agent task must progress through 5 distinct operational phases in order:
+To ensure predictable, reliable, and transparent agent operations, all Lumi agents must strictly adhere to a standardized 5-Phase Task Execution Lifecycle and utilize a structured 5-Component Handoff Report Protocol. This methodology ensures state is preserved across agent sessions and inter-agent collaboration is seamless.
+
+### 1.1 5-Phase Task Execution Lifecycle
+
+All tasks, regardless of size, must proceed through the following 5 chronological phases:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                       AI AGENT TASK EXECUTION LIFECYCLE                     │
 ├───────────────┬─────────────────────────────────────────────────────────────┤
-│ Phase 1       │ Exploration & Discovery (Read-Only)                         │
+│ Phase 1       │ Ingestion & Briefing Analysis (Read-Only)                   │
 │               │ Inspect code, locate exact lines, read briefing/progress.  │
 ├───────────────┼─────────────────────────────────────────────────────────────┤
-│ Phase 2       │ Architectural Alignment                                     │
-│               │ Verify monorepo boundaries, module rules & schema contracts.│
+│ Phase 2       │ Exploration & Planning                                      │
+│               │ Verify monorepo boundaries, module rules & draft plan.      │
 ├───────────────┼─────────────────────────────────────────────────────────────┤
 │ Phase 3       │ Focused Minimal Implementation                              │
 │               │ Make minimal, contiguous edits. Preserve existing style.   │
@@ -40,60 +42,90 @@ Every AI agent task must progress through 5 distinct operational phases in order
 │ Phase 4       │ Mandatory Self-Verification                                 │
 │               │ Execute build, typecheck, lint, and test suites.            │
 ├───────────────┼─────────────────────────────────────────────────────────────┤
-│ Phase 5       │ Structured Handoff & Documentation                          │
-│               │ Produce 5-Component Handoff Report in workspace directory.  │
+│ Phase 5       │ Handoff, Changeset & Documentation                          │
+│               │ Produce Changeset (if code touched) & 5-Component Report.  │
 └───────────────┴─────────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 Context Window & Information Retrieval Optimization
-To maintain context window efficiency and prevent token exhaustion:
-- **Tool Hierarchy**: Use low-overhead search tools first.
-  1. `grep_search` — Exact string or regex pattern search.
-  2. `find_by_name` — Target filename or pattern search.
-  3. `view_file` — Targeted inspection using explicit `StartLine` and `EndLine`.
-- **Line & Slice Discipline**: Never dump large files (>800 lines) into context without line slicing.
-- **Diff Minimization**: Make surgical, minimal-change edits. Blanket file auto-formatting or wholesale file replacements are strictly prohibited.
+1. **Phase 1: Ingestion & Briefing Analysis**
+   - Read persistent working memory files (`BRIEFING.md` and `progress.md`) to establish full context and mission parameters.
+2. **Phase 2: Exploration & Planning**
+   - Investigate the codebase using `grep_search`, `find_by_name`, and targeted `view_file` calls. Draft an atomic implementation plan and update `progress.md`.
+3. **Phase 3: Focused Minimal Implementation**
+   - Mutate source code atomically. If modifying `packages/` or `apps/`, prepare a corresponding changeset (see Section 2).
+4. **Phase 4: Mandatory Self-Verification**
+   - Execute verification suites (`bun run typecheck`, `bun run lint`, `bun run test`). Resolve all introduced warnings or errors before committing.
+5. **Phase 5: Handoff & Documentation**
+   - Generate required Changesets (`bunx changeset`). Update `progress.md` and output the 5-Component Handoff Report.
 
-### 1.3 Tool Safety Constraints & Security Guardrails
-AI agents must strictly respect safety constraints during tool execution:
+### 1.2 Persistent Working Memory (`progress.md` & `BRIEFING.md`)
 
-- ❌ **Forbidden Bash Operations**:
-  - Destructive filesystem commands: `rm -rf /`, `rm -rf .git`, unapproved mass deletion.
-  - Raw secret exposure: Printing contents of `.env` or logging API keys/tokens to output.
-  - Production database mutation: Executing `prisma db push` or `prisma migrate reset` against production databases (`NODE_ENV=production`).
-- ⚡ **Prerequisite Execution Law**:
-  - Always run `bun run db:generate` (`prisma generate`) before executing `bun run typecheck` whenever Prisma schema or database models are modified.
-  - Always run `bun run modules:manifest` after creating or modifying `@DefineModule` metadata.
-- 🐚 **Nix Shell Execution**:
-  - If running in an environment where `bun` is not in default PATH, invoke commands using `nix-shell -p bun nodejs --run "<command>"`.
+- **`BRIEFING.md`**: The Immutable Source of Truth containing core system architecture, constraints, and dependency rules.
+- **`progress.md`**: The Mutable Scratchpad tracking immediate task queues, completed checklists, and blockers.
 
-### 1.4 Multi-Agent Workspace Isolation & Handoff Standard
-- **Workspace Isolation**: Each agent operates strictly within its designated working directory under `.agents/<agent_id>/`. Agents must **never** create temporary scratch files outside their assigned `.agents` subfolder.
-- **5-Component Handoff Protocol**: All handoff reports (`handoff.md`) must contain the following 5 sections:
-  1. **Observation**: Verbatim file paths, line numbers, exact errors, and tool output quotes.
-  2. **Logic Chain**: Step-by-step reasoning connecting observations to conclusions.
-  3. **Caveats**: Scope limits, unverified edge cases, assumptions made.
-  4. **Conclusion**: Clear, actionable assessment supported by logic.
-  5. **Verification Method**: Exact commands and file paths to independently verify work.
+### 1.3 5-Component Handoff Report Protocol
 
-### 1.5 State Recovery & Liveness Protocol
-- **Liveness Heartbeat**: Update `.agents/<agent_id>/progress.md` after completing each meaningful task step. Include a `Last visited: [timestamp]` header.
-- **Persistent Working Memory**: Maintain `.agents/<agent_id>/BRIEFING.md` (<100 lines index). Sections marked `## 🔒 My Identity` and `## 🔒 Key Constraints` are **immutable and append-only**.
+All agent handoff reports must contain the following 5 sections:
+1. **Observation**: Verbatim file paths, line numbers, exact errors, and tool output quotes.
+2. **Logic Chain**: Step-by-step reasoning connecting observations to conclusions.
+3. **Caveats**: Scope limits, unverified edge cases, assumptions made.
+4. **Conclusion**: Clear, actionable assessment supported by logic.
+5. **Verification Method**: Exact commands and file paths to independently verify work.
 
 ---
 
-## 2. 🏗️ Monorepo Architecture & Path Resolution
+## 2. 📦 Changeset Creation & Release Workflow Protocols
 
-### 2.1 Workspace Structure
+Lumi utilizes a monorepo architecture leveraging Changesets (`@changesets/cli` + `@changesets/action`) for version management, automated changelog generation, and GitHub Release publishing.
+
+### 2.1 Changeset Creation Protocol
+
+Whenever an agent modifies source code within `packages/` or `apps/`, it is **mandatory** to generate a corresponding changeset file before concluding the task.
+
+- **Command**: `bunx changeset` (or programmatic creation of `.changeset/*.md`).
+- **CI Enforcement**: `.github/workflows/changeset-check.yml` automatically blocks PRs touching package/app code without a changeset.
+
+### 2.2 Changeset Markdown Schema
+
+Manually constructed changesets in `.changeset/` must use standard YAML frontmatter:
+
+```markdown
+---
+"@lumi/core": patch
+"@lumi/worker": patch
+---
+
+Detailed human-readable summary of the changes for CHANGELOG.md.
+```
+
+### 2.3 Semantic Versioning (Semver) Rules
+
+- **`patch` (0.0.X)**: Bug fixes, internal refactoring, performance tweaks (backwards-compatible).
+- **`minor` (0.X.0)**: New features or non-breaking public API additions.
+- **`major` (X.0.0)**: Breaking API changes or major architectural redesigns.
+
+### 2.4 Auto-Exemption Rules
+
+Changesets are exempt for commits strictly modifying:
+- Documentation files (`area:docs` / `docs-only` label, `docs/` directory, `*.md`).
+- Workflow & CI files (`area:ci` label, `.github/workflows/`, `flake.nix`, `lefthook.yml`).
+
+---
+
+## 3. 🏗️ Monorepo Architecture & Path Resolution Spec
+
+### 3.1 Monorepo Package Layout
+
 Lumi is structured as a Bun workspace monorepo:
 - **`apps/*`**: Thin entrypoint applications (`@lumi/worker`, `@lumi/gateway`, `@lumi/scheduler`, `@lumi/dashboard`).
-- **`packages/*`**: Shared core libraries (`@lumi/core`, `@lumi/event-bus`, `@lumi/observability`, `@lumi/sharding`, `@lumi/contracts`, `@lumi/sdk`, `@lumi/eslint-config`, `@lumi/typescript-config`).
+- **`packages/*`**: Shared core libraries (`@lumi/core`, `@lumi/event-bus`, `@lumi/observability`, `@lumi/sharding`, `@lumi/contracts`).
 
 > [!WARNING]
 > **Cross-Package Import Law**: Cross-package imports MUST use `@lumi/*` package specifiers. Never use relative paths (e.g. `../../packages/core`) across package boundaries.
 
-### 2.2 Complete Path Alias Specifier Reference
-Within `@lumi/core` (and symlinked third-party modules), imports are mapped via `package.json`:
+### 3.2 Complete Path Alias Specifier Reference
+
+Within `@lumi/core` (and symlinked third-party modules), imports are mapped via `package.json` `"imports"`:
 
 | Import Alias | Target Resolution | Description |
 | :--- | :--- | :--- |
@@ -102,163 +134,140 @@ Within `@lumi/core` (and symlinked third-party modules), imports are mapped via 
 | `#utilities/*.js` | `./packages/core/src/lib/utilities/*.ts` | Cards, formatters, time helpers, utilities |
 | `#core/lib/*.js` | `./packages/core/src/lib/*.ts` | Alias for core library imports |
 | `#core/module-system/*.js`| `./packages/core/src/lib/module-system/*.ts` | Module store, Service, listener bases |
-| `#core/*.js` | `./packages/core/src/lib/*.ts` | Alias for core library imports (catch-all) |
-| `#root/*.js` | `./packages/core/src/*.ts` | Root source directory |
+| `#core/*.js` | `./packages/core/src/lib/*.ts` | Catch-all alias for core library |
 | `#modules/*.js` | `./packages/core/src/modules/*.ts` | Module sub-stores and feature code |
 
 > [!IMPORTANT]
 > **Mandatory `.js` Extension Law**: Specifiers using import aliases MUST append `.js` (e.g. `import { Service } from '#core/module-system/Service.js'`), even though source files are written in `.ts`.
 
-### 2.3 3rd-Party Addon Architecture & Symlink Resolution
+### 3.3 3rd-Party Addon Architecture & Symlink Resolution
+
 Third-party downloaded modules reside in `data/3rd-party-modules/` and are symlinked into `packages/core/src/modules/`.
-
-Because Bun resolves symlinks to their realpath (`data/3rd-party-modules/<addon>`), the root `package.json` contains a `"comment:imports"` map mirroring `packages/core/package.json`. This guarantees that `#lib/*`, `#database/*`, and `#utilities/*` import aliases resolve seamlessly from third-party addon directories without breaking module encapsulation.
-
-### 2.4 Runtime Roles (`LUMI_ROLE`) & Transports (`TRANSPORT`)
-`LUMI_ROLE` controls process behavior:
-- `monolith` (default): Monolithic worker process running WebSockets, commands, and scheduled tasks in one process.
-- `gateway`: Dedicated Discord WebSocket receiver publishing raw events onto the transport bus.
-- `worker`: WebSocket-less event consumer handling command, listener, and module execution.
-- `scheduler`: Leader-locked process managing BullMQ queues and delayed jobs.
-
-The event bus uses Redis Streams for cross-process message delivery.
-
----
-
-## 3. 🛠️ Tech Stack & Approved Libraries
-
-### 3.1 Stack Summary
-- **Runtime**: Bun 1.3+
-- **Framework**: Sapphire Framework v5 (`@sapphire/framework`, `@sapphire/plugin-*`)
-- **Discord**: Discord.js v14 + `@discordjs/builders` + `@discordjs/formatters`
-- **Database**: PostgreSQL 17 + Prisma ORM (`@prisma/client`) + PgBouncer
-- **Cache & Queues**: Redis 7 (ioredis) + BullMQ (`@sapphire/plugin-scheduled-tasks`)
-- **Messaging**: RabbitMQ (`amqplib`) RPC bridge
-- **Validation & i18n**: `@sapphire/shapeshift` + `@sapphire/plugin-i18next`
-
-### 3.2 Approved Helper Libraries
-
-#### `@discordjs/formatters` Reference Table
-| Use Case | Recommended Helper Function |
-| :--- | :--- |
-| Relative timestamp (`<t:…:R>`) | `time(date, TimestampStyles.RelativeTime)` |
-| Short time (`<t:…:T>`) | `time(date, TimestampStyles.ShortTime)` |
-| User mention (`<@id>`) | `userMention(id)` |
-| Channel mention (`<#id>`) | `channelMention(id)` |
-| Role mention (`<@&id>`) | `roleMention(id)` |
-| Escape markdown | `escapeMarkdown(str)` |
-
-#### `@sapphire/utilities` Reference Table
-| Use Case | Approved Helper Function | Anti-Pattern to Avoid |
-| :--- | :--- | :--- |
-| Truncate string to N chars | `cutText(str, n)` | Manual `.slice(0, n) + '...'` |
-| Check null / undefined | `isNullish(v)` | `v === null \|\| v === undefined` |
-| Check null / empty | `isNullishOrEmpty(v)` | Manual string/array length check |
-| Type-safe array filter | `.filter(filterNullish)` | ❌ `.filter(Boolean)` on typed arrays |
-| Safe JSON parsing | `tryParseJSON(str)` | ❌ `JSON.parse` inside try/catch |
-| Title case capitalization | `toTitleCase(str)` | Manual regex or `.toUpperCase()` chaining |
-| Array pagination chunking | `chunk(arr, size)` | ❌ `PaginatedMessage` or custom loops |
-| Escape regex metacharacters | `regExpEsc(str)` | Manual string replacements |
-| Safe object cloning | `deepClone(obj)` | `JSON.parse(JSON.stringify(obj))` |
-
-#### Utilities & Timers
-- **HTTP Fetch**: Use `@sapphire/fetch` instead of global `fetch()`.
-- **Performance Stopwatch**: Use `@sapphire/stopwatch` instead of `performance.now()`.
-- **Duration Formatting**: Use `container.utilities.time.humanizeDelta()`.
+The root `package.json` contains a safety-net `"imports"` mapping that mirrors `packages/core/package.json` so imported aliases resolve seamlessly from third-party addon directories without breaking module encapsulation.
 
 ---
 
 ## 4. 🧩 Module System & Component Laws
 
-### 4.1 Module Structure & `@DefineModule` Decorator
-Feature modules live in `packages/core/src/modules/<module_name>/`. The entrypoint `index.ts` exports a module class decorated with `@DefineModule`:
+### 4.1 `@DefineModule` Metadata Schema
+
+Every module entrypoint (`index.ts`) must export a module class decorated with `@DefineModule`:
 
 ```typescript
-import { Module, DefineModule } from '#core/module-system/Module.js';
+import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
 
 @DefineModule({
-  id: 'my_module',
-  name: 'My Feature Module',
-  description: 'Module description goes here',
+  name: "my_module",            // lowercase snake_case id
+  displayName: "My Module",     // human-readable name
+  emoji: Emojis.GEAR,
+  version: "1.0.0",
+  description: "Module description goes here",
   defaultEnabled: true,
-  configSchema: myConfigSchema
+  configSchema: {
+    some_setting: cfg.boolean.default(true),
+  },
 })
 export class MyModule extends Module {}
 ```
 
-### 4.2 Module Sub-store Directories
+### 4.2 Sub-Store Directories
+
+Feature modules organize code into sub-store folders:
 - `commands/` — Extend `BaseCommand` or `BaseSubcommand`.
 - `listeners/` — Extend `ModuleListener` or `GuildMessageListener`.
-- `interaction-handlers/` — Extend Sapphire `InteractionHandler` (buttons, select menus, modals).
+- `interaction-handlers/` — Extend Sapphire `InteractionHandler`.
 - `services/` — Extend `Service` singleton class.
-- **`scheduled-tasks/`** — Must be named **`scheduled-tasks/`** exactly; extend `RelayTask`.
+- **`scheduled-tasks/`** — Extend `RelayTask` (placed in `scheduled-tasks/` exactly).
 
-> [!CAUTION]
-> **Zero Cross-Module Import Law**: Feature modules must **NEVER** import code directly from sibling modules (e.g. `import { foo } from '../other_module/service.js'` is strictly forbidden). Shared functionality must be placed in `#lib/*`, `#database/*`, or `#utilities/*`.
+### 4.3 Zero Cross-Module Import Law & Permits
 
-### 4.3 Services & Permission Hierarchy
-- **Services**: Singletons extending `Service` (`#core/module-system/Service.js`). Access via `getService("<name>")` or `tryGetService("<name>")`.
-- **Permissions (Wick-style Permits)**:
-  Commands declare a `requiredPermit` string node (e.g. `"mod.*"`, `"admin.*"`, `"owner.*"`). The `PermitResolver` evaluates granted nodes with wildcard matching, bot/guild owner bypasses, and Anti-Nuke Quarantine interception. Permits are stored as `CustomPermit` (stripped during quarantine) or `EnforcedPermit` (un-quarantinable).
+- **Zero Cross-Module Import Law**: Feature modules must **NEVER** import code directly from sibling modules (e.g. `import { foo } from '../other_module/service.js'` is strictly forbidden). Shared code belongs in `#lib/*`, `#database/*`, or `#utilities/*`.
+- **Wick-style Permits**: Commands declare a required permit string node (e.g. `"mod.*"`). `PermitResolver` evaluates granted permits with wildcard matching, bot/guild owner bypasses, and Anti-Nuke Quarantine interception.
 
 ---
 
-## 5. 💾 Data, State & Config Management
+## 5. 💾 Database, Seeding & Storage Management
 
-### 5.1 Database Access (`container.db`)
+### 5.1 Database Access Law (`container.db`)
+
 - **Mandate**: All database queries must go through **`container.db`** (`DatabaseService`).
 - ❌ **Absolute Ban**: Modules must **NEVER** access `container.prisma` directly.
 
-### 5.2 Redis Namespacing & InvalidationBus
+### 5.2 Cache Invalidation (`InvalidationBus`)
+
 - All Redis key names must be registered in `RedisKeys` (`#database/redis.js`).
-- Cache invalidations **must** pass through `InvalidationBus`. Never call `redis.del` directly on shared keys.
+- Cache invalidations **must** pass through `InvalidationBus` (`container.invalidation`). Never call `redis.del` directly on shared keys.
 
-### 5.3 Module Configuration & Schema Validation
-- Configuration uses `@sapphire/shapeshift` (`cfg.*` helpers).
-- Read module settings using `ConfigService.getConfigList`.
-- Register cache invalidation hooks with `container.configChangeHooks.set("<module>:<key>", fn)`.
+### 5.3 Database Seeding & Environment Guardrails
 
----
-
-## 6. ⚙️ Background Processing & Event Bus
-
-1. **Scheduled Tasks (BullMQ)**: Place task definitions in `src/modules/<name>/scheduled-tasks/` extending `RelayTask`.
-2. **Event Bus (Redis Streams)**: Inter-process event streaming via `packages/event-bus`. `LUMI_ROLE=gateway` publishes raw Discord dispatches; workers consume them.
-3. **RabbitMQ RPC Bridge**: Dashboard-to-worker communication via RabbitMQ. Register handlers via `registerRpcHandler` for web panel communication (`apps/dashboard`).
+- **Seeding Script**: Execute `bun run db:seed` (`scripts/seed.ts`).
+- **QA Guild Target**: Seeds sample data under QA Test Guild ID `123456789012345678`.
+- **Production Guardrails**: `scripts/seed.ts` contains a hard abort if `NODE_ENV === 'production'`. Never bypass this check.
 
 ---
 
-## 7. 📊 Observability & Telemetry
+## 6. 🐙 Git, PR & CI Automation Protocols
 
-- **Logging**: Use `this.logger` (backed by `PinoSapphireLogger`).
-- **OpenTelemetry**: Enabled via `OTEL_ENABLED=true`.
-- **Metrics Exporter**: Prometheus registry exposed on `METRICS_PORT` (`:9090`). Custom metrics **must** be registered in `packages/observability/src/metrics.ts`.
+### 6.1 Branching & Commit Conventions
 
----
+- **Feature Branches**: Create feature branches (`git checkout -b feat/<name>`).
+- **Commit Formatting**: Use Conventional Commits (`feat(mod): ...`, `fix(core): ...`, `docs: ...`).
 
-## 8. 💻 UI Card System & i18n Rules
+### 6.2 Pull Request (PR) Protocol
 
-### 8.1 Card System Utilities (`#utilities/cards.js`)
-Lumi enforces a consistent visual design language across all Discord replies.
+- **PR Creation**: Create PRs via `gh pr create --title '...' --body '...'`.
+- **Merge Queues**: PRs pass through GitHub Merge Queue (`merge-group.yml`) before landing on `main`.
 
-- ❌ **Forbidden**: Constructing raw `EmbedBuilder` instances inside commands.
-- ✅ **Mandatory**: Use Card System helpers: `makeInfoCard`, `makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeListCard`.
-- Reply using interaction helpers: `replySuccess(interaction, message)`, `replyError(interaction, message)`.
+### 6.3 Pre-Commit Hooks (`lefthook.yml`)
 
-### 8.2 Pagination & i18n
-- **Pagination**: Use `chunk(array, pageSize)` from `@sapphire/utilities`. Do not use `PaginatedMessage`.
-- **Localization**: Translation files reside in `packages/core/src/languages/<locale>/<namespace>.json`. Supported locales: 30 Discord locales from `af-ZA` to `zh-TW`. Translations sourced via Crowdin; untranslated stubs fall back to `en-US`. Fetch translators via `await this.fetchT(interaction)`.
+- **Fast Pre-Commit Hook**: `lefthook` executes `typecheck` (filtered with `glob: "*.{ts,tsx,cts,mts}"`) and staged linting. Non-TypeScript commits execute in **0.02 seconds**.
 
 ---
 
-## 9. ✅ Verification Command Matrix & Anti-Pattern Index
+## 7. 💻 UI Card System, i18n & Helper Libraries
 
-### 9.1 Verification Command Matrix
+### 7.1 UI Card System (`#utilities/cards.js`)
+
+- ❌ **Forbidden**: Constructing raw `EmbedBuilder` instances inside commands or services.
+- ✅ **Mandatory**: Use Card System helpers: `makeInfoCard`, `makeSuccessCard`, `makeErrorCard`, `replySuccess(interaction, text)`, `replyError(interaction, text)`.
+
+### 7.2 Core Helper Libraries Reference
+
+#### `@discordjs/formatters`
+| Helper Function | Use Case |
+| :--- | :--- |
+| `time(date, style?)` | Relative or styled timestamps (`<t:…:R>`) |
+| `userMention(id)` | Ping user (`<@id>`) |
+| `roleMention(id)` | Ping role (`<@&id>`) |
+| `channelMention(id)` | Link channel (`<#id>`) |
+| `inlineCode(text)` | Inline code snippet |
+
+#### `@sapphire/utilities`
+| Helper Function | Approved Use Case |
+| :--- | :--- |
+| `cutText(str, n)` | Truncate string to N chars |
+| `isNullish(v)` | Check null / undefined |
+| `filter(filterNullish)` | Type-safe array filtering |
+| `tryParseJSON(str)` | Safe JSON parsing |
+| `chunk(arr, size)` | Array pagination chunking |
+
+### 7.3 Internationalization (i18n)
+
+- Translation files reside in `packages/core/src/languages/<locale>/<namespace>.json`.
+- Fetch translators via `const t = await this.fetchT(interaction);`.
+- Use localized string keys (e.g. `t('commands:ping.response', { ms })`).
+
+---
+
+## 8. ✅ Verification Command Matrix & Anti-Pattern Index
+
+### 8.1 Verification Command Matrix
 
 | Change Scope | Required Verification Command(s) |
 | :--- | :--- |
-| **Prisma Schema Changes** | `bun run db:generate` (or `nix-shell -p bun nodejs --run "bun run db:generate"`) |
+| **Prisma Schema Changes** | `bun run db:generate` |
 | **Module Metadata / `@DefineModule`** | `bun run modules:manifest` |
+| **Development Database Seeding** | `bun run db:seed` |
 | **TypeScript Code & Types** | `bun run typecheck` |
 | **Code Style & Linting** | `bun run lint` |
 | **Unit & Integration Tests** | `bun run test` |
@@ -266,7 +275,7 @@ Lumi enforces a consistent visual design language across all Discord replies.
 | **System Resilience & Chaos** | `bun run verify:resilience` |
 | **Third-Party Addon Package** | `bun run validate <path/to/addon>` |
 
-### 9.2 Anti-Pattern Index
+### 8.2 Anti-Pattern Index
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -274,13 +283,15 @@ Lumi enforces a consistent visual design language across all Discord replies.
 ├────────────────────────────┬────────────────────────────────────────────────┤
 │ Anti-Pattern               │ Rule Violation & Correct Alternative           │
 ├────────────────────────────┼────────────────────────────────────────────────┤
-│ Raw Embeds                 │ ❌ Banned. Use Card System helpers from cards.ts│
+│ Raw EmbedBuilder           │ ❌ Banned. Use Card System helpers from cards.ts│
 │ Cross-Module Imports       │ ❌ Banned. Move shared code to #lib/           │
 │ Direct container.prisma    │ ❌ Banned. Use container.db (DatabaseService)  │
-│ Direct redis.del           │ ❌ Banned. Use InvalidationBus                 │
+│ Direct redis.del           │ ❌ Banned. Use container.invalidation          │
+│ Missing Changesets on PR   │ ❌ Banned. Run bunx changeset for package code │
 │ Raw <@ID> string formatting│ ❌ Banned. Use userMention(id) from formatters │
 │ .filter(Boolean) on arrays │ ❌ Banned. Use .filter(filterNullish)          │
 │ JSON.parse in try/catch    │ ❌ Banned. Use tryParseJSON(str)               │
+│ Extensionless # imports    │ ❌ Banned. Always append .js extension         │
 │ Context Window Dumping     │ ❌ Banned. Use grep_search and line slicing   │
 │ Unverified Handoffs        │ ❌ Banned. Provide 5-Component Handoff Report │
 └────────────────────────────┴────────────────────────────────────────────────┘
