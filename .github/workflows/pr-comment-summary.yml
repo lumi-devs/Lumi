@@ -12,32 +12,39 @@ permissions: {}
 
 jobs:
   summary-comment:
-    name: Post Sticky PR Overview Comment
+    name: Post Micro-Benchmark PR Report
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - name: Post or Update Sticky PR Comment
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun Environment
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run Micro-Benchmark Suite
+        id: bench
+        run: |
+          BENCH_RESULTS=$(bun run bench)
+          echo "BENCH_RESULTS<<EOF" >> $GITHUB_ENV
+          echo "$BENCH_RESULTS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Post or Update Sticky Micro-Benchmark Report
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: lumi-pr-summary
           message: |
-            ## Ecosystem & CI Matrix
+            ## Micro-Benchmark Results
 
-            | Subsystem | Status | Scope |
-            | :--- | :---: | :--- |
-            | `packages/core` | 🟢 Ready | Engine & Perms |
-            | `apps/gateway` | 🟢 Ready | Shard Router |
-            | `apps/worker` | 🟢 Ready | Task Execution |
+            ${{ env.BENCH_RESULTS }}
 
-            <details>
-            <summary><b>Workspace Pipelines</b></summary>
-
-            - `bun run typecheck:all`
-            - `bun run lint:all`
-            - `bun run test`
-            </details>
-
-            *commit `${{ github.event.pull_request.head.sha }}`*
+            ---
+            *Commit `${{ github.event.pull_request.head.sha }}`*
