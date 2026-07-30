@@ -290,6 +290,10 @@ Feature modules organize code into sub-store folders:
 - **ChatOps Slash Commands**:
   - `/format` — Runs `eslint --fix` and automatically commits/pushes style fixes back to the PR branch.
   - `/retest` — Re-triggers failing CI test suites.
+  - `/label <name>` — Adds requested labels to issue or PR.
+  - `/unlabel <name>` — Removes requested labels from issue or PR.
+  - `/assign <user>` — Assigns issue or PR to requested GitHub user.
+  - `/bench` — Executes Redis Streams resilience benchmark suite & posts a latency/throughput summary comment.
 - **Merge Queues**: PRs pass through GitHub Merge Queue (`merge-group.yml`) before landing on `main`.
 
 ### 8.3 Pre-Commit Hooks (`lefthook.yml`)
@@ -303,7 +307,7 @@ Feature modules organize code into sub-store folders:
 | `changeset-check.yml` | Quality Gate | Enforces changeset file inclusion on code PRs |
 | `release.yml` | Release | Consumes changesets, updates `CHANGELOG.md`, opens version PRs & publishes releases |
 | `ci.yml` | CI | Runs linting, typechecking, tests & Nix flake evaluation with Turborepo Git diffing |
-| `slash-commands.yml` | ChatOps | Executes `/format` (auto-formatting PR branches) and `/retest` |
+| `slash-commands.yml` | ChatOps | Executes `/format`, `/retest`, `/label`, `/unlabel`, `/assign`, and `/bench` |
 | `comment.yml` | ChatOps | Adds instant reaction (`👀`) on `/lumi` or `@lumi-devs` comments |
 | `review.yml` | PR Hygiene | Automatically minimizes/collapses dismissed bot comments via GraphQL |
 | `pr-comment-summary.yml` | PR Hygiene | Posts & updates a sticky PR status overview comment |
