@@ -3,34 +3,8 @@ name: CI
 on:
   push:
     branches: [main, develop, "release/*"]
-    paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'prisma/**'
-      - 'scripts/**'
-      - 'package.json'
-      - '.github/workflows/ci.yml'
-      - 'bun.lock'
-      - 'tsconfig*.json'
-      - 'eslint.config.*'
-      - 'turbo.json'
-      - 'flake.nix'
-      - 'flake.lock'
   pull_request:
     branches: [main, develop]
-    paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'prisma/**'
-      - 'scripts/**'
-      - '.github/workflows/ci.yml'
-      - 'package.json'
-      - 'bun.lock'
-      - 'tsconfig*.json'
-      - 'eslint.config.*'
-      - 'turbo.json'
-      - 'flake.nix'
-      - 'flake.lock'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -39,8 +13,39 @@ concurrency:
 permissions: {}
 
 jobs:
+  changes:
+    name: Detect Changed Paths
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+      nix: ${{ steps.filter.outputs.nix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - 'apps/**'
+              - 'packages/**'
+              - 'prisma/**'
+              - 'scripts/**'
+              - 'package.json'
+              - 'bun.lock'
+              - 'tsconfig*.json'
+              - 'eslint.config.*'
+              - 'turbo.json'
+            nix:
+              - 'flake.nix'
+              - 'flake.lock'
+
   lint:
     name: Lint
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -61,6 +66,8 @@ jobs:
 
   typecheck:
     name: Typecheck
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -81,6 +88,8 @@ jobs:
 
   test:
     name: Test
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -106,6 +115,8 @@ jobs:
 
   nix-check:
     name: Nix Flake Evaluation
+    needs: changes
+    if: ${{ needs.changes.outputs.nix == 'true' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
