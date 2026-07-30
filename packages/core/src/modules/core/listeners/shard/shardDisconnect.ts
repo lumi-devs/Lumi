@@ -10,7 +10,7 @@ export class ShardDisconnectListener extends Listener<
   public run(event: CloseEvent, id: number) {
     shardStatus.set({ shard: String(id) }, 0);
     this.container.logger.warn(
-      `[Shard ${id}] Disconnected — code ${event.code}`,
+      `[Shard ${id}] Disconnected - code ${event.code}`,
     );
   }
 }

@@ -6,7 +6,7 @@ interface AhoMatcher {
   search(text: string): Array<[number, string[]]>;
 }
 
-/** Which rule fired and what it matched — drives the warning + log copy. */
+/** Which rule fired and what it matched - drives the warning + log copy. */
 export interface FilterHit {
   rule: "term" | "regex" | "invite" | "link" | "mentions" | "caps" | "phish";
   /** The matched term/pattern/code/domain, or a human summary for counters. */
@@ -36,7 +36,7 @@ export interface CompiledRules {
   config: RuleConfig;
 }
 
-/** Default for `capsMinLength` — avoids "OK" tripping the caps rule. */
+/** Default for `capsMinLength` - avoids "OK" tripping the caps rule. */
 export const DEFAULT_CAPS_MIN_LENGTH = 12;
 
 /** Default transient warning; `{user}` and `{reason}` are substituted. */
@@ -136,7 +136,7 @@ export function capsPercent(content: string): number {
 
 /**
  * Evaluate a message against a guild's compiled rules. `mentionCount` is the
- * message's user+role mention total (computed by the listener — this module
+ * message's user+role mention total (computed by the listener - this module
  * stays discord.js-free). Rules run cheapest-adequate first; the first hit wins.
  */
 export function evaluate(

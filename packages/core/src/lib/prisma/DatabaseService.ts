@@ -34,7 +34,7 @@ export type { ConfigOverrideEntry } from "#lib/prisma/repositories/ConfigOverrid
  * Thin facade over the per-domain repositories.  Each repo owns its tables +
  * Redis keys/TTLs and shares the cache-aside `getOrSet` / `InvalidationBus`
  * primitives from the `Repository` base class.  `container.db.<repo>.<method>`
- * is the only sanctioned data-access path for features — never touch
+ * is the only sanctioned data-access path for features - never touch
  * `container.prisma` from a module.
  *
  * A handful of cross-domain operations (`deleteUserData`, `transaction`,
@@ -102,7 +102,7 @@ export class DatabaseService {
   }
 
   /**
-   * Core user-data deletion — called by executeGdprDeletion() after all module
+   * Core user-data deletion - called by executeGdprDeletion() after all module
    * hooks have run.  Spans several repositories' tables, so it lives on the
    * facade:
    *
@@ -112,7 +112,7 @@ export class DatabaseService {
    *
    * IgnoreEntry has no userId column.  AfkEntry is handled by the AFK module
    * hook.  ModerationCase anonymization is handled by the mod module hook
-   * (ModerationRepository.anonymizeUser) — do not duplicate it here.
+   * (ModerationRepository.anonymizeUser) - do not duplicate it here.
    * Blocklist Redis keys are scanned and invalidated last.
    */
   public async deleteUserData(userId: string): Promise<void> {

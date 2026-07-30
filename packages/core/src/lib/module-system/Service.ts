@@ -15,7 +15,7 @@ import { container, Piece } from "@sapphire/framework";
 
 export interface Services {}
 
-/** Typed lookup for service pieces — use instead of `stores.get("services").get(...) as X`. */
+/** Typed lookup for service pieces - use instead of `stores.get("services").get(...) as X`. */
 export function getService<K extends keyof Services>(name: K): Services[K] {
   const service = tryGetService(name);
   if (!service) throw new Error(`Service "${name}" is not loaded`);

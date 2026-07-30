@@ -83,7 +83,7 @@ sequenceDiagram
 
 | Category | Package | Purpose |
 | :--- | :--- | :--- |
-| **Apps** | `apps/worker` | Main execution engine — commands, events, module logic |
+| **Apps** | `apps/worker` | Main execution engine - commands, events, module logic |
 | | `apps/gateway` | Discord WebSocket ingestion (`LUMI_ROLE=gateway`) |
 | | `apps/scheduler` | Background task scheduler, BullMQ queues |
 | | `apps/dashboard` | Web admin panel on `:8080`, Discord OAuth2 |

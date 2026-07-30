@@ -7,7 +7,7 @@ export class ShardReadyListener extends Listener<typeof Events.ShardReady> {
   public run(id: number, unavailableGuilds: Set<string> | undefined) {
     shardStatus.set({ shard: String(id) }, 1);
     this.container.logger.info(
-      `[Shard ${id}] Ready — ${unavailableGuilds?.size ?? 0} unavailable guilds`,
+      `[Shard ${id}] Ready - ${unavailableGuilds?.size ?? 0} unavailable guilds`,
     );
   }
 }

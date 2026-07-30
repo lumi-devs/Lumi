@@ -16,7 +16,7 @@ export interface DrainStep {
 }
 
 export interface DrainOptions {
-  /** Logger — usually console or a structured logger. */
+  /** Logger - usually console or a structured logger. */
   log: (level: "info" | "warn" | "error", msg: string, meta?: object) => void;
   /** Wait this long after markDraining() before running steps. Default 5s. */
   preCloseGraceMs?: number;
@@ -46,7 +46,7 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 }
 
 /**
- * Run the standard drain sequence. Throws only if the deadline is hit —
+ * Run the standard drain sequence. Throws only if the deadline is hit -
  * individual step failures are logged and the rest of the sequence continues.
  */
 export async function runDrainSequence(
@@ -61,7 +61,7 @@ export async function runDrainSequence(
   } = opts;
 
   markDraining();
-  log("info", "drain started — /readyz now reports 503", {
+  log("info", "drain started - /readyz now reports 503", {
     preCloseGraceMs,
     deadlineMs,
   });
@@ -75,10 +75,10 @@ export async function runDrainSequence(
     );
   }
 
-  // Hard ceiling — if the whole thing hangs past `deadlineMs`, abandon and
+  // Hard ceiling - if the whole thing hangs past `deadlineMs`, abandon and
   // exit. The caller does process.exit() after this returns either way.
   const deadlineTimer = setTimeout(() => {
-    log("error", "drain hit hard deadline — forcing exit");
+    log("error", "drain hit hard deadline - forcing exit");
     process.exit(1);
   }, remaining());
   deadlineTimer.unref?.();

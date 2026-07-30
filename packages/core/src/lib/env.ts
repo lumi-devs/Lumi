@@ -73,13 +73,13 @@ export const getClusterName = (): string | null =>
 
 /**
  * Comma- or colon-separated list of absolute directory paths to add as extra
- * ModuleStore roots at startup — the Lumi equivalent of RedBot's `--cog-path`.
+ * ModuleStore roots at startup - the Lumi equivalent of RedBot's `--cog-path`.
  *
  * Example: `LUMI_DEV_PATHS=/home/dev/my-modules:/home/dev/other-modules`
  *
  * Paths are non-persistent (env var only). Use for development and local testing;
  * never set in production. Modules in these directories are discovered and loaded
- * exactly like bundled modules — they just live outside the repo.
+ * exactly like bundled modules - they just live outside the repo.
  */
 export function getDevModulePaths(): string[] {
   const raw = process.env["LUMI_DEV_PATHS"]?.trim();
@@ -95,7 +95,7 @@ export function getDevModulePaths(): string[] {
  * Unset / empty → discord.js talks to discord.com directly (safe for a single
  * worker; required to opt in once multiple workers share a bot token).
  * Trailing slashes are tolerated; pass the proxy root, e.g.
- * `http://nirn-proxy:8080` — `/api` is appended by `buildRestOptions()`.
+ * `http://nirn-proxy:8080` - `/api` is appended by `buildRestOptions()`.
  */
 export const getDiscordProxyUrl = (): string | null => {
   const raw = process.env["DISCORD_PROXY_URL"]?.trim();

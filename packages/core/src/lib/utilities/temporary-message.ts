@@ -13,7 +13,7 @@ export const TRANSIENT_REPLY_TTL = 5_000;
  * never keeps the process alive during shutdown, and failures are swallowed at
  * debug level (the message may already be gone).
  *
- * Mirrors Skyra's `deleteMessage` / `sendTemporaryMessage` pattern — one place
+ * Mirrors Skyra's `deleteMessage` / `sendTemporaryMessage` pattern - one place
  * owns the "reply now, clean up later" behavior instead of scattered
  * `setTimeout(() => x.delete(), …)` calls.
  */

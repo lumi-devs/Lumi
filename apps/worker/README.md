@@ -100,17 +100,17 @@ Configure `@lumi/worker` using environment variables:
 
 | Environment Variable | Required | Default | Description |
 |---|:---:|:---:|---|
-| `BOT_TOKEN` | **Yes** | — | Discord Bot Token from the Discord Developer Portal. |
+| `BOT_TOKEN` | **Yes** | - | Discord Bot Token from the Discord Developer Portal. |
 | `LUMI_ROLE` | No | `monolith` | Service role (`monolith` \| `worker`). |
 | `TRANSPORT` | No | `streams` | Event bus transport mechanism (`streams`). |
 | `LUMI_CONSUMER_ID` | No | `worker-1` | Unique consumer ID for stream consumer group tracking. |
-| `POSTGRES_URL` | **Yes** | — | PostgreSQL pooled connection string (PgBouncer). |
-| `DIRECT_POSTGRES_URL` | **Yes** | — | PostgreSQL direct connection string (used for schema migrations). |
+| `POSTGRES_URL` | **Yes** | - | PostgreSQL pooled connection string (PgBouncer). |
+| `DIRECT_POSTGRES_URL` | **Yes** | - | PostgreSQL direct connection string (used for schema migrations). |
 | `REDIS_HOST` | No | `localhost` | Redis server hostname. |
 | `REDIS_PORT` | No | `6379` | Redis server network port. |
-| `REDIS_PASSWORD` | No | — | Redis authentication password. |
+| `REDIS_PASSWORD` | No | - | Redis authentication password. |
 | `REDIS_CACHE_DB` | No | `0` | Redis database index for entity caching. |
-| `RABBITMQ_URL` | **Yes** | — | RabbitMQ broker URL for dashboard RPC calls. |
+| `RABBITMQ_URL` | **Yes** | - | RabbitMQ broker URL for dashboard RPC calls. |
 | `LUMI_DEV_PATHS` | No | `/lumi-addons` | Colon-separated paths to external addon directories. |
 | `METRICS_ENABLED` | No | `true` | Enables HTTP metrics and health check server. |
 | `METRICS_PORT` | No | `9090` | Network port for Prometheus metrics and health probes. |

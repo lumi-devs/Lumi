@@ -105,11 +105,11 @@ Services are organized into distinct Compose **profiles** so you only run what y
 
 | Service Name | Profile | Ports / Interfaces | Description |
 |---|---|---|---|
-| `worker` | *(default)* | — | Default Lumi bot process (`LUMI_ROLE=monolith`). Runs gateway, workers, and scheduler in a single process. |
-| `lumi-dev` | `development` | — | Interactive development container with live volume mounts and watch mode. |
-| `gateway` | `scale` | — | Standalone Gateway edge service for Discord WebSockets. |
-| `worker-scale` | `scale` | — | Scaled Worker node reading events from Redis Streams (`LUMI_ROLE=worker`). |
-| `scheduler` | `scale` | — | Task Scheduler managing BullMQ background tasks. |
+| `worker` | *(default)* | - | Default Lumi bot process (`LUMI_ROLE=monolith`). Runs gateway, workers, and scheduler in a single process. |
+| `lumi-dev` | `development` | - | Interactive development container with live volume mounts and watch mode. |
+| `gateway` | `scale` | - | Standalone Gateway edge service for Discord WebSockets. |
+| `worker-scale` | `scale` | - | Scaled Worker node reading events from Redis Streams (`LUMI_ROLE=worker`). |
+| `scheduler` | `scale` | - | Task Scheduler managing BullMQ background tasks. |
 | `dashboard` | `dashboard` | `8080:8080` | Web Administration Dashboard UI. |
 | `postgres` | *(core)* | `127.0.0.1:5432:5432` | PostgreSQL 17 primary database server. |
 | `pgbouncer` | *(core)* | `127.0.0.1:6432:6432` | PgBouncer transaction-level connection pooler. |
@@ -118,7 +118,7 @@ Services are organized into distinct Compose **profiles** so you only run what y
 | `nirn-proxy` | `scale` | `127.0.0.1:18080`, `:19000` | Discord REST rate-limiting proxy. |
 | `otel-collector` | `observability` | `127.0.0.1:4318:4318` | OpenTelemetry Collector endpoint (OTLP HTTP). |
 | `prometheus` | `observability` | `127.0.0.1:9091:9090` | Prometheus metrics collector and alerting engine. |
-| `tempo` | `observability` | — | Grafana Tempo distributed tracing storage engine. |
+| `tempo` | `observability` | - | Grafana Tempo distributed tracing storage engine. |
 | `grafana` | `observability` | `127.0.0.1:3001:3000` | Grafana metrics and trace visualization dashboard. |
 
 ---
@@ -135,16 +135,16 @@ cp .env.example .env
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `BOT_TOKEN` | — | Discord Bot Token (Required). |
+| `BOT_TOKEN` | - | Discord Bot Token (Required). |
 | `POSTGRES_USER` | `lumi` | PostgreSQL database username. |
 | `POSTGRES_PASSWORD` | `lumi` | PostgreSQL database password. |
 | `REDIS_PASSWORD` | `lumi` | Redis password authentication. |
 | `RABBITMQ_USER` | `lumi` | RabbitMQ username. |
 | `RABBITMQ_PASSWORD` | `lumi` | RabbitMQ password. |
-| `DASHBOARD_SESSION_SECRET` | — | Secret key for dashboard session cookies. |
-| `DISCORD_OAUTH2_CLIENT_ID` | — | OAuth2 Client ID for dashboard authentication. |
-| `DISCORD_OAUTH2_CLIENT_SECRET` | — | OAuth2 Client Secret for dashboard authentication. |
-| `DISCORD_OAUTH2_REDIRECT_URI` | — | OAuth2 Redirect URI for dashboard login. |
+| `DASHBOARD_SESSION_SECRET` | - | Secret key for dashboard session cookies. |
+| `DISCORD_OAUTH2_CLIENT_ID` | - | OAuth2 Client ID for dashboard authentication. |
+| `DISCORD_OAUTH2_CLIENT_SECRET` | - | OAuth2 Client Secret for dashboard authentication. |
+| `DISCORD_OAUTH2_REDIRECT_URI` | - | OAuth2 Redirect URI for dashboard login. |
 | `OTEL_ENABLED` | `true` | Enables OpenTelemetry tracing exporters. |
 | `GRAFANA_PASSWORD` | `admin` | Admin password for Grafana web UI. |
 

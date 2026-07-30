@@ -24,7 +24,7 @@ export class WarnAction {
     });
 
     const dm = makeSuccessCard(
-      `⚠️ Warning — ${guild.name}`,
+      `⚠️ Warning - ${guild.name}`,
       `**Reason:** ${reason}\n-# Case #${c.caseNumber}`,
     );
     await targetMember.send(dm).catch(() => null);

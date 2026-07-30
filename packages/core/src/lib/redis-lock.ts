@@ -7,7 +7,7 @@ import type { Redis } from "ioredis";
  * not multi-master). Auto-extends while held so long transactions don't
  * lose the lock to TTL; only the original owner can release.
  *
- * Not FIFO — waiters retry with capped exponential backoff. Use this when
+ * Not FIFO - waiters retry with capped exponential backoff. Use this when
  * mutual exclusion across workers matters, not ordering.
  */
 

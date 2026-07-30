@@ -94,17 +94,17 @@ Configure `@lumi/gateway` using environment variables:
 
 | Environment Variable | Required | Default | Description |
 |---|:---:|:---:|---|
-| `BOT_TOKEN` | **Yes** | — | Discord Bot Token from the Discord Developer Portal. |
+| `BOT_TOKEN` | **Yes** | - | Discord Bot Token from the Discord Developer Portal. |
 | `LUMI_ROLE` | **Yes** | `gateway` | Identifies the process role (`gateway`). |
 | `TRANSPORT` | No | `streams` | Event bus transport driver (`streams`). |
-| `LUMI_CLUSTER_NAME` | No | — | Cluster identifier for multi-replica sharded gateway deployments. |
+| `LUMI_CLUSTER_NAME` | No | - | Cluster identifier for multi-replica sharded gateway deployments. |
 | `LUMI_CONSUMER_ID` | No | `gateway-1` | Unique replica identifier within the cluster (defaults to hostname/pid). |
 | `INTERACTION_DEFER_AT_GATEWAY` | No | `true` | When `true`, gateway sends immediate pre-acknowledgments to Discord interactions. |
-| `DISCORD_PROXY_URL` | No | — | Optional base URL of a `nirn-proxy` REST proxy (e.g. `http://nirn-proxy:8080`). |
+| `DISCORD_PROXY_URL` | No | - | Optional base URL of a `nirn-proxy` REST proxy (e.g. `http://nirn-proxy:8080`). |
 | `EVENT_STREAM_MAXLEN` | No | `100000` | Capped length limit for Redis Streams queues. |
 | `REDIS_HOST` | No | `localhost` | Redis server hostname. |
 | `REDIS_PORT` | No | `6379` | Redis server network port. |
-| `REDIS_PASSWORD` | No | — | Redis authentication password. |
+| `REDIS_PASSWORD` | No | - | Redis authentication password. |
 | `REDIS_CACHE_DB` | No | `0` | Redis database index for cluster state and session storage. |
 | `METRICS_ENABLED` | No | `true` | Enables HTTP metrics and health check server. |
 | `METRICS_PORT` | No | `9090` | Network port for Prometheus metrics and health probes. |

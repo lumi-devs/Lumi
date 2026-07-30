@@ -7,7 +7,7 @@ import { ButtonStyle } from "discord.js";
  *
  * Bun's ESM loader caches every module by resolved URL and offers no way to
  * purge a module *and its transitive imports* (Python's `importlib`/`sys.modules`
- * tricks that Red-DiscordBot relies on have no ESM equivalent — even Red tells
+ * tricks that Red-DiscordBot relies on have no ESM equivalent - even Red tells
  * users to restart when a cog's shared libraries change). The only way to load a
  * changed module's full source subtree reliably is a fresh process.
  *
@@ -52,7 +52,7 @@ export function scheduleProcessRestart(reason: string, delayMs = 2_000): void {
   restartScheduled = true;
 
   container.logger.warn(
-    `[Restart] Scheduling graceful restart in ${delayMs}ms — ${reason}`,
+    `[Restart] Scheduling graceful restart in ${delayMs}ms - ${reason}`,
   );
 
   const timer = setTimeout(() => {

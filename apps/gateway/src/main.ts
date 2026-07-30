@@ -111,7 +111,7 @@ if (CLUSTER_NAME) {
     replicaId: REPLICA_ID,
     log,
     onRebalance: (delta) => {
-      log("info", "shard assignment changed — applying in place", {
+      log("info", "shard assignment changed - applying in place", {
         added: delta.added,
         removed: delta.removed,
       });
@@ -186,7 +186,7 @@ async function applyRebalance(
   removed: readonly number[],
 ): Promise<void> {
   if (!dynamicStrategy) {
-    log("warn", "no dynamic strategy — falling back to restart", {
+    log("warn", "no dynamic strategy - falling back to restart", {
       added,
       removed,
     });
@@ -214,7 +214,7 @@ async function applyRebalance(
       owned: [...ownedShards].sort((a, b) => a - b),
     });
   } catch (err) {
-    log("error", "in-place rebalance failed — falling back to restart", {
+    log("error", "in-place rebalance failed - falling back to restart", {
       err: String(err),
     });
     void shutdown("REBALANCE");
@@ -289,7 +289,7 @@ if (DEFER_AT_GATEWAY) {
       );
     },
   );
-  log("info", "INTERACTION_DEFER_AT_GATEWAY=true — gateway will pre-ack");
+  log("info", "INTERACTION_DEFER_AT_GATEWAY=true - gateway will pre-ack");
 }
 
 const restLabels = (info: { route: string; method: string; global: boolean }) =>
@@ -388,7 +388,7 @@ let shuttingDown = false;
 async function shutdown(sig: string) {
   if (shuttingDown) return;
   shuttingDown = true;
-  log("info", `${sig} received — shutting down`);
+  log("info", `${sig} received - shutting down`);
   const isRebalance = sig === "REBALANCE";
   if (readyHeartbeat) {
     clearInterval(readyHeartbeat);

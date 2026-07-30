@@ -23,7 +23,7 @@ const queues = new Map<string, ChannelQueue>();
 /**
  * Queue a single-message delete. Returns a promise that settles when the
  * coalesced or single-shot REST call completes (resolves on terminal API
- * errors handled by the caller — i.e. always; reject is reserved for
+ * errors handled by the caller - i.e. always; reject is reserved for
  * unexpected transport failures so callers can log).
  */
 export function coalesceMessageDelete(

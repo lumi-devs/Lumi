@@ -4,7 +4,7 @@
 // `client.ws.handlePacket` keeps the publish fire-and-forget alongside local
 // dispatch, so the monolith can run TRANSPORT=streams while keeping its own
 // listeners (useful for shadow-traffic validation). The dedicated gateway app uses
-// `RawGatewayProxyPublisher` below instead — no Sapphire, publish-only.
+// `RawGatewayProxyPublisher` below instead - no Sapphire, publish-only.
 
 import type { EventBus } from "./types.js";
 import {
@@ -47,7 +47,7 @@ export class RawGatewayPublisher {
     this.log = opts.log ?? (() => undefined);
   }
 
-  /** Wrap handlePacket. Idempotent — second call is a no-op. */
+  /** Wrap handlePacket. Idempotent - second call is a no-op. */
   public attach(): void {
     if (this.attached) return;
     const original = this.client.ws.handlePacket.bind(this.client.ws);
@@ -100,7 +100,7 @@ function extractGuildId(d: unknown): string | undefined {
 
 /**
  * Proxy-mode publisher. Hooks `@discordjs/ws` `WebSocketManager`
- * directly via the `Dispatch` event — no discord.js `Client`, no entity
+ * directly via the `Dispatch` event - no discord.js `Client`, no entity
  * managers, no caches. Used by `apps/gateway` once the proxy cutover lands.
  *
  * Same envelope shape as `RawGatewayPublisher`; the worker side

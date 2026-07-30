@@ -180,7 +180,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
 
       const result = await validateAddon(addonDir);
       expect(result.errors).toContain(
-        'Found a "tasks/" directory — BullMQ pieces MUST live in "scheduled-tasks/" (a "tasks/" directory is silently never scanned).'
+        'Found a "tasks/" directory - BullMQ pieces MUST live in "scheduled-tasks/" (a "tasks/" directory is silently never scanned).'
       );
       expect(result.errors.some((e) => e.includes("uses EmbedBuilder"))).toBe(true);
       expect(result.errors.some((e) => e.includes("touches container.prisma"))).toBe(true);

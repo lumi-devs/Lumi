@@ -22,7 +22,7 @@ const sig = {
  * Process-local index of generator channels and active temp VCs, keyed by
  * guild. Discord routes all of a guild's gateway events (voice, interactions,
  * commands) to a single shard/process, so this index is authoritative for the
- * process that actually handles the guild — the hot voice path needs zero
+ * process that actually handles the guild - the hot voice path needs zero
  * network I/O after the first lazy hydration. The InvalidationBus keeps peer
  * processes (e.g. the GDPR bulk-delete or a dashboard RPC) in sync.
  */

@@ -1,4 +1,4 @@
-// @lumi/event-bus — cross-service bus for the gateway/worker split.
+// @lumi/event-bus - cross-service bus for the gateway/worker split.
 // Powered 100% by Redis Streams via createEventBus().
 
 export type {

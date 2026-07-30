@@ -644,7 +644,7 @@ export class LumiClient extends SapphireClient {
     const ws = this.ws as unknown as { connect: () => Promise<void> };
     ws.connect = () => {
       container.logger.info(
-        "[Worker] ws.connect() suppressed — packets arrive via event bus",
+        "[Worker] ws.connect() suppressed - packets arrive via event bus",
       );
       return Promise.resolve();
     };
@@ -732,7 +732,7 @@ export class LumiClient extends SapphireClient {
       _clusterRedis: { redis, subscriber },
     });
     cluster.coordinator.onRebalance((delta) => {
-      log("warn", "shard assignment changed — draining for restart", {
+      log("warn", "shard assignment changed - draining for restart", {
         added: delta.added,
         removed: delta.removed,
       });

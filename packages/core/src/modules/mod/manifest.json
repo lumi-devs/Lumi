@@ -2,7 +2,7 @@
   "name": "mod",
   "displayName": "Moderation",
   "emoji": "🛡️",
-  "description": "Staff moderation: warn, mute, kick, ban — with case logging.",
+  "description": "Staff moderation: warn, mute, kick, ban - with case logging.",
   "version": "1.0.0",
   "disableable": true,
   "dependencies": [],

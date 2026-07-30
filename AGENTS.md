@@ -65,9 +65,9 @@ All tasks, regardless of size, must proceed through the following 5 chronologica
 
 To maintain context window efficiency and prevent token exhaustion:
 - **Tool Hierarchy**: Use low-overhead search tools first.
-  1. `grep_search` — Exact string or regex pattern search.
-  2. `find_by_name` — Target filename or pattern search.
-  3. `view_file` — Targeted inspection using explicit `StartLine` and `EndLine`.
+  1. `grep_search` - Exact string or regex pattern search.
+  2. `find_by_name` - Target filename or pattern search.
+  3. `view_file` - Targeted inspection using explicit `StartLine` and `EndLine`.
 - **Line & Slice Discipline**: Never dump large files (>800 lines) into context without line slicing.
 - **Diff Minimization**: Make surgical, minimal-change edits. Blanket file auto-formatting or wholesale file replacements are strictly prohibited.
 
@@ -257,11 +257,11 @@ export class MyModule extends Module {}
 ### 5.2 Sub-Store Directories
 
 Feature modules organize code into sub-store folders:
-- `commands/` — Extend `BaseCommand` or `BaseSubcommand`.
-- `listeners/` — Extend `ModuleListener` or `GuildMessageListener`.
-- `interaction-handlers/` — Extend Sapphire `InteractionHandler`.
-- `services/` — Extend `Service` singleton class (`getService("<name>")` / `tryGetService("<name>")`).
-- **`scheduled-tasks/`** — Extend `RelayTask` (placed in `scheduled-tasks/` exactly).
+- `commands/` - Extend `BaseCommand` or `BaseSubcommand`.
+- `listeners/` - Extend `ModuleListener` or `GuildMessageListener`.
+- `interaction-handlers/` - Extend Sapphire `InteractionHandler`.
+- `services/` - Extend `Service` singleton class (`getService("<name>")` / `tryGetService("<name>")`).
+- **`scheduled-tasks/`** - Extend `RelayTask` (placed in `scheduled-tasks/` exactly).
 
 ### 5.3 Zero Cross-Module Import Law & Permits
 
@@ -309,9 +309,9 @@ Feature modules organize code into sub-store folders:
 
 - **PR Creation**: Create PRs via `gh pr create --title '...' --body '...'`.
 - **ChatOps Slash Commands**:
-  - `/format` — Runs `eslint --fix` and automatically commits/pushes style fixes back to the PR branch.
-  - `/retest` — Re-triggers failing CI test suites.
-  - `/bench` — Executes the benchmark suite (`bun run bench`) and posts latency/throughput performance results.
+  - `/format` - Runs `eslint --fix` and automatically commits/pushes style fixes back to the PR branch.
+  - `/retest` - Re-triggers failing CI test suites.
+  - `/bench` - Executes the benchmark suite (`bun run bench`) and posts latency/throughput performance results.
 - **Merge Queues**: PRs pass through GitHub Merge Queue (`merge-group.yml`) before landing on `main`.
 
 ### 8.3 Pre-Commit Hooks (`lefthook.yml`)

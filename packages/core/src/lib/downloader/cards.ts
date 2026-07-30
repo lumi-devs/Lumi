@@ -9,7 +9,7 @@ export interface ModuleUpdateResult {
 }
 
 /**
- * The result card shown after a single-module update — shared by the `/module
+ * The result card shown after a single-module update - shared by the `/module
  * update` command and the "Update Module" button so both render identically.
  */
 export function moduleUpdateResultCard(

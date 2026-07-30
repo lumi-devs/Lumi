@@ -3,7 +3,7 @@
 // Discord's IDENTIFY limit is `max_concurrency` per 5-second window, bucketed
 // by `shardId % max_concurrency`. With a single process, `SimpleIdentifyThrottler`
 // from @discordjs/ws is enough. With multiple gateway replicas owning disjoint
-// shard ranges, each process throttling locally could collide — two replicas
+// shard ranges, each process throttling locally could collide - two replicas
 // could each IDENTIFY shard 0's bucket within the same 5s window, get one
 // of them session-invalidated, and burn a slot.
 //

@@ -7,7 +7,7 @@ import { Emojis } from "#lib/utilities/assets.js";
 export class GuildCreateListener extends Listener<typeof Events.GuildCreate> {
   public async run(guild: Guild) {
     this.container.logger.info(
-      `[Guild] ${Emojis.GUILD} Joined: ${guild.name} (${guild.id}) — ${guild.memberCount} members`,
+      `[Guild] ${Emojis.GUILD} Joined: ${guild.name} (${guild.id}) - ${guild.memberCount} members`,
     );
     await this.container.db.config.getGuildSettings(guild.id);
   }

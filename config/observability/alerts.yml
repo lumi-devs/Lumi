@@ -17,7 +17,7 @@ groups:
           severity: warning
         annotations:
           summary: "Queue {{ $labels.queue }} backing up on {{ $labels.service }}"
-          description: "Queue depth has exceeded 1000 for 5 minutes — consumers are falling behind."
+          description: "Queue depth has exceeded 1000 for 5 minutes - consumers are falling behind."
 
       - alert: Rest429Spike
         expr: sum(rate(lumi_rest_429_total[5m])) by (service) > 1
@@ -26,7 +26,7 @@ groups:
           severity: warning
         annotations:
           summary: "Discord REST 429s on {{ $labels.service }}"
-          description: "Sustained rate-limit responses (>1/s over 5m) — risk of a global ban."
+          description: "Sustained rate-limit responses (>1/s over 5m) - risk of a global ban."
 
       - alert: DbPoolSaturation
         expr: |
@@ -47,7 +47,7 @@ groups:
           severity: warning
         annotations:
           summary: "Consumer group {{ $labels.group }} lagging on {{ $labels.stream }}"
-          description: "Pending (unacked) entries have exceeded 1000 for 5 minutes — consumers are not keeping up."
+          description: "Pending (unacked) entries have exceeded 1000 for 5 minutes - consumers are not keeping up."
 
       - alert: StreamDlqGrowing
         expr: max(lumi_stream_dlq_length) by (stream) > 0
@@ -56,7 +56,7 @@ groups:
           severity: warning
         annotations:
           summary: "DLQ has entries on {{ $labels.stream }}"
-          description: "Stream {{ $labels.stream }}:dlq is non-empty — a message exceeded max-deliveries and was parked. Inspect with XRANGE."
+          description: "Stream {{ $labels.stream }}:dlq is non-empty - a message exceeded max-deliveries and was parked. Inspect with XRANGE."
 
       # Discord IP-bans the bot at 10k invalid (401/403/429) responses in
       # a 10-minute window. invalidRequestWarningInterval=500 → each emit is

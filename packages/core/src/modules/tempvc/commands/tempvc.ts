@@ -214,7 +214,7 @@ export class TempVcCommand extends BaseSubcommand {
     );
     const lines = [...generators.entries()].map(
       ([id, cfg]) =>
-        `${channelMention(id)} — **${cfg.name}** · limit ${cfg.limit || t("tempvc:unlimited")}`,
+        `${channelMention(id)} - **${cfg.name}** · limit ${cfg.limit || t("tempvc:unlimited")}`,
     );
     await paginateList({
       interactionOrMessage: interaction,

@@ -27,7 +27,7 @@ export interface ClusterCoordinatorOptions {
   redis: Redis;
   /**
    * Dedicated connection used for SUBSCRIBE on the `:rebalance` channel.
-   * Must NOT be shared with `redis` — subscribed connections cannot run
+   * Must NOT be shared with `redis` - subscribed connections cannot run
    * normal commands.
    */
   subscriber: Redis;
@@ -201,7 +201,7 @@ export class ClusterCoordinator {
       );
       await this.reconcileAssignment(true);
     } catch {
-      /* swallow — best effort on shutdown */
+      /* swallow - best effort on shutdown */
     }
   }
 

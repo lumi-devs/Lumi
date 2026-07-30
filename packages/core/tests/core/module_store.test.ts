@@ -50,7 +50,7 @@ describe('ModuleStore', () => {
 			isCore: m.isCore ?? false
 		}));
 
-		// DatabaseService is namespaced — ModuleStore reads via container.db.modules.*
+		// DatabaseService is namespaced - ModuleStore reads via container.db.modules.*
 		container.db = {
 			modules: {
 				getGlobalModuleStates: vi.fn().mockResolvedValue(new Map()),

@@ -6,27 +6,27 @@ Copy `.env.example` to `.env` and fill in the required values.
 
 | Variable | Default | Required | Description |
 | :--- | :--- | :---: | :--- |
-| `BOT_TOKEN` | — | ✅ | Discord Bot Token |
-| `CLIENT_ID` | — | ✅ | Discord Application Client ID |
+| `BOT_TOKEN` | - | ✅ | Discord Bot Token |
+| `CLIENT_ID` | - | ✅ | Discord Application Client ID |
 | `POSTGRES_URL` | `postgresql://lumi:lumi@localhost:6432/lumi` | ✅ | PgBouncer connection pool URI (port 6432) |
 | `DIRECT_POSTGRES_URL` | `postgresql://lumi:lumi@localhost:5432/lumi` | ✅ | Direct PostgreSQL URI for Prisma migrations (port 5432) |
 | `REDIS_HOST` | `localhost` | ✅ | Redis hostname |
 | `REDIS_PORT` | `6379` | ✅ | Redis port |
-| `REDIS_PASSWORD` | — | — | Redis authentication password |
+| `REDIS_PASSWORD` | - | - | Redis authentication password |
 | `RABBITMQ_URL` | `amqp://lumi:lumi@localhost:5672` | ✅ | RabbitMQ AMQP broker URI |
-| `LUMI_ROLE` | `monolith` | — | Runtime process role: `monolith` / `gateway` / `worker` / `scheduler` |
-| `TRANSPORT` | `streams` | — | Inter-process event transport (`streams` via Redis Streams) |
-| `OTEL_ENABLED` | `false` | — | Enable OpenTelemetry OTLP tracing |
-| `METRICS_ENABLED` | `true` | — | Enable Prometheus metrics endpoint |
-| `METRICS_PORT` | `9090` | — | Prometheus `/metrics` HTTP port |
-| `DASHBOARD_PORT` | `8080` | — | Web admin panel HTTP port |
-| `DISCORD_OAUTH2_CLIENT_SECRET` | — | — | OAuth2 secret for dashboard login |
+| `LUMI_ROLE` | `monolith` | - | Runtime process role: `monolith` / `gateway` / `worker` / `scheduler` |
+| `TRANSPORT` | `streams` | - | Inter-process event transport (`streams` via Redis Streams) |
+| `OTEL_ENABLED` | `false` | - | Enable OpenTelemetry OTLP tracing |
+| `METRICS_ENABLED` | `true` | - | Enable Prometheus metrics endpoint |
+| `METRICS_PORT` | `9090` | - | Prometheus `/metrics` HTTP port |
+| `DASHBOARD_PORT` | `8080` | - | Web admin panel HTTP port |
+| `DISCORD_OAUTH2_CLIENT_SECRET` | - | - | OAuth2 secret for dashboard login |
 
 ## Branding & Config Files
 
-- **`config/bot.ts`** — Activity/presence settings, embed colors, support URLs, pagination limits.
-- **`config/emojis.ts`** — Unicode and custom Discord emoji overrides used by the card renderer.
-- **`config/observability/`** — Prometheus scrapers, OpenTelemetry collector, and Grafana dashboard configs.
+- **`config/bot.ts`** - Activity/presence settings, embed colors, support URLs, pagination limits.
+- **`config/emojis.ts`** - Unicode and custom Discord emoji overrides used by the card renderer.
+- **`config/observability/`** - Prometheus scrapers, OpenTelemetry collector, and Grafana dashboard configs.
 
 ## Docker Compose Profiles
 

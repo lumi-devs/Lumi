@@ -9,7 +9,7 @@ import { handleModLiftFire } from "./lib/lift-handler.js";
   displayName: "Moderation",
   emoji: "🛡️",
   version: "1.0.0",
-  description: "Staff moderation: warn, mute, kick, ban — with case logging.",
+  description: "Staff moderation: warn, mute, kick, ban - with case logging.",
   configSchema: cfg.object({
     log_channel_id: cfg.channel({
       label: "Mod Log Channel",

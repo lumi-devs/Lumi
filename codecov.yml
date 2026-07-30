@@ -13,7 +13,7 @@ coverage:
         if_not_found: success
 
 comment:
-  # Only comment on PRs that actually change coverage — no noise
+  # Only comment on PRs that actually change coverage - no noise
   require_changes: true
   layout: "reach, diff, flags, files"
   behavior: default

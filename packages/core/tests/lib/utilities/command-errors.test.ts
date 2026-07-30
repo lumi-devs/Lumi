@@ -72,7 +72,7 @@ describe("Command Error Utilities (resolveCommandError)", () => {
       { code: RESTJSONErrorCodes.UnknownUser, expectedMsg: "That user could not be found." },
       { code: RESTJSONErrorCodes.MissingAccess, expectedMsg: "I don't have access to do that here." },
       { code: RESTJSONErrorCodes.MissingPermissions, expectedMsg: "I'm missing the permissions to do that." },
-      { code: RESTJSONErrorCodes.CannotSendMessagesToThisUser, expectedMsg: "I can't message that user — their DMs are closed." },
+      { code: RESTJSONErrorCodes.CannotSendMessagesToThisUser, expectedMsg: "I can't message that user - their DMs are closed." },
     ];
 
     for (const { code, expectedMsg } of codesToMessages) {

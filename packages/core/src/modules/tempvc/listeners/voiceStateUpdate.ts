@@ -56,7 +56,7 @@ export default class TempVcVoiceStateListener extends Listener<
           await member.voice.disconnect().catch(() => null);
           await member
             .send(
-              `⏳ Slow down — wait up to ${Math.round(
+              `⏳ Slow down - wait up to ${Math.round(
                 TEMPVC_CREATE_COOLDOWN_MS / 1000,
               )}s before creating another channel.`,
             )

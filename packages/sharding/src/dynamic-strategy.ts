@@ -3,12 +3,12 @@
 // without a process restart. `SimpleShardingStrategy` keeps its shard map private and
 // only exposes a manager-wide destroy(); we re-implement the same surface and add
 // `addShards()`/`removeShards()` for the rebalance path. RESUME still works because
-// per-shard session info lives in `RedisSessionStore` — when a shard moves from gw-a to
+// per-shard session info lives in `RedisSessionStore` - when a shard moves from gw-a to
 // gw-b, gw-b's retrieveSessionInfo returns the cached session and the new WS RESUMEs.
 //
 // Only per-shard membership churn is in-place: the host `WebSocketManager` caches
 // `shardCount` and the initial `shardIds`, so a re-shard (shardCount change) still
-// needs a restart. That matches the need — rebalances are routine, re-shards are rare
+// needs a restart. That matches the need - rebalances are routine, re-shards are rare
 // and tied to guild-count growth.
 
 import {

@@ -1,6 +1,6 @@
 // Worker-side: consume raw gateway envelopes from the bus and replay each
 // packet into a local discord.js client's dispatcher. The worker never
-// connects to the gateway itself — `client.ws.handlePacket` is driven by
+// connects to the gateway itself - `client.ws.handlePacket` is driven by
 // the consumer loop instead.
 //
 // `shard` discord.js wants is a `WebSocketShard` instance from its own
@@ -102,7 +102,7 @@ export class RawGatewayConsumer {
         t: env.packet.t,
         err: String(err),
       });
-      // Leave pending — the XAUTOCLAIM loop will surface it.
+      // Leave pending - the XAUTOCLAIM loop will surface it.
     }
   }
 }

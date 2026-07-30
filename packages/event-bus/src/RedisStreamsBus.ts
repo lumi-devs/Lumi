@@ -11,7 +11,7 @@
 // `maxDeliveries` the entry is XADDed onto `<stream>:dlq` (kept for inspection, never
 // auto-replayed) and XACKed off the live stream. A periodic stats callback reports
 // XLEN + pending count so observability can update gauges without pulling prom-client
-// into this package. Exactly-once is out of scope — the contract is at-least-once plus
+// into this package. Exactly-once is out of scope - the contract is at-least-once plus
 // idempotent handlers, so raw-packet handlers dedupe on the dispatch sequence (`d.s`),
 // not the stream id (redelivery yields a new one).
 
@@ -249,7 +249,7 @@ export class RedisStreamsBus implements EventBus {
     deliveryCount: number,
     handler: (msg: BusMessage<T>) => Promise<void>,
   ): Promise<void> {
-    // Deliveries beyond the limit go straight to the DLQ — don't even invoke
+    // Deliveries beyond the limit go straight to the DLQ - don't even invoke
     // the handler again. The entry has already been redelivered N times; we
     // know it's poison.
     if (deliveryCount > this.maxDeliveries) {
@@ -285,7 +285,7 @@ export class RedisStreamsBus implements EventBus {
         await this.publisher.xack(stream, group, id);
       },
       nack: async () => {
-        // No-op — leaving the entry unacked makes it eligible for XAUTOCLAIM
+        // No-op - leaving the entry unacked makes it eligible for XAUTOCLAIM
         // after claimMinIdleMs.
       },
     };
@@ -310,7 +310,7 @@ export class RedisStreamsBus implements EventBus {
       // XAUTOCLAIM <key> <group> <consumer> <min-idle-time> <start> [COUNT n]
       // → [next-cursor, [[id, [field, value, ...]], ...], [deleted-ids]]
       let cursor = "0-0";
-      // Bound the loop — claim up to ~128 entries per tick, then yield.
+      // Bound the loop - claim up to ~128 entries per tick, then yield.
       for (let i = 0; i < 8; i++) {
         const resp = (await this.subStream.xautoclaim(
           stream,

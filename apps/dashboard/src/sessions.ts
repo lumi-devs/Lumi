@@ -8,7 +8,7 @@ const STATE_COOKIE = "lumi_oauth_state";
 
 /**
  * Server-side session store. The session ID stored in the cookie is a
- * 32-byte (256-bit) cryptographically random opaque token — knowing the ID
+ * 32-byte (256-bit) cryptographically random opaque token - knowing the ID
  * is the credential. No signing is required because brute-forcing or guessing
  * a 256-bit random value is computationally infeasible.
  */

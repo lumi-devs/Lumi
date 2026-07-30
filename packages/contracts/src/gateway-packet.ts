@@ -26,7 +26,7 @@ export interface RawGatewayEnvelope {
   guildId?: string;
 }
 
-/** Stream name per dispatch type — keeps fan-out and per-type backpressure independent. */
+/** Stream name per dispatch type - keeps fan-out and per-type backpressure independent. */
 export const rawGatewayStream = (eventType: string) =>
   `lumi:gw:${eventType.toLowerCase()}`;
 

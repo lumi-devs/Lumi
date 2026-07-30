@@ -13,7 +13,7 @@ Create a directory under `packages/core/src/modules/<your-module>/`:
 
 ```
 packages/core/src/modules/<your-module>/
-  index.ts          # Module entrypoint — @DefineModule decorator
+  index.ts          # Module entrypoint - @DefineModule decorator
   commands/         # Slash/text commands extending BaseCommand
   listeners/        # Event listeners extending ModuleListener
   services/         # Singleton services extending Service

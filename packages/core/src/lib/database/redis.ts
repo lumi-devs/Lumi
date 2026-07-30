@@ -136,7 +136,7 @@ export function createRedisClient(): Redis {
 
 /**
  * BullMQ (used by @sapphire/plugin-scheduled-tasks) requires its connections
- * to have `maxRetriesPerRequest: null` and to skip the ready check — otherwise
+ * to have `maxRetriesPerRequest: null` and to skip the ready check - otherwise
  * its blocking commands (BRPOPLPUSH, etc.) get aborted and the worker dies.
  */
 export function parseRedisConnectionOption(): RedisOptions {
@@ -196,7 +196,7 @@ export class InvalidationBus {
     this.#started = false;
   }
 
-  /** Permanent teardown — pause, then quit the owned subscriber connection. */
+  /** Permanent teardown - pause, then quit the owned subscriber connection. */
   public async close(): Promise<void> {
     await this.stop();
     await this.#subscriber

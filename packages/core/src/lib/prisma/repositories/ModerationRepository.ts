@@ -102,7 +102,7 @@ export class ModerationRepository extends Repository {
     return result.count > 0;
   }
 
-  /** Active cases that have a future or past expiry — used to re-arm lift jobs on startup. */
+  /** Active cases that have a future or past expiry - used to re-arm lift jobs on startup. */
   public getActiveExpiringCases(): Promise<ModerationCase[]> {
     return this.prisma.moderationCase.findMany({
       where: { active: true, expiresAt: { not: null } },

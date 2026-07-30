@@ -124,7 +124,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
       const info = JSON.parse(await fs.readFile(infoPath, "utf8")) as unknown;
       const parsed = infoSchema.run(info);
       if (parsed.isErr()) {
-        errors.push(`info.json: (root) — ${parsed.error.message}`);
+        errors.push(`info.json: (root) - ${parsed.error.message}`);
       } else {
         const val = parsed.unwrap();
         if (val.name !== base) {
@@ -155,7 +155,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
       ) as unknown;
       const parsed = manifestSchema.run(manifest);
       if (parsed.isErr()) {
-        errors.push(`manifest.json: (root) — ${parsed.error.message}`);
+        errors.push(`manifest.json: (root) - ${parsed.error.message}`);
       } else {
         const val = parsed.unwrap();
         if (val.name !== base) {
@@ -182,7 +182,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
       );
     if (/\bconfigFields\s*:/.test(src))
       warnings.push(
-        "index.ts hand-authors `configFields` — declare a `configSchema` with the cfg.* helpers instead (fields are derived from it).",
+        "index.ts hand-authors `configFields` - declare a `configSchema` with the cfg.* helpers instead (fields are derived from it).",
       );
   } else {
     errors.push("Missing index.ts (module entrypoint).");
@@ -190,7 +190,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
 
   if (await pathExists(path.join(dir, "tasks"))) {
     errors.push(
-      'Found a "tasks/" directory — BullMQ pieces MUST live in "scheduled-tasks/" (a "tasks/" directory is silently never scanned).',
+      'Found a "tasks/" directory - BullMQ pieces MUST live in "scheduled-tasks/" (a "tasks/" directory is silently never scanned).',
     );
   }
 
@@ -202,15 +202,15 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
 
     if (EMBED_IMPORT_RE.test(src) || /\bnew\s+EmbedBuilder\s*\(/.test(src))
       errors.push(
-        `${rel}: uses EmbedBuilder — user-facing replies must use the make*Card helpers from #utilities/cards.js.`,
+        `${rel}: uses EmbedBuilder - user-facing replies must use the make*Card helpers from #utilities/cards.js.`,
       );
     if (/\bcontainer\.prisma\b/.test(src))
       errors.push(
-        `${rel}: touches container.prisma — addons get no schema; persist via container.db.guildKV or container.redis.`,
+        `${rel}: touches container.prisma - addons get no schema; persist via container.db.guildKV or container.redis.`,
       );
     if (/\bstores\.registerPath\s*\(/.test(src))
       warnings.push(
-        `${rel}: calls stores.registerPath — the Downloader already registers the addon path; remove this.`,
+        `${rel}: calls stores.registerPath - the Downloader already registers the addon path; remove this.`,
       );
 
     let match: RegExpExecArray | null;
@@ -219,7 +219,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
       const spec = match[1]!;
       if (spec.startsWith("#modules/")) {
         errors.push(
-          `${rel}: imports another module via "${spec}" — addons must be self-contained.`,
+          `${rel}: imports another module via "${spec}" - addons must be self-contained.`,
         );
         continue;
       }
@@ -230,7 +230,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
           !resolved.startsWith(addonRoot + path.sep)
         )
           errors.push(
-            `${rel}: relative import "${spec}" escapes the addon directory — move shared code into the addon or use #core/#utilities/#lib aliases.`,
+            `${rel}: relative import "${spec}" escapes the addon directory - move shared code into the addon or use #core/#utilities/#lib aliases.`,
           );
       }
     }

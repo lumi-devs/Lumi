@@ -64,7 +64,7 @@ export { checkModulesEnabled } from "./src/lib/module-check.js";
 export { relativeTimestamp, shortTimestamp } from "./src/lib/utilities/time.js";
 export { swallow, logError, errorFrom } from "./src/lib/utilities/errors.js";
 
-// Discord formatters — re-exported so addons import from @lumi/sdk only
+// Discord formatters - re-exported so addons import from @lumi/sdk only
 export {
   userMention,
   channelMention,

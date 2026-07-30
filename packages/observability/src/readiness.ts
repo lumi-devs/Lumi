@@ -1,12 +1,12 @@
 // Readiness probe registry. `/healthz` (liveness) is always 200 while the metrics
-// server responds — orchestrators use it to decide whether to restart the container.
+// server responds - orchestrators use it to decide whether to restart the container.
 // `/readyz` (readiness) is 200 only when every registered probe passes; k8s and the
 // cluster coordinator gate on it, so a failing probe pulls the replica out of the pool
 // without killing it.
 //
-// Each app registers the probes it needs: gateway — redis bus, Discord WS, cluster
-// joined; worker — postgres, redis, bus consumer, Discord (if monolith); scheduler —
-// postgres, redis, BullMQ, leader-lock (if enabled); api — postgres, redis, rabbitmq.
+// Each app registers the probes it needs: gateway - redis bus, Discord WS, cluster
+// joined; worker - postgres, redis, bus consumer, Discord (if monolith); scheduler -
+// postgres, redis, BullMQ, leader-lock (if enabled); api - postgres, redis, rabbitmq.
 
 export type ProbeStatus = "ok" | "fail" | "skip";
 

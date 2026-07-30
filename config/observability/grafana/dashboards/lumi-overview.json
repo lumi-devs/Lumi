@@ -2,7 +2,7 @@
   "annotations": { "list": [] },
   "editable": true,
   "schemaVersion": 39,
-  "title": "Lumi — Service Overview",
+  "title": "Lumi - Service Overview",
   "tags": ["lumi"],
   "time": { "from": "now-1h", "to": "now" },
   "templating": {
@@ -20,7 +20,7 @@
   },
   "panels": [
     {
-      "title": "Command rate (RED — rate)",
+      "title": "Command rate (RED - rate)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
@@ -32,7 +32,7 @@
       ]
     },
     {
-      "title": "Command errors (RED — errors)",
+      "title": "Command errors (RED - errors)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
@@ -44,7 +44,7 @@
       ]
     },
     {
-      "title": "Command p95 latency (RED — duration)",
+      "title": "Command p95 latency (RED - duration)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },

@@ -77,17 +77,17 @@ export function buildHubView(o: HubOverview): CardReply {
   ].join("\n");
 
   const tabs = [
-    `${Emojis.GEAR} **Modules** — enable, disable, and configure every feature`,
-    `${Emojis.SHIELD} **Permissions** — per-command allow / deny overrides`,
-    `${Emojis.GUILD} **Settings** — server language and command prefix`,
-    `${Emojis.REPO} **Addons** — extend Lumi with add-on modules`,
+    `${Emojis.GEAR} **Modules** - enable, disable, and configure every feature`,
+    `${Emojis.SHIELD} **Permissions** - per-command allow / deny overrides`,
+    `${Emojis.GUILD} **Settings** - server language and command prefix`,
+    `${Emojis.REPO} **Addons** - extend Lumi with add-on modules`,
   ].join("\n");
 
   return makeCard(
     0,
     `${Emojis.BOT} Lumi Control Panel`,
     [
-      "Manage everything for this server from one place — no scattered commands to remember.",
+      "Manage everything for this server from one place - no scattered commands to remember.",
       glance,
       tabs,
     ],
@@ -103,8 +103,8 @@ export function buildSettingsView(settings: {
   locale: string;
 }): CardReply {
   const body = [
-    `${Emojis.GUILD} **Language** — \`${settings.locale}\``,
-    `${Emojis.TERMINAL} **Prefix** — \`${settings.prefix ?? DEFAULT_PREFIX}\`${
+    `${Emojis.GUILD} **Language** - \`${settings.locale}\``,
+    `${Emojis.TERMINAL} **Prefix** - \`${settings.prefix ?? DEFAULT_PREFIX}\`${
       settings.prefix ? "" : "  -# *(default)*"
     }`,
   ].join("\n");
@@ -175,7 +175,7 @@ const formatOverride = (o: PermissionOverrideRow): string => {
   else if (o.modelType === "category")
     mention = `category ${channelMention(o.modelId)}`;
   else mention = channelMention(o.modelId);
-  return `${dot} \`${o.commandPath}\` — ${o.modelType} ${mention}`;
+  return `${dot} \`${o.commandPath}\` - ${o.modelType} ${mention}`;
 };
 
 const overrideLabel = (o: PermissionOverrideRow): string => {
@@ -190,7 +190,7 @@ export function buildPermissionsView(
   const lines = shown.length
     ? shown.map(formatOverride)
     : [
-        "*No permission overrides set — every command uses its default access.*",
+        "*No permission overrides set - every command uses its default access.*",
       ];
 
   const addRow = row(
@@ -279,9 +279,9 @@ export function buildAddonsView(
     `${Emojis.REPO} **Tracked Repositories:** ${stats?.repoCount ?? 0}`,
     `${Emojis.DOWNLOAD} **Installed Add-ons:** ${stats?.installedCount ?? 0}`,
     [
-      `• **Repositories** — View all downloaded repositories and explore their modules`,
-      `• **Installed Add-ons** — Manage and review currently installed add-ons`,
-      `• **Add Repository** — Add a new community repository by URL`,
+      `• **Repositories** - View all downloaded repositories and explore their modules`,
+      `• **Installed Add-ons** - Manage and review currently installed add-ons`,
+      `• **Add Repository** - Add a new community repository by URL`,
     ].join("\n"),
   ];
 
@@ -446,7 +446,7 @@ export function buildAddonRepoModulesView(
     ? sorted.map((m) => {
         const statusBadge = m.isInstalled ? "✓ Installed" : "Available";
         const desc = m.short ? cutText(m.short, 100) : "No description.";
-        return `**${m.name}** (v${m.version}) — *${statusBadge}*\n-# ${desc}`;
+        return `**${m.name}** (v${m.version}) - *${statusBadge}*\n-# ${desc}`;
       })
     : ["No modules found in this repository."];
 

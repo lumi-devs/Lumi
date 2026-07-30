@@ -53,7 +53,7 @@ function messageForDiscordCode(code: number): string | null {
     case RESTJSONErrorCodes.MissingPermissions:
       return "I'm missing the permissions to do that.";
     case RESTJSONErrorCodes.CannotSendMessagesToThisUser:
-      return "I can't message that user — their DMs are closed.";
+      return "I can't message that user - their DMs are closed.";
     default:
       return null;
   }

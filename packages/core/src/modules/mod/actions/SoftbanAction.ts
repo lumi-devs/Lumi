@@ -27,7 +27,7 @@ export class SoftbanAction extends BaseAction {
     const deleteMessageSeconds = days * 86400;
 
     const dm = makeErrorCard(
-      `🧹 Softbanned — ${guild.name}`,
+      `🧹 Softbanned - ${guild.name}`,
       `You have been softbanned from **${guild.name}** to clear recent message history.\n\n**Reason:** ${reason}`,
     );
     await targetUser.send(dm).catch(() => null);

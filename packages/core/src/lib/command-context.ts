@@ -58,14 +58,14 @@ export class CommandContext {
     return this.args === null;
   }
 
-  /** The slash interaction — throws on the prefix path; guard with `isSlash`. */
+  /** The slash interaction - throws on the prefix path; guard with `isSlash`. */
   public get interaction(): ChatInputCommandInteraction {
     if (this.args !== null)
       throw new Error("CommandContext: not an interaction");
     return this.source as ChatInputCommandInteraction;
   }
 
-  /** The prefix message — throws on the slash path; guard with `isSlash`. */
+  /** The prefix message - throws on the slash path; guard with `isSlash`. */
   public get message(): Message {
     if (this.args === null) throw new Error("CommandContext: not a message");
     return this.source as Message;
@@ -269,7 +269,7 @@ export class CommandContext {
     return fetchT(this.source) as unknown as Promise<LumiT>;
   }
 
-  /** Per-subcommand permit check — throws a rendered denial. */
+  /** Per-subcommand permit check - throws a rendered denial. */
   public async checkPermit(permitNode: string): Promise<void> {
     const userId = this.user.id;
     const guildId = this.guildId;

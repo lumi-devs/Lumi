@@ -1,6 +1,6 @@
 # 📚 Lumi Documentation Hub
 
-Welcome to the engineering documentation for **Lumi** — a modular, self-hosted Discord bot framework built with TypeScript and Bun.
+Welcome to the engineering documentation for **Lumi** - a modular, self-hosted Discord bot framework built with TypeScript and Bun.
 
 ---
 

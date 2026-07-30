@@ -13,7 +13,7 @@ This directory contains the operational and infrastructure configurations for Lu
 
 The `bot.ts` file configures runtime presence, color schemes, external links, permission tier titles, and user interface pagination defaults.
 
-All available options are documented as comments in the file. Uncomment and edit what you need — everything is optional.
+All available options are documented as comments in the file. Uncomment and edit what you need - everything is optional.
 
 #### Configuration Options
 
@@ -26,7 +26,7 @@ All available options are documented as comments in the file. Uncomment and edit
 | `branding.links.supportServer` | `string` | Discord invite URL surfaced in help and information cards | `""` |
 | `branding.links.website` | `string` | Official website URL surfaced in bot metadata | `""` |
 | `branding.links.github` | `string` | Source code repository URL | `""` |
-| *(removed)* | — | Permission level names — legacy tier system replaced by Wick-style Permit nodes | Use granular permit nodes (`"mod.*"`, `"admin.*"`) in `requiredPermit` command options instead |
+| *(removed)* | - | Permission level names - legacy tier system replaced by Wick-style Permit nodes | Use granular permit nodes (`"mod.*"`, `"admin.*"`) in `requiredPermit` command options instead |
 | `ui.defaultListPerPage` | `number` | Default number of items per page in paginated UI components | `10` |
 
 ---

@@ -62,7 +62,7 @@ export const MODULE_ROOT = path.join(
   "data",
   "3rd-party-modules",
 );
-/** Where symlinks for installed addons live — registered as a second ModuleStore root. */
+/** Where symlinks for installed addons live - registered as a second ModuleStore root. */
 export const ADDON_MODULES_ROOT = path.join(
   process.cwd(),
   "data",
@@ -203,7 +203,7 @@ export class DownloadResolver {
 
     const infoPath = path.join(sourcePath, "info.json");
     if (!(await this._exists(infoPath))) {
-      throw new Error(`Module ${moduleName} has no info.json — cannot install`);
+      throw new Error(`Module ${moduleName} has no info.json - cannot install`);
     }
     const info = JSON.parse(await fs.readFile(infoPath, "utf8")) as ModuleInfo;
 

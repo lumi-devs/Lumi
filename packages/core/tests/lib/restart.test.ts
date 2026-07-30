@@ -55,10 +55,10 @@ describe("Bot Restart & State Management Utilities", () => {
       scheduleProcessRestart("Second attempt", 1500);
 
       expect(container.logger.warn).toHaveBeenCalledWith(
-        "[Restart] Scheduling graceful restart in 1500ms — First attempt"
+        "[Restart] Scheduling graceful restart in 1500ms - First attempt"
       );
       expect(container.logger.warn).not.toHaveBeenCalledWith(
-        "[Restart] Scheduling graceful restart in 1500ms — Second attempt"
+        "[Restart] Scheduling graceful restart in 1500ms - Second attempt"
       );
       expect(killSpy).not.toHaveBeenCalled();
 

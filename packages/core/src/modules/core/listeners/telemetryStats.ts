@@ -37,7 +37,7 @@ export class TelemetryStatsListener extends Listener<
 
     if (getDiscordProxyUrl() !== null) {
       this.container.logger.info(
-        "[REST] Routing through DISCORD_PROXY_URL — local global throttle disabled",
+        "[REST] Routing through DISCORD_PROXY_URL - local global throttle disabled",
       );
     }
 

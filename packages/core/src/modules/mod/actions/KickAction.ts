@@ -16,7 +16,7 @@ export class KickAction {
     const { guild, targetMember, moderator, reason } = options;
 
     const dm = makeErrorCard(
-      `👢 Kicked — ${guild.name}`,
+      `👢 Kicked - ${guild.name}`,
       `You have been kicked from **${guild.name}**.\n\n**Reason:** ${reason}`,
     );
     await targetMember.send(dm).catch(() => null);

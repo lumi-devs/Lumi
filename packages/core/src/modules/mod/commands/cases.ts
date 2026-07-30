@@ -174,7 +174,7 @@ export class CasesCommand extends BaseSubcommand {
       `**Action:** ${c.action}`,
       `**Target:** ${userMention(c.userId)} (${c.userId})`,
       `**Moderator:** ${userMention(c.moderatorId)}`,
-      `**Reason:** ${c.reason ?? "—"}`,
+      `**Reason:** ${c.reason ?? "-"}`,
       `**Date:** ${time(c.createdAt, TimestampStyles.RelativeTime)}`,
       c.expiresAt
         ? `**Expires:** ${time(c.expiresAt, TimestampStyles.RelativeTime)}`
@@ -210,7 +210,7 @@ export class CasesCommand extends BaseSubcommand {
     }
     const lines = cases.map(
       (c) =>
-        `**#${c.caseNumber}** \`${c.action}\` — ${c.reason ?? "—"} ${time(c.createdAt, TimestampStyles.RelativeTime)}`,
+        `**#${c.caseNumber}** \`${c.action}\` - ${c.reason ?? "-"} ${time(c.createdAt, TimestampStyles.RelativeTime)}`,
     );
     const pages = chunk(lines, 10);
     const body = pages[0]!.join("\n");

@@ -2,7 +2,7 @@
   "name": "@lumi/gateway",
   "version": "1.0.1",
   "license": "AGPL-3.0-only",
-  "description": "Gateway service — Discord WS connection + event-bus publisher.",
+  "description": "Gateway service - Discord WS connection + event-bus publisher.",
   "type": "module",
   "private": true,
   "scripts": {

@@ -2,7 +2,7 @@
   "name": "@lumi/dashboard",
   "version": "1.0.1",
   "license": "AGPL-3.0-only",
-  "description": "Web admin dashboard — Discord OAuth login + auto-generated config forms, served over the RabbitMQ RPC bridge.",
+  "description": "Web admin dashboard - Discord OAuth login + auto-generated config forms, served over the RabbitMQ RPC bridge.",
   "type": "module",
   "private": true,
   "exports": {

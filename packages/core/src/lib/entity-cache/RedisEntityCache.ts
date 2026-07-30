@@ -5,7 +5,7 @@ export interface CachedGuild {
   id: string;
   name: string;
   ownerId: string;
-  /** Discord guild "preferred locale" — used by some moderation card flows. */
+  /** Discord guild "preferred locale" - used by some moderation card flows. */
   locale?: string;
   /** ISO timestamp of the last write into the cache. */
   cachedAt: number;
@@ -42,7 +42,7 @@ export interface CachedUser {
 export interface CachedMember {
   userId: string;
   guildId: string;
-  /** Role ids — comma-joined in the hash field to dodge ioredis list quirks. */
+  /** Role ids - comma-joined in the hash field to dodge ioredis list quirks. */
   roleIds: string[];
   /** Server-side nickname, if set. */
   nick?: string;

@@ -32,7 +32,7 @@ export function createPinoLogger(opts: PinoLoggerOptions): PinoLogger {
   };
 
   if (opts.format === "pretty") {
-    // Synchronous stream (no worker thread) — robust under Bun.
+    // Synchronous stream (no worker thread) - robust under Bun.
     return pino(
       base,
       PinoPretty({

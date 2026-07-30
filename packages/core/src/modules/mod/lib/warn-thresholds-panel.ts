@@ -112,15 +112,15 @@ export function buildWarnThresholdsPanelView(
           .setPlaceholder("🛡️ Select Punishment Action & Duration...")
           .addOptions(
             new StringSelectMenuOptionBuilder()
-              .setLabel("🔇 Mute — 1 Hour")
+              .setLabel("🔇 Mute - 1 Hour")
               .setValue("action:mute:1h")
               .setDescription("Timeout member for 1 Hour"),
             new StringSelectMenuOptionBuilder()
-              .setLabel("🔇 Mute — 24 Hours")
+              .setLabel("🔇 Mute - 24 Hours")
               .setValue("action:mute:24h")
               .setDescription("Timeout member for 24 Hours"),
             new StringSelectMenuOptionBuilder()
-              .setLabel("🔇 Mute — 7 Days")
+              .setLabel("🔇 Mute - 7 Days")
               .setValue("action:mute:7d")
               .setDescription("Timeout member for 7 Days"),
             new StringSelectMenuOptionBuilder()
@@ -132,11 +132,11 @@ export function buildWarnThresholdsPanelView(
               .setValue("action:ban")
               .setDescription("Permanently ban member"),
             new StringSelectMenuOptionBuilder()
-              .setLabel("🔨 Tempban — 7 Days")
+              .setLabel("🔨 Tempban - 7 Days")
               .setValue("action:tempban:7d")
               .setDescription("Ban member with scheduled 7-day unban"),
             new StringSelectMenuOptionBuilder()
-              .setLabel("🔨 Tempban — 30 Days")
+              .setLabel("🔨 Tempban - 30 Days")
               .setValue("action:tempban:30d")
               .setDescription("Ban member with scheduled 30-day unban"),
             new StringSelectMenuOptionBuilder()

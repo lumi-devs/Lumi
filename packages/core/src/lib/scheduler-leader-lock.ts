@@ -3,7 +3,7 @@ import { RedisKeys } from "#lib/database/redis.js";
 
 export interface SchedulerLeaderLockOptions {
   redis: Redis;
-  /** Unique identifier for this replica — written as the lock's value. */
+  /** Unique identifier for this replica - written as the lock's value. */
   replicaId: string;
   /** Lock TTL (ms). Defaults to 30s. */
   ttlMs?: number;
@@ -119,7 +119,7 @@ export class SchedulerLeaderLock {
         this.ttlMs.toString(),
       )) as number;
       if (result !== 1) {
-        this.handleLost("renewal returned 0 — lock taken by another replica");
+        this.handleLost("renewal returned 0 - lock taken by another replica");
       }
     } catch (err: unknown) {
       this.log("error", "[SchedulerLock] Renewal error", { err: String(err) });

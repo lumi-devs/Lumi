@@ -74,17 +74,17 @@ Configure `@lumi/scheduler` using environment variables:
 
 | Environment Variable | Required | Default | Description |
 |---|:---:|:---:|---|
-| `BOT_TOKEN` | **Yes** | — | Discord Bot Token (used for Sapphire framework initialisation). |
+| `BOT_TOKEN` | **Yes** | - | Discord Bot Token (used for Sapphire framework initialisation). |
 | `LUMI_ROLE` | **Yes** | `scheduler` | Identifies the process role (`scheduler`). |
 | `SCHEDULER_LEADER_LOCK` | No | `false` | Enables Redis leader election for HA deployments. |
 | `SCHEDULER_LEADER_LOCK_TTL_MS` | No | `30000` | Lease duration in milliseconds for the leader key lock. |
 | `SCHEDULER_LEADER_LOCK_RENEW_MS` | No | `10000` | Renewal heartbeat interval for the active leader. |
 | `REDIS_HOST` | No | `localhost` | Redis server hostname. |
 | `REDIS_PORT` | No | `6379` | Redis server network port. |
-| `REDIS_PASSWORD` | No | — | Redis authentication password. |
+| `REDIS_PASSWORD` | No | - | Redis authentication password. |
 | `REDIS_TASK_DB` | No | `1` | Redis database index used exclusively for BullMQ task queues. |
-| `RABBITMQ_URL` | **Yes** | — | RabbitMQ broker URL for background task consumer channels. |
-| `POSTGRES_URL` | **Yes** | — | PgBouncer or Postgres database connection string. |
+| `RABBITMQ_URL` | **Yes** | - | RabbitMQ broker URL for background task consumer channels. |
+| `POSTGRES_URL` | **Yes** | - | PgBouncer or Postgres database connection string. |
 | `METRICS_ENABLED` | No | `true` | Enables HTTP metrics and health check server. |
 | `METRICS_PORT` | No | `9090` | Network port for Prometheus metrics and health probes. |
 

@@ -97,14 +97,14 @@ declare module "#lib/env.js" {
     REDIS_SENTINEL_PASSWORD: string;
     /** When "true" on a `scheduler` replica, acquire a Redis-backed
      * leader lock before login(); followers block until it lapses. Default
-     * "false" — rely on BullMQ's per-job locks for safety, accept the
+     * "false" - rely on BullMQ's per-job locks for safety, accept the
      * coordination overhead of multiple active schedulers. */
     SCHEDULER_LEADER_LOCK: "true" | "false";
     SCHEDULER_LEADER_LOCK_TTL_MS: IntegerString;
     SCHEDULER_LEADER_LOCK_RENEW_MS: IntegerString;
     SCHEDULER_LEADER_LOCK_POLL_MS: IntegerString;
     RABBITMQ_URL: string;
-    /** "streams" — @lumi/event-bus transport (Redis Streams). */
+    /** "streams" - @lumi/event-bus transport (Redis Streams). */
     TRANSPORT: "streams";
     /** Approximate per-stream cap for raw gateway events. Default 100000. */
     EVENT_STREAM_MAXLEN: IntegerString;

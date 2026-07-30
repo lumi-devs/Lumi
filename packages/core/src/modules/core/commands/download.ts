@@ -123,7 +123,7 @@ export class DownloadCommand extends BaseSubcommand {
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       this.container.logger.warn(
-        `[Download] ${Emojis.ERROR} Install failed: ${moduleName} — ${msg_}`,
+        `[Download] ${Emojis.ERROR} Install failed: ${moduleName} - ${msg_}`,
       );
       await ctx.reply(
         makeErrorCard(`${Emojis.ERROR} ${t("core:failedInstallModuleTitle")}`, msg_),
@@ -153,7 +153,7 @@ export class DownloadCommand extends BaseSubcommand {
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       this.container.logger.warn(
-        `[Download] Uninstall failed: ${moduleName} — ${msg_}`,
+        `[Download] Uninstall failed: ${moduleName} - ${msg_}`,
       );
       await ctx.reply(makeErrorCard(t("core:failedUninstallModuleTitle"), msg_));
     }

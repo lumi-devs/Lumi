@@ -3,7 +3,7 @@ import { tryGetService } from "#lib/module-system/Service.js";
 import { ChannelType } from "discord.js";
 import { DEFAULT_WARN_MESSAGE } from "./lib/rules.js";
 
-/** Config keys the FilterService compiles into its per-guild rule set —
+/** Config keys the FilterService compiles into its per-guild rule set -
  * changing any of them must rebuild that guild's cache. */
 const COMPILED_KEYS = [
   "terms",

@@ -146,7 +146,7 @@ export class RepoCommand extends BaseSubcommand {
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       this.container.logger.warn(
-        `[Repo] ${Emojis.ERROR} Failed to add repo: ${name} — ${msg_}`,
+        `[Repo] ${Emojis.ERROR} Failed to add repo: ${name} - ${msg_}`,
       );
       await ctx.reply(
         makeErrorCard(`${Emojis.ERROR} ${t("core:failedAddRepoTitle")}`, msg_),
@@ -208,7 +208,7 @@ export class RepoCommand extends BaseSubcommand {
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       this.container.logger.warn(
-        `[Repo] ${Emojis.ERROR} Failed to update repo: ${name} — ${msg_}`,
+        `[Repo] ${Emojis.ERROR} Failed to update repo: ${name} - ${msg_}`,
       );
       await ctx.reply(
         makeErrorCard(`${Emojis.ERROR} ${t("core:failedUpdateRepoTitle")}`, msg_),

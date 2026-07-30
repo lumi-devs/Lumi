@@ -12,7 +12,7 @@ export interface ConfigOverrideEntry {
 }
 
 /**
- * Per-scope config overrides (`ModuleConfigOverride`) — user/channel/role/
+ * Per-scope config overrides (`ModuleConfigOverride`) - user/channel/role/
  * category/guild values layered over the base module config.
  */
 export class ConfigOverrideRepository extends Repository {

@@ -7,7 +7,7 @@ export class ShardResumeListener extends Listener<typeof Events.ShardResume> {
   public run(id: number, replayedEvents: number) {
     shardStatus.set({ shard: String(id) }, 1);
     this.container.logger.info(
-      `[Shard ${id}] Resumed — ${replayedEvents} events replayed`,
+      `[Shard ${id}] Resumed - ${replayedEvents} events replayed`,
     );
   }
 }

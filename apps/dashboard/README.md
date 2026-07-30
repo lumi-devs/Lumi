@@ -81,12 +81,12 @@ Configure `@lumi/dashboard` using environment variables. Required variables must
 |---|:---:|:---:|---|
 | `DASHBOARD_HOST` | No | `0.0.0.0` | IP interface host address for the web server. |
 | `DASHBOARD_PORT` | No | `8080` | Network port for HTTP web requests. |
-| `DASHBOARD_SESSION_SECRET` | **Yes** | — | HMAC signing key for secure session cookies. Generate with `openssl rand -hex 32`. |
+| `DASHBOARD_SESSION_SECRET` | **Yes** | - | HMAC signing key for secure session cookies. Generate with `openssl rand -hex 32`. |
 | `DASHBOARD_SECURE_COOKIES` | No | `false` | Enables `Secure` flag on cookies. Set to `true` when deployed behind HTTPS. |
-| `DISCORD_OAUTH2_CLIENT_ID` | **Yes** | — | Discord Application Client ID from the Discord Developer Portal. |
-| `DISCORD_OAUTH2_CLIENT_SECRET` | **Yes** | — | Discord Application Client Secret. |
-| `DISCORD_OAUTH2_REDIRECT_URI` | **Yes** | — | Fully qualified OAuth2 callback URL (e.g. `https://dash.example.com/callback`). |
-| `RABBITMQ_URL` | **Yes** | — | Connection string for RabbitMQ broker (e.g. `amqp://lumi:lumi@localhost:5672`). |
+| `DISCORD_OAUTH2_CLIENT_ID` | **Yes** | - | Discord Application Client ID from the Discord Developer Portal. |
+| `DISCORD_OAUTH2_CLIENT_SECRET` | **Yes** | - | Discord Application Client Secret. |
+| `DISCORD_OAUTH2_REDIRECT_URI` | **Yes** | - | Fully qualified OAuth2 callback URL (e.g. `https://dash.example.com/callback`). |
+| `RABBITMQ_URL` | **Yes** | - | Connection string for RabbitMQ broker (e.g. `amqp://lumi:lumi@localhost:5672`). |
 | `METRICS_ENABLED` | No | `true` | Enables HTTP metrics and readiness endpoint server. |
 | `METRICS_PORT` | No | `9090` | Network port for Prometheus metrics and health checks. |
 | `LOG_LEVEL` | No | `info` | Logging verbosity (`debug` \| `info` \| `warn` \| `error`). |

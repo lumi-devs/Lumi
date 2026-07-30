@@ -32,7 +32,7 @@ export class BanAction {
     } = options;
 
     const dm = makeErrorCard(
-      `🔨 Banned — ${guild.name}`,
+      `🔨 Banned - ${guild.name}`,
       `You have been banned from **${guild.name}**.\n\n**Reason:** ${reason}`,
     );
     await targetUser.send(dm).catch(() => null);

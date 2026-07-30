@@ -8,15 +8,15 @@ import { ModerationRepository } from "#lib/prisma/repositories/ModerationReposit
 //
 // We can't run a real Postgres row lock in a unit test, so we model the two
 // guarantees the implementation relies on:
-//   1. `$transaction(fn)` serializes its body against the counter row — modelled
+//   1. `$transaction(fn)` serializes its body against the counter row - modelled
 //      here with a per-guild async mutex held for the duration of the callback
 //      (mirrors SELECT … FOR UPDATE taken by the atomic `increment`).
-//   2. `(guildId, caseNumber)` is unique — `moderationCase.create` throws on a
+//   2. `(guildId, caseNumber)` is unique - `moderationCase.create` throws on a
 //      duplicate, exactly like the DB constraint would (P2002).
 //
 // If a refactor moves the counter read OUTSIDE the transaction, the read stops
 // being covered by the mutex, concurrent calls observe the same `next`, and the
-// unique check throws — failing this test. That's the regression guard.
+// unique check throws - failing this test. That's the regression guard.
 
 class AsyncMutex {
   private tail: Promise<void> = Promise.resolve();
@@ -110,7 +110,7 @@ class FakePrisma {
 
   // Models the transactional row lock: the callback runs under the guild's
   // mutex. We don't know the guildId until the body runs, so callers operating
-  // on different guilds still serialize through a single outer mutex — fine for
+  // on different guilds still serialize through a single outer mutex - fine for
   // this test, which hammers one guild.
   $transaction = async <T>(fn: (tx: FakePrisma) => Promise<T>): Promise<T> => {
     return this.globalLock.run(() => fn(this));

@@ -11,7 +11,7 @@
   "statsBody": "**Active AFK entries:** {{activeEntries}}\n**Active cooldowns:** {{activeCooldowns}}",
   "mentionsTitle": "Recent Mentions",
   "jumpToMessage": "Jump to Message",
-  "mentionLine": "{{user}} in {{channel}} — {{duration}} ago\n{{link}}",
+  "mentionLine": "{{user}} in {{channel}} - {{duration}} ago\n{{link}}",
   "viewMentionsButton": "View Mentions ({{count}})",
   "welcomeBackTitle": "Welcome Back!",
   "welcomeBackBody": "AFK removed.\nAFK for **{{duration}}**.",

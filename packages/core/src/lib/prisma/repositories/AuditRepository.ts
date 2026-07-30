@@ -13,7 +13,7 @@ export interface AuditLogPayload {
 }
 
 /**
- * Buffered audit log — writes land in a Redis Stream (`auditLogsQueue`) and are
+ * Buffered audit log - writes land in a Redis Stream (`auditLogsQueue`) and are
  * drained to the `AuditLedger` Postgres table in batches via a consumer group.
  */
 export class AuditRepository extends Repository {
@@ -78,7 +78,7 @@ export class AuditRepository extends Repository {
         const raw = idx === -1 ? undefined : fields[idx + 1];
         if (raw === undefined) {
           this.logger.warn(
-            `[AuditRepository] Entry ${id} is missing the "payload" field — skipping.`,
+            `[AuditRepository] Entry ${id} is missing the "payload" field - skipping.`,
           );
         } else {
           const parsed = tryParseJSON(raw);

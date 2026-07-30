@@ -64,7 +64,7 @@ export const queueDepth = new Gauge({
   registers: [registry],
 });
 
-// Redis Streams transport — fed by RedisStreamsBus.onStats (XLEN + XPENDING).
+// Redis Streams transport - fed by RedisStreamsBus.onStats (XLEN + XPENDING).
 
 export const streamLength = new Gauge({
   name: "lumi_stream_length",
@@ -138,7 +138,7 @@ export const restRetryAfterSeconds = new Histogram({
   registers: [registry],
 });
 
-// Invalid-request counter — each emit is N (configured warning interval)
+// Invalid-request counter - each emit is N (configured warning interval)
 // 401/403/429 responses in a rolling 10-minute window. Discord IP-bans the bot
 // at 10k/10min; we set the interval to 500, so each tick = 500 invalid reqs.
 // Alerts should fire well before the rate would project past 10k.
@@ -203,7 +203,7 @@ export function startMetricsServer(port: number): Server | null {
       return;
     }
     if (req.url === "/healthz") {
-      // Liveness: process is up. No deep checks — k8s uses this to decide
+      // Liveness: process is up. No deep checks - k8s uses this to decide
       // whether to restart the container.
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end('{"status":"ok"}');

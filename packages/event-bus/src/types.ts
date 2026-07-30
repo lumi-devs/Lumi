@@ -1,4 +1,4 @@
-// Bus interface — Redis Streams event bus abstraction.
+// Bus interface - Redis Streams event bus abstraction.
 // Semantics target Redis Streams' consumer groups: at-least-once delivery,
 // per-consumer pending list, explicit ack.
 
@@ -14,9 +14,9 @@ export interface BusMessage<T = unknown> {
    * that aren't naturally idempotent).
    */
   deliveryCount: number;
-  /** Acknowledge — removes the message from the consumer group's pending list. */
+  /** Acknowledge - removes the message from the consumer group's pending list. */
   ack: () => Promise<void>;
-  /** Negative ack — leaves the message pending so it can be claimed by another consumer. */
+  /** Negative ack - leaves the message pending so it can be claimed by another consumer. */
   nack: () => Promise<void>;
 }
 
@@ -30,7 +30,7 @@ export interface PublishOptions {
 }
 
 export interface ConsumeOptions {
-  /** Consumer group name — created lazily on first read. */
+  /** Consumer group name - created lazily on first read. */
   group: string;
   /** Stable per-replica id; persisting it across restarts lets a worker re-claim its own pending msgs. */
   consumer: string;
@@ -46,7 +46,7 @@ export interface EventBus {
   /**
    * Consume from `streams` indefinitely, invoking `handler` per message.
    * Returns a stop fn; the loop unwinds at the next blocking-read boundary.
-   * The handler MUST call `msg.ack()` (or `msg.nack()`) — failure to ack
+   * The handler MUST call `msg.ack()` (or `msg.nack()`) - failure to ack
    * leaves the message in the pending list, where it can be auto-claimed.
    */
   consume<T>(

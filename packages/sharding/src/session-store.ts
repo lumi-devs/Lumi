@@ -2,7 +2,7 @@
 // opening each shard; returning a recent `SessionInfo` makes the gateway RESUME
 // instead of IDENTIFY (no budget consumed, missed dispatches replayed, near-free
 // shard handoff). We persist SessionInfo to shared Redis keyed by shardId so a
-// restarted process — or a replica taking over a shard — resumes the prior session.
+// restarted process - or a replica taking over a shard - resumes the prior session.
 //
 // TTL defaults to 5 minutes: Discord invalidates sessions disconnected for "a few
 // minutes", after which RESUME fails 4007/4009 and the shard falls back to IDENTIFY.

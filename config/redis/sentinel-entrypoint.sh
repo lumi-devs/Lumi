@@ -1,5 +1,5 @@
 #!/bin/sh
-# Generates a writable sentinel.conf at boot — sentinel rewrites this file when
+# Generates a writable sentinel.conf at boot - sentinel rewrites this file when
 # state changes (known replicas, failover epoch), so we can't mount it read-only.
 set -eu
 

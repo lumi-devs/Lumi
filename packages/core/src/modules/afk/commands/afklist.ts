@@ -38,7 +38,7 @@ export default class AfkListCommand extends BaseCommand {
 
     const lines = entries.map(
       (e) =>
-        `${userMention(e.userId)} — \`${e.reason}\` *${t("afk:listDuration", { duration: afkDurationSince(e.since) })}*`,
+        `${userMention(e.userId)} - \`${e.reason}\` *${t("afk:listDuration", { duration: afkDurationSince(e.since) })}*`,
     );
     const pages = chunk(lines, 15);
     const body = pages[0]!.join("\n");

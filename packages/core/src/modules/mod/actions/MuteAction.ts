@@ -28,7 +28,7 @@ export class MuteAction {
     const expiresAt = new Date(Date.now() + durationMs);
 
     const dm = makeErrorCard(
-      `🔇 Muted — ${guild.name}`,
+      `🔇 Muted - ${guild.name}`,
       `You have been timed out in **${guild.name}** for **${formatDuration(durationMs)}**.\n\n**Reason:** ${reason}`,
     );
     await targetMember.send(dm).catch(() => null);

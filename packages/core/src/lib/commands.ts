@@ -47,7 +47,7 @@ export interface ReplyOptions {
   ephemeral?: boolean;
 }
 
-/** Interactions the card reply helpers accept — slash and context-menu commands. */
+/** Interactions the card reply helpers accept - slash and context-menu commands. */
 export type CommandReplyTarget =
   | ChatInputCommandInteraction
   | MessageContextMenuCommandInteraction
@@ -284,8 +284,8 @@ interface DefaultsApplicableBuilder {
 /**
  * Shadow `registerApplicationCommands` (the same instance-shadowing pattern as
  * {@link instrumentCommandPiece}) so every chat-input / context-menu builder
- * receives the shared defaults — `defaultMemberPermissions`, `contexts`,
- * `integrationTypes` — before the subclass's builder callback runs. Commands
+ * receives the shared defaults - `defaultMemberPermissions`, `contexts`,
+ * `integrationTypes` - before the subclass's builder callback runs. Commands
  * never repeat the setter trio, and can still override any of the three by
  * calling the setter themselves inside their builder chain.
  */
@@ -485,7 +485,7 @@ export namespace BaseCommand {
   export type Options = Command.Options & LumiCommandExtras;
 }
 
-/** Subcommand mapping entries may declare `run: "method"` — a single-source
+/** Subcommand mapping entries may declare `run: "method"` - a single-source
  * handler `(ctx: CommandContext) => unknown` bridged to slash (and prefix when
  * `prefixEnabled`) by the constructor. */
 type LumiSubcommandMappings = NonNullable<Subcommand.Options["subcommands"]>;

@@ -2,7 +2,7 @@
   "annotations": { "list": [] },
   "editable": true,
   "schemaVersion": 39,
-  "title": "Lumi — Cost & Efficiency",
+  "title": "Lumi - Cost & Efficiency",
   "tags": ["lumi", "cost"],
   "time": { "from": "now-6h", "to": "now" },
   "templating": {
@@ -66,7 +66,7 @@
           "legendFormat": "{{service}}"
         }
       ],
-      "description": "What KEDA is actually running. Compare to lumi_stream_consumer_lag — if lag is climbing while this is flat, the autoscaler isn't reacting."
+      "description": "What KEDA is actually running. Compare to lumi_stream_consumer_lag - if lag is climbing while this is flat, the autoscaler isn't reacting."
     },
     {
       "title": "RSS per service",
@@ -138,7 +138,7 @@
           "legendFormat": "{{cache}}"
         }
       ],
-      "description": "Hit ratios below 80% on hot caches mean DatabaseService.getOrSet's TTL is shorter than the read cadence — tune RedisTTL in src/database/redis.ts."
+      "description": "Hit ratios below 80% on hot caches mean DatabaseService.getOrSet's TTL is shorter than the read cadence - tune RedisTTL in src/database/redis.ts."
     },
     {
       "title": "Postgres pool saturation (%)",
@@ -187,7 +187,7 @@
           "legendFormat": "{{stream}}"
         }
       ],
-      "description": "Mirrors deploy/k8s/worker-scaledobject.yaml — the KEDA Prometheus trigger fires at threshold 500. Sustained lag past that should be followed by replica count climbing above."
+      "description": "Mirrors deploy/k8s/worker-scaledobject.yaml - the KEDA Prometheus trigger fires at threshold 500. Sustained lag past that should be followed by replica count climbing above."
     }
   ]
 }

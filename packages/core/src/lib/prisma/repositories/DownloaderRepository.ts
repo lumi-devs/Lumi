@@ -1,7 +1,7 @@
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
 /**
- * Module downloader bookkeeping — `DownloaderRepo` (tracked git repos) and
+ * Module downloader bookkeeping - `DownloaderRepo` (tracked git repos) and
  * `DownloaderModule` (installed modules per repo).  No Redis caching.
  */
 export class DownloaderRepository extends Repository {

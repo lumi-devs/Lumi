@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/banner.png" alt="Lumi" width="800">
 
-  <p><strong>Fully modular, hot-swappable, self-hosted — built for communities that want control.</strong></p>
+  <p><strong>Fully modular, hot-swappable, self-hosted - built for communities that want control.</strong></p>
 
   <p>
     <a href="https://github.com/lumi-devs/lumi/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/lumi-devs/lumi/ci.yml?branch=main&style=flat-square&label=CI&logo=github" alt="CI"></a>
@@ -30,9 +30,9 @@
 
 ## Overview
 
-> ⚠️ **Pre-Alpha Notice:** Lumi is currently in **pre-alpha**. Several components  including but not limited to the dashboard, Lumi Downloader, and various commands — are undocumented and subject to radical changes without notice. Expect breaking changes between updates.
+> ⚠️ **Pre-Alpha Notice:** Lumi is currently in **pre-alpha**. Several components  including but not limited to the dashboard, Lumi Downloader, and various commands - are undocumented and subject to radical changes without notice. Expect breaking changes between updates.
 
-Lumi is a self-hosted, modular Discord bot built for communities that demand full control and high performance. Every feature is a hot-swappable module — toggle, configure, and extend without restarting the bot or touching core code.
+Lumi is a self-hosted, modular Discord bot built for communities that demand full control and high performance. Every feature is a hot-swappable module - toggle, configure, and extend without restarting the bot or touching core code.
 
 Built with **Bun**, **TypeScript**, **discord.js v14**, and the **[Sapphire Framework](https://sapphirejs.dev)**. Backed by **PostgreSQL 17** and **Redis 7**.
 
@@ -42,10 +42,10 @@ Built with **Bun**, **TypeScript**, **discord.js v14**, and the **[Sapphire Fram
 
 ### Requirements
 
-- [**Bun**](https://bun.sh) 1.3+ — runtime and package manager
-- [**Docker**](https://docs.docker.com/get-docker/) & [**Docker Compose**](https://docs.docker.com/compose/install/) — for containerized services
-- [**PostgreSQL**](https://www.postgresql.org/download/) 17 — primary datastore
-- [**Redis**](https://redis.io/download/) 7 — caching, queues, and cross-process event streaming
+- [**Bun**](https://bun.sh) 1.3+ - runtime and package manager
+- [**Docker**](https://docs.docker.com/get-docker/) & [**Docker Compose**](https://docs.docker.com/compose/install/) - for containerized services
+- [**PostgreSQL**](https://www.postgresql.org/download/) 17 - primary datastore
+- [**Redis**](https://redis.io/download/) 7 - caching, queues, and cross-process event streaming
 
 ### Quick Start
 

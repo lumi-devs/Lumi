@@ -101,7 +101,7 @@ export class FilterMessageListener extends GuildMessageListener {
     await logService?.dispatch({
       guildId: message.guildId,
       moduleName: "filter",
-      action: `Filter — ${hit.rule}`,
+      action: `Filter - ${hit.rule}`,
       targetId: message.author.id,
       actorId: this.container.client.user!.id,
       reason: hit.detail,

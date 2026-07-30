@@ -25,7 +25,7 @@ export class GuildLogService extends Service {
 
     const title = isNullish(entry.caseNumber)
       ? entry.action
-      : `${entry.action} — Case #${entry.caseNumber}`;
+      : `${entry.action} - Case #${entry.caseNumber}`;
 
     const lines = [
       `**Target**: ${userMention(entry.targetId)} (${entry.targetId})`,

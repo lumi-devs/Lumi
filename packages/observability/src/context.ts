@@ -1,5 +1,5 @@
 // Per-operation request context, shared by logger + tracer so a correlation id
-// and the active trace follow a unit of work across awaits — and, once the
+// and the active trace follow a unit of work across awaits - and, once the
 // gateway→bus→worker split lands, across services via the carrier helpers below.
 
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -33,7 +33,7 @@ export function activeTraceIds(): { traceId?: string; spanId?: string } {
   return { traceId: sc.traceId, spanId: sc.spanId };
 }
 
-/** Carrier (W3C `traceparent`) for the active trace — stamp onto outgoing bus/RPC messages. */
+/** Carrier (W3C `traceparent`) for the active trace - stamp onto outgoing bus/RPC messages. */
 export function injectTraceContext(): Record<string, string> {
   const carrier: Record<string, string> = {};
   propagation.inject(otelContext.active(), carrier);

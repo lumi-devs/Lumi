@@ -91,7 +91,7 @@ async function main() {
     const meta = extractMeta(mod);
     if (!meta?.name) continue;
     if (seen.has(meta.name)) {
-      console.warn(`${YELLOW}[manifest] duplicate module name '${meta.name}' at ${dir} — skipped${RESET}`);
+      console.warn(`${YELLOW}[manifest] duplicate module name '${meta.name}' at ${dir} - skipped${RESET}`);
       continue;
     }
     seen.add(meta.name);

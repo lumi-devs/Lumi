@@ -1,7 +1,7 @@
 //
-// Bot Configuration — overrides compiled-in defaults.
+// Bot Configuration - overrides compiled-in defaults.
 // Edit values here to customize your bot, then restart.
-// You only need to specify what you want to change — everything is optional.
+// You only need to specify what you want to change - everything is optional.
 //
 // All available options (with defaults) are listed below for reference.
 // Uncomment and change any value you wish to override.

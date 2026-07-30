@@ -437,7 +437,7 @@ export function buildHistoryView(
   const lines = entries.length
     ? entries.map(
         (e) =>
-          `**${labelFor(e.key)}** — ${fmt(e.key, e.oldValue)} → ${fmt(e.key, e.newValue)}\n-# by ${userMention(e.actorId)} • ${time(e.createdAt, TimestampStyles.RelativeTime)}`,
+          `**${labelFor(e.key)}** - ${fmt(e.key, e.oldValue)} → ${fmt(e.key, e.newValue)}\n-# by ${userMention(e.actorId)} • ${time(e.createdAt, TimestampStyles.RelativeTime)}`,
       )
     : ["*No changes recorded yet.*"];
 
@@ -505,7 +505,7 @@ export function buildOverridesView(
   const lines = overrides.length
     ? overrides.map(
         (o) =>
-          `\`${o.key}\` — ${o.modelType} ${overrideTargetMention(o)} → \`${cutText(String(o.value), 60)}\``,
+          `\`${o.key}\` - ${o.modelType} ${overrideTargetMention(o)} → \`${cutText(String(o.value), 60)}\``,
       )
     : ["*No overrides set for this feature.*"];
 

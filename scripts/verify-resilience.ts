@@ -74,7 +74,7 @@ const redisConfig = {
 
 const redisScenarios: Scenario[] = [
   {
-    name: "Redis Streams — basic publish & consume round-trip",
+    name: "Redis Streams - basic publish & consume round-trip",
     async run() {
       const { bus, close } = createEventBus({
         transport: "streams",
@@ -95,7 +95,7 @@ const redisScenarios: Scenario[] = [
     },
   },
   {
-    name: "Redis Streams — sequential message ordering under queue load",
+    name: "Redis Streams - sequential message ordering under queue load",
     async run() {
       const { bus, close } = createEventBus({
         transport: "streams",
@@ -119,7 +119,7 @@ const redisScenarios: Scenario[] = [
     },
   },
   {
-    name: "Redis Streams — consumer group isolation & fanout",
+    name: "Redis Streams - consumer group isolation & fanout",
     async run() {
       const { bus, close } = createEventBus({
         transport: "streams",
@@ -150,7 +150,7 @@ const redisScenarios: Scenario[] = [
     },
   },
   {
-    name: "Redis Streams — high-throughput burst load (100 parallel dispatches)",
+    name: "Redis Streams - high-throughput burst load (100 parallel dispatches)",
     async run() {
       const { bus, close } = createEventBus({
         transport: "streams",
@@ -180,7 +180,7 @@ const redisScenarios: Scenario[] = [
     },
   },
   {
-    name: "Redis Streams — lifecycle initialization and graceful shutdown",
+    name: "Redis Streams - lifecycle initialization and graceful shutdown",
     async run() {
       const { close } = createEventBus({
         transport: "streams",
@@ -190,7 +190,7 @@ const redisScenarios: Scenario[] = [
     },
   },
   {
-    name: "Redis Streams — bus re-initialization after connection termination",
+    name: "Redis Streams - bus re-initialization after connection termination",
     async run() {
       const busInstanceA = createEventBus({
         transport: "streams",
@@ -230,7 +230,7 @@ async function executeResilienceSuite(): Promise<void> {
 
   const badge = failureCount === 0 ? `${GREEN}PASSED${RESET}` : `${RED}FAILED${RESET}`;
   process.stdout.write(
-    `\n${DIM}[verify:resilience]${RESET} ${badge} — ${activeScenarios.length - failureCount}/${activeScenarios.length} scenario(s) succeeded\n\n`,
+    `\n${DIM}[verify:resilience]${RESET} ${badge} - ${activeScenarios.length - failureCount}/${activeScenarios.length} scenario(s) succeeded\n\n`,
   );
 
   process.exit(failureCount > 0 ? 1 : 0);

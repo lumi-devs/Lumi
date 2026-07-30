@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Addon validation CLI — `bun run validate <path>`.
+ * Addon validation CLI - `bun run validate <path>`.
  *
  * Runs the same structural checks the Downloader applies before loading an
  * addon (info.json schema, @DefineModule export, the scheduled-tasks/ naming

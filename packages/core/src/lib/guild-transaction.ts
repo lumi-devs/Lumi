@@ -76,7 +76,7 @@ export class GuildWriteTransaction {
     void this.#release();
   }
 
-  /** TC39 `using` keyword support — releases the lock automatically on scope exit. */
+  /** TC39 `using` keyword support - releases the lock automatically on scope exit. */
   public [Symbol.dispose](): void {
     void this.#release();
   }

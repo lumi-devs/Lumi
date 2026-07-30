@@ -1,9 +1,9 @@
 //
-// Emoji Overrides — override built-in emoji symbols with custom Discord emojis.
+// Emoji Overrides - override built-in emoji symbols with custom Discord emojis.
 // Each key maps an identifier used across the bot's UI to an emoji string.
 // Use unicode glyphs ("🔴") or custom Discord emoji IDs ("<:name:123456789>").
 //
-// You only need to specify keys you want to override — everything is optional.
+// You only need to specify keys you want to override - everything is optional.
 // All available keys (with defaults) are listed below for reference.
 //
 
