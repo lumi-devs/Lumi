@@ -1,6 +1,6 @@
 {
   "name": "@lumi/sharding",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "AGPL-3.0-only",
   "description": "Shard topology + IDENTIFY orchestration shared between gateway, worker, and monolith. Calls /gateway/bot, plans shard ranges, and supplies IdentifyThrottlers.",
   "type": "module",
@@ -18,6 +18,8 @@
     "ioredis": "^5.4.0"
   },
   "peerDependenciesMeta": {
-    "ioredis": { "optional": true }
+    "ioredis": {
+      "optional": true
+    }
   }
 }

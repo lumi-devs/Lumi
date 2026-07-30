@@ -1,6 +1,6 @@
 {
   "name": "@lumi/observability",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "AGPL-3.0-only",
   "description": "Cross-service telemetry for Lumi: pino structured logging with trace/correlation propagation, OpenTelemetry tracing, and Prometheus metrics. Zero discord.js deps.",
   "type": "module",
