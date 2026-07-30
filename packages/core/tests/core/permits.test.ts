@@ -3,7 +3,7 @@ import {
   PermitResolver,
   evaluateNodeMatch,
 } from "#lib/permissions/PermitResolver.js";
-import { container } from "@sapphire/framework";
+import { container, UserError } from "@sapphire/framework";
 
 describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {
   let resolver: PermitResolver;
@@ -29,9 +29,37 @@ describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {
       expect(evaluateNodeMatch("mod.*", "mod.kick.soft")).toBe(true);
       expect(evaluateNodeMatch("mod.*", "config.prefix")).toBe(false);
     });
+
+    it("should evaluate evaluateNodeMatch instance method", () => {
+      expect(resolver.evaluateNodeMatch("mod.*", "mod.ban")).toBe(true);
+    });
   });
 
-  describe("hasPermit evaluation pipeline", () => {
+  describe("isBotOwner", () => {
+    it("should return true if user is client application single owner", () => {
+      (container as any).client = {
+        application: {
+          owner: { id: "APP_OWNER" },
+        },
+      };
+      expect(PermitResolver.isBotOwner("APP_OWNER")).toBe(true);
+      expect(PermitResolver.isBotOwner("OTHER_USER")).toBe(false);
+    });
+
+    it("should return true if user is in team application members", () => {
+      (container as any).client = {
+        application: {
+          owner: {
+            members: new Set(["TEAM_MEMBER_1", "TEAM_MEMBER_2"]),
+          },
+        },
+      };
+      expect(PermitResolver.isBotOwner("TEAM_MEMBER_1")).toBe(true);
+      expect(PermitResolver.isBotOwner("NON_MEMBER")).toBe(false);
+    });
+  });
+
+  describe("hasPermit & assertPermit evaluation pipeline", () => {
     it("should grant permission for Guild Owner", async () => {
       const allowed = await resolver.hasPermit({
         guildId: "G1",
@@ -69,7 +97,7 @@ describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {
     it("should STRIP Custom Permits when Anti-Nuke Quarantine is active", async () => {
       (container as any).db = {
         getUserPermits: vi.fn().mockResolvedValue({
-          customPermits: new Set(), // Interceptor strips custom permits when quarantined
+          customPermits: new Set(),
           enforcedPermits: new Set(),
           isQuarantined: true,
         }),
@@ -86,8 +114,8 @@ describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {
     it("should PRESERVE Enforced Permits even when Anti-Nuke Quarantine is active", async () => {
       (container as any).db = {
         getUserPermits: vi.fn().mockResolvedValue({
-          customPermits: new Set(), // Stripped
-          enforcedPermits: new Set(["system.emergency"]), // Retained
+          customPermits: new Set(),
+          enforcedPermits: new Set(["system.emergency"]),
           isQuarantined: true,
         }),
       };
@@ -105,6 +133,42 @@ describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {
         permitNode: "mod.warn",
       });
       expect(allowedCustom).toBe(false);
+    });
+
+    it("should throw UserError on assertPermit when permission is denied", async () => {
+      (container as any).db = {
+        getUserPermits: vi.fn().mockResolvedValue({
+          customPermits: new Set(),
+          enforcedPermits: new Set(),
+          isQuarantined: false,
+        }),
+      };
+
+      await expect(
+        resolver.assertPermit({
+          guildId: "G1",
+          userId: "U1",
+          permitNode: "mod.ban",
+        }),
+      ).rejects.toThrow(UserError);
+    });
+
+    it("should resolve assertPermit when permission is granted", async () => {
+      (container as any).db = {
+        getUserPermits: vi.fn().mockResolvedValue({
+          customPermits: new Set(["mod.ban"]),
+          enforcedPermits: new Set(),
+          isQuarantined: false,
+        }),
+      };
+
+      await expect(
+        resolver.assertPermit({
+          guildId: "G1",
+          userId: "U1",
+          permitNode: "mod.ban",
+        }),
+      ).resolves.toBeUndefined();
     });
   });
 });
