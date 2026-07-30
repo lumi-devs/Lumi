@@ -20,6 +20,11 @@ const GROUP_ALPHA = "verify-resilience-alpha";
 const GROUP_BETA = "verify-resilience-beta";
 const CONSUMER_PRIMARY = "consumer-0";
 
+const RED = "\x1b[31m";
+const GREEN = "\x1b[32m";
+const DIM = "\x1b[2m";
+const RESET = "\x1b[0m";
+
 interface Scenario {
   name: string;
   run: () => Promise<void>;
@@ -28,12 +33,12 @@ interface Scenario {
 // ── Logging Utilities ─────────────────────────────────────────────────────────
 
 function pass(name: string): void {
-  process.stdout.write(`  ✓ ${name}\n`);
+  process.stdout.write(`  ${GREEN}✓${RESET} ${name}\n`);
 }
 
 function fail(name: string, err: unknown): void {
   const reason = err instanceof Error ? err.message : String(err);
-  process.stderr.write(`  ✗ ${name}: ${reason}\n`);
+  process.stderr.write(`  ${RED}✗${RESET} ${name}: ${DIM}${reason}${RESET}\n`);
 }
 
 /** Drain up to `limit` messages from a stream and explicit-ack them. */
@@ -209,7 +214,7 @@ async function executeResilienceSuite(): Promise<void> {
   const activeScenarios = redisScenarios;
 
   process.stdout.write(
-    `\n[verify:resilience] Running ${activeScenarios.length} scenario(s) (Redis Streams)\n\n`,
+    `\n${DIM}[verify:resilience]${RESET} Running ${activeScenarios.length} scenario(s) (Redis Streams)\n\n`,
   );
 
   let failureCount = 0;
@@ -223,8 +228,9 @@ async function executeResilienceSuite(): Promise<void> {
     }
   }
 
+  const badge = failureCount === 0 ? `${GREEN}PASSED${RESET}` : `${RED}FAILED${RESET}`;
   process.stdout.write(
-    `\n[verify:resilience] ${failureCount === 0 ? "PASSED" : "FAILED"} — ${activeScenarios.length - failureCount}/${activeScenarios.length} scenario(s) succeeded\n\n`,
+    `\n${DIM}[verify:resilience]${RESET} ${badge} — ${activeScenarios.length - failureCount}/${activeScenarios.length} scenario(s) succeeded\n\n`,
   );
 
   process.exit(failureCount > 0 ? 1 : 0);

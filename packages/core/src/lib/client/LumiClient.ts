@@ -6,6 +6,7 @@ import {
   LogLevel,
 } from "@sapphire/framework";
 import "@sapphire/plugin-hmr/register";
+import { initCoreRpcHandlers } from "#lib/rpc/core-rpc.js";
 import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
 import {
   GatewayIntentBits,
@@ -43,6 +44,7 @@ import {
 import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
 import { SchedulerLeaderLock } from "#lib/scheduler-leader-lock.js";
 import { RabbitClient } from "#lib/rabbitmq/index.js";
+import { permitResolver } from "#lib/permissions/PermitResolver.js";
 import {
   createEventBus,
   RawGatewayConsumer,
@@ -258,7 +260,6 @@ export class LumiClient extends SapphireClient {
       defaultMaxLen: envParseInteger("EVENT_STREAM_MAXLEN", 100_000),
       maxDeliveries: envParseInteger("EVENT_STREAM_MAX_DELIVERIES", 5),
       claimMinIdleMs: envParseInteger("EVENT_STREAM_CLAIM_MIN_IDLE_MS", 60_000),
-      ackWaitMs: envParseInteger("EVENT_STREAM_ACK_WAIT_MS", 60_000),
       claimIntervalMs: envParseInteger(
         "EVENT_STREAM_CLAIM_INTERVAL_MS",
         30_000,
@@ -283,6 +284,7 @@ export class LumiClient extends SapphireClient {
       entityCache: new RedisEntityCache(redis),
       eventBus: this._ownedEventBus.bus,
       moduleStore,
+      permitResolver,
       configChangeHooks: new Map(),
       stats: {
         messages: 0,
@@ -364,6 +366,7 @@ export class LumiClient extends SapphireClient {
       );
     }
 
+    initCoreRpcHandlers();
     await this.stores.get("modules").discover();
 
     if (this.role === "worker" || this.role === "scheduler") {
@@ -466,7 +469,7 @@ export class LumiClient extends SapphireClient {
 
     this._livenessInterval = setInterval(async () => {
       try {
-        await container.prisma.$queryRaw`SELECT 1`;
+        await container.db.probePrisma();
       } catch (err: unknown) {
         container.logger.error("[Database] Liveness check failed:", err);
       }
@@ -581,7 +584,7 @@ export class LumiClient extends SapphireClient {
   private _registerReadinessProbes() {
     registerReadinessProbe("postgres", async () => {
       try {
-        await container.prisma.$queryRaw`SELECT 1`;
+        await container.db.probePrisma();
         return { status: "ok" };
       } catch (err) {
         return { status: "fail", detail: String(err) };

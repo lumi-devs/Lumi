@@ -2,10 +2,6 @@ import type { Container } from "@sapphire/framework";
 import { tryGetService } from "#lib/module-system/Service.js";
 import { type User } from "discord.js";
 import { scheduleTask } from "#lib/schedule-task.js";
-import { parseDuration, formatDuration } from "#lib/utilities/time.js";
-
-export { parseDuration, formatDuration };
-
 const liftJobId = (caseId: number) => `mod-lift:${caseId}`;
 
 /** Schedule a one-shot lift job to fire exactly when the case expires. Idempotent per case id. */

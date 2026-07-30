@@ -4,8 +4,8 @@ Lumi ships 8 built-in modules in `packages/core/src/modules/`. Each is strictly 
 
 | Module | Name | Commands | What it does |
 | :---: | :--- | :--- | :--- |
-| ⚙️ `core` | Core Settings | `/lumi`, `/module`, `/permissions`, `/prefix` | Bot settings, module toggles, per-guild prefix, role permission tiers |
-| 🔨 `mod` | Moderation | `/ban`, `/kick`, `/timeout`, `/warn`, `/quarantine` | Full mod suite — case IDs, duration parsing, user history, log delivery |
+| ⚙️ `core` | Core Infrastructure | `/lumi`, `/module`, `/permissions`, `/prefix` | Built-in system infrastructure, module toggles, prefix settings, Wick permit assignments |
+| 🔨 `mod` | Moderation | `/ban`, `/kick`, `/timeout`, `/warn`, `/quarantine`, `/lockdown`, `/dehoist` | Full mod suite — case IDs, warning threshold escalation & decay, timed voice mutes (with disconnect), channel restrictions, anti-raid lockdown & dehoisting |
 | 🛡️ `filter` | Auto-Filter | `/lumi panel` | Real-time regex/substring message inspection — anti-spam, anti-invite, bad words |
 | 🔧 `utility` | Utilities | `/serverinfo`, `/whois` | Server info, user profiles, avatar lookup, guild diagnostics |
 | 💤 `afk` | AFK Manager | `/afk` | Away status with reasons — notifies callers on mention, clears on return |

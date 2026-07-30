@@ -48,6 +48,7 @@ declare module "@sapphire/pieces" {
     /** Read-through projection of guilds/channels/roles/members. */
     readonly entityCache: import("#lib/entity-cache/RedisEntityCache.js").RedisEntityCache;
     readonly moduleStore: ModuleStore;
+    readonly permitResolver: import("#lib/permissions/PermitResolver.js").PermitResolver;
 
     stats: {
       messages: number;

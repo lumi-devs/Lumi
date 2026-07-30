@@ -198,8 +198,8 @@ export class MyModule extends Module {}
 
 ### 4.3 Services & Permission Hierarchy
 - **Services**: Singletons extending `Service` (`#core/module-system/Service.js`). Access via `getService("<name>")` or `tryGetService("<name>")`.
-- **Permissions Tier Hierarchy**:
-  `USER(0) < MOD(5) < ADMIN(7) < GUILD_OWNER(8) < BOT_OWNER(10)`. Set `permissionLevel` in command options.
+- **Permissions (Wick-style Permits)**:
+  Commands declare a `requiredPermit` string node (e.g. `"mod.*"`, `"admin.*"`, `"owner.*"`). The `PermitResolver` evaluates granted nodes with wildcard matching, bot/guild owner bypasses, and Anti-Nuke Quarantine interception. Permits are stored as `CustomPermit` (stripped during quarantine) or `EnforcedPermit` (un-quarantinable).
 
 ---
 

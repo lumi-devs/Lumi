@@ -109,6 +109,12 @@ export class ModerationRepository extends Repository {
     });
   }
 
+  public getActiveWarnCases(): Promise<ModerationCase[]> {
+    return this.prisma.moderationCase.findMany({
+      where: { action: "warn", active: true },
+    });
+  }
+
   public getModerationCaseById(id: number): Promise<ModerationCase | null> {
     return this.prisma.moderationCase.findUnique({ where: { id } });
   }
@@ -140,6 +146,70 @@ export class ModerationRepository extends Repository {
     await this.prisma.moderationCase.updateMany({
       where: { moderatorId: userId },
       data: { moderatorId: "0" },
+    });
+  }
+
+  public getWarnThresholds(guildId: string) {
+    return this.prisma.warnThreshold.findMany({
+      where: { guildId },
+      orderBy: { warnCount: "asc" },
+    });
+  }
+
+  public setWarnThreshold(data: {
+    guildId: string;
+    warnCount: number;
+    action: string;
+    duration?: string;
+  }) {
+    return this.prisma.warnThreshold.upsert({
+      where: {
+        guildId_warnCount: {
+          guildId: data.guildId,
+          warnCount: data.warnCount,
+        },
+      },
+      create: {
+        guildId: data.guildId,
+        warnCount: data.warnCount,
+        action: data.action,
+        duration: data.duration,
+      },
+      update: {
+        action: data.action,
+        duration: data.duration,
+      },
+    });
+  }
+
+  public removeWarnThreshold(guildId: string, warnCount: number) {
+    return this.prisma.warnThreshold.deleteMany({
+      where: { guildId, warnCount },
+    });
+  }
+
+  public resetWarnThresholds(guildId: string) {
+    return this.prisma.warnThreshold.deleteMany({
+      where: { guildId },
+    });
+  }
+
+  public setBulkWarnThresholds(
+    guildId: string,
+    thresholds: Array<{ warnCount: number; action: string; duration?: string }>,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.warnThreshold.deleteMany({ where: { guildId } });
+      if (thresholds.length > 0) {
+        await tx.warnThreshold.createMany({
+          data: thresholds.map((t) => ({
+            guildId,
+            warnCount: t.warnCount,
+            action: t.action,
+            duration: t.duration,
+          })),
+        });
+      }
     });
   }
 }

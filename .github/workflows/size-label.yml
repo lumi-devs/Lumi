@@ -1,7 +1,7 @@
 name: PR Size Label
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened]
 
 concurrency:
@@ -18,10 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Apply size label
-        uses: actions/github-script@v9
+        uses: actions/github-script@v7
         with:
           script: |
             const { data: pr } = await github.rest.pulls.get({
@@ -35,37 +35,40 @@ jobs:
             const total = additions + deletions;
 
             let sizeLabel;
-            if (total < 50)       sizeLabel = 'size:S';
+            if (total < 10)       sizeLabel = 'size:XS';
+            else if (total < 50)  sizeLabel = 'size:S';
             else if (total < 200) sizeLabel = 'size:M';
             else if (total < 500) sizeLabel = 'size:L';
             else                  sizeLabel = 'size:XL';
 
-            // Remove any existing size labels
             const { data: labels } = await github.rest.issues.listLabelsOnIssue({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
 
-            const sizeLabels = labels
+            const currentSizeLabels = labels
               .map(l => l.name)
               .filter(n => n.startsWith('size:'));
 
-            for (const label of sizeLabels) {
-              await github.rest.issues.removeLabel({
+            for (const label of currentSizeLabels) {
+              if (label !== sizeLabel) {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  name: label,
+                });
+              }
+            }
+
+            if (!currentSizeLabels.includes(sizeLabel)) {
+              await github.rest.issues.addLabels({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                name: label,
+                labels: [sizeLabel],
               });
             }
-
-            // Add the correct size label
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              labels: [sizeLabel],
-            });
 
             core.info(`PR has ${total} changed lines → applied label: ${sizeLabel}`);

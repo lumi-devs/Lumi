@@ -1,7 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Args } from "@sapphire/framework";
 import { BaseCommand, fetchTyped } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions/index.js";
 import {
   Message,
   PermissionFlagsBits,
@@ -26,7 +25,7 @@ import { LanguageKeys } from "#lib/i18n/keys.js";
   name: "purge",
   description: "Bulk delete messages in a channel.",
   preconditions: ["GuildOnly"],
-  permissionLevel: PermissionLevel.MOD,
+  requiredPermit: "mod.*",
   requiredClientPermissions: [PermissionFlagsBits.ManageMessages],
 })
 export class PurgeCommand extends BaseCommand {

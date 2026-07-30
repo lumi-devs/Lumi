@@ -38,7 +38,7 @@ export class RpcClient {
     this.#connection = amqp.connect([url]);
     this.#channel = this.#connection.createChannel({
       json: false,
-      setup: (ch: any) => this.#setup(ch),
+      setup: (ch: Channel) => this.#setup(ch),
     });
   }
 

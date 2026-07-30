@@ -11,7 +11,7 @@
   </p>
 
   <p>
-    <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.3+-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun"></a>
+    <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.3%2B-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun"></a>
     <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-A42E2B?style=flat-square&logo=gnu&logoColor=white" alt="AGPL v3"></a>
   </p>
@@ -77,6 +77,19 @@ docker compose --profile dashboard up -d
 ```
 
 For scaled-out / distributed deployments (`gateway` + `worker` + `scheduler`), specify `LUMI_ROLE` per container node. Refer to [docs/architecture.md](docs/architecture.md).
+
+</details>
+
+<details>
+<summary><strong>Updating Lumi</strong></summary>
+
+- **Bare-metal/Local**: Use the `/lumi update` command inside Discord to securely pull new code and gracefully restart your bot.
+- **Docker Deployments**: Pull the latest image and restart the containers:
+  ```sh
+  docker pull ghcr.io/lumi-devs/lumi:latest
+  docker compose up -d
+  ```
+  *(Tip: We recommend installing [Watchtower](https://containrrr.dev/watchtower/) to automate Docker updates!)*
 
 </details>
 

@@ -102,7 +102,7 @@ describe("ModuleCommand", () => {
       isModuleDisableable: vi.fn().mockImplementation((name: string) => {
         const rec = mockModuleStore.getRecord(name);
         if (!rec) return true;
-        return !rec.meta.isCore && rec.meta.disableable !== false;
+        return rec.meta.disableable !== false;
       }),
       moduleNameForLocation: vi.fn().mockImplementation((path: string) => {
         if (path.includes("afk")) return "afk";
@@ -252,7 +252,8 @@ describe("ModuleCommand", () => {
       expect(ctx.reply).toHaveBeenCalled();
     });
 
-    it("should prevent disabling core module", async () => {
+    it("should prevent disabling non-disableable module", async () => {
+      mockModuleStore.isModuleDisableable.mockReturnValueOnce(false);
       const ctx = createMockCtx({ module: "mod" });
       await command.disable(ctx as any);
       expect(mockModuleStore.setEnabled).not.toHaveBeenCalled();

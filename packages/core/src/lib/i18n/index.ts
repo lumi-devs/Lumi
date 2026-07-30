@@ -37,11 +37,9 @@ export const DEFAULT_LANGUAGE = "en-US";
  * Translations are managed via Crowdin; untranslated stubs fall back to en-US.
  */
 export const SUPPORTED_LANGUAGES = [
-  "af-ZA", "ar-SA", "ca-ES", "cs-CZ", "da-DK", "de-DE", "el-GR",
-  "en-US", "es-ES", "fi-FI", "fr-FR", "he-IL", "hu-HU", "it-IT",
-  "ja-JP", "ko-KR", "nl-NL", "no-NO", "pl-PL", "pt-BR", "pt-PT",
-  "ro-RO", "ru-RU", "sr-SP", "sv-SE", "tr-TR", "uk-UA", "vi-VN",
-  "zh-CN", "zh-TW",
+  "cs", "da", "de", "el", "en-US", "es-ES", "fi", "fr", "hu", "it",
+  "ja", "ko", "nl", "no", "pl", "pt-BR", "ro", "ru", "sv-SE", "tr",
+  "uk", "vi", "zh-CN", "zh-TW",
 ] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 

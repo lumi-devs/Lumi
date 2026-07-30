@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { UserError } from "@sapphire/framework";
+import { UserError, container } from "@sapphire/framework";
 import * as i18n from "@sapphire/plugin-i18next";
 import { MessageFlags } from "discord.js";
 import { CommandContext } from "#lib/command-context.js";
-import * as permissions from "#lib/permissions/index.js";
 import * as commandResponse from "#lib/utilities/command-response.js";
 
 vi.mock("@sapphire/plugin-i18next", () => ({
@@ -155,19 +154,28 @@ describe("CommandContext", () => {
     });
   });
 
-  describe("checkPermission & fetchT", () => {
-    it("checks permission level and passes when user level >= required", async () => {
-      vi.spyOn(permissions, "resolvePermissionLevel").mockResolvedValue(permissions.PermissionLevel.ADMIN);
+  describe("checkPermit & fetchT", () => {
+    it("passes when permit is granted", async () => {
+      (container as any).permitResolver = {
+        hasPermit: vi.fn().mockResolvedValue(true),
+      };
 
-      const ctx = CommandContext.fromInteraction({} as any);
-      await expect(ctx.checkPermission(permissions.PermissionLevel.MOD)).resolves.toBeUndefined();
+      const ctx = CommandContext.fromInteraction({ guildId: "G1", guild: { ownerId: "O1" }, user: { id: "U1" }, member: { roles: { cache: new Map() } } } as any);
+      await expect(ctx.checkPermit("mod.ban")).resolves.toBeUndefined();
     });
 
-    it("throws UserError when user permission level < required", async () => {
-      vi.spyOn(permissions, "resolvePermissionLevel").mockResolvedValue(permissions.PermissionLevel.USER);
+    it("throws UserError when permit is denied", async () => {
+      (container as any).permitResolver = {
+        hasPermit: vi.fn().mockResolvedValue(false),
+      };
 
+      const ctx = CommandContext.fromInteraction({ guildId: "G1", guild: { ownerId: "O1" }, user: { id: "U1" }, member: { roles: { cache: new Map() } } } as any);
+      await expect(ctx.checkPermit("mod.ban")).rejects.toThrow(UserError);
+    });
+
+    it("throws UserError when guildId is missing", async () => {
       const ctx = CommandContext.fromInteraction({} as any);
-      await expect(ctx.checkPermission(permissions.PermissionLevel.ADMIN)).rejects.toThrow(UserError);
+      await expect(ctx.checkPermit("mod.ban")).rejects.toThrow(UserError);
     });
 
     it("calls fetchT with source", async () => {

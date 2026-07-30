@@ -2,7 +2,6 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions/index.js";
 import { logError } from "#lib/utilities/errors.js";
 import { KickAction } from "../actions/index.js";
 
@@ -10,7 +9,7 @@ import { KickAction } from "../actions/index.js";
   name: "kick",
   description: "Kick a member from the server",
   preconditions: ["GuildOnly"],
-  permissionLevel: PermissionLevel.MOD,
+  requiredPermit: "mod.*",
   prefixEnabled: true,
   cooldownLimit: 3,
   cooldownDelay: 5000,

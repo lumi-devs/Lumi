@@ -1,10 +1,7 @@
 import { Precondition } from "@sapphire/framework";
 import type { ChatInputCommandInteraction, Message } from "discord.js";
-import {
-  PermissionLevel,
-  resolvePermissionLevel,
-} from "#lib/permissions/index.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
+import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 
 declare module "@sapphire/framework" {
   interface Preconditions {
@@ -14,20 +11,19 @@ declare module "@sapphire/framework" {
 
 export class BotOwnerPrecondition extends Precondition {
   public override messageRun(message: Message) {
-    return this.#check(message);
+    return this.#check(message.author.id);
   }
 
   public override chatInputRun(interaction: ChatInputCommandInteraction) {
-    return this.#check(interaction);
+    return this.#check(interaction.user.id);
   }
 
-  async #check(ctx: ChatInputCommandInteraction | Message) {
-    const actual = await resolvePermissionLevel(ctx);
-    return actual >= PermissionLevel.BOT_OWNER
+  async #check(userId: string) {
+    return PermitResolver.isBotOwner(userId)
       ? this.ok()
       : this.error({
           identifier: "PermissionDenied",
-          message: `You need at least **Bot Owner** level to use this.`,
+          message: "You need at least **Bot Owner** level to use this.",
           context: { i18nKey: LanguageKeys.Preconditions.BotOwner },
         });
   }

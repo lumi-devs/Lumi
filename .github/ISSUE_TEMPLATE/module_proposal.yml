@@ -1,12 +1,12 @@
 name: 🧩 Module Proposal
 description: Propose a new feature module for packages/core/src/modules/
 title: "[Module]: "
-labels: ["module-proposal", "triage"]
+labels: ["type: feature", "area:core", "status: needs-triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Feature modules in Lumi-TS live in `packages/core/src/modules/<name>/`.
+        Feature modules in Lumi live in `packages/core/src/modules/<name>/`.
         Use this template to outline new bot capabilities, sub-stores, and permissions.
   - type: input
     id: module_name
@@ -44,4 +44,4 @@ body:
     id: permissions
     attributes:
       label: Permissions & Access Control
-      description: Define required permission levels (USER, MOD, ADMIN, GUILD_OWNER, BOT_OWNER)
+      description: Define required permission nodes (e.g. mod.*, admin.*, owner.*)

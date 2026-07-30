@@ -113,7 +113,7 @@ type Row = ActionRowBuilder<MessageActionRowComponentBuilder>;
 
 export function formatFieldValue(field: ConfigField, value: unknown): string {
   const val = value ?? field.default ?? null;
-  if (val === null || val === undefined || val === "") return "-# *(not set)*";
+  if (val === null || val === "") return "-# *(not set)*";
 
   if (
     field.list ||

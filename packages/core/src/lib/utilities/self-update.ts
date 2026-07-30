@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { promises as fs } from "node:fs";
+import { promises as fs, existsSync } from "node:fs";
+import { join } from "node:path";
 import { container } from "@sapphire/framework";
 
 const execFileAsync = promisify(execFile);
@@ -58,6 +59,17 @@ async function readRemoteVersionFile(
  * Checks local and remote core status without mutating the current checkout.
  */
 export async function getCoreUpdateStatus(): Promise<CoreUpdateStatus> {
+  const cwd = process.cwd();
+  if (!existsSync(join(cwd, ".git"))) {
+    return {
+      upToDate: true, // Prevent UI from showing "Behind by X commits" incorrectly
+      branch: "docker",
+      currentCommit: "docker-build",
+      behindBy: 0,
+      error: "Running via Docker. Cannot check git status.",
+    };
+  }
+
   try {
     const currentHashOutput = await execGit(["rev-parse", "--short", "HEAD"]);
     const currentCommit = currentHashOutput.stdout.trim();
@@ -112,6 +124,15 @@ export async function getCoreUpdateStatus(): Promise<CoreUpdateStatus> {
  */
 export async function updateLumiCore(): Promise<CoreUpdateResult> {
   const cwd = process.cwd();
+
+  if (!existsSync(join(cwd, ".git"))) {
+    return {
+      updated: false,
+      currentCommit: "unknown",
+      error: "Lumi is running via Docker or without a `.git` repository. Please update by pulling the latest image (e.g., `docker pull ghcr.io/lumi-devs/lumi:latest`).",
+    };
+  }
+
   try {
     // 1. Get current commit hash
     const currentHashOutput = await execGit(["rev-parse", "--short", "HEAD"]);

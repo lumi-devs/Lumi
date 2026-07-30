@@ -1,7 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry, container } from "@sapphire/framework";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions/index.js";
 import {
   makeSuccessCard,
   makeErrorCard,
@@ -17,7 +16,7 @@ import { restartChoiceRow } from "#lib/restart.js";
   name: "lumi",
   description: "Open the Lumi control panel or update Lumi core",
   preconditions: ["GuildOnly"],
-  permissionLevel: PermissionLevel.ADMIN,
+  requiredPermit: "admin.*",
   prefixEnabled: true,
   subcommands: [
     { name: "update", run: "update" },
@@ -62,7 +61,7 @@ export class LumiCommand extends BaseSubcommand {
   }
 
   public async update(ctx: CommandContext): Promise<void> {
-    await ctx.checkPermission(PermissionLevel.BOT_OWNER);
+    await ctx.checkPermit("owner.*");
     const t = await ctx.fetchT();
     await ctx.reply(
       makeInfoCard(

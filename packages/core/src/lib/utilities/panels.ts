@@ -2,9 +2,13 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ChannelSelectMenuBuilder,
+  MentionableSelectMenuBuilder,
   RoleSelectMenuBuilder,
+  SectionBuilder,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
+  TextDisplayBuilder,
+  ThumbnailBuilder,
   UserSelectMenuBuilder,
   type AnyComponentBuilder,
   type MessageActionRowComponentBuilder,
@@ -17,9 +21,7 @@ import {
 import { container } from "@sapphire/framework";
 import { Emojis } from "#utilities/assets.js";
 
-// ==========================================
-// Select Menu Builder Options & Helpers
-// ==========================================
+export { formatBreadcrumbHeader, formatStatusBadge, formatSubtitle, breadcrumbs } from "./ui/layout.js";
 
 export interface CreateUserSelectMenuOptions {
   customId: string;
@@ -41,6 +43,14 @@ export interface CreateChannelSelectMenuOptions {
   customId: string;
   placeholder?: string;
   channelTypes?: ChannelType[];
+  minValues?: number;
+  maxValues?: number;
+  disabled?: boolean;
+}
+
+export interface CreateMentionableSelectMenuOptions {
+  customId: string;
+  placeholder?: string;
   minValues?: number;
   maxValues?: number;
   disabled?: boolean;
@@ -74,6 +84,14 @@ export function createUserSelectMenu(
   return menu;
 }
 
+export function createUserSelectMenuRow(
+  options: CreateUserSelectMenuOptions,
+): ActionRowBuilder<UserSelectMenuBuilder> {
+  return new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(
+    createUserSelectMenu(options),
+  );
+}
+
 export function createRoleSelectMenu(
   options: CreateRoleSelectMenuOptions,
 ): RoleSelectMenuBuilder {
@@ -83,6 +101,14 @@ export function createRoleSelectMenu(
   if (options.maxValues !== undefined) menu.setMaxValues(options.maxValues);
   if (options.disabled !== undefined) menu.setDisabled(options.disabled);
   return menu;
+}
+
+export function createRoleSelectMenuRow(
+  options: CreateRoleSelectMenuOptions,
+): ActionRowBuilder<RoleSelectMenuBuilder> {
+  return new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(
+    createRoleSelectMenu(options),
+  );
 }
 
 export function createChannelSelectMenu(
@@ -97,6 +123,33 @@ export function createChannelSelectMenu(
   if (options.maxValues !== undefined) menu.setMaxValues(options.maxValues);
   if (options.disabled !== undefined) menu.setDisabled(options.disabled);
   return menu;
+}
+
+export function createChannelSelectMenuRow(
+  options: CreateChannelSelectMenuOptions,
+): ActionRowBuilder<ChannelSelectMenuBuilder> {
+  return new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
+    createChannelSelectMenu(options),
+  );
+}
+
+export function createMentionableSelectMenu(
+  options: CreateMentionableSelectMenuOptions,
+): MentionableSelectMenuBuilder {
+  const menu = new MentionableSelectMenuBuilder().setCustomId(options.customId);
+  if (options.placeholder) menu.setPlaceholder(options.placeholder);
+  if (options.minValues !== undefined) menu.setMinValues(options.minValues);
+  if (options.maxValues !== undefined) menu.setMaxValues(options.maxValues);
+  if (options.disabled !== undefined) menu.setDisabled(options.disabled);
+  return menu;
+}
+
+export function createMentionableSelectMenuRow(
+  options: CreateMentionableSelectMenuOptions,
+): ActionRowBuilder<MentionableSelectMenuBuilder> {
+  return new ActionRowBuilder<MentionableSelectMenuBuilder>().addComponents(
+    createMentionableSelectMenu(options),
+  );
 }
 
 export function createStringSelectMenu(
@@ -131,6 +184,26 @@ export function createStringSelectMenu(
   }
 
   return menu;
+}
+
+export function createStringSelectMenuRow(
+  options: CreateStringSelectMenuOptions,
+): ActionRowBuilder<StringSelectMenuBuilder> {
+  return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+    createStringSelectMenu(options),
+  );
+}
+
+export function createMultiSelectMenuRow(
+  options: CreateStringSelectMenuOptions,
+): ActionRowBuilder<StringSelectMenuBuilder> {
+  const minVal = options.minValues ?? 1;
+  const maxVal = options.maxValues ?? (options.options ? options.options.length : 25);
+  return createStringSelectMenuRow({
+    ...options,
+    minValues: minVal,
+    maxValues: maxVal,
+  });
 }
 
 export interface CreateActionButtonOptions {
@@ -212,30 +285,18 @@ export function createPaginationRow(
 
 export function buildSafeActionRows<
   T extends AnyComponentBuilder = MessageActionRowComponentBuilder,
->(rows: (ActionRowBuilder<T> | any)[]): ActionRowBuilder<T>[] {
+>(rows: (ActionRowBuilder<T> | unknown)[]): ActionRowBuilder<T>[] {
   const MAX_ROWS = 5;
   if (!rows || !Array.isArray(rows)) return [];
 
-  if (rows.length > MAX_ROWS) {
-    const warningMsg = `[PanelSafety] ActionRow limit exceeded (${rows.length} > ${MAX_ROWS}). Truncating to first ${MAX_ROWS} rows.`;
-    try {
-      container.logger?.warn(warningMsg);
-    } catch {
-      console.warn(warningMsg);
-    }
+  const validRows = rows.filter((r): r is ActionRowBuilder<T> => r instanceof ActionRowBuilder);
+
+  if (validRows.length > MAX_ROWS) {
+    const warningMsg = `[PanelSafety] ActionRow limit exceeded (${validRows.length} > ${MAX_ROWS}). Truncating to first ${MAX_ROWS} rows.`;
+    container.logger?.warn(warningMsg);
   }
 
-  return rows.slice(0, MAX_ROWS);
-}
-
-export function formatBreadcrumbHeader(crumbs: string[]): string {
-
-  if (!crumbs || crumbs.length === 0) return "";
-  return crumbs
-    .map((crumb, idx) =>
-      idx === crumbs.length - 1 ? `**${crumb}**` : `\`${crumb}\``,
-    )
-    .join(" ❯ ");
+  return validRows.slice(0, MAX_ROWS);
 }
 
 export interface CategoryTab {
@@ -243,6 +304,7 @@ export interface CategoryTab {
   label: string;
   emoji?: string;
   count?: number;
+  description?: string;
 }
 
 export function createCategorySubmenuRow(
@@ -254,6 +316,7 @@ export function createCategorySubmenuRow(
   const options = categories.map((cat) => ({
     label: cat.count !== undefined ? `${cat.label} (${cat.count})` : cat.label,
     value: cat.id,
+    description: cat.description,
     emoji: cat.emoji,
     default: cat.id === activeCategoryId,
   }));
@@ -267,3 +330,26 @@ export function createCategorySubmenuRow(
   return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
 }
 
+export function createSectionWithThumbnail(
+  lines: string[],
+  imageUrl: string,
+): SectionBuilder {
+  const section = new SectionBuilder().setThumbnailAccessory(
+    new ThumbnailBuilder().setURL(imageUrl),
+  );
+  for (const line of lines) {
+    section.addTextDisplayComponents(new TextDisplayBuilder().setContent(line));
+  }
+  return section;
+}
+
+export function createSectionWithButton(
+  lines: string[],
+  button: ButtonBuilder,
+): SectionBuilder {
+  const section = new SectionBuilder().setButtonAccessory(button);
+  for (const line of lines) {
+    section.addTextDisplayComponents(new TextDisplayBuilder().setContent(line));
+  }
+  return section;
+}

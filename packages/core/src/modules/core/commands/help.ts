@@ -13,7 +13,7 @@ import { Emojis } from "#lib/utilities/assets.js";
 import { paginateContainer } from "#lib/utilities/pagination.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
 
-function getCategories(containerInstance: typeof container) {
+export function getCategories(containerInstance: typeof container) {
   const commands = [
     ...containerInstance.stores.get("commands").values(),
   ] as BaseCommand[];

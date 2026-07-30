@@ -1,5 +1,6 @@
 import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
 import { container } from "@sapphire/framework";
+import { cutText } from "@sapphire/utilities";
 import { Emojis } from "#lib/utilities/assets.js";
 import { clearAllAfkForUser } from "./data/afk.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
@@ -16,9 +17,7 @@ export function sanitizeReason(reason: string): string {
       .filter((l) => l.length > 0)
       .join(" ")
       .replace(/\s+/g, " ") || "AFK";
-  return f.length > AFK_MAX_REASON_LENGTH
-    ? `${f.slice(0, AFK_MAX_REASON_LENGTH - 3)}…`
-    : f;
+  return cutText(f, AFK_MAX_REASON_LENGTH);
 }
 
 export const AFK_MENTION_COOLDOWN_MS = 5_000;

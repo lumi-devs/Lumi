@@ -18,8 +18,6 @@ export interface CreateEventBusOptions {
   maxDeliveries?: number;
   /** See RedisStreamsBusOptions.claimMinIdleMs. */
   claimMinIdleMs?: number;
-  /** Legacy alias for claimMinIdleMs. */
-  ackWaitMs?: number;
   /** See RedisStreamsBusOptions.claimIntervalMs. */
   claimIntervalMs?: number;
   /** See RedisStreamsBusOptions.onStats. */
@@ -62,7 +60,7 @@ export function createEventBus(
     defaultMaxLen: opts.defaultMaxLen,
     log: opts.log,
     maxDeliveries: opts.maxDeliveries,
-    claimMinIdleMs: opts.claimMinIdleMs ?? opts.ackWaitMs,
+    claimMinIdleMs: opts.claimMinIdleMs,
     claimIntervalMs: opts.claimIntervalMs,
     onStats: opts.onStats,
     statsIntervalMs: opts.statsIntervalMs,

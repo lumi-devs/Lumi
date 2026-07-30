@@ -1,0 +1,8 @@
+pre-commit:
+  parallel: true
+  commands:
+    typecheck:
+      run: bun run typecheck
+    lint:
+      glob: "*.{ts,tsx,js,jsx}"
+      run: bunx eslint {staged_files} --fix

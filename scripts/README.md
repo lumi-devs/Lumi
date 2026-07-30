@@ -1,6 +1,6 @@
 # Lumi Utility & Ecosystem Scripts
 
-This directory contains CLI tools, build-time code generators, integration testing suites, and operational scripts supporting the Lumi monorepo and addon ecosystem.
+This directory contains CLI tools, build-time code generators, integration testing suites, database seeders, and operational scripts supporting the Lumi monorepo and addon ecosystem.
 
 > [!NOTE]
 > All scripts in this directory are executed using [Bun](https://bun.sh) (`bun run` or `bun <script-path>`). Some testing and provisioning scripts require a configured `.env` file with backing datastores (PostgreSQL, Redis, RabbitMQ) running.
@@ -13,8 +13,7 @@ This directory contains CLI tools, build-time code generators, integration testi
 | :--- | :--- | :--- | :--- |
 | `generate-manifests.ts` | `bun run modules:manifest` | Build-time manifest generator for internal & external modules | Node/Bun file system |
 | `validate-addon.ts` | `bun run validate <path>` | Structural and architectural validator for local third-party addons | Offline CLI |
-| `test-remote-addons.ts` | `bun scripts/test-remote-addons.ts` | Integration tester for remote/git addon repositories | `.env`, DB, Redis, RabbitMQ |
-| `qa-setup.ts` | `bun scripts/qa-setup.ts` | Discord server QA environment automated setup script | `BOT_TOKEN`, Discord Guild |
+| `seed.ts` | `bun run db:seed` | Populates local PostgreSQL database with QA test guilds & config | PostgreSQL |
 | `verify-resilience.ts` | `bun run verify:resilience` | Fault-tolerance & event-bus message durability test suite | Redis Streams |
 
 ---
@@ -75,63 +74,25 @@ bun run validate ./my-addons-repository
 
 ---
 
-### `test-remote-addons.ts`
+### `seed.ts`
 
-**Command:** `bun scripts/test-remote-addons.ts [repo-url]`
+**Command:** `bun run db:seed`
 
-An integration testing harness that boots a full Lumi monolithic client, connects to a remote Git addon repository, and verifies that every module in the repository can be installed, loaded into Sapphire stores, and cleanly uninstalled without runtime errors.
+Development database seeding utility that populates local PostgreSQL databases with sample Global configuration, QA Test Guilds (`123456789012345678`), enabled module states, Wick-style custom permits, and sample moderation cases.
 
-> [!IMPORTANT]
-> Running this script requires an active PostgreSQL, Redis, and RabbitMQ instance, along with a valid `BOT_TOKEN` in `.env`.
+#### Provisioned Entities
 
-#### Workflow
-
-1. Initializes `LumiClient` in monolithic mode and logs into Discord Gateway.
-2. Clones or fetches the target Git repository (defaults to `https://github.com/lumi-devs/lumi-addons.git`).
-3. Enumerates all modules exposed by the repository.
-4. For each module:
-   - Installs the module into the local runtime.
-   - Asserts that the module registers valid `ModuleStore` records and attaches pieces to Sapphire stores.
-   - Uninstalls the module and asserts complete cleanup without leftover store pieces.
-5. Exit code `0` indicates all modules passed install/load/uninstall verification. Exit code `1` indicates failures.
+- **Global Config**: Default prefix (`!`), maintenance mode flag.
+- **QA Test Guild**: Guild ID `123456789012345678` with default role IDs.
+- **Module States**: Enable state for all 8 core modules (`core`, `mod`, `filter`, `utility`, `afk`, `tempvc`, `logging`, `dashboard`).
+- **Custom Permits**: Permissive `mod.*` wildcard node assigned to QA Moderator Role.
+- **Moderation Cases**: Sample warning case history.
 
 #### Usage Examples
 
 ```bash
-# Run integration verification against the official public addon repository
-bun scripts/test-remote-addons.ts
-
-# Test a custom remote Git addon repository
-bun scripts/test-remote-addons.ts https://github.com/my-org/custom-lumi-addons.git
-
-# Test a local working copy using file:// URL
-bun scripts/test-remote-addons.ts file:///home/user/code/lumi-addons
-```
-
----
-
-### `qa-setup.ts`
-
-**Command:** `bun scripts/qa-setup.ts`
-
-An automated setup script designed for QA and local testing environments. Connects to Discord using the configured `BOT_TOKEN` and provisions roles, channels, and categories in the first available Discord server.
-
-#### Provisioned Artifacts
-
-| Category | Item Name | Details / Specifications |
-| :--- | :--- | :--- |
-| **Roles** | `Lumi Tester` | Color `#00FF00` (Green), assigned for testing permission tiers |
-| **Roles** | `Muted` | Color `#808080` (Gray), assigned for moderation testing |
-| **Categories** | `Lumi QA` | Parent category for text channels |
-| **Categories** | `QA TempVC` | Parent category for dynamic voice channel testing |
-| **Channels** | `#lumi-qa-general` | Text channel; posts an initial readiness greeting |
-| **Channels** | `#lumi-qa-logs` | Text channel for testing moderation log outputs |
-
-#### Usage Examples
-
-```bash
-# Provision QA roles and channels in your test server
-bun scripts/qa-setup.ts
+# Seed development database
+bun run db:seed
 ```
 
 ---
@@ -153,15 +114,11 @@ A fault-tolerance and distributed event-bus verification suite that tests messag
 | **Redis Streams** | Lifecycle & graceful shutdown | Clean socket disconnects without unhandled rejections |
 | **Redis Streams** | Bus re-initialization | Re-establishment of stream consumers after connection drop |
 
-
 #### Usage Examples
 
 ```bash
-# Run resilience verification suite against local Redis (default localhost:6379)
+# Run resilience verification suite against local Redis
 bun run verify:resilience
-# Run resilience suite with custom Redis host
-
-REDIS_HOST=127.0.0.1 REDIS_PORT=6379 bun run verify:resilience
 ```
 
 ---

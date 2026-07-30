@@ -11,7 +11,6 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { errorFrom } from "#lib/utilities/errors.js";
-import { isAutoRestartEnabled } from "#lib/restart.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -195,6 +194,17 @@ export class DownloaderService extends Service {
     return resolver.getModulesInRepo(repoName);
   }
 
+  public async getRepoStatus(repoName: string): Promise<{ lastCommit: string | null; lastCommitTime: string | null }> {
+    const repoPath = path.join(MODULE_ROOT, repoName);
+    try {
+      const { stdout } = await execFileAsync("git", ["-C", repoPath, "log", "-1", "--format=%h|%cr"]);
+      const [hash, time] = stdout.trim().split("|");
+      return { lastCommit: hash || null, lastCommitTime: time || null };
+    } catch {
+      return { lastCommit: null, lastCommitTime: null };
+    }
+  }
+
   public async updateModule(
     moduleName: string,
   ): Promise<{ updated: boolean; changelog?: string; needsRestart?: boolean }> {
@@ -312,23 +322,10 @@ export class DownloaderService extends Service {
       remoteHash,
     );
 
-    if (isAutoRestartEnabled()) {
-      this.container.logger.info(
-        `[DownloaderService] ${moduleName} updated on disk; restart required to apply.`,
-      );
-      return { updated: true, changelog, needsRestart: true };
-    }
-
     this.container.logger.info(
-      `[DownloaderService] Reloading module ${moduleName} (update)...`,
+      `[DownloaderService] ${moduleName} updated on disk; restart required to apply.`,
     );
-    await this.container.moduleStore.reload(moduleName);
-    this.container.logger.info(
-      "[DownloaderService] Syncing commands (update)...",
-    );
-    await this.syncApplicationCommands();
-
-    return { updated: true, changelog };
+    return { updated: true, changelog, needsRestart: true };
   }
 
   public getInstalledModules() {

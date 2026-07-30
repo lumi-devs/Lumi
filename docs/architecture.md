@@ -92,4 +92,3 @@ sequenceDiagram
 | | `@lumi/observability` | Pino logger, OpenTelemetry, Prometheus `:9090` |
 | | `@lumi/sharding` | Discord cluster coordinator & shard planner |
 | | `@lumi/contracts` | Shared TypeScript interfaces, event schemas |
-| | `@lumi/sdk` | Developer SDK for external extensions |

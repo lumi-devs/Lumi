@@ -22,7 +22,7 @@ Copy `.env.example` to `.env` and fill in the required values.
 
 ## Branding & Config Files
 
-- **`config/bot.ts`** — Activity/presence settings, embed colors, support URLs, permission tier labels, pagination limits.
+- **`config/bot.ts`** — Activity/presence settings, embed colors, support URLs, pagination limits.
 - **`config/emojis.ts`** — Unicode and custom Discord emoji overrides used by the card renderer.
 
 ## Docker Compose Profiles

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [
+    [
+      "@lumi/core",
+      "@lumi/gateway",
+      "@lumi/worker",
+      "@lumi/scheduler",
+      "@lumi/dashboard",
+      "@lumi/event-bus",
+      "@lumi/sharding",
+      "@lumi/observability",
+      "@lumi/contracts"
+    ]
+  ],
+  "linked": [],
+  "access": "restricted",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": [
+    "@lumi/typescript-config",
+    "@lumi/eslint-config"
+  ]
+}

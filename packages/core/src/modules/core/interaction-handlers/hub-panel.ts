@@ -23,8 +23,7 @@ import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import {
   PermissionLevel,
   resolvePermissionLevel,
-  type PermissionModelType,
-} from "#lib/permissions/index.js";
+  } from "#lib/permissions/index.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import {
   ephemeralCard,
@@ -57,9 +56,9 @@ const PERMISSION_MODEL_TYPES = [
   "channel",
   "category",
   "everyone",
-] as const satisfies readonly PermissionModelType[];
+] as const satisfies readonly ("role" | "user" | "channel" | "category" | "everyone")[];
 
-const isModelType = (v: string): v is PermissionModelType =>
+const isModelType = (v: string): v is ("role" | "user" | "channel" | "category" | "everyone") =>
   (PERMISSION_MODEL_TYPES as readonly string[]).includes(v);
 
 const accessDenied = () =>
@@ -113,9 +112,13 @@ async function renderSettings(
 async function renderPermissions(
   interaction: ButtonInteraction | AnySelectMenuInteraction,
 ) {
-  const overrides = await container.db.permissions.getAllPermissionOverrides(
+  const permits = await container.db.permissions.getGuildPermits(
     interaction.guildId!,
   );
+  const overrides = [
+    ...permits.custom.map(c => ({ commandPath: c.permit, modelType: c.targetType, modelId: c.targetId, allow: true })),
+    ...permits.enforced.map(c => ({ commandPath: c.permit, modelType: c.targetType, modelId: c.targetId, allow: false }))
+  ];
   return interaction.editReply(buildPermissionsView(overrides));
 }
 
@@ -769,9 +772,13 @@ export class HubPanelModalHandler extends InteractionHandler {
       return this.#error(interaction, "Invalid Target", err);
     }
 
-    const overrides = await container.db.permissions.getAllPermissionOverrides(
+    const permits = await container.db.permissions.getGuildPermits(
       interaction.guildId!,
     );
+    const overrides = [
+      ...permits.custom.map(c => ({ commandPath: c.permit, modelType: c.targetType, modelId: c.targetId, allow: true })),
+      ...permits.enforced.map(c => ({ commandPath: c.permit, modelType: c.targetType, modelId: c.targetId, allow: false }))
+    ];
     return this.#render(interaction, buildPermissionsView(overrides));
   }
 

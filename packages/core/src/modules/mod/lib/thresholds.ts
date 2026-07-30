@@ -1,6 +1,6 @@
 import type { Container } from "@sapphire/framework";
 import { tryParseJSON } from "@sapphire/utilities";
-import { parseDuration } from "./helpers.js";
+import { parseDuration } from "#lib/utilities/time.js";
 import { BanAction, MuteAction, KickAction } from "../actions/index.js";
 
 export type ThresholdAction = "mute" | "kick" | "ban";
@@ -29,15 +29,14 @@ export async function getThresholds(
     if (parsedCache) return parsedCache;
   }
 
-  const raw = await container.db.config.getModuleConfig(
-    guildId,
-    "mod",
-    "warn_thresholds",
-  );
-  const parsed: WarnThresholds =
-    raw && typeof raw === "string"
-      ? ((tryParseJSON(raw) as WarnThresholds | null) ?? {})
-      : {};
+  const rows = await container.db.moderation.getWarnThresholds(guildId);
+  const parsed: WarnThresholds = {};
+  for (const row of rows) {
+    parsed[String(row.warnCount)] = {
+      action: row.action as ThresholdAction,
+      duration: row.duration ?? undefined,
+    };
+  }
 
   await container.redis.setex(
     thresholdKey(guildId),
@@ -56,6 +55,57 @@ export async function invalidateThresholds(
   } else {
     await container.redis.del(thresholdKey(guildId));
   }
+}
+
+export async function saveThresholds(
+  container: Container,
+  guildId: string,
+  thresholds: WarnThresholds,
+): Promise<void> {
+  const list = Object.entries(thresholds)
+    .map(([countStr, entry]) => ({ count: Number(countStr), entry }))
+    .filter(({ count }) => !isNaN(count))
+    .map(({ count, entry }) => ({
+      warnCount: count,
+      action: entry.action,
+      duration: entry.duration,
+    }));
+
+  await container.db.moderation.setBulkWarnThresholds(guildId, list);
+  await invalidateThresholds(container, guildId);
+}
+
+export async function setThresholdRule(
+  container: Container,
+  guildId: string,
+  count: number,
+  action: string,
+  duration?: string,
+): Promise<void> {
+  await container.db.moderation.setWarnThreshold({
+    guildId,
+    warnCount: count,
+    action,
+    duration: duration || undefined,
+  });
+  await invalidateThresholds(container, guildId);
+}
+
+export async function removeThresholdRule(
+  container: Container,
+  guildId: string,
+  count: number,
+): Promise<void> {
+  await container.db.moderation.removeWarnThreshold(guildId, count);
+  await invalidateThresholds(container, guildId);
+}
+
+export async function resetAllThresholds(
+  container: Container,
+  guildId: string,
+): Promise<void> {
+  await container.db.moderation.resetWarnThresholds(guildId);
+  await invalidateThresholds(container, guildId);
 }
 
 const WARN_COUNT_TTL = 365 * 24 * 3600;

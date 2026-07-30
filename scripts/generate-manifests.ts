@@ -14,6 +14,12 @@ import type { ModuleMeta, ModuleOptions } from "../packages/core/src/lib/module-
 // source of truth) and writes the serialisable static contract that `discover()`
 // consumes at runtime WITHOUT importing module code. Run via `bun run modules:manifest`.
 
+const RED = "\x1b[31m";
+const YELLOW = "\x1b[33m";
+const GREEN = "\x1b[32m";
+const DIM = "\x1b[2m";
+const RESET = "\x1b[0m";
+
 const ROOT = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 
 /** Roots to scan. Extra dirs (e.g. addon checkouts) may be passed as argv. */
@@ -79,13 +85,13 @@ async function main() {
     try {
       mod = (await import(pathToFileURL(index).href)) as Record<string, unknown>;
     } catch (err) {
-      console.warn(`[manifest] skip (import failed): ${index}\n  ${String(err)}`);
+      console.warn(`${YELLOW}[manifest] skip (import failed): ${index}\n  ${String(err)}${RESET}`);
       continue;
     }
     const meta = extractMeta(mod);
     if (!meta?.name) continue;
     if (seen.has(meta.name)) {
-      console.warn(`[manifest] duplicate module name '${meta.name}' at ${dir} — skipped`);
+      console.warn(`${YELLOW}[manifest] duplicate module name '${meta.name}' at ${dir} — skipped${RESET}`);
       continue;
     }
     seen.add(meta.name);
@@ -93,12 +99,12 @@ async function main() {
     const manifest: ModuleManifest = await manifestFromMeta(meta, dir);
     await writeManifest(dir, manifest);
     written++;
-    console.log(`[manifest] ${meta.name} → ${path.relative(ROOT, dir)}/manifest.json`);
+    console.log(`${DIM}[manifest]${RESET} ${GREEN}${meta.name}${RESET} → ${DIM}${path.relative(ROOT, dir)}/manifest.json${RESET}`);
   }
-  console.log(`[manifest] wrote ${written} manifest(s).`);
+  console.log(`${GREEN}[manifest] wrote ${written} manifest(s).${RESET}`);
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error(`${RED}❌ Manifest generation failed:${RESET}`, err);
   process.exit(1);
 });

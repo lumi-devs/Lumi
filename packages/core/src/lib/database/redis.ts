@@ -17,15 +17,22 @@ export const RedisKeys = {
 
   permOverrides: (commandPath: string, guildId: string) =>
     `lumi:perms:${commandPath}:${guildId}`,
+  targetPermits: (
+    guildId: string,
+    targetType: "user" | "role",
+    targetId: string,
+  ) => `lumi:permits:${guildId}:${targetType}:${targetId}`,
+  guildPermitsPattern: (guildId: string) => `lumi:permits:${guildId}:*`,
+  quarantineState: (guildId: string, userId: string) =>
+    `lumi:mod:${guildId}:quarantine:${userId}`,
+  voiceMuteState: (guildId: string, userId: string) =>
+    `lumi:mod:${guildId}:voicemute:${userId}`,
   blocked: (guildId: string | null, userId: string) =>
     `lumi:block:${guildId ?? "global"}:${userId}`,
   blockedPattern: (userId: string) => `lumi:block:*:${userId}`,
   guildIgnored: (guildId: string) => `lumi:ignore:guild:${guildId}`,
   channelIgnored: (guildId: string, channelId: string) =>
     `lumi:ignore:channel:${guildId}:${channelId}`,
-
-  cooldown: (commandName: string, userId: string) =>
-    `lumi:cd:${commandName}:user:${userId}`,
 
   botStats: () => "lumi:stats:bot",
 
@@ -46,10 +53,16 @@ export const RedisTTL = {
   globalConfig: 120,
   guildPrefix: 60,
   permOverrides: 120,
+  permits: 120,
   moduleEnabledCache: 30,
   blockedCache: 300,
   ignoreCache: 300,
   botStats: 15,
+  voiceMute: 300,
+  quarantine: 30 * 24 * 60 * 60,
+  warnThresholds: 300,
+  warnCount: 365 * 24 * 3600,
+  voiceOccupancy: 24 * 60 * 60,
   entity: 60 * 60 * 24,
 } as const;
 

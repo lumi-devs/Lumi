@@ -13,7 +13,7 @@ Ensure the following prerequisites are installed on your workstation:
 
 | Dependency | Minimum Version | Recommended Installation | Notes |
 | :--- | :--- | :--- | :--- |
-| **[Bun](https://bun.sh)** | `1.3.0+` | `curl -fsSL https://bun.sh/install \| bash` | Primary JavaScript runtime, package manager, and test runner |
+| **[Bun](https://bun.sh)** | `1.3.0+` | <code>curl -fsSL https://bun.sh/install &#124; bash</code> | Primary JavaScript runtime, package manager, and test runner |
 | **Node.js** | `26.0.0+` | `nvm install 26` | Required for tooling compatibility and typechecking |
 | **PostgreSQL** | `17.0+` | Docker / Native | Relational database (uses PgBouncer connection pooler) |
 | **Redis** | `7.0+` | Docker / Native | High-speed cache, rate limiting, and Redis Streams event bus |
@@ -70,20 +70,6 @@ Copy `.env.example` to `.env` and fill in required secrets:
 cp .env.example .env
 ```
 
-#### Essential Environment Variables
-
-| Variable | Required | Description | Example |
-| :--- | :--- | :--- | :--- |
-| `BOT_TOKEN` | **Yes** | Discord Bot User Token from Developer Portal | `MTI...` |
-| `CLIENT_ID` | **Yes** | Discord Application Client ID | `123456789012345678` |
-| `POSTGRES_URL` | **Yes** | Database connection string via PgBouncer | `postgresql://lumi:lumi@localhost:6432/lumi` |
-| `DIRECT_POSTGRES_URL` | **Yes** | Direct database connection string (for migrations) | `postgresql://lumi:lumi@localhost:5432/lumi` |
-| `REDIS_HOST` | **Yes** | Hostname of Redis instance | `localhost` |
-| `REDIS_PASSWORD` | **Yes** | Password for Redis authentication | `lumi` |
-| `RABBITMQ_URL` | Optional | Connection string for RabbitMQ AMQP broker | `amqp://lumi:lumi@localhost:5672` |
-| `METRICS_ENABLED` | Optional | Enable Prometheus `/metrics` HTTP endpoint | `true` |
-| `OTEL_ENABLED` | Optional | Enable OpenTelemetry tracing pipeline | `true` |
-
 ### 5. Launch Development Server
 
 Start Lumi in monolithic development mode:
@@ -91,6 +77,30 @@ Start Lumi in monolithic development mode:
 ```bash
 bun run dev
 ```
+
+---
+
+## Changesets & Changelog Workflow
+
+Lumi uses **[Changesets](https://github.com/changesets/changesets)** to automate package versioning and release notes across our workspace packages (`@lumi/core`, `@lumi/gateway`, `@lumi/worker`, etc.).
+
+### When to Add a Changeset
+
+If your PR introduces a feature, bug fix, refactor, or performance improvement in `packages/` or `apps/`, you **must** include a changeset file.
+
+### How to Create a Changeset
+
+1. Run the interactive CLI helper:
+   ```bash
+   bun changeset
+   ```
+2. Select the package(s) affected by your changes using spacebar.
+3. Select the bump level (`patch` for bug fixes/minor tweaks, `minor` for new features, `major` for breaking API changes).
+4. Enter a clear summary of your change for the release notes.
+5. Commit the generated markdown file inside `.changeset/` as part of your pull request.
+
+> [!NOTE]
+> PRs that only modify documentation, CI scripts, or workspace dependencies (`area:docs`, `area:ci`, `area:deps`, `docs-only`) are exempt from the changeset requirement.
 
 ---
 
@@ -152,38 +162,6 @@ Translation files reside in `packages/core/src/languages/<locale>/`.
 
 ---
 
-## Step-by-Step: Adding a New Module
-
-1. **Create Directory Structure**: Create a directory under `packages/core/src/modules/<module-name>/`.
-2. **Define Module Metadata**: Create `index.ts` with the `@DefineModule` decorator:
-   ```ts
-   import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
-
-   @DefineModule({
-     id: "utility",
-     name: "Utility",
-     description: "General utility commands",
-     defaultEnabled: true,
-     configSchema: {
-       enablePing: cfg.boolean.default(true),
-     },
-   })
-   export class UtilityModule extends Module {}
-   ```
-3. **Add Components**: Add subdirectories as needed:
-   * `commands/` — Sapphire commands inheriting from `BaseCommand`
-   * `listeners/` — Event listeners inheriting from `ModuleListener`
-   * `services/` — Business logic services
-   * `scheduled-tasks/` — Sapphire scheduled tasks
-4. **Generate Static Manifest**: Run the manifest generator script:
-   ```bash
-   bun run modules:manifest
-   ```
-5. **Add Localizations**: Add translation keys into `packages/core/src/languages/<locale>/<module-name>.json` for `en-US` at minimum. Other locales are populated via Crowdin.
-6. **Write Tests**: Create corresponding unit tests in `packages/core/tests/modules/<module-name>/`.
-
----
-
 ## Verification & Testing Suite
 
 Run the full verification suite locally prior to pushing your branch:
@@ -219,7 +197,7 @@ bun run verify:resilience
 
 ### Git Commit Guidelines
 
-Lumi uses the [Conventional Commits](https://www.conventionalcommits.org/) format:
+Lumi follows standard commit conventions:
 
 ```text
 <type>(<scope>): <short description>
@@ -236,16 +214,6 @@ Lumi uses the [Conventional Commits](https://www.conventionalcommits.org/) forma
 | `test` | Adding or updating tests | `test(resilience): add event-bus burst test` |
 | `chore` | Build tasks, package management, dependencies | `chore(deps): update sapphire framework packages` |
 | `perf` | Code changes that improve performance | `perf(event-bus): reduce stream consumer allocation overhead` |
-
-### Pull Request Checklist
-
-When opening a Pull Request:
-
-1. Create a descriptive branch name: `feat/my-feature` or `fix/my-bugfix`.
-2. Ensure all 5 verification commands (`typecheck`, `lint`, `test`, `test:e2e`, `verify:resilience`) pass without errors.
-3. Verify that `bun run modules:manifest` was executed if any module schemas or command signatures changed.
-4. Ensure new user-facing strings are localized in `en-US` at minimum. Crowdin handles distribution to all 30 supported locales.
-5. Link relevant GitHub Issues in your PR description.
 
 ---
 

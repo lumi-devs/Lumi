@@ -2,7 +2,6 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { getService } from "#lib/module-system/Service.js";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions/index.js";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -23,7 +22,7 @@ import type { DownloaderService } from "#lib/services/DownloaderService.js";
   aliases: ["dl"],
   description:
     "Install or uninstall a module from a repository (Bot Owner Only)",
-  permissionLevel: PermissionLevel.BOT_OWNER,
+  requiredPermit: "owner.*",
   prefixEnabled: true,
   subcommands: [
     { name: "panel", run: "panel", default: true },

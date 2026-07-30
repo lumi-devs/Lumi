@@ -22,7 +22,10 @@ import { ConfigOverrideRepository } from "#lib/prisma/repositories/ConfigOverrid
 import { AfkRepository } from "#lib/prisma/repositories/AfkRepository.js";
 import { GlobalRepository } from "#lib/prisma/repositories/GlobalRepository.js";
 
-export type { CachedOverride } from "#lib/prisma/repositories/PermissionRepository.js";
+export type {
+  TargetPermitPayload,
+  UserPermitSet,
+} from "#lib/prisma/repositories/PermissionRepository.js";
 export type { AuditLogPayload } from "#lib/prisma/repositories/AuditRepository.js";
 export type { ConfigHistoryEntry } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
 export type { ConfigOverrideEntry } from "#lib/prisma/repositories/ConfigOverrideRepository.js";
@@ -80,6 +83,14 @@ export class DatabaseService {
       this,
     );
     this.afk = new AfkRepository(prisma, redis, logger, this);
+  }
+
+  public getUserPermits(
+    guildId: string,
+    userId: string,
+    roleIds: string[] = [],
+  ) {
+    return this.permissions.getUserPermits(guildId, userId, roleIds);
   }
 
   public async publishBotStats(stats: Record<string, unknown>): Promise<void> {

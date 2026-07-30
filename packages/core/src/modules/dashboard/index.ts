@@ -4,6 +4,7 @@ import { registerRpcHandler, rpcHandlers } from "#lib/rabbitmq/index.js";
 import { RPC_ACTIONS } from "@lumi/contracts";
 import type { Prisma } from "@prisma/client";
 import { s, type BaseValidator } from "@sapphire/shapeshift";
+import { checkModulesEnabled } from "#lib/module-check.js";
 
 const SnowflakeSchema = s.string().regex(/^\d{17,20}$/);
 
@@ -22,8 +23,9 @@ function requireGuildId(guildId: string | null | undefined): string {
 function parsePayload<T>(schema: BaseValidator<T>, data: unknown): T {
   try {
     return schema.parse(data);
-  } catch (err: any) {
-    throw new Error(`Bad payload: ${err.message}`);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Bad payload: ${msg}`);
   }
 }
 
@@ -57,42 +59,41 @@ export class DashboardModule extends Module {
       if (!guild) throw new Error("Guild not found in bot cache");
 
       const settings = await container.db.config.getGuildSettings(guildId);
-      const modules = container.stores
-        .get("modules")
-        .loaded()
-        .map(async (m) => {
-          const enabled = await container.db.modules.isModuleGuildEnabled(
-            guildId,
-            m.meta.name,
-          );
+      const loadedModules = container.stores.get("modules").loaded();
+      const moduleNames = loadedModules.map((m) => m.meta.name);
 
-          const config: Record<string, unknown> = {};
-          if (m.meta.configFields) {
-            for (const field of m.meta.configFields) {
-              config[field.key] = await container.db.config.getModuleConfig(
-                guildId,
-                m.meta.name,
-                field.key,
-              );
-            }
+      const [enabledMap, allConfigsMap] = await Promise.all([
+        checkModulesEnabled(guildId, moduleNames),
+        container.db.config.getAllModuleConfigsForGuild(guildId),
+      ]);
+
+      const modules = loadedModules.map((m) => {
+        const enabled = enabledMap.get(m.meta.name) ?? true;
+        const guildModuleConfig = allConfigsMap.get(m.meta.name) ?? {};
+
+        const config: Record<string, unknown> = {};
+        if (m.meta.configFields) {
+          for (const field of m.meta.configFields) {
+            config[field.key] = guildModuleConfig[field.key] ?? field.default ?? null;
           }
+        }
 
-          return {
-            name: m.meta.name,
-            displayName: m.meta.displayName,
-            emoji: m.meta.emoji,
-            description: m.meta.description,
-            enabled,
-            configFields: m.meta.configFields || [],
-            config,
-          };
-        });
+        return {
+          name: m.meta.name,
+          displayName: m.meta.displayName,
+          emoji: m.meta.emoji,
+          description: m.meta.description,
+          enabled,
+          configFields: m.meta.configFields || [],
+          config,
+        };
+      });
 
       return {
         name: guild.name,
         icon: guild.iconURL(),
         settings,
-        modules: await Promise.all(modules),
+        modules,
       };
     });
 

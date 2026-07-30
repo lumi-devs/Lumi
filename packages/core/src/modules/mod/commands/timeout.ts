@@ -2,9 +2,8 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions/index.js";
 import { logError } from "#lib/utilities/errors.js";
-import { parseDuration, formatDuration } from "../lib/helpers.js";
+import { parseDuration, formatDuration } from "#lib/utilities/time.js";
 import { MuteAction } from "../actions/index.js";
 
 const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000;
@@ -13,7 +12,7 @@ const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000;
   name: "timeout",
   description: "Timeout or untimeout a member",
   preconditions: ["GuildOnly"],
-  permissionLevel: PermissionLevel.MOD,
+  requiredPermit: "mod.*",
   prefixEnabled: true,
   subcommands: [
     { name: "add", run: "add", default: true },

@@ -64,7 +64,6 @@ describe("Module Manifest Utilities", () => {
         emoji: "🚀",
         description: "A test module description",
         version: "1.2.3",
-        isCore: false,
         disableable: true,
         dependencies: ["dep-1"],
         conflicts: ["conflict-1"],
@@ -100,17 +99,6 @@ describe("Module Manifest Utilities", () => {
       expect(manifest.version).toBe("0.0.0");
       expect(manifest.disableable).toBe(true);
     });
-
-    it("sets disableable to false by default for core modules", async () => {
-      const meta = {
-        name: "core-module",
-        isCore: true,
-      };
-
-      const manifest = await manifestFromMeta(meta, tmpDir);
-      expect(manifest.isCore).toBe(true);
-      expect(manifest.disableable).toBe(false);
-    });
   });
 
   describe("metaFromManifest", () => {
@@ -121,7 +109,6 @@ describe("Module Manifest Utilities", () => {
         emoji: "✨",
         description: "Desc",
         version: "2.0.0",
-        isCore: true,
         disableable: false,
         dependencies: ["base"],
         conflicts: [],
@@ -138,7 +125,6 @@ describe("Module Manifest Utilities", () => {
         emoji: "✨",
         description: "Desc",
         version: "2.0.0",
-        isCore: true,
         disableable: false,
         dependencies: ["base"],
         conflicts: [],
@@ -156,7 +142,6 @@ describe("Module Manifest Utilities", () => {
         emoji: "💾",
         description: "File IO test",
         version: "1.0.0",
-        isCore: false,
         disableable: true,
         dependencies: [],
         conflicts: [],

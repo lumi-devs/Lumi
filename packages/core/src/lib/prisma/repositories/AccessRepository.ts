@@ -24,7 +24,7 @@ export class AccessRepository extends Repository {
     if (gCached === "0" && (!sKey || sCached === "0")) return false;
 
     const blocks = await this.prisma.blocklist.findMany({
-      where: { userId, OR: [{ guildId: null }, { guildId: guildId ?? null }] },
+      where: { userId, OR: [{ guildId: null }, ...(guildId ? [{ guildId }] : [])] },
     });
 
     const gBlocked = blocks.some((b) => b.guildId === null);

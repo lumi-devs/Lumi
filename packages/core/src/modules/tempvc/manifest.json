@@ -4,11 +4,10 @@
   "emoji": "🔊",
   "description": "On-demand temporary voice channels that delete themselves once empty, with an owner control panel.",
   "version": "1.0.0",
-  "isCore": false,
   "disableable": true,
   "dependencies": [],
   "conflicts": [],
-  "configOverrides": false,
+  "configOverrides": true,
   "targetService": "worker",
   "subStores": [
     "commands",

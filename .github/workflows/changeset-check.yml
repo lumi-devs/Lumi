@@ -1,0 +1,80 @@
+name: Changeset Verification
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check-changeset:
+    name: Require Changeset on Package/App Code Changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun Environment
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check for Changeset Exemption or Required Changeset File
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const labels = (pr.labels || []).map(l => l.name);
+
+            // Exclude PRs labeled as docs-only, area:docs, area:ci, or area:deps
+            const exemptLabels = ['docs-only', 'area:docs', 'area:ci', 'area:deps'];
+            const isExempt = labels.some(l => exemptLabels.includes(l));
+
+            if (isExempt) {
+              core.info(`PR is labeled with an exempt label (${labels.filter(l => exemptLabels.includes(l)).join(', ')}) — skipping changeset requirement.`);
+              return;
+            }
+
+            // Fetch changed files in PR
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+
+            const codeChanged = files.some(f => 
+              (f.filename.startsWith('packages/') || f.filename.startsWith('apps/')) &&
+              !f.filename.endsWith('.md')
+            );
+
+            if (!codeChanged) {
+              core.info('No code files in packages/ or apps/ modified — skipping changeset requirement.');
+              return;
+            }
+
+            const changesetAdded = files.some(f => 
+              f.filename.startsWith('.changeset/') && 
+              f.filename.endsWith('.md') && 
+              f.filename !== '.changeset/README.md'
+            );
+
+            if (!changesetAdded) {
+              core.setFailed(
+                '❌ This PR modifies package or application code under packages/ or apps/, but no changeset file was added under .changeset/.\n' +
+                'Please run `bun changeset` locally, answer the prompts, and commit the generated markdown file.'
+              );
+            } else {
+              core.info('✅ Valid changeset file found in PR.');
+            }

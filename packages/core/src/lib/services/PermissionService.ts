@@ -1,11 +1,10 @@
 import { Service } from "#lib/module-system/Service.js";
-import type { PermissionModelType } from "#lib/permissions/index.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 
 @ApplyOptions<Piece.Options>({ name: "permissions" })
 export class PermissionService extends Service {
-  public parseTarget(raw: string | null, type: PermissionModelType): string {
+  public parseTarget(raw: string | null, type: string): string {
     if (type === "everyone") return "0";
     if (!raw) throw new Error("Target is required for non-everyone overrides.");
     const cleaned = raw.replace(/[<@&#!>]/g, "");
@@ -14,20 +13,82 @@ export class PermissionService extends Service {
     return cleaned;
   }
 
+  public async grantCustomPermit(
+    guildId: string,
+    targetType: "user" | "role",
+    targetRaw: string,
+    permit: string,
+  ) {
+    const targetId = this.parseTarget(targetRaw, targetType);
+    await this.container.db.permissions.grantCustomPermit(
+      guildId,
+      targetType,
+      targetId,
+      permit,
+    );
+    return targetId;
+  }
+
+  public async revokeCustomPermit(
+    guildId: string,
+    targetType: "user" | "role",
+    targetRaw: string,
+    permit: string,
+  ) {
+    const targetId = this.parseTarget(targetRaw, targetType);
+    return this.container.db.permissions.revokeCustomPermit(
+      guildId,
+      targetType,
+      targetId,
+      permit,
+    );
+  }
+
+  public async grantEnforcedPermit(
+    guildId: string,
+    targetType: "user" | "role",
+    targetRaw: string,
+    permit: string,
+  ) {
+    const targetId = this.parseTarget(targetRaw, targetType);
+    await this.container.db.permissions.grantEnforcedPermit(
+      guildId,
+      targetType,
+      targetId,
+      permit,
+    );
+    return targetId;
+  }
+
+  public async revokeEnforcedPermit(
+    guildId: string,
+    targetType: "user" | "role",
+    targetRaw: string,
+    permit: string,
+  ) {
+    const targetId = this.parseTarget(targetRaw, targetType);
+    return this.container.db.permissions.revokeEnforcedPermit(
+      guildId,
+      targetType,
+      targetId,
+      permit,
+    );
+  }
+
   public async addOverride(
     guildId: string,
     commandPath: string,
-    type: PermissionModelType,
+    type: string,
     targetRaw: string | null,
-    allow: boolean,
+    _allow: boolean,
   ) {
-    const targetId = this.parseTarget(targetRaw, type);
-    await this.container.db.permissions.setPermissionOverride(
+    const targetType = type === "user" ? "user" : "role";
+    const targetId = this.parseTarget(targetRaw, targetType);
+    await this.container.db.permissions.grantCustomPermit(
       guildId,
-      commandPath,
-      type,
+      targetType,
       targetId,
-      allow,
+      commandPath,
     );
     return targetId;
   }
@@ -35,30 +96,18 @@ export class PermissionService extends Service {
   public async resetOverride(
     guildId: string,
     commandPath: string,
-    type: PermissionModelType | null,
+    type: string | null,
     targetRaw: string | null,
   ) {
-    let deleted: number;
-    if (type) {
-      const targetId = this.parseTarget(targetRaw, type);
-      deleted = await this.container.db.permissions.clearPermissionOverrides(
-        guildId,
-        commandPath,
-        type,
-        targetId,
-      );
-    } else {
-      deleted = await this.container.db.permissions.clearPermissionOverrides(
-        guildId,
-        commandPath,
-      );
-    }
-
-    if (deleted === 0) {
-      throw new Error("No matching overrides were found.");
-    }
-
-    return deleted;
+    const targetType = type === "user" ? "user" : "role";
+    const targetId = targetRaw ? this.parseTarget(targetRaw, targetType) : "0";
+    const count = await this.container.db.permissions.revokeCustomPermit(
+      guildId,
+      targetType,
+      targetId,
+      commandPath,
+    );
+    return count;
   }
 }
 

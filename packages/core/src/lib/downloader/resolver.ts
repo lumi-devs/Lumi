@@ -222,7 +222,6 @@ export class DownloadResolver {
         emoji: info.emoji || "📦",
         description: info.description || "",
         version: info.version || "1.0.0",
-        isCore: false,
         disableable: true,
         dependencies: info.dependencies || [],
         conflicts: info.conflicts || [],

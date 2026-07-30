@@ -262,7 +262,7 @@ const detachPublisher = attachProxyPublisher(ownedBus.bus, manager, {
 if (DEFER_AT_GATEWAY) {
   manager.on(
     WebSocketShardEvents.Dispatch,
-    (data: any, shardId: number) => {
+    (data: { t?: string; d?: unknown; s?: number }, shardId: number) => {
       if (data.t !== "INTERACTION_CREATE") return;
       const d = data.d as InteractionPayload;
       const envelope: RawGatewayEnvelope = {
@@ -270,7 +270,7 @@ if (DEFER_AT_GATEWAY) {
         packet: {
           op: GatewayOpcodes.Dispatch,
           t: data.t,
-          s: (data as { s?: number }).s ?? 0,
+          s: data.s ?? 0,
           d: data.d,
         },
         ts: Date.now(),

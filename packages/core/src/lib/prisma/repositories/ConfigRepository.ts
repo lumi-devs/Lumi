@@ -72,6 +72,22 @@ export class ConfigRepository extends Repository {
     });
   }
 
+  public async getAllModuleConfigsForGuild(
+    guildId: string,
+  ): Promise<Map<string, Record<string, unknown>>> {
+    const configs = await this.prisma.guildModuleConfig.findMany({
+      where: { guildId },
+    });
+    const result = new Map<string, Record<string, unknown>>();
+    for (const c of configs) {
+      if (!result.has(c.moduleName)) {
+        result.set(c.moduleName, {});
+      }
+      result.get(c.moduleName)![c.configKey] = c.value;
+    }
+    return result;
+  }
+
   public async setModuleConfig(
     guildId: string,
     moduleName: string,
