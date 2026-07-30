@@ -43,7 +43,7 @@
     "validate": "bun scripts/validate-addon.ts",
     "test": "vitest run",
     "test:e2e": "vitest run -c vitest.e2e.config.ts",
-    "changeset": "bunx changeset",
+    "changeset": "bunx @changesets/cli",
     "verify:resilience": "bun scripts/verify-resilience.ts",
     "bench": "bun scripts/benchmark.ts"
   },
