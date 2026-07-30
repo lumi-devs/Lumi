@@ -51,6 +51,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - run: echo "::add-matcher::.github/problemMatchers/eslint.json"
       - uses: oven-sh/setup-bun@v2
         with:
@@ -62,7 +64,13 @@ jobs:
           restore-keys: ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - run: bun run db:generate
-      - run: bun run lint
+      - name: Turbo Filtered Lint
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            bun turbo run lint:all --filter=[origin/${{ github.base_ref }}...HEAD] || bun run lint
+          else
+            bun run lint
+          fi
 
   typecheck:
     name: Typecheck
@@ -73,6 +81,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - run: echo "::add-matcher::.github/problemMatchers/tsc.json"
       - uses: oven-sh/setup-bun@v2
         with:
@@ -84,7 +94,13 @@ jobs:
           restore-keys: ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - run: bun run db:generate
-      - run: bun run typecheck
+      - name: Turbo Filtered Typecheck
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            bun turbo run typecheck:all --filter=[origin/${{ github.base_ref }}...HEAD] || bun run typecheck
+          else
+            bun run typecheck
+          fi
 
   test:
     name: Test
