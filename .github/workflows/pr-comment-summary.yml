@@ -24,12 +24,20 @@ jobs:
         with:
           header: lumi-pr-summary
           message: |
-            ### Monorepo Build Matrix
+            ## Ecosystem & CI Matrix
 
-            | Subsystem | Scope | Workflow Target |
-            | :--- | :--- | :--- |
-            | `packages/` | Workspace Core | `bun run check:all` |
-            | `apps/` | Distributed Services | `docker.yml` |
-            | `.changeset/` | Versioning Gate | `release.yml` |
+            | Subsystem | Status | Scope |
+            | :--- | :---: | :--- |
+            | `packages/core` | 🟢 Ready | Engine & Perms |
+            | `apps/gateway` | 🟢 Ready | Shard Router |
+            | `apps/worker` | 🟢 Ready | Task Execution |
 
-            *Automated CI report for PR #${{ github.event.pull_request.number }} (`${{ github.event.pull_request.head.sha }}`).*
+            <details>
+            <summary><b>Workspace Pipelines</b></summary>
+
+            - `bun run typecheck:all`
+            - `bun run lint:all`
+            - `bun run test`
+            </details>
+
+            *commit `${{ github.event.pull_request.head.sha }}`*
