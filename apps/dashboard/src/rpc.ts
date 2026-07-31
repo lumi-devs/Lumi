@@ -33,7 +33,10 @@ export class RpcClient {
   readonly #channel: ChannelWrapper;
   readonly #replies = new EventEmitter();
 
-  public constructor(url: string) {
+  public constructor(
+    url: string,
+    private readonly log: (msg: string) => void = () => {},
+  ) {
     this.#replies.setMaxListeners(0);
     this.#connection = amqp.connect([url]);
     this.#channel = this.#connection.createChannel({
@@ -107,7 +110,9 @@ export class RpcClient {
             msg.properties.correlationId,
             JSON.parse(msg.content.toString()) as RpcResponse,
           );
-        } catch {}
+        } catch (err: unknown) {
+          this.log(`Discarding undecodable RPC reply: ${String(err)}`);
+        }
       },
       { noAck: true },
     );

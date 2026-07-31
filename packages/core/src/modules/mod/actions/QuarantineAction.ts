@@ -19,9 +19,6 @@ export interface QuarantineUndoOptions {
   reason: string;
 }
 
-const quarantineKey = (guildId: string, userId: string) =>
-  `lumi:mod:${guildId}:quarantine:${userId}`;
-
 export class QuarantineAction {
   public static async apply(options: QuarantineApplyOptions) {
     const { guild, targetMember, moderator, reason } = options;
@@ -35,9 +32,18 @@ export class QuarantineAction {
       throw new Error("UNCONFIGURED");
     }
 
-    const key = quarantineKey(guild.id, targetMember.id);
+    const key = RedisKeys.quarantineState(guild.id, targetMember.id);
     if (await container.redis.exists(key)) {
       throw new Error("ALREADY_QUARANTINED");
+    }
+
+    const staleCases = await container.db.moderation.getActiveCases(
+      guild.id,
+      targetMember.id,
+      "quarantine",
+    );
+    for (const stale of staleCases) {
+      await container.db.moderation.liftModerationCase(stale.id);
     }
 
     const savedRoles = targetMember.roles.cache
@@ -60,7 +66,7 @@ export class QuarantineAction {
       guildId: guild.id,
       userId: targetMember.id,
       moderatorId: moderator.id,
-      action: "mute",
+      action: "quarantine",
       reason,
     });
 
@@ -80,7 +86,7 @@ export class QuarantineAction {
   public static async undo(options: QuarantineUndoOptions) {
     const { guild, targetMember, moderator, reason } = options;
 
-    const key = quarantineKey(guild.id, targetMember.id);
+    const key = RedisKeys.quarantineState(guild.id, targetMember.id);
     const saved = await container.redis.get(key);
     if (!saved) {
       throw new Error("NOT_QUARANTINED");
@@ -105,11 +111,20 @@ export class QuarantineAction {
       await container.redis.del(key, permKey);
     }
 
+    const activeCases = await container.db.moderation.getActiveCases(
+      guild.id,
+      targetMember.id,
+      "quarantine",
+    );
+    for (const active of activeCases) {
+      await container.db.moderation.liftModerationCase(active.id);
+    }
+
     const c = await container.db.moderation.createModerationCase({
       guildId: guild.id,
       userId: targetMember.id,
       moderatorId: moderator.id,
-      action: "unmute",
+      action: "unquarantine",
       reason,
     });
 

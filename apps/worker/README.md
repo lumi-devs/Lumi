@@ -102,7 +102,6 @@ Configure `@lumi/worker` using environment variables:
 |---|:---:|:---:|---|
 | `BOT_TOKEN` | **Yes** | - | Discord Bot Token from the Discord Developer Portal. |
 | `LUMI_ROLE` | No | `monolith` | Service role (`monolith` \| `worker`). |
-| `TRANSPORT` | No | `streams` | Event bus transport mechanism (`streams`). |
 | `LUMI_CONSUMER_ID` | No | `worker-1` | Unique consumer ID for stream consumer group tracking. |
 | `POSTGRES_URL` | **Yes** | - | PostgreSQL pooled connection string (PgBouncer). |
 | `DIRECT_POSTGRES_URL` | **Yes** | - | PostgreSQL direct connection string (used for schema migrations). |
@@ -133,7 +132,7 @@ bun apps/worker/src/main.ts
 In production, run workers with `LUMI_ROLE=worker` behind `@lumi/gateway`:
 
 ```bash
-LUMI_ROLE="worker" TRANSPORT="streams" LUMI_CONSUMER_ID="worker-node-1" bun apps/worker/src/main.ts
+LUMI_ROLE="worker" LUMI_CONSUMER_ID="worker-node-1" bun apps/worker/src/main.ts
 ```
 
 ### Docker Compose

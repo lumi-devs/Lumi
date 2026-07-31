@@ -213,7 +213,11 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
               updatedCount++;
               if (res.needsRestart) needsRestart = true;
             }
-          } catch {}
+          } catch (err: unknown) {
+            this.container.logger.debug(
+              `[hub] Update check failed for ${mod.moduleName}: ${String(err)}`,
+            );
+          }
         }
 
         const msg =

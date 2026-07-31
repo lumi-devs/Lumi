@@ -3,7 +3,6 @@ import { type Guild, type User, Colors } from "discord.js";
 import { formatAuditReason } from "#lib/utilities/misc.js";
 import { makeErrorCard } from "#lib/utilities/cards.js";
 import { logToChannel } from "../lib/helpers.js";
-import { BaseAction } from "./BaseAction.js";
 
 export interface SoftbanApplyOptions {
   guild: Guild;
@@ -13,8 +12,8 @@ export interface SoftbanApplyOptions {
   deleteMessageDays?: number;
 }
 
-export class SoftbanAction extends BaseAction {
-  public static override async apply(options: SoftbanApplyOptions) {
+export class SoftbanAction {
+  public static async apply(options: SoftbanApplyOptions) {
     const {
       guild,
       targetUser,

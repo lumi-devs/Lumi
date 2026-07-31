@@ -15,7 +15,6 @@ Copy `.env.example` to `.env` and fill in the required values.
 | `REDIS_PASSWORD` | - | - | Redis authentication password |
 | `RABBITMQ_URL` | `amqp://lumi:lumi@localhost:5672` | ✅ | RabbitMQ AMQP broker URI |
 | `LUMI_ROLE` | `monolith` | - | Runtime process role: `monolith` / `gateway` / `worker` / `scheduler` |
-| `TRANSPORT` | `streams` | - | Inter-process event transport (`streams` via Redis Streams) |
 | `OTEL_ENABLED` | `false` | - | Enable OpenTelemetry OTLP tracing |
 | `METRICS_ENABLED` | `true` | - | Enable Prometheus metrics endpoint |
 | `METRICS_PORT` | `9090` | - | Prometheus `/metrics` HTTP port |

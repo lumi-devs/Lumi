@@ -45,6 +45,8 @@ export class CasesCommand extends BaseSubcommand {
                   { name: "mute", value: "mute" },
                   { name: "kick", value: "kick" },
                   { name: "ban", value: "ban" },
+                  { name: "quarantine", value: "quarantine" },
+                  { name: "voice mute", value: "voice_mute" },
                 ),
             ),
         )

@@ -104,8 +104,6 @@ declare module "#lib/env.js" {
     SCHEDULER_LEADER_LOCK_RENEW_MS: IntegerString;
     SCHEDULER_LEADER_LOCK_POLL_MS: IntegerString;
     RABBITMQ_URL: string;
-    /** "streams" - @lumi/event-bus transport (Redis Streams). */
-    TRANSPORT: "streams";
     /** Approximate per-stream cap for raw gateway events. Default 100000. */
     EVENT_STREAM_MAXLEN: IntegerString;
     /** Redis Streams consumer idle threshold in ms. Default 60000. */
@@ -114,7 +112,7 @@ declare module "#lib/env.js" {
     LUMI_ROLE: "monolith" | "gateway" | "worker" | "scheduler";
     /** Stable per-replica consumer id for the worker pool. Falls back to $HOSTNAME, then pid. */
     LUMI_CONSUMER_ID: string;
-    /** When "true", the gateway pre-acks INTERACTION_CREATE via REST before publishing. */
+    /** Gateway pre-acks INTERACTION_CREATE via REST before publishing. Default "true"; set "false" to opt out. */
     INTERACTION_DEFER_AT_GATEWAY: "true" | "false";
   }
 }

@@ -471,7 +471,11 @@ export class TempVcPanelSelectHandler extends BaseInteractionHandler {
             break;
           }
         }
-      } catch {}
+      } catch (err: unknown) {
+        this.container.logger.debug(
+          `[tempvc] ${action} failed for ${id} in ${channel.id}: ${String(err)}`,
+        );
+      }
     }
     if (done.length === 0) return t("tempvc:noChangesApplied");
     const verb = {

@@ -4,6 +4,8 @@ import { cacheHits, cacheMisses } from "@lumi/observability";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 
+const inflight = new Map<string, Promise<unknown>>();
+
 /** Base class for per-domain database repositories. */
 export abstract class Repository {
   public constructor(
@@ -40,8 +42,22 @@ export abstract class Repository {
     }
     cacheMisses.inc({ cache });
 
-    const data = await fetcher();
-    await this.redis.setex(key, ttl, JSON.stringify(data));
-    return data;
+    const pending = inflight.get(key);
+    if (pending) return pending as Promise<T>;
+
+    const flight = (async () => {
+      const data = await fetcher();
+      const serialized = JSON.stringify(data);
+      if (serialized !== undefined) {
+        await this.redis.setex(key, ttl, serialized);
+      }
+      return data;
+    })();
+    inflight.set(key, flight);
+    try {
+      return await flight;
+    } finally {
+      inflight.delete(key);
+    }
   }
 }

@@ -4,7 +4,6 @@ metadata:
   name: lumi-env
   namespace: lumi
 data:
-  TRANSPORT: "streams"
   REDIS_HOST: "redis.lumi.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_CACHE_DB: "0"
@@ -30,6 +29,5 @@ data:
 
   CLUSTER_NAME: "lumi-prod"
 
-  INTERACTION_DEFER_AT_GATEWAY: "true"
 
   SCHEDULER_LEADER_LOCK: "true"
