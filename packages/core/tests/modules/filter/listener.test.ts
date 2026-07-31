@@ -82,8 +82,8 @@ describe("FilterMessageListener", () => {
         path: "/path/to/modules/filter/listeners/messageCreate.ts",
         root: "/path/to/modules",
         store: { name: "listeners" } as any,
-      } as any,
-      { module: "filter" } as any
+      },
+      { module: "filter" }
     );
   });
 

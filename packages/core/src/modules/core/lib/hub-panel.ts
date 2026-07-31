@@ -24,6 +24,7 @@ import { Emojis } from "#lib/utilities/assets.js";
 import { SUPPORTED_LANGUAGES, type LumiT } from "#lib/i18n/index.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import {
+  createMentionableSelectMenu,
   createPaginationRow,
   createStringSelectMenu,
   settingRow,
@@ -205,10 +206,12 @@ export function buildSettingsView(
 }
 
 export interface PermissionOverrideRow {
+  /** The permit node granted, e.g. `mod.*` or `admin.config`. */
   commandPath: string;
   modelType: string;
   modelId: string;
-  allow: boolean;
+  /** True for an un-quarantinable enforced permit; false for a custom permit. */
+  enforced: boolean;
 }
 
 const overrideMention = (o: PermissionOverrideRow): string => {
@@ -234,11 +237,11 @@ export function buildPermissionsView(
   const sections = shown.map((o) =>
     settingRow(
       [
-        `${o.allow ? Emojis.CHECK : Emojis.CROSS} \`${o.commandPath}\``,
-        `-# ${o.modelType} ${overrideMention(o)}`,
+        `${o.enforced ? Emojis.SHIELD : Emojis.CHECK} \`${o.commandPath}\``,
+        `-# ${o.enforced ? "enforced" : "custom"} · ${o.modelType} ${overrideMention(o)}`,
       ],
       {
-        customId: `lumi:permdel:${o.allow ? "c" : "e"}|${o.modelType}|${o.modelId}|${o.commandPath}`,
+        customId: `lumi:permdel:${o.enforced ? "e" : "c"}|${o.modelType}|${o.modelId}|${o.commandPath}`,
         label: t ? t(PanelsKeys.PermsRevoke) : "Revoke",
         style: ButtonStyle.Danger,
       },
@@ -247,15 +250,15 @@ export function buildPermissionsView(
 
   const addRow = row(
     new ButtonBuilder()
-      .setCustomId("lumi:perm:allow")
-      .setLabel(t ? t(PanelsKeys.PermsAllow) : "Allow…")
+      .setCustomId("lumi:permit:grant:custom")
+      .setLabel(t ? t(PanelsKeys.PermsGrantCustom) : "Grant Custom…")
       .setEmoji(Emojis.parse(Emojis.CHECK))
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
-      .setCustomId("lumi:perm:deny")
-      .setLabel(t ? t(PanelsKeys.PermsDeny) : "Deny…")
-      .setEmoji(Emojis.parse(Emojis.CROSS))
-      .setStyle(ButtonStyle.Danger),
+      .setCustomId("lumi:permit:grant:enforced")
+      .setLabel(t ? t(PanelsKeys.PermsGrantEnforced) : "Grant Enforced…")
+      .setEmoji(Emojis.parse(Emojis.SHIELD))
+      .setStyle(ButtonStyle.Primary),
   );
 
   const rows: Row[] = [addRow];
@@ -288,7 +291,7 @@ export function buildPermissionsView(
       CARD_ACCENTS.PRIMARY,
       `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsTitle) : "Command Permissions"}`,
       shown.length
-        ? `-# ${Emojis.CHECK} ${t ? t(PanelsKeys.PermsLegend) : "allow · deny. Overrides take priority over a command's default access level."}`
+        ? `-# ${Emojis.CHECK} ${t ? t(PanelsKeys.PermsLegend) : "custom · enforced. Enforced permits survive anti-nuke quarantine."}`
         : (t
             ? t(PanelsKeys.PermsEmpty)
             : "*No permission overrides set - every command uses its default access.*"),
@@ -296,6 +299,74 @@ export function buildPermissionsView(
     ),
   );
 }
+
+export type PermitKind = "custom" | "enforced";
+
+/** Step 1 of granting a permit: pick who it applies to. */
+export function buildPermitTargetPickerView(
+  kind: PermitKind,
+  t?: LumiT,
+): CardReply {
+  const select = createMentionableSelectMenu({
+    customId: `lumi:permit:target:${kind}`,
+    placeholder: t ? t(PanelsKeys.PermsPickTarget) : "Pick a role or member…",
+  });
+
+  return makeCard(
+    CARD_ACCENTS.PRIMARY,
+    `${Emojis.SHIELD} ${t ? (kind === "enforced" ? t(PanelsKeys.PermsGrantEnforced) : t(PanelsKeys.PermsGrantCustom)) : "Grant Permit"}`,
+    t ? t(PanelsKeys.PermsPickTarget) : "Pick a role or member to grant a permit to.",
+    {
+      actionRows: [row(select), backToPermissionsRow(t)],
+    },
+  );
+}
+
+/** Step 2 of granting a permit: pick which node to grant the chosen target. */
+export function buildPermitNodePickerView(
+  kind: PermitKind,
+  targetType: "role" | "user",
+  targetId: string,
+  nodes: string[],
+  t?: LumiT,
+): CardReply {
+  const mention = targetType === "role" ? roleMention(targetId) : userMention(targetId);
+
+  if (nodes.length === 0) {
+    return makeCard(
+      CARD_ACCENTS.PRIMARY,
+      `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsPickNode) : "Pick a Permit Node"}`,
+      t ? t(PanelsKeys.PermsNoNodes) : "No permit nodes are registered by any loaded command.",
+      { actionRows: [backToPermissionsRow(t)] },
+    );
+  }
+
+  const select = createStringSelectMenu({
+    customId: `lumi:permit:node:${kind}:${targetType}:${targetId}`,
+    placeholder: t ? t(PanelsKeys.PermsPickNode) : "Pick the permit node…",
+    options: nodes.slice(0, 25).map((node) =>
+      new StringSelectMenuOptionBuilder().setLabel(node).setValue(node),
+    ),
+  });
+
+  return makeCard(
+    CARD_ACCENTS.PRIMARY,
+    `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsPickNode) : "Pick a Permit Node"}`,
+    `${t ? t(PanelsKeys.PermsPickNode) : "Pick the permit node to grant"} ${mention}.`,
+    {
+      actionRows: [row(select), backToPermissionsRow(t)],
+    },
+  );
+}
+
+const backToPermissionsRow = (t?: LumiT): Row =>
+  row(
+    new ButtonBuilder()
+      .setCustomId("lumi:tab:permissions")
+      .setLabel(t ? t(PanelsKeys.BackToHub) : "Back")
+      .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+      .setStyle(ButtonStyle.Secondary),
+  );
 
 export interface AddonDashboardStats {
   repoCount: number;

@@ -183,6 +183,14 @@
       "description": "Kick members who don't verify before the timeout.",
       "group": "Verification",
       "default": false
+    },
+    {
+      "key": "panic_lock_channel_ids",
+      "type": "STRING",
+      "label": "Channels to Lock",
+      "description": "Comma-separated channel IDs locked by /panic. Blank locks every text channel.",
+      "group": "Panic Mode",
+      "list": true
     }
   ]
 }

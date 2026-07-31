@@ -53,7 +53,7 @@ describe("hub-panel view builders", () => {
       commandPath: `mod.cmd${i}`,
       modelType: "role",
       modelId: `${100000000000000000n + BigInt(i)}`,
-      allow: i % 2 === 0,
+      enforced: i % 2 === 0,
     }));
 
     const card = buildPermissionsView(overrides, 0);

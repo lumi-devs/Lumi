@@ -147,6 +147,13 @@ import { handleVerifySweepFire } from "./lib/verify-sweep-handler.js";
       description: "Kick members who don't verify before the timeout.",
       default: false,
     }),
+    panic_lock_channel_ids: cfg.string({
+      group: "Panic Mode",
+      label: "Channels to Lock",
+      description:
+        "Comma-separated channel IDs locked by /panic. Blank locks every text channel.",
+      list: true,
+    }),
   }),
 })
 export class SecurityModule extends Module {

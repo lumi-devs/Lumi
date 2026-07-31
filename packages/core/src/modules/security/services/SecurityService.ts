@@ -1,16 +1,39 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
-import { Colors, type Guild, type GuildMember } from "discord.js";
+import {
+  ChannelType,
+  Colors,
+  PermissionFlagsBits,
+  type Guild,
+  type GuildMember,
+} from "discord.js";
 import { isNullish, tryParseJSON } from "@sapphire/utilities";
 import { Service } from "#lib/module-system/Service.js";
 import { RedisKeys } from "#database/redis.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { logToChannel } from "#lib/moderation/log.js";
+import type { LockedChannelSnapshot } from "#lib/prisma/repositories/SecurityRepository.js";
 import {
   buildChallenge,
   MAX_ATTEMPTS,
   type CaptchaState,
 } from "../lib/captcha.js";
+
+export interface PanicResult {
+  invitesPaused: boolean;
+  lockedCount: number;
+  skippedCount: number;
+}
+
+export interface PanicRevertResult {
+  restoredCount: number;
+}
+
+const PANIC_CHANNEL_CAP = 40;
+const PANIC_EDIT_DELAY_MS = 300;
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 export type NukeKind =
   | "ban"
@@ -460,6 +483,119 @@ export class SecurityService extends Service {
       );
       return false;
     }
+  }
+
+  /**
+   * Activates panic mode: pauses invites and locks `@everyone` SendMessages
+   * across the guild's text channels (or a configured subset), snapshotting
+   * prior overwrites so `revertPanic` can restore them exactly.
+   */
+  public async enterPanic(
+    guild: Guild,
+    actorId: string,
+    channelIds: string[],
+  ): Promise<PanicResult> {
+    let invitesPaused = false;
+    try {
+      await guild.disableInvites(true);
+      invitesPaused = true;
+    } catch (err: unknown) {
+      this.logger.warn(
+        `[security] Panic: failed to pause invites in ${guild.id}: ${String(err)}`,
+      );
+    }
+
+    const candidates =
+      channelIds.length > 0
+        ? channelIds
+            .map((id) => guild.channels.cache.get(id))
+            .filter((c): c is NonNullable<typeof c> => Boolean(c))
+        : [...guild.channels.cache.values()].filter(
+            (c) =>
+              c.type === ChannelType.GuildText ||
+              c.type === ChannelType.GuildAnnouncement,
+          );
+
+    const targets = candidates.slice(0, PANIC_CHANNEL_CAP);
+    const everyone = guild.roles.everyone;
+    const snapshot: LockedChannelSnapshot = {};
+    let lockedCount = 0;
+
+    for (const channel of targets) {
+      if (!("permissionOverwrites" in channel)) continue;
+      try {
+        const overwrite = channel.permissionOverwrites.cache.get(everyone.id);
+        const prior = overwrite?.allow.has(PermissionFlagsBits.SendMessages)
+          ? true
+          : overwrite?.deny.has(PermissionFlagsBits.SendMessages)
+            ? false
+            : null;
+        snapshot[channel.id] = prior;
+        await channel.permissionOverwrites.edit(
+          everyone,
+          { SendMessages: false },
+          { reason: `Panic mode activated by ${actorId}` },
+        );
+        lockedCount++;
+      } catch (err: unknown) {
+        this.logger.warn(
+          `[security] Panic: failed to lock channel ${channel.id} in ${guild.id}: ${String(err)}`,
+        );
+      }
+      await sleep(PANIC_EDIT_DELAY_MS);
+    }
+
+    await this.db.security.savePanicState({
+      guildId: guild.id,
+      actorId,
+      invitesPaused,
+      lockedChannels: snapshot,
+    });
+
+    return {
+      invitesPaused,
+      lockedCount,
+      skippedCount: targets.length - lockedCount,
+    };
+  }
+
+  /** Restores invites and every channel overwrite snapshotted by `enterPanic`. */
+  public async revertPanic(guild: Guild): Promise<PanicRevertResult | null> {
+    const state = await this.db.security.getPanicState(guild.id);
+    if (!state) return null;
+
+    if (state.invitesPaused) {
+      await guild.disableInvites(false).catch((err: unknown) => {
+        this.logger.warn(
+          `[security] Panic: failed to resume invites in ${guild.id}: ${String(err)}`,
+        );
+      });
+    }
+
+    const snapshot = (state.lockedChannels ?? {}) as LockedChannelSnapshot;
+    const everyone = guild.roles.everyone;
+    let restoredCount = 0;
+
+    for (const [channelId, prior] of Object.entries(snapshot)) {
+      const channel = guild.channels.cache.get(channelId);
+      if (!channel || !("permissionOverwrites" in channel)) continue;
+      try {
+        await channel.permissionOverwrites.edit(
+          everyone,
+          { SendMessages: prior },
+          { reason: "Panic mode reverted" },
+        );
+        restoredCount++;
+      } catch (err: unknown) {
+        this.logger.warn(
+          `[security] Panic: failed to restore channel ${channelId} in ${guild.id}: ${String(err)}`,
+        );
+      }
+      await sleep(PANIC_EDIT_DELAY_MS);
+    }
+
+    await this.db.security.clearPanicState(guild.id);
+    return { restoredCount };
   }
 }
 
