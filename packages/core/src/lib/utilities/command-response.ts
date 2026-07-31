@@ -65,6 +65,35 @@ export async function sendInteractionReply(
   return undefined;
 }
 
+/**
+ * Re-renders a panel card in place on a component or modal interaction.
+ * Strips ephemerality flags (immutable after send) and swallows expiry errors.
+ */
+export async function updatePanel(
+  interaction: RepliableInteraction,
+  card: CardReply,
+): Promise<void> {
+  const flags =
+    Number(card.flags ?? MessageFlags.IsComponentsV2) &
+    MessageFlags.IsComponentsV2;
+  const payload = {
+    components: card.components,
+    flags,
+    allowedMentions: card.allowedMentions,
+  };
+  try {
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply(payload);
+    } else if ("update" in interaction && typeof interaction.update === "function") {
+      await (interaction as { update: (p: unknown) => Promise<unknown> }).update(payload);
+    } else {
+      await interaction.reply({ ...payload, flags });
+    }
+  } catch (err: unknown) {
+    container.logger.debug(`[panel] update failed: ${String(err)}`);
+  }
+}
+
 /** Renders a transient error reply to an interaction. */
 export async function respond(
   interaction: RepliableInteraction,

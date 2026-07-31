@@ -1,5 +1,5 @@
 import { Module, DefineModule } from "#lib/module-system/Module.js";
-import { MODULE_NAME, TempVcData } from "./keys.js";
+import { MODULE_NAME } from "./keys.js";
 import { tempVcRegistry } from "./registry.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleTempVcCleanupFire } from "./lib/cleanup-handler.js";
@@ -29,19 +29,9 @@ export class TempVcModule extends Module {
   public override async deleteUserData(
     userId: string,
   ): Promise<void> {
-    const rows = await this.container.db.guildKV.listModuleData<{
-      ownerId?: string;
-    }>({
-      module: MODULE_NAME,
-      key: TempVcData.RECORD,
-    });
-    const owned = rows.filter((r) => r.value.ownerId === userId);
+    const owned = await this.container.db.tempvc.findRecordsForOwner(userId);
     if (owned.length === 0) return;
-    await this.container.db.guildKV.deleteModuleDataMany(
-      MODULE_NAME,
-      TempVcData.RECORD,
-      owned.map((r) => ({ guildId: r.guildId, targetId: r.targetId })),
-    );
+    await this.container.db.tempvc.deleteRecordsForOwner(userId);
     for (const guildId of new Set(owned.map((r) => r.guildId))) {
       await tempVcRegistry.reloadVcs(guildId);
     }

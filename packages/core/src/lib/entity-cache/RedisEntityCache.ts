@@ -49,6 +49,24 @@ export interface CachedMember {
   cachedAt: number;
 }
 
+const channelFields = (c: CachedChannel): Record<string, string> => ({
+  id: c.id,
+  guildId: c.guildId,
+  name: c.name,
+  type: String(c.type),
+  ...(c.parentId ? { parentId: c.parentId } : {}),
+  cachedAt: String(c.cachedAt),
+});
+
+const roleFields = (r: CachedRole): Record<string, string> => ({
+  id: r.id,
+  guildId: r.guildId,
+  name: r.name,
+  permissions: r.permissions,
+  position: String(r.position),
+  cachedAt: String(r.cachedAt),
+});
+
 export class RedisEntityCache {
   public constructor(private readonly redis: Redis) {}
 
@@ -92,14 +110,17 @@ export class RedisEntityCache {
   }
 
   public async putChannel(c: CachedChannel): Promise<void> {
-    await this.#putHash(RedisKeys.entityChannel(c.id), {
-      id: c.id,
-      guildId: c.guildId,
-      name: c.name,
-      type: String(c.type),
-      ...(c.parentId ? { parentId: c.parentId } : {}),
-      cachedAt: String(c.cachedAt),
-    });
+    await this.#putHash(RedisKeys.entityChannel(c.id), channelFields(c));
+  }
+
+  public async putChannels(channels: readonly CachedChannel[]): Promise<void> {
+    if (channels.length === 0) return;
+    const pipe = this.redis.pipeline();
+    for (const c of channels) {
+      const key = RedisKeys.entityChannel(c.id);
+      pipe.hmset(key, channelFields(c)).expire(key, RedisTTL.entity);
+    }
+    await pipe.exec();
   }
 
   public async deleteChannel(id: string): Promise<void> {
@@ -120,14 +141,17 @@ export class RedisEntityCache {
   }
 
   public async putRole(r: CachedRole): Promise<void> {
-    await this.#putHash(RedisKeys.entityRole(r.id), {
-      id: r.id,
-      guildId: r.guildId,
-      name: r.name,
-      permissions: r.permissions,
-      position: String(r.position),
-      cachedAt: String(r.cachedAt),
-    });
+    await this.#putHash(RedisKeys.entityRole(r.id), roleFields(r));
+  }
+
+  public async putRoles(roles: readonly CachedRole[]): Promise<void> {
+    if (roles.length === 0) return;
+    const pipe = this.redis.pipeline();
+    for (const r of roles) {
+      const key = RedisKeys.entityRole(r.id);
+      pipe.hmset(key, roleFields(r)).expire(key, RedisTTL.entity);
+    }
+    await pipe.exec();
   }
 
   public async deleteRole(id: string): Promise<void> {

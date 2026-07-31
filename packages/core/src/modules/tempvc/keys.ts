@@ -1,13 +1,5 @@
 export const MODULE_NAME = "tempvc";
 
-/** ModuleData `key` discriminators (targetId carries the channel id). */
-export const TempVcData = {
-  /** A generator (trigger) channel; value = GeneratorConfig. */
-  GENERATOR: "gen",
-  /** An active temporary voice channel; value = VcRecord. */
-  RECORD: "vc",
-} as const;
-
 export const TempVcKeys = {
   /** Per-user creation cooldown. */
   createCooldown: (guildId: string, userId: string) =>

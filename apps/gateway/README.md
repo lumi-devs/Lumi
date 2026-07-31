@@ -35,7 +35,7 @@ The gateway process isolates connection management from command and event logic 
 - **High-Throughput Event Backplane**: Publishes raw gateway envelopes (`rawGatewayStream`) to Redis Streams for consumption by worker pools.
 
 > [!NOTE]
-> Standalone gateway instances require `TRANSPORT=streams`.
+
 
 ---
 
@@ -96,7 +96,6 @@ Configure `@lumi/gateway` using environment variables:
 |---|:---:|:---:|---|
 | `BOT_TOKEN` | **Yes** | - | Discord Bot Token from the Discord Developer Portal. |
 | `LUMI_ROLE` | **Yes** | `gateway` | Identifies the process role (`gateway`). |
-| `TRANSPORT` | No | `streams` | Event bus transport driver (`streams`). |
 | `LUMI_CLUSTER_NAME` | No | - | Cluster identifier for multi-replica sharded gateway deployments. |
 | `LUMI_CONSUMER_ID` | No | `gateway-1` | Unique replica identifier within the cluster (defaults to hostname/pid). |
 | `INTERACTION_DEFER_AT_GATEWAY` | No | `true` | When `true`, gateway sends immediate pre-acknowledgments to Discord interactions. |
@@ -122,7 +121,7 @@ Ensure Redis is running, then launch the gateway:
 
 ```bash
 # Set environment variables and run gateway
-BOT_TOKEN="your-discord-bot-token" LUMI_ROLE="gateway" TRANSPORT="streams" bun apps/gateway/src/main.ts
+BOT_TOKEN="your-discord-bot-token" LUMI_ROLE="gateway" bun apps/gateway/src/main.ts
 ```
 
 ### Multi-Replica Clustered Gateway (Docker Compose)

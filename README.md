@@ -121,7 +121,7 @@ Lumi scales seamlessly from a single process to a distributed cluster using `LUM
 | `worker` | Event processing worker pool for slash commands, triggers, and listeners. |
 | `scheduler` | Queue processor for scheduled tasks and recurring cron jobs. |
 
-Inter-process event streaming and RPC bridging operate on **Redis Streams**. Detailed specifications are in [docs/architecture.md](docs/architecture.md).
+Inter-process event streaming runs on **Redis Streams**; RPC bridging between processes runs on **RabbitMQ**. Detailed specifications are in [docs/architecture.md](docs/architecture.md).
 
 ---
 

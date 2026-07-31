@@ -10,12 +10,15 @@ Copy `.env.example` to `.env` and fill in the required values.
 | `CLIENT_ID` | - | ✅ | Discord Application Client ID |
 | `POSTGRES_URL` | `postgresql://lumi:lumi@localhost:6432/lumi` | ✅ | PgBouncer connection pool URI (port 6432) |
 | `DIRECT_POSTGRES_URL` | `postgresql://lumi:lumi@localhost:5432/lumi` | ✅ | Direct PostgreSQL URI for Prisma migrations (port 5432) |
-| `REDIS_HOST` | `localhost` | ✅ | Redis hostname |
-| `REDIS_PORT` | `6379` | ✅ | Redis port |
+| `REDIS_HOST` | `localhost` | ✅ | Redis hostname (ignored when `REDIS_SENTINELS` is set) |
+| `REDIS_PORT` | `6379` | ✅ | Redis port (ignored when `REDIS_SENTINELS` is set) |
 | `REDIS_PASSWORD` | - | - | Redis authentication password |
-| `RABBITMQ_URL` | `amqp://lumi:lumi@localhost:5672` | ✅ | RabbitMQ AMQP broker URI |
+| `REDIS_CACHE_DB` | `0` | - | Redis logical DB index used for cache/session keys |
+| `REDIS_SENTINELS` | - | - | Comma-separated `host:port` list of Sentinel nodes; enables HA mode instead of `REDIS_HOST`/`REDIS_PORT` |
+| `REDIS_SENTINEL_NAME` | `mymaster` | - | Master name as registered with Sentinel |
+| `REDIS_SENTINEL_PASSWORD` | - | - | Password for connecting to the Sentinels themselves (separate from `REDIS_PASSWORD`) |
+| `RABBITMQ_URL` | `amqp://lumi:lumi@localhost:5672` | ✅ | RabbitMQ AMQP broker URI (used for RPC bridging and cross-process events) |
 | `LUMI_ROLE` | `monolith` | - | Runtime process role: `monolith` / `gateway` / `worker` / `scheduler` |
-| `TRANSPORT` | `streams` | - | Inter-process event transport (`streams` via Redis Streams) |
 | `OTEL_ENABLED` | `false` | - | Enable OpenTelemetry OTLP tracing |
 | `METRICS_ENABLED` | `true` | - | Enable Prometheus metrics endpoint |
 | `METRICS_PORT` | `9090` | - | Prometheus `/metrics` HTTP port |

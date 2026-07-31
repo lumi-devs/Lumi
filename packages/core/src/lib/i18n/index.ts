@@ -5,6 +5,7 @@ import type {
 } from "@sapphire/plugin-i18next";
 import type { TFunction } from "i18next";
 import { fileURLToPath } from "node:url";
+import type { TypedFT, TypedT } from "#lib/i18n/keys.js";
 
 /**
  * The namespaces Lumi ships. Kept as a tuple so a bound `TFunction` accepts
@@ -20,10 +21,20 @@ export type LumiNamespaces = [
   "afk",
   "logging",
   "filter",
+  "panels",
 ];
 
-/** A translation function bound to every Lumi namespace. */
-export type LumiT = TFunction<LumiNamespaces>;
+/**
+ * A translation function bound to every Lumi namespace. Also accepts the
+ * Skyra-style typed keys from `#lib/i18n/keys.js`: `T` keys resolve plainly,
+ * `FT` keys require their declared interpolation args at the call site.
+ */
+export type LumiT = TFunction<LumiNamespaces> &
+  (<TReturn = string>(key: TypedT<TReturn>) => TReturn) &
+  (<TArgs extends object, TReturn = string>(
+    key: TypedFT<TArgs, TReturn>,
+    args: TArgs,
+  ) => TReturn);
 
 /** The language used when nothing more specific can be resolved. */
 export const DEFAULT_LANGUAGE = "en-US";

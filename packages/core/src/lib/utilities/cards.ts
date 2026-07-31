@@ -58,7 +58,7 @@ function buildContainer(
   accentColor?: number,
 ) {
   const c = new ContainerBuilder();
-  if (accentColor) {
+  if (accentColor !== undefined) {
     c.setAccentColor(accentColor);
   }
 
@@ -88,31 +88,41 @@ function buildContainer(
 
   c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(opts.divider ?? true));
 
-  // Sections if provided
   if (opts.sections && opts.sections.length > 0) {
     for (const sec of opts.sections) {
       c.addSectionComponents(sec);
     }
   }
 
-  // Main Body Parts
   const parts = Array.isArray(body) ? body : [body];
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    if (i > 0) c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
-    if (part && part.length > 0) {
-      c.addTextDisplayComponents(new TextDisplayBuilder().setContent(part));
-    }
-  }
+  const thumbUrl =
+    !opts.sections?.length && (opts.thumbnailUrl ?? opts.thumbnail);
 
-  // Thumbnail accessory section if URL provided without explicit sections
-  const thumbUrl = opts.thumbnailUrl ?? opts.thumbnail;
-  if (thumbUrl && (!opts.sections || opts.sections.length === 0)) {
+  if (thumbUrl) {
+    // The thumbnail renders beside the first body lines (max 3 per section).
     const thumbSec = new SectionBuilder().setThumbnailAccessory(
       new ThumbnailBuilder().setURL(thumbUrl),
     );
-    thumbSec.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# Thumbnail Preview`));
+    const sectionParts = parts.filter((p) => p && p.length > 0).slice(0, 3);
+    for (const part of sectionParts.length > 0 ? sectionParts : [title]) {
+      thumbSec.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(part),
+      );
+    }
     c.addSectionComponents(thumbSec);
+    for (const part of parts.filter((p) => p && p.length > 0).slice(3)) {
+      c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
+      c.addTextDisplayComponents(new TextDisplayBuilder().setContent(part));
+    }
+  } else {
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (i > 0)
+        c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
+      if (part && part.length > 0) {
+        c.addTextDisplayComponents(new TextDisplayBuilder().setContent(part));
+      }
+    }
   }
 
   // Footer

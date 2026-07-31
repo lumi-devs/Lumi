@@ -7,6 +7,8 @@ import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js
 import type { GuildMessage } from "#lib/types/common.js";
 import type { FilterService } from "../services/FilterService.js";
 import { getHitReason, type FilterHit } from "../lib/rules.js";
+import { heatAction, type HeatConfig } from "../lib/heat.js";
+import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 import { fetchTyped } from "#lib/commands.js";
@@ -34,15 +36,94 @@ export class FilterMessageListener extends GuildMessageListener {
       mentionCount,
     );
 
-    if (!hit) return;
+    const heat = this.filterService.getHeat(message.guildId);
+    const heatActive = heat?.enabled === true;
+    if (!hit && !heatActive) return;
 
     if (await this.#isExempt(message)) return;
 
-    await message.delete().catch(swallow("Filter: delete filtered message"));
+    if (hit) {
+      await message.delete().catch(swallow("Filter: delete filtered message"));
+      await this.#warn(message, hit);
+      await Promise.all([this.#punish(message, hit), this.#log(message, hit)]);
+    }
 
-    await this.#warn(message, hit);
+    if (heatActive) await this.#heat(message, mentionCount, hit !== null, heat);
+  }
 
-    await Promise.all([this.#punish(message, hit), this.#log(message, hit)]);
+  /** Accrues heat from this message's signals and escalates once thresholds trip. */
+  async #heat(
+    message: GuildMessage,
+    mentionCount: number,
+    wasHit: boolean,
+    config: HeatConfig,
+  ): Promise<void> {
+    const { guildId } = message;
+    const userId = message.author.id;
+
+    let points = config.perMessage;
+    if (config.perMention > 0) points += config.perMention * mentionCount;
+    if (wasHit) points += config.perFilterHit;
+    if (
+      config.perDuplicate > 0 &&
+      (await this.filterService.isDuplicate(guildId, userId, message.content))
+    ) {
+      points += config.perDuplicate;
+    }
+    if (points <= 0) return;
+
+    const level = await this.filterService.addHeat(
+      guildId,
+      userId,
+      points,
+      config,
+    );
+    const action = heatAction(level, config);
+    if (action === "none") return;
+
+    const reason = `Heat escalation: reached ${Math.round(level)} heat`;
+    const member = message.member;
+    if (action === "quarantine" && member) {
+      await this.filterService.clearHeat(guildId, userId);
+      await QuarantineAction.apply({
+        guild: message.guild,
+        targetMember: member,
+        moderator: this.container.client.user!,
+        reason,
+      }).catch(swallow("Filter: heat quarantine"));
+      await this.#logHeat(message, "Heat - Quarantine", reason);
+    } else if (action === "timeout" && member) {
+      await this.filterService.clearHeat(guildId, userId);
+      await member
+        .timeout(config.timeoutMinutes * 60_000, reason)
+        .catch(swallow("Filter: heat timeout"));
+      await this.#logHeat(message, "Heat - Timeout", reason);
+    } else if (action === "warn") {
+      if (!(await this.filterService.claimWarnSlot(guildId, userId))) return;
+      const t = await fetchTyped(message);
+      const warn = await message.channel
+        .send(t("filter:heatWarn", { user: message.author.toString() }))
+        .catch(swallow("Filter: heat warn"));
+      if (warn) deleteMessageLater(warn, undefined, "Filter: delete heat warn");
+    }
+  }
+
+  async #logHeat(
+    message: GuildMessage,
+    action: string,
+    reason: string,
+  ): Promise<void> {
+    const logService = tryGetService("guild-log");
+    await logService?.dispatch({
+      guildId: message.guildId,
+      moduleName: "filter",
+      action,
+      targetId: message.author.id,
+      actorId: this.container.client.user!.id,
+      reason,
+      color: Colors.Orange,
+      extra: { Channel: channelMention(message.channelId) },
+    });
   }
 
   async #isExempt(message: GuildMessage): Promise<boolean> {

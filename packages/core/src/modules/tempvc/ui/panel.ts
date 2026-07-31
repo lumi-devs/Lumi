@@ -47,11 +47,15 @@ export function buildPanel(
 
   const lockBadge = formatStatusBadge(
     record.locked ? "disabled" : "enabled",
-    record.locked ? "LOCKED" : "UNLOCKED",
+    record.locked
+      ? (t ? t("tempvc:statusLocked") : "LOCKED")
+      : (t ? t("tempvc:statusUnlocked") : "UNLOCKED"),
   );
   const hideBadge = formatStatusBadge(
     record.hidden ? "disabled" : "enabled",
-    record.hidden ? "HIDDEN" : "VISIBLE",
+    record.hidden
+      ? (t ? t("tempvc:statusHidden") : "HIDDEN")
+      : (t ? t("tempvc:statusVisible") : "VISIBLE"),
   );
 
   const body = [
@@ -156,7 +160,93 @@ export function buildPanel(
   });
 }
 
-/** Builds the sub-action view for kicking channel members. */
+const backToPanelRow = (channelId: string, t?: LumiT) =>
+  new ActionRowBuilder<ButtonBuilder>().addComponents(
+    createBackButton(
+      `${TVC}:panel:${channelId}`,
+      t ? t("tempvc:backToPanel") : "← Back to Panel",
+    ),
+  );
+
+interface AccessViewSpec {
+  key: "trust" | "untrust" | "block" | "unblock";
+  fallbackTitle: string;
+  fallbackMessage: string;
+  fallbackUserPlaceholder: string;
+  fallbackRolePlaceholder: string;
+}
+
+const ACCESS_VIEWS: Record<AccessViewSpec["key"], AccessViewSpec> = {
+  trust: {
+    key: "trust",
+    fallbackTitle: "✅ Trust User or Role",
+    fallbackMessage:
+      "Select users or roles to grant access (connect, view, speak) to this channel:",
+    fallbackUserPlaceholder: "Select user(s) to trust…",
+    fallbackRolePlaceholder: "Select role(s) to trust…",
+  },
+  untrust: {
+    key: "untrust",
+    fallbackTitle: "❎ Untrust User or Role",
+    fallbackMessage:
+      "Select users or roles to remove custom permissions from this channel:",
+    fallbackUserPlaceholder: "Select user(s) to untrust…",
+    fallbackRolePlaceholder: "Select role(s) to untrust…",
+  },
+  block: {
+    key: "block",
+    fallbackTitle: "🚫 Block User or Role",
+    fallbackMessage:
+      "Select users or roles to block from joining this voice channel:",
+    fallbackUserPlaceholder: "Select user(s) to block…",
+    fallbackRolePlaceholder: "Select role(s) to block…",
+  },
+  unblock: {
+    key: "unblock",
+    fallbackTitle: "♻️ Unblock User or Role",
+    fallbackMessage:
+      "Select users or roles to remove block restrictions from this channel:",
+    fallbackUserPlaceholder: "Select user(s) to unblock…",
+    fallbackRolePlaceholder: "Select role(s) to unblock…",
+  },
+};
+
+function buildAccessView(
+  channel: VoiceBasedChannel,
+  spec: AccessViewSpec,
+  t?: LumiT,
+): PanelMessage {
+  const userSelect = createUserSelectMenu({
+    customId: `${TVC}:select_${spec.key}:${channel.id}`,
+    placeholder: t
+      ? t(`tempvc:${spec.key}UserPlaceholder`)
+      : spec.fallbackUserPlaceholder,
+    minValues: 1,
+    maxValues: 10,
+  });
+
+  const roleSelect = createRoleSelectMenu({
+    customId: `${TVC}:select_${spec.key}_role:${channel.id}`,
+    placeholder: t
+      ? t(`tempvc:${spec.key}RolePlaceholder`)
+      : spec.fallbackRolePlaceholder,
+    minValues: 1,
+    maxValues: 10,
+  });
+
+  const rows = buildSafeActionRows([
+    new ActionRowBuilder().addComponents(userSelect),
+    new ActionRowBuilder().addComponents(roleSelect),
+    backToPanelRow(channel.id, t),
+  ]);
+
+  return makeInfoCard(
+    t ? t(`tempvc:${spec.key}Title`) : spec.fallbackTitle,
+    t ? t(`tempvc:${spec.key}Message`) : spec.fallbackMessage,
+    { actionRows: rows },
+  );
+}
+
 export function buildKickView(
   channel: VoiceBasedChannel,
   _record: VcRecord,
@@ -164,189 +254,81 @@ export function buildKickView(
 ): PanelMessage {
   const userSelect = createUserSelectMenu({
     customId: `${TVC}:select_kick:${channel.id}`,
-    placeholder: t ? t("tempvc:selectKickPlaceholder") : "Select member(s) to kick…",
+    placeholder: t
+      ? t("tempvc:selectKickPlaceholder")
+      : "Select member(s) to kick…",
     minValues: 1,
     maxValues: 10,
   });
 
-  const backLabel = "← Back to Panel";
-  const backBtn = createBackButton(`${TVC}:panel:${channel.id}`, backLabel);
-
   const rows = buildSafeActionRows([
     new ActionRowBuilder().addComponents(userSelect),
-    new ActionRowBuilder().addComponents(backBtn),
+    backToPanelRow(channel.id, t),
   ]);
 
   return makeInfoCard(
     t ? t("tempvc:kickMembersTitle") : "👢 Kick Members",
-    t ? t("tempvc:kickMembersMessage") : "Select members to disconnect from this voice channel:",
+    t
+      ? t("tempvc:kickMembersMessage")
+      : "Select members to disconnect from this voice channel:",
     { actionRows: rows },
   );
 }
 
-/** Builds the sub-action view for trusting users or roles. */
 export function buildTrustView(
   channel: VoiceBasedChannel,
   _record: VcRecord,
-  _t?: LumiT,
+  t?: LumiT,
 ): PanelMessage {
-  const userSelect = createUserSelectMenu({
-    customId: `${TVC}:select_trust:${channel.id}`,
-    placeholder: "Select user(s) to trust…",
-    minValues: 1,
-    maxValues: 10,
-  });
-
-  const roleSelect = createRoleSelectMenu({
-    customId: `${TVC}:select_trust_role:${channel.id}`,
-    placeholder: "Select role(s) to trust…",
-    minValues: 1,
-    maxValues: 10,
-  });
-
-  const backBtn = createBackButton(`${TVC}:panel:${channel.id}`, "← Back to Panel");
-
-  const rows = buildSafeActionRows([
-    new ActionRowBuilder().addComponents(userSelect),
-    new ActionRowBuilder().addComponents(roleSelect),
-    new ActionRowBuilder().addComponents(backBtn),
-  ]);
-
-  return makeInfoCard(
-    "✅ Trust User or Role",
-    "Select users or roles to grant access (connect, view, speak) to this channel:",
-    { actionRows: rows },
-  );
+  return buildAccessView(channel, ACCESS_VIEWS.trust, t);
 }
 
-/** Builds the sub-action view for untrusting users or roles. */
 export function buildUntrustView(
   channel: VoiceBasedChannel,
   _record: VcRecord,
-  _t?: LumiT,
+  t?: LumiT,
 ): PanelMessage {
-  const userSelect = createUserSelectMenu({
-    customId: `${TVC}:select_untrust:${channel.id}`,
-    placeholder: "Select user(s) to untrust…",
-    minValues: 1,
-    maxValues: 10,
-  });
-
-  const roleSelect = createRoleSelectMenu({
-    customId: `${TVC}:select_untrust_role:${channel.id}`,
-    placeholder: "Select role(s) to untrust…",
-    minValues: 1,
-    maxValues: 10,
-  });
-
-  const backBtn = createBackButton(`${TVC}:panel:${channel.id}`, "← Back to Panel");
-
-  const rows = buildSafeActionRows([
-    new ActionRowBuilder().addComponents(userSelect),
-    new ActionRowBuilder().addComponents(roleSelect),
-    new ActionRowBuilder().addComponents(backBtn),
-  ]);
-
-  return makeInfoCard(
-    "❎ Untrust User or Role",
-    "Select users or roles to remove custom permissions from this channel:",
-    { actionRows: rows },
-  );
+  return buildAccessView(channel, ACCESS_VIEWS.untrust, t);
 }
 
-/** Builds the sub-action view for blocking users or roles. */
 export function buildBlockView(
   channel: VoiceBasedChannel,
   _record: VcRecord,
-  _t?: LumiT,
+  t?: LumiT,
 ): PanelMessage {
-  const userSelect = createUserSelectMenu({
-    customId: `${TVC}:select_block:${channel.id}`,
-    placeholder: "Select user(s) to block…",
-    minValues: 1,
-    maxValues: 10,
-  });
-
-  const roleSelect = createRoleSelectMenu({
-    customId: `${TVC}:select_block_role:${channel.id}`,
-    placeholder: "Select role(s) to block…",
-    minValues: 1,
-    maxValues: 10,
-  });
-
-  const backBtn = createBackButton(`${TVC}:panel:${channel.id}`, "← Back to Panel");
-
-  const rows = buildSafeActionRows([
-    new ActionRowBuilder().addComponents(userSelect),
-    new ActionRowBuilder().addComponents(roleSelect),
-    new ActionRowBuilder().addComponents(backBtn),
-  ]);
-
-  return makeInfoCard(
-    "🚫 Block User or Role",
-    "Select users or roles to block from joining this voice channel:",
-    { actionRows: rows },
-  );
+  return buildAccessView(channel, ACCESS_VIEWS.block, t);
 }
 
-/** Builds the sub-action view for unblocking users or roles. */
 export function buildUnblockView(
   channel: VoiceBasedChannel,
   _record: VcRecord,
-  _t?: LumiT,
+  t?: LumiT,
 ): PanelMessage {
-  const userSelect = createUserSelectMenu({
-    customId: `${TVC}:select_unblock:${channel.id}`,
-    placeholder: "Select user(s) to unblock…",
-    minValues: 1,
-    maxValues: 10,
-  });
-
-  const roleSelect = createRoleSelectMenu({
-    customId: `${TVC}:select_unblock_role:${channel.id}`,
-    placeholder: "Select role(s) to unblock…",
-    minValues: 1,
-    maxValues: 10,
-  });
-
-  const backBtn = createBackButton(`${TVC}:panel:${channel.id}`, "← Back to Panel");
-
-  const rows = buildSafeActionRows([
-    new ActionRowBuilder().addComponents(userSelect),
-    new ActionRowBuilder().addComponents(roleSelect),
-    new ActionRowBuilder().addComponents(backBtn),
-  ]);
-
-  return makeInfoCard(
-    "♻️ Unblock User or Role",
-    "Select users or roles to remove block restrictions from this channel:",
-    { actionRows: rows },
-  );
+  return buildAccessView(channel, ACCESS_VIEWS.unblock, t);
 }
 
-/** Builds the sub-action view for transferring ownership. */
 export function buildTransferView(
   channel: VoiceBasedChannel,
   _record: VcRecord,
-  _t?: LumiT,
+  t?: LumiT,
 ): PanelMessage {
   const userSelect = createUserSelectMenu({
     customId: `${TVC}:select_transfer:${channel.id}`,
-    placeholder: "Select new channel owner…",
+    placeholder: t
+      ? t("tempvc:transferPlaceholder")
+      : "Select new channel owner…",
     minValues: 1,
     maxValues: 1,
   });
 
-  const backBtn = createBackButton(`${TVC}:panel:${channel.id}`, "← Back to Panel");
-
   const rows = buildSafeActionRows([
     new ActionRowBuilder().addComponents(userSelect),
-    new ActionRowBuilder().addComponents(backBtn),
+    backToPanelRow(channel.id, t),
   ]);
 
   return makeInfoCard(
-    "🔄 Transfer Ownership",
-    "Select a new owner for this voice channel:",
+    t ? t("tempvc:transferTitle") : "🔄 Transfer Ownership",
+    t ? t("tempvc:transferMessage") : "Select a new owner for this voice channel:",
     { actionRows: rows },
   );
 }
@@ -362,7 +344,10 @@ export function buildDeleteConfirmView(
     style: ButtonStyle.Danger,
   });
 
-  const backBtn = createBackButton(`${TVC}:panel:${channel.id}`, "← Back to Panel");
+  const backBtn = createBackButton(
+    `${TVC}:panel:${channel.id}`,
+    t ? t("tempvc:backToPanel") : "← Back to Panel",
+  );
 
   const rows = buildSafeActionRows([
     new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn, backBtn),

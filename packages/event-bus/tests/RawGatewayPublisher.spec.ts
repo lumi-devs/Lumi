@@ -18,7 +18,7 @@ describe("RawGatewayPublisher", () => {
     },
   });
 
-  it("attaches to handlePacket and forwards op=0 dispatch packets to the bus", async () => {
+  it("attaches to handlePacket and forwards op=0 dispatch packets to the bus", () => {
     const bus = createMockBus();
     const client = createMockClient();
     const publisher = new RawGatewayPublisher(bus, client, { maxLen: 5000 });
@@ -227,14 +227,14 @@ describe("attachProxyPublisher", () => {
   });
 
   const createMockEmitter = () => {
-    const listeners: Record<string, Array<Function>> = {};
+    const listeners: Record<string, Array<(...args: unknown[]) => void>> = {};
     return {
       listeners,
-      on: vi.fn((event: string, fn: Function) => {
+      on: vi.fn((event: string, fn: (...args: unknown[]) => void) => {
         listeners[event] = listeners[event] || [];
         listeners[event].push(fn);
       }),
-      off: vi.fn((event: string, fn: Function) => {
+      off: vi.fn((event: string, fn: (...args: unknown[]) => void) => {
         if (listeners[event]) {
           listeners[event] = listeners[event].filter((f) => f !== fn);
         }
@@ -285,7 +285,7 @@ describe("attachProxyPublisher", () => {
     expect(emitter.on).toHaveBeenCalledWith("custom_dispatch", expect.any(Function));
 
     // Missing t
-    emitter.emit("custom_dispatch", { op: 0 } as any, 0);
+    emitter.emit("custom_dispatch", { op: 0 }, 0);
     // Ignored type
     emitter.emit("custom_dispatch", { op: 0, t: "TYPING_START" }, 0);
 

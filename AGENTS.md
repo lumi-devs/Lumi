@@ -398,6 +398,34 @@ Feature modules organize code into sub-store folders:
 - Fetch translators via `const t = await this.fetchT(interaction);`.
 - Use localized string keys (e.g. `t('commands:ping.response', { ms })`).
 
+### 9.3 Panel Kit (`#lib/utilities/ui/kit.js`, re-exported from `#utilities/panels.js`)
+
+This is the mandated way to build admin-facing panels (hub, config, module
+subpanels). Do not hand-roll section/button/tab layouts - use these builders
+so every panel stays visually and structurally consistent, and so the
+5-action-row limit is respected by construction:
+
+- **`settingRow(lines, button)`** - the core list-row primitive: up to three
+  text lines as a `SectionBuilder` with an inline Edit/Toggle button
+  accessory. Use for every "one setting per row" list (permissions, config
+  fields, addon entries).
+- **`thumbRow(lines, imageUrl)`** - same shape, with a thumbnail accessory
+  instead of a button (e.g. the hub header's guild icon).
+- **`tabRow(prefix, tabs, activeId)`** - the panel tab bar. Active tab renders
+  disabled/Primary; others are Secondary buttons with customId
+  `<prefix>:<tab.id>`. Max 5 tabs (one action row).
+- **`confirmRow({ confirmId, cancelId, confirmLabel?, cancelLabel?, confirmStyle? })`** - the
+  standard Danger-confirm + Secondary-cancel pair for destructive flows
+  (`/panic`, `/purge`, resets).
+- **`backRow(customId, label?)`** - a lone back button for subpanels.
+- **`createPaginationRow({ customIdPrefix, currentPage, totalPages })`**
+  (`#utilities/panels.js`) - the one stateless pagination scheme
+  (`prefix:prev:N` / `prefix:next:N`); don't build another paging mechanism.
+
+A view builder that needs more than 5 rows is a sign the data belongs in a
+subpanel (own view + back button), not a wider single view - see the config
+panel's per-field edit subpanels for the pattern.
+
 ---
 
 ## 10. 📊 Observability & Telemetry

@@ -121,5 +121,33 @@ describe("Base Repository", () => {
 
       expect(cacheMisses.inc).toHaveBeenCalledWith({ cache: "unknown" });
     });
+
+    it("dedupes concurrent misses for the same key into one fetch", async () => {
+      mockRedis.get.mockResolvedValue(null);
+      let resolveFetch!: (v: string) => void;
+      const fetcher = vi.fn().mockReturnValue(
+        new Promise<string>((resolve) => {
+          resolveFetch = resolve;
+        })
+      );
+
+      const first = repo.callGetOrSet("prefix:flight:1", 60, fetcher);
+      const second = repo.callGetOrSet("prefix:flight:1", 60, fetcher);
+      resolveFetch("shared");
+
+      await expect(first).resolves.toBe("shared");
+      await expect(second).resolves.toBe("shared");
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not cache undefined fetcher results", async () => {
+      mockRedis.get.mockResolvedValue(null);
+      const fetcher = vi.fn().mockResolvedValue(undefined);
+
+      const result = await repo.callGetOrSet("prefix:none:1", 60, fetcher);
+
+      expect(result).toBeUndefined();
+      expect(mockRedis.setex).not.toHaveBeenCalled();
+    });
   });
 });

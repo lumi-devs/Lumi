@@ -2,7 +2,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry, container } from "@sapphire/framework";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { getThresholds } from "../lib/thresholds.js";
-import { buildWarnThresholdsPanelView } from "../lib/warn-thresholds-panel.js";
+import { buildWarnThresholdsPanel } from "../lib/warn-thresholds-panel.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "warnthresholds",
@@ -37,15 +37,6 @@ export class WarnThresholdsCommand extends BaseSubcommand {
     const decayRaw = await container.db.config.getModuleConfig(ctx.guildId!, "mod", "warn_decay_days");
     const decayDays = typeof decayRaw === "number" ? decayRaw : 30;
 
-    const view = buildWarnThresholdsPanelView(thresholds, decayDays);
-    const renderCtx = {
-      sessionId: `wt:${ctx.guildId}:${ctx.user.id}`,
-      guildId: ctx.guildId!,
-      userId: ctx.user.id,
-      moduleStore: container.stores.get("modules"),
-    };
-
-    const rendered = await view.render(renderCtx);
-    await ctx.reply(rendered);
+    await ctx.reply(buildWarnThresholdsPanel(thresholds, decayDays));
   }
 }

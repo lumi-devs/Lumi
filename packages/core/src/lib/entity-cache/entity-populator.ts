@@ -48,30 +48,27 @@ async function handle(
           roles?: APIRole[];
           members?: APIGuildMember[];
         };
-        if (Array.isArray(gc.channels)) {
-          for (const c of gc.channels) {
-            await cache.putChannel({
+        const channels = Array.isArray(gc.channels)
+          ? gc.channels.map((c) => ({
               id: c.id,
               guildId: g.id,
               name: ("name" in c && c.name) || "",
               type: c.type,
               parentId: ("parent_id" in c && c.parent_id) || undefined,
               cachedAt: now,
-            });
-          }
-        }
-        if (Array.isArray(gc.roles)) {
-          for (const r of gc.roles) {
-            await cache.putRole({
+            }))
+          : [];
+        const roles = Array.isArray(gc.roles)
+          ? gc.roles.map((r) => ({
               id: r.id,
               guildId: g.id,
               name: r.name,
               permissions: r.permissions,
               position: r.position,
               cachedAt: now,
-            });
-          }
-        }
+            }))
+          : [];
+        await Promise.all([cache.putChannels(channels), cache.putRoles(roles)]);
       }
       return;
     }

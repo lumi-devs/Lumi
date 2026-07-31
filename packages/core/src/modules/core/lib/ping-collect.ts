@@ -418,7 +418,22 @@ export function getRuntimeLabel() {
   return `Node.js ${process.version}`;
 }
 
+let lastCollect: {
+  at: number;
+  data: Omit<PingData, "roundTrip">;
+} | null = null;
+const COLLECT_TTL_MS = 5_000;
+
 export async function collectPingData(): Promise<Omit<PingData, "roundTrip">> {
+  if (lastCollect && Date.now() - lastCollect.at < COLLECT_TTL_MS) {
+    return lastCollect.data;
+  }
+  const data = await collectPingDataFresh();
+  lastCollect = { at: Date.now(), data };
+  return data;
+}
+
+async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
   const { client, redis, moduleStore, stats, rabbit } = container;
   const wsPing = client.ws.ping ?? 0;
 

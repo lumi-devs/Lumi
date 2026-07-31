@@ -52,7 +52,7 @@ export function getConsumerId(): string {
 }
 
 export const isInteractionDeferAtGateway = () =>
-  process.env["INTERACTION_DEFER_AT_GATEWAY"] === "true";
+  process.env["INTERACTION_DEFER_AT_GATEWAY"] !== "false";
 
 /**
  * Whether to run the Redis entity-cache populator. The projection is

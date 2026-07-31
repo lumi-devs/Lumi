@@ -4,11 +4,8 @@ import {
   ChannelSelectMenuBuilder,
   MentionableSelectMenuBuilder,
   RoleSelectMenuBuilder,
-  SectionBuilder,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
-  TextDisplayBuilder,
-  ThumbnailBuilder,
   UserSelectMenuBuilder,
   type AnyComponentBuilder,
   type MessageActionRowComponentBuilder,
@@ -22,6 +19,16 @@ import { container } from "@sapphire/framework";
 import { Emojis } from "#utilities/assets.js";
 
 export { formatBreadcrumbHeader, formatStatusBadge, formatSubtitle, breadcrumbs } from "./ui/layout.js";
+export {
+  settingRow,
+  thumbRow,
+  tabRow,
+  confirmRow,
+  backRow,
+  type AccessoryButton,
+  type Tab,
+  type ConfirmRowOptions,
+} from "./ui/kit.js";
 
 export interface CreateUserSelectMenuOptions {
   customId: string;
@@ -84,14 +91,6 @@ export function createUserSelectMenu(
   return menu;
 }
 
-export function createUserSelectMenuRow(
-  options: CreateUserSelectMenuOptions,
-): ActionRowBuilder<UserSelectMenuBuilder> {
-  return new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(
-    createUserSelectMenu(options),
-  );
-}
-
 export function createRoleSelectMenu(
   options: CreateRoleSelectMenuOptions,
 ): RoleSelectMenuBuilder {
@@ -101,14 +100,6 @@ export function createRoleSelectMenu(
   if (options.maxValues !== undefined) menu.setMaxValues(options.maxValues);
   if (options.disabled !== undefined) menu.setDisabled(options.disabled);
   return menu;
-}
-
-export function createRoleSelectMenuRow(
-  options: CreateRoleSelectMenuOptions,
-): ActionRowBuilder<RoleSelectMenuBuilder> {
-  return new ActionRowBuilder<RoleSelectMenuBuilder>().addComponents(
-    createRoleSelectMenu(options),
-  );
 }
 
 export function createChannelSelectMenu(
@@ -125,14 +116,6 @@ export function createChannelSelectMenu(
   return menu;
 }
 
-export function createChannelSelectMenuRow(
-  options: CreateChannelSelectMenuOptions,
-): ActionRowBuilder<ChannelSelectMenuBuilder> {
-  return new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
-    createChannelSelectMenu(options),
-  );
-}
-
 export function createMentionableSelectMenu(
   options: CreateMentionableSelectMenuOptions,
 ): MentionableSelectMenuBuilder {
@@ -142,14 +125,6 @@ export function createMentionableSelectMenu(
   if (options.maxValues !== undefined) menu.setMaxValues(options.maxValues);
   if (options.disabled !== undefined) menu.setDisabled(options.disabled);
   return menu;
-}
-
-export function createMentionableSelectMenuRow(
-  options: CreateMentionableSelectMenuOptions,
-): ActionRowBuilder<MentionableSelectMenuBuilder> {
-  return new ActionRowBuilder<MentionableSelectMenuBuilder>().addComponents(
-    createMentionableSelectMenu(options),
-  );
 }
 
 export function createStringSelectMenu(
@@ -184,26 +159,6 @@ export function createStringSelectMenu(
   }
 
   return menu;
-}
-
-export function createStringSelectMenuRow(
-  options: CreateStringSelectMenuOptions,
-): ActionRowBuilder<StringSelectMenuBuilder> {
-  return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-    createStringSelectMenu(options),
-  );
-}
-
-export function createMultiSelectMenuRow(
-  options: CreateStringSelectMenuOptions,
-): ActionRowBuilder<StringSelectMenuBuilder> {
-  const minVal = options.minValues ?? 1;
-  const maxVal = options.maxValues ?? (options.options ? options.options.length : 25);
-  return createStringSelectMenuRow({
-    ...options,
-    minValues: minVal,
-    maxValues: maxVal,
-  });
 }
 
 export interface CreateActionButtonOptions {
@@ -330,26 +285,3 @@ export function createCategorySubmenuRow(
   return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
 }
 
-export function createSectionWithThumbnail(
-  lines: string[],
-  imageUrl: string,
-): SectionBuilder {
-  const section = new SectionBuilder().setThumbnailAccessory(
-    new ThumbnailBuilder().setURL(imageUrl),
-  );
-  for (const line of lines) {
-    section.addTextDisplayComponents(new TextDisplayBuilder().setContent(line));
-  }
-  return section;
-}
-
-export function createSectionWithButton(
-  lines: string[],
-  button: ButtonBuilder,
-): SectionBuilder {
-  const section = new SectionBuilder().setButtonAccessory(button);
-  for (const line of lines) {
-    section.addTextDisplayComponents(new TextDisplayBuilder().setContent(line));
-  }
-  return section;
-}

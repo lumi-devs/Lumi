@@ -17,6 +17,8 @@ import {
   type ModalSubmitInteraction,
 } from "discord.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { fetchTyped } from "#lib/commands.js";
+import type { LumiT } from "#lib/i18n/index.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";
 import { FieldType } from "#lib/module-system/Module.js";
@@ -24,6 +26,7 @@ import type { ConfigService } from "#lib/services/ConfigService.js";
 import {
   buildFeatureDetailView,
   buildFeatureListView,
+  buildFieldEditView,
   buildHistoryView,
   buildOverridesView,
   hasPanelAccess,
@@ -71,21 +74,39 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
       return this.#openConfigureModal(interaction, guildId, moduleName);
     if (action === "ovadd")
       return this.#openOverrideModal(interaction, guildId, moduleName);
+    if (action === "fedit")
+      return this.#openFieldModal(interaction, guildId, moduleName, rest[0]);
 
     await this.acknowledge(interaction);
+    const t = await fetchTyped(interaction);
 
     switch (action) {
       case "back": {
         const features = await loadFeatures(guildId);
-        return interaction.editReply(buildFeatureListView(features));
+        return interaction.editReply(buildFeatureListView(features, 0, t));
       }
       case "page": {
-        const page = parseInt(moduleName, 10) || 0;
+        const page = parseInt(rest[0] ?? moduleName, 10) || 0;
         const features = await loadFeatures(guildId);
-        return interaction.editReply(buildFeatureListView(features, page));
+        return interaction.editReply(buildFeatureListView(features, page, t));
       }
       case "open":
-        return this.#renderDetail(interaction, guildId, moduleName);
+        return this.#renderDetail(interaction, guildId, moduleName, 0, t);
+      case "field": {
+        const key = rest[0];
+        const fieldPage = parseInt(rest[1] ?? "0", 10) || 0;
+        if (!key) return;
+        const detail = await this.#requireDetail(guildId, moduleName);
+        const field = detail.meta.configFields?.find((f) => f.key === key);
+        if (!field) return;
+        return interaction.editReply(
+          buildFieldEditView(detail.meta, field, detail.config, fieldPage, t),
+        );
+      }
+      case "fpage": {
+        const page = parseInt(rest[1] ?? "0", 10) || 0;
+        return this.#renderDetail(interaction, guildId, moduleName, page, t);
+      }
       case "tog": {
         const detail = await this.#requireDetail(guildId, moduleName);
         await this.cfg.toggleGuildModule(
@@ -93,14 +114,15 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
           moduleName,
           !detail.guildEnabled,
         );
-        return this.#renderDetail(interaction, guildId, moduleName);
+        return this.#renderDetail(interaction, guildId, moduleName, 0, t);
       }
       case "rst": {
         await this.container.db.config.clearModuleConfig(guildId, moduleName);
-        return this.#renderDetail(interaction, guildId, moduleName);
+        return this.#renderDetail(interaction, guildId, moduleName, 0, t);
       }
       case "bool": {
         const key = rest[0];
+        const fieldPage = parseInt(rest[1] ?? "0", 10) || 0;
         if (!key) return;
         const detail = await this.#requireDetail(guildId, moduleName);
         const field = detail.meta.configFields?.find((f) => f.key === key);
@@ -115,7 +137,13 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
           String(!current),
           interaction.user.id,
         );
-        return this.#renderDetail(interaction, guildId, moduleName);
+        return this.#renderDetail(
+          interaction,
+          guildId,
+          moduleName,
+          fieldPage,
+          t,
+        );
       }
       case "hist": {
         const detail = await this.#requireDetail(guildId, moduleName);
@@ -145,11 +173,50 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
     interaction: ButtonInteraction,
     guildId: string,
     moduleName: string,
+    fieldPage = 0,
+    t?: LumiT,
   ) {
     const detail = await this.#requireDetail(guildId, moduleName);
     return interaction.editReply(
-      buildFeatureDetailView(detail.meta, detail.config, detail.guildEnabled),
+      buildFeatureDetailView(
+        detail.meta,
+        detail.config,
+        detail.guildEnabled,
+        fieldPage,
+        t,
+      ),
     );
+  }
+
+  async #openFieldModal(
+    interaction: ButtonInteraction,
+    guildId: string,
+    moduleName: string,
+    key: string | undefined,
+  ) {
+    if (!key) return;
+    const detail = await this.#requireDetail(guildId, moduleName);
+    const field = detail.meta.configFields?.find((f) => f.key === key);
+    if (!field) return;
+
+    const current = detail.config[field.key];
+    const input = new TextInputBuilder()
+      .setCustomId("value")
+      .setLabel(field.label.slice(0, 45))
+      .setStyle(TextInputStyle.Short)
+      .setRequired(Boolean(field.required));
+    if (field.description) input.setPlaceholder(field.description.slice(0, 100));
+    if (current !== null && current !== undefined)
+      input.setValue(String(current).slice(0, 4000));
+
+    const modal = new ModalBuilder()
+      .setCustomId(`cfg:fmodal:${moduleName}:${field.key}`)
+      .setTitle(field.label.slice(0, 45))
+      .addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(input),
+      );
+
+    return interaction.showModal(modal);
   }
 
   async #requireDetail(
@@ -253,8 +320,8 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
 
   public override parse(interaction: AnySelectMenuInteraction) {
     if (!interaction.customId.startsWith("cfg:")) return this.none();
-    const [, action, moduleName, key] = interaction.customId.split(":");
-    return this.some({ action, moduleName, key });
+    const [, action, moduleName, key, page] = interaction.customId.split(":");
+    return this.some({ action, moduleName, key, page });
   }
 
   public async run(
@@ -263,12 +330,15 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
       action,
       moduleName,
       key,
-    }: { action: string; moduleName: string; key: string },
+      page,
+    }: { action: string; moduleName: string; key: string; page?: string },
   ) {
     if (!interaction.inGuild()) return;
     if (!(await hasPanelAccess(interaction))) throw accessDenied();
     const { guildId } = interaction;
     await this.acknowledge(interaction);
+    const t = await fetchTyped(interaction);
+    const fieldPage = parseInt(page ?? "0", 10) || 0;
 
     switch (action) {
       case "sel": {
@@ -276,7 +346,12 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
           ? interaction.values[0]
           : undefined;
         if (!selected || selected === "_none") return;
-        return this.#renderDetail(interaction, guildId, selected);
+        return this.#renderDetail(interaction, guildId, selected, 0, t);
+      }
+      case "gsel": {
+        if (!interaction.isStringSelectMenu()) return;
+        const section = parseInt(interaction.values[0] ?? "0", 10) || 0;
+        return this.#renderDetail(interaction, guildId, moduleName, section, t);
       }
       case "enum": {
         if (!interaction.isStringSelectMenu() || !key) return;
@@ -289,7 +364,7 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
             value,
             interaction.user.id,
           );
-        return this.#renderDetail(interaction, guildId, moduleName);
+        return this.#renderDetail(interaction, guildId, moduleName, fieldPage, t);
       }
       case "ch":
       case "role":
@@ -311,7 +386,7 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
             key,
           );
         }
-        return this.#renderDetail(interaction, guildId, moduleName);
+        return this.#renderDetail(interaction, guildId, moduleName, fieldPage, t);
       }
       case "rb": {
         if (!interaction.isStringSelectMenu()) return;
@@ -378,11 +453,19 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
     interaction: AnySelectMenuInteraction,
     guildId: string,
     moduleName: string,
+    fieldPage = 0,
+    t?: LumiT,
   ) {
     const detail = await loadDetail(guildId, moduleName);
     if (!detail) return;
     return interaction.editReply(
-      buildFeatureDetailView(detail.meta, detail.config, detail.guildEnabled),
+      buildFeatureDetailView(
+        detail.meta,
+        detail.config,
+        detail.guildEnabled,
+        fieldPage,
+        t,
+      ),
     );
   }
 }
@@ -399,16 +482,21 @@ export class ConfigPanelModalHandler extends InteractionHandler {
   public override parse(interaction: ModalSubmitInteraction) {
     if (
       !interaction.customId.startsWith("cfg:modal:") &&
-      !interaction.customId.startsWith("cfg:ovmodal:")
+      !interaction.customId.startsWith("cfg:ovmodal:") &&
+      !interaction.customId.startsWith("cfg:fmodal:")
     )
       return this.none();
-    const [, kind, moduleName] = interaction.customId.split(":");
-    return this.some({ kind, moduleName });
+    const [, kind, moduleName, fieldKey] = interaction.customId.split(":");
+    return this.some({ kind, moduleName, fieldKey });
   }
 
   public async run(
     interaction: ModalSubmitInteraction,
-    { kind, moduleName }: { kind: string; moduleName: string },
+    {
+      kind,
+      moduleName,
+      fieldKey,
+    }: { kind: string; moduleName: string; fieldKey?: string },
   ) {
     if (!interaction.inGuild() || !(await hasPanelAccess(interaction))) {
       return interaction.reply(
@@ -433,7 +521,38 @@ export class ConfigPanelModalHandler extends InteractionHandler {
       );
     }
 
-    if (kind === "modal") {
+    if (kind === "fmodal") {
+      const field = record.meta.configFields?.find((f) => f.key === fieldKey);
+      if (!field)
+        return this.#err(interaction, `\`${fieldKey}\` is not a valid config key.`);
+      const raw = interaction.fields.getTextInputValue("value").trim();
+      try {
+        if (raw === "") {
+          await this.container.db.config.deleteModuleConfigKey(
+            guildId,
+            moduleName,
+            field.key,
+          );
+        } else {
+          await this.cfg.setConfig(
+            guildId,
+            moduleName,
+            field.key,
+            raw,
+            interaction.user.id,
+          );
+        }
+      } catch (err) {
+        return interaction.reply(
+          ephemeralCard(
+            makeErrorCard(
+              "Invalid Value",
+              `**${field.label}**: ${err instanceof Error ? err.message : String(err)}`,
+            ),
+          ),
+        );
+      }
+    } else if (kind === "modal") {
       for (const f of record.meta.configFields ?? []) {
         if (f.type !== FieldType.STRING && f.type !== FieldType.NUMBER)
           continue;
@@ -521,10 +640,13 @@ export class ConfigPanelModalHandler extends InteractionHandler {
 
     const detail = await loadDetail(guildId, moduleName);
     if (!detail) return;
+    const t = await fetchTyped(interaction);
     const view = buildFeatureDetailView(
       detail.meta,
       detail.config,
       detail.guildEnabled,
+      0,
+      t,
     );
     if (interaction.isFromMessage()) return interaction.update(view);
     return interaction.reply(ephemeralCard(view));

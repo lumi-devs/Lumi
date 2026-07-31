@@ -75,40 +75,6 @@ export class PermissionService extends Service {
     );
   }
 
-  public async addOverride(
-    guildId: string,
-    commandPath: string,
-    type: string,
-    targetRaw: string | null,
-    _allow: boolean,
-  ) {
-    const targetType = type === "user" ? "user" : "role";
-    const targetId = this.parseTarget(targetRaw, targetType);
-    await this.container.db.permissions.grantCustomPermit(
-      guildId,
-      targetType,
-      targetId,
-      commandPath,
-    );
-    return targetId;
-  }
-
-  public async resetOverride(
-    guildId: string,
-    commandPath: string,
-    type: string | null,
-    targetRaw: string | null,
-  ) {
-    const targetType = type === "user" ? "user" : "role";
-    const targetId = targetRaw ? this.parseTarget(targetRaw, targetType) : "0";
-    const count = await this.container.db.permissions.revokeCustomPermit(
-      guildId,
-      targetType,
-      targetId,
-      commandPath,
-    );
-    return count;
-  }
 }
 
 declare module "#lib/module-system/Service.js" {

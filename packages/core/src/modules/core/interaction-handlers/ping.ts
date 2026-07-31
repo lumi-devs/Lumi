@@ -49,11 +49,13 @@ export class PingInteractionHandler extends BaseInteractionHandler {
     const data = await collectPingData();
 
     if (result.category === "overview") {
-      return interaction.editReply({
-        components: [
-          buildOverviewCard({ roundTrip: null, ...data }, result.userId),
-        ],
-      });
+      return interaction
+        .editReply({
+          components: [
+            buildOverviewCard({ roundTrip: null, ...data }, result.userId),
+          ],
+        })
+        .catch(() => null);
     }
 
     const card = buildDetailCard(
@@ -61,6 +63,6 @@ export class PingInteractionHandler extends BaseInteractionHandler {
       { roundTrip: null, ...data },
       result.userId,
     );
-    return interaction.editReply({ components: [card] });
+    return interaction.editReply({ components: [card] }).catch(() => null);
   }
 }

@@ -1,7 +1,7 @@
 // Redis Streams transport: consumer groups give at-least-once delivery, horizontal
 // worker scaling (each consumer claims a partition of the pending list), and bounded
 // memory via MAXLEN ~. This is the production transport once the gateway/worker split
-// flips on (TRANSPORT=streams). There's one stream per gateway event type
+// flips on. There is one stream per gateway event type
 // (`lumi:gw:message_create`, etc.) for per-event backpressure, independent MAXLEN and
 // targeted lag dashboards; one consumer group per worker pool (default
 // `lumi-workers`); and bodies JSON-encoded into a single `b` field.
@@ -312,7 +312,7 @@ export class RedisStreamsBus implements EventBus {
       let cursor = "0-0";
       // Bound the loop - claim up to ~128 entries per tick, then yield.
       for (let i = 0; i < 8; i++) {
-        const resp = (await this.subStream.xautoclaim(
+        const resp = (await this.pubStream.xautoclaim(
           stream,
           opts.group,
           opts.consumer,

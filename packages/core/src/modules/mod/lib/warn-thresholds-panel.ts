@@ -6,7 +6,6 @@ import {
 } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 import { badge, makeInfoCard, type CardReply } from "#lib/utilities/cards.js";
-import type { View, ViewContext } from "#lib/utilities/ui/types.js";
 
 export interface WarnThresholds {
   [count: string]: {
@@ -21,20 +20,16 @@ export interface WarnThresholdsPanelOptions {
   selectedDuration?: string;
 }
 
-export function buildWarnThresholdsPanelView(
+export function buildWarnThresholdsPanel(
   thresholds: WarnThresholds,
   decayDays: number = 30,
   options: WarnThresholdsPanelOptions = {},
-): View {
+): CardReply {
   const selectedCount = options.selectedCount ?? 3;
   const selectedAction = options.selectedAction ?? "mute";
   const selectedDuration = options.selectedDuration ?? "1h";
 
-  return {
-    id: "warnthresholds",
-    label: "Warn Escalation Control Center",
-    render: (_ctx: ViewContext): CardReply => {
-      const entries = Object.entries(thresholds).sort(([a], [b]) => Number(a) - Number(b));
+  const entries = Object.entries(thresholds).sort(([a], [b]) => Number(a) - Number(b));
       const ruleBadges = entries.length > 0
         ? entries
             .map(([cnt, entry]) => {
@@ -168,9 +163,7 @@ export function buildWarnThresholdsPanelView(
           .setDisabled(entries.length === 0),
       );
 
-      return makeInfoCard("⚡ Warning Threshold Control Center", bodyText, {
-        actionRows: [row1, row2, row3],
-      });
-    },
-  };
+  return makeInfoCard("⚡ Warning Threshold Control Center", bodyText, {
+    actionRows: [row1, row2, row3],
+  });
 }

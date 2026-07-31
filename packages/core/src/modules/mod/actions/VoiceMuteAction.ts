@@ -3,7 +3,6 @@ import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { formatAuditReason } from "#lib/utilities/misc.js";
 import { logToChannel, scheduleCaseLift } from "../lib/helpers.js";
-import { BaseAction } from "./BaseAction.js";
 import { errorCode } from "#lib/utilities/errors.js";
 import { RedisKeys } from "#database/redis.js";
 
@@ -22,8 +21,8 @@ export interface VoiceMuteUndoOptions {
   reason: string;
 }
 
-export class VoiceMuteAction extends BaseAction {
-  public static override async apply(options: VoiceMuteApplyOptions) {
+export class VoiceMuteAction {
+  public static async apply(options: VoiceMuteApplyOptions) {
     const { guild, targetMember, moderator, reason, durationMs } = options;
     const auditReason = formatAuditReason(moderator, reason);
 

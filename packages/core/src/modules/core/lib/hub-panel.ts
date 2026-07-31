@@ -1,7 +1,7 @@
 import {
   ActionRowBuilder,
   ButtonBuilder,
-  StringSelectMenuBuilder,
+  SectionBuilder,
   StringSelectMenuOptionBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
@@ -10,16 +10,31 @@ import { cutText } from "@sapphire/utilities";
 import {
   channelMention,
   roleMention,
+  time,
+  TimestampStyles,
   userMention,
 } from "@discordjs/formatters";
-import { makeCard, noPingCard, type CardReply } from "#lib/utilities/cards.js";
+import {
+  CARD_ACCENTS,
+  makeCard,
+  noPingCard,
+  type CardReply,
+} from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { SUPPORTED_LANGUAGES } from "#lib/i18n/index.js";
-import { createStringSelectMenu } from "#utilities/panels.js";
-
-export const formatSubtitle = (text: string) => `-# ${text}`;
+import { SUPPORTED_LANGUAGES, type LumiT } from "#lib/i18n/index.js";
+import { PanelsKeys } from "#lib/i18n/keys.js";
+import {
+  createMentionableSelectMenu,
+  createPaginationRow,
+  createStringSelectMenu,
+  settingRow,
+  tabRow,
+  type Tab,
+} from "#utilities/panels.js";
 
 export const DEFAULT_PREFIX = ",";
+export const PERMS_PER_PAGE = 6;
+export const ADDON_ROWS_PER_PAGE = 8;
 
 type Row = ActionRowBuilder<MessageActionRowComponentBuilder>;
 
@@ -28,36 +43,47 @@ const row = (...components: MessageActionRowComponentBuilder[]): Row =>
     ...components,
   );
 
-export function hubRow(): Row {
-  return row(
-    new ButtonBuilder()
-      .setCustomId("lumi:tab:modules")
-      .setLabel("Modules")
-      .setEmoji(Emojis.parse(Emojis.GEAR))
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId("lumi:tab:permissions")
-      .setLabel("Permissions")
-      .setEmoji(Emojis.parse(Emojis.SHIELD))
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId("lumi:tab:settings")
-      .setLabel("Settings")
-      .setEmoji(Emojis.parse(Emojis.GUILD))
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId("lumi:tab:addons")
-      .setLabel("Addons")
-      .setEmoji(Emojis.parse(Emojis.REPO))
-      .setStyle(ButtonStyle.Primary),
-  );
+export type HubTabId =
+  | "home"
+  | "modules"
+  | "permissions"
+  | "settings"
+  | "addons";
+
+const hubTabs = (t?: LumiT): Tab[] => [
+  { id: "home", label: t ? t(PanelsKeys.TabHome) : "Hub", emoji: Emojis.BOT },
+  {
+    id: "modules",
+    label: t ? t(PanelsKeys.TabModules) : "Modules",
+    emoji: Emojis.GEAR,
+  },
+  {
+    id: "permissions",
+    label: t ? t(PanelsKeys.TabPermissions) : "Permissions",
+    emoji: Emojis.SHIELD,
+  },
+  {
+    id: "settings",
+    label: t ? t(PanelsKeys.TabSettings) : "Settings",
+    emoji: Emojis.GUILD,
+  },
+  {
+    id: "addons",
+    label: t ? t(PanelsKeys.TabAddons) : "Addons",
+    emoji: Emojis.REPO,
+  },
+];
+
+/** The persistent tab bar shown on every hub view. */
+export function hubTabRow(active: HubTabId, t?: LumiT): Row {
+  return tabRow("lumi:tab", hubTabs(t), active);
 }
 
-export function backToHubRow(): Row {
+export function backToHubRow(t?: LumiT): Row {
   return row(
     new ButtonBuilder()
-      .setCustomId("lumi:home")
-      .setLabel("Back to Hub")
+      .setCustomId("lumi:tab:home")
+      .setLabel(t ? t(PanelsKeys.BackToHub) : "Back to Hub")
       .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
       .setStyle(ButtonStyle.Secondary),
   );
@@ -68,50 +94,74 @@ export interface HubOverview {
   enabledCount: number;
   prefix: string | null;
   locale: string;
+  iconUrl?: string | null;
 }
 
-export function buildHubView(o: HubOverview): CardReply {
-  const glance = [
-    `${Emojis.GEAR} **${o.enabledCount}** of **${o.moduleCount}** modules enabled`,
-    `${Emojis.GUILD} Language \`${o.locale}\`  •  Prefix \`${o.prefix ?? DEFAULT_PREFIX}\``,
-  ].join("\n");
+export function buildHubView(o: HubOverview, t?: LumiT): CardReply {
+  const prefix = o.prefix ?? DEFAULT_PREFIX;
+  const glanceLines = [
+    t
+      ? t(PanelsKeys.HubIntro)
+      : "Manage everything for this server from one place - no scattered commands to remember.",
+    `${Emojis.GEAR} ${
+      t
+        ? t(PanelsKeys.HubGlanceModules, { enabled: o.enabledCount, total: o.moduleCount })
+        : `**${o.enabledCount}** of **${o.moduleCount}** modules enabled`
+    }`,
+    `${Emojis.GUILD} ${
+      t
+        ? t(PanelsKeys.HubGlanceLocale, { locale: o.locale, prefix })
+        : `Language \`${o.locale}\`  •  Prefix \`${prefix}\``
+    }`,
+  ];
 
-  const tabs = [
-    `${Emojis.GEAR} **Modules** - enable, disable, and configure every feature`,
-    `${Emojis.SHIELD} **Permissions** - per-command allow / deny overrides`,
-    `${Emojis.GUILD} **Settings** - server language and command prefix`,
-    `${Emojis.REPO} **Addons** - extend Lumi with add-on modules`,
+  const hints = [
+    `${Emojis.GEAR} **${t ? t(PanelsKeys.TabModules) : "Modules"}** - ${t ? t(PanelsKeys.TabHintModules) : "enable, disable, and configure every feature"}`,
+    `${Emojis.SHIELD} **${t ? t(PanelsKeys.TabPermissions) : "Permissions"}** - ${t ? t(PanelsKeys.TabHintPermissions) : "permit grants and per-command overrides"}`,
+    `${Emojis.GUILD} **${t ? t(PanelsKeys.TabSettings) : "Settings"}** - ${t ? t(PanelsKeys.TabHintSettings) : "server language and command prefix"}`,
+    `${Emojis.REPO} **${t ? t(PanelsKeys.TabAddons) : "Addons"}** - ${t ? t(PanelsKeys.TabHintAddons) : "extend Lumi with add-on modules"}`,
   ].join("\n");
 
   return makeCard(
-    0,
-    `${Emojis.BOT} Lumi Control Panel`,
-    [
-      "Manage everything for this server from one place - no scattered commands to remember.",
-      glance,
-      tabs,
-    ],
+    CARD_ACCENTS.PRIMARY,
+    `${Emojis.BOT} ${t ? t(PanelsKeys.HubTitle) : "Lumi Control Panel"}`,
+    [glanceLines.join("\n"), hints],
     {
-      footer: "Select an option below to continue.",
-      actionRows: [hubRow()],
+      footer: t ? t(PanelsKeys.HubFooter) : "Select a tab below to continue.",
+      thumbnailUrl: o.iconUrl ?? undefined,
+      actionRows: [hubTabRow("home", t)],
     },
   );
 }
 
-export function buildSettingsView(settings: {
-  prefix: string | null;
-  locale: string;
-}): CardReply {
-  const body = [
-    `${Emojis.GUILD} **Language** - \`${settings.locale}\``,
-    `${Emojis.TERMINAL} **Prefix** - \`${settings.prefix ?? DEFAULT_PREFIX}\`${
-      settings.prefix ? "" : "  -# *(default)*"
-    }`,
-  ].join("\n");
+export function buildSettingsView(
+  settings: { prefix: string | null; locale: string },
+  t?: LumiT,
+): CardReply {
+  const prefixLabel = t ? t(PanelsKeys.SettingsPrefix) : "Prefix";
+  const prefixValue = `\`${settings.prefix ?? DEFAULT_PREFIX}\`${
+    settings.prefix
+      ? ""
+      : ` *${t ? t(PanelsKeys.SettingsPrefixDefault) : "(default)"}*`
+  }`;
+
+  const sections: SectionBuilder[] = [
+    settingRow(
+      [
+        `${Emojis.TERMINAL} **${prefixLabel}** - ${prefixValue}`,
+        `-# ${t ? t(PanelsKeys.SettingsFooter) : "Prefix commands work for a curated set of moderation and utility commands."}`,
+      ],
+      {
+        customId: "lumi:prefix:set",
+        label: t ? t(PanelsKeys.SettingsEdit) : "Edit",
+        emoji: Emojis.EDIT,
+      },
+    ),
+  ];
 
   const langSelect = createStringSelectMenu({
     customId: "lumi:setlang",
-    placeholder: "Change language…",
+    placeholder: t ? t(PanelsKeys.SettingsChangeLanguage) : "Change language…",
     options: SUPPORTED_LANGUAGES.slice(0, 25).map((lang) =>
       new StringSelectMenuOptionBuilder()
         .setLabel(lang)
@@ -120,129 +170,203 @@ export function buildSettingsView(settings: {
     ),
   });
 
-  const prefixButtons = row(
-    new ButtonBuilder()
-      .setCustomId("lumi:prefix:set")
-      .setLabel("Set Prefix")
-      .setEmoji(Emojis.parse(Emojis.EDIT))
-      .setStyle(ButtonStyle.Secondary),
+  const maintenanceButtons = row(
     new ButtonBuilder()
       .setCustomId("lumi:prefix:reset")
-      .setLabel("Reset to Default")
+      .setLabel(t ? t(PanelsKeys.SettingsReset) : "Reset")
       .setEmoji(Emojis.parse(Emojis.UNINSTALL))
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(settings.prefix === null),
-  );
-
-  const updateButtons = row(
     new ButtonBuilder()
       .setCustomId("lumi:update_all")
-      .setLabel("Update Addons")
+      .setLabel(t ? t(PanelsKeys.SettingsUpdateAddons) : "Update Addons")
       .setEmoji(Emojis.parse("🔄"))
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId("lumi:check_core")
-      .setLabel("Check Core")
+      .setLabel(t ? t(PanelsKeys.SettingsCheckCore) : "Check Core")
       .setEmoji(Emojis.parse(Emojis.BOT))
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId("lumi:update_core")
-      .setLabel("Update Lumi Core")
+      .setLabel(t ? t(PanelsKeys.SettingsUpdateCore) : "Update Lumi Core")
       .setEmoji(Emojis.parse(Emojis.BOT))
       .setStyle(ButtonStyle.Primary),
   );
 
-  return makeCard(0, `${Emojis.GUILD} Server Settings`, body, {
-    footer:
-      "Prefix commands work for a curated set of moderation and utility commands.",
-    actionRows: [backToHubRow(), row(langSelect), prefixButtons, updateButtons],
-  });
+  return makeCard(
+    CARD_ACCENTS.PRIMARY,
+    `${Emojis.GUILD} ${t ? t(PanelsKeys.SettingsTitle) : "Server Settings"}`,
+    `${Emojis.GUILD} **${t ? t(PanelsKeys.SettingsLanguage) : "Language"}** - \`${settings.locale}\``,
+    {
+      sections,
+      actionRows: [row(langSelect), maintenanceButtons, hubTabRow("settings", t)],
+    },
+  );
 }
 
 export interface PermissionOverrideRow {
+  /** The permit node granted, e.g. `mod.*` or `admin.config`. */
   commandPath: string;
   modelType: string;
   modelId: string;
-  allow: boolean;
+  /** True for an un-quarantinable enforced permit; false for a custom permit. */
+  enforced: boolean;
 }
 
-const formatOverride = (o: PermissionOverrideRow): string => {
-  const dot = o.allow ? Emojis.CHECK : Emojis.CROSS;
-  let mention: string;
-  if (o.modelType === "everyone") mention = "@everyone";
-  else if (o.modelType === "role") mention = roleMention(o.modelId);
-  else if (o.modelType === "user") mention = userMention(o.modelId);
-  else if (o.modelType === "category")
-    mention = `category ${channelMention(o.modelId)}`;
-  else mention = channelMention(o.modelId);
-  return `${dot} \`${o.commandPath}\` - ${o.modelType} ${mention}`;
-};
-
-const overrideLabel = (o: PermissionOverrideRow): string => {
-  const target = o.modelType === "everyone" ? "everyone" : o.modelId;
-  return `${o.allow ? "✓" : "✕"} ${o.commandPath} · ${o.modelType} ${target}`;
+const overrideMention = (o: PermissionOverrideRow): string => {
+  if (o.modelType === "everyone") return "@everyone";
+  if (o.modelType === "role") return roleMention(o.modelId);
+  if (o.modelType === "user") return userMention(o.modelId);
+  if (o.modelType === "category") return `category ${channelMention(o.modelId)}`;
+  return channelMention(o.modelId);
 };
 
 export function buildPermissionsView(
   overrides: PermissionOverrideRow[],
+  page = 0,
+  t?: LumiT,
 ): CardReply {
-  const shown = overrides.slice(0, 25);
-  const lines = shown.length
-    ? shown.map(formatOverride)
-    : [
-        "*No permission overrides set - every command uses its default access.*",
-      ];
-
-  const addRow = row(
-    new ButtonBuilder()
-      .setCustomId("lumi:perm:allow")
-      .setLabel("Allow…")
-      .setEmoji(Emojis.parse(Emojis.CHECK))
-      .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-      .setCustomId("lumi:perm:deny")
-      .setLabel("Deny…")
-      .setEmoji(Emojis.parse(Emojis.CROSS))
-      .setStyle(ButtonStyle.Danger),
+  const totalPages = Math.max(1, Math.ceil(overrides.length / PERMS_PER_PAGE));
+  const safePage = Math.max(0, Math.min(page, totalPages - 1));
+  const shown = overrides.slice(
+    safePage * PERMS_PER_PAGE,
+    (safePage + 1) * PERMS_PER_PAGE,
   );
 
-  const rows: Row[] = [backToHubRow(), addRow];
-  if (shown.length) {
-    rows.push(
-      row(
-        new StringSelectMenuBuilder()
-          .setCustomId("lumi:permrm")
-          .setPlaceholder("Remove an override…")
-          .addOptions(
-            shown.map((o) =>
-              new StringSelectMenuOptionBuilder()
-                .setLabel(overrideLabel(o).slice(0, 100))
-                .setValue(`${o.modelType}|${o.modelId}|${o.commandPath}`)
-                .setEmoji(Emojis.parse(o.allow ? Emojis.CHECK : Emojis.CROSS)),
-            ),
-          ),
-      ),
-    );
-  }
-
-  return noPingCard(
-    makeCard(
-      0,
-      `${Emojis.SHIELD} Command Permissions`,
+  const sections = shown.map((o) =>
+    settingRow(
       [
-        lines.join("\n"),
-        `-# ${Emojis.CHECK} allow · ${Emojis.CROSS} deny. Overrides take priority over a command's default access level.`,
+        `${o.enforced ? Emojis.SHIELD : Emojis.CHECK} \`${o.commandPath}\``,
+        `-# ${o.enforced ? "enforced" : "custom"} · ${o.modelType} ${overrideMention(o)}`,
       ],
       {
-        footer:
-          overrides.length > shown.length
-            ? `Showing ${shown.length} of ${overrides.length} overrides.`
-            : `${overrides.length} override${overrides.length === 1 ? "" : "s"}`,
-        actionRows: rows,
+        customId: `lumi:permdel:${o.enforced ? "e" : "c"}|${o.modelType}|${o.modelId}|${o.commandPath}`,
+        label: t ? t(PanelsKeys.PermsRevoke) : "Revoke",
+        style: ButtonStyle.Danger,
       },
     ),
   );
+
+  const addRow = row(
+    new ButtonBuilder()
+      .setCustomId("lumi:permit:grant:custom")
+      .setLabel(t ? t(PanelsKeys.PermsGrantCustom) : "Grant Custom…")
+      .setEmoji(Emojis.parse(Emojis.CHECK))
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId("lumi:permit:grant:enforced")
+      .setLabel(t ? t(PanelsKeys.PermsGrantEnforced) : "Grant Enforced…")
+      .setEmoji(Emojis.parse(Emojis.SHIELD))
+      .setStyle(ButtonStyle.Primary),
+  );
+
+  const rows: Row[] = [addRow];
+  if (totalPages > 1) {
+    rows.push(
+      createPaginationRow({
+        customIdPrefix: "lumi:permpage",
+        currentPage: safePage,
+        totalPages,
+      }),
+    );
+  }
+  rows.push(hubTabRow("permissions", t));
+
+  const footer =
+    totalPages > 1
+      ? t
+        ? t(PanelsKeys.PermsPageFooter, {
+            page: safePage + 1,
+            total: totalPages,
+            count: overrides.length,
+          })
+        : `Page ${safePage + 1} of ${totalPages} · ${overrides.length} override(s)`
+      : t
+        ? t(PanelsKeys.PermsCountFooter, { count: overrides.length })
+        : `${overrides.length} override(s)`;
+
+  return noPingCard(
+    makeCard(
+      CARD_ACCENTS.PRIMARY,
+      `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsTitle) : "Command Permissions"}`,
+      shown.length
+        ? `-# ${Emojis.CHECK} ${t ? t(PanelsKeys.PermsLegend) : "custom · enforced. Enforced permits survive anti-nuke quarantine."}`
+        : (t
+            ? t(PanelsKeys.PermsEmpty)
+            : "*No permission overrides set - every command uses its default access.*"),
+      { sections, footer, actionRows: rows },
+    ),
+  );
 }
+
+export type PermitKind = "custom" | "enforced";
+
+/** Step 1 of granting a permit: pick who it applies to. */
+export function buildPermitTargetPickerView(
+  kind: PermitKind,
+  t?: LumiT,
+): CardReply {
+  const select = createMentionableSelectMenu({
+    customId: `lumi:permit:target:${kind}`,
+    placeholder: t ? t(PanelsKeys.PermsPickTarget) : "Pick a role or member…",
+  });
+
+  return makeCard(
+    CARD_ACCENTS.PRIMARY,
+    `${Emojis.SHIELD} ${t ? (kind === "enforced" ? t(PanelsKeys.PermsGrantEnforced) : t(PanelsKeys.PermsGrantCustom)) : "Grant Permit"}`,
+    t ? t(PanelsKeys.PermsPickTarget) : "Pick a role or member to grant a permit to.",
+    {
+      actionRows: [row(select), backToPermissionsRow(t)],
+    },
+  );
+}
+
+/** Step 2 of granting a permit: pick which node to grant the chosen target. */
+export function buildPermitNodePickerView(
+  kind: PermitKind,
+  targetType: "role" | "user",
+  targetId: string,
+  nodes: string[],
+  t?: LumiT,
+): CardReply {
+  const mention = targetType === "role" ? roleMention(targetId) : userMention(targetId);
+
+  if (nodes.length === 0) {
+    return makeCard(
+      CARD_ACCENTS.PRIMARY,
+      `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsPickNode) : "Pick a Permit Node"}`,
+      t ? t(PanelsKeys.PermsNoNodes) : "No permit nodes are registered by any loaded command.",
+      { actionRows: [backToPermissionsRow(t)] },
+    );
+  }
+
+  const select = createStringSelectMenu({
+    customId: `lumi:permit:node:${kind}:${targetType}:${targetId}`,
+    placeholder: t ? t(PanelsKeys.PermsPickNode) : "Pick the permit node…",
+    options: nodes.slice(0, 25).map((node) =>
+      new StringSelectMenuOptionBuilder().setLabel(node).setValue(node),
+    ),
+  });
+
+  return makeCard(
+    CARD_ACCENTS.PRIMARY,
+    `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsPickNode) : "Pick a Permit Node"}`,
+    `${t ? t(PanelsKeys.PermsPickNode) : "Pick the permit node to grant"} ${mention}.`,
+    {
+      actionRows: [row(select), backToPermissionsRow(t)],
+    },
+  );
+}
+
+const backToPermissionsRow = (t?: LumiT): Row =>
+  row(
+    new ButtonBuilder()
+      .setCustomId("lumi:tab:permissions")
+      .setLabel(t ? t(PanelsKeys.BackToHub) : "Back")
+      .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+      .setStyle(ButtonStyle.Secondary),
+  );
 
 export interface AddonDashboardStats {
   repoCount: number;
@@ -273,32 +397,32 @@ export interface AddonRepoModuleRow {
 
 export function buildAddonsView(
   stats: AddonDashboardStats = { repoCount: 0, installedCount: 0 },
+  t?: LumiT,
 ): CardReply {
   const body = [
-    "Add-ons let you expand Lumi with community modules. Every installed add-on works seamlessly alongside built-in features.",
-    `${Emojis.REPO} **Tracked Repositories:** ${stats?.repoCount ?? 0}`,
-    `${Emojis.DOWNLOAD} **Installed Add-ons:** ${stats?.installedCount ?? 0}`,
+    t
+      ? t(PanelsKeys.AddonsIntro)
+      : "Add-ons let you expand Lumi with community modules. Every installed add-on works seamlessly alongside built-in features.",
     [
-      `• **Repositories** - View all downloaded repositories and explore their modules`,
-      `• **Installed Add-ons** - Manage and review currently installed add-ons`,
-      `• **Add Repository** - Add a new community repository by URL`,
+      `${Emojis.REPO} **${t ? t(PanelsKeys.AddonsRepos) : "Tracked Repositories"}:** ${stats?.repoCount ?? 0}`,
+      `${Emojis.DOWNLOAD} **${t ? t(PanelsKeys.AddonsInstalled) : "Installed Add-ons"}:** ${stats?.installedCount ?? 0}`,
     ].join("\n"),
   ];
 
   const browseButtons = row(
     new ButtonBuilder()
       .setCustomId("lumi:addon:repos")
-      .setLabel("Downloaded Repositories")
+      .setLabel(t ? t(PanelsKeys.AddonsBrowseRepos) : "Downloaded Repositories")
       .setEmoji(Emojis.parse(Emojis.REPO))
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId("lumi:addon:installed")
-      .setLabel("Installed Add-ons")
+      .setLabel(t ? t(PanelsKeys.AddonsBrowseInstalled) : "Installed Add-ons")
       .setEmoji(Emojis.parse(Emojis.DOWNLOAD))
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId("lumi:addon:refresh")
-      .setLabel("Refresh")
+      .setLabel(t ? t(PanelsKeys.AddonsRefresh) : "Refresh")
       .setEmoji(Emojis.parse("🔄"))
       .setStyle(ButtonStyle.Secondary),
   );
@@ -306,193 +430,220 @@ export function buildAddonsView(
   const repoActions = row(
     new ButtonBuilder()
       .setCustomId("lumi:addon:add_repo")
-      .setLabel("Add Repository")
+      .setLabel(t ? t(PanelsKeys.AddonsAddRepo) : "Add Repository")
       .setEmoji(Emojis.parse(Emojis.REPO))
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
       .setCustomId("lumi:addon:rm_repo")
-      .setLabel("Remove Repository")
+      .setLabel(t ? t(PanelsKeys.AddonsRemoveRepo) : "Remove Repository")
       .setEmoji(Emojis.parse(Emojis.UNINSTALL))
       .setStyle(ButtonStyle.Danger),
     new ButtonBuilder()
       .setCustomId("lumi:update_all")
-      .setLabel("Update All Add-ons")
+      .setLabel(t ? t(PanelsKeys.AddonsUpdateAll) : "Update All Add-ons")
       .setEmoji(Emojis.parse("🔄"))
       .setStyle(ButtonStyle.Secondary),
   );
 
-  const coreActions = row(
-    new ButtonBuilder()
-      .setCustomId("lumi:check_core")
-      .setLabel("Check Core Version")
-      .setEmoji(Emojis.parse(Emojis.BOT))
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId("lumi:update_core")
-      .setLabel("Self Update Lumi Core")
-      .setEmoji(Emojis.parse(Emojis.BOT))
-      .setStyle(ButtonStyle.Primary),
+  return makeCard(
+    CARD_ACCENTS.PRIMARY,
+    `${Emojis.REPO} ${t ? t(PanelsKeys.AddonsTitle) : "Add-ons & Updates"}`,
+    body,
+    {
+      footer:
+        t
+          ? t(PanelsKeys.AddonsFooter)
+          : "Bot Owner access is required to add repositories or run updates.",
+      actionRows: [browseButtons, repoActions, hubTabRow("addons", t)],
+    },
   );
-
-  return makeCard(0, `${Emojis.REPO} Add-ons & Updates`, body, {
-    footer: "Bot Owner access is required to add repositories or run updates.",
-    actionRows: [backToHubRow(), browseButtons, repoActions, coreActions],
-  });
 }
 
-export function buildAddonReposView(repos: AddonRepoRow[]): CardReply {
+const backToAddonsRow = (t?: LumiT): Row =>
+  row(
+    new ButtonBuilder()
+      .setCustomId("lumi:tab:addons")
+      .setLabel(t ? t(PanelsKeys.BackToAddons) : "Back to Add-ons")
+      .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId("lumi:addon:refresh")
+      .setLabel(t ? t(PanelsKeys.AddonsRefresh) : "Refresh")
+      .setEmoji(Emojis.parse("🔄"))
+      .setStyle(ButtonStyle.Secondary),
+  );
+
+export function buildAddonReposView(
+  repos: AddonRepoRow[],
+  t?: LumiT,
+): CardReply {
   const sorted = [...repos].sort((a, b) => a.name.localeCompare(b.name));
-  const lines = sorted.length
-    ? sorted.map(
-        (repo) =>
-          `**${repo.name}** (\`${repo.branch}\`)\n-# ${repo.url}\n-# Installed add-ons from this repo: **${repo.installedCount}**`,
-      )
-    : ["No repositories added yet. Click **Add Repository** to get started."];
+  const shown = sorted.slice(0, ADDON_ROWS_PER_PAGE);
+
+  const sections = shown.map((repo) =>
+    settingRow(
+      [
+        `${Emojis.REPO} **${repo.name}** (\`${repo.branch}\`)`,
+        `-# ${cutText(repo.url, 90)}`,
+        `-# ${t ? t(PanelsKeys.AddonsInstalled) : "Installed Add-ons"}: **${repo.installedCount}**`,
+      ],
+      {
+        customId: `lumi:addon:browse:${repo.name}`,
+        label: t ? t(PanelsKeys.AddonsBrowse) : "Browse",
+        style: ButtonStyle.Primary,
+      },
+    ),
+  );
 
   const rows: Row[] = [
     row(
       new ButtonBuilder()
         .setCustomId("lumi:tab:addons")
-        .setLabel("Back to Add-ons")
+        .setLabel(t ? t(PanelsKeys.BackToAddons) : "Back to Add-ons")
         .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId("lumi:addon:add_repo")
-        .setLabel("Add Repository")
+        .setLabel(t ? t(PanelsKeys.AddonsAddRepo) : "Add Repository")
         .setEmoji(Emojis.parse(Emojis.REPO))
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
         .setCustomId("lumi:addon:refresh")
-        .setLabel("Refresh")
+        .setLabel(t ? t(PanelsKeys.AddonsRefresh) : "Refresh")
         .setEmoji(Emojis.parse("🔄"))
         .setStyle(ButtonStyle.Secondary),
     ),
   ];
 
-  if (sorted.length > 0) {
-    rows.push(
-      row(
-        new StringSelectMenuBuilder()
-          .setCustomId("lumi:addon:repo_pick")
-          .setPlaceholder("Select a repository to view available modules...")
-          .addOptions(
-            sorted.slice(0, 25).map((repo) =>
-              new StringSelectMenuOptionBuilder()
-                .setLabel(cutText(repo.name, 100))
-                .setValue(repo.name)
-                .setDescription(
-                  cutText(
-                    `Branch: ${repo.branch} • ${repo.installedCount} module(s) installed`,
-                    100,
-                  ),
-                ),
-            ),
-          ),
-      ),
-    );
-  }
-
-  return makeCard(0, `${Emojis.REPO} Downloaded Repositories`, lines, {
-    footer: "Select any repository from the dropdown to see its available modules.",
-    actionRows: rows,
-  });
+  return makeCard(
+    CARD_ACCENTS.PRIMARY,
+    `${Emojis.REPO} ${t ? t(PanelsKeys.AddonsReposTitle) : "Downloaded Repositories"}`,
+    sorted.length
+      ? sorted.length > shown.length
+        ? `-# +${sorted.length - shown.length} more`
+        : ""
+      : (t
+          ? t(PanelsKeys.AddonsReposEmpty)
+          : "No repositories added yet. Click **Add Repository** to get started."),
+    {
+      sections,
+      footer:
+        t
+          ? t(PanelsKeys.AddonsReposFooter)
+          : "Browse a repository to see its available modules.",
+      actionRows: rows,
+    },
+  );
 }
 
 export function buildAddonInstalledView(
   installed: AddonInstalledRow[],
+  t?: LumiT,
 ): CardReply {
   const sorted = [...installed].sort((a, b) =>
     a.moduleName.localeCompare(b.moduleName),
   );
-  const lines = sorted.length
-    ? sorted.map(
-        (mod) =>
-          `**${mod.moduleName}** (v${mod.version ?? "1.0.0"})\n-# Repository: **${mod.repoName}** · Installed <t:${Math.floor(mod.installedAt.getTime() / 1000)}:R>`,
-      )
-    : ["No add-on modules are currently installed."];
+  const shown = sorted.slice(0, ADDON_ROWS_PER_PAGE);
 
-  return makeCard(0, `${Emojis.DOWNLOAD} Installed Add-ons`, lines, {
-    footer: "Installed add-ons automatically appear in the Modules tab.",
-    actionRows: [
-      row(
-        new ButtonBuilder()
-          .setCustomId("lumi:tab:addons")
-          .setLabel("Back to Add-ons")
-          .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
-          .setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder()
-          .setCustomId("lumi:addon:uninstall")
-          .setLabel("Uninstall Add-on")
-          .setEmoji(Emojis.parse(Emojis.CROSS))
-          .setStyle(ButtonStyle.Danger),
-        new ButtonBuilder()
-          .setCustomId("lumi:addon:refresh")
-          .setLabel("Refresh")
-          .setEmoji(Emojis.parse("🔄"))
-          .setStyle(ButtonStyle.Secondary),
-      ),
-    ],
-  });
+  const sections = shown.map((mod) =>
+    settingRow(
+      [
+        `${Emojis.DOWNLOAD} **${mod.moduleName}** (v${mod.version ?? "1.0.0"})`,
+        `-# ${mod.repoName} · ${time(mod.installedAt, TimestampStyles.RelativeTime)}`,
+      ],
+      {
+        customId: `lumi:addon:rm_mod:${mod.moduleName}`,
+        label: t ? t(PanelsKeys.AddonsUninstall) : "Uninstall",
+        style: ButtonStyle.Danger,
+      },
+    ),
+  );
+
+  return makeCard(
+    CARD_ACCENTS.PRIMARY,
+    `${Emojis.DOWNLOAD} ${t ? t(PanelsKeys.AddonsInstalledTitle) : "Installed Add-ons"}`,
+    sorted.length
+      ? sorted.length > shown.length
+        ? `-# +${sorted.length - shown.length} more`
+        : ""
+      : (t
+          ? t(PanelsKeys.AddonsInstalledEmpty)
+          : "No add-on modules are currently installed."),
+    {
+      sections,
+      footer:
+        t
+          ? t(PanelsKeys.AddonsInstalledFooter)
+          : "Installed add-ons automatically appear in the Modules tab.",
+      actionRows: [backToAddonsRow(t)],
+    },
+  );
 }
 
 export function buildAddonRepoModulesView(
   repoName: string,
   modules: AddonRepoModuleRow[],
+  t?: LumiT,
 ): CardReply {
   const visible = modules.filter((moduleInfo) => !moduleInfo.hidden);
   const sorted = [...visible].sort((a, b) => a.name.localeCompare(b.name));
+  const shown = sorted.slice(0, ADDON_ROWS_PER_PAGE);
 
-  const lines = sorted.length
-    ? sorted.map((m) => {
-        const statusBadge = m.isInstalled ? "✓ Installed" : "Available";
-        const desc = m.short ? cutText(m.short, 100) : "No description.";
-        return `**${m.name}** (v${m.version}) - *${statusBadge}*\n-# ${desc}`;
-      })
-    : ["No modules found in this repository."];
+  const sections = shown.map((m) => {
+    const status = m.isInstalled
+      ? `${Emojis.CHECK} ${t ? t(PanelsKeys.AddonsStatusInstalled) : "Installed"}`
+      : (t ? t(PanelsKeys.AddonsStatusAvailable) : "Available");
+    return settingRow(
+      [
+        `**${m.name}** (v${m.version}) - *${status}*`,
+        `-# ${m.short ? cutText(m.short, 90) : "No description."}`,
+      ],
+      {
+        customId: `lumi:addon:modact:${m.isInstalled ? "uninstall" : "install"}:${repoName}:${m.name}`,
+        label: m.isInstalled
+          ? (t ? t(PanelsKeys.AddonsUninstall) : "Uninstall")
+          : (t ? t(PanelsKeys.AddonsInstall) : "Install"),
+        style: m.isInstalled ? ButtonStyle.Danger : ButtonStyle.Success,
+      },
+    );
+  });
 
   const rows: Row[] = [
     row(
       new ButtonBuilder()
         .setCustomId("lumi:addon:repos")
-        .setLabel("Back to Repositories")
+        .setLabel(t ? t(PanelsKeys.BackToRepos) : "Back to Repositories")
         .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
-        .setCustomId("lumi:addon:refresh")
-        .setLabel("Refresh")
+        .setCustomId(`lumi:addon:browse:${repoName}`)
+        .setLabel(t ? t(PanelsKeys.AddonsRefresh) : "Refresh")
         .setEmoji(Emojis.parse("🔄"))
         .setStyle(ButtonStyle.Secondary),
     ),
   ];
 
-  if (sorted.length > 0) {
-    rows.push(
-      row(
-        new StringSelectMenuBuilder()
-          .setCustomId(`lumi:addon:mod_action:${repoName}`)
-          .setPlaceholder("Pick a module to install or uninstall...")
-          .addOptions(
-            sorted.slice(0, 25).map((m) =>
-              new StringSelectMenuOptionBuilder()
-                .setLabel(cutText(`${m.name} (v${m.version})`, 100))
-                .setValue(`${m.isInstalled ? "uninstall" : "install"}:${repoName}:${m.name}`)
-                .setDescription(
-                  cutText(
-                    m.isInstalled
-                      ? `Click to uninstall ${m.name}`
-                      : `Click to install ${m.name}`,
-                    100,
-                  ),
-                )
-                .setEmoji(Emojis.parse(m.isInstalled ? Emojis.CROSS : Emojis.DOWNLOAD)),
-            ),
-          ),
-      ),
-    );
-  }
-
-  return makeCard(0, `${Emojis.GEAR} Available Modules in ${repoName}`, lines, {
-    footer: "Choose any module from the menu above to install or uninstall it with 1 click.",
-    actionRows: rows,
-  });
+  return makeCard(
+    CARD_ACCENTS.PRIMARY,
+    `${Emojis.GEAR} ${
+      t
+        ? t(PanelsKeys.AddonsModulesTitle, { repo: repoName })
+        : `Available Modules in ${repoName}`
+    }`,
+    sorted.length
+      ? sorted.length > shown.length
+        ? `-# +${sorted.length - shown.length} more`
+        : ""
+      : (t
+          ? t(PanelsKeys.AddonsModulesEmpty)
+          : "No modules found in this repository."),
+    {
+      sections,
+      footer:
+        t
+          ? t(PanelsKeys.AddonsModulesFooter)
+          : "Install or uninstall any module with one click.",
+      actionRows: rows,
+    },
+  );
 }

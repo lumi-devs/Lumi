@@ -107,7 +107,11 @@ export function initCoreRpcHandlers() {
     const targetPath = path.join(ADDON_MODULES_ROOT, moduleName);
     try {
       await fs.rm(targetPath, { recursive: true, force: true });
-    } catch {}
+    } catch (err: unknown) {
+      container.logger.debug(
+        `[rpc] Failed to remove addon files at ${targetPath}: ${String(err)}`,
+      );
+    }
     await container.db.downloader.deleteInstalledDownloaderModule(moduleName);
     return { success: true, moduleName };
   });

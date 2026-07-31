@@ -1,0 +1,196 @@
+{
+  "name": "security",
+  "displayName": "Security",
+  "emoji": "🛡️",
+  "description": "Wick-style server protection: anti-nuke detection with automatic quarantine.",
+  "version": "1.0.0",
+  "disableable": true,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": true,
+  "targetService": "worker",
+  "subStores": [
+    "commands",
+    "listeners",
+    "interaction-handlers",
+    "services",
+    "scheduled-tasks"
+  ],
+  "configFields": [
+    {
+      "key": "antinuke_enabled",
+      "type": "BOOLEAN",
+      "label": "Anti-Nuke",
+      "description": "Watch the audit log for mass destructive actions.",
+      "group": "Anti-Nuke",
+      "default": false
+    },
+    {
+      "key": "window_seconds",
+      "type": "NUMBER",
+      "label": "Detection Window",
+      "description": "Sliding window in seconds for counting actions.",
+      "group": "Anti-Nuke",
+      "default": 60
+    },
+    {
+      "key": "response",
+      "type": "ENUM",
+      "label": "Response",
+      "description": "What to do when an executor trips a threshold.",
+      "group": "Anti-Nuke",
+      "default": "quarantine",
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ]
+    },
+    {
+      "key": "trusted_role_ids",
+      "type": "STRING",
+      "label": "Trusted Roles",
+      "description": "Comma-separated role IDs exempt from anti-nuke.",
+      "group": "Anti-Nuke",
+      "list": true
+    },
+    {
+      "key": "log_channel_id",
+      "type": "CHANNEL",
+      "label": "Security Log Channel",
+      "description": "Channel for anti-nuke alerts (falls back to mod log).",
+      "group": "Anti-Nuke"
+    },
+    {
+      "key": "max_bans",
+      "type": "NUMBER",
+      "label": "Max Bans",
+      "description": "Bans allowed per executor within the window.",
+      "group": "Nuke Limits",
+      "default": 5
+    },
+    {
+      "key": "max_kicks",
+      "type": "NUMBER",
+      "label": "Max Kicks",
+      "description": "Kicks allowed per executor within the window.",
+      "group": "Nuke Limits",
+      "default": 5
+    },
+    {
+      "key": "max_channel_deletes",
+      "type": "NUMBER",
+      "label": "Max Channel Deletes",
+      "description": "Channel deletions allowed per executor within the window.",
+      "group": "Nuke Limits",
+      "default": 3
+    },
+    {
+      "key": "max_role_deletes",
+      "type": "NUMBER",
+      "label": "Max Role Deletes",
+      "description": "Role deletions allowed per executor within the window.",
+      "group": "Nuke Limits",
+      "default": 3
+    },
+    {
+      "key": "max_webhook_creates",
+      "type": "NUMBER",
+      "label": "Max Webhook Creates",
+      "description": "Webhook creations allowed per executor within the window.",
+      "group": "Nuke Limits",
+      "default": 3
+    },
+    {
+      "key": "joingate_enabled",
+      "type": "BOOLEAN",
+      "label": "Join Gate",
+      "description": "Screen new members for raids and throwaway accounts.",
+      "group": "Join Gate",
+      "default": false
+    },
+    {
+      "key": "min_account_age_hours",
+      "type": "NUMBER",
+      "label": "Min Account Age (hours)",
+      "description": "Accounts younger than this are gated. 0 disables the check.",
+      "group": "Join Gate",
+      "default": 0
+    },
+    {
+      "key": "raid_join_count",
+      "type": "NUMBER",
+      "label": "Raid Join Count",
+      "description": "Joins within the raid window that activate raid mode.",
+      "group": "Join Gate",
+      "default": 10
+    },
+    {
+      "key": "raid_window_seconds",
+      "type": "NUMBER",
+      "label": "Raid Window (seconds)",
+      "description": "Window for counting joins toward raid detection.",
+      "group": "Join Gate",
+      "default": 30
+    },
+    {
+      "key": "raid_action",
+      "type": "ENUM",
+      "label": "Gate Action",
+      "description": "Action applied to gated joiners during a raid.",
+      "group": "Join Gate",
+      "default": "kick",
+      "choices": [
+        "kick",
+        "timeout",
+        "quarantine"
+      ]
+    },
+    {
+      "key": "verification_enabled",
+      "type": "BOOLEAN",
+      "label": "Verification",
+      "description": "Require members to verify via the panel for the verified role.",
+      "group": "Verification",
+      "default": false
+    },
+    {
+      "key": "verified_role_id",
+      "type": "ROLE",
+      "label": "Verified Role",
+      "description": "Role granted after passing the emoji captcha.",
+      "group": "Verification"
+    },
+    {
+      "key": "verification_pending_role_id",
+      "type": "ROLE",
+      "label": "Pending Role",
+      "description": "Role assigned on join and removed once verified. Optional.",
+      "group": "Verification"
+    },
+    {
+      "key": "verification_timeout_minutes",
+      "type": "NUMBER",
+      "label": "Verify Timeout (minutes)",
+      "description": "How long a member has to pass the captcha.",
+      "group": "Verification",
+      "default": 10
+    },
+    {
+      "key": "verification_kick_on_timeout",
+      "type": "BOOLEAN",
+      "label": "Kick on Timeout",
+      "description": "Kick members who don't verify before the timeout.",
+      "group": "Verification",
+      "default": false
+    },
+    {
+      "key": "panic_lock_channel_ids",
+      "type": "STRING",
+      "label": "Channels to Lock",
+      "description": "Comma-separated channel IDs locked by /panic. Blank locks every text channel.",
+      "group": "Panic Mode",
+      "list": true
+    }
+  ]
+}

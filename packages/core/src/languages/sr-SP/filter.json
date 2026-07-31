@@ -6,5 +6,6 @@
   "reasonLinkNotAllowed": "a link that is not allowed here",
   "reasonTooManyMentions": "too many mentions",
   "reasonExcessiveCaps": "excessive caps",
-  "reasonPhishingLink": "a known phishing/scam link"
+  "reasonPhishingLink": "a known phishing/scam link",
+  "heatWarn": "{user}, slow down - you're sending messages too fast."
 }

@@ -15,7 +15,7 @@ const pino = createPinoLogger({
   format: process.env["NODE_ENV"] === "development" ? "pretty" : "json",
 });
 
-const rpc = new RpcClient(config.rabbitUrl);
+const rpc = new RpcClient(config.rabbitUrl, (msg) => pino.debug(msg));
 
 registerReadinessProbe("rabbitmq", () => ({
   status: rpc.connected ? "ok" : "fail",

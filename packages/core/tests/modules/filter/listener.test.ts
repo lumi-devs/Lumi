@@ -37,6 +37,7 @@ describe("FilterMessageListener", () => {
       has: vi.fn().mockReturnValue(true),
       loadGuild: vi.fn().mockResolvedValue(undefined),
       test: vi.fn().mockReturnValue(null),
+      getHeat: vi.fn().mockReturnValue({ enabled: false }),
     };
 
     mockConfigService = {
@@ -81,8 +82,8 @@ describe("FilterMessageListener", () => {
         path: "/path/to/modules/filter/listeners/messageCreate.ts",
         root: "/path/to/modules",
         store: { name: "listeners" } as any,
-      } as any,
-      { module: "filter" } as any
+      },
+      { module: "filter" }
     );
   });
 

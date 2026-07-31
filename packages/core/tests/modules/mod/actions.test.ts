@@ -34,6 +34,8 @@ vi.mock('@sapphire/framework', () => ({
       moderation: {
         getModerationCases: vi.fn(),
         createModerationCase: vi.fn(),
+        getActiveCases: vi.fn().mockResolvedValue([]),
+        liftModerationCase: vi.fn(),
         getWarnThresholds: vi.fn(),
         setWarnThreshold: vi.fn(),
         removeWarnThreshold: vi.fn(),
@@ -319,6 +321,9 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
 
     expect(c.caseNumber).toBe(14);
     expect(mockMember.roles.set).toHaveBeenCalledWith(['g-1', 'q-role'], expect.anything());
+    expect(container.db.moderation.createModerationCase).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'quarantine' })
+    );
   });
 
   it('QuarantineAction.undo restores original roles', async () => {
@@ -347,5 +352,8 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
 
     expect(c.caseNumber).toBe(15);
     expect(mockMember.roles.set).toHaveBeenCalledWith(['g-1', 'r1', 'r2'], expect.anything());
+    expect(container.db.moderation.createModerationCase).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'unquarantine' })
+    );
   });
 });

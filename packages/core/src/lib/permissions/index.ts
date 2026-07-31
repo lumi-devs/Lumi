@@ -6,7 +6,6 @@ import "./preconditions/Moderator.js";
 import "./preconditions/ModuleEnabled.js";
 import "./preconditions/NotBlocked.js";
 import "./preconditions/NotIgnored.js";
-import "./preconditions/PermissionOverrides.js";
 import "./preconditions/RequirePermit.js";
 import { PermitResolver } from "./PermitResolver.js";
 

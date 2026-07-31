@@ -146,23 +146,32 @@ export class RabbitClient {
     });
   }
 
-  public publishEvent(event: string, payload: Record<string, unknown> = {}) {
+  public async publishEvent(
+    event: string,
+    payload: Record<string, unknown> = {},
+  ): Promise<boolean> {
     busEventsPublished.inc({ event });
     const carrier = injectTraceContext();
-    return this.channel.publish(
-      "lumi.events",
-      "",
-      Buffer.from(
-        JSON.stringify({
-          event,
-          ts: Date.now(),
-          traceparent: carrier.traceparent,
-          tracestate: carrier.tracestate,
-          ...payload,
-        }),
-      ),
-      { persistent: true },
-    );
+    try {
+      await this.channel.publish(
+        "lumi.events",
+        "",
+        Buffer.from(
+          JSON.stringify({
+            event,
+            ts: Date.now(),
+            traceparent: carrier.traceparent,
+            tracestate: carrier.tracestate,
+            ...payload,
+          }),
+        ),
+        { persistent: true },
+      );
+      return true;
+    } catch (err: unknown) {
+      logError(`RabbitMQ: publishEvent ${event} failed`, err);
+      return false;
+    }
   }
 
   public onEvent(event: string, handler: (payload: unknown) => void) {

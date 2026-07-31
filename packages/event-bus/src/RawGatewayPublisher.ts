@@ -2,7 +2,7 @@
 // discord.js client is also published to the bus, partitioned by guild_id so a
 // guild's events stay ordered through the consumer group. Wrapping
 // `client.ws.handlePacket` keeps the publish fire-and-forget alongside local
-// dispatch, so the monolith can run TRANSPORT=streams while keeping its own
+// dispatch, so the monolith can consume the stream bus while keeping its own
 // listeners (useful for shadow-traffic validation). The dedicated gateway app uses
 // `RawGatewayProxyPublisher` below instead - no Sapphire, publish-only.
 
