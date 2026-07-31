@@ -348,6 +348,11 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
         if (!selected || selected === "_none") return;
         return this.#renderDetail(interaction, guildId, selected, 0, t);
       }
+      case "gsel": {
+        if (!interaction.isStringSelectMenu()) return;
+        const section = parseInt(interaction.values[0] ?? "0", 10) || 0;
+        return this.#renderDetail(interaction, guildId, moduleName, section, t);
+      }
       case "enum": {
         if (!interaction.isStringSelectMenu() || !key) return;
         const value = interaction.values[0];

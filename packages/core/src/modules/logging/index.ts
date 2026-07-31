@@ -10,51 +10,61 @@ import { ChannelType } from "discord.js";
     "Server event logs: message deletes/edits, joins, leaves, bans, unbans, nickname and role changes.",
   configSchema: cfg.object({
     log_channel_id: cfg.channel({
+      group: "Setup",
       label: "Log Channel",
       description: "Channel where server events are logged.",
       channelTypes: [ChannelType.GuildText],
     }),
     message_deletes: cfg.boolean({
+      group: "Message Events",
       label: "Message Deletes",
       description: "Log deleted messages.",
       default: true,
     }),
     message_edits: cfg.boolean({
+      group: "Message Events",
       label: "Message Edits",
       description: "Log edited messages (before/after).",
       default: true,
     }),
     member_joins: cfg.boolean({
+      group: "Member Events",
       label: "Member Joins",
       description: "Log members joining the server.",
       default: true,
     }),
     member_leaves: cfg.boolean({
+      group: "Member Events",
       label: "Member Leaves",
       description: "Log members leaving the server.",
       default: true,
     }),
     member_bans: cfg.boolean({
+      group: "Member Events",
       label: "Member Bans",
       description: "Log bans.",
       default: true,
     }),
     member_unbans: cfg.boolean({
+      group: "Member Events",
       label: "Member Unbans",
       description: "Log unbans.",
       default: true,
     }),
     nickname_changes: cfg.boolean({
+      group: "Member Events",
       label: "Nickname Changes",
       description: "Log nickname changes.",
       default: true,
     }),
     role_changes: cfg.boolean({
+      group: "Member Events",
       label: "Role Changes",
       description: "Log member role additions/removals.",
       default: true,
     }),
     ignored_channels: cfg.string({
+      group: "Setup",
       label: "Ignored Channel IDs",
       description:
         "Comma-separated channel IDs whose message events are not logged.",

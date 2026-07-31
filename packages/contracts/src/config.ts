@@ -25,4 +25,7 @@ export interface ConfigField {
   channelTypes?: ChannelType[];
   /** STRING fields whose stored value is a comma-separated list (read as `string[]`). */
   list?: boolean;
+  /** Section this field belongs to in the config panel. Fields sharing a group
+   * render together as one navigable subsection; omit for small modules. */
+  group?: string;
 }

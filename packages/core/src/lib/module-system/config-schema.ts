@@ -23,7 +23,17 @@ interface BaseOpts {
   label: string;
   description: string;
   required?: boolean;
+  /** Panel subsection this field belongs to. Fields sharing a group render
+   * together as one navigable section; omit for small modules. */
+  group?: string;
 }
+
+const base = (o: BaseOpts) => ({
+  label: o.label,
+  description: o.description,
+  required: o.required,
+  group: o.group,
+});
 
 /** Config field builders tagged with UI metadata. */
 export const cfg = {
@@ -34,10 +44,8 @@ export const cfg = {
   boolean(o: BaseOpts & { default?: boolean }) {
     return tag(s.boolean(), {
       type: FieldType.BOOLEAN,
-      label: o.label,
-      description: o.description,
+      ...base(o),
       default: o.default,
-      required: o.required,
     });
   },
 
@@ -47,10 +55,8 @@ export const cfg = {
     if (o.max !== undefined) schema = schema.lessThanOrEqual(o.max);
     return tag(schema, {
       type: FieldType.NUMBER,
-      label: o.label,
-      description: o.description,
+      ...base(o),
       default: o.default,
-      required: o.required,
     });
   },
 
@@ -58,10 +64,8 @@ export const cfg = {
   string(o: BaseOpts & { default?: string; list?: boolean }) {
     return tag(s.string(), {
       type: FieldType.STRING,
-      label: o.label,
-      description: o.description,
+      ...base(o),
       default: o.default,
-      required: o.required,
       list: o.list,
     });
   },
@@ -72,10 +76,8 @@ export const cfg = {
   ) {
     return tag(s.enum(choices), {
       type: FieldType.ENUM,
-      label: o.label,
-      description: o.description,
+      ...base(o),
       default: o.default,
-      required: o.required,
       choices: [...choices],
     });
   },
@@ -83,10 +85,8 @@ export const cfg = {
   channel(o: BaseOpts & { default?: string; channelTypes?: ChannelType[] }) {
     return tag(snowflake(), {
       type: FieldType.CHANNEL,
-      label: o.label,
-      description: o.description,
+      ...base(o),
       default: o.default,
-      required: o.required,
       channelTypes: o.channelTypes,
     });
   },
@@ -94,20 +94,16 @@ export const cfg = {
   role(o: BaseOpts & { default?: string }) {
     return tag(snowflake(), {
       type: FieldType.ROLE,
-      label: o.label,
-      description: o.description,
+      ...base(o),
       default: o.default,
-      required: o.required,
     });
   },
 
   user(o: BaseOpts & { default?: string }) {
     return tag(snowflake(), {
       type: FieldType.USER,
-      label: o.label,
-      description: o.description,
+      ...base(o),
       default: o.default,
-      required: o.required,
     });
   },
 };

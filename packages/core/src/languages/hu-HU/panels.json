@@ -84,6 +84,8 @@
 	"detailOverrides": "Overrides",
 	"detailEdit": "Edit",
 	"detailFieldsFooter": "Fields {{from}}-{{to}} of {{count}}",
+	"detailSection": "Section **{{name}}** · {{index}}/{{total}}",
+	"detailJump": "Jump to a section…",
 	"fieldEditTitle": "{{module}} • {{field}}",
 	"fieldEditCurrent": "Current value",
 	"fieldEditHint": "Pick a new value below, or clear the selection to unset.",

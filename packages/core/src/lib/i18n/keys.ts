@@ -114,6 +114,10 @@ export const PanelsKeys = {
   DetailFieldsFooter: FT<{ from: number; to: number; count: number }>(
     "panels:detailFieldsFooter",
   ),
+  DetailSection: FT<{ name: string; index: number; total: number }>(
+    "panels:detailSection",
+  ),
+  DetailJump: T("panels:detailJump"),
   FieldEditTitle: FT<{ module: string; field: string }>(
     "panels:fieldEditTitle",
   ),

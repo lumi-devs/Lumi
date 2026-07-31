@@ -237,32 +237,69 @@ export function buildFeatureListView(
   );
 }
 
+interface FieldSection {
+  name: string | null;
+  fields: ConfigField[];
+}
+
+/**
+ * Splits a module's fields into navigable sections: by explicit `group` when
+ * the schema defines them, otherwise into `FIELDS_PER_PAGE` chunks so a large
+ * ungrouped module never overflows the component budget. Small modules collapse
+ * to a single unnamed section (no switcher).
+ */
+function sectionsFor(fields: ConfigField[]): FieldSection[] {
+  if (fields.some((f) => f.group)) {
+    const order: string[] = [];
+    const map = new Map<string, ConfigField[]>();
+    for (const f of fields) {
+      const g = f.group ?? "General";
+      let arr = map.get(g);
+      if (!arr) {
+        arr = [];
+        map.set(g, arr);
+        order.push(g);
+      }
+      arr.push(f);
+    }
+    return order.map((name) => ({ name, fields: map.get(name)! }));
+  }
+  if (fields.length <= FIELDS_PER_PAGE) return [{ name: null, fields }];
+  const out: FieldSection[] = [];
+  for (let i = 0; i < fields.length; i += FIELDS_PER_PAGE) {
+    out.push({
+      name: `Page ${Math.floor(i / FIELDS_PER_PAGE) + 1}`,
+      fields: fields.slice(i, i + FIELDS_PER_PAGE),
+    });
+  }
+  return out;
+}
+
 /**
  * Module detail: fields render as section rows with inline accessory buttons
- * (booleans toggle in place, everything else opens a per-field edit subpanel),
- * paginated so the card never exceeds Discord's component budget.
+ * (booleans toggle in place, everything else opens a per-field edit subpanel).
+ * Large modules split into named subsections navigated by a "jump to section"
+ * select, so the card never scrolls into a wall of settings.
  */
 export function buildFeatureDetailView(
   meta: ModuleMeta,
   config: Record<string, unknown>,
   guildEnabled: boolean,
-  fieldPage = 0,
+  sectionIndex = 0,
   t?: LumiT,
 ): CardReply {
   const fields = meta.configFields ?? [];
-  const totalPages = Math.max(1, Math.ceil(fields.length / FIELDS_PER_PAGE));
-  const safePage = Math.max(0, Math.min(fieldPage, totalPages - 1));
-  const pageFields = fields.slice(
-    safePage * FIELDS_PER_PAGE,
-    (safePage + 1) * FIELDS_PER_PAGE,
-  );
+  const groups = sectionsFor(fields);
+  const multi = groups.length > 1;
+  const idx = Math.max(0, Math.min(sectionIndex, groups.length - 1));
+  const current = groups[idx] ?? { name: null, fields: [] };
 
   const statusBadge = formatStatusBadge(
     guildEnabled ? "enabled" : "disabled",
     t,
   );
 
-  const sections = pageFields.map((f) => {
+  const sections = current.fields.map((f) => {
     const req = f.required
       ? ` *${t ? t(PanelsKeys.DetailRequired) : "(required)"}*`
       : "";
@@ -275,14 +312,14 @@ export function buildFeatureDetailView(
       const def = f.default === undefined ? false : Boolean(f.default);
       const on = Boolean(config[f.key] ?? def);
       return settingRow(lines, {
-        customId: `cfg:bool:${meta.name}:${f.key}:${safePage}`,
+        customId: `cfg:bool:${meta.name}:${f.key}:${idx}`,
         label: on ? Emojis.CHECK : Emojis.CROSS,
         style: on ? ButtonStyle.Success : ButtonStyle.Secondary,
       });
     }
 
     return settingRow(lines, {
-      customId: `cfg:field:${meta.name}:${f.key}:${safePage}`,
+      customId: `cfg:field:${meta.name}:${f.key}:${idx}`,
       label: t ? t(PanelsKeys.DetailEdit) : "Edit",
       emoji: Emojis.EDIT,
       style: ButtonStyle.Secondary,
@@ -292,7 +329,7 @@ export function buildFeatureDetailView(
   const rows: Row[] = [
     new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
       createActionButton({
-        customId: `cfg:tog:${meta.name}:${safePage}`,
+        customId: `cfg:tog:${meta.name}:${idx}`,
         label: guildEnabled
           ? (t ? t(PanelsKeys.DetailDisable) : "Disable Module")
           : (t ? t(PanelsKeys.DetailEnable) : "Enable Module"),
@@ -300,7 +337,7 @@ export function buildFeatureDetailView(
         style: guildEnabled ? ButtonStyle.Danger : ButtonStyle.Success,
       }),
       createActionButton({
-        customId: `cfg:rst:${meta.name}:${safePage}`,
+        customId: `cfg:rst:${meta.name}:${idx}`,
         label: t ? t(PanelsKeys.DetailReset) : "Reset",
         emoji: Emojis.UNINSTALL,
         style: ButtonStyle.Secondary,
@@ -308,13 +345,31 @@ export function buildFeatureDetailView(
     ),
   ];
 
+  if (multi) {
+    rows.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        createStringSelectMenu({
+          customId: `cfg:gsel:${meta.name}`,
+          placeholder: t ? t(PanelsKeys.DetailJump) : "Jump to a section…",
+          options: groups.slice(0, 25).map((sec, i) =>
+            new StringSelectMenuOptionBuilder()
+              .setLabel(cutText(sec.name ?? "Settings", 100))
+              .setValue(String(i))
+              .setDescription(`${sec.fields.length} setting(s)`)
+              .setDefault(i === idx),
+          ),
+        }),
+      ),
+    );
+  }
+
   const secondaryComponents: MessageActionRowComponentBuilder[] = [
     createBackButton(
-      `cfg:back:${safePage}`,
+      `cfg:back:0`,
       t ? t(PanelsKeys.BackToModules) : "← Back to Modules",
     ),
     createActionButton({
-      customId: `cfg:hist:${meta.name}:${safePage}`,
+      customId: `cfg:hist:${meta.name}:${idx}`,
       label: t ? t(PanelsKeys.DetailHistory) : "History",
       emoji: Emojis.CLOCK,
       style: ButtonStyle.Secondary,
@@ -324,7 +379,7 @@ export function buildFeatureDetailView(
   if (meta.configOverrides) {
     secondaryComponents.push(
       createActionButton({
-        customId: `cfg:ovr:${meta.name}:${safePage}`,
+        customId: `cfg:ovr:${meta.name}:${idx}`,
         label: t ? t(PanelsKeys.DetailOverrides) : "Overrides",
         emoji: Emojis.SHIELD,
         style: ButtonStyle.Secondary,
@@ -338,36 +393,28 @@ export function buildFeatureDetailView(
     ),
   );
 
-  if (totalPages > 1) {
-    rows.push(
-      createPaginationRow({
-        customIdPrefix: `cfg:fpage:${meta.name}`,
-        currentPage: safePage,
-        totalPages,
-      }),
+  const body = [
+    formatSubtitle(meta.description || "No description provided."),
+    `**${t ? t(PanelsKeys.DetailStatus) : "Status"}:** ${statusBadge}`,
+  ];
+  if (multi && current.name) {
+    body.push(
+      t
+        ? t(PanelsKeys.DetailSection, {
+            name: current.name,
+            index: idx + 1,
+            total: groups.length,
+          })
+        : `Section **${current.name}** · ${idx + 1}/${groups.length}`,
     );
   }
-
-  const footer =
-    totalPages > 1
-      ? t
-        ? t(PanelsKeys.DetailFieldsFooter, {
-            from: safePage * FIELDS_PER_PAGE + 1,
-            to: safePage * FIELDS_PER_PAGE + pageFields.length,
-            count: fields.length,
-          })
-        : `Fields ${safePage * FIELDS_PER_PAGE + 1}-${safePage * FIELDS_PER_PAGE + pageFields.length} of ${fields.length}`
-      : undefined;
 
   return noPingCard(
     makeCard(
       guildEnabled ? CARD_ACCENTS.PRIMARY : CARD_ACCENTS.WARNING,
       `${meta.emoji} ${meta.displayName}`,
-      [
-        formatSubtitle(meta.description || "No description provided."),
-        `**${t ? t(PanelsKeys.DetailStatus) : "Status"}:** ${statusBadge}`,
-      ],
-      { sections, footer, actionRows: buildSafeActionRows(rows) },
+      body,
+      { sections, actionRows: buildSafeActionRows(rows) },
     ),
   );
 }
