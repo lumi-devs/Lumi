@@ -649,6 +649,11 @@ export class LumiClient extends SapphireClient {
       return Promise.resolve();
     };
 
+    Object.defineProperty(this.ws, "status", {
+      get: () => 0,
+      configurable: true,
+    });
+
     if (isInteractionDeferAtGateway()) {
       installPreDeferredInteractions((msg: string) =>
         container.logger.info(msg),

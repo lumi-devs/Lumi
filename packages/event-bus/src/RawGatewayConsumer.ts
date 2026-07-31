@@ -34,6 +34,8 @@ export interface RawGatewayConsumerOptions {
   log?: (level: "info" | "warn" | "error", msg: string, meta?: object) => void;
 }
 
+const HIGH_BUS_LATENCY_MS = 500;
+
 /** Conservative default: enough to drive command/listener flows. */
 export const DEFAULT_RAW_DISPATCH_TYPES = [
   "READY",
@@ -93,7 +95,23 @@ export class RawGatewayConsumer {
       : otelContext.active();
     try {
       await otelApiContext.with(ctx, () => {
-        this.client.ws.handlePacket(env.packet, { id: env.shardId });
+        const syntheticShard = {
+          id: env.shardId,
+          checkReady: () => true,
+          status: 0,
+          send: () => {},
+          close: () => {},
+          destroy: () => {},
+          sessionInfo: { sequence: 0 },
+        };
+        const lat = Date.now() - env.ts;
+        if (lat > HIGH_BUS_LATENCY_MS) {
+          this.opts.log?.("warn", "high bus latency", {
+            t: env.packet.t,
+            latencyMs: lat,
+          });
+        }
+        this.client.ws.handlePacket(env.packet, syntheticShard);
       });
       await msg.ack();
     } catch (err) {

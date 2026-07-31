@@ -17,6 +17,7 @@ describe("RedisStreamsBus", () => {
       xlen: vi.fn().mockResolvedValue(5),
       xgroup: vi.fn().mockResolvedValue("OK"),
       xpending: vi.fn().mockResolvedValue([12, "100-0", "100-0", []]),
+      xautoclaim: vi.fn().mockResolvedValue(null),
       quit: vi.fn().mockResolvedValue("OK"),
     };
 
@@ -36,8 +37,8 @@ describe("RedisStreamsBus", () => {
 
   const createBus = (opts = {}) => {
     return new RedisStreamsBus({
-      publisher: publisherMock as unknown as Redis,
-      subscriber: subscriberMock as unknown as Redis,
+      publisher: publisherMock,
+      subscriber: subscriberMock,
       log: logSpy,
       claimIntervalMs: 0,
       statsIntervalMs: 0,
@@ -169,7 +170,7 @@ describe("RedisStreamsBus", () => {
 
       subscriberMock.xreadgroup
         .mockImplementationOnce(
-          async () => [
+          () => [
             [
               "stream-1",
               [
@@ -204,7 +205,7 @@ describe("RedisStreamsBus", () => {
     it("handles xreadgroup error gracefully and retries after sleep", async () => {
       const bus = createBus();
       subscriberMock.xreadgroup.mockImplementationOnce(
-        async () => { throw new Error("Socket error"); },
+        () => { throw new Error("Socket error"); },
       );
 
       const stop = await bus.consume(
@@ -229,7 +230,7 @@ describe("RedisStreamsBus", () => {
     it("logs error when handler throws and leaves entry pending", async () => {
       const bus = createBus();
       subscriberMock.xreadgroup.mockImplementationOnce(
-        async () => [
+        () => [
           [
             "stream-1",
             [["2000-0", ["b", JSON.stringify({ key: "val" })]]],
@@ -267,7 +268,7 @@ describe("RedisStreamsBus", () => {
       const bus = createBus({ maxDeliveries: 3, defaultMaxLen: 10000 });
       const handlerSpy = vi.fn();
 
-      subscriberMock.xautoclaim.mockResolvedValueOnce([
+      publisherMock.xautoclaim.mockResolvedValueOnce([
         "0-0",
         [["3000-0", ["b", JSON.stringify({ poison: true })]]],
         [],
@@ -357,7 +358,7 @@ describe("RedisStreamsBus", () => {
       const handlerSpy = vi.fn();
 
       subscriberMock.xreadgroup
-        .mockImplementationOnce(async () => [
+        .mockImplementationOnce(() => [
           [
             "stream-1",
             [
@@ -368,7 +369,7 @@ describe("RedisStreamsBus", () => {
             ],
           ],
         ])
-        .mockImplementationOnce(async () => [
+        .mockImplementationOnce(() => [
           [
             "stream-1",
             [
@@ -435,7 +436,7 @@ describe("RedisStreamsBus", () => {
       const bus = createBus({ claimIntervalMs: 5000 });
       const handlerSpy = vi.fn();
 
-      subscriberMock.xautoclaim.mockResolvedValueOnce([
+      publisherMock.xautoclaim.mockResolvedValueOnce([
         "0-0",
         [["5000-0", ["b", JSON.stringify({ claimed: true })]]],
         [],
@@ -452,7 +453,7 @@ describe("RedisStreamsBus", () => {
 
       await vi.advanceTimersByTimeAsync(5000);
 
-      expect(subscriberMock.xautoclaim).toHaveBeenCalledWith(
+      expect(publisherMock.xautoclaim).toHaveBeenCalledWith(
         "stream-1",
         "g-1",
         "c-1",
@@ -483,7 +484,7 @@ describe("RedisStreamsBus", () => {
 
     it("logs error when xautoclaim loop throws exception", async () => {
       const bus = createBus({ claimIntervalMs: 5000 });
-      subscriberMock.xautoclaim.mockRejectedValueOnce(new Error("Autoclaim error"));
+      publisherMock.xautoclaim.mockRejectedValueOnce(new Error("Autoclaim error"));
 
       const stop = await bus.consume(
         ["stream-1"],

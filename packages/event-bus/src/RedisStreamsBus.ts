@@ -312,7 +312,7 @@ export class RedisStreamsBus implements EventBus {
       let cursor = "0-0";
       // Bound the loop - claim up to ~128 entries per tick, then yield.
       for (let i = 0; i < 8; i++) {
-        const resp = (await this.subStream.xautoclaim(
+        const resp = (await this.pubStream.xautoclaim(
           stream,
           opts.group,
           opts.consumer,

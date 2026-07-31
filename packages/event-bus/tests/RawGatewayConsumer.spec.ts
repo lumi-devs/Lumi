@@ -13,7 +13,7 @@ describe("RawGatewayConsumer", () => {
     const stopSpy = vi.fn().mockResolvedValue(undefined);
     const bus: EventBus = {
       publish: vi.fn().mockResolvedValue("1-0"),
-      consume: vi.fn().mockImplementation(async (_streams, _opts, handler) => {
+      consume: vi.fn().mockImplementation((_streams, _opts, handler) => {
         if (consumeHandlerCapture) {
           // store handler reference
           (consumeHandlerCapture as any).handler = handler;
@@ -113,7 +113,7 @@ describe("RawGatewayConsumer", () => {
 
     expect(client.ws.handlePacket).toHaveBeenCalledWith(
       { op: 0, t: "MESSAGE_CREATE", d: { id: "m-1" } },
-      { id: 2 },
+      expect.objectContaining({ id: 2 }),
     );
     expect(mockAck).toHaveBeenCalledTimes(1);
   });
@@ -148,7 +148,7 @@ describe("RawGatewayConsumer", () => {
 
     expect(client.ws.handlePacket).toHaveBeenCalledWith(
       { op: 0, t: "GUILD_CREATE", d: { id: "g-2" } },
-      { id: 0 },
+      expect.objectContaining({ id: 0 }),
     );
     expect(mockAck).toHaveBeenCalledTimes(1);
   });
