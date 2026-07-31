@@ -4,11 +4,8 @@ import {
   ChannelSelectMenuBuilder,
   MentionableSelectMenuBuilder,
   RoleSelectMenuBuilder,
-  SectionBuilder,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
-  TextDisplayBuilder,
-  ThumbnailBuilder,
   UserSelectMenuBuilder,
   type AnyComponentBuilder,
   type MessageActionRowComponentBuilder,
@@ -22,6 +19,16 @@ import { container } from "@sapphire/framework";
 import { Emojis } from "#utilities/assets.js";
 
 export { formatBreadcrumbHeader, formatStatusBadge, formatSubtitle, breadcrumbs } from "./ui/layout.js";
+export {
+  settingRow,
+  thumbRow,
+  tabRow,
+  confirmRow,
+  backRow,
+  type AccessoryButton,
+  type Tab,
+  type ConfirmRowOptions,
+} from "./ui/kit.js";
 
 export interface CreateUserSelectMenuOptions {
   customId: string;
@@ -330,26 +337,3 @@ export function createCategorySubmenuRow(
   return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
 }
 
-export function createSectionWithThumbnail(
-  lines: string[],
-  imageUrl: string,
-): SectionBuilder {
-  const section = new SectionBuilder().setThumbnailAccessory(
-    new ThumbnailBuilder().setURL(imageUrl),
-  );
-  for (const line of lines) {
-    section.addTextDisplayComponents(new TextDisplayBuilder().setContent(line));
-  }
-  return section;
-}
-
-export function createSectionWithButton(
-  lines: string[],
-  button: ButtonBuilder,
-): SectionBuilder {
-  const section = new SectionBuilder().setButtonAccessory(button);
-  for (const line of lines) {
-    section.addTextDisplayComponents(new TextDisplayBuilder().setContent(line));
-  }
-  return section;
-}

@@ -1,8 +1,8 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { InteractionHandler, InteractionHandlerTypes, container } from "@sapphire/framework";
 import { type ButtonInteraction, type StringSelectMenuInteraction } from "discord.js";
-import { buildWarnThresholdsPanelView } from "../lib/warn-thresholds-panel.js";
-import { logError } from "#lib/utilities/errors.js";
+import { buildWarnThresholdsPanel } from "../lib/warn-thresholds-panel.js";
+import { updatePanel } from "#lib/utilities/command-response.js";
 import {
   getThresholds,
   setThresholdRule,
@@ -65,29 +65,14 @@ export class WarnThresholdsButtonHandler extends InteractionHandler {
     const decayRaw = await container.db.config.getModuleConfig(guildId, "mod", "warn_decay_days");
     const decayDays = typeof decayRaw === "number" ? decayRaw : 30;
 
-    const view = buildWarnThresholdsPanelView(thresholds, decayDays, {
-      selectedCount,
-      selectedAction,
-      selectedDuration,
-    });
-
-    const renderCtx = {
-      sessionId: `wt:${guildId}:${interaction.user.id}`,
-      guildId,
-      userId: interaction.user.id,
-      moduleStore: container.stores.get("modules") as any,
-    };
-
-    const rendered = await view.render(renderCtx);
-    try {
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply(rendered);
-      } else {
-        await interaction.update(rendered as any);
-      }
-    } catch (err) {
-      logError(`warnthresholds button error: customId=${parsed.customId}`, err);
-    }
+    await updatePanel(
+      interaction,
+      buildWarnThresholdsPanel(thresholds, decayDays, {
+        selectedCount,
+        selectedAction,
+        selectedDuration,
+      }),
+    );
   }
 }
 
@@ -125,28 +110,13 @@ export class WarnThresholdsSelectHandler extends InteractionHandler {
     const decayRaw = await container.db.config.getModuleConfig(guildId, "mod", "warn_decay_days");
     const decayDays = typeof decayRaw === "number" ? decayRaw : 30;
 
-    const view = buildWarnThresholdsPanelView(thresholds, decayDays, {
-      selectedCount,
-      selectedAction,
-      selectedDuration,
-    });
-
-    const renderCtx = {
-      sessionId: `wt:${guildId}:${interaction.user.id}`,
-      guildId,
-      userId: interaction.user.id,
-      moduleStore: container.stores.get("modules") as any,
-    };
-
-    const rendered = await view.render(renderCtx);
-    try {
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply(rendered);
-      } else {
-        await interaction.update(rendered as any);
-      }
-    } catch (err) {
-      logError(`warnthresholds select error: customId=${parsed.customId}`, err);
-    }
+    await updatePanel(
+      interaction,
+      buildWarnThresholdsPanel(thresholds, decayDays, {
+        selectedCount,
+        selectedAction,
+        selectedDuration,
+      }),
+    );
   }
 }
