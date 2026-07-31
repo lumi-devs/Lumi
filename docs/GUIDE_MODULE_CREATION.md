@@ -97,17 +97,47 @@ export class GreetListener extends ModuleListener {
 
 ## Step 5: Add Scheduled Tasks
 
-`packages/core/src/modules/<your-module>/scheduled-tasks/cleanup.ts`:
+Every Lumi scheduled task is a `RelayTask` subclass: it declares nothing but a
+name and payload type via `@sapphire/plugin-scheduled-tasks`'s
+`ScheduledTask.Options`. `RelayTask.run()` (from `#lib/scheduled-tasks.js`)
+applies the catch-up policy and republishes the fire onto the bus - the
+Discord-touching work never lives in the piece itself. There are two shapes:
+
+**Recurring (cron)** - `packages/core/src/modules/<your-module>/scheduled-tasks/cleanup.ts`:
 
 ```typescript
 import { ApplyOptions } from "@sapphire/decorators";
-import { RelayTask } from "#lib/schedule-task.js";
+import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
+import { RelayTask, type CatchUpMeta } from "#lib/scheduled-tasks.js";
 
-@ApplyOptions<RelayTask.Options>({
-  name: "my-module-cleanup",
-  interval: 3_600_000, // every hour
-})
+export interface CleanupPayload extends CatchUpMeta {}
+
+@ApplyOptions<ScheduledTask.Options>({ name: "my-module-cleanup", pattern: "0 * * * *" }) // hourly
 export class CleanupTask extends RelayTask<"my-module-cleanup"> {}
+
+declare module "@sapphire/plugin-scheduled-tasks" {
+  interface ScheduledTasks {
+    "my-module-cleanup": CleanupPayload;
+  }
+}
+```
+
+**One-shot (delayed)** - schedule from anywhere with `scheduleTask` (from
+`#lib/schedule-task.js`), then handle the actual fire with
+`registerTaskFireHandler` in your module's `onLoad`:
+
+```typescript
+// lib/helpers.ts
+import { scheduleTask } from "#lib/schedule-task.js";
+
+await scheduleTask("my-module-cleanup", { targetId }, { repeated: false, delay: 60_000 });
+
+// index.ts
+import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
+
+registerTaskFireHandler("my-module-cleanup", "unicast", async (payload) => {
+  // do the actual Discord-touching work here
+});
 ```
 
 ## Step 6: Add Translations
@@ -159,5 +189,9 @@ bun run typecheck && bun run lint && bun run test
 - **No cross-module imports**: Never `import` from sibling modules. Move shared code to `#lib/*`.
 - **No raw EmbedBuilder**: Use card helpers from `#utilities/cards.js` and `#lib/commands.js`.
 - **No direct `container.prisma`**: Use `container.db` (`DatabaseService`).
+- **Built-in modules use dedicated Prisma tables, not the KV store**: add a
+  repository under `lib/prisma/repositories/` for your module's data. The
+  generic `ModuleData` KV table (`container.db.guildKV`) is reserved for
+  third-party addons that can't ship a migration.
 - **No direct `redis.del`**: Use `container.invalidation.invalidate(...)`.
 - **Use `#` aliases**: Import using `#lib/*`, `#database/*`, `#utilities/*` with `.js` extension.
