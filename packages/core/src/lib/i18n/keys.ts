@@ -95,6 +95,7 @@ export const PanelsKeys = {
   AddonsAddRepo: T("panels:addonsAddRepo"),
   AddonsRemoveRepo: T("panels:addonsRemoveRepo"),
   AddonsUpdateAll: T("panels:addonsUpdateAll"),
+  AddonsUpdateRepo: T("panels:addonsUpdateRepo"),
   AddonsFooter: T("panels:addonsFooter"),
   AddonsReposTitle: T("panels:addonsReposTitle"),
   AddonsReposEmpty: T("panels:addonsReposEmpty"),

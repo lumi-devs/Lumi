@@ -3,6 +3,7 @@ import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { invalidateThresholds } from "./lib/thresholds.js";
 import { scheduleCaseLift } from "./lib/helpers.js";
 import { handleModLiftFire } from "./lib/lift-handler.js";
+import { handleWarnDecayFire } from "./lib/warn-decay-handler.js";
 
 @DefineModule({
   name: "mod",
@@ -33,6 +34,7 @@ export class ModModule extends Module {
       invalidateThresholds(this.container, guildId),
     );
     registerTaskFireHandler("mod-lift", "unicast", handleModLiftFire);
+    registerTaskFireHandler("warn-decay", "unicast", handleWarnDecayFire);
     return super.onLoad();
   }
 

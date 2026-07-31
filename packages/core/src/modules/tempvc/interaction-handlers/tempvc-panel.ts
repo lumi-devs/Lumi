@@ -161,6 +161,13 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
     { action, channelId }: { action: string; channelId: string },
   ): Promise<void> {
     if (!interaction.inGuild()) return;
+
+    // showModal() must be the interaction's first response, so "name"/"limit"
+    // can't defer first; every other action defers immediately to beat
+    // Discord's 3s ack window before the i18n/Redis lookups below.
+    const opensModal = action === "name" || action === "limit";
+    if (!opensModal) await interaction.deferUpdate();
+
     const t = await fetchTyped(interaction);
     const channel = interaction.guild?.channels.cache.get(channelId);
     if (!channel || !channel.isVoiceBased()) {
@@ -189,7 +196,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
 
     switch (action) {
       case "panel":
-        await interaction.update(buildPanel(channel, record, t));
+        await interaction.editReply(buildPanel(channel, record, t));
         return;
       case "name":
         await showRenameModal(interaction, channel, t);
@@ -198,7 +205,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
         await showLimitModal(interaction, channel, t);
         return;
       case "delete":
-        await interaction.update(buildDeleteConfirmView(channel, t));
+        await interaction.editReply(buildDeleteConfirmView(channel, t));
         return;
       case "delyes":
         await this.#doDelete(interaction, channel, t);
@@ -209,7 +216,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
           record,
           !record.locked,
         );
-        await interaction.update(buildPanel(channel, next, t));
+        await interaction.editReply(buildPanel(channel, next, t));
         return;
       }
       case "hide": {
@@ -218,26 +225,26 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
           record,
           !record.hidden,
         );
-        await interaction.update(buildPanel(channel, next, t));
+        await interaction.editReply(buildPanel(channel, next, t));
         return;
       }
       case "kick":
-        await interaction.update(buildKickView(channel, record, t));
+        await interaction.editReply(buildKickView(channel, record, t));
         return;
       case "trust":
-        await interaction.update(buildTrustView(channel, record, t));
+        await interaction.editReply(buildTrustView(channel, record, t));
         return;
       case "untrust":
-        await interaction.update(buildUntrustView(channel, record, t));
+        await interaction.editReply(buildUntrustView(channel, record, t));
         return;
       case "block":
-        await interaction.update(buildBlockView(channel, record, t));
+        await interaction.editReply(buildBlockView(channel, record, t));
         return;
       case "unblock":
-        await interaction.update(buildUnblockView(channel, record, t));
+        await interaction.editReply(buildUnblockView(channel, record, t));
         return;
       case "transfer":
-        await interaction.update(buildTransferView(channel, record, t));
+        await interaction.editReply(buildTransferView(channel, record, t));
         return;
       default:
         return;
@@ -249,7 +256,6 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
     channel: VoiceBasedChannel,
     t?: import("#lib/i18n/index.js").LumiT,
   ): Promise<void> {
-    await interaction.deferUpdate();
     const { id, guildId } = channel;
     await channel.delete("Deleted by owner via panel").catch(() => null);
     if (guildId) await removeVcRecord(guildId, id);
@@ -301,7 +307,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
 
     const fullRecord = (await getVcRecord(interaction.guildId!, channel.id))!;
     const next = await this.service.setOwner(channel, fullRecord, member.id);
-    await interaction.update(buildPanel(channel, next, t));
+    await interaction.editReply(buildPanel(channel, next, t));
   }
 }
 
@@ -329,6 +335,14 @@ export class TempVcPanelSelectHandler extends BaseInteractionHandler {
     const channel = interaction.guild?.channels.cache.get(channelId);
     if (!channel || !channel.isVoiceBased()) return;
 
+    // showModal() must be the interaction's first response, so a "panelmenu"
+    // pick of "name"/"limit" can't defer first; everything else defers
+    // immediately to beat Discord's 3s ack window before the Redis/i18n
+    // lookups below. `interaction.values` is available synchronously.
+    const selected = action === "panelmenu" ? interaction.values[0] : undefined;
+    const opensModal = selected === "name" || selected === "limit";
+    if (!opensModal) await interaction.deferUpdate();
+
     const record = await getVcRecord(interaction.guildId, channelId);
     if (!record) return;
 
@@ -337,7 +351,6 @@ export class TempVcPanelSelectHandler extends BaseInteractionHandler {
     assertOwner(this.service, member, channel, record.ownerId, t);
 
     if (action === "panelmenu") {
-      const selected = interaction.values[0];
       switch (selected) {
         case "name":
           await showRenameModal(interaction, channel, t);
@@ -347,41 +360,40 @@ export class TempVcPanelSelectHandler extends BaseInteractionHandler {
           return;
         case "lock": {
           const next = await this.service.setLock(channel, record, !record.locked);
-          await interaction.update(buildPanel(channel, next, t));
+          await interaction.editReply(buildPanel(channel, next, t));
           return;
         }
         case "hide": {
           const next = await this.service.setHide(channel, record, !record.hidden);
-          await interaction.update(buildPanel(channel, next, t));
+          await interaction.editReply(buildPanel(channel, next, t));
           return;
         }
         case "kick":
-          await interaction.update(buildKickView(channel, record, t));
+          await interaction.editReply(buildKickView(channel, record, t));
           return;
         case "trust":
-          await interaction.update(buildTrustView(channel, record, t));
+          await interaction.editReply(buildTrustView(channel, record, t));
           return;
         case "untrust":
-          await interaction.update(buildUntrustView(channel, record, t));
+          await interaction.editReply(buildUntrustView(channel, record, t));
           return;
         case "block":
-          await interaction.update(buildBlockView(channel, record, t));
+          await interaction.editReply(buildBlockView(channel, record, t));
           return;
         case "unblock":
-          await interaction.update(buildUnblockView(channel, record, t));
+          await interaction.editReply(buildUnblockView(channel, record, t));
           return;
         case "transfer":
-          await interaction.update(buildTransferView(channel, record, t));
+          await interaction.editReply(buildTransferView(channel, record, t));
           return;
         case "delete":
-          await interaction.update(buildDeleteConfirmView(channel, t));
+          await interaction.editReply(buildDeleteConfirmView(channel, t));
           return;
         default:
           return;
       }
     }
 
-    await interaction.deferUpdate();
     const ids = interaction.values.filter((id) => id !== record.ownerId);
 
     const result =
@@ -531,6 +543,8 @@ export class TempVcPanelModalHandler extends BaseInteractionHandler {
     { kind, channelId }: { kind: string; channelId: string },
   ): Promise<void> {
     if (!interaction.inGuild()) return;
+    await interaction.deferUpdate();
+
     const channel = interaction.guild?.channels.cache.get(channelId);
     if (!channel || !channel.isVoiceBased()) return;
 
@@ -543,7 +557,7 @@ export class TempVcPanelModalHandler extends BaseInteractionHandler {
     if (kind === "namem") {
       const name = interaction.fields.getTextInputValue("name").trim();
       if (!name) {
-        await interaction.reply(
+        await interaction.followUp(
           ephemeralCard(
             makeErrorCard(
               t("tempvc:invalidNameTitle"),
@@ -563,7 +577,7 @@ export class TempVcPanelModalHandler extends BaseInteractionHandler {
       const raw = interaction.fields.getTextInputValue("limit").trim();
       const limit = Number.parseInt(raw, 10);
       if (Number.isNaN(limit) || limit < 0 || limit > 99) {
-        await interaction.reply(
+        await interaction.followUp(
           ephemeralCard(
             makeErrorCard(
               t("tempvc:modalLimitTitle"),
@@ -578,11 +592,11 @@ export class TempVcPanelModalHandler extends BaseInteractionHandler {
     }
 
     const fresh = await getVcRecord(interaction.guildId, channelId);
-    if (interaction.isFromMessage() && fresh) {
-      await interaction.update(buildPanel(channel, fresh, t));
+    if (fresh) {
+      await interaction.editReply(buildPanel(channel, fresh, t));
       return;
     }
-    await interaction.reply(
+    await interaction.followUp(
       ephemeralCard(
         makeSuccessCard(
           t("tempvc:updatedTitle"),

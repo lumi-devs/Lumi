@@ -20,24 +20,12 @@ export class KickCommand extends BaseCommand {
     registry: ApplicationCommandRegistry,
   ) {
     registry.registerChatInputCommand((b) =>
-      applyLocalizedBuilder(
-        b,
-        "commands:kick.name",
-        "commands:kick.description",
-      )
+      applyLocalizedBuilder(b, "commands:kick")
         .addUserOption((o) =>
-          applyLocalizedBuilder(
-            o,
-            "commands:kick.options.member.name",
-            "commands:kick.options.member.description",
-          ).setRequired(true),
+          applyLocalizedBuilder(o, "commands:kickMember").setRequired(true),
         )
         .addStringOption((o) =>
-          applyLocalizedBuilder(
-            o,
-            "commands:kick.options.reason.name",
-            "commands:kick.options.reason.description",
-          ),
+          applyLocalizedBuilder(o, "commands:modReason"),
         ),
     );
   }

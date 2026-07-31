@@ -3,7 +3,7 @@ import {
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
-import type { ButtonInteraction } from "discord.js";
+import { MessageFlags, type ButtonInteraction } from "discord.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { fetchTyped } from "#lib/commands.js";
 import { getService } from "#lib/module-system/Service.js";
@@ -42,6 +42,19 @@ export class VerifyInteractionHandler extends BaseInteractionHandler {
 
   public async run(interaction: ButtonInteraction, parsed: Parsed) {
     if (!interaction.inGuild() || !interaction.guild) return;
+
+    // "start" is a fresh ephemeral reply (the Verify button lives on a
+    // shared public panel); "step" edits that per-user ephemeral challenge
+    // message in place. Defer immediately, before any DB/Redis lookups, to
+    // beat Discord's 3s ack window.
+    if (parsed.kind === "start") {
+      await interaction.deferReply({
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+      });
+    } else {
+      await interaction.deferUpdate();
+    }
+
     const t = await fetchTyped(interaction);
     const security = getService("security");
     const { guild } = interaction;
@@ -50,7 +63,7 @@ export class VerifyInteractionHandler extends BaseInteractionHandler {
     if (parsed.kind === "start") {
       const config = await security.loadVerificationConfig(guild.id);
       if (!config.enabled || !config.verifiedRoleId) {
-        return interaction.reply(
+        return interaction.editReply(
           ephemeralCard(
             makeErrorCard(
               t(PanelsKeys.VerifyDisabledTitle),
@@ -60,12 +73,12 @@ export class VerifyInteractionHandler extends BaseInteractionHandler {
         );
       }
       const state = await security.startChallenge(guild.id, userId, config);
-      return interaction.reply(ephemeralCard(buildChallengeCard(t, state)));
+      return interaction.editReply(ephemeralCard(buildChallengeCard(t, state)));
     }
 
     const state = await security.getChallenge(guild.id, userId);
     if (!state) {
-      return interaction.update(
+      return interaction.editReply(
         makeErrorCard(
           t(PanelsKeys.VerifyExpiredTitle),
           t(PanelsKeys.VerifyExpired),
@@ -78,18 +91,18 @@ export class VerifyInteractionHandler extends BaseInteractionHandler {
       case "solved":
         await security.clearChallenge(guild.id, userId);
         await security.grantVerified(guild, userId);
-        return interaction.update(
+        return interaction.editReply(
           makeSuccessCard(t(PanelsKeys.VerifyOkTitle), t(PanelsKeys.VerifyOk)),
         );
       case "progress":
         await security.saveChallenge(guild.id, userId, state);
-        return interaction.update(buildProgressCard(t, state));
+        return interaction.editReply(buildProgressCard(t, state));
       case "wrong":
         await security.saveChallenge(guild.id, userId, state);
-        return interaction.update(buildWrongCard(t, state));
+        return interaction.editReply(buildWrongCard(t, state));
       case "failed":
         await security.clearChallenge(guild.id, userId);
-        return interaction.update(
+        return interaction.editReply(
           makeErrorCard(
             t(PanelsKeys.VerifyFailedTitle),
             t(PanelsKeys.VerifyFailed),

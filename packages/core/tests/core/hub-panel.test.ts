@@ -67,7 +67,11 @@ describe("hub-panel view builders", () => {
   });
 
   it("buildAddonsView renders the addons tab active", () => {
-    const card = buildAddonsView({ installedCount: 0, repoCount: 0 });
+    const card = buildAddonsView({
+      installedCount: 0,
+      repoCount: 0,
+      pendingUpdates: [],
+    });
     const tabs = actionRows(card).at(-1);
     const addons = tabs?.components?.find(
       (b) => b.custom_id === "lumi:tab:addons",
@@ -75,7 +79,7 @@ describe("hub-panel view builders", () => {
     expect(addons?.disabled).toBe(true);
   });
 
-  it("buildAddonReposView renders repos as browse rows", () => {
+  it("buildAddonReposView renders repos as update rows", () => {
     const card = buildAddonReposView([
       {
         name: "community",
@@ -85,7 +89,7 @@ describe("hub-panel view builders", () => {
       },
     ]);
     expect(sections(card)[0].accessory?.custom_id).toBe(
-      "lumi:addon:browse:community",
+      "lumi:addon:update_repo:community",
     );
   });
 });

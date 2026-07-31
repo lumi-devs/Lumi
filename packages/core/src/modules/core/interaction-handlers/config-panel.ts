@@ -67,6 +67,14 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
     }: { action: string; moduleName: string; rest: string[] },
   ) {
     if (!interaction.inGuild()) return;
+
+    // showModal() must be the interaction's first response, so modal-opening
+    // actions can't defer first; every other action defers immediately to
+    // beat Discord's 3s ack window before the permission/i18n lookups below.
+    const opensModal =
+      action === "cfg" || action === "ovadd" || action === "fedit";
+    if (!opensModal) await this.acknowledge(interaction);
+
     if (!(await hasPanelAccess(interaction))) throw accessDenied();
     const { guildId } = interaction;
 
@@ -77,7 +85,6 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
     if (action === "fedit")
       return this.#openFieldModal(interaction, guildId, moduleName, rest[0]);
 
-    await this.acknowledge(interaction);
     const t = await fetchTyped(interaction);
 
     switch (action) {
@@ -334,9 +341,9 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
     }: { action: string; moduleName: string; key: string; page?: string },
   ) {
     if (!interaction.inGuild()) return;
+    await this.acknowledge(interaction);
     if (!(await hasPanelAccess(interaction))) throw accessDenied();
     const { guildId } = interaction;
-    await this.acknowledge(interaction);
     const t = await fetchTyped(interaction);
     const fieldPage = parseInt(page ?? "0", 10) || 0;
 
@@ -498,12 +505,15 @@ export class ConfigPanelModalHandler extends InteractionHandler {
       fieldKey,
     }: { kind: string; moduleName: string; fieldKey?: string },
   ) {
-    if (!interaction.inGuild() || !(await hasPanelAccess(interaction))) {
-      return interaction.reply(
+    if (!interaction.inGuild()) return;
+    await interaction.deferUpdate();
+
+    if (!(await hasPanelAccess(interaction))) {
+      return interaction.followUp(
         ephemeralCard(
           makeErrorCard(
             "Permission Denied",
-            "You need the Admin permission level to manage configuration.",
+            "You need the `admin.*` permit to manage configuration.",
           ),
         ),
       );
@@ -511,7 +521,7 @@ export class ConfigPanelModalHandler extends InteractionHandler {
     const { guildId } = interaction;
     const record = this.container.moduleStore.getRecord(moduleName);
     if (!record) {
-      return interaction.reply(
+      return interaction.followUp(
         ephemeralCard(
           makeErrorCard(
             "Unknown Module",
@@ -543,7 +553,7 @@ export class ConfigPanelModalHandler extends InteractionHandler {
           );
         }
       } catch (err) {
-        return interaction.reply(
+        return interaction.followUp(
           ephemeralCard(
             makeErrorCard(
               "Invalid Value",
@@ -579,7 +589,7 @@ export class ConfigPanelModalHandler extends InteractionHandler {
             );
           }
         } catch (err) {
-          return interaction.reply(
+          return interaction.followUp(
             ephemeralCard(
               makeErrorCard(
                 "Invalid Value",
@@ -631,11 +641,7 @@ export class ConfigPanelModalHandler extends InteractionHandler {
           guildId,
           moduleName,
         );
-      if (interaction.isFromMessage())
-        return interaction.update(buildOverridesView(record.meta, overrides));
-      return interaction.reply(
-        ephemeralCard(buildOverridesView(record.meta, overrides)),
-      );
+      return interaction.editReply(buildOverridesView(record.meta, overrides));
     }
 
     const detail = await loadDetail(guildId, moduleName);
@@ -648,12 +654,11 @@ export class ConfigPanelModalHandler extends InteractionHandler {
       0,
       t,
     );
-    if (interaction.isFromMessage()) return interaction.update(view);
-    return interaction.reply(ephemeralCard(view));
+    return interaction.editReply(view);
   }
 
   #err(interaction: ModalSubmitInteraction, message: string) {
-    return interaction.reply(
+    return interaction.followUp(
       ephemeralCard(makeErrorCard("Invalid Override", message)),
     );
   }

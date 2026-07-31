@@ -11,7 +11,6 @@ import {
   TextInputBuilder,
 } from "@discordjs/builders";
 import {
-  GuildMember,
   MessageFlags,
   TextInputStyle,
   type ButtonInteraction,
@@ -22,10 +21,7 @@ import { getService } from "#lib/module-system/Service.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import {
-  PermissionLevel,
-  resolvePermissionLevel,
-  } from "#lib/permissions/index.js";
+import { hasRequiredPermit } from "#lib/permissions/index.js";
 import { collectKnownPermitNodes } from "#lib/permissions/nodes.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import {
@@ -49,6 +45,7 @@ import {
   buildAddonInstalledView,
   buildAddonRepoModulesView,
   buildAddonReposView,
+  buildAutoUpdateSettingsView,
   DEFAULT_PREFIX,
   type PermitKind,
 } from "#modules/core/lib/hub-panel.js";
@@ -59,23 +56,17 @@ import type { DownloaderService } from "#lib/services/DownloaderService.js";
 const accessDenied = () =>
   new UserError({
     identifier: "AccessDenied",
-    message: `${Emojis.CROSS} You need the Admin permission level to manage this server.`,
+    message: `${Emojis.CROSS} You need the \`admin.*\` permit to manage this server.`,
   });
 
-/** Resolves the interacting member's permission level within this guild. */
-export async function resolveLevel(
-  interaction:
-    ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction,
-): Promise<PermissionLevel> {
-  if (!interaction.guild) return PermissionLevel.USER;
-  const member =
-    interaction.member instanceof GuildMember ? interaction.member : null;
-  return resolvePermissionLevel({
-    userId: interaction.user.id,
-    guild: interaction.guild,
-    member,
-  });
-}
+type PanelInteraction =
+  ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction;
+
+/** Wick-style permit checks for the hub panel: same nodes /lumi and /download require. */
+const hasAdminPermit = (interaction: PanelInteraction) =>
+  hasRequiredPermit(interaction, "admin.*");
+const hasOwnerPermit = (interaction: PanelInteraction) =>
+  hasRequiredPermit(interaction, "owner.*");
 
 async function renderHub(interaction: ButtonInteraction, t?: LumiT) {
   const guildId = interaction.guildId!;
@@ -146,7 +137,6 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
   private static readonly ADDON_MODAL_ACTIONS = new Set([
     "add_repo",
     "rm_repo",
-    "update_repo",
     "install",
     "uninstall",
   ]);
@@ -166,9 +156,18 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
     { action, sub, rest }: { action: string; sub?: string; rest: string[] },
   ) {
     if (!interaction.inGuild()) return;
-    const level = await resolveLevel(interaction);
-    if (level < PermissionLevel.ADMIN) throw accessDenied();
-    const t = await fetchTyped(interaction);
+
+    // showModal() must be the interaction's first response, so modal-opening
+    // actions can't defer first; every other action defers immediately to
+    // beat Discord's 3s ack window before doing any permission/i18n lookups.
+    const opensModal =
+      (action === "prefix" && sub === "set") ||
+      (action === "addon" &&
+        !!sub &&
+        HubPanelButtonHandler.ADDON_MODAL_ACTIONS.has(sub));
+    if (!opensModal) await this.acknowledge(interaction);
+
+    if (!(await hasAdminPermit(interaction))) throw accessDenied();
 
     if (action === "prefix" && sub === "set")
       return this.#openPrefixModal(interaction);
@@ -177,8 +176,7 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
       sub &&
       HubPanelButtonHandler.ADDON_MODAL_ACTIONS.has(sub)
     ) {
-      const bLevel = await resolveLevel(interaction);
-      if (bLevel < PermissionLevel.BOT_OWNER)
+      if (!(await hasOwnerPermit(interaction)))
         throw new UserError({
           identifier: "AccessDenied",
           message: "Only Bot Owners can manage addons.",
@@ -186,7 +184,7 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
       return this.#openAddonModal(interaction, sub);
     }
 
-    await this.acknowledge(interaction);
+    const t = await fetchTyped(interaction);
 
     switch (action) {
       case "home":
@@ -239,59 +237,8 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
         }
         return undefined;
       }
-      case "update_all": {
-        if (level < PermissionLevel.BOT_OWNER)
-          throw new UserError({
-            identifier: "AccessDenied",
-            message: "Only Bot Owners can update add-ons.",
-          });
-
-        const downloader = getService("downloader");
-        const installed = await downloader.getInstalledModules();
-        if (!installed.length) {
-          return interaction.editReply(
-            ephemeralCard(
-              makeWarningCard(
-                "No Addon Modules",
-                "No third-party addon modules are installed. Core system modules update automatically with the host process.",
-              ),
-            ),
-          );
-        }
-
-        let updatedCount = 0;
-        let needsRestart = false;
-        for (const mod of installed) {
-          try {
-            const res = await downloader.updateModule(mod.moduleName);
-            if (res.updated) {
-              updatedCount++;
-              if (res.needsRestart) needsRestart = true;
-            }
-          } catch (err: unknown) {
-            this.container.logger.debug(
-              `[hub] Update check failed for ${mod.moduleName}: ${String(err)}`,
-            );
-          }
-        }
-
-        const msg =
-          updatedCount > 0
-            ? `Successfully updated **${updatedCount}** module(s).`
-            : "All modules and repositories are up to date!";
-
-        return interaction.editReply(
-          ephemeralCard(
-            makeSuccessCard("Update Check Complete", msg, {
-              actionRows: needsRestart
-                ? [restartChoiceRow(interaction.user.id)]
-                : undefined,
-            }),
-          ),
-        );
-      }
       case "check_core": {
-        if (level < PermissionLevel.BOT_OWNER)
+        if (!(await hasOwnerPermit(interaction)))
           throw new UserError({
             identifier: "AccessDenied",
             message: "Only Bot Owners can check core update status.",
@@ -344,7 +291,7 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
         );
       }
       case "update_core": {
-        if (level < PermissionLevel.BOT_OWNER)
+        if (!(await hasOwnerPermit(interaction)))
           throw new UserError({
             identifier: "AccessDenied",
             message: "Only Bot Owners can update Lumi core.",
@@ -380,7 +327,7 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
         );
       }
       case "addon": {
-        if (level < PermissionLevel.BOT_OWNER)
+        if (!(await hasOwnerPermit(interaction)))
           throw new UserError({
             identifier: "AccessDenied",
             message: "Only Bot Owners can manage add-ons.",
@@ -391,19 +338,24 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
         if (sub === "installed") {
           return this.#renderAddonInstalled(interaction, t);
         }
-        if (sub === "refresh") {
-          return this.#renderAddonDashboard(interaction, t);
+        if (sub === "autoupdate") {
+          const config = await this.downloader.getAutoUpdateConfig();
+          return interaction.editReply(buildAutoUpdateSettingsView(config, t));
         }
-        if (sub === "browse") {
-          const repoName = rest.join(":");
-          if (!repoName) return undefined;
-          return this.#renderRepoModules(interaction, repoName, t);
+        if (sub === "autoupdate_toggle") {
+          const config = await this.downloader.getAutoUpdateConfig();
+          await this.downloader.setAutoUpdateConfig({
+            enabled: !config.enabled,
+          });
+          const next = await this.downloader.getAutoUpdateConfig();
+          return interaction.editReply(buildAutoUpdateSettingsView(next, t));
         }
-        if (sub === "rm_mod") {
+        if (sub === "toggle") {
           const moduleName = rest.join(":");
           if (!moduleName) return undefined;
           try {
-            await this.downloader.uninstallModule(moduleName);
+            const record = this.container.moduleStore.getRecord(moduleName);
+            await this.downloader.toggleModule(moduleName, !record?.enabled);
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             return interaction.followUp(
@@ -411,6 +363,25 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
             );
           }
           return this.#renderAddonInstalled(interaction, t);
+        }
+        if (sub === "update_repo") {
+          const repoName = rest.join(":");
+          if (!repoName) return undefined;
+          try {
+            await this.downloader.updateRepo(repoName);
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            return interaction.followUp(
+              ephemeralCard(makeErrorCard("Action Failed", msg)),
+            );
+          }
+          return this.#renderAddonRepos(interaction, t);
+        }
+        if (sub === "browsepage") {
+          const [repoName, dir, pageStr] = rest;
+          if (!repoName || dir === "indicator") return undefined;
+          const page = parseInt(pageStr ?? "0", 10) || 0;
+          return this.#renderRepoModules(interaction, repoName, t, page);
         }
         if (sub === "modact") {
           const [act, repoName, ...moduleParts] = rest;
@@ -461,15 +432,17 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
   }
 
   async #renderAddonDashboard(interaction: ButtonInteraction, t?: LumiT) {
-    const [repos, installed] = await Promise.all([
+    const [repos, installed, pendingUpdates] = await Promise.all([
       this.downloader.listRepos(),
       this.downloader.getInstalledModulesDetailed(),
+      this.downloader.checkForUpdates(),
     ]);
     return interaction.editReply(
       buildAddonsView(
         {
           repoCount: repos.length,
           installedCount: installed.length,
+          pendingUpdates,
         },
         t,
       ),
@@ -501,7 +474,10 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
   }
 
   async #renderAddonInstalled(interaction: ButtonInteraction, t?: LumiT) {
-    const installed = await this.downloader.getInstalledModulesDetailed();
+    const [installed, repos] = await Promise.all([
+      this.downloader.getInstalledModulesDetailed(),
+      this.downloader.listRepos(),
+    ]);
 
     return interaction.editReply(
       buildAddonInstalledView(
@@ -510,7 +486,9 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
           version: row.version,
           repoName: row.repo.name,
           installedAt: row.installedAt,
+          enabled: this.container.moduleStore.getRecord(row.moduleName)?.enabled ?? true,
         })),
+        repos.map((repo) => ({ name: repo.name })),
         t,
       ),
     );
@@ -520,6 +498,7 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
     interaction: ButtonInteraction,
     repoName: string,
     t?: LumiT,
+    page = 0,
   ) {
     const [modules, installedDetailed] = await Promise.all([
       this.downloader.getModulesInRepo(repoName),
@@ -541,6 +520,7 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
           hidden: moduleInfo.hidden,
           isInstalled: installed.has(moduleInfo.name),
         })),
+        page,
         t,
       ),
     );
@@ -598,10 +578,6 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
       modal
         .setTitle("Remove Repository")
         .addComponents(field("name", "Repository Name", "e.g. lumi-addons"));
-    } else if (action === "update_repo") {
-      modal
-        .setTitle("Update Repository")
-        .addComponents(field("name", "Repository Name", "e.g. lumi-addons"));
     } else if (action === "install") {
       modal
         .setTitle("Install Module")
@@ -641,14 +617,15 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
       return this.some("addon_repo_pick");
     if (interaction.customId.startsWith("lumi:addon:mod_action:"))
       return this.some("addon_mod_action");
+    if (interaction.customId === "lumi:addon:autoupdate_interval")
+      return this.some("addon_autoupdate_interval");
     return this.none();
   }
 
   public async run(interaction: AnySelectMenuInteraction, kind: string) {
     if (!interaction.inGuild()) return;
-    if ((await resolveLevel(interaction)) < PermissionLevel.ADMIN)
-      throw accessDenied();
     await this.acknowledge(interaction);
+    if (!(await hasAdminPermit(interaction))) throw accessDenied();
     const t = await fetchTyped(interaction);
 
     if (kind === "lang") {
@@ -661,7 +638,7 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
     }
 
     if (kind === "addon_mod_action") {
-      if ((await resolveLevel(interaction)) < PermissionLevel.BOT_OWNER) {
+      if (!(await hasOwnerPermit(interaction))) {
         throw new UserError({
           identifier: "AccessDenied",
           message: "Only Bot Owners can manage add-ons.",
@@ -706,13 +683,14 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
             hidden: moduleInfo.hidden,
             isInstalled: installed.has(moduleInfo.name),
           })),
+          0,
           t,
         ),
       );
     }
 
     if (kind === "addon_repo_pick") {
-      if ((await resolveLevel(interaction)) < PermissionLevel.BOT_OWNER) {
+      if (!(await hasOwnerPermit(interaction))) {
         throw new UserError({
           identifier: "AccessDenied",
           message: "Only Bot Owners can manage add-ons.",
@@ -749,9 +727,24 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
             hidden: moduleInfo.hidden,
             isInstalled: installed.has(moduleInfo.name),
           })),
+          0,
           t,
         ),
       );
+    }
+
+    if (kind === "addon_autoupdate_interval") {
+      if (!(await hasOwnerPermit(interaction))) {
+        throw new UserError({
+          identifier: "AccessDenied",
+          message: "Only Bot Owners can manage add-ons.",
+        });
+      }
+      const minutes = Number(interaction.values[0]);
+      const downloader = getService("downloader");
+      await downloader.setAutoUpdateConfig({ intervalMinutes: minutes });
+      const config = await downloader.getAutoUpdateConfig();
+      return interaction.editReply(buildAutoUpdateSettingsView(config, t));
     }
 
     if (kind === "permit_target") {
@@ -823,18 +816,32 @@ export class HubPanelModalHandler extends InteractionHandler {
     data: { kind: "prefix" } | { kind: "addon"; action: string },
   ) {
     if (!interaction.inGuild()) return;
-    const level = await resolveLevel(interaction);
 
+    // Defer immediately (before any permit/DB lookups) to beat Discord's 3s
+    // ack window. "addon" gets its own ephemeral reply since it doesn't edit
+    // the originating panel message; "prefix" edits it in place.
     if (data.kind === "addon") {
-      if (level < PermissionLevel.BOT_OWNER)
-        return this.#deny(interaction, "Only Bot Owners can manage addons.");
+      await interaction.deferReply({
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+      });
+      if (!(await hasOwnerPermit(interaction)))
+        return interaction.editReply(
+          ephemeralCard(
+            makeErrorCard("Permission Denied", "Only Bot Owners can manage addons."),
+          ),
+        );
       return this.#submitAddon(interaction, data.action);
     }
 
-    if (level < PermissionLevel.ADMIN)
-      return this.#deny(
-        interaction,
-        "You need the Admin permission level to manage this server.",
+    await interaction.deferUpdate();
+    if (!(await hasAdminPermit(interaction)))
+      return interaction.followUp(
+        ephemeralCard(
+          makeErrorCard(
+            "Permission Denied",
+            "You need the `admin.*` permit to manage this server.",
+          ),
+        ),
       );
 
     return this.#submitPrefix(interaction);
@@ -862,8 +869,7 @@ export class HubPanelModalHandler extends InteractionHandler {
   }
 
   #render(interaction: ModalSubmitInteraction, view: CardReply) {
-    if (interaction.isFromMessage()) return interaction.update(view);
-    return interaction.reply(ephemeralCard(view));
+    return interaction.editReply(view);
   }
 
   private get downloader(): DownloaderService {
@@ -871,9 +877,6 @@ export class HubPanelModalHandler extends InteractionHandler {
   }
 
   async #submitAddon(interaction: ModalSubmitInteraction, action: string) {
-    await interaction.deferReply({
-      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
-    });
     try {
       if (action === "add_repo") {
         const name = interaction.fields.getTextInputValue("name").trim();
@@ -897,17 +900,6 @@ export class HubPanelModalHandler extends InteractionHandler {
             makeSuccessCard(
               "Repository Removed",
               `Removed **${name}** and any modules that were installed from it.`,
-            ),
-          ),
-        );
-      } else if (action === "update_repo") {
-        const name = interaction.fields.getTextInputValue("name").trim();
-        await this.downloader.updateRepo(name);
-        await interaction.editReply(
-          ephemeralCard(
-            makeSuccessCard(
-              "Repository Updated",
-              `Fetched the latest changes for **${name}**.`,
             ),
           ),
         );
@@ -947,15 +939,9 @@ export class HubPanelModalHandler extends InteractionHandler {
     }
   }
 
-  #deny(interaction: ModalSubmitInteraction, msg: string) {
-    return interaction.reply(
-      ephemeralCard(makeErrorCard("Permission Denied", msg)),
-    );
-  }
-
   #error(interaction: ModalSubmitInteraction, title: string, err: unknown) {
     const message =
       err instanceof Error ? err.message : String(err ?? "Unknown error");
-    return interaction.reply(ephemeralCard(makeErrorCard(title, message)));
+    return interaction.followUp(ephemeralCard(makeErrorCard(title, message)));
   }
 }

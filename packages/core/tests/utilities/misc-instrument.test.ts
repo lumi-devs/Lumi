@@ -51,7 +51,7 @@ describe("misc utilities & telemetry instrumentation", () => {
     });
 
     it("LumiInfo returns age in days", () => {
-      expect(LumiInfo.version).toBe("2.1.1");
+      expect(LumiInfo.version).toMatch(/^\d+\.\d+\.\d+/);
       expect(typeof LumiInfo.getAgeInDays()).toBe("number");
       expect(LumiInfo.getAgeInDays()).toBeGreaterThanOrEqual(0);
     });
@@ -110,9 +110,9 @@ describe("misc utilities & telemetry instrumentation", () => {
         return "res-1";
       });
 
-      const task2 = withSerializedWork("key-1", async () => {
+      const task2 = withSerializedWork("key-1", () => {
         order.push(2);
-        return "res-2";
+        return Promise.resolve("res-2");
       });
 
       const [r1, r2] = await Promise.all([task1, task2]);

@@ -32,7 +32,7 @@ function fmtMs(n: number | null): string {
   return `${Math.round(n)}ms`;
 }
 
-function fmtMB(bytes: number): string {
+export function fmtMB(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 

@@ -6,16 +6,12 @@ import {
 import {
   ButtonStyle,
   ChannelType,
-  GuildMember,
   type ButtonInteraction,
   type AnySelectMenuInteraction,
   type ModalSubmitInteraction,
 } from "discord.js";
 import { container } from "@sapphire/framework";
-import {
-  PermissionLevel,
-  resolvePermissionLevel,
-} from "#lib/permissions/index.js";
+import { hasRequiredPermit } from "#lib/permissions/index.js";
 import {
   channelMention,
   roleMention,
@@ -62,8 +58,11 @@ import type {
   ConfigOverrideEntry,
 } from "#lib/prisma/DatabaseService.js";
 
-export const FEATURES_PER_PAGE = 8;
-export const FIELDS_PER_PAGE = 6;
+// Each settingRow is a Section with up to 2 text lines + 1 button = ~4 real
+// components once nested, and card chrome (container/title/footer/tab row)
+// already eats ~18-19 of Discord's 40-component budget per message.
+export const FEATURES_PER_PAGE = 4;
+export const FIELDS_PER_PAGE = 5;
 
 export interface FeatureDetail {
   meta: ModuleMeta;
@@ -75,13 +74,18 @@ export async function loadFeatures(
   guildId: string,
 ): Promise<FeatureListEntry[]> {
   return Promise.all(
-    container.moduleStore.all().map(async (record) => ({
-      meta: record.meta,
-      guildEnabled: await container.db.modules.isModuleGuildEnabled(
-        guildId,
-        record.meta.name,
-      ),
-    })),
+    container.moduleStore
+      .all()
+      // Non-disableable modules (e.g. "core", which hosts this very panel)
+      // aren't guild-toggleable features - keep them out of the list.
+      .filter((record) => record.meta.disableable !== false)
+      .map(async (record) => ({
+        meta: record.meta,
+        guildEnabled: await container.db.modules.isModuleGuildEnabled(
+          guildId,
+          record.meta.name,
+        ),
+      })),
   );
 }
 
@@ -98,20 +102,13 @@ export async function loadDetail(
   return { meta: record.meta, config, guildEnabled };
 }
 
-/** Re-checks that the interacting user still has ADMIN in this guild. */
+/** Re-checks that the interacting user still holds the `admin.*` permit (same node /lumi requires). */
 export async function hasPanelAccess(
   interaction:
     ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction,
 ): Promise<boolean> {
   if (!interaction.guild || !interaction.member) return false;
-  const member =
-    interaction.member instanceof GuildMember ? interaction.member : null;
-  const level = await resolvePermissionLevel({
-    userId: interaction.user.id,
-    guild: interaction.guild,
-    member,
-  });
-  return level >= PermissionLevel.ADMIN;
+  return hasRequiredPermit(interaction, "admin.*");
 }
 
 type Row = ActionRowBuilder<MessageActionRowComponentBuilder>;
@@ -209,16 +206,9 @@ export function buildFeatureListView(
   return makeCard(
     CARD_ACCENTS.PRIMARY,
     `${Emojis.GEAR} ${t ? t(PanelsKeys.ModulesTitle) : "Feature Modules"}`,
-    [
-      formatSubtitle(
-        t
-          ? t(PanelsKeys.ModulesSubtitle)
-          : "Browse and configure feature modules enabled for this server.",
-      ),
-      pageFeatures.length
-        ? ""
-        : (t ? t(PanelsKeys.ModulesEmpty) : "*No features registered.*"),
-    ],
+    pageFeatures.length
+      ? ""
+      : (t ? t(PanelsKeys.ModulesEmpty) : "*No features registered.*"),
     {
       sections,
       footer:
@@ -233,6 +223,7 @@ export function buildFeatureListView(
             ? t(PanelsKeys.ModulesFooter)
             : "Open a module to enable, disable, or configure it.",
       actionRows: buildSafeActionRows(rows),
+      separatorAboveActionRows: true,
     },
   );
 }
@@ -248,6 +239,19 @@ interface FieldSection {
  * ungrouped module never overflows the component budget. Small modules collapse
  * to a single unnamed section (no switcher).
  */
+function chunkSection(name: string | null, fields: ConfigField[]): FieldSection[] {
+  if (fields.length <= FIELDS_PER_PAGE) return [{ name, fields }];
+  const out: FieldSection[] = [];
+  for (let i = 0; i < fields.length; i += FIELDS_PER_PAGE) {
+    const pageNum = Math.floor(i / FIELDS_PER_PAGE) + 1;
+    out.push({
+      name: name ? `${name} (${pageNum})` : `Page ${pageNum}`,
+      fields: fields.slice(i, i + FIELDS_PER_PAGE),
+    });
+  }
+  return out;
+}
+
 function sectionsFor(fields: ConfigField[]): FieldSection[] {
   if (fields.some((f) => f.group)) {
     const order: string[] = [];
@@ -262,17 +266,9 @@ function sectionsFor(fields: ConfigField[]): FieldSection[] {
       }
       arr.push(f);
     }
-    return order.map((name) => ({ name, fields: map.get(name)! }));
+    return order.flatMap((name) => chunkSection(name, map.get(name)!));
   }
-  if (fields.length <= FIELDS_PER_PAGE) return [{ name: null, fields }];
-  const out: FieldSection[] = [];
-  for (let i = 0; i < fields.length; i += FIELDS_PER_PAGE) {
-    out.push({
-      name: `Page ${Math.floor(i / FIELDS_PER_PAGE) + 1}`,
-      fields: fields.slice(i, i + FIELDS_PER_PAGE),
-    });
-  }
-  return out;
+  return chunkSection(null, fields);
 }
 
 /**

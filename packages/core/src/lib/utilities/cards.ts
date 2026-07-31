@@ -38,6 +38,8 @@ export interface CardOptions {
   divider?: boolean;
   sections?: SectionBuilder[];
   actionRows?: ActionRowBuilder<MessageActionRowComponentBuilder | any>[];
+  /** Adds a divider above actionRows - only used above the hub tab bar so it doesn't blend into the content above it. */
+  separatorAboveActionRows?: boolean;
   mediaGallery?: MediaGalleryBuilder;
 }
 
@@ -139,6 +141,9 @@ function buildContainer(
   }
 
   // Action Rows & Component Selects
+  if (opts.separatorAboveActionRows && opts.actionRows?.length) {
+    c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
+  }
   for (const row of opts.actionRows ?? []) {
     c.addActionRowComponents((builder) => {
       builder.addComponents(...row.components);

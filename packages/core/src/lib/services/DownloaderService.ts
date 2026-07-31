@@ -11,6 +11,26 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { errorFrom } from "#lib/utilities/errors.js";
+import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+
+export interface AutoUpdateConfig {
+  enabled: boolean;
+  intervalMinutes: number;
+  lastCheckedAt: number | null;
+}
+
+type ModuleUpdateCheck =
+  | { ok: false; reason: string }
+  | { ok: true; hasUpdate: false }
+  | {
+      ok: true;
+      hasUpdate: true;
+      repoId: number;
+      repoName: string;
+      branch: string;
+      remoteHash: string;
+      changelog: string;
+    };
 
 const execFileAsync = promisify(execFile);
 
@@ -205,26 +225,29 @@ export class DownloaderService extends Service {
     }
   }
 
-  public async updateModule(
+  /** Read-only check: fetches and compares hashes, never pulls. Shared by updateModule() and checkForUpdates(). */
+  private async checkForModuleUpdate(
     moduleName: string,
-  ): Promise<{ updated: boolean; changelog?: string; needsRestart?: boolean }> {
+  ): Promise<ModuleUpdateCheck> {
     const installed =
       await this.container.db.downloader.readInstalledDownloaderModule(
         moduleName,
       );
     if (!installed) {
-      throw new Error(
-        `Module **${moduleName}** was not installed via the downloader.`,
-      );
+      return {
+        ok: false,
+        reason: `Module **${moduleName}** was not installed via the downloader.`,
+      };
     }
 
     const repo = await this.container.db.downloader.readDownloaderRepoById(
       installed.repoId,
     );
     if (!repo) {
-      throw new Error(
-        `Repository for module **${moduleName}** could not be found.`,
-      );
+      return {
+        ok: false,
+        reason: `Repository for module **${moduleName}** could not be found.`,
+      };
     }
 
     const repoPath = path.join(MODULE_ROOT, repo.name);
@@ -283,7 +306,7 @@ export class DownloaderService extends Service {
       localHash === remoteHash;
 
     if (upToDate) {
-      return { updated: false };
+      return { ok: true, hasUpdate: false };
     }
 
     if (fetchFailed && localHash === remoteHash) {
@@ -292,7 +315,7 @@ export class DownloaderService extends Service {
         moduleName,
         remoteHash,
       );
-      return { updated: false };
+      return { ok: true, hasUpdate: false };
     }
 
     const { stdout: logOut } = await execFileAsync("git", [
@@ -302,7 +325,27 @@ export class DownloaderService extends Service {
       "--oneline",
       `HEAD..${targetRef}`,
     ]).catch(() => ({ stdout: "" }));
-    const changelog = logOut.trim();
+
+    return {
+      ok: true,
+      hasUpdate: true,
+      repoId: repo.id,
+      repoName: repo.name,
+      branch,
+      remoteHash,
+      changelog: logOut.trim(),
+    };
+  }
+
+  public async updateModule(
+    moduleName: string,
+  ): Promise<{ updated: boolean; changelog?: string; needsRestart?: boolean }> {
+    const check = await this.checkForModuleUpdate(moduleName);
+    if (!check.ok) throw new Error(check.reason);
+    if (!check.hasUpdate) return { updated: false };
+
+    const { repoId, repoName, branch, remoteHash, changelog } = check;
+    const repoPath = path.join(MODULE_ROOT, repoName);
 
     const pullArgs = ["-C", repoPath, "pull"];
     if (branch !== "default") pullArgs.push("origin", branch);
@@ -314,10 +357,10 @@ export class DownloaderService extends Service {
       },
     );
 
-    await resolver.installModule(repo.name, moduleName);
+    await resolver.installModule(repoName, moduleName);
 
     await this.container.db.downloader.updateInstalledDownloaderModuleCommit(
-      repo.id,
+      repoId,
       moduleName,
       remoteHash,
     );
@@ -328,12 +371,80 @@ export class DownloaderService extends Service {
     return { updated: true, changelog, needsRestart: true };
   }
 
+  /** Read-only sweep across every installed module; Redis-cached to avoid hammering git on repeated calls. */
+  public async checkForUpdates(): Promise<string[]> {
+    const cacheKey = RedisKeys.addonUpdateCheck();
+    const cached = await this.container.redis.get(cacheKey);
+    if (cached) return JSON.parse(cached) as string[];
+
+    const installed = await this.getInstalledModules();
+    const pending: string[] = [];
+    for (const mod of installed) {
+      try {
+        const check = await this.checkForModuleUpdate(mod.moduleName);
+        if (check.ok && check.hasUpdate) pending.push(mod.moduleName);
+      } catch (err: unknown) {
+        this.container.logger.warn(
+          `[DownloaderService] Update check failed for ${mod.moduleName}: ${String(err)}`,
+        );
+      }
+    }
+
+    await this.container.redis.setex(
+      cacheKey,
+      RedisTTL.addonUpdateCheck,
+      JSON.stringify(pending),
+    );
+    return pending;
+  }
+
+  public async getAutoUpdateConfig(): Promise<AutoUpdateConfig> {
+    const global = await this.container.db.global.getGlobalConfig();
+    const extra = (global.extra as Record<string, unknown> | null) ?? {};
+    const raw = extra.autoUpdate as Partial<AutoUpdateConfig> | undefined;
+    return {
+      enabled: raw?.enabled ?? false,
+      intervalMinutes: raw?.intervalMinutes ?? 360,
+      lastCheckedAt: raw?.lastCheckedAt ?? null,
+    };
+  }
+
+  public async setAutoUpdateConfig(
+    patch: Partial<AutoUpdateConfig>,
+  ): Promise<void> {
+    const global = await this.container.db.global.getGlobalConfig();
+    const extra = (global.extra as Record<string, unknown> | null) ?? {};
+    const current = (extra.autoUpdate as Partial<AutoUpdateConfig>) ?? {};
+    await this.container.db.global.updateGlobalConfig({
+      extra: { ...extra, autoUpdate: { ...current, ...patch } },
+    });
+  }
+
   public getInstalledModules() {
     return this.container.db.downloader.readAllInstalledDownloaderModules();
   }
 
   public getInstalledModulesDetailed() {
     return this.container.db.downloader.readAllInstalledDownloaderModulesWithRepo();
+  }
+
+  /** Enables/disables an installed addon module live via ModuleStore - no restart. */
+  public async toggleModule(moduleName: string, enabled: boolean): Promise<void> {
+    const installed =
+      await this.container.db.downloader.readInstalledDownloaderModule(
+        moduleName,
+      );
+    if (!installed) {
+      throw new Error(
+        `Module **${moduleName}** was not installed via the downloader.`,
+      );
+    }
+    await this.container.moduleStore.setEnabled(
+      moduleName,
+      enabled,
+      "toggled via addons panel",
+    );
+    await this.syncApplicationCommands();
   }
 
   public async removeRepo(name: string) {

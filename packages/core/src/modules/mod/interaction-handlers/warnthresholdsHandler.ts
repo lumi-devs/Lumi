@@ -25,6 +25,7 @@ export class WarnThresholdsButtonHandler extends InteractionHandler {
     interaction: ButtonInteraction,
     parsed: { customId: string },
   ): Promise<void> {
+    await interaction.deferUpdate();
     const parts = parsed.customId.replace("wt:", "").split(":");
     const subAction = parts[0];
     const guildId = interaction.guildId!;
@@ -89,6 +90,7 @@ export class WarnThresholdsSelectHandler extends InteractionHandler {
     interaction: StringSelectMenuInteraction,
     parsed: { customId: string },
   ): Promise<void> {
+    await interaction.deferUpdate();
     const parts = parsed.customId.replace("wt:", "").split(":");
     const subAction = parts[0];
     const val = interaction.values[0] ?? "";
