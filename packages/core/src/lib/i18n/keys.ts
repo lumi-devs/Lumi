@@ -1,3 +1,137 @@
+/**
+ * Skyra-style typed i18n keys. `T` marks a plain key; `FT` carries the
+ * interpolation argument shape so `t(key, args)` is compile-checked.
+ */
+export type TypedT<TReturn = string> = string & { __return__?: TReturn };
+export type TypedFT<TArgs, TReturn = string> = string & {
+  __args__?: TArgs;
+  __return__?: TReturn;
+};
+
+export function T<TReturn = string>(key: string): TypedT<TReturn> {
+  return key as TypedT<TReturn>;
+}
+
+export function FT<TArgs, TReturn = string>(
+  key: string,
+): TypedFT<TArgs, TReturn> {
+  return key as TypedFT<TArgs, TReturn>;
+}
+
+export const PanelsKeys = {
+  HubTitle: T("panels:hubTitle"),
+  HubIntro: T("panels:hubIntro"),
+  HubGlanceModules: FT<{ enabled: number; total: number }>(
+    "panels:hubGlanceModules",
+  ),
+  HubGlanceLocale: FT<{ locale: string; prefix: string }>(
+    "panels:hubGlanceLocale",
+  ),
+  HubFooter: T("panels:hubFooter"),
+  TabHome: T("panels:tabHome"),
+  TabModules: T("panels:tabModules"),
+  TabPermissions: T("panels:tabPermissions"),
+  TabSettings: T("panels:tabSettings"),
+  TabAddons: T("panels:tabAddons"),
+  TabHintModules: T("panels:tabHintModules"),
+  TabHintPermissions: T("panels:tabHintPermissions"),
+  TabHintSettings: T("panels:tabHintSettings"),
+  TabHintAddons: T("panels:tabHintAddons"),
+  SettingsTitle: T("panels:settingsTitle"),
+  SettingsLanguage: T("panels:settingsLanguage"),
+  SettingsPrefix: T("panels:settingsPrefix"),
+  SettingsPrefixDefault: T("panels:settingsPrefixDefault"),
+  SettingsChangeLanguage: T("panels:settingsChangeLanguage"),
+  SettingsEdit: T("panels:settingsEdit"),
+  SettingsReset: T("panels:settingsReset"),
+  SettingsFooter: T("panels:settingsFooter"),
+  SettingsUpdateAddons: T("panels:settingsUpdateAddons"),
+  SettingsCheckCore: T("panels:settingsCheckCore"),
+  SettingsUpdateCore: T("panels:settingsUpdateCore"),
+  PermsTitle: T("panels:permsTitle"),
+  PermsEmpty: T("panels:permsEmpty"),
+  PermsLegend: T("panels:permsLegend"),
+  PermsAllow: T("panels:permsAllow"),
+  PermsDeny: T("panels:permsDeny"),
+  PermsRevoke: T("panels:permsRevoke"),
+  PermsCountFooter: FT<{ count: number }>("panels:permsCountFooter"),
+  PermsPageFooter: FT<{ page: number; total: number; count: number }>(
+    "panels:permsPageFooter",
+  ),
+  AddonsTitle: T("panels:addonsTitle"),
+  AddonsIntro: T("panels:addonsIntro"),
+  AddonsRepos: T("panels:addonsRepos"),
+  AddonsInstalled: T("panels:addonsInstalled"),
+  AddonsBrowseRepos: T("panels:addonsBrowseRepos"),
+  AddonsBrowseInstalled: T("panels:addonsBrowseInstalled"),
+  AddonsRefresh: T("panels:addonsRefresh"),
+  AddonsAddRepo: T("panels:addonsAddRepo"),
+  AddonsRemoveRepo: T("panels:addonsRemoveRepo"),
+  AddonsUpdateAll: T("panels:addonsUpdateAll"),
+  AddonsFooter: T("panels:addonsFooter"),
+  AddonsReposTitle: T("panels:addonsReposTitle"),
+  AddonsReposEmpty: T("panels:addonsReposEmpty"),
+  AddonsReposFooter: T("panels:addonsReposFooter"),
+  AddonsBrowse: T("panels:addonsBrowse"),
+  AddonsInstalledTitle: T("panels:addonsInstalledTitle"),
+  AddonsInstalledEmpty: T("panels:addonsInstalledEmpty"),
+  AddonsInstalledFooter: T("panels:addonsInstalledFooter"),
+  AddonsUninstall: T("panels:addonsUninstall"),
+  AddonsInstall: T("panels:addonsInstall"),
+  AddonsModulesTitle: FT<{ repo: string }>("panels:addonsModulesTitle"),
+  AddonsModulesEmpty: T("panels:addonsModulesEmpty"),
+  AddonsModulesFooter: T("panels:addonsModulesFooter"),
+  AddonsStatusInstalled: T("panels:addonsStatusInstalled"),
+  AddonsStatusAvailable: T("panels:addonsStatusAvailable"),
+  Back: T("panels:back"),
+  BackToHub: T("panels:backToHub"),
+  BackToAddons: T("panels:backToAddons"),
+  BackToRepos: T("panels:backToRepos"),
+  BackToModules: T("panels:backToModules"),
+  BackToFeature: T("panels:backToFeature"),
+  PagePrev: T("panels:pagePrev"),
+  PageNext: T("panels:pageNext"),
+  PageIndicator: FT<{ page: number; total: number }>("panels:pageIndicator"),
+  ModulesTitle: T("panels:modulesTitle"),
+  ModulesSubtitle: T("panels:modulesSubtitle"),
+  ModulesEmpty: T("panels:modulesEmpty"),
+  ModulesOpen: T("panels:modulesOpen"),
+  ModulesFooter: T("panels:modulesFooter"),
+  ModulesPageFooter: FT<{ page: number; total: number }>(
+    "panels:modulesPageFooter",
+  ),
+  DetailStatus: T("panels:detailStatus"),
+  DetailEnabled: T("panels:detailEnabled"),
+  DetailDisabled: T("panels:detailDisabled"),
+  DetailRequired: T("panels:detailRequired"),
+  DetailNotSet: T("panels:detailNotSet"),
+  DetailEnable: T("panels:detailEnable"),
+  DetailDisable: T("panels:detailDisable"),
+  DetailReset: T("panels:detailReset"),
+  DetailHistory: T("panels:detailHistory"),
+  DetailOverrides: T("panels:detailOverrides"),
+  DetailEdit: T("panels:detailEdit"),
+  DetailFieldsFooter: FT<{ from: number; to: number; count: number }>(
+    "panels:detailFieldsFooter",
+  ),
+  FieldEditTitle: FT<{ module: string; field: string }>(
+    "panels:fieldEditTitle",
+  ),
+  FieldEditCurrent: T("panels:fieldEditCurrent"),
+  FieldEditHint: T("panels:fieldEditHint"),
+  FieldEditEnterValue: T("panels:fieldEditEnterValue"),
+  HistoryTitle: FT<{ module: string }>("panels:historyTitle"),
+  HistorySubtitle: T("panels:historySubtitle"),
+  HistoryEmpty: T("panels:historyEmpty"),
+  HistoryRollback: T("panels:historyRollback"),
+  OverridesTitle: FT<{ module: string }>("panels:overridesTitle"),
+  OverridesSubtitle: T("panels:overridesSubtitle"),
+  OverridesEmpty: T("panels:overridesEmpty"),
+  OverridesAdd: T("panels:overridesAdd"),
+  OverridesRemove: T("panels:overridesRemove"),
+  OverridesHint: T("panels:overridesHint"),
+} as const;
+
 export const CommonKeys = {
   /** Value: `common:default` */
   Default: "common:default",
@@ -471,4 +605,5 @@ export const LanguageKeys = {
   Common: CommonKeys,
   Preconditions: PreconditionsKeys,
   Commands: CommandsKeys,
+  Panels: PanelsKeys,
 } as const;

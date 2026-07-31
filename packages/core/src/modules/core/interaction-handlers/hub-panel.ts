@@ -20,6 +20,8 @@ import {
 } from "discord.js";
 import { getService } from "#lib/module-system/Service.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { fetchTyped } from "#lib/commands.js";
+import type { LumiT } from "#lib/i18n/index.js";
 import {
   PermissionLevel,
   resolvePermissionLevel,
@@ -82,44 +84,65 @@ export async function resolveLevel(
   });
 }
 
-async function renderHub(interaction: ButtonInteraction) {
+async function renderHub(interaction: ButtonInteraction, t?: LumiT) {
   const guildId = interaction.guildId!;
   const [features, settings] = await Promise.all([
     loadFeatures(guildId),
     container.db.config.getGuildSettings(guildId),
   ]);
   return interaction.editReply(
-    buildHubView({
-      moduleCount: features.length,
-      enabledCount: features.filter((f) => f.guildEnabled).length,
-      prefix: settings.prefix,
-      locale: settings.locale,
-    }),
+    buildHubView(
+      {
+        moduleCount: features.length,
+        enabledCount: features.filter((f) => f.guildEnabled).length,
+        prefix: settings.prefix,
+        locale: settings.locale,
+        iconUrl:
+          interaction.guild?.iconURL() ??
+          container.client.user?.displayAvatarURL(),
+      },
+      t,
+    ),
   );
 }
 
 async function renderSettings(
   interaction: ButtonInteraction | AnySelectMenuInteraction,
+  t?: LumiT,
 ) {
   const settings = await container.db.config.getGuildSettings(
     interaction.guildId!,
   );
   return interaction.editReply(
-    buildSettingsView({ prefix: settings.prefix, locale: settings.locale }),
+    buildSettingsView({ prefix: settings.prefix, locale: settings.locale }, t),
   );
+}
+
+async function loadPermissionOverrides(guildId: string) {
+  const permits = await container.db.permissions.getGuildPermits(guildId);
+  return [
+    ...permits.custom.map((c) => ({
+      commandPath: c.permit,
+      modelType: c.targetType,
+      modelId: c.targetId,
+      allow: true,
+    })),
+    ...permits.enforced.map((c) => ({
+      commandPath: c.permit,
+      modelType: c.targetType,
+      modelId: c.targetId,
+      allow: false,
+    })),
+  ];
 }
 
 async function renderPermissions(
   interaction: ButtonInteraction | AnySelectMenuInteraction,
+  page = 0,
+  t?: LumiT,
 ) {
-  const permits = await container.db.permissions.getGuildPermits(
-    interaction.guildId!,
-  );
-  const overrides = [
-    ...permits.custom.map(c => ({ commandPath: c.permit, modelType: c.targetType, modelId: c.targetId, allow: true })),
-    ...permits.enforced.map(c => ({ commandPath: c.permit, modelType: c.targetType, modelId: c.targetId, allow: false }))
-  ];
-  return interaction.editReply(buildPermissionsView(overrides));
+  const overrides = await loadPermissionOverrides(interaction.guildId!);
+  return interaction.editReply(buildPermissionsView(overrides, page, t));
 }
 
 @ApplyOptions<InteractionHandler.Options>({
@@ -141,17 +164,18 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
 
   public override parse(interaction: ButtonInteraction) {
     if (!interaction.customId.startsWith("lumi:")) return this.none();
-    const [, action, sub] = interaction.customId.split(":");
-    return this.some({ action, sub });
+    const [, action, sub, ...rest] = interaction.customId.split(":");
+    return this.some({ action, sub, rest });
   }
 
   public async run(
     interaction: ButtonInteraction,
-    { action, sub }: { action: string; sub?: string },
+    { action, sub, rest }: { action: string; sub?: string; rest: string[] },
   ) {
     if (!interaction.inGuild()) return;
     const level = await resolveLevel(interaction);
     if (level < PermissionLevel.ADMIN) throw accessDenied();
+    const t = await fetchTyped(interaction);
 
     if (action === "prefix" && sub === "set")
       return this.#openPrefixModal(interaction);
@@ -175,15 +199,47 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
 
     switch (action) {
       case "home":
-        return renderHub(interaction);
+        return renderHub(interaction, t);
       case "tab":
-        return this.#renderTab(interaction, sub);
+        return this.#renderTab(interaction, sub, t);
       case "prefix":
         if (sub === "reset") {
           await this.settings.resetPrefix(interaction.guildId).catch(() => {});
-          return renderSettings(interaction);
+          return renderSettings(interaction, t);
         }
         return undefined;
+      case "permdel": {
+        const raw = [sub, ...rest].join(":");
+        const [kind, modelType, modelId, ...permitParts] = raw.split("|");
+        const permit = permitParts.join("|");
+        if (
+          permit &&
+          modelId &&
+          (modelType === "role" || modelType === "user")
+        ) {
+          const perms = getService("permissions");
+          await (kind === "e"
+            ? perms.revokeEnforcedPermit(
+                interaction.guildId,
+                modelType,
+                modelId,
+                permit,
+              )
+            : perms.revokeCustomPermit(
+                interaction.guildId,
+                modelType,
+                modelId,
+                permit,
+              )
+          ).catch(() => null);
+        }
+        return renderPermissions(interaction, 0, t);
+      }
+      case "permpage": {
+        if (sub === "indicator") return undefined;
+        const page = parseInt(rest[0] ?? "0", 10) || 0;
+        return renderPermissions(interaction, page, t);
+      }
       case "update_all": {
         if (level < PermissionLevel.BOT_OWNER)
           throw new UserError({
@@ -331,13 +387,49 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
             message: "Only Bot Owners can manage add-ons.",
           });
         if (sub === "repos" || sub === "modules") {
-          return this.#renderAddonRepos(interaction);
+          return this.#renderAddonRepos(interaction, t);
         }
         if (sub === "installed") {
-          return this.#renderAddonInstalled(interaction);
+          return this.#renderAddonInstalled(interaction, t);
         }
         if (sub === "refresh") {
-          return this.#renderAddonDashboard(interaction);
+          return this.#renderAddonDashboard(interaction, t);
+        }
+        if (sub === "browse") {
+          const repoName = rest.join(":");
+          if (!repoName) return undefined;
+          return this.#renderRepoModules(interaction, repoName, t);
+        }
+        if (sub === "rm_mod") {
+          const moduleName = rest.join(":");
+          if (!moduleName) return undefined;
+          try {
+            await this.downloader.uninstallModule(moduleName);
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            return interaction.followUp(
+              ephemeralCard(makeErrorCard("Action Failed", msg)),
+            );
+          }
+          return this.#renderAddonInstalled(interaction, t);
+        }
+        if (sub === "modact") {
+          const [act, repoName, ...moduleParts] = rest;
+          const moduleName = moduleParts.join(":");
+          if (!act || !repoName || !moduleName) return undefined;
+          try {
+            if (act === "install") {
+              await this.downloader.installModule(repoName, moduleName);
+            } else if (act === "uninstall") {
+              await this.downloader.uninstallModule(moduleName);
+            }
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            return interaction.followUp(
+              ephemeralCard(makeErrorCard("Action Failed", msg)),
+            );
+          }
+          return this.#renderRepoModules(interaction, repoName, t);
         }
         return undefined;
       }
@@ -346,37 +438,46 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
     }
   }
 
-  async #renderTab(interaction: ButtonInteraction, tab: string | undefined) {
+  async #renderTab(
+    interaction: ButtonInteraction,
+    tab: string | undefined,
+    t?: LumiT,
+  ) {
     switch (tab) {
+      case "home":
+        return renderHub(interaction, t);
       case "modules": {
         const features = await loadFeatures(interaction.guildId!);
-        return interaction.editReply(buildFeatureListView(features));
+        return interaction.editReply(buildFeatureListView(features, 0, t));
       }
       case "permissions":
-        return renderPermissions(interaction);
+        return renderPermissions(interaction, 0, t);
       case "settings":
-        return renderSettings(interaction);
+        return renderSettings(interaction, t);
       case "addons":
-        return this.#renderAddonDashboard(interaction);
+        return this.#renderAddonDashboard(interaction, t);
       default:
         return undefined;
     }
   }
 
-  async #renderAddonDashboard(interaction: ButtonInteraction) {
+  async #renderAddonDashboard(interaction: ButtonInteraction, t?: LumiT) {
     const [repos, installed] = await Promise.all([
       this.downloader.listRepos(),
       this.downloader.getInstalledModulesDetailed(),
     ]);
     return interaction.editReply(
-      buildAddonsView({
-        repoCount: repos.length,
-        installedCount: installed.length,
-      }),
+      buildAddonsView(
+        {
+          repoCount: repos.length,
+          installedCount: installed.length,
+        },
+        t,
+      ),
     );
   }
 
-  async #renderAddonRepos(interaction: ButtonInteraction) {
+  async #renderAddonRepos(interaction: ButtonInteraction, t?: LumiT) {
     const [repos, installed] = await Promise.all([
       this.downloader.listRepos(),
       this.downloader.getInstalledModulesDetailed(),
@@ -395,11 +496,12 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
           branch: repo.branch,
           installedCount: installedByRepo.get(repo.id) ?? 0,
         })),
+        t,
       ),
     );
   }
 
-  async #renderAddonInstalled(interaction: ButtonInteraction) {
+  async #renderAddonInstalled(interaction: ButtonInteraction, t?: LumiT) {
     const installed = await this.downloader.getInstalledModulesDetailed();
 
     return interaction.editReply(
@@ -410,6 +512,37 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
           repoName: row.repo.name,
           installedAt: row.installedAt,
         })),
+        t,
+      ),
+    );
+  }
+
+  async #renderRepoModules(
+    interaction: ButtonInteraction,
+    repoName: string,
+    t?: LumiT,
+  ) {
+    const [modules, installedDetailed] = await Promise.all([
+      this.downloader.getModulesInRepo(repoName),
+      this.downloader.getInstalledModulesDetailed(),
+    ]);
+    const installed = new Set(
+      installedDetailed
+        .filter((row) => row.repo.name === repoName)
+        .map((row) => row.moduleName),
+    );
+
+    return interaction.editReply(
+      buildAddonRepoModulesView(
+        repoName,
+        modules.map((moduleInfo) => ({
+          name: moduleInfo.name,
+          version: moduleInfo.version,
+          short: moduleInfo.short,
+          hidden: moduleInfo.hidden,
+          isInstalled: installed.has(moduleInfo.name),
+        })),
+        t,
       ),
     );
   }
@@ -551,6 +684,7 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
     if ((await resolveLevel(interaction)) < PermissionLevel.ADMIN)
       throw accessDenied();
     await this.acknowledge(interaction);
+    const t = await fetchTyped(interaction);
 
     if (kind === "lang") {
       const language = interaction.values[0];
@@ -558,7 +692,7 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
         await this.settings
           .setLanguage(interaction.guildId, language)
           .catch(() => {});
-      return renderSettings(interaction);
+      return renderSettings(interaction, t);
     }
 
     if (kind === "addon_mod_action") {
@@ -607,6 +741,7 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
             hidden: moduleInfo.hidden,
             isInstalled: installed.has(moduleInfo.name),
           })),
+          t,
         ),
       );
     }
@@ -649,6 +784,7 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
             hidden: moduleInfo.hidden,
             isInstalled: installed.has(moduleInfo.name),
           })),
+          t,
         ),
       );
     }
@@ -661,7 +797,7 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
         .resetOverride(interaction.guildId, commandPath, modelType, modelId)
         .catch(() => {});
     }
-    return renderPermissions(interaction);
+    return renderPermissions(interaction, 0, t);
   }
 }
 
@@ -731,9 +867,13 @@ export class HubPanelModalHandler extends InteractionHandler {
     const settings = await container.db.config.getGuildSettings(
       interaction.guildId!,
     );
+    const t = await fetchTyped(interaction);
     return this.#render(
       interaction,
-      buildSettingsView({ prefix: settings.prefix, locale: settings.locale }),
+      buildSettingsView(
+        { prefix: settings.prefix, locale: settings.locale },
+        t,
+      ),
     );
   }
 
@@ -776,14 +916,9 @@ export class HubPanelModalHandler extends InteractionHandler {
       return this.#error(interaction, "Invalid Target", err);
     }
 
-    const permits = await container.db.permissions.getGuildPermits(
-      interaction.guildId!,
-    );
-    const overrides = [
-      ...permits.custom.map(c => ({ commandPath: c.permit, modelType: c.targetType, modelId: c.targetId, allow: true })),
-      ...permits.enforced.map(c => ({ commandPath: c.permit, modelType: c.targetType, modelId: c.targetId, allow: false }))
-    ];
-    return this.#render(interaction, buildPermissionsView(overrides));
+    const overrides = await loadPermissionOverrides(interaction.guildId!);
+    const t = await fetchTyped(interaction);
+    return this.#render(interaction, buildPermissionsView(overrides, 0, t));
   }
 
   #render(interaction: ModalSubmitInteraction, view: CardReply) {

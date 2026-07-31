@@ -46,17 +46,24 @@ export class LumiCommand extends BaseSubcommand {
 
   public async panel(ctx: CommandContext): Promise<void> {
     const guildId = ctx.guildId!;
-    const [features, settings] = await Promise.all([
+    const [features, settings, t] = await Promise.all([
       loadFeatures(guildId),
       container.db.config.getGuildSettings(guildId),
+      ctx.fetchT(),
     ]);
+    const guild = container.client.guilds.cache.get(guildId);
     await ctx.reply(
-      buildHubView({
-        moduleCount: features.length,
-        enabledCount: features.filter((f) => f.guildEnabled).length,
-        prefix: settings.prefix,
-        locale: settings.locale,
-      }),
+      buildHubView(
+        {
+          moduleCount: features.length,
+          enabledCount: features.filter((f) => f.guildEnabled).length,
+          prefix: settings.prefix,
+          locale: settings.locale,
+          iconUrl:
+            guild?.iconURL() ?? container.client.user?.displayAvatarURL(),
+        },
+        t,
+      ),
     );
   }
 

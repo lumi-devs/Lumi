@@ -36,13 +36,10 @@ import {
   type CardReply,
 } from "#utilities/cards.js";
 
-const formatSubtitle = (text: string) => `-# ${text}`;
-const formatStatusBadge = (status: "enabled" | "disabled") =>
-  status === "enabled"
-    ? `${Emojis.SUCCESS} \`ENABLED\``
-    : `${Emojis.ERROR} \`DISABLED\``;
-import { backToHubRow } from "#modules/core/lib/hub-panel.js";
+import { hubTabRow } from "#modules/core/lib/hub-panel.js";
 import { Emojis } from "#utilities/assets.js";
+import type { LumiT } from "#lib/i18n/index.js";
+import { PanelsKeys } from "#lib/i18n/keys.js";
 import {
   createActionButton,
   createBackButton,
@@ -52,13 +49,21 @@ import {
   createStringSelectMenu,
   createUserSelectMenu,
   buildSafeActionRows,
+  settingRow,
 } from "#utilities/panels.js";
+
+const formatSubtitle = (text: string) => `-# ${text}`;
+const formatStatusBadge = (status: "enabled" | "disabled", t?: LumiT) =>
+  status === "enabled"
+    ? `${Emojis.SUCCESS} \`${t ? t(PanelsKeys.DetailEnabled) : "ENABLED"}\``
+    : `${Emojis.ERROR} \`${t ? t(PanelsKeys.DetailDisabled) : "DISABLED"}\``;
 import type {
   ConfigHistoryEntry,
   ConfigOverrideEntry,
 } from "#lib/prisma/DatabaseService.js";
 
-export const FEATURES_PER_PAGE = 25;
+export const FEATURES_PER_PAGE = 8;
+export const FIELDS_PER_PAGE = 6;
 
 export interface FeatureDetail {
   meta: ModuleMeta;
@@ -157,9 +162,6 @@ export function formatFieldValue(field: ConfigField, value: unknown): string {
   }
 }
 
-const hasFieldType = (meta: ModuleMeta, ...types: FieldType[]) =>
-  (meta.configFields ?? []).some((f) => types.includes(f.type));
-
 export interface FeatureListEntry {
   meta: ModuleMeta;
   guildEnabled: boolean;
@@ -168,6 +170,7 @@ export interface FeatureListEntry {
 export function buildFeatureListView(
   features: FeatureListEntry[],
   page = 0,
+  t?: LumiT,
 ): CardReply {
   const sorted = [...features].sort((a, b) =>
     a.meta.displayName.localeCompare(b.meta.displayName),
@@ -177,39 +180,21 @@ export function buildFeatureListView(
   const start = safePage * FEATURES_PER_PAGE;
   const pageFeatures = sorted.slice(start, start + FEATURES_PER_PAGE);
 
-  const lines = pageFeatures.map((f) => {
-    const dot = f.guildEnabled ? Emojis.SUCCESS : Emojis.ERROR;
-    return `${dot} ${f.meta.emoji} **${f.meta.displayName}**`;
-  });
+  const sections = pageFeatures.map((f) =>
+    settingRow(
+      [
+        `${f.guildEnabled ? Emojis.SUCCESS : Emojis.ERROR} ${f.meta.emoji} **${f.meta.displayName}**`,
+        `-# ${f.meta.description ? cutText(f.meta.description, 90) : "No description"}`,
+      ],
+      {
+        customId: `cfg:open:${f.meta.name}:${safePage}`,
+        label: t ? t(PanelsKeys.ModulesOpen) : "Open",
+        style: ButtonStyle.Primary,
+      },
+    ),
+  );
 
-  const select = createStringSelectMenu({
-    customId: `cfg:sel:${safePage}`,
-    placeholder: "Select a feature to configure…",
-    disabled: pageFeatures.length === 0,
-    options: pageFeatures.length
-      ? pageFeatures.map((f) =>
-          new StringSelectMenuOptionBuilder()
-            .setLabel(cutText(f.meta.displayName, 100))
-            .setValue(f.meta.name)
-            .setDescription(
-              f.meta.description
-                ? cutText(f.meta.description, 100)
-                : "No description",
-            )
-            .setEmoji(Emojis.parse(f.meta.emoji)),
-        )
-      : [
-          new StringSelectMenuOptionBuilder()
-            .setLabel("No features registered")
-            .setValue("_none"),
-        ],
-  });
-
-  const rows: Row[] = [
-    backToHubRow(),
-    new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(select),
-  ];
-
+  const rows: Row[] = [];
   if (totalPages > 1) {
     rows.push(
       createPaginationRow({
@@ -219,81 +204,118 @@ export function buildFeatureListView(
       }),
     );
   }
+  rows.push(hubTabRow("modules", t));
 
   return makeCard(
     CARD_ACCENTS.PRIMARY,
-    `${Emojis.GEAR} Feature Modules`,
+    `${Emojis.GEAR} ${t ? t(PanelsKeys.ModulesTitle) : "Feature Modules"}`,
     [
-      formatSubtitle("Browse and configure feature modules enabled for this server."),
-      lines.length ? lines.join("\n") : "*No features registered.*",
+      formatSubtitle(
+        t
+          ? t(PanelsKeys.ModulesSubtitle)
+          : "Browse and configure feature modules enabled for this server.",
+      ),
+      pageFeatures.length
+        ? ""
+        : (t ? t(PanelsKeys.ModulesEmpty) : "*No features registered.*"),
     ],
     {
+      sections,
       footer:
         totalPages > 1
-          ? `Page ${safePage + 1}/${totalPages} • Select a module to enable, disable, or configure it.`
-          : "Select a module to enable, disable, or configure it.",
+          ? t
+            ? t(PanelsKeys.ModulesPageFooter, {
+                page: safePage + 1,
+                total: totalPages,
+              })
+            : `Page ${safePage + 1}/${totalPages} • Open a module to enable, disable, or configure it.`
+          : t
+            ? t(PanelsKeys.ModulesFooter)
+            : "Open a module to enable, disable, or configure it.",
       actionRows: buildSafeActionRows(rows),
     },
   );
 }
 
+/**
+ * Module detail: fields render as section rows with inline accessory buttons
+ * (booleans toggle in place, everything else opens a per-field edit subpanel),
+ * paginated so the card never exceeds Discord's component budget.
+ */
 export function buildFeatureDetailView(
   meta: ModuleMeta,
   config: Record<string, unknown>,
   guildEnabled: boolean,
-  page = 0,
+  fieldPage = 0,
+  t?: LumiT,
 ): CardReply {
   const fields = meta.configFields ?? [];
-  const statusBadge = formatStatusBadge(guildEnabled ? "enabled" : "disabled");
+  const totalPages = Math.max(1, Math.ceil(fields.length / FIELDS_PER_PAGE));
+  const safePage = Math.max(0, Math.min(fieldPage, totalPages - 1));
+  const pageFields = fields.slice(
+    safePage * FIELDS_PER_PAGE,
+    (safePage + 1) * FIELDS_PER_PAGE,
+  );
 
-  const fieldLines = [`**Status:** ${statusBadge}`];
-  for (const f of fields) {
-    const req = f.required ? " *(required)*" : "";
-    fieldLines.push(
-      `**${f.label}:** ${formatFieldValue(f, config[f.key])}${req}`,
-    );
-  }
+  const statusBadge = formatStatusBadge(
+    guildEnabled ? "enabled" : "disabled",
+    t,
+  );
 
-  const rows: Row[] = [];
+  const sections = pageFields.map((f) => {
+    const req = f.required
+      ? ` *${t ? t(PanelsKeys.DetailRequired) : "(required)"}*`
+      : "";
+    const lines = [
+      `**${f.label}**${req} - ${formatFieldValue(f, config[f.key])}`,
+      ...(f.description ? [`-# ${cutText(f.description, 90)}`] : []),
+    ];
 
-  const primaryComponents: MessageActionRowComponentBuilder[] = [
-    createActionButton({
-      customId: `cfg:tog:${meta.name}:${page}`,
-      label: guildEnabled ? "Disable Module" : "Enable Module",
-      emoji: guildEnabled ? Emojis.CROSS : Emojis.CHECK,
-      style: guildEnabled ? ButtonStyle.Danger : ButtonStyle.Success,
-    }),
-  ];
+    if (f.type === FieldType.BOOLEAN) {
+      const def = f.default === undefined ? false : Boolean(f.default);
+      const on = Boolean(config[f.key] ?? def);
+      return settingRow(lines, {
+        customId: `cfg:bool:${meta.name}:${f.key}:${safePage}`,
+        label: on ? Emojis.CHECK : Emojis.CROSS,
+        style: on ? ButtonStyle.Success : ButtonStyle.Secondary,
+      });
+    }
 
-  if (hasFieldType(meta, FieldType.STRING, FieldType.NUMBER)) {
-    primaryComponents.push(
+    return settingRow(lines, {
+      customId: `cfg:field:${meta.name}:${f.key}:${safePage}`,
+      label: t ? t(PanelsKeys.DetailEdit) : "Edit",
+      emoji: Emojis.EDIT,
+      style: ButtonStyle.Secondary,
+    });
+  });
+
+  const rows: Row[] = [
+    new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
       createActionButton({
-        customId: `cfg:cfg:${meta.name}:${page}`,
-        label: "Configure…",
-        emoji: Emojis.EDIT,
+        customId: `cfg:tog:${meta.name}:${safePage}`,
+        label: guildEnabled
+          ? (t ? t(PanelsKeys.DetailDisable) : "Disable Module")
+          : (t ? t(PanelsKeys.DetailEnable) : "Enable Module"),
+        emoji: guildEnabled ? Emojis.CROSS : Emojis.CHECK,
+        style: guildEnabled ? ButtonStyle.Danger : ButtonStyle.Success,
+      }),
+      createActionButton({
+        customId: `cfg:rst:${meta.name}:${safePage}`,
+        label: t ? t(PanelsKeys.DetailReset) : "Reset",
+        emoji: Emojis.UNINSTALL,
         style: ButtonStyle.Secondary,
       }),
-    );
-  }
-
-  primaryComponents.push(
-    createActionButton({
-      customId: `cfg:rst:${meta.name}:${page}`,
-      label: "Reset",
-      emoji: Emojis.UNINSTALL,
-      style: ButtonStyle.Secondary,
-    }),
-  );
-
-  rows.push(
-    new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(...primaryComponents),
-  );
+    ),
+  ];
 
   const secondaryComponents: MessageActionRowComponentBuilder[] = [
-    createBackButton(`cfg:back:${page}`, "← Back to Modules"),
+    createBackButton(
+      `cfg:back:${safePage}`,
+      t ? t(PanelsKeys.BackToModules) : "← Back to Modules",
+    ),
     createActionButton({
-      customId: `cfg:hist:${meta.name}:${page}`,
-      label: "History",
+      customId: `cfg:hist:${meta.name}:${safePage}`,
+      label: t ? t(PanelsKeys.DetailHistory) : "History",
       emoji: Emojis.CLOCK,
       style: ButtonStyle.Secondary,
     }),
@@ -302,8 +324,8 @@ export function buildFeatureDetailView(
   if (meta.configOverrides) {
     secondaryComponents.push(
       createActionButton({
-        customId: `cfg:ovr:${meta.name}:${page}`,
-        label: "Overrides",
+        customId: `cfg:ovr:${meta.name}:${safePage}`,
+        label: t ? t(PanelsKeys.DetailOverrides) : "Overrides",
         emoji: Emojis.SHIELD,
         style: ButtonStyle.Secondary,
       }),
@@ -311,97 +333,31 @@ export function buildFeatureDetailView(
   }
 
   rows.push(
-    new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(...secondaryComponents),
+    new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+      ...secondaryComponents,
+    ),
   );
 
-  // Chunk boolean fields (up to 5 boolean buttons per row)
-  const boolFields = fields.filter((f) => f.type === FieldType.BOOLEAN);
-  for (let i = 0; i < boolFields.length; i += 5) {
-    const chunk = boolFields.slice(i, i + 5);
+  if (totalPages > 1) {
     rows.push(
-      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-        ...chunk.map((f) => {
-          const def = f.default === undefined ? false : Boolean(f.default);
-          const on = Boolean(config[f.key] ?? def);
-          return createActionButton({
-            customId: `cfg:bool:${meta.name}:${f.key}:${page}`,
-            label: `${on ? Emojis.CHECK : Emojis.CROSS} ${cutText(f.label, 40)}`,
-            style: on ? ButtonStyle.Success : ButtonStyle.Secondary,
-          });
-        }),
-      ),
+      createPaginationRow({
+        customIdPrefix: `cfg:fpage:${meta.name}`,
+        currentPage: safePage,
+        totalPages,
+      }),
     );
   }
 
-  // Interactive entity select menus for Channel, Role, User, and Enum fields
-  for (const f of fields) {
-    const isRoleList = f.list && f.key.includes("role");
-    const isChannelList = f.list && f.key.includes("channel");
-    const isUserList = f.list && f.key.includes("user");
-
-    if (f.type === FieldType.CHANNEL || isChannelList) {
-      let channelTypes: ChannelType[] | undefined = f.channelTypes;
-      if (!channelTypes || channelTypes.length === 0) {
-        if (
-          f.key.includes("base") ||
-          f.key.includes("voice") ||
-          f.key.includes("lounge")
-        ) {
-          channelTypes = [
-            ChannelType.GuildVoice,
-            ChannelType.GuildStageVoice,
-          ];
-        } else {
-          channelTypes = [ChannelType.GuildText];
-        }
-      }
-      const chBuilder = createChannelSelectMenu({
-        customId: `cfg:ch:${meta.name}:${f.key}:${page}`,
-        placeholder: `Set: ${cutText(f.label, 80)}`,
-        channelTypes,
-        minValues: 0,
-        maxValues: isChannelList ? 25 : 1,
-      });
-      rows.push(
-        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(chBuilder),
-      );
-    } else if (f.type === FieldType.ROLE || isRoleList) {
-      const roleBuilder = createRoleSelectMenu({
-        customId: `cfg:role:${meta.name}:${f.key}:${page}`,
-        placeholder: `Set: ${cutText(f.label, 80)}`,
-        minValues: 0,
-        maxValues: isRoleList ? 25 : 1,
-      });
-      rows.push(
-        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(roleBuilder),
-      );
-    } else if (f.type === FieldType.USER || isUserList) {
-      const userBuilder = createUserSelectMenu({
-        customId: `cfg:user:${meta.name}:${f.key}:${page}`,
-        placeholder: `Set: ${cutText(f.label, 80)}`,
-        minValues: 0,
-        maxValues: isUserList ? 25 : 1,
-      });
-      rows.push(
-        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(userBuilder),
-      );
-    } else if (f.type === FieldType.ENUM && f.choices?.length) {
-      const current = config[f.key];
-      const enumBuilder = createStringSelectMenu({
-        customId: `cfg:enum:${meta.name}:${f.key}:${page}`,
-        placeholder: `Set: ${cutText(f.label, 80)}`,
-        options: f.choices.slice(0, 25).map((choice) =>
-          new StringSelectMenuOptionBuilder()
-            .setLabel(cutText(choice, 100))
-            .setValue(choice)
-            .setDefault(choice === current),
-        ),
-      });
-      rows.push(
-        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(enumBuilder),
-      );
-    }
-  }
+  const footer =
+    totalPages > 1
+      ? t
+        ? t(PanelsKeys.DetailFieldsFooter, {
+            from: safePage * FIELDS_PER_PAGE + 1,
+            to: safePage * FIELDS_PER_PAGE + pageFields.length,
+            count: fields.length,
+          })
+        : `Fields ${safePage * FIELDS_PER_PAGE + 1}-${safePage * FIELDS_PER_PAGE + pageFields.length} of ${fields.length}`
+      : undefined;
 
   return noPingCard(
     makeCard(
@@ -409,7 +365,125 @@ export function buildFeatureDetailView(
       `${meta.emoji} ${meta.displayName}`,
       [
         formatSubtitle(meta.description || "No description provided."),
-        fieldLines.join("\n"),
+        `**${t ? t(PanelsKeys.DetailStatus) : "Status"}:** ${statusBadge}`,
+      ],
+      { sections, footer, actionRows: buildSafeActionRows(rows) },
+    ),
+  );
+}
+
+const resolveChannelTypes = (f: ConfigField): ChannelType[] => {
+  if (f.channelTypes?.length) return f.channelTypes;
+  if (
+    f.key.includes("base") ||
+    f.key.includes("voice") ||
+    f.key.includes("lounge")
+  ) {
+    return [ChannelType.GuildVoice, ChannelType.GuildStageVoice];
+  }
+  return [ChannelType.GuildText];
+};
+
+/** Per-field edit subpanel hosting the single native picker for the field. */
+export function buildFieldEditView(
+  meta: ModuleMeta,
+  field: ConfigField,
+  config: Record<string, unknown>,
+  fieldPage = 0,
+  t?: LumiT,
+): CardReply {
+  const isRoleList = field.list && field.key.includes("role");
+  const isChannelList = field.list && field.key.includes("channel");
+  const isUserList = field.list && field.key.includes("user");
+
+  const rows: Row[] = [];
+
+  if (field.type === FieldType.CHANNEL || isChannelList) {
+    rows.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        createChannelSelectMenu({
+          customId: `cfg:ch:${meta.name}:${field.key}:${fieldPage}`,
+          placeholder: cutText(field.label, 100),
+          channelTypes: resolveChannelTypes(field),
+          minValues: 0,
+          maxValues: isChannelList ? 25 : 1,
+        }),
+      ),
+    );
+  } else if (field.type === FieldType.ROLE || isRoleList) {
+    rows.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        createRoleSelectMenu({
+          customId: `cfg:role:${meta.name}:${field.key}:${fieldPage}`,
+          placeholder: cutText(field.label, 100),
+          minValues: 0,
+          maxValues: isRoleList ? 25 : 1,
+        }),
+      ),
+    );
+  } else if (field.type === FieldType.USER || isUserList) {
+    rows.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        createUserSelectMenu({
+          customId: `cfg:user:${meta.name}:${field.key}:${fieldPage}`,
+          placeholder: cutText(field.label, 100),
+          minValues: 0,
+          maxValues: isUserList ? 25 : 1,
+        }),
+      ),
+    );
+  } else if (field.type === FieldType.ENUM && field.choices?.length) {
+    rows.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        createStringSelectMenu({
+          customId: `cfg:enum:${meta.name}:${field.key}:${fieldPage}`,
+          placeholder: cutText(field.label, 100),
+          options: field.choices.slice(0, 25).map((choice) =>
+            new StringSelectMenuOptionBuilder()
+              .setLabel(cutText(choice, 100))
+              .setValue(choice)
+              .setDefault(choice === config[field.key]),
+          ),
+        }),
+      ),
+    );
+  } else {
+    rows.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        createActionButton({
+          customId: `cfg:fedit:${meta.name}:${field.key}:${fieldPage}`,
+          label: t ? t(PanelsKeys.FieldEditEnterValue) : "Enter value…",
+          emoji: Emojis.EDIT,
+          style: ButtonStyle.Primary,
+        }),
+      ),
+    );
+  }
+
+  rows.push(
+    new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+      createBackButton(
+        `cfg:open:${meta.name}:${fieldPage}`,
+        t ? t(PanelsKeys.BackToFeature) : "← Back to Feature",
+      ),
+    ),
+  );
+
+  return noPingCard(
+    makeCard(
+      CARD_ACCENTS.PRIMARY,
+      `${meta.emoji} ${
+        t
+          ? t(PanelsKeys.FieldEditTitle, {
+              module: meta.displayName,
+              field: field.label,
+            })
+          : `${meta.displayName} • ${field.label}`
+      }`,
+      [
+        ...(field.description ? [formatSubtitle(field.description)] : []),
+        `**${t ? t(PanelsKeys.FieldEditCurrent) : "Current value"}:** ${formatFieldValue(field, config[field.key])}`,
+        `-# ${t ? t(PanelsKeys.FieldEditHint) : "Pick a new value below, or clear the selection to unset."}`,
       ],
       { actionRows: buildSafeActionRows(rows) },
     ),

@@ -7,6 +7,7 @@ import type tempvc from "../languages/en-US/tempvc.json";
 import type afk from "../languages/en-US/afk.json";
 import type logging from "../languages/en-US/logging.json";
 import type filter from "../languages/en-US/filter.json";
+import type panels from "../languages/en-US/panels.json";
 
 declare module "i18next" {
   interface CustomTypeOptions {
@@ -20,6 +21,7 @@ declare module "i18next" {
       afk: typeof afk;
       logging: typeof logging;
       filter: typeof filter;
+      panels: typeof panels;
     };
   }
 }

@@ -4,35 +4,88 @@ import {
   buildSettingsView,
   buildPermissionsView,
   buildAddonsView,
+  buildAddonReposView,
+  PERMS_PER_PAGE,
 } from "#modules/core/lib/hub-panel.js";
 
+type ComponentJson = {
+  type: number;
+  components?: ComponentJson[];
+  accessory?: { custom_id?: string; style?: number };
+  custom_id?: string;
+  style?: number;
+  disabled?: boolean;
+};
+
+const toJson = (card: { components: { toJSON(): unknown }[] }) =>
+  card.components[0].toJSON() as { components: ComponentJson[] };
+
+const actionRows = (card: { components: { toJSON(): unknown }[] }) =>
+  toJson(card).components.filter((c) => c.type === 1);
+
+const sections = (card: { components: { toJSON(): unknown }[] }) =>
+  toJson(card).components.filter((c) => c.type === 9);
+
 describe("hub-panel view builders", () => {
-  it("buildHubView creates a valid control panel card", () => {
+  it("buildHubView renders the tab bar with home active", () => {
     const card = buildHubView({
       moduleCount: 5,
       enabledCount: 4,
       prefix: "!",
       locale: "en-US",
     });
-    expect(card.components).toBeDefined();
-    expect(card.components.length).toBeGreaterThan(0);
+
+    const [tabs] = actionRows(card);
+    expect(tabs.components).toHaveLength(5);
+    const home = tabs.components!.find((b) => b.custom_id === "lumi:tab:home");
+    expect(home?.disabled).toBe(true);
+    expect(home?.style).toBe(1);
   });
 
-  it("buildSettingsView renders settings menu components", () => {
+  it("buildSettingsView renders the prefix as a section row with edit accessory", () => {
     const card = buildSettingsView({ prefix: "!", locale: "en-US" });
-    expect(card.components).toBeDefined();
-    expect(card.components.length).toBeGreaterThan(0);
+    const [prefixRow] = sections(card);
+    expect(prefixRow.accessory?.custom_id).toBe("lumi:prefix:set");
   });
 
-  it("buildPermissionsView renders permissions components", () => {
-    const card = buildPermissionsView([], []);
-    expect(card.components).toBeDefined();
-    expect(card.components.length).toBeGreaterThan(0);
+  it("buildPermissionsView renders revoke accessories and paginates", () => {
+    const overrides = Array.from({ length: PERMS_PER_PAGE + 1 }, (_, i) => ({
+      commandPath: `mod.cmd${i}`,
+      modelType: "role",
+      modelId: `${100000000000000000n + BigInt(i)}`,
+      allow: i % 2 === 0,
+    }));
+
+    const card = buildPermissionsView(overrides, 0);
+    expect(sections(card)).toHaveLength(PERMS_PER_PAGE);
+    expect(sections(card)[0].accessory?.custom_id).toContain("lumi:permdel:");
+
+    const pageRow = actionRows(card).find((r) =>
+      r.components?.some((b) => b.custom_id?.startsWith("lumi:permpage")),
+    );
+    expect(pageRow).toBeDefined();
   });
 
-  it("buildAddonsView renders addons menu view", () => {
+  it("buildAddonsView renders the addons tab active", () => {
     const card = buildAddonsView({ installedCount: 0, repoCount: 0 });
-    expect(card.components).toBeDefined();
-    expect(card.components.length).toBeGreaterThan(0);
+    const tabs = actionRows(card).at(-1);
+    const addons = tabs?.components?.find(
+      (b) => b.custom_id === "lumi:tab:addons",
+    );
+    expect(addons?.disabled).toBe(true);
+  });
+
+  it("buildAddonReposView renders repos as browse rows", () => {
+    const card = buildAddonReposView([
+      {
+        name: "community",
+        url: "https://x",
+        branch: "main",
+        installedCount: 2,
+      },
+    ]);
+    expect(sections(card)[0].accessory?.custom_id).toBe(
+      "lumi:addon:browse:community",
+    );
   });
 });
