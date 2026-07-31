@@ -25,6 +25,15 @@ export const RedisKeys = {
   guildPermitsPattern: (guildId: string) => `lumi:permits:${guildId}:*`,
   quarantineState: (guildId: string, userId: string) =>
     `lumi:mod:${guildId}:quarantine:${userId}`,
+  securityWindow: (guildId: string, executorId: string, kind: string) =>
+    `lumi:security:${guildId}:window:${kind}:${executorId}`,
+  securityTripped: (guildId: string, executorId: string) =>
+    `lumi:security:${guildId}:tripped:${executorId}`,
+  joinBurst: (guildId: string) => `lumi:security:${guildId}:joins`,
+  raidMode: (guildId: string) => `lumi:security:${guildId}:raid`,
+  verifyChallenge: (guildId: string, userId: string) =>
+    `lumi:security:${guildId}:verify:${userId}`,
+  panicState: (guildId: string) => `lumi:security:${guildId}:panic`,
   voiceMuteState: (guildId: string, userId: string) =>
     `lumi:mod:${guildId}:voicemute:${userId}`,
   blocked: (guildId: string | null, userId: string) =>

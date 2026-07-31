@@ -188,6 +188,8 @@ export class LumiClient extends SapphireClient {
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildModeration,
+        GatewayIntentBits.GuildInvites,
+        GatewayIntentBits.GuildWebhooks,
         GatewayIntentBits.GuildPresences,
       ],
       partials: [Partials.Channel, Partials.GuildMember, Partials.Message],

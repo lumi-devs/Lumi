@@ -75,7 +75,7 @@ const hubTabs = (t?: LumiT): Tab[] => [
 
 /** The persistent tab bar shown on every hub view. */
 export function hubTabRow(active: HubTabId, t?: LumiT): Row {
-  return tabRow("lumi:tab", hubTabs(t), active) as unknown as Row;
+  return tabRow("lumi:tab", hubTabs(t), active);
 }
 
 export function backToHubRow(t?: LumiT): Row {
@@ -265,7 +265,7 @@ export function buildPermissionsView(
         customIdPrefix: "lumi:permpage",
         currentPage: safePage,
         totalPages,
-      }) as unknown as Row,
+      }),
     );
   }
   rows.push(hubTabRow("permissions", t));

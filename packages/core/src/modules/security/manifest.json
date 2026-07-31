@@ -1,0 +1,92 @@
+{
+  "name": "security",
+  "displayName": "Security",
+  "emoji": "🛡️",
+  "description": "Wick-style server protection: anti-nuke detection with automatic quarantine.",
+  "version": "1.0.0",
+  "disableable": true,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": true,
+  "targetService": "worker",
+  "subStores": [
+    "listeners",
+    "services"
+  ],
+  "configFields": [
+    {
+      "key": "antinuke_enabled",
+      "type": "BOOLEAN",
+      "label": "Anti-Nuke",
+      "description": "Watch the audit log for mass destructive actions.",
+      "default": false
+    },
+    {
+      "key": "window_seconds",
+      "type": "NUMBER",
+      "label": "Detection Window",
+      "description": "Sliding window in seconds for counting actions.",
+      "default": 60
+    },
+    {
+      "key": "max_bans",
+      "type": "NUMBER",
+      "label": "Max Bans",
+      "description": "Bans allowed per executor within the window.",
+      "default": 5
+    },
+    {
+      "key": "max_kicks",
+      "type": "NUMBER",
+      "label": "Max Kicks",
+      "description": "Kicks allowed per executor within the window.",
+      "default": 5
+    },
+    {
+      "key": "max_channel_deletes",
+      "type": "NUMBER",
+      "label": "Max Channel Deletes",
+      "description": "Channel deletions allowed per executor within the window.",
+      "default": 3
+    },
+    {
+      "key": "max_role_deletes",
+      "type": "NUMBER",
+      "label": "Max Role Deletes",
+      "description": "Role deletions allowed per executor within the window.",
+      "default": 3
+    },
+    {
+      "key": "max_webhook_creates",
+      "type": "NUMBER",
+      "label": "Max Webhook Creates",
+      "description": "Webhook creations allowed per executor within the window.",
+      "default": 3
+    },
+    {
+      "key": "response",
+      "type": "ENUM",
+      "label": "Response",
+      "description": "What to do when an executor trips a threshold.",
+      "default": "quarantine",
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ]
+    },
+    {
+      "key": "trusted_role_ids",
+      "type": "STRING",
+      "label": "Trusted Roles",
+      "description": "Comma-separated role IDs exempt from anti-nuke.",
+      "list": true
+    },
+    {
+      "key": "log_channel_id",
+      "type": "CHANNEL",
+      "label": "Security Log Channel",
+      "description": "Channel for anti-nuke alerts (falls back to mod log)."
+    }
+  ]
+}

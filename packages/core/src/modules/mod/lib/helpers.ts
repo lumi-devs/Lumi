@@ -1,7 +1,8 @@
 import type { Container } from "@sapphire/framework";
-import { tryGetService } from "#lib/module-system/Service.js";
-import { type User } from "discord.js";
 import { scheduleTask } from "#lib/schedule-task.js";
+
+export { logToChannel } from "#lib/moderation/log.js";
+
 const liftJobId = (caseId: number) => `mod-lift:${caseId}`;
 
 /** Schedule a one-shot lift job to fire exactly when the case expires. Idempotent per case id. */
@@ -31,24 +32,3 @@ export async function scheduleCaseLift(
   );
 }
 
-export async function logToChannel(
-  guildId: string,
-  action: string,
-  color: number,
-  targetId: string,
-  actor: User,
-  reason: string,
-  caseNumber: number,
-): Promise<void> {
-  const logService = tryGetService("guild-log");
-  await logService?.dispatch({
-    guildId,
-    moduleName: "mod",
-    action,
-    targetId,
-    actorId: actor.id,
-    reason,
-    color,
-    caseNumber,
-  });
-}

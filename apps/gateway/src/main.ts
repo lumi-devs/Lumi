@@ -158,6 +158,9 @@ const manager = new WebSocketManager({
     GatewayIntentBits.GuildMessages |
     GatewayIntentBits.GuildVoiceStates |
     GatewayIntentBits.MessageContent |
+    GatewayIntentBits.GuildModeration |
+    GatewayIntentBits.GuildInvites |
+    GatewayIntentBits.GuildWebhooks |
     GatewayIntentBits.GuildPresences,
   shardCount: shardPlan.shardCount,
   ...(assignedShards && { shardIds: [...assignedShards] }),

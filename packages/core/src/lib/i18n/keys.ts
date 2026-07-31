@@ -9,13 +9,13 @@ export type TypedFT<TArgs, TReturn = string> = string & {
 };
 
 export function T<TReturn = string>(key: string): TypedT<TReturn> {
-  return key as TypedT<TReturn>;
+  return key;
 }
 
 export function FT<TArgs, TReturn = string>(
   key: string,
 ): TypedFT<TArgs, TReturn> {
-  return key as TypedFT<TArgs, TReturn>;
+  return key;
 }
 
 export const PanelsKeys = {
