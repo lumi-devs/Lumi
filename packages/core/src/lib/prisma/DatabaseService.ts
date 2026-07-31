@@ -22,6 +22,7 @@ import { ConfigOverrideRepository } from "#lib/prisma/repositories/ConfigOverrid
 import { AfkRepository } from "#lib/prisma/repositories/AfkRepository.js";
 import { GlobalRepository } from "#lib/prisma/repositories/GlobalRepository.js";
 import { SecurityRepository } from "#lib/prisma/repositories/SecurityRepository.js";
+import { TempVcRepository } from "#lib/prisma/repositories/TempVcRepository.js";
 
 export type {
   TargetPermitPayload,
@@ -56,6 +57,7 @@ export class DatabaseService {
   public readonly configOverrides: ConfigOverrideRepository;
   public readonly afk: AfkRepository;
   public readonly security: SecurityRepository;
+  public readonly tempvc: TempVcRepository;
 
   public constructor(
     private readonly prisma: DatabaseClient,
@@ -86,6 +88,7 @@ export class DatabaseService {
     );
     this.afk = new AfkRepository(prisma, redis, logger, this);
     this.security = new SecurityRepository(prisma, redis, logger, this);
+    this.tempvc = new TempVcRepository(prisma, redis, logger, this);
   }
 
   /** Ensures a Guild row exists so dependent rows can satisfy their FK. */

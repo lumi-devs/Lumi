@@ -1,6 +1,5 @@
 import { container } from "@sapphire/framework";
 import { logError } from "#lib/utilities/errors.js";
-import { MODULE_NAME, TempVcData } from "./keys.js";
 import type { GeneratorConfig } from "./data.js";
 
 /** Lightweight per-VC fact kept hot in memory for the voice event path. */
@@ -147,11 +146,9 @@ class TempVcRegistry {
     let p = this.#genHydrating.get(guildId);
     if (!p) {
       p = (async () => {
-        const rows = await container.db.guildKV.listModuleData<GeneratorConfig>(
-          { module: MODULE_NAME, key: TempVcData.GENERATOR, guildId },
-        );
+        const rows = await container.db.tempvc.listGenerators(guildId);
         const map = new Map<string, GeneratorConfig>();
-        for (const r of rows) map.set(r.targetId, r.value);
+        for (const r of rows) map.set(r.channelId, { name: r.name, limit: r.limit });
         this.#gens.set(guildId, map);
         this.#gensLoaded.add(guildId);
       })()
@@ -167,17 +164,12 @@ class TempVcRegistry {
     let p = this.#vcHydrating.get(guildId);
     if (!p) {
       p = (async () => {
-        const rows = await container.db.guildKV.listModuleData<ManagedVc>({
-          module: MODULE_NAME,
-          key: TempVcData.RECORD,
-          guildId,
-        });
+        const rows = await container.db.tempvc.listRecords(guildId);
         const map = new Map<string, ManagedVc>();
         for (const r of rows) {
-          const rec = r.value;
-          map.set(r.targetId, {
-            generatorId: rec.generatorId,
-            number: rec.number,
+          map.set(r.channelId, {
+            generatorId: r.generatorId,
+            number: r.number,
           });
         }
         this.#vcs.set(guildId, map);

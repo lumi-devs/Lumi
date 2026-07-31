@@ -66,6 +66,8 @@ model Guild {
   warnThresholds    WarnThreshold[]
   panicState        PanicState?
   verificationPanel VerificationPanel?
+  tempVcGenerators  TempVcGenerator[]
+  tempVcRecords     TempVcRecord[]
 
   @@map("guilds")
 }
@@ -369,4 +371,38 @@ model VerificationPanel {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@map("verification_panels")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODULE: tempvc (Temporary Voice Channels)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model TempVcGenerator {
+  guildId   String @map("guild_id") @db.VarChar(20)
+  channelId String @map("channel_id") @db.VarChar(20)
+  name      String @db.VarChar(100) // Name template; "{}" is the number slot.
+  limit     Int    @default(0) // User limit for created channels (0 = unlimited).
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@id([guildId, channelId])
+  @@map("tempvc_generators")
+}
+
+model TempVcRecord {
+  guildId     String   @map("guild_id") @db.VarChar(20)
+  channelId   String   @map("channel_id") @db.VarChar(20)
+  ownerId     String   @map("owner_id") @db.VarChar(20)
+  generatorId String   @map("generator_id") @db.VarChar(20)
+  name        String   @db.VarChar(100)
+  number      Int
+  locked      Boolean  @default(false)
+  hidden      Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@id([guildId, channelId])
+  @@index([ownerId]) // GDPR cross-guild deletes
+  @@map("tempvc_records")
 }
