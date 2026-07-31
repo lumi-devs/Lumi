@@ -10,8 +10,11 @@
   "configOverrides": true,
   "targetService": "worker",
   "subStores": [
+    "commands",
     "listeners",
-    "services"
+    "interaction-handlers",
+    "services",
+    "scheduled-tasks"
   ],
   "configFields": [
     {
@@ -87,6 +90,79 @@
       "type": "CHANNEL",
       "label": "Security Log Channel",
       "description": "Channel for anti-nuke alerts (falls back to mod log)."
+    },
+    {
+      "key": "joingate_enabled",
+      "type": "BOOLEAN",
+      "label": "Join Gate",
+      "description": "Screen new members for raids and throwaway accounts.",
+      "default": false
+    },
+    {
+      "key": "min_account_age_hours",
+      "type": "NUMBER",
+      "label": "Min Account Age (hours)",
+      "description": "Accounts younger than this are gated. 0 disables the check.",
+      "default": 0
+    },
+    {
+      "key": "raid_join_count",
+      "type": "NUMBER",
+      "label": "Raid Join Count",
+      "description": "Joins within the raid window that activate raid mode.",
+      "default": 10
+    },
+    {
+      "key": "raid_window_seconds",
+      "type": "NUMBER",
+      "label": "Raid Window (seconds)",
+      "description": "Window for counting joins toward raid detection.",
+      "default": 30
+    },
+    {
+      "key": "raid_action",
+      "type": "ENUM",
+      "label": "Gate Action",
+      "description": "Action applied to gated joiners during a raid.",
+      "default": "kick",
+      "choices": [
+        "kick",
+        "timeout",
+        "quarantine"
+      ]
+    },
+    {
+      "key": "verification_enabled",
+      "type": "BOOLEAN",
+      "label": "Verification",
+      "description": "Require members to verify via the panel for the verified role.",
+      "default": false
+    },
+    {
+      "key": "verified_role_id",
+      "type": "ROLE",
+      "label": "Verified Role",
+      "description": "Role granted after passing the emoji captcha."
+    },
+    {
+      "key": "verification_pending_role_id",
+      "type": "ROLE",
+      "label": "Pending Role",
+      "description": "Role assigned on join and removed once verified. Optional."
+    },
+    {
+      "key": "verification_timeout_minutes",
+      "type": "NUMBER",
+      "label": "Verify Timeout (minutes)",
+      "description": "How long a member has to pass the captcha.",
+      "default": 10
+    },
+    {
+      "key": "verification_kick_on_timeout",
+      "type": "BOOLEAN",
+      "label": "Kick on Timeout",
+      "description": "Kick members who don't verify before the timeout.",
+      "default": false
     }
   ]
 }

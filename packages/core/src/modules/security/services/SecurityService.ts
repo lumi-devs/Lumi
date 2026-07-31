@@ -1,11 +1,16 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
-import { Colors, type Guild } from "discord.js";
-import { isNullish } from "@sapphire/utilities";
+import { Colors, type Guild, type GuildMember } from "discord.js";
+import { isNullish, tryParseJSON } from "@sapphire/utilities";
 import { Service } from "#lib/module-system/Service.js";
 import { RedisKeys } from "#database/redis.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { logToChannel } from "#lib/moderation/log.js";
+import {
+  buildChallenge,
+  MAX_ATTEMPTS,
+  type CaptchaState,
+} from "../lib/captcha.js";
 
 export type NukeKind =
   | "ban"
@@ -22,6 +27,24 @@ export interface AntiNukeConfig {
   trustedRoleIds: string[];
 }
 
+export type GateAction = "kick" | "timeout" | "quarantine";
+
+export interface JoinGateConfig {
+  enabled: boolean;
+  minAccountAgeHours: number;
+  raidJoinCount: number;
+  raidWindowSeconds: number;
+  raidAction: GateAction;
+}
+
+export interface VerificationConfig {
+  enabled: boolean;
+  verifiedRoleId: string | null;
+  pendingRoleId: string | null;
+  timeoutMinutes: number;
+  kickOnTimeout: boolean;
+}
+
 const KIND_LIMIT_KEYS: Record<NukeKind, string> = {
   ban: "max_bans",
   kick: "max_kicks",
@@ -31,13 +54,15 @@ const KIND_LIMIT_KEYS: Record<NukeKind, string> = {
 };
 
 const TRIPPED_COOLDOWN_SECONDS = 300;
+const RAID_MODE_SECONDS = 600;
+const GATE_TIMEOUT_MS = 60 * 60 * 1000;
 
 @ApplyOptions<Piece.Options>({ name: "security" })
 export class SecurityService extends Service {
   public async loadAntiNukeConfig(guildId: string): Promise<AntiNukeConfig> {
     const raw = await this.db.config.getAllModuleConfig(guildId, "security");
     const num = (key: string, fallback: number): number =>
-      typeof raw[key] === "number" ? (raw[key] as number) : fallback;
+      typeof raw[key] === "number" ? (raw[key]) : fallback;
 
     const trustedRaw = raw["trusted_role_ids"];
     const trustedRoleIds =
@@ -183,6 +208,257 @@ export class SecurityService extends Service {
         c.caseNumber,
         "security",
       );
+    }
+  }
+
+  public async loadJoinGateConfig(guildId: string): Promise<JoinGateConfig> {
+    const raw = await this.db.config.getAllModuleConfig(guildId, "security");
+    const num = (key: string, fallback: number): number =>
+      typeof raw[key] === "number" ? (raw[key]) : fallback;
+    const action = raw["raid_action"];
+
+    return {
+      enabled: raw["joingate_enabled"] === true,
+      minAccountAgeHours: num("min_account_age_hours", 0),
+      raidJoinCount: num("raid_join_count", 10),
+      raidWindowSeconds: num("raid_window_seconds", 30),
+      raidAction:
+        action === "timeout" || action === "quarantine" ? action : "kick",
+    };
+  }
+
+  /**
+   * Counts a join toward raid detection. Returns true when this join pushes
+   * the guild over the threshold and raid mode was newly activated.
+   */
+  public async recordJoin(
+    guildId: string,
+    config: JoinGateConfig,
+  ): Promise<boolean> {
+    const key = RedisKeys.joinBurst(guildId);
+    const count = await this.redis.incr(key);
+    if (count === 1) {
+      await this.redis.expire(key, config.raidWindowSeconds);
+    }
+    if (count < config.raidJoinCount) return false;
+
+    const started = await this.redis.set(
+      RedisKeys.raidMode(guildId),
+      String(Date.now()),
+      "EX",
+      RAID_MODE_SECONDS,
+      "NX",
+    );
+    return started === "OK";
+  }
+
+  public async isRaidActive(guildId: string): Promise<boolean> {
+    return (await this.redis.exists(RedisKeys.raidMode(guildId))) === 1;
+  }
+
+  public async endRaidMode(guildId: string): Promise<void> {
+    if (this.container.invalidation) {
+      await this.container.invalidation.invalidate(RedisKeys.raidMode(guildId));
+    } else {
+      await this.redis.del(RedisKeys.raidMode(guildId));
+    }
+  }
+
+  public async loadVerificationConfig(
+    guildId: string,
+  ): Promise<VerificationConfig> {
+    const raw = await this.db.config.getAllModuleConfig(guildId, "security");
+    const str = (key: string): string | null => {
+      const v = raw[key];
+      return typeof v === "string" && v ? v : null;
+    };
+    const timeout =
+      typeof raw["verification_timeout_minutes"] === "number"
+        ? raw["verification_timeout_minutes"]
+        : 10;
+    return {
+      enabled: raw["verification_enabled"] === true,
+      verifiedRoleId: str("verified_role_id"),
+      pendingRoleId: str("verification_pending_role_id"),
+      timeoutMinutes: timeout,
+      kickOnTimeout: raw["verification_kick_on_timeout"] === true,
+    };
+  }
+
+  /**
+   * Builds a fresh emoji-sequence challenge for a member, persists it (expiring
+   * at the configured timeout), and tracks the member in the pending set for
+   * the timeout sweep. Returns the state to render.
+   */
+  public async startChallenge(
+    guildId: string,
+    userId: string,
+    config: VerificationConfig,
+  ): Promise<CaptchaState> {
+    const { sequence, buttons } = buildChallenge();
+    const expiresAt = Date.now() + config.timeoutMinutes * 60 * 1000;
+    const state: CaptchaState = {
+      sequence,
+      buttons,
+      progress: 0,
+      attempts: MAX_ATTEMPTS,
+      expiresAt,
+    };
+    await this.redis
+      .multi()
+      .set(
+        RedisKeys.verifyChallenge(guildId, userId),
+        JSON.stringify(state),
+        "EXAT",
+        Math.floor(expiresAt / 1000),
+      )
+      .zadd(RedisKeys.verifyPending(guildId), expiresAt, userId)
+      .exec();
+    return state;
+  }
+
+  public async getChallenge(
+    guildId: string,
+    userId: string,
+  ): Promise<CaptchaState | null> {
+    const raw = await this.redis.get(RedisKeys.verifyChallenge(guildId, userId));
+    if (isNullish(raw)) return null;
+    return tryParseJSON(raw) as CaptchaState | null;
+  }
+
+  public async saveChallenge(
+    guildId: string,
+    userId: string,
+    state: CaptchaState,
+  ): Promise<void> {
+    await this.redis.set(
+      RedisKeys.verifyChallenge(guildId, userId),
+      JSON.stringify(state),
+      "EXAT",
+      Math.floor(state.expiresAt / 1000),
+    );
+  }
+
+  /** Drops all pending state for a member (on success or failure). */
+  public async clearChallenge(guildId: string, userId: string): Promise<void> {
+    await this.redis
+      .multi()
+      .del(RedisKeys.verifyChallenge(guildId, userId))
+      .zrem(RedisKeys.verifyPending(guildId), userId)
+      .exec();
+  }
+
+  /** Grants the verified role and strips the pending role once a member passes. */
+  public async grantVerified(guild: Guild, userId: string): Promise<boolean> {
+    const config = await this.loadVerificationConfig(guild.id);
+    if (isNullish(config.verifiedRoleId)) return false;
+    const member = await guild.members.fetch(userId).catch(() => null);
+    if (isNullish(member)) return false;
+    try {
+      await member.roles.add(config.verifiedRoleId, "Verification passed");
+      if (config.pendingRoleId && member.roles.cache.has(config.pendingRoleId)) {
+        await member.roles
+          .remove(config.pendingRoleId, "Verification passed")
+          .catch(() => null);
+      }
+    } catch (err: unknown) {
+      this.logger.warn(
+        `[security] Verify role grant failed for ${userId} in ${guild.id}: ${String(err)}`,
+      );
+      return false;
+    }
+    return true;
+  }
+
+  /** Assigns the pending role on join and starts the timeout clock. */
+  public async assignPending(
+    member: GuildMember,
+    config: VerificationConfig,
+  ): Promise<void> {
+    if (config.pendingRoleId) {
+      await member.roles
+        .add(config.pendingRoleId, "Awaiting verification")
+        .catch(() => null);
+    }
+    const expiresAt = Date.now() + config.timeoutMinutes * 60 * 1000;
+    await this.redis.zadd(
+      RedisKeys.verifyPending(member.guild.id),
+      expiresAt,
+      member.id,
+    );
+  }
+
+  /**
+   * Kicks (or just clears) members whose verification window elapsed. Called by
+   * the periodic sweep; safe to run on any worker holding the guild.
+   */
+  public async sweepExpiredPending(guild: Guild): Promise<void> {
+    const config = await this.loadVerificationConfig(guild.id);
+    if (!config.enabled) return;
+    const expired = await this.redis.zrangebyscore(
+      RedisKeys.verifyPending(guild.id),
+      0,
+      Date.now(),
+    );
+    for (const userId of expired) {
+      if (config.kickOnTimeout) {
+        const member = await guild.members.fetch(userId).catch(() => null);
+        if (member && !member.roles.cache.has(config.verifiedRoleId ?? "")) {
+          await member.kick("Verification timed out").catch(() => null);
+        }
+      }
+      await this.clearChallenge(guild.id, userId);
+    }
+  }
+
+  public async applyGateAction(
+    guild: Guild,
+    memberId: string,
+    action: GateAction,
+    reason: string,
+  ): Promise<boolean> {
+    const member = await guild.members.fetch(memberId).catch(() => null);
+    if (isNullish(member)) return false;
+    const botUser = this.container.client.user;
+    if (isNullish(botUser)) return false;
+
+    try {
+      if (action === "kick") {
+        await member.kick(reason);
+      } else if (action === "timeout") {
+        await member.timeout(GATE_TIMEOUT_MS, reason);
+      } else {
+        await QuarantineAction.apply({
+          guild,
+          targetMember: member,
+          moderator: botUser,
+          reason,
+        });
+        return true;
+      }
+      const c = await this.db.moderation.createModerationCase({
+        guildId: guild.id,
+        userId: memberId,
+        moderatorId: botUser.id,
+        action: action === "kick" ? "kick" : "mute",
+        reason,
+      });
+      await logToChannel(
+        guild.id,
+        action === "kick" ? "👢 Gate Kicked" : "🔇 Gate Timed Out",
+        Colors.Orange,
+        memberId,
+        botUser,
+        reason,
+        c.caseNumber,
+        "security",
+      );
+      return true;
+    } catch (err: unknown) {
+      this.logger.warn(
+        `[security] Gate ${action} failed for ${memberId} in ${guild.id}: ${String(err)}`,
+      );
+      return false;
     }
   }
 }

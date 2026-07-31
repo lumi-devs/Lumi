@@ -21,6 +21,7 @@ import { ConfigHistoryRepository } from "#lib/prisma/repositories/ConfigHistoryR
 import { ConfigOverrideRepository } from "#lib/prisma/repositories/ConfigOverrideRepository.js";
 import { AfkRepository } from "#lib/prisma/repositories/AfkRepository.js";
 import { GlobalRepository } from "#lib/prisma/repositories/GlobalRepository.js";
+import { SecurityRepository } from "#lib/prisma/repositories/SecurityRepository.js";
 
 export type {
   TargetPermitPayload,
@@ -54,6 +55,7 @@ export class DatabaseService {
   public readonly configHistory: ConfigHistoryRepository;
   public readonly configOverrides: ConfigOverrideRepository;
   public readonly afk: AfkRepository;
+  public readonly security: SecurityRepository;
 
   public constructor(
     private readonly prisma: DatabaseClient,
@@ -83,6 +85,16 @@ export class DatabaseService {
       this,
     );
     this.afk = new AfkRepository(prisma, redis, logger, this);
+    this.security = new SecurityRepository(prisma, redis, logger, this);
+  }
+
+  /** Ensures a Guild row exists so dependent rows can satisfy their FK. */
+  public async ensureGuild(guildId: string): Promise<void> {
+    await this.prisma.guild.upsert({
+      where: { id: guildId },
+      create: { id: guildId },
+      update: {},
+    });
   }
 
   public getUserPermits(

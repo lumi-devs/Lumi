@@ -33,6 +33,7 @@ export const RedisKeys = {
   raidMode: (guildId: string) => `lumi:security:${guildId}:raid`,
   verifyChallenge: (guildId: string, userId: string) =>
     `lumi:security:${guildId}:verify:${userId}`,
+  verifyPending: (guildId: string) => `lumi:security:${guildId}:verify:pending`,
   panicState: (guildId: string) => `lumi:security:${guildId}:panic`,
   voiceMuteState: (guildId: string, userId: string) =>
     `lumi:mod:${guildId}:voicemute:${userId}`,
