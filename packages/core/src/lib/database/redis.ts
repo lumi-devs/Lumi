@@ -37,6 +37,12 @@ export const RedisKeys = {
   panicState: (guildId: string) => `lumi:security:${guildId}:panic`,
   voiceMuteState: (guildId: string, userId: string) =>
     `lumi:mod:${guildId}:voicemute:${userId}`,
+  filterHeat: (guildId: string, userId: string) =>
+    `lumi:filter:${guildId}:heat:${userId}`,
+  filterHeatActed: (guildId: string, userId: string) =>
+    `lumi:filter:${guildId}:heatacted:${userId}`,
+  filterLastMsg: (guildId: string, userId: string) =>
+    `lumi:filter:${guildId}:lastmsg:${userId}`,
   blocked: (guildId: string | null, userId: string) =>
     `lumi:block:${guildId ?? "global"}:${userId}`,
   blockedPattern: (userId: string) => `lumi:block:*:${userId}`,

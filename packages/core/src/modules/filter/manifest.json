@@ -19,6 +19,7 @@
       "type": "STRING",
       "label": "Filtered Terms",
       "description": "Comma-separated list of words/phrases to block.",
+      "group": "Terms & Patterns",
       "list": true
     },
     {
@@ -26,6 +27,7 @@
       "type": "STRING",
       "label": "Regex Rules",
       "description": "Comma-separated regular expressions to block (case-insensitive, max 256 chars each). Invalid patterns are skipped.",
+      "group": "Terms & Patterns",
       "list": true
     },
     {
@@ -33,6 +35,7 @@
       "type": "BOOLEAN",
       "label": "Block Invites",
       "description": "Delete messages containing Discord server invites.",
+      "group": "Invites & Links",
       "default": false
     },
     {
@@ -40,6 +43,7 @@
       "type": "STRING",
       "label": "Allowed Invite Codes",
       "description": "Comma-separated invite codes that are always allowed (e.g. your own server's).",
+      "group": "Invites & Links",
       "list": true
     },
     {
@@ -47,6 +51,7 @@
       "type": "BOOLEAN",
       "label": "Block Links",
       "description": "Delete messages containing links, except allowlisted domains.",
+      "group": "Invites & Links",
       "default": false
     },
     {
@@ -54,6 +59,7 @@
       "type": "STRING",
       "label": "Allowed Link Domains",
       "description": "Comma-separated domains exempt from link blocking (subdomains included), e.g. youtube.com, github.com.",
+      "group": "Invites & Links",
       "list": true
     },
     {
@@ -61,6 +67,7 @@
       "type": "NUMBER",
       "label": "Max Mentions",
       "description": "Maximum user+role mentions per message. 0 disables the rule.",
+      "group": "Spam Limits",
       "default": 0
     },
     {
@@ -68,6 +75,7 @@
       "type": "NUMBER",
       "label": "Max Caps %",
       "description": "Delete messages whose letters are more than this % uppercase. 0 disables the rule.",
+      "group": "Spam Limits",
       "default": 0
     },
     {
@@ -75,6 +83,7 @@
       "type": "NUMBER",
       "label": "Caps Min Length",
       "description": "Messages shorter than this never trip the caps rule.",
+      "group": "Spam Limits",
       "default": 12
     },
     {
@@ -82,6 +91,7 @@
       "type": "STRING",
       "label": "Exempt Role IDs",
       "description": "Comma-separated role IDs that bypass all filter rules (members with Manage Messages are always exempt).",
+      "group": "Punishment",
       "list": true
     },
     {
@@ -89,6 +99,7 @@
       "type": "NUMBER",
       "label": "Timeout (minutes)",
       "description": "Timeout the author for this many minutes on a filter hit. 0 disables punishment.",
+      "group": "Punishment",
       "default": 0
     },
     {
@@ -96,6 +107,7 @@
       "type": "STRING",
       "label": "Warning Message",
       "description": "Transient warning sent after a deletion. Placeholders: {user}, {reason}. Empty disables the warning.",
+      "group": "Punishment",
       "default": "{user}, your message was removed for containing {reason}."
     },
     {
@@ -103,9 +115,90 @@
       "type": "CHANNEL",
       "label": "Log Channel",
       "description": "Channel where filter hits are logged.",
+      "group": "Punishment",
       "channelTypes": [
         0
       ]
+    },
+    {
+      "key": "heat_enabled",
+      "type": "BOOLEAN",
+      "label": "Heat System",
+      "description": "Accumulate a decaying heat score per member and escalate on spam bursts.",
+      "group": "Heat Scoring",
+      "default": false
+    },
+    {
+      "key": "heat_per_message",
+      "type": "NUMBER",
+      "label": "Heat per Message",
+      "description": "Heat added for every message. 0 disables the baseline.",
+      "group": "Heat Scoring",
+      "default": 0
+    },
+    {
+      "key": "heat_per_mention",
+      "type": "NUMBER",
+      "label": "Heat per Mention",
+      "description": "Heat added per user/role mention in a message.",
+      "group": "Heat Scoring",
+      "default": 3
+    },
+    {
+      "key": "heat_per_duplicate",
+      "type": "NUMBER",
+      "label": "Heat per Duplicate",
+      "description": "Heat added when a message repeats the member's previous one.",
+      "group": "Heat Scoring",
+      "default": 5
+    },
+    {
+      "key": "heat_per_filter_hit",
+      "type": "NUMBER",
+      "label": "Heat per Filter Hit",
+      "description": "Heat added when a message trips a hard filter rule.",
+      "group": "Heat Scoring",
+      "default": 10
+    },
+    {
+      "key": "heat_decay_per_minute",
+      "type": "NUMBER",
+      "label": "Heat Decay / min",
+      "description": "Heat points bled off per minute.",
+      "group": "Heat Scoring",
+      "default": 10
+    },
+    {
+      "key": "heat_warn",
+      "type": "NUMBER",
+      "label": "Warn Threshold",
+      "description": "Heat at which the member gets a slow-down warning. 0 disables.",
+      "group": "Heat Thresholds",
+      "default": 15
+    },
+    {
+      "key": "heat_timeout",
+      "type": "NUMBER",
+      "label": "Timeout Threshold",
+      "description": "Heat at which the member is timed out. 0 disables.",
+      "group": "Heat Thresholds",
+      "default": 30
+    },
+    {
+      "key": "heat_quarantine",
+      "type": "NUMBER",
+      "label": "Quarantine Threshold",
+      "description": "Heat at which the member is quarantined. 0 disables.",
+      "group": "Heat Thresholds",
+      "default": 0
+    },
+    {
+      "key": "heat_timeout_minutes",
+      "type": "NUMBER",
+      "label": "Heat Timeout (minutes)",
+      "description": "Timeout duration applied at the timeout threshold.",
+      "group": "Heat Thresholds",
+      "default": 10
     }
   ]
 }

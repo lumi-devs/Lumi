@@ -37,6 +37,7 @@ describe("FilterMessageListener", () => {
       has: vi.fn().mockReturnValue(true),
       loadGuild: vi.fn().mockResolvedValue(undefined),
       test: vi.fn().mockReturnValue(null),
+      getHeat: vi.fn().mockReturnValue({ enabled: false }),
     };
 
     mockConfigService = {
