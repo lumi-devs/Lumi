@@ -58,9 +58,7 @@ export class AboutCommand extends BaseCommand {
 
     const ageDays = LumiInfo.getAgeInDays();
     const ageText =
-      ageDays === 0
-        ? t("core:today")
-        : t("core:daysAgo", { count: ageDays });
+      ageDays === 0 ? t("core:today") : t("core:daysAgo", { count: ageDays });
 
     const serverCount = data.guilds;
     const userCount = data.users;
@@ -72,14 +70,9 @@ export class AboutCommand extends BaseCommand {
     const bootTime = new Date(Date.now() - data.uptime);
     const hostBootTime = new Date(Date.now() - data.osUptimeSecs * 1000);
 
-    const loadedModulesList = data.modules
-      .map((m) => m.meta.displayName)
-      .join(", ");
-
     const tagline = t(LanguageKeys.Commands.AboutTagline);
     const instanceStatsHeader = t(LanguageKeys.Commands.AboutInstanceStats);
     const coreArchHeader = t(LanguageKeys.Commands.AboutCoreArch);
-    const loadedModulesHeader = t(LanguageKeys.Commands.AboutLoadedModules);
 
     const pingStatus =
       data.wsPing < 150 ? "success" : data.wsPing < 300 ? "warning" : "error";
@@ -87,7 +80,7 @@ export class AboutCommand extends BaseCommand {
 
     const body = [
       `${Emojis.BOT} **${tagline}**\n` +
-        `${t("core:aboutTagline", { age: ageText })} — Codename **${LumiInfo.codename}**`,
+        `${t("core:aboutUptime", { age: ageText })} — Codename **${LumiInfo.codename}**`,
 
       `### ${Emojis.ANALYTICS} ${instanceStatsHeader}\n` +
         `**${t("core:servers")}:** ${fmtCount(serverCount)}  •  **${t("core:members")}:** ${fmtCount(userCount)}  •  **${t("core:channels")}:** ${fmtCount(channelCount)}\n` +
@@ -102,9 +95,6 @@ export class AboutCommand extends BaseCommand {
 
       `### ${Emojis.REPO} Codebase\n` +
         `**${data.codeLines.toLocaleString()}** lines of TypeScript across **${data.modules.length}** modules  •  **${data.depCount.toLocaleString()}** dependencies`,
-
-      `### ${Emojis.REPO} ${loadedModulesHeader}\n` +
-        (loadedModulesList || t("core:none")),
     ];
 
     const buttons: ButtonBuilder[] = [];
@@ -188,9 +178,14 @@ export class AboutCommand extends BaseCommand {
       );
     }
 
-    return makeCard(BotConfig.branding.colors.PRIMARY, t("core:commandCenter"), body, {
-      thumbnailUrl: data.avatarURL,
-      actionRows,
-    });
+    return makeCard(
+      BotConfig.branding.colors.PRIMARY,
+      t("core:commandCenter"),
+      body,
+      {
+        thumbnailUrl: data.avatarURL,
+        actionRows,
+      },
+    );
   }
 }

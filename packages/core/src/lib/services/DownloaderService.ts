@@ -34,6 +34,45 @@ type ModuleUpdateCheck =
 
 const execFileAsync = promisify(execFile);
 
+/** One queued registration as Sapphire records it on a command's registry. */
+interface ApiCall {
+  registerOptions: { guildIds?: string[] };
+  builtData: object;
+}
+
+/**
+ * The private shape of Sapphire's `ApplicationCommandRegistry` that
+ * {@linkcode DownloaderService.syncApplicationCommands} depends on.
+ *
+ * @remarks
+ *
+ * `apiCalls` is an undocumented, non-public field of Sapphire's
+ * `ApplicationCommandRegistry`. It holds the normalized payloads produced by
+ * `registerChatInputCommand` / `registerContextMenuCommand` together with the
+ * guild scoping each registration asked for. Validated against
+ * `@sapphire/framework@5.5.0`.
+ *
+ * There is no public alternative: the registry exposes only command *names* and
+ * *ids* (`chatInputCommands`, `globalChatInputCommandIds`, ...), never the
+ * built payloads, and the only public way to push them to Discord is
+ * `ApplicationCommandRegistries.registerCommands`, which runs once during the
+ * `ready` handshake and cannot be re-driven for a subset of pieces.
+ *
+ * If Sapphire renames or reshapes this field, live addon installs stop
+ * publishing their slash commands until the process is restarted;
+ * {@linkcode DownloaderService.syncApplicationCommands} degrades to a warning
+ * rather than throwing.
+ */
+interface RegistryInternal {
+  apiCalls?: ApiCall[];
+}
+
+/** Reads the registry's queued registrations, or `null` if the field is gone. */
+function readApiCalls(registry: unknown): ApiCall[] | null {
+  const { apiCalls } = (registry ?? {}) as RegistryInternal;
+  return Array.isArray(apiCalls) ? apiCalls : null;
+}
+
 export class ModuleAlreadyInstalledError extends Error {
   public readonly moduleName: string;
   public constructor(moduleName: string) {
@@ -80,7 +119,11 @@ export class DownloaderService extends Service {
             `[DownloaderService] Restoring repo ${item.repo.name} for module ${item.moduleName}...`,
           );
           await resolver
-            .addRepo(item.repo.name, item.repo.url, item.repo.branch || "default")
+            .addRepo(
+              item.repo.name,
+              item.repo.url,
+              item.repo.branch || "default",
+            )
             .catch(() => {});
         }
 
@@ -95,7 +138,9 @@ export class DownloaderService extends Service {
             .then(() => true)
             .catch(() => false))
         ) {
-          await fs.rm(targetPath, { recursive: true, force: true }).catch(() => {});
+          await fs
+            .rm(targetPath, { recursive: true, force: true })
+            .catch(() => {});
           await fs.symlink(sourcePath, targetPath, "dir");
           restoredAny = true;
           this.container.logger.info(
@@ -214,10 +259,18 @@ export class DownloaderService extends Service {
     return resolver.getModulesInRepo(repoName);
   }
 
-  public async getRepoStatus(repoName: string): Promise<{ lastCommit: string | null; lastCommitTime: string | null }> {
+  public async getRepoStatus(
+    repoName: string,
+  ): Promise<{ lastCommit: string | null; lastCommitTime: string | null }> {
     const repoPath = path.join(MODULE_ROOT, repoName);
     try {
-      const { stdout } = await execFileAsync("git", ["-C", repoPath, "log", "-1", "--format=%h|%cr"]);
+      const { stdout } = await execFileAsync("git", [
+        "-C",
+        repoPath,
+        "log",
+        "-1",
+        "--format=%h|%cr",
+      ]);
       const [hash, time] = stdout.trim().split("|");
       return { lastCommit: hash || null, lastCommitTime: time || null };
     } catch {
@@ -429,7 +482,10 @@ export class DownloaderService extends Service {
   }
 
   /** Enables/disables an installed addon module live via ModuleStore - no restart. */
-  public async toggleModule(moduleName: string, enabled: boolean): Promise<void> {
+  public async toggleModule(
+    moduleName: string,
+    enabled: boolean,
+  ): Promise<void> {
     const installed =
       await this.container.db.downloader.readInstalledDownloaderModule(
         moduleName,
@@ -468,6 +524,24 @@ export class DownloaderService extends Service {
     await this.container.db.downloader.deleteDownloaderRepo(name);
   }
 
+  /**
+   * Re-publishes every loaded command's application-command payloads so a
+   * module installed or toggled at runtime appears in Discord without a
+   * restart.
+   *
+   * @remarks
+   *
+   * Sapphire only drives its own registration pass once, during the `ready`
+   * handshake, so this reads each piece's queued payloads straight off the
+   * private `apiCalls` field of its `ApplicationCommandRegistry` - see
+   * {@linkcode RegistryInternal} for why no public API can supply them - and
+   * bulk-overwrites the global and per-guild command sets from what it finds.
+   *
+   * Pieces that were loaded after the handshake have an empty queue, so their
+   * `registerApplicationCommands` is invoked first to fill it. When the private
+   * field is absent on every registry the sync is skipped with a warning
+   * instead of silently wiping the application's commands.
+   */
   public async syncApplicationCommands() {
     const { client } = this.container;
     if (!client.application) {
@@ -479,19 +553,10 @@ export class DownloaderService extends Service {
 
     const commandStore = this.container.stores.get("commands");
 
-    interface ApiCall {
-      registerOptions: { guildIds?: string[] };
-      builtData: object;
-    }
-    interface RegistryInternal {
-      apiCalls?: ApiCall[];
-    }
-
     for (const command of commandStore.values()) {
       if (typeof command.registerApplicationCommands !== "function") continue;
       const registry = command.applicationCommandRegistry;
-      const { apiCalls } = registry as unknown as RegistryInternal;
-      if (!apiCalls?.length) {
+      if (!readApiCalls(registry)?.length) {
         try {
           await command.registerApplicationCommands(registry);
         } catch (err: unknown) {
@@ -505,11 +570,12 @@ export class DownloaderService extends Service {
 
     const globalData: object[] = [];
     const guildData = new Map<string, object[]>();
+    let registriesRead = 0;
 
     for (const command of commandStore.values()) {
-      const apiCalls =
-        (command.applicationCommandRegistry as unknown as RegistryInternal)
-          .apiCalls ?? [];
+      const apiCalls = readApiCalls(command.applicationCommandRegistry);
+      if (apiCalls === null) continue;
+      registriesRead += 1;
       for (const call of apiCalls) {
         if (call.registerOptions?.guildIds?.length) {
           for (const guildId of call.registerOptions.guildIds) {
@@ -521,6 +587,13 @@ export class DownloaderService extends Service {
           globalData.push(call.builtData);
         }
       }
+    }
+
+    if (registriesRead === 0 && commandStore.size > 0) {
+      this.container.logger.warn(
+        "[DownloaderService] ApplicationCommandRegistry no longer exposes `apiCalls`; slash command sync skipped",
+      );
+      return;
     }
 
     if (globalData.length) {

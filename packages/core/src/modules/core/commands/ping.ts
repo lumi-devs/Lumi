@@ -35,21 +35,20 @@ export class PingCommand extends BaseCommand {
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
     const data = await collectPingData();
 
-    // eslint-disable-next-line no-restricted-syntax
-    const response = await interaction.reply({
-      flags: EPHEMERAL_FLAGS,
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ flags: EPHEMERAL_FLAGS });
+    }
+
+    const msg = await interaction.editReply({
       components: [
         buildOverviewCard({ roundTrip: null, ...data }, interaction.user.id),
       ],
       allowedMentions: {},
-      withResponse: true,
     });
 
-    const msg = response.resource!.message!;
     const roundTrip = msg.createdTimestamp - interaction.createdTimestamp;
 
     await interaction.editReply({
-      flags: EPHEMERAL_FLAGS,
       components: [
         buildOverviewCard({ roundTrip, ...data }, interaction.user.id),
       ],
@@ -100,7 +99,8 @@ export class PingCommand extends BaseCommand {
       try {
         const data = await collectPingData();
         const state = pingViewStates.get(userId) || "overview";
-        const { buildDetailCard } = await import("#modules/core/lib/ping-cards.js");
+        const { buildDetailCard } =
+          await import("#modules/core/lib/ping-cards.js");
         const card =
           state === "overview"
             ? buildOverviewCard({ roundTrip: null, ...data }, userId)

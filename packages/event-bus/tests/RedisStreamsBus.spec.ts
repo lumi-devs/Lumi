@@ -28,7 +28,10 @@ describe("RedisStreamsBus", () => {
       xautoclaim: vi.fn().mockResolvedValue(null),
       xpending: vi.fn().mockResolvedValue([12, "100-0", "100-0", []]),
       quit: vi.fn().mockResolvedValue("OK"),
+      disconnect: vi.fn(),
     };
+    // duplicate() returns itself so existing assertions still see the calls.
+    subscriberMock.duplicate = vi.fn().mockReturnValue(subscriberMock);
   });
 
   afterEach(() => {

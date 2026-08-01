@@ -3,7 +3,8 @@ import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import {
   BaseSubcommand,
   replyError,
-  sendReply, assertPermit,
+  sendReply,
+  assertPermit,
   replySuccess,
   fetchTyped,
 } from "#lib/commands.js";
@@ -25,7 +26,8 @@ import { buildPanel } from "../ui/panel.js";
   name: "tempvc",
   description: "Temporary voice channel controls.",
   preconditions: ["GuildOnly", "ModuleEnabled"],
-  module: "tempvc",  subcommands: [
+  module: "tempvc",
+  subcommands: [
     { name: "panel", chatInputRun: "chatInputPanel" },
     {
       name: "generator",

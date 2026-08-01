@@ -60,7 +60,7 @@
     },
     "apps/dashboard": {
       "name": "@lumi/dashboard",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dependencies": {
         "@lumi/contracts": "workspace:*",
         "@lumi/observability": "workspace:*",
@@ -71,23 +71,9 @@
         "bun-types": "latest",
       },
     },
-    "apps/gateway": {
-      "name": "@lumi/gateway",
-      "version": "1.0.0",
-      "dependencies": {
-        "@discordjs/rest": "^2.6.2",
-        "@discordjs/ws": "^2.0.4",
-        "@lumi/contracts": "workspace:*",
-        "@lumi/event-bus": "workspace:*",
-        "@lumi/observability": "workspace:*",
-        "@lumi/sharding": "workspace:*",
-        "discord-api-types": "^0.38.50",
-        "ioredis": "^5.11.1",
-      },
-    },
     "apps/scheduler": {
       "name": "@lumi/scheduler",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dependencies": {
         "@lumi/core": "workspace:*",
         "@lumi/observability": "workspace:*",
@@ -95,7 +81,7 @@
     },
     "apps/worker": {
       "name": "@lumi/worker",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dependencies": {
         "@lumi/core": "workspace:*",
         "@lumi/observability": "workspace:*",
@@ -105,14 +91,14 @@
     },
     "packages/contracts": {
       "name": "@lumi/contracts",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "peerDependencies": {
         "discord.js": "^14.20.0",
       },
     },
     "packages/core": {
       "name": "@lumi/core",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dependencies": {
         "@discordjs/builders": "^1.14.1",
         "@discordjs/formatters": "^0.6.2",
@@ -165,7 +151,7 @@
     },
     "packages/event-bus": {
       "name": "@lumi/event-bus",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dependencies": {
         "@lumi/contracts": "workspace:*",
         "@lumi/observability": "workspace:*",
@@ -174,7 +160,7 @@
     },
     "packages/observability": {
       "name": "@lumi/observability",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dependencies": {
         "@opentelemetry/api": "^1.9.1",
         "@opentelemetry/context-async-hooks": "^2.9.0",
@@ -195,7 +181,7 @@
     },
     "packages/sharding": {
       "name": "@lumi/sharding",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dependencies": {
         "@discordjs/collection": "^2.1.1",
         "@discordjs/rest": "^2.6.2",
@@ -297,8 +283,6 @@
     "@lumi/eslint-config": ["@lumi/eslint-config@workspace:packages/eslint-config"],
 
     "@lumi/event-bus": ["@lumi/event-bus@workspace:packages/event-bus"],
-
-    "@lumi/gateway": ["@lumi/gateway@workspace:apps/gateway"],
 
     "@lumi/observability": ["@lumi/observability@workspace:packages/observability"],
 

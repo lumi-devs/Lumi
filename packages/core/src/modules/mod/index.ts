@@ -43,9 +43,7 @@ export class ModModule extends Module {
     return super.onUnload();
   }
 
-  public override async deleteUserData(
-    userId: string,
-  ): Promise<void> {
+  public override async deleteUserData(userId: string): Promise<void> {
     await this.container.db.moderation.anonymizeUser(userId);
   }
 

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   capsPercent,
-  compileRegexRules,
   compileRules,
   evaluate,
+  screenRegexRules,
   findBlockedInvite,
   findBlockedLink,
   MAX_REGEX_LENGTH,
@@ -79,15 +79,22 @@ describe("capsPercent", () => {
   });
 });
 
-describe("compileRegexRules", () => {
+describe("screenRegexRules", () => {
   it("skips invalid and oversized patterns, reporting them", () => {
     const errors: string[] = [];
-    const compiled = compileRegexRules(
+    const screened = screenRegexRules(
       ["valid\\d+", "([unclosed", "x".repeat(MAX_REGEX_LENGTH + 1)],
       (p) => errors.push(p),
     );
-    expect(compiled).toHaveLength(1);
+    expect(screened).toEqual(["valid\\d+"]);
     expect(errors).toHaveLength(2);
+  });
+
+  it("returns sources, never compiled RegExp objects", () => {
+    // Guild patterns must not exist as RegExp on this thread - only the worker
+    // ever compiles them.
+    const compiled = compileRules({ ...baseConfig, regexRules: ["a+b"] });
+    expect(compiled.regexSources).toEqual(["a+b"]);
   });
 });
 
@@ -101,9 +108,9 @@ describe("evaluate", () => {
     expect(evaluate(r, "clean message", 0)).toBeNull();
   });
 
-  it("matches regex rules", () => {
+  it("does not run regex rules - those belong to the worker", () => {
     const r = rules({ regexRules: ["fr[e3]{2}\\s+nitro"] });
-    expect(evaluate(r, "FR33  NITRO click here", 0)?.rule).toBe("regex");
+    expect(evaluate(r, "FR33  NITRO click here", 0)).toBeNull();
   });
 
   it("blocks invites unless allowlisted", () => {

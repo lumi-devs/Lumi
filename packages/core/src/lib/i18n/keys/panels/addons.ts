@@ -1,0 +1,31 @@
+import { FT, T } from "#lib/i18n/keys/types.js";
+
+/** `panels:` keys for the addon repository browser. */
+export const AddonsPanelKeys = {
+  AddonsTitle: T("panels:addonsTitle"),
+  AddonsIntro: T("panels:addonsIntro"),
+  AddonsRepos: T("panels:addonsRepos"),
+  AddonsInstalled: T("panels:addonsInstalled"),
+  AddonsBrowseRepos: T("panels:addonsBrowseRepos"),
+  AddonsBrowseInstalled: T("panels:addonsBrowseInstalled"),
+  AddonsRefresh: T("panels:addonsRefresh"),
+  AddonsAddRepo: T("panels:addonsAddRepo"),
+  AddonsRemoveRepo: T("panels:addonsRemoveRepo"),
+  AddonsUpdateAll: T("panels:addonsUpdateAll"),
+  AddonsUpdateRepo: T("panels:addonsUpdateRepo"),
+  AddonsFooter: T("panels:addonsFooter"),
+  AddonsReposTitle: T("panels:addonsReposTitle"),
+  AddonsReposEmpty: T("panels:addonsReposEmpty"),
+  AddonsReposFooter: T("panels:addonsReposFooter"),
+  AddonsBrowse: T("panels:addonsBrowse"),
+  AddonsInstalledTitle: T("panels:addonsInstalledTitle"),
+  AddonsInstalledEmpty: T("panels:addonsInstalledEmpty"),
+  AddonsInstalledFooter: T("panels:addonsInstalledFooter"),
+  AddonsUninstall: T("panels:addonsUninstall"),
+  AddonsInstall: T("panels:addonsInstall"),
+  AddonsModulesTitle: FT<{ repo: string }>("panels:addonsModulesTitle"),
+  AddonsModulesEmpty: T("panels:addonsModulesEmpty"),
+  AddonsModulesFooter: T("panels:addonsModulesFooter"),
+  AddonsStatusInstalled: T("panels:addonsStatusInstalled"),
+  AddonsStatusAvailable: T("panels:addonsStatusAvailable"),
+} as const;

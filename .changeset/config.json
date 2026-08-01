@@ -5,7 +5,6 @@
   "fixed": [
     [
       "@lumi/core",
-      "@lumi/gateway",
       "@lumi/worker",
       "@lumi/scheduler",
       "@lumi/dashboard",

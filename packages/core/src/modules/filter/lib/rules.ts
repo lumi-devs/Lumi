@@ -1,6 +1,7 @@
 // @ts-expect-error - ahocorasick does not provide type declarations
 import AhoCorasick from "ahocorasick";
 import type { LumiT } from "#lib/i18n/index.js";
+import { MAX_REGEX_LENGTH } from "#lib/regex-worker/validate.js";
 
 interface AhoMatcher {
   search(text: string): Array<[number, string[]]>;
@@ -32,7 +33,11 @@ export interface RuleConfig {
 
 export interface CompiledRules {
   matcher: AhoMatcher | null;
-  regexes: RegExp[];
+  /**
+   * Validated pattern sources, *not* `RegExp` objects: guild regex only ever
+   * runs in the regex worker, so nothing here can backtrack on the event loop.
+   */
+  regexSources: string[];
   config: RuleConfig;
 }
 
@@ -43,8 +48,7 @@ export const DEFAULT_CAPS_MIN_LENGTH = 12;
 export const DEFAULT_WARN_MESSAGE =
   "{user}, your message was removed for containing {reason}.";
 
-/** Regex patterns longer than this are rejected at compile time. */
-export const MAX_REGEX_LENGTH = 256;
+export { MAX_REGEX_LENGTH };
 
 const INVITE_RE =
   /(?:discord\.(?:gg|com\/invite)|discordapp\.com\/invite)\/([\w-]+)/i;
@@ -52,21 +56,23 @@ const INVITE_RE =
 const URL_RE = /https?:\/\/([^\s/<>"']+)/gi;
 
 /**
- * Compile user-supplied regex rules defensively: length-capped, `iu` flags,
- * invalid patterns reported via `onError` and skipped rather than throwing.
+ * Screen user-supplied regex rules: length-capped and syntax-checked, with
+ * invalid patterns reported via `onError` and dropped rather than throwing.
+ * The surviving *sources* are returned - compiling them is the worker's job.
  */
-export function compileRegexRules(
+export function screenRegexRules(
   patterns: string[],
   onError?: (pattern: string, reason: string) => void,
-): RegExp[] {
-  const out: RegExp[] = [];
+): string[] {
+  const out: string[] = [];
   for (const pattern of patterns) {
     if (pattern.length > MAX_REGEX_LENGTH) {
       onError?.(pattern, `longer than ${MAX_REGEX_LENGTH} chars`);
       continue;
     }
     try {
-      out.push(new RegExp(pattern, "iu"));
+      new RegExp(pattern, "iu");
+      out.push(pattern);
     } catch (err) {
       onError?.(pattern, err instanceof Error ? err.message : String(err));
     }
@@ -85,7 +91,7 @@ export function compileRules(
             config.terms.map((t) => t.toLowerCase()),
           ) as AhoMatcher)
         : null,
-    regexes: compileRegexRules(config.regexRules, onRegexError),
+    regexSources: screenRegexRules(config.regexRules, onRegexError),
     config,
   };
 }
@@ -134,28 +140,28 @@ export function capsPercent(content: string): number {
   return letters === 0 ? 0 : (upper / letters) * 100;
 }
 
+/** Aho-Corasick term match - linear in the input, safe on the event loop. */
+export function evaluateTerms(
+  rules: CompiledRules,
+  content: string,
+): FilterHit | null {
+  if (!rules.matcher) return null;
+  const results = rules.matcher.search(content.toLowerCase());
+  const term = results[0]?.[1]?.[0];
+  return term ? { rule: "term", detail: term } : null;
+}
+
 /**
- * Evaluate a message against a guild's compiled rules. `mentionCount` is the
- * message's user+role mention total (computed by the listener - this module
- * stays discord.js-free). Rules run cheapest-adequate first; the first hit wins.
+ * The bounded rules: invites, links, mentions and caps. All linear in the
+ * message length, so they stay inline. Regex rules are *not* here - they run in
+ * the regex worker (`FilterService.test`), between terms and these.
  */
-export function evaluate(
+export function evaluateStatic(
   rules: CompiledRules,
   content: string,
   mentionCount: number,
 ): FilterHit | null {
   const { config } = rules;
-
-  if (rules.matcher) {
-    const results = rules.matcher.search(content.toLowerCase());
-    const term = results[0]?.[1]?.[0];
-    if (term) return { rule: "term", detail: term };
-  }
-
-  for (const regex of rules.regexes) {
-    regex.lastIndex = 0;
-    if (regex.test(content)) return { rule: "regex", detail: regex.source };
-  }
 
   if (config.blockInvites) {
     const code = findBlockedInvite(content, config.inviteAllowlist);
@@ -186,6 +192,22 @@ export function evaluate(
   }
 
   return null;
+}
+
+/**
+ * Every rule that can run synchronously, in priority order. `mentionCount` is
+ * the message's user+role mention total (computed by the listener - this module
+ * stays discord.js-free). The first hit wins.
+ */
+export function evaluate(
+  rules: CompiledRules,
+  content: string,
+  mentionCount: number,
+): FilterHit | null {
+  return (
+    evaluateTerms(rules, content) ??
+    evaluateStatic(rules, content, mentionCount)
+  );
 }
 
 /** Human copy for the transient warning, per rule. */

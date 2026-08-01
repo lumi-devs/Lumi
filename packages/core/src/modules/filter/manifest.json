@@ -26,7 +26,7 @@
       "key": "regex_rules",
       "type": "STRING",
       "label": "Regex Rules",
-      "description": "Comma-separated regular expressions to block (case-insensitive, max 256 chars each). Invalid patterns are skipped.",
+      "description": "Comma-separated regular expressions to block (case-insensitive, max 256 chars each). Invalid patterns are skipped; patterns that backtrack catastrophically are rejected when saved.",
       "group": "Terms & Patterns",
       "list": true
     },

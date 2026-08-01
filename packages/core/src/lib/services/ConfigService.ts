@@ -48,6 +48,14 @@ export class ConfigService extends Service {
       }
     }
 
+    const validator = this.container.configValueValidators.get(
+      `${moduleName}:${key}`,
+    );
+    if (validator) {
+      const reason = await validator(coerced, guildId);
+      if (reason) throw new Error(`Invalid value for \`${key}\`: ${reason}`);
+    }
+
     const release = await configLock(guildId, moduleName);
     try {
       const oldValue = await this.container.db.config.getModuleConfig(

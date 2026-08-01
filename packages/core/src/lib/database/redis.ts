@@ -55,6 +55,7 @@ export const RedisKeys = {
   auditLogsQueue: () => "lumi:queue:audit_logs",
 
   schedulerLeader: () => "lumi:scheduler:leader",
+  commandRegistrationLeader: () => "lumi:commands:registration:leader",
 
   entityGuild: (guildId: string) => `lumi:ent:guild:${guildId}`,
   entityChannel: (channelId: string) => `lumi:ent:channel:${channelId}`,

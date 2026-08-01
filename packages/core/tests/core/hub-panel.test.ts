@@ -1,12 +1,13 @@
-import { describe, it, expect } from "vitest";
 import {
-  buildHubView,
-  buildSettingsView,
-  buildPermissionsView,
-  buildAddonsView,
   buildAddonReposView,
+  buildAddonsView,
+} from "#modules/core/ui/addons.js";
+import { buildHubView, buildSettingsView } from "#modules/core/ui/hub.js";
+import {
+  buildPermissionsView,
   PERMS_PER_PAGE,
-} from "#modules/core/lib/hub-panel.js";
+} from "#modules/core/ui/permissions.js";
+import { describe, it, expect } from "vitest";
 
 type ComponentJson = {
   type: number;

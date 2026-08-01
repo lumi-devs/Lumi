@@ -90,13 +90,9 @@
   color: "5319e7"
   description: "Changes in apps/dashboard web interface"
 
-- name: "area:gateway"
-  color: "5319e7"
-  description: "Changes in apps/gateway Discord WebSocket receiver"
-
 - name: "area:worker"
   color: "5319e7"
-  description: "Changes in apps/worker event consumer"
+  description: "Changes in apps/worker gateway connection & command engine"
 
 - name: "area:scheduler"
   color: "5319e7"

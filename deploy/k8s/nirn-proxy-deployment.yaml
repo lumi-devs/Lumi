@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nirn-proxy
+  namespace: lumi
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nirn-proxy
+  template:
+    metadata:
+      labels:
+        app: nirn-proxy
+    spec:
+      containers:
+        - name: nirn-proxy
+          image: ghcr.io/germanoeich/nirn-proxy:latest
+          env:
+            - name: BIND_IP
+              value: "0.0.0.0"
+            - name: PORT
+              value: "8080"
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nirn-proxy
+  namespace: lumi
+spec:
+  selector:
+    app: nirn-proxy
+  ports:
+    - port: 8080
+      targetPort: 8080

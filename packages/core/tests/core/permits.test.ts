@@ -59,6 +59,35 @@ describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {
     });
   });
 
+  describe("isGuildOwner", () => {
+    it("should return true when userId matches guildOwnerId", () => {
+      expect(PermitResolver.isGuildOwner("123", "123")).toBe(true);
+    });
+
+    it("should return false when userId does not match guildOwnerId", () => {
+      expect(PermitResolver.isGuildOwner("123", "456")).toBe(false);
+    });
+
+    it("should return false when guildOwnerId is null", () => {
+      expect(PermitResolver.isGuildOwner(null, "123")).toBe(false);
+    });
+  });
+
+  describe("resolveUserPermits", () => {
+    it("should pass guildId, userId and roleIds through to container.db.getUserPermits", async () => {
+      const getUserPermits = vi.fn().mockResolvedValue({
+        customPermits: new Set(),
+        enforcedPermits: new Set(),
+        isQuarantined: false,
+      });
+      (container as any).db = { getUserPermits };
+
+      await resolver.resolveUserPermits("G1", "U1", ["ROLE1", "ROLE2"]);
+
+      expect(getUserPermits).toHaveBeenCalledWith("G1", "U1", ["ROLE1", "ROLE2"]);
+    });
+  });
+
   describe("hasPermit & assertPermit evaluation pipeline", () => {
     it("should grant permission for Guild Owner", async () => {
       const allowed = await resolver.hasPermit({

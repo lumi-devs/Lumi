@@ -1,19 +1,27 @@
+import type { LumiT } from "#lib/i18n/index.js";
+import { LanguageKeys } from "#lib/i18n/keys.js";
+import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
-import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import { BaseCommand, type CommandContext } from "#lib/commands.js";
+import type { GuildMember } from "discord.js";
 import { WarnAction } from "../actions/index.js";
 
-@ApplyOptions<BaseCommand.Options>({
+const Root = LanguageKeys.Commands;
+
+type Warned = Awaited<ReturnType<typeof WarnAction.apply>>;
+type Context = ModerationCommand.ActionContext<GuildMember>;
+type Success = ModerationCommand.OutcomeContext<GuildMember, Warned>;
+
+@ApplyOptions<ModerationCommand.Options>({
   name: "warn",
   description: "Warn a member",
   preconditions: ["GuildOnly"],
   requiredPermit: "mod.*",
   prefixEnabled: true,
 })
-export class WarnCommand extends BaseCommand {
+export class WarnCommand extends ModerationCommand<GuildMember, Warned> {
   public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
+    registry: ModerationCommand.Registry,
   ) {
     registry.registerChatInputCommand((b) =>
       applyLocalizedBuilder(b, "commands:warn")
@@ -26,35 +34,26 @@ export class WarnCommand extends BaseCommand {
     );
   }
 
-  public override async run(ctx: CommandContext) {
-    await ctx.defer();
-    const t = await ctx.fetchT();
-    const member = await ctx.getMember("member");
-    const reason =
-      (await ctx.getString("reason", { rest: true })) ??
-      t("commands:modNoReason");
-    if (!member) {
-      return ctx.replyError(
-        t("commands:modMemberNotFoundTitle"),
-        t("commands:modMemberNotFound"),
-      );
-    }
+  protected override resolveTarget(ctx: ModerationCommand.RunContext) {
+    return ctx.getMember("member");
+  }
 
-    const { caseRecord, warnCount } = await WarnAction.apply({
-      guild: ctx.guild!,
-      targetMember: member,
-      moderator: ctx.user,
-      reason,
-    });
+  protected override action({ guild, target, moderator, reason }: Context) {
+    return WarnAction.apply({ guild, targetMember: target, moderator, reason });
+  }
 
-    return ctx.replySuccess(
-      t("commands:warnSuccessTitle"),
-      t("commands:warnSuccess", {
-        user: member.user.username,
+  protected override buildSuccessMessage(
+    t: LumiT,
+    { target, reason, outcome }: Success,
+  ) {
+    return {
+      title: t(Root.WarnSuccessTitle),
+      body: t(Root.WarnSuccess, {
+        user: target.user.username,
         reason,
-        caseNumber: caseRecord.caseNumber,
-        count: warnCount,
+        caseNumber: outcome.caseRecord.caseNumber,
+        count: outcome.warnCount,
       }),
-    );
+    };
   }
 }

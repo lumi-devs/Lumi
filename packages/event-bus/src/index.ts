@@ -1,4 +1,4 @@
-// @lumi/event-bus - cross-service bus for the gateway/worker split.
+// @lumi/event-bus - cross-service bus between worker and scheduler.
 // Powered 100% by Redis Streams via createEventBus().
 
 export type {
@@ -17,14 +17,3 @@ export {
   type CreateEventBusOptions,
   type OwnedEventBus,
 } from "./factory.js";
-export {
-  RawGatewayPublisher,
-  type RawGatewayPublisherOptions,
-  attachProxyPublisher,
-  type AttachProxyPublisherOptions,
-} from "./RawGatewayPublisher.js";
-export {
-  RawGatewayConsumer,
-  type RawGatewayConsumerOptions,
-  DEFAULT_RAW_DISPATCH_TYPES,
-} from "./RawGatewayConsumer.js";

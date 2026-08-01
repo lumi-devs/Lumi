@@ -13,6 +13,11 @@ vi.mock("#lib/module-system/Service.js", async (importOriginal) => {
 
 import { getService } from "#lib/module-system/Service.js";
 
+/** Extracts the rendered text content of a CardReply (title + body) for content assertions. */
+function cardText(card: any): string {
+  return JSON.stringify(card.components[0].toJSON());
+}
+
 describe("ModuleCommand", () => {
   let command: ModuleCommand;
   let mockModuleStore: any;
@@ -189,10 +194,32 @@ describe("ModuleCommand", () => {
   }
 
   it("should register application chat input subcommands", () => {
+    const subNames: string[] = [];
+    const makeSubBuilder = () => {
+      const sub: any = {
+        setName: vi.fn((n: string) => {
+          subNames.push(n);
+          return sub;
+        }),
+        setDescription: vi.fn().mockReturnThis(),
+        addStringOption: vi.fn((cb: any) => {
+          cb({
+            setName: vi.fn().mockReturnThis(),
+            setDescription: vi.fn().mockReturnThis(),
+            setRequired: vi.fn().mockReturnThis(),
+          });
+          return sub;
+        }),
+      };
+      return sub;
+    };
     const mockBuilder = {
       setName: vi.fn().mockReturnThis(),
       setDescription: vi.fn().mockReturnThis(),
-      addSubcommand: vi.fn().mockReturnThis(),
+      addSubcommand: vi.fn((cb: any) => {
+        cb(makeSubBuilder());
+        return mockBuilder;
+      }),
       setDefaultMemberPermissions: vi.fn().mockReturnThis(),
       setContexts: vi.fn().mockReturnThis(),
       setIntegrationTypes: vi.fn().mockReturnThis(),
@@ -203,8 +230,20 @@ describe("ModuleCommand", () => {
     };
 
     command.registerApplicationCommands(mockRegistry as any);
+
     expect(spy).toHaveBeenCalled();
-    expect(mockBuilder.addSubcommand).toHaveBeenCalled();
+    expect(mockBuilder.addSubcommand).toHaveBeenCalledTimes(9);
+    expect(subNames).toEqual([
+      "list",
+      "info",
+      "enable",
+      "disable",
+      "reload",
+      "install",
+      "uninstall",
+      "update",
+      "help",
+    ]);
   });
 
   describe("list subcommand", () => {
@@ -233,7 +272,9 @@ describe("ModuleCommand", () => {
     it("should return error card if module not found", async () => {
       const ctx = createMockCtx({ module: "unknown" });
       await command.info(ctx as any);
-      expect(ctx.reply).toHaveBeenCalled();
+      const text = cardText(ctx.reply.mock.calls[0]![0]);
+      expect(text).toContain("Not Found");
+      expect(text).toContain("Module **unknown** was not discovered.");
     });
   });
 
@@ -289,6 +330,9 @@ describe("ModuleCommand", () => {
       const ctx = createMockCtx({ repo: "official", module: "economy", isSlash: true });
       await command.install(ctx as any);
       expect(container.logger.warn).toHaveBeenCalled();
+      const text = cardText(ctx.reply.mock.calls.at(-1)![0]);
+      expect(text).toContain("Failed to Install Module");
+      expect(text).toContain("Git clone failed");
     });
   });
 
@@ -305,6 +349,9 @@ describe("ModuleCommand", () => {
       const ctx = createMockCtx({ module: "economy", isSlash: true });
       await command.uninstall(ctx as any);
       expect(container.logger.warn).toHaveBeenCalled();
+      const text = cardText(ctx.reply.mock.calls.at(-1)![0]);
+      expect(text).toContain("Failed to Uninstall Module");
+      expect(text).toContain("Module not found on disk");
     });
   });
 
@@ -322,6 +369,9 @@ describe("ModuleCommand", () => {
       const ctx = createMockCtx({ module: "afk", isSlash: true });
       await command.reloadModuleCmd(ctx as any);
       expect(container.logger.warn).toHaveBeenCalled();
+      const text = cardText(ctx.reply.mock.calls.at(-1)![0]);
+      expect(text).toContain("Reload Failed");
+      expect(text).toContain("Syntax error in module");
     });
   });
 
@@ -365,14 +415,18 @@ describe("ModuleCommand", () => {
       mockDownloaderService.getInstalledModules.mockResolvedValue([]);
       const ctx = createMockCtx({ module: null, isSlash: true });
       await command.update(ctx as any);
-      expect(ctx.reply).toHaveBeenCalled();
+      const text = cardText(ctx.reply.mock.calls.at(-1)![0]);
+      expect(text).toContain("No Modules Installed");
+      expect(text).toContain("You have not installed any third-party modules via the Downloader.");
     });
 
     it("should handle error in runAllModulesUpdate when getInstalledModules fails", async () => {
       mockDownloaderService.getInstalledModules.mockRejectedValue(new Error("Database offline"));
       const ctx = createMockCtx({ module: null, isSlash: true });
       await command.update(ctx as any);
-      expect(ctx.reply).toHaveBeenCalled();
+      const text = cardText(ctx.reply.mock.calls.at(-1)![0]);
+      expect(text).toContain("Multi-Update Failed");
+      expect(text).toContain("Database offline");
     });
   });
 

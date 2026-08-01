@@ -82,10 +82,7 @@ function header(data: PingData, subtitle?: string): SectionBuilder {
 }
 
 /** Shared scaffold for every detail card: header section, divider. */
-function detailCard(
-  subtitle: string,
-  data: PingData,
-): ContainerBuilder {
+function detailCard(subtitle: string, data: PingData): ContainerBuilder {
   const c = new ContainerBuilder();
   c.addSectionComponents(header(data, subtitle));
   c.addSeparatorComponents(
@@ -160,8 +157,14 @@ export function buildGatewayCard(data: PingData, t?: LumiT): ContainerBuilder {
         executiveSection(
           t ? t("core:pingHealth") : "Connection Health",
           [
-            [t ? t("core:pingAvgLatency") : "Average Latency", fmtMs(data.wsPing)],
-            [t ? t("core:pingJitter") : "Jitter", `±${Math.round(data.jitterMs)}ms`],
+            [
+              t ? t("core:pingAvgLatency") : "Average Latency",
+              fmtMs(data.wsPing),
+            ],
+            [
+              t ? t("core:pingJitter") : "Jitter",
+              `±${Math.round(data.jitterMs)}ms`,
+            ],
           ],
           data.jitterMs < 5 ? "Status: Excellent" : "Status: Normal",
         ),
@@ -263,16 +266,13 @@ export function buildHostCard(data: PingData, t?: LumiT): ContainerBuilder {
             ["Logic Cores", `${data.cpuCores} Cores (${data.arch})`],
           ],
         ),
-        executiveSection(
-          t ? t("core:pingMemorySwap") : "Memory & Swap",
+        executiveSection(t ? t("core:pingMemorySwap") : "Memory & Swap", [
           [
-            [
-              "System RAM",
-              `${(data.ramUsed / 1024 / 1024 / 1024).toFixed(2)} GB / ${(data.ramTotal / 1024 / 1024 / 1024).toFixed(2)} GB`,
-            ],
-            ["Swap Used", `${(data.swapUsedKb / 1024).toFixed(0)} MB`],
+            "System RAM",
+            `${(data.ramUsed / 1024 / 1024 / 1024).toFixed(2)} GB / ${(data.ramTotal / 1024 / 1024 / 1024).toFixed(2)} GB`,
           ],
-        ),
+          ["Swap Used", `${(data.swapUsedKb / 1024).toFixed(0)} MB`],
+        ]),
         executiveSection(
           "Host Environment",
           [
@@ -294,18 +294,18 @@ export function buildHostCard(data: PingData, t?: LumiT): ContainerBuilder {
 }
 
 export function buildPostgresCard(data: PingData, t?: LumiT): ContainerBuilder {
-  const c = detailCard(`${Emojis.DATABASE} ${t ? t("core:pingDbHealth") : "Database Health"}`, data);
+  const c = detailCard(
+    `${Emojis.DATABASE} ${t ? t("core:pingDbHealth") : "Database Health"}`,
+    data,
+  );
 
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       [
-        executiveSection(
-          "Performance",
-          [
-            ["Transaction Speed", `${data.txRate.toFixed(1)} ops/sec`],
-            ["Query Response", fmtMs(data.prismaMs)],
-          ],
-        ),
+        executiveSection("Performance", [
+          ["Transaction Speed", `${data.txRate.toFixed(1)} ops/sec`],
+          ["Query Response", fmtMs(data.prismaMs)],
+        ]),
         executiveSection(
           "Database Details",
           [
@@ -338,8 +338,7 @@ export function buildPostgresCard(data: PingData, t?: LumiT): ContainerBuilder {
     );
     const tableLines = data.tableSizes
       .map(
-        (t) =>
-          `${Emojis.SPACE}${Emojis.SPACE}**${t.name}:** ${fmtKB(t.bytes)}`,
+        (t) => `${Emojis.SPACE}${Emojis.SPACE}**${t.name}:** ${fmtKB(t.bytes)}`,
       )
       .join("\n");
     c.addTextDisplayComponents(new TextDisplayBuilder().setContent(tableLines));
@@ -349,18 +348,18 @@ export function buildPostgresCard(data: PingData, t?: LumiT): ContainerBuilder {
 }
 
 export function buildRedisCard(data: PingData, t?: LumiT): ContainerBuilder {
-  const c = detailCard(`${Emojis.CACHE} ${t ? t("core:pingCachePerformance") : "Cache Performance"}`, data);
+  const c = detailCard(
+    `${Emojis.CACHE} ${t ? t("core:pingCachePerformance") : "Cache Performance"}`,
+    data,
+  );
 
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       [
-        executiveSection(
-          "Memory Usage",
-          [
-            ["Current Usage", fmtMB(data.redisMemUsedBytes)],
-            ["Peak Usage", fmtMB(data.redisMemPeakBytes)],
-          ],
-        ),
+        executiveSection("Memory Usage", [
+          ["Current Usage", fmtMB(data.redisMemUsedBytes)],
+          ["Peak Usage", fmtMB(data.redisMemPeakBytes)],
+        ]),
         executiveSection(
           "Cache Hits & Efficiency",
           [
@@ -385,25 +384,22 @@ export function buildRedisCard(data: PingData, t?: LumiT): ContainerBuilder {
 }
 
 export function buildRabbitCard(data: PingData, t?: LumiT): ContainerBuilder {
-  const c = detailCard(`${Emojis.QUEUE} ${t ? t("core:pingMsgQueuePipeline") : "Message Queue Pipeline"}`, data);
+  const c = detailCard(
+    `${Emojis.QUEUE} ${t ? t("core:pingMsgQueuePipeline") : "Message Queue Pipeline"}`,
+    data,
+  );
 
   if (data.rabbitConnected) {
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
-          executiveSection(
-            "Connection Status",
-            [
-              ["Status", "Connected and healthy"],
-            ],
-          ),
-          executiveSection(
-            "Queue Load",
-            [
-              ["Pending Messages", `${data.rabbitQueued}`],
-              ["Active Worker Processes", `${data.rabbitConsumers}`],
-            ],
-          ),
+          executiveSection("Connection Status", [
+            ["Status", "Connected and healthy"],
+          ]),
+          executiveSection("Queue Load", [
+            ["Pending Messages", `${data.rabbitQueued}`],
+            ["Active Worker Processes", `${data.rabbitConsumers}`],
+          ]),
         ].join("\n"),
       ),
     );
@@ -419,7 +415,10 @@ export function buildRabbitCard(data: PingData, t?: LumiT): ContainerBuilder {
 }
 
 export function buildBotCard(data: PingData, t?: LumiT): ContainerBuilder {
-  const c = detailCard(`${Emojis.BOT} ${t ? t("core:pingSummary") : "Bot System Summary"}`, data);
+  const c = detailCard(
+    `${Emojis.BOT} ${t ? t("core:pingSummary") : "Bot System Summary"}`,
+    data,
+  );
 
   const memPerGuild =
     data.guilds > 0 ? (data.rss / 1024 / 1024 / data.guilds).toFixed(2) : "0";

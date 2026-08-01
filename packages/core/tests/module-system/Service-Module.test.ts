@@ -31,8 +31,8 @@ const DummyModule = DefineModule({
 })(BaseDummyModule);
 
 class FailingReconcileModule extends Module {
-  public override reconcileScheduledJobs(): void {
-    throw new Error("Reconcile error");
+  public override reconcileScheduledJobs(): Promise<void> {
+    return Promise.reject(new Error("Reconcile error"));
   }
 }
 
@@ -100,14 +100,20 @@ describe("module-system Service and Module", () => {
       await mod.onUnload();
     });
 
-    it("catches reconcileScheduledJobs errors in onLoad", async () => {
+    it("catches reconcileScheduledJobs errors in onLoad and logs them instead of throwing", async () => {
       const failingMod = new FailingReconcileModule({} as any, { name: "failing-mod" });
 
-      try {
-        await failingMod.onLoad();
-      } catch (err: any) {
-        expect(err.message).toBe("Reconcile error");
-      }
+      await failingMod.onLoad();
+
+      // reconcileScheduledJobs() failure is caught off a detached promise
+      // inside onLoad(); flush microtasks so the .catch() handler runs.
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(container.logger.error).toHaveBeenCalledWith(
+        "[Module:failing-mod] reconcileScheduledJobs failed:",
+        expect.any(Error),
+      );
+      expect((container.logger.error as any).mock.calls[0][1].message).toBe("Reconcile error");
     });
   });
 });

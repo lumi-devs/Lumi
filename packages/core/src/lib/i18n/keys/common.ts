@@ -1,0 +1,20 @@
+/** `common:` keys: shared words and generic failure messages. */
+export const CommonKeys = {
+  Default: "common:default",
+  Yes: "common:yes",
+  No: "common:no",
+  None: "common:none",
+  Enabled: "common:enabled",
+  Disabled: "common:disabled",
+  Unknown: "common:unknown",
+  Loading: "common:loading",
+  Success: "common:success",
+  Error: "common:error",
+  Warning: "common:warning",
+  Info: "common:info",
+  NothingHere: "common:nothingHere",
+  Pagination: "common:pagination",
+  PermissionDenied: "common:permissionDenied",
+  GuildOnly: "common:guildOnly",
+  UnexpectedError: "common:unexpectedError",
+} as const;

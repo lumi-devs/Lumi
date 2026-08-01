@@ -1,11 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ContainerBuilder,
+} from "@discordjs/builders";
 import { ButtonStyle, ChannelType } from "discord.js";
 import { container } from "@sapphire/framework";
 import {
   createUserSelectMenu,
   createRoleSelectMenu,
   createChannelSelectMenu,
+  createMentionableSelectMenu,
   createStringSelectMenu,
   createBackButton,
   createActionButton,
@@ -26,6 +31,7 @@ import {
   formatSubtitle,
   formatBreadcrumbs,
 } from "#utilities/cards.js";
+import { BotConfig } from "#utilities/config.js";
 import { createStringSelectMenu as createStringSelectFromIndex } from "#utilities/index.js";
 
 describe("Panel & Card Utility Standardization", () => {
@@ -87,6 +93,22 @@ describe("Panel & Card Utility Standardization", () => {
         ChannelType.GuildText,
         ChannelType.GuildAnnouncement,
       ]);
+    });
+
+    it("createMentionableSelectMenu creates mentionable select menu with expected options", () => {
+      const menu = createMentionableSelectMenu({
+        customId: "mentionable_select_test",
+        placeholder: "Select a user or role...",
+        minValues: 1,
+        maxValues: 4,
+        disabled: true,
+      });
+      const data = menu.toJSON();
+      expect(data.custom_id).toBe("mentionable_select_test");
+      expect(data.placeholder).toBe("Select a user or role...");
+      expect(data.min_values).toBe(1);
+      expect(data.max_values).toBe(4);
+      expect(data.disabled).toBe(true);
     });
 
     it("createStringSelectMenu builds options properly", () => {
@@ -212,7 +234,9 @@ describe("Panel & Card Utility Standardization", () => {
 
     it("makeSuccessCard sets accent color", () => {
       const card = makeSuccessCard("Success Title", "Success Body");
-      expect(card.components[0]).toBeDefined();
+      const container = card.components[0] as ContainerBuilder;
+      const data = container.toJSON() as { accent_color?: number };
+      expect(data.accent_color).toBe(BotConfig.branding.colors.SUCCESS);
     });
 
     it("formatStatusBadge formats status strings properly", () => {

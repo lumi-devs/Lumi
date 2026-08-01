@@ -88,12 +88,57 @@ describe("CommandContext", () => {
       expect(mockInteraction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     });
 
+    it("defers publicly (no ephemeral flag) when ephemeral is false", async () => {
+      const mockInteraction = {
+        deferred: false,
+        replied: false,
+        deferReply: vi.fn().mockResolvedValue(undefined),
+      } as any;
+
+      const ctx = CommandContext.fromInteraction(mockInteraction);
+      await ctx.defer({ ephemeral: false });
+
+      expect(mockInteraction.deferReply).toHaveBeenCalledWith({});
+    });
+
+    it("does not call deferReply again when interaction is already deferred or replied", async () => {
+      const deferredInteraction = {
+        deferred: true,
+        replied: false,
+        deferReply: vi.fn(),
+      } as any;
+      await CommandContext.fromInteraction(deferredInteraction).defer();
+      expect(deferredInteraction.deferReply).not.toHaveBeenCalled();
+
+      const repliedInteraction = {
+        deferred: false,
+        replied: true,
+        deferReply: vi.fn(),
+      } as any;
+      await CommandContext.fromInteraction(repliedInteraction).defer();
+      expect(repliedInteraction.deferReply).not.toHaveBeenCalled();
+    });
+
     it("replies on slash interaction using sendInteractionReply", async () => {
       const mockInteraction = {} as any;
       const ctx = CommandContext.fromInteraction(mockInteraction);
 
       await ctx.replySuccess("Success Title", "Success Body");
       expect(commandResponse.sendInteractionReply).toHaveBeenCalled();
+    });
+
+    it("replies publicly without ephemeral wrapping when ephemeral is false", async () => {
+      const mockInteraction = {} as any;
+      const ctx = CommandContext.fromInteraction(mockInteraction);
+      const card = { components: [], flags: 0 } as any;
+
+      await ctx.reply(card, { ephemeral: false });
+
+      expect(commandResponse.sendInteractionReply).toHaveBeenCalledWith(
+        mockInteraction,
+        card,
+        "edit",
+      );
     });
   });
 
@@ -156,21 +201,41 @@ describe("CommandContext", () => {
 
   describe("checkPermit & fetchT", () => {
     it("passes when permit is granted", async () => {
-      (container as any).permitResolver = {
-        hasPermit: vi.fn().mockResolvedValue(true),
-      };
+      const hasPermit = vi.fn().mockResolvedValue(true);
+      (container as any).permitResolver = { hasPermit };
 
-      const ctx = CommandContext.fromInteraction({ guildId: "G1", guild: { ownerId: "O1" }, user: { id: "U1" }, member: { roles: { cache: new Map() } } } as any);
+      const roleIds = ["R1", "R2"];
+      const ctx = CommandContext.fromInteraction({
+        guildId: "G1",
+        guild: { ownerId: "O1" },
+        user: { id: "U1" },
+        member: { roles: { cache: new Map(roleIds.map((id) => [id, id])) } },
+      } as any);
       await expect(ctx.checkPermit("mod.ban")).resolves.toBeUndefined();
+
+      expect(hasPermit).toHaveBeenCalledWith({
+        guildId: "G1",
+        userId: "U1",
+        roleIds,
+        permitNode: "mod.ban",
+        guildOwnerId: "O1",
+      });
     });
 
     it("throws UserError when permit is denied", async () => {
-      (container as any).permitResolver = {
-        hasPermit: vi.fn().mockResolvedValue(false),
-      };
+      const hasPermit = vi.fn().mockResolvedValue(false);
+      (container as any).permitResolver = { hasPermit };
 
       const ctx = CommandContext.fromInteraction({ guildId: "G1", guild: { ownerId: "O1" }, user: { id: "U1" }, member: { roles: { cache: new Map() } } } as any);
       await expect(ctx.checkPermit("mod.ban")).rejects.toThrow(UserError);
+
+      expect(hasPermit).toHaveBeenCalledWith({
+        guildId: "G1",
+        userId: "U1",
+        roleIds: [],
+        permitNode: "mod.ban",
+        guildOwnerId: "O1",
+      });
     });
 
     it("throws UserError when guildId is missing", async () => {
@@ -179,10 +244,11 @@ describe("CommandContext", () => {
     });
 
     it("calls fetchT with source", async () => {
-      const ctx = CommandContext.fromInteraction({} as any);
+      const mockInteraction = { id: "interaction-1" } as any;
+      const ctx = CommandContext.fromInteraction(mockInteraction);
       const t = await ctx.fetchT();
       expect(t).toBeDefined();
-      expect(i18n.fetchT).toHaveBeenCalled();
+      expect(i18n.fetchT).toHaveBeenCalledWith(mockInteraction);
     });
   });
 });

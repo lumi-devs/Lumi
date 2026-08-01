@@ -13,7 +13,6 @@
     "packages/core/src",
     "packages/sharding/src",
     "apps/worker/src",
-    "apps/gateway/src",
     "apps/scheduler/src",
     "apps/dashboard/src"
   ]

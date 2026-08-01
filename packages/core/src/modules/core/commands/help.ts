@@ -125,7 +125,8 @@ export class HelpCommand extends BaseCommand {
 
     const commandListText = categoryCommands
       .map((cmd) => {
-        const desc = cmd.description || t(LanguageKeys.Commands.HelpNoDescription);
+        const desc =
+          cmd.description || t(LanguageKeys.Commands.HelpNoDescription);
         return `**\`/${cmd.name}\`** or **\`${prefix}${cmd.name}\`** — ${desc}`;
       })
       .join("\n");

@@ -173,6 +173,56 @@ describe("Permissions Preconditions", () => {
     });
   });
 
+  describe("NotIgnoredPrecondition", () => {
+    const precondition = new NotIgnoredPrecondition(
+      { name: "NotIgnored", path: "", root: "", store: {} as any } as any,
+      {}
+    );
+
+    it("denies execution when the guild is ignored", async () => {
+      (container as any).db.access.getIgnoreStatus = vi
+        .fn()
+        .mockResolvedValue({ guild: true, channel: false });
+
+      const result = await precondition.messageRun(makeMockMessage());
+      expect(result.isErr()).toBe(true);
+      expect(result.unwrapErr().message).toBe("This server is not using Lumi.");
+    });
+
+    it("denies execution when the channel is ignored", async () => {
+      (container as any).db.access.getIgnoreStatus = vi
+        .fn()
+        .mockResolvedValue({ guild: false, channel: true });
+
+      const result = await precondition.messageRun(makeMockMessage());
+      expect(result.isErr()).toBe(true);
+      expect(result.unwrapErr().message).toBe(
+        "Commands are disabled in this channel."
+      );
+    });
+
+    it("allows execution when neither guild nor channel is ignored", async () => {
+      (container as any).db.access.getIgnoreStatus = vi
+        .fn()
+        .mockResolvedValue({ guild: false, channel: false });
+
+      const msgResult = await precondition.messageRun(makeMockMessage());
+      expect(msgResult.isOk()).toBe(true);
+
+      const interactionResult = await precondition.chatInputRun(makeMockInteraction());
+      expect(interactionResult.isOk()).toBe(true);
+    });
+
+    it("allows execution outside a guild without checking ignore status", async () => {
+      const getIgnoreStatus = vi.fn().mockResolvedValue({ guild: false, channel: false });
+      (container as any).db.access.getIgnoreStatus = getIgnoreStatus;
+
+      const result = await precondition.messageRun(makeMockMessage({ guild: null }));
+      expect(result.isOk()).toBe(true);
+      expect(getIgnoreStatus).not.toHaveBeenCalled();
+    });
+  });
+
   describe("MaintenanceModePrecondition", () => {
     const precondition = new MaintenanceModePrecondition(
       { name: "MaintenanceMode", path: "", root: "", store: {} as any } as any,
@@ -190,6 +240,33 @@ describe("Permissions Preconditions", () => {
 
       const msgResult = await precondition.messageRun(makeMockMessage());
       expect(msgResult.isOk()).toBe(true);
+    });
+  });
+
+  describe("NotBlockedPrecondition", () => {
+    const precondition = new NotBlockedPrecondition(
+      { name: "NotBlocked", path: "", root: "", store: {} as any } as any,
+      {}
+    );
+
+    it("denies execution when the user is blocked", async () => {
+      (container as any).db.access.isUserBlocked = vi.fn().mockResolvedValue(true);
+
+      const result = await precondition.messageRun(makeMockMessage());
+      expect(result.isErr()).toBe(true);
+      expect(result.unwrapErr().message).toBe(
+        "You are not allowed to use this bot."
+      );
+    });
+
+    it("allows execution when the user is not blocked", async () => {
+      (container as any).db.access.isUserBlocked = vi.fn().mockResolvedValue(false);
+
+      const msgResult = await precondition.messageRun(makeMockMessage());
+      expect(msgResult.isOk()).toBe(true);
+
+      const interactionResult = await precondition.chatInputRun(makeMockInteraction());
+      expect(interactionResult.isOk()).toBe(true);
     });
   });
 });

@@ -61,7 +61,7 @@ export class CoreModule extends Module {
       ...options,
       name: "core",
       enabled: true,
-            displayName: "Core",
+      displayName: "Core",
       description: "The built-in core module.",
       emoji: Emojis.SHIELD,
     });

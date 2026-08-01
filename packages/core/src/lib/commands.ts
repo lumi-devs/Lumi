@@ -1,27 +1,7 @@
-import {
-  Command,
-  UserError,
-  BucketScope,
-  type ApplicationCommandRegistry,
-  type Args,
-} from "@sapphire/framework";
-import { Subcommand } from "@sapphire/plugin-subcommands";
 import { CommandContext } from "#lib/command-context.js";
-import { fetchT } from "@sapphire/plugin-i18next";
-export { fetchT };
 import type { LumiT } from "#lib/i18n/index.js";
-import type {
-  ChatInputCommandInteraction,
-  MessageContextMenuCommandInteraction,
-  UserContextMenuCommandInteraction,
-  InteractionReplyOptions,
-  Message,
-} from "discord.js";
-import {
-  PermissionFlagsBits,
-  ApplicationIntegrationType,
-  InteractionContextType,
-} from "discord.js";
+import { instrumentCommandPiece } from "#lib/telemetry/instrument.js";
+import { sendInteractionReply } from "#lib/utilities/command-response.js";
 import {
   ephemeralCard,
   makeErrorCard,
@@ -30,17 +10,29 @@ import {
   makeWarningCard,
   type CardReply,
 } from "#lib/utilities/cards.js";
-import { instrumentCommandPiece } from "#lib/telemetry/instrument.js";
-import { sendInteractionReply } from "#lib/utilities/command-response.js";
+import {
+  BucketScope,
+  Command,
+  UserError,
+  type ApplicationCommandRegistry,
+  type Args,
+} from "@sapphire/framework";
+import { fetchT } from "@sapphire/plugin-i18next";
+import { Subcommand } from "@sapphire/plugin-subcommands";
+import {
+  ApplicationIntegrationType,
+  InteractionContextType,
+  PermissionFlagsBits,
+  type ChatInputCommandInteraction,
+  type InteractionReplyOptions,
+  type Message,
+  type MessageContextMenuCommandInteraction,
+  type UserContextMenuCommandInteraction,
+} from "discord.js";
 
-function mapRequiredPermitToDiscordPermission(
-  permit: string | undefined,
-): bigint | undefined {
-  if (!permit) return undefined;
-  if (permit.startsWith("admin")) return PermissionFlagsBits.ManageGuild;
-  if (permit.startsWith("mod")) return PermissionFlagsBits.ManageMessages;
-  return undefined;
-}
+export { fetchT };
+export { CommandContext } from "#lib/command-context.js";
+export { BucketScope };
 
 export interface ReplyOptions {
   /** Explicitly opt out of ephemeral. Replies are ephemeral by default. */
@@ -92,6 +84,56 @@ export const replyWarning = makeReplyHelper(makeWarningCard);
 /** Helper to send a standardized informational card reply. */
 export const replyInfo = makeReplyHelper(makeInfoCard);
 
+/**
+ * Throws a `PermissionDenied` {@linkcode UserError} unless the invoking member
+ * holds `permitNode` in the interaction's guild.
+ *
+ * @param interaction - The interaction whose invoker is being checked.
+ * @param permitNode - The permit node to require, e.g. `admin.*`.
+ */
+export async function assertPermit(
+  interaction: ChatInputCommandInteraction,
+  permitNode: string,
+): Promise<void> {
+  const { container } = await import("@sapphire/framework");
+  const userId = interaction.user.id;
+  const guildId = interaction.guild?.id;
+  const roles = interaction.member?.roles;
+  const roleIds = Array.isArray(roles)
+    ? roles
+    : Array.from(roles?.cache.keys() ?? []);
+  const guildOwnerId = interaction.guild?.ownerId;
+  const hasPermit = await container.permitResolver.hasPermit({
+    guildId: guildId!,
+    userId,
+    roleIds,
+    permitNode,
+    guildOwnerId,
+  });
+  if (!hasPermit) {
+    throw new UserError({
+      identifier: "PermissionDenied",
+      message: `You lack the required permit (\`${permitNode}\`) to use this.`,
+    });
+  }
+}
+
+/** Resolves the i18next translator for a target as Lumi's typed {@linkcode LumiT}. */
+export function fetchTyped(
+  target: Parameters<typeof fetchT>[0],
+): Promise<LumiT> {
+  return fetchT(target) as unknown as Promise<LumiT>;
+}
+
+function mapRequiredPermitToDiscordPermission(
+  permit: string | undefined,
+): bigint | undefined {
+  if (!permit) return undefined;
+  if (permit.startsWith("admin")) return PermissionFlagsBits.ManageGuild;
+  if (permit.startsWith("mod")) return PermissionFlagsBits.ManageMessages;
+  return undefined;
+}
+
 function appendPermitPrecondition(
   instance: { preconditions: Command["preconditions"] },
   permitNode: string | undefined,
@@ -102,9 +144,20 @@ function appendPermitPrecondition(
 }
 
 interface LumiCommandExtras {
+  /** Permit node required to invoke the command, e.g. `mod.ban`. */
   requiredPermit?: string;
+  /** @default [ApplicationIntegrationType.GuildInstall] */
   integrationTypes?: ApplicationIntegrationType[];
+  /**
+   * Interaction contexts the command may be invoked from. Defaults to guilds
+   * only when the command declares the `GuildOnly` precondition, otherwise
+   * guilds plus DMs and private channels.
+   */
   contexts?: InteractionContextType[];
+  /**
+   * Discord-side permission gate. Defaults to the permission implied by
+   * {@linkcode LumiCommandExtras.requiredPermit}.
+   */
   defaultMemberPermissions?: bigint | null;
   /**
    * Opt the command into prefix (message) invocation. Slash-only by default;
@@ -243,35 +296,12 @@ function resolveCommandDefaults(
   };
 }
 
-export async function assertPermit(
-  interaction: ChatInputCommandInteraction,
-  permitNode: string,
-): Promise<void> {
-  const { container } = await import("@sapphire/framework");
-  const userId = interaction.user.id;
-  const guildId = interaction.guild?.id;
-  const roles = interaction.member?.roles;
-  const roleIds = Array.isArray(roles) ? roles : Array.from(roles?.cache.keys() ?? []);
-  const guildOwnerId = interaction.guild?.ownerId;
-  const hasPermit = await container.permitResolver.hasPermit({
-    guildId: guildId!,
-    userId,
-    roleIds,
-    permitNode,
-    guildOwnerId,
-  });
-  if (!hasPermit) {
-    throw new UserError({
-      identifier: "PermissionDenied",
-      message: `You lack the required permit (\`${permitNode}\`) to use this.`,
-    });
-  }
-}
-
-export function fetchTyped(
-  target: Parameters<typeof fetchT>[0],
-): Promise<LumiT> {
-  return fetchT(target) as unknown as Promise<LumiT>;
+/** The registration-time defaults a piece contributes to its own builders. */
+interface CommandLike {
+  readonly requiredPermit: string | undefined;
+  readonly integrationTypes: ApplicationIntegrationType[];
+  readonly contexts: InteractionContextType[];
+  readonly defaultMemberPermissions: bigint | undefined;
 }
 
 /** Minimal structural view of the builders the shared defaults apply to. */
@@ -281,74 +311,104 @@ interface DefaultsApplicableBuilder {
   setIntegrationTypes(...types: ApplicationIntegrationType[]): unknown;
 }
 
+function applyCommandDefaults<T>(builder: T, piece: CommandLike): T {
+  const target = builder as DefaultsApplicableBuilder;
+  target.setDefaultMemberPermissions(piece.defaultMemberPermissions ?? null);
+  target.setContexts(...piece.contexts);
+  target.setIntegrationTypes(...piece.integrationTypes);
+  return builder;
+}
+
 /**
- * Shadow `registerApplicationCommands` (the same instance-shadowing pattern as
- * {@link instrumentCommandPiece}) so every chat-input / context-menu builder
- * receives the shared defaults - `defaultMemberPermissions`, `contexts`,
- * `integrationTypes` - before the subclass's builder callback runs. Commands
- * never repeat the setter trio, and can still override any of the three by
- * calling the setter themselves inside their builder chain.
+ * Seeds `input` with the piece's shared defaults.
+ *
+ * @remarks
+ *
+ * For the callback form the defaults are written onto the builder *before* the
+ * subclass's callback runs, so a command that calls `setContexts` (or either of
+ * the other two setters) in its own chain overwrites them. For the pre-built
+ * form there is no such window, so the defaults are written on registration.
  */
-function autoApplyCommandDefaults(piece: BaseCommand | BaseSubcommand): void {
-  const method = piece.registerApplicationCommands;
-  if (typeof method !== "function") return;
-  const original = method.bind(piece);
+function withCommandDefaults<T>(input: T, piece: CommandLike): T {
+  if (typeof input === "function") {
+    const build = input as (builder: unknown) => unknown;
+    return ((builder: unknown) =>
+      build(applyCommandDefaults(builder, piece))) as T;
+  }
+  if (
+    typeof input === "object" &&
+    input !== null &&
+    "setIntegrationTypes" in input
+  ) {
+    return applyCommandDefaults(input, piece);
+  }
+  return input;
+}
 
-  const applyDefaults = <T>(builder: T): T => {
-    const b = builder as unknown as DefaultsApplicableBuilder;
-    b.setDefaultMemberPermissions(piece.defaultMemberPermissions ?? null);
-    b.setContexts(...piece.contexts);
-    b.setIntegrationTypes(...piece.integrationTypes);
-    return builder;
+/**
+ * Builds a delegating view of `registry` that seeds every builder handed to it
+ * with the piece's shared defaults before forwarding the registration.
+ *
+ * @remarks
+ *
+ * The view inherits from `registry`, so any other member a command reaches for
+ * resolves to the real registry unchanged. Only the two register methods are
+ * owned by the view, and the view is handed to the subclass instead of the real
+ * registry - the registry itself is never mutated.
+ */
+function createDefaultsRegistry(
+  registry: ApplicationCommandRegistry,
+  piece: CommandLike,
+): ApplicationCommandRegistry {
+  const view = Object.create(registry) as ApplicationCommandRegistry;
+  view.registerChatInputCommand = (input, options) => {
+    registry.registerChatInputCommand(
+      withCommandDefaults(input, piece),
+      options,
+    );
+    return view;
   };
+  view.registerContextMenuCommand = (input, options) => {
+    registry.registerContextMenuCommand(
+      withCommandDefaults(input, piece),
+      options,
+    );
+    return view;
+  };
+  return view;
+}
 
-  const wrapInput = <I>(input: I): I => {
-    if (typeof input === "function") {
-      const fn = input as unknown as (builder: unknown) => unknown;
-      return ((builder: unknown) => fn(applyDefaults(builder))) as unknown as I;
-    }
-    if (
-      typeof input === "object" &&
-      input !== null &&
-      "setIntegrationTypes" in input
-    ) {
-      return applyDefaults(input);
-    }
-    return input;
-  };
+/**
+ * Shadow `registerApplicationCommands` on the instance (the same pattern as
+ * {@linkcode instrumentCommandPiece}) so the subclass's implementation - at
+ * whatever depth of the prototype chain it lives - is handed a defaults-seeding
+ * registry view rather than the raw registry. Commands therefore never repeat
+ * the `setDefaultMemberPermissions` / `setContexts` / `setIntegrationTypes`
+ * trio, yet can still override any of the three in their own builder chain.
+ */
+function shadowRegistrationDefaults(piece: BaseCommand | BaseSubcommand): void {
+  const register = piece.registerApplicationCommands;
+  if (typeof register !== "function") return;
+  const original = register.bind(piece);
 
   Object.defineProperty(piece, "registerApplicationCommands", {
     configurable: true,
     writable: true,
     async value(registry: ApplicationCommandRegistry): Promise<void> {
-      const chat = registry.registerChatInputCommand;
-      const menu = registry.registerContextMenuCommand;
-
-      registry.registerChatInputCommand = (input, options) =>
-        chat.call(registry, wrapInput(input), options);
-      registry.registerContextMenuCommand = (input, options) =>
-        menu.call(registry, wrapInput(input), options);
-      try {
-        await original(registry);
-      } finally {
-        registry.registerChatInputCommand = chat;
-        registry.registerContextMenuCommand = menu;
-      }
+      await original(createDefaultsRegistry(registry, piece));
     },
   });
 }
 
-interface CommandLike {
-  readonly requiredPermit: string | undefined;
-  readonly integrationTypes: ApplicationIntegrationType[];
-  readonly contexts: InteractionContextType[];
-  readonly defaultMemberPermissions: bigint | undefined;
-}
-
 /**
  * The base class that all standalone Lumi commands must extend.
- * Provides automatic context bridging for single-source handlers and standardizes
- * permissions, context types, and integrations.
+ *
+ * @remarks
+ *
+ * The constructor resolves the shared Discord-facing defaults, bridges the
+ * single-source {@linkcode BaseCommand.run} handler onto `chatInputRun` (and
+ * `messageRun` when `prefixEnabled`), instruments the run methods, and arranges
+ * for the defaults to be seeded onto every builder the subclass registers.
  */
 export abstract class BaseCommand extends Command implements CommandLike {
   public readonly requiredPermit: string | undefined;
@@ -375,7 +435,7 @@ export abstract class BaseCommand extends Command implements CommandLike {
       }
     }
     instrumentCommandPiece(this);
-    autoApplyCommandDefaults(this);
+    shadowRegistrationDefaults(this);
   }
 
   /**
@@ -385,40 +445,27 @@ export abstract class BaseCommand extends Command implements CommandLike {
    */
   public run?(ctx: CommandContext): Awaited<unknown> | Promise<unknown>;
 
-  public reply(target: CommandReplyTarget, payload: InteractionReplyOptions): Promise<void> {
-    return sendReply(target, payload);
-  }
-  public replySuccess(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
-    return replySuccess(target, title, body, opts);
-  }
-  public replyError(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
-    return replyError(target, title, body, opts);
-  }
-  public replyWarning(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
-    return replyWarning(target, title, body, opts);
-  }
-  public replyInfo(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
-    return replyInfo(target, title, body, opts);
-  }
-  public checkPermit(interaction: ChatInputCommandInteraction, permitNode: string): Promise<void> {
-    return assertPermit(interaction, permitNode);
-  }
-
+  /**
+   * Appends the `RequirePermit` precondition when the command declares a
+   * permit node, plus the `ModuleEnabled` gate every Lumi command carries.
+   */
   protected override parseConstructorPreConditions(
     options: BaseCommand.Options,
   ): void {
     super.parseConstructorPreConditions(options);
-    appendPermitPrecondition(
-      this,
-      options.requiredPermit,
-    );
+    appendPermitPrecondition(this, options.requiredPermit);
     this.preconditions.append("ModuleEnabled");
   }
 }
 
 /**
  * The base class that all Lumi subcommand groups must extend.
- * Like {@link BaseCommand}, this bridges context automatically for handlers defined via string mapping (`run: "methodName"`).
+ *
+ * @remarks
+ *
+ * Behaves like {@linkcode BaseCommand}, and additionally rewrites
+ * `run: "methodName"` mapping entries into generated wrapper methods so a
+ * subcommand handler can take a {@linkcode CommandContext} directly.
  */
 export abstract class BaseSubcommand extends Subcommand implements CommandLike {
   public readonly requiredPermit: string | undefined;
@@ -447,59 +494,44 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
     this.defaultMemberPermissions = defaults.defaultMemberPermissions;
     defineCtxWrappers(this, runNames, options.prefixEnabled ?? false);
     instrumentCommandPiece(this);
-    autoApplyCommandDefaults(this);
+    shadowRegistrationDefaults(this);
   }
 
-  public reply(target: CommandReplyTarget, payload: InteractionReplyOptions): Promise<void> {
-    return sendReply(target, payload);
-  }
-  public replySuccess(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
-    return replySuccess(target, title, body, opts);
-  }
-  public replyError(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
-    return replyError(target, title, body, opts);
-  }
-  public replyWarning(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
-    return replyWarning(target, title, body, opts);
-  }
-  public replyInfo(target: CommandReplyTarget, title: string, body: string, opts?: ReplyOptions): Promise<void> {
-    return replyInfo(target, title, body, opts);
-  }
-  public checkPermit(interaction: ChatInputCommandInteraction, permitNode: string): Promise<void> {
-    return assertPermit(interaction, permitNode);
-  }
-
+  /**
+   * Appends the `RequirePermit` precondition when the command declares a
+   * permit node, plus the `ModuleEnabled` gate every Lumi command carries.
+   */
   protected override parseConstructorPreConditions(
     options: BaseSubcommand.Options,
   ): void {
     super.parseConstructorPreConditions(options);
-    appendPermitPrecondition(
-      this,
-      options.requiredPermit,
-    );
+    appendPermitPrecondition(this, options.requiredPermit);
     this.preconditions.append("ModuleEnabled");
   }
 }
 
-export namespace BaseCommand {
-  export type Options = Command.Options & LumiCommandExtras;
-}
-
-/** Subcommand mapping entries may declare `run: "method"` - a single-source
+/**
+ * Subcommand mapping entries may declare `run: "method"` - a single-source
  * handler `(ctx: CommandContext) => unknown` bridged to slash (and prefix when
- * `prefixEnabled`) by the constructor. */
+ * `prefixEnabled`) by the constructor.
+ */
 type LumiSubcommandMappings = NonNullable<Subcommand.Options["subcommands"]>;
 type LumiMappingEntry = LumiSubcommandMappings[number];
 type WithRun<T> = T extends { entries: infer E extends readonly unknown[] }
   ? Omit<T, "entries"> & { entries: Array<WithRun<E[number]>> }
   : T & { run?: string };
 
+export namespace BaseCommand {
+  export type Options = Command.Options & LumiCommandExtras;
+  export type LoaderContext = Command.LoaderContext;
+  export type Registry = Command.Registry;
+}
+
 export namespace BaseSubcommand {
   export type Options = Omit<Subcommand.Options, "subcommands"> &
     LumiCommandExtras & {
       subcommands?: Array<WithRun<LumiMappingEntry>>;
     };
+  export type LoaderContext = Subcommand.LoaderContext;
+  export type Registry = Subcommand.Registry;
 }
-
-export { CommandContext } from "#lib/command-context.js";
-export { BucketScope };

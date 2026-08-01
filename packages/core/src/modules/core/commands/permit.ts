@@ -36,9 +36,7 @@ export class PermitCommand extends BaseSubcommand {
                 .addChoices(...KIND_CHOICES),
             )
             .addStringOption((o) =>
-              applyLocalizedBuilder(o, "commands:permitNode").setRequired(
-                true,
-              ),
+              applyLocalizedBuilder(o, "commands:permitNode").setRequired(true),
             )
             .addRoleOption((o) =>
               applyLocalizedBuilder(o, "commands:permitRole").setRequired(
@@ -59,9 +57,7 @@ export class PermitCommand extends BaseSubcommand {
                 .addChoices(...KIND_CHOICES),
             )
             .addStringOption((o) =>
-              applyLocalizedBuilder(o, "commands:permitNode").setRequired(
-                true,
-              ),
+              applyLocalizedBuilder(o, "commands:permitNode").setRequired(true),
             )
             .addRoleOption((o) =>
               applyLocalizedBuilder(o, "commands:permitRole").setRequired(
@@ -74,9 +70,7 @@ export class PermitCommand extends BaseSubcommand {
               ),
             ),
         )
-        .addSubcommand((s) =>
-          applyLocalizedBuilder(s, "commands:permitList"),
-        ),
+        .addSubcommand((s) => applyLocalizedBuilder(s, "commands:permitList")),
     );
   }
 
@@ -181,8 +175,12 @@ export class PermitCommand extends BaseSubcommand {
       ctx.guildId!,
     );
     const all = [
-      ...permits.custom.map((p) => `${p.targetType}:${p.targetId} → \`${p.permit}\` (custom)`),
-      ...permits.enforced.map((p) => `${p.targetType}:${p.targetId} → \`${p.permit}\` (enforced)`),
+      ...permits.custom.map(
+        (p) => `${p.targetType}:${p.targetId} → \`${p.permit}\` (custom)`,
+      ),
+      ...permits.enforced.map(
+        (p) => `${p.targetType}:${p.targetId} → \`${p.permit}\` (enforced)`,
+      ),
     ];
     if (!all.length) {
       return ctx.replyInfo(

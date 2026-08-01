@@ -148,7 +148,8 @@ class TempVcRegistry {
       p = (async () => {
         const rows = await container.db.tempvc.listGenerators(guildId);
         const map = new Map<string, GeneratorConfig>();
-        for (const r of rows) map.set(r.channelId, { name: r.name, limit: r.limit });
+        for (const r of rows)
+          map.set(r.channelId, { name: r.name, limit: r.limit });
         this.#gens.set(guildId, map);
         this.#gensLoaded.add(guildId);
       })()

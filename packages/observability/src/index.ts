@@ -3,6 +3,7 @@
 
 export * from "./boot.js";
 export * from "./context.js";
+export * from "./event-loop.js";
 export * from "./logger.js";
 export * from "./metrics.js";
 export * from "./readiness.js";

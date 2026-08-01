@@ -38,6 +38,16 @@ declare module "@sapphire/plugin-scheduled-tasks" {
 /** Modules register per-key invalidation callbacks here instead of patching ConfigService. */
 export type ConfigChangeHook = (guildId: string, key: string) => Promise<void>;
 
+/**
+ * Guard run before a config value is persisted, for checks the schema cannot
+ * express (e.g. proving a regex terminates). Return a reason to reject the
+ * write, or null to accept it.
+ */
+export type ConfigValueValidator = (
+  value: unknown,
+  guildId: string,
+) => Promise<string | null> | string | null;
+
 declare module "@sapphire/pieces" {
   interface Container {
     readonly prisma: DatabaseClient;
@@ -62,6 +72,9 @@ declare module "@sapphire/pieces" {
 
     /** Key format: `"<moduleName>:<configKey>"` */
     readonly configChangeHooks: Map<string, ConfigChangeHook>;
+
+    /** Pre-write value guards. Key format: `"<moduleName>:<configKey>"` */
+    readonly configValueValidators: Map<string, ConfigValueValidator>;
   }
 }
 
@@ -104,15 +117,13 @@ declare module "#lib/env.js" {
     SCHEDULER_LEADER_LOCK_RENEW_MS: IntegerString;
     SCHEDULER_LEADER_LOCK_POLL_MS: IntegerString;
     RABBITMQ_URL: string;
-    /** Approximate per-stream cap for raw gateway events. Default 100000. */
+    /** Approximate per-stream cap for bus events. Default 100000. */
     EVENT_STREAM_MAXLEN: IntegerString;
     /** Redis Streams consumer idle threshold in ms. Default 60000. */
     EVENT_STREAM_ACK_WAIT_MS: IntegerString;
-    /** Which service this process plays in the split topology. Default "monolith". */
-    LUMI_ROLE: "monolith" | "gateway" | "worker" | "scheduler";
+    /** Which service this process plays. Default "worker". */
+    LUMI_ROLE: "worker" | "scheduler";
     /** Stable per-replica consumer id for the worker pool. Falls back to $HOSTNAME, then pid. */
     LUMI_CONSUMER_ID: string;
-    /** Gateway pre-acks INTERACTION_CREATE via REST before publishing. Default "true"; set "false" to opt out. */
-    INTERACTION_DEFER_AT_GATEWAY: "true" | "false";
   }
 }

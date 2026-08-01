@@ -3,10 +3,7 @@ import {
   ButtonBuilder,
   StringSelectMenuBuilder,
 } from "@discordjs/builders";
-import {
-  ButtonStyle,
-  type VoiceBasedChannel,
-} from "discord.js";
+import { ButtonStyle, type VoiceBasedChannel } from "discord.js";
 import { channelMention, userMention } from "@discordjs/formatters";
 import { TVC } from "../keys.js";
 import type { VcRecord } from "../data.js";
@@ -48,14 +45,22 @@ export function buildPanel(
   const lockBadge = formatStatusBadge(
     record.locked ? "disabled" : "enabled",
     record.locked
-      ? (t ? t("tempvc:statusLocked") : "LOCKED")
-      : (t ? t("tempvc:statusUnlocked") : "UNLOCKED"),
+      ? t
+        ? t("tempvc:statusLocked")
+        : "LOCKED"
+      : t
+        ? t("tempvc:statusUnlocked")
+        : "UNLOCKED",
   );
   const hideBadge = formatStatusBadge(
     record.hidden ? "disabled" : "enabled",
     record.hidden
-      ? (t ? t("tempvc:statusHidden") : "HIDDEN")
-      : (t ? t("tempvc:statusVisible") : "VISIBLE"),
+      ? t
+        ? t("tempvc:statusHidden")
+        : "HIDDEN"
+      : t
+        ? t("tempvc:statusVisible")
+        : "VISIBLE",
   );
 
   const body = [
@@ -167,6 +172,11 @@ const backToPanelRow = (channelId: string, t?: LumiT) =>
       t ? t("tempvc:backToPanel") : "← Back to Panel",
     ),
   );
+
+/** Standalone "back to panel" row, for cards that carry no other controls. */
+export function buildBackRows(channelId: string) {
+  return buildSafeActionRows([backToPanelRow(channelId)]);
+}
 
 interface AccessViewSpec {
   key: "trust" | "untrust" | "block" | "unblock";
@@ -328,7 +338,9 @@ export function buildTransferView(
 
   return makeInfoCard(
     t ? t("tempvc:transferTitle") : "🔄 Transfer Ownership",
-    t ? t("tempvc:transferMessage") : "Select a new owner for this voice channel:",
+    t
+      ? t("tempvc:transferMessage")
+      : "Select a new owner for this voice channel:",
     { actionRows: rows },
   );
 }

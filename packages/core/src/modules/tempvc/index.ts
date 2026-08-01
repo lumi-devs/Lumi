@@ -26,9 +26,7 @@ export class TempVcModule extends Module {
     return super.onLoad();
   }
 
-  public override async deleteUserData(
-    userId: string,
-  ): Promise<void> {
+  public override async deleteUserData(userId: string): Promise<void> {
     const owned = await this.container.db.tempvc.findRecordsForOwner(userId);
     if (owned.length === 0) return;
     await this.container.db.tempvc.deleteRecordsForOwner(userId);

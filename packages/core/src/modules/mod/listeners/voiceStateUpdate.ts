@@ -4,7 +4,10 @@ import { container } from "@sapphire/framework";
 import { RedisKeys, RedisTTL } from "#database/redis.js";
 
 export class VoiceStateUpdateListener extends Listener {
-  public constructor(context: Listener.LoaderContext, options: Listener.Options) {
+  public constructor(
+    context: Listener.LoaderContext,
+    options: Listener.Options,
+  ) {
     super(context, {
       ...options,
       event: "voiceStateUpdate",
@@ -25,7 +28,11 @@ export class VoiceStateUpdateListener extends Listener {
 
     if (!isVoiceMuted) {
       // Fallback DB check for active voice_mute case
-      const activeCases = await container.db.moderation.getActiveCases(guildId, userId, "voice_mute");
+      const activeCases = await container.db.moderation.getActiveCases(
+        guildId,
+        userId,
+        "voice_mute",
+      );
       if (activeCases.length > 0) {
         isVoiceMuted = true;
         // Cache back to Redis
@@ -35,8 +42,12 @@ export class VoiceStateUpdateListener extends Listener {
 
     if (isVoiceMuted) {
       // Ensure member is server muted and disconnected
-      await newState.setMute(true, "Auto-enforcing voice mute").catch(() => null);
-      await newState.disconnect("User is currently voice muted.").catch(() => null);
+      await newState
+        .setMute(true, "Auto-enforcing voice mute")
+        .catch(() => null);
+      await newState
+        .disconnect("User is currently voice muted.")
+        .catch(() => null);
     }
   }
 }

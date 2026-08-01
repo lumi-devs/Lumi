@@ -1,8 +1,7 @@
 // Redis Streams transport: consumer groups give at-least-once delivery, horizontal
 // worker scaling (each consumer claims a partition of the pending list), and bounded
-// memory via MAXLEN ~. This is the production transport once the gateway/worker split
-// flips on. There is one stream per gateway event type
-// (`lumi:gw:message_create`, etc.) for per-event backpressure, independent MAXLEN and
+// memory via MAXLEN ~. There is one stream per event type for per-event
+// backpressure, independent MAXLEN and
 // targeted lag dashboards; one consumer group per worker pool (default
 // `lumi-workers`); and bodies JSON-encoded into a single `b` field.
 //
@@ -12,8 +11,8 @@
 // auto-replayed) and XACKed off the live stream. A periodic stats callback reports
 // XLEN + pending count so observability can update gauges without pulling prom-client
 // into this package. Exactly-once is out of scope - the contract is at-least-once plus
-// idempotent handlers, so raw-packet handlers dedupe on the dispatch sequence (`d.s`),
-// not the stream id (redelivery yields a new one).
+// idempotent handlers - handlers must dedupe on a payload-level identifier, not the
+// stream id (redelivery yields a new one).
 
 import type { Redis } from "ioredis";
 import type {
@@ -83,9 +82,8 @@ interface RedisStreamCommands {
 export class RedisStreamsBus implements EventBus {
   private readonly publisher: Redis;
   private readonly subscriber: Redis;
-  /** Typed views of the two connections for the awkwardly-overloaded stream commands. */
+  /** Typed view of the publisher connection for the awkwardly-overloaded stream commands. */
   private readonly pubStream: RedisStreamCommands;
-  private readonly subStream: RedisStreamCommands;
   private readonly defaultMaxLen: number;
   private readonly knownGroups = new Set<string>();
   private readonly log: NonNullable<RedisStreamsBusOptions["log"]>;
@@ -101,7 +99,6 @@ export class RedisStreamsBus implements EventBus {
     this.publisher = opts.publisher;
     this.subscriber = opts.subscriber;
     this.pubStream = this.publisher;
-    this.subStream = this.subscriber;
     this.defaultMaxLen = opts.defaultMaxLen ?? 100_000;
     this.log = opts.log ?? (() => undefined);
     this.maxDeliveries = opts.maxDeliveries ?? 5;
@@ -140,6 +137,14 @@ export class RedisStreamsBus implements EventBus {
     const batchSize = opts.batchSize ?? 16;
     for (const stream of streams) await this.ensureGroup(stream, opts.group);
 
+    // Each consume() call gets its own connection - XREADGROUP BLOCK holds
+    // the socket, and sharing one across concurrent consume() loops would
+    // serialize them behind each other.
+    const readConn = this.subscriber.duplicate() as unknown as RedisStreamCommands & {
+      quit(): Promise<string>;
+      disconnect(): void;
+    };
+
     let stopped = false;
     let loopDone: Promise<void> = Promise.resolve();
     const loop = async () => {
@@ -159,7 +164,7 @@ export class RedisStreamsBus implements EventBus {
         ];
         let resp: unknown;
         try {
-          resp = await this.subStream.xreadgroup(...args);
+          resp = await readConn.xreadgroup(...args);
         } catch (err) {
           if (this.closed || stopped) return;
           this.log("error", "xreadgroup failed", { err: String(err) });
@@ -226,6 +231,7 @@ export class RedisStreamsBus implements EventBus {
       // Without this await, callers can close the underlying Redis connection
       // mid-XACK and leak pending entries until XAUTOCLAIM picks them up.
       await loopDone.catch(() => undefined);
+      await readConn.quit().catch(() => readConn.disconnect());
     };
   }
 

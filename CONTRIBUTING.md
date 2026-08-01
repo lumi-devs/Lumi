@@ -72,7 +72,7 @@ cp .env.example .env
 
 ### 5. Launch Development Server
 
-Start Lumi in monolithic development mode:
+Start Lumi in single-process development mode:
 
 ```bash
 bun run dev
@@ -82,7 +82,7 @@ bun run dev
 
 ## Changesets & Changelog Workflow
 
-Lumi uses **[Changesets](https://github.com/changesets/changesets)** to automate package versioning and release notes across our workspace packages (`@lumi/core`, `@lumi/gateway`, `@lumi/worker`, etc.).
+Lumi uses **[Changesets](https://github.com/changesets/changesets)** to automate package versioning and release notes across our workspace packages (`@lumi/core`, `@lumi/worker`, `@lumi/scheduler`, etc.).
 
 ### When to Add a Changeset
 

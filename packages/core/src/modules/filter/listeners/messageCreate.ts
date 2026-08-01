@@ -30,7 +30,7 @@ export class FilterMessageListener extends GuildMessageListener {
 
     const mentionCount =
       message.mentions.users.size + message.mentions.roles.size;
-    const hit = this.filterService.test(
+    const hit = await this.filterService.test(
       message.guildId,
       message.content,
       mentionCount,

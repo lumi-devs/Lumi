@@ -6,18 +6,26 @@ import { SoftbanAction } from "../actions/SoftbanAction.js";
 @ApplyOptions<BaseCommand.Options>({
   name: "softban",
   aliases: ["sban"],
-  description: "Softban a member (ban and immediately unban to clear recent messages)",
+  description:
+    "Softban a member (ban and immediately unban to clear recent messages)",
   preconditions: ["GuildOnly"],
   requiredPermit: "mod.softban",
   prefixEnabled: true,
 })
 export class SoftbanCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
+  public override registerApplicationCommands(
+    registry: ApplicationCommandRegistry,
+  ) {
     registry.registerChatInputCommand((b) =>
       b
         .setName(this.name)
         .setDescription(this.description)
-        .addUserOption((o) => o.setName("target").setDescription("Member to softban").setRequired(true))
+        .addUserOption((o) =>
+          o
+            .setName("target")
+            .setDescription("Member to softban")
+            .setRequired(true),
+        )
         .addIntegerOption((o) =>
           o
             .setName("days")
@@ -25,7 +33,9 @@ export class SoftbanCommand extends BaseCommand {
             .setMinValue(1)
             .setMaxValue(7),
         )
-        .addStringOption((o) => o.setName("reason").setDescription("Reason for softban")),
+        .addStringOption((o) =>
+          o.setName("reason").setDescription("Reason for softban"),
+        ),
     );
   }
 
@@ -33,10 +43,15 @@ export class SoftbanCommand extends BaseCommand {
     const guild = ctx.guild!;
     const user = await ctx.getUser("target");
     const days = (await ctx.getInteger("days")) ?? 1;
-    const reason = (await ctx.getString("reason")) ?? "Softban to purge recent message history.";
+    const reason =
+      (await ctx.getString("reason")) ??
+      "Softban to purge recent message history.";
 
     if (!user) {
-      return ctx.replyError("User Required", "Please specify a user to softban.");
+      return ctx.replyError(
+        "User Required",
+        "Please specify a user to softban.",
+      );
     }
 
     const c = await SoftbanAction.apply({

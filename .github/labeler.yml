@@ -26,10 +26,6 @@
   - changed-files:
       - any-glob-to-any-file: 'apps/dashboard/**'
 
-'area:gateway':
-  - changed-files:
-      - any-glob-to-any-file: 'apps/gateway/**'
-
 'area:worker':
   - changed-files:
       - any-glob-to-any-file: 'apps/worker/**'

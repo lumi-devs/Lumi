@@ -47,6 +47,7 @@ export const DEFAULT_LANGUAGE = "en-US";
  * Adding a language is purely additive: drop in the directory, list it here.
  * Translations are managed via Crowdin; untranslated stubs fall back to en-US.
  */
+// prettier-ignore
 export const SUPPORTED_LANGUAGES = [
   "cs", "da", "de", "el", "en-US", "es-ES", "fi", "fr", "hu", "it",
   "ja", "ko", "nl", "no", "pl", "pt-BR", "ro", "ru", "sv-SE", "tr",

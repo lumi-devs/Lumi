@@ -12,20 +12,30 @@ import { VoiceMuteAction } from "../actions/VoiceMuteAction.js";
   prefixEnabled: true,
 })
 export class VcUnmuteCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
+  public override registerApplicationCommands(
+    registry: ApplicationCommandRegistry,
+  ) {
     registry.registerChatInputCommand((b) =>
       b
         .setName(this.name)
         .setDescription(this.description)
-        .addUserOption((o) => o.setName("target").setDescription("Member to unmute in voice").setRequired(true))
-        .addStringOption((o) => o.setName("reason").setDescription("Reason for voice unmute")),
+        .addUserOption((o) =>
+          o
+            .setName("target")
+            .setDescription("Member to unmute in voice")
+            .setRequired(true),
+        )
+        .addStringOption((o) =>
+          o.setName("reason").setDescription("Reason for voice unmute"),
+        ),
     );
   }
 
   public override async run(ctx: CommandContext): Promise<void> {
     const guild = ctx.guild!;
     const user = await ctx.getUser("target");
-    const reason = (await ctx.getString("reason")) ?? "Voice unmute by moderator";
+    const reason =
+      (await ctx.getString("reason")) ?? "Voice unmute by moderator";
 
     if (!user) {
       return ctx.replyError("User Required", "Please specify a target user.");
@@ -33,7 +43,10 @@ export class VcUnmuteCommand extends BaseCommand {
 
     const member = await guild.members.fetch(user.id).catch(() => null);
     if (!member) {
-      return ctx.replyError("Member Not Found", "That user is not in this server.");
+      return ctx.replyError(
+        "Member Not Found",
+        "That user is not in this server.",
+      );
     }
 
     const c = await VoiceMuteAction.undo({

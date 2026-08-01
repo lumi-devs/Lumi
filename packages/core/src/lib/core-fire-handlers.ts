@@ -1,6 +1,7 @@
 import { container } from "@sapphire/framework";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { getService } from "#lib/module-system/Service.js";
+import { handleSendMessageFire } from "#lib/outbound/send-queue.js";
 import { scheduleProcessRestart } from "#lib/restart.js";
 
 async function handleFlushLogsFire(): Promise<void> {
@@ -55,6 +56,7 @@ async function handleAddonAutoUpdateFire(): Promise<void> {
 
 export function registerCoreFireHandlers(): void {
   registerTaskFireHandler("flush-logs", "unicast", handleFlushLogsFire);
+  registerTaskFireHandler("send-message", "unicast", handleSendMessageFire);
   registerTaskFireHandler(
     "addon-auto-update",
     "unicast",

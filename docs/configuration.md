@@ -18,7 +18,9 @@ Copy `.env.example` to `.env` and fill in the required values.
 | `REDIS_SENTINEL_NAME` | `mymaster` | - | Master name as registered with Sentinel |
 | `REDIS_SENTINEL_PASSWORD` | - | - | Password for connecting to the Sentinels themselves (separate from `REDIS_PASSWORD`) |
 | `RABBITMQ_URL` | `amqp://lumi:lumi@localhost:5672` | ✅ | RabbitMQ AMQP broker URI (used for RPC bridging and cross-process events) |
-| `LUMI_ROLE` | `monolith` | - | Runtime process role: `monolith` / `gateway` / `worker` / `scheduler` |
+| `LUMI_ROLE` | `worker` | - | Runtime process role: `worker` (Discord WebSocket + all bot logic) or `scheduler` (BullMQ tasks only) |
+| `CLUSTER_NAME` | - | - | Enables multi-replica shard coordination via `@lumi/sharding`. Every replica sharing a name is assigned a disjoint shard range. Unset means single-process mode. |
+| `DISCORD_PROXY_URL` | - | - | Base URL of a shared Discord REST proxy (`nirn-proxy`). Required when running more than one worker replica so REST rate-limit buckets are coordinated across processes. |
 | `OTEL_ENABLED` | `false` | - | Enable OpenTelemetry OTLP tracing |
 | `METRICS_ENABLED` | `true` | - | Enable Prometheus metrics endpoint |
 | `METRICS_PORT` | `9090` | - | Prometheus `/metrics` HTTP port |
@@ -36,7 +38,7 @@ Copy `.env.example` to `.env` and fill in the required values.
 | Profile | What it starts |
 | :--- | :--- |
 | `default` | Worker + Postgres + PgBouncer + Redis + RabbitMQ |
-| `scale` | Gateway + Worker pool + Scheduler + Rate-limit proxy |
+| `scale` | Worker replicas + Scheduler + `nirn-proxy` REST rate-limit proxy |
 | `dashboard` | Web admin panel on `:8080` |
 | `observability` | OTel Collector + Prometheus + Grafana + Tempo |
 
@@ -45,7 +47,7 @@ Copy `.env.example` to `.env` and fill in the required values.
 docker compose --profile scale --profile dashboard --profile observability up -d
 ```
 
-## Kubernetes (KEDA)
+## Kubernetes
 
 Production manifests are in `deploy/k8s/`:
 
@@ -54,8 +56,13 @@ kubectl apply -f deploy/k8s/namespace.yaml
 kubectl apply -f deploy/k8s/configmap.yaml
 kubectl apply -f deploy/k8s/secret.example.yaml
 kubectl apply -f deploy/k8s/migrate-job.yaml
-kubectl apply -f deploy/k8s/gateway-statefulset.yaml
-kubectl apply -f deploy/k8s/worker-deployment.yaml
-kubectl apply -f deploy/k8s/worker-scaledobject.yaml
+kubectl apply -f deploy/k8s/worker-statefulset.yaml
 kubectl apply -f deploy/k8s/scheduler-deployment.yaml
 ```
+
+The worker runs as a StatefulSet because each replica owns real per-shard state
+(WebSocket connection and resumable session). `replicas:` is a deliberate
+shards-per-replica decision, not an autoscaler target - see
+[architecture.md](architecture.md#horizontal-scaling). Scaling past one replica
+requires `CLUSTER_NAME` in the ConfigMap, and `DISCORD_PROXY_URL` pointing at a
+`nirn-proxy` Service.

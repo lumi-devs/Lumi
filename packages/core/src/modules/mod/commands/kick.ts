@@ -1,12 +1,18 @@
+import type { LumiT } from "#lib/i18n/index.js";
+import { LanguageKeys } from "#lib/i18n/keys.js";
+import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
-import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import { isNullish } from "@sapphire/utilities";
-import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import { logError } from "#lib/utilities/errors.js";
+import type { ModerationCase } from "@prisma/client";
+import type { GuildMember } from "discord.js";
 import { KickAction } from "../actions/index.js";
 
-@ApplyOptions<BaseCommand.Options>({
+const Root = LanguageKeys.Commands;
+
+type Context = ModerationCommand.ActionContext<GuildMember>;
+type Success = ModerationCommand.OutcomeContext<GuildMember, ModerationCase>;
+
+@ApplyOptions<ModerationCommand.Options>({
   name: "kick",
   description: "Kick a member from the server",
   preconditions: ["GuildOnly"],
@@ -14,58 +20,43 @@ import { KickAction } from "../actions/index.js";
   prefixEnabled: true,
   cooldownLimit: 3,
   cooldownDelay: 5000,
+  logScope: "kick",
 })
-export class KickCommand extends BaseCommand {
+export class KickCommand extends ModerationCommand<
+  GuildMember,
+  ModerationCase
+> {
   public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
+    registry: ModerationCommand.Registry,
   ) {
     registry.registerChatInputCommand((b) =>
       applyLocalizedBuilder(b, "commands:kick")
         .addUserOption((o) =>
           applyLocalizedBuilder(o, "commands:kickMember").setRequired(true),
         )
-        .addStringOption((o) =>
-          applyLocalizedBuilder(o, "commands:modReason"),
-        ),
+        .addStringOption((o) => applyLocalizedBuilder(o, "commands:modReason")),
     );
   }
 
-  public override async run(ctx: CommandContext) {
-    await ctx.defer();
-    const t = await ctx.fetchT();
-    const member = await ctx.getMember("member");
-    const reason =
-      (await ctx.getString("reason", { rest: true })) ??
-      t("commands:modNoReason");
-    if (isNullish(member)) {
-      return ctx.replyError(
-        t("commands:modMemberNotFoundTitle"),
-        t("commands:modMemberNotFound"),
-      );
-    }
+  protected override resolveTarget(ctx: ModerationCommand.RunContext) {
+    return ctx.getMember("member");
+  }
 
-    let c;
-    try {
-      c = await KickAction.apply({
-        guild: ctx.guild!,
-        targetMember: member,
-        moderator: ctx.user,
+  protected override action({ guild, target, moderator, reason }: Context) {
+    return KickAction.apply({ guild, targetMember: target, moderator, reason });
+  }
+
+  protected override buildSuccessMessage(
+    t: LumiT,
+    { target, reason, outcome }: Success,
+  ) {
+    return {
+      title: t(Root.KickSuccessTitle),
+      body: t(Root.KickSuccess, {
+        user: target.user.username,
         reason,
-      });
-    } catch (err: unknown) {
-      logError(`kick: guild=${ctx.guildId} target=${member.id}`, err);
-      return ctx.replyError(
-        t("commands:modActionFailedTitle"),
-        t("commands:modActionFailed"),
-      );
-    }
-    return ctx.replySuccess(
-      t("commands:kickSuccessTitle"),
-      t("commands:kickSuccess", {
-        user: member.user.username,
-        reason,
-        caseNumber: c.caseNumber,
+        caseNumber: outcome.caseNumber,
       }),
-    );
+    };
   }
 }
