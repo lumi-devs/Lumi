@@ -26,23 +26,28 @@ This directory documents the containerization strategy, **Dockerfile multi-stage
 
 ## 🌟 Overview & Container Architecture
 
-Lumi's container setup provides complete flexibility: run a simple single-container bot monolith or launch a fully orchestrated 10+ container microservices stack with rate-limiting proxies, event streams, database connection pooling, and OpenTelemetry tracing.
+Lumi's container setup provides complete flexibility: run a single bot container against the core data plane, or launch a fully orchestrated stack with extra worker replicas, a dashboard, and OpenTelemetry tracing.
+
+There are two application roles. A **worker** owns its own Discord WebSocket connection and runs all command, module, and interaction logic in-process; a **scheduler** owns BullMQ queues and holds no WebSocket. There is no separate gateway container. A single worker tracks its own Discord REST rate-limit buckets; once you run more than one, the `scale` profile adds **nirn-proxy** as a shared REST proxy so those buckets stay coordinated across processes (`DISCORD_PROXY_URL`).
 
 ### Docker Compose Architecture Diagram
 
 ```mermaid
 flowchart TD
+    subgraph External
+        Discord[Discord Gateway / REST API]
+    end
+
     subgraph Edge Services
-        NP[lumi-nirn-proxy<br/>:18080 / :19000]
-        Dash[lumi-dashboard<br/>:8080]
+        NP[lumi-nirn-proxy<br/>Profile: scale<br/>:18080 / :19000]
+        Dash[lumi-dashboard<br/>Profile: dashboard]
     end
 
     subgraph Lumi Application Nodes
-        GW[lumi-gateway<br/>Profile: scale]
+        W[lumi-worker<br/>Default]
         WS[lumi-worker-scale<br/>Profile: scale]
         Sched[lumi-scheduler<br/>Profile: scale]
         Dev[lumi-dev<br/>Profile: development]
-        Mono[lumi-worker<br/>Default Worker]
     end
 
     subgraph Data & Messaging Plane
@@ -59,21 +64,28 @@ flowchart TD
         Graf[lumi-grafana<br/>:3001]
     end
 
-    GW -->|WS Control / Pre-Ack| NP
-    GW -->|Publish Events| Redis
-    WS -->|Consume Streams| Redis
-    WS <-->|PgBouncer Pool| PGB
+    Discord <-->|WebSocket| W
+    Discord <-->|WebSocket| WS
+    W -->|REST| Discord
+    NP -->|REST| Discord
+
+    W -.->|REST via DISCORD_PROXY_URL<br/>scale only| NP
+    WS -.->|REST via DISCORD_PROXY_URL<br/>scale only| NP
+
+    W <-->|Shard coordination / sessions| Redis
+    WS <-->|Shard coordination / sessions| Redis
+    W <-->|PgBouncer Pool| PGB
     PGB <-->|Scram-SHA-256| PG
 
     Dash <-->|RPC Messages| RMQ
-    WS <-->|RPC Responders| RMQ
+    W <-->|RPC Responders| RMQ
 
     Sched <-->|BullMQ Tasks| Redis
 
-    GW -->|OTLP Traces / Metrics| OTEL
+    W -->|OTLP Traces / Metrics| OTEL
     WS -->|OTLP Traces / Metrics| OTEL
     OTEL -->|Traces| Tempo
-    Prom -->|Scrape Metrics| GW
+    Prom -->|Scrape Metrics| W
     Prom -->|Scrape Metrics| WS
     Graf -->|Dashboards| Prom
     Graf -->|Dashboards| Tempo
@@ -105,17 +117,16 @@ Services are organized into distinct Compose **profiles** so you only run what y
 
 | Service Name | Profile | Ports / Interfaces | Description |
 |---|---|---|---|
-| `worker` | *(default)* | - | Default Lumi bot process (`LUMI_ROLE=monolith`). Runs gateway, workers, and scheduler in a single process. |
+| `worker` | *(default)* | - | Default Lumi bot process (`LUMI_ROLE=worker`). Owns the Discord WebSocket and runs all command, module, and interaction logic. |
 | `lumi-dev` | `development` | - | Interactive development container with live volume mounts and watch mode. |
-| `gateway` | `scale` | - | Standalone Gateway edge service for Discord WebSockets. |
-| `worker-scale` | `scale` | - | Scaled Worker node reading events from Redis Streams (`LUMI_ROLE=worker`). |
-| `scheduler` | `scale` | - | Task Scheduler managing BullMQ background tasks. |
+| `worker-scale` | `scale` | - | Additional worker replica (`LUMI_ROLE=worker`) claiming its own shard range. |
+| `scheduler` | `scale` | - | Task Scheduler managing BullMQ background tasks (`LUMI_ROLE=scheduler`, no WebSocket). |
 | `dashboard` | `dashboard` | `8080:8080` | Web Administration Dashboard UI. |
 | `postgres` | *(core)* | `127.0.0.1:5432:5432` | PostgreSQL 17 primary database server. |
 | `pgbouncer` | *(core)* | `127.0.0.1:6432:6432` | PgBouncer transaction-level connection pooler. |
 | `redis` | *(core)* | `127.0.0.1:6379:6379` | Redis 7 data store for entity caching and event streams. |
 | `rabbitmq` | *(core)* | `127.0.0.1:5672`, `:15672` | RabbitMQ 4 broker with Management UI. |
-| `nirn-proxy` | `scale` | `127.0.0.1:18080`, `:19000` | Discord REST rate-limiting proxy. |
+| `nirn-proxy` | `scale` | `127.0.0.1:18080`, `:19000` | Shared Discord REST rate-limiting proxy for multi-worker runs. |
 | `otel-collector` | `observability` | `127.0.0.1:4318:4318` | OpenTelemetry Collector endpoint (OTLP HTTP). |
 | `prometheus` | `observability` | `127.0.0.1:9091:9090` | Prometheus metrics collector and alerting engine. |
 | `tempo` | `observability` | - | Grafana Tempo distributed tracing storage engine. |
@@ -145,6 +156,7 @@ cp .env.example .env
 | `DISCORD_OAUTH2_CLIENT_ID` | - | OAuth2 Client ID for dashboard authentication. |
 | `DISCORD_OAUTH2_CLIENT_SECRET` | - | OAuth2 Client Secret for dashboard authentication. |
 | `DISCORD_OAUTH2_REDIRECT_URI` | - | OAuth2 Redirect URI for dashboard login. |
+| `DISCORD_PROXY_URL` | *(empty)* | Shared Discord REST proxy endpoint. Set to `http://nirn-proxy:8080` under the `scale` profile; leave empty for single-worker runs. |
 | `OTEL_ENABLED` | `true` | Enables OpenTelemetry tracing exporters. |
 | `GRAFANA_PASSWORD` | `admin` | Admin password for Grafana web UI. |
 
@@ -154,7 +166,7 @@ cp .env.example .env
 
 ### 1. Default Stack
 
-Run Lumi in single-container mode alongside PostgreSQL, PgBouncer, Redis, and RabbitMQ:
+Run a single worker alongside PostgreSQL, PgBouncer, Redis, and RabbitMQ:
 
 ```bash
 docker compose up -d
@@ -168,9 +180,9 @@ Run the hot-reloading development container with interactive logs:
 docker compose --profile development up
 ```
 
-### 3. Scaled Production Microservices Stack
+### 3. Scaled Production Stack
 
-Launch Gateway, Worker, Scheduler, Dashboard, and Rate-Limit Proxy:
+Launch a second worker replica plus the Scheduler and Dashboard:
 
 ```bash
 docker compose --profile scale --profile dashboard up -d

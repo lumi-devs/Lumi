@@ -1,16 +1,16 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry, container } from "@sapphire/framework";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
+import { restartChoiceRow } from "#lib/restart.js";
+import { loadFeatures } from "#modules/core/lib/config-panel.js";
+import { buildHubView } from "#modules/core/ui/hub.js";
+import { Emojis } from "#utilities/assets.js";
 import {
   makeSuccessCard,
   makeErrorCard,
   makeInfoCard,
-} from "#lib/utilities/cards.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { buildHubView } from "#modules/core/lib/hub-panel.js";
-import { loadFeatures } from "#modules/core/lib/config-panel.js";
-import { updateLumiCore } from "#lib/utilities/self-update.js";
-import { restartChoiceRow } from "#lib/restart.js";
+} from "#utilities/cards.js";
+import { updateLumiCore } from "#utilities/self-update.js";
+import { ApplyOptions } from "@sapphire/decorators";
+import { ApplicationCommandRegistry, container } from "@sapphire/framework";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "lumi",
@@ -32,9 +32,7 @@ export class LumiCommand extends BaseSubcommand {
         .setName(this.name)
         .setDescription(this.description)
         .addSubcommand((s) =>
-          s
-            .setName("panel")
-            .setDescription("Open the Lumi control panel"),
+          s.setName("panel").setDescription("Open the Lumi control panel"),
         )
         .addSubcommand((s) =>
           s
@@ -80,7 +78,10 @@ export class LumiCommand extends BaseSubcommand {
     const res = await updateLumiCore();
     if (res.error) {
       await ctx.reply(
-        makeErrorCard(`${Emojis.ERROR} ${t("core:coreUpdateFailedTitle")}`, res.error),
+        makeErrorCard(
+          `${Emojis.ERROR} ${t("core:coreUpdateFailedTitle")}`,
+          res.error,
+        ),
       );
       return;
     }

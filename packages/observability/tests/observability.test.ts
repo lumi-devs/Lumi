@@ -6,8 +6,17 @@ describe("Observability package metrics & registry", () => {
     initMetrics("test-service");
   });
 
-  it("initializes metrics with default service label", () => {
-    expect(registry).toBeDefined();
+  it("initializes metrics with default service label", async () => {
+    const metricsJson = await registry.getMetricsAsJSON();
+    const names = metricsJson.map((m) => m.name);
+
+    // collectDefaultMetrics({ prefix: "lumi_" }) should have registered the
+    // standard Node/process metrics into the shared registry.
+    expect(names).toContain("lumi_process_cpu_seconds_total");
+    expect(names).toContain("lumi_nodejs_heap_size_total_bytes");
+
+    const metricsStr = await registry.metrics();
+    expect(metricsStr).toContain('service="test-service"');
   });
 
   it("increments counters correctly", async () => {

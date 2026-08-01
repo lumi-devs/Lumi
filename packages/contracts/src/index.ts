@@ -3,6 +3,5 @@
 
 export * from "./rpc.js";
 export * from "./bus.js";
-export * from "./gateway-packet.js";
 export * from "./config.js";
 export * from "./manifest.js";

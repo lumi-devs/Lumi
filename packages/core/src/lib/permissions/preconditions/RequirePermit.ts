@@ -12,7 +12,7 @@ declare module "@sapphire/framework" {
   }
 }
 
-function memberRoleIds(member: unknown): string[] {
+export function memberRoleIds(member: unknown): string[] {
   if (!member || typeof member !== "object") return [];
   const roles = (member as { roles?: unknown }).roles;
   if (Array.isArray(roles)) return roles as string[];

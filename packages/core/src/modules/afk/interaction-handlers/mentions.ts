@@ -38,6 +38,16 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
   ) {
     if (!this.checkSecurity(interaction, userId)) return;
 
+    // Which defer to use depends only on the source message's own flags
+    // (known synchronously), so defer before the async lookups below to
+    // beat Discord's 3s ack window.
+    const isEphemeral = interaction.message.flags.has(MessageFlags.Ephemeral);
+    if (isEphemeral) await interaction.deferUpdate();
+    else
+      await interaction.deferReply({
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+      });
+
     const t = await fetchTyped(interaction);
     const mentions = await getAfkMentions(interaction.guildId!, userId);
 
@@ -87,10 +97,6 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
       row ? { actionRows: [row] } : {}
     );
 
-    if (interaction.message.flags.has(MessageFlags.Ephemeral)) {
-      await interaction.update(card);
-    } else {
-      await interaction.reply(ephemeralCard(card));
-    }
+    await interaction.editReply(isEphemeral ? card : ephemeralCard(card));
   }
 }

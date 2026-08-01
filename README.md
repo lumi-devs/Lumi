@@ -76,7 +76,7 @@ docker compose up -d
 docker compose --profile dashboard up -d
 ```
 
-For scaled-out / distributed deployments (`gateway` + `worker` + `scheduler`), specify `LUMI_ROLE` per container node. Refer to [docs/architecture.md](docs/architecture.md).
+For scaled-out deployments (multiple `worker` replicas + a `scheduler`), specify `LUMI_ROLE` per container node and set `CLUSTER_NAME` so replicas divide the shard range between themselves. Refer to [docs/architecture.md](docs/architecture.md).
 
 </details>
 
@@ -112,16 +112,16 @@ Check out [CONTRIBUTING.md](CONTRIBUTING.md) for contribution rules, code conven
 
 ## Architecture
 
-Lumi scales seamlessly from a single process to a distributed cluster using `LUMI_ROLE`:
+Lumi runs as two process roles, selected with `LUMI_ROLE`:
 
 | Role | Purpose |
 |---|---|
-| `monolith` | Default single-process mode. Runs gateway, workers, and scheduler together. |
-| `gateway` | High-performance Discord WebSocket gateway receiver. |
-| `worker` | Event processing worker pool for slash commands, triggers, and listeners. |
-| `scheduler` | Queue processor for scheduled tasks and recurring cron jobs. |
+| `worker` | Default. Holds Lumi's Discord Gateway WebSocket connection and runs all slash commands, listeners, and module logic in the same process. |
+| `scheduler` | Queue processor for scheduled tasks and recurring cron jobs. No WebSocket connection. |
 
-Inter-process event streaming runs on **Redis Streams**; RPC bridging between processes runs on **RabbitMQ**. Detailed specifications are in [docs/architecture.md](docs/architecture.md).
+Gateway ingestion and bot logic intentionally live in one process. Scaling is horizontal: set `CLUSTER_NAME` and `@lumi/sharding` assigns each worker replica a disjoint range of Discord shards, coordinating IDENTIFY throttling and resumable sessions through Redis. Multi-replica deployments route REST traffic through a shared `nirn-proxy` (`DISCORD_PROXY_URL`) so rate-limit buckets stay coordinated.
+
+Task queueing runs on **Redis Streams**/BullMQ; RPC bridging between processes runs on **RabbitMQ**. Detailed specifications are in [docs/architecture.md](docs/architecture.md).
 
 ---
 

@@ -2,14 +2,13 @@
 
 <div align="center">
   <img src="https://img.shields.io/badge/Kubernetes-1.28+-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white" alt="Kubernetes">
-  <img src="https://img.shields.io/badge/Autoscaling-KEDA_v2.13+-FF69B4?style=for-the-badge" alt="KEDA">
-  <img src="https://img.shields.io/badge/Architecture-Distributed-purple?style=for-the-badge" alt="Architecture">
+  <img src="https://img.shields.io/badge/Architecture-Sharded_Workers-purple?style=for-the-badge" alt="Architecture">
   <img src="https://img.shields.io/badge/Status-Production_Ready-brightgreen?style=for-the-badge" alt="Status">
 </div>
 
 <br />
 
-This directory contains production-ready **Kubernetes manifests** for deploying Lumi in a horizontally scaled, event-driven microservices architecture using **KEDA (Kubernetes Event-driven Autoscaling)** and **Prometheus**.
+This directory contains production-ready **Kubernetes manifests** for deploying Lumi as a sharded worker fleet with a separate scheduler and a shared Discord REST proxy.
 
 ---
 
@@ -19,19 +18,19 @@ This directory contains production-ready **Kubernetes manifests** for deploying 
 - [Prerequisites](#-prerequisites)
 - [Kubernetes Manifests Reference](#-kubernetes-manifests-reference)
 - [Deployment Sequence & Commands](#-deployment-sequence--commands)
-- [Autoscaling & KEDA Verification](#-autoscaling--keda-verification)
+- [Scaling Workers](#-scaling-workers)
 - [Troubleshooting & Maintenance](#-troubleshooting--maintenance)
 
 ---
 
 ## 🌟 Overview & Architecture
 
-In Kubernetes, Lumi decomposes into discrete, specialized workloads rather than running as a single monolith:
+Lumi runs as two application roles. There is no separate gateway process: each worker pod owns its own Discord WebSocket connection and runs command, module, and interaction logic in the same process.
 
-- **`gateway` (StatefulSet)**: Manages Discord WebSocket connections and pre-defers interaction payloads. Uses a StatefulSet to maintain predictable pod identity for shard clustering.
-- **`worker` (Deployment)**: Executes stateless bot commands, module logic, and event handling. Autoscaled elastically by KEDA between 2 and 20 pods based on Redis Stream consumer lag.
-- **`scheduler` (Deployment)**: Runs as a single replica (or HA leader-locked setup) managing BullMQ delayed job queues and task fire triggers.
-- **`migrate` (Job)**: Executes one-shot database schema synchronization (`bunx prisma db push`) prior to launching application services.
+- **`worker` (StatefulSet)**: Holds real Discord shards and runs all bot logic. StatefulSet, not Deployment, because each pod owns per-shard state (WebSocket session, sequence number). Replica count is a shard-assignment decision, not an autoscaler target — see [Scaling Workers](#-scaling-workers).
+- **`scheduler` (Deployment)**: Single replica (or HA with the leader lock) owning BullMQ delayed job queues and task fire triggers. No Discord WebSocket.
+- **`nirn-proxy` (Deployment)**: Stateless shared Discord REST proxy. Every worker replica routes its REST calls through it via `DISCORD_PROXY_URL` so per-route and global rate-limit buckets stay coordinated across pods.
+- **`migrate` (Job)**: One-shot database migration (`bunx prisma migrate deploy`) run before application services start.
 
 ### Kubernetes Deployment Topology
 
@@ -40,72 +39,62 @@ flowchart TD
     subgraph External Services
         Discord[Discord Gateway / REST API]
         DB[(PostgreSQL 17 / PgBouncer)]
-        Redis[(Redis 7 Cluster)]
+        Redis[(Redis 7)]
         RMQ[RabbitMQ Broker]
         Prometheus[Prometheus Server]
     end
 
     subgraph Kubernetes Cluster (Namespace: lumi)
-        Job[migrate Job<br/>prisma db push]
+        Job[migrate Job<br/>prisma migrate deploy]
 
-        subgraph Ingestion Layer
-            GW0[gateway-0 StatefulSet Pod]
-            GW1[gateway-1 StatefulSet Pod]
-            GWH[gateway-headless Service<br/>Port 9090]
+        subgraph Worker Fleet
+            W0[worker-0 StatefulSet Pod]
+            W1[worker-1 StatefulSet Pod]
+            WH[worker-headless Service<br/>Port 9090]
         end
 
-        subgraph Processing Layer
-            W1[worker Deployment Pod 1]
-            W2[worker Deployment Pod 2]
-            WN[worker Deployment Pod N...]
-            KEDA[KEDA ScaledObject<br/>min: 2, max: 20]
+        subgraph REST Layer
+            NP[nirn-proxy Deployment<br/>Service :8080]
         end
 
         subgraph Scheduling Layer
             Sched[scheduler Deployment Pod]
         end
 
-        PVC[(lumi-data PVC<br/>Persistent Volume Claim)]
+        PVC[(lumi-data PVC)]
     end
 
-    Discord <-->|WS / REST| GW0
-    Discord <-->|WS / REST| GW1
+    Discord <-->|WebSocket| W0
+    Discord <-->|WebSocket| W1
+    NP -->|REST| Discord
 
-    GW0 -->|Publish Events| Redis
-    GW1 -->|Publish Events| Redis
+    W0 -->|REST via DISCORD_PROXY_URL| NP
+    W1 -->|REST via DISCORD_PROXY_URL| NP
 
-    Redis -->|Stream Events| W1
-    Redis -->|Stream Events| W2
-    Redis -->|Stream Events| WN
+    W0 <-->|Shard coordination / sessions| Redis
+    W1 <-->|Shard coordination / sessions| Redis
 
-    Prometheus -->|Scrape /metrics| GWH
-    Prometheus -->|Scrape /metrics| W1
-    Prometheus -->|Scrape /metrics| Sched
-
-    KEDA -->|Query stream_consumer_lag| Prometheus
-    KEDA -->|Autoscale Replicas| W1
+    W0 <-->|Queries| DB
+    W0 <-->|RPC Responders| RMQ
 
     Sched <-->|BullMQ Tasks| Redis
     Sched <-->|Sync State| DB
 
-    W1 <-->|Data Mount| PVC
-    WN <-->|Data Mount| PVC
+    Prometheus -->|Scrape /metrics| WH
+    Prometheus -->|Scrape /metrics| Sched
+
+    W0 <-->|Data Mount| PVC
+    Sched <-->|Data Mount| PVC
 ```
 
 ---
 
 ## 📋 Prerequisites
 
-Before deploying Lumi to Kubernetes, verify that your cluster meets the following requirements:
-
 1. **Kubernetes Cluster**: Version `1.28` or higher.
 2. **`kubectl` CLI**: Installed and configured with cluster admin permissions.
-3. **KEDA (v2.13+)**: Installed in the cluster. Verify CRD availability:
-   ```bash
-   kubectl get crd scaledobjects.keda.sh
-   ```
-4. **Prometheus Operator / Server**: Deployed and configured to scrape pods annotated with `prometheus.io/scrape: "true"`.
-5. **External Data Plane**: PostgreSQL 17 (or PgBouncer), Redis 7, and RabbitMQ must be deployed and reachable from inside the cluster.
+3. **Prometheus Operator / Server**: Configured to scrape pods annotated with `prometheus.io/scrape: "true"`.
+4. **External Data Plane**: PostgreSQL 17 (or PgBouncer), Redis 7, and RabbitMQ deployed and reachable from inside the cluster.
 
 ---
 
@@ -114,14 +103,13 @@ Before deploying Lumi to Kubernetes, verify that your cluster meets the followin
 | Manifest File | Kind | Name | Purpose |
 |---|---|---|---|
 | [`namespace.yaml`](./namespace.yaml) | `Namespace` | `lumi` | Isolated Kubernetes namespace for all Lumi components. |
-| [`configmap.yaml`](./configmap.yaml) | `ConfigMap` | `lumi-env` | Non-sensitive environment configuration (endpoints, ports, log settings). |
+| [`configmap.yaml`](./configmap.yaml) | `ConfigMap` | `lumi-env` | Non-sensitive environment configuration (endpoints, ports, log settings, `DISCORD_PROXY_URL`, `CLUSTER_NAME`). |
 | [`secret.example.yaml`](./secret.example.yaml) | `Secret` | `lumi-secrets` | Sensitive credential placeholders (`BOT_TOKEN`, database passwords, secret keys). |
 | [`lumi-data-pvc.yaml`](./lumi-data-pvc.yaml) | `PersistentVolumeClaim` | `lumi-data` | Shared storage volume for persistent data and dynamic addons (`/app/data`). |
-| [`migrate-job.yaml`](./migrate-job.yaml) | `Job` | `lumi-migrate` | Database migration job executing `bunx prisma db push --accept-data-loss`. |
-| [`gateway-statefulset.yaml`](./gateway-statefulset.yaml) | `StatefulSet` + `Service` | `gateway`, `gateway-headless` | Sharded gateway pod pool with headless service for metrics discovery. |
+| [`migrate-job.yaml`](./migrate-job.yaml) | `Job` | `migrate` | Database migration job executing `bunx prisma migrate deploy`. |
+| [`worker-statefulset.yaml`](./worker-statefulset.yaml) | `StatefulSet` + `Service` | `worker`, `worker-headless` | Sharded worker fleet with headless service for metrics discovery. |
 | [`scheduler-deployment.yaml`](./scheduler-deployment.yaml) | `Deployment` | `scheduler` | Task scheduler managing BullMQ queues (uses `Recreate` deployment strategy). |
-| [`worker-deployment.yaml`](./worker-deployment.yaml) | `Deployment` | `worker` | Elastic worker deployment executing commands (`RollingUpdate` strategy). |
-| [`worker-scaledobject.yaml`](./worker-scaledobject.yaml) | `ScaledObject` | `worker` | KEDA autoscaler configuration scaling worker pods based on stream consumer lag. |
+| [`nirn-proxy-deployment.yaml`](./nirn-proxy-deployment.yaml) | `Deployment` + `Service` | `nirn-proxy` | Shared Discord REST rate-limit proxy for the worker fleet. |
 
 ---
 
@@ -133,74 +121,47 @@ Before deploying Lumi to Kubernetes, verify that your cluster meets the followin
 ### Step 1: Create Namespace & Secrets
 
 ```bash
-# Create namespace
 kubectl apply -f namespace.yaml
 
-# Copy and edit secret configuration
 cp secret.example.yaml secret.yaml
 # (Edit secret.yaml with your credentials)
 
-# Apply ConfigMap and Secret
 kubectl apply -f configmap.yaml -f secret.yaml
 ```
 
 ### Step 2: Storage & Migration
 
 ```bash
-# Apply PVC
 kubectl apply -f lumi-data-pvc.yaml
-
-# Run database migration job
 kubectl apply -f migrate-job.yaml
-
-# Wait for migration job to complete successfully
-kubectl -n lumi wait --for=condition=complete job/lumi-migrate --timeout=120s
+kubectl -n lumi wait --for=condition=complete job/migrate --timeout=120s
 ```
 
-### Step 3: Deploy Core Applications
+### Step 3: Deploy Applications
 
 ```bash
-# Deploy Scheduler
+# REST proxy first - workers read DISCORD_PROXY_URL at boot
+kubectl apply -f nirn-proxy-deployment.yaml
+
 kubectl apply -f scheduler-deployment.yaml
-
-# Deploy Gateway StatefulSet
-kubectl apply -f gateway-statefulset.yaml
-
-# Deploy Worker Pool
-kubectl apply -f worker-deployment.yaml
-
-# Deploy KEDA ScaledObject
-kubectl apply -f worker-scaledobject.yaml
+kubectl apply -f worker-statefulset.yaml
 ```
 
 ---
 
-## 📈 Autoscaling & KEDA Verification
+## 📈 Scaling Workers
 
-Worker scaling is governed by KEDA using Prometheus metric queries against Redis Stream lag (`lumi_stream_consumer_lag{group="lumi-workers"}`) and DLQ length.
+Worker replica count is set manually, not by an autoscaler. Discord's `/gateway/bot` decides the total shard count; `packages/sharding` divides those shards across however many replicas are running, keyed on `CLUSTER_NAME` (already set in `configmap.yaml`).
 
-### KEDA ScaledObject Configuration Summary
-
-- **Min Replicas**: `2`
-- **Max Replicas**: `20`
-- **Polling Interval**: `15` seconds
-- **Cooldown Period**: `300` seconds
-- **Triggers**:
-  - Prometheus Metric `lumi_stream_consumer_lag_workers` (Target Threshold: `500` pending events).
-  - Prometheus Metric `lumi_stream_dlq_length_workers` (Target Threshold: `10` dead-letter events).
-
-### Verification Commands
+- At `replicas: 1`, cluster coordination stays inert and the pod runs the single-process shard path.
+- Past 1 replica, each pod claims its own shard range automatically. Size it by picking a shards-per-replica target (start around 16–32) and dividing the total shard count by it.
+- Rolling updates use `maxUnavailable: 1` so at most one shard range is offline at a time; each replacement pod RESUMEs its predecessor's sessions from Redis instead of spending IDENTIFY budget.
 
 ```bash
-# Inspect ScaledObject status
-kubectl -n lumi get scaledobject worker -o jsonpath='{.status}' | jq
-
-# Describe active HPA created by KEDA
-kubectl -n lumi describe hpa keda-hpa-worker
-
-# Monitor worker pod replica count live
-kubectl -n lumi get pods -l app=worker -w
+kubectl -n lumi scale statefulset/worker --replicas=4
 ```
+
+Watch `shardLatency`, `shardStatus`, `guildCount`, and `rest429Total` in Prometheus when tuning.
 
 ---
 
@@ -209,25 +170,20 @@ kubectl -n lumi get pods -l app=worker -w
 ### Viewing Pod Logs
 
 ```bash
-# Gateway logs
-kubectl -n lumi logs -l app=gateway --tail=100 -f
-
-# Worker logs
 kubectl -n lumi logs -l app=worker --tail=100 -f
-
-# Scheduler logs
 kubectl -n lumi logs -l app=scheduler --tail=100 -f
+kubectl -n lumi logs -l app=nirn-proxy --tail=100 -f
 ```
 
 ### Force Database Migration Re-run
 
 ```bash
-kubectl -n lumi delete job lumi-migrate
+kubectl -n lumi delete job migrate
 kubectl apply -f migrate-job.yaml
 ```
 
 ### Graceful Restart of Workers
 
 ```bash
-kubectl -n lumi rollout restart deployment/worker
+kubectl -n lumi rollout restart statefulset/worker
 ```

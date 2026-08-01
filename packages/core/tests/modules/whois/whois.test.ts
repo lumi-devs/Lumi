@@ -228,6 +228,14 @@ describe("WhoisCommand", () => {
   describe("buildWhoisCard edge cases", () => {
     const mockT = (key: string, opts?: any) => `${key}${opts ? ":" + JSON.stringify(opts) : ""}`;
 
+    const textContentOf = (card: any) => {
+      const container = card.components[0].toJSON();
+      return container.components
+        .filter((c: any) => c.type === 10)
+        .map((c: any) => c.content)
+        .join("\n");
+    };
+
     it("should format member roles when total length > 800 chars", () => {
       const mockUser = {
         id: "12345",
@@ -260,7 +268,16 @@ describe("WhoisCommand", () => {
       } as unknown as GuildMember;
 
       const card = (command as any).buildWhoisCard(mockUser, mockMember, "G1", mockT);
-      expect(card).toBeDefined();
+
+      const text = textContentOf(card);
+      // 40 mentions of ~37-38 chars join to >800 chars, so the source truncates
+      // to the mentions that fit under 750 chars (20 of them here) and reports
+      // the remaining count (20) via the "roles more" key.
+      expect(text).toContain("commands:whoisRolesMore");
+      expect(text).toContain('"count":20');
+      expect(text).toContain("commands:whoisRolesTitle");
+      expect(text).toContain('"count":40');
+      expect(text).not.toContain("commands:whoisRolesNone");
     });
 
     it("should format member permissions when user has specific key permissions without Admin", () => {
@@ -294,7 +311,11 @@ describe("WhoisCommand", () => {
       } as unknown as GuildMember;
 
       const card = (command as any).buildWhoisCard(mockUser, mockMember, "G1", mockT);
-      expect(card).toBeDefined();
+
+      const text = textContentOf(card);
+      expect(text).toContain("Ban Members, Kick Members");
+      expect(text).not.toContain("Administrator");
+      expect(text).not.toContain("commands:whoisPermissionsNone");
     });
 
     it("should format member permissions when user has no key permissions", () => {
@@ -328,7 +349,11 @@ describe("WhoisCommand", () => {
       } as unknown as GuildMember;
 
       const card = (command as any).buildWhoisCard(mockUser, mockMember, "G1", mockT);
-      expect(card).toBeDefined();
+
+      const text = textContentOf(card);
+      expect(text).toContain("commands:whoisPermissionsNone");
+      expect(text).not.toContain("Ban Members");
+      expect(text).not.toContain("Administrator");
     });
   });
 });

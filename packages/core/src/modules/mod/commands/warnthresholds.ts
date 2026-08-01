@@ -19,22 +19,38 @@ import { buildWarnThresholdsPanel } from "../lib/warn-thresholds-panel.js";
   ],
 })
 export class WarnThresholdsCommand extends BaseSubcommand {
-  public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
+  public override registerApplicationCommands(
+    registry: ApplicationCommandRegistry,
+  ) {
     registry.registerChatInputCommand((b) =>
       b
         .setName(this.name)
         .setDescription(this.description)
-        .addSubcommand((s) => s.setName("panel").setDescription("Open the interactive Warning Escalation panel"))
-        .addSubcommand((s) => s.setName("set").setDescription("Configure warning thresholds"))
-        .addSubcommand((s) => s.setName("remove").setDescription("Remove warning thresholds"))
-        .addSubcommand((s) => s.setName("list").setDescription("List active warning thresholds")),
+        .addSubcommand((s) =>
+          s
+            .setName("panel")
+            .setDescription("Open the interactive Warning Escalation panel"),
+        )
+        .addSubcommand((s) =>
+          s.setName("set").setDescription("Configure warning thresholds"),
+        )
+        .addSubcommand((s) =>
+          s.setName("remove").setDescription("Remove warning thresholds"),
+        )
+        .addSubcommand((s) =>
+          s.setName("list").setDescription("List active warning thresholds"),
+        ),
     );
   }
 
   public async showPanel(ctx: CommandContext): Promise<void> {
     await ctx.defer();
     const thresholds = await getThresholds(container, ctx.guildId!);
-    const decayRaw = await container.db.config.getModuleConfig(ctx.guildId!, "mod", "warn_decay_days");
+    const decayRaw = await container.db.config.getModuleConfig(
+      ctx.guildId!,
+      "mod",
+      "warn_decay_days",
+    );
     const decayDays = typeof decayRaw === "number" ? decayRaw : 30;
 
     await ctx.reply(buildWarnThresholdsPanel(thresholds, decayDays));

@@ -14,8 +14,7 @@ body:
       description: Select the primary package or service where the issue occurs
       options:
         - "@lumi/core (Framework Core & Base Modules)"
-        - "@lumi/gateway (Discord Gateway Service)"
-        - "@lumi/worker (Event Worker Engine)"
+        - "@lumi/worker (Gateway Connection & Command Engine)"
         - "@lumi/scheduler (BullMQ Task Engine)"
         - "@lumi/dashboard (Web Dashboard)"
         - "@lumi/event-bus (Redis Streams Event Infrastructure)"

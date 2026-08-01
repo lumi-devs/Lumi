@@ -10,17 +10,8 @@ import { fetchTyped } from "#lib/commands.js";
 import { getService } from "#lib/module-system/Service.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";
+import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
 import { PANIC_REVERT_ID, buildPanicRevertedCard } from "../lib/panic-card.js";
-
-function memberRoleIds(member: unknown): string[] {
-  if (!member || typeof member !== "object") return [];
-  const roles = (member as { roles?: unknown }).roles;
-  if (Array.isArray(roles)) return roles as string[];
-  const cache = (roles as { cache?: { keys?: () => Iterable<string> } })?.cache;
-  if (cache && typeof cache.keys === "function") return Array.from(cache.keys());
-  if (cache && typeof cache === "object") return Object.keys(cache);
-  return [];
-}
 
 @ApplyOptions<InteractionHandler.Options>({
   name: "security-panic-revert",
@@ -34,6 +25,7 @@ export class PanicRevertInteractionHandler extends BaseInteractionHandler {
 
   public async run(interaction: ButtonInteraction) {
     if (!interaction.inGuild() || !interaction.guild) return;
+    await interaction.deferUpdate();
     const t = await fetchTyped(interaction);
 
     const hasPermit = await container.permitResolver.hasPermit({
@@ -44,7 +36,7 @@ export class PanicRevertInteractionHandler extends BaseInteractionHandler {
       guildOwnerId: interaction.guild.ownerId,
     });
     if (!hasPermit) {
-      return interaction.reply(
+      return interaction.followUp(
         ephemeralCard(
           makeErrorCard(t(PanelsKeys.PanicDeniedTitle), t(PanelsKeys.PanicDenied)),
         ),
@@ -53,11 +45,11 @@ export class PanicRevertInteractionHandler extends BaseInteractionHandler {
 
     const result = await getService("security").revertPanic(interaction.guild);
     if (!result) {
-      return interaction.update(
+      return interaction.editReply(
         makeErrorCard(t(PanelsKeys.PanicNotActiveTitle), t(PanelsKeys.PanicNotActive)),
       );
     }
 
-    return interaction.update(buildPanicRevertedCard(t, result.restoredCount));
+    return interaction.editReply(buildPanicRevertedCard(t, result.restoredCount));
   }
 }

@@ -1,4 +1,4 @@
-// Thin glue layer used by apps/gateway and LumiClient. Given a ShardPlan and Redis
+// Thin glue layer used by LumiClient. Given a ShardPlan and Redis
 // connections it returns a fully wired cluster topology: the shards this replica owns
 // (from ClusterCoordinator.join()), the coordinator (for rebalance subscriptions +
 // shutdown), the session store (passed into ws.{retrieve,update}SessionInfo), and an

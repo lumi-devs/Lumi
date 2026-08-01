@@ -3,6 +3,7 @@
 // imports, so it must live in its own module imported first in main.ts).
 
 import { startTracing } from "./tracing.js";
+import { startEventLoopMonitor } from "./event-loop.js";
 import { initMetrics, startMetricsServer } from "./metrics.js";
 
 export function bootstrapTelemetry(serviceName?: string): void {
@@ -28,6 +29,7 @@ export function bootstrapTelemetry(serviceName?: string): void {
   });
 
   initMetrics(svc);
+  startEventLoopMonitor();
   startMetricsServer(
     process.env["METRICS_PORT"] ? Number(process.env["METRICS_PORT"]) : 9090,
   );

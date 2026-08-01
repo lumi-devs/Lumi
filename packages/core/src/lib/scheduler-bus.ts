@@ -56,8 +56,8 @@ export interface FireEnvelope<
 
 /**
  * Publish a `create` request. Used by the role-aware `scheduleTask()` shim and
- * by ModModule.reconcileScheduledJobs(). Safe to call from any role: on
- * monolith the same process consumes it almost immediately.
+ * by ModModule.reconcileScheduledJobs(). Safe to call from any role: in a
+ * single process it is consumed almost immediately.
  */
 export async function publishCreateRequest<N extends keyof ScheduledTasks>(
   name: N,
@@ -88,9 +88,8 @@ export async function publishDeleteRequest(jobId: string): Promise<void> {
 }
 
 /**
- * Called by each ScheduledTask piece's `run()` on the scheduler. Workers (or
- * the monolith) consume the corresponding stream and run the registered
- * fire-handler.
+ * Called by each ScheduledTask piece's `run()` on the scheduler. Workers
+ * consume the corresponding stream and run the registered fire-handler.
  */
 export async function publishTaskFire<N extends keyof ScheduledTasks>(
   name: N,

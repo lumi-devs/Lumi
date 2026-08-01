@@ -96,9 +96,12 @@ describe("ServerInfoCommand", () => {
     it("should return early if message channel is not sendable", async () => {
       const mockMessage = {
         channel: { isSendable: () => false },
+        reply: vi.fn().mockResolvedValue(undefined),
       };
 
       await command.messageRun(mockMessage as any);
+
+      expect(mockMessage.reply).not.toHaveBeenCalled();
     });
 
     it("should send serverinfo reply card for sendable channel", async () => {
@@ -167,7 +170,18 @@ describe("ServerInfoCommand", () => {
       const mockT = (k: string, opts?: any) => `${k}${opts ? ":" + JSON.stringify(opts) : ""}`;
 
       const card = await (command as any).buildServerCard(mockCtx, mockT);
-      expect(card).toBeDefined();
+
+      const container = card.components[0].toJSON();
+      const textContent = container.components
+        .filter((c: any) => c.type === 10)
+        .map((c: any) => c.content)
+        .join("\n");
+      expect(textContent).not.toContain("serverinfoServerBoosts");
+
+      const actionRows = container.components.filter(
+        (c: any) => c.type === 1,
+      );
+      expect(actionRows).toHaveLength(0);
     });
   });
 });

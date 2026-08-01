@@ -4,7 +4,7 @@
   "emoji": "🛡️",
   "description": "The built-in core module.",
   "version": "1.0.0",
-  "disableable": true,
+  "disableable": false,
   "dependencies": [],
   "conflicts": [],
   "configOverrides": true,
@@ -12,7 +12,8 @@
   "subStores": [
     "commands",
     "listeners",
-    "interaction-handlers"
+    "interaction-handlers",
+    "scheduled-tasks"
   ],
   "configFields": []
 }

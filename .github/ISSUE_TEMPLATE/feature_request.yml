@@ -15,8 +15,7 @@ body:
       options:
         - "@lumi/core (Framework Core & Base Engine)"
         - "New Core Module (packages/core/src/modules/)"
-        - "@lumi/gateway (WebSocket Shard Gateway)"
-        - "@lumi/worker (Background Packet Consumer)"
+        - "@lumi/worker (Gateway Connection & Command Engine)"
         - "@lumi/scheduler (Scheduled Tasks Engine)"
         - "@lumi/dashboard (Web Management UI)"
         - "@lumi/event-bus (Event Streaming Infrastructure)"

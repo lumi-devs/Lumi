@@ -7,7 +7,6 @@
 
 # Apps entrypoints
 /apps/dashboard/ @lumi-devs/maintainers
-/apps/gateway/   @lumi-devs/maintainers
 /apps/worker/    @lumi-devs/maintainers
 /apps/scheduler/ @lumi-devs/maintainers
 

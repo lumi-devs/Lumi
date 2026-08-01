@@ -39,9 +39,7 @@ export class DownloadCommand extends BaseSubcommand {
         .setName(this.name)
         .setDescription(this.description)
         .addSubcommand((s) =>
-          s
-            .setName("panel")
-            .setDescription("Open the Add-ons Manager panel"),
+          s.setName("panel").setDescription("Open the Add-ons Manager panel"),
         )
         .addSubcommand((s) =>
           s
@@ -80,13 +78,14 @@ export class DownloadCommand extends BaseSubcommand {
 
   public async panel(ctx: CommandContext): Promise<void> {
     const t = await ctx.fetchT();
-    const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-      new ButtonBuilder()
-        .setCustomId("lumi:tab:addons")
-        .setLabel(t("core:openAddonsManager"))
-        .setEmoji(Emojis.parse(Emojis.REPO))
-        .setStyle(ButtonStyle.Primary),
-    );
+    const row =
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId("lumi:tab:addons")
+          .setLabel(t("core:openAddonsManager"))
+          .setEmoji(Emojis.parse(Emojis.REPO))
+          .setStyle(ButtonStyle.Primary),
+      );
 
     await ctx.reply(
       makeInfoCard(
@@ -126,7 +125,10 @@ export class DownloadCommand extends BaseSubcommand {
         `[Download] ${Emojis.ERROR} Install failed: ${moduleName} - ${msg_}`,
       );
       await ctx.reply(
-        makeErrorCard(`${Emojis.ERROR} ${t("core:failedInstallModuleTitle")}`, msg_),
+        makeErrorCard(
+          `${Emojis.ERROR} ${t("core:failedInstallModuleTitle")}`,
+          msg_,
+        ),
       );
     }
   }
@@ -136,7 +138,10 @@ export class DownloadCommand extends BaseSubcommand {
     const moduleName = (await ctx.getString("module", { required: true }))!;
 
     await ctx.reply(
-      makeInfoCard(t("core:uninstallingModuleTitle"), t("core:uninstallingModuleText", { moduleName })),
+      makeInfoCard(
+        t("core:uninstallingModuleTitle"),
+        t("core:uninstallingModuleText", { moduleName }),
+      ),
     );
 
     try {
@@ -155,7 +160,9 @@ export class DownloadCommand extends BaseSubcommand {
       this.container.logger.warn(
         `[Download] Uninstall failed: ${moduleName} - ${msg_}`,
       );
-      await ctx.reply(makeErrorCard(t("core:failedUninstallModuleTitle"), msg_));
+      await ctx.reply(
+        makeErrorCard(t("core:failedUninstallModuleTitle"), msg_),
+      );
     }
   }
 }

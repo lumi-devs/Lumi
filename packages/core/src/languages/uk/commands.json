@@ -240,7 +240,6 @@
   "aboutTagline": "Bringing modular harmony to Discord.",
   "aboutInstanceStats": "INSTANCE STATISTICS",
   "aboutCoreArch": "CORE ARCHITECTURE",
-  "aboutLoadedModules": "LOADED MODULES",
   "permitName": "permit",
   "permitDescription": "Grant, revoke, or list permit nodes for roles and members",
   "permitGrantName": "grant",

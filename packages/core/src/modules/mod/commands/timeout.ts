@@ -1,14 +1,70 @@
+import { LanguageKeys } from "#lib/i18n/keys.js";
+import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
+import { formatDuration, parseDuration } from "#lib/utilities/time.js";
 import { ApplyOptions } from "@sapphire/decorators";
-import { type ApplicationCommandRegistry } from "@sapphire/framework";
+import { Result } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
-import { logError } from "#lib/utilities/errors.js";
-import { parseDuration, formatDuration } from "#lib/utilities/time.js";
+import type { ModerationCase } from "@prisma/client";
+import type { GuildMember } from "discord.js";
 import { MuteAction } from "../actions/index.js";
 
+const Root = LanguageKeys.Commands;
 const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000;
 
-@ApplyOptions<BaseSubcommand.Options>({
+type Flow = ModerationSubcommand.Flow<GuildMember, ModerationCase>;
+type TimedFlow = ModerationSubcommand.Flow<GuildMember, ModerationCase, number>;
+
+const TimeoutAdd: TimedFlow = {
+  logScope: "timeout add",
+  resolveTarget: (ctx) => ctx.getMember("member"),
+  preHandle: async (ctx, t) => {
+    const input = await ctx.getString("duration");
+    const durationMs = input ? parseDuration(input) : null;
+    if (!durationMs) {
+      return Result.err({
+        title: t(Root.TimeoutInvalidDurationTitle),
+        body: t(Root.TimeoutInvalidDuration),
+      });
+    }
+    if (durationMs > MAX_TIMEOUT_MS) {
+      return Result.err({
+        title: t(Root.TimeoutTooLongTitle),
+        body: t(Root.TimeoutTooLong),
+      });
+    }
+    return Result.ok(durationMs);
+  },
+  action: ({ guild, target, moderator, reason, prepared }) =>
+    MuteAction.apply({
+      guild,
+      targetMember: target,
+      moderator,
+      reason,
+      durationMs: prepared,
+    }),
+  buildSuccessMessage: (t, { target, reason, prepared, outcome }) => ({
+    title: t(Root.TimeoutSuccessTitle),
+    body: t(Root.TimeoutSuccess, {
+      user: target.user.username,
+      duration: formatDuration(prepared),
+      reason,
+      caseNumber: outcome.caseNumber,
+    }),
+  }),
+};
+
+const TimeoutRemove: Flow = {
+  logScope: "timeout remove",
+  resolveTarget: (ctx) => ctx.getMember("member"),
+  action: ({ guild, target, moderator, reason }) =>
+    MuteAction.undo({ guild, targetMember: target, moderator, reason }),
+  buildSuccessMessage: (t, { target }) => ({
+    title: t(Root.TimeoutRemovedTitle),
+    body: t(Root.TimeoutRemoved, { user: target.user.username }),
+  }),
+};
+
+@ApplyOptions<ModerationSubcommand.Options>({
   name: "timeout",
   description: "Timeout or untimeout a member",
   preconditions: ["GuildOnly"],
@@ -19,9 +75,9 @@ const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000;
     { name: "remove", run: "remove" },
   ],
 })
-export class TimeoutCommand extends BaseSubcommand {
+export class TimeoutCommand extends ModerationSubcommand {
   public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
+    registry: ModerationSubcommand.Registry,
   ) {
     registry.registerChatInputCommand((b) =>
       applyLocalizedBuilder(b, "commands:timeout")
@@ -55,94 +111,11 @@ export class TimeoutCommand extends BaseSubcommand {
     );
   }
 
-  public async add(ctx: CommandContext) {
-    await ctx.defer();
-    const t = await ctx.fetchT();
-    const member = await ctx.getMember("member");
-    const durationStr = await ctx.getString("duration");
-    const reason =
-      (await ctx.getString("reason", { rest: true })) ??
-      t("commands:modNoReason");
-
-    if (!member) {
-      return ctx.replyError(
-        t("commands:modMemberNotFoundTitle"),
-        t("commands:modMemberNotFound"),
-      );
-    }
-    const ms = durationStr ? parseDuration(durationStr) : null;
-    if (!ms) {
-      return ctx.replyError(
-        t("commands:timeoutInvalidDurationTitle"),
-        t("commands:timeoutInvalidDuration"),
-      );
-    }
-    if (ms > MAX_TIMEOUT_MS) {
-      return ctx.replyError(
-        t("commands:timeoutTooLongTitle"),
-        t("commands:timeoutTooLong"),
-      );
-    }
-
-    let c;
-    try {
-      c = await MuteAction.apply({
-        guild: ctx.guild!,
-        targetMember: member,
-        moderator: ctx.user,
-        reason,
-        durationMs: ms,
-      });
-    } catch (err: unknown) {
-      logError(`timeout add: guild=${ctx.guildId} target=${member.id}`, err);
-      return ctx.replyError(
-        t("commands:modActionFailedTitle"),
-        t("commands:modActionFailed"),
-      );
-    }
-    return ctx.replySuccess(
-      t("commands:timeoutSuccessTitle"),
-      t("commands:timeoutSuccess", {
-        user: member.user.username,
-        duration: formatDuration(ms),
-        reason,
-        caseNumber: c.caseNumber,
-      }),
-    );
+  public add(ctx: ModerationSubcommand.RunContext) {
+    return this.runFlow(ctx, TimeoutAdd);
   }
 
-  public async remove(ctx: CommandContext) {
-    await ctx.defer();
-    const t = await ctx.fetchT();
-    const member = await ctx.getMember("member");
-    const reason =
-      (await ctx.getString("reason", { rest: true })) ??
-      t("commands:modNoReason");
-
-    if (!member) {
-      return ctx.replyError(
-        t("commands:modMemberNotFoundTitle"),
-        t("commands:modMemberNotFound"),
-      );
-    }
-
-    try {
-      await MuteAction.undo({
-        guild: ctx.guild!,
-        targetMember: member,
-        moderator: ctx.user,
-        reason,
-      });
-    } catch (err: unknown) {
-      logError(`timeout remove: guild=${ctx.guildId} target=${member.id}`, err);
-      return ctx.replyError(
-        t("commands:modActionFailedTitle"),
-        t("commands:modActionFailed"),
-      );
-    }
-    return ctx.replySuccess(
-      t("commands:timeoutRemovedTitle"),
-      t("commands:timeoutRemoved", { user: member.user.username }),
-    );
+  public remove(ctx: ModerationSubcommand.RunContext) {
+    return this.runFlow(ctx, TimeoutRemove);
   }
 }

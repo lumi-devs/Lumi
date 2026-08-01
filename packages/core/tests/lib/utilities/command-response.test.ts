@@ -5,6 +5,7 @@ import { MessageFlags } from "discord.js";
 import {
   errorCard,
   sendInteractionReply,
+  updatePanel,
   respond,
   respondMessage,
   handleDenied,
@@ -100,6 +101,81 @@ describe("command-response utilities", () => {
       const res = await sendInteractionReply(interaction, { content: "direct reply" });
       expect(interaction.reply).toHaveBeenCalledWith({ content: "direct reply" });
       expect(res).toBeUndefined();
+    });
+  });
+
+  describe("updatePanel", () => {
+    const card = {
+      components: [{ toJSON: () => ({ type: 17 }) }],
+      flags: MessageFlags.IsComponentsV2,
+      allowedMentions: { parse: [] },
+    } as any;
+    const expectedPayload = {
+      components: card.components,
+      flags: MessageFlags.IsComponentsV2,
+      allowedMentions: card.allowedMentions,
+    };
+
+    it("calls editReply when the interaction is already deferred or replied", async () => {
+      const interaction = {
+        deferred: true,
+        replied: false,
+        editReply: vi.fn().mockResolvedValue(undefined),
+        update: vi.fn(),
+        reply: vi.fn(),
+      } as any;
+
+      await updatePanel(interaction, card);
+      expect(interaction.editReply).toHaveBeenCalledWith(expectedPayload);
+      expect(interaction.update).not.toHaveBeenCalled();
+      expect(interaction.reply).not.toHaveBeenCalled();
+    });
+
+    it("calls update() when the interaction supports it and is not deferred/replied", async () => {
+      const interaction = {
+        deferred: false,
+        replied: false,
+        update: vi.fn().mockResolvedValue(undefined),
+        editReply: vi.fn(),
+        reply: vi.fn(),
+      } as any;
+
+      await updatePanel(interaction, card);
+      expect(interaction.update).toHaveBeenCalledWith(expectedPayload);
+      expect(interaction.editReply).not.toHaveBeenCalled();
+      expect(interaction.reply).not.toHaveBeenCalled();
+    });
+
+    it("calls reply() for a fresh interaction with no update()", async () => {
+      const interaction = {
+        deferred: false,
+        replied: false,
+        reply: vi.fn().mockResolvedValue(undefined),
+        editReply: vi.fn(),
+      } as any;
+
+      await updatePanel(interaction, card);
+      expect(interaction.reply).toHaveBeenCalledWith({
+        ...expectedPayload,
+        flags: MessageFlags.IsComponentsV2,
+      });
+      expect(interaction.editReply).not.toHaveBeenCalled();
+    });
+
+    it("swallows errors from editReply/update/reply and debug-logs them", async () => {
+      const interaction = {
+        deferred: true,
+        replied: false,
+        editReply: vi.fn().mockRejectedValue(new Error("Unknown Message")),
+      } as any;
+
+      await expect(updatePanel(interaction, card)).resolves.toBeUndefined();
+      expect(container.logger.debug).toHaveBeenCalledWith(
+        expect.stringContaining("[panel] update failed:")
+      );
+      expect(container.logger.debug).toHaveBeenCalledWith(
+        expect.stringContaining("Unknown Message")
+      );
     });
   });
 

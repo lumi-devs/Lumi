@@ -3,6 +3,14 @@ import { PermissionsBitField } from "discord.js";
 import { isGuildBasedChannel } from "@sapphire/discord.js-utilities";
 import { checkModulesEnabled } from "#lib/module-check.js";
 import { AsyncQueue } from "@sapphire/async-queue";
+import { createRequire } from "node:module";
+
+const _req = createRequire(import.meta.url);
+// Changesets bumps packages/core/package.json on every release merge - the
+// single source of truth for this number, never hand-edit it elsewhere.
+const corePackageVersion = (
+  _req("../../../package.json") as { version: string }
+).version;
 
 export function formatAuditReason(
   actor: User,
@@ -14,7 +22,7 @@ export function formatAuditReason(
 }
 
 export const LumiInfo = {
-  version: "2.1.1",
+  version: corePackageVersion,
   codename: "Elysian",
   tagline: "The next-generation modular Discord command center",
   inception: new Date("2026-07-11T07:50:00Z"),

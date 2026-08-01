@@ -1,7 +1,8 @@
 import os from "node:os";
 import path from "node:path";
-import { promises as fs } from "node:fs";
+import { promises as fs, existsSync } from "node:fs";
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import { container } from "@sapphire/framework";
 import { fetch, FetchResultTypes } from "@sapphire/fetch";
 import { Stopwatch } from "@sapphire/stopwatch";
@@ -366,12 +367,25 @@ async function hostStats() {
   };
 }
 
+// process.cwd() varies by role, so walk up from this file instead.
+function findRepoRoot(startDir: string): string {
+  let dir = startDir;
+  while (true) {
+    if (existsSync(path.join(dir, "turbo.json"))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) return startDir;
+    dir = parent;
+  }
+}
+
+const REPO_ROOT = findRepoRoot(path.dirname(fileURLToPath(import.meta.url)));
+
 let cachedDepCount: number | null = null;
 let cachedCodeLines: number | null = null;
 
 async function countDeps() {
   if (cachedDepCount !== null) return cachedDepCount;
-  const nmPath = path.join(process.cwd(), "node_modules");
+  const nmPath = path.join(REPO_ROOT, "node_modules");
   const dirs = await fs.readdir(nmPath).catch(() => []);
   cachedDepCount = dirs.filter((d) => !d.startsWith(".")).length;
   return cachedDepCount;
@@ -379,7 +393,7 @@ async function countDeps() {
 
 async function countCodeLines() {
   if (cachedCodeLines !== null) return cachedCodeLines;
-  const srcPath = path.join(process.cwd(), "packages", "core", "src");
+  const srcPath = path.join(REPO_ROOT, "packages", "core", "src");
   let total = 0;
   const walk = async (dir: string): Promise<void> => {
     const entries = await fs

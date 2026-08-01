@@ -5,12 +5,12 @@
   <img src="https://img.shields.io/badge/Bun-1.3+-black?style=for-the-badge&logo=bun" alt="Bun">
   <img src="https://img.shields.io/badge/TypeScript-5.9-blue?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Framework-Sapphire_v5-blue?style=for-the-badge" alt="Sapphire">
-  <img src="https://img.shields.io/badge/Role-worker%20%7C%20monolith-purple?style=for-the-badge" alt="Role">
+  <img src="https://img.shields.io/badge/Role-worker-purple?style=for-the-badge" alt="Role">
 </div>
 
 <br />
 
-The **Lumi Worker** (`@lumi/worker`) is the primary stateless execution engine of the Lumi bot ecosystem. It processes raw Discord gateway events consumed from the event bus, executes slash and chat commands, manages per-guild module logic, serves web dashboard RabbitMQ RPC requests, and handles database persistence.
+The **Lumi Worker** (`@lumi/worker`) is the primary execution engine of the Lumi bot ecosystem. It owns Lumi's Discord Gateway WebSocket connection, executes slash and chat commands, manages per-guild module logic, serves web dashboard RabbitMQ RPC requests, and handles database persistence.
 
 ---
 
@@ -27,14 +27,14 @@ The **Lumi Worker** (`@lumi/worker`) is the primary stateless execution engine o
 
 ## 🌟 Overview
 
-The worker application serves as the core processing engine in both monolithic and microservices deployments:
+The worker application serves as the core processing engine at every deployment size, from one process to a multi-replica cluster:
 
-- **WS-Suppressed Worker Execution**: In distributed mode (`LUMI_ROLE=worker`), WebSocket connection initiation is completely disabled. Packets arrive asynchronously via `RawGatewayConsumer` over Redis Streams.
+- **Owns the Gateway Connection**: The worker opens its own Discord Gateway WebSocket and handles the resulting dispatches in-process. Gateway ingestion and command/interaction handling are never split across processes - discord.js's internal packet handling assumes single-process invariants.
 - **Sapphire Framework Foundation**: Built on Sapphire Framework v5, providing modular command registration, listener stores, argument parsing, and command execution pipelines.
 - **Dynamic Module Store**: Loads built-in feature modules (`afk`, `core`, `dashboard`, `filter`, `logging`, `mod`, `tempvc`, `utility`) and dynamically mounts external third-party addons from `/lumi-addons` or custom development paths (`LUMI_DEV_PATHS`).
 - **Dashboard RPC Handler**: Serves asynchronous RabbitMQ RPC requests emitted by `@lumi/dashboard` to fetch live guild configurations and apply module state changes.
 - **High-Performance Caching**: Integrates `RedisEntityCache` and an `InvalidationBus` to cache guild configurations and user states, reducing database load.
-- **Horizontal Elasticity**: Stateless design allows worker instances to scale dynamically from 1 to 100+ replicas (e.g. via Kubernetes KEDA) based on consumer stream lag.
+- **Horizontal Scaling by Shard Range**: With `CLUSTER_NAME` set, `@lumi/sharding` assigns each replica a disjoint slice of the shard count returned by `GET /gateway/bot`, throttles IDENTIFY across replicas through Redis, and persists sessions so replacement pods RESUME rather than reconnect cold. Replica count is a deliberate shards-per-replica decision, not a queue-lag autoscaler target.
 
 ---
 
@@ -44,12 +44,12 @@ The worker application serves as the core processing engine in both monolithic a
 
 ```mermaid
 flowchart TD
-    subgraph Event Transport Backplane
-        EB{Redis Streams<br/>rawGatewayStream}
+    subgraph Discord
+        WS[Discord Gateway<br/>WebSocket]
     end
 
     subgraph Worker Process (apps/worker)
-        RGC[RawGatewayConsumer]
+        SH[LumiClient<br/>owned shards]
         Sapphire[Sapphire Framework Engine]
         MS[ModuleStore<br/>Built-in & Addon Modules]
         EC[(Redis Entity Cache)]
@@ -62,8 +62,8 @@ flowchart TD
         Dash[apps/dashboard]
     end
 
-    EB -->|Raw Gateway Packets| RGC
-    RGC -->|Inject Packet into Client| Sapphire
+    WS -->|Gateway Dispatch| SH
+    SH -->|In-process Event Emission| Sapphire
     Sapphire -->|Lookup Guild Settings| EC
     EC <-->|Cache Miss / Sync| DB
 
@@ -101,8 +101,10 @@ Configure `@lumi/worker` using environment variables:
 | Environment Variable | Required | Default | Description |
 |---|:---:|:---:|---|
 | `BOT_TOKEN` | **Yes** | - | Discord Bot Token from the Discord Developer Portal. |
-| `LUMI_ROLE` | No | `monolith` | Service role (`monolith` \| `worker`). |
-| `LUMI_CONSUMER_ID` | No | `worker-1` | Unique consumer ID for stream consumer group tracking. |
+| `LUMI_ROLE` | No | `worker` | Service role (`worker` \| `scheduler`). |
+| `LUMI_CONSUMER_ID` | No | `worker-1` | Unique consumer ID for stream consumer group tracking and cluster replica identity. |
+| `CLUSTER_NAME` | No | - | Enables multi-replica shard-range coordination via `@lumi/sharding`. Unset means single-process mode. |
+| `DISCORD_PROXY_URL` | No | - | Shared Discord REST proxy (`nirn-proxy`) base URL. Set this whenever more than one worker replica is running. |
 | `POSTGRES_URL` | **Yes** | - | PostgreSQL pooled connection string (PgBouncer). |
 | `DIRECT_POSTGRES_URL` | **Yes** | - | PostgreSQL direct connection string (used for schema migrations). |
 | `REDIS_HOST` | No | `localhost` | Redis server hostname. |
@@ -118,29 +120,30 @@ Configure `@lumi/worker` using environment variables:
 
 ## 🚀 Development & Running Instructions
 
-### Monolithic Development Mode (Single Process)
+### Single-Process Mode (Development & Small Deployments)
 
-In development, a worker can run in monolithic mode (`LUMI_ROLE=monolith`), maintaining its own Discord Gateway WebSocket connection:
+With `CLUSTER_NAME` unset, the worker connects to every shard itself:
 
 ```bash
-# Run monolithic bot worker
 bun apps/worker/src/main.ts
 ```
 
-### Distributed Worker Mode (Production)
+### Clustered Mode (Multi-Replica Production)
 
-In production, run workers with `LUMI_ROLE=worker` behind `@lumi/gateway`:
+Set `CLUSTER_NAME` on every replica and give each a unique `LUMI_CONSUMER_ID`. `@lumi/sharding` divides the shard count between them:
 
 ```bash
-LUMI_ROLE="worker" LUMI_CONSUMER_ID="worker-node-1" bun apps/worker/src/main.ts
+CLUSTER_NAME="lumi-prod" LUMI_CONSUMER_ID="worker-node-1" \
+DISCORD_PROXY_URL="http://nirn-proxy:8080" \
+bun apps/worker/src/main.ts
 ```
 
 ### Docker Compose
 
-Run workers in scaled mode using Docker Compose:
+Run additional worker replicas and the shared REST proxy using Docker Compose:
 
 ```bash
-docker compose --profile scale up -d worker-scale
+docker compose --profile scale up -d
 ```
 
 ---
@@ -154,7 +157,7 @@ The worker exposes an HTTP server on `METRICS_PORT` (default `9090`).
 | Endpoint | Method | Status Code | Description |
 |---|---|:---:|---|
 | `/healthz` | `GET` | `200` | Process liveness probe. |
-| `/readyz` | `GET` | `200` / `503` | Evaluates system probes (`postgres`, `redis`, `rabbitmq`, `raw-gateway-consumer`). |
+| `/readyz` | `GET` | `200` / `503` | Evaluates system probes (`postgres`, `redis`, `rabbitmq`). |
 | `/metrics` | `GET` | `200` | Exports Prometheus runtime, stream lag, and command execution metrics. |
 
 ### Registered Readiness Probes
@@ -162,4 +165,3 @@ The worker exposes an HTTP server on `METRICS_PORT` (default `9090`).
 - `postgres`: Confirms PostgreSQL connectivity via Prisma `SELECT 1`.
 - `redis`: Confirms Redis `PING` / `PONG` response.
 - `rabbitmq`: Verifies active connection to the RabbitMQ broker.
-- `raw-gateway-consumer`: Confirms that `RawGatewayConsumer` is actively reading from the event stream (`LUMI_ROLE=worker`).

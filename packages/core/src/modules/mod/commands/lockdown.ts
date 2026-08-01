@@ -14,16 +14,20 @@ import { ChannelType } from "discord.js";
   ],
 })
 export class LockdownCommand extends BaseSubcommand {
-  public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
+  public override registerApplicationCommands(
+    registry: ApplicationCommandRegistry,
+  ) {
     registry.registerChatInputCommand((b) =>
       b
         .setName(this.name)
         .setDescription(this.description)
         .addSubcommand((s) =>
-          s.setName("enable").setDescription("Lock down all text channels")
+          s.setName("enable").setDescription("Lock down all text channels"),
         )
         .addSubcommand((s) =>
-          s.setName("disable").setDescription("Remove lockdown from text channels")
+          s
+            .setName("disable")
+            .setDescription("Remove lockdown from text channels"),
         ),
     );
   }
@@ -49,12 +53,15 @@ export class LockdownCommand extends BaseSubcommand {
     }
 
     if (modified === 0 && failed > 0) {
-      return ctx.replyError("Lockdown Failed", `Could not modify permissions for ${failed} channels.`);
+      return ctx.replyError(
+        "Lockdown Failed",
+        `Could not modify permissions for ${failed} channels.`,
+      );
     }
 
     return ctx.replySuccess(
       "Lockdown Enabled",
-      `Successfully disabled SendMessages for @everyone in ${modified} text channel(s).`
+      `Successfully disabled SendMessages for @everyone in ${modified} text channel(s).`,
     );
   }
 
@@ -79,12 +86,15 @@ export class LockdownCommand extends BaseSubcommand {
     }
 
     if (modified === 0 && failed > 0) {
-      return ctx.replyError("Lockdown Disable Failed", `Could not modify permissions for ${failed} channels.`);
+      return ctx.replyError(
+        "Lockdown Disable Failed",
+        `Could not modify permissions for ${failed} channels.`,
+      );
     }
 
     return ctx.replySuccess(
       "Lockdown Disabled",
-      `Successfully restored SendMessages for @everyone in ${modified} text channel(s).`
+      `Successfully restored SendMessages for @everyone in ${modified} text channel(s).`,
     );
   }
 }

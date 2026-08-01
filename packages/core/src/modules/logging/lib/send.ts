@@ -1,8 +1,6 @@
 import { container } from "@sapphire/framework";
-import { time, TimestampStyles } from "@discordjs/formatters";
 import { getService } from "#lib/module-system/Service.js";
-import { makeCard, noPingCard, type CardReply } from "#lib/utilities/cards.js";
-import { swallow } from "#lib/utilities/errors.js";
+import { queueSend } from "#lib/outbound/send-queue.js";
 
 const MODULE = "logging";
 
@@ -31,6 +29,12 @@ export async function isIgnoredChannel(
   return ignored.includes(channelId);
 }
 
+/**
+ * Queue a log card for the guild's logging channel. Nothing waits on a log
+ * card, so it goes through the outbound queue rather than an inline REST call -
+ * a rate-limited log channel then parks one queue slot instead of blocking the
+ * event handler that produced it.
+ */
 export async function sendLog(
   guildId: string,
   color: number,
@@ -44,15 +48,5 @@ export async function sendLog(
   );
   if (!channelId || typeof channelId !== "string") return;
 
-  const channel =
-    container.client.channels.cache.get(channelId) ??
-    (await container.client.channels.fetch(channelId).catch(() => null));
-  if (!channel || !channel.isTextBased() || !("send" in channel)) return;
-
-  const card: CardReply = noPingCard(
-    makeCard(color, title, lines.join("\n"), {
-      footer: time(new Date(), TimestampStyles.ShortDateTime),
-    }),
-  );
-  await channel.send(card).catch(swallow("Logging: send log card"));
+  await queueSend({ channelId, logCard: { color, title, lines } });
 }

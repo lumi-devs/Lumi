@@ -2,7 +2,7 @@
   "name": "@lumi/event-bus",
   "version": "1.0.1",
   "license": "AGPL-3.0-only",
-  "description": "Cross-service event bus (Redis Streams) for the gateway/worker split. Carries raw Discord gateway packets and domain bus events with W3C trace propagation.",
+  "description": "Cross-service event bus (Redis Streams) between worker and scheduler. Carries domain bus events with W3C trace propagation.",
   "type": "module",
   "private": true,
   "exports": {

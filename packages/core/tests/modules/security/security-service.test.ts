@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
+import { ChannelType } from "discord.js";
 import { SecurityService } from "#modules/security/services/SecurityService.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { logToChannel } from "#lib/moderation/log.js";
@@ -195,5 +196,233 @@ describe("SecurityService.respond", () => {
       7,
       "security",
     );
+  });
+});
+
+describe("SecurityService.enterPanic / revertPanic", () => {
+  it(
+    "pauses invites, locks matching text channels, and snapshots prior overwrites",
+    async () => {
+      const disableInvites = vi.fn().mockResolvedValue(undefined);
+      const editC1 = vi.fn().mockResolvedValue(undefined);
+      const everyone = { id: "everyone-id" };
+      const channel1 = {
+        id: "c1",
+        type: ChannelType.GuildText,
+        permissionOverwrites: {
+          cache: { get: vi.fn().mockReturnValue(undefined) },
+          edit: editC1,
+        },
+      };
+      const voiceChannel = { id: "v1", type: ChannelType.GuildVoice };
+      const savePanicState = vi.fn().mockResolvedValue(undefined);
+      const panicGuild = {
+        id: "g-panic",
+        disableInvites,
+        channels: {
+          cache: new Map([
+            ["c1", channel1],
+            ["v1", voiceChannel],
+          ]),
+        },
+        roles: { everyone },
+      } as any;
+
+      const service = makeService({ db: { security: { savePanicState } } });
+
+      const result = await service.enterPanic(panicGuild, "actor-1", []);
+
+      expect(disableInvites).toHaveBeenCalledWith(true);
+      expect(editC1).toHaveBeenCalledWith(
+        everyone,
+        { SendMessages: false },
+        expect.objectContaining({ reason: expect.stringContaining("actor-1") }),
+      );
+      // The voice channel isn't a GuildText/GuildAnnouncement channel, so only
+      // c1 is a candidate and gets locked.
+      expect(result).toEqual({
+        invitesPaused: true,
+        lockedCount: 1,
+        skippedCount: 0,
+      });
+      expect(savePanicState).toHaveBeenCalledWith({
+        guildId: "g-panic",
+        actorId: "actor-1",
+        invitesPaused: true,
+        lockedChannels: { c1: null },
+      });
+    },
+    10000,
+  );
+
+  it(
+    "restores every snapshotted channel overwrite and resumes invites",
+    async () => {
+      const disableInvites = vi.fn().mockResolvedValue(undefined);
+      const editC1 = vi.fn().mockResolvedValue(undefined);
+      const everyone = { id: "everyone-id" };
+      const channel1 = {
+        id: "c1",
+        permissionOverwrites: { edit: editC1 },
+      };
+      const getPanicState = vi.fn().mockResolvedValue({
+        guildId: "g-panic",
+        actorId: "actor-1",
+        invitesPaused: true,
+        lockedChannels: { c1: true },
+      });
+      const clearPanicState = vi.fn().mockResolvedValue(undefined);
+      const panicGuild = {
+        id: "g-panic",
+        disableInvites,
+        channels: { cache: new Map([["c1", channel1]]) },
+        roles: { everyone },
+      } as any;
+
+      const service = makeService({
+        db: { security: { getPanicState, clearPanicState } },
+      });
+
+      const result = await service.revertPanic(panicGuild);
+
+      expect(disableInvites).toHaveBeenCalledWith(false);
+      expect(editC1).toHaveBeenCalledWith(
+        everyone,
+        { SendMessages: true },
+        expect.objectContaining({ reason: "Panic mode reverted" }),
+      );
+      expect(clearPanicState).toHaveBeenCalledWith("g-panic");
+      expect(result).toEqual({ restoredCount: 1 });
+    },
+    10000,
+  );
+
+  it("returns null when there is no saved panic state to revert", async () => {
+    const getPanicState = vi.fn().mockResolvedValue(null);
+    const service = makeService({ db: { security: { getPanicState } } });
+
+    const result = await service.revertPanic(guild);
+
+    expect(result).toBeNull();
+  });
+});
+
+describe("SecurityService.applyGateAction", () => {
+  it("kicks the member, creates a case, and logs to channel on the kick action", async () => {
+    const kick = vi.fn().mockResolvedValue(undefined);
+    const member = { id: "u1", kick };
+    const fetch = vi.fn().mockResolvedValue(member);
+    const createModerationCase = vi.fn().mockResolvedValue({ caseNumber: 9 });
+    const gateGuild = { id: "g1", members: { fetch } } as any;
+
+    const service = makeService({
+      db: { moderation: { createModerationCase } },
+    });
+
+    const result = await service.applyGateAction(
+      gateGuild,
+      "u1",
+      "kick",
+      "Underage account",
+    );
+
+    expect(kick).toHaveBeenCalledWith("Underage account");
+    expect(createModerationCase).toHaveBeenCalledWith(
+      expect.objectContaining({ guildId: "g1", userId: "u1", action: "kick" }),
+    );
+    expect(logToChannel).toHaveBeenCalledWith(
+      "g1",
+      expect.any(String),
+      expect.any(Number),
+      "u1",
+      expect.anything(),
+      "Underage account",
+      9,
+      "security",
+    );
+    expect(result).toBe(true);
+  });
+
+  it("applies quarantine without creating a moderation case directly", async () => {
+    const member = { id: "u1" };
+    const fetch = vi.fn().mockResolvedValue(member);
+    const createModerationCase = vi.fn();
+    const gateGuild = { id: "g1", members: { fetch } } as any;
+    const service = makeService({
+      db: { moderation: { createModerationCase } },
+    });
+
+    const result = await service.applyGateAction(
+      gateGuild,
+      "u1",
+      "quarantine",
+      "Raid join burst",
+    );
+
+    expect(QuarantineAction.apply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        guild: gateGuild,
+        targetMember: member,
+        reason: "Raid join burst",
+      }),
+    );
+    expect(createModerationCase).not.toHaveBeenCalled();
+    expect(result).toBe(true);
+  });
+
+  it("returns false when the member can't be fetched (already left)", async () => {
+    const fetch = vi.fn().mockResolvedValue(null);
+    const gateGuild = { id: "g1", members: { fetch } } as any;
+    const service = makeService({});
+
+    const result = await service.applyGateAction(gateGuild, "u1", "kick", "Raid");
+
+    expect(result).toBe(false);
+  });
+});
+
+describe("SecurityService.grantVerified", () => {
+  it("grants the verified role and strips the pending role", async () => {
+    const roleAdd = vi.fn().mockResolvedValue(undefined);
+    const roleRemove = vi.fn().mockResolvedValue(undefined);
+    const member = {
+      roles: {
+        add: roleAdd,
+        remove: roleRemove,
+        cache: new Map([["pending-role", {}]]),
+      },
+    };
+    const fetch = vi.fn().mockResolvedValue(member);
+    const getAllModuleConfig = vi.fn().mockResolvedValue({
+      verification_enabled: true,
+      verified_role_id: "verified-role",
+      verification_pending_role_id: "pending-role",
+    });
+    const verifyGuild = { id: "g1", members: { fetch } } as any;
+    const service = makeService({ db: { config: { getAllModuleConfig } } });
+
+    const result = await service.grantVerified(verifyGuild, "u1");
+
+    expect(roleAdd).toHaveBeenCalledWith(
+      "verified-role",
+      "Verification passed",
+    );
+    expect(roleRemove).toHaveBeenCalledWith(
+      "pending-role",
+      "Verification passed",
+    );
+    expect(result).toBe(true);
+  });
+
+  it("denies verification when the guild has no verified role configured", async () => {
+    const fetch = vi.fn();
+    const getAllModuleConfig = vi.fn().mockResolvedValue({});
+    const verifyGuild = { id: "g1", members: { fetch } } as any;
+    const service = makeService({ db: { config: { getAllModuleConfig } } });
+
+    const result = await service.grantVerified(verifyGuild, "u1");
+
+    expect(result).toBe(false);
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

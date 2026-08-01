@@ -34,30 +34,26 @@ const httpClient = {
 describe('Dashboard Black-Box E2E Tests', () => {
   it('should redirect unauthenticated root requests to /login', async () => {
     const response = await httpClient.get('/');
-    if (response) {
-      expect([302, 303, 307]).toContain(response.status);
-      expect(response.headers.get('location')).toBe('/login');
-    }
+    expect(response, 'dashboard unreachable — is it running?').not.toBeNull();
+    expect([302, 303, 307]).toContain(response!.status);
+    expect(response!.headers.get('location')).toBe('/login');
   });
 
   it('should reject unauthenticated access to protected API endpoints', async () => {
     const response = await httpClient.get('/api/v1/guilds');
-    if (response) {
-      expect([401, 302, 403]).toContain(response.status);
-    }
+    expect(response, 'dashboard unreachable — is it running?').not.toBeNull();
+    expect([401, 302, 403]).toContain(response!.status);
   });
 
   it('should return 404 for non-existent routes without exposing internal stack trace', async () => {
     const response = await httpClient.get('/api/v1/non-existent-endpoint');
-    if (response) {
-      expect(response.status).toBe(404);
-    }
+    expect(response, 'dashboard unreachable — is it running?').not.toBeNull();
+    expect(response!.status).toBe(404);
   });
 
   it('should handle malformed POST payload gracefully', async () => {
     const response = await httpClient.post('/api/v1/auth', { malformed: true });
-    if (response) {
-      expect([400, 401, 404]).toContain(response.status);
-    }
+    expect(response, 'dashboard unreachable — is it running?').not.toBeNull();
+    expect([400, 401, 404]).toContain(response!.status);
   });
 });

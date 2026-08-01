@@ -49,7 +49,8 @@ const ModuleUninstallSchema = s.object({
   displayName: "Core",
   description: "The built-in core module.",
   emoji: Emojis.SHIELD,
-    version: "1.0.0",
+  version: "1.0.0",
+  disableable: false,
 })
 export class CoreModule extends Module {
   public constructor(
@@ -60,7 +61,7 @@ export class CoreModule extends Module {
       ...options,
       name: "core",
       enabled: true,
-            displayName: "Core",
+      displayName: "Core",
       description: "The built-in core module.",
       emoji: Emojis.SHIELD,
     });

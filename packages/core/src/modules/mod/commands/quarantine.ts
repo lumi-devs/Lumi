@@ -1,11 +1,72 @@
+import { LanguageKeys } from "#lib/i18n/keys.js";
+import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
-import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
-import { logError } from "#lib/utilities/errors.js";
+import type { ModerationCase } from "@prisma/client";
+import type { GuildMember } from "discord.js";
 import { QuarantineAction } from "../actions/index.js";
 
-@ApplyOptions<BaseSubcommand.Options>({
+const Root = LanguageKeys.Commands;
+
+type Flow = ModerationSubcommand.Flow<GuildMember, ModerationCase>;
+
+function isSentinel(error: unknown, message: string): boolean {
+  return error instanceof Error && error.message === message;
+}
+
+const QuarantineAdd: Flow = {
+  logScope: "quarantine add",
+  resolveTarget: (ctx) => ctx.getMember("member"),
+  action: ({ guild, target, moderator, reason }) =>
+    QuarantineAction.apply({ guild, targetMember: target, moderator, reason }),
+  mapExpectedError: (t, error, { target }) => {
+    if (isSentinel(error, "UNCONFIGURED")) {
+      return {
+        title: t(Root.QuarantineUnconfiguredTitle),
+        body: t(Root.QuarantineUnconfigured),
+      };
+    }
+    if (isSentinel(error, "ALREADY_QUARANTINED")) {
+      return {
+        title: t(Root.QuarantineAlreadyTitle),
+        body: t(Root.QuarantineAlready, { user: target.user.username }),
+      };
+    }
+    return null;
+  },
+  buildSuccessMessage: (t, { target, reason, outcome }) => ({
+    title: t(Root.QuarantineSuccessTitle),
+    body: t(Root.QuarantineSuccess, {
+      user: target.user.username,
+      reason,
+      caseNumber: outcome.caseNumber,
+    }),
+  }),
+};
+
+const QuarantineRemove: Flow = {
+  logScope: "quarantine remove",
+  resolveTarget: (ctx) => ctx.getMember("member"),
+  action: ({ guild, target, moderator, reason }) =>
+    QuarantineAction.undo({ guild, targetMember: target, moderator, reason }),
+  mapExpectedError: (t, error, { target }) =>
+    isSentinel(error, "NOT_QUARANTINED")
+      ? {
+          title: t(Root.QuarantineNotTitle),
+          body: t(Root.QuarantineNot, { user: target.user.username }),
+        }
+      : null,
+  buildSuccessMessage: (t, { target, reason, outcome }) => ({
+    title: t(Root.QuarantineReleasedTitle),
+    body: t(Root.QuarantineReleased, {
+      user: target.user.username,
+      reason,
+      caseNumber: outcome.caseNumber,
+    }),
+  }),
+};
+
+@ApplyOptions<ModerationSubcommand.Options>({
   name: "quarantine",
   description: "Quarantine or release a member",
   preconditions: ["GuildOnly"],
@@ -16,9 +77,9 @@ import { QuarantineAction } from "../actions/index.js";
     { name: "remove", run: "remove" },
   ],
 })
-export class QuarantineCommand extends BaseSubcommand {
+export class QuarantineCommand extends ModerationSubcommand {
   public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
+    registry: ModerationSubcommand.Registry,
   ) {
     registry.registerChatInputCommand((b) =>
       applyLocalizedBuilder(b, "commands:quarantine")
@@ -47,103 +108,11 @@ export class QuarantineCommand extends BaseSubcommand {
     );
   }
 
-  public async add(ctx: CommandContext) {
-    await ctx.defer();
-    const t = await ctx.fetchT();
-    const member = await ctx.getMember("member");
-    const reason =
-      (await ctx.getString("reason", { rest: true })) ??
-      t("commands:modNoReason");
-    if (!member) {
-      return ctx.replyError(
-        t("commands:modMemberNotFoundTitle"),
-        t("commands:modMemberNotFound"),
-      );
-    }
-    const guildId = ctx.guildId!;
-
-    let c;
-    try {
-      c = await QuarantineAction.apply({
-        guild: ctx.guild!,
-        targetMember: member,
-        moderator: ctx.user,
-        reason,
-      });
-    } catch (err: unknown) {
-      if (err instanceof Error && err.message === "UNCONFIGURED") {
-        return ctx.replyError(
-          t("commands:quarantineUnconfiguredTitle"),
-          t("commands:quarantineUnconfigured"),
-        );
-      }
-      if (err instanceof Error && err.message === "ALREADY_QUARANTINED") {
-        return ctx.replyError(
-          t("commands:quarantineAlreadyTitle"),
-          t("commands:quarantineAlready", { user: member.user.username }),
-        );
-      }
-      logError(`quarantine add: guild=${guildId} target=${member.id}`, err);
-      return ctx.replyError(
-        t("commands:modActionFailedTitle"),
-        t("commands:modActionFailed"),
-      );
-    }
-
-    return ctx.replySuccess(
-      t("commands:quarantineSuccessTitle"),
-      t("commands:quarantineSuccess", {
-        user: member.user.username,
-        reason,
-        caseNumber: c.caseNumber,
-      }),
-    );
+  public add(ctx: ModerationSubcommand.RunContext) {
+    return this.runFlow(ctx, QuarantineAdd);
   }
 
-  public async remove(ctx: CommandContext) {
-    await ctx.defer();
-    const t = await ctx.fetchT();
-    const member = await ctx.getMember("member");
-    const reason =
-      (await ctx.getString("reason", { rest: true })) ??
-      t("commands:modNoReason");
-    if (!member) {
-      return ctx.replyError(
-        t("commands:modMemberNotFoundTitle"),
-        t("commands:modMemberNotFound"),
-      );
-    }
-    const guildId = ctx.guildId!;
-
-    let c;
-    try {
-      c = await QuarantineAction.undo({
-        guild: ctx.guild!,
-        targetMember: member,
-        moderator: ctx.user,
-        reason,
-      });
-    } catch (err: unknown) {
-      if (err instanceof Error && err.message === "NOT_QUARANTINED") {
-        return ctx.replyError(
-          t("commands:quarantineNotTitle"),
-          t("commands:quarantineNot", { user: member.user.username }),
-        );
-      }
-      logError(`quarantine remove: guild=${guildId} target=${member.id}`, err);
-      return ctx.replyError(
-        t("commands:modActionFailedTitle"),
-        t("commands:modActionFailed"),
-      );
-    }
-
-    return ctx.replySuccess(
-      t("commands:quarantineReleasedTitle"),
-      t("commands:quarantineReleased", {
-        user: member.user.username,
-        reason,
-        caseNumber: c.caseNumber,
-      }),
-    );
+  public remove(ctx: ModerationSubcommand.RunContext) {
+    return this.runFlow(ctx, QuarantineRemove);
   }
 }

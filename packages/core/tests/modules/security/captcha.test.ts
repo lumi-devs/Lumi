@@ -42,7 +42,7 @@ describe("advanceCaptcha", () => {
     const state = freshState();
     advanceCaptcha(state, state.sequence[0]!);
     expect(state.progress).toBe(1);
-    const wrong = state.buttons.find((b) => b !== state.sequence[0])!;
+    const wrong = state.buttons.find((b) => !state.sequence.includes(b))!;
     const { outcome } = advanceCaptcha(state, wrong);
     expect(outcome).toBe("wrong");
     expect(state.progress).toBe(0);

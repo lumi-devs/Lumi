@@ -7,7 +7,8 @@ import "./preconditions/ModuleEnabled.js";
 import "./preconditions/NotBlocked.js";
 import "./preconditions/NotIgnored.js";
 import "./preconditions/RequirePermit.js";
-import { PermitResolver } from "./PermitResolver.js";
+import { PermitResolver, permitResolver } from "./PermitResolver.js";
+import { memberRoleIds } from "./preconditions/RequirePermit.js";
 
 export * from "./PermitResolver.js";
 
@@ -56,4 +57,29 @@ export async function resolvePermissionLevel(target: unknown): Promise<number> {
   }
 
   return PermissionLevel.USER;
+}
+
+/**
+ * Wick-style permit-node check for interaction handlers, which (unlike
+ * Command pieces) never run through RequirePermitPrecondition. Mirrors
+ * that precondition's guild/user/role extraction against `target`.
+ */
+export async function hasRequiredPermit(
+  target: unknown,
+  permitNode: string,
+): Promise<boolean> {
+  if (!target || typeof target !== "object") return false;
+  const t = target as Record<string, unknown>;
+  const userId = (t.user as { id?: string })?.id ?? (t.userId as string);
+  const guildId = (t.guildId as string | null) ?? (t.guild as { id?: string })?.id;
+  if (!userId || !guildId) return false;
+
+  const guild = (t.guild as { ownerId?: string }) ?? null;
+  return permitResolver.hasPermit({
+    guildId,
+    userId,
+    roleIds: memberRoleIds(t.member),
+    permitNode,
+    guildOwnerId: guild?.ownerId ?? "",
+  });
 }

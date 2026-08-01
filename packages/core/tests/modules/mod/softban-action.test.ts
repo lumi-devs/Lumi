@@ -60,4 +60,50 @@ describe("SoftbanAction", () => {
       expect.anything(),
     );
   });
+
+  it("SoftbanAction.apply formats the audit reason and reuses it for the unban", async () => {
+    const banSpy = vi.fn().mockResolvedValue({});
+    const unbanSpy = vi.fn().mockResolvedValue({});
+    const sendSpy = vi.fn().mockResolvedValue({});
+
+    const mockGuild = {
+      id: "g-100",
+      name: "Test Guild",
+      members: { ban: banSpy },
+      bans: { remove: unbanSpy },
+    };
+
+    const mockTarget = { id: "user-200", tag: "Target#0001", send: sendSpy };
+    const mockModerator = { id: "mod-300", tag: "Moderator#0001" };
+
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({
+      caseNumber: 42,
+    });
+
+    const caseResult = await SoftbanAction.apply({
+      guild: mockGuild as any,
+      targetUser: mockTarget as any,
+      moderator: mockModerator as any,
+      reason: "Spamming links",
+      deleteMessageDays: 2,
+    });
+
+    expect(sendSpy).toHaveBeenCalled();
+    expect(banSpy).toHaveBeenCalledWith("user-200", {
+      reason: "[Moderator#0001 | mod-300] [Softban] Spamming links",
+      deleteMessageSeconds: 2 * 86400,
+    });
+    expect(unbanSpy).toHaveBeenCalledWith(
+      "user-200",
+      "[Moderator#0001 | mod-300] [Softban] Spamming links",
+    );
+    expect(container.db.moderation.createModerationCase).toHaveBeenCalledWith({
+      guildId: "g-100",
+      userId: "user-200",
+      moderatorId: "mod-300",
+      action: "softban",
+      reason: "Spamming links",
+    });
+    expect(caseResult).toEqual({ caseNumber: 42 });
+  });
 });

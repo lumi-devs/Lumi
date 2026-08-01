@@ -1,9 +1,9 @@
 import { container } from "@sapphire/framework";
 import { shutdownTracing, runDrainSequence } from "@lumi/observability";
-import { LumiClient, type LumiClientOptions } from "./LumiClient.js";
+import { LumiClient } from "./LumiClient.js";
 import { envParseString } from "#lib/env.js";
 
-export interface BootstrapAppOptions extends LumiClientOptions {
+export interface BootstrapAppOptions extends LumiClient.Options {
   onlineMessage?: string;
   extraDrainSteps?: Array<{ name: string; run: () => Promise<void> | void }>;
 }

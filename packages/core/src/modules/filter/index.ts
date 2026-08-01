@@ -1,6 +1,11 @@
 import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
+import { parseConfigList } from "#lib/module-system/config-schema.js";
 import { tryGetService } from "#lib/module-system/Service.js";
 import { ChannelType } from "discord.js";
+import {
+  shutdownRegexWorker,
+  validateRegexPattern,
+} from "#lib/regex-worker/index.js";
 import { DEFAULT_WARN_MESSAGE } from "./lib/rules.js";
 
 /** Config keys the FilterService compiles into its per-guild rule set -
@@ -45,7 +50,7 @@ const COMPILED_KEYS = [
       group: "Terms & Patterns",
       label: "Regex Rules",
       description:
-        "Comma-separated regular expressions to block (case-insensitive, max 256 chars each). Invalid patterns are skipped.",
+        "Comma-separated regular expressions to block (case-insensitive, max 256 chars each). Invalid patterns are skipped; patterns that backtrack catastrophically are rejected when saved.",
       list: true,
     }),
     block_invites: cfg.boolean({
@@ -222,13 +227,27 @@ export class FilterModule extends Module {
         },
       );
     }
+    // Reject catastrophic patterns at save time so they are never reachable
+    // from the message path in the first place.
+    this.container.configValueValidators.set(
+      "filter:regex_rules",
+      async (value) => {
+        for (const pattern of parseConfigList(value)) {
+          const reason = await validateRegexPattern(pattern);
+          if (reason) return `\`${pattern}\` - ${reason}`;
+        }
+        return null;
+      },
+    );
     return super.onLoad();
   }
 
-  public override onUnload() {
+  public override async onUnload() {
     for (const key of COMPILED_KEYS) {
       this.container.configChangeHooks.delete(`filter:${key}`);
     }
+    this.container.configValueValidators.delete("filter:regex_rules");
+    await shutdownRegexWorker();
     return super.onUnload();
   }
 }

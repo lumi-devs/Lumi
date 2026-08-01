@@ -47,22 +47,29 @@ export class RepoCommand extends BaseSubcommand {
             .setDescription("Open Repository Management help and panel"),
         )
         .addSubcommand((s) =>
-          s
-            .setName("list")
-            .setDescription("List all added repositories"),
+          s.setName("list").setDescription("List all added repositories"),
         )
         .addSubcommand((s) =>
           s
             .setName("add")
             .setDescription("Add a repository")
             .addStringOption((o) =>
-              o.setName("name").setDescription("Unique repo name").setRequired(true),
+              o
+                .setName("name")
+                .setDescription("Unique repo name")
+                .setRequired(true),
             )
             .addStringOption((o) =>
-              o.setName("url").setDescription("Git clone URL").setRequired(true),
+              o
+                .setName("url")
+                .setDescription("Git clone URL")
+                .setRequired(true),
             )
             .addStringOption((o) =>
-              o.setName("branch").setDescription("Branch name (default: default)").setRequired(false),
+              o
+                .setName("branch")
+                .setDescription("Branch name (default: default)")
+                .setRequired(false),
             ),
         )
         .addSubcommand((s) =>
@@ -70,7 +77,10 @@ export class RepoCommand extends BaseSubcommand {
             .setName("remove")
             .setDescription("Remove an added repository")
             .addStringOption((o) =>
-              o.setName("name").setDescription("Repo name to remove").setRequired(true),
+              o
+                .setName("name")
+                .setDescription("Repo name to remove")
+                .setRequired(true),
             ),
         )
         .addSubcommand((s) =>
@@ -78,7 +88,10 @@ export class RepoCommand extends BaseSubcommand {
             .setName("update")
             .setDescription("Update/pull latest changes for a repository")
             .addStringOption((o) =>
-              o.setName("name").setDescription("Repo name to update (or 'all')").setRequired(true),
+              o
+                .setName("name")
+                .setDescription("Repo name to update (or 'all')")
+                .setRequired(true),
             ),
         )
         .addSubcommand((s) =>
@@ -86,7 +99,10 @@ export class RepoCommand extends BaseSubcommand {
             .setName("modules")
             .setDescription("List available modules inside a repository")
             .addStringOption((o) =>
-              o.setName("repo_name").setDescription("Repository name").setRequired(true),
+              o
+                .setName("repo_name")
+                .setDescription("Repository name")
+                .setRequired(true),
             ),
         ),
     );
@@ -98,26 +114,31 @@ export class RepoCommand extends BaseSubcommand {
 
   public async help(ctx: CommandContext): Promise<void> {
     const t = await ctx.fetchT();
-    const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-      new ButtonBuilder()
-        .setCustomId("lumi:tab:addons")
-        .setLabel(t("core:openAddonsManager"))
-        .setEmoji(Emojis.parse(Emojis.REPO))
-        .setStyle(ButtonStyle.Primary),
-    );
+    const row =
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId("lumi:tab:addons")
+          .setLabel(t("core:openAddonsManager"))
+          .setEmoji(Emojis.parse(Emojis.REPO))
+          .setStyle(ButtonStyle.Primary),
+      );
 
     await ctx.reply(
-      makeInfoCard(t("core:repoManagementTitle"), [
-        "Use the Add-ons Manager for the smoothest workflow: browse repositories, inspect modules, and install in a few clicks.",
-        "Quick command fallback:",
-        "- `,repo add <name> <url> [branch]`",
-        "- `,repo remove <name>`",
-        "- `,repo update <name>`",
-        "- `,repo list`",
-        "- `,repo modules <repo_name>`",
-      ], {
-        actionRows: [row],
-      }),
+      makeInfoCard(
+        t("core:repoManagementTitle"),
+        [
+          "Use the Add-ons Manager for the smoothest workflow: browse repositories, inspect modules, and install in a few clicks.",
+          "Quick command fallback:",
+          "- `,repo add <name> <url> [branch]`",
+          "- `,repo remove <name>`",
+          "- `,repo update <name>`",
+          "- `,repo list`",
+          "- `,repo modules <repo_name>`",
+        ],
+        {
+          actionRows: [row],
+        },
+      ),
     );
   }
 
@@ -129,7 +150,10 @@ export class RepoCommand extends BaseSubcommand {
       (await ctx.getString("branch", { required: false })) ?? "default";
 
     await ctx.reply(
-      makeInfoCard(t("core:addingRepoTitle"), t("core:addingRepoText", { name })),
+      makeInfoCard(
+        t("core:addingRepoTitle"),
+        t("core:addingRepoText", { name }),
+      ),
     );
 
     try {
@@ -211,7 +235,10 @@ export class RepoCommand extends BaseSubcommand {
         `[Repo] ${Emojis.ERROR} Failed to update repo: ${name} - ${msg_}`,
       );
       await ctx.reply(
-        makeErrorCard(`${Emojis.ERROR} ${t("core:failedUpdateRepoTitle")}`, msg_),
+        makeErrorCard(
+          `${Emojis.ERROR} ${t("core:failedUpdateRepoTitle")}`,
+          msg_,
+        ),
       );
     }
   }
@@ -221,10 +248,7 @@ export class RepoCommand extends BaseSubcommand {
     const repos = await this.downloaderService.listRepos();
     if (!repos.length) {
       await ctx.reply(
-        makeErrorCard(
-          t("core:noReposTitle"),
-          t("core:noReposText"),
-        ),
+        makeErrorCard(t("core:noReposTitle"), t("core:noReposText")),
       );
       return;
     }
@@ -265,7 +289,9 @@ export class RepoCommand extends BaseSubcommand {
       const list = modules
         .filter((m) => !m.hidden)
         .map((m) => {
-          const badge = installedNames.has(m.name) ? t("core:installedBadge") : "";
+          const badge = installedNames.has(m.name)
+            ? t("core:installedBadge")
+            : "";
           return `**${m.name}** (v${m.version})${badge}\n*${m.short}*`;
         });
       await paginateList({

@@ -1,13 +1,66 @@
+import { LanguageKeys } from "#lib/i18n/keys.js";
+import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
-import { type ApplicationCommandRegistry } from "@sapphire/framework";
+import { Result } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import { isNullish } from "@sapphire/utilities";
 import { userMention } from "@discordjs/formatters";
-import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
-import { logError } from "#lib/utilities/errors.js";
+import type { ModerationCase } from "@prisma/client";
+import type { User } from "discord.js";
 import { BanAction } from "../actions/index.js";
 
-@ApplyOptions<BaseSubcommand.Options>({
+const Root = LanguageKeys.Commands;
+const USER_ID_PATTERN = /^\d{17,20}$/;
+const SECONDS_PER_DAY = 86400;
+
+const BanAdd: ModerationSubcommand.Flow<User, ModerationCase, number> = {
+  logScope: "ban",
+  resolveTarget: (ctx) => ctx.getUser("user"),
+  preHandle: async (ctx) =>
+    Result.ok(ctx.isSlash ? ((await ctx.getInteger("delete_days")) ?? 0) : 0),
+  action: ({ guild, target, moderator, reason, prepared }) =>
+    BanAction.apply({
+      guild,
+      targetUser: target,
+      moderator,
+      reason,
+      deleteMessageSeconds: prepared * SECONDS_PER_DAY,
+    }),
+  buildSuccessMessage: (t, { target, reason, outcome }) => ({
+    title: t(Root.BanSuccessTitle),
+    body: t(Root.BanSuccess, {
+      user: userMention(target.id),
+      reason,
+      caseNumber: outcome.caseNumber,
+    }),
+  }),
+};
+
+const BanRemove: ModerationSubcommand.Flow<string, ModerationCase> = {
+  logScope: "unban",
+  resolveTarget: async (ctx) => {
+    const raw = await ctx.getString("user_id", { required: true });
+    return raw!.replace(/\D/g, "");
+  },
+  preHandle: (_ctx, t, target) =>
+    USER_ID_PATTERN.test(target)
+      ? Result.ok(null)
+      : Result.err({
+          title: t(Root.BanInvalidIdTitle),
+          body: t(Root.BanInvalidId),
+        }),
+  action: ({ guild, target, moderator, reason }) =>
+    BanAction.undo({ guild, targetId: target, moderator, reason }),
+  buildFailureMessage: (t) => ({
+    title: t(Root.ModActionFailedTitle),
+    body: t(Root.BanRemoveFailed),
+  }),
+  buildSuccessMessage: (t, { target }) => ({
+    title: t(Root.BanRemoveSuccessTitle),
+    body: t(Root.BanRemoveSuccess, { user: userMention(target) }),
+  }),
+};
+
+@ApplyOptions<ModerationSubcommand.Options>({
   name: "ban",
   description: "Ban or unban a user",
   preconditions: ["GuildOnly"],
@@ -20,9 +73,9 @@ import { BanAction } from "../actions/index.js";
     { name: "remove", run: "remove" },
   ],
 })
-export class BanCommand extends BaseSubcommand {
+export class BanCommand extends ModerationSubcommand {
   public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
+    registry: ModerationSubcommand.Registry,
   ) {
     registry.registerChatInputCommand((b) =>
       applyLocalizedBuilder(b, "commands:ban")
@@ -53,87 +106,11 @@ export class BanCommand extends BaseSubcommand {
     );
   }
 
-  public async add(ctx: CommandContext) {
-    await ctx.defer();
-    const t = await ctx.fetchT();
-    const user = await ctx.getUser("user");
-    if (isNullish(user)) {
-      return ctx.replyError(
-        t("commands:modMemberNotFoundTitle"),
-        t("commands:modMemberNotFound"),
-      );
-    }
-    const deleteDays = ctx.isSlash
-      ? ((await ctx.getInteger("delete_days")) ?? 0)
-      : 0;
-    const reason =
-      (await ctx.getString("reason", { rest: true })) ??
-      t("commands:modNoReason");
-
-    const guild = ctx.guild!;
-
-    let c;
-    try {
-      c = await BanAction.apply({
-        guild,
-        targetUser: user,
-        moderator: ctx.user,
-        reason,
-        deleteMessageSeconds: deleteDays * 86400,
-      });
-    } catch (err: unknown) {
-      logError(`ban: guild=${guild.id} target=${user.id}`, err);
-      return ctx.replyError(
-        t("commands:modActionFailedTitle"),
-        t("commands:modActionFailed"),
-      );
-    }
-
-    return ctx.replySuccess(
-      t("commands:banSuccessTitle"),
-      t("commands:banSuccess", {
-        user: userMention(user.id),
-        reason,
-        caseNumber: c.caseNumber,
-      }),
-    );
+  public add(ctx: ModerationSubcommand.RunContext) {
+    return this.runFlow(ctx, BanAdd);
   }
 
-  public async remove(ctx: CommandContext) {
-    await ctx.defer();
-    const t = await ctx.fetchT();
-    const rawId = await ctx.getString("user_id", { required: true });
-    const userId = rawId!.replace(/\D/g, "");
-    const reason =
-      (await ctx.getString("reason", { rest: true })) ??
-      t("commands:modNoReason");
-
-    if (!/^\d{17,20}$/.test(userId)) {
-      return ctx.replyError(
-        t("commands:banInvalidIdTitle"),
-        t("commands:banInvalidId"),
-      );
-    }
-
-    const guild = ctx.guild!;
-    try {
-      await BanAction.undo({
-        guild,
-        targetId: userId,
-        moderator: ctx.user,
-        reason,
-      });
-    } catch (err: unknown) {
-      logError(`unban: guild=${guild.id} target=${userId}`, err);
-      return ctx.replyError(
-        t("commands:modActionFailedTitle"),
-        t("commands:banRemoveFailed"),
-      );
-    }
-
-    return ctx.replySuccess(
-      t("commands:banRemoveSuccessTitle"),
-      t("commands:banRemoveSuccess", { user: userMention(userId) }),
-    );
+  public remove(ctx: ModerationSubcommand.RunContext) {
+    return this.runFlow(ctx, BanRemove);
   }
 }

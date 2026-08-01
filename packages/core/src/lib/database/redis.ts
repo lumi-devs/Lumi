@@ -55,6 +55,7 @@ export const RedisKeys = {
   auditLogsQueue: () => "lumi:queue:audit_logs",
 
   schedulerLeader: () => "lumi:scheduler:leader",
+  commandRegistrationLeader: () => "lumi:commands:registration:leader",
 
   entityGuild: (guildId: string) => `lumi:ent:guild:${guildId}`,
   entityChannel: (channelId: string) => `lumi:ent:channel:${channelId}`,
@@ -62,6 +63,8 @@ export const RedisKeys = {
   entityUser: (userId: string) => `lumi:ent:user:${userId}`,
   entityMember: (guildId: string, userId: string) =>
     `lumi:ent:member:${guildId}:${userId}`,
+
+  addonUpdateCheck: () => "lumi:addon:update-check",
 } as const;
 
 export const RedisTTL = {
@@ -80,6 +83,7 @@ export const RedisTTL = {
   warnCount: 365 * 24 * 3600,
   voiceOccupancy: 24 * 60 * 60,
   entity: 60 * 60 * 24,
+  addonUpdateCheck: 300,
 } as const;
 
 /**

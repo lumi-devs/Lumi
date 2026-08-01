@@ -47,6 +47,7 @@
 	"addonsAddRepo": "Add Repository",
 	"addonsRemoveRepo": "Remove Repository",
 	"addonsUpdateAll": "Update All Add-ons",
+	"addonsUpdateRepo": "Update Repo",
 	"addonsFooter": "Bot Owner access is required to add repositories or run updates.",
 	"addonsReposTitle": "Downloaded Repositories",
 	"addonsReposEmpty": "No repositories added yet. Click **Add Repository** to get started.",

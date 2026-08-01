@@ -45,6 +45,7 @@ describe("DownloaderService", () => {
   let mockLogger: any;
   let mockClient: any;
   let mockCommandStore: any;
+  let mockRedis: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -71,6 +72,12 @@ describe("DownloaderService", () => {
       loadModule: vi.fn().mockResolvedValue(undefined),
       unload: vi.fn().mockResolvedValue(undefined),
       reload: vi.fn().mockResolvedValue(undefined),
+      setEnabled: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mockRedis = {
+      get: vi.fn().mockResolvedValue(null),
+      setex: vi.fn().mockResolvedValue(undefined),
     };
 
     mockLogger = {
@@ -94,6 +101,7 @@ describe("DownloaderService", () => {
     container.moduleStore = mockModuleStore;
     container.logger = mockLogger;
     container.client = mockClient;
+    container.redis = mockRedis;
     container.stores = {
       get: vi.fn().mockReturnValue(mockCommandStore),
     } as any;
@@ -275,6 +283,26 @@ describe("DownloaderService", () => {
     });
   });
 
+  describe("getRepoStatus", () => {
+    it("parses the last commit hash and relative time from git log", async () => {
+      mockExecFile.mockImplementation((_file: string, _args: string[], cb: any) => {
+        cb(null, { stdout: "abc1234|2 days ago\n", stderr: "" });
+      });
+
+      const res = await service.getRepoStatus("repo1");
+      expect(res).toEqual({ lastCommit: "abc1234", lastCommitTime: "2 days ago" });
+    });
+
+    it("returns nulls when git log fails", async () => {
+      mockExecFile.mockImplementation((_file: string, _args: string[], cb: any) => {
+        cb(new Error("not a git repository"));
+      });
+
+      const res = await service.getRepoStatus("repo1");
+      expect(res).toEqual({ lastCommit: null, lastCommitTime: null });
+    });
+  });
+
   describe("updateModule", () => {
     it("throws error if module not installed", async () => {
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue(null);
@@ -306,7 +334,7 @@ describe("DownloaderService", () => {
       expect(res).toEqual({ updated: false });
     });
 
-    it("updates module and triggers reload when restart is not required", async () => {
+    it("updates module on disk and reports that a restart is required", async () => {
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ repoId: "r1-id", commit: "oldhash" });
       mockDb.downloader.readDownloaderRepoById.mockResolvedValue({ id: "r1-id", name: "repo1", branch: "main" });
 
@@ -346,6 +374,87 @@ describe("DownloaderService", () => {
       });
 
       await expect(service.updateModule("m1")).rejects.toThrow("Git pull failed: Git pull conflict");
+    });
+  });
+
+  describe("checkForUpdates", () => {
+    it("returns the cached result from Redis without hitting the DB or git", async () => {
+      mockRedis.get.mockResolvedValue(JSON.stringify(["cached-mod"]));
+
+      const res = await service.checkForUpdates();
+
+      expect(res).toEqual(["cached-mod"]);
+      expect(mockDb.downloader.readAllInstalledDownloaderModules).not.toHaveBeenCalled();
+      expect(mockRedis.setex).not.toHaveBeenCalled();
+    });
+
+    it("swallows a per-module failure with a warning and still caches the modules that succeeded", async () => {
+      mockRedis.get.mockResolvedValue(null);
+      mockDb.downloader.readAllInstalledDownloaderModules.mockResolvedValue([
+        { moduleName: "modA" },
+        { moduleName: "modB" },
+      ]);
+
+      mockDb.downloader.readInstalledDownloaderModule.mockImplementation((name: string) => {
+        if (name === "modB") return Promise.reject(new Error("DB down"));
+        return Promise.resolve({ repoId: "r1-id-A", commit: "oldhash" });
+      });
+      mockDb.downloader.readDownloaderRepoById.mockResolvedValue({
+        id: "r1-id-A",
+        name: "repoA",
+        branch: "main",
+      });
+
+      (fs.access as any).mockResolvedValue(true);
+      mockExecFile.mockImplementation((file: string, args: string[], cb: any) => {
+        if (args.includes("rev-parse") && args.includes("HEAD")) {
+          cb(null, { stdout: "oldhash\n", stderr: "" });
+        } else if (args.includes("rev-parse") && args.includes("@{u}")) {
+          cb(null, { stdout: "origin/main\n", stderr: "" });
+        } else if (args.includes("rev-parse") && args.includes("origin/main")) {
+          cb(null, { stdout: "newhash\n", stderr: "" });
+        } else if (args.includes("log")) {
+          cb(null, { stdout: "feat: change\n", stderr: "" });
+        } else {
+          cb(null, { stdout: "", stderr: "" });
+        }
+      });
+
+      const res = await service.checkForUpdates();
+
+      expect(res).toEqual(["modA"]);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining("[DownloaderService] Update check failed for modB:")
+      );
+      expect(mockRedis.setex).toHaveBeenCalledWith(
+        "lumi:addon:update-check",
+        300,
+        JSON.stringify(["modA"])
+      );
+    });
+  });
+
+  describe("toggleModule", () => {
+    it("throws error if module was not installed via the downloader", async () => {
+      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue(null);
+      await expect(service.toggleModule("m1", true)).rejects.toThrow(
+        "was not installed via the downloader"
+      );
+      expect(mockModuleStore.setEnabled).not.toHaveBeenCalled();
+    });
+
+    it("enables/disables the module via the ModuleStore and re-syncs commands", async () => {
+      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id" });
+      const syncSpy = vi.spyOn(service, "syncApplicationCommands").mockResolvedValue(undefined);
+
+      await service.toggleModule("m1", false);
+
+      expect(mockModuleStore.setEnabled).toHaveBeenCalledWith(
+        "m1",
+        false,
+        "toggled via addons panel"
+      );
+      expect(syncSpy).toHaveBeenCalled();
     });
   });
 

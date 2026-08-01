@@ -4,13 +4,18 @@ import type { Piece } from "@sapphire/framework";
 import { RedisKeys } from "#database/redis.js";
 import {
   compileRules,
-  evaluate,
+  evaluateStatic,
+  evaluateTerms,
   DEFAULT_CAPS_MIN_LENGTH,
   type CompiledRules,
   type FilterHit,
   type RuleConfig,
 } from "../lib/rules.js";
 import { decayHeat, secondsUntilCool, type HeatConfig } from "../lib/heat.js";
+import {
+  getRegexWorker,
+  RegexTimeoutError,
+} from "#lib/regex-worker/index.js";
 
 const DUPLICATE_WINDOW_SECONDS = 30;
 const WARN_COOLDOWN_SECONDS = 30;
@@ -28,6 +33,8 @@ function fingerprint(content: string): string {
 export class FilterService extends Service {
   private readonly _guilds = new Map<string, CompiledRules | null>();
   private readonly _heat = new Map<string, HeatConfig>();
+  /** Bumped whenever a guild's patterns change, so the worker re-loads them. */
+  private readonly _versions = new Map<string, number>();
 
   public async loadGuild(guildId: string): Promise<void> {
     const configService = getService("config");
@@ -97,6 +104,7 @@ export class FilterService extends Service {
           )
         : null,
     );
+    this.#bumpVersion(guildId);
     this.#evictIfNeeded();
   }
 
@@ -104,20 +112,86 @@ export class FilterService extends Service {
     return this._guilds.has(guildId);
   }
 
-  public test(
+  /**
+   * Evaluate a message. Terms and the bounded rules run inline; guild regex is
+   * dispatched to the regex worker so a catastrophic pattern cannot stall the
+   * event loop. A pattern that blows its budget is dropped from this guild's
+   * rule set rather than retried on every subsequent message.
+   */
+  public async test(
     guildId: string,
     content: string,
     mentionCount: number,
-  ): FilterHit | null {
+  ): Promise<FilterHit | null> {
     if (!this._guilds.has(guildId)) return null;
     const rules = this.#touch(guildId);
     if (!rules) return null;
-    return evaluate(rules, content, mentionCount);
+
+    const termHit = evaluateTerms(rules, content);
+    if (termHit) return termHit;
+
+    const regexHit = await this.#testRegex(guildId, rules, content);
+    if (regexHit) return regexHit;
+
+    return evaluateStatic(rules, content, mentionCount);
+  }
+
+  async #testRegex(
+    guildId: string,
+    rules: CompiledRules,
+    content: string,
+  ): Promise<FilterHit | null> {
+    if (rules.regexSources.length === 0) return null;
+    const key = `${guildId}:${this._versions.get(guildId) ?? 0}`;
+    try {
+      const index = await getRegexWorker().test(
+        key,
+        rules.regexSources,
+        content,
+      );
+      return index === null
+        ? null
+        : { rule: "regex", detail: rules.regexSources[index]! };
+    } catch (err: unknown) {
+      if (err instanceof RegexTimeoutError) {
+        this.#disablePattern(guildId, rules, err.patternIndex);
+        return null;
+      }
+      this.container.logger.error(
+        `[Filter] Regex evaluation failed in guild ${guildId}:`,
+        err,
+      );
+      return null;
+    }
+  }
+
+  /** Drop the pattern that hung, in place, and invalidate the worker's copy. */
+  #disablePattern(
+    guildId: string,
+    rules: CompiledRules,
+    index: number | null,
+  ): void {
+    if (index === null || index >= rules.regexSources.length) {
+      this.container.logger.warn(
+        `[Filter] Regex evaluation timed out in guild ${guildId} before any pattern was reported; leaving rules untouched.`,
+      );
+      return;
+    }
+    const [pattern] = rules.regexSources.splice(index, 1);
+    this.#bumpVersion(guildId);
+    this.container.logger.warn(
+      `[Filter] Disabled regex rule in guild ${guildId}: /${pattern}/ exceeded its evaluation budget (catastrophic backtracking). Remove or rewrite it; it stays disabled until the config is reloaded.`,
+    );
+  }
+
+  #bumpVersion(guildId: string): void {
+    this._versions.set(guildId, (this._versions.get(guildId) ?? 0) + 1);
   }
 
   public evict(guildId: string): void {
     this._guilds.delete(guildId);
     this._heat.delete(guildId);
+    this._versions.delete(guildId);
   }
 
   public async loadHeatConfig(guildId: string): Promise<HeatConfig> {
@@ -211,6 +285,7 @@ export class FilterService extends Service {
       if (oldest === undefined) break;
       this._guilds.delete(oldest);
       this._heat.delete(oldest);
+      this._versions.delete(oldest);
     }
   }
 
