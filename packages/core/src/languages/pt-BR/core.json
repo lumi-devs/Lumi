@@ -2,7 +2,7 @@
   "today": "today",
   "daysAgo": "{{count}} day ago",
   "daysAgo_other": "{{count}} days ago",
-  "aboutUptime": "Bringing modular harmony to Discord since 11 Jul 2026 (over {{age}}!).",
+  "aboutUptime": "Live for {{age}}.",
   "uptime": "Uptime",
   "hostUptime": "Host Uptime",
   "servers": "Servers",

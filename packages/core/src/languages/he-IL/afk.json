@@ -1,0 +1,20 @@
+{
+  "defaultReason": "AFK",
+  "cleanTitle": "AFK Cleanup",
+  "cleanSuccess": "Removed {{count}} stale AFK entries.",
+  "listTitle": "AFK List",
+  "listEmpty": "No users are currently AFK in this server.",
+  "listDuration": "(for {{duration}})",
+  "listFooterPages": "Page {{page}}/{{totalPages}} • Total AFK in this server: {{total}}",
+  "listFooter": "Total AFK in this server: {{total}}",
+  "statsTitle": "AFK System Stats",
+  "statsBody": "**Active AFK entries:** {{activeEntries}}\n**Active cooldowns:** {{activeCooldowns}}",
+  "mentionsTitle": "Recent Mentions",
+  "jumpToMessage": "Jump to Message",
+  "mentionLine": "{{user}} in {{channel}} - {{duration}} ago\n{{link}}",
+  "viewMentionsButton": "View Mentions ({{count}})",
+  "welcomeBackTitle": "Welcome Back!",
+  "welcomeBackBody": "AFK removed.\nAFK for **{{duration}}**.",
+  "isAfkTitle": "{{name}} is AFK",
+  "isAfkBody": "**Reason:** {{reason}}\n**AFK for:** {{duration}}"
+}
