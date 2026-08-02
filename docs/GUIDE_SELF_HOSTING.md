@@ -6,11 +6,11 @@ Running your own Lumi instance for a personal server or small community. This co
 
 | Dependency | Minimum | Notes |
 | :--- | :--- | :--- |
-| [Docker](https://docs.docker.com/get-docker/) + Docker Compose | any recent version | Runs Postgres, Redis, RabbitMQ, and (optionally) Lumi itself. |
-| [Bun](https://bun.sh) | `1.3.0+` | Only needed if you're running the app outside its container (e.g. contributing code). |
+| [Docker](https://docs.docker.com/get-docker/) + Docker Compose | any recent version | Easiest way to run Postgres, Redis, RabbitMQ, and (optionally) Lumi itself. Not required - see below. |
+| [Bun](https://bun.sh) | `1.3.0+` | Always required, Docker or not. |
 | A Discord application | - | Create one at the [Developer Portal](https://discord.com/developers/applications); you need its bot token and client ID. |
 
-You do **not** need Node, Postgres, Redis, or RabbitMQ installed natively - `docker-compose.yml` provides all of them.
+This guide's commands assume Docker for Postgres/Redis/RabbitMQ, since it's the fastest path. If you'd rather not use Docker at all, either run `nix develop` (provisions native Postgres/Redis/RabbitMQ binaries) or install those three yourself and point `.env` at them - Lumi itself is just a Bun process reading connection strings, nothing in the code requires Docker.
 
 ## 1. Create a Discord application
 
