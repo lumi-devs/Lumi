@@ -1,5 +1,53 @@
 # @lumi/contracts
 
+## 3.0.0
+
+### Major Changes
+
+- 70337e8: Remove the split gateway/worker topology; the worker now owns its own Discord
+  Gateway connection.
+
+  `apps/gateway` relayed raw Discord dispatch packets to workers over Redis
+  Streams, and the worker replayed them into discord.js's internal
+  `client.ws.handlePacket()`. That method assumes single-process invariants, which
+  the relay could not satisfy: interaction pre-acknowledgement state was lost,
+  `client.application` was unset when Sapphire registered slash commands, and two
+  WebSocket sessions competed for one bot token.
+
+  **Breaking changes:**
+
+  - `apps/gateway` is deleted. Remove any `LUMI_ROLE=gateway` process from your
+    deployment; the worker replaces it entirely.
+  - `LUMI_ROLE` accepts only `worker` (default) and `scheduler`. The `monolith`
+    and `gateway` roles are gone - `monolith` is now simply `worker`.
+  - `RawGatewayPublisher`, `RawGatewayConsumer`, and the `RawGatewayEnvelope` /
+    `rawGatewayStream` contracts are removed from `@lumi/event-bus` and
+    `@lumi/contracts`.
+  - `INTERACTION_DEFER_AT_GATEWAY` is removed; interactions are always deferred
+    in-process.
+  - Kubernetes: `gateway-statefulset.yaml` and `worker-scaledobject.yaml` are
+    removed, and the worker deployment becomes a StatefulSet - it now holds real
+    per-shard state, so replica count is a shard-assignment decision rather than a
+    queue-lag autoscaler target.
+
+  `@lumi/sharding` is now wired into the worker: with `CLUSTER_NAME` set, replicas
+  divide the shard count from `GET /gateway/bot` between themselves, throttle
+  IDENTIFY through Redis, and resume persisted sessions across restarts. Command
+  registration against Discord's REST routes is gated behind a Redis leader lock
+  so only one replica performs it per boot. Multi-replica deployments should set
+  `DISCORD_PROXY_URL` to a shared `nirn-proxy` so REST rate-limit buckets stay
+  coordinated. The task queue, scheduler RPC, and dashboard RabbitMQ RPC paths are
+  unchanged.
+
+### Minor Changes
+
+- 27d4684: Group config fields into navigable subsections in the `/lumi` config panel.
+  Modules with many settings (security, filter, logging) no longer render as a
+  flat, multi-page scroll of every field; a `group` on each config field collects
+  related settings into a section, and the detail view shows one section at a time
+  with a "jump to section" select. Small modules are unchanged. Large ungrouped
+  modules fall back to automatic paging so the component budget is never exceeded.
+
 ## 1.0.1
 
 ### Patch Changes

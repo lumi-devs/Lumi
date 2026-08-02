@@ -1,6 +1,6 @@
 {
   "name": "@lumi/contracts",
-  "version": "1.0.1",
+  "version": "3.0.0",
   "license": "AGPL-3.0-only",
   "description": "Shared wire contracts (bus events, RPC payloads, module manifest, config fields) for all Lumi services.",
   "type": "module",

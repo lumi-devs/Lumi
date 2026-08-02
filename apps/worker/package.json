@@ -1,6 +1,6 @@
 {
   "name": "@lumi/worker",
-  "version": "1.0.1",
+  "version": "3.0.0",
   "license": "AGPL-3.0-only",
   "description": "Worker service - runs the full Lumi bot (Discord gateway + features + scheduler) in one process.",
   "type": "module",
