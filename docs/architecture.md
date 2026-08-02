@@ -1,127 +1,91 @@
 # Architecture & System Topology
 
-Lumi is organized as a unified Bun workspace monorepo separating entrypoint applications (`apps/`) from reusable core packages (`packages/`).
+## Process roles
 
-## Two-Process Model
+Lumi runs as three independent apps under `apps/`:
 
-Lumi runs as **two** process roles, selected with `LUMI_ROLE`:
+| App | Role | Discord gateway? | Purpose |
+| :--- | :--- | :--- | :--- |
+| [`apps/worker`](../apps/worker/README.md) | `worker` | Yes | Owns the Discord WebSocket connection(s) and runs every command, module, and interaction handler in-process. |
+| [`apps/scheduler`](../apps/scheduler/README.md) | `scheduler` | No | Owns BullMQ delayed/cron job queues. Never opens a gateway connection. |
+| [`apps/dashboard`](../apps/dashboard/README.md) | *(not a `ServiceRole`)* | No | Lightweight HTTP app. Talks to `worker` over RabbitMQ RPC. |
 
-| Role | Responsibility |
-| :--- | :--- |
-| `worker` (default) | Owns a real Discord Gateway WebSocket connection **and** runs all command, interaction, listener, and module logic in the same process. Also serves the dashboard's RabbitMQ RPC requests. |
-| `scheduler` | BullMQ queue owner for scheduled/recurring tasks. No WebSocket connection. |
+There is no separate gateway process. Each `worker` replica owns its own shard range end-to-end - gateway connection, command dispatch, and module logic all live in the same process. `ServiceRole` (`packages/core/src/lib/env.ts`) is a union of exactly `"worker" | "scheduler"`.
 
-Gateway ingestion and business logic deliberately live in one process. Lumi previously ran a separate `apps/gateway` process that relayed raw Discord dispatch packets to workers over Redis Streams; the worker replayed them into discord.js's internal `client.ws.handlePacket()`. That method assumes single-process invariants — it expects the client that received the packet to be the client that owns the session, the REST identity, and the interaction lifecycle. Reconstructing client state from another process's packets broke interaction pre-acknowledgement state, left `client.application` unset when Sapphire registered slash commands, and produced two WebSocket sessions competing for one bot token. The relay (`apps/gateway`, `RawGatewayPublisher`, `RawGatewayConsumer`, `RawGatewayEnvelope`) has been removed. Scaling is horizontal instead: many worker processes, each owning a disjoint range of shards.
+Entry points are intentionally thin. `apps/worker/src/main.ts`:
 
-The event bus remains for the things it is actually good at — the BullMQ/Redis Streams task queue, scheduler RPC, and the dashboard's RabbitMQ RPC bridge. None of these carry live gateway traffic.
+```ts
+import "./telemetry.js";
+import "@lumi/core/setup";
+import { bootstrapClientApp } from "@lumi/core";
 
-## System Topology
-
-```mermaid
-graph TD
-    subgraph Discord Infrastructure
-        DC[Discord Gateway / REST API]
-    end
-
-    subgraph Optional: multi-replica only
-        PX[nirn-proxy<br/>Shared REST Bucket Coordination]
-    end
-
-    subgraph Worker Cluster
-        WK1[apps/worker 1<br/>shards 0..n]
-        WK2[apps/worker N<br/>shards n+1..m]
-        SCH[apps/scheduler<br/>LUMI_ROLE=scheduler]
-    end
-
-    subgraph Coordination & Transport
-        RD[(Redis 7<br/>Shard coordination, sessions,<br/>cache, BullMQ, Streams)]
-        MQ[(RabbitMQ<br/>RPC & Events)]
-    end
-
-    subgraph Management & Data
-        DB_APP[apps/dashboard<br/>Web Admin UI :8080]
-        PGB[PgBouncer :6432]
-        PG[(PostgreSQL 17)]
-    end
-
-    DC <-->|WebSocket per shard| WK1
-    DC <-->|WebSocket per shard| WK2
-
-    WK1 <-->|REST Requests| PX
-    WK2 <-->|REST Requests| PX
-    PX <-->|Proxied REST| DC
-
-    WK1 <-->|Shard plan, sessions, cache| RD
-    WK2 <-->|Shard plan, sessions, cache| RD
-    SCH <-->|BullMQ Tasks| RD
-
-    WK1 -->|Transaction Pool| PGB
-    WK2 -->|Transaction Pool| PGB
-    PGB --> PG
-
-    DB_APP <-->|RPC Commands| MQ
-    MQ <-->|RPC Handler| WK1
+await bootstrapClientApp({ role: "worker" });
 ```
 
-## Horizontal Scaling
+`apps/scheduler/src/main.ts` is structurally identical, passing `role: "scheduler"`. Telemetry bootstrap is imported first (side-effect only) so instrumentation is installed before any instrumented library loads.
 
-One worker process is the intended deployment. Scaling past it is a configuration change rather than an architectural one: set `CLUSTER_NAME` and `packages/sharding` takes over coordination. With `CLUSTER_NAME` unset the worker stays on the single-process path with a plain local shard list, and the coordination machinery below stays dormant.
+## Inter-process communication
 
-- **Shard plan** — `shard-planner.ts` calls `GET /gateway/bot` at boot for `recommended_shards`, `max_concurrency`, and `session_start_limit`. The shard count is Discord's decision, not a hardcoded constant; the planner refuses to boot when the session-start budget cannot cover the shards it is about to IDENTIFY (`SHARD_IDENTIFY_FORCE` bypasses this for emergencies only).
-- **Shard-range assignment** — `ClusterCoordinator.join()` divides the total shard count across the replicas currently in the cluster and hands each replica its own slice. Replica count is the tuning dial (shards per replica), sized against the `shardLatency`, `shardStatus`, `guildCount`, and `eventLoopDelay` gauges exported by `packages/observability`. Because Discord's `(guild_id >> 22) % shard_count` mapping is stable, a guild's traffic always lands on the same replica for as long as that replica owns its shard, so per-guild in-memory state stays naturally local.
-- **IDENTIFY throttling** — `RedisIdentifyThrottler` funnels every replica's IDENTIFY through a Redis-held bucket keyed by `shardId % max_concurrency`, so independent processes never collide on a bucket that Discord treats as one logical rate-limit space.
-- **Rolling deploys** — `RedisSessionStore` persists each shard's `sessionId`, `sequence`, and `resumeGatewayUrl`, so a replacement process RESUMEs its predecessor's sessions instead of burning a cold IDENTIFY. `ClusterCoordinator.onRebalance` signals a process that cannot reshard in place to drain and exit, letting the orchestrator start a successor that resumes. Note this covers the *session* half only: discord.js rebuilds its guild/member cache from the `GUILD_CREATE` burst that follows a resume, rather than migrating cached state between processes.
-- **Command registration** — slash commands are registered globally, once, independent of shard or guild count. A Redis leader lock (the same `SET NX EX` primitive as `SchedulerLeaderLock`) gates Sapphire's `handleRegistryAPICalls()` so only one replica per boot cycle talks to Discord's command REST routes. Every replica still loads its command pieces locally for dispatch — `loadAll()` is unaffected, since Sapphire already skips Discord-side registration when `client.application` is not yet populated.
-- **Shared REST rate limits** — Discord's REST limits are per-route and per-bot-global, not per-process. Each replica's local bucket tracking is blind to the others, so multi-replica deployments route REST through `nirn-proxy` via `DISCORD_PROXY_URL`. It is not part of the default stack: it sits behind Docker Compose's `scale` profile, and its Kubernetes manifest is applied only once worker replicas exceed one. `rest429Total` / `restRetryAfterSeconds` catch undersizing before it becomes user-visible.
+Two distinct transports exist, deliberately separate:
 
-### Beyond this — a deferred sketch
+- **Worker ↔ Scheduler: Redis Streams**, via [`packages/event-bus`](../packages/event-bus/README.md). `RedisStreamsBus` is the sole transport implementation - one Redis Stream per event type, one consumer group per worker pool (default `lumi-workers`).
+- **Dashboard ↔ Worker: RabbitMQ RPC** (request/response), via `apps/dashboard/src/rpc.ts`. Uses RabbitMQ's `amq.rabbitmq.reply-to` pseudo-queue against a shared request queue (`lumi.rpc.requests`). This is a different mechanism from the event bus and is not used by worker/scheduler.
 
-The dials above (`CLUSTER_NAME`, replica count, shards-per-replica) are what a much larger deployment would turn; nothing about the process shape changes. The notes below are a sketch to re-derive when real guild counts force the question, not settled design.
+### Redis Streams bus mechanics
 
-Past Discord's large-bot sharding threshold the API assigns the shard count outright, so `planShards()` keeps working unchanged and replica count follows from whatever shards-per-replica figure the memory and event-loop headroom actually supports. Gateway *event volume*, not guild count, is what saturates a shard — `PresenceUpdate` and `TypingStart` dominate, so auditing `LumiClient`'s intents against what modules genuinely consume is likely a bigger win than shard tuning. On the data side, PgBouncer covers connection-pool headroom well past that point; because all database access is centralized in the repository classes, adding a read replica later is a change in one layer rather than a query rewrite.
+- Delivery via `XREADGROUP ... GROUP <group> <consumer> COUNT <batchSize> BLOCK <blockMs>` (defaults: batch 16, block 5000ms).
+- At-least-once delivery. A background `XAUTOCLAIM` loop (every `claimIntervalMs`, default 30s) reclaims entries idle past `claimMinIdleMs` (default 60s) so a crashed consumer's in-flight messages get picked up by another.
+- Poison messages: once `deliveryCount` exceeds `maxDeliveries` (default 5), the entry moves to `<stream>:dlq` and is ACKed off the live stream - it is never auto-replayed.
+- Streams are bounded via `XADD ... MAXLEN ~ <defaultMaxLen>` (default 100,000).
+- Stats (stream length, consumer lag) are polled periodically and exported as `lumi_stream_length` / `lumi_stream_consumer_lag` / `lumi_stream_dlq_length` Prometheus gauges.
+- Explicit design contract: **exactly-once is out of scope** - the guarantee is at-least-once delivery plus idempotent handlers.
 
-Prior art worth noting, since the removed relay had no precedent in it: YAGPDB's shard orchestrator supervises whole bot processes and exchanges control-plane events with them — it never relays raw gateway payloads. Skyra runs a single `client.login()` process. Red-DiscordBot uses discord.py's `AutoShardedBot`, holding all shards in one process. In every case gateway ingestion and command handling share a process.
+All tuning knobs are environment variables (`EVENT_STREAM_*`) - see [Configuration Reference](configuration.md).
 
-## Protecting the Event Loop
+## Sharding & clustering
 
-One process handles every shard it owns, so anything that blocks the event loop blocks all of them — commands, heartbeats, and gateway acks alike. Two mechanisms exist for that reason.
+[`packages/sharding`](../packages/sharding/README.md) implements horizontal shard-range scaling without a separate control-plane service - coordination state lives entirely in Redis.
 
-- **Regex runs off-thread.** Guild-configured filter patterns are attacker-controlled in practice: one catastrophically backtracking pattern, entered by accident or on purpose, would stall every shard on the replica. `lib/regex-worker/` owns a single `node:worker_threads` worker that compiles and runs those patterns; the main thread never holds a `RegExp` built from guild input. Requests are serialized through an `AsyncQueue`, matched by correlation ID, and bounded by a per-evaluation timeout — on expiry the worker is killed and respawned, and the pattern it was running is dropped from that guild's rule set with a logged warning rather than retried on every subsequent message. Patterns are also probed against adversarial inputs when saved (`ConfigService` consults `container.configValueValidators`), so the common case is rejection at config time. Aho-Corasick term matching, invite/link/mention/caps rules are linear in message length and stay inline.
-- **Sends nobody waits on are queued.** `lib/outbound/send-queue.ts` routes mod-log entries, security alerts, and logging cards through the existing BullMQ path (`send-message` task → task-fire consumer) instead of an inline REST call, so a Discord outage delays them instead of losing them. The consumer holds one in-flight send per channel, taking YAGPDB's `mqueue` insight that a rate-limited channel should park one slot rather than block a handler; depth is exported as `lumi_queue_depth{queue="outbound-send"}`. Interaction replies are deliberately excluded — they are bounded by Discord's 15-minute token and are the one path a user is actually waiting on. The rule is *if no user is waiting on it, queue it*.
+- **Shard planning** (`shard-planner.ts`): calls Discord's `GET /gateway/bot` for the recommended shard count and session-start budget. `TOTAL_SHARDS=auto` (default) follows Discord's recommendation; a fixed integer pins it. `SHARD_LIST` restricts which shard IDs a given replica owns. Boot refuses to proceed if the remaining session-start budget can't cover the shards about to IDENTIFY, unless `SHARD_IDENTIFY_FORCE=true` - this exists so a crash-loop can't burn the daily IDENTIFY budget and get the bot rate-limited.
+- **Cluster coordination** (`coordinator.ts`): replicas heartbeat into a Redis ZSET every `heartbeatIntervalMs` (default 5s); entries older than `memberTtlMs` (default 15s) are pruned as dead. Whichever replica holds a short-lived Redis lock (`SET NX PX`) is the assignment leader - it divides shard IDs contiguously and evenly across the live replica set and publishes the new assignment over a Redis pub/sub channel.
+- **In-place rebalancing** (`dynamic-strategy.ts`): a replica can add/remove individual shards when membership changes, without a full process restart. A change to the *total* shard count still requires a restart, since discord.js caches `shardCount` at `WebSocketManager` construction.
+- **Session continuity** (`session-store.ts`): per-shard WebSocket session state is persisted in Redis so a shard moving to a new replica (rebalance, or pod replacement) can RESUME instead of spending a fresh IDENTIFY.
 
-`lumi_event_loop_delay_seconds{quantile="p50"|"p99"|"max"}` (from `perf_hooks.monitorEventLoopDelay`, started in `bootstrapTelemetry`) is the metric to check before tuning any of this. `max` is the one that matters for gateway health: a single multi-second stall drops heartbeats regardless of the median.
+Clustering only activates when `CLUSTER_NAME` is set. With a single replica and no `CLUSTER_NAME`, all of the above is inert and the process runs the plain `SHARD_LIST` + local IDENTIFY throttle path.
 
-## Dashboard RPC Sequence
+## Database layer
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Admin as Server Administrator
-    participant DB as apps/dashboard (HTTP :8080)
-    participant RMQ as RabbitMQ (RPC Queue)
-    participant WK as apps/worker (@lumi/core)
-    participant PG as PostgreSQL (PgBouncer)
-    participant RD as Redis (Cache)
+**PostgreSQL** via Prisma (`prisma/schema.prisma`, 23 models) is the system of record. **All data access goes through `container.db`** (`DatabaseService`, `packages/core/src/lib/prisma/DatabaseService.ts`) - a facade over per-domain repositories (`global`, `config`, `modules`, `guildKV`, `access`, `permissions`, `downloader`, `audit`, `users`, `moderation`, `configHistory`, `configOverrides`, `afk`, `security`, `tempvc`, ...). Modules never touch `container.prisma` directly; see the [Module Creation Guide](GUIDE_MODULE_CREATION.md#database--persistence) for the rule and why it exists.
 
-    Admin->>DB: Update Guild Module Config (/dashboard)
-    DB->>RMQ: Publish RPC Request (UpdateConfigPayload)
-    RMQ->>WK: Deliver RPC Message to Worker
-    WK->>PG: Persist GuildModuleConfig (Prisma)
-    WK->>RD: Invalidate Guild Config Cache (InvalidationBus)
-    WK-->>RMQ: Publish RPC Success Response
-    RMQ-->>DB: Receive RPC Ack & Data
-    DB-->>Admin: Render 200 OK Response
-```
+**Redis** (`packages/core/src/lib/database/redis.ts`) is used for several distinct purposes, all namespaced under `lumi:*` in `RedisKeys`:
 
-## Monorepo Structure
+- Cache-aside reads for repositories (`getOrSet`), with matching TTLs in `RedisTTL`.
+- Cross-process cache invalidation via `InvalidationBus` - a pub/sub channel (`lumi:cache:invalidate`) where deleting a key locally also broadcasts the deletion so every process's local cache stays coherent. Modules invalidate through `container.invalidation.invalidate(...)`, never a raw `redis.del` on a shared key.
+- The event bus transport (Redis Streams, see above).
+- Cluster/shard coordination state (`packages/sharding`).
+- Leader-election locks (command registration, scheduler leader - see below).
+- BullMQ's job queue backing store.
 
-| Category | Package | Purpose |
-| :--- | :--- | :--- |
-| **Apps** | `apps/worker` | Discord WebSocket connection plus all command, event, and module logic (`LUMI_ROLE=worker`) |
-| | `apps/scheduler` | Background task scheduler, BullMQ queues (`LUMI_ROLE=scheduler`) |
-| | `apps/dashboard` | Web admin panel on `:8080`, Discord OAuth2 |
-| **Packages** | `@lumi/core` | Core framework, modules, Prisma models, i18n |
-| | `@lumi/event-bus` | Redis Streams task queue & RPC transport |
-| | `@lumi/observability` | Pino logger, OpenTelemetry, Prometheus `:9090` |
-| | `@lumi/sharding` | Shard planner, cluster coordinator, IDENTIFY throttler, session store |
-| | `@lumi/contracts` | Shared TypeScript interfaces, event schemas |
+Sentinel-based Redis HA is supported: setting `REDIS_SENTINELS` switches connection construction to Sentinel-aware options instead of a direct host/port.
+
+## Command registration leader election
+
+When `worker` runs as multiple replicas under a `CLUSTER_NAME`, every replica loading its command stores would otherwise all try to push the same application commands to Discord on boot - redundant and wasteful of Discord's registration rate limit. `CommandRegistrationLeaderElection` (`packages/core/src/lib/client/CommandRegistrationLeaderElection.ts`) elects exactly one replica to actually register commands:
+
+1. No-op for the `scheduler` role, or when there's no cluster - a lone process always registers.
+2. Otherwise, replicas contend for a renewing Redis lock (`lumi:commands:registration:leader`, default TTL 30s, renewed every 10s).
+3. The winner holds the lock for its process lifetime; losers still load and dispatch their command pieces locally by name, but never call Discord's registration routes (`suppressCommandRegistration`).
+4. **Fails open**: if Redis is unreachable during acquisition, the replica registers unguarded - starting with possibly-stale commands beats starting with none.
+
+## Observability
+
+[`packages/observability`](../packages/observability/README.md) wires up tracing, metrics, and health probes identically across all apps via `bootstrapTelemetry()`, called before anything else loads.
+
+- **Tracing**: OpenTelemetry, no-op unless `OTEL_ENABLED=true`. Ratio-based sampling (`OTEL_TRACES_SAMPLE_RATIO`), OTLP export over HTTP, best-effort auto-instrumentation of HTTP/Postgres/Redis/AMQP clients (instrumentation failures never block boot).
+- **Metrics**: Prometheus via `prom-client`, served at `GET /metrics` on `METRICS_PORT` (default 9090). Covers command RED metrics, event-bus throughput and lag, BullMQ failures, gateway shard latency/status, Discord REST 429s, Postgres pool utilization, and cache hit/miss rates.
+- **Event-loop protection**: `startEventLoopMonitor()` uses Node's `perf_hooks.monitorEventLoopDelay` to report `lumi_event_loop_delay_seconds` (p50/p99/max) every 10s window. The `max` quantile is the one that matters for gateway health - a single multi-second stall drops heartbeats regardless of what the median looks like.
+- **Health endpoints**: `GET /healthz` (liveness - always 200 once serving) and `GET /readyz` (readiness - runs every registered probe with a 2s timeout each). Infrastructure probes (`postgres`, `redis`, `rabbitmq`) run on every role; `worker` additionally checks gateway readiness, and whichever replica holds the scheduler leader lock checks it can still see BullMQ. `markDraining()` flips `/readyz` to 503 immediately on SIGTERM, before in-flight work finishes closing, so orchestrators pull the replica out of rotation early.
+
+## Deployment topology
+
+See [Configuration Reference](configuration.md) for the full environment variable list, Docker Compose services, and Kubernetes manifests. In short: `worker` is deployed as a Kubernetes `StatefulSet` (shard identity matters), `scheduler` as a `Deployment` with `strategy: Recreate` (exactly one BullMQ owner at a time), and an optional `nirn-proxy` deployment shares Discord REST rate limits across worker replicas once you scale past one.
