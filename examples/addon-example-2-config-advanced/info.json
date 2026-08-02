@@ -1,5 +1,5 @@
 {
-  "name": "tag-manager",
+  "name": "addon-example-2-config-advanced",
   "author": ["Lumi Developers"],
   "description": "Custom text tags with add/remove/list/reset, showing five config field types and guildKV persistence.",
   "short": "Custom tag commands with a config-heavy example.",
