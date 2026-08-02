@@ -14,7 +14,6 @@
     "packages/sharding/src",
     "apps/worker/src",
     "apps/scheduler/src",
-    "apps/dashboard/src",
     "examples"
   ]
 }

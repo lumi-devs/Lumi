@@ -3,7 +3,7 @@
 
 import { pino, type Logger as PinoLogger } from "pino";
 import PinoPretty from "pino-pretty";
-import { activeTraceIds, getRequestContext } from "./context.js";
+import { activeTraceIds, getRequestContext } from "./context";
 
 export interface PinoLoggerOptions {
   service: string;

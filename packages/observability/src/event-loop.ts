@@ -4,7 +4,7 @@
 
 import { monitorEventLoopDelay, type IntervalHistogram } from "node:perf_hooks";
 import { Gauge } from "prom-client";
-import { registry } from "./metrics.js";
+import { registry } from "./metrics";
 
 /** Sampling resolution; also the floor on what the histogram can report. */
 const RESOLUTION_MS = 20;

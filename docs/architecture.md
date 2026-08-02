@@ -66,6 +66,15 @@ Clustering only activates when `CLUSTER_NAME` is set. With a single replica and 
 - Leader-election locks (command registration, scheduler leader - see below).
 - BullMQ's job queue backing store.
 
+## Dashboard Frontend
+
+`apps/dashboard` is a Next.js (App Router) app; it is the one piece of the diagram above that changed shape in the v2 rewrite — the RPC sequence itself (`apps/dashboard` → RabbitMQ → `apps/worker` → Postgres/Redis → back) is unchanged, only the process that renders HTML did. A pre-rewrite survey of Red-DiscordBot, YAGPDB, and Skyra (see `dashboard.md` for the full spec this rewrite implements) shaped a few concrete choices:
+
+- **The decoupled RPC bridge stays exactly as architected.** Red-DiscordBot's own `_rpc.py` — a JSON-RPC server the bot process exposes for an independent web frontend to call — validates the same design this monorepo already has: the dashboard never blocks or shares an event loop with the Discord gateway, regardless of which frontend framework renders its pages. `apps/dashboard/src/lib/rpc.ts` is a `server-only` module reachable only from Server Components, Route Handlers, and Server Actions — never bundled to the client.
+- **Sidebar + content-pane is a layout route group, not a re-rendered shell.** YAGPDB's control panel splits a persistent per-guild nav (`cp_nav.html`) from a swappable content pane rebuilt on every request. Next's `app/guild/[guildId]/layout.tsx` renders that sidebar once per navigation instead of on every page.
+- **Config forms stay schema-driven off `ConfigField[]`** (`@lumi/contracts`), the same shape YAGPDB gets to by threading small "Discord-aware form control" template helpers (`roleOptions`, `channelOptions`, `hasPerm`) into every module's settings form — implemented here as shared client components keyed off `ConfigField.type`.
+- **Auth is NextAuth.js (Auth.js v5)**, not the old hand-rolled HMAC-signed cookie + in-memory session Map — `apps/dashboard/src/lib/auth.ts`. The server-side IDOR guard (`authorizedGuild()` in `lib/auth-guards.ts`, re-checked on every guild-scoped render *and* every Server Action) and the Bot-Owner/Server-Owner route-level split are unchanged in spirit from the original design, just re-homed to App Router idioms (`notFound()`/`redirect()` instead of hand-written 403/302 responses).
+
 Sentinel-based Redis HA is supported: setting `REDIS_SENTINELS` switches connection construction to Sentinel-aware options instead of a direct host/port.
 
 ## Command registration leader election

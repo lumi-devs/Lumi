@@ -1,9 +1,22 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  // "loose": every task inherits the full shell environment. This repo has
+  // no remote-cache/CI scenario across untrusted contributors that would
+  // need turbo's default "strict" per-task env allowlisting — and strict
+  // mode silently drops runtime config (RABBITMQ_URL, DISCORD_OAUTH2_*,
+  // DASHBOARD_SESSION_SECRET, BOT_OWNERS, ...) from `turbo run build`/`turbo
+  // run dev`, which apps/dashboard's Next.js build needs at collect-page-data
+  // time (see apps/dashboard/src/lib/env.ts).
+  "envMode": "loose",
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      // "dist/**" was unused until now — apps/dashboard is the first (and
+      // only, as of this rewrite) package with a real "build" script; it's
+      // a Next.js app, so its output is ".next/**" (excluding Next's own
+      // incremental cache dir, which shouldn't be treated as a build
+      // artifact to restore).
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
     "dev": {
       "cache": false,

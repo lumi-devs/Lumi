@@ -1,4 +1,4 @@
-import type { ConfigField } from "./config.js";
+import type { ConfigField } from "./config";
 
 // Serializable module manifest contract for discovery and lifecycle metadata.
 

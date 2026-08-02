@@ -3,7 +3,10 @@ import baseConfig from './packages/eslint-config/index.js';
 
 export default tseslint.config(
   {
-    ignores: ['scripts/**', 'dist/**', 'coverage/**'],
+    // apps/dashboard is a Next.js app with its own tsconfig (DOM/React
+    // types) outside this root tsconfig's typed-lint project — it has its
+    // own `next lint` script instead. See apps/dashboard/package.json.
+    ignores: ['scripts/**', 'dist/**', 'coverage/**', 'apps/dashboard/**'],
   },
   ...baseConfig,
   {
