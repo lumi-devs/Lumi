@@ -5,6 +5,7 @@ import { RPC_ACTIONS, type GuildSettingsPayload } from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
+import { runAction, type ActionResult } from "#/lib/action-result";
 
 // Server Actions are the Next.js replacement for the old server.ts
 // `/api/guild/:guildId/*` POST routes. Two defenses carry over unchanged
@@ -19,23 +20,20 @@ import { isRateLimited } from "#/lib/rate-limit";
 
 async function guardedAction(guildId: string) {
   const session = await requireGuild(guildId);
-  if (isRateLimited(`guild-action:${session.userId}`, 60, 60_000)) {
+  if (await isRateLimited(`guild-action:${session.userId}`, 60, 60_000)) {
     throw new Error("Too many requests — slow down.");
   }
   return session;
 }
 
-export interface ActionResult {
-  ok: boolean;
-  error?: string;
-}
+export type { ActionResult };
 
 export async function toggleGuildModule(
   guildId: string,
   moduleName: string,
   enabled: boolean,
 ): Promise<ActionResult> {
-  try {
+  return runAction(async () => {
     const session = await guardedAction(guildId);
     await rpcCall(RPC_ACTIONS.guildModuleToggle, {
       guildId,
@@ -44,9 +42,7 @@ export async function toggleGuildModule(
     });
     revalidatePath(`/guild/${guildId}`);
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "RPC failed" };
-  }
+  });
 }
 
 export async function setGuildConfigField(
@@ -55,7 +51,7 @@ export async function setGuildConfigField(
   key: string,
   value: unknown,
 ): Promise<ActionResult> {
-  try {
+  return runAction(async () => {
     const session = await guardedAction(guildId);
     await rpcCall(RPC_ACTIONS.guildConfigSet, {
       guildId,
@@ -64,16 +60,14 @@ export async function setGuildConfigField(
     });
     revalidatePath(`/guild/${guildId}/modules/${moduleName}`);
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "RPC failed" };
-  }
+  });
 }
 
 export async function setGuildSettings(
   guildId: string,
   data: GuildSettingsPayload,
 ): Promise<ActionResult> {
-  try {
+  return runAction(async () => {
     const session = await guardedAction(guildId);
     await rpcCall(RPC_ACTIONS.guildSettingsSet, {
       guildId,
@@ -82,8 +76,6 @@ export async function setGuildSettings(
     });
     revalidatePath(`/guild/${guildId}`);
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "RPC failed" };
-  }
+  });
 }
 

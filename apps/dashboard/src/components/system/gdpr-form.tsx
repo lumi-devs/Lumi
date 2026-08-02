@@ -1,21 +1,22 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { gdprDeleteUser } from "#/actions/system-actions";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
 import { Input, Label } from "#/components/ui/input";
 import { Button } from "#/components/ui/button";
+import { useServerAction } from "#/lib/use-server-action";
 
 /** dashboard.md §9A `SystemUserPrivacyConsole` — GDPR deletion trigger, wired to the existing `global.gdpr.delete` RPC. */
 export function GdprForm() {
   const [userId, setUserId] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [result, setResult] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const { isPending, run } = useServerAction();
 
   function handleDelete() {
     setResult(null);
-    startTransition(async () => {
+    run(async () => {
       const res = await gdprDeleteUser(userId);
       setResult(res.ok ? "Deleted." : (res.error ?? "Failed"));
       if (res.ok) {

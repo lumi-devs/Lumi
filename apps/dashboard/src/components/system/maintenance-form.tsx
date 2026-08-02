@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { setMaintenanceMode } from "#/actions/system-actions";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
 import { Switch } from "#/components/ui/switch";
 import { Input, Label } from "#/components/ui/input";
 import { Button } from "#/components/ui/button";
+import { ActionError } from "#/components/action-error";
+import { useServerAction } from "#/lib/use-server-action";
 
 /** dashboard.md §9A `SystemGlobalConfigCard` maintenance controls. */
 export function MaintenanceForm({
@@ -17,12 +19,10 @@ export function MaintenanceForm({
 }) {
   const [enabled, setEnabled] = useState(maintenanceMode);
   const [message, setMessage] = useState(maintenanceMessage ?? "");
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const { isPending, error, setError, run } = useServerAction();
 
   function save(nextEnabled: boolean, nextMessage: string) {
-    setError(null);
-    startTransition(async () => {
+    run(async () => {
       const res = await setMaintenanceMode(nextEnabled, nextMessage || undefined);
       if (!res.ok) setError(res.error ?? "Failed");
     });
@@ -65,7 +65,7 @@ export function MaintenanceForm({
             Save
           </Button>
         </div>
-        {error && <p className="text-xs text-danger">{error}</p>}
+        <ActionError error={error} />
       </div>
     </Card>
   );

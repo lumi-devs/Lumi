@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { toggleGlobalModule } from "#/actions/system-actions";
 import { Card } from "#/components/ui/card";
 import { Switch } from "#/components/ui/switch";
 import { Input, Label } from "#/components/ui/input";
 import { Button } from "#/components/ui/button";
+import { ActionError } from "#/components/action-error";
+import { useServerAction } from "#/lib/use-server-action";
 import type { GlobalModuleStateView } from "#/lib/dashboard-data";
 
 /**
@@ -22,12 +24,10 @@ export function ModuleKillSwitchGrid({
   const [rows, setRows] = useState(moduleStates);
   const [name, setName] = useState("");
   const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const { isPending, error, setError, run } = useServerAction();
 
   function apply(moduleName: string, enabled: boolean, reasonText?: string) {
-    setError(null);
-    startTransition(async () => {
+    run(async () => {
       const res = await toggleGlobalModule(moduleName, enabled, reasonText);
       if (!res.ok) {
         setError(res.error ?? "Failed");
@@ -98,7 +98,7 @@ export function ModuleKillSwitchGrid({
             Disable globally
           </Button>
         </div>
-        {error && <p className="mt-2 text-xs text-danger">{error}</p>}
+        <ActionError error={error} className="mt-2" />
       </Card>
     </div>
   );

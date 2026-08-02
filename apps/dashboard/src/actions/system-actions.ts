@@ -5,6 +5,7 @@ import { RPC_ACTIONS, type GdprRequester } from "@lumi/contracts";
 import { requireBotOwner } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
+import { runAction } from "#/lib/action-result";
 import type { ActionResult } from "./guild-actions";
 
 // dashboard.md §5: every action here re-checks `session.isBotOwner` — the
@@ -13,7 +14,7 @@ import type { ActionResult } from "./guild-actions";
 
 async function guardedSystemAction() {
   const session = await requireBotOwner();
-  if (isRateLimited(`system-action:${session.userId}`, 60, 60_000)) {
+  if (await isRateLimited(`system-action:${session.userId}`, 60, 60_000)) {
     throw new Error("Too many requests — slow down.");
   }
   return session;
@@ -23,7 +24,7 @@ export async function setMaintenanceMode(
   maintenanceMode: boolean,
   maintenanceMessage?: string,
 ): Promise<ActionResult> {
-  try {
+  return runAction(async () => {
     const session = await guardedSystemAction();
     await rpcCall(RPC_ACTIONS.systemMaintenanceSet, {
       actorId: session.userId,
@@ -31,9 +32,7 @@ export async function setMaintenanceMode(
     });
     revalidatePath("/system");
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "RPC failed" };
-  }
+  });
 }
 
 export async function toggleGlobalModule(
@@ -41,7 +40,7 @@ export async function toggleGlobalModule(
   enabled: boolean,
   reason?: string,
 ): Promise<ActionResult> {
-  try {
+  return runAction(async () => {
     const session = await guardedSystemAction();
     await rpcCall(RPC_ACTIONS.systemModuleToggle, {
       actorId: session.userId,
@@ -49,9 +48,7 @@ export async function toggleGlobalModule(
     });
     revalidatePath("/system/modules");
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "RPC failed" };
-  }
+  });
 }
 
 export async function addRepo(
@@ -59,7 +56,7 @@ export async function addRepo(
   url: string,
   branch?: string,
 ): Promise<ActionResult> {
-  try {
+  return runAction(async () => {
     const session = await guardedSystemAction();
     await rpcCall(RPC_ACTIONS.repoAdd, {
       actorId: session.userId,
@@ -67,16 +64,14 @@ export async function addRepo(
     });
     revalidatePath("/system/addons");
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "RPC failed" };
-  }
+  });
 }
 
 export async function installModule(
   repoName: string,
   moduleName: string,
 ): Promise<ActionResult> {
-  try {
+  return runAction(async () => {
     const session = await guardedSystemAction();
     await rpcCall(RPC_ACTIONS.moduleInstall, {
       actorId: session.userId,
@@ -84,9 +79,7 @@ export async function installModule(
     });
     revalidatePath("/system/addons");
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "RPC failed" };
-  }
+  });
 }
 
 export interface RepoModuleView {
@@ -98,20 +91,18 @@ export interface RepoModuleView {
 export async function listRepoModules(
   repoName: string,
 ): Promise<{ ok: true; modules: RepoModuleView[] } | { ok: false; error: string }> {
-  try {
+  return runAction(async () => {
     const session = await guardedSystemAction();
     const result = (await rpcCall(RPC_ACTIONS.repoModules, {
       actorId: session.userId,
       data: { repoName },
     })) as { modules: RepoModuleView[] };
     return { ok: true, modules: result.modules };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "RPC failed" };
-  }
+  });
 }
 
 export async function uninstallModule(moduleName: string): Promise<ActionResult> {
-  try {
+  return runAction(async () => {
     const session = await guardedSystemAction();
     await rpcCall(RPC_ACTIONS.moduleUninstall, {
       actorId: session.userId,
@@ -119,23 +110,19 @@ export async function uninstallModule(moduleName: string): Promise<ActionResult>
     });
     revalidatePath("/system/addons");
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "RPC failed" };
-  }
+  });
 }
 
 export async function gdprDeleteUser(
   userId: string,
   requester: GdprRequester = "OWNER",
 ): Promise<ActionResult> {
-  try {
+  return runAction(async () => {
     const session = await guardedSystemAction();
     await rpcCall(RPC_ACTIONS.gdprDelete, {
       actorId: session.userId,
       data: { userId, requester },
     });
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "RPC failed" };
-  }
+  });
 }
