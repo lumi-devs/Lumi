@@ -48,20 +48,20 @@
     "@sapphire/discord.js-utilities": "^7.3.3",
     "@sapphire/fetch": "^3.0.5",
     "@sapphire/framework": "^5.5.0",
+    "@sapphire/plugin-editable-commands": "^4.0.4",
     "@sapphire/plugin-hmr": "^3.0.2",
     "@sapphire/plugin-i18next": "^8.0.0",
     "@sapphire/plugin-logger": "^4.1.0",
-    "@sapphire/plugin-editable-commands": "^4.0.4",
     "@sapphire/plugin-pattern-commands": "^6.0.3",
-    "@sapphire/plugin-utilities-store": "^2.0.3",
-    "@sapphire/ratelimits": "^2.4.11",
-    "@sapphire/timestamp": "^1.0.5",
     "@sapphire/plugin-scheduled-tasks": "^10.0.4",
     "@sapphire/plugin-subcommands": "^7.0.1",
+    "@sapphire/plugin-utilities-store": "^2.0.3",
+    "@sapphire/ratelimits": "^2.4.11",
     "@sapphire/shapeshift": "^4.0.0",
     "@sapphire/snowflake": "^3.5.5",
     "@sapphire/stopwatch": "^1.5.4",
     "@sapphire/time-utilities": "^1.7.14",
+    "@sapphire/timestamp": "^1.0.5",
     "@sapphire/utilities": "^3.18.2",
     "ahocorasick": "^1.0.2",
     "amqp-connection-manager": "^5.0.0",
@@ -70,6 +70,10 @@
     "colorette": "^2.0.20",
     "discord.js": "^14.27.0",
     "ioredis": "^5.11.1",
-    "pg": "^8.22.0"
+    "pg": "^8.22.0",
+    "semver": "^7.8.5"
+  },
+  "devDependencies": {
+    "@types/semver": "^7.8.0"
   }
 }

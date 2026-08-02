@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { s } from "@sapphire/shapeshift";
+import semver from "semver";
 
 /** Static, import-free structural validation for an addon directory. */
 export interface ValidationResult {
@@ -174,24 +175,25 @@ function checkLeakHeuristics(src: string, rel: string, warnings: string[]): void
   }
 }
 
-function parseSemver(v: string): [number, number, number] {
-  const parts = v
-    .replace(/^v/, "")
-    .split(".")
-    .map((n) => Number(n) || 0);
-  return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0];
+/** Coerces a loose version string (`v` prefix, missing segments, etc.) to a strict semver, if possible. */
+function normalizeVersion(v: string): string | null {
+  return semver.valid(v) ?? semver.valid(semver.coerce(v));
 }
 
+/**
+ * True when `currentVersion` satisfies `minVersion` (i.e. `currentVersion >= minVersion`),
+ * per the semver spec - this correctly handles pre-release tags (`1.0.1-beta` ranks
+ * between `1.0.0` and `1.0.1`), build metadata (`1.0.1+build.5`), and `v`-prefixed
+ * versions. An unparseable version on either side is treated as incompatible.
+ */
 function isVersionCompatible(
   minVersion: string,
   currentVersion = "1.0.0",
 ): boolean {
-  const [minMajor, minMinor, minPatch] = parseSemver(minVersion);
-  const [curMajor, curMinor, curPatch] = parseSemver(currentVersion);
-
-  if (curMajor !== minMajor) return curMajor > minMajor;
-  if (curMinor !== minMinor) return curMinor > minMinor;
-  return curPatch >= minPatch;
+  const min = normalizeVersion(minVersion);
+  const current = normalizeVersion(currentVersion);
+  if (!min || !current) return false;
+  return semver.gte(current, min);
 }
 
 /** Validate a single addon directory. Returns collected errors + warnings. */
