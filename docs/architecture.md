@@ -68,7 +68,7 @@ Clustering only activates when `CLUSTER_NAME` is set. With a single replica and 
 
 ## Dashboard Frontend
 
-`apps/dashboard` is a Next.js (App Router) app; it is the one piece of the diagram above that changed shape in the v2 rewrite — the RPC sequence itself (`apps/dashboard` → RabbitMQ → `apps/worker` → Postgres/Redis → back) is unchanged, only the process that renders HTML did. A pre-rewrite survey of Red-DiscordBot, YAGPDB, and Skyra (see `dashboard.md` for the full spec this rewrite implements) shaped a few concrete choices:
+`apps/dashboard` is a Next.js (App Router) app; it is the one piece of the diagram above that changed shape in the v2 rewrite — the RPC sequence itself (`apps/dashboard` → RabbitMQ → `apps/worker` → Postgres/Redis → back) is unchanged, only the process that renders HTML did. A pre-rewrite survey of Red-DiscordBot, YAGPDB, and Skyra shaped a few concrete choices:
 
 - **The decoupled RPC bridge stays exactly as architected.** Red-DiscordBot's own `_rpc.py` — a JSON-RPC server the bot process exposes for an independent web frontend to call — validates the same design this monorepo already has: the dashboard never blocks or shares an event loop with the Discord gateway, regardless of which frontend framework renders its pages. `apps/dashboard/src/lib/rpc.ts` is a `server-only` module reachable only from Server Components, Route Handlers, and Server Actions — never bundled to the client.
 - **Sidebar + content-pane is a layout route group, not a re-rendered shell.** YAGPDB's control panel splits a persistent per-guild nav (`cp_nav.html`) from a swappable content pane rebuilt on every request. Next's `app/guild/[guildId]/layout.tsx` renders that sidebar once per navigation instead of on every page.

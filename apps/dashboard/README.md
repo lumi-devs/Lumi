@@ -12,7 +12,7 @@
 
 The **Lumi Dashboard** (`@lumi/dashboard`) is a Next.js (App Router) web administration panel. It empowers Discord server administrators to manage Lumi bot features, toggle modules, and modify configuration settings directly from a browser UI without using Discord chat commands.
 
-This is a from-scratch rewrite of the original hand-rolled `Bun.serve` SSR app — see `docs/DASHBOARD_RESEARCH_NOTES.md` and `dashboard.md` (repo root) for the design rationale. The architecture piece that **did not** change: the dashboard still never touches Postgres directly and never holds the Discord bot token — every read/write is proxied over a RabbitMQ RPC bridge to the bot worker (`apps/worker`), so a dashboard outage or traffic spike can never affect Discord gateway latency.
+This is a from-scratch rewrite of the original hand-rolled `Bun.serve` SSR app. The architecture piece that **did not** change: the dashboard still never touches Postgres directly and never holds the Discord bot token — every read/write is proxied over a RabbitMQ RPC bridge to the bot worker (`apps/worker`), so a dashboard outage or traffic spike can never affect Discord gateway latency.
 
 ---
 
@@ -23,7 +23,7 @@ This is a from-scratch rewrite of the original hand-rolled `Bun.serve` SSR app �
 - **IDOR guard**: `src/lib/auth-guards.ts`'s `authorizedGuild()` is re-checked on every guild-scoped page render *and* every guild-scoped Server Action — never trusted from client state.
 - **Security headers + CSP**: `next.config.ts`'s `headers()`.
 - **CSRF**: Next.js Server Actions' built-in same-origin (Origin vs Host) check — no hand-rolled token system.
-- **Design system**: Tailwind v4 tokens generated from the CSS custom properties in `dashboard.md` §7 (`src/app/globals.css`), plus a 3-theme engine (`data-theme` on `<html>`, see `src/components/theme-provider.tsx`).
+- **Design system**: Tailwind v4 tokens generated from the CSS custom properties in `src/app/globals.css`, plus a 3-theme engine (`data-theme` on `<html>`, see `src/components/theme-provider.tsx`).
 
 ---
 
@@ -88,4 +88,4 @@ src/
 
 ### What's stubbed
 
-Several `dashboard.md` §9 UI components are intentionally left as placeholder pages with a `StubPage` component naming the exact Prisma model(s) and spec component name — e.g. moderation case manager, warn thresholds, panic mode, temp VC generators/monitor, permits, config overrides, settings history, audit log, blocklist. Each stub page's file is a 5-line wrapper; the working pattern to copy is either `app/guild/[guildId]/modules/[moduleName]/page.tsx` (dynamic form + floating save bar) or `app/guild/[guildId]/modules/page.tsx` (toggle grid).
+Several UI components are intentionally left as placeholder pages with a `StubPage` component naming the exact Prisma model(s) and spec component name — e.g. moderation case manager, warn thresholds, panic mode, temp VC generators/monitor, permits, config overrides, settings history, audit log, blocklist. Each stub page's file is a 5-line wrapper; the working pattern to copy is either `app/guild/[guildId]/modules/[moduleName]/page.tsx` (dynamic form + floating save bar) or `app/guild/[guildId]/modules/page.tsx` (toggle grid).
