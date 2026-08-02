@@ -24,6 +24,14 @@ jobs:
           set -e
           WIKI_URL="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git"
 
+          # NOTE: GitHub does not provision the underlying <repo>.wiki.git
+          # repository from `has_wiki: true` alone - it's created lazily the
+          # first time a page is saved through the web UI (there is no API
+          # for this). Until that one-time manual step happens, every clone
+          # and push below fails with "remote: Repository not found." even
+          # though the "Wiki" tab is enabled. This block is best-effort: it
+          # tries to initialize a fresh repo so the push below "just works"
+          # once the wiki has been bootstrapped with a first page by hand.
           rm -rf wiki
           if git clone "$WIKI_URL" wiki 2>/dev/null; then
             echo "Cloned existing wiki"

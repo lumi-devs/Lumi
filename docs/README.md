@@ -15,6 +15,8 @@ Engineering documentation for **Lumi** - a modular, self-hosted Discord bot fram
 | [Addon SDK API Reference](API_REFERENCE.md) | Every export of `"lumi"` and its subpaths (`lumi/commands`, `lumi/permissions`, `lumi/scheduling`, `lumi/ui`, `lumi/utils`) - the addon-facing API surface. |
 | [Self-Hosting Guide](GUIDE_SELF_HOSTING.md) | Running your own instance: prerequisites, Docker Compose services, first-run steps, updates, backups. |
 | [Production Deployment Guide](GUIDE_PRODUCTION_DEPLOYMENT.md) | Hardening/scaling beyond self-hosting: clustering, secrets management, monitoring, zero-downtime deploys. |
+| [FAQ](FAQ.md) | Common questions - modules vs. addons, dashboard requirements, GDPR, updating, translations. |
+| [Troubleshooting](TROUBLESHOOTING.md) | Symptom-first index across boot, dashboard, sharding/clustering, addons, and observability. |
 
 ## Project policies
 

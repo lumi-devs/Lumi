@@ -22,6 +22,7 @@
     <a href="#architecture">Architecture</a> •
     <a href="#translations">Translations</a> •
     <a href="docs/">Docs</a> •
+    <a href="https://github.com/lumi-devs/Lumi/wiki">Wiki</a> •
     <a href="#contributing">Contributing</a>
   </p>
 </div>
@@ -54,7 +55,7 @@ git clone https://github.com/lumi-devs/lumi.git && cd lumi
 cp .env.example .env
 bun install
 docker compose up -d postgres pgbouncer redis rabbitmq
-bun run db:push
+bun run db:migrate
 bun run dev
 ```
 
