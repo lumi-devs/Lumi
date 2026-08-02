@@ -1,4 +1,5 @@
 import { container } from "@sapphire/framework";
+import { tryParseJSON } from "@sapphire/utilities";
 import { envIsDefined, envParseInteger, envParseString } from "#lib/env.js";
 import { Redis, type RedisOptions } from "ioredis";
 import { logError } from "#lib/utilities/errors.js";
@@ -235,11 +236,8 @@ export class InvalidationBus {
   }
 
   #onMessage = (_channel: string, payload: string) => {
-    try {
-      const { keys } = JSON.parse(payload) as { keys: string[] };
-      for (const fn of this.#listeners) fn(keys);
-    } catch (err: unknown) {
-      logError("Invalidation: malformed payload", err);
-    }
+    const parsed = tryParseJSON(payload) as { keys?: string[] } | null;
+    if (!parsed?.keys) return;
+    for (const fn of this.#listeners) fn(parsed.keys);
   };
 }

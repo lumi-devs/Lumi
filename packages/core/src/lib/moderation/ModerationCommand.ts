@@ -2,6 +2,7 @@ import { BaseCommand, type CommandContext } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
 import { logError } from "#lib/utilities/errors.js";
+import { isNullish } from "@sapphire/utilities";
 import { Result, type Awaitable } from "@sapphire/framework";
 import type { Guild, User } from "discord.js";
 
@@ -75,7 +76,7 @@ export async function runModerationFlow<
   const t = await ctx.fetchT();
 
   const target = await flow.resolveTarget(ctx, t);
-  if (target === null || target === undefined) {
+  if (isNullish(target)) {
     return replyFailure(ctx, flow.targetNotFound?.(t) ?? memberNotFound(t));
   }
 

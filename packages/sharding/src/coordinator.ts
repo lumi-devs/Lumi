@@ -124,6 +124,8 @@ export class ClusterCoordinator {
   private currentEpoch = -1;
   private closed = false;
 
+  private messageListener: ((ch: string, payload: string) => void) | null = null;
+
   public constructor(options: ClusterCoordinatorOptions) {
     this.opts = {
       redis: options.redis,
@@ -155,14 +157,17 @@ export class ClusterCoordinator {
     await this.opts.subscriber.subscribe(
       rebalanceChannel(this.opts.clusterName),
     );
-    this.opts.subscriber.on("message", (ch, payload) => {
-      if (ch !== rebalanceChannel(this.opts.clusterName)) return;
-      const epoch = Number(payload);
-      if (!Number.isFinite(epoch) || epoch <= this.currentEpoch) return;
-      this.applyAssignmentFromRedis().catch((err) =>
-        this.opts.log("warn", "rebalance apply failed", { err: String(err) }),
-      );
-    });
+    if (!this.messageListener) {
+      this.messageListener = (ch, payload) => {
+        if (ch !== rebalanceChannel(this.opts.clusterName)) return;
+        const epoch = Number(payload);
+        if (!Number.isFinite(epoch) || epoch <= this.currentEpoch) return;
+        this.applyAssignmentFromRedis().catch((err) =>
+          this.opts.log("warn", "rebalance apply failed", { err: String(err) }),
+        );
+      };
+      this.opts.subscriber.on("message", this.messageListener);
+    }
     this.heartbeatTimer = setInterval(() => {
       this.tick().catch((err) =>
         this.opts.log("warn", "heartbeat tick failed", { err: String(err) }),
@@ -191,6 +196,24 @@ export class ClusterCoordinator {
     this.closed = true;
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     this.heartbeatTimer = null;
+    if (this.messageListener) {
+      if (typeof this.opts.subscriber.off === "function") {
+        this.opts.subscriber.off("message", this.messageListener);
+      } else if (
+        typeof (
+          this.opts.subscriber as unknown as {
+            removeListener?: (...args: unknown[]) => unknown;
+          }
+        ).removeListener === "function"
+      ) {
+        (
+          this.opts.subscriber as unknown as {
+            removeListener: (...args: unknown[]) => unknown;
+          }
+        ).removeListener("message", this.messageListener);
+      }
+      this.messageListener = null;
+    }
     try {
       await this.opts.redis.zrem(
         membersKey(this.opts.clusterName),

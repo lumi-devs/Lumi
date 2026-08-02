@@ -98,3 +98,27 @@ Items are ordered by impact/effort; each references the exact files involved.
 - `skyra/src/lib/SkyraClient.ts` — composition style for #7 (note: not apples-to-apples,
   Skyra has no multi-process cluster to coordinate, but the composition pattern applies)
 - `skyra/src/lib/i18n/languageKeys/` — target layout for #5
+
+---
+
+## Post-Refactor Roadmap & Feature Expansion (v1.0 Preparation)
+
+### 12. Core Feature Expansion
+- **Audio / Music Module (`@lumi/module-music`)**: Implement audio node interface (e.g., Lavalink / Rust audio driver integration) for YouTube, SoundCloud, Spotify parsing, queueing, and DJ controls.
+- **Ticketing & Modmail Module (`@lumi/module-tickets`)**: Implement support ticket panel system with modal intake forms, staff assignment, ticket claiming, and HTML transcript archiving.
+- **Gamification & Economy Module (`@lumi/module-economy`)**: Implement XP leveling system, customizable rank cards, daily rewards, and server currency/shops.
+
+### 13. Dashboard UX & Discord Integration
+- **Global Search Shortcut (`Cmd+K` / `Ctrl+K`)**: Upgrade dashboard search box to support full-text search across field descriptions and category labels with highlight matching.
+- **Direct Dashboard Deep Links in Bot Responses**: Create `getDashboardLink(guildId, module, field)` utility to provide clickable web dashboard links directly in Discord warning/error messages (e.g. `/automod` -> *"Configure sensitivity on Web Dashboard [here]"*).
+- **UI Polish**: Fix dark-mode contrast (`#80869a`), add real-time "Saved" toast feedback, "Reset to Defaults" buttons, and field tooltips.
+
+### 14. Testing & Developer Experience (DX)
+- **Offline In-Memory Test Drivers**: Provide fallback mock drivers for Redis and PostgreSQL in unit tests so `bun test` passes 100% cleanly offline without database containers.
+- **Interactive Setup Wizard (`scripts/setup.sh` / `setup.ps1`)**: Complete interactive CLI setup script for `.env` generation, bot token verification, and Docker service bootstrapping.
+- **Addon Linter AST Enhancements**: Expand `scripts/validate-addon.ts` to enforce internal `#core` import boundaries and detect memory leaks in third-party modules.
+
+### 15. Documentation & Onboarding
+- **Core Guides**: Author `QUICK_START_ADDON.md`, `GUIDE_SELF_HOSTING.md`, `GUIDE_PRODUCTION_DEPLOYMENT.md`, and `API_REFERENCE.md`.
+- **Addon Boilerplate CLI**: Implement `bun run addon:create <name>` scaffolding command for bootstrapping new Lumi addon modules.
+

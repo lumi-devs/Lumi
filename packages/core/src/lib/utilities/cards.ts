@@ -8,6 +8,7 @@ import {
 
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
+import { cutText } from "@sapphire/utilities";
 import { MessageFlags } from "discord.js";
 import { BotConfig } from "./config.js";
 import { badge, formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "./ui/layout.js";
@@ -200,8 +201,13 @@ export function makeListCard(
   if (items.length === 0) {
     bodyParts.push("-# *No items to display.*");
   } else {
-    for (const item of items) {
-      bodyParts.push(`• ${item}`);
+    const maxVisibleItems = 25;
+    const visibleItems = items.slice(0, maxVisibleItems);
+    for (const item of visibleItems) {
+      bodyParts.push(`• ${cutText(item, 200)}`);
+    }
+    if (items.length > maxVisibleItems) {
+      bodyParts.push(`-# ...and ${items.length - maxVisibleItems} more item(s).`);
     }
   }
   return makeInfoCard(title, bodyParts, opts);

@@ -18,9 +18,9 @@ export class LoggingMessageUpdateListener extends ModuleListener<
     oldMessage: Message | PartialMessage,
     newMessage: Message | PartialMessage,
   ): Promise<void> {
-    if (!newMessage.content || newMessage.author?.bot) return;
+    if (!newMessage.guildId || !newMessage.content || newMessage.author?.bot) return;
     if (oldMessage.content === newMessage.content) return;
-    const guildId = newMessage.guildId!;
+    const guildId = newMessage.guildId;
     if (!(await isToggleEnabled(guildId, "message_edits"))) return;
     if (await isIgnoredChannel(guildId, newMessage.channelId)) return;
 

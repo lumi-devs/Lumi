@@ -7,6 +7,7 @@ import type { Channel, ConsumeMessage } from "amqplib";
 import { EventEmitter } from "node:events";
 import { randomUUID } from "node:crypto";
 import { container } from "@sapphire/framework";
+import { tryParseJSON } from "@sapphire/utilities";
 import { SpanKind } from "@opentelemetry/api";
 import {
   busEventsConsumed,
@@ -18,7 +19,6 @@ import {
   withSpan,
 } from "@lumi/observability";
 import { logError, errorFrom } from "#lib/utilities/errors.js";
-import { tryParseJSON } from "@sapphire/utilities";
 import type { RpcRequest, RpcResponse, RpcHandler } from "@lumi/contracts";
 
 export type { RpcRequest, RpcResponse, RpcHandler };
@@ -28,10 +28,7 @@ export const rpcHandlers = new Map<string, RpcHandler<unknown, unknown>>();
 export function registerRpcHandler<TIn, TOut>(
   action: string,
   handler: RpcHandler<TIn, TOut>,
-) {
-  if (rpcHandlers.has(action)) {
-    container.logger.warn(`[RPC] Overwriting existing handler: ${action}`);
-  }
+): void {
   rpcHandlers.set(action, handler as RpcHandler<unknown, unknown>);
 }
 
@@ -39,10 +36,15 @@ export function deregisterRpcHandler(action: string) {
   rpcHandlers.delete(action);
 }
 
-async function dispatchRpc(req: RpcRequest): Promise<RpcResponse> {
+async function dispatchRpc(req: RpcRequest<unknown>): Promise<RpcResponse<unknown>> {
   const handler = rpcHandlers.get(req.action);
-  if (!handler)
-    return { id: req.id, ok: false, error: `Missing action: ${req.action}` };
+  if (!handler) {
+    return {
+      id: req.id,
+      ok: false,
+      error: `No handler registered for action "${req.action}"`,
+    };
+  }
 
   if (
     req.guildId &&
@@ -90,8 +92,9 @@ function handleRpc(ch: Channel, msg: ConsumeMessage | null) {
   if (!msg) return;
   void (async () => {
     try {
-      const body = JSON.parse(msg.content.toString());
-      const req = { ...body, id: body.id ?? randomUUID() };
+      const body = tryParseJSON(msg.content.toString()) as RpcRequest | null;
+      if (!body?.action) return;
+      const req = { ...body, id: body.id ?? randomUUID() } as RpcRequest;
       const res = await dispatchRpc(req);
 
       if (msg.properties.replyTo) {
@@ -192,8 +195,8 @@ export class RabbitClient {
   #handleEvent(_ch: Channel, msg: ConsumeMessage | null) {
     if (!msg) return;
     try {
-      const data = JSON.parse(msg.content.toString());
-      if (!data.event) return;
+      const data = tryParseJSON(msg.content.toString()) as Record<string, any> | null;
+      if (!data?.event) return;
       busEventsConsumed.inc({ event: data.event });
 
       const parent = extractTraceContext({

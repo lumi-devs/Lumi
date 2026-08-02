@@ -38,10 +38,6 @@ export default class GiveawayService extends Service {
     return this.redis.scard(key);
   }
 
-  public async removeEntrant(guildId: string, giveawayId: string, userId: string): Promise<void> {
-    await this.redis.srem(GiveawayKeys.entries(guildId, giveawayId), userId);
-  }
-
   public async pickWinners(guildId: string, giveawayId: string, count: number): Promise<string[]> {
     const entrants = await this.redis.smembers(GiveawayKeys.entries(guildId, giveawayId));
     const shuffled = [...entrants].sort(() => Math.random() - 0.5);

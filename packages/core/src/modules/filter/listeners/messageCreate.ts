@@ -28,6 +28,8 @@ export class FilterMessageListener extends GuildMessageListener {
       await this.filterService.loadGuild(message.guildId);
     }
 
+    if (await this.#isExempt(message)) return;
+
     const mentionCount =
       message.mentions.users.size + message.mentions.roles.size;
     const hit = await this.filterService.test(
@@ -39,8 +41,6 @@ export class FilterMessageListener extends GuildMessageListener {
     const heat = this.filterService.getHeat(message.guildId);
     const heatActive = heat?.enabled === true;
     if (!hit && !heatActive) return;
-
-    if (await this.#isExempt(message)) return;
 
     if (hit) {
       await message.delete().catch(swallow("Filter: delete filtered message"));

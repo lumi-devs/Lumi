@@ -1,4 +1,5 @@
 import { container } from "@sapphire/framework";
+import { toTitleCase } from "@sapphire/utilities";
 import { shutdownTracing, runDrainSequence } from "@lumi/observability";
 import { LumiClient } from "./LumiClient.js";
 import { envParseString } from "#lib/env.js";
@@ -14,7 +15,7 @@ export async function bootstrapClientApp(
   const roleName = options.role ?? "worker";
   const onlineMsg =
     options.onlineMessage ??
-    `[${roleName.charAt(0).toUpperCase() + roleName.slice(1)}] Online`;
+    `[${toTitleCase(roleName)}] Online`;
 
   const client = await LumiClient.bootstrap(options).catch(
     (err: unknown): never => {

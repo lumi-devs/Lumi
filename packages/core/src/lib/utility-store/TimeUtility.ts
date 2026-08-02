@@ -1,20 +1,21 @@
 import { Utility } from "@sapphire/plugin-utilities-store";
-import { Timestamp } from "@sapphire/timestamp";
 import { Duration } from "@sapphire/time-utilities";
+import { time, TimestampStyles } from "@discordjs/formatters";
 
 export class TimeUtility extends Utility {
+
   public constructor(context: Utility.Context, options: Utility.Options) {
     super(context, { ...options, name: "time" });
   }
 
   public relative(date: Date | number = new Date()): string {
-    const t = new Timestamp("R");
-    return t.display(date);
+    const d = typeof date === "number" ? new Date(date) : date;
+    return time(d, TimestampStyles.RelativeTime);
   }
 
   public shortTime(date: Date | number = new Date()): string {
-    const t = new Timestamp("t");
-    return t.display(date);
+    const d = typeof date === "number" ? new Date(date) : date;
+    return time(d, TimestampStyles.ShortTime);
   }
 
   public formatDuration(ms: number): string {

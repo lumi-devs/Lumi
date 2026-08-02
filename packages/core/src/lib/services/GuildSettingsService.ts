@@ -1,4 +1,5 @@
 import { Service } from "#lib/module-system/Service.js";
+import { isNullish, tryParseJSON } from "@sapphire/utilities";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import type { Guild } from "@prisma/client";
@@ -11,10 +12,8 @@ import {
 @ApplyOptions<Piece.Options>({ name: "guild-settings" })
 export class GuildSettingsService extends Service {
   public async setDashboardLayout(guildId: string, rawLayout: string) {
-    let layout: unknown;
-    try {
-      layout = JSON.parse(rawLayout);
-    } catch {
+    const layout = tryParseJSON(rawLayout);
+    if (isNullish(layout)) {
       throw new Error("The layout must be valid JSON (parse failed).");
     }
     if (!Array.isArray(layout)) {
