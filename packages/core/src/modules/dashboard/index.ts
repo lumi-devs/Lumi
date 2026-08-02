@@ -170,6 +170,7 @@ export class DashboardModule extends Module {
 
     registerRpcHandler(RPC_ACTIONS.guildSettingsSet, async (req) => {
       const guildId = requireGuildId(req.guildId);
+      await requireGuildManager(guildId, req.actorId);
       const data = parsePayload(GuildSettingsSchema, req.data);
 
       const updated = await container.db.config.updateGuildSettings(
