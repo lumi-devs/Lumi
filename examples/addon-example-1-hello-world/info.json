@@ -1,5 +1,5 @@
 {
-  "name": "hello-world",
+  "name": "addon-example-1-hello-world",
   "author": ["Lumi Developers"],
   "description": "The simplest possible Lumi addon: one command, one config field, one listener.",
   "short": "A minimal starter addon.",

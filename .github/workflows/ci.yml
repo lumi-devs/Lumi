@@ -22,6 +22,7 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
       nix: ${{ steps.filter.outputs.nix }}
+      addons: ${{ steps.filter.outputs.addons }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v4
@@ -41,6 +42,10 @@ jobs:
             nix:
               - 'flake.nix'
               - 'flake.lock'
+            addons:
+              - 'examples/**'
+              - 'scripts/validate-addon.ts'
+              - 'packages/core/src/lib/downloader/**'
 
   lint:
     name: Lint
@@ -121,11 +126,13 @@ jobs:
           restore-keys: ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - run: bun run db:generate
-      - run: bun run test -- --coverage
+      - run: bun run test:coverage
       - uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: coverage/lcov.info
+          path: |
+            coverage/lcov.info
+            coverage/dashboard/lcov.info
           retention-days: 1
           if-no-files-found: error
       - name: Codecov Upload
@@ -133,8 +140,29 @@ jobs:
         continue-on-error: true
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
+          files: ./coverage/lcov.info,./coverage/dashboard/lcov.info
           fail_ci_if_error: false
+
+  validate-examples:
+    name: Validate Example Addons
+    needs: changes
+    if: ${{ needs.changes.outputs.addons == 'true' || github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - name: Validate example addons against the Downloader's structural rules
+        run: bun run validate examples
 
   nix-check:
     name: Nix Flake Evaluation

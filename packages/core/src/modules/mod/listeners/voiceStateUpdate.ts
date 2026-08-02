@@ -15,19 +15,16 @@ export class VoiceStateUpdateListener extends Listener {
   }
 
   public async run(_oldState: VoiceState, newState: VoiceState): Promise<void> {
-    // Only process when user is in a voice channel
     if (!newState.channelId || !newState.guild || !newState.member) return;
 
     const guildId = newState.guild.id;
     const userId = newState.member.id;
 
-    // Check Redis for active voice mute state
     const key = RedisKeys.voiceMuteState(guildId, userId);
     const isMutedInRedis = await container.redis.get(key);
     let isVoiceMuted = Boolean(isMutedInRedis);
 
     if (!isVoiceMuted) {
-      // Fallback DB check for active voice_mute case
       const activeCases = await container.db.moderation.getActiveCases(
         guildId,
         userId,
@@ -35,13 +32,11 @@ export class VoiceStateUpdateListener extends Listener {
       );
       if (activeCases.length > 0) {
         isVoiceMuted = true;
-        // Cache back to Redis
         await container.redis.set(key, "1", "EX", RedisTTL.voiceMute);
       }
     }
 
     if (isVoiceMuted) {
-      // Ensure member is server muted and disconnected
       await newState
         .setMute(true, "Auto-enforcing voice mute")
         .catch(() => null);

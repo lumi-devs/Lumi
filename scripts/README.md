@@ -11,8 +11,10 @@ This directory contains CLI tools, build-time code generators, integration testi
 
 | Script | Invocation Alias | Primary Purpose | Environment Requirements |
 | :--- | :--- | :--- | :--- |
+| `setup.sh` | `bun run setup` | Interactive first-run wizard: generates `.env`, verifies the bot token, optionally starts `docker compose` | Offline CLI (curl/docker optional) |
 | `generate-manifests.ts` | `bun run modules:manifest` | Build-time manifest generator for internal & external modules | Node/Bun file system |
 | `validate-addon.ts` | `bun run validate <path>` | Structural and architectural validator for local third-party addons | Offline CLI |
+| `create-addon.ts` | `bun run addon:create <name>` | Scaffolds a new addon/module directory from a minimal template | Offline CLI |
 | `seed.ts` | `bun run db:seed` | Populates local PostgreSQL database with QA test guilds & config | PostgreSQL |
 | `benchmark.ts` | `bun run bench` | Performance benchmark suite measuring PermitResolver, Card UI, & formatters | Offline CLI |
 | `verify-resilience.ts` | `bun run verify:resilience` | Fault-tolerance & event-bus message durability test suite | Redis Streams |
@@ -20,6 +22,28 @@ This directory contains CLI tools, build-time code generators, integration testi
 ---
 
 ## Script Reference
+
+### `setup.sh`
+
+**Command:** `bun run setup`
+
+Interactive onboarding wizard for a fresh checkout. Bash, not Bun/TS, since it runs before any dependency is installed.
+
+#### Overview & Mechanics
+
+1. Prompts for every mandatory variable in `.env.example` (bot token, client ID, Postgres/Redis/RabbitMQ credentials), plus a few common general/dashboard settings, and writes the result to `.env` (mode `600`). Refuses to clobber an existing `.env` without confirmation.
+2. Verifies the entered bot token with a live `GET https://discord.com/api/v10/users/@me` request (`Authorization: Bot <token>`) and prints the resolved bot username on success. A failed/unreachable check is a warning, not a hard stop - setup still completes so you can fix `.env` by hand.
+3. Optionally runs `docker compose up -d postgres pgbouncer redis rabbitmq` if Docker is available.
+
+#### Usage Examples
+
+```bash
+# Full interactive setup
+bun run setup
+
+# Same thing, direct invocation
+bash scripts/setup.sh
+```
 
 ### `generate-manifests.ts`
 
@@ -62,6 +86,7 @@ A structural validation utility used during addon development and CI pipelines t
 * **Module Definition**: Verifies that `index.ts` exports a valid `@DefineModule` decorator definition.
 * **Directory Conventions**: Ensures all Sapphire Scheduled Tasks are placed strictly inside a `scheduled-tasks/` subdirectory.
 * **Architectural Boundaries**: Checks for forbidden cross-module relative imports and disallowed global monkey-patching patterns.
+* **Memory-leak heuristics** *(warnings, not errors)*: flags `setInterval`/`setTimeout` handles that are never stored or never passed to `clearInterval`/`clearTimeout`, `.on(`/`.addListener(` registrations with no `onUnload`/`dispose`/`.off(`/`.removeListener(` anywhere in the same file, and module-level `let`/array/`Map`/`Set` state that's pushed/set/added to without any visible bound or eviction. These are best-effort static checks (regex-level, not a real parser) meant to prompt a second look, not a verdict - see `packages/core/src/lib/downloader/validate.ts`.
 
 #### Usage Examples
 
@@ -71,6 +96,31 @@ bun run validate ./data/3rd-party-modules/moderation-plus
 
 # Validate a full repository containing multiple addon directories
 bun run validate ./my-addons-repository
+```
+
+---
+
+### `create-addon.ts`
+
+**Command:** `bun run addon:create <name> [--dir <path>] [--display-name <text>] [--author <name>] [--force]`
+
+Scaffolds a new addon directory with the minimal boilerplate a real addon needs - `info.json`, `index.ts` (`@DefineModule` + a `configSchema` field + a no-op `deleteUserData`), one command stub, and a `README.md` - mirroring `examples/addon-example-1-hello-world`, the addon [`docs/QUICK_START_ADDON.md`](../docs/QUICK_START_ADDON.md) walks through.
+
+#### Overview & Mechanics
+
+Writes into `./addons/<name>` by default (gitignored - a personal scratch directory, the same shape `LUMI_DEV_PATHS` expects: a directory containing one or more addon subfolders). Refuses to overwrite an existing directory unless `--force` is passed.
+
+#### Usage Examples
+
+```bash
+# Scaffold ./addons/welcome-messages
+bun run addon:create welcome-messages
+
+# Custom output location and metadata
+bun run addon:create tag-manager --dir ../lumi-addons --author "Your Name"
+
+# Validate what got generated
+bun run validate ./addons/welcome-messages
 ```
 
 ---

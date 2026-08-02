@@ -42,6 +42,15 @@ export class ModuleRepository extends Repository {
     return new Map(rows.map((r) => [r.moduleName, r.enabled]));
   }
 
+  /** Full kill-switch rows (incl. `reason`) for the dashboard's system panel. */
+  public async getGlobalModuleStatesDetailed(): Promise<
+    { moduleName: string; enabled: boolean; reason: string | null }[]
+  > {
+    return this.prisma.globalModuleState.findMany({
+      select: { moduleName: true, enabled: true, reason: true },
+    });
+  }
+
   public async getGuildModuleStates(
     guildId: string,
   ): Promise<Map<string, boolean>> {

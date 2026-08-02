@@ -9,7 +9,7 @@ import {
   Registry,
 } from "prom-client";
 import { createServer, type Server } from "node:http";
-import { runReadinessProbes } from "./readiness.js";
+import { runReadinessProbes } from "./readiness";
 
 export const registry = new Registry();
 

@@ -40,6 +40,18 @@ const ConfigSetSchema = s.object({
   value: s.any(),
 });
 
+const GuildSettingsSchema = s.object({
+  prefix: s.string().lengthLessThanOrEqual(5).nullable().optional(),
+  modRoleId: SnowflakeSchema.nullable().optional(),
+  adminRoleId: SnowflakeSchema.nullable().optional(),
+  modLogChannelId: SnowflakeSchema.nullable().optional(),
+  muteRoleId: SnowflakeSchema.nullable().optional(),
+  locale: s.string().optional(),
+  timezone: s.string().optional(),
+  noMentionSpamWindowMs: s.number().int().nullable().optional(),
+  noMentionSpamLimit: s.number().int().nullable().optional(),
+});
+
 @DefineModule({
   name: "dashboard",
   displayName: "Dashboard",
@@ -131,6 +143,17 @@ export class DashboardModule extends Module {
       return { success: true, key, value };
     });
 
+    registerRpcHandler(RPC_ACTIONS.guildSettingsSet, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      const data = parsePayload(GuildSettingsSchema, req.data);
+
+      const updated = await container.db.config.updateGuildSettings(
+        guildId,
+        data,
+      );
+      return { success: true, settings: updated };
+    });
+
     return super.onLoad();
   }
 
@@ -139,6 +162,7 @@ export class DashboardModule extends Module {
     rpcHandlers.delete(RPC_ACTIONS.guildDashboardGet);
     rpcHandlers.delete(RPC_ACTIONS.guildModuleToggle);
     rpcHandlers.delete(RPC_ACTIONS.guildConfigSet);
+    rpcHandlers.delete(RPC_ACTIONS.guildSettingsSet);
     return super.onUnload();
   }
 }

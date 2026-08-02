@@ -7,3 +7,48 @@ append_commit_message: false
 files:
   - source: /packages/core/src/languages/en-US/**/*.json
     translation: /packages/core/src/languages/%locale%/**/%original_file_name%
+    # Crowdin's %locale% placeholder resolves to each language's *default CLDR
+    # locale* (e.g. "cs" -> "cs-CZ", "de" -> "de-DE", "ja" -> "ja-JP"), which
+    # for most languages does NOT match the exact locale code Discord's
+    # interactionLocale/guildLocale expects (see discord-api-types' `Locale`
+    # enum: Discord wants the bare "cs", "de", "ja", ... with no region
+    # suffix, except where noted below). Without this mapping, every sync
+    # regenerates a `<code>-<REGION>` folder alongside the correct one.
+    # Verified against the live Crowdin API (GET /api/v2/languages) on
+    # 2026-08-02: each `id` below is Crowdin's language id, each value is the
+    # exact code we want written to disk (= Discord's locale code).
+    languages_mapping:
+      locale:
+        cs: cs
+        da: da
+        de: de
+        el: el
+        fi: fi
+        fr: fr
+        hu: hu
+        it: it
+        ja: ja
+        ko: ko
+        nl: nl
+        no: no
+        pl: pl
+        ro: ro
+        ru: ru
+        tr: tr
+        uk: uk
+        vi: vi
+        # These already match Discord's codes 1:1 (Crowdin's default locale
+        # for these happens to equal the id), listed for pinning/documentation:
+        es-ES: es-ES
+        pt-BR: pt-BR
+        sv-SE: sv-SE
+        zh-CN: zh-CN
+        zh-TW: zh-TW
+    # TODO: The Crowdin *project's* target-language list still has several
+    # languages enabled that Discord does not support at all, so they will
+    # keep coming back on every sync no matter what this file says. These
+    # must be removed as target languages via the Crowdin web UI/API
+    # (Project Settings > Languages) — cannot be done from this repo:
+    #   af (Afrikaans), ar / ar-SA (Arabic), ca (Catalan), he (Hebrew),
+    #   pt-PT (Portuguese, Portugal — pt-BR is the only Portuguese Discord
+    #   supports), sr (Serbian)

@@ -2,9 +2,9 @@
 // module that calls this BEFORE any instrumented library is imported (ESM hoists
 // imports, so it must live in its own module imported first in main.ts).
 
-import { startTracing } from "./tracing.js";
-import { startEventLoopMonitor } from "./event-loop.js";
-import { initMetrics, startMetricsServer } from "./metrics.js";
+import { startTracing } from "./tracing";
+import { startEventLoopMonitor } from "./event-loop";
+import { initMetrics, startMetricsServer } from "./metrics";
 
 export function bootstrapTelemetry(serviceName?: string): void {
   const name =

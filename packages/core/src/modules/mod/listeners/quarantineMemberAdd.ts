@@ -17,7 +17,6 @@ export class QuarantineMemberAddListener extends Listener {
     const guildId = member.guild.id;
     const userId = member.id;
 
-    // Check Redis or DB for active quarantine state
     const quarantineState = await container.redis.get(
       RedisKeys.quarantineState(guildId, userId),
     );
