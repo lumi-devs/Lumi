@@ -1,7 +1,7 @@
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 
 /**
- * Registers `/module` and its nine subcommands.
+ * Registers `/module` and its eleven subcommands.
  *
  * @param registry - The registry handed to the command piece.
  * @param name - The piece's own name, so the slash command never drifts from
@@ -103,6 +103,30 @@ export function registerModuleCommand(
               .setName("module")
               .setDescription("The module name to update (omit to update all)")
               .setRequired(false),
+          ),
+      )
+      .addSubcommand((s) =>
+        s
+          .setName("pin")
+          .setDescription(
+            "Freeze an installed module's version - ,module update will skip it",
+          )
+          .addStringOption((o) =>
+            o
+              .setName("module")
+              .setDescription("The module name to pin")
+              .setRequired(true),
+          ),
+      )
+      .addSubcommand((s) =>
+        s
+          .setName("unpin")
+          .setDescription("Remove the update lock set by ,module pin")
+          .addStringOption((o) =>
+            o
+              .setName("module")
+              .setDescription("The module name to unpin")
+              .setRequired(true),
           ),
       )
       .addSubcommand((s) =>

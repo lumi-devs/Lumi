@@ -1,0 +1,8 @@
+{
+  "name": "giveaway",
+  "author": ["Lumi Developers"],
+  "description": "Giveaways with an entry button, scheduled ending, host-only reroll, and an edit-prize modal - one example of every module extension point.",
+  "short": "Full-featured giveaway addon.",
+  "version": "1.0.0",
+  "requirements": []
+}

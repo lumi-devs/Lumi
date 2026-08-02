@@ -392,7 +392,25 @@ export class DownloaderService extends Service {
 
   public async updateModule(
     moduleName: string,
-  ): Promise<{ updated: boolean; changelog?: string; needsRestart?: boolean }> {
+  ): Promise<{
+    updated: boolean;
+    changelog?: string;
+    needsRestart?: boolean;
+    pinned?: boolean;
+  }> {
+    const installed =
+      await this.container.db.downloader.readInstalledDownloaderModule(
+        moduleName,
+      );
+    if (!installed) {
+      throw new Error(
+        `Module **${moduleName}** was not installed via the downloader.`,
+      );
+    }
+    if (installed.pinned) {
+      return { updated: false, pinned: true };
+    }
+
     const check = await this.checkForModuleUpdate(moduleName);
     if (!check.ok) throw new Error(check.reason);
     if (!check.hasUpdate) return { updated: false };
@@ -471,6 +489,26 @@ export class DownloaderService extends Service {
     await this.container.db.global.updateGlobalConfig({
       extra: { ...extra, autoUpdate: { ...current, ...patch } },
     });
+  }
+
+  /** Freezes (or unfreezes) an installed module against `,module update`/`updateall`. */
+  public async setModulePinned(
+    moduleName: string,
+    pinned: boolean,
+  ): Promise<void> {
+    const installed =
+      await this.container.db.downloader.readInstalledDownloaderModule(
+        moduleName,
+      );
+    if (!installed) {
+      throw new Error(
+        `Module **${moduleName}** was not installed via the downloader.`,
+      );
+    }
+    await this.container.db.downloader.setInstalledDownloaderModulePinned(
+      moduleName,
+      pinned,
+    );
   }
 
   public getInstalledModules() {

@@ -7,6 +7,15 @@
   "type": "module",
   "workspaces": ["packages/*", "apps/*"],
   "comment:imports": "Safety net for downloaded addons: they are symlinked into packages/core/src/modules but live (realpath) under data/3rd-party-modules, so their #core/#lib/#utilities specifiers resolve up to THIS root package.json. Mirrors packages/core/package.json's imports map.",
+  "comment:exports": "The public addon API, namespaced like redbot.core/redbot.core.commands/redbot.core.utils.chat_formatting. Since addon files' nearest package.json is this one (see comment:imports above), `import ... from \"lumi\"` (and its subpaths) self-resolve here via Node/Bun package self-reference - the one stable import surface third-party addon code should use instead of #core/#lib/#utilities/#database.",
+  "exports": {
+    ".": "./packages/core/src/lib/addon-sdk/index.ts",
+    "./commands": "./packages/core/src/lib/addon-sdk/commands.ts",
+    "./permissions": "./packages/core/src/lib/addon-sdk/permissions.ts",
+    "./scheduling": "./packages/core/src/lib/addon-sdk/scheduling.ts",
+    "./ui": "./packages/core/src/lib/addon-sdk/ui.ts",
+    "./utils": "./packages/core/src/lib/addon-sdk/utils.ts"
+  },
   "imports": {
     "#lib/commands.js": "./packages/core/src/lib/commands.ts",
     "#lib/env.js": "./packages/core/src/lib/env.ts",

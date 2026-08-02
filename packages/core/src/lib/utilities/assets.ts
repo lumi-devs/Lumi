@@ -55,6 +55,7 @@ const defaultEmojis = {
   DOWNLOAD: "📥",
   INSTALL: "🔧",
   UNINSTALL: "🗑️",
+  PIN: "📌",
 
   /** Connectivity & Infrastructure */
   DATABASE: "🐘",

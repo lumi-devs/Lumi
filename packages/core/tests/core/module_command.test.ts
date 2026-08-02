@@ -232,7 +232,7 @@ describe("ModuleCommand", () => {
     command.registerApplicationCommands(mockRegistry as any);
 
     expect(spy).toHaveBeenCalled();
-    expect(mockBuilder.addSubcommand).toHaveBeenCalledTimes(9);
+    expect(mockBuilder.addSubcommand).toHaveBeenCalledTimes(11);
     expect(subNames).toEqual([
       "list",
       "info",
@@ -242,6 +242,8 @@ describe("ModuleCommand", () => {
       "install",
       "uninstall",
       "update",
+      "pin",
+      "unpin",
       "help",
     ]);
   });

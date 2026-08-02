@@ -19,6 +19,8 @@ If you're adding a module that ships *with* the bot itself, you want the [Module
 
 The downloader clones the repo, treats each top-level directory as an addon, and registers it as a Sapphire base path - your `commands/`, `listeners/`, etc. sub-store folders are discovered automatically. You never call `stores.registerPath` yourself.
 
+`,repo add` shows a one-time confirmation prompt before cloning, warning that code from the repo runs **inside the bot process** with full access to its database, cache, and Discord client, and that Lumi doesn't review or vet third-party repositories. Declining, or not responding within 30 seconds, cancels the add - nothing gets cloned. This is a bot-owner-facing warning about the repo as a whole, not something your addon needs to do anything about.
+
 ## Anatomy of an addon
 
 Only `info.json` and `index.ts` are mandatory:
@@ -51,7 +53,7 @@ my-addon/
 `index.ts` follows the same `@DefineModule` pattern as a built-in module (see the [Module Creation Guide](GUIDE_MODULE_CREATION.md#step-1-define-module-metadata)):
 
 ```typescript
-import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
+import { Module, DefineModule, cfg } from "lumi";
 
 @DefineModule({
   name: "my-addon",
@@ -79,13 +81,14 @@ Config declared in `configSchema` is automatically editable via `/config` and th
 
 These are stricter than the built-in module rules because addons run untrusted, outside this repo, and can't ship schema migrations:
 
+- **Import through the SDK, never Lumi's internal paths.** Addon code must import from `"lumi"` and its subpaths - `"lumi"` (`Module`, `DefineModule`, `cfg`, `Service`/`getService`), `"lumi/commands"` (`BaseCommand`, `BaseSubcommand`, `CommandContext`), `"lumi/permissions"`, `"lumi/scheduling"`, `"lumi/ui"` (cards, `Emojis`, pagination, `confirmPrompt`), `"lumi/utils"` - never `#core/*`, `#lib/*`, `#utilities/*`, or `#database/*`. Those are implementation details that move on any core refactor; the addon linter emits a warning if it sees one of them imported directly (see `validateAddon` in the downloader).
 - **Dependency isolation**: list external packages in `info.json`'s `requirements` array. The downloader creates a private `package.json` inside the addon directory and runs `bun add` there - never assume anything about the bot's root `package.json`.
 - **No `DatabaseService` methods.** Addons must be 100% self-contained; you cannot add a repository to the shared `container.db` facade.
 - **No `container.prisma`, ever.** Addons get no schema of their own.
 - **Persist through `container.db.guildKV`** - the generic key/value store, keyed `guildId + module + targetId + key`. Note `listModuleData({ module, key, guildId })` filters on `key`, so the identifier that *varies per record* goes in `targetId`, and `key` names the collection (see `activity-roles/lib/store.ts` in `lumi-addons` for the pattern).
 - **Use `container.redis` for ephemeral state**, with key builders defined in a local `keys.ts` - same convention as built-in modules.
 - **GDPR**: if your addon stores anything keyed by a user ID (Postgres via `guildKV`, or Redis), override `deleteUserData(userId, requester)` and delete it there. If you store nothing, write a `// No-op` override with a one-line justification rather than omitting the method.
-- **UI through the card system**: never `new EmbedBuilder()`. Use `makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeInfoCard`, `makeListCard` from `#utilities/cards.js`, or the `reply*` helpers on `BaseCommand`.
+- **UI through the card system**: never `new EmbedBuilder()`. Use `makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeInfoCard` from `"lumi/ui"`, or the `reply*` helpers on `CommandContext`.
 - **BullMQ pieces live in a folder named exactly `scheduled-tasks/`** - a `tasks/` directory is silently ignored, not an error. Discord/DB side effects of a fire must go through `registerTaskFireHandler(name, mode, handler)` in `onLoad`, same as built-in modules (see [Scheduled Tasks](GUIDE_MODULE_CREATION.md#step-7-scheduled-tasks)).
 - **No imports from sibling addons.** Same zero-cross-module-import rule as built-in modules, just enforced across addon directories instead of `packages/core/src/modules/`.
 
@@ -128,3 +131,5 @@ Address feedback with follow-up commits on the same branch rather than force-pus
 ## Versioning & updates
 
 Bump `version` in `info.json` on any behavioral change - this is what `,repo update` / the dashboard's addon-update check compares against to know a new version is available. There's no separate changelog file requirement for addons (unlike core `Lumi`, which uses Changesets); a clear PR description and commit messages are sufficient.
+
+A bot owner can freeze an installed addon at its current version with `,module pin <name>` (mirroring Red's `[p]cog pin`) - `,module update <name>` and a bare `,module update` (all installed modules) both skip a pinned module instead of checking it for updates. `,module unpin <name>` removes the lock. This is entirely owner-side; your addon doesn't need to do anything to support it, but it's worth a line in your README if users might want to pin before a breaking version bump.

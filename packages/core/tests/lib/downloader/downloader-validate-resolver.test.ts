@@ -62,7 +62,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       await fs.writeFile(path.join(addonDir, "manifest.json"), JSON.stringify(manifestJson));
 
       const indexTs = `
-        import { Module } from "#lib/module-system/Module.js";
+        import { Module } from "lumi";
         export function DefineModule(meta: any) { return (cls: any) => cls; }
         @DefineModule({ name: "${addonName}" })
         export class ValidModule extends Module {}

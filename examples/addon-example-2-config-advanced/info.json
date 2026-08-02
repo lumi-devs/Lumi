@@ -1,0 +1,8 @@
+{
+  "name": "tag-manager",
+  "author": ["Lumi Developers"],
+  "description": "Custom text tags with add/remove/list/reset, showing five config field types and guildKV persistence.",
+  "short": "Custom tag commands with a config-heavy example.",
+  "version": "1.0.0",
+  "requirements": []
+}
