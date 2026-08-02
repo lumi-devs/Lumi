@@ -13,6 +13,7 @@ import { Input, Label } from "#/components/ui/input";
 import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
 import type { DownloaderRepoView } from "#/lib/dashboard-data";
+import { deriveRepoNameFromUrl } from "#/lib/utils";
 
 /** dashboard.md §9A `AddonGitRepoManagerTable` + `InstalledAddonsGrid`. */
 export function RepoManager({ repos: initial }: { repos: DownloaderRepoView[] }) {
@@ -23,15 +24,27 @@ export function RepoManager({ repos: initial }: { repos: DownloaderRepoView[] })
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  function handleUrlBlur() {
+    // Only auto-fill while the user hasn't typed a name of their own -
+    // never clobber a manual edit.
+    if (!name.trim() && url.trim()) {
+      setName(deriveRepoNameFromUrl(url.trim()));
+    }
+  }
+
   function handleAdd() {
     setError(null);
+    const effectiveName = name.trim() || deriveRepoNameFromUrl(url.trim());
     startTransition(async () => {
-      const res = await addRepo(name, url, branch || undefined);
+      const res = await addRepo(effectiveName, url, branch || undefined);
       if (!res.ok) {
         setError(res.error ?? "Failed to add repo");
         return;
       }
-      setRepos((r) => [...r, { id: Date.now(), name, url, branch: branch || "master", commit: null }]);
+      setRepos((r) => [
+        ...r,
+        { id: Date.now(), name: effectiveName, url, branch: branch || "master", commit: null },
+      ]);
       setName("");
       setUrl("");
       setBranch("");
@@ -44,12 +57,22 @@ export function RepoManager({ repos: initial }: { repos: DownloaderRepoView[] })
         <p className="mb-3 text-sm font-semibold">Add addon repository</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1.5fr_0.7fr_auto]">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="repoName">Name</Label>
-            <Input id="repoName" value={name} onChange={(e) => setName(e.target.value)} />
+            <Label htmlFor="repoName">Name (optional)</Label>
+            <Input
+              id="repoName"
+              placeholder="Derived from URL if left blank"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="repoUrl">Git URL</Label>
-            <Input id="repoUrl" value={url} onChange={(e) => setUrl(e.target.value)} />
+            <Input
+              id="repoUrl"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onBlur={handleUrlBlur}
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="repoBranch">Branch</Label>
@@ -61,7 +84,7 @@ export function RepoManager({ repos: initial }: { repos: DownloaderRepoView[] })
             />
           </div>
           <Button
-            disabled={!name || !url || isPending}
+            disabled={!url || isPending}
             onClick={handleAdd}
             className="self-end"
           >

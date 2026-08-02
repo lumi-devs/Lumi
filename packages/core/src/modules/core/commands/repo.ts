@@ -1,4 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
+import { deriveRepoNameFromUrl } from "#lib/downloader/url-helpers.js";
 import { getService } from "#lib/module-system/Service.js";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
@@ -56,15 +57,17 @@ export class RepoCommand extends BaseSubcommand {
             .setDescription("Add a repository")
             .addStringOption((o) =>
               o
-                .setName("name")
-                .setDescription("Unique repo name")
+                .setName("url")
+                .setDescription("Git clone URL")
                 .setRequired(true),
             )
             .addStringOption((o) =>
               o
-                .setName("url")
-                .setDescription("Git clone URL")
-                .setRequired(true),
+                .setName("name")
+                .setDescription(
+                  "Unique repo name (optional - derived from the URL if omitted)",
+                )
+                .setRequired(false),
             )
             .addStringOption((o) =>
               o
@@ -130,7 +133,7 @@ export class RepoCommand extends BaseSubcommand {
         [
           "Use the Add-ons Manager for the smoothest workflow: browse repositories, inspect modules, and install in a few clicks.",
           "Quick command fallback:",
-          "- `,repo add <name> <url> [branch]`",
+          "- `,repo add <url> [name] [branch]` (name is derived from the URL if omitted)",
           "- `,repo remove <name>`",
           "- `,repo update <name>`",
           "- `,repo list`",
@@ -145,8 +148,9 @@ export class RepoCommand extends BaseSubcommand {
 
   public async add(ctx: CommandContext): Promise<void> {
     const t = await ctx.fetchT();
-    const name = (await ctx.getString("name", { required: true }))!;
     const url = (await ctx.getString("url", { required: true }))!;
+    const rawName = await ctx.getString("name", { required: false });
+    const name = rawName || deriveRepoNameFromUrl(url);
     const branch =
       (await ctx.getString("branch", { required: false })) ?? "default";
 
