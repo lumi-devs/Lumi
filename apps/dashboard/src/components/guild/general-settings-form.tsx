@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import type { GuildSettingsPayload } from "@lumi/contracts";
 import { setGuildSettings } from "#/actions/guild-actions";
 import { SaveBar } from "#/components/save-bar";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
 import { Input, Label } from "#/components/ui/input";
+import { useServerAction } from "#/lib/use-server-action";
 import type { GuildSettings } from "#/lib/dashboard-data";
 
 type FormState = GuildSettingsPayload;
@@ -34,8 +35,7 @@ export function GeneralSettingsForm({
 }) {
   const baseline = toFormState(settings);
   const [form, setForm] = useState<FormState>(baseline);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const { isPending, error, setError, run } = useServerAction();
 
   const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
 
@@ -44,8 +44,7 @@ export function GeneralSettingsForm({
   }
 
   function handleSave() {
-    setError(null);
-    startTransition(async () => {
+    run(async () => {
       const normalized: GuildSettingsPayload = {
         ...form,
         prefix: form.prefix || null,

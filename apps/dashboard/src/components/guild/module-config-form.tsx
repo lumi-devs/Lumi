@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { setGuildConfigField, toggleGuildModule } from "#/actions/guild-actions";
 import { SaveBar } from "#/components/save-bar";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
 import { Switch } from "#/components/ui/switch";
 import { Badge } from "#/components/ui/badge";
 import { ConfigFieldInput, ConfigFieldLabel } from "./config-field-input";
+import { useServerAction } from "#/lib/use-server-action";
 import type { DashboardModuleView } from "#/lib/dashboard-data";
 
 /** dashboard.md §9B `DynamicConfigFormEditor` — one module's toggle + config fields. */
@@ -20,15 +21,16 @@ export function ModuleConfigForm({
   const isCore = m.name === "core";
   const [enabled, setEnabled] = useState(m.enabled);
   const [config, setConfig] = useState<Record<string, unknown>>(m.config);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const { isPending, error, setError, run } = useServerAction();
 
   const dirty = JSON.stringify(config) !== JSON.stringify(m.config);
 
+  // Toggle and save share one pending/error state (as before): both drive
+  // the same Switch's `disabled` and the same SaveBar's `saving`/`error`.
   function handleToggle(next: boolean) {
     const prev = enabled;
     setEnabled(next);
-    startTransition(async () => {
+    run(async () => {
       const res = await toggleGuildModule(guildId, m.name, next);
       if (!res.ok) {
         setEnabled(prev);
@@ -38,11 +40,10 @@ export function ModuleConfigForm({
   }
 
   function handleSave() {
-    setError(null);
     const changedKeys = Object.keys(config).filter(
       (k) => JSON.stringify(config[k]) !== JSON.stringify(m.config[k]),
     );
-    startTransition(async () => {
+    run(async () => {
       const results = await Promise.all(
         changedKeys.map((key) =>
           setGuildConfigField(guildId, m.name, key, config[key]),

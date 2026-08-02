@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import Link from "next/link";
 import { toggleGuildModule } from "#/actions/guild-actions";
 import { Switch } from "#/components/ui/switch";
 import { Card } from "#/components/ui/card";
 import { Badge } from "#/components/ui/badge";
+import { ActionError } from "#/components/action-error";
+import { useOptimisticAction } from "#/lib/use-server-action";
 import type { DashboardModuleView } from "#/lib/dashboard-data";
 
 /** dashboard.md §9B `GuildModuleToggleSidebar` (rendered here as a grid, matching step 6's "toggle grid" ask). */
@@ -33,21 +34,10 @@ function ModuleCard({
   module: DashboardModuleView;
 }) {
   const isCore = m.name === "core";
-  const [enabled, setEnabled] = useState(m.enabled);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const { value: enabled, isPending, error, run } = useOptimisticAction(m.enabled);
 
   function handleToggle(next: boolean) {
-    const prev = enabled;
-    setEnabled(next);
-    setError(null);
-    startTransition(async () => {
-      const res = await toggleGuildModule(guildId, m.name, next);
-      if (!res.ok) {
-        setEnabled(prev);
-        setError(res.error ?? "Failed to toggle");
-      }
-    });
+    run(next, () => toggleGuildModule(guildId, m.name, next), "Failed to toggle");
   }
 
   return (
@@ -74,7 +64,7 @@ function ModuleCard({
         )}
       </div>
       <p className="text-xs text-white/50">{m.description}</p>
-      {error && <p className="text-xs text-danger">{error}</p>}
+      <ActionError error={error} />
       <span className="text-xs text-white/30">
         {m.configFields.length} config field
         {m.configFields.length === 1 ? "" : "s"}
