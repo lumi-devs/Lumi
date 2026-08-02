@@ -78,16 +78,22 @@ export class RpcClient {
       };
 
       this.#replies.once(id, onReply);
-      this.#channel
-        .sendToQueue(RPC_QUEUE, Buffer.from(JSON.stringify(request)), {
-          correlationId: id,
-          replyTo: REPLY_QUEUE,
-        })
-        .catch((err: unknown) => {
-          clearTimeout(timer);
-          this.#replies.off(id, onReply);
-          reject(err instanceof Error ? err : new Error(String(err)));
-        });
+      try {
+        this.#channel
+          .sendToQueue(RPC_QUEUE, Buffer.from(JSON.stringify(request)), {
+            correlationId: id,
+            replyTo: REPLY_QUEUE,
+          })
+          .catch((err: unknown) => {
+            clearTimeout(timer);
+            this.#replies.off(id, onReply);
+            reject(err instanceof Error ? err : new Error(String(err)));
+          });
+      } catch (err: unknown) {
+        clearTimeout(timer);
+        this.#replies.off(id, onReply);
+        reject(err instanceof Error ? err : new Error(String(err)));
+      }
     });
 
     if (!response.ok) throw new Error(response.error ?? "RPC error");

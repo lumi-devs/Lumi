@@ -124,4 +124,12 @@ export class PingCommand extends BaseCommand {
 
     activeIntervals.set(userId, interval);
   }
+
+  public override onUnload() {
+    for (const interval of activeIntervals.values()) {
+      clearInterval(interval);
+    }
+    activeIntervals.clear();
+    return super.onUnload();
+  }
 }

@@ -91,24 +91,33 @@ async function dispatchRpc(req: RpcRequest<unknown>): Promise<RpcResponse<unknow
 function handleRpc(ch: Channel, msg: ConsumeMessage | null) {
   if (!msg) return;
   void (async () => {
-    try {
-      const body = tryParseJSON(msg.content.toString()) as RpcRequest | null;
-      if (!body?.action) return;
-      const req = { ...body, id: body.id ?? randomUUID() } as RpcRequest;
-      const res = await dispatchRpc(req);
+    const body = tryParseJSON(msg.content.toString()) as RpcRequest | null;
+    if (!body?.action) {
+      ch.nack(msg, false, false);
+      return;
+    }
 
-      if (msg.properties.replyTo) {
-        ch.sendToQueue(
-          msg.properties.replyTo,
-          Buffer.from(JSON.stringify(res)),
-          { correlationId: msg.properties.correlationId },
-        );
-      }
-      ch.ack(msg);
+    const req = { ...body, id: body.id ?? randomUUID() } as RpcRequest;
+    let res: RpcResponse;
+    try {
+      res = await dispatchRpc(req);
     } catch (err: unknown) {
       logError("RabbitMQ: Failed to handle RPC message", err);
-      ch.nack(msg, false, false);
+      res = {
+        id: req.id,
+        ok: false,
+        error: errorFrom(err).message ?? "Internal error",
+      };
     }
+
+    if (msg.properties.replyTo) {
+      ch.sendToQueue(
+        msg.properties.replyTo,
+        Buffer.from(JSON.stringify(res)),
+        { correlationId: msg.properties.correlationId },
+      );
+    }
+    ch.ack(msg);
   })();
 }
 

@@ -27,8 +27,16 @@ const baseConfig = {
   trustedRoleIds: [] as string[],
 };
 
+function makeMultiMock(count: number) {
+  return {
+    incr: vi.fn().mockReturnThis(),
+    expire: vi.fn().mockReturnThis(),
+    exec: vi.fn().mockResolvedValue([[null, count]]),
+  };
+}
+
 function makeService(overrides: {
-  redis?: Record<string, ReturnType<typeof vi.fn>>;
+  redis?: Record<string, unknown>;
   db?: Record<string, unknown>;
 }) {
   const service = Object.create(SecurityService.prototype) as SecurityService;
@@ -37,6 +45,7 @@ function makeService(overrides: {
       incr: vi.fn(),
       expire: vi.fn(),
       set: vi.fn(),
+      multi: vi.fn(() => makeMultiMock(1)),
       ...overrides.redis,
     },
   });
@@ -89,19 +98,23 @@ describe("SecurityService.loadAntiNukeConfig", () => {
 
 describe("SecurityService.recordAction", () => {
   it("stays silent under the limit and sets the window expiry once", async () => {
-    const incr = vi.fn().mockResolvedValue(1);
-    const expire = vi.fn();
-    const service = makeService({ redis: { incr, expire } });
+    const multiMock = makeMultiMock(1);
+    const multi = vi.fn(() => multiMock);
+    const service = makeService({ redis: { multi } });
 
     const result = await service.recordAction(guild, "u1", "ban", baseConfig);
     expect(result).toBeNull();
-    expect(expire).toHaveBeenCalledTimes(1);
+    expect(multiMock.expire).toHaveBeenCalledWith(
+      expect.any(String),
+      baseConfig.windowSeconds,
+      "NX",
+    );
   });
 
   it("trips once when the limit is exceeded", async () => {
-    const incr = vi.fn().mockResolvedValue(4);
+    const multi = vi.fn(() => makeMultiMock(4));
     const set = vi.fn().mockResolvedValue("OK");
-    const service = makeService({ redis: { incr, set } });
+    const service = makeService({ redis: { multi, set } });
 
     const result = await service.recordAction(guild, "u1", "ban", baseConfig);
     expect(result).toBe(4);
@@ -115,9 +128,9 @@ describe("SecurityService.recordAction", () => {
   });
 
   it("does not re-trip while the cooldown key exists", async () => {
-    const incr = vi.fn().mockResolvedValue(5);
+    const multi = vi.fn(() => makeMultiMock(5));
     const set = vi.fn().mockResolvedValue(null);
-    const service = makeService({ redis: { incr, set } });
+    const service = makeService({ redis: { multi, set } });
 
     const result = await service.recordAction(guild, "u1", "ban", baseConfig);
     expect(result).toBeNull();
@@ -383,13 +396,14 @@ describe("SecurityService.applyGateAction", () => {
 
 describe("SecurityService.grantVerified", () => {
   it("grants the verified role and strips the pending role", async () => {
-    const roleAdd = vi.fn().mockResolvedValue(undefined);
-    const roleRemove = vi.fn().mockResolvedValue(undefined);
+    const roleSet = vi.fn().mockResolvedValue(undefined);
     const member = {
       roles: {
-        add: roleAdd,
-        remove: roleRemove,
-        cache: new Map([["pending-role", {}]]),
+        set: roleSet,
+        cache: new Map([
+          ["pending-role", {}],
+          ["other-role", {}],
+        ]),
       },
     };
     const fetch = vi.fn().mockResolvedValue(member);
@@ -403,14 +417,10 @@ describe("SecurityService.grantVerified", () => {
 
     const result = await service.grantVerified(verifyGuild, "u1");
 
-    expect(roleAdd).toHaveBeenCalledWith(
-      "verified-role",
-      "Verification passed",
-    );
-    expect(roleRemove).toHaveBeenCalledWith(
-      "pending-role",
-      "Verification passed",
-    );
+    expect(roleSet).toHaveBeenCalledTimes(1);
+    const [rolesArg, reasonArg] = roleSet.mock.calls[0] as [string[], string];
+    expect(new Set(rolesArg)).toEqual(new Set(["other-role", "verified-role"]));
+    expect(reasonArg).toBe("Verification passed");
     expect(result).toBe(true);
   });
 

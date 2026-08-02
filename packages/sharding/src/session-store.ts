@@ -95,7 +95,14 @@ export class RedisSessionStore {
         pipe.set(key, JSON.stringify(info), "EX", this.opts.ttlSeconds);
       }
     }
-    await pipe.exec();
+    try {
+      await pipe.exec();
+    } catch (err) {
+      for (const [shardId, info] of snapshot) {
+        if (!this.pending.has(shardId)) this.pending.set(shardId, info);
+      }
+      throw err;
+    }
   }
 
   public async close(): Promise<void> {

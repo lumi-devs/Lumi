@@ -108,7 +108,7 @@ function diff(prev: readonly number[], next: readonly number[]): ShardDelta {
   return { added, removed, unchanged };
 }
 
-const membersKey = (name: string) => `lumi:cluster:${name}:members`;
+export const membersKey = (name: string) => `lumi:cluster:${name}:members`;
 const assignmentKey = (name: string) => `lumi:cluster:${name}:assignment`;
 const leaderLockKey = (name: string) => `lumi:cluster:${name}:leader-lock`;
 const rebalanceChannel = (name: string) => `lumi:cluster:${name}:rebalance`;
@@ -250,7 +250,7 @@ export class ClusterCoordinator {
       0,
       -1,
     );
-    const current = await this.readAssignment();
+    let current = await this.readAssignment();
     const wantByReplica = assignShards(liveIds, this.opts.shardCount);
     const needsRewrite =
       force ||
@@ -273,6 +273,19 @@ export class ClusterCoordinator {
       }
       return;
     }
+
+    current = await this.readAssignment();
+    if (
+      current &&
+      current.shardCount === this.opts.shardCount &&
+      sameAssignment(current.byReplica, wantByReplica)
+    ) {
+      if (current.epoch !== this.currentEpoch) {
+        await this.applyAssignmentFromRedis();
+      }
+      return;
+    }
+
     const nextEpoch = (current?.epoch ?? 0) + 1;
     const next: ClusterAssignment = {
       epoch: nextEpoch,

@@ -29,6 +29,29 @@ function parsePayload<T>(schema: BaseValidator<T>, data: unknown): T {
   }
 }
 
+/**
+ * Re-check the actor's Discord permissions live against the guild, rather
+ * than trusting the dashboard session (its cached guild list can be up to
+ * `SESSION_TTL_MS` stale).
+ */
+async function requireGuildManager(
+  guildId: string,
+  actorId: string | undefined,
+): Promise<void> {
+  if (!actorId) throw new Error("actorId is required");
+  const guild = container.client.guilds.cache.get(guildId);
+  if (!guild) throw new Error("Guild not found in bot cache");
+  if (guild.ownerId === actorId) return;
+
+  const member = await guild.members.fetch(actorId).catch(() => null);
+  if (
+    !member?.permissions.has("ManageGuild") &&
+    !member?.permissions.has("Administrator")
+  ) {
+    throw new Error("Missing ManageGuild permission");
+  }
+}
+
 const ModuleToggleSchema = s.object({
   moduleName: s.string().lengthGreaterThanOrEqual(1),
   enabled: s.boolean(),
@@ -99,6 +122,7 @@ export class DashboardModule extends Module {
 
     registerRpcHandler(RPC_ACTIONS.guildModuleToggle, async (req) => {
       const guildId = requireGuildId(req.guildId);
+      await requireGuildManager(guildId, req.actorId);
       const { moduleName, enabled } = parsePayload(
         ModuleToggleSchema,
         req.data,
@@ -117,6 +141,7 @@ export class DashboardModule extends Module {
 
     registerRpcHandler(RPC_ACTIONS.guildConfigSet, async (req) => {
       const guildId = requireGuildId(req.guildId);
+      await requireGuildManager(guildId, req.actorId);
       const { moduleName, key, value } = parsePayload(
         ConfigSetSchema,
         req.data,

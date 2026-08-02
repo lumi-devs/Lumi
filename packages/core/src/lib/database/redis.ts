@@ -173,9 +173,11 @@ const INVALIDATION_CHANNEL = "lumi:cache:invalidate";
 export class InvalidationBus {
   readonly #subscriber: Redis;
   #listeners = new Set<(keys: string[]) => void>();
+  #resyncListeners = new Set<() => void | Promise<void>>();
   #started = false;
   #startPromise: Promise<void> | null = null;
   #handlerAttached = false;
+  #connectionDropped = false;
 
   public constructor(subscriber: Redis) {
     this.#subscriber = subscriber;
@@ -184,6 +186,11 @@ export class InvalidationBus {
   public onInvalidate(fn: (keys: string[]) => void): () => void {
     this.#listeners.add(fn);
     return () => this.#listeners.delete(fn);
+  }
+
+  public onResync(fn: () => void | Promise<void>): () => void {
+    this.#resyncListeners.add(fn);
+    return () => this.#resyncListeners.delete(fn);
   }
 
   public start(): Promise<void> {
@@ -202,6 +209,12 @@ export class InvalidationBus {
       INVALIDATION_CHANNEL,
       JSON.stringify({ keys }),
     );
+
+    setTimeout(() => {
+      container.redis
+        .del(...keys)
+        .catch((err: unknown) => logError("Redis: delayed re-invalidation failed", err));
+    }, 500).unref();
   }
 
   /**
@@ -229,6 +242,8 @@ export class InvalidationBus {
     if (this.#started) return;
     if (!this.#handlerAttached) {
       this.#subscriber.on("message", this.#onMessage);
+      this.#subscriber.on("close", this.#onClose);
+      this.#subscriber.on("ready", this.#onReady);
       this.#handlerAttached = true;
     }
     await this.#subscriber.subscribe(INVALIDATION_CHANNEL);
@@ -239,5 +254,19 @@ export class InvalidationBus {
     const parsed = tryParseJSON(payload) as { keys?: string[] } | null;
     if (!parsed?.keys) return;
     for (const fn of this.#listeners) fn(parsed.keys);
+  };
+
+  #onClose = () => {
+    if (this.#started) this.#connectionDropped = true;
+  };
+
+  #onReady = () => {
+    if (!this.#connectionDropped) return;
+    this.#connectionDropped = false;
+    for (const fn of this.#resyncListeners) {
+      Promise.resolve(fn()).catch((err: unknown) =>
+        logError("Redis: invalidation resync failed", err),
+      );
+    }
   };
 }

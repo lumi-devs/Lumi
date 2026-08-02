@@ -4,20 +4,28 @@
 // tolerate that (REST + entity cache on demand), but cooperative populators and
 // cache-seeding flows want a clean "cluster has converged" signal.
 //
-// `lumi:cluster:<name>:ready` holds "1" once every gateway replica reports all its
-// shards Ready/Resumed (absent or "0" otherwise); the TTL is refreshed on each
-// heartbeat so a crashed gateway flips back to not-ready within `ttlMs`. Gateways call
+// Each gateway replica tracks its own readiness under a per-replica key
+// (`lumi:cluster:<name>:ready:<replicaId>`), refreshed on each heartbeat so a
+// crashed gateway's flag expires within `ttlMs`. `isReady()` cross-references
+// that against ClusterCoordinator's live-membership set
+// (`lumi:cluster:<name>:members`) and only reports ready once every
+// currently-live replica has published readiness. Gateways call
 // `publishReady(true)` from the Ready/Resumed handler when
-// `shardReady.size === expectedShards.size` and `publishReady(false)` on Close/Error;
-// workers call `waitForReady()` before starting their consumer loops.
+// `shardReady.size === expectedShards.size` and `publishReady(false)` on
+// Close/Error; workers call `waitForReady()` before starting their consumer
+// loops.
 
 import type { Redis } from "ioredis";
+import { membersKey } from "./coordinator.js";
 
-const readyKey = (name: string) => `lumi:cluster:${name}:ready`;
+const readyKey = (name: string, replicaId: string) =>
+  `lumi:cluster:${name}:ready:${replicaId}`;
 
 export interface ClusterReadyTrackerOptions {
   redis: Redis;
   clusterName: string;
+  /** This replica's id, used to key its own readiness flag. */
+  replicaId: string;
   /** TTL on the ready key; refreshed by `publishReady(true)`. Default 30s. */
   ttlMs?: number;
 }
@@ -30,13 +38,13 @@ export class ClusterReadyTracker {
   }
 
   /**
-   * Set or clear the cluster-ready flag. Idempotent. A gateway should call
-   * `publishReady(true)` once all its owned shards are Ready/Resumed, and
-   * `publishReady(false)` on any shard close/error. Workers observe the flag
-   * via `isReady()` / `waitForReady()`.
+   * Set or clear this replica's own ready flag. Idempotent. A gateway should
+   * call `publishReady(true)` once all its owned shards are Ready/Resumed,
+   * and `publishReady(false)` on any shard close/error. Workers observe the
+   * cluster-wide state via `isReady()` / `waitForReady()`.
    */
   public async publishReady(ready: boolean): Promise<void> {
-    const key = readyKey(this.opts.clusterName);
+    const key = readyKey(this.opts.clusterName, this.opts.replicaId);
     if (ready) {
       await this.opts.redis.set(key, "1", "PX", this.ttlMs);
     } else {
@@ -45,8 +53,19 @@ export class ClusterReadyTracker {
   }
 
   public async isReady(): Promise<boolean> {
-    const v = await this.opts.redis.get(readyKey(this.opts.clusterName));
-    return v === "1";
+    const liveIds = await this.opts.redis.zrange(
+      membersKey(this.opts.clusterName),
+      0,
+      -1,
+    );
+    if (liveIds.length === 0) return false;
+
+    const values = await Promise.all(
+      liveIds.map((id) =>
+        this.opts.redis.get(readyKey(this.opts.clusterName, id)),
+      ),
+    );
+    return values.every((v) => v === "1");
   }
 
   /**

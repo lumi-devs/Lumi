@@ -55,6 +55,13 @@ class TempVcRegistry {
         }
       }
     });
+
+    container.invalidation.onResync(() => {
+      this.#gens.clear();
+      this.#vcs.clear();
+      this.#gensLoaded.clear();
+      this.#vcsLoaded.clear();
+    });
   }
 
   public async getGenerator(

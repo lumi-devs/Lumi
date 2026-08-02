@@ -16,6 +16,15 @@ const REFRESH_MS = 15_000;
 export class TelemetryStatsListener extends Listener<
   typeof Events.ClientReady
 > {
+  #rateLimitedHandler?: (info: {
+    route: string;
+    method: string;
+    global: boolean;
+    timeToReset: number;
+  }) => void;
+  #invalidRequestHandler?: () => void;
+  #refreshTimer?: ReturnType<typeof setInterval>;
+
   public run() {
     const { client } = this.container;
 
@@ -26,14 +35,16 @@ export class TelemetryStatsListener extends Listener<
         global: String(info.global),
       }) as const;
 
-    client.rest.on("rateLimited", (info) => {
+    this.#rateLimitedHandler = (info) => {
       rest429Total.inc(labels(info));
       restRetryAfterSeconds.observe(labels(info), info.timeToReset / 1000);
-    });
+    };
+    client.rest.on("rateLimited", this.#rateLimitedHandler);
 
-    client.rest.on("invalidRequestWarning", () => {
+    this.#invalidRequestHandler = () => {
       restInvalidRequestWarnings.inc();
-    });
+    };
+    client.rest.on("invalidRequestWarning", this.#invalidRequestHandler);
 
     if (getDiscordProxyUrl() !== null) {
       this.container.logger.info(
@@ -51,7 +62,23 @@ export class TelemetryStatsListener extends Listener<
     };
 
     refresh();
-    const timer = setInterval(refresh, REFRESH_MS);
-    timer.unref();
+    this.#refreshTimer = setInterval(refresh, REFRESH_MS);
+    this.#refreshTimer.unref();
+  }
+
+  public override onUnload() {
+    const { client } = this.container;
+
+    if (this.#rateLimitedHandler) {
+      client.rest.off("rateLimited", this.#rateLimitedHandler);
+    }
+    if (this.#invalidRequestHandler) {
+      client.rest.off("invalidRequestWarning", this.#invalidRequestHandler);
+    }
+    if (this.#refreshTimer) {
+      clearInterval(this.#refreshTimer);
+    }
+
+    return super.onUnload();
   }
 }

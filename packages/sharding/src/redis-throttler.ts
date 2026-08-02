@@ -50,8 +50,9 @@ export class RedisIdentifyThrottler implements IIdentifyThrottler {
       );
       if (ok === "OK") return;
       const pttl = await this.opts.redis.pttl(key);
-      const waitMs = pttl > 0 ? Math.min(pttl + 25, WINDOW_MS) : 250;
-      await sleep(waitMs, signal);
+      if (pttl > 0) {
+        await sleep(Math.min(pttl + 25, WINDOW_MS), signal);
+      }
     }
     throw new Error("RedisIdentifyThrottler aborted");
   }
