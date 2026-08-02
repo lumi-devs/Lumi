@@ -259,7 +259,11 @@ export class RedisStreamsBus implements EventBus {
     // the handler again. The entry has already been redelivered N times; we
     // know it's poison.
     if (deliveryCount > this.maxDeliveries) {
-      await this.sendToDlq(stream, id, fields, deliveryCount);
+      try {
+        await this.sendToDlq(stream, id, fields, deliveryCount);
+      } catch (err) {
+        this.log("error", "sendToDlq failed", { stream, id, err: String(err) });
+      }
       await this.publisher.xack(stream, group, id);
       this.log("warn", "dropped poison message to DLQ", {
         stream,
@@ -278,7 +282,15 @@ export class RedisStreamsBus implements EventBus {
         id,
         err: String(err),
       });
-      await this.sendToDlq(stream, id, fields, deliveryCount);
+      try {
+        await this.sendToDlq(stream, id, fields, deliveryCount);
+      } catch (dlqErr) {
+        this.log("error", "sendToDlq failed", {
+          stream,
+          id,
+          err: String(dlqErr),
+        });
+      }
       await this.publisher.xack(stream, group, id);
       return;
     }

@@ -126,10 +126,12 @@ export class SecurityService extends Service {
     config: AntiNukeConfig,
   ): Promise<number | null> {
     const key = RedisKeys.securityWindow(guild.id, executorId, kind);
-    const count = await this.redis.incr(key);
-    if (count === 1) {
-      await this.redis.expire(key, config.windowSeconds);
-    }
+    const results = await this.redis
+      .multi()
+      .incr(key)
+      .expire(key, config.windowSeconds, "NX")
+      .exec();
+    const count = results?.[0]?.[1] as number;
     if (count <= config.limits[kind]) return null;
 
     const tripped = await this.redis.set(
@@ -259,10 +261,12 @@ export class SecurityService extends Service {
     config: JoinGateConfig,
   ): Promise<boolean> {
     const key = RedisKeys.joinBurst(guildId);
-    const count = await this.redis.incr(key);
-    if (count === 1) {
-      await this.redis.expire(key, config.raidWindowSeconds);
-    }
+    const results = await this.redis
+      .multi()
+      .incr(key)
+      .expire(key, config.raidWindowSeconds, "NX")
+      .exec();
+    const count = results?.[0]?.[1] as number;
     if (count < config.raidJoinCount) return false;
 
     const started = await this.redis.set(
@@ -378,12 +382,10 @@ export class SecurityService extends Service {
     const member = await guild.members.fetch(userId).catch(() => null);
     if (isNullish(member)) return false;
     try {
-      await member.roles.add(config.verifiedRoleId, "Verification passed");
-      if (config.pendingRoleId && member.roles.cache.has(config.pendingRoleId)) {
-        await member.roles
-          .remove(config.pendingRoleId, "Verification passed")
-          .catch(() => null);
-      }
+      const nextRoles = new Set(member.roles.cache.keys());
+      nextRoles.add(config.verifiedRoleId);
+      if (config.pendingRoleId) nextRoles.delete(config.pendingRoleId);
+      await member.roles.set([...nextRoles], "Verification passed");
     } catch (err: unknown) {
       this.logger.warn(
         `[security] Verify role grant failed for ${userId} in ${guild.id}: ${String(err)}`,

@@ -434,41 +434,42 @@ export class ModuleStore extends Store<Module> {
     if (this.#invalidationListenerSet || !container.invalidation) return;
     this.#invalidationListenerSet = true;
 
-    container.invalidation.onInvalidate(async (keys) => {
-      const prefix = "lumi:module:global:enabled:";
+    const prefix = "lumi:module:global:enabled:";
 
+    container.invalidation.onInvalidate(async (keys) => {
       for (const key of keys) {
         if (!key.startsWith(prefix)) continue;
-        const name = key.slice(prefix.length);
-        const module = this.get(name);
-        const record = this.#records.get(name);
-
-        if (record) {
-          const newEnabled =
-            await container.db.modules.isModuleGlobalEnabled(name);
-          if (record.enabled !== newEnabled) {
-            record.enabled = newEnabled;
-            if (module) module.enabled = newEnabled;
-
-            if (newEnabled) {
-              await this.loadModule(name).catch((err) =>
-                container.logger.error(
-                  `[ModuleStore] Cluster load failed: ${name}`,
-                  err,
-                ),
-              );
-            } else {
-              await this.unload(name).catch((err) =>
-                container.logger.error(
-                  `[ModuleStore] Cluster unload failed: ${name}`,
-                  err,
-                ),
-              );
-            }
-          }
-        }
+        await this.#syncModuleEnabled(key.slice(prefix.length));
       }
     });
+
+    container.invalidation.onResync(async () => {
+      await Promise.all(
+        [...this.#records.keys()].map((name) => this.#syncModuleEnabled(name)),
+      );
+    });
+  }
+
+  async #syncModuleEnabled(name: string): Promise<void> {
+    const module = this.get(name);
+    const record = this.#records.get(name);
+    if (!record) return;
+
+    const newEnabled = await container.db.modules.isModuleGlobalEnabled(name);
+    if (record.enabled === newEnabled) return;
+
+    record.enabled = newEnabled;
+    if (module) module.enabled = newEnabled;
+
+    if (newEnabled) {
+      await this.loadModule(name).catch((err) =>
+        container.logger.error(`[ModuleStore] Cluster load failed: ${name}`, err),
+      );
+    } else {
+      await this.unload(name).catch((err) =>
+        container.logger.error(`[ModuleStore] Cluster unload failed: ${name}`, err),
+      );
+    }
   }
 
   async #exists(p: string) {

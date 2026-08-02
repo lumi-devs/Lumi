@@ -22,51 +22,88 @@ import { DiscordAPIError } from "@discordjs/rest";
 
 describe("ClusterReadyTracker", () => {
   let mockRedis: any;
+  let members: Map<string, string[]>;
 
   beforeEach(() => {
     const store = new Map<string, string>();
+    members = new Map();
     mockRedis = {
-      set: vi.fn(async (key: string, val: string) => {
+      set: vi.fn((key: string, val: string) => {
         store.set(key, val);
-        return "OK";
+        return Promise.resolve("OK");
       }),
-      get: vi.fn(async (key: string) => store.get(key) ?? null),
+      get: vi.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
+      zrange: vi.fn((key: string) => Promise.resolve(members.get(key) ?? [])),
     };
   });
 
-  it("publishes ready state true and returns isReady true", async () => {
+  it("publishes ready state true and returns isReady true once the only live replica is ready", async () => {
+    members.set("lumi:cluster:default:members", ["replica-1"]);
     const tracker = new ClusterReadyTracker({
       redis: mockRedis,
       clusterName: "default",
+      replicaId: "replica-1",
     });
 
     expect(await tracker.isReady()).toBe(false);
 
     await tracker.publishReady(true);
-    expect(mockRedis.set).toHaveBeenCalledWith("lumi:cluster:default:ready", "1", "PX", 30000);
+    expect(mockRedis.set).toHaveBeenCalledWith(
+      "lumi:cluster:default:ready:replica-1",
+      "1",
+      "PX",
+      30000,
+    );
     expect(await tracker.isReady()).toBe(true);
   });
 
   it("publishes ready state false", async () => {
+    members.set("lumi:cluster:production:members", ["replica-1"]);
     const tracker = new ClusterReadyTracker({
       redis: mockRedis,
       clusterName: "production",
+      replicaId: "replica-1",
       ttlMs: 15000,
     });
 
     await tracker.publishReady(false);
-    expect(mockRedis.set).toHaveBeenCalledWith("lumi:cluster:production:ready", "0", "PX", 15000);
+    expect(mockRedis.set).toHaveBeenCalledWith(
+      "lumi:cluster:production:ready:replica-1",
+      "0",
+      "PX",
+      15000,
+    );
     expect(await tracker.isReady()).toBe(false);
   });
 
-  it("waitForReady resolves immediately when cluster is ready", async () => {
+  it("stays not-ready while any live replica hasn't reported ready", async () => {
+    members.set("lumi:cluster:default:members", ["replica-1", "replica-2"]);
     const tracker = new ClusterReadyTracker({
       redis: mockRedis,
       clusterName: "default",
+      replicaId: "replica-1",
     });
 
     await tracker.publishReady(true);
-    await expect(tracker.waitForReady()).resolves.toBeUndefined();
+    expect(await tracker.isReady()).toBe(false);
+  });
+
+  it("waitForReady resolves once every live replica is ready", async () => {
+    members.set("lumi:cluster:default:members", ["replica-1", "replica-2"]);
+    const tracker1 = new ClusterReadyTracker({
+      redis: mockRedis,
+      clusterName: "default",
+      replicaId: "replica-1",
+    });
+    const tracker2 = new ClusterReadyTracker({
+      redis: mockRedis,
+      clusterName: "default",
+      replicaId: "replica-2",
+    });
+
+    await tracker1.publishReady(true);
+    await tracker2.publishReady(true);
+    await expect(tracker1.waitForReady()).resolves.toBeUndefined();
   });
 });
 
@@ -97,7 +134,7 @@ describe("planShards", () => {
     const plan = await planShards({
       token: "t",
       log,
-      env: {} as NodeJS.ProcessEnv,
+      env: {},
     });
 
     expect(plan.shardCount).toBe(6);
@@ -113,7 +150,7 @@ describe("planShards", () => {
     const plan = await planShards({
       token: "t",
       log,
-      env: { TOTAL_SHARDS: "10" } as unknown as NodeJS.ProcessEnv,
+      env: { TOTAL_SHARDS: "10" },
     });
 
     expect(plan.shardCount).toBe(10);
@@ -127,7 +164,7 @@ describe("planShards", () => {
       planShards({
         token: "t",
         log,
-        env: { TOTAL_SHARDS: "not-a-number" } as unknown as NodeJS.ProcessEnv,
+        env: { TOTAL_SHARDS: "not-a-number" },
       }),
     ).rejects.toThrow(/positive integer/);
   });
@@ -141,7 +178,7 @@ describe("planShards", () => {
       env: {
         TOTAL_SHARDS: "4",
         SHARD_LIST: "0, 1",
-      } as unknown as NodeJS.ProcessEnv,
+      },
     });
 
     expect(plan.shards).toEqual([0, 1]);
@@ -158,7 +195,7 @@ describe("planShards", () => {
         env: {
           TOTAL_SHARDS: "4",
           SHARD_LIST: "4",
-        } as unknown as NodeJS.ProcessEnv,
+        },
       }),
     ).rejects.toThrow(/SHARD_LIST has id 4/);
   });
@@ -177,7 +214,7 @@ describe("planShards", () => {
     );
 
     await expect(
-      planShards({ token: "t", log, env: {} as NodeJS.ProcessEnv }),
+      planShards({ token: "t", log, env: {} }),
     ).rejects.toThrow(/session_start_limit\.remaining=1/);
   });
 
@@ -197,7 +234,7 @@ describe("planShards", () => {
     const plan = await planShards({
       token: "t",
       log,
-      env: { SHARD_IDENTIFY_FORCE: "true" } as unknown as NodeJS.ProcessEnv,
+      env: { SHARD_IDENTIFY_FORCE: "true" },
     });
 
     expect(plan.shardCount).toBe(4);
@@ -211,12 +248,12 @@ describe("planShards", () => {
         401,
         "GET",
         "/gateway/bot",
-        {} as never,
+        {},
       ),
     );
 
     await expect(
-      planShards({ token: "bad-token", log, env: {} as NodeJS.ProcessEnv }),
+      planShards({ token: "bad-token", log, env: {} }),
     ).rejects.toThrow(/Discord rejected the bot token/);
   });
 });
@@ -262,37 +299,37 @@ function createMockRedis() {
   const zsets = new Map<string, Map<string, number>>();
 
   const redis: any = {
-    async get(key: string) {
+    get(key: string) {
       const now = Date.now();
       if (ttl.has(key) && ttl.get(key)! <= now) {
         kv.delete(key);
         ttl.delete(key);
       }
-      return kv.has(key) ? kv.get(key)! : null;
+      return Promise.resolve(kv.has(key) ? kv.get(key)! : null);
     },
-    async set(key: string, val: string, ...flags: unknown[]) {
+    set(key: string, val: string, ...flags: unknown[]) {
       const now = Date.now();
       if (ttl.has(key) && ttl.get(key)! <= now) {
         kv.delete(key);
         ttl.delete(key);
       }
-      if (flags.includes("NX") && kv.has(key)) return null;
+      if (flags.includes("NX") && kv.has(key)) return Promise.resolve(null);
       kv.set(key, val);
       const pxIdx = flags.indexOf("PX");
       const exIdx = flags.indexOf("EX");
       if (pxIdx !== -1) ttl.set(key, now + Number(flags[pxIdx + 1]));
       else if (exIdx !== -1) ttl.set(key, now + Number(flags[exIdx + 1]) * 1000);
       else ttl.delete(key);
-      return "OK";
+      return Promise.resolve("OK");
     },
-    async zadd(key: string, score: number, member: string) {
+    zadd(key: string, score: number, member: string) {
       if (!zsets.has(key)) zsets.set(key, new Map());
       zsets.get(key)!.set(member, score);
-      return 1;
+      return Promise.resolve(1);
     },
-    async zremrangebyscore(key: string, _min: unknown, max: number) {
+    zremrangebyscore(key: string, _min: unknown, max: number) {
       const z = zsets.get(key);
-      if (!z) return 0;
+      if (!z) return Promise.resolve(0);
       let removed = 0;
       for (const [member, score] of [...z]) {
         if (score <= max) {
@@ -300,18 +337,20 @@ function createMockRedis() {
           removed++;
         }
       }
-      return removed;
+      return Promise.resolve(removed);
     },
-    async zrange(key: string) {
+    zrange(key: string) {
       const z = zsets.get(key);
-      if (!z) return [];
-      return [...z.entries()].sort((a, b) => a[1] - b[1]).map(([m]) => m);
+      if (!z) return Promise.resolve([]);
+      return Promise.resolve(
+        [...z.entries()].sort((a, b) => a[1] - b[1]).map(([m]) => m),
+      );
     },
-    async zrem(key: string, member: string) {
-      return zsets.get(key)?.delete(member) ? 1 : 0;
+    zrem(key: string, member: string) {
+      return Promise.resolve(zsets.get(key)?.delete(member) ? 1 : 0);
     },
-    async publish() {
-      return 0;
+    publish() {
+      return Promise.resolve(0);
     },
     multi() {
       const ops: Array<() => Promise<unknown>> = [];

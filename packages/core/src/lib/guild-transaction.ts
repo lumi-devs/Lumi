@@ -73,12 +73,16 @@ export class GuildWriteTransaction {
   }
 
   public dispose() {
-    void this.#release();
+    this.#release().catch((err: unknown) =>
+      container.logger.error("[GuildWriteTransaction] release failed", err),
+    );
   }
 
   /** TC39 `using` keyword support - releases the lock automatically on scope exit. */
   public [Symbol.dispose](): void {
-    void this.#release();
+    this.#release().catch((err: unknown) =>
+      container.logger.error("[GuildWriteTransaction] release failed", err),
+    );
   }
 
   async #release() {

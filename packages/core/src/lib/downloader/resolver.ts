@@ -276,9 +276,7 @@ export class DownloadResolver {
       }
     }
 
-    if (await this._exists(targetPath)) {
-      await fs.rm(targetPath, { recursive: true, force: true }).catch(() => {});
-    }
+    await fs.rm(targetPath, { recursive: true, force: true }).catch(() => {});
     await fs.symlink(sourcePath, targetPath, "dir");
 
     container.logger?.info?.(
