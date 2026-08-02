@@ -38,7 +38,7 @@ jobs:
         if: steps.download.outcome == 'success'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
+          files: ./coverage/lcov.info,./coverage/dashboard/lcov.info
           override_commit: ${{ github.event.workflow_run.head_sha }}
           override_branch: ${{ github.event.workflow_run.head_branch }}
           fail_ci_if_error: true

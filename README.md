@@ -139,6 +139,7 @@ To help translate Lumi into your native language or refine existing translations
 We welcome community contributions! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting pull requests.
 
 - Verify your changes pass checks: `bun run typecheck && bun run lint && bun run test`
+- Run `bun run test:coverage` to generate coverage reports (`coverage/lcov.info` and `coverage/dashboard/lcov.info`), matching what CI uploads to Codecov
 - Maintain isolated, modular scope (one feature/fix per PR)
 - Refer to [AGENTS.md](AGENTS.md) for architectural guidelines and design principles
 

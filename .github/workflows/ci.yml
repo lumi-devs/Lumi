@@ -126,11 +126,13 @@ jobs:
           restore-keys: ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - run: bun run db:generate
-      - run: bun run test -- --coverage
+      - run: bun run test:coverage
       - uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: coverage/lcov.info
+          path: |
+            coverage/lcov.info
+            coverage/dashboard/lcov.info
           retention-days: 1
           if-no-files-found: error
       - name: Codecov Upload
@@ -138,7 +140,7 @@ jobs:
         continue-on-error: true
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
+          files: ./coverage/lcov.info,./coverage/dashboard/lcov.info
           fail_ci_if_error: false
 
   validate-examples:

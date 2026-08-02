@@ -53,6 +53,7 @@
     "validate": "bun scripts/validate-addon.ts",
     "addon:create": "bun scripts/create-addon.ts",
     "test": "vitest run && bun run --cwd apps/dashboard test",
+    "test:coverage": "vitest run --coverage && bun run --cwd apps/dashboard test -- --coverage",
     "test:e2e": "vitest run -c vitest.e2e.config.ts",
     "changeset": "bunx @changesets/cli",
     "verify:resilience": "bun scripts/verify-resilience.ts",

@@ -36,6 +36,11 @@ export default defineConfig({
     setupFiles: ["./tests/setup.ts"],
     coverage: {
       reporter: ["text", "json", "html", "lcov"],
+      // Land alongside the root suite's report (../../coverage/lcov.info)
+      // instead of the default apps/dashboard/coverage, so a single
+      // `coverage/` tree covers both vitest invocations run by
+      // `bun run test:coverage`.
+      reportsDirectory: path.resolve(import.meta.dirname, "../../coverage/dashboard"),
     },
   },
 });
