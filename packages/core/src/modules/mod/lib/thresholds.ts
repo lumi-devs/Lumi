@@ -132,6 +132,10 @@ export async function incrementWarnCount(
   pipe.incr(key);
   pipe.expire(key, WARN_COUNT_TTL);
   const results = await pipe.exec();
+  if (!results || results[0]?.[0]) {
+    container.logger.error("[Thresholds] Redis pipeline execution failed:", results?.[0]?.[0]);
+    return 0;
+  }
   return (results?.[0]?.[1] as number | null) ?? 0;
 }
 
@@ -166,7 +170,15 @@ export async function checkThresholds(
   warnCount: number,
 ): Promise<void> {
   const thresholds = await getThresholds(container, guildId);
-  const entry = thresholds[String(warnCount)];
+  // Find highest threshold entry matching or below the target warn count
+  const matchingKeys = Object.keys(thresholds)
+    .map(Number)
+    .filter((count) => count <= warnCount)
+    .sort((a, b) => b - a);
+
+  if (matchingKeys.length === 0) return;
+  const targetCount = matchingKeys[0]!;
+  const entry = thresholds[String(targetCount)];
   if (!entry) return;
 
   const guild = container.client.guilds.cache.get(guildId);
@@ -174,7 +186,7 @@ export async function checkThresholds(
 
   const botUser = container.client.user;
   if (!botUser) return;
-  const reason = `Auto: ${warnCount} warn${warnCount === 1 ? "" : "s"} reached threshold.`;
+  const reason = `Auto: ${warnCount} warn${warnCount === 1 ? "" : "s"} reached threshold (${targetCount}).`;
 
   if (entry.action === "mute") {
     const member = await guild.members.fetch(userId).catch(() => null);

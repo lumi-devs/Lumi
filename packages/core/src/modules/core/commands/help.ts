@@ -5,7 +5,6 @@ import { SeparatorBuilder, TextDisplayBuilder } from "@discordjs/builders";
 import {
   type ChatInputCommandInteraction,
   type Message,
-  MessageFlags,
   SeparatorSpacingSize,
 } from "discord.js";
 import type { ContainerBuilder } from "@discordjs/builders";
@@ -58,7 +57,7 @@ export class HelpCommand extends BaseCommand {
   }
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    await interaction.deferReply({ ephemeral: true });
     await this.showHelp(interaction);
   }
 

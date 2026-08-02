@@ -16,6 +16,7 @@ import {
 } from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
+import { confirmPrompt } from "#lib/utilities/confirm.js";
 import type { DownloaderService } from "#lib/services/DownloaderService.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
@@ -148,6 +149,22 @@ export class RepoCommand extends BaseSubcommand {
     const url = (await ctx.getString("url", { required: true }))!;
     const branch =
       (await ctx.getString("branch", { required: false })) ?? "default";
+
+    const agreed = await confirmPrompt(ctx, {
+      title: `${Emojis.WARNING_SIGN} Third-Party Code Warning`,
+      body: [
+        `You're about to clone **${name}** (\`${url}\`) as a module repository.`,
+        "Modules installed from it run **inside the bot process** with full access to its database, cache, and Discord client. Lumi does not review or vet third-party repositories.",
+        "Only add repositories from sources you trust.",
+      ].join("\n\n"),
+      confirmLabel: "I understand, add it",
+    });
+    if (!agreed) {
+      await ctx.reply(
+        makeErrorCard("Cancelled", `Repository **${name}** was not added.`),
+      );
+      return;
+    }
 
     await ctx.reply(
       makeInfoCard(

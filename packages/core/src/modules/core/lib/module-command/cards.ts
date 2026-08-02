@@ -47,6 +47,7 @@ export function moduleNotFoundCard(name: string): CardReply {
 export function moduleInfoCard(
   record: ModuleRecord,
   pieces: ModulePiecesInfo,
+  pinned = false,
 ): CardReply {
   const description = record.meta.description || "No description provided.";
   const isCoreLabel = record.name === "core" ? "Yes (Core)" : "No (Addon)";
@@ -61,6 +62,12 @@ export function moduleInfoCard(
     `**Global Toggle:** ${globalStatus}`,
     `**Runtime Status:** ${statusEmoji} \`${stateLabel}\``,
   ];
+
+  if (pinned) {
+    detailLines.push(
+      `**Update Lock:** ${Emojis.PIN} Pinned (\`,module update\` skips this module)`,
+    );
+  }
 
   if (record.failureReason) {
     detailLines.push(`**Failure Reason:** \`${record.failureReason}\``);
@@ -162,9 +169,23 @@ export function noInstalledModulesCard(): CardReply {
   );
 }
 
+export function modulePinnedCard(moduleName: string): CardReply {
+  return makeSuccessCard(
+    `${Emojis.PIN} Module Pinned`,
+    `**${moduleName}** is now pinned. \`,module update ${moduleName}\` and \`,module update\` (all) will both skip it until you run \`,module unpin ${moduleName}\`.`,
+  );
+}
+
+export function moduleUnpinnedCard(moduleName: string): CardReply {
+  return makeSuccessCard(
+    `${Emojis.CHECK} Module Unpinned`,
+    `**${moduleName}** is unpinned and will be updated normally again.`,
+  );
+}
+
 export interface ModuleUpdateOutcome {
   moduleName: string;
-  status: "updated" | "up-to-date" | "failed";
+  status: "updated" | "up-to-date" | "failed" | "skipped-pinned";
   /** Only meaningful when `status` is `"updated"`. */
   needsRestart: boolean;
   /** Failure message, present only when `status` is `"failed"`. */
@@ -189,6 +210,9 @@ export function multiUpdateReportCard(
   const skipped = outcomes
     .filter((outcome) => outcome.status === "up-to-date")
     .map((outcome) => `- **${outcome.moduleName}** (up-to-date)`);
+  const pinned = outcomes
+    .filter((outcome) => outcome.status === "skipped-pinned")
+    .map((outcome) => `${Emojis.PIN} **${outcome.moduleName}** (pinned)`);
   const failed = outcomes
     .filter((outcome) => outcome.status === "failed")
     .map(
@@ -203,6 +227,7 @@ export function multiUpdateReportCard(
   if (succeeded.length > 0)
     report.push(`### Updated:\n${succeeded.join("\n")}`);
   if (skipped.length > 0) report.push(`### Up-To-Date:\n${skipped.join("\n")}`);
+  if (pinned.length > 0) report.push(`### Pinned (skipped):\n${pinned.join("\n")}`);
   if (failed.length > 0) report.push(`### Failed:\n${failed.join("\n")}`);
   if (needsRestart) {
     report.push(
@@ -246,6 +271,8 @@ export function moduleHelpCard(): CardReply {
       "- `,module install <repo> <module>` or `/module install` - Install a module from a repo.",
       "- `,module uninstall <module>` or `/module uninstall` - Uninstall a downloader module.",
       "- `,module update [module]` or `/module update` - Update an installed module (or all).",
+      "- `,module pin <module>` or `/module pin` - Freeze a module's version; updates skip it.",
+      "- `,module unpin <module>` or `/module unpin` - Remove the update lock.",
     ].join("\n"),
     { actionRows: [panelRow] },
   );

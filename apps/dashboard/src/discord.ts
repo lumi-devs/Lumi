@@ -1,3 +1,4 @@
+import { fetch, FetchResultTypes } from "@sapphire/fetch";
 import { config } from "./config.js";
 import type { OAuthGuild } from "./types.js";
 
@@ -28,29 +29,33 @@ export function authorizeUrl(state: string): string {
 
 /** Exchange an authorization code for an access token. */
 export async function exchangeCode(code: string): Promise<string> {
-  const res = await fetch(`${DISCORD_API}/oauth2/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: config.redirectUri,
-      client_id: config.clientId,
-      client_secret: config.clientSecret,
-    }),
-  });
-  if (!res.ok) throw new Error(`Token exchange failed (${res.status})`);
-  const json = (await res.json()) as { access_token?: string };
+  const json = await fetch<{ access_token?: string }>(
+    `${DISCORD_API}/oauth2/token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: config.redirectUri,
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+      }),
+    },
+    FetchResultTypes.JSON,
+  );
   if (!json.access_token) throw new Error("Token exchange returned no token");
   return json.access_token;
 }
 
 async function bearerGet<T>(path: string, accessToken: string): Promise<T> {
-  const res = await fetch(`${DISCORD_API}${path}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!res.ok) throw new Error(`Discord API ${path} failed (${res.status})`);
-  return (await res.json()) as T;
+  return fetch<T>(
+    `${DISCORD_API}${path}`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+    FetchResultTypes.JSON,
+  );
 }
 
 export function getUser(accessToken: string): Promise<DiscordUser> {

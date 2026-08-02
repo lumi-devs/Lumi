@@ -202,7 +202,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
 
     if (EMBED_IMPORT_RE.test(src) || /\bnew\s+EmbedBuilder\s*\(/.test(src))
       errors.push(
-        `${rel}: uses EmbedBuilder - user-facing replies must use the make*Card helpers from #utilities/cards.js.`,
+        `${rel}: uses EmbedBuilder - user-facing replies must use the make*Card helpers from "lumi".`,
       );
     if (/\bcontainer\.prisma\b/.test(src))
       errors.push(
@@ -223,6 +223,11 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
         );
         continue;
       }
+      if (/^#(core|lib|utilities|database|root)\//.test(spec)) {
+        warnings.push(
+          `${rel}: imports Lumi's internal path "${spec}" directly - these can move or disappear on any core refactor. Use the public API instead: "lumi" (Module/DefineModule/cfg/Service), "lumi/commands" (BaseCommand/BaseSubcommand/CommandContext), "lumi/permissions", "lumi/scheduling", "lumi/ui" (cards/Emojis/pagination), or "lumi/utils".`,
+        );
+      }
       if (spec.startsWith(".")) {
         const resolved = path.resolve(path.dirname(file), spec);
         if (
@@ -230,7 +235,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
           !resolved.startsWith(addonRoot + path.sep)
         )
           errors.push(
-            `${rel}: relative import "${spec}" escapes the addon directory - move shared code into the addon or use #core/#utilities/#lib aliases.`,
+            `${rel}: relative import "${spec}" escapes the addon directory - move shared code into the addon or import from "lumi".`,
           );
       }
     }

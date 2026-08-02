@@ -47,7 +47,7 @@ export class WarnAction {
       targetMember.id,
     );
 
-    checkThresholds(container, guild.id, targetMember.id, warnCount).catch(
+    await checkThresholds(container, guild.id, targetMember.id, warnCount).catch(
       (err: unknown) =>
         container.logger.error("[Warn] Threshold check failed:", err),
     );

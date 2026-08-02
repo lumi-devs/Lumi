@@ -1,0 +1,72 @@
+name: Sync Docs to Wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+
+      - name: Sync docs/ into the GitHub wiki
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          WIKI_URL="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git"
+
+          rm -rf wiki
+          if git clone "$WIKI_URL" wiki 2>/dev/null; then
+            echo "Cloned existing wiki"
+          else
+            echo "Wiki has no pages yet - initializing"
+            mkdir wiki
+            cd wiki
+            git init -b master
+            git remote add origin "$WIKI_URL"
+            cd ..
+          fi
+
+          # Clear previously-synced pages (leave hand-authored _Sidebar/_Footer alone)
+          find wiki -maxdepth 1 -name "*.md" ! -name "_Sidebar.md" ! -name "_Footer.md" -delete
+
+          for f in docs/*.md; do
+            name=$(basename "$f")
+            if [ "$name" = "README.md" ]; then
+              cp "$f" wiki/Home.md
+            else
+              cp "$f" "wiki/$name"
+            fi
+          done
+
+          {
+            echo "**[Home](Home)**"
+            echo ""
+            for f in docs/*.md; do
+              name=$(basename "$f" .md)
+              [ "$name" = "README" ] && continue
+              echo "- [$name]($name)"
+            done
+          } > wiki/_Sidebar.md
+
+          cd wiki
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to sync"
+            exit 0
+          fi
+
+          git commit -m "docs: sync wiki from docs/ @ ${GITHUB_SHA::7}"
+          git push origin HEAD:master

@@ -6,6 +6,7 @@ import { hasPanelAccess, loadDetail } from "#modules/core/lib/config-panel.js";
 import { buildFeatureDetailView } from "#modules/core/ui/modules.js";
 import { buildOverridesView } from "#modules/core/ui/overrides.js";
 import { ephemeralCard, makeErrorCard } from "#utilities/cards.js";
+import { cleanMention } from "#utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,
@@ -157,7 +158,7 @@ export class ConfigPanelModalHandler extends InteractionHandler {
           interaction,
           "Target type must be one of: channel, role, user, category.",
         );
-      const modelId = target.replace(/[<@&#!>]/g, "");
+      const modelId = cleanMention(target);
       if (!/^\d{17,20}$/.test(modelId))
         return this.#err(
           interaction,

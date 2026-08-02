@@ -257,6 +257,23 @@ export class DownloadResolver {
       await execFileAsync("bun", ["add", ...reqs], { cwd: sourcePath, timeout: 60000 }).catch(
         execError("Requirement installation failed"),
       );
+
+      // The synthetic package.json above becomes the nearest package boundary
+      // for this addon's files, which stops Node/Bun's specifier resolution
+      // from walking up any further - silently breaking both the legacy
+      // `#core/#lib/#utilities` aliases and the `"lumi"` self-reference
+      // (root's package.json, name "lumi", is now unreachable). Symlinking
+      // "lumi" straight into this addon's own node_modules restores it via a
+      // normal node_modules lookup instead of the walk-up.
+      const nodeModulesLumiPath = path.join(sourcePath, "node_modules", "lumi");
+      if (!(await this._exists(nodeModulesLumiPath))) {
+        await fs.mkdir(path.join(sourcePath, "node_modules"), {
+          recursive: true,
+        });
+        await fs
+          .symlink(process.cwd(), nodeModulesLumiPath, "dir")
+          .catch(() => {});
+      }
     }
 
     if (await this._exists(targetPath)) {

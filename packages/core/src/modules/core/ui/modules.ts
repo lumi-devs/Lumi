@@ -1,3 +1,4 @@
+import { chunk } from "@sapphire/utilities";
 import type { LumiT } from "#lib/i18n/index.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import {
@@ -138,15 +139,10 @@ function chunkSection(
   fields: ConfigField[],
 ): FieldSection[] {
   if (fields.length <= FIELDS_PER_PAGE) return [{ name, fields }];
-  const out: FieldSection[] = [];
-  for (let i = 0; i < fields.length; i += FIELDS_PER_PAGE) {
-    const pageNum = Math.floor(i / FIELDS_PER_PAGE) + 1;
-    out.push({
-      name: name ? `${name} (${pageNum})` : `Page ${pageNum}`,
-      fields: fields.slice(i, i + FIELDS_PER_PAGE),
-    });
-  }
-  return out;
+  return chunk(fields, FIELDS_PER_PAGE).map((pageFields, idx) => ({
+    name: name ? `${name} (${idx + 1})` : `Page ${idx + 1}`,
+    fields: pageFields,
+  }));
 }
 
 function sectionsFor(fields: ConfigField[]): FieldSection[] {

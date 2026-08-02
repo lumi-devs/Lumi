@@ -13,7 +13,7 @@ const GOOD_INFO = JSON.stringify({
   short: "Sample.",
   version: "1.0.0",
 });
-const GOOD_INDEX = `import { Module, DefineModule } from "#lib/module-system/Module.js";
+const GOOD_INDEX = `import { Module, DefineModule } from "lumi";
 @DefineModule({ name: "sample", displayName: "Sample", emoji: "🧪", version: "1.0.0", description: "d" })
 export class SampleModule extends Module {}
 `;

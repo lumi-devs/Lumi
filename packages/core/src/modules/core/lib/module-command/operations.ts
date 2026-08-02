@@ -14,6 +14,8 @@ import { errorFrom } from "#lib/utilities/errors.js";
 import {
   moduleAlreadyInstalledCard,
   moduleNotFoundCard,
+  modulePinnedCard,
+  moduleUnpinnedCard,
   multiUpdateReportCard,
   noInstalledModulesCard,
   type ModuleUpdateOutcome,
@@ -170,6 +172,14 @@ export async function updateAllModules(userId: string): Promise<CardReply> {
 
     const outcomes: ModuleUpdateOutcome[] = [];
     for (const item of installed) {
+      if (item.pinned) {
+        outcomes.push({
+          moduleName: item.moduleName,
+          status: "skipped-pinned",
+          needsRestart: false,
+        });
+        continue;
+      }
       try {
         const result = await downloader().updateModule(item.moduleName);
         outcomes.push({
@@ -191,6 +201,32 @@ export async function updateAllModules(userId: string): Promise<CardReply> {
   } catch (err: unknown) {
     return makeErrorCard(
       `${Emojis.ERROR} Multi-Update Failed`,
+      errorFrom(err).message,
+    );
+  }
+}
+
+/** Freezes a downloader-installed module against `,module update`/`updateall`. */
+export async function pinModule(moduleName: string): Promise<CardReply> {
+  try {
+    await downloader().setModulePinned(moduleName, true);
+    return modulePinnedCard(moduleName);
+  } catch (err: unknown) {
+    return makeErrorCard(
+      `${Emojis.ERROR} Pin Failed`,
+      errorFrom(err).message,
+    );
+  }
+}
+
+/** Removes the update lock set by {@linkcode pinModule}. */
+export async function unpinModule(moduleName: string): Promise<CardReply> {
+  try {
+    await downloader().setModulePinned(moduleName, false);
+    return moduleUnpinnedCard(moduleName);
+  } catch (err: unknown) {
+    return makeErrorCard(
+      `${Emojis.ERROR} Unpin Failed`,
       errorFrom(err).message,
     );
   }

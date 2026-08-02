@@ -1,41 +1,42 @@
-# 📚 Lumi Documentation Hub
+# Documentation Hub
 
-Welcome to the engineering documentation for **Lumi** - a modular, self-hosted Discord bot framework built with TypeScript and Bun.
+Engineering documentation for **Lumi** - a modular, self-hosted Discord bot framework built with TypeScript and Bun.
 
----
-
-## 🧭 Navigation & Guides
+## Guides
 
 | Document | Description |
 | :--- | :--- |
-| 🏗️ [**Architecture & System Topology**](architecture.md) | The two process roles (`worker`, `scheduler`), horizontal shard-range scaling, RPC transport, and database layer |
-| ⚙️ [**Configuration Reference**](configuration.md) | Complete list of environment variables, Docker Compose profiles, and Kubernetes manifests |
-| 🧩 [**Modules & Features**](modules.md) | Overview of built-in modules (`core`, `mod`, `filter`, `utility`, `afk`, `tempvc`, `logging`, `dashboard`) and CLI tools |
-| 🛠️ [**Module Creation Guide**](GUIDE_MODULE_CREATION.md) | Step-by-step tutorial for building new feature modules, commands, listeners, services, and tasks |
-| 🤝 [**Contributing Guide**](../CONTRIBUTING.md) | Coding standards, workflow, pull request guidelines, and setup |
-| 🔒 [**Security Policy**](../SECURITY.md) | Responsible disclosure, vulnerability reporting, and addon security guidelines |
-| 🤖 [**AI & Agent Blueprint**](../AGENTS.md) | Agent operational protocols, monorepo boundaries, path aliases, and anti-pattern rules |
+| [Architecture & System Topology](architecture.md) | Process roles (`worker`, `scheduler`, `dashboard`), the Redis Streams event bus, sharding/clustering, database layer, command registration leader election, observability. |
+| [Configuration Reference](configuration.md) | Every environment variable, Docker Compose service, and Kubernetes manifest. |
+| [Modules & Features](modules.md) | The nine built-in modules, plus a deep dive into the security suite (anti-nuke, join-gate, verification, panic mode, filter heat escalation). |
+| [Module Creation Guide](GUIDE_MODULE_CREATION.md) | Step-by-step: config schema, commands, listeners, services, interaction handlers, scheduled tasks, persistence, i18n - built around a full walkthrough of the real `afk` module. |
+| [Addon Publishing Guide](GUIDE_ADDON_PUBLISHING.md) | Writing and submitting an addon to [`lumi-addons`](https://github.com/lumi-devs/lumi-addons): the stricter rules addons run under, the pre-submission checklist, and the PR workflow. |
 
----
+## Project policies
 
-## 📦 Workspace Packages & Apps
+| Document | Description |
+| :--- | :--- |
+| [Contributing Guide](../CONTRIBUTING.md) | Coding standards, workflow, and pull request guidelines. |
+| [Security Policy](../SECURITY.md) | Responsible disclosure and vulnerability reporting. |
+| [AI & Agent Blueprint](../AGENTS.md) | Operational rules for agents (human or AI) working in this codebase - module system boundaries, path aliases, anti-pattern list. Source of truth for anything this docs folder summarizes. |
 
-- **[Apps Overview](../apps/worker/README.md)**: Entrypoints for the runtime roles
-  - [`apps/worker`](../apps/worker/README.md): Discord gateway connection & command execution engine
-  - [`apps/scheduler`](../apps/scheduler/README.md): BullMQ task queue processor
-  - [`apps/dashboard`](../apps/dashboard/README.md): Web management panel
-- **[Packages Overview](../packages/core/README.md)**: Shared libraries & core framework
-  - [`packages/core`](../packages/core/README.md): Framework core, module loader, & database service
-  - [`packages/event-bus`](../packages/event-bus/README.md): Task queue & RPC messaging abstractions
-  - [`packages/sharding`](../packages/sharding/README.md): Shard planner, cluster coordinator & session store
-  - [`packages/observability`](../packages/observability/README.md): Prometheus & OpenTelemetry instrumentation
-  - [`packages/contracts`](../packages/contracts/README.md): RPC schemas & type definitions
+## Workspace packages & apps
 
----
+- **Apps** - entrypoints for the runtime roles:
+  - [`apps/worker`](../apps/worker/README.md) - Discord gateway connection & command execution
+  - [`apps/scheduler`](../apps/scheduler/README.md) - BullMQ task queue processor
+  - [`apps/dashboard`](../apps/dashboard/README.md) - Web management panel
+- **Packages** - shared libraries & core framework:
+  - [`packages/core`](../packages/core/README.md) - Framework core, module loader, database service
+  - [`packages/event-bus`](../packages/event-bus/README.md) - Redis Streams event bus between worker and scheduler
+  - [`packages/sharding`](../packages/sharding/README.md) - Shard planner, cluster coordinator, session store
+  - [`packages/observability`](../packages/observability/README.md) - Prometheus & OpenTelemetry instrumentation
+  - [`packages/contracts`](../packages/contracts/README.md) - RPC schemas & shared type definitions
 
-## 🚀 Quick Links
+## Quick links
 
 - [GitHub Repository](https://github.com/lumi-devs/Lumi)
 - [Issue Tracker](https://github.com/lumi-devs/Lumi/issues)
 - [Discussions](https://github.com/lumi-devs/Lumi/discussions)
+- [Wiki](https://github.com/lumi-devs/Lumi/wiki) - mirrors this `docs/` folder automatically on every push to `main`
 - [Security Advisories](https://github.com/lumi-devs/Lumi/security/advisories)

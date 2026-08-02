@@ -12,6 +12,10 @@ const corePackageVersion = (
   _req("../../../package.json") as { version: string }
 ).version;
 
+export function cleanMention(raw: string): string {
+  return raw.replace(/[<@&#!>]/g, "");
+}
+
 export function formatAuditReason(
   actor: User,
   reason: string | null,

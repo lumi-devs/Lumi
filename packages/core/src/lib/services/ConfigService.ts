@@ -1,5 +1,6 @@
 import { Service } from "#lib/module-system/Service.js";
 import { FieldType, parseConfigList } from "#lib/module-system/Module.js";
+import { cleanMention } from "#utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import type { Prisma } from "@prisma/client";
@@ -229,7 +230,7 @@ export class ConfigService extends Service {
       case FieldType.CHANNEL:
       case FieldType.ROLE:
       case FieldType.USER: {
-        const id = value.replace(/[<@&#!>]/g, "");
+        const id = cleanMention(value);
         return /^\d{17,20}$/.test(id) ? id : null;
       }
       default:

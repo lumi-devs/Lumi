@@ -1,4 +1,5 @@
 import { Service } from "#lib/module-system/Service.js";
+import { cleanMention } from "#utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 
@@ -7,7 +8,7 @@ export class PermissionService extends Service {
   public parseTarget(raw: string | null, type: string): string {
     if (type === "everyone") return "0";
     if (!raw) throw new Error("Target is required for non-everyone overrides.");
-    const cleaned = raw.replace(/[<@&#!>]/g, "");
+    const cleaned = cleanMention(raw);
     if (!/^\d{17,20}$/.test(cleaned))
       throw new Error("Invalid mention or snowflake ID.");
     return cleaned;

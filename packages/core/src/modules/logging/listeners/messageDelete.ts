@@ -16,8 +16,8 @@ export class LoggingMessageDeleteListener extends ModuleListener<
   typeof Events.MessageDelete
 > {
   protected async handle(message: Message | PartialMessage): Promise<void> {
-    if (message.author?.bot) return;
-    const guildId = message.guildId!;
+    if (!message.guildId || message.author?.bot) return;
+    const guildId = message.guildId;
     if (!(await isToggleEnabled(guildId, "message_deletes"))) return;
     if (await isIgnoredChannel(guildId, message.channelId)) return;
 

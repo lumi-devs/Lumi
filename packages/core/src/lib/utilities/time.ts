@@ -1,4 +1,5 @@
 import { time, TimestampStyles } from "@discordjs/formatters";
+import { Duration } from "@sapphire/time-utilities";
 
 /** Discord relative timestamp markup: `<t:EPOCH:R>` → "2 hours ago". */
 export function relativeTimestamp(date: Date | number = new Date()): string {
@@ -11,8 +12,6 @@ export function shortTimestamp(date: Date | number = new Date()): string {
   const d = typeof date === "number" ? new Date(date) : date;
   return time(d, TimestampStyles.ShortTime);
 }
-
-import { Duration } from "@sapphire/time-utilities";
 
 /** Parse a duration string like "10m", "2h30m", "7d" into milliseconds. Returns null if unparseable. */
 export function parseDuration(str: string): number | null {

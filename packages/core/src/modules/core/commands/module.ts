@@ -14,9 +14,11 @@ import {
 } from "#modules/core/lib/module-command/cards.js";
 import {
   installModule,
+  pinModule,
   reloadModule,
   setModuleEnabled,
   uninstallModule,
+  unpinModule,
   updateAllModules,
   updateModule,
 } from "#modules/core/lib/module-command/operations.js";
@@ -24,6 +26,8 @@ import { getModulePiecesInfo } from "#modules/core/lib/module-command/pieces.js"
 import { registerModuleCommand } from "#modules/core/lib/module-command/registry.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
+import { getService } from "#lib/module-system/Service.js";
+import type { DownloaderService } from "#lib/services/DownloaderService.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "module",
@@ -40,6 +44,8 @@ import type { ApplicationCommandRegistry } from "@sapphire/framework";
     { name: "uninstall", run: "uninstall" },
     { name: "reload", run: "reloadModuleCmd" },
     { name: "update", run: "update" },
+    { name: "pin", run: "pin" },
+    { name: "unpin", run: "unpin" },
     { name: "help", run: "help", default: true },
   ],
 })
@@ -70,11 +76,22 @@ export class ModuleCommand extends BaseSubcommand {
     await ctx.defer();
     const name = (await ctx.getString("module", { required: true }))!;
     const record = this.container.moduleStore.getRecord(name);
+    if (!record) {
+      await ctx.reply(moduleNotFoundCard(name));
+      return;
+    }
+    const installed = await this.downloaderService
+      .getInstalledModules()
+      .catch(() => []);
+    const pinned =
+      installed.find((m) => m.moduleName === name)?.pinned ?? false;
     await ctx.reply(
-      record
-        ? moduleInfoCard(record, getModulePiecesInfo(this.container, name))
-        : moduleNotFoundCard(name),
+      moduleInfoCard(record, getModulePiecesInfo(this.container, name), pinned),
     );
+  }
+
+  private get downloaderService(): DownloaderService {
+    return getService("downloader");
   }
 
   public async enable(ctx: CommandContext): Promise<void> {
@@ -141,6 +158,18 @@ export class ModuleCommand extends BaseSubcommand {
     }
 
     await ctx.reply(await updateAllModules(ctx.user.id));
+  }
+
+  public async pin(ctx: CommandContext): Promise<void> {
+    await ctx.defer();
+    const moduleName = (await ctx.getString("module", { required: true }))!;
+    await ctx.reply(await pinModule(moduleName));
+  }
+
+  public async unpin(ctx: CommandContext): Promise<void> {
+    await ctx.defer();
+    const moduleName = (await ctx.getString("module", { required: true }))!;
+    await ctx.reply(await unpinModule(moduleName));
   }
 
   public async help(ctx: CommandContext): Promise<void> {

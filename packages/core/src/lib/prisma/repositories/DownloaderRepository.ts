@@ -78,4 +78,14 @@ export class DownloaderRepository extends Repository {
       data: { commit },
     });
   }
+
+  public setInstalledDownloaderModulePinned(
+    moduleName: string,
+    pinned: boolean,
+  ) {
+    return this.prisma.downloaderModule.updateMany({
+      where: { moduleName },
+      data: { pinned },
+    });
+  }
 }

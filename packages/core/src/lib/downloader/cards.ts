@@ -6,6 +6,7 @@ export interface ModuleUpdateResult {
   updated: boolean;
   changelog?: string;
   needsRestart?: boolean;
+  pinned?: boolean;
 }
 
 /**
@@ -17,6 +18,13 @@ export function moduleUpdateResultCard(
   moduleName: string,
   userId: string,
 ): CardReply {
+  if (result.pinned) {
+    return makeSuccessCard(
+      `${Emojis.PIN} Module Pinned`,
+      `**${moduleName}** is pinned and was skipped. Run \`,module unpin ${moduleName}\` first if you want to update it.`,
+    );
+  }
+
   if (!result.updated) {
     return makeSuccessCard(
       `${Emojis.CHECK} Module Up-To-Date`,

@@ -154,8 +154,8 @@ describe("ModuleCommand", () => {
       values: vi.fn().mockReturnValue([mockCommandsStore, mockListenersStore]),
     };
 
-    container.moduleStore = mockModuleStore as any;
-    container.stores = mockStores as any;
+    container.moduleStore = mockModuleStore;
+    container.stores = mockStores;
     container.logger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -172,7 +172,7 @@ describe("ModuleCommand", () => {
         path: "/path/to/commands/module.ts",
         root: "/path/to/commands",
         store: { name: "commands" } as any,
-      } as any,
+      },
       { prefixEnabled: true }
     );
   });
@@ -232,7 +232,7 @@ describe("ModuleCommand", () => {
     command.registerApplicationCommands(mockRegistry as any);
 
     expect(spy).toHaveBeenCalled();
-    expect(mockBuilder.addSubcommand).toHaveBeenCalledTimes(9);
+    expect(mockBuilder.addSubcommand).toHaveBeenCalledTimes(11);
     expect(subNames).toEqual([
       "list",
       "info",
@@ -242,6 +242,8 @@ describe("ModuleCommand", () => {
       "install",
       "uninstall",
       "update",
+      "pin",
+      "unpin",
       "help",
     ]);
   });
