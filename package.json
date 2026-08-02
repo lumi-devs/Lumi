@@ -39,6 +39,7 @@
   "scripts": {
     "dev": "turbo run dev",
     "start": "bun --filter @lumi/worker run start",
+    "setup": "bash scripts/setup.sh",
     "typecheck": "turbo run typecheck:all && turbo run typecheck --filter=@lumi/dashboard",
     "lint": "turbo run lint:all",
     "typecheck:all": "tsc --noEmit -p tsconfig.json",
@@ -50,6 +51,7 @@
     "db:seed": "bun scripts/seed.ts",
     "modules:manifest": "bun scripts/generate-manifests.ts",
     "validate": "bun scripts/validate-addon.ts",
+    "addon:create": "bun scripts/create-addon.ts",
     "test": "vitest run && bun run --cwd apps/dashboard test",
     "test:e2e": "vitest run -c vitest.e2e.config.ts",
     "changeset": "bunx @changesets/cli",
