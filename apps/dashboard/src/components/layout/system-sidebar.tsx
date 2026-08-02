@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "#/lib/utils";
+import { NavItem } from "./nav-item";
 
 const LINKS = [
   { href: "/system", label: "Global Config", emoji: "🌐" },
@@ -22,19 +21,13 @@ export function SystemSidebar() {
         System Panel
       </p>
       {LINKS.map((l) => (
-        <Link
+        <NavItem
           key={l.href}
           href={l.href}
-          className={cn(
-            "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
-            pathname === l.href
-              ? "bg-accent-cyan/15 text-accent-cyan"
-              : "text-white/60 hover:bg-white/5 hover:text-white",
-          )}
-        >
-          <span className="text-base leading-none">{l.emoji}</span>
-          {l.label}
-        </Link>
+          label={l.label}
+          emoji={l.emoji}
+          active={pathname === l.href}
+        />
       ))}
     </nav>
   );

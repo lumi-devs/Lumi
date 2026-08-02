@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "#/lib/utils";
+import { NavItem } from "./nav-item";
 import type { DashboardModuleView } from "#/lib/dashboard-data";
 
 interface NavLink {
@@ -94,42 +93,5 @@ export function GuildSidebar({
         </div>
       </div>
     </nav>
-  );
-}
-
-function NavItem({
-  href,
-  label,
-  emoji,
-  active,
-  enabled,
-}: {
-  href: string;
-  label: string;
-  emoji: string;
-  active?: boolean;
-  enabled?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
-        active
-          ? "bg-accent-cyan/15 text-accent-cyan"
-          : "text-white/60 hover:bg-white/5 hover:text-white",
-      )}
-    >
-      <span className="text-base leading-none">{emoji}</span>
-      <span className="truncate">{label}</span>
-      {enabled !== undefined && (
-        <span
-          className={cn(
-            "ml-auto size-1.5 rounded-full",
-            enabled ? "bg-success shadow-[0_0_6px_var(--color-success)]" : "bg-white/15",
-          )}
-        />
-      )}
-    </Link>
   );
 }
