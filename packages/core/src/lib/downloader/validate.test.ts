@@ -71,6 +71,73 @@ describe("validateAddon - lumi SDK import boundary", () => {
   });
 });
 
+describe("validateAddon - min_bot_version semver compatibility", () => {
+  let tmpRoot: string;
+
+  beforeEach(async () => {
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "lumi-addon-semver-"));
+  });
+
+  afterEach(async () => {
+    await fs.rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  const VALID_INDEX = `import { Module, DefineModule } from "lumi";\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`;
+
+  async function writeWithMinBotVersion(dir: string, minBotVersion: string) {
+    const info = JSON.stringify({
+      name: "my-addon",
+      author: ["Someone"],
+      description: "A test addon.",
+      short: "Test addon.",
+      version: "1.0.0",
+      min_bot_version: minBotVersion,
+    });
+    await writeAddon(dir, VALID_INDEX, info);
+  }
+
+  it("flags a pre-release min_bot_version whose numeric part exceeds the current version (1.0.0)", async () => {
+    // The old hand-rolled parser split on "." and ran `Number(...)` per segment,
+    // so "1.0.1-beta" -> Number("1-beta") -> NaN -> defaulted to 0, silently
+    // parsing the requirement as 1.0.0 (== current) instead of 1.0.1 (> current).
+    // That made an addon requiring a not-yet-released bot version look compatible.
+    const dir = path.join(tmpRoot, "my-addon");
+    await writeWithMinBotVersion(dir, "1.0.1-beta");
+
+    const { errors } = await validateAddon(dir);
+    expect(errors.some((e) => e.includes("min_bot_version"))).toBe(true);
+  });
+
+  it("flags a min_bot_version with build metadata whose numeric part exceeds the current version", async () => {
+    // Same class of bug as above via the "+build" suffix: "1.0.1+build.5" ->
+    // Number("1+build") -> NaN -> 0, so the requirement was silently downgraded
+    // to 1.0.0 and incorrectly treated as satisfied.
+    const dir = path.join(tmpRoot, "my-addon");
+    await writeWithMinBotVersion(dir, "1.0.1+build.5");
+
+    const { errors } = await validateAddon(dir);
+    expect(errors.some((e) => e.includes("min_bot_version"))).toBe(true);
+  });
+
+  it("accepts a v-prefixed min_bot_version that the current version satisfies", async () => {
+    const dir = path.join(tmpRoot, "my-addon");
+    await writeWithMinBotVersion(dir, "v0.9.0");
+
+    const { errors } = await validateAddon(dir);
+    expect(errors.some((e) => e.includes("min_bot_version"))).toBe(false);
+  });
+
+  it("correctly ranks multi-digit minor versions (1.10.0 > 1.9.0) instead of comparing lexically", async () => {
+    const dir = path.join(tmpRoot, "my-addon");
+    // Current Lumi version is fixed at 1.0.0, so a min_bot_version of 1.10.0 is
+    // never satisfiable - this pins the numeric (not lexical) comparison.
+    await writeWithMinBotVersion(dir, "1.10.0");
+
+    const { errors } = await validateAddon(dir);
+    expect(errors.some((e) => e.includes("min_bot_version"))).toBe(true);
+  });
+});
+
 describe("validateAddon - memory-leak heuristics", () => {
   let tmpRoot: string;
 
