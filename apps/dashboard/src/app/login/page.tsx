@@ -17,7 +17,7 @@ export default async function LoginPage() {
     "use server";
     const ip = (await headers()).get("x-forwarded-for") ?? "unknown";
     // dashboard.md §5F: max 10/min on the login/callback flow.
-    if (isRateLimited(`login:${ip}`, 10, 60_000)) {
+    if (await isRateLimited(`login:${ip}`, 10, 60_000)) {
       throw new Error("Too many login attempts — try again in a minute.");
     }
     await signIn("discord", { redirectTo: "/" });
