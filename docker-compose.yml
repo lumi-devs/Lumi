@@ -134,19 +134,27 @@ services:
     profiles:
       - scale
 
+  # NOTE: apps/dashboard is now a Next.js app (see apps/dashboard/README.md).
+  # The shared `runner` Dockerfile target this service builds from does not
+  # yet have a `next build` stage / copy the `.next` output — that's
+  # follow-up work this rewrite didn't cover (no Docker runtime available to
+  # verify against in this environment). `command` below assumes a future
+  # image stage that includes `apps/dashboard/.next` and node_modules.
   dashboard:
     <<: *lumi-service
     container_name: lumi-dashboard
-    command: ["bun", "apps/dashboard/src/main.ts"]
+    command:
+      ["bun", "run", "--cwd", "apps/dashboard", "start"]
     environment:
       <<: *lumi-env
       DASHBOARD_HOST: "0.0.0.0"
       DASHBOARD_PORT: "8080"
+      # Doubles as NextAuth's session JWT encryption secret — see
+      # apps/dashboard/src/lib/env.ts.
       DASHBOARD_SESSION_SECRET: "${DASHBOARD_SESSION_SECRET:-}"
-      DASHBOARD_SECURE_COOKIES: "${DASHBOARD_SECURE_COOKIES:-false}"
+      BOT_OWNERS: "${BOT_OWNERS:-}"
       DISCORD_OAUTH2_CLIENT_ID: "${DISCORD_OAUTH2_CLIENT_ID:-}"
       DISCORD_OAUTH2_CLIENT_SECRET: "${DISCORD_OAUTH2_CLIENT_SECRET:-}"
-      DISCORD_OAUTH2_REDIRECT_URI: "${DISCORD_OAUTH2_REDIRECT_URI:-}"
     depends_on:
       rabbitmq:
         condition: service_healthy

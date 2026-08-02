@@ -471,8 +471,13 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
       modal
         .setTitle("Add Repository")
         .addComponents(
-          field("name", "Repository Name", "e.g. lumi-addons"),
-          field("url", "Repository URL", "e.g. https://github.com/..."),
+          field("url", "Repository URL", "e.g. https://github.com/owner/repo"),
+          field(
+            "name",
+            "Repository Name (optional)",
+            "Leave blank to derive from the URL",
+            false,
+          ),
           field("branch", "Branch", "default: main", false),
         );
     } else if (action === "rm_repo") {

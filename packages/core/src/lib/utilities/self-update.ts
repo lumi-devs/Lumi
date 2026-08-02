@@ -134,11 +134,9 @@ export async function updateLumiCore(): Promise<CoreUpdateResult> {
   }
 
   try {
-    // 1. Get current commit hash
     const currentHashOutput = await execGit(["rev-parse", "--short", "HEAD"]);
     const currentCommit = currentHashOutput.stdout.trim();
 
-    // 2. Get current branch name
     const branchOutput = await execGit(["rev-parse", "--abbrev-ref", "HEAD"]);
     const branch = branchOutput.stdout.trim() || "master";
 
@@ -146,10 +144,8 @@ export async function updateLumiCore(): Promise<CoreUpdateResult> {
       `[SelfUpdate] Checking remote updates for Lumi core (${branch} @ ${currentCommit})...`,
     );
 
-    // 3. Fetch remote changes
     await execGit(["fetch", "origin", branch]);
 
-    // 4. Get remote HEAD hash
     const remoteHashOutput = await execGit([
       "rev-parse",
       "--short",
@@ -164,7 +160,6 @@ export async function updateLumiCore(): Promise<CoreUpdateResult> {
       };
     }
 
-    // 5. Calculate commits count & log
     const logOutput = await execGit([
       "log",
       "--oneline",
@@ -180,13 +175,11 @@ export async function updateLumiCore(): Promise<CoreUpdateResult> {
     ]);
     const commitsCount = parseInt(countOutput.stdout.trim(), 10) || 1;
 
-    // 6. Pull remote updates
     container.logger?.info(
       `[SelfUpdate] Pulling ${commitsCount} commit(s) from origin/${branch}...`,
     );
     await execGit(["pull", "--ff-only", "origin", branch]);
 
-    // 7. Try bun install if package.json / bun.lockb changed
     try {
       await execFileAsync("bun", ["install", "--frozen-lockfile"], {
         cwd,

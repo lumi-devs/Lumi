@@ -66,6 +66,31 @@ export interface ConfigSetPayload {
   value?: unknown;
 }
 
+/** dashboard.md §9B `GuildGeneralSettingsCard` — partial `Guild` model update. */
+export interface GuildSettingsPayload {
+  prefix?: string | null;
+  modRoleId?: string | null;
+  adminRoleId?: string | null;
+  modLogChannelId?: string | null;
+  muteRoleId?: string | null;
+  locale?: string;
+  timezone?: string;
+  noMentionSpamWindowMs?: number | null;
+  noMentionSpamLimit?: number | null;
+}
+
+/** dashboard.md §10 — Bot Owner System Panel actions. */
+export interface SystemMaintenancePayload {
+  maintenanceMode: boolean;
+  maintenanceMessage?: string;
+}
+
+export interface SystemModuleTogglePayload {
+  moduleName: string;
+  enabled: boolean;
+  reason?: string;
+}
+
 /** Maps each RPC action to the `data` payload the caller must send. */
 export interface RpcRequestPayloads {
   "global.gdpr.delete": GdprDeletePayload;
@@ -77,6 +102,10 @@ export interface RpcRequestPayloads {
   "guild.dashboard.get": never;
   "guild.module.toggle": ModuleTogglePayload;
   "guild.config.set": ConfigSetPayload;
+  "guild.settings.set": GuildSettingsPayload;
+  "system.dashboard.get": never;
+  "system.maintenance.set": SystemMaintenancePayload;
+  "system.module.toggle": SystemModuleTogglePayload;
 }
 
 export type RpcActionName = keyof RpcRequestPayloads;
@@ -91,4 +120,14 @@ export const RPC_ACTIONS = {
   guildDashboardGet: "guild.dashboard.get",
   guildModuleToggle: "guild.module.toggle",
   guildConfigSet: "guild.config.set",
+  guildSettingsSet: "guild.settings.set",
+  // System Panel (dashboard.md §10) — request/response contracts only; the
+  // bot worker doesn't implement handlers for these yet (see apps/worker),
+  // same as the rest of §10's action list. Adding the remaining ones
+  // (warn thresholds, permits, panic, tempvc, overrides, history, audit)
+  // is left for whoever builds out the matching stub pages in
+  // apps/dashboard/src/app/guild/[guildId]/*.
+  systemDashboardGet: "system.dashboard.get",
+  systemMaintenanceSet: "system.maintenance.set",
+  systemModuleToggle: "system.module.toggle",
 } as const satisfies Record<string, RpcActionName>;

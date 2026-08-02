@@ -41,6 +41,17 @@ const ModuleUninstallSchema = s.object({
   moduleName: s.string().lengthGreaterThanOrEqual(1),
 });
 
+const SystemMaintenanceSchema = s.object({
+  maintenanceMode: s.boolean(),
+  maintenanceMessage: s.string().optional(),
+});
+
+const SystemModuleToggleSchema = s.object({
+  moduleName: s.string().lengthGreaterThanOrEqual(1),
+  enabled: s.boolean(),
+  reason: s.string().optional(),
+});
+
 export function initCoreRpcHandlers() {
   container.logger.info("[CoreSystem] Initializing Core RPC handlers...");
 
@@ -114,5 +125,50 @@ export function initCoreRpcHandlers() {
     }
     await container.db.downloader.deleteInstalledDownloaderModule(moduleName);
     return { success: true, moduleName };
+  });
+
+  // Bot Owner System Panel (dashboard.md §9A / §10).
+  registerRpcHandler(RPC_ACTIONS.systemDashboardGet, async () => {
+    const [global, moduleStates] = await Promise.all([
+      container.db.global.getGlobalConfig(),
+      container.db.modules.getGlobalModuleStatesDetailed(),
+    ]);
+    return {
+      global: {
+        botName: global.botName,
+        defaultPrefix: global.defaultPrefix,
+        maintenanceMode: global.maintenanceMode,
+        maintenanceMessage: global.maintenanceMessage,
+        inviteUrl: global.inviteUrl,
+        supportGuildId: global.supportGuildId,
+      },
+      moduleStates,
+      guildCount: container.client.guilds.cache.size,
+    };
+  });
+
+  registerRpcHandler(RPC_ACTIONS.systemMaintenanceSet, async (req) => {
+    const { maintenanceMode, maintenanceMessage } = parsePayload(
+      SystemMaintenanceSchema,
+      req.data,
+    );
+    const global = await container.db.global.setMaintenanceMode(
+      maintenanceMode,
+      maintenanceMessage,
+    );
+    return { success: true, maintenanceMode: global.maintenanceMode };
+  });
+
+  registerRpcHandler(RPC_ACTIONS.systemModuleToggle, async (req) => {
+    const { moduleName, enabled, reason } = parsePayload(
+      SystemModuleToggleSchema,
+      req.data,
+    );
+    await container.db.modules.setModuleGlobalEnabled(
+      moduleName,
+      enabled,
+      reason,
+    );
+    return { success: true, moduleName, enabled };
   });
 }

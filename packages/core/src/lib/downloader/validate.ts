@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { s } from "@sapphire/shapeshift";
+import semver from "semver";
 
 /** Static, import-free structural validation for an addon directory. */
 export interface ValidationResult {
@@ -92,24 +93,107 @@ const IMPORT_RE = /(?:import|export)[^"'`]*?["']([^"'`]+)["']/g;
 const EMBED_IMPORT_RE =
   /import\s*(?:type\s*)?\{[^}]*\bEmbedBuilder\b[^}]*\}\s*from\s*["'](?:discord\.js|@discordjs\/builders)["']/;
 
-function parseSemver(v: string): [number, number, number] {
-  const parts = v
-    .replace(/^v/, "")
-    .split(".")
-    .map((n) => Number(n) || 0);
-  return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0];
+// ── Memory-leak heuristics ──────────────────────────────────────────────────
+// Best-effort, regex-level static checks for the leak shapes that come up
+// most often in long-running addon code: timers nobody clears, listeners
+// nobody removes, and module-level collections nobody bounds. Source text
+// can't prove any of these actually leak (the clear/cleanup call might live
+// in a helper this file imports, a base class, etc.) so every finding here is
+// a warning, same severity tier as the internal-path-import check above -
+// never a hard failure.
+
+const TIMER_RE =
+  /(?:(?:const|let|var)\s+(\w+)\s*=\s*|([\w$][\w$.]*)\s*=\s*)?\b(setInterval|setTimeout)\s*\(/g;
+
+const LISTENER_RE = /\.(?:on|addListener)\s*\(\s*["'`]/;
+const LISTENER_CLEANUP_RE =
+  /\b(?:onUnload|dispose|\.off\s*\(|removeListener|removeAllListeners)\b/;
+
+// Anchored at true line-start (no leading whitespace) as a cheap proxy for
+// "module scope" without a real parser - matches the formatting this repo
+// (and generated addon scaffolds) actually use.
+const GLOBAL_LET_RE = /^(?:export\s+)?let\s+(\w+)\b/gm;
+const GLOBAL_COLLECTION_RE =
+  /^(?:export\s+)?const\s+(\w+)\s*(?::\s*[^=;]+)?=\s*(?:\[\s*\]|new\s+Map\s*\(\s*\)|new\s+Set\s*\(\s*\))/gm;
+
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/** Appends best-effort memory-leak warnings for one addon source file to `warnings`. */
+function checkLeakHeuristics(src: string, rel: string, warnings: string[]): void {
+  TIMER_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = TIMER_RE.exec(src)) !== null) {
+    const varName = m[1] ?? m[2];
+    const fn = m[3]!;
+    const clearFn = fn === "setInterval" ? "clearInterval" : "clearTimeout";
+
+    if (!varName) {
+      warnings.push(
+        `${rel}: \`${fn}(...)\` return value isn't stored in a variable, so it can never be passed to \`${clearFn}\` - it will keep firing for the life of the process.`,
+      );
+      continue;
+    }
+
+    const clearRe = new RegExp(`\\b${clearFn}\\s*\\(\\s*${escapeRe(varName)}\\b`);
+    if (!clearRe.test(src)) {
+      warnings.push(
+        `${rel}: \`${varName}\` holds a ${fn} handle but no \`${clearFn}(${varName})\` appears in this file - confirm it's cleared somewhere (e.g. onUnload) or the timer leaks for the process lifetime.`,
+      );
+    }
+  }
+
+  if (LISTENER_RE.test(src) && !LISTENER_CLEANUP_RE.test(src)) {
+    warnings.push(
+      `${rel}: registers a listener via .on(...)/.addListener(...) but this file has no onUnload/dispose/.off(/.removeListener( - confirm it's torn down on module unload, or reloading the addon stacks duplicate listeners on the same emitter.`,
+    );
+  }
+
+  GLOBAL_LET_RE.lastIndex = 0;
+  while ((m = GLOBAL_LET_RE.exec(src)) !== null) {
+    warnings.push(
+      `${rel}: module-level \`let ${m[1]}\` is mutable state shared by every guild this addon runs in, for the life of the process - prefer per-guild storage (container.db.guildKV / container.redis) over an in-memory module-level variable.`,
+    );
+  }
+
+  GLOBAL_COLLECTION_RE.lastIndex = 0;
+  while ((m = GLOBAL_COLLECTION_RE.exec(src)) !== null) {
+    const name = m[1]!;
+    const escaped = escapeRe(name);
+    const growsRe = new RegExp(`\\b${escaped}\\.(?:push|set|add)\\s*\\(`);
+    if (!growsRe.test(src)) continue;
+
+    const boundedRe = new RegExp(
+      `\\b${escaped}\\.(?:delete|shift|pop|clear|splice)\\s*\\(|\\b${escaped}\\.(?:length|size)\\s*[<>]`,
+    );
+    if (!boundedRe.test(src)) {
+      warnings.push(
+        `${rel}: module-level \`${name}\` is pushed/set/added to but this file never trims it (.delete/.shift/.pop/.clear/.splice, or a .length/.size bounds check) - it can grow unbounded for the process lifetime.`,
+      );
+    }
+  }
+}
+
+/** Coerces a loose version string (`v` prefix, missing segments, etc.) to a strict semver, if possible. */
+function normalizeVersion(v: string): string | null {
+  return semver.valid(v) ?? semver.valid(semver.coerce(v));
+}
+
+/**
+ * True when `currentVersion` satisfies `minVersion` (i.e. `currentVersion >= minVersion`),
+ * per the semver spec - this correctly handles pre-release tags (`1.0.1-beta` ranks
+ * between `1.0.0` and `1.0.1`), build metadata (`1.0.1+build.5`), and `v`-prefixed
+ * versions. An unparseable version on either side is treated as incompatible.
+ */
 function isVersionCompatible(
   minVersion: string,
   currentVersion = "1.0.0",
 ): boolean {
-  const [minMajor, minMinor, minPatch] = parseSemver(minVersion);
-  const [curMajor, curMinor, curPatch] = parseSemver(currentVersion);
-
-  if (curMajor !== minMajor) return curMajor > minMajor;
-  if (curMinor !== minMinor) return curMinor > minMinor;
-  return curPatch >= minPatch;
+  const min = normalizeVersion(minVersion);
+  const current = normalizeVersion(currentVersion);
+  if (!min || !current) return false;
+  return semver.gte(current, min);
 }
 
 /** Validate a single addon directory. Returns collected errors + warnings. */
@@ -212,6 +296,8 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
       warnings.push(
         `${rel}: calls stores.registerPath - the Downloader already registers the addon path; remove this.`,
       );
+
+    checkLeakHeuristics(src, rel, warnings);
 
     let match: RegExpExecArray | null;
     IMPORT_RE.lastIndex = 0;

@@ -9,8 +9,14 @@ Engineering documentation for **Lumi** - a modular, self-hosted Discord bot fram
 | [Architecture & System Topology](architecture.md) | Process roles (`worker`, `scheduler`, `dashboard`), the Redis Streams event bus, sharding/clustering, database layer, command registration leader election, observability. |
 | [Configuration Reference](configuration.md) | Every environment variable, Docker Compose service, and Kubernetes manifest. |
 | [Modules & Features](modules.md) | The nine built-in modules, plus a deep dive into the security suite (anti-nuke, join-gate, verification, panic mode, filter heat escalation). |
+| [Quick Start: Your First Addon](QUICK_START_ADDON.md) | Fastest path from a clean checkout to a working `/slash` command, using `bun run addon:create`. |
 | [Module Creation Guide](GUIDE_MODULE_CREATION.md) | Step-by-step: config schema, commands, listeners, services, interaction handlers, scheduled tasks, persistence, i18n - built around a full walkthrough of the real `afk` module. |
 | [Addon Publishing Guide](GUIDE_ADDON_PUBLISHING.md) | Writing and submitting an addon to [`lumi-addons`](https://github.com/lumi-devs/lumi-addons): the stricter rules addons run under, the pre-submission checklist, and the PR workflow. |
+| [Addon SDK API Reference](API_REFERENCE.md) | Every export of `"lumi"` and its subpaths (`lumi/commands`, `lumi/permissions`, `lumi/scheduling`, `lumi/ui`, `lumi/utils`) - the addon-facing API surface. |
+| [Self-Hosting Guide](GUIDE_SELF_HOSTING.md) | Running your own instance: prerequisites, Docker Compose services, first-run steps, updates, backups. |
+| [Production Deployment Guide](GUIDE_PRODUCTION_DEPLOYMENT.md) | Hardening/scaling beyond self-hosting: clustering, secrets management, monitoring, zero-downtime deploys. |
+| [FAQ](FAQ.md) | Common questions - modules vs. addons, dashboard requirements, GDPR, updating, translations. |
+| [Troubleshooting](TROUBLESHOOTING.md) | Symptom-first index across boot, dashboard, sharding/clustering, addons, and observability. |
 
 ## Project policies
 

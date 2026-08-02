@@ -5,6 +5,9 @@ coverage/
 .turbo/
 *.tsbuildinfo
 .antigravitycli/
+# Next.js build output (apps/dashboard).
+.next/
+next-env.d.ts
 # Prisma: ignore only the generated client and any local dev DB. The schema,
 # migrations, and the data layer (packages/*/src/prisma) are tracked source.
 /prisma/generated/
@@ -23,3 +26,7 @@ indirections.txt
 # embedded git repos — never commit, never add as a submodule.
 /data/
 .agents/
+
+# Local scratch dir for `bun run addon:create` output (point LUMI_DEV_PATHS at
+# it, or move the addon into a real lumi-addons checkout when it's ready).
+/addons/

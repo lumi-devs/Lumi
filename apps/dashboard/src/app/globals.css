@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+/* ── Lumi brand design system — dashboard.md §7 ──────────────────────────
+ * Palette extracted from assets/banner.png. CSS custom properties (not
+ * hardcoded Tailwind theme values) so the multi-theme engine (§6E) can swap
+ * the whole palette at runtime via `data-theme` on <html> without a rebuild
+ * — same reasoning the old vanilla-CSS dashboard had for using custom
+ * properties, it just now also feeds Tailwind's `@theme inline`.
+ */
+:root {
+  --bg-canvas: #04060c;
+  --bg-card: rgba(13, 15, 24, 0.75);
+  --bg-card-hover: rgba(22, 25, 38, 0.85);
+
+  --accent-cyan: #38bdf8;
+  --accent-blue: #00a8ff;
+  --accent-violet: #6366f1;
+  --accent-purple: #8b5cf6;
+
+  --status-success: #10b981;
+  --status-warning: #f59e0b;
+  --status-danger: #f43f5e;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(0, 168, 255, 0.35);
+  --glow-radial: radial-gradient(
+    circle at 50% 0%,
+    rgba(56, 189, 248, 0.15),
+    transparent 70%
+  );
+
+  /* Populated by next/font in app/layout.tsx (self-hosted, no external
+   * request) — these fall back to system fonts until the variables land. */
+  --font-brand: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+/* OLED Pitch Black — dashboard.md §6E */
+:root[data-theme="oled"] {
+  --bg-canvas: #000000;
+  --bg-card: rgba(10, 10, 10, 0.8);
+  --bg-card-hover: rgba(18, 18, 18, 0.9);
+  --accent-purple: #8b5cf6;
+  --accent-violet: #8b5cf6;
+}
+
+/* Cyberpunk Neon — dashboard.md §6E */
+:root[data-theme="cyberpunk"] {
+  --bg-canvas: #090a0f;
+  --bg-card: rgba(18, 12, 20, 0.75);
+  --bg-card-hover: rgba(28, 18, 32, 0.85);
+  --accent-cyan: #06b6d4;
+  --accent-blue: #ec4899;
+  --accent-violet: #ec4899;
+  --accent-purple: #ec4899;
+  --border-glow: rgba(236, 72, 153, 0.35);
+  --glow-radial: radial-gradient(
+    circle at 50% 0%,
+    rgba(236, 72, 153, 0.15),
+    transparent 70%
+  );
+}
+
+@theme inline {
+  --color-canvas: var(--bg-canvas);
+  --color-card: var(--bg-card);
+  --color-card-hover: var(--bg-card-hover);
+  --color-accent-cyan: var(--accent-cyan);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-violet: var(--accent-violet);
+  --color-accent-purple: var(--accent-purple);
+  --color-success: var(--status-success);
+  --color-warning: var(--status-warning);
+  --color-danger: var(--status-danger);
+  --color-border: var(--border);
+  --font-brand: var(--font-brand);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+body {
+  background: var(--bg-canvas);
+  background-image: var(--glow-radial);
+  background-attachment: fixed;
+  color: #f1f3f7;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.glass-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+.glass-card:hover {
+  background: var(--bg-card-hover);
+}
+
+.brand-gradient-text {
+  background: linear-gradient(
+    135deg,
+    var(--accent-cyan) 0%,
+    var(--accent-violet) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+::selection {
+  background: var(--accent-cyan);
+  color: #04060c;
+}

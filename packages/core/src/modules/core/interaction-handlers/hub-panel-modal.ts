@@ -1,4 +1,5 @@
 import { fetchTyped } from "#lib/commands.js";
+import { deriveRepoNameFromUrl } from "#lib/downloader/url-helpers.js";
 import { getService } from "#lib/module-system/Service.js";
 import type { DownloaderService } from "#lib/services/DownloaderService.js";
 import type { GuildSettingsService } from "#lib/services/GuildSettingsService.js";
@@ -97,8 +98,9 @@ export class HubPanelModalHandler extends InteractionHandler {
   async #submitAddon(interaction: ModalSubmitInteraction, action: string) {
     try {
       if (action === "add_repo") {
-        const name = interaction.fields.getTextInputValue("name").trim();
         const url = interaction.fields.getTextInputValue("url").trim();
+        const rawName = interaction.fields.getTextInputValue("name")?.trim();
+        const name = rawName || deriveRepoNameFromUrl(url);
         const branch =
           interaction.fields.getTextInputValue("branch")?.trim() || "main";
         await this.downloader.addRepo(name, url, branch);
