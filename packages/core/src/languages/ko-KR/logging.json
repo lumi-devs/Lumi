@@ -1,0 +1,16 @@
+{
+  "author": "Author",
+  "channel": "Channel",
+  "content": "Content",
+  "attachments": "Attachments",
+  "unknownUncached": "unknown (uncached message)",
+  "messageDeleted": "Message Deleted",
+  "messageUpdated": "Message Updated",
+  "messageEdited": "Message Edited",
+  "memberJoined": "Member Joined",
+  "memberLeft": "Member Left",
+  "memberBanned": "Member Banned",
+  "memberUnbanned": "Member Unbanned",
+  "nicknameChanged": "Nickname Changed",
+  "rolesUpdated": "Roles Updated"
+}
