@@ -41,15 +41,12 @@ function parseUrl(val: string): string {
       throw new Error("Invalid HTTP/HTTPS URL");
     }
   }
-  if (val.startsWith("file://")) {
-    return val;
-  }
   const sshRegex = /^git@[a-zA-Z0-9.-]+:[a-zA-Z0-9._\/-]+(?:\.git)?$/i;
   const sshUrlRegex =
     /^ssh:\/\/git@[a-zA-Z0-9.-]+(?::[0-9]+)?\/[a-zA-Z0-9._\/-]+(?:\.git)?$/i;
   if (sshRegex.test(val) || sshUrlRegex.test(val)) return val;
   throw new Error(
-    "Must be a valid HTTP/HTTPS URL, file URL, or Git SSH URL (git@github.com:owner/repo.git)",
+    "Must be a valid HTTP/HTTPS URL or Git SSH URL (git@github.com:owner/repo.git) - local/file paths are not allowed",
   );
 }
 
@@ -254,9 +251,17 @@ export class DownloadResolver {
         );
       }
 
-      await execFileAsync("bun", ["add", ...reqs], { cwd: sourcePath, timeout: 60000 }).catch(
-        execError("Requirement installation failed"),
-      );
+      // --ignore-scripts: addon requirements come from an untrusted info.json
+      // and are installed unattended. Without this, a malicious/typosquatted
+      // package's postinstall (or any other lifecycle script) executes on the
+      // host at install time. This does mean packages that need a native
+      // build step (e.g. node-gyp) won't work for addon requirements - an
+      // acceptable tradeoff for not running arbitrary scripts from addon repos.
+      await execFileAsync(
+        "bun",
+        ["add", "--ignore-scripts", ...reqs],
+        { cwd: sourcePath, timeout: 60000 },
+      ).catch(execError("Requirement installation failed"));
 
       // The synthetic package.json above becomes the nearest package boundary
       // for this addon's files, which stops Node/Bun's specifier resolution
