@@ -485,6 +485,77 @@ describe("RedisStreamsBus", () => {
       expect(countEmpty).toBe(1);
     });
 
+    it("skips reclaiming a message whose handler is still in flight in this process", async () => {
+      // Regression test for the same-process double-invocation race: a slow
+      // handler (e.g. a DB write) can still be running past claimMinIdleMs
+      // when the claim loop's XAUTOCLAIM decides the entry is stale purely
+      // from Redis-side idle time, which has no visibility into local
+      // handler state.
+      const bus = createBus();
+
+      let resolveHandler!: () => void;
+      const handlerGate = new Promise<void>((resolve) => {
+        resolveHandler = resolve;
+      });
+      const handlerSpy = vi.fn().mockImplementation(() => handlerGate);
+
+      // Simulate the main read loop delivering this entry. `deliver` is an
+      // async function whose synchronous prefix (mark in-flight, invoke the
+      // handler) runs to completion before the first `await` suspends it, so
+      // by the time this call returns, the id is already tracked in-flight
+      // and the handler has been invoked exactly once.
+      const deliverPromise = (bus as any).deliver(
+        "stream-1",
+        "g-1",
+        "6000-0",
+        ["b", JSON.stringify({ slow: true })],
+        1,
+        handlerSpy,
+      );
+
+      publisherMock.xautoclaim.mockResolvedValueOnce([
+        "0-0",
+        [["6000-0", ["b", JSON.stringify({ slow: true })]]],
+        [],
+      ]);
+
+      await (bus as any).runClaim(
+        ["stream-1"],
+        { group: "g-1", consumer: "c-1" },
+        handlerSpy,
+      );
+
+      // The claim loop must NOT have re-invoked the handler while the first
+      // delivery's handler call is still pending.
+      expect(handlerSpy).toHaveBeenCalledTimes(1);
+      expect(logSpy).toHaveBeenCalledWith(
+        "warn",
+        "skipping reclaim of in-flight message",
+        expect.objectContaining({ stream: "stream-1", id: "6000-0" }),
+      );
+
+      // Let the original handler invocation finish and clear the in-flight
+      // marker.
+      resolveHandler();
+      await deliverPromise;
+
+      // Now that it's no longer in flight, a later claim cycle may
+      // legitimately redeliver the same id (e.g. it's genuinely stuck).
+      publisherMock.xautoclaim.mockResolvedValueOnce([
+        "0-0",
+        [["6000-0", ["b", JSON.stringify({ slow: true })]]],
+        [],
+      ]);
+
+      await (bus as any).runClaim(
+        ["stream-1"],
+        { group: "g-1", consumer: "c-1" },
+        handlerSpy,
+      );
+
+      expect(handlerSpy).toHaveBeenCalledTimes(2);
+    });
+
     it("logs error when xautoclaim loop throws exception", async () => {
       const bus = createBus({ claimIntervalMs: 5000 });
       publisherMock.xautoclaim.mockRejectedValueOnce(new Error("Autoclaim error"));
