@@ -258,7 +258,7 @@ export class LumiClient extends SapphireClient {
       this._schedulerLeaderLock = null;
     }
     await this.#commandRegistration.release();
-    await super.destroy();
+    await super.destroy().catch(warnOnCleanupError("Sapphire client destroy"));
     await flushAllMessageDeletes().catch(
       warnOnCleanupError("flushAllMessageDeletes"),
     );
