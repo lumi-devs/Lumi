@@ -1,13 +1,17 @@
 import { container } from "@sapphire/framework";
 import { getService } from "#lib/module-system/Service.js";
 import { registerRpcHandler } from "#lib/rabbitmq/index.js";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RPC_ACTIONS, type RpcRequest } from "@lumi/contracts";
 import { resolver, ADDON_MODULES_ROOT } from "#lib/downloader/resolver.js";
+import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { s, type BaseValidator } from "@sapphire/shapeshift";
 
 const SnowflakeSchema = s.string().regex(/^\d{17,20}$/);
+
+/** Same identifier shape enforced for repo/module names in the downloader resolver. */
+const SafeNameSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
 
 function parsePayload<T>(schema: BaseValidator<T>, data: unknown): T {
   try {
@@ -17,9 +21,20 @@ function parsePayload<T>(schema: BaseValidator<T>, data: unknown): T {
   }
 }
 
+/**
+ * Re-check the actor's Bot Owner status on the worker side rather than
+ * trusting the dashboard's client-side `requireBotOwner` guard - the worker
+ * is the actual trust boundary for these system-level RPC actions.
+ */
+function requireBotOwner(req: RpcRequest<unknown>): void {
+  if (!req.actorId || !PermitResolver.isBotOwner(req.actorId)) {
+    throw new Error("Bot Owner authorization required for this action.");
+  }
+}
+
 const GdprDeleteSchema = s.object({
   userId: SnowflakeSchema,
-  requester: s.string().optional(),
+  requester: s.enum(["DISCORD_DELETED_USER", "OWNER", "USER", "USER_STRICT"]).optional(),
 });
 
 const RepoAddSchema = s.object({
@@ -38,7 +53,7 @@ const ModuleInstallSchema = s.object({
 });
 
 const ModuleUninstallSchema = s.object({
-  moduleName: s.string().lengthGreaterThanOrEqual(1),
+  moduleName: SafeNameSchema,
 });
 
 const SystemMaintenanceSchema = s.object({
@@ -56,6 +71,7 @@ export function initCoreRpcHandlers() {
   container.logger.info("[CoreSystem] Initializing Core RPC handlers...");
 
   registerRpcHandler(RPC_ACTIONS.gdprDelete, async (req) => {
+    requireBotOwner(req);
     const { userId } = parsePayload(GdprDeleteSchema, req.data);
     await container.db.deleteUserData(userId);
     return { success: true };
@@ -90,6 +106,7 @@ export function initCoreRpcHandlers() {
   });
 
   registerRpcHandler(RPC_ACTIONS.moduleInstall, async (req) => {
+    requireBotOwner(req);
     const { repoName, moduleName } = parsePayload(ModuleInstallSchema, req.data);
     const repo = await container.db.downloader.readDownloaderRepo(repoName);
     if (!repo) throw new Error(`Repository ${repoName} not found in database.`);
@@ -113,6 +130,7 @@ export function initCoreRpcHandlers() {
   });
 
   registerRpcHandler(RPC_ACTIONS.moduleUninstall, async (req) => {
+    requireBotOwner(req);
     const { moduleName } = parsePayload(ModuleUninstallSchema, req.data);
     await container.moduleStore.unload(moduleName);
     const targetPath = path.join(ADDON_MODULES_ROOT, moduleName);
@@ -148,6 +166,7 @@ export function initCoreRpcHandlers() {
   });
 
   registerRpcHandler(RPC_ACTIONS.systemMaintenanceSet, async (req) => {
+    requireBotOwner(req);
     const { maintenanceMode, maintenanceMessage } = parsePayload(
       SystemMaintenanceSchema,
       req.data,
@@ -160,6 +179,7 @@ export function initCoreRpcHandlers() {
   });
 
   registerRpcHandler(RPC_ACTIONS.systemModuleToggle, async (req) => {
+    requireBotOwner(req);
     const { moduleName, enabled, reason } = parsePayload(
       SystemModuleToggleSchema,
       req.data,
