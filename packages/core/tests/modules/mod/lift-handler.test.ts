@@ -43,11 +43,11 @@ describe('handleModLiftFire', () => {
 
   it('does nothing when the case is missing or already inactive', async () => {
     (container.db.moderation.getModerationCaseById as any).mockResolvedValue(null);
-    await handleModLiftFire({ caseId: 1 } as any);
+    await handleModLiftFire({ caseId: 1 });
     expect(container.db.moderation.liftModerationCase).not.toHaveBeenCalled();
 
     (container.db.moderation.getModerationCaseById as any).mockResolvedValue({ id: 2, active: false });
-    await handleModLiftFire({ caseId: 2 } as any);
+    await handleModLiftFire({ caseId: 2 });
     expect(container.db.moderation.liftModerationCase).not.toHaveBeenCalled();
   });
 
@@ -61,7 +61,7 @@ describe('handleModLiftFire', () => {
       active: true
     });
 
-    await handleModLiftFire({ caseId: 3 } as any);
+    await handleModLiftFire({ caseId: 3 });
 
     // Regression guard: without VoiceMuteAction.undoRaw being called here,
     // the member stays server-muted on Discord even though the case is
@@ -83,7 +83,7 @@ describe('handleModLiftFire', () => {
       active: true
     });
 
-    await handleModLiftFire({ caseId: 4 } as any);
+    await handleModLiftFire({ caseId: 4 });
 
     expect(container.client.rest.patch).toHaveBeenCalled();
     expect(container.db.moderation.liftModerationCase).toHaveBeenCalledWith(4);
