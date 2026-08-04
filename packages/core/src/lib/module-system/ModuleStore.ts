@@ -10,6 +10,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { BaseValidator } from "@sapphire/shapeshift";
+import { withSerializedWork } from "#lib/utilities/misc.js";
 
 /**
  * Represents the current lifecycle state of a module in the store.
@@ -246,28 +247,42 @@ export class ModuleStore extends Store<Module> {
   }
 
   public async setEnabled(name: string, enabled: boolean, reason?: string) {
-    const record = this.#records.get(name);
-    if (!record) throw new Error(`Unknown module: ${name}`);
-    if (!enabled && !this.isModuleDisableable(name)) {
-      throw new Error(`Module '${name}' is essential and cannot be disabled.`);
-    }
-    if (record.enabled === enabled) return;
+    return withSerializedWork(ModuleStore.#enableLockKey(name), async () => {
+      const record = this.#records.get(name);
+      if (!record) throw new Error(`Unknown module: ${name}`);
+      if (!enabled && !this.isModuleDisableable(name)) {
+        throw new Error(`Module '${name}' is essential and cannot be disabled.`);
+      }
+      if (record.enabled === enabled) return;
 
-    if (enabled) {
-      await this.loadModule(name);
-    } else {
-      await this.unload(name).catch((err: unknown) => {
-        if (!isMissingPieceError(err)) throw err;
-      });
-    }
+      if (enabled) {
+        await this.loadModule(name);
+      } else {
+        await this.unload(name).catch((err: unknown) => {
+          if (!isMissingPieceError(err)) throw err;
+        });
+      }
 
-    await container.db.modules.setModuleGlobalEnabled(name, enabled, reason);
+      await container.db.modules.setModuleGlobalEnabled(name, enabled, reason);
 
-    record.enabled = enabled;
-    record.state = enabled ? "loaded" : "disabled";
-    record.failureReason = undefined;
-    const module = this.get(name);
-    if (module) module.enabled = enabled;
+      record.enabled = enabled;
+      record.state = enabled ? "loaded" : "disabled";
+      record.failureReason = undefined;
+      const module = this.get(name);
+      if (module) module.enabled = enabled;
+    });
+  }
+
+  /**
+   * Lock key shared by {@link setEnabled} and {@link #syncModuleEnabled} so a
+   * dashboard/command-driven toggle and a cluster-invalidation-driven sync
+   * for the same module never interleave their check-then-act on
+   * `record.enabled` - without this, both can read the stale flag before
+   * either writes it, double-loading (or unload/load-interleaving) the
+   * module's Sapphire pieces.
+   */
+  static #enableLockKey(name: string): string {
+    return `module-store:enable:${name}`;
   }
 
   /**
@@ -451,25 +466,27 @@ export class ModuleStore extends Store<Module> {
   }
 
   async #syncModuleEnabled(name: string): Promise<void> {
-    const module = this.get(name);
-    const record = this.#records.get(name);
-    if (!record) return;
+    return withSerializedWork(ModuleStore.#enableLockKey(name), async () => {
+      const module = this.get(name);
+      const record = this.#records.get(name);
+      if (!record) return;
 
-    const newEnabled = await container.db.modules.isModuleGlobalEnabled(name);
-    if (record.enabled === newEnabled) return;
+      const newEnabled = await container.db.modules.isModuleGlobalEnabled(name);
+      if (record.enabled === newEnabled) return;
 
-    record.enabled = newEnabled;
-    if (module) module.enabled = newEnabled;
+      record.enabled = newEnabled;
+      if (module) module.enabled = newEnabled;
 
-    if (newEnabled) {
-      await this.loadModule(name).catch((err) =>
-        container.logger.error(`[ModuleStore] Cluster load failed: ${name}`, err),
-      );
-    } else {
-      await this.unload(name).catch((err) =>
-        container.logger.error(`[ModuleStore] Cluster unload failed: ${name}`, err),
-      );
-    }
+      if (newEnabled) {
+        await this.loadModule(name).catch((err) =>
+          container.logger.error(`[ModuleStore] Cluster load failed: ${name}`, err),
+        );
+      } else {
+        await this.unload(name).catch((err) =>
+          container.logger.error(`[ModuleStore] Cluster unload failed: ${name}`, err),
+        );
+      }
+    });
   }
 
   async #exists(p: string) {
@@ -590,39 +607,82 @@ export class ModuleStore extends Store<Module> {
     }
   }
 
+  /**
+   * Disables a single module whose dependency graph is broken (a circular
+   * dependency, a missing dependency, or a transitive dependency on another
+   * broken module), mirroring the per-module isolation pattern used by
+   * {@link loadAll} and {@link loadModule} - one malformed manifest must
+   * never abort discovery for every other module.
+   */
+  #disableBrokenModule(name: string, reason: string, broken: Set<string>) {
+    const record = this.#records.get(name);
+    if (record && record.enabled) {
+      record.enabled = false;
+      record.state = "failed";
+      record.failureReason = reason;
+      container.logger.error(`[ModuleStore] Disabling module "${name}": ${reason}`);
+    }
+    broken.add(name);
+  }
+
   #topoSort() {
     const order: string[] = [];
     const visited = new Set<string>();
     const visiting = new Set<string>();
+    const broken = new Set<string>();
 
-    const visit = (name: string) => {
-      if (visited.has(name)) return;
-      if (visiting.has(name)) throw new Error(`Circular dependency: ${name}`);
+    /** Resolves `name`, returning `false` if it (or anything it depends on) is broken. */
+    const visit = (name: string): boolean => {
+      if (visited.has(name)) return !broken.has(name);
+      if (broken.has(name)) return false;
+
+      if (visiting.has(name)) {
+        this.#disableBrokenModule(
+          name,
+          `Circular dependency detected involving '${name}'`,
+          broken,
+        );
+        return false;
+      }
 
       const record = this.#records.get(name);
       if (!record) {
         container.logger.error(`[ModuleStore] Missing dependency: ${name}`);
-        return;
+        broken.add(name);
+        return false;
       }
 
       if (!record.enabled) {
         visited.add(name);
         order.push(name);
-        return;
+        return true;
       }
 
       visiting.add(name);
       for (const dep of record.meta.dependencies ?? []) {
         if (!this.#records.has(dep)) {
-          throw new Error(
+          visiting.delete(name);
+          this.#disableBrokenModule(
+            name,
             `Module '${name}' requires missing dependency '${dep}'`,
+            broken,
           );
+          return false;
         }
-        visit(dep);
+        if (!visit(dep)) {
+          visiting.delete(name);
+          this.#disableBrokenModule(
+            name,
+            `Module '${name}' disabled because its dependency '${dep}' is unavailable`,
+            broken,
+          );
+          return false;
+        }
       }
       visiting.delete(name);
       visited.add(name);
       order.push(name);
+      return true;
     };
 
     for (const name of this.#records.keys()) visit(name);

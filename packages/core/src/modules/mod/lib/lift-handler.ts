@@ -1,6 +1,12 @@
 import { container } from "@sapphire/framework";
 import type { ModLiftPayload } from "../scheduled-tasks/modLift.js";
-import { MuteAction, BanAction } from "../actions/index.js";
+import { MuteAction, BanAction, VoiceMuteAction } from "../actions/index.js";
+
+const ACTION_LABELS: Record<string, string> = {
+  mute: "Mute",
+  ban: "Ban",
+  voice_mute: "Voice Mute",
+};
 
 export async function handleModLiftFire(
   payload: ModLiftPayload,
@@ -8,13 +14,15 @@ export async function handleModLiftFire(
   const c = await container.db.moderation.getModerationCaseById(payload.caseId);
   if (!c?.active) return;
 
-  const reason = `[AutoLift] ${c.action === "mute" ? "Mute" : "Ban"} case #${c.caseNumber} expired`;
+  const reason = `[AutoLift] ${ACTION_LABELS[c.action] ?? c.action} case #${c.caseNumber} expired`;
 
   try {
     if (c.action === "mute") {
       await MuteAction.undoRaw(c.guildId, c.userId, reason);
     } else if (c.action === "ban") {
       await BanAction.undoRaw(c.guildId, c.userId, reason);
+    } else if (c.action === "voice_mute") {
+      await VoiceMuteAction.undoRaw(c.guildId, c.userId, reason);
     }
 
     await container.db.moderation.liftModerationCase(c.id);
