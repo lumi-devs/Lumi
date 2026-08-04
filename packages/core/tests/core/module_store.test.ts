@@ -27,18 +27,18 @@ function setupModules(mods: Record<string, ModSpec>, order: string[] = Object.ke
 	const names = Object.keys(mods);
 	vi.spyOn(fs, 'access').mockResolvedValue(undefined);
 	vi.spyOn(fs, 'readdir').mockImplementation(
-		async (p: any) => (names.includes(path.basename(String(p))) ? [] : order) as any
+		(p: any) => Promise.resolve(names.includes(path.basename(String(p))) ? [] : order) as any
 	);
 	vi.spyOn(fs, 'stat').mockImplementation(
-		async (p: any) =>
-			({
+		(p: any) =>
+			Promise.resolve({
 				isDirectory: () => names.includes(path.basename(String(p))),
 				isFile: () => false
 			}) as any
 	);
-	readManifest.mockImplementation(async (dir: string) => {
+	readManifest.mockImplementation((dir: string) => {
 		const name = path.basename(dir);
-		return names.includes(name) ? { name, ...mods[name] } : null;
+		return Promise.resolve(names.includes(name) ? { name, ...mods[name] } : null);
 	});
 }
 
@@ -118,10 +118,10 @@ describe('ModuleStore', () => {
 			values: vi.fn().mockReturnValue([failingStore]),
 			get: vi.fn()
 		} as any;
-		(fs.readdir as any).mockImplementation(async (p: any) => {
+		(fs.readdir as any).mockImplementation((p: any) => {
 			const parts = String(p).split(path.sep);
-			if (parts.at(-1) === 'commands') return ['bad.ts'];
-			return ['broken'];
+			if (parts.at(-1) === 'commands') return Promise.resolve(['bad.ts']);
+			return Promise.resolve(['broken']);
 		});
 
 		await expect(store.loadModule('broken')).rejects.toThrow(/bad command/);
@@ -192,6 +192,32 @@ describe('ModuleStore', () => {
 
 		it('throws for an unknown module', async () => {
 			await expect(store.setEnabled('does-not-exist', true)).rejects.toThrow(/Unknown module/);
+		});
+
+		it('serializes concurrent calls for the same module instead of double-loading it', async () => {
+			container.db.modules.getGlobalModuleStates = vi.fn().mockResolvedValue(new Map([['afk', false]]));
+			setupModules({ afk: {} });
+			await store.discover();
+			expect(store.getRecord('afk').enabled).toBe(false);
+
+			// Resolve loadModule only after both setEnabled() calls have started,
+			// so their check-then-act on record.enabled has a real chance to
+			// interleave if setEnabled isn't serialized per-module.
+			let releaseLoad: () => void = () => {};
+			const loadGate = new Promise<void>((resolve) => {
+				releaseLoad = resolve;
+			});
+			const loadModuleSpy = vi.spyOn(store, 'loadModule').mockImplementation(() => loadGate);
+
+			const first = store.setEnabled('afk', true, 'admin A');
+			const second = store.setEnabled('afk', true, 'admin B');
+			await Promise.resolve(); // let both calls reach their await points
+			releaseLoad();
+			await Promise.all([first, second]);
+
+			expect(loadModuleSpy).toHaveBeenCalledTimes(1);
+			expect(container.db.modules.setModuleGlobalEnabled).toHaveBeenCalledTimes(1);
+			expect(store.getRecord('afk').enabled).toBe(true);
 		});
 	});
 
