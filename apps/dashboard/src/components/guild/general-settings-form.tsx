@@ -35,6 +35,17 @@ const FIELD_LABELS: Record<keyof FormState, string> = {
   noMentionSpamLimit: "No-mention-spam limit",
 };
 
+// These fields render as text inputs where an empty string means "unset";
+// every other field's own `field()` setter already produces the right
+// wire value (e.g. numeric fields go straight to number | null).
+const NULLABLE_STRING_FIELDS = new Set<keyof FormState>([
+  "prefix",
+  "modRoleId",
+  "adminRoleId",
+  "modLogChannelId",
+  "muteRoleId",
+]);
+
 function toFormState(settings: GuildSettings): FormState {
   return {
     prefix: settings.prefix ?? "",
@@ -192,19 +203,34 @@ export function GeneralSettingsForm({
 
   function handleSave() {
     run(async () => {
-      const normalized: GuildSettingsPayload = {
-        ...form,
-        prefix: form.prefix || null,
-        modRoleId: form.modRoleId || null,
-        adminRoleId: form.adminRoleId || null,
-        modLogChannelId: form.modLogChannelId || null,
-        muteRoleId: form.muteRoleId || null,
-      };
-      const res = await setGuildSettings(guildId, normalized);
+      // guild.settings.set is a partial update (see GuildSettingsPayload's
+      // doc comment) - send only what actually changed. Sending the whole
+      // cached `form` here would silently revert any concurrent change
+      // (another tab, another admin, a Discord slash command) made to a
+      // field this session never touched, since every field is optional in
+      // the wire contract but this component used to fill them all in.
+      const changedKeys = (Object.keys(form) as (keyof FormState)[]).filter(
+        (key) => JSON.stringify(form[key]) !== JSON.stringify(baseline[key]),
+      );
+      if (changedKeys.length === 0) return;
+
+      const patch = Object.fromEntries(
+        changedKeys.map((key) => {
+          const value = form[key];
+          return [key, NULLABLE_STRING_FIELDS.has(key) && value === "" ? null : value];
+        }),
+      ) as GuildSettingsPayload;
+
+      const res = await setGuildSettings(guildId, patch);
       if (!res.ok) {
         setError(res.error ?? "Save failed");
         return;
       }
+
+      // Untouched fields already equal `baseline` (that's what "not in
+      // changedKeys" means), so layering `patch`'s coerced values over
+      // `form` gives the exact new server-side state without a re-fetch.
+      const normalized = { ...form, ...patch } as FormState;
       setBaseline(normalized);
       baselineRef.current = normalized;
       setForm(normalized);

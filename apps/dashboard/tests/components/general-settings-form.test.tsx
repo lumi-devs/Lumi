@@ -44,6 +44,78 @@ function guildChannel(guildId: string) {
   return new BroadcastChannel(`lumi:guild-settings:${guildId}`);
 }
 
+describe("GeneralSettingsForm (partial guild.settings.set save)", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("on save, sends only the field(s) that actually changed", async () => {
+    setGuildSettings.mockResolvedValue({ ok: true });
+    render(<GeneralSettingsForm guildId="101" settings={makeSettings()} />);
+
+    fireEvent.change(screen.getByLabelText("Locale"), {
+      target: { value: "fr-FR" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() =>
+      expect(setGuildSettings).toHaveBeenCalledWith("101", { locale: "fr-FR" }),
+    );
+    // Regression guard: modRoleId, timezone, etc. were never touched in this
+    // session - sending them back would silently revert any concurrent
+    // change (another tab, another admin, a Discord slash command) made to
+    // those fields between page load and this save.
+    expect(setGuildSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("normalizes an emptied nullable text field to null, but only sends that one field", async () => {
+    setGuildSettings.mockResolvedValue({ ok: true });
+    render(<GeneralSettingsForm guildId="101" settings={makeSettings()} />);
+
+    fireEvent.change(screen.getByLabelText("Mod role ID"), {
+      target: { value: "" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() =>
+      expect(setGuildSettings).toHaveBeenCalledWith("101", { modRoleId: null }),
+    );
+    expect(setGuildSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves every changed field when more than one was edited", async () => {
+    setGuildSettings.mockResolvedValue({ ok: true });
+    render(<GeneralSettingsForm guildId="101" settings={makeSettings()} />);
+
+    fireEvent.change(screen.getByLabelText("Locale"), {
+      target: { value: "fr-FR" },
+    });
+    fireEvent.change(screen.getByLabelText("Timezone"), {
+      target: { value: "Europe/Paris" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() =>
+      expect(setGuildSettings).toHaveBeenCalledWith("101", {
+        locale: "fr-FR",
+        timezone: "Europe/Paris",
+      }),
+    );
+    expect(setGuildSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows an error and keeps the save bar open when a save fails", async () => {
+    setGuildSettings.mockResolvedValue({ ok: false, error: "Bad payload" });
+    render(<GeneralSettingsForm guildId="101" settings={makeSettings()} />);
+
+    fireEvent.change(screen.getByLabelText("Locale"), {
+      target: { value: "fr-FR" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    expect(await screen.findByText("Bad payload")).toBeInTheDocument();
+    expect(screen.getByText(/unsaved changes/i)).toBeInTheDocument();
+  });
+});
+
 describe("GeneralSettingsForm (cross-tab sync)", () => {
   beforeEach(() => vi.clearAllMocks());
 

@@ -113,20 +113,30 @@ describe("validateAddon", () => {
     expect(errors.some((e) => e.includes("container.prisma"))).toBe(true);
   });
 
-  it("allows #core/#utilities alias imports (does not flag them as escapes)", async () => {
+  it("blocks direct #core/#lib/#utilities/#database alias imports as hard errors", async () => {
     const dir = await makeAddon("aliases", {
       "info.json": JSON.stringify({ name: "aliases", author: ["T"], description: "d", short: "s", version: "1.0.0" }),
       "index.ts": GOOD_INDEX,
       "lib/x.ts": `import { makeInfoCard } from "#lib/utilities/cards.js";\nimport { Service } from "#lib/module-system/Service.js";\nexport { makeInfoCard, Service };\n`,
     });
     const { errors } = await validateAddon(dir);
-    expect(errors).toEqual([]);
+    expect(errors.some((e) => e.includes('imports Lumi\'s internal path "#lib/utilities/cards.js"'))).toBe(true);
+    expect(errors.some((e) => e.includes('imports Lumi\'s internal path "#lib/module-system/Service.js"'))).toBe(true);
+  });
+
+  it("blocks direct #database/* alias imports too (closes the container.prisma bypass)", async () => {
+    const dir = await makeAddon("database-bypass", {
+      "info.json": JSON.stringify({ name: "database-bypass", author: ["T"], description: "d", short: "s", version: "1.0.0" }),
+      "index.ts": `${GOOD_INDEX}\nimport { prisma } from "#database/client.js";\nexport { prisma };\n`,
+    });
+    const { errors } = await validateAddon(dir);
+    expect(errors.some((e) => e.includes('imports Lumi\'s internal path "#database/client.js"'))).toBe(true);
   });
 
   it("validates a valid manifest.json contract", async () => {
     const dir = await makeAddon("valid-manifest", {
       "info.json": JSON.stringify({ name: "valid-manifest", author: ["T"], description: "d", short: "s", version: "1.0.0" }),
-      "index.ts": `import { Module, DefineModule } from "#lib/module-system/Module.js";\n@DefineModule({ name: "valid-manifest", displayName: "M", emoji: "🧪", version: "1.0.0", description: "d" })\nexport class MModule extends Module {}\n`,
+      "index.ts": `import { Module, DefineModule } from "lumi";\n@DefineModule({ name: "valid-manifest", displayName: "M", emoji: "🧪", version: "1.0.0", description: "d" })\nexport class MModule extends Module {}\n`,
       "manifest.json": JSON.stringify({
         name: "valid-manifest",
         displayName: "M",
@@ -145,7 +155,7 @@ describe("validateAddon", () => {
   it("flags an invalid manifest.json schema or mismatched name", async () => {
     const dir = await makeAddon("bad-manifest", {
       "info.json": JSON.stringify({ name: "bad-manifest", author: ["T"], description: "d", short: "s", version: "1.0.0" }),
-      "index.ts": `import { Module, DefineModule } from "#lib/module-system/Module.js";\n@DefineModule({ name: "bad-manifest", displayName: "B", emoji: "🧪", version: "1.0.0", description: "d" })\nexport class BModule extends Module {}\n`,
+      "index.ts": `import { Module, DefineModule } from "lumi";\n@DefineModule({ name: "bad-manifest", displayName: "B", emoji: "🧪", version: "1.0.0", description: "d" })\nexport class BModule extends Module {}\n`,
       "manifest.json": JSON.stringify({
         name: "mismatched-name",
         displayName: "B",
