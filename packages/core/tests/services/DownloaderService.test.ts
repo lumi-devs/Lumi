@@ -375,6 +375,49 @@ describe("DownloaderService", () => {
 
       await expect(service.updateModule("m1")).rejects.toThrow("Git pull failed: Git pull conflict");
     });
+
+    it("serializes concurrent updateModule calls that touch the same repo checkout", async () => {
+      // Regression test: two modules living in the same repo (or a manual
+      // update-button click overlapping the auto-update sweep) must not run
+      // `git pull` against that repo's directory at the same time.
+      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ repoId: "r1-id", commit: "oldhash" });
+      mockDb.downloader.readDownloaderRepoById.mockResolvedValue({ id: "r1-id", name: "repo1", branch: "main" });
+
+      (fs.access as any).mockResolvedValue(true);
+
+      let activePulls = 0;
+      let maxActivePulls = 0;
+      mockExecFile.mockImplementation((file: string, args: string[], cb: any) => {
+        if (args.includes("rev-parse") && args.includes("HEAD")) {
+          cb(null, { stdout: "oldhash\n", stderr: "" });
+        } else if (args.includes("rev-parse") && args.includes("@{u}")) {
+          cb(null, { stdout: "origin/main\n", stderr: "" });
+        } else if (args.includes("rev-parse") && args.includes("origin/main")) {
+          cb(null, { stdout: "newhash\n", stderr: "" });
+        } else if (args.includes("log")) {
+          cb(null, { stdout: "feat: change\n", stderr: "" });
+        } else if (args.includes("pull")) {
+          activePulls++;
+          maxActivePulls = Math.max(maxActivePulls, activePulls);
+          setTimeout(() => {
+            activePulls--;
+            cb(null, { stdout: "", stderr: "" });
+          }, 20);
+        } else {
+          cb(null, { stdout: "", stderr: "" });
+        }
+      });
+
+      const [res1, res2] = await Promise.all([
+        service.updateModule("m1"),
+        service.updateModule("m2"),
+      ]);
+
+      expect(res1).toEqual({ updated: true, changelog: "feat: change", needsRestart: true });
+      expect(res2).toEqual({ updated: true, changelog: "feat: change", needsRestart: true });
+      // The two `git pull`s against repo1's checkout never overlapped.
+      expect(maxActivePulls).toBe(1);
+    });
   });
 
   describe("checkForUpdates", () => {

@@ -12,6 +12,7 @@ import {
   writeManifest,
   type ModuleManifest,
 } from "#lib/module-system/manifest.js";
+import { withSerializedWork } from "#lib/utilities/misc.js";
 
 const execFileAsync = promisify(execFile);
 const execGit = (args: string[]) =>
@@ -83,55 +84,58 @@ export class DownloadResolver {
     url = parseUrl(url);
     branch = branchSchema.parse(branch);
 
-    const repoPath = path.join(MODULE_ROOT, name);
-    const gitFolder = path.join(repoPath, ".git");
+    // Serialized per repo name: a manual update-button click, the "add repo"
+    // flow, and the 15-minute auto-update sweep can all target the same
+    // on-disk checkout concurrently. Without this, two overlapping
+    // `git pull`/`rm -rf`+`clone` sequences on the same directory can
+    // interleave and corrupt it.
+    await withSerializedWork(name, async () => {
+      const repoPath = path.join(MODULE_ROOT, name);
+      const gitFolder = path.join(repoPath, ".git");
 
-    if (await this._exists(repoPath)) {
-      if (!(await this._exists(gitFolder))) {
-        container.logger?.warn?.(
-          `[Downloader] ${name} exists at ${repoPath} but is not a valid git repository. Cleaning up...`,
-        );
-        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+      if (await this._exists(repoPath)) {
+        if (!(await this._exists(gitFolder))) {
+          container.logger?.warn?.(
+            `[Downloader] ${name} exists at ${repoPath} but is not a valid git repository. Cleaning up...`,
+          );
+          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+        }
       }
-    }
 
+      const isExisting =
+        (await this._exists(repoPath)) && (await this._exists(gitFolder));
 
-    const isExisting =
-      (await this._exists(repoPath)) && (await this._exists(gitFolder));
-
-    if (isExisting) {
-      container.logger?.info?.(`[Downloader] Updating repo: ${name}`);
-      const pullArgs =
-        branch === "default"
-          ? ["-C", repoPath, "pull"]
-          : ["-C", repoPath, "pull", "origin", branch];
-      await execGit(pullArgs).catch(async () => {
-        container.logger?.warn?.(
-          `[Downloader] Git pull failed for ${name}, attempting clean clone fallback...`,
-        );
-        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+      if (isExisting) {
+        container.logger?.info?.(`[Downloader] Updating repo: ${name}`);
+        const pullArgs =
+          branch === "default"
+            ? ["-C", repoPath, "pull"]
+            : ["-C", repoPath, "pull", "origin", branch];
+        await execGit(pullArgs).catch(async () => {
+          container.logger?.warn?.(
+            `[Downloader] Git pull failed for ${name}, attempting clean clone fallback...`,
+          );
+          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+          const cloneArgs = ["clone"];
+          if (branch !== "default") cloneArgs.push("-b", branch);
+          cloneArgs.push("--", url, repoPath);
+          await execGit(cloneArgs).catch(async (cloneErr) => {
+            await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+            execError("Git clone failed")(cloneErr);
+          });
+        });
+      } else {
+        container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
+        await fs.mkdir(MODULE_ROOT, { recursive: true });
         const cloneArgs = ["clone"];
         if (branch !== "default") cloneArgs.push("-b", branch);
         cloneArgs.push("--", url, repoPath);
-        await execGit(cloneArgs).catch(async (cloneErr) => {
+        await execGit(cloneArgs).catch(async () => {
           await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
-          execError("Git clone failed")(cloneErr);
+          throw new Error("Git clone failed");
         });
-      });
-    } else {
-      container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
-      await fs.mkdir(MODULE_ROOT, { recursive: true });
-      const cloneArgs = ["clone"];
-      if (branch !== "default") cloneArgs.push("-b", branch);
-      cloneArgs.push("--", url, repoPath);
-      await execGit(cloneArgs).catch(async () => {
-        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
-        throw new Error("Git clone failed");
-      });
-    }
-
-
-
+      }
+    });
   }
 
   public async getModulesInRepo(repoName: string): Promise<ModuleInfo[]> {
