@@ -13,7 +13,7 @@
   <p>
     <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.3%2B-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun"></a>
     <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-A42E2B?style=flat-square&logo=gnu&logoColor=white" alt="AGPL v3"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-A42E2B?style=flat-square&logo=gnu&logoColor=white" alt="GPL v3"></a>
   </p>
 
   <p>
@@ -180,4 +180,4 @@ Security vulnerabilities should be reported responsibly. Review [SECURITY.md](SE
 
 ## License
 
-Distributed under the [AGPL v3 License](LICENSE). Publicly hosted derivatives must publish modified source code.
+Distributed under the [GPL v3 License](LICENSE). First-party addons in [lumi-addons](https://github.com/lumi-devs/lumi-addons) are licensed AGPL v3; deployments that load them are subject to AGPL's network source-disclosure requirement for the combined work (GPLv3 §13 / AGPLv3 §13).
