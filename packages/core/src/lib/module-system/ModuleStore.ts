@@ -590,39 +590,82 @@ export class ModuleStore extends Store<Module> {
     }
   }
 
+  /**
+   * Disables a single module whose dependency graph is broken (a circular
+   * dependency, a missing dependency, or a transitive dependency on another
+   * broken module), mirroring the per-module isolation pattern used by
+   * {@link loadAll} and {@link loadModule} - one malformed manifest must
+   * never abort discovery for every other module.
+   */
+  #disableBrokenModule(name: string, reason: string, broken: Set<string>) {
+    const record = this.#records.get(name);
+    if (record && record.enabled) {
+      record.enabled = false;
+      record.state = "failed";
+      record.failureReason = reason;
+      container.logger.error(`[ModuleStore] Disabling module "${name}": ${reason}`);
+    }
+    broken.add(name);
+  }
+
   #topoSort() {
     const order: string[] = [];
     const visited = new Set<string>();
     const visiting = new Set<string>();
+    const broken = new Set<string>();
 
-    const visit = (name: string) => {
-      if (visited.has(name)) return;
-      if (visiting.has(name)) throw new Error(`Circular dependency: ${name}`);
+    /** Resolves `name`, returning `false` if it (or anything it depends on) is broken. */
+    const visit = (name: string): boolean => {
+      if (visited.has(name)) return !broken.has(name);
+      if (broken.has(name)) return false;
+
+      if (visiting.has(name)) {
+        this.#disableBrokenModule(
+          name,
+          `Circular dependency detected involving '${name}'`,
+          broken,
+        );
+        return false;
+      }
 
       const record = this.#records.get(name);
       if (!record) {
         container.logger.error(`[ModuleStore] Missing dependency: ${name}`);
-        return;
+        broken.add(name);
+        return false;
       }
 
       if (!record.enabled) {
         visited.add(name);
         order.push(name);
-        return;
+        return true;
       }
 
       visiting.add(name);
       for (const dep of record.meta.dependencies ?? []) {
         if (!this.#records.has(dep)) {
-          throw new Error(
+          visiting.delete(name);
+          this.#disableBrokenModule(
+            name,
             `Module '${name}' requires missing dependency '${dep}'`,
+            broken,
           );
+          return false;
         }
-        visit(dep);
+        if (!visit(dep)) {
+          visiting.delete(name);
+          this.#disableBrokenModule(
+            name,
+            `Module '${name}' disabled because its dependency '${dep}' is unavailable`,
+            broken,
+          );
+          return false;
+        }
       }
       visiting.delete(name);
       visited.add(name);
       order.push(name);
+      return true;
     };
 
     for (const name of this.#records.keys()) visit(name);

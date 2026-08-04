@@ -27,18 +27,19 @@ function setupModules(mods: Record<string, ModSpec>, order: string[] = Object.ke
 	const names = Object.keys(mods);
 	vi.spyOn(fs, 'access').mockResolvedValue(undefined);
 	vi.spyOn(fs, 'readdir').mockImplementation(
-		async (p: any) => (names.includes(path.basename(String(p))) ? [] : order) as any
+		(p: any) =>
+			Promise.resolve(names.includes(path.basename(String(p))) ? [] : order) as any
 	);
 	vi.spyOn(fs, 'stat').mockImplementation(
-		async (p: any) =>
-			({
+		(p: any) =>
+			Promise.resolve({
 				isDirectory: () => names.includes(path.basename(String(p))),
 				isFile: () => false
 			}) as any
 	);
-	readManifest.mockImplementation(async (dir: string) => {
+	readManifest.mockImplementation((dir: string) => {
 		const name = path.basename(dir);
-		return names.includes(name) ? { name, ...mods[name] } : null;
+		return Promise.resolve(names.includes(name) ? { name, ...mods[name] } : null);
 	});
 }
 
@@ -91,9 +92,39 @@ describe('ModuleStore', () => {
 		expect(order).toEqual(['a', 'b']);
 	});
 
-	it('should throw on circular dependencies', async () => {
+	it('disables (but does not throw for) modules with a circular dependency', async () => {
 		setupModules({ a: { dependencies: ['b'] }, b: { dependencies: ['a'] } });
-		await expect(store.discover()).rejects.toThrow(/Circular dependency/);
+		await expect(store.discover()).resolves.toBeUndefined();
+
+		expect(store.getRecord('a').enabled).toBe(false);
+		expect(store.getRecord('a').state).toBe('failed');
+		expect(store.getRecord('b').enabled).toBe(false);
+		expect(store.getRecord('b').state).toBe('failed');
+		expect(container.logger.error).toHaveBeenCalledWith(
+			expect.stringContaining('Circular dependency')
+		);
+	});
+
+	it('disables only the module with a missing dependency, leaving unrelated modules loaded', async () => {
+		setupModules({ a: {}, b: { dependencies: ['ghost'] } });
+		await store.discover();
+
+		expect(store.getRecord('a').enabled).toBe(true);
+		expect(store.getRecord('b').enabled).toBe(false);
+		expect(store.getRecord('b').state).toBe('failed');
+		expect(store.getRecord('b').failureReason).toMatch(/missing dependency 'ghost'/);
+		expect(container.stores.registerPath).toHaveBeenCalledTimes(1);
+	});
+
+	it('transitively disables modules that depend on a broken module', async () => {
+		// c -> b -> a, and a has a missing dependency. b and c must both be disabled.
+		setupModules({ a: { dependencies: ['ghost'] }, b: { dependencies: ['a'] }, c: { dependencies: ['b'] } });
+		await store.discover();
+
+		expect(store.getRecord('a').enabled).toBe(false);
+		expect(store.getRecord('b').enabled).toBe(false);
+		expect(store.getRecord('c').enabled).toBe(false);
+		expect(container.stores.registerPath).not.toHaveBeenCalled();
 	});
 
 	it('should handle conflicts', async () => {
@@ -118,10 +149,10 @@ describe('ModuleStore', () => {
 			values: vi.fn().mockReturnValue([failingStore]),
 			get: vi.fn()
 		} as any;
-		(fs.readdir as any).mockImplementation(async (p: any) => {
+		(fs.readdir as any).mockImplementation((p: any) => {
 			const parts = String(p).split(path.sep);
-			if (parts.at(-1) === 'commands') return ['bad.ts'];
-			return ['broken'];
+			if (parts.at(-1) === 'commands') return Promise.resolve(['bad.ts']);
+			return Promise.resolve(['broken']);
 		});
 
 		await expect(store.loadModule('broken')).rejects.toThrow(/bad command/);
