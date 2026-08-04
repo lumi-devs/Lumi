@@ -10,6 +10,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { BaseValidator } from "@sapphire/shapeshift";
+import { withSerializedWork } from "#lib/utilities/misc.js";
 
 /**
  * Represents the current lifecycle state of a module in the store.
@@ -188,13 +189,20 @@ export class ModuleStore extends Store<Module> {
    * @param name - The name of the module to reload.
    */
   public async reload(name: string) {
-    try {
-      await this.unload(name);
-    } catch (err: unknown) {
-      if (!isMissingPieceError(err)) throw err;
-    }
-    await this.discover(true, true);
-    await this.loadModule(name);
+    // Same lock namespace ("module-store:enable:<name>") as setEnabled()/
+    // #syncModuleEnabled() use - two overlapping /module reload calls for
+    // the same module used to interleave unload/discover/loadModule with
+    // no guard at all, risking double-registered pieces or a store left
+    // inconsistent until a full process restart.
+    return withSerializedWork(`module-store:enable:${name}`, async () => {
+      try {
+        await this.unload(name);
+      } catch (err: unknown) {
+        if (!isMissingPieceError(err)) throw err;
+      }
+      await this.discover(true, true);
+      await this.loadModule(name);
+    });
   }
 
   /**

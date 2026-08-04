@@ -27,18 +27,18 @@ function setupModules(mods: Record<string, ModSpec>, order: string[] = Object.ke
 	const names = Object.keys(mods);
 	vi.spyOn(fs, 'access').mockResolvedValue(undefined);
 	vi.spyOn(fs, 'readdir').mockImplementation(
-		async (p: any) => (names.includes(path.basename(String(p))) ? [] : order) as any
+		(p: any) => Promise.resolve(names.includes(path.basename(String(p))) ? [] : order) as any
 	);
 	vi.spyOn(fs, 'stat').mockImplementation(
-		async (p: any) =>
-			({
+		(p: any) =>
+			Promise.resolve({
 				isDirectory: () => names.includes(path.basename(String(p))),
 				isFile: () => false
 			}) as any
 	);
-	readManifest.mockImplementation(async (dir: string) => {
+	readManifest.mockImplementation((dir: string) => {
 		const name = path.basename(dir);
-		return names.includes(name) ? { name, ...mods[name] } : null;
+		return Promise.resolve(names.includes(name) ? { name, ...mods[name] } : null);
 	});
 }
 
@@ -118,10 +118,10 @@ describe('ModuleStore', () => {
 			values: vi.fn().mockReturnValue([failingStore]),
 			get: vi.fn()
 		} as any;
-		(fs.readdir as any).mockImplementation(async (p: any) => {
+		(fs.readdir as any).mockImplementation((p: any) => {
 			const parts = String(p).split(path.sep);
-			if (parts.at(-1) === 'commands') return ['bad.ts'];
-			return ['broken'];
+			if (parts.at(-1) === 'commands') return Promise.resolve(['bad.ts']);
+			return Promise.resolve(['broken']);
 		});
 
 		await expect(store.loadModule('broken')).rejects.toThrow(/bad command/);
@@ -192,6 +192,59 @@ describe('ModuleStore', () => {
 
 		it('throws for an unknown module', async () => {
 			await expect(store.setEnabled('does-not-exist', true)).rejects.toThrow(/Unknown module/);
+		});
+	});
+
+	describe('reload', () => {
+		it('serializes overlapping reload() calls instead of interleaving unload/discover/loadModule', async () => {
+			setupModules({ afk: {} });
+			await store.discover();
+
+			const order: string[] = [];
+			let releaseFirstLoad: () => void = () => {};
+			const firstLoadGate = new Promise<void>((resolve) => {
+				releaseFirstLoad = resolve;
+			});
+			let loadModuleCalls = 0;
+
+			vi.spyOn(store, 'unload').mockImplementation((n: any) => {
+				order.push(`unload:${n}`);
+				return Promise.resolve({} as any);
+			});
+			vi.spyOn(store, 'discover').mockImplementation(() => {
+				order.push('discover');
+				return Promise.resolve();
+			});
+			vi.spyOn(store, 'loadModule').mockImplementation(async (n: any) => {
+				loadModuleCalls += 1;
+				order.push(`loadModule:${n}:start`);
+				if (loadModuleCalls === 1) await firstLoadGate;
+				order.push(`loadModule:${n}:end`);
+			});
+
+			const first = store.reload('afk');
+			const second = store.reload('afk');
+			// Give the first call's chain a chance to reach (and block on)
+			// loadModule. If reload() isn't serialized, the second call's
+			// unload()/discover() would already be interleaved in `order` here.
+			await Promise.resolve();
+			await Promise.resolve();
+			await Promise.resolve();
+			expect(order).toEqual(['unload:afk', 'discover', 'loadModule:afk:start']);
+
+			releaseFirstLoad();
+			await Promise.all([first, second]);
+
+			expect(order).toEqual([
+				'unload:afk',
+				'discover',
+				'loadModule:afk:start',
+				'loadModule:afk:end',
+				'unload:afk',
+				'discover',
+				'loadModule:afk:start',
+				'loadModule:afk:end',
+			]);
 		});
 	});
 

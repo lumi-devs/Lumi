@@ -4,6 +4,21 @@ import { envIsDefined, envParseInteger, envParseString } from "#lib/env.js";
 import { Redis, type RedisOptions } from "ioredis";
 import { logError } from "#lib/utilities/errors.js";
 
+/**
+ * Companion "fence" key for a cache key, bumped by {@link InvalidationBus.invalidate}.
+ * Repository.getOrSet reads this before and after its DB fetch; if it
+ * changed mid-fetch, a write invalidated the key while the read was still
+ * in flight, so the freshly-fetched value may already be stale and the
+ * cache write is skipped instead of repopulating it. Unlike a fixed delay,
+ * this is correct regardless of how long the read takes.
+ */
+export function cacheFenceKey(key: string): string {
+  return `${key}:fence`;
+}
+
+/** How long a fence marker survives - just needs to outlive the slowest realistic getOrSet() fetch. */
+const CACHE_FENCE_TTL_MS = 60_000;
+
 export const RedisKeys = {
   guildSettings: (guildId: string) => `lumi:settings:guild:${guildId}`,
   guildConfig: (module: string, guildId: string) =>
@@ -205,6 +220,11 @@ export class InvalidationBus {
   public async invalidate(...keys: string[]): Promise<void> {
     if (keys.length === 0) return;
     await container.redis.del(...keys);
+    const fence = container.redis.pipeline();
+    for (const key of keys) {
+      fence.set(cacheFenceKey(key), Date.now(), "PX", CACHE_FENCE_TTL_MS);
+    }
+    await fence.exec();
     await container.redis.publish(
       INVALIDATION_CHANNEL,
       JSON.stringify({ keys }),

@@ -173,10 +173,20 @@ export class DashboardModule extends Module {
       await requireGuildManager(guildId, req.actorId);
       const data = parsePayload(GuildSettingsSchema, req.data);
 
-      const updated = await container.db.config.updateGuildSettings(
-        guildId,
-        data,
-      );
+      // Go through the same per-guild lock (container.db.transaction) that
+      // command-driven writes use (GuildSettingsService.setPrefix/
+      // setLanguage) - calling ConfigRepository.updateGuildSettings
+      // directly bypassed it, letting a dashboard save race a
+      // bot-command-driven change with no ordering guarantee between
+      // the two writes or their cache invalidations.
+      const tx = await container.db.transaction(guildId);
+      try {
+        tx.write(data);
+        await tx.submit();
+      } finally {
+        tx.dispose();
+      }
+      const updated = await container.db.config.getGuildSettings(guildId);
       return { success: true, settings: updated };
     });
 
