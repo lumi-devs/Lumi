@@ -1,5 +1,34 @@
 # @lumi/core
 
+## 3.1.0
+
+### Minor Changes
+
+- 653797b: Export `sendReply`, `replySuccess`, `replyError`, `replyWarning`, `replyInfo`, `assertPermit`, and the `CommandReplyTarget` type from the public addon SDK (`lumi/commands`), giving third-party addons standalone reply/permission-assertion helpers that don't require reaching into internal (`#core`/`#lib`) modules.
+
+### Patch Changes
+
+- 82137ab: Relicense the core bot library and infrastructure packages from AGPL-3.0-only to GPL-3.0-only; first-party addons in lumi-addons remain AGPL-3.0-only. GPLv3 §13 / AGPLv3 §13 explicitly permit combining GPL and AGPL-licensed works, so third-party addons can keep depending on and importing the core SDK surface across the license boundary.
+- 4fbd1e6: Serialize addon repo git operations per repo name so a manual "update repo" click can no longer race the scheduled auto-update task's own `git pull` on the same checkout directory.
+- e1f5c3b: Re-run addon validation (the forbidden internal-alias check) against every already-installed module in a repo after a `git pull` updates it, instead of only validating on first install — an addon that passed validation once could otherwise pull in code crossing the internal `#core`/`#lib` boundary without ever being re-checked.
+- 25e9905: Fix several concurrency and correctness issues found in an audit pass: RPC actor authorization on privileged core-rpc handlers (`repoAdd`, `repoList`, `repoModules`, `systemDashboardGet`), a mod-lift handler crash on `voice_mute` cases, and related regression coverage.
+- 1157762: Route `guildSettingsSet`'s writes through the per-guild write transaction instead of calling the repository directly, and close a cache-aside race in `Repository.getOrSet` where a concurrent invalidation could be clobbered by a stale repopulation (via a per-key fence marker checked before and after the underlying fetch).
+- 146c469: Fix broadcast consumer groups replaying the full stream backlog on every restart (groups now start from `$` for broadcast subscriptions instead of `0`), stop acking a message when its DLQ write fails (so a dead-letter failure no longer silently loses the message), and guard `runClaim`'s `pendingDeliveryCount` call with try/catch so a transient Redis error doesn't kill the claim loop.
+- 0dcc859: `guildDashboardGet` RPC handler now re-checks the actor's live Discord permissions (owner or ManageGuild/Administrator) like the other dashboard RPC handlers, closing a gap that let any authenticated dashboard actor read any guild's settings and module configs by guild ID alone.
+- 7562e46: Serialize `ModuleStore.setEnabled()` and `ModuleStore.reload()` per module name so overlapping calls (e.g. a rapid double-toggle from the dashboard) can no longer interleave and leave a module's enabled state or loaded instance inconsistent.
+- 45b9864: `/untimeout` and `/vcunmute` now close out the case(s) they supersede and cancel that case's scheduled auto-lift job, instead of leaving the original case active so its lift job redundantly re-lifts an already-lifted mute later.
+- 32d5e2c: RabbitMQ RPC shutdown now drains in-flight requests (bounded by a timeout) before closing the channel/connection instead of dropping them, and the process now has an `unhandledRejection` handler so a rejected promise is logged instead of crashing the process outright.
+- b17febf: Serialize the verification captcha's read-modify-write challenge-state update per member so two concurrent submissions (a double-click, or a retried interaction) can no longer both read stale state and clobber each other's write — closing a race that could weaken the attempt limit or double-process a verification outcome.
+- 357d9f1: Fix a crash in the scheduled mod-lift handler when a case's action is `voice_mute` — it now routes to `VoiceMuteAction.undoRaw` instead of falling through unhandled.
+- Updated dependencies [82137ab]
+- Updated dependencies [f9e6d62]
+- Updated dependencies [146c469]
+- Updated dependencies [626d6ee]
+  - @lumi/contracts@3.1.0
+  - @lumi/event-bus@3.1.0
+  - @lumi/observability@3.1.0
+  - @lumi/sharding@3.1.0
+
 ## 3.0.0
 
 ### Major Changes

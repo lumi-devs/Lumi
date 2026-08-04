@@ -1,5 +1,16 @@
 # @lumi/event-bus
 
+## 3.1.0
+
+### Patch Changes
+
+- 82137ab: Relicense the core bot library and infrastructure packages from AGPL-3.0-only to GPL-3.0-only; first-party addons in lumi-addons remain AGPL-3.0-only. GPLv3 §13 / AGPLv3 §13 explicitly permit combining GPL and AGPL-licensed works, so third-party addons can keep depending on and importing the core SDK surface across the license boundary.
+- 146c469: Fix broadcast consumer groups replaying the full stream backlog on every restart (groups now start from `$` for broadcast subscriptions instead of `0`), stop acking a message when its DLQ write fails (so a dead-letter failure no longer silently loses the message), and guard `runClaim`'s `pendingDeliveryCount` call with try/catch so a transient Redis error doesn't kill the claim loop.
+- Updated dependencies [82137ab]
+- Updated dependencies [f9e6d62]
+  - @lumi/contracts@3.1.0
+  - @lumi/observability@3.1.0
+
 ## 3.0.0
 
 ### Major Changes

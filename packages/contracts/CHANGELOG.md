@@ -1,5 +1,12 @@
 # @lumi/contracts
 
+## 3.1.0
+
+### Patch Changes
+
+- 82137ab: Relicense the core bot library and infrastructure packages from AGPL-3.0-only to GPL-3.0-only; first-party addons in lumi-addons remain AGPL-3.0-only. GPLv3 §13 / AGPLv3 §13 explicitly permit combining GPL and AGPL-licensed works, so third-party addons can keep depending on and importing the core SDK surface across the license boundary.
+- f9e6d62: Replace `BusEventEnvelope<T>` (which wrongly implied a nested `{ payload: T }` wire shape) with a generic `BusEventMessage<T>` that reflects the actual flat envelope `RabbitClient#publishEvent` puts on the wire, so consumers get correctly typed fields instead of reaching for a `.payload` that doesn't exist.
+
 ## 3.0.0
 
 ### Major Changes

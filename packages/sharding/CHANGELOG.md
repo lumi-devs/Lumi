@@ -1,5 +1,12 @@
 # @lumi/sharding
 
+## 3.1.0
+
+### Patch Changes
+
+- 82137ab: Relicense the core bot library and infrastructure packages from AGPL-3.0-only to GPL-3.0-only; first-party addons in lumi-addons remain AGPL-3.0-only. GPLv3 §13 / AGPLv3 §13 explicitly permit combining GPL and AGPL-licensed works, so third-party addons can keep depending on and importing the core SDK surface across the license boundary.
+- 626d6ee: Fix a stale-read window in `RedisSessionStore`: `retrieve()` could read Redis directly while a `flush()` for the same shard was still mid-flight, returning stale or absent data instead of the value already snapshotted for write. Concurrent `flush()` calls are also now serialized instead of racing overlapping snapshots.
+
 ## 3.0.0
 
 ### Major Changes

@@ -1,6 +1,6 @@
 {
   "name": "@lumi/scheduler",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "license": "GPL-3.0-only",
   "description": "Thin scheduler entrypoint - boots @lumi/worker until the real service split.",
   "type": "module",
