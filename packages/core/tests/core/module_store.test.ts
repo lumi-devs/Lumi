@@ -224,6 +224,32 @@ describe('ModuleStore', () => {
 		it('throws for an unknown module', async () => {
 			await expect(store.setEnabled('does-not-exist', true)).rejects.toThrow(/Unknown module/);
 		});
+
+		it('serializes concurrent calls for the same module instead of double-loading it', async () => {
+			container.db.modules.getGlobalModuleStates = vi.fn().mockResolvedValue(new Map([['afk', false]]));
+			setupModules({ afk: {} });
+			await store.discover();
+			expect(store.getRecord('afk').enabled).toBe(false);
+
+			// Resolve loadModule only after both setEnabled() calls have started,
+			// so their check-then-act on record.enabled has a real chance to
+			// interleave if setEnabled isn't serialized per-module.
+			let releaseLoad: () => void = () => {};
+			const loadGate = new Promise<void>((resolve) => {
+				releaseLoad = resolve;
+			});
+			const loadModuleSpy = vi.spyOn(store, 'loadModule').mockImplementation(() => loadGate);
+
+			const first = store.setEnabled('afk', true, 'admin A');
+			const second = store.setEnabled('afk', true, 'admin B');
+			await Promise.resolve(); // let both calls reach their await points
+			releaseLoad();
+			await Promise.all([first, second]);
+
+			expect(loadModuleSpy).toHaveBeenCalledTimes(1);
+			expect(container.db.modules.setModuleGlobalEnabled).toHaveBeenCalledTimes(1);
+			expect(store.getRecord('afk').enabled).toBe(true);
+		});
 	});
 
 	describe('unload', () => {

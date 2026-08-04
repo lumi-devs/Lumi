@@ -10,6 +10,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { BaseValidator } from "@sapphire/shapeshift";
+import { withSerializedWork } from "#lib/utilities/misc.js";
 
 /**
  * Represents the current lifecycle state of a module in the store.
@@ -246,28 +247,42 @@ export class ModuleStore extends Store<Module> {
   }
 
   public async setEnabled(name: string, enabled: boolean, reason?: string) {
-    const record = this.#records.get(name);
-    if (!record) throw new Error(`Unknown module: ${name}`);
-    if (!enabled && !this.isModuleDisableable(name)) {
-      throw new Error(`Module '${name}' is essential and cannot be disabled.`);
-    }
-    if (record.enabled === enabled) return;
+    return withSerializedWork(ModuleStore.#enableLockKey(name), async () => {
+      const record = this.#records.get(name);
+      if (!record) throw new Error(`Unknown module: ${name}`);
+      if (!enabled && !this.isModuleDisableable(name)) {
+        throw new Error(`Module '${name}' is essential and cannot be disabled.`);
+      }
+      if (record.enabled === enabled) return;
 
-    if (enabled) {
-      await this.loadModule(name);
-    } else {
-      await this.unload(name).catch((err: unknown) => {
-        if (!isMissingPieceError(err)) throw err;
-      });
-    }
+      if (enabled) {
+        await this.loadModule(name);
+      } else {
+        await this.unload(name).catch((err: unknown) => {
+          if (!isMissingPieceError(err)) throw err;
+        });
+      }
 
-    await container.db.modules.setModuleGlobalEnabled(name, enabled, reason);
+      await container.db.modules.setModuleGlobalEnabled(name, enabled, reason);
 
-    record.enabled = enabled;
-    record.state = enabled ? "loaded" : "disabled";
-    record.failureReason = undefined;
-    const module = this.get(name);
-    if (module) module.enabled = enabled;
+      record.enabled = enabled;
+      record.state = enabled ? "loaded" : "disabled";
+      record.failureReason = undefined;
+      const module = this.get(name);
+      if (module) module.enabled = enabled;
+    });
+  }
+
+  /**
+   * Lock key shared by {@link setEnabled} and {@link #syncModuleEnabled} so a
+   * dashboard/command-driven toggle and a cluster-invalidation-driven sync
+   * for the same module never interleave their check-then-act on
+   * `record.enabled` - without this, both can read the stale flag before
+   * either writes it, double-loading (or unload/load-interleaving) the
+   * module's Sapphire pieces.
+   */
+  static #enableLockKey(name: string): string {
+    return `module-store:enable:${name}`;
   }
 
   /**
@@ -451,25 +466,27 @@ export class ModuleStore extends Store<Module> {
   }
 
   async #syncModuleEnabled(name: string): Promise<void> {
-    const module = this.get(name);
-    const record = this.#records.get(name);
-    if (!record) return;
+    return withSerializedWork(ModuleStore.#enableLockKey(name), async () => {
+      const module = this.get(name);
+      const record = this.#records.get(name);
+      if (!record) return;
 
-    const newEnabled = await container.db.modules.isModuleGlobalEnabled(name);
-    if (record.enabled === newEnabled) return;
+      const newEnabled = await container.db.modules.isModuleGlobalEnabled(name);
+      if (record.enabled === newEnabled) return;
 
-    record.enabled = newEnabled;
-    if (module) module.enabled = newEnabled;
+      record.enabled = newEnabled;
+      if (module) module.enabled = newEnabled;
 
-    if (newEnabled) {
-      await this.loadModule(name).catch((err) =>
-        container.logger.error(`[ModuleStore] Cluster load failed: ${name}`, err),
-      );
-    } else {
-      await this.unload(name).catch((err) =>
-        container.logger.error(`[ModuleStore] Cluster unload failed: ${name}`, err),
-      );
-    }
+      if (newEnabled) {
+        await this.loadModule(name).catch((err) =>
+          container.logger.error(`[ModuleStore] Cluster load failed: ${name}`, err),
+        );
+      } else {
+        await this.unload(name).catch((err) =>
+          container.logger.error(`[ModuleStore] Cluster unload failed: ${name}`, err),
+        );
+      }
+    });
   }
 
   async #exists(p: string) {
