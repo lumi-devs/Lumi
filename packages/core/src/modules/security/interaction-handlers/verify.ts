@@ -13,7 +13,7 @@ import {
   makeErrorCard,
   makeSuccessCard,
 } from "#lib/utilities/cards.js";
-import { advanceCaptcha, CAPTCHA_BUTTON_PREFIX } from "../lib/captcha.js";
+import { CAPTCHA_BUTTON_PREFIX } from "../lib/captcha.js";
 import {
   VERIFY_BUTTON_ID,
   buildChallengeCard,
@@ -76,8 +76,8 @@ export class VerifyInteractionHandler extends BaseInteractionHandler {
       return interaction.editReply(ephemeralCard(buildChallengeCard(t, state)));
     }
 
-    const state = await security.getChallenge(guild.id, userId);
-    if (!state) {
+    const result = await security.advanceChallenge(guild.id, userId, parsed.idx);
+    if (!result) {
       return interaction.editReply(
         makeErrorCard(
           t(PanelsKeys.VerifyExpiredTitle),
@@ -86,22 +86,18 @@ export class VerifyInteractionHandler extends BaseInteractionHandler {
       );
     }
 
-    const { outcome } = advanceCaptcha(state, parsed.idx);
+    const { state, outcome } = result;
     switch (outcome) {
       case "solved":
-        await security.clearChallenge(guild.id, userId);
         await security.grantVerified(guild, userId);
         return interaction.editReply(
           makeSuccessCard(t(PanelsKeys.VerifyOkTitle), t(PanelsKeys.VerifyOk)),
         );
       case "progress":
-        await security.saveChallenge(guild.id, userId, state);
         return interaction.editReply(buildProgressCard(t, state));
       case "wrong":
-        await security.saveChallenge(guild.id, userId, state);
         return interaction.editReply(buildWrongCard(t, state));
       case "failed":
-        await security.clearChallenge(guild.id, userId);
         return interaction.editReply(
           makeErrorCard(
             t(PanelsKeys.VerifyFailedTitle),
