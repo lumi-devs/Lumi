@@ -78,18 +78,21 @@ export function initCoreRpcHandlers() {
   });
 
   registerRpcHandler(RPC_ACTIONS.repoAdd, async (req) => {
+    requireBotOwner(req);
     const { name, url, branch } = parsePayload(RepoAddSchema, req.data);
     const service = getService("downloader");
     const repo = await service.addRepo(name, url, branch || "default");
     return { success: true, repo };
   });
 
-  registerRpcHandler(RPC_ACTIONS.repoList, async () => {
+  registerRpcHandler(RPC_ACTIONS.repoList, async (req) => {
+    requireBotOwner(req);
     const repos = await container.db.downloader.readAllDownloaderRepos();
     return { repos };
   });
 
   registerRpcHandler(RPC_ACTIONS.repoModules, async (req) => {
+    requireBotOwner(req);
     const { repoName } = parsePayload(RepoModulesSchema, req.data);
     const modules = await resolver.getModulesInRepo(repoName);
     const repo = await container.db.downloader.readDownloaderRepoWithModules(repoName);
@@ -146,7 +149,8 @@ export function initCoreRpcHandlers() {
   });
 
   // Bot Owner System Panel (dashboard.md §9A / §10).
-  registerRpcHandler(RPC_ACTIONS.systemDashboardGet, async () => {
+  registerRpcHandler(RPC_ACTIONS.systemDashboardGet, async (req) => {
+    requireBotOwner(req);
     const [global, moduleStates] = await Promise.all([
       container.db.global.getGlobalConfig(),
       container.db.modules.getGlobalModuleStatesDetailed(),
