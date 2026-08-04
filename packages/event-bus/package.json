@@ -1,6 +1,6 @@
 {
   "name": "@lumi/event-bus",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "license": "GPL-3.0-only",
   "description": "Cross-service event bus (Redis Streams) between worker and scheduler. Carries domain bus events with W3C trace propagation.",
   "type": "module",
