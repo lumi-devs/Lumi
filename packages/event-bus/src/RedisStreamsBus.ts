@@ -135,7 +135,9 @@ export class RedisStreamsBus implements EventBus {
   ): Promise<() => Promise<void>> {
     const blockMs = opts.blockMs ?? 5000;
     const batchSize = opts.batchSize ?? 16;
-    for (const stream of streams) await this.ensureGroup(stream, opts.group);
+    for (const stream of streams) {
+      await this.ensureGroup(stream, opts.group, opts.startId ?? "0");
+    }
 
     // Each consume() call gets its own connection - XREADGROUP BLOCK holds
     // the socket, and sharing one across concurrent consume() loops would
@@ -262,7 +264,16 @@ export class RedisStreamsBus implements EventBus {
       try {
         await this.sendToDlq(stream, id, fields, deliveryCount);
       } catch (err) {
-        this.log("error", "sendToDlq failed", { stream, id, err: String(err) });
+        // Don't ack: acking here would remove the entry from the pending
+        // list while it was never durably recorded in the DLQ either -
+        // permanent, silent loss. Leave it pending so XAUTOCLAIM redelivers
+        // it and this DLQ write is retried.
+        this.log("error", "sendToDlq failed; leaving entry pending for retry", {
+          stream,
+          id,
+          err: String(err),
+        });
+        return;
       }
       await this.publisher.xack(stream, group, id);
       this.log("warn", "dropped poison message to DLQ", {
@@ -285,11 +296,12 @@ export class RedisStreamsBus implements EventBus {
       try {
         await this.sendToDlq(stream, id, fields, deliveryCount);
       } catch (dlqErr) {
-        this.log("error", "sendToDlq failed", {
+        this.log("error", "sendToDlq failed; leaving entry pending for retry", {
           stream,
           id,
           err: String(dlqErr),
         });
+        return;
       }
       await this.publisher.xack(stream, group, id);
       return;
@@ -343,12 +355,24 @@ export class RedisStreamsBus implements EventBus {
         const [nextCursor, entries] = resp;
         for (const [id, fields] of entries) {
           // XPENDING for delivery count. XAUTOCLAIM increments it for us;
-          // we read it back to drive the DLQ threshold.
-          const deliveryCount = await this.pendingDeliveryCount(
-            stream,
-            opts.group,
-            id,
-          );
+          // we read it back to drive the DLQ threshold. Guarded the same as
+          // deliver() below it - a transient XPENDING failure on one entry
+          // must not abort the rest of this batch/stream for the tick.
+          let deliveryCount: number;
+          try {
+            deliveryCount = await this.pendingDeliveryCount(
+              stream,
+              opts.group,
+              id,
+            );
+          } catch (err) {
+            this.log("error", "pendingDeliveryCount failed", {
+              stream,
+              id,
+              err: String(err),
+            });
+            continue;
+          }
           try {
             await this.deliver(
               stream,
@@ -447,11 +471,15 @@ export class RedisStreamsBus implements EventBus {
     }
   }
 
-  private async ensureGroup(stream: string, group: string): Promise<void> {
+  private async ensureGroup(
+    stream: string,
+    group: string,
+    startId: string,
+  ): Promise<void> {
     const key = `${stream}::${group}`;
     if (this.knownGroups.has(key)) return;
     try {
-      await this.publisher.xgroup("CREATE", stream, group, "0", "MKSTREAM");
+      await this.publisher.xgroup("CREATE", stream, group, startId, "MKSTREAM");
     } catch (err) {
       const msg = String(err);
       if (!msg.includes("BUSYGROUP")) throw err;
