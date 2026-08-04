@@ -1,6 +1,6 @@
 {
   "name": "@lumi/core",
-  "version": "1.0.1",
+  "version": "3.0.0",
   "license": "GPL-3.0-only",
   "description": "Lumi core - the full bot library (framework glue, module system, DB/Redis/RabbitMQ layers, core commands).",
   "private": true,
