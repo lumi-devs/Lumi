@@ -1,5 +1,17 @@
 # @lumi/dashboard
 
+## 3.1.0
+
+### Patch Changes
+
+- 82137ab: Relicense the core bot library and infrastructure packages from AGPL-3.0-only to GPL-3.0-only; first-party addons in lumi-addons remain AGPL-3.0-only. GPLv3 §13 / AGPLv3 §13 explicitly permit combining GPL and AGPL-licensed works, so third-party addons can keep depending on and importing the core SDK surface across the license boundary.
+- 2ecec84: `GeneralSettingsForm` now stays in sync across browser tabs: a successful save broadcasts the new settings to other open tabs for the same guild (via `BroadcastChannel`, with a gossip handshake so a tab opened after the save still catches up), updating untouched fields while preserving and flagging any field the user has locally edited but not yet saved.
+- 30364b7: `GeneralSettingsForm` now sends only the fields the user actually changed instead of the full form state, so a stale/prefetched baseline can no longer silently revert unrelated settings on save. The save-bar's Cmd/Ctrl+S shortcut also now respects an in-flight save.
+- Updated dependencies [82137ab]
+- Updated dependencies [f9e6d62]
+  - @lumi/contracts@3.1.0
+  - @lumi/observability@3.1.0
+
 ## 3.0.0
 
 ### Patch Changes
