@@ -118,6 +118,16 @@ export class DownloadResolver {
           execError("Git clone failed")(cloneErr);
         });
       });
+
+      // The pull above may have brought in new commits for modules that were
+      // already validated and symlinked into ADDON_MODULES_ROOT on a previous
+      // install. A module that passed validateAddon() back then can later add
+      // an import of a forbidden internal "#core"/"#lib"/"#database"/
+      // "#utilities"/"#root" alias - those reach past the public "lumi" SDK
+      // surface into GPL-core internals an AGPL-licensed addon must not touch.
+      // Re-validate every already-installed module sourced from this repo so
+      // that boundary can't be bypassed by an update.
+      await this._revalidateInstalledModules(name, repoPath);
     } else {
       container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
       await fs.mkdir(MODULE_ROOT, { recursive: true });
@@ -284,6 +294,55 @@ export class DownloadResolver {
     );
 
     return info;
+  }
+
+  /**
+   * Re-runs {@linkcode validateAddon} against every module currently
+   * symlinked into `ADDON_MODULES_ROOT` that is sourced from `repoPath`,
+   * mirroring the same validate-then-throw behavior {@linkcode installModule}
+   * uses for a brand-new install. Installed modules are found by resolving
+   * each symlink in `ADDON_MODULES_ROOT` and checking whether it points
+   * inside this repo - no DB/service layer knowledge is required here.
+   *
+   * Throws a single aggregated error (same "failed validation" bullet-list
+   * shape as `installModule`) if any already-installed module's freshly
+   * pulled code now fails validation, so a broken update is surfaced as an
+   * error instead of silently leaving invalid code symlinked and loadable.
+   */
+  private async _revalidateInstalledModules(
+    repoName: string,
+    repoPath: string,
+  ): Promise<void> {
+    if (!(await this._exists(ADDON_MODULES_ROOT))) return;
+
+    const entries = await fs.readdir(ADDON_MODULES_ROOT, {
+      withFileTypes: true,
+    });
+    const failures: string[] = [];
+
+    for (const entry of entries) {
+      const linkPath = path.join(ADDON_MODULES_ROOT, entry.name);
+      let real: string;
+      try {
+        real = await fs.realpath(linkPath);
+      } catch {
+        continue; // broken symlink - nothing on disk to (re)validate
+      }
+      if (real !== repoPath && !real.startsWith(repoPath + path.sep)) continue;
+
+      const { errors } = await validateAddon(real);
+      if (errors.length) {
+        failures.push(
+          `**${entry.name}**:\n${errors.map((e) => `• ${e}`).join("\n")}`,
+        );
+      }
+    }
+
+    if (failures.length) {
+      throw new Error(
+        `Repo **${repoName}** update pulled in changes that fail addon validation for already-installed module(s):\n${failures.join("\n\n")}`,
+      );
+    }
   }
 
   private async _exists(filePath: string): Promise<boolean> {
