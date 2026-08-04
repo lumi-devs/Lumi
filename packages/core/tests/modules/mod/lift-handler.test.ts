@@ -63,9 +63,6 @@ describe('handleModLiftFire', () => {
 
     await handleModLiftFire({ caseId: 3 });
 
-    // Regression guard: without VoiceMuteAction.undoRaw being called here,
-    // the member stays server-muted on Discord even though the case is
-    // marked inactive below.
     expect(container.client.rest.patch).toHaveBeenCalledWith(
       expect.stringContaining('/guilds/g1/members/u1'),
       expect.objectContaining({ body: { mute: false } })

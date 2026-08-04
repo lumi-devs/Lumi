@@ -377,9 +377,6 @@ describe("DownloaderService", () => {
     });
 
     it("serializes concurrent updateModule calls that touch the same repo checkout", async () => {
-      // Regression test: two modules living in the same repo (or a manual
-      // update-button click overlapping the auto-update sweep) must not run
-      // `git pull` against that repo's directory at the same time.
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ repoId: "r1-id", commit: "oldhash" });
       mockDb.downloader.readDownloaderRepoById.mockResolvedValue({ id: "r1-id", name: "repo1", branch: "main" });
 
@@ -415,7 +412,6 @@ describe("DownloaderService", () => {
 
       expect(res1).toEqual({ updated: true, changelog: "feat: change", needsRestart: true });
       expect(res2).toEqual({ updated: true, changelog: "feat: change", needsRestart: true });
-      // The two `git pull`s against repo1's checkout never overlapped.
       expect(maxActivePulls).toBe(1);
     });
   });

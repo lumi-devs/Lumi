@@ -272,7 +272,6 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
     });
 
     it("accepts valid http and SSH URLs (including markdown brackets)", async () => {
-      // addRepo for non-existent git repository will throw "Git clone failed" after passing URL validation
       await expect(
         resolver.addRepo("test_http", "<https://github.com/nonexistent/repo1.git>")
       ).rejects.toThrow("Git clone failed");

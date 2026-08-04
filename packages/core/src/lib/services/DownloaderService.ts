@@ -419,9 +419,6 @@ export class DownloaderService extends Service {
     const { repoId, repoName, branch, remoteHash, changelog } = check;
     const repoPath = path.join(MODULE_ROOT, repoName);
 
-    // Serialized per repo name so this pull can't interleave with a manual
-    // "update repo" click (or another auto-update pass) touching the same
-    // checkout - see DownloadResolver.addRepo, which locks on the same key.
     await withSerializedWork(repoName, async () => {
       const pullArgs = ["-C", repoPath, "pull"];
       if (branch !== "default") pullArgs.push("origin", branch);

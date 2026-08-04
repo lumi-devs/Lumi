@@ -35,9 +35,6 @@ const FIELD_LABELS: Record<keyof FormState, string> = {
   noMentionSpamLimit: "No-mention-spam limit",
 };
 
-// These fields render as text inputs where an empty string means "unset";
-// every other field's own `field()` setter already produces the right
-// wire value (e.g. numeric fields go straight to number | null).
 const NULLABLE_STRING_FIELDS = new Set<keyof FormState>([
   "prefix",
   "modRoleId",
@@ -60,11 +57,6 @@ function toFormState(settings: GuildSettings): FormState {
   };
 }
 
-/**
- * Cross-tab sync for this guild's settings — `BroadcastChannel` only
- * reaches other browsing contexts (tabs/windows) of the *same origin*, so
- * one channel per guild keeps unrelated guild pages from cross-talking.
- */
 function channelName(guildId: string) {
   return `lumi:guild-settings:${guildId}`;
 }
@@ -85,13 +77,6 @@ export function GeneralSettingsForm({
   const [form, setForm] = useState<FormState>(baseline);
   const { isPending, error, setError, run } = useServerAction();
 
-  // Mirror `baseline`/`form` so the BroadcastChannel handler (registered
-  // once, in an effect) and `mergeIncoming` always read the latest values
-  // instead of ones captured at subscribe/memoize time. Reading these
-  // synchronously (rather than via a `setForm(f => ...)` updater callback)
-  // also sidesteps React not guaranteeing an updater runs before the code
-  // after the `setForm(...)` call — `mergeIncoming` needs the "did the user
-  // touch this field" answer *before* deciding whether to call `setError`.
   const baselineRef = useRef(baseline);
   const formRef = useRef(form);
   const channelRef = useRef<BroadcastChannel | null>(null);
@@ -105,17 +90,6 @@ export function GeneralSettingsForm({
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  /**
-   * Applies settings that changed *outside this form instance* — another
-   * tab's save (via BroadcastChannel) or this tab's own save round-tripping
-   * back through a fresh `settings` prop (via Next's Server Action
-   * revalidation). For each field:
-   *  - untouched here (form already matched the old baseline) → silently
-   *    adopt the new value, so this tab never displays stale data.
-   *  - actively edited here and not yet saved → keep the local edit, but
-   *    surface a conflict so the user knows their pending change is now
-   *    based on out-of-date data, rather than silently guessing.
-   */
   const mergeIncoming = useCallback(
     (newBaseline: FormState) => {
       const oldBaseline = baselineRef.current;
@@ -155,10 +129,6 @@ export function GeneralSettingsForm({
     [setError],
   );
 
-  // Own-tab case: `setGuildSettings`'s `revalidatePath` makes Next refresh
-  // this route's RSC payload, which flows back in as a new `settings`
-  // prop — this is also where that lands, no separate optimistic-update
-  // path is needed for the tab that actually clicked Save.
   const prevSettingsRef = useRef(settings);
   useEffect(() => {
     if (settings === prevSettingsRef.current) return;
@@ -166,11 +136,6 @@ export function GeneralSettingsForm({
     mergeIncoming(toFormState(settings));
   }, [settings, mergeIncoming]);
 
-  // Cross-tab case: a `BroadcastChannel` per guild. Tabs gossip rather than
-  // one tab pushing to a known list — any tab can answer a `request-sync`
-  // with whatever it currently believes the baseline is, so a tab that
-  // opens (or wakes from being backgrounded/frozen) after another tab's
-  // save still catches up even though it missed the original broadcast.
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") return;
     const channel = new BroadcastChannel(channelName(guildId));
@@ -203,12 +168,6 @@ export function GeneralSettingsForm({
 
   function handleSave() {
     run(async () => {
-      // guild.settings.set is a partial update (see GuildSettingsPayload's
-      // doc comment) - send only what actually changed. Sending the whole
-      // cached `form` here would silently revert any concurrent change
-      // (another tab, another admin, a Discord slash command) made to a
-      // field this session never touched, since every field is optional in
-      // the wire contract but this component used to fill them all in.
       const changedKeys = (Object.keys(form) as (keyof FormState)[]).filter(
         (key) => JSON.stringify(form[key]) !== JSON.stringify(baseline[key]),
       );
@@ -227,9 +186,6 @@ export function GeneralSettingsForm({
         return;
       }
 
-      // Untouched fields already equal `baseline` (that's what "not in
-      // changedKeys" means), so layering `patch`'s coerced values over
-      // `form` gives the exact new server-side state without a re-fetch.
       const normalized = { ...form, ...patch } as FormState;
       setBaseline(normalized);
       baselineRef.current = normalized;

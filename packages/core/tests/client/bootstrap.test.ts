@@ -62,9 +62,6 @@ describe("bootstrapClientApp", () => {
 
 describe("registerProcessErrorHandlers", () => {
   beforeEach(() => {
-    // process.exit is spied on (and left un-restored) by tests in the
-    // describe block above; without restoring here, vi.spyOn below would
-    // reuse that same mock instance and inherit its stale call history.
     vi.restoreAllMocks();
     container.logger = {
       info: vi.fn(),

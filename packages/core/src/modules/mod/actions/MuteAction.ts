@@ -69,9 +69,6 @@ export class MuteAction {
 
     await targetMember.timeout(null, formatAuditReason(moderator, reason));
 
-    // Close out the case(s) this manual unmute supersedes - otherwise the
-    // original case stays active and its scheduled mod-lift job still fires
-    // later, redundantly re-lifting an already-lifted mute.
     const activeCases = await container.db.moderation.getActiveCases(
       guild.id,
       targetMember.id,

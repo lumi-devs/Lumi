@@ -30,9 +30,6 @@ describe("RedisSessionStore", () => {
   });
 
   it("retrieve() does not fall back to stale/absent Redis data while a flush is in flight", async () => {
-    // The pipeline's exec() is held open until we manually resolve it, so we
-    // can observe retrieve() behavior in the window between `pending` being
-    // cleared and the write actually landing in Redis.
     let resolveExec!: (v: unknown[]) => void;
     const execPromise = new Promise<unknown[]>((resolve) => {
       resolveExec = resolve;
@@ -43,8 +40,6 @@ describe("RedisSessionStore", () => {
       del: vi.fn(),
       exec: vi.fn().mockReturnValue(execPromise),
     });
-    // Simulate Redis not having committed the write yet: GET still returns
-    // null (as it would before the pipeline resolves).
     mockRedis.get.mockResolvedValue(null);
 
     const store = new RedisSessionStore({
@@ -58,20 +53,13 @@ describe("RedisSessionStore", () => {
 
     const flushPromise = store.flush();
 
-    // At this point flush() has synchronously snapshotted-and-cleared
-    // `pending` but the pipeline hasn't resolved yet. A concurrent
-    // retrieve() for the same shard must not return stale/absent data.
     const retrieved = await store.retrieve(0);
     expect(retrieved).toEqual(info);
-    // Confirms this assertion actually exercised the in-flight path, not a
-    // leftover value still sitting in `pending`.
     expect(mockRedis.get).not.toHaveBeenCalled();
 
     resolveExec([]);
     await flushPromise;
 
-    // Once the pipeline has landed, retrieve() reads through to Redis as
-    // normal.
     mockRedis.get.mockResolvedValue(JSON.stringify(info));
     const afterFlush = await store.retrieve(0);
     expect(afterFlush).toEqual(info);
@@ -100,16 +88,12 @@ describe("RedisSessionStore", () => {
     store.update(1, original);
     const flushPromise = store.flush().catch(() => {});
 
-    // A newer update lands for the same shard while the failing flush is
-    // still in flight.
     const newer = sessionInfo({ sessionId: "newer" });
     store.update(1, newer);
 
     rejectExec(new Error("connection reset"));
     await flushPromise;
 
-    // The newer update must win, not get clobbered by the failed flush's
-    // restore-on-error path.
     expect(await store.retrieve(1)).toEqual(newer);
 
     await store.close();

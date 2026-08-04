@@ -55,8 +55,6 @@ describe("validateAddon - lumi SDK import boundary", () => {
     );
 
     const { warnings, errors } = await validateAddon(dir);
-    // Direct internal-path imports bypass the addon-sdk surface and are now a
-    // hard install-blocking error, not just a warning (see installModule()).
     expect(errors.some((e) => e.includes(internalPath) && e.includes('"lumi"'))).toBe(true);
     expect(warnings.some((w) => w.includes(internalPath))).toBe(false);
   });

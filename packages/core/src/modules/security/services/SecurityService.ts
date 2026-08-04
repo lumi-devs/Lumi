@@ -83,14 +83,6 @@ const TRIPPED_COOLDOWN_SECONDS = 300;
 const RAID_MODE_SECONDS = 600;
 const GATE_TIMEOUT_MS = 60 * 60 * 1000;
 
-/**
- * Lock key shared by every {@link SecurityService.advanceChallenge} call for
- * a given member's challenge, so a double-clicked captcha button (or two
- * rapid interaction events) can't both read the same `progress`/`attempts`
- * state before either write lands - without this, one click's update is
- * silently overwritten by the other, weakening the MAX_ATTEMPTS
- * brute-force guard.
- */
 function challengeLockKey(guildId: string, userId: string): string {
   return `security:verify-challenge:${guildId}:${userId}`;
 }
@@ -381,16 +373,6 @@ export class SecurityService extends Service {
     );
   }
 
-  /**
-   * Applies one captcha click atomically: reads the challenge, advances it,
-   * and persists (or clears) the result, all behind a per-member lock. Two
-   * concurrent calls for the same member (a double-clicked button, or two
-   * rapid interaction events) would otherwise both read the same
-   * `progress`/`attempts` state before either write lands, letting one
-   * click's update silently overwrite the other and weakening the
-   * MAX_ATTEMPTS brute-force guard. Returns null when there's no active
-   * challenge (expired or never started).
-   */
   public async advanceChallenge(
     guildId: string,
     userId: string,

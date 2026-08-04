@@ -81,11 +81,6 @@ export class DownloadResolver {
     url = parseUrl(url);
     branch = branchSchema.parse(branch);
 
-    // Serialized per repo name: a manual update-button click, the "add repo"
-    // flow, and the 15-minute auto-update sweep can all target the same
-    // on-disk checkout concurrently. Without this, two overlapping
-    // `git pull`/`rm -rf`+`clone` sequences on the same directory can
-    // interleave and corrupt it.
     await withSerializedWork(name, async () => {
       const repoPath = path.join(MODULE_ROOT, name);
       const gitFolder = path.join(repoPath, ".git");
@@ -122,14 +117,6 @@ export class DownloadResolver {
           });
         });
 
-        // The pull above may have brought in new commits for modules that were
-        // already validated and symlinked into ADDON_MODULES_ROOT on a previous
-        // install. A module that passed validateAddon() back then can later add
-        // an import of a forbidden internal "#core"/"#lib"/"#database"/
-        // "#utilities"/"#root" alias - those reach past the public "lumi" SDK
-        // surface into GPL-core internals an AGPL-licensed addon must not touch.
-        // Re-validate every already-installed module sourced from this repo so
-        // that boundary can't be bypassed by an update.
         await this._revalidateInstalledModules(name, repoPath);
       } else {
         container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
@@ -265,25 +252,12 @@ export class DownloadResolver {
         );
       }
 
-      // --ignore-scripts: addon requirements come from an untrusted info.json
-      // and are installed unattended. Without this, a malicious/typosquatted
-      // package's postinstall (or any other lifecycle script) executes on the
-      // host at install time. This does mean packages that need a native
-      // build step (e.g. node-gyp) won't work for addon requirements - an
-      // acceptable tradeoff for not running arbitrary scripts from addon repos.
       await execFileAsync(
         "bun",
         ["add", "--ignore-scripts", ...reqs],
         { cwd: sourcePath, timeout: 60000 },
       ).catch(execError("Requirement installation failed"));
 
-      // The synthetic package.json above becomes the nearest package boundary
-      // for this addon's files, which stops Node/Bun's specifier resolution
-      // from walking up any further - silently breaking both the legacy
-      // `#core/#lib/#utilities` aliases and the `"lumi"` self-reference
-      // (root's package.json, name "lumi", is now unreachable). Symlinking
-      // "lumi" straight into this addon's own node_modules restores it via a
-      // normal node_modules lookup instead of the walk-up.
       const nodeModulesLumiPath = path.join(sourcePath, "node_modules", "lumi");
       if (!(await this._exists(nodeModulesLumiPath))) {
         await fs.mkdir(path.join(sourcePath, "node_modules"), {
@@ -305,19 +279,6 @@ export class DownloadResolver {
     return info;
   }
 
-  /**
-   * Re-runs {@linkcode validateAddon} against every module currently
-   * symlinked into `ADDON_MODULES_ROOT` that is sourced from `repoPath`,
-   * mirroring the same validate-then-throw behavior {@linkcode installModule}
-   * uses for a brand-new install. Installed modules are found by resolving
-   * each symlink in `ADDON_MODULES_ROOT` and checking whether it points
-   * inside this repo - no DB/service layer knowledge is required here.
-   *
-   * Throws a single aggregated error (same "failed validation" bullet-list
-   * shape as `installModule`) if any already-installed module's freshly
-   * pulled code now fails validation, so a broken update is surfaced as an
-   * error instead of silently leaving invalid code symlinked and loadable.
-   */
   private async _revalidateInstalledModules(
     repoName: string,
     repoPath: string,
