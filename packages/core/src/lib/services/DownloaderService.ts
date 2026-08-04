@@ -12,6 +12,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { errorFrom } from "#lib/utilities/errors.js";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { withSerializedWork } from "#lib/utilities/misc.js";
 
 export interface AutoUpdateConfig {
   enabled: boolean;
@@ -418,17 +419,22 @@ export class DownloaderService extends Service {
     const { repoId, repoName, branch, remoteHash, changelog } = check;
     const repoPath = path.join(MODULE_ROOT, repoName);
 
-    const pullArgs = ["-C", repoPath, "pull"];
-    if (branch !== "default") pullArgs.push("origin", branch);
-    await execFileAsync("git", pullArgs).catch(
-      (err: NodeJS.ErrnoException & { stderr?: string }) => {
-        throw new Error(
-          `Git pull failed: ${(err.stderr ?? err.message).trim()}`,
-        );
-      },
-    );
+    // Serialized per repo name so this pull can't interleave with a manual
+    // "update repo" click (or another auto-update pass) touching the same
+    // checkout - see DownloadResolver.addRepo, which locks on the same key.
+    await withSerializedWork(repoName, async () => {
+      const pullArgs = ["-C", repoPath, "pull"];
+      if (branch !== "default") pullArgs.push("origin", branch);
+      await execFileAsync("git", pullArgs).catch(
+        (err: NodeJS.ErrnoException & { stderr?: string }) => {
+          throw new Error(
+            `Git pull failed: ${(err.stderr ?? err.message).trim()}`,
+          );
+        },
+      );
 
-    await resolver.installModule(repoName, moduleName);
+      await resolver.installModule(repoName, moduleName);
+    });
 
     await this.container.db.downloader.updateInstalledDownloaderModuleCommit(
       repoId,

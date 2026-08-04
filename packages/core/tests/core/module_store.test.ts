@@ -27,18 +27,19 @@ function setupModules(mods: Record<string, ModSpec>, order: string[] = Object.ke
 	const names = Object.keys(mods);
 	vi.spyOn(fs, 'access').mockResolvedValue(undefined);
 	vi.spyOn(fs, 'readdir').mockImplementation(
-		async (p: any) => (names.includes(path.basename(String(p))) ? [] : order) as any
+		(p: any) =>
+			Promise.resolve(names.includes(path.basename(String(p))) ? [] : order) as any
 	);
 	vi.spyOn(fs, 'stat').mockImplementation(
-		async (p: any) =>
-			({
+		(p: any) =>
+			Promise.resolve({
 				isDirectory: () => names.includes(path.basename(String(p))),
 				isFile: () => false
 			}) as any
 	);
-	readManifest.mockImplementation(async (dir: string) => {
+	readManifest.mockImplementation((dir: string) => {
 		const name = path.basename(dir);
-		return names.includes(name) ? { name, ...mods[name] } : null;
+		return Promise.resolve(names.includes(name) ? { name, ...mods[name] } : null);
 	});
 }
 
@@ -91,9 +92,39 @@ describe('ModuleStore', () => {
 		expect(order).toEqual(['a', 'b']);
 	});
 
-	it('should throw on circular dependencies', async () => {
+	it('disables (but does not throw for) modules with a circular dependency', async () => {
 		setupModules({ a: { dependencies: ['b'] }, b: { dependencies: ['a'] } });
-		await expect(store.discover()).rejects.toThrow(/Circular dependency/);
+		await expect(store.discover()).resolves.toBeUndefined();
+
+		expect(store.getRecord('a').enabled).toBe(false);
+		expect(store.getRecord('a').state).toBe('failed');
+		expect(store.getRecord('b').enabled).toBe(false);
+		expect(store.getRecord('b').state).toBe('failed');
+		expect(container.logger.error).toHaveBeenCalledWith(
+			expect.stringContaining('Circular dependency')
+		);
+	});
+
+	it('disables only the module with a missing dependency, leaving unrelated modules loaded', async () => {
+		setupModules({ a: {}, b: { dependencies: ['ghost'] } });
+		await store.discover();
+
+		expect(store.getRecord('a').enabled).toBe(true);
+		expect(store.getRecord('b').enabled).toBe(false);
+		expect(store.getRecord('b').state).toBe('failed');
+		expect(store.getRecord('b').failureReason).toMatch(/missing dependency 'ghost'/);
+		expect(container.stores.registerPath).toHaveBeenCalledTimes(1);
+	});
+
+	it('transitively disables modules that depend on a broken module', async () => {
+		// c -> b -> a, and a has a missing dependency. b and c must both be disabled.
+		setupModules({ a: { dependencies: ['ghost'] }, b: { dependencies: ['a'] }, c: { dependencies: ['b'] } });
+		await store.discover();
+
+		expect(store.getRecord('a').enabled).toBe(false);
+		expect(store.getRecord('b').enabled).toBe(false);
+		expect(store.getRecord('c').enabled).toBe(false);
+		expect(container.stores.registerPath).not.toHaveBeenCalled();
 	});
 
 	it('should handle conflicts', async () => {
@@ -118,10 +149,10 @@ describe('ModuleStore', () => {
 			values: vi.fn().mockReturnValue([failingStore]),
 			get: vi.fn()
 		} as any;
-		(fs.readdir as any).mockImplementation(async (p: any) => {
+		(fs.readdir as any).mockImplementation((p: any) => {
 			const parts = String(p).split(path.sep);
-			if (parts.at(-1) === 'commands') return ['bad.ts'];
-			return ['broken'];
+			if (parts.at(-1) === 'commands') return Promise.resolve(['bad.ts']);
+			return Promise.resolve(['broken']);
 		});
 
 		await expect(store.loadModule('broken')).rejects.toThrow(/bad command/);
@@ -192,6 +223,85 @@ describe('ModuleStore', () => {
 
 		it('throws for an unknown module', async () => {
 			await expect(store.setEnabled('does-not-exist', true)).rejects.toThrow(/Unknown module/);
+		});
+
+		it('serializes concurrent calls for the same module instead of double-loading it', async () => {
+			container.db.modules.getGlobalModuleStates = vi.fn().mockResolvedValue(new Map([['afk', false]]));
+			setupModules({ afk: {} });
+			await store.discover();
+			expect(store.getRecord('afk').enabled).toBe(false);
+
+			// Resolve loadModule only after both setEnabled() calls have started,
+			// so their check-then-act on record.enabled has a real chance to
+			// interleave if setEnabled isn't serialized per-module.
+			let releaseLoad: () => void = () => {};
+			const loadGate = new Promise<void>((resolve) => {
+				releaseLoad = resolve;
+			});
+			const loadModuleSpy = vi.spyOn(store, 'loadModule').mockImplementation(() => loadGate);
+
+			const first = store.setEnabled('afk', true, 'admin A');
+			const second = store.setEnabled('afk', true, 'admin B');
+			await Promise.resolve(); // let both calls reach their await points
+			releaseLoad();
+			await Promise.all([first, second]);
+
+			expect(loadModuleSpy).toHaveBeenCalledTimes(1);
+			expect(container.db.modules.setModuleGlobalEnabled).toHaveBeenCalledTimes(1);
+			expect(store.getRecord('afk').enabled).toBe(true);
+		});
+	});
+
+	describe('reload', () => {
+		it('serializes overlapping reload() calls instead of interleaving unload/discover/loadModule', async () => {
+			setupModules({ afk: {} });
+			await store.discover();
+
+			const order: string[] = [];
+			let releaseFirstLoad: () => void = () => {};
+			const firstLoadGate = new Promise<void>((resolve) => {
+				releaseFirstLoad = resolve;
+			});
+			let loadModuleCalls = 0;
+
+			vi.spyOn(store, 'unload').mockImplementation((n: any) => {
+				order.push(`unload:${n}`);
+				return Promise.resolve({} as any);
+			});
+			vi.spyOn(store, 'discover').mockImplementation(() => {
+				order.push('discover');
+				return Promise.resolve();
+			});
+			vi.spyOn(store, 'loadModule').mockImplementation(async (n: any) => {
+				loadModuleCalls += 1;
+				order.push(`loadModule:${n}:start`);
+				if (loadModuleCalls === 1) await firstLoadGate;
+				order.push(`loadModule:${n}:end`);
+			});
+
+			const first = store.reload('afk');
+			const second = store.reload('afk');
+			// Give the first call's chain a chance to reach (and block on)
+			// loadModule. If reload() isn't serialized, the second call's
+			// unload()/discover() would already be interleaved in `order` here.
+			await Promise.resolve();
+			await Promise.resolve();
+			await Promise.resolve();
+			expect(order).toEqual(['unload:afk', 'discover', 'loadModule:afk:start']);
+
+			releaseFirstLoad();
+			await Promise.all([first, second]);
+
+			expect(order).toEqual([
+				'unload:afk',
+				'discover',
+				'loadModule:afk:start',
+				'loadModule:afk:end',
+				'unload:afk',
+				'discover',
+				'loadModule:afk:start',
+				'loadModule:afk:end',
+			]);
 		});
 	});
 

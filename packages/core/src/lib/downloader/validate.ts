@@ -310,8 +310,8 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
         continue;
       }
       if (/^#(core|lib|utilities|database|root)\//.test(spec)) {
-        warnings.push(
-          `${rel}: imports Lumi's internal path "${spec}" directly - these can move or disappear on any core refactor. Use the public API instead: "lumi" (Module/DefineModule/cfg/Service), "lumi/commands" (BaseCommand/BaseSubcommand/CommandContext), "lumi/permissions", "lumi/scheduling", "lumi/ui" (cards/Emojis/pagination), or "lumi/utils".`,
+        errors.push(
+          `${rel}: imports Lumi's internal path "${spec}" directly - addons are restricted to the public API surface: "lumi" (Module/DefineModule/cfg/Service), "lumi/commands" (BaseCommand/BaseSubcommand/CommandContext), "lumi/permissions", "lumi/scheduling", "lumi/ui" (cards/Emojis/pagination), or "lumi/utils".`,
         );
       }
       if (spec.startsWith(".")) {

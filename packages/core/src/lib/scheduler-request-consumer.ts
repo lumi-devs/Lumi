@@ -60,7 +60,7 @@ export class SchedulerRequestConsumer {
         `[SchedulerRequestConsumer] Failed to apply request (id=${msg.id}, deliveryCount=${msg.deliveryCount}):`,
         err,
       );
-      await msg.ack();
+      await msg.nack();
     }
   }
 }

@@ -12,6 +12,7 @@ import {
   writeManifest,
   type ModuleManifest,
 } from "#lib/module-system/manifest.js";
+import { withSerializedWork } from "#lib/utilities/misc.js";
 
 const execFileAsync = promisify(execFile);
 const execGit = (args: string[]) =>
@@ -41,15 +42,12 @@ function parseUrl(val: string): string {
       throw new Error("Invalid HTTP/HTTPS URL");
     }
   }
-  if (val.startsWith("file://")) {
-    return val;
-  }
   const sshRegex = /^git@[a-zA-Z0-9.-]+:[a-zA-Z0-9._\/-]+(?:\.git)?$/i;
   const sshUrlRegex =
     /^ssh:\/\/git@[a-zA-Z0-9.-]+(?::[0-9]+)?\/[a-zA-Z0-9._\/-]+(?:\.git)?$/i;
   if (sshRegex.test(val) || sshUrlRegex.test(val)) return val;
   throw new Error(
-    "Must be a valid HTTP/HTTPS URL, file URL, or Git SSH URL (git@github.com:owner/repo.git)",
+    "Must be a valid HTTP/HTTPS URL or Git SSH URL (git@github.com:owner/repo.git) - local/file paths are not allowed",
   );
 }
 
@@ -83,65 +81,68 @@ export class DownloadResolver {
     url = parseUrl(url);
     branch = branchSchema.parse(branch);
 
-    const repoPath = path.join(MODULE_ROOT, name);
-    const gitFolder = path.join(repoPath, ".git");
+    // Serialized per repo name: a manual update-button click, the "add repo"
+    // flow, and the 15-minute auto-update sweep can all target the same
+    // on-disk checkout concurrently. Without this, two overlapping
+    // `git pull`/`rm -rf`+`clone` sequences on the same directory can
+    // interleave and corrupt it.
+    await withSerializedWork(name, async () => {
+      const repoPath = path.join(MODULE_ROOT, name);
+      const gitFolder = path.join(repoPath, ".git");
 
-    if (await this._exists(repoPath)) {
-      if (!(await this._exists(gitFolder))) {
-        container.logger?.warn?.(
-          `[Downloader] ${name} exists at ${repoPath} but is not a valid git repository. Cleaning up...`,
-        );
-        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+      if (await this._exists(repoPath)) {
+        if (!(await this._exists(gitFolder))) {
+          container.logger?.warn?.(
+            `[Downloader] ${name} exists at ${repoPath} but is not a valid git repository. Cleaning up...`,
+          );
+          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+        }
       }
-    }
 
+      const isExisting =
+        (await this._exists(repoPath)) && (await this._exists(gitFolder));
 
-    const isExisting =
-      (await this._exists(repoPath)) && (await this._exists(gitFolder));
+      if (isExisting) {
+        container.logger?.info?.(`[Downloader] Updating repo: ${name}`);
+        const pullArgs =
+          branch === "default"
+            ? ["-C", repoPath, "pull"]
+            : ["-C", repoPath, "pull", "origin", branch];
+        await execGit(pullArgs).catch(async () => {
+          container.logger?.warn?.(
+            `[Downloader] Git pull failed for ${name}, attempting clean clone fallback...`,
+          );
+          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+          const cloneArgs = ["clone"];
+          if (branch !== "default") cloneArgs.push("-b", branch);
+          cloneArgs.push("--", url, repoPath);
+          await execGit(cloneArgs).catch(async (cloneErr) => {
+            await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+            execError("Git clone failed")(cloneErr);
+          });
+        });
 
-    if (isExisting) {
-      container.logger?.info?.(`[Downloader] Updating repo: ${name}`);
-      const pullArgs =
-        branch === "default"
-          ? ["-C", repoPath, "pull"]
-          : ["-C", repoPath, "pull", "origin", branch];
-      await execGit(pullArgs).catch(async () => {
-        container.logger?.warn?.(
-          `[Downloader] Git pull failed for ${name}, attempting clean clone fallback...`,
-        );
-        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+        // The pull above may have brought in new commits for modules that were
+        // already validated and symlinked into ADDON_MODULES_ROOT on a previous
+        // install. A module that passed validateAddon() back then can later add
+        // an import of a forbidden internal "#core"/"#lib"/"#database"/
+        // "#utilities"/"#root" alias - those reach past the public "lumi" SDK
+        // surface into GPL-core internals an AGPL-licensed addon must not touch.
+        // Re-validate every already-installed module sourced from this repo so
+        // that boundary can't be bypassed by an update.
+        await this._revalidateInstalledModules(name, repoPath);
+      } else {
+        container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
+        await fs.mkdir(MODULE_ROOT, { recursive: true });
         const cloneArgs = ["clone"];
         if (branch !== "default") cloneArgs.push("-b", branch);
         cloneArgs.push("--", url, repoPath);
-        await execGit(cloneArgs).catch(async (cloneErr) => {
+        await execGit(cloneArgs).catch(async () => {
           await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
-          execError("Git clone failed")(cloneErr);
+          throw new Error("Git clone failed");
         });
-      });
-
-      // The pull above may have brought in new commits for modules that were
-      // already validated and symlinked into ADDON_MODULES_ROOT on a previous
-      // install. A module that passed validateAddon() back then can later add
-      // an import of a forbidden internal "#core"/"#lib"/"#database"/
-      // "#utilities"/"#root" alias - those reach past the public "lumi" SDK
-      // surface into GPL-core internals an AGPL-licensed addon must not touch.
-      // Re-validate every already-installed module sourced from this repo so
-      // that boundary can't be bypassed by an update.
-      await this._revalidateInstalledModules(name, repoPath);
-    } else {
-      container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
-      await fs.mkdir(MODULE_ROOT, { recursive: true });
-      const cloneArgs = ["clone"];
-      if (branch !== "default") cloneArgs.push("-b", branch);
-      cloneArgs.push("--", url, repoPath);
-      await execGit(cloneArgs).catch(async () => {
-        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
-        throw new Error("Git clone failed");
-      });
-    }
-
-
-
+      }
+    });
   }
 
   public async getModulesInRepo(repoName: string): Promise<ModuleInfo[]> {
@@ -264,9 +265,17 @@ export class DownloadResolver {
         );
       }
 
-      await execFileAsync("bun", ["add", ...reqs], { cwd: sourcePath, timeout: 60000 }).catch(
-        execError("Requirement installation failed"),
-      );
+      // --ignore-scripts: addon requirements come from an untrusted info.json
+      // and are installed unattended. Without this, a malicious/typosquatted
+      // package's postinstall (or any other lifecycle script) executes on the
+      // host at install time. This does mean packages that need a native
+      // build step (e.g. node-gyp) won't work for addon requirements - an
+      // acceptable tradeoff for not running arbitrary scripts from addon repos.
+      await execFileAsync(
+        "bun",
+        ["add", "--ignore-scripts", ...reqs],
+        { cwd: sourcePath, timeout: 60000 },
+      ).catch(execError("Requirement installation failed"));
 
       // The synthetic package.json above becomes the nearest package boundary
       // for this addon's files, which stops Node/Bun's specifier resolution

@@ -200,6 +200,79 @@ describe("DownloadResolver Edge Cases", () => {
     vi.clearAllMocks();
   });
 
+  it("serializes concurrent addRepo calls for the same repo name so pulls/clones can't interleave", async () => {
+    // Regression test for a race where a manual "update repo" click could
+    // overlap the 15-minute auto-update sweep (or a double-click) and run
+    // two `git pull`/`rm -rf`+`clone` sequences against the same checkout
+    // at once, corrupting it. addRepo() now serializes per repo name.
+    const repoName = "race_repo";
+
+    // Repo doesn't exist locally yet, so both calls take the "clone" branch.
+    vi.spyOn(fs, "access").mockRejectedValue(
+      Object.assign(new Error("ENOENT"), { code: "ENOENT" }),
+    );
+    vi.spyOn(fs, "mkdir").mockResolvedValue(undefined);
+    vi.spyOn(fs, "rm").mockResolvedValue(undefined);
+
+    let active = 0;
+    let maxActive = 0;
+    mockExecFile.mockImplementation((...args: any[]) => {
+      const cb = args[args.length - 1];
+      active++;
+      maxActive = Math.max(maxActive, active);
+      setTimeout(() => {
+        active--;
+        cb(null, "", "");
+      }, 20);
+      return {} as any;
+    });
+
+    await Promise.all([
+      resolver.addRepo(repoName, "https://github.com/some-org/race-repo.git"),
+      resolver.addRepo(repoName, "https://github.com/some-org/race-repo.git"),
+    ]);
+
+    // Never more than one git process touching this repo's checkout at once.
+    expect(maxActive).toBe(1);
+    expect(mockExecFile).toHaveBeenCalledTimes(2);
+
+    vi.restoreAllMocks();
+  });
+
+  it("does not serialize addRepo calls for different repo names", async () => {
+    const repoNameA = "race_repo_a";
+    const repoNameB = "race_repo_b";
+
+    vi.spyOn(fs, "access").mockRejectedValue(
+      Object.assign(new Error("ENOENT"), { code: "ENOENT" }),
+    );
+    vi.spyOn(fs, "mkdir").mockResolvedValue(undefined);
+    vi.spyOn(fs, "rm").mockResolvedValue(undefined);
+
+    let active = 0;
+    let maxActive = 0;
+    mockExecFile.mockImplementation((...args: any[]) => {
+      const cb = args[args.length - 1];
+      active++;
+      maxActive = Math.max(maxActive, active);
+      setTimeout(() => {
+        active--;
+        cb(null, "", "");
+      }, 20);
+      return {} as any;
+    });
+
+    await Promise.all([
+      resolver.addRepo(repoNameA, "https://github.com/some-org/race-repo-a.git"),
+      resolver.addRepo(repoNameB, "https://github.com/some-org/race-repo-b.git"),
+    ]);
+
+    // Different repos must not block behind the same per-name lock.
+    expect(maxActive).toBe(2);
+
+    vi.restoreAllMocks();
+  });
+
   describe("installModule()", () => {
     const repoName = "repo_x";
     const moduleName = "economy";
