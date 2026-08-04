@@ -147,6 +147,59 @@ describe("DownloadResolver Edge Cases", () => {
     vi.restoreAllMocks();
   });
 
+  it("addRepo() re-validates already-installed modules sourced from an updated repo and rejects if the pulled code now fails validation", async () => {
+    const repoName = "existing_repo_revalidate";
+    const moduleName = "economy";
+    const repoPath = path.join(MODULE_ROOT, repoName);
+    const gitFolder = path.join(repoPath, ".git");
+    const modulePath = path.join(repoPath, moduleName);
+    const symlinkPath = path.join(ADDON_MODULES_ROOT, moduleName);
+
+    vi.spyOn(fs, "access").mockImplementation((p: any) => {
+      if ([repoPath, gitFolder, ADDON_MODULES_ROOT].includes(String(p))) {
+        return Promise.resolve(undefined);
+      }
+      const err: any = new Error("ENOENT");
+      err.code = "ENOENT";
+      throw err;
+    });
+    vi.spyOn(fs, "readdir").mockImplementation((p: any) => {
+      if (String(p) === ADDON_MODULES_ROOT) {
+        return Promise.resolve([{ name: moduleName }] as any);
+      }
+      throw new Error(`unexpected readdir: ${p}`);
+    });
+    vi.spyOn(fs, "realpath").mockImplementation((p: any) => {
+      if (String(p) === symlinkPath) return Promise.resolve(modulePath);
+      throw new Error(`unexpected realpath: ${p}`);
+    });
+
+    mockExecFile.mockImplementation((...args: any[]) => {
+      const cb = args[args.length - 1];
+      if (typeof cb === "function") cb(null, "", "");
+      return {} as any;
+    });
+
+    (validateAddon as any).mockResolvedValue({
+      errors: [
+        `index.ts: imports Lumi's internal path "#core/database.js" directly - use the public API instead.`,
+      ],
+    });
+
+    // Simulates a repo update: a module that was validated and symlinked on
+    // a previous install has since pulled in code that now fails
+    // validateAddon(). The update must surface this instead of silently
+    // leaving the newly-invalid code symlinked and loadable.
+    await expect(
+      resolver.addRepo(repoName, "https://github.com/some-org/existing-repo.git"),
+    ).rejects.toThrow(/fail addon validation for already-installed module/);
+
+    expect(validateAddon).toHaveBeenCalledWith(modulePath);
+
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+  });
+
   it("serializes concurrent addRepo calls for the same repo name so pulls/clones can't interleave", async () => {
     // Regression test for a race where a manual "update repo" click could
     // overlap the 15-minute auto-update sweep (or a double-click) and run
