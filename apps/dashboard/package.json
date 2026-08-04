@@ -1,7 +1,7 @@
 {
   "name": "@lumi/dashboard",
   "version": "2.0.0",
-  "license": "AGPL-3.0-only",
+  "license": "GPL-3.0-only",
   "description": "Web admin dashboard (Next.js App Router) - Discord OAuth login via NextAuth.js + auto-generated config forms, served over the RabbitMQ RPC bridge.",
   "type": "module",
   "private": true,
