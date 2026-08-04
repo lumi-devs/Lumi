@@ -14,10 +14,6 @@ const { GeneralSettingsForm } = await import(
   "#/components/guild/general-settings-form"
 );
 
-// Values shared by both the `GuildSettings` (server prop) and
-// `GuildSettingsPayload`/form-state shapes used below — same field names,
-// same values, just different optionality, so one object literal is
-// assignable to either.
 function baseValues() {
   return {
     prefix: "!",
@@ -59,10 +55,6 @@ describe("GeneralSettingsForm (partial guild.settings.set save)", () => {
     await waitFor(() =>
       expect(setGuildSettings).toHaveBeenCalledWith("101", { locale: "fr-FR" }),
     );
-    // Regression guard: modRoleId, timezone, etc. were never touched in this
-    // session - sending them back would silently revert any concurrent
-    // change (another tab, another admin, a Discord slash command) made to
-    // those fields between page load and this save.
     expect(setGuildSettings).toHaveBeenCalledTimes(1);
   });
 
@@ -128,8 +120,6 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
     render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} />);
     expect(screen.getByLabelText("Mod role ID")).toHaveValue("111");
 
-    // Simulate a second open tab for the same guild that just saved a
-    // change to modRoleId.
     const otherTab = guildChannel("g1");
     otherTab.postMessage({
       type: "settings-updated",
@@ -139,7 +129,6 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
     await waitFor(() =>
       expect(screen.getByLabelText("Mod role ID")).toHaveValue("999"),
     );
-    // No local edits were in flight, so nothing should look "unsaved".
     expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
 
     otherTab.close();
@@ -148,32 +137,24 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
   it("keeps a locally-edited, unsaved field on remote conflict and surfaces an error, while still adopting other untouched fields", async () => {
     render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} />);
 
-    // User starts editing Mod role ID here but hasn't saved yet.
     fireEvent.change(screen.getByLabelText("Mod role ID"), {
       target: { value: "LOCAL-EDIT" },
     });
     expect(screen.getByLabelText("Mod role ID")).toHaveValue("LOCAL-EDIT");
 
-    // Another tab saves changes to *both* modRoleId (conflict) and
-    // adminRoleId (untouched here).
     const otherTab = guildChannel("g1");
     otherTab.postMessage({
       type: "settings-updated",
       settings: formState({ modRoleId: "REMOTE-CHANGE", adminRoleId: "999" }),
     });
 
-    // The untouched field adopts the remote value...
     await waitFor(() =>
       expect(screen.getByLabelText("Admin role ID")).toHaveValue("999"),
     );
-    // ...but the field the user is actively (and not yet successfully)
-    // editing is NOT clobbered by the remote value.
     expect(screen.getByLabelText("Mod role ID")).toHaveValue("LOCAL-EDIT");
-    // ...and the conflict is surfaced rather than silently resolved.
     const conflictMessage = screen.getByText(/changed in another tab/i);
     expect(conflictMessage).toBeInTheDocument();
     expect(conflictMessage).toHaveTextContent("Mod role ID");
-    // The still-conflicting local edit keeps the save bar open.
     expect(screen.getByText(/careful.*unsaved changes/i)).toBeInTheDocument();
 
     otherTab.close();
@@ -191,15 +172,12 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
       expect(screen.getByLabelText("Mod role ID")).toHaveValue("999"),
     );
 
-    // User edits an unrelated field, then hits Reset.
     fireEvent.change(screen.getByLabelText("Admin role ID"), {
       target: { value: "TEMP" },
     });
     expect(screen.getByText(/unsaved changes/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
 
-    // Reset must land on the up-to-date baseline (999), not silently
-    // revert the other tab's save back to the original page-load value.
     expect(screen.getByLabelText("Mod role ID")).toHaveValue("999");
     expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
 
@@ -228,8 +206,6 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
   });
 
   it("requests a sync on mount so it catches up on a save it missed (e.g. it opened after the other tab saved)", async () => {
-    // A tab that's already open and up to date answers any `request-sync`
-    // with what it currently believes the baseline to be.
     const existingTab = guildChannel("g1");
     existingTab.onmessage = (event) => {
       if (event.data?.type === "request-sync") {

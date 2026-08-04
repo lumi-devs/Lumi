@@ -47,13 +47,6 @@ export abstract class Repository {
     if (pending) return pending as Promise<T>;
 
     const flight = (async () => {
-      // Fence against a concurrent write's invalidate() firing mid-fetch:
-      // if the fence marker changed while fetcher() was running, a write
-      // touched this key after we started reading, so what we just fetched
-      // may already be stale relative to it - skip repopulating the shared
-      // cache with it (this caller still gets the value it fetched, just
-      // doesn't write it back). Correct regardless of how long the fetch
-      // takes, unlike a fixed-delay double-delete.
       const fenceKey = cacheFenceKey(key);
       const fenceBefore = await this.redis.get(fenceKey);
       const data = await fetcher();

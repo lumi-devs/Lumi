@@ -439,13 +439,6 @@ describe("SecurityService.grantVerified", () => {
 });
 
 describe("SecurityService.advanceChallenge", () => {
-  /**
-   * A fake challenge-key Redis backing store. `get` has a real (short) delay
-   * to mimic an actual round-trip, so two calls fired back-to-back without
-   * serialization would both read the pre-update value before either write
-   * commits - reproducing the get-compute-set race this method guards
-   * against.
-   */
   function makeChallengeRedis(initial: CaptchaState) {
     let stored: string | null = JSON.stringify(initial);
     const get = vi.fn(async () => {
@@ -474,9 +467,6 @@ describe("SecurityService.advanceChallenge", () => {
     const redis = makeChallengeRedis(initial);
     const service = makeService({ redis });
 
-    // Index 7 sits outside the sequence, so both clicks are "wrong" and each
-    // should burn one attempt - simulating a double-clicked captcha button
-    // (or two rapid interaction events) for the same member.
     const [r1, r2] = await Promise.all([
       service.advanceChallenge("g1", "u1", 7),
       service.advanceChallenge("g1", "u1", 7),
@@ -484,10 +474,6 @@ describe("SecurityService.advanceChallenge", () => {
 
     expect(r1?.outcome).toBe("wrong");
     expect(r2?.outcome).toBe("wrong");
-    // Both decrements must land. Without serialization, both calls read
-    // attempts=3 before either writes, and the second write silently
-    // clobbers the first - leaving attempts=2 (one decrement lost) instead
-    // of the correct 1, weakening the MAX_ATTEMPTS brute-force guard.
     expect(redis.read()?.attempts).toBe(MAX_ATTEMPTS - 2);
   });
 

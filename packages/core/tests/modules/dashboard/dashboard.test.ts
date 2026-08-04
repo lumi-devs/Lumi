@@ -57,8 +57,6 @@ describe("dashboard module RPC handlers", () => {
       get: vi.fn().mockReturnValue({ loaded: () => [] }),
     } as any;
 
-    // Registers the RPC handlers into the shared `rpcHandlers` map so tests
-    // can invoke them directly, exactly like the real dispatcher would.
     const mod = new DashboardModule({} as any, { name: "dashboard" });
     await mod.onLoad();
   });
@@ -85,7 +83,6 @@ describe("dashboard module RPC handlers", () => {
       }),
     ).rejects.toThrow("Missing ManageGuild permission");
 
-    // The unauthorized actor must never reach the guild-data lookups.
     expect(container.db.config.getGuildSettings).not.toHaveBeenCalled();
   });
 
@@ -102,7 +99,6 @@ describe("dashboard module RPC handlers", () => {
     expect(result.name).toBe("Test Guild");
     expect(result.settings.prefix).toBe("!");
     expect(container.db.config.getGuildSettings).toHaveBeenCalledWith(GUILD_ID);
-    // Owner check short-circuits before any member permission fetch.
     expect(guild.members.fetch).not.toHaveBeenCalled();
   });
 

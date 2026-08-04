@@ -10,7 +10,6 @@ import { s, type BaseValidator } from "@sapphire/shapeshift";
 
 const SnowflakeSchema = s.string().regex(/^\d{17,20}$/);
 
-/** Same identifier shape enforced for repo/module names in the downloader resolver. */
 const SafeNameSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
 
 function parsePayload<T>(schema: BaseValidator<T>, data: unknown): T {
@@ -21,11 +20,6 @@ function parsePayload<T>(schema: BaseValidator<T>, data: unknown): T {
   }
 }
 
-/**
- * Re-check the actor's Bot Owner status on the worker side rather than
- * trusting the dashboard's client-side `requireBotOwner` guard - the worker
- * is the actual trust boundary for these system-level RPC actions.
- */
 function requireBotOwner(req: RpcRequest<unknown>): void {
   if (!req.actorId || !PermitResolver.isBotOwner(req.actorId)) {
     throw new Error("Bot Owner authorization required for this action.");

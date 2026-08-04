@@ -64,10 +64,6 @@ describe("SaveBar", () => {
   });
 
   it("does not wire up the Cmd+S shortcut while a save is already in flight", () => {
-    // Regression: a keypress racing a click (or two rapid Cmd+S presses)
-    // used to fire a second concurrent onSave before the first settled,
-    // since only the button had disabled={saving} - the shortcut didn't
-    // check it.
     const onSave = vi.fn();
     render(<SaveBar dirty={true} saving={true} onSave={onSave} onReset={vi.fn()} />);
     fireEvent.keyDown(window, { key: "s", metaKey: true });

@@ -152,11 +152,6 @@ describe("Base Repository", () => {
     });
 
     it("skips repopulating the cache when a write invalidates the key mid-fetch", async () => {
-      // Regression: a concurrent write's invalidate() bumps the fence
-      // key. If that happens while this getOrSet() is still awaiting its
-      // own fetcher(), the value it's about to write back may already be
-      // stale relative to the write - it must not overwrite the (now
-      // correctly deleted, or soon to be freshly written) cache entry.
       mockRedis.get
         .mockResolvedValueOnce(null) // main cache check: miss
         .mockResolvedValueOnce("111") // fence read before fetch

@@ -189,11 +189,6 @@ export class ModuleStore extends Store<Module> {
    * @param name - The name of the module to reload.
    */
   public async reload(name: string) {
-    // Same lock namespace ("module-store:enable:<name>") as setEnabled()/
-    // #syncModuleEnabled() use - two overlapping /module reload calls for
-    // the same module used to interleave unload/discover/loadModule with
-    // no guard at all, risking double-registered pieces or a store left
-    // inconsistent until a full process restart.
     return withSerializedWork(`module-store:enable:${name}`, async () => {
       try {
         await this.unload(name);
@@ -280,14 +275,6 @@ export class ModuleStore extends Store<Module> {
     });
   }
 
-  /**
-   * Lock key shared by {@link setEnabled} and {@link #syncModuleEnabled} so a
-   * dashboard/command-driven toggle and a cluster-invalidation-driven sync
-   * for the same module never interleave their check-then-act on
-   * `record.enabled` - without this, both can read the stale flag before
-   * either writes it, double-loading (or unload/load-interleaving) the
-   * module's Sapphire pieces.
-   */
   static #enableLockKey(name: string): string {
     return `module-store:enable:${name}`;
   }
@@ -614,13 +601,6 @@ export class ModuleStore extends Store<Module> {
     }
   }
 
-  /**
-   * Disables a single module whose dependency graph is broken (a circular
-   * dependency, a missing dependency, or a transitive dependency on another
-   * broken module), mirroring the per-module isolation pattern used by
-   * {@link loadAll} and {@link loadModule} - one malformed manifest must
-   * never abort discovery for every other module.
-   */
   #disableBrokenModule(name: string, reason: string, broken: Set<string>) {
     const record = this.#records.get(name);
     if (record && record.enabled) {
@@ -638,7 +618,6 @@ export class ModuleStore extends Store<Module> {
     const visiting = new Set<string>();
     const broken = new Set<string>();
 
-    /** Resolves `name`, returning `false` if it (or anything it depends on) is broken. */
     const visit = (name: string): boolean => {
       if (visited.has(name)) return !broken.has(name);
       if (broken.has(name)) return false;

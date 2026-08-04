@@ -261,9 +261,6 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
   });
 
   it('MuteAction.undo closes the original active case and cancels its pending auto-lift job', async () => {
-    // Regression: without this, the original case stayed active and its
-    // scheduled mod-lift job still fired later, redundantly re-lifting an
-    // already-lifted mute.
     const mockMember = { id: 'u-1', timeout: vi.fn().mockResolvedValue({}) };
     const mockMod = { id: 'm-1' };
     const mockGuild = { id: 'g-1' };
