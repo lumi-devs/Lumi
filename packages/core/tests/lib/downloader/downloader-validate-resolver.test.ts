@@ -255,7 +255,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
 
     it("rejects invalid URL protocols and malformed strings in addRepo", async () => {
       await expect(resolver.addRepo("test_repo", "ftp://invalid-protocol.com")).rejects.toThrow(
-        "Must be a valid HTTP/HTTPS URL, file URL, or Git SSH URL"
+        "Must be a valid HTTP/HTTPS URL or Git SSH URL"
       );
 
       await expect(resolver.addRepo("test_repo", "http://invalid-url:-1")).rejects.toThrow(
@@ -265,14 +265,16 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       await expect(resolver.addRepo("test_repo", "not-a-url")).rejects.toThrow();
     });
 
-    it("accepts valid http, https, file, and SSH URLs (including markdown brackets)", async () => {
+    it("rejects file:// URLs in addRepo (local paths must never reach git clone)", async () => {
+      await expect(
+        resolver.addRepo("test_file", "file:///tmp/repo.git")
+      ).rejects.toThrow("Must be a valid HTTP/HTTPS URL or Git SSH URL");
+    });
+
+    it("accepts valid http and SSH URLs (including markdown brackets)", async () => {
       // addRepo for non-existent git repository will throw "Git clone failed" after passing URL validation
       await expect(
         resolver.addRepo("test_http", "<https://github.com/nonexistent/repo1.git>")
-      ).rejects.toThrow("Git clone failed");
-
-      await expect(
-        resolver.addRepo("test_file", "file:///tmp/repo.git")
       ).rejects.toThrow("Git clone failed");
 
       await expect(
