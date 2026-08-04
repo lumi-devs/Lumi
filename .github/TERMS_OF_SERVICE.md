@@ -33,7 +33,7 @@ contained in the Service are protected by copyright and trade mark law.
 
 ## USE LICENSE
 
-To view what license applies to the Service please consult [the separate LICENSE document](../LICENSE). Lumi is licensed under the GNU AGPL v3.0 License.
+To view what license applies to the Service please consult [the separate LICENSE document](../LICENSE). Lumi core is licensed under the GNU GPL v3.0 License; first-party addons are licensed under the GNU AGPL v3.0 License.
 
 ## DISCLAIMER
 

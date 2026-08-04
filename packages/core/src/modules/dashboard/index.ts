@@ -89,6 +89,7 @@ export class DashboardModule extends Module {
 
     registerRpcHandler(RPC_ACTIONS.guildDashboardGet, async (req) => {
       const guildId = requireGuildId(req.guildId);
+      await requireGuildManager(guildId, req.actorId);
 
       const guild = container.client.guilds.cache.get(guildId);
       if (!guild) throw new Error("Guild not found in bot cache");

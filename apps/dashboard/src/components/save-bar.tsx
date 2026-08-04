@@ -18,7 +18,7 @@ export function SaveBar({
   onReset: () => void;
 }) {
   useEffect(() => {
-    if (!dirty) return;
+    if (!dirty || saving) return;
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
@@ -27,7 +27,7 @@ export function SaveBar({
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [dirty, onSave]);
+  }, [dirty, saving, onSave]);
 
   if (!dirty) return null;
 

@@ -29,15 +29,16 @@ describe("validateAddon - lumi SDK import boundary", () => {
     await fs.rm(tmpRoot, { recursive: true, force: true });
   });
 
-  it("does not warn when the addon imports from the public lumi SDK", async () => {
+  it("does not warn or error when the addon imports from the public lumi SDK", async () => {
     const dir = path.join(tmpRoot, "my-addon");
     await writeAddon(
       dir,
       `import { Module, DefineModule, cfg } from "lumi";\nimport { BaseCommand } from "lumi/commands";\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
     );
 
-    const { warnings } = await validateAddon(dir);
+    const { warnings, errors } = await validateAddon(dir);
     expect(warnings).toEqual([]);
+    expect(errors).toEqual([]);
   });
 
   it.each([
@@ -46,7 +47,7 @@ describe("validateAddon - lumi SDK import boundary", () => {
     "#utilities/cards.js",
     "#database/redis.js",
     "#root/foo.js",
-  ])("warns when the addon imports Lumi's internal path %s directly", async (internalPath) => {
+  ])("hard-errors when the addon imports Lumi's internal path %s directly", async (internalPath) => {
     const dir = path.join(tmpRoot, "my-addon");
     await writeAddon(
       dir,
@@ -54,9 +55,10 @@ describe("validateAddon - lumi SDK import boundary", () => {
     );
 
     const { warnings, errors } = await validateAddon(dir);
-    expect(warnings.some((w) => w.includes(internalPath) && w.includes('"lumi"'))).toBe(true);
-    // Internal-path imports are a warning, not a hard failure.
-    expect(errors).toEqual([]);
+    // Direct internal-path imports bypass the addon-sdk surface and are now a
+    // hard install-blocking error, not just a warning (see installModule()).
+    expect(errors.some((e) => e.includes(internalPath) && e.includes('"lumi"'))).toBe(true);
+    expect(warnings.some((w) => w.includes(internalPath))).toBe(false);
   });
 
   it("still hard-errors on importing another module via #modules/*", async () => {

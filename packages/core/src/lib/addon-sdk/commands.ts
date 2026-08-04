@@ -6,5 +6,12 @@ export {
   BaseSubcommand,
   CommandContext,
   BucketScope,
+  sendReply,
+  replySuccess,
+  replyError,
+  replyWarning,
+  replyInfo,
+  assertPermit,
   type ReplyOptions,
+  type CommandReplyTarget,
 } from "#lib/commands.js";

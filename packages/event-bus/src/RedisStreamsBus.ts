@@ -8,9 +8,13 @@
 // A background XAUTOCLAIM loop reclaims entries idle past `claimMinIdleMs` and
 // redelivers them with `deliveryCount > 1` so callers can dedupe; once that exceeds
 // `maxDeliveries` the entry is XADDed onto `<stream>:dlq` (kept for inspection, never
-// auto-replayed) and XACKed off the live stream. A periodic stats callback reports
-// XLEN + pending count so observability can update gauges without pulling prom-client
-// into this package. Exactly-once is out of scope - the contract is at-least-once plus
+// auto-replayed) and XACKed off the live stream. Since Redis-side idle time can't see
+// whether a handler is still running locally, an in-process `inFlight` set tracks ids
+// currently mid-handler so the claim loop never double-invokes a handler that just
+// happens to be slow; it does not (and cannot) prevent cross-consumer redelivery,
+// which is inherent to at-least-once. A periodic stats callback reports XLEN + pending
+// count so observability can update gauges without pulling prom-client into this
+// package. Exactly-once is out of scope - the contract is at-least-once plus
 // idempotent handlers - handlers must dedupe on a payload-level identifier, not the
 // stream id (redelivery yields a new one).
 
@@ -93,6 +97,21 @@ export class RedisStreamsBus implements EventBus {
   private readonly onStats: RedisStreamsBusOptions["onStats"];
   private readonly statsIntervalMs: number;
   private readonly timers = new Set<NodeJS.Timeout>();
+  /**
+   * Message ids (keyed `${stream}\0${id}`) whose handler invocation is
+   * currently in flight in this process. XAUTOCLAIM only knows Redis-side
+   * idle time since last delivery - it has no idea a handler is still
+   * running locally past claimMinIdleMs (e.g. a slow DB write). Without this,
+   * the claim loop (runClaim) can reclaim and re-invoke the handler for an
+   * entry the main read loop is still processing, causing two concurrent
+   * handler calls for the same logical event. Populated right before
+   * `handler()` is invoked in `deliver`, cleared in a `finally` once it
+   * settles. This only guards against same-process double-invocation; it
+   * does not (and cannot) prevent cross-consumer redelivery, which is
+   * inherent to at-least-once delivery and is why handlers must still be
+   * idempotent.
+   */
+  private readonly inFlight = new Set<string>();
   private closed = false;
 
   public constructor(opts: RedisStreamsBusOptions) {
@@ -135,7 +154,9 @@ export class RedisStreamsBus implements EventBus {
   ): Promise<() => Promise<void>> {
     const blockMs = opts.blockMs ?? 5000;
     const batchSize = opts.batchSize ?? 16;
-    for (const stream of streams) await this.ensureGroup(stream, opts.group);
+    for (const stream of streams) {
+      await this.ensureGroup(stream, opts.group, opts.startId ?? "0");
+    }
 
     // Each consume() call gets its own connection - XREADGROUP BLOCK holds
     // the socket, and sharing one across concurrent consume() loops would
@@ -262,7 +283,16 @@ export class RedisStreamsBus implements EventBus {
       try {
         await this.sendToDlq(stream, id, fields, deliveryCount);
       } catch (err) {
-        this.log("error", "sendToDlq failed", { stream, id, err: String(err) });
+        // Don't ack: acking here would remove the entry from the pending
+        // list while it was never durably recorded in the DLQ either -
+        // permanent, silent loss. Leave it pending so XAUTOCLAIM redelivers
+        // it and this DLQ write is retried.
+        this.log("error", "sendToDlq failed; leaving entry pending for retry", {
+          stream,
+          id,
+          err: String(err),
+        });
+        return;
       }
       await this.publisher.xack(stream, group, id);
       this.log("warn", "dropped poison message to DLQ", {
@@ -285,11 +315,12 @@ export class RedisStreamsBus implements EventBus {
       try {
         await this.sendToDlq(stream, id, fields, deliveryCount);
       } catch (dlqErr) {
-        this.log("error", "sendToDlq failed", {
+        this.log("error", "sendToDlq failed; leaving entry pending for retry", {
           stream,
           id,
           err: String(dlqErr),
         });
+        return;
       }
       await this.publisher.xack(stream, group, id);
       return;
@@ -307,6 +338,8 @@ export class RedisStreamsBus implements EventBus {
         // after claimMinIdleMs.
       },
     };
+    const inFlightKey = `${stream}\0${id}`;
+    this.inFlight.add(inFlightKey);
     try {
       await handler(msg);
     } catch (err) {
@@ -316,6 +349,8 @@ export class RedisStreamsBus implements EventBus {
         deliveryCount,
         err: String(err),
       });
+    } finally {
+      this.inFlight.delete(inFlightKey);
     }
   }
 
@@ -342,13 +377,39 @@ export class RedisStreamsBus implements EventBus {
         if (!resp) break;
         const [nextCursor, entries] = resp;
         for (const [id, fields] of entries) {
+          // Redis-side idle time only reflects time since last delivery - it
+          // has no visibility into whether a handler invocation from an
+          // earlier delivery is still running in this process. Skip
+          // redelivering ids we're already handling locally; XAUTOCLAIM has
+          // still reset their idle clock, so they'll be reconsidered next
+          // cycle if genuinely stuck, without us double-invoking a handler
+          // that's mid-flight.
+          if (this.inFlight.has(`${stream}\0${id}`)) {
+            this.log("warn", "skipping reclaim of in-flight message", {
+              stream,
+              id,
+            });
+            continue;
+          }
           // XPENDING for delivery count. XAUTOCLAIM increments it for us;
-          // we read it back to drive the DLQ threshold.
-          const deliveryCount = await this.pendingDeliveryCount(
-            stream,
-            opts.group,
-            id,
-          );
+          // we read it back to drive the DLQ threshold. Guarded the same as
+          // deliver() below it - a transient XPENDING failure on one entry
+          // must not abort the rest of this batch/stream for the tick.
+          let deliveryCount: number;
+          try {
+            deliveryCount = await this.pendingDeliveryCount(
+              stream,
+              opts.group,
+              id,
+            );
+          } catch (err) {
+            this.log("error", "pendingDeliveryCount failed", {
+              stream,
+              id,
+              err: String(err),
+            });
+            continue;
+          }
           try {
             await this.deliver(
               stream,
@@ -447,11 +508,15 @@ export class RedisStreamsBus implements EventBus {
     }
   }
 
-  private async ensureGroup(stream: string, group: string): Promise<void> {
+  private async ensureGroup(
+    stream: string,
+    group: string,
+    startId: string,
+  ): Promise<void> {
     const key = `${stream}::${group}`;
     if (this.knownGroups.has(key)) return;
     try {
-      await this.publisher.xgroup("CREATE", stream, group, "0", "MKSTREAM");
+      await this.publisher.xgroup("CREATE", stream, group, startId, "MKSTREAM");
     } catch (err) {
       const msg = String(err);
       if (!msg.includes("BUSYGROUP")) throw err;

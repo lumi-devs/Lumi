@@ -12,9 +12,11 @@ import {
 } from '#modules/mod/lib/thresholds.js';
 import { BanAction } from '#modules/mod/actions/BanAction.js';
 import { MuteAction } from '#modules/mod/actions/MuteAction.js';
+import { VoiceMuteAction } from '#modules/mod/actions/VoiceMuteAction.js';
 import { KickAction } from '#modules/mod/actions/KickAction.js';
 import { WarnAction } from '#modules/mod/actions/WarnAction.js';
 import { QuarantineAction } from '#modules/mod/actions/QuarantineAction.js';
+import { cancelTask } from '#lib/schedule-task.js';
 
 vi.mock('@sapphire/framework', () => ({
   container: {
@@ -64,6 +66,11 @@ vi.mock('@sapphire/framework', () => ({
       }
     }
   }
+}));
+
+vi.mock('#lib/schedule-task.js', () => ({
+  scheduleTask: vi.fn().mockResolvedValue(undefined),
+  cancelTask: vi.fn().mockResolvedValue(undefined)
 }));
 
 vi.mock('#lib/module-system/Service.js', () => ({
@@ -253,12 +260,58 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     expect(mockMember.timeout).toHaveBeenCalledWith(null, expect.anything());
   });
 
+  it('MuteAction.undo closes the original active case and cancels its pending auto-lift job', async () => {
+    // Regression: without this, the original case stayed active and its
+    // scheduled mod-lift job still fired later, redundantly re-lifting an
+    // already-lifted mute.
+    const mockMember = { id: 'u-1', timeout: vi.fn().mockResolvedValue({}) };
+    const mockMod = { id: 'm-1' };
+    const mockGuild = { id: 'g-1' };
+    (container.db.moderation.getActiveCases as any).mockResolvedValueOnce([
+      { id: 55, caseNumber: 5, action: 'mute' }
+    ]);
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ id: 2, caseNumber: 12 });
+
+    await MuteAction.undo({
+      guild: mockGuild as any,
+      targetMember: mockMember as any,
+      moderator: mockMod as any,
+      reason: 'Time served'
+    });
+
+    expect(container.db.moderation.getActiveCases).toHaveBeenCalledWith('g-1', 'u-1', 'mute');
+    expect(container.db.moderation.liftModerationCase).toHaveBeenCalledWith(55);
+    expect(cancelTask).toHaveBeenCalledWith('mod-lift:55');
+  });
+
   it('MuteAction.undoRaw handles 10007 silently', async () => {
     const err = new Error('Unknown Member');
     (err as any).code = 10007;
     (container.client.rest.patch as any).mockRejectedValue(err);
 
     await expect(MuteAction.undoRaw('g-1', 'u-1', 'Reason')).resolves.toBeUndefined();
+  });
+
+  it('VoiceMuteAction.undo closes the original active case and cancels its pending auto-lift job', async () => {
+    const mockMember = { id: 'u-1', voice: { setMute: vi.fn().mockResolvedValue({}) } };
+    const mockMod = { id: 'm-1' };
+    const mockGuild = { id: 'g-1' };
+    (container.db.moderation.getActiveCases as any).mockResolvedValueOnce([
+      { id: 77, caseNumber: 7, action: 'voice_mute' }
+    ]);
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ id: 3, caseNumber: 13 });
+
+    await VoiceMuteAction.undo({
+      guild: mockGuild as any,
+      targetMember: mockMember as any,
+      moderator: mockMod as any,
+      reason: 'Time served'
+    });
+
+    expect(mockMember.voice.setMute).toHaveBeenCalledWith(false, expect.anything());
+    expect(container.db.moderation.getActiveCases).toHaveBeenCalledWith('g-1', 'u-1', 'voice_mute');
+    expect(container.db.moderation.liftModerationCase).toHaveBeenCalledWith(77);
+    expect(cancelTask).toHaveBeenCalledWith('mod-lift:77');
   });
 
   it('KickAction.apply sends DM, kicks member, and creates case', async () => {

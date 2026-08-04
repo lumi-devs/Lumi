@@ -2,9 +2,10 @@ import { container } from "@sapphire/framework";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { formatAuditReason } from "#lib/utilities/misc.js";
-import { logToChannel, scheduleCaseLift } from "../lib/helpers.js";
+import { logToChannel, scheduleCaseLift, liftJobId } from "../lib/helpers.js";
 import { errorCode } from "#lib/utilities/errors.js";
 import { RedisKeys } from "#database/redis.js";
+import { cancelTask } from "#lib/schedule-task.js";
 
 export interface VoiceMuteApplyOptions {
   guild: Guild;
@@ -69,6 +70,19 @@ export class VoiceMuteAction {
     const auditReason = formatAuditReason(moderator, reason);
 
     await targetMember.voice.setMute(false, auditReason);
+
+    // Close out the case(s) this manual unmute supersedes - otherwise the
+    // original case stays active and its scheduled mod-lift job still fires
+    // later, redundantly re-lifting an already-lifted mute.
+    const activeCases = await container.db.moderation.getActiveCases(
+      guild.id,
+      targetMember.id,
+      "voice_mute",
+    );
+    for (const active of activeCases) {
+      await container.db.moderation.liftModerationCase(active.id);
+      await cancelTask(liftJobId(active.id)).catch(() => null);
+    }
 
     const c = await container.db.moderation.createModerationCase({
       guildId: guild.id,
