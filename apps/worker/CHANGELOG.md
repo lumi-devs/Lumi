@@ -1,5 +1,13 @@
 # @lumi/worker
 
+## 3.1.1
+
+### Patch Changes
+
+- Updated dependencies [3a37474]
+  - @lumi/core@3.1.1
+  - @lumi/observability@3.1.1
+
 ## 3.1.0
 
 ### Patch Changes

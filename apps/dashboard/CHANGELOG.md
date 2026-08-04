@@ -1,5 +1,14 @@
 # @lumi/dashboard
 
+## 3.1.1
+
+### Patch Changes
+
+- 3a37474: No functional change - trims verbose explanatory comments down to what the code's names and structure already convey.
+- Updated dependencies [3a37474]
+  - @lumi/contracts@3.1.1
+  - @lumi/observability@3.1.1
+
 ## 3.1.0
 
 ### Patch Changes

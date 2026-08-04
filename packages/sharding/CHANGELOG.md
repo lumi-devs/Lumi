@@ -1,5 +1,11 @@
 # @lumi/sharding
 
+## 3.1.1
+
+### Patch Changes
+
+- 3a37474: No functional change - trims verbose explanatory comments down to what the code's names and structure already convey.
+
 ## 3.1.0
 
 ### Patch Changes
