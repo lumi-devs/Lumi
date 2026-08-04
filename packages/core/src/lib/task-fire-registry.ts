@@ -99,6 +99,13 @@ export class TaskFireConsumer {
         consumer: this.opts.consumerId,
         blockMs: this.opts.blockMs,
         batchSize: this.opts.batchSize,
+        // Broadcast groups are one-shot per replica (keyed by consumerId) -
+        // a fresh group must start at "$" (new entries only), not replay the
+        // stream's full history. An ordinary restart without a pinned
+        // LUMI_CONSUMER_ID mints a brand-new group name every time; without
+        // this, that would instantly redeliver every historical broadcast
+        // event still resident in the stream to the replacement replica.
+        startId: reg.mode === "broadcast" ? "$" : undefined,
       },
       (msg) => this.handle(reg.name, msg),
     );

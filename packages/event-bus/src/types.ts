@@ -38,6 +38,18 @@ export interface ConsumeOptions {
   blockMs?: number;
   /** Max batch size per read. Default 16. */
   batchSize?: number;
+  /**
+   * Where a brand-new consumer group starts reading from (only applies the
+   * first time `group` is created - ignored once it already exists).
+   * Default `"0"` (full stream history), correct for a persistent, shared
+   * group like the default worker pool: a fresh group should catch up on
+   * whatever's backlogged since the stream existed. Pass `"$"` (new entries
+   * only) for a group that's inherently one-shot per consumer - e.g. a
+   * broadcast-mode group keyed by a per-replica id - so an ordinary restart
+   * (which mints a new group name) doesn't replay the entire stream history
+   * instantly to the replacement replica.
+   */
+  startId?: string;
 }
 
 export interface EventBus {
