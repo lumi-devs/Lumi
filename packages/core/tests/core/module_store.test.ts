@@ -252,6 +252,59 @@ describe('ModuleStore', () => {
 		});
 	});
 
+	describe('reload', () => {
+		it('serializes overlapping reload() calls instead of interleaving unload/discover/loadModule', async () => {
+			setupModules({ afk: {} });
+			await store.discover();
+
+			const order: string[] = [];
+			let releaseFirstLoad: () => void = () => {};
+			const firstLoadGate = new Promise<void>((resolve) => {
+				releaseFirstLoad = resolve;
+			});
+			let loadModuleCalls = 0;
+
+			vi.spyOn(store, 'unload').mockImplementation((n: any) => {
+				order.push(`unload:${n}`);
+				return Promise.resolve({} as any);
+			});
+			vi.spyOn(store, 'discover').mockImplementation(() => {
+				order.push('discover');
+				return Promise.resolve();
+			});
+			vi.spyOn(store, 'loadModule').mockImplementation(async (n: any) => {
+				loadModuleCalls += 1;
+				order.push(`loadModule:${n}:start`);
+				if (loadModuleCalls === 1) await firstLoadGate;
+				order.push(`loadModule:${n}:end`);
+			});
+
+			const first = store.reload('afk');
+			const second = store.reload('afk');
+			// Give the first call's chain a chance to reach (and block on)
+			// loadModule. If reload() isn't serialized, the second call's
+			// unload()/discover() would already be interleaved in `order` here.
+			await Promise.resolve();
+			await Promise.resolve();
+			await Promise.resolve();
+			expect(order).toEqual(['unload:afk', 'discover', 'loadModule:afk:start']);
+
+			releaseFirstLoad();
+			await Promise.all([first, second]);
+
+			expect(order).toEqual([
+				'unload:afk',
+				'discover',
+				'loadModule:afk:start',
+				'loadModule:afk:end',
+				'unload:afk',
+				'discover',
+				'loadModule:afk:start',
+				'loadModule:afk:end',
+			]);
+		});
+	});
+
 	describe('unload', () => {
 		it('unloads owned pieces from every other store and marks the module disabled when its directory still exists', async () => {
 			setupModules({ afk: {} });
