@@ -4,7 +4,10 @@ import { hasRequiredPermit, PermitResolver } from "#lib/permissions/index.js";
 import { loadFeatures } from "#modules/core/lib/config-panel.js";
 import { buildAddonRepoModulesView } from "#modules/core/ui/addons.js";
 import { buildHubView, buildSettingsView } from "#modules/core/ui/hub.js";
-import { buildPermissionsView } from "#modules/core/ui/permissions.js";
+import {
+  buildPermissionsView,
+  type PermitAssignmentRow,
+} from "#modules/core/ui/permissions.js";
 import { Emojis } from "#utilities/assets.js";
 import { container, UserError } from "@sapphire/framework";
 import type {
@@ -69,23 +72,21 @@ export async function renderSettings(interaction: PanelInteraction, t?: LumiT) {
   );
 }
 
-/** Flattens the guild's custom and enforced permits into one revocable list. */
-async function loadPermissionOverrides(guildId: string) {
-  const permits = await container.db.permissions.getGuildPermits(guildId);
-  return [
-    ...permits.custom.map((c) => ({
-      commandPath: c.permit,
-      modelType: c.targetType,
-      modelId: c.targetId,
-      enforced: false,
+/** Flattens the guild's permits into one revocable assignment-per-row list. */
+async function loadPermitAssignments(
+  guildId: string,
+): Promise<PermitAssignmentRow[]> {
+  const permits = await container.db.permissions.listPermits(guildId);
+  return permits.flatMap((permit) =>
+    permit.assignments.map((a) => ({
+      permitId: permit.id,
+      permitName: permit.name,
+      kind: permit.kind as PermitAssignmentRow["kind"],
+      builtin: permit.builtin,
+      targetType: a.targetType as PermitAssignmentRow["targetType"],
+      targetId: a.targetId,
     })),
-    ...permits.enforced.map((c) => ({
-      commandPath: c.permit,
-      modelType: c.targetType,
-      modelId: c.targetId,
-      enforced: true,
-    })),
-  ];
+  );
 }
 
 export async function renderPermissions(
@@ -93,8 +94,8 @@ export async function renderPermissions(
   page = 0,
   t?: LumiT,
 ) {
-  const overrides = await loadPermissionOverrides(interaction.guildId!);
-  return interaction.editReply(buildPermissionsView(overrides, page, t));
+  const assignments = await loadPermitAssignments(interaction.guildId!);
+  return interaction.editReply(buildPermissionsView(assignments, page, t));
 }
 
 /**

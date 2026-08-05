@@ -17,7 +17,7 @@ vi.mock("#lib/commands.js", async (importOriginal) => {
   const actual: any = await importOriginal();
   return {
     ...actual,
-    fetchTyped: vi.fn().mockResolvedValue((key: string, opts?: any) => {
+    fetchTyped: vi.fn().mockResolvedValue((key: string, _opts?: any) => {
       if (key === "filter:defaultWarnMessage") return "Default warning for {user}: {reason}";
       return key;
     }),
@@ -70,7 +70,7 @@ describe("FilterMessageListener", () => {
       user: { id: "bot-123" },
     } as any;
 
-    container.db = {
+    (container as any).db = {
       config: {
         getModuleConfig: vi.fn().mockResolvedValue(null),
       },

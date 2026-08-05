@@ -76,4 +76,12 @@ export class LoggingModule extends Module {
   public override async deleteUserData(
     _userId: string,
   ): Promise<void> {}
+
+  // No per-user rows: this module only ever writes event embeds to a Discord
+  // channel, never to our own DB, so there's nothing to export.
+  public override exportUserData(
+    _userId: string,
+  ): Record<string, unknown> | null {
+    return null;
+  }
 }

@@ -23,7 +23,7 @@ import {
 } from "#modules/core/ui/addons.js";
 import { DEFAULT_PREFIX } from "#modules/core/ui/hub.js";
 import { buildFeatureListView } from "#modules/core/ui/modules.js";
-import { buildPermitTargetPickerView } from "#modules/core/ui/permissions.js";
+import { buildPermitPickerView } from "#modules/core/ui/permissions.js";
 import { Emojis } from "#utilities/assets.js";
 import {
   ephemeralCard,
@@ -115,29 +115,17 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
         return undefined;
       case "permdel": {
         const raw = [sub, ...rest].join(":");
-        const [kind, modelType, modelId, ...permitParts] = raw.split("|");
-        const permit = permitParts.join("|");
+        const [permitIdRaw, targetType, targetId] = raw.split("|");
+        const permitId = Number(permitIdRaw);
         if (
-          permit &&
-          modelId &&
-          (modelType === "role" || modelType === "user")
+          Number.isInteger(permitId) &&
+          targetId &&
+          (targetType === "role" || targetType === "user")
         ) {
           const perms = getService("permissions");
-          await (
-            kind === "e"
-              ? perms.revokeEnforcedPermit(
-                  interaction.guildId,
-                  modelType,
-                  modelId,
-                  permit,
-                )
-              : perms.revokeCustomPermit(
-                  interaction.guildId,
-                  modelType,
-                  modelId,
-                  permit,
-                )
-          ).catch(() => null);
+          await perms
+            .unassignPermit(permitId, targetType, targetId)
+            .catch(() => null);
         }
         return renderPermissions(interaction, 0, t);
       }
@@ -151,7 +139,14 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
           sub === "grant" &&
           (rest[0] === "custom" || rest[0] === "enforced")
         ) {
-          return interaction.editReply(buildPermitTargetPickerView(rest[0], t));
+          const kind = rest[0];
+          const perms = getService("permissions");
+          const permits = (await perms.listPermits(interaction.guildId)).filter(
+            (p) => p.kind === kind,
+          );
+          return interaction.editReply(
+            buildPermitPickerView(kind, permits, t),
+          );
         }
         return undefined;
       }

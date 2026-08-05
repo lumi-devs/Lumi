@@ -36,6 +36,13 @@ export interface GdprDeletePayload {
   requester: GdprRequester;
 }
 
+export interface GdprExportPayload {
+  userId: string;
+}
+
+/** Response `data` shape of `global.gdpr.export`, keyed by module name (core data under `"core"`). */
+export type GdprExportResult = Record<string, unknown>;
+
 export interface RepoAddPayload {
   name: string;
   url: string;
@@ -77,6 +84,58 @@ export interface GuildSettingsPayload {
   timezone?: string;
   noMentionSpamWindowMs?: number | null;
   noMentionSpamLimit?: number | null;
+  inviteUrl?: string | null;
+  supportUrl?: string | null;
+}
+
+export type PermitKind = "enforced" | "custom";
+export type PermitTargetType = "role" | "user";
+
+export interface PermitAssignmentPayload {
+  id: number;
+  targetType: PermitTargetType;
+  targetId: string;
+}
+
+export interface PermitPayload {
+  id: number;
+  name: string;
+  kind: PermitKind;
+  nodes: string[];
+  builtin: boolean;
+  assignments: PermitAssignmentPayload[];
+}
+
+export interface PermitsListResponse {
+  permits: PermitPayload[];
+}
+
+export interface PermitCreatePayload {
+  name: string;
+  kind: PermitKind;
+  nodes: string[];
+}
+
+export interface PermitUpdatePayload {
+  permitId: number;
+  name?: string;
+  nodes?: string[];
+}
+
+export interface PermitDeletePayload {
+  permitId: number;
+}
+
+export interface PermitAssignPayload {
+  permitId: number;
+  targetType: PermitTargetType;
+  targetId: string;
+}
+
+export interface PermitUnassignPayload {
+  permitId: number;
+  targetType: PermitTargetType;
+  targetId: string;
 }
 
 /** dashboard.md §10 — Bot Owner System Panel actions. */
@@ -103,7 +162,14 @@ export interface RpcRequestPayloads {
   "guild.module.toggle": ModuleTogglePayload;
   "guild.config.set": ConfigSetPayload;
   "guild.settings.set": GuildSettingsPayload;
+  "guild.permits.list": never;
+  "guild.permits.create": PermitCreatePayload;
+  "guild.permits.update": PermitUpdatePayload;
+  "guild.permits.delete": PermitDeletePayload;
+  "guild.permits.assign": PermitAssignPayload;
+  "guild.permits.unassign": PermitUnassignPayload;
   "auth.whoami": never;
+  "global.gdpr.export": GdprExportPayload;
   "system.dashboard.get": never;
   "system.maintenance.set": SystemMaintenancePayload;
   "system.module.toggle": SystemModuleTogglePayload;
@@ -129,7 +195,14 @@ export const RPC_ACTIONS = {
   guildModuleToggle: "guild.module.toggle",
   guildConfigSet: "guild.config.set",
   guildSettingsSet: "guild.settings.set",
+  guildPermitsList: "guild.permits.list",
+  guildPermitsCreate: "guild.permits.create",
+  guildPermitsUpdate: "guild.permits.update",
+  guildPermitsDelete: "guild.permits.delete",
+  guildPermitsAssign: "guild.permits.assign",
+  guildPermitsUnassign: "guild.permits.unassign",
   authWhoAmI: "auth.whoami",
+  gdprExport: "global.gdpr.export",
   // System Panel (dashboard.md §10) — request/response contracts only; the
   // bot worker doesn't implement handlers for these yet (see apps/worker),
   // same as the rest of §10's action list. Adding the remaining ones

@@ -59,7 +59,7 @@ vi.mock("#modules/afk/index.js", () => ({
 describe("AFK Module Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    container.invalidation = undefined;
+    (container as any).invalidation = undefined;
   });
 
   describe("AfkKeys and AfkTTL", () => {
@@ -137,7 +137,7 @@ describe("AFK Module Tests", () => {
     });
 
     it("uses invalidation service when available", async () => {
-      container.invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
+      (container as any).invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
       (container.db.afk.deleteEntry as any).mockResolvedValue(undefined);
 
       const res = await clearAfkEntry("g1", "u1");
@@ -168,7 +168,7 @@ describe("AFK Module Tests", () => {
     });
 
     it("uses invalidation service for user keys when available", async () => {
-      container.invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
+      (container as any).invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
       (container.db.afk.deleteAllForUser as any).mockResolvedValue(1);
       (container.redis.scan as any).mockResolvedValueOnce(["0", ["key1"]]);
 
@@ -224,7 +224,7 @@ describe("AFK Module Tests", () => {
       ]);
       const mentions = await getAfkMentions("g1", "u1");
       expect(mentions.length).toBe(1);
-      expect(mentions[0].authorId).toBe("u2");
+      expect(mentions[0]!.authorId).toBe("u2");
     });
 
     it("batch adds mentions for multiple users", async () => {
@@ -246,7 +246,7 @@ describe("AFK Module Tests", () => {
       await clearAfkMentions("g1", "u1");
       expect(container.redis.del).toHaveBeenCalledWith("lumi:afk:mentions:g1:u1");
 
-      container.invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
+      (container as any).invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
       await clearAfkMentions("g1", "u1");
       expect(container.invalidation.invalidate).toHaveBeenCalledWith("lumi:afk:mentions:g1:u1");
     });

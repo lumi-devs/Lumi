@@ -1,0 +1,96 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { exportMyData } from "#/actions/user-actions";
+import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
+import { Button } from "#/components/ui/button";
+
+function countEntries(value: unknown): number {
+  if (Array.isArray(value)) return value.length;
+  if (value && typeof value === "object") return Object.keys(value).length;
+  return value == null ? 0 : 1;
+}
+
+export function GdprExportCard() {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<Record<string, number> | null>(null);
+
+  function handleExport() {
+    setError(null);
+    startTransition(async () => {
+      const res = await exportMyData();
+      if (!res.ok || !res.data) {
+        setError(res.error ?? "Export failed");
+        return;
+      }
+
+      const nextSummary: Record<string, number> = {};
+      for (const [moduleName, moduleData] of Object.entries(res.data)) {
+        nextSummary[moduleName] = countEntries(moduleData);
+      }
+      setSummary(nextSummary);
+
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `lumi-data-export-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle>Download my data</CardTitle>
+          <CardDescription>
+            A JSON export of everything Lumi stores about you (AFK status,
+            moderation cases, temp voice channels you own, and more).
+          </CardDescription>
+        </div>
+      </CardHeader>
+      <div className="flex flex-col gap-4">
+        <Button
+          variant="primary"
+          onClick={handleExport}
+          disabled={isPending}
+          className="self-start"
+        >
+          {isPending ? "Preparing export…" : "Download my data"}
+        </Button>
+        {error && <p className="text-xs text-danger">{error}</p>}
+        {summary && (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold text-white/60">
+              Records found, by module
+            </p>
+            {Object.keys(summary).length === 0 ? (
+              <p className="text-xs text-white/40">
+                Nothing on file for your account.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {Object.entries(summary).map(([moduleName, count]) => (
+                  <li
+                    key={moduleName}
+                    className="flex items-center justify-between rounded-lg border border-border bg-white/5 px-3 py-2 text-xs"
+                  >
+                    <span className="font-medium text-white/80">{moduleName}</span>
+                    <span className="text-white/50">
+                      {count} record{count === 1 ? "" : "s"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}

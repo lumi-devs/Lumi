@@ -149,6 +149,13 @@ export class ModerationRepository extends Repository {
     });
   }
 
+  public findCasesForUser(userId: string): Promise<ModerationCase[]> {
+    return this.prisma.moderationCase.findMany({
+      where: { OR: [{ userId }, { moderatorId: userId }] },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
   public getWarnThresholds(guildId: string) {
     return this.prisma.warnThreshold.findMany({
       where: { guildId },

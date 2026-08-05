@@ -2,7 +2,11 @@ import "server-only";
 import { cache } from "react";
 import { RPC_ACTIONS } from "@lumi/contracts";
 import { rpcCall } from "./rpc";
-import type { DashboardData, SystemDashboardData } from "./dashboard-data";
+import type {
+  DashboardData,
+  PermitView,
+  SystemDashboardData,
+} from "./dashboard-data";
 
 // `React.cache()` gives per-request memoization: the guild layout (sidebar)
 // and whichever page is rendering both call this with the same guildId, but
@@ -17,6 +21,16 @@ export const getGuildDashboard = cache(
       actorId,
     });
     return data as DashboardData;
+  },
+);
+
+export const getGuildPermits = cache(
+  async (guildId: string, actorId: string): Promise<PermitView[]> => {
+    const data = (await rpcCall(RPC_ACTIONS.guildPermitsList, {
+      guildId,
+      actorId,
+    })) as { permits: PermitView[] };
+    return data.permits;
   },
 );
 

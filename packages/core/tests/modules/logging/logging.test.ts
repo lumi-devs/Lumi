@@ -8,8 +8,8 @@ describe("LoggingModule", () => {
       {},
     );
     expect(mod).toBeDefined();
-    expect(LoggingModule.meta.name).toBe("logging");
-    expect(LoggingModule.meta.displayName).toBe("Logging");
+    expect((LoggingModule as any).meta.name).toBe("logging");
+    expect((LoggingModule as any).meta.displayName).toBe("Logging");
   });
 
   it("handles deleteUserData without throwing", async () => {

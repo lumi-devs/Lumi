@@ -27,6 +27,11 @@ import { TempVcRepository } from "#lib/prisma/repositories/TempVcRepository.js";
 export type {
   TargetPermitPayload,
   UserPermitSet,
+  PermitKind,
+  PermitTargetType,
+  PermitRecord,
+  PermitAssignmentRecord,
+  PermitWithAssignments,
 } from "#lib/prisma/repositories/PermissionRepository.js";
 export type { AuditLogPayload } from "#lib/prisma/repositories/AuditRepository.js";
 export type { ConfigHistoryEntry } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
@@ -154,6 +159,22 @@ export class DatabaseService {
     if (keys.length) {
       await container.invalidation.invalidate(...keys);
     }
+  }
+
+  public async exportUserData(
+    userId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const [user, blocklist, auditLedger] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId } }),
+      this.prisma.blocklist.findMany({ where: { userId } }),
+      this.prisma.auditLedger.findMany({ where: { userId } }),
+    ]);
+
+    if (!user && blocklist.length === 0 && auditLedger.length === 0) {
+      return null;
+    }
+
+    return { user, blocklist, auditLedger };
   }
 
   public transaction(guildId: string): Promise<GuildWriteTransaction> {

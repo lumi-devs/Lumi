@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
+import { Collection } from "discord.js";
 import { RPC_ACTIONS } from "@lumi/contracts";
 import { rpcHandlers } from "#lib/rabbitmq/index.js";
 import { DashboardModule } from "#modules/dashboard/index.js";
@@ -16,11 +17,24 @@ describe("dashboard module RPC handlers", () => {
     vi.clearAllMocks();
 
     guild = {
+      id: GUILD_ID,
       ownerId: OWNER_ID,
       name: "Test Guild",
       iconURL: vi.fn().mockReturnValue("https://example.com/icon.png"),
+      roles: {
+        cache: new Collection([
+          [GUILD_ID, { id: GUILD_ID, name: "@everyone", color: 0 }],
+          ["444444444444444444", { id: "444444444444444444", name: "Mods", color: 0 }],
+        ]),
+      },
+      channels: {
+        cache: new Collection([
+          ["555555555555555555", { id: "555555555555555555", name: "general", type: 0 }],
+        ]),
+      },
       members: {
         fetch: vi.fn(),
+        cache: new Collection(),
       },
     };
 
@@ -37,7 +51,7 @@ describe("dashboard module RPC handlers", () => {
       },
     } as any;
 
-    container.db = {
+    (container as any).db = {
       config: {
         getGuildSettings: vi.fn().mockResolvedValue({
           prefix: "!",
@@ -100,6 +114,12 @@ describe("dashboard module RPC handlers", () => {
     expect(result.settings.prefix).toBe("!");
     expect(container.db.config.getGuildSettings).toHaveBeenCalledWith(GUILD_ID);
     expect(guild.members.fetch).not.toHaveBeenCalled();
+    expect(result.roles).toEqual([
+      { id: "444444444444444444", name: "Mods", color: 0 },
+    ]);
+    expect(result.channels).toEqual([
+      { id: "555555555555555555", name: "general", type: 0 },
+    ]);
   });
 
   it("returns guild settings + modules for a non-owner actor with ManageGuild permission", async () => {

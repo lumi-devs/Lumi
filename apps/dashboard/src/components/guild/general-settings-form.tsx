@@ -11,9 +11,16 @@ import {
   CardTitle,
   CardDescription,
 } from "#/components/ui/card";
-import { Field, Input } from "#/components/ui/input";
+import { Field, Input, Select } from "#/components/ui/input";
 import { useServerAction } from "#/lib/use-server-action";
-import type { GuildSettings } from "#/lib/dashboard-data";
+import type {
+  GuildSettings,
+  DashboardRoleView,
+  DashboardChannelView,
+} from "#/lib/dashboard-data";
+
+/** Channel types offered for the Mod Log Channel picker (text-capable only). */
+const LOG_CHANNEL_TYPES = new Set([0, 5]);
 
 type FormState = GuildSettingsPayload;
 
@@ -27,18 +34,22 @@ const FORM_KEYS = [
   "timezone",
   "noMentionSpamWindowMs",
   "noMentionSpamLimit",
+  "inviteUrl",
+  "supportUrl",
 ] as const satisfies readonly (keyof FormState)[];
 
 const FIELD_LABELS: Record<keyof FormState, string> = {
   prefix: "Command prefix",
-  modRoleId: "Mod role ID",
-  adminRoleId: "Admin role ID",
-  modLogChannelId: "Mod log channel ID",
-  muteRoleId: "Mute role ID",
+  modRoleId: "Mod role",
+  adminRoleId: "Admin role",
+  modLogChannelId: "Mod log channel",
+  muteRoleId: "Mute role",
   locale: "Locale",
   timezone: "Timezone",
   noMentionSpamWindowMs: "No-mention-spam window (ms)",
   noMentionSpamLimit: "No-mention-spam limit",
+  inviteUrl: "Invite URL",
+  supportUrl: "Support URL",
 };
 
 const NULLABLE_STRING_FIELDS = new Set<keyof FormState>([
@@ -47,6 +58,8 @@ const NULLABLE_STRING_FIELDS = new Set<keyof FormState>([
   "adminRoleId",
   "modLogChannelId",
   "muteRoleId",
+  "inviteUrl",
+  "supportUrl",
 ]);
 
 function toFormState(settings: GuildSettings): FormState {
@@ -60,6 +73,8 @@ function toFormState(settings: GuildSettings): FormState {
     timezone: (settings["timezone"] as string) ?? "UTC",
     noMentionSpamWindowMs: (settings["noMentionSpamWindowMs"] as number | null) ?? null,
     noMentionSpamLimit: (settings["noMentionSpamLimit"] as number | null) ?? null,
+    inviteUrl: (settings["inviteUrl"] as string | null) ?? "",
+    supportUrl: (settings["supportUrl"] as string | null) ?? "",
   };
 }
 
@@ -75,9 +90,13 @@ type SyncMessage =
 export function GeneralSettingsForm({
   guildId,
   settings,
+  roles,
+  channels,
 }: {
   guildId: string;
   settings: GuildSettings;
+  roles: DashboardRoleView[];
+  channels: DashboardChannelView[];
 }) {
   const [baseline, setBaseline] = useState<FormState>(() => toFormState(settings));
   const [form, setForm] = useState<FormState>(baseline);
@@ -204,8 +223,6 @@ export function GeneralSettingsForm({
     });
   }
 
-  const snowflake = "font-mono text-[12px]";
-
   return (
     <>
       {/* `rise` is the third beat of the guild overview's page-load
@@ -262,45 +279,95 @@ export function GeneralSettingsForm({
           <CardHeader>
             <CardTitle>Roles &amp; channels</CardTitle>
             <CardDescription>
-              Discord snowflake IDs. Enable Developer Mode in Discord to copy
-              one from a right-click menu.
+              Staff roles and the mod log destination for this server.
             </CardDescription>
           </CardHeader>
           <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Mod role ID" htmlFor="modRoleId">
-              <Input
+            <Field label="Mod role" htmlFor="modRoleId">
+              <Select
                 id="modRoleId"
-                className={snowflake}
-                placeholder="Role ID"
                 value={form.modRoleId ?? ""}
-                onChange={(e) => field("modRoleId", e.target.value)}
-              />
+                onChange={(e) => field("modRoleId", e.target.value || null)}
+              >
+                <option value="">None</option>
+                {roles.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </Select>
             </Field>
-            <Field label="Admin role ID" htmlFor="adminRoleId">
-              <Input
+            <Field label="Admin role" htmlFor="adminRoleId">
+              <Select
                 id="adminRoleId"
-                className={snowflake}
-                placeholder="Role ID"
                 value={form.adminRoleId ?? ""}
-                onChange={(e) => field("adminRoleId", e.target.value)}
-              />
+                onChange={(e) => field("adminRoleId", e.target.value || null)}
+              >
+                <option value="">None</option>
+                {roles.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </Select>
             </Field>
-            <Field label="Mute role ID" htmlFor="muteRoleId">
-              <Input
+            <Field label="Mute role" htmlFor="muteRoleId">
+              <Select
                 id="muteRoleId"
-                className={snowflake}
-                placeholder="Role ID"
                 value={form.muteRoleId ?? ""}
-                onChange={(e) => field("muteRoleId", e.target.value)}
+                onChange={(e) => field("muteRoleId", e.target.value || null)}
+              >
+                <option value="">None</option>
+                {roles.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Mod log channel" htmlFor="modLogChannelId">
+              <Select
+                id="modLogChannelId"
+                value={form.modLogChannelId ?? ""}
+                onChange={(e) => field("modLogChannelId", e.target.value || null)}
+              >
+                <option value="">None</option>
+                {channels
+                  .filter((c) => LOG_CHANNEL_TYPES.has(c.type))
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      #{c.name}
+                    </option>
+                  ))}
+              </Select>
+            </Field>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Invite &amp; support</CardTitle>
+            <CardDescription>
+              Shown to members looking for how to invite the bot or get help.
+            </CardDescription>
+          </CardHeader>
+          <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Invite URL" htmlFor="inviteUrl">
+              <Input
+                id="inviteUrl"
+                type="url"
+                placeholder="https://discord.gg/…"
+                value={form.inviteUrl ?? ""}
+                onChange={(e) => field("inviteUrl", e.target.value)}
               />
             </Field>
-            <Field label="Mod log channel ID" htmlFor="modLogChannelId">
+            <Field label="Support URL" htmlFor="supportUrl">
               <Input
-                id="modLogChannelId"
-                className={snowflake}
-                placeholder="Channel ID"
-                value={form.modLogChannelId ?? ""}
-                onChange={(e) => field("modLogChannelId", e.target.value)}
+                id="supportUrl"
+                type="url"
+                placeholder="https://…"
+                value={form.supportUrl ?? ""}
+                onChange={(e) => field("supportUrl", e.target.value)}
               />
             </Field>
           </CardBody>

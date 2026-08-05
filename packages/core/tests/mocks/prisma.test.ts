@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { createMockPrismaClient, type MockPrismaClient } from "./prisma.js";
+import { createMockPrismaClient, type MockPrismaClient, type MockModelDelegate } from "./prisma.js";
 import { AfkRepository } from "#lib/prisma/repositories/AfkRepository.js";
 
 describe("MockPrismaClient (offline in-memory Postgres test driver)", () => {
@@ -10,41 +10,45 @@ describe("MockPrismaClient (offline in-memory Postgres test driver)", () => {
   });
 
   it("creates a model table lazily on first access", async () => {
-    expect(await prisma.someModel.findMany()).toEqual([]);
+    const someModel = prisma.someModel as MockModelDelegate;
+    expect(await someModel.findMany()).toEqual([]);
   });
 
   it("supports create / findUnique / findMany / count", async () => {
-    await prisma.widget.create({ data: { id: "1", name: "a" } });
-    await prisma.widget.create({ data: { id: "2", name: "b" } });
+    const widget = prisma.widget as MockModelDelegate;
+    await widget.create({ data: { id: "1", name: "a" } });
+    await widget.create({ data: { id: "2", name: "b" } });
 
-    expect(await prisma.widget.findUnique({ where: { id: "1" } })).toEqual({ id: "1", name: "a" });
-    expect(await prisma.widget.findMany({ where: { name: "b" } })).toEqual([{ id: "2", name: "b" }]);
-    expect(await prisma.widget.count()).toBe(2);
+    expect(await widget.findUnique({ where: { id: "1" } })).toEqual({ id: "1", name: "a" });
+    expect(await widget.findMany({ where: { name: "b" } })).toEqual([{ id: "2", name: "b" }]);
+    expect(await widget.count()).toBe(2);
   });
 
   it("matches flattened compound-unique keys, e.g. @@id([userId, guildId])", async () => {
     prisma.$seed("afkEntry", [{ userId: "u1", guildId: "g1", reason: "AFK", since: new Date() }]);
+    const afkEntry = prisma.afkEntry as MockModelDelegate;
 
-    const found = await prisma.afkEntry.findUnique({
+    const found = await afkEntry.findUnique({
       where: { userId_guildId: { userId: "u1", guildId: "g1" } },
     });
     expect(found).toMatchObject({ userId: "u1", guildId: "g1" });
 
-    const missing = await prisma.afkEntry.findUnique({
+    const missing = await afkEntry.findUnique({
       where: { userId_guildId: { userId: "u1", guildId: "other" } },
     });
     expect(missing).toBeNull();
   });
 
   it("supports upsert (create branch, then update branch)", async () => {
-    const created = await prisma.counter.upsert({
+    const counter = prisma.counter as MockModelDelegate;
+    const created = await counter.upsert({
       where: { id: "c1" },
       update: { value: { increment: 1 } },
       create: { id: "c1", value: 0 },
     });
     expect(created).toEqual({ id: "c1", value: 0 });
 
-    const updated = await prisma.counter.upsert({
+    const updated = await counter.upsert({
       where: { id: "c1" },
       update: { value: { increment: 1 } },
       create: { id: "c1", value: 0 },
@@ -58,38 +62,42 @@ describe("MockPrismaClient (offline in-memory Postgres test driver)", () => {
       { id: "2", score: 15 },
       { id: "3", score: 25 },
     ]);
+    const item = prisma.item as MockModelDelegate;
 
-    const { count: updatedCount } = await prisma.item.updateMany({
+    const { count: updatedCount } = await item.updateMany({
       where: { score: { gte: 10 } },
       data: { score: { increment: 100 } },
     });
     expect(updatedCount).toBe(2);
-    expect(await prisma.item.findMany({ where: { score: { gte: 100 } } })).toHaveLength(2);
+    expect(await item.findMany({ where: { score: { gte: 100 } } })).toHaveLength(2);
 
-    const { count: deletedCount } = await prisma.item.deleteMany({ where: { score: { lt: 10 } } });
+    const { count: deletedCount } = await item.deleteMany({ where: { score: { lt: 10 } } });
     expect(deletedCount).toBe(1);
-    expect(await prisma.item.count()).toBe(2);
+    expect(await item.count()).toBe(2);
   });
 
   it("throws a P2025-shaped error when update/delete finds no match", async () => {
-    await expect(prisma.ghost.update({ where: { id: "nope" }, data: {} })).rejects.toMatchObject({
+    const ghost = prisma.ghost as MockModelDelegate;
+    await expect(ghost.update({ where: { id: "nope" }, data: {} })).rejects.toMatchObject({
       code: "P2025",
     });
-    await expect(prisma.ghost.delete({ where: { id: "nope" } })).rejects.toMatchObject({
+    await expect(ghost.delete({ where: { id: "nope" } })).rejects.toMatchObject({
       code: "P2025",
     });
   });
 
   it("supports both $transaction forms", async () => {
-    await prisma.tx.create({ data: { id: "1" } });
+    const tx = prisma.tx as MockModelDelegate;
+    await tx.create({ data: { id: "1" } });
 
-    const [a, b] = await prisma.$transaction([prisma.tx.count(), prisma.tx.findMany()]);
+    const [a, b] = await prisma.$transaction([tx.count(), tx.findMany()]);
     expect(a).toBe(1);
     expect(b).toHaveLength(1);
 
-    const viaCallback = await prisma.$transaction(async (tx) => {
-      await tx.tx.create({ data: { id: "2" } });
-      return tx.tx.count();
+    const viaCallback = await prisma.$transaction(async (txClient) => {
+      const txModel = txClient.tx as MockModelDelegate;
+      await txModel.create({ data: { id: "2" } });
+      return txModel.count();
     });
     expect(viaCallback).toBe(2);
   });

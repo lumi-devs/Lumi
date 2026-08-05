@@ -5,6 +5,17 @@ import { RPC_ACTIONS } from "@lumi/contracts";
 import { s, type BaseValidator } from "@sapphire/shapeshift";
 import { getService } from "#lib/module-system/Service.js";
 import { checkModulesEnabled } from "#lib/module-check.js";
+import { ChannelType } from "discord.js";
+
+/** Channel types sensible to offer in a CHANNEL config picker by default (no threads, no categories). */
+const PICKABLE_CHANNEL_TYPES = new Set<ChannelType>([
+  ChannelType.GuildText,
+  ChannelType.GuildAnnouncement,
+  ChannelType.GuildVoice,
+  ChannelType.GuildStageVoice,
+  ChannelType.GuildForum,
+  ChannelType.GuildMedia,
+]);
 
 const SnowflakeSchema = s.string().regex(/^\d{17,20}$/);
 
@@ -52,6 +63,19 @@ async function requireGuildManager(
   }
 }
 
+/** Stricter than `requireGuildManager` — only the guild owner may pass, no ManageGuild fallback. */
+function requireGuildOwner(
+  guildId: string,
+  actorId: string | undefined,
+): void {
+  if (!actorId) throw new Error("actorId is required");
+  const guild = container.client.guilds.cache.get(guildId);
+  if (!guild) throw new Error("Guild not found in bot cache");
+  if (guild.ownerId !== actorId) {
+    throw new Error("Only the guild owner may change this setting");
+  }
+}
+
 const ModuleToggleSchema = s.object({
   moduleName: s.string().lengthGreaterThanOrEqual(1),
   enabled: s.boolean(),
@@ -73,6 +97,33 @@ const GuildSettingsSchema = s.object({
   timezone: s.string().optional(),
   noMentionSpamWindowMs: s.number().int().nullable().optional(),
   noMentionSpamLimit: s.number().int().nullable().optional(),
+  inviteUrl: s.string().url().nullable().optional(),
+  supportUrl: s.string().url().nullable().optional(),
+});
+
+/** Fields in `GuildSettingsSchema` restricted to the guild owner (no ManageGuild fallback). */
+const OWNER_ONLY_SETTINGS_KEYS = new Set(["inviteUrl", "supportUrl"]);
+
+const PermitCreateSchema = s.object({
+  name: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(64),
+  kind: s.enum(["enforced", "custom"] as const),
+  nodes: s.array(s.string().lengthGreaterThanOrEqual(1)).lengthGreaterThanOrEqual(1),
+});
+
+const PermitUpdateSchema = s.object({
+  permitId: s.number().int(),
+  name: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(64).optional(),
+  nodes: s.array(s.string().lengthGreaterThanOrEqual(1)).lengthGreaterThanOrEqual(1).optional(),
+});
+
+const PermitDeleteSchema = s.object({
+  permitId: s.number().int(),
+});
+
+const PermitAssignSchema = s.object({
+  permitId: s.number().int(),
+  targetType: s.enum(["role", "user"] as const),
+  targetId: SnowflakeSchema,
 });
 
 @DefineModule({
@@ -125,11 +176,33 @@ export class DashboardModule extends Module {
         };
       });
 
+      const roles = guild.roles.cache
+        .filter((r) => r.id !== guild.id)
+        .map((r) => ({ id: r.id, name: r.name, color: r.color }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      const channels = guild.channels.cache
+        .filter((c) => PICKABLE_CHANNEL_TYPES.has(c.type))
+        .map((c) => ({ id: c.id, name: c.name, type: c.type }));
+
+      const members = guild.members.cache
+        .filter((m) => !m.user.bot)
+        .map((m) => ({
+          id: m.id,
+          username: m.user.username,
+          displayName: m.displayName,
+        }))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName))
+        .slice(0, 200);
+
       return {
         name: guild.name,
         icon: guild.iconURL(),
         settings,
         modules,
+        roles,
+        channels,
+        members,
       };
     });
 
@@ -192,6 +265,10 @@ export class DashboardModule extends Module {
       await requireGuildManager(guildId, req.actorId);
       const data = parsePayload(GuildSettingsSchema, req.data);
 
+      if (Object.keys(data).some((k) => OWNER_ONLY_SETTINGS_KEYS.has(k))) {
+        requireGuildOwner(guildId, req.actorId);
+      }
+
       const tx = await container.db.transaction(guildId);
       try {
         tx.write(data);
@@ -203,6 +280,79 @@ export class DashboardModule extends Module {
       return { success: true, settings: updated };
     });
 
+    registerRpcHandler(RPC_ACTIONS.guildPermitsList, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      await requireGuildManager(guildId, req.actorId);
+      const permits = await getService("permissions").listPermits(guildId);
+      return { permits };
+    });
+
+    registerRpcHandler(RPC_ACTIONS.guildPermitsCreate, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      await requireGuildManager(guildId, req.actorId);
+      const { name, kind, nodes } = parsePayload(PermitCreateSchema, req.data);
+      const permit = await getService("permissions").createPermit(
+        guildId,
+        name,
+        kind,
+        nodes,
+      );
+      return { success: true, permit };
+    });
+
+    registerRpcHandler(RPC_ACTIONS.guildPermitsUpdate, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      await requireGuildManager(guildId, req.actorId);
+      const { permitId, name, nodes } = parsePayload(
+        PermitUpdateSchema,
+        req.data,
+      );
+      const perms = getService("permissions");
+      if (name !== undefined) await perms.renamePermit(permitId, name);
+      const permit = nodes !== undefined
+        ? await perms.updatePermitNodes(permitId, nodes)
+        : await perms.getPermit(permitId);
+      return { success: true, permit };
+    });
+
+    registerRpcHandler(RPC_ACTIONS.guildPermitsDelete, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      await requireGuildManager(guildId, req.actorId);
+      const { permitId } = parsePayload(PermitDeleteSchema, req.data);
+      await getService("permissions").deletePermit(permitId);
+      return { success: true };
+    });
+
+    registerRpcHandler(RPC_ACTIONS.guildPermitsAssign, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      await requireGuildManager(guildId, req.actorId);
+      const { permitId, targetType, targetId } = parsePayload(
+        PermitAssignSchema,
+        req.data,
+      );
+      await getService("permissions").assignPermit(
+        permitId,
+        targetType,
+        targetId,
+      );
+      return { success: true };
+    });
+
+    registerRpcHandler(RPC_ACTIONS.guildPermitsUnassign, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      await requireGuildManager(guildId, req.actorId);
+      const { permitId, targetType, targetId } = parsePayload(
+        PermitAssignSchema,
+        req.data,
+      );
+      await getService("permissions").unassignPermit(
+        permitId,
+        targetType,
+        targetId,
+      );
+      return { success: true };
+    });
+
     return super.onLoad();
   }
 
@@ -212,6 +362,12 @@ export class DashboardModule extends Module {
     rpcHandlers.delete(RPC_ACTIONS.guildModuleToggle);
     rpcHandlers.delete(RPC_ACTIONS.guildConfigSet);
     rpcHandlers.delete(RPC_ACTIONS.guildSettingsSet);
+    rpcHandlers.delete(RPC_ACTIONS.guildPermitsList);
+    rpcHandlers.delete(RPC_ACTIONS.guildPermitsCreate);
+    rpcHandlers.delete(RPC_ACTIONS.guildPermitsUpdate);
+    rpcHandlers.delete(RPC_ACTIONS.guildPermitsDelete);
+    rpcHandlers.delete(RPC_ACTIONS.guildPermitsAssign);
+    rpcHandlers.delete(RPC_ACTIONS.guildPermitsUnassign);
     return super.onUnload();
   }
 }

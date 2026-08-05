@@ -344,6 +344,17 @@ export class ModuleStore extends Store<Module> {
       .filter((r): r is ModuleRecord => r !== undefined);
   }
 
+  /** Every module's entry file is `index.ts`; rename the piece to its declared module name so Sapphire's name-collision eviction in `insert()` doesn't unload one module per subsequent module load. */
+  public override construct(
+    ...args: Parameters<Store<Module>["construct"]>
+  ): Module {
+    const [Ctor, data] = args;
+    const record = [...this.#records.values()].find(
+      (r) => r.dir === data.root,
+    );
+    return super.construct(Ctor, record ? { ...data, name: record.name } : data);
+  }
+
   /**
    * Loads a module and sequentially loads all of its child pieces across all registered Sapphire stores.
    *

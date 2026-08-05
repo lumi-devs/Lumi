@@ -10,5 +10,6 @@ export class GuildCreateListener extends Listener<typeof Events.GuildCreate> {
       `[Guild] ${Emojis.GUILD} Joined: ${guild.name} (${guild.id}) - ${guild.memberCount} members`,
     );
     await this.container.db.config.getGuildSettings(guild.id);
+    await this.container.db.permissions.ensureBuiltinPermits(guild.id);
   }
 }

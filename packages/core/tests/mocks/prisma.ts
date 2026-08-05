@@ -242,7 +242,7 @@ class PrismaNotFoundError extends Error {
 }
 
 /** One in-memory "table" plus the Prisma delegate methods bound to it. */
-class MockModelDelegate {
+export class MockModelDelegate {
   private rows: Rec[] = [];
 
   public constructor(private readonly modelName: string) {}
@@ -420,7 +420,9 @@ export class MockPrismaClient {
     if (typeof arg === "function") return arg(this.selfRef ?? this);
     throw new TypeError("MockPrismaClient.$transaction: expected an array or a callback.");
   }) as {
-    <T>(promises: Promise<T>[]): Promise<T[]>;
+    <T extends readonly unknown[] | []>(
+      promises: readonly [...{ [K in keyof T]: Promise<T[K]> }],
+    ): Promise<T>;
     <T>(fn: (tx: MockPrismaClient) => Promise<T>): Promise<T>;
   };
 

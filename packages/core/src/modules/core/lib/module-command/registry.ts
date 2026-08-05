@@ -30,7 +30,8 @@ export function registerModuleCommand(
             o
               .setName("module")
               .setDescription("The name of the module")
-              .setRequired(true),
+              .setRequired(true)
+              .setAutocomplete(true),
           ),
       )
       .addSubcommand((s) =>
@@ -41,7 +42,8 @@ export function registerModuleCommand(
             o
               .setName("module")
               .setDescription("The name of the module to enable")
-              .setRequired(true),
+              .setRequired(true)
+              .setAutocomplete(true),
           ),
       )
       .addSubcommand((s) =>
@@ -52,7 +54,8 @@ export function registerModuleCommand(
             o
               .setName("module")
               .setDescription("The name of the module to disable")
-              .setRequired(true),
+              .setRequired(true)
+              .setAutocomplete(true),
           ),
       )
       .addSubcommand((s) =>
@@ -63,7 +66,8 @@ export function registerModuleCommand(
             o
               .setName("module")
               .setDescription("The name of the module to reload")
-              .setRequired(true),
+              .setRequired(true)
+              .setAutocomplete(true),
           ),
       )
       .addSubcommand((s) =>
@@ -74,13 +78,15 @@ export function registerModuleCommand(
             o
               .setName("repo")
               .setDescription("The repository name")
-              .setRequired(true),
+              .setRequired(true)
+              .setAutocomplete(true),
           )
           .addStringOption((o) =>
             o
               .setName("module")
               .setDescription("The module name")
-              .setRequired(true),
+              .setRequired(true)
+              .setAutocomplete(true),
           ),
       )
       .addSubcommand((s) =>
@@ -91,7 +97,8 @@ export function registerModuleCommand(
             o
               .setName("module")
               .setDescription("The module name to uninstall")
-              .setRequired(true),
+              .setRequired(true)
+              .setAutocomplete(true),
           ),
       )
       .addSubcommand((s) =>
@@ -102,7 +109,8 @@ export function registerModuleCommand(
             o
               .setName("module")
               .setDescription("The module name to update (omit to update all)")
-              .setRequired(false),
+              .setRequired(false)
+              .setAutocomplete(true),
           ),
       )
       .addSubcommand((s) =>
@@ -115,7 +123,8 @@ export function registerModuleCommand(
             o
               .setName("module")
               .setDescription("The module name to pin")
-              .setRequired(true),
+              .setRequired(true)
+              .setAutocomplete(true),
           ),
       )
       .addSubcommand((s) =>
@@ -126,7 +135,8 @@ export function registerModuleCommand(
             o
               .setName("module")
               .setDescription("The module name to unpin")
-              .setRequired(true),
+              .setRequired(true)
+              .setAutocomplete(true),
           ),
       )
       .addSubcommand((s) =>

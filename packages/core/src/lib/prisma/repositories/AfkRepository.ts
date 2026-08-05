@@ -47,6 +47,10 @@ export class AfkRepository extends Repository {
     return this.prisma.afkEntry.findMany({ where: { guildId } });
   }
 
+  public findAllForUser(userId: string): Promise<AfkEntry[]> {
+    return this.prisma.afkEntry.findMany({ where: { userId } });
+  }
+
   public countAll(): Promise<number> {
     return this.prisma.afkEntry.count();
   }

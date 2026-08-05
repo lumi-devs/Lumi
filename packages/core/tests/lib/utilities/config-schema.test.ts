@@ -108,7 +108,7 @@ describe("Config Schema Utilities", () => {
 
       const fields = fieldsFromSchema(mixedSchema);
       expect(fields).toHaveLength(1);
-      expect(fields[0].key).toBe("tagged");
+      expect(fields[0]!.key).toBe("tagged");
     });
   });
 

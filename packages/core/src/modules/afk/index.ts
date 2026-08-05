@@ -79,4 +79,11 @@ export class AfkModule extends Module {
   ): Promise<void> {
     await clearAllAfkForUser(userId);
   }
+
+  public override async exportUserData(
+    userId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const entries = await container.db.afk.findAllForUser(userId);
+    return entries.length > 0 ? { afkEntries: entries } : null;
+  }
 }

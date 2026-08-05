@@ -37,7 +37,10 @@ export function SiteHeader({ session }: { session: Session | null }) {
 
           <ThemeToggle />
 
-          <div className="flex items-center gap-2 rounded-md border border-border bg-surface py-1 pr-2.5 pl-1">
+          <Link
+            href="/account"
+            className="flex items-center gap-2 rounded-md border border-border bg-surface py-1 pr-2.5 pl-1 transition-colors hover:bg-white/10"
+          >
             {/* eslint-disable-next-line @next/next/no-img-element -- external Discord CDN avatar, next/image adds no value here */}
             <img
               src={session.avatar}
@@ -49,7 +52,7 @@ export function SiteHeader({ session }: { session: Session | null }) {
             <span className="max-w-[120px] truncate text-[12px] font-medium text-fg">
               {session.username}
             </span>
-          </div>
+          </Link>
 
           <form action={signOutAction}>
             <Button

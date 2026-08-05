@@ -10,46 +10,35 @@ import {
   type CardReply,
 } from "#utilities/cards.js";
 import {
-  createMentionableSelectMenu,
   createPaginationRow,
+  createRoleSelectMenu,
   createStringSelectMenu,
+  createUserSelectMenu,
   settingRow,
 } from "#utilities/panels.js";
 import {
   ButtonBuilder,
   StringSelectMenuOptionBuilder,
 } from "@discordjs/builders";
-import {
-  channelMention,
-  roleMention,
-  userMention,
-} from "@discordjs/formatters";
+import { roleMention, userMention } from "@discordjs/formatters";
 import { ButtonStyle } from "discord.js";
 
-// Each row here is a Section with 2-3 text lines + 1 button = 4-5 real
-// components once nested, and card chrome already eats ~10-19 of Discord's
-// 40-component budget per message, so page sizes stay well under naive counts.
 export const PERMS_PER_PAGE = 4;
 
-export interface PermissionOverrideRow {
-  /** The permit node granted, e.g. `mod.*` or `admin.config`. */
-  commandPath: string;
-  modelType: string;
-  modelId: string;
-  /** True for an un-quarantinable enforced permit; false for a custom permit. */
-  enforced: boolean;
+export type PermitKind = "custom" | "enforced";
+export type PermitTargetType = "role" | "user";
+
+export interface PermitAssignmentRow {
+  permitId: number;
+  permitName: string;
+  kind: PermitKind;
+  builtin: boolean;
+  targetType: PermitTargetType;
+  targetId: string;
 }
 
-export type PermitKind = "custom" | "enforced";
-
-const overrideMention = (o: PermissionOverrideRow): string => {
-  if (o.modelType === "everyone") return "@everyone";
-  if (o.modelType === "role") return roleMention(o.modelId);
-  if (o.modelType === "user") return userMention(o.modelId);
-  if (o.modelType === "category")
-    return `category ${channelMention(o.modelId)}`;
-  return channelMention(o.modelId);
-};
+const assignmentMention = (row: PermitAssignmentRow): string =>
+  row.targetType === "role" ? roleMention(row.targetId) : userMention(row.targetId);
 
 const backToPermissionsRow = (t?: LumiT): Row =>
   row(
@@ -60,33 +49,26 @@ const backToPermissionsRow = (t?: LumiT): Row =>
       .setStyle(ButtonStyle.Secondary),
   );
 
-/**
- * The permissions tab: one revocable row per granted permit, paginated at
- * {@linkcode PERMS_PER_PAGE}.
- *
- * @param overrides - Every custom and enforced permit of the guild, unsorted.
- * @param page - Zero-based page index; out-of-range values are clamped.
- */
 export function buildPermissionsView(
-  overrides: PermissionOverrideRow[],
+  assignments: PermitAssignmentRow[],
   page = 0,
   t?: LumiT,
 ): CardReply {
-  const totalPages = Math.max(1, Math.ceil(overrides.length / PERMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(assignments.length / PERMS_PER_PAGE));
   const safePage = Math.max(0, Math.min(page, totalPages - 1));
-  const shown = overrides.slice(
+  const shown = assignments.slice(
     safePage * PERMS_PER_PAGE,
     (safePage + 1) * PERMS_PER_PAGE,
   );
 
-  const sections = shown.map((o) =>
+  const sections = shown.map((a) =>
     settingRow(
       [
-        `${o.enforced ? Emojis.SHIELD : Emojis.CHECK} \`${o.commandPath}\``,
-        `-# ${o.enforced ? "enforced" : "custom"} · ${o.modelType} ${overrideMention(o)}`,
+        `${a.kind === "enforced" ? Emojis.SHIELD : Emojis.CHECK} ${a.permitName}${a.builtin ? " 🔒" : ""}`,
+        `-# ${a.kind} · ${a.targetType} ${assignmentMention(a)}`,
       ],
       {
-        customId: `lumi:permdel:${o.enforced ? "e" : "c"}|${o.modelType}|${o.modelId}|${o.commandPath}`,
+        customId: `lumi:permdel:${a.permitId}|${a.targetType}|${a.targetId}`,
         label: t ? t(PanelsKeys.PermsRevoke) : "Revoke",
         style: ButtonStyle.Danger,
       },
@@ -96,12 +78,12 @@ export function buildPermissionsView(
   const addRow = row(
     new ButtonBuilder()
       .setCustomId("lumi:permit:grant:custom")
-      .setLabel(t ? t(PanelsKeys.PermsGrantCustom) : "Grant Custom…")
+      .setLabel(t ? t(PanelsKeys.PermsGrantCustom) : "Assign Custom…")
       .setEmoji(Emojis.parse(Emojis.CHECK))
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
       .setCustomId("lumi:permit:grant:enforced")
-      .setLabel(t ? t(PanelsKeys.PermsGrantEnforced) : "Grant Enforced…")
+      .setLabel(t ? t(PanelsKeys.PermsGrantEnforced) : "Assign Enforced…")
       .setEmoji(Emojis.parse(Emojis.SHIELD))
       .setStyle(ButtonStyle.Primary),
   );
@@ -124,92 +106,88 @@ export function buildPermissionsView(
         ? t(PanelsKeys.PermsPageFooter, {
             page: safePage + 1,
             total: totalPages,
-            count: overrides.length,
+            count: assignments.length,
           })
-        : `Page ${safePage + 1} of ${totalPages} · ${overrides.length} override(s)`
+        : `Page ${safePage + 1} of ${totalPages} · ${assignments.length} assignment(s)`
       : t
-        ? t(PanelsKeys.PermsCountFooter, { count: overrides.length })
-        : `${overrides.length} override(s)`;
+        ? t(PanelsKeys.PermsCountFooter, { count: assignments.length })
+        : `${assignments.length} assignment(s)`;
 
   return noPingCard(
     makeCard(
       CARD_ACCENTS.PRIMARY,
-      `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsTitle) : "Command Permissions"}`,
+      `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsTitle) : "Permits"}`,
       shown.length
         ? `-# ${Emojis.CHECK} ${t ? t(PanelsKeys.PermsLegend) : "custom · enforced. Enforced permits survive anti-nuke quarantine."}`
         : t
           ? t(PanelsKeys.PermsEmpty)
-          : "*No permission overrides set - every command uses its default access.*",
+          : "*No permits are assigned yet - every command uses its default access.*",
       { sections, footer, actionRows: rows, separatorAboveActionRows: true },
     ),
   );
 }
 
-/** Step 1 of granting a permit: pick who it applies to. */
-export function buildPermitTargetPickerView(
+export function buildPermitPickerView(
   kind: PermitKind,
+  permits: { id: number; name: string; builtin: boolean }[],
   t?: LumiT,
 ): CardReply {
-  const select = createMentionableSelectMenu({
-    customId: `lumi:permit:target:${kind}`,
-    placeholder: t ? t(PanelsKeys.PermsPickTarget) : "Pick a role or member…",
-  });
-
-  return makeCard(
-    CARD_ACCENTS.PRIMARY,
-    `${Emojis.SHIELD} ${t ? (kind === "enforced" ? t(PanelsKeys.PermsGrantEnforced) : t(PanelsKeys.PermsGrantCustom)) : "Grant Permit"}`,
-    t
-      ? t(PanelsKeys.PermsPickTarget)
-      : "Pick a role or member to grant a permit to.",
-    {
-      actionRows: [row(select), backToPermissionsRow(t)],
-    },
-  );
-}
-
-/**
- * Step 2 of granting a permit: pick which node to grant the chosen target.
- *
- * @param nodes - Every permit node registered by a loaded command; only the
- * first 25 fit into a select menu.
- */
-export function buildPermitNodePickerView(
-  kind: PermitKind,
-  targetType: "role" | "user",
-  targetId: string,
-  nodes: string[],
-  t?: LumiT,
-): CardReply {
-  const mention =
-    targetType === "role" ? roleMention(targetId) : userMention(targetId);
-
-  if (nodes.length === 0) {
+  if (permits.length === 0) {
     return makeCard(
       CARD_ACCENTS.PRIMARY,
-      `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsPickNode) : "Pick a Permit Node"}`,
+      `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsPickPermit) : "Pick a Permit"}`,
       t
-        ? t(PanelsKeys.PermsNoNodes)
-        : "No permit nodes are registered by any loaded command.",
+        ? t(PanelsKeys.PermsNoPermits)
+        : "No permits of this kind exist yet. Create one with `/permit create` or from the dashboard.",
       { actionRows: [backToPermissionsRow(t)] },
     );
   }
 
   const select = createStringSelectMenu({
-    customId: `lumi:permit:node:${kind}:${targetType}:${targetId}`,
-    placeholder: t ? t(PanelsKeys.PermsPickNode) : "Pick the permit node…",
-    options: nodes
-      .slice(0, 25)
-      .map((node) =>
-        new StringSelectMenuOptionBuilder().setLabel(node).setValue(node),
-      ),
+    customId: `lumi:permit:pick:${kind}`,
+    placeholder: t ? t(PanelsKeys.PermsPickPermit) : "Pick a permit…",
+    options: permits.slice(0, 25).map((p) =>
+      new StringSelectMenuOptionBuilder()
+        .setLabel(p.builtin ? `${p.name} (built-in)` : p.name)
+        .setValue(String(p.id)),
+    ),
   });
 
   return makeCard(
     CARD_ACCENTS.PRIMARY,
-    `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsPickNode) : "Pick a Permit Node"}`,
-    `${t ? t(PanelsKeys.PermsPickNode) : "Pick the permit node to grant"} ${mention}.`,
-    {
-      actionRows: [row(select), backToPermissionsRow(t)],
-    },
+    `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsPickPermit) : "Pick a Permit"}`,
+    t
+      ? t(PanelsKeys.PermsPickPermit)
+      : "Pick which permit to assign.",
+    { actionRows: [row(select), backToPermissionsRow(t)] },
+  );
+}
+
+export function buildPermitAssignTargetView(
+  permitId: number,
+  permitName: string,
+  kind: PermitKind,
+  t?: LumiT,
+): CardReply {
+  const select =
+    kind === "enforced"
+      ? createUserSelectMenu({
+          customId: `lumi:permit:assign:${permitId}`,
+          placeholder: t ? t(PanelsKeys.PermsPickTarget) : "Pick a member…",
+        })
+      : createRoleSelectMenu({
+          customId: `lumi:permit:assign:${permitId}`,
+          placeholder: t ? t(PanelsKeys.PermsPickTarget) : "Pick a role…",
+        });
+
+  return makeCard(
+    CARD_ACCENTS.PRIMARY,
+    `${Emojis.SHIELD} ${permitName}`,
+    t
+      ? t(PanelsKeys.PermsPickTarget)
+      : kind === "enforced"
+        ? "Pick the member to assign this permit to."
+        : "Pick the role to assign this permit to.",
+    { actionRows: [row(select), backToPermissionsRow(t)] },
   );
 }

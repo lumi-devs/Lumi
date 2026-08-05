@@ -10,6 +10,9 @@ vi.mock('#lib/module-system/manifest.js', () => ({
 
 import { readManifest, metaFromManifest } from '#lib/module-system/manifest.js';
 
+const mockedReadManifest = vi.mocked(readManifest);
+const mockedMetaFromManifest = vi.mocked(metaFromManifest);
+
 import { ModuleStore } from '#lib/module-system/ModuleStore.js';
 
 type ModSpec = {
@@ -37,9 +40,20 @@ function setupModules(mods: Record<string, ModSpec>, order: string[] = Object.ke
 				isFile: () => false
 			}) as any
 	);
-	readManifest.mockImplementation((dir: string) => {
+	mockedReadManifest.mockImplementation((dir: string) => {
 		const name = path.basename(dir);
-		return Promise.resolve(names.includes(name) ? { name, ...mods[name] } : null);
+		if (!names.includes(name)) return Promise.resolve(null);
+		return Promise.resolve({
+			name,
+			displayName: name,
+			emoji: '',
+			description: '',
+			version: '0.0.0',
+			targetService: 'worker' as const,
+			subStores: [],
+			configFields: [],
+			...mods[name]
+		});
 	});
 }
 
@@ -48,17 +62,19 @@ describe('ModuleStore', () => {
 
 	beforeEach(() => {
 		vi.restoreAllMocks();
-		metaFromManifest.mockImplementation((m: any) => ({
+		mockedMetaFromManifest.mockImplementation((m: any) => ({
 			name: m.name,
 			displayName: m.name,
+			emoji: '',
+			description: '',
+			version: '0.0.0',
 			dependencies: m.dependencies ?? [],
 			conflicts: m.conflicts ?? [],
-			isCore: m.isCore ?? false,
 			disableable: m.disableable
 		}));
 
 		// DatabaseService is namespaced - ModuleStore reads via container.db.modules.*
-		container.db = {
+		(container as any).db = {
 			modules: {
 				getGlobalModuleStates: vi.fn().mockResolvedValue(new Map()),
 				isModuleGlobalEnabled: vi.fn(),

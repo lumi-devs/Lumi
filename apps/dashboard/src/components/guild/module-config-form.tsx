@@ -12,7 +12,11 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { SettingRow } from "#/components/ui/input";
 import { ConfigFieldInput } from "./config-field-input";
 import { useServerAction } from "#/lib/use-server-action";
-import type { DashboardModuleView } from "#/lib/dashboard-data";
+import type {
+  DashboardModuleView,
+  DashboardRoleView,
+  DashboardChannelView,
+} from "#/lib/dashboard-data";
 
 /**
  * dashboard.md §9B `DynamicConfigFormEditor` — one module's toggle + config
@@ -27,9 +31,13 @@ import type { DashboardModuleView } from "#/lib/dashboard-data";
 export function ModuleConfigForm({
   guildId,
   module: m,
+  roles,
+  channels,
 }: {
   guildId: string;
   module: DashboardModuleView;
+  roles: DashboardRoleView[];
+  channels: DashboardChannelView[];
 }) {
   const isCore = m.name === "core";
   const [enabled, setEnabled] = useState(m.enabled);
@@ -127,6 +135,8 @@ export function ModuleConfigForm({
                     onChange={(value) =>
                       setConfig((c) => ({ ...c, [f.key]: value }))
                     }
+                    roles={roles}
+                    channels={channels}
                   />
                 }
               />

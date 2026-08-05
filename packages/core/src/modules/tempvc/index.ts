@@ -34,4 +34,11 @@ export class TempVcModule extends Module {
       await tempVcRegistry.reloadVcs(guildId);
     }
   }
+
+  public override async exportUserData(
+    userId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const owned = await this.container.db.tempvc.findRecordsForOwner(userId);
+    return owned.length > 0 ? { ownedChannels: owned } : null;
+  }
 }

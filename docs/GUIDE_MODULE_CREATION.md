@@ -78,10 +78,9 @@ There is no `defaultEnabled` option - every module defaults to enabled at runtim
 | :--- | :--- | :--- |
 | `onLoad()` | Module (or its containing process) starts. Also fires `reconcileScheduledJobs()` fire-and-forget. | calls `super.onLoad()` |
 | `onUnload()` | Module is unloaded/disabled. | calls `super.onUnload()` |
-| `deleteUserData(userId, requester?)` | Meant to scrub the module's own data for a user during GDPR erasure. | no-op |
+| `deleteUserData(userId, requester?)` | Scrubs the module's own data for a user during GDPR erasure. Invoked by `executeGdprDeletion` (`#lib/gdpr.js`) for every loaded module. | no-op |
+| `exportUserData(userId)` | Returns the module's own data for a user during a GDPR export request, or `null` if it has none. Invoked by `executeGdprExport` (`#lib/gdpr.js`). | returns `null` |
 | `reconcileScheduledJobs()` | Called from `onLoad`; re-arm any delayed jobs that should exist after a restart. | no-op |
-
-> **Known gap**: as of this writing, nothing in the GDPR RPC flow actually calls each loaded module's `deleteUserData` - see [Modules & Features](modules.md#gdpr-data-deletion---known-gap). Implement the hook anyway if your module holds per-user data (it's the intended design), but don't assume it fires end-to-end without checking the call path yourself.
 
 ## Step 2: Configuration schema
 
@@ -350,7 +349,7 @@ const value = await container.db.guildKV.getModuleData<MyType>(guildId, "my_modu
 
 **Cache invalidation** goes through `container.invalidation.invalidate(...key)`, never a raw `container.redis.del` on a key other processes might also cache - `InvalidationBus` broadcasts the deletion over Redis pub/sub so every process's local cache stays coherent.
 
-**GDPR**: implement `deleteUserData(userId)` on your `Module` subclass if you store per-user data. Be aware of the known gap noted in Step 1 - verify the call path before treating this as load-bearing.
+**GDPR**: implement `deleteUserData(userId)` and `exportUserData(userId)` on your `Module` subclass if you store per-user data - both are invoked end-to-end by the GDPR RPC flow (see Step 1).
 
 ## Step 9: Translations
 

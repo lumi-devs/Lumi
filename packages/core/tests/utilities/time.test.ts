@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { TimeUtility } from '#lib/utility-store/TimeUtility.js';
 
 describe('TimeUtility', () => {
-	const timeUtil = new TimeUtility({ name: 'time', store: {} as any }, { name: 'time' });
+	const timeUtil = new TimeUtility({ name: 'time', path: '', root: '', store: {} }, { name: 'time' });
 
 	it('humanizeDelta', () => {
 		expect(timeUtil.humanizeDelta(50)).toBe('50s');

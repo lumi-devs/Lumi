@@ -30,11 +30,12 @@ abstract class Module extends Piece {
   onLoad(): Awaitable<unknown>;
   onUnload(): Awaitable<unknown>;
   deleteUserData(userId: string, requester?: unknown): Awaitable<void>;
+  exportUserData(userId: string): Awaitable<Record<string, unknown> | null>;
   reconcileScheduledJobs(): Awaitable<void>;
 }
 ```
 
-Base class for a module/addon's entrypoint class. Extends Sapphire's `Piece`. Implement `deleteUserData` if the addon stores anything keyed by a user ID (GDPR); a documented no-op is fine otherwise. See [Module Creation Guide § Lifecycle hooks](GUIDE_MODULE_CREATION.md#lifecycle-hooks) for when each hook fires.
+Base class for a module/addon's entrypoint class. Extends Sapphire's `Piece`. Implement `deleteUserData` and `exportUserData` if the addon stores anything keyed by a user ID (GDPR); documented no-ops (return `undefined`/`null`) are fine otherwise. See [Module Creation Guide § Lifecycle hooks](GUIDE_MODULE_CREATION.md#lifecycle-hooks) for when each hook fires.
 
 ### `DefineModule(options)`
 

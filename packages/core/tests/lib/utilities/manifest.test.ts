@@ -10,7 +10,7 @@ import {
   writeManifest,
   MANIFEST_FILE,
 } from "#lib/module-system/manifest.js";
-import { cfg } from "#lib/module-system/config-schema.js";
+import { cfg, FieldType } from "#lib/module-system/config-schema.js";
 
 describe("Module Manifest Utilities", () => {
   let tmpDir: string;
@@ -53,7 +53,7 @@ describe("Module Manifest Utilities", () => {
         conflicts: ["conflict-1"],
         configOverrides: true,
         configFields: [
-          { key: "enabled", type: "BOOLEAN" as const, label: "Enabled", description: "Enable feature" },
+          { key: "enabled", type: FieldType.BOOLEAN, label: "Enabled", description: "Enable feature" },
         ],
       };
 

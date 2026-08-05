@@ -137,6 +137,20 @@ export abstract class Module extends Piece {
   }
 
   /**
+   * Hook called when a user requests an export of their data under GDPR/CCPA.
+   * Modules that store user-specific data must override this method and
+   * return it in a plain, JSON-serializable shape. Returning `null` (the
+   * default) omits this module from the combined export.
+   *
+   * @param _userId - The ID of the user requesting export.
+   */
+  public exportUserData(
+    _userId: string,
+  ): Awaitable<Record<string, unknown> | null> {
+    return null;
+  }
+
+  /**
    * Re-arms any delayed jobs or background tasks this module owns after a restart.
    */
   public reconcileScheduledJobs(): Awaitable<void> {

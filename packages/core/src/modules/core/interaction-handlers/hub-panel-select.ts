@@ -1,7 +1,6 @@
 import { fetchTyped } from "#lib/commands.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { getService } from "#lib/module-system/Service.js";
-import { collectKnownPermitNodes } from "#lib/permissions/nodes.js";
 import type { GuildSettingsService } from "#lib/services/GuildSettingsService.js";
 import type { PermissionService } from "#lib/services/PermissionService.js";
 import {
@@ -14,7 +13,7 @@ import {
 } from "#modules/core/lib/hub-panel.js";
 import { buildAutoUpdateSettingsView } from "#modules/core/ui/addons.js";
 import {
-  buildPermitNodePickerView,
+  buildPermitAssignTargetView,
   type PermitKind,
 } from "#modules/core/ui/permissions.js";
 import {
@@ -51,10 +50,10 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
 
   public override parse(interaction: AnySelectMenuInteraction) {
     if (interaction.customId === "lumi:setlang") return this.some("lang");
-    if (interaction.customId.startsWith("lumi:permit:target:"))
-      return this.some("permit_target");
-    if (interaction.customId.startsWith("lumi:permit:node:"))
-      return this.some("permit_node");
+    if (interaction.customId.startsWith("lumi:permit:pick:"))
+      return this.some("permit_pick");
+    if (interaction.customId.startsWith("lumi:permit:assign:"))
+      return this.some("permit_assign");
     if (interaction.customId === "lumi:addon:repo_pick")
       return this.some("addon_repo_pick");
     if (interaction.customId.startsWith("lumi:addon:mod_action:"))
@@ -127,47 +126,27 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
       return interaction.editReply(buildAutoUpdateSettingsView(config, t));
     }
 
-    if (kind === "permit_target") {
-      if (!interaction.isMentionableSelectMenu())
-        return renderPermissions(interaction, 0, t);
+    if (kind === "permit_pick") {
       const permitKind = interaction.customId.split(":")[3] as PermitKind;
-      const targetId = interaction.values[0];
-      if (!targetId) return renderPermissions(interaction, 0, t);
-      const targetType: "role" | "user" = interaction.roles.has(targetId)
-        ? "role"
-        : "user";
-      const nodes = collectKnownPermitNodes();
+      const permitId = Number(interaction.values[0]);
+      if (!Number.isInteger(permitId)) return renderPermissions(interaction, 0, t);
+      const permit = await this.perms.getPermit(permitId);
+      if (!permit) return renderPermissions(interaction, 0, t);
       return interaction.editReply(
-        buildPermitNodePickerView(permitKind, targetType, targetId, nodes, t),
+        buildPermitAssignTargetView(permit.id, permit.name, permitKind, t),
       );
     }
 
-    if (kind === "permit_node") {
-      const [, , , permitKindRaw, targetTypeRaw, targetId] =
-        interaction.customId.split(":");
-      const permitKind = permitKindRaw as PermitKind;
-      const targetType = targetTypeRaw as "role" | "user";
-      const node = interaction.values[0];
-      if (
-        node &&
-        targetId &&
-        (targetType === "role" || targetType === "user")
-      ) {
-        await (
-          permitKind === "enforced"
-            ? this.perms.grantEnforcedPermit(
-                interaction.guildId,
-                targetType,
-                targetId,
-                node,
-              )
-            : this.perms.grantCustomPermit(
-                interaction.guildId,
-                targetType,
-                targetId,
-                node,
-              )
-        ).catch(() => {});
+    if (kind === "permit_assign") {
+      const permitId = Number(interaction.customId.split(":")[3]);
+      const targetId = interaction.values[0];
+      if (Number.isInteger(permitId) && targetId) {
+        const targetType: "role" | "user" = interaction.isRoleSelectMenu()
+          ? "role"
+          : "user";
+        await this.perms
+          .assignPermit(permitId, targetType, targetId)
+          .catch(() => {});
       }
       return renderPermissions(interaction, 0, t);
     }

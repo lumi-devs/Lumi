@@ -50,7 +50,7 @@ describe("Base Repository", () => {
       invalidate: vi.fn().mockResolvedValue(undefined),
     };
 
-    container.invalidation = mockInvalidation;
+    (container as any).invalidation = mockInvalidation;
 
     repo = new ConcreteRepository(mockPrisma, mockRedis, mockLogger, mockDb);
   });

@@ -4,6 +4,7 @@ import { registerRpcHandler } from "#lib/rabbitmq/index.js";
 import { RPC_ACTIONS, type RpcRequest } from "@lumi/contracts";
 import { resolver, ADDON_MODULES_ROOT } from "#lib/downloader/resolver.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
+import { executeGdprDeletion, executeGdprExport } from "#lib/gdpr.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { s, type BaseValidator } from "@sapphire/shapeshift";
@@ -26,9 +27,21 @@ function requireBotOwner(req: RpcRequest<unknown>): void {
   }
 }
 
+/** A user may always export their own data; exporting someone else's requires Bot Owner. */
+function requireSelfOrBotOwner(req: RpcRequest<unknown>, userId: string): void {
+  if (!req.actorId) throw new Error("actorId is required");
+  if (req.actorId === userId) return;
+  if (PermitResolver.isBotOwner(req.actorId)) return;
+  throw new Error("Not authorized to export this user's data.");
+}
+
 const GdprDeleteSchema = s.object({
   userId: SnowflakeSchema,
   requester: s.enum(["DISCORD_DELETED_USER", "OWNER", "USER", "USER_STRICT"]).optional(),
+});
+
+const GdprExportSchema = s.object({
+  userId: SnowflakeSchema,
 });
 
 const RepoAddSchema = s.object({
@@ -73,9 +86,16 @@ export function initCoreRpcHandlers() {
 
   registerRpcHandler(RPC_ACTIONS.gdprDelete, async (req) => {
     requireBotOwner(req);
-    const { userId } = parsePayload(GdprDeleteSchema, req.data);
-    await container.db.deleteUserData(userId);
+    const { userId, requester } = parsePayload(GdprDeleteSchema, req.data);
+    await executeGdprDeletion(userId, requester);
     return { success: true };
+  });
+
+  registerRpcHandler(RPC_ACTIONS.gdprExport, async (req) => {
+    const { userId } = parsePayload(GdprExportSchema, req.data);
+    requireSelfOrBotOwner(req, userId);
+    const data = await executeGdprExport(userId);
+    return { success: true, data };
   });
 
   registerRpcHandler(RPC_ACTIONS.repoAdd, async (req) => {

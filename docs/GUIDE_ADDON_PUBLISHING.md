@@ -72,6 +72,11 @@ export class MyAddonModule extends Module {
   public override async deleteUserData(userId: string, requester) {
     // Delete anything keyed by userId here, or justify a no-op.
   }
+
+  public override async exportUserData(userId: string) {
+    // Return anything keyed by userId here, or null if you store nothing.
+    return null;
+  }
 }
 ```
 
@@ -87,7 +92,7 @@ These are stricter than the built-in module rules because addons run untrusted, 
 - **No `container.prisma`, ever.** Addons get no schema of their own.
 - **Persist through `container.db.guildKV`** - the generic key/value store, keyed `guildId + module + targetId + key`. Note `listModuleData({ module, key, guildId })` filters on `key`, so the identifier that *varies per record* goes in `targetId`, and `key` names the collection (see `activity-roles/lib/store.ts` in `lumi-addons` for the pattern).
 - **Use `container.redis` for ephemeral state**, with key builders defined in a local `keys.ts` - same convention as built-in modules.
-- **GDPR**: if your addon stores anything keyed by a user ID (Postgres via `guildKV`, or Redis), override `deleteUserData(userId, requester)` and delete it there. If you store nothing, write a `// No-op` override with a one-line justification rather than omitting the method.
+- **GDPR**: if your addon stores anything keyed by a user ID (Postgres via `guildKV`, or Redis), override both `deleteUserData(userId, requester)` and `exportUserData(userId)` and act on it there. If you store nothing, write `// No-op` overrides with a one-line justification rather than omitting the methods.
 - **UI through the card system**: never `new EmbedBuilder()`. Use `makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeInfoCard` from `"lumi/ui"`, or the `reply*` helpers on `CommandContext`.
 - **BullMQ pieces live in a folder named exactly `scheduled-tasks/`** - a `tasks/` directory is silently ignored, not an error. Discord/DB side effects of a fire must go through `registerTaskFireHandler(name, mode, handler)` in `onLoad`, same as built-in modules (see [Scheduled Tasks](GUIDE_MODULE_CREATION.md#step-7-scheduled-tasks)).
 - **No imports from sibling addons.** Same zero-cross-module-import rule as built-in modules, just enforced across addon directories instead of `packages/core/src/modules/`.
@@ -108,7 +113,7 @@ Before opening a PR:
 2. `bun run lint` - zero lint errors.
 3. Your addon has a `README.md` describing what it does and how to configure it.
 4. Every user-facing string is added to `en-US` at minimum (see [Translations](GUIDE_MODULE_CREATION.md#step-9-translations)).
-5. `deleteUserData` is implemented or explicitly no-op'd with a comment explaining why.
+5. `deleteUserData` and `exportUserData` are implemented or explicitly no-op'd with a comment explaining why.
 6. No addon-to-addon imports, no `container.prisma`, no raw `EmbedBuilder`.
 
 Both gates are enforced in CI (`lumi-addons`' `ci.yml`) - a red check blocks merge regardless of review status.
@@ -124,7 +129,7 @@ Both gates are enforced in CI (`lumi-addons`' `ci.yml`) - a red check blocks mer
 
 ## Code review
 
-Reviewers will generally check for the addon-specific rules above first - `container.prisma` usage, missing `deleteUserData`, raw `EmbedBuilder` calls, and cross-addon imports are the most common rejection reasons. Beyond that, expect the same review bar as the main [Lumi contributing guide](../CONTRIBUTING.md): clear naming, no dead code, and commands/config that match what the README documents.
+Reviewers will generally check for the addon-specific rules above first - `container.prisma` usage, missing `deleteUserData`/`exportUserData`, raw `EmbedBuilder` calls, and cross-addon imports are the most common rejection reasons. Beyond that, expect the same review bar as the main [Lumi contributing guide](../CONTRIBUTING.md): clear naming, no dead code, and commands/config that match what the README documents.
 
 Address feedback with follow-up commits on the same branch rather than force-pushing over review history, unless a reviewer asks you to squash before merge.
 

@@ -26,8 +26,13 @@ import { getModulePiecesInfo } from "#modules/core/lib/module-command/pieces.js"
 import { registerModuleCommand } from "#modules/core/lib/module-command/registry.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
+import type { AutocompleteInteraction } from "discord.js";
 import { getService } from "#lib/module-system/Service.js";
 import type { DownloaderService } from "#lib/services/DownloaderService.js";
+import {
+  filterAutocompleteChoices,
+  respondWithChoices,
+} from "#lib/utilities/autocomplete.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "module",
@@ -53,6 +58,79 @@ export class ModuleCommand extends BaseSubcommand {
     registry: ApplicationCommandRegistry,
   ) {
     registerModuleCommand(registry, this.name, this.description);
+  }
+
+  public override async autocompleteRun(
+    interaction: AutocompleteInteraction,
+  ): Promise<void> {
+    const focused = interaction.options.getFocused(true);
+    const subcommand = interaction.options.getSubcommand(false);
+
+    if (focused.name === "repo") {
+      const repos = await this.downloaderService.listRepos();
+      return respondWithChoices(
+        interaction,
+        filterAutocompleteChoices(
+          repos.map((r) => r.name),
+          focused.value,
+        ),
+      );
+    }
+
+    if (focused.name !== "module") return respondWithChoices(interaction, []);
+
+    if (subcommand === "install") {
+      const repoName = interaction.options.getString("repo");
+      if (!repoName) return respondWithChoices(interaction, []);
+      try {
+        const [modules, installed] = await Promise.all([
+          this.downloaderService.getModulesInRepo(repoName),
+          this.downloaderService.getInstalledModules(),
+        ]);
+        const installedNames = new Set(installed.map((m) => m.moduleName));
+        const names = modules
+          .filter((m) => !m.hidden && !installedNames.has(m.name))
+          .map((m) => m.name);
+        return respondWithChoices(
+          interaction,
+          filterAutocompleteChoices(names, focused.value),
+        );
+      } catch {
+        return respondWithChoices(interaction, []);
+      }
+    }
+
+    if (["uninstall", "update", "pin", "unpin"].includes(subcommand ?? "")) {
+      const installed = await this.downloaderService.getInstalledModules();
+      const names = installed
+        .filter((m) => {
+          if (subcommand === "pin") return !m.pinned;
+          if (subcommand === "unpin") return m.pinned;
+          return true;
+        })
+        .map((m) => m.moduleName);
+      return respondWithChoices(
+        interaction,
+        filterAutocompleteChoices(names, focused.value),
+      );
+    }
+
+    if (subcommand === "enable" || subcommand === "disable") {
+      const names = this.container.moduleStore
+        .all()
+        .filter((r) => (subcommand === "enable" ? !r.enabled : r.enabled))
+        .map((r) => r.name);
+      return respondWithChoices(
+        interaction,
+        filterAutocompleteChoices(names, focused.value),
+      );
+    }
+
+    const names = this.container.moduleStore.all().map((r) => r.name);
+    return respondWithChoices(
+      interaction,
+      filterAutocompleteChoices(names, focused.value),
+    );
   }
 
   public async list(ctx: CommandContext): Promise<void> {

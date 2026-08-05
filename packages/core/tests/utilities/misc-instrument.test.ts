@@ -10,7 +10,6 @@ import {
 import { instrumentCommandPiece } from "#lib/telemetry/instrument.js";
 import * as moduleCheck from "#lib/module-check.js";
 import * as observability from "@lumi/observability";
-import * as discordUtils from "@sapphire/discord.js-utilities";
 
 vi.mock("@sapphire/discord.js-utilities", () => ({
   isGuildBasedChannel: vi.fn().mockImplementation((ch: any) => ch?.isGuildBased?.() ?? false),
@@ -24,8 +23,8 @@ vi.mock("@lumi/observability", () => {
     commandsTotal: {
       inc: vi.fn(),
     },
-    runWithContext: vi.fn().mockImplementation((ctx, fn) => fn()),
-    withSpan: vi.fn().mockImplementation((name, fn) => {
+    runWithContext: vi.fn().mockImplementation((_ctx, fn) => fn()),
+    withSpan: vi.fn().mockImplementation((_name, fn) => {
       const mockSpan = { setAttribute: vi.fn() };
       return fn(mockSpan);
     }),
