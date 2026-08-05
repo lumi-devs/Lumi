@@ -7,6 +7,8 @@ export const ModerationCommandsKeys = {
   ModMemberNotFound: "commands:modMemberNotFound",
   ModActionFailedTitle: "commands:modActionFailedTitle",
   ModActionFailed: "commands:modActionFailed",
+  ModHierarchyTitle: "commands:modHierarchyTitle",
+  ModHierarchy: "commands:modHierarchy",
   KickName: "commands:kickName",
   KickDescription: "commands:kickDescription",
   KickMemberName: "commands:kickMemberName",

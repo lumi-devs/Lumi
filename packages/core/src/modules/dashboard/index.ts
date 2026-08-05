@@ -2,8 +2,8 @@ import { Module, DefineModule } from "#lib/module-system/Module.js";
 import { container } from "@sapphire/framework";
 import { registerRpcHandler, rpcHandlers } from "#lib/rabbitmq/index.js";
 import { RPC_ACTIONS } from "@lumi/contracts";
-import type { Prisma } from "@prisma/client";
 import { s, type BaseValidator } from "@sapphire/shapeshift";
+import { getService } from "#lib/module-system/Service.js";
 import { checkModulesEnabled } from "#lib/module-check.js";
 
 const SnowflakeSchema = s.string().regex(/^\d{17,20}$/);
@@ -160,13 +160,31 @@ export class DashboardModule extends Module {
         req.data,
       );
 
-      await container.db.config.setModuleConfig(
+      // Same path the in-Discord config panel uses: it validates the key
+      // against the module's schema, coerces/validates the value, writes
+      // audit history and fires the post-set hooks. Writing straight to
+      // db.config here would let a dashboard caller store arbitrary
+      // unvalidated JSON under any key.
+      if (value === null || value === undefined || value === "") {
+        await container.db.config.deleteModuleConfigKey(
+          guildId,
+          moduleName,
+          key,
+        );
+        return { success: true, key, value: null };
+      }
+
+      const raw = Array.isArray(value)
+        ? value.map((entry) => String(entry)).join(",")
+        : String(value);
+      const { coerced } = await getService("config").setConfig(
         guildId,
         moduleName,
         key,
-        value as Prisma.InputJsonValue,
+        raw,
+        req.actorId,
       );
-      return { success: true, key, value };
+      return { success: true, key, value: coerced };
     });
 
     registerRpcHandler(RPC_ACTIONS.guildSettingsSet, async (req) => {

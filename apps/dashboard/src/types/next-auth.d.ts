@@ -19,8 +19,6 @@ interface SessionExtras {
   userId: string;
   username: string;
   avatar: string;
-  /** Discord OAuth2 access token — used server-side only to refetch guilds. */
-  accessToken: string;
   /** Guilds where the user holds Manage Server (or ownership), pre-filtered at sign-in. */
   guilds: OAuthGuild[];
   /** True when `userId` is listed in the `BOT_OWNERS` env var — dashboard.md §8. */
@@ -31,7 +29,6 @@ interface JwtExtras {
   userId?: string;
   username?: string;
   avatar?: string;
-  accessToken?: string;
   guilds?: OAuthGuild[];
   isBotOwner?: boolean;
 }

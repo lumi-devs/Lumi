@@ -23,8 +23,7 @@ import type { DownloaderService } from "#lib/services/DownloaderService.js";
 @ApplyOptions<BaseSubcommand.Options>({
   name: "repo",
   description: "Manage third-party module repositories",
-  preconditions: ["GuildOnly"],
-  requiredPermit: "owner.*",
+  preconditions: ["GuildOnly", "BotOwner"],
   prefixEnabled: true,
   subcommands: [
     { name: "add", run: "add" },

@@ -32,8 +32,7 @@ import type { DownloaderService } from "#lib/services/DownloaderService.js";
 @ApplyOptions<BaseSubcommand.Options>({
   name: "module",
   description: "Manage system and third-party modules",
-  preconditions: ["GuildOnly"],
-  requiredPermit: "owner.*",
+  preconditions: ["GuildOnly", "BotOwner"],
   prefixEnabled: true,
   subcommands: [
     { name: "list", run: "list" },

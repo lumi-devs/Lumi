@@ -21,6 +21,7 @@ import { logError, errorCode } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 import { parseDuration, formatDuration } from "#lib/utilities/time.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
+import { validateRegexPattern } from "#lib/regex-worker/index.js";
 import type { LumiT } from "#lib/i18n/index.js";
 
 type MessageFilter = (message: Message) => boolean;
@@ -180,15 +181,17 @@ export class PurgeCommand extends BaseSubcommand {
   public async regex(ctx: CommandContext) {
     const pattern = await ctx.getString("pattern", { required: true });
     const amount = (await ctx.getInteger("amount")) ?? DEFAULT_FILTER_SCAN;
-    let compiled: RegExp;
-    try {
-      compiled = new RegExp(pattern!, "i");
-    } catch {
+    // The compiled pattern runs against up to MAX_SCAN messages on the
+    // gateway's own event loop, so a catastrophically backtracking pattern
+    // would stall every guild on this process, not just this one.
+    const rejection = await validateRegexPattern(pattern!);
+    if (rejection) {
       return ctx.replyError(
         "Invalid Pattern",
-        `\`${pattern}\` is not a valid regular expression.`,
+        `\`${pattern}\` was rejected: ${rejection}`,
       );
     }
+    const compiled = new RegExp(pattern!, "i");
     return this.runPurge(
       ctx,
       amount,

@@ -4,7 +4,7 @@ import { LanguageKeys } from "#lib/i18n/keys.js";
 import { logError } from "#lib/utilities/errors.js";
 import { isNullish } from "@sapphire/utilities";
 import { Result, type Awaitable } from "@sapphire/framework";
-import type { Guild, User } from "discord.js";
+import type { Guild, GuildMember, User } from "discord.js";
 
 const Root = LanguageKeys.Commands;
 
@@ -35,6 +35,46 @@ function actionFailed(t: LumiT): ModerationCommand.Reply {
     title: t(Root.ModActionFailedTitle),
     body: t(Root.ModActionFailed),
   };
+}
+
+/**
+ * Rejects a moderation action whose target outranks (or ties) the invoker.
+ *
+ * Discord's own hierarchy only protects the *bot* from acting above its top
+ * role - without this, anyone holding a `mod.*` permit could use the bot to
+ * act on admins and other moderators ranked above them.
+ *
+ * @returns the reply to fail with, or null when the action may proceed.
+ */
+function checkHierarchy(
+  ctx: CommandContext,
+  target: ModerationCommand.TargetLike,
+  t: LumiT,
+): ModerationCommand.Reply | null {
+  const guild = ctx.guild;
+  const moderator = ctx.member;
+  if (!guild || !moderator) return null;
+  if (guild.ownerId === moderator.id) return null;
+
+  const targetId = targetIdOf(target);
+  if (targetId === moderator.id) return null;
+
+  const deny = (user: string): ModerationCommand.Reply => ({
+    title: t(Root.ModHierarchyTitle),
+    body: t(Root.ModHierarchy, { user }),
+  });
+
+  if (targetId === guild.ownerId) return deny(`<@${targetId}>`);
+
+  const targetMember =
+    typeof target === "object" && "roles" in target
+      ? (target as GuildMember)
+      : guild.members.cache.get(targetId);
+  if (!targetMember) return null;
+
+  return targetMember.roles.highest.position >= moderator.roles.highest.position
+    ? deny(`<@${targetId}>`)
+    : null;
 }
 
 /**
@@ -79,6 +119,9 @@ export async function runModerationFlow<
   if (isNullish(target)) {
     return replyFailure(ctx, flow.targetNotFound?.(t) ?? memberNotFound(t));
   }
+
+  const outranked = checkHierarchy(ctx, target, t);
+  if (outranked) return replyFailure(ctx, outranked);
 
   const prepared: Result<Prepared, ModerationCommand.Reply> = flow.preHandle
     ? await flow.preHandle(ctx, t, target)

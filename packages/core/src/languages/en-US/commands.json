@@ -45,6 +45,8 @@
   "modMemberNotFound": "That member isn't in this server - provide a valid member.",
   "modActionFailedTitle": "Action Failed",
   "modActionFailed": "Could not complete the action. Check the bot's permissions and role hierarchy.",
+  "modHierarchyTitle": "Outranked",
+  "modHierarchy": "You cannot moderate {{user}} - they are the same rank as you or higher.",
   "kickName": "kick",
   "kickDescription": "Kick a member from the server",
   "kickMemberName": "member",

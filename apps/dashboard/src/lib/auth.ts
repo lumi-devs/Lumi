@@ -52,7 +52,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.userId = raw.id;
         token.username = raw.username;
         token.avatar = raw.avatar ?? "";
-        token.accessToken = account.access_token;
         token.isBotOwner = isBotOwner(raw.id);
         try {
           const guilds = await fetchUserGuilds(account.access_token ?? "");
@@ -76,7 +75,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.userId = token.userId ?? "";
       session.username = token.username ?? "";
       session.avatar = token.avatar ?? "";
-      session.accessToken = token.accessToken ?? "";
       session.guilds = token.guilds ?? [];
       session.isBotOwner = token.isBotOwner ?? false;
       return session;
