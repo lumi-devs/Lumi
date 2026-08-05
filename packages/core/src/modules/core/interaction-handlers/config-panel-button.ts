@@ -108,12 +108,8 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
         return this.#renderDetail(interaction, guildId, moduleName, page, t);
       }
       case "tog": {
-        const detail = await this.#requireDetail(guildId, moduleName);
-        await this.cfg.toggleGuildModule(
-          guildId,
-          moduleName,
-          !detail.guildEnabled,
-        );
+        await this.#requireDetail(guildId, moduleName);
+        await this.cfg.flipGuildModule(guildId, moduleName);
         return this.#renderDetail(interaction, guildId, moduleName, 0, t);
       }
       case "rst": {
@@ -127,14 +123,10 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
         const detail = await this.#requireDetail(guildId, moduleName);
         const field = detail.meta.configFields?.find((f) => f.key === key);
         if (!field) return;
-        const def =
-          field.default === undefined ? false : Boolean(field.default);
-        const current = Boolean(detail.config[key] ?? def);
-        await this.cfg.setConfig(
+        await this.cfg.toggleConfigBool(
           guildId,
           moduleName,
           key,
-          String(!current),
           interaction.user.id,
         );
         return this.#renderDetail(

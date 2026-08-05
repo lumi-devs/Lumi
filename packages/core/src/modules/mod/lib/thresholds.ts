@@ -16,6 +16,11 @@ export const thresholdKey = (guildId: string) =>
   `lumi:mod:${guildId}:thresholds`;
 export const warnCountKey = (guildId: string, userId: string) =>
   `lumi:mod:${guildId}:warns:${userId}`;
+const thresholdFiredKey = (guildId: string, userId: string, count: number) =>
+  `lumi:mod:${guildId}:threshold-fired:${userId}:${count}`;
+
+/** How long a fired threshold stays claimed - long enough to cover a retry storm. */
+const THRESHOLD_FIRED_TTL = 60;
 
 const THRESHOLD_TTL = 300;
 
@@ -180,6 +185,18 @@ export async function checkThresholds(
   const targetCount = matchingKeys[0]!;
   const entry = thresholds[String(targetCount)];
   if (!entry) return;
+
+  // Two warns landing at once can both resolve to the same threshold (and a
+  // cold warn counter makes them resolve to the same count outright), which
+  // would apply the punishment twice. First one through wins.
+  const claimed = await container.redis.set(
+    thresholdFiredKey(guildId, userId, targetCount),
+    "1",
+    "EX",
+    THRESHOLD_FIRED_TTL,
+    "NX",
+  );
+  if (claimed !== "OK") return;
 
   const guild = container.client.guilds.cache.get(guildId);
   if (!guild) return;

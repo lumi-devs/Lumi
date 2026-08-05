@@ -12,7 +12,7 @@ import {
   makeErrorCard,
   makeSuccessCard,
 } from "#utilities/cards.js";
-import { getVcRecord, setVcRecord } from "#modules/tempvc/data.js";
+import { getVcRecord, patchVcRecord } from "#modules/tempvc/data.js";
 import { TVC } from "#modules/tempvc/keys.js";
 import { assertOwner } from "#modules/tempvc/lib/panel-helpers.js";
 import type TempVcService from "#modules/tempvc/services/TempVcService.js";
@@ -67,8 +67,7 @@ export class TempVcPanelModalHandler extends BaseInteractionHandler {
         return;
       }
       await channel.setName(name.slice(0, 100), "Renamed by owner");
-      await setVcRecord(interaction.guildId, channelId, {
-        ...record,
+      await patchVcRecord(interaction.guildId, channelId, {
         name: channel.name,
       });
     } else {

@@ -80,6 +80,8 @@ export class FilterMessageListener extends GuildMessageListener {
     );
     const action = heatAction(level, config);
     if (action === "none") return;
+    if (!(await this.filterService.claimEscalation(guildId, userId, action)))
+      return;
 
     const reason = `Heat escalation: reached ${Math.round(level)} heat`;
     const member = message.member;
@@ -99,7 +101,6 @@ export class FilterMessageListener extends GuildMessageListener {
         .catch(swallow("Filter: heat timeout"));
       await this.#logHeat(message, "Heat - Timeout", reason);
     } else if (action === "warn") {
-      if (!(await this.filterService.claimWarnSlot(guildId, userId))) return;
       const t = await fetchTyped(message);
       const warn = await message.channel
         .send(t("filter:heatWarn", { user: message.author.toString() }))

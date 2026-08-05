@@ -108,6 +108,16 @@ function diff(prev: readonly number[], next: readonly number[]): ShardDelta {
   return { added, removed, unchanged };
 }
 
+/** Compare-and-set the assignment blob: ARGV[1] is the expected value ("" = absent). */
+const CAS_ASSIGNMENT_SCRIPT = `
+local cur = redis.call('GET', KEYS[1])
+if (cur == false and ARGV[1] == '') or cur == ARGV[1] then
+  redis.call('SET', KEYS[1], ARGV[2])
+  return 1
+end
+return 0
+`;
+
 export const membersKey = (name: string) => `lumi:cluster:${name}:members`;
 const assignmentKey = (name: string) => `lumi:cluster:${name}:assignment`;
 const leaderLockKey = (name: string) => `lumi:cluster:${name}:leader-lock`;
@@ -123,6 +133,7 @@ export class ClusterCoordinator {
   private currentShards: number[] = [];
   private currentEpoch = -1;
   private closed = false;
+  private applyChain: Promise<void> = Promise.resolve();
 
   private messageListener: ((ch: string, payload: string) => void) | null = null;
 
@@ -274,7 +285,8 @@ export class ClusterCoordinator {
       return;
     }
 
-    current = await this.readAssignment();
+    const { raw: currentRaw, value: reread } = await this.readAssignmentRaw();
+    current = reread;
     if (
       current &&
       current.shardCount === this.opts.shardCount &&
@@ -293,10 +305,25 @@ export class ClusterCoordinator {
       byReplica: wantByReplica,
       writtenAt: Date.now(),
     };
-    await this.opts.redis.set(
+    // The leader lock can expire mid-reconcile (short TTL, no renewal), so two
+    // replicas can both believe they are leader. Writing unconditionally would
+    // let the loser's stale member snapshot overwrite the winner's assignment
+    // at the same epoch - two replicas owning the same shard. Swap in the new
+    // value only if the assignment key still holds exactly what we read.
+    const swapped = await this.opts.redis.eval(
+      CAS_ASSIGNMENT_SCRIPT,
+      1,
       assignmentKey(this.opts.clusterName),
+      currentRaw ?? "",
       JSON.stringify(next),
     );
+    if (swapped !== 1) {
+      this.opts.log("warn", "assignment changed under us; resyncing", {
+        attemptedEpoch: nextEpoch,
+      });
+      await this.applyAssignmentFromRedis();
+      return;
+    }
     await this.opts.redis.publish(
       rebalanceChannel(this.opts.clusterName),
       String(nextEpoch),
@@ -322,9 +349,19 @@ export class ClusterCoordinator {
   }
 
   private async readAssignment(): Promise<ClusterAssignment | null> {
+    return (await this.readAssignmentRaw()).value;
+  }
+
+  private async readAssignmentRaw(): Promise<{
+    raw: string | null;
+    value: ClusterAssignment | null;
+  }> {
     const raw = await this.opts.redis.get(assignmentKey(this.opts.clusterName));
-    if (!raw) return null;
-    return (tryParseJSON(raw) as ClusterAssignment | null) ?? null;
+    if (!raw) return { raw: null, value: null };
+    return {
+      raw,
+      value: (tryParseJSON(raw) as ClusterAssignment | null) ?? null,
+    };
   }
 
   private async applyAssignmentFromRedis(): Promise<void> {
@@ -333,7 +370,22 @@ export class ClusterCoordinator {
     await this.applyAssignment(a);
   }
 
-  private async applyAssignment(a: ClusterAssignment): Promise<void> {
+  /**
+   * Serialized: the pub/sub rebalance handler and the heartbeat tick can both
+   * land an apply, and listeners spawn/destroy gateway shards - overlapping
+   * runs would issue add/remove for the same shard id concurrently.
+   */
+  private applyAssignment(a: ClusterAssignment): Promise<void> {
+    const run = this.applyChain.then(
+      () => this.doApplyAssignment(a),
+      () => this.doApplyAssignment(a),
+    );
+    this.applyChain = run.catch(() => undefined);
+    return run;
+  }
+
+  private async doApplyAssignment(a: ClusterAssignment): Promise<void> {
+    if (a.epoch < this.currentEpoch) return;
     const next = (a.byReplica[this.opts.replicaId] ?? [])
       .slice()
       .sort((x, y) => x - y);

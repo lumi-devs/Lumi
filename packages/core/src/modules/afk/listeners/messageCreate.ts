@@ -26,9 +26,9 @@ import {
 import {
   getAfkEntry,
   isAfkOnCooldown,
+  claimAfkCooldown,
   getAfkMentions,
   clearAfkEntry,
-  setAfkCooldown,
   clearAfkMentions,
   addAfkMentionsBatch,
 } from "../data/afk.js";
@@ -78,12 +78,13 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
       );
     }
 
-    if (await isAfkOnCooldown(AfkKeys.welcomeCooldown(channelId, userId)))
+    if (
+      !(await claimAfkCooldown(
+        AfkKeys.welcomeCooldown(channelId, userId),
+        AFK_WELCOME_COOLDOWN_MS,
+      ))
+    )
       return;
-    await setAfkCooldown(
-      AfkKeys.welcomeCooldown(channelId, userId),
-      AFK_WELCOME_COOLDOWN_MS,
-    );
     if (!message.channel.isSendable() || !canSendMessages(message)) return;
 
     const t = await fetchTyped(message);
@@ -149,8 +150,12 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
   }
 
   async #notifyMentioned(message: GuildMessage) {
-    const onCooldown = await isAfkOnCooldown(
+    // Claimed up front rather than set after the reply: two mentioning
+    // messages in the same channel are handled concurrently and would both
+    // pass a read-only cooldown check.
+    const claimedNotice = await claimAfkCooldown(
       AfkKeys.mentionCooldown(message.channelId),
+      AFK_MENTION_COOLDOWN_MS,
     );
 
     const mentionBase = {
@@ -180,7 +185,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
       hits.map(({ userId }) => ({ userId, mention: mentionBase })),
     ).catch((err: unknown) => logError("AFK: Batch mention write failed", err));
 
-    if (onCooldown) return;
+    if (!claimedNotice) return;
 
     const { userId, entry } = hits[0]!;
     const member = await message.guild.members
@@ -221,18 +226,16 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
       ).catch((err: unknown) =>
         logError("AFK: Schedule mention delete failed", err),
       );
-    await setAfkCooldown(
-      AfkKeys.mentionCooldown(message.channelId),
-      AFK_MENTION_COOLDOWN_MS,
-    );
   }
 
   async #editNick(userId: string, fn: () => Promise<unknown>) {
-    if (await isAfkOnCooldown(AfkKeys.nickEditCooldown(userId))) return;
-    await setAfkCooldown(
-      AfkKeys.nickEditCooldown(userId),
-      AFK_NICK_EDIT_COOLDOWN_MS,
-    );
+    if (
+      !(await claimAfkCooldown(
+        AfkKeys.nickEditCooldown(userId),
+        AFK_NICK_EDIT_COOLDOWN_MS,
+      ))
+    )
+      return;
     await fn().catch((err: unknown) =>
       logError("AFK: Nickname edit failed", err),
     );

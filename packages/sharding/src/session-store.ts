@@ -79,10 +79,16 @@ export class RedisSessionStore {
     this.pending.set(shardId, info);
   }
 
-  /** Drop persisted session for a shard we're handing off as invalidated. */
+  /**
+   * Drop persisted session for a shard we're handing off as invalidated.
+   * Queued as a `null` write rather than a bare DEL: a flush already in flight
+   * may still be carrying an older SET for this shard, and a raw DEL racing it
+   * would leave the stale session behind for another replica to RESUME with.
+   */
   public async invalidate(shardId: number): Promise<void> {
-    this.pending.delete(shardId);
-    await this.opts.redis.del(sessionKey(this.opts.clusterName, shardId));
+    this.inFlight.delete(shardId);
+    this.pending.set(shardId, null);
+    await this.flush();
   }
 
   public flush(): Promise<void> {

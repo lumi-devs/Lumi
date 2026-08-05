@@ -352,6 +352,17 @@ function createMockRedis() {
     publish() {
       return Promise.resolve(0);
     },
+    // Stands in for the assignment compare-and-set script: swap only when the
+    // stored value still equals what the caller read ("" = expected absent).
+    eval(_script: string, _numKeys: number, key: string, expected: string, next: string) {
+      const cur = kv.has(key) ? kv.get(key)! : null;
+      if ((cur === null && expected === "") || cur === expected) {
+        kv.set(key, next);
+        ttl.delete(key);
+        return Promise.resolve(1);
+      }
+      return Promise.resolve(0);
+    },
     multi() {
       const ops: Array<() => Promise<unknown>> = [];
       const chain: any = {
