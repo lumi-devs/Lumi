@@ -154,7 +154,7 @@ describe("ModuleCommand", () => {
       values: vi.fn().mockReturnValue([mockCommandsStore, mockListenersStore]),
     };
 
-    container.moduleStore = mockModuleStore;
+    (container as any).moduleStore = mockModuleStore;
     container.stores = mockStores;
     container.logger = {
       info: vi.fn(),
@@ -207,6 +207,7 @@ describe("ModuleCommand", () => {
             setName: vi.fn().mockReturnThis(),
             setDescription: vi.fn().mockReturnThis(),
             setRequired: vi.fn().mockReturnThis(),
+            setAutocomplete: vi.fn().mockReturnThis(),
           });
           return sub;
         }),

@@ -19,7 +19,7 @@ type ComponentJson = {
 };
 
 const toJson = (card: { components: { toJSON(): unknown }[] }) =>
-  card.components[0].toJSON() as { components: ComponentJson[] };
+  card.components[0]!.toJSON() as { components: ComponentJson[] };
 
 const actionRows = (card: { components: { toJSON(): unknown }[] }) =>
   toJson(card).components.filter((c) => c.type === 1);
@@ -37,8 +37,9 @@ describe("hub-panel view builders", () => {
     });
 
     const [tabs] = actionRows(card);
-    expect(tabs.components).toHaveLength(5);
-    const home = tabs.components!.find((b) => b.custom_id === "lumi:tab:home");
+    expect(tabs).toBeDefined();
+    expect(tabs!.components).toHaveLength(5);
+    const home = tabs!.components!.find((b) => b.custom_id === "lumi:tab:home");
     expect(home?.disabled).toBe(true);
     expect(home?.style).toBe(1);
   });
@@ -46,20 +47,23 @@ describe("hub-panel view builders", () => {
   it("buildSettingsView renders the prefix as a section row with edit accessory", () => {
     const card = buildSettingsView({ prefix: "!", locale: "en-US" });
     const [prefixRow] = sections(card);
-    expect(prefixRow.accessory?.custom_id).toBe("lumi:prefix:set");
+    expect(prefixRow).toBeDefined();
+    expect(prefixRow!.accessory?.custom_id).toBe("lumi:prefix:set");
   });
 
   it("buildPermissionsView renders revoke accessories and paginates", () => {
     const overrides = Array.from({ length: PERMS_PER_PAGE + 1 }, (_, i) => ({
-      commandPath: `mod.cmd${i}`,
-      modelType: "role",
-      modelId: `${100000000000000000n + BigInt(i)}`,
-      enforced: i % 2 === 0,
+      permitId: i,
+      permitName: `Permit ${i}`,
+      kind: (i % 2 === 0 ? "enforced" : "custom"),
+      builtin: i % 2 === 0,
+      targetType: (i % 2 === 0 ? "user" : "role"),
+      targetId: `${100000000000000000n + BigInt(i)}`,
     }));
 
     const card = buildPermissionsView(overrides, 0);
     expect(sections(card)).toHaveLength(PERMS_PER_PAGE);
-    expect(sections(card)[0].accessory?.custom_id).toContain("lumi:permdel:");
+    expect(sections(card)[0]!.accessory?.custom_id).toContain("lumi:permdel:");
 
     const pageRow = actionRows(card).find((r) =>
       r.components?.some((b) => b.custom_id?.startsWith("lumi:permpage")),
@@ -89,7 +93,7 @@ describe("hub-panel view builders", () => {
         installedCount: 2,
       },
     ]);
-    expect(sections(card)[0].accessory?.custom_id).toBe(
+    expect(sections(card)[0]!.accessory?.custom_id).toBe(
       "lumi:addon:update_repo:community",
     );
   });

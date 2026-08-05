@@ -10,7 +10,7 @@ import {
 
 describe("scheduler-bus", () => {
   beforeEach(() => {
-    container.eventBus = {
+    (container as any).eventBus = {
       publish: vi.fn().mockResolvedValue(undefined),
     } as any;
   });

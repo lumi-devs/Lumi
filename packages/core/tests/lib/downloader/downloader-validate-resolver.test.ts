@@ -5,7 +5,7 @@ import path from "node:path";
 import child_process from "node:child_process";
 import { container } from "@sapphire/framework";
 import { validateAddon, validateAddonOrRepo } from "#lib/downloader/validate.js";
-import { DownloadResolver, MODULE_ROOT, ADDON_MODULES_ROOT } from "#lib/downloader/resolver.js";
+import { DownloadResolver, MODULE_ROOT } from "#lib/downloader/resolver.js";
 
 describe("Downloader & Addon Helpers (validate & resolver)", () => {
   let tmpDir: string;

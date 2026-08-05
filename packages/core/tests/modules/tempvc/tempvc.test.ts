@@ -46,7 +46,7 @@ describe("TempVcService", () => {
     vi.useFakeTimers();
 
     // Directly assign mock properties to the global container
-    container.redis = {
+    (container as any).redis = {
       set: vi.fn(),
     } as any;
     container.logger = {

@@ -63,6 +63,6 @@ The `filter` module scores repeat offenses instead of only reacting to single me
 
 Crossing configured heat thresholds escalates the punishment automatically, without needing a human moderator to notice the pattern.
 
-## GDPR data deletion - known gap
+## GDPR data deletion and export
 
-`Module.deleteUserData(userId, requester?)` is an overridable lifecycle hook, and four modules currently implement it: `afk`, `mod`, `logging`, `tempvc`. However, the GDPR RPC handler (`core` module's `RPC_ACTIONS.gdprDelete`) only calls `container.db.deleteUserData(userId)` - a separate `DatabaseService` method that deletes `Blocklist`, `AuditLedger`, and `User` rows directly. **It does not iterate loaded modules and call their `deleteUserData` hooks.** If you're relying on a module's GDPR hook to actually run, verify the call path yourself before shipping - as of this writing, the per-module hooks are wired but not invoked by the deletion flow that's supposed to trigger them.
+`Module.deleteUserData(userId, requester?)` and `Module.exportUserData(userId)` are overridable lifecycle hooks; `afk`, `mod`, `logging`, `tempvc` implement both. `packages/core/src/lib/gdpr.ts`'s `executeGdprDeletion`/`executeGdprExport` iterate every loaded module's hook plus the core cross-repository deletion/export (`DatabaseService.deleteUserData`/`exportUserData`), and are what `RPC_ACTIONS.gdprDelete`/`gdprExport` (`core-rpc.ts`) actually call. Export results are keyed by module name (core data under `"core"`); modules returning `null` are omitted.

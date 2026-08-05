@@ -39,17 +39,7 @@ const yieldOnce = () => new Promise<void>((r) => setImmediate(r));
 class FakePrisma {
   private counters = new Map<string, number>(); // guildId -> next
   private cases: Array<{ guildId: string; caseNumber: number; id: number }> = [];
-  private locks = new Map<string, AsyncMutex>();
   private seq = 0;
-
-  private lockFor(guildId: string): AsyncMutex {
-    let m = this.locks.get(guildId);
-    if (!m) {
-      m = new AsyncMutex();
-      this.locks.set(guildId, m);
-    }
-    return m;
-  }
 
   guildCaseCounter = {
     upsert: async ({
@@ -86,7 +76,7 @@ class FakePrisma {
       const guildCases = this.cases.filter((c) => c.guildId === where.guildId);
       if (guildCases.length === 0) return null;
       const sorted = [...guildCases].sort((a, b) => b.caseNumber - a.caseNumber);
-      return { caseNumber: sorted[0].caseNumber };
+      return { caseNumber: sorted[0]!.caseNumber };
     },
     create: async ({
       data,

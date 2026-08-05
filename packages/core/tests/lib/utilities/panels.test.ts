@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   ActionRowBuilder,
-  ButtonBuilder,
   ContainerBuilder,
 } from "@discordjs/builders";
-import { ButtonStyle, ChannelType } from "discord.js";
+import {
+  ButtonStyle,
+  ChannelType,
+  type APIButtonComponentWithCustomId,
+} from "discord.js";
 import { container } from "@sapphire/framework";
 import {
   createUserSelectMenu,
@@ -22,11 +25,6 @@ import {
 import {
   CARD_ACCENTS,
   makeSuccessCard,
-  makeErrorCard,
-  makeWarningCard,
-  makeInfoCard,
-  makeCard,
-  makeListCard,
   formatStatusBadge,
   formatSubtitle,
   formatBreadcrumbs,
@@ -146,16 +144,16 @@ describe("Panel & Card Utility Standardization", () => {
         { id: "mod", label: "Moderation", count: 4, emoji: "🛡️" },
       ], "mod");
       const data = row.toJSON();
-      expect(data.components[0].custom_id).toBe("submenu_test");
-      expect(data.components[0].options[1].default).toBe(true);
-      expect(data.components[0].options[0].label).toBe("All Modules (12)");
+      expect(data.components[0]!.custom_id).toBe("submenu_test");
+      expect(data.components[0]!.options[1]!.default).toBe(true);
+      expect(data.components[0]!.options[0]!.label).toBe("All Modules (12)");
     });
   });
 
   describe("Panel Buttons & Navigation Helpers", () => {
     it("createBackButton creates secondary button with default label '← Back'", () => {
       const btn = createBackButton("back_btn");
-      const data = btn.toJSON();
+      const data = btn.toJSON() as APIButtonComponentWithCustomId;
       expect(data.custom_id).toBe("back_btn");
       expect(data.label).toBe("← Back");
       expect(data.style).toBe(ButtonStyle.Secondary);
@@ -163,7 +161,7 @@ describe("Panel & Card Utility Standardization", () => {
 
     it("createBackButton accepts custom label", () => {
       const btn = createBackButton("back_btn_custom", "Go Back");
-      expect(btn.toJSON().label).toBe("Go Back");
+      expect((btn.toJSON() as APIButtonComponentWithCustomId).label).toBe("Go Back");
     });
 
     it("createActionButton creates primary action button with emoji and options", () => {
@@ -174,7 +172,7 @@ describe("Panel & Card Utility Standardization", () => {
         emoji: "✅",
         disabled: false,
       });
-      const data = btn.toJSON();
+      const data = btn.toJSON() as APIButtonComponentWithCustomId;
       expect(data.custom_id).toBe("action_test");
       expect(data.label).toBe("Confirm");
       expect(data.style).toBe(ButtonStyle.Success);
@@ -190,9 +188,9 @@ describe("Panel & Card Utility Standardization", () => {
       const components = row.components;
       expect(components).toHaveLength(3);
 
-      const prev = components[0]?.toJSON();
-      const indicator = components[1]?.toJSON();
-      const next = components[2]?.toJSON();
+      const prev = components[0]?.toJSON() as APIButtonComponentWithCustomId | undefined;
+      const indicator = components[1]?.toJSON() as APIButtonComponentWithCustomId | undefined;
+      const next = components[2]?.toJSON() as APIButtonComponentWithCustomId | undefined;
 
       expect(prev?.custom_id).toBe("nav:prev:0");
       expect(prev?.disabled).toBe(true); // First page disabled

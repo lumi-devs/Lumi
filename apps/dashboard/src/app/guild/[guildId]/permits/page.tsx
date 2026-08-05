@@ -1,7 +1,6 @@
-import { IdCard, Network } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { StubPage } from "#/components/stub-page";
-import { PageHeader } from "#/components/ui/page-header";
+import { getGuildDashboard, getGuildPermits } from "#/lib/dashboard-fetch";
+import { PermitsBoard } from "#/components/guild/permits-board";
 
 export default async function PermitsPage({
   params,
@@ -9,26 +8,27 @@ export default async function PermitsPage({
   params: Promise<{ guildId: string }>;
 }) {
   const { guildId } = await params;
-  await requireGuild(guildId);
+  const session = await requireGuild(guildId);
+  const [dashboard, permits] = await Promise.all([
+    getGuildDashboard(guildId, session.userId),
+    getGuildPermits(guildId, session.userId),
+  ]);
+
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader
-        title="Permits"
-        description="Who is allowed to do what, independent of Discord's own role permissions."
-      />
-      <StubPage
-        icon={IdCard}
-        title="Enforced Permits"
-        specComponent="EnforcedPermitsTable"
-        models={["EnforcedPermit"]}
-        description="Un-quarantinable system-level permits assigned to roles/users."
-      />
-      <StubPage
-        icon={Network}
-        title="Custom Permits"
-        specComponent="CustomPermitsNodeTree"
-        models={["CustomPermit"]}
-        description="Fine-grained Wick-style node permits (mod.ban, tempvc.claim), stripped during Anti-Nuke Quarantine."
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="font-brand text-xl font-bold">Permits</h1>
+        <p className="text-sm text-white/50">
+          Named, reusable permission bundles, Wick-style. Enforced tiers are
+          fixed and immune to anti-nuke quarantine; custom permits are fully
+          editable and can be stripped.
+        </p>
+      </div>
+      <PermitsBoard
+        guildId={guildId}
+        initialPermits={permits}
+        roles={dashboard.roles}
+        members={dashboard.members}
       />
     </div>
   );

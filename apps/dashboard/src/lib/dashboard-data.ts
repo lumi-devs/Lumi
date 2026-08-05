@@ -16,6 +16,8 @@ export interface GuildSettings {
   timezone?: string;
   noMentionSpamWindowMs?: number | null;
   noMentionSpamLimit?: number | null;
+  inviteUrl?: string | null;
+  supportUrl?: string | null;
   [key: string]: unknown;
 }
 
@@ -30,12 +32,55 @@ export interface DashboardModuleView {
   config: Record<string, unknown>;
 }
 
+/** One of the guild's roles, as projected for a CHANNEL/ROLE config picker or permit assignment. */
+export interface DashboardRoleView {
+  id: string;
+  name: string;
+  color: number;
+}
+
+/** One of the guild's channels, as projected for a CHANNEL config picker. `type` is a discord.js `ChannelType`. */
+export interface DashboardChannelView {
+  id: string;
+  name: string;
+  type: number;
+}
+
+/** A guild member, as projected for user-assignment dropdowns (cached members only, capped). */
+export interface DashboardMemberView {
+  id: string;
+  username: string;
+  displayName: string;
+}
+
 /** The full payload of `guild.dashboard.get`. */
 export interface DashboardData {
   name: string;
   icon: string | null;
   settings: GuildSettings;
   modules: DashboardModuleView[];
+  roles: DashboardRoleView[];
+  channels: DashboardChannelView[];
+  members: DashboardMemberView[];
+}
+
+export type PermitKind = "enforced" | "custom";
+export type PermitTargetType = "role" | "user";
+
+export interface PermitAssignmentView {
+  id: number;
+  targetType: PermitTargetType;
+  targetId: string;
+}
+
+/** One row of `guild.permits.list` — a named, reusable permit bundle. */
+export interface PermitView {
+  id: number;
+  name: string;
+  kind: PermitKind;
+  nodes: string[];
+  builtin: boolean;
+  assignments: PermitAssignmentView[];
 }
 
 /** dashboard.md §9A — one row of the Global Module Kill-Switch Grid. */

@@ -45,8 +45,8 @@ describe("module-system Service and Module", () => {
       debug: vi.fn(),
     } as any;
 
-    container.db = { dummyDb: true } as any;
-    container.redis = { dummyRedis: true } as any;
+    (container as any).db = { dummyDb: true } as any;
+    (container as any).redis = { dummyRedis: true } as any;
 
     const mockServicesStore = new Map();
     container.stores = {
@@ -86,7 +86,7 @@ describe("module-system Service and Module", () => {
 
       const mod = new DummyModule({} as any, { name: "dummy-mod" });
       expect(mod.configFields).toHaveLength(1);
-      expect(mod.configFields[0].key).toBe("enabled");
+      expect(mod.configFields[0]!.key).toBe("enabled");
       expect(mod.enabled).toBe(true);
     });
 

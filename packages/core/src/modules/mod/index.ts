@@ -47,6 +47,13 @@ export class ModModule extends Module {
     await this.container.db.moderation.anonymizeUser(userId);
   }
 
+  public override async exportUserData(
+    userId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const cases = await this.container.db.moderation.findCasesForUser(userId);
+    return cases.length > 0 ? { moderationCases: cases } : null;
+  }
+
   public override async reconcileScheduledJobs(): Promise<void> {
     const cases = await this.container.db.moderation.getActiveExpiringCases();
     await Promise.all(cases.map((c) => scheduleCaseLift(this.container, c)));

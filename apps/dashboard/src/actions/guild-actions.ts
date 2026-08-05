@@ -1,7 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RPC_ACTIONS, type GuildSettingsPayload } from "@lumi/contracts";
+import {
+  RPC_ACTIONS,
+  type GuildSettingsPayload,
+  type PermitKind,
+  type PermitTargetType,
+} from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
@@ -75,6 +80,93 @@ export async function setGuildSettings(
       data,
     });
     revalidatePath(`/guild/${guildId}`);
+    return { ok: true };
+  });
+}
+
+export async function createPermit(
+  guildId: string,
+  name: string,
+  kind: PermitKind,
+  nodes: string[],
+): Promise<ActionResult & { permitId?: number }> {
+  return runAction(async () => {
+    const session = await guardedAction(guildId);
+    const res = (await rpcCall(RPC_ACTIONS.guildPermitsCreate, {
+      guildId,
+      actorId: session.userId,
+      data: { name, kind, nodes },
+    })) as { permit: { id: number } };
+    revalidatePath(`/guild/${guildId}/permits`);
+    return { ok: true, permitId: res.permit.id };
+  });
+}
+
+export async function updatePermit(
+  guildId: string,
+  permitId: number,
+  data: { name?: string; nodes?: string[] },
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await guardedAction(guildId);
+    await rpcCall(RPC_ACTIONS.guildPermitsUpdate, {
+      guildId,
+      actorId: session.userId,
+      data: { permitId, ...data },
+    });
+    revalidatePath(`/guild/${guildId}/permits`);
+    return { ok: true };
+  });
+}
+
+export async function deletePermit(
+  guildId: string,
+  permitId: number,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await guardedAction(guildId);
+    await rpcCall(RPC_ACTIONS.guildPermitsDelete, {
+      guildId,
+      actorId: session.userId,
+      data: { permitId },
+    });
+    revalidatePath(`/guild/${guildId}/permits`);
+    return { ok: true };
+  });
+}
+
+export async function assignPermit(
+  guildId: string,
+  permitId: number,
+  targetType: PermitTargetType,
+  targetId: string,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await guardedAction(guildId);
+    await rpcCall(RPC_ACTIONS.guildPermitsAssign, {
+      guildId,
+      actorId: session.userId,
+      data: { permitId, targetType, targetId },
+    });
+    revalidatePath(`/guild/${guildId}/permits`);
+    return { ok: true };
+  });
+}
+
+export async function unassignPermit(
+  guildId: string,
+  permitId: number,
+  targetType: PermitTargetType,
+  targetId: string,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await guardedAction(guildId);
+    await rpcCall(RPC_ACTIONS.guildPermitsUnassign, {
+      guildId,
+      actorId: session.userId,
+      data: { permitId, targetType, targetId },
+    });
+    revalidatePath(`/guild/${guildId}/permits`);
     return { ok: true };
   });
 }

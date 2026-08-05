@@ -13,8 +13,6 @@ export const PermissionsPanelKeys = {
   PermsGrantCustom: T("panels:permsGrantCustom"),
   PermsGrantEnforced: T("panels:permsGrantEnforced"),
   PermsPickTarget: T("panels:permsPickTarget"),
-  PermsPickNode: T("panels:permsPickNode"),
-  PermsNoNodes: T("panels:permsNoNodes"),
-  PermsGrantedTitle: T("panels:permsGrantedTitle"),
-  PermsGranted: FT<{ node: string }>("panels:permsGranted"),
+  PermsPickPermit: T("panels:permsPickPermit"),
+  PermsNoPermits: T("panels:permsNoPermits"),
 } as const;

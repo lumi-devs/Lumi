@@ -1,7 +1,12 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { getService } from "#lib/module-system/Service.js";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
+import type { AutocompleteInteraction } from "discord.js";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
+import {
+  filterAutocompleteChoices,
+  respondWithChoices,
+} from "#lib/utilities/autocomplete.js";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -49,13 +54,15 @@ export class DownloadCommand extends BaseSubcommand {
               o
                 .setName("repo")
                 .setDescription("Repository name")
-                .setRequired(true),
+                .setRequired(true)
+                .setAutocomplete(true),
             )
             .addStringOption((o) =>
               o
                 .setName("module")
                 .setDescription("Module name")
-                .setRequired(true),
+                .setRequired(true)
+                .setAutocomplete(true),
             ),
         )
         .addSubcommand((s) =>
@@ -66,7 +73,8 @@ export class DownloadCommand extends BaseSubcommand {
               o
                 .setName("module")
                 .setDescription("Module name to uninstall")
-                .setRequired(true),
+                .setRequired(true)
+                .setAutocomplete(true),
             ),
         ),
     );
@@ -74,6 +82,56 @@ export class DownloadCommand extends BaseSubcommand {
 
   private get downloaderService(): DownloaderService {
     return getService("downloader");
+  }
+
+  public override async autocompleteRun(
+    interaction: AutocompleteInteraction,
+  ): Promise<void> {
+    const focused = interaction.options.getFocused(true);
+
+    if (focused.name === "repo") {
+      const repos = await this.downloaderService.listRepos();
+      return respondWithChoices(
+        interaction,
+        filterAutocompleteChoices(
+          repos.map((r) => r.name),
+          focused.value,
+        ),
+      );
+    }
+
+    if (focused.name !== "module") return respondWithChoices(interaction, []);
+
+    const subcommand = interaction.options.getSubcommand(false);
+    if (subcommand === "install") {
+      const repoName = interaction.options.getString("repo");
+      if (!repoName) return respondWithChoices(interaction, []);
+      try {
+        const [modules, installed] = await Promise.all([
+          this.downloaderService.getModulesInRepo(repoName),
+          this.downloaderService.getInstalledModules(),
+        ]);
+        const installedNames = new Set(installed.map((m) => m.moduleName));
+        const names = modules
+          .filter((m) => !m.hidden && !installedNames.has(m.name))
+          .map((m) => m.name);
+        return respondWithChoices(
+          interaction,
+          filterAutocompleteChoices(names, focused.value),
+        );
+      } catch {
+        return respondWithChoices(interaction, []);
+      }
+    }
+
+    const installed = await this.downloaderService.getInstalledModules();
+    return respondWithChoices(
+      interaction,
+      filterAutocompleteChoices(
+        installed.map((m) => m.moduleName),
+        focused.value,
+      ),
+    );
   }
 
   public async panel(ctx: CommandContext): Promise<void> {

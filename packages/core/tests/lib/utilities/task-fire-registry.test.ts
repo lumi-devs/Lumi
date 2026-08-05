@@ -20,8 +20,8 @@ describe("Task Fire Registry & Consumer", () => {
     vi.restoreAllMocks();
 
     mockBus = {
-      consume: vi.fn().mockImplementation(async (_streams, _opts, _callback) => {
-        return vi.fn().mockResolvedValue(undefined);
+      consume: vi.fn().mockImplementation((_streams, _opts, _callback) => {
+        return Promise.resolve(vi.fn().mockResolvedValue(undefined));
       }),
     };
   });
@@ -153,12 +153,12 @@ describe("Task Fire Registry & Consumer", () => {
     });
 
     it("executes handler successfully and acks message upon receiving bus event", async () => {
-      let consumeCallback: Function | undefined;
-      mockBus.consume.mockImplementation(async (_streams: any, _opts: any, cb: Function) => {
+      let consumeCallback: ((msg: unknown) => unknown) | undefined;
+      mockBus.consume.mockImplementation((_streams: any, _opts: any, cb: (msg: unknown) => unknown) => {
         if (_streams[0] === "lumi.scheduler.fire:eventTask") {
           consumeCallback = cb;
         }
-        return vi.fn().mockResolvedValue(undefined);
+        return Promise.resolve(vi.fn().mockResolvedValue(undefined));
       });
 
       const handler = vi.fn().mockResolvedValue(undefined);
@@ -193,10 +193,8 @@ describe("Task Fire Registry & Consumer", () => {
     });
 
     it("acks message and logs warning when message arrives for unregistered or missing task", async () => {
-      let consumeCallback: Function | undefined;
-      mockBus.consume.mockImplementation(async (_streams: any, _opts: any, cb: Function) => {
-        consumeCallback = cb;
-        return vi.fn().mockResolvedValue(undefined);
+      mockBus.consume.mockImplementation((_streams: any, _opts: any, _cb: (msg: unknown) => unknown) => {
+        return Promise.resolve(vi.fn().mockResolvedValue(undefined));
       });
 
       const consumer = new TaskFireConsumer(mockBus as EventBus, {
@@ -229,12 +227,12 @@ describe("Task Fire Registry & Consumer", () => {
     });
 
     it("nacks message and logs error when task handler throws an exception", async () => {
-      let consumeCallback: Function | undefined;
-      mockBus.consume.mockImplementation(async (_streams: any, _opts: any, cb: Function) => {
+      let consumeCallback: ((msg: unknown) => unknown) | undefined;
+      mockBus.consume.mockImplementation((_streams: any, _opts: any, cb: (msg: unknown) => unknown) => {
         if (_streams[0] === "lumi.scheduler.fire:failingTask") {
           consumeCallback = cb;
         }
-        return vi.fn().mockResolvedValue(undefined);
+        return Promise.resolve(vi.fn().mockResolvedValue(undefined));
       });
 
       const failingHandler = vi.fn().mockRejectedValue(new Error("Handler execution crashed"));

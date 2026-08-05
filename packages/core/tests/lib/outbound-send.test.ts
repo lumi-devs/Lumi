@@ -17,7 +17,7 @@ const events: string[] = [];
 function makeChannel(id: string, delayMs: number) {
   return {
     isTextBased: () => true,
-    send: vi.fn(async () => {
+    send: vi.fn(async (_payload?: unknown) => {
       events.push(`start:${id}`);
       await new Promise((resolve) => setTimeout(resolve, delayMs));
       events.push(`end:${id}`);
@@ -42,7 +42,7 @@ beforeEach(() => {
   container.client = {
     channels: {
       cache: { get: (id: string) => channels.get(id) },
-      fetch: async (id: string) => channels.get(id) ?? null,
+      fetch: (id: string) => Promise.resolve(channels.get(id) ?? null),
     },
   } as never;
 });
@@ -110,7 +110,7 @@ describe("handleSendMessageFire", () => {
     channels.set("c1", {
       isTextBased: () => true,
       send: vi.fn().mockRejectedValue(new Error("500 Internal Server Error")),
-    } as never);
+    });
 
     await expect(
       handleSendMessageFire({ channelId: "c1", content: "a" }),

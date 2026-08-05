@@ -83,7 +83,12 @@ export default async function GuildOverviewPage({
       {/* Beat 3 lives inside the form (on its card stack, not on the fragment)
        * because the SaveBar it also renders is `position: fixed` — a running
        * transform on an ancestor would re-parent it to that ancestor. */}
-      <GeneralSettingsForm guildId={guildId} settings={data.settings} />
+      <GeneralSettingsForm
+        guildId={guildId}
+        settings={data.settings}
+        roles={data.roles}
+        channels={data.channels}
+      />
     </div>
   );
 }

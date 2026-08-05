@@ -41,31 +41,55 @@ function makeModule(): DashboardModuleView {
   };
 }
 
+const roles = [{ id: "555555555555555555", name: "Moderators", color: 0 }];
+const channels: never[] = [];
+
 describe("ModuleConfigForm (dynamic config form editor + save bar)", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("hides the save bar until a field is edited", () => {
-    render(<ModuleConfigForm guildId="101" module={makeModule()} />);
+    render(
+      <ModuleConfigForm
+        guildId="101"
+        module={makeModule()}
+        roles={roles}
+        channels={channels}
+      />,
+    );
     expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
   });
 
   it("shows the save bar once a field value changes, and hides it again on Reset", () => {
-    render(<ModuleConfigForm guildId="101" module={makeModule()} />);
+    render(
+      <ModuleConfigForm
+        guildId="101"
+        module={makeModule()}
+        roles={roles}
+        channels={channels}
+      />,
+    );
 
-    const roleInput = screen.getByPlaceholderText("Role ID");
+    const roleInput = screen.getByLabelText("Mod Role");
     fireEvent.change(roleInput, { target: { value: "555555555555555555" } });
     expect(screen.getByText(/unsaved changes/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
     expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Role ID")).toHaveValue("");
+    expect(screen.getByLabelText("Mod Role")).toHaveValue("");
   });
 
   it("on save, only sends the field(s) that actually changed", async () => {
     setGuildConfigField.mockResolvedValue({ ok: true });
-    render(<ModuleConfigForm guildId="101" module={makeModule()} />);
+    render(
+      <ModuleConfigForm
+        guildId="101"
+        module={makeModule()}
+        roles={roles}
+        channels={channels}
+      />,
+    );
 
-    fireEvent.change(screen.getByPlaceholderText("Role ID"), {
+    fireEvent.change(screen.getByLabelText("Mod Role"), {
       target: { value: "555555555555555555" },
     });
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
@@ -84,9 +108,16 @@ describe("ModuleConfigForm (dynamic config form editor + save bar)", () => {
 
   it("saves every changed field when more than one was edited", async () => {
     setGuildConfigField.mockResolvedValue({ ok: true });
-    render(<ModuleConfigForm guildId="101" module={makeModule()} />);
+    render(
+      <ModuleConfigForm
+        guildId="101"
+        module={makeModule()}
+        roles={roles}
+        channels={channels}
+      />,
+    );
 
-    fireEvent.change(screen.getByPlaceholderText("Role ID"), {
+    fireEvent.change(screen.getByLabelText("Mod Role"), {
       target: { value: "555555555555555555" },
     });
     fireEvent.click(screen.getByRole("checkbox", { name: "Verbose Logging" }));
@@ -109,9 +140,16 @@ describe("ModuleConfigForm (dynamic config form editor + save bar)", () => {
 
   it("shows an error and keeps the save bar open when a save fails", async () => {
     setGuildConfigField.mockResolvedValue({ ok: false, error: "Bad payload" });
-    render(<ModuleConfigForm guildId="101" module={makeModule()} />);
+    render(
+      <ModuleConfigForm
+        guildId="101"
+        module={makeModule()}
+        roles={roles}
+        channels={channels}
+      />,
+    );
 
-    fireEvent.change(screen.getByPlaceholderText("Role ID"), {
+    fireEvent.change(screen.getByLabelText("Mod Role"), {
       target: { value: "555555555555555555" },
     });
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
@@ -122,7 +160,14 @@ describe("ModuleConfigForm (dynamic config form editor + save bar)", () => {
 
   it("toggling the module's enable switch calls toggleGuildModule independently of the save bar", async () => {
     toggleGuildModule.mockResolvedValue({ ok: true });
-    render(<ModuleConfigForm guildId="101" module={makeModule()} />);
+    render(
+      <ModuleConfigForm
+        guildId="101"
+        module={makeModule()}
+        roles={roles}
+        channels={channels}
+      />,
+    );
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Toggle Security" }));
 

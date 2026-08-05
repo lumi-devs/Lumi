@@ -15,5 +15,12 @@ export default async function GuildModuleConfigPage({
   const module = data.modules.find((m) => m.name === moduleName);
   if (!module) notFound();
 
-  return <ModuleConfigForm guildId={guildId} module={module} />;
+  return (
+    <ModuleConfigForm
+      guildId={guildId}
+      module={module}
+      roles={data.roles}
+      channels={data.channels}
+    />
+  );
 }

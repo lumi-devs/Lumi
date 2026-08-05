@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { UserError, ResultError, container, err } from "@sapphire/framework";
+import { UserError, ResultError, container } from "@sapphire/framework";
 import { DiscordAPIError, HTTPError, RESTJSONErrorCodes } from "discord.js";
 import { trace } from "@opentelemetry/api";
 import { resolveCommandError, ERROR_TITLES } from "#lib/utilities/command-errors.js";

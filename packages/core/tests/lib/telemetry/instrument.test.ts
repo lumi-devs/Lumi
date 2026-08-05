@@ -17,8 +17,8 @@ describe("Telemetry & Instrumentation (instrumentCommandPiece)", () => {
     vi.spyOn(observability.commandDuration, "startTimer").mockReturnValue(mockStopTimer);
     vi.spyOn(observability.commandsTotal, "inc").mockImplementation(mockInc);
 
-    vi.spyOn(observability, "runWithContext").mockImplementation((ctx: any, fn: any) => fn());
-    vi.spyOn(observability, "withSpan").mockImplementation(async (name: string, fn: any, opts: any) => {
+    vi.spyOn(observability, "runWithContext").mockImplementation((_ctx: any, fn: any) => fn());
+    vi.spyOn(observability, "withSpan").mockImplementation((_name: string, fn: any, _opts: any) => {
       const mockSpan = {
         setAttribute: vi.fn(),
       };
@@ -143,7 +143,7 @@ describe("Telemetry & Instrumentation (instrumentCommandPiece)", () => {
       chatInputRun: "not a function",
     };
 
-    instrumentCommandPiece(piece as any);
+    instrumentCommandPiece(piece);
 
     expect(typeof piece.chatInputRun).toBe("string");
   });

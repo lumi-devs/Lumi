@@ -91,6 +91,19 @@ Details: the "Dashboard Frontend" section of [`docs/architecture.md`](docs/archi
 - **Panels**: admin-facing panel UI (hub, config, module subpanels) uses the panel kit
   (`#utilities/panels.js`) builders (`settingRow`, `tabRow`, `confirmRow`, `backRow`,
   `createPaginationRow`, ...) rather than hand-rolled section/button layouts.
+- **Permit nodes**: the canonical vocabulary of dot-notation permit strings (`mod.ban`,
+  `admin.*`, ...) lives in `packages/core/src/lib/permissions/permit-nodes.ts`, sourced from
+  every command's actual `requiredPermit`. Register a new node there when adding a
+  permit-gated command so the dashboard's permit editor and `/permit`'s autocomplete both
+  pick it up automatically.
+- **Autocomplete**: for a STRING/NUMBER command option whose valid values are a real,
+  bounded, discoverable set at runtime (an existing permit/module/repo name, not free text
+  like a ban reason), wire Sapphire's `Command.autocompleteRun` rather than leaving it
+  free-typed, using the shared helpers in `#utilities/autocomplete.js`
+  (`filterAutocompleteChoices`, `respondWithChoices`) for the case-insensitive match + 25-choice
+  cap Discord's API requires. Options already using `addRoleOption`/`addChannelOption`/
+  `addUserOption`/`addMentionableOption` already have a native picker - autocomplete doesn't
+  apply there.
 
 ## Running things
 

@@ -2,8 +2,13 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { deriveRepoNameFromUrl } from "#lib/downloader/url-helpers.js";
 import { getService } from "#lib/module-system/Service.js";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
+import type { AutocompleteInteraction } from "discord.js";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { paginateList } from "#lib/utilities/pagination.js";
+import {
+  filterAutocompleteChoices,
+  respondWithChoices,
+} from "#lib/utilities/autocomplete.js";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -83,7 +88,8 @@ export class RepoCommand extends BaseSubcommand {
               o
                 .setName("name")
                 .setDescription("Repo name to remove")
-                .setRequired(true),
+                .setRequired(true)
+                .setAutocomplete(true),
             ),
         )
         .addSubcommand((s) =>
@@ -94,7 +100,8 @@ export class RepoCommand extends BaseSubcommand {
               o
                 .setName("name")
                 .setDescription("Repo name to update (or 'all')")
-                .setRequired(true),
+                .setRequired(true)
+                .setAutocomplete(true),
             ),
         )
         .addSubcommand((s) =>
@@ -105,7 +112,8 @@ export class RepoCommand extends BaseSubcommand {
               o
                 .setName("repo_name")
                 .setDescription("Repository name")
-                .setRequired(true),
+                .setRequired(true)
+                .setAutocomplete(true),
             ),
         ),
     );
@@ -113,6 +121,25 @@ export class RepoCommand extends BaseSubcommand {
 
   private get downloaderService(): DownloaderService {
     return getService("downloader");
+  }
+
+  public override async autocompleteRun(
+    interaction: AutocompleteInteraction,
+  ): Promise<void> {
+    const focused = interaction.options.getFocused(true);
+    if (focused.name !== "name" && focused.name !== "repo_name") {
+      return respondWithChoices(interaction, []);
+    }
+
+    const repos = await this.downloaderService.listRepos();
+    const names = repos.map((r) => r.name);
+    if (focused.name === "name" && interaction.options.getSubcommand(false) === "update") {
+      names.push("all");
+    }
+    return respondWithChoices(
+      interaction,
+      filterAutocompleteChoices(names, focused.value),
+    );
   }
 
   public async help(ctx: CommandContext): Promise<void> {

@@ -5,7 +5,7 @@ import { container } from '@sapphire/framework';
 
 vi.mock('@sapphire/framework', async (importOriginal?: () => Promise<any>) => {
   if (typeof importOriginal === 'function') {
-    const actual = await importOriginal<typeof import('@sapphire/framework')>();
+    const actual = await importOriginal();
     return {
       ...actual,
       container: {

@@ -3,7 +3,6 @@ import { DownloaderService, ModuleAlreadyInstalledError } from "#lib/services/Do
 import { container } from "@sapphire/framework";
 import { resolver } from "#lib/downloader/resolver.js";
 import { promises as fs } from "node:fs";
-import child_process from "node:child_process";
 
 vi.mock("#lib/downloader/resolver.js", () => ({
   resolver: {
@@ -26,7 +25,7 @@ vi.mock("node:fs", () => ({
 }));
 
 const { mockExecFile } = vi.hoisted(() => ({
-  mockExecFile: vi.fn((file, args, cb) => {
+  mockExecFile: vi.fn((_file, _args, cb) => {
     cb(null, { stdout: "hash123\n", stderr: "" });
   }),
 }));
@@ -97,11 +96,11 @@ describe("DownloaderService", () => {
       },
     };
 
-    container.db = mockDb;
-    container.moduleStore = mockModuleStore;
+    (container as any).db = mockDb;
+    (container as any).moduleStore = mockModuleStore;
     container.logger = mockLogger;
     container.client = mockClient;
-    container.redis = mockRedis;
+    (container as any).redis = mockRedis;
     container.stores = {
       get: vi.fn().mockReturnValue(mockCommandStore),
     } as any;
@@ -320,7 +319,7 @@ describe("DownloaderService", () => {
       mockDb.downloader.readDownloaderRepoById.mockResolvedValue({ id: "r1-id", name: "repo1", branch: "main" });
 
       (fs.access as any).mockResolvedValue(true);
-      mockExecFile.mockImplementation((file: string, args: string[], cb: any) => {
+      mockExecFile.mockImplementation((_file: string, args: string[], cb: any) => {
         if (args.includes("rev-parse")) {
           cb(null, { stdout: "hash123\n", stderr: "" });
         } else if (args.includes("fetch")) {
@@ -339,7 +338,7 @@ describe("DownloaderService", () => {
       mockDb.downloader.readDownloaderRepoById.mockResolvedValue({ id: "r1-id", name: "repo1", branch: "main" });
 
       (fs.access as any).mockResolvedValue(true);
-      mockExecFile.mockImplementation((file: string, args: string[], cb: any) => {
+      mockExecFile.mockImplementation((_file: string, args: string[], cb: any) => {
         if (args.includes("rev-parse") && args.includes("HEAD")) {
           cb(null, { stdout: "oldhash\n", stderr: "" });
         } else if (args.includes("rev-parse") && args.includes("@{u}")) {
@@ -363,7 +362,7 @@ describe("DownloaderService", () => {
       mockDb.downloader.readDownloaderRepoById.mockResolvedValue({ id: "r1-id", name: "repo1", branch: "main" });
 
       (fs.access as any).mockResolvedValue(true);
-      mockExecFile.mockImplementation((file: string, args: string[], cb: any) => {
+      mockExecFile.mockImplementation((_file: string, args: string[], cb: any) => {
         if (args.includes("pull")) {
           const err: any = new Error("Conflict");
           err.stderr = "Git pull conflict";
@@ -384,7 +383,7 @@ describe("DownloaderService", () => {
 
       let activePulls = 0;
       let maxActivePulls = 0;
-      mockExecFile.mockImplementation((file: string, args: string[], cb: any) => {
+      mockExecFile.mockImplementation((_file: string, args: string[], cb: any) => {
         if (args.includes("rev-parse") && args.includes("HEAD")) {
           cb(null, { stdout: "oldhash\n", stderr: "" });
         } else if (args.includes("rev-parse") && args.includes("@{u}")) {
@@ -445,7 +444,7 @@ describe("DownloaderService", () => {
       });
 
       (fs.access as any).mockResolvedValue(true);
-      mockExecFile.mockImplementation((file: string, args: string[], cb: any) => {
+      mockExecFile.mockImplementation((_file: string, args: string[], cb: any) => {
         if (args.includes("rev-parse") && args.includes("HEAD")) {
           cb(null, { stdout: "oldhash\n", stderr: "" });
         } else if (args.includes("rev-parse") && args.includes("@{u}")) {
