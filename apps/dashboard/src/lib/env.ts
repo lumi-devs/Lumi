@@ -24,13 +24,4 @@ export const env = {
   authSecret: required("DASHBOARD_SESSION_SECRET"),
   host: optional("DASHBOARD_HOST", "0.0.0.0"),
   port: Number.parseInt(optional("DASHBOARD_PORT", "8080"), 10),
-  /** Comma-separated Discord user IDs granted the System Panel — dashboard.md §8. */
-  botOwners: optional("BOT_OWNERS")
-    .split(",")
-    .map((id) => id.trim())
-    .filter(Boolean),
 } as const;
-
-export function isBotOwner(userId: string): boolean {
-  return env.botOwners.includes(userId);
-}

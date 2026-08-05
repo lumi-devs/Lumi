@@ -103,9 +103,17 @@ export interface RpcRequestPayloads {
   "guild.module.toggle": ModuleTogglePayload;
   "guild.config.set": ConfigSetPayload;
   "guild.settings.set": GuildSettingsPayload;
+  "auth.whoami": never;
   "system.dashboard.get": never;
   "system.maintenance.set": SystemMaintenancePayload;
   "system.module.toggle": SystemModuleTogglePayload;
+}
+
+/** Response of `auth.whoami` — lets the dashboard defer owner detection to
+ *  the worker's `PermitResolver.isBotOwner`, which recognizes the Discord
+ *  application's actual owner without any env-var configuration. */
+export interface WhoAmIResponse {
+  isBotOwner: boolean;
 }
 
 export type RpcActionName = keyof RpcRequestPayloads;
@@ -121,6 +129,7 @@ export const RPC_ACTIONS = {
   guildModuleToggle: "guild.module.toggle",
   guildConfigSet: "guild.config.set",
   guildSettingsSet: "guild.settings.set",
+  authWhoAmI: "auth.whoami",
   // System Panel (dashboard.md §10) — request/response contracts only; the
   // bot worker doesn't implement handlers for these yet (see apps/worker),
   // same as the rest of §10's action list. Adding the remaining ones

@@ -21,7 +21,8 @@ interface SessionExtras {
   avatar: string;
   /** Guilds where the user holds Manage Server (or ownership), pre-filtered at sign-in. */
   guilds: OAuthGuild[];
-  /** True when `userId` is listed in the `BOT_OWNERS` env var — dashboard.md §8. */
+  /** From the worker's `auth.whoami` RPC — true when `PermitResolver.isBotOwner`
+   *  recognizes `userId` (via `OWNER_IDS` or the Discord application owner). */
   isBotOwner: boolean;
 }
 

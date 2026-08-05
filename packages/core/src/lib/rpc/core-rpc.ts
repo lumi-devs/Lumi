@@ -64,6 +64,13 @@ const SystemModuleToggleSchema = s.object({
 export function initCoreRpcHandlers() {
   container.logger.info("[CoreSystem] Initializing Core RPC handlers...");
 
+  // Self-check only — tells the caller whether *their own* actorId is a bot
+  // owner, so the dashboard can defer to `PermitResolver.isBotOwner`'s
+  // application-owner fallback instead of keeping its own env-var list.
+  registerRpcHandler(RPC_ACTIONS.authWhoAmI, (req) => {
+    return { isBotOwner: req.actorId ? PermitResolver.isBotOwner(req.actorId) : false };
+  });
+
   registerRpcHandler(RPC_ACTIONS.gdprDelete, async (req) => {
     requireBotOwner(req);
     const { userId } = parsePayload(GdprDeleteSchema, req.data);

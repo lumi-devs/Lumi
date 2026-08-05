@@ -9,8 +9,8 @@ export default async function SystemLayout({
 }) {
   // dashboard.md §8: Bot Owner and Server Owner tiers are completely
   // separated at the route level — this 404s (never 403s, to avoid
-  // confirming the route's existence to a non-owner) anyone whose session
-  // isn't in BOT_OWNERS.
+  // confirming the route's existence to a non-owner) anyone the worker's
+  // `auth.whoami` didn't recognize as a bot owner.
   const session = await requireBotOwner();
 
   return (
