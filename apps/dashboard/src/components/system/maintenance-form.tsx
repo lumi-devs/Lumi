@@ -2,10 +2,17 @@
 
 import { useState } from "react";
 import { setMaintenanceMode } from "#/actions/system-actions";
-import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "#/components/ui/card";
 import { Switch } from "#/components/ui/switch";
 import { Input, Label } from "#/components/ui/input";
 import { Button } from "#/components/ui/button";
+import { Badge } from "#/components/ui/badge";
 import { ActionError } from "#/components/action-error";
 import { useServerAction } from "#/lib/use-server-action";
 
@@ -29,25 +36,37 @@ export function MaintenanceForm({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="grow">
-          <CardTitle>Maintenance mode</CardTitle>
-          <CardDescription>
-            Instantly puts every guild-facing command into a downtime state.
-          </CardDescription>
-        </div>
-        <Switch
-          checked={enabled}
-          onChange={(v) => {
-            setEnabled(v);
-            save(v, message);
-          }}
-          disabled={isPending}
-          aria-label="Toggle maintenance mode"
-        />
+    <Card
+      // The one screen-level state that changes the bot's behaviour for every
+      // user gets a coloured left rule when it's on, so an operator can tell
+      // at a glance from anywhere on the page.
+      className={enabled ? "border-warning/40" : undefined}
+    >
+      <CardHeader
+        actions={
+          <>
+            <Badge variant={enabled ? "warning" : "neutral"} dot>
+              {enabled ? "Active" : "Off"}
+            </Badge>
+            <Switch
+              checked={enabled}
+              onChange={(v) => {
+                setEnabled(v);
+                save(v, message);
+              }}
+              disabled={isPending}
+              aria-label="Toggle maintenance mode"
+            />
+          </>
+        }
+      >
+        <CardTitle>Maintenance mode</CardTitle>
+        <CardDescription>
+          Instantly puts every guild-facing command into a downtime state.
+        </CardDescription>
       </CardHeader>
-      <div className="flex flex-col gap-2">
+
+      <CardBody className="flex flex-col gap-2">
         <Label htmlFor="maintenanceMessage">Downtime message</Label>
         <div className="flex gap-2">
           <Input
@@ -57,16 +76,18 @@ export function MaintenanceForm({
             onChange={(e) => setMessage(e.target.value)}
           />
           <Button
-            variant="outline"
-            size="sm"
+            variant="secondary"
             disabled={isPending}
             onClick={() => save(enabled, message)}
           >
             Save
           </Button>
         </div>
-        <ActionError error={error} />
-      </div>
+        <p className="text-[11px] text-fg-subtle">
+          Shown to users in place of the normal command response.
+        </p>
+        <ActionError error={error} className="mt-1" />
+      </CardBody>
     </Card>
   );
 }

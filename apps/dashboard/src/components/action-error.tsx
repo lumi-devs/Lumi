@@ -1,6 +1,7 @@
+import { Alert } from "#/components/ui/alert";
 import { cn } from "#/lib/utils";
 
-/** Shared error line for `useServerAction`/`useOptimisticAction` consumers. */
+/** Shared error surface for `useServerAction`/`useOptimisticAction` consumers. */
 export function ActionError({
   error,
   className,
@@ -9,5 +10,9 @@ export function ActionError({
   className?: string;
 }) {
   if (!error) return null;
-  return <p className={cn("text-xs text-danger", className)}>{error}</p>;
+  return (
+    <Alert variant="danger" className={cn(className)}>
+      {error}
+    </Alert>
+  );
 }

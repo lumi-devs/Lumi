@@ -1,29 +1,48 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { NavItem } from "./nav-item";
+import {
+  Ban,
+  ClipboardList,
+  Gavel,
+  History,
+  IdCard,
+  LayoutGrid,
+  type LucideIcon,
+  Settings,
+  ShieldAlert,
+  SlidersHorizontal,
+  TriangleAlert,
+  Volume2,
+  Wrench,
+} from "lucide-react";
+import { NavItem, NavSection } from "./nav-item";
+import { Glyph } from "#/components/ui/glyph";
 import type { DashboardModuleView } from "#/lib/dashboard-data";
 
 interface NavLink {
   href: string;
   label: string;
-  emoji: string;
+  icon: LucideIcon;
 }
 
-/** Stub pages — dashboard.md §9B rows without a wired-up form yet. See each page.tsx for the Prisma model TODO comment. */
+// Management routes. Icons come from lucide so the whole nav column shares
+// one stroke weight and optical size — the previous emoji set (🔨 ⚠️ 🔐 🔊 🪪
+// 🎛️ 🕘 📋 🚫 🧰) rendered at different widths per platform and is the single
+// loudest "scaffolded UI" tell in the app.
 function managementLinks(guildId: string): NavLink[] {
   const base = `/guild/${guildId}`;
   return [
-    { href: `${base}/moderation`, label: "Moderation Cases", emoji: "🔨" },
-    { href: `${base}/warn-thresholds`, label: "Warn Thresholds", emoji: "⚠️" },
-    { href: `${base}/security`, label: "Security", emoji: "🔐" },
-    { href: `${base}/tempvc`, label: "Temp Voice Channels", emoji: "🔊" },
-    { href: `${base}/permits`, label: "Permits", emoji: "🪪" },
-    { href: `${base}/overrides`, label: "Overrides", emoji: "🎛️" },
-    { href: `${base}/history`, label: "Settings History", emoji: "🕘" },
-    { href: `${base}/audit`, label: "Audit Log", emoji: "📋" },
-    { href: `${base}/blocklist`, label: "Blocklist", emoji: "🚫" },
-    { href: `${base}/advanced`, label: "Advanced", emoji: "🧰" },
+    { href: `${base}/moderation`, label: "Moderation Cases", icon: Gavel },
+    { href: `${base}/warn-thresholds`, label: "Warn Thresholds", icon: TriangleAlert },
+    { href: `${base}/security`, label: "Security", icon: ShieldAlert },
+    { href: `${base}/tempvc`, label: "Temp Voice Channels", icon: Volume2 },
+    { href: `${base}/permits`, label: "Permits", icon: IdCard },
+    { href: `${base}/overrides`, label: "Overrides", icon: SlidersHorizontal },
+    { href: `${base}/history`, label: "Settings History", icon: History },
+    { href: `${base}/audit`, label: "Audit Log", icon: ClipboardList },
+    { href: `${base}/blocklist`, label: "Blocklist", icon: Ban },
+    { href: `${base}/advanced`, label: "Advanced", icon: Wrench },
   ];
 }
 
@@ -39,59 +58,49 @@ export function GuildSidebar({
     href === `/guild/${guildId}` ? pathname === href : pathname?.startsWith(href);
 
   return (
-    <nav className="flex w-full shrink-0 flex-col gap-6 md:w-60">
-      <div>
-        <p className="mb-2 px-2 text-xs font-semibold tracking-wide text-white/40 uppercase">
-          Server
-        </p>
+    <nav
+      aria-label="Server settings"
+      className="flex w-full shrink-0 flex-col gap-5 md:sticky md:top-[57px] md:max-h-[calc(100vh-57px)] md:w-56 md:overflow-y-auto md:pb-6"
+    >
+      <NavSection title="Server">
         <NavItem
           href={`/guild/${guildId}`}
           label="General"
-          emoji="⚙️"
+          icon={Settings}
           active={isActive(`/guild/${guildId}`)}
         />
         <NavItem
           href={`/guild/${guildId}/modules`}
           label="Modules"
-          emoji="🧩"
+          icon={LayoutGrid}
           active={pathname?.startsWith(`/guild/${guildId}/modules`)}
         />
-      </div>
+      </NavSection>
 
-      <div>
-        <p className="mb-2 px-2 text-xs font-semibold tracking-wide text-white/40 uppercase">
-          Modules
-        </p>
-        <div className="flex flex-col gap-0.5">
-          {modules.map((m) => (
-            <NavItem
-              key={m.name}
-              href={`/guild/${guildId}/modules/${m.name}`}
-              label={m.displayName}
-              emoji={m.emoji}
-              active={pathname === `/guild/${guildId}/modules/${m.name}`}
-              enabled={m.enabled || m.name === "core"}
-            />
-          ))}
-        </div>
-      </div>
+      <NavSection title={`Modules · ${modules.length}`}>
+        {modules.map((m) => (
+          <NavItem
+            key={m.name}
+            href={`/guild/${guildId}/modules/${m.name}`}
+            label={m.displayName}
+            leading={<Glyph emoji={m.emoji} size="sm" />}
+            active={pathname === `/guild/${guildId}/modules/${m.name}`}
+            enabled={m.enabled || m.name === "core"}
+          />
+        ))}
+      </NavSection>
 
-      <div>
-        <p className="mb-2 px-2 text-xs font-semibold tracking-wide text-white/40 uppercase">
-          Management
-        </p>
-        <div className="flex flex-col gap-0.5">
-          {managementLinks(guildId).map((l) => (
-            <NavItem
-              key={l.href}
-              href={l.href}
-              label={l.label}
-              emoji={l.emoji}
-              active={pathname === l.href}
-            />
-          ))}
-        </div>
-      </div>
+      <NavSection title="Management">
+        {managementLinks(guildId).map((l) => (
+          <NavItem
+            key={l.href}
+            href={l.href}
+            label={l.label}
+            icon={l.icon}
+            active={pathname === l.href}
+          />
+        ))}
+      </NavSection>
     </nav>
   );
 }

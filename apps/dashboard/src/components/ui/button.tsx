@@ -1,32 +1,54 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "#/lib/utils";
 
-// Small copy-in primitives styled off the Tailwind tokens generated from
-// dashboard.md §7's CSS custom properties — same "own the source, don't
-// depend on a component npm package" model shadcn/ui popularized (see
-// docs/DASHBOARD_RESEARCH_NOTES.md). No Radix dependency: these are plain
-// native elements, kept intentionally minimal for this rewrite's scope.
+// Copy-in primitives styled off the semantic tokens in globals.css — the
+// "own the source, don't depend on a component npm package" model, but
+// deliberately *not* default shadcn styling.
+//
+// Action hierarchy is the point of this file. Exactly one variant reads as
+// primary (solid accent); everything else is neutral or explicitly
+// destructive, so a screen with six buttons still has one obvious next step:
+//
+//   primary   — the single committing action on a screen (Save, Install)
+//   secondary — bordered neutral; the default for everything else
+//   ghost     — borderless neutral; toolbar / inline / repeated actions
+//   danger    — solid destructive; irreversible, confirmed actions only
+//   dangerGhost — destructive but low-emphasis (Uninstall, Remove in a row)
+//   link      — inline text action
 
 export const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-all disabled:pointer-events-none disabled:opacity-50 cursor-pointer",
+  [
+    "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap",
+    // Chrome type: the condensed display face, tracked slightly open so short
+    // labels ("Save", "Install") don't read as cramped at 12-13px.
+    "font-display tracking-[0.01em] font-semibold",
+    "rounded-md transition-colors duration-100 cursor-pointer",
+    "disabled:pointer-events-none disabled:opacity-45",
+    "[&_svg]:pointer-events-none [&_svg]:shrink-0",
+  ].join(" "),
   {
     variants: {
       variant: {
-        default:
-          "bg-accent-cyan text-[#04060c] hover:brightness-110 shadow-[0_4px_16px_rgba(56,189,248,0.25)]",
-        ghost:
-          "bg-transparent text-white border border-border hover:bg-white/5",
-        danger:
-          "bg-danger/90 text-white hover:bg-danger shadow-[0_4px_16px_rgba(244,63,94,0.25)]",
-        outline: "border border-border bg-transparent hover:bg-white/5 text-white",
+        // The only element in the app that carries the accent shadow.
+        primary:
+          "bg-accent text-fg-on-accent hover:bg-accent-hover shadow-accent",
+        secondary:
+          "border border-border bg-surface text-fg hover:bg-surface-hover hover:border-border-strong shadow-e1",
+        ghost: "text-fg-muted hover:bg-surface-hover hover:text-fg",
+        danger: "bg-danger text-white hover:brightness-110 shadow-e1",
+        dangerGhost:
+          "border border-transparent text-danger hover:bg-danger-soft hover:border-danger/25",
+        link: "text-accent-fg underline-offset-4 hover:underline px-0",
       },
       size: {
-        default: "h-10 px-4",
-        sm: "h-8 px-3 text-xs",
-        icon: "h-9 w-9",
+        sm: "h-7 gap-1 px-2 text-[12px] [&_svg]:size-3.5",
+        md: "h-8 px-2.5 text-[13px] [&_svg]:size-4",
+        lg: "h-9 px-3.5 text-[13px] [&_svg]:size-4",
+        icon: "size-8 [&_svg]:size-4",
+        iconSm: "size-7 [&_svg]:size-3.5",
       },
     },
-    defaultVariants: { variant: "default", size: "default" },
+    defaultVariants: { variant: "secondary", size: "md" },
   },
 );
 

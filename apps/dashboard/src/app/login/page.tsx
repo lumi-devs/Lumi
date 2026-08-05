@@ -3,6 +3,7 @@ import { signIn, auth } from "#/lib/auth";
 import { redirect } from "next/navigation";
 import { isRateLimited } from "#/lib/rate-limit";
 import { Button } from "#/components/ui/button";
+import { Wordmark } from "#/components/layout/wordmark";
 
 // Branded replacement for the old server.ts `loginPage()` — same visual
 // intent (glow card, "Continue with Discord"), but the actual OAuth2
@@ -24,27 +25,28 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center px-4">
-      <div
-        className="pointer-events-none absolute top-1/2 left-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(56,189,248,0.15) 0%, transparent 70%)",
-        }}
-      />
-      <div className="glass-card relative z-10 w-full max-w-md rounded-2xl p-10 text-center shadow-2xl">
-        <p className="font-brand mb-2 text-2xl font-bold">
-          <span className="brand-gradient-text">✦ Lumi</span> Control Panel
-        </p>
-        <p className="mb-8 text-sm text-white/50">
-          Configure every feature for your Discord servers instantly — no
-          commands required.
+    // No radial glow blob, no gradient wordmark: a sign-in screen for an admin
+    // tool should look like a door, not a product launch. One card, one action.
+    <main className="flex min-h-screen flex-col items-center justify-center px-4">
+      <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-6 shadow-e2">
+        <Wordmark className="mb-5" />
+        <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
+          Sign in to Lumi
+        </h1>
+        <p className="mt-1 mb-5 text-[12px] leading-5 text-fg-muted">
+          Authenticate with Discord to manage the servers where you have Manage
+          Server.
         </p>
         <form action={loginAction}>
-          <Button type="submit" className="w-full">
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            className="w-full"
+          >
             <svg
-              width="18"
-              height="18"
+              width="16"
+              height="16"
               viewBox="0 0 127.14 96.36"
               fill="currentColor"
               aria-hidden="true"
@@ -54,6 +56,10 @@ export default async function LoginPage() {
             Continue with Discord
           </Button>
         </form>
+        <p className="mt-4 text-[11px] leading-4 text-fg-subtle">
+          Lumi only requests your Discord identity and guild list. It never
+          reads your messages.
+        </p>
       </div>
     </main>
   );

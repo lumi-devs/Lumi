@@ -2,6 +2,7 @@ import { requireBotOwner } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
 import { RPC_ACTIONS } from "@lumi/contracts";
 import { RepoManager } from "#/components/system/repo-manager";
+import { PageHeader } from "#/components/ui/page-header";
 import type { DownloaderRepoView } from "#/lib/dashboard-data";
 
 export default async function SystemAddonsPage() {
@@ -11,13 +12,11 @@ export default async function SystemAddonsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-brand text-xl font-bold">Addon Repositories</h1>
-        <p className="text-sm text-white/50">
-          Manage third-party Git repositories and their installed modules.
-        </p>
-      </div>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        title="Addon Repositories"
+        description="Manage third-party Git repositories and the modules installed from them."
+      />
       <RepoManager repos={result.repos} />
     </div>
   );
