@@ -16,7 +16,7 @@ export default async function SystemLayout({
   return (
     <>
       <SiteHeader session={session} />
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 pt-6 pb-24 md:flex-row">
+      <div className="mx-auto flex max-w-[88rem] flex-col gap-6 px-4 pt-5 pb-28 md:flex-row md:gap-8 md:px-6">
         <SystemSidebar />
         <main className="min-w-0 flex-1">{children}</main>
       </div>

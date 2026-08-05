@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Search } from "lucide-react";
 
-// dashboard.md §7 header wireframe: `[Search settings & modules...  ⌘K]`.
-// This wires up the ⌘K focus affordance the wireframe calls for; it does not
-// implement fuzzy search over modules/settings — that needs an indexed list
-// of every module's config fields across the currently loaded guild, which
-// isn't available at the header's scope. Left as a follow-up.
+// Wires up the ⌘K focus affordance. It does not implement fuzzy search over
+// modules/settings — that needs an indexed list of every module's config
+// fields across the currently loaded guild, which isn't available at the
+// header's scope. Left as a follow-up.
 export function SpotlightSearch() {
   const ref = useRef<HTMLInputElement>(null);
 
@@ -22,14 +22,19 @@ export function SpotlightSearch() {
   }, []);
 
   return (
-    <div className="relative hidden flex-1 max-w-md md:block">
+    <div className="relative hidden max-w-xs flex-1 md:block">
+      <Search
+        aria-hidden
+        className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-fg-subtle"
+      />
       <input
         ref={ref}
         type="search"
-        placeholder="Search settings & modules..."
-        className="h-9 w-full rounded-lg border border-border bg-white/5 px-3 pr-10 text-sm text-white placeholder:text-white/30 outline-none focus:border-accent-cyan"
+        placeholder="Search settings and modules"
+        aria-label="Search settings and modules"
+        className="h-8 w-full rounded-md border border-border bg-bg-subtle pr-12 pl-8 text-[13px] text-fg transition-colors outline-none placeholder:text-fg-subtle hover:border-border-strong focus:border-accent focus:bg-surface [&::-webkit-search-cancel-button]:appearance-none"
       />
-      <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border border-border px-1.5 py-0.5 text-[10px] text-white/40">
+      <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border border-border bg-surface px-1 py-px font-sans text-[10px] leading-4 text-fg-subtle">
         ⌘K
       </kbd>
     </div>

@@ -1,3 +1,4 @@
+import { TriangleAlert } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { StubPage } from "#/components/stub-page";
 
@@ -10,7 +11,7 @@ export default async function WarnThresholdsPage({
   await requireGuild(guildId);
   return (
     <StubPage
-      emoji="⚠️"
+      icon={TriangleAlert}
       title="Warn Thresholds"
       specComponent="WarnThresholdRulesEditor"
       models={["WarnThreshold"]}

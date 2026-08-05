@@ -1,44 +1,69 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
-// dashboard.md §6E — Multi-Theme Engine. Applies the stored theme via a
-// `data-theme` attribute on <html>, same mechanism the spec calls for.
+// Theme is `system | light | dark`, applied via a `data-theme` attribute on
+// <html>. `system` removes the attribute entirely so the `prefers-color-scheme`
+// block in globals.css takes over — which means the common case (following
+// the OS) paints correctly on the very first frame with no script involved.
 //
 // This runs client-side after hydration rather than as a blocking inline
-// <head> script (the more common "avoid flash of wrong theme" trick):
-// dashboard.md §5C's CSP intentionally ships `script-src 'self'` with no
-// 'unsafe-inline'/nonce in production, and a nonce-per-request setup would
-// add real complexity for a cosmetic flash. The tradeoff is a one-frame
-// flash of the default (Midnight Space) theme on first paint for visitors
-// who previously picked a different theme — acceptable for a self-hosted
-// admin tool.
+// <head> script: next.config.ts ships `script-src 'self'` with no
+// 'unsafe-inline'/nonce in production, and a nonce-per-request setup would add
+// real complexity. The residual tradeoff is a one-frame flash *only* for users
+// who explicitly pinned a theme opposite to their OS setting.
 
-export const THEMES = ["midnight", "oled", "cyberpunk"] as const;
+export const THEMES = ["system", "light", "dark"] as const;
 export type Theme = (typeof THEMES)[number];
+
 const STORAGE_KEY = "lumi-dashboard-theme";
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored && THEMES.includes(stored as Theme) && stored !== "midnight") {
-      document.documentElement.dataset["theme"] = stored;
-    }
-  }, []);
-  return children;
+function isTheme(value: string | null): value is Theme {
+  return value !== null && (THEMES as readonly string[]).includes(value);
 }
 
-export function setTheme(theme: Theme): void {
-  if (theme === "midnight") document.documentElement.removeAttribute("data-theme");
+function applyTheme(theme: Theme): void {
+  if (theme === "system") document.documentElement.removeAttribute("data-theme");
   else document.documentElement.dataset["theme"] = theme;
-  window.localStorage.setItem(STORAGE_KEY, theme);
 }
 
-export function useCurrentTheme(): Theme {
-  const [theme, setThemeState] = useState<Theme>("midnight");
+interface ThemeContextValue {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+  /** False until the stored preference has been read, so the toggle can avoid a hydration mismatch. */
+  ready: boolean;
+}
+
+const ThemeContext = createContext<ThemeContextValue>({
+  theme: "system",
+  setTheme: () => undefined,
+  ready: false,
+});
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setThemeState] = useState<Theme>("system");
+  const [ready, setReady] = useState(false);
+
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored && THEMES.includes(stored as Theme)) setThemeState(stored as Theme);
+    if (isTheme(stored)) {
+      setThemeState(stored);
+      applyTheme(stored);
+    }
+    setReady(true);
   }, []);
-  return theme;
+
+  const setTheme = useCallback((next: Theme) => {
+    setThemeState(next);
+    applyTheme(next);
+    window.localStorage.setItem(STORAGE_KEY, next);
+  }, []);
+
+  return (
+    <ThemeContext value={{ theme, setTheme, ready }}>{children}</ThemeContext>
+  );
+}
+
+export function useTheme(): ThemeContextValue {
+  return useContext(ThemeContext);
 }

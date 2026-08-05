@@ -1,16 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import { SlidersHorizontal } from "lucide-react";
 import { setGuildConfigField, toggleGuildModule } from "#/actions/guild-actions";
 import { SaveBar } from "#/components/save-bar";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
 import { Switch } from "#/components/ui/switch";
 import { Badge } from "#/components/ui/badge";
-import { ConfigFieldInput, ConfigFieldLabel } from "./config-field-input";
+import { Glyph } from "#/components/ui/glyph";
+import { EmptyState } from "#/components/ui/empty-state";
+import { SettingRow } from "#/components/ui/input";
+import { ConfigFieldInput } from "./config-field-input";
 import { useServerAction } from "#/lib/use-server-action";
 import type { DashboardModuleView } from "#/lib/dashboard-data";
 
-/** dashboard.md §9B `DynamicConfigFormEditor` — one module's toggle + config fields. */
+/**
+ * dashboard.md §9B `DynamicConfigFormEditor` — one module's toggle + config
+ * fields.
+ *
+ * Fields are description-left / control-right rows separated by hairlines,
+ * rather than a stack of label-above-input blocks with 20px gaps. For a
+ * module with ten fields that's the difference between one screen and three,
+ * and the description finally has room to be read instead of being an 11px
+ * afterthought under the input.
+ */
 export function ModuleConfigForm({
   guildId,
   module: m,
@@ -24,6 +37,7 @@ export function ModuleConfigForm({
   const { isPending, error, setError, run } = useServerAction();
 
   const dirty = JSON.stringify(config) !== JSON.stringify(m.config);
+  const inactive = !enabled && !isCore;
 
   // Toggle and save share one pending/error state (as before): both drive
   // the same Switch's `disabled` and the same SaveBar's `saving`/`error`.
@@ -56,45 +70,66 @@ export function ModuleConfigForm({
 
   return (
     <>
-      <Card className={!enabled && !isCore ? "opacity-60" : undefined}>
-        <CardHeader>
-          <span className="text-2xl">{m.emoji}</span>
-          <div className="grow">
-            <CardTitle>{m.displayName}</CardTitle>
-            <CardDescription>{m.description}</CardDescription>
+      <Card>
+        <CardHeader
+          className="items-center"
+          actions={
+            isCore ? (
+              <Badge variant="neutral">Always active</Badge>
+            ) : (
+              <>
+                <Badge variant={enabled ? "success" : "neutral"} dot>
+                  {enabled ? "Enabled" : "Disabled"}
+                </Badge>
+                <Switch
+                  checked={enabled}
+                  onChange={handleToggle}
+                  disabled={isPending}
+                  aria-label={`Toggle ${m.displayName}`}
+                />
+              </>
+            )
+          }
+        >
+          <div className="flex items-center gap-2.5">
+            <Glyph emoji={m.emoji} />
+            <div className="min-w-0">
+              <CardTitle>{m.displayName}</CardTitle>
+              <CardDescription>{m.description}</CardDescription>
+            </div>
           </div>
-          {isCore ? (
-            <Badge>Always active</Badge>
-          ) : (
-            <Switch
-              checked={enabled}
-              onChange={handleToggle}
-              disabled={isPending}
-              aria-label={`Toggle ${m.displayName}`}
-            />
-          )}
         </CardHeader>
 
         {m.configFields.length === 0 ? (
-          <p className="text-sm text-white/40">No configurable options.</p>
+          <EmptyState
+            compact
+            icon={SlidersHorizontal}
+            title="No configurable options"
+            description="This module works out of the box — enabling it is the only setting."
+          />
         ) : (
-          <div className="flex flex-col gap-5">
+          <div
+            // Disabled modules keep their settings readable but visibly
+            // inert, instead of the whole card dropping to 60% opacity
+            // (which also faded the toggle you need to turn it back on).
+            className={inactive ? "divide-y divide-border opacity-60" : "divide-y divide-border"}
+          >
             {m.configFields.map((f) => (
-              <div key={f.key} className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <ConfigFieldLabel htmlFor={f.key}>{f.label}</ConfigFieldLabel>
-                </div>
-                <ConfigFieldInput
-                  field={f}
-                  value={config[f.key]}
-                  onChange={(value) =>
-                    setConfig((c) => ({ ...c, [f.key]: value }))
-                  }
-                />
-                {f.description && (
-                  <p className="text-xs text-white/40">{f.description}</p>
-                )}
-              </div>
+              <SettingRow
+                key={f.key}
+                htmlFor={f.key}
+                label={f.label}
+                description={f.description}
+                control={
+                  <ConfigFieldInput
+                    field={f}
+                    value={config[f.key]}
+                    onChange={(value) =>
+                      setConfig((c) => ({ ...c, [f.key]: value }))
+                    }
+                  />
+                }
+              />
             ))}
           </div>
         )}

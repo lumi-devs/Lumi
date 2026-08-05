@@ -1,3 +1,4 @@
+import { Ban } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { StubPage } from "#/components/stub-page";
 
@@ -10,7 +11,7 @@ export default async function BlocklistPage({
   await requireGuild(guildId);
   return (
     <StubPage
-      emoji="🚫"
+      icon={Ban}
       title="Blocklist"
       specComponent="GuildBlocklistTable"
       models={["Blocklist (guildId IS NOT NULL)"]}

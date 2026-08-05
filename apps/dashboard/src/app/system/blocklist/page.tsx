@@ -1,3 +1,4 @@
+import { Ban } from "lucide-react";
 import { requireBotOwner } from "#/lib/auth-guards";
 import { StubPage } from "#/components/stub-page";
 
@@ -5,7 +6,7 @@ export default async function SystemBlocklistPage() {
   await requireBotOwner();
   return (
     <StubPage
-      emoji="🚫"
+      icon={Ban}
       title="Global Blocklist"
       specComponent="GlobalBlocklistTable"
       models={["Blocklist (guildId IS NULL)"]}

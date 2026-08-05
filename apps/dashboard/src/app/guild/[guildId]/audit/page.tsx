@@ -1,3 +1,4 @@
+import { ClipboardList } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { StubPage } from "#/components/stub-page";
 
@@ -10,7 +11,7 @@ export default async function AuditPage({
   await requireGuild(guildId);
   return (
     <StubPage
-      emoji="📋"
+      icon={ClipboardList}
       title="Audit Log"
       specComponent="GuildAuditLogTable"
       models={["AuditLedger"]}
