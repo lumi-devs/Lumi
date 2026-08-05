@@ -1,3 +1,4 @@
+import { SlidersHorizontal } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { StubPage } from "#/components/stub-page";
 
@@ -10,7 +11,7 @@ export default async function OverridesPage({
   await requireGuild(guildId);
   return (
     <StubPage
-      emoji="🎛️"
+      icon={SlidersHorizontal}
       title="Channel / Role Overrides"
       specComponent="ChannelRoleOverridesMatrix"
       models={["ModuleConfigOverride"]}

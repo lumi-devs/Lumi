@@ -1,3 +1,4 @@
+import { History } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { StubPage } from "#/components/stub-page";
 
@@ -10,7 +11,7 @@ export default async function HistoryPage({
   await requireGuild(guildId);
   return (
     <StubPage
-      emoji="🕘"
+      icon={History}
       title="Settings History & Rollback"
       specComponent="SettingsHistoryRollbackTable"
       models={["ModuleConfigHistory"]}

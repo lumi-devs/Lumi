@@ -1,6 +1,6 @@
 import type { LumiT } from "#lib/i18n/index.js";
 import { getService } from "#lib/module-system/Service.js";
-import { hasRequiredPermit } from "#lib/permissions/index.js";
+import { hasRequiredPermit, PermitResolver } from "#lib/permissions/index.js";
 import { loadFeatures } from "#modules/core/lib/config-panel.js";
 import { buildAddonRepoModulesView } from "#modules/core/ui/addons.js";
 import { buildHubView, buildSettingsView } from "#modules/core/ui/hub.js";
@@ -24,12 +24,18 @@ export const accessDenied = () =>
     message: `${Emojis.CROSS} You need the \`admin.*\` permit to manage this server.`,
   });
 
-/** Wick-style permit checks for the hub panel: same nodes /lumi and /download require. */
+/** Wick-style permit check for the hub panel: same node /lumi requires. */
 export const hasAdminPermit = (interaction: PanelInteraction) =>
   hasRequiredPermit(interaction, "admin.*");
 
+/**
+ * Host-level actions (addons, core self-update) are Bot Owner only. This is
+ * deliberately not a permit node: `owner.*` is satisfied by every guild owner
+ * (PermitResolver's guild-owner bypass), and installing an addon runs
+ * third-party code in the bot process.
+ */
 export const hasOwnerPermit = (interaction: PanelInteraction) =>
-  hasRequiredPermit(interaction, "owner.*");
+  Promise.resolve(PermitResolver.isBotOwner(interaction.user.id));
 
 /** Re-renders the hub landing card in place; the interaction must be deferred. */
 export async function renderHub(interaction: ButtonInteraction, t?: LumiT) {

@@ -1,10 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { CircleCheck } from "lucide-react";
 import { gdprDeleteUser } from "#/actions/system-actions";
-import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
-import { Input, Label } from "#/components/ui/input";
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "#/components/ui/card";
+import { Field, Input } from "#/components/ui/input";
+import { Checkbox } from "#/components/ui/switch";
 import { Button } from "#/components/ui/button";
+import { Alert } from "#/components/ui/alert";
 import { useServerAction } from "#/lib/use-server-action";
 
 /** dashboard.md §9A `SystemUserPrivacyConsole` — GDPR deletion trigger, wired to the existing `global.gdpr.delete` RPC. */
@@ -12,12 +21,14 @@ export function GdprForm() {
   const [userId, setUserId] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
   const { isPending, run } = useServerAction();
 
   function handleDelete() {
     setResult(null);
     run(async () => {
       const res = await gdprDeleteUser(userId);
+      setFailed(!res.ok);
       setResult(res.ok ? "Deleted." : (res.error ?? "Failed"));
       if (res.ok) {
         setUserId("");
@@ -27,45 +38,56 @@ export function GdprForm() {
   }
 
   return (
-    <Card>
+    // Destructive panels get a danger-tinted border so they never read like
+    // the ordinary settings cards stacked above them.
+    <Card className="border-danger/30">
       <CardHeader>
-        <div>
-          <CardTitle>GDPR data deletion</CardTitle>
-          <CardDescription>
-            Irreversibly purges a user&apos;s data across every guild (moderation
-            case attribution anonymized to <code>0</code>, AFK/temp-VC/etc. rows
-            removed).
-          </CardDescription>
-        </div>
+        <CardTitle>GDPR data deletion</CardTitle>
+        <CardDescription>
+          Irreversibly purges a user&apos;s data across every guild. Moderation
+          case attribution is anonymised to <code className="font-mono">0</code>;
+          AFK, temp-VC and similar rows are removed outright.
+        </CardDescription>
       </CardHeader>
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="gdprUserId">Discord user ID</Label>
+
+      <CardBody className="flex max-w-md flex-col gap-3">
+        <Field
+          label="Discord user ID"
+          htmlFor="gdprUserId"
+          hint="Right-click a user with Developer Mode enabled to copy their ID."
+        >
           <Input
             id="gdprUserId"
             placeholder="123456789012345678"
+            className="font-mono text-[12px]"
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
           />
-        </div>
-        <label className="flex items-center gap-2 text-sm text-white/60">
-          <input
-            type="checkbox"
-            checked={confirmed}
-            onChange={(e) => setConfirmed(e.target.checked)}
-          />
+        </Field>
+
+        <label className="flex cursor-pointer items-center gap-2 text-[12px] text-fg-muted">
+          <Checkbox checked={confirmed} onChange={setConfirmed} />
           I understand this cannot be undone.
         </label>
+
         <Button
           variant="danger"
           disabled={!userId || !confirmed || isPending}
           onClick={handleDelete}
           className="self-start"
         >
-          Delete user data
+          {isPending ? "Deleting…" : "Delete user data"}
         </Button>
-        {result && <p className="text-xs text-white/60">{result}</p>}
-      </div>
+
+        {result &&
+          (failed ? (
+            <Alert variant="danger">{result}</Alert>
+          ) : (
+            <Alert variant="info" icon={CircleCheck} className="text-success">
+              {result}
+            </Alert>
+          ))}
+      </CardBody>
     </Card>
   );
 }

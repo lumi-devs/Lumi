@@ -22,7 +22,7 @@ import type { DownloaderService } from "#lib/services/DownloaderService.js";
   aliases: ["dl"],
   description:
     "Install or uninstall a module from a repository (Bot Owner Only)",
-  requiredPermit: "owner.*",
+  preconditions: ["BotOwner"],
   prefixEnabled: true,
   subcommands: [
     { name: "panel", run: "panel", default: true },

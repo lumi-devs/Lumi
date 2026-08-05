@@ -1,4 +1,5 @@
 import { container } from "@sapphire/framework";
+import { acquireRedisLock } from "#lib/redis-lock.js";
 import type { ModLiftPayload } from "../scheduled-tasks/modLift.js";
 import { MuteAction, BanAction, VoiceMuteAction } from "../actions/index.js";
 
@@ -11,6 +12,22 @@ const ACTION_LABELS: Record<string, string> = {
 export async function handleModLiftFire(
   payload: ModLiftPayload,
 ): Promise<void> {
+  // The fire stream is at-least-once (XAUTOCLAIM can redeliver a fire that is
+  // still running elsewhere), so the active-check and the lift have to be
+  // mutually exclusive across processes - otherwise the same case unbans twice.
+  const release = await acquireRedisLock(
+    container.redis,
+    `lumi:lock:mod-lift:${payload.caseId}`,
+    { ttlMs: 30_000, acquireTimeoutMs: 60_000 },
+  );
+  try {
+    await liftCase(payload);
+  } finally {
+    await release();
+  }
+}
+
+async function liftCase(payload: ModLiftPayload): Promise<void> {
   const c = await container.db.moderation.getModerationCaseById(payload.caseId);
   if (!c?.active) return;
 

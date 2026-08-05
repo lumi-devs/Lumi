@@ -69,6 +69,24 @@ export class TempVcRepository extends Repository {
     });
   }
 
+  /**
+   * Update only the named columns. Panel actions each carry a record they read
+   * moments earlier; writing the whole row back would drop a concurrent
+   * action's change (lock vs. hide vs. transfer on the same channel).
+   */
+  public async patchRecord(
+    guildId: string,
+    channelId: string,
+    patch: Partial<TempVcRecordInput>,
+  ): Promise<TempVcRecord | null> {
+    const { count } = await this.prisma.tempVcRecord.updateMany({
+      where: { guildId, channelId },
+      data: patch,
+    });
+    if (count === 0) return null;
+    return this.getRecord(guildId, channelId);
+  }
+
   public async deleteRecord(guildId: string, channelId: string): Promise<void> {
     await this.prisma.tempVcRecord.deleteMany({
       where: { guildId, channelId },

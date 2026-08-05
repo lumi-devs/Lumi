@@ -1,7 +1,7 @@
 "use client";
 
 import { FieldType, type ConfigField } from "@lumi/contracts";
-import { Input, Select, Label } from "#/components/ui/input";
+import { Input, Select } from "#/components/ui/input";
 import { Switch } from "#/components/ui/switch";
 
 /** Renders the right control for a `ConfigField`, mirroring the old `fieldInput()` switch in views.ts. */
@@ -27,6 +27,7 @@ export function ConfigFieldInput({
     case FieldType.ENUM:
       return (
         <Select
+          id={field.key}
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
         >
@@ -44,7 +45,9 @@ export function ConfigFieldInput({
     case FieldType.NUMBER:
       return (
         <Input
+          id={field.key}
           type="number"
+          className="tabular"
           value={value === null || value === undefined ? "" : String(value)}
           onChange={(e) =>
             onChange(e.target.value === "" ? null : Number(e.target.value))
@@ -66,10 +69,18 @@ export function ConfigFieldInput({
       const shown = Array.isArray(value)
         ? value.join(", ")
         : ((value as string | undefined) ?? "");
+      // Snowflake IDs are long digit strings — mono keeps them scannable and
+      // stops them from looking like prose in the middle of a settings list.
+      const isSnowflake =
+        field.type === FieldType.CHANNEL ||
+        field.type === FieldType.ROLE ||
+        field.type === FieldType.USER;
       return (
         <Input
+          id={field.key}
           type="text"
           placeholder={placeholder}
+          className={isSnowflake ? "font-mono text-[12px]" : undefined}
           value={shown}
           onChange={(e) => {
             if (field.list) {
@@ -88,5 +99,3 @@ export function ConfigFieldInput({
     }
   }
 }
-
-export { Label as ConfigFieldLabel };

@@ -11,7 +11,7 @@ import {
   type FilterHit,
   type RuleConfig,
 } from "../lib/rules.js";
-import { decayHeat, secondsUntilCool, type HeatConfig } from "../lib/heat.js";
+import { type HeatConfig } from "../lib/heat.js";
 import {
   getRegexWorker,
   RegexTimeoutError,
@@ -19,6 +19,36 @@ import {
 
 const DUPLICATE_WINDOW_SECONDS = 30;
 const WARN_COOLDOWN_SECONDS = 30;
+
+/**
+ * Decay-then-add in one round trip. A burst of messages from one member is
+ * handled by concurrent listener invocations; an HGETALL/HSET pair around an
+ * await lets them all read the same heat and write back the same value, so a
+ * spammer's heat stops climbing exactly when it should be climbing fastest.
+ * Mirrors `decayHeat`/`secondsUntilCool` from ../lib/heat.js.
+ */
+const ADD_HEAT_SCRIPT = `
+local h = tonumber(redis.call('HGET', KEYS[1], 'h')) or 0
+local t = tonumber(redis.call('HGET', KEYS[1], 't'))
+local now = tonumber(ARGV[1])
+local decay = tonumber(ARGV[2])
+local points = tonumber(ARGV[3])
+if t == nil then t = now end
+local cur = h
+if decay > 0 then
+  local minutes = (now - t) / 60000
+  if minutes < 0 then minutes = 0 end
+  cur = h - minutes * decay
+end
+if cur < 0 then cur = 0 end
+local nxt = cur + points
+local ttl = 3600
+if decay > 0 then ttl = math.ceil(nxt / decay * 60) + 60 end
+local value = string.format('%.3f', nxt)
+redis.call('HSET', KEYS[1], 'h', value, 't', string.format('%d', now))
+redis.call('EXPIRE', KEYS[1], string.format('%d', ttl))
+return value
+`;
 
 /** djb2 — a cheap, short, non-cryptographic fingerprint of message content. */
 function fingerprint(content: string): string {
@@ -228,16 +258,16 @@ export class FilterService extends Service {
   ): Promise<number> {
     const key = RedisKeys.filterHeat(guildId, userId);
     const now = Date.now();
-    const cur = await this.redis.hgetall(key);
-    const stored = cur["h"] ? Number.parseFloat(cur["h"]) : 0;
-    const lastTs = cur["t"] ? Number.parseInt(cur["t"], 10) : now;
-    const next =
-      decayHeat(stored, lastTs, now, config.decayPerMinute) + points;
-    await this.redis
-      .multi()
-      .hset(key, "h", next.toFixed(3), "t", String(now))
-      .expire(key, secondsUntilCool(next, config.decayPerMinute))
-      .exec();
+    const next = Number.parseFloat(
+      (await this.redis.eval(
+        ADD_HEAT_SCRIPT,
+        1,
+        key,
+        String(now),
+        String(config.decayPerMinute),
+        String(points),
+      )) as string,
+    );
     return next;
   }
 
@@ -259,10 +289,18 @@ export class FilterService extends Service {
     return prev === fp;
   }
 
-  /** One-shot guard so a sustained-hot member is warned once per window, not per message. */
-  public async claimWarnSlot(guildId: string, userId: string): Promise<boolean> {
+  /**
+   * One-shot guard so a sustained-hot member is escalated once per window, not
+   * once per message: several messages in the same burst can each cross the
+   * threshold before the first escalation's `clearHeat` lands.
+   */
+  public async claimEscalation(
+    guildId: string,
+    userId: string,
+    action: string,
+  ): Promise<boolean> {
     const set = await this.redis.set(
-      RedisKeys.filterHeatActed(guildId, userId),
+      `${RedisKeys.filterHeatActed(guildId, userId)}:${action}`,
       "1",
       "EX",
       WARN_COOLDOWN_SECONDS,

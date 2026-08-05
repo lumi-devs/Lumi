@@ -27,6 +27,7 @@ import {
   listVcRecords,
   removeVcRecord,
   setVcRecord,
+  patchVcRecord,
   listGenerators,
   setGenerator,
   removeGenerator,
@@ -283,9 +284,10 @@ export default class TempVcService extends Service {
     await channel.permissionOverwrites
       .edit(newOwnerId, { ManageChannels: true })
       .catch(() => null);
-    const next = { ...record, ownerId: newOwnerId };
-    await setVcRecord(channel.guild.id, channel.id, next);
-    return next;
+    const next = await patchVcRecord(channel.guild.id, channel.id, {
+      ownerId: newOwnerId,
+    });
+    return next ?? { ...record, ownerId: newOwnerId };
   }
 
   public canManage(member: GuildMember, channel: VoiceBasedChannel): boolean {
@@ -338,9 +340,8 @@ export default class TempVcService extends Service {
           .catch(() => null);
       }
     }
-    const next = { ...record, ...patch };
-    await setVcRecord(channel.guild.id, channel.id, next);
-    return next;
+    const next = await patchVcRecord(channel.guild.id, channel.id, patch);
+    return next ?? { ...record, ...patch };
   }
 }
 

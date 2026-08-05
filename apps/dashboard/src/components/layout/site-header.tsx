@@ -1,14 +1,22 @@
 import Link from "next/link";
 import type { Session } from "next-auth";
+import { LogOut, Terminal } from "lucide-react";
 import { signOutAction } from "#/actions/auth-actions";
 import { SpotlightSearch } from "./spotlight-search";
+import { ThemeToggle } from "./theme-toggle";
+import { Wordmark } from "./wordmark";
+import { Button, buttonVariants } from "#/components/ui/button";
 
-/** Sticky header — dashboard.md §7 wireframe row 1. */
+/**
+ * Sticky app bar. 56px instead of 64px, hairline bottom border instead of a
+ * blurred translucent panel — at this size the header is chrome, not a
+ * feature, and it should not visually compete with the page title beneath it.
+ */
 export function SiteHeader({ session }: { session: Session | null }) {
   return (
-    <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b border-border bg-[#04060c]/80 px-4 backdrop-blur-md md:px-6">
-      <Link href="/" className="font-brand shrink-0 text-lg font-bold">
-        <span className="brand-gradient-text">✦ Lumi</span>
+    <header className="sticky top-0 z-50 flex h-14 items-center gap-3 border-b border-border bg-bg/85 px-4 backdrop-blur-sm md:px-6">
+      <Link href="/" className="shrink-0" aria-label="Lumi home">
+        <Wordmark />
       </Link>
 
       <SpotlightSearch />
@@ -20,40 +28,51 @@ export function SiteHeader({ session }: { session: Session | null }) {
           {session.isBotOwner && (
             <Link
               href="/system"
-              className="hidden text-sm font-medium text-white/60 hover:text-white sm:inline"
+              className={buttonVariants({ variant: "ghost", size: "md" })}
             >
-              System Panel
+              <Terminal aria-hidden />
+              <span className="hidden sm:inline">System</span>
             </Link>
           )}
-          <div className="flex items-center gap-2 rounded-full border border-border bg-white/5 py-1 pr-3 pl-1">
+
+          <ThemeToggle />
+
+          <div className="flex items-center gap-2 rounded-md border border-border bg-surface py-1 pr-2.5 pl-1">
             {/* eslint-disable-next-line @next/next/no-img-element -- external Discord CDN avatar, next/image adds no value here */}
             <img
               src={session.avatar}
               alt=""
-              width={24}
-              height={24}
-              className="size-6 rounded-full"
+              width={20}
+              height={20}
+              className="size-5 rounded-full"
             />
-            <span className="max-w-[120px] truncate text-xs font-medium">
+            <span className="max-w-[120px] truncate text-[12px] font-medium text-fg">
               {session.username}
             </span>
           </div>
+
           <form action={signOutAction}>
-            <button
+            <Button
               type="submit"
-              className="text-sm font-medium text-white/50 hover:text-white"
+              variant="ghost"
+              size="icon"
+              title="Log out"
+              aria-label="Log out"
             >
-              Log out
-            </button>
+              <LogOut aria-hidden />
+            </Button>
           </form>
         </>
       ) : (
-        <Link
-          href="/login"
-          className="rounded-lg bg-accent-cyan px-4 py-2 text-sm font-semibold text-[#04060c]"
-        >
-          Login
-        </Link>
+        <>
+          <ThemeToggle />
+          <Link
+            href="/login"
+            className={buttonVariants({ variant: "primary", size: "md" })}
+          >
+            Login
+          </Link>
+        </>
       )}
     </header>
   );

@@ -18,12 +18,16 @@ This is a from-scratch rewrite of the original hand-rolled `Bun.serve` SSR app. 
 
 ## 🌟 Overview
 
-- **Auth**: Discord OAuth2 via [NextAuth.js (Auth.js v5)](https://authjs.dev), not hand-rolled HMAC cookie signing. Session is a JWT (`AUTH_SECRET`, mapped from `DASHBOARD_SESSION_SECRET`); `session.isBotOwner` is derived from the `BOT_OWNERS` env var.
+- **Auth**: Discord OAuth2 via [NextAuth.js (Auth.js v5)](https://authjs.dev), not hand-rolled HMAC cookie signing. Session is a JWT (`AUTH_SECRET`, mapped from `DASHBOARD_SESSION_SECRET`); `session.isBotOwner` comes from the worker's `auth.whoami` RPC at sign-in, so it tracks `PermitResolver.isBotOwner` (`OWNER_IDS` env var, or the Discord application's actual owner) with no separate dashboard-side owner list.
 - **RPC bridge**: `src/lib/rpc.ts` is a `server-only` module (never bundled to the client) — a straight port of the old `apps/dashboard/src/rpc.ts` RabbitMQ RPC client, now reached from Server Components / Route Handlers / Server Actions.
 - **IDOR guard**: `src/lib/auth-guards.ts`'s `authorizedGuild()` is re-checked on every guild-scoped page render *and* every guild-scoped Server Action — never trusted from client state.
 - **Security headers + CSP**: `next.config.ts`'s `headers()`.
 - **CSRF**: Next.js Server Actions' built-in same-origin (Origin vs Host) check — no hand-rolled token system.
-- **Design system**: Tailwind v4 tokens generated from the CSS custom properties in `src/app/globals.css`, plus a 3-theme engine (`data-theme` on `<html>`, see `src/components/theme-provider.tsx`).
+- **Design direction**: *engineering blueprint / operator console.* Hairline rules, wide uppercase micro-labels, condensed engineered type for chrome, a 32px graph-paper field behind the page, and one saturated signal colour (blueprint cobalt) reserved for the primary action and the active route. Amber/green/red are reserved for machine status only, so decoration can never be mistaken for a state readout. Surfaces that carry data stay opaque and flat.
+- **Design system**: Tailwind v4 tokens generated from the semantic CSS custom properties in `src/app/globals.css` (`--surface`, `--fg-muted`, `--accent`, …). Components must consume those tokens — never a raw colour or a `white/40`-style alpha, or light mode breaks. Light and dark are both authored; `system`/`light`/`dark` is chosen via `data-theme` on `<html>` (`src/components/theme-provider.tsx`, toggled from the header).
+- **Type**: Saira Semi Condensed for chrome (titles, nav, buttons, badges, table headers, micro-labels — `font-display`), IBM Plex Sans for body and dense prose (`font-sans`), JetBrains Mono for data (snowflakes, module names, URLs — `font-mono`). All three self-hosted via `next/font`.
+- **Motion**: one orchestrated page-load on the guild overview and system panel — `.rise` with a `--rise-delay` custom property on a 70ms beat. Nothing else animates on entry; `prefers-reduced-motion` collapses it.
+- **Icons**: `lucide-react`, used for all application chrome. Emoji are never used as an icon set; a module's own `emoji` field is author-supplied identity metadata and is rendered inside `components/ui/glyph.tsx`.
 
 ---
 
@@ -34,7 +38,6 @@ This is a from-scratch rewrite of the original hand-rolled `Bun.serve` SSR app. 
 | `DASHBOARD_HOST` | No | `0.0.0.0` | Interface to bind (used by `next start -H`). |
 | `DASHBOARD_PORT` | No | `8080` | Port to listen on. |
 | `DASHBOARD_SESSION_SECRET` | **Yes** | - | NextAuth's session JWT encryption secret. Generate with `openssl rand -hex 32`. |
-| `BOT_OWNERS` | No | `""` | Comma-separated Discord user IDs granted the `/system` panel. |
 | `DISCORD_OAUTH2_CLIENT_ID` | **Yes** | - | Discord Application Client ID. |
 | `DISCORD_OAUTH2_CLIENT_SECRET` | **Yes** | - | Discord Application Client Secret. |
 | `RABBITMQ_URL` | **Yes** | - | RabbitMQ broker connection string. |

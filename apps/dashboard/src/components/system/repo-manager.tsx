@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { ChevronDown, ChevronRight, GitBranch, PackagePlus } from "lucide-react";
 import {
   addRepo,
   installModule,
@@ -8,12 +9,21 @@ import {
   listRepoModules,
   type RepoModuleView,
 } from "#/actions/system-actions";
-import { Card } from "#/components/ui/card";
-import { Input, Label } from "#/components/ui/input";
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "#/components/ui/card";
+import { Field, Input } from "#/components/ui/input";
 import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
+import { Alert } from "#/components/ui/alert";
+import { EmptyState } from "#/components/ui/empty-state";
+import { ActionError } from "#/components/action-error";
 import type { DownloaderRepoView } from "#/lib/dashboard-data";
-import { deriveRepoNameFromUrl } from "#/lib/utils";
+import { cn, deriveRepoNameFromUrl } from "#/lib/utils";
 
 /** dashboard.md §9A `AddonGitRepoManagerTable` + `InstalledAddonsGrid`. */
 export function RepoManager({ repos: initial }: { repos: DownloaderRepoView[] }) {
@@ -54,58 +64,76 @@ export function RepoManager({ repos: initial }: { repos: DownloaderRepoView[] })
   return (
     <div className="flex flex-col gap-4">
       <Card>
-        <p className="mb-3 text-sm font-semibold">Add addon repository</p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1.5fr_0.7fr_auto]">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="repoName">Name (optional)</Label>
-            <Input
-              id="repoName"
-              placeholder="Derived from URL if left blank"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+        <CardHeader>
+          <CardTitle>Add a repository</CardTitle>
+          <CardDescription>
+            Lumi clones the repo and makes its modules available to install.
+          </CardDescription>
+        </CardHeader>
+        <CardBody className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1.5fr_1fr_0.7fr_auto]">
+            <Field label="Git URL" htmlFor="repoUrl">
+              <Input
+                id="repoUrl"
+                placeholder="https://github.com/owner/repo"
+                className="font-mono text-[12px]"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onBlur={handleUrlBlur}
+              />
+            </Field>
+            <Field label="Name (optional)" htmlFor="repoName">
+              <Input
+                id="repoName"
+                placeholder="Derived from URL"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </Field>
+            <Field label="Branch" htmlFor="repoBranch">
+              <Input
+                id="repoBranch"
+                placeholder="master"
+                className="font-mono text-[12px]"
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+              />
+            </Field>
+            <Button
+              variant="primary"
+              disabled={!url || isPending}
+              onClick={handleAdd}
+              className="self-start sm:mt-[22px]"
+            >
+              <PackagePlus aria-hidden />
+              {isPending ? "Adding…" : "Add repo"}
+            </Button>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="repoUrl">Git URL</Label>
-            <Input
-              id="repoUrl"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onBlur={handleUrlBlur}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="repoBranch">Branch</Label>
-            <Input
-              id="repoBranch"
-              placeholder="master"
-              value={branch}
-              onChange={(e) => setBranch(e.target.value)}
-            />
-          </div>
-          <Button
-            disabled={!url || isPending}
-            onClick={handleAdd}
-            className="self-end"
-          >
-            Add
-          </Button>
-        </div>
-        {error && <p className="mt-2 text-xs text-danger">{error}</p>}
-        <p className="mt-3 text-xs text-white/40">
-          Third-party repositories run arbitrary code inside the bot process.
-          Only add repositories you trust.
-        </p>
+
+          <ActionError error={error} />
+
+          <Alert variant="warning">
+            Third-party repositories run arbitrary code inside the bot process
+            with full database access. Only add repositories you trust.
+          </Alert>
+        </CardBody>
       </Card>
 
-      <div className="flex flex-col gap-3">
-        {repos.map((r) => (
-          <RepoRow key={r.name} repo={r} />
-        ))}
-        {repos.length === 0 && (
-          <p className="text-sm text-white/40">No addon repositories configured.</p>
-        )}
-      </div>
+      {repos.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={GitBranch}
+            title="No addon repositories"
+            description="Add a Git repository above to browse and install community modules."
+          />
+        </Card>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {repos.map((r) => (
+            <RepoRow key={r.name} repo={r} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -127,79 +155,146 @@ function RepoRow({ repo }: { repo: DownloaderRepoView }) {
     }
   }
 
-  function handleInstall(moduleName: string) {
-    startTransition(async () => {
-      const res = await installModule(repo.name, moduleName);
-      if (res.ok) {
-        setModules((m) =>
-          m?.map((mod) => (mod.name === moduleName ? { ...mod, isInstalled: true } : mod)) ?? null,
-        );
-      } else setError(res.error ?? "Install failed");
-    });
-  }
-
-  function handleUninstall(moduleName: string) {
-    startTransition(async () => {
-      const res = await uninstallModule(moduleName);
-      if (res.ok) {
-        setModules((m) =>
-          m?.map((mod) => (mod.name === moduleName ? { ...mod, isInstalled: false } : mod)) ?? null,
-        );
-      } else setError(res.error ?? "Uninstall failed");
-    });
-  }
+  const Chevron = expanded ? ChevronDown : ChevronRight;
 
   return (
     <Card>
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{repo.name}</p>
-          <p className="truncate text-xs text-white/40">
-            {repo.url} · <span className="font-mono">{repo.branch}</span>
+      <button
+        type="button"
+        onClick={toggleExpand}
+        aria-expanded={expanded}
+        className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover"
+      >
+        <Chevron className="size-4 shrink-0 text-fg-subtle" aria-hidden />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] font-medium text-fg">{repo.name}</p>
+          <p className="truncate font-mono text-[11px] text-fg-subtle">
+            {repo.url}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={toggleExpand}>
+        <Badge variant="outline" className="font-mono">
+          <GitBranch className="size-3" aria-hidden />
+          {repo.branch}
+        </Badge>
+        <span className="text-[12px] text-fg-muted">
           {expanded ? "Hide modules" : "Browse modules"}
-        </Button>
-      </div>
+        </span>
+      </button>
 
       {expanded && (
-        <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
-          {isPending && !modules && <p className="text-xs text-white/40">Loading…</p>}
-          {error && <p className="text-xs text-danger">{error}</p>}
-          {modules?.map((m) => (
-            <div key={m.name} className="flex items-center justify-between gap-3">
-              <span className="text-sm">
-                {m.name} {m.version && <span className="text-white/30">v{m.version}</span>}
-              </span>
-              {m.isInstalled ? (
-                <div className="flex items-center gap-2">
-                  <Badge variant="success">Installed</Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={isPending}
-                    onClick={() => handleUninstall(m.name)}
-                  >
-                    Uninstall
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  size="sm"
-                  disabled={isPending}
-                  onClick={() => handleInstall(m.name)}
-                >
-                  Install
-                </Button>
-              )}
+        <div className="border-t border-border">
+          {isPending && !modules ? (
+            <ModuleRowSkeleton />
+          ) : error ? (
+            <div className="p-3">
+              <ActionError error={error} />
             </div>
-          ))}
-          {modules?.length === 0 && (
-            <p className="text-xs text-white/40">No modules found in this repo.</p>
+          ) : modules && modules.length > 0 ? (
+            <ul className="divide-y divide-border">
+              {modules.map((m) => (
+                <RepoModuleRow
+                  key={m.name}
+                  repoName={repo.name}
+                  module={m}
+                  onChange={(installed) =>
+                    setModules(
+                      (list) =>
+                        list?.map((mod) =>
+                          mod.name === m.name ? { ...mod, isInstalled: installed } : mod,
+                        ) ?? null,
+                    )
+                  }
+                />
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              compact
+              icon={PackagePlus}
+              title="No modules in this repository"
+              description="The repo cloned successfully but contains no Lumi module manifests."
+            />
           )}
         </div>
       )}
     </Card>
+  );
+}
+
+function RepoModuleRow({
+  repoName,
+  module: m,
+  onChange,
+}: {
+  repoName: string;
+  module: RepoModuleView;
+  onChange: (installed: boolean) => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function act(installed: boolean) {
+    setError(null);
+    startTransition(async () => {
+      const res = installed
+        ? await installModule(repoName, m.name)
+        : await uninstallModule(m.name);
+      if (res.ok) onChange(installed);
+      else setError(res.error ?? (installed ? "Install failed" : "Uninstall failed"));
+    });
+  }
+
+  return (
+    <li className="flex items-center gap-3 px-3 py-2 transition-colors hover:bg-surface-hover">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate font-mono text-[12px] text-fg">{m.name}</span>
+          {m.version && (
+            <span className="tabular text-[11px] text-fg-subtle">v{m.version}</span>
+          )}
+        </div>
+        {error && <p className="mt-1 text-[11px] text-danger">{error}</p>}
+      </div>
+
+      {m.isInstalled ? (
+        <>
+          <Badge variant="success" dot>
+            Installed
+          </Badge>
+          <Button
+            variant="dangerGhost"
+            size="sm"
+            disabled={isPending}
+            onClick={() => act(false)}
+          >
+            Uninstall
+          </Button>
+        </>
+      ) : (
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={isPending}
+          onClick={() => act(true)}
+        >
+          Install
+        </Button>
+      )}
+    </li>
+  );
+}
+
+function ModuleRowSkeleton() {
+  return (
+    <ul className="divide-y divide-border" aria-hidden>
+      {[0, 1, 2].map((i) => (
+        <li key={i} className="flex items-center gap-3 px-3 py-2.5">
+          <span
+            className={cn("skeleton h-3", i === 1 ? "w-40" : "w-28")}
+          />
+          <span className="skeleton ml-auto h-6 w-16" />
+        </li>
+      ))}
+    </ul>
   );
 }

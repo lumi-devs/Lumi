@@ -2,8 +2,10 @@ import "server-only";
 import NextAuth, { type Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import Discord from "next-auth/providers/discord";
-import { env, isBotOwner } from "./env";
+import { env } from "./env";
 import { canManage, fetchUserGuilds } from "./discord";
+import { rpcCall } from "./rpc";
+import { RPC_ACTIONS, type WhoAmIResponse } from "@lumi/contracts";
 
 // Auth.js (NextAuth v5) replaces the old hand-rolled HMAC-signed session
 // cookie + in-memory session Map (apps/dashboard/src/sessions.ts) and the
@@ -52,8 +54,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.userId = raw.id;
         token.username = raw.username;
         token.avatar = raw.avatar ?? "";
-        token.accessToken = account.access_token;
-        token.isBotOwner = isBotOwner(raw.id);
+        try {
+          // Defers to the worker's `PermitResolver.isBotOwner`, which
+          // recognizes the Discord application's actual owner as well as
+          // `OWNER_IDS` — no separate dashboard-side owner list to keep in
+          // sync.
+          const whoami = (await rpcCall(RPC_ACTIONS.authWhoAmI, {
+            actorId: raw.id,
+          })) as WhoAmIResponse;
+          token.isBotOwner = whoami.isBotOwner;
+        } catch {
+          // Worker unreachable at sign-in shouldn't hard-fail login — just
+          // re-checked on next re-auth, and every Bot Owner Server Action
+          // re-validates against the worker independently anyway.
+          token.isBotOwner = false;
+        }
         try {
           const guilds = await fetchUserGuilds(account.access_token ?? "");
           token.guilds = guilds.filter(canManage);
@@ -76,7 +91,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.userId = token.userId ?? "";
       session.username = token.username ?? "";
       session.avatar = token.avatar ?? "";
-      session.accessToken = token.accessToken ?? "";
       session.guilds = token.guilds ?? [];
       session.isBotOwner = token.isBotOwner ?? false;
       return session;

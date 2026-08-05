@@ -2,29 +2,50 @@ import { container } from "@sapphire/framework";
 
 const TTL_SECONDS = 24 * 60 * 60;
 
-const occKey = (channelId: string) => `lumi:tempvc:voice:occ:${channelId}`;
+const OCC_PREFIX = "lumi:tempvc:voice:occ:";
+const occKey = (channelId: string) => `${OCC_PREFIX}${channelId}`;
 const userKey = (userId: string) => `lumi:tempvc:voice:user:${userId}`;
+
+/**
+ * Read-the-previous-channel and rewrite occupancy in one Lua call: two voice
+ * events for the same user (join then move) are handled concurrently, and a
+ * GET followed by a separate MULTI lets the second event read a pre-move value
+ * and skip the SREM - leaving the user forever "in" a temp VC that then never
+ * qualifies as empty for cleanup.
+ */
+const TRACK_SCRIPT = `
+local prev = redis.call('GET', KEYS[1])
+if prev == false then prev = nil end
+local newChannel = ARGV[1]
+if newChannel == '' then newChannel = nil end
+if prev == newChannel then return prev or false end
+if prev then redis.call('SREM', ARGV[4] .. prev, ARGV[2]) end
+if newChannel then
+  local occ = ARGV[4] .. newChannel
+  redis.call('SADD', occ, ARGV[2])
+  redis.call('EXPIRE', occ, ARGV[3])
+  redis.call('SET', KEYS[1], newChannel, 'EX', ARGV[3])
+else
+  redis.call('DEL', KEYS[1])
+end
+return prev or false
+`;
 
 /** Move `userId` from their previous channel to `newChannelId` (null = disconnected). */
 export async function trackVoiceState(
   userId: string,
   newChannelId: string | null,
 ): Promise<{ prevChannelId: string | null }> {
-  const { redis } = container;
-  const prev = await redis.get(userKey(userId));
-  if (prev === newChannelId) return { prevChannelId: prev };
-
-  const pipe = redis.multi();
-  if (prev) pipe.srem(occKey(prev), userId);
-  if (newChannelId) {
-    pipe.sadd(occKey(newChannelId), userId);
-    pipe.expire(occKey(newChannelId), TTL_SECONDS);
-    pipe.set(userKey(userId), newChannelId, "EX", TTL_SECONDS);
-  } else {
-    pipe.del(userKey(userId));
-  }
-  await pipe.exec();
-  return { prevChannelId: prev };
+  const prev = (await container.redis.eval(
+    TRACK_SCRIPT,
+    1,
+    userKey(userId),
+    newChannelId ?? "",
+    userId,
+    String(TTL_SECONDS),
+    OCC_PREFIX,
+  )) as string | null;
+  return { prevChannelId: prev ?? null };
 }
 
 export async function isVoiceChannelEmpty(channelId: string): Promise<boolean> {

@@ -4,8 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { GuildSettingsPayload } from "@lumi/contracts";
 import { setGuildSettings } from "#/actions/guild-actions";
 import { SaveBar } from "#/components/save-bar";
-import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
-import { Input, Label } from "#/components/ui/input";
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "#/components/ui/card";
+import { Field, Input } from "#/components/ui/input";
 import { useServerAction } from "#/lib/use-server-action";
 import type { GuildSettings } from "#/lib/dashboard-data";
 
@@ -198,111 +204,157 @@ export function GeneralSettingsForm({
     });
   }
 
+  const snowflake = "font-mono text-[12px]";
+
   return (
     <>
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>General settings</CardTitle>
-            <CardDescription>Core server configuration — Guild model.</CardDescription>
-          </div>
-        </CardHeader>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="prefix">Command prefix</Label>
-            <Input
-              id="prefix"
-              maxLength={5}
-              placeholder="(uses global default)"
-              value={form.prefix ?? ""}
-              onChange={(e) => field("prefix", e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="locale">Locale</Label>
-            <Input
-              id="locale"
-              value={form.locale ?? ""}
-              onChange={(e) => field("locale", e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="timezone">Timezone</Label>
-            <Input
-              id="timezone"
-              value={form.timezone ?? ""}
-              onChange={(e) => field("timezone", e.target.value)}
-            />
-          </div>
-          <div />
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="modRoleId">Mod role ID</Label>
-            <Input
-              id="modRoleId"
-              placeholder="Role ID"
-              value={form.modRoleId ?? ""}
-              onChange={(e) => field("modRoleId", e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="adminRoleId">Admin role ID</Label>
-            <Input
-              id="adminRoleId"
-              placeholder="Role ID"
-              value={form.adminRoleId ?? ""}
-              onChange={(e) => field("adminRoleId", e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="muteRoleId">Mute role ID</Label>
-            <Input
-              id="muteRoleId"
-              placeholder="Role ID"
-              value={form.muteRoleId ?? ""}
-              onChange={(e) => field("muteRoleId", e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="modLogChannelId">Mod log channel ID</Label>
-            <Input
-              id="modLogChannelId"
-              placeholder="Channel ID"
-              value={form.modLogChannelId ?? ""}
-              onChange={(e) => field("modLogChannelId", e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="noMentionSpamLimit">No-mention-spam limit</Label>
-            <Input
-              id="noMentionSpamLimit"
-              type="number"
-              placeholder="Disabled"
-              value={form.noMentionSpamLimit ?? ""}
-              onChange={(e) =>
-                field(
-                  "noMentionSpamLimit",
-                  e.target.value === "" ? null : Number(e.target.value),
-                )
-              }
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="noMentionSpamWindowMs">No-mention-spam window (ms)</Label>
-            <Input
-              id="noMentionSpamWindowMs"
-              type="number"
-              placeholder="Disabled"
-              value={form.noMentionSpamWindowMs ?? ""}
-              onChange={(e) =>
-                field(
-                  "noMentionSpamWindowMs",
-                  e.target.value === "" ? null : Number(e.target.value),
-                )
-              }
-            />
-          </div>
-        </div>
-      </Card>
+      {/* `rise` is the third beat of the guild overview's page-load
+       * choreography (globals.css). It sits here rather than on a wrapper in
+       * page.tsx so the fixed-position SaveBar below stays outside the
+       * animated subtree. */}
+      <div
+        className="rise flex flex-col gap-4"
+        style={{ "--rise-delay": "140ms" } as React.CSSProperties}
+      >
+        {/* Three small cards instead of one nine-field grid. The old layout
+         * put "Command prefix" and "No-mention-spam window (ms)" in the same
+         * undifferentiated 2-column run, so there was no way to tell at a
+         * glance which settings related to each other. */}
+        <Card>
+          <CardHeader>
+            <CardTitle>General</CardTitle>
+            <CardDescription>
+              Command prefix and localisation for this server.
+            </CardDescription>
+          </CardHeader>
+          <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Field
+              label="Command prefix"
+              htmlFor="prefix"
+              hint="Blank uses the bot-wide default."
+            >
+              <Input
+                id="prefix"
+                maxLength={5}
+                placeholder="(uses global default)"
+                value={form.prefix ?? ""}
+                onChange={(e) => field("prefix", e.target.value)}
+              />
+            </Field>
+            <Field label="Locale" htmlFor="locale" hint="BCP-47 tag, e.g. en-US.">
+              <Input
+                id="locale"
+                value={form.locale ?? ""}
+                onChange={(e) => field("locale", e.target.value)}
+              />
+            </Field>
+            <Field label="Timezone" htmlFor="timezone" hint="IANA name, e.g. Europe/Berlin.">
+              <Input
+                id="timezone"
+                value={form.timezone ?? ""}
+                onChange={(e) => field("timezone", e.target.value)}
+              />
+            </Field>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Roles &amp; channels</CardTitle>
+            <CardDescription>
+              Discord snowflake IDs. Enable Developer Mode in Discord to copy
+              one from a right-click menu.
+            </CardDescription>
+          </CardHeader>
+          <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Mod role ID" htmlFor="modRoleId">
+              <Input
+                id="modRoleId"
+                className={snowflake}
+                placeholder="Role ID"
+                value={form.modRoleId ?? ""}
+                onChange={(e) => field("modRoleId", e.target.value)}
+              />
+            </Field>
+            <Field label="Admin role ID" htmlFor="adminRoleId">
+              <Input
+                id="adminRoleId"
+                className={snowflake}
+                placeholder="Role ID"
+                value={form.adminRoleId ?? ""}
+                onChange={(e) => field("adminRoleId", e.target.value)}
+              />
+            </Field>
+            <Field label="Mute role ID" htmlFor="muteRoleId">
+              <Input
+                id="muteRoleId"
+                className={snowflake}
+                placeholder="Role ID"
+                value={form.muteRoleId ?? ""}
+                onChange={(e) => field("muteRoleId", e.target.value)}
+              />
+            </Field>
+            <Field label="Mod log channel ID" htmlFor="modLogChannelId">
+              <Input
+                id="modLogChannelId"
+                className={snowflake}
+                placeholder="Channel ID"
+                value={form.modLogChannelId ?? ""}
+                onChange={(e) => field("modLogChannelId", e.target.value)}
+              />
+            </Field>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Mention spam</CardTitle>
+            <CardDescription>
+              Leave both blank to disable mention-spam protection entirely.
+            </CardDescription>
+          </CardHeader>
+          <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field
+              label="No-mention-spam limit"
+              htmlFor="noMentionSpamLimit"
+              hint="Mentions allowed inside the window."
+            >
+              <Input
+                id="noMentionSpamLimit"
+                type="number"
+                className="tabular"
+                placeholder="Disabled"
+                value={form.noMentionSpamLimit ?? ""}
+                onChange={(e) =>
+                  field(
+                    "noMentionSpamLimit",
+                    e.target.value === "" ? null : Number(e.target.value),
+                  )
+                }
+              />
+            </Field>
+            <Field
+              label="No-mention-spam window (ms)"
+              htmlFor="noMentionSpamWindowMs"
+              hint="Rolling window length in milliseconds."
+            >
+              <Input
+                id="noMentionSpamWindowMs"
+                type="number"
+                className="tabular"
+                placeholder="Disabled"
+                value={form.noMentionSpamWindowMs ?? ""}
+                onChange={(e) =>
+                  field(
+                    "noMentionSpamWindowMs",
+                    e.target.value === "" ? null : Number(e.target.value),
+                  )
+                }
+              />
+            </Field>
+          </CardBody>
+        </Card>
+      </div>
       <SaveBar
         dirty={dirty}
         saving={isPending}

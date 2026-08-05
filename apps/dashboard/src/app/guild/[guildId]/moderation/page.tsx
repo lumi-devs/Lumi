@@ -1,3 +1,4 @@
+import { Gavel } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { StubPage } from "#/components/stub-page";
 
@@ -10,7 +11,7 @@ export default async function ModerationPage({
   await requireGuild(guildId);
   return (
     <StubPage
-      emoji="🔨"
+      icon={Gavel}
       title="Moderation Cases"
       specComponent="ModerationCaseManagerTable"
       models={["ModerationCase", "GuildCaseCounter"]}
