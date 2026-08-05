@@ -25,7 +25,7 @@ vi.mock('@sapphire/framework', () => ({
       setex: vi.fn(),
       del: vi.fn(),
       exists: vi.fn().mockResolvedValue(0),
-      set: vi.fn(),
+      set: vi.fn().mockResolvedValue('OK'),
       pipeline: vi.fn(),
       eval: vi.fn()
     },

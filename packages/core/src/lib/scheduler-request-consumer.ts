@@ -5,6 +5,33 @@ import {
   type RequestEnvelope,
 } from "#lib/scheduler-bus.js";
 
+type CreateOptions = Extract<RequestEnvelope, { action: "create" }>["options"];
+
+/**
+ * Default a one-shot create's BullMQ jobId to the stream entry id. The request
+ * stream is at-least-once, so a redelivered `create` would otherwise enqueue a
+ * second copy of the same job; the entry id is stable across redeliveries, and
+ * BullMQ rejects a duplicate jobId. Repeated jobs are left alone - BullMQ keys
+ * them by their repeat pattern already and disallows a custom id.
+ */
+function withIdempotentJobId(
+  options: CreateOptions,
+  streamId: string,
+): CreateOptions {
+  const base =
+    typeof options === "number"
+      ? { repeated: false, delay: options }
+      : { ...options };
+  if (base.repeated) return options;
+  return {
+    ...base,
+    customJobOptions: {
+      jobId: `req:${streamId}`,
+      ...base.customJobOptions,
+    },
+  };
+}
+
 export interface SchedulerRequestConsumerOptions {
   consumerId: string;
   group?: string;
@@ -44,7 +71,10 @@ export class SchedulerRequestConsumer {
       if (env.action === "create") {
         await container.tasks.create(
           { name: env.name, payload: env.payload },
-          env.options as Parameters<typeof container.tasks.create>[1],
+          withIdempotentJobId(
+            env.options,
+            msg.id,
+          ) as Parameters<typeof container.tasks.create>[1],
         );
       } else if (env.action === "delete") {
         await container.tasks.delete(env.jobId);

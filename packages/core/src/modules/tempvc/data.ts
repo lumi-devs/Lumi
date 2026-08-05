@@ -85,6 +85,25 @@ export async function setVcRecord(
   });
 }
 
+/**
+ * Apply a partial update to an existing record and return the merged result.
+ * Returns null when the record is gone (channel deleted mid-interaction).
+ */
+export async function patchVcRecord(
+  guildId: string,
+  channelId: string,
+  patch: Partial<Omit<VcRecord, "createdAt">>,
+): Promise<VcRecord | null> {
+  const row = await container.db.tempvc.patchRecord(guildId, channelId, patch);
+  if (!row) return null;
+  const record = toRecord(row);
+  await tempVcRegistry.addVc(guildId, channelId, {
+    generatorId: record.generatorId,
+    number: record.number,
+  });
+  return record;
+}
+
 export async function removeVcRecord(
   guildId: string,
   channelId: string,

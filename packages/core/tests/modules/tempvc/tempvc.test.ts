@@ -4,7 +4,7 @@ import { container } from "@sapphire/framework";
 import { tempVcRegistry } from "#modules/tempvc/registry.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import { isVoiceChannelEmpty, clearVoiceChannelOccupancy } from "#modules/tempvc/lib/voice-occupancy.js";
-import { setVcRecord, listVcRecords, listGenerators, removeVcRecord, getVcRecord, setGenerator, removeGenerator } from "#modules/tempvc/data.js";
+import { setVcRecord, patchVcRecord, listVcRecords, listGenerators, removeVcRecord, getVcRecord, setGenerator, removeGenerator } from "#modules/tempvc/data.js";
 
 vi.mock("#lib/schedule-task.js", () => ({
   scheduleTask: vi.fn().mockResolvedValue(undefined),
@@ -17,6 +17,7 @@ vi.mock("#modules/tempvc/lib/voice-occupancy.js", () => ({
 
 vi.mock("#modules/tempvc/data.js", () => ({
   setVcRecord: vi.fn(),
+  patchVcRecord: vi.fn(),
   listVcRecords: vi.fn(),
   listGenerators: vi.fn(),
   removeVcRecord: vi.fn(),
@@ -315,8 +316,7 @@ describe("TempVcService", () => {
         mockChannel.guild.roles.everyone,
         { Connect: false }
       );
-      expect(setVcRecord).toHaveBeenCalledWith("guild-1", "vc-123", {
-        ...record,
+      expect(patchVcRecord).toHaveBeenCalledWith("guild-1", "vc-123", {
         locked: true,
       });
       expect(result.locked).toBe(true);
@@ -345,8 +345,7 @@ describe("TempVcService", () => {
         mockChannel.guild.roles.everyone,
         { ViewChannel: false }
       );
-      expect(setVcRecord).toHaveBeenCalledWith("guild-1", "vc-123", {
-        ...record,
+      expect(patchVcRecord).toHaveBeenCalledWith("guild-1", "vc-123", {
         hidden: true,
       });
       expect(result.hidden).toBe(true);
@@ -374,7 +373,7 @@ describe("TempVcService", () => {
       expect(mockChannel.permissionOverwrites.edit).toHaveBeenCalledWith("new-owner", {
         ManageChannels: true,
       });
-      expect(setVcRecord).toHaveBeenCalledWith("guild-1", "vc-123", {
+      expect(patchVcRecord).toHaveBeenCalledWith("guild-1", "vc-123", {
         ownerId: "new-owner",
       });
       expect(result.ownerId).toBe("new-owner");

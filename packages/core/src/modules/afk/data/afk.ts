@@ -178,6 +178,19 @@ export async function setAfkCooldown(key: string, ms: number): Promise<void> {
 }
 
 /**
+ * Atomically take a cooldown slot. Returns true only for the caller that won
+ * it - `isAfkOnCooldown` followed by `setAfkCooldown` leaves a window in which
+ * two messages from the same author both pass the check.
+ */
+export async function claimAfkCooldown(
+  key: string,
+  ms: number,
+): Promise<boolean> {
+  const set = await container.redis.set(key, "1", "PX", ms, "NX");
+  return set === "OK";
+}
+
+/**
  * Batch-writes multiple AFK mentions for different users in a single Redis
  * multi/exec transaction instead of one round-trip per mentioned user.
  */
