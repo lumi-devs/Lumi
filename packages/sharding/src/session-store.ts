@@ -22,7 +22,7 @@ export interface RedisSessionStoreOptions {
   log?: (level: "info" | "warn" | "error", msg: string, meta?: object) => void;
 }
 
-const sessionKey = (cluster: string, shardId: number) =>
+export const sessionKey = (cluster: string, shardId: number) =>
   `lumi:cluster:${cluster}:session:${shardId}`;
 
 export class RedisSessionStore {

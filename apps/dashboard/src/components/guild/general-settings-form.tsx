@@ -34,8 +34,6 @@ const FORM_KEYS = [
   "timezone",
   "noMentionSpamWindowMs",
   "noMentionSpamLimit",
-  "inviteUrl",
-  "supportUrl",
 ] as const satisfies readonly (keyof FormState)[];
 
 const FIELD_LABELS: Record<keyof FormState, string> = {
@@ -48,8 +46,6 @@ const FIELD_LABELS: Record<keyof FormState, string> = {
   timezone: "Timezone",
   noMentionSpamWindowMs: "No-mention-spam window (ms)",
   noMentionSpamLimit: "No-mention-spam limit",
-  inviteUrl: "Invite URL",
-  supportUrl: "Support URL",
 };
 
 const NULLABLE_STRING_FIELDS = new Set<keyof FormState>([
@@ -58,8 +54,6 @@ const NULLABLE_STRING_FIELDS = new Set<keyof FormState>([
   "adminRoleId",
   "modLogChannelId",
   "muteRoleId",
-  "inviteUrl",
-  "supportUrl",
 ]);
 
 function toFormState(settings: GuildSettings): FormState {
@@ -73,8 +67,6 @@ function toFormState(settings: GuildSettings): FormState {
     timezone: (settings["timezone"] as string) ?? "UTC",
     noMentionSpamWindowMs: (settings["noMentionSpamWindowMs"] as number | null) ?? null,
     noMentionSpamLimit: (settings["noMentionSpamLimit"] as number | null) ?? null,
-    inviteUrl: (settings["inviteUrl"] as string | null) ?? "",
-    supportUrl: (settings["supportUrl"] as string | null) ?? "",
   };
 }
 
@@ -340,35 +332,6 @@ export function GeneralSettingsForm({
                     </option>
                   ))}
               </Select>
-            </Field>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Invite &amp; support</CardTitle>
-            <CardDescription>
-              Shown to members looking for how to invite the bot or get help.
-            </CardDescription>
-          </CardHeader>
-          <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Invite URL" htmlFor="inviteUrl">
-              <Input
-                id="inviteUrl"
-                type="url"
-                placeholder="https://discord.gg/…"
-                value={form.inviteUrl ?? ""}
-                onChange={(e) => field("inviteUrl", e.target.value)}
-              />
-            </Field>
-            <Field label="Support URL" htmlFor="supportUrl">
-              <Input
-                id="supportUrl"
-                type="url"
-                placeholder="https://…"
-                value={form.supportUrl ?? ""}
-                onChange={(e) => field("supportUrl", e.target.value)}
-              />
             </Field>
           </CardBody>
         </Card>

@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { AuditLedger, Prisma } from "@prisma/client";
 import { RedisKeys } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
@@ -10,6 +10,15 @@ export interface AuditLogPayload {
   action: string;
   platform: string;
   details?: unknown;
+}
+
+export interface AuditLedgerFilter {
+  guildId?: string;
+  userId?: string;
+  action?: string;
+  platform?: string;
+  skip?: number;
+  take?: number;
 }
 
 /**
@@ -114,6 +123,30 @@ export class AuditRepository extends Repository {
     await this.redis.xdel(key, ...ids);
 
     return payloads.length;
+  }
+
+  // Omitting `guildId` reads across every guild — bot-owner scoped callers only.
+  public async listAuditLogs(
+    filter: AuditLedgerFilter = {},
+  ): Promise<{ entries: AuditLedger[]; total: number }> {
+    const where = {
+      ...(filter.guildId ? { guildId: filter.guildId } : {}),
+      ...(filter.userId ? { userId: filter.userId } : {}),
+      ...(filter.action ? { action: { contains: filter.action } } : {}),
+      ...(filter.platform ? { platform: filter.platform } : {}),
+    };
+
+    const [entries, total] = await this.prisma.$transaction([
+      this.prisma.auditLedger.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: filter.skip ?? 0,
+        take: filter.take ?? 25,
+      }),
+      this.prisma.auditLedger.count({ where }),
+    ]);
+
+    return { entries, total };
   }
 
   async #ensureGroup(key: string) {

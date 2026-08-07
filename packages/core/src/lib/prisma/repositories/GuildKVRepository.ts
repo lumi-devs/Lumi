@@ -76,6 +76,52 @@ export class GuildKVRepository extends Repository {
     }));
   }
 
+  public async listGuildModuleData(
+    guildId: string,
+    filter: {
+      moduleName?: string;
+      targetId?: string;
+      key?: string;
+      skip?: number;
+      take?: number;
+    } = {},
+  ): Promise<{
+    entries: {
+      moduleName: string;
+      targetId: string;
+      key: string;
+      value: unknown;
+    }[];
+    total: number;
+  }> {
+    const where = {
+      guildId,
+      ...(filter.moduleName ? { moduleName: filter.moduleName } : {}),
+      ...(filter.targetId ? { targetId: filter.targetId } : {}),
+      ...(filter.key ? { key: filter.key } : {}),
+    };
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.moduleData.findMany({
+        where,
+        orderBy: [{ moduleName: "asc" }, { targetId: "asc" }, { key: "asc" }],
+        skip: filter.skip ?? 0,
+        take: filter.take ?? 25,
+      }),
+      this.prisma.moduleData.count({ where }),
+    ]);
+
+    return {
+      entries: rows.map((r) => ({
+        moduleName: r.moduleName,
+        targetId: r.targetId,
+        key: r.key,
+        value: r.value,
+      })),
+      total,
+    };
+  }
+
   /** Deletes one KV row; returns the number of rows removed (0 or 1). */
   public async deleteModuleData(
     guildId: string,

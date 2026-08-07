@@ -119,7 +119,7 @@ return 0
 `;
 
 export const membersKey = (name: string) => `lumi:cluster:${name}:members`;
-const assignmentKey = (name: string) => `lumi:cluster:${name}:assignment`;
+export const assignmentKey = (name: string) => `lumi:cluster:${name}:assignment`;
 const leaderLockKey = (name: string) => `lumi:cluster:${name}:leader-lock`;
 const rebalanceChannel = (name: string) => `lumi:cluster:${name}:rebalance`;
 

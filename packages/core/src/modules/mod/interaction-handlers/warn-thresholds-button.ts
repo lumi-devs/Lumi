@@ -5,6 +5,8 @@ import {
   container,
 } from "@sapphire/framework";
 import type { ButtonInteraction } from "discord.js";
+import { isWarnThresholdAction } from "@lumi/contracts";
+import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";
 import {
   removeThresholdRule,
   resetAllThresholds,
@@ -39,7 +41,33 @@ export class WarnThresholdsButtonHandler extends InteractionHandler {
       const count = Number(parts[1] || 3);
       const action = parts[2] || "mute";
       const duration = parts[3] || undefined;
-      await setThresholdRule(container, guildId, count, action, duration);
+
+      if (!isWarnThresholdAction(action)) {
+        await interaction.followUp(
+          ephemeralCard(
+            makeErrorCard(
+              "Unknown Action",
+              `\`${action}\` is not an escalation action Lumi can apply.`,
+            ),
+          ),
+        );
+        return;
+      }
+
+      try {
+        await setThresholdRule(container, guildId, count, action, duration);
+      } catch (err) {
+        await interaction.followUp(
+          ephemeralCard(
+            makeErrorCard(
+              "Rule Not Saved",
+              err instanceof Error ? err.message : "The rule could not be saved.",
+            ),
+          ),
+        );
+        return;
+      }
+
       selectedCount = count;
       selectedAction = action;
       selectedDuration = duration ?? "";

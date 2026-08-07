@@ -1,7 +1,13 @@
 import { container } from "@sapphire/framework";
 import { getService } from "#lib/module-system/Service.js";
 import { registerRpcHandler } from "#lib/rabbitmq/index.js";
-import { RPC_ACTIONS, type RpcRequest } from "@lumi/contracts";
+import {
+  RPC_ACTIONS,
+  type RpcRequest,
+  type SystemShardsResponse,
+} from "@lumi/contracts";
+import { DEFAULT_CLUSTER_NAME, readClusterShards } from "@lumi/sharding";
+import { getClusterName } from "#lib/env.js";
 import { resolver, ADDON_MODULES_ROOT } from "#lib/downloader/resolver.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { executeGdprDeletion, executeGdprExport } from "#lib/gdpr.js";
@@ -21,10 +27,12 @@ function parsePayload<T>(schema: BaseValidator<T>, data: unknown): T {
   }
 }
 
-function requireBotOwner(req: RpcRequest<unknown>): void {
+// Returns the validated actor id so callers can attribute writes to them.
+function requireBotOwner(req: RpcRequest<unknown>): string {
   if (!req.actorId || !PermitResolver.isBotOwner(req.actorId)) {
     throw new Error("Bot Owner authorization required for this action.");
   }
+  return req.actorId;
 }
 
 /** A user may always export their own data; exporting someone else's requires Bot Owner. */
@@ -73,6 +81,49 @@ const SystemModuleToggleSchema = s.object({
   enabled: s.boolean(),
   reason: s.string().optional(),
 });
+
+const SystemIdentitySchema = s.object({
+  inviteUrl: s.string().url().nullable().optional(),
+  supportGuildId: SnowflakeSchema.nullable().optional(),
+});
+
+const MAX_PAGE_SIZE = 100;
+const PageSchema = s.number().int().greaterThanOrEqual(1).optional();
+const PageSizeSchema = s
+  .number()
+  .int()
+  .greaterThanOrEqual(1)
+  .lessThanOrEqual(MAX_PAGE_SIZE)
+  .optional();
+
+const SystemAuditListSchema = s.object({
+  guildId: SnowflakeSchema.optional(),
+  userId: SnowflakeSchema.optional(),
+  action: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(128).optional(),
+  platform: s.enum(["discord", "web"] as const).optional(),
+  page: PageSchema,
+  pageSize: PageSizeSchema,
+});
+
+const SystemBlocklistListSchema = s.object({
+  page: PageSchema,
+  pageSize: PageSizeSchema,
+});
+
+const SystemBlocklistAddSchema = s.object({
+  userId: SnowflakeSchema,
+  reason: s.string().lengthLessThanOrEqual(500).optional(),
+});
+
+const SystemBlocklistRemoveSchema = s.object({
+  userId: SnowflakeSchema,
+});
+
+function paginate(filter: { page?: number; pageSize?: number }) {
+  const page = filter.page ?? 1;
+  const pageSize = filter.pageSize ?? 25;
+  return { page, pageSize, skip: (page - 1) * pageSize, take: pageSize };
+}
 
 export function initCoreRpcHandlers() {
   container.logger.info("[CoreSystem] Initializing Core RPC handlers...");
@@ -169,7 +220,7 @@ export function initCoreRpcHandlers() {
     return { success: true, moduleName };
   });
 
-  // Bot Owner System Panel (dashboard.md §9A / §10).
+  // Bot Owner system panel.
   registerRpcHandler(RPC_ACTIONS.systemDashboardGet, async (req) => {
     requireBotOwner(req);
     const [global, moduleStates] = await Promise.all([
@@ -215,5 +266,137 @@ export function initCoreRpcHandlers() {
       reason,
     );
     return { success: true, moduleName, enabled };
+  });
+
+  registerRpcHandler(RPC_ACTIONS.systemIdentitySet, async (req) => {
+    requireBotOwner(req);
+    const { inviteUrl, supportGuildId } = parsePayload(
+      SystemIdentitySchema,
+      req.data,
+    );
+    const global = await container.db.global.updateGlobalConfig({
+      ...(inviteUrl !== undefined && { inviteUrl }),
+      ...(supportGuildId !== undefined && { supportGuildId }),
+    });
+    return {
+      success: true,
+      inviteUrl: global.inviteUrl,
+      supportGuildId: global.supportGuildId,
+    };
+  });
+
+  // Unlike `guild.audit.list`, this reads the ledger across every guild, so it
+  // stays bot-owner only even when a `guildId` filter narrows it to one.
+  registerRpcHandler(RPC_ACTIONS.systemAuditList, async (req) => {
+    requireBotOwner(req);
+    const filter = parsePayload(SystemAuditListSchema, req.data ?? {});
+    const { page, pageSize, skip, take } = paginate(filter);
+
+    const { entries, total } = await container.db.audit.listAuditLogs({
+      guildId: filter.guildId,
+      userId: filter.userId,
+      action: filter.action,
+      platform: filter.platform,
+      skip,
+      take,
+    });
+
+    return {
+      entries: entries.map((e) => ({
+        id: e.id,
+        guildId: e.guildId,
+        userId: e.userId,
+        action: e.action,
+        platform: e.platform,
+        details: e.details,
+        createdAt: e.createdAt.toISOString(),
+      })),
+      total,
+      page,
+      pageSize,
+    };
+  });
+
+  registerRpcHandler(RPC_ACTIONS.systemBlocklistList, async (req) => {
+    requireBotOwner(req);
+    const filter = parsePayload(SystemBlocklistListSchema, req.data ?? {});
+    const { page, pageSize, skip, take } = paginate(filter);
+
+    const { entries, total } = await container.db.access.listBlocklist(null, {
+      skip,
+      take,
+    });
+
+    return {
+      entries: entries.map((e) => ({
+        id: e.id,
+        userId: e.userId,
+        reason: e.reason,
+        blockedBy: e.blockedBy,
+        createdAt: e.createdAt.toISOString(),
+      })),
+      total,
+      page,
+      pageSize,
+    };
+  });
+
+  registerRpcHandler(RPC_ACTIONS.systemBlocklistAdd, async (req) => {
+    const actorId = requireBotOwner(req);
+    const { userId, reason } = parsePayload(SystemBlocklistAddSchema, req.data);
+    if (PermitResolver.isBotOwner(userId)) {
+      throw new Error("Cannot blocklist a bot owner");
+    }
+    if (await container.db.access.isUserBlocklisted(userId, null)) {
+      throw new Error(`${userId} is already blocklisted globally`);
+    }
+    await container.db.access.addBlocklistEntry(userId, actorId, reason, null);
+    return { success: true, userId };
+  });
+
+  registerRpcHandler(RPC_ACTIONS.systemBlocklistRemove, async (req) => {
+    requireBotOwner(req);
+    const { userId } = parsePayload(SystemBlocklistRemoveSchema, req.data);
+    await container.db.access.removeBlocklistEntry(userId, null);
+    return { success: true, userId };
+  });
+
+  // Answered from shared Redis rather than this process's own `client.ws`: the
+  // RPC lands on whichever worker picks it up, which owns at most its own slice
+  // of the shard range.
+  registerRpcHandler(RPC_ACTIONS.systemShardsGet, async (req) => {
+    requireBotOwner(req);
+    const snapshot = await readClusterShards({
+      redis: container.redis,
+      clusterName: getClusterName() ?? DEFAULT_CLUSTER_NAME,
+    });
+
+    return {
+      clusterName: snapshot.clusterName,
+      clustered: snapshot.clustered,
+      epoch: snapshot.epoch,
+      assignedAt: snapshot.assignedAt
+        ? new Date(snapshot.assignedAt).toISOString()
+        : null,
+      shardCount: snapshot.shardCount,
+      observedAt: new Date(snapshot.observedAt).toISOString(),
+      replicas: snapshot.replicas.map((r) => ({
+        replicaId: r.replicaId,
+        lastSeenAt: r.lastSeenAt ? new Date(r.lastSeenAt).toISOString() : null,
+        ready: r.ready,
+        assignedShardIds: r.assignedShardIds,
+        reportingShardIds: r.reportingShardIds,
+      })),
+      shards: snapshot.shards.map((s) => ({
+        shardId: s.shardId,
+        replicaId: s.replicaId,
+        status: s.status,
+        ping: s.ping,
+        guildCount: s.guildCount,
+        lastHeartbeatAt: new Date(s.updatedAt).toISOString(),
+        session: s.session,
+      })),
+      missingShardIds: snapshot.missingShardIds,
+    } satisfies SystemShardsResponse;
   });
 }

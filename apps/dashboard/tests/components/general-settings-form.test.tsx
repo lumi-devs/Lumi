@@ -29,8 +29,6 @@ function baseValues() {
     timezone: "UTC",
     noMentionSpamWindowMs: null,
     noMentionSpamLimit: null,
-    inviteUrl: "",
-    supportUrl: "",
   } as const;
 }
 

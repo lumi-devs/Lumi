@@ -51,8 +51,6 @@ model Guild {
   timezone              String   @default("UTC")   @db.VarChar(64)
   noMentionSpamWindowMs Int?     @map("no_mention_spam_window_ms")
   noMentionSpamLimit    Int?     @map("no_mention_spam_limit")
-  inviteUrl             String?  @map("invite_url") @db.VarChar(512)
-  supportUrl            String?  @map("support_url") @db.VarChar(512)
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
 

@@ -67,6 +67,36 @@ export class ModerationRepository extends Repository {
     });
   }
 
+  public async listCases(
+    guildId: string,
+    filter: {
+      action?: string;
+      userId?: string;
+      moderatorId?: string;
+      skip?: number;
+      take?: number;
+    } = {},
+  ): Promise<{ cases: ModerationCase[]; total: number }> {
+    const where = {
+      guildId,
+      ...(filter.action ? { action: filter.action } : {}),
+      ...(filter.userId ? { userId: filter.userId } : {}),
+      ...(filter.moderatorId ? { moderatorId: filter.moderatorId } : {}),
+    };
+
+    const [cases, total] = await this.prisma.$transaction([
+      this.prisma.moderationCase.findMany({
+        where,
+        orderBy: { caseNumber: "desc" },
+        skip: filter.skip ?? 0,
+        take: filter.take ?? 25,
+      }),
+      this.prisma.moderationCase.count({ where }),
+    ]);
+
+    return { cases, total };
+  }
+
   /**
    * Active (un-lifted) cases for a user, newest first. Optionally filtered by
    * action. Used to clear a prior active mute before applying a new one and to

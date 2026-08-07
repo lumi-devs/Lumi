@@ -8,7 +8,8 @@ import {
   incrementWarnCount,
   decrementWarnCount,
   resetWarnCount,
-  checkThresholds
+  checkThresholds,
+  setThresholdRule
 } from '#modules/mod/lib/thresholds.js';
 import { BanAction } from '#modules/mod/actions/BanAction.js';
 import { MuteAction } from '#modules/mod/actions/MuteAction.js';
@@ -174,6 +175,121 @@ describe('Mod Thresholds Logic', () => {
 
     expect(kickSpy).toHaveBeenCalled();
     kickSpy.mockRestore();
+  });
+
+  it('checkThresholds executes quarantine action when threshold matches', async () => {
+    (container.redis.get as any).mockResolvedValue(JSON.stringify({ '4': { action: 'quarantine' } }));
+    const mockMember = { id: 'u-1' };
+    const mockGuild = {
+      id: 'g-1',
+      members: { fetch: vi.fn().mockResolvedValue(mockMember) }
+    };
+    (container.client.guilds.cache.get as any).mockReturnValue(mockGuild);
+
+    const quarantineSpy = vi
+      .spyOn(QuarantineAction, 'apply')
+      .mockResolvedValue({ caseNumber: 2 } as any);
+    await checkThresholds(container, 'g-1', 'u-1', 4);
+
+    expect(quarantineSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ targetMember: mockMember, moderator: container.client.user })
+    );
+    quarantineSpy.mockRestore();
+  });
+
+  it('checkThresholds logs instead of throwing when quarantine is unconfigured', async () => {
+    (container.redis.get as any).mockResolvedValue(JSON.stringify({ '4': { action: 'quarantine' } }));
+    (container.client.guilds.cache.get as any).mockReturnValue({
+      id: 'g-1',
+      members: { fetch: vi.fn().mockResolvedValue({ id: 'u-1' }) }
+    });
+
+    const quarantineSpy = vi
+      .spyOn(QuarantineAction, 'apply')
+      .mockRejectedValue(new Error('UNCONFIGURED'));
+    await expect(checkThresholds(container, 'g-1', 'u-1', 4)).resolves.toBeUndefined();
+
+    expect(container.logger.error).toHaveBeenCalled();
+    quarantineSpy.mockRestore();
+  });
+
+  it('checkThresholds executes vcmute action with the configured duration', async () => {
+    (container.redis.get as any).mockResolvedValue(
+      JSON.stringify({ '2': { action: 'vcmute', duration: '30m' } })
+    );
+    const mockMember = { id: 'u-1' };
+    (container.client.guilds.cache.get as any).mockReturnValue({
+      id: 'g-1',
+      members: { fetch: vi.fn().mockResolvedValue(mockMember) }
+    });
+
+    const vcSpy = vi.spyOn(VoiceMuteAction, 'apply').mockResolvedValue({ caseNumber: 3 } as any);
+    await checkThresholds(container, 'g-1', 'u-1', 2);
+
+    expect(vcSpy).toHaveBeenCalledWith(expect.objectContaining({ durationMs: 1800000 }));
+    vcSpy.mockRestore();
+  });
+
+  it('checkThresholds warns and falls back to an hour for a mute rule with a bad duration', async () => {
+    (container.redis.get as any).mockResolvedValue(
+      JSON.stringify({ '3': { action: 'mute', duration: 'soon' } })
+    );
+    (container.client.guilds.cache.get as any).mockReturnValue({
+      id: 'g-1',
+      members: { fetch: vi.fn().mockResolvedValue({ id: 'u-1' }) }
+    });
+
+    const muteSpy = vi.spyOn(MuteAction, 'apply').mockResolvedValue({ caseNumber: 4 } as any);
+    await checkThresholds(container, 'g-1', 'u-1', 3);
+
+    expect(muteSpy).toHaveBeenCalledWith(expect.objectContaining({ durationMs: 3600000 }));
+    const warning = (container.logger.warn as any).mock.calls[0]?.[0] as string;
+    expect(warning).toContain('g-1');
+    expect(warning).toContain('3 warns');
+    expect(warning).toContain('soon');
+    muteSpy.mockRestore();
+  });
+
+  it('checkThresholds logs an error for an action it cannot apply', async () => {
+    (container.redis.get as any).mockResolvedValue(JSON.stringify({ '3': { action: 'tempban' } }));
+    (container.client.guilds.cache.get as any).mockReturnValue({
+      id: 'g-1',
+      members: { fetch: vi.fn().mockResolvedValue({ id: 'u-1' }) }
+    });
+
+    await checkThresholds(container, 'g-1', 'u-1', 3);
+
+    expect(container.logger.error).toHaveBeenCalledWith(expect.stringContaining('tempban'));
+  });
+
+  it('setThresholdRule rejects a mute rule with no duration', async () => {
+    await expect(setThresholdRule(container, 'g-1', 3, 'mute')).rejects.toThrow(/duration/);
+    expect(container.db.moderation.setWarnThreshold).not.toHaveBeenCalled();
+  });
+
+  it('setThresholdRule rejects a vcmute rule with an unparseable duration', async () => {
+    await expect(
+      setThresholdRule(container, 'g-1', 3, 'vcmute', 'forever')
+    ).rejects.toThrow(/forever/);
+    expect(container.db.moderation.setWarnThreshold).not.toHaveBeenCalled();
+  });
+
+  it('setThresholdRule stores timed rules and drops durations that do not apply', async () => {
+    await setThresholdRule(container, 'g-1', 3, 'mute', ' 2h ');
+    expect(container.db.moderation.setWarnThreshold).toHaveBeenCalledWith({
+      guildId: 'g-1',
+      warnCount: 3,
+      action: 'mute',
+      duration: '2h'
+    });
+
+    await setThresholdRule(container, 'g-1', 5, 'kick', '2h');
+    expect(container.db.moderation.setWarnThreshold).toHaveBeenLastCalledWith({
+      guildId: 'g-1',
+      warnCount: 5,
+      action: 'kick',
+      duration: undefined
+    });
   });
 });
 
