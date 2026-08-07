@@ -1,9 +1,25 @@
 import type { Container } from "@sapphire/framework";
 import { tryParseJSON } from "@sapphire/utilities";
+import { type WarnThresholdAction } from "@lumi/contracts";
 import { parseDuration } from "#lib/utilities/time.js";
-import { BanAction, MuteAction, KickAction } from "../actions/index.js";
+import {
+  thresholdKey,
+  invalidateThresholds,
+  normalizeRuleDuration,
+  setThresholdRule,
+  removeThresholdRule,
+} from "#utilities/thresholds.js";
+import {
+  BanAction,
+  MuteAction,
+  KickAction,
+  QuarantineAction,
+  VoiceMuteAction,
+} from "../actions/index.js";
 
-export type ThresholdAction = "mute" | "kick" | "ban";
+/** Kept identical to the wire contract so a rule the dashboard can save is a rule the runner can apply. */
+export type ThresholdAction = WarnThresholdAction;
+export { thresholdKey, invalidateThresholds, setThresholdRule, removeThresholdRule };
 
 export interface ThresholdEntry {
   action: ThresholdAction;
@@ -12,8 +28,6 @@ export interface ThresholdEntry {
 
 export type WarnThresholds = Record<string, ThresholdEntry>;
 
-export const thresholdKey = (guildId: string) =>
-  `lumi:mod:${guildId}:thresholds`;
 export const warnCountKey = (guildId: string, userId: string) =>
   `lumi:mod:${guildId}:warns:${userId}`;
 const thresholdFiredKey = (guildId: string, userId: string, count: number) =>
@@ -51,17 +65,6 @@ export async function getThresholds(
   return parsed;
 }
 
-export async function invalidateThresholds(
-  container: Container,
-  guildId: string,
-): Promise<void> {
-  if (container.invalidation) {
-    await container.invalidation.invalidate(thresholdKey(guildId));
-  } else {
-    await container.redis.del(thresholdKey(guildId));
-  }
-}
-
 export async function saveThresholds(
   container: Container,
   guildId: string,
@@ -73,35 +76,10 @@ export async function saveThresholds(
     .map(({ count, entry }) => ({
       warnCount: count,
       action: entry.action,
-      duration: entry.duration,
+      duration: normalizeRuleDuration(entry.action, entry.duration),
     }));
 
   await container.db.moderation.setBulkWarnThresholds(guildId, list);
-  await invalidateThresholds(container, guildId);
-}
-
-export async function setThresholdRule(
-  container: Container,
-  guildId: string,
-  count: number,
-  action: string,
-  duration?: string,
-): Promise<void> {
-  await container.db.moderation.setWarnThreshold({
-    guildId,
-    warnCount: count,
-    action,
-    duration: duration || undefined,
-  });
-  await invalidateThresholds(container, guildId);
-}
-
-export async function removeThresholdRule(
-  container: Container,
-  guildId: string,
-  count: number,
-): Promise<void> {
-  await container.db.moderation.removeWarnThreshold(guildId, count);
   await invalidateThresholds(container, guildId);
 }
 
@@ -168,6 +146,31 @@ export async function resetWarnCount(
   }
 }
 
+/**
+ * Falls back to the hour both editors offer as their default rather than
+ * dropping the rule: rows written before the write path validated durations
+ * still describe an intended punishment, and a Discord timeout cannot be
+ * permanent, so there is no "no duration" reading of the rule to honour.
+ */
+const FALLBACK_THRESHOLD_DURATION_MS = 60 * 60 * 1000;
+
+function resolveThresholdDuration(
+  container: Container,
+  guildId: string,
+  targetCount: number,
+  entry: ThresholdEntry,
+): number {
+  const ms = entry.duration ? parseDuration(entry.duration) : null;
+  if (ms) return ms;
+
+  container.logger.warn(
+    `[Thresholds] Guild ${guildId}: the ${entry.action} rule at ${targetCount} warns has an unusable duration (${
+      entry.duration ? `"${entry.duration}"` : "none set"
+    }) - applying ${FALLBACK_THRESHOLD_DURATION_MS / 60000}m instead. Save the rule again with a valid duration.`,
+  );
+  return FALLBACK_THRESHOLD_DURATION_MS;
+}
+
 export async function checkThresholds(
   container: Container,
   guildId: string,
@@ -175,7 +178,6 @@ export async function checkThresholds(
   warnCount: number,
 ): Promise<void> {
   const thresholds = await getThresholds(container, guildId);
-  // Find highest threshold entry matching or below the target warn count
   const matchingKeys = Object.keys(thresholds)
     .map(Number)
     .filter((count) => count <= warnCount)
@@ -208,8 +210,7 @@ export async function checkThresholds(
   if (entry.action === "mute") {
     const member = await guild.members.fetch(userId).catch(() => null);
     if (!member) return;
-    const ms = entry.duration ? parseDuration(entry.duration) : null;
-    if (!ms) return;
+    const ms = resolveThresholdDuration(container, guildId, targetCount, entry);
     await MuteAction.apply({
       guild,
       targetMember: member,
@@ -250,5 +251,39 @@ export async function checkThresholds(
         err,
       );
     });
+  } else if (entry.action === "quarantine") {
+    const member = await guild.members.fetch(userId).catch(() => null);
+    if (!member) return;
+    await QuarantineAction.apply({
+      guild,
+      targetMember: member,
+      moderator: botUser,
+      reason,
+    }).catch((err) => {
+      container.logger.error(
+        `[Thresholds] Auto-quarantine failed for ${userId}:`,
+        err,
+      );
+    });
+  } else if (entry.action === "vcmute") {
+    const member = await guild.members.fetch(userId).catch(() => null);
+    if (!member) return;
+    const ms = resolveThresholdDuration(container, guildId, targetCount, entry);
+    await VoiceMuteAction.apply({
+      guild,
+      targetMember: member,
+      moderator: botUser,
+      reason,
+      durationMs: ms,
+    }).catch((err) => {
+      container.logger.error(
+        `[Thresholds] Auto-voice-mute failed for ${userId}:`,
+        err,
+      );
+    });
+  } else {
+    container.logger.error(
+      `[Thresholds] Guild ${guildId} has a rule at ${targetCount} warns with unknown action "${entry.action as string}" - nothing was applied.`,
+    );
   }
 }
