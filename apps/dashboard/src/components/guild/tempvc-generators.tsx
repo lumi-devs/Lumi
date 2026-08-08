@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Volume2 } from "lucide-react";
+import { Info, Volume2 } from "lucide-react";
 import {
   deleteTempVcGenerator,
   setTempVcGenerator,
@@ -13,6 +13,12 @@ import { ConfirmDialog } from "#/components/ui/confirm-dialog";
 import { DataTable } from "#/components/ui/data-table";
 import { EmptyState } from "#/components/ui/empty-state";
 import { Field, Input, Select } from "#/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "#/components/ui/tooltip";
 import { tempvcGeneratorsColumns } from "#/components/guild/tempvc-generators-columns";
 import type {
   DashboardChannelView,
@@ -26,6 +32,15 @@ import { useServerAction } from "#/lib/use-server-action";
  * `{name}` (both shown as "Alex" here since the preview has no real member).
  * No placeholder appends the number to the end.
  */
+/** Whether the resolved name actually changes from one generated channel to the next. */
+export function hasSequencePlaceholder(template: string): boolean {
+  const trimmed = template.trim();
+  const hasNamedPlaceholder = /\{number\}|\{position\}|\{username\}|\{name\}/.test(
+    trimmed,
+  );
+  return !hasNamedPlaceholder || /\{\}|\{number\}|\{position\}/.test(trimmed);
+}
+
 export function resolveName(template: string, number: number): string {
   const trimmed = template.trim();
   const hasPlaceholder = /\{\}|\{number\}|\{position\}|\{username\}|\{name\}/.test(
@@ -245,28 +260,6 @@ function GeneratorForm({
         </Field>
 
         <Field
-          label="Name pattern"
-          htmlFor="generator-name"
-          className="min-w-[12rem] flex-1 gap-1"
-          hint={
-            <>
-              Preview: “{resolveName(name, 1)}”. Placeholders: {"{}"}/
-              {"{number}"} → “1”, {"{username}"} → “Alex”, {"{name}"} →
-              “Alex”, {"{position}"} → “1” (alias of {"{number}"}). No
-              placeholder appends the number to the end.
-            </>
-          }
-        >
-          <Input
-            id="generator-name"
-            value={name}
-            maxLength={100}
-            placeholder="{name}'s Channel"
-            onChange={(e) => setName(e.target.value)}
-          />
-        </Field>
-
-        <Field
           label="User limit"
           htmlFor="generator-limit"
           className="w-28 gap-1"
@@ -295,6 +288,73 @@ function GeneratorForm({
           ) : null}
         </div>
       </div>
+
+      <Field
+        label={
+          <span className="inline-flex items-center gap-1">
+            Name pattern
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Name pattern placeholders"
+                    className="inline-flex size-3.5 items-center justify-center rounded-full text-fg-subtle transition-colors hover:text-fg"
+                  >
+                    <Info className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="w-auto max-w-none px-3 py-2.5">
+                  <div className="grid grid-cols-[max-content_1fr] items-baseline gap-x-3 gap-y-1 text-[11px]">
+                    {[
+                      { tokens: ["{}", "{number}", "{position}"], example: "1" },
+                      { tokens: ["{username}", "{name}"], example: "Alex" },
+                    ].map(({ tokens, example }) => (
+                      <div key={example} className="col-span-2 grid grid-cols-subgrid items-baseline">
+                        <span className="flex flex-wrap gap-x-1 font-mono text-background/70">
+                          {tokens.map((token, i) => (
+                            <span key={token}>
+                              {i > 0 ? <span className="text-background/50">/</span> : null}
+                              {token}
+                            </span>
+                          ))}
+                        </span>
+                        <span className="text-background/70">
+                          → <span className="text-background">“{example}”</span>
+                        </span>
+                      </div>
+                    ))}
+                    <div className="col-span-2 mt-0.5 border-t border-background/20 pt-1.5 text-background/60">
+                      No placeholder → number appended to the end.
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </span>
+        }
+        htmlFor="generator-name"
+        className="gap-1.5"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            id="generator-name"
+            value={name}
+            maxLength={100}
+            placeholder="{name}'s Channel"
+            onChange={(e) => setName(e.target.value)}
+            className="min-w-[12rem] flex-1"
+          />
+          <span
+            className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-[12px] text-fg"
+            aria-live="polite"
+          >
+            <Volume2 aria-hidden className="size-3.5 shrink-0 text-fg-subtle" />
+            <span className="truncate">{resolveName(name, 1)}</span>
+          </span>
+        </div>
+      </Field>
+
       <ActionError error={error} />
     </form>
   );

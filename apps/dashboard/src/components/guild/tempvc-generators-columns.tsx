@@ -1,6 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal } from "lucide-react";
-import { resolveName } from "#/components/guild/tempvc-generators";
+import { hasSequencePlaceholder, resolveName } from "#/components/guild/tempvc-generators";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import {
@@ -54,10 +54,13 @@ export function tempvcGeneratorsColumns({
       accessorFn: (g) => g.name,
       cell: ({ row }) => {
         const generator = row.original;
+        const sequenced = hasSequencePlaceholder(generator.name);
         return (
           <span className="flex flex-col">
             <span className="text-fg">
-              {resolveName(generator.name, 1)}, {resolveName(generator.name, 2)}, …
+              {sequenced
+                ? `${resolveName(generator.name, 1)}, ${resolveName(generator.name, 2)}, …`
+                : resolveName(generator.name, 1)}
             </span>
             <span className="font-mono text-[11px] text-fg-subtle">
               {generator.name}
