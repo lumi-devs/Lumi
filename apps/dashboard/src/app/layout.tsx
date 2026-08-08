@@ -36,6 +36,14 @@ export const metadata: Metadata = {
   description:
     "Configure every Lumi feature for your Discord servers — modular, anti-nuke, dynamic voice, permit-based moderation.",
   manifest: "/manifest.json",
+  other: {
+    // Tells Dark Reader (and similarly-behaved extensions) this page already
+    // ships its own light/dark theme — without this they rewrite every
+    // colored attribute (stroke/fill/style) client-side before React
+    // hydrates, which causes SSR/CSR hydration-mismatch errors on every
+    // icon in the tree. See https://github.com/darkreader/darkreader#how-to-disable-dark-reader-on-my-website
+    "darkreader-lock": "1",
+  },
 };
 
 export const viewport: Viewport = {

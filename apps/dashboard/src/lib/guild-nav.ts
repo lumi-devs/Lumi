@@ -63,7 +63,6 @@ export function guildManagementGroups(guildId: string): GuildNavGroup[] {
     {
       title: "Community",
       links: [
-        { href: `${base}/tempvc`, label: "Voice Generators", icon: Volume2 },
         { href: `${base}/permits`, label: "Permits", icon: IdCard },
         { href: `${base}/appeals`, label: "Appeals", icon: Scale },
       ],
@@ -71,6 +70,7 @@ export function guildManagementGroups(guildId: string): GuildNavGroup[] {
     {
       title: "System",
       links: [
+        { href: `${base}/tempvc`, label: "Voice Generators", icon: Volume2 },
         { href: `${base}/history`, label: "Settings History", icon: History },
         { href: `${base}/audit`, label: "Audit Log", icon: ClipboardList },
         { href: `${base}/advanced`, label: "Advanced", icon: Wrench },
