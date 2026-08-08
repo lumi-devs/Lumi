@@ -257,6 +257,20 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       description: "Kick members who don't verify before the timeout.",
       default: false,
     }),
+    verification_mode: cfg.enum(["emoji", "none", "web"], {
+      group: "Verification",
+      label: "Verification Mode",
+      description:
+        "How members prove they're human: emoji sequence, one-click, or a web challenge on the dashboard.",
+      default: "emoji",
+    }),
+    verification_target: cfg.enum(["everyone", "suspicious"], {
+      group: "Verification",
+      label: "Verification Target",
+      description:
+        "Require verification from everyone, or only accounts flagged as suspicious (new or no avatar).",
+      default: "everyone",
+    }),
     panic_lock_channel_ids: cfg.string({
       group: "Panic Mode",
       label: "Channels to Lock",

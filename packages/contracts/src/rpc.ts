@@ -402,6 +402,7 @@ export interface RpcRequestPayloads {
   "guild.verificationPanel.get": never;
   "guild.verificationPanel.set": VerificationPanelSetPayload;
   "guild.verificationPanel.delete": never;
+  "guild.verificationWeb.complete": never;
   "guild.tempvc.generators.list": never;
   "guild.tempvc.generators.set": TempVcGeneratorSetPayload;
   "guild.tempvc.records.list": never;
@@ -473,6 +474,7 @@ export const RPC_ACTIONS = {
   guildVerificationPanelGet: "guild.verificationPanel.get",
   guildVerificationPanelSet: "guild.verificationPanel.set",
   guildVerificationPanelDelete: "guild.verificationPanel.delete",
+  guildVerificationWebComplete: "guild.verificationWeb.complete",
   guildTempVcGeneratorsList: "guild.tempvc.generators.list",
   guildTempVcGeneratorSet: "guild.tempvc.generators.set",
   guildTempVcRecordsList: "guild.tempvc.records.list",

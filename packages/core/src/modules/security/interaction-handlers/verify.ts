@@ -8,6 +8,7 @@ import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { fetchTyped } from "#lib/commands.js";
 import { getService } from "#lib/module-system/Service.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
+import { getDashboardPublicUrl } from "#lib/env.js";
 import {
   ephemeralCard,
   makeErrorCard,
@@ -18,6 +19,7 @@ import {
   VERIFY_BUTTON_ID,
   buildChallengeCard,
   buildProgressCard,
+  buildWebPromptCard,
   buildWrongCard,
 } from "../lib/verify-panel.js";
 
@@ -72,6 +74,32 @@ export class VerifyInteractionHandler extends BaseInteractionHandler {
           ),
         );
       }
+      if (config.mode === "none") {
+        await security.grantVerified(guild, userId);
+        return interaction.editReply(
+          ephemeralCard(
+            makeSuccessCard(t(PanelsKeys.VerifyOkTitle), t(PanelsKeys.VerifyOk)),
+          ),
+        );
+      }
+
+      if (config.mode === "web") {
+        const baseUrl = getDashboardPublicUrl();
+        if (!baseUrl) {
+          return interaction.editReply(
+            ephemeralCard(
+              makeErrorCard(
+                t(PanelsKeys.VerifyWebUnavailableTitle),
+                t(PanelsKeys.VerifyWebUnavailable),
+              ),
+            ),
+          );
+        }
+        return interaction.editReply(
+          ephemeralCard(buildWebPromptCard(t, `${baseUrl}/verify/${guild.id}`)),
+        );
+      }
+
       const state = await security.startChallenge(guild.id, userId, config);
       return interaction.editReply(ephemeralCard(buildChallengeCard(t, state)));
     }

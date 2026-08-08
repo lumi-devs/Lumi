@@ -28,4 +28,9 @@ export const VerifyPanelKeys = {
   VerifyPosted: FT<{ channel: string }>("panels:verifyPosted"),
   VerifyUnconfiguredTitle: T("panels:verifyUnconfiguredTitle"),
   VerifyUnconfigured: T("panels:verifyUnconfigured"),
+  VerifyWebTitle: T("panels:verifyWebTitle"),
+  VerifyWebIntro: T("panels:verifyWebIntro"),
+  VerifyWebButton: T("panels:verifyWebButton"),
+  VerifyWebUnavailableTitle: T("panels:verifyWebUnavailableTitle"),
+  VerifyWebUnavailable: T("panels:verifyWebUnavailable"),
 } as const;
