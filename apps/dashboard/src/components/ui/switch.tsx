@@ -1,5 +1,7 @@
 "use client";
 
+import { Switch as SwitchPrimitive } from "radix-ui";
+import { motion } from "motion/react";
 import { cn } from "#/lib/utils";
 
 export interface SwitchProps {
@@ -10,12 +12,8 @@ export interface SwitchProps {
   "aria-label"?: string;
 }
 
-/**
- * Plain checkbox styled as a toggle — no Radix dependency needed for this
- * scope. Sized to 20px so it sits inside a 32px dense row, and "on" uses the
- * accent rather than green: green is reserved for *status* (a module is
- * running) so a toggle's colour never competes with a health indicator.
- */
+// "On" uses the accent, not green: green is reserved for machine status, so a
+// toggle's colour never competes with a health indicator.
 export function Switch({
   checked,
   onChange,
@@ -24,36 +22,35 @@ export function Switch({
   ...aria
 }: SwitchProps) {
   return (
-    <label
+    <SwitchPrimitive.Root
+      checked={checked}
+      onCheckedChange={onChange}
+      disabled={disabled}
       className={cn(
         "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors",
         checked
           ? "border-transparent bg-accent"
           : "border-border bg-bg-subtle hover:border-border-strong",
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
-        "focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--ring)]",
+        "outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]",
         className,
       )}
+      {...aria}
     >
-      <input
-        type="checkbox"
-        className="peer sr-only"
-        checked={checked}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
-        {...aria}
-      />
-      <span
-        className={cn(
-          "pointer-events-none inline-block size-3.5 rounded-full shadow-e1 transition-transform",
-          checked ? "translate-x-[1.125rem] bg-white" : "translate-x-[3px] bg-fg-subtle",
-        )}
-      />
-    </label>
+      <SwitchPrimitive.Thumb asChild>
+        <motion.span
+          className={cn(
+            "pointer-events-none inline-block size-3.5 rounded-full",
+            checked ? "bg-white" : "bg-fg-subtle",
+          )}
+          animate={{ x: checked ? 18 : 3 }}
+          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        />
+      </SwitchPrimitive.Thumb>
+    </SwitchPrimitive.Root>
   );
 }
 
-/** Checkbox for explicit confirmations (destructive flows). */
 export function Checkbox({
   checked,
   onChange,

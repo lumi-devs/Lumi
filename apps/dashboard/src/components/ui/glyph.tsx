@@ -1,17 +1,9 @@
 import { cn } from "#/lib/utils";
 
-/**
- * Module identity mark.
- *
- * Icon policy for this app, applied consistently:
- *   - Application chrome (navigation, buttons, states, status) uses
- *     `lucide-react`. Emoji are never used as an icon set there.
- *   - A *module's* emoji is author-supplied identity metadata that arrives
- *     over RPC (`DashboardModuleView.emoji`), the same class of thing as a
- *     guild icon. It's kept, but rendered inside a fixed bordered tile so it
- *     reads as an avatar rather than as a stand-in for a real icon — and so a
- *     4-wide emoji and a 1-wide emoji still produce identical row heights.
- */
+// Icon policy: application chrome uses `lucide-react` and never emoji. A
+// module's emoji is author-supplied identity metadata arriving over RPC, so it
+// is kept — but boxed in a fixed tile, so a 4-wide and a 1-wide emoji still
+// produce identical row heights.
 export function Glyph({
   emoji,
   size = "md",
@@ -25,7 +17,7 @@ export function Glyph({
     <span
       aria-hidden
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded border border-border bg-bg-subtle leading-none select-none",
+        "inline-flex shrink-0 items-center justify-center rounded-control border border-border bg-bg-subtle leading-none select-none",
         size === "sm" ? "size-5 text-[11px]" : "size-7 text-[13px]",
         className,
       )}

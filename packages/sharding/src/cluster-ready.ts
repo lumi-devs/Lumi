@@ -18,7 +18,7 @@
 import type { Redis } from "ioredis";
 import { membersKey } from "./coordinator.js";
 
-const readyKey = (name: string, replicaId: string) =>
+export const readyKey = (name: string, replicaId: string) =>
   `lumi:cluster:${name}:ready:${replicaId}`;
 
 export interface ClusterReadyTrackerOptions {

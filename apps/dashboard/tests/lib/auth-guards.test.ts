@@ -72,7 +72,7 @@ describe("authorizedGuild (IDOR guard)", () => {
   });
 
   it("does not authorize a different guild than the one the session actually manages (the core IDOR case)", () => {
-    // Regression guard for the exact attack dashboard.md §5B calls out:
+    // Regression guard for the core IDOR attack:
     // changing /guild/101 to /guild/999 in the address bar.
     const session = makeSession({
       guilds: [{ id: "101", name: "Mine", icon: null, permissions: "0x20", owner: true }],
@@ -150,7 +150,7 @@ describe("requireBotOwner (privilege-escalation guard)", () => {
     expect(notFound).not.toHaveBeenCalled();
   });
 
-  it("404s a regular authenticated (non-owner) session — the exact escalation path dashboard.md §5 calls out", async () => {
+  it("404s a regular authenticated (non-owner) session — the bot-owner escalation path", async () => {
     const session = makeSession({ isBotOwner: false });
     authMock.mockResolvedValue(session);
     await expect(requireBotOwner()).rejects.toThrow("NEXT_NOT_FOUND");

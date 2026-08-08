@@ -45,6 +45,7 @@ No default - the app will not boot without these.
 | `OTEL_TRACES_SAMPLE_RATIO` | `1` | Lower in production (e.g. `0.1`) to cut trace volume. |
 | `METRICS_ENABLED` | `true` | |
 | `METRICS_PORT` | `9090` | Serves `/metrics`, `/healthz`, `/readyz`. |
+| `<SERVICE>_METRICS_PORT` | — | Per-service override, e.g. `DASHBOARD_METRICS_PORT`. Needed when several services share one host and one `.env`; without it they contend for `METRICS_PORT` and only the first binds. |
 | `GRAFANA_USER` / `GRAFANA_PASSWORD` | `admin` / `admin` | Only used by the bundled Grafana Compose service - change before exposing it. |
 
 ### Scalability & topology (advanced)
@@ -78,8 +79,14 @@ No default - the app will not boot without these.
 | `DASHBOARD_HOST` | `0.0.0.0` | |
 | `DASHBOARD_SESSION_SECRET` | *(required for the dashboard)* | Generate with `openssl rand -hex 32`. |
 | `DISCORD_OAUTH2_CLIENT_ID` / `DISCORD_OAUTH2_CLIENT_SECRET` | | From your Discord application's OAuth2 page. |
-| `DISCORD_OAUTH2_REDIRECT_URI` | `http://localhost:8080/callback` | Must match the redirect URI registered on the Discord application. |
-| `DASHBOARD_SECURE_COOKIES` | `false` | Set `true` once the dashboard is served over HTTPS. |
+| `AUTH_URL` | *(derived from the request)* | The dashboard's externally visible origin. Only needed if a reverse proxy rewrites the Host header. |
+| `METRICS_ENABLED` / `METRICS_PORT` | `true` / `9090` | The dashboard's `/healthz`, `/readyz`, `/metrics` server, same as the other roles. |
+
+There is **no** OAuth2 redirect-URI variable. NextAuth derives the callback from the incoming request; the path is `/api/auth/callback/discord`. Register `https://<your-dashboard-origin>/api/auth/callback/discord` under **OAuth2 → Redirects** on your Discord application.
+
+There is also no secure-cookie variable. NextAuth decides whether to use the `__Secure-` cookie prefix from the resolved URL scheme - serve the dashboard over HTTPS (and set `AUTH_URL` if a proxy rewrites the host) and it follows automatically.
+
+Full reference for the app itself: [Dashboard Reference](dashboard.md).
 
 ## Docker Compose
 
@@ -91,7 +98,7 @@ No default - the app will not boot without these.
 | `lumi-dev` (profile `development`) | Dev container with the repo (and a sibling `../lumi-addons`) bind-mounted, pretty/debug logging, interactive TTY. |
 | `worker-scale` (profile `scale`) | A second worker replica for local cluster testing. |
 | `scheduler` (profile `scale`) | `LUMI_ROLE=scheduler`. |
-| `dashboard` (profile `dashboard`) | Web dashboard on `${DASHBOARD_PORT:-8080}`. |
+| `dashboard` (profile `dashboard`) | Web dashboard on `${DASHBOARD_PORT:-8080}`. **Not usable yet** - the shared `Dockerfile` has no `next build` stage, so `next start` exits with *"Could not find a production build in the '.next' directory"*. Run the dashboard outside Docker; see [Dashboard Reference § Running it](dashboard.md#running-it). |
 | `postgres` | `postgres:17`, primary database. |
 | `pgbouncer` | Connection pooler in front of Postgres, transaction pool mode, port 6432. Point `POSTGRES_URL` at this, not directly at `postgres`. |
 | `redis` | `redis:7-alpine`, AOF persistence, `maxmemory 128mb` / `noeviction`. |
@@ -105,7 +112,7 @@ All app services `depends_on` Postgres, pgbouncer, Redis, and RabbitMQ with `con
 docker compose up worker postgres pgbouncer redis rabbitmq
 ```
 
-Add `--profile scale` for a second worker + scheduler, `--profile dashboard` for the web dashboard, or `--profile observability` for the full metrics/tracing stack.
+Add `--profile scale` for a second worker + scheduler, or `--profile observability` for the full metrics/tracing stack. `--profile dashboard` is not usable yet - see the table above.
 
 ## Kubernetes (`deploy/k8s/`)
 
@@ -119,6 +126,8 @@ Add `--profile scale` for a second worker + scheduler, `--profile dashboard` for
 | `worker-statefulset.yaml` | `StatefulSet` + headless `Service` | The sharded worker fleet. `replicas: 1` by default - scaling past 1 requires `CLUSTER_NAME`. `podManagementPolicy: Parallel`, rolling updates `maxUnavailable: 1`. Readiness/liveness on `/readyz` / `/healthz`, `preStop` sleeps 15s before termination for a graceful drain. |
 | `scheduler-deployment.yaml` | `Deployment` | `replicas: 1`, `strategy: Recreate` - guarantees exactly one BullMQ owner at a time. |
 | `nirn-proxy-deployment.yaml` | `Deployment` + `Service` | `replicas: 2`, stateless Discord REST proxy shared by worker replicas. |
+
+There is **no dashboard manifest**. `secret.example.yaml` carries `DISCORD_OAUTH2_CLIENT_SECRET` and `DASHBOARD_SESSION_SECRET` (the names `apps/dashboard/src/lib/env.ts` reads) so the Secret is ready when one is written, but nothing in `deploy/k8s/` consumes them today.
 
 Deploy order: namespace → secrets/configmap → PVC → `migrate-job` (wait for completion) → `nirn-proxy` → `scheduler` → `worker`.
 

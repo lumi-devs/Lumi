@@ -7,6 +7,7 @@ import { logToChannel, scheduleCaseLift, liftJobId } from "../lib/helpers.js";
 import { formatDuration } from "#lib/utilities/time.js";
 import { errorCode } from "#lib/utilities/errors.js";
 import { cancelTask } from "#lib/schedule-task.js";
+import { sendAppealLinkDm } from "#lib/appeals/dm.js";
 
 export interface MuteApplyOptions {
   guild: Guild;
@@ -60,6 +61,8 @@ export class MuteAction {
       reason,
       c.caseNumber,
     );
+
+    await sendAppealLinkDm(targetMember.user, guild, c);
 
     return c;
   }

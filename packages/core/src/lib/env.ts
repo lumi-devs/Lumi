@@ -92,3 +92,14 @@ export const getDiscordProxyUrl = (): string | null => {
   if (!raw) return null;
   return raw.replace(/\/+$/, "");
 };
+
+/**
+ * Public origin of the dashboard, e.g. `https://lumi.example.com`. Used only
+ * to build the appeal link DMed on ban/timeout - unset means appeal links
+ * are skipped rather than DMed as a broken/relative URL.
+ */
+export const getDashboardPublicUrl = (): string | null => {
+  const raw = process.env["DASHBOARD_PUBLIC_URL"]?.trim();
+  if (!raw) return null;
+  return raw.replace(/\/+$/, "");
+};

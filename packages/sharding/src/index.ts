@@ -5,3 +5,4 @@ export * from "./redis-throttler.js";
 export * from "./cluster-bootstrap.js";
 export * from "./cluster-ready.js";
 export * from "./dynamic-strategy.js";
+export * from "./shard-telemetry.js";

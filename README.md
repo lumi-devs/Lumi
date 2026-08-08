@@ -110,10 +110,10 @@ docker compose up -d
 # Option B: Build the image locally
 docker compose build
 docker compose up -d
-
-# Optional: include the web dashboard
-docker compose --profile dashboard up -d
 ```
+
+> [!WARNING]
+> The `dashboard` Compose profile does not work yet - the shared `Dockerfile` has no `next build` stage, so `next start` exits with *"Could not find a production build in the '.next' directory"*. Run the dashboard directly (`bun run --cwd apps/dashboard build && bun run --cwd apps/dashboard start`) until that image stage lands. See [docs/dashboard.md](docs/dashboard.md#running-it).
 
 For scaled-out deployments (multiple `worker` replicas + a `scheduler`), specify `LUMI_ROLE` per container node and set `CLUSTER_NAME` so replicas divide the shard range between themselves. Full walkthrough: [docs/GUIDE_PRODUCTION_DEPLOYMENT.md](docs/GUIDE_PRODUCTION_DEPLOYMENT.md).
 

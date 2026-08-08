@@ -1,28 +1,18 @@
 import type { OAuthGuild } from "#/lib/discord";
 
-// Module augmentation: extends NextAuth's Session/JWT shapes with the fields
-// the old hand-rolled `Session` interface (apps/dashboard/src/types.ts)
-// used to carry — userId, avatar, accessToken, guilds, isBotOwner. NextAuth
-// owns issuing/verifying/expiring the session now; we just widen its type.
-//
-// Both "next-auth"/"next-auth/jwt" AND "@auth/core/types"/"@auth/core/jwt"
-// are augmented: next-auth v5's `Session`/`JWT` interfaces are declared in
-// @auth/core and merely re-exported (`export * from "@auth/core/jwt"` for
-// JWT) from the next-auth subpaths. TypeScript's `declare module` merging
-// doesn't reliably follow through a wildcard re-export, so augmenting only
-// "next-auth/jwt" silently no-ops and `token.foo` types as `{}` inside
-// lib/auth.ts's callbacks. Augmenting the @auth/core source directly is
-// what actually merges; the next-auth-path augmentation is kept too since
-// that's the module application code imports from.
+// Both the "next-auth/*" and "@auth/core/*" module paths are augmented below.
+// next-auth v5 declares `Session`/`JWT` in @auth/core and wildcard re-exports
+// them; `declare module` merging doesn't follow through a wildcard re-export,
+// so augmenting only "next-auth/jwt" silently no-ops and `token.foo` types as
+// `{}`. The @auth/core augmentation is the one that merges; the next-auth one
+// is kept because that's the path application code imports from.
 
 interface SessionExtras {
   userId: string;
   username: string;
   avatar: string;
-  /** Guilds where the user holds Manage Server (or ownership), pre-filtered at sign-in. */
+  /** Pre-filtered at sign-in to guilds where the user holds Manage Server. */
   guilds: OAuthGuild[];
-  /** From the worker's `auth.whoami` RPC — true when `PermitResolver.isBotOwner`
-   *  recognizes `userId` (via `OWNER_IDS` or the Discord application owner). */
   isBotOwner: boolean;
 }
 
@@ -32,6 +22,9 @@ interface JwtExtras {
   avatar?: string;
   guilds?: OAuthGuild[];
   isBotOwner?: boolean;
+  accessToken?: string;
+  /** Epoch ms of the last `guilds`/`isBotOwner` refresh attempt. */
+  authRefreshedAt?: number;
 }
 
 declare module "next-auth" {

@@ -2,10 +2,9 @@ import Link from "next/link";
 import { ArrowLeft, PlugZap } from "lucide-react";
 import { Card } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
-import { buttonVariants } from "#/components/ui/button";
+import { buttonVariants } from "#/components/ui/button-variants";
 import { env } from "#/lib/env";
 
-/** Shown when `guild.dashboard.get` fails — bot isn't in this guild (or its dashboard module is disabled). */
 export function InviteNeeded({ guildId }: { guildId: string }) {
   const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${env.discordClientId}&permissions=8&scope=bot%20applications.commands&guild_id=${guildId}&disable_guild_select=true`;
   return (

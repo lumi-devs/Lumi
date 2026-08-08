@@ -447,12 +447,14 @@ export abstract class BaseCommand extends Command implements CommandLike {
 
   /**
    * Appends the `RequirePermit` precondition when the command declares a
-   * permit node, plus the `ModuleEnabled` gate every Lumi command carries.
+   * permit node, plus the `MaintenanceMode` and `ModuleEnabled` gates every
+   * Lumi command carries.
    */
   protected override parseConstructorPreConditions(
     options: BaseCommand.Options,
   ): void {
     super.parseConstructorPreConditions(options);
+    this.preconditions.append("MaintenanceMode");
     appendPermitPrecondition(this, options.requiredPermit);
     this.preconditions.append("ModuleEnabled");
   }
@@ -499,12 +501,14 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
 
   /**
    * Appends the `RequirePermit` precondition when the command declares a
-   * permit node, plus the `ModuleEnabled` gate every Lumi command carries.
+   * permit node, plus the `MaintenanceMode` and `ModuleEnabled` gates every
+   * Lumi command carries.
    */
   protected override parseConstructorPreConditions(
     options: BaseSubcommand.Options,
   ): void {
     super.parseConstructorPreConditions(options);
+    this.preconditions.append("MaintenanceMode");
     appendPermitPrecondition(this, options.requiredPermit);
     this.preconditions.append("ModuleEnabled");
   }

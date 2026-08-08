@@ -15,9 +15,9 @@ Symptom-first index across the whole stack. If you're troubleshooting a single-i
 
 | Symptom | Likely cause |
 | :--- | :--- |
-| OAuth2 login fails / redirect loop | `DISCORD_OAUTH2_REDIRECT_URI` must exactly match a redirect registered on the Discord application's OAuth2 page, including scheme and trailing slash. |
+| OAuth2 login fails / redirect loop | The callback URL isn't registered on the Discord application. NextAuth derives it from the request - there is no redirect-URI env var - so the value to register under **OAuth2 → Redirects** is `https://<your-dashboard-origin>/api/auth/callback/discord`, matching scheme, host, and port exactly. |
 | Dashboard loads but every guild-scoped page 404s or redirects | Dashboard RPC couldn't reach `worker` over RabbitMQ, or the `dashboard` module is disabled for that guild - the RPC surface is what's disabled, not the web app itself (see [FAQ](FAQ.md#is-the-web-dashboard-required)). Confirm `RABBITMQ_URL` is reachable from both `worker` and `apps/dashboard`. |
-| Cookies not persisting behind a reverse proxy / HTTPS | Set `DASHBOARD_SECURE_COOKIES=true` once the dashboard is served over HTTPS - it defaults `false` for local HTTP development. |
+| Cookies not persisting behind a reverse proxy / HTTPS | There is no secure-cookie env var - NextAuth picks the `__Secure-` cookie prefix from the resolved URL scheme. If the proxy terminates TLS and forwards plain HTTP, the app resolves an `http://` origin and the prefixes disagree with the browser's expectation. Set `AUTH_URL` to the externally visible `https://` origin; `trustHost: true` is already set in `apps/dashboard/src/lib/auth.ts`, so forwarded Host headers are honoured. |
 
 ## Sharding & clustering
 

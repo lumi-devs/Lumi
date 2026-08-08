@@ -1,10 +1,5 @@
 import { cn } from "#/lib/utils";
 
-/**
- * Every page previously hand-rolled its own title block with slightly
- * different type sizes and margins. This is the single one: 15px semibold
- * title, 12px muted subtitle, right-aligned actions, one shared bottom rule.
- */
 export function PageHeader({
   title,
   description,
@@ -14,16 +9,14 @@ export function PageHeader({
 }: {
   title: React.ReactNode;
   description?: React.ReactNode;
-  /** Right-aligned page-level actions. */
   actions?: React.ReactNode;
-  /** Optional line under the title — IDs, counts, breadcrumb-ish context. */
   meta?: React.ReactNode;
   className?: string;
 }) {
   return (
     <div
       className={cn(
-        "flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4",
+        "flex flex-wrap items-start justify-between gap-3 pb-5",
         className,
       )}
     >

@@ -49,6 +49,16 @@ export class ConfigOverrideRepository extends Repository {
     });
   }
 
+  public listGuildConfigOverrides(
+    guildId: string,
+    moduleName?: string,
+  ): Promise<ConfigOverrideEntry[]> {
+    return this.prisma.moduleConfigOverride.findMany({
+      where: { guildId, ...(moduleName ? { moduleName } : {}) },
+      orderBy: [{ moduleName: "asc" }, { key: "asc" }],
+    });
+  }
+
   public async deleteConfigOverride(data: {
     guildId: string;
     moduleName: string;

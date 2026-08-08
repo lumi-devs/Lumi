@@ -230,6 +230,16 @@ export function startMetricsServer(port: number): Server | null {
     res.end();
   });
 
+  // Without this the bind failure surfaces as an uncaughtException and takes the
+  // whole service down — telemetry must never be able to kill its host.
+  server.on("error", (err: NodeJS.ErrnoException) => {
+    const detail =
+      err.code === "EADDRINUSE"
+        ? `port ${port} already in use — set METRICS_PORT for this service`
+        : String(err);
+    process.stderr.write(`[observability] metrics server disabled: ${detail}\n`);
+  });
+
   server.listen(port);
   return server;
 }

@@ -17,7 +17,7 @@ describe("MaintenanceForm (system panel maintenance-mode toggle)", () => {
     render(
       <MaintenanceForm maintenanceMode={true} maintenanceMessage="Back soon" />,
     );
-    expect(screen.getByRole("checkbox", { name: /toggle maintenance mode/i })).toBeChecked();
+    expect(screen.getByRole("switch", { name: /toggle maintenance mode/i })).toBeChecked();
     expect(screen.getByPlaceholderText(/scheduled maintenance/i)).toHaveValue(
       "Back soon",
     );
@@ -27,7 +27,7 @@ describe("MaintenanceForm (system panel maintenance-mode toggle)", () => {
     setMaintenanceMode.mockResolvedValue({ ok: true });
     render(<MaintenanceForm maintenanceMode={false} maintenanceMessage={null} />);
 
-    fireEvent.click(screen.getByRole("checkbox", { name: /toggle maintenance mode/i }));
+    fireEvent.click(screen.getByRole("switch", { name: /toggle maintenance mode/i }));
 
     await waitFor(() =>
       expect(setMaintenanceMode).toHaveBeenCalledWith(true, undefined),
@@ -52,7 +52,7 @@ describe("MaintenanceForm (system panel maintenance-mode toggle)", () => {
     setMaintenanceMode.mockResolvedValue({ ok: false, error: "RPC timed out" });
     render(<MaintenanceForm maintenanceMode={false} maintenanceMessage={null} />);
 
-    fireEvent.click(screen.getByRole("checkbox", { name: /toggle maintenance mode/i }));
+    fireEvent.click(screen.getByRole("switch", { name: /toggle maintenance mode/i }));
 
     expect(await screen.findByText("RPC timed out")).toBeInTheDocument();
   });

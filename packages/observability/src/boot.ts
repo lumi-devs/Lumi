@@ -6,6 +6,17 @@ import { startTracing } from "./tracing";
 import { startEventLoopMonitor } from "./event-loop";
 import { initMetrics, startMetricsServer } from "./metrics";
 
+// A single-host deployment runs several services off one shared `.env`, so a bare
+// METRICS_PORT would have them all fight over one port. The per-service override
+// wins, and `SERVICE_NAME` is normalized because env keys can't hold `-`.
+function resolveMetricsPort(service: string | undefined): number {
+  const scoped = service
+    ? process.env[`${service.toUpperCase().replace(/[^A-Z0-9]/g, "_")}_METRICS_PORT`]
+    : undefined;
+  const port = scoped ?? process.env["METRICS_PORT"];
+  return port ? Number(port) : 9090;
+}
+
 export function bootstrapTelemetry(serviceName?: string): void {
   const name =
     (serviceName && serviceName.trim().length > 0
@@ -30,7 +41,5 @@ export function bootstrapTelemetry(serviceName?: string): void {
 
   initMetrics(svc);
   startEventLoopMonitor();
-  startMetricsServer(
-    process.env["METRICS_PORT"] ? Number(process.env["METRICS_PORT"]) : 9090,
-  );
+  startMetricsServer(resolveMetricsPort(svc));
 }

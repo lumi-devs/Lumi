@@ -12,16 +12,6 @@ import { ActionError } from "#/components/action-error";
 import { useOptimisticAction } from "#/lib/use-server-action";
 import type { DashboardModuleView } from "#/lib/dashboard-data";
 
-/**
- * dashboard.md §9B `GuildModuleToggleSidebar`.
- *
- * Was a 3-column grid of 24px-padded cards: ~130px of vertical space per
- * module, nothing aligned, and the toggle — the only thing you actually come
- * here to do — sat at a different x-position in every card. It's now a single
- * dense list where name, description, field count and toggle each occupy a
- * fixed column, so twelve modules fit on one screen and the toggles form one
- * scannable rail on the right.
- */
 export function ModuleToggleGrid({
   guildId,
   modules,

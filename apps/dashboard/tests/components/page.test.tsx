@@ -36,7 +36,7 @@ function makeSession(overrides: Partial<Session> = {}): Session {
   } as Session;
 }
 
-describe("/ (dashboard.md §11: landing when signed out, server picker when signed in)", () => {
+describe("/ (landing when signed out, server picker when signed in)", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("renders the public marketing landing page when there is no session", async () => {

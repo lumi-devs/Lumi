@@ -5,6 +5,7 @@ import { formatAuditReason } from "#lib/utilities/misc.js";
 import { makeErrorCard } from "#lib/utilities/cards.js";
 import { logToChannel } from "../lib/helpers.js";
 import { errorCode } from "#lib/utilities/errors.js";
+import { sendAppealLinkDm } from "#lib/appeals/dm.js";
 
 export interface BanApplyOptions {
   guild: Guild;
@@ -59,6 +60,8 @@ export class BanAction {
       reason,
       c.caseNumber,
     );
+
+    await sendAppealLinkDm(targetUser, guild, c);
 
     return c;
   }

@@ -19,7 +19,6 @@ import type {
   DashboardChannelView,
 } from "#/lib/dashboard-data";
 
-/** Channel types offered for the Mod Log Channel picker (text-capable only). */
 const LOG_CHANNEL_TYPES = new Set([0, 5]);
 
 type FormState = GuildSettingsPayload;
@@ -34,8 +33,6 @@ const FORM_KEYS = [
   "timezone",
   "noMentionSpamWindowMs",
   "noMentionSpamLimit",
-  "inviteUrl",
-  "supportUrl",
 ] as const satisfies readonly (keyof FormState)[];
 
 const FIELD_LABELS: Record<keyof FormState, string> = {
@@ -48,8 +45,6 @@ const FIELD_LABELS: Record<keyof FormState, string> = {
   timezone: "Timezone",
   noMentionSpamWindowMs: "No-mention-spam window (ms)",
   noMentionSpamLimit: "No-mention-spam limit",
-  inviteUrl: "Invite URL",
-  supportUrl: "Support URL",
 };
 
 const NULLABLE_STRING_FIELDS = new Set<keyof FormState>([
@@ -58,23 +53,19 @@ const NULLABLE_STRING_FIELDS = new Set<keyof FormState>([
   "adminRoleId",
   "modLogChannelId",
   "muteRoleId",
-  "inviteUrl",
-  "supportUrl",
 ]);
 
 function toFormState(settings: GuildSettings): FormState {
   return {
     prefix: settings.prefix ?? "",
-    modRoleId: (settings["modRoleId"] as string | null) ?? "",
-    adminRoleId: (settings["adminRoleId"] as string | null) ?? "",
-    modLogChannelId: (settings["modLogChannelId"] as string | null) ?? "",
-    muteRoleId: (settings["muteRoleId"] as string | null) ?? "",
+    modRoleId: (settings["modRoleId"]) ?? "",
+    adminRoleId: (settings["adminRoleId"]) ?? "",
+    modLogChannelId: (settings["modLogChannelId"]) ?? "",
+    muteRoleId: (settings["muteRoleId"]) ?? "",
     locale: settings.locale ?? "en-US",
-    timezone: (settings["timezone"] as string) ?? "UTC",
-    noMentionSpamWindowMs: (settings["noMentionSpamWindowMs"] as number | null) ?? null,
-    noMentionSpamLimit: (settings["noMentionSpamLimit"] as number | null) ?? null,
-    inviteUrl: (settings["inviteUrl"] as string | null) ?? "",
-    supportUrl: (settings["supportUrl"] as string | null) ?? "",
+    timezone: (settings["timezone"]) ?? "UTC",
+    noMentionSpamWindowMs: (settings["noMentionSpamWindowMs"]) ?? null,
+    noMentionSpamLimit: (settings["noMentionSpamLimit"]) ?? null,
   };
 }
 
@@ -86,7 +77,6 @@ type SyncMessage =
   | { type: "settings-updated"; settings: FormState }
   | { type: "request-sync" };
 
-/** dashboard.md §9B `GuildGeneralSettingsCard` — Guild model fields. */
 export function GeneralSettingsForm({
   guildId,
   settings,
@@ -125,7 +115,7 @@ export function GeneralSettingsForm({
 
       for (const key of FORM_KEYS) {
         if (JSON.stringify(newBaseline[key]) === JSON.stringify(oldBaseline[key])) {
-          continue; // this field didn't actually change remotely
+          continue;
         }
         const fieldDirty = JSON.stringify(currentForm[key]) !== JSON.stringify(oldBaseline[key]);
         if (fieldDirty) {
@@ -211,7 +201,7 @@ export function GeneralSettingsForm({
         return;
       }
 
-      const normalized = { ...form, ...patch } as FormState;
+      const normalized = { ...form, ...patch };
       setBaseline(normalized);
       baselineRef.current = normalized;
       setForm(normalized);
@@ -225,18 +215,12 @@ export function GeneralSettingsForm({
 
   return (
     <>
-      {/* `rise` is the third beat of the guild overview's page-load
-       * choreography (globals.css). It sits here rather than on a wrapper in
-       * page.tsx so the fixed-position SaveBar below stays outside the
-       * animated subtree. */}
+      {/* `rise` sits here, not on a wrapper in page.tsx, so the fixed-position
+       * SaveBar below stays outside the animated subtree. */}
       <div
         className="rise flex flex-col gap-4"
         style={{ "--rise-delay": "140ms" } as React.CSSProperties}
       >
-        {/* Three small cards instead of one nine-field grid. The old layout
-         * put "Command prefix" and "No-mention-spam window (ms)" in the same
-         * undifferentiated 2-column run, so there was no way to tell at a
-         * glance which settings related to each other. */}
         <Card>
           <CardHeader>
             <CardTitle>General</CardTitle>
@@ -340,35 +324,6 @@ export function GeneralSettingsForm({
                     </option>
                   ))}
               </Select>
-            </Field>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Invite &amp; support</CardTitle>
-            <CardDescription>
-              Shown to members looking for how to invite the bot or get help.
-            </CardDescription>
-          </CardHeader>
-          <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Invite URL" htmlFor="inviteUrl">
-              <Input
-                id="inviteUrl"
-                type="url"
-                placeholder="https://discord.gg/…"
-                value={form.inviteUrl ?? ""}
-                onChange={(e) => field("inviteUrl", e.target.value)}
-              />
-            </Field>
-            <Field label="Support URL" htmlFor="supportUrl">
-              <Input
-                id="supportUrl"
-                type="url"
-                placeholder="https://…"
-                value={form.supportUrl ?? ""}
-                onChange={(e) => field("supportUrl", e.target.value)}
-              />
             </Field>
           </CardBody>
         </Card>

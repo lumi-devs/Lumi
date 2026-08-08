@@ -21,6 +21,14 @@ export interface WarnThresholds {
   };
 }
 
+const ACTION_EMOJI: Record<string, string> = {
+  mute: "🔇",
+  kick: "👢",
+  ban: "🔨",
+  quarantine: "☣️",
+  vcmute: "🎙️",
+};
+
 export interface WarnThresholdsPanelOptions {
   selectedCount?: number;
   selectedAction?: string;
@@ -43,16 +51,7 @@ export function buildWarnThresholdsPanel(
     entries.length > 0
       ? entries
           .map(([cnt, entry]) => {
-            const actionEmoji =
-              entry.action === "mute"
-                ? "🔇"
-                : entry.action === "kick"
-                  ? "👢"
-                  : entry.action === "ban"
-                    ? "🔨"
-                    : entry.action === "quarantine"
-                      ? "☣️"
-                      : "🛡️";
+            const actionEmoji = ACTION_EMOJI[entry.action] ?? "🛡️";
             const dur = entry.duration ? ` (${entry.duration})` : "";
             const badgeColor =
               entry.action === "ban"
@@ -93,7 +92,6 @@ export function buildWarnThresholdsPanel(
     `**Decay Schedule:** ${badge(`${decayDays} Days`, "green")} -# *(Warning points decay automatically)*`,
   ].join("\n");
 
-  // Row 1: Warn Count Select (1 to 10)
   const countSelectOptions: StringSelectMenuOptionBuilder[] = [];
   for (let i = 1; i <= 10; i++) {
     countSelectOptions.push(
@@ -118,7 +116,6 @@ export function buildWarnThresholdsPanel(
       .addOptions(countSelectOptions),
   );
 
-  // Row 2: Action & Duration Select
   const row2 = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(
@@ -147,21 +144,20 @@ export function buildWarnThresholdsPanel(
           .setValue("action:ban")
           .setDescription("Permanently ban member"),
         new StringSelectMenuOptionBuilder()
-          .setLabel("🔨 Tempban - 7 Days")
-          .setValue("action:tempban:7d")
-          .setDescription("Ban member with scheduled 7-day unban"),
-        new StringSelectMenuOptionBuilder()
-          .setLabel("🔨 Tempban - 30 Days")
-          .setValue("action:tempban:30d")
-          .setDescription("Ban member with scheduled 30-day unban"),
-        new StringSelectMenuOptionBuilder()
           .setLabel("☣️ Quarantine Member")
           .setValue("action:quarantine")
           .setDescription("Apply Anti-Nuke Quarantine role"),
+        new StringSelectMenuOptionBuilder()
+          .setLabel("🎙️ Voice Mute - 1 Hour")
+          .setValue("action:vcmute:1h")
+          .setDescription("Server-mute in voice for 1 Hour"),
+        new StringSelectMenuOptionBuilder()
+          .setLabel("🎙️ Voice Mute - 24 Hours")
+          .setValue("action:vcmute:24h")
+          .setDescription("Server-mute in voice for 24 Hours"),
       ),
   );
 
-  // Row 3: Save, Remove, Preset, Reset All
   const row3 = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(
@@ -190,13 +186,8 @@ export function buildWarnThresholdsPanel(
   });
 }
 
-/**
- * Re-reads the guild's thresholds and decay window and repaints the panel in
- * place, so a component handler only has to say which rule stays selected.
- *
- * @param interaction - The component interaction owning the panel message.
- * @param selection - The rule the panel's editors highlight after the repaint.
- */
+// Re-reads thresholds and the decay window and repaints in place, so a
+// component handler only has to say which rule stays selected.
 export async function updateWarnThresholdsPanel(
   interaction: ButtonInteraction | StringSelectMenuInteraction,
   selection: WarnThresholdsPanelOptions,

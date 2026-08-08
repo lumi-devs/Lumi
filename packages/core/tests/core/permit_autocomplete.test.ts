@@ -89,7 +89,9 @@ describe("PermitCommand.autocompleteRun", () => {
     const [choices] = interaction.respond.mock.calls[0]!;
     expect(choices.map((c: any) => c.value)).toEqual([
       "mod.*",
+      "mod.appeals",
       "mod.lockdown",
+      "mod.notes",
       "mod.softban",
       "mod.voicemute",
     ]);

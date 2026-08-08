@@ -29,8 +29,6 @@ function baseValues() {
     timezone: "UTC",
     noMentionSpamWindowMs: null,
     noMentionSpamLimit: null,
-    inviteUrl: "",
-    supportUrl: "",
   } as const;
 }
 
@@ -50,12 +48,12 @@ function guildChannel(guildId: string) {
 // cross-tab-broadcast sentinel values) must exist here so the role <select>
 // can represent it as an <option>.
 const roles: DashboardRoleView[] = [
-  { id: "111", name: "111", color: 0 },
-  { id: "222", name: "222", color: 0 },
-  { id: "444", name: "444", color: 0 },
-  { id: "999", name: "999", color: 0 },
-  { id: "LOCAL-EDIT", name: "LOCAL-EDIT", color: 0 },
-  { id: "REMOTE-CHANGE", name: "REMOTE-CHANGE", color: 0 },
+  { id: "111", name: "111", color: 0, position: 0, permissions: "0", isBotRole: false },
+  { id: "222", name: "222", color: 0, position: 0, permissions: "0", isBotRole: false },
+  { id: "444", name: "444", color: 0, position: 0, permissions: "0", isBotRole: false },
+  { id: "999", name: "999", color: 0, position: 0, permissions: "0", isBotRole: false },
+  { id: "LOCAL-EDIT", name: "LOCAL-EDIT", color: 0, position: 0, permissions: "0", isBotRole: false },
+  { id: "REMOTE-CHANGE", name: "REMOTE-CHANGE", color: 0, position: 0, permissions: "0", isBotRole: false },
 ];
 
 const channels: DashboardChannelView[] = [{ id: "333", name: "333", type: 0 }];

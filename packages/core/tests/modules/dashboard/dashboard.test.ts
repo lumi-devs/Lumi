@@ -23,8 +23,20 @@ describe("dashboard module RPC handlers", () => {
       iconURL: vi.fn().mockReturnValue("https://example.com/icon.png"),
       roles: {
         cache: new Collection([
-          [GUILD_ID, { id: GUILD_ID, name: "@everyone", color: 0 }],
-          ["444444444444444444", { id: "444444444444444444", name: "Mods", color: 0 }],
+          [
+            GUILD_ID,
+            { id: GUILD_ID, name: "@everyone", color: 0, position: 0, permissions: { bitfield: 0n } },
+          ],
+          [
+            "444444444444444444",
+            {
+              id: "444444444444444444",
+              name: "Mods",
+              color: 0,
+              position: 1,
+              permissions: { bitfield: 0n },
+            },
+          ],
         ]),
       },
       channels: {
@@ -34,6 +46,7 @@ describe("dashboard module RPC handlers", () => {
       },
       members: {
         fetch: vi.fn(),
+        me: { roles: { highest: { id: "444444444444444444" } } },
         cache: new Collection(),
       },
     };
@@ -115,7 +128,14 @@ describe("dashboard module RPC handlers", () => {
     expect(container.db.config.getGuildSettings).toHaveBeenCalledWith(GUILD_ID);
     expect(guild.members.fetch).not.toHaveBeenCalled();
     expect(result.roles).toEqual([
-      { id: "444444444444444444", name: "Mods", color: 0 },
+      {
+        id: "444444444444444444",
+        name: "Mods",
+        color: 0,
+        position: 1,
+        permissions: "0",
+        isBotRole: true,
+      },
     ]);
     expect(result.channels).toEqual([
       { id: "555555555555555555", name: "general", type: 0 },

@@ -1,16 +1,11 @@
 import "server-only";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 
-// Per-process rate limiter — dashboard.md §5F. Backed by
-// `rate-limiter-flexible`'s in-memory driver for correct sliding-window
-// semantics (vs. the fixed-window bucket this used to hand-roll). Still
-// process-local: it does not coordinate across multiple dashboard replicas.
-// Swapping the driver for `RateLimiterRedis` (same library) would give
-// cross-replica coordination; out of scope for this rewrite.
+// Process-local: this does not coordinate across dashboard replicas. Swapping
+// the driver for `RateLimiterRedis` (same library) is what would.
 //
-// `limit`/`windowMs` vary per call site, so limiters are cached per
-// (limit, windowMs) pair rather than constructed once — each pair gets its
-// own independent point budget, matching the old per-bucket-config behavior.
+// Keyed per (limit, windowMs) so each call site gets its own point budget
+// rather than sharing one.
 const limiters = new Map<string, RateLimiterMemory>();
 
 function getLimiter(limit: number, windowMs: number): RateLimiterMemory {
@@ -26,7 +21,6 @@ function getLimiter(limit: number, windowMs: number): RateLimiterMemory {
   return limiter;
 }
 
-/** Returns true when `key` has exceeded `limit` calls within `windowMs`. */
 export async function isRateLimited(
   key: string,
   limit = 30,

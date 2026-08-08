@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Ban,
@@ -10,7 +11,18 @@ import {
   Power,
   ShieldUser,
 } from "lucide-react";
-import { NavItem, NavSection } from "./nav-item";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "#/components/ui/sidebar";
+import { Wordmark } from "./wordmark";
 
 const LINKS = [
   { href: "/system", label: "Global Config", icon: Globe },
@@ -24,22 +36,34 @@ const LINKS = [
 
 export function SystemSidebar() {
   const pathname = usePathname();
+
   return (
-    <nav
-      aria-label="System panel"
-      className="flex w-full shrink-0 flex-col md:sticky md:top-[57px] md:w-56"
-    >
-      <NavSection title="System Panel">
-        {LINKS.map((l) => (
-          <NavItem
-            key={l.href}
-            href={l.href}
-            label={l.label}
-            icon={l.icon}
-            active={pathname === l.href}
-          />
-        ))}
-      </NavSection>
-    </nav>
+    <Sidebar collapsible="offcanvas">
+      <SidebarHeader>
+        <Link href="/" aria-label="Lumi home" className="flex items-center gap-2 px-2 py-1.5">
+          <Wordmark />
+        </Link>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>System Panel</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {LINKS.map((l) => (
+                <SidebarMenuItem key={l.href}>
+                  <SidebarMenuButton asChild isActive={pathname === l.href}>
+                    <Link href={l.href}>
+                      <l.icon aria-hidden />
+                      <span>{l.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
   );
 }

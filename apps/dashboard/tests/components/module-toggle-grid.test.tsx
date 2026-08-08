@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import type { ActionResult } from "#/actions/guild-actions";
 import type { DashboardModuleView } from "#/lib/dashboard-data";
 
@@ -37,8 +37,8 @@ describe("ModuleToggleGrid", () => {
         ]}
       />,
     );
-    expect(screen.getByRole("checkbox", { name: "Toggle AFK" })).toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "Toggle Filter" })).not.toBeChecked();
+    expect(screen.getByRole("switch", { name: "Toggle AFK" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "Toggle Filter" })).not.toBeChecked();
   });
 
   it("shows the core module as always-active, with no toggle switch", () => {
@@ -63,9 +63,9 @@ describe("ModuleToggleGrid", () => {
       />,
     );
 
-    const toggle = screen.getByRole("checkbox", { name: "Toggle AFK" });
+    const toggle = screen.getByRole("switch", { name: "Toggle AFK" });
     expect(toggle).not.toBeChecked();
-    toggle.click();
+    fireEvent.click(toggle);
 
     // Optimistic UI: flips immediately, before the action resolves.
     expect(toggle).toBeChecked();
@@ -83,8 +83,8 @@ describe("ModuleToggleGrid", () => {
       />,
     );
 
-    const toggle = screen.getByRole("checkbox", { name: "Toggle AFK" });
-    toggle.click();
+    const toggle = screen.getByRole("switch", { name: "Toggle AFK" });
+    fireEvent.click(toggle);
     expect(toggle).not.toBeChecked(); // optimistic flip
 
     await waitFor(() => expect(toggle).toBeChecked()); // reverted

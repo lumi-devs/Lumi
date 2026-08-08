@@ -12,13 +12,13 @@ export default async function GuildModuleConfigPage({
   const session = await requireGuild(guildId);
   const data = await getGuildDashboard(guildId, session.userId);
 
-  const module = data.modules.find((m) => m.name === moduleName);
-  if (!module) notFound();
+  const mod = data.modules.find((m) => m.name === moduleName);
+  if (!mod) notFound();
 
   return (
     <ModuleConfigForm
       guildId={guildId}
-      module={module}
+      module={mod}
       roles={data.roles}
       channels={data.channels}
     />

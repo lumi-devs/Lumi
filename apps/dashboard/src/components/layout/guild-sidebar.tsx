@@ -1,49 +1,79 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ChevronRight } from "lucide-react";
+import { motion } from "motion/react";
 import {
-  Ban,
-  ClipboardList,
-  Gavel,
-  History,
-  IdCard,
-  LayoutGrid,
-  type LucideIcon,
-  Settings,
-  ShieldAlert,
-  SlidersHorizontal,
-  TriangleAlert,
-  Volume2,
-  Wrench,
-} from "lucide-react";
-import { NavItem, NavSection } from "./nav-item";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "#/components/ui/collapsible";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "#/components/ui/sidebar";
 import { Glyph } from "#/components/ui/glyph";
+import { StatusDot } from "#/components/ui/badge";
+import { Wordmark } from "./wordmark";
+import { useCollapsedNavGroups } from "#/hooks/use-collapsed-nav-groups";
 import type { DashboardModuleView } from "#/lib/dashboard-data";
+import { guildManagementGroups, guildTopLinks, type GuildNavGroup } from "#/lib/guild-nav";
 
-interface NavLink {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-}
+const MotionChevron = motion.create(ChevronRight);
 
-// Management routes. Icons come from lucide so the whole nav column shares
-// one stroke weight and optical size — the previous emoji set (🔨 ⚠️ 🔐 🔊 🪪
-// 🎛️ 🕘 📋 🚫 🧰) rendered at different widths per platform and is the single
-// loudest "scaffolded UI" tell in the app.
-function managementLinks(guildId: string): NavLink[] {
-  const base = `/guild/${guildId}`;
-  return [
-    { href: `${base}/moderation`, label: "Moderation Cases", icon: Gavel },
-    { href: `${base}/warn-thresholds`, label: "Warn Thresholds", icon: TriangleAlert },
-    { href: `${base}/security`, label: "Security", icon: ShieldAlert },
-    { href: `${base}/tempvc`, label: "Temp Voice Channels", icon: Volume2 },
-    { href: `${base}/permits`, label: "Permits", icon: IdCard },
-    { href: `${base}/overrides`, label: "Overrides", icon: SlidersHorizontal },
-    { href: `${base}/history`, label: "Settings History", icon: History },
-    { href: `${base}/audit`, label: "Audit Log", icon: ClipboardList },
-    { href: `${base}/blocklist`, label: "Blocklist", icon: Ban },
-    { href: `${base}/advanced`, label: "Advanced", icon: Wrench },
-  ];
+function CollapsibleNavGroup({
+  guildId,
+  group,
+  isActive,
+}: {
+  guildId: string;
+  group: GuildNavGroup;
+  isActive: (href: string) => boolean;
+}) {
+  const { collapsed, toggle } = useCollapsedNavGroups(guildId);
+  const open = !collapsed.has(group.title);
+
+  return (
+    <Collapsible open={open} onOpenChange={() => toggle(group.title)}>
+      <SidebarGroup>
+        <CollapsibleTrigger asChild>
+          <SidebarGroupLabel className="w-full cursor-pointer gap-1.5">
+            <MotionChevron
+              aria-hidden
+              animate={{ rotate: open ? 90 : 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 40 }}
+              className="size-3 shrink-0"
+            />
+            {group.title}
+          </SidebarGroupLabel>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {group.links.map((l) => (
+                <SidebarMenuItem key={l.href}>
+                  <SidebarMenuButton asChild isActive={isActive(l.href)}>
+                    <Link href={l.href}>
+                      <l.icon aria-hidden />
+                      <span>{l.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </CollapsibleContent>
+      </SidebarGroup>
+    </Collapsible>
+  );
 }
 
 export function GuildSidebar({
@@ -58,49 +88,67 @@ export function GuildSidebar({
     href === `/guild/${guildId}` ? pathname === href : pathname?.startsWith(href);
 
   return (
-    <nav
-      aria-label="Server settings"
-      className="flex w-full shrink-0 flex-col gap-5 md:sticky md:top-[57px] md:max-h-[calc(100vh-57px)] md:w-56 md:overflow-y-auto md:pb-6"
-    >
-      <NavSection title="Server">
-        <NavItem
-          href={`/guild/${guildId}`}
-          label="General"
-          icon={Settings}
-          active={isActive(`/guild/${guildId}`)}
-        />
-        <NavItem
-          href={`/guild/${guildId}/modules`}
-          label="Modules"
-          icon={LayoutGrid}
-          active={pathname?.startsWith(`/guild/${guildId}/modules`)}
-        />
-      </NavSection>
+    <Sidebar collapsible="offcanvas">
+      <SidebarHeader>
+        <Link href="/" aria-label="Lumi home" className="flex items-center gap-2 px-2 py-1.5">
+          <Wordmark />
+        </Link>
+      </SidebarHeader>
 
-      <NavSection title={`Modules · ${modules.length}`}>
-        {modules.map((m) => (
-          <NavItem
-            key={m.name}
-            href={`/guild/${guildId}/modules/${m.name}`}
-            label={m.displayName}
-            leading={<Glyph emoji={m.emoji} size="sm" />}
-            active={pathname === `/guild/${guildId}/modules/${m.name}`}
-            enabled={m.enabled || m.name === "core"}
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {guildTopLinks(guildId).map((l) => (
+                <SidebarMenuItem key={l.href}>
+                  <SidebarMenuButton asChild isActive={isActive(l.href)}>
+                    <Link href={l.href}>
+                      <l.icon aria-hidden />
+                      <span>{l.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Modules · {modules.length}</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {modules.map((m) => {
+                const href = `/guild/${guildId}/modules/${m.name}`;
+                const enabled = m.enabled || m.name === "core";
+                return (
+                  <SidebarMenuItem key={m.name}>
+                    <SidebarMenuButton asChild isActive={pathname === href}>
+                      <Link href={href}>
+                        <Glyph emoji={m.emoji} size="sm" />
+                        <span className="truncate">{m.displayName}</span>
+                        <StatusDot
+                          active={enabled}
+                          className="ml-auto"
+                          title={enabled ? "Enabled" : "Disabled"}
+                        />
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {guildManagementGroups(guildId).map((group) => (
+          <CollapsibleNavGroup
+            key={group.title}
+            guildId={guildId}
+            group={group}
+            isActive={(href) => pathname === href}
           />
         ))}
-      </NavSection>
-
-      <NavSection title="Management">
-        {managementLinks(guildId).map((l) => (
-          <NavItem
-            key={l.href}
-            href={l.href}
-            label={l.label}
-            icon={l.icon}
-            active={pathname === l.href}
-          />
-        ))}
-      </NavSection>
-    </nav>
+      </SidebarContent>
+    </Sidebar>
   );
 }

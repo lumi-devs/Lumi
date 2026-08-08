@@ -26,16 +26,11 @@ interface CallOptions<A extends RpcActionName> {
 }
 
 /**
- * Request/response client for the bot's RabbitMQ RPC bridge — ported
- * unchanged from the old `apps/dashboard/src/rpc.ts` (Bun.serve app). Uses
- * RabbitMQ's direct reply-to pseudo-queue so no per-call reply queue is
- * created; responses are correlated by id.
+ * Uses RabbitMQ's direct reply-to pseudo-queue, so no per-call reply queue is
+ * created and responses are correlated by id instead.
  *
- * This module is `server-only` and must be reached exclusively from Server
- * Components, Route Handlers, or Server Actions — the dashboard never talks
- * to Postgres directly and never bundles amqplib to the client (see
- * dashboard.md §1: decoupled async RPC architecture stays, only the frontend
- * framework changed).
+ * `server-only`: reachable exclusively from Server Components, Route Handlers
+ * and Server Actions — see docs/dashboard.md "Hard boundaries".
  */
 export class RpcClient {
   readonly #connection: AmqpConnectionManager;
@@ -134,12 +129,10 @@ export class RpcClient {
   }
 }
 
-// Next.js has no long-lived `main.ts` bootstrap — Route Handlers, Server
-// Components, and Server Actions are all invoked ad hoc by the framework, so
-// the RPC connection has to be a lazily-created module-scope singleton
-// instead of something wired up once at process start. `globalThis` caching
-// avoids spawning a fresh AMQP connection on every hot-reload in `next dev`
-// (same trick commonly used for a Prisma client singleton in Next.js apps).
+// Next.js has no long-lived bootstrap to wire this up in — handlers, Server
+// Components and Server Actions are all invoked ad hoc — so the connection is a
+// lazy module-scope singleton. `globalThis` keeps `next dev` hot-reloads from
+// opening a fresh AMQP connection each time.
 const globalForRpc = globalThis as unknown as { rpcClient?: RpcClient };
 
 export function getRpcClient(): RpcClient {
@@ -151,7 +144,6 @@ export function getRpcClient(): RpcClient {
   return globalForRpc.rpcClient;
 }
 
-/** Convenience wrapper: `rpcCall("guild.config.set", { guildId, data })`. */
 export function rpcCall<A extends RpcActionName>(
   action: A,
   options?: CallOptions<A>,

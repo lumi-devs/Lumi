@@ -152,7 +152,10 @@ services:
       # Doubles as NextAuth's session JWT encryption secret — see
       # apps/dashboard/src/lib/env.ts.
       DASHBOARD_SESSION_SECRET: "${DASHBOARD_SESSION_SECRET:-}"
-      BOT_OWNERS: "${BOT_OWNERS:-}"
+      # No BOT_OWNERS here: the dashboard reads no such variable. Bot-owner
+      # detection goes through the `auth.whoami` RPC, which defers to the
+      # worker's PermitResolver.isBotOwner (OWNER_IDS, or the Discord
+      # application's actual owner). Setting it here would be a silent no-op.
       DISCORD_OAUTH2_CLIENT_ID: "${DISCORD_OAUTH2_CLIENT_ID:-}"
       DISCORD_OAUTH2_CLIENT_SECRET: "${DISCORD_OAUTH2_CLIENT_SECRET:-}"
     depends_on:

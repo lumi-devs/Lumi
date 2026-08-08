@@ -3,6 +3,7 @@ import { getGuildDashboard } from "#/lib/dashboard-fetch";
 import { SiteHeader } from "#/components/layout/site-header";
 import { GuildSidebar } from "#/components/layout/guild-sidebar";
 import { InviteNeeded } from "#/components/invite-needed";
+import { SidebarInset, SidebarProvider } from "#/components/ui/sidebar";
 
 export default async function GuildLayout({
   children,
@@ -12,9 +13,7 @@ export default async function GuildLayout({
   params: Promise<{ guildId: string }>;
 }) {
   const { guildId } = await params;
-  // dashboard.md §5B IDOR guard — re-checked here (layout) AND in every
-  // Server Action in actions/guild-actions.ts, since a layout only guards
-  // the page render, not a directly-invoked mutation.
+  // A layout only guards the page render, so every Server Action re-checks too.
   const session = await requireGuild(guildId);
 
   let data;
@@ -30,12 +29,14 @@ export default async function GuildLayout({
   }
 
   return (
-    <>
-      <SiteHeader session={session} />
-      <div className="mx-auto flex max-w-[88rem] flex-col gap-6 px-4 pt-5 pb-28 md:flex-row md:gap-8 md:px-6">
-        <GuildSidebar guildId={guildId} modules={data.modules} />
-        <main className="min-w-0 flex-1">{children}</main>
-      </div>
-    </>
+    <SidebarProvider>
+      <GuildSidebar guildId={guildId} modules={data.modules} />
+      <SidebarInset>
+        <SiteHeader session={session} withSidebarTrigger />
+        <div className="mx-auto w-full min-w-0 max-w-[88rem] flex-1 px-4 pt-5 pb-28 md:px-6">
+          {children}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

@@ -101,6 +101,35 @@ export class AccessRepository extends Repository {
     await this.invalidate(RedisKeys.blocked(guildId ?? null, userId));
   }
 
+  // `guildId` is required rather than optional because `null` is a meaningful
+  // scope here — the global blocklist — not "any guild".
+  public async listBlocklist(
+    guildId: string | null,
+    opts: { skip?: number; take?: number } = {},
+  ): Promise<{ entries: Blocklist[]; total: number }> {
+    const where = { guildId };
+
+    const [entries, total] = await this.prisma.$transaction([
+      this.prisma.blocklist.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: opts.skip ?? 0,
+        take: opts.take ?? 25,
+      }),
+      this.prisma.blocklist.count({ where }),
+    ]);
+
+    return { entries, total };
+  }
+
+  // Includes the `channelId: null` guild-wide row.
+  public listIgnoreEntries(guildId: string): Promise<IgnoreEntry[]> {
+    return this.prisma.ignoreEntry.findMany({
+      where: { guildId },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
   public async isIgnored(guildId: string, channelId: string): Promise<boolean> {
     const ignore = await this.prisma.ignoreEntry.findFirst({
       where: { guildId, OR: [{ channelId }, { channelId: null }] },

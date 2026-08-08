@@ -11,7 +11,7 @@ import {
 import { ActionError } from "#/components/action-error";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "#/components/ui/card";
+import { Card, CardBody, CardDescription, CardHeader, CardTitle } from "#/components/ui/card";
 import { Input, Label, Select } from "#/components/ui/input";
 import type {
   DashboardMemberView,
@@ -56,10 +56,10 @@ export function PermitsBoard({
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-3">
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-white/40">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-fg-subtle">
             Enforced Permits
           </h2>
-          <p className="text-xs text-white/40">
+          <p className="text-xs text-fg-subtle">
             Fixed system tiers — un-quarantinable, user-assignable only.
           </p>
         </div>
@@ -80,10 +80,10 @@ export function PermitsBoard({
 
       <section className="flex flex-col gap-3">
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-white/40">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-fg-subtle">
             Custom Permits
           </h2>
-          <p className="text-xs text-white/40">
+          <p className="text-xs text-fg-subtle">
             Admin-defined node bundles — editable, role-assignable only.
           </p>
         </div>
@@ -166,7 +166,7 @@ function CreatePermitCard({
           </CardDescription>
         </div>
       </CardHeader>
-      <div className="flex flex-col gap-4">
+      <CardBody className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="new-permit-name">Name</Label>
           <Input
@@ -200,7 +200,7 @@ function CreatePermitCard({
             {isPending ? "Creating…" : "Create Permit"}
           </Button>
         </div>
-      </div>
+      </CardBody>
     </Card>
   );
 }
@@ -216,14 +216,14 @@ function NodeChecklist({
     <div className="flex flex-col gap-3">
       {KNOWN_PERMIT_NODE_GROUPS.map((group) => (
         <div key={group.prefix} className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wide text-white/30">
+          <span className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
             {group.prefix}
           </span>
           <div className="flex flex-wrap gap-3">
             {group.nodes.map((node) => (
               <label
                 key={node}
-                className="flex cursor-pointer items-center gap-1.5 text-sm text-white/80"
+                className="flex cursor-pointer items-center gap-1.5 text-sm text-fg"
               >
                 <input
                   type="checkbox"
@@ -241,7 +241,7 @@ function NodeChecklist({
         (n) => !KNOWN_PERMIT_NODE_GROUPS.some((g) => g.nodes.includes(n)),
       ).length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wide text-white/30">
+          <span className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
             custom
           </span>
           <div className="flex flex-wrap gap-2">
@@ -252,7 +252,7 @@ function NodeChecklist({
                   <code>{node}</code>
                   <button
                     type="button"
-                    className="ml-1.5 text-white/50 hover:text-white"
+                    className="ml-1.5 text-fg-muted hover:text-fg"
                     onClick={() => onToggle(node)}
                   >
                     ×
@@ -392,7 +392,7 @@ function PermitCard({
   }
 
   return (
-    <Card className={locked ? "border-white/5 bg-white/[0.015]" : undefined}>
+    <Card className={locked ? "border-border bg-surface-hover" : undefined}>
       <CardHeader>
         <div className="flex w-full items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -428,7 +428,7 @@ function PermitCard({
         </div>
       </CardHeader>
 
-      <div className="flex flex-col gap-4">
+      <CardBody className="flex flex-col gap-4">
         {locked ? (
           <div className="flex flex-wrap gap-2">
             {permit.nodes.map((node) => (
@@ -442,12 +442,12 @@ function PermitCard({
         )}
 
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-white/30">
+          <span className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
             Assigned {targetType === "role" ? "roles" : "members"} (
             {permit.assignments.length})
           </span>
           {permit.assignments.length === 0 ? (
-            <p className="text-xs text-white/40">Nobody has this permit yet.</p>
+            <p className="text-xs text-fg-subtle">Nobody has this permit yet.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {permit.assignments.map((a) => (
@@ -455,7 +455,7 @@ function PermitCard({
                   {targetLabel(a, roles, members)}
                   <button
                     type="button"
-                    className="text-white/50 hover:text-white"
+                    className="text-fg-muted hover:text-fg"
                     onClick={() => handleUnassign(a.targetId)}
                     disabled={isPending}
                   >
@@ -495,7 +495,7 @@ function PermitCard({
         </div>
 
         <ActionError error={error} />
-      </div>
+      </CardBody>
     </Card>
   );
 }

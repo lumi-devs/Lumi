@@ -6,9 +6,6 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { PageHeader } from "#/components/ui/page-header";
 import { guildIconUrl } from "#/lib/discord";
 
-// Deterministic fallback tint for guilds with no icon, mirroring how Discord
-// itself renders an iconless server. Muted enough to sit in a list without
-// turning the page into a colour swatch.
 const COLORS = [
   "#5865f2", "#3ba55d", "#ed4245", "#faa81a",
   "#eb459e", "#f47b67", "#7b6ef6", "#00a8a8",
@@ -20,7 +17,6 @@ function colorFor(id: string): string {
   return COLORS[Math.abs(hash) % COLORS.length]!;
 }
 
-/** Authenticated home view — dashboard.md §11 `GET /` (session branch). */
 export function GuildPicker({ session }: { session: Session }) {
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-8 pb-24">
@@ -49,7 +45,7 @@ export function GuildPicker({ session }: { session: Session }) {
                     className="group flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-surface-hover"
                   >
                     <span
-                      className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg text-[12px] font-semibold text-white"
+                      className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-control text-[12px] font-semibold text-white"
                       style={{ backgroundColor: icon ? undefined : colorFor(g.id) }}
                     >
                       {icon ? (

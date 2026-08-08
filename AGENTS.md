@@ -29,6 +29,7 @@ source of truth for anything below.
 - `packages/observability` — OpenTelemetry tracing, Prometheus metrics, health probes,
   wired up identically across all apps.
 - `packages/eslint-config` — shared ESLint config consumed by every workspace package.
+- `packages/typescript-config` — shared `tsconfig` bases, same deal.
 
 ## Import path aliases
 
@@ -75,7 +76,16 @@ Full surface: [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md).
 `apps/dashboard` never opens a Postgres or Redis connection and never holds the bot token.
 Every read/write is proxied over RabbitMQ RPC to `apps/worker` (`apps/dashboard/src/lib/rpc.ts`,
 a `server-only` module reachable only from Server Components/Route Handlers/Server Actions).
-Details: the "Dashboard Frontend" section of [`docs/architecture.md`](docs/architecture.md).
+
+The action surface is exactly **50 actions**, defined once in `packages/contracts/src/rpc.ts`:
+`RpcRequestPayloads` maps each wire action string to its `data` payload, and `RPC_ACTIONS`
+gives the caller-side constants. Adding a dashboard capability means adding an entry there,
+a handler in `packages/core/src/lib/rpc/core-rpc.ts`, and a caller in
+`apps/dashboard/src/lib/dashboard-fetch.ts` (reads) or `apps/dashboard/src/actions/*` (mutations)
+— never a direct database call from the dashboard.
+
+Full reference: [`docs/dashboard.md`](docs/dashboard.md). System-level view: the
+"Dashboard Frontend" section of [`docs/architecture.md`](docs/architecture.md).
 
 ## Repo-specific anti-patterns
 
@@ -86,8 +96,10 @@ Details: the "Dashboard Frontend" section of [`docs/architecture.md`](docs/archi
 - **Cache invalidation**: shared Redis keys are invalidated via `container.invalidation`
   (`InvalidationBus`), never a raw `redis.del`.
 - **Discord embeds**: never construct `new EmbedBuilder()` directly in a command/service —
-  use the card helpers in `#utilities/cards.js` (`makeInfoCard`, `makeSuccessCard`,
-  `makeErrorCard`, `replySuccess`, `replyError`, ...).
+  use the card builders in `#utilities/cards.js` (`makeInfoCard`, `makeSuccessCard`,
+  `makeErrorCard`, `makeWarningCard`, `makeListCard`, ...) or, inside a command, the reply
+  helpers in `#lib/commands.js` (`replySuccess`, `replyError`, `sendReply`) / the equivalent
+  `ctx.replySuccess(...)` / `ctx.replyError(...)` on `CommandContext`.
 - **Panels**: admin-facing panel UI (hub, config, module subpanels) uses the panel kit
   (`#utilities/panels.js`) builders (`settingRow`, `tabRow`, `confirmRow`, `backRow`,
   `createPaginationRow`, ...) rather than hand-rolled section/button layouts.
@@ -111,18 +123,26 @@ Details: the "Dashboard Frontend" section of [`docs/architecture.md`](docs/archi
 shell `PATH`. Enter it with `nix develop` before running any `bun`/`gh` command, or wrap
 one-off commands as `nix develop --command <cmd>`.
 
-- `bun run typecheck` — `tsc --noEmit` across the workspace, plus the dashboard's own
-  typecheck.
-- `bun run lint` — ESLint across `packages/*/src`, `apps/worker/src`, `apps/scheduler/src`.
-- `bun run test` — Vitest across the workspace, plus the dashboard's own test script.
+- `bun run typecheck` — `turbo run typecheck:all` (`tsc --noEmit` over the root
+  `tsconfig.json`) plus `turbo run typecheck --filter=@lumi/dashboard`, since the dashboard
+  has its own `tsconfig`.
+- `bun run lint` — `turbo run lint:all`, which is `eslint packages/*/src apps/worker/src
+  apps/scheduler/src apps/dashboard/src --fix`. Note it **auto-fixes**. `apps/dashboard` also
+  has its own `lint` script, `eslint src` — plain ESLint, not `next lint`, which Next 16
+  removed.
+- `bun run test` — `vitest run` at the root (globs `packages/**`, `node` environment) plus
+  `bun run --cwd apps/dashboard test`, which has its own config for the DOM-based
+  component tests.
 - `bun run db:generate` — regenerate the Prisma client after a schema change.
 
-`lefthook` runs a pre-commit hook (`lefthook.yml`) that typechecks and lints staged
-TypeScript files; non-TS commits are a no-op.
+`lefthook` runs a pre-commit hook (`lefthook.yml`): a `*.{ts,tsx,cts,mts}` change triggers the
+full `bun run typecheck`, and a `*.{ts,tsx,js,jsx}` change runs `eslint --fix` on the staged
+files only. Commits touching neither are a no-op.
 
 ## Testing conventions
 
-Tests live alongside or under a `tests/` directory per package (e.g. `packages/core/tests/`,
-`packages/event-bus/tests/`, `packages/sharding/tests/`, `apps/dashboard/tests/`). For
+Tests live alongside or under a `tests/` directory per package (`packages/core/tests/`,
+`packages/event-bus/tests/`, `packages/sharding/tests/`, `packages/observability/tests/`,
+`apps/dashboard/tests/`). For
 database-touching unit tests, `packages/core/tests/mocks/prisma.ts` provides an offline
 in-memory mock Prisma driver so tests don't need a live Postgres instance.

@@ -72,5 +72,5 @@ The Compose services define baseline limits (`worker`: 512MB/1 CPU, `postgres`: 
 - [ ] `CLUSTER_NAME` set and `nirn-proxy` deployed *before* scaling `worker` past 1 replica.
 - [ ] `GRAFANA_PASSWORD` changed from the default if the observability stack is exposed at all.
 - [ ] Postgres backups automated (see [Self-Hosting § Backups](GUIDE_SELF_HOSTING.md#backups)) and periodically restore-tested.
-- [ ] `DASHBOARD_SECURE_COOKIES=true` if the dashboard is served over HTTPS (it should be, in production).
+- [ ] Dashboard served over HTTPS, with `AUTH_URL` set to its externally visible origin if a proxy rewrites the Host header - that's what makes NextAuth issue `__Secure-` cookies. There is no secure-cookie env var.
 - [ ] A runbook for `BOT_TOKEN` rotation that doesn't require a full redeploy (just the `Secret` + a rollout restart).

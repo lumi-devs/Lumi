@@ -1,6 +1,7 @@
 "use client";
 
 import { Monitor, Moon, Sun } from "lucide-react";
+import { motion } from "motion/react";
 import { useTheme, type Theme } from "#/components/theme-provider";
 import { cn } from "#/lib/utils";
 
@@ -10,11 +11,6 @@ const OPTIONS: { value: Theme; label: string; icon: typeof Sun }[] = [
   { value: "dark", label: "Dark theme", icon: Moon },
 ];
 
-/**
- * Segmented system/light/dark control. The old multi-theme engine
- * ("midnight"/"oled"/"cyberpunk") had no UI at all and no light mode, so in
- * practice the app was dark-only with two unreachable novelty palettes.
- */
 export function ThemeToggle() {
   const { theme, setTheme, ready } = useTheme();
 
@@ -22,7 +18,7 @@ export function ThemeToggle() {
     <div
       role="radiogroup"
       aria-label="Colour theme"
-      className="flex items-center gap-px rounded-md border border-border bg-bg-subtle p-px"
+      className="flex items-center gap-px rounded-full border border-border bg-bg-subtle p-px"
     >
       {OPTIONS.map(({ value, label, icon: Icon }) => {
         const selected = ready && theme === value;
@@ -36,13 +32,18 @@ export function ThemeToggle() {
             title={label}
             onClick={() => setTheme(value)}
             className={cn(
-              "flex size-6 cursor-pointer items-center justify-center rounded-[5px] transition-colors",
-              selected
-                ? "bg-surface text-fg shadow-e1"
-                : "text-fg-subtle hover:text-fg",
+              "relative flex size-6 cursor-pointer items-center justify-center rounded-full transition-colors",
+              selected ? "text-fg" : "text-fg-subtle hover:text-fg",
             )}
           >
-            <Icon className="size-3.5" aria-hidden />
+            {selected ? (
+              <motion.span
+                layoutId="theme-toggle-pill"
+                className="absolute inset-0 rounded-full bg-surface"
+                transition={{ type: "spring", stiffness: 500, damping: 40 }}
+              />
+            ) : null}
+            <Icon className="relative z-10 size-3.5" aria-hidden />
           </button>
         );
       })}

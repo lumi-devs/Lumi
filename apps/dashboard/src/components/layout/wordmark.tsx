@@ -1,12 +1,5 @@
 import { cn } from "#/lib/utils";
 
-/**
- * Product mark. Replaces the `✦ Lumi` cyan→violet gradient text — a gradient
- * wordmark is the single most recognisable "generated landing page" signal,
- * and it also had no light-mode story (gradient text on white lost all
- * contrast). This is a solid geometric mark plus plain semibold type, which
- * is what Vercel/Linear/Discord all actually do in their app chrome.
- */
 export function Wordmark({
   className,
   showText = true,

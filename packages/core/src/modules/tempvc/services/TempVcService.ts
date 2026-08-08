@@ -19,7 +19,7 @@ import {
 } from "../lib/voice-occupancy.js";
 import {
   TEMPVC_CLEANUP_DELAY_MS,
-  TEMPVC_CREATE_COOLDOWN_MS,
+  getCreateCooldownMs,
 } from "../index.js";
 import { MODULE_NAME, TempVcKeys } from "../keys.js";
 import {
@@ -42,6 +42,33 @@ const creationQueues = new Collection<string, AsyncQueue>();
 const cleanupJobId = (guildId: string, channelId: string) =>
   `tempvc-cleanup:${guildId}:${channelId}`;
 
+/**
+ * Resolves a generator's name template into a channel name.
+ * Supports `{}`/`{number}` (sequence number, kept both for backwards
+ * compatibility), `{username}` (raw account username), `{name}` (display
+ * name/nickname), and `{position}` (alias of `{number}`). Falls back to
+ * appending the number when no placeholder is present. Truncated to
+ * Discord's 100-character channel name limit after all substitutions.
+ */
+export function resolveGeneratorName(
+  template: string,
+  { number, member }: { number: number; member: GuildMember },
+): string {
+  const trimmed = template.trim();
+  const hasPlaceholder = /\{\}|\{number\}|\{position\}|\{username\}|\{name\}/.test(
+    trimmed,
+  );
+  const substituted = hasPlaceholder
+    ? trimmed
+        .replaceAll("{}", String(number))
+        .replaceAll("{number}", String(number))
+        .replaceAll("{position}", String(number))
+        .replaceAll("{username}", member.user.username)
+        .replaceAll("{name}", member.displayName)
+    : `${trimmed} ${number}`;
+  return [...substituted].slice(0, 100).join("");
+}
+
 @ApplyOptions<Piece.Options>({ name: "tempvc" })
 export default class TempVcService extends Service {
   /** True if this user must wait before creating another channel. */
@@ -49,11 +76,12 @@ export default class TempVcService extends Service {
     guildId: string,
     userId: string,
   ): Promise<boolean> {
+    const cooldownMs = await getCreateCooldownMs(guildId);
     const set = await this.redis.set(
       TempVcKeys.createCooldown(guildId, userId),
       "1",
       "PX",
-      TEMPVC_CREATE_COOLDOWN_MS,
+      cooldownMs,
       "NX",
     );
     return set === null;
@@ -79,11 +107,7 @@ export default class TempVcService extends Service {
         generator.id,
         (id) => guild.channels.cache.has(id),
       );
-      const template = config.name.trim();
-      const rawName = template.includes("{}")
-        ? template.replace("{}", String(number))
-        : `${template} ${number}`;
-      const name = [...rawName].slice(0, 100).join("");
+      const name = resolveGeneratorName(config.name, { number, member });
 
       const vc = await guild.channels.create({
         name,

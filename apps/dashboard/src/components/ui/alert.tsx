@@ -2,12 +2,8 @@ import { AlertTriangle, CircleAlert, Info, type LucideIcon } from "lucide-react"
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "#/lib/utils";
 
-// Inline callouts. Error/warning text used to be bare 12px coloured `<p>`s
-// scattered through forms, which is easy to miss on a busy screen and reads
-// as unfinished. These carry an icon, a tinted field and a matching border.
-
 const alertVariants = cva(
-  "flex items-start gap-2 rounded-md border px-2.5 py-2 text-[12px] leading-5",
+  "flex items-start gap-2 rounded-control border px-2.5 py-2 text-[12px] leading-5",
   {
     variants: {
       variant: {
@@ -42,6 +38,7 @@ export function Alert({
   const Icon = icon === null ? null : (icon ?? DEFAULT_ICON[variant ?? "info"]!);
   return (
     <div
+      data-slot="alert"
       role={variant === "danger" ? "alert" : undefined}
       className={cn(alertVariants({ variant }), className)}
       {...props}

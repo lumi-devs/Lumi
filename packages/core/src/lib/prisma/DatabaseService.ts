@@ -20,6 +20,8 @@ import { ModerationRepository } from "#lib/prisma/repositories/ModerationReposit
 import { ConfigHistoryRepository } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
 import { ConfigOverrideRepository } from "#lib/prisma/repositories/ConfigOverrideRepository.js";
 import { AfkRepository } from "#lib/prisma/repositories/AfkRepository.js";
+import { ModNoteRepository } from "#lib/prisma/repositories/ModNoteRepository.js";
+import { AppealRepository } from "#lib/prisma/repositories/AppealRepository.js";
 import { GlobalRepository } from "#lib/prisma/repositories/GlobalRepository.js";
 import { SecurityRepository } from "#lib/prisma/repositories/SecurityRepository.js";
 import { TempVcRepository } from "#lib/prisma/repositories/TempVcRepository.js";
@@ -61,6 +63,8 @@ export class DatabaseService {
   public readonly configHistory: ConfigHistoryRepository;
   public readonly configOverrides: ConfigOverrideRepository;
   public readonly afk: AfkRepository;
+  public readonly modNotes: ModNoteRepository;
+  public readonly appeals: AppealRepository;
   public readonly security: SecurityRepository;
   public readonly tempvc: TempVcRepository;
 
@@ -92,6 +96,8 @@ export class DatabaseService {
       this,
     );
     this.afk = new AfkRepository(prisma, redis, logger, this);
+    this.modNotes = new ModNoteRepository(prisma, redis, logger, this);
+    this.appeals = new AppealRepository(prisma, redis, logger, this);
     this.security = new SecurityRepository(prisma, redis, logger, this);
     this.tempvc = new TempVcRepository(prisma, redis, logger, this);
   }

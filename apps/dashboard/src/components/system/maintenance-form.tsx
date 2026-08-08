@@ -16,7 +16,6 @@ import { Badge } from "#/components/ui/badge";
 import { ActionError } from "#/components/action-error";
 import { useServerAction } from "#/lib/use-server-action";
 
-/** dashboard.md §9A `SystemGlobalConfigCard` maintenance controls. */
 export function MaintenanceForm({
   maintenanceMode,
   maintenanceMessage,
@@ -37,9 +36,6 @@ export function MaintenanceForm({
 
   return (
     <Card
-      // The one screen-level state that changes the bot's behaviour for every
-      // user gets a coloured left rule when it's on, so an operator can tell
-      // at a glance from anywhere on the page.
       className={enabled ? "border-warning/40" : undefined}
     >
       <CardHeader

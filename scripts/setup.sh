@@ -176,9 +176,8 @@ if confirm "Configure the web dashboard now?" "n"; then
   ENV_VALUES[DISCORD_OAUTH2_CLIENT_ID]="$PROMPT_RESULT"
   prompt "" "Discord OAuth2 client secret" secret
   ENV_VALUES[DISCORD_OAUTH2_CLIENT_SECRET]="$PROMPT_RESULT"
-  prompt "http://localhost:${ENV_VALUES[DASHBOARD_PORT]}/callback" "OAuth2 redirect URI"
-  ENV_VALUES[DISCORD_OAUTH2_REDIRECT_URI]="$PROMPT_RESULT"
-  ENV_VALUES[DASHBOARD_SECURE_COOKIES]="false"
+  info "Add this redirect URI on the Developer Portal's OAuth2 tab:"
+  info "  http://localhost:${ENV_VALUES[DASHBOARD_PORT]}/api/auth/callback/discord"
 else
   info "Skipping - uncomment the '[ 5 ] DASHBOARD CONFIGURATION' block in .env later if you need it."
 fi
