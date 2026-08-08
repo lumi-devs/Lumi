@@ -14,6 +14,7 @@ import {
   SlidersHorizontal,
   TriangleAlert,
   Volume2,
+  Wand2,
   Wrench,
 } from "lucide-react";
 import { NavItem, NavSection } from "./nav-item";
@@ -74,6 +75,12 @@ export function GuildSidebar({
           label="Modules"
           icon={LayoutGrid}
           active={pathname?.startsWith(`/guild/${guildId}/modules`)}
+        />
+        <NavItem
+          href={`/guild/${guildId}/setup`}
+          label="Guided Setup"
+          icon={Wand2}
+          active={pathname === `/guild/${guildId}/setup`}
         />
       </NavSection>
 
