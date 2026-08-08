@@ -38,6 +38,7 @@ export const RedisKeys = {
     `lumi:security:${guildId}:tripped:${executorId}`,
   joinBurst: (guildId: string) => `lumi:security:${guildId}:joins`,
   raidMode: (guildId: string) => `lumi:security:${guildId}:raid`,
+  recentJoiners: (guildId: string) => `lumi:security:${guildId}:recent-joiners`,
   verifyChallenge: (guildId: string, userId: string) =>
     `lumi:security:${guildId}:verify:${userId}`,
   verifyPending: (guildId: string) => `lumi:security:${guildId}:verify:pending`,

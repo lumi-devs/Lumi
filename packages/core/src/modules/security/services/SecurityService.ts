@@ -8,7 +8,7 @@ import {
   type GuildMember,
 } from "discord.js";
 import { isNullish, tryParseJSON } from "@sapphire/utilities";
-import { Service } from "#lib/module-system/Service.js";
+import { Service, tryGetService } from "#lib/module-system/Service.js";
 import { RedisKeys } from "#database/redis.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { logToChannel } from "#lib/moderation/log.js";
@@ -22,6 +22,15 @@ import {
   type CaptchaState,
 } from "../lib/captcha.js";
 import { snapshotGuild, type GuildBackupData } from "../lib/backup.js";
+import { parseConfigList } from "#lib/module-system/config-schema.js";
+import {
+  hasNoAvatar,
+  isUnverifiedBot,
+  matchesUsernamePattern,
+  hasSimilarRecentJoiner,
+  isCreationClustered,
+  type RecentJoiner,
+} from "../lib/join-heuristics.js";
 
 export interface PanicResult {
   invitesPaused: boolean;
@@ -58,7 +67,22 @@ export interface AntiNukeConfig {
   trustedRoleIds: string[];
 }
 
-export type GateAction = "kick" | "timeout" | "quarantine";
+export type GateAction = "log" | "kick" | "timeout" | "quarantine";
+
+/** Severity order used to pick a single action when several filters trip at once. */
+const GATE_ACTION_SEVERITY: Record<GateAction, number> = {
+  log: 0,
+  kick: 1,
+  timeout: 2,
+  quarantine: 3,
+};
+
+export type RaidAccountType = "all" | "suspicious";
+
+export interface JoinGateFilterConfig {
+  enabled: boolean;
+  action: GateAction;
+}
 
 export interface JoinGateConfig {
   enabled: boolean;
@@ -66,6 +90,17 @@ export interface JoinGateConfig {
   raidJoinCount: number;
   raidWindowSeconds: number;
   raidAction: GateAction;
+  raidAccountType: RaidAccountType;
+  raidWarnRoleIds: string[];
+  filterNoAvatar: JoinGateFilterConfig;
+  filterMinAge: JoinGateFilterConfig & { hours: number };
+  filterUnverifiedBot: JoinGateFilterConfig;
+  filterUsernamePattern: JoinGateFilterConfig & { patterns: string[] };
+}
+
+export interface JoinFilterResult {
+  action: GateAction;
+  triggered: string[];
 }
 
 export interface VerificationConfig {
@@ -100,6 +135,8 @@ export const DANGEROUS_PERMISSIONS = [
 const TRIPPED_COOLDOWN_SECONDS = 300;
 const RAID_MODE_SECONDS = 600;
 const GATE_TIMEOUT_MS = 60 * 60 * 1000;
+const RECENT_JOINERS_CAP = 20;
+const RECENT_JOINERS_TTL_SECONDS = 300;
 
 function challengeLockKey(guildId: string, userId: string): string {
   return `security:verify-challenge:${guildId}:${userId}`;
@@ -277,16 +314,125 @@ export class SecurityService extends Service {
     const raw = await this.db.config.getAllModuleConfig(guildId, "security");
     const num = (key: string, fallback: number): number =>
       typeof raw[key] === "number" ? (raw[key]) : fallback;
-    const action = raw["raid_action"];
+    const gateAction = (key: string, fallback: GateAction): GateAction => {
+      const v = raw[key];
+      return v === "log" || v === "kick" || v === "timeout" || v === "quarantine"
+        ? v
+        : fallback;
+    };
+    const legacyMinAge = num("min_account_age_hours", 0);
 
     return {
       enabled: raw["joingate_enabled"] === true,
-      minAccountAgeHours: num("min_account_age_hours", 0),
+      minAccountAgeHours: legacyMinAge,
       raidJoinCount: num("raid_join_count", 10),
       raidWindowSeconds: num("raid_window_seconds", 30),
-      raidAction:
-        action === "timeout" || action === "quarantine" ? action : "kick",
+      raidAction: gateAction("raid_action", "kick"),
+      raidAccountType: raw["raid_account_type"] === "suspicious" ? "suspicious" : "all",
+      raidWarnRoleIds: parseConfigList(raw["raid_warn_role_ids"]),
+      filterNoAvatar: {
+        enabled: raw["filter_no_avatar_enabled"] === true,
+        action: gateAction("filter_no_avatar_action", "log"),
+      },
+      filterMinAge: {
+        // legacy `min_account_age_hours` is the fallback default until reconfigured
+        enabled: raw["filter_min_age_enabled"] === true,
+        hours: num("filter_min_age_hours", legacyMinAge),
+        action: gateAction("filter_min_age_action", "kick"),
+      },
+      filterUnverifiedBot: {
+        enabled: raw["filter_unverified_bot_enabled"] === true,
+        action: gateAction("filter_unverified_bot_action", "kick"),
+      },
+      filterUsernamePattern: {
+        enabled: raw["filter_username_pattern_enabled"] === true,
+        patterns: parseConfigList(raw["filter_username_pattern"]),
+        action: gateAction("filter_username_pattern_action", "log"),
+      },
     };
+  }
+
+  /**
+   * Runs every enabled join-gate filter against a member and returns the
+   * single most severe triggered action (quarantine > timeout > kick > log),
+   * or null when nothing tripped.
+   */
+  public evaluateJoinFilters(
+    member: GuildMember,
+    config: JoinGateConfig,
+  ): JoinFilterResult | null {
+    const triggered: string[] = [];
+    let action: GateAction | null = null;
+    const consider = (hit: boolean, filterAction: GateAction, label: string) => {
+      if (!hit) return;
+      triggered.push(label);
+      if (action === null || GATE_ACTION_SEVERITY[filterAction] > GATE_ACTION_SEVERITY[action]) {
+        action = filterAction;
+      }
+    };
+
+    if (config.filterNoAvatar.enabled) {
+      consider(hasNoAvatar(member.user), config.filterNoAvatar.action, "no avatar");
+    }
+    if (config.filterMinAge.enabled && config.filterMinAge.hours > 0) {
+      const ageMs = Date.now() - member.user.createdTimestamp;
+      consider(
+        ageMs < config.filterMinAge.hours * 60 * 60 * 1000,
+        config.filterMinAge.action,
+        `account younger than ${config.filterMinAge.hours}h`,
+      );
+    }
+    if (config.filterUnverifiedBot.enabled) {
+      consider(isUnverifiedBot(member.user), config.filterUnverifiedBot.action, "unverified bot");
+    }
+    if (config.filterUsernamePattern.enabled && config.filterUsernamePattern.patterns.length > 0) {
+      consider(
+        matchesUsernamePattern(member.user.username, config.filterUsernamePattern.patterns),
+        config.filterUsernamePattern.action,
+        "username pattern match",
+      );
+    }
+
+    if (action === null) return null;
+    return { action, triggered };
+  }
+
+  /** Tracks a joiner for the short-lived recent-joiners window used by the raid/similarity heuristics. */
+  public async recordRecentJoiner(guildId: string, joiner: RecentJoiner): Promise<void> {
+    const key = RedisKeys.recentJoiners(guildId);
+    await this.redis
+      .multi()
+      .lpush(key, JSON.stringify(joiner))
+      .ltrim(key, 0, RECENT_JOINERS_CAP - 1)
+      .expire(key, RECENT_JOINERS_TTL_SECONDS)
+      .exec();
+  }
+
+  public async getRecentJoiners(guildId: string): Promise<RecentJoiner[]> {
+    const raw = await this.redis.lrange(RedisKeys.recentJoiners(guildId), 0, -1);
+    return raw
+      .map((r: string) => tryParseJSON(r) as RecentJoiner | null)
+      .filter((j: RecentJoiner | null): j is RecentJoiner => j !== null);
+  }
+
+  /**
+   * "Suspicious" scope for raid mode: no avatar, under the configured min
+   * age, a username too close to a recent joiner's, or an unusual share of
+   * recent joiners sharing this account's creation day - any one is enough,
+   * this doesn't need to be a tunable score.
+   */
+  public async isSuspiciousJoiner(
+    member: GuildMember,
+    config: JoinGateConfig,
+  ): Promise<boolean> {
+    if (hasNoAvatar(member.user)) return true;
+    const minAgeHours = config.filterMinAge.hours > 0 ? config.filterMinAge.hours : 24;
+    if (Date.now() - member.user.createdTimestamp < minAgeHours * 60 * 60 * 1000) return true;
+
+    const recent = await this.getRecentJoiners(member.guild.id);
+    if (hasSimilarRecentJoiner(member.user.username, recent)) return true;
+    if (isCreationClustered(member.user.createdTimestamp, recent)) return true;
+    return false;
   }
 
   /**
@@ -498,10 +644,25 @@ export class SecurityService extends Service {
     action: GateAction,
     reason: string,
   ): Promise<boolean> {
-    const member = await guild.members.fetch(memberId).catch(() => null);
-    if (isNullish(member)) return false;
     const botUser = this.container.client.user;
     if (isNullish(botUser)) return false;
+
+    if (action === "log") {
+      const logService = tryGetService("guild-log");
+      await logService?.dispatch({
+        guildId: guild.id,
+        moduleName: "security",
+        action: "📝 Gate Logged",
+        targetId: memberId,
+        actorId: botUser.id,
+        reason,
+        color: Colors.Yellow,
+      });
+      return true;
+    }
+
+    const member = await guild.members.fetch(memberId).catch(() => null);
+    if (isNullish(member)) return false;
 
     try {
       if (action === "kick") {

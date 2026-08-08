@@ -151,6 +151,82 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       description: "Action applied to gated joiners during a raid.",
       default: "kick",
     }),
+    raid_account_type: cfg.enum(["all", "suspicious"], {
+      group: "Join Gate",
+      label: "Raid Response Scope",
+      description:
+        "Apply the raid action to every joiner, or only ones flagged suspicious (no avatar, low account age, similar username to a recent joiner, or bulk-created).",
+      default: "all",
+    }),
+    raid_warn_role_ids: cfg.string({
+      group: "Join Gate",
+      label: "Raid Warn Roles",
+      description:
+        "Comma-separated role IDs mentioned in the log message when raid mode activates.",
+      list: true,
+    }),
+    filter_no_avatar_enabled: cfg.boolean({
+      group: "Join Gate Filters",
+      label: "Filter: No Avatar",
+      description: "Flag members who have never set a custom avatar.",
+      default: false,
+    }),
+    filter_no_avatar_action: cfg.enum(["log", "kick", "timeout", "quarantine"], {
+      group: "Join Gate Filters",
+      label: "No Avatar Action",
+      description: "Action taken when the no-avatar filter trips.",
+      default: "log",
+    }),
+    filter_min_age_enabled: cfg.boolean({
+      group: "Join Gate Filters",
+      label: "Filter: Min Account Age",
+      description: "Flag accounts younger than the configured age.",
+      default: false,
+    }),
+    filter_min_age_hours: cfg.number({
+      group: "Join Gate Filters",
+      label: "Min Account Age (hours)",
+      description: "Accounts younger than this trip the filter.",
+      default: 0,
+      min: 0,
+      max: 8760,
+    }),
+    filter_min_age_action: cfg.enum(["log", "kick", "timeout", "quarantine"], {
+      group: "Join Gate Filters",
+      label: "Min Age Action",
+      description: "Action taken when the min-age filter trips.",
+      default: "kick",
+    }),
+    filter_unverified_bot_enabled: cfg.boolean({
+      group: "Join Gate Filters",
+      label: "Filter: Unverified Bots",
+      description: "Flag bot accounts that aren't Discord-verified.",
+      default: false,
+    }),
+    filter_unverified_bot_action: cfg.enum(["log", "kick", "timeout", "quarantine"], {
+      group: "Join Gate Filters",
+      label: "Unverified Bot Action",
+      description: "Action taken when the unverified-bot filter trips.",
+      default: "kick",
+    }),
+    filter_username_pattern_enabled: cfg.boolean({
+      group: "Join Gate Filters",
+      label: "Filter: Username Pattern",
+      description: "Flag members whose username contains a configured substring.",
+      default: false,
+    }),
+    filter_username_pattern: cfg.string({
+      group: "Join Gate Filters",
+      label: "Username Patterns",
+      description: "Comma-separated substrings matched (case-insensitively) against usernames.",
+      list: true,
+    }),
+    filter_username_pattern_action: cfg.enum(["log", "kick", "timeout", "quarantine"], {
+      group: "Join Gate Filters",
+      label: "Username Pattern Action",
+      description: "Action taken when the username-pattern filter trips.",
+      default: "log",
+    }),
     verification_enabled: cfg.boolean({
       group: "Verification",
       label: "Verification",
