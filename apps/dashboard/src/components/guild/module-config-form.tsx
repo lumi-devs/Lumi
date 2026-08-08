@@ -18,16 +18,6 @@ import type {
   DashboardChannelView,
 } from "#/lib/dashboard-data";
 
-/**
- * dashboard.md §9B `DynamicConfigFormEditor` — one module's toggle + config
- * fields.
- *
- * Fields are description-left / control-right rows separated by hairlines,
- * rather than a stack of label-above-input blocks with 20px gaps. For a
- * module with ten fields that's the difference between one screen and three,
- * and the description finally has room to be read instead of being an 11px
- * afterthought under the input.
- */
 export function ModuleConfigForm({
   guildId,
   module: m,
@@ -47,8 +37,6 @@ export function ModuleConfigForm({
   const dirty = JSON.stringify(config) !== JSON.stringify(m.config);
   const inactive = !enabled && !isCore;
 
-  // Toggle and save share one pending/error state (as before): both drive
-  // the same Switch's `disabled` and the same SaveBar's `saving`/`error`.
   function handleToggle(next: boolean) {
     const prev = enabled;
     setEnabled(next);
@@ -117,9 +105,6 @@ export function ModuleConfigForm({
           />
         ) : (
           <div
-            // Disabled modules keep their settings readable but visibly
-            // inert, instead of the whole card dropping to 60% opacity
-            // (which also faded the toggle you need to turn it back on).
             className={inactive ? "divide-y divide-border opacity-60" : "divide-y divide-border"}
           >
             {m.configFields.map((f) => (

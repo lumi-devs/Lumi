@@ -19,7 +19,6 @@ import type {
   DashboardChannelView,
 } from "#/lib/dashboard-data";
 
-/** Channel types offered for the Mod Log Channel picker (text-capable only). */
 const LOG_CHANNEL_TYPES = new Set([0, 5]);
 
 type FormState = GuildSettingsPayload;
@@ -59,14 +58,14 @@ const NULLABLE_STRING_FIELDS = new Set<keyof FormState>([
 function toFormState(settings: GuildSettings): FormState {
   return {
     prefix: settings.prefix ?? "",
-    modRoleId: (settings["modRoleId"] as string | null) ?? "",
-    adminRoleId: (settings["adminRoleId"] as string | null) ?? "",
-    modLogChannelId: (settings["modLogChannelId"] as string | null) ?? "",
-    muteRoleId: (settings["muteRoleId"] as string | null) ?? "",
+    modRoleId: (settings["modRoleId"]) ?? "",
+    adminRoleId: (settings["adminRoleId"]) ?? "",
+    modLogChannelId: (settings["modLogChannelId"]) ?? "",
+    muteRoleId: (settings["muteRoleId"]) ?? "",
     locale: settings.locale ?? "en-US",
-    timezone: (settings["timezone"] as string) ?? "UTC",
-    noMentionSpamWindowMs: (settings["noMentionSpamWindowMs"] as number | null) ?? null,
-    noMentionSpamLimit: (settings["noMentionSpamLimit"] as number | null) ?? null,
+    timezone: (settings["timezone"]) ?? "UTC",
+    noMentionSpamWindowMs: (settings["noMentionSpamWindowMs"]) ?? null,
+    noMentionSpamLimit: (settings["noMentionSpamLimit"]) ?? null,
   };
 }
 
@@ -78,7 +77,6 @@ type SyncMessage =
   | { type: "settings-updated"; settings: FormState }
   | { type: "request-sync" };
 
-/** dashboard.md §9B `GuildGeneralSettingsCard` — Guild model fields. */
 export function GeneralSettingsForm({
   guildId,
   settings,
@@ -117,7 +115,7 @@ export function GeneralSettingsForm({
 
       for (const key of FORM_KEYS) {
         if (JSON.stringify(newBaseline[key]) === JSON.stringify(oldBaseline[key])) {
-          continue; // this field didn't actually change remotely
+          continue;
         }
         const fieldDirty = JSON.stringify(currentForm[key]) !== JSON.stringify(oldBaseline[key]);
         if (fieldDirty) {
@@ -203,7 +201,7 @@ export function GeneralSettingsForm({
         return;
       }
 
-      const normalized = { ...form, ...patch } as FormState;
+      const normalized = { ...form, ...patch };
       setBaseline(normalized);
       baselineRef.current = normalized;
       setForm(normalized);
@@ -217,18 +215,12 @@ export function GeneralSettingsForm({
 
   return (
     <>
-      {/* `rise` is the third beat of the guild overview's page-load
-       * choreography (globals.css). It sits here rather than on a wrapper in
-       * page.tsx so the fixed-position SaveBar below stays outside the
-       * animated subtree. */}
+      {/* `rise` sits here, not on a wrapper in page.tsx, so the fixed-position
+       * SaveBar below stays outside the animated subtree. */}
       <div
         className="rise flex flex-col gap-4"
         style={{ "--rise-delay": "140ms" } as React.CSSProperties}
       >
-        {/* Three small cards instead of one nine-field grid. The old layout
-         * put "Command prefix" and "No-mention-spam window (ms)" in the same
-         * undifferentiated 2-column run, so there was no way to tell at a
-         * glance which settings related to each other. */}
         <Card>
           <CardHeader>
             <CardTitle>General</CardTitle>

@@ -1,9 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import {
-  IBM_Plex_Sans,
-  JetBrains_Mono,
-  Saira_Semi_Condensed,
-} from "next/font/google";
+import { Geist, Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "#/components/theme-provider";
 import "./globals.css";
 
@@ -12,31 +8,18 @@ import "./globals.css";
 // better for the CSP in next.config.ts: no external font/style origin needs
 // allow-listing, and there's no render-blocking third-party font request.
 //
-// ── Type pairing: "engineering blueprint / operator console" ──────────────
-//
-// Saira Semi Condensed — chrome. A technical, squarish semi-condensed grotesk
-// in the DIN/signage lineage: flat-sided bowls, low stroke contrast, an
-// unmistakably engineered rhythm. It carries page titles, panel titles, nav
-// items, buttons, badges, table headers and the wide uppercase micro-labels.
-// Being semi-condensed is functional here, not just stylistic: a 20-item
-// sidebar and a 6-column table both gain real horizontal room per label.
-//
-// IBM Plex Sans — body. Drawn for engineering documentation, so it holds up at
-// the 12–13px this app lives at while still having character (the tailed `l`,
-// the flat-terminal `a`, the slightly mechanical `g`). It carries descriptions,
-// hints, table prose and input text.
-//
-// JetBrains Mono — data. Snowflake IDs, module names, git URLs, digests.
-const display = Saira_Semi_Condensed({
+// Geist carries chrome (headings, nav, buttons, labels, table headers); Inter
+// carries body copy. JetBrains Mono stays for IDs/timestamps/counts.
+const display = Geist({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
-  variable: "--font-saira",
+  variable: "--font-geist",
   display: "swap",
 });
-const body = IBM_Plex_Sans({
+const body = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  variable: "--font-plex",
+  variable: "--font-inter",
   display: "swap",
 });
 const mono = JetBrains_Mono({
@@ -57,8 +40,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fbfbfc" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0b0d" },
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#08090a" },
   ],
   width: "device-width",
   initialScale: 1,

@@ -6,8 +6,10 @@ import { PageHeader } from "#/components/ui/page-header";
 import type { DownloaderRepoView } from "#/lib/dashboard-data";
 
 export default async function SystemAddonsPage() {
-  await requireBotOwner();
-  const result = (await rpcCall(RPC_ACTIONS.repoList)) as {
+  const session = await requireBotOwner();
+  const result = (await rpcCall(RPC_ACTIONS.repoList, {
+    actorId: session.userId,
+  })) as {
     repos: DownloaderRepoView[];
   };
 

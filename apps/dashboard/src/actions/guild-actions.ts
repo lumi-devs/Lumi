@@ -12,17 +12,6 @@ import { rpcCall } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
 import { runAction, type ActionResult } from "#/lib/action-result";
 
-// Server Actions are the Next.js replacement for the old server.ts
-// `/api/guild/:guildId/*` POST routes. Two defenses carry over unchanged
-// from dashboard.md §5:
-//  - IDOR guard: `requireGuild()` re-checks Manage Server on *every* call,
-//    server-side, regardless of what the client believes it's allowed to do.
-//  - CSRF: Server Actions already reject cross-origin POSTs via Next's
-//    built-in Origin/Host check — see next.config.ts's comment. No hand-rolled
-//    token here.
-// Rate limiting (§5F) is layered on top, keyed by session user id (more
-// meaningful than IP for an authenticated mutation).
-
 async function guardedAction(guildId: string) {
   const session = await requireGuild(guildId);
   if (await isRateLimited(`guild-action:${session.userId}`, 60, 60_000)) {

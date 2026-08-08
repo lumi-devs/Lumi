@@ -17,8 +17,8 @@ export default async function PermitsPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-brand text-xl font-bold">Permits</h1>
-        <p className="text-sm text-white/50">
+        <h1 className="font-display text-xl font-bold">Permits</h1>
+        <p className="text-sm text-fg-muted">
           Named, reusable permission bundles, Wick-style. Enforced tiers are
           fixed and immune to anti-nuke quarantine; custom permits are fully
           editable and can be stripped.

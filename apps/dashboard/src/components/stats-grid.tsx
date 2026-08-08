@@ -1,5 +1,6 @@
-import type { LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowUp, type LucideIcon } from "lucide-react";
 import { cn } from "#/lib/utils";
+import { Card } from "#/components/ui/card";
 
 export interface Stat {
   label: string;
@@ -7,6 +8,8 @@ export interface Stat {
   icon: LucideIcon;
   /** Optional status tint for the value (e.g. maintenance mode). */
   tone?: "default" | "success" | "warning" | "danger";
+  /** Optional delta vs. a prior period, rendered next to the value. */
+  trend?: { direction: "up" | "down"; value: string };
 }
 
 const TONE: Record<NonNullable<Stat["tone"]>, string> = {
@@ -16,40 +19,50 @@ const TONE: Record<NonNullable<Stat["tone"]>, string> = {
   danger: "text-danger",
 };
 
-/**
- * Summary strip. Previously four separate 24px-padded glass cards with a
- * 20px emoji above a 24px number — a lot of screen for four short facts.
- * Now one bordered container with hairline-divided cells: label first (you
- * scan labels, not numbers), value second, at a size that doesn't out-shout
- * the form beneath it.
- */
+const TREND_TONE: Record<"up" | "down", string> = {
+  up: "text-success",
+  down: "text-danger",
+};
+
 export function StatsGrid({ stats }: { stats: Stat[] }) {
   return (
-    <dl className="grid grid-cols-2 divide-border overflow-hidden rounded-lg border border-border bg-surface sm:grid-cols-4 sm:divide-x">
-      {stats.map((s, i) => (
-        <div
+    <dl className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      {stats.map((s) => (
+        <Card
           key={s.label}
-          className={cn(
-            "px-3.5 py-3",
-            // 2-col mobile / 4-col desktop: keep the internal rules tidy.
-            i % 2 === 1 && "border-l border-border sm:border-l-0",
-            i >= 2 && "border-t border-border sm:border-t-0",
-          )}
+          className="px-3.5 py-3 transition-colors hover:border-border-strong hover:bg-surface-hover"
         >
-          <dt className="font-display flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.09em] text-fg-subtle uppercase">
-            <s.icon className="size-3" aria-hidden />
+          <dt className="font-display flex items-center gap-2 text-[11px] font-semibold tracking-[0.09em] text-fg-subtle uppercase">
+            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-bg-subtle text-fg-muted">
+              <s.icon className="size-3" aria-hidden />
+            </span>
             <span className="truncate">{s.label}</span>
           </dt>
           <dd
             className={cn(
-              "font-display tabular mt-1 truncate text-[19px] leading-6 font-semibold",
+              "font-display tabular mt-1 flex items-baseline gap-1.5 text-[19px] leading-6 font-semibold",
               TONE[s.tone ?? "default"],
             )}
             title={String(s.value)}
           >
-            {s.value}
+            <span className="truncate">{s.value}</span>
+            {s.trend ? (
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-0.5 text-[11px] font-medium",
+                  TREND_TONE[s.trend.direction],
+                )}
+              >
+                {s.trend.direction === "up" ? (
+                  <ArrowUp className="size-3" aria-hidden />
+                ) : (
+                  <ArrowDown className="size-3" aria-hidden />
+                )}
+                {s.trend.value}
+              </span>
+            ) : null}
           </dd>
-        </div>
+        </Card>
       ))}
     </dl>
   );

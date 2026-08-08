@@ -16,7 +16,6 @@ import { Button } from "#/components/ui/button";
 import { Alert } from "#/components/ui/alert";
 import { useServerAction } from "#/lib/use-server-action";
 
-/** dashboard.md §9A `SystemUserPrivacyConsole` — GDPR deletion trigger, wired to the existing `global.gdpr.delete` RPC. */
 export function GdprForm() {
   const [userId, setUserId] = useState("");
   const [confirmed, setConfirmed] = useState(false);
@@ -38,8 +37,6 @@ export function GdprForm() {
   }
 
   return (
-    // Destructive panels get a danger-tinted border so they never read like
-    // the ordinary settings cards stacked above them.
     <Card className="border-danger/30">
       <CardHeader>
         <CardTitle>GDPR data deletion</CardTitle>

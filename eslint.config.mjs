@@ -1,17 +1,19 @@
 import tseslint from 'typescript-eslint';
+import nextPlugin from '@next/eslint-plugin-next';
 import baseConfig from './packages/eslint-config/index.js';
 
 export default tseslint.config(
   {
-    // apps/dashboard is a Next.js app with its own tsconfig (DOM/React
-    // types) outside this root tsconfig's typed-lint project — it has its
-    // own `next lint` script instead. See apps/dashboard/package.json.
-    ignores: ['scripts/**', 'dist/**', 'coverage/**', 'apps/dashboard/**'],
+    ignores: ['scripts/**', 'dist/**', 'coverage/**', 'apps/dashboard/.next/**'],
   },
   ...baseConfig,
   {
+    files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
       parserOptions: {
+        // `project: true` resolves each file against its *nearest* tsconfig,
+        // so apps/dashboard's DOM/React project is used for its own files
+        // rather than this root one.
         project: true,
         tsconfigRootDir: import.meta.dirname,
       },
@@ -42,6 +44,19 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    // `next lint` was removed in Next 16, so the App Router rules it used to
+    // provide are wired up directly here.
+    files: ['apps/dashboard/src/**/*.{ts,tsx}'],
+    plugins: { '@next/next': nextPlugin },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs['core-web-vitals'].rules,
+      // App Router only — the rule hunts for a `pages/` directory and warns
+      // on every run when it finds none.
+      '@next/next/no-html-link-for-pages': 'off',
     },
   },
   {

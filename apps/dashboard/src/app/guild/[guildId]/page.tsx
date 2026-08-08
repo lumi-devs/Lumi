@@ -34,10 +34,10 @@ export default async function GuildOverviewPage({
               <img
                 src={data.icon}
                 alt=""
-                className="size-6 rounded-md object-cover"
+                className="size-6 rounded-control object-cover"
               />
             ) : (
-              <span className="flex size-6 items-center justify-center rounded-md border border-border bg-bg-subtle text-[11px] font-semibold text-fg-muted">
+              <span className="flex size-6 items-center justify-center rounded-control border border-border bg-bg-subtle text-[11px] font-semibold text-fg-muted">
                 {data.name.slice(0, 1).toUpperCase()}
               </span>
             )}

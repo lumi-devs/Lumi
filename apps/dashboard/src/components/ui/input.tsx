@@ -1,12 +1,10 @@
 import { ChevronDown } from "lucide-react";
 import { cn } from "#/lib/utils";
 
-// Controls are 32px tall, not 40px. On a config screen with twelve fields
-// that is roughly a hundred vertical pixels of scrolling saved per screen,
-// and it matches the button scale so a control + button row lines up.
+// Controls are 32px, matching the button scale so a control + button row lines up.
 
 const controlBase = [
-  "h-8 w-full rounded-md border border-border bg-bg-subtle px-2.5",
+  "h-8 w-full rounded-control border border-border bg-bg-subtle px-2.5",
   "text-[13px] text-fg placeholder:text-fg-subtle",
   "transition-colors outline-none",
   "hover:border-border-strong",
@@ -18,7 +16,7 @@ export function Input({
   className,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn(controlBase, className)} {...props} />;
+  return <input data-slot="input" className={cn(controlBase, className)} {...props} />;
 }
 
 export function Textarea({
@@ -69,7 +67,6 @@ export function Label({
   );
 }
 
-/** Stacked label → control → hint. The default for form grids. */
 export function Field({
   label,
   htmlFor,
@@ -92,11 +89,8 @@ export function Field({
   );
 }
 
-/**
- * Description-left / control-right row, the layout Discord's own settings and
- * Linear both use. Reads far faster than label-above-input when the control is
- * small (a switch, a short enum) and the explanation is the long part.
- */
+// Description-left / control-right. Use when the control is small (a switch, a
+// short enum) and the explanation is the long part.
 export function SettingRow({
   label,
   htmlFor,

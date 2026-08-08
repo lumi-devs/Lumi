@@ -18,10 +18,11 @@ This is a from-scratch rewrite of the original hand-rolled `Bun.serve` SSR app. 
 
 ## 🌟 Overview
 
-- **Auth**: Discord OAuth2 via [NextAuth.js (Auth.js v5)](https://authjs.dev), not hand-rolled HMAC cookie signing. Session is a JWT (`AUTH_SECRET`, mapped from `DASHBOARD_SESSION_SECRET`); `session.isBotOwner` comes from the worker's `auth.whoami` RPC at sign-in, so it tracks `PermitResolver.isBotOwner` (`OWNER_IDS` env var, or the Discord application's actual owner) with no separate dashboard-side owner list.
+- **Auth**: Discord OAuth2 via [NextAuth.js (Auth.js v5)](https://authjs.dev), not hand-rolled HMAC cookie signing. Session is a JWT (`AUTH_SECRET`, mapped from `DASHBOARD_SESSION_SECRET`); `session.isBotOwner` comes from the worker's `auth.whoami` RPC, so it tracks `PermitResolver.isBotOwner` (`OWNER_IDS` env var, or the Discord application's actual owner) with no separate dashboard-side owner list. That fact and the user's manageable-guild list are re-derived at most once per 5 minutes (`AUTHZ_TTL_MS` in `src/lib/auth.ts`), bounded by a process-local snapshot rather than the JWT timestamp alone.
 - **RPC bridge**: `src/lib/rpc.ts` is a `server-only` module (never bundled to the client) — a straight port of the old `apps/dashboard/src/rpc.ts` RabbitMQ RPC client, now reached from Server Components / Route Handlers / Server Actions.
 - **IDOR guard**: `src/lib/auth-guards.ts`'s `authorizedGuild()` is re-checked on every guild-scoped page render *and* every guild-scoped Server Action — never trusted from client state.
-- **Security headers + CSP**: `next.config.ts`'s `headers()`.
+- **Security headers**: `next.config.ts`'s `headers()` — `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Strict-Transport-Security`, `Permissions-Policy`.
+- **CSP**: `src/middleware.ts`, deliberately *not* `next.config.ts`. Next only nonces its inline RSC flight scripts when it can read a `content-security-policy` header off the **incoming request**, and only middleware can set one — a response header from `next.config.ts` is invisible to the renderer, so a strict `script-src 'self'` set there blocks every flight script and hydration never runs.
 - **CSRF**: Next.js Server Actions' built-in same-origin (Origin vs Host) check — no hand-rolled token system.
 - **Design direction**: *engineering blueprint / operator console.* Hairline rules, wide uppercase micro-labels, condensed engineered type for chrome, a 32px graph-paper field behind the page, and one saturated signal colour (blueprint cobalt) reserved for the primary action and the active route. Amber/green/red are reserved for machine status only, so decoration can never be mistaken for a state readout. Surfaces that carry data stay opaque and flat.
 - **Design system**: Tailwind v4 tokens generated from the semantic CSS custom properties in `src/app/globals.css` (`--surface`, `--fg-muted`, `--accent`, …). Components must consume those tokens — never a raw colour or a `white/40`-style alpha, or light mode breaks. Light and dark are both authored; `system`/`light`/`dark` is chosen via `data-theme` on `<html>` (`src/components/theme-provider.tsx`, toggled from the header).
@@ -44,7 +45,9 @@ This is a from-scratch rewrite of the original hand-rolled `Bun.serve` SSR app. 
 | `METRICS_ENABLED` | No | `true` | Enables the `/healthz`, `/readyz`, `/metrics` telemetry server. |
 | `METRICS_PORT` | No | `9090` | Port for the telemetry server (see `src/instrumentation.ts`). |
 
-The OAuth2 redirect URI is no longer a separate env var — NextAuth derives it from the request (`/api/auth/callback/discord`); set `AUTH_URL` (or ensure `trustHost: true`, already set in `src/lib/auth.ts`) if running behind a reverse proxy.
+The OAuth2 redirect URI is not an env var — NextAuth derives it from the request. Register `<dashboard-origin>/api/auth/callback/discord` under **OAuth2 → Redirects** on your Discord application. Behind a reverse proxy that rewrites the Host header, set `AUTH_URL` to the externally visible origin (`trustHost: true` is already set in `src/lib/auth.ts`). There is likewise no secure-cookie variable: NextAuth picks the `__Secure-` cookie prefix from the resolved URL scheme.
+
+Full reference, including the route inventory and the 50-action RPC surface: [`docs/dashboard.md`](../../docs/dashboard.md).
 
 ---
 
@@ -67,12 +70,8 @@ turbo run typecheck --filter=@lumi/dashboard
 
 ### Docker Compose
 
-```bash
-docker compose --profile dashboard up -d
-```
-
-> [!NOTE]
-> The shared `runner` Dockerfile target doesn't yet have a `next build` stage — see the comment above the `dashboard` service in `docker-compose.yml`. Building/running the container image needs that follow-up before this profile works end to end.
+> [!WARNING]
+> `docker compose --profile dashboard up` does **not** work. The shared `runner` Dockerfile target has no `next build` stage and copies source only, while the Compose service runs `next start`, which needs a prebuilt `.next` — the container exits immediately with *"Could not find a production build in the '.next' directory"*. See the comment above the `dashboard` service in `docker-compose.yml`. Run the dashboard directly (above) until that image stage lands.
 
 ---
 
@@ -84,11 +83,12 @@ src/
   components/           UI primitives (components/ui), layout chrome, guild/system feature components
   lib/                  auth.ts (NextAuth config), rpc.ts (server-only RPC client), auth-guards.ts (IDOR/owner guards),
                          env.ts, dashboard-fetch.ts (React.cache-deduped RPC fetchers), dashboard-data.ts (response types)
-  actions/               Server Actions — guild-actions.ts, system-actions.ts, auth-actions.ts
+  actions/               Server Actions, one file per domain — guild, moderation, security,
+                         tempvc, overrides, history, blocklist, advanced, system, user, auth
   types/next-auth.d.ts   Session/JWT module augmentation
   instrumentation.ts     OTel + Prometheus metrics + readiness-probe boot hook (Next's server-boot convention)
 ```
 
-### What's stubbed
+### Adding a route
 
-Several UI components are intentionally left as placeholder pages with a `StubPage` component naming the exact Prisma model(s) and spec component name — e.g. moderation case manager, warn thresholds, panic mode, temp VC generators/monitor, permits, config overrides, settings history, audit log, blocklist. Each stub page's file is a 5-line wrapper; the working pattern to copy is either `app/guild/[guildId]/modules/[moduleName]/page.tsx` (dynamic form + floating save bar) or `app/guild/[guildId]/modules/page.tsx` (toggle grid).
+Every route is wired to a real RPC read. The working patterns to copy are `app/guild/[guildId]/modules/[moduleName]/page.tsx` (dynamic form + floating save bar) and `app/guild/[guildId]/modules/page.tsx` (toggle grid).

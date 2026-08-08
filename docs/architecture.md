@@ -29,7 +29,7 @@ await bootstrapClientApp({ role: "worker" });
 Two distinct transports exist, deliberately separate:
 
 - **Worker ↔ Scheduler: Redis Streams**, via [`packages/event-bus`](../packages/event-bus/README.md). `RedisStreamsBus` is the sole transport implementation - one Redis Stream per event type, one consumer group per worker pool (default `lumi-workers`).
-- **Dashboard ↔ Worker: RabbitMQ RPC** (request/response), via `apps/dashboard/src/rpc.ts`. Uses RabbitMQ's `amq.rabbitmq.reply-to` pseudo-queue against a shared request queue (`lumi.rpc.requests`). This is a different mechanism from the event bus and is not used by worker/scheduler.
+- **Dashboard ↔ Worker: RabbitMQ RPC** (request/response), via `apps/dashboard/src/lib/rpc.ts`. Uses RabbitMQ's `amq.rabbitmq.reply-to` pseudo-queue against a shared request queue (`lumi.rpc.requests`). This is a different mechanism from the event bus and is not used by worker/scheduler.
 
 ### Redis Streams bus mechanics
 
@@ -55,7 +55,7 @@ Clustering only activates when `CLUSTER_NAME` is set. With a single replica and 
 
 ## Database layer
 
-**PostgreSQL** via Prisma (`prisma/schema.prisma`, 23 models) is the system of record. **All data access goes through `container.db`** (`DatabaseService`, `packages/core/src/lib/prisma/DatabaseService.ts`) - a facade over per-domain repositories (`global`, `config`, `modules`, `guildKV`, `access`, `permissions`, `downloader`, `audit`, `users`, `moderation`, `configHistory`, `configOverrides`, `afk`, `security`, `tempvc`, ...). Modules never touch `container.prisma` directly; see the [Module Creation Guide](GUIDE_MODULE_CREATION.md#database--persistence) for the rule and why it exists.
+**PostgreSQL** via Prisma (`prisma/schema.prisma`, 24 models) is the system of record. **All data access goes through `container.db`** (`DatabaseService`, `packages/core/src/lib/prisma/DatabaseService.ts`) - a facade over per-domain repositories (`global`, `config`, `modules`, `guildKV`, `access`, `permissions`, `downloader`, `audit`, `users`, `moderation`, `configHistory`, `configOverrides`, `afk`, `security`, `tempvc`, ...). Modules never touch `container.prisma` directly; see the [Module Creation Guide](GUIDE_MODULE_CREATION.md#database--persistence) for the rule and why it exists.
 
 **Redis** (`packages/core/src/lib/database/redis.ts`) is used for several distinct purposes, all namespaced under `lumi:*` in `RedisKeys`:
 

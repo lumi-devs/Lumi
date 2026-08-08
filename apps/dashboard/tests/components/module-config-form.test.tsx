@@ -41,7 +41,7 @@ function makeModule(): DashboardModuleView {
   };
 }
 
-const roles = [{ id: "555555555555555555", name: "Moderators", color: 0 }];
+const roles = [{ id: "555555555555555555", name: "Moderators", color: 0, position: 0, permissions: "0", isBotRole: false }];
 const channels: never[] = [];
 
 describe("ModuleConfigForm (dynamic config form editor + save bar)", () => {
@@ -120,7 +120,7 @@ describe("ModuleConfigForm (dynamic config form editor + save bar)", () => {
     fireEvent.change(screen.getByLabelText("Mod Role"), {
       target: { value: "555555555555555555" },
     });
-    fireEvent.click(screen.getByRole("checkbox", { name: "Verbose Logging" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Verbose Logging" }));
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() => expect(setGuildConfigField).toHaveBeenCalledTimes(2));
@@ -169,7 +169,7 @@ describe("ModuleConfigForm (dynamic config form editor + save bar)", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "Toggle Security" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Toggle Security" }));
 
     await waitFor(() =>
       expect(toggleGuildModule).toHaveBeenCalledWith("101", "security", false),

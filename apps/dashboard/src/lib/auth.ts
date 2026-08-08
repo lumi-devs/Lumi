@@ -3,20 +3,9 @@ import NextAuth, { type Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import Discord from "next-auth/providers/discord";
 import { env } from "./env";
-import { canManage, fetchUserGuilds } from "./discord";
+import { canManage, fetchUserGuilds, userAvatarUrl, type OAuthGuild } from "./discord";
 import { rpcCall } from "./rpc";
 import { RPC_ACTIONS, type WhoAmIResponse } from "@lumi/contracts";
-
-// Auth.js (NextAuth v5) replaces the old hand-rolled HMAC-signed session
-// cookie + in-memory session Map (apps/dashboard/src/sessions.ts) and the
-// manual OAuth2 state-param dance (apps/dashboard/src/discord.ts
-// `authorizeUrl` + server.ts `/callback`). NextAuth's Discord provider
-// handles the authorization redirect, PKCE/state CSRF protection, and code
-// exchange; sessions are signed+encrypted JWTs (`AUTH_SECRET`, mapped from
-// the deploy-config `DASHBOARD_SESSION_SECRET` var — see lib/env.ts).
-//
-// Scope is `identify guilds` (same as before) so the `guilds` list can be
-// fetched and permission-filtered at sign-in time.
 
 interface DiscordRawProfile {
   id: string;
@@ -24,6 +13,63 @@ interface DiscordRawProfile {
   avatar: string | null;
   discriminator?: string;
   global_name?: string | null;
+}
+
+// How stale `guilds`/`isBotOwner` may get: a revoked Manage Server takes effect
+// within this window rather than lasting the full 8h session.
+const AUTHZ_TTL_MS = 5 * 60 * 1000;
+
+interface AuthzSnapshot {
+  at: number;
+  guilds?: OAuthGuild[];
+  isBotOwner?: boolean;
+}
+
+// A Server Component render can't write the mutated JWT back to the cookie, so
+// `authRefreshedAt` alone would let every page view re-fetch. This process-local
+// snapshot is what actually bounds the outbound traffic.
+const authzCache = new Map<string, AuthzSnapshot>();
+
+async function refreshAuthorization(token: JWT): Promise<void> {
+  const userId = token.userId ?? "";
+  const cached = authzCache.get(userId);
+  if (cached && Date.now() - cached.at < AUTHZ_TTL_MS) {
+    if (cached.guilds) token.guilds = cached.guilds;
+    if (cached.isBotOwner !== undefined) token.isBotOwner = cached.isBotOwner;
+    token.authRefreshedAt = cached.at;
+    return;
+  }
+
+  // Published before the awaits so concurrent renders don't stampede, and so a
+  // persistently failing Discord/worker can't turn every request into a retry.
+  const snapshot: AuthzSnapshot = {
+    at: Date.now(),
+    guilds: token.guilds,
+    isBotOwner: token.isBotOwner,
+  };
+  authzCache.set(userId, snapshot);
+  token.authRefreshedAt = snapshot.at;
+  for (const [key, entry] of authzCache) {
+    if (snapshot.at - entry.at > AUTHZ_TTL_MS) authzCache.delete(key);
+  }
+
+  try {
+    const whoami = (await rpcCall(RPC_ACTIONS.authWhoAmI, {
+      actorId: userId,
+    })) as WhoAmIResponse;
+    token.isBotOwner = whoami.isBotOwner;
+    snapshot.isBotOwner = whoami.isBotOwner;
+  } catch {
+    // Keep the previous value: clobbering it to `false` would lock a real bot
+    // owner out of /system until the session expires.
+  }
+  try {
+    const guilds = (await fetchUserGuilds(token.accessToken ?? "")).filter(canManage);
+    token.guilds = guilds;
+    snapshot.guilds = guilds;
+  } catch {
+    // Likewise: an empty list would 404 every guild route until a manual sign-out.
+  }
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -35,49 +81,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   secret: env.authSecret,
-  // Runs behind a reverse proxy / container port mapping in every real
-  // deployment (see docker-compose.yml's `dashboard` service) rather than
-  // being reachable on a fixed, known host — without this, NextAuth throws
-  // `UntrustedHost` on every request instead of trusting the proxy's
-  // forwarded Host header.
+  // Always deployed behind a reverse proxy; without this NextAuth throws
+  // `UntrustedHost` instead of trusting the forwarded Host header.
   trustHost: true,
   session: {
     strategy: "jwt",
-    // Matches the old dashboard's SESSION_TTL_MS (8 hours).
     maxAge: 60 * 60 * 8,
   },
   callbacks: {
     async jwt({ token, account, profile }) {
-      // Only runs on initial sign-in, when Discord's OAuth2 response is present.
+      // `account`/`profile` are only present on the initial sign-in callback.
       if (account && profile) {
         const raw = profile as unknown as DiscordRawProfile;
         token.userId = raw.id;
         token.username = raw.username;
         token.avatar = raw.avatar ?? "";
-        try {
-          // Defers to the worker's `PermitResolver.isBotOwner`, which
-          // recognizes the Discord application's actual owner as well as
-          // `OWNER_IDS` — no separate dashboard-side owner list to keep in
-          // sync.
-          const whoami = (await rpcCall(RPC_ACTIONS.authWhoAmI, {
-            actorId: raw.id,
-          })) as WhoAmIResponse;
-          token.isBotOwner = whoami.isBotOwner;
-        } catch {
-          // Worker unreachable at sign-in shouldn't hard-fail login — just
-          // re-checked on next re-auth, and every Bot Owner Server Action
-          // re-validates against the worker independently anyway.
-          token.isBotOwner = false;
-        }
-        try {
-          const guilds = await fetchUserGuilds(account.access_token ?? "");
-          token.guilds = guilds.filter(canManage);
-        } catch {
-          // Discord API hiccup at sign-in shouldn't hard-fail login — the
-          // guild list just re-populates on next re-auth. Guild-scoped
-          // routes still enforce authorizedGuild() with whatever is cached.
-          token.guilds = [];
-        }
+        token.accessToken = account.access_token ?? "";
+        await refreshAuthorization(token);
+        return token;
+      }
+      if (Date.now() - (token.authRefreshedAt ?? 0) > AUTHZ_TTL_MS) {
+        await refreshAuthorization(token);
       }
       return token;
     },
@@ -90,14 +114,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }) {
       session.userId = token.userId ?? "";
       session.username = token.username ?? "";
-      session.avatar = token.avatar ?? "";
+      session.avatar = userAvatarUrl(token.userId ?? "", token.avatar);
       session.guilds = token.guilds ?? [];
       session.isBotOwner = token.isBotOwner ?? false;
       return session;
     },
   },
   pages: {
-    // Custom branded page instead of NextAuth's default (see app/login/page.tsx).
     signIn: "/login",
   },
 });

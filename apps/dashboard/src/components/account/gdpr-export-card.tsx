@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { exportMyData } from "#/actions/user-actions";
-import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardBody } from "#/components/ui/card";
 import { Button } from "#/components/ui/button";
 
 function countEntries(value: unknown): number {
@@ -54,7 +54,7 @@ export function GdprExportCard() {
           </CardDescription>
         </div>
       </CardHeader>
-      <div className="flex flex-col gap-4">
+      <CardBody className="flex flex-col gap-4">
         <Button
           variant="primary"
           onClick={handleExport}
@@ -66,11 +66,11 @@ export function GdprExportCard() {
         {error && <p className="text-xs text-danger">{error}</p>}
         {summary && (
           <div className="flex flex-col gap-2">
-            <p className="text-xs font-semibold text-white/60">
+            <p className="text-xs font-semibold text-fg-muted">
               Records found, by module
             </p>
             {Object.keys(summary).length === 0 ? (
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-fg-subtle">
                 Nothing on file for your account.
               </p>
             ) : (
@@ -78,10 +78,10 @@ export function GdprExportCard() {
                 {Object.entries(summary).map(([moduleName, count]) => (
                   <li
                     key={moduleName}
-                    className="flex items-center justify-between rounded-lg border border-border bg-white/5 px-3 py-2 text-xs"
+                    className="flex items-center justify-between rounded-control border border-border bg-surface-hover px-3 py-2 text-xs"
                   >
-                    <span className="font-medium text-white/80">{moduleName}</span>
-                    <span className="text-white/50">
+                    <span className="font-medium text-fg">{moduleName}</span>
+                    <span className="text-fg-muted">
                       {count} record{count === 1 ? "" : "s"}
                     </span>
                   </li>
@@ -90,7 +90,7 @@ export function GdprExportCard() {
             )}
           </div>
         )}
-      </div>
+      </CardBody>
     </Card>
   );
 }

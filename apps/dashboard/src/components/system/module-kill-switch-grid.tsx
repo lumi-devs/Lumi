@@ -10,27 +10,19 @@ import {
   CardTitle,
   CardDescription,
 } from "#/components/ui/card";
-import { Switch } from "#/components/ui/switch";
 import { Field, Input } from "#/components/ui/input";
 import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
 import { Alert } from "#/components/ui/alert";
+import { DataTable } from "#/components/ui/data-table";
 import { EmptyState } from "#/components/ui/empty-state";
-import { Table, TableScroll, TBody, TD, TH, THead, TR } from "#/components/ui/table";
+import { moduleKillSwitchColumns } from "#/components/system/module-kill-switch-columns";
 import { ActionError } from "#/components/action-error";
 import { useServerAction } from "#/lib/use-server-action";
 import type { GlobalModuleStateView } from "#/lib/dashboard-data";
 
-/**
- * dashboard.md §9A `GlobalModuleKillSwitchGrid`. Only lists modules with an
- * explicit `GlobalModuleState` row (i.e. ones some Bot Owner has already
- * overridden) — every module not shown here is implicitly enabled bot-wide.
- * The form below can force-disable (or re-enable) any module by name.
- *
- * Presented as a table rather than a card grid: these rows are records with
- * identical fields (name, state, reason) and an operator reads down the
- * "state" column, which a 3-across card grid makes impossible.
- */
+// Only modules with an explicit `GlobalModuleState` row appear; anything absent
+// is implicitly enabled bot-wide.
 export function ModuleKillSwitchGrid({
   moduleStates,
 }: {
@@ -40,6 +32,11 @@ export function ModuleKillSwitchGrid({
   const [name, setName] = useState("");
   const [reason, setReason] = useState("");
   const { isPending, error, setError, run } = useServerAction();
+
+  const columns = moduleKillSwitchColumns({
+    isPending,
+    onToggle: (moduleName, enabled) => apply(moduleName, enabled),
+  });
 
   function apply(moduleName: string, enabled: boolean, reasonText?: string) {
     run(async () => {
@@ -79,44 +76,7 @@ export function ModuleKillSwitchGrid({
             description="Every module currently follows its per-guild configuration. Use the form below to force one off bot-wide."
           />
         ) : (
-          <TableScroll>
-            <Table>
-              <THead>
-                <tr>
-                  <TH className="w-56">Module</TH>
-                  <TH>Reason</TH>
-                  <TH className="w-24 text-right">State</TH>
-                </tr>
-              </THead>
-              <TBody>
-                {rows.map((r) => (
-                  <TR key={r.moduleName}>
-                    <TD className="font-mono text-[12px] text-fg">
-                      {r.moduleName}
-                    </TD>
-                    <TD className="text-fg-muted">
-                      {r.reason ?? (
-                        <span className="text-fg-subtle">No reason recorded</span>
-                      )}
-                    </TD>
-                    <TD>
-                      <div className="flex items-center justify-end gap-2">
-                        <Badge variant={r.enabled ? "success" : "danger"} dot>
-                          {r.enabled ? "On" : "Off"}
-                        </Badge>
-                        <Switch
-                          checked={r.enabled}
-                          onChange={(v) => apply(r.moduleName, v)}
-                          disabled={isPending}
-                          aria-label={`Toggle ${r.moduleName} globally`}
-                        />
-                      </div>
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          </TableScroll>
+          <DataTable columns={columns} data={rows} getRowId={(r) => r.moduleName} />
         )}
       </Card>
 

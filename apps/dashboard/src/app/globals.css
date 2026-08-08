@@ -1,95 +1,118 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /* ── Lumi dashboard design tokens ─────────────────────────────────────────
  *
- * AESTHETIC DIRECTION: "engineering blueprint / operator console".
- *
- * Lumi is an anti-nuke and moderation control panel — panic mode, global kill
- * switches, permit trees. The right reference is a technical drawing and an
- * instrument console, not a SaaS marketing dashboard: hairline rules, wide
- * uppercase micro-labels, condensed engineered type for chrome, a measured
- * graph-paper field behind the content, and exactly one saturated signal
- * colour (blueprint cobalt) reserved for the primary action and the active
- * route. Amber / green / red stay reserved for machine status, the way they
- * are on real instrumentation, so nothing decorative can ever be mistaken for
- * a state readout.
- *
- * The restraint is deliberate and load-bearing: atmosphere lives in the page
- * canvas and the sticky chrome, while every surface that carries data stays
- * opaque, flat and high-contrast.
+ * AESTHETIC DIRECTION: Linear's restraint + near-black canvas as the base,
+ * Vercel's motion timing, Stripe's "depth via tint, not shadow" principle —
+ * plus real spring physics for the handful of moments that deserve it
+ * (nav pill, switches, button press, card hover, the live-status pulse glow).
  *
  * Semantic tokens only. Nothing in the app should reference a raw colour or
- * a `white/40`-style alpha — those are what made light mode impossible and
- * made every surface read as "generic dark template". Components consume
- * `bg-surface` / `text-fg-muted` / `border-border`, and the two themes below
- * are the only places actual colour values live.
+ * a `white/40`-style alpha. Components consume `bg-surface` /
+ * `text-fg-muted` / `border-border`, and the two themes below are the only
+ * places actual colour values live.
  *
  * Theme resolution:
  *   1. no `data-theme`      → follow the OS via `prefers-color-scheme`
  *   2. `data-theme="light"` → force light
  *   3. `data-theme="dark"`  → force dark
  *
- * Light is a designed theme, not an inversion: it uses white cards on a warm
- * grey canvas with a *lighter* accent weight, because the same accent that
- * reads as "primary" on near-black vibrates on white.
+ * Light is a designed theme, not an inversion: white cards on a warm-grey
+ * canvas with a darkened accent weight for AA contrast.
  */
 
 :root {
   color-scheme: light;
 
   /* Surfaces */
-  --bg: #fbfbfc;
-  --bg-subtle: #f3f4f6;
+  --bg: #fafafa;
+  --bg-subtle: #f2f2f4;
   --surface: #ffffff;
-  --surface-hover: #f7f8f9;
-  --surface-active: #eef0f2;
+  --surface-hover: #f6f6f8;
+  --surface-active: #ececef;
 
   /* Lines */
-  --border: #e5e7ea;
-  --border-strong: #d2d6da;
+  --border: #e7e7ea;
+  --border-strong: #d6d6db;
 
   /* Text */
-  --fg: #15181c;
-  --fg-muted: #5c646d;
-  --fg-subtle: #8b939b;
+  --fg: #16171a;
+  --fg-muted: #62636b;
+  --fg-subtle: #8f9098;
   --fg-on-accent: #ffffff;
 
-  /* Blueprint cobalt — the one saturated colour in the system. Reserved for
-   * the primary action and the active route, never for decoration. Slightly
-   * violet-leaning and desaturated against stock blue so it reads as drafting
-   * ink rather than "default framework blue". */
-  --accent: #2743c9;
-  --accent-hover: #1c33a8;
-  --accent-soft: rgba(39, 67, 201, 0.1);
-  --accent-fg: #2338ad;
+  /* Lavender-indigo — the one saturated colour in the system. Reserved for
+   * the primary action and the active route, never for decoration. */
+  --accent: #4f4dc7;
+  --accent-hover: #4340b0;
+  --accent-soft: rgba(79, 77, 199, 0.1);
+  --accent-fg: #4340b0;
+  --accent-glow: #7c3aed;
 
   /* Status */
-  --success: #128a4d;
-  --success-soft: rgba(18, 138, 77, 0.1);
-  --warning: #a15c07;
-  --warning-soft: rgba(161, 92, 7, 0.11);
-  --danger: #c62828;
-  --danger-soft: rgba(198, 40, 40, 0.09);
+  --success: #1f9d63;
+  --success-soft: rgba(31, 157, 99, 0.1);
+  --warning: #b0720a;
+  --warning-soft: rgba(176, 114, 10, 0.1);
+  --danger: #d93636;
+  --danger-soft: rgba(217, 54, 54, 0.09);
 
-  --ring: rgba(39, 67, 201, 0.35);
-  --shadow-sm: 0 1px 2px rgba(16, 20, 26, 0.06);
+  /* Scrim behind a modal `<dialog>`. Dark in both themes — a light scrim over
+   * the dark canvas reads as a rendering fault rather than as depth. */
+  --overlay: rgba(0, 0, 0, 0.6);
+
+  --ring: rgba(79, 77, 199, 0.4);
+  --shadow-sm: 0 1px 2px rgba(20, 20, 30, 0.06);
   --shadow-md:
-    0 1px 2px rgba(16, 20, 26, 0.06), 0 8px 24px -8px rgba(16, 20, 26, 0.14);
+    0 1px 2px rgba(20, 20, 30, 0.06), 0 8px 24px -8px rgba(20, 20, 30, 0.14);
   --shadow-lg:
-    0 1px 2px rgba(16, 20, 26, 0.08), 0 16px 48px -12px rgba(16, 20, 26, 0.24);
-  /* Single dramatic accent shadow, used only under the primary button. */
-  --shadow-accent:
-    0 1px 2px rgba(39, 67, 201, 0.4), 0 6px 16px -6px rgba(39, 67, 201, 0.55);
+    0 1px 2px rgba(20, 20, 30, 0.08), 0 16px 48px -12px rgba(20, 20, 30, 0.24);
+  /* Single dramatic accent shadow, used only under the primary button, the
+   * active nav pill, and the live-status pulse glow. */
+  --shadow-accent: 0 1px 2px rgba(20, 20, 30, 0.08),
+    0 8px 24px -6px rgba(79, 77, 199, 0.28);
 
-  /* Graph-paper field behind the content. */
-  --grid-line: rgba(21, 24, 28, 0.05);
-  --grid-line-strong: rgba(21, 24, 28, 0.075);
+  --ease-out: cubic-bezier(0.175, 0.885, 0.32, 1.1);
 
   /* Populated by next/font in app/layout.tsx (self-hosted, no external
    * request) — these fall back to system fonts until the variables land. */
-  --font-display: var(--font-saira), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  /* ── shadcn/ui-expected tokens ──────────────────────────────────────────
+   * Remapped from the Lumi tokens above — same colour values, shadcn's
+   * naming. Keep both sets in sync; the tokens above stay the source of
+   * truth, these are aliases so the shadcn component set (and the shadcn
+   * CLI's `add` command) work unmodified. */
+  --background: var(--bg);
+  --foreground: var(--fg);
+  --card: var(--surface);
+  --card-foreground: var(--fg);
+  --popover: var(--surface);
+  --popover-foreground: var(--fg);
+  --primary: var(--accent);
+  --primary-foreground: var(--fg-on-accent);
+  --secondary: var(--surface-hover);
+  --secondary-foreground: var(--fg);
+  --muted: var(--bg-subtle);
+  --muted-foreground: var(--fg-muted);
+  --accent-shadcn: var(--surface-hover);
+  --accent-shadcn-foreground: var(--fg);
+  --destructive: var(--danger);
+  --destructive-foreground: #ffffff;
+  --input: var(--border);
+  --radius: 0.5rem;
+
+  --sidebar: var(--bg-subtle);
+  --sidebar-foreground: var(--fg);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: var(--fg-on-accent);
+  --sidebar-accent: var(--surface-hover);
+  --sidebar-accent-foreground: var(--fg);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 /* Dark values live in one place and are applied by both selectors below.
@@ -99,84 +122,138 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
 
-    --bg: #0a0b0d;
-    --bg-subtle: #0e1013;
-    --surface: #131518;
-    --surface-hover: #191c20;
-    --surface-active: #1f2328;
+    --bg: #08090a;
+    --bg-subtle: #0c0d0f;
+    --surface: #131417;
+    --surface-hover: #191a1e;
+    --surface-active: #1f2024;
 
-    --border: #23262b;
-    --border-strong: #32373d;
+    --border: #212226;
+    --border-strong: #2c2d33;
 
-    --fg: #e9ebed;
-    --fg-muted: #9aa1a9;
-    --fg-subtle: #6b737b;
+    --fg: #f2f3f5;
+    --fg-muted: #9a9ba3;
+    --fg-subtle: #66676f;
     --fg-on-accent: #ffffff;
 
-    --accent: #5b78ff;
-    --accent-hover: #7a91ff;
-    --accent-soft: rgba(91, 120, 255, 0.16);
-    --accent-fg: #93a8ff;
+    --accent: #5e6ad2;
+    --accent-hover: #7b78e0;
+    --accent-soft: rgba(94, 106, 210, 0.16);
+    --accent-fg: #9d9bef;
+    --accent-glow: #8b5cf6;
 
-    --success: #2fa96a;
-    --success-soft: rgba(47, 169, 106, 0.16);
-    --warning: #d99a2b;
-    --warning-soft: rgba(217, 154, 43, 0.16);
-    --danger: #ef5350;
-    --danger-soft: rgba(239, 83, 80, 0.15);
+    --success: #3ecf8e;
+    --success-soft: rgba(62, 207, 142, 0.14);
+    --warning: #f5a623;
+    --warning-soft: rgba(245, 166, 35, 0.14);
+    --danger: #f56565;
+    --danger-soft: rgba(245, 101, 101, 0.13);
 
-    --ring: rgba(91, 120, 255, 0.45);
+    --overlay: rgba(0, 0, 0, 0.6);
+
+    --ring: rgba(94, 106, 210, 0.45);
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -8px rgba(0, 0, 0, 0.6);
     --shadow-lg:
       0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 48px -12px rgba(0, 0, 0, 0.75);
-    --shadow-accent:
-      0 1px 2px rgba(0, 0, 0, 0.5), 0 6px 18px -6px rgba(91, 120, 255, 0.6);
+    --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.5),
+      0 8px 24px -6px rgba(94, 106, 210, 0.45);
 
-    --grid-line: rgba(233, 235, 237, 0.045);
-    --grid-line-strong: rgba(233, 235, 237, 0.07);
+    --background: var(--bg);
+    --foreground: var(--fg);
+    --card: var(--surface);
+    --card-foreground: var(--fg);
+    --popover: var(--surface);
+    --popover-foreground: var(--fg);
+    --primary: var(--accent);
+    --primary-foreground: var(--fg-on-accent);
+    --secondary: var(--surface-hover);
+    --secondary-foreground: var(--fg);
+    --muted: var(--bg-subtle);
+    --muted-foreground: var(--fg-muted);
+    --accent-shadcn: var(--surface-hover);
+    --accent-shadcn-foreground: var(--fg);
+    --destructive: var(--danger);
+    --destructive-foreground: #ffffff;
+    --input: var(--border);
+
+    --sidebar: var(--bg-subtle);
+    --sidebar-foreground: var(--fg);
+    --sidebar-primary: var(--accent);
+    --sidebar-primary-foreground: var(--fg-on-accent);
+    --sidebar-accent: var(--surface-hover);
+    --sidebar-accent-foreground: var(--fg);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--ring);
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #0a0b0d;
-  --bg-subtle: #0e1013;
-  --surface: #131518;
-  --surface-hover: #191c20;
-  --surface-active: #1f2328;
+  --bg: #08090a;
+  --bg-subtle: #0c0d0f;
+  --surface: #131417;
+  --surface-hover: #191a1e;
+  --surface-active: #1f2024;
 
-  --border: #23262b;
-  --border-strong: #32373d;
+  --border: #212226;
+  --border-strong: #2c2d33;
 
-  --fg: #e9ebed;
-  --fg-muted: #9aa1a9;
-  --fg-subtle: #6b737b;
+  --fg: #f2f3f5;
+  --fg-muted: #9a9ba3;
+  --fg-subtle: #66676f;
   --fg-on-accent: #ffffff;
 
-  --accent: #5b78ff;
-  --accent-hover: #7a91ff;
-  --accent-soft: rgba(91, 120, 255, 0.16);
-  --accent-fg: #93a8ff;
+  --accent: #5e6ad2;
+  --accent-hover: #7b78e0;
+  --accent-soft: rgba(94, 106, 210, 0.16);
+  --accent-fg: #9d9bef;
+  --accent-glow: #8b5cf6;
 
-  --success: #2fa96a;
-  --success-soft: rgba(47, 169, 106, 0.16);
-  --warning: #d99a2b;
-  --warning-soft: rgba(217, 154, 43, 0.16);
-  --danger: #ef5350;
-  --danger-soft: rgba(239, 83, 80, 0.15);
+  --success: #3ecf8e;
+  --success-soft: rgba(62, 207, 142, 0.14);
+  --warning: #f5a623;
+  --warning-soft: rgba(245, 166, 35, 0.14);
+  --danger: #f56565;
+  --danger-soft: rgba(245, 101, 101, 0.13);
 
-  --ring: rgba(91, 120, 255, 0.45);
+  --overlay: rgba(0, 0, 0, 0.6);
+
+  --ring: rgba(94, 106, 210, 0.45);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -8px rgba(0, 0, 0, 0.6);
   --shadow-lg:
     0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 48px -12px rgba(0, 0, 0, 0.75);
-  --shadow-accent:
-    0 1px 2px rgba(0, 0, 0, 0.5), 0 6px 18px -6px rgba(91, 120, 255, 0.6);
+  --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.5),
+    0 8px 24px -6px rgba(94, 106, 210, 0.45);
 
-  --grid-line: rgba(233, 235, 237, 0.045);
-  --grid-line-strong: rgba(233, 235, 237, 0.07);
+  --background: var(--bg);
+  --foreground: var(--fg);
+  --card: var(--surface);
+  --card-foreground: var(--fg);
+  --popover: var(--surface);
+  --popover-foreground: var(--fg);
+  --primary: var(--accent);
+  --primary-foreground: var(--fg-on-accent);
+  --secondary: var(--surface-hover);
+  --secondary-foreground: var(--fg);
+  --muted: var(--bg-subtle);
+  --muted-foreground: var(--fg-muted);
+  --accent-shadcn: var(--surface-hover);
+  --accent-shadcn-foreground: var(--fg);
+  --destructive: var(--danger);
+  --destructive-foreground: #ffffff;
+  --input: var(--border);
+
+  --sidebar: var(--bg-subtle);
+  --sidebar-foreground: var(--fg);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: var(--fg-on-accent);
+  --sidebar-accent: var(--surface-hover);
+  --sidebar-accent-foreground: var(--fg);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 @theme inline {
@@ -198,6 +275,7 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
   --color-accent-fg: var(--accent-fg);
+  --color-accent-glow: var(--accent-glow);
 
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
@@ -205,6 +283,8 @@
   --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+
+  --color-overlay: var(--overlay);
 
   --font-display: var(--font-display);
   --font-sans: var(--font-sans);
@@ -214,6 +294,44 @@
   --shadow-e2: var(--shadow-md);
   --shadow-e3: var(--shadow-lg);
   --shadow-accent: var(--shadow-accent);
+
+  /* Locked 3-value radius scale — controls, panels, pills. Don't add a 4th. */
+  --radius-control: 8px;
+  --radius-panel: 14px;
+
+  /* shadcn/ui token wiring (Tailwind v4 CSS-first `@theme`) */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-shadcn: var(--accent-shadcn);
+  --color-accent-shadcn-foreground: var(--accent-shadcn-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────── */
@@ -234,14 +352,11 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* ── Atmosphere: the drafting field ───────────────────────────────────────
+/* ── Atmosphere ────────────────────────────────────────────────────────────
  *
- * A fixed 32px graph-paper grid with a 128px major division, plus one soft
- * cobalt bloom anchored to the top-left corner where the app chrome starts
- * (not a centred hero glow). This is the single atmospheric layer in the
- * product and it lives *behind* everything at ~5% contrast: cards, tables and
- * form rows all paint opaque surfaces on top, so it never competes with data.
- * It reads as the drawing board the console is bolted to.
+ * One quiet two-stop glow anchored top-center, well under the opacity of
+ * anything it sits behind — depth comes from surface tint-shift
+ * (bg → bg-subtle → surface → surface-hover), not texture or shadow.
  */
 body::before {
   content: "";
@@ -249,25 +364,12 @@ body::before {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image:
-    radial-gradient(
-      60rem 32rem at 0% 0%,
-      var(--accent-soft),
-      transparent 70%
-    ),
-    linear-gradient(var(--grid-line-strong) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line-strong) 1px, transparent 1px),
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size:
-    100% 100%,
-    128px 128px,
-    128px 128px,
-    32px 32px,
-    32px 32px;
-  /* Fade the field out toward the bottom so long tables end on clean paper. */
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%);
+  background-image: radial-gradient(
+    64rem 34rem at 50% -12%,
+    var(--accent-glow),
+    transparent 70%
+  );
+  opacity: 0.05;
 }
 
 /* Everything the user interacts with sits above the field. */
@@ -276,15 +378,11 @@ body > * {
   z-index: 1;
 }
 
-/* Chrome type is condensed and engineered; body copy is not. Headings, nav,
- * buttons and micro-labels use --font-display, set slightly open rather than
- * tight because a condensed face needs air at small sizes. */
 h1,
 h2,
 h3,
 h4 {
   font-family: var(--font-display);
-  letter-spacing: 0.005em;
   font-weight: 600;
 }
 
@@ -302,7 +400,7 @@ h4 {
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: var(--radius-control);
 }
 
 /* Scrollbars follow the theme instead of showing the OS default light bar
@@ -380,6 +478,24 @@ h4 {
 }
 .skeleton {
   background: var(--bg-subtle);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   animation: lumi-pulse 1.6s ease-in-out infinite;
+}
+
+/* Signature element: a breathing pulse glow on genuinely-live status
+ * indicators (bot online, a shard actually reporting, panic mode armed).
+ * The animation is a live signal, not decoration — used sparingly. */
+@keyframes lumi-pulse-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+.pulse-live {
+  animation: lumi-pulse-glow 2.4s var(--ease-out) infinite;
 }

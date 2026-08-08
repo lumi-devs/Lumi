@@ -8,10 +8,6 @@ import { isRateLimited } from "#/lib/rate-limit";
 import { runAction } from "#/lib/action-result";
 import type { ActionResult } from "./guild-actions";
 
-// dashboard.md §5: every action here re-checks `session.isBotOwner` — the
-// "Bot Owner Privilege Escalation" mitigation — regardless of what route the
-// caller reached the action from.
-
 async function guardedSystemAction() {
   const session = await requireBotOwner();
   if (await isRateLimited(`system-action:${session.userId}`, 60, 60_000)) {
@@ -29,6 +25,21 @@ export async function setMaintenanceMode(
     await rpcCall(RPC_ACTIONS.systemMaintenanceSet, {
       actorId: session.userId,
       data: { maintenanceMode, maintenanceMessage },
+    });
+    revalidatePath("/system");
+    return { ok: true };
+  });
+}
+
+export async function setBotIdentity(
+  inviteUrl: string | null,
+  supportGuildId: string | null,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await guardedSystemAction();
+    await rpcCall(RPC_ACTIONS.systemIdentitySet, {
+      actorId: session.userId,
+      data: { inviteUrl, supportGuildId },
     });
     revalidatePath("/system");
     return { ok: true };

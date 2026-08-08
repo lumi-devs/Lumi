@@ -1,25 +1,25 @@
 import { requireBotOwner } from "#/lib/auth-guards";
 import { SiteHeader } from "#/components/layout/site-header";
 import { SystemSidebar } from "#/components/layout/system-sidebar";
+import { SidebarInset, SidebarProvider } from "#/components/ui/sidebar";
 
 export default async function SystemLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // dashboard.md §8: Bot Owner and Server Owner tiers are completely
-  // separated at the route level — this 404s (never 403s, to avoid
-  // confirming the route's existence to a non-owner) anyone the worker's
-  // `auth.whoami` didn't recognize as a bot owner.
+  // 404s rather than 403s, so a non-owner can't confirm the route exists.
   const session = await requireBotOwner();
 
   return (
-    <>
-      <SiteHeader session={session} />
-      <div className="mx-auto flex max-w-[88rem] flex-col gap-6 px-4 pt-5 pb-28 md:flex-row md:gap-8 md:px-6">
-        <SystemSidebar />
-        <main className="min-w-0 flex-1">{children}</main>
-      </div>
-    </>
+    <SidebarProvider>
+      <SystemSidebar />
+      <SidebarInset>
+        <SiteHeader session={session} withSidebarTrigger />
+        <div className="mx-auto w-full min-w-0 max-w-[88rem] flex-1 px-4 pt-5 pb-28 md:px-6">
+          {children}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

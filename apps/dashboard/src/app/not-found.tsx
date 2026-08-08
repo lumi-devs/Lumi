@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, FileQuestion } from "lucide-react";
 import { Card } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
-import { buttonVariants } from "#/components/ui/button";
+import { buttonVariants } from "#/components/ui/button-variants";
 
 export default function NotFound() {
   return (

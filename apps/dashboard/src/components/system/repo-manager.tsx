@@ -25,7 +25,6 @@ import { ActionError } from "#/components/action-error";
 import type { DownloaderRepoView } from "#/lib/dashboard-data";
 import { cn, deriveRepoNameFromUrl } from "#/lib/utils";
 
-/** dashboard.md §9A `AddonGitRepoManagerTable` + `InstalledAddonsGrid`. */
 export function RepoManager({ repos: initial }: { repos: DownloaderRepoView[] }) {
   const [repos, setRepos] = useState(initial);
   const [name, setName] = useState("");
@@ -35,8 +34,6 @@ export function RepoManager({ repos: initial }: { repos: DownloaderRepoView[] })
   const [isPending, startTransition] = useTransition();
 
   function handleUrlBlur() {
-    // Only auto-fill while the user hasn't typed a name of their own -
-    // never clobber a manual edit.
     if (!name.trim() && url.trim()) {
       setName(deriveRepoNameFromUrl(url.trim()));
     }

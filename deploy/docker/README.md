@@ -121,7 +121,7 @@ Services are organized into distinct Compose **profiles** so you only run what y
 | `lumi-dev` | `development` | - | Interactive development container with live volume mounts and watch mode. |
 | `worker-scale` | `scale` | - | Additional worker replica (`LUMI_ROLE=worker`) claiming its own shard range. |
 | `scheduler` | `scale` | - | Task Scheduler managing BullMQ background tasks (`LUMI_ROLE=scheduler`, no WebSocket). |
-| `dashboard` | `dashboard` | `8080:8080` | Web Administration Dashboard UI. |
+| `dashboard` | `dashboard` | `8080:8080` | Web Administration Dashboard UI. **Not working yet** - see the note under [Execution & Operation Commands](#-execution--operation-commands). |
 | `postgres` | *(core)* | `127.0.0.1:5432:5432` | PostgreSQL 17 primary database server. |
 | `pgbouncer` | *(core)* | `127.0.0.1:6432:6432` | PgBouncer transaction-level connection pooler. |
 | `redis` | *(core)* | `127.0.0.1:6379:6379` | Redis 7 data store for entity caching and event streams. |
@@ -152,10 +152,10 @@ cp .env.example .env
 | `REDIS_PASSWORD` | `lumi` | Redis password authentication. |
 | `RABBITMQ_USER` | `lumi` | RabbitMQ username. |
 | `RABBITMQ_PASSWORD` | `lumi` | RabbitMQ password. |
-| `DASHBOARD_SESSION_SECRET` | - | Secret key for dashboard session cookies. |
+| `DASHBOARD_SESSION_SECRET` | - | NextAuth session JWT signing/encryption secret. |
 | `DISCORD_OAUTH2_CLIENT_ID` | - | OAuth2 Client ID for dashboard authentication. |
 | `DISCORD_OAUTH2_CLIENT_SECRET` | - | OAuth2 Client Secret for dashboard authentication. |
-| `DISCORD_OAUTH2_REDIRECT_URI` | - | OAuth2 Redirect URI for dashboard login. |
+| `AUTH_URL` | *(derived)* | Dashboard's externally visible origin. Only needed behind a proxy that rewrites the Host header. |
 | `DISCORD_PROXY_URL` | *(empty)* | Shared Discord REST proxy endpoint. Set to `http://nirn-proxy:8080` under the `scale` profile; leave empty for single-worker runs. |
 | `OTEL_ENABLED` | `true` | Enables OpenTelemetry tracing exporters. |
 | `GRAFANA_PASSWORD` | `admin` | Admin password for Grafana web UI. |
@@ -182,11 +182,16 @@ docker compose --profile development up
 
 ### 3. Scaled Production Stack
 
-Launch a second worker replica plus the Scheduler and Dashboard:
+Launch a second worker replica plus the Scheduler:
 
 ```bash
-docker compose --profile scale --profile dashboard up -d
+docker compose --profile scale up -d
 ```
+
+> [!WARNING]
+> The `dashboard` profile does not work yet. The shared `Dockerfile` `runner` target has no `next build` stage and copies source only, while the service runs `next start`, which needs a prebuilt `.next` - the container exits immediately with *"Could not find a production build in the '.next' directory"*. Run the dashboard outside Docker until that image stage exists; see [docs/dashboard.md](../../docs/dashboard.md#running-it).
+>
+> There is also no OAuth2 redirect-URI variable. NextAuth derives the callback from the request; register `<dashboard-origin>/api/auth/callback/discord` on your Discord application.
 
 ### 4. Stopping Containers
 

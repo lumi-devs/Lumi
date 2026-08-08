@@ -1,7 +1,14 @@
 import { Module, DefineModule } from "#lib/module-system/Module.js";
 import { container } from "@sapphire/framework";
 import { registerRpcHandler, rpcHandlers } from "#lib/rabbitmq/index.js";
-import { RPC_ACTIONS, WARN_THRESHOLD_ACTIONS } from "@lumi/contracts";
+import {
+  APPEAL_REVIEW_STATUSES,
+  APPEAL_STATUSES,
+  RPC_ACTIONS,
+  WARN_THRESHOLD_ACTIONS,
+} from "@lumi/contracts";
+import { verifyAppealToken } from "#lib/appeals/token.js";
+import type { ModerationCase } from "@prisma/client";
 import { s, type BaseValidator } from "@sapphire/shapeshift";
 import { getService, tryGetService } from "#lib/module-system/Service.js";
 import { checkModulesEnabled } from "#lib/module-check.js";
@@ -223,6 +230,45 @@ const BlocklistRemoveSchema = s.object({
   userId: SnowflakeSchema,
 });
 
+const ModNoteListSchema = s.object({
+  userId: SnowflakeSchema,
+});
+
+const ModNoteAddSchema = s.object({
+  userId: SnowflakeSchema,
+  message: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(1000),
+});
+
+const ModNoteRemoveSchema = s.object({
+  id: s.number().int().greaterThanOrEqual(1),
+});
+
+// Only ban/timeout cases are appealable - matches BanAction/MuteAction, the
+// only two call sites that ever DM an appeal link.
+const APPEALABLE_CASE_ACTIONS = new Set(["ban", "mute"]);
+
+const AppealVerifySchema = s.object({
+  caseId: s.number().int().greaterThanOrEqual(1),
+  token: s.string().lengthGreaterThanOrEqual(1),
+});
+
+const AppealSubmitSchema = s.object({
+  caseId: s.number().int().greaterThanOrEqual(1),
+  token: s.string().lengthGreaterThanOrEqual(1),
+  message: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(2000),
+});
+
+const AppealsListSchema = s.object({
+  status: s.enum(APPEAL_STATUSES).optional(),
+  page: PageSchema,
+  pageSize: PageSizeSchema,
+});
+
+const AppealReviewSchema = s.object({
+  id: s.number().int().greaterThanOrEqual(1),
+  status: s.enum(APPEAL_REVIEW_STATUSES),
+});
+
 const IgnoredChannelSchema = s.object({
   channelId: SnowflakeSchema.nullable(),
 });
@@ -234,6 +280,40 @@ const ModuleDataListSchema = s.object({
   page: PageSchema,
   pageSize: PageSizeSchema,
 });
+
+type AppealTokenResolution =
+  | { ok: false; reason: string }
+  | { ok: true; moderationCase: ModerationCase; userId: string };
+
+// Shared by `guild.appeals.verify` and `guild.appeals.submit` - re-run in
+// full on submission rather than trusting the earlier verify call, per the
+// "don't trust client state between the two" requirement: a token that
+// expired, or a case that was deleted, between page load and submit must
+// fail here too.
+async function resolveAppealToken(
+  guildId: string,
+  caseId: number,
+  token: string,
+): Promise<AppealTokenResolution> {
+  const payload = verifyAppealToken(token);
+  if (!payload || payload.guildId !== guildId || payload.caseId !== caseId) {
+    return { ok: false, reason: "This appeal link is invalid or has expired." };
+  }
+
+  const moderationCase = await container.db.moderation.getModerationCaseById(caseId);
+  if (
+    !moderationCase ||
+    moderationCase.guildId !== guildId ||
+    moderationCase.userId !== payload.userId
+  ) {
+    return { ok: false, reason: "This appeal link is invalid or has expired." };
+  }
+  if (!APPEALABLE_CASE_ACTIONS.has(moderationCase.action)) {
+    return { ok: false, reason: "This case can't be appealed." };
+  }
+
+  return { ok: true, moderationCase, userId: payload.userId };
+}
 
 function paginate(filter: { page?: number; pageSize?: number }) {
   const page = filter.page ?? 1;
@@ -299,9 +379,17 @@ export class DashboardModule extends Module {
         };
       });
 
+      const botRoleId = guild.members.me?.roles.highest.id;
       const roles = guild.roles.cache
         .filter((r) => r.id !== guild.id)
-        .map((r) => ({ id: r.id, name: r.name, color: r.color }))
+        .map((r) => ({
+          id: r.id,
+          name: r.name,
+          color: r.color,
+          position: r.position,
+          permissions: r.permissions.bitfield.toString(),
+          isBotRole: r.id === botRoleId,
+        }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
       const channels = guild.channels.cache
@@ -912,6 +1000,180 @@ export class DashboardModule extends Module {
       return { success: true, userId };
     });
 
+    registerRpcHandler(RPC_ACTIONS.guildModNotesList, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      await requireGuildManager(guildId, req.actorId);
+      const { userId } = parsePayload(ModNoteListSchema, req.data);
+      const notes = await container.db.modNotes.listForUser(guildId, userId);
+
+      return {
+        notes: notes.map((n) => ({
+          id: n.id,
+          userId: n.userId,
+          authorId: n.authorId,
+          message: n.message,
+          createdAt: n.createdAt.toISOString(),
+        })),
+      };
+    });
+
+    registerRpcHandler(RPC_ACTIONS.guildModNotesAdd, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      const actorId = await requireGuildManager(guildId, req.actorId);
+      const { userId, message } = parsePayload(ModNoteAddSchema, req.data);
+
+      await container.db.ensureGuild(guildId);
+      const note = await container.db.modNotes.create(
+        guildId,
+        userId,
+        actorId,
+        message,
+      );
+      return {
+        success: true,
+        note: {
+          id: note.id,
+          userId: note.userId,
+          authorId: note.authorId,
+          message: note.message,
+          createdAt: note.createdAt.toISOString(),
+        },
+      };
+    });
+
+    registerRpcHandler(RPC_ACTIONS.guildModNotesRemove, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      await requireGuildManager(guildId, req.actorId);
+      const { id } = parsePayload(ModNoteRemoveSchema, req.data);
+      const deleted = await container.db.modNotes.delete(guildId, id);
+      return { success: true, deleted };
+    });
+
+    // Public, unauthenticated: reachable by a punished user with no dashboard
+    // access at all. Authorization is the signed token, not `actorId`/session.
+    registerRpcHandler(RPC_ACTIONS.guildAppealsVerify, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      const { caseId, token } = parsePayload(AppealVerifySchema, req.data);
+
+      const resolved = await resolveAppealToken(guildId, caseId, token);
+      if (!resolved.ok) return { valid: false, reason: resolved.reason };
+
+      const existing = await container.db.appeals.findByCaseId(caseId);
+      return {
+        valid: true,
+        case: {
+          caseNumber: resolved.moderationCase.caseNumber,
+          action: resolved.moderationCase.action,
+          reason: resolved.moderationCase.reason,
+          createdAt: resolved.moderationCase.createdAt.toISOString(),
+        },
+        existingStatus: existing?.status ?? null,
+      };
+    });
+
+    // Public, unauthenticated - see guildAppealsVerify above.
+    registerRpcHandler(RPC_ACTIONS.guildAppealsSubmit, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      const { caseId, token, message } = parsePayload(
+        AppealSubmitSchema,
+        req.data,
+      );
+
+      const resolved = await resolveAppealToken(guildId, caseId, token);
+      if (!resolved.ok) throw new Error(resolved.reason);
+
+      const existing = await container.db.appeals.findByCaseId(caseId);
+      if (existing) {
+        throw new Error("An appeal has already been submitted for this case.");
+      }
+
+      await container.db.ensureGuild(guildId);
+      const appeal = await container.db.appeals.create(
+        guildId,
+        resolved.userId,
+        caseId,
+        message,
+      );
+      return {
+        success: true,
+        appeal: {
+          id: appeal.id,
+          status: appeal.status,
+          createdAt: appeal.createdAt.toISOString(),
+        },
+      };
+    });
+
+    registerRpcHandler(RPC_ACTIONS.guildAppealsList, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      await requireGuildManager(guildId, req.actorId);
+      const filter = parsePayload(AppealsListSchema, req.data ?? {});
+      const { page, pageSize, skip, take } = paginate(filter);
+
+      const { appeals, total } = await container.db.appeals.listForGuild(
+        guildId,
+        { status: filter.status, skip, take },
+      );
+      const cases = await Promise.all(
+        appeals.map((a) => container.db.moderation.getModerationCaseById(a.caseId)),
+      );
+
+      return {
+        appeals: appeals.map((a, i) => ({
+          id: a.id,
+          guildId: a.guildId,
+          userId: a.userId,
+          caseId: a.caseId,
+          caseNumber: cases[i]?.caseNumber ?? 0,
+          action: cases[i]?.action ?? "unknown",
+          status: a.status,
+          message: a.message,
+          reviewedBy: a.reviewedBy,
+          reviewedAt: a.reviewedAt?.toISOString() ?? null,
+          createdAt: a.createdAt.toISOString(),
+        })),
+        total,
+        page,
+        pageSize,
+      };
+    });
+
+    registerRpcHandler(RPC_ACTIONS.guildAppealsReview, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      const actorId = await requireGuildManager(guildId, req.actorId);
+      const { id, status } = parsePayload(AppealReviewSchema, req.data);
+
+      const appeal = await container.db.appeals.review(
+        guildId,
+        id,
+        status,
+        actorId,
+      );
+      if (!appeal) throw new Error(`Appeal #${id} not found`);
+
+      if (
+        status === "denied_blacklisted" &&
+        !(await container.db.access.isUserBlocklisted(appeal.userId, guildId))
+      ) {
+        await container.db.access.addBlocklistEntry(
+          appeal.userId,
+          actorId,
+          "Appeal denied — blacklisted",
+          guildId,
+        );
+      }
+
+      return {
+        success: true,
+        appeal: {
+          id: appeal.id,
+          status: appeal.status,
+          reviewedBy: appeal.reviewedBy,
+          reviewedAt: appeal.reviewedAt?.toISOString() ?? null,
+        },
+      };
+    });
+
     registerRpcHandler(RPC_ACTIONS.guildAfkList, async (req) => {
       const guildId = requireGuildId(req.guildId);
       await requireGuildManager(guildId, req.actorId);
@@ -1020,6 +1282,13 @@ export class DashboardModule extends Module {
     rpcHandlers.delete(RPC_ACTIONS.guildBlocklistList);
     rpcHandlers.delete(RPC_ACTIONS.guildBlocklistAdd);
     rpcHandlers.delete(RPC_ACTIONS.guildBlocklistRemove);
+    rpcHandlers.delete(RPC_ACTIONS.guildModNotesList);
+    rpcHandlers.delete(RPC_ACTIONS.guildModNotesAdd);
+    rpcHandlers.delete(RPC_ACTIONS.guildModNotesRemove);
+    rpcHandlers.delete(RPC_ACTIONS.guildAppealsVerify);
+    rpcHandlers.delete(RPC_ACTIONS.guildAppealsSubmit);
+    rpcHandlers.delete(RPC_ACTIONS.guildAppealsList);
+    rpcHandlers.delete(RPC_ACTIONS.guildAppealsReview);
     rpcHandlers.delete(RPC_ACTIONS.guildAfkList);
     rpcHandlers.delete(RPC_ACTIONS.guildIgnoredList);
     rpcHandlers.delete(RPC_ACTIONS.guildIgnoredAdd);

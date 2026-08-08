@@ -105,16 +105,22 @@ The dashboard needs its own OAuth2 app credentials (can be the same Discord appl
 DASHBOARD_SESSION_SECRET=$(openssl rand -hex 32)
 DISCORD_OAUTH2_CLIENT_ID=<same as CLIENT_ID, or a separate app>
 DISCORD_OAUTH2_CLIENT_SECRET=<from OAuth2 tab>
-DISCORD_OAUTH2_REDIRECT_URI=http://localhost:8080/callback
 ```
 
-Register `http://localhost:8080/callback` as a valid redirect under **OAuth2 → Redirects** in the Developer Portal, then:
+There is no redirect-URI variable - NextAuth derives the callback from the request. Register `http://localhost:8080/api/auth/callback/discord` as a valid redirect under **OAuth2 → Redirects** in the Developer Portal.
+
+> [!WARNING]
+> The `dashboard` Docker Compose profile does **not** work yet. The shared `Dockerfile` `runner` target has no `next build` stage and copies source only, while the Compose service runs `next start`, which needs a prebuilt `.next`. The container exits immediately with *"Could not find a production build in the '.next' directory"*.
+
+Run it directly instead:
 
 ```bash
-docker compose --profile dashboard up -d dashboard
+bun run --cwd apps/dashboard dev          # development
+# or
+bun run --cwd apps/dashboard build && bun run --cwd apps/dashboard start
 ```
 
-Visit `http://localhost:8080`.
+Visit `http://localhost:8080`. The `worker` and RabbitMQ must be up, or every page that reads data fails its RPC call. Details: [Dashboard Reference](dashboard.md).
 
 ## 7. Optional: metrics and tracing
 
@@ -152,6 +158,7 @@ Automate this with a cron job or your platform's volume-snapshot mechanism (`pos
 | Worker exits immediately on boot | Missing/invalid `BOT_TOKEN` or `CLIENT_ID` - check the container logs, or re-run `bun run setup` to re-verify the token. |
 | Worker starts but no slash commands appear | First registration can take up to an hour globally; test in a guild-scoped context for faster iteration, or check `docker compose logs worker` for registration errors. |
 | `worker` can't reach Postgres | `pgbouncer` and `postgres` both need `condition: service_healthy` before `worker` starts - `docker compose ps` should show both `healthy`, not just `running`. |
-| Dashboard OAuth2 login fails | `DISCORD_OAUTH2_REDIRECT_URI` must exactly match a redirect registered on the Discord application, including scheme and trailing slash. |
+| Dashboard OAuth2 login fails | `<dashboard-origin>/api/auth/callback/discord` must be registered under **OAuth2 → Redirects** on the Discord application, matching scheme, host, and port exactly. There is no redirect-URI env var to set. |
+| `docker compose --profile dashboard` exits immediately | Expected - the profile isn't supported yet (no `next build` stage in the Dockerfile). Run the dashboard directly; see [§ 6](#6-optional-the-web-dashboard). |
 
 For anything not covered here, see [Architecture](architecture.md) for how the pieces fit together, or open a discussion on the [GitHub repo](https://github.com/lumi-devs/Lumi).

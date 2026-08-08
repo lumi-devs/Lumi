@@ -251,6 +251,57 @@ export interface BlocklistRemovePayload {
   userId: string;
 }
 
+export interface ModNoteListPayload {
+  userId: string;
+}
+
+export interface ModNoteAddPayload {
+  userId: string;
+  message: string;
+}
+
+export interface ModNoteRemovePayload {
+  id: number;
+}
+
+/** Reviewer-facing decisions - `pending` is the initial state, never set by a review call. */
+export const APPEAL_REVIEW_STATUSES = [
+  "approved",
+  "denied",
+  "denied_blacklisted",
+  "dismissed",
+] as const;
+
+export type AppealReviewStatus = (typeof APPEAL_REVIEW_STATUSES)[number];
+
+export const APPEAL_STATUSES = ["pending", ...APPEAL_REVIEW_STATUSES] as const;
+
+export type AppealStatus = (typeof APPEAL_STATUSES)[number];
+
+/** Public, unauthenticated - `token` is the signed link param, verified entirely server-side. */
+export interface AppealVerifyPayload {
+  caseId: number;
+  token: string;
+}
+
+/** Public, unauthenticated - re-verifies `token` before writing, same as `guild.appeals.verify`. */
+export interface AppealSubmitPayload {
+  caseId: number;
+  token: string;
+  message: string;
+}
+
+export interface AppealsListPayload {
+  status?: AppealStatus;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface AppealReviewPayload {
+  id: number;
+  status: AppealReviewStatus;
+}
+
 /** `channelId: null` targets the guild-wide ignore row rather than one channel. */
 export interface IgnoredChannelPayload {
   channelId: string | null;
@@ -362,6 +413,13 @@ export interface RpcRequestPayloads {
   "guild.blocklist.list": BlocklistListPayload;
   "guild.blocklist.add": BlocklistAddPayload;
   "guild.blocklist.remove": BlocklistRemovePayload;
+  "guild.modNotes.list": ModNoteListPayload;
+  "guild.modNotes.add": ModNoteAddPayload;
+  "guild.modNotes.remove": ModNoteRemovePayload;
+  "guild.appeals.verify": AppealVerifyPayload;
+  "guild.appeals.submit": AppealSubmitPayload;
+  "guild.appeals.list": AppealsListPayload;
+  "guild.appeals.review": AppealReviewPayload;
   "guild.afk.list": never;
   "guild.ignored.list": never;
   "guild.ignored.add": IgnoredChannelPayload;
@@ -426,6 +484,13 @@ export const RPC_ACTIONS = {
   guildBlocklistList: "guild.blocklist.list",
   guildBlocklistAdd: "guild.blocklist.add",
   guildBlocklistRemove: "guild.blocklist.remove",
+  guildModNotesList: "guild.modNotes.list",
+  guildModNotesAdd: "guild.modNotes.add",
+  guildModNotesRemove: "guild.modNotes.remove",
+  guildAppealsVerify: "guild.appeals.verify",
+  guildAppealsSubmit: "guild.appeals.submit",
+  guildAppealsList: "guild.appeals.list",
+  guildAppealsReview: "guild.appeals.review",
   guildAfkList: "guild.afk.list",
   guildIgnoredList: "guild.ignored.list",
   guildIgnoredAdd: "guild.ignored.add",

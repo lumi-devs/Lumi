@@ -111,6 +111,9 @@ flowchart TD
 | [`scheduler-deployment.yaml`](./scheduler-deployment.yaml) | `Deployment` | `scheduler` | Task scheduler managing BullMQ queues (uses `Recreate` deployment strategy). |
 | [`nirn-proxy-deployment.yaml`](./nirn-proxy-deployment.yaml) | `Deployment` + `Service` | `nirn-proxy` | Shared Discord REST rate-limit proxy for the worker fleet. |
 
+> [!NOTE]
+> **There is no dashboard manifest here.** `apps/dashboard` has no Kubernetes `Deployment` or `Service` in this directory, and the shared container image has no `next build` stage yet either (see [docs/dashboard.md](../../docs/dashboard.md#running-it)). `secret.example.yaml` carries `DISCORD_OAUTH2_CLIENT_SECRET` and `DASHBOARD_SESSION_SECRET` - the names `apps/dashboard/src/lib/env.ts` actually reads - so the Secret is ready when a manifest is added, but nothing in this directory consumes them today.
+
 ---
 
 ## 🚀 Deployment Sequence & Commands

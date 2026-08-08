@@ -5,11 +5,6 @@ import { isRateLimited } from "#/lib/rate-limit";
 import { Button } from "#/components/ui/button";
 import { Wordmark } from "#/components/layout/wordmark";
 
-// Branded replacement for the old server.ts `loginPage()` — same visual
-// intent (glow card, "Continue with Discord"), but the actual OAuth2
-// authorize redirect + state-param CSRF protection is now NextAuth's
-// Discord provider, not a hand-rolled `authorizeUrl()` + cookie (dashboard.md
-// §5D is handled by the library now).
 export default async function LoginPage() {
   const session = await auth();
   if (session) redirect("/");
@@ -17,7 +12,6 @@ export default async function LoginPage() {
   async function loginAction() {
     "use server";
     const ip = (await headers()).get("x-forwarded-for") ?? "unknown";
-    // dashboard.md §5F: max 10/min on the login/callback flow.
     if (await isRateLimited(`login:${ip}`, 10, 60_000)) {
       throw new Error("Too many login attempts — try again in a minute.");
     }
@@ -25,10 +19,8 @@ export default async function LoginPage() {
   }
 
   return (
-    // No radial glow blob, no gradient wordmark: a sign-in screen for an admin
-    // tool should look like a door, not a product launch. One card, one action.
     <main className="flex min-h-screen flex-col items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-6 shadow-e2">
+      <div className="w-full max-w-sm rounded-panel border border-border bg-surface p-6 shadow-e2">
         <Wordmark className="mb-5" />
         <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
           Sign in to Lumi

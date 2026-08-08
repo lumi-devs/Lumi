@@ -60,6 +60,8 @@ model Guild {
   permitAssignments PermitAssignment[]
   cases             ModerationCase[]
   caseCounter       GuildCaseCounter?
+  modNotes          ModNote[]
+  appeals           Appeal[]
   afkEntries        AfkEntry[]
   ignoreEntries     IgnoreEntry[]
   auditLedgers      AuditLedger[]
@@ -176,7 +178,8 @@ model ModerationCase {
   active      Boolean   @default(true)
   createdAt   DateTime  @default(now()) @map("created_at")
 
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  guild   Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  appeal  Appeal?
 
   @@unique([guildId, caseNumber], name: "uq_cases_guild_number")
   @@index([guildId, userId])
@@ -184,6 +187,44 @@ model ModerationCase {
   @@index([userId])
   @@index([guildId, active, expiresAt]) // expiry sweep
   @@map("moderation_cases")
+}
+
+// Ban/timeout appeal, submitted through a signed link DMed to the punished
+// user on punishment (see packages/core/src/lib/appeals/token.ts). One
+// appeal per case - a case that already has one is not appealable again.
+model Appeal {
+  id         Int       @id @default(autoincrement())
+  guildId    String    @map("guild_id")   @db.VarChar(20)
+  userId     String    @map("user_id")    @db.VarChar(20)
+  caseId     Int       @unique @map("case_id")
+  status     String    @default("pending") @db.VarChar(24) // pending | approved | denied | denied_blacklisted | dismissed
+  message    String    @db.VarChar(2000)
+  reviewedBy String?   @map("reviewed_by") @db.VarChar(20)
+  reviewedAt DateTime? @map("reviewed_at")
+  createdAt  DateTime  @default(now())     @map("created_at")
+
+  guild Guild          @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  case  ModerationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, status])
+  @@index([userId])
+  @@map("appeals")
+}
+
+// Persistent staff-only note on a member, separate from warns/cases - never
+// shown to the member and not counted toward warn thresholds.
+model ModNote {
+  id        Int      @id @default(autoincrement())
+  guildId   String   @map("guild_id")  @db.VarChar(20)
+  userId    String   @map("user_id")   @db.VarChar(20)
+  authorId  String   @map("author_id") @db.VarChar(20)
+  message   String   @db.VarChar(1000)
+  createdAt DateTime @default(now())   @map("created_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, userId])
+  @@map("mod_notes")
 }
 
 // Nullable guildId: null = global blocklist. Partial unique index handles dedup.

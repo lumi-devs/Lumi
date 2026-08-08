@@ -5,14 +5,13 @@ import { Input, Select } from "#/components/ui/input";
 import { Switch } from "#/components/ui/switch";
 import type { DashboardRoleView, DashboardChannelView } from "#/lib/dashboard-data";
 
-/** Channel types shown when a CHANNEL field doesn't declare its own `channelTypes` restriction. */
 const DEFAULT_PICKABLE_CHANNEL_TYPES = new Set([0, 2, 5, 13, 15, 16]);
 
 function channelOptionsFor(
   field: ConfigField,
   channels: DashboardChannelView[],
 ): DashboardChannelView[] {
-  const allow = field.channelTypes as number[] | undefined;
+  const allow = field.channelTypes;
   return channels.filter((c) =>
     allow && allow.length > 0
       ? allow.includes(c.type)
@@ -20,7 +19,6 @@ function channelOptionsFor(
   );
 }
 
-/** Renders the right control for a `ConfigField`, mirroring the old `fieldInput()` switch in views.ts. */
 export function ConfigFieldInput({
   field,
   value,
@@ -122,8 +120,6 @@ export function ConfigFieldInput({
       const shown = Array.isArray(value)
         ? value.join(", ")
         : ((value as string | undefined) ?? "");
-      // Snowflake IDs are long digit strings — mono keeps them scannable and
-      // stops them from looking like prose in the middle of a settings list.
       const isSnowflake = field.type === FieldType.USER;
       return (
         <Input

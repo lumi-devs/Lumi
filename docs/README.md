@@ -8,6 +8,7 @@ Engineering documentation for **Lumi** - a modular, self-hosted Discord bot fram
 | :--- | :--- |
 | [Architecture & System Topology](architecture.md) | Process roles (`worker`, `scheduler`, `dashboard`), the Redis Streams event bus, sharding/clustering, database layer, command registration leader election, observability. |
 | [Configuration Reference](configuration.md) | Every environment variable, Docker Compose service, and Kubernetes manifest. |
+| [Dashboard Reference](dashboard.md) | `apps/dashboard`: App Router route inventory, the RabbitMQ RPC bridge and its 50 actions, read vs. mutation paths, NextAuth v5 + the authz cache and route guards, the CSP nonce middleware, design tokens. |
 | [Modules & Features](modules.md) | The nine built-in modules, plus a deep dive into the security suite (anti-nuke, join-gate, verification, panic mode, filter heat escalation). |
 | [Quick Start: Your First Addon](QUICK_START_ADDON.md) | Fastest path from a clean checkout to a working `/slash` command, using `bun run addon:create`. |
 | [Module Creation Guide](GUIDE_MODULE_CREATION.md) | Step-by-step: config schema, commands, listeners, services, interaction handlers, scheduled tasks, persistence, i18n - built around a full walkthrough of the real `afk` module. |

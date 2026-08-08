@@ -11,7 +11,7 @@ import {
   Volume2,
   type LucideIcon,
 } from "lucide-react";
-import { buttonVariants } from "#/components/ui/button";
+import { buttonVariants } from "#/components/ui/button-variants";
 import { env } from "#/lib/env";
 
 const FEATURES: { icon: LucideIcon; title: string; desc: string }[] = [
@@ -47,16 +47,6 @@ const FEATURES: { icon: LucideIcon; title: string; desc: string }[] = [
   },
 ];
 
-/**
- * Public landing page — dashboard.md §4. Served at `/` for anyone not signed in.
- *
- * Deliberately restrained: this is the front door of a self-hosted admin tool,
- * so it previews the product rather than performing at the reader. Removed in
- * this pass: the centred gradient-text hero, the emoji-per-feature card grid,
- * and the ✅/❌ "how Lumi compares to MEE6/Dyno/YAGPDB" table — competitor
- * checkmark tables are marketing furniture that no self-hosted admin panel
- * needs, and emoji ticks in a table are a strong template tell.
- */
 export function LandingPage() {
   const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${env.discordClientId}&permissions=8&scope=bot%20applications.commands`;
 
@@ -113,7 +103,7 @@ export function LandingPage() {
         <div className="mt-5 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map(({ icon: Icon, title, desc }) => (
             <div key={title} className="flex gap-3">
-              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-fg-muted">
+              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-control border border-border bg-surface text-fg-muted">
                 <Icon className="size-3.5" aria-hidden />
               </span>
               <div>
@@ -129,7 +119,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-surface px-5 py-4">
+      <section className="flex flex-wrap items-center gap-4 rounded-panel border border-border bg-surface px-5 py-4">
         <SlidersHorizontal className="size-4 shrink-0 text-fg-subtle" aria-hidden />
         <p className="min-w-0 flex-1 text-[13px] text-fg-muted">
           Already running Lumi? Sign in with Discord to manage any server where

@@ -1,15 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import { cn } from "#/lib/utils";
 
-/**
- * The one empty state for the whole app. Previously every list invented its
- * own ("No addon repositories configured." as a bare grey `<p>`, a TODO
- * badge, a centered emoji), so nothing looked deliberate and none of them
- * told you what to do next.
- *
- * Rules: a bordered icon tile (never a bare emoji), one sentence of what's
- * missing, one sentence of why/what to do, and an optional action.
- */
+// The one empty state for the whole app: a bordered icon tile (never a bare
+// emoji), one sentence of what's missing, one of what to do, optional action.
 export function EmptyState({
   icon: Icon,
   title,
@@ -36,7 +29,7 @@ export function EmptyState({
         className,
       )}
     >
-      <div className="flex size-9 items-center justify-center rounded-lg border border-border bg-bg-subtle text-fg-subtle">
+      <div className="flex size-9 items-center justify-center rounded-control border border-border bg-bg-subtle text-fg-subtle">
         <Icon className="size-4" aria-hidden />
       </div>
       <div className="max-w-sm">
