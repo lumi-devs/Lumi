@@ -14,6 +14,7 @@ import {
   StickyNote,
   TriangleAlert,
   Volume2,
+  Wand2,
   Wrench,
 } from "lucide-react";
 
@@ -35,6 +36,7 @@ export function guildTopLinks(guildId: string): GuildNavLink[] {
   return [
     { href: base, label: "General", icon: Settings },
     { href: `${base}/modules`, label: "Modules", icon: LayoutGrid },
+    { href: `${base}/setup`, label: "Guided Setup", icon: Wand2 },
   ];
 }
 

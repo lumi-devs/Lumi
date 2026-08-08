@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import {
   RPC_ACTIONS,
   type GuildSettingsPayload,
+  type GuildSetupRunResult,
   type PermitKind,
   type PermitTargetType,
 } from "@lumi/contracts";
@@ -54,6 +55,23 @@ export async function setGuildConfigField(
     });
     revalidatePath(`/guild/${guildId}/modules/${moduleName}`);
     return { ok: true };
+  });
+}
+
+export async function runGuildSetup(
+  guildId: string,
+): Promise<ActionResult & { result?: GuildSetupRunResult }> {
+  return runAction(async () => {
+    const session = await guardedAction(guildId);
+    const result = (await rpcCall(RPC_ACTIONS.guildSetupRun, {
+      guildId,
+      actorId: session.userId,
+    })) as GuildSetupRunResult;
+    revalidatePath(`/guild/${guildId}`);
+    revalidatePath(`/guild/${guildId}/modules/security`);
+    revalidatePath(`/guild/${guildId}/modules/mod`);
+    revalidatePath(`/guild/${guildId}/setup`);
+    return { ok: true, result };
   });
 }
 

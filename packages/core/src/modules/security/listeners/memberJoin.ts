@@ -1,11 +1,10 @@
 import { Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
-import { Colors, type GuildMember } from "discord.js";
+import { Colors, roleMention, type GuildMember } from "discord.js";
 import { userMention } from "@discordjs/formatters";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetService } from "#lib/module-system/Service.js";
-
-const HOUR_MS = 60 * 60 * 1000;
+import { isSuspiciousAccount } from "../lib/suspicious.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "securityMemberJoin",
@@ -21,24 +20,25 @@ export class SecurityMemberJoinListener extends ModuleListener<
     if (!security) return;
 
     const verification = await security.loadVerificationConfig(member.guild.id);
-    if (verification.enabled) {
+    if (
+      verification.enabled &&
+      (verification.target === "everyone" || isSuspiciousAccount(member.user))
+    ) {
       await security.assignPending(member, verification);
     }
 
     const config = await security.loadJoinGateConfig(member.guild.id);
     if (!config.enabled) return;
 
-    if (config.minAccountAgeHours > 0) {
-      const ageMs = Date.now() - member.user.createdTimestamp;
-      if (ageMs < config.minAccountAgeHours * HOUR_MS) {
-        await security.applyGateAction(
-          member.guild,
-          member.id,
-          config.raidAction,
-          `Join gate: account younger than ${config.minAccountAgeHours}h`,
-        );
-        return;
-      }
+    const filterResult = security.evaluateJoinFilters(member, config);
+    if (filterResult) {
+      await security.applyGateAction(
+        member.guild,
+        member.id,
+        filterResult.action,
+        `Join gate: ${filterResult.triggered.join(", ")}`,
+      );
+      if (filterResult.action !== "log") return;
     }
 
     const raidStarted = await security.recordJoin(member.guild.id, config);
@@ -47,6 +47,7 @@ export class SecurityMemberJoinListener extends ModuleListener<
         `[security] Raid mode activated in ${member.guild.id}: ${config.raidJoinCount}+ joins in ${config.raidWindowSeconds}s`,
       );
       const logService = tryGetService("guild-log");
+      const warnMentions = config.raidWarnRoleIds.map((id) => roleMention(id)).join(" ");
       await logService?.dispatch({
         guildId: member.guild.id,
         moduleName: "security",
@@ -55,16 +56,28 @@ export class SecurityMemberJoinListener extends ModuleListener<
         actorId: this.container.client.user?.id ?? member.id,
         reason: `${config.raidJoinCount}+ joins within ${config.raidWindowSeconds}s - gating joiners (${config.raidAction}). Latest: ${userMention(member.id)}`,
         color: Colors.Red,
+        extra: warnMentions ? { "Notify": warnMentions } : undefined,
       });
     }
 
     if (await security.isRaidActive(member.guild.id)) {
-      await security.applyGateAction(
-        member.guild,
-        member.id,
-        config.raidAction,
-        "Join gate: raid mode active",
-      );
+      // Compare against joiners recorded *before* this one - checked first, tracked after.
+      const shouldGate =
+        config.raidAccountType === "all" ||
+        (await security.isSuspiciousJoiner(member, config));
+      if (shouldGate) {
+        await security.applyGateAction(
+          member.guild,
+          member.id,
+          config.raidAction,
+          "Join gate: raid mode active",
+        );
+      }
     }
+
+    await security.recordRecentJoiner(member.guild.id, {
+      username: member.user.username,
+      createdTimestamp: member.user.createdTimestamp,
+    });
   }
 }

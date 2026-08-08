@@ -1,6 +1,7 @@
 import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleVerifySweepFire } from "./lib/verify-sweep-handler.js";
+import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
 
 @DefineModule({
   name: "security",
@@ -81,6 +82,39 @@ import { handleVerifySweepFire } from "./lib/verify-sweep-handler.js";
       min: 1,
       max: 50,
     }),
+    max_vanity_changes: cfg.number({
+      group: "Nuke Limits",
+      label: "Max Vanity URL Changes",
+      description: "Vanity invite code changes allowed per executor within the window.",
+      default: 1,
+      min: 1,
+      max: 10,
+    }),
+    max_permission_grants: cfg.number({
+      group: "Nuke Limits",
+      label: "Max Dangerous Permission Grants",
+      description:
+        "Times @everyone can be granted a dangerous permission (Administrator, Manage Roles, etc.) per executor within the window before response fires. The grant itself is always reverted immediately.",
+      default: 1,
+      min: 1,
+      max: 10,
+    }),
+    max_quarantine_bypass: cfg.number({
+      group: "Nuke Limits",
+      label: "Max Quarantine Bypass Attempts",
+      description:
+        "Times an executor can attempt to change a quarantined member's roles per executor within the window before response fires. The change itself is always reverted immediately.",
+      default: 1,
+      min: 1,
+      max: 10,
+    }),
+    panic_lock_mod_commands: cfg.boolean({
+      group: "Panic Mode",
+      label: "Lock Mod Commands During Panic",
+      description:
+        "While panic mode is active, only the server owner or whoever triggered it may run moderation commands.",
+      default: false,
+    }),
     joingate_enabled: cfg.boolean({
       group: "Join Gate",
       label: "Join Gate",
@@ -117,6 +151,82 @@ import { handleVerifySweepFire } from "./lib/verify-sweep-handler.js";
       description: "Action applied to gated joiners during a raid.",
       default: "kick",
     }),
+    raid_account_type: cfg.enum(["all", "suspicious"], {
+      group: "Join Gate",
+      label: "Raid Response Scope",
+      description:
+        "Apply the raid action to every joiner, or only ones flagged suspicious (no avatar, low account age, similar username to a recent joiner, or bulk-created).",
+      default: "all",
+    }),
+    raid_warn_role_ids: cfg.string({
+      group: "Join Gate",
+      label: "Raid Warn Roles",
+      description:
+        "Comma-separated role IDs mentioned in the log message when raid mode activates.",
+      list: true,
+    }),
+    filter_no_avatar_enabled: cfg.boolean({
+      group: "Join Gate Filters",
+      label: "Filter: No Avatar",
+      description: "Flag members who have never set a custom avatar.",
+      default: false,
+    }),
+    filter_no_avatar_action: cfg.enum(["log", "kick", "timeout", "quarantine"], {
+      group: "Join Gate Filters",
+      label: "No Avatar Action",
+      description: "Action taken when the no-avatar filter trips.",
+      default: "log",
+    }),
+    filter_min_age_enabled: cfg.boolean({
+      group: "Join Gate Filters",
+      label: "Filter: Min Account Age",
+      description: "Flag accounts younger than the configured age.",
+      default: false,
+    }),
+    filter_min_age_hours: cfg.number({
+      group: "Join Gate Filters",
+      label: "Min Account Age (hours)",
+      description: "Accounts younger than this trip the filter.",
+      default: 0,
+      min: 0,
+      max: 8760,
+    }),
+    filter_min_age_action: cfg.enum(["log", "kick", "timeout", "quarantine"], {
+      group: "Join Gate Filters",
+      label: "Min Age Action",
+      description: "Action taken when the min-age filter trips.",
+      default: "kick",
+    }),
+    filter_unverified_bot_enabled: cfg.boolean({
+      group: "Join Gate Filters",
+      label: "Filter: Unverified Bots",
+      description: "Flag bot accounts that aren't Discord-verified.",
+      default: false,
+    }),
+    filter_unverified_bot_action: cfg.enum(["log", "kick", "timeout", "quarantine"], {
+      group: "Join Gate Filters",
+      label: "Unverified Bot Action",
+      description: "Action taken when the unverified-bot filter trips.",
+      default: "kick",
+    }),
+    filter_username_pattern_enabled: cfg.boolean({
+      group: "Join Gate Filters",
+      label: "Filter: Username Pattern",
+      description: "Flag members whose username contains a configured substring.",
+      default: false,
+    }),
+    filter_username_pattern: cfg.string({
+      group: "Join Gate Filters",
+      label: "Username Patterns",
+      description: "Comma-separated substrings matched (case-insensitively) against usernames.",
+      list: true,
+    }),
+    filter_username_pattern_action: cfg.enum(["log", "kick", "timeout", "quarantine"], {
+      group: "Join Gate Filters",
+      label: "Username Pattern Action",
+      description: "Action taken when the username-pattern filter trips.",
+      default: "log",
+    }),
     verification_enabled: cfg.boolean({
       group: "Verification",
       label: "Verification",
@@ -147,12 +257,43 @@ import { handleVerifySweepFire } from "./lib/verify-sweep-handler.js";
       description: "Kick members who don't verify before the timeout.",
       default: false,
     }),
+    verification_mode: cfg.enum(["emoji", "none", "web"], {
+      group: "Verification",
+      label: "Verification Mode",
+      description:
+        "How members prove they're human: emoji sequence, one-click, or a web challenge on the dashboard.",
+      default: "emoji",
+    }),
+    verification_target: cfg.enum(["everyone", "suspicious"], {
+      group: "Verification",
+      label: "Verification Target",
+      description:
+        "Require verification from everyone, or only accounts flagged as suspicious (new or no avatar).",
+      default: "everyone",
+    }),
     panic_lock_channel_ids: cfg.string({
       group: "Panic Mode",
       label: "Channels to Lock",
       description:
         "Comma-separated channel IDs locked by /panic. Blank locks every text channel.",
       list: true,
+    }),
+    backup_interval_hours: cfg.number({
+      group: "Backups",
+      label: "Backup Interval (hours)",
+      description:
+        "How often to snapshot role/channel structure while Anti-Nuke is on, for the Restore System.",
+      default: 3,
+      min: 1,
+      max: 168,
+    }),
+    backup_keep_count: cfg.number({
+      group: "Backups",
+      label: "Backups to Keep",
+      description: "Older backups past this count are pruned.",
+      default: 10,
+      min: 1,
+      max: 50,
     }),
   }),
 })
@@ -162,6 +303,11 @@ export class SecurityModule extends Module {
       "security-verify-sweep",
       "broadcast",
       handleVerifySweepFire,
+    );
+    registerTaskFireHandler(
+      "security-backup-snapshot",
+      "broadcast",
+      handleBackupSnapshotFire,
     );
     return super.onLoad();
   }

@@ -7,8 +7,16 @@ import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js
 import type { GuildMessage } from "#lib/types/common.js";
 import type { FilterService } from "../services/FilterService.js";
 import { getHitReason, type FilterHit } from "../lib/rules.js";
-import { heatAction, type HeatConfig } from "../lib/heat.js";
+import {
+  containsLink,
+  countEmoji,
+  escalatedTimeoutMinutes,
+  heatAction,
+  type HeatConfig,
+} from "../lib/heat.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
+import { lockAllTextChannels } from "#lib/moderation/lockdown.js";
+import { scheduleTask } from "#lib/schedule-task.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 import { fetchTyped } from "#lib/commands.js";
@@ -32,6 +40,9 @@ export class FilterMessageListener extends GuildMessageListener {
 
     const mentionCount =
       message.mentions.users.size + message.mentions.roles.size;
+
+    await this.#mentionFlood(message, mentionCount);
+
     const hit = await this.filterService.test(
       message.guildId,
       message.content,
@@ -51,6 +62,52 @@ export class FilterMessageListener extends GuildMessageListener {
     if (heatActive) await this.#heat(message, mentionCount, hit !== null, heat);
   }
 
+  /**
+   * Server-wide flood guard, independent of the Heat System: once non-exempt
+   * mentions in the guild cross `lockdownMentionThreshold` within the window,
+   * every text channel is locked for `lockdownDurationMinutes` and an
+   * auto-unlock job is scheduled so the lock lifts even across a restart.
+   */
+  async #mentionFlood(message: GuildMessage, mentionCount: number): Promise<void> {
+    if (mentionCount <= 0) return;
+    const config = this.filterService.getHeat(message.guildId);
+    if (!config || config.lockdownMentionThreshold <= 0) return;
+
+    const total = await this.filterService.recordMentions(
+      message.guildId,
+      mentionCount,
+      config.lockdownWindowSeconds,
+    );
+    if (total < config.lockdownMentionThreshold) return;
+
+    const activated = await this.filterService.activateAutoLockdown(
+      message.guildId,
+      config.lockdownDurationMinutes,
+    );
+    if (!activated) return;
+
+    const { modified } = await lockAllTextChannels(message.guild);
+    await scheduleTask(
+      "filter-auto-lockdown-unlock",
+      { guildId: message.guildId },
+      {
+        repeated: false,
+        delay: config.lockdownDurationMinutes * 60_000,
+        customJobOptions: {
+          jobId: `filter-auto-lockdown-unlock:${message.guildId}`,
+          removeOnComplete: true,
+          removeOnFail: true,
+        },
+      },
+    ).catch(swallow("Filter: schedule auto-lockdown unlock"));
+
+    await this.#logHeat(
+      message,
+      "Auto-Lockdown - Triggered",
+      `Mention flood: ${total} mentions within ${config.lockdownWindowSeconds}s. Locked ${modified} channel(s) for ${config.lockdownDurationMinutes}m.`,
+    );
+  }
+
   /** Accrues heat from this message's signals and escalates once thresholds trip. */
   async #heat(
     message: GuildMessage,
@@ -60,10 +117,39 @@ export class FilterMessageListener extends GuildMessageListener {
   ): Promise<void> {
     const { guildId } = message;
     const userId = message.author.id;
+    const member = message.member;
+
+    // Heat panic mode: a flagged raider's next message is actioned instantly,
+    // without waiting for their (possibly already-cleared) heat to re-cross
+    // the threshold.
+    if (
+      (await this.filterService.isHeatPanicActive(guildId)) &&
+      (await this.filterService.isFlaggedRaider(guildId, userId))
+    ) {
+      if (member) {
+        const reason =
+          "Heat panic mode: flagged raider posted during the active raid window";
+        await member
+          .timeout(config.timeoutMinutes * 60_000, reason)
+          .catch(swallow("Filter: heat panic timeout"));
+        await this.#logHeat(message, "Heat Panic - Timeout", reason);
+      }
+      return;
+    }
 
     let points = config.perMessage;
     if (config.perMention > 0) points += config.perMention * mentionCount;
     if (wasHit) points += config.perFilterHit;
+    if (config.perAttachment > 0 && message.attachments.size > 0) {
+      points += config.perAttachment * message.attachments.size;
+    }
+    if (config.perEmoji > 0) {
+      const emojiCount = countEmoji(message.content);
+      if (emojiCount > 0) points += config.perEmoji * emojiCount;
+    }
+    if (config.perLink > 0 && containsLink(message.content)) {
+      points += config.perLink;
+    }
     if (
       config.perDuplicate > 0 &&
       (await this.filterService.isDuplicate(guildId, userId, message.content))
@@ -71,6 +157,11 @@ export class FilterMessageListener extends GuildMessageListener {
       points += config.perDuplicate;
     }
     if (points <= 0) return;
+
+    // Wick treats webhook-relayed spam more harshly than a regular member.
+    if (message.webhookId && config.webhookMultiplier > 1) {
+      points *= config.webhookMultiplier;
+    }
 
     const level = await this.filterService.addHeat(
       guildId,
@@ -83,10 +174,9 @@ export class FilterMessageListener extends GuildMessageListener {
     if (!(await this.filterService.claimEscalation(guildId, userId, action)))
       return;
 
-    const reason = `Heat escalation: reached ${Math.round(level)} heat`;
-    const member = message.member;
     if (action === "quarantine" && member) {
       await this.filterService.clearHeat(guildId, userId);
+      const reason = `Heat escalation: reached ${Math.round(level)} heat`;
       await QuarantineAction.apply({
         guild: message.guild,
         targetMember: member,
@@ -94,12 +184,25 @@ export class FilterMessageListener extends GuildMessageListener {
         reason,
       }).catch(swallow("Filter: heat quarantine"));
       await this.#logHeat(message, "Heat - Quarantine", reason);
+      if (config.panicRaiderCount > 0) {
+        await this.filterService.recordHeatPanicRaider(guildId, userId, config);
+      }
     } else if (action === "timeout" && member) {
       await this.filterService.clearHeat(guildId, userId);
+      const violations = await this.filterService.recordViolation(guildId, userId);
+      const minutes = escalatedTimeoutMinutes(
+        config.timeoutMinutes,
+        violations,
+        config,
+      );
+      const reason = `Heat escalation: reached ${Math.round(level)} heat (violation #${violations})`;
       await member
-        .timeout(config.timeoutMinutes * 60_000, reason)
+        .timeout(minutes * 60_000, reason)
         .catch(swallow("Filter: heat timeout"));
       await this.#logHeat(message, "Heat - Timeout", reason);
+      if (config.panicRaiderCount > 0) {
+        await this.filterService.recordHeatPanicRaider(guildId, userId, config);
+      }
     } else if (action === "warn") {
       const t = await fetchTyped(message);
       const warn = await message.channel

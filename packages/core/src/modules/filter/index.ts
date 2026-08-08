@@ -7,6 +7,8 @@ import {
   validateRegexPattern,
 } from "#lib/regex-worker/index.js";
 import { DEFAULT_WARN_MESSAGE } from "./lib/rules.js";
+import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
+import { handleAutoLockdownUnlockFire } from "./lib/auto-lockdown-handler.js";
 
 /** Config keys the FilterService compiles into its per-guild rule set -
  * changing any of them must rebuild that guild's cache. */
@@ -25,7 +27,18 @@ const COMPILED_KEYS = [
   "heat_per_mention",
   "heat_per_duplicate",
   "heat_per_filter_hit",
+  "heat_per_attachment",
+  "heat_per_emoji",
+  "heat_per_link",
+  "heat_webhook_multiplier",
   "heat_decay_per_minute",
+  "heat_multiplier_enabled",
+  "heat_multiplier_base",
+  "heat_panic_raider_count",
+  "heat_panic_window_seconds",
+  "lockdown_mention_threshold",
+  "lockdown_window_seconds",
+  "lockdown_duration_minutes",
   "heat_warn",
   "heat_timeout",
   "heat_quarantine",
@@ -174,6 +187,39 @@ const COMPILED_KEYS = [
       min: 0,
       max: 100,
     }),
+    heat_per_attachment: cfg.number({
+      group: "Heat Scoring",
+      label: "Heat per Attachment",
+      description: "Heat added per attachment (image/embed-spam signal).",
+      default: 0,
+      min: 0,
+      max: 100,
+    }),
+    heat_per_emoji: cfg.number({
+      group: "Heat Scoring",
+      label: "Heat per Emoji",
+      description: "Heat added per custom or unicode emoji in a message.",
+      default: 0,
+      min: 0,
+      max: 100,
+    }),
+    heat_per_link: cfg.number({
+      group: "Heat Scoring",
+      label: "Heat per Link",
+      description: "Heat added when a message contains a URL (advertisement signal).",
+      default: 0,
+      min: 0,
+      max: 100,
+    }),
+    heat_webhook_multiplier: cfg.number({
+      group: "Heat Scoring",
+      label: "Webhook Multiplier",
+      description:
+        "Message/link heat is multiplied by this for webhook-sent messages. 1 disables special treatment.",
+      default: 1,
+      min: 1,
+      max: 20,
+    }),
     heat_decay_per_minute: cfg.number({
       group: "Heat Scoring",
       label: "Heat Decay / min",
@@ -181,6 +227,64 @@ const COMPILED_KEYS = [
       default: 10,
       min: 1,
       max: 100,
+    }),
+    heat_multiplier_enabled: cfg.boolean({
+      group: "Heat Escalation",
+      label: "Escalating Timeouts",
+      description:
+        "Geometrically increase the timeout duration for members who keep re-tripping heat after their previous timeout expires.",
+      default: false,
+    }),
+    heat_multiplier_base: cfg.number({
+      group: "Heat Escalation",
+      label: "Escalation Multiplier",
+      description:
+        "Each repeat timeout after the first multiplies the base duration by this much (e.g. 2 -> 1, 1, 2, 4, 8x the base).",
+      default: 2,
+      min: 2,
+      max: 10,
+    }),
+    heat_panic_raider_count: cfg.number({
+      group: "Heat Escalation",
+      label: "Heat Panic Raider Count",
+      description:
+        "Distinct members who must trip Timeout/Quarantine within the panic window to activate heat panic mode, instantly actioning any flagged member's next message. 0 disables.",
+      default: 0,
+      min: 0,
+      max: 100,
+    }),
+    heat_panic_window_seconds: cfg.number({
+      group: "Heat Escalation",
+      label: "Heat Panic Window (seconds)",
+      description: "Window for counting distinct raiders toward heat panic mode.",
+      default: 30,
+      min: 5,
+      max: 600,
+    }),
+    lockdown_mention_threshold: cfg.number({
+      group: "Auto Lockdown",
+      label: "Mention Flood Threshold",
+      description:
+        "Total non-exempt mentions guild-wide within the window that trigger an automatic server-wide lockdown. 0 disables.",
+      default: 0,
+      min: 0,
+      max: 10_000,
+    }),
+    lockdown_window_seconds: cfg.number({
+      group: "Auto Lockdown",
+      label: "Mention Flood Window (seconds)",
+      description: "Window for counting mentions toward auto-lockdown.",
+      default: 30,
+      min: 5,
+      max: 600,
+    }),
+    lockdown_duration_minutes: cfg.number({
+      group: "Auto Lockdown",
+      label: "Auto-Lockdown Duration (minutes)",
+      description: "How long the server-wide lockdown lasts before auto-unlocking.",
+      default: 10,
+      min: 1,
+      max: 1440,
     }),
     heat_warn: cfg.number({
       group: "Heat Thresholds",
@@ -218,6 +322,11 @@ const COMPILED_KEYS = [
 })
 export class FilterModule extends Module {
   public override onLoad() {
+    registerTaskFireHandler(
+      "filter-auto-lockdown-unlock",
+      "unicast",
+      handleAutoLockdownUnlockFire,
+    );
     for (const key of COMPILED_KEYS) {
       this.container.configChangeHooks.set(
         `filter:${key}`,

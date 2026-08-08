@@ -38,10 +38,13 @@ export const RedisKeys = {
     `lumi:security:${guildId}:tripped:${executorId}`,
   joinBurst: (guildId: string) => `lumi:security:${guildId}:joins`,
   raidMode: (guildId: string) => `lumi:security:${guildId}:raid`,
+  recentJoiners: (guildId: string) => `lumi:security:${guildId}:recent-joiners`,
   verifyChallenge: (guildId: string, userId: string) =>
     `lumi:security:${guildId}:verify:${userId}`,
   verifyPending: (guildId: string) => `lumi:security:${guildId}:verify:pending`,
   panicState: (guildId: string) => `lumi:security:${guildId}:panic`,
+  securityRestorePending: (guildId: string) =>
+    `lumi:security:${guildId}:restore-pending`,
   voiceMuteState: (guildId: string, userId: string) =>
     `lumi:mod:${guildId}:voicemute:${userId}`,
   filterHeat: (guildId: string, userId: string) =>
@@ -50,6 +53,18 @@ export const RedisKeys = {
     `lumi:filter:${guildId}:heatacted:${userId}`,
   filterLastMsg: (guildId: string, userId: string) =>
     `lumi:filter:${guildId}:lastmsg:${userId}`,
+  filterHeatViolations: (guildId: string, userId: string) =>
+    `lumi:filter:${guildId}:violations:${userId}`,
+  filterHeatPanicRaiders: (guildId: string) =>
+    `lumi:filter:${guildId}:heatpanic:raiders`,
+  filterHeatPanicActive: (guildId: string) =>
+    `lumi:filter:${guildId}:heatpanic:active`,
+  filterHeatPanicFlagged: (guildId: string, userId: string) =>
+    `lumi:filter:${guildId}:heatpanic:flagged:${userId}`,
+  filterMentionWindow: (guildId: string) =>
+    `lumi:filter:${guildId}:mentionwindow`,
+  filterAutoLockdown: (guildId: string) =>
+    `lumi:filter:${guildId}:autolockdown`,
   blocked: (guildId: string | null, userId: string) =>
     `lumi:block:${guildId ?? "global"}:${userId}`,
   blockedPattern: (userId: string) => `lumi:block:*:${userId}`,

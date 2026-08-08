@@ -237,11 +237,22 @@ export class FilterService extends Service {
       perMention: num("heat_per_mention", 0),
       perDuplicate: num("heat_per_duplicate", 0),
       perFilterHit: num("heat_per_filter_hit", 10),
+      perAttachment: num("heat_per_attachment", 0),
+      perEmoji: num("heat_per_emoji", 0),
+      perLink: num("heat_per_link", 0),
+      webhookMultiplier: num("heat_webhook_multiplier", 1),
       decayPerMinute: num("heat_decay_per_minute", 10),
       warnAt: num("heat_warn", 0),
       timeoutAt: num("heat_timeout", 30),
       quarantineAt: num("heat_quarantine", 0),
       timeoutMinutes: num("heat_timeout_minutes", 10),
+      multiplierEnabled: raw["heat_multiplier_enabled"] === true,
+      multiplierBase: num("heat_multiplier_base", 2),
+      panicRaiderCount: num("heat_panic_raider_count", 0),
+      panicWindowSeconds: num("heat_panic_window_seconds", 30),
+      lockdownMentionThreshold: num("lockdown_mention_threshold", 0),
+      lockdownWindowSeconds: num("lockdown_window_seconds", 30),
+      lockdownDurationMinutes: num("lockdown_duration_minutes", 10),
     };
   }
 
@@ -307,6 +318,123 @@ export class FilterService extends Service {
       "NX",
     );
     return set === "OK";
+  }
+
+  private static readonly VIOLATION_RESET_SECONDS = 86_400;
+  private static readonly HEAT_PANIC_FLAG_SECONDS = 600;
+  private static readonly MENTION_WINDOW_DEFAULT_SECONDS = 30;
+
+  /**
+   * Bumps the "timeouts since last clean day" counter used by the escalating
+   * multiplier. The TTL refreshes on every call, so a member who stops
+   * offending for `VIOLATION_RESET_SECONDS` starts over at the base duration.
+   */
+  public async recordViolation(guildId: string, userId: string): Promise<number> {
+    const key = RedisKeys.filterHeatViolations(guildId, userId);
+    const results = await this.redis
+      .multi()
+      .incr(key)
+      .expire(key, FilterService.VIOLATION_RESET_SECONDS)
+      .exec();
+    return (results?.[0]?.[1] as number) ?? 1;
+  }
+
+  /**
+   * Counts this escalation toward heat panic mode (distinct raiders tripping
+   * timeout/quarantine within a short window). Once `raiderCount` distinct
+   * members are flagged, panic mode activates for
+   * {@link HEAT_PANIC_FLAG_SECONDS} and every flagged raider is marked so
+   * their next message can be actioned instantly.
+   */
+  public async recordHeatPanicRaider(
+    guildId: string,
+    userId: string,
+    config: Pick<HeatConfig, "panicWindowSeconds" | "panicRaiderCount">,
+  ): Promise<boolean> {
+    if (config.panicRaiderCount <= 0) return false;
+    const key = RedisKeys.filterHeatPanicRaiders(guildId);
+    const results = await this.redis
+      .multi()
+      .sadd(key, userId)
+      .expire(key, config.panicWindowSeconds)
+      .scard(key)
+      .exec();
+    const distinct = (results?.[2]?.[1] as number) ?? 0;
+    if (distinct < config.panicRaiderCount) return false;
+
+    await this.redis.set(
+      RedisKeys.filterHeatPanicFlagged(guildId, userId),
+      "1",
+      "EX",
+      FilterService.HEAT_PANIC_FLAG_SECONDS,
+    );
+    const activated = await this.redis.set(
+      RedisKeys.filterHeatPanicActive(guildId),
+      String(Date.now()),
+      "EX",
+      FilterService.HEAT_PANIC_FLAG_SECONDS,
+      "NX",
+    );
+    return activated === "OK";
+  }
+
+  /** Flags a member as an active-panic raider so their next message is actioned instantly. */
+  public async flagHeatPanicRaider(guildId: string, userId: string): Promise<void> {
+    await this.redis.set(
+      RedisKeys.filterHeatPanicFlagged(guildId, userId),
+      "1",
+      "EX",
+      FilterService.HEAT_PANIC_FLAG_SECONDS,
+    );
+  }
+
+  public async isHeatPanicActive(guildId: string): Promise<boolean> {
+    return (await this.redis.exists(RedisKeys.filterHeatPanicActive(guildId))) === 1;
+  }
+
+  public async isFlaggedRaider(guildId: string, userId: string): Promise<boolean> {
+    return (
+      (await this.redis.exists(RedisKeys.filterHeatPanicFlagged(guildId, userId))) === 1
+    );
+  }
+
+  /**
+   * Adds `count` non-exempt mentions to the guild-wide flood window. Returns
+   * the running total so the caller can compare it against the configured
+   * threshold.
+   */
+  public async recordMentions(
+    guildId: string,
+    count: number,
+    windowSeconds: number,
+  ): Promise<number> {
+    if (count <= 0) return 0;
+    const key = RedisKeys.filterMentionWindow(guildId);
+    const results = await this.redis
+      .multi()
+      .incrby(key, count)
+      .expire(
+        key,
+        windowSeconds > 0 ? windowSeconds : FilterService.MENTION_WINDOW_DEFAULT_SECONDS,
+        "NX",
+      )
+      .exec();
+    return (results?.[0]?.[1] as number) ?? count;
+  }
+
+  /** Marks the guild as auto-locked for `durationMinutes`. Returns false if already locked. */
+  public async activateAutoLockdown(
+    guildId: string,
+    durationMinutes: number,
+  ): Promise<boolean> {
+    const activated = await this.redis.set(
+      RedisKeys.filterAutoLockdown(guildId),
+      String(Date.now()),
+      "EX",
+      Math.max(60, durationMinutes * 60),
+      "NX",
+    );
+    return activated === "OK";
   }
 
   /** Mark a guild as most-recently-used and return its rule set. */

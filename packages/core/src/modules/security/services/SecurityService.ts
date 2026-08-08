@@ -8,7 +8,7 @@ import {
   type GuildMember,
 } from "discord.js";
 import { isNullish, tryParseJSON } from "@sapphire/utilities";
-import { Service } from "#lib/module-system/Service.js";
+import { Service, tryGetService } from "#lib/module-system/Service.js";
 import { RedisKeys } from "#database/redis.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { logToChannel } from "#lib/moderation/log.js";
@@ -21,6 +21,16 @@ import {
   type CaptchaOutcome,
   type CaptchaState,
 } from "../lib/captcha.js";
+import { snapshotGuild, type GuildBackupData } from "../lib/backup.js";
+import { parseConfigList } from "#lib/module-system/config-schema.js";
+import {
+  hasNoAvatar,
+  isUnverifiedBot,
+  matchesUsernamePattern,
+  hasSimilarRecentJoiner,
+  isCreationClustered,
+  type RecentJoiner,
+} from "../lib/join-heuristics.js";
 
 export interface PanicResult {
   invitesPaused: boolean;
@@ -30,6 +40,7 @@ export interface PanicResult {
 
 export interface PanicRevertResult {
   restoredCount: number;
+  restoredStructure: { rolesRestored: number; channelsRestored: number } | null;
 }
 
 const PANIC_CHANNEL_CAP = 40;
@@ -43,7 +54,10 @@ export type NukeKind =
   | "kick"
   | "channel_delete"
   | "role_delete"
-  | "webhook_create";
+  | "webhook_create"
+  | "vanity_change"
+  | "dangerous_permission_grant"
+  | "quarantine_bypass";
 
 export interface AntiNukeConfig {
   enabled: boolean;
@@ -53,7 +67,22 @@ export interface AntiNukeConfig {
   trustedRoleIds: string[];
 }
 
-export type GateAction = "kick" | "timeout" | "quarantine";
+export type GateAction = "log" | "kick" | "timeout" | "quarantine";
+
+/** Severity order used to pick a single action when several filters trip at once. */
+const GATE_ACTION_SEVERITY: Record<GateAction, number> = {
+  log: 0,
+  kick: 1,
+  timeout: 2,
+  quarantine: 3,
+};
+
+export type RaidAccountType = "all" | "suspicious";
+
+export interface JoinGateFilterConfig {
+  enabled: boolean;
+  action: GateAction;
+}
 
 export interface JoinGateConfig {
   enabled: boolean;
@@ -61,10 +90,26 @@ export interface JoinGateConfig {
   raidJoinCount: number;
   raidWindowSeconds: number;
   raidAction: GateAction;
+  raidAccountType: RaidAccountType;
+  raidWarnRoleIds: string[];
+  filterNoAvatar: JoinGateFilterConfig;
+  filterMinAge: JoinGateFilterConfig & { hours: number };
+  filterUnverifiedBot: JoinGateFilterConfig;
+  filterUsernamePattern: JoinGateFilterConfig & { patterns: string[] };
 }
+
+export interface JoinFilterResult {
+  action: GateAction;
+  triggered: string[];
+}
+
+export type VerificationMode = "emoji" | "none" | "web";
+export type VerificationTarget = "everyone" | "suspicious";
 
 export interface VerificationConfig {
   enabled: boolean;
+  mode: VerificationMode;
+  target: VerificationTarget;
   verifiedRoleId: string | null;
   pendingRoleId: string | null;
   timeoutMinutes: number;
@@ -77,11 +122,26 @@ const KIND_LIMIT_KEYS: Record<NukeKind, string> = {
   channel_delete: "max_channel_deletes",
   role_delete: "max_role_deletes",
   webhook_create: "max_webhook_creates",
+  vanity_change: "max_vanity_changes",
+  dangerous_permission_grant: "max_permission_grants",
+  quarantine_bypass: "max_quarantine_bypass",
 };
+
+/** Permissions that hand out server control - never allowed on `@everyone`. */
+export const DANGEROUS_PERMISSIONS = [
+  PermissionFlagsBits.Administrator,
+  PermissionFlagsBits.ManageGuild,
+  PermissionFlagsBits.ManageRoles,
+  PermissionFlagsBits.ManageChannels,
+  PermissionFlagsBits.BanMembers,
+  PermissionFlagsBits.KickMembers,
+] as const;
 
 const TRIPPED_COOLDOWN_SECONDS = 300;
 const RAID_MODE_SECONDS = 600;
 const GATE_TIMEOUT_MS = 60 * 60 * 1000;
+const RECENT_JOINERS_CAP = 20;
+const RECENT_JOINERS_TTL_SECONDS = 300;
 
 function challengeLockKey(guildId: string, userId: string): string {
   return `security:verify-challenge:${guildId}:${userId}`;
@@ -112,6 +172,12 @@ export class SecurityService extends Service {
         channel_delete: num(KIND_LIMIT_KEYS.channel_delete, 3),
         role_delete: num(KIND_LIMIT_KEYS.role_delete, 3),
         webhook_create: num(KIND_LIMIT_KEYS.webhook_create, 3),
+        vanity_change: num(KIND_LIMIT_KEYS.vanity_change, 1),
+        dangerous_permission_grant: num(
+          KIND_LIMIT_KEYS.dangerous_permission_grant,
+          1,
+        ),
+        quarantine_bypass: num(KIND_LIMIT_KEYS.quarantine_bypass, 1),
       },
       response:
         raw["response"] === "log" || raw["response"] === "ban"
@@ -172,7 +238,7 @@ export class SecurityService extends Service {
     count: number,
     config: AntiNukeConfig,
   ): Promise<void> {
-    const reason = `Anti-nuke: ${count} ${kind.replace("_", " ")} actions in ${config.windowSeconds}s`;
+    const reason = `Anti-nuke: ${count} ${kind.replaceAll("_", " ")} actions in ${config.windowSeconds}s`;
     const botUser = this.container.client.user;
     if (isNullish(botUser)) return;
 
@@ -243,20 +309,135 @@ export class SecurityService extends Service {
     }
   }
 
+  public async isQuarantined(guildId: string, userId: string): Promise<boolean> {
+    return (
+      (await this.redis.exists(RedisKeys.quarantineState(guildId, userId))) === 1
+    );
+  }
+
   public async loadJoinGateConfig(guildId: string): Promise<JoinGateConfig> {
     const raw = await this.db.config.getAllModuleConfig(guildId, "security");
     const num = (key: string, fallback: number): number =>
       typeof raw[key] === "number" ? (raw[key]) : fallback;
-    const action = raw["raid_action"];
+    const gateAction = (key: string, fallback: GateAction): GateAction => {
+      const v = raw[key];
+      return v === "log" || v === "kick" || v === "timeout" || v === "quarantine"
+        ? v
+        : fallback;
+    };
+    const legacyMinAge = num("min_account_age_hours", 0);
 
     return {
       enabled: raw["joingate_enabled"] === true,
-      minAccountAgeHours: num("min_account_age_hours", 0),
+      minAccountAgeHours: legacyMinAge,
       raidJoinCount: num("raid_join_count", 10),
       raidWindowSeconds: num("raid_window_seconds", 30),
-      raidAction:
-        action === "timeout" || action === "quarantine" ? action : "kick",
+      raidAction: gateAction("raid_action", "kick"),
+      raidAccountType: raw["raid_account_type"] === "suspicious" ? "suspicious" : "all",
+      raidWarnRoleIds: parseConfigList(raw["raid_warn_role_ids"]),
+      filterNoAvatar: {
+        enabled: raw["filter_no_avatar_enabled"] === true,
+        action: gateAction("filter_no_avatar_action", "log"),
+      },
+      filterMinAge: {
+        // legacy `min_account_age_hours` is the fallback default until reconfigured
+        enabled: raw["filter_min_age_enabled"] === true,
+        hours: num("filter_min_age_hours", legacyMinAge),
+        action: gateAction("filter_min_age_action", "kick"),
+      },
+      filterUnverifiedBot: {
+        enabled: raw["filter_unverified_bot_enabled"] === true,
+        action: gateAction("filter_unverified_bot_action", "kick"),
+      },
+      filterUsernamePattern: {
+        enabled: raw["filter_username_pattern_enabled"] === true,
+        patterns: parseConfigList(raw["filter_username_pattern"]),
+        action: gateAction("filter_username_pattern_action", "log"),
+      },
     };
+  }
+
+  /**
+   * Runs every enabled join-gate filter against a member and returns the
+   * single most severe triggered action (quarantine > timeout > kick > log),
+   * or null when nothing tripped.
+   */
+  public evaluateJoinFilters(
+    member: GuildMember,
+    config: JoinGateConfig,
+  ): JoinFilterResult | null {
+    const triggered: string[] = [];
+    let action: GateAction | null = null;
+    const consider = (hit: boolean, filterAction: GateAction, label: string) => {
+      if (!hit) return;
+      triggered.push(label);
+      if (action === null || GATE_ACTION_SEVERITY[filterAction] > GATE_ACTION_SEVERITY[action]) {
+        action = filterAction;
+      }
+    };
+
+    if (config.filterNoAvatar.enabled) {
+      consider(hasNoAvatar(member.user), config.filterNoAvatar.action, "no avatar");
+    }
+    if (config.filterMinAge.enabled && config.filterMinAge.hours > 0) {
+      const ageMs = Date.now() - member.user.createdTimestamp;
+      consider(
+        ageMs < config.filterMinAge.hours * 60 * 60 * 1000,
+        config.filterMinAge.action,
+        `account younger than ${config.filterMinAge.hours}h`,
+      );
+    }
+    if (config.filterUnverifiedBot.enabled) {
+      consider(isUnverifiedBot(member.user), config.filterUnverifiedBot.action, "unverified bot");
+    }
+    if (config.filterUsernamePattern.enabled && config.filterUsernamePattern.patterns.length > 0) {
+      consider(
+        matchesUsernamePattern(member.user.username, config.filterUsernamePattern.patterns),
+        config.filterUsernamePattern.action,
+        "username pattern match",
+      );
+    }
+
+    if (action === null) return null;
+    return { action, triggered };
+  }
+
+  /** Tracks a joiner for the short-lived recent-joiners window used by the raid/similarity heuristics. */
+  public async recordRecentJoiner(guildId: string, joiner: RecentJoiner): Promise<void> {
+    const key = RedisKeys.recentJoiners(guildId);
+    await this.redis
+      .multi()
+      .lpush(key, JSON.stringify(joiner))
+      .ltrim(key, 0, RECENT_JOINERS_CAP - 1)
+      .expire(key, RECENT_JOINERS_TTL_SECONDS)
+      .exec();
+  }
+
+  public async getRecentJoiners(guildId: string): Promise<RecentJoiner[]> {
+    const raw = await this.redis.lrange(RedisKeys.recentJoiners(guildId), 0, -1);
+    return raw
+      .map((r: string) => tryParseJSON(r) as RecentJoiner | null)
+      .filter((j: RecentJoiner | null): j is RecentJoiner => j !== null);
+  }
+
+  /**
+   * "Suspicious" scope for raid mode: no avatar, under the configured min
+   * age, a username too close to a recent joiner's, or an unusual share of
+   * recent joiners sharing this account's creation day - any one is enough,
+   * this doesn't need to be a tunable score.
+   */
+  public async isSuspiciousJoiner(
+    member: GuildMember,
+    config: JoinGateConfig,
+  ): Promise<boolean> {
+    if (hasNoAvatar(member.user)) return true;
+    const minAgeHours = config.filterMinAge.hours > 0 ? config.filterMinAge.hours : 24;
+    if (Date.now() - member.user.createdTimestamp < minAgeHours * 60 * 60 * 1000) return true;
+
+    const recent = await this.getRecentJoiners(member.guild.id);
+    if (hasSimilarRecentJoiner(member.user.username, recent)) return true;
+    if (isCreationClustered(member.user.createdTimestamp, recent)) return true;
+    return false;
   }
 
   /**
@@ -310,8 +491,12 @@ export class SecurityService extends Service {
       typeof raw["verification_timeout_minutes"] === "number"
         ? raw["verification_timeout_minutes"]
         : 10;
+    const mode = raw["verification_mode"];
+    const target = raw["verification_target"];
     return {
       enabled: raw["verification_enabled"] === true,
+      mode: mode === "none" || mode === "web" ? mode : "emoji",
+      target: target === "suspicious" ? "suspicious" : "everyone",
       verifiedRoleId: str("verified_role_id"),
       pendingRoleId: str("verification_pending_role_id"),
       timeoutMinutes: timeout,
@@ -468,10 +653,25 @@ export class SecurityService extends Service {
     action: GateAction,
     reason: string,
   ): Promise<boolean> {
-    const member = await guild.members.fetch(memberId).catch(() => null);
-    if (isNullish(member)) return false;
     const botUser = this.container.client.user;
     if (isNullish(botUser)) return false;
+
+    if (action === "log") {
+      const logService = tryGetService("guild-log");
+      await logService?.dispatch({
+        guildId: guild.id,
+        moduleName: "security",
+        action: "📝 Gate Logged",
+        targetId: memberId,
+        actorId: botUser.id,
+        reason,
+        color: Colors.Yellow,
+      });
+      return true;
+    }
+
+    const member = await guild.members.fetch(memberId).catch(() => null);
+    if (isNullish(member)) return false;
 
     try {
       if (action === "kick") {
@@ -511,6 +711,123 @@ export class SecurityService extends Service {
       );
       return false;
     }
+  }
+
+  public async loadBackupConfig(
+    guildId: string,
+  ): Promise<{ intervalHours: number; keepCount: number }> {
+    const raw = await this.db.config.getAllModuleConfig(guildId, "security");
+    const num = (key: string, fallback: number): number =>
+      typeof raw[key] === "number" ? (raw[key]) : fallback;
+    return {
+      intervalHours: num("backup_interval_hours", 3),
+      keepCount: num("backup_keep_count", 10),
+    };
+  }
+
+  /** Snapshots the guild's role/channel structure and prunes old backups past `keepCount`. */
+  public async createBackup(guild: Guild, keepCount: number): Promise<number> {
+    const data = snapshotGuild(guild);
+    const backup = await this.db.security.createBackup(guild.id, data);
+    await this.db.security.pruneBackups(guild.id, keepCount);
+    return backup.id;
+  }
+
+  /** Marks the guild as having lost structure during the current panic window, for auto-restore on revert. */
+  public async flagRestorePending(guildId: string): Promise<void> {
+    await this.redis.set(
+      RedisKeys.securityRestorePending(guildId),
+      "1",
+      "EX",
+      24 * 60 * 60,
+    );
+  }
+
+  public async isRestorePending(guildId: string): Promise<boolean> {
+    return (
+      (await this.redis.exists(RedisKeys.securityRestorePending(guildId))) === 1
+    );
+  }
+
+  public async clearRestorePending(guildId: string): Promise<void> {
+    await this.redis.del(RedisKeys.securityRestorePending(guildId));
+  }
+
+  /**
+   * Recreates roles and channels present in the snapshot but missing from
+   * the guild now. Best-effort: exact position/id can't be preserved (a
+   * recreated role/channel gets a new Discord id), only name, permissions,
+   * hierarchy-adjacent position, and (for channels) parent + overwrites.
+   */
+  public async restoreFromBackup(
+    guild: Guild,
+    backupId?: number,
+  ): Promise<{ rolesRestored: number; channelsRestored: number } | null> {
+    const row = backupId
+      ? await this.db.security.getBackup(backupId)
+      : await this.db.security.getLatestBackup(guild.id);
+    if (!row || row.guildId !== guild.id) return null;
+
+    const data = row.data as unknown as GuildBackupData;
+    let rolesRestored = 0;
+    const roleIdMap = new Map<string, string>();
+
+    for (const role of data.roles) {
+      if (guild.roles.cache.has(role.id)) {
+        roleIdMap.set(role.id, role.id);
+        continue;
+      }
+      try {
+        const created = await guild.roles.create({
+          name: role.name,
+          color: role.color,
+          permissions: BigInt(role.permissions),
+          hoist: role.hoist,
+          mentionable: role.mentionable,
+          reason: "Security: restoring from backup",
+        });
+        roleIdMap.set(role.id, created.id);
+        rolesRestored++;
+      } catch (err: unknown) {
+        this.logger.warn(
+          `[security] Restore: failed to recreate role ${role.name} in ${guild.id}: ${String(err)}`,
+        );
+      }
+    }
+
+    let channelsRestored = 0;
+    // Categories first so child channels can resolve `parentId`.
+    const ordered = [...data.channels].sort((a, b) =>
+      a.type === ChannelType.GuildCategory ? -1 : b.type === ChannelType.GuildCategory ? 1 : 0,
+    );
+
+    for (const channel of ordered) {
+      if (guild.channels.cache.has(channel.id)) continue;
+      try {
+        const parentId = channel.parentId
+          ? (guild.channels.cache.get(channel.parentId)?.id ?? null)
+          : null;
+        await guild.channels.create({
+          name: channel.name,
+          type: channel.type as never,
+          parent: parentId,
+          permissionOverwrites: channel.overwrites.map((ow) => ({
+            id: roleIdMap.get(ow.id) ?? ow.id,
+            type: ow.type,
+            allow: BigInt(ow.allow),
+            deny: BigInt(ow.deny),
+          })),
+          reason: "Security: restoring from backup",
+        });
+        channelsRestored++;
+      } catch (err: unknown) {
+        this.logger.warn(
+          `[security] Restore: failed to recreate channel ${channel.name} in ${guild.id}: ${String(err)}`,
+        );
+      }
+    }
+
+    return { rolesRestored, channelsRestored };
   }
 
   /**
@@ -623,7 +940,21 @@ export class SecurityService extends Service {
     }
 
     await this.db.security.clearPanicState(guild.id);
-    return { restoredCount };
+
+    let restoredStructure: PanicRevertResult["restoredStructure"] = null;
+    if (await this.isRestorePending(guild.id)) {
+      restoredStructure = await this.restoreFromBackup(guild).catch(
+        (err: unknown) => {
+          this.logger.warn(
+            `[security] Panic: auto-restore failed in ${guild.id}: ${String(err)}`,
+          );
+          return null;
+        },
+      );
+      await this.clearRestorePending(guild.id);
+    }
+
+    return { restoredCount, restoredStructure };
   }
 }
 

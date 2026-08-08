@@ -71,3 +71,17 @@ export function buildWrongCard(t: LumiT, state: CaptchaState): CardReply {
     { actionRows: buildCaptchaRows(state.buttons, new Set()) },
   );
 }
+
+/** "web" mode: deep-links to the dashboard's `/verify/[guildId]` page instead of a challenge. */
+export function buildWebPromptCard(t: LumiT, url: string): CardReply {
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setStyle(ButtonStyle.Link)
+      .setURL(url)
+      .setLabel(t(PanelsKeys.VerifyWebButton))
+      .setEmoji(Emojis.parse("🔗")),
+  );
+  return makeInfoCard(t(PanelsKeys.VerifyWebTitle), t(PanelsKeys.VerifyWebIntro), {
+    actionRows: [row],
+  });
+}
