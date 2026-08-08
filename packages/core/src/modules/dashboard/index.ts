@@ -739,6 +739,33 @@ export class DashboardModule extends Module {
       return { success: true, deleted };
     });
 
+    // Not gated by requireGuildManager - any authenticated dashboard visitor
+    // can complete their own "web" mode verification, same as anyone can
+    // click the emoji-captcha panel. Grants only the caller's own role.
+    registerRpcHandler(RPC_ACTIONS.guildVerificationWebComplete, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      const actorId = req.actorId;
+      if (!actorId) throw new Error("actorId is required");
+      SnowflakeSchema.parse(actorId);
+
+      const security = tryGetService("security");
+      if (!security) throw new Error("The security module is not loaded");
+
+      const config = await security.loadVerificationConfig(guildId);
+      if (!config.enabled || config.mode !== "web" || !config.verifiedRoleId) {
+        throw new Error("Web verification is not enabled for this server");
+      }
+
+      const guild = cachedGuild(guildId);
+      const granted = await security.grantVerified(guild, actorId);
+      if (!granted) {
+        throw new Error(
+          "Couldn't grant the verified role - make sure you're a member of the server and try again.",
+        );
+      }
+      return { success: true };
+    });
+
     registerRpcHandler(RPC_ACTIONS.guildTempVcGeneratorsList, async (req) => {
       const guildId = requireGuildId(req.guildId);
       await requireGuildManager(guildId, req.actorId);
@@ -1271,6 +1298,7 @@ export class DashboardModule extends Module {
     rpcHandlers.delete(RPC_ACTIONS.guildVerificationPanelGet);
     rpcHandlers.delete(RPC_ACTIONS.guildVerificationPanelSet);
     rpcHandlers.delete(RPC_ACTIONS.guildVerificationPanelDelete);
+    rpcHandlers.delete(RPC_ACTIONS.guildVerificationWebComplete);
     rpcHandlers.delete(RPC_ACTIONS.guildTempVcGeneratorsList);
     rpcHandlers.delete(RPC_ACTIONS.guildTempVcGeneratorSet);
     rpcHandlers.delete(RPC_ACTIONS.guildTempVcRecordsList);

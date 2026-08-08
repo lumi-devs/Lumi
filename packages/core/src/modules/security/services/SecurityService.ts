@@ -68,8 +68,13 @@ export interface JoinGateConfig {
   raidAction: GateAction;
 }
 
+export type VerificationMode = "emoji" | "none" | "web";
+export type VerificationTarget = "everyone" | "suspicious";
+
 export interface VerificationConfig {
   enabled: boolean;
+  mode: VerificationMode;
+  target: VerificationTarget;
   verifiedRoleId: string | null;
   pendingRoleId: string | null;
   timeoutMinutes: number;
@@ -340,8 +345,12 @@ export class SecurityService extends Service {
       typeof raw["verification_timeout_minutes"] === "number"
         ? raw["verification_timeout_minutes"]
         : 10;
+    const mode = raw["verification_mode"];
+    const target = raw["verification_target"];
     return {
       enabled: raw["verification_enabled"] === true,
+      mode: mode === "none" || mode === "web" ? mode : "emoji",
+      target: target === "suspicious" ? "suspicious" : "everyone",
       verifiedRoleId: str("verified_role_id"),
       pendingRoleId: str("verification_pending_role_id"),
       timeoutMinutes: timeout,

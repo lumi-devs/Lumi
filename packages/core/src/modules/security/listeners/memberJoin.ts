@@ -4,6 +4,7 @@ import { Colors, type GuildMember } from "discord.js";
 import { userMention } from "@discordjs/formatters";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetService } from "#lib/module-system/Service.js";
+import { isSuspiciousAccount } from "../lib/suspicious.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -21,7 +22,10 @@ export class SecurityMemberJoinListener extends ModuleListener<
     if (!security) return;
 
     const verification = await security.loadVerificationConfig(member.guild.id);
-    if (verification.enabled) {
+    if (
+      verification.enabled &&
+      (verification.target === "everyone" || isSuspiciousAccount(member.user))
+    ) {
       await security.assignPending(member, verification);
     }
 
