@@ -42,6 +42,8 @@ export const RedisKeys = {
     `lumi:security:${guildId}:verify:${userId}`,
   verifyPending: (guildId: string) => `lumi:security:${guildId}:verify:pending`,
   panicState: (guildId: string) => `lumi:security:${guildId}:panic`,
+  securityRestorePending: (guildId: string) =>
+    `lumi:security:${guildId}:restore-pending`,
   voiceMuteState: (guildId: string, userId: string) =>
     `lumi:mod:${guildId}:voicemute:${userId}`,
   filterHeat: (guildId: string, userId: string) =>

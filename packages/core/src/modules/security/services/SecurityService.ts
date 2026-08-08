@@ -21,6 +21,7 @@ import {
   type CaptchaOutcome,
   type CaptchaState,
 } from "../lib/captcha.js";
+import { snapshotGuild, type GuildBackupData } from "../lib/backup.js";
 
 export interface PanicResult {
   invitesPaused: boolean;
@@ -30,6 +31,7 @@ export interface PanicResult {
 
 export interface PanicRevertResult {
   restoredCount: number;
+  restoredStructure: { rolesRestored: number; channelsRestored: number } | null;
 }
 
 const PANIC_CHANNEL_CAP = 40;
@@ -541,6 +543,123 @@ export class SecurityService extends Service {
     }
   }
 
+  public async loadBackupConfig(
+    guildId: string,
+  ): Promise<{ intervalHours: number; keepCount: number }> {
+    const raw = await this.db.config.getAllModuleConfig(guildId, "security");
+    const num = (key: string, fallback: number): number =>
+      typeof raw[key] === "number" ? (raw[key]) : fallback;
+    return {
+      intervalHours: num("backup_interval_hours", 3),
+      keepCount: num("backup_keep_count", 10),
+    };
+  }
+
+  /** Snapshots the guild's role/channel structure and prunes old backups past `keepCount`. */
+  public async createBackup(guild: Guild, keepCount: number): Promise<number> {
+    const data = snapshotGuild(guild);
+    const backup = await this.db.security.createBackup(guild.id, data);
+    await this.db.security.pruneBackups(guild.id, keepCount);
+    return backup.id;
+  }
+
+  /** Marks the guild as having lost structure during the current panic window, for auto-restore on revert. */
+  public async flagRestorePending(guildId: string): Promise<void> {
+    await this.redis.set(
+      RedisKeys.securityRestorePending(guildId),
+      "1",
+      "EX",
+      24 * 60 * 60,
+    );
+  }
+
+  public async isRestorePending(guildId: string): Promise<boolean> {
+    return (
+      (await this.redis.exists(RedisKeys.securityRestorePending(guildId))) === 1
+    );
+  }
+
+  public async clearRestorePending(guildId: string): Promise<void> {
+    await this.redis.del(RedisKeys.securityRestorePending(guildId));
+  }
+
+  /**
+   * Recreates roles and channels present in the snapshot but missing from
+   * the guild now. Best-effort: exact position/id can't be preserved (a
+   * recreated role/channel gets a new Discord id), only name, permissions,
+   * hierarchy-adjacent position, and (for channels) parent + overwrites.
+   */
+  public async restoreFromBackup(
+    guild: Guild,
+    backupId?: number,
+  ): Promise<{ rolesRestored: number; channelsRestored: number } | null> {
+    const row = backupId
+      ? await this.db.security.getBackup(backupId)
+      : await this.db.security.getLatestBackup(guild.id);
+    if (!row || row.guildId !== guild.id) return null;
+
+    const data = row.data as unknown as GuildBackupData;
+    let rolesRestored = 0;
+    const roleIdMap = new Map<string, string>();
+
+    for (const role of data.roles) {
+      if (guild.roles.cache.has(role.id)) {
+        roleIdMap.set(role.id, role.id);
+        continue;
+      }
+      try {
+        const created = await guild.roles.create({
+          name: role.name,
+          color: role.color,
+          permissions: BigInt(role.permissions),
+          hoist: role.hoist,
+          mentionable: role.mentionable,
+          reason: "Security: restoring from backup",
+        });
+        roleIdMap.set(role.id, created.id);
+        rolesRestored++;
+      } catch (err: unknown) {
+        this.logger.warn(
+          `[security] Restore: failed to recreate role ${role.name} in ${guild.id}: ${String(err)}`,
+        );
+      }
+    }
+
+    let channelsRestored = 0;
+    // Categories first so child channels can resolve `parentId`.
+    const ordered = [...data.channels].sort((a, b) =>
+      a.type === ChannelType.GuildCategory ? -1 : b.type === ChannelType.GuildCategory ? 1 : 0,
+    );
+
+    for (const channel of ordered) {
+      if (guild.channels.cache.has(channel.id)) continue;
+      try {
+        const parentId = channel.parentId
+          ? (guild.channels.cache.get(channel.parentId)?.id ?? null)
+          : null;
+        await guild.channels.create({
+          name: channel.name,
+          type: channel.type as never,
+          parent: parentId,
+          permissionOverwrites: channel.overwrites.map((ow) => ({
+            id: roleIdMap.get(ow.id) ?? ow.id,
+            type: ow.type,
+            allow: BigInt(ow.allow),
+            deny: BigInt(ow.deny),
+          })),
+          reason: "Security: restoring from backup",
+        });
+        channelsRestored++;
+      } catch (err: unknown) {
+        this.logger.warn(
+          `[security] Restore: failed to recreate channel ${channel.name} in ${guild.id}: ${String(err)}`,
+        );
+      }
+    }
+
+    return { rolesRestored, channelsRestored };
+  }
+
   /**
    * Activates panic mode: pauses invites and locks `@everyone` SendMessages
    * across the guild's text channels (or a configured subset), snapshotting
@@ -651,7 +770,21 @@ export class SecurityService extends Service {
     }
 
     await this.db.security.clearPanicState(guild.id);
-    return { restoredCount };
+
+    let restoredStructure: PanicRevertResult["restoredStructure"] = null;
+    if (await this.isRestorePending(guild.id)) {
+      restoredStructure = await this.restoreFromBackup(guild).catch(
+        (err: unknown) => {
+          this.logger.warn(
+            `[security] Panic: auto-restore failed in ${guild.id}: ${String(err)}`,
+          );
+          return null;
+        },
+      );
+      await this.clearRestorePending(guild.id);
+    }
+
+    return { restoredCount, restoredStructure };
   }
 }
 

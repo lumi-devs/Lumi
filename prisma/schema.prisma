@@ -68,6 +68,7 @@ model Guild {
   warnThresholds    WarnThreshold[]
   panicState        PanicState?
   verificationPanel VerificationPanel?
+  backups           GuildBackup[]
   tempVcGenerators  TempVcGenerator[]
   tempVcRecords     TempVcRecord[]
 
@@ -418,6 +419,21 @@ model VerificationPanel {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@map("verification_panels")
+}
+
+// Structural snapshot for the anti-nuke Restore System - roles and channels
+// only, never messages or member role assignments (matches Wick's documented
+// scope). `data` shape: { roles: RoleSnapshot[], channels: ChannelSnapshot[] }.
+model GuildBackup {
+  id        Int      @id @default(autoincrement())
+  guildId   String   @map("guild_id") @db.VarChar(20)
+  data      Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, createdAt])
+  @@map("guild_backups")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

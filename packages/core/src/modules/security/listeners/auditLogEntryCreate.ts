@@ -38,6 +38,13 @@ export class SecurityAuditLogListener extends ModuleListener<
     const security = tryGetService("security");
     if (!security) return;
 
+    if (
+      (kind === "channel_delete" || kind === "role_delete") &&
+      (await this.container.db.security.getPanicState(guild.id))
+    ) {
+      await security.flagRestorePending(guild.id);
+    }
+
     const config = await security.loadAntiNukeConfig(guild.id);
     if (!config.enabled) return;
     if (await security.isExempt(guild, executorId, config)) return;

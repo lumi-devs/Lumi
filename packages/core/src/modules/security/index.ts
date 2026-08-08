@@ -1,6 +1,7 @@
 import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleVerifySweepFire } from "./lib/verify-sweep-handler.js";
+import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
 
 @DefineModule({
   name: "security",
@@ -187,6 +188,23 @@ import { handleVerifySweepFire } from "./lib/verify-sweep-handler.js";
         "Comma-separated channel IDs locked by /panic. Blank locks every text channel.",
       list: true,
     }),
+    backup_interval_hours: cfg.number({
+      group: "Backups",
+      label: "Backup Interval (hours)",
+      description:
+        "How often to snapshot role/channel structure while Anti-Nuke is on, for the Restore System.",
+      default: 3,
+      min: 1,
+      max: 168,
+    }),
+    backup_keep_count: cfg.number({
+      group: "Backups",
+      label: "Backups to Keep",
+      description: "Older backups past this count are pruned.",
+      default: 10,
+      min: 1,
+      max: 50,
+    }),
   }),
 })
 export class SecurityModule extends Module {
@@ -195,6 +213,11 @@ export class SecurityModule extends Module {
       "security-verify-sweep",
       "broadcast",
       handleVerifySweepFire,
+    );
+    registerTaskFireHandler(
+      "security-backup-snapshot",
+      "broadcast",
+      handleBackupSnapshotFire,
     );
     return super.onLoad();
   }
