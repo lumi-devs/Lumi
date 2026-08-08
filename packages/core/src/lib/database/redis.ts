@@ -50,6 +50,18 @@ export const RedisKeys = {
     `lumi:filter:${guildId}:heatacted:${userId}`,
   filterLastMsg: (guildId: string, userId: string) =>
     `lumi:filter:${guildId}:lastmsg:${userId}`,
+  filterHeatViolations: (guildId: string, userId: string) =>
+    `lumi:filter:${guildId}:violations:${userId}`,
+  filterHeatPanicRaiders: (guildId: string) =>
+    `lumi:filter:${guildId}:heatpanic:raiders`,
+  filterHeatPanicActive: (guildId: string) =>
+    `lumi:filter:${guildId}:heatpanic:active`,
+  filterHeatPanicFlagged: (guildId: string, userId: string) =>
+    `lumi:filter:${guildId}:heatpanic:flagged:${userId}`,
+  filterMentionWindow: (guildId: string) =>
+    `lumi:filter:${guildId}:mentionwindow`,
+  filterAutoLockdown: (guildId: string) =>
+    `lumi:filter:${guildId}:autolockdown`,
   blocked: (guildId: string | null, userId: string) =>
     `lumi:block:${guildId ?? "global"}:${userId}`,
   blockedPattern: (userId: string) => `lumi:block:*:${userId}`,

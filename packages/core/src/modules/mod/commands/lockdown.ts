@@ -1,7 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
-import { ChannelType } from "discord.js";
+import { lockAllTextChannels, unlockAllTextChannels } from "#lib/moderation/lockdown.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "lockdown",
@@ -34,23 +34,7 @@ export class LockdownCommand extends BaseSubcommand {
 
   public async enable(ctx: CommandContext) {
     await ctx.defer();
-    const guild = ctx.guild!;
-    let modified = 0;
-    let failed = 0;
-
-    const channels = await guild.channels.fetch();
-    for (const channel of channels.values()) {
-      if (channel && channel.type === ChannelType.GuildText) {
-        try {
-          await channel.permissionOverwrites.edit(guild.id, {
-            SendMessages: false,
-          });
-          modified++;
-        } catch (e) {
-          failed++;
-        }
-      }
-    }
+    const { modified, failed } = await lockAllTextChannels(ctx.guild!);
 
     if (modified === 0 && failed > 0) {
       return ctx.replyError(
@@ -67,23 +51,7 @@ export class LockdownCommand extends BaseSubcommand {
 
   public async disable(ctx: CommandContext) {
     await ctx.defer();
-    const guild = ctx.guild!;
-    let modified = 0;
-    let failed = 0;
-
-    const channels = await guild.channels.fetch();
-    for (const channel of channels.values()) {
-      if (channel && channel.type === ChannelType.GuildText) {
-        try {
-          await channel.permissionOverwrites.edit(guild.id, {
-            SendMessages: null,
-          });
-          modified++;
-        } catch (e) {
-          failed++;
-        }
-      }
-    }
+    const { modified, failed } = await unlockAllTextChannels(ctx.guild!);
 
     if (modified === 0 && failed > 0) {
       return ctx.replyError(
