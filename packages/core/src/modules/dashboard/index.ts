@@ -6,6 +6,7 @@ import {
   APPEAL_STATUSES,
   RPC_ACTIONS,
   WARN_THRESHOLD_ACTIONS,
+  type GuildSetupRunResult,
 } from "@lumi/contracts";
 import { verifyAppealToken } from "#lib/appeals/token.js";
 import type { ModerationCase } from "@prisma/client";
@@ -19,7 +20,7 @@ import {
   removeThresholdRule,
   setThresholdRule,
 } from "#utilities/thresholds.js";
-import { ChannelType } from "discord.js";
+import { ChannelType, type Guild } from "discord.js";
 
 /** Channel types sensible to offer in a CHANNEL config picker by default (no threads, no categories). */
 const PICKABLE_CHANNEL_TYPES = new Set<ChannelType>([
@@ -77,6 +78,152 @@ function cachedGuild(guildId: string) {
   const guild = container.client.guilds.cache.get(guildId);
   if (!guild) throw new Error("Guild not found in bot cache");
   return guild;
+}
+
+/**
+ * One-shot guided bootstrap for the dashboard setup wizard (Phase 7 of the
+ * Wick-parity plan): creates the quarantine role and log channels a fresh
+ * guild needs and flips Anti-Nuke/Join Gate on, reusing the same config
+ * write path (`ConfigService.setConfig`) as every other dashboard mutation
+ * rather than writing to Postgres directly. Idempotent — re-running it on
+ * an already-configured guild reuses what's there instead of duplicating
+ * roles/channels or re-flipping settings that are already on.
+ */
+async function runGuildSetup(
+  guild: Guild,
+  actorId: string | undefined,
+): Promise<GuildSetupRunResult> {
+  const config = getService("config");
+
+  const existingQuarantineRoleId = await container.db.config.getModuleConfig(
+    guild.id,
+    "mod",
+    "quarantine_role_id",
+  );
+  let quarantineRole =
+    typeof existingQuarantineRoleId === "string"
+      ? guild.roles.cache.get(existingQuarantineRoleId)
+      : undefined;
+  let quarantineRoleCreated = false;
+  if (!quarantineRole) {
+    quarantineRole = await guild.roles.create({
+      name: "Quarantined",
+      permissions: [],
+      reason: "Dashboard setup wizard: quarantine role",
+    });
+    await config.setConfig(
+      guild.id,
+      "mod",
+      "quarantine_role_id",
+      quarantineRole.id,
+      actorId,
+    );
+    quarantineRoleCreated = true;
+  }
+
+  const existingSecurityLogId = await container.db.config.getModuleConfig(
+    guild.id,
+    "security",
+    "log_channel_id",
+  );
+  let logsChannel =
+    typeof existingSecurityLogId === "string"
+      ? guild.channels.cache.get(existingSecurityLogId)
+      : undefined;
+  let logsChannelCreated = false;
+  if (!logsChannel) {
+    logsChannel = await guild.channels.create({
+      name: "logs",
+      type: ChannelType.GuildText,
+      reason: "Dashboard setup wizard: security log channel",
+    });
+    await config.setConfig(
+      guild.id,
+      "security",
+      "log_channel_id",
+      logsChannel.id,
+      actorId,
+    );
+    logsChannelCreated = true;
+  }
+
+  const existingModLogId = await container.db.config.getModuleConfig(
+    guild.id,
+    "mod",
+    "log_channel_id",
+  );
+  let modLogsChannel =
+    typeof existingModLogId === "string"
+      ? guild.channels.cache.get(existingModLogId)
+      : undefined;
+  let modLogsChannelCreated = false;
+  if (!modLogsChannel) {
+    modLogsChannel = await guild.channels.create({
+      name: "modlogs",
+      type: ChannelType.GuildText,
+      reason: "Dashboard setup wizard: mod log channel",
+    });
+    await config.setConfig(
+      guild.id,
+      "mod",
+      "log_channel_id",
+      modLogsChannel.id,
+      actorId,
+    );
+    modLogsChannelCreated = true;
+  }
+
+  const antinukeAlreadyEnabled =
+    (await container.db.config.getModuleConfig(
+      guild.id,
+      "security",
+      "antinuke_enabled",
+    )) === true;
+  if (!antinukeAlreadyEnabled) {
+    await config.setConfig(
+      guild.id,
+      "security",
+      "antinuke_enabled",
+      "true",
+      actorId,
+    );
+  }
+
+  const joingateAlreadyEnabled =
+    (await container.db.config.getModuleConfig(
+      guild.id,
+      "security",
+      "joingate_enabled",
+    )) === true;
+  if (!joingateAlreadyEnabled) {
+    await config.setConfig(
+      guild.id,
+      "security",
+      "joingate_enabled",
+      "true",
+      actorId,
+    );
+  }
+
+  return {
+    quarantineRole: {
+      id: quarantineRole.id,
+      name: quarantineRole.name,
+      created: quarantineRoleCreated,
+    },
+    logsChannel: {
+      id: logsChannel.id,
+      name: logsChannel.name,
+      created: logsChannelCreated,
+    },
+    modLogsChannel: {
+      id: modLogsChannel.id,
+      name: modLogsChannel.name,
+      created: modLogsChannelCreated,
+    },
+    antinukeEnabled: true,
+    joingateEnabled: true,
+  };
 }
 
 const ModuleToggleSchema = s.object({
@@ -467,6 +614,15 @@ export class DashboardModule extends Module {
         req.actorId,
       );
       return { success: true, key, value: coerced };
+    });
+
+    registerRpcHandler(RPC_ACTIONS.guildSetupRun, async (req) => {
+      const guildId = requireGuildId(req.guildId);
+      await requireGuildManager(guildId, req.actorId);
+      const guild = container.client.guilds.cache.get(guildId);
+      if (!guild) throw new Error("Guild not found in bot cache");
+
+      return runGuildSetup(guild, req.actorId);
     });
 
     registerRpcHandler(RPC_ACTIONS.guildSettingsSet, async (req) => {
@@ -1282,6 +1438,7 @@ export class DashboardModule extends Module {
     rpcHandlers.delete(RPC_ACTIONS.guildDashboardGet);
     rpcHandlers.delete(RPC_ACTIONS.guildModuleToggle);
     rpcHandlers.delete(RPC_ACTIONS.guildConfigSet);
+    rpcHandlers.delete(RPC_ACTIONS.guildSetupRun);
     rpcHandlers.delete(RPC_ACTIONS.guildSettingsSet);
     rpcHandlers.delete(RPC_ACTIONS.guildPermitsList);
     rpcHandlers.delete(RPC_ACTIONS.guildPermitsCreate);

@@ -70,6 +70,22 @@ export interface ConfigSetPayload {
   value?: unknown;
 }
 
+/** One created-or-reused item in a `guild.setup.run` result (a role or a channel). */
+export interface GuildSetupItemResult {
+  id: string;
+  name: string;
+  created: boolean;
+}
+
+/** Result of `guild.setup.run` — the setup wizard's one-shot guided bootstrap. */
+export interface GuildSetupRunResult {
+  quarantineRole: GuildSetupItemResult;
+  logsChannel: GuildSetupItemResult;
+  modLogsChannel: GuildSetupItemResult;
+  antinukeEnabled: boolean;
+  joingateEnabled: boolean;
+}
+
 /** Partial `Guild` model update from the dashboard's general-settings form. */
 export interface GuildSettingsPayload {
   prefix?: string | null;
@@ -386,6 +402,7 @@ export interface RpcRequestPayloads {
   "guild.dashboard.get": never;
   "guild.module.toggle": ModuleTogglePayload;
   "guild.config.set": ConfigSetPayload;
+  "guild.setup.run": never;
   "guild.settings.set": GuildSettingsPayload;
   "guild.permits.list": never;
   "guild.permits.create": PermitCreatePayload;
@@ -458,6 +475,7 @@ export const RPC_ACTIONS = {
   guildDashboardGet: "guild.dashboard.get",
   guildModuleToggle: "guild.module.toggle",
   guildConfigSet: "guild.config.set",
+  guildSetupRun: "guild.setup.run",
   guildSettingsSet: "guild.settings.set",
   guildPermitsList: "guild.permits.list",
   guildPermitsCreate: "guild.permits.create",
