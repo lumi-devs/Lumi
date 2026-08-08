@@ -3,7 +3,12 @@ import type { TempVcRecord } from "@prisma/client";
 import { tempVcRegistry } from "./registry.js";
 
 export interface GeneratorConfig {
-  /** Name template; use {} where the number goes, e.g. "Gaming {}" → "Gaming 1". */
+  /**
+   * Name template. Supports `{}`/`{number}` (sequence number, e.g.
+   * "Gaming {}" → "Gaming 1"), `{username}` (Discord username),
+   * `{name}` (display name/nickname), and `{position}` (alias of
+   * `{number}`). No placeholder appends the number to the end.
+   */
   name: string;
   /** User limit applied to created channels (0 = unlimited). */
   limit: number;

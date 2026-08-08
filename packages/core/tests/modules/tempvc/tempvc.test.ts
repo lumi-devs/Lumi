@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import TempVcService from "#modules/tempvc/services/TempVcService.js";
+import TempVcService, {
+  resolveGeneratorName,
+} from "#modules/tempvc/services/TempVcService.js";
 import { container } from "@sapphire/framework";
 import { tempVcRegistry } from "#modules/tempvc/registry.js";
 import { scheduleTask } from "#lib/schedule-task.js";
@@ -48,6 +50,11 @@ describe("TempVcService", () => {
     // Directly assign mock properties to the global container
     (container as any).redis = {
       set: vi.fn(),
+    } as any;
+    (container as any).db = {
+      config: {
+        getModuleConfig: vi.fn().mockResolvedValue(null),
+      },
     } as any;
     container.logger = {
       error: vi.fn(),
@@ -574,6 +581,71 @@ describe("TempVcService", () => {
         ManageChannels: true,
       });
       expect(result.ownerId).toBe("new-owner");
+    });
+  });
+
+  describe("resolveGeneratorName", () => {
+    const member = {
+      user: { username: "raw_user" },
+      displayName: "Nicky",
+    } as any;
+
+    it("substitutes {} with the sequence number", () => {
+      expect(resolveGeneratorName("Gaming {}", { number: 3, member })).toBe(
+        "Gaming 3",
+      );
+    });
+
+    it("substitutes {number} with the sequence number", () => {
+      expect(
+        resolveGeneratorName("Room {number}", { number: 7, member }),
+      ).toBe("Room 7");
+    });
+
+    it("substitutes {position} as an alias of {number}", () => {
+      expect(
+        resolveGeneratorName("Spot #{position}", { number: 4, member }),
+      ).toBe("Spot #4");
+    });
+
+    it("substitutes {username} with the raw account username", () => {
+      expect(
+        resolveGeneratorName("{username}'s Room", { number: 1, member }),
+      ).toBe("raw_user's Room");
+    });
+
+    it("substitutes {name} with the member's display name", () => {
+      expect(
+        resolveGeneratorName("{name}'s Room", { number: 1, member }),
+      ).toBe("Nicky's Room");
+    });
+
+    it("supports multiple placeholders in one template", () => {
+      expect(
+        resolveGeneratorName("{name} ({username}) #{number}", {
+          number: 5,
+          member,
+        }),
+      ).toBe("Nicky (raw_user) #5");
+    });
+
+    it("appends the number when the template has no placeholder", () => {
+      expect(resolveGeneratorName("Gaming", { number: 2, member })).toBe(
+        "Gaming 2",
+      );
+    });
+
+    it("truncates the resolved name to 100 characters after substitution", () => {
+      const longMember = {
+        user: { username: "a".repeat(150) },
+        displayName: "b".repeat(150),
+      } as any;
+      const result = resolveGeneratorName("{username}", {
+        number: 1,
+        member: longMember,
+      });
+      expect(result).toHaveLength(100);
+      expect(result).toBe("a".repeat(100));
     });
   });
 });

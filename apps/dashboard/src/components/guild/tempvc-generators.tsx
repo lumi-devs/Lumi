@@ -20,12 +20,24 @@ import type {
 } from "#/lib/dashboard-data";
 import { useServerAction } from "#/lib/use-server-action";
 
-/** Mirrors `TempVcService.createVc`: no `{}` in the template appends the number. */
+/**
+ * Mirrors `TempVcService.resolveGeneratorName`: substitutes `{}`/`{number}`
+ * (sequence number), `{position}` (alias of `{number}`), `{username}`, and
+ * `{name}` (both shown as "Alex" here since the preview has no real member).
+ * No placeholder appends the number to the end.
+ */
 export function resolveName(template: string, number: number): string {
   const trimmed = template.trim();
-  return trimmed.includes("{}")
-    ? trimmed.replace("{}", String(number))
-    : `${trimmed} ${number}`;
+  const hasPlaceholder = /\{\}|\{number\}|\{position\}|\{username\}|\{name\}/.test(
+    trimmed,
+  );
+  if (!hasPlaceholder) return `${trimmed} ${number}`;
+  return trimmed
+    .replaceAll("{}", String(number))
+    .replaceAll("{number}", String(number))
+    .replaceAll("{position}", String(number))
+    .replaceAll("{username}", "Alex")
+    .replaceAll("{name}", "Alex");
 }
 
 export function TempVcGenerators({
@@ -237,16 +249,19 @@ function GeneratorForm({
           htmlFor="generator-name"
           className="min-w-[12rem] flex-1 gap-1"
           hint={
-            name.includes("{}")
-              ? `Creates “${resolveName(name, 1)}”`
-              : `No {} in the pattern, so the number goes on the end: “${resolveName(name, 1)}”`
+            <>
+              Preview: “{resolveName(name, 1)}”. Placeholders: {"{}"}/
+              {"{number}"} → “1”, {"{username}"} → “Alex”, {"{name}"} →
+              “Alex”, {"{position}"} → “1” (alias of {"{number}"}). No
+              placeholder appends the number to the end.
+            </>
           }
         >
           <Input
             id="generator-name"
             value={name}
             maxLength={100}
-            placeholder="Gaming {}"
+            placeholder="{name}'s Channel"
             onChange={(e) => setName(e.target.value)}
           />
         </Field>

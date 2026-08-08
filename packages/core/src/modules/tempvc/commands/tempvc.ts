@@ -16,7 +16,7 @@ import {
 } from "discord.js";
 import { ephemeralCard } from "#lib/utilities/cards.js";
 import { paginateList } from "#lib/utilities/pagination.js";
-import { TEMPVC_MAX_GENERATORS } from "../index.js";
+import { getMaxGenerators } from "../index.js";
 import { getService } from "#lib/module-system/Service.js";
 import type TempVcService from "../services/TempVcService.js";
 import { getVcRecord } from "../data.js";
@@ -72,7 +72,7 @@ export class TempVcCommand extends BaseSubcommand {
                   opt
                     .setName("name")
                     .setDescription(
-                      'Name template for created channels. Use {} where the number goes, e.g. "Gaming {}".',
+                      'Name template for created channels. Supports {}/{number}, {username}, {name}, {position}, e.g. "Gaming {}".',
                     )
                     .setMaxLength(90)
                     .setRequired(true),
@@ -158,11 +158,12 @@ export class TempVcCommand extends BaseSubcommand {
     }
 
     const existing = await this.tempVcService.listGenerators(guildId);
-    if (!existing.has(channel.id) && existing.size >= TEMPVC_MAX_GENERATORS) {
+    const maxGenerators = await getMaxGenerators(guildId);
+    if (!existing.has(channel.id) && existing.size >= maxGenerators) {
       return replyError(
         interaction,
         t("tempvc:tooManyGeneratorsTitle"),
-        t("tempvc:tooManyGeneratorsMessage", { max: TEMPVC_MAX_GENERATORS }),
+        t("tempvc:tooManyGeneratorsMessage", { max: maxGenerators }),
       );
     }
 
