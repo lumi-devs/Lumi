@@ -1,5 +1,14 @@
 # @lumi/event-bus
 
+## 3.3.0
+
+### Patch Changes
+
+- Updated dependencies [19dedd9]
+- Updated dependencies [ef84827]
+  - @lumi/contracts@3.3.0
+  - @lumi/observability@3.3.0
+
 ## 3.2.0
 
 ### Patch Changes
