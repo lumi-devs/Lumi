@@ -81,6 +81,39 @@ import { handleVerifySweepFire } from "./lib/verify-sweep-handler.js";
       min: 1,
       max: 50,
     }),
+    max_vanity_changes: cfg.number({
+      group: "Nuke Limits",
+      label: "Max Vanity URL Changes",
+      description: "Vanity invite code changes allowed per executor within the window.",
+      default: 1,
+      min: 1,
+      max: 10,
+    }),
+    max_permission_grants: cfg.number({
+      group: "Nuke Limits",
+      label: "Max Dangerous Permission Grants",
+      description:
+        "Times @everyone can be granted a dangerous permission (Administrator, Manage Roles, etc.) per executor within the window before response fires. The grant itself is always reverted immediately.",
+      default: 1,
+      min: 1,
+      max: 10,
+    }),
+    max_quarantine_bypass: cfg.number({
+      group: "Nuke Limits",
+      label: "Max Quarantine Bypass Attempts",
+      description:
+        "Times an executor can attempt to change a quarantined member's roles per executor within the window before response fires. The change itself is always reverted immediately.",
+      default: 1,
+      min: 1,
+      max: 10,
+    }),
+    panic_lock_mod_commands: cfg.boolean({
+      group: "Panic Mode",
+      label: "Lock Mod Commands During Panic",
+      description:
+        "While panic mode is active, only the server owner or whoever triggered it may run moderation commands.",
+      default: false,
+    }),
     joingate_enabled: cfg.boolean({
       group: "Join Gate",
       label: "Join Gate",

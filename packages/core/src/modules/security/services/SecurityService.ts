@@ -43,7 +43,10 @@ export type NukeKind =
   | "kick"
   | "channel_delete"
   | "role_delete"
-  | "webhook_create";
+  | "webhook_create"
+  | "vanity_change"
+  | "dangerous_permission_grant"
+  | "quarantine_bypass";
 
 export interface AntiNukeConfig {
   enabled: boolean;
@@ -77,7 +80,20 @@ const KIND_LIMIT_KEYS: Record<NukeKind, string> = {
   channel_delete: "max_channel_deletes",
   role_delete: "max_role_deletes",
   webhook_create: "max_webhook_creates",
+  vanity_change: "max_vanity_changes",
+  dangerous_permission_grant: "max_permission_grants",
+  quarantine_bypass: "max_quarantine_bypass",
 };
+
+/** Permissions that hand out server control - never allowed on `@everyone`. */
+export const DANGEROUS_PERMISSIONS = [
+  PermissionFlagsBits.Administrator,
+  PermissionFlagsBits.ManageGuild,
+  PermissionFlagsBits.ManageRoles,
+  PermissionFlagsBits.ManageChannels,
+  PermissionFlagsBits.BanMembers,
+  PermissionFlagsBits.KickMembers,
+] as const;
 
 const TRIPPED_COOLDOWN_SECONDS = 300;
 const RAID_MODE_SECONDS = 600;
@@ -112,6 +128,12 @@ export class SecurityService extends Service {
         channel_delete: num(KIND_LIMIT_KEYS.channel_delete, 3),
         role_delete: num(KIND_LIMIT_KEYS.role_delete, 3),
         webhook_create: num(KIND_LIMIT_KEYS.webhook_create, 3),
+        vanity_change: num(KIND_LIMIT_KEYS.vanity_change, 1),
+        dangerous_permission_grant: num(
+          KIND_LIMIT_KEYS.dangerous_permission_grant,
+          1,
+        ),
+        quarantine_bypass: num(KIND_LIMIT_KEYS.quarantine_bypass, 1),
       },
       response:
         raw["response"] === "log" || raw["response"] === "ban"
@@ -172,7 +194,7 @@ export class SecurityService extends Service {
     count: number,
     config: AntiNukeConfig,
   ): Promise<void> {
-    const reason = `Anti-nuke: ${count} ${kind.replace("_", " ")} actions in ${config.windowSeconds}s`;
+    const reason = `Anti-nuke: ${count} ${kind.replaceAll("_", " ")} actions in ${config.windowSeconds}s`;
     const botUser = this.container.client.user;
     if (isNullish(botUser)) return;
 
@@ -241,6 +263,12 @@ export class SecurityService extends Service {
         "security",
       );
     }
+  }
+
+  public async isQuarantined(guildId: string, userId: string): Promise<boolean> {
+    return (
+      (await this.redis.exists(RedisKeys.quarantineState(guildId, userId))) === 1
+    );
   }
 
   public async loadJoinGateConfig(guildId: string): Promise<JoinGateConfig> {

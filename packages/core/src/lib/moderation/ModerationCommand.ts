@@ -3,7 +3,7 @@ import type { LumiT } from "#lib/i18n/index.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
 import { logError } from "#lib/utilities/errors.js";
 import { isNullish } from "@sapphire/utilities";
-import { Result, type Awaitable } from "@sapphire/framework";
+import { Result, container, type Awaitable } from "@sapphire/framework";
 import type { Guild, GuildMember, User } from "discord.js";
 
 const Root = LanguageKeys.Commands;
@@ -34,6 +34,38 @@ function actionFailed(t: LumiT): ModerationCommand.Reply {
   return {
     title: t(Root.ModActionFailedTitle),
     body: t(Root.ModActionFailed),
+  };
+}
+
+/**
+ * While panic mode is active and `security:panic_lock_mod_commands` is on,
+ * only the guild owner or whoever triggered panic mode may run moderation
+ * commands - stops a compromised mod account from acting while the server is
+ * locked down.
+ */
+async function checkPanicLock(
+  ctx: CommandContext,
+  t: LumiT,
+): Promise<ModerationCommand.Reply | null> {
+  const guild = ctx.guild;
+  const moderator = ctx.member;
+  if (!guild || !moderator) return null;
+  if (guild.ownerId === moderator.id) return null;
+
+  const locked = await container.db.config.getModuleConfig(
+    guild.id,
+    "security",
+    "panic_lock_mod_commands",
+  );
+  if (locked !== true) return null;
+
+  const state = await container.db.security.getPanicState(guild.id);
+  if (!state) return null;
+  if (state.actorId === moderator.id) return null;
+
+  return {
+    title: t(Root.ModPanicLockedTitle),
+    body: t(Root.ModPanicLocked),
   };
 }
 
@@ -114,6 +146,9 @@ export async function runModerationFlow<
 
   await ctx.defer();
   const t = await ctx.fetchT();
+
+  const panicLocked = await checkPanicLock(ctx, t);
+  if (panicLocked) return replyFailure(ctx, panicLocked);
 
   const target = await flow.resolveTarget(ctx, t);
   if (isNullish(target)) {

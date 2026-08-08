@@ -47,6 +47,8 @@
   "modActionFailed": "Could not complete the action. Check the bot's permissions and role hierarchy.",
   "modHierarchyTitle": "Outranked",
   "modHierarchy": "You cannot moderate {{user}} - they are the same rank as you or higher.",
+  "modPanicLockedTitle": "Panic Mode Active",
+  "modPanicLocked": "Moderation commands are locked while panic mode is active. Only the server owner or whoever triggered panic mode can act right now.",
   "kickName": "kick",
   "kickDescription": "Kick a member from the server",
   "kickMemberName": "member",
