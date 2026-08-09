@@ -78,6 +78,7 @@ declare module "@sapphire/pieces" {
   }
 }
 
+import "@sapphire/plugin-utilities-store";
 import type { ServiceStore } from "#lib/module-system/ServiceStore.js";
 
 declare module "@sapphire/framework" {

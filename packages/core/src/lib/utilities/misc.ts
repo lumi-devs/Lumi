@@ -81,5 +81,6 @@ export async function withSerializedWork<T>(
     return await fn();
   } finally {
     queue.shift();
+    if (queue.remaining === 0) queues.delete(key);
   }
 }

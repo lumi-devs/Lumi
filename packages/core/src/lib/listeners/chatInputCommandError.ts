@@ -2,7 +2,8 @@ import {
   Listener,
   type ChatInputCommandErrorPayload,
 } from "@sapphire/framework";
-import { makeErrorCard } from "#lib/utilities/cards.js";
+import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";
+import { resolveCommandError } from "#lib/utilities/command-errors.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
 
 export class CoreChatInputCommandErrorListener extends Listener {
@@ -15,16 +16,13 @@ export class CoreChatInputCommandErrorListener extends Listener {
 
   public async run(error: unknown, payload: ChatInputCommandErrorPayload): Promise<void> {
     const { interaction } = payload;
-    this.container.logger.error(`[ChatInputCommandError] command=${payload.command.name}:`, error);
+    const label = `Command:${payload.command.name}`;
+    const { title, message } = resolveCommandError(label, error);
 
-    const errorMessage =
-      error instanceof Error ? error.message : "An unexpected error occurred while executing this command.";
-
-    const card = makeErrorCard(
-      "Command Error",
-      `An error occurred while running **/${payload.command.name}**:\n\n\`\`\`\n${errorMessage}\n\`\`\``,
-    );
-
-    await sendInteractionReply(interaction, card, "edit").catch(() => null);
+    const card = ephemeralCard(makeErrorCard(title, message));
+    const mode = interaction.deferred || interaction.replied ? "edit" : "followUp";
+    await sendInteractionReply(interaction, card, mode).catch((err) => {
+      this.container.logger.debug("[ChatInputCommandError] Failed to send error card:", err);
+    });
   }
 }

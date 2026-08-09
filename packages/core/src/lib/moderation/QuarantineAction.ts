@@ -51,7 +51,7 @@ export class QuarantineAction {
       .map((r) => r.id);
 
     await targetMember.roles.set(
-      [guild.id, quarantineRoleId],
+      [quarantineRoleId],
       formatAuditReason(moderator, reason),
     );
 
@@ -99,7 +99,7 @@ export class QuarantineAction {
     const validRoles = rolesToRestore.filter((id) => guild.roles.cache.has(id));
 
     await targetMember.roles.set(
-      [guild.id, ...validRoles],
+      validRoles,
       formatAuditReason(moderator, reason),
     );
 

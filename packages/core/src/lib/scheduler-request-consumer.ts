@@ -90,7 +90,14 @@ export class SchedulerRequestConsumer {
         `[SchedulerRequestConsumer] Failed to apply request (id=${msg.id}, deliveryCount=${msg.deliveryCount}):`,
         err,
       );
-      await msg.nack();
+      if (msg.deliveryCount >= 5) {
+        container.logger.error(
+          `[SchedulerRequestConsumer] Poison message dead-lettered after ${msg.deliveryCount} attempts (id=${msg.id}). Investigate manually.`,
+        );
+        await msg.ack();
+      } else {
+        await msg.nack();
+      }
     }
   }
 }

@@ -46,6 +46,7 @@ function makeService(overrides: {
       incr: vi.fn(),
       expire: vi.fn(),
       set: vi.fn(),
+      exists: vi.fn().mockResolvedValue(0),
       multi: vi.fn(() => makeMultiMock(1)),
       ...overrides.redis,
     },
@@ -306,7 +307,7 @@ describe("SecurityService.enterPanic / revertPanic", () => {
         expect.objectContaining({ reason: "Panic mode reverted" }),
       );
       expect(clearPanicState).toHaveBeenCalledWith("g-panic");
-      expect(result).toEqual({ restoredCount: 1 });
+      expect(result).toEqual({ restoredCount: 1, restoredStructure: null });
     },
     10000,
   );

@@ -19,8 +19,6 @@ import { ButtonStyle } from "discord.js";
  * `MODULE_UPDATE_AUTO_RESTART=false` to keep the bot up and restart by hand.
  */
 
-
-
 /**
  * The "Restart Now / Cancel" choice presented to the bot owner after an update
  * that needs a restart to load. `userId` scopes the buttons to the invoker.

@@ -5,9 +5,21 @@ export async function executeGdprDeletion(
   userId: string,
   requester?: string,
 ): Promise<void> {
-  for (const module of container.moduleStore.values()) {
-    await module.deleteUserData(userId, requester);
+  const modules = Array.from(container.moduleStore.values());
+  const results = await Promise.allSettled(
+    modules.map((m) => m.deleteUserData(userId, requester)),
+  );
+
+  for (let i = 0; i < results.length; i++) {
+    const res = results[i]!;
+    if (res.status === "rejected") {
+      container.logger.error(
+        `[GDPR] Module '${modules[i]!.name}' failed deleteUserData for ${userId}:`,
+        res.reason,
+      );
+    }
   }
+
   await container.db.deleteUserData(userId);
 }
 
@@ -20,9 +32,21 @@ export async function executeGdprExport(
   const core = await container.db.exportUserData(userId);
   if (core) result["core"] = core;
 
-  for (const module of container.moduleStore.values()) {
-    const data = await module.exportUserData(userId);
-    if (data) result[module.name] = data;
+  const modules = Array.from(container.moduleStore.values());
+  const exports = await Promise.allSettled(
+    modules.map((m) => m.exportUserData(userId)),
+  );
+
+  for (let i = 0; i < exports.length; i++) {
+    const res = exports[i]!;
+    if (res.status === "fulfilled" && res.value != null) {
+      result[modules[i]!.name] = res.value;
+    } else if (res.status === "rejected") {
+      container.logger.warn(
+        `[GDPR] Module '${modules[i]!.name}' failed exportUserData for ${userId}:`,
+        res.reason,
+      );
+    }
   }
 
   return result;

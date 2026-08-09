@@ -1,5 +1,6 @@
 import type { Redis } from "ioredis";
 import { RedisKeys } from "#lib/database/redis.js";
+import { REDIS_RELEASE_SCRIPT, REDIS_EXTEND_SCRIPT } from "#lib/redis-lock.js";
 
 export interface CommandRegistrationLockOptions {
   redis: Redis;
@@ -72,11 +73,7 @@ export class CommandRegistrationLock {
     this.leader = false;
     try {
       await this.redis.eval(
-        `if redis.call("GET", KEYS[1]) == ARGV[1] then
-           return redis.call("DEL", KEYS[1])
-         else
-           return 0
-         end`,
+        REDIS_RELEASE_SCRIPT,
         1,
         this.key,
         this.replicaId,
@@ -98,11 +95,7 @@ export class CommandRegistrationLock {
   private async renew(): Promise<void> {
     try {
       const result = (await this.redis.eval(
-        `if redis.call("GET", KEYS[1]) == ARGV[1] then
-           return redis.call("PEXPIRE", KEYS[1], ARGV[2])
-         else
-           return 0
-         end`,
+        REDIS_EXTEND_SCRIPT,
         1,
         this.key,
         this.replicaId,
@@ -116,7 +109,9 @@ export class CommandRegistrationLock {
         });
       }
     } catch (err: unknown) {
-      this.log("error", "[CommandLock] Renewal error", { err: String(err) });
+      this.leader = false;
+      this.stopRenewal();
+      this.log("error", "[CommandLock] Renewal error - marking as non-leader", { err: String(err) });
     }
   }
 
