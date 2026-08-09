@@ -53,7 +53,7 @@ export class RequirePermitPrecondition extends Precondition {
       userId,
       roleIds,
       permitNode,
-      guildOwnerId: guildOwnerId ?? "",
+      guildOwnerId,
     });
     return hasPermit
       ? this.ok()

@@ -22,8 +22,9 @@ const SafeNameSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
 function parsePayload<T>(schema: BaseValidator<T>, data: unknown): T {
   try {
     return schema.parse(data);
-  } catch (err: any) {
-    throw new Error(`Bad payload: ${err.message}`);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Bad payload: ${msg}`);
   }
 }
 
@@ -198,7 +199,11 @@ export function initCoreRpcHandlers() {
     }
 
     await resolver.installModule(repoName, moduleName);
-    await container.db.downloader.writeInstalledDownloaderModule(repo.id, moduleName);
+    await container.db.downloader.writeInstalledDownloaderModule(
+      repo.id,
+      moduleName,
+      remoteModule.version,
+    );
     await container.moduleStore.discover(true);
     await container.moduleStore.loadModule(moduleName);
     return { success: true, moduleName };

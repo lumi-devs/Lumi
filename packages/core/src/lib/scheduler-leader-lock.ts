@@ -1,5 +1,6 @@
 import type { Redis } from "ioredis";
 import { RedisKeys } from "#lib/database/redis.js";
+import { REDIS_RELEASE_SCRIPT, REDIS_EXTEND_SCRIPT } from "#lib/redis-lock.js";
 
 export interface SchedulerLeaderLockOptions {
   redis: Redis;
@@ -83,11 +84,7 @@ export class SchedulerLeaderLock {
     this.state = "idle";
     try {
       await this.redis.eval(
-        `if redis.call("GET", KEYS[1]) == ARGV[1] then
-           return redis.call("DEL", KEYS[1])
-         else
-           return 0
-         end`,
+        REDIS_RELEASE_SCRIPT,
         1,
         this.key,
         this.replicaId,
@@ -108,11 +105,7 @@ export class SchedulerLeaderLock {
   private async renew(): Promise<void> {
     try {
       const result = (await this.redis.eval(
-        `if redis.call("GET", KEYS[1]) == ARGV[1] then
-           return redis.call("PEXPIRE", KEYS[1], ARGV[2])
-         else
-           return 0
-         end`,
+        REDIS_EXTEND_SCRIPT,
         1,
         this.key,
         this.replicaId,

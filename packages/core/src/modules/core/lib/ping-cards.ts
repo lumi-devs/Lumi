@@ -16,9 +16,9 @@ import {
 import { time, TimestampStyles } from "@discordjs/formatters";
 import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
 import type { PingData } from "./ping-collect.js";
-import { container } from "@sapphire/framework";
 import { Emojis } from "#lib/utilities/assets.js";
 import type { LumiT } from "#lib/i18n/index.js";
+import { formatDuration } from "#utilities/time.js";
 
 export const PING_FLAGS = MessageFlags.IsComponentsV2;
 export const EPHEMERAL_FLAGS =
@@ -127,7 +127,7 @@ export function buildOverviewCard(
     const ping = shard.ping < 0 ? "Analyzing…" : `${Math.round(shard.ping)}ms`;
     content += `### __Shard ${shard.id}__\n`;
     content += `${E.space}${E.latency} **Latency**: ${ping}\n`;
-    content += `${E.space}${E.uptime} **Uptime**: ${container.utilities.time.formatDuration(data.uptime)}\n`;
+    content += `${E.space}${E.uptime} **Uptime**: ${formatDuration(data.uptime)}\n`;
     content += `${E.space}${E.trade} __System Resources__:\n`;
     content += `${E.space}${E.space}${E.memory} **RAM**: ${fmtMB(data.rss)}\n`;
     content += `${E.space}${E.space}${E.cpu} **CPU**: ${Math.round(data.cpuPercent)}%\n`;
@@ -284,7 +284,7 @@ export function buildHostCard(data: PingData, t?: LumiT): ContainerBuilder {
                 : "N/A",
             ],
           ],
-          `System Uptime: ${container.utilities.time.formatDuration(data.osUptimeSecs * 1000)}`,
+          `System Uptime: ${formatDuration(data.osUptimeSecs * 1000)}`,
         ),
       ].join("\n"),
     ),
@@ -313,7 +313,7 @@ export function buildPostgresCard(data: PingData, t?: LumiT): ContainerBuilder {
             [
               "Database Uptime",
               data.dbUptimeSecs
-                ? container.utilities.time.formatDuration(
+                ? formatDuration(
                     data.dbUptimeSecs * 1000,
                   )
                 : "N/A",
@@ -439,7 +439,7 @@ export function buildBotCard(data: PingData, t?: LumiT): ContainerBuilder {
             ["Memory/Guild", `${memPerGuild} MB`],
             ["System RSS", fmtMB(data.rss)],
           ],
-          `Process Uptime: ${container.utilities.time.formatDuration(data.uptime)}`,
+          `Process Uptime: ${formatDuration(data.uptime)}`,
         ),
         executiveSection(
           "Software Architecture",
