@@ -56,7 +56,7 @@ export class ClusterReadyTracker {
     const liveIds = await this.opts.redis.zrange(
       membersKey(this.opts.clusterName),
       0,
-      -1,
+      "-1",
     );
     if (liveIds.length === 0) return false;
 
