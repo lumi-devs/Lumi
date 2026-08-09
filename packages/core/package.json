@@ -57,7 +57,7 @@
     "@sapphire/plugin-subcommands": "^7.0.1",
     "@sapphire/plugin-utilities-store": "^2.0.3",
     "@sapphire/ratelimits": "^2.4.11",
-    "@sapphire/shapeshift": "^4.0.0",
+    "@sapphire/shapeshift": "^5.0.0",
     "@sapphire/snowflake": "^3.5.5",
     "@sapphire/stopwatch": "^1.5.4",
     "@sapphire/time-utilities": "^1.7.14",
