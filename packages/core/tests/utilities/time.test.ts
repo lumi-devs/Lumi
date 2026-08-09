@@ -1,23 +1,21 @@
-import { describe, it, expect } from 'vitest';
-import { TimeUtility } from '#lib/utility-store/TimeUtility.js';
+import { describe, it, expect } from "vitest";
+import { parseDuration, formatDuration, relativeTimestamp, shortTimestamp } from "#utilities/time.js";
 
-describe('TimeUtility', () => {
-	const timeUtil = new TimeUtility({ name: 'time', path: '', root: '', store: {} }, { name: 'time' });
+describe("time utilities", () => {
+  it("formatDuration", () => {
+    expect(formatDuration(50000)).toBe("50s");
+    expect(formatDuration(90000)).toBe("1m");
+  });
 
-	it('humanizeDelta', () => {
-		expect(timeUtil.humanizeDelta(50)).toBe('50s');
-		expect(timeUtil.humanizeDelta(90)).toBe('1m 30s');
-	});
+  it("parseDuration", () => {
+    expect(parseDuration("1m")).toBe(60000);
+    expect(parseDuration("2h30m")).toBe(9000000);
+    expect(parseDuration("invalid")).toBe(null);
+  });
 
-	it('formatDuration', () => {
-		expect(timeUtil.formatDuration(90000)).toBe('1m 30s');
-	});
-
-	it('parseDuration', () => {
-		expect(timeUtil.parseDuration('1m')).toBe(60);
-		expect(timeUtil.parseDuration('2h30m')).toBe(9000);
-		expect(timeUtil.parseDuration('invalid')).toBe(null);
-	});
-
-
+  it("timestamps", () => {
+    const d = new Date(1700000000000);
+    expect(relativeTimestamp(d)).toContain("<t:1700000000:R>");
+    expect(shortTimestamp(d)).toContain("<t:1700000000:t>");
+  });
 });

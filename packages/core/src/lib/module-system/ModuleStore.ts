@@ -36,7 +36,8 @@ export interface ModuleRecord {
 }
 
 /** True when `child` is `parent` itself or a path nested beneath it. */
-function isPathInside(child: string, parent: string): boolean {
+function isPathInside(child: string | undefined | null, parent: string): boolean {
+  if (!child || !parent) return false;
   return child === parent || child.startsWith(parent + path.sep);
 }
 
@@ -370,14 +371,8 @@ export class ModuleStore extends Store<Module> {
       const storePath = path.join(record.dir, store.name);
       if (!(await this.#exists(storePath))) continue;
 
-      const entries = await fs.readdir(storePath).catch(() => [] as string[]);
-      for (const file of entries) {
-        if (
-          !file.endsWith(".ts") &&
-          !file.endsWith(".js") &&
-          !file.endsWith(".mts")
-        )
-          continue;
+      const files = await this.#walkStoreFiles(storePath);
+      for (const file of files) {
         try {
           await store.load(storePath, file);
         } catch (err: unknown) {
@@ -492,6 +487,27 @@ export class ModuleStore extends Store<Module> {
         );
       }
     });
+  }
+
+  async #walkStoreFiles(dir: string, baseDir = dir): Promise<string[]> {
+    const out: string[] = [];
+    const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
+    for (const entry of entries) {
+      if (entry.name.startsWith("_") || entry.name.startsWith(".")) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        out.push(...(await this.#walkStoreFiles(full, baseDir)));
+      } else if (
+        entry.isFile() &&
+        (entry.name.endsWith(".ts") ||
+          entry.name.endsWith(".js") ||
+          entry.name.endsWith(".mts")) &&
+        !entry.name.endsWith(".d.ts")
+      ) {
+        out.push(path.relative(baseDir, full));
+      }
+    }
+    return out;
   }
 
   async #exists(p: string) {

@@ -31,6 +31,7 @@ import {
   getCoreUpdateStatus,
   updateLumiCore,
 } from "#lib/utilities/self-update.js";
+import { LumiInfo } from "#utilities/misc.js";
 
 interface MockEntry {
   stdout?: string;
@@ -86,7 +87,9 @@ describe("getCoreUpdateStatus", () => {
       "git fetch origin main": { stdout: "" },
       "git rev-parse --short origin/main": { stdout: "def5678\n" },
       "git rev-list --count abc1234..origin/main": { stdout: "3\n" },
-      "git show origin/main:version.txt": { stdout: "1.2.3\n" },
+      "git show origin/main:packages/core/package.json": {
+        stdout: JSON.stringify({ version: "3.3.0" }),
+      },
     });
 
     const status = await getCoreUpdateStatus();
@@ -96,8 +99,8 @@ describe("getCoreUpdateStatus", () => {
     expect(status.branch).toBe("main");
     expect(status.currentCommit).toBe("abc1234");
     expect(status.latestCommit).toBe("def5678");
-    expect(status.currentVersion).toBe("1.2.0");
-    expect(status.remoteVersion).toBe("1.2.3");
+    expect(status.currentVersion).toBe(LumiInfo.version);
+    expect(status.remoteVersion).toBe("3.3.0");
     expect(status.error).toBeUndefined();
   });
 
@@ -155,6 +158,7 @@ describe("updateLumiCore", () => {
       "git rev-parse --abbrev-ref HEAD": { stdout: "main\n" },
       "git fetch origin main": { stdout: "" },
       "git rev-parse --short origin/main": { stdout: "abc1234\n" },
+      "git rev-list --count abc1234..origin/main": { stdout: "0\n" },
     });
 
     const result = await updateLumiCore();

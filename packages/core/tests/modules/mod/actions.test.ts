@@ -486,7 +486,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     });
 
     expect(c.caseNumber).toBe(14);
-    expect(mockMember.roles.set).toHaveBeenCalledWith(['g-1', 'q-role'], expect.anything());
+    expect(mockMember.roles.set).toHaveBeenCalledWith(['q-role'], expect.anything());
     expect(container.db.moderation.createModerationCase).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'quarantine' })
     );
@@ -500,6 +500,10 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
         set: vi.fn().mockResolvedValue({})
       }
     };
+
+    (container.db.moderation.getActiveCases as any).mockResolvedValue([{ id: 'c-1' }]);
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ caseNumber: 15 });
+
     const mockMod = { id: 'm-1' };
     const mockGuild = {
       id: 'g-1',
@@ -507,7 +511,6 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
         cache: new Map([['r1', { id: 'r1' }], ['r2', { id: 'r2' }]])
       }
     };
-    (container.db.moderation.createModerationCase as any).mockResolvedValue({ caseNumber: 15 });
 
     const c = await QuarantineAction.undo({
       guild: mockGuild as any,
@@ -517,7 +520,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     });
 
     expect(c.caseNumber).toBe(15);
-    expect(mockMember.roles.set).toHaveBeenCalledWith(['g-1', 'r1', 'r2'], expect.anything());
+    expect(mockMember.roles.set).toHaveBeenCalledWith(['r1', 'r2'], expect.anything());
     expect(container.db.moderation.createModerationCase).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'unquarantine' })
     );

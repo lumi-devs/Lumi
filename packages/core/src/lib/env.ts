@@ -11,8 +11,10 @@ export function envParseString(key: string, defaultValue?: string): string {
 export function envParseInteger(key: string, defaultValue?: number): number {
   const raw = process.env[key];
   if (raw !== undefined) {
-    const n = Number(raw);
-    if (!isNaN(n) && Number.isInteger(n)) return n;
+    const trimmed = raw.trim();
+    if (trimmed.length > 0 && /^-?\d+$/.test(trimmed)) {
+      return parseInt(trimmed, 10);
+    }
     throw new Error(`[ENV] Invalid integer: ${key}=${raw}`);
   }
   if (defaultValue !== undefined) return defaultValue;
@@ -25,8 +27,9 @@ export type ServiceRole = "worker" | "scheduler";
 
 export function getServiceRole(): ServiceRole {
   const raw = process.env["LUMI_ROLE"];
-  if (raw === "worker" || raw === "scheduler") return raw;
-  return "worker";
+  if (!raw || raw === "worker") return "worker";
+  if (raw === "scheduler") return "scheduler";
+  throw new Error(`[ENV] Invalid LUMI_ROLE value '${raw}'. Expected 'worker' or 'scheduler'.`);
 }
 
 /** Roles that own the BullMQ Worker (consume jobs and fire tasks). */

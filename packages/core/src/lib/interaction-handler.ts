@@ -1,6 +1,5 @@
 import {
   InteractionHandler,
-  InteractionHandlerOptions,
   UserError,
 } from "@sapphire/framework";
 import type {
@@ -22,13 +21,6 @@ export type AnyInteraction =
   | ChannelSelectMenuInteraction;
 
 export abstract class BaseInteractionHandler extends InteractionHandler {
-  public constructor(
-    context: InteractionHandler.LoaderContext,
-    options: InteractionHandlerOptions,
-  ) {
-    super(context, options);
-  }
-
   /**
    * Ensures only the original invoker can use the interaction.
    * Throws UserError (caught by the framework's denied handler) if the user doesn't match.
@@ -36,13 +28,13 @@ export abstract class BaseInteractionHandler extends InteractionHandler {
   protected checkSecurity(
     interaction: AnyInteraction,
     ownerId: string,
-  ): boolean {
-    if (interaction.user.id === ownerId) return true;
-
-    throw new UserError({
-      identifier: "AccessDenied",
-      message: `${Emojis.CROSS} Only the original invoker can use these components.`,
-    });
+  ): void {
+    if (interaction.user.id !== ownerId) {
+      throw new UserError({
+        identifier: "AccessDenied",
+        message: `${Emojis.CROSS} Only the original invoker can use these components.`,
+      });
+    }
   }
 
   /**
