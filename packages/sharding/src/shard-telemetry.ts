@@ -184,7 +184,7 @@ export async function readClusterShards(
 
   const [assignmentRaw, memberEntries, shardKeys] = await Promise.all([
     redis.get(assignmentKey(clusterName)),
-    redis.zrange(membersKey(clusterName), 0, -1, "WITHSCORES"),
+    redis.zrange(membersKey(clusterName), 0, "-1", "WITHSCORES"),
     scanKeys(redis, pattern, opts.scanCount ?? 200),
   ]);
 

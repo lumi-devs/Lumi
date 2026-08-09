@@ -259,7 +259,7 @@ export class ClusterCoordinator {
     const liveIds = await this.opts.redis.zrange(
       membersKey(this.opts.clusterName),
       0,
-      -1,
+      "-1",
     );
     let current = await this.readAssignment();
     const wantByReplica = assignShards(liveIds, this.opts.shardCount);
