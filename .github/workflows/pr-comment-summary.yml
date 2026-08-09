@@ -38,7 +38,7 @@ jobs:
           echo "EOF" >> $GITHUB_ENV
 
       - name: Post or Update Sticky Micro-Benchmark Report
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: lumi-pr-summary
           message: |
