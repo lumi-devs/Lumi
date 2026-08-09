@@ -1,11 +1,9 @@
+import { randomUUID } from "node:crypto";
 import { ComponentType, type Message } from "discord.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
 import { confirmRow } from "#lib/utilities/ui/kit.js";
 import { makeWarningCard, type CardReply } from "#lib/utilities/cards.js";
-
-const CONFIRM_ID = "lumi:confirm:yes";
-const CANCEL_ID = "lumi:confirm:no";
 
 export interface ConfirmPromptOptions {
   title: string;
@@ -25,11 +23,15 @@ export async function confirmPrompt(
   ctx: CommandContext,
   opts: ConfirmPromptOptions,
 ): Promise<boolean> {
+  const id = randomUUID();
+  const confirmId = `lumi:confirm:yes:${id}`;
+  const cancelId = `lumi:confirm:no:${id}`;
+
   const card: CardReply = makeWarningCard(opts.title, opts.body, {
     actionRows: [
       confirmRow({
-        confirmId: CONFIRM_ID,
-        cancelId: CANCEL_ID,
+        confirmId,
+        cancelId,
         confirmLabel: opts.confirmLabel ?? "I understand, continue",
         cancelLabel: opts.cancelLabel ?? "Cancel",
       }),
@@ -50,7 +52,7 @@ export async function confirmPrompt(
       componentType: ComponentType.Button,
       time: opts.time ?? 30_000,
     });
-    const confirmed = click.customId === CONFIRM_ID;
+    const confirmed = click.customId === confirmId;
     await click.deferUpdate().catch(() => {});
     return confirmed;
   } catch {

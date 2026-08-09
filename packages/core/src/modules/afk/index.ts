@@ -2,6 +2,7 @@ import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
 import { container } from "@sapphire/framework";
 import { cutText } from "@sapphire/utilities";
 import { Emojis } from "#lib/utilities/assets.js";
+import { formatDuration } from "#utilities/time.js";
 import { clearAllAfkForUser } from "./data/afk.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleAfkDeleteMessageFire } from "./lib/delete-handler.js";
@@ -26,9 +27,7 @@ export const AFK_REMOVAL_COOLDOWN_MS = 2_000;
 export const AFK_NICK_EDIT_COOLDOWN_MS = 1_000;
 
 export function afkDurationSince(since: Date): string {
-  return container.utilities.time.humanizeDelta(
-    Math.max(0, Math.floor((Date.now() - since.getTime()) / 1000)),
-  );
+  return formatDuration(Math.max(0, Date.now() - since.getTime()));
 }
 
 export async function isAfkNickPrefixEnabled(

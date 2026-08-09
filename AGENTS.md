@@ -135,10 +135,6 @@ one-off commands as `nix develop --command <cmd>`.
   component tests.
 - `bun run db:generate` — regenerate the Prisma client after a schema change.
 
-`lefthook` runs a pre-commit hook (`lefthook.yml`): a `*.{ts,tsx,cts,mts}` change triggers the
-full `bun run typecheck`, and a `*.{ts,tsx,js,jsx}` change runs `eslint --fix` on the staged
-files only. Commits touching neither are a no-op.
-
 ## Testing conventions
 
 Tests live alongside or under a `tests/` directory per package (`packages/core/tests/`,

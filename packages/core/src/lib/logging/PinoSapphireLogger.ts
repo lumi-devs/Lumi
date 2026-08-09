@@ -1,6 +1,18 @@
 import { LogLevel, type ILogger } from "@sapphire/framework";
 import { createPinoLogger, type PinoLogger } from "@lumi/observability";
 
+type PinoMethod = "trace" | "debug" | "info" | "warn" | "error" | "fatal";
+
+const LEVEL_TO_PINO: Record<LogLevel, PinoMethod> = {
+  [LogLevel.Trace]: "trace",
+  [LogLevel.Debug]: "debug",
+  [LogLevel.Info]: "info",
+  [LogLevel.Warn]: "warn",
+  [LogLevel.Error]: "error",
+  [LogLevel.Fatal]: "fatal",
+  [LogLevel.None]: "info",
+};
+
 export class PinoSapphireLogger implements ILogger {
   public readonly pino: PinoLogger;
   public level: LogLevel;
@@ -9,8 +21,7 @@ export class PinoSapphireLogger implements ILogger {
     this.level = level;
     const format =
       process.env["NODE_ENV"] === "development" ? "pretty" : "json";
-    const pinoLevel = levelToPino(level);
-    this.pino = createPinoLogger({ service, level: pinoLevel, format });
+    this.pino = createPinoLogger({ service, level: LEVEL_TO_PINO[level] ?? "info", format });
   }
 
   public has(level: LogLevel): boolean {
@@ -19,20 +30,18 @@ export class PinoSapphireLogger implements ILogger {
 
   public write(level: LogLevel, ...values: readonly unknown[]): void {
     if (!this.has(level)) return;
-    const method = levelToMethod(level);
+    const method = LEVEL_TO_PINO[level] ?? "info";
     if (typeof values[0] === "string") {
       const [msg, ...rest] = values;
-      if (
-        rest.length === 1 &&
-        typeof rest[0] === "object" &&
-        rest[0] !== null
-      ) {
+      if (rest.length === 1 && typeof rest[0] === "object" && rest[0] !== null) {
         this.pino[method](rest[0], msg);
       } else if (rest.length > 0) {
         this.pino[method]({ extra: rest }, msg);
       } else {
         this.pino[method](msg);
       }
+    } else if (values.length === 1 && typeof values[0] === "object" && values[0] !== null) {
+      this.pino[method](values[0]);
     } else {
       this.pino[method]({ values });
     }
@@ -60,45 +69,5 @@ export class PinoSapphireLogger implements ILogger {
 
   public fatal(...values: readonly unknown[]): void {
     this.write(LogLevel.Fatal, ...values);
-  }
-}
-
-function levelToPino(level: LogLevel): string {
-  switch (level) {
-    case LogLevel.Trace:
-      return "trace";
-    case LogLevel.Debug:
-      return "debug";
-    case LogLevel.Info:
-      return "info";
-    case LogLevel.Warn:
-      return "warn";
-    case LogLevel.Error:
-      return "error";
-    case LogLevel.Fatal:
-      return "fatal";
-    default:
-      return "info";
-  }
-}
-
-function levelToMethod(
-  level: LogLevel,
-): "trace" | "debug" | "info" | "warn" | "error" | "fatal" {
-  switch (level) {
-    case LogLevel.Trace:
-      return "trace";
-    case LogLevel.Debug:
-      return "debug";
-    case LogLevel.Info:
-      return "info";
-    case LogLevel.Warn:
-      return "warn";
-    case LogLevel.Error:
-      return "error";
-    case LogLevel.Fatal:
-      return "fatal";
-    default:
-      return "info";
   }
 }

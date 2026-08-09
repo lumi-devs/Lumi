@@ -111,7 +111,7 @@ export function buildClientOptions(options: LumiClient.Options): ClientOptions {
     defaultPrefix: envParseString("DEFAULT_PREFIX", ","),
     logger: {
       instance: new PinoSapphireLogger(
-        process.env["SERVICE_NAME"] ?? getServiceRole(),
+        envParseString("SERVICE_NAME", getServiceRole()),
         process.env["NODE_ENV"] === "development"
           ? LogLevel.Debug
           : LogLevel.Info,

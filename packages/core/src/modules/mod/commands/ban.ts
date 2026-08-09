@@ -39,7 +39,7 @@ const BanRemove: ModerationSubcommand.Flow<string, ModerationCase> = {
   logScope: "unban",
   resolveTarget: async (ctx) => {
     const raw = await ctx.getString("user_id", { required: true });
-    return raw!.replace(/\D/g, "");
+    return (raw ?? "").replace(/\D/g, "");
   },
   preHandle: (_ctx, t, target) =>
     USER_ID_PATTERN.test(target)

@@ -34,7 +34,7 @@ export class ModuleRestartInteractionHandler extends BaseInteractionHandler {
     interaction: ButtonInteraction,
     { action, userId }: { action: "restart" | "cancel"; userId: string },
   ) {
-    if (!this.checkSecurity(interaction, userId)) return;
+    this.checkSecurity(interaction, userId);
     await this.acknowledge(interaction);
     const t = await fetchTyped(interaction);
 
