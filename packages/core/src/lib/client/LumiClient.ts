@@ -43,7 +43,6 @@ import type { Message } from "discord.js";
 import { Redis } from "ioredis";
 import { warnOnCleanupError } from "./cleanup.js";
 import { buildClientOptions } from "./client-options.js";
-import { CommandRegistrationLeaderElection } from "./CommandRegistrationLeaderElection.js";
 import { installContainerServices } from "./container-services.js";
 import { ReadinessProbes } from "./ReadinessProbes.js";
 
@@ -53,19 +52,16 @@ import { ReadinessProbes } from "./ReadinessProbes.js";
  * @remarks
  *
  * The client composes rather than implements its start-up concerns: option
- * building, container-service installation, command registration leader
- * election and readiness probes each live in their own module. What stays here
- * is the ordering contract between them.
+ * building, container-service installation and readiness probes each live in
+ * their own module. What stays here is the ordering contract between them.
  *
  * `login()` brings resources up in dependency order - database, leader locks,
- * RabbitMQ, module discovery, command election - and only then hands over to
- * Sapphire. `destroy()` unwinds that in reverse, and every step swallows its
- * own failure so one unreachable resource cannot strand the others.
+ * RabbitMQ, module discovery - and only then hands over to Sapphire.
+ * `destroy()` unwinds that in reverse, and every step swallows its own
+ * failure so one unreachable resource cannot strand the others.
  */
 export class LumiClient extends SapphireClient {
   public readonly role: ServiceRole;
-
-  readonly #commandRegistration: CommandRegistrationLeaderElection;
 
   private _livenessInterval: ReturnType<typeof setInterval> | null = null;
   private _ownedEventBus: OwnedEventBus | null = null;
@@ -91,10 +87,6 @@ export class LumiClient extends SapphireClient {
     });
 
     this.role = role;
-    this.#commandRegistration = new CommandRegistrationLeaderElection({
-      role,
-      stores: this.stores,
-    });
     this._cluster = options.cluster ?? null;
     this._clusterRedis = options.clusterRedis ?? null;
   }
@@ -153,8 +145,6 @@ export class LumiClient extends SapphireClient {
 
     initCoreRpcHandlers();
     await this.stores.get("modules").discover();
-
-    await this.#commandRegistration.elect();
 
     const result = await super.login(token);
 
@@ -257,7 +247,6 @@ export class LumiClient extends SapphireClient {
         .catch(warnOnCleanupError("SchedulerLeaderLock release"));
       this._schedulerLeaderLock = null;
     }
-    await this.#commandRegistration.release();
     await super.destroy().catch(warnOnCleanupError("Sapphire client destroy"));
     await flushAllMessageDeletes().catch(
       warnOnCleanupError("flushAllMessageDeletes"),

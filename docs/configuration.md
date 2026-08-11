@@ -67,7 +67,6 @@ No default - the app will not boot without these.
 | `EVENT_STREAM_STATS_INTERVAL_MS` | `10000` | How often stream-length/lag stats are polled and exported. |
 | `SCHEDULER_LEADER_LOCK` | `false` | Require leader election among scheduler replicas (set `true` if you ever run more than one). |
 | `SCHEDULER_LEADER_LOCK_TTL_MS` / `_RENEW_MS` / `_POLL_MS` | `30000` / `10000` / `2000` | |
-| `COMMAND_REGISTRATION_LOCK_TTL_MS` / `_RENEW_MS` | `30000` / `10000` | Leader lock for command registration across clustered `worker` replicas. Not present in `.env.example` - add it explicitly if you're tuning it. |
 | `ENTITY_CACHE_POPULATE` | `false` | |
 | `DISCORD_PROXY_URL` | *(unset)* | Point at a shared Discord REST rate-limit proxy (e.g. `nirn-proxy`). Multi-replica deployments only - leave unset for single-process runs. |
 
