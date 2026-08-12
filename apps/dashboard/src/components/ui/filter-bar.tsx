@@ -17,6 +17,8 @@ export type FilterField =
       label: string;
       placeholder?: string;
       inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+      /** Autocomplete suggestions (e.g. known member IDs) via a native <datalist> - the field still accepts any typed value, so it works for entities the suggestion list doesn't cover (a banned/departed member, for instance). */
+      suggestions?: { value: string; label: string }[];
     }
   | {
       type: "select";
@@ -114,15 +116,25 @@ export function FilterBar({
             className="min-w-[10rem] flex-1 basis-44 gap-1"
           >
             {field.type === "search" ? (
-              <Input
-                id={id}
-                name={field.name}
-                type="search"
-                value={value}
-                inputMode={field.inputMode}
-                placeholder={field.placeholder}
-                onChange={(e) => update(field.name, e.target.value, true)}
-              />
+              <>
+                <Input
+                  id={id}
+                  name={field.name}
+                  type="search"
+                  value={value}
+                  inputMode={field.inputMode}
+                  placeholder={field.placeholder}
+                  list={field.suggestions ? `${id}-list` : undefined}
+                  onChange={(e) => update(field.name, e.target.value, true)}
+                />
+                {field.suggestions ? (
+                  <datalist id={`${id}-list`}>
+                    {field.suggestions.map((s) => (
+                      <option key={s.value} value={s.value} label={s.label} />
+                    ))}
+                  </datalist>
+                ) : null}
+              </>
             ) : (
               <Select
                 id={id}

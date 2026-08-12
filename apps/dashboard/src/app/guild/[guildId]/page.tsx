@@ -1,4 +1,4 @@
-import { Clock, Globe, Puzzle, Terminal } from "lucide-react";
+import { Globe, Puzzle, Terminal, Users } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildDashboard } from "#/lib/dashboard-fetch";
 import { StatsGrid } from "#/components/stats-grid";
@@ -53,13 +53,15 @@ export default async function GuildOverviewPage({
         />
       </div>
 
-      {/* Member/threat/VC counts need a dedicated stats RPC action this
-       * rewrite doesn't add yet (no §10 contract exists for it); module +
-       * guild-scoped numbers we do have are shown instead so the strip isn't
-       * just placeholder text. */}
       <div className="rise" style={{ "--rise-delay": "70ms" } as React.CSSProperties}>
         <StatsGrid
           stats={[
+            {
+              icon: Users,
+              label: "Members",
+              value: data.memberCount,
+              countUp: true,
+            },
             {
               icon: Puzzle,
               label: "Modules enabled",
@@ -70,11 +72,6 @@ export default async function GuildOverviewPage({
               icon: Terminal,
               label: "Prefix",
               value: data.settings.prefix ?? "default",
-            },
-            {
-              icon: Clock,
-              label: "Timezone",
-              value: (data.settings["timezone"] as string) ?? "UTC",
             },
           ]}
         />

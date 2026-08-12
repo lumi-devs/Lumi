@@ -18,6 +18,9 @@ export interface DashboardModuleView {
   displayName: string;
   emoji: string;
   description: string;
+  version: string;
+  conflicts: string[];
+  dependencies: string[];
   enabled: boolean;
   configFields: ConfigField[];
   config: Record<string, unknown>;
@@ -50,6 +53,7 @@ export interface DashboardMemberView {
 export interface DashboardData {
   name: string;
   icon: string | null;
+  memberCount: number;
   settings: GuildSettings;
   modules: DashboardModuleView[];
   roles: DashboardRoleView[];

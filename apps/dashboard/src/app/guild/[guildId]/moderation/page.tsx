@@ -53,6 +53,9 @@ export default async function ModerationPage({
 
   const dashboard = await getGuildDashboard(guildId, session.userId);
   const memberNames = extractMemberNames(dashboard.members);
+  const memberOptions = [...dashboard.members]
+    .sort((a, b) => a.displayName.localeCompare(b.displayName))
+    .map((m) => ({ value: m.id, label: m.displayName }));
 
   let data: CasesListData | null = null;
   let failure: string | null = null;
@@ -113,6 +116,7 @@ export default async function ModerationPage({
                   label: "Target user ID",
                   placeholder: "e.g. 328473289473289473",
                   inputMode: "numeric",
+                  suggestions: memberOptions,
                 },
                 {
                   type: "search",
@@ -120,6 +124,7 @@ export default async function ModerationPage({
                   label: "Moderator ID",
                   placeholder: "e.g. 328473289473289473",
                   inputMode: "numeric",
+                  suggestions: memberOptions,
                 },
               ]}
             />

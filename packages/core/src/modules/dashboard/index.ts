@@ -521,6 +521,9 @@ export class DashboardModule extends Module {
           displayName: m.meta.displayName,
           emoji: m.meta.emoji,
           description: m.meta.description,
+          version: m.meta.version,
+          conflicts: m.meta.conflicts ?? [],
+          dependencies: m.meta.dependencies ?? [],
           enabled,
           configFields: m.meta.configFields || [],
           config,
@@ -558,6 +561,7 @@ export class DashboardModule extends Module {
       return {
         name: guild.name,
         icon: guild.iconURL(),
+        memberCount: guild.memberCount,
         settings,
         modules,
         roles,
