@@ -21,6 +21,7 @@ import type {
 } from "#/lib/dashboard-data";
 import { KNOWN_PERMIT_NODE_GROUPS } from "#/lib/permit-nodes";
 import { useServerAction } from "#/lib/use-server-action";
+import { useStaggerIn } from "#/lib/animate";
 
 export function PermitsBoard({
   guildId,
@@ -34,6 +35,8 @@ export function PermitsBoard({
   members: DashboardMemberView[];
 }) {
   const [permits, setPermits] = useState(initialPermits);
+  const enforcedGridRef = useStaggerIn<HTMLDivElement>("> *");
+  const customGridRef = useStaggerIn<HTMLDivElement>("> *");
 
   const enforced = permits.filter((p) => p.kind === "enforced");
   const custom = permits.filter((p) => p.kind === "custom");
@@ -63,7 +66,7 @@ export function PermitsBoard({
             Fixed system tiers — un-quarantinable, user-assignable only.
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div ref={enforcedGridRef} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {enforced.map((p) => (
             <PermitCard
               key={p.id}
@@ -88,7 +91,7 @@ export function PermitsBoard({
           </p>
         </div>
         <CreatePermitCard guildId={guildId} onCreated={upsert} />
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div ref={customGridRef} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {custom.map((p) => (
             <PermitCard
               key={p.id}

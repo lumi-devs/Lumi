@@ -1,3 +1,4 @@
+import { Package } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildDashboard } from "#/lib/dashboard-fetch";
 import { ModuleToggleGrid } from "#/components/guild/module-toggle-grid";
@@ -21,6 +22,7 @@ export default async function GuildAddonsPage({
       <PageHeader
         title="Addons"
         description="Third-party modules loaded from an addon repository, separate from the bot's core features."
+        icon={Package}
         actions={
           modules.length > 0 ? (
             <Badge variant="neutral">

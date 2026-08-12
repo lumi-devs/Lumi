@@ -1,3 +1,4 @@
+import { Activity } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildDashboard } from "#/lib/dashboard-fetch";
 import { PageHeader } from "#/components/ui/page-header";
@@ -20,6 +21,7 @@ export default async function GuildHealthPage({
       <PageHeader
         title="Health Check"
         description="A read-only scan of common misconfigurations: role hierarchy, dangerous permissions, and security/filter settings left off."
+        icon={Activity}
       />
       <HealthCheckList
         guildId={guildId}

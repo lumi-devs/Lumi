@@ -1,3 +1,5 @@
+"use client";
+
 import { Eye, EyeOff, Lock, Radio, Unlock } from "lucide-react";
 import { Badge, StatusDot } from "#/components/ui/badge";
 import { EmptyState } from "#/components/ui/empty-state";
@@ -7,6 +9,7 @@ import type {
   TempVcRecordView,
 } from "#/lib/dashboard-data";
 import { formatCaseDate, formatDuration } from "#/lib/moderation-cases";
+import { useStaggerIn } from "#/lib/animate";
 
 export function TempVcLiveChannels({
   records,
@@ -21,6 +24,8 @@ export function TempVcLiveChannels({
   channelNames: Record<string, string>;
   now: number;
 }) {
+  const liveChanRef = useStaggerIn<HTMLUListElement>("> li");
+
   if (records.length === 0) {
     return (
       <EmptyState
@@ -37,7 +42,7 @@ export function TempVcLiveChannels({
   );
 
   return (
-    <ul className="grid grid-cols-1 gap-px bg-border sm:grid-cols-2 xl:grid-cols-3">
+    <ul ref={liveChanRef} className="grid grid-cols-1 gap-px bg-border sm:grid-cols-2 xl:grid-cols-3">
       {sorted.map((record) => {
         const owner = members.find((m) => m.id === record.ownerId);
         const generator = generators.find(

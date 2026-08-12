@@ -1,3 +1,4 @@
+import { Package } from "lucide-react";
 import { requireBotOwner } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
 import { RPC_ACTIONS } from "@lumi/contracts";
@@ -18,6 +19,7 @@ export default async function SystemAddonsPage() {
       <PageHeader
         title="Addon Repositories"
         description="Manage third-party Git repositories and the modules installed from them."
+        icon={Package}
       />
       <RepoManager repos={result.repos} />
     </div>

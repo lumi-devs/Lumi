@@ -7,6 +7,7 @@ import { runGuildSetup } from "#/actions/guild-actions";
 import { Card, CardBody, CardFooter, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
 import { Button } from "#/components/ui/button";
 import { ActionError } from "#/components/action-error";
+import { useStaggerIn } from "#/lib/animate";
 import { useServerAction } from "#/lib/use-server-action";
 
 export interface SetupChecklistItem {
@@ -34,6 +35,7 @@ export function SetupWizard({
 }) {
   const { isPending, error, run } = useServerAction();
   const [result, setResult] = useState<GuildSetupRunResult | null>(null);
+  const listRef = useStaggerIn<HTMLUListElement>("li", { resetKey: guildId });
 
   const allDone = items.every((i) => i.alreadyDone) && !result;
 
@@ -65,7 +67,7 @@ export function SetupWizard({
         </CardDescription>
       </CardHeader>
       <CardBody className="p-0">
-        <ul className="divide-y divide-border">
+        <ul ref={listRef} className="divide-y divide-border">
           {items.map((item) => {
             const status = itemStatus(result, item);
             const done = item.alreadyDone || status !== undefined;

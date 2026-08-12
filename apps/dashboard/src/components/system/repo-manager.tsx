@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { ChevronDown, ChevronRight, GitBranch, PackagePlus } from "lucide-react";
+import { useStaggerIn } from "#/lib/animate";
 import {
   addRepo,
   installModule,
@@ -33,6 +34,9 @@ export function RepoManager({ repos: initial }: { repos: DownloaderRepoView[] })
   const [branch, setBranch] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const listRef = useStaggerIn<HTMLDivElement>("[data-repo-item]", {
+    resetKey: repos.map((r) => r.name).join(","),
+  });
 
   function handleUrlBlur() {
     if (!name.trim() && url.trim()) {
@@ -126,9 +130,11 @@ export function RepoManager({ repos: initial }: { repos: DownloaderRepoView[] })
           />
         </Card>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div ref={listRef} className="flex flex-col gap-3">
           {repos.map((r) => (
-            <RepoRow key={r.name} repo={r} />
+            <div key={r.name} data-repo-item>
+              <RepoRow repo={r} />
+            </div>
           ))}
         </div>
       )}
