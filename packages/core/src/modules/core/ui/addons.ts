@@ -159,11 +159,6 @@ export function buildAddonReposView(
   const rows: Row[] = [
     row(
       new ButtonBuilder()
-        .setCustomId("lumi:tab:addons")
-        .setLabel(t ? t(PanelsKeys.BackToAddons) : "Back to Add-ons")
-        .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
         .setCustomId("lumi:addon:add_repo")
         .setLabel(t ? t(PanelsKeys.AddonsAddRepo) : "Add Repository")
         .setEmoji(Emojis.parse(Emojis.REPO))
@@ -174,6 +169,7 @@ export function buildAddonReposView(
         .setEmoji(Emojis.parse(Emojis.UNINSTALL))
         .setStyle(ButtonStyle.Danger),
     ),
+    backToAddonsRow(t),
   ];
 
   return makeCard(
@@ -190,6 +186,39 @@ export function buildAddonReposView(
       sections,
       footer:
         "Update pulls the repo's latest commit for every installed module from it.",
+      actionRows: rows,
+    },
+  );
+}
+
+/** The confirmation card shown after checking a repo, when a pending update was found. */
+export function buildRepoUpdateConfirmView(
+  repoName: string,
+  changelog: string,
+  t?: LumiT,
+): CardReply {
+  const rows: Row[] = [
+    row(
+      new ButtonBuilder()
+        .setCustomId(`lumi:addon:update_repo_confirm:${repoName}`)
+        .setLabel(t ? t(PanelsKeys.AddonsUpdateRepo) : "Update")
+        .setEmoji(Emojis.parse(Emojis.DOWNLOAD))
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`lumi:addon:update_repo_skip:${repoName}`)
+        .setLabel("Skip")
+        .setStyle(ButtonStyle.Secondary),
+    ),
+  ];
+
+  return makeCard(
+    resolveCardColor("warning"),
+    `${Emojis.REPO} Update available for ${repoName}`,
+    changelog
+      ? `-# \`\`\`\n${cutText(changelog, 900)}\n\`\`\``
+      : "New commits are available on the tracked branch.",
+    {
+      footer: "Update pulls the repo's latest commit for every installed module from it.",
       actionRows: rows,
     },
   );

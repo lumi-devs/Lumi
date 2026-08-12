@@ -34,6 +34,11 @@ type ModuleUpdateCheck =
       changelog: string;
     };
 
+export type RepoUpdateCheck =
+  | { ok: false; reason: string }
+  | { ok: true; hasUpdate: false }
+  | { ok: true; hasUpdate: true; changelog: string };
+
 const execFileAsync = promisify(execFile);
 
 /** One queued registration as Sapphire records it on a command's registry. */
@@ -254,6 +259,58 @@ export class DownloaderService extends Service {
       );
     }
     await resolver.addRepo(repo.name, repo.url, repo.branch);
+  }
+
+  /** Read-only check: fetches and compares the repo's local HEAD against its remote branch, never pulls. */
+  public async checkRepoUpdate(name: string): Promise<RepoUpdateCheck> {
+    const repo = await this.container.db.downloader.readDownloaderRepo(name);
+    if (!repo) {
+      return { ok: false, reason: `Repository **${name}** was not found.` };
+    }
+
+    const repoPath = path.join(MODULE_ROOT, repo.name);
+    try {
+      await fs.access(repoPath);
+    } catch {
+      return { ok: true, hasUpdate: true, changelog: "" };
+    }
+
+    await execFileAsync("git", ["-C", repoPath, "fetch", "origin"]).catch(
+      (err: NodeJS.ErrnoException & { stderr?: string }) => {
+        this.container.logger.warn(
+          `[DownloaderService] git fetch failed for ${repo.name}; update check uses stale refs: ${(err.stderr ?? err.message).trim()}`,
+        );
+      },
+    );
+
+    const branch = repo.branch || "default";
+    const targetRef = `origin/${branch === "default" ? "master" : branch}`;
+
+    try {
+      const localHash = (
+        await execFileAsync("git", ["-C", repoPath, "rev-parse", "HEAD"])
+      ).stdout.trim();
+      const remoteHash = (
+        await execFileAsync("git", ["-C", repoPath, "rev-parse", targetRef])
+      ).stdout.trim();
+
+      if (localHash === remoteHash) {
+        return { ok: true, hasUpdate: false };
+      }
+
+      const { stdout: logOut } = await execFileAsync("git", [
+        "-C",
+        repoPath,
+        "log",
+        "--oneline",
+        `HEAD..${targetRef}`,
+      ]).catch(() => ({ stdout: "" }));
+
+      return { ok: true, hasUpdate: true, changelog: logOut.trim() };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { ok: false, reason: `Could not check **${name}** for updates: ${msg}` };
+    }
   }
 
   public listRepos() {
