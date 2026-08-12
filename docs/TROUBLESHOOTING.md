@@ -7,7 +7,7 @@ Symptom-first index across the whole stack. If you're troubleshooting a single-i
 | Symptom | Likely cause |
 | :--- | :--- |
 | `worker` exits immediately on boot | Missing/invalid `BOT_TOKEN` or `CLIENT_ID` - check container logs, or re-run `bun run setup` to re-verify the token against Discord's API. |
-| `worker` starts but no slash commands appear | First-ever global registration can take up to an hour to propagate; test in a guild-scoped context for faster iteration. Otherwise check logs for registration errors, and confirm you're not running clustered with a registration leader that failed to register (see [Architecture § Command registration leader election](architecture.md#command-registration-leader-election)). |
+| `worker` starts but no slash commands appear | First-ever global registration can take up to an hour to propagate; test in a guild-scoped context for faster iteration. Otherwise check logs for registration errors (see [Architecture § Command registration](architecture.md#command-registration)). |
 | `worker` can't reach Postgres | `pgbouncer` and `postgres` both need `condition: service_healthy` before `worker` starts - `docker compose ps` should show both `healthy`, not just `running`. Confirm `POSTGRES_URL` points at `pgbouncer` (port 6432), not `postgres` directly. |
 | Migrations fail or hang in a clustered deployment | Run the `migrate` Job to completion before rolling `worker`/`scheduler` (`kubectl wait --for=condition=complete job/migrate`) - never let scaled workers race the same DDL. See [Production Deployment § Zero-downtime deploys](GUIDE_PRODUCTION_DEPLOYMENT.md#zero-downtime-deploys). |
 
@@ -24,7 +24,7 @@ Symptom-first index across the whole stack. If you're troubleshooting a single-i
 | Symptom | Likely cause |
 | :--- | :--- |
 | Boot refuses to proceed, citing session-start budget | Discord's remaining IDENTIFY budget can't cover the shards this replica is about to bring up - almost always the symptom of a crash-loop burning the daily allowance. Fix the underlying crash first; only set `SHARD_IDENTIFY_FORCE=true` to deliberately break the loop, and turn it back off immediately after. See [Architecture § Sharding & clustering](architecture.md#sharding--clustering). |
-| Multiple `worker` replicas all try to register the same commands | Expected without `CLUSTER_NAME` set - each process thinks it's alone. Set `CLUSTER_NAME` so replicas participate in leader election for command registration and shard assignment. |
+| Multiple `worker` replicas all try to register the same commands | Expected, and harmless - every replica registers its command set directly on boot regardless of `CLUSTER_NAME`, and Discord's bulk-overwrite endpoint is idempotent, so the redundant registrations are a no-op race, not a correctness issue. |
 | Discord REST 429s increase after scaling past one replica | You likely need `nirn-proxy` deployed and `DISCORD_PROXY_URL` set so replicas share rate-limit buckets - required once more than one `worker` shares a bot token. See [Production Deployment § Clustering & sharding](GUIDE_PRODUCTION_DEPLOYMENT.md#clustering--sharding). |
 | Total shard count change doesn't take effect | discord.js caches `shardCount` at `WebSocketManager` construction - changing `TOTAL_SHARDS` always requires a full restart, unlike shard *assignment* changes, which rebalance in place. |
 

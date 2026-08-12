@@ -63,7 +63,7 @@ Clustering only activates when `CLUSTER_NAME` is set. With a single replica and 
 - Cross-process cache invalidation via `InvalidationBus` - a pub/sub channel (`lumi:cache:invalidate`) where deleting a key locally also broadcasts the deletion so every process's local cache stays coherent. Modules invalidate through `container.invalidation.invalidate(...)`, never a raw `redis.del` on a shared key.
 - The event bus transport (Redis Streams, see above).
 - Cluster/shard coordination state (`packages/sharding`).
-- Leader-election locks (command registration, scheduler leader - see below).
+- The scheduler leader-election lock (`SCHEDULER_LEADER_LOCK`, see [Configuration Reference](configuration.md)).
 - BullMQ's job queue backing store.
 
 ## Dashboard Frontend
@@ -77,14 +77,9 @@ Clustering only activates when `CLUSTER_NAME` is set. With a single replica and 
 
 Sentinel-based Redis HA is supported: setting `REDIS_SENTINELS` switches connection construction to Sentinel-aware options instead of a direct host/port.
 
-## Command registration leader election
+## Command registration
 
-When `worker` runs as multiple replicas under a `CLUSTER_NAME`, every replica loading its command stores would otherwise all try to push the same application commands to Discord on boot - redundant and wasteful of Discord's registration rate limit. `CommandRegistrationLeaderElection` (`packages/core/src/lib/client/CommandRegistrationLeaderElection.ts`) elects exactly one replica to actually register commands:
-
-1. No-op for the `scheduler` role, or when there's no cluster - a lone process always registers.
-2. Otherwise, replicas contend for a renewing Redis lock (`lumi:commands:registration:leader`, default TTL 30s, renewed every 10s).
-3. The winner holds the lock for its process lifetime; losers still load and dispatch their command pieces locally by name, but never call Discord's registration routes (`suppressCommandRegistration`).
-4. **Fails open**: if Redis is unreachable during acquisition, the replica registers unguarded - starting with possibly-stale commands beats starting with none.
+Every `worker` replica registers its command set to Discord directly on boot - no coordination between replicas, regardless of `CLUSTER_NAME` or replica count. Discord's bulk-overwrite endpoint is idempotent, so concurrent replicas registering the same commands is a harmless no-op race, not a correctness concern.
 
 ## Observability
 
