@@ -8,6 +8,7 @@ import { Card } from "#/components/ui/card";
 import { Badge } from "#/components/ui/badge";
 import { Glyph } from "#/components/ui/glyph";
 import { EmptyState } from "#/components/ui/empty-state";
+import { useStaggerIn } from "#/lib/animate";
 import { ActionError } from "#/components/action-error";
 import { useOptimisticAction } from "#/lib/use-server-action";
 import type { DashboardModuleView } from "#/lib/dashboard-data";
@@ -31,9 +32,11 @@ export function ModuleToggleGrid({
     );
   }
 
+  const listRef = useStaggerIn<HTMLUListElement>("li", { resetKey: guildId });
+
   return (
     <Card>
-      <ul className="divide-y divide-border">
+      <ul ref={listRef} className="divide-y divide-border">
         {modules.map((m) => (
           <ModuleRow key={m.name} guildId={guildId} module={m} />
         ))}
