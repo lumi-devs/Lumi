@@ -10,7 +10,7 @@ import {
   CardTitle,
   CardDescription,
 } from "#/components/ui/card";
-import { Field, Input } from "#/components/ui/input";
+import { Field, Input, Select } from "#/components/ui/input";
 import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
 import { Alert } from "#/components/ui/alert";
@@ -25,8 +25,10 @@ import type { GlobalModuleStateView } from "#/lib/dashboard-data";
 // is implicitly enabled bot-wide.
 export function ModuleKillSwitchGrid({
   moduleStates,
+  allModules,
 }: {
   moduleStates: GlobalModuleStateView[];
+  allModules: { name: string; displayName: string; emoji: string }[];
 }) {
   const [rows, setRows] = useState(moduleStates);
   const [name, setName] = useState("");
@@ -90,13 +92,18 @@ export function ModuleKillSwitchGrid({
         <CardBody className="flex flex-col gap-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto]">
             <Field label="Module name" htmlFor="moduleName">
-              <Input
+              <Select
                 id="moduleName"
-                placeholder="e.g. tempvc"
-                className="font-mono text-[12px]"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-              />
+              >
+                <option value="">Select a module…</option>
+                {allModules.map((m) => (
+                  <option key={m.name} value={m.name}>
+                    {m.emoji} {m.displayName}
+                  </option>
+                ))}
+              </Select>
             </Field>
             <Field label="Reason (optional)" htmlFor="reason">
               <Input

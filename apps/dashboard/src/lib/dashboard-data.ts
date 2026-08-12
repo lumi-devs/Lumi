@@ -297,6 +297,7 @@ export interface SystemDashboardData {
     supportGuildId: string | null;
   };
   moduleStates: GlobalModuleStateView[];
+  allModules: { name: string; displayName: string; emoji: string }[];
   guildCount: number;
 }
 

@@ -226,6 +226,15 @@ export function initCoreRpcHandlers() {
       container.db.global.getGlobalConfig(),
       container.db.modules.getGlobalModuleStatesDetailed(),
     ]);
+    const moduleStore = container.stores.get("modules");
+    const allModules = moduleStore
+      .loaded()
+      .map((m) => ({
+        name: m.meta.name,
+        displayName: m.meta.displayName,
+        emoji: m.meta.emoji,
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
     return {
       global: {
         botName: global.botName,
@@ -236,6 +245,7 @@ export function initCoreRpcHandlers() {
         supportGuildId: global.supportGuildId,
       },
       moduleStates,
+      allModules,
       guildCount: container.client.guilds.cache.size,
     };
   });

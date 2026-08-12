@@ -13,7 +13,10 @@ export default async function SystemModulesPage() {
         title="Module Kill-Switches"
         description="Force-disable any module across every guild instantly."
       />
-      <ModuleKillSwitchGrid moduleStates={data.moduleStates} />
+      <ModuleKillSwitchGrid
+        moduleStates={data.moduleStates}
+        allModules={data.allModules}
+      />
     </div>
   );
 }
