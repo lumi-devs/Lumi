@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import { getService } from "#lib/module-system/Service.js";
-import { registerRpcHandler } from "#lib/rabbitmq/index.js";
+import { registerRpcHandler } from "#lib/rpc/dispatch.js";
 import {
   RPC_ACTIONS,
   type RpcRequest,
@@ -8,11 +8,9 @@ import {
 } from "@lumi/contracts";
 import { DEFAULT_CLUSTER_NAME, readClusterShards } from "@lumi/sharding";
 import { getClusterName } from "#lib/env.js";
-import { resolver, ADDON_MODULES_ROOT } from "#lib/downloader/resolver.js";
+import { resolver } from "#lib/downloader/resolver.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { executeGdprDeletion, executeGdprExport } from "#lib/gdpr.js";
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { s, type BaseValidator } from "@sapphire/shapeshift";
 
 const SnowflakeSchema = s.string().regex(/^\d{17,20}$/);
@@ -66,10 +64,16 @@ const RepoModulesSchema = s.object({
 const ModuleInstallSchema = s.object({
   repoName: s.string().lengthGreaterThanOrEqual(1),
   moduleName: s.string().lengthGreaterThanOrEqual(1),
+  revision: s.string().lengthGreaterThanOrEqual(4).optional(),
 });
 
 const ModuleUninstallSchema = s.object({
   moduleName: SafeNameSchema,
+});
+
+const ModuleRollbackSchema = s.object({
+  moduleName: SafeNameSchema,
+  revision: s.string().lengthGreaterThanOrEqual(4),
 });
 
 const SystemMaintenanceSchema = s.object({
@@ -169,60 +173,50 @@ export function initCoreRpcHandlers() {
     const { repoName } = parsePayload(RepoModulesSchema, req.data);
     const modules = await resolver.getModulesInRepo(repoName);
     const repo = await container.db.downloader.readDownloaderRepoWithModules(repoName);
-    const installedMap = new Set(
-      repo?.installedModules.map((m: { moduleName: string }) => m.moduleName) || [],
+    const installedMap = new Map(
+      repo?.installedModules.map(
+        (m: { moduleName: string; commit: string | null; pinned: boolean }) => [
+          m.moduleName,
+          m,
+        ],
+      ) || [],
     );
     return {
       repoName,
-      modules: modules.map((m) => ({
-        ...m,
-        isInstalled: installedMap.has(m.name),
-      })),
+      modules: modules.map((m) => {
+        const installed = installedMap.get(m.name);
+        return {
+          ...m,
+          isInstalled: !!installed,
+          commit: installed?.commit ?? null,
+          pinned: installed?.pinned ?? false,
+        };
+      }),
     };
   });
 
   registerRpcHandler(RPC_ACTIONS.moduleInstall, async (req) => {
     requireBotOwner(req);
-    const { repoName, moduleName } = parsePayload(ModuleInstallSchema, req.data);
-    const repo = await container.db.downloader.readDownloaderRepo(repoName);
-    if (!repo) throw new Error(`Repository ${repoName} not found in database.`);
-
-    const installed = await container.db.downloader.readInstalledDownloaderModule(moduleName);
-    const remoteModules = await resolver.getModulesInRepo(repoName);
-    const remoteModule = remoteModules.find((m) => m.name === moduleName);
-
-    if (!remoteModule) throw new Error(`Module ${moduleName} not found in repo ${repoName}.`);
-    if (installed) {
-      if (installed.version === remoteModule.version) {
-        throw new Error(`Module **${moduleName}** (v${installed.version}) is already installed.`);
-      }
-    }
-
-    await resolver.installModule(repoName, moduleName);
-    await container.db.downloader.writeInstalledDownloaderModule(
-      repo.id,
-      moduleName,
-      remoteModule.version,
+    const { repoName, moduleName, revision } = parsePayload(
+      ModuleInstallSchema,
+      req.data,
     );
-    await container.moduleStore.discover(true);
-    await container.moduleStore.loadModule(moduleName);
+    await getService("downloader").installModule(repoName, moduleName, revision);
     return { success: true, moduleName };
   });
 
   registerRpcHandler(RPC_ACTIONS.moduleUninstall, async (req) => {
     requireBotOwner(req);
     const { moduleName } = parsePayload(ModuleUninstallSchema, req.data);
-    await container.moduleStore.unload(moduleName);
-    const targetPath = path.join(ADDON_MODULES_ROOT, moduleName);
-    try {
-      await fs.rm(targetPath, { recursive: true, force: true });
-    } catch (err: unknown) {
-      container.logger.debug(
-        `[rpc] Failed to remove addon files at ${targetPath}: ${String(err)}`,
-      );
-    }
-    await container.db.downloader.deleteInstalledDownloaderModule(moduleName);
+    await getService("downloader").uninstallModule(moduleName);
     return { success: true, moduleName };
+  });
+
+  registerRpcHandler(RPC_ACTIONS.moduleRollback, async (req) => {
+    requireBotOwner(req);
+    const { moduleName, revision } = parsePayload(ModuleRollbackSchema, req.data);
+    const result = await getService("downloader").rollbackModule(moduleName, revision);
+    return { success: true, moduleName, commit: result.commit };
   });
 
   // Bot Owner system panel.
@@ -378,18 +372,10 @@ export function initCoreRpcHandlers() {
 
     return {
       clusterName: snapshot.clusterName,
-      clustered: snapshot.clustered,
-      epoch: snapshot.epoch,
-      assignedAt: snapshot.assignedAt
-        ? new Date(snapshot.assignedAt).toISOString()
-        : null,
       shardCount: snapshot.shardCount,
       observedAt: new Date(snapshot.observedAt).toISOString(),
       replicas: snapshot.replicas.map((r) => ({
         replicaId: r.replicaId,
-        lastSeenAt: r.lastSeenAt ? new Date(r.lastSeenAt).toISOString() : null,
-        ready: r.ready,
-        assignedShardIds: r.assignedShardIds,
         reportingShardIds: r.reportingShardIds,
       })),
       shards: snapshot.shards.map((s) => ({
@@ -399,7 +385,6 @@ export function initCoreRpcHandlers() {
         ping: s.ping,
         guildCount: s.guildCount,
         lastHeartbeatAt: new Date(s.updatedAt).toISOString(),
-        session: s.session,
       })),
       missingShardIds: snapshot.missingShardIds,
     } satisfies SystemShardsResponse;

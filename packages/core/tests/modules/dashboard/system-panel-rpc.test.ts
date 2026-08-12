@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
 import { RPC_ACTIONS } from "@lumi/contracts";
-import { rpcHandlers } from "#lib/rabbitmq/index.js";
+import { rpcHandlers } from "#lib/rpc/dispatch.js";
 import { initCoreRpcHandlers } from "#lib/rpc/core-rpc.js";
 import { AuditRepository } from "#lib/prisma/repositories/AuditRepository.js";
 import { AccessRepository } from "#lib/prisma/repositories/AccessRepository.js";

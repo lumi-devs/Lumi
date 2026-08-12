@@ -15,18 +15,18 @@ import type { DashboardModuleView } from "#/lib/dashboard-data";
 export function ModuleToggleGrid({
   guildId,
   modules,
+  emptyTitle = "No modules available",
+  emptyDescription = "This guild's worker reported no loadable modules. Check that the bot process started cleanly.",
 }: {
   guildId: string;
   modules: DashboardModuleView[];
+  emptyTitle?: string;
+  emptyDescription?: string;
 }) {
   if (modules.length === 0) {
     return (
       <Card>
-        <EmptyState
-          icon={PackageOpen}
-          title="No modules available"
-          description="This guild's worker reported no loadable modules. Check that the bot process started cleanly."
-        />
+        <EmptyState icon={PackageOpen} title={emptyTitle} description={emptyDescription} />
       </Card>
     );
   }

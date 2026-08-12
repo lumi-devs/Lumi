@@ -3,7 +3,7 @@
   // "loose": every task inherits the full shell environment. This repo has
   // no remote-cache/CI scenario across untrusted contributors that would
   // need turbo's default "strict" per-task env allowlisting — and strict
-  // mode silently drops runtime config (RABBITMQ_URL, DISCORD_OAUTH2_*,
+  // mode silently drops runtime config (RPC_HTTP_URL, DISCORD_OAUTH2_*,
   // DASHBOARD_SESSION_SECRET, BOT_OWNERS, ...) from `turbo run build`/`turbo
   // run dev`, which apps/dashboard's Next.js build needs at collect-page-data
   // time (see apps/dashboard/src/lib/env.ts).

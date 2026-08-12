@@ -126,14 +126,20 @@ export class PermissionRepository extends Repository {
         include: { permit: true },
       });
 
+      const assignmentsByTarget = new Map<string, typeof assignments>();
+      for (const assignment of assignments) {
+        const key = `${assignment.targetType}:${assignment.targetId}`;
+        if (!assignmentsByTarget.has(key)) {
+          assignmentsByTarget.set(key, []);
+        }
+        assignmentsByTarget.get(key)!.push(assignment);
+      }
+
       const pipeline = this.redis.pipeline();
 
       for (const missing of missingTargets) {
-        const forTarget = assignments.filter(
-          (a) =>
-            a.targetType === missing.targetType &&
-            a.targetId === missing.targetId,
-        );
+        const key = `${missing.targetType}:${missing.targetId}`;
+        const forTarget = assignmentsByTarget.get(key) ?? [];
         const payload = collapseAssignments(forTarget);
 
         for (const p of payload.custom) customPermits.add(p);

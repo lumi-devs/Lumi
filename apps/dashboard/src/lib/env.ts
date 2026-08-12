@@ -14,7 +14,8 @@ function optional(name: string, fallback = ""): string {
 }
 
 export const env = {
-  rabbitUrl: required("RABBITMQ_URL"),
+  /** Internal-only HTTP RPC bridge to the worker, e.g. "http://worker:8091". */
+  rpcHttpUrl: required("RPC_HTTP_URL"),
   discordClientId: required("DISCORD_OAUTH2_CLIENT_ID"),
   discordClientSecret: required("DISCORD_OAUTH2_CLIENT_SECRET"),
   /** NextAuth session/JWT encryption secret — replaces the old hand-rolled

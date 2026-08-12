@@ -57,9 +57,11 @@ export const isEntityCachePopulateEnabled = () =>
   process.env["ENTITY_CACHE_POPULATE"] === "true";
 
 /**
- * Cluster name turns on the Redis-backed cluster coordinator (shard
- * range assignment + session resumption + shared IDENTIFY throttling).
- * Unset → single-replica path: SHARD_LIST honored, sessions not persisted.
+ * Cluster name namespaces the shard telemetry each replica publishes to
+ * Redis for the dashboard's fleet view. Shard ownership itself is static,
+ * set per replica via SHARD_LIST - this has no effect on assignment,
+ * session resumption, or IDENTIFY throttling. Unset → telemetry reports
+ * under the shared "default" namespace.
  */
 export const getClusterName = (): string | null =>
   process.env["CLUSTER_NAME"]?.trim() || null;

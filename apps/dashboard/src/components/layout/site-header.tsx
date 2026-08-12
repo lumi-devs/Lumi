@@ -7,20 +7,10 @@ import { ThemeToggle } from "./theme-toggle";
 import { Wordmark } from "./wordmark";
 import { Button } from "#/components/ui/button";
 import { buttonVariants } from "#/components/ui/button-variants";
-import { SidebarTrigger } from "#/components/ui/sidebar";
 
-export function SiteHeader({
-  session,
-  withSidebarTrigger = false,
-}: {
-  session: Session | null;
-  /** Only valid when rendered inside a `SidebarProvider`, e.g. guild/system layouts. */
-  withSidebarTrigger?: boolean;
-}) {
+export function SiteHeader({ session }: { session: Session | null }) {
   return (
     <header className="sticky top-0 z-50 flex h-14 items-center gap-3 border-b border-border bg-bg/85 px-4 backdrop-blur-sm md:px-6">
-      {withSidebarTrigger && <SidebarTrigger className="-ml-1 md:hidden" />}
-
       <Link href="/" className="shrink-0" aria-label="Lumi home">
         <Wordmark />
       </Link>

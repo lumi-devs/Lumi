@@ -38,6 +38,7 @@ function makeModule(): DashboardModuleView {
       },
     ],
     config: { modRoleId: "", verbose: false },
+    isAddon: false,
   };
 }
 

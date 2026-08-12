@@ -10,21 +10,12 @@ import {
 } from "@discordjs/builders";
 import { cutText } from "@sapphire/utilities";
 import { MessageFlags } from "discord.js";
-import { BotConfig } from "./config.js";
+import { resolveCardColor } from "./config.js";
 import { badge, formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "./ui/layout.js";
 import type { CardReply } from "./ui/types.js";
 
 export type { CardReply } from "./ui/types.js";
-
-export const CARD_ACCENTS = {
-  PRIMARY: 0x5865f2,
-  INFO: 0x3498db,
-  SUCCESS: 0x2ecc71,
-  WARNING: 0xf1c40f,
-  ERROR: 0xe74c3c,
-  PURPLE: 0x9b59b6,
-  CYAN: 0x1abc9c,
-} as const;
+export { resolveCardColor, defaultCardColors, type CardColorKey } from "./config.js";
 
 export { formatStatusBadge, formatSubtitle, formatBreadcrumbs, badge };
 export const makeStatusBadge = formatStatusBadge;
@@ -65,7 +56,6 @@ function buildContainer(
     c.setAccentColor(accentColor);
   }
 
-  // Optional Header Breadcrumbs & Status Badges
   const headerParts: string[] = [];
   if (opts.breadcrumbs && opts.breadcrumbs.length > 0) {
     headerParts.push(formatBreadcrumbs(opts.breadcrumbs));
@@ -79,7 +69,6 @@ function buildContainer(
     );
   }
 
-  // Main Title & Subtitle
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(`## ${title}`),
   );
@@ -128,7 +117,6 @@ function buildContainer(
     }
   }
 
-  // Footer
   if (opts.footer) {
     c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(false));
     c.addTextDisplayComponents(
@@ -136,12 +124,10 @@ function buildContainer(
     );
   }
 
-  // Media Gallery
   if (opts.mediaGallery) {
     c.addMediaGalleryComponents(opts.mediaGallery);
   }
 
-  // Action Rows & Component Selects
   if (opts.separatorAboveActionRows && opts.actionRows?.length) {
     c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
   }
@@ -165,25 +151,25 @@ export const makeSuccessCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(title, body, opts, BotConfig.branding.colors.SUCCESS));
+) => makeCard(resolveCardColor("success"), title, body, opts);
 
 export const makeErrorCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(title, body, opts, BotConfig.branding.colors.ERROR));
+) => makeCard(resolveCardColor("error"), title, body, opts);
 
 export const makeWarningCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(title, body, opts, BotConfig.branding.colors.WARNING));
+) => makeCard(resolveCardColor("warning"), title, body, opts);
 
 export const makeInfoCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(title, body, opts, BotConfig.branding.colors.INFO));
+) => makeCard(resolveCardColor("info"), title, body, opts);
 
 export const makeCard = (
   color: number,

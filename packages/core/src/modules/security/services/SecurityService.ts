@@ -31,6 +31,11 @@ import {
   isCreationClustered,
   type RecentJoiner,
 } from "../lib/join-heuristics.js";
+import {
+  getConfigNumber,
+  getConfigString,
+  getConfigAction,
+} from "../lib/config-helpers.js";
 
 export interface PanicResult {
   invitesPaused: boolean;
@@ -151,8 +156,6 @@ function challengeLockKey(guildId: string, userId: string): string {
 export class SecurityService extends Service {
   public async loadAntiNukeConfig(guildId: string): Promise<AntiNukeConfig> {
     const raw = await this.db.config.getAllModuleConfig(guildId, "security");
-    const num = (key: string, fallback: number): number =>
-      typeof raw[key] === "number" ? (raw[key]) : fallback;
 
     const trustedRaw = raw["trusted_role_ids"];
     const trustedRoleIds =
@@ -165,19 +168,20 @@ export class SecurityService extends Service {
 
     return {
       enabled: raw["antinuke_enabled"] === true,
-      windowSeconds: num("window_seconds", 60),
+      windowSeconds: getConfigNumber(raw, "window_seconds", 60),
       limits: {
-        ban: num(KIND_LIMIT_KEYS.ban, 5),
-        kick: num(KIND_LIMIT_KEYS.kick, 5),
-        channel_delete: num(KIND_LIMIT_KEYS.channel_delete, 3),
-        role_delete: num(KIND_LIMIT_KEYS.role_delete, 3),
-        webhook_create: num(KIND_LIMIT_KEYS.webhook_create, 3),
-        vanity_change: num(KIND_LIMIT_KEYS.vanity_change, 1),
-        dangerous_permission_grant: num(
+        ban: getConfigNumber(raw, KIND_LIMIT_KEYS.ban, 5),
+        kick: getConfigNumber(raw, KIND_LIMIT_KEYS.kick, 5),
+        channel_delete: getConfigNumber(raw, KIND_LIMIT_KEYS.channel_delete, 3),
+        role_delete: getConfigNumber(raw, KIND_LIMIT_KEYS.role_delete, 3),
+        webhook_create: getConfigNumber(raw, KIND_LIMIT_KEYS.webhook_create, 3),
+        vanity_change: getConfigNumber(raw, KIND_LIMIT_KEYS.vanity_change, 1),
+        dangerous_permission_grant: getConfigNumber(
+          raw,
           KIND_LIMIT_KEYS.dangerous_permission_grant,
           1,
         ),
-        quarantine_bypass: num(KIND_LIMIT_KEYS.quarantine_bypass, 1),
+        quarantine_bypass: getConfigNumber(raw, KIND_LIMIT_KEYS.quarantine_bypass, 1),
       },
       response:
         raw["response"] === "log" || raw["response"] === "ban"
@@ -317,42 +321,34 @@ export class SecurityService extends Service {
 
   public async loadJoinGateConfig(guildId: string): Promise<JoinGateConfig> {
     const raw = await this.db.config.getAllModuleConfig(guildId, "security");
-    const num = (key: string, fallback: number): number =>
-      typeof raw[key] === "number" ? (raw[key]) : fallback;
-    const gateAction = (key: string, fallback: GateAction): GateAction => {
-      const v = raw[key];
-      return v === "log" || v === "kick" || v === "timeout" || v === "quarantine"
-        ? v
-        : fallback;
-    };
-    const legacyMinAge = num("min_account_age_hours", 0);
+    const legacyMinAge = getConfigNumber(raw, "min_account_age_hours", 0);
 
     return {
       enabled: raw["joingate_enabled"] === true,
       minAccountAgeHours: legacyMinAge,
-      raidJoinCount: num("raid_join_count", 10),
-      raidWindowSeconds: num("raid_window_seconds", 30),
-      raidAction: gateAction("raid_action", "kick"),
+      raidJoinCount: getConfigNumber(raw, "raid_join_count", 10),
+      raidWindowSeconds: getConfigNumber(raw, "raid_window_seconds", 30),
+      raidAction: getConfigAction(raw, "raid_action", "kick"),
       raidAccountType: raw["raid_account_type"] === "suspicious" ? "suspicious" : "all",
       raidWarnRoleIds: parseConfigList(raw["raid_warn_role_ids"]),
       filterNoAvatar: {
         enabled: raw["filter_no_avatar_enabled"] === true,
-        action: gateAction("filter_no_avatar_action", "log"),
+        action: getConfigAction(raw, "filter_no_avatar_action", "log"),
       },
       filterMinAge: {
         // legacy `min_account_age_hours` is the fallback default until reconfigured
         enabled: raw["filter_min_age_enabled"] === true,
-        hours: num("filter_min_age_hours", legacyMinAge),
-        action: gateAction("filter_min_age_action", "kick"),
+        hours: getConfigNumber(raw, "filter_min_age_hours", legacyMinAge),
+        action: getConfigAction(raw, "filter_min_age_action", "kick"),
       },
       filterUnverifiedBot: {
         enabled: raw["filter_unverified_bot_enabled"] === true,
-        action: gateAction("filter_unverified_bot_action", "kick"),
+        action: getConfigAction(raw, "filter_unverified_bot_action", "kick"),
       },
       filterUsernamePattern: {
         enabled: raw["filter_username_pattern_enabled"] === true,
         patterns: parseConfigList(raw["filter_username_pattern"]),
-        action: gateAction("filter_username_pattern_action", "log"),
+        action: getConfigAction(raw, "filter_username_pattern_action", "log"),
       },
     };
   }
@@ -483,22 +479,15 @@ export class SecurityService extends Service {
     guildId: string,
   ): Promise<VerificationConfig> {
     const raw = await this.db.config.getAllModuleConfig(guildId, "security");
-    const str = (key: string): string | null => {
-      const v = raw[key];
-      return typeof v === "string" && v ? v : null;
-    };
-    const timeout =
-      typeof raw["verification_timeout_minutes"] === "number"
-        ? raw["verification_timeout_minutes"]
-        : 10;
+    const timeout = getConfigNumber(raw, "verification_timeout_minutes", 10);
     const mode = raw["verification_mode"];
     const target = raw["verification_target"];
     return {
       enabled: raw["verification_enabled"] === true,
       mode: mode === "none" || mode === "web" ? mode : "emoji",
       target: target === "suspicious" ? "suspicious" : "everyone",
-      verifiedRoleId: str("verified_role_id"),
-      pendingRoleId: str("verification_pending_role_id"),
+      verifiedRoleId: getConfigString(raw, "verified_role_id"),
+      pendingRoleId: getConfigString(raw, "verification_pending_role_id"),
       timeoutMinutes: timeout,
       kickOnTimeout: raw["verification_kick_on_timeout"] === true,
     };
@@ -717,11 +706,9 @@ export class SecurityService extends Service {
     guildId: string,
   ): Promise<{ intervalHours: number; keepCount: number }> {
     const raw = await this.db.config.getAllModuleConfig(guildId, "security");
-    const num = (key: string, fallback: number): number =>
-      typeof raw[key] === "number" ? (raw[key]) : fallback;
     return {
-      intervalHours: num("backup_interval_hours", 3),
-      keepCount: num("backup_keep_count", 10),
+      intervalHours: getConfigNumber(raw, "backup_interval_hours", 3),
+      keepCount: getConfigNumber(raw, "backup_keep_count", 10),
     };
   }
 

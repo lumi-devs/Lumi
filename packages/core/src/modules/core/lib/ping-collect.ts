@@ -86,10 +86,6 @@ export interface PingData {
   redisClients: number;
   redisTotalKeys: number;
 
-  rabbitConnected: boolean;
-  rabbitQueued: number;
-  rabbitConsumers: number;
-
   uptime: number;
   guilds: number;
   users: number;
@@ -448,7 +444,7 @@ export async function collectPingData(): Promise<Omit<PingData, "roundTrip">> {
 }
 
 async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
-  const { client, redis, moduleStore, stats, rabbit } = container;
+  const { client, redis, moduleStore, stats } = container;
   const wsPing = client.ws.ping ?? 0;
 
   recordInvocation(wsPing);
@@ -504,18 +500,6 @@ async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
     _getActiveRequests?: () => { length: number };
   };
 
-  let rabbitQueued = 0;
-  let rabbitConsumers = 0;
-  if (rabbit) {
-    try {
-      const q = await rabbit.channel.checkQueue("lumi.rpc.requests");
-      rabbitQueued = q.messageCount;
-      rabbitConsumers = q.consumerCount;
-    } catch (err: unknown) {
-      logError("Ping: RabbitMQ queue check failed", err);
-    }
-  }
-
   return {
     wsPing,
     loopLagMs,
@@ -552,10 +536,6 @@ async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
     redisReadMs,
     redisWriteMs,
     ...rdStats,
-
-    rabbitConnected: rabbit?.connected ?? false,
-    rabbitQueued,
-    rabbitConsumers,
 
     uptime: client.uptime ?? 0,
     guilds: client.guilds.cache.size,

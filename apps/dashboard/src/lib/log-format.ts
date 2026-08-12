@@ -1,4 +1,5 @@
 export { isSnowflake } from "./moderation-cases";
+import type { DashboardMemberView } from "./dashboard-data";
 
 // Formatted in UTC so a Server Component and the client that hydrates it can
 // never disagree about the rendered string.
@@ -141,4 +142,12 @@ export function filterHref(
   }
   const qs = params.toString();
   return qs ? `${path}?${qs}` : path;
+}
+
+export function extractMemberNames(
+  members: DashboardMemberView[],
+): Record<string, string> {
+  return Object.fromEntries(
+    members.map((m) => [m.id, m.displayName || m.username]),
+  );
 }

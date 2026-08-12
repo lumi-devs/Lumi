@@ -2,8 +2,8 @@ import { container } from "@sapphire/framework";
 import { type Guild, type User, Colors } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { formatAuditReason } from "#lib/utilities/misc.js";
-import { makeErrorCard } from "#lib/utilities/cards.js";
 import { logToChannel } from "../lib/helpers.js";
+import { sendModActionDm } from "../lib/notify.js";
 import { errorCode } from "#lib/utilities/errors.js";
 import { sendAppealLinkDm } from "#lib/appeals/dm.js";
 
@@ -32,11 +32,13 @@ export class BanAction {
       deleteMessageSeconds = 0,
     } = options;
 
-    const dm = makeErrorCard(
-      `🔨 Banned - ${guild.name}`,
+    await sendModActionDm(
+      targetUser,
+      "🔨",
+      "Banned",
+      guild,
       `You have been banned from **${guild.name}**.\n\n**Reason:** ${reason}`,
     );
-    await targetUser.send(dm).catch(() => null);
 
     await guild.members.ban(targetUser.id, {
       reason: formatAuditReason(moderator, reason),

@@ -6,7 +6,7 @@ map, not a manual — for anything not covered here, see [`docs/README.md`](docs
 which mirrors `docs/` on every push to `main`.
 
 Lumi is a self-hosted, modular Discord bot: Bun + TypeScript, `@sapphire/framework` +
-discord.js v14, Prisma/PostgreSQL, Redis, RabbitMQ.
+discord.js v14, Prisma/PostgreSQL, Redis.
 
 ## Repo shape
 
@@ -17,14 +17,14 @@ source of truth for anything below.
 - `apps/worker` — owns the Discord gateway connection(s); runs every command, module, and
   interaction handler.
 - `apps/scheduler` — owns BullMQ delayed/cron job queues; never opens a gateway connection.
-- `apps/dashboard` — Next.js (App Router) web admin panel; talks to `worker` only over
-  RabbitMQ RPC, never touches Postgres/Redis directly.
+- `apps/dashboard` — Next.js (App Router) web admin panel; talks to `worker` only over an
+  internal HTTP RPC bridge, never touches Postgres/Redis directly.
 - `packages/core` — the framework itself: module loader, database service, command/permit
   system, addon SDK.
 - `packages/contracts` — RPC schemas and shared type definitions used by both `worker` and
   `dashboard`.
 - `packages/event-bus` — Redis Streams event bus between `worker` and `scheduler`.
-- `packages/sharding` — shard planner, cluster coordinator, session store for horizontal
+- `packages/sharding` — shard planner and shard telemetry for static horizontal
   scaling.
 - `packages/observability` — OpenTelemetry tracing, Prometheus metrics, health probes,
   wired up identically across all apps.
@@ -47,7 +47,7 @@ Always append `.js` to the specifier even though the source is `.ts`:
 | `#modules/*.js` | `packages/core/src/modules/*.ts` |
 
 A handful of hot paths (`commands.js`, `env.js`, `permissions.js`, `module-system.js`,
-`rabbit.js`, `types.js`, `guild-transaction.js`, `module-check.js`, `scheduler-bus.js`,
+`types.js`, `guild-transaction.js`, `module-check.js`, `scheduler-bus.js`,
 `schedule-task.js`) have explicit non-wildcard entries — check `package.json` if a wildcard
 import doesn't resolve as expected. Cross-*package* imports (e.g. `packages/core` →
 `packages/event-bus`) must use the `@lumi/*` specifier, never a relative path across a
@@ -74,8 +74,9 @@ Full surface: [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md).
 ## RPC bridge (dashboard ↔ worker)
 
 `apps/dashboard` never opens a Postgres or Redis connection and never holds the bot token.
-Every read/write is proxied over RabbitMQ RPC to `apps/worker` (`apps/dashboard/src/lib/rpc.ts`,
-a `server-only` module reachable only from Server Components/Route Handlers/Server Actions).
+Every read/write is proxied over an internal HTTP RPC bridge to `apps/worker`
+(`apps/dashboard/src/lib/rpc.ts` calling `packages/core/src/lib/rpc/http-server.ts`, a
+`server-only` module reachable only from Server Components/Route Handlers/Server Actions).
 
 The action surface is exactly **50 actions**, defined once in `packages/contracts/src/rpc.ts`:
 `RpcRequestPayloads` maps each wire action string to its `data` payload, and `RPC_ACTIONS`

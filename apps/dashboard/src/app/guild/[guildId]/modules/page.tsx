@@ -13,9 +13,8 @@ export default async function GuildModulesPage({
   const session = await requireGuild(guildId);
   const data = await getGuildDashboard(guildId, session.userId);
 
-  const enabled = data.modules.filter(
-    (m) => m.enabled || m.name === "core",
-  ).length;
+  const modules = data.modules.filter((m) => !m.isAddon);
+  const enabled = modules.filter((m) => m.enabled || m.name === "core").length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -24,11 +23,11 @@ export default async function GuildModulesPage({
         description="Enable or disable a module, or open one to edit its config fields."
         actions={
           <Badge variant="neutral">
-            {enabled} of {data.modules.length} enabled
+            {enabled} of {modules.length} enabled
           </Badge>
         }
       />
-      <ModuleToggleGrid guildId={guildId} modules={data.modules} />
+      <ModuleToggleGrid guildId={guildId} modules={modules} />
     </div>
   );
 }

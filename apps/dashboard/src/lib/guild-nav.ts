@@ -7,6 +7,7 @@ import {
   IdCard,
   LayoutGrid,
   type LucideIcon,
+  Package,
   Scale,
   Settings,
   ShieldAlert,
@@ -29,18 +30,19 @@ export interface GuildNavGroup {
   links: GuildNavLink[];
 }
 
-// Shared by `GuildSidebar` (rendered) and `CommandPalette` (searched); a link
+// Shared by `GuildTopNav` (rendered) and `CommandPalette` (searched); a link
 // added here must reach both.
 export function guildTopLinks(guildId: string): GuildNavLink[] {
   const base = `/guild/${guildId}`;
   return [
     { href: base, label: "General", icon: Settings },
     { href: `${base}/modules`, label: "Modules", icon: LayoutGrid },
+    { href: `${base}/addons`, label: "Addons", icon: Package },
     { href: `${base}/setup`, label: "Guided Setup", icon: Wand2 },
   ];
 }
 
-// Consumed by `GuildSidebar` (rendered as collapsible groups) and
+// Consumed by `GuildTopNav` (rendered as dropdown groups) and
 // `CommandPalette` (flattened for search); a link added here must reach both.
 export function guildManagementGroups(guildId: string): GuildNavGroup[] {
   const base = `/guild/${guildId}`;

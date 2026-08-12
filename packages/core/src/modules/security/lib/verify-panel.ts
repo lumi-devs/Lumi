@@ -4,7 +4,7 @@ import { Emojis } from "#lib/utilities/assets.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import {
-  CARD_ACCENTS,
+  resolveCardColor,
   makeCard,
   makeInfoCard,
   makeWarningCard,
@@ -27,7 +27,7 @@ export function buildVerifyPanel(t: LumiT): CardReply {
       .setStyle(ButtonStyle.Success)
       .setEmoji(Emojis.parse("✅")),
   );
-  return makeCard(CARD_ACCENTS.SUCCESS, t(PanelsKeys.VerifyTitle), t(PanelsKeys.VerifyIntro), {
+  return makeCard(resolveCardColor("success"), t(PanelsKeys.VerifyTitle), t(PanelsKeys.VerifyIntro), {
     footer: t(PanelsKeys.VerifyFooter),
     actionRows: [row],
   });

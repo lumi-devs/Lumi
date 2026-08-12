@@ -83,7 +83,8 @@ Configure `@lumi/scheduler` using environment variables:
 | `REDIS_PORT` | No | `6379` | Redis server network port. |
 | `REDIS_PASSWORD` | No | - | Redis authentication password. |
 | `REDIS_TASK_DB` | No | `1` | Redis database index used exclusively for BullMQ task queues. |
-| `RABBITMQ_URL` | **Yes** | - | RabbitMQ broker URL for background task consumer channels. |
+| `RPC_HTTP_HOST` | No | `0.0.0.0` | Bind host for the internal RPC HTTP server. |
+| `RPC_HTTP_PORT` | No | `8091` | Bind port for the internal RPC HTTP server. |
 | `POSTGRES_URL` | **Yes** | - | PgBouncer or Postgres database connection string. |
 | `METRICS_ENABLED` | No | `true` | Enables HTTP metrics and health check server. |
 | `METRICS_PORT` | No | `9090` | Network port for Prometheus metrics and health probes. |
@@ -97,7 +98,7 @@ Configure `@lumi/scheduler` using environment variables:
 
 ### Local Development
 
-Ensure PostgreSQL, Redis, and RabbitMQ are available:
+Ensure PostgreSQL and Redis are available:
 
 ```bash
 # Set environment variables and launch scheduler
@@ -123,13 +124,12 @@ The scheduler exposes an HTTP server on `METRICS_PORT` (default `9090`).
 | Endpoint | Method | Status Code | Description |
 |---|---|:---:|---|
 | `/healthz` | `GET` | `200` | Liveness check for the process. |
-| `/readyz` | `GET` | `200` / `503` | Evaluates system probes (`postgres`, `redis`, `rabbitmq`, `scheduler-tasks`, `scheduler-leader`). |
+| `/readyz` | `GET` | `200` / `503` | Evaluates system probes (`postgres`, `redis`, `scheduler-tasks`, `scheduler-leader`). |
 | `/metrics` | `GET` | `200` | Exports Prometheus metrics including `lumi_failed_jobs_total` and queue lengths. |
 
 ### Registered Readiness Probes
 
 - `postgres`: Confirms database query execution (`SELECT 1`).
 - `redis`: Verifies Redis connectivity (`PING` -> `PONG`).
-- `rabbitmq`: Verifies RabbitMQ channel connection status.
 - `scheduler-tasks`: Confirms BullMQ task container initialization.
 - `scheduler-leader`: Validates leadership ownership when `SCHEDULER_LEADER_LOCK=true`.

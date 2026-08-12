@@ -61,7 +61,7 @@ const manifestSchema = s.object({
 
 const IGNORED_DIRS = new Set(["node_modules", ".git", "dist", "build"]);
 
-async function pathExists(p: string): Promise<boolean> {
+export async function pathExists(p: string): Promise<boolean> {
   try {
     await fs.access(p);
     return true;
@@ -106,14 +106,6 @@ const EMBED_IMPORT_RE =
 const TIMER_RE =
   /(?:(?:const|let|var)\s+(\w+)\s*=\s*|([\w$][\w$.]*)\s*=\s*)?\b(setInterval|setTimeout)\s*\(/g;
 
-const LISTENER_RE = /\.(?:on|addListener)\s*\(\s*["'`]/;
-const LISTENER_CLEANUP_RE =
-  /\b(?:onUnload|dispose|\.off\s*\(|removeListener|removeAllListeners)\b/;
-
-// Anchored at true line-start (no leading whitespace) as a cheap proxy for
-// "module scope" without a real parser - matches the formatting this repo
-// (and generated addon scaffolds) actually use.
-const GLOBAL_LET_RE = /^(?:export\s+)?let\s+(\w+)\b/gm;
 const GLOBAL_COLLECTION_RE =
   /^(?:export\s+)?const\s+(\w+)\s*(?::\s*[^=;]+)?=\s*(?:\[\s*\]|new\s+Map\s*\(\s*\)|new\s+Set\s*\(\s*\))/gm;
 
@@ -143,19 +135,6 @@ function checkLeakHeuristics(src: string, rel: string, warnings: string[]): void
         `${rel}: \`${varName}\` holds a ${fn} handle but no \`${clearFn}(${varName})\` appears in this file - confirm it's cleared somewhere (e.g. onUnload) or the timer leaks for the process lifetime.`,
       );
     }
-  }
-
-  if (LISTENER_RE.test(src) && !LISTENER_CLEANUP_RE.test(src)) {
-    warnings.push(
-      `${rel}: registers a listener via .on(...)/.addListener(...) but this file has no onUnload/dispose/.off(/.removeListener( - confirm it's torn down on module unload, or reloading the addon stacks duplicate listeners on the same emitter.`,
-    );
-  }
-
-  GLOBAL_LET_RE.lastIndex = 0;
-  while ((m = GLOBAL_LET_RE.exec(src)) !== null) {
-    warnings.push(
-      `${rel}: module-level \`let ${m[1]}\` is mutable state shared by every guild this addon runs in, for the life of the process - prefer per-guild storage (container.db.guildKV / container.redis) over an in-memory module-level variable.`,
-    );
   }
 
   GLOBAL_COLLECTION_RE.lastIndex = 0;

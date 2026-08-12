@@ -6,6 +6,7 @@ import {
   addRepo,
   installModule,
   uninstallModule,
+  rollbackModule,
   listRepoModules,
   type RepoModuleView,
 } from "#/actions/system-actions";
@@ -135,6 +136,25 @@ export function RepoManager({ repos: initial }: { repos: DownloaderRepoView[] })
   );
 }
 
+function RevisionInput({
+  placeholder,
+  value,
+  onChange,
+}: {
+  placeholder: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <Input
+      placeholder={placeholder}
+      className="font-mono text-[11px]"
+      value={value}
+      onChange={onChange}
+    />
+  );
+}
+
 function RepoRow({ repo }: { repo: DownloaderRepoView }) {
   const [expanded, setExpanded] = useState(false);
   const [modules, setModules] = useState<RepoModuleView[] | null>(null);
@@ -193,11 +213,11 @@ function RepoRow({ repo }: { repo: DownloaderRepoView }) {
                   key={m.name}
                   repoName={repo.name}
                   module={m}
-                  onChange={(installed) =>
+                  onChange={(patch) =>
                     setModules(
                       (list) =>
                         list?.map((mod) =>
-                          mod.name === m.name ? { ...mod, isInstalled: installed } : mod,
+                          mod.name === m.name ? { ...mod, ...patch } : mod,
                         ) ?? null,
                     )
                   }
@@ -225,57 +245,161 @@ function RepoModuleRow({
 }: {
   repoName: string;
   module: RepoModuleView;
-  onChange: (installed: boolean) => void;
+  onChange: (patch: Partial<RepoModuleView>) => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [panelState, setPanelState] = useState<{
+    mode: "none" | "advanced" | "rollback";
+    revision: string;
+  }>({ mode: "none", revision: "" });
 
-  function act(installed: boolean) {
+  function install() {
     setError(null);
     startTransition(async () => {
-      const res = installed
-        ? await installModule(repoName, m.name)
-        : await uninstallModule(m.name);
-      if (res.ok) onChange(installed);
-      else setError(res.error ?? (installed ? "Install failed" : "Uninstall failed"));
+      const res = await installModule(
+        repoName,
+        m.name,
+        panelState.revision.trim() || undefined,
+      );
+      if (res.ok) {
+        onChange({ isInstalled: true });
+        setPanelState({ mode: "none", revision: "" });
+      } else {
+        setError(res.error ?? "Install failed");
+      }
+    });
+  }
+
+  function uninstall() {
+    setError(null);
+    startTransition(async () => {
+      const res = await uninstallModule(m.name);
+      if (res.ok) onChange({ isInstalled: false, commit: null, pinned: false });
+      else setError(res.error ?? "Uninstall failed");
+    });
+  }
+
+  function rollback() {
+    if (!panelState.revision.trim()) {
+      setError("Enter a commit/branch/tag to roll back to");
+      return;
+    }
+    setError(null);
+    startTransition(async () => {
+      const res = await rollbackModule(m.name, panelState.revision.trim());
+      if (res.ok) {
+        onChange({ commit: res.commit });
+        setPanelState({ mode: "none", revision: "" });
+      } else {
+        setError(res.error ?? "Rollback failed");
+      }
     });
   }
 
   return (
-    <li className="flex items-center gap-3 px-3 py-2 transition-colors hover:bg-surface-hover">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate font-mono text-[12px] text-fg">{m.name}</span>
-          {m.version && (
-            <span className="tabular text-[11px] text-fg-subtle">v{m.version}</span>
-          )}
+    <li className="flex flex-col gap-2 px-3 py-2 transition-colors hover:bg-surface-hover">
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate font-mono text-[12px] text-fg">{m.name}</span>
+            {m.version && (
+              <span className="tabular text-[11px] text-fg-subtle">v{m.version}</span>
+            )}
+            {m.isInstalled && m.commit && (
+              <span className="tabular text-[11px] text-fg-subtle">
+                @ {m.commit.slice(0, 7)}
+                {m.pinned ? " (pinned)" : ""}
+              </span>
+            )}
+          </div>
+          {error && <p className="mt-1 text-[11px] text-danger">{error}</p>}
         </div>
-        {error && <p className="mt-1 text-[11px] text-danger">{error}</p>}
+
+        {m.isInstalled ? (
+          <>
+            <Badge variant="success" dot>
+              Installed
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isPending}
+              onClick={() =>
+                setPanelState((s) => ({
+                  mode: s.mode === "rollback" ? "none" : "rollback",
+                  revision: "",
+                }))
+              }
+            >
+              Rollback
+            </Button>
+            <Button
+              variant="dangerGhost"
+              size="sm"
+              disabled={isPending}
+              onClick={uninstall}
+            >
+              Uninstall
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isPending}
+              onClick={() =>
+                setPanelState((s) => ({
+                  mode: s.mode === "advanced" ? "none" : "advanced",
+                  revision: "",
+                }))
+              }
+            >
+              Advanced
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={isPending}
+              onClick={install}
+            >
+              Install
+            </Button>
+          </>
+        )}
       </div>
 
-      {m.isInstalled ? (
-        <>
-          <Badge variant="success" dot>
-            Installed
-          </Badge>
+      {!m.isInstalled && panelState.mode === "advanced" && (
+        <div className="flex items-center gap-2 pl-0.5">
+          <RevisionInput
+            placeholder="Revision (commit/branch/tag) - defaults to latest"
+            value={panelState.revision}
+            onChange={(e) =>
+              setPanelState((s) => ({ ...s, revision: e.target.value }))
+            }
+          />
+        </div>
+      )}
+
+      {m.isInstalled && panelState.mode === "rollback" && (
+        <div className="flex items-center gap-2 pl-0.5">
+          <RevisionInput
+            placeholder="Commit/branch/tag to roll back to"
+            value={panelState.revision}
+            onChange={(e) =>
+              setPanelState((s) => ({ ...s, revision: e.target.value }))
+            }
+          />
           <Button
             variant="dangerGhost"
             size="sm"
             disabled={isPending}
-            onClick={() => act(false)}
+            onClick={rollback}
           >
-            Uninstall
+            Confirm rollback
           </Button>
-        </>
-      ) : (
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={isPending}
-          onClick={() => act(true)}
-        >
-          Install
-        </Button>
+        </div>
       )}
     </li>
   );

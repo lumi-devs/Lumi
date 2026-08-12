@@ -4,7 +4,7 @@ import type { BusEventEnvelope } from "./bus.js";
 import type { BusEventMessage } from "./bus.js";
 
 describe("BusEventMessage", () => {
-  it("models the actual flat wire shape RabbitClient#publishEvent produces", () => {
+  it("models the actual flat wire shape a bus publisher produces", () => {
     const wire: BusEventMessage<{ guildId: string; moduleName: string }> = {
       event: "module.updated",
       ts: Date.now(),

@@ -20,6 +20,7 @@ function makeModule(overrides: Partial<DashboardModuleView> = {}): DashboardModu
     enabled: true,
     configFields: [],
     config: {},
+    isAddon: false,
     ...overrides,
   };
 }

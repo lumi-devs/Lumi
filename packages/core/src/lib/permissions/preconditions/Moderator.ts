@@ -1,20 +1,11 @@
 import { Precondition, container } from "@sapphire/framework";
 import type { ChatInputCommandInteraction, Message } from "discord.js";
+import { memberRoleIds } from "./RequirePermit.js";
 
 declare module "@sapphire/framework" {
   interface Preconditions {
     Moderator: never;
   }
-}
-
-function memberRoleIds(member: unknown): string[] {
-  if (!member || typeof member !== "object") return [];
-  const roles = (member as { roles?: unknown }).roles;
-  if (Array.isArray(roles)) return roles as string[];
-  const cache = (roles as { cache?: { keys?: () => Iterable<string> } })?.cache;
-  if (cache && typeof cache.keys === "function") return Array.from(cache.keys());
-  if (cache && typeof cache === "object") return Object.keys(cache);
-  return [];
 }
 
 export class ModeratorPrecondition extends Precondition {

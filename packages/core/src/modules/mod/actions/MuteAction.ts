@@ -2,11 +2,10 @@ import { container } from "@sapphire/framework";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { formatAuditReason } from "#lib/utilities/misc.js";
-import { makeErrorCard } from "#lib/utilities/cards.js";
-import { logToChannel, scheduleCaseLift, liftJobId } from "../lib/helpers.js";
+import { logToChannel, scheduleCaseLift, liftAllActiveCases } from "../lib/helpers.js";
+import { sendModActionDm } from "../lib/notify.js";
 import { formatDuration } from "#lib/utilities/time.js";
 import { errorCode } from "#lib/utilities/errors.js";
-import { cancelTask } from "#lib/schedule-task.js";
 import { sendAppealLinkDm } from "#lib/appeals/dm.js";
 
 export interface MuteApplyOptions {
@@ -29,11 +28,13 @@ export class MuteAction {
     const { guild, targetMember, moderator, reason, durationMs } = options;
     const expiresAt = new Date(Date.now() + durationMs);
 
-    const dm = makeErrorCard(
-      `🔇 Muted - ${guild.name}`,
+    await sendModActionDm(
+      targetMember,
+      "🔇",
+      "Muted",
+      guild,
       `You have been timed out in **${guild.name}** for **${formatDuration(durationMs)}**.\n\n**Reason:** ${reason}`,
     );
-    await targetMember.send(dm).catch(() => null);
 
     await targetMember.timeout(
       durationMs,
@@ -72,23 +73,15 @@ export class MuteAction {
 
     await targetMember.timeout(null, formatAuditReason(moderator, reason));
 
-    const activeCases = await container.db.moderation.getActiveCases(
-      guild.id,
+    const c = await liftAllActiveCases(
+      container,
+      guild,
       targetMember.id,
       "mute",
-    );
-    for (const active of activeCases) {
-      await container.db.moderation.liftModerationCase(active.id);
-      await cancelTask(liftJobId(active.id)).catch(() => null);
-    }
-
-    const c = await container.db.moderation.createModerationCase({
-      guildId: guild.id,
-      userId: targetMember.id,
-      moderatorId: moderator.id,
-      action: "unmute",
+      "unmute",
+      moderator.id,
       reason,
-    });
+    );
 
     return c;
   }

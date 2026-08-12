@@ -4,7 +4,7 @@ import { time, TimestampStyles } from "@discordjs/formatters";
 import type { LumiT } from "#lib/i18n/index.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import {
-  CARD_ACCENTS,
+  resolveCardColor,
   makeCard,
   makeSuccessCard,
   makeWarningCard,
@@ -43,7 +43,7 @@ export function buildPanicConfirmCard(t: LumiT): CardReply {
 
 export function buildPanicCancelledCard(t: LumiT): CardReply {
   return makeCard(
-    CARD_ACCENTS.INFO,
+    resolveCardColor("info"),
     t(PanelsKeys.PanicCancelledTitle),
     t(PanelsKeys.PanicCancelledBody),
   );
@@ -55,7 +55,7 @@ export function buildPanicStatusCard(
   status: { invitesPaused: boolean; lockedCount: number; skippedCount: number },
 ): CardReply {
   return makeCard(
-    CARD_ACCENTS.ERROR,
+    resolveCardColor("error"),
     t(PanelsKeys.PanicActiveTitle),
     t(PanelsKeys.PanicActiveBody, {
       locked: status.lockedCount,
@@ -75,7 +75,7 @@ export function buildPanicAlreadyActiveCard(
   startedAt: Date,
 ): CardReply {
   return makeCard(
-    CARD_ACCENTS.ERROR,
+    resolveCardColor("error"),
     t(PanelsKeys.PanicAlreadyActiveTitle),
     t(PanelsKeys.PanicAlreadyActiveBody, {
       since: time(startedAt, TimestampStyles.RelativeTime),

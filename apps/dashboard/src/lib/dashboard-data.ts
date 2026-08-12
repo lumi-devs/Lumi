@@ -21,6 +21,7 @@ export interface DashboardModuleView {
   enabled: boolean;
   configFields: ConfigField[];
   config: Record<string, unknown>;
+  isAddon: boolean;
 }
 
 export interface DashboardRoleView {
@@ -299,11 +300,6 @@ export interface SystemDashboardData {
   guildCount: number;
 }
 
-export interface ShardSessionView {
-  sequence: number;
-  resumeUrl: string | null;
-}
-
 export interface ShardStateView {
   shardId: number;
   replicaId: string;
@@ -311,22 +307,15 @@ export interface ShardStateView {
   ping: number | null;
   guildCount: number;
   lastHeartbeatAt: string;
-  session: ShardSessionView | null;
 }
 
 export interface ClusterReplicaView {
   replicaId: string;
-  lastSeenAt: string | null;
-  ready: boolean | null;
-  assignedShardIds: number[];
   reportingShardIds: number[];
 }
 
 export interface SystemShardsData {
   clusterName: string;
-  clustered: boolean;
-  epoch: number | null;
-  assignedAt: string | null;
   shardCount: number;
   observedAt: string;
   replicas: ClusterReplicaView[];

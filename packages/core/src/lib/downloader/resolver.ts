@@ -32,6 +32,18 @@ const execError =
 
 const repoSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
 const branchSchema = s.string().regex(/^[a-zA-Z0-9_.][a-zA-Z0-9_.-]*$/);
+
+function buildGitCloneArgs(
+  branch: string,
+  url: string,
+  path: string,
+): string[] {
+  const args = ["clone"];
+  if (branch !== "default") args.push("-b", branch);
+  args.push("--", url, path);
+  return args;
+}
+
 function parseUrl(val: string): string {
   val = val.trim().replace(/^<|>$/g, "");
   if (val.startsWith("http://") || val.startsWith("https://")) {
@@ -108,9 +120,7 @@ export class DownloadResolver {
             `[Downloader] Git pull failed for ${name}, attempting clean clone fallback...`,
           );
           await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
-          const cloneArgs = ["clone"];
-          if (branch !== "default") cloneArgs.push("-b", branch);
-          cloneArgs.push("--", url, repoPath);
+          const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
           await execGit(cloneArgs).catch(async (cloneErr) => {
             await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
             execError("Git clone failed")(cloneErr);
@@ -121,9 +131,7 @@ export class DownloadResolver {
       } else {
         container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
         await fs.mkdir(MODULE_ROOT, { recursive: true });
-        const cloneArgs = ["clone"];
-        if (branch !== "default") cloneArgs.push("-b", branch);
-        cloneArgs.push("--", url, repoPath);
+        const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
         await execGit(cloneArgs).catch(async () => {
           await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
           throw new Error("Git clone failed");
@@ -185,18 +193,95 @@ export class DownloadResolver {
     return modules;
   }
 
+  /**
+   * Resolves a user-supplied revision (full/short SHA, branch, or tag) to a
+   * full commit hash within `repoPath`, rejecting short SHAs that match more
+   * than one commit instead of silently picking one.
+   */
+  public async resolveRevision(
+    repoPath: string,
+    revision: string,
+  ): Promise<string> {
+    const isHexPrefix = /^[0-9a-fA-F]{4,40}$/.test(revision);
+
+    if (isHexPrefix) {
+      const { stdout } = await execGit([
+        "-C",
+        repoPath,
+        "rev-parse",
+        `--disambiguate=${revision}`,
+      ]).catch(() => ({ stdout: "" }));
+      const candidates = stdout
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      if (candidates.length > 1) {
+        throw new Error(
+          `Revision **${revision}** is ambiguous and matches ${candidates.length} commits:\n${candidates.map((c) => `• \`${c}\``).join("\n")}\nUse a longer SHA to disambiguate.`,
+        );
+      }
+      if (candidates.length === 1) {
+        const [full] = candidates;
+        await execGit(["-C", repoPath, "cat-file", "-e", `${full}^{commit}`]).catch(
+          () => {
+            throw new Error(
+              `Revision **${revision}** resolves to \`${full}\`, which is not a commit.`,
+            );
+          },
+        );
+        return full!;
+      }
+    }
+
+    const { stdout } = await execGit([
+      "-C",
+      repoPath,
+      "rev-parse",
+      "--verify",
+      `${revision}^{commit}`,
+    ]).catch(
+      execError(`Revision **${revision}** could not be resolved to a commit`),
+    );
+    return stdout.trim();
+  }
+
+  /**
+   * Checks out `revision` (resolved via {@linkcode resolveRevision}) in an
+   * already-cloned repo, detaching HEAD. Shared by install-with-revision and
+   * rollback, since both just need the repo's working tree pointed at a
+   * specific commit.
+   */
+  public async checkoutRevision(
+    repoPath: string,
+    revision: string,
+  ): Promise<string> {
+    const resolved = await this.resolveRevision(repoPath, revision);
+    await execGit(["-C", repoPath, "checkout", "--detach", resolved]).catch(
+      execError(`Git checkout of ${revision} failed`),
+    );
+    return resolved;
+  }
+
   public async installModule(
     repoName: string,
     moduleName: string,
-  ): Promise<ModuleInfo> {
+    revision?: string,
+  ): Promise<ModuleInfo & { commit: string | null }> {
     repoName = repoSchema.parse(repoName);
     moduleName = repoSchema.parse(moduleName);
 
+    const repoPath = path.join(MODULE_ROOT, repoName);
     const sourcePath = path.join(MODULE_ROOT, repoName, moduleName);
     const targetPath = path.join(ADDON_MODULES_ROOT, moduleName);
 
     if (!(await this._exists(sourcePath))) {
       throw new Error(`Module ${moduleName} not found in repo ${repoName}`);
+    }
+
+    let commit: string | null = null;
+    if (revision) {
+      commit = await this.checkoutRevision(repoPath, revision);
     }
 
     const infoPath = path.join(sourcePath, "info.json");
@@ -273,10 +358,10 @@ export class DownloadResolver {
     await fs.symlink(sourcePath, targetPath, "dir");
 
     container.logger?.info?.(
-      `[Downloader] Installed ${moduleName} from ${repoName}`,
+      `[Downloader] Installed ${moduleName} from ${repoName}${commit ? ` @ ${commit}` : ""}`,
     );
 
-    return info;
+    return { ...info, commit };
   }
 
   private async _revalidateInstalledModules(

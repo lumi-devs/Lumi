@@ -3,7 +3,7 @@ import { PanelsKeys } from "#lib/i18n/keys.js";
 import { row, type Row } from "#modules/core/ui/common.js";
 import { hubTabRow } from "#modules/core/ui/hub.js";
 import { Emojis } from "#utilities/assets.js";
-import { CARD_ACCENTS, makeCard, type CardReply } from "#utilities/cards.js";
+import { resolveCardColor, makeCard, type CardReply } from "#utilities/cards.js";
 import {
   createPaginationRow,
   createStringSelectMenu,
@@ -117,7 +117,7 @@ export function buildAddonsView(
   );
 
   return makeCard(
-    CARD_ACCENTS.PRIMARY,
+    resolveCardColor("primary"),
     `${Emojis.REPO} ${t ? t(PanelsKeys.AddonsTitle) : "Add-ons & Updates"}`,
     body,
     {
@@ -177,7 +177,7 @@ export function buildAddonReposView(
   ];
 
   return makeCard(
-    CARD_ACCENTS.PRIMARY,
+    resolveCardColor("primary"),
     `${Emojis.REPO} ${t ? t(PanelsKeys.AddonsReposTitle) : "Configure Repositories"}`,
     sorted.length
       ? sorted.length > shown.length
@@ -250,7 +250,7 @@ export function buildAddonInstalledView(
   }
 
   return makeCard(
-    CARD_ACCENTS.PRIMARY,
+    resolveCardColor("primary"),
     `${Emojis.DOWNLOAD} ${t ? t(PanelsKeys.AddonsInstalledTitle) : "Configure Addons"}`,
     sorted.length
       ? sorted.length > shown.length
@@ -336,7 +336,7 @@ export function buildAddonRepoModulesView(
   }
 
   return makeCard(
-    CARD_ACCENTS.PRIMARY,
+    resolveCardColor("primary"),
     `${Emojis.GEAR} ${
       t
         ? t(PanelsKeys.AddonsModulesTitle, { repo: repoName })
@@ -389,7 +389,7 @@ export function buildAutoUpdateSettingsView(
   });
 
   return makeCard(
-    CARD_ACCENTS.PRIMARY,
+    resolveCardColor("primary"),
     "⏱️ Auto-Update Settings",
     [
       "When enabled, Lumi periodically checks every tracked repository and pulls updates for installed add-ons automatically.",

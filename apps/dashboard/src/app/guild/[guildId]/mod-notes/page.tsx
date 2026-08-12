@@ -14,7 +14,11 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import type { ModNoteView } from "#/lib/dashboard-data";
-import { isSnowflake, single } from "#/lib/log-format";
+import {
+  extractMemberNames,
+  isSnowflake,
+  single,
+} from "#/lib/log-format";
 
 export default async function ModNotesPage({
   params,
@@ -30,9 +34,7 @@ export default async function ModNotesPage({
   const badUserFilter = Boolean(userId) && !isSnowflake(userId);
 
   const dashboard = await getGuildDashboard(guildId, session.userId);
-  const memberNames = Object.fromEntries(
-    dashboard.members.map((m) => [m.id, m.displayName || m.username]),
-  );
+  const memberNames = extractMemberNames(dashboard.members);
 
   let notes: ModNoteView[] | null = null;
   let failure: string | null = null;
