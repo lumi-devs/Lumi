@@ -1,32 +1,20 @@
 import "server-only";
 
-// Small Discord REST/CDN helpers shared by the NextAuth callbacks and the
+// Small Discord REST helpers shared by the NextAuth callbacks and the
 // server components that render user/guild chrome. Token exchange itself is
 // handled by NextAuth's built-in Discord OAuth2 provider (see lib/auth.ts) —
 // this module only covers what NextAuth doesn't: fetching the caller's guild
-// list (needs the `guilds` scope) and CDN URL formatting.
+// list (needs the `guilds` scope). Pure formatting helpers (no secrets, no
+// fetch) live in lib/discord-format.ts instead, re-exported here so existing
+// server-side importers don't need to change - that split exists so Client
+// Components (e.g. GuildPicker) can use the CDN URL helpers without pulling
+// in this file's `server-only` marker.
 
 const DISCORD_API = "https://discord.com/api/v10";
-const DISCORD_CDN = "https://cdn.discordapp.com";
-const MANAGE_GUILD = 0x20n;
 
-export interface OAuthGuild {
-  id: string;
-  name: string;
-  icon: string | null;
-  permissions: string;
-  owner?: boolean;
-}
-
-/** True when the OAuth guild entry grants Manage Server (or ownership). */
-export function canManage(guild: OAuthGuild): boolean {
-  if (guild.owner) return true;
-  try {
-    return (BigInt(guild.permissions) & MANAGE_GUILD) === MANAGE_GUILD;
-  } catch {
-    return false;
-  }
-}
+export type { OAuthGuild } from "./discord-format";
+export { canManage, userAvatarUrl, guildIconUrl } from "./discord-format";
+import type { OAuthGuild } from "./discord-format";
 
 /** Fetch the guilds the authenticated user belongs to, using their OAuth2 access token. */
 export async function fetchUserGuilds(
@@ -40,22 +28,4 @@ export async function fetchUserGuilds(
   });
   if (!res.ok) throw new Error(`Discord guilds fetch failed: ${res.status}`);
   return (await res.json()) as OAuthGuild[];
-}
-
-export function userAvatarUrl(
-  userId: string,
-  avatar: string | null | undefined,
-): string {
-  if (avatar) {
-    const ext = avatar.startsWith("a_") ? "gif" : "png";
-    return `${DISCORD_CDN}/avatars/${userId}/${avatar}.${ext}?size=64`;
-  }
-  const index = Number((BigInt(userId) >> 22n) % 6n);
-  return `${DISCORD_CDN}/embed/avatars/${index}.png`;
-}
-
-export function guildIconUrl(id: string, icon: string | null): string | null {
-  if (!icon) return null;
-  const ext = icon.startsWith("a_") ? "gif" : "png";
-  return `${DISCORD_CDN}/icons/${id}/${icon}.${ext}?size=64`;
 }

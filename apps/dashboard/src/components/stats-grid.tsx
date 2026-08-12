@@ -1,9 +1,7 @@
-"use client";
-
 import { ArrowDown, ArrowUp, type LucideIcon } from "lucide-react";
 import { cn } from "#/lib/utils";
 import { Card } from "#/components/ui/card";
-import { useCountUp } from "#/lib/animate";
+import { StatCountUp } from "#/components/stat-count-up";
 
 export interface Stat {
   label: string;
@@ -18,9 +16,8 @@ export interface Stat {
 }
 
 function StatValue({ stat }: { stat: Stat }) {
-  const counted = useCountUp(typeof stat.value === "number" ? stat.value : 0);
   if (stat.countUp && typeof stat.value === "number") {
-    return <>{counted.toLocaleString()}</>;
+    return <StatCountUp value={stat.value} />;
   }
   return <>{stat.value}</>;
 }
