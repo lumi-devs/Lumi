@@ -24,7 +24,7 @@ export function TempVcLiveChannels({
   channelNames: Record<string, string>;
   now: number;
 }) {
-  const liveChanRef = useStaggerIn<HTMLUListElement>("> li");
+  const liveChanRef = useStaggerIn<HTMLUListElement>("li");
 
   if (records.length === 0) {
     return (

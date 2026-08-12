@@ -32,7 +32,13 @@ export function useStaggerIn<T extends HTMLElement>(
   useEffect(() => {
     const el = ref.current;
     if (!el || prefersReducedMotion()) return;
-    const items = el.querySelectorAll(itemSelector);
+    // `el.querySelectorAll("> li")` throws (a bare leading combinator isn't
+    // valid without :scope) - normalize the CSS-nesting idiom that's easy to
+    // reach for here instead of the vanilla DOM one.
+    const selector = itemSelector.trimStart().startsWith(">")
+      ? `:scope ${itemSelector.trimStart()}`
+      : itemSelector;
+    const items = el.querySelectorAll(selector);
     if (items.length === 0) return;
 
     const grid = opts?.grid;
