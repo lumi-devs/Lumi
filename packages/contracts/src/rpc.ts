@@ -53,10 +53,16 @@ export interface RepoModulesPayload {
 export interface ModuleInstallPayload {
   repoName: string;
   moduleName: string;
+  revision?: string;
 }
 
 export interface ModuleUninstallPayload {
   moduleName: string;
+}
+
+export interface ModuleRollbackPayload {
+  moduleName: string;
+  revision: string;
 }
 
 export interface ModuleTogglePayload {
@@ -348,12 +354,6 @@ export interface SystemIdentityPayload {
   supportGuildId?: string | null;
 }
 
-/** Persisted gateway session for a shard; present only when the cluster session store is installed. */
-export interface ShardSessionView {
-  sequence: number;
-  resumeUrl: string | null;
-}
-
 /** One reporting shard, as published by the process holding its WebSocket. */
 export interface ShardStateView {
   shardId: number;
@@ -364,25 +364,17 @@ export interface ShardStateView {
   ping: number | null;
   guildCount: number;
   lastHeartbeatAt: string;
-  session: ShardSessionView | null;
 }
 
 /** One gateway process in the cluster. */
 export interface ClusterReplicaView {
   replicaId: string;
-  lastSeenAt: string | null;
-  ready: boolean | null;
-  assignedShardIds: number[];
   reportingShardIds: number[];
 }
 
 /** Response of `system.shards.get`. */
 export interface SystemShardsResponse {
   clusterName: string;
-  /** False when no coordinator assignment exists — a single-process deployment. */
-  clustered: boolean;
-  epoch: number | null;
-  assignedAt: string | null;
   shardCount: number;
   observedAt: string;
   replicas: ClusterReplicaView[];
@@ -399,6 +391,7 @@ export interface RpcRequestPayloads {
   "downloader.repo.modules": RepoModulesPayload;
   "downloader.module.install": ModuleInstallPayload;
   "downloader.module.uninstall": ModuleUninstallPayload;
+  "downloader.module.rollback": ModuleRollbackPayload;
   "guild.dashboard.get": never;
   "guild.module.toggle": ModuleTogglePayload;
   "guild.config.set": ConfigSetPayload;
@@ -472,6 +465,7 @@ export const RPC_ACTIONS = {
   repoModules: "downloader.repo.modules",
   moduleInstall: "downloader.module.install",
   moduleUninstall: "downloader.module.uninstall",
+  moduleRollback: "downloader.module.rollback",
   guildDashboardGet: "guild.dashboard.get",
   guildModuleToggle: "guild.module.toggle",
   guildConfigSet: "guild.config.set",

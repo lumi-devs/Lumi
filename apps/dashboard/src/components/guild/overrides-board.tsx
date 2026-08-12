@@ -25,6 +25,7 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { Field, Input, Select } from "#/components/ui/input";
 import { Glyph } from "#/components/ui/glyph";
 import { ValueChip } from "#/components/ui/value-chip";
+import { useStaggerIn } from "#/lib/animate";
 import type {
   ConfigOverrideView,
   DashboardChannelView,
@@ -81,8 +82,13 @@ export function OverridesBoard({
     return [...byModule.entries()].map(([name, items]) => ({ name, items }));
   }, [overrides]);
 
+  const boardRef = useStaggerIn<HTMLDivElement>('[data-slot="card"]', {
+    delay: 60,
+    resetKey: groups.map((g) => g.name).join(","),
+  });
+
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={boardRef} className="flex flex-col gap-4">
       <div aria-live="polite">
         {notice ? <Alert variant="info">{notice}</Alert> : null}
       </div>
@@ -139,18 +145,10 @@ export function OverridesBoard({
           />
         </Card>
       ) : (
-        groups.map((group, index) => {
+        groups.map((group) => {
           const moduleView = moduleIndex.get(group.name);
           return (
-            <Card
-              key={group.name}
-              className="rise"
-              style={
-                {
-                  "--rise-delay": `${Math.min(70 + index * 70, 280)}ms`,
-                } as React.CSSProperties
-              }
-            >
+            <Card key={group.name}>
               <CardHeader
                 actions={
                   <Badge variant="neutral" className="tabular">

@@ -53,15 +53,7 @@ function extractModuleMeta(mod: {
   default?: { meta?: ModuleMeta };
   [key: string]: unknown;
 }): ModuleMeta | undefined {
-  return (
-    mod.meta ??
-    mod.default?.meta ??
-    (
-      Object.values(mod).find(
-        (v: unknown) => (v as { meta?: ModuleMeta })?.meta,
-      ) as { meta?: ModuleMeta } | undefined
-    )?.meta
-  );
+  return mod.meta ?? mod.default?.meta;
 }
 
 /**
@@ -87,6 +79,20 @@ export class ModuleStore extends Store<Module> {
    */
   public addRoot(root: URL) {
     this.#roots.push(root);
+  }
+
+  /**
+   * Determines whether a module was discovered outside the core modules root (i.e. it's an addon).
+   *
+   * @param record - The module record to check.
+   * @returns `true` if the module's directory is not nested under the first registered root.
+   */
+  public isAddonModule(record: ModuleRecord): boolean {
+    const coreRoot = this.#roots[0];
+    if (!coreRoot) return false;
+    const coreRootPath = path.resolve(fileURLToPath(coreRoot));
+    const recordDir = path.resolve(record.dir);
+    return !isPathInside(recordDir, coreRootPath);
   }
 
   /**
@@ -564,6 +570,26 @@ export class ModuleStore extends Store<Module> {
     return null;
   }
 
+  #buildRecord(
+    name: string,
+    dir: string,
+    indexPath: string,
+    meta: ModuleMeta,
+    globalState: Map<string, boolean>,
+    targetService: TargetService,
+    manifest?: ModuleManifest,
+  ): ModuleRecord {
+    return {
+      name,
+      dir,
+      indexUrl: pathToFileURL(indexPath).href,
+      enabled: globalState.get(name) ?? true,
+      meta,
+      ...(manifest ? { manifest } : {}),
+      targetService,
+    };
+  }
+
   #ingestManifest(
     dir: string,
     indexPath: string,
@@ -572,15 +598,18 @@ export class ModuleStore extends Store<Module> {
     globalState: Map<string, boolean>,
   ) {
     if (found.has(manifest.name)) return;
-    found.set(manifest.name, {
-      name: manifest.name,
-      dir,
-      indexUrl: pathToFileURL(indexPath).href,
-      enabled: globalState.get(manifest.name) ?? true,
-      meta: metaFromManifest(manifest),
-      manifest,
-      targetService: manifest.targetService,
-    });
+    found.set(
+      manifest.name,
+      this.#buildRecord(
+        manifest.name,
+        dir,
+        indexPath,
+        metaFromManifest(manifest),
+        globalState,
+        manifest.targetService,
+        manifest,
+      ),
+    );
   }
 
   async #ingest(
@@ -601,14 +630,10 @@ export class ModuleStore extends Store<Module> {
       if (meta.configSchema)
         this.#schemaCache.set(meta.name, meta.configSchema);
 
-      found.set(meta.name, {
-        name: meta.name,
-        dir,
-        indexUrl: pathToFileURL(indexPath).href,
-        enabled: globalState.get(meta.name) ?? true,
-        meta,
-        targetService: "worker",
-      });
+      found.set(
+        meta.name,
+        this.#buildRecord(meta.name, dir, indexPath, meta, globalState, "worker"),
+      );
     } catch (err: unknown) {
       container.logger.error(`[ModuleStore] Import failed: ${indexPath}`, err);
     }

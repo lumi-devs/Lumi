@@ -105,7 +105,7 @@ export const RedisTTL = {
  * Build Redis connection options. When `REDIS_SENTINELS` is set (HA mode),
  * returns Sentinel-aware options (`sentinels` + `name`); otherwise returns
  * direct host/port. Exported so call sites that need to build their own
- * Redis clients (event-bus, cluster coordinator) stay HA-aware too.
+ * Redis clients (event-bus) stay HA-aware too.
  *
  * `REDIS_SENTINELS`: comma-separated `host:port` list of Sentinel nodes,
  * e.g. `sentinel-1:26379,sentinel-2:26379,sentinel-3:26379`.

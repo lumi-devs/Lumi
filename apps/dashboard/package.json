@@ -2,7 +2,7 @@
   "name": "@lumi/dashboard",
   "version": "3.2.0",
   "license": "GPL-3.0-only",
-  "description": "Web admin dashboard (Next.js App Router) - Discord OAuth login via NextAuth.js + auto-generated config forms, served over the RabbitMQ RPC bridge.",
+  "description": "Web admin dashboard (Next.js App Router) - Discord OAuth login via NextAuth.js + auto-generated config forms, served over an internal HTTP RPC bridge to the worker.",
   "type": "module",
   "private": true,
   "scripts": {
@@ -17,8 +17,7 @@
     "@lumi/contracts": "workspace:*",
     "@lumi/observability": "workspace:*",
     "@tanstack/react-table": "^8",
-    "amqp-connection-manager": "^5.0.0",
-    "amqplib": "^2.0.1",
+    "animejs": "^4.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.28.0",

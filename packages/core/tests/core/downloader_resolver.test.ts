@@ -344,7 +344,7 @@ describe("DownloadResolver Edge Cases", () => {
           subStores: ["commands"],
         }),
       );
-      expect(result).toEqual(info);
+      expect(result).toEqual({ ...info, commit: null });
     });
 
     it("symlinks the source module into the addon modules root on a successful install", async () => {
@@ -364,7 +364,7 @@ describe("DownloadResolver Edge Cases", () => {
 
       expect(writeManifest).not.toHaveBeenCalled();
       expect(symlinkSpy).toHaveBeenCalledWith(sourcePath, targetPath, "dir");
-      expect(result).toEqual(info);
+      expect(result).toEqual({ ...info, commit: null });
     });
 
     it("throws with the validation errors when the addon fails validation", async () => {

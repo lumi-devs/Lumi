@@ -60,12 +60,6 @@ export class ReadinessProbes {
         return { status: "fail", detail: String(err) };
       }
     });
-
-    registerReadinessProbe("rabbitmq", () =>
-      container.rabbit?.connected
-        ? { status: "ok" }
-        : { status: "fail", detail: "not connected" },
-    );
   }
 
   /** Declares the probes only some roles can meaningfully answer. */

@@ -6,11 +6,11 @@ Running your own Lumi instance for a personal server or small community. This co
 
 | Dependency | Minimum | Notes |
 | :--- | :--- | :--- |
-| [Docker](https://docs.docker.com/get-docker/) + Docker Compose | any recent version | Easiest way to run Postgres, Redis, RabbitMQ, and (optionally) Lumi itself. Not required - see below. |
+| [Docker](https://docs.docker.com/get-docker/) + Docker Compose | any recent version | Easiest way to run Postgres, Redis, and (optionally) Lumi itself. Not required - see below. |
 | [Bun](https://bun.sh) | `1.3.0+` | Always required, Docker or not. |
 | A Discord application | - | Create one at the [Developer Portal](https://discord.com/developers/applications); you need its bot token and client ID. |
 
-This guide's commands assume Docker for Postgres/Redis/RabbitMQ, since it's the fastest path. If you'd rather not use Docker at all, either run `nix develop` (provisions native Postgres/Redis/RabbitMQ binaries) or install those three yourself and point `.env` at them - Lumi itself is just a Bun process reading connection strings, nothing in the code requires Docker.
+This guide's commands assume Docker for Postgres/Redis, since it's the fastest path. If you'd rather not use Docker at all, either run `nix develop` (provisions native Postgres/Redis binaries) or install those two yourself and point `.env` at them - Lumi itself is just a Bun process reading connection strings, nothing in the code requires Docker.
 
 ## 1. Create a Discord application
 
@@ -44,14 +44,13 @@ $EDITOR .env   # fill in BOT_TOKEN, CLIENT_ID at minimum - see below
 | `POSTGRES_PASSWORD` | Any password - also used by `docker-compose.yml`'s `postgres` service. |
 | `POSTGRES_URL` / `DIRECT_POSTGRES_URL` | Defaults in `.env.example` (`postgresql://lumi:lumi@localhost:5432/lumi`) work as-is if you keep the default password. |
 | `REDIS_PASSWORD` | Any password - also used by the `redis` service. |
-| `RABBITMQ_USER` / `RABBITMQ_PASSWORD` | Any credentials - also used by the `rabbitmq` service. |
 
 Everything else in `.env.example` has a working default for local use. See [Configuration Reference](configuration.md) for every variable, including the advanced sharding/clustering knobs you don't need for a single instance.
 
 ## 3. Start the backing services
 
 ```bash
-docker compose up -d postgres pgbouncer redis rabbitmq
+docker compose up -d postgres pgbouncer redis
 ```
 
 This starts:
@@ -61,7 +60,6 @@ This starts:
 | `postgres` | Primary database (`postgres:17`). |
 | `pgbouncer` | Connection pooler in front of Postgres - `POSTGRES_URL` should point here (port 6432), not directly at `postgres`. |
 | `redis` | Cache, rate limiting, cross-process invalidation, event bus transport. |
-| `rabbitmq` | Dashboard ↔ worker RPC transport (only needed if you run the dashboard). |
 
 Wait for them to report healthy:
 
@@ -98,13 +96,14 @@ bun run dev
 
 ## 6. Optional: the web dashboard
 
-The dashboard needs its own OAuth2 app credentials (can be the same Discord application) and RabbitMQ, which you already have running.
+The dashboard needs its own OAuth2 app credentials (can be the same Discord application) and a running `worker` reachable at `RPC_HTTP_URL` - no extra infrastructure required.
 
 ```bash
 # .env additions
 DASHBOARD_SESSION_SECRET=$(openssl rand -hex 32)
 DISCORD_OAUTH2_CLIENT_ID=<same as CLIENT_ID, or a separate app>
 DISCORD_OAUTH2_CLIENT_SECRET=<from OAuth2 tab>
+RPC_HTTP_URL=http://localhost:8091   # or http://worker:8091 under Docker Compose
 ```
 
 There is no redirect-URI variable - NextAuth derives the callback from the request. Register `http://localhost:8080/api/auth/callback/discord` as a valid redirect under **OAuth2 → Redirects** in the Developer Portal.
@@ -120,7 +119,7 @@ bun run --cwd apps/dashboard dev          # development
 bun run --cwd apps/dashboard build && bun run --cwd apps/dashboard start
 ```
 
-Visit `http://localhost:8080`. The `worker` and RabbitMQ must be up, or every page that reads data fails its RPC call. Details: [Dashboard Reference](dashboard.md).
+Visit `http://localhost:8080`. `worker` must be up and reachable at `RPC_HTTP_URL`, or every page that reads data fails its RPC call. Details: [Dashboard Reference](dashboard.md).
 
 ## 7. Optional: metrics and tracing
 

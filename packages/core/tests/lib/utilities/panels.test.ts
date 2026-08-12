@@ -23,13 +23,13 @@ import {
   createCategorySubmenuRow,
 } from "#utilities/panels.js";
 import {
-  CARD_ACCENTS,
+  defaultCardColors,
   makeSuccessCard,
   formatStatusBadge,
   formatSubtitle,
   formatBreadcrumbs,
+  resolveCardColor,
 } from "#utilities/cards.js";
-import { BotConfig } from "#utilities/config.js";
 import { createStringSelectMenu as createStringSelectFromIndex } from "#utilities/index.js";
 
 describe("Panel & Card Utility Standardization", () => {
@@ -222,19 +222,20 @@ describe("Panel & Card Utility Standardization", () => {
   });
 
   describe("Card Extensions & Formatting Helpers", () => {
-    it("CARD_ACCENTS palette is defined", () => {
-      expect(CARD_ACCENTS.PRIMARY).toBe(0x5865f2);
-      expect(CARD_ACCENTS.SUCCESS).toBe(0x2ecc71);
-      expect(CARD_ACCENTS.ERROR).toBe(0xe74c3c);
-      expect(CARD_ACCENTS.WARNING).toBe(0xf1c40f);
-      expect(CARD_ACCENTS.INFO).toBe(0x3498db);
+    it("defaultCardColors palette is defined", () => {
+      expect(defaultCardColors.primary).toBe(0x5865f2);
+      expect(defaultCardColors.success).toBe(0x57f287);
+      expect(defaultCardColors.error).toBe(0xed4245);
+      expect(defaultCardColors.warning).toBe(0xfee75c);
+      expect(defaultCardColors.info).toBe(0x5865f2);
     });
 
     it("makeSuccessCard sets accent color", () => {
       const card = makeSuccessCard("Success Title", "Success Body");
       const container = card.components[0] as ContainerBuilder;
       const data = container.toJSON() as { accent_color?: number };
-      expect(data.accent_color).toBe(BotConfig.branding.colors.SUCCESS);
+      const expectedColor = resolveCardColor("success");
+      expect(data.accent_color).toBe(expectedColor);
     });
 
     it("formatStatusBadge formats status strings properly", () => {

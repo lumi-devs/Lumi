@@ -2,10 +2,9 @@ import { container } from "@sapphire/framework";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { formatAuditReason } from "#lib/utilities/misc.js";
-import { logToChannel, scheduleCaseLift, liftJobId } from "../lib/helpers.js";
+import { logToChannel, scheduleCaseLift, liftAllActiveCases } from "../lib/helpers.js";
 import { errorCode } from "#lib/utilities/errors.js";
 import { RedisKeys } from "#database/redis.js";
-import { cancelTask } from "#lib/schedule-task.js";
 
 export interface VoiceMuteApplyOptions {
   guild: Guild;
@@ -71,23 +70,15 @@ export class VoiceMuteAction {
 
     await targetMember.voice.setMute(false, auditReason);
 
-    const activeCases = await container.db.moderation.getActiveCases(
-      guild.id,
+    const c = await liftAllActiveCases(
+      container,
+      guild,
       targetMember.id,
       "voice_mute",
-    );
-    for (const active of activeCases) {
-      await container.db.moderation.liftModerationCase(active.id);
-      await cancelTask(liftJobId(active.id)).catch(() => null);
-    }
-
-    const c = await container.db.moderation.createModerationCase({
-      guildId: guild.id,
-      userId: targetMember.id,
-      moderatorId: moderator.id,
-      action: "unvoice_mute",
+      "unvoice_mute",
+      moderator.id,
       reason,
-    });
+    );
 
     await logToChannel(
       guild.id,

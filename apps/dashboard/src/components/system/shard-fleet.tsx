@@ -34,6 +34,14 @@ function since(iso: string | null, observedAt: string): string {
   return `${Math.floor(seconds / 86_400)}d ago`;
 }
 
+function pluralize(
+  count: number,
+  singular: string,
+  plural: string,
+): string {
+  return count === 1 ? singular : plural;
+}
+
 function shardRange(ids: number[]): string {
   if (ids.length === 0) return "none";
   const sorted = [...ids].sort((a, b) => a - b);
@@ -76,7 +84,6 @@ function ShardRows({
             <TH>Status</TH>
             <TH className="text-right">Latency</TH>
             <TH className="text-right">Guilds</TH>
-            <TH>Gateway session</TH>
             <TH className="text-right">Last heartbeat</TH>
           </TR>
         </THead>
@@ -103,16 +110,6 @@ function ShardRows({
                 <TD className="tabular text-right font-mono text-fg-muted">
                   {shard.guildCount}
                 </TD>
-                <TD className="text-fg-muted">
-                  {shard.session ? (
-                    <span className="font-mono text-[12px]">
-                      seq {shard.session.sequence}
-                      {shard.session.resumeUrl ? " · resumable" : ""}
-                    </span>
-                  ) : (
-                    <span className="text-fg-subtle">Not persisted</span>
-                  )}
-                </TD>
                 <TD className="tabular text-right font-mono text-fg-muted">
                   {since(shard.lastHeartbeatAt, observedAt)}
                 </TD>
@@ -122,7 +119,7 @@ function ShardRows({
                 <TD className="font-mono tabular font-semibold text-danger">
                   {shardId}
                 </TD>
-                <TD colSpan={5}>
+                <TD colSpan={4}>
                   <span className="font-display flex items-center gap-1.5 text-[12px] font-semibold text-danger">
                     <CircleSlash className="size-3.5 shrink-0" aria-hidden />
                     Not reporting — no process is holding this shard
@@ -140,63 +137,29 @@ function ShardRows({
 function ReplicaCard({
   replica,
   shards,
-  missing,
   observedAt,
 }: {
   replica: ClusterReplicaView;
   shards: ShardStateView[];
-  missing: number[];
   observedAt: string;
 }) {
   return (
     <Card>
-      <CardHeader
-        actions={
-          <>
-            {missing.length > 0 ? (
-              <Badge variant="danger" dot>
-                {missing.length} missing
-              </Badge>
-            ) : null}
-            <Badge
-              variant={
-                replica.ready === null
-                  ? "neutral"
-                  : replica.ready
-                    ? "success"
-                    : "warning"
-              }
-              dot
-            >
-              {replica.ready === null
-                ? "No readiness signal"
-                : replica.ready
-                  ? "Ready"
-                  : "Converging"}
-            </Badge>
-          </>
-        }
-      >
+      <CardHeader>
         <CardTitle className="flex min-w-0 items-center gap-2">
           <Cpu className="size-3.5 shrink-0 text-fg-subtle" aria-hidden />
           <span className="truncate font-mono">{replica.replicaId}</span>
         </CardTitle>
         <CardDescription>
-          Holds shard {shardRange([...shards.map((s) => s.shardId), ...missing])}
-          {" · "}
-          coordinator heartbeat {since(replica.lastSeenAt, observedAt)}
+          Holds shard {shardRange(shards.map((s) => s.shardId))}
         </CardDescription>
       </CardHeader>
-      <ShardRows shards={shards} missing={missing} observedAt={observedAt} />
+      <ShardRows shards={shards} missing={[]} observedAt={observedAt} />
     </Card>
   );
 }
 
 export function ShardFleet({ data }: { data: SystemShardsData }) {
-  const orphaned = data.missingShardIds.filter(
-    (id) => !data.replicas.some((r) => r.assignedShardIds.includes(id)),
-  );
-
   if (data.shards.length === 0 && data.shardCount === 0) {
     return (
       <Card>
@@ -220,42 +183,39 @@ export function ShardFleet({ data }: { data: SystemShardsData }) {
           </p>
           <p className="mt-0.5">
             Shard {shardRange(data.missingShardIds)} stopped publishing
-            heartbeats, so the guilds on {data.missingShardIds.length === 1 ? "it" : "them"}{" "}
+            heartbeats, so the guilds on {pluralize(data.missingShardIds.length, "it", "them")}{" "}
             are receiving no gateway events. Check the gateway process that owns
-            that range; if it is gone, the coordinator reassigns the shards on
-            its next rebalance.
+            that range, or start a replacement covering it.
           </p>
         </Alert>
       ) : null}
 
       {data.replicas.map((replica) => {
-        const assigned = new Set(replica.assignedShardIds);
         const shards = data.shards.filter((s) => s.replicaId === replica.replicaId);
-        const missing = data.missingShardIds.filter((id) => assigned.has(id));
-        if (shards.length === 0 && missing.length === 0) return null;
+        if (shards.length === 0) return null;
         return (
           <ReplicaCard
             key={replica.replicaId}
             replica={replica}
             shards={shards}
-            missing={missing}
             observedAt={data.observedAt}
           />
         );
       })}
 
-      {orphaned.length > 0 ? (
+      {data.missingShardIds.length > 0 ? (
         <Card>
-          <CardHeader actions={<Badge variant="danger" dot>Unclaimed</Badge>}>
-            <CardTitle>Shards with no owner</CardTitle>
+          <CardHeader actions={<Badge variant="danger" dot>Not reporting</Badge>}>
+            <CardTitle>Shards with no process</CardTitle>
             <CardDescription>
-              Shard {shardRange(orphaned)} {orphaned.length === 1 ? "is" : "are"}{" "}
-              within the cluster&apos;s shard count but no live process claims{" "}
-              {orphaned.length === 1 ? "it" : "them"}. Start another gateway
-              replica, or lower TOTAL_SHARDS to match the fleet.
+              Shard {shardRange(data.missingShardIds)}{" "}
+              {pluralize(data.missingShardIds.length, "is", "are")} within the
+              cluster&apos;s shard count but no live process is reporting{" "}
+              {pluralize(data.missingShardIds.length, "it", "them")}. Start another
+              gateway replica, or lower TOTAL_SHARDS to match the fleet.
             </CardDescription>
           </CardHeader>
-          <ShardRows shards={[]} missing={orphaned} observedAt={data.observedAt} />
+          <ShardRows shards={[]} missing={data.missingShardIds} observedAt={data.observedAt} />
         </Card>
       ) : null}
     </div>

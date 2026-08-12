@@ -19,7 +19,13 @@ import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
 import { buildModuleLabelIndex } from "#/lib/config-labels";
 import type { ConfigHistoryListData } from "#/lib/dashboard-data";
-import { filterHref, isSnowflake, pageNumber, single } from "#/lib/log-format";
+import {
+  extractMemberNames,
+  filterHref,
+  isSnowflake,
+  pageNumber,
+  single,
+} from "#/lib/log-format";
 
 const PAGE_SIZE = 25;
 
@@ -45,9 +51,7 @@ export default async function HistoryPage({
 
   const dashboard = await getGuildDashboard(guildId, session.userId);
   const labels = buildModuleLabelIndex(dashboard.modules);
-  const memberNames = Object.fromEntries(
-    dashboard.members.map((m) => [m.id, m.displayName || m.username]),
-  );
+  const memberNames = extractMemberNames(dashboard.members);
 
   let data: ConfigHistoryListData | null = null;
   let failure: string | null = null;

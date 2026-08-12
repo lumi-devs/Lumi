@@ -24,6 +24,7 @@ import {
   makeCard,
   ephemeralCard,
   formatStatusBadge,
+  resolveCardColor,
 } from "#lib/utilities/cards.js";
 
 @ApplyOptions<Command.Options>({
@@ -76,7 +77,6 @@ export class AboutCommand extends BaseCommand {
 
     const pingStatus =
       data.wsPing < 150 ? "success" : data.wsPing < 300 ? "warning" : "error";
-    const rabbitStatus = data.rabbitConnected ? "success" : "error";
 
     const body = [
       `${Emojis.BOT} **${tagline}**\n` +
@@ -91,7 +91,7 @@ export class AboutCommand extends BaseCommand {
         `**${t("core:lumiVersion")}:** v${LumiInfo.version}  •  **${t("core:runtimeEnvironment")}:** ${data.runtime}\n` +
         `**${t("core:coreLibraries")}:** discord.js v${data.djsVersion} · Sapphire v${data.sapphireVersion}\n` +
         `**${t("core:storageCache")}:** Prisma v${data.prismaVersion} · Redis v${data.redisVersion}\n` +
-        `**${t("core:eventPipeline")}:** ${formatStatusBadge(rabbitStatus, "RabbitMQ")} · BullMQ`,
+        `**${t("core:eventPipeline")}:** BullMQ`,
 
       `### ${Emojis.REPO} Codebase\n` +
         `**${data.codeLines.toLocaleString()}** lines of TypeScript across **${data.modules.length}** modules  •  **${data.depCount.toLocaleString()}** dependencies`,
@@ -179,7 +179,7 @@ export class AboutCommand extends BaseCommand {
     }
 
     return makeCard(
-      BotConfig.branding.colors.PRIMARY,
+      resolveCardColor("primary"),
       t("core:commandCenter"),
       body,
       {

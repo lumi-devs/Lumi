@@ -20,6 +20,7 @@ import {
 } from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
+import { confirmPrompt } from "#lib/utilities/confirm.js";
 import type { DownloaderService } from "#lib/services/DownloaderService.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
@@ -33,6 +34,7 @@ import type { DownloaderService } from "#lib/services/DownloaderService.js";
     { name: "panel", run: "panel", default: true },
     { name: "install", run: "install" },
     { name: "uninstall", run: "uninstall" },
+    { name: "rollback", run: "rollback" },
   ],
 })
 export class DownloadCommand extends BaseSubcommand {
@@ -63,6 +65,14 @@ export class DownloadCommand extends BaseSubcommand {
                 .setDescription("Module name")
                 .setRequired(true)
                 .setAutocomplete(true),
+            )
+            .addStringOption((o) =>
+              o
+                .setName("revision")
+                .setDescription(
+                  "Specific commit/branch/tag to install instead of the current HEAD",
+                )
+                .setRequired(false),
             ),
         )
         .addSubcommand((s) =>
@@ -75,6 +85,26 @@ export class DownloadCommand extends BaseSubcommand {
                 .setDescription("Module name to uninstall")
                 .setRequired(true)
                 .setAutocomplete(true),
+            ),
+        )
+        .addSubcommand((s) =>
+          s
+            .setName("rollback")
+            .setDescription(
+              "Check out an installed module to a specific prior revision",
+            )
+            .addStringOption((o) =>
+              o
+                .setName("module")
+                .setDescription("Module name to roll back")
+                .setRequired(true)
+                .setAutocomplete(true),
+            )
+            .addStringOption((o) =>
+              o
+                .setName("revision")
+                .setDescription("Commit/branch/tag to roll back to")
+                .setRequired(true),
             ),
         ),
     );
@@ -158,6 +188,8 @@ export class DownloadCommand extends BaseSubcommand {
     const t = await ctx.fetchT();
     const repoName = (await ctx.getString("repo", { required: true }))!;
     const moduleName = (await ctx.getString("module", { required: true }))!;
+    const revision =
+      (await ctx.getString("revision", { required: false })) ?? undefined;
 
     await ctx.reply(
       makeInfoCard(
@@ -167,7 +199,11 @@ export class DownloadCommand extends BaseSubcommand {
     );
 
     try {
-      await this.downloaderService.installModule(repoName, moduleName);
+      await this.downloaderService.installModule(
+        repoName,
+        moduleName,
+        revision,
+      );
       this.container.logger.info(
         `[Download] ${Emojis.DOWNLOAD} Installed ${moduleName} from ${repoName} by ${ctx.user.tag}`,
       );
@@ -220,6 +256,61 @@ export class DownloadCommand extends BaseSubcommand {
       );
       await ctx.reply(
         makeErrorCard(t("core:failedUninstallModuleTitle"), msg_),
+      );
+    }
+  }
+
+  public async rollback(ctx: CommandContext): Promise<void> {
+    const t = await ctx.fetchT();
+    const moduleName = (await ctx.getString("module", { required: true }))!;
+    const revision = (await ctx.getString("revision", { required: true }))!;
+
+    const agreed = await confirmPrompt(ctx, {
+      title: `${Emojis.WARNING_SIGN} Rollback Warning`,
+      body: [
+        `You're about to check out **${moduleName}** to revision \`${revision}\`.`,
+        "This runs whatever code exists at that commit inside the bot process. A restart is required to fully apply the change.",
+      ].join("\n\n"),
+      confirmLabel: "I understand, roll it back",
+    });
+    if (!agreed) {
+      await ctx.reply(
+        makeErrorCard("Cancelled", `Module **${moduleName}** was not rolled back.`),
+      );
+      return;
+    }
+
+    await ctx.reply(
+      makeInfoCard(
+        t("core:rollingBackModuleTitle"),
+        t("core:rollingBackModuleText", { moduleName, revision }),
+      ),
+    );
+
+    try {
+      const result = await this.downloaderService.rollbackModule(
+        moduleName,
+        revision,
+      );
+      this.container.logger.info(
+        `[Download] Rolled back ${moduleName} to ${revision} (${result.commit ?? "unknown"}) by ${ctx.user.tag}`,
+      );
+      await ctx.reply(
+        makeSuccessCard(
+          t("core:moduleRolledBackTitle"),
+          t("core:moduleRolledBackText", {
+            moduleName,
+            commit: result.commit ?? revision,
+          }),
+        ),
+      );
+    } catch (err: unknown) {
+      const msg_ = errorFrom(err).message;
+      this.container.logger.warn(
+        `[Download] Rollback failed: ${moduleName} - ${msg_}`,
+      );
+      await ctx.reply(
+        makeErrorCard(t("core:failedRollbackModuleTitle"), msg_),
       );
     }
   }

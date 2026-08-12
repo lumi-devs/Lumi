@@ -18,7 +18,13 @@ import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
 import type { CasesListData } from "#/lib/dashboard-data";
-import { CASE_ACTION_OPTIONS, isSnowflake } from "#/lib/moderation-cases";
+import {
+  extractMemberNames,
+  isSnowflake,
+  pageNumber,
+  single,
+} from "#/lib/log-format";
+import { CASE_ACTION_OPTIONS } from "#/lib/moderation-cases";
 
 const PAGE_SIZE = 25;
 
@@ -46,9 +52,10 @@ export default async function ModerationPage({
   ].filter((value): value is string => value !== null);
 
   const dashboard = await getGuildDashboard(guildId, session.userId);
-  const memberNames = Object.fromEntries(
-    dashboard.members.map((m) => [m.id, m.displayName || m.username]),
-  );
+  const memberNames = extractMemberNames(dashboard.members);
+  const memberOptions = [...dashboard.members]
+    .sort((a, b) => a.displayName.localeCompare(b.displayName))
+    .map((m) => ({ value: m.id, label: m.displayName }));
 
   let data: CasesListData | null = null;
   let failure: string | null = null;
@@ -109,6 +116,7 @@ export default async function ModerationPage({
                   label: "Target user ID",
                   placeholder: "e.g. 328473289473289473",
                   inputMode: "numeric",
+                  suggestions: memberOptions,
                 },
                 {
                   type: "search",
@@ -116,6 +124,7 @@ export default async function ModerationPage({
                   label: "Moderator ID",
                   placeholder: "e.g. 328473289473289473",
                   inputMode: "numeric",
+                  suggestions: memberOptions,
                 },
               ]}
             />
@@ -217,14 +226,4 @@ function firstPageHref(
   if (moderatorId) params.set("moderator", moderatorId);
   const qs = params.toString();
   return `/guild/${guildId}/moderation${qs ? `?${qs}` : ""}`;
-}
-
-function single(value: string | string[] | undefined): string {
-  const raw = Array.isArray(value) ? value[0] : value;
-  return raw?.trim() ?? "";
-}
-
-function pageNumber(value: string): number {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }

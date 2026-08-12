@@ -9,9 +9,11 @@ export {
   makeErrorCard,
   ephemeralCard,
   noPingCard,
-  CARD_ACCENTS,
+  resolveCardColor,
+  defaultCardColors,
   type CardReply,
   type CardOptions,
+  type CardColorKey,
 } from "#utilities/cards.js";
 export { confirmRow, backRow } from "#utilities/ui/kit.js";
 export { confirmPrompt, type ConfirmPromptOptions } from "#utilities/confirm.js";

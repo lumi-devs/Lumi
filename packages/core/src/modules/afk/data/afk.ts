@@ -29,6 +29,14 @@ async function scanKeys(pattern: string) {
   return found;
 }
 
+async function invalidateKeys(keys: string[]) {
+  if (container.invalidation) {
+    await container.invalidation.invalidate(...keys);
+  } else {
+    await container.redis.del(...keys);
+  }
+}
+
 async function getOrSet<T>(
   key: string,
   ttl: number,
@@ -85,11 +93,7 @@ export async function clearAfkEntry(
 ): Promise<boolean> {
   try {
     await container.db.afk.deleteEntry(guildId, userId);
-    if (container.invalidation) {
-      await container.invalidation.invalidate(AfkKeys.afk(guildId, userId));
-    } else {
-      await container.redis.del(AfkKeys.afk(guildId, userId));
-    }
+    await invalidateKeys([AfkKeys.afk(guildId, userId)]);
     return true;
   } catch (err: unknown) {
     container.logger.error(
@@ -104,11 +108,7 @@ export async function clearAllAfkForUser(userId: string): Promise<number> {
   const count = await container.db.afk.deleteAllForUser(userId);
   const keys = await scanKeys(AfkKeys.allForUserPattern(userId));
   if (keys.length) {
-    if (container.invalidation) {
-      await container.invalidation.invalidate(...keys);
-    } else {
-      await container.redis.del(...keys);
-    }
+    await invalidateKeys(keys);
   }
   return count;
 }

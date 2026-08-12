@@ -1,6 +1,6 @@
 # Lumi Configuration Architecture & Reference
 
-This directory contains the operational and infrastructure configurations for Lumi. Configuration in Lumi is partitioned into **Application-Level Settings** (`bot.json`, `emojis.json`) and **Infrastructure-Level Stack Configurations** (`postgres/`, `redis/`, `rabbitmq/`, `observability/`, `advanced.config`).
+This directory contains the operational and infrastructure configurations for Lumi. Configuration in Lumi is partitioned into **Application-Level Settings** (`bot.json`, `emojis.json`) and **Infrastructure-Level Stack Configurations** (`postgres/`, `redis/`, `observability/`).
 
 > [!NOTE]
 > Application configuration files (`bot.ts` and `emojis.ts`) are optional. Lumi ships with production-grade defaults compiled directly into the binary. Any values provided in `config/bot.ts` or `config/emojis.ts` are deeply merged on top of internal defaults at boot time.
@@ -49,18 +49,13 @@ The subdirectories within `config/` house operational parameters and initializat
 
 ```
 config/
-├── advanced.config           # RabbitMQ legacy metrics Permit configuration
 ├── bot.ts                    # Application presence, branding, & UI settings
 ├── emojis.ts                 # Application emoji symbol mappings
-├── rabbitmq.conf             # RabbitMQ single-node base configuration
 ├── postgres/
 │   ├── init-replication.sh   # Primary DB bootstrap script (creates replicator role)
 │   ├── pg_hba.conf           # PostgreSQL host-based authentication rules
 │   ├── primary.conf          # PostgreSQL WAL & replication parameters
 │   └── replica-entrypoint.sh # Standby DB bootstrap script (runs pg_basebackup)
-├── rabbitmq/
-│   ├── apply-ha-policy.sh    # REST API policy script setting default queue type to quorum
-│   └── rabbitmq-ha.conf      # 3-node static cluster peer discovery & autoheal policy
 ├── redis/
 │   ├── redis-replica.conf    # Redis replica node configuration
 │   └── sentinel-entrypoint.sh # Dynamic Sentinel configuration boot generator
@@ -117,16 +112,6 @@ Lumi's database architecture uses PostgreSQL 17 streaming replication paired wit
 | `SENTINEL_DOWN_AFTER_MS` | `5000` | Milliseconds of unreachability before declaring a node down |
 | `SENTINEL_FAILOVER_TIMEOUT_MS` | `30000` | Timeout period for a failover execution |
 | `SENTINEL_PARALLEL_SYNCS` | `1` | Number of replicas reconfigured in parallel during failover |
-
----
-
-### Message Queue Infrastructure (`rabbitmq/`)
-
-Lumi utilizes RabbitMQ for cross-service events and RPC dispatches between Gateway, Worker, and Scheduler instances.
-
-* **`rabbitmq.conf` & `advanced.config`**: Contains `deprecated_features.permit.management_metrics_collection = true` to preserve compatibility with standard Prometheus exporter metrics endpoints in RabbitMQ 4.x.
-* **`rabbitmq/rabbitmq-ha.conf`**: Multi-node static cluster configuration (`rabbit@rabbitmq`, `rabbit@rabbitmq-2`, `rabbit@rabbitmq-3`) utilizing `classic_config` peer discovery and automatic partition healing (`cluster_partition_handling = autoheal`).
-* **`rabbitmq/apply-ha-policy.sh`**: Executes a curl request against the RabbitMQ Management API (`PUT /api/vhosts/%2F`) to apply `{"default_queue_type":"quorum"}` on the default vhost `/`. This guarantees all newly declared queues use Raft consensus replication across nodes.
 
 ---
 

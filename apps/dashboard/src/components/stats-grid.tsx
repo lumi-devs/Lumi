@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, type LucideIcon } from "lucide-react";
 import { cn } from "#/lib/utils";
 import { Card } from "#/components/ui/card";
+import { StatCountUp } from "#/components/stat-count-up";
 
 export interface Stat {
   label: string;
@@ -10,6 +11,15 @@ export interface Stat {
   tone?: "default" | "success" | "warning" | "danger";
   /** Optional delta vs. a prior period, rendered next to the value. */
   trend?: { direction: "up" | "down"; value: string };
+  /** Counts up from 0 on mount instead of appearing static - use only for real numbers (member/case/blocklist totals), never padding. */
+  countUp?: boolean;
+}
+
+function StatValue({ stat }: { stat: Stat }) {
+  if (stat.countUp && typeof stat.value === "number") {
+    return <StatCountUp value={stat.value} />;
+  }
+  return <>{stat.value}</>;
 }
 
 const TONE: Record<NonNullable<Stat["tone"]>, string> = {
@@ -45,7 +55,9 @@ export function StatsGrid({ stats }: { stats: Stat[] }) {
             )}
             title={String(s.value)}
           >
-            <span className="truncate">{s.value}</span>
+            <span className="truncate">
+              <StatValue stat={s} />
+            </span>
             {s.trend ? (
               <span
                 className={cn(

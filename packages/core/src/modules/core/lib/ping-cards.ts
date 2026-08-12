@@ -25,7 +25,7 @@ export const EPHEMERAL_FLAGS =
   MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral;
 
 export type PingCategory =
-  "gateway" | "engine" | "host" | "postgres" | "redis" | "rabbitmq" | "bot";
+  "gateway" | "engine" | "host" | "postgres" | "redis" | "bot";
 
 function fmtMs(n: number | null): string {
   if (n === null || n < 0) return "Analyzing…";
@@ -112,7 +112,6 @@ export function buildOverviewCard(
     members: Emojis.MEMBERS,
     redis: Emojis.REDIS,
     sql: Emojis.SQL,
-    rabbit: Emojis.RABBIT,
   };
 
   const fmtCount = (count: number) =>
@@ -139,7 +138,6 @@ export function buildOverviewCard(
   content += `### __External Services__\n`;
   content += `${E.redis} **Redis Cache**: ${fmtMs(data.redisReadMs)} | Hit Ratio: ${data.redisHitRatio.toFixed(1)}%\n`;
   content += `${E.sql} **Database**: ${fmtMs(data.prismaMs)} | Load: ${data.txRate.toFixed(1)} tx/s\n`;
-  content += `${E.rabbit} **Message Queue**: ${data.rabbitConnected ? `Connected (${data.rabbitQueued} queued)` : "Offline"}\n`;
 
   c.addTextDisplayComponents(new TextDisplayBuilder().setContent(content));
 
@@ -383,37 +381,6 @@ export function buildRedisCard(data: PingData, t?: LumiT): ContainerBuilder {
   return c;
 }
 
-export function buildRabbitCard(data: PingData, t?: LumiT): ContainerBuilder {
-  const c = detailCard(
-    `${Emojis.QUEUE} ${t ? t("core:pingMsgQueuePipeline") : "Message Queue Pipeline"}`,
-    data,
-  );
-
-  if (data.rabbitConnected) {
-    c.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        [
-          executiveSection("Connection Status", [
-            ["Status", "Connected and healthy"],
-          ]),
-          executiveSection("Queue Load", [
-            ["Pending Messages", `${data.rabbitQueued}`],
-            ["Active Worker Processes", `${data.rabbitConsumers}`],
-          ]),
-        ].join("\n"),
-      ),
-    );
-  } else {
-    c.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `### ${Emojis.CROSS} Message Queue Offline\n> Background tasks and event queues are currently suspended.`,
-      ),
-    );
-  }
-
-  return c;
-}
-
 export function buildBotCard(data: PingData, t?: LumiT): ContainerBuilder {
   const c = detailCard(
     `${Emojis.BOT} ${t ? t("core:pingSummary") : "Bot System Summary"}`,
@@ -474,8 +441,6 @@ export function buildDetailCard(
         return buildPostgresCard(data, t);
       case "redis":
         return buildRedisCard(data, t);
-      case "rabbitmq":
-        return buildRabbitCard(data, t);
       case "bot":
         return buildBotCard(data, t);
     }

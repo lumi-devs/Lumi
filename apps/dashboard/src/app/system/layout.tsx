@@ -1,7 +1,6 @@
 import { requireBotOwner } from "#/lib/auth-guards";
 import { SiteHeader } from "#/components/layout/site-header";
-import { SystemSidebar } from "#/components/layout/system-sidebar";
-import { SidebarInset, SidebarProvider } from "#/components/ui/sidebar";
+import { SystemTopNav } from "#/components/layout/system-top-nav";
 
 export default async function SystemLayout({
   children,
@@ -12,14 +11,12 @@ export default async function SystemLayout({
   const session = await requireBotOwner();
 
   return (
-    <SidebarProvider>
-      <SystemSidebar />
-      <SidebarInset>
-        <SiteHeader session={session} withSidebarTrigger />
-        <div className="mx-auto w-full min-w-0 max-w-[88rem] flex-1 px-4 pt-5 pb-28 md:px-6">
-          {children}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    <>
+      <SiteHeader session={session} />
+      <SystemTopNav />
+      <div className="mx-auto w-full min-w-0 max-w-[88rem] flex-1 px-4 pt-5 pb-28 md:px-6">
+        {children}
+      </div>
+    </>
   );
 }

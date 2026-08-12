@@ -6,6 +6,7 @@ import {
   ADDON_MODULES_ROOT,
   MODULE_ROOT,
 } from "#lib/downloader/resolver.js";
+import { pathExists } from "#lib/downloader/validate.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { execFile } from "node:child_process";
@@ -32,6 +33,11 @@ type ModuleUpdateCheck =
       remoteHash: string;
       changelog: string;
     };
+
+export type RepoUpdateCheck =
+  | { ok: false; reason: string }
+  | { ok: true; hasUpdate: false }
+  | { ok: true; hasUpdate: true; changelog: string };
 
 const execFileAsync = promisify(execFile);
 
@@ -111,10 +117,7 @@ export class DownloaderService extends Service {
       const targetPath = path.join(ADDON_MODULES_ROOT, item.moduleName);
 
       try {
-        const sourceExists = await fs
-          .access(sourcePath)
-          .then(() => true)
-          .catch(() => false);
+        const sourceExists = await pathExists(sourcePath);
         if (!sourceExists) {
           this.container.logger.info(
             `[DownloaderService] Restoring repo ${item.repo.name} for module ${item.moduleName}...`,
@@ -128,17 +131,8 @@ export class DownloaderService extends Service {
             .catch(() => {});
         }
 
-        const targetExists = await fs
-          .access(targetPath)
-          .then(() => true)
-          .catch(() => false);
-        if (
-          !targetExists &&
-          (await fs
-            .access(sourcePath)
-            .then(() => true)
-            .catch(() => false))
-        ) {
+        const targetExists = await pathExists(targetPath);
+        if (!targetExists && (await pathExists(sourcePath))) {
           await fs
             .rm(targetPath, { recursive: true, force: true })
             .catch(() => {});
@@ -161,7 +155,11 @@ export class DownloaderService extends Service {
     }
   }
 
-  public async installModule(repoName: string, moduleName: string) {
+  public async installModule(
+    repoName: string,
+    moduleName: string,
+    revision?: string,
+  ) {
     const repo =
       await this.container.db.downloader.readDownloaderRepo(repoName);
     if (!repo) {
@@ -178,7 +176,11 @@ export class DownloaderService extends Service {
       throw new ModuleAlreadyInstalledError(moduleName);
     }
 
-    const info = await resolver.installModule(repoName, moduleName);
+    const info = revision
+      ? await withSerializedWork(repoName, () =>
+          resolver.installModule(repoName, moduleName, revision),
+        )
+      : await resolver.installModule(repoName, moduleName);
     try {
       this.container.logger.info("[DownloaderService] Discovering modules...");
       await this.container.moduleStore.discover(true);
@@ -193,6 +195,13 @@ export class DownloaderService extends Service {
         moduleName,
         info.version,
       );
+      if (info.commit) {
+        await this.container.db.downloader.updateInstalledDownloaderModuleCommit(
+          repo.id,
+          moduleName,
+          info.commit,
+        );
+      }
     } catch (err: unknown) {
       await this.container.moduleStore
         .unload(moduleName)
@@ -250,6 +259,58 @@ export class DownloaderService extends Service {
       );
     }
     await resolver.addRepo(repo.name, repo.url, repo.branch);
+  }
+
+  /** Read-only check: fetches and compares the repo's local HEAD against its remote branch, never pulls. */
+  public async checkRepoUpdate(name: string): Promise<RepoUpdateCheck> {
+    const repo = await this.container.db.downloader.readDownloaderRepo(name);
+    if (!repo) {
+      return { ok: false, reason: `Repository **${name}** was not found.` };
+    }
+
+    const repoPath = path.join(MODULE_ROOT, repo.name);
+    try {
+      await fs.access(repoPath);
+    } catch {
+      return { ok: true, hasUpdate: true, changelog: "" };
+    }
+
+    await execFileAsync("git", ["-C", repoPath, "fetch", "origin"]).catch(
+      (err: NodeJS.ErrnoException & { stderr?: string }) => {
+        this.container.logger.warn(
+          `[DownloaderService] git fetch failed for ${repo.name}; update check uses stale refs: ${(err.stderr ?? err.message).trim()}`,
+        );
+      },
+    );
+
+    const branch = repo.branch || "default";
+    const targetRef = `origin/${branch === "default" ? "master" : branch}`;
+
+    try {
+      const localHash = (
+        await execFileAsync("git", ["-C", repoPath, "rev-parse", "HEAD"])
+      ).stdout.trim();
+      const remoteHash = (
+        await execFileAsync("git", ["-C", repoPath, "rev-parse", targetRef])
+      ).stdout.trim();
+
+      if (localHash === remoteHash) {
+        return { ok: true, hasUpdate: false };
+      }
+
+      const { stdout: logOut } = await execFileAsync("git", [
+        "-C",
+        repoPath,
+        "log",
+        "--oneline",
+        `HEAD..${targetRef}`,
+      ]).catch(() => ({ stdout: "" }));
+
+      return { ok: true, hasUpdate: true, changelog: logOut.trim() };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { ok: false, reason: `Could not check **${name}** for updates: ${msg}` };
+    }
   }
 
   public listRepos() {
@@ -393,6 +454,7 @@ export class DownloaderService extends Service {
 
   public async updateModule(
     moduleName: string,
+    revision?: string,
   ): Promise<{
     updated: boolean;
     changelog?: string;
@@ -408,8 +470,41 @@ export class DownloaderService extends Service {
         `Module **${moduleName}** was not installed via the downloader.`,
       );
     }
-    if (installed.pinned) {
+    if (installed.pinned && !revision) {
       return { updated: false, pinned: true };
+    }
+
+    const repo = await this.container.db.downloader.readDownloaderRepoById(
+      installed.repoId,
+    );
+    if (!repo) {
+      throw new Error(
+        `Repository for module **${moduleName}** could not be found.`,
+      );
+    }
+
+    if (revision) {
+      const repoPath = path.join(MODULE_ROOT, repo.name);
+      const info = await withSerializedWork(repo.name, () =>
+        resolver.installModule(repo.name, moduleName, revision),
+      );
+
+      await this.container.moduleStore.discover(true);
+      await this.container.moduleStore.loadModule(moduleName);
+      await this.syncApplicationCommands();
+
+      if (info.commit) {
+        await this.container.db.downloader.updateInstalledDownloaderModuleCommit(
+          repo.id,
+          moduleName,
+          info.commit,
+        );
+      }
+
+      this.container.logger.info(
+        `[DownloaderService] ${moduleName} checked out to ${revision} (${info.commit ?? "unknown"}) at ${repoPath}.`,
+      );
+      return { updated: true, needsRestart: true };
     }
 
     const check = await this.checkForModuleUpdate(moduleName);
@@ -443,6 +538,56 @@ export class DownloaderService extends Service {
       `[DownloaderService] ${moduleName} updated on disk; restart required to apply.`,
     );
     return { updated: true, changelog, needsRestart: true };
+  }
+
+  /**
+   * Checks out an already-installed module to a specific prior revision
+   * against its existing clone - no re-clone, just a checkout + manifest
+   * refresh, mirroring the tail end of {@linkcode updateModule}.
+   */
+  public async rollbackModule(
+    moduleName: string,
+    revision: string,
+  ): Promise<{ commit: string | null; needsRestart: true }> {
+    const installed =
+      await this.container.db.downloader.readInstalledDownloaderModule(
+        moduleName,
+      );
+    if (!installed) {
+      throw new Error(
+        `Module **${moduleName}** was not installed via the downloader.`,
+      );
+    }
+
+    const repo = await this.container.db.downloader.readDownloaderRepoById(
+      installed.repoId,
+    );
+    if (!repo) {
+      throw new Error(
+        `Repository for module **${moduleName}** could not be found.`,
+      );
+    }
+
+    const info = await withSerializedWork(repo.name, () =>
+      resolver.installModule(repo.name, moduleName, revision),
+    );
+
+    await this.container.moduleStore.discover(true);
+    await this.container.moduleStore.loadModule(moduleName);
+    await this.syncApplicationCommands();
+
+    if (info.commit) {
+      await this.container.db.downloader.updateInstalledDownloaderModuleCommit(
+        repo.id,
+        moduleName,
+        info.commit,
+      );
+    }
+
+    this.container.logger.info(
+      `[DownloaderService] Rolled back ${moduleName} to ${revision} (${info.commit ?? "unknown"}).`,
+    );
+    return { commit: info.commit, needsRestart: true };
   }
 
   /** Read-only sweep across every installed module; Redis-cached to avoid hammering git on repeated calls. */

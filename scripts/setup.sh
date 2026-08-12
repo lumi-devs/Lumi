@@ -4,7 +4,7 @@
 #
 # Walks a new contributor through generating a working `.env` (based on
 # `.env.example` at the repo root), verifies the Discord bot token against
-# Discord's API, and optionally brings up the Postgres/Redis/RabbitMQ services
+# Discord's API, and optionally brings up the Postgres/Redis services
 # from `docker-compose.yml`. Safe to re-run - it never overwrites an existing
 # `.env` without asking first.
 #
@@ -60,7 +60,7 @@ confirm() {
 }
 
 header "Lumi setup wizard"
-info "This generates ${BOLD}.env${RESET} from ${BOLD}.env.example${RESET}, verifies your bot token, and can start the local Postgres/Redis/RabbitMQ stack."
+info "This generates ${BOLD}.env${RESET} from ${BOLD}.env.example${RESET}, verifies your bot token, and can start the local Postgres/Redis stack."
 
 if [[ ! -f "$ENV_EXAMPLE" ]]; then
   err ".env.example not found at repo root (${ENV_EXAMPLE}) - can't continue."
@@ -111,13 +111,9 @@ ENV_VALUES[REDIS_PORT]="6379"
 ENV_VALUES[REDIS_CACHE_DB]="0"
 ENV_VALUES[REDIS_TASK_DB]="1"
 
-prompt "lumi" "RabbitMQ username"
-RMQ_USER="$PROMPT_RESULT"
-ENV_VALUES[RABBITMQ_USER]="$RMQ_USER"
-prompt "lumi" "RabbitMQ password"
-RMQ_PASSWORD="$PROMPT_RESULT"
-ENV_VALUES[RABBITMQ_PASSWORD]="$RMQ_PASSWORD"
-ENV_VALUES[RABBITMQ_URL]="amqp://${RMQ_USER}:${RMQ_PASSWORD}@localhost:5672"
+ENV_VALUES[RPC_HTTP_HOST]="0.0.0.0"
+ENV_VALUES[RPC_HTTP_PORT]="8091"
+ENV_VALUES[RPC_HTTP_URL]="http://localhost:8091"
 
 # ── [ 2 ] General settings ────────────────────────────────────────────────────
 header "[2/4] General settings"
@@ -224,17 +220,17 @@ fi
 header "Local services"
 
 if ! command -v docker >/dev/null 2>&1; then
-  warn "docker not found - skipping. Install Docker to run Postgres/Redis/RabbitMQ locally, or point .env at existing instances."
+  warn "docker not found - skipping. Install Docker to run Postgres/Redis locally, or point .env at existing instances."
 elif ! docker compose version >/dev/null 2>&1; then
   warn "'docker compose' not available - skipping."
 else
-  if confirm "Start Postgres, pgbouncer, Redis, and RabbitMQ now (docker compose up -d)?" "y"; then
-    info "Running: docker compose up -d postgres pgbouncer redis rabbitmq"
-    docker compose up -d postgres pgbouncer redis rabbitmq
+  if confirm "Start Postgres, pgbouncer, and Redis now (docker compose up -d)?" "y"; then
+    info "Running: docker compose up -d postgres pgbouncer redis"
+    docker compose up -d postgres pgbouncer redis
     ok "Services starting in the background - 'docker compose ps' to check status."
   else
     info "Skipped. Run it yourself later with:"
-    info "  docker compose up -d postgres pgbouncer redis rabbitmq"
+    info "  docker compose up -d postgres pgbouncer redis"
   fi
 fi
 

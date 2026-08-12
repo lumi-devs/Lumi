@@ -18,8 +18,7 @@ No default - the app will not boot without these.
 | `POSTGRES_POOL_MAX` | Default `10`. |
 | `REDIS_URL` / `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` | Redis connection. `REDIS_HOST` defaults `localhost`, `REDIS_PORT` defaults `6379`. |
 | `REDIS_CACHE_DB` / `REDIS_TASK_DB` | Redis logical DB indices - `0` for caching, `1` for BullMQ task queues. |
-| `RABBITMQ_URL` | RabbitMQ connection string. |
-| `RABBITMQ_USER` / `RABBITMQ_PASSWORD` | Default `lumi` / `lumi`. |
+| `RPC_HTTP_HOST` / `RPC_HTTP_PORT` | Bind address for the worker's internal RPC HTTP server. Defaults `0.0.0.0` / `8091`. Never published to the host. |
 
 ### General settings
 
@@ -57,7 +56,7 @@ No default - the app will not boot without these.
 | `SHARD_LIST` | *(unset)* | Comma-separated shard IDs this replica owns, e.g. `0,1,2`. |
 | `TOTAL_SHARDS` | `auto` | Pin the total shard count instead of following Discord's recommendation. |
 | `SHARD_IDENTIFY_FORCE` | `false` | Bypass the session-start budget guard. Only for recovering a crash-loop deliberately - leaving this on defeats the guard's purpose. |
-| `CLUSTER_NAME` | *(unset)* | Setting this activates Redis-backed cluster coordination, session persistence, and shared IDENTIFY throttling across replicas. Required to run `worker` at more than one replica. |
+| `CLUSTER_NAME` | *(unset)* | Namespaces the shard telemetry each replica publishes to Redis for the dashboard's fleet view. Shard ownership itself is static, set per replica via `SHARD_LIST` - set `CLUSTER_NAME` to the same value on every replica sharing a fleet so the dashboard can tell them apart. |
 | `REDIS_SENTINELS` / `REDIS_SENTINEL_NAME` / `REDIS_SENTINEL_PASSWORD` | *(unset)* | Switch Redis connections to Sentinel-aware mode. `REDIS_SENTINEL_NAME` defaults `mymaster`. |
 | `EVENT_STREAM_MAXLEN` | `100000` | Redis Stream trim length (event bus). |
 | `EVENT_STREAM_MAX_DELIVERIES` | `5` | Deliveries before a message is moved to `<stream>:dlq`. |
@@ -101,14 +100,13 @@ Full reference for the app itself: [Dashboard Reference](dashboard.md).
 | `postgres` | `postgres:17`, primary database. |
 | `pgbouncer` | Connection pooler in front of Postgres, transaction pool mode, port 6432. Point `POSTGRES_URL` at this, not directly at `postgres`. |
 | `redis` | `redis:7-alpine`, AOF persistence, `maxmemory 128mb` / `noeviction`. |
-| `rabbitmq` | `rabbitmq:4-management-alpine` - dashboard-to-worker RPC transport. |
 | `nirn-proxy` (profile `scale`) | Shared Discord REST rate-limit proxy across replicas. |
 | `otel-collector`, `tempo`, `prometheus`, `grafana` (profile `observability`) | Full tracing/metrics stack, configs under `./config/observability/`. |
 
-All app services `depends_on` Postgres, pgbouncer, Redis, and RabbitMQ with `condition: service_healthy`. Bring up the minimal stack with:
+All app services `depends_on` Postgres, pgbouncer, and Redis with `condition: service_healthy`. The dashboard talks to `worker` directly over an internal HTTP RPC port (`RPC_HTTP_PORT`, never published to the host) - no extra service to bring up. Bring up the minimal stack with:
 
 ```bash
-docker compose up worker postgres pgbouncer redis rabbitmq
+docker compose up worker postgres pgbouncer redis
 ```
 
 Add `--profile scale` for a second worker + scheduler, or `--profile observability` for the full metrics/tracing stack. `--profile dashboard` is not usable yet - see the table above.
@@ -118,11 +116,11 @@ Add `--profile scale` for a second worker + scheduler, or `--profile observabili
 | Manifest | Kind | Purpose |
 | :--- | :--- | :--- |
 | `namespace.yaml` | `Namespace` `lumi` | |
-| `configmap.yaml` | `ConfigMap` `lumi-env` | Non-secret env: Redis/Postgres/RabbitMQ connection info, OTel/metrics settings, `CLUSTER_NAME: "lumi-prod"`, `SCHEDULER_LEADER_LOCK: "true"`. |
+| `configmap.yaml` | `ConfigMap` `lumi-env` | Non-secret env: Redis/Postgres connection info, internal RPC HTTP host/port, OTel/metrics settings, `CLUSTER_NAME: "lumi-prod"`, `SCHEDULER_LEADER_LOCK: "true"`. |
 | `secret.example.yaml` | `Secret` template | Copy to `secret.yaml` and fill in - **never commit the filled version**. In real production, use Sealed Secrets or a vault instead of a plain `Secret` manifest. |
 | `lumi-data-pvc.yaml` | `PersistentVolumeClaim` | `ReadWriteMany`, 5Gi - shared storage for downloaded addon repo files (addon *metadata* lives in Postgres; the files themselves live here). |
 | `migrate-job.yaml` | `Job` | Runs `prisma migrate deploy` once, before rollout, so scaled workers don't race the same DDL. |
-| `worker-statefulset.yaml` | `StatefulSet` + headless `Service` | The sharded worker fleet. `replicas: 1` by default - scaling past 1 requires `CLUSTER_NAME`. `podManagementPolicy: Parallel`, rolling updates `maxUnavailable: 1`. Readiness/liveness on `/readyz` / `/healthz`, `preStop` sleeps 15s before termination for a graceful drain. |
+| `worker-statefulset.yaml` | `StatefulSet` + headless `Service` | The sharded worker fleet. `replicas: 1` by default - scaling past 1 means giving each replica a disjoint `SHARD_LIST` and setting `CLUSTER_NAME` so the dashboard's fleet view can tell them apart. `podManagementPolicy: Parallel`, rolling updates `maxUnavailable: 1`. Readiness/liveness on `/readyz` / `/healthz`, `preStop` sleeps 15s before termination for a graceful drain. |
 | `scheduler-deployment.yaml` | `Deployment` | `replicas: 1`, `strategy: Recreate` - guarantees exactly one BullMQ owner at a time. |
 | `nirn-proxy-deployment.yaml` | `Deployment` + `Service` | `replicas: 2`, stateless Discord REST proxy shared by worker replicas. |
 

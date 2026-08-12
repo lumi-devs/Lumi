@@ -5,7 +5,6 @@ networks:
 volumes:
   postgres-data:
   redis-data:
-  rabbitmq-data:
   prometheus-data:
   grafana-data:
   tempo-data:
@@ -23,8 +22,8 @@ x-lumi-service: &lumi-service
     REDIS_HOST: redis
     POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
     DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
-    RABBITMQ_URL: amqp://${RABBITMQ_USER:-lumi}:${RABBITMQ_PASSWORD:-lumi}@rabbitmq:5672
-    RABBITMQ_ENABLED: "true"
+    RPC_HTTP_HOST: "0.0.0.0"
+    RPC_HTTP_PORT: "8091"
     OTEL_ENABLED: "${OTEL_ENABLED:-true}"
     OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
     OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
@@ -41,8 +40,6 @@ x-lumi-service: &lumi-service
     postgres:
       condition: service_healthy
     redis:
-      condition: service_healthy
-    rabbitmq:
       condition: service_healthy
   restart: unless-stopped
   networks:
@@ -65,6 +62,10 @@ services:
     environment:
       <<: *lumi-env
       LUMI_ROLE: "worker"
+    # Not published to the host - reachable only from other containers on
+    # lumi-net (the dashboard's internal RPC client).
+    expose:
+      - "8091"
 
   lumi-dev:
     build:
@@ -79,8 +80,8 @@ services:
       REDIS_HOST: redis
       POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
       DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-lumi}:${RABBITMQ_PASSWORD:-lumi}@rabbitmq:5672
-      RABBITMQ_ENABLED: "true"
+      RPC_HTTP_HOST: "0.0.0.0"
+      RPC_HTTP_PORT: "8091"
       OTEL_ENABLED: "${OTEL_ENABLED:-true}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
       OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
@@ -94,8 +95,6 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      rabbitmq:
         condition: service_healthy
     volumes:
       - .:/app:z
@@ -152,6 +151,10 @@ services:
       # Doubles as NextAuth's session JWT encryption secret — see
       # apps/dashboard/src/lib/env.ts.
       DASHBOARD_SESSION_SECRET: "${DASHBOARD_SESSION_SECRET:-}"
+      # Internal-only HTTP RPC bridge to the worker (see
+      # packages/core/src/lib/rpc/http-server.ts) - reachable over lumi-net,
+      # never published to the host.
+      RPC_HTTP_URL: "http://worker:8091"
       # No BOT_OWNERS here: the dashboard reads no such variable. Bot-owner
       # detection goes through the `auth.whoami` RPC, which defers to the
       # worker's PermitResolver.isBotOwner (OWNER_IDS, or the Discord
@@ -159,8 +162,8 @@ services:
       DISCORD_OAUTH2_CLIENT_ID: "${DISCORD_OAUTH2_CLIENT_ID:-}"
       DISCORD_OAUTH2_CLIENT_SECRET: "${DISCORD_OAUTH2_CLIENT_SECRET:-}"
     depends_on:
-      rabbitmq:
-        condition: service_healthy
+      worker:
+        condition: service_started
     ports:
       - "${DASHBOARD_PORT:-8080}:8080"
     profiles:
@@ -244,32 +247,6 @@ services:
           memory: 160m
     ports:
       - "127.0.0.1:6379:6379"
-
-  rabbitmq:
-    image: rabbitmq:4-management-alpine
-    container_name: lumi-rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-lumi}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-lumi}
-      RABBITMQ_DEFAULT_VHOST: /
-    volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
-    networks:
-      - lumi-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-    ports:
-      - "127.0.0.1:5672:5672"
-      - "127.0.0.1:15672:15672"
 
   nirn-proxy:
     image: ghcr.io/germanoeich/nirn-proxy:latest

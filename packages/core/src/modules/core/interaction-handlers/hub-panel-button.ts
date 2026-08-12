@@ -20,6 +20,7 @@ import {
   buildAddonReposView,
   buildAddonsView,
   buildAutoUpdateSettingsView,
+  buildRepoUpdateConfirmView,
 } from "#modules/core/ui/addons.js";
 import { DEFAULT_PREFIX } from "#modules/core/ui/hub.js";
 import { buildFeatureListView } from "#modules/core/ui/modules.js";
@@ -295,13 +296,53 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
       const repoName = rest.join(":");
       if (!repoName) return undefined;
       try {
-        await this.downloader.updateRepo(repoName);
+        const check = await this.downloader.checkRepoUpdate(repoName);
+        if (!check.ok) {
+          await interaction.followUp(
+            ephemeralCard(makeErrorCard("Check Failed", check.reason)),
+          );
+          return this.#renderAddonRepos(interaction, t);
+        }
+        if (!check.hasUpdate) {
+          await interaction.followUp(
+            ephemeralCard(
+              makeInfoCard(
+                "Already Up To Date",
+                `**${repoName}** has no pending updates.`,
+              ),
+            ),
+          );
+          return this.#renderAddonRepos(interaction, t);
+        }
+        return interaction.editReply(
+          buildRepoUpdateConfirmView(repoName, check.changelog, t),
+        );
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         return interaction.followUp(
           ephemeralCard(makeErrorCard("Action Failed", msg)),
         );
       }
+    }
+    if (sub === "update_repo_confirm") {
+      const repoName = rest.join(":");
+      if (!repoName) return undefined;
+      try {
+        await this.downloader.updateRepo(repoName);
+        await interaction.followUp(
+          ephemeralCard(
+            makeSuccessCard("Repository Updated", `**${repoName}** was updated.`),
+          ),
+        );
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        await interaction.followUp(
+          ephemeralCard(makeErrorCard("Update Failed", msg)),
+        );
+      }
+      return this.#renderAddonRepos(interaction, t);
+    }
+    if (sub === "update_repo_skip") {
       return this.#renderAddonRepos(interaction, t);
     }
     if (sub === "browsepage") {

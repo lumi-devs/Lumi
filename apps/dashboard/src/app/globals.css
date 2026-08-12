@@ -42,13 +42,13 @@
   --fg-subtle: #8f9098;
   --fg-on-accent: #ffffff;
 
-  /* Lavender-indigo — the one saturated colour in the system. Reserved for
+  /* Electric blue - the one saturated colour in the system. Reserved for
    * the primary action and the active route, never for decoration. */
-  --accent: #4f4dc7;
-  --accent-hover: #4340b0;
-  --accent-soft: rgba(79, 77, 199, 0.1);
-  --accent-fg: #4340b0;
-  --accent-glow: #7c3aed;
+  --accent: #2f6feb;
+  --accent-hover: #2558c4;
+  --accent-soft: rgba(47, 111, 235, 0.1);
+  --accent-fg: #2558c4;
+  --accent-glow: #22d3ee;
 
   /* Status */
   --success: #1f9d63;
@@ -62,7 +62,7 @@
    * the dark canvas reads as a rendering fault rather than as depth. */
   --overlay: rgba(0, 0, 0, 0.6);
 
-  --ring: rgba(79, 77, 199, 0.4);
+  --ring: rgba(47, 111, 235, 0.4);
   --shadow-sm: 0 1px 2px rgba(20, 20, 30, 0.06);
   --shadow-md:
     0 1px 2px rgba(20, 20, 30, 0.06), 0 8px 24px -8px rgba(20, 20, 30, 0.14);
@@ -71,7 +71,25 @@
   /* Single dramatic accent shadow, used only under the primary button, the
    * active nav pill, and the live-status pulse glow. */
   --shadow-accent: 0 1px 2px rgba(20, 20, 30, 0.08),
-    0 8px 24px -6px rgba(79, 77, 199, 0.28);
+    0 8px 24px -6px rgba(47, 111, 235, 0.28);
+  /* Softer, wider cyan glow for hover-elevated cards and "live" badges -
+   * distinct from --shadow-accent (which marks the one committed action). */
+  --shadow-glow-accent: 0 1px 2px rgba(20, 20, 30, 0.06),
+    0 12px 32px -10px rgba(34, 211, 238, 0.35);
+
+  /* Glass chrome (nav, dropdowns, dialogs, sheets) - a translucent tint over
+   * backdrop-blur, not a solid surface. */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-blur-sm: 8px;
+  --glass-blur-md: 16px;
+  --glass-blur-lg: 32px;
+
+  /* Single source of truth for transition/animation durations - both CSS
+   * transitions and anime.js calls key off these so motion feels uniform. */
+  --motion-instant: 75ms;
+  --motion-fast: 150ms;
+  --motion-normal: 300ms;
+  --motion-slow: 600ms;
 
   --ease-out: cubic-bezier(0.175, 0.885, 0.32, 1.1);
 
@@ -136,11 +154,11 @@
     --fg-subtle: #66676f;
     --fg-on-accent: #ffffff;
 
-    --accent: #5e6ad2;
-    --accent-hover: #7b78e0;
-    --accent-soft: rgba(94, 106, 210, 0.16);
-    --accent-fg: #9d9bef;
-    --accent-glow: #8b5cf6;
+    --accent: #4f8dff;
+    --accent-hover: #6fa4ff;
+    --accent-soft: rgba(79, 141, 255, 0.16);
+    --accent-fg: #8fbaff;
+    --accent-glow: #22d3ee;
 
     --success: #3ecf8e;
     --success-soft: rgba(62, 207, 142, 0.14);
@@ -158,6 +176,18 @@
       0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 48px -12px rgba(0, 0, 0, 0.75);
     --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.5),
       0 8px 24px -6px rgba(94, 106, 210, 0.45);
+    --shadow-glow-accent: 0 1px 2px rgba(0, 0, 0, 0.5),
+      0 16px 40px -10px rgba(34, 211, 238, 0.4);
+
+    --glass-bg: rgba(19, 20, 23, 0.68);
+    --glass-blur-sm: 8px;
+    --glass-blur-md: 16px;
+    --glass-blur-lg: 32px;
+
+    --motion-instant: 75ms;
+    --motion-fast: 150ms;
+    --motion-normal: 300ms;
+    --motion-slow: 600ms;
 
     --background: var(--bg);
     --foreground: var(--fg);
@@ -205,11 +235,11 @@
   --fg-subtle: #66676f;
   --fg-on-accent: #ffffff;
 
-  --accent: #5e6ad2;
-  --accent-hover: #7b78e0;
-  --accent-soft: rgba(94, 106, 210, 0.16);
-  --accent-fg: #9d9bef;
-  --accent-glow: #8b5cf6;
+  --accent: #4f8dff;
+  --accent-hover: #6fa4ff;
+  --accent-soft: rgba(79, 141, 255, 0.16);
+  --accent-fg: #8fbaff;
+  --accent-glow: #22d3ee;
 
   --success: #3ecf8e;
   --success-soft: rgba(62, 207, 142, 0.14);
@@ -227,6 +257,18 @@
     0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 48px -12px rgba(0, 0, 0, 0.75);
   --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.5),
     0 8px 24px -6px rgba(94, 106, 210, 0.45);
+  --shadow-glow-accent: 0 1px 2px rgba(0, 0, 0, 0.5),
+    0 16px 40px -10px rgba(34, 211, 238, 0.4);
+
+  --glass-bg: rgba(19, 20, 23, 0.68);
+  --glass-blur-sm: 8px;
+  --glass-blur-md: 16px;
+  --glass-blur-lg: 32px;
+
+  --motion-instant: 75ms;
+  --motion-fast: 150ms;
+  --motion-normal: 300ms;
+  --motion-slow: 600ms;
 
   --background: var(--bg);
   --foreground: var(--fg);
@@ -294,10 +336,21 @@
   --shadow-e2: var(--shadow-md);
   --shadow-e3: var(--shadow-lg);
   --shadow-accent: var(--shadow-accent);
+  --shadow-glow-accent: var(--shadow-glow-accent);
+
+  --color-glass-bg: var(--glass-bg);
+  --blur-glass-sm: var(--glass-blur-sm);
+  --blur-glass-md: var(--glass-blur-md);
+  --blur-glass-lg: var(--glass-blur-lg);
+
+  --duration-instant: var(--motion-instant);
+  --duration-fast: var(--motion-fast);
+  --duration-normal: var(--motion-normal);
+  --duration-slow: var(--motion-slow);
 
   /* Locked 3-value radius scale — controls, panels, pills. Don't add a 4th. */
-  --radius-control: 8px;
-  --radius-panel: 14px;
+  --radius-control: 10px;
+  --radius-panel: 16px;
 
   /* shadcn/ui token wiring (Tailwind v4 CSS-first `@theme`) */
   --color-background: var(--background);
@@ -345,7 +398,7 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -365,11 +418,34 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background-image: radial-gradient(
-    64rem 34rem at 50% -12%,
+    64rem 34rem at var(--atmosphere-x, 50%) -12%,
     var(--accent-glow),
     transparent 70%
   );
   opacity: 0.05;
+  animation: lumi-atmosphere-drift 40s ease-in-out infinite;
+}
+
+/* Registered so the browser interpolates the percentage smoothly across the
+ * keyframe instead of jumping at 50% (unregistered custom properties don't
+ * animate/interpolate). */
+@property --atmosphere-x {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 50%;
+}
+
+/* Barely-perceptible position drift so the background never reads as a
+ * static image - infinite and cheap enough to stay pure CSS rather than
+ * anime.js, which is reserved for one-shot/numeric/orchestrated motion. */
+@keyframes lumi-atmosphere-drift {
+  0%,
+  100% {
+    --atmosphere-x: 42%;
+  }
+  50% {
+    --atmosphere-x: 58%;
+  }
 }
 
 /* Everything the user interacts with sits above the field. */

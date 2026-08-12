@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   CircleCheck,
@@ -6,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "#/lib/utils";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
+import { useStaggerIn } from "#/lib/animate";
 import type { DashboardRoleView, DashboardModuleView } from "#/lib/dashboard-data";
 
 // Native Discord permission bits (see Module.js `cfg` conventions elsewhere
@@ -175,6 +178,7 @@ export function HealthCheckList({
 }) {
   const checks = buildChecks(guildId, roles, securityConfig, filterModule);
   const passing = checks.filter((c) => c.ok).length;
+  const containerRef = useStaggerIn<HTMLDivElement>("[data-check-row]", { resetKey: guildId });
 
   return (
     <Card>
@@ -184,9 +188,11 @@ export function HealthCheckList({
           {passing} of {checks.length} checks passing.
         </CardDescription>
       </CardHeader>
-      <div className="divide-y divide-border">
+      <div ref={containerRef} className="divide-y divide-border">
         {checks.map((check) => (
-          <CheckRow key={check.id} check={check} />
+          <div key={check.id} data-check-row>
+            <CheckRow check={check} />
+          </div>
         ))}
       </div>
     </Card>

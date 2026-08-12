@@ -4,8 +4,7 @@ import { AuditLogEvent, type Guild } from "discord.js";
 import { isNullish } from "@sapphire/utilities";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetService } from "#lib/module-system/Service.js";
-
-const RECENT_AUDIT_ENTRY_MS = 10_000;
+import { resolveAuditLogExecutor } from "../lib/audit.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "securityGuildUpdate",
@@ -28,7 +27,7 @@ export class SecurityGuildUpdateListener extends ModuleListener<
     const config = await security.loadAntiNukeConfig(newGuild.id);
     if (!config.enabled) return;
 
-    const executorId = await this.#resolveExecutor(newGuild);
+    const executorId = await resolveAuditLogExecutor(newGuild, AuditLogEvent.GuildUpdate);
     if (isNullish(executorId)) return;
     if (await security.isExempt(newGuild, executorId, config)) return;
 
@@ -46,15 +45,4 @@ export class SecurityGuildUpdateListener extends ModuleListener<
     await security.respond(newGuild, executorId, "vanity_change", count, config);
   }
 
-  /** Vanity URL changes have no dedicated audit log event; `GuildUpdate` covers it too. */
-  async #resolveExecutor(guild: Guild): Promise<string | null> {
-    const logs = await guild
-      .fetchAuditLogs({ type: AuditLogEvent.GuildUpdate, limit: 1 })
-      .catch(() => null);
-    const entry = logs?.entries.first();
-    if (!entry || Date.now() - entry.createdTimestamp > RECENT_AUDIT_ENTRY_MS) {
-      return null;
-    }
-    return entry.executorId;
-  }
 }

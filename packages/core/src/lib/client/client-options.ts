@@ -66,21 +66,9 @@ export function buildClientOptions(options: LumiClient.Options): ClientOptions {
     },
     ...(options.shardPlan && {
       shardCount: options.shardPlan.shardCount,
-      ...((options.cluster?.shards ?? options.shardPlan.shards) && {
-        shards: [...(options.cluster?.shards ?? options.shardPlan.shards!)],
-      }),
+      ...(options.shardPlan.shards && { shards: [...options.shardPlan.shards] }),
       ws: {
-        buildIdentifyThrottler:
-          options.cluster?.throttlerFactory ??
-          buildSimpleThrottlerFactory(options.shardPlan),
-        ...(options.cluster && {
-          retrieveSessionInfo: options.cluster.sessionStore.retrieve.bind(
-            options.cluster.sessionStore,
-          ),
-          updateSessionInfo: options.cluster.sessionStore.update.bind(
-            options.cluster.sessionStore,
-          ),
-        }),
+        buildIdentifyThrottler: buildSimpleThrottlerFactory(options.shardPlan),
       },
     }),
     intents: [

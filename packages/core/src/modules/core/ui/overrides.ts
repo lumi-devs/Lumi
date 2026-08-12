@@ -11,7 +11,7 @@ import {
 } from "#modules/core/ui/common.js";
 import { Emojis } from "#utilities/assets.js";
 import {
-  CARD_ACCENTS,
+  resolveCardColor,
   makeCard,
   noPingCard,
   type CardReply,
@@ -106,7 +106,7 @@ export function buildHistoryView(
 
   return noPingCard(
     makeCard(
-      CARD_ACCENTS.INFO,
+      resolveCardColor("info"),
       `${Emojis.CLOCK} ${meta.displayName} • History`,
       [
         formatSubtitle("Configuration change log and rollback history."),
@@ -165,7 +165,7 @@ export function buildOverridesView(
 
   return noPingCard(
     makeCard(
-      CARD_ACCENTS.PURPLE,
+      resolveCardColor("purple"),
       `${Emojis.SHIELD} ${meta.displayName} • Overrides`,
       [
         formatSubtitle(
@@ -225,7 +225,7 @@ export function buildAddOverrideTargetView(
   );
 
   return makeCard(
-    CARD_ACCENTS.PURPLE,
+    resolveCardColor("purple"),
     `${Emojis.SHIELD} Add Override • ${meta.displayName}`,
     [
       formatSubtitle("Select target role, channel, or user via select menus."),

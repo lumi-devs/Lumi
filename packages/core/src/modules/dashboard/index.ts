@@ -1,6 +1,6 @@
 import { Module, DefineModule } from "#lib/module-system/Module.js";
 import { container } from "@sapphire/framework";
-import { registerRpcHandler, rpcHandlers } from "#lib/rabbitmq/index.js";
+import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
 import {
   APPEAL_REVIEW_STATUSES,
   APPEAL_STATUSES,
@@ -496,7 +496,8 @@ export class DashboardModule extends Module {
       if (!guild) throw new Error("Guild not found in bot cache");
 
       const settings = await container.db.config.getGuildSettings(guildId);
-      const loadedModules = container.stores.get("modules").loaded();
+      const moduleStore = container.stores.get("modules");
+      const loadedModules = moduleStore.loaded();
       const moduleNames = loadedModules.map((m) => m.meta.name);
 
       const [enabledMap, allConfigsMap] = await Promise.all([
@@ -520,9 +521,13 @@ export class DashboardModule extends Module {
           displayName: m.meta.displayName,
           emoji: m.meta.emoji,
           description: m.meta.description,
+          version: m.meta.version,
+          conflicts: m.meta.conflicts ?? [],
+          dependencies: m.meta.dependencies ?? [],
           enabled,
           configFields: m.meta.configFields || [],
           config,
+          isAddon: moduleStore.isAddonModule(m),
         };
       });
 
@@ -556,6 +561,7 @@ export class DashboardModule extends Module {
       return {
         name: guild.name,
         icon: guild.iconURL(),
+        memberCount: guild.memberCount,
         settings,
         modules,
         roles,

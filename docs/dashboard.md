@@ -6,9 +6,9 @@ Reference for `apps/dashboard` - the Next.js (App Router) web administration pan
 
 Three rules define the app, and everything below follows from them:
 
-1. **The dashboard never opens a Postgres or Redis connection.** There is no Prisma client, no `ioredis` import, no connection string other than `RABBITMQ_URL`. Every read and every write is a RabbitMQ RPC call to `apps/worker`, which owns the database.
+1. **The dashboard never opens a Postgres or Redis connection.** There is no Prisma client, no `ioredis` import, no connection string other than `RPC_HTTP_URL`. Every read and every write is an HTTP RPC call to `apps/worker`'s internal RPC server, which owns the database.
 2. **The dashboard never holds the Discord bot token.** It holds OAuth2 *application* credentials (`DISCORD_OAUTH2_CLIENT_ID` / `_SECRET`) so users can sign in as themselves, and nothing more. Anything that needs the bot's identity is done by the worker on the other end of an RPC call.
-3. **Nothing that talks to RabbitMQ is reachable from the browser.** `src/lib/rpc.ts`, `src/lib/env.ts`, `src/lib/auth.ts`, `src/lib/auth-guards.ts`, `src/lib/dashboard-fetch.ts` and `src/lib/rate-limit.ts` all start with `import "server-only"`, which makes importing them from a Client Component a build-time error.
+3. **Nothing that talks to the internal RPC server is reachable from the browser.** `src/lib/rpc.ts`, `src/lib/env.ts`, `src/lib/auth.ts`, `src/lib/auth-guards.ts`, `src/lib/dashboard-fetch.ts` and `src/lib/rate-limit.ts` all start with `import "server-only"`, which makes importing them from a Client Component a build-time error.
 
 The practical payoff is isolation: a dashboard outage, a traffic spike, or a slow page render cannot affect Discord gateway latency, because the two never share a process or an event loop.
 
@@ -21,7 +21,7 @@ src/
   components/
     ui/                 Primitives: button, card, table, input, switch, badge, alert,
                         empty-state, page-header, glyph
-    layout/             Chrome: site-header, guild-sidebar, system-sidebar, nav-item,
+    layout/             Chrome: site-header, top-nav, guild-top-nav, system-top-nav,
                         command-palette, theme-toggle, wordmark
     guild/  system/  account/   Feature components for each route group
   lib/                  auth.ts, auth-guards.ts, rpc.ts, dashboard-fetch.ts,
@@ -59,7 +59,7 @@ The `#/` import alias maps to `src/` (`tsconfig.json` paths), so imports read `#
 | `/guild/[guildId]/advanced` | `requireGuild` | Ignored channels, AFK entries, raw module data. |
 | `/system` | `requireBotOwner` | Global config and maintenance mode. |
 | `/system/modules` | `requireBotOwner` | Global module kill-switches. |
-| `/system/addons` | `requireBotOwner` | Addon git repositories - add, list, install, uninstall. |
+| `/system/addons` | `requireBotOwner` | Addon git repositories - add, list, install, uninstall, rollback. |
 | `/system/blocklist` | `requireBotOwner` | Global user blocklist. |
 | `/system/audit` | `requireBotOwner` | Cross-guild audit log. |
 | `/system/users` | `requireBotOwner` | User privacy console - GDPR deletion. |
@@ -67,22 +67,22 @@ The `#/` import alias maps to `src/` (`tsconfig.json` paths), so imports read `#
 
 Every route above is built and RPC-wired. For a new one, the patterns to copy are `guild/[guildId]/modules/[moduleName]/page.tsx` (dynamic form + floating save bar), `guild/[guildId]/modules/page.tsx` (toggle grid), or `guild/[guildId]/moderation/page.tsx` (searchParams-driven filter + pagination).
 
-The two sidebars are driven by shared link tables - `src/lib/guild-nav.ts` for the guild nav (also consumed by the command palette, so the two can't drift) and a module-scope constant in `src/components/layout/system-sidebar.tsx` for the system nav.
+The two top navs are driven by shared link tables - `src/lib/guild-nav.ts` for the guild nav (also consumed by the command palette, so the two can't drift) and a module-scope constant in `src/components/layout/system-top-nav.tsx` for the system nav.
 
 ## The RPC bridge
 
-`src/lib/rpc.ts` is the only outbound data path. It is a request/response client over RabbitMQ:
+`src/lib/rpc.ts` is the only outbound data path. It is a request/response client over plain HTTP, talking directly to `apps/worker`'s internal RPC server (`packages/core/src/lib/rpc/http-server.ts`) over the docker/cluster network - no message broker in between:
 
-- Requests are published to the durable shared queue `lumi.rpc.requests`, which `apps/worker` consumes.
-- Replies come back over RabbitMQ's `amq.rabbitmq.reply-to` pseudo-queue, so no per-call reply queue is ever created. Responses are correlated by a `randomUUID()` request id carried in `correlationId`.
-- The default timeout is 8000 ms, overridable per call via `timeoutMs`.
+- Each call is a `POST` to `${RPC_HTTP_URL}/rpc` with the request as a JSON body; the worker's `dispatchRpc` looks up the registered handler and returns a JSON response.
+- The default timeout is 8000 ms (enforced client-side via `AbortController`), overridable per call via `timeoutMs`.
 - A non-`ok` response is rethrown as an `Error` carrying the worker's `error` string.
+- The port is never published to the host - reachable only from other containers/pods on the internal network.
 
 Wire types (`RpcRequest`, `RpcResponse`), the payload map (`RpcRequestPayloads`), and the action-name constants (`RPC_ACTIONS`) all live in `packages/contracts/src/rpc.ts` and are shared verbatim by both ends, so an action rename is a compile error on the caller side rather than a runtime 500.
 
-Next.js has no long-lived `main.ts` bootstrap - Server Components, Route Handlers, and Server Actions are each invoked ad hoc by the framework. The AMQP connection is therefore a lazily created module-scope singleton cached on `globalThis`, which also stops `next dev` from opening a fresh connection on every hot reload.
+Next.js has no long-lived `main.ts` bootstrap - Server Components, Route Handlers, and Server Actions are each invoked ad hoc by the framework. The `RpcClient` is therefore a lazily created module-scope singleton cached on `globalThis`, which also keeps `next dev` from constructing a fresh one on every hot reload.
 
-`src/instrumentation.ts` (Next's documented server-boot hook) registers a `rabbitmq` readiness probe against that client, alongside the same OTel tracing and Prometheus metrics bootstrap every other Lumi service runs.
+`src/instrumentation.ts` (Next's documented server-boot hook) registers an `rpc` readiness probe that hits the worker's `/healthz`, alongside the same OTel tracing and Prometheus metrics bootstrap every other Lumi service runs.
 
 ## RPC action surface
 
@@ -92,7 +92,7 @@ There are exactly 50 actions. The authoritative list is `RpcRequestPayloads` in 
 | :--- | :--- |
 | Auth (1) | `auth.whoami` |
 | Global / GDPR (2) | `global.gdpr.delete`, `global.gdpr.export` |
-| Addon downloader (5) | `downloader.repo.add`, `downloader.repo.list`, `downloader.repo.modules`, `downloader.module.install`, `downloader.module.uninstall` |
+| Addon downloader (6) | `downloader.repo.add`, `downloader.repo.list`, `downloader.repo.modules`, `downloader.module.install`, `downloader.module.uninstall`, `downloader.module.rollback` |
 | Guild core (4) | `guild.dashboard.get`, `guild.module.toggle`, `guild.config.set`, `guild.settings.set` |
 | Permits (6) | `guild.permits.list`, `.create`, `.update`, `.delete`, `.assign`, `.unassign` |
 | Moderation (4) | `guild.cases.list`, `guild.cases.revoke`, `guild.warnThresholds.list`, `guild.warnThresholds.set` |
@@ -110,7 +110,7 @@ Guild-scoped actions carry `guildId`; every action carries `actorId` so the work
 
 The two are deliberately separate.
 
-**Reads** go through `src/lib/dashboard-fetch.ts`, a thin typed layer over `rpcCall` that returns the view types declared in `src/lib/dashboard-data.ts`. Fetchers whose arguments are scalars (`getGuildDashboard`, `getGuildPermits`, `getGuildPanicState`, ...) are wrapped in `React.cache()`, giving per-request memoization: the guild layout renders the sidebar and the page renders its content, both calling `getGuildDashboard(guildId, actorId)`, but only one `guild.dashboard.get` round trip happens. Fetchers that take a filter object (`getGuildCases`, `getGuildAuditLog`, `getGuildConfigHistory`, `getGuildBlocklist`, `getGuildModuleData`, the system list fetchers) are intentionally *not* wrapped - `React.cache()` keys on argument identity, and a freshly constructed filter object never hits.
+**Reads** go through `src/lib/dashboard-fetch.ts`, a thin typed layer over `rpcCall` that returns the view types declared in `src/lib/dashboard-data.ts`. Fetchers whose arguments are scalars (`getGuildDashboard`, `getGuildPermits`, `getGuildPanicState`, ...) are wrapped in `React.cache()`, giving per-request memoization: the guild layout renders the top nav and the page renders its content, both calling `getGuildDashboard(guildId, actorId)`, but only one `guild.dashboard.get` round trip happens. Fetchers that take a filter object (`getGuildCases`, `getGuildAuditLog`, `getGuildConfigHistory`, `getGuildBlocklist`, `getGuildModuleData`, the system list fetchers) are intentionally *not* wrapped - `React.cache()` keys on argument identity, and a freshly constructed filter object never hits.
 
 **Mutations** go through `src/actions/*-actions.ts`, one file per domain: `guild-actions`, `moderation-actions`, `security-actions`, `tempvc-actions`, `overrides-actions`, `history-actions`, `blocklist-actions`, `advanced-actions`, `system-actions`, `user-actions`, `auth-actions`. Every guild-scoped action independently calls `requireGuild(guildId)` and every system action calls `requireBotOwner()` before issuing its RPC - a layout guard only protects a page render, not a Server Action invoked directly. Each action is wrapped in `runAction()` (`src/lib/action-result.ts`), which normalizes a guard rejection or an RPC failure into `{ ok: false, error }` and re-throws Next's control-flow signals so a `redirect()` from an expired session still redirects instead of rendering as the string `"NEXT_REDIRECT"`. Successful mutations call `revalidatePath` so the affected Server Components re-render with fresh data.
 
@@ -181,7 +181,7 @@ Two motion utilities exist: `.rise`, an entry animation driven by a `--rise-dela
 
 | Variable | Required | Default | Purpose |
 | :--- | :---: | :--- | :--- |
-| `RABBITMQ_URL` | yes | - | Broker carrying the RPC bridge. |
+| `RPC_HTTP_URL` | yes | - | Base URL of the worker's internal RPC HTTP server, e.g. `http://worker:8091`. |
 | `DISCORD_OAUTH2_CLIENT_ID` | yes | - | Discord application client ID. |
 | `DISCORD_OAUTH2_CLIENT_SECRET` | yes | - | Discord application client secret. |
 | `DASHBOARD_SESSION_SECRET` | yes | - | NextAuth JWT signing/encryption secret. `openssl rand -hex 32`. |
@@ -210,7 +210,7 @@ bun run --cwd apps/dashboard test     # Vitest + Testing Library, apps/dashboard
 bun run --cwd apps/dashboard lint     # eslint src
 ```
 
-`worker` and RabbitMQ must be running, or every page that reads data will fail its RPC call.
+`worker` must be running and reachable at `RPC_HTTP_URL`, or every page that reads data will fail its RPC call.
 
 > [!WARNING]
 > The `dashboard` Docker Compose profile does not work yet. The shared `Dockerfile` `runner` target has no `next build` stage and copies source only, while the Compose service runs `next start`, which needs a prebuilt `.next`. Starting it exits immediately with *"Could not find a production build in the '.next' directory"*. Run the dashboard directly (above) until that image stage exists.

@@ -2,7 +2,7 @@ import { SUPPORTED_LANGUAGES, type LumiT } from "#lib/i18n/index.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { row, type Row } from "#modules/core/ui/common.js";
 import { Emojis } from "#utilities/assets.js";
-import { CARD_ACCENTS, makeCard, type CardReply } from "#utilities/cards.js";
+import { resolveCardColor, makeCard, type CardReply } from "#utilities/cards.js";
 import {
   createStringSelectMenu,
   settingRow,
@@ -103,7 +103,7 @@ export function buildHubView(o: HubOverview, t?: LumiT): CardReply {
   ].join("\n");
 
   return makeCard(
-    CARD_ACCENTS.PRIMARY,
+    resolveCardColor("primary"),
     `${Emojis.BOT} ${t ? t(PanelsKeys.HubTitle) : "Lumi Control Panel"}`,
     [glanceLines.join("\n"), hints],
     {
@@ -177,7 +177,7 @@ export function buildSettingsView(
   );
 
   return makeCard(
-    CARD_ACCENTS.PRIMARY,
+    resolveCardColor("primary"),
     `${Emojis.GUILD} ${t ? t(PanelsKeys.SettingsTitle) : "Server Settings"}`,
     `${Emojis.GUILD} **${t ? t(PanelsKeys.SettingsLanguage) : "Language"}** - \`${settings.locale}\``,
     {

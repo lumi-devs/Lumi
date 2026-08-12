@@ -1,14 +1,8 @@
-import {
-  createRedisClient,
-  redisConnectionOptions,
-  RedisKeys,
-  RedisTTL,
-} from "#lib/database/redis.js";
+import { createRedisClient, RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { installEntityPopulator } from "#lib/entity-cache/entity-populator.js";
 import {
   envParseInteger,
   envParseString,
-  getClusterName,
   getConsumerId,
   getServiceRole,
   isEntityCachePopulateEnabled,
@@ -17,20 +11,15 @@ import {
   type ServiceRole,
 } from "#lib/env.js";
 import { registerCoreFireHandlers } from "#lib/core-fire-handlers.js";
-import { RabbitClient } from "#lib/rabbitmq/index.js";
 import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
 import { initCoreRpcHandlers } from "#lib/rpc/core-rpc.js";
+import { startRpcHttpServer } from "#lib/rpc/http-server.js";
 import { SchedulerLeaderLock } from "#lib/scheduler-leader-lock.js";
 import { SchedulerRequestConsumer } from "#lib/scheduler-request-consumer.js";
 import { TaskFireConsumer } from "#lib/task-fire-registry.js";
 import type { OwnedEventBus } from "@lumi/event-bus";
 import { failedJobsTotal } from "@lumi/observability";
-import {
-  attachCluster,
-  planShards,
-  type ClusterBootstrap,
-  type ShardPlan,
-} from "@lumi/sharding";
+import { planShards, type ShardPlan } from "@lumi/sharding";
 import {
   ApplicationCommandRegistries,
   RegisterBehavior,
@@ -40,7 +29,6 @@ import {
 import "@sapphire/plugin-hmr/register";
 import { tryParseJSON } from "@sapphire/utilities";
 import type { Message } from "discord.js";
-import { Redis } from "ioredis";
 import { warnOnCleanupError } from "./cleanup.js";
 import { buildClientOptions } from "./client-options.js";
 import { installContainerServices } from "./container-services.js";
@@ -56,7 +44,7 @@ import { ReadinessProbes } from "./ReadinessProbes.js";
  * their own module. What stays here is the ordering contract between them.
  *
  * `login()` brings resources up in dependency order - database, leader locks,
- * RabbitMQ, module discovery - and only then hands over to Sapphire.
+ * internal RPC server, module discovery - and only then hands over to Sapphire.
  * `destroy()` unwinds that in reverse, and every step swallows its own
  * failure so one unreachable resource cannot strand the others.
  */
@@ -69,8 +57,6 @@ export class LumiClient extends SapphireClient {
   private _schedulerRequestConsumer: SchedulerRequestConsumer | null = null;
   private _taskFireConsumer: TaskFireConsumer | null = null;
   private _schedulerLeaderLock: SchedulerLeaderLock | null = null;
-  private _cluster: ClusterBootstrap | null = null;
-  private _clusterRedis: { redis: Redis; subscriber: Redis } | null = null;
 
   public constructor(options: LumiClient.Options = {}) {
     const role = options.role ?? getServiceRole();
@@ -87,8 +73,6 @@ export class LumiClient extends SapphireClient {
     });
 
     this.role = role;
-    this._cluster = options.cluster ?? null;
-    this._clusterRedis = options.clusterRedis ?? null;
   }
 
   public override async login(token?: string) {
@@ -122,35 +106,11 @@ export class LumiClient extends SapphireClient {
       await this._schedulerLeaderLock.acquire();
     }
 
-    const rabbitUrl = envParseString("RABBITMQ_URL");
-    container.rabbit = new RabbitClient(rabbitUrl);
-
-    try {
-      let timer: NodeJS.Timeout | undefined;
-      await Promise.race([
-        container.rabbit.channel.waitForConnect(),
-        new Promise((_, reject) => {
-          timer = setTimeout(
-            () => reject(new Error("RabbitMQ connection timeout")),
-            15_000,
-          );
-        }),
-      ]).finally(() => clearTimeout(timer));
-    } catch (err: unknown) {
-      container.logger.error(
-        "[RabbitMQ] Connection failed or timed out. Background tasks will be unavailable.",
-        err,
-      );
-    }
-
     initCoreRpcHandlers();
+    startRpcHttpServer((level, msg, meta) => container.logger[level](msg, meta));
     await this.stores.get("modules").discover();
 
     const result = await super.login(token);
-
-    if (container.rabbit.connected) {
-      container.rabbit.startConsumers();
-    }
 
     if (roleOwnsScheduler(this.role)) {
       this._schedulerRequestConsumer = new SchedulerRequestConsumer(
@@ -251,22 +211,10 @@ export class LumiClient extends SapphireClient {
     await flushAllMessageDeletes().catch(
       warnOnCleanupError("flushAllMessageDeletes"),
     );
-    await container.rabbit?.close();
     await this._ownedEventBus
       ?.close()
       .catch(warnOnCleanupError("EventBus close"));
     this._ownedEventBus = null;
-    if (this._cluster) {
-      await this._cluster.close().catch(warnOnCleanupError("Cluster close"));
-      this._cluster = null;
-    }
-    if (this._clusterRedis) {
-      await Promise.allSettled([
-        this._clusterRedis.redis.quit(),
-        this._clusterRedis.subscriber.quit(),
-      ]);
-      this._clusterRedis = null;
-    }
     await container.invalidation.close();
     await container.redis.quit().catch(warnOnCleanupError("Redis quit"));
     await container.prisma
@@ -340,48 +288,7 @@ export class LumiClient extends SapphireClient {
       throw new Error(err instanceof Error ? err.message : String(err));
     }
 
-    const clusterName = getClusterName();
-    if (!clusterName) {
-      return new LumiClient({ ...options, shardPlan });
-    }
-
-    const redisOpts = {
-      ...redisConnectionOptions(),
-      db: envParseInteger("REDIS_CACHE_DB", 0),
-      lazyConnect: true,
-      maxRetriesPerRequest: null,
-      enableReadyCheck: false,
-    };
-    const redis = new Redis(redisOpts);
-    const subscriber = new Redis(redisOpts);
-    await redis.connect();
-    await subscriber.connect();
-    const replicaId =
-      process.env["LUMI_CONSUMER_ID"] ||
-      process.env["HOSTNAME"] ||
-      `worker-${process.pid}`;
-    const cluster = await attachCluster({
-      plan: shardPlan,
-      redis,
-      subscriber,
-      clusterName,
-      replicaId,
-      log,
-    });
-    const client = new LumiClient({
-      ...options,
-      shardPlan,
-      cluster,
-      clusterRedis: { redis, subscriber },
-    });
-    cluster.coordinator.onRebalance((delta) => {
-      log("warn", "shard assignment changed - draining for restart", {
-        added: delta.added,
-        removed: delta.removed,
-      });
-      void client.destroy().finally(() => process.exit(0));
-    });
-    return client;
+    return new LumiClient({ ...options, shardPlan });
   }
 }
 
@@ -396,19 +303,5 @@ export namespace LumiClient {
      * {@linkcode LumiClient.bootstrap} to fetch it for you.
      */
     shardPlan?: ShardPlan;
-    /**
-     * Cluster bootstrap from `attachCluster()`. When supplied, its `shards`
-     * override the plan's, its `sessionStore` drives retrieve/updateSessionInfo
-     * and its `throttlerFactory` replaces the single-process
-     * SimpleIdentifyThrottler. Built by {@linkcode LumiClient.bootstrap} when
-     * `CLUSTER_NAME` is set.
-     */
-    cluster?: ClusterBootstrap;
-    /**
-     * Redis pair opened by {@linkcode LumiClient.bootstrap} for the cluster
-     * coordinator. Ownership transfers to the client, which quits both in
-     * `destroy()`.
-     */
-    clusterRedis?: { redis: Redis; subscriber: Redis };
   }
 }

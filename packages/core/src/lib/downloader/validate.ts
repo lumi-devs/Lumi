@@ -61,7 +61,7 @@ const manifestSchema = s.object({
 
 const IGNORED_DIRS = new Set(["node_modules", ".git", "dist", "build"]);
 
-async function pathExists(p: string): Promise<boolean> {
+export async function pathExists(p: string): Promise<boolean> {
   try {
     await fs.access(p);
     return true;
@@ -114,6 +114,7 @@ const LISTENER_CLEANUP_RE =
 // "module scope" without a real parser - matches the formatting this repo
 // (and generated addon scaffolds) actually use.
 const GLOBAL_LET_RE = /^(?:export\s+)?let\s+(\w+)\b/gm;
+
 const GLOBAL_COLLECTION_RE =
   /^(?:export\s+)?const\s+(\w+)\s*(?::\s*[^=;]+)?=\s*(?:\[\s*\]|new\s+Map\s*\(\s*\)|new\s+Set\s*\(\s*\))/gm;
 
