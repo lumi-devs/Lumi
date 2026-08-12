@@ -50,7 +50,6 @@ export function useStaggerIn<T extends HTMLElement>(
       delay: stagger(opts?.delay ?? 40, grid ? { grid, from: "center" } : undefined),
       ease: "outQuint",
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts?.resetKey]);
 
   return ref;
@@ -79,7 +78,6 @@ export function usePopIn<T extends HTMLElement>(watch: unknown) {
       duration: 480,
       ease: "outElastic(1, .6)",
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watch]);
 
   return ref;
@@ -113,7 +111,6 @@ export function useCountUp(value: number, opts?: { duration?: number }) {
     return () => {
       anim.pause();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   return display;
@@ -152,7 +149,6 @@ export function usePageTimeline(refs: {
     return () => {
       tl.pause();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }
 
