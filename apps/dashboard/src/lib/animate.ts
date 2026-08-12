@@ -6,6 +6,7 @@ import { animate, createTimeline, stagger, type JSAnimation } from "animejs";
 function prefersReducedMotion(): boolean {
   return (
     typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
 }
