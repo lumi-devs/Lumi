@@ -1,3 +1,5 @@
+"use client";
+
 import { TopNav } from "#/components/layout/top-nav";
 import { guildManagementGroups, guildTopLinks } from "#/lib/guild-nav";
 
