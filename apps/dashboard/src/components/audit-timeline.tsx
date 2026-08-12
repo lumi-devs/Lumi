@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { Badge } from "#/components/ui/badge";
+import { useStaggerIn } from "#/lib/animate";
 import type { AuditEntryView } from "#/lib/dashboard-data";
 import {
   formatDetails,
@@ -16,10 +19,14 @@ export function AuditTimeline({
   guildHref?: (guildId: string) => string;
 }) {
   const days = groupByDay(entries, (e) => e.createdAt);
+  const ref = useStaggerIn<HTMLDivElement>("li", {
+    delay: 18,
+    resetKey: entries.map((e) => e.id).join(","),
+  });
 
   return (
-    <div>
-      {days.map((day, dayIndex) => (
+    <div ref={ref}>
+      {days.map((day) => (
         <section key={day.key} aria-label={day.label}>
           <h4 className="font-display flex items-baseline justify-between gap-3 border-y border-border bg-bg-subtle px-4 py-1.5 text-[11px] font-semibold tracking-[0.09em] text-fg-subtle uppercase">
             <span>{day.label}</span>
@@ -29,19 +36,8 @@ export function AuditTimeline({
           </h4>
 
           <ol>
-            {day.items.map((entry, index) => (
-              <li
-                key={entry.id}
-                className="rise"
-                style={
-                  {
-                    "--rise-delay": `${Math.min(
-                      (dayIndex * 4 + index) * 18,
-                      280,
-                    )}ms`,
-                  } as React.CSSProperties
-                }
-              >
+            {day.items.map((entry) => (
+              <li key={entry.id}>
                 <AuditRow entry={entry} guildHref={guildHref} />
               </li>
             ))}
