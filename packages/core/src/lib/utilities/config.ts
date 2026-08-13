@@ -96,7 +96,12 @@ export const defaultCardColors = {
 
 export type CardColorKey = keyof typeof defaultCardColors;
 
+/** Keys with no built-in accent bar unless the operator opts in via `config/bot.ts` - `defaultCardColors[key]` still names what that opt-in would use. */
+const BLANK_BY_DEFAULT: ReadonlySet<CardColorKey> = new Set(["primary"]);
+
 /** Single resolution path for card colors - checks the operator's `config/bot.ts` override before falling back to the built-in palette. */
-export function resolveCardColor(key: CardColorKey): number {
-  return BotConfig.branding.colors?.[key] ?? defaultCardColors[key];
+export function resolveCardColor(key: CardColorKey): number | undefined {
+  const override = BotConfig.branding.colors?.[key];
+  if (override !== undefined) return override;
+  return BLANK_BY_DEFAULT.has(key) ? undefined : defaultCardColors[key];
 }

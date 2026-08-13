@@ -1,0 +1,49 @@
+:root {
+  --sl-color-accent-low: #3a2410;
+  --sl-color-accent: #c2570f;
+  --sl-color-accent-high: #ffb27a;
+}
+
+:root[data-theme="dark"] {
+  --sl-color-accent-low: #3a230f;
+  --sl-color-accent: #ff8a3d;
+  --sl-color-accent-high: #ffd2ab;
+  --sl-color-bg: #0b0e14;
+  --sl-color-bg-nav: #0e1219;
+  --sl-color-bg-sidebar: #0e1219;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sl-markdown-content > *,
+  .content-panel {
+    animation: docs-fade-in 320ms ease-out both;
+  }
+
+  .sl-markdown-content > :nth-child(2) { animation-delay: 20ms; }
+  .sl-markdown-content > :nth-child(3) { animation-delay: 40ms; }
+  .sl-markdown-content > :nth-child(4) { animation-delay: 60ms; }
+  .sl-markdown-content > :nth-child(5) { animation-delay: 80ms; }
+
+  a, button, .card {
+    transition:
+      color 150ms ease,
+      background-color 150ms ease,
+      border-color 150ms ease,
+      transform 150ms ease;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes docs-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

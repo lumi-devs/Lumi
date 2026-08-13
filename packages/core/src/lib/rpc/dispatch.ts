@@ -22,6 +22,11 @@ export function deregisterRpcHandler(action: string) {
  * The transport-agnostic core of RPC handling — handler lookup, the
  * dashboard-enabled check, and error shaping. `http-server.ts` is the only
  * transport that calls this.
+ *
+ * `req.actorId` is an unauthenticated claim at this layer: handlers may treat
+ * it as the acting user only because every transport authenticates the caller
+ * first (the HTTP transport requires `RPC_INTERNAL_TOKEN`). Any new transport
+ * must do the same before calling in.
  */
 export async function dispatchRpc(req: RpcRequest<unknown>): Promise<RpcResponse<unknown>> {
   const handler = rpcHandlers.get(req.action);

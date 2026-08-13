@@ -26,7 +26,23 @@ export interface ProbeRequest {
   inputs: string[];
 }
 
-export type WorkerRequest = LoadRequest | TestRequest | ProbeRequest;
+/**
+ * Run one ad-hoc pattern against many contents in a single round trip, so a
+ * bulk caller (e.g. `purge regex`) spends one budget per batch instead of
+ * monopolising the worker with one request per item.
+ */
+export interface MatchAllRequest {
+  kind: "matchAll";
+  id: number;
+  pattern: string;
+  contents: string[];
+}
+
+export type WorkerRequest =
+  | LoadRequest
+  | TestRequest
+  | ProbeRequest
+  | MatchAllRequest;
 
 /** Sent once at startup; spawn cost must not count against an eval budget. */
 export interface ReadyResponse {
@@ -54,8 +70,16 @@ export interface UnknownResponse {
   key: string;
 }
 
+/** Positions in the request's `contents` that the pattern matched. */
+export interface MatchesResponse {
+  kind: "matches";
+  id: number;
+  indexes: number[];
+}
+
 export type WorkerResponse =
   | ReadyResponse
   | ProgressResponse
   | ResultResponse
-  | UnknownResponse;
+  | UnknownResponse
+  | MatchesResponse;

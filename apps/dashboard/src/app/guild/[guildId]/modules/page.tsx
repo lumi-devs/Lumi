@@ -1,7 +1,7 @@
 import { Puzzle } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildDashboard } from "#/lib/dashboard-fetch";
-import { ModuleToggleGrid } from "#/components/guild/module-toggle-grid";
+import { ModuleCardGrid } from "#/components/guild/module-card-grid";
 import { PageHeader } from "#/components/ui/page-header";
 import { Badge } from "#/components/ui/badge";
 
@@ -29,7 +29,7 @@ export default async function GuildModulesPage({
           </Badge>
         }
       />
-      <ModuleToggleGrid guildId={guildId} modules={modules} />
+      <ModuleCardGrid guildId={guildId} modules={modules} />
     </div>
   );
 }

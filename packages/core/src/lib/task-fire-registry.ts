@@ -26,9 +26,13 @@ export function registerTaskFireHandler<N extends keyof ScheduledTasks>(
   mode: TaskFireMode,
   handler: TaskFireHandler<N>,
 ): void {
-  if (registry.has(name)) {
-    container.logger?.warn(
-      `[TaskFireRegistry] Overwriting handler for task '${String(name)}'`,
+  const previous = registry.get(name);
+  if (previous) {
+    // Not refused: reloading an addon re-runs its registration, and that path
+    // depends on the replacement landing. But an addon claiming a task name
+    // core already owns silently hijacks its fires, so make it audit-visible.
+    container.logger?.error(
+      `[TaskFireRegistry] Handler for task '${String(name)}' is being replaced (was mode=${previous.mode}, now mode=${mode}). If these are different owners, one of them is hijacking the other's task fires.`,
     );
   }
   registry.set(name, { name, mode, handler } as Registration);
@@ -60,6 +64,8 @@ export interface TaskFireConsumerOptions {
 export class TaskFireConsumer {
   private stops: Array<() => Promise<void>> = [];
   private subscribed = new Set<keyof ScheduledTasks>();
+  /** Per-replica groups created for `broadcast` tasks, torn down on stop. */
+  private ephemeralGroups: Array<{ stream: string; group: string }> = [];
 
   public constructor(
     private readonly bus: EventBus,
@@ -104,6 +110,7 @@ export class TaskFireConsumer {
       (msg) => this.handle(reg.name, msg),
     );
     this.stops.push(stop);
+    if (reg.mode === "broadcast") this.ephemeralGroups.push({ stream, group });
     container.logger.debug(
       `[TaskFireConsumer] subscribed task='${String(reg.name)}' mode=${reg.mode} group=${group}`,
     );
@@ -114,6 +121,14 @@ export class TaskFireConsumer {
     this.subscribed.clear();
     const stops = this.stops.splice(0);
     await Promise.allSettled(stops.map((s) => s()));
+
+    // A broadcast group is named after this replica and re-created at `$` on
+    // the next boot, so leaving it behind strands a dead group (and its pending
+    // list) in Redis for every restart the process ever makes.
+    const groups = this.ephemeralGroups.splice(0);
+    await Promise.allSettled(
+      groups.map((g) => this.bus.destroyGroup(g.stream, g.group)),
+    );
   }
 
   private async handle(

@@ -2,6 +2,12 @@
 
 Copy `.env.example` to `.env` and fill in the mandatory section before running anything. This page documents every variable, every Docker Compose service, and the Kubernetes manifests under `deploy/k8s/`.
 
+### One file, all services
+
+The repo-root `.env` is the single source of truth. `apps/worker/.env`, `apps/scheduler/.env` and `apps/dashboard/.env` are symlinks to it — each app is started with its own directory as cwd and Bun auto-loads whatever `.env` it finds there, so the links are what stop three separately-maintained copies from drifting apart. `scripts/setup.sh` creates them; `.env` is gitignored at every level, so they can't be committed and a fresh checkout needs that run (or `ln -s ../../.env apps/<app>/.env` by hand).
+
+The consequence is that a value in the root `.env` applies to *every* service. Anything that must differ per service is therefore left unset there and defaulted in code — `LUMI_ROLE` (each entrypoint declares its own role) and `RPC_HTTP_PORT` (worker `8091`, scheduler `8092`) — or has a per-service key, as with `<SERVICE>_METRICS_PORT`.
+
 ## Environment variables
 
 ### Mandatory
@@ -18,7 +24,8 @@ No default - the app will not boot without these.
 | `POSTGRES_POOL_MAX` | Default `10`. |
 | `REDIS_URL` / `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` | Redis connection. `REDIS_HOST` defaults `localhost`, `REDIS_PORT` defaults `6379`. |
 | `REDIS_CACHE_DB` / `REDIS_TASK_DB` | Redis logical DB indices - `0` for caching, `1` for BullMQ task queues. |
-| `RPC_HTTP_HOST` / `RPC_HTTP_PORT` | Bind address for the worker's internal RPC HTTP server. Defaults `0.0.0.0` / `8091`. Never published to the host. |
+| `RPC_HTTP_HOST` / `RPC_HTTP_PORT` | Bind address for the internal RPC HTTP server. Defaults `127.0.0.1` / `8091` on the worker; the scheduler runs one too and self-defaults to `8092` so the pair don't collide on a single host. Set `0.0.0.0` only where the dashboard runs in another container. Never published to the host. Leave `RPC_HTTP_PORT` unset in a shared `.env` — a value there forces both services onto the same port. |
+| `RPC_INTERNAL_TOKEN` | Shared secret the dashboard sends as `Authorization: Bearer` on every internal RPC call. Required when `NODE_ENV=production` - the worker refuses to start the RPC server without it. Generate with `openssl rand -hex 32`. |
 
 ### General settings
 
@@ -44,14 +51,15 @@ No default - the app will not boot without these.
 | `OTEL_TRACES_SAMPLE_RATIO` | `1` | Lower in production (e.g. `0.1`) to cut trace volume. |
 | `METRICS_ENABLED` | `true` | |
 | `METRICS_PORT` | `9090` | Serves `/metrics`, `/healthz`, `/readyz`. |
+| `METRICS_HOST` | `127.0.0.1` | Set `0.0.0.0` only where Prometheus scrapes across containers (docker-compose sets it on `worker`, `worker-scale`, `scheduler`). |
 | `<SERVICE>_METRICS_PORT` | — | Per-service override, e.g. `DASHBOARD_METRICS_PORT`. Needed when several services share one host and one `.env`; without it they contend for `METRICS_PORT` and only the first binds. |
-| `GRAFANA_USER` / `GRAFANA_PASSWORD` | `admin` / `admin` | Only used by the bundled Grafana Compose service - change before exposing it. |
+| `GRAFANA_USER` / `GRAFANA_PASSWORD` | — | Only used by the bundled Grafana Compose service. Required - compose refuses to start without `GRAFANA_PASSWORD` set. |
 
 ### Scalability & topology (advanced)
 
 | Variable | Default | Purpose |
 | :--- | :--- | :--- |
-| `LUMI_ROLE` | `worker` | `worker` (Discord WS + all command/module logic) or `scheduler` (BullMQ only, no gateway). |
+| `LUMI_ROLE` | `worker` | `worker` (Discord WS + all command/module logic) or `scheduler` (BullMQ only, no gateway). Set by each entrypoint for itself and only used to label logs/metrics — leave it unset in a shared `.env`, where a fixed value mislabels the scheduler. Compose and the k8s manifests set it per service, which is correct: there one process reads one env. |
 | `LUMI_CONSUMER_ID` | *(unset)* | Stable identity for this replica in Redis Streams consumer groups; in k8s this is set from the pod name. |
 | `SHARD_LIST` | *(unset)* | Comma-separated shard IDs this replica owns, e.g. `0,1,2`. |
 | `TOTAL_SHARDS` | `auto` | Pin the total shard count instead of following Discord's recommendation. |
@@ -79,6 +87,8 @@ No default - the app will not boot without these.
 | `DISCORD_OAUTH2_CLIENT_ID` / `DISCORD_OAUTH2_CLIENT_SECRET` | | From your Discord application's OAuth2 page. |
 | `AUTH_URL` | *(derived from the request)* | The dashboard's externally visible origin. Only needed if a reverse proxy rewrites the Host header. |
 | `METRICS_ENABLED` / `METRICS_PORT` | `true` / `9090` | The dashboard's `/healthz`, `/readyz`, `/metrics` server, same as the other roles. |
+| `CLIENT_IP_HEADER` | *(unset)* | Name of the client-IP header your reverse proxy sets **and strips from inbound requests** (`cf-connecting-ip`, `x-real-ip`, …). Used verbatim when set, and the only fully spoof-proof option. Keys the login and `/api/auth/*` rate limits. |
+| `TRUSTED_PROXY_HOPS` | `1` | How many trusted proxies sit in front of the dashboard, used to pick the right `X-Forwarded-For` entry when `CLIENT_IP_HEADER` is unset. Too high and a client can forge its own limiter bucket. |
 
 There is **no** OAuth2 redirect-URI variable. NextAuth derives the callback from the incoming request; the path is `/api/auth/callback/discord`. Register `https://<your-dashboard-origin>/api/auth/callback/discord` under **OAuth2 → Redirects** on your Discord application.
 

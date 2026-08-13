@@ -6,7 +6,9 @@ import { StatCountUp } from "#/components/stat-count-up";
 export interface Stat {
   label: string;
   value: string | number;
-  icon: LucideIcon;
+  icon?: LucideIcon;
+  /** Small trailing unit next to the value ("ms", "/ 12"). */
+  unit?: string;
   /** Optional status tint for the value (e.g. maintenance mode). */
   tone?: "default" | "success" | "warning" | "danger";
   /** Optional delta vs. a prior period, rendered next to the value. */
@@ -40,17 +42,19 @@ export function StatsGrid({ stats }: { stats: Stat[] }) {
       {stats.map((s) => (
         <Card
           key={s.label}
-          className="px-3.5 py-3 transition-colors hover:border-border-strong hover:bg-surface-hover"
+          className="px-4 pt-3.5 pb-3.5 transition-colors hover:border-border-strong"
         >
-          <dt className="font-display flex items-center gap-2 text-[11px] font-semibold tracking-[0.09em] text-fg-subtle uppercase">
-            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-bg-subtle text-fg-muted">
-              <s.icon className="size-3" aria-hidden />
-            </span>
+          <dt className="font-display flex items-center gap-2 text-[11px] font-semibold tracking-[0.06em] text-fg-subtle uppercase">
+            {s.icon ? (
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-bg-subtle text-fg-muted">
+                <s.icon className="size-3" aria-hidden />
+              </span>
+            ) : null}
             <span className="truncate">{s.label}</span>
           </dt>
           <dd
             className={cn(
-              "font-display tabular mt-1 flex items-baseline gap-1.5 text-[19px] leading-6 font-semibold",
+              "tabular mt-2.5 flex items-baseline gap-1.5 font-mono text-[26px] leading-7 font-semibold",
               TONE[s.tone ?? "default"],
             )}
             title={String(s.value)}
@@ -58,6 +62,11 @@ export function StatsGrid({ stats }: { stats: Stat[] }) {
             <span className="truncate">
               <StatValue stat={s} />
             </span>
+            {s.unit ? (
+              <span className="shrink-0 text-[13px] font-normal text-fg-subtle">
+                {s.unit}
+              </span>
+            ) : null}
             {s.trend ? (
               <span
                 className={cn(

@@ -116,8 +116,14 @@ declare module "#lib/env.js" {
     SCHEDULER_LEADER_LOCK_POLL_MS: IntegerString;
     /** Internal RPC HTTP server bind port. Default 8091. */
     RPC_HTTP_PORT: IntegerString;
-    /** Internal RPC HTTP server bind host. Default "0.0.0.0". */
+    /** Internal RPC HTTP server bind host. Default "127.0.0.1"; set to
+     * "0.0.0.0" only where the dashboard reaches the worker over a container
+     * network. */
     RPC_HTTP_HOST: string;
+    /** Shared secret the dashboard presents as `Authorization: Bearer <token>`
+     * on every internal RPC call. Required in production - the RPC server
+     * refuses to start without it. */
+    RPC_INTERNAL_TOKEN: string;
     /** Approximate per-stream cap for bus events. Default 100000. */
     EVENT_STREAM_MAXLEN: IntegerString;
     /** Redis Streams consumer idle threshold in ms. Default 60000. */

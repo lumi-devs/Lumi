@@ -84,6 +84,7 @@ export class AccessRepository extends Repository {
     reason?: string,
     guildId?: string | null,
   ): Promise<Blocklist> {
+    if (guildId) await this.db.ensureGuild(guildId);
     const entry = await this.prisma.blocklist.create({
       data: { userId, blockedBy, reason, guildId },
     });

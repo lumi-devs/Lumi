@@ -13,6 +13,7 @@ import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Card, CardBody, CardDescription, CardHeader, CardTitle } from "#/components/ui/card";
 import { Input, Label, Select } from "#/components/ui/input";
+import { Checkbox } from "#/components/ui/switch";
 import type {
   DashboardMemberView,
   DashboardRoleView,
@@ -118,20 +119,12 @@ function CreatePermitCard({
 }) {
   const [name, setName] = useState("");
   const [nodes, setNodes] = useState<string[]>([]);
-  const [customNode, setCustomNode] = useState("");
   const { isPending, error, setError, run } = useServerAction();
 
   function toggleNode(node: string) {
     setNodes((prev) =>
       prev.includes(node) ? prev.filter((n) => n !== node) : [...prev, node],
     );
-  }
-
-  function addCustomNode() {
-    const trimmed = customNode.trim();
-    if (!trimmed || nodes.includes(trimmed)) return;
-    setNodes((prev) => [...prev, trimmed]);
-    setCustomNode("");
   }
 
   function handleCreate() {
@@ -181,22 +174,6 @@ function CreatePermitCard({
           />
         </div>
         <NodeChecklist nodes={nodes} onToggle={toggleNode} />
-        <div className="flex gap-2">
-          <Input
-            placeholder="Add a custom node, e.g. filter.bypass"
-            value={customNode}
-            onChange={(e) => setCustomNode(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addCustomNode();
-              }
-            }}
-          />
-          <Button variant="secondary" size="sm" onClick={addCustomNode}>
-            Add
-          </Button>
-        </div>
         <ActionError error={error} />
         <div>
           <Button size="sm" onClick={handleCreate} disabled={isPending}>
@@ -208,60 +185,90 @@ function CreatePermitCard({
   );
 }
 
+const ALL_KNOWN_NODES = KNOWN_PERMIT_NODE_GROUPS.flatMap((g) => g.nodes);
+
 function NodeChecklist({
   nodes,
   onToggle,
+  disabled = false,
 }: {
   nodes: string[];
   onToggle: (node: string) => void;
+  /** Each toggle is its own round-trip computed from the current node list, so further clicks are locked out until one lands rather than racing it. */
+  disabled?: boolean;
 }) {
+  const [search, setSearch] = useState("");
+  const query = search.trim().toLowerCase();
+
+  const matches = (label: string, description: string) =>
+    query === "" || label.toLowerCase().includes(query) || description.toLowerCase().includes(query);
+
+  const unknownNodes = nodes.filter(
+    (n) => !ALL_KNOWN_NODES.some((known) => known.node === n),
+  );
+
   return (
     <div className="flex flex-col gap-3">
-      {KNOWN_PERMIT_NODE_GROUPS.map((group) => (
-        <div key={group.prefix} className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
-            {group.prefix}
-          </span>
-          <div className="flex flex-wrap gap-3">
-            {group.nodes.map((node) => (
-              <label
-                key={node}
-                className="flex cursor-pointer items-center gap-1.5 text-sm text-fg"
-              >
-                <input
-                  type="checkbox"
-                  checked={nodes.includes(node)}
-                  onChange={() => onToggle(node)}
-                  className="size-4 rounded border-border accent-accent-cyan"
-                />
-                <code>{node}</code>
-              </label>
-            ))}
-          </div>
-        </div>
-      ))}
-      {nodes.filter(
-        (n) => !KNOWN_PERMIT_NODE_GROUPS.some((g) => g.nodes.includes(n)),
-      ).length > 0 && (
+      <Input
+        placeholder="Search permits…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        aria-label="Search permit nodes"
+      />
+      <div className="flex flex-col gap-4">
+        {KNOWN_PERMIT_NODE_GROUPS.map((group) => {
+          const visible = group.nodes.filter((n) => matches(n.label, n.description));
+          if (visible.length === 0) return null;
+          return (
+            <div key={group.prefix} className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
+                {group.prefix}
+              </span>
+              <div className="flex flex-col gap-1">
+                {visible.map((n) => (
+                  <label
+                    key={n.node}
+                    className={`flex items-start gap-2 rounded px-1.5 py-1 text-sm text-fg hover:bg-surface-hover ${
+                      disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+                    }`}
+                  >
+                    <Checkbox
+                      checked={nodes.includes(n.node)}
+                      onChange={() => onToggle(n.node)}
+                      disabled={disabled}
+                      aria-label={n.label}
+                      className="mt-0.5"
+                    />
+                    <span className="flex flex-col">
+                      <span className="font-medium">{n.label}</span>
+                      <span className="text-xs text-fg-subtle">{n.description}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {unknownNodes.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
-            custom
+            unrecognized
           </span>
           <div className="flex flex-wrap gap-2">
-            {nodes
-              .filter((n) => !KNOWN_PERMIT_NODE_GROUPS.some((g) => g.nodes.includes(n)))
-              .map((node) => (
-                <Badge key={node} variant="accent">
-                  <code>{node}</code>
-                  <button
-                    type="button"
-                    className="ml-1.5 text-fg-muted hover:text-fg"
-                    onClick={() => onToggle(node)}
-                  >
-                    ×
-                  </button>
-                </Badge>
-              ))}
+            {unknownNodes.map((node) => (
+              <Badge key={node} variant="accent">
+                <code>{node}</code>
+                <button
+                  type="button"
+                  className="ml-1.5 text-fg-muted hover:text-fg disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => onToggle(node)}
+                  disabled={disabled}
+                >
+                  ×
+                </button>
+              </Badge>
+            ))}
           </div>
         </div>
       )}
@@ -441,7 +448,11 @@ function PermitCard({
             ))}
           </div>
         ) : (
-          <NodeChecklist nodes={permit.nodes} onToggle={toggleNode} />
+          <NodeChecklist
+            nodes={permit.nodes}
+            onToggle={toggleNode}
+            disabled={isPending}
+          />
         )}
 
         <div className="flex flex-col gap-2">

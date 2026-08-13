@@ -7,7 +7,7 @@ import type { RpcResponse } from "@lumi/contracts";
 // test environment. `RpcClient` itself doesn't read `env`, but importing
 // the module would still throw without this.
 vi.mock("#/lib/env", () => ({
-  env: { rpcHttpUrl: "http://worker:8091" },
+  env: { rpcHttpUrl: "http://worker:8091", rpcInternalToken: "test-token" },
 }));
 
 const { RpcClient } = await import("#/lib/rpc");
@@ -55,6 +55,30 @@ describe("RpcClient", () => {
       actorId: "1",
       data: { moduleName: "afk", enabled: false },
     });
+  });
+
+  it("sends the internal token as a bearer header when one is configured", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ id: "unused", ok: true, data: null }),
+    );
+
+    const client = new RpcClient("http://worker:8091", "s3cret");
+    await client.call("guild.dashboard.get", { guildId: "101" });
+
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect(init.headers).toMatchObject({ authorization: "Bearer s3cret" });
+  });
+
+  it("omits the bearer header when no token is configured", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ id: "unused", ok: true, data: null }),
+    );
+
+    const client = new RpcClient("http://worker:8091");
+    await client.call("guild.dashboard.get", { guildId: "101" });
+
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect(init.headers).not.toHaveProperty("authorization");
   });
 
   it("resolves call() with response.data on a successful reply", async () => {
@@ -126,7 +150,7 @@ describe("RpcClient", () => {
       json: () => Promise.reject(new Error("Unexpected token")),
     } as unknown as Response);
 
-    const client = new RpcClient("http://worker:8091", log);
+    const client = new RpcClient("http://worker:8091", "", log);
     await expect(
       client.call("guild.dashboard.get", { guildId: "101" }),
     ).rejects.toThrow("malformed response");

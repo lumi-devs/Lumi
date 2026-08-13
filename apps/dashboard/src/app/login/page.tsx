@@ -3,6 +3,8 @@ import { signIn, auth } from "#/lib/auth";
 import { redirect } from "next/navigation";
 import { LogIn } from "lucide-react";
 import { isRateLimited } from "#/lib/rate-limit";
+import { getClientIp } from "#/lib/client-ip";
+import Link from "next/link";
 import { Wordmark } from "#/components/layout/wordmark";
 import { LoginForm, type LoginActionState } from "#/components/auth/login-form";
 
@@ -15,7 +17,9 @@ export default async function LoginPage() {
     _formData: FormData,
   ): Promise<LoginActionState> {
     "use server";
-    const ip = (await headers()).get("x-forwarded-for") ?? "unknown";
+    // Covers only this server action, i.e. the button on this page. NextAuth's
+    // own /api/auth/signin and /api/auth/callback/discord routes bypass it.
+    const ip = getClientIp(await headers());
     if (await isRateLimited(`login:${ip}`, 10, 60_000)) {
       return { error: "Too many login attempts — try again in a minute." };
     }
@@ -44,8 +48,18 @@ export default async function LoginPage() {
         <div className="mb-5" />
         <LoginForm action={loginAction} />
         <p className="mt-4 text-[11px] leading-4 text-fg-subtle">
-          Lumi only requests your Discord identity and guild list. It never
-          reads your messages.
+          Signing in only shares your Discord identity and guild list with
+          this dashboard. The bot&rsquo;s own message-reading permissions are
+          separate and configured per-server.
+        </p>
+        <p className="mt-2 text-[11px] leading-4 text-fg-subtle">
+          <Link href="/legal/privacy" className="underline hover:text-fg-muted">
+            Privacy Policy
+          </Link>{" "}
+          &middot;{" "}
+          <Link href="/legal/terms" className="underline hover:text-fg-muted">
+            Terms of Service
+          </Link>
         </p>
       </div>
     </main>

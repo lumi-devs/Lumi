@@ -15,13 +15,13 @@ import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
 import { initCoreRpcHandlers } from "#lib/rpc/core-rpc.js";
 import { startRpcHttpServer } from "#lib/rpc/http-server.js";
 import { SchedulerLeaderLock } from "#lib/scheduler-leader-lock.js";
-import { SchedulerRequestConsumer } from "#lib/scheduler-request-consumer.js";
 import { TaskFireConsumer } from "#lib/task-fire-registry.js";
 import type { OwnedEventBus } from "@lumi/event-bus";
 import { failedJobsTotal } from "@lumi/observability";
 import { planShards, type ShardPlan } from "@lumi/sharding";
 import {
   ApplicationCommandRegistries,
+  PluginHook,
   RegisterBehavior,
   SapphireClient,
   container,
@@ -54,7 +54,6 @@ export class LumiClient extends SapphireClient {
   private _livenessInterval: ReturnType<typeof setInterval> | null = null;
   private _ownedEventBus: OwnedEventBus | null = null;
   private _detachEntityPopulator: (() => void) | null = null;
-  private _schedulerRequestConsumer: SchedulerRequestConsumer | null = null;
   private _taskFireConsumer: TaskFireConsumer | null = null;
   private _schedulerLeaderLock: SchedulerLeaderLock | null = null;
 
@@ -110,18 +109,12 @@ export class LumiClient extends SapphireClient {
     startRpcHttpServer((level, msg, meta) => container.logger[level](msg, meta));
     await this.stores.get("modules").discover();
 
-    const result = await super.login(token);
+    const result =
+      this.role === "scheduler"
+        ? await this.loginWithoutGateway(token)
+        : await super.login(token);
 
     if (roleOwnsScheduler(this.role)) {
-      this._schedulerRequestConsumer = new SchedulerRequestConsumer(
-        container.eventBus,
-        { consumerId: getConsumerId() },
-      );
-      await this._schedulerRequestConsumer.start();
-      container.logger.info(
-        `[Scheduler] Request consumer started (consumerId=${getConsumerId()})`,
-      );
-
       const bullWorker = (
         container.tasks as unknown as {
           worker?: {
@@ -180,6 +173,43 @@ export class LumiClient extends SapphireClient {
     return result;
   }
 
+  /**
+   * Sapphire's `login()` sequence with the Discord WebSocket connection left
+   * out: register the piece paths, run the plugin hooks, load every store.
+   *
+   * @remarks
+   *
+   * The scheduler owns BullMQ and relays every fire onto the bus for a worker
+   * to execute - it has no use for gateway events. Letting `super.login()` run
+   * there would spawn a full set of shards per scheduler replica, burn the
+   * daily IDENTIFY budget, and - because the same listeners and commands are
+   * loaded in every role - make the scheduler answer commands and react to
+   * events a second time alongside the workers.
+   *
+   * REST still works: the token is set on the REST manager, so a task effect
+   * that reaches Discord over HTTP is unaffected.
+   */
+  private async loginWithoutGateway(token?: string): Promise<string> {
+    const resolved = token ?? this.token;
+    if (resolved) {
+      this.token = resolved;
+      this.rest.setToken(resolved);
+    }
+
+    if (this.options.baseUserDirectory !== null) {
+      this.stores.registerPath(this.options.baseUserDirectory);
+    }
+    for (const plugin of LumiClient.plugins.values(PluginHook.PreLogin)) {
+      await plugin.hook.call(this, this.options);
+    }
+    await Promise.all([...this.stores.values()].map((store) => store.loadAll()));
+    for (const plugin of LumiClient.plugins.values(PluginHook.PostLogin)) {
+      await plugin.hook.call(this, this.options);
+    }
+
+    return resolved ?? "";
+  }
+
   public override async destroy() {
     if (this._livenessInterval) {
       clearInterval(this._livenessInterval);
@@ -194,12 +224,6 @@ export class LumiClient extends SapphireClient {
         .stopConsuming()
         .catch(warnOnCleanupError("TaskFireConsumer stop"));
       this._taskFireConsumer = null;
-    }
-    if (this._schedulerRequestConsumer) {
-      await this._schedulerRequestConsumer
-        .stopConsuming()
-        .catch(warnOnCleanupError("SchedulerRequestConsumer stop"));
-      this._schedulerRequestConsumer = null;
     }
     if (this._schedulerLeaderLock) {
       await this._schedulerLeaderLock

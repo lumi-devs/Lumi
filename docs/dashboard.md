@@ -21,7 +21,7 @@ src/
   components/
     ui/                 Primitives: button, card, table, input, switch, badge, alert,
                         empty-state, page-header, glyph
-    layout/             Chrome: site-header, top-nav, guild-top-nav, system-top-nav,
+    layout/             Chrome: site-header, side-nav, guild-side-nav, system-side-nav,
                         command-palette, theme-toggle, wordmark
     guild/  system/  account/   Feature components for each route group
   lib/                  auth.ts, auth-guards.ts, rpc.ts, dashboard-fetch.ts,
@@ -41,7 +41,7 @@ The `#/` import alias maps to `src/` (`tsconfig.json` paths), so imports read `#
 | :--- | :--- | :--- |
 | `/` | none | Landing page when signed out, server picker when signed in. |
 | `/login` | none | Branded sign-in screen. The "Continue with Discord" button is a Server Action calling NextAuth's `signIn("discord")`, rate limited to 10/min per IP. |
-| `/api/auth/[...nextauth]` | none | NextAuth's catch-all route handler (`/signin`, `/callback/discord`, `/session`, `/signout`, `/csrf`). |
+| `/api/auth/[...nextauth]` | none | NextAuth's catch-all route handler (`/signin`, `/callback/discord`, `/session`, `/signout`, `/csrf`). `/signin*` and `/callback/*` are rate limited to 20/min per IP in `src/proxy.ts`. |
 | `/account` | `requireSession` | Self-service GDPR export of the signed-in user's own data. |
 | `/guild-picker` | session, else `/login` | Standalone server list, for switching servers from inside a guild. |
 | `/guild/[guildId]` | `requireGuild` | General settings - prefix, mod/admin roles, mod-log and mute channels, locale, timezone, mention-spam limits, invite/support URLs. |
@@ -67,7 +67,7 @@ The `#/` import alias maps to `src/` (`tsconfig.json` paths), so imports read `#
 
 Every route above is built and RPC-wired. For a new one, the patterns to copy are `guild/[guildId]/modules/[moduleName]/page.tsx` (dynamic form + floating save bar), `guild/[guildId]/modules/page.tsx` (toggle grid), or `guild/[guildId]/moderation/page.tsx` (searchParams-driven filter + pagination).
 
-The two top navs are driven by shared link tables - `src/lib/guild-nav.ts` for the guild nav (also consumed by the command palette, so the two can't drift) and a module-scope constant in `src/components/layout/system-top-nav.tsx` for the system nav.
+The two sidebars are driven by shared link tables - `src/lib/guild-nav.ts` for the guild rail (also consumed by the command palette, so the two can't drift) and `src/lib/system-nav.ts` for the system rail.
 
 ## The RPC bridge
 
@@ -145,13 +145,22 @@ A mutated JWT is only written back to the cookie in contexts that can set header
 
 `requireGuild` is the IDOR guard: authorization is re-derived from the session on the server on every render and every mutation, never trusted from client state, so editing `/guild/101` to `/guild/999` in the address bar - or crafting a direct Server Action call - reads and writes nothing. Both guilded and owner failures use `notFound()` rather than a 403, so the response never confirms that a route or a guild exists to someone not entitled to it. `apps/dashboard/tests/lib/auth-guards.test.ts` holds regression tests for both attacks.
 
-`src/lib/rate-limit.ts` adds a per-process sliding-window limiter (`rate-limiter-flexible`, in-memory driver) used on the login flow. It is process-local and does not coordinate across dashboard replicas; swapping the driver for `RateLimiterRedis` would, but that is not wired up.
+`src/lib/rate-limit.ts` adds a per-process sliding-window limiter (`rate-limiter-flexible`, in-memory driver), keyed on the caller IP that `src/lib/client-ip.ts` resolves. It is process-local and does not coordinate across dashboard replicas; swapping the driver for `RateLimiterRedis` would, but that is not wired up.
+
+It is applied in two places, because they cover different traffic:
+
+- The `/login` Server Action — 10/min per IP. This only covers the button on that page.
+- `src/proxy.ts`, in front of `/api/auth/signin*` and `/api/auth/callback/*` — 20/min per IP, answered with a `429` and a `Retry-After` before NextAuth sees the request. These are the endpoints the browser hits directly during the OAuth redirect dance, so the Server Action limit never sees them. A sign-in costs roughly two of the twenty, leaving ~10 full flows a minute per IP. `/api/auth/session` and `/api/auth/csrf` are deliberately **not** limited: ordinary page loads poll them, and limiting them would break normal use rather than abuse.
+
+The proxy `matcher` lists `/api/auth/:path*` as its own unconditional entry. The other entry carries a `missing: [next-router-prefetch, purpose=prefetch]` clause, and since those headers are client-supplied, sharing that entry would have let any caller skip the proxy — and the rate limit with it — by sending `purpose: prefetch`.
+
+Because the limit is keyed on client IP, `CLIENT_IP_HEADER` / `TRUSTED_PROXY_HOPS` must match your actual proxy topology or every request lands in one bucket (`"unknown"`); see the trust-model comment at the top of `src/lib/client-ip.ts`.
 
 ## Security headers and the CSP nonce
 
 Static headers - `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Strict-Transport-Security`, `Permissions-Policy` - are applied to every response by `headers()` in `next.config.ts`.
 
-The Content-Security-Policy is **not** there. It is built per request in `src/middleware.ts`, and it has to be, for a specific reason: Next only adds a nonce to its own inline RSC flight scripts (`self.__next_f.push(...)`) when it can read a `content-security-policy` header off the **incoming request**. A response header configured in `next.config.ts` is invisible to the renderer. Set a strict `script-src 'self'` that way and every flight script is blocked, so hydration never runs and the app is inert. Only middleware can mutate request headers, so only middleware can do this.
+The Content-Security-Policy is **not** there. It is built per request in `src/proxy.ts` (Next 16's rename of `middleware.ts`), and it has to be, for a specific reason: Next only adds a nonce to its own inline RSC flight scripts (`self.__next_f.push(...)`) when it can read a `content-security-policy` header off the **incoming request**. A response header configured in `next.config.ts` is invisible to the renderer. Set a strict `script-src 'self'` that way and every flight script is blocked, so hydration never runs and the app is inert. Only middleware can mutate request headers, so only middleware can do this.
 
 Each request gets 16 random bytes, base64-encoded into a nonce, which is written onto both the forwarded request headers and the outgoing response headers. The policy is `default-src 'self'` with `img-src` extended to `https://cdn.discordapp.com` (Discord user and guild icons) and `data:`, `style-src 'self' 'unsafe-inline'`, `frame-ancestors 'none'`, and `base-uri` / `form-action` pinned to `'self'`. In development only, `script-src` also allows `'unsafe-inline' 'unsafe-eval'` and `connect-src` allows `ws:`, which the dev overlay and hot reload need.
 

@@ -125,7 +125,12 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
         ) {
           const perms = getService("permissions");
           await perms
-            .unassignPermit(permitId, targetType, targetId)
+            .unassignPermit(
+              interaction.guildId,
+              permitId,
+              targetType,
+              targetId,
+            )
             .catch(() => null);
         }
         return renderPermissions(interaction, 0, t);

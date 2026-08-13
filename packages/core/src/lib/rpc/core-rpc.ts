@@ -27,6 +27,9 @@ function parsePayload<T>(schema: BaseValidator<T>, data: unknown): T {
 }
 
 // Returns the validated actor id so callers can attribute writes to them.
+// `req.actorId` is only meaningful because the RPC transport authenticated the
+// caller with RPC_INTERNAL_TOKEN (see lib/rpc/http-server.ts) - on its own it
+// is an attacker-suppliable field, and bot-owner snowflakes are public.
 function requireBotOwner(req: RpcRequest<unknown>): string {
   if (!req.actorId || !PermitResolver.isBotOwner(req.actorId)) {
     throw new Error("Bot Owner authorization required for this action.");
@@ -85,6 +88,10 @@ const SystemModuleToggleSchema = s.object({
   moduleName: s.string().lengthGreaterThanOrEqual(1),
   enabled: s.boolean(),
   reason: s.string().optional(),
+});
+
+const SystemModuleClearSchema = s.object({
+  moduleName: s.string().lengthGreaterThanOrEqual(1),
 });
 
 const SystemIdentitySchema = s.object({
@@ -222,9 +229,13 @@ export function initCoreRpcHandlers() {
   // Bot Owner system panel.
   registerRpcHandler(RPC_ACTIONS.systemDashboardGet, async (req) => {
     requireBotOwner(req);
-    const [global, moduleStates] = await Promise.all([
+    const [global, moduleStates, shardSnapshot] = await Promise.all([
       container.db.global.getGlobalConfig(),
       container.db.modules.getGlobalModuleStatesDetailed(),
+      readClusterShards({
+        redis: container.redis,
+        clusterName: getClusterName() ?? DEFAULT_CLUSTER_NAME,
+      }),
     ]);
     const moduleStore = container.stores.get("modules");
     const allModules = moduleStore
@@ -246,7 +257,10 @@ export function initCoreRpcHandlers() {
       },
       moduleStates,
       allModules,
-      guildCount: container.client.guilds.cache.size,
+      guildCount: shardSnapshot.shards.reduce(
+        (sum, shard) => sum + shard.guildCount,
+        0,
+      ),
     };
   });
 
@@ -275,6 +289,13 @@ export function initCoreRpcHandlers() {
       reason,
     );
     return { success: true, moduleName, enabled };
+  });
+
+  registerRpcHandler(RPC_ACTIONS.systemModuleClear, async (req) => {
+    requireBotOwner(req);
+    const { moduleName } = parsePayload(SystemModuleClearSchema, req.data);
+    await container.db.modules.clearModuleGlobalState(moduleName);
+    return { success: true, moduleName };
   });
 
   registerRpcHandler(RPC_ACTIONS.systemIdentitySet, async (req) => {

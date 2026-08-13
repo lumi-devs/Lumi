@@ -349,6 +349,10 @@ export interface SystemModuleTogglePayload {
   reason?: string;
 }
 
+export interface SystemModuleClearPayload {
+  moduleName: string;
+}
+
 export interface SystemIdentityPayload {
   inviteUrl?: string | null;
   supportGuildId?: string | null;
@@ -441,6 +445,7 @@ export interface RpcRequestPayloads {
   "system.dashboard.get": never;
   "system.maintenance.set": SystemMaintenancePayload;
   "system.module.toggle": SystemModuleTogglePayload;
+  "system.module.clear": SystemModuleClearPayload;
   "system.identity.set": SystemIdentityPayload;
   "system.audit.list": SystemAuditListPayload;
   "system.blocklist.list": BlocklistListPayload;
@@ -515,6 +520,7 @@ export const RPC_ACTIONS = {
   systemDashboardGet: "system.dashboard.get",
   systemMaintenanceSet: "system.maintenance.set",
   systemModuleToggle: "system.module.toggle",
+  systemModuleClear: "system.module.clear",
   systemIdentitySet: "system.identity.set",
   systemAuditList: "system.audit.list",
   systemBlocklistList: "system.blocklist.list",

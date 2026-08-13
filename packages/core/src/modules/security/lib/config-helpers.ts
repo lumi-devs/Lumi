@@ -8,7 +8,7 @@ export function getConfigNumber(
 	key: string,
 	fallback: number,
 ): number {
-	return typeof raw[key] === "number" ? (raw[key] as number) : fallback;
+	return typeof raw[key] === "number" ? (raw[key]) : fallback;
 }
 
 /**
@@ -33,6 +33,6 @@ export function getConfigAction(
 ): GateAction {
 	const v = raw[key];
 	return v === "log" || v === "kick" || v === "timeout" || v === "quarantine"
-		? (v as GateAction)
+		? (v)
 		: fallback;
 }

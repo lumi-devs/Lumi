@@ -62,6 +62,18 @@ export async function toggleGlobalModule(
   });
 }
 
+export async function clearGlobalModule(moduleName: string): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await guardedSystemAction();
+    await rpcCall(RPC_ACTIONS.systemModuleClear, {
+      actorId: session.userId,
+      data: { moduleName },
+    });
+    revalidatePath("/system/modules");
+    return { ok: true };
+  });
+}
+
 export async function addRepo(
   name: string,
   url: string,

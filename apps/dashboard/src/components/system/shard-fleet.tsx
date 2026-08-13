@@ -10,28 +10,16 @@ import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/ca
 import { EmptyState } from "#/components/ui/empty-state";
 import { Table, TableScroll, TBody, TD, TH, THead, TR } from "#/components/ui/table";
 import { cn } from "#/lib/utils";
+import { since } from "#/lib/log-format";
 
-const HEALTHY_STATUS = "Ready";
-const OFFLINE_STATUSES = new Set(["Disconnected", "Idle"]);
+export const HEALTHY_STATUS = "Ready";
+export const OFFLINE_STATUSES = new Set(["Disconnected", "Idle"]);
 const SLOW_PING_MS = 500;
 
 function statusVariant(status: string) {
   if (status === HEALTHY_STATUS) return "success" as const;
   if (OFFLINE_STATUSES.has(status)) return "danger" as const;
   return "warning" as const;
-}
-
-/** Relative to the snapshot's own read time, so the string can't drift on the client. */
-function since(iso: string | null, observedAt: string): string {
-  if (!iso) return "never";
-  const seconds = Math.max(
-    0,
-    Math.round((Date.parse(observedAt) - Date.parse(iso)) / 1000),
-  );
-  if (seconds < 60) return `${seconds}s ago`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86_400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86_400)}d ago`;
 }
 
 function pluralize(

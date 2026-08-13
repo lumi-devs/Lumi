@@ -1,6 +1,13 @@
 networks:
   lumi-net:
     driver: bridge
+  # Grafana proxies datasource queries on behalf of its users, which makes any
+  # service it can route to reachable from the browser. Keeping it off lumi-net
+  # is what stops that proxy from being pointed at the worker's internal RPC
+  # port; it reaches Prometheus/Tempo over this network instead, and they are
+  # the only services attached to both.
+  lumi-obs-net:
+    driver: bridge
 
 volumes:
   postgres-data:
@@ -22,8 +29,14 @@ x-lumi-service: &lumi-service
     REDIS_HOST: redis
     POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
     DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
-    RPC_HTTP_HOST: "0.0.0.0"
+    # No RPC_HTTP_HOST here on purpose: the default is 127.0.0.1, and only the
+    # services that actually serve RPC to the dashboard widen it to 0.0.0.0.
     RPC_HTTP_PORT: "8091"
+    # Shared secret authenticating the dashboard -> worker RPC calls. Unset is
+    # a hard failure rather than an insecure default: `actorId` in an RPC body
+    # is unsigned, so anything that can reach port 8091 without this token can
+    # claim to be the bot owner. Generate with `openssl rand -hex 32`.
+    RPC_INTERNAL_TOKEN: "${RPC_INTERNAL_TOKEN:?set RPC_INTERNAL_TOKEN in .env - generate with: openssl rand -hex 32}"
     OTEL_ENABLED: "${OTEL_ENABLED:-true}"
     OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
     OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
@@ -62,6 +75,11 @@ services:
     environment:
       <<: *lumi-env
       LUMI_ROLE: "worker"
+      # Serves the dashboard's RPC client from another container, so it has to
+      # bind beyond loopback. Authentication is RPC_INTERNAL_TOKEN, not the
+      # network boundary.
+      RPC_HTTP_HOST: "0.0.0.0"
+      METRICS_HOST: "0.0.0.0"
     # Not published to the host - reachable only from other containers on
     # lumi-net (the dashboard's internal RPC client).
     expose:
@@ -80,8 +98,10 @@ services:
       REDIS_HOST: redis
       POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
       DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
-      RPC_HTTP_HOST: "0.0.0.0"
+      # Loopback: nothing calls into the dev container's RPC server.
+      RPC_HTTP_HOST: "127.0.0.1"
       RPC_HTTP_PORT: "8091"
+      RPC_INTERNAL_TOKEN: "${RPC_INTERNAL_TOKEN:-}"
       OTEL_ENABLED: "${OTEL_ENABLED:-true}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
       OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
@@ -113,6 +133,11 @@ services:
       <<: *lumi-env
       LUMI_ROLE: "worker"
       LUMI_CONSUMER_ID: "${LUMI_CONSUMER_ID:-worker-1}"
+      # Stays on loopback: nothing routes RPC to this replica (the dashboard's
+      # RPC_HTTP_URL points at `worker`). Widen it only alongside a load
+      # balancer that actually fans out to it.
+      RPC_HTTP_HOST: "127.0.0.1"
+      METRICS_HOST: "0.0.0.0"
     profiles:
       - scale
 
@@ -123,6 +148,7 @@ services:
     environment:
       <<: *lumi-env
       LUMI_ROLE: "scheduler"
+      METRICS_HOST: "0.0.0.0"
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -303,7 +329,9 @@ services:
       - ./config/observability/tempo.yaml:/etc/tempo/tempo.yaml:ro
       - tempo-data:/var/tempo
     networks:
+      # lumi-net for otel-collector's OTLP push, lumi-obs-net for Grafana's queries.
       - lumi-net
+      - lumi-obs-net
     restart: unless-stopped
     profiles:
       - observability
@@ -324,7 +352,9 @@ services:
       - ./config/observability/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus-data:/prometheus
     networks:
+      # lumi-net to scrape the app services, lumi-obs-net for Grafana's queries.
       - lumi-net
+      - lumi-obs-net
     restart: unless-stopped
     profiles:
       - observability
@@ -340,7 +370,10 @@ services:
     container_name: lumi-grafana
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      # No default. Grafana's admin can add datasources and proxy requests
+      # through the server, so `admin`/`admin` is a foothold, not a
+      # convenience. Generate with `openssl rand -base64 24`.
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD:?set GRAFANA_PASSWORD in .env - generate with openssl rand -base64 24}"
       GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
       - ./config/observability/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -349,8 +382,11 @@ services:
     depends_on:
       - prometheus
       - tempo
+    # Deliberately NOT on lumi-net: Grafana's datasource proxy is a
+    # server-side request primitive reachable by any logged-in Grafana user,
+    # and lumi-net is where the worker's internal RPC port lives.
     networks:
-      - lumi-net
+      - lumi-obs-net
     restart: unless-stopped
     profiles:
       - observability

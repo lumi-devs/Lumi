@@ -22,12 +22,17 @@ interface CallOptions<A extends RpcActionName> {
  * network (see packages/core/src/lib/rpc/http-server.ts) — no message broker
  * in between.
  *
+ * `actorId` on the wire is an unsigned claim, so the worker only honours it
+ * from callers holding the shared `RPC_INTERNAL_TOKEN`, sent here as a bearer
+ * token. It must match the worker's value byte for byte.
+ *
  * `server-only`: reachable exclusively from Server Components, Route Handlers
  * and Server Actions — see docs/dashboard.md "Hard boundaries".
  */
 export class RpcClient {
   public constructor(
     private readonly baseUrl: string,
+    private readonly token: string = "",
     private readonly log: (msg: string) => void = () => {},
   ) {}
 
@@ -53,7 +58,10 @@ export class RpcClient {
     try {
       res = await fetch(`${this.baseUrl}/rpc`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(this.token ? { authorization: `Bearer ${this.token}` } : {}),
+        },
         body: JSON.stringify(request),
         signal: controller.signal,
       });
@@ -97,9 +105,13 @@ const globalForRpc = globalThis as unknown as { rpcClient?: RpcClient };
 
 export function getRpcClient(): RpcClient {
   if (!globalForRpc.rpcClient) {
-    globalForRpc.rpcClient = new RpcClient(env.rpcHttpUrl, (msg) => {
-      if (process.env["NODE_ENV"] === "development") console.debug(msg);
-    });
+    globalForRpc.rpcClient = new RpcClient(
+      env.rpcHttpUrl,
+      env.rpcInternalToken,
+      (msg) => {
+        if (process.env["NODE_ENV"] === "development") console.debug(msg);
+      },
+    );
   }
   return globalForRpc.rpcClient;
 }

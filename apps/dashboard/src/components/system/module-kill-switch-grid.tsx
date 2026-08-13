@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ShieldOff } from "lucide-react";
-import { toggleGlobalModule } from "#/actions/system-actions";
+import { clearGlobalModule, toggleGlobalModule } from "#/actions/system-actions";
 import {
   Card,
   CardBody,
@@ -38,6 +38,7 @@ export function ModuleKillSwitchGrid({
   const columns = moduleKillSwitchColumns({
     isPending,
     onToggle: (moduleName, enabled) => apply(moduleName, enabled),
+    onClear: (moduleName) => clear(moduleName),
   });
 
   function apply(moduleName: string, enabled: boolean, reasonText?: string) {
@@ -54,6 +55,17 @@ export function ModuleKillSwitchGrid({
           ? prev.map((r) => (r.moduleName === moduleName ? next : r))
           : [...prev, next];
       });
+    });
+  }
+
+  function clear(moduleName: string) {
+    run(async () => {
+      const res = await clearGlobalModule(moduleName);
+      if (!res.ok) {
+        setError(res.error ?? "Failed");
+        return;
+      }
+      setRows((prev) => prev.filter((r) => r.moduleName !== moduleName));
     });
   }
 

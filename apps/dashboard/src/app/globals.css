@@ -3,10 +3,10 @@
 
 /* ── Lumi dashboard design tokens ─────────────────────────────────────────
  *
- * AESTHETIC DIRECTION: Linear's restraint + near-black canvas as the base,
- * Vercel's motion timing, Stripe's "depth via tint, not shadow" principle —
- * plus real spring physics for the handful of moments that deserve it
- * (nav pill, switches, button press, card hover, the live-status pulse glow).
+ * AESTHETIC DIRECTION: "Control Room" — a mission-control console. Cold
+ * near-black canvas (#0B0E14) carrying warm amber-orange as the single
+ * saturated colour, with green/amber/red reserved strictly for machine
+ * status. Depth comes from surface tint-shift, never from shadow spread.
  *
  * Semantic tokens only. Nothing in the app should reference a raw colour or
  * a `white/40`-style alpha. Components consume `bg-surface` /
@@ -18,68 +18,72 @@
  *   2. `data-theme="light"` → force light
  *   3. `data-theme="dark"`  → force dark
  *
- * Light is a designed theme, not an inversion: white cards on a warm-grey
- * canvas with a darkened accent weight for AA contrast.
+ * Dark is the primary, designed experience (the Control Room palette). Light
+ * is its daylight counterpart in the same amber family — warm paper canvas,
+ * white cards, and a burnt-orange accent weight dark enough for AA text
+ * contrast, since #FF8A3D on white is nowhere near legible.
  */
 
 :root {
   color-scheme: light;
 
   /* Surfaces */
-  --bg: #fafafa;
-  --bg-subtle: #f2f2f4;
+  --bg: #faf8f5;
+  --bg-subtle: #f2eee7;
   --surface: #ffffff;
-  --surface-hover: #f6f6f8;
-  --surface-active: #ececef;
+  --surface-hover: #f7f3ed;
+  --surface-active: #ece7dd;
 
   /* Lines */
-  --border: #e7e7ea;
-  --border-strong: #d6d6db;
+  --border: #e8e2d7;
+  --border-soft: #f1ece4;
+  --border-strong: #d5ccbd;
 
   /* Text */
-  --fg: #16171a;
-  --fg-muted: #62636b;
-  --fg-subtle: #8f9098;
+  --fg: #191510;
+  --fg-muted: #6a6157;
+  --fg-subtle: #948b7e;
   --fg-on-accent: #ffffff;
 
-  /* Electric blue - the one saturated colour in the system. Reserved for
-   * the primary action and the active route, never for decoration. */
-  --accent: #2f6feb;
-  --accent-hover: #2558c4;
-  --accent-soft: rgba(47, 111, 235, 0.1);
-  --accent-fg: #2558c4;
-  --accent-glow: #22d3ee;
+  /* Amber-orange - the one saturated colour in the system. Reserved for
+   * the primary action and the active route, never for decoration.
+   * Darkened from the dark theme's #FF8A3D to hold AA on white. */
+  --accent: #c2570f;
+  --accent-hover: #a4480a;
+  --accent-soft: rgba(194, 87, 15, 0.1);
+  --accent-fg: #a4480a;
+  --accent-glow: #ff8a3d;
 
   /* Status */
-  --success: #1f9d63;
-  --success-soft: rgba(31, 157, 99, 0.1);
-  --warning: #b0720a;
-  --warning-soft: rgba(176, 114, 10, 0.1);
-  --danger: #d93636;
-  --danger-soft: rgba(217, 54, 54, 0.09);
+  --success: #1f8a52;
+  --success-soft: rgba(31, 138, 82, 0.1);
+  --warning: #9a6508;
+  --warning-soft: rgba(154, 101, 8, 0.1);
+  --danger: #c93a3a;
+  --danger-soft: rgba(201, 58, 58, 0.09);
 
   /* Scrim behind a modal `<dialog>`. Dark in both themes — a light scrim over
    * the dark canvas reads as a rendering fault rather than as depth. */
   --overlay: rgba(0, 0, 0, 0.6);
 
-  --ring: rgba(47, 111, 235, 0.4);
-  --shadow-sm: 0 1px 2px rgba(20, 20, 30, 0.06);
+  --ring: rgba(194, 87, 15, 0.4);
+  --shadow-sm: 0 1px 2px rgba(30, 22, 12, 0.06);
   --shadow-md:
-    0 1px 2px rgba(20, 20, 30, 0.06), 0 8px 24px -8px rgba(20, 20, 30, 0.14);
+    0 1px 2px rgba(30, 22, 12, 0.06), 0 8px 24px -8px rgba(30, 22, 12, 0.14);
   --shadow-lg:
-    0 1px 2px rgba(20, 20, 30, 0.08), 0 16px 48px -12px rgba(20, 20, 30, 0.24);
+    0 1px 2px rgba(30, 22, 12, 0.08), 0 16px 48px -12px rgba(30, 22, 12, 0.24);
   /* Single dramatic accent shadow, used only under the primary button, the
    * active nav pill, and the live-status pulse glow. */
-  --shadow-accent: 0 1px 2px rgba(20, 20, 30, 0.08),
-    0 8px 24px -6px rgba(47, 111, 235, 0.28);
-  /* Softer, wider cyan glow for hover-elevated cards and "live" badges -
+  --shadow-accent: 0 1px 2px rgba(30, 22, 12, 0.08),
+    0 8px 24px -6px rgba(194, 87, 15, 0.28);
+  /* Softer, wider ember glow for hover-elevated cards and "live" badges -
    * distinct from --shadow-accent (which marks the one committed action). */
-  --shadow-glow-accent: 0 1px 2px rgba(20, 20, 30, 0.06),
-    0 12px 32px -10px rgba(34, 211, 238, 0.35);
+  --shadow-glow-accent: 0 1px 2px rgba(30, 22, 12, 0.06),
+    0 12px 32px -10px rgba(255, 138, 61, 0.35);
 
   /* Glass chrome (nav, dropdowns, dialogs, sheets) - a translucent tint over
    * backdrop-blur, not a solid surface. */
-  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-bg: rgba(255, 253, 250, 0.72);
   --glass-blur-sm: 8px;
   --glass-blur-md: 16px;
   --glass-blur-lg: 32px;
@@ -140,46 +144,48 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
 
-    --bg: #08090a;
-    --bg-subtle: #0c0d0f;
-    --surface: #131417;
-    --surface-hover: #191a1e;
-    --surface-active: #1f2024;
+    --bg: #0b0e14;
+    --bg-subtle: #10141d;
+    --surface: #12161f;
+    --surface-hover: #181d28;
+    --surface-active: #1e2431;
 
-    --border: #212226;
-    --border-strong: #2c2d33;
+    --border: #252b38;
+    --border-soft: #1b2029;
+    --border-strong: #333c4e;
 
-    --fg: #f2f3f5;
-    --fg-muted: #9a9ba3;
-    --fg-subtle: #66676f;
-    --fg-on-accent: #ffffff;
+    --fg: #e7ebf3;
+    --fg-muted: #8891a5;
+    --fg-subtle: #5b6376;
+    /* Near-black on amber: white on #FF8A3D fails contrast outright. */
+    --fg-on-accent: #1a1005;
 
-    --accent: #4f8dff;
-    --accent-hover: #6fa4ff;
-    --accent-soft: rgba(79, 141, 255, 0.16);
-    --accent-fg: #8fbaff;
-    --accent-glow: #22d3ee;
+    --accent: #ff8a3d;
+    --accent-hover: #ffa163;
+    --accent-soft: rgba(255, 138, 61, 0.1);
+    --accent-fg: #ff8a3d;
+    --accent-glow: #ff8a3d;
 
-    --success: #3ecf8e;
-    --success-soft: rgba(62, 207, 142, 0.14);
-    --warning: #f5a623;
-    --warning-soft: rgba(245, 166, 35, 0.14);
-    --danger: #f56565;
-    --danger-soft: rgba(245, 101, 101, 0.13);
+    --success: #4ade80;
+    --success-soft: rgba(74, 222, 128, 0.12);
+    --warning: #fbbf24;
+    --warning-soft: rgba(251, 191, 36, 0.12);
+    --danger: #f76464;
+    --danger-soft: rgba(247, 100, 100, 0.12);
 
     --overlay: rgba(0, 0, 0, 0.6);
 
-    --ring: rgba(94, 106, 210, 0.45);
+    --ring: rgba(255, 138, 61, 0.45);
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -8px rgba(0, 0, 0, 0.6);
     --shadow-lg:
       0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 48px -12px rgba(0, 0, 0, 0.75);
     --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.5),
-      0 8px 24px -6px rgba(94, 106, 210, 0.45);
+      0 8px 24px -6px rgba(255, 138, 61, 0.4);
     --shadow-glow-accent: 0 1px 2px rgba(0, 0, 0, 0.5),
-      0 16px 40px -10px rgba(34, 211, 238, 0.4);
+      0 16px 40px -10px rgba(255, 138, 61, 0.28);
 
-    --glass-bg: rgba(19, 20, 23, 0.68);
+    --glass-bg: rgba(18, 22, 31, 0.72);
     --glass-blur-sm: 8px;
     --glass-blur-md: 16px;
     --glass-blur-lg: 32px;
@@ -221,46 +227,48 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #08090a;
-  --bg-subtle: #0c0d0f;
-  --surface: #131417;
-  --surface-hover: #191a1e;
-  --surface-active: #1f2024;
+  --bg: #0b0e14;
+  --bg-subtle: #10141d;
+  --surface: #12161f;
+  --surface-hover: #181d28;
+  --surface-active: #1e2431;
 
-  --border: #212226;
-  --border-strong: #2c2d33;
+  --border: #252b38;
+  --border-soft: #1b2029;
+  --border-strong: #333c4e;
 
-  --fg: #f2f3f5;
-  --fg-muted: #9a9ba3;
-  --fg-subtle: #66676f;
-  --fg-on-accent: #ffffff;
+  --fg: #e7ebf3;
+  --fg-muted: #8891a5;
+  --fg-subtle: #5b6376;
+  /* Near-black on amber: white on #FF8A3D fails contrast outright. */
+  --fg-on-accent: #1a1005;
 
-  --accent: #4f8dff;
-  --accent-hover: #6fa4ff;
-  --accent-soft: rgba(79, 141, 255, 0.16);
-  --accent-fg: #8fbaff;
-  --accent-glow: #22d3ee;
+  --accent: #ff8a3d;
+  --accent-hover: #ffa163;
+  --accent-soft: rgba(255, 138, 61, 0.1);
+  --accent-fg: #ff8a3d;
+  --accent-glow: #ff8a3d;
 
-  --success: #3ecf8e;
-  --success-soft: rgba(62, 207, 142, 0.14);
-  --warning: #f5a623;
-  --warning-soft: rgba(245, 166, 35, 0.14);
-  --danger: #f56565;
-  --danger-soft: rgba(245, 101, 101, 0.13);
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.12);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.12);
+  --danger: #f76464;
+  --danger-soft: rgba(247, 100, 100, 0.12);
 
   --overlay: rgba(0, 0, 0, 0.6);
 
-  --ring: rgba(94, 106, 210, 0.45);
+  --ring: rgba(255, 138, 61, 0.45);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -8px rgba(0, 0, 0, 0.6);
   --shadow-lg:
     0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 48px -12px rgba(0, 0, 0, 0.75);
   --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.5),
-    0 8px 24px -6px rgba(94, 106, 210, 0.45);
+    0 8px 24px -6px rgba(255, 138, 61, 0.4);
   --shadow-glow-accent: 0 1px 2px rgba(0, 0, 0, 0.5),
-    0 16px 40px -10px rgba(34, 211, 238, 0.4);
+    0 16px 40px -10px rgba(255, 138, 61, 0.28);
 
-  --glass-bg: rgba(19, 20, 23, 0.68);
+  --glass-bg: rgba(18, 22, 31, 0.72);
   --glass-blur-sm: 8px;
   --glass-blur-md: 16px;
   --glass-blur-lg: 32px;
@@ -306,6 +314,9 @@
   --color-surface-active: var(--surface-active);
 
   --color-border: var(--border);
+  /* Quieter than --border: chrome edges (sidebar, rail, feed rows) recede so
+   * the panel grid stays the strongest line in the layout. */
+  --color-border-soft: var(--border-soft);
   --color-border-strong: var(--border-strong);
 
   --color-fg: var(--fg);

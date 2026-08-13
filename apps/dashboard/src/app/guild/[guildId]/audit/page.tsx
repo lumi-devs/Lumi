@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ClipboardList, PlugZap, SearchX } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildAuditLog } from "#/lib/dashboard-fetch";
+import { getGuildAuditLog, getGuildDashboard } from "#/lib/dashboard-fetch";
 import { AuditTimeline } from "#/components/audit-timeline";
 import { Alert } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
@@ -17,6 +17,7 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
+import { buildModuleLabelIndex } from "#/lib/config-labels";
 import type { AuditListData } from "#/lib/dashboard-data";
 import {
   AUDIT_PLATFORM_OPTIONS,
@@ -48,6 +49,9 @@ export default async function AuditPage({
   const page = pageNumber(single(query["page"]));
 
   const badUserFilter = Boolean(userId) && !isSnowflake(userId);
+
+  const dashboard = await getGuildDashboard(guildId, session.userId);
+  const labels = buildModuleLabelIndex(dashboard.modules);
 
   let data: AuditListData | null = null;
   let failure: string | null = null;
@@ -152,7 +156,12 @@ export default async function AuditPage({
               footnote={failure}
             />
           ) : data && data.entries.length > 0 ? (
-            <AuditTimeline entries={data.entries} />
+            <AuditTimeline
+              entries={data.entries}
+              labels={labels}
+              roles={dashboard.roles}
+              channels={dashboard.channels}
+            />
           ) : data && data.total > 0 ? (
             <EmptyState
               compact

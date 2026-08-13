@@ -23,6 +23,7 @@ describe("Task Fire Registry & Consumer", () => {
       consume: vi.fn().mockImplementation((_streams, _opts, _callback) => {
         return Promise.resolve(vi.fn().mockResolvedValue(undefined));
       }),
+      destroyGroup: vi.fn().mockResolvedValue(undefined),
     };
   });
 
@@ -38,15 +39,17 @@ describe("Task Fire Registry & Consumer", () => {
       expect(registered?.handler).toBe(handler);
     });
 
-    it("warns when overwriting an existing handler for the same task name", () => {
+    it("logs an error when overwriting an existing handler for the same task name", () => {
       const handler1 = vi.fn().mockResolvedValue(undefined);
       const handler2 = vi.fn().mockResolvedValue(undefined);
 
       registerTaskFireHandler("overwriteTask" as any, "unicast", handler1);
       registerTaskFireHandler("overwriteTask" as any, "broadcast", handler2);
 
-      expect(container.logger.warn).toHaveBeenCalledWith(
-        "[TaskFireRegistry] Overwriting handler for task 'overwriteTask'"
+      expect(container.logger.error).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "Handler for task 'overwriteTask' is being replaced"
+        )
       );
 
       const registered = getRegisteredFireHandlers().find((h) => h.name === ("overwriteTask" as any));
@@ -93,6 +96,26 @@ describe("Task Fire Registry & Consumer", () => {
       );
 
       await consumer.stopConsuming();
+    });
+
+    it("destroys only the per-replica broadcast group on stop", async () => {
+      registerTaskFireHandler("stopUnicast" as any, "unicast", vi.fn());
+      registerTaskFireHandler("stopBroadcast" as any, "broadcast", vi.fn());
+
+      const consumer = new TaskFireConsumer(mockBus as EventBus, {
+        consumerId: "consumer-stop",
+      });
+      await consumer.start();
+      await consumer.stopConsuming();
+
+      expect(mockBus.destroyGroup).toHaveBeenCalledWith(
+        "lumi.scheduler.fire:stopBroadcast",
+        "lumi-worker:consumer-stop"
+      );
+      expect(mockBus.destroyGroup).not.toHaveBeenCalledWith(
+        "lumi.scheduler.fire:stopUnicast",
+        expect.anything()
+      );
     });
 
     it("is idempotent when subscribe is called multiple times for the same task name", async () => {
