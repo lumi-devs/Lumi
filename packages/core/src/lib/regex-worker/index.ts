@@ -1,6 +1,8 @@
 export {
   DEFAULT_EVAL_TIMEOUT_MS,
+  DEFAULT_MATCH_TIMEOUT_MS,
   DEFAULT_PROBE_TIMEOUT_MS,
+  MATCH_BATCH_SIZE,
   RegexTimeoutError,
   RegexWorkerHandler,
   getRegexWorker,

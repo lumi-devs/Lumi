@@ -19,8 +19,11 @@ export class PermissionService extends Service {
     return this.container.db.permissions.listPermits(guildId);
   }
 
-  public getPermit(permitId: number): Promise<PermitRecord | null> {
-    return this.container.db.permissions.getPermit(permitId);
+  public getPermit(
+    guildId: string,
+    permitId: number,
+  ): Promise<PermitRecord | null> {
+    return this.container.db.permissions.getPermit(guildId, permitId);
   }
 
   public findPermitByName(
@@ -60,64 +63,91 @@ export class PermissionService extends Service {
   }
 
   public async renamePermit(
+    guildId: string,
     permitId: number,
     name: string,
   ): Promise<PermitRecord> {
     const trimmedName = name.trim();
     if (!trimmedName) throw new Error("A permit name is required.");
-    const permit = await this.requirePermit(permitId);
+    await this.requirePermit(guildId, permitId);
     const existing = await this.container.db.permissions.findPermitByName(
-      permit.guildId,
+      guildId,
       trimmedName,
     );
     if (existing && existing.id !== permitId) {
       throw new Error(`A permit named "${trimmedName}" already exists.`);
     }
-    return this.container.db.permissions.renamePermit(permitId, trimmedName);
+    const renamed = await this.container.db.permissions.renamePermit(
+      guildId,
+      permitId,
+      trimmedName,
+    );
+    if (!renamed) throw new Error("Permit not found.");
+    return renamed;
   }
 
   public async updatePermitNodes(
+    guildId: string,
     permitId: number,
     nodes: string[],
   ): Promise<PermitRecord> {
-    return this.container.db.permissions.updatePermitNodes(
+    const updated = await this.container.db.permissions.updatePermitNodes(
+      guildId,
       permitId,
       this.normalizeNodes(nodes),
     );
+    if (!updated) throw new Error("Permit not found.");
+    return updated;
   }
 
-  public async deletePermit(permitId: number): Promise<void> {
-    const permit = await this.requirePermit(permitId);
+  public async deletePermit(guildId: string, permitId: number): Promise<void> {
+    const permit = await this.requirePermit(guildId, permitId);
     if (permit.builtin) {
       throw new Error("Built-in permits cannot be deleted.");
     }
-    await this.container.db.permissions.deletePermit(permitId);
+    await this.container.db.permissions.deletePermit(guildId, permitId);
   }
 
   public async assignPermit(
+    guildId: string,
     permitId: number,
     targetType: PermitTargetType,
     targetRaw: string,
   ): Promise<PermitAssignmentRecord> {
-    const permit = await this.requirePermit(permitId);
+    const permit = await this.requirePermit(guildId, permitId);
     this.assertTargetTypeMatches(permit, targetType);
     const targetId = this.parseTargetId(targetRaw);
-    return this.container.db.permissions.assignPermit(permitId, targetId);
+    return this.container.db.permissions.assignPermit(
+      guildId,
+      permitId,
+      targetId,
+    );
   }
 
   public async unassignPermit(
+    guildId: string,
     permitId: number,
     targetType: PermitTargetType,
     targetRaw: string,
   ): Promise<number> {
-    const permit = await this.requirePermit(permitId);
+    const permit = await this.requirePermit(guildId, permitId);
     this.assertTargetTypeMatches(permit, targetType);
     const targetId = this.parseTargetId(targetRaw);
-    return this.container.db.permissions.unassignPermit(permitId, targetId);
+    return this.container.db.permissions.unassignPermit(
+      guildId,
+      permitId,
+      targetId,
+    );
   }
 
-  private async requirePermit(permitId: number): Promise<PermitRecord> {
-    const permit = await this.container.db.permissions.getPermit(permitId);
+  private async requirePermit(
+    guildId: string,
+    permitId: number,
+  ): Promise<PermitRecord> {
+    const permit = await this.container.db.permissions.getPermit(
+      guildId,
+      permitId,
+    );
     if (!permit) throw new Error("Permit not found.");
     return permit;
   }

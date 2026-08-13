@@ -41,6 +41,12 @@ export class ModuleRepository extends Repository {
     await this.invalidate(RedisKeys.moduleGlobalEnabled(name));
   }
 
+  /** Deletes the global override row entirely, returning the module to following each guild's own setting. */
+  public async clearModuleGlobalState(name: string): Promise<void> {
+    await this.prisma.globalModuleState.deleteMany({ where: { moduleName: name } });
+    await this.invalidate(RedisKeys.moduleGlobalEnabled(name));
+  }
+
   public async getGlobalModuleStates(): Promise<Map<string, boolean>> {
     const rows = await this.prisma.globalModuleState.findMany();
     return new Map(rows.map((r) => [r.moduleName, r.enabled]));

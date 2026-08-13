@@ -10,13 +10,22 @@ declare module "@sapphire/framework" {
 
 export class AdministratorPrecondition extends Precondition {
   public override messageRun(message: Message) {
-    if (!message.guild) return this.ok();
+    if (!message.guild) return this.#outsideGuild();
     return this.#check(message.guild.id, message.author.id, memberRoleIds(message.member), message.guild.ownerId);
   }
 
   public override chatInputRun(interaction: ChatInputCommandInteraction) {
-    if (!interaction.guild) return this.ok();
+    if (!interaction.guild) return this.#outsideGuild();
     return this.#check(interaction.guild.id, interaction.user.id, memberRoleIds(interaction.member), interaction.guild.ownerId);
+  }
+
+  // A guild-scoped permit can never be satisfied outside a guild, so missing
+  // guild context must deny rather than skip the check.
+  #outsideGuild() {
+    return this.error({
+      identifier: "PermissionDenied",
+      message: "This command can only be used in a server.",
+    });
   }
 
   async #check(guildId: string, userId: string, roleIds: string[], guildOwnerId: string) {

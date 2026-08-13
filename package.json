@@ -39,7 +39,7 @@
     "dev": "turbo run dev",
     "start": "bun run --filter @lumi/worker start",
     "setup": "bash scripts/setup.sh",
-    "typecheck": "turbo run typecheck:all && turbo run typecheck --filter=@lumi/dashboard",
+    "typecheck": "turbo run typecheck:all && turbo run typecheck --filter=@lumi/dashboard && turbo run typecheck --filter=@lumi/docs",
     "lint": "turbo run lint:all",
     "typecheck:all": "tsc --noEmit -p tsconfig.json",
     "lint:all": "eslint packages/*/src apps/worker/src apps/scheduler/src apps/dashboard/src --fix",

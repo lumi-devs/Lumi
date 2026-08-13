@@ -16,6 +16,28 @@ export type { OAuthGuild } from "./discord-format";
 export { canManage, userAvatarUrl, guildIconUrl } from "./discord-format";
 import type { OAuthGuild } from "./discord-format";
 
+/**
+ * Carries the HTTP status so callers can tell "this grant is gone" (401/403,
+ * `invalid_grant`) from "Discord is having a moment" (429/5xx/network) — the
+ * two need opposite handling when re-checking a live session.
+ */
+export class DiscordApiError extends Error {
+  public constructor(
+    message: string,
+    public readonly status: number,
+    public readonly body: string = "",
+  ) {
+    super(message);
+    this.name = "DiscordApiError";
+  }
+
+  /** The user's authorization no longer exists: revoked, expired, or reset. */
+  public get isAuthFailure(): boolean {
+    if (this.status === 401 || this.status === 403) return true;
+    return this.status === 400 && this.body.includes("invalid_grant");
+  }
+}
+
 /** Fetch the guilds the authenticated user belongs to, using their OAuth2 access token. */
 export async function fetchUserGuilds(
   accessToken: string,
@@ -26,6 +48,13 @@ export async function fetchUserGuilds(
     // stale "you can manage this server" state after a permission change.
     cache: "no-store",
   });
-  if (!res.ok) throw new Error(`Discord guilds fetch failed: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new DiscordApiError(
+      `Discord guilds fetch failed: ${res.status}`,
+      res.status,
+      body,
+    );
+  }
   return (await res.json()) as OAuthGuild[];
 }

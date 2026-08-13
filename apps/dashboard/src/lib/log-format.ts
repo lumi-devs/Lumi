@@ -95,6 +95,17 @@ export function isUnset(value: unknown): boolean {
   return value === null || value === undefined;
 }
 
+export function humanizeKey(key: string): string {
+  const words = key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .split(/\s+/);
+  return words
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export function formatDetails(details: unknown): string | null {
   if (details === null || details === undefined) return null;
   if (typeof details === "string") return details;
@@ -150,4 +161,22 @@ export function extractMemberNames(
   return Object.fromEntries(
     members.map((m) => [m.id, m.displayName || m.username]),
   );
+}
+
+/**
+ * Measured against a caller-supplied reference time (a telemetry snapshot's
+ * own read time, or the server's render time) rather than `Date.now()` — a
+ * Server Component and the client that hydrates it must never disagree about
+ * the rendered string.
+ */
+export function since(iso: string | null, referenceIso: string): string {
+  if (!iso) return "never";
+  const seconds = Math.max(
+    0,
+    Math.round((Date.parse(referenceIso) - Date.parse(iso)) / 1000),
+  );
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86_400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86_400)}d ago`;
 }

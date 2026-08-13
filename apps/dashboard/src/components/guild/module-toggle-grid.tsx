@@ -24,6 +24,8 @@ export function ModuleToggleGrid({
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
+  const listRef = useStaggerIn<HTMLUListElement>("li", { resetKey: guildId });
+
   if (modules.length === 0) {
     return (
       <Card>
@@ -31,8 +33,6 @@ export function ModuleToggleGrid({
       </Card>
     );
   }
-
-  const listRef = useStaggerIn<HTMLUListElement>("li", { resetKey: guildId });
 
   return (
     <Card>

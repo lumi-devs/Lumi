@@ -109,7 +109,8 @@ Configure `@lumi/worker` using environment variables:
 | `REDIS_PORT` | No | `6379` | Redis server network port. |
 | `REDIS_PASSWORD` | No | - | Redis authentication password. |
 | `REDIS_CACHE_DB` | No | `0` | Redis database index for entity caching. |
-| `RPC_HTTP_HOST` | No | `0.0.0.0` | Bind host for the internal RPC HTTP server the dashboard calls into. |
+| `RPC_HTTP_HOST` | No | `127.0.0.1` | Bind host for the internal RPC HTTP server the dashboard calls into. Set `0.0.0.0` when the dashboard runs in a separate container. |
+| `RPC_INTERNAL_TOKEN` | In production | - | Shared secret the dashboard must present as `Authorization: Bearer`; the RPC server refuses to start without it under `NODE_ENV=production`. |
 | `RPC_HTTP_PORT` | No | `8091` | Bind port for the internal RPC HTTP server. Never published to the host. |
 | `LUMI_DEV_PATHS` | No | `/lumi-addons` | Colon-separated paths to external addon directories. |
 | `METRICS_ENABLED` | No | `true` | Enables HTTP metrics and health check server. |

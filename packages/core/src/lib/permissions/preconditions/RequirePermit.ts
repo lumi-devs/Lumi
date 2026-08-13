@@ -24,7 +24,7 @@ export function memberRoleIds(member: unknown): string[] {
 
 export class RequirePermitPrecondition extends Precondition {
   public override messageRun(message: Message) {
-    if (!message.guild) return this.ok();
+    if (!message.guild) return this.#outsideGuild();
     const cmd = (message as Message & { command: Command }).command as BaseCommand | undefined;
     const permitNode = cmd?.requiredPermit;
     if (!permitNode) return this.ok();
@@ -32,7 +32,7 @@ export class RequirePermitPrecondition extends Precondition {
   }
 
   public override chatInputRun(interaction: ChatInputCommandInteraction) {
-    if (!interaction.guild) return this.ok();
+    if (!interaction.guild) return this.#outsideGuild();
     const cmd = container.stores.get("commands").get(interaction.commandName) as BaseCommand | undefined;
     const permitNode = cmd?.requiredPermit;
     if (!permitNode) return this.ok();
@@ -40,11 +40,20 @@ export class RequirePermitPrecondition extends Precondition {
   }
 
   public override contextMenuRun(interaction: ContextMenuCommandInteraction) {
-    if (!interaction.guild) return this.ok();
+    if (!interaction.guild) return this.#outsideGuild();
     const cmd = container.stores.get("commands").get(interaction.commandName) as BaseCommand | undefined;
     const permitNode = cmd?.requiredPermit;
     if (!permitNode) return this.ok();
     return this.#check(interaction.guild.id, interaction.user.id, memberRoleIds(interaction.member), permitNode, interaction.guild.ownerId);
+  }
+
+  // A guild-scoped permit can never be satisfied outside a guild, so missing
+  // guild context must deny rather than skip the check.
+  #outsideGuild() {
+    return this.error({
+      identifier: "PermissionDenied",
+      message: "This command can only be used in a server.",
+    });
   }
 
   async #check(guildId: string, userId: string, roleIds: string[], permitNode: string, guildOwnerId?: string) {

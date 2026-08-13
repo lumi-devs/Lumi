@@ -172,7 +172,7 @@ export const makeInfoCard = (
 ) => makeCard(resolveCardColor("info"), title, body, opts);
 
 export const makeCard = (
-  color: number,
+  color: number | undefined,
   title: string,
   body: string | string[],
   opts?: CardOptions,

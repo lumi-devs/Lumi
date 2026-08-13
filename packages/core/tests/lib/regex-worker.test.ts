@@ -11,8 +11,11 @@ const EVIL = "(a+)+$";
 
 const handlers: RegexWorkerHandler[] = [];
 
-function makeHandler(evalTimeoutMs = 250): RegexWorkerHandler {
-  const handler = new RegexWorkerHandler({ evalTimeoutMs });
+function makeHandler(
+  evalTimeoutMs = 250,
+  matchTimeoutMs = 250,
+): RegexWorkerHandler {
+  const handler = new RegexWorkerHandler({ evalTimeoutMs, matchTimeoutMs });
   handlers.push(handler);
   return handler;
 }
@@ -100,6 +103,65 @@ describe("RegexWorkerHandler", () => {
 
     // A synchronous hang would have starved the interval entirely.
     expect(ticks).toBeGreaterThan(3);
+  });
+});
+
+describe("RegexWorkerHandler.matchAll", () => {
+  it("returns the positions of the matching contents", async () => {
+    const handler = makeHandler();
+    await expect(
+      handler.matchAll("sc[a4]m", ["hello", "SC4M here", "bye", "a scam"]),
+    ).resolves.toEqual([1, 3]);
+  });
+
+  it("returns an empty list when nothing matches", async () => {
+    const handler = makeHandler();
+    await expect(
+      handler.matchAll("\\bnope\\b", ["one", "two"]),
+    ).resolves.toEqual([]);
+  });
+
+  it("short-circuits on empty input", async () => {
+    const handler = makeHandler();
+    await expect(handler.matchAll(EVIL, [])).resolves.toEqual([]);
+  });
+
+  it("treats an uncompilable pattern as matching nothing", async () => {
+    const handler = makeHandler();
+    await expect(handler.matchAll("(unclosed", ["anything"])).resolves.toEqual(
+      [],
+    );
+  });
+
+  it("times out instead of hanging on catastrophic backtracking", async () => {
+    const handler = makeHandler(250, 250);
+    await expect(
+      handler.matchAll(EVIL, ["clean", `${"a".repeat(40)}!`]),
+    ).rejects.toBeInstanceOf(RegexTimeoutError);
+  });
+
+  it("keeps the main thread responsive while a batch hangs", async () => {
+    const handler = makeHandler(250, 250);
+    await handler.matchAll("warm", ["warm"]);
+
+    let ticks = 0;
+    const timer = setInterval(() => ticks++, 5);
+    await handler
+      .matchAll(EVIL, [`${"a".repeat(40)}!`])
+      .catch(() => undefined);
+    clearInterval(timer);
+
+    expect(ticks).toBeGreaterThan(3);
+  });
+
+  it("recovers after a batch timeout", async () => {
+    const handler = makeHandler(250, 250);
+    await expect(
+      handler.matchAll(EVIL, [`${"a".repeat(40)}!`]),
+    ).rejects.toBeInstanceOf(RegexTimeoutError);
+    await expect(handler.matchAll("spam", ["spam", "ok"])).resolves.toEqual([
+      0,
+    ]);
   });
 });
 

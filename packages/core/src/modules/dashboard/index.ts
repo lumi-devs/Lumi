@@ -675,10 +675,10 @@ export class DashboardModule extends Module {
         req.data,
       );
       const perms = getService("permissions");
-      if (name !== undefined) await perms.renamePermit(permitId, name);
+      if (name !== undefined) await perms.renamePermit(guildId, permitId, name);
       const permit = nodes !== undefined
-        ? await perms.updatePermitNodes(permitId, nodes)
-        : await perms.getPermit(permitId);
+        ? await perms.updatePermitNodes(guildId, permitId, nodes)
+        : await perms.getPermit(guildId, permitId);
       return { success: true, permit };
     });
 
@@ -686,7 +686,7 @@ export class DashboardModule extends Module {
       const guildId = requireGuildId(req.guildId);
       await requireGuildManager(guildId, req.actorId);
       const { permitId } = parsePayload(PermitDeleteSchema, req.data);
-      await getService("permissions").deletePermit(permitId);
+      await getService("permissions").deletePermit(guildId, permitId);
       return { success: true };
     });
 
@@ -698,6 +698,7 @@ export class DashboardModule extends Module {
         req.data,
       );
       await getService("permissions").assignPermit(
+        guildId,
         permitId,
         targetType,
         targetId,
@@ -713,6 +714,7 @@ export class DashboardModule extends Module {
         req.data,
       );
       await getService("permissions").unassignPermit(
+        guildId,
         permitId,
         targetType,
         targetId,

@@ -17,6 +17,16 @@ export const DEFAULT_EVAL_TIMEOUT_MS = 250;
 /** Budget for a save-time probe, which runs a pattern against nasty inputs. */
 export const DEFAULT_PROBE_TIMEOUT_MS = 250;
 
+/**
+ * Budget for one bulk match batch. Larger than a single evaluation because a
+ * batch covers a whole page of messages, but still bounded so a pattern that
+ * only misbehaves on real content cannot pin the worker.
+ */
+export const DEFAULT_MATCH_TIMEOUT_MS = 1_000;
+
+/** Contents per bulk match request; keeps one batch inside one budget. */
+export const MATCH_BATCH_SIZE = 100;
+
 /** Consecutive spawn failures after which the handler stops trying. */
 const MAX_SPAWN_FAILURES = 3;
 
@@ -38,9 +48,11 @@ export class RegexTimeoutError extends Error {
   }
 }
 
+type RequestResult = number | null | number[];
+
 interface Pending {
   id: number;
-  resolve(index: number | null): void;
+  resolve(value: RequestResult): void;
   reject(err: Error): void;
   timer: ReturnType<typeof setTimeout>;
   /** Last pattern the worker announced it was about to run. */
@@ -50,6 +62,7 @@ interface Pending {
 export interface RegexWorkerOptions {
   evalTimeoutMs?: number;
   probeTimeoutMs?: number;
+  matchTimeoutMs?: number;
 }
 
 /**
@@ -67,6 +80,7 @@ export class RegexWorkerHandler {
   readonly #loaded = new Set<string>();
   readonly #evalTimeoutMs: number;
   readonly #probeTimeoutMs: number;
+  readonly #matchTimeoutMs: number;
 
   #worker: Worker | null = null;
   #pending: Pending | null = null;
@@ -79,6 +93,7 @@ export class RegexWorkerHandler {
   public constructor(options: RegexWorkerOptions = {}) {
     this.#evalTimeoutMs = options.evalTimeoutMs ?? DEFAULT_EVAL_TIMEOUT_MS;
     this.#probeTimeoutMs = options.probeTimeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS;
+    this.#matchTimeoutMs = options.matchTimeoutMs ?? DEFAULT_MATCH_TIMEOUT_MS;
   }
 
   /** False once the worker has failed to spawn too often; callers skip regex rules. */
@@ -115,7 +130,7 @@ export class RegexWorkerHandler {
         { kind: "test", id, key, content },
         this.#evalTimeoutMs,
       );
-      return index;
+      return Array.isArray(index) ? null : index;
     } finally {
       this.#queue.shift();
     }
@@ -148,6 +163,39 @@ export class RegexWorkerHandler {
     }
   }
 
+  /**
+   * Positions in `contents` matched by `pattern`, evaluated inside the worker
+   * under {@link DEFAULT_MATCH_TIMEOUT_MS}. Callers with more than
+   * {@link MATCH_BATCH_SIZE} items should batch, so one hostile pattern costs
+   * one budget window rather than pinning the worker for the whole scan.
+   *
+   * Returns null when the worker is unavailable, so callers can fail closed
+   * rather than silently falling back to the event loop.
+   *
+   * @throws {RegexTimeoutError} when the batch exceeds its budget.
+   */
+  public async matchAll(
+    pattern: string,
+    contents: string[],
+  ): Promise<number[] | null> {
+    if (contents.length === 0) return [];
+    await this.#queue.wait();
+    try {
+      const worker = await this.#warmWorker();
+      if (!worker) return null;
+
+      const id = ++this.#nextId;
+      const result = await this.#request(
+        worker,
+        { kind: "matchAll", id, pattern, contents },
+        this.#matchTimeoutMs,
+      );
+      return Array.isArray(result) ? result : [];
+    } finally {
+      this.#queue.shift();
+    }
+  }
+
   /** Terminate the worker; the next request spawns a fresh one. */
   public async destroy(): Promise<void> {
     const worker = this.#worker;
@@ -159,8 +207,8 @@ export class RegexWorkerHandler {
     worker: Worker,
     message: WorkerRequest & { id: number },
     timeoutMs: number,
-  ): Promise<number | null> {
-    return new Promise<number | null>((resolve, reject) => {
+  ): Promise<RequestResult> {
+    return new Promise<RequestResult>((resolve, reject) => {
       const timer = setTimeout(() => {
         // Detach first: #restart rejects whatever is still pending, and this
         // request must surface as a timeout, not as a generic restart error.
@@ -262,6 +310,9 @@ export class RegexWorkerHandler {
         return;
       case "result":
         this.#settle(pending, () => pending.resolve(msg.index));
+        return;
+      case "matches":
+        this.#settle(pending, () => pending.resolve(msg.indexes));
         return;
       case "unknown":
         // Worker restarted between load and test; drop the key and pass this

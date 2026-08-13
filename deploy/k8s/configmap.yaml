@@ -12,6 +12,10 @@ data:
   DIRECT_POSTGRES_URL: "postgresql://lumi@postgres.lumi.svc.cluster.local:5432/lumi"
   POSTGRES_POOL_MAX: "10"
 
+  # Cross-pod: the dashboard reaches the worker over the Service, so the bind
+  # has to be routable. Authentication is RPC_INTERNAL_TOKEN (see
+  # secret.example.yaml), not the network boundary - pair this with a
+  # NetworkPolicy restricting :8091 to the dashboard pods.
   RPC_HTTP_HOST: "0.0.0.0"
   RPC_HTTP_PORT: "8091"
   RPC_HTTP_URL: "http://worker.lumi.svc.cluster.local:8091"

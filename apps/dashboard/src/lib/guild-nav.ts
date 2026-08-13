@@ -30,7 +30,7 @@ export interface GuildNavGroup {
   links: GuildNavLink[];
 }
 
-// Shared by `GuildTopNav` (rendered) and `CommandPalette` (searched); a link
+// Shared by `GuildSideNav` (rendered) and `CommandPalette` (searched); a link
 // added here must reach both.
 export function guildTopLinks(guildId: string): GuildNavLink[] {
   const base = `/guild/${guildId}`;
@@ -42,7 +42,7 @@ export function guildTopLinks(guildId: string): GuildNavLink[] {
   ];
 }
 
-// Consumed by `GuildTopNav` (rendered as dropdown groups) and
+// Consumed by `GuildSideNav` (rendered as rail sections) and
 // `CommandPalette` (flattened for search); a link added here must reach both.
 export function guildManagementGroups(guildId: string): GuildNavGroup[] {
   const base = `/guild/${guildId}`;

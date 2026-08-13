@@ -33,7 +33,7 @@ export function SetupWizard({
   guildId: string;
   items: SetupChecklistItem[];
 }) {
-  const { isPending, error, run } = useServerAction();
+  const { isPending, error, setError, run } = useServerAction();
   const [result, setResult] = useState<GuildSetupRunResult | null>(null);
   const listRef = useStaggerIn<HTMLUListElement>("li", { resetKey: guildId });
 
@@ -43,6 +43,10 @@ export function SetupWizard({
     run(async () => {
       const res = await runGuildSetup(guildId);
       if (!res.ok) {
+        setError(
+          res.error ??
+            "Setup didn't finish. Check that the bot is online and has Manage Roles and Manage Channels, then try again.",
+        );
         return;
       }
       setResult(res.result ?? null);

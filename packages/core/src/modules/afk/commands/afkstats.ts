@@ -8,6 +8,7 @@ import { getAfkStats } from "../data/afk.js";
 @ApplyOptions<BaseCommand.Options>({
   name: "afkstats",
   description: "Show AFK system stats (owner only).",
+  preconditions: ["GuildOnly"],
   requiredPermit: "owner.*",
   module: "afk",
 })

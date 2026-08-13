@@ -65,7 +65,13 @@ async function runOne(probe: Probe): Promise<ProbeResult> {
     ]);
     return result;
   } catch (err) {
-    return { status: "fail", detail: String(err) };
+    // `/readyz` is unauthenticated, so the response carries only a fixed
+    // classification; the raw error (which can embed connection strings) is
+    // logged instead.
+    process.stderr.write(
+      `[observability] readiness probe "${probe.name}" threw: ${String(err)}\n`,
+    );
+    return { status: "fail", detail: "probe error" };
   }
 }
 
