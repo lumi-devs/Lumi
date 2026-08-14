@@ -496,11 +496,7 @@ export class DashboardModule extends Module {
     container.logger.info("[Dashboard] Initializing RPC handlers...");
 
     registerRpcHandler(RPC_ACTIONS.guildDashboardGet, async (req) => {
-      const guildId = requireGuildId(req.guildId);
-      await requireGuildManager(guildId, req.actorId);
-
-      const guild = container.client.guilds.cache.get(guildId);
-      if (!guild) throw new Error("Guild not found in bot cache");
+      const { guildId, guild } = await verifyGuildAccess(req);
 
       const settings = await container.db.config.getGuildSettings(guildId);
       const moduleStore = container.stores.get("modules");
@@ -721,8 +717,7 @@ export class DashboardModule extends Module {
     });
 
     registerRpcHandler(RPC_ACTIONS.guildCasesList, async (req) => {
-      const guildId = requireGuildId(req.guildId);
-      await requireGuildManager(guildId, req.actorId);
+      const { guildId } = await verifyGuildAccess(req);
       const filter = parsePayload(CasesListSchema, req.data ?? {});
 
       const page = filter.page ?? 1;
@@ -1139,8 +1134,7 @@ export class DashboardModule extends Module {
     });
 
     registerRpcHandler(RPC_ACTIONS.guildBlocklistList, async (req) => {
-      const guildId = requireGuildId(req.guildId);
-      await requireGuildManager(guildId, req.actorId);
+      const { guildId } = await verifyGuildAccess(req);
       const filter = parsePayload(BlocklistListSchema, req.data ?? {});
       const { page, pageSize, skip, take } = paginate(filter);
 
