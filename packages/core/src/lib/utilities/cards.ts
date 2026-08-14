@@ -18,7 +18,6 @@ export type { CardReply } from "./ui/types.js";
 export { resolveCardColor, defaultCardColors, type CardColorKey } from "./config.js";
 
 export { formatStatusBadge, formatSubtitle, formatBreadcrumbs, badge };
-export const makeStatusBadge = formatStatusBadge;
 
 export interface CardOptions {
   subtitle?: string;
@@ -189,12 +188,11 @@ export function makeListCard(
   } else {
     const maxVisibleItems = 25;
     const visibleItems = items.slice(0, maxVisibleItems);
-    for (const item of visibleItems) {
-      bodyParts.push(`• ${cutText(item, 200)}`);
-    }
+    const lines = visibleItems.map((item) => `• ${cutText(item, 200)}`);
     if (items.length > maxVisibleItems) {
-      bodyParts.push(`-# ...and ${items.length - maxVisibleItems} more item(s).`);
+      lines.push(`-# ...and ${items.length - maxVisibleItems} more item(s).`);
     }
+    bodyParts.push(lines.join("\n"));
   }
   return makeInfoCard(title, bodyParts, opts);
 }

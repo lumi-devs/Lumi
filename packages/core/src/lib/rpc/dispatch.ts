@@ -14,10 +14,6 @@ export function registerRpcHandler<TIn, TOut>(
   rpcHandlers.set(action, handler as RpcHandler<unknown, unknown>);
 }
 
-export function deregisterRpcHandler(action: string) {
-  rpcHandlers.delete(action);
-}
-
 /**
  * The transport-agnostic core of RPC handling — handler lookup, the
  * dashboard-enabled check, and error shaping. `http-server.ts` is the only

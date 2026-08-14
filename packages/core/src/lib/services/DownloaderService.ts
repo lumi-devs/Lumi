@@ -594,7 +594,15 @@ export class DownloaderService extends Service {
   public async checkForUpdates(): Promise<string[]> {
     const cacheKey = RedisKeys.addonUpdateCheck();
     const cached = await this.container.redis.get(cacheKey);
-    if (cached) return JSON.parse(cached) as string[];
+    if (cached) {
+      try {
+        return JSON.parse(cached) as string[];
+      } catch {
+        this.container.logger.warn(
+          `[DownloaderService] Discarding corrupted update-check cache at ${cacheKey}.`,
+        );
+      }
+    }
 
     const installed = await this.getInstalledModules();
     const pending: string[] = [];
@@ -783,21 +791,33 @@ export class DownloaderService extends Service {
     }
 
     if (globalData.length) {
-      await client.application.commands.set(
-        globalData as Parameters<typeof client.application.commands.set>[0],
-      );
-      this.container.logger.info(
-        `[DownloaderService] Synced ${globalData.length} global application commands.`,
-      );
+      try {
+        await client.application.commands.set(
+          globalData as Parameters<typeof client.application.commands.set>[0],
+        );
+        this.container.logger.info(
+          `[DownloaderService] Synced ${globalData.length} global application commands.`,
+        );
+      } catch (err: unknown) {
+        this.container.logger.error(
+          `[DownloaderService] Failed to sync global application commands: ${String(err)}`,
+        );
+      }
     }
     for (const [guildId, data] of guildData) {
-      await client.application.commands.set(
-        data as Parameters<typeof client.application.commands.set>[0],
-        guildId,
-      );
-      this.container.logger.info(
-        `[DownloaderService] Synced ${data.length} commands for guild ${guildId}.`,
-      );
+      try {
+        await client.application.commands.set(
+          data as Parameters<typeof client.application.commands.set>[0],
+          guildId,
+        );
+        this.container.logger.info(
+          `[DownloaderService] Synced ${data.length} commands for guild ${guildId}.`,
+        );
+      } catch (err: unknown) {
+        this.container.logger.error(
+          `[DownloaderService] Failed to sync commands for guild ${guildId}: ${String(err)}`,
+        );
+      }
     }
   }
 }

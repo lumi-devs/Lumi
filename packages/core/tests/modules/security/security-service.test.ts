@@ -231,6 +231,7 @@ describe("SecurityService.enterPanic / revertPanic", () => {
       };
       const voiceChannel = { id: "v1", type: ChannelType.GuildVoice };
       const savePanicState = vi.fn().mockResolvedValue(undefined);
+      const getPanicState = vi.fn().mockResolvedValue(null);
       const panicGuild = {
         id: "g-panic",
         disableInvites,
@@ -243,7 +244,7 @@ describe("SecurityService.enterPanic / revertPanic", () => {
         roles: { everyone },
       } as any;
 
-      const service = makeService({ db: { security: { savePanicState } } });
+      const service = makeService({ db: { security: { savePanicState, getPanicState } } });
 
       const result = await service.enterPanic(panicGuild, "actor-1", []);
 
