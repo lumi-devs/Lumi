@@ -11,12 +11,12 @@ declare module "@sapphire/framework" {
 export class ModeratorPrecondition extends Precondition {
   public override messageRun(message: Message) {
     if (!message.guild) return this.#outsideGuild();
-    return this.#check(message.guild.id, message.author.id, memberRoleIds(message.member));
+    return this.#check(message.guild.id, message.author.id, memberRoleIds(message.member), message.guild.ownerId);
   }
 
   public override chatInputRun(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) return this.#outsideGuild();
-    return this.#check(interaction.guild.id, interaction.user.id, memberRoleIds(interaction.member));
+    return this.#check(interaction.guild.id, interaction.user.id, memberRoleIds(interaction.member), interaction.guild.ownerId);
   }
 
   // A guild-scoped permit can never be satisfied outside a guild, so missing
@@ -28,13 +28,13 @@ export class ModeratorPrecondition extends Precondition {
     });
   }
 
-  async #check(guildId: string, userId: string, roleIds: string[]) {
+  async #check(guildId: string, userId: string, roleIds: string[], guildOwnerId: string) {
     const hasPermit = await container.permitResolver.hasPermit({
       guildId,
       userId,
       roleIds,
       permitNode: "mod.*",
-      guildOwnerId: "",
+      guildOwnerId,
     });
     return hasPermit
       ? this.ok()

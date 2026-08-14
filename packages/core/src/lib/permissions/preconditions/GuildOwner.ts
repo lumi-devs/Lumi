@@ -11,13 +11,20 @@ declare module "@sapphire/framework" {
 
 export class GuildOwnerPrecondition extends Precondition {
   public override messageRun(message: Message) {
-    if (!message.guild) return this.ok();
+    if (!message.guild) return this.#outsideGuild();
     return this.#check(message.author.id, message.guild.ownerId);
   }
 
   public override chatInputRun(interaction: ChatInputCommandInteraction) {
-    if (!interaction.guild) return this.ok();
+    if (!interaction.guild) return this.#outsideGuild();
     return this.#check(interaction.user.id, interaction.guild.ownerId);
+  }
+
+  #outsideGuild() {
+    return this.error({
+      identifier: "PermissionDenied",
+      message: "This command can only be used in a server.",
+    });
   }
 
   async #check(userId: string, guildOwnerId: string) {

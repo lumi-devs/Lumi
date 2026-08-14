@@ -21,21 +21,17 @@ export function evaluateNodeMatch(
     return true;
   }
   if (grantedNode.endsWith(".*")) {
-    // "mod.*" -> namespace = "mod"; only matches nodes where the first segment is exactly "mod"
     const namespace = grantedNode.slice(0, -2);
-    return requiredNode.split(".")[0] === namespace;
+    return requiredNode === namespace || requiredNode.startsWith(namespace + ".");
   }
   return false;
 }
 
-export interface ResolvePermitsOptions {
+export interface EvaluatePermitOptions {
   guildId: string;
   userId: string;
   roleIds?: string[];
   guildOwnerId?: string | null;
-}
-
-export interface EvaluatePermitOptions extends ResolvePermitsOptions {
   permitNode: string;
 }
 
