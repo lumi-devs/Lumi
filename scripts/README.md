@@ -3,7 +3,7 @@
 This directory contains CLI tools, build-time code generators, integration testing suites, database seeders, and operational scripts supporting the Lumi monorepo and addon ecosystem.
 
 > [!NOTE]
-> All scripts in this directory are executed using [Bun](https://bun.sh) (`bun run` or `bun <script-path>`). Some testing and provisioning scripts require a configured `.env` file with backing datastores (PostgreSQL, Redis, RabbitMQ) running.
+> All scripts in this directory are executed using [Bun](https://bun.sh) (`bun run` or `bun <script-path>`). Some testing and provisioning scripts require a configured `.env` file with backing datastores (PostgreSQL, Redis) running.
 
 ---
 
@@ -31,9 +31,9 @@ Interactive onboarding wizard for a fresh checkout. Bash, not Bun/TS, since it r
 
 #### Overview & Mechanics
 
-1. Prompts for every mandatory variable in `.env.example` (bot token, client ID, Postgres/Redis/RabbitMQ credentials), plus a few common general/dashboard settings, and writes the result to `.env` (mode `600`). Refuses to clobber an existing `.env` without confirmation.
+1. Prompts for every mandatory variable in `.env.example` (bot token, client ID, Postgres/Redis credentials), plus a few common general/dashboard settings, and writes the result to `.env` (mode `600`). Refuses to clobber an existing `.env` without confirmation.
 2. Verifies the entered bot token with a live `GET https://discord.com/api/v10/users/@me` request (`Authorization: Bot <token>`) and prints the resolved bot username on success. A failed/unreachable check is a warning, not a hard stop - setup still completes so you can fix `.env` by hand.
-3. Optionally runs `docker compose up -d postgres pgbouncer redis rabbitmq` if Docker is available.
+3. Optionally runs `docker compose up -d postgres pgbouncer redis` if Docker is available.
 
 #### Usage Examples
 

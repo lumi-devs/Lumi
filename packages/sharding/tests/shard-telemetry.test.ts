@@ -9,7 +9,6 @@ const CLUSTER = "test";
 
 function fakeRedis() {
   const store = new Map<string, string>();
-  const zset = new Map<string, number>();
   const commands: { cmd: string; args: unknown[] }[] = [];
 
   const multi = () => {
@@ -35,17 +34,11 @@ function fakeRedis() {
 
   return {
     store,
-    zset,
     commands,
     multi,
     get: vi.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
     mget: vi.fn((...keys: string[]) =>
       Promise.resolve(keys.map((k) => store.get(k) ?? null)),
-    ),
-    zrange: vi.fn((_key: string, _start: number, _stop: number, _opt?: string) =>
-      Promise.resolve(
-        [...zset.entries()].flatMap(([id, score]) => [id, String(score)]),
-      ),
     ),
     scan: vi.fn((_cursor: string, _m: string, pattern: string) => {
       const prefix = pattern.replace(/\\(.)/g, "$1").replace(/\*$/, "");
@@ -95,7 +88,8 @@ describe("ShardTelemetryPublisher", () => {
     expect(typeof row.updatedAt).toBe("number");
 
     const write = redis.commands.find(
-      (c) => c.cmd === "set" && c.args[0] === `lumi:cluster:${CLUSTER}:shard:0`,
+      (c: { cmd: string; args: unknown[] }) =>
+        c.cmd === "set" && c.args[0] === `lumi:cluster:${CLUSTER}:shard:0`,
     );
     expect(write).toBeDefined();
   });
@@ -148,71 +142,20 @@ describe("readClusterShards", () => {
     }).publish();
   }
 
-  it("reports shards assigned to a dead replica as missing", async () => {
-    redis.store.set(
-      `lumi:cluster:${CLUSTER}:assignment`,
-      JSON.stringify({
-        epoch: 7,
-        shardCount: 4,
-        byReplica: { "gw-a": [0, 1], "gw-b": [2, 3] },
-        writtenAt: 1_000,
-      }),
-    );
-    redis.zset.set("gw-a", 5_000);
-    redis.store.set(`lumi:cluster:${CLUSTER}:ready:gw-a`, "1");
+  it("derives the expected shard count from reporting rows", async () => {
     await publish("gw-a", [sample(0), sample(1)]);
+    await publish("gw-b", [sample(2, { shardCount: 4 })]);
 
     const snapshot = await readClusterShards({ redis, clusterName: CLUSTER });
 
-    expect(snapshot.clustered).toBe(true);
-    expect(snapshot.epoch).toBe(7);
     expect(snapshot.shardCount).toBe(4);
-    expect(snapshot.missingShardIds).toEqual([2, 3]);
-    expect(snapshot.shards.map((s) => s.shardId)).toEqual([0, 1]);
+    expect(snapshot.missingShardIds).toEqual([3]);
+    expect(snapshot.shards.map((s) => s.shardId)).toEqual([0, 1, 2]);
 
-    const gwB = snapshot.replicas.find((r) => r.replicaId === "gw-b");
-    expect(gwB).toMatchObject({
-      lastSeenAt: null,
-      ready: null,
-      assignedShardIds: [2, 3],
-      reportingShardIds: [],
-    });
     const gwA = snapshot.replicas.find((r) => r.replicaId === "gw-a");
-    expect(gwA).toMatchObject({ lastSeenAt: 5_000, ready: true });
-  });
-
-  it("derives the expected shard count from reporting rows when no assignment exists", async () => {
-    await publish("solo", [sample(0, { shardCount: 2 })]);
-
-    const snapshot = await readClusterShards({ redis, clusterName: CLUSTER });
-
-    expect(snapshot.clustered).toBe(false);
-    expect(snapshot.epoch).toBeNull();
-    expect(snapshot.shardCount).toBe(2);
-    expect(snapshot.missingShardIds).toEqual([1]);
-    expect(snapshot.replicas.map((r) => r.replicaId)).toEqual(["solo"]);
-  });
-
-  it("attaches the persisted gateway session for shards that have one", async () => {
-    await publish("gw-a", [sample(0), sample(1)]);
-    redis.store.set(
-      `lumi:cluster:${CLUSTER}:session:0`,
-      JSON.stringify({
-        shardId: 0,
-        shardCount: 2,
-        sessionId: "s",
-        sequence: 991,
-        resumeURL: "wss://resume.example",
-      }),
-    );
-
-    const snapshot = await readClusterShards({ redis, clusterName: CLUSTER });
-
-    expect(snapshot.shards[0]!.session).toEqual({
-      sequence: 991,
-      resumeUrl: "wss://resume.example",
-    });
-    expect(snapshot.shards[1]!.session).toBeNull();
+    expect(gwA).toMatchObject({ reportingShardIds: [0, 1] });
+    const gwB = snapshot.replicas.find((r) => r.replicaId === "gw-b");
+    expect(gwB).toMatchObject({ reportingShardIds: [2] });
   });
 
   it("returns an empty topology when nothing has ever reported", async () => {

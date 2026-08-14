@@ -115,7 +115,6 @@ export function ConfigHistoryList({
                   </p>
                   <p className="truncate text-[11px] text-fg-subtle">
                     {moduleLabel(labels, entry.moduleName)}
-                    <span className="font-mono"> · {entry.key}</span>
                   </p>
                 </div>
               </div>

@@ -1,7 +1,6 @@
 import type { Redis } from "ioredis";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { ModuleStore } from "#lib/module-system/ModuleStore.js";
-import type { RabbitClient } from "#lib/rabbitmq/index.js";
 import type { InvalidationBus } from "#lib/database/redis.js";
 import type { EventBus } from "@lumi/event-bus";
 import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
@@ -68,8 +67,6 @@ declare module "@sapphire/pieces" {
       lastResume: Date | null;
     };
 
-    rabbit?: RabbitClient;
-
     /** Key format: `"<moduleName>:<configKey>"` */
     readonly configChangeHooks: Map<string, ConfigChangeHook>;
 
@@ -78,6 +75,7 @@ declare module "@sapphire/pieces" {
   }
 }
 
+import "@sapphire/plugin-utilities-store";
 import type { ServiceStore } from "#lib/module-system/ServiceStore.js";
 
 declare module "@sapphire/framework" {
@@ -116,7 +114,16 @@ declare module "#lib/env.js" {
     SCHEDULER_LEADER_LOCK_TTL_MS: IntegerString;
     SCHEDULER_LEADER_LOCK_RENEW_MS: IntegerString;
     SCHEDULER_LEADER_LOCK_POLL_MS: IntegerString;
-    RABBITMQ_URL: string;
+    /** Internal RPC HTTP server bind port. Default 8091. */
+    RPC_HTTP_PORT: IntegerString;
+    /** Internal RPC HTTP server bind host. Default "127.0.0.1"; set to
+     * "0.0.0.0" only where the dashboard reaches the worker over a container
+     * network. */
+    RPC_HTTP_HOST: string;
+    /** Shared secret the dashboard presents as `Authorization: Bearer <token>`
+     * on every internal RPC call. Required in production - the RPC server
+     * refuses to start without it. */
+    RPC_INTERNAL_TOKEN: string;
     /** Approximate per-stream cap for bus events. Default 100000. */
     EVENT_STREAM_MAXLEN: IntegerString;
     /** Redis Streams consumer idle threshold in ms. Default 60000. */

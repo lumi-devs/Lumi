@@ -8,6 +8,7 @@ import type AfkService from "../services/AfkService.js";
   name: "afkclean",
   description:
     "Remove AFK entries whose users are no longer cached (owner only).",
+  preconditions: ["GuildOnly"],
   requiredPermit: "owner.*",
   module: "afk",
 })

@@ -31,7 +31,7 @@ export default function AppError({
         <EmptyState
           icon={ServerCrash}
           title="Something went wrong"
-          description="The dashboard couldn't reach the bot worker, or the worker returned an error. Check that apps/worker is running and connected to RabbitMQ."
+          description="The dashboard couldn't reach the bot worker, or the worker returned an error. Check that apps/worker is running and reachable at RPC_HTTP_URL."
           action={
             <Button variant="secondary" onClick={reset}>
               <RefreshCw aria-hidden />

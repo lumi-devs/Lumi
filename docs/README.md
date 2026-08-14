@@ -6,9 +6,9 @@ Engineering documentation for **Lumi** - a modular, self-hosted Discord bot fram
 
 | Document | Description |
 | :--- | :--- |
-| [Architecture & System Topology](architecture.md) | Process roles (`worker`, `scheduler`, `dashboard`), the Redis Streams event bus, sharding/clustering, database layer, command registration leader election, observability. |
+| [Architecture & System Topology](architecture.md) | Process roles (`worker`, `scheduler`, `dashboard`), the Redis Streams event bus, sharding/clustering, database layer, command registration, observability. |
 | [Configuration Reference](configuration.md) | Every environment variable, Docker Compose service, and Kubernetes manifest. |
-| [Dashboard Reference](dashboard.md) | `apps/dashboard`: App Router route inventory, the RabbitMQ RPC bridge and its 50 actions, read vs. mutation paths, NextAuth v5 + the authz cache and route guards, the CSP nonce middleware, design tokens. |
+| [Dashboard Reference](dashboard.md) | `apps/dashboard`: App Router route inventory, the internal HTTP RPC bridge and its 50 actions, read vs. mutation paths, NextAuth v5 + the authz cache and route guards, the CSP nonce middleware, design tokens. |
 | [Modules & Features](modules.md) | The nine built-in modules, plus a deep dive into the security suite (anti-nuke, join-gate, verification, panic mode, filter heat escalation). |
 | [Quick Start: Your First Addon](QUICK_START_ADDON.md) | Fastest path from a clean checkout to a working `/slash` command, using `bun run addon:create`. |
 | [Module Creation Guide](GUIDE_MODULE_CREATION.md) | Step-by-step: config schema, commands, listeners, services, interaction handlers, scheduled tasks, persistence, i18n - built around a full walkthrough of the real `afk` module. |
@@ -36,7 +36,7 @@ Engineering documentation for **Lumi** - a modular, self-hosted Discord bot fram
 - **Packages** - shared libraries & core framework:
   - [`packages/core`](../packages/core/README.md) - Framework core, module loader, database service
   - [`packages/event-bus`](../packages/event-bus/README.md) - Redis Streams event bus between worker and scheduler
-  - [`packages/sharding`](../packages/sharding/README.md) - Shard planner, cluster coordinator, session store
+  - [`packages/sharding`](../packages/sharding/README.md) - Shard planner, shard telemetry
   - [`packages/observability`](../packages/observability/README.md) - Prometheus & OpenTelemetry instrumentation
   - [`packages/contracts`](../packages/contracts/README.md) - RPC schemas & shared type definitions
 

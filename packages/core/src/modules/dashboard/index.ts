@@ -1,12 +1,13 @@
 import { Module, DefineModule } from "#lib/module-system/Module.js";
 import { container } from "@sapphire/framework";
-import { registerRpcHandler, rpcHandlers } from "#lib/rabbitmq/index.js";
+import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
 import {
   APPEAL_REVIEW_STATUSES,
   APPEAL_STATUSES,
   RPC_ACTIONS,
   WARN_THRESHOLD_ACTIONS,
   type GuildSetupRunResult,
+  type RpcRequest,
 } from "@lumi/contracts";
 import { verifyAppealToken } from "#lib/appeals/token.js";
 import type { ModerationCase } from "@prisma/client";
@@ -72,6 +73,13 @@ async function requireGuildManager(
     throw new Error("Missing ManageGuild permission");
   }
   return actorId;
+}
+
+async function verifyGuildAccess(req: RpcRequest<unknown>): Promise<{ guildId: string; actorId: string; guild: Guild }> {
+  const guildId = requireGuildId(req.guildId);
+  const actorId = await requireGuildManager(guildId, req.actorId);
+  const guild = container.client.guilds.cache.get(guildId)!;
+  return { guildId, actorId, guild };
 }
 
 function cachedGuild(guildId: string) {
@@ -489,14 +497,11 @@ export class DashboardModule extends Module {
     container.logger.info("[Dashboard] Initializing RPC handlers...");
 
     registerRpcHandler(RPC_ACTIONS.guildDashboardGet, async (req) => {
-      const guildId = requireGuildId(req.guildId);
-      await requireGuildManager(guildId, req.actorId);
-
-      const guild = container.client.guilds.cache.get(guildId);
-      if (!guild) throw new Error("Guild not found in bot cache");
+      const { guildId, guild } = await verifyGuildAccess(req);
 
       const settings = await container.db.config.getGuildSettings(guildId);
-      const loadedModules = container.stores.get("modules").loaded();
+      const moduleStore = container.stores.get("modules");
+      const loadedModules = moduleStore.loaded();
       const moduleNames = loadedModules.map((m) => m.meta.name);
 
       const [enabledMap, allConfigsMap] = await Promise.all([
@@ -520,9 +525,13 @@ export class DashboardModule extends Module {
           displayName: m.meta.displayName,
           emoji: m.meta.emoji,
           description: m.meta.description,
+          version: m.meta.version,
+          conflicts: m.meta.conflicts ?? [],
+          dependencies: m.meta.dependencies ?? [],
           enabled,
           configFields: m.meta.configFields || [],
           config,
+          isAddon: moduleStore.isAddonModule(m),
         };
       });
 
@@ -556,6 +565,7 @@ export class DashboardModule extends Module {
       return {
         name: guild.name,
         icon: guild.iconURL(),
+        memberCount: guild.memberCount,
         settings,
         modules,
         roles,
@@ -565,8 +575,7 @@ export class DashboardModule extends Module {
     });
 
     registerRpcHandler(RPC_ACTIONS.guildModuleToggle, async (req) => {
-      const guildId = requireGuildId(req.guildId);
-      await requireGuildManager(guildId, req.actorId);
+      const { guildId } = await verifyGuildAccess(req);
       const { moduleName, enabled } = parsePayload(
         ModuleToggleSchema,
         req.data,
@@ -584,8 +593,7 @@ export class DashboardModule extends Module {
     });
 
     registerRpcHandler(RPC_ACTIONS.guildConfigSet, async (req) => {
-      const guildId = requireGuildId(req.guildId);
-      await requireGuildManager(guildId, req.actorId);
+      const { guildId } = await verifyGuildAccess(req);
       const { moduleName, key, value } = parsePayload(
         ConfigSetSchema,
         req.data,
@@ -617,17 +625,12 @@ export class DashboardModule extends Module {
     });
 
     registerRpcHandler(RPC_ACTIONS.guildSetupRun, async (req) => {
-      const guildId = requireGuildId(req.guildId);
-      await requireGuildManager(guildId, req.actorId);
-      const guild = container.client.guilds.cache.get(guildId);
-      if (!guild) throw new Error("Guild not found in bot cache");
-
-      return runGuildSetup(guild, req.actorId);
+      const { guild, actorId } = await verifyGuildAccess(req);
+      return runGuildSetup(guild, actorId);
     });
 
     registerRpcHandler(RPC_ACTIONS.guildSettingsSet, async (req) => {
-      const guildId = requireGuildId(req.guildId);
-      await requireGuildManager(guildId, req.actorId);
+      const { guildId } = await verifyGuildAccess(req);
       const data = parsePayload(GuildSettingsSchema, req.data);
 
       const tx = await container.db.transaction(guildId);
@@ -642,8 +645,7 @@ export class DashboardModule extends Module {
     });
 
     registerRpcHandler(RPC_ACTIONS.guildPermitsList, async (req) => {
-      const guildId = requireGuildId(req.guildId);
-      await requireGuildManager(guildId, req.actorId);
+      const { guildId } = await verifyGuildAccess(req);
       const permits = await getService("permissions").listPermits(guildId);
       return { permits };
     });
@@ -662,17 +664,16 @@ export class DashboardModule extends Module {
     });
 
     registerRpcHandler(RPC_ACTIONS.guildPermitsUpdate, async (req) => {
-      const guildId = requireGuildId(req.guildId);
-      await requireGuildManager(guildId, req.actorId);
+      const { guildId } = await verifyGuildAccess(req);
       const { permitId, name, nodes } = parsePayload(
         PermitUpdateSchema,
         req.data,
       );
       const perms = getService("permissions");
-      if (name !== undefined) await perms.renamePermit(permitId, name);
+      if (name !== undefined) await perms.renamePermit(guildId, permitId, name);
       const permit = nodes !== undefined
-        ? await perms.updatePermitNodes(permitId, nodes)
-        : await perms.getPermit(permitId);
+        ? await perms.updatePermitNodes(guildId, permitId, nodes)
+        : await perms.getPermit(guildId, permitId);
       return { success: true, permit };
     });
 
@@ -680,7 +681,7 @@ export class DashboardModule extends Module {
       const guildId = requireGuildId(req.guildId);
       await requireGuildManager(guildId, req.actorId);
       const { permitId } = parsePayload(PermitDeleteSchema, req.data);
-      await getService("permissions").deletePermit(permitId);
+      await getService("permissions").deletePermit(guildId, permitId);
       return { success: true };
     });
 
@@ -692,6 +693,7 @@ export class DashboardModule extends Module {
         req.data,
       );
       await getService("permissions").assignPermit(
+        guildId,
         permitId,
         targetType,
         targetId,
@@ -707,6 +709,7 @@ export class DashboardModule extends Module {
         req.data,
       );
       await getService("permissions").unassignPermit(
+        guildId,
         permitId,
         targetType,
         targetId,
@@ -715,8 +718,7 @@ export class DashboardModule extends Module {
     });
 
     registerRpcHandler(RPC_ACTIONS.guildCasesList, async (req) => {
-      const guildId = requireGuildId(req.guildId);
-      await requireGuildManager(guildId, req.actorId);
+      const { guildId } = await verifyGuildAccess(req);
       const filter = parsePayload(CasesListSchema, req.data ?? {});
 
       const page = filter.page ?? 1;
@@ -1133,8 +1135,7 @@ export class DashboardModule extends Module {
     });
 
     registerRpcHandler(RPC_ACTIONS.guildBlocklistList, async (req) => {
-      const guildId = requireGuildId(req.guildId);
-      await requireGuildManager(guildId, req.actorId);
+      const { guildId } = await verifyGuildAccess(req);
       const filter = parsePayload(BlocklistListSchema, req.data ?? {});
       const { page, pageSize, skip, take } = paginate(filter);
 

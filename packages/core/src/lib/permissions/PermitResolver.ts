@@ -16,26 +16,22 @@ export function evaluateNodeMatch(
   grantedNode: string,
   requiredNode: string,
 ): boolean {
+  if (!grantedNode || !requiredNode) return false;
   if (grantedNode === "*" || grantedNode === requiredNode) {
     return true;
   }
   if (grantedNode.endsWith(".*")) {
-    const prefix = grantedNode.slice(0, -1); // e.g. "mod." from "mod.*"
-    if (requiredNode.startsWith(prefix)) {
-      return true;
-    }
+    const namespace = grantedNode.slice(0, -2);
+    return requiredNode === namespace || requiredNode.startsWith(namespace + ".");
   }
   return false;
 }
 
-export interface ResolvePermitsOptions {
+export interface EvaluatePermitOptions {
   guildId: string;
   userId: string;
   roleIds?: string[];
   guildOwnerId?: string | null;
-}
-
-export interface EvaluatePermitOptions extends ResolvePermitsOptions {
   permitNode: string;
 }
 
@@ -94,7 +90,6 @@ export class PermitResolver {
   public async hasPermit(options: EvaluatePermitOptions): Promise<boolean> {
     const { guildId, userId, roleIds = [], permitNode, guildOwnerId } = options;
 
-    // 1. Owner Bypasses
     if (
       PermitResolver.isBotOwner(userId) ||
       PermitResolver.isGuildOwner(guildOwnerId, userId)
@@ -102,18 +97,15 @@ export class PermitResolver {
       return true;
     }
 
-    // 2. Fetch User Permits (DB/Redis + Anti-Nuke Quarantine Interceptor)
     const { customPermits, enforcedPermits, isQuarantined } =
       await this.resolveUserPermits(guildId, userId, roleIds);
 
-    // 3. Evaluate Enforced Permits (un-quarantinable)
     for (const granted of enforcedPermits) {
       if (evaluateNodeMatch(granted, permitNode)) {
         return true;
       }
     }
 
-    // 4. Evaluate Custom Permits (stripped if Quarantined)
     if (!isQuarantined) {
       for (const granted of customPermits) {
         if (evaluateNodeMatch(granted, permitNode)) {

@@ -5,13 +5,19 @@ import { cn } from "#/lib/utils";
 
 export function Card({
   className,
+  interactive,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+}: React.HTMLAttributes<HTMLDivElement> & {
+  /** Hover lift + accent glow, for cards that are themselves a clickable/navigable unit (not a static data panel). */
+  interactive?: boolean;
+}) {
   return (
     <div
       data-slot="card"
       className={cn(
-        "overflow-hidden rounded-panel border border-border bg-surface",
+        "overflow-hidden rounded-panel border border-border bg-surface transition-[transform,box-shadow,border-color] duration-fast",
+        interactive &&
+          "hover:-translate-y-px hover:border-border-strong hover:shadow-glow-accent",
         className,
       )}
       {...props}

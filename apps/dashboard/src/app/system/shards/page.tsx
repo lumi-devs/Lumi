@@ -40,10 +40,7 @@ export default async function SystemShardsPage() {
           }
           meta={
             <p className="font-mono text-[11px] text-fg-subtle">
-              cluster {data.clusterName}
-              {data.clustered
-                ? ` · assignment epoch ${data.epoch}`
-                : " · single process, no coordinator"}
+              cluster {data.clusterName} · {data.shardCount} total shards
             </p>
           }
         />

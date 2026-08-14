@@ -16,6 +16,7 @@ import { Field, Input, Select } from "#/components/ui/input";
 import { TriangleAlert } from "lucide-react";
 import type { WarnThresholdView } from "#/lib/dashboard-data";
 import { useServerAction } from "#/lib/use-server-action";
+import { useStaggerIn } from "#/lib/animate";
 
 // `checkThresholds` picks the single highest rule at or below the member's warn
 // count, so rules are ranges rather than a checklist — the ladder shows them
@@ -44,6 +45,7 @@ export function WarnThresholdLadder({
   const [target, setTarget] = useState<WarnThresholdView | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const { isPending, error, setError, run } = useServerAction();
+  const rungsRef = useStaggerIn<HTMLOListElement>("> li");
 
   const rungs = [...thresholds].sort((a, b) => a.warnCount - b.warnCount);
 
@@ -80,7 +82,7 @@ export function WarnThresholdLadder({
           description="Right now a warn only writes a case. Add a rule below and Lumi acts on its own once a member reaches that many warns — a mute at 3 is the usual first rung."
         />
       ) : (
-        <ol className="flex flex-col px-4 py-4">
+        <ol ref={rungsRef} className="flex flex-col divide-y divide-border-soft px-4 py-3">
           {rungs.map((rung, index) => (
             <Rung
               key={rung.warnCount}
@@ -150,7 +152,7 @@ function Rung({
   const durationMissing = meta?.duration === "required" && !rung.duration;
 
   return (
-    <li className="relative flex gap-3">
+    <li className="relative flex gap-3 py-3 first:pt-0 last:pb-0">
       <div className="relative flex w-8 shrink-0 justify-center">
         {last ? null : (
           <span
@@ -163,7 +165,7 @@ function Rung({
         </span>
       </div>
 
-      <div className={last ? "min-w-0 flex-1" : "min-w-0 flex-1 pb-5"}>
+      <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <p className="font-display text-[13px] leading-8 font-semibold tracking-[0.01em] text-fg">
             {label}

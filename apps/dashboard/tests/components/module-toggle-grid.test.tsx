@@ -17,9 +17,13 @@ function makeModule(overrides: Partial<DashboardModuleView> = {}): DashboardModu
     displayName: "AFK",
     emoji: "💤",
     description: "Marks members as away.",
+    version: "1.0.0",
+    conflicts: [],
+    dependencies: [],
     enabled: true,
     configFields: [],
     config: {},
+    isAddon: false,
     ...overrides,
   };
 }

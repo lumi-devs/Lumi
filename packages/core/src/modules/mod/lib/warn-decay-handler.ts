@@ -24,7 +24,7 @@ export async function handleWarnDecayFire(
     const diffMs = now.getTime() - c.createdAt.getTime();
     const diffDays = diffMs / (1000 * 60 * 60 * 24);
 
-    if (diffDays > decayDays) {
+    if (diffDays >= decayDays) {
       await container.db.moderation.liftModerationCase(c.id);
       await decrementWarnCount(container, c.guildId, c.userId);
       container.logger.debug(

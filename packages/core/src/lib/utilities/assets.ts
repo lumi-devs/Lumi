@@ -60,7 +60,6 @@ const defaultEmojis = {
   /** Connectivity & Infrastructure */
   DATABASE: "🐘",
   CACHE: "🧠",
-  QUEUE: "🐇",
   GATEWAY: "🌐",
   CPU: "🖥️",
 
@@ -74,7 +73,6 @@ const defaultEmojis = {
   MEMBERS: "👥",
   REDIS: "🔴",
   SQL: "🐘",
-  RABBIT: "🐇",
 };
 
 let customEmojis = {};

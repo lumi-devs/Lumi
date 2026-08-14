@@ -1,19 +1,14 @@
-// Durable per-shard health. The coordinator persists *intent* (which replica owns
-// which shard ids) and the session store persists *resumability*, but neither knows
-// whether a shard's WebSocket is actually up: status, gateway latency and guild
-// count are only visible inside the process holding the socket. Each WS-holding
-// replica therefore publishes one row per owned shard on an interval, under a key
-// whose TTL is a small multiple of that interval.
+// Durable per-shard health. Nothing else persists which shard is running where, so
+// status, gateway latency and guild count are only visible inside the process
+// holding the socket. Each WS-holding replica therefore publishes one row per owned
+// shard on an interval, under a key whose TTL is a small multiple of that interval.
 //
 // The TTL is the point. A replica that crashes stops refreshing and its rows expire
-// rather than lingering as a stale "Ready", so an assigned shard with no row is
-// unambiguously a shard nobody is running.
+// rather than lingering as a stale "Ready", so a shard with no row is unambiguously
+// a shard nobody is running.
 
 import type { Redis } from "ioredis";
 import { tryParseJSON } from "@sapphire/utilities";
-import { assignmentKey, membersKey, type ClusterAssignment } from "./coordinator.js";
-import { readyKey } from "./cluster-ready.js";
-import { sessionKey } from "./session-store.js";
 
 /** Namespace used when `CLUSTER_NAME` is unset, so single-process deployments still report. */
 export const DEFAULT_CLUSTER_NAME = "default";
@@ -130,34 +125,18 @@ export class ShardTelemetryPublisher {
   }
 }
 
-/** Gateway session persisted for a shard, when the cluster session store is installed. */
-export interface ShardSessionState {
-  sequence: number;
-  resumeUrl: string | null;
-}
-
 export interface ClusterReplicaState {
   replicaId: string;
-  /** Last coordinator heartbeat (ms), or null when the replica is not in the member set. */
-  lastSeenAt: number | null;
-  /** Self-published readiness; null when the replica never published one. */
-  ready: boolean | null;
-  /** Shard ids the assignment says this replica owns. */
-  assignedShardIds: number[];
   /** Shard ids this replica is actually reporting telemetry for. */
   reportingShardIds: number[];
 }
 
 export interface ClusterShardsSnapshot {
   clusterName: string;
-  /** False when no coordinator assignment exists — a single-process deployment. */
-  clustered: boolean;
-  epoch: number | null;
-  assignedAt: number | null;
   shardCount: number;
   observedAt: number;
   replicas: ClusterReplicaState[];
-  shards: (ShardTelemetry & { session: ShardSessionState | null })[];
+  shards: ShardTelemetry[];
   /** Expected shard ids with no live telemetry row. */
   missingShardIds: number[];
 }
@@ -172,9 +151,8 @@ export interface ReadClusterShardsOptions {
 }
 
 /**
- * Assemble the operator-facing cluster view from the four things that outlive
- * any single process: the assignment blob, the member heartbeat set, the
- * per-replica ready flags and the TTL'd shard telemetry rows.
+ * Assemble the operator-facing cluster view from the one thing that outlives
+ * any single process: the TTL'd shard telemetry rows.
  */
 export async function readClusterShards(
   opts: ReadClusterShardsOptions,
@@ -182,15 +160,7 @@ export async function readClusterShards(
   const { redis, clusterName } = opts;
   const pattern = `lumi:cluster:${clusterName.replace(GLOB_SPECIALS, "\\$&")}:shard:*`;
 
-  const [assignmentRaw, memberEntries, shardKeys] = await Promise.all([
-    redis.get(assignmentKey(clusterName)),
-    redis.zrange(membersKey(clusterName), 0, -1, "WITHSCORES"),
-    scanKeys(redis, pattern, opts.scanCount ?? 200),
-  ]);
-
-  const assignment = assignmentRaw
-    ? ((tryParseJSON(assignmentRaw) as ClusterAssignment | null) ?? null)
-    : null;
+  const shardKeys = await scanKeys(redis, pattern, opts.scanCount ?? 200);
 
   const rows: ShardTelemetry[] = [];
   if (shardKeys.length > 0) {
@@ -203,45 +173,17 @@ export async function readClusterShards(
   }
   rows.sort((a, b) => a.shardId - b.shardId);
 
-  const shardCount =
-    assignment?.shardCount ??
-    rows.reduce((max, r) => Math.max(max, r.shardCount ?? 0), 0);
+  const shardCount = rows.reduce((max, r) => Math.max(max, r.shardCount ?? 0), 0);
 
-  const sessions = await readSessions(
-    redis,
-    clusterName,
-    rows.map((r) => r.shardId),
-  );
-
-  const lastSeen = new Map<string, number>();
-  for (let i = 0; i < memberEntries.length; i += 2) {
-    const id = memberEntries[i];
-    const score = Number(memberEntries[i + 1]);
-    if (id !== undefined && Number.isFinite(score)) lastSeen.set(id, score);
-  }
-
-  const replicaIds = new Set<string>([
-    ...Object.keys(assignment?.byReplica ?? {}),
-    ...lastSeen.keys(),
-    ...rows.map((r) => r.replicaId),
-  ]);
-  const readyValues = await Promise.all(
-    [...replicaIds].map((id) => redis.get(readyKey(clusterName, id))),
-  );
+  const replicaIds = new Set<string>(rows.map((r) => r.replicaId));
 
   const replicas: ClusterReplicaState[] = [...replicaIds]
-    .map((replicaId, index) => {
-      const ready = readyValues[index];
-      return {
-        replicaId,
-        lastSeenAt: lastSeen.get(replicaId) ?? null,
-        ready: ready === null || ready === undefined ? null : ready === "1",
-        assignedShardIds: assignment?.byReplica[replicaId] ?? [],
-        reportingShardIds: rows
-          .filter((r) => r.replicaId === replicaId)
-          .map((r) => r.shardId),
-      };
-    })
+    .map((replicaId) => ({
+      replicaId,
+      reportingShardIds: rows
+        .filter((r) => r.replicaId === replicaId)
+        .map((r) => r.shardId),
+    }))
     .sort((a, b) => a.replicaId.localeCompare(b.replicaId));
 
   const reporting = new Set(rows.map((r) => r.shardId));
@@ -252,43 +194,12 @@ export async function readClusterShards(
 
   return {
     clusterName,
-    clustered: assignment !== null,
-    epoch: assignment?.epoch ?? null,
-    assignedAt: assignment?.writtenAt ?? null,
     shardCount,
     observedAt: Date.now(),
     replicas,
-    shards: rows.map((r) => ({
-      ...r,
-      session: sessions.get(r.shardId) ?? null,
-    })),
+    shards: rows,
     missingShardIds,
   };
-}
-
-async function readSessions(
-  redis: Redis,
-  clusterName: string,
-  shardIds: readonly number[],
-): Promise<Map<number, ShardSessionState>> {
-  const out = new Map<number, ShardSessionState>();
-  if (shardIds.length === 0) return out;
-  const values = await redis.mget(
-    ...shardIds.map((id) => sessionKey(clusterName, id)),
-  );
-  values.forEach((raw, index) => {
-    if (!raw) return;
-    const parsed = tryParseJSON(raw) as {
-      sequence?: number;
-      resumeURL?: string;
-    } | null;
-    if (!parsed || typeof parsed.sequence !== "number") return;
-    out.set(shardIds[index]!, {
-      sequence: parsed.sequence,
-      resumeUrl: parsed.resumeURL ?? null,
-    });
-  });
-  return out;
 }
 
 async function scanKeys(

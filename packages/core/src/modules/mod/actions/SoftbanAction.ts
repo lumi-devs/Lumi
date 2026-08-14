@@ -1,8 +1,8 @@
 import { container } from "@sapphire/framework";
 import { type Guild, type User, Colors } from "discord.js";
 import { formatAuditReason } from "#lib/utilities/misc.js";
-import { makeErrorCard } from "#lib/utilities/cards.js";
 import { logToChannel } from "../lib/helpers.js";
+import { sendModActionDm } from "../lib/notify.js";
 
 export interface SoftbanApplyOptions {
   guild: Guild;
@@ -25,11 +25,13 @@ export class SoftbanAction {
     const days = Math.min(Math.max(deleteMessageDays, 1), 7);
     const deleteMessageSeconds = days * 86400;
 
-    const dm = makeErrorCard(
-      `🧹 Softbanned - ${guild.name}`,
+    await sendModActionDm(
+      targetUser,
+      "🧹",
+      "Softbanned",
+      guild,
       `You have been softbanned from **${guild.name}** to clear recent message history.\n\n**Reason:** ${reason}`,
     );
-    await targetUser.send(dm).catch(() => null);
 
     const auditReason = formatAuditReason(moderator, `[Softban] ${reason}`);
 

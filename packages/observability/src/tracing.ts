@@ -77,14 +77,12 @@ export function startTracing(opts: TracingOptions): boolean {
       import("@opentelemetry/instrumentation-http"),
       import("@opentelemetry/instrumentation-pg"),
       import("@opentelemetry/instrumentation-ioredis"),
-      import("@opentelemetry/instrumentation-amqplib"),
-    ]).then(([http, pg, ioredis, amqplib]) => {
+    ]).then(([http, pg, ioredis]) => {
       registerInstrumentations({
         instrumentations: [
           new http.HttpInstrumentation(),
           new pg.PgInstrumentation(),
           new ioredis.IORedisInstrumentation(),
-          new amqplib.AmqplibInstrumentation(),
         ],
       });
     });

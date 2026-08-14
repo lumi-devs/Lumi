@@ -6,6 +6,7 @@ import child_process from "node:child_process";
 import { container } from "@sapphire/framework";
 import { validateAddon, validateAddonOrRepo } from "#lib/downloader/validate.js";
 import { DownloadResolver, MODULE_ROOT } from "#lib/downloader/resolver.js";
+import { LumiInfo } from "#utilities/misc.js";
 
 describe("Downloader & Addon Helpers (validate & resolver)", () => {
   let tmpDir: string;
@@ -94,7 +95,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
         description: "Mismatch addon",
         short: "Mismatch",
         version: "1.0.0",
-        min_bot_version: "2.0.0",
+        min_bot_version: "4.0.0",
       };
       await fs.writeFile(path.join(addonDir, "info.json"), JSON.stringify(infoJson));
       await fs.writeFile(
@@ -105,7 +106,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       const result = await validateAddon(addonDir);
       expect(result.errors).toContain('info.json "name" (wrong-name) must match the directory name (my-addon).');
       expect(result.errors).toContain(
-        'info.json "min_bot_version" (2.0.0) exceeds current Lumi version (1.0.0).'
+        `info.json "min_bot_version" (4.0.0) exceeds current Lumi version (${LumiInfo.version}).`
       );
     });
 

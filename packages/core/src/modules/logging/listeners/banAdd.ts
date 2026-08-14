@@ -1,7 +1,7 @@
 import { Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Colors, type GuildBan } from "discord.js";
-import { userMention } from "@discordjs/formatters";
+import { escapeMarkdown, userMention } from "@discordjs/formatters";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { isToggleEnabled, sendLog } from "../lib/send.js";
 
@@ -17,7 +17,7 @@ export class LoggingBanAddListener extends ModuleListener<
     if (!(await isToggleEnabled(ban.guild.id, "member_bans"))) return;
 
     const lines = [`**Member**: ${userMention(ban.user.id)} (${ban.user.id})`];
-    if (ban.reason) lines.push(`**Reason**: ${ban.reason}`);
+    if (ban.reason) lines.push(`**Reason**: ${escapeMarkdown(ban.reason)}`);
     await sendLog(ban.guild.id, Colors.DarkRed, "Member Banned", lines);
   }
 }

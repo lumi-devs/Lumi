@@ -4,7 +4,7 @@
 #
 # Walks a new contributor through generating a working `.env` (based on
 # `.env.example` at the repo root), verifies the Discord bot token against
-# Discord's API, and optionally brings up the Postgres/Redis/RabbitMQ services
+# Discord's API, and optionally brings up the Postgres/Redis services
 # from `docker-compose.yml`. Safe to re-run - it never overwrites an existing
 # `.env` without asking first.
 #
@@ -60,17 +60,40 @@ confirm() {
 }
 
 header "Lumi setup wizard"
-info "This generates ${BOLD}.env${RESET} from ${BOLD}.env.example${RESET}, verifies your bot token, and can start the local Postgres/Redis/RabbitMQ stack."
+info "This generates ${BOLD}.env${RESET} from ${BOLD}.env.example${RESET}, verifies your bot token, and can start the local Postgres/Redis stack."
 
 if [[ ! -f "$ENV_EXAMPLE" ]]; then
   err ".env.example not found at repo root (${ENV_EXAMPLE}) - can't continue."
   exit 1
 fi
 
+# Each app is started with its own directory as cwd, and Bun auto-loads the
+# `.env` it finds there. Pointing them all at the root file is what keeps them
+# from drifting into separately-maintained copies (which is how apps/worker/.env
+# ended up missing RPC_INTERNAL_TOKEN). `.env` is gitignored at every level, so
+# these links can't be committed - they have to be (re)made here.
+link_app_envs() {
+  local app
+  for app in worker scheduler dashboard; do
+    local link="${ROOT_DIR}/apps/${app}/.env"
+    [[ -d "${ROOT_DIR}/apps/${app}" ]] || continue
+    if [[ -L "$link" && "$(readlink "$link")" == "../../.env" ]]; then
+      continue
+    fi
+    if [[ -e "$link" && ! -L "$link" ]]; then
+      warn "apps/${app}/.env is a real file, not a symlink to the root .env - replacing it."
+    fi
+    rm -f "$link"
+    ln -s "../../.env" "$link"
+    ok "Linked apps/${app}/.env -> ../../.env"
+  done
+}
+
 if [[ -f "$ENV_FILE" ]]; then
   warn "${ENV_FILE} already exists."
   if ! confirm "Overwrite it?" "n"; then
     info "Keeping the existing .env. Re-run 'bun run setup' any time to regenerate it."
+    link_app_envs
     exit 0
   fi
 fi
@@ -111,13 +134,17 @@ ENV_VALUES[REDIS_PORT]="6379"
 ENV_VALUES[REDIS_CACHE_DB]="0"
 ENV_VALUES[REDIS_TASK_DB]="1"
 
-prompt "lumi" "RabbitMQ username"
-RMQ_USER="$PROMPT_RESULT"
-ENV_VALUES[RABBITMQ_USER]="$RMQ_USER"
-prompt "lumi" "RabbitMQ password"
-RMQ_PASSWORD="$PROMPT_RESULT"
-ENV_VALUES[RABBITMQ_PASSWORD]="$RMQ_PASSWORD"
-ENV_VALUES[RABBITMQ_URL]="amqp://${RMQ_USER}:${RMQ_PASSWORD}@localhost:5672"
+ENV_VALUES[RPC_HTTP_HOST]="127.0.0.1"
+# RPC_HTTP_PORT is deliberately not written: every app reads this one file, and
+# 8091 here would drag the scheduler (which self-defaults to 8092) onto the
+# worker's port. 8091 is already the worker's built-in default.
+ENV_VALUES[RPC_HTTP_URL]="http://localhost:8091"
+if command -v openssl >/dev/null 2>&1; then
+  ENV_VALUES[RPC_INTERNAL_TOKEN]="$(openssl rand -hex 32)"
+else
+  warn "openssl not found - set RPC_INTERNAL_TOKEN manually before running in production."
+  ENV_VALUES[RPC_INTERNAL_TOKEN]=""
+fi
 
 # ── [ 2 ] General settings ────────────────────────────────────────────────────
 header "[2/4] General settings"
@@ -148,7 +175,8 @@ ENV_VALUES[EVENT_STREAM_CLAIM_MIN_IDLE_MS]="60000"
 ENV_VALUES[EVENT_STREAM_ACK_WAIT_MS]="60000"
 ENV_VALUES[EVENT_STREAM_CLAIM_INTERVAL_MS]="30000"
 ENV_VALUES[EVENT_STREAM_STATS_INTERVAL_MS]="10000"
-ENV_VALUES[LUMI_ROLE]="worker"
+# LUMI_ROLE is deliberately not written: each entrypoint declares its own role,
+# and a shared `worker` value only mislabels the scheduler's logs and metrics.
 
 # ── [ 3 ] Dashboard (optional) ────────────────────────────────────────────────
 header "[3/4] Dashboard (optional)"
@@ -197,6 +225,8 @@ header "Writing ${ENV_FILE}"
 chmod 600 "$ENV_FILE"
 ok "Wrote $(wc -l < "$ENV_FILE" | tr -d ' ') variables to .env (permissions set to 600)."
 
+link_app_envs
+
 # ── [ 4 ] Verify the bot token ────────────────────────────────────────────────
 header "[4/4] Verifying bot token"
 
@@ -224,17 +254,17 @@ fi
 header "Local services"
 
 if ! command -v docker >/dev/null 2>&1; then
-  warn "docker not found - skipping. Install Docker to run Postgres/Redis/RabbitMQ locally, or point .env at existing instances."
+  warn "docker not found - skipping. Install Docker to run Postgres/Redis locally, or point .env at existing instances."
 elif ! docker compose version >/dev/null 2>&1; then
   warn "'docker compose' not available - skipping."
 else
-  if confirm "Start Postgres, pgbouncer, Redis, and RabbitMQ now (docker compose up -d)?" "y"; then
-    info "Running: docker compose up -d postgres pgbouncer redis rabbitmq"
-    docker compose up -d postgres pgbouncer redis rabbitmq
+  if confirm "Start Postgres, pgbouncer, and Redis now (docker compose up -d)?" "y"; then
+    info "Running: docker compose up -d postgres pgbouncer redis"
+    docker compose up -d postgres pgbouncer redis
     ok "Services starting in the background - 'docker compose ps' to check status."
   else
     info "Skipped. Run it yourself later with:"
-    info "  docker compose up -d postgres pgbouncer redis rabbitmq"
+    info "  docker compose up -d postgres pgbouncer redis"
   fi
 fi
 

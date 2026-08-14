@@ -46,6 +46,7 @@ function makeService(overrides: {
       incr: vi.fn(),
       expire: vi.fn(),
       set: vi.fn(),
+      exists: vi.fn().mockResolvedValue(0),
       multi: vi.fn(() => makeMultiMock(1)),
       ...overrides.redis,
     },
@@ -230,6 +231,7 @@ describe("SecurityService.enterPanic / revertPanic", () => {
       };
       const voiceChannel = { id: "v1", type: ChannelType.GuildVoice };
       const savePanicState = vi.fn().mockResolvedValue(undefined);
+      const getPanicState = vi.fn().mockResolvedValue(null);
       const panicGuild = {
         id: "g-panic",
         disableInvites,
@@ -242,7 +244,7 @@ describe("SecurityService.enterPanic / revertPanic", () => {
         roles: { everyone },
       } as any;
 
-      const service = makeService({ db: { security: { savePanicState } } });
+      const service = makeService({ db: { security: { savePanicState, getPanicState } } });
 
       const result = await service.enterPanic(panicGuild, "actor-1", []);
 
@@ -306,7 +308,7 @@ describe("SecurityService.enterPanic / revertPanic", () => {
         expect.objectContaining({ reason: "Panic mode reverted" }),
       );
       expect(clearPanicState).toHaveBeenCalledWith("g-panic");
-      expect(result).toEqual({ restoredCount: 1 });
+      expect(result).toEqual({ restoredCount: 1, restoredStructure: null });
     },
     10000,
   );

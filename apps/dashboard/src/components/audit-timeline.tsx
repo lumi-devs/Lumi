@@ -1,25 +1,98 @@
+"use client";
+
 import Link from "next/link";
 import { Badge } from "#/components/ui/badge";
-import type { AuditEntryView } from "#/lib/dashboard-data";
+import { useStaggerIn } from "#/lib/animate";
+import { cn } from "#/lib/utils";
 import {
-  formatDetails,
+  fieldLabel,
+  fieldType,
+  moduleLabel,
+  resolveConfigValue,
+  type ModuleLabelIndex,
+} from "#/lib/config-labels";
+import type {
+  AuditEntryView,
+  DashboardChannelView,
+  DashboardRoleView,
+} from "#/lib/dashboard-data";
+import {
   formatTime,
   groupByDay,
+  humanizeKey,
+  isSnowflake,
   splitAction,
 } from "#/lib/log-format";
 
+interface ConfigChangeDetails {
+  moduleName: string;
+  key: string;
+  value: unknown;
+}
+
+function asConfigChangeDetails(details: unknown): ConfigChangeDetails | null {
+  if (typeof details !== "object" || details === null) return null;
+  const record = details as Record<string, unknown>;
+  if (
+    typeof record["moduleName"] === "string" &&
+    typeof record["key"] === "string"
+  ) {
+    return {
+      moduleName: record["moduleName"],
+      key: record["key"],
+      value: record["value"],
+    };
+  }
+  return null;
+}
+
+function objectDetailEntries(details: unknown): [string, unknown][] | null {
+  if (typeof details !== "object" || details === null || Array.isArray(details)) {
+    return null;
+  }
+  return Object.entries(details as Record<string, unknown>);
+}
+
+function resolveDetailValue(
+  value: unknown,
+  roles: DashboardRoleView[] | undefined,
+  channels: DashboardChannelView[] | undefined,
+): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "boolean") return value ? "On" : "Off";
+  if (typeof value === "string" && isSnowflake(value)) {
+    const role = roles?.find((r) => r.id === value);
+    if (role) return `@${role.name}`;
+    const channel = channels?.find((c) => c.id === value);
+    if (channel) return `#${channel.name}`;
+    return value;
+  }
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
 export function AuditTimeline({
   entries,
+  labels,
+  roles,
+  channels,
   guildHref,
 }: {
   entries: AuditEntryView[];
+  labels?: ModuleLabelIndex;
+  roles?: DashboardRoleView[];
+  channels?: DashboardChannelView[];
   guildHref?: (guildId: string) => string;
 }) {
   const days = groupByDay(entries, (e) => e.createdAt);
+  const ref = useStaggerIn<HTMLDivElement>("li", {
+    delay: 18,
+    resetKey: entries.map((e) => e.id).join(","),
+  });
 
   return (
-    <div>
-      {days.map((day, dayIndex) => (
+    <div ref={ref}>
+      {days.map((day) => (
         <section key={day.key} aria-label={day.label}>
           <h4 className="font-display flex items-baseline justify-between gap-3 border-y border-border bg-bg-subtle px-4 py-1.5 text-[11px] font-semibold tracking-[0.09em] text-fg-subtle uppercase">
             <span>{day.label}</span>
@@ -29,20 +102,15 @@ export function AuditTimeline({
           </h4>
 
           <ol>
-            {day.items.map((entry, index) => (
-              <li
-                key={entry.id}
-                className="rise"
-                style={
-                  {
-                    "--rise-delay": `${Math.min(
-                      (dayIndex * 4 + index) * 18,
-                      280,
-                    )}ms`,
-                  } as React.CSSProperties
-                }
-              >
-                <AuditRow entry={entry} guildHref={guildHref} />
+            {day.items.map((entry) => (
+              <li key={entry.id}>
+                <AuditRow
+                  entry={entry}
+                  labels={labels}
+                  roles={roles}
+                  channels={channels}
+                  guildHref={guildHref}
+                />
               </li>
             ))}
           </ol>
@@ -54,13 +122,20 @@ export function AuditTimeline({
 
 function AuditRow({
   entry,
+  labels,
+  roles,
+  channels,
   guildHref,
 }: {
   entry: AuditEntryView;
+  labels?: ModuleLabelIndex;
+  roles?: DashboardRoleView[];
+  channels?: DashboardChannelView[];
   guildHref?: (guildId: string) => string;
 }) {
   const { scope, verb } = splitAction(entry.action);
-  const details = formatDetails(entry.details);
+  const configChange = labels ? asConfigChangeDetails(entry.details) : null;
+  const entries = configChange ? null : objectDetailEntries(entry.details);
 
   return (
     <div className="group flex gap-3 px-4 transition-colors hover:bg-surface-hover">
@@ -109,15 +184,47 @@ function AuditRow({
           ) : null}
         </div>
 
-        {details ? (
-          <details className="mt-1.5">
-            <summary className="font-display inline-flex cursor-pointer text-[11px] tracking-[0.02em] text-fg-subtle hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]">
-              What was recorded
-            </summary>
-            <pre className="mt-1.5 max-w-full overflow-x-auto rounded border border-border bg-bg-subtle px-2.5 py-2 font-mono text-[11px] leading-5 text-fg-muted">
-              {details}
-            </pre>
-          </details>
+        {configChange && labels ? (
+          <p className="mt-1.5 text-[11px] text-fg-muted">
+            <span className="font-semibold text-fg">
+              {moduleLabel(labels, configChange.moduleName)} →{" "}
+              {fieldLabel(labels, configChange.moduleName, configChange.key)}
+            </span>{" "}
+            set to{" "}
+            <span className="font-mono text-fg">
+              {resolveConfigValue(
+                fieldType(labels, configChange.moduleName, configChange.key),
+                configChange.value,
+                roles ?? [],
+                channels ?? [],
+              )}
+            </span>
+          </p>
+        ) : entries && entries.length > 0 ? (
+          <dl className="mt-1.5 flex flex-col gap-0.5">
+            {entries.map(([key, value]) => {
+              const resolved = resolveDetailValue(value, roles, channels);
+              const isRawId =
+                typeof value === "string" &&
+                isSnowflake(value) &&
+                resolved === value;
+              return (
+                <div key={key} className="flex gap-1.5 text-[11px]">
+                  <dt className="text-fg-subtle">{humanizeKey(key)}:</dt>
+                  <dd
+                    className={cn(
+                      "text-fg-muted",
+                      isRawId && "font-mono",
+                    )}
+                  >
+                    {resolved}
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
+        ) : typeof entry.details === "string" ? (
+          <p className="mt-1.5 text-[11px] text-fg-muted">{entry.details}</p>
         ) : null}
       </div>
     </div>

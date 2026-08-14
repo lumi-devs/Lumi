@@ -51,7 +51,15 @@ export class ModModule extends Module {
     userId: string,
   ): Promise<Record<string, unknown> | null> {
     const cases = await this.container.db.moderation.findCasesForUser(userId);
-    return cases.length > 0 ? { moderationCases: cases } : null;
+    if (cases.length === 0) return null;
+
+    // GDPR Recital 63 - redact third-party identity, not just the requester's own data.
+    const redacted = cases.map((c) =>
+      c.moderatorId === userId
+        ? c
+        : { ...c, moderatorId: "[redacted: third-party moderator]" },
+    );
+    return { moderationCases: redacted };
   }
 
   public override async reconcileScheduledJobs(): Promise<void> {

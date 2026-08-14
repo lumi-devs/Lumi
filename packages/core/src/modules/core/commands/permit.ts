@@ -234,7 +234,7 @@ export class PermitCommand extends BaseSubcommand {
 
     const perms = getService("permissions");
     try {
-      await perms.deletePermit(permit.id);
+      await perms.deletePermit(ctx.guildId!, permit.id);
     } catch (err: unknown) {
       logError(`permit delete: guild=${ctx.guildId} name=${name}`, err);
       return ctx.replyError(
@@ -260,7 +260,10 @@ export class PermitCommand extends BaseSubcommand {
 
     const perms = getService("permissions");
     try {
-      await perms.updatePermitNodes(permit.id, [...permit.nodes, node]);
+      await perms.updatePermitNodes(ctx.guildId!, permit.id, [
+        ...permit.nodes,
+        node,
+      ]);
     } catch (err: unknown) {
       logError(`permit nodes add: guild=${ctx.guildId} name=${name}`, err);
       return ctx.replyError(
@@ -294,7 +297,7 @@ export class PermitCommand extends BaseSubcommand {
 
     const perms = getService("permissions");
     try {
-      await perms.updatePermitNodes(permit.id, remaining);
+      await perms.updatePermitNodes(ctx.guildId!, permit.id, remaining);
     } catch (err: unknown) {
       logError(`permit nodes remove: guild=${ctx.guildId} name=${name}`, err);
       return ctx.replyError(
@@ -326,7 +329,12 @@ export class PermitCommand extends BaseSubcommand {
 
     const perms = getService("permissions");
     try {
-      await perms.assignPermit(permit.id, target.targetType, target.targetId);
+      await perms.assignPermit(
+        ctx.guildId!,
+        permit.id,
+        target.targetType,
+        target.targetId,
+      );
     } catch (err: unknown) {
       logError(`permit assign: guild=${ctx.guildId} name=${name}`, err);
       return ctx.replyError(
@@ -359,6 +367,7 @@ export class PermitCommand extends BaseSubcommand {
     const perms = getService("permissions");
     try {
       await perms.unassignPermit(
+        ctx.guildId!,
         permit.id,
         target.targetType,
         target.targetId,

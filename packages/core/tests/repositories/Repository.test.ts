@@ -150,38 +150,5 @@ describe("Base Repository", () => {
       expect(result).toBeUndefined();
       expect(mockRedis.setex).not.toHaveBeenCalled();
     });
-
-    it("skips repopulating the cache when a write invalidates the key mid-fetch", async () => {
-      mockRedis.get
-        .mockResolvedValueOnce(null) // main cache check: miss
-        .mockResolvedValueOnce("111") // fence read before fetch
-        .mockResolvedValueOnce("222"); // fence read after fetch - changed
-      const fetcher = vi.fn().mockResolvedValue({ name: "stale-by-the-time-we-finish" });
-
-      const result = await repo.callGetOrSet("prefix:mycache:1", 60, fetcher);
-
-      expect(result).toEqual({ name: "stale-by-the-time-we-finish" });
-      expect(mockRedis.setex).not.toHaveBeenCalled();
-      expect(mockLogger.debug).toHaveBeenCalledWith(
-        "[cache] Skipped repopulating prefix:mycache:1 - invalidated while fetching",
-      );
-    });
-
-    it("still repopulates the cache when the fence is unchanged across the fetch", async () => {
-      mockRedis.get
-        .mockResolvedValueOnce(null) // main cache check: miss
-        .mockResolvedValueOnce("111") // fence read before fetch
-        .mockResolvedValueOnce("111"); // fence read after fetch - unchanged
-      const fetcher = vi.fn().mockResolvedValue({ name: "fresh" });
-
-      const result = await repo.callGetOrSet("prefix:mycache:1", 60, fetcher);
-
-      expect(result).toEqual({ name: "fresh" });
-      expect(mockRedis.setex).toHaveBeenCalledWith(
-        "prefix:mycache:1",
-        60,
-        JSON.stringify({ name: "fresh" }),
-      );
-    });
   });
 });

@@ -184,9 +184,6 @@ export class FilterMessageListener extends GuildMessageListener {
         reason,
       }).catch(swallow("Filter: heat quarantine"));
       await this.#logHeat(message, "Heat - Quarantine", reason);
-      if (config.panicRaiderCount > 0) {
-        await this.filterService.recordHeatPanicRaider(guildId, userId, config);
-      }
     } else if (action === "timeout" && member) {
       await this.filterService.clearHeat(guildId, userId);
       const violations = await this.filterService.recordViolation(guildId, userId);
@@ -200,15 +197,16 @@ export class FilterMessageListener extends GuildMessageListener {
         .timeout(minutes * 60_000, reason)
         .catch(swallow("Filter: heat timeout"));
       await this.#logHeat(message, "Heat - Timeout", reason);
-      if (config.panicRaiderCount > 0) {
-        await this.filterService.recordHeatPanicRaider(guildId, userId, config);
-      }
     } else if (action === "warn") {
       const t = await fetchTyped(message);
       const warn = await message.channel
         .send(t("filter:heatWarn", { user: message.author.toString() }))
         .catch(swallow("Filter: heat warn"));
       if (warn) deleteMessageLater(warn, undefined, "Filter: delete heat warn");
+    }
+
+    if ((action === "quarantine" || action === "timeout") && config.panicRaiderCount > 0) {
+      await this.filterService.recordHeatPanicRaider(guildId, userId, config);
     }
   }
 

@@ -1,11 +1,10 @@
 // Readiness probe registry. `/healthz` (liveness) is always 200 while the metrics
 // server responds - orchestrators use it to decide whether to restart the container.
-// `/readyz` (readiness) is 200 only when every registered probe passes; k8s and the
-// cluster coordinator gate on it, so a failing probe pulls the replica out of the pool
-// without killing it.
+// `/readyz` (readiness) is 200 only when every registered probe passes; k8s gates
+// on it, so a failing probe pulls the replica out of the pool without killing it.
 //
-// Each app registers the probes it needs: worker - postgres, redis, rabbitmq,
-// Discord; scheduler - postgres, redis, BullMQ, leader-lock (if enabled).
+// Each app registers the probes it needs: worker - postgres, redis, Discord;
+// scheduler - postgres, redis, BullMQ, leader-lock (if enabled); dashboard - rpc.
 
 export type ProbeStatus = "ok" | "fail" | "skip";
 
@@ -66,7 +65,13 @@ async function runOne(probe: Probe): Promise<ProbeResult> {
     ]);
     return result;
   } catch (err) {
-    return { status: "fail", detail: String(err) };
+    // `/readyz` is unauthenticated, so the response carries only a fixed
+    // classification; the raw error (which can embed connection strings) is
+    // logged instead.
+    process.stderr.write(
+      `[observability] readiness probe "${probe.name}" threw: ${String(err)}\n`,
+    );
+    return { status: "fail", detail: "probe error" };
   }
 }
 

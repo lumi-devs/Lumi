@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
-import { getService } from "#lib/module-system/Service.js";
+import { tryGetService } from "#lib/module-system/Service.js";
 import { handleSendMessageFire } from "#lib/outbound/send-queue.js";
 import { scheduleProcessRestart } from "#lib/restart.js";
 
@@ -22,7 +22,9 @@ async function handleFlushLogsFire(): Promise<void> {
 
 async function handleAddonAutoUpdateFire(): Promise<void> {
   try {
-    const downloader = getService("downloader");
+    const downloader = tryGetService("downloader");
+    if (!downloader) return;
+
     const config = await downloader.getAutoUpdateConfig();
     if (!config.enabled) return;
 

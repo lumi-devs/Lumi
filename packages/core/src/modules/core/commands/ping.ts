@@ -93,6 +93,7 @@ export class PingCommand extends BaseCommand {
       if (Date.now() - start >= LIVE_UPDATES_DURATION) {
         clearInterval(interval);
         activeIntervals.delete(userId);
+        pingViewStates.delete(userId);
         return;
       }
 
@@ -115,10 +116,12 @@ export class PingCommand extends BaseCommand {
           .catch(() => {
             clearInterval(interval);
             activeIntervals.delete(userId);
+            pingViewStates.delete(userId);
           });
       } catch {
         clearInterval(interval);
         activeIntervals.delete(userId);
+        pingViewStates.delete(userId);
       }
     }, LIVE_UPDATE_INTERVAL).unref();
 
@@ -130,6 +133,7 @@ export class PingCommand extends BaseCommand {
       clearInterval(interval);
     }
     activeIntervals.clear();
+    pingViewStates.clear();
     return super.onUnload();
   }
 }

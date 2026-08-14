@@ -18,7 +18,11 @@ import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
 import type { AppealsListData } from "#/lib/dashboard-data";
 import { APPEAL_STATUS_OPTIONS, isAppealStatus } from "#/lib/appeals";
-import { single } from "#/lib/log-format";
+import {
+  extractMemberNames,
+  pageNumber,
+  single,
+} from "#/lib/log-format";
 
 const PAGE_SIZE = 25;
 
@@ -38,9 +42,7 @@ export default async function AppealsPage({
   const page = pageNumber(single(query["page"]));
 
   const dashboard = await getGuildDashboard(guildId, session.userId);
-  const memberNames = Object.fromEntries(
-    dashboard.members.map((m) => [m.id, m.displayName || m.username]),
-  );
+  const memberNames = extractMemberNames(dashboard.members);
 
   let data: AppealsListData | null = null;
   let failure: string | null = null;
@@ -168,9 +170,4 @@ function firstPageHref(guildId: string, status: string | undefined): string {
   if (status) params.set("status", status);
   const qs = params.toString();
   return `/guild/${guildId}/appeals${qs ? `?${qs}` : ""}`;
-}
-
-function pageNumber(value: string): number {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }

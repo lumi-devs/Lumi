@@ -55,6 +55,14 @@ export interface EventBus {
     opts: ConsumeOptions,
     handler: (msg: BusMessage<T>) => Promise<void>,
   ): Promise<() => Promise<void>>;
+  /**
+   * Drop a consumer group and its pending list. Only for groups that are
+   * ephemeral by construction - one per replica, recreated at `$` on the next
+   * boot - which would otherwise accumulate in Redis forever, one dead group
+   * per restart. Never call it for a shared pool group: the pending entries of
+   * every consumer in it go with it.
+   */
+  destroyGroup(stream: string, group: string): Promise<void>;
   /** Release all underlying connections. Safe to call multiple times. */
   close(): Promise<void>;
 }

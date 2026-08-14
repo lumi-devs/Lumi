@@ -72,15 +72,8 @@ export class CommandContext {
   }
 
   public get user(): User {
-    if (this.isSlash) {
-      return (
-        (this.source as ChatInputCommandInteraction).user ||
-        ({ id: "0", tag: "mock#0000" } as any)
-      );
-    }
-    return (
-      (this.source as Message).author || ({ id: "0", tag: "mock#0000" } as any)
-    );
+    if (this.isSlash) return (this.source as ChatInputCommandInteraction).user;
+    return (this.source as Message).author;
   }
 
   public get member(): GuildMember | null {
@@ -271,7 +264,6 @@ export class CommandContext {
 
   /** Per-subcommand permit check - throws a rendered denial. */
   public async checkPermit(permitNode: string): Promise<void> {
-    const userId = this.user.id;
     const guildId = this.guildId;
     if (!guildId) {
       throw new UserError({
@@ -279,6 +271,7 @@ export class CommandContext {
         message: "This command can only be used in a server.",
       });
     }
+    const userId = this.user.id;
     const roleIds = Array.from(this.member?.roles.cache.keys() ?? []);
     const guildOwnerId = this.guild?.ownerId;
     const hasPermit = await container.permitResolver.hasPermit({

@@ -27,13 +27,6 @@ export class GuildSettingsService extends Service {
       layout,
     );
 
-    if (this.container.rabbit) {
-      await this.container.rabbit.publishEvent("dashboard.layout.updated", {
-        guildId,
-        layout,
-      });
-    }
-
     return layout;
   }
 

@@ -1,3 +1,4 @@
+import * as React from "react";
 import { cn } from "#/lib/utils";
 
 // Wrap in `<TableScroll>` so wide tables scroll inside their own container
@@ -58,18 +59,19 @@ export function TH({
   );
 }
 
-export function TBody({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLTableSectionElement>) {
+export const TBody = React.forwardRef<
+  HTMLTableSectionElement,
+  React.HTMLAttributes<HTMLTableSectionElement>
+>(function TBody({ className, ...props }, ref) {
   return (
     <tbody
+      ref={ref}
       data-slot="table-body"
       className={cn("divide-y divide-border", className)}
       {...props}
     />
   );
-}
+});
 
 export function TR({
   className,

@@ -1,9 +1,9 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
-import { isNullish } from "@sapphire/utilities";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { VoiceMuteAction } from "../actions/VoiceMuteAction.js";
 import { parseDuration } from "#lib/utilities/time.js";
+import { resolveVoiceMember } from "../lib/helpers.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "vcmute",
@@ -65,21 +65,11 @@ export class VcMuteCommand extends BaseSubcommand {
 
   public async add(ctx: CommandContext): Promise<void> {
     const guild = ctx.guild!;
-    const user = await ctx.getUser("target");
     const durationStr = await ctx.getString("duration");
     const reason = (await ctx.getString("reason")) ?? "No reason provided.";
 
-    if (isNullish(user)) {
-      return ctx.replyError("User Required", "Please specify a target user.");
-    }
-
-    const member = await guild.members.fetch(user.id).catch(() => null);
-    if (isNullish(member)) {
-      return ctx.replyError(
-        "Member Not Found",
-        "That user is not in this server.",
-      );
-    }
+    const member = await resolveVoiceMember(ctx, guild);
+    if (!member) return;
 
     const durationMs = durationStr
       ? parseDuration(durationStr)
@@ -107,21 +97,11 @@ export class VcMuteCommand extends BaseSubcommand {
 
   public async remove(ctx: CommandContext): Promise<void> {
     const guild = ctx.guild!;
-    const user = await ctx.getUser("target");
     const reason =
       (await ctx.getString("reason")) ?? "Voice unmute by moderator";
 
-    if (!user) {
-      return ctx.replyError("User Required", "Please specify a target user.");
-    }
-
-    const member = await guild.members.fetch(user.id).catch(() => null);
-    if (!member) {
-      return ctx.replyError(
-        "Member Not Found",
-        "That user is not in this server.",
-      );
-    }
+    const member = await resolveVoiceMember(ctx, guild);
+    if (!member) return;
 
     const c = await VoiceMuteAction.undo({
       guild,

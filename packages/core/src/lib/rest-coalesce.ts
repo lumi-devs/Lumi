@@ -90,6 +90,7 @@ async function flush(channelId: string): Promise<void> {
   if (q.entries.length === 0) {
     queues.delete(channelId);
   } else if (!q.timer) {
+    // Entries arrived while we were awaiting the REST call — reschedule flush.
     q.timer = setTimeout(() => void flush(channelId), FLUSH_DELAY_MS);
     q.timer.unref?.();
   }
