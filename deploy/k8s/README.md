@@ -40,7 +40,6 @@ flowchart TD
         Discord[Discord Gateway / REST API]
         DB[(PostgreSQL 17 / PgBouncer)]
         Redis[(Redis 7)]
-        RMQ[RabbitMQ Broker]
         Prometheus[Prometheus Server]
     end
 
@@ -71,11 +70,10 @@ flowchart TD
     W0 -->|REST via DISCORD_PROXY_URL| NP
     W1 -->|REST via DISCORD_PROXY_URL| NP
 
-    W0 <-->|Shard coordination / sessions| Redis
-    W1 <-->|Shard coordination / sessions| Redis
+    W0 <-->|Shard telemetry & session state| Redis
+    W1 <-->|Shard telemetry & session state| Redis
 
     W0 <-->|Queries| DB
-    W0 <-->|RPC Responders| RMQ
 
     Sched <-->|BullMQ Tasks| Redis
     Sched <-->|Sync State| DB
@@ -94,7 +92,7 @@ flowchart TD
 1. **Kubernetes Cluster**: Version `1.28` or higher.
 2. **`kubectl` CLI**: Installed and configured with cluster admin permissions.
 3. **Prometheus Operator / Server**: Configured to scrape pods annotated with `prometheus.io/scrape: "true"`.
-4. **External Data Plane**: PostgreSQL 17 (or PgBouncer), Redis 7, and RabbitMQ deployed and reachable from inside the cluster.
+4. **External Data Plane**: PostgreSQL 17 (or PgBouncer) and Redis 7 deployed and reachable from inside the cluster. The dashboard talks to `worker` directly over an internal HTTP RPC port (`RPC_HTTP_PORT`, default 8091) — no message broker involved.
 
 ---
 
@@ -154,11 +152,10 @@ kubectl apply -f worker-statefulset.yaml
 
 ## 📈 Scaling Workers
 
-Worker replica count is set manually, not by an autoscaler. Discord's `/gateway/bot` decides the total shard count; `packages/sharding` divides those shards across however many replicas are running, keyed on `CLUSTER_NAME` (already set in `configmap.yaml`).
+Worker replica count is set manually, not by an autoscaler, and shard assignment is static: each replica is told which shard IDs it owns via `SHARD_LIST`, there is no runtime coordination between replicas. `CLUSTER_NAME` (already set in `configmap.yaml`) only namespaces the shard telemetry each replica publishes for the dashboard's fleet view.
 
-- At `replicas: 1`, cluster coordination stays inert and the pod runs the single-process shard path.
-- Past 1 replica, each pod claims its own shard range automatically. Size it by picking a shards-per-replica target (start around 16–32) and dividing the total shard count by it.
-- Rolling updates use `maxUnavailable: 1` so at most one shard range is offline at a time; each replacement pod RESUMEs its predecessor's sessions from Redis instead of spending IDENTIFY budget.
+- Scaling replica count means changing `SHARD_LIST` (and `CLUSTER_REPLICAS`/`TOTAL_SHARDS` if applicable) for the affected pods and restarting them — there is no in-place rebalance path. Size it by picking a shards-per-replica target (start around 16–32) and dividing the total shard count by it.
+- Rolling updates use `maxUnavailable: 1` so at most one shard range is offline at a time; each replacement pod spends a fresh IDENTIFY on restart.
 
 ```bash
 kubectl -n lumi scale statefulset/worker --replicas=4

@@ -11,7 +11,7 @@ import type { Redis } from "ioredis";
  * mutual exclusion across workers matters, not ordering.
  */
 
-const RELEASE_SCRIPT = `
+export const REDIS_RELEASE_SCRIPT = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
   return redis.call('DEL', KEYS[1])
 else
@@ -19,7 +19,7 @@ else
 end
 `;
 
-const EXTEND_SCRIPT = `
+export const REDIS_EXTEND_SCRIPT = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
   return redis.call('PEXPIRE', KEYS[1], ARGV[2])
 else
@@ -72,7 +72,7 @@ export async function acquireRedisLock(
     () => {
       if (released) return;
       redis
-        .eval(EXTEND_SCRIPT, 1, key, token, opts.ttlMs.toString())
+        .eval(REDIS_EXTEND_SCRIPT, 1, key, token, opts.ttlMs.toString())
         .catch(() => null);
     },
     Math.floor(opts.ttlMs / 2),
@@ -83,6 +83,6 @@ export async function acquireRedisLock(
     if (released) return;
     released = true;
     clearInterval(renew);
-    await redis.eval(RELEASE_SCRIPT, 1, key, token).catch(() => null);
+    await redis.eval(REDIS_RELEASE_SCRIPT, 1, key, token).catch(() => null);
   };
 }

@@ -24,10 +24,13 @@ describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {
       expect(evaluateNodeMatch("*", "config.prefix")).toBe(true);
     });
 
-    it("should match section wildcards like mod.*", () => {
+    it("should match section wildcards like mod.* and nested wildcards like mod.kick.*", () => {
       expect(evaluateNodeMatch("mod.*", "mod.ban")).toBe(true);
       expect(evaluateNodeMatch("mod.*", "mod.kick.soft")).toBe(true);
       expect(evaluateNodeMatch("mod.*", "config.prefix")).toBe(false);
+      expect(evaluateNodeMatch("mod.kick.*", "mod.kick.soft")).toBe(true);
+      expect(evaluateNodeMatch("mod.kick.*", "mod.kick")).toBe(true);
+      expect(evaluateNodeMatch("mod.kick.*", "mod.ban")).toBe(false);
     });
 
     it("should evaluate evaluateNodeMatch instance method", () => {

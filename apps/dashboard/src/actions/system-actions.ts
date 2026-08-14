@@ -62,6 +62,18 @@ export async function toggleGlobalModule(
   });
 }
 
+export async function clearGlobalModule(moduleName: string): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await guardedSystemAction();
+    await rpcCall(RPC_ACTIONS.systemModuleClear, {
+      actorId: session.userId,
+      data: { moduleName },
+    });
+    revalidatePath("/system/modules");
+    return { ok: true };
+  });
+}
+
 export async function addRepo(
   name: string,
   url: string,
@@ -81,15 +93,31 @@ export async function addRepo(
 export async function installModule(
   repoName: string,
   moduleName: string,
+  revision?: string,
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSystemAction();
     await rpcCall(RPC_ACTIONS.moduleInstall, {
       actorId: session.userId,
-      data: { repoName, moduleName },
+      data: { repoName, moduleName, revision },
     });
     revalidatePath("/system/addons");
     return { ok: true };
+  });
+}
+
+export async function rollbackModule(
+  moduleName: string,
+  revision: string,
+): Promise<{ ok: true; commit: string | null } | { ok: false; error: string }> {
+  return runAction(async () => {
+    const session = await guardedSystemAction();
+    const result = (await rpcCall(RPC_ACTIONS.moduleRollback, {
+      actorId: session.userId,
+      data: { moduleName, revision },
+    })) as { commit: string | null };
+    revalidatePath("/system/addons");
+    return { ok: true, commit: result.commit };
   });
 }
 
@@ -97,6 +125,8 @@ export interface RepoModuleView {
   name: string;
   version?: string;
   isInstalled: boolean;
+  commit: string | null;
+  pinned: boolean;
 }
 
 export async function listRepoModules(

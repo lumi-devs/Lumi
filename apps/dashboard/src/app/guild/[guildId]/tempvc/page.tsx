@@ -1,4 +1,4 @@
-import { PlugZap } from "lucide-react";
+import { Mic, PlugZap } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import {
   getGuildDashboard,
@@ -57,6 +57,7 @@ export default async function TempVcPage({
     <div className="flex flex-col gap-4">
       <div className="rise" style={{ "--rise-delay": "0ms" } as React.CSSProperties}>
         <PageHeader
+          icon={Mic}
           title="Temporary voice channels"
           description="Members who join a generator get a voice channel of their own, created in the same category and deleted once it empties."
         />

@@ -3,7 +3,13 @@ import NextAuth, { type Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import Discord from "next-auth/providers/discord";
 import { env } from "./env";
-import { canManage, fetchUserGuilds, userAvatarUrl, type OAuthGuild } from "./discord";
+import {
+  canManage,
+  DiscordApiError,
+  fetchUserGuilds,
+  userAvatarUrl,
+  type OAuthGuild,
+} from "./discord";
 import { rpcCall } from "./rpc";
 import { RPC_ACTIONS, type WhoAmIResponse } from "@lumi/contracts";
 
@@ -67,9 +73,33 @@ async function refreshAuthorization(token: JWT): Promise<void> {
     const guilds = (await fetchUserGuilds(token.accessToken ?? "")).filter(canManage);
     token.guilds = guilds;
     snapshot.guilds = guilds;
-  } catch {
-    // Likewise: an empty list would 404 every guild route until a manual sign-out.
+  } catch (err: unknown) {
+    if (err instanceof DiscordApiError && err.isAuthFailure) {
+      // The grant is gone (revoked, expired, password reset). Keeping the
+      // cached list would let a revoked authorization keep working for the
+      // remaining 8h of session life, so drop everything derived from it —
+      // guild routes and /system then deny, and the next visit re-authorizes.
+      clearAuthorization(token, snapshot);
+    }
+    // Anything else (429, 5xx, network) is transient: keep the previous value
+    // rather than 404-ing every guild route on a blip, and retry next cycle.
   }
+}
+
+/**
+ * Strips everything the OAuth grant vouched for. `accessToken` goes too — it
+ * is dead, and clearing it keeps a later refresh from re-deriving access.
+ */
+function clearAuthorization(token: JWT, snapshot: AuthzSnapshot): void {
+  token.guilds = [];
+  token.isBotOwner = false;
+  token.accessToken = "";
+  snapshot.guilds = [];
+  snapshot.isBotOwner = false;
+  // Re-check on the very next request instead of trusting this snapshot for
+  // another TTL window.
+  snapshot.at = 0;
+  token.authRefreshedAt = 0;
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({

@@ -126,14 +126,20 @@ export class PermissionRepository extends Repository {
         include: { permit: true },
       });
 
+      const assignmentsByTarget = new Map<string, typeof assignments>();
+      for (const assignment of assignments) {
+        const key = `${assignment.targetType}:${assignment.targetId}`;
+        if (!assignmentsByTarget.has(key)) {
+          assignmentsByTarget.set(key, []);
+        }
+        assignmentsByTarget.get(key)!.push(assignment);
+      }
+
       const pipeline = this.redis.pipeline();
 
       for (const missing of missingTargets) {
-        const forTarget = assignments.filter(
-          (a) =>
-            a.targetType === missing.targetType &&
-            a.targetId === missing.targetId,
-        );
+        const key = `${missing.targetType}:${missing.targetId}`;
+        const forTarget = assignmentsByTarget.get(key) ?? [];
         const payload = collapseAssignments(forTarget);
 
         for (const p of payload.custom) customPermits.add(p);
@@ -188,8 +194,15 @@ export class PermissionRepository extends Repository {
     });
   }
 
-  public async getPermit(permitId: number): Promise<PermitRecord | null> {
-    return this.prisma.permit.findUnique({ where: { id: permitId } });
+  /**
+   * Looks a permit up scoped to its guild, so a permit id belonging to another
+   * guild can never be resolved.
+   */
+  public async getPermit(
+    guildId: string,
+    permitId: number,
+  ): Promise<PermitRecord | null> {
+    return this.prisma.permit.findFirst({ where: { id: permitId, guildId } });
   }
 
   public async findPermitByName(
@@ -213,35 +226,44 @@ export class PermissionRepository extends Repository {
   }
 
   public async updatePermitNodes(
+    guildId: string,
     permitId: number,
     nodes: string[],
-  ): Promise<PermitRecord> {
-    const updated = await this.prisma.permit.update({
-      where: { id: permitId },
+  ): Promise<PermitRecord | null> {
+    const { count } = await this.prisma.permit.updateMany({
+      where: { id: permitId, guildId },
       data: { nodes },
+    });
+    if (count === 0) return null;
+    const updated = await this.prisma.permit.findUnique({
+      where: { id: permitId },
       include: { assignments: true },
     });
+    if (!updated) return null;
     await this.invalidateAssignments(updated.assignments);
     return updated;
   }
 
   public async renamePermit(
+    guildId: string,
     permitId: number,
     name: string,
-  ): Promise<PermitRecord> {
-    return this.prisma.permit.update({
-      where: { id: permitId },
+  ): Promise<PermitRecord | null> {
+    const { count } = await this.prisma.permit.updateMany({
+      where: { id: permitId, guildId },
       data: { name },
     });
+    if (count === 0) return null;
+    return this.prisma.permit.findUnique({ where: { id: permitId } });
   }
 
-  public async deletePermit(permitId: number): Promise<void> {
-    const permit = await this.prisma.permit.findUnique({
-      where: { id: permitId },
+  public async deletePermit(guildId: string, permitId: number): Promise<void> {
+    const permit = await this.prisma.permit.findFirst({
+      where: { id: permitId, guildId },
       include: { assignments: true },
     });
     if (!permit) return;
-    await this.prisma.permit.delete({ where: { id: permitId } });
+    await this.prisma.permit.deleteMany({ where: { id: permitId, guildId } });
     await this.invalidateAssignments(permit.assignments);
   }
 
@@ -264,11 +286,12 @@ export class PermissionRepository extends Repository {
   }
 
   public async assignPermit(
+    guildId: string,
     permitId: number,
     targetId: string,
   ): Promise<PermitAssignmentRecord> {
-    const permit = await this.prisma.permit.findUnique({
-      where: { id: permitId },
+    const permit = await this.prisma.permit.findFirst({
+      where: { id: permitId, guildId },
     });
     if (!permit) throw new Error("Permit not found.");
     const targetType = KIND_TARGET_TYPE[permit.kind as PermitKind];
@@ -292,17 +315,18 @@ export class PermissionRepository extends Repository {
   }
 
   public async unassignPermit(
+    guildId: string,
     permitId: number,
     targetId: string,
   ): Promise<number> {
-    const permit = await this.prisma.permit.findUnique({
-      where: { id: permitId },
+    const permit = await this.prisma.permit.findFirst({
+      where: { id: permitId, guildId },
     });
     if (!permit) throw new Error("Permit not found.");
     const targetType = KIND_TARGET_TYPE[permit.kind as PermitKind];
 
     const { count } = await this.prisma.permitAssignment.deleteMany({
-      where: { permitId, targetType, targetId },
+      where: { permitId, guildId, targetType, targetId },
     });
     await this.invalidate(
       RedisKeys.targetPermits(permit.guildId, targetType, targetId),

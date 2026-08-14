@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CheckCircle, XCircle } from "lucide-react";
 import { Wordmark } from "#/components/layout/wordmark";
 import { AppealIntakeForm } from "#/components/appeal/appeal-intake-form";
 import { Alert } from "#/components/ui/alert";
@@ -69,13 +70,20 @@ export default async function AppealIntakePage({
 function InvalidLink({ reason }: { reason?: string }) {
   return (
     <>
-      <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
-        This appeal link doesn&rsquo;t work
-      </h1>
-      <p className="mt-1 mb-4 text-[12px] leading-5 text-fg-muted">
-        {reason ??
-          "The link is malformed, expired, or was already used. Ask the server's staff for a fresh one if you still want to appeal."}
-      </p>
+      <div className="mb-4 flex items-start gap-3">
+        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control border border-border bg-danger-soft text-danger-fg">
+          <XCircle className="size-4" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
+            This appeal link doesn&rsquo;t work
+          </h1>
+          <p className="mt-1 text-[12px] leading-5 text-fg-muted">
+            {reason ??
+              "The link is malformed, expired, or was already used. Ask the server's staff for a fresh one if you still want to appeal."}
+          </p>
+        </div>
+      </div>
     </>
   );
 }
@@ -84,14 +92,21 @@ function AlreadySubmitted({ status }: { status: string }) {
   const label = isAppealStatus(status) ? APPEAL_STATUS_LABELS[status] : status;
   return (
     <>
-      <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
-        Appeal already submitted
-      </h1>
-      <p className="mt-1 mb-4 text-[12px] leading-5 text-fg-muted">
-        An appeal for this case has already been submitted. Its current
-        status is <span className="font-medium text-fg">{label}</span>.
-        Submitting again isn&rsquo;t possible for the same case.
-      </p>
+      <div className="mb-4 flex items-start gap-3">
+        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control border border-border bg-success-soft text-success-fg">
+          <CheckCircle className="size-4" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
+            Appeal already submitted
+          </h1>
+          <p className="mt-1 text-[12px] leading-5 text-fg-muted">
+            An appeal for this case has already been submitted. Its current
+            status is <span className="font-medium text-fg">{label}</span>.
+            Submitting again isn&rsquo;t possible for the same case.
+          </p>
+        </div>
+      </div>
     </>
   );
 }

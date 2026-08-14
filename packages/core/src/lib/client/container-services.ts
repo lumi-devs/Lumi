@@ -17,7 +17,7 @@ import {
   streamDlqLength,
   streamLength,
 } from "@lumi/observability";
-import { container, type SapphireClient } from "@sapphire/framework";
+import { container, Store, type SapphireClient } from "@sapphire/framework";
 import { pathToFileURL } from "node:url";
 
 /**
@@ -45,10 +45,10 @@ export function installContainerServices(
   client.stores.register(new ServiceStore());
   client.stores.register(moduleStore);
   client.stores.registerPath(new URL("../permissions/", import.meta.url));
-  (client.stores.get("services") as any).registerPath(
+  (client.stores.get("services") as Store<any> | undefined)?.registerPath(
     new URL("../services/", import.meta.url),
   );
-  (client.stores.get("utilities") as any).registerPath(
+  (client.stores.get("utilities") as Store<any> | undefined)?.registerPath(
     new URL("../utility-store/", import.meta.url),
   );
 

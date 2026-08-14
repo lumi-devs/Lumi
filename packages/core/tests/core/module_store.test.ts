@@ -165,9 +165,14 @@ describe('ModuleStore', () => {
 			values: vi.fn().mockReturnValue([failingStore]),
 			get: vi.fn()
 		} as any;
-		(fs.readdir as any).mockImplementation((p: any) => {
+		(fs.readdir as any).mockImplementation((p: any, opts: any) => {
 			const parts = String(p).split(path.sep);
-			if (parts.at(-1) === 'commands') return Promise.resolve(['bad.ts']);
+			if (parts.at(-1) === 'commands') {
+				if (opts?.withFileTypes) {
+					return Promise.resolve([{ name: 'bad.ts', isDirectory: () => false, isFile: () => true }]);
+				}
+				return Promise.resolve(['bad.ts']);
+			}
 			return Promise.resolve(['broken']);
 		});
 

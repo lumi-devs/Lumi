@@ -25,6 +25,7 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { Field, Input, Select } from "#/components/ui/input";
 import { Glyph } from "#/components/ui/glyph";
 import { ValueChip } from "#/components/ui/value-chip";
+import { useStaggerIn } from "#/lib/animate";
 import type {
   ConfigOverrideView,
   DashboardChannelView,
@@ -36,6 +37,14 @@ import { formatConfigValue, isSnowflake, isUnset } from "#/lib/log-format";
 import { useServerAction } from "#/lib/use-server-action";
 
 const CATEGORY_CHANNEL_TYPE = 4;
+
+// `guild.overrides.set` treats a null value as a delete, so an override whose
+// value was never filled in would silently remove a row instead of creating
+// one. Removing is its own explicit action on each row, so blank submits are
+// blocked rather than quietly routed into the delete path.
+function isBlankValue(value: unknown): boolean {
+  return isUnset(value) || (typeof value === "string" && value.trim() === "");
+}
 
 const TARGET_TYPES: { value: ConfigOverrideModelType; label: string }[] = [
   { value: "channel", label: "Channel" },
@@ -81,8 +90,13 @@ export function OverridesBoard({
     return [...byModule.entries()].map(([name, items]) => ({ name, items }));
   }, [overrides]);
 
+  const boardRef = useStaggerIn<HTMLDivElement>('[data-slot="card"]', {
+    delay: 60,
+    resetKey: groups.map((g) => g.name).join(","),
+  });
+
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={boardRef} className="flex flex-col gap-4">
       <div aria-live="polite">
         {notice ? <Alert variant="info">{notice}</Alert> : null}
       </div>
@@ -139,18 +153,10 @@ export function OverridesBoard({
           />
         </Card>
       ) : (
-        groups.map((group, index) => {
+        groups.map((group) => {
           const moduleView = moduleIndex.get(group.name);
           return (
-            <Card
-              key={group.name}
-              className="rise"
-              style={
-                {
-                  "--rise-delay": `${Math.min(70 + index * 70, 280)}ms`,
-                } as React.CSSProperties
-              }
-            >
+            <Card key={group.name}>
               <CardHeader
                 actions={
                   <Badge variant="neutral" className="tabular">
@@ -216,6 +222,12 @@ function OverrideRow({
   const settingName = field?.label || override.key;
 
   function save() {
+    if (isBlankValue(draft)) {
+      setError(
+        `Clearing the value would delete this override, not change it. Use Remove if ${target.name} should go back to the server-wide value.`,
+      );
+      return;
+    }
     run(async () => {
       const result = await setConfigOverride(
         guildId,
@@ -315,7 +327,7 @@ function OverrideRow({
             />
           </div>
         )}
-        {editing ? null : <ActionError error={error} className="mt-2" />}
+        {removing ? null : <ActionError error={error} className="mt-2" />}
       </div>
 
       {editing ? null : (
@@ -396,10 +408,11 @@ function AddOverrideForm({
   const targetOptions = targetOptionsFor(modelType, directory);
   const needsTypedId = modelType === "user";
   const targetValid = needsTypedId ? isSnowflake(modelId) : Boolean(modelId);
-  const ready = Boolean(moduleView && field && targetValid);
+  const valueValid = !isBlankValue(value);
+  const ready = Boolean(moduleView && field && targetValid && valueValid);
 
   function submit() {
-    if (!moduleView || !field) return;
+    if (!moduleView || !field || !targetValid || !valueValid) return;
     run(async () => {
       const result = await setConfigOverride(
         guildId,
@@ -558,6 +571,11 @@ function AddOverrideForm({
         {moduleView && field && !targetValid ? (
           <span className="text-[11px] text-fg-subtle">
             Choose what this applies to first.
+          </span>
+        ) : moduleView && field && !valueValid ? (
+          <span className="text-[11px] text-fg-subtle">
+            Enter the value this target should use instead — an override with no
+            value of its own wouldn&apos;t change anything.
           </span>
         ) : null}
       </div>

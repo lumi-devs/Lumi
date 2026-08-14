@@ -2,6 +2,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseCommand, CommandContext } from "#lib/commands.js";
 import { VoiceMuteAction } from "../actions/VoiceMuteAction.js";
+import { resolveVoiceMember } from "../lib/helpers.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "vcunmute",
@@ -33,21 +34,11 @@ export class VcUnmuteCommand extends BaseCommand {
 
   public override async run(ctx: CommandContext): Promise<void> {
     const guild = ctx.guild!;
-    const user = await ctx.getUser("target");
     const reason =
       (await ctx.getString("reason")) ?? "Voice unmute by moderator";
 
-    if (!user) {
-      return ctx.replyError("User Required", "Please specify a target user.");
-    }
-
-    const member = await guild.members.fetch(user.id).catch(() => null);
-    if (!member) {
-      return ctx.replyError(
-        "Member Not Found",
-        "That user is not in this server.",
-      );
-    }
+    const member = await resolveVoiceMember(ctx, guild);
+    if (!member) return;
 
     const c = await VoiceMuteAction.undo({
       guild,

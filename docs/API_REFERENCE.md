@@ -269,7 +269,7 @@ Lower-level primitive `RelayTask` and the scheduler process use internally to pu
 ## `lumi/ui`
 
 ```typescript
-export { makeCard, makeInfoCard, makeSuccessCard, makeWarningCard, makeErrorCard, ephemeralCard, noPingCard, CARD_ACCENTS, type CardReply, type CardOptions };
+export { makeCard, makeInfoCard, makeSuccessCard, makeWarningCard, makeErrorCard, ephemeralCard, noPingCard, resolveCardColor, defaultCardColors, type CardReply, type CardOptions, type CardColorKey };
 export { confirmRow, backRow };
 export { confirmPrompt, type ConfirmPromptOptions };
 export { paginateList, paginateContainer };
@@ -301,7 +301,7 @@ interface CardOptions {
 }
 ```
 
-`CARD_ACCENTS` exposes the raw color ints (`PRIMARY`, `INFO`, `SUCCESS`, `WARNING`, `ERROR`, `PURPLE`, `CYAN`) if you're composing a card manually instead of through a `make*Card` helper. `ephemeralCard(card)` / `noPingCard(card)` wrap an existing `CardReply` to add the ephemeral flag / suppress mention pings, respectively - useful when you built the card once and need both an ephemeral and non-ephemeral send path.
+`resolveCardColor(key)` returns a color int for the given key (`"primary"`, `"info"`, `"success"`, `"warning"`, `"error"`, `"neutral"`, `"gold"`, `"purple"`, `"cyan"`) - it checks the operator's branding overrides in `config/bot.ts` first, then falls back to the built-in palette. `defaultCardColors` is the raw object (`{ primary: 0x5865f2, info: 0x5865f2, ... }`) if you need to access the palette directly. Use `resolveCardColor` when composing a card manually instead of through a `make*Card` helper. `ephemeralCard(card)` / `noPingCard(card)` wrap an existing `CardReply` to add the ephemeral flag / suppress mention pings, respectively - useful when you built the card once and need both an ephemeral and non-ephemeral send path.
 
 On a `CommandContext`, the equivalent one-call helpers are `ctx.replySuccess`/`replyError`/`replyWarning`/`replyInfo` (see `lumi/commands` above) - reach for `make*Card` directly only when you need the `CardReply` object itself (e.g. sending from a listener with no `CommandContext`, or building a multi-step message).
 

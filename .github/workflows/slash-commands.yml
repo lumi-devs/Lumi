@@ -6,14 +6,25 @@ on:
 
 permissions: {}
 
+env:
+  BUN_VERSION: "1.3.14"
+
 jobs:
-  format-command:
-    name: Execute /format Slash Command
+  # Authorization gate. `issue_comment` fires for comments from anyone, so
+  # without an author_association check any drive-by account could run the
+  # jobs below against a fork's code. Every downstream job hangs off this one.
+  format-authorize:
+    name: Authorize /format
     runs-on: ubuntu-latest
-    if: github.event.issue.pull_request && contains(github.event.comment.body, '/format')
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/format') &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
     permissions:
-      contents: write
       pull-requests: write
+    outputs:
+      head_repo: ${{ steps.pr.outputs.head_repo }}
+      head_ref: ${{ steps.pr.outputs.head_ref }}
     steps:
       - name: Add eyes reaction
         uses: actions/github-script@v9
@@ -26,30 +37,97 @@ jobs:
               content: 'eyes'
             });
 
+      - name: Resolve PR head
+        id: pr
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.issue.number
+            });
+            core.setOutput('head_repo', pr.head.repo.full_name);
+            core.setOutput('head_ref', pr.head.ref);
+
+  # Untrusted stage: this runs the PR author's package.json lifecycle scripts
+  # and eslint config. It gets a read-only token, and `persist-credentials:
+  # false` keeps even that out of .git/config where a postinstall could read
+  # it. The result leaves as a patch artifact, never as a push.
+  format-build:
+    name: Build /format Patch
+    runs-on: ubuntu-latest
+    needs: format-authorize
+    permissions:
+      contents: read
+    steps:
       - name: Checkout PR Branch
         uses: actions/checkout@v4
         with:
           ref: refs/pull/${{ github.event.issue.number }}/head
+          persist-credentials: false
 
       - name: Setup Bun Environment
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Install Dependencies & Run ESLint Fix
         run: |
           bun install --frozen-lockfile
           bun run lint --fix || true
 
+      - name: Export Formatting Patch
+        run: git diff --binary > /tmp/format.patch
+
+      - name: Upload Formatting Patch
+        uses: actions/upload-artifact@v4
+        with:
+          name: format-patch
+          path: /tmp/format.patch
+          retention-days: 1
+
+  # Privileged stage: holds the write token but never executes PR code - it
+  # only applies a patch and pushes.
+  format-push:
+    name: Push /format Result
+    runs-on: ubuntu-latest
+    needs: [format-authorize, format-build]
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout PR Head Branch
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ needs.format-authorize.outputs.head_repo }}
+          ref: ${{ needs.format-authorize.outputs.head_ref }}
+
+      - name: Download Formatting Patch
+        uses: actions/download-artifact@v4
+        with:
+          name: format-patch
+          path: /tmp/patch
+
+      - name: Apply Formatting Patch
+        run: |
+          if [ -s /tmp/patch/format.patch ]; then
+            git apply --allow-empty /tmp/patch/format.patch
+          else
+            echo "No formatting changes to apply."
+          fi
+
       - name: Commit & Push Formatted Code
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@b863ae1933cb653a53c021fe36dbb774e1fb9403 # v5
         with:
           commit_message: "style(repo): auto-format code via /format slash command"
 
   retest-command:
     name: Execute /retest Slash Command
     runs-on: ubuntu-latest
-    if: github.event.issue.pull_request && contains(github.event.comment.body, '/retest')
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/retest') &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
     permissions:
       pull-requests: write
     steps:
@@ -64,51 +142,82 @@ jobs:
               content: 'rocket'
             });
 
-  bench-command:
-    name: Execute /bench Slash Command
+  bench-authorize:
+    name: Authorize /bench
     runs-on: ubuntu-latest
-    if: github.event.issue.pull_request && contains(github.event.comment.body, '/bench')
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/bench') &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Add rocket reaction
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+  # Untrusted stage: runs the PR author's install scripts and benchmark code
+  # with no token on disk and no permission to comment. Benchmark output goes
+  # to a file, not $GITHUB_ENV - attacker-shaped stdout cannot forge env vars.
+  bench-run:
+    name: Run /bench Suite
+    runs-on: ubuntu-latest
+    needs: bench-authorize
     permissions:
       contents: read
-      pull-requests: write
     steps:
-      - name: Add rocket reaction
-        uses: actions/github-script@v9
-        with:
-          script: |
-            await github.rest.reactions.createForIssueComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: context.payload.comment.id,
-              content: 'rocket'
-            });
-
       - name: Checkout PR Branch
         uses: actions/checkout@v4
         with:
           ref: refs/pull/${{ github.event.issue.number }}/head
+          persist-credentials: false
 
       - name: Setup Bun Environment
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Install Dependencies
         run: bun install --frozen-lockfile
 
       - name: Run Performance Benchmark Suite
-        id: bench
-        run: |
-          OUTPUT=$(bun run bench)
-          echo "BENCH_OUTPUT<<EOF" >> $GITHUB_ENV
-          echo "$OUTPUT" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+        run: bun run bench > /tmp/bench-output.txt
+
+      - name: Upload Benchmark Output
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-output
+          path: /tmp/bench-output.txt
+          retention-days: 1
+
+  bench-comment:
+    name: Post /bench Results
+    runs-on: ubuntu-latest
+    needs: [bench-authorize, bench-run]
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Download Benchmark Output
+        uses: actions/download-artifact@v4
+        with:
+          name: bench-output
+          path: /tmp/bench
 
       - name: Post Benchmark Results Comment
         uses: actions/github-script@v9
         with:
           script: |
-            const message = process.env.BENCH_OUTPUT + `\n\n*Triggered via \`/bench\` slash command by @${context.payload.comment.user.login}*`;
+            const fs = require('fs');
+            const output = fs.readFileSync('/tmp/bench/bench-output.txt', 'utf8');
+            const author = context.payload.comment.user.login;
+            const message = output + `\n\n*Triggered via \`/bench\` slash command by @${author}*`;
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,

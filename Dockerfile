@@ -26,4 +26,4 @@ RUN mkdir -p /app/data && chown -R bun:bun /app
 USER bun
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["sh", "-c", "bunx prisma db push --accept-data-loss && bun apps/worker/src/main.ts"]
+CMD ["sh", "-c", "bunx prisma migrate deploy && bun apps/worker/src/main.ts"]

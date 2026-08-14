@@ -1,8 +1,9 @@
 # `@lumi/sharding`
 
-Dynamic cluster assignment, ready tracking, and shard rebalancing utilities for Lumi Gateway nodes.
+Static shard assignment and per-shard health telemetry for Lumi Gateway nodes.
 
 ## Features
 
-- Shared cluster ready tracking via Redis
-- Dynamic shard assignment algorithm across multi-node Gateway deployments
+- Static shard assignment via `SHARD_LIST` environment variable (cluster-managed per replica)
+- Per-shard health telemetry published to Redis (`ShardTelemetry`) — status, gateway latency, guild count, and replica ownership
+- Session-start-limit guard to prevent identify budget exhaustion on restart

@@ -1,14 +1,18 @@
 import type { ColumnDef } from "@tanstack/react-table";
+import { X } from "lucide-react";
 import { Badge } from "#/components/ui/badge";
 import { Switch } from "#/components/ui/switch";
+import { Button } from "#/components/ui/button";
 import type { GlobalModuleStateView } from "#/lib/dashboard-data";
 
 export function moduleKillSwitchColumns({
   isPending,
   onToggle,
+  onClear,
 }: {
   isPending: boolean;
   onToggle: (moduleName: string, enabled: boolean) => void;
+  onClear: (moduleName: string) => void;
 }): ColumnDef<GlobalModuleStateView>[] {
   return [
     {
@@ -48,6 +52,23 @@ export function moduleKillSwitchColumns({
           </div>
         );
       },
+    },
+    {
+      id: "clear",
+      header: "",
+      meta: { className: "w-10 text-right" },
+      cell: ({ row }) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          disabled={isPending}
+          onClick={() => onClear(row.original.moduleName)}
+          title="Remove override — module reverts to per-guild config"
+          aria-label={`Remove global override for ${row.original.moduleName}`}
+        >
+          <X aria-hidden />
+        </Button>
+      ),
     },
   ];
 }

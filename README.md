@@ -45,11 +45,11 @@ Built with **Bun**, **TypeScript**, **discord.js v14**, and the **[Sapphire Fram
 
 - [**Bun**](https://bun.sh) 1.3+ - runtime and package manager (always required, Docker or not)
 - A **Discord application** - bot token + client ID from the [Developer Portal](https://discord.com/developers/applications)
-- **PostgreSQL 17**, **Redis 7**, and **RabbitMQ 4** (only needed if you run the dashboard) - either via [Docker](https://docs.docker.com/get-docker/) or installed natively
+- **PostgreSQL 17** and **Redis 7** - either via [Docker](https://docs.docker.com/get-docker/) or installed natively
 
 ### Quick Start (with Docker)
 
-The easiest path - Docker runs Postgres, Redis, and RabbitMQ for you; only Bun and the app itself run on the host.
+The easiest path - Docker runs Postgres and Redis for you; only Bun and the app itself run on the host.
 
 ```sh
 git clone https://github.com/lumi-devs/lumi.git && cd lumi
@@ -62,7 +62,7 @@ Prefer to do it by hand instead of the wizard:
 ```sh
 cp .env.example .env
 $EDITOR .env                                       # fill in BOT_TOKEN, CLIENT_ID at minimum
-docker compose up -d postgres pgbouncer redis rabbitmq
+docker compose up -d postgres pgbouncer redis
 bun run db:migrate
 bun run dev
 ```
@@ -71,7 +71,7 @@ bun run dev
 
 Lumi itself is just a Bun process reading connection strings from `.env` - nothing in the code requires Docker. Two ways to skip it:
 
-**A. Nix dev shell** - provisions native Postgres/Redis/RabbitMQ binaries alongside Bun:
+**A. Nix dev shell** - provisions native Postgres/Redis binaries alongside Bun:
 
 ```sh
 git clone https://github.com/lumi-devs/lumi.git && cd lumi
@@ -83,12 +83,12 @@ bun run db:migrate
 bun run dev
 ```
 
-**B. Bring your own services** - install Postgres 17, Redis 7, and (if you want the dashboard) RabbitMQ 4 yourself, however you normally would (system package manager, existing servers, etc.), then point `.env` at them:
+**B. Bring your own services** - install Postgres 17 and Redis 7 yourself, however you normally would (system package manager, existing servers, etc.), then point `.env` at them:
 
 ```sh
 git clone https://github.com/lumi-devs/lumi.git && cd lumi
 cp .env.example .env
-$EDITOR .env   # set POSTGRES_URL / REDIS_HOST / RABBITMQ_URL to your own instances
+$EDITOR .env   # set POSTGRES_URL / REDIS_HOST to your own instances
 bun install
 bun run db:generate
 bun run db:migrate
@@ -147,7 +147,7 @@ Lumi runs as two process roles, selected with `LUMI_ROLE`:
 
 Gateway ingestion and bot logic intentionally live in one process. Scaling is horizontal: set `CLUSTER_NAME` and `@lumi/sharding` assigns each worker replica a disjoint range of Discord shards, coordinating IDENTIFY throttling and resumable sessions through Redis. Multi-replica deployments route REST traffic through a shared `nirn-proxy` (`DISCORD_PROXY_URL`) so rate-limit buckets stay coordinated.
 
-Task queueing runs on **Redis Streams**/BullMQ; RPC bridging between processes runs on **RabbitMQ**. Detailed specifications are in [docs/architecture.md](docs/architecture.md).
+Task queueing runs on **Redis Streams**/BullMQ; the dashboard talks to the worker over an **internal HTTP RPC bridge**. Detailed specifications are in [docs/architecture.md](docs/architecture.md).
 
 ---
 

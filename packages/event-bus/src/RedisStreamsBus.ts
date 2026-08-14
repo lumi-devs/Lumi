@@ -240,6 +240,19 @@ export class RedisStreamsBus implements EventBus {
     };
   }
 
+  public async destroyGroup(stream: string, group: string): Promise<void> {
+    try {
+      await this.publisher.xgroup("DESTROY", stream, group);
+    } catch (err) {
+      this.log("warn", "xgroup destroy failed", {
+        stream,
+        group,
+        err: String(err),
+      });
+    }
+    this.knownGroups.delete(`${stream}::${group}`);
+  }
+
   public close(): Promise<void> {
     this.closed = true;
     for (const t of this.timers) clearInterval(t);

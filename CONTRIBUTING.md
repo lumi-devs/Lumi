@@ -17,7 +17,6 @@ Ensure the following prerequisites are installed on your workstation:
 | **Node.js** | `26.0.0+` | `nvm install 26` | Required for tooling compatibility and typechecking |
 | **PostgreSQL** | `17.0+` | Docker / Native | Relational database (uses PgBouncer connection pooler) |
 | **Redis** | `7.0+` | Docker / Native | High-speed cache, rate limiting, and Redis Streams event bus |
-| **RabbitMQ** | `4.0+` | Docker / Native | Inter-service message broker (Gateway / Worker decoupled scale profile) |
 | **Nix** | Optional | [Nix Package Manager](https://nixos.org) | Declarative shell environment via `nix-shell` |
 
 ---
@@ -41,10 +40,10 @@ nix-shell -p bun nodejs --run "bun install"
 
 ### 2. Infrastructure Backends (Docker Compose)
 
-Start PostgreSQL, PgBouncer, Redis, and RabbitMQ containerized services:
+Start PostgreSQL, PgBouncer, and Redis containerized services:
 
 ```bash
-docker compose up -d postgres pgbouncer redis rabbitmq
+docker compose up -d postgres pgbouncer redis
 ```
 
 ### 3. Database Schema Provisioning

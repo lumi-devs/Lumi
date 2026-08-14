@@ -21,11 +21,14 @@ const WINDOW_MS = 200;
 
 interface Entry {
   promise: Promise<Map<string, boolean>>;
-  modules: Set<string>;
   at: number;
 }
 
 const cache = new Map<string, Entry>();
+
+function cacheKey(guildId: string, modules: string[]): string {
+  return `${guildId}:${[...modules].sort().join(",")}`;
+}
 
 /**
  * Returns the enabled state for all `modules` in `guildId`.
@@ -36,19 +39,18 @@ export async function checkModulesEnabled(
   modules: string[],
 ): Promise<Map<string, boolean>> {
   const now = Date.now();
-  const existing = cache.get(guildId);
+  const key = cacheKey(guildId, modules);
+  const existing = cache.get(key);
 
   if (existing && now - existing.at < WINDOW_MS) {
-    const missing = modules.filter((m) => !existing.modules.has(m));
-    if (missing.length === 0) return existing.promise;
+    return existing.promise;
   }
 
-  const moduleSet = new Set(modules);
   const promise = container.db.modules.areModulesEnabled(guildId, modules);
-  cache.set(guildId, { promise, modules: moduleSet, at: now });
+  cache.set(key, { promise, at: now });
 
   setTimeout(() => {
-    if (cache.get(guildId)?.at === now) cache.delete(guildId);
+    if (cache.get(key)?.at === now) cache.delete(key);
   }, WINDOW_MS + 10);
 
   return promise;

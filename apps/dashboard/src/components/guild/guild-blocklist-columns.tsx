@@ -33,7 +33,10 @@ export function guildBlocklistColumns({
       accessorFn: (entry) => entry.reason ?? "",
       meta: { className: "max-w-[22rem] text-fg-muted" },
       cell: ({ row }) => (
-        <span className="block truncate" title={row.original.reason ?? undefined}>
+        <span
+          className="block max-w-40 truncate text-[12.5px] text-fg-muted"
+          title={row.original.reason ?? undefined}
+        >
           {row.original.reason ?? "No reason recorded"}
         </span>
       ),

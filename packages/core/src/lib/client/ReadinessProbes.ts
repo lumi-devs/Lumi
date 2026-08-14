@@ -41,31 +41,33 @@ export class ReadinessProbes {
 
   /** Declares the probes shared by every role: the backing services. */
   protected registerInfrastructureProbes(): void {
+    // `/readyz` is reachable by anyone who can reach the metrics port, so probe
+    // details are fixed classifications. Driver errors are logged instead:
+    // stringified connection failures embed host, port, database and sometimes
+    // the credentials from the connection string.
     registerReadinessProbe("postgres", async () => {
       try {
         await container.db.probePrisma();
         return { status: "ok" };
       } catch (err) {
-        return { status: "fail", detail: String(err) };
+        container.logger?.error("[Readiness] postgres probe failed:", err);
+        return { status: "fail", detail: "database unreachable" };
       }
     });
 
     registerReadinessProbe("redis", async () => {
       try {
         const pong = await container.redis.ping();
-        return pong === "PONG"
-          ? { status: "ok" }
-          : { status: "fail", detail: `unexpected ping reply: ${pong}` };
+        if (pong === "PONG") return { status: "ok" };
+        container.logger?.error(
+          `[Readiness] redis probe returned unexpected reply: ${pong}`,
+        );
+        return { status: "fail", detail: "redis unreachable" };
       } catch (err) {
-        return { status: "fail", detail: String(err) };
+        container.logger?.error("[Readiness] redis probe failed:", err);
+        return { status: "fail", detail: "redis unreachable" };
       }
     });
-
-    registerReadinessProbe("rabbitmq", () =>
-      container.rabbit?.connected
-        ? { status: "ok" }
-        : { status: "fail", detail: "not connected" },
-    );
   }
 
   /** Declares the probes only some roles can meaningfully answer. */

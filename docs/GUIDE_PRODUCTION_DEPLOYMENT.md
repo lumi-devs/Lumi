@@ -11,20 +11,20 @@ A single `worker` replica handles every shard Discord assigns it (`TOTAL_SHARDS=
 - Discord's recommended shard count grows past what one process can hold in memory/CPU (guild count is the usual trigger, roughly the 2,500-guild-per-shard heuristic Discord itself uses), or
 - you want zero-downtime deploys / redundancy against a single process crash.
 
-If neither applies yet, stay on the single-replica path from [Self-Hosting](GUIDE_SELF_HOSTING.md) - `CLUSTER_NAME` unset, no `nirn-proxy`, no leader-election overhead. Everything below only activates once you set `CLUSTER_NAME`.
+If neither applies yet, stay on the single-replica path from [Self-Hosting](GUIDE_SELF_HOSTING.md) - `CLUSTER_NAME` unset, no `nirn-proxy`. Everything below only activates once you set `CLUSTER_NAME`.
 
 ## Clustering & sharding
 
-Set `CLUSTER_NAME` to activate Redis-backed coordination (see [Architecture § Sharding & clustering](architecture.md#sharding--clustering) for the mechanics: heartbeat ZSET, assignment leader lock, `XAUTOCLAIM`-style session resumption). Practical knobs:
+Scaling past one replica is static: each replica is told which shard IDs it owns via `SHARD_LIST`, there is no runtime coordination between replicas, and `CLUSTER_NAME` only namespaces the shard telemetry each replica publishes for the dashboard's fleet view (see [Architecture § Sharding & clustering](architecture.md#sharding--clustering)). Practical knobs:
 
 | Decision | Guidance |
 | :--- | :--- |
-| **Shards per replica** | Start at 16-32. Fewer shards per replica means faster individual pod restarts (less to RESUME) but more replicas to manage. |
+| **Shards per replica** | Start at 16-32. Fewer shards per replica means faster individual pod restarts but more replicas to manage. |
 | **`TOTAL_SHARDS`** | Leave `auto` unless you have a specific reason to pin it - Discord's recommendation already accounts for your guild count. Pinning it wrong causes either wasted capacity or an under-sharded bot that gets rate-limited. |
 | **`SHARD_IDENTIFY_FORCE`** | Leave `false`. This exists to break a crash-loop deliberately; leaving it on defeats the session-start budget guard that stops a crash-loop from burning your daily IDENTIFY allowance and getting the bot rate-limited by Discord. |
 | **`nirn-proxy`** | Required once you run more than one worker replica sharing the same bot token - it coordinates Discord REST rate-limit buckets across pods. Deploy it before your first multi-replica worker rollout (workers read `DISCORD_PROXY_URL` at boot). |
 
-Total shard count changes (not shard *assignment* changes - those rebalance in place) still require a full restart: discord.js caches `shardCount` at `WebSocketManager` construction, so a running process can't adopt a new total without restarting.
+Scaling replicas, or changing which shard IDs a replica owns, means changing `SHARD_LIST` and `TOTAL_SHARDS` and restarting the affected processes - there is no in-place rebalance path. Total shard count changes always require a full restart: discord.js caches `shardCount` at `WebSocketManager` construction, so a running process can't adopt a new total without restarting.
 
 ## Scheduler high availability
 
@@ -47,7 +47,7 @@ Rotate `BOT_TOKEN` via the Developer Portal's **Reset Token**, `DASHBOARD_SESSIO
 - **Set `OTEL_ENABLED=true`** and point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector. Lower `OTEL_TRACES_SAMPLE_RATIO` (e.g. `0.1`) once trace volume matters - `1` (100%) is fine for a single low-traffic instance, not for a sharded fleet.
 - **Scrape `/metrics`** (`METRICS_PORT`, default `9090`) on every pod - the k8s manifests already annotate for Prometheus Operator discovery. Dashboard-worthy signals from [Architecture § Observability](architecture.md#observability): command RED metrics, event-bus lag (`lumi_stream_consumer_lag`) and DLQ depth (`lumi_stream_dlq_length`), gateway shard latency/status, Discord REST 429 rate, Postgres pool utilization, event-loop delay p99/max.
 - **Alert on `lumi_event_loop_delay_seconds` (max quantile), not just p50/p99** - a single multi-second stall drops Discord gateway heartbeats regardless of what the median looks like. This is the single most important gateway-health signal to page on.
-- **Wire `/healthz` and `/readyz`** into your orchestrator's liveness/readiness probes (already done in the k8s manifests). `/readyz` runs every registered probe (Postgres, Redis, RabbitMQ, plus gateway readiness on `worker` and BullMQ reachability on whichever replica holds the scheduler leader lock) with a 2s timeout each - a replica that can't reach a dependency gets pulled from rotation automatically.
+- **Wire `/healthz` and `/readyz`** into your orchestrator's liveness/readiness probes (already done in the k8s manifests). `/readyz` runs every registered probe (Postgres, Redis, plus gateway readiness on `worker` and BullMQ reachability on whichever replica holds the scheduler leader lock) with a 2s timeout each - a replica that can't reach a dependency gets pulled from rotation automatically.
 - The bundled `docker compose --profile observability` stack (otel-collector, Tempo, Prometheus, Grafana) is a reasonable starting point for self-managed monitoring, but isn't itself HA - point at a managed/clustered equivalent (Grafana Cloud, a real Prometheus HA pair, etc.) once uptime of the monitoring stack itself matters.
 
 ## Zero-downtime deploys

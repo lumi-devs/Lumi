@@ -31,6 +31,11 @@ import {
   isCreationClustered,
   type RecentJoiner,
 } from "../lib/join-heuristics.js";
+import {
+  getConfigNumber,
+  getConfigString,
+  getConfigAction,
+} from "../lib/config-helpers.js";
 
 export interface PanicResult {
   invitesPaused: boolean;
@@ -147,12 +152,14 @@ function challengeLockKey(guildId: string, userId: string): string {
   return `security:verify-challenge:${guildId}:${userId}`;
 }
 
+function panicLockKey(guildId: string): string {
+  return `security:panic:${guildId}`;
+}
+
 @ApplyOptions<Piece.Options>({ name: "security" })
 export class SecurityService extends Service {
   public async loadAntiNukeConfig(guildId: string): Promise<AntiNukeConfig> {
     const raw = await this.db.config.getAllModuleConfig(guildId, "security");
-    const num = (key: string, fallback: number): number =>
-      typeof raw[key] === "number" ? (raw[key]) : fallback;
 
     const trustedRaw = raw["trusted_role_ids"];
     const trustedRoleIds =
@@ -165,19 +172,20 @@ export class SecurityService extends Service {
 
     return {
       enabled: raw["antinuke_enabled"] === true,
-      windowSeconds: num("window_seconds", 60),
+      windowSeconds: getConfigNumber(raw, "window_seconds", 60),
       limits: {
-        ban: num(KIND_LIMIT_KEYS.ban, 5),
-        kick: num(KIND_LIMIT_KEYS.kick, 5),
-        channel_delete: num(KIND_LIMIT_KEYS.channel_delete, 3),
-        role_delete: num(KIND_LIMIT_KEYS.role_delete, 3),
-        webhook_create: num(KIND_LIMIT_KEYS.webhook_create, 3),
-        vanity_change: num(KIND_LIMIT_KEYS.vanity_change, 1),
-        dangerous_permission_grant: num(
+        ban: getConfigNumber(raw, KIND_LIMIT_KEYS.ban, 5),
+        kick: getConfigNumber(raw, KIND_LIMIT_KEYS.kick, 5),
+        channel_delete: getConfigNumber(raw, KIND_LIMIT_KEYS.channel_delete, 3),
+        role_delete: getConfigNumber(raw, KIND_LIMIT_KEYS.role_delete, 3),
+        webhook_create: getConfigNumber(raw, KIND_LIMIT_KEYS.webhook_create, 3),
+        vanity_change: getConfigNumber(raw, KIND_LIMIT_KEYS.vanity_change, 1),
+        dangerous_permission_grant: getConfigNumber(
+          raw,
           KIND_LIMIT_KEYS.dangerous_permission_grant,
           1,
         ),
-        quarantine_bypass: num(KIND_LIMIT_KEYS.quarantine_bypass, 1),
+        quarantine_bypass: getConfigNumber(raw, KIND_LIMIT_KEYS.quarantine_bypass, 1),
       },
       response:
         raw["response"] === "log" || raw["response"] === "ban"
@@ -317,42 +325,34 @@ export class SecurityService extends Service {
 
   public async loadJoinGateConfig(guildId: string): Promise<JoinGateConfig> {
     const raw = await this.db.config.getAllModuleConfig(guildId, "security");
-    const num = (key: string, fallback: number): number =>
-      typeof raw[key] === "number" ? (raw[key]) : fallback;
-    const gateAction = (key: string, fallback: GateAction): GateAction => {
-      const v = raw[key];
-      return v === "log" || v === "kick" || v === "timeout" || v === "quarantine"
-        ? v
-        : fallback;
-    };
-    const legacyMinAge = num("min_account_age_hours", 0);
+    const legacyMinAge = getConfigNumber(raw, "min_account_age_hours", 0);
 
     return {
       enabled: raw["joingate_enabled"] === true,
       minAccountAgeHours: legacyMinAge,
-      raidJoinCount: num("raid_join_count", 10),
-      raidWindowSeconds: num("raid_window_seconds", 30),
-      raidAction: gateAction("raid_action", "kick"),
+      raidJoinCount: getConfigNumber(raw, "raid_join_count", 10),
+      raidWindowSeconds: getConfigNumber(raw, "raid_window_seconds", 30),
+      raidAction: getConfigAction(raw, "raid_action", "kick"),
       raidAccountType: raw["raid_account_type"] === "suspicious" ? "suspicious" : "all",
       raidWarnRoleIds: parseConfigList(raw["raid_warn_role_ids"]),
       filterNoAvatar: {
         enabled: raw["filter_no_avatar_enabled"] === true,
-        action: gateAction("filter_no_avatar_action", "log"),
+        action: getConfigAction(raw, "filter_no_avatar_action", "log"),
       },
       filterMinAge: {
         // legacy `min_account_age_hours` is the fallback default until reconfigured
         enabled: raw["filter_min_age_enabled"] === true,
-        hours: num("filter_min_age_hours", legacyMinAge),
-        action: gateAction("filter_min_age_action", "kick"),
+        hours: getConfigNumber(raw, "filter_min_age_hours", legacyMinAge),
+        action: getConfigAction(raw, "filter_min_age_action", "kick"),
       },
       filterUnverifiedBot: {
         enabled: raw["filter_unverified_bot_enabled"] === true,
-        action: gateAction("filter_unverified_bot_action", "kick"),
+        action: getConfigAction(raw, "filter_unverified_bot_action", "kick"),
       },
       filterUsernamePattern: {
         enabled: raw["filter_username_pattern_enabled"] === true,
         patterns: parseConfigList(raw["filter_username_pattern"]),
-        action: gateAction("filter_username_pattern_action", "log"),
+        action: getConfigAction(raw, "filter_username_pattern_action", "log"),
       },
     };
   }
@@ -483,22 +483,15 @@ export class SecurityService extends Service {
     guildId: string,
   ): Promise<VerificationConfig> {
     const raw = await this.db.config.getAllModuleConfig(guildId, "security");
-    const str = (key: string): string | null => {
-      const v = raw[key];
-      return typeof v === "string" && v ? v : null;
-    };
-    const timeout =
-      typeof raw["verification_timeout_minutes"] === "number"
-        ? raw["verification_timeout_minutes"]
-        : 10;
+    const timeout = getConfigNumber(raw, "verification_timeout_minutes", 10);
     const mode = raw["verification_mode"];
     const target = raw["verification_target"];
     return {
       enabled: raw["verification_enabled"] === true,
       mode: mode === "none" || mode === "web" ? mode : "emoji",
       target: target === "suspicious" ? "suspicious" : "everyone",
-      verifiedRoleId: str("verified_role_id"),
-      pendingRoleId: str("verification_pending_role_id"),
+      verifiedRoleId: getConfigString(raw, "verified_role_id"),
+      pendingRoleId: getConfigString(raw, "verification_pending_role_id"),
       timeoutMinutes: timeout,
       kickOnTimeout: raw["verification_kick_on_timeout"] === true,
     };
@@ -637,9 +630,9 @@ export class SecurityService extends Service {
       Date.now(),
     );
     for (const userId of expired) {
-      if (config.kickOnTimeout) {
+      if (config.kickOnTimeout && config.verifiedRoleId) {
         const member = await guild.members.fetch(userId).catch(() => null);
-        if (member && !member.roles.cache.has(config.verifiedRoleId ?? "")) {
+        if (member && !member.roles.cache.has(config.verifiedRoleId)) {
           await member.kick("Verification timed out").catch(() => null);
         }
       }
@@ -717,11 +710,9 @@ export class SecurityService extends Service {
     guildId: string,
   ): Promise<{ intervalHours: number; keepCount: number }> {
     const raw = await this.db.config.getAllModuleConfig(guildId, "security");
-    const num = (key: string, fallback: number): number =>
-      typeof raw[key] === "number" ? (raw[key]) : fallback;
     return {
-      intervalHours: num("backup_interval_hours", 3),
-      keepCount: num("backup_keep_count", 10),
+      intervalHours: getConfigNumber(raw, "backup_interval_hours", 3),
+      keepCount: getConfigNumber(raw, "backup_keep_count", 10),
     };
   }
 
@@ -840,121 +831,130 @@ export class SecurityService extends Service {
     actorId: string,
     channelIds: string[],
   ): Promise<PanicResult> {
-    let invitesPaused = false;
-    try {
-      await guild.disableInvites(true);
-      invitesPaused = true;
-    } catch (err: unknown) {
-      this.logger.warn(
-        `[security] Panic: failed to pause invites in ${guild.id}: ${String(err)}`,
-      );
-    }
+    return withSerializedWork(panicLockKey(guild.id), async () => {
+      const existing = await this.db.security.getPanicState(guild.id);
+      if (existing) {
+        return { invitesPaused: existing.invitesPaused, lockedCount: 0, skippedCount: 0 };
+      }
 
-    const candidates =
-      channelIds.length > 0
-        ? channelIds
-            .map((id) => guild.channels.cache.get(id))
-            .filter((c): c is NonNullable<typeof c> => Boolean(c))
-        : [...guild.channels.cache.values()].filter(
-            (c) =>
-              c.type === ChannelType.GuildText ||
-              c.type === ChannelType.GuildAnnouncement,
-          );
-
-    const targets = candidates.slice(0, PANIC_CHANNEL_CAP);
-    const everyone = guild.roles.everyone;
-    const snapshot: LockedChannelSnapshot = {};
-    let lockedCount = 0;
-
-    for (const channel of targets) {
-      if (!("permissionOverwrites" in channel)) continue;
+      let invitesPaused = false;
       try {
-        const overwrite = channel.permissionOverwrites.cache.get(everyone.id);
-        const prior = overwrite?.allow.has(PermissionFlagsBits.SendMessages)
-          ? true
-          : overwrite?.deny.has(PermissionFlagsBits.SendMessages)
-            ? false
-            : null;
-        snapshot[channel.id] = prior;
-        await channel.permissionOverwrites.edit(
-          everyone,
-          { SendMessages: false },
-          { reason: `Panic mode activated by ${actorId}` },
-        );
-        lockedCount++;
+        await guild.disableInvites(true);
+        invitesPaused = true;
       } catch (err: unknown) {
         this.logger.warn(
-          `[security] Panic: failed to lock channel ${channel.id} in ${guild.id}: ${String(err)}`,
+          `[security] Panic: failed to pause invites in ${guild.id}: ${String(err)}`,
         );
       }
-      await sleep(PANIC_EDIT_DELAY_MS);
-    }
 
-    await this.db.security.savePanicState({
-      guildId: guild.id,
-      actorId,
-      invitesPaused,
-      lockedChannels: snapshot,
+      const candidates =
+        channelIds.length > 0
+          ? channelIds
+              .map((id) => guild.channels.cache.get(id))
+              .filter((c): c is NonNullable<typeof c> => Boolean(c))
+          : [...guild.channels.cache.values()].filter(
+              (c) =>
+                c.type === ChannelType.GuildText ||
+                c.type === ChannelType.GuildAnnouncement,
+            );
+
+      const targets = candidates.slice(0, PANIC_CHANNEL_CAP);
+      const everyone = guild.roles.everyone;
+      const snapshot: LockedChannelSnapshot = {};
+      let lockedCount = 0;
+
+      for (const channel of targets) {
+        if (!("permissionOverwrites" in channel)) continue;
+        try {
+          const overwrite = channel.permissionOverwrites.cache.get(everyone.id);
+          const prior = overwrite?.allow.has(PermissionFlagsBits.SendMessages)
+            ? true
+            : overwrite?.deny.has(PermissionFlagsBits.SendMessages)
+              ? false
+              : null;
+          snapshot[channel.id] = prior;
+          await channel.permissionOverwrites.edit(
+            everyone,
+            { SendMessages: false },
+            { reason: `Panic mode activated by ${actorId}` },
+          );
+          lockedCount++;
+        } catch (err: unknown) {
+          this.logger.warn(
+            `[security] Panic: failed to lock channel ${channel.id} in ${guild.id}: ${String(err)}`,
+          );
+        }
+        await sleep(PANIC_EDIT_DELAY_MS);
+      }
+
+      await this.db.security.savePanicState({
+        guildId: guild.id,
+        actorId,
+        invitesPaused,
+        lockedChannels: snapshot,
+      });
+
+      return {
+        invitesPaused,
+        lockedCount,
+        skippedCount: targets.length - lockedCount,
+      };
     });
-
-    return {
-      invitesPaused,
-      lockedCount,
-      skippedCount: targets.length - lockedCount,
-    };
   }
 
   /** Restores invites and every channel overwrite snapshotted by `enterPanic`. */
   public async revertPanic(guild: Guild): Promise<PanicRevertResult | null> {
-    const state = await this.db.security.getPanicState(guild.id);
-    if (!state) return null;
+    return withSerializedWork(panicLockKey(guild.id), async () => {
+      const state = await this.db.security.getPanicState(guild.id);
+      if (!state) return null;
 
-    if (state.invitesPaused) {
-      await guild.disableInvites(false).catch((err: unknown) => {
-        this.logger.warn(
-          `[security] Panic: failed to resume invites in ${guild.id}: ${String(err)}`,
-        );
-      });
-    }
-
-    const snapshot = (state.lockedChannels ?? {}) as LockedChannelSnapshot;
-    const everyone = guild.roles.everyone;
-    let restoredCount = 0;
-
-    for (const [channelId, prior] of Object.entries(snapshot)) {
-      const channel = guild.channels.cache.get(channelId);
-      if (!channel || !("permissionOverwrites" in channel)) continue;
-      try {
-        await channel.permissionOverwrites.edit(
-          everyone,
-          { SendMessages: prior },
-          { reason: "Panic mode reverted" },
-        );
-        restoredCount++;
-      } catch (err: unknown) {
-        this.logger.warn(
-          `[security] Panic: failed to restore channel ${channelId} in ${guild.id}: ${String(err)}`,
-        );
-      }
-      await sleep(PANIC_EDIT_DELAY_MS);
-    }
-
-    await this.db.security.clearPanicState(guild.id);
-
-    let restoredStructure: PanicRevertResult["restoredStructure"] = null;
-    if (await this.isRestorePending(guild.id)) {
-      restoredStructure = await this.restoreFromBackup(guild).catch(
-        (err: unknown) => {
+      if (state.invitesPaused) {
+        await guild.disableInvites(false).catch((err: unknown) => {
           this.logger.warn(
-            `[security] Panic: auto-restore failed in ${guild.id}: ${String(err)}`,
+            `[security] Panic: failed to resume invites in ${guild.id}: ${String(err)}`,
           );
-          return null;
-        },
-      );
-      await this.clearRestorePending(guild.id);
-    }
+        });
+      }
 
-    return { restoredCount, restoredStructure };
+      const snapshot = (state.lockedChannels ?? {}) as LockedChannelSnapshot;
+      const everyone = guild.roles.everyone;
+      let restoredCount = 0;
+
+      for (const [channelId, prior] of Object.entries(snapshot)) {
+        const channel = guild.channels.cache.get(channelId);
+        if (!channel || !("permissionOverwrites" in channel)) continue;
+        try {
+          await channel.permissionOverwrites.edit(
+            everyone,
+            { SendMessages: prior },
+            { reason: "Panic mode reverted" },
+          );
+          restoredCount++;
+        } catch (err: unknown) {
+          this.logger.warn(
+            `[security] Panic: failed to restore channel ${channelId} in ${guild.id}: ${String(err)}`,
+          );
+        }
+        await sleep(PANIC_EDIT_DELAY_MS);
+      }
+
+      await this.db.security.clearPanicState(guild.id);
+
+      let restoredStructure: PanicRevertResult["restoredStructure"] = null;
+      if (await this.isRestorePending(guild.id)) {
+        restoredStructure = await this.restoreFromBackup(guild).catch(
+          (err: unknown) => {
+            this.logger.warn(
+              `[security] Panic: auto-restore failed in ${guild.id}: ${String(err)}`,
+            );
+            return null;
+          },
+        );
+        await this.clearRestorePending(guild.id);
+      }
+
+      return { restoredCount, restoredStructure };
+    });
   }
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CheckCircle, Scale } from "lucide-react";
 import { submitAppeal } from "#/actions/public-appeal-actions";
 import { Alert } from "#/components/ui/alert";
 import { ActionError } from "#/components/action-error";
@@ -31,13 +32,20 @@ export function AppealIntakeForm({
   if (submitted) {
     return (
       <>
-        <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
-          Appeal submitted
-        </h1>
-        <p className="mt-1 text-[12px] leading-5 text-fg-muted">
-          The server's staff can now review it. There&rsquo;s nothing else to
-          do here — you don&rsquo;t need to submit again.
-        </p>
+        <div className="mb-4 flex items-start gap-3">
+          <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control border border-border bg-success-soft text-success-fg">
+            <CheckCircle className="size-4" aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
+              Appeal submitted
+            </h1>
+            <p className="mt-1 text-[12px] leading-5 text-fg-muted">
+              The server's staff can now review it. There&rsquo;s nothing else to
+              do here — you don&rsquo;t need to submit again.
+            </p>
+          </div>
+        </div>
       </>
     );
   }
@@ -61,9 +69,16 @@ export function AppealIntakeForm({
 
   return (
     <>
-      <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
-        Appeal this {caseActionLabel(caseSummary.action).toLowerCase()}
-      </h1>
+      <div className="mb-4 flex items-start gap-3">
+        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control border border-border bg-accent-soft text-accent-fg">
+          <Scale className="size-4" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
+            Appeal this {caseActionLabel(caseSummary.action).toLowerCase()}
+          </h1>
+        </div>
+      </div>
       <div className="mt-2 mb-4 rounded-control border border-border bg-bg-subtle p-3 text-[12px] leading-5 text-fg-muted">
         <p>
           Case #{caseSummary.caseNumber} · {formatCaseDate(caseSummary.createdAt)}

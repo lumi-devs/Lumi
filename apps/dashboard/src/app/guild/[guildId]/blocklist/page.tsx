@@ -16,6 +16,11 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
 import type { BlocklistListData } from "#/lib/dashboard-data";
+import {
+  extractMemberNames,
+  pageNumber,
+  single,
+} from "#/lib/log-format";
 
 const PAGE_SIZE = 25;
 
@@ -30,14 +35,10 @@ export default async function BlocklistPage({
   const session = await requireGuild(guildId);
   const query = await searchParams;
 
-  const raw = Array.isArray(query["page"]) ? query["page"][0] : query["page"];
-  const parsed = Number.parseInt(raw ?? "", 10);
-  const page = Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+  const page = pageNumber(single(query["page"]));
 
   const dashboard = await getGuildDashboard(guildId, session.userId);
-  const memberNames = Object.fromEntries(
-    dashboard.members.map((m) => [m.id, m.displayName || m.username]),
-  );
+  const memberNames = extractMemberNames(dashboard.members);
 
   let data: BlocklistListData | null = null;
   let failure: string | null = null;

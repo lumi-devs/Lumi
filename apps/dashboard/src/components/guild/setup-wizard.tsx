@@ -7,6 +7,7 @@ import { runGuildSetup } from "#/actions/guild-actions";
 import { Card, CardBody, CardFooter, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
 import { Button } from "#/components/ui/button";
 import { ActionError } from "#/components/action-error";
+import { useStaggerIn } from "#/lib/animate";
 import { useServerAction } from "#/lib/use-server-action";
 
 export interface SetupChecklistItem {
@@ -32,8 +33,9 @@ export function SetupWizard({
   guildId: string;
   items: SetupChecklistItem[];
 }) {
-  const { isPending, error, run } = useServerAction();
+  const { isPending, error, setError, run } = useServerAction();
   const [result, setResult] = useState<GuildSetupRunResult | null>(null);
+  const listRef = useStaggerIn<HTMLUListElement>("li", { resetKey: guildId });
 
   const allDone = items.every((i) => i.alreadyDone) && !result;
 
@@ -41,6 +43,10 @@ export function SetupWizard({
     run(async () => {
       const res = await runGuildSetup(guildId);
       if (!res.ok) {
+        setError(
+          res.error ??
+            "Setup didn't finish. Check that the bot is online and has Manage Roles and Manage Channels, then try again.",
+        );
         return;
       }
       setResult(res.result ?? null);
@@ -65,7 +71,7 @@ export function SetupWizard({
         </CardDescription>
       </CardHeader>
       <CardBody className="p-0">
-        <ul className="divide-y divide-border">
+        <ul ref={listRef} className="divide-y divide-border">
           {items.map((item) => {
             const status = itemStatus(result, item);
             const done = item.alreadyDone || status !== undefined;

@@ -12,7 +12,7 @@ import {
   makeCard,
   makeInfoCard,
   makeErrorCard,
-  CARD_ACCENTS,
+  resolveCardColor,
   formatStatusBadge,
   type CardReply,
 } from "#utilities/cards.js";
@@ -159,7 +159,7 @@ export function buildPanel(
     ? t("tempvc:panelFooter")
     : "Settings are restricted to the owner. Anyone can claim if the owner leaves.";
 
-  return makeCard(CARD_ACCENTS.PRIMARY, title, body, {
+  return makeCard(resolveCardColor("primary"), title, body, {
     footer,
     actionRows: rows,
   });

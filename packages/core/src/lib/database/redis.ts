@@ -4,12 +4,6 @@ import { envIsDefined, envParseInteger, envParseString } from "#lib/env.js";
 import { Redis, type RedisOptions } from "ioredis";
 import { logError } from "#lib/utilities/errors.js";
 
-export function cacheFenceKey(key: string): string {
-  return `${key}:fence`;
-}
-
-const CACHE_FENCE_TTL_MS = 60_000;
-
 export const RedisKeys = {
   guildSettings: (guildId: string) => `lumi:settings:guild:${guildId}`,
   guildConfig: (module: string, guildId: string) =>
@@ -77,7 +71,6 @@ export const RedisKeys = {
   auditLogsQueue: () => "lumi:queue:audit_logs",
 
   schedulerLeader: () => "lumi:scheduler:leader",
-  commandRegistrationLeader: () => "lumi:commands:registration:leader",
 
   entityGuild: (guildId: string) => `lumi:ent:guild:${guildId}`,
   entityChannel: (channelId: string) => `lumi:ent:channel:${channelId}`,
@@ -112,7 +105,7 @@ export const RedisTTL = {
  * Build Redis connection options. When `REDIS_SENTINELS` is set (HA mode),
  * returns Sentinel-aware options (`sentinels` + `name`); otherwise returns
  * direct host/port. Exported so call sites that need to build their own
- * Redis clients (event-bus, cluster coordinator) stay HA-aware too.
+ * Redis clients (event-bus) stay HA-aware too.
  *
  * `REDIS_SENTINELS`: comma-separated `host:port` list of Sentinel nodes,
  * e.g. `sentinel-1:26379,sentinel-2:26379,sentinel-3:26379`.
@@ -226,21 +219,10 @@ export class InvalidationBus {
   public async invalidate(...keys: string[]): Promise<void> {
     if (keys.length === 0) return;
     await container.redis.del(...keys);
-    const fence = container.redis.pipeline();
-    for (const key of keys) {
-      fence.set(cacheFenceKey(key), Date.now(), "PX", CACHE_FENCE_TTL_MS);
-    }
-    await fence.exec();
     await container.redis.publish(
       INVALIDATION_CHANNEL,
       JSON.stringify({ keys }),
     );
-
-    setTimeout(() => {
-      container.redis
-        .del(...keys)
-        .catch((err: unknown) => logError("Redis: delayed re-invalidation failed", err));
-    }, 500).unref();
   }
 
   /**

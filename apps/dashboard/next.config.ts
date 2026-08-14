@@ -2,7 +2,7 @@ import path from "node:path";
 import type { NextConfig } from "next";
 
 // Content-Security-Policy is deliberately not here — it needs a per-request
-// nonce on the request headers, which only middleware can set. See src/middleware.ts.
+// nonce on the request headers, which only the proxy can set. See src/proxy.ts.
 const securityHeaders: { key: string; value: string }[] = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },

@@ -11,6 +11,6 @@
   "dependencies": {
     "@lumi/contracts": "workspace:*",
     "@lumi/observability": "workspace:*",
-    "ioredis": "^5.11.1"
+    "ioredis": "^6.0.0"
   }
 }
