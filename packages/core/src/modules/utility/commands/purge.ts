@@ -21,10 +21,29 @@ import { logError, errorCode } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 import { parseDuration, formatDuration } from "#lib/utilities/time.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
-import { validateRegexPattern } from "#lib/regex-worker/index.js";
+import {
+  MATCH_BATCH_SIZE,
+  getRegexWorker,
+  validateRegexPattern,
+} from "#lib/regex-worker/index.js";
 import type { LumiT } from "#lib/i18n/index.js";
 
 type MessageFilter = (message: Message) => boolean;
+
+/**
+ * Ids of the messages in one fetched page that pass the filter, for matching
+ * that cannot run on the gateway event loop and has to go through the regex
+ * worker's sandbox and budget.
+ */
+type MessageBatchFilter = (messages: Message[]) => Promise<Set<string>>;
+
+/** Aborts a purge without deleting anything; surfaced to the invoking channel. */
+class PurgeAbortedError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = "PurgeAbortedError";
+  }
+}
 
 const URL_RE = /https?:\/\/\S+/i;
 const DEFAULT_FILTER_SCAN = 100;
@@ -181,9 +200,11 @@ export class PurgeCommand extends BaseSubcommand {
   public async regex(ctx: CommandContext) {
     const pattern = await ctx.getString("pattern", { required: true });
     const amount = (await ctx.getInteger("amount")) ?? DEFAULT_FILTER_SCAN;
-    // The compiled pattern runs against up to MAX_SCAN messages on the
-    // gateway's own event loop, so a catastrophically backtracking pattern
-    // would stall every guild on this process, not just this one.
+    // The save-time probe only proves the pattern survives a canned corpus;
+    // real message content can still trigger catastrophic backtracking. So the
+    // match itself runs in the regex worker under a hard budget rather than on
+    // the gateway's event loop, where a hang would stall every guild on this
+    // process.
     const rejection = await validateRegexPattern(pattern!);
     if (rejection) {
       return ctx.replyError(
@@ -191,12 +212,38 @@ export class PurgeCommand extends BaseSubcommand {
         `\`${pattern}\` was rejected: ${rejection}`,
       );
     }
-    const compiled = new RegExp(pattern!, "i");
+
+    const batchFilter: MessageBatchFilter = async (messages) => {
+      const matched = new Set<string>();
+      for (let i = 0; i < messages.length; i += MATCH_BATCH_SIZE) {
+        const batch = messages.slice(i, i + MATCH_BATCH_SIZE);
+        const indexes = await getRegexWorker()
+          .matchAll(
+            pattern!,
+            batch.map((m) => m.content),
+          )
+          .catch(() => {
+            // Budget blown on real content: fail closed, deleting nothing.
+            throw new PurgeAbortedError(
+              `\`${pattern}\` took too long to evaluate against real messages and was stopped. No messages were deleted.`,
+            );
+          });
+        if (indexes === null) {
+          throw new PurgeAbortedError(
+            "The regex sandbox is unavailable, so `purge regex` cannot run right now. No messages were deleted.",
+          );
+        }
+        for (const index of indexes) matched.add(batch[index]!.id);
+      }
+      return matched;
+    };
+
     return this.runPurge(
       ctx,
       amount,
-      (m) => compiled.test(m.content),
+      null,
       `matching \`${pattern}\``,
+      batchFilter,
     );
   }
 
@@ -224,6 +271,7 @@ export class PurgeCommand extends BaseSubcommand {
     amount: number,
     filter: MessageFilter | null,
     filterDescription: string,
+    batchFilter: MessageBatchFilter | null = null,
   ) {
     const t = await ctx.fetchT();
 
@@ -284,7 +332,7 @@ export class PurgeCommand extends BaseSubcommand {
       });
     }
 
-    void this.executePurge(channel, amount, prompt, filter, t);
+    void this.executePurge(channel, amount, prompt, filter, t, batchFilter);
 
     if (ctx.isSlash) {
       await ctx.replySuccess(
@@ -300,7 +348,9 @@ export class PurgeCommand extends BaseSubcommand {
     prompt: Message,
     filter: MessageFilter | null,
     t: LumiT,
+    batchFilter: MessageBatchFilter | null = null,
   ) {
+    const hasFilter = Boolean(filter ?? batchFilter);
     let deletedCount = 0;
     let remaining = amount;
     let scanned = 0;
@@ -339,10 +389,12 @@ export class PurgeCommand extends BaseSubcommand {
     };
 
     try {
-      while (remaining > 0 && (!filter || scanned < MAX_SCAN)) {
+      while (remaining > 0 && (!hasFilter || scanned < MAX_SCAN)) {
         const limit = Math.min(remaining, 100);
 
-        const fetchOptions: FetchMessagesOptions = { limit: filter ? 100 : limit };
+        const fetchOptions: FetchMessagesOptions = {
+          limit: hasFilter ? 100 : limit,
+        };
         if (lastMessageId) fetchOptions.before = lastMessageId;
 
         const messages = (await channel.messages
@@ -357,6 +409,14 @@ export class PurgeCommand extends BaseSubcommand {
 
         scanned += messages.size;
 
+        // Resolved once per page so a sandboxed matcher costs one round trip
+        // per page rather than one per message.
+        const batchMatched = batchFilter
+          ? await batchFilter(
+              [...messages.values()].filter((m) => m.id !== prompt.id),
+            )
+          : null;
+
         const now = Date.now();
         const fourteenDaysAgo = now - 14 * 24 * 60 * 60 * 1000;
 
@@ -366,6 +426,7 @@ export class PurgeCommand extends BaseSubcommand {
         for (const msg of messages.values()) {
           if (msg.id === prompt.id) continue;
           if (filter && !filter(msg)) continue;
+          if (batchMatched && !batchMatched.has(msg.id)) continue;
 
           if (msg.createdTimestamp > fourteenDaysAgo) {
             youngMessages.push(msg);
@@ -440,6 +501,17 @@ export class PurgeCommand extends BaseSubcommand {
         .catch((err: unknown) =>
           logError("Purge: Failed to delete prompt", err),
         );
+      if (err instanceof PurgeAbortedError) {
+        const card = await channel
+          .send({
+            ...makeWarningCard("Purge Stopped", err.message),
+            allowedMentions: {},
+          })
+          .catch(() => null);
+        if (card) {
+          deleteMessageLater(card, undefined, "Purge: delete abort notice");
+        }
+      }
     }
   }
 

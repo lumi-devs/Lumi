@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import { getService } from "#lib/module-system/Service.js";
-import { registerRpcHandler } from "#lib/rabbitmq/index.js";
+import { registerRpcHandler } from "#lib/rpc/dispatch.js";
 import {
   RPC_ACTIONS,
   type RpcRequest,
@@ -8,11 +8,9 @@ import {
 } from "@lumi/contracts";
 import { DEFAULT_CLUSTER_NAME, readClusterShards } from "@lumi/sharding";
 import { getClusterName } from "#lib/env.js";
-import { resolver, ADDON_MODULES_ROOT } from "#lib/downloader/resolver.js";
+import { resolver } from "#lib/downloader/resolver.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { executeGdprDeletion, executeGdprExport } from "#lib/gdpr.js";
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { s, type BaseValidator } from "@sapphire/shapeshift";
 
 const SnowflakeSchema = s.string().regex(/^\d{17,20}$/);
@@ -22,12 +20,16 @@ const SafeNameSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
 function parsePayload<T>(schema: BaseValidator<T>, data: unknown): T {
   try {
     return schema.parse(data);
-  } catch (err: any) {
-    throw new Error(`Bad payload: ${err.message}`);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Bad payload: ${msg}`);
   }
 }
 
 // Returns the validated actor id so callers can attribute writes to them.
+// `req.actorId` is only meaningful because the RPC transport authenticated the
+// caller with RPC_INTERNAL_TOKEN (see lib/rpc/http-server.ts) - on its own it
+// is an attacker-suppliable field, and bot-owner snowflakes are public.
 function requireBotOwner(req: RpcRequest<unknown>): string {
   if (!req.actorId || !PermitResolver.isBotOwner(req.actorId)) {
     throw new Error("Bot Owner authorization required for this action.");
@@ -65,10 +67,16 @@ const RepoModulesSchema = s.object({
 const ModuleInstallSchema = s.object({
   repoName: s.string().lengthGreaterThanOrEqual(1),
   moduleName: s.string().lengthGreaterThanOrEqual(1),
+  revision: s.string().lengthGreaterThanOrEqual(4).optional(),
 });
 
 const ModuleUninstallSchema = s.object({
   moduleName: SafeNameSchema,
+});
+
+const ModuleRollbackSchema = s.object({
+  moduleName: SafeNameSchema,
+  revision: s.string().lengthGreaterThanOrEqual(4),
 });
 
 const SystemMaintenanceSchema = s.object({
@@ -80,6 +88,10 @@ const SystemModuleToggleSchema = s.object({
   moduleName: s.string().lengthGreaterThanOrEqual(1),
   enabled: s.boolean(),
   reason: s.string().optional(),
+});
+
+const SystemModuleClearSchema = s.object({
+  moduleName: s.string().lengthGreaterThanOrEqual(1),
 });
 
 const SystemIdentitySchema = s.object({
@@ -168,65 +180,72 @@ export function initCoreRpcHandlers() {
     const { repoName } = parsePayload(RepoModulesSchema, req.data);
     const modules = await resolver.getModulesInRepo(repoName);
     const repo = await container.db.downloader.readDownloaderRepoWithModules(repoName);
-    const installedMap = new Set(
-      repo?.installedModules.map((m: { moduleName: string }) => m.moduleName) || [],
+    const installedMap = new Map(
+      repo?.installedModules.map(
+        (m: { moduleName: string; commit: string | null; pinned: boolean }) => [
+          m.moduleName,
+          m,
+        ],
+      ) || [],
     );
     return {
       repoName,
-      modules: modules.map((m) => ({
-        ...m,
-        isInstalled: installedMap.has(m.name),
-      })),
+      modules: modules.map((m) => {
+        const installed = installedMap.get(m.name);
+        return {
+          ...m,
+          isInstalled: !!installed,
+          commit: installed?.commit ?? null,
+          pinned: installed?.pinned ?? false,
+        };
+      }),
     };
   });
 
   registerRpcHandler(RPC_ACTIONS.moduleInstall, async (req) => {
     requireBotOwner(req);
-    const { repoName, moduleName } = parsePayload(ModuleInstallSchema, req.data);
-    const repo = await container.db.downloader.readDownloaderRepo(repoName);
-    if (!repo) throw new Error(`Repository ${repoName} not found in database.`);
-
-    const installed = await container.db.downloader.readInstalledDownloaderModule(moduleName);
-    const remoteModules = await resolver.getModulesInRepo(repoName);
-    const remoteModule = remoteModules.find((m) => m.name === moduleName);
-
-    if (!remoteModule) throw new Error(`Module ${moduleName} not found in repo ${repoName}.`);
-    if (installed) {
-      if (installed.version === remoteModule.version) {
-        throw new Error(`Module **${moduleName}** (v${installed.version}) is already installed.`);
-      }
-    }
-
-    await resolver.installModule(repoName, moduleName);
-    await container.db.downloader.writeInstalledDownloaderModule(repo.id, moduleName);
-    await container.moduleStore.discover(true);
-    await container.moduleStore.loadModule(moduleName);
+    const { repoName, moduleName, revision } = parsePayload(
+      ModuleInstallSchema,
+      req.data,
+    );
+    await getService("downloader").installModule(repoName, moduleName, revision);
     return { success: true, moduleName };
   });
 
   registerRpcHandler(RPC_ACTIONS.moduleUninstall, async (req) => {
     requireBotOwner(req);
     const { moduleName } = parsePayload(ModuleUninstallSchema, req.data);
-    await container.moduleStore.unload(moduleName);
-    const targetPath = path.join(ADDON_MODULES_ROOT, moduleName);
-    try {
-      await fs.rm(targetPath, { recursive: true, force: true });
-    } catch (err: unknown) {
-      container.logger.debug(
-        `[rpc] Failed to remove addon files at ${targetPath}: ${String(err)}`,
-      );
-    }
-    await container.db.downloader.deleteInstalledDownloaderModule(moduleName);
+    await getService("downloader").uninstallModule(moduleName);
     return { success: true, moduleName };
+  });
+
+  registerRpcHandler(RPC_ACTIONS.moduleRollback, async (req) => {
+    requireBotOwner(req);
+    const { moduleName, revision } = parsePayload(ModuleRollbackSchema, req.data);
+    const result = await getService("downloader").rollbackModule(moduleName, revision);
+    return { success: true, moduleName, commit: result.commit };
   });
 
   // Bot Owner system panel.
   registerRpcHandler(RPC_ACTIONS.systemDashboardGet, async (req) => {
     requireBotOwner(req);
-    const [global, moduleStates] = await Promise.all([
+    const [global, moduleStates, shardSnapshot] = await Promise.all([
       container.db.global.getGlobalConfig(),
       container.db.modules.getGlobalModuleStatesDetailed(),
+      readClusterShards({
+        redis: container.redis,
+        clusterName: getClusterName() ?? DEFAULT_CLUSTER_NAME,
+      }),
     ]);
+    const moduleStore = container.stores.get("modules");
+    const allModules = moduleStore
+      .loaded()
+      .map((m) => ({
+        name: m.meta.name,
+        displayName: m.meta.displayName,
+        emoji: m.meta.emoji,
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
     return {
       global: {
         botName: global.botName,
@@ -237,7 +256,11 @@ export function initCoreRpcHandlers() {
         supportGuildId: global.supportGuildId,
       },
       moduleStates,
-      guildCount: container.client.guilds.cache.size,
+      allModules,
+      guildCount: shardSnapshot.shards.reduce(
+        (sum, shard) => sum + shard.guildCount,
+        0,
+      ),
     };
   });
 
@@ -266,6 +289,13 @@ export function initCoreRpcHandlers() {
       reason,
     );
     return { success: true, moduleName, enabled };
+  });
+
+  registerRpcHandler(RPC_ACTIONS.systemModuleClear, async (req) => {
+    requireBotOwner(req);
+    const { moduleName } = parsePayload(SystemModuleClearSchema, req.data);
+    await container.db.modules.clearModuleGlobalState(moduleName);
+    return { success: true, moduleName };
   });
 
   registerRpcHandler(RPC_ACTIONS.systemIdentitySet, async (req) => {
@@ -373,18 +403,10 @@ export function initCoreRpcHandlers() {
 
     return {
       clusterName: snapshot.clusterName,
-      clustered: snapshot.clustered,
-      epoch: snapshot.epoch,
-      assignedAt: snapshot.assignedAt
-        ? new Date(snapshot.assignedAt).toISOString()
-        : null,
       shardCount: snapshot.shardCount,
       observedAt: new Date(snapshot.observedAt).toISOString(),
       replicas: snapshot.replicas.map((r) => ({
         replicaId: r.replicaId,
-        lastSeenAt: r.lastSeenAt ? new Date(r.lastSeenAt).toISOString() : null,
-        ready: r.ready,
-        assignedShardIds: r.assignedShardIds,
         reportingShardIds: r.reportingShardIds,
       })),
       shards: snapshot.shards.map((s) => ({
@@ -394,7 +416,6 @@ export function initCoreRpcHandlers() {
         ping: s.ping,
         guildCount: s.guildCount,
         lastHeartbeatAt: new Date(s.updatedAt).toISOString(),
-        session: s.session,
       })),
       missingShardIds: snapshot.missingShardIds,
     } satisfies SystemShardsResponse;

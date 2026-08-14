@@ -71,6 +71,25 @@ port.on("message", (msg: WorkerRequest) => {
       return;
     }
 
+    case "matchAll": {
+      let regex: RegExp;
+      try {
+        regex = new RegExp(msg.pattern, "iu");
+      } catch {
+        reply({ kind: "matches", id: msg.id, indexes: [] });
+        return;
+      }
+      const indexes: number[] = [];
+      for (let i = 0; i < msg.contents.length; i++) {
+        // Announced per item so a timeout names the content that hung.
+        reply({ kind: "progress", id: msg.id, index: i });
+        regex.lastIndex = 0;
+        if (regex.test(msg.contents[i]!)) indexes.push(i);
+      }
+      reply({ kind: "matches", id: msg.id, indexes });
+      return;
+    }
+
     case "probe": {
       let regex: RegExp;
       try {

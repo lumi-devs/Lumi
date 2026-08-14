@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
 import { Collection } from "discord.js";
 import { RPC_ACTIONS } from "@lumi/contracts";
-import { rpcHandlers } from "#lib/rabbitmq/index.js";
+import { rpcHandlers } from "#lib/rpc/dispatch.js";
 import { DashboardModule } from "#modules/dashboard/index.js";
 
 const GUILD_ID = "123456789012345678";

@@ -6,8 +6,7 @@ import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetService } from "#lib/module-system/Service.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { DANGEROUS_PERMISSIONS } from "../services/SecurityService.js";
-
-const RECENT_AUDIT_ENTRY_MS = 10_000;
+import { resolveAuditLogExecutor } from "../lib/audit.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "securityRoleUpdate",
@@ -38,7 +37,7 @@ export class SecurityRoleUpdateListener extends ModuleListener<
     const config = await security.loadAntiNukeConfig(newRole.guild.id);
     if (!config.enabled) return;
 
-    const executorId = await this.#resolveExecutor(newRole);
+    const executorId = await resolveAuditLogExecutor(newRole.guild, AuditLogEvent.RoleUpdate, newRole.id);
     if (isNullish(executorId)) return;
     if (await security.isExempt(newRole.guild, executorId, config)) return;
 
@@ -62,18 +61,4 @@ export class SecurityRoleUpdateListener extends ModuleListener<
     );
   }
 
-  async #resolveExecutor(role: Role): Promise<string | null> {
-    const logs = await role.guild
-      .fetchAuditLogs({ type: AuditLogEvent.RoleUpdate, limit: 1 })
-      .catch(() => null);
-    const entry = logs?.entries.first();
-    if (
-      !entry ||
-      entry.targetId !== role.id ||
-      Date.now() - entry.createdTimestamp > RECENT_AUDIT_ENTRY_MS
-    ) {
-      return null;
-    }
-    return entry.executorId;
-  }
 }

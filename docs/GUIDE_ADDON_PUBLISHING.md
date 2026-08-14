@@ -11,7 +11,13 @@ If you're adding a module that ships *with* the bot itself, you want the [Module
 ,repo add lumi-addons https://github.com/lumi-devs/lumi-addons.git
 
 # Install a specific addon from it
-,download lumi-addons <addon-name>
+,download install lumi-addons <addon-name>
+
+# Install a specific revision (commit/branch/tag) instead of latest
+,download install lumi-addons <addon-name> <revision>
+
+# Roll back an installed addon to a prior revision
+,download rollback <addon-name> <revision>
 
 # Enable it for a guild
 /modules enable <addon-name>
@@ -20,6 +26,10 @@ If you're adding a module that ships *with* the bot itself, you want the [Module
 The downloader clones the repo, treats each top-level directory as an addon, and registers it as a Sapphire base path - your `commands/`, `listeners/`, etc. sub-store folders are discovered automatically. You never call `stores.registerPath` yourself.
 
 `,repo add` shows a one-time confirmation prompt before cloning, warning that code from the repo runs **inside the bot process** with full access to its database, cache, and Discord client, and that Lumi doesn't review or vet third-party repositories. Declining, or not responding within 30 seconds, cancels the add - nothing gets cloned. This is a bot-owner-facing warning about the repo as a whole, not something your addon needs to do anything about.
+
+### Installation revisions
+
+The `install` command optionally accepts a third parameter - a git revision (commit hash, branch name, or tag) to install at instead of the repo's default branch. Similarly, `rollback` checks out an already-installed addon to any prior revision, useful if a newer version has a breaking bug. Both commands require a bot restart to fully apply the change. This also works via the dashboard's `/system/addons` page - installed addons show a "Rollback" button, and uninstalled addons have an "Advanced" mode that lets you specify a revision before installing.
 
 ## Anatomy of an addon
 

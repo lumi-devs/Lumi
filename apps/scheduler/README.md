@@ -31,11 +31,11 @@ The scheduler service guarantees accurate execution of time-sensitive operations
 - **Headless & WS-Free Operation**: Does not open or maintain Discord Gateway WebSocket connections, preserving token gateway identify limits.
 - **BullMQ Task Queue Engine**: Backed by **BullMQ** (using Redis DB index `1`), handling exponential backoff retries, job deduplication, and delayed triggers.
 - **Distributed Leader Election**: Supports optional Redis-based active/passive leader locking (`SCHEDULER_LEADER_LOCK=true`) to enable high-availability (HA) multi-replica deployments without duplicate task execution.
-- **Event Bus Consumer Interface**: Listens for schedule and unschedule requests via `SchedulerRequestConsumer` emitted by worker nodes.
-- **Task Fire Event Dispatcher**: Emits task fire notifications (`TaskFireConsumer`) over the event bus when scheduled timers trigger, allowing worker nodes to execute final Discord side-effects.
+- **Shared Queue, No Broker Hop**: Workers enqueue straight onto the same BullMQ queue (Redis DB `1`), so a job is durable the moment it is created and does not depend on the scheduler being up to be *scheduled*. The scheduler is extra queue capacity dedicated to running them, not a gatekeeper.
+- **Task Fire Event Dispatcher**: Emits task fire notifications over the event bus (`lumi.scheduler.fire:<task>`) when scheduled timers trigger, allowing worker nodes to execute final Discord side-effects.
 
 > [!NOTE]
-> In production environments with multiple scheduler instances, enable `SCHEDULER_LEADER_LOCK=true`. Only the active leader replica processes queue items, while standby replicas maintain readiness.
+> In production environments with multiple scheduler instances, enable `SCHEDULER_LEADER_LOCK=true`: standby replicas block on the lock before booting their BullMQ worker, so only one scheduler replica draws from the queue. This is about scheduler replicas among themselves - BullMQ's own queue semantics already stop any two owners (scheduler or worker) from running the same job.
 
 ---
 
@@ -52,16 +52,14 @@ sequenceDiagram
     participant Redis as Redis (DB 1 - BullMQ)
     participant DB as PostgreSQL 17
 
-    Worker->>EB: Publish Schedule Request (e.g. TempVC Expiration in 10m)
-    EB->>Sched: SchedulerRequestConsumer Receives Request
-    Sched->>Redis: Enqueue BullMQ Delayed Job { delay: 600000 }
-    Redis-->>Sched: Job Persisted
+    Worker->>Redis: Enqueue BullMQ Delayed Job (e.g. TempVC Expiration in 10m)
+    Redis-->>Worker: Job Persisted
 
     Note over Sched,Redis: 10 minutes pass...
 
-    Redis->>Sched: Job Triggered
+    Redis->>Sched: Job Triggered (any BullMQ owner; exactly one wins it)
     Sched->>DB: Query Task Context Data
-    Sched->>EB: Emits Task Fire Event (TaskFireConsumer)
+    Sched->>EB: Emits Task Fire Event (lumi.scheduler.fire:<task>)
     EB->>Worker: Worker Receives Task Fire Trigger
     Worker->>Worker: Executes Final Action (Delete Channel / Unmute User)
 ```
@@ -83,7 +81,9 @@ Configure `@lumi/scheduler` using environment variables:
 | `REDIS_PORT` | No | `6379` | Redis server network port. |
 | `REDIS_PASSWORD` | No | - | Redis authentication password. |
 | `REDIS_TASK_DB` | No | `1` | Redis database index used exclusively for BullMQ task queues. |
-| `RABBITMQ_URL` | **Yes** | - | RabbitMQ broker URL for background task consumer channels. |
+| `RPC_HTTP_HOST` | No | `127.0.0.1` | Bind host for the internal RPC HTTP server. |
+| `RPC_INTERNAL_TOKEN` | In production | - | Shared secret required as `Authorization: Bearer` on every internal RPC call. |
+| `RPC_HTTP_PORT` | No | `8091` | Bind port for the internal RPC HTTP server. |
 | `POSTGRES_URL` | **Yes** | - | PgBouncer or Postgres database connection string. |
 | `METRICS_ENABLED` | No | `true` | Enables HTTP metrics and health check server. |
 | `METRICS_PORT` | No | `9090` | Network port for Prometheus metrics and health probes. |
@@ -97,7 +97,7 @@ Configure `@lumi/scheduler` using environment variables:
 
 ### Local Development
 
-Ensure PostgreSQL, Redis, and RabbitMQ are available:
+Ensure PostgreSQL and Redis are available:
 
 ```bash
 # Set environment variables and launch scheduler
@@ -123,13 +123,12 @@ The scheduler exposes an HTTP server on `METRICS_PORT` (default `9090`).
 | Endpoint | Method | Status Code | Description |
 |---|---|:---:|---|
 | `/healthz` | `GET` | `200` | Liveness check for the process. |
-| `/readyz` | `GET` | `200` / `503` | Evaluates system probes (`postgres`, `redis`, `rabbitmq`, `scheduler-tasks`, `scheduler-leader`). |
+| `/readyz` | `GET` | `200` / `503` | Evaluates system probes (`postgres`, `redis`, `scheduler-tasks`, `scheduler-leader`). |
 | `/metrics` | `GET` | `200` | Exports Prometheus metrics including `lumi_failed_jobs_total` and queue lengths. |
 
 ### Registered Readiness Probes
 
 - `postgres`: Confirms database query execution (`SELECT 1`).
 - `redis`: Verifies Redis connectivity (`PING` -> `PONG`).
-- `rabbitmq`: Verifies RabbitMQ channel connection status.
 - `scheduler-tasks`: Confirms BullMQ task container initialization.
 - `scheduler-leader`: Validates leadership ownership when `SCHEDULER_LEADER_LOCK=true`.

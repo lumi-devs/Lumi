@@ -19,7 +19,7 @@ No, not until Discord's recommended shard count for your bot outgrows what one p
 
 ## Is the web dashboard required?
 
-No. `apps/dashboard` is an optional Next.js app that talks to `worker` over RabbitMQ RPC; disabling the `dashboard` module only disables the RPC surface it depends on, not the rest of the bot. Everything else runs fine with it never started. See [Self-Hosting § Optional: the web dashboard](GUIDE_SELF_HOSTING.md#6-optional-the-web-dashboard).
+No. `apps/dashboard` is an optional Next.js app that talks to `worker` over an internal HTTP RPC bridge; disabling the `dashboard` module only disables the RPC surface it depends on, not the rest of the bot. Everything else runs fine with it never started. See [Self-Hosting § Optional: the web dashboard](GUIDE_SELF_HOSTING.md#6-optional-the-web-dashboard).
 
 ## Is the join-verification challenge a real CAPTCHA?
 

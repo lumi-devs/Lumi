@@ -1,4 +1,4 @@
-import { PlugZap } from "lucide-react";
+import { AlertTriangle, PlugZap } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildWarnThresholds } from "#/lib/dashboard-fetch";
 import { WarnThresholdLadder } from "#/components/guild/warn-threshold-ladder";
@@ -33,6 +33,7 @@ export default async function WarnThresholdsPage({
     <div className="flex flex-col gap-4">
       <div className="rise" style={{ "--rise-delay": "0ms" } as React.CSSProperties}>
         <PageHeader
+          icon={AlertTriangle}
           title="Warn thresholds"
           description="Rules that let a warn escalate on its own. Warns are counted per member across the whole server."
         />

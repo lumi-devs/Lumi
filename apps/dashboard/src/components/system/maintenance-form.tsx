@@ -14,7 +14,7 @@ import { Input, Label } from "#/components/ui/input";
 import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
 import { ActionError } from "#/components/action-error";
-import { useServerAction } from "#/lib/use-server-action";
+import { useOptimisticAction } from "#/lib/use-server-action";
 
 export function MaintenanceForm({
   maintenanceMode,
@@ -23,15 +23,20 @@ export function MaintenanceForm({
   maintenanceMode: boolean;
   maintenanceMessage: string | null;
 }) {
-  const [enabled, setEnabled] = useState(maintenanceMode);
   const [message, setMessage] = useState(maintenanceMessage ?? "");
-  const { isPending, error, setError, run } = useServerAction();
+  const {
+    value: enabled,
+    isPending,
+    error,
+    run,
+  } = useOptimisticAction(maintenanceMode);
 
   function save(nextEnabled: boolean, nextMessage: string) {
-    run(async () => {
-      const res = await setMaintenanceMode(nextEnabled, nextMessage || undefined);
-      if (!res.ok) setError(res.error ?? "Failed");
-    });
+    run(
+      nextEnabled,
+      () => setMaintenanceMode(nextEnabled, nextMessage || undefined),
+      "Failed to reach the bot — maintenance mode is unchanged.",
+    );
   }
 
   return (
@@ -46,10 +51,7 @@ export function MaintenanceForm({
             </Badge>
             <Switch
               checked={enabled}
-              onChange={(v) => {
-                setEnabled(v);
-                save(v, message);
-              }}
+              onChange={(v) => save(v, message)}
               disabled={isPending}
               aria-label="Toggle maintenance mode"
             />

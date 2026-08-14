@@ -252,17 +252,20 @@ export default class TempVcService extends Service {
 
     if (!(await isVoiceChannelEmpty(channelId))) return;
 
+    const cleanup = async () => {
+      await removeVcRecord(guildId, channelId);
+      await clearVoiceChannelOccupancy(channelId);
+    };
+
     try {
       await this.container.client.rest.delete(Routes.channel(channelId), {
         reason: "Empty temp VC cleanup",
       });
-      await removeVcRecord(guildId, channelId);
-      await clearVoiceChannelOccupancy(channelId);
+      await cleanup();
     } catch (err: unknown) {
       const code = errorCode(err);
       if (code === 10003 || code === 50013) {
-        await removeVcRecord(guildId, channelId);
-        await clearVoiceChannelOccupancy(channelId);
+        await cleanup();
         return;
       }
       throw err;

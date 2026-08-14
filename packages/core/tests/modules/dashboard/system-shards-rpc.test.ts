@@ -1,23 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { container } from "@sapphire/framework";
 import { RPC_ACTIONS } from "@lumi/contracts";
-import { rpcHandlers } from "#lib/rabbitmq/index.js";
+import { rpcHandlers } from "#lib/rpc/dispatch.js";
 import { initCoreRpcHandlers } from "#lib/rpc/core-rpc.js";
 
 const BOT_OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";
 const CLUSTER = "prod";
 
-function fakeRedis(store: Map<string, string>, members: Map<string, number>) {
+function fakeRedis(store: Map<string, string>) {
   return {
     get: vi.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
     mget: vi.fn((...keys: string[]) =>
       Promise.resolve(keys.map((k) => store.get(k) ?? null)),
-    ),
-    zrange: vi.fn(() =>
-      Promise.resolve(
-        [...members.entries()].flatMap(([id, score]) => [id, String(score)]),
-      ),
     ),
     scan: vi.fn((_cursor: string, _match: string, pattern: string) => {
       const prefix = pattern.replace(/\\(.)/g, "$1").replace(/\*$/, "");
@@ -43,14 +38,12 @@ function shardRow(shardId: number, replicaId: string, updatedAt: number) {
 
 describe("system.shards.get RPC handler", () => {
   let store: Map<string, string>;
-  let members: Map<string, number>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     process.env["CLUSTER_NAME"] = CLUSTER;
 
     store = new Map();
-    members = new Map();
 
     container.logger = {
       info: vi.fn(),
@@ -62,7 +55,7 @@ describe("system.shards.get RPC handler", () => {
       application: { owner: { id: BOT_OWNER_ID } },
       guilds: { cache: new Map() },
     } as any;
-    (container as any).redis = fakeRedis(store, members);
+    (container as any).redis = fakeRedis(store);
 
     initCoreRpcHandlers();
   });
@@ -86,28 +79,14 @@ describe("system.shards.get RPC handler", () => {
     await expect(call(undefined)).rejects.toThrow(/Bot Owner/);
   });
 
-  it("returns the cluster topology with ISO timestamps", async () => {
-    store.set(
-      `lumi:cluster:${CLUSTER}:assignment`,
-      JSON.stringify({
-        epoch: 4,
-        shardCount: 3,
-        byReplica: { "gw-a": [0, 1], "gw-b": [2] },
-        writtenAt: Date.UTC(2026, 0, 1),
-      }),
-    );
-    members.set("gw-a", Date.UTC(2026, 0, 2));
-    store.set(`lumi:cluster:${CLUSTER}:ready:gw-a`, "1");
+  it("returns reporting shards with ISO timestamps", async () => {
     store.set(`lumi:cluster:${CLUSTER}:shard:0`, shardRow(0, "gw-a", Date.UTC(2026, 0, 3)));
     store.set(`lumi:cluster:${CLUSTER}:shard:1`, shardRow(1, "gw-a", Date.UTC(2026, 0, 3)));
 
     const result = (await call()) as any;
 
     expect(result.clusterName).toBe(CLUSTER);
-    expect(result.clustered).toBe(true);
-    expect(result.epoch).toBe(4);
     expect(result.shardCount).toBe(3);
-    expect(result.assignedAt).toBe("2026-01-01T00:00:00.000Z");
     expect(result.shards).toHaveLength(2);
     expect(result.shards[0]).toMatchObject({
       shardId: 0,
@@ -116,39 +95,27 @@ describe("system.shards.get RPC handler", () => {
       ping: 37,
       guildCount: 12,
       lastHeartbeatAt: "2026-01-03T00:00:00.000Z",
-      session: null,
     });
     expect(
-      result.replicas.find((r: any) => r.replicaId === "gw-a").lastSeenAt,
-    ).toBe("2026-01-02T00:00:00.000Z");
+      result.replicas.find((r: any) => r.replicaId === "gw-a"),
+    ).toMatchObject({ reportingShardIds: [0, 1] });
   });
 
-  it("flags an assigned shard nobody is reporting", async () => {
-    store.set(
-      `lumi:cluster:${CLUSTER}:assignment`,
-      JSON.stringify({
-        epoch: 4,
-        shardCount: 3,
-        byReplica: { "gw-a": [0, 1], "gw-b": [2] },
-        writtenAt: Date.UTC(2026, 0, 1),
-      }),
-    );
+  it("flags missing shard ids", async () => {
     store.set(`lumi:cluster:${CLUSTER}:shard:0`, shardRow(0, "gw-a", Date.UTC(2026, 0, 3)));
+    store.set(`lumi:cluster:${CLUSTER}:shard:2`, shardRow(2, "gw-b", Date.UTC(2026, 0, 3)));
 
     const result = (await call()) as any;
 
-    expect(result.missingShardIds).toEqual([1, 2]);
-    expect(
-      result.replicas.find((r: any) => r.replicaId === "gw-b"),
-    ).toMatchObject({ ready: null, assignedShardIds: [2], reportingShardIds: [] });
+    expect(result.missingShardIds).toEqual([1]);
   });
 
-  it("falls back to the default cluster namespace when CLUSTER_NAME is unset", async () => {
+  it("defaults to the default cluster namespace when CLUSTER_NAME is unset", async () => {
     delete process.env["CLUSTER_NAME"];
 
     const result = (await call()) as any;
 
     expect(result.clusterName).toBe("default");
-    expect(result.clustered).toBe(false);
+    expect(result.shardCount).toBe(0);
   });
 });

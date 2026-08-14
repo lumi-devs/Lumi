@@ -59,12 +59,5 @@ export class GuildDeleteEventBusListener extends Listener<
 
     const filterSvc = tryGetService("filter");
     filterSvc?.evict(guild.id);
-
-    if (!this.container.rabbit) return;
-    void this.container.rabbit.publishEvent("GUILD_LEAVE", {
-      guildId: guild.id,
-      name: guild.name,
-      leftAt: Date.now(),
-    });
   }
 }

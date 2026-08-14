@@ -22,6 +22,9 @@ function makeModule(): DashboardModuleView {
     displayName: "Security",
     emoji: "🔐",
     description: "Anti-nuke and permit controls.",
+    version: "1.0.0",
+    conflicts: [],
+    dependencies: [],
     enabled: true,
     configFields: [
       {
@@ -38,6 +41,7 @@ function makeModule(): DashboardModuleView {
       },
     ],
     config: { modRoleId: "", verbose: false },
+    isAddon: false,
   };
 }
 

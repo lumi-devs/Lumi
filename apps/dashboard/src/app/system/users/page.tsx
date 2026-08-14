@@ -1,3 +1,4 @@
+import { Shield } from "lucide-react";
 import { requireBotOwner } from "#/lib/auth-guards";
 import { GdprForm } from "#/components/system/gdpr-form";
 import { PageHeader } from "#/components/ui/page-header";
@@ -9,6 +10,7 @@ export default async function SystemUsersPage() {
       <PageHeader
         title="User Privacy"
         description="Look up user preferences and trigger GDPR deletion."
+        icon={Shield}
       />
       <GdprForm />
     </div>

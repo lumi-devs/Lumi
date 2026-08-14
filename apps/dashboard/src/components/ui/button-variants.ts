@@ -11,8 +11,9 @@ export const buttonVariants = cva(
   [
     "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap",
     "font-display tracking-[0.01em] font-semibold",
-    "rounded-control transition-colors duration-150 cursor-pointer",
-    "disabled:pointer-events-none disabled:opacity-45",
+    "rounded-control transition-[background-color,border-color,color,transform,box-shadow] duration-150 cursor-pointer",
+    "active:scale-[0.97]",
+    "disabled:pointer-events-none disabled:opacity-45 disabled:active:scale-100",
     "[&_svg]:pointer-events-none [&_svg]:shrink-0",
   ].join(" "),
   {
@@ -29,11 +30,11 @@ export const buttonVariants = cva(
         link: "text-accent-fg underline-offset-4 hover:underline px-0",
       },
       size: {
-        sm: "h-7 gap-1 px-2 text-[12px] [&_svg]:size-3.5",
-        md: "h-8 px-2.5 text-[13px] [&_svg]:size-4",
-        lg: "h-9 px-3.5 text-[13px] [&_svg]:size-4",
-        icon: "size-8 [&_svg]:size-4",
-        iconSm: "size-7 [&_svg]:size-3.5",
+        sm: "h-8 gap-1 px-2.5 text-[13px] [&_svg]:size-3.5",
+        md: "h-9 px-3 text-[14px] [&_svg]:size-4",
+        lg: "h-10 px-4 text-[15px] [&_svg]:size-[18px]",
+        icon: "size-9 [&_svg]:size-4",
+        iconSm: "size-8 [&_svg]:size-3.5",
       },
     },
     defaultVariants: { variant: "secondary", size: "md" },

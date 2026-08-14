@@ -14,6 +14,7 @@ import {
   BucketScope,
   Command,
   UserError,
+  container,
   type ApplicationCommandRegistry,
   type Args,
 } from "@sapphire/framework";
@@ -95,16 +96,21 @@ export async function assertPermit(
   interaction: ChatInputCommandInteraction,
   permitNode: string,
 ): Promise<void> {
-  const { container } = await import("@sapphire/framework");
-  const userId = interaction.user.id;
   const guildId = interaction.guild?.id;
+  if (!guildId) {
+    throw new UserError({
+      identifier: "PermissionDenied",
+      message: "This command can only be used in a server.",
+    });
+  }
+  const userId = interaction.user.id;
   const roles = interaction.member?.roles;
   const roleIds = Array.isArray(roles)
     ? roles
     : Array.from(roles?.cache.keys() ?? []);
   const guildOwnerId = interaction.guild?.ownerId;
   const hasPermit = await container.permitResolver.hasPermit({
-    guildId: guildId!,
+    guildId,
     userId,
     roleIds,
     permitNode,

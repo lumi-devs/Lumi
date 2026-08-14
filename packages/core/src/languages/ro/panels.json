@@ -143,5 +143,10 @@
   "panicDeniedTitle": "Access Denied",
   "panicDenied": "You need the Admin permit to manage panic mode.",
   "permsPickPermit": "Pick a permit…",
-  "permsNoPermits": "No permits of this kind exist yet. Create one with `/permit create` or from the dashboard."
+  "permsNoPermits": "No permits of this kind exist yet. Create one with `/permit create` or from the dashboard.",
+  "verifyWebTitle": "Verify on the Dashboard",
+  "verifyWebIntro": "Click below to finish verifying on Lumi's dashboard. It'll grant your verified role as soon as you're done.",
+  "verifyWebButton": "Open Verification Page",
+  "verifyWebUnavailableTitle": "Web Verification Unavailable",
+  "verifyWebUnavailable": "Web verification isn't configured for this bot right now. Please contact a moderator."
 }

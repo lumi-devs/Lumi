@@ -42,15 +42,6 @@ const defaultConfig = {
     status: "online",
   },
   branding: {
-    colors: {
-      PRIMARY: 0,
-      SUCCESS: 0,
-      ERROR: 0,
-      WARNING: 0,
-      INFO: 0,
-      NEUTRAL: 0,
-      GOLD: 0,
-    },
     links: {
       supportServer: "",
       website: "",
@@ -79,7 +70,38 @@ try {
   }
 }
 
+type BotConfigType = typeof defaultConfig & {
+  branding: typeof defaultConfig.branding & {
+    colors?: Record<string, number>;
+  };
+};
+
 export const BotConfig = mergeDefault(
   defaultConfig,
   userConfig,
-) as typeof defaultConfig;
+) as BotConfigType;
+
+/** Built-in card palette, used when an operator hasn't overridden a color via `config/bot.ts`. */
+export const defaultCardColors = {
+  primary: 0x5865f2,
+  info: 0x5865f2,
+  success: 0x57f287,
+  warning: 0xfee75c,
+  error: 0xed4245,
+  neutral: 0x4f545c,
+  gold: 0xffc800,
+  purple: 0x9b59b6,
+  cyan: 0x1abc9c,
+} as const;
+
+export type CardColorKey = keyof typeof defaultCardColors;
+
+/** Keys with no built-in accent bar unless the operator opts in via `config/bot.ts` - `defaultCardColors[key]` still names what that opt-in would use. */
+const BLANK_BY_DEFAULT: ReadonlySet<CardColorKey> = new Set(["primary"]);
+
+/** Single resolution path for card colors - checks the operator's `config/bot.ts` override before falling back to the built-in palette. */
+export function resolveCardColor(key: CardColorKey): number | undefined {
+  const override = BotConfig.branding.colors?.[key];
+  if (override !== undefined) return override;
+  return BLANK_BY_DEFAULT.has(key) ? undefined : defaultCardColors[key];
+}

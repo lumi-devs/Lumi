@@ -12,14 +12,14 @@
 
 The **Lumi Dashboard** (`@lumi/dashboard`) is a Next.js (App Router) web administration panel. It empowers Discord server administrators to manage Lumi bot features, toggle modules, and modify configuration settings directly from a browser UI without using Discord chat commands.
 
-This is a from-scratch rewrite of the original hand-rolled `Bun.serve` SSR app. The architecture piece that **did not** change: the dashboard still never touches Postgres directly and never holds the Discord bot token — every read/write is proxied over a RabbitMQ RPC bridge to the bot worker (`apps/worker`), so a dashboard outage or traffic spike can never affect Discord gateway latency.
+This is a from-scratch rewrite of the original hand-rolled `Bun.serve` SSR app. The architecture piece that **did not** change: the dashboard still never touches Postgres directly and never holds the Discord bot token — every read/write is proxied over an internal HTTP RPC bridge to the bot worker (`apps/worker`), so a dashboard outage or traffic spike can never affect Discord gateway latency.
 
 ---
 
 ## 🌟 Overview
 
 - **Auth**: Discord OAuth2 via [NextAuth.js (Auth.js v5)](https://authjs.dev), not hand-rolled HMAC cookie signing. Session is a JWT (`AUTH_SECRET`, mapped from `DASHBOARD_SESSION_SECRET`); `session.isBotOwner` comes from the worker's `auth.whoami` RPC, so it tracks `PermitResolver.isBotOwner` (`OWNER_IDS` env var, or the Discord application's actual owner) with no separate dashboard-side owner list. That fact and the user's manageable-guild list are re-derived at most once per 5 minutes (`AUTHZ_TTL_MS` in `src/lib/auth.ts`), bounded by a process-local snapshot rather than the JWT timestamp alone.
-- **RPC bridge**: `src/lib/rpc.ts` is a `server-only` module (never bundled to the client) — a straight port of the old `apps/dashboard/src/rpc.ts` RabbitMQ RPC client, now reached from Server Components / Route Handlers / Server Actions.
+- **RPC bridge**: `src/lib/rpc.ts` is a `server-only` module (never bundled to the client) — an HTTP client that `POST`s to the worker's internal RPC server directly over the docker/cluster network, reached from Server Components / Route Handlers / Server Actions.
 - **IDOR guard**: `src/lib/auth-guards.ts`'s `authorizedGuild()` is re-checked on every guild-scoped page render *and* every guild-scoped Server Action — never trusted from client state.
 - **Security headers**: `next.config.ts`'s `headers()` — `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Strict-Transport-Security`, `Permissions-Policy`.
 - **CSP**: `src/middleware.ts`, deliberately *not* `next.config.ts`. Next only nonces its inline RSC flight scripts when it can read a `content-security-policy` header off the **incoming request**, and only middleware can set one — a response header from `next.config.ts` is invisible to the renderer, so a strict `script-src 'self'` set there blocks every flight script and hydration never runs.
@@ -41,7 +41,7 @@ This is a from-scratch rewrite of the original hand-rolled `Bun.serve` SSR app. 
 | `DASHBOARD_SESSION_SECRET` | **Yes** | - | NextAuth's session JWT encryption secret. Generate with `openssl rand -hex 32`. |
 | `DISCORD_OAUTH2_CLIENT_ID` | **Yes** | - | Discord Application Client ID. |
 | `DISCORD_OAUTH2_CLIENT_SECRET` | **Yes** | - | Discord Application Client Secret. |
-| `RABBITMQ_URL` | **Yes** | - | RabbitMQ broker connection string. |
+| `RPC_HTTP_URL` | **Yes** | - | Base URL of the worker's internal RPC HTTP server, e.g. `http://worker:8091`. |
 | `METRICS_ENABLED` | No | `true` | Enables the `/healthz`, `/readyz`, `/metrics` telemetry server. |
 | `METRICS_PORT` | No | `9090` | Port for the telemetry server (see `src/instrumentation.ts`). |
 
@@ -56,7 +56,7 @@ Full reference, including the route inventory and the 50-action RPC surface: [`d
 ```bash
 bun install
 
-# Requires RABBITMQ_URL, DISCORD_OAUTH2_CLIENT_ID/SECRET, DASHBOARD_SESSION_SECRET set.
+# Requires RPC_HTTP_URL, DISCORD_OAUTH2_CLIENT_ID/SECRET, DASHBOARD_SESSION_SECRET set.
 bun run --cwd apps/dashboard dev
 # or, from repo root:
 turbo run dev --filter=@lumi/dashboard

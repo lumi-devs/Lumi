@@ -71,6 +71,7 @@ model Guild {
   backups           GuildBackup[]
   tempVcGenerators  TempVcGenerator[]
   tempVcRecords     TempVcRecord[]
+  blocklistEntries  Blocklist[]
 
   @@map("guilds")
 }
@@ -186,6 +187,7 @@ model ModerationCase {
   @@index([guildId, userId])
   @@index([guildId, createdAt])
   @@index([userId])
+  @@index([moderatorId]) // GDPR anonymization + cross-guild moderator lookups
   @@index([guildId, active, expiresAt]) // expiry sweep
   @@map("moderation_cases")
 }
@@ -236,6 +238,8 @@ model Blocklist {
   reason    String?  @db.VarChar(500)
   blockedBy String   @map("blocked_by") @db.VarChar(20)
   createdAt DateTime @default(now()) @map("created_at")
+
+  guild Guild? @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@unique([userId, guildId], name: "uq_blocklist_user_guild")
   @@index([userId])

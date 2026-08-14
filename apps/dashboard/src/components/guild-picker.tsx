@@ -1,10 +1,13 @@
+"use client";
+
 import Link from "next/link";
 import type { Session } from "next-auth";
-import { ChevronRight, ServerOff } from "lucide-react";
+import { ChevronRight, Layers3, ServerOff } from "lucide-react";
 import { Card } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
 import { PageHeader } from "#/components/ui/page-header";
-import { guildIconUrl } from "#/lib/discord";
+import { useStaggerIn } from "#/lib/animate";
+import { guildIconUrl } from "#/lib/discord-format";
 
 const COLORS = [
   "#5865f2", "#3ba55d", "#ed4245", "#faa81a",
@@ -18,11 +21,14 @@ function colorFor(id: string): string {
 }
 
 export function GuildPicker({ session }: { session: Session }) {
+  const guildListRef = useStaggerIn<HTMLUListElement>("li");
+
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-8 pb-24">
       <PageHeader
         title="Your servers"
         description="Servers where you have Manage Server. Pick one to configure Lumi for it."
+        icon={Layers3}
       />
 
       {session.guilds.length === 0 ? (
@@ -35,7 +41,7 @@ export function GuildPicker({ session }: { session: Session }) {
         </Card>
       ) : (
         <Card>
-          <ul className="divide-y divide-border">
+          <ul ref={guildListRef} className="divide-y divide-border">
             {session.guilds.map((g) => {
               const icon = guildIconUrl(g.id, g.icon);
               return (

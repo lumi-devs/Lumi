@@ -5,8 +5,7 @@ import { isNullish } from "@sapphire/utilities";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetService } from "#lib/module-system/Service.js";
 import { swallow } from "#lib/utilities/errors.js";
-
-const RECENT_AUDIT_ENTRY_MS = 10_000;
+import { resolveAuditLogExecutor } from "../lib/audit.js";
 
 function roleSet(member: GuildMember): Set<string> {
   return new Set(member.roles.cache.keys());
@@ -53,7 +52,7 @@ export class SecurityGuildMemberUpdateListener extends ModuleListener<
     const config = await security.loadAntiNukeConfig(newMember.guild.id);
     if (!config.enabled) return;
 
-    const executorId = await this.#resolveExecutor(newMember);
+    const executorId = await resolveAuditLogExecutor(newMember.guild, AuditLogEvent.MemberRoleUpdate, newMember.id);
     if (isNullish(executorId)) return;
     if (await security.isExempt(newMember.guild, executorId, config)) return;
 
@@ -77,18 +76,4 @@ export class SecurityGuildMemberUpdateListener extends ModuleListener<
     );
   }
 
-  async #resolveExecutor(member: GuildMember): Promise<string | null> {
-    const logs = await member.guild
-      .fetchAuditLogs({ type: AuditLogEvent.MemberRoleUpdate, limit: 1 })
-      .catch(() => null);
-    const entry = logs?.entries.first();
-    if (
-      !entry ||
-      entry.targetId !== member.id ||
-      Date.now() - entry.createdTimestamp > RECENT_AUDIT_ENTRY_MS
-    ) {
-      return null;
-    }
-    return entry.executorId;
-  }
 }

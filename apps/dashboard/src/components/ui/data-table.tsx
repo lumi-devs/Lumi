@@ -9,6 +9,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Table, TableScroll, TBody, TD, TH, THead, TR } from "#/components/ui/table";
+import { useStaggerIn } from "#/lib/animate";
 
 declare module "@tanstack/react-table" {
   interface ColumnMeta<TData, TValue> {
@@ -42,6 +43,11 @@ export function DataTable<TData, TValue>({
     getRowId: getRowId ? (row) => getRowId(row) : undefined,
   });
 
+  const rows = table.getRowModel().rows;
+  const bodyRef = useStaggerIn<HTMLTableSectionElement>("tr", {
+    resetKey: rows.map((r) => r.id).join(","),
+  });
+
   return (
     <TableScroll className={className}>
       <Table>
@@ -62,8 +68,8 @@ export function DataTable<TData, TValue>({
             </TR>
           ))}
         </THead>
-        <TBody>
-          {table.getRowModel().rows.map((row) => (
+        <TBody ref={bodyRef}>
+          {rows.map((row) => (
             <TR key={row.id}>
               {row.getVisibleCells().map((cell) => (
                 <TD key={cell.id} className={cell.column.columnDef.meta?.className}>

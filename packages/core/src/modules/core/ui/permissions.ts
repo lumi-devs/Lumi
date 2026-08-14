@@ -4,7 +4,7 @@ import { row, type Row } from "#modules/core/ui/common.js";
 import { hubTabRow } from "#modules/core/ui/hub.js";
 import { Emojis } from "#utilities/assets.js";
 import {
-  CARD_ACCENTS,
+  resolveCardColor,
   makeCard,
   noPingCard,
   type CardReply,
@@ -115,7 +115,7 @@ export function buildPermissionsView(
 
   return noPingCard(
     makeCard(
-      CARD_ACCENTS.PRIMARY,
+      resolveCardColor("primary"),
       `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsTitle) : "Permits"}`,
       shown.length
         ? `-# ${Emojis.CHECK} ${t ? t(PanelsKeys.PermsLegend) : "custom · enforced. Enforced permits survive anti-nuke quarantine."}`
@@ -134,7 +134,7 @@ export function buildPermitPickerView(
 ): CardReply {
   if (permits.length === 0) {
     return makeCard(
-      CARD_ACCENTS.PRIMARY,
+      resolveCardColor("primary"),
       `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsPickPermit) : "Pick a Permit"}`,
       t
         ? t(PanelsKeys.PermsNoPermits)
@@ -154,7 +154,7 @@ export function buildPermitPickerView(
   });
 
   return makeCard(
-    CARD_ACCENTS.PRIMARY,
+    resolveCardColor("primary"),
     `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsPickPermit) : "Pick a Permit"}`,
     t
       ? t(PanelsKeys.PermsPickPermit)
@@ -181,7 +181,7 @@ export function buildPermitAssignTargetView(
         });
 
   return makeCard(
-    CARD_ACCENTS.PRIMARY,
+    resolveCardColor("primary"),
     `${Emojis.SHIELD} ${permitName}`,
     t
       ? t(PanelsKeys.PermsPickTarget)

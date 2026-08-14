@@ -169,9 +169,12 @@ describe("DownloaderService", () => {
         },
       ]);
 
-      (fs.access as any).mockImplementation(() => {
-        throw new Error("Access forbidden");
-      });
+      (fs.access as any)
+        .mockRejectedValueOnce(new Error("ENOENT"))
+        .mockRejectedValueOnce(new Error("ENOENT"))
+        .mockResolvedValueOnce(true);
+
+      (fs.symlink as any).mockRejectedValueOnce(new Error("Symlink failed"));
 
       await service.syncInstalledModulesOnStartup();
 
@@ -215,6 +218,24 @@ describe("DownloaderService", () => {
 
       expect(mockModuleStore.unload).toHaveBeenCalledWith("m1");
       expect(fs.unlink).toHaveBeenCalledWith("/mock/addon_modules/m1");
+    });
+
+    it("passes an explicit revision through to resolver.installModule and persists the resolved commit", async () => {
+      mockDb.downloader.readDownloaderRepo.mockResolvedValue({ id: "r1-id" });
+      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue(null);
+      (resolver.installModule as any).mockResolvedValueOnce({
+        version: "1.0.0",
+        commit: "abc1234",
+      });
+
+      await service.installModule("r1", "m1", "abc1234");
+
+      expect(resolver.installModule).toHaveBeenCalledWith("r1", "m1", "abc1234");
+      expect(mockDb.downloader.updateInstalledDownloaderModuleCommit).toHaveBeenCalledWith(
+        "r1-id",
+        "m1",
+        "abc1234",
+      );
     });
   });
 
@@ -412,6 +433,82 @@ describe("DownloaderService", () => {
       expect(res1).toEqual({ updated: true, changelog: "feat: change", needsRestart: true });
       expect(res2).toEqual({ updated: true, changelog: "feat: change", needsRestart: true });
       expect(maxActivePulls).toBe(1);
+    });
+
+    it("returns pinned:false without checking pinned when a pull-less regular update finds nothing new", async () => {
+      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({
+        repoId: "r1-id",
+        commit: "hash123",
+        pinned: true,
+      });
+
+      const res = await service.updateModule("m1");
+      expect(res).toEqual({ updated: false, pinned: true });
+    });
+
+    it("skips the up-to-date check and pinned short-circuit when an explicit revision is given", async () => {
+      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({
+        repoId: "r1-id",
+        commit: "oldhash",
+        pinned: true,
+      });
+      mockDb.downloader.readDownloaderRepoById.mockResolvedValue({
+        id: "r1-id",
+        name: "repo1",
+        branch: "main",
+      });
+      (resolver.installModule as any).mockResolvedValueOnce({
+        version: "1.0.0",
+        commit: "pinnedhash",
+      });
+
+      const res = await service.updateModule("m1", "pinnedhash");
+
+      expect(res).toEqual({ updated: true, needsRestart: true });
+      expect(resolver.installModule).toHaveBeenCalledWith("repo1", "m1", "pinnedhash");
+      expect(mockDb.downloader.updateInstalledDownloaderModuleCommit).toHaveBeenCalledWith(
+        "r1-id",
+        "m1",
+        "pinnedhash",
+      );
+    });
+  });
+
+  describe("rollbackModule", () => {
+    it("throws error if module not installed via the downloader", async () => {
+      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue(null);
+      await expect(service.rollbackModule("m1", "oldhash")).rejects.toThrow(
+        "was not installed via the downloader",
+      );
+    });
+
+    it("throws error if the repository can't be found", async () => {
+      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ repoId: "r1-id" });
+      mockDb.downloader.readDownloaderRepoById.mockResolvedValue(null);
+      await expect(service.rollbackModule("m1", "oldhash")).rejects.toThrow(
+        "Repository for module **m1** could not be found",
+      );
+    });
+
+    it("checks out the given revision against the existing clone and persists the resolved commit", async () => {
+      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ repoId: "r1-id" });
+      mockDb.downloader.readDownloaderRepoById.mockResolvedValue({ id: "r1-id", name: "repo1" });
+      (resolver.installModule as any).mockResolvedValueOnce({
+        version: "1.0.0",
+        commit: "oldhash",
+      });
+
+      const res = await service.rollbackModule("m1", "oldhash");
+
+      expect(resolver.installModule).toHaveBeenCalledWith("repo1", "m1", "oldhash");
+      expect(mockModuleStore.discover).toHaveBeenCalledWith(true);
+      expect(mockModuleStore.loadModule).toHaveBeenCalledWith("m1");
+      expect(mockDb.downloader.updateInstalledDownloaderModuleCommit).toHaveBeenCalledWith(
+        "r1-id",
+        "m1",
+        "oldhash",
+      );
+      expect(res).toEqual({ commit: "oldhash", needsRestart: true });
     });
   });
 

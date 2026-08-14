@@ -3,7 +3,6 @@ import { ActionRowBuilder, ButtonBuilder, type MessageActionRowComponentBuilder 
 import {
   InteractionHandlerTypes,
   InteractionHandler,
-  container,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { ButtonInteraction, MessageFlags } from "discord.js";
@@ -13,6 +12,7 @@ import {
   hyperlink,
   messageLink,
 } from "@discordjs/formatters";
+import { formatDuration } from "#utilities/time.js";
 import { makeListCard, ephemeralCard } from "#lib/utilities/cards.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { Emojis } from "#lib/utilities/assets.js";
@@ -36,7 +36,7 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
     interaction: ButtonInteraction,
     { userId, page }: { userId: string; page: number },
   ) {
-    if (!this.checkSecurity(interaction, userId)) return;
+    this.checkSecurity(interaction, userId);
 
     // Which defer to use depends only on the source message's own flags
     // (known synchronously), so defer before the async lookups below to
@@ -56,7 +56,7 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
     const pageItems = mentions.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
     const items = pageItems.map((m) => {
-      const duration = container.utilities.time.formatDuration(
+      const duration = formatDuration(
         Date.now() - m.ts * 1000,
       );
       const link = hyperlink(

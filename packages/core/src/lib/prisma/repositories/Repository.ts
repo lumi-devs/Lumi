@@ -1,7 +1,6 @@
 import type { Redis } from "ioredis";
 import { type ILogger, container } from "@sapphire/framework";
 import { cacheHits, cacheMisses } from "@lumi/observability";
-import { cacheFenceKey } from "#lib/database/redis.js";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 
@@ -47,19 +46,10 @@ export abstract class Repository {
     if (pending) return pending as Promise<T>;
 
     const flight = (async () => {
-      const fenceKey = cacheFenceKey(key);
-      const fenceBefore = await this.redis.get(fenceKey);
       const data = await fetcher();
-      const fenceAfter = await this.redis.get(fenceKey);
-      if (fenceAfter === fenceBefore) {
-        const serialized = JSON.stringify(data);
-        if (serialized !== undefined) {
-          await this.redis.setex(key, ttl, serialized);
-        }
-      } else {
-        this.logger.debug(
-          `[cache] Skipped repopulating ${key} - invalidated while fetching`,
-        );
+      const serialized = JSON.stringify(data);
+      if (serialized !== undefined) {
+        await this.redis.setex(key, ttl, serialized);
       }
       return data;
     })();

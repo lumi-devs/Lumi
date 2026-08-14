@@ -30,6 +30,36 @@ export {
   type ConfirmRowOptions,
 } from "./ui/kit.js";
 
+function setEmojiIfPresent(
+  builder: StringSelectMenuOptionBuilder | ButtonBuilder,
+  emoji?: string | APIMessageComponentEmoji,
+): void {
+  if (emoji) {
+    if (typeof emoji === "string") {
+      builder.setEmoji(Emojis.parse(emoji));
+    } else {
+      builder.setEmoji(emoji);
+    }
+  }
+}
+
+function applySelectMenuOptions(
+  menu:
+    | UserSelectMenuBuilder
+    | RoleSelectMenuBuilder
+    | ChannelSelectMenuBuilder
+    | MentionableSelectMenuBuilder,
+  opts: CreateUserSelectMenuOptions &
+    CreateRoleSelectMenuOptions &
+    CreateChannelSelectMenuOptions &
+    CreateMentionableSelectMenuOptions,
+): void {
+  if (opts.placeholder) menu.setPlaceholder(opts.placeholder);
+  if (opts.minValues !== undefined) menu.setMinValues(opts.minValues);
+  if (opts.maxValues !== undefined) menu.setMaxValues(opts.maxValues);
+  if (opts.disabled !== undefined) menu.setDisabled(opts.disabled);
+}
+
 export interface CreateUserSelectMenuOptions {
   customId: string;
   placeholder?: string;
@@ -84,10 +114,7 @@ export function createUserSelectMenu(
   options: CreateUserSelectMenuOptions,
 ): UserSelectMenuBuilder {
   const menu = new UserSelectMenuBuilder().setCustomId(options.customId);
-  if (options.placeholder) menu.setPlaceholder(options.placeholder);
-  if (options.minValues !== undefined) menu.setMinValues(options.minValues);
-  if (options.maxValues !== undefined) menu.setMaxValues(options.maxValues);
-  if (options.disabled !== undefined) menu.setDisabled(options.disabled);
+  applySelectMenuOptions(menu, options);
   return menu;
 }
 
@@ -95,10 +122,7 @@ export function createRoleSelectMenu(
   options: CreateRoleSelectMenuOptions,
 ): RoleSelectMenuBuilder {
   const menu = new RoleSelectMenuBuilder().setCustomId(options.customId);
-  if (options.placeholder) menu.setPlaceholder(options.placeholder);
-  if (options.minValues !== undefined) menu.setMinValues(options.minValues);
-  if (options.maxValues !== undefined) menu.setMaxValues(options.maxValues);
-  if (options.disabled !== undefined) menu.setDisabled(options.disabled);
+  applySelectMenuOptions(menu, options);
   return menu;
 }
 
@@ -106,13 +130,10 @@ export function createChannelSelectMenu(
   options: CreateChannelSelectMenuOptions,
 ): ChannelSelectMenuBuilder {
   const menu = new ChannelSelectMenuBuilder().setCustomId(options.customId);
-  if (options.placeholder) menu.setPlaceholder(options.placeholder);
   if (options.channelTypes && options.channelTypes.length > 0) {
     menu.setChannelTypes(options.channelTypes);
   }
-  if (options.minValues !== undefined) menu.setMinValues(options.minValues);
-  if (options.maxValues !== undefined) menu.setMaxValues(options.maxValues);
-  if (options.disabled !== undefined) menu.setDisabled(options.disabled);
+  applySelectMenuOptions(menu, options);
   return menu;
 }
 
@@ -120,10 +141,7 @@ export function createMentionableSelectMenu(
   options: CreateMentionableSelectMenuOptions,
 ): MentionableSelectMenuBuilder {
   const menu = new MentionableSelectMenuBuilder().setCustomId(options.customId);
-  if (options.placeholder) menu.setPlaceholder(options.placeholder);
-  if (options.minValues !== undefined) menu.setMinValues(options.minValues);
-  if (options.maxValues !== undefined) menu.setMaxValues(options.maxValues);
-  if (options.disabled !== undefined) menu.setDisabled(options.disabled);
+  applySelectMenuOptions(menu, options);
   return menu;
 }
 
@@ -145,13 +163,7 @@ export function createStringSelectMenu(
         .setLabel(opt.label)
         .setValue(opt.value);
       if (opt.description) optionBuilder.setDescription(opt.description);
-      if (opt.emoji) {
-        if (typeof opt.emoji === "string") {
-          optionBuilder.setEmoji(Emojis.parse(opt.emoji));
-        } else {
-          optionBuilder.setEmoji(opt.emoji);
-        }
-      }
+      setEmojiIfPresent(optionBuilder, opt.emoji);
       if (opt.default !== undefined) optionBuilder.setDefault(opt.default);
       return optionBuilder;
     });
@@ -192,13 +204,7 @@ export function createActionButton(
   const button = new ButtonBuilder().setCustomId(options.customId);
   if (options.label) button.setLabel(options.label);
   button.setStyle(options.style ?? ButtonStyle.Primary);
-  if (options.emoji) {
-    if (typeof options.emoji === "string") {
-      button.setEmoji(Emojis.parse(options.emoji));
-    } else {
-      button.setEmoji(options.emoji);
-    }
-  }
+  setEmojiIfPresent(button, options.emoji);
   if (options.disabled !== undefined) button.setDisabled(options.disabled);
   return button;
 }

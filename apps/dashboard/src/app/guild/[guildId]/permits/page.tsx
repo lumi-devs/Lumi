@@ -1,6 +1,8 @@
+import { Shield } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildDashboard, getGuildPermits } from "#/lib/dashboard-fetch";
 import { PermitsBoard } from "#/components/guild/permits-board";
+import { PageHeader } from "#/components/ui/page-header";
 
 export default async function PermitsPage({
   params,
@@ -16,14 +18,11 @@ export default async function PermitsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-display text-xl font-bold">Permits</h1>
-        <p className="text-sm text-fg-muted">
-          Named, reusable permission bundles, Wick-style. Enforced tiers are
-          fixed and immune to anti-nuke quarantine; custom permits are fully
-          editable and can be stripped.
-        </p>
-      </div>
+      <PageHeader
+        icon={Shield}
+        title="Permits"
+        description="Named, reusable permission bundles, Wick-style. Enforced tiers are fixed and immune to anti-nuke quarantine; custom permits are fully editable and can be stripped."
+      />
       <PermitsBoard
         guildId={guildId}
         initialPermits={permits}

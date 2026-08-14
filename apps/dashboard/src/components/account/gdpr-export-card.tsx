@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Download } from "lucide-react";
 import { exportMyData } from "#/actions/user-actions";
 import { Card, CardHeader, CardTitle, CardDescription, CardBody } from "#/components/ui/card";
 import { Button } from "#/components/ui/button";
@@ -46,12 +47,17 @@ export function GdprExportCard() {
   return (
     <Card>
       <CardHeader>
-        <div>
-          <CardTitle>Download my data</CardTitle>
-          <CardDescription>
-            A JSON export of everything Lumi stores about you (AFK status,
-            moderation cases, temp voice channels you own, and more).
-          </CardDescription>
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-control border border-border bg-accent-soft text-accent-fg">
+            <Download className="size-4" aria-hidden />
+          </span>
+          <div>
+            <CardTitle>Download my data</CardTitle>
+            <CardDescription>
+              A JSON export of everything Lumi stores about you (AFK status,
+              moderation cases, temp voice channels you own, and more).
+            </CardDescription>
+          </div>
         </div>
       </CardHeader>
       <CardBody className="flex flex-col gap-4">

@@ -8,8 +8,8 @@ metadata:
 spec:
   serviceName: worker-headless
   # Single replica until guild count justifies clustering. Scaling past 1
-  # requires CLUSTER_NAME set below - packages/sharding then handles
-  # shard-range assignment across replicas automatically. See "Scaling to
+  # requires CLUSTER_NAME set (for shard telemetry namespacing) and SHARD_LIST
+  # computed per replica (static assignment, not dynamic). See "Scaling to
   # ~1,000,000 guilds" in plan.md for how to size this at growth.
   replicas: 1
   podManagementPolicy: Parallel

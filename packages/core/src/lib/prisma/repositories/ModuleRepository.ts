@@ -5,8 +5,12 @@ import { Repository } from "#lib/prisma/repositories/Repository.js";
 
 /** Repository for global and guild-specific module enabled states. */
 export class ModuleRepository extends Repository {
+  #isEssential(name: string): boolean {
+    return Boolean(container.moduleStore && !container.moduleStore.isModuleDisableable(name));
+  }
+
   public isModuleGlobalEnabled(name: string): Promise<boolean> {
-    if (container.moduleStore && !container.moduleStore.isModuleDisableable(name)) {
+    if (this.#isEssential(name)) {
       return Promise.resolve(true);
     }
     return this.getOrSet(
@@ -26,7 +30,7 @@ export class ModuleRepository extends Repository {
     enabled: boolean,
     reason?: string | null,
   ) {
-    if (!enabled && container.moduleStore && !container.moduleStore.isModuleDisableable(name)) {
+    if (!enabled && this.#isEssential(name)) {
       throw new Error(`Module '${name}' is essential and cannot be disabled.`);
     }
     await this.prisma.globalModuleState.upsert({
@@ -34,6 +38,12 @@ export class ModuleRepository extends Repository {
       update: { enabled, reason: reason ?? null },
       create: { moduleName: name, enabled, reason: reason ?? null },
     });
+    await this.invalidate(RedisKeys.moduleGlobalEnabled(name));
+  }
+
+  /** Deletes the global override row entirely, returning the module to following each guild's own setting. */
+  public async clearModuleGlobalState(name: string): Promise<void> {
+    await this.prisma.globalModuleState.deleteMany({ where: { moduleName: name } });
     await this.invalidate(RedisKeys.moduleGlobalEnabled(name));
   }
 
@@ -61,7 +71,7 @@ export class ModuleRepository extends Repository {
   }
 
   public isModuleGuildEnabled(guildId: string, name: string): Promise<boolean> {
-    if (container.moduleStore && !container.moduleStore.isModuleDisableable(name)) {
+    if (this.#isEssential(name)) {
       return Promise.resolve(true);
     }
     return this.getOrSet(
@@ -150,7 +160,7 @@ export class ModuleRepository extends Repository {
     name: string,
     enabled: boolean,
   ) {
-    if (!enabled && container.moduleStore && !container.moduleStore.isModuleDisableable(name)) {
+    if (!enabled && this.#isEssential(name)) {
       throw new Error(`Module '${name}' is essential and cannot be disabled.`);
     }
     const updated = await this.prisma.guildModuleState.upsert({

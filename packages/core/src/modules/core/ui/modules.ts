@@ -15,7 +15,7 @@ import {
 import { hubTabRow } from "#modules/core/ui/hub.js";
 import { Emojis } from "#utilities/assets.js";
 import {
-  CARD_ACCENTS,
+  resolveCardColor,
   makeCard,
   noPingCard,
   type CardReply,
@@ -97,7 +97,7 @@ export function buildFeatureListView(
   rows.push(hubTabRow("modules", t));
 
   return makeCard(
-    CARD_ACCENTS.PRIMARY,
+    resolveCardColor("primary"),
     `${Emojis.GEAR} ${t ? t(PanelsKeys.ModulesTitle) : "Feature Modules"}`,
     pageFeatures.length
       ? ""
@@ -302,7 +302,7 @@ export function buildFeatureDetailView(
 
   return noPingCard(
     makeCard(
-      guildEnabled ? CARD_ACCENTS.PRIMARY : CARD_ACCENTS.WARNING,
+      guildEnabled ? resolveCardColor("primary") : resolveCardColor("warning"),
       `${meta.emoji} ${meta.displayName}`,
       body,
       { sections, actionRows: buildSafeActionRows(rows) },
@@ -414,7 +414,7 @@ export function buildFieldEditView(
 
   return noPingCard(
     makeCard(
-      CARD_ACCENTS.PRIMARY,
+      resolveCardColor("primary"),
       `${meta.emoji} ${
         t
           ? t(PanelsKeys.FieldEditTitle, {

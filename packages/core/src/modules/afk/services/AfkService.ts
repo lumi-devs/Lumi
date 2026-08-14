@@ -63,6 +63,10 @@ export default class AfkService extends Service {
     const shardCount = this.container.client.shard?.count ?? 1;
     const myShards = this.container.client.shard?.ids ?? [0];
 
+    const tryRemoveEntry = async (guildId: string, userId: string) => {
+      if (await clearAfkEntry(guildId, userId)) removed++;
+    };
+
     for (const entry of entries) {
       const shardId = Number(
         (BigInt(entry.guildId) >> 22n) % BigInt(shardCount),
@@ -71,7 +75,7 @@ export default class AfkService extends Service {
 
       const guild = this.container.client.guilds.cache.get(entry.guildId);
       if (!guild) {
-        if (await clearAfkEntry(entry.guildId, entry.userId)) removed++;
+        await tryRemoveEntry(entry.guildId, entry.userId);
         continue;
       }
 
@@ -80,7 +84,7 @@ export default class AfkService extends Service {
         .then(() => true)
         .catch(() => false);
       if (!memberExists) {
-        if (await clearAfkEntry(entry.guildId, entry.userId)) removed++;
+        await tryRemoveEntry(entry.guildId, entry.userId);
       }
     }
 

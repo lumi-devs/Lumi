@@ -70,12 +70,19 @@ export async function bootstrapClientApp(
         ...(options.extraDrainSteps ?? []),
         { name: "tracing-shutdown", run: () => shutdownTracing() },
       ];
-      await runDrainSequence(drainSteps, {
-        log,
-        preCloseGraceMs: 5_000,
-        deadlineMs: 30_000,
-      });
-      process.exit(0);
+      try {
+        await runDrainSequence(drainSteps, {
+          log,
+          preCloseGraceMs: 5_000,
+          deadlineMs: 30_000,
+        });
+        process.exit(0);
+      } catch (err: unknown) {
+        log("error", "Drain sequence failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        process.exit(1);
+      }
     });
   });
 

@@ -7,23 +7,22 @@ import { ThemeToggle } from "./theme-toggle";
 import { Wordmark } from "./wordmark";
 import { Button } from "#/components/ui/button";
 import { buttonVariants } from "#/components/ui/button-variants";
-import { SidebarTrigger } from "#/components/ui/sidebar";
 
 export function SiteHeader({
   session,
-  withSidebarTrigger = false,
+  compact,
 }: {
   session: Session | null;
-  /** Only valid when rendered inside a `SidebarProvider`, e.g. guild/system layouts. */
-  withSidebarTrigger?: boolean;
+  /** Drops the wordmark on sidebar layouts, where the rail already brands the page. */
+  compact?: boolean;
 }) {
   return (
     <header className="sticky top-0 z-50 flex h-14 items-center gap-3 border-b border-border bg-bg/85 px-4 backdrop-blur-sm md:px-6">
-      {withSidebarTrigger && <SidebarTrigger className="-ml-1 md:hidden" />}
-
-      <Link href="/" className="shrink-0" aria-label="Lumi home">
-        <Wordmark />
-      </Link>
+      {compact ? null : (
+        <Link href="/" className="shrink-0" aria-label="Lumi home">
+          <Wordmark />
+        </Link>
+      )}
 
       <CommandPalette session={session} />
 

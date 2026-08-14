@@ -50,11 +50,10 @@ flowchart TD
         Dev[lumi-dev<br/>Profile: development]
     end
 
-    subgraph Data & Messaging Plane
+    subgraph Data Plane
         PGB[lumi-pgbouncer<br/>:6432]
         PG[(lumi-postgres<br/>PostgreSQL 17)]
         Redis[(lumi-redis<br/>Redis 7)]
-        RMQ[(lumi-rabbitmq<br/>RabbitMQ 4 Management)]
     end
 
     subgraph Telemetry & Observability Stack
@@ -72,13 +71,12 @@ flowchart TD
     W -.->|REST via DISCORD_PROXY_URL<br/>scale only| NP
     WS -.->|REST via DISCORD_PROXY_URL<br/>scale only| NP
 
-    W <-->|Shard coordination / sessions| Redis
-    WS <-->|Shard coordination / sessions| Redis
+    W <-->|Shard telemetry & session state| Redis
+    WS <-->|Shard telemetry & session state| Redis
     W <-->|PgBouncer Pool| PGB
     PGB <-->|Scram-SHA-256| PG
 
-    Dash <-->|RPC Messages| RMQ
-    W <-->|RPC Responders| RMQ
+    Dash <-->|Internal HTTP RPC :8091| W
 
     Sched <-->|BullMQ Tasks| Redis
 
@@ -125,7 +123,6 @@ Services are organized into distinct Compose **profiles** so you only run what y
 | `postgres` | *(core)* | `127.0.0.1:5432:5432` | PostgreSQL 17 primary database server. |
 | `pgbouncer` | *(core)* | `127.0.0.1:6432:6432` | PgBouncer transaction-level connection pooler. |
 | `redis` | *(core)* | `127.0.0.1:6379:6379` | Redis 7 data store for entity caching and event streams. |
-| `rabbitmq` | *(core)* | `127.0.0.1:5672`, `:15672` | RabbitMQ 4 broker with Management UI. |
 | `nirn-proxy` | `scale` | `127.0.0.1:18080`, `:19000` | Shared Discord REST rate-limiting proxy for multi-worker runs. |
 | `otel-collector` | `observability` | `127.0.0.1:4318:4318` | OpenTelemetry Collector endpoint (OTLP HTTP). |
 | `prometheus` | `observability` | `127.0.0.1:9091:9090` | Prometheus metrics collector and alerting engine. |
@@ -150,8 +147,8 @@ cp .env.example .env
 | `POSTGRES_USER` | `lumi` | PostgreSQL database username. |
 | `POSTGRES_PASSWORD` | `lumi` | PostgreSQL database password. |
 | `REDIS_PASSWORD` | `lumi` | Redis password authentication. |
-| `RABBITMQ_USER` | `lumi` | RabbitMQ username. |
-| `RABBITMQ_PASSWORD` | `lumi` | RabbitMQ password. |
+| `RPC_HTTP_PORT` | `8091` | Internal HTTP RPC server port the worker binds - never published to the host. |
+| `RPC_HTTP_URL` | `http://worker:8091` | Internal RPC bridge URL the dashboard calls into the worker over. |
 | `DASHBOARD_SESSION_SECRET` | - | NextAuth session JWT signing/encryption secret. |
 | `DISCORD_OAUTH2_CLIENT_ID` | - | OAuth2 Client ID for dashboard authentication. |
 | `DISCORD_OAUTH2_CLIENT_SECRET` | - | OAuth2 Client Secret for dashboard authentication. |
@@ -166,7 +163,7 @@ cp .env.example .env
 
 ### 1. Default Stack
 
-Run a single worker alongside PostgreSQL, PgBouncer, Redis, and RabbitMQ:
+Run a single worker alongside PostgreSQL, PgBouncer, and Redis:
 
 ```bash
 docker compose up -d
@@ -217,5 +214,4 @@ docker compose --profile observability up -d
 
 - **Grafana Dashboards**: `http://localhost:3001` (User: `admin`, Password: `${GRAFANA_PASSWORD:-admin}`)
 - **Prometheus UI**: `http://localhost:9091`
-- **RabbitMQ Management**: `http://localhost:15672` (User: `lumi`, Password: `lumi`)
 - **Nirn-Proxy Metrics**: `http://localhost:19000`

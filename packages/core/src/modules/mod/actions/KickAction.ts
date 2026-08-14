@@ -1,8 +1,8 @@
 import { container } from "@sapphire/framework";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { formatAuditReason } from "#lib/utilities/misc.js";
-import { makeErrorCard } from "#lib/utilities/cards.js";
 import { logToChannel } from "../lib/helpers.js";
+import { sendModActionDm } from "../lib/notify.js";
 
 export interface KickApplyOptions {
   guild: Guild;
@@ -15,11 +15,13 @@ export class KickAction {
   public static async apply(options: KickApplyOptions) {
     const { guild, targetMember, moderator, reason } = options;
 
-    const dm = makeErrorCard(
-      `👢 Kicked - ${guild.name}`,
+    await sendModActionDm(
+      targetMember,
+      "👢",
+      "Kicked",
+      guild,
       `You have been kicked from **${guild.name}**.\n\n**Reason:** ${reason}`,
     );
-    await targetMember.send(dm).catch(() => null);
 
     await targetMember.kick(formatAuditReason(moderator, reason));
 

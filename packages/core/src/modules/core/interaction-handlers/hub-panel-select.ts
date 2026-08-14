@@ -130,7 +130,7 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
       const permitKind = interaction.customId.split(":")[3] as PermitKind;
       const permitId = Number(interaction.values[0]);
       if (!Number.isInteger(permitId)) return renderPermissions(interaction, 0, t);
-      const permit = await this.perms.getPermit(permitId);
+      const permit = await this.perms.getPermit(interaction.guildId, permitId);
       if (!permit) return renderPermissions(interaction, 0, t);
       return interaction.editReply(
         buildPermitAssignTargetView(permit.id, permit.name, permitKind, t),
@@ -145,7 +145,7 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
           ? "role"
           : "user";
         await this.perms
-          .assignPermit(permitId, targetType, targetId)
+          .assignPermit(interaction.guildId, permitId, targetType, targetId)
           .catch(() => {});
       }
       return renderPermissions(interaction, 0, t);

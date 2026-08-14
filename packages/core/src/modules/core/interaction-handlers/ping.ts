@@ -39,7 +39,7 @@ export class PingInteractionHandler extends BaseInteractionHandler {
     result: { category: PingCategory | "overview"; userId: string },
   ) {
     if (!interaction.isMessageComponent()) return;
-    if (!this.checkSecurity(interaction, result.userId)) return;
+    this.checkSecurity(interaction, result.userId);
 
     await this.acknowledge(interaction);
 

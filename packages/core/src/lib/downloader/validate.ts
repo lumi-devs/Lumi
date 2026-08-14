@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { s } from "@sapphire/shapeshift";
 import semver from "semver";
+import { LumiInfo } from "#utilities/misc.js";
 
 /** Static, import-free structural validation for an addon directory. */
 export interface ValidationResult {
@@ -60,7 +61,7 @@ const manifestSchema = s.object({
 
 const IGNORED_DIRS = new Set(["node_modules", ".git", "dist", "build"]);
 
-async function pathExists(p: string): Promise<boolean> {
+export async function pathExists(p: string): Promise<boolean> {
   try {
     await fs.access(p);
     return true;
@@ -113,6 +114,7 @@ const LISTENER_CLEANUP_RE =
 // "module scope" without a real parser - matches the formatting this repo
 // (and generated addon scaffolds) actually use.
 const GLOBAL_LET_RE = /^(?:export\s+)?let\s+(\w+)\b/gm;
+
 const GLOBAL_COLLECTION_RE =
   /^(?:export\s+)?const\s+(\w+)\s*(?::\s*[^=;]+)?=\s*(?:\[\s*\]|new\s+Map\s*\(\s*\)|new\s+Set\s*\(\s*\))/gm;
 
@@ -188,7 +190,7 @@ function normalizeVersion(v: string): string | null {
  */
 function isVersionCompatible(
   minVersion: string,
-  currentVersion = "1.0.0",
+  currentVersion: string,
 ): boolean {
   const min = normalizeVersion(minVersion);
   const current = normalizeVersion(currentVersion);
@@ -216,9 +218,9 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
             `info.json "name" (${val.name}) must match the directory name (${base}).`,
           );
         }
-        if (val.min_bot_version && !isVersionCompatible(val.min_bot_version)) {
+        if (val.min_bot_version && !isVersionCompatible(val.min_bot_version, LumiInfo.version)) {
           errors.push(
-            `info.json "min_bot_version" (${val.min_bot_version}) exceeds current Lumi version (1.0.0).`,
+            `info.json "min_bot_version" (${val.min_bot_version}) exceeds current Lumi version (${LumiInfo.version}).`,
           );
         }
       }
@@ -335,6 +337,9 @@ export async function validateAddonOrRepo(
   target: string,
 ): Promise<Map<string, ValidationResult>> {
   const results = new Map<string, ValidationResult>();
+  if (!(await pathExists(target))) {
+    return results;
+  }
   if (await pathExists(path.join(target, "info.json"))) {
     results.set(
       path.basename(path.resolve(target)),

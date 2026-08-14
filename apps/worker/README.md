@@ -10,7 +10,7 @@
 
 <br />
 
-The **Lumi Worker** (`@lumi/worker`) is the primary execution engine of the Lumi bot ecosystem. It owns Lumi's Discord Gateway WebSocket connection, executes slash and chat commands, manages per-guild module logic, serves web dashboard RabbitMQ RPC requests, and handles database persistence.
+The **Lumi Worker** (`@lumi/worker`) is the primary execution engine of the Lumi bot ecosystem. It owns Lumi's Discord Gateway WebSocket connection, executes slash and chat commands, manages per-guild module logic, serves web dashboard RPC requests over an internal HTTP server, and handles database persistence.
 
 ---
 
@@ -32,7 +32,7 @@ The worker application serves as the core processing engine at every deployment 
 - **Owns the Gateway Connection**: The worker opens its own Discord Gateway WebSocket and handles the resulting dispatches in-process. Gateway ingestion and command/interaction handling are never split across processes - discord.js's internal packet handling assumes single-process invariants.
 - **Sapphire Framework Foundation**: Built on Sapphire Framework v5, providing modular command registration, listener stores, argument parsing, and command execution pipelines.
 - **Dynamic Module Store**: Loads built-in feature modules (`afk`, `core`, `dashboard`, `filter`, `logging`, `mod`, `tempvc`, `utility`) and dynamically mounts external third-party addons from `/lumi-addons` or custom development paths (`LUMI_DEV_PATHS`).
-- **Dashboard RPC Handler**: Serves asynchronous RabbitMQ RPC requests emitted by `@lumi/dashboard` to fetch live guild configurations and apply module state changes.
+- **Dashboard RPC Handler**: Serves synchronous HTTP RPC requests from `@lumi/dashboard` (`packages/core/src/lib/rpc/http-server.ts`) to fetch live guild configurations and apply module state changes.
 - **High-Performance Caching**: Integrates `RedisEntityCache` and an `InvalidationBus` to cache guild configurations and user states, reducing database load.
 - **Horizontal Scaling by Shard Range**: With `CLUSTER_NAME` set, `@lumi/sharding` assigns each replica a disjoint slice of the shard count returned by `GET /gateway/bot`, throttles IDENTIFY across replicas through Redis, and persists sessions so replacement pods RESUME rather than reconnect cold. Replica count is a deliberate shards-per-replica decision, not a queue-lag autoscaler target.
 
@@ -57,7 +57,6 @@ flowchart TD
 
     subgraph External Infrastructure
         DB[(PostgreSQL 17 / PgBouncer)]
-        RMQ[RabbitMQ RPC Exchange]
         Discord[Discord REST API]
         Dash[apps/dashboard]
     end
@@ -70,9 +69,8 @@ flowchart TD
     Sapphire -->|Execute Feature Logic| MS
     MS -->|REST Actions / Interactivity| Discord
 
-    Dash <-->|RPC Request/Reply| RMQ
-    RMQ <-->|DashboardModule Handler| Worker
-    Worker -->|Update Guild Config| DB
+    Dash <-->|Internal HTTP RPC :8091| SH
+    SH -->|Update Guild Config| DB
 ```
 
 ---
@@ -111,7 +109,9 @@ Configure `@lumi/worker` using environment variables:
 | `REDIS_PORT` | No | `6379` | Redis server network port. |
 | `REDIS_PASSWORD` | No | - | Redis authentication password. |
 | `REDIS_CACHE_DB` | No | `0` | Redis database index for entity caching. |
-| `RABBITMQ_URL` | **Yes** | - | RabbitMQ broker URL for dashboard RPC calls. |
+| `RPC_HTTP_HOST` | No | `127.0.0.1` | Bind host for the internal RPC HTTP server the dashboard calls into. Set `0.0.0.0` when the dashboard runs in a separate container. |
+| `RPC_INTERNAL_TOKEN` | In production | - | Shared secret the dashboard must present as `Authorization: Bearer`; the RPC server refuses to start without it under `NODE_ENV=production`. |
+| `RPC_HTTP_PORT` | No | `8091` | Bind port for the internal RPC HTTP server. Never published to the host. |
 | `LUMI_DEV_PATHS` | No | `/lumi-addons` | Colon-separated paths to external addon directories. |
 | `METRICS_ENABLED` | No | `true` | Enables HTTP metrics and health check server. |
 | `METRICS_PORT` | No | `9090` | Network port for Prometheus metrics and health probes. |
@@ -157,11 +157,10 @@ The worker exposes an HTTP server on `METRICS_PORT` (default `9090`).
 | Endpoint | Method | Status Code | Description |
 |---|---|:---:|---|
 | `/healthz` | `GET` | `200` | Process liveness probe. |
-| `/readyz` | `GET` | `200` / `503` | Evaluates system probes (`postgres`, `redis`, `rabbitmq`). |
+| `/readyz` | `GET` | `200` / `503` | Evaluates system probes (`postgres`, `redis`). |
 | `/metrics` | `GET` | `200` | Exports Prometheus runtime, stream lag, and command execution metrics. |
 
 ### Registered Readiness Probes
 
 - `postgres`: Confirms PostgreSQL connectivity via Prisma `SELECT 1`.
 - `redis`: Confirms Redis `PING` / `PONG` response.
-- `rabbitmq`: Verifies active connection to the RabbitMQ broker.

@@ -1,3 +1,4 @@
+import { Sparkles } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildDashboard } from "#/lib/dashboard-fetch";
 import { PageHeader } from "#/components/ui/page-header";
@@ -53,6 +54,7 @@ export default async function GuildSetupPage({
       <PageHeader
         title="Guided Setup"
         description="Get this server to a sane security baseline in one step."
+        icon={Sparkles}
       />
       <SetupWizard guildId={guildId} items={items} />
     </div>

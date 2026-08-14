@@ -14,7 +14,13 @@ function optional(name: string, fallback = ""): string {
 }
 
 export const env = {
-  rabbitUrl: required("RABBITMQ_URL"),
+  /** Internal-only HTTP RPC bridge to the worker, e.g. "http://worker:8091". */
+  rpcHttpUrl: required("RPC_HTTP_URL"),
+  /** Shared secret sent as `Authorization: Bearer` on every RPC call. Must
+   *  match the worker's `RPC_INTERNAL_TOKEN` — without it the worker rejects
+   *  the dashboard with 401, since `actorId` alone proves nothing. Optional
+   *  only so a local worker running without the token still works in dev. */
+  rpcInternalToken: optional("RPC_INTERNAL_TOKEN"),
   discordClientId: required("DISCORD_OAUTH2_CLIENT_ID"),
   discordClientSecret: required("DISCORD_OAUTH2_CLIENT_SECRET"),
   /** NextAuth session/JWT encryption secret — replaces the old hand-rolled

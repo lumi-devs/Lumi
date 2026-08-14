@@ -75,7 +75,7 @@ function messageForHttpStatus(status: number): string | null {
 }
 
 /** Capture an unexpected error to the active OTEL span and return its trace id, if any. */
-function reportUnexpected(_label: string, error: unknown): string | undefined {
+function reportUnexpected(error: unknown): string | undefined {
   try {
     const span = trace.getActiveSpan();
     if (span) {
@@ -159,7 +159,7 @@ export function resolveCommandError(
   }
 
   container.logger.error(`[${label}] Unhandled error:`, errorFrom(error));
-  const report = reportUnexpected(label, error);
+  const report = reportUnexpected(error);
   return {
     title: "Unexpected Error",
     message: report

@@ -6,6 +6,10 @@
 // All available options (with defaults) are listed below for reference.
 // Uncomment and change any value you wish to override.
 //
+// Note: Branding colors default to the built-in palette in
+// packages/core/src/lib/utilities/config.ts (defaultCardColors), not in this
+// file - only set the ones you want to override here.
+//
 
 export default {
   // --- Presence -----------------------------------------------------------
@@ -18,13 +22,15 @@ export default {
   // --- Branding -----------------------------------------------------------
   // branding: {
   //   colors: {
-  //     PRIMARY:   0x5865f2,   // Discord blurple
-  //     SUCCESS:   0x57f287,   // green
-  //     ERROR:     0xed4245,   // red
-  //     WARNING:   0xfee75c,   // yellow
-  //     INFO:      0x5865f2,   // blurple
-  //     NEUTRAL:   0x4f545c,   // gray
-  //     GOLD:      0xffc800,   // gold
+  //     primary:   0x5865f2,   // Discord blurple
+  //     success:   0x57f287,   // green
+  //     error:     0xed4245,   // red
+  //     warning:   0xfee75c,   // yellow
+  //     info:      0x5865f2,   // blurple
+  //     neutral:   0x4f545c,   // gray
+  //     gold:      0xffc800,   // gold
+  //     purple:    0x9b59b6,   // purple
+  //     cyan:      0x1abc9c,   // cyan
   //   },
   //   links: {
   //     supportServer: "",

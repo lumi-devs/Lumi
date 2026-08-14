@@ -221,8 +221,13 @@ export function startMetricsServer(port: number): Server | null {
           res.end(JSON.stringify(report));
         })
         .catch((err) => {
+          // Endpoint is unauthenticated: report a fixed classification and log
+          // the raw error, which can embed connection-string credentials.
+          process.stderr.write(
+            `[observability] readiness probes failed: ${String(err)}\n`,
+          );
           res.writeHead(503, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ready: false, error: String(err) }));
+          res.end(JSON.stringify({ ready: false, error: "probe error" }));
         });
       return;
     }
@@ -240,6 +245,11 @@ export function startMetricsServer(port: number): Server | null {
     process.stderr.write(`[observability] metrics server disabled: ${detail}\n`);
   });
 
-  server.listen(port);
+  // `/metrics`, `/healthz` and `/readyz` are unauthenticated, so the server
+  // binds to loopback unless a host is set explicitly. Deployments where the
+  // scraper lives elsewhere (Prometheus on a container network, a k8s
+  // ServiceMonitor) must set METRICS_HOST=0.0.0.0.
+  const host = process.env["METRICS_HOST"] ?? "127.0.0.1";
+  server.listen(port, host);
   return server;
 }
