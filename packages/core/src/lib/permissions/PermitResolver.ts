@@ -27,14 +27,11 @@ export function evaluateNodeMatch(
   return false;
 }
 
-export interface ResolvePermitsOptions {
+export interface EvaluatePermitOptions {
   guildId: string;
   userId: string;
   roleIds?: string[];
   guildOwnerId?: string | null;
-}
-
-export interface EvaluatePermitOptions extends ResolvePermitsOptions {
   permitNode: string;
 }
 

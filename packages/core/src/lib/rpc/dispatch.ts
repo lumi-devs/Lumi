@@ -14,10 +14,6 @@ export function registerRpcHandler<TIn, TOut>(
   rpcHandlers.set(action, handler as RpcHandler<unknown, unknown>);
 }
 
-export function deregisterRpcHandler(action: string) {
-  rpcHandlers.delete(action);
-}
-
 /**
  * The transport-agnostic core of RPC handling — handler lookup, the
  * dashboard-enabled check, and error shaping. `http-server.ts` is the only
@@ -29,11 +25,10 @@ export function deregisterRpcHandler(action: string) {
  * must do the same before calling in.
  */
 export async function dispatchRpc(req: RpcRequest<unknown>): Promise<RpcResponse<unknown>> {
-  const id = req.id ?? "";
   const handler = rpcHandlers.get(req.action);
   if (!handler) {
     return {
-      id,
+      id: req.id,
       ok: false,
       error: `No handler registered for action "${req.action}"`,
     };
@@ -43,12 +38,12 @@ export async function dispatchRpc(req: RpcRequest<unknown>): Promise<RpcResponse
     req.guildId &&
     !(await container.db.config.isDashboardEnabled(req.guildId))
   ) {
-    return { id, ok: false, error: "Dashboard disabled" };
+    return { id: req.id, ok: false, error: "Dashboard disabled" };
   }
 
   return runWithContext(
     {
-      correlationId: id,
+      correlationId: req.id,
       source: "rpc",
       name: req.action,
       guildId: req.guildId,
@@ -61,14 +56,14 @@ export async function dispatchRpc(req: RpcRequest<unknown>): Promise<RpcResponse
         container.logger.debug(`[RPC] ${req.action} ok`, {
           durationMs: Date.now() - startedAt,
         });
-        return { id, ok: true, data };
+        return { id: req.id, ok: true, data };
       } catch (err: unknown) {
         logError(`RPC: ${req.action} error`, err);
         container.logger.error(`[RPC] ${req.action} failed`, {
           durationMs: Date.now() - startedAt,
         });
         return {
-          id,
+          id: req.id,
           ok: false,
           error: errorFrom(err).message ?? "Internal error",
         };

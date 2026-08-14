@@ -18,7 +18,6 @@ export type { CardReply } from "./ui/types.js";
 export { resolveCardColor, defaultCardColors, type CardColorKey } from "./config.js";
 
 export { formatStatusBadge, formatSubtitle, formatBreadcrumbs, badge };
-export const makeStatusBadge = formatStatusBadge;
 
 export interface CardOptions {
   subtitle?: string;
