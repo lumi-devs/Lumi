@@ -7,6 +7,7 @@ import {
   RPC_ACTIONS,
   WARN_THRESHOLD_ACTIONS,
   type GuildSetupRunResult,
+  type RpcRequest,
 } from "@lumi/contracts";
 import { verifyAppealToken } from "#lib/appeals/token.js";
 import type { ModerationCase } from "@prisma/client";
