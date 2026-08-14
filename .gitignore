@@ -34,3 +34,4 @@ indirections.txt
 # Local scratch dir for `bun run addon:create` output (point LUMI_DEV_PATHS at
 # it, or move the addon into a real lumi-addons checkout when it's ready).
 /addons/
+.bug-hunter/

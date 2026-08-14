@@ -29,10 +29,11 @@ export function deregisterRpcHandler(action: string) {
  * must do the same before calling in.
  */
 export async function dispatchRpc(req: RpcRequest<unknown>): Promise<RpcResponse<unknown>> {
+  const id = req.id ?? "";
   const handler = rpcHandlers.get(req.action);
   if (!handler) {
     return {
-      id: req.id,
+      id,
       ok: false,
       error: `No handler registered for action "${req.action}"`,
     };
@@ -42,12 +43,12 @@ export async function dispatchRpc(req: RpcRequest<unknown>): Promise<RpcResponse
     req.guildId &&
     !(await container.db.config.isDashboardEnabled(req.guildId))
   ) {
-    return { id: req.id, ok: false, error: "Dashboard disabled" };
+    return { id, ok: false, error: "Dashboard disabled" };
   }
 
   return runWithContext(
     {
-      correlationId: req.id,
+      correlationId: id,
       source: "rpc",
       name: req.action,
       guildId: req.guildId,
@@ -60,14 +61,14 @@ export async function dispatchRpc(req: RpcRequest<unknown>): Promise<RpcResponse
         container.logger.debug(`[RPC] ${req.action} ok`, {
           durationMs: Date.now() - startedAt,
         });
-        return { id: req.id, ok: true, data };
+        return { id, ok: true, data };
       } catch (err: unknown) {
         logError(`RPC: ${req.action} error`, err);
         container.logger.error(`[RPC] ${req.action} failed`, {
           durationMs: Date.now() - startedAt,
         });
         return {
-          id: req.id,
+          id,
           ok: false,
           error: errorFrom(err).message ?? "Internal error",
         };

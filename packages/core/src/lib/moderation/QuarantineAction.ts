@@ -4,6 +4,7 @@ import { tryParseJSON } from "@sapphire/utilities";
 import { formatAuditReason } from "#lib/utilities/misc.js";
 import { RedisKeys } from "#database/redis.js";
 import { logToChannel } from "#lib/moderation/log.js";
+import { acquireRedisLock } from "#lib/redis-lock.js";
 
 export interface QuarantineApplyOptions {
   guild: Guild;
@@ -33,111 +34,122 @@ export class QuarantineAction {
     }
 
     const key = RedisKeys.quarantineState(guild.id, targetMember.id);
-    if (await container.redis.exists(key)) {
-      throw new Error("ALREADY_QUARANTINED");
+    const release = await acquireRedisLock(container.redis, `${key}:lock`);
+    try {
+      if (await container.redis.exists(key)) {
+        throw new Error("ALREADY_QUARANTINED");
+      }
+
+      const staleCases = await container.db.moderation.getActiveCases(
+        guild.id,
+        targetMember.id,
+        "quarantine",
+      );
+      for (const stale of staleCases) {
+        await container.db.moderation.liftModerationCase(stale.id);
+      }
+
+      const savedRoles = targetMember.roles.cache
+        .filter((r) => r.id !== guild.id && r.id !== quarantineRoleId)
+        .map((r) => r.id);
+
+      await targetMember.roles.set(
+        [quarantineRoleId],
+        formatAuditReason(moderator, reason),
+      );
+
+      await container.redis.set(
+        key,
+        JSON.stringify(savedRoles),
+        "EX",
+        30 * 24 * 60 * 60,
+      );
+
+      const c = await container.db.moderation.createModerationCase({
+        guildId: guild.id,
+        userId: targetMember.id,
+        moderatorId: moderator.id,
+        action: "quarantine",
+        reason,
+      });
+
+      await logToChannel(
+        guild.id,
+        "🔒 Quarantined",
+        Colors.Orange,
+        targetMember.id,
+        moderator,
+        reason,
+        c.caseNumber,
+      );
+
+      return c;
+    } finally {
+      await release();
     }
-
-    const staleCases = await container.db.moderation.getActiveCases(
-      guild.id,
-      targetMember.id,
-      "quarantine",
-    );
-    for (const stale of staleCases) {
-      await container.db.moderation.liftModerationCase(stale.id);
-    }
-
-    const savedRoles = targetMember.roles.cache
-      .filter((r) => r.id !== guild.id && r.id !== quarantineRoleId)
-      .map((r) => r.id);
-
-    await targetMember.roles.set(
-      [quarantineRoleId],
-      formatAuditReason(moderator, reason),
-    );
-
-    await container.redis.set(
-      key,
-      JSON.stringify(savedRoles),
-      "EX",
-      30 * 24 * 60 * 60,
-    );
-
-    const c = await container.db.moderation.createModerationCase({
-      guildId: guild.id,
-      userId: targetMember.id,
-      moderatorId: moderator.id,
-      action: "quarantine",
-      reason,
-    });
-
-    await logToChannel(
-      guild.id,
-      "🔒 Quarantined",
-      Colors.Orange,
-      targetMember.id,
-      moderator,
-      reason,
-      c.caseNumber,
-    );
-
-    return c;
   }
 
   public static async undo(options: QuarantineUndoOptions) {
     const { guild, targetMember, moderator, reason } = options;
 
     const key = RedisKeys.quarantineState(guild.id, targetMember.id);
-    const saved = await container.redis.get(key);
-    if (!saved) {
-      throw new Error("NOT_QUARANTINED");
+    const release = await acquireRedisLock(container.redis, `${key}:lock`);
+    try {
+      const saved = await container.redis.get(key);
+      if (!saved) {
+        throw new Error("NOT_QUARANTINED");
+      }
+
+      const parsedRoles = tryParseJSON(saved);
+      if (!Array.isArray(parsedRoles)) {
+        throw new Error("CORRUPTED_STATE");
+      }
+      const rolesToRestore = parsedRoles as string[];
+      const validRoles = rolesToRestore.filter((id) => guild.roles.cache.has(id));
+
+      await targetMember.roles.set(
+        validRoles,
+        formatAuditReason(moderator, reason),
+      );
+
+      const permKey = RedisKeys.targetPermits(guild.id, "user", targetMember.id);
+      if (container.invalidation) {
+        await container.invalidation.invalidate(key);
+        await container.invalidation.invalidate(permKey);
+      } else {
+        await container.redis.del(key, permKey);
+      }
+
+      const activeCases = await container.db.moderation.getActiveCases(
+        guild.id,
+        targetMember.id,
+        "quarantine",
+      );
+      for (const active of activeCases) {
+        await container.db.moderation.liftModerationCase(active.id);
+      }
+
+      const c = await container.db.moderation.createModerationCase({
+        guildId: guild.id,
+        userId: targetMember.id,
+        moderatorId: moderator.id,
+        action: "unquarantine",
+        reason,
+      });
+
+      await logToChannel(
+        guild.id,
+        "🔓 Released",
+        Colors.Green,
+        targetMember.id,
+        moderator,
+        reason,
+        c.caseNumber,
+      );
+
+      return c;
+    } finally {
+      await release();
     }
-
-    const parsedRoles = tryParseJSON(saved);
-    const rolesToRestore = Array.isArray(parsedRoles)
-      ? (parsedRoles as string[])
-      : [];
-    const validRoles = rolesToRestore.filter((id) => guild.roles.cache.has(id));
-
-    await targetMember.roles.set(
-      validRoles,
-      formatAuditReason(moderator, reason),
-    );
-
-    const permKey = RedisKeys.targetPermits(guild.id, "user", targetMember.id);
-    if (container.invalidation) {
-      await container.invalidation.invalidate(key);
-      await container.invalidation.invalidate(permKey);
-    } else {
-      await container.redis.del(key, permKey);
-    }
-
-    const activeCases = await container.db.moderation.getActiveCases(
-      guild.id,
-      targetMember.id,
-      "quarantine",
-    );
-    for (const active of activeCases) {
-      await container.db.moderation.liftModerationCase(active.id);
-    }
-
-    const c = await container.db.moderation.createModerationCase({
-      guildId: guild.id,
-      userId: targetMember.id,
-      moderatorId: moderator.id,
-      action: "unquarantine",
-      reason,
-    });
-
-    await logToChannel(
-      guild.id,
-      "🔓 Released",
-      Colors.Green,
-      targetMember.id,
-      moderator,
-      reason,
-      c.caseNumber,
-    );
-
-    return c;
   }
 }

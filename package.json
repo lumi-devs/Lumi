@@ -57,10 +57,6 @@
     "verify:resilience": "bun scripts/verify-resilience.ts",
     "bench": "bun scripts/benchmark.ts"
   },
-  "overrides": {
-    "@opentelemetry/semantic-conventions": "1.42.0",
-    "@types/pg": "8.21.0"
-  },
   "devDependencies": {
     "@discordjs/builders": "^1.14.1",
     "@discordjs/formatters": "^0.6.2",
