@@ -1,9 +1,15 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseCommand, CommandContext } from "#lib/commands.js";
+import { ApplicationCommandRegistry, Result } from "@sapphire/framework";
+import {
+  ModerationCommand,
+  type ModerationCommand as MC,
+} from "#lib/moderation/ModerationCommand.js";
 import { SoftbanAction } from "../actions/SoftbanAction.js";
+import type { LumiT } from "#lib/i18n/index.js";
+import type { ModerationCase } from "@prisma/client";
+import type { User } from "discord.js";
 
-@ApplyOptions<BaseCommand.Options>({
+@ApplyOptions<MC.Options>({
   name: "softban",
   aliases: ["sban"],
   description:
@@ -11,8 +17,13 @@ import { SoftbanAction } from "../actions/SoftbanAction.js";
   preconditions: ["GuildOnly"],
   requiredPermit: "mod.softban",
   prefixEnabled: true,
+  logScope: "softban",
 })
-export class SoftbanCommand extends BaseCommand {
+export class SoftbanCommand extends ModerationCommand<
+  User,
+  ModerationCase,
+  number
+> {
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {
@@ -39,32 +50,44 @@ export class SoftbanCommand extends BaseCommand {
     );
   }
 
-  public override async run(ctx: CommandContext): Promise<void> {
-    const guild = ctx.guild!;
-    const user = await ctx.getUser("target");
+  protected override resolveTarget(ctx: MC.RunContext) {
+    return ctx.getUser("target");
+  }
+
+  protected override async preHandle(ctx: MC.RunContext) {
     const days = (await ctx.getInteger("days")) ?? 1;
-    const reason =
-      (await ctx.getString("reason")) ??
-      "Softban to purge recent message history.";
+    return Result.ok(days);
+  }
 
-    if (!user) {
-      return ctx.replyError(
-        "User Required",
-        "Please specify a user to softban.",
-      );
-    }
+  protected override resolveReason(ctx: MC.RunContext) {
+    return ctx
+      .getString("reason")
+      .then((r) => r ?? "Softban to purge recent message history.");
+  }
 
-    const c = await SoftbanAction.apply({
+  protected override action({
+    guild,
+    target,
+    moderator,
+    reason,
+    prepared,
+  }: MC.ActionContext<User, number>) {
+    return SoftbanAction.apply({
       guild,
-      targetUser: user,
-      moderator: ctx.user,
+      targetUser: target,
+      moderator,
       reason,
-      deleteMessageDays: days,
+      deleteMessageDays: prepared,
     });
+  }
 
-    await ctx.replySuccess(
-      "Softbanned Member",
-      `Successfully softbanned **${user.tag}** and purged **${days} day(s)** of message history.\n\n**Case:** #${c.caseNumber}`,
-    );
+  protected override buildSuccessMessage(
+    _t: LumiT,
+    { target, prepared, outcome }: MC.OutcomeContext<User, ModerationCase, number>,
+  ) {
+    return {
+      title: "Softbanned Member",
+      body: `Successfully softbanned **${target.tag}** and purged **${prepared} day(s)** of message history.\n\n**Case:** #${outcome.caseNumber}`,
+    };
   }
 }

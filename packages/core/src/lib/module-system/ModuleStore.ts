@@ -691,9 +691,13 @@ export class ModuleStore extends Store<Module> {
       }
 
       if (!record.enabled) {
+        // Disabled, not broken - do not log or set a failureReason. Still
+        // must report "unavailable" to any dependent visiting it, and must
+        // do so consistently on every visit, so it's tracked as `broken`
+        // too rather than only being skipped from `order`.
         visited.add(name);
-        order.push(name);
-        return true;
+        broken.add(name);
+        return false;
       }
 
       visiting.add(name);

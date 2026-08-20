@@ -5,6 +5,7 @@ export {
   MATCH_BATCH_SIZE,
   RegexTimeoutError,
   RegexWorkerHandler,
+  RegexWorkerUnavailableError,
   getRegexWorker,
   shutdownRegexWorker,
   type RegexWorkerOptions,

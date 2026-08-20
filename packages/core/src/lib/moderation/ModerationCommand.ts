@@ -78,11 +78,11 @@ async function checkPanicLock(
  *
  * @returns the reply to fail with, or null when the action may proceed.
  */
-function checkHierarchy(
+async function checkHierarchy(
   ctx: CommandContext,
   target: ModerationCommand.TargetLike,
   t: LumiT,
-): ModerationCommand.Reply | null {
+): Promise<ModerationCommand.Reply | null> {
   const guild = ctx.guild;
   const moderator = ctx.member;
   if (!guild || !moderator) return null;
@@ -101,7 +101,8 @@ function checkHierarchy(
   const targetMember =
     typeof target === "object" && "roles" in target
       ? (target as GuildMember)
-      : guild.members.cache.get(targetId);
+      : (guild.members.cache.get(targetId) ??
+        (await guild.members.fetch(targetId).catch(() => null)));
   if (!targetMember) return null;
 
   return targetMember.roles.highest.position >= moderator.roles.highest.position
@@ -155,7 +156,7 @@ export async function runModerationFlow<
     return replyFailure(ctx, flow.targetNotFound?.(t) ?? memberNotFound(t));
   }
 
-  const outranked = checkHierarchy(ctx, target, t);
+  const outranked = await checkHierarchy(ctx, target, t);
   if (outranked) return replyFailure(ctx, outranked);
 
   const prepared: Result<Prepared, ModerationCommand.Reply> = flow.preHandle
