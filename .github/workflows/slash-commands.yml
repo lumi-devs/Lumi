@@ -62,7 +62,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout PR Branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: refs/pull/${{ github.event.issue.number }}/head
           persist-credentials: false
@@ -97,7 +97,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout PR Head Branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ needs.format-authorize.outputs.head_repo }}
           ref: ${{ needs.format-authorize.outputs.head_ref }}
@@ -174,7 +174,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout PR Branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: refs/pull/${{ github.event.issue.number }}/head
           persist-credentials: false
