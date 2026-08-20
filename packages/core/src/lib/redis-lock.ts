@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { container } from "@sapphire/framework";
 import type { Redis } from "ioredis";
 
 /**
@@ -68,12 +69,24 @@ export async function acquireRedisLock(
   }
 
   let released = false;
+  let consecutiveRenewFailures = 0;
   const renew = setInterval(
     () => {
       if (released) return;
       redis
         .eval(REDIS_EXTEND_SCRIPT, 1, key, token, opts.ttlMs.toString())
-        .catch(() => null);
+        .then(() => {
+          consecutiveRenewFailures = 0;
+        })
+        .catch((err) => {
+          consecutiveRenewFailures++;
+          const message = `[redis-lock] Failed to renew lock "${key}" (${consecutiveRenewFailures} consecutive failure${consecutiveRenewFailures === 1 ? "" : "s"})`;
+          if (container.logger) {
+            container.logger.error(message, err);
+          } else {
+            console.error(message, err);
+          }
+        });
     },
     Math.floor(opts.ttlMs / 2),
   );
