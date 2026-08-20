@@ -63,7 +63,7 @@ my-addon/
 }
 ```
 
-`index.ts` follows the same `@DefineModule` pattern as a built-in module (see the [Module Creation Guide](GUIDE_MODULE_CREATION.md#step-1-define-module-metadata)):
+`index.ts` follows the same `@DefineModule` pattern as a built-in module (see the [Module Creation Guide](/Lumi/guides/module-creation/#step-1-define-module-metadata)):
 
 ```typescript
 import { Module, DefineModule, cfg } from "lumi";
@@ -107,7 +107,7 @@ These are stricter than the built-in module rules because addons run untrusted, 
 - **Use `container.redis` for ephemeral state**, with key builders defined in a local `keys.ts` - same convention as built-in modules.
 - **GDPR**: if your addon stores anything keyed by a user ID (Postgres via `guildKV`, or Redis), override both `deleteUserData(userId, requester)` and `exportUserData(userId)` and act on it there. If you store nothing, write `// No-op` overrides with a one-line justification rather than omitting the methods.
 - **UI through the card system**: never `new EmbedBuilder()`. Use `makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeInfoCard` from `"lumi/ui"`, or the `reply*` helpers on `CommandContext`.
-- **BullMQ pieces live in a folder named exactly `scheduled-tasks/`** - a `tasks/` directory is silently ignored, not an error. Discord/DB side effects of a fire must go through `registerTaskFireHandler(name, mode, handler)` in `onLoad`, same as built-in modules (see [Scheduled Tasks](GUIDE_MODULE_CREATION.md#step-7-scheduled-tasks)).
+- **BullMQ pieces live in a folder named exactly `scheduled-tasks/`** - a `tasks/` directory is silently ignored, not an error. Discord/DB side effects of a fire must go through `registerTaskFireHandler(name, mode, handler)` in `onLoad`, same as built-in modules (see [Scheduled Tasks](/Lumi/guides/module-creation/#step-7-scheduled-tasks)).
 - **No imports from sibling addons.** Same zero-cross-module-import rule as built-in modules, just enforced across addon directories instead of `packages/core/src/modules/`.
 
 ## Pre-submission checklist
@@ -125,7 +125,7 @@ Before opening a PR:
 1. `bun run typecheck` - zero compile errors.
 2. `bun run lint` - zero lint errors.
 3. Your addon has a `README.md` describing what it does and how to configure it.
-4. Every user-facing string is added to `en-US` at minimum (see [Translations](GUIDE_MODULE_CREATION.md#step-9-translations)).
+4. Every user-facing string is added to `en-US` at minimum (see [Translations](/Lumi/guides/module-creation/#step-9-translations)).
 5. `deleteUserData` and `exportUserData` are implemented or explicitly no-op'd with a comment explaining why.
 6. No addon-to-addon imports, no `container.prisma`, no raw `EmbedBuilder`.
 

@@ -1,6 +1,11 @@
-# Self-Hosting Guide
+---
+title: "Self-Hosting Guide"
+description: "Get Lumi running on your own machine or server."
+---
 
-This walks through running Lumi for yourself - a personal server, a small community, whatever. If you outgrow a single instance later (thousands of members, multiple bot processes, zero-downtime deploys), see [Production Deployment](GUIDE_PRODUCTION_DEPLOYMENT.md) once you've got the basics working.
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+This walks through running Lumi for yourself - a personal server, a small community, whatever. If you outgrow a single instance later (thousands of members, multiple bot processes, zero-downtime deploys), see [Production Deployment](/Lumi/guides/production-deployment/) once you've got the basics working.
 
 ## What you'll need
 
@@ -45,11 +50,12 @@ $EDITOR .env   # fill in BOT_TOKEN, CLIENT_ID at minimum - see below
 | `POSTGRES_URL` / `DIRECT_POSTGRES_URL` | The defaults work as-is if you kept the default password. |
 | `REDIS_PASSWORD` | Any password. |
 
-Everything else in `.env.example` already has a sensible default. The [Configuration Reference](configuration.md) covers every variable if you need one of the advanced ones later.
+Everything else in `.env.example` already has a sensible default. The [Configuration Reference](/Lumi/configuration/) covers every variable if you need one of the advanced ones later.
 
 ## 3. Start Postgres and Redis
 
-**Docker (recommended):**
+<Tabs>
+<TabItem label="Docker (recommended)" icon="server">
 
 ```bash
 docker compose up -d postgres pgbouncer redis
@@ -61,21 +67,29 @@ Then wait for them to report healthy:
 docker compose ps
 ```
 
-**Nix, instead:**
+</TabItem>
+<TabItem label="Nix" icon="setting">
 
 ```bash
 nix develop
 ```
 
-Gives you real Postgres and Redis running locally, no Docker needed. Point the Postgres and Redis variables in `.env` at whatever address it prints.
+Gives you real Postgres and Redis running locally, no Docker needed. Point the
+Postgres and Redis variables in `.env` at whatever address it prints.
 
-**Or already running your own:** just point `.env` at them -
+</TabItem>
+<TabItem label="Manual" icon="pencil">
+
+Already run Postgres 17 and Redis 7 somewhere? Just point `.env` at them:
 
 ```bash
 POSTGRES_URL=postgresql://<user>:<password>@<host>:<port>/<db>
 DIRECT_POSTGRES_URL=postgresql://<user>:<password>@<host>:<port>/<db>
 REDIS_URL=redis://<user>:<password>@<host>:<port>
 ```
+
+</TabItem>
+</Tabs>
 
 ## 4. Set up the database
 
@@ -127,7 +141,7 @@ bun run --cwd apps/dashboard dev          # development
 bun run --cwd apps/dashboard build && bun run --cwd apps/dashboard start
 ```
 
-Visit `http://localhost:8080`. The bot needs to be running and reachable for any of it to work. More detail: [Dashboard Reference](dashboard.md).
+Visit `http://localhost:8080`. The bot needs to be running and reachable for any of it to work. More detail: [Dashboard Reference](/Lumi/dashboard/).
 
 ## 7. Optional: metrics and tracing
 
@@ -177,7 +191,7 @@ bun run db:migrate
 docker compose up -d --build worker   # or: bun run dev
 ```
 
-Worth a quick look at [`packages/core/CHANGELOG.md`](../packages/core/CHANGELOG.md) or GitHub Releases first - most updates are drop-in, but anything that needs manual attention gets called out there.
+Worth a quick look at the [changelog](https://github.com/lumi-devs/Lumi/blob/main/packages/core/CHANGELOG.md) or GitHub Releases first - most updates are drop-in, but anything that needs manual attention gets called out there.
 
 ## Backups
 
@@ -191,4 +205,4 @@ Put this on a cron job, or use whatever snapshot mechanism your hosting platform
 
 ## Something not working?
 
-See [Troubleshooting](TROUBLESHOOTING.md) for the common failure modes, or [open a discussion](https://github.com/lumi-devs/Lumi/discussions) if you're stuck.
+See [Troubleshooting](/Lumi/troubleshooting/) for the common failure modes, or [open a discussion](https://github.com/lumi-devs/Lumi/discussions) if you're stuck.
