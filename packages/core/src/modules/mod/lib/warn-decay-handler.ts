@@ -25,11 +25,19 @@ export async function handleWarnDecayFire(
     const diffDays = diffMs / (1000 * 60 * 60 * 24);
 
     if (diffDays >= decayDays) {
-      await container.db.moderation.liftModerationCase(c.id);
-      await decrementWarnCount(container, c.guildId, c.userId);
-      container.logger.debug(
-        `[WarnDecay] Decayed warn case #${c.caseNumber} for user ${c.userId} in guild ${c.guildId}`,
-      );
+      try {
+        await container.db.moderation.liftModerationCase(c.id);
+        await decrementWarnCount(container, c.guildId, c.userId);
+        container.logger.debug(
+          `[WarnDecay] Decayed warn case #${c.caseNumber} for user ${c.userId} in guild ${c.guildId}`,
+        );
+      } catch (err) {
+        container.logger.warn(
+          `[WarnDecay] Failed to decay warn case #${c.caseNumber} for user ${c.userId} in guild ${c.guildId}:`,
+          err,
+        );
+        continue;
+      }
     }
   }
 }
