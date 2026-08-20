@@ -69,7 +69,7 @@ Multiple dev directories are comma- or colon-separated: `LUMI_DEV_PATHS=./addons
 bun run dev
 ```
 
-`LUMI_DEV_PATHS` directories are scanned exactly like bundled modules at startup - no manifest generation step required (that's only for `packages/core/src/modules/*`, see [Module Creation Guide](GUIDE_MODULE_CREATION.md#step-10-generate-the-manifest)). Once the worker is up, enable it for your test server:
+`LUMI_DEV_PATHS` directories are scanned exactly like bundled modules at startup - no manifest generation step required (that's only for `packages/core/src/modules/*`, see [Module Creation Guide](/Lumi/guides/module-creation/#step-10-generate-the-manifest)). Once the worker is up, enable it for your test server:
 
 ```
 /modules enable welcome-messages

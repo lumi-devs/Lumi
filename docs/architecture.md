@@ -54,7 +54,7 @@ All tuning knobs are environment variables (`EVENT_STREAM_*`) - see [Configurati
 
 ## Database layer
 
-**PostgreSQL** via Prisma (`prisma/schema.prisma`, 24 models) is the system of record. **All data access goes through `container.db`** (`DatabaseService`, `packages/core/src/lib/prisma/DatabaseService.ts`) - a facade over per-domain repositories (`global`, `config`, `modules`, `guildKV`, `access`, `permissions`, `downloader`, `audit`, `users`, `moderation`, `configHistory`, `configOverrides`, `afk`, `security`, `tempvc`, ...). Modules never touch `container.prisma` directly; see the [Module Creation Guide](GUIDE_MODULE_CREATION.md#database--persistence) for the rule and why it exists.
+**PostgreSQL** via Prisma (`prisma/schema.prisma`, 24 models) is the system of record. **All data access goes through `container.db`** (`DatabaseService`, `packages/core/src/lib/prisma/DatabaseService.ts`) - a facade over per-domain repositories (`global`, `config`, `modules`, `guildKV`, `access`, `permissions`, `downloader`, `audit`, `users`, `moderation`, `configHistory`, `configOverrides`, `afk`, `security`, `tempvc`, ...). Modules never touch `container.prisma` directly; see the [Module Creation Guide](GUIDE_MODULE_CREATION.md#step-8-database--persistence) for the rule and why it exists.
 
 **Redis** (`packages/core/src/lib/database/redis.ts`) is used for several distinct purposes, all namespaced under `lumi:*` in `RedisKeys`:
 

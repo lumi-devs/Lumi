@@ -109,7 +109,7 @@ Full reference for the app itself: [Dashboard Reference](/Lumi/dashboard/).
 | `lumi-dev` (profile `development`) | Dev container with the repo (and a sibling `../lumi-addons`) bind-mounted, pretty/debug logging, interactive TTY. |
 | `worker-scale` (profile `scale`) | A second worker replica for local cluster testing. |
 | `scheduler` (profile `scale`) | `LUMI_ROLE=scheduler`. |
-| `dashboard` (profile `dashboard`) | Web dashboard on `${DASHBOARD_PORT:-8080}`. **Not usable yet** - the shared `Dockerfile` has no `next build` stage, so `next start` exits with *"Could not find a production build in the '.next' directory"*. Run the dashboard outside Docker; see [Dashboard Reference § Running it](dashboard.md#running-it). |
+| `dashboard` (profile `dashboard`) | Web dashboard on `${DASHBOARD_PORT:-8080}`. **Not usable yet** - the shared `Dockerfile` has no `next build` stage, so `next start` exits with *"Could not find a production build in the '.next' directory"*. Run the dashboard outside Docker; see [Dashboard Reference § Running it](/Lumi/dashboard/#running-it). |
 | `postgres` | `postgres:17`, primary database. |
 | `pgbouncer` | Connection pooler in front of Postgres, transaction pool mode, port 6432. Point `POSTGRES_URL` at this, not directly at `postgres`. |
 | `redis` | `redis:7-alpine`, AOF persistence, `maxmemory 128mb` / `noeviction`. |

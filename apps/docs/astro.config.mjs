@@ -56,7 +56,7 @@ export default defineConfig({
           label: "Reference",
           items: [
             { label: "Architecture", slug: "architecture" },
-            { label: "Modules", slug: "modules", badge: { text: "Updated", variant: "tip" } },
+            { label: "What Lumi does", slug: "modules" },
             { label: "Dashboard", slug: "dashboard" },
             { label: "API reference", slug: "api-reference" },
             { label: "Troubleshooting", slug: "troubleshooting" },

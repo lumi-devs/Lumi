@@ -38,7 +38,7 @@ abstract class Module extends Piece {
 }
 ```
 
-Base class for a module/addon's entrypoint class. Extends Sapphire's `Piece`. Implement `deleteUserData` and `exportUserData` if the addon stores anything keyed by a user ID (GDPR); documented no-ops (return `undefined`/`null`) are fine otherwise. See [Module Creation Guide § Lifecycle hooks](GUIDE_MODULE_CREATION.md#lifecycle-hooks) for when each hook fires.
+Base class for a module/addon's entrypoint class. Extends Sapphire's `Piece`. Implement `deleteUserData` and `exportUserData` if the addon stores anything keyed by a user ID (GDPR); documented no-ops (return `undefined`/`null`) are fine otherwise. See [Module Creation Guide § Lifecycle hooks](/Lumi/guides/module-creation/#lifecycle-hooks) for when each hook fires.
 
 ### `DefineModule(options)`
 
@@ -95,7 +95,7 @@ abstract class ModuleListener<E extends keyof ClientEvents> extends Listener {
 }
 ```
 
-A Sapphire `Listener` that gates on the owning module being enabled for the guild before calling `handle()` - implement `handle`, never `run` (sealed). `GuildMessageListener` is a specialization pinned to Lumi's filtered guild-message event (bots/webhooks/system messages already excluded) - same `handle(message: GuildMessage)` contract. See [Module Creation Guide § Listeners](GUIDE_MODULE_CREATION.md#step-4-listeners).
+A Sapphire `Listener` that gates on the owning module being enabled for the guild before calling `handle()` - implement `handle`, never `run` (sealed). `GuildMessageListener` is a specialization pinned to Lumi's filtered guild-message event (bots/webhooks/system messages already excluded) - same `handle(message: GuildMessage)` contract. See [Module Creation Guide § Listeners](/Lumi/guides/module-creation/#step-4-listeners).
 
 ```typescript
 import { ApplyOptions } from "@sapphire/decorators";
@@ -230,7 +230,7 @@ export { publishTaskFire };
 export { registerTaskFireHandler };
 ```
 
-Lumi's scheduled-task pieces (`@sapphire/plugin-scheduled-tasks`, BullMQ-backed) are pure *schedulers* - a piece never touches Discord directly, it republishes a "fire" event onto a Redis Stream, and whichever `worker` process consumes that stream does the actual work. See [Architecture § Redis Streams bus mechanics](architecture.md#redis-streams-bus-mechanics) for delivery guarantees (at-least-once, DLQ after 5 deliveries) and [Module Creation Guide § Scheduled tasks](GUIDE_MODULE_CREATION.md#step-7-scheduled-tasks) for the full walkthrough.
+Lumi's scheduled-task pieces (`@sapphire/plugin-scheduled-tasks`, BullMQ-backed) are pure *schedulers* - a piece never touches Discord directly, it republishes a "fire" event onto a Redis Stream, and whichever `worker` process consumes that stream does the actual work. See [Architecture § Redis Streams bus mechanics](/Lumi/architecture/#redis-streams-bus-mechanics) for delivery guarantees (at-least-once, DLQ after 5 deliveries) and [Module Creation Guide § Scheduled tasks](/Lumi/guides/module-creation/#step-7-scheduled-tasks) for the full walkthrough.
 
 ### `RelayTask<N>`
 
@@ -400,7 +400,7 @@ Type-only export - the message shape `GuildMessageListener.handle()` receives (L
 
 ## What's deliberately not exported
 
-- **`container.prisma` / any Prisma model type.** Addons get no database schema of their own - persist through `container.db.guildKV` (generic per-guild key/value store) or `container.redis`. See [Addon Publishing Guide](GUIDE_ADDON_PUBLISHING.md#addon-specific-rules).
+- **`container.prisma` / any Prisma model type.** Addons get no database schema of their own - persist through `container.db.guildKV` (generic per-guild key/value store) or `container.redis`. See [Addon Publishing Guide](/Lumi/guides/addon-publishing/#addon-specific-rules).
 - **`DatabaseService` methods beyond `guildKV`.** The full repository facade (`container.db.afk`, `container.db.moderation`, etc.) is for built-in modules with dedicated Prisma tables.
 - **`stores.registerPath`.** The Downloader already registers an addon's path; calling it yourself is a linter warning.
 - **Raw `EmbedBuilder`.** Use the card helpers in `lumi/ui` - this is a hard lint error, not a warning.

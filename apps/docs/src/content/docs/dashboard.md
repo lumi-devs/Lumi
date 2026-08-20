@@ -3,7 +3,7 @@ title: "Dashboard"
 description: "The dashboard's route inventory, internal RPC bridge, auth model, and design tokens."
 ---
 
-Reference for `apps/dashboard` - the Next.js (App Router) web administration panel. For where the dashboard sits in the wider system, see [Architecture § Dashboard Frontend](architecture.md#dashboard-frontend); for the environment variables it reads, see [Configuration Reference § Dashboard](configuration.md#dashboard).
+Reference for `apps/dashboard` - the Next.js (App Router) web administration panel. For where the dashboard sits in the wider system, see [Architecture § Dashboard Frontend](/Lumi/architecture/#dashboard-frontend); for the environment variables it reads, see [Configuration Reference § Dashboard](/Lumi/configuration/#dashboard).
 
 ## Hard boundaries
 
