@@ -12,6 +12,8 @@ Three rules define the app, and everything below follows from them:
 
 The practical payoff is isolation: a dashboard outage, a traffic spike, or a slow page render cannot affect Discord gateway latency, because the two never share a process or an event loop.
 
+**The bot runs fully standalone without this app.** `apps/worker` never depends on `apps/dashboard` being up - it's the other direction only, dashboard reads/writes go *to* the worker's RPC server. Self-hosters who don't want the web panel can skip starting `apps/dashboard` entirely, or disable just its RPC surface per-guild via the `dashboard` module (`docs/modules.md`) while leaving every other module running. This is a deliberate choice over folding the API into the bot process itself (the pattern some other Sapphire-based bots use) - it's what keeps rule 1-3 above enforceable at all.
+
 ## App Router structure
 
 ```

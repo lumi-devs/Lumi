@@ -37,6 +37,7 @@ The guild owner, the bot itself, members with `trusted_role_ids`, and anyone hol
 - **Account-age gate**: `min_account_age_hours` kicks/flags accounts younger than the threshold on join (`0` disables the check).
 - **Raid detection**: a rolling join counter (`raid_join_count` joins within `raid_window_seconds`) flips the guild into raid mode; joiners during raid mode get `raid_action` (`kick` / `timeout` / `quarantine`) instead of the normal welcome flow.
 - **Verification**: `/verifypanel` posts a persistent Components V2 panel with a Verify button. Clicking it shows a row of emoji buttons and a target sequence to click in order; completing it grants `verified_role_id` and removes `verification_pending_role_id` (if configured). Members who don't verify within `verification_timeout_minutes` are optionally kicked (`verification_kick_on_timeout`). This is a click-sequence challenge, not a real CAPTCHA - it stops simple join-bots, not targeted abuse.
+- **Join Gate filters**: independently toggleable, each with its own action (log/kick/timeout/quarantine) - no avatar, min account age, unverified bot, username pattern (comma-configured substrings), and advertising account (display name itself is a link or invite - a fixed structural check, distinct from the configurable username-pattern filter).
 
 ### Panic mode
 
@@ -48,6 +49,10 @@ The guild owner, the bot itself, members with `trusted_role_ids`, and anyone hol
 4. Edits are sequential with a small delay, capped at 40 channels per run to stay clear of Discord's per-channel permission-overwrite rate limit; a failure on one channel doesn't abort the rest.
 
 The resulting status card carries a **Revert** button that restores every snapshotted overwrite and resumes invites in one click, re-checking the `admin.*` permit at click time. Re-running `/panic` while already active re-shows the same status card instead of re-confirming - the recovery path if the original ephemeral message was dismissed or expired.
+
+### Backup & restore (structural imaging)
+
+While Anti-Nuke is on, an hourly sweep (`backup_interval_hours`) snapshots - "images" - the guild's role and channel structure (names, permissions, hierarchy position, overwrites) via `packages/core/src/modules/security/lib/backup.ts`; older snapshots past `backup_keep_count` are pruned. `/restore` replays the most recent image to rebuild roles/channels after a nuke, and a panic revert can auto-restore from it. This is the same capability Wick markets as "imaging" - worth using that term in any parity-claim docs, since it's what their audience searches for.
 
 ### Filter heat escalation
 

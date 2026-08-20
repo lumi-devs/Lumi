@@ -1,6 +1,7 @@
 import type { Guild, GuildModuleConfig, Prisma } from "@prisma/client";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
+import { acquireRedisLock } from "#core/lib/redis-lock.js";
 
 /** Repository for guild settings and module configurations. */
 export class ConfigRepository extends Repository {
@@ -125,5 +126,36 @@ export class ConfigRepository extends Repository {
       where: { guildId, moduleName, configKey: key },
     });
     await this.invalidate(RedisKeys.guildConfig(moduleName, guildId));
+  }
+
+  /**
+   * Atomic read-modify-write for one config key, guarded by a Redis lock
+   * scoped to (guildId, moduleName, key) - Redbot's `async with
+   * config.guild(g).some_list() as l:` pattern, for addon authors who'd
+   * otherwise do get-then-set by hand and race a concurrent writer.
+   * `mutator` returning `undefined` deletes the key instead of writing it.
+   */
+  public async mutateModuleConfig<T = unknown>(
+    guildId: string,
+    moduleName: string,
+    key: string,
+    mutator: (current: T | null) => T | undefined | Promise<T | undefined>,
+  ): Promise<T | undefined> {
+    const release = await acquireRedisLock(
+      this.redis,
+      `lock:config-mutate:${moduleName}:${guildId}:${key}`,
+    );
+    try {
+      const current = (await this.getModuleConfig(guildId, moduleName, key)) as T | null;
+      const next = await mutator(current);
+      if (next === undefined) {
+        await this.deleteModuleConfigKey(guildId, moduleName, key);
+      } else {
+        await this.setModuleConfig(guildId, moduleName, key, next as Prisma.InputJsonValue);
+      }
+      return next;
+    } finally {
+      await release();
+    }
   }
 }

@@ -308,4 +308,107 @@ describe("PermissionService", () => {
       ).resolves.toEqual(FOREIGN_EXTRA_OWNER);
     });
   });
+
+  describe("exportPermits", () => {
+    it("excludes builtin permits and shapes role assignments", async () => {
+      mockPermissions.listPermits.mockResolvedValue([
+        { id: 1, name: "Extra Owner", kind: "enforced", nodes: ["*"], builtin: true, assignments: [] },
+        {
+          id: 2,
+          name: "Mods",
+          kind: "custom",
+          nodes: ["mod.*"],
+          builtin: false,
+          assignments: [
+            { targetType: "role", targetId: "111" },
+            { targetType: "role", targetId: "222" },
+          ],
+        },
+      ]);
+
+      const result = await service.exportPermits("G1");
+
+      expect(result.permits).toEqual([
+        { name: "Mods", nodes: ["mod.*"], roleIds: ["111", "222"] },
+      ]);
+    });
+  });
+
+  describe("importPermits", () => {
+    it("rejects a payload without a permits array", async () => {
+      await expect(service.importPermits("G1", { foo: "bar" })).rejects.toThrow(
+        /not a valid permit export/i,
+      );
+    });
+
+    it("creates permits that don't exist yet and assigns their roles", async () => {
+      mockPermissions.findPermitByName.mockResolvedValue(null);
+      mockPermissions.createPermit.mockResolvedValue({ id: 5, name: "Mods" });
+      mockPermissions.assignPermit.mockResolvedValue({});
+
+      const result = await service.importPermits("G1", {
+        version: 1,
+        exportedAt: "now",
+        permits: [{ name: "Mods", nodes: ["mod.*"], roleIds: ["111111111111111111"] }],
+      });
+
+      expect(mockPermissions.createPermit).toHaveBeenCalledWith("G1", "Mods", "custom", ["mod.*"]);
+      expect(mockPermissions.assignPermit).toHaveBeenCalledWith("G1", 5, "111111111111111111");
+      expect(result).toEqual({ created: 1, updated: 0, skipped: [] });
+    });
+
+    it("updates an existing permit's nodes instead of creating a duplicate", async () => {
+      mockPermissions.findPermitByName.mockResolvedValue({ id: 9, name: "Mods", builtin: false });
+      mockPermissions.updatePermitNodes.mockResolvedValue({ id: 9 });
+
+      const result = await service.importPermits("G1", {
+        permits: [{ name: "Mods", nodes: ["mod.*", "mod.warn"], roleIds: [] }],
+      });
+
+      expect(mockPermissions.updatePermitNodes).toHaveBeenCalledWith("G1", 9, [
+        "mod.*",
+        "mod.warn",
+      ]);
+      expect(mockPermissions.createPermit).not.toHaveBeenCalled();
+      expect(result).toEqual({ created: 0, updated: 1, skipped: [] });
+    });
+
+    it("skips a malformed entry without aborting the rest", async () => {
+      mockPermissions.findPermitByName.mockResolvedValue(null);
+      mockPermissions.createPermit.mockResolvedValue({ id: 5, name: "Good" });
+
+      const result = await service.importPermits("G1", {
+        permits: [
+          { name: "", nodes: ["mod.*"], roleIds: [] },
+          { name: "Good", nodes: ["mod.*"], roleIds: [] },
+        ],
+      });
+
+      expect(result.created).toBe(1);
+    });
+
+    it("records a skip when creating a permit throws", async () => {
+      mockPermissions.findPermitByName.mockResolvedValue(null);
+      mockPermissions.createPermit.mockRejectedValue(new Error("boom"));
+
+      const result = await service.importPermits("G1", {
+        permits: [{ name: "Mods", nodes: ["mod.*"], roleIds: [] }],
+      });
+
+      expect(result.created).toBe(0);
+      expect(result.skipped).toEqual([{ name: "Mods", reason: "boom" }]);
+    });
+
+    it("ignores malformed role IDs in an entry", async () => {
+      mockPermissions.findPermitByName.mockResolvedValue(null);
+      mockPermissions.createPermit.mockResolvedValue({ id: 5, name: "Mods" });
+
+      await service.importPermits("G1", {
+        permits: [{ name: "Mods", nodes: ["mod.*"], roleIds: ["not-a-snowflake", "111111111111111111"] }],
+      });
+
+      expect(mockPermissions.assignPermit).toHaveBeenCalledTimes(1);
+      expect(mockPermissions.assignPermit).toHaveBeenCalledWith("G1", 5, "111111111111111111");
+    });
+  });
 });

@@ -307,5 +307,16 @@
   "whoisUserNotFound": "Please specify a valid user mention or ID.",
   "whoisUserNotFoundTitle": "User Not Found",
   "whoisUserOption": "The user whose info to display (defaults to you).",
-  "whoisViewProfile": "View Profile"
+  "whoisViewProfile": "View Profile",
+  "permitExportName": "export",
+  "permitExportDescription": "Export every custom permit and its role assignments as a JSON file",
+  "permitImportName": "import",
+  "permitImportDescription": "Import custom permits from a JSON file produced by /permit export",
+  "permitImportFileName": "file",
+  "permitImportFileDescription": "The permits JSON file to import",
+  "permitImportNoFile": "Attach a permits JSON file (from `/permit export`) to import.",
+  "permitImportTooLarge": "That file is too large - permit exports are small JSON, something's wrong.",
+  "permitImportInvalid": "Couldn't read that file as a permit export - make sure it's unmodified output from `/permit export`.",
+  "permitImportDoneTitle": "Permits Imported",
+  "permitImportDone": "Created **{{created}}**, updated **{{updated}}**, skipped **{{skipped}}**."
 }

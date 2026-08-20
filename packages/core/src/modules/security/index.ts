@@ -227,6 +227,18 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       description: "Action taken when the username-pattern filter trips.",
       default: "log",
     }),
+    filter_advertising_enabled: cfg.boolean({
+      group: "Join Gate Filters",
+      label: "Filter: Advertising Account",
+      description: "Flag members whose display name itself is a link or invite (ad/scam accounts).",
+      default: false,
+    }),
+    filter_advertising_action: cfg.enum(["log", "kick", "timeout", "quarantine"], {
+      group: "Join Gate Filters",
+      label: "Advertising Account Action",
+      description: "Action taken when the advertising-account filter trips.",
+      default: "kick",
+    }),
     verification_enabled: cfg.boolean({
       group: "Verification",
       label: "Verification",
