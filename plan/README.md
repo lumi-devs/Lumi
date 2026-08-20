@@ -9,6 +9,7 @@ Source: competitive teardown against Wick's dashboard (docs + HAR + screenshots)
 - [`03-mod-notes.md`](./03-mod-notes.md) — persistent staff notes per member (schema + repo + permit + bot command).
 - [`04-appeals.md`](./04-appeals.md) — ban/timeout appeal pipeline (schema + repo + permit + public intake route).
 - [`05-verification.md`](./05-verification.md) — how to test each phase end-to-end.
+- [`06-competitor-research.md`](./06-competitor-research.md) — background research (not a phase to land): Wick/Red-DiscordBot/Skyra feature comparison, plus Sapphire/Dyno dashboard visual notes feeding the paused visual-direction decision above.
 
 ## Context
 

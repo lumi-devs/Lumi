@@ -1,8 +1,8 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import type { AutocompleteInteraction } from "discord.js";
-import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
+import { AttachmentBuilder, MessageFlags, type AutocompleteInteraction } from "discord.js";
+import { BaseSubcommand, sendReply, type CommandContext } from "#lib/commands.js";
 import { getService } from "#lib/module-system/Service.js";
 import { logError } from "#lib/utilities/errors.js";
 import { KNOWN_PERMIT_NODES } from "#lib/permissions/permit-nodes.js";
@@ -10,6 +10,8 @@ import {
   filterAutocompleteChoices,
   respondWithChoices,
 } from "#lib/utilities/autocomplete.js";
+
+const MAX_IMPORT_BYTES = 256 * 1024;
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "permit",
@@ -31,6 +33,8 @@ import {
     { name: "assign", run: "assign" },
     { name: "unassign", run: "unassign" },
     { name: "list", run: "list", default: true },
+    { name: "export", run: "export" },
+    { name: "import", run: "import" },
   ],
 })
 export class PermitCommand extends BaseSubcommand {
@@ -125,7 +129,13 @@ export class PermitCommand extends BaseSubcommand {
               ),
             ),
         )
-        .addSubcommand((s) => applyLocalizedBuilder(s, "commands:permitList")),
+        .addSubcommand((s) => applyLocalizedBuilder(s, "commands:permitList"))
+        .addSubcommand((s) => applyLocalizedBuilder(s, "commands:permitExport"))
+        .addSubcommand((s) =>
+          applyLocalizedBuilder(s, "commands:permitImport").addAttachmentOption(
+            (o) => applyLocalizedBuilder(o, "commands:permitImportFile").setRequired(true),
+          ),
+        ),
     );
   }
 
@@ -407,5 +417,90 @@ export class PermitCommand extends BaseSubcommand {
       t("commands:permitListTitle"),
       lines.slice(0, 40).join("\n"),
     );
+  }
+
+  public async export(ctx: CommandContext) {
+    await ctx.defer();
+    const t = await ctx.fetchT();
+    const perms = getService("permissions");
+    const data = await perms.exportPermits(ctx.guildId!);
+
+    if (data.permits.length === 0) {
+      return ctx.replyInfo(
+        t("commands:permitListEmptyTitle"),
+        t("commands:permitListEmpty"),
+      );
+    }
+
+    const attachment = new AttachmentBuilder(
+      Buffer.from(JSON.stringify(data, null, 2), "utf-8"),
+      { name: `permits-${ctx.guildId}.json` },
+    );
+
+    if (ctx.isSlash) {
+      await sendReply(ctx.interaction, {
+        files: [attachment],
+        flags: MessageFlags.Ephemeral,
+      });
+    } else {
+      await ctx.message.reply({ files: [attachment] });
+    }
+  }
+
+  public async import(ctx: CommandContext) {
+    await ctx.defer();
+    const t = await ctx.fetchT();
+
+    const attachment = ctx.isSlash
+      ? ctx.interaction.options.getAttachment("file")
+      : ctx.message.attachments.first();
+
+    if (!attachment) {
+      return ctx.replyError(
+        t("commands:permitFailedTitle"),
+        t("commands:permitImportNoFile"),
+      );
+    }
+    if (attachment.size > MAX_IMPORT_BYTES) {
+      return ctx.replyError(
+        t("commands:permitFailedTitle"),
+        t("commands:permitImportTooLarge"),
+      );
+    }
+
+    let parsed: unknown;
+    try {
+      const res = await fetch(attachment.url);
+      parsed = JSON.parse(await res.text());
+    } catch (err: unknown) {
+      logError(`permit import: guild=${ctx.guildId} fetch/parse`, err);
+      return ctx.replyError(
+        t("commands:permitFailedTitle"),
+        t("commands:permitImportInvalid"),
+      );
+    }
+
+    const perms = getService("permissions");
+    try {
+      const result = await perms.importPermits(ctx.guildId!, parsed);
+      const skippedLines = result.skipped
+        .slice(0, 10)
+        .map((s) => `- **${s.name}**: ${s.reason}`)
+        .join("\n");
+      return ctx.replySuccess(
+        t("commands:permitImportDoneTitle"),
+        t("commands:permitImportDone", {
+          created: result.created,
+          updated: result.updated,
+          skipped: result.skipped.length,
+        }) + (skippedLines ? `\n${skippedLines}` : ""),
+      );
+    } catch (err: unknown) {
+      logError(`permit import: guild=${ctx.guildId}`, err);
+      return ctx.replyError(
+        t("commands:permitFailedTitle"),
+        err instanceof Error ? err.message : t("commands:permitImportInvalid"),
+      );
+    }
   }
 }

@@ -27,6 +27,7 @@ import {
   hasNoAvatar,
   isUnverifiedBot,
   matchesUsernamePattern,
+  hasAdvertisingIndicators,
   hasSimilarRecentJoiner,
   isCreationClustered,
   type RecentJoiner,
@@ -101,6 +102,7 @@ export interface JoinGateConfig {
   filterMinAge: JoinGateFilterConfig & { hours: number };
   filterUnverifiedBot: JoinGateFilterConfig;
   filterUsernamePattern: JoinGateFilterConfig & { patterns: string[] };
+  filterAdvertising: JoinGateFilterConfig;
 }
 
 export interface JoinFilterResult {
@@ -354,6 +356,10 @@ export class SecurityService extends Service {
         patterns: parseConfigList(raw["filter_username_pattern"]),
         action: getConfigAction(raw, "filter_username_pattern_action", "log"),
       },
+      filterAdvertising: {
+        enabled: raw["filter_advertising_enabled"] === true,
+        action: getConfigAction(raw, "filter_advertising_action", "kick"),
+      },
     };
   }
 
@@ -395,6 +401,13 @@ export class SecurityService extends Service {
         matchesUsernamePattern(member.user.username, config.filterUsernamePattern.patterns),
         config.filterUsernamePattern.action,
         "username pattern match",
+      );
+    }
+    if (config.filterAdvertising.enabled) {
+      consider(
+        hasAdvertisingIndicators(member.user),
+        config.filterAdvertising.action,
+        "advertising account",
       );
     }
 
