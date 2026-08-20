@@ -54,7 +54,7 @@ const channelFields = (c: CachedChannel): Record<string, string> => ({
   guildId: c.guildId,
   name: c.name,
   type: String(c.type),
-  ...(c.parentId ? { parentId: c.parentId } : {}),
+  parentId: c.parentId ?? "",
   cachedAt: String(c.cachedAt),
 });
 
@@ -87,7 +87,7 @@ export class RedisEntityCache {
       id: g.id,
       name: g.name,
       ownerId: g.ownerId,
-      ...(g.locale ? { locale: g.locale } : {}),
+      locale: g.locale ?? "",
       cachedAt: String(g.cachedAt),
     });
   }
@@ -174,8 +174,8 @@ export class RedisEntityCache {
     await this.#putHash(RedisKeys.entityUser(u.id), {
       id: u.id,
       username: u.username,
-      ...(u.discriminator ? { discriminator: u.discriminator } : {}),
-      ...(u.bot ? { bot: "1" } : {}),
+      discriminator: u.discriminator ?? "",
+      bot: u.bot ? "1" : "",
       cachedAt: String(u.cachedAt),
     });
   }
@@ -202,7 +202,7 @@ export class RedisEntityCache {
       userId: m.userId,
       guildId: m.guildId,
       roleIds: m.roleIds.join(","),
-      ...(m.nick ? { nick: m.nick } : {}),
+      nick: m.nick ?? "",
       cachedAt: String(m.cachedAt),
     });
   }
