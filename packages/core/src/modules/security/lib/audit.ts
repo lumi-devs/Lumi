@@ -15,6 +15,7 @@ export async function resolveAuditLogExecutor(
 	guild: Guild,
 	eventType: AuditLogEvent,
 	targetId?: string,
+	changeKey?: string,
 ): Promise<string | null> {
 	const logs = await guild
 		.fetchAuditLogs({ type: eventType, limit: 1 })
@@ -24,6 +25,9 @@ export async function resolveAuditLogExecutor(
 		return null;
 	}
 	if (targetId !== undefined && entry.targetId !== targetId) {
+		return null;
+	}
+	if (changeKey !== undefined && !entry.changes?.some((c) => c.key === changeKey)) {
 		return null;
 	}
 	return entry.executorId;
