@@ -50,5 +50,5 @@ Yes - localization is centralized in `packages/core/src/languages/en-US/` and ma
 
 ## Something here doesn't match the code
 
-Open a discussion or issue on the [GitHub repo](https://github.com/lumi-devs/Lumi) - this page (and the rest of `docs/`) is written against the current source and synced verbatim to the [wiki](https://github.com/lumi-devs/Lumi/wiki) on every push to `main`, so a mismatch is a bug in the docs, not the code.
+Open a discussion or issue on the [GitHub repo](https://github.com/lumi-devs/Lumi) - this page (and the rest of `docs/`) is written against the current source and rebuilt onto this docs site on every push to `main`, so a mismatch is a bug in the docs, not the code.
 

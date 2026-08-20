@@ -22,7 +22,7 @@
     <a href="#architecture">Architecture</a> •
     <a href="#translations">Translations</a> •
     <a href="docs/">Docs</a> •
-    <a href="https://github.com/lumi-devs/Lumi/wiki">Wiki</a> •
+    <a href="https://lumi-devs.github.io/Lumi/">Docs Site</a> •
     <a href="#contributing">Contributing</a>
   </p>
 </div>

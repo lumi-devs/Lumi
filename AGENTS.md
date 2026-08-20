@@ -2,8 +2,8 @@
 
 Operating spec for any AI coding agent working in this repository. This is a
 map, not a manual — for anything not covered here, see [`docs/README.md`](docs/README.md)
-(the documentation index) or the [GitHub wiki](https://github.com/lumi-devs/Lumi/wiki),
-which mirrors `docs/` on every push to `main`.
+(the documentation index) or the [docs site](https://lumi-devs.github.io/Lumi/),
+which is built from `docs/` on every push to `main`.
 
 Lumi is a self-hosted, modular Discord bot: Bun + TypeScript, `@sapphire/framework` +
 discord.js v14, Prisma/PostgreSQL, Redis.

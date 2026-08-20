@@ -45,5 +45,5 @@ Engineering documentation for **Lumi** - a modular, self-hosted Discord bot fram
 - [GitHub Repository](https://github.com/lumi-devs/Lumi)
 - [Issue Tracker](https://github.com/lumi-devs/Lumi/issues)
 - [Discussions](https://github.com/lumi-devs/Lumi/discussions)
-- [Wiki](https://github.com/lumi-devs/Lumi/wiki) - mirrors this `docs/` folder automatically on every push to `main`
+- [Docs Site](https://lumi-devs.github.io/Lumi/) - built from this `docs/` folder automatically on every push to `main`
 - [Security Advisories](https://github.com/lumi-devs/Lumi/security/advisories)

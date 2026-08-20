@@ -167,6 +167,37 @@ docker compose --profile observability up -d
 
 Brings up `otel-collector`, `tempo`, `prometheus`, and `grafana`. Grafana is at `http://localhost:3001` (default login `admin`/`admin` - **change `GRAFANA_PASSWORD` in `.env` before exposing this beyond localhost**). Set `OTEL_ENABLED=true` in `.env` and restart `worker` to start exporting traces. See [Architecture](architecture.md#observability) for what's instrumented.
 
+## Running as a service (bare-metal)
+
+If you're running `bun run --cwd apps/worker start` directly on a server rather than through Docker Compose (which already restarts on failure via `restart: unless-stopped`), keep it alive across reboots and crashes with a systemd unit:
+
+```ini
+# /etc/systemd/system/lumi-worker.service
+[Unit]
+Description=Lumi Discord bot worker
+After=network-online.target
+
+[Service]
+Type=simple
+User=lumi
+WorkingDirectory=/opt/lumi
+EnvironmentFile=/opt/lumi/.env
+ExecStart=/usr/bin/env bun run --cwd apps/worker start
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now lumi-worker
+journalctl -u lumi-worker -f   # logs
+```
+
+Run the backing services (Postgres, Redis) as their own systemd/Docker units, and point `.env` at them the same way you would locally. If you're running the [dashboard](#6-optional-the-web-dashboard) on bare metal too, give it a matching unit with `ExecStart=/usr/bin/env bun run --cwd apps/dashboard start` (after `build`).
+
 ## Updating
 
 ```bash
