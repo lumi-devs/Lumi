@@ -488,3 +488,67 @@ describe("SecurityService.advanceChallenge", () => {
     expect(result).toBeNull();
   });
 });
+
+describe("SecurityService join gate: advertising-account filter", () => {
+  function makeMember(displayName: string) {
+    return {
+      user: { globalName: displayName, username: "fallback", bot: false, avatar: "x" },
+    } as any;
+  }
+
+  it("loadJoinGateConfig parses the advertising filter's enabled flag and action", async () => {
+    const getAllModuleConfig = vi.fn().mockResolvedValue({
+      filter_advertising_enabled: true,
+      filter_advertising_action: "quarantine",
+    });
+    const service = makeService({ db: { config: { getAllModuleConfig } } });
+
+    const config = await service.loadJoinGateConfig("g1");
+
+    expect(config.filterAdvertising).toEqual({ enabled: true, action: "quarantine" });
+  });
+
+  it("evaluateJoinFilters trips the advertising filter on a link-as-display-name", () => {
+    const service = makeService({});
+    const config = {
+      enabled: true,
+      minAccountAgeHours: 0,
+      raidJoinCount: 10,
+      raidWindowSeconds: 30,
+      raidAction: "kick" as const,
+      raidAccountType: "all" as const,
+      raidWarnRoleIds: [],
+      filterNoAvatar: { enabled: false, action: "log" as const },
+      filterMinAge: { enabled: false, hours: 0, action: "kick" as const },
+      filterUnverifiedBot: { enabled: false, action: "kick" as const },
+      filterUsernamePattern: { enabled: false, patterns: [], action: "log" as const },
+      filterAdvertising: { enabled: true, action: "kick" as const },
+    };
+
+    const result = service.evaluateJoinFilters(makeMember("discord.gg/freenitro"), config);
+
+    expect(result).toEqual({ action: "kick", triggered: ["advertising account"] });
+  });
+
+  it("evaluateJoinFilters leaves the advertising filter alone when disabled", () => {
+    const service = makeService({});
+    const config = {
+      enabled: true,
+      minAccountAgeHours: 0,
+      raidJoinCount: 10,
+      raidWindowSeconds: 30,
+      raidAction: "kick" as const,
+      raidAccountType: "all" as const,
+      raidWarnRoleIds: [],
+      filterNoAvatar: { enabled: false, action: "log" as const },
+      filterMinAge: { enabled: false, hours: 0, action: "kick" as const },
+      filterUnverifiedBot: { enabled: false, action: "kick" as const },
+      filterUsernamePattern: { enabled: false, patterns: [], action: "log" as const },
+      filterAdvertising: { enabled: false, action: "kick" as const },
+    };
+
+    const result = service.evaluateJoinFilters(makeMember("discord.gg/freenitro"), config);
+
+    expect(result).toBeNull();
+  });
+});
