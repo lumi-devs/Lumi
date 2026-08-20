@@ -775,6 +775,7 @@ export class SecurityService extends Service {
           permissions: BigInt(role.permissions),
           hoist: role.hoist,
           mentionable: role.mentionable,
+          position: role.position,
           reason: "Security: restoring from backup",
         });
         roleIdMap.set(role.id, created.id);
@@ -791,17 +792,24 @@ export class SecurityService extends Service {
     const ordered = [...data.channels].sort((a, b) =>
       a.type === ChannelType.GuildCategory ? -1 : b.type === ChannelType.GuildCategory ? 1 : 0,
     );
+    const channelIdMap = new Map<string, string>();
 
     for (const channel of ordered) {
-      if (guild.channels.cache.has(channel.id)) continue;
+      if (guild.channels.cache.has(channel.id)) {
+        channelIdMap.set(channel.id, channel.id);
+        continue;
+      }
       try {
         const parentId = channel.parentId
-          ? (guild.channels.cache.get(channel.parentId)?.id ?? null)
+          ? (channelIdMap.get(channel.parentId) ??
+              guild.channels.cache.get(channel.parentId)?.id ??
+              null)
           : null;
-        await guild.channels.create({
+        const created = await guild.channels.create({
           name: channel.name,
           type: channel.type as never,
           parent: parentId,
+          position: channel.position,
           permissionOverwrites: channel.overwrites.map((ow) => ({
             id: roleIdMap.get(ow.id) ?? ow.id,
             type: ow.type,
@@ -810,6 +818,7 @@ export class SecurityService extends Service {
           })),
           reason: "Security: restoring from backup",
         });
+        channelIdMap.set(channel.id, (created as { id: string }).id);
         channelsRestored++;
       } catch (err: unknown) {
         this.logger.warn(
