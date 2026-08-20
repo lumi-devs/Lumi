@@ -1,0 +1,131 @@
+---
+title: Lumi
+description: "Documentation for Lumi, a modular, self-hosted Discord bot framework built with TypeScript and Bun."
+template: splash
+hero:
+  title: Lumi
+  tagline: A modular, self-hosted Discord bot framework. Wick-depth security, a Red-DiscordBot-shaped addon SDK, one bot you actually control.
+  actions:
+    - text: Self-host it
+      link: /Lumi/guides/self-hosting/
+      icon: rocket
+      variant: primary
+    - text: Build an addon
+      link: /Lumi/guides/quick-start-addon/
+      icon: puzzle
+      variant: secondary
+    - text: View on GitHub
+      link: https://github.com/lumi-devs/Lumi
+      icon: github
+      variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+## Start here
+
+<CardGrid>
+	<Card title="Self-hosting" icon="rocket">
+		Prerequisites, Docker Compose services, first-run steps, updates, backups.
+		[Read the guide →](/Lumi/guides/self-hosting/)
+	</Card>
+	<Card title="Production deployment" icon="rocket">
+		Hardening and scaling beyond self-hosting: clustering, secrets management,
+		monitoring, zero-downtime deploys.
+		[Read the guide →](/Lumi/guides/production-deployment/)
+	</Card>
+	<Card title="Configuration reference" icon="setting">
+		Every environment variable, Docker Compose service, and Kubernetes
+		manifest, in one table.
+		[View reference →](/Lumi/configuration/)
+	</Card>
+	<Card title="FAQ" icon="question">
+		Modules vs. addons, dashboard requirements, GDPR, updating, translations.
+		[Read the FAQ →](/Lumi/faq/)
+	</Card>
+</CardGrid>
+
+## Reference
+
+<CardGrid>
+	<Card title="Architecture & system topology" icon="random">
+		Process roles (`worker`, `scheduler`, `dashboard`), the Redis Streams event
+		bus, sharding/clustering, the database layer, observability.
+		[Read →](/Lumi/architecture/)
+	</Card>
+	<Card title="Modules & features" icon="approve-check-circle">
+		The nine built-in modules, plus a deep dive into the security suite —
+		anti-nuke, join-gate, verification, panic mode, filter heat escalation.
+		[Read →](/Lumi/modules/)
+	</Card>
+	<Card title="Dashboard reference" icon="laptop">
+		`apps/dashboard`: route inventory, the internal RPC bridge, NextAuth v5 and
+		the authz cache, the CSP nonce middleware, design tokens.
+		[Read →](/Lumi/dashboard/)
+	</Card>
+	<Card title="Troubleshooting" icon="magnifier">
+		Symptom-first index across boot, dashboard, sharding/clustering, addons,
+		and observability.
+		[Read →](/Lumi/troubleshooting/)
+	</Card>
+</CardGrid>
+
+## Building addons
+
+Lumi's addon SDK is deliberately shaped like Red-DiscordBot's `redbot.core` —
+if you've written a Red cog before, this will feel familiar.
+
+<CardGrid>
+	<Card title="Quick start" icon="rocket">
+		Fastest path from a clean checkout to a working `/slash` command, using
+		`bun run addon:create`.
+		[Start here →](/Lumi/guides/quick-start-addon/)
+	</Card>
+	<Card title="Creating a module" icon="document">
+		Config schema, commands, listeners, services, interaction handlers,
+		scheduled tasks, persistence, i18n — a full walkthrough of the real `afk`
+		module.
+		[Read the guide →](/Lumi/guides/module-creation/)
+	</Card>
+	<Card title="Publishing an addon" icon="star">
+		Writing and submitting an addon to
+		[`lumi-addons`](https://github.com/lumi-devs/lumi-addons): stricter
+		rules, the pre-submission checklist, the PR workflow.
+		[Read the guide →](/Lumi/guides/addon-publishing/)
+	</Card>
+	<Card title="Addon SDK API reference" icon="open-book">
+		Every export of `"lumi"` and its subpaths (`lumi/commands`,
+		`lumi/permissions`, `lumi/scheduling`, `lumi/ui`, `lumi/utils`).
+		[View reference →](/Lumi/api-reference/)
+	</Card>
+</CardGrid>
+
+## Project policies
+
+- [Contributing Guide](https://github.com/lumi-devs/Lumi/blob/main/CONTRIBUTING.md) — coding standards, workflow, and pull request guidelines.
+- [Security Policy](https://github.com/lumi-devs/Lumi/blob/main/SECURITY.md) — responsible disclosure and vulnerability reporting.
+- [AI & Agent Blueprint](https://github.com/lumi-devs/Lumi/blob/main/AGENTS.md) — operational rules for agents (human or AI) working in this codebase; source of truth for anything this docs site summarizes.
+
+## Workspace packages & apps
+
+**Apps** — entrypoints for the runtime roles:
+
+- [`apps/worker`](https://github.com/lumi-devs/Lumi/blob/main/apps/worker/README.md) — Discord gateway connection & command execution
+- [`apps/scheduler`](https://github.com/lumi-devs/Lumi/blob/main/apps/scheduler/README.md) — BullMQ task queue processor
+- [`apps/dashboard`](https://github.com/lumi-devs/Lumi/blob/main/apps/dashboard/README.md) — web management panel
+
+**Packages** — shared libraries & core framework:
+
+- [`packages/core`](https://github.com/lumi-devs/Lumi/blob/main/packages/core/README.md) — framework core, module loader, database service
+- [`packages/event-bus`](https://github.com/lumi-devs/Lumi/blob/main/packages/event-bus/README.md) — Redis Streams event bus between worker and scheduler
+- [`packages/sharding`](https://github.com/lumi-devs/Lumi/blob/main/packages/sharding/README.md) — shard planner, shard telemetry
+- [`packages/observability`](https://github.com/lumi-devs/Lumi/blob/main/packages/observability/README.md) — Prometheus & OpenTelemetry instrumentation
+- [`packages/contracts`](https://github.com/lumi-devs/Lumi/blob/main/packages/contracts/README.md) — RPC schemas & shared type definitions
+
+## Quick links
+
+- [GitHub Repository](https://github.com/lumi-devs/Lumi)
+- [Issue Tracker](https://github.com/lumi-devs/Lumi/issues)
+- [Discussions](https://github.com/lumi-devs/Lumi/discussions)
+- [Wiki](https://github.com/lumi-devs/Lumi/wiki) — mirrors the repo's `docs/` folder automatically on every push to `main`
+- [Security Advisories](https://github.com/lumi-devs/Lumi/security/advisories)

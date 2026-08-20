@@ -3,6 +3,8 @@ title: "Self-Hosting Guide"
 description: "Running your own instance: prerequisites, Docker Compose services, first-run steps, updates, backups."
 ---
 
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
 Running your own Lumi instance for a personal server or small community. This covers the single-replica path only - no sharding, no clustering, no HA. If you're outgrowing that (multiple guilds past a few thousand members, need for zero-downtime deploys, multiple worker replicas), see [Production Deployment](/Lumi/guides/production-deployment/) once you're done here.
 
 ## Prerequisites
@@ -52,6 +54,9 @@ Everything else in `.env.example` has a working default for local use. See [Conf
 
 ## 3. Start the backing services
 
+<Tabs>
+<TabItem label="Docker (recommended)" icon="server">
+
 ```bash
 docker compose up -d postgres pgbouncer redis
 ```
@@ -69,6 +74,36 @@ Wait for them to report healthy:
 ```bash
 docker compose ps
 ```
+
+</TabItem>
+<TabItem label="Nix" icon="setting">
+
+```bash
+nix develop
+```
+
+Provisions native Postgres and Redis binaries and drops you into a shell with
+both running - no Docker daemon required. Point `POSTGRES_URL` /
+`DIRECT_POSTGRES_URL` and the Redis variables in `.env` at the addresses it
+prints.
+
+</TabItem>
+<TabItem label="Manual" icon="pencil">
+
+Install Postgres 17 and Redis 7 yourself (native packages, a VM, whatever you
+already run), then point `.env` at them:
+
+```bash
+POSTGRES_URL=postgresql://<user>:<password>@<host>:<port>/<db>
+DIRECT_POSTGRES_URL=postgresql://<user>:<password>@<host>:<port>/<db>
+REDIS_URL=redis://<user>:<password>@<host>:<port>
+```
+
+Lumi itself is just a Bun process reading connection strings - nothing in the
+code requires Docker or Nix.
+
+</TabItem>
+</Tabs>
 
 ## 4. Provision the database
 
