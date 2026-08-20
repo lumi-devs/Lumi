@@ -92,10 +92,8 @@ async function refreshAuthorization(token: JWT): Promise<void> {
  */
 function clearAuthorization(token: JWT, snapshot: AuthzSnapshot): void {
   token.guilds = [];
-  token.isBotOwner = false;
   token.accessToken = "";
   snapshot.guilds = [];
-  snapshot.isBotOwner = false;
   // Re-check on the very next request instead of trusting this snapshot for
   // another TTL window.
   snapshot.at = 0;
