@@ -18,7 +18,7 @@ import {
 import { container } from "@sapphire/framework";
 import { Emojis } from "#utilities/assets.js";
 
-export { formatBreadcrumbHeader, formatStatusBadge, formatSubtitle, breadcrumbs } from "./ui/layout.js";
+export { formatBreadcrumbHeader, formatStatusBadge, formatSubtitle, formatBreadcrumbs } from "./ui/layout.js";
 export {
   settingRow,
   thumbRow,

@@ -7,7 +7,7 @@ Copy `.env.example` to `.env` and fill in the mandatory section before running a
 
 ### One file, all services
 
-The repo-root `.env` is the single source of truth. `apps/worker/.env`, `apps/scheduler/.env` and `apps/dashboard/.env` are symlinks to it — each app is started with its own directory as cwd and Bun auto-loads whatever `.env` it finds there, so the links are what stop three separately-maintained copies from drifting apart. `scripts/setup.sh` creates them; `.env` is gitignored at every level, so they can't be committed and a fresh checkout needs that run (or `ln -s ../../.env apps/<app>/.env` by hand).
+The repo-root `.env` is the single source of truth. `apps/worker/.env` and `apps/dashboard/.env` are symlinks to it — each app is started with its own directory as cwd and Bun auto-loads whatever `.env` it finds there, so the links are what stop separately-maintained copies from drifting apart. `scripts/setup.sh` creates them; `.env` is gitignored at every level, so they can't be committed and a fresh checkout needs that run (or `ln -s ../../.env apps/<app>/.env` by hand).
 
 The consequence is that a value in the root `.env` applies to *every* service. Anything that must differ per service is therefore left unset there and defaulted in code — `LUMI_ROLE` (each entrypoint declares its own role) and `RPC_HTTP_PORT` (worker `8091`, scheduler `8092`) — or has a per-service key, as with `<SERVICE>_METRICS_PORT`.
 
@@ -109,7 +109,7 @@ Full reference for the app itself: [Dashboard Reference](/Lumi/dashboard/).
 | `lumi-dev` (profile `development`) | Dev container with the repo (and a sibling `../lumi-addons`) bind-mounted, pretty/debug logging, interactive TTY. |
 | `worker-scale` (profile `scale`) | A second worker replica for local cluster testing. |
 | `scheduler` (profile `scale`) | `LUMI_ROLE=scheduler`. |
-| `dashboard` (profile `dashboard`) | Web dashboard on `${DASHBOARD_PORT:-8080}`. **Not usable yet** - the shared `Dockerfile` has no `next build` stage, so `next start` exits with *"Could not find a production build in the '.next' directory"*. Run the dashboard outside Docker; see [Dashboard Reference § Running it](dashboard.md#running-it). |
+| `dashboard` (profile `dashboard`) | Web dashboard on `${DASHBOARD_PORT:-8080}`. **Not usable yet** - the shared `Dockerfile` has no `next build` stage, so `next start` exits with *"Could not find a production build in the '.next' directory"*. Run the dashboard outside Docker; see [Dashboard Reference § Running it](/Lumi/dashboard/#running-it). |
 | `postgres` | `postgres:17`, primary database. |
 | `pgbouncer` | Connection pooler in front of Postgres, transaction pool mode, port 6432. Point `POSTGRES_URL` at this, not directly at `postgres`. |
 | `redis` | `redis:7-alpine`, AOF persistence, `maxmemory 128mb` / `noeviction`. |

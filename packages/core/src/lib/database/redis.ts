@@ -20,7 +20,7 @@ export const RedisKeys = {
     `lumi:perms:${commandPath}:${guildId}`,
   targetPermits: (
     guildId: string,
-    targetType: "user" | "role",
+    targetType: "user" | "role" | "channel",
     targetId: string,
   ) => `lumi:permits:${guildId}:${targetType}:${targetId}`,
   guildPermitsPattern: (guildId: string) => `lumi:permits:${guildId}:*`,
@@ -28,8 +28,8 @@ export const RedisKeys = {
     `lumi:mod:${guildId}:quarantine:${userId}`,
   securityWindow: (guildId: string, executorId: string, kind: string) =>
     `lumi:security:${guildId}:window:${kind}:${executorId}`,
-  securityTripped: (guildId: string, executorId: string) =>
-    `lumi:security:${guildId}:tripped:${executorId}`,
+  securityTripped: (guildId: string, executorId: string, kind: string) =>
+    `lumi:security:${guildId}:tripped:${kind}:${executorId}`,
   joinBurst: (guildId: string) => `lumi:security:${guildId}:joins`,
   raidMode: (guildId: string) => `lumi:security:${guildId}:raid`,
   recentJoiners: (guildId: string) => `lumi:security:${guildId}:recent-joiners`,

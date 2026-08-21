@@ -1,11 +1,58 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseSubcommand, CommandContext } from "#lib/commands.js";
+import { ApplicationCommandRegistry, Result } from "@sapphire/framework";
+import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
 import { VoiceMuteAction } from "../actions/VoiceMuteAction.js";
 import { parseDuration } from "#lib/utilities/time.js";
-import { resolveVoiceMember } from "../lib/helpers.js";
+import type { ModerationCase } from "@prisma/client";
+import type { GuildMember } from "discord.js";
 
-@ApplyOptions<BaseSubcommand.Options>({
+const DEFAULT_DURATION_MS = 24 * 3600 * 1000;
+
+type TimedFlow = ModerationSubcommand.Flow<GuildMember, ModerationCase, number>;
+type Flow = ModerationSubcommand.Flow<GuildMember, ModerationCase>;
+
+const VcMuteAdd: TimedFlow = {
+  logScope: "vcmute add",
+  resolveTarget: (ctx) => ctx.getMember("target"),
+  preHandle: async (ctx) => {
+    const durationStr = await ctx.getString("duration");
+    const durationMs = durationStr
+      ? parseDuration(durationStr)
+      : DEFAULT_DURATION_MS;
+    if (!durationMs) {
+      return Result.err({
+        title: "Invalid Duration",
+        body: "Provide a valid duration e.g. `1h`, `30m`, `1d`.",
+      });
+    }
+    return Result.ok(durationMs);
+  },
+  action: ({ guild, target, moderator, reason, prepared }) =>
+    VoiceMuteAction.apply({
+      guild,
+      targetMember: target,
+      moderator,
+      reason,
+      durationMs: prepared,
+    }),
+  buildSuccessMessage: (_t, { target, reason, outcome }) => ({
+    title: "Voice Muted Member",
+    body: `Successfully voice muted **${target.user.tag}**.\n\n**Case:** #${outcome.caseNumber}\n**Reason:** ${reason}`,
+  }),
+};
+
+const VcMuteRemove: Flow = {
+  logScope: "vcmute remove",
+  resolveTarget: (ctx) => ctx.getMember("target"),
+  action: ({ guild, target, moderator, reason }) =>
+    VoiceMuteAction.undo({ guild, targetMember: target, moderator, reason }),
+  buildSuccessMessage: (_t, { target, outcome }) => ({
+    title: "Voice Unmuted Member",
+    body: `Successfully unmuted **${target.user.tag}** in voice.\n\n**Case:** #${outcome.caseNumber}`,
+  }),
+};
+
+@ApplyOptions<ModerationSubcommand.Options>({
   name: "vcmute",
   aliases: ["voicemute", "vmute"],
   description: "Voice mute a member in server voice channels",
@@ -17,7 +64,7 @@ import { resolveVoiceMember } from "../lib/helpers.js";
     { name: "remove", run: "remove" },
   ],
 })
-export class VcMuteCommand extends BaseSubcommand {
+export class VcMuteCommand extends ModerationSubcommand {
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {
@@ -63,56 +110,11 @@ export class VcMuteCommand extends BaseSubcommand {
     );
   }
 
-  public async add(ctx: CommandContext): Promise<void> {
-    const guild = ctx.guild!;
-    const durationStr = await ctx.getString("duration");
-    const reason = (await ctx.getString("reason")) ?? "No reason provided.";
-
-    const member = await resolveVoiceMember(ctx, guild);
-    if (!member) return;
-
-    const durationMs = durationStr
-      ? parseDuration(durationStr)
-      : 24 * 3600 * 1000;
-    if (!durationMs) {
-      return ctx.replyError(
-        "Invalid Duration",
-        "Provide a valid duration e.g. `1h`, `30m`, `1d`.",
-      );
-    }
-
-    const c = await VoiceMuteAction.apply({
-      guild,
-      targetMember: member,
-      moderator: ctx.user,
-      reason,
-      durationMs,
-    });
-
-    await ctx.replySuccess(
-      "Voice Muted Member",
-      `Successfully voice muted **${member.user.tag}**.\n\n**Case:** #${c.caseNumber}\n**Reason:** ${reason}`,
-    );
+  public add(ctx: ModerationSubcommand.RunContext) {
+    return this.runFlow(ctx, VcMuteAdd);
   }
 
-  public async remove(ctx: CommandContext): Promise<void> {
-    const guild = ctx.guild!;
-    const reason =
-      (await ctx.getString("reason")) ?? "Voice unmute by moderator";
-
-    const member = await resolveVoiceMember(ctx, guild);
-    if (!member) return;
-
-    const c = await VoiceMuteAction.undo({
-      guild,
-      targetMember: member,
-      moderator: ctx.user,
-      reason,
-    });
-
-    await ctx.replySuccess(
-      "Voice Unmuted Member",
-      `Successfully unmuted **${member.user.tag}** in voice.\n\n**Case:** #${c.caseNumber}`,
-    );
+  public remove(ctx: ModerationSubcommand.RunContext) {
+    return this.runFlow(ctx, VcMuteRemove);
   }
 }

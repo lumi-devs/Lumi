@@ -18,7 +18,7 @@ If neither applies yet, stay on the single-replica path from [Self-Hosting](/Lum
 
 ## Clustering & sharding
 
-Scaling past one replica is static: each replica is told which shard IDs it owns via `SHARD_LIST`, there is no runtime coordination between replicas, and `CLUSTER_NAME` only namespaces the shard telemetry each replica publishes for the dashboard's fleet view (see [Architecture § Sharding & clustering](architecture.md#sharding--clustering)). Practical knobs:
+Scaling past one replica is static: each replica is told which shard IDs it owns via `SHARD_LIST`, there is no runtime coordination between replicas, and `CLUSTER_NAME` only namespaces the shard telemetry each replica publishes for the dashboard's fleet view (see [Architecture § Sharding & clustering](/Lumi/architecture/#sharding--clustering)). Practical knobs:
 
 | Decision | Guidance |
 | :--- | :--- |
@@ -48,7 +48,7 @@ Rotate `BOT_TOKEN` via the Developer Portal's **Reset Token**, `DASHBOARD_SESSIO
 [`packages/observability`](https://github.com/lumi-devs/Lumi/blob/main/packages/observability/README.md) wires up the full stack identically across every app - nothing extra to instrument per-module. In production:
 
 - **Set `OTEL_ENABLED=true`** and point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector. Lower `OTEL_TRACES_SAMPLE_RATIO` (e.g. `0.1`) once trace volume matters - `1` (100%) is fine for a single low-traffic instance, not for a sharded fleet.
-- **Scrape `/metrics`** (`METRICS_PORT`, default `9090`) on every pod - the k8s manifests already annotate for Prometheus Operator discovery. Dashboard-worthy signals from [Architecture § Observability](architecture.md#observability): command RED metrics, event-bus lag (`lumi_stream_consumer_lag`) and DLQ depth (`lumi_stream_dlq_length`), gateway shard latency/status, Discord REST 429 rate, Postgres pool utilization, event-loop delay p99/max.
+- **Scrape `/metrics`** (`METRICS_PORT`, default `9090`) on every pod - the k8s manifests already annotate for Prometheus Operator discovery. Dashboard-worthy signals from [Architecture § Observability](/Lumi/architecture/#observability): command RED metrics, event-bus lag (`lumi_stream_consumer_lag`) and DLQ depth (`lumi_stream_dlq_length`), gateway shard latency/status, Discord REST 429 rate, Postgres pool utilization, event-loop delay p99/max.
 - **Alert on `lumi_event_loop_delay_seconds` (max quantile), not just p50/p99** - a single multi-second stall drops Discord gateway heartbeats regardless of what the median looks like. This is the single most important gateway-health signal to page on.
 - **Wire `/healthz` and `/readyz`** into your orchestrator's liveness/readiness probes (already done in the k8s manifests). `/readyz` runs every registered probe (Postgres, Redis, plus gateway readiness on `worker` and BullMQ reachability on whichever replica holds the scheduler leader lock) with a 2s timeout each - a replica that can't reach a dependency gets pulled from rotation automatically.
 - The bundled `docker compose --profile observability` stack (otel-collector, Tempo, Prometheus, Grafana) is a reasonable starting point for self-managed monitoring, but isn't itself HA - point at a managed/clustered equivalent (Grafana Cloud, a real Prometheus HA pair, etc.) once uptime of the monitoring stack itself matters.
@@ -74,7 +74,7 @@ The Compose services define baseline limits (`worker`: 512MB/1 CPU, `postgres`: 
 - [ ] Alerting wired to `/readyz` failures and `lumi_event_loop_delay_seconds` (max).
 - [ ] `CLUSTER_NAME` set and `nirn-proxy` deployed *before* scaling `worker` past 1 replica.
 - [ ] `GRAFANA_PASSWORD` changed from the default if the observability stack is exposed at all.
-- [ ] Postgres backups automated (see [Self-Hosting § Backups](GUIDE_SELF_HOSTING.md#backups)) and periodically restore-tested.
+- [ ] Postgres backups automated (see [Self-Hosting § Backups](/Lumi/guides/self-hosting/#backups)) and periodically restore-tested.
 - [ ] Dashboard served over HTTPS, with `AUTH_URL` set to its externally visible origin if a proxy rewrites the Host header - that's what makes NextAuth issue `__Secure-` cookies. There is no secure-cookie env var.
 - [ ] A runbook for `BOT_TOKEN` rotation that doesn't require a full redeploy (just the `Secret` + a rollout restart).
 

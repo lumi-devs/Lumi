@@ -74,7 +74,7 @@ fi
 # these links can't be committed - they have to be (re)made here.
 link_app_envs() {
   local app
-  for app in worker scheduler dashboard; do
+  for app in worker dashboard; do
     local link="${ROOT_DIR}/apps/${app}/.env"
     [[ -d "${ROOT_DIR}/apps/${app}" ]] || continue
     if [[ -L "$link" && "$(readlink "$link")" == "../../.env" ]]; then
@@ -273,7 +273,7 @@ header "Next steps"
 cat <<EOF
   1. bun install
   2. bun run db:migrate   ${DIM}# applies prisma/schema.prisma to Postgres${RESET}
-  3. bun run dev          ${DIM}# starts worker (+ scheduler/dashboard via turbo)${RESET}
+  3. bun run dev          ${DIM}# starts worker (+ dashboard via turbo)${RESET}
 
 See docs/GUIDE_SELF_HOSTING.md for the full walkthrough, or docs/configuration.md
 for every environment variable this project understands.

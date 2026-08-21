@@ -14,8 +14,6 @@
   },
   "dependencies": {
     "@lumi/core": "workspace:*",
-    "@lumi/observability": "workspace:*",
-    "@sapphire/framework": "^5.5.0",
-    "@sapphire/plugin-logger": "^4.1.0"
+    "@lumi/observability": "workspace:*"
   }
 }

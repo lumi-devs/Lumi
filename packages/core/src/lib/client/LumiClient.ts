@@ -14,7 +14,7 @@ import { registerCoreFireHandlers } from "#lib/core-fire-handlers.js";
 import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
 import { initCoreRpcHandlers } from "#lib/rpc/core-rpc.js";
 import { startRpcHttpServer } from "#lib/rpc/http-server.js";
-import { SchedulerLeaderLock } from "#lib/scheduler-leader-lock.js";
+import { LeaderLock } from "#lib/leader-lock.js";
 import { TaskFireConsumer } from "#lib/task-fire-registry.js";
 import type { OwnedEventBus } from "@lumi/event-bus";
 import { failedJobsTotal } from "@lumi/observability";
@@ -55,7 +55,7 @@ export class LumiClient extends SapphireClient {
   private _ownedEventBus: OwnedEventBus | null = null;
   private _detachEntityPopulator: (() => void) | null = null;
   private _taskFireConsumer: TaskFireConsumer | null = null;
-  private _schedulerLeaderLock: SchedulerLeaderLock | null = null;
+  private _schedulerLeaderLock: LeaderLock | null = null;
 
   public constructor(options: LumiClient.Options = {}) {
     const role = options.role ?? getServiceRole();
@@ -82,8 +82,9 @@ export class LumiClient extends SapphireClient {
       this.role === "scheduler" &&
       envParseString("SCHEDULER_LEADER_LOCK", "false") === "true"
     ) {
-      this._schedulerLeaderLock = new SchedulerLeaderLock({
+      this._schedulerLeaderLock = new LeaderLock({
         redis: createRedisClient(),
+        key: RedisKeys.schedulerLeader(),
         replicaId: getConsumerId(),
         ttlMs: envParseInteger("SCHEDULER_LEADER_LOCK_TTL_MS", 30_000),
         renewIntervalMs: envParseInteger(
@@ -91,6 +92,8 @@ export class LumiClient extends SapphireClient {
           10_000,
         ),
         pollIntervalMs: envParseInteger("SCHEDULER_LEADER_LOCK_POLL_MS", 2_000),
+        keepAlive: true,
+        logPrefix: "[SchedulerLock]",
         log: (level: string, msg: string, meta?: any) =>
           container.logger[
             level as "info" | "warn" | "error" | "fatal" | "debug" | "trace"

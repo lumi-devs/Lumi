@@ -13,6 +13,29 @@
   --sl-color-bg-sidebar: #0e1219;
 }
 
+.hero {
+  position: relative;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -4rem -1rem auto -1rem;
+  height: 26rem;
+  background: radial-gradient(closest-side, var(--sl-color-accent-low), transparent 70%);
+  opacity: 0.5;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.hero .tagline {
+  max-width: 42rem;
+}
+
+.card {
+  border-radius: 0.5rem;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .sl-markdown-content > *,
   .content-panel {
@@ -34,6 +57,7 @@
 
   .card:hover {
     transform: translateY(-2px);
+    border-color: var(--sl-color-accent);
   }
 }
 

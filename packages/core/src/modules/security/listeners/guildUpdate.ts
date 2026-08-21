@@ -27,7 +27,12 @@ export class SecurityGuildUpdateListener extends ModuleListener<
     const config = await security.loadAntiNukeConfig(newGuild.id);
     if (!config.enabled) return;
 
-    const executorId = await resolveAuditLogExecutor(newGuild, AuditLogEvent.GuildUpdate);
+    const executorId = await resolveAuditLogExecutor(
+      newGuild,
+      AuditLogEvent.GuildUpdate,
+      undefined,
+      "vanity_url_code",
+    );
     if (isNullish(executorId)) return;
     if (await security.isExempt(newGuild, executorId, config)) return;
 

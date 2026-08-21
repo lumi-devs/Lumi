@@ -1,9 +1,15 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { type ApplicationCommandRegistry } from "@sapphire/framework";
+import { type ApplicationCommandRegistry, Result } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import { logError } from "#lib/utilities/errors.js";
+import {
+  ModerationCommand,
+  type ModerationCommand as MC,
+} from "#lib/moderation/ModerationCommand.js";
+import { LanguageKeys } from "#lib/i18n/keys.js";
+import type { LumiT } from "#lib/i18n/index.js";
+import type { GuildMember } from "discord.js";
 
+const Root = LanguageKeys.Commands;
 const DEHOIST_REGEX = /^[\x21-\x40\x5B-\x60\x7B-\x7E\s]+/u;
 
 function sanitizeName(name: string): string {
@@ -11,14 +17,24 @@ function sanitizeName(name: string): string {
   return dehoisted.length >= 2 ? dehoisted : "Sanitized User";
 }
 
-@ApplyOptions<BaseCommand.Options>({
+interface SanitizeOutcome {
+  before: string;
+  after: string;
+}
+
+@ApplyOptions<MC.Options>({
   name: "sanitize",
   description: "Remove hoisting characters from a member's nickname",
   preconditions: ["GuildOnly"],
   requiredPermit: "mod.*",
   prefixEnabled: true,
+  logScope: "sanitize",
 })
-export class SanitizeCommand extends BaseCommand {
+export class SanitizeCommand extends ModerationCommand<
+  GuildMember,
+  SanitizeOutcome,
+  string
+> {
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {
@@ -29,47 +45,46 @@ export class SanitizeCommand extends BaseCommand {
     );
   }
 
-  public override async run(ctx: CommandContext) {
-    await ctx.defer();
-    const t = await ctx.fetchT();
-    const member = await ctx.getMember("member");
-    if (!member) {
-      return ctx.replyError(
-        t("commands:modMemberNotFoundTitle"),
-        t("commands:modMemberNotFound"),
-      );
-    }
+  protected override resolveTarget(ctx: MC.RunContext) {
+    return ctx.getMember("member");
+  }
 
-    const current = member.nickname ?? member.user.username;
+  protected override resolveReason(): Promise<string> {
+    return Promise.resolve("Sanitize: removed hoisting characters");
+  }
+
+  protected override preHandle(_ctx: MC.RunContext, t: LumiT, target: GuildMember) {
+    const current = target.nickname ?? target.user.username;
     const sanitized = sanitizeName(current);
-
     if (sanitized === current) {
-      return ctx.replyError(
-        t("commands:sanitizeNothingTitle"),
-        t("commands:sanitizeNothing", { user: member.user.username }),
-      );
+      return Result.err({
+        title: t(Root.SanitizeNothingTitle),
+        body: t(Root.SanitizeNothing, { user: target.user.username }),
+      });
     }
+    return Result.ok(sanitized);
+  }
 
-    try {
-      await member.setNickname(
-        sanitized,
-        "Sanitize: removed hoisting characters",
-      );
-    } catch (err: unknown) {
-      logError(`sanitize: guild=${member.guild.id} target=${member.id}`, err);
-      return ctx.replyError(
-        t("commands:modActionFailedTitle"),
-        t("commands:modActionFailed"),
-      );
-    }
+  protected override async action({
+    target,
+    prepared,
+  }: MC.ActionContext<GuildMember, string>): Promise<SanitizeOutcome> {
+    const before = target.nickname ?? target.user.username;
+    await target.setNickname(prepared, "Sanitize: removed hoisting characters");
+    return { before, after: prepared };
+  }
 
-    return ctx.replySuccess(
-      t("commands:sanitizeSuccessTitle"),
-      t("commands:sanitizeSuccess", {
-        user: member.user.username,
-        before: current,
-        after: sanitized,
+  protected override buildSuccessMessage(
+    t: LumiT,
+    { target, outcome }: MC.OutcomeContext<GuildMember, SanitizeOutcome, string>,
+  ) {
+    return {
+      title: t(Root.SanitizeSuccessTitle),
+      body: t(Root.SanitizeSuccess, {
+        user: target.user.username,
+        before: outcome.before,
+        after: outcome.after,
       }),
-    );
+    };
   }
 }

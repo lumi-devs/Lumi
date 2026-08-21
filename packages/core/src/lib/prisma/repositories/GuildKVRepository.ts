@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
+import { acquireRedisLock } from "#core/lib/redis-lock.js";
 
 /**
  * Generic per-module key/value storage (`ModuleData`), keyed by
@@ -120,6 +121,39 @@ export class GuildKVRepository extends Repository {
       })),
       total,
     };
+  }
+
+  /**
+   * Atomic read-modify-write for one KV row, guarded by a Redis lock scoped
+   * to (guildId, module, targetId, key) - for addon code that would
+   * otherwise do `getModuleData` then `setModuleData` by hand and race a
+   * concurrent writer (e.g. appending to a list). Mirrors Redbot's `async
+   * with config...() as l:` context-manager pattern. `mutator` returning
+   * `undefined` deletes the row instead of writing it.
+   */
+  public async mutateModuleData<T = unknown>(
+    guildId: string,
+    module: string,
+    targetId: string,
+    key: string,
+    mutator: (current: T | null) => T | undefined | Promise<T | undefined>,
+  ): Promise<T | undefined> {
+    const release = await acquireRedisLock(
+      this.redis,
+      `lock:kv-mutate:${module}:${guildId}:${targetId}:${key}`,
+    );
+    try {
+      const current = await this.getModuleData<T>(guildId, module, targetId, key);
+      const next = await mutator(current);
+      if (next === undefined) {
+        await this.deleteModuleData(guildId, module, targetId, key);
+      } else {
+        await this.setModuleData(guildId, module, targetId, key, next);
+      }
+      return next;
+    } finally {
+      await release();
+    }
   }
 
   /** Deletes one KV row; returns the number of rows removed (0 or 1). */

@@ -31,6 +31,7 @@ export class SecurityMemberJoinListener extends ModuleListener<
     if (!config.enabled) return;
 
     const filterResult = security.evaluateJoinFilters(member, config);
+    let gated = false;
     if (filterResult) {
       await security.applyGateAction(
         member.guild,
@@ -38,9 +39,12 @@ export class SecurityMemberJoinListener extends ModuleListener<
         filterResult.action,
         `Join gate: ${filterResult.triggered.join(", ")}`,
       );
-      if (filterResult.action !== "log") return;
+      gated = filterResult.action !== "log";
     }
 
+    // Every join counts toward the raid-burst window, even one the join gate
+    // just kicked/banned - otherwise a raid whose joiners all trip the gate
+    // never reaches the burst threshold that would activate raid mode.
     const raidStarted = await security.recordJoin(member.guild.id, config);
     if (raidStarted) {
       this.container.logger.warn(
@@ -59,6 +63,8 @@ export class SecurityMemberJoinListener extends ModuleListener<
         extra: warnMentions ? { "Notify": warnMentions } : undefined,
       });
     }
+
+    if (gated) return;
 
     if (await security.isRaidActive(member.guild.id)) {
       // Compare against joiners recorded *before* this one - checked first, tracked after.

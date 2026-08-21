@@ -77,11 +77,10 @@ export class AuditRepository extends Repository {
     const messages = results?.[0]?.[1] ?? [];
     if (!messages.length) return 0;
 
-    const payloads: AuditLogPayload[] = [];
-    const ids: string[] = [];
+    const entries: { id: string; payload: AuditLogPayload }[] = [];
+    const droppedIds: string[] = [];
 
     for (const [id, fields] of messages) {
-      ids.push(id);
       try {
         const idx = fields.indexOf("payload");
         const raw = idx === -1 ? undefined : fields[idx + 1];
@@ -89,9 +88,14 @@ export class AuditRepository extends Repository {
           this.logger.warn(
             `[AuditRepository] Entry ${id} is missing the "payload" field - skipping.`,
           );
+          droppedIds.push(id);
         } else {
           const parsed = tryParseJSON(raw);
-          if (parsed) payloads.push(parsed as AuditLogPayload);
+          if (parsed) {
+            entries.push({ id, payload: parsed as AuditLogPayload });
+          } else {
+            droppedIds.push(id);
+          }
         }
       } catch (err: unknown) {
         this.logger.error(
@@ -99,13 +103,17 @@ export class AuditRepository extends Repository {
           id,
           err,
         );
+        droppedIds.push(id);
       }
     }
 
-    if (payloads.length) {
+    const persistedIds: string[] = [...droppedIds];
+    let persistedEntryCount = 0;
+
+    if (entries.length) {
       try {
         await this.prisma.auditLedger.createMany({
-          data: payloads.map((p) => ({
+          data: entries.map(({ payload: p }) => ({
             guildId: p.guildId,
             userId: p.userId,
             action: p.action,
@@ -113,16 +121,42 @@ export class AuditRepository extends Repository {
             details: p.details as Prisma.InputJsonValue,
           })),
         });
+        persistedIds.push(...entries.map((e) => e.id));
+        persistedEntryCount = entries.length;
       } catch (err) {
-        this.logger.error("[AuditRepository] Postgres flush failed:", err);
-        throw err;
+        this.logger.error(
+          "[AuditRepository] Postgres batch flush failed, falling back to per-row insert:",
+          err,
+        );
+        for (const { id, payload: p } of entries) {
+          try {
+            await this.prisma.auditLedger.create({
+              data: {
+                guildId: p.guildId,
+                userId: p.userId,
+                action: p.action,
+                platform: p.platform,
+                details: p.details as Prisma.InputJsonValue,
+              },
+            });
+            persistedIds.push(id);
+            persistedEntryCount++;
+          } catch (rowErr) {
+            this.logger.error(
+              `[AuditRepository] Dropping unpersistable audit log entry ${id}:`,
+              rowErr,
+            );
+          }
+        }
       }
     }
 
-    await this.redis.xack(key, "audit_workers", ...ids);
-    await this.redis.xdel(key, ...ids);
+    if (persistedIds.length) {
+      await this.redis.xack(key, "audit_workers", ...persistedIds);
+      await this.redis.xdel(key, ...persistedIds);
+    }
 
-    return payloads.length;
+    return persistedEntryCount;
   }
 
   // Omitting `guildId` reads across every guild — bot-owner scoped callers only.

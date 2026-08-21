@@ -3,17 +3,17 @@ import { Repository } from "#lib/prisma/repositories/Repository.js";
 import { tryParseJSON } from "@sapphire/utilities";
 
 export type PermitKind = "enforced" | "custom";
-export type PermitTargetType = "user" | "role";
+export type PermitTargetType = "user" | "role" | "channel";
+export type PermitPolarity = "grant" | "deny";
 
-export interface TargetPermitPayload {
-  custom: string[];
-  enforced: string[];
+export interface PolarityBucket {
+  grant: string[];
+  deny: string[];
 }
 
-export interface UserPermitSet {
-  customPermits: Set<string>;
-  enforcedPermits: Set<string>;
-  isQuarantined: boolean;
+export interface TargetPermitPayload {
+  custom: PolarityBucket;
+  enforced: PolarityBucket;
 }
 
 export interface PermitRecord {
@@ -21,6 +21,7 @@ export interface PermitRecord {
   guildId: string;
   name: string;
   kind: string;
+  polarity: string;
   nodes: string[];
   builtin: boolean;
   createdAt: Date;
@@ -41,9 +42,15 @@ export interface PermitWithAssignments extends PermitRecord {
   assignments: PermitAssignmentRecord[];
 }
 
-export const KIND_TARGET_TYPE: Record<PermitKind, PermitTargetType> = {
-  enforced: "user",
-  custom: "role",
+/**
+ * Target types a permit kind may be assigned to. Enforced permits stay
+ * user-only (system-tier grants for specific trusted people); custom permits
+ * may target a user, role, or channel, feeding the precedence chain in
+ * PermitResolver (user > channel > role, highest-position role first).
+ */
+export const KIND_TARGET_TYPES: Record<PermitKind, ReadonlyArray<PermitTargetType>> = {
+  enforced: ["user"],
+  custom: ["user", "role", "channel"],
 };
 
 export const BUILTIN_PERMITS: ReadonlyArray<{
@@ -71,50 +78,44 @@ export class PermissionRepository extends Repository {
     });
   }
 
-  public async getUserPermits(
+  /**
+   * Fetches per-tier permit payloads for the full precedence chain in one
+   * batched round-trip, preserving `chainTargets`' order so PermitResolver
+   * can walk it (most specific first) without N sequential lookups on the
+   * hot command-execution path.
+   */
+  public async getPermitChain(
     guildId: string,
     userId: string,
-    roleIds: string[] = [],
-  ): Promise<UserPermitSet> {
-    const targets: Array<{ targetType: PermitTargetType; targetId: string }> = [
-      { targetType: "user", targetId: userId },
-      ...roleIds.map((targetId) => ({ targetType: "role" as const, targetId })),
-    ];
-
-    const keys = targets.map((t) =>
+    chainTargets: Array<{ targetType: PermitTargetType; targetId: string }>,
+  ): Promise<{ tiers: TargetPermitPayload[]; isQuarantined: boolean }> {
+    const keys = chainTargets.map((t) =>
       RedisKeys.targetPermits(guildId, t.targetType, t.targetId),
     );
 
-    const rawResults = await this.redis.mget(...keys);
+    const rawResults = keys.length > 0 ? await this.redis.mget(...keys) : [];
+    const tiers: TargetPermitPayload[] = new Array(chainTargets.length);
 
-    const customPermits = new Set<string>();
-    const enforcedPermits = new Set<string>();
+    const missingIndexes: number[] = [];
 
-    const missingTargets: Array<{
-      targetType: PermitTargetType;
-      targetId: string;
-      key: string;
-    }> = [];
-
-    for (let i = 0; i < targets.length; i++) {
-      const target = targets[i]!;
+    for (let i = 0; i < chainTargets.length; i++) {
       const raw = rawResults[i];
       if (raw) {
         const parsed = tryParseJSON(raw) as TargetPermitPayload | null;
         if (
           parsed &&
-          Array.isArray(parsed.custom) &&
-          Array.isArray(parsed.enforced)
+          isPolarityBucket(parsed.custom) &&
+          isPolarityBucket(parsed.enforced)
         ) {
-          for (const p of parsed.custom) customPermits.add(p);
-          for (const p of parsed.enforced) enforcedPermits.add(p);
+          tiers[i] = parsed;
           continue;
         }
       }
-      missingTargets.push({ ...target, key: keys[i]! });
+      missingIndexes.push(i);
     }
 
-    if (missingTargets.length > 0) {
+    if (missingIndexes.length > 0) {
+      const missingTargets = missingIndexes.map((i) => chainTargets[i]!);
       const assignments = await this.prisma.permitAssignment.findMany({
         where: {
           guildId,
@@ -137,15 +138,13 @@ export class PermissionRepository extends Repository {
 
       const pipeline = this.redis.pipeline();
 
-      for (const missing of missingTargets) {
-        const key = `${missing.targetType}:${missing.targetId}`;
+      for (const i of missingIndexes) {
+        const target = chainTargets[i]!;
+        const key = `${target.targetType}:${target.targetId}`;
         const forTarget = assignmentsByTarget.get(key) ?? [];
         const payload = collapseAssignments(forTarget);
-
-        for (const p of payload.custom) customPermits.add(p);
-        for (const p of payload.enforced) enforcedPermits.add(p);
-
-        pipeline.setex(missing.key, RedisTTL.permits, JSON.stringify(payload));
+        tiers[i] = payload;
+        pipeline.setex(keys[i]!, RedisTTL.permits, JSON.stringify(payload));
       }
 
       await pipeline.exec();
@@ -153,11 +152,7 @@ export class PermissionRepository extends Repository {
 
     const isQuarantined = await this.isUserQuarantined(guildId, userId);
 
-    return {
-      customPermits: isQuarantined ? new Set<string>() : customPermits,
-      enforcedPermits,
-      isQuarantined,
-    };
+    return { tiers, isQuarantined };
   }
 
   public async isUserQuarantined(
@@ -219,9 +214,10 @@ export class PermissionRepository extends Repository {
     name: string,
     kind: PermitKind,
     nodes: string[],
+    polarity: PermitPolarity = "grant",
   ): Promise<PermitRecord> {
     return this.prisma.permit.create({
-      data: { guildId, name, kind, nodes, builtin: false },
+      data: { guildId, name, kind, nodes, polarity, builtin: false },
     });
   }
 
@@ -288,13 +284,13 @@ export class PermissionRepository extends Repository {
   public async assignPermit(
     guildId: string,
     permitId: number,
+    targetType: PermitTargetType,
     targetId: string,
   ): Promise<PermitAssignmentRecord> {
     const permit = await this.prisma.permit.findFirst({
       where: { id: permitId, guildId },
     });
     if (!permit) throw new Error("Permit not found.");
-    const targetType = KIND_TARGET_TYPE[permit.kind as PermitKind];
 
     const assignment = await this.prisma.permitAssignment.upsert({
       where: {
@@ -317,13 +313,13 @@ export class PermissionRepository extends Repository {
   public async unassignPermit(
     guildId: string,
     permitId: number,
+    targetType: PermitTargetType,
     targetId: string,
   ): Promise<number> {
     const permit = await this.prisma.permit.findFirst({
       where: { id: permitId, guildId },
     });
     if (!permit) throw new Error("Permit not found.");
-    const targetType = KIND_TARGET_TYPE[permit.kind as PermitKind];
 
     const { count } = await this.prisma.permitAssignment.deleteMany({
       where: { permitId, guildId, targetType, targetId },
@@ -336,13 +332,26 @@ export class PermissionRepository extends Repository {
 }
 
 function collapseAssignments(
-  assignments: Array<{ permit: { kind: string; nodes: string[] } }>,
+  assignments: Array<{
+    permit: { kind: string; polarity: string; nodes: string[] };
+  }>,
 ): TargetPermitPayload {
-  const custom: string[] = [];
-  const enforced: string[] = [];
+  const custom: PolarityBucket = { grant: [], deny: [] };
+  const enforced: PolarityBucket = { grant: [], deny: [] };
   for (const { permit } of assignments) {
-    const bucket = permit.kind === "enforced" ? enforced : custom;
-    bucket.push(...permit.nodes);
+    const kindBucket = permit.kind === "enforced" ? enforced : custom;
+    const polarityBucket =
+      permit.polarity === "deny" ? kindBucket.deny : kindBucket.grant;
+    polarityBucket.push(...permit.nodes);
   }
   return { custom, enforced };
+}
+
+function isPolarityBucket(value: unknown): value is PolarityBucket {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    Array.isArray((value as PolarityBucket).grant) &&
+    Array.isArray((value as PolarityBucket).deny)
+  );
 }

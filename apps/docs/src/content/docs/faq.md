@@ -1,54 +1,53 @@
 ---
 title: "FAQ"
-description: "Common questions - modules vs. addons, dashboard requirements, GDPR, updating, translations."
+description: "The questions people actually ask about running Lumi."
 ---
 
 ## What is Lumi?
 
-A self-hosted, modular Discord bot built with Bun, TypeScript, discord.js v14, and the [Sapphire Framework](https://sapphirejs.dev). Every feature is a hot-swappable module - toggle, configure, and extend without restarting the bot or touching core code. See [Architecture](/Lumi/architecture/) for how the pieces fit together.
+A Discord bot you run yourself - on your own computer, your own server, or a cheap VPS. You get moderation, anti-raid protection, verification, logging, and more, and it's your data the whole time. See [what Lumi does](/Lumi/modules/) for the full list.
 
 ## What's the difference between a "module" and an "addon"?
 
-Same underlying mechanism (`Module` + `@DefineModule`, see [API Reference](/Lumi/api-reference/)), different distribution path:
+They work the same way under the hood - the difference is just where the code lives.
 
-- A **module** ships inside this repo, under `packages/core/src/modules/`, versioned and released with the rest of Lumi. See [Modules & Features](/Lumi/modules/) for the full built-in list.
-- An **addon** is a module distributed outside this repo (typically via [`lumi-addons`](https://github.com/lumi-devs/lumi-addons)) and installed at runtime through the built-in downloader (`,repo add`, `,download`) - no restart, no rebuild. See [Addon Publishing Guide](/Lumi/guides/addon-publishing/).
+- A **module** ships with Lumi itself, built in from the start.
+- An **addon** is a plugin someone else wrote, that you install separately (usually from [`lumi-addons`](https://github.com/lumi-devs/lumi-addons)) without needing to update the bot.
 
-If you're building something to ship *with* the bot, use the [Module Creation Guide](/Lumi/guides/module-creation/); if it's for outside distribution, start at [Quick Start: Your First Addon](/Lumi/guides/quick-start-addon/).
+Want to build one? Start with [Quick start](/Lumi/guides/quick-start-addon/) for an addon, or [Building a module](/Lumi/guides/module-creation/) if you're contributing to Lumi itself.
 
-## Do I need to run more than one `worker` replica?
+## Do I need the web dashboard?
 
-No, not until Discord's recommended shard count for your bot outgrows what one process can hold, or you specifically want zero-downtime deploys / redundancy against a single process crash. A single `worker` with `TOTAL_SHARDS=auto` and no `CLUSTER_NAME` handles every shard Discord assigns it in one process. See [Production Deployment § Do you actually need to scale past one replica?](GUIDE_PRODUCTION_DEPLOYMENT.md#do-you-actually-need-to-scale-past-one-replica).
+No. Everything works from Discord using slash commands and `/lumi panel`. The dashboard is a nice-to-have for people who prefer clicking around a web page over typing commands - it's entirely optional, and you can turn it off without losing anything else. See [Self-hosting § the web dashboard](/Lumi/guides/self-hosting/#6-optional-the-web-dashboard) if you want it.
 
-## Is the web dashboard required?
+## Is the verification challenge a real CAPTCHA?
 
-No. `apps/dashboard` is an optional Next.js app that talks to `worker` over an internal HTTP RPC bridge; disabling the `dashboard` module only disables the RPC surface it depends on, not the rest of the bot. Everything else runs fine with it never started. See [Self-Hosting § Optional: the web dashboard](GUIDE_SELF_HOSTING.md#6-optional-the-web-dashboard).
+No - it's a row of emoji buttons the new member has to click in the right order. It stops simple join-and-spam bots, but it won't stop someone determined to get past it manually. Good first line of defense, not a silver bullet.
 
-## Is the join-verification challenge a real CAPTCHA?
+## Is it safe to install addons?
 
-No - it's a click-sequence challenge (a row of emoji buttons clicked in a target order), which stops simple join-bots but not targeted abuse. See [Modules & Features § Join-gate & verification](modules.md#join-gate--verification).
+Only as safe as the person who wrote them. Addon code runs inside the bot with full access to everything it can see - your server data, your database, all of it. Lumi doesn't review or vet addons before you install them. You'll get a one-time warning before anything is cloned - only say yes to addons from people you trust. See [Publishing an addon](/Lumi/guides/addon-publishing/#how-installation-works) and the [security policy](https://github.com/lumi-devs/Lumi/blob/main/SECURITY.md).
 
-## Is addon code safe to install?
+## If I ask Lumi to delete my data, does it actually happen?
 
-Not inherently - addon code runs **inside the bot process** with full access to its database, cache, and Discord client, and Lumi does not review or vet third-party addon repositories. `,repo add` shows a one-time confirmation warning before cloning a repository for exactly this reason. Only add repositories you trust. See [Addon Publishing Guide § How installation works](GUIDE_ADDON_PUBLISHING.md#how-installation-works) and [Security Policy](https://github.com/lumi-devs/Lumi/blob/main/SECURITY.md).
+Mostly, yes. When a deletion request comes in, Lumi asks every loaded feature to remove anything it's stored about that user, then removes the shared records too. A couple of built-in features don't implement this yet, so it's not airtight everywhere - but it's not just a token gesture either. See [what Lumi does § data deletion](/Lumi/modules/#data-and-privacy) for the current state.
 
-## Does deleting a user's data actually work end-to-end?
+## How do I update?
 
-Partially, as of this writing. Four built-in modules (`afk`, `mod`, `logging`, `tempvc`) implement the `deleteUserData` lifecycle hook, but the GDPR RPC handler currently deletes only global `Blocklist`/`AuditLedger`/`User` rows and does **not** iterate loaded modules to call their hooks. If a deletion request depends on a specific module's hook running, verify the call path yourself first. See [Modules & Features § GDPR data deletion - known gap](modules.md#gdpr-data-deletion---known-gap).
+```bash
+git pull && bun install && bun run db:migrate
+```
 
-## How do I update my instance?
+Then restart the bot - `docker compose up -d --build worker` if you're on Docker, or just restart your process otherwise. Worth a quick look at the [changelog](https://github.com/lumi-devs/Lumi/blob/main/packages/core/CHANGELOG.md) or GitHub Releases first, in case anything needs manual attention. Details: [Self-hosting § updating](/Lumi/guides/self-hosting/#updating).
 
-`git pull && bun install && bun run db:migrate`, then restart `worker` (Docker: `docker compose up -d --build worker`; bare-metal: `/lumi update` inside Discord, or restart your process manager). Check `packages/core/CHANGELOG.md` or GitHub Releases for anything migration-adjacent first. See [Self-Hosting § Updating](GUIDE_SELF_HOSTING.md#updating).
+## Is my data safe if the Redis container dies?
 
-## Is my data safe if I lose the Redis container?
-
-Yes - Redis only holds cache, rate-limit, and queue state that's safe to lose (it repopulates). PostgreSQL is the sole system of record; back it up with `pg_dump`. See [Self-Hosting § Backups](GUIDE_SELF_HOSTING.md#backups).
+Yes. Redis only holds things that are fine to lose - caches, rate limits, queues - and it rebuilds them on its own. Postgres is where everything that actually matters lives, so that's the one worth backing up. See [Self-hosting § backups](/Lumi/guides/self-hosting/#backups).
 
 ## Can I help translate Lumi?
 
-Yes - localization is centralized in `packages/core/src/languages/en-US/` and managed through [Crowdin](https://crowdin.com/project/lumi-bot). See the root [README](https://github.com/lumi-devs/Lumi/blob/main/README.md#translations).
+Yes, please - translations happen through [Crowdin](https://crowdin.com/project/lumi-bot). See the [README](https://github.com/lumi-devs/Lumi/blob/main/README.md#translations) for how to jump in.
 
-## Something here doesn't match the code
+## Something on this page is wrong
 
-Open a discussion or issue on the [GitHub repo](https://github.com/lumi-devs/Lumi) - this page (and the rest of `docs/`) is written against the current source and synced verbatim to the [wiki](https://github.com/lumi-devs/Lumi/wiki) on every push to `main`, so a mismatch is a bug in the docs, not the code.
-
+That's a docs bug, not a you problem - [open an issue](https://github.com/lumi-devs/Lumi/issues) or start a [discussion](https://github.com/lumi-devs/Lumi/discussions) and we'll sort it out.

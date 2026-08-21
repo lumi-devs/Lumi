@@ -17,6 +17,21 @@ export function matchesUsernamePattern(username: string, patterns: string[]): bo
 }
 
 /**
+ * Ad/scam accounts commonly turn their display name itself into the pitch,
+ * since that's the one field visible pre-verification without a privileged
+ * intent (reading actual bio text needs `GuildPresences`, which Lumi doesn't
+ * require). Distinct from `matchesUsernamePattern`: this is a fixed
+ * link/invite structural check, not a user-configured substring list.
+ */
+const ADVERTISING_PATTERN =
+  /(discord\.gg\/|discordapp\.com\/invite\/|t\.me\/|https?:\/\/|www\.[a-z0-9-]+\.[a-z]{2,})/i;
+
+export function hasAdvertisingIndicators(user: User): boolean {
+  const displayName = user.globalName ?? user.username;
+  return ADVERTISING_PATTERN.test(displayName);
+}
+
+/**
  * Not implemented here yet - Phase 4's verification work may land a shared
  * `isSuspiciousAccount(user)` in `./suspicious.ts`; this file's join-gate
  * heuristics (no-avatar, min-age, username-similarity, creation clustering)

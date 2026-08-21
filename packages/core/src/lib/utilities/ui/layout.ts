@@ -51,7 +51,7 @@ export function formatSubtitle(text: string, icon?: string): string {
   return `-# ${formatted}`;
 }
 
-export function breadcrumbs(crumbs: string[], separator = " ❯ "): string {
+export function formatBreadcrumbs(crumbs: string[], separator = " ❯ "): string {
   return crumbs
     .map((crumb, idx) =>
       idx === crumbs.length - 1 ? `**${crumb}**` : crumb,
@@ -59,9 +59,7 @@ export function breadcrumbs(crumbs: string[], separator = " ❯ "): string {
     .join(separator);
 }
 
-export const formatBreadcrumbs = breadcrumbs;
-
 export function formatBreadcrumbHeader(crumbs: string[]): string {
   if (crumbs.length === 0) return "";
-  return breadcrumbs(crumbs);
+  return formatBreadcrumbs(crumbs);
 }

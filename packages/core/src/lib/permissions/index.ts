@@ -75,10 +75,12 @@ export async function hasRequiredPermit(
   if (!userId || !guildId) return false;
 
   const guild = (t.guild as { ownerId?: string }) ?? null;
+  const channelId = t.channelId as string | undefined;
   return permitResolver.hasPermit({
     guildId,
     userId,
     roleIds: memberRoleIds(t.member),
+    channelId,
     permitNode,
     guildOwnerId: guild?.ownerId ?? "",
   });

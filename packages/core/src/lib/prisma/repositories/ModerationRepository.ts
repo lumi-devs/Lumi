@@ -156,6 +156,15 @@ export class ModerationRepository extends Repository {
     });
   }
 
+  /** Lifts many cases in one round trip - for batch jobs like warn decay. */
+  public async liftModerationCases(ids: number[]): Promise<void> {
+    if (ids.length === 0) return;
+    await this.prisma.moderationCase.updateMany({
+      where: { id: { in: ids } },
+      data: { active: false },
+    });
+  }
+
   /** Edits the reason on a single case (by primary key). */
   public async updateCaseReason(id: number, reason: string): Promise<void> {
     await this.prisma.moderationCase.update({

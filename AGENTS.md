@@ -2,8 +2,8 @@
 
 Operating spec for any AI coding agent working in this repository. This is a
 map, not a manual — for anything not covered here, see [`docs/README.md`](docs/README.md)
-(the documentation index) or the [GitHub wiki](https://github.com/lumi-devs/Lumi/wiki),
-which mirrors `docs/` on every push to `main`.
+(the documentation index) or the [docs site](https://lumi-devs.github.io/Lumi/),
+which is built from `docs/` on every push to `main`.
 
 Lumi is a self-hosted, modular Discord bot: Bun + TypeScript, `@sapphire/framework` +
 discord.js v14, Prisma/PostgreSQL, Redis.
@@ -14,9 +14,11 @@ Bun workspace monorepo (`workspaces: ["packages/*", "apps/*"]`). See
 [`docs/architecture.md`](docs/architecture.md) for the full system topology — treat it as
 source of truth for anything below.
 
-- `apps/worker` — owns the Discord gateway connection(s); runs every command, module, and
-  interaction handler.
-- `apps/scheduler` — owns BullMQ delayed/cron job queues; never opens a gateway connection.
+- `apps/worker` — the one bot entrypoint, run in either of two roles selected by the
+  `LUMI_ROLE` env var: `worker` (owns the Discord gateway connection(s); runs every command,
+  module, and interaction handler) or `scheduler` (owns BullMQ delayed/cron job queues; never
+  opens a gateway connection). Deployed as two separate processes/replica groups from the same
+  image, not two separate app packages.
 - `apps/dashboard` — Next.js (App Router) web admin panel; talks to `worker` only over an
   internal HTTP RPC bridge, never touches Postgres/Redis directly.
 - `packages/core` — the framework itself: module loader, database service, command/permit
@@ -128,7 +130,7 @@ one-off commands as `nix develop --command <cmd>`.
   `tsconfig.json`) plus `turbo run typecheck --filter=@lumi/dashboard`, since the dashboard
   has its own `tsconfig`.
 - `bun run lint` — `turbo run lint:all`, which is `eslint packages/*/src apps/worker/src
-  apps/scheduler/src apps/dashboard/src --fix`. Note it **auto-fixes**. `apps/dashboard` also
+  apps/dashboard/src --fix`. Note it **auto-fixes**. `apps/dashboard` also
   has its own `lint` script, `eslint src` — plain ESLint, not `next lint`, which Next 16
   removed.
 - `bun run test` — `vitest run` at the root (globs `packages/**`, `node` environment) plus

@@ -86,19 +86,25 @@ export class ModuleRepository extends Repository {
     );
   }
 
+  /**
+   * Runs on essentially every guild command's precondition check, so the
+   * global+guild lookup goes through {@linkcode areModulesEnabled}'s single
+   * batched `mget` rather than two sequential Redis round trips.
+   */
   public async isModuleEnabled(
     guildId: string | null,
     moduleName: string,
   ): Promise<boolean> {
-    if (!(await this.isModuleGlobalEnabled(moduleName))) return false;
-
-    if (guildId) {
-      if (!(await this.isModuleGuildEnabled(guildId, moduleName))) return false;
-
-      return this.#configLevelEnabled(guildId, moduleName);
+    if (this.#isEssential(moduleName)) {
+      return guildId ? this.#configLevelEnabled(guildId, moduleName) : true;
     }
 
-    return true;
+    if (!guildId) {
+      return this.isModuleGlobalEnabled(moduleName);
+    }
+
+    const result = await this.areModulesEnabled(guildId, [moduleName]);
+    return result.get(moduleName)!;
   }
 
   /** Batched variant of isModuleEnabled checking multiple modules in one roundtrip. */
