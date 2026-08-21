@@ -123,6 +123,7 @@ model Permit {
   guildId   String   @map("guild_id") @db.VarChar(20)
   name      String   @db.VarChar(64)
   kind      String   @db.VarChar(16) // "enforced" | "custom"
+  polarity  String   @default("grant") @db.VarChar(8) // "grant" | "deny"
   nodes     String[] @map("nodes")
   builtin   Boolean  @default(false)
   createdAt DateTime @default(now())     @map("created_at")
@@ -136,9 +137,10 @@ model Permit {
   @@map("permits")
 }
 
-/// Assigns a Permit to a role or user. Enforced permits only ever have
-/// targetType="user" rows; custom permits only ever have targetType="role"
-/// rows — enforced at the service layer, not by a DB constraint.
+/// Assigns a Permit to a user, role, or channel. Enforced permits only ever
+/// have targetType="user" rows; custom permits may have targetType="user",
+/// "role", or "channel" rows — enforced at the service layer (see
+/// KIND_TARGET_TYPES in PermissionRepository.ts), not by a DB constraint.
 model PermitAssignment {
   id         Int      @id @default(autoincrement())
   permitId   Int      @map("permit_id")

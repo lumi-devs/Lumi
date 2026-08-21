@@ -1,7 +1,8 @@
 import {
-  KIND_TARGET_TYPE,
+  KIND_TARGET_TYPES,
   type PermitAssignmentRecord,
   type PermitKind,
+  type PermitPolarity,
   type PermitRecord,
   type PermitTargetType,
   type PermitWithAssignments,
@@ -38,6 +39,7 @@ export class PermissionService extends Service {
     name: string,
     kind: string,
     nodes: string[],
+    polarity: PermitPolarity = "grant",
   ): Promise<PermitRecord> {
     if (kind === "enforced") {
       throw new Error(
@@ -59,6 +61,7 @@ export class PermissionService extends Service {
       trimmedName,
       kind,
       this.normalizeNodes(nodes),
+      polarity,
     );
   }
 
@@ -120,6 +123,7 @@ export class PermissionService extends Service {
     return this.container.db.permissions.assignPermit(
       guildId,
       permitId,
+      targetType,
       targetId,
     );
   }
@@ -136,6 +140,7 @@ export class PermissionService extends Service {
     return this.container.db.permissions.unassignPermit(
       guildId,
       permitId,
+      targetType,
       targetId,
     );
   }
@@ -156,12 +161,12 @@ export class PermissionService extends Service {
     permit: PermitRecord,
     targetType: PermitTargetType,
   ): void {
-    const expected = KIND_TARGET_TYPE[permit.kind as PermitKind];
-    if (expected !== targetType) {
+    const allowed = KIND_TARGET_TYPES[permit.kind as PermitKind];
+    if (!allowed.includes(targetType)) {
       throw new Error(
         permit.kind === "enforced"
-          ? "Enforced permits can only be assigned to users, not roles."
-          : "Custom permits can only be assigned to roles, not users.",
+          ? "Enforced permits can only be assigned to users."
+          : "Custom permits can only be assigned to a user, role, or channel.",
       );
     }
   }
@@ -239,7 +244,7 @@ export class PermissionService extends Service {
         }
         for (const roleId of entry.roleIds) {
           if (!/^\d{17,20}$/.test(roleId)) continue;
-          await this.container.db.permissions.assignPermit(guildId, permit.id, roleId);
+          await this.container.db.permissions.assignPermit(guildId, permit.id, "role", roleId);
         }
       } catch (err: unknown) {
         result.skipped.push({

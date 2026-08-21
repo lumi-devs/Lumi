@@ -1,5 +1,6 @@
 import { container, UserError } from "@sapphire/framework";
 import { envParseString } from "#lib/env.js";
+import type { PermitTargetType } from "#lib/prisma/repositories/PermissionRepository.js";
 
 const OWNER_IDS: ReadonlySet<string> = new Set(
   envParseString("OWNER_IDS", "")
@@ -30,9 +31,16 @@ export function evaluateNodeMatch(
 export interface EvaluatePermitOptions {
   guildId: string;
   userId: string;
+  /** Position-ordered highest-to-lowest (see `memberRoleIds`) - order decides precedence when roles disagree. */
   roleIds?: string[];
+  /** The channel the command ran in, if any - sits between the user and role tiers in precedence. */
+  channelId?: string;
   guildOwnerId?: string | null;
   permitNode: string;
+}
+
+function anyNodeMatches(nodes: readonly string[], permitNode: string): boolean {
+  return nodes.some((granted) => evaluateNodeMatch(granted, permitNode));
 }
 
 /**
@@ -68,27 +76,23 @@ export class PermitResolver {
   }
 
   /**
-   * Resolves raw permit sets and quarantine status for a user in a guild.
-   */
-  public async resolveUserPermits(
-    guildId: string,
-    userId: string,
-    roleIds: string[] = [],
-  ): Promise<{
-    customPermits: Set<string>;
-    enforcedPermits: Set<string>;
-    isQuarantined: boolean;
-  }> {
-    return container.db.getUserPermits(guildId, userId, roleIds);
-  }
-
-  /**
    * Evaluates if a user possesses the required permit node in a guild.
-   * Handles Owner Bypasses (Bot Owner, Guild Owner), Enforced Permits,
-   * Anti-Nuke Quarantine Interception (stripping Custom Permits), and Custom Permits.
+   *
+   * Precedence, most specific first: Owner Bypasses (Bot Owner, Guild Owner)
+   * > the user's own Enforced permits (system-tier, quarantine-immune) > the
+   * user's own Custom permits > the current channel's Custom permits > each
+   * of the user's roles' Custom permits, highest role position first. Within
+   * a tier, a Deny-polarity match wins over a Grant-polarity match at the
+   * same tier. The first tier with any match (deny or grant) decides the
+   * whole check; nothing matching anywhere falls through to deny.
+   *
+   * Anti-Nuke Quarantine strips Custom permits (both polarities, every tier)
+   * for the requesting user - Enforced permits still apply regardless, since
+   * they're the fixed system tiers a quarantine must not be able to bypass.
    */
   public async hasPermit(options: EvaluatePermitOptions): Promise<boolean> {
-    const { guildId, userId, roleIds = [], permitNode, guildOwnerId } = options;
+    const { guildId, userId, roleIds = [], channelId, permitNode, guildOwnerId } =
+      options;
 
     if (
       PermitResolver.isBotOwner(userId) ||
@@ -97,20 +101,30 @@ export class PermitResolver {
       return true;
     }
 
-    const { customPermits, enforcedPermits, isQuarantined } =
-      await this.resolveUserPermits(guildId, userId, roleIds);
+    const chain: Array<{ targetType: PermitTargetType; targetId: string }> = [
+      { targetType: "user", targetId: userId },
+      ...(channelId ? [{ targetType: "channel" as const, targetId: channelId }] : []),
+      ...roleIds.map((roleId) => ({ targetType: "role" as const, targetId: roleId })),
+    ];
 
-    for (const granted of enforcedPermits) {
-      if (evaluateNodeMatch(granted, permitNode)) {
-        return true;
-      }
+    const { tiers, isQuarantined } = await container.db.permissions.getPermitChain(
+      guildId,
+      userId,
+      chain,
+    );
+
+    // Enforced permits are only ever assigned to the "user" target type
+    // (KIND_TARGET_TYPES.enforced), which is always chain[0]/tiers[0] here.
+    const userTier = tiers[0];
+    if (userTier) {
+      if (anyNodeMatches(userTier.enforced.deny, permitNode)) return false;
+      if (anyNodeMatches(userTier.enforced.grant, permitNode)) return true;
     }
 
     if (!isQuarantined) {
-      for (const granted of customPermits) {
-        if (evaluateNodeMatch(granted, permitNode)) {
-          return true;
-        }
+      for (const tier of tiers) {
+        if (anyNodeMatches(tier.custom.deny, permitNode)) return false;
+        if (anyNodeMatches(tier.custom.grant, permitNode)) return true;
       }
     }
 

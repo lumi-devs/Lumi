@@ -32,6 +32,7 @@ export class PanicRevertInteractionHandler extends BaseInteractionHandler {
       guildId: interaction.guild.id,
       userId: interaction.user.id,
       roleIds: memberRoleIds(interaction.member),
+      channelId: interaction.channelId,
       permitNode: "admin.*",
       guildOwnerId: interaction.guild.ownerId,
     });

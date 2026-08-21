@@ -20,6 +20,7 @@ import {
   type CardReply,
 } from "#lib/utilities/cards.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
+import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
 
 export interface CtxOptionSpec {
   required?: boolean;
@@ -272,12 +273,13 @@ export class CommandContext {
       });
     }
     const userId = this.user.id;
-    const roleIds = Array.from(this.member?.roles.cache.keys() ?? []);
+    const roleIds = memberRoleIds(this.member);
     const guildOwnerId = this.guild?.ownerId;
     const hasPermit = await container.permitResolver.hasPermit({
       guildId,
       userId,
       roleIds,
+      channelId: this.channelId,
       permitNode,
       guildOwnerId,
     });

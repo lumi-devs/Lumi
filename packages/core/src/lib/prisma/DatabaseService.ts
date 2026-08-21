@@ -28,9 +28,10 @@ import { TempVcRepository } from "#lib/prisma/repositories/TempVcRepository.js";
 
 export type {
   TargetPermitPayload,
-  UserPermitSet,
+  PolarityBucket,
   PermitKind,
   PermitTargetType,
+  PermitPolarity,
   PermitRecord,
   PermitAssignmentRecord,
   PermitWithAssignments,
@@ -109,14 +110,6 @@ export class DatabaseService {
       create: { id: guildId },
       update: {},
     });
-  }
-
-  public getUserPermits(
-    guildId: string,
-    userId: string,
-    roleIds: string[] = [],
-  ) {
-    return this.permissions.getUserPermits(guildId, userId, roleIds);
   }
 
   public async publishBotStats(stats: Record<string, unknown>): Promise<void> {
