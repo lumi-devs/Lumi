@@ -76,20 +76,23 @@ describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {
     });
   });
 
-  describe("resolveUserPermits", () => {
-    it("should pass guildId, userId and roleIds through to container.db.getUserPermits", async () => {
-      const getUserPermits = vi.fn().mockResolvedValue({
-        customPermits: new Set(),
-        enforcedPermits: new Set(),
-        isQuarantined: false,
-      });
-      (container as any).db = { getUserPermits };
-
-      await resolver.resolveUserPermits("G1", "U1", ["ROLE1", "ROLE2"]);
-
-      expect(getUserPermits).toHaveBeenCalledWith("G1", "U1", ["ROLE1", "ROLE2"]);
+  function mockChain(opts: {
+    customGrant?: string[];
+    enforcedGrant?: string[];
+    isQuarantined?: boolean;
+  }) {
+    const getPermitChain = vi.fn().mockResolvedValue({
+      tiers: [
+        {
+          custom: { grant: opts.customGrant ?? [], deny: [] },
+          enforced: { grant: opts.enforcedGrant ?? [], deny: [] },
+        },
+      ],
+      isQuarantined: opts.isQuarantined ?? false,
     });
-  });
+    (container as any).db = { permissions: { getPermitChain } };
+    return getPermitChain;
+  }
 
   describe("hasPermit & assertPermit evaluation pipeline", () => {
     it("should grant permission for Guild Owner", async () => {
@@ -103,13 +106,7 @@ describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {
     });
 
     it("should evaluate Custom Permits when not quarantined", async () => {
-      (container as any).db = {
-        getUserPermits: vi.fn().mockResolvedValue({
-          customPermits: new Set(["mod.warn"]),
-          enforcedPermits: new Set(),
-          isQuarantined: false,
-        }),
-      };
+      mockChain({ customGrant: ["mod.warn"] });
 
       const allowedWarn = await resolver.hasPermit({
         guildId: "G1",
@@ -127,13 +124,7 @@ describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {
     });
 
     it("should STRIP Custom Permits when Anti-Nuke Quarantine is active", async () => {
-      (container as any).db = {
-        getUserPermits: vi.fn().mockResolvedValue({
-          customPermits: new Set(),
-          enforcedPermits: new Set(),
-          isQuarantined: true,
-        }),
-      };
+      mockChain({ isQuarantined: true });
 
       const allowedWarn = await resolver.hasPermit({
         guildId: "G1",
@@ -144,13 +135,7 @@ describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {
     });
 
     it("should PRESERVE Enforced Permits even when Anti-Nuke Quarantine is active", async () => {
-      (container as any).db = {
-        getUserPermits: vi.fn().mockResolvedValue({
-          customPermits: new Set(),
-          enforcedPermits: new Set(["system.emergency"]),
-          isQuarantined: true,
-        }),
-      };
+      mockChain({ enforcedGrant: ["system.emergency"], isQuarantined: true });
 
       const allowedEmergency = await resolver.hasPermit({
         guildId: "G1",
@@ -168,13 +153,7 @@ describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {
     });
 
     it("should throw UserError on assertPermit when permission is denied", async () => {
-      (container as any).db = {
-        getUserPermits: vi.fn().mockResolvedValue({
-          customPermits: new Set(),
-          enforcedPermits: new Set(),
-          isQuarantined: false,
-        }),
-      };
+      mockChain({});
 
       await expect(
         resolver.assertPermit({
@@ -186,13 +165,7 @@ describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {
     });
 
     it("should resolve assertPermit when permission is granted", async () => {
-      (container as any).db = {
-        getUserPermits: vi.fn().mockResolvedValue({
-          customPermits: new Set(["mod.ban"]),
-          enforcedPermits: new Set(),
-          isQuarantined: false,
-        }),
-      };
+      mockChain({ customGrant: ["mod.ban"] });
 
       await expect(
         resolver.assertPermit({

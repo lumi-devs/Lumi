@@ -63,6 +63,7 @@ describe("PermissionService", () => {
         "Mods",
         "custom",
         ["mod.ban"],
+        "grant",
       );
     });
 
@@ -118,15 +119,15 @@ describe("PermissionService", () => {
       expect(mockPermissions.assignPermit).not.toHaveBeenCalled();
     });
 
-    it("rejects assigning a user to a custom permit", async () => {
+    it("rejects assigning a channel to an enforced permit", async () => {
       mockPermissions.getPermit.mockResolvedValue({
-        id: 2,
-        kind: "custom",
+        id: 1,
+        kind: "enforced",
         guildId: "G1",
       });
       await expect(
-        service.assignPermit("G1", 2, "user", "111111111111111111"),
-      ).rejects.toThrow(/only be assigned to roles/i);
+        service.assignPermit("G1", 1, "channel", "111111111111111111"),
+      ).rejects.toThrow(/only be assigned to users/i);
     });
 
     it("assigns a user to an enforced permit", async () => {
@@ -140,6 +141,7 @@ describe("PermissionService", () => {
       expect(mockPermissions.assignPermit).toHaveBeenCalledWith(
         "G1",
         1,
+        "user",
         "111111111111111111",
       );
     });
@@ -155,7 +157,40 @@ describe("PermissionService", () => {
       expect(mockPermissions.assignPermit).toHaveBeenCalledWith(
         "G1",
         2,
+        "role",
         "222222222222222222",
+      );
+    });
+
+    it("assigns a user to a custom permit (per-user overrides for precedence/deny)", async () => {
+      mockPermissions.getPermit.mockResolvedValue({
+        id: 2,
+        kind: "custom",
+        guildId: "G1",
+      });
+      mockPermissions.assignPermit.mockResolvedValue({ id: 12 });
+      await service.assignPermit("G1", 2, "user", "333333333333333333");
+      expect(mockPermissions.assignPermit).toHaveBeenCalledWith(
+        "G1",
+        2,
+        "user",
+        "333333333333333333",
+      );
+    });
+
+    it("assigns a channel to a custom permit", async () => {
+      mockPermissions.getPermit.mockResolvedValue({
+        id: 2,
+        kind: "custom",
+        guildId: "G1",
+      });
+      mockPermissions.assignPermit.mockResolvedValue({ id: 13 });
+      await service.assignPermit("G1", 2, "channel", "444444444444444444");
+      expect(mockPermissions.assignPermit).toHaveBeenCalledWith(
+        "G1",
+        2,
+        "channel",
+        "444444444444444444",
       );
     });
 
@@ -352,8 +387,8 @@ describe("PermissionService", () => {
         permits: [{ name: "Mods", nodes: ["mod.*"], roleIds: ["111111111111111111"] }],
       });
 
-      expect(mockPermissions.createPermit).toHaveBeenCalledWith("G1", "Mods", "custom", ["mod.*"]);
-      expect(mockPermissions.assignPermit).toHaveBeenCalledWith("G1", 5, "111111111111111111");
+      expect(mockPermissions.createPermit).toHaveBeenCalledWith("G1", "Mods", "custom", ["mod.*"], "grant");
+      expect(mockPermissions.assignPermit).toHaveBeenCalledWith("G1", 5, "role", "111111111111111111");
       expect(result).toEqual({ created: 1, updated: 0, skipped: [] });
     });
 
@@ -408,7 +443,7 @@ describe("PermissionService", () => {
       });
 
       expect(mockPermissions.assignPermit).toHaveBeenCalledTimes(1);
-      expect(mockPermissions.assignPermit).toHaveBeenCalledWith("G1", 5, "111111111111111111");
+      expect(mockPermissions.assignPermit).toHaveBeenCalledWith("G1", 5, "role", "111111111111111111");
     });
   });
 });
