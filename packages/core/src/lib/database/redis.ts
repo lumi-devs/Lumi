@@ -20,7 +20,7 @@ export const RedisKeys = {
     `lumi:perms:${commandPath}:${guildId}`,
   targetPermits: (
     guildId: string,
-    targetType: "user" | "role",
+    targetType: "user" | "role" | "channel",
     targetId: string,
   ) => `lumi:permits:${guildId}:${targetType}:${targetId}`,
   guildPermitsPattern: (guildId: string) => `lumi:permits:${guildId}:*`,

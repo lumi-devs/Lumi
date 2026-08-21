@@ -9,15 +9,18 @@ spec:
   serviceName: worker-headless
   # Single replica until guild count justifies clustering. Scaling past 1
   # requires CLUSTER_NAME set (for shard telemetry namespacing) and SHARD_LIST
-  # computed per replica (static assignment, not dynamic). See "Scaling to
-  # ~1,000,000 guilds" in plan.md for how to size this at growth.
+  # computed per replica (static assignment, not dynamic). See the sharding
+  # section of docs/architecture.md for how to size this at growth - there is
+  # no in-place rebalance path, a shard-count change requires a restart.
   replicas: 1
   podManagementPolicy: Parallel
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
-      # Never take more than one shard-range offline at once - each replacement
-      # pod RESUMEs its predecessor's sessions from Redis (session-store.ts).
+      # Never take more than one shard-range offline at once during a rolling
+      # update. Each replacement pod does a fresh IDENTIFY (no session resume -
+      # there is no session-store), so this just bounds how many shard ranges
+      # are simultaneously disconnected, not how long the gap is.
       maxUnavailable: 1
   selector:
     matchLabels:

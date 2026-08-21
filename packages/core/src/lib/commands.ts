@@ -1,5 +1,6 @@
 import { CommandContext } from "#lib/command-context.js";
 import type { LumiT } from "#lib/i18n/index.js";
+import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
 import { instrumentCommandPiece } from "#lib/telemetry/instrument.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
 import {
@@ -104,15 +105,13 @@ export async function assertPermit(
     });
   }
   const userId = interaction.user.id;
-  const roles = interaction.member?.roles;
-  const roleIds = Array.isArray(roles)
-    ? roles
-    : Array.from(roles?.cache.keys() ?? []);
+  const roleIds = memberRoleIds(interaction.member);
   const guildOwnerId = interaction.guild?.ownerId;
   const hasPermit = await container.permitResolver.hasPermit({
     guildId,
     userId,
     roleIds,
+    channelId: interaction.channelId,
     permitNode,
     guildOwnerId,
   });
