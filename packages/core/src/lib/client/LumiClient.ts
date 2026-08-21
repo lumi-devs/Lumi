@@ -1,27 +1,20 @@
-import { createRedisClient, RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { installEntityPopulator } from "#lib/entity-cache/entity-populator.js";
 import {
-  envParseInteger,
   envParseString,
   getConsumerId,
-  getServiceRole,
   isEntityCachePopulateEnabled,
-  roleExecutesTaskEffects,
-  roleOwnsScheduler,
-  type ServiceRole,
+  isPrimaryShard,
 } from "#lib/env.js";
 import { registerCoreFireHandlers } from "#lib/core-fire-handlers.js";
 import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
 import { initCoreRpcHandlers } from "#lib/rpc/core-rpc.js";
 import { startRpcHttpServer } from "#lib/rpc/http-server.js";
-import { LeaderLock } from "#lib/leader-lock.js";
 import { TaskFireConsumer } from "#lib/task-fire-registry.js";
 import type { OwnedEventBus } from "@lumi/event-bus";
 import { failedJobsTotal } from "@lumi/observability";
-import { planShards, type ShardPlan } from "@lumi/sharding";
 import {
   ApplicationCommandRegistries,
-  PluginHook,
   RegisterBehavior,
   SapphireClient,
   container,
@@ -43,23 +36,19 @@ import { ReadinessProbes } from "./ReadinessProbes.js";
  * building, container-service installation and readiness probes each live in
  * their own module. What stays here is the ordering contract between them.
  *
- * `login()` brings resources up in dependency order - database, leader locks,
- * internal RPC server, module discovery - and only then hands over to Sapphire.
+ * `login()` brings resources up in dependency order - database, internal RPC
+ * server, module discovery - and only then hands over to Sapphire.
  * `destroy()` unwinds that in reverse, and every step swallows its own
  * failure so one unreachable resource cannot strand the others.
  */
 export class LumiClient extends SapphireClient {
-  public readonly role: ServiceRole;
-
   private _livenessInterval: ReturnType<typeof setInterval> | null = null;
   private _ownedEventBus: OwnedEventBus | null = null;
   private _detachEntityPopulator: (() => void) | null = null;
   private _taskFireConsumer: TaskFireConsumer | null = null;
-  private _schedulerLeaderLock: LeaderLock | null = null;
 
-  public constructor(options: LumiClient.Options = {}) {
-    const role = options.role ?? getServiceRole();
-    super(buildClientOptions(options));
+  public constructor(_options: LumiClient.Options = {}) {
+    super(buildClientOptions());
 
     this._ownedEventBus = installContainerServices(this);
 
@@ -70,54 +59,26 @@ export class LumiClient extends SapphireClient {
     this.on("messageCreate", (m) => {
       if (!m.author.bot) container.stats.messages++;
     });
-
-    this.role = role;
   }
 
   public override async login(token?: string) {
     await container.prisma.$connect();
     await container.invalidation.start();
 
-    if (
-      this.role === "scheduler" &&
-      envParseString("SCHEDULER_LEADER_LOCK", "false") === "true"
-    ) {
-      this._schedulerLeaderLock = new LeaderLock({
-        redis: createRedisClient(),
-        key: RedisKeys.schedulerLeader(),
-        replicaId: getConsumerId(),
-        ttlMs: envParseInteger("SCHEDULER_LEADER_LOCK_TTL_MS", 30_000),
-        renewIntervalMs: envParseInteger(
-          "SCHEDULER_LEADER_LOCK_RENEW_MS",
-          10_000,
-        ),
-        pollIntervalMs: envParseInteger("SCHEDULER_LEADER_LOCK_POLL_MS", 2_000),
-        keepAlive: true,
-        logPrefix: "[SchedulerLock]",
-        log: (level: string, msg: string, meta?: any) =>
-          container.logger[
-            level as "info" | "warn" | "error" | "fatal" | "debug" | "trace"
-          ](msg, meta),
-        onLost: (reason: string) => {
-          container.logger.fatal(
-            `[Scheduler] Leadership lost (${reason}); exiting for orchestrator restart`,
-          );
-          process.exit(1);
-        },
-      });
-      await this._schedulerLeaderLock.acquire();
+    // Only one process per pod may bind RPC_HTTP_PORT. Under ShardingManager
+    // that's whichever child holds shard 0; standalone (dev) it's always
+    // this process.
+    if (isPrimaryShard()) {
+      initCoreRpcHandlers();
+      startRpcHttpServer((level, msg, meta) => container.logger[level](msg, meta));
     }
-
-    initCoreRpcHandlers();
-    startRpcHttpServer((level, msg, meta) => container.logger[level](msg, meta));
     await this.stores.get("modules").discover();
 
-    const result =
-      this.role === "scheduler"
-        ? await this.loginWithoutGateway(token)
-        : await super.login(token);
+    const result = await super.login(token);
 
-    if (roleOwnsScheduler(this.role)) {
+    // container.tasks (BullMQ) is only wired up on the primary shard - see
+    // setup.ts. Registering this on a shard where it's absent would throw.
+    if (isPrimaryShard()) {
       const bullWorker = (
         container.tasks as unknown as {
           worker?: {
@@ -145,15 +106,15 @@ export class LumiClient extends SapphireClient {
       }
     }
 
-    if (roleExecutesTaskEffects(this.role)) {
-      registerCoreFireHandlers();
-      this._taskFireConsumer = new TaskFireConsumer(container.eventBus, {
-        consumerId: getConsumerId(),
-      });
-      await this._taskFireConsumer.start();
-    }
+    // Every shard executes fired task effects for the guilds it holds - this
+    // is the event-bus relay, unrelated to which shard owns BullMQ itself.
+    registerCoreFireHandlers();
+    this._taskFireConsumer = new TaskFireConsumer(container.eventBus, {
+      consumerId: getConsumerId(),
+    });
+    await this._taskFireConsumer.start();
 
-    if (this.role === "worker" && isEntityCachePopulateEnabled()) {
+    if (isEntityCachePopulateEnabled()) {
       this._detachEntityPopulator = installEntityPopulator(
         container.entityCache,
       );
@@ -168,49 +129,10 @@ export class LumiClient extends SapphireClient {
     }, 60_000);
 
     new ReadinessProbes({
-      role: this.role,
       isReady: () => this.isReady(),
-      schedulerLeaderLock: () => this._schedulerLeaderLock,
     }).register();
 
     return result;
-  }
-
-  /**
-   * Sapphire's `login()` sequence with the Discord WebSocket connection left
-   * out: register the piece paths, run the plugin hooks, load every store.
-   *
-   * @remarks
-   *
-   * The scheduler owns BullMQ and relays every fire onto the bus for a worker
-   * to execute - it has no use for gateway events. Letting `super.login()` run
-   * there would spawn a full set of shards per scheduler replica, burn the
-   * daily IDENTIFY budget, and - because the same listeners and commands are
-   * loaded in every role - make the scheduler answer commands and react to
-   * events a second time alongside the workers.
-   *
-   * REST still works: the token is set on the REST manager, so a task effect
-   * that reaches Discord over HTTP is unaffected.
-   */
-  private async loginWithoutGateway(token?: string): Promise<string> {
-    const resolved = token ?? this.token;
-    if (resolved) {
-      this.token = resolved;
-      this.rest.setToken(resolved);
-    }
-
-    if (this.options.baseUserDirectory !== null) {
-      this.stores.registerPath(this.options.baseUserDirectory);
-    }
-    for (const plugin of LumiClient.plugins.values(PluginHook.PreLogin)) {
-      await plugin.hook.call(this, this.options);
-    }
-    await Promise.all([...this.stores.values()].map((store) => store.loadAll()));
-    for (const plugin of LumiClient.plugins.values(PluginHook.PostLogin)) {
-      await plugin.hook.call(this, this.options);
-    }
-
-    return resolved ?? "";
   }
 
   public override async destroy() {
@@ -227,12 +149,6 @@ export class LumiClient extends SapphireClient {
         .stopConsuming()
         .catch(warnOnCleanupError("TaskFireConsumer stop"));
       this._taskFireConsumer = null;
-    }
-    if (this._schedulerLeaderLock) {
-      await this._schedulerLeaderLock
-        .release()
-        .catch(warnOnCleanupError("SchedulerLeaderLock release"));
-      this._schedulerLeaderLock = null;
     }
     await super.destroy().catch(warnOnCleanupError("Sapphire client destroy"));
     await flushAllMessageDeletes().catch(
@@ -279,56 +195,20 @@ export class LumiClient extends SapphireClient {
   };
 
   /**
-   * Async factory that resolves a shard plan via `/gateway/bot` before
-   * constructing the client. For the `scheduler` role (no WS), shard planning
-   * is skipped.
+   * Factory kept as the stable call site for the worker entrypoint. Shard
+   * assignment (`SHARDS`/`SHARD_COUNT`) comes from discord.js's
+   * `ShardingManager` via env vars read directly by the `Client` constructor
+   * - see `apps/worker/src/main.ts`.
    *
    * @param options - Additional options for client construction.
    * @returns A fully constructed and initialized {@linkcode LumiClient}.
    */
-  public static async bootstrap(
-    options: LumiClient.Options = {},
-  ): Promise<LumiClient> {
-    const role = options.role ?? getServiceRole();
-    if (role === "scheduler" || options.shardPlan !== undefined) {
-      return new LumiClient(options);
-    }
-    const log = (
-      level: "info" | "warn" | "error",
-      msg: string,
-      meta?: object,
-    ) => {
-      const line = meta
-        ? `[LumiClient] ${msg} ${JSON.stringify(meta)}`
-        : `[LumiClient] ${msg}`;
-      if (level === "error") console.error(line);
-      else if (level === "warn") console.warn(line);
-      else console.info(line);
-    };
-    let shardPlan;
-    try {
-      shardPlan = await planShards({
-        token: envParseString("BOT_TOKEN"),
-        log,
-      });
-    } catch (err: unknown) {
-      throw new Error(err instanceof Error ? err.message : String(err));
-    }
-
-    return new LumiClient({ ...options, shardPlan });
+  public static bootstrap(options: LumiClient.Options = {}): LumiClient {
+    return new LumiClient(options);
   }
 }
 
 export namespace LumiClient {
-  export interface Options {
-    /** Override the role derived from `LUMI_ROLE`. */
-    role?: ServiceRole;
-    /**
-     * Pre-fetched shard plan from `@lumi/sharding`. Required for the worker
-     * role - it drives `shardCount`/`shards`/`buildIdentifyThrottler`. The
-     * scheduler never opens a Discord WS so the plan is ignored there. Use
-     * {@linkcode LumiClient.bootstrap} to fetch it for you.
-     */
-    shardPlan?: ShardPlan;
-  }
+   
+  export interface Options {}
 }

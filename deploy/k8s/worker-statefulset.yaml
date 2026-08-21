@@ -7,11 +7,13 @@ metadata:
     app: worker
 spec:
   serviceName: worker-headless
-  # Single replica until guild count justifies clustering. Scaling past 1
-  # requires CLUSTER_NAME set (for shard telemetry namespacing) and SHARD_LIST
-  # computed per replica (static assignment, not dynamic). See the sharding
-  # section of docs/architecture.md for how to size this at growth - there is
-  # no in-place rebalance path, a shard-count change requires a restart.
+  # Single replica until guild count justifies clustering. Each pod runs a
+  # discord.js ShardingManager that spawns one child process per shard it
+  # owns (TOTAL_SHARDS/SHARD_LIST, default "auto" = all of them, one pod).
+  # Scaling past 1 replica requires CLUSTER_NAME set (for shard telemetry
+  # namespacing) and SHARD_LIST partitioned per replica (static assignment,
+  # not dynamic) - see docs/architecture.md. There is no in-place rebalance
+  # path; a shard-count change requires a restart.
   replicas: 1
   podManagementPolicy: Parallel
   updateStrategy:
@@ -46,8 +48,6 @@ spec:
             - secretRef:
                 name: lumi-secrets
           env:
-            - name: LUMI_ROLE
-              value: "worker"
             - name: LUMI_CONSUMER_ID
               valueFrom:
                 fieldRef:

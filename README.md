@@ -115,7 +115,7 @@ docker compose up -d
 > [!WARNING]
 > The `dashboard` Compose profile does not work yet - the shared `Dockerfile` has no `next build` stage, so `next start` exits with *"Could not find a production build in the '.next' directory"*. Run the dashboard directly (`bun run --cwd apps/dashboard build && bun run --cwd apps/dashboard start`) until that image stage lands. See [docs/dashboard.md](docs/dashboard.md#running-it).
 
-For scaled-out deployments (multiple `worker` replicas + a `scheduler`), specify `LUMI_ROLE` per container node and set `CLUSTER_NAME` so replicas divide the shard range between themselves. Full walkthrough: [docs/GUIDE_PRODUCTION_DEPLOYMENT.md](docs/GUIDE_PRODUCTION_DEPLOYMENT.md).
+For scaled-out deployments (multiple `worker` replicas), set `CLUSTER_NAME` and give each replica a disjoint `SHARD_LIST` so they divide the shard range between themselves. Full walkthrough: [docs/GUIDE_PRODUCTION_DEPLOYMENT.md](docs/GUIDE_PRODUCTION_DEPLOYMENT.md).
 
 </details>
 
@@ -138,14 +138,9 @@ Full step-by-step guide, including the optional dashboard and observability stac
 
 ## Architecture
 
-Lumi runs as two process roles, selected with `LUMI_ROLE`:
+Every worker process is identical - there's no separate scheduler role. `apps/worker/src/main.ts` is a lightweight discord.js `ShardingManager` that spawns one child process per shard it owns; each child holds a real Discord Gateway WebSocket connection and runs all slash commands, listeners, and module logic in the same process.
 
-| Role | Purpose |
-|---|---|
-| `worker` | Default. Holds Lumi's Discord Gateway WebSocket connection and runs all slash commands, listeners, and module logic in the same process. |
-| `scheduler` | Queue processor for scheduled tasks and recurring cron jobs. No WebSocket connection. |
-
-Gateway ingestion and bot logic intentionally live in one process. Scaling is horizontal: set `CLUSTER_NAME` and `@lumi/sharding` assigns each worker replica a disjoint range of Discord shards, coordinating IDENTIFY throttling and resumable sessions through Redis. Multi-replica deployments route REST traffic through a shared `nirn-proxy` (`DISCORD_PROXY_URL`) so rate-limit buckets stay coordinated.
+Gateway ingestion and bot logic intentionally live in one process. Scaling is horizontal: set `CLUSTER_NAME` and give each replica a disjoint `SHARD_LIST`. Exactly one shard per pod - the one holding shard id `0` - is elected "primary" with zero coordination and owns BullMQ job scheduling and the RPC/metrics HTTP surface. Multi-replica deployments route REST traffic through a shared `nirn-proxy` (`DISCORD_PROXY_URL`) so rate-limit buckets stay coordinated.
 
 Task queueing runs on **Redis Streams**/BullMQ; the dashboard talks to the worker over an **internal HTTP RPC bridge**. Detailed specifications are in [docs/architecture.md](docs/architecture.md).
 

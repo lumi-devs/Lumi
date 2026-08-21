@@ -1,7 +1,7 @@
-import { roleOwnsScheduler, type ServiceRole } from "#lib/env.js";
-import type { LeaderLock } from "#lib/leader-lock.js";
+import { getClusterName, isPrimaryShard } from "#lib/env.js";
 import { registerReadinessProbe } from "@lumi/observability";
 import { container } from "@sapphire/framework";
+import { DEFAULT_CLUSTER_NAME, readClusterShards } from "@lumi/sharding";
 
 /**
  * Declares the `/readyz` probes a client replica answers with.
@@ -9,37 +9,31 @@ import { container } from "@sapphire/framework";
  * @remarks
  *
  * {@linkcode register} runs once, at the tail of `login()`, so that every
- * dependency a probe reports on already exists. Which probes are declared
- * depends on the role: only the worker holds a gateway connection, and only a
- * scheduler that actually took the leader lock can report on leadership.
+ * dependency a probe reports on already exists. Every process holds a real
+ * gateway shard now, so the `discord` probe always applies; `scheduler-tasks`
+ * only applies to the primary shard, the sole process BullMQ is wired up on
+ * (see `setup.ts`).
  *
  * Probes reach their dependency through the suppliers passed in rather than
  * capturing it, because the client releases those handles during shutdown and
  * a probe must observe that rather than a stale reference.
  */
 export class ReadinessProbes {
-  /** Role of the owning client; decides which probes are declared. */
-  protected readonly role: ServiceRole;
-
-  /** Whether the gateway connection is usable. Worker role only. */
+  /** Whether the gateway connection is usable. */
   protected readonly isReady: () => boolean;
 
-  /** The scheduler leader lock, or `null` when this replica took none. */
-  protected readonly schedulerLeaderLock: () => LeaderLock | null;
-
   public constructor(options: ReadinessProbes.Options) {
-    this.role = options.role;
     this.isReady = options.isReady;
-    this.schedulerLeaderLock = options.schedulerLeaderLock;
   }
 
-  /** Declares every probe applicable to the owning client's role. */
+  /** Declares every applicable probe. */
   public register(): void {
     this.registerInfrastructureProbes();
-    this.registerRoleProbes();
+    this.registerDiscordProbe();
+    this.registerSchedulerProbe();
   }
 
-  /** Declares the probes shared by every role: the backing services. */
+  /** Declares the probes shared by every process: the backing services. */
   protected registerInfrastructureProbes(): void {
     // `/readyz` is reachable by anyone who can reach the metrics port, so probe
     // details are fixed classifications. Driver errors are logged instead:
@@ -70,41 +64,56 @@ export class ReadinessProbes {
     });
   }
 
-  /** Declares the probes only some roles can meaningfully answer. */
-  protected registerRoleProbes(): void {
-    if (this.role === "worker") {
-      registerReadinessProbe("discord", () =>
-        this.isReady()
-          ? { status: "ok" }
-          : { status: "fail", detail: "client not ready" },
-      );
-    }
+  protected registerDiscordProbe(): void {
+    registerReadinessProbe("discord", async () => {
+      if (!this.isReady()) {
+        return { status: "fail", detail: "client not ready" };
+      }
+      // Only the primary shard binds `/readyz`, so it also has to speak for
+      // every sibling shard spawned by ShardingManager in this pod - a
+      // single shard's own readiness says nothing about the others.
+      if (!isPrimaryShard()) return { status: "ok" };
+      try {
+        const snapshot = await readClusterShards({
+          redis: container.redis,
+          clusterName: getClusterName() ?? DEFAULT_CLUSTER_NAME,
+        });
+        if (snapshot.missingShardIds.length > 0) {
+          return {
+            status: "fail",
+            detail: `missing shards: ${snapshot.missingShardIds.join(",")}`,
+          };
+        }
+        const notReady = snapshot.shards
+          .filter((s) => s.status !== "Ready")
+          .map((s) => s.shardId);
+        if (notReady.length > 0) {
+          return {
+            status: "fail",
+            detail: `shards not ready: ${notReady.join(",")}`,
+          };
+        }
+        return { status: "ok" };
+      } catch (err) {
+        container.logger?.error("[Readiness] cluster shard check failed:", err);
+        return { status: "fail", detail: "cluster shard telemetry unreachable" };
+      }
+    });
+  }
 
-    if (!roleOwnsScheduler(this.role)) return;
-
+  protected registerSchedulerProbe(): void {
+    if (!isPrimaryShard()) return;
     registerReadinessProbe("scheduler-tasks", () =>
       container.tasks
         ? { status: "ok" }
         : { status: "fail", detail: "tasks store missing" },
     );
-
-    if (this.schedulerLeaderLock()) {
-      registerReadinessProbe("scheduler-leader", () =>
-        this.schedulerLeaderLock()?.isLeader()
-          ? { status: "ok" }
-          : { status: "fail", detail: "not leader" },
-      );
-    }
   }
 }
 
 export namespace ReadinessProbes {
   export interface Options {
-    /** Role of the owning client. */
-    role: ServiceRole;
     /** Reads the client's current gateway readiness. */
     isReady: () => boolean;
-    /** Reads the client's scheduler leader lock, if it holds one. */
-    schedulerLeaderLock: () => LeaderLock | null;
   }
 }

@@ -3,44 +3,70 @@ title: "Architecture & System Topology"
 description: "Process roles, the Redis Streams event bus, sharding/clustering, the database layer, command registration, and observability."
 ---
 
-## Process roles
+## Process model
 
-Lumi runs as two independent apps under `apps/`, plus `apps/worker` deployed twice under
-different roles:
+Lumi runs as two independent apps under `apps/`:
 
-| App | Role | Discord gateway? | Purpose |
-| :--- | :--- | :--- | :--- |
-| [`apps/worker`](https://github.com/lumi-devs/Lumi/blob/main/apps/worker/README.md) | `worker` | Yes | Owns the Discord WebSocket connection(s) and runs every command, module, and interaction handler in-process. |
-| [`apps/worker`](https://github.com/lumi-devs/Lumi/blob/main/apps/worker/README.md) | `scheduler` | No | Same image/entrypoint, run with `LUMI_ROLE=scheduler`. Owns BullMQ delayed/cron job queues. Never opens a gateway connection. |
-| [`apps/dashboard`](https://github.com/lumi-devs/Lumi/blob/main/apps/dashboard/README.md) | *(not a `ServiceRole`)* | No | Lightweight HTTP app. Talks to `worker` over an internal HTTP RPC bridge. |
+| App | Discord gateway? | Purpose |
+| :--- | :--- | :--- |
+| [`apps/worker`](https://github.com/lumi-devs/Lumi/blob/main/apps/worker/README.md) | Yes | Owns the Discord WebSocket connection(s) and runs every command, module, and interaction handler in-process. |
+| [`apps/dashboard`](https://github.com/lumi-devs/Lumi/blob/main/apps/dashboard/README.md) | No | Lightweight HTTP app. Talks to `worker` over an internal HTTP RPC bridge. |
 
-There is no separate gateway process, and no separate scheduler app package - the scheduler is
-a deployment-level split (a second replica group of the same image/entrypoint), not a
-code-level one. Each `worker`-role replica owns its own shard range end-to-end - gateway
-connection, command dispatch, and module logic all live in the same process. `ServiceRole`
-(`packages/core/src/lib/env.ts`) is a union of exactly `"worker" | "scheduler"`, read from the
-`LUMI_ROLE` env var.
-
-The entry point is intentionally thin. `apps/worker/src/main.ts`:
+There is no separate scheduler process and no service-role distinction - every worker process is
+identical, holding a real gateway shard connection and running every command, module, and
+listener. `apps/worker/src/main.ts` is a lightweight *manager* process: it constructs a
+discord.js `ShardingManager` and spawns one child OS process per shard
+(`apps/worker/src/shard-client.ts`), which is where the actual `LumiClient` lives. The manager
+itself opens no gateway connection, binds no HTTP port, and loads no telemetry - there's nothing
+in it to instrument.
 
 ```ts
-import "./telemetry.js";
-import "@lumi/core/setup";
-import { bootstrapClientApp, getServiceRole } from "@lumi/core";
-
-const role = getServiceRole();
-await bootstrapClientApp({ role });
+// apps/worker/src/main.ts (manager - no telemetry, no client)
+const manager = new ShardingManager(shardFile, {
+  token,
+  totalShards: envInt("TOTAL_SHARDS") ?? "auto",
+  shardList: envShardList() ?? "auto",
+  respawn: true,
+});
+await manager.spawn({ amount: "auto", timeout: -1 });
 ```
 
-Telemetry bootstrap is imported first (side-effect only) so instrumentation is installed before
-any instrumented library loads.
+```ts
+// apps/worker/src/shard-client.ts (spawned once per shard)
+import "./telemetry.js";
+import "@lumi/core/setup";
+import { bootstrapClientApp } from "@lumi/core";
+
+await bootstrapClientApp({});
+```
+
+Telemetry bootstrap is imported first in `shard-client.ts` (side-effect only) so instrumentation
+is installed before any instrumented library loads.
+
+### Primary shard
+
+Singleton duties - things exactly one process per pod should do - are gated by
+`isPrimaryShard()` (`packages/core/src/lib/env.ts`) rather than a role or a Redis lock: it
+returns true if this process either isn't running under `ShardingManager` at all, or holds shard
+id 0. Shard 0 is always globally unique across the whole fleet, so this is a free,
+zero-coordination leader election - no lock to acquire, nothing to fail over. The primary shard
+is the only process that:
+
+- Binds the internal RPC HTTP server (`RPC_HTTP_PORT`) the dashboard talks to.
+- Binds the Prometheus `/metrics` HTTP listener.
+- Loads `@sapphire/plugin-scheduled-tasks` - i.e. owns BullMQ cron/delayed job *scheduling*.
+- Aggregates the `/readyz` `discord` probe across every shard in the pod (see Observability).
+
+Every process, primary or not, still *executes* fired task effects through the event-bus relay
+(`TaskFireConsumer`) below - that has to happen wherever the relevant guild's shard actually
+lives, which is unrelated to which shard owns BullMQ itself.
 
 ## Inter-process communication
 
 Two distinct transports exist, deliberately separate:
 
-- **Worker ↔ Scheduler: Redis Streams**, via [`packages/event-bus`](https://github.com/lumi-devs/Lumi/blob/main/packages/event-bus/README.md). `RedisStreamsBus` is the sole transport implementation - one Redis Stream per event type, one consumer group per worker pool (default `lumi-workers`).
-- **Dashboard ↔ Worker: internal HTTP RPC** (request/response), via `apps/dashboard/src/lib/rpc.ts` calling `packages/core/src/lib/rpc/http-server.ts`'s `POST /rpc` directly over the docker/cluster network - no message broker in between. This is a different mechanism from the event bus and is not used by worker/scheduler.
+- **Task scheduling → task execution: Redis Streams**, via [`packages/event-bus`](https://github.com/lumi-devs/Lumi/blob/main/packages/event-bus/README.md). `RedisStreamsBus` is the sole transport implementation - one Redis Stream per event type, one consumer group per worker pool (default `lumi-workers`). The primary shard's BullMQ job fires onto the bus; every shard consumes and executes the effect for the guilds it holds.
+- **Dashboard ↔ Worker: internal HTTP RPC** (request/response), via `apps/dashboard/src/lib/rpc.ts` calling `packages/core/src/lib/rpc/http-server.ts`'s `POST /rpc` directly over the docker/cluster network - no message broker in between. This is a different mechanism from the event bus and is not used for shard-to-shard communication.
 
 ### Redis Streams bus mechanics
 
@@ -55,13 +81,14 @@ All tuning knobs are environment variables (`EVENT_STREAM_*`) - see [Configurati
 
 ## Sharding & clustering
 
-[`packages/sharding`](https://github.com/lumi-devs/Lumi/blob/main/packages/sharding/README.md) implements static shard-range scaling: each replica is told which shard IDs it owns via config, and there is no runtime coordination or rebalancing between processes.
+[`packages/sharding`](https://github.com/lumi-devs/Lumi/blob/main/packages/sharding/README.md) now holds only cross-process shard
+*telemetry* - actual shard assignment is discord.js's `ShardingManager`, not a custom planner.
 
-- **Shard planning** (`shard-planner.ts`): calls Discord's `GET /gateway/bot` for the recommended shard count and session-start budget. `TOTAL_SHARDS=auto` (default) follows Discord's recommendation; a fixed integer pins it. `SHARD_LIST` restricts which shard IDs a given replica owns. Boot refuses to proceed if the remaining session-start budget can't cover the shards about to IDENTIFY, unless `SHARD_IDENTIFY_FORCE=true` - this exists so a crash-loop can't burn the daily IDENTIFY budget and get the bot rate-limited.
-- **Shard telemetry** (`shard-telemetry.ts`): each replica publishes a TTL'd Redis row per shard it holds (status, ping, guild count) under `CLUSTER_NAME`'s namespace, purely for the dashboard's fleet view. There is no assignment blob, heartbeat set, or readiness flag behind it - a shard with no row is simply not running anywhere.
-- Scaling replicas up or down, or changing which shard IDs a replica owns, means changing `SHARD_LIST`/`TOTAL_SHARDS` and restarting the affected processes - there is no in-place rebalance path. A change to the *total* shard count always requires a restart, since discord.js caches `shardCount` at `WebSocketManager` construction.
+- **Shard spawning**: `apps/worker/src/main.ts` constructs a `ShardingManager` pointed at `shard-client.ts` and calls `spawn()`. `TOTAL_SHARDS=auto` (default) follows Discord's recommended count; a fixed integer pins it. `SHARD_LIST` restricts which shard IDs this replica's manager spawns children for - unchanged operator-facing behavior from the old planner, just passed straight through to `ShardingManager`'s `totalShards`/`shardList` options instead of a hand-rolled `/gateway/bot` call.
+- **Shard telemetry** (`shard-telemetry.ts`): each shard child publishes a TTL'd Redis row (status, ping, guild count) under `CLUSTER_NAME`'s namespace. Used both for the dashboard's fleet view and for the primary shard's `/readyz` probe, which also confirms every sibling shard in the pod reports ready before answering healthy. There is no assignment blob or heartbeat set behind it beyond these rows - a shard with no row is simply not running anywhere.
+- Scaling replicas up or down, or changing which shard IDs a replica owns, means changing `SHARD_LIST`/`TOTAL_SHARDS` and restarting the affected processes - there is no in-place rebalance path. `ShardingManager`'s `respawn: true` restarts an individual crashed shard child in place; it does not rebalance shard *assignment*.
 
-`CLUSTER_NAME` only turns on shard telemetry reporting (namespacing the Redis keys the dashboard reads for the fleet view); it does not turn on any coordination between replicas, and IDENTIFY throttling is always the single-process throttler. With a single replica and no `CLUSTER_NAME`, telemetry still reports under the `default` namespace.
+`CLUSTER_NAME` only turns on shard telemetry reporting (namespacing the Redis keys the dashboard reads for the fleet view); it does not turn on any coordination between replicas. With a single replica and no `CLUSTER_NAME`, telemetry still reports under the `default` namespace.
 
 ## Database layer
 
@@ -73,7 +100,6 @@ All tuning knobs are environment variables (`EVENT_STREAM_*`) - see [Configurati
 - Cross-process cache invalidation via `InvalidationBus` - a pub/sub channel (`lumi:cache:invalidate`) where deleting a key locally also broadcasts the deletion so every process's local cache stays coherent. Modules invalidate through `container.invalidation.invalidate(...)`, never a raw `redis.del` on a shared key.
 - The event bus transport (Redis Streams, see above).
 - Shard telemetry rows for the dashboard's fleet view (`packages/sharding`).
-- The scheduler leader-election lock (`SCHEDULER_LEADER_LOCK`, see [Configuration Reference](/Lumi/configuration/)).
 - BullMQ's job queue backing store.
 
 ## Dashboard Frontend
@@ -89,7 +115,7 @@ Sentinel-based Redis HA is supported: setting `REDIS_SENTINELS` switches connect
 
 ## Command registration
 
-Every `worker` replica registers its command set to Discord directly on boot - no coordination between replicas, regardless of `CLUSTER_NAME` or replica count. Discord's bulk-overwrite endpoint is idempotent, so concurrent replicas registering the same commands is a harmless no-op race, not a correctness concern.
+Every shard child registers its command set to Discord directly on boot - no coordination between processes, regardless of `CLUSTER_NAME` or replica count. Discord's bulk-overwrite endpoint is idempotent, so concurrent processes registering the same commands is a harmless no-op race, not a correctness concern.
 
 ## Observability
 

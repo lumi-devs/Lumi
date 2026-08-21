@@ -34,13 +34,13 @@ describe("bootstrapClientApp", () => {
       login: vi.fn().mockResolvedValue("mock.bot.token.12345"),
       destroy: vi.fn().mockResolvedValue(undefined),
     };
-    (LumiClient.bootstrap as any).mockResolvedValue(mockClient);
+    (LumiClient.bootstrap as any).mockReturnValue(mockClient);
 
-    const client = await bootstrapClientApp({ role: "worker" });
+    const client = await bootstrapClientApp({});
 
-    expect(LumiClient.bootstrap).toHaveBeenCalledWith({ role: "worker" });
+    expect(LumiClient.bootstrap).toHaveBeenCalledWith({});
     expect(mockClient.login).toHaveBeenCalledWith("mock.bot.token.12345");
-    expect(container.logger.info).toHaveBeenCalledWith("[Worker] Online");
+    expect(container.logger.info).toHaveBeenCalledWith("[Lumi] Online");
     expect(client).toBe(mockClient as any);
   });
 
@@ -49,12 +49,12 @@ describe("bootstrapClientApp", () => {
       login: vi.fn().mockRejectedValue(new Error("Invalid Token")),
       destroy: vi.fn().mockResolvedValue(undefined),
     };
-    (LumiClient.bootstrap as any).mockResolvedValue(mockClient);
+    (LumiClient.bootstrap as any).mockReturnValue(mockClient);
     const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {}) as any);
 
-    await bootstrapClientApp({ role: "scheduler", onlineMessage: "Scheduler Custom Online" });
+    await bootstrapClientApp({ onlineMessage: "Scheduler Custom Online" });
 
-    expect(container.logger.fatal).toHaveBeenCalledWith("[scheduler] Fatal:", expect.any(Error));
+    expect(container.logger.fatal).toHaveBeenCalledWith("[Lumi] Fatal:", expect.any(Error));
     expect(mockClient.destroy).toHaveBeenCalled();
     expect(exitSpy).toHaveBeenCalledWith(1);
   });

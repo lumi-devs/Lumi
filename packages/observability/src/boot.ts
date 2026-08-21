@@ -17,13 +17,25 @@ function resolveMetricsPort(service: string | undefined): number {
   return port ? Number(port) : 9090;
 }
 
-export function bootstrapTelemetry(serviceName?: string): void {
+export interface BootstrapTelemetryOptions {
+  /**
+   * Bind the `/metrics` HTTP listener. False for a non-primary
+   * ShardingManager child sharing a pod with a primary that already owns
+   * the port - tracing/metrics collection still runs, just unexposed.
+   * Default true.
+   */
+  exposeHttp?: boolean;
+}
+
+export function bootstrapTelemetry(
+  serviceName?: string,
+  opts: BootstrapTelemetryOptions = {},
+): void {
   const name =
     (serviceName && serviceName.trim().length > 0
       ? serviceName
       : undefined) ??
     process.env["SERVICE_NAME"] ??
-    process.env["LUMI_ROLE"] ??
     "lumi";
 
   // Pin the service name so the (later-constructed) pino logger agrees with traces/metrics.
@@ -41,5 +53,7 @@ export function bootstrapTelemetry(serviceName?: string): void {
 
   initMetrics(svc);
   startEventLoopMonitor();
-  startMetricsServer(resolveMetricsPort(svc));
+  if (opts.exposeHttp ?? true) {
+    startMetricsServer(resolveMetricsPort(svc));
+  }
 }

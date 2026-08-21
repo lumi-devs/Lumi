@@ -1,5 +1,4 @@
 import { container } from "@sapphire/framework";
-import { toTitleCase } from "@sapphire/utilities";
 import { shutdownTracing, runDrainSequence } from "@lumi/observability";
 import { LumiClient } from "./LumiClient.js";
 import { envParseString } from "#lib/env.js";
@@ -40,19 +39,17 @@ export async function bootstrapClientApp(
 ): Promise<LumiClient> {
   registerProcessErrorHandlers();
 
-  const roleName = options.role ?? "worker";
-  const onlineMsg =
-    options.onlineMessage ??
-    `[${toTitleCase(roleName)}] Online`;
+  const onlineMsg = options.onlineMessage ?? "[Lumi] Online";
 
-  const client = await LumiClient.bootstrap(options).catch(
-    (err: unknown): never => {
-      console.error(
-        `[${roleName}] Fatal during bootstrap: ${err instanceof Error ? err.message : String(err)}`,
-      );
-      process.exit(1);
-    },
-  );
+  let client: LumiClient;
+  try {
+    client = LumiClient.bootstrap(options);
+  } catch (err: unknown) {
+    console.error(
+      `[Lumi] Fatal during bootstrap: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    process.exit(1);
+  }
 
   let shuttingDown = false;
   ["SIGINT", "SIGTERM"].forEach((sig) => {
@@ -90,11 +87,11 @@ export async function bootstrapClientApp(
     await client.login(envParseString("BOT_TOKEN"));
     container.logger.info(onlineMsg);
   } catch (err: unknown) {
-    container.logger.fatal(`[${roleName}] Fatal:`, err);
+    container.logger.fatal("[Lumi] Fatal:", err);
     await client
       .destroy()
       .catch((err: unknown) =>
-        container.logger.error(`[${roleName}] Client destroy failed:`, err),
+        container.logger.error("[Lumi] Client destroy failed:", err),
       );
     process.exit(1);
   }

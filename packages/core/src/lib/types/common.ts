@@ -106,14 +106,6 @@ declare module "#lib/env.js" {
     REDIS_SENTINEL_NAME: string;
     /** Password for Sentinel processes themselves (distinct from REDIS_PASSWORD for the master). */
     REDIS_SENTINEL_PASSWORD: string;
-    /** When "true" on a `scheduler` replica, acquire a Redis-backed
-     * leader lock before login(); followers block until it lapses. Default
-     * "false" - rely on BullMQ's per-job locks for safety, accept the
-     * coordination overhead of multiple active schedulers. */
-    SCHEDULER_LEADER_LOCK: "true" | "false";
-    SCHEDULER_LEADER_LOCK_TTL_MS: IntegerString;
-    SCHEDULER_LEADER_LOCK_RENEW_MS: IntegerString;
-    SCHEDULER_LEADER_LOCK_POLL_MS: IntegerString;
     /** Internal RPC HTTP server bind port. Default 8091. */
     RPC_HTTP_PORT: IntegerString;
     /** Internal RPC HTTP server bind host. Default "127.0.0.1"; set to
@@ -128,8 +120,6 @@ declare module "#lib/env.js" {
     EVENT_STREAM_MAXLEN: IntegerString;
     /** Redis Streams consumer idle threshold in ms. Default 60000. */
     EVENT_STREAM_ACK_WAIT_MS: IntegerString;
-    /** Which service this process plays. Default "worker". */
-    LUMI_ROLE: "worker" | "scheduler";
     /** Stable per-replica consumer id for the worker pool. Falls back to $HOSTNAME, then pid. */
     LUMI_CONSUMER_ID: string;
   }

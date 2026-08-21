@@ -28,7 +28,7 @@ This directory documents the containerization strategy, **Dockerfile multi-stage
 
 Lumi's container setup provides complete flexibility: run a single bot container against the core data plane, or launch a fully orchestrated stack with extra worker replicas, a dashboard, and OpenTelemetry tracing.
 
-There are two application roles. A **worker** owns its own Discord WebSocket connection and runs all command, module, and interaction logic in-process; a **scheduler** owns BullMQ queues and holds no WebSocket. There is no separate gateway container. A single worker tracks its own Discord REST rate-limit buckets; once you run more than one, the `scale` profile adds **nirn-proxy** as a shared REST proxy so those buckets stay coordinated across processes (`DISCORD_PROXY_URL`).
+Every worker process is identical: `apps/worker/src/main.ts` is a lightweight discord.js `ShardingManager` that spawns one child process per shard it owns, each child holding a real Discord WebSocket connection and running all command, module, and interaction logic in-process. There is no separate scheduler or gateway container - exactly one child per pod, the one holding shard id `0`, is elected "primary" (zero-coordination, via `isPrimaryShard()`) and is the sole owner of BullMQ job scheduling and the RPC/metrics HTTP surface. A single worker tracks its own Discord REST rate-limit buckets; once you run more than one, the `scale` profile adds **nirn-proxy** as a shared REST proxy so those buckets stay coordinated across processes (`DISCORD_PROXY_URL`).
 
 ### Docker Compose Architecture Diagram
 
@@ -46,7 +46,6 @@ flowchart TD
     subgraph Lumi Application Nodes
         W[lumi-worker<br/>Default]
         WS[lumi-worker-scale<br/>Profile: scale]
-        Sched[lumi-scheduler<br/>Profile: scale]
         Dev[lumi-dev<br/>Profile: development]
     end
 
@@ -78,7 +77,7 @@ flowchart TD
 
     Dash <-->|Internal HTTP RPC :8091| W
 
-    Sched <-->|BullMQ Tasks| Redis
+    W <-->|BullMQ Tasks, primary shard only| Redis
 
     W -->|OTLP Traces / Metrics| OTEL
     WS -->|OTLP Traces / Metrics| OTEL
@@ -115,10 +114,9 @@ Services are organized into distinct Compose **profiles** so you only run what y
 
 | Service Name | Profile | Ports / Interfaces | Description |
 |---|---|---|---|
-| `worker` | *(default)* | - | Default Lumi bot process (`LUMI_ROLE=worker`). Owns the Discord WebSocket and runs all command, module, and interaction logic. |
+| `worker` | *(default)* | - | Default Lumi bot process. `ShardingManager` spawns one child per shard; the primary shard (id `0`) owns BullMQ and the RPC/metrics surface. |
 | `lumi-dev` | `development` | - | Interactive development container with live volume mounts and watch mode. |
-| `worker-scale` | `scale` | - | Additional worker replica (`LUMI_ROLE=worker`) claiming its own shard range. |
-| `scheduler` | `scale` | - | Task Scheduler managing BullMQ background tasks (`LUMI_ROLE=scheduler`, no WebSocket). |
+| `worker-scale` | `scale` | - | Additional worker replica claiming its own shard range. |
 | `dashboard` | `dashboard` | `8080:8080` | Web Administration Dashboard UI. **Not working yet** - see the note under [Execution & Operation Commands](#-execution--operation-commands). |
 | `postgres` | *(core)* | `127.0.0.1:5432:5432` | PostgreSQL 17 primary database server. |
 | `pgbouncer` | *(core)* | `127.0.0.1:6432:6432` | PgBouncer transaction-level connection pooler. |
@@ -179,7 +177,7 @@ docker compose --profile development up
 
 ### 3. Scaled Production Stack
 
-Launch a second worker replica plus the Scheduler:
+Launch a second worker replica:
 
 ```bash
 docker compose --profile scale up -d

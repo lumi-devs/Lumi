@@ -135,9 +135,10 @@ ENV_VALUES[REDIS_CACHE_DB]="0"
 ENV_VALUES[REDIS_TASK_DB]="1"
 
 ENV_VALUES[RPC_HTTP_HOST]="127.0.0.1"
-# RPC_HTTP_PORT is deliberately not written: every app reads this one file, and
-# 8091 here would drag the scheduler (which self-defaults to 8092) onto the
-# worker's port. 8091 is already the worker's built-in default.
+# RPC_HTTP_PORT is deliberately not written: 8091 is already the built-in
+# default, and only the primary shard in a pod binds it (see
+# docs/architecture.md), so there's nothing else to collide with on a
+# single host.
 ENV_VALUES[RPC_HTTP_URL]="http://localhost:8091"
 if command -v openssl >/dev/null 2>&1; then
   ENV_VALUES[RPC_INTERNAL_TOKEN]="$(openssl rand -hex 32)"
@@ -175,8 +176,6 @@ ENV_VALUES[EVENT_STREAM_CLAIM_MIN_IDLE_MS]="60000"
 ENV_VALUES[EVENT_STREAM_ACK_WAIT_MS]="60000"
 ENV_VALUES[EVENT_STREAM_CLAIM_INTERVAL_MS]="30000"
 ENV_VALUES[EVENT_STREAM_STATS_INTERVAL_MS]="10000"
-# LUMI_ROLE is deliberately not written: each entrypoint declares its own role,
-# and a shared `worker` value only mislabels the scheduler's logs and metrics.
 
 # ── [ 3 ] Dashboard (optional) ────────────────────────────────────────────────
 header "[3/4] Dashboard (optional)"

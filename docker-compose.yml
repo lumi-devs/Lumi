@@ -74,7 +74,6 @@ services:
     container_name: lumi-worker
     environment:
       <<: *lumi-env
-      LUMI_ROLE: "worker"
       # Serves the dashboard's RPC client from another container, so it has to
       # bind beyond loopback. Authentication is RPC_INTERNAL_TOKEN, not the
       # network boundary.
@@ -131,31 +130,12 @@ services:
     container_name: lumi-worker-scale
     environment:
       <<: *lumi-env
-      LUMI_ROLE: "worker"
       LUMI_CONSUMER_ID: "${LUMI_CONSUMER_ID:-worker-1}"
       # Stays on loopback: nothing routes RPC to this replica (the dashboard's
       # RPC_HTTP_URL points at `worker`). Widen it only alongside a load
       # balancer that actually fans out to it.
       RPC_HTTP_HOST: "127.0.0.1"
       METRICS_HOST: "0.0.0.0"
-    profiles:
-      - scale
-
-  scheduler:
-    <<: *lumi-service
-    container_name: lumi-scheduler
-    command: ["bun", "apps/worker/src/main.ts"]
-    environment:
-      <<: *lumi-env
-      LUMI_ROLE: "scheduler"
-      METRICS_HOST: "0.0.0.0"
-    depends_on:
-      pgbouncer:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     profiles:
       - scale
 
