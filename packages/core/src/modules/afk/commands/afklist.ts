@@ -2,11 +2,9 @@ import { ApplyOptions } from "@sapphire/decorators";
 
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { userMention } from "@discordjs/formatters";
-import { chunk } from "@sapphire/utilities";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import { makeWarningCard } from "#lib/utilities/cards.js";
+import { paginateList } from "#lib/utilities/pagination.js";
 import { afkDurationSince } from "../index.js";
-import { Emojis } from "#lib/utilities/assets.js";
 import { getAfkEntriesForGuild } from "../data/afk.js";
 
 @ApplyOptions<BaseCommand.Options>({
@@ -40,18 +38,12 @@ export default class AfkListCommand extends BaseCommand {
       (e) =>
         `${userMention(e.userId)} - \`${e.reason}\` *${t("afk:listDuration", { duration: afkDurationSince(e.since) })}*`,
     );
-    const pages = chunk(lines, 15);
-    const body = pages[0]!.join("\n");
-    const footer =
-      pages.length > 1
-        ? t("afk:listFooterPages", {
-            page: 1,
-            totalPages: pages.length,
-            total: entries.length,
-          })
-        : t("afk:listFooter", { total: entries.length });
-    return ctx.reply(
-      makeWarningCard(`${Emojis.PAGES} ${t("afk:listTitle")}`, body, { footer }),
-    );
+    return paginateList({
+      interactionOrMessage: ctx.source,
+      userId: ctx.user.id,
+      title: t("afk:listTitle"),
+      items: lines,
+      perPage: 15,
+    });
   }
 }

@@ -1333,7 +1333,8 @@ export class DashboardModule extends Module {
         status,
         actorId,
       );
-      if (!appeal) throw new Error(`Appeal #${id} not found`);
+      if (!appeal)
+        throw new Error(`Appeal #${id} not found or already reviewed`);
 
       if (
         status === "denied_blacklisted" &&

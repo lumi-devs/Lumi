@@ -48,6 +48,17 @@ export class RegexTimeoutError extends Error {
   }
 }
 
+/**
+ * The worker could not be spawned or warmed (see {@link RegexWorkerHandler.available}).
+ * Thrown rather than returned so callers can't mistake an outage for "no match".
+ */
+export class RegexWorkerUnavailableError extends Error {
+  public constructor() {
+    super("Regex worker is unavailable");
+    this.name = "RegexWorkerUnavailableError";
+  }
+}
+
 type RequestResult = number | null | number[];
 
 interface Pending {
@@ -117,7 +128,7 @@ export class RegexWorkerHandler {
     await this.#queue.wait();
     try {
       const worker = await this.#warmWorker();
-      if (!worker) return null;
+      if (!worker) throw new RegexWorkerUnavailableError();
 
       if (!this.#loaded.has(key)) {
         worker.postMessage({ kind: "load", key, patterns } satisfies WorkerRequest);

@@ -15,6 +15,7 @@ import { type HeatConfig } from "../lib/heat.js";
 import {
   getRegexWorker,
   RegexTimeoutError,
+  RegexWorkerUnavailableError,
 } from "#lib/regex-worker/index.js";
 
 const DUPLICATE_WINDOW_SECONDS = 30;
@@ -185,6 +186,12 @@ export class FilterService extends Service {
     } catch (err: unknown) {
       if (err instanceof RegexTimeoutError) {
         this.#disablePattern(guildId, rules, err.patternIndex);
+        return null;
+      }
+      if (err instanceof RegexWorkerUnavailableError) {
+        this.container.logger.error(
+          `[Filter] Regex worker unavailable; regex rules skipped for guild ${guildId}.`,
+        );
         return null;
       }
       this.container.logger.error(

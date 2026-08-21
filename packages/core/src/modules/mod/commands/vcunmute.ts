@@ -1,18 +1,27 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseCommand, CommandContext } from "#lib/commands.js";
+import type { ApplicationCommandRegistry } from "@sapphire/framework";
+import {
+  ModerationCommand,
+  type ModerationCommand as MC,
+} from "#lib/moderation/ModerationCommand.js";
 import { VoiceMuteAction } from "../actions/VoiceMuteAction.js";
-import { resolveVoiceMember } from "../lib/helpers.js";
+import type { LumiT } from "#lib/i18n/index.js";
+import type { ModerationCase } from "@prisma/client";
+import type { GuildMember } from "discord.js";
 
-@ApplyOptions<BaseCommand.Options>({
+@ApplyOptions<MC.Options>({
   name: "vcunmute",
   aliases: ["voiceunmute", "vunmute"],
   description: "Unmute a member in server voice channels",
   preconditions: ["GuildOnly"],
   requiredPermit: "mod.voicemute",
   prefixEnabled: true,
+  logScope: "vcunmute",
 })
-export class VcUnmuteCommand extends BaseCommand {
+export class VcUnmuteCommand extends ModerationCommand<
+  GuildMember,
+  ModerationCase
+> {
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {
@@ -32,24 +41,32 @@ export class VcUnmuteCommand extends BaseCommand {
     );
   }
 
-  public override async run(ctx: CommandContext): Promise<void> {
-    const guild = ctx.guild!;
-    const reason =
-      (await ctx.getString("reason")) ?? "Voice unmute by moderator";
+  protected override resolveTarget(ctx: MC.RunContext) {
+    return ctx.getMember("target");
+  }
 
-    const member = await resolveVoiceMember(ctx, guild);
-    if (!member) return;
+  protected override resolveReason(ctx: MC.RunContext) {
+    return ctx
+      .getString("reason")
+      .then((r) => r ?? "Voice unmute by moderator");
+  }
 
-    const c = await VoiceMuteAction.undo({
-      guild,
-      targetMember: member,
-      moderator: ctx.user,
-      reason,
-    });
+  protected override action({
+    guild,
+    target,
+    moderator,
+    reason,
+  }: MC.ActionContext<GuildMember>) {
+    return VoiceMuteAction.undo({ guild, targetMember: target, moderator, reason });
+  }
 
-    await ctx.replySuccess(
-      "Voice Unmuted Member",
-      `Successfully unmuted **${member.user.tag}** in voice.\n\n**Case:** #${c.caseNumber}`,
-    );
+  protected override buildSuccessMessage(
+    _t: LumiT,
+    { target, outcome }: MC.OutcomeContext<GuildMember, ModerationCase>,
+  ) {
+    return {
+      title: "Voice Unmuted Member",
+      body: `Successfully unmuted **${target.user.tag}** in voice.\n\n**Case:** #${outcome.caseNumber}`,
+    };
   }
 }

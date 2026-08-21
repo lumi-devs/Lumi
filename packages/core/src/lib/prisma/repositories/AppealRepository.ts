@@ -65,7 +65,9 @@ export class AppealRepository extends Repository {
 
   /**
    * Reviews one appeal scoped to its guild, so an appeal id from another
-   * guild can never be targeted. Returns null if no matching row exists.
+   * guild can never be targeted. Only a "pending" appeal can be reviewed, so
+   * two reviewers racing the same appeal can't both apply a decision.
+   * Returns null if no matching pending row exists.
    */
   public async review(
     guildId: string,
@@ -74,7 +76,7 @@ export class AppealRepository extends Repository {
     reviewedBy: string,
   ): Promise<Appeal | null> {
     const { count } = await this.prisma.appeal.updateMany({
-      where: { id, guildId },
+      where: { id, guildId, status: "pending" },
       data: { status, reviewedBy, reviewedAt: new Date() },
     });
     if (count === 0) return null;

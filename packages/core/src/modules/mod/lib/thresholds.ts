@@ -122,16 +122,28 @@ export async function incrementWarnCount(
   return (results?.[0]?.[1] as number | null) ?? 0;
 }
 
+const DECREMENT_WARN_COUNT_SCRIPT =
+  "local v = tonumber(redis.call('GET', KEYS[1])); if v and v > 0 then return redis.call('DECR', KEYS[1]) end return v or 0";
+
 export async function decrementWarnCount(
   container: Container,
   guildId: string,
   userId: string,
 ): Promise<void> {
-  await container.redis.eval(
-    "local v = tonumber(redis.call('GET', KEYS[1])); if v and v > 0 then return redis.call('DECR', KEYS[1]) end return v or 0",
-    1,
-    warnCountKey(guildId, userId),
-  );
+  await container.redis.eval(DECREMENT_WARN_COUNT_SCRIPT, 1, warnCountKey(guildId, userId));
+}
+
+/** Batched variant of {@linkcode decrementWarnCount} - one pipeline instead of N round trips. */
+export async function decrementWarnCounts(
+  container: Container,
+  entries: { guildId: string; userId: string }[],
+): Promise<void> {
+  if (entries.length === 0) return;
+  const pipeline = container.redis.pipeline();
+  for (const { guildId, userId } of entries) {
+    pipeline.eval(DECREMENT_WARN_COUNT_SCRIPT, 1, warnCountKey(guildId, userId));
+  }
+  await pipeline.exec();
 }
 
 export async function resetWarnCount(

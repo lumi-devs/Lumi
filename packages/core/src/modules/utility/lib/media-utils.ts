@@ -57,7 +57,7 @@ export async function handleMediaRequest({
     const cooldownSeconds =
       ((await container.db.config.getModuleConfig(
         guildId!,
-        "user_media",
+        "utility",
         "cooldown_seconds",
       )) as number | null) ?? 10;
 

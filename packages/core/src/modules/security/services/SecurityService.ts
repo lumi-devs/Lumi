@@ -218,7 +218,7 @@ export class SecurityService extends Service {
     if (count <= config.limits[kind]) return null;
 
     const tripped = await this.redis.set(
-      RedisKeys.securityTripped(guild.id, executorId),
+      RedisKeys.securityTripped(guild.id, executorId, kind),
       String(Date.now()),
       "EX",
       TRIPPED_COOLDOWN_SECONDS,

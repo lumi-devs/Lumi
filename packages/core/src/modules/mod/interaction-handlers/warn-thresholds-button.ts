@@ -2,11 +2,14 @@ import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,
   InteractionHandlerTypes,
+  UserError,
   container,
 } from "@sapphire/framework";
 import type { ButtonInteraction } from "discord.js";
 import { isWarnThresholdAction } from "@lumi/contracts";
+import { hasRequiredPermit } from "#lib/permissions/index.js";
 import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";
+import { Emojis } from "#utilities/assets.js";
 import {
   removeThresholdRule,
   resetAllThresholds,
@@ -29,6 +32,14 @@ export class WarnThresholdsButtonHandler extends InteractionHandler {
     parsed: { customId: string },
   ): Promise<void> {
     await interaction.deferUpdate();
+
+    if (!(await hasRequiredPermit(interaction, "admin.config"))) {
+      throw new UserError({
+        identifier: "AccessDenied",
+        message: `${Emojis.CROSS} You need the Admin permission level to manage warning thresholds.`,
+      });
+    }
+
     const parts = parsed.customId.replace("wt:", "").split(":");
     const subAction = parts[0];
     const guildId = interaction.guildId!;
