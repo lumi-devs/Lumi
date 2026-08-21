@@ -12,9 +12,8 @@ export {
   envParseString,
   envParseInteger,
   envIsDefined,
-  getServiceRole,
+  isPrimaryShard,
   type Env,
-  type ServiceRole,
 } from "./src/lib/env.js";
 
 // Module system

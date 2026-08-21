@@ -1,10 +1,9 @@
 import { parseRedisConnectionOption } from "#lib/database/redis.js";
 import { buildRestOptions } from "#lib/discord-rest.js";
-import { envParseInteger, envParseString, getServiceRole } from "#lib/env.js";
+import { envParseInteger, envParseString } from "#lib/env.js";
 import { buildI18nOptions } from "#lib/i18n/index.js";
 import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
 import { BotConfig } from "#lib/utilities/config.js";
-import { buildSimpleThrottlerFactory } from "@lumi/sharding";
 import { LogLevel } from "@sapphire/framework";
 import {
   GatewayIntentBits,
@@ -14,7 +13,6 @@ import {
   type ClientOptions,
   type PresenceStatusData,
 } from "discord.js";
-import type { LumiClient } from "./LumiClient.js";
 
 /**
  * Assembles the discord.js + Sapphire options the client is constructed with.
@@ -22,13 +20,12 @@ import type { LumiClient } from "./LumiClient.js";
  * @remarks
  *
  * Kept as a free function because it has to be evaluated inside the `super()`
- * argument list, before `this` exists. The sharding block is spread in only
- * when a plan is supplied - the scheduler role opens no gateway connection and
- * must not declare shards.
- *
- * @param options - Caller-supplied client options.
+ * argument list, before `this` exists. Shard id/count are deliberately left
+ * unset here - discord.js's `Client` constructor reads them itself from the
+ * `SHARDS`/`SHARD_COUNT` env vars `ShardingManager` injects into each spawned
+ * child (see `apps/worker/src/main.ts`).
  */
-export function buildClientOptions(options: LumiClient.Options): ClientOptions {
+export function buildClientOptions(): ClientOptions {
   return {
     makeCache: Options.cacheWithLimits({
       ...Options.DefaultMakeCacheSettings,
@@ -64,13 +61,6 @@ export function buildClientOptions(options: LumiClient.Options): ClientOptions {
         }),
       },
     },
-    ...(options.shardPlan && {
-      shardCount: options.shardPlan.shardCount,
-      ...(options.shardPlan.shards && { shards: [...options.shardPlan.shards] }),
-      ws: {
-        buildIdentifyThrottler: buildSimpleThrottlerFactory(options.shardPlan),
-      },
-    }),
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMembers,
@@ -99,7 +89,7 @@ export function buildClientOptions(options: LumiClient.Options): ClientOptions {
     defaultPrefix: envParseString("DEFAULT_PREFIX", ","),
     logger: {
       instance: new PinoSapphireLogger(
-        envParseString("SERVICE_NAME", getServiceRole()),
+        envParseString("SERVICE_NAME", "lumi"),
         process.env["NODE_ENV"] === "development"
           ? LogLevel.Debug
           : LogLevel.Info,

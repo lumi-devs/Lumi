@@ -23,28 +23,33 @@ export function envParseInteger(key: string, defaultValue?: number): number {
 
 export const envIsDefined = (key: string) => Boolean(process.env[key]);
 
-export type ServiceRole = "worker" | "scheduler";
-
-export function getServiceRole(): ServiceRole {
-  const raw = process.env["LUMI_ROLE"];
-  if (!raw || raw === "worker") return "worker";
-  if (raw === "scheduler") return "scheduler";
-  throw new Error(`[ENV] Invalid LUMI_ROLE value '${raw}'. Expected 'worker' or 'scheduler'.`);
-}
-
-/** Roles that own the BullMQ Worker (consume jobs and fire tasks). */
-export const roleOwnsScheduler = (r: ServiceRole) =>
-  r === "scheduler" || r === "worker";
-
-/** Roles that execute task effects (Discord-side work) on the bus. */
-export const roleExecutesTaskEffects = (r: ServiceRole) => r === "worker";
-
 export function getConsumerId(): string {
   return (
     process.env["LUMI_CONSUMER_ID"] ??
     process.env["HOSTNAME"] ??
     `worker-${process.pid}`
   );
+}
+
+/**
+ * Whether this process should own the pod's single HTTP surface (RPC,
+ * metrics, `/healthz`/`/readyz`). A process not spawned by discord.js's
+ * `ShardingManager` (a standalone dev run) is always primary. A
+ * ShardingManager child is primary only if shard 0 is
+ * among the ids it holds - only one process per pod may bind the shared
+ * port, and shard 0 always exists.
+ */
+export function isPrimaryShard(): boolean {
+  if (!process.env["SHARDING_MANAGER"]) return true;
+  const raw = process.env["SHARDS"];
+  if (!raw) return true;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    const ids = Array.isArray(parsed) ? parsed : [parsed];
+    return ids.includes(0);
+  } catch {
+    return true;
+  }
 }
 
 /**

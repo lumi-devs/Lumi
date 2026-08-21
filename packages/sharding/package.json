@@ -2,16 +2,14 @@
   "name": "@lumi/sharding",
   "version": "3.2.0",
   "license": "GPL-3.0-only",
-  "description": "Shard topology + IDENTIFY orchestration for the worker fleet. Calls /gateway/bot, plans shard ranges, and supplies IdentifyThrottlers.",
+  "description": "Cross-process shard telemetry: publishes per-shard health to Redis and assembles the cluster-wide fleet view for the dashboard.",
   "type": "module",
   "private": true,
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@discordjs/rest": "^2.6.2",
-    "@discordjs/ws": "^2.0.4",
-    "discord-api-types": "^0.38.50"
+    "@sapphire/utilities": "^3.18.2"
   },
   "peerDependencies": {
     "ioredis": "^5.4.0"

@@ -14,20 +14,22 @@ Bun workspace monorepo (`workspaces: ["packages/*", "apps/*"]`). See
 [`docs/architecture.md`](docs/architecture.md) for the full system topology — treat it as
 source of truth for anything below.
 
-- `apps/worker` — the one bot entrypoint, run in either of two roles selected by the
-  `LUMI_ROLE` env var: `worker` (owns the Discord gateway connection(s); runs every command,
-  module, and interaction handler) or `scheduler` (owns BullMQ delayed/cron job queues; never
-  opens a gateway connection). Deployed as two separate processes/replica groups from the same
-  image, not two separate app packages.
+- `apps/worker` — the one bot entrypoint. `main.ts` is a thin discord.js `ShardingManager`
+  that spawns one identical child process per shard it owns (`shard-client.ts`); every process
+  owns the Discord gateway connection(s) for its shards and runs every command, module, and
+  interaction handler. There is no separate scheduler role - exactly one shard per pod (the one
+  holding shard id `0`) is elected "primary" with zero coordination and additionally owns BullMQ
+  job scheduling and the RPC/metrics HTTP surface (`isPrimaryShard()` in `packages/core/src/lib/env.ts`).
 - `apps/dashboard` — Next.js (App Router) web admin panel; talks to `worker` only over an
   internal HTTP RPC bridge, never touches Postgres/Redis directly.
 - `packages/core` — the framework itself: module loader, database service, command/permit
   system, addon SDK.
 - `packages/contracts` — RPC schemas and shared type definitions used by both `worker` and
   `dashboard`.
-- `packages/event-bus` — Redis Streams event bus between `worker` and `scheduler`.
-- `packages/sharding` — shard planner and shard telemetry for static horizontal
-  scaling.
+- `packages/event-bus` — Redis Streams event bus relaying fired scheduled-task effects from
+  the primary shard to every shard.
+- `packages/sharding` — shard telemetry for the dashboard's fleet view; shard assignment
+  itself is discord.js's `ShardingManager`, not custom code.
 - `packages/observability` — OpenTelemetry tracing, Prometheus metrics, health probes,
   wired up identically across all apps.
 - `packages/eslint-config` — shared ESLint config consumed by every workspace package.
