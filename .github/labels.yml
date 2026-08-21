@@ -96,7 +96,7 @@
 
 - name: "area:scheduler"
   color: "5319e7"
-  description: "Changes in apps/scheduler task queue executor"
+  description: "Changes in the scheduler role's task queue executor"
 
 - name: "area:ci"
   color: "fef2c0"

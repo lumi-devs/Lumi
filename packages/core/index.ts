@@ -12,7 +12,9 @@ export {
   envParseString,
   envParseInteger,
   envIsDefined,
+  getServiceRole,
   type Env,
+  type ServiceRole,
 } from "./src/lib/env.js";
 
 // Module system

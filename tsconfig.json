@@ -13,7 +13,6 @@
     "packages/core/src",
     "packages/sharding/src",
     "apps/worker/src",
-    "apps/scheduler/src",
     "examples",
     "prisma.config.ts"
   ]

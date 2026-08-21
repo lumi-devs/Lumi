@@ -6,7 +6,6 @@
     [
       "@lumi/core",
       "@lumi/worker",
-      "@lumi/scheduler",
       "@lumi/dashboard",
       "@lumi/event-bus",
       "@lumi/sharding",

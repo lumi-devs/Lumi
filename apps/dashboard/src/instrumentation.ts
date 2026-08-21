@@ -4,7 +4,7 @@
 // the process entrypoint now, so there's no `main.ts` to put this in.
 //
 // Mirrors what every other Lumi service does at boot (see
-// apps/worker/src/main.ts, apps/scheduler/src/main.ts): OTel tracing +
+// apps/worker/src/main.ts, run in either the worker or scheduler role): OTel tracing +
 // Prometheus metrics + a /healthz, /readyz, /metrics server on
 // METRICS_PORT, and a readiness probe for the internal HTTP RPC connection
 // this app depends on for every guild/system page.

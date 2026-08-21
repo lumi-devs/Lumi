@@ -2,27 +2,35 @@
 
 ## Process roles
 
-Lumi runs as three independent apps under `apps/`:
+Lumi runs as two independent apps under `apps/`, plus `apps/worker` deployed twice under
+different roles:
 
 | App | Role | Discord gateway? | Purpose |
 | :--- | :--- | :--- | :--- |
 | [`apps/worker`](../apps/worker/README.md) | `worker` | Yes | Owns the Discord WebSocket connection(s) and runs every command, module, and interaction handler in-process. |
-| [`apps/scheduler`](../apps/scheduler/README.md) | `scheduler` | No | Owns BullMQ delayed/cron job queues. Never opens a gateway connection. |
+| [`apps/worker`](../apps/worker/README.md) | `scheduler` | No | Same image/entrypoint, run with `LUMI_ROLE=scheduler`. Owns BullMQ delayed/cron job queues. Never opens a gateway connection. |
 | [`apps/dashboard`](../apps/dashboard/README.md) | *(not a `ServiceRole`)* | No | Lightweight HTTP app. Talks to `worker` over an internal HTTP RPC bridge. |
 
-There is no separate gateway process. Each `worker` replica owns its own shard range end-to-end - gateway connection, command dispatch, and module logic all live in the same process. `ServiceRole` (`packages/core/src/lib/env.ts`) is a union of exactly `"worker" | "scheduler"`.
+There is no separate gateway process, and no separate scheduler app package - the scheduler is
+a deployment-level split (a second replica group of the same image/entrypoint), not a
+code-level one. Each `worker`-role replica owns its own shard range end-to-end - gateway
+connection, command dispatch, and module logic all live in the same process. `ServiceRole`
+(`packages/core/src/lib/env.ts`) is a union of exactly `"worker" | "scheduler"`, read from the
+`LUMI_ROLE` env var.
 
-Entry points are intentionally thin. `apps/worker/src/main.ts`:
+The entry point is intentionally thin. `apps/worker/src/main.ts`:
 
 ```ts
 import "./telemetry.js";
 import "@lumi/core/setup";
-import { bootstrapClientApp } from "@lumi/core";
+import { bootstrapClientApp, getServiceRole } from "@lumi/core";
 
-await bootstrapClientApp({ role: "worker" });
+const role = getServiceRole();
+await bootstrapClientApp({ role });
 ```
 
-`apps/scheduler/src/main.ts` is structurally identical, passing `role: "scheduler"`. Telemetry bootstrap is imported first (side-effect only) so instrumentation is installed before any instrumented library loads.
+Telemetry bootstrap is imported first (side-effect only) so instrumentation is installed before
+any instrumented library loads.
 
 ## Inter-process communication
 

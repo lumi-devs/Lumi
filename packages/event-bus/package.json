@@ -9,8 +9,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@lumi/contracts": "workspace:*",
-    "@lumi/observability": "workspace:*",
     "ioredis": "^6.0.0"
   }
 }
