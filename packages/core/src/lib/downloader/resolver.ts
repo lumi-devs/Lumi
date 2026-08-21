@@ -79,10 +79,6 @@ export const ADDON_MODULES_ROOT = path.join(
   "installed-modules",
 );
 
-/**
- * Handles the logic of cloning repositories, verifying info.json,
- * and resolving dependencies.
- */
 export class DownloadResolver {
   public async addRepo(
     name: string,

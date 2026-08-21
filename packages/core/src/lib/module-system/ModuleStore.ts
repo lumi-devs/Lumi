@@ -12,15 +12,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import type { BaseValidator } from "@sapphire/shapeshift";
 import { withSerializedWork } from "#lib/utilities/misc.js";
 
-/**
- * Represents the current lifecycle state of a module in the store.
- */
 export type ModuleState =
   "discovered" | "loaded" | "failed" | "disabled" | "skipped-conflict";
 
-/**
- * Represents a discovered module and its metadata within the {@link ModuleStore}.
- */
 export interface ModuleRecord {
   name: string;
   dir: string;

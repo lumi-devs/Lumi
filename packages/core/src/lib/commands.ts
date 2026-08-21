@@ -77,13 +77,9 @@ function makeReplyHelper(factory: CardFactory) {
     );
 }
 
-/** Helper to send a standardized success card reply. */
 export const replySuccess = makeReplyHelper(makeSuccessCard);
-/** Helper to send a standardized error card reply. */
 export const replyError = makeReplyHelper(makeErrorCard);
-/** Helper to send a standardized warning card reply. */
 export const replyWarning = makeReplyHelper(makeWarningCard);
-/** Helper to send a standardized informational card reply. */
 export const replyInfo = makeReplyHelper(makeInfoCard);
 
 /**

@@ -16,10 +16,7 @@ export {
   parseConfigList,
 } from "./config-schema.js";
 
-/**
- * Represents the static metadata structure exported by a feature module's index file.
- * This metadata is used during module discovery without executing the module's code.
- */
+/** Used during module discovery without executing the module's code. */
 export interface ModuleMeta {
   name: string;
   displayName: string;
