@@ -1,5 +1,8 @@
-// Duplicates discord.js `ChannelType` values so the dashboard bundle doesn't
-// have to import discord.js.
+// Duplicates discord.js `ChannelType` values instead of importing discord.js:
+// confirmed by an actual build attempt that Next.js/Turbopack can't resolve
+// discord.js's `@discordjs/ws` -> `zlib-sync` lazy-import chain even in a
+// server component, so this isn't just a client-bundle-size guard - the
+// import breaks the build outright.
 
 const TEXT = 0;
 const VOICE = 2;
