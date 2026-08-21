@@ -144,7 +144,7 @@ services:
   scheduler:
     <<: *lumi-service
     container_name: lumi-scheduler
-    command: ["bun", "apps/scheduler/src/main.ts"]
+    command: ["bun", "apps/worker/src/main.ts"]
     environment:
       <<: *lumi-env
       LUMI_ROLE: "scheduler"

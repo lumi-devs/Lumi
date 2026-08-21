@@ -42,7 +42,7 @@
     "typecheck": "turbo run typecheck:all && turbo run typecheck --filter=@lumi/dashboard && turbo run typecheck --filter=@lumi/docs",
     "lint": "turbo run lint:all",
     "typecheck:all": "tsc --noEmit -p tsconfig.json",
-    "lint:all": "eslint packages/*/src apps/worker/src apps/scheduler/src apps/dashboard/src --fix",
+    "lint:all": "eslint packages/*/src apps/worker/src apps/dashboard/src --fix",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",

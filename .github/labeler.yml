@@ -32,7 +32,11 @@
 
 'area:scheduler':
   - changed-files:
-      - any-glob-to-any-file: 'apps/scheduler/**'
+      - any-glob-to-any-file:
+          - 'deploy/k8s/scheduler-deployment.yaml'
+          - 'packages/core/src/lib/scheduled-tasks.ts'
+          - 'packages/core/src/lib/scheduler-bus.ts'
+          - 'packages/core/src/lib/schedule-task.ts'
 
 'area:i18n':
   - changed-files:

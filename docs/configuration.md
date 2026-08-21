@@ -4,7 +4,7 @@ Copy `.env.example` to `.env` and fill in the mandatory section before running a
 
 ### One file, all services
 
-The repo-root `.env` is the single source of truth. `apps/worker/.env`, `apps/scheduler/.env` and `apps/dashboard/.env` are symlinks to it — each app is started with its own directory as cwd and Bun auto-loads whatever `.env` it finds there, so the links are what stop three separately-maintained copies from drifting apart. `scripts/setup.sh` creates them; `.env` is gitignored at every level, so they can't be committed and a fresh checkout needs that run (or `ln -s ../../.env apps/<app>/.env` by hand).
+The repo-root `.env` is the single source of truth. `apps/worker/.env` and `apps/dashboard/.env` are symlinks to it — each app is started with its own directory as cwd and Bun auto-loads whatever `.env` it finds there, so the links are what stop separately-maintained copies from drifting apart. `scripts/setup.sh` creates them; `.env` is gitignored at every level, so they can't be committed and a fresh checkout needs that run (or `ln -s ../../.env apps/<app>/.env` by hand).
 
 The consequence is that a value in the root `.env` applies to *every* service. Anything that must differ per service is therefore left unset there and defaulted in code — `LUMI_ROLE` (each entrypoint declares its own role) and `RPC_HTTP_PORT` (worker `8091`, scheduler `8092`) — or has a per-service key, as with `<SERVICE>_METRICS_PORT`.
 

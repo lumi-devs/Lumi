@@ -1,5 +1,5 @@
 import { roleOwnsScheduler, type ServiceRole } from "#lib/env.js";
-import type { SchedulerLeaderLock } from "#lib/scheduler-leader-lock.js";
+import type { LeaderLock } from "#lib/leader-lock.js";
 import { registerReadinessProbe } from "@lumi/observability";
 import { container } from "@sapphire/framework";
 
@@ -25,7 +25,7 @@ export class ReadinessProbes {
   protected readonly isReady: () => boolean;
 
   /** The scheduler leader lock, or `null` when this replica took none. */
-  protected readonly schedulerLeaderLock: () => SchedulerLeaderLock | null;
+  protected readonly schedulerLeaderLock: () => LeaderLock | null;
 
   public constructor(options: ReadinessProbes.Options) {
     this.role = options.role;
@@ -105,6 +105,6 @@ export namespace ReadinessProbes {
     /** Reads the client's current gateway readiness. */
     isReady: () => boolean;
     /** Reads the client's scheduler leader lock, if it holds one. */
-    schedulerLeaderLock: () => SchedulerLeaderLock | null;
+    schedulerLeaderLock: () => LeaderLock | null;
   }
 }

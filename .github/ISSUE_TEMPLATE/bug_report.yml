@@ -14,8 +14,8 @@ body:
       description: Select the primary package or service where the issue occurs
       options:
         - "@lumi/core (Framework Core & Base Modules)"
-        - "@lumi/worker (Gateway Connection & Command Engine)"
-        - "@lumi/scheduler (BullMQ Task Engine)"
+        - "@lumi/worker (Gateway Connection & Command Engine, worker role)"
+        - "@lumi/worker (BullMQ Task Engine, scheduler role)"
         - "@lumi/dashboard (Web Dashboard)"
         - "@lumi/event-bus (Redis Streams Event Infrastructure)"
         - "@lumi/sharding (Sharding Coordinator)"

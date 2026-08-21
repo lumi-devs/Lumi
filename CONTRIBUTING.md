@@ -81,7 +81,7 @@ bun run dev
 
 ## Changesets & Changelog Workflow
 
-Lumi uses **[Changesets](https://github.com/changesets/changesets)** to automate package versioning and release notes across our workspace packages (`@lumi/core`, `@lumi/worker`, `@lumi/scheduler`, etc.).
+Lumi uses **[Changesets](https://github.com/changesets/changesets)** to automate package versioning and release notes across our workspace packages (`@lumi/core`, `@lumi/worker`, `@lumi/dashboard`, etc.).
 
 ### When to Add a Changeset
 

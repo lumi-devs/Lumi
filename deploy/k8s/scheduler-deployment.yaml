@@ -24,7 +24,7 @@ spec:
         - name: scheduler
           image: ghcr.io/your-org/lumi:latest
           imagePullPolicy: IfNotPresent
-          command: ["bun", "apps/scheduler/src/main.ts"]
+          command: ["bun", "apps/worker/src/main.ts"]
           envFrom:
             - configMapRef:
                 name: lumi-env
