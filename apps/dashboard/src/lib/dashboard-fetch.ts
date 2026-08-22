@@ -30,6 +30,7 @@ import type {
   BlocklistListPayload,
   CasesListPayload,
   ConfigHistoryListPayload,
+  GuildSummaryView,
   ModuleDataListPayload,
   SystemAuditListPayload,
 } from "@lumi/contracts";
@@ -43,6 +44,29 @@ export const getGuildDashboard = cache(
     return data as DashboardData;
   },
 );
+
+/**
+ * Decoration for the `/guilds` picker (icon/banner/member count per tile) -
+ * unlike every other fetch here, failure degrades to "no summaries" instead
+ * of propagating, since the picker's fallback tile treatment already covers
+ * "we don't know this guild's banner" and a worker hiccup shouldn't take the
+ * whole server list down with it.
+ */
+export async function getGuildSummaries(
+  guildIds: string[],
+  actorId: string,
+): Promise<GuildSummaryView[]> {
+  if (guildIds.length === 0) return [];
+  try {
+    const data = (await rpcCall(RPC_ACTIONS.guildSummariesList, {
+      actorId,
+      data: { guildIds },
+    })) as { summaries: GuildSummaryView[] };
+    return data.summaries;
+  } catch {
+    return [];
+  }
+}
 
 export const getGuildPermits = cache(
   async (guildId: string, actorId: string): Promise<PermitView[]> => {

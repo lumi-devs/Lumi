@@ -19,7 +19,7 @@ export function moduleKillSwitchColumns({
       id: "module",
       header: "Module",
       accessorFn: (r) => r.moduleName,
-      meta: { className: "w-56 font-mono text-[12px] text-fg" },
+      meta: { className: "w-56 font-mono text-[14px] text-fg" },
     },
     {
       id: "reason",

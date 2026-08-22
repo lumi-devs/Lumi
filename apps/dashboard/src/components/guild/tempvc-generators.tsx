@@ -222,11 +222,17 @@ function GeneratorForm({
   if (options.length === 0 && !editing) {
     return (
       <div className="border-t border-border bg-bg-subtle px-4 py-3">
-        <Alert variant="info">
-          {channels.length === 0
-            ? "Lumi can't see any voice channels in this server. Create one, or check the bot's channel permissions."
-            : "Every voice channel Lumi can see is already a generator. Remove one to reuse its channel."}
-        </Alert>
+        {channels.length === 0 ? (
+          <Alert variant="warning">
+            Lumi can&rsquo;t see any voice channels in this server. Create
+            one, or check the bot&rsquo;s channel permissions.
+          </Alert>
+        ) : (
+          <Alert variant="info">
+            Every voice channel Lumi can see is already a generator. Remove
+            one to reuse its channel.
+          </Alert>
+        )}
       </div>
     );
   }
@@ -263,7 +269,6 @@ function GeneratorForm({
           label="User limit"
           htmlFor="generator-limit"
           className="w-28 gap-1"
-          hint="0 for no limit"
         >
           <Input
             id="generator-limit"
@@ -273,21 +278,33 @@ function GeneratorForm({
           />
         </Field>
 
-        <div className="flex items-center gap-2 pb-px">
-          <Button type="submit" variant="primary" disabled={isPending}>
-            {isPending
-              ? "Saving…"
-              : editing
-                ? "Save generator"
-                : "Add generator"}
-          </Button>
-          {editing ? (
-            <Button type="button" variant="ghost" onClick={onCancel}>
-              Cancel
+        <div className="flex flex-col gap-1">
+          {/* Invisible spacer matching Field's Label row, so these buttons -
+           * which have no label of their own - still bottom-align with the
+           * inputs instead of the "User limit" Field's hint-inflated height. */}
+          <span aria-hidden className="invisible text-[14px] leading-4">
+            spacer
+          </span>
+          <div className="flex items-center gap-2">
+            <Button type="submit" variant="primary" disabled={isPending}>
+              {isPending
+                ? "Saving…"
+                : editing
+                  ? "Save generator"
+                  : "Add generator"}
             </Button>
-          ) : null}
+            {editing ? (
+              <Button type="button" variant="ghost" onClick={onCancel}>
+                Cancel
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
+
+      <p className="text-[13px] leading-4 text-fg-subtle">
+        User limit: 0 for no limit.
+      </p>
 
       <Field
         label={
@@ -305,7 +322,7 @@ function GeneratorForm({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="w-auto max-w-none px-3 py-2.5">
-                  <div className="grid grid-cols-[max-content_1fr] items-baseline gap-x-3 gap-y-1 text-[11px]">
+                  <div className="grid grid-cols-[max-content_1fr] items-baseline gap-x-3 gap-y-1 text-[13px]">
                     {[
                       { tokens: ["{}", "{number}", "{position}"], example: "1" },
                       { tokens: ["{username}", "{name}"], example: "Alex" },
@@ -346,7 +363,7 @@ function GeneratorForm({
             className="min-w-[12rem] flex-1"
           />
           <span
-            className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-[12px] text-fg"
+            className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-[14px] text-fg"
             aria-live="polite"
           >
             <Volume2 aria-hidden className="size-3.5 shrink-0 text-fg-subtle" />

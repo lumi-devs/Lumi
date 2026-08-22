@@ -75,10 +75,10 @@ function InvalidLink({ reason }: { reason?: string }) {
           <XCircle className="size-4" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
+          <h1 className="font-display text-[19px] font-semibold tracking-[0.01em] text-fg">
             This appeal link doesn&rsquo;t work
           </h1>
-          <p className="mt-1 text-[12px] leading-5 text-fg-muted">
+          <p className="mt-1 text-[14px] leading-5 text-fg-muted">
             {reason ??
               "The link is malformed, expired, or was already used. Ask the server's staff for a fresh one if you still want to appeal."}
           </p>
@@ -97,10 +97,10 @@ function AlreadySubmitted({ status }: { status: string }) {
           <CheckCircle className="size-4" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
+          <h1 className="font-display text-[19px] font-semibold tracking-[0.01em] text-fg">
             Appeal already submitted
           </h1>
-          <p className="mt-1 text-[12px] leading-5 text-fg-muted">
+          <p className="mt-1 text-[14px] leading-5 text-fg-muted">
             An appeal for this case has already been submitted. Its current
             status is <span className="font-medium text-fg">{label}</span>.
             Submitting again isn&rsquo;t possible for the same case.

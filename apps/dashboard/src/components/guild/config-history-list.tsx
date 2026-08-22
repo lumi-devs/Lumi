@@ -110,10 +110,10 @@ export function ConfigHistoryList({
               <div className="flex min-w-0 shrink-0 items-start gap-2 sm:w-56">
                 {emoji ? <Glyph emoji={emoji} size="sm" /> : null}
                 <div className="min-w-0">
-                  <p className="truncate text-[13px] text-fg">
+                  <p className="truncate text-[15px] text-fg">
                     {fieldLabel(labels, entry.moduleName, entry.key)}
                   </p>
-                  <p className="truncate text-[11px] text-fg-subtle">
+                  <p className="truncate text-[13px] text-fg-subtle">
                     {moduleLabel(labels, entry.moduleName)}
                   </p>
                 </div>
@@ -127,7 +127,7 @@ export function ConfigHistoryList({
                   <ValueChip text={chipText(entry.newValue)} emphasis />
                 </div>
                 {superseded ? (
-                  <p className="mt-1 text-[11px] text-fg-subtle">
+                  <p className="mt-1 text-[13px] text-fg-subtle">
                     Changed again on {formatShortDay(superseded)} — this is no
                     longer the live value.
                   </p>
@@ -135,7 +135,7 @@ export function ConfigHistoryList({
               </div>
 
               <div className="flex shrink-0 items-center justify-between gap-3 sm:w-64 sm:justify-end">
-                <p className="min-w-0 text-[11px] text-fg-muted sm:text-right">
+                <p className="min-w-0 text-[13px] text-fg-muted sm:text-right">
                   <span className="block truncate">
                     {memberNames[entry.actorId] ?? entry.actorId}
                   </span>

@@ -46,7 +46,7 @@ export function Pagination({
         className,
       )}
     >
-      <p className="text-[12px] text-fg-muted">
+      <p className="text-[14px] text-fg-muted">
         <span className="tabular text-fg">
           {first}–{last}
         </span>{" "}
@@ -63,7 +63,7 @@ export function Pagination({
             <ChevronLeft aria-hidden />
             Previous
           </PageStep>
-          <span className="font-display text-[12px] tracking-[0.02em] text-fg-muted">
+          <span className="font-display text-[14px] tracking-[0.02em] text-fg-muted">
             Page <span className="tabular text-fg">{page}</span> of{" "}
             <span className="tabular text-fg">{pageCount}</span>
           </span>

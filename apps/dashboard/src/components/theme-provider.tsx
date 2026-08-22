@@ -54,9 +54,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setTheme = useCallback((next: Theme) => {
-    setThemeState(next);
-    applyTheme(next);
-    window.localStorage.setItem(STORAGE_KEY, next);
+    const commit = () => {
+      setThemeState(next);
+      applyTheme(next);
+      window.localStorage.setItem(STORAGE_KEY, next);
+    };
+    // `applyTheme` is a plain DOM mutation (not React-managed), so the
+    // browser can capture it as-is for the transition - no flushSync needed.
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion || typeof document.startViewTransition !== "function") {
+      commit();
+      return;
+    }
+    document.startViewTransition(commit);
   }, []);
 
   return (

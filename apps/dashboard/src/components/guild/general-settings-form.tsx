@@ -13,6 +13,7 @@ import {
 } from "#/components/ui/card";
 import { Field, Input, Select } from "#/components/ui/input";
 import { useServerAction } from "#/lib/use-server-action";
+import { useStaggerIn } from "#/lib/animate";
 import type {
   GuildSettings,
   DashboardRoleView,
@@ -88,6 +89,7 @@ export function GeneralSettingsForm({
   roles: DashboardRoleView[];
   channels: DashboardChannelView[];
 }) {
+  const sectionsRef = useStaggerIn<HTMLDivElement>("> div");
   const [baseline, setBaseline] = useState<FormState>(() => toFormState(settings));
   const [form, setForm] = useState<FormState>(baseline);
   const { isPending, error, setError, run } = useServerAction();
@@ -218,6 +220,7 @@ export function GeneralSettingsForm({
       {/* `rise` sits here, not on a wrapper in page.tsx, so the fixed-position
        * SaveBar below stays outside the animated subtree. */}
       <div
+        ref={sectionsRef}
         className="rise flex flex-col gap-4"
         style={{ "--rise-delay": "140ms" } as React.CSSProperties}
       >

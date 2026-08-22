@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { setPanicMode } from "#/actions/security-actions";
 import { ActionError } from "#/components/action-error";
 import { Alert } from "#/components/ui/alert";
@@ -31,6 +32,7 @@ export function PanicModeConsole({
   const [confirming, setConfirming] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
   const { isPending, error, setError, run } = useServerAction();
+  const reduceMotion = useReducedMotion();
 
   const scoped = picked.length > 0;
   const targetCount = Math.min(scoped ? picked.length : channels.length, CHANNEL_CAP);
@@ -63,6 +65,15 @@ export function PanicModeConsole({
   if (state.active) {
     return (
       <>
+        <div className="relative isolate">
+          {reduceMotion ? null : (
+            <motion.div
+              aria-hidden
+              className="pointer-events-none absolute -inset-1 -z-10 rounded-panel bg-danger/25 blur-md"
+              animate={{ opacity: [0.6, 1, 0.6] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut" }}
+            />
+          )}
         <Card className="border-danger/40">
           <CardHeader
             className="border-danger/25 bg-danger-soft"
@@ -96,12 +107,12 @@ export function PanicModeConsole({
               {actorName ? (
                 <>
                   {actorName}{" "}
-                  <span className="tabular font-mono text-[11px] text-fg-subtle">
+                  <span className="tabular font-mono text-[13px] text-fg-subtle">
                     {state.actorId}
                   </span>
                 </>
               ) : (
-                <span className="tabular font-mono text-[12px]">
+                <span className="tabular font-mono text-[14px]">
                   {state.actorId ?? "Unknown"}
                 </span>
               )}
@@ -129,6 +140,7 @@ export function PanicModeConsole({
             <ActionError error={error} />
           </CardBody>
         </Card>
+        </div>
 
         <ConfirmDialog
           open={confirming}
@@ -179,14 +191,14 @@ export function PanicModeConsole({
         </CardHeader>
 
         <CardBody className="flex flex-col gap-3">
-          <p className="text-[13px] leading-5 text-fg-muted">
+          <p className="text-[15px] leading-5 text-fg-muted">
             Turning it on pauses invites for the whole server and denies
             @everyone Send Messages in the channels below, snapshotting each
             channel&rsquo;s current overwrite first so turning it off restores
             them exactly. Edits are paced to stay inside Discord&rsquo;s rate
             limits, so a large server takes a minute or two.
           </p>
-          <p className="text-[13px] leading-5 text-fg-muted">
+          <p className="text-[15px] leading-5 text-fg-muted">
             It doesn&rsquo;t ban, kick or quarantine anyone — it buys time.
           </p>
 
@@ -258,10 +270,10 @@ function ChannelScope({
   return (
     <div className="rounded-panel border border-border">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-bg-subtle px-3 py-2">
-        <p className="font-display text-[11px] tracking-[0.09em] text-fg-subtle uppercase">
+        <p className="font-display text-[13px] tracking-[0.09em] text-fg-subtle uppercase">
           Channels to lock
         </p>
-        <p className="text-[12px] text-fg-muted">
+        <p className="text-[14px] text-fg-muted">
           {picked.length === 0
             ? `Every text channel (${Math.min(channels.length, CHANNEL_CAP)} of ${channels.length})`
             : `${picked.length} selected`}
@@ -280,7 +292,7 @@ function ChannelScope({
         <ul className="flex flex-col">
           {channels.map((channel) => (
             <li key={channel.id}>
-              <label className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-[13px] text-fg hover:bg-surface-hover">
+              <label className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-[15px] text-fg hover:bg-surface-hover">
                 <Checkbox
                   checked={picked.includes(channel.id)}
                   onChange={() => onToggle(channel.id)}
@@ -293,7 +305,7 @@ function ChannelScope({
         </ul>
       </div>
       {channels.length > CHANNEL_CAP && picked.length === 0 ? (
-        <p className="border-t border-border px-3 py-2 text-[11px] leading-4 text-fg-subtle">
+        <p className="border-t border-border px-3 py-2 text-[13px] leading-4 text-fg-subtle">
           Lumi locks at most {CHANNEL_CAP} channels in one run. Pick the
           channels that matter if this server has more.
         </p>

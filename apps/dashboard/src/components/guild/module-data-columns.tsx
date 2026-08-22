@@ -30,27 +30,40 @@ export function moduleDataColumns(
       id: "target",
       header: "Target",
       accessorFn: (entry) => entry.targetId,
-      meta: { className: "w-48 tabular font-mono text-[11px] text-fg-muted" },
+      meta: { className: "w-48 tabular font-mono text-[13px] text-fg-muted" },
     },
     {
       id: "key",
       header: "Key",
       accessorFn: (entry) => entry.key,
-      meta: { className: "w-56 font-mono text-[12px] text-fg" },
+      meta: { className: "w-56 font-mono text-[14px] text-fg" },
     },
     {
       id: "value",
       header: "Value",
       accessorFn: (entry) => JSON.stringify(entry.value),
-      meta: { className: "max-w-[26rem] font-mono text-[11px] text-fg-muted" },
+      meta: { className: "max-w-[26rem] font-mono text-[13px] text-fg-muted" },
       cell: ({ row }) => {
-        const value = JSON.stringify(row.original.value);
+        const { display, full } = formatStoredValue(row.original.value);
         return (
-          <span className="block truncate" title={value}>
-            {value}
+          <span className="block truncate" title={full}>
+            {display}
           </span>
         );
       },
     },
   ];
+}
+
+// Objects/arrays keep the raw JSON (still the honest representation of nested
+// data), but a bare string/number/boolean/null - the common case for most
+// module-stored values - doesn't need JSON's quotes and escapes to read.
+function formatStoredValue(value: unknown): { display: string; full: string } {
+  if (value === null) return { display: "null", full: "null" };
+  if (typeof value === "string") return { display: value, full: value };
+  if (typeof value === "number" || typeof value === "boolean") {
+    return { display: String(value), full: String(value) };
+  }
+  const json = JSON.stringify(value);
+  return { display: json, full: json };
 }

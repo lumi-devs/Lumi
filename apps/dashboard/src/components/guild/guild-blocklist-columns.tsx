@@ -8,7 +8,7 @@ function UserCell({ id, names }: { id: string; names: Record<string, string> }) 
   return (
     <span className="flex flex-col">
       {name ? <span className="truncate text-fg">{name}</span> : null}
-      <span className="tabular font-mono text-[11px] text-fg-subtle">{id}</span>
+      <span className="tabular font-mono text-[13px] text-fg-subtle">{id}</span>
     </span>
   );
 }
@@ -34,7 +34,7 @@ export function guildBlocklistColumns({
       meta: { className: "max-w-[22rem] text-fg-muted" },
       cell: ({ row }) => (
         <span
-          className="block max-w-40 truncate text-[12.5px] text-fg-muted"
+          className="block max-w-40 truncate text-[14.5px] text-fg-muted"
           title={row.original.reason ?? undefined}
         >
           {row.original.reason ?? "No reason recorded"}
@@ -52,7 +52,7 @@ export function guildBlocklistColumns({
       id: "createdAt",
       header: "Blocked",
       accessorFn: (entry) => entry.createdAt,
-      meta: { className: "w-44 tabular whitespace-nowrap text-[12px] text-fg-muted" },
+      meta: { className: "w-44 tabular whitespace-nowrap text-[14px] text-fg-muted" },
       cell: ({ row }) => formatCaseDate(row.original.createdAt),
     },
     {

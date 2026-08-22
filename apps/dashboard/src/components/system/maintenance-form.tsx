@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { setMaintenanceMode } from "#/actions/system-actions";
 import {
   Card,
@@ -15,6 +16,7 @@ import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
 import { ActionError } from "#/components/action-error";
 import { useOptimisticAction } from "#/lib/use-server-action";
+import { SPRING_SNAPPY } from "#/lib/animate";
 
 export function MaintenanceForm({
   maintenanceMode,
@@ -24,6 +26,7 @@ export function MaintenanceForm({
   maintenanceMessage: string | null;
 }) {
   const [message, setMessage] = useState(maintenanceMessage ?? "");
+  const reduce = useReducedMotion();
   const {
     value: enabled,
     isPending,
@@ -81,10 +84,21 @@ export function MaintenanceForm({
             Save
           </Button>
         </div>
-        <p className="text-[11px] text-fg-subtle">
+        <p className="text-[13px] text-fg-subtle">
           Shown to users in place of the normal command response.
         </p>
-        <ActionError error={error} className="mt-1" />
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={reduce ? false : { opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={SPRING_SNAPPY}
+            >
+              <ActionError error={error} className="mt-1" />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </CardBody>
     </Card>
   );

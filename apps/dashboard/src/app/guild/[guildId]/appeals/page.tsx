@@ -2,7 +2,9 @@ import { Scale, PlugZap, SearchX } from "lucide-react";
 import Link from "next/link";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildAppeals, getGuildDashboard } from "#/lib/dashboard-fetch";
+import { exportGuildAppeals } from "#/actions/guild-export-actions";
 import { GuildAppealsTable } from "#/components/guild/guild-appeals-table";
+import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
 import { Badge } from "#/components/ui/badge";
 import { buttonVariants } from "#/components/ui/button-variants";
 import {
@@ -13,12 +15,14 @@ import {
   CardTitle,
 } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
+import { ExportLogButton } from "#/components/ui/export-log-button";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
-import type { AppealsListData } from "#/lib/dashboard-data";
+import type { AppealsListData, AppealView } from "#/lib/dashboard-data";
 import { APPEAL_STATUS_OPTIONS, isAppealStatus } from "#/lib/appeals";
 import {
+  countBy,
   extractMemberNames,
   pageNumber,
   single,
@@ -70,9 +74,20 @@ export default async function AppealsPage({
           <CardHeader
             actions={
               data ? (
-                <Badge variant="neutral" className="tabular">
-                  {data.total} total
-                </Badge>
+                <>
+                  <Badge variant="neutral" className="tabular">
+                    {data.total} total
+                  </Badge>
+                  {data.total > 0 ? (
+                    <ExportLogButton<AppealView>
+                      label="Download"
+                      filename={`lumi-appeals-${guildId}-${Date.now()}.json`}
+                      action={exportGuildAppeals.bind(null, guildId, {
+                        ...(status ? { status } : {}),
+                      })}
+                    />
+                  ) : null}
+                </>
               ) : null
             }
           >
@@ -106,11 +121,21 @@ export default async function AppealsPage({
               footnote={failure}
             />
           ) : data && data.appeals.length > 0 ? (
-            <GuildAppealsTable
-              guildId={guildId}
-              appeals={data.appeals}
-              memberNames={memberNames}
-            />
+            <>
+              {data.appeals.length > 1 ? (
+                <div className="border-b border-border px-4 py-3">
+                  <p className="mb-2 text-[13px] font-semibold tracking-[0.08em] text-fg-subtle uppercase">
+                    Appeals on this page, by status
+                  </p>
+                  <DataBreakdownChart data={countBy<AppealView>(data.appeals, "status")} />
+                </div>
+              ) : null}
+              <GuildAppealsTable
+                guildId={guildId}
+                appeals={data.appeals}
+                memberNames={memberNames}
+              />
+            </>
           ) : data && data.total > 0 ? (
             <EmptyState
               compact

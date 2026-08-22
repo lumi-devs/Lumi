@@ -1,3 +1,5 @@
+"use client";
+
 import { CircleSlash, Cpu, Network } from "lucide-react";
 import type {
   ClusterReplicaView,
@@ -8,9 +10,11 @@ import { Alert } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
+import { ProgressRing } from "#/components/ui/progress-ring";
 import { Table, TableScroll, TBody, TD, TH, THead, TR } from "#/components/ui/table";
 import { cn } from "#/lib/utils";
 import { since } from "#/lib/log-format";
+import { useStaggerIn } from "#/lib/animate";
 
 export const HEALTHY_STATUS = "Ready";
 export const OFFLINE_STATUSES = new Set(["Disconnected", "Idle"]);
@@ -62,6 +66,9 @@ function ShardRows({
     ...shards.map((s) => ({ shardId: s.shardId, shard: s })),
     ...missing.map((shardId) => ({ shardId, shard: null })),
   ].sort((a, b) => a.shardId - b.shardId);
+  const bodyRef = useStaggerIn<HTMLTableSectionElement>("tr", {
+    resetKey: rows.map((r) => r.shardId).join(","),
+  });
 
   return (
     <TableScroll>
@@ -75,7 +82,7 @@ function ShardRows({
             <TH className="text-right">Last heartbeat</TH>
           </TR>
         </THead>
-        <TBody>
+        <TBody ref={bodyRef}>
           {rows.map(({ shardId, shard }) =>
             shard ? (
               <TR key={shardId}>
@@ -108,7 +115,7 @@ function ShardRows({
                   {shardId}
                 </TD>
                 <TD colSpan={4}>
-                  <span className="font-display flex items-center gap-1.5 text-[12px] font-semibold text-danger">
+                  <span className="font-display flex items-center gap-1.5 text-[14px] font-semibold text-danger">
                     <CircleSlash className="size-3.5 shrink-0" aria-hidden />
                     Not reporting — no process is holding this shard
                   </span>
@@ -161,8 +168,28 @@ export function ShardFleet({ data }: { data: SystemShardsData }) {
     );
   }
 
+  const healthy = data.shards.filter((s) => s.status === HEALTHY_STATUS).length;
+
   return (
     <div className="flex flex-col gap-4">
+      {data.shardCount > 0 ? (
+        <div className="flex items-center gap-3">
+          <ProgressRing
+            value={(healthy / data.shardCount) * 100}
+            size={44}
+            strokeWidth={5}
+          />
+          <div>
+            <p className="font-display text-[14px] font-semibold text-fg">
+              {healthy} / {data.shardCount} shards healthy
+            </p>
+            <p className="text-[13px] text-fg-subtle">
+              Ready and reporting, across the whole fleet.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {data.missingShardIds.length > 0 ? (
         <Alert variant="danger">
           <p className="font-display font-semibold">

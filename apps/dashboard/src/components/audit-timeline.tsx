@@ -94,7 +94,7 @@ export function AuditTimeline({
     <div ref={ref}>
       {days.map((day) => (
         <section key={day.key} aria-label={day.label}>
-          <h4 className="font-display flex items-baseline justify-between gap-3 border-y border-border bg-bg-subtle px-4 py-1.5 text-[11px] font-semibold tracking-[0.09em] text-fg-subtle uppercase">
+          <h4 className="font-display flex items-baseline justify-between gap-3 border-y border-border bg-bg-subtle px-4 py-1.5 text-[13px] font-semibold tracking-[0.09em] text-fg-subtle uppercase">
             <span>{day.label}</span>
             <span className="tabular">
               {day.items.length} {day.items.length === 1 ? "entry" : "entries"}
@@ -141,7 +141,7 @@ function AuditRow({
     <div className="group flex gap-3 px-4 transition-colors hover:bg-surface-hover">
       <time
         dateTime={entry.createdAt}
-        className="tabular w-[4.5rem] shrink-0 pt-2.5 font-mono text-[11px] text-fg-subtle"
+        className="tabular w-[4.5rem] shrink-0 pt-2.5 font-mono text-[13px] text-fg-subtle"
       >
         {formatTime(entry.createdAt)}
       </time>
@@ -153,7 +153,7 @@ function AuditRow({
 
       <div className="min-w-0 flex-1 py-2 pl-1">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <span className="font-mono text-[12px] text-fg">
+          <span className="font-mono text-[14px] text-fg">
             {scope ? (
               <span className="text-fg-subtle">{scope}.</span>
             ) : null}
@@ -164,7 +164,7 @@ function AuditRow({
           </Badge>
         </div>
 
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-fg-muted">
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-fg-muted">
           <span>
             by{" "}
             <span className="tabular font-mono text-fg-subtle">
@@ -185,7 +185,7 @@ function AuditRow({
         </div>
 
         {configChange && labels ? (
-          <p className="mt-1.5 text-[11px] text-fg-muted">
+          <p className="mt-1.5 text-[13px] text-fg-muted">
             <span className="font-semibold text-fg">
               {moduleLabel(labels, configChange.moduleName)} →{" "}
               {fieldLabel(labels, configChange.moduleName, configChange.key)}
@@ -209,7 +209,7 @@ function AuditRow({
                 isSnowflake(value) &&
                 resolved === value;
               return (
-                <div key={key} className="flex gap-1.5 text-[11px]">
+                <div key={key} className="flex gap-1.5 text-[13px]">
                   <dt className="text-fg-subtle">{humanizeKey(key)}:</dt>
                   <dd
                     className={cn(
@@ -224,7 +224,7 @@ function AuditRow({
             })}
           </dl>
         ) : typeof entry.details === "string" ? (
-          <p className="mt-1.5 text-[11px] text-fg-muted">{entry.details}</p>
+          <p className="mt-1.5 text-[13px] text-fg-muted">{entry.details}</p>
         ) : null}
       </div>
     </div>

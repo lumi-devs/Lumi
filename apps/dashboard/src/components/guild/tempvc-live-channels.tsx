@@ -58,15 +58,15 @@ export function TempVcLiveChannels({
             <div className="flex items-start gap-2">
               <StatusDot active className="mt-1.5" />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-display text-[13px] font-semibold tracking-[0.01em] text-fg">
+                <p className="truncate font-display text-[15px] font-semibold tracking-[0.01em] text-fg">
                   {record.name}
                 </p>
-                <p className="truncate text-[12px] text-fg-muted">
+                <p className="truncate text-[14px] text-fg-muted">
                   {owner ? owner.displayName || owner.username : "Owner left the server"}
                 </p>
               </div>
               <span
-                className="tabular shrink-0 text-[12px] text-fg-muted"
+                className="tabular shrink-0 text-[14px] text-fg-muted"
                 title={formatCaseDate(record.createdAt)}
               >
                 {formatDuration(elapsed)}
@@ -90,7 +90,7 @@ export function TempVcLiveChannels({
                 )}
                 {record.hidden ? "Hidden" : "Visible"}
               </Badge>
-              <span className="truncate text-[11px] text-fg-subtle">
+              <span className="truncate text-[13px] text-fg-subtle">
                 from{" "}
                 {generator
                   ? (channelNames[generator.channelId] ?? generator.channelId)

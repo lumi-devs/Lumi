@@ -2,7 +2,9 @@ import Link from "next/link";
 import { History, PlugZap, SearchX } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildConfigHistory, getGuildDashboard } from "#/lib/dashboard-fetch";
+import { exportGuildConfigHistory } from "#/actions/guild-export-actions";
 import { ConfigHistoryList } from "#/components/guild/config-history-list";
+import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
 import { Alert } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
 import { buttonVariants } from "#/components/ui/button-variants";
@@ -14,12 +16,14 @@ import {
   CardTitle,
 } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
+import { ExportLogButton } from "#/components/ui/export-log-button";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
 import { buildModuleLabelIndex } from "#/lib/config-labels";
-import type { ConfigHistoryListData } from "#/lib/dashboard-data";
+import type { ConfigHistoryEntryView, ConfigHistoryListData } from "#/lib/dashboard-data";
 import {
+  countBy,
   extractMemberNames,
   filterHref,
   isSnowflake,
@@ -83,9 +87,22 @@ export default async function HistoryPage({
           <CardHeader
             actions={
               data ? (
-                <Badge variant="neutral" className="tabular">
-                  {data.total} changes
-                </Badge>
+                <>
+                  <Badge variant="neutral" className="tabular">
+                    {data.total} changes
+                  </Badge>
+                  {data.total > 0 ? (
+                    <ExportLogButton<ConfigHistoryEntryView>
+                      label="Download"
+                      filename={`lumi-settings-history-${guildId}-${Date.now()}.json`}
+                      action={exportGuildConfigHistory.bind(null, guildId, {
+                        ...(moduleName ? { moduleName } : {}),
+                        ...(key ? { key } : {}),
+                        ...(actorId && !badActorFilter ? { actorId } : {}),
+                      })}
+                    />
+                  ) : null}
+                </>
               ) : null
             }
           >
@@ -142,12 +159,24 @@ export default async function HistoryPage({
               footnote={failure}
             />
           ) : data && data.entries.length > 0 ? (
-            <ConfigHistoryList
-              guildId={guildId}
-              entries={data.entries}
-              labels={labels}
-              memberNames={memberNames}
-            />
+            <>
+              {data.entries.length > 1 ? (
+                <div className="border-b border-border px-4 py-3">
+                  <p className="mb-2 text-[13px] font-semibold tracking-[0.08em] text-fg-subtle uppercase">
+                    Changes on this page, by module
+                  </p>
+                  <DataBreakdownChart
+                    data={countBy<ConfigHistoryEntryView>(data.entries, "moduleName")}
+                  />
+                </div>
+              ) : null}
+              <ConfigHistoryList
+                guildId={guildId}
+                entries={data.entries}
+                labels={labels}
+                memberNames={memberNames}
+              />
+            </>
           ) : data && data.total > 0 ? (
             <EmptyState
               compact

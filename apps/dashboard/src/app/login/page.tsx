@@ -10,7 +10,7 @@ import { LoginForm, type LoginActionState } from "#/components/auth/login-form";
 
 export default async function LoginPage() {
   const session = await auth();
-  if (session) redirect("/");
+  if (session) redirect("/guilds");
 
   async function loginAction(
     _prevState: LoginActionState,
@@ -23,23 +23,26 @@ export default async function LoginPage() {
     if (await isRateLimited(`login:${ip}`, 10, 60_000)) {
       return { error: "Too many login attempts — try again in a minute." };
     }
-    await signIn("discord", { redirectTo: "/" });
+    await signIn("discord", { redirectTo: "/guilds" });
     return { error: null };
   }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-panel border border-border bg-surface p-6 shadow-e2">
+      <div
+        className="rise w-full max-w-sm rounded-panel border border-border bg-surface p-6 shadow-e2"
+        style={{ "--rise-delay": "0ms" } as React.CSSProperties}
+      >
         <Wordmark className="mb-5" />
         <div className="mb-4 flex items-start gap-3">
           <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-control border border-border bg-accent-soft text-accent-fg">
             <LogIn className="size-4" aria-hidden />
           </span>
           <div className="min-w-0">
-            <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
+            <h1 className="font-display text-[19px] font-semibold tracking-[0.01em] text-fg">
               Sign in to Lumi
             </h1>
-            <p className="mt-1 text-[12px] leading-5 text-fg-muted">
+            <p className="mt-1 text-[14px] leading-5 text-fg-muted">
               Authenticate with Discord to manage the servers where you have Manage
               Server.
             </p>
@@ -47,12 +50,12 @@ export default async function LoginPage() {
         </div>
         <div className="mb-5" />
         <LoginForm action={loginAction} />
-        <p className="mt-4 text-[11px] leading-4 text-fg-subtle">
+        <p className="mt-4 text-[13px] leading-4 text-fg-subtle">
           Signing in only shares your Discord identity and guild list with
           this dashboard. The bot&rsquo;s own message-reading permissions are
           separate and configured per-server.
         </p>
-        <p className="mt-2 text-[11px] leading-4 text-fg-subtle">
+        <p className="mt-2 text-[13px] leading-4 text-fg-subtle">
           <Link href="/legal/privacy" className="underline hover:text-fg-muted">
             Privacy Policy
           </Link>{" "}

@@ -33,16 +33,16 @@ export function EmptyState({
         <Icon className="size-4" aria-hidden />
       </div>
       <div className="max-w-sm">
-        <p className="font-display text-[14px] font-semibold tracking-[0.01em] text-fg">
+        <p className="font-display text-[16px] font-semibold tracking-[0.01em] text-fg">
           {title}
         </p>
         {description ? (
-          <p className="mt-1 text-[12px] leading-5 text-fg-muted">{description}</p>
+          <p className="mt-1 text-[14px] leading-5 text-fg-muted">{description}</p>
         ) : null}
       </div>
       {action ? <div className="mt-1 flex gap-2">{action}</div> : null}
       {footnote ? (
-        <p className="mt-1 font-mono text-[11px] text-fg-subtle">{footnote}</p>
+        <p className="mt-1 font-mono text-[13px] text-fg-subtle">{footnote}</p>
       ) : null}
     </div>
   );

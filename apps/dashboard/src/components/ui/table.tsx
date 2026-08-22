@@ -24,7 +24,7 @@ export function Table({
   return (
     <table
       data-slot="table"
-      className={cn("w-full border-collapse text-[13px]", className)}
+      className={cn("w-full border-collapse text-[15px]", className)}
       {...props}
     />
   );
@@ -51,7 +51,7 @@ export function TH({
     <th
       data-slot="table-head"
       className={cn(
-        "font-display px-3 py-2 text-left text-[11px] font-semibold tracking-[0.09em] text-fg-subtle uppercase",
+        "font-display px-3 py-2 text-left text-[13px] font-semibold tracking-[0.09em] text-fg-subtle uppercase",
         className,
       )}
       {...props}

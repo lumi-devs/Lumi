@@ -18,6 +18,7 @@ import {
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
 import { DataTable } from "#/components/ui/data-table";
 import { EmptyState } from "#/components/ui/empty-state";
+import { ExportLogButton } from "#/components/ui/export-log-button";
 import { Field, Input } from "#/components/ui/input";
 import { globalBlocklistColumns } from "#/components/system/global-blocklist-columns";
 import { Pagination } from "#/components/ui/pagination";
@@ -32,11 +33,17 @@ export function GlobalBlocklistPanel({
   page,
   pageSize,
   total,
+  exportAction,
 }: {
   entries: BlocklistEntryView[];
   page: number;
   pageSize: number;
   total: number;
+  exportAction: () => Promise<{
+    ok: boolean;
+    error?: string;
+    items?: BlocklistEntryView[];
+  }>;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
   const columns = globalBlocklistColumns({ onUnblocked: setNotice });
@@ -52,9 +59,18 @@ export function GlobalBlocklistPanel({
       <Card>
         <CardHeader
           actions={
-            <Badge variant="neutral" className="tabular">
-              {total} blocked
-            </Badge>
+            <>
+              <Badge variant="neutral" className="tabular">
+                {total} blocked
+              </Badge>
+              {total > 0 ? (
+                <ExportLogButton<BlocklistEntryView>
+                  label="Download"
+                  filename={`lumi-global-blocklist-${Date.now()}.json`}
+                  action={exportAction}
+                />
+              ) : null}
+            </>
           }
         >
           <CardTitle>Blocked everywhere</CardTitle>
@@ -148,7 +164,7 @@ function BlockForm({ onBlocked }: { onBlocked: (message: string) => void }) {
             <Input
               id="block-user"
               inputMode="numeric"
-              className="tabular font-mono text-[12px]"
+              className="tabular font-mono text-[14px]"
               placeholder="e.g. 328473289473289473"
               value={userId}
               onChange={(e) => {

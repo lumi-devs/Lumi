@@ -8,7 +8,7 @@ function UserCell({ id, names }: { id: string; names: Record<string, string> }) 
   return (
     <span className="flex flex-col">
       {name ? <span className="truncate text-fg">{name}</span> : null}
-      <span className="tabular font-mono text-[11px] text-fg-subtle">{id}</span>
+      <span className="tabular font-mono text-[13px] text-fg-subtle">{id}</span>
     </span>
   );
 }
@@ -38,7 +38,7 @@ export function guildModNotesColumns({
       id: "createdAt",
       header: "Added",
       accessorFn: (note) => note.createdAt,
-      meta: { className: "w-44 tabular whitespace-nowrap text-[12px] text-fg-muted" },
+      meta: { className: "w-44 tabular whitespace-nowrap text-[14px] text-fg-muted" },
       cell: ({ row }) => formatCaseDate(row.original.createdAt),
     },
     {

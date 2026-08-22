@@ -23,7 +23,7 @@ export function afkColumns({
                 {member.displayName || member.username}
               </span>
             ) : null}
-            <span className="tabular font-mono text-[11px] text-fg-subtle">
+            <span className="tabular font-mono text-[13px] text-fg-subtle">
               {row.original.userId}
             </span>
           </span>
@@ -58,7 +58,7 @@ export function afkColumns({
       id: "since",
       header: "Since",
       accessorFn: (entry) => entry.since,
-      meta: { className: "w-44 tabular whitespace-nowrap text-[12px] text-fg-muted" },
+      meta: { className: "w-44 tabular whitespace-nowrap text-[14px] text-fg-muted" },
       cell: ({ row }) => formatCaseDate(row.original.since),
     },
   ];

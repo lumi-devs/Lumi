@@ -2,7 +2,9 @@ import Link from "next/link";
 import { PlugZap, SearchX } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildBlocklist, getGuildDashboard } from "#/lib/dashboard-fetch";
+import { exportGuildBlocklist } from "#/actions/guild-export-actions";
 import { GuildBlocklistTable } from "#/components/guild/guild-blocklist-table";
+import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
 import { Badge } from "#/components/ui/badge";
 import { buttonVariants } from "#/components/ui/button-variants";
 import {
@@ -13,10 +15,12 @@ import {
   CardTitle,
 } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
+import { ExportLogButton } from "#/components/ui/export-log-button";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
-import type { BlocklistListData } from "#/lib/dashboard-data";
+import type { BlocklistEntryView, BlocklistListData } from "#/lib/dashboard-data";
 import {
+  countBy,
   extractMemberNames,
   pageNumber,
   single,
@@ -65,9 +69,18 @@ export default async function BlocklistPage({
           <CardHeader
             actions={
               data ? (
-                <Badge variant="neutral" className="tabular">
-                  {data.total} blocked
-                </Badge>
+                <>
+                  <Badge variant="neutral" className="tabular">
+                    {data.total} blocked
+                  </Badge>
+                  {data.total > 0 ? (
+                    <ExportLogButton<BlocklistEntryView>
+                      label="Download"
+                      filename={`lumi-blocklist-${guildId}-${Date.now()}.json`}
+                      action={exportGuildBlocklist.bind(null, guildId)}
+                    />
+                  ) : null}
+                </>
               ) : null
             }
           >
@@ -89,6 +102,16 @@ export default async function BlocklistPage({
             />
           ) : (
             <>
+              {data.entries.length > 1 ? (
+                <div className="border-b border-border px-4 py-3">
+                  <p className="mb-2 text-[13px] font-semibold tracking-[0.08em] text-fg-subtle uppercase">
+                    Entries on this page, by who blocked them
+                  </p>
+                  <DataBreakdownChart
+                    data={countBy<BlocklistEntryView>(data.entries, "blockedBy")}
+                  />
+                </div>
+              ) : null}
               <GuildBlocklistTable
                 guildId={guildId}
                 entries={data.entries}

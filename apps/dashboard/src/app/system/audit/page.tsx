@@ -2,7 +2,9 @@ import Link from "next/link";
 import { ClipboardList, PlugZap, SearchX } from "lucide-react";
 import { requireBotOwner } from "#/lib/auth-guards";
 import { getSystemAuditLog } from "#/lib/dashboard-fetch";
+import { exportSystemAuditLog } from "#/actions/system-export-actions";
 import { AuditTimeline } from "#/components/audit-timeline";
+import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
 import { Alert } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
 import { buttonVariants } from "#/components/ui/button-variants";
@@ -14,12 +16,14 @@ import {
   CardTitle,
 } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
+import { ExportLogButton } from "#/components/ui/export-log-button";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
-import type { AuditListData } from "#/lib/dashboard-data";
+import type { AuditEntryView, AuditListData } from "#/lib/dashboard-data";
 import {
   AUDIT_PLATFORM_OPTIONS,
+  countBy,
   filterHref,
   formatShortDay,
   isSnowflake,
@@ -79,7 +83,7 @@ export default async function SystemAuditPage({
           actions={<Badge variant="outline">All servers</Badge>}
           meta={
             newest && oldest ? (
-              <p className="text-[12px] text-fg-muted">
+              <p className="text-[14px] text-fg-muted">
                 This page covers{" "}
                 <span className="tabular text-fg">
                   {formatShortDay(oldest.createdAt)}
@@ -100,9 +104,23 @@ export default async function SystemAuditPage({
           <CardHeader
             actions={
               data ? (
-                <Badge variant="neutral" className="tabular">
-                  {data.total} recorded
-                </Badge>
+                <>
+                  <Badge variant="neutral" className="tabular">
+                    {data.total} recorded
+                  </Badge>
+                  {data.total > 0 ? (
+                    <ExportLogButton<AuditEntryView>
+                      label="Download"
+                      filename={`lumi-system-audit-log-${Date.now()}.json`}
+                      action={exportSystemAuditLog.bind(null, {
+                        ...(action ? { action } : {}),
+                        ...(userId && isSnowflake(userId) ? { userId } : {}),
+                        ...(guildId && isSnowflake(guildId) ? { guildId } : {}),
+                        ...(platform ? { platform } : {}),
+                      })}
+                    />
+                  ) : null}
+                </>
               ) : null
             }
           >
@@ -168,17 +186,27 @@ export default async function SystemAuditPage({
               footnote={failure}
             />
           ) : data && data.entries.length > 0 ? (
-            <AuditTimeline
-              entries={data.entries}
-              guildHref={(id) =>
-                filterHref("/system/audit", {
-                  guild: id,
-                  action,
-                  user: userId,
-                  platform,
-                })
-              }
-            />
+            <>
+              {data.entries.length > 1 ? (
+                <div className="border-b border-border px-4 py-3">
+                  <p className="mb-2 text-[13px] font-semibold tracking-[0.08em] text-fg-subtle uppercase">
+                    Actions on this page
+                  </p>
+                  <DataBreakdownChart data={countBy<AuditEntryView>(data.entries, "action")} />
+                </div>
+              ) : null}
+              <AuditTimeline
+                entries={data.entries}
+                guildHref={(id) =>
+                  filterHref("/system/audit", {
+                    guild: id,
+                    action,
+                    user: userId,
+                    platform,
+                  })
+                }
+              />
+            </>
           ) : data && data.total > 0 ? (
             <EmptyState
               compact

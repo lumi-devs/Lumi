@@ -5,6 +5,8 @@ import { Download } from "lucide-react";
 import { exportMyData } from "#/actions/user-actions";
 import { Card, CardHeader, CardTitle, CardDescription, CardBody } from "#/components/ui/card";
 import { Button } from "#/components/ui/button";
+import { downloadJson } from "#/lib/download";
+import { DataBreakdownChart } from "./data-breakdown-chart";
 
 function countEntries(value: unknown): number {
   if (Array.isArray(value)) return value.length;
@@ -31,16 +33,7 @@ export function GdprExportCard() {
         nextSummary[moduleName] = countEntries(moduleData);
       }
       setSummary(nextSummary);
-
-      const blob = new Blob([JSON.stringify(res.data, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `lumi-data-export-${Date.now()}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadJson(`lumi-data-export-${Date.now()}.json`, res.data);
     });
   }
 
@@ -80,19 +73,7 @@ export function GdprExportCard() {
                 Nothing on file for your account.
               </p>
             ) : (
-              <ul className="flex flex-col gap-1">
-                {Object.entries(summary).map(([moduleName, count]) => (
-                  <li
-                    key={moduleName}
-                    className="flex items-center justify-between rounded-control border border-border bg-surface-hover px-3 py-2 text-xs"
-                  >
-                    <span className="font-medium text-fg">{moduleName}</span>
-                    <span className="text-fg-muted">
-                      {count} record{count === 1 ? "" : "s"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <DataBreakdownChart data={summary} />
             )}
           </div>
         )}

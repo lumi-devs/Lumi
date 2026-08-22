@@ -3,10 +3,11 @@
 
 /* ── Lumi dashboard design tokens ─────────────────────────────────────────
  *
- * AESTHETIC DIRECTION: "Control Room" — a mission-control console. Cold
- * near-black canvas (#0B0E14) carrying warm amber-orange as the single
- * saturated colour, with green/amber/red reserved strictly for machine
- * status. Depth comes from surface tint-shift, never from shadow spread.
+ * AESTHETIC DIRECTION: "Daylight" — a premium consumer console in the Apple
+ * idiom. Cool graphite/paper neutrals (never warm, never pure black/white),
+ * one confident cobalt-blue accent, glass chrome on nav/overlays, and soft
+ * diffused elevation instead of hard drop shadows. Calm by default; motion
+ * and depth are used to clarify state, not to decorate.
  *
  * Semantic tokens only. Nothing in the app should reference a raw colour or
  * a `white/40`-style alpha. Components consume `bg-surface` /
@@ -18,75 +19,76 @@
  *   2. `data-theme="light"` → force light
  *   3. `data-theme="dark"`  → force dark
  *
- * Dark is the primary, designed experience (the Control Room palette). Light
- * is its daylight counterpart in the same amber family — warm paper canvas,
- * white cards, and a burnt-orange accent weight dark enough for AA text
- * contrast, since #FF8A3D on white is nowhere near legible.
+ * Light and dark are equal citizens here — this is a daily-use admin tool,
+ * not a single "hero" theme with an afterthought counterpart, so both carry
+ * the same glass chrome, the same accent, the same shadow language.
  */
 
 :root {
   color-scheme: light;
 
-  /* Surfaces */
-  --bg: #faf8f5;
-  --bg-subtle: #f2eee7;
+  /* Surfaces — cool paper, not warm cream. */
+  --bg: #f4f5f8;
+  --bg-subtle: #ebedf2;
   --surface: #ffffff;
-  --surface-hover: #f7f3ed;
-  --surface-active: #ece7dd;
+  --surface-hover: #f5f6fa;
+  --surface-active: #eaedf3;
 
   /* Lines */
-  --border: #e8e2d7;
-  --border-soft: #f1ece4;
-  --border-strong: #d5ccbd;
+  --border: #e1e4ea;
+  --border-soft: #ebedf2;
+  --border-strong: #c7cdd9;
 
   /* Text */
-  --fg: #191510;
-  --fg-muted: #6a6157;
-  --fg-subtle: #948b7e;
+  --fg: #14161c;
+  --fg-muted: #5a6270;
+  --fg-subtle: #8b93a3;
   --fg-on-accent: #ffffff;
 
-  /* Amber-orange - the one saturated colour in the system. Reserved for
-   * the primary action and the active route, never for decoration.
-   * Darkened from the dark theme's #FF8A3D to hold AA on white. */
-  --accent: #c2570f;
-  --accent-hover: #a4480a;
-  --accent-soft: rgba(194, 87, 15, 0.1);
-  --accent-fg: #a4480a;
-  --accent-glow: #ff8a3d;
+  /* Cobalt — the one saturated colour in the system. Reserved for the
+   * primary action and the active route, never for decoration. */
+  --accent: #2953d8;
+  --accent-hover: #1f41b0;
+  --accent-soft: rgba(41, 83, 216, 0.09);
+  --accent-fg: #1f41b0;
+  --accent-glow: #4c7dff;
 
   /* Status */
-  --success: #1f8a52;
-  --success-soft: rgba(31, 138, 82, 0.1);
-  --warning: #9a6508;
-  --warning-soft: rgba(154, 101, 8, 0.1);
-  --danger: #c93a3a;
-  --danger-soft: rgba(201, 58, 58, 0.09);
+  --success: #12805a;
+  --success-soft: rgba(18, 128, 90, 0.1);
+  --warning: #92600a;
+  --warning-soft: rgba(146, 96, 10, 0.1);
+  --danger: #c7333f;
+  --danger-soft: rgba(199, 51, 63, 0.09);
 
-  /* Scrim behind a modal `<dialog>`. Dark in both themes — a light scrim over
-   * the dark canvas reads as a rendering fault rather than as depth. */
-  --overlay: rgba(0, 0, 0, 0.6);
+  /* Scrim behind a modal `<dialog>`. Dark in both themes — a light scrim
+   * over a light canvas reads as a rendering fault rather than as depth. */
+  --overlay: rgba(10, 12, 18, 0.45);
 
-  --ring: rgba(194, 87, 15, 0.4);
-  --shadow-sm: 0 1px 2px rgba(30, 22, 12, 0.06);
+  --ring: rgba(41, 83, 216, 0.38);
+
+  /* Soft, cool-tinted elevation — never pure black. */
+  --shadow-sm: 0 1px 2px rgba(20, 22, 30, 0.05);
   --shadow-md:
-    0 1px 2px rgba(30, 22, 12, 0.06), 0 8px 24px -8px rgba(30, 22, 12, 0.14);
+    0 1px 2px rgba(20, 22, 30, 0.04), 0 10px 30px -10px rgba(20, 22, 30, 0.12);
   --shadow-lg:
-    0 1px 2px rgba(30, 22, 12, 0.08), 0 16px 48px -12px rgba(30, 22, 12, 0.24);
-  /* Single dramatic accent shadow, used only under the primary button, the
-   * active nav pill, and the live-status pulse glow. */
-  --shadow-accent: 0 1px 2px rgba(30, 22, 12, 0.08),
-    0 8px 24px -6px rgba(194, 87, 15, 0.28);
-  /* Softer, wider ember glow for hover-elevated cards and "live" badges -
-   * distinct from --shadow-accent (which marks the one committed action). */
-  --shadow-glow-accent: 0 1px 2px rgba(30, 22, 12, 0.06),
-    0 12px 32px -10px rgba(255, 138, 61, 0.35);
+    0 2px 4px rgba(20, 22, 30, 0.05), 0 24px 60px -16px rgba(20, 22, 30, 0.18);
+  /* Single dramatic accent shadow, used only under the primary button and
+   * the active nav pill. */
+  --shadow-accent: 0 1px 2px rgba(20, 22, 30, 0.06),
+    0 10px 28px -8px rgba(41, 83, 216, 0.28);
+  /* Softer, wider halo for hover-elevated cards - distinct from
+   * --shadow-accent (which marks the one committed action). */
+  --shadow-glow-accent: 0 1px 2px rgba(20, 22, 30, 0.05),
+    0 16px 40px -12px rgba(76, 125, 255, 0.22);
 
   /* Glass chrome (nav, dropdowns, dialogs, sheets) - a translucent tint over
-   * backdrop-blur, not a solid surface. */
-  --glass-bg: rgba(255, 253, 250, 0.72);
-  --glass-blur-sm: 8px;
-  --glass-blur-md: 16px;
-  --glass-blur-lg: 32px;
+   * backdrop-blur, with a hairline highlight for physical edge refraction. */
+  --glass-bg: rgba(255, 255, 255, 0.68);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-blur-sm: 10px;
+  --glass-blur-md: 20px;
+  --glass-blur-lg: 40px;
 
   /* Single source of truth for transition/animation durations - both CSS
    * transitions and anime.js calls key off these so motion feels uniform. */
@@ -95,12 +97,17 @@
   --motion-normal: 300ms;
   --motion-slow: 600ms;
 
-  --ease-out: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  /* No overshoot — a settled iOS-style ease, not a bounce. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Populated by next/font in app/layout.tsx (self-hosted, no external
-   * request) — these fall back to system fonts until the variables land. */
-  --font-display: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+   * request). Body text uses the OS system-font stack on purpose: on Apple
+   * platforms that *is* San Francisco, which is a more honest "Apple-y" feel
+   * than shipping a look-alike web font, and it costs zero bytes. */
+  --font-display: var(--font-geist), -apple-system, BlinkMacSystemFont,
+    ui-sans-serif, system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
   /* ── shadcn/ui-expected tokens ──────────────────────────────────────────
@@ -125,7 +132,9 @@
   --destructive: var(--danger);
   --destructive-foreground: #ffffff;
   --input: var(--border);
-  --radius: 0.5rem;
+  /* Plumper than a typical admin panel — the soft-rounded, pillowy corner
+   * language premium consumer products use. */
+  --radius: 0.625rem;
 
   --sidebar: var(--bg-subtle);
   --sidebar-foreground: var(--fg);
@@ -144,51 +153,54 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
 
-    --bg: #0b0e14;
-    --bg-subtle: #10141d;
-    --surface: #12161f;
-    --surface-hover: #181d28;
-    --surface-active: #1e2431;
+    --bg: #0a0b0f;
+    --bg-subtle: #0f1116;
+    --surface: #15171d;
+    --surface-hover: #1b1e25;
+    --surface-active: #21242c;
 
-    --border: #252b38;
-    --border-soft: #1b2029;
-    --border-strong: #333c4e;
+    --border: #262931;
+    --border-soft: #1b1e24;
+    --border-strong: #383c46;
 
-    --fg: #e7ebf3;
-    --fg-muted: #8891a5;
-    --fg-subtle: #5b6376;
-    /* Near-black on amber: white on #FF8A3D fails contrast outright. */
-    --fg-on-accent: #1a1005;
+    --fg: #ecedf2;
+    --fg-muted: #969caa;
+    --fg-subtle: #5f6572;
+    /* Deep navy on the bright dark-mode accent: white text on #5B8CFF is
+     * borderline on AA at UI text sizes, navy is safely dark enough. */
+    --fg-on-accent: #0a1230;
 
-    --accent: #ff8a3d;
-    --accent-hover: #ffa163;
-    --accent-soft: rgba(255, 138, 61, 0.1);
-    --accent-fg: #ff8a3d;
-    --accent-glow: #ff8a3d;
+    --accent: #5b8cff;
+    --accent-hover: #7ba3ff;
+    --accent-soft: rgba(91, 140, 255, 0.14);
+    --accent-fg: #8fb2ff;
+    --accent-glow: #5b8cff;
 
-    --success: #4ade80;
-    --success-soft: rgba(74, 222, 128, 0.12);
+    --success: #34d399;
+    --success-soft: rgba(52, 211, 153, 0.12);
     --warning: #fbbf24;
     --warning-soft: rgba(251, 191, 36, 0.12);
-    --danger: #f76464;
-    --danger-soft: rgba(247, 100, 100, 0.12);
+    --danger: #fb7185;
+    --danger-soft: rgba(251, 113, 133, 0.12);
 
-    --overlay: rgba(0, 0, 0, 0.6);
+    --overlay: rgba(0, 0, 0, 0.55);
 
-    --ring: rgba(255, 138, 61, 0.45);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -8px rgba(0, 0, 0, 0.6);
+    --ring: rgba(91, 140, 255, 0.42);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-md:
+      0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -10px rgba(0, 0, 0, 0.55);
     --shadow-lg:
-      0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 48px -12px rgba(0, 0, 0, 0.75);
-    --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.5),
-      0 8px 24px -6px rgba(255, 138, 61, 0.4);
-    --shadow-glow-accent: 0 1px 2px rgba(0, 0, 0, 0.5),
-      0 16px 40px -10px rgba(255, 138, 61, 0.28);
+      0 2px 4px rgba(0, 0, 0, 0.45), 0 26px 64px -16px rgba(0, 0, 0, 0.7);
+    --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.4),
+      0 10px 28px -8px rgba(91, 140, 255, 0.35);
+    --shadow-glow-accent: 0 1px 2px rgba(0, 0, 0, 0.4),
+      0 18px 44px -12px rgba(91, 140, 255, 0.25);
 
-    --glass-bg: rgba(18, 22, 31, 0.72);
-    --glass-blur-sm: 8px;
-    --glass-blur-md: 16px;
-    --glass-blur-lg: 32px;
+    --glass-bg: rgba(21, 23, 29, 0.68);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-blur-sm: 10px;
+    --glass-blur-md: 20px;
+    --glass-blur-lg: 40px;
 
     --motion-instant: 75ms;
     --motion-fast: 150ms;
@@ -227,51 +239,52 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #0b0e14;
-  --bg-subtle: #10141d;
-  --surface: #12161f;
-  --surface-hover: #181d28;
-  --surface-active: #1e2431;
+  --bg: #0a0b0f;
+  --bg-subtle: #0f1116;
+  --surface: #15171d;
+  --surface-hover: #1b1e25;
+  --surface-active: #21242c;
 
-  --border: #252b38;
-  --border-soft: #1b2029;
-  --border-strong: #333c4e;
+  --border: #262931;
+  --border-soft: #1b1e24;
+  --border-strong: #383c46;
 
-  --fg: #e7ebf3;
-  --fg-muted: #8891a5;
-  --fg-subtle: #5b6376;
-  /* Near-black on amber: white on #FF8A3D fails contrast outright. */
-  --fg-on-accent: #1a1005;
+  --fg: #ecedf2;
+  --fg-muted: #969caa;
+  --fg-subtle: #5f6572;
+  --fg-on-accent: #0a1230;
 
-  --accent: #ff8a3d;
-  --accent-hover: #ffa163;
-  --accent-soft: rgba(255, 138, 61, 0.1);
-  --accent-fg: #ff8a3d;
-  --accent-glow: #ff8a3d;
+  --accent: #5b8cff;
+  --accent-hover: #7ba3ff;
+  --accent-soft: rgba(91, 140, 255, 0.14);
+  --accent-fg: #8fb2ff;
+  --accent-glow: #5b8cff;
 
-  --success: #4ade80;
-  --success-soft: rgba(74, 222, 128, 0.12);
+  --success: #34d399;
+  --success-soft: rgba(52, 211, 153, 0.12);
   --warning: #fbbf24;
   --warning-soft: rgba(251, 191, 36, 0.12);
-  --danger: #f76464;
-  --danger-soft: rgba(247, 100, 100, 0.12);
+  --danger: #fb7185;
+  --danger-soft: rgba(251, 113, 133, 0.12);
 
-  --overlay: rgba(0, 0, 0, 0.6);
+  --overlay: rgba(0, 0, 0, 0.55);
 
-  --ring: rgba(255, 138, 61, 0.45);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -8px rgba(0, 0, 0, 0.6);
+  --ring: rgba(91, 140, 255, 0.42);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md:
+    0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -10px rgba(0, 0, 0, 0.55);
   --shadow-lg:
-    0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 48px -12px rgba(0, 0, 0, 0.75);
-  --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.5),
-    0 8px 24px -6px rgba(255, 138, 61, 0.4);
-  --shadow-glow-accent: 0 1px 2px rgba(0, 0, 0, 0.5),
-    0 16px 40px -10px rgba(255, 138, 61, 0.28);
+    0 2px 4px rgba(0, 0, 0, 0.45), 0 26px 64px -16px rgba(0, 0, 0, 0.7);
+  --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.4),
+    0 10px 28px -8px rgba(91, 140, 255, 0.35);
+  --shadow-glow-accent: 0 1px 2px rgba(0, 0, 0, 0.4),
+    0 18px 44px -12px rgba(91, 140, 255, 0.25);
 
-  --glass-bg: rgba(18, 22, 31, 0.72);
-  --glass-blur-sm: 8px;
-  --glass-blur-md: 16px;
-  --glass-blur-lg: 32px;
+  --glass-bg: rgba(21, 23, 29, 0.68);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur-sm: 10px;
+  --glass-blur-md: 20px;
+  --glass-blur-lg: 40px;
 
   --motion-instant: 75ms;
   --motion-fast: 150ms;
@@ -350,6 +363,7 @@
   --shadow-glow-accent: var(--shadow-glow-accent);
 
   --color-glass-bg: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
   --blur-glass-sm: var(--glass-blur-sm);
   --blur-glass-md: var(--glass-blur-md);
   --blur-glass-lg: var(--glass-blur-lg);
@@ -360,8 +374,8 @@
   --duration-slow: var(--motion-slow);
 
   /* Locked 3-value radius scale — controls, panels, pills. Don't add a 4th. */
-  --radius-control: 10px;
-  --radius-panel: 16px;
+  --radius-control: 12px;
+  --radius-panel: 20px;
 
   /* shadcn/ui token wiring (Tailwind v4 CSS-first `@theme`) */
   --color-background: var(--background);
@@ -409,60 +423,11 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-sans);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-}
-
-/* ── Atmosphere ────────────────────────────────────────────────────────────
- *
- * One quiet two-stop glow anchored top-center, well under the opacity of
- * anything it sits behind — depth comes from surface tint-shift
- * (bg → bg-subtle → surface → surface-hover), not texture or shadow.
- */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image: radial-gradient(
-    64rem 34rem at var(--atmosphere-x, 50%) -12%,
-    var(--accent-glow),
-    transparent 70%
-  );
-  opacity: 0.05;
-  animation: lumi-atmosphere-drift 40s ease-in-out infinite;
-}
-
-/* Registered so the browser interpolates the percentage smoothly across the
- * keyframe instead of jumping at 50% (unregistered custom properties don't
- * animate/interpolate). */
-@property --atmosphere-x {
-  syntax: "<percentage>";
-  inherits: false;
-  initial-value: 50%;
-}
-
-/* Barely-perceptible position drift so the background never reads as a
- * static image - infinite and cheap enough to stay pure CSS rather than
- * anime.js, which is reserved for one-shot/numeric/orchestrated motion. */
-@keyframes lumi-atmosphere-drift {
-  0%,
-  100% {
-    --atmosphere-x: 42%;
-  }
-  50% {
-    --atmosphere-x: 58%;
-  }
-}
-
-/* Everything the user interacts with sits above the field. */
-body > * {
-  position: relative;
-  z-index: 1;
 }
 
 h1,
@@ -525,13 +490,92 @@ h4 {
   }
 }
 
+/* ── Glass chrome ─────────────────────────────────────────────────────────
+ *
+ * Shared utility for translucent chrome (header, dropdowns, sheets, command
+ * palette): backdrop-blur plus a hairline top highlight for the physical
+ * "edge refraction" a frosted pane catches in real light. Solid-fill
+ * fallback for `prefers-reduced-transparency` so the chrome never becomes
+ * unreadable when a user has asked for less translucency.
+ */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur-md)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-md)) saturate(160%);
+  box-shadow: inset 0 1px 0 var(--glass-border);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* ── Spotlight ────────────────────────────────────────────────────────────
+ * Cursor-tracked accent glow for hover-heavy surfaces (module cards, guild
+ * tiles, feature rows). `spotlightHandler` in lib/animate.ts sets --spot-x/y
+ * on mousemove; this just reads them. Card must be `position: relative`
+ * (already true of `.rounded-panel` surfaces) for the glow to clip to it.
+ */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  transition: opacity var(--motion-normal) var(--ease-out);
+  background: radial-gradient(
+    220px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    var(--accent-soft),
+    transparent 70%
+  );
+}
+.spotlight:hover::before {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spotlight::before {
+    display: none;
+  }
+}
+
+/* ── Theme transition wave ────────────────────────────────────────────────
+ * Circular reveal for light/dark switches, driven by the View Transitions
+ * API (theme-provider.tsx wraps the swap in `document.startViewTransition`).
+ * Radiates from the top-right, where the toggle is always docked in the
+ * header, out past the opposite corner. `old` stays static so the `new`
+ * snapshot's growing clip-path reads as a clean wipe, not a cross-fade.
+ */
+::view-transition-old(root) {
+  animation: none;
+}
+::view-transition-new(root) {
+  animation: lumi-theme-wave 620ms var(--ease-out);
+}
+@keyframes lumi-theme-wave {
+  from {
+    clip-path: circle(0% at 100% 0%);
+  }
+  to {
+    clip-path: circle(150% at 100% 0%);
+  }
+}
+
 /* ── Page-load choreography ───────────────────────────────────────────────
  *
- * One orchestrated moment, on the screens that own a full page of panels: the
- * header, then the instrument strip, then each panel, drawn in on a 70ms beat
- * like a console coming up. 320ms total, translate capped at 8px, and it never
- * repeats — an operator who saves a setting and reloads must not sit through
- * an animation. `both` fill mode holds the start frame so nothing flashes at
+ * One quiet moment, on the screens that own a full page of panels: the
+ * header, then the instrument strip, then each panel, drawn in on a 70ms
+ * beat. 320ms total, translate capped at 8px, and it never repeats — an
+ * operator who saves a setting and reloads must not sit through an
+ * animation. `both` fill mode holds the start frame so nothing flashes at
  * full opacity before its turn.
  *
  * The `prefers-reduced-motion` block above collapses the duration to 0.01ms,
@@ -549,7 +593,7 @@ h4 {
 }
 
 .rise {
-  animation: lumi-rise 320ms cubic-bezier(0.22, 0.68, 0.35, 1) both;
+  animation: lumi-rise 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--rise-delay, 0ms);
 }
 
@@ -585,4 +629,47 @@ h4 {
 }
 .pulse-live {
   animation: lumi-pulse-glow 2.4s var(--ease-out) infinite;
+}
+
+/* Registered so the browser interpolates the percentage smoothly across the
+ * keyframe instead of jumping at 50% (unregistered custom properties don't
+ * animate/interpolate). Scoped to `.hero-atmosphere` (the marketing landing
+ * page only) rather than global `body` — utility screens the operator sits
+ * in all day stay a flat, quiet canvas; the ambient drift is a one-time,
+ * front-door flourish, not chrome every route carries. */
+@property --atmosphere-x {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 50%;
+}
+
+.hero-atmosphere {
+  position: relative;
+  isolation: isolate;
+}
+
+.hero-atmosphere::before {
+  content: "";
+  position: absolute;
+  inset: -6rem -2rem auto -2rem;
+  z-index: -1;
+  height: 28rem;
+  pointer-events: none;
+  background-image: radial-gradient(
+    56rem 28rem at var(--atmosphere-x, 50%) 0%,
+    var(--accent-glow),
+    transparent 70%
+  );
+  opacity: 0.12;
+  animation: lumi-atmosphere-drift 40s ease-in-out infinite;
+}
+
+@keyframes lumi-atmosphere-drift {
+  0%,
+  100% {
+    --atmosphere-x: 42%;
+  }
+  50% {
+    --atmosphere-x: 58%;
+  }
 }

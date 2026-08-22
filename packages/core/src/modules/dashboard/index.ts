@@ -339,6 +339,10 @@ const TempVcGeneratorSetSchema = s.object({
   limit: s.number().int().greaterThanOrEqual(0).lessThanOrEqual(99).optional(),
 });
 
+const GuildSummariesSchema = s.object({
+  guildIds: s.array(SnowflakeSchema).lengthGreaterThanOrEqual(1),
+});
+
 const AuditListSchema = s.object({
   userId: SnowflakeSchema.optional(),
   action: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(128).optional(),
@@ -565,6 +569,7 @@ export class DashboardModule extends Module {
       return {
         name: guild.name,
         icon: guild.iconURL(),
+        banner: guild.bannerURL(),
         memberCount: guild.memberCount,
         settings,
         modules,
@@ -572,6 +577,31 @@ export class DashboardModule extends Module {
         channels,
         members,
       };
+    });
+
+    // Decorative only (icon/banner/member count - the same fields Discord
+    // already shows anyone previewing an invite), so this skips the live
+    // `guild.members.fetch()` + permission check `requireGuildManager` does:
+    // doing that per guild here would mean one Discord API round trip per
+    // tile on a page meant to render dozens of guilds in one shot. Guild ids
+    // the bot isn't in are dropped rather than erroring the whole batch.
+    registerRpcHandler(RPC_ACTIONS.guildSummariesList, async (req) => {
+      const { guildIds } = parsePayload(GuildSummariesSchema, req.data);
+
+      const summaries = guildIds.flatMap((guildId) => {
+        const guild = container.client.guilds.cache.get(guildId);
+        if (!guild) return [];
+        return [
+          {
+            guildId,
+            icon: guild.iconURL(),
+            banner: guild.bannerURL(),
+            memberCount: guild.memberCount,
+          },
+        ];
+      });
+
+      return { summaries };
     });
 
     registerRpcHandler(RPC_ACTIONS.guildModuleToggle, async (req) => {

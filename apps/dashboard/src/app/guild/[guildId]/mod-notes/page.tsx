@@ -2,6 +2,7 @@ import { Alert } from "#/components/ui/alert";
 import { PlugZap, StickyNote } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildDashboard, getGuildModNotes } from "#/lib/dashboard-fetch";
+import { exportGuildModNotes } from "#/actions/guild-export-actions";
 import { GuildModNotesTable } from "#/components/guild/guild-mod-notes-table";
 import { Badge } from "#/components/ui/badge";
 import {
@@ -11,6 +12,7 @@ import {
   CardTitle,
 } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
+import { ExportLogButton } from "#/components/ui/export-log-button";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import type { ModNoteView } from "#/lib/dashboard-data";
@@ -63,9 +65,18 @@ export default async function ModNotesPage({
           <CardHeader
             actions={
               notes ? (
-                <Badge variant="neutral" className="tabular">
-                  {notes.length} note{notes.length === 1 ? "" : "s"}
-                </Badge>
+                <>
+                  <Badge variant="neutral" className="tabular">
+                    {notes.length} note{notes.length === 1 ? "" : "s"}
+                  </Badge>
+                  {notes.length > 0 ? (
+                    <ExportLogButton<ModNoteView>
+                      label="Download"
+                      filename={`lumi-mod-notes-${guildId}-${userId}-${Date.now()}.json`}
+                      action={exportGuildModNotes.bind(null, guildId, userId)}
+                    />
+                  ) : null}
+                </>
               ) : null
             }
           >

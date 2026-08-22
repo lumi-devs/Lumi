@@ -126,7 +126,7 @@ export function ConfigFieldInput({
           id={field.key}
           type="text"
           placeholder={placeholder}
-          className={isSnowflake ? "font-mono text-[12px]" : undefined}
+          className={isSnowflake ? "font-mono text-[14px]" : undefined}
           value={shown}
           onChange={(e) => {
             if (field.list) {

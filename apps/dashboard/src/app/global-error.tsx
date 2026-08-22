@@ -20,8 +20,8 @@ export default function GlobalError({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0a0b0d",
-          color: "#e6e8ec",
+          background: "#0a0b0f",
+          color: "#ecedf2",
           fontFamily: "ui-sans-serif, system-ui, sans-serif",
         }}
       >
@@ -33,7 +33,7 @@ export default function GlobalError({
             style={{
               fontSize: "0.8125rem",
               lineHeight: 1.6,
-              color: "#8b909b",
+              color: "#969caa",
               marginTop: "0.5rem",
             }}
           >
@@ -45,7 +45,7 @@ export default function GlobalError({
               style={{
                 fontSize: "0.75rem",
                 fontFamily: "ui-monospace, monospace",
-                color: "#8b909b",
+                color: "#969caa",
                 marginTop: "0.75rem",
               }}
             >
@@ -58,7 +58,7 @@ export default function GlobalError({
               display: "inline-block",
               marginTop: "1.25rem",
               fontSize: "0.8125rem",
-              color: "#5b7cfa",
+              color: "#5b8cff",
             }}
           >
             Back to the dashboard

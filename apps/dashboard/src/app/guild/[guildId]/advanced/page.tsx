@@ -69,7 +69,10 @@ export default async function AdvancedPage({
         />
       </div>
 
-      <div className="rise" style={{ "--rise-delay": "70ms" } as React.CSSProperties}>
+      <div
+        className="rise grid gap-4 lg:grid-cols-2"
+        style={{ "--rise-delay": "70ms" } as React.CSSProperties}
+      >
         <Card>
           <CardHeader
             actions={
@@ -97,9 +100,7 @@ export default async function AdvancedPage({
             <LoadFailure what="The AFK list" error={afk.error} />
           )}
         </Card>
-      </div>
 
-      <div className="rise" style={{ "--rise-delay": "140ms" } as React.CSSProperties}>
         <Card>
           <CardHeader>
             <CardTitle>Ignored channels</CardTitle>

@@ -13,7 +13,7 @@ export function ValueChip({
 }) {
   if (text === null) {
     return (
-      <span className={cn("text-[12px] text-fg-subtle italic", className)}>
+      <span className={cn("text-[14px] text-fg-subtle italic", className)}>
         Not set
       </span>
     );
@@ -22,7 +22,7 @@ export function ValueChip({
     <span
       title={text}
       className={cn(
-        "max-w-full truncate rounded-full border bg-bg-subtle px-2 py-px font-mono text-[12px]",
+        "max-w-full truncate rounded-full border bg-bg-subtle px-2 py-px font-mono text-[14px]",
         emphasis
           ? "border-border-strong text-fg"
           : "border-border text-fg-subtle",

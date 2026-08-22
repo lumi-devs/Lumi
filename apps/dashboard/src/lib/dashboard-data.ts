@@ -53,6 +53,7 @@ export interface DashboardMemberView {
 export interface DashboardData {
   name: string;
   icon: string | null;
+  banner: string | null;
   memberCount: number;
   settings: GuildSettings;
   modules: DashboardModuleView[];

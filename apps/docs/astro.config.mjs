@@ -23,6 +23,24 @@ export default defineConfig({
       },
       lastUpdated: true,
       pagination: true,
+      expressiveCode: {
+        themes: ["github-dark-default", "github-light"],
+        styleOverrides: {
+          borderRadius: "0.7rem",
+          borderColor: "rgba(255, 138, 61, 0.22)",
+          codeFontFamily:
+            "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+          codeFontSize: "0.85rem",
+          codeLineHeight: "1.65",
+          frames: {
+            shadowColor: "rgba(0, 0, 0, 0.4)",
+            editorActiveTabIndicatorTopColor: "#ff8a3d",
+            editorActiveTabIndicatorBottomColor: "#ff8a3d",
+            terminalTitlebarDotsForeground: "#ff8a3d",
+            terminalTitlebarDotsOpacity: "0.6",
+          },
+        },
+      },
       head: [
         {
           tag: "meta",
@@ -39,6 +57,25 @@ export default defineConfig({
         {
           tag: "meta",
           attrs: { name: "twitter:card", content: "summary" },
+        },
+        {
+          tag: "link",
+          attrs: { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        },
+        {
+          tag: "link",
+          attrs: {
+            rel: "preconnect",
+            href: "https://fonts.gstatic.com",
+            crossorigin: true,
+          },
+        },
+        {
+          tag: "link",
+          attrs: {
+            rel: "stylesheet",
+            href: "https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap",
+          },
         },
       ],
       customCss: ["./src/styles/custom.css"],

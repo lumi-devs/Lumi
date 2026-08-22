@@ -19,10 +19,10 @@ export function WebVerifyPanel({ guildId }: { guildId: string }) {
             <CheckCircle className="size-4" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
+            <h1 className="font-display text-[19px] font-semibold tracking-[0.01em] text-fg">
               You&rsquo;re verified
             </h1>
-            <p className="mt-1 text-[12px] leading-5 text-fg-muted">
+            <p className="mt-1 text-[14px] leading-5 text-fg-muted">
               Head back to Discord — the server should let you in now.
             </p>
           </div>
@@ -49,10 +49,10 @@ export function WebVerifyPanel({ guildId }: { guildId: string }) {
           <Shield className="size-4" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
+          <h1 className="font-display text-[19px] font-semibold tracking-[0.01em] text-fg">
             Verify to continue
           </h1>
-          <p className="mt-1 mb-4 text-[12px] leading-5 text-fg-muted">
+          <p className="mt-1 mb-4 text-[14px] leading-5 text-fg-muted">
             Click below to confirm it&rsquo;s you and unlock the rest of the
             server. This uses your signed-in Discord account — nothing else is
             needed.

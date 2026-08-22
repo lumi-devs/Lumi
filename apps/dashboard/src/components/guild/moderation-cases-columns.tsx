@@ -16,7 +16,7 @@ function UserCell({ id, name }: { id: string; name?: string }) {
   return (
     <span className="flex flex-col">
       {name ? <span className="truncate text-fg">{name}</span> : null}
-      <span className="tabular font-mono text-[11px] text-fg-subtle">{id}</span>
+      <span className="tabular font-mono text-[13px] text-fg-subtle">{id}</span>
     </span>
   );
 }
@@ -33,7 +33,7 @@ export function moderationCasesColumns({
       id: "caseNumber",
       header: "Case",
       accessorFn: (c) => c.caseNumber,
-      meta: { className: "w-16 tabular font-mono text-[12px] text-fg-muted" },
+      meta: { className: "w-16 tabular font-mono text-[14px] text-fg-muted" },
       cell: ({ row }) => `#${row.original.caseNumber}`,
     },
     {
@@ -74,14 +74,14 @@ export function moderationCasesColumns({
       id: "createdAt",
       header: "Created",
       accessorFn: (c) => c.createdAt,
-      meta: { className: "w-44 whitespace-nowrap text-[12px] text-fg-muted" },
+      meta: { className: "w-44 whitespace-nowrap text-[14px] text-fg-muted" },
       cell: ({ row }) => {
         const c = row.original;
         return (
           <>
             <span className="tabular">{formatCaseDate(c.createdAt)}</span>
             {c.duration ? (
-              <span className="block text-[11px] text-fg-subtle">
+              <span className="block text-[13px] text-fg-subtle">
                 Duration {formatDuration(c.duration)}
               </span>
             ) : null}

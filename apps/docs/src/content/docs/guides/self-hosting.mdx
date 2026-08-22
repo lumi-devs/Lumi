@@ -103,18 +103,27 @@ Always use `db:migrate` here, not `db:push` - it keeps a proper history, which y
 
 ## 5. Run it
 
-**Docker (simplest, just run the bot):**
+<Tabs>
+<TabItem label="Docker (simplest)" icon="server">
+
+Just runs the bot - nothing else to install.
 
 ```bash
 docker compose up -d worker
 docker compose logs -f worker
 ```
 
-**Bun directly (if you're also developing):**
+</TabItem>
+<TabItem label="Bun directly" icon="bun">
+
+Better if you're also developing - see file changes on save.
 
 ```bash
 bun run dev
 ```
+
+</TabItem>
+</Tabs>
 
 The bot should be online within a few seconds. Slash commands can take up to an hour to show up everywhere the first time - test in one server for faster feedback, that usually works within a minute.
 
@@ -122,8 +131,7 @@ The bot should be online within a few seconds. Slash commands can take up to an 
 
 You don't need this - everything works from Discord. If you'd like a web UI too, it needs its own OAuth2 credentials (the same Discord application is fine) and a running bot it can talk to:
 
-```bash
-# .env additions
+```bash title=".env" {4}
 DASHBOARD_SESSION_SECRET=$(openssl rand -hex 32)
 DISCORD_OAUTH2_CLIENT_ID=<same as CLIENT_ID, or a separate app>
 DISCORD_OAUTH2_CLIENT_SECRET=<from the OAuth2 tab>
@@ -132,8 +140,9 @@ RPC_HTTP_URL=http://localhost:8091   # or http://worker:8091 under Docker Compos
 
 Register `http://localhost:8080/api/auth/callback/discord` as a redirect under **OAuth2 → Redirects** on the Developer Portal - there's no separate redirect-URL setting to configure, it's derived from this.
 
-> [!WARNING]
-> The Docker Compose `dashboard` profile doesn't work yet - it needs a manual build step the container doesn't do for you. Run the dashboard directly instead, below.
+:::caution
+The Docker Compose `dashboard` profile doesn't work yet - it needs a manual build step the container doesn't do for you. Run the dashboard directly instead, below.
+:::
 
 ```bash
 bun run --cwd apps/dashboard dev          # development
@@ -155,8 +164,7 @@ Brings up Grafana at `http://localhost:3001` (default login `admin`/`admin` - **
 
 If you're running `bun run --cwd apps/worker start` directly rather than through Docker (which already restarts on its own), keep it alive across reboots and crashes with a systemd unit:
 
-```ini
-# /etc/systemd/system/lumi-worker.service
+```ini title="/etc/systemd/system/lumi-worker.service" {10}
 [Unit]
 Description=Lumi Discord bot worker
 After=network-online.target
