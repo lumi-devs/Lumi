@@ -15,6 +15,8 @@ Three rules define the app, and everything below follows from them:
 
 The practical payoff is isolation: a dashboard outage, a traffic spike, or a slow page render cannot affect Discord gateway latency, because the two never share a process or an event loop.
 
+**The bot runs fully standalone without this app.** `apps/worker` never depends on `apps/dashboard` being up - it's the other direction only, dashboard reads/writes go *to* the worker's RPC server. Self-hosters who don't want the web panel can skip starting `apps/dashboard` entirely, or disable just its RPC surface per-guild via the `dashboard` module ([What Lumi does](/Lumi/modules/)) while leaving every other module running. This is a deliberate choice over folding the API into the bot process itself (the pattern some other Sapphire-based bots use) - it's what keeps rule 1-3 above enforceable at all.
+
 ## App Router structure
 
 ```
@@ -224,8 +226,9 @@ bun run --cwd apps/dashboard lint     # eslint src
 
 `worker` must be running and reachable at `RPC_HTTP_URL`, or every page that reads data will fail its RPC call.
 
-> [!WARNING]
-> The `dashboard` Docker Compose profile does not work yet. The shared `Dockerfile` `runner` target has no `next build` stage and copies source only, while the Compose service runs `next start`, which needs a prebuilt `.next`. Starting it exits immediately with *"Could not find a production build in the '.next' directory"*. Run the dashboard directly (above) until that image stage exists.
+:::caution
+The `dashboard` Docker Compose profile does not work yet. The shared `Dockerfile` `runner` target has no `next build` stage and copies source only, while the Compose service runs `next start`, which needs a prebuilt `.next`. Starting it exits immediately with *"Could not find a production build in the '.next' directory"*. Run the dashboard directly (above) until that image stage exists.
+:::
 
 ## Testing
 

@@ -29,10 +29,6 @@ Scaling past one replica is static: each replica is told which shard IDs it owns
 
 Scaling replicas, or changing which shard IDs a replica owns, means changing `SHARD_LIST` and `TOTAL_SHARDS` and restarting the affected processes - there is no in-place rebalance path. Total shard count changes always require a full restart: discord.js caches `shardCount` at `WebSocketManager` construction, so a running process can't adopt a new total without restarting.
 
-## Scheduler high availability
-
-Run more than one `scheduler` replica only with `SCHEDULER_LEADER_LOCK=true` - BullMQ job creation must have exactly one owner at a time, and the Kubernetes manifest already pins `scheduler` to `strategy: Recreate` for the same reason (never two scheduler pods live simultaneously, even mid-rollout). If you don't need scheduler redundancy, one replica with `SCHEDULER_LEADER_LOCK=false` (default) is simpler and equally correct.
-
 ## Secrets management
 
 `deploy/k8s/secret.example.yaml` is a template, not something to fill in and commit. In order of preference for production:
@@ -50,7 +46,7 @@ Rotate `BOT_TOKEN` via the Developer Portal's **Reset Token**, `DASHBOARD_SESSIO
 - **Set `OTEL_ENABLED=true`** and point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector. Lower `OTEL_TRACES_SAMPLE_RATIO` (e.g. `0.1`) once trace volume matters - `1` (100%) is fine for a single low-traffic instance, not for a sharded fleet.
 - **Scrape `/metrics`** (`METRICS_PORT`, default `9090`) on every pod - the k8s manifests already annotate for Prometheus Operator discovery. Dashboard-worthy signals from [Architecture § Observability](/Lumi/architecture/#observability): command RED metrics, event-bus lag (`lumi_stream_consumer_lag`) and DLQ depth (`lumi_stream_dlq_length`), gateway shard latency/status, Discord REST 429 rate, Postgres pool utilization, event-loop delay p99/max.
 - **Alert on `lumi_event_loop_delay_seconds` (max quantile), not just p50/p99** - a single multi-second stall drops Discord gateway heartbeats regardless of what the median looks like. This is the single most important gateway-health signal to page on.
-- **Wire `/healthz` and `/readyz`** into your orchestrator's liveness/readiness probes (already done in the k8s manifests). `/readyz` runs every registered probe (Postgres, Redis, plus gateway readiness on `worker` and BullMQ reachability on whichever replica holds the scheduler leader lock) with a 2s timeout each - a replica that can't reach a dependency gets pulled from rotation automatically.
+- **Wire `/healthz` and `/readyz`** into your orchestrator's liveness/readiness probes (already done in the k8s manifests) - only the primary shard in each pod binds them (see [Architecture § Primary shard](/Lumi/architecture/#primary-shard)). `/readyz` runs every registered probe (Postgres, Redis, gateway readiness aggregated across every shard in the pod, plus BullMQ reachability) with a 2s timeout each - a pod that can't reach a dependency gets pulled from rotation automatically.
 - The bundled `docker compose --profile observability` stack (otel-collector, Tempo, Prometheus, Grafana) is a reasonable starting point for self-managed monitoring, but isn't itself HA - point at a managed/clustered equivalent (Grafana Cloud, a real Prometheus HA pair, etc.) once uptime of the monitoring stack itself matters.
 
 ## Zero-downtime deploys
@@ -60,8 +56,7 @@ The pieces that make a rolling deploy safe are already built in - this section i
 - **`markDraining()` on SIGTERM** flips `/readyz` to 503 *immediately*, before in-flight work finishes, so the orchestrator stops routing new traffic while existing work drains. Don't set `terminationGracePeriodSeconds` so low that in-flight command executions or event-bus acks get killed before they finish - the k8s manifest's `preStop` sleep (15s) exists to give the orchestrator's own routing update time to propagate before the process actually starts shutting down.
 - **`worker` is a `StatefulSet` with `maxUnavailable: 1`** - shard identity (WebSocket session, sequence number) is per-pod state, so replacing more than one at a time risks multiple shard ranges going dark simultaneously. Don't override this to speed up rollouts.
 - **Session persistence in Redis** means a replaced pod RESUMEs its predecessor's shard sessions instead of spending fresh IDENTIFY calls - this is what makes rolling restarts cheap against Discord's session-start budget. It depends on Redis being reachable and `CLUSTER_NAME` set; without clustering, a restart always pays for fresh IDENTIFYs.
-- **Run the `migrate` Job to completion before rolling `worker`/`scheduler`** (`kubectl wait --for=condition=complete job/migrate`) - never let a new schema and old application code (or vice versa) run concurrently longer than the migration itself takes. Design migrations to be backward-compatible for at least one deploy cycle if you need the old and new code to coexist during a rollout (additive column first, backfill, only then a follow-up deploy that starts requiring it).
-- **`scheduler`'s `Recreate` strategy is intentionally not zero-downtime** - a brief scheduler gap (seconds) is the tradeoff for guaranteeing only one BullMQ owner ever exists. This is safe: no in-flight Discord interactions depend on the scheduler being up every second, only on jobs eventually firing.
+- **Run the `migrate` Job to completion before rolling `worker`** (`kubectl wait --for=condition=complete job/migrate`) - never let a new schema and old application code (or vice versa) run concurrently longer than the migration itself takes. Design migrations to be backward-compatible for at least one deploy cycle if you need the old and new code to coexist during a rollout (additive column first, backfill, only then a follow-up deploy that starts requiring it).
 
 ## Resource sizing
 
