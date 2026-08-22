@@ -87,7 +87,7 @@ export function globalBlocklistColumns({
       id: "userId",
       header: "User ID",
       accessorFn: (entry) => entry.userId,
-      meta: { className: "w-52 tabular font-mono text-[12px] text-fg" },
+      meta: { className: "w-52 tabular font-mono text-[14px] text-fg" },
     },
     {
       id: "reason",
@@ -107,13 +107,13 @@ export function globalBlocklistColumns({
       id: "blockedBy",
       header: "Blocked by",
       accessorFn: (entry) => entry.blockedBy,
-      meta: { className: "w-44 tabular font-mono text-[12px] text-fg-subtle" },
+      meta: { className: "w-44 tabular font-mono text-[14px] text-fg-subtle" },
     },
     {
       id: "createdAt",
       header: "Blocked since",
       accessorFn: (entry) => entry.createdAt,
-      meta: { className: "w-44 tabular text-[12px] whitespace-nowrap text-fg-muted" },
+      meta: { className: "w-44 tabular text-[14px] whitespace-nowrap text-fg-muted" },
       cell: ({ row }) => formatStamp(row.original.createdAt),
     },
     {

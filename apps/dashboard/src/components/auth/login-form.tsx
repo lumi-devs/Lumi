@@ -2,8 +2,16 @@
 
 import { useActionState } from "react";
 import { Loader2 } from "lucide-react";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+} from "motion/react";
 import { Button } from "#/components/ui/button";
 import { ActionError } from "#/components/action-error";
+import { SPRING_SNAPPY, SPRING_SOFT } from "#/lib/animate";
 
 export interface LoginActionState {
   error: string | null;
@@ -17,15 +25,41 @@ export function LoginForm({
   const [state, formAction, isPending] = useActionState<LoginActionState, FormData>(action, {
     error: null,
   });
+  const reduce = useReducedMotion();
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const springX = useSpring(x, SPRING_SOFT);
+  const springY = useSpring(y, SPRING_SOFT);
+
+  function onMouseMove(e: React.MouseEvent<HTMLButtonElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relX = e.clientX - (rect.left + rect.width / 2);
+    const relY = e.clientY - (rect.top + rect.height / 2);
+    x.set(Math.max(-6, Math.min(6, relX * 0.25)));
+    y.set(Math.max(-6, Math.min(6, relY * 0.25)));
+  }
+
+  function onMouseLeave() {
+    x.set(0);
+    y.set(0);
+  }
 
   return (
-    <form action={formAction}>
+    <motion.form
+      action={formAction}
+      initial={reduce ? false : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+    >
       <Button
         type="submit"
         variant="primary"
         size="lg"
         className="w-full"
         disabled={isPending}
+        style={reduce ? undefined : { x: springX, y: springY }}
+        onMouseMove={reduce ? undefined : onMouseMove}
+        onMouseLeave={reduce ? undefined : onMouseLeave}
       >
         {isPending ? (
           <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -42,7 +76,18 @@ export function LoginForm({
         )}
         {isPending ? "Redirecting to Discord…" : "Continue with Discord"}
       </Button>
-      <ActionError error={state.error} className="mt-3" />
-    </form>
+      <AnimatePresence>
+        {state.error ? (
+          <motion.div
+            initial={reduce ? false : { opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={reduce ? undefined : { opacity: 0, scale: 0.95 }}
+            transition={SPRING_SNAPPY}
+          >
+            <ActionError error={state.error} className="mt-3" />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </motion.form>
   );
 }

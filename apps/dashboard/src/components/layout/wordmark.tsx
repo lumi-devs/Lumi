@@ -21,7 +21,7 @@ export function Wordmark({
         />
       </svg>
       {showText && (
-        <span className="font-display text-[15px] font-semibold tracking-[0.06em] text-fg uppercase">
+        <span className="font-display text-[17px] font-semibold tracking-[0.06em] text-fg uppercase">
           Lumi
         </span>
       )}

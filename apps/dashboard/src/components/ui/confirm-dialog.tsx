@@ -64,11 +64,11 @@ export function ConfirmDialog({
       <div className="flex flex-col gap-2 px-4 py-4">
         <h2
           id={titleId}
-          className="font-display text-[15px] leading-5 font-semibold tracking-[0.01em] text-fg"
+          className="font-display text-[17px] leading-5 font-semibold tracking-[0.01em] text-fg"
         >
           {title}
         </h2>
-        <div id={descriptionId} className="text-[13px] leading-5 text-fg-muted">
+        <div id={descriptionId} className="text-[15px] leading-5 text-fg-muted">
           {description}
         </div>
         {children}

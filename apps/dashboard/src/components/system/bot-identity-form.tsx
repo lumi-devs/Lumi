@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { setBotIdentity } from "#/actions/system-actions";
 import {
   Card,
@@ -13,6 +14,7 @@ import { Field, Input } from "#/components/ui/input";
 import { Button } from "#/components/ui/button";
 import { ActionError } from "#/components/action-error";
 import { useServerAction } from "#/lib/use-server-action";
+import { SPRING_SNAPPY } from "#/lib/animate";
 
 export function BotIdentityForm({
   inviteUrl,
@@ -24,6 +26,7 @@ export function BotIdentityForm({
   const [invite, setInvite] = useState(inviteUrl ?? "");
   const [supportGuild, setSupportGuild] = useState(supportGuildId ?? "");
   const { isPending, error, setError, run } = useServerAction();
+  const reduce = useReducedMotion();
 
   function save() {
     run(async () => {
@@ -62,7 +65,18 @@ export function BotIdentityForm({
           <Button variant="secondary" disabled={isPending} onClick={save}>
             Save
           </Button>
-          <ActionError error={error} />
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={reduce ? false : { opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={SPRING_SNAPPY}
+              >
+                <ActionError error={error} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </CardBody>
     </Card>

@@ -171,7 +171,7 @@ export function FilterBar({
         ) : null}
         <span
           aria-live="polite"
-          className="font-display text-[11px] tracking-[0.02em] text-fg-subtle"
+          className="font-display text-[13px] tracking-[0.02em] text-fg-subtle"
         >
           {isPending ? "Updating…" : ""}
         </span>

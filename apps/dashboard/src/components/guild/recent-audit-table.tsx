@@ -48,23 +48,23 @@ export function RecentAuditTable({
               const { scope, verb } = splitAction(entry.action);
               return (
                 <TR key={entry.id}>
-                  <TD className="tabular font-mono text-[11.5px] whitespace-nowrap text-fg">
+                  <TD className="tabular font-mono text-[13.5px] whitespace-nowrap text-fg">
                     {formatTime(entry.createdAt)}
                   </TD>
-                  <TD className="max-w-40 truncate text-[12.5px] text-fg-muted">
+                  <TD className="max-w-40 truncate text-[14.5px] text-fg-muted">
                     {memberNames[entry.userId] ?? (
-                      <span className="font-mono text-[11.5px]">
+                      <span className="font-mono text-[13.5px]">
                         {entry.userId}
                       </span>
                     )}
                   </TD>
-                  <TD className="font-mono text-[11.5px]">
+                  <TD className="font-mono text-[13.5px]">
                     {scope ? <span className="text-fg-subtle">{scope}.</span> : null}
                     <span className="text-fg">{verb}</span>
                   </TD>
                   <TD>
                     <span
-                      className={`inline-flex rounded-full px-2 py-px font-mono text-[10.5px] ${
+                      className={`inline-flex rounded-full px-2 py-px font-mono text-[12.5px] ${
                         PLATFORM_TONE[entry.platform] ?? "bg-bg-subtle text-fg-muted"
                       }`}
                     >

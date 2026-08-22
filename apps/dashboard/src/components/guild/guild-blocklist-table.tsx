@@ -174,7 +174,6 @@ function BlockForm({
           label="Reason"
           htmlFor="block-reason"
           className="min-w-[13rem] flex-[2] gap-1"
-          hint="Optional, shown to whoever reads this list later"
         >
           <Input
             id="block-reason"
@@ -184,15 +183,20 @@ function BlockForm({
             onChange={(e) => setReason(e.target.value)}
           />
         </Field>
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={isPending}
-          className="mb-px"
-        >
-          {isPending ? "Blocking…" : "Block user"}
-        </Button>
+        <div className="flex flex-col gap-1">
+          {/* Invisible spacer matching Field's Label row, so the button - which
+           * has no label of its own - still bottom-aligns with the inputs. */}
+          <span aria-hidden className="invisible text-[14px] leading-4">
+            spacer
+          </span>
+          <Button type="submit" variant="primary" disabled={isPending}>
+            {isPending ? "Blocking…" : "Block user"}
+          </Button>
+        </div>
       </div>
+      <p className="text-[13px] leading-4 text-fg-subtle">
+        Reason is optional, shown to whoever reads this list later.
+      </p>
       <ActionError error={error} />
     </form>
   );

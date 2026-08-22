@@ -67,21 +67,21 @@ function ModuleRow({
         <div className="flex items-center gap-2">
           <Link
             href={`/guild/${guildId}/modules/${m.name}`}
-            className="font-display truncate text-[13px] font-semibold tracking-[0.01em] text-fg hover:underline"
+            className="font-display truncate text-[15px] font-semibold tracking-[0.01em] text-fg hover:underline"
           >
             {m.displayName}
           </Link>
-          <span className="hidden font-mono text-[11px] text-fg-subtle sm:inline">
+          <span className="hidden font-mono text-[13px] text-fg-subtle sm:inline">
             {m.name}
           </span>
         </div>
-        <p className="truncate text-[12px] leading-5 text-fg-muted">
+        <p className="truncate text-[14px] leading-5 text-fg-muted">
           {m.description}
         </p>
         <ActionError error={error} className="mt-1.5" />
       </div>
 
-      <span className="tabular hidden w-24 shrink-0 text-right text-[12px] text-fg-subtle lg:block">
+      <span className="tabular hidden w-24 shrink-0 text-right text-[14px] text-fg-subtle lg:block">
         {m.configFields.length} field{m.configFields.length === 1 ? "" : "s"}
       </span>
 

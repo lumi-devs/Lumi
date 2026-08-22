@@ -278,13 +278,13 @@ function OverrideRow({
     <li className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start sm:gap-4">
       <div className="flex min-w-0 shrink-0 items-center gap-2 sm:w-56">
         <Badge variant="outline">{target.typeLabel}</Badge>
-        <span className="truncate text-[13px] text-fg" title={target.name}>
+        <span className="truncate text-[15px] text-fg" title={target.name}>
           {target.name}
         </span>
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="text-[12px] text-fg-muted">{settingName}</p>
+        <p className="text-[14px] text-fg-muted">{settingName}</p>
         {editing ? (
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <div className="min-w-[12rem] flex-1">
@@ -519,7 +519,7 @@ function AddOverrideForm({
             <Input
               id="override-target"
               inputMode="numeric"
-              className="tabular font-mono text-[12px]"
+              className="tabular font-mono text-[14px]"
               placeholder="e.g. 328473289473289473"
               value={modelId}
               onChange={(e) => setModelId(e.target.value.trim())}
@@ -569,11 +569,11 @@ function AddOverrideForm({
           {isPending ? "Saving…" : "Save override"}
         </Button>
         {moduleView && field && !targetValid ? (
-          <span className="text-[11px] text-fg-subtle">
+          <span className="text-[13px] text-fg-subtle">
             Choose what this applies to first.
           </span>
         ) : moduleView && field && !valueValid ? (
-          <span className="text-[11px] text-fg-subtle">
+          <span className="text-[13px] text-fg-subtle">
             Enter the value this target should use instead — an override with no
             value of its own wouldn&apos;t change anything.
           </span>
@@ -597,7 +597,7 @@ function ValueInput({
   if (!field) {
     return (
       <Input
-        className="font-mono text-[12px]"
+        className="font-mono text-[14px]"
         value={typeof value === "string" ? value : formatConfigValue(value)}
         onChange={(e) => onChange(e.target.value)}
       />

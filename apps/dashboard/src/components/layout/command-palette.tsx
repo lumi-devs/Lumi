@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import type { Session } from "next-auth";
+import { AnimatePresence, motion } from "motion/react";
 import {
   Home,
   IdCard as ServerIcon,
@@ -13,6 +14,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { guildManagementGroups, guildTopLinks } from "#/lib/guild-nav";
+import { SPRING_SNAPPY, useStaggerIn } from "#/lib/animate";
+import { guildIconUrl } from "#/lib/discord-format";
 import { cn } from "#/lib/utils";
 
 interface PaletteItem {
@@ -89,11 +92,12 @@ export function CommandPalette({ session }: { session: Session | null }) {
         label: g.name,
         sublabel: g.id,
         icon: ServerIcon,
+        iconUrl: guildIconUrl(g.id, g.icon) ?? undefined,
       }));
     if (guildItems.length > 0) result.push({ title: "Switch server", items: guildItems });
 
     const goto: PaletteItem[] = [
-      { id: "home", href: "/", label: "Your servers", icon: Home },
+      { id: "home", href: "/guilds", label: "Your servers", icon: Home },
       { id: "account", href: "/account", label: "Your data", icon: User },
     ];
     if (session.isBotOwner) {
@@ -106,6 +110,12 @@ export function CommandPalette({ session }: { session: Session | null }) {
   }, [session, query, currentGuildId]);
 
   const flat = useMemo(() => sections.flatMap((s) => s.items), [sections]);
+  // Fires once per open, not per keystroke - tying this to the filtered
+  // result set (as data-table.tsx's row stagger does) re-faded every visible
+  // row on every character typed, which read as flicker rather than motion.
+  const resultsRef = useStaggerIn<HTMLDivElement>("a", {
+    resetKey: open,
+  });
 
   useEffect(() => {
     setActiveIndex(0);
@@ -132,32 +142,41 @@ export function CommandPalette({ session }: { session: Session | null }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="relative hidden h-8 max-w-xs flex-1 items-center rounded-control border border-border bg-bg-subtle pr-12 pl-8 text-left text-[13px] text-fg-subtle transition-colors outline-none hover:border-border-strong md:flex"
+        className="relative hidden h-9 max-w-sm flex-1 items-center rounded-control border border-border bg-bg-subtle pr-12 pl-9 text-left text-[15.5px] text-fg-subtle transition-colors outline-none hover:border-border-strong md:flex"
       >
         <Search
           aria-hidden
           className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-fg-subtle"
         />
         Search servers and settings
-        <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-control border border-border bg-surface px-1 py-px font-sans text-[10px] leading-4 text-fg-subtle">
+        <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-control border border-border bg-surface px-1 py-px font-sans text-[12px] leading-4 text-fg-subtle">
           ⌘K
         </kbd>
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-[60] flex items-start justify-center bg-black/60 px-4 pt-[12vh] backdrop-blur-sm"
-          onClick={() => setOpen(false)}
-        >
-          <div
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[60] flex items-start justify-center bg-black/60 px-4 pt-[12vh] backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+          >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97, y: -8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97, y: -8 }}
+            transition={SPRING_SNAPPY}
             role="dialog"
             aria-modal="true"
             aria-label="Command palette"
-            className="rise flex w-full max-w-lg flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-e3"
+            className="flex w-full max-w-2xl flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-e3"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-2 border-b border-border px-3">
-              <Search className="size-4 shrink-0 text-fg-subtle" aria-hidden />
+            <div className="flex items-center gap-3 border-b border-border px-4 transition-colors focus-within:border-accent">
+              <Search className="size-5 shrink-0 text-fg-subtle" aria-hidden />
               <input
                 ref={inputRef}
                 value={query}
@@ -166,22 +185,22 @@ export function CommandPalette({ session }: { session: Session | null }) {
                 type="text"
                 placeholder="Search servers and settings…"
                 aria-label="Search servers and settings"
-                className="h-11 w-full bg-transparent text-[14px] text-fg outline-none placeholder:text-fg-subtle"
+                className="h-14 w-full bg-transparent text-[18px] text-fg outline-none! placeholder:text-fg-subtle"
               />
-              <kbd className="shrink-0 rounded-control border border-border px-1 py-px font-sans text-[10px] leading-4 text-fg-subtle">
+              <kbd className="shrink-0 rounded-control border border-border px-1.5 py-0.5 font-sans text-[13px] leading-4 text-fg-subtle">
                 Esc
               </kbd>
             </div>
 
-            <div className="max-h-80 overflow-y-auto p-1.5">
+            <div ref={resultsRef} className="max-h-[28rem] overflow-y-auto p-2">
               {flat.length === 0 ? (
-                <p className="px-2.5 py-6 text-center text-[13px] text-fg-subtle">
+                <p className="px-3 py-8 text-center text-[16px] text-fg-subtle">
                   No matches for “{query}”
                 </p>
               ) : (
                 sections.map((section) => (
                   <div key={section.title} className="mb-1 last:mb-0">
-                    <p className="font-display px-2.5 pt-2 pb-1 text-[11px] font-semibold tracking-[0.11em] text-fg-subtle uppercase">
+                    <p className="font-display px-3 pt-2.5 pb-1.5 text-[14px] font-semibold tracking-[0.11em] text-fg-subtle uppercase">
                       {section.title}
                     </p>
                     {section.items.map((item) => {
@@ -198,24 +217,33 @@ export function CommandPalette({ session }: { session: Session | null }) {
                           onClick={() => setOpen(false)}
                           onMouseEnter={() => setActiveIndex(index)}
                           className={cn(
-                            "flex w-full items-center gap-2.5 rounded-control px-2.5 py-2 text-left text-[13px] transition-colors",
+                            "flex w-full items-center gap-3 rounded-control px-3 py-2.5 text-left text-[16px] transition-colors",
                             active
                               ? "bg-accent-soft text-fg"
                               : "text-fg-muted hover:bg-surface-hover hover:text-fg",
                           )}
                         >
-                          <item.icon
-                            className={cn(
-                              "size-3.5 shrink-0",
-                              active ? "text-accent-fg" : "text-fg-subtle",
-                            )}
-                            aria-hidden
-                          />
+                          {item.iconUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- external Discord CDN icon, next/image adds no value here
+                            <img
+                              src={item.iconUrl}
+                              alt=""
+                              className="size-6 shrink-0 rounded-full object-cover"
+                            />
+                          ) : (
+                            <item.icon
+                              className={cn(
+                                "size-4 shrink-0",
+                                active ? "text-accent-fg" : "text-fg-subtle",
+                              )}
+                              aria-hidden
+                            />
+                          )}
                           <span className="min-w-0 flex-1 truncate font-medium">
                             {item.label}
                           </span>
                           {item.sublabel && (
-                            <span className="shrink-0 truncate font-mono text-[11px] text-fg-subtle">
+                            <span className="shrink-0 truncate font-mono text-[14px] text-fg-subtle">
                               {item.sublabel}
                             </span>
                           )}
@@ -227,7 +255,7 @@ export function CommandPalette({ session }: { session: Session | null }) {
               )}
             </div>
 
-            <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-[11px] text-fg-subtle">
+            <div className="flex items-center gap-3 border-t border-border px-4 py-2.5 text-[14px] text-fg-subtle">
               <span className="flex items-center gap-1">
                 <kbd className="rounded border border-border bg-bg-subtle px-1 py-px font-sans">↑↓</kbd>
                 Navigate
@@ -237,9 +265,10 @@ export function CommandPalette({ session }: { session: Session | null }) {
                 Select
               </span>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

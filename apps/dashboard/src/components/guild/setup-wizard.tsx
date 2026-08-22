@@ -83,13 +83,13 @@ export function SetupWizard({
                   <CircleDashed className="mt-0.5 size-4 shrink-0 text-fg-subtle" aria-hidden />
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-medium text-fg">{item.label}</p>
-                  <p className="text-[12px] leading-5 text-fg-muted">
+                  <p className="text-[15px] font-medium text-fg">{item.label}</p>
+                  <p className="text-[14px] leading-5 text-fg-muted">
                     {item.description}
                   </p>
                 </div>
                 {status ? (
-                  <span className="shrink-0 text-[12px] text-fg-subtle">{status}</span>
+                  <span className="shrink-0 text-[14px] text-fg-subtle">{status}</span>
                 ) : null}
               </li>
             );

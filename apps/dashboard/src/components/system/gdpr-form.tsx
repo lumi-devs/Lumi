@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { CircleCheck } from "lucide-react";
 import { gdprDeleteUser } from "#/actions/system-actions";
 import {
@@ -15,6 +16,7 @@ import { Checkbox } from "#/components/ui/switch";
 import { Button } from "#/components/ui/button";
 import { Alert } from "#/components/ui/alert";
 import { useServerAction } from "#/lib/use-server-action";
+import { SPRING_SNAPPY } from "#/lib/animate";
 
 export function GdprForm() {
   const [userId, setUserId] = useState("");
@@ -22,6 +24,7 @@ export function GdprForm() {
   const [result, setResult] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const { isPending, run } = useServerAction();
+  const reduce = useReducedMotion();
 
   function handleDelete() {
     setResult(null);
@@ -56,13 +59,13 @@ export function GdprForm() {
           <Input
             id="gdprUserId"
             placeholder="123456789012345678"
-            className="font-mono text-[12px]"
+            className="font-mono text-[14px]"
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
           />
         </Field>
 
-        <label className="flex cursor-pointer items-center gap-2 text-[12px] text-fg-muted">
+        <label className="flex cursor-pointer items-center gap-2 text-[14px] text-fg-muted">
           <Checkbox checked={confirmed} onChange={setConfirmed} />
           I understand this cannot be undone.
         </label>
@@ -76,14 +79,24 @@ export function GdprForm() {
           {isPending ? "Deleting…" : "Delete user data"}
         </Button>
 
-        {result &&
-          (failed ? (
-            <Alert variant="danger">{result}</Alert>
-          ) : (
-            <Alert variant="info" icon={CircleCheck} className="text-success">
-              {result}
-            </Alert>
-          ))}
+        <AnimatePresence>
+          {result && (
+            <motion.div
+              initial={reduce ? false : { opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={SPRING_SNAPPY}
+            >
+              {failed ? (
+                <Alert variant="danger">{result}</Alert>
+              ) : (
+                <Alert variant="info" icon={CircleCheck} className="text-success">
+                  {result}
+                </Alert>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </CardBody>
     </Card>
   );

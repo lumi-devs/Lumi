@@ -96,7 +96,7 @@ export default async function GuildOverviewPage({
                   className="size-6 rounded-control object-cover"
                 />
               ) : (
-                <span className="flex size-6 items-center justify-center rounded-control border border-border bg-bg-subtle text-[11px] font-semibold text-fg-muted">
+                <span className="flex size-6 items-center justify-center rounded-control border border-border bg-bg-subtle text-[13px] font-semibold text-fg-muted">
                   {data.name.slice(0, 1).toUpperCase()}
                 </span>
               )}
@@ -106,7 +106,7 @@ export default async function GuildOverviewPage({
           description={
             <>
               Guild overview ·{" "}
-              <code className="font-mono text-[11px] text-fg-subtle">
+              <code className="font-mono text-[13px] text-fg-subtle">
                 {guildId}
               </code>
             </>

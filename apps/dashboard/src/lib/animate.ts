@@ -152,4 +152,26 @@ export function usePageTimeline(refs: {
   }, []);
 }
 
+/**
+ * Shared spring configs so every `motion/react` spring in the app comes from
+ * the same two physical "feels" instead of each component picking its own
+ * stiffness/damping. SNAPPY is the existing Button/theme-toggle press-scale
+ * and pill-slide feel; SOFT is for larger surfaces (cards, panels, the save
+ * bar) where SNAPPY's stiffness reads as jittery at that size.
+ */
+export const SPRING_SNAPPY = { type: "spring", stiffness: 500, damping: 30 } as const;
+export const SPRING_SOFT = { type: "spring", stiffness: 260, damping: 26 } as const;
+
+/**
+ * Cursor-tracked glow for `.spotlight` (globals.css) — sets the CSS custom
+ * properties the radial-gradient reads, directly on the event target, so
+ * there's no re-render per mousemove frame. Plain event handler rather than
+ * a hook: nothing here is React state.
+ */
+export function spotlightHandler(e: React.MouseEvent<HTMLElement>) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--spot-x", `${e.clientX - rect.left}px`);
+  e.currentTarget.style.setProperty("--spot-y", `${e.clientY - rect.top}px`);
+}
+
 export type { JSAnimation };

@@ -78,7 +78,7 @@ export function RepoManager({ repos: initial }: { repos: DownloaderRepoView[] })
               <Input
                 id="repoUrl"
                 placeholder="https://github.com/owner/repo"
-                className="font-mono text-[12px]"
+                className="font-mono text-[14px]"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 onBlur={handleUrlBlur}
@@ -96,7 +96,7 @@ export function RepoManager({ repos: initial }: { repos: DownloaderRepoView[] })
               <Input
                 id="repoBranch"
                 placeholder="master"
-                className="font-mono text-[12px]"
+                className="font-mono text-[14px]"
                 value={branch}
                 onChange={(e) => setBranch(e.target.value)}
               />
@@ -154,7 +154,7 @@ function RevisionInput({
   return (
     <Input
       placeholder={placeholder}
-      className="font-mono text-[11px]"
+      className="font-mono text-[13px]"
       value={value}
       onChange={onChange}
     />
@@ -190,8 +190,8 @@ function RepoRow({ repo }: { repo: DownloaderRepoView }) {
       >
         <Chevron className="size-4 shrink-0 text-fg-subtle" aria-hidden />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-medium text-fg">{repo.name}</p>
-          <p className="truncate font-mono text-[11px] text-fg-subtle">
+          <p className="truncate text-[15px] font-medium text-fg">{repo.name}</p>
+          <p className="truncate font-mono text-[13px] text-fg-subtle">
             {repo.url}
           </p>
         </div>
@@ -199,7 +199,7 @@ function RepoRow({ repo }: { repo: DownloaderRepoView }) {
           <GitBranch className="size-3" aria-hidden />
           {repo.branch}
         </Badge>
-        <span className="text-[12px] text-fg-muted">
+        <span className="text-[14px] text-fg-muted">
           {expanded ? "Hide modules" : "Browse modules"}
         </span>
       </button>
@@ -308,18 +308,18 @@ function RepoModuleRow({
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="truncate font-mono text-[12px] text-fg">{m.name}</span>
+            <span className="truncate font-mono text-[14px] text-fg">{m.name}</span>
             {m.version && (
-              <span className="tabular text-[11px] text-fg-subtle">v{m.version}</span>
+              <span className="tabular text-[13px] text-fg-subtle">v{m.version}</span>
             )}
             {m.isInstalled && m.commit && (
-              <span className="tabular text-[11px] text-fg-subtle">
+              <span className="tabular text-[13px] text-fg-subtle">
                 @ {m.commit.slice(0, 7)}
                 {m.pinned ? " (pinned)" : ""}
               </span>
             )}
           </div>
-          {error && <p className="mt-1 text-[11px] text-danger">{error}</p>}
+          {error && <p className="mt-1 text-[13px] text-danger">{error}</p>}
         </div>
 
         {m.isInstalled ? (

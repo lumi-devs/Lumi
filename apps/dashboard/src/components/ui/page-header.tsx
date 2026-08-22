@@ -31,11 +31,11 @@ export function PageHeader({
           </span>
         ) : null}
         <div className="min-w-0">
-          <h1 className="font-display text-[17px] leading-6 font-semibold tracking-[0.01em] text-fg">
+          <h1 className="font-display text-[19px] leading-6 font-semibold tracking-[0.01em] text-fg">
             {title}
           </h1>
           {description ? (
-            <p className="mt-0.5 max-w-2xl text-[12px] leading-5 text-fg-muted">
+            <p className="mt-0.5 max-w-2xl text-[14px] leading-5 text-fg-muted">
               {description}
             </p>
           ) : null}

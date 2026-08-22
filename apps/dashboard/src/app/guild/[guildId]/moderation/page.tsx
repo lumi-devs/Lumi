@@ -2,7 +2,9 @@ import Link from "next/link";
 import { Gavel, PlugZap, SearchX } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildCases, getGuildDashboard } from "#/lib/dashboard-fetch";
+import { exportGuildCases } from "#/actions/guild-export-actions";
 import { ModerationCasesTable } from "#/components/guild/moderation-cases-table";
+import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
 import { Alert } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
 import { buttonVariants } from "#/components/ui/button-variants";
@@ -14,11 +16,13 @@ import {
   CardTitle,
 } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
+import { ExportLogButton } from "#/components/ui/export-log-button";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
-import type { CasesListData } from "#/lib/dashboard-data";
+import type { CasesListData, ModerationCaseView } from "#/lib/dashboard-data";
 import {
+  countBy,
   extractMemberNames,
   isSnowflake,
   pageNumber,
@@ -87,9 +91,24 @@ export default async function ModerationPage({
           <CardHeader
             actions={
               data ? (
-                <Badge variant="neutral" className="tabular">
-                  {data.total} total
-                </Badge>
+                <>
+                  <Badge variant="neutral" className="tabular">
+                    {data.total} total
+                  </Badge>
+                  {data.total > 0 ? (
+                    <ExportLogButton<ModerationCaseView>
+                      label="Download"
+                      filename={`lumi-moderation-cases-${guildId}-${Date.now()}.json`}
+                      action={exportGuildCases.bind(null, guildId, {
+                        ...(action ? { action } : {}),
+                        ...(userId && isSnowflake(userId) ? { userId } : {}),
+                        ...(moderatorId && isSnowflake(moderatorId)
+                          ? { moderatorId }
+                          : {}),
+                      })}
+                    />
+                  ) : null}
+                </>
               ) : null
             }
           >
@@ -147,11 +166,21 @@ export default async function ModerationPage({
               footnote={failure}
             />
           ) : data && data.cases.length > 0 ? (
-            <ModerationCasesTable
-              guildId={guildId}
-              cases={data.cases}
-              memberNames={memberNames}
-            />
+            <>
+              {data.cases.length > 1 ? (
+                <div className="border-b border-border px-4 py-3">
+                  <p className="mb-2 text-[13px] font-semibold tracking-[0.08em] text-fg-subtle uppercase">
+                    Cases on this page, by action
+                  </p>
+                  <DataBreakdownChart data={countBy<ModerationCaseView>(data.cases, "action")} />
+                </div>
+              ) : null}
+              <ModerationCasesTable
+                guildId={guildId}
+                cases={data.cases}
+                memberNames={memberNames}
+              />
+            </>
           ) : data && data.total > 0 ? (
             <EmptyState
               compact

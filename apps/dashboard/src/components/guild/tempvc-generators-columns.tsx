@@ -41,7 +41,7 @@ export function tempvcGeneratorsColumns({
                 </Badge>
               )}
             </span>
-            <span className="tabular font-mono text-[11px] text-fg-subtle">
+            <span className="tabular font-mono text-[13px] text-fg-subtle">
               {generator.channelId}
             </span>
           </span>
@@ -62,7 +62,7 @@ export function tempvcGeneratorsColumns({
                 ? `${resolveName(generator.name, 1)}, ${resolveName(generator.name, 2)}, …`
                 : resolveName(generator.name, 1)}
             </span>
-            <span className="font-mono text-[11px] text-fg-subtle">
+            <span className="font-mono text-[13px] text-fg-subtle">
               {generator.name}
             </span>
           </span>

@@ -11,13 +11,17 @@ export default async function AccountPage() {
     <>
       <SiteHeader session={session} />
       <main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 pt-10 pb-24">
-        <PageHeader
-          title="Your data"
-          description="Everything Lumi has stored about your Discord account, across every server it shares with you."
-          icon={ShieldCheck}
-        />
+        <div className="rise" style={{ "--rise-delay": "0ms" } as React.CSSProperties}>
+          <PageHeader
+            title="Your data"
+            description="Everything Lumi has stored about your Discord account, across every server it shares with you."
+            icon={ShieldCheck}
+          />
+        </div>
 
-        <GdprExportCard />
+        <div className="rise" style={{ "--rise-delay": "70ms" } as React.CSSProperties}>
+          <GdprExportCard />
+        </div>
       </main>
     </>
   );

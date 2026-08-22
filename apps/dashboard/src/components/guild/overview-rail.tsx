@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { cn } from "#/lib/utils";
+import { useStaggerIn } from "#/lib/animate";
 import { since } from "#/lib/log-format";
 import {
   fieldLabel,
@@ -59,7 +62,7 @@ export function OverviewRail({
 
 function RailHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="font-display mb-3 text-[11px] font-semibold tracking-[0.07em] text-fg-subtle uppercase">
+    <h3 className="font-display mb-3 text-[13px] font-semibold tracking-[0.07em] text-fg-subtle uppercase">
       {children}
     </h3>
   );
@@ -91,7 +94,7 @@ function ShardHealth({ shards }: { shards: SystemShardsData }) {
                   : `Shard ${id} — not reporting`
               }
               className={cn(
-                "tabular flex aspect-square items-center justify-center rounded-[6px] border font-mono text-[10px]",
+                "tabular flex aspect-square items-center justify-center rounded-[6px] border font-mono text-[12px]",
                 tone === "good" &&
                   "border-success/35 bg-success-soft text-success",
                 tone === "warn" &&
@@ -104,7 +107,7 @@ function ShardHealth({ shards }: { shards: SystemShardsData }) {
           );
         })}
       </div>
-      <p className="mt-2.5 font-mono text-[10.5px] text-fg-subtle">
+      <p className="mt-2.5 font-mono text-[12.5px] text-fg-subtle">
         <Link href="/system/shards" className="hover:text-fg">
           {shards.clusterName} · {shards.shards.length}/{shards.shardCount}{" "}
           reporting →
@@ -129,16 +132,20 @@ function RecentChanges({
   channels: DashboardChannelView[];
   renderedAt: string;
 }) {
+  const listRef = useStaggerIn<HTMLUListElement>("li", {
+    resetKey: changes.map((c) => c.id).join(","),
+  });
+
   return (
     <div>
       <RailHeading>Recent changes</RailHeading>
       {changes.length === 0 ? (
-        <p className="text-[12px] leading-5 text-fg-muted">
+        <p className="text-[14px] leading-5 text-fg-muted">
           No settings have been changed yet. Every edit made here or from
           Discord shows up in this column.
         </p>
       ) : (
-        <ul className="flex flex-col">
+        <ul ref={listRef} className="flex flex-col">
           {changes.map((entry) => (
             <li
               key={entry.id}
@@ -149,7 +156,7 @@ function RecentChanges({
                 className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent"
               />
               <div className="min-w-0">
-                <p className="text-[12px] leading-[1.45] text-fg-muted">
+                <p className="text-[14px] leading-[1.45] text-fg-muted">
                   <span className="font-semibold text-fg">
                     {moduleLabel(labels, entry.moduleName)} →{" "}
                     {fieldLabel(labels, entry.moduleName, entry.key)}
@@ -166,7 +173,7 @@ function RecentChanges({
                     )}
                   </span>
                 </p>
-                <p className="tabular mt-0.5 font-mono text-[10px] text-fg-subtle">
+                <p className="tabular mt-0.5 font-mono text-[12px] text-fg-subtle">
                   {actorNames[entry.actorId] ?? entry.actorId} ·{" "}
                   {since(entry.createdAt, renderedAt)}
                 </p>

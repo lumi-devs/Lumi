@@ -80,6 +80,16 @@ export function groupByDay<T>(
   return groups;
 }
 
+/** Tallies items by a string field, for the per-page breakdown charts. */
+export function countBy<T>(items: T[], key: keyof T): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const item of items) {
+    const value = String(item[key]);
+    counts[value] = (counts[value] ?? 0) + 1;
+  }
+  return counts;
+}
+
 export function formatConfigValue(value: unknown): string {
   if (value === null || value === undefined) return "Not set";
   if (typeof value === "boolean") return value ? "On" : "Off";

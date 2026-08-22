@@ -13,6 +13,7 @@ import { Button } from "#/components/ui/button";
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
 import { EmptyState } from "#/components/ui/empty-state";
 import { Field, Select } from "#/components/ui/input";
+import { useStaggerIn } from "#/lib/animate";
 import type {
   DashboardChannelView,
   IgnoredChannelView,
@@ -40,6 +41,9 @@ export function IgnoredChannelsList({
   const ignoredIds = new Set(entries.map((e) => e.channelId));
   const serverIgnored = ignoredIds.has(null);
   const options = channels.filter((c) => !ignoredIds.has(c.id));
+  const listRef = useStaggerIn<HTMLUListElement>("li", {
+    resetKey: entries.map((e) => e.id).join(","),
+  });
 
   function add(channelId: string | null) {
     run(async () => {
@@ -106,7 +110,7 @@ export function IgnoredChannelsList({
           description="Ignore a channel to keep command spam out of it — Lumi stops responding there while everything else carries on as normal."
         />
       ) : (
-        <ul className="divide-y divide-border">
+        <ul ref={listRef} className="divide-y divide-border">
           {[...entries]
             .sort((a, b) => Number(b.channelId === null) - Number(a.channelId === null))
             .map((entry) => {
@@ -119,7 +123,7 @@ export function IgnoredChannelsList({
                   className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-2 text-[13px] text-fg">
+                    <p className="flex items-center gap-2 text-[15px] text-fg">
                       {entry.channelId === null ? (
                         <>
                           The whole server
@@ -131,7 +135,7 @@ export function IgnoredChannelsList({
                         `#${channel?.name ?? entry.channelId}`
                       )}
                     </p>
-                    <p className="text-[12px] leading-5 text-fg-muted">
+                    <p className="text-[14px] leading-5 text-fg-muted">
                       {entry.channelId === null
                         ? "Every command in every channel is refused with “This server is not using Lumi.”"
                         : channel
@@ -183,18 +187,21 @@ export function IgnoredChannelsList({
               ))}
             </Select>
           </Field>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={isPending}
-            className="mb-px"
-          >
-            {isPending
-              ? "Saving…"
-              : picked === WHOLE_SERVER
-                ? "Ignore the whole server"
-                : "Ignore channel"}
-          </Button>
+          <div className="flex flex-col gap-1">
+            {/* Invisible spacer matching Field's Label row, so the button -
+             * which has no label of its own - still bottom-aligns with the
+             * Select instead of floating above it. */}
+            <span aria-hidden className="invisible text-[14px] leading-4">
+              spacer
+            </span>
+            <Button type="submit" variant="primary" disabled={isPending}>
+              {isPending
+                ? "Saving…"
+                : picked === WHOLE_SERVER
+                  ? "Ignore the whole server"
+                  : "Ignore channel"}
+            </Button>
+          </div>
         </div>
         <ActionError error={error} />
       </form>

@@ -20,6 +20,7 @@ import {
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
 import { Field, Input, Select } from "#/components/ui/input";
 import { Readout, ReadoutList } from "#/components/ui/readout";
+import { spotlightHandler } from "#/lib/animate";
 import type {
   DashboardChannelView,
   VerificationPanelView,
@@ -56,7 +57,7 @@ export function VerificationPanelCard({
   }
 
   return (
-    <Card>
+    <Card className="spotlight" onMouseMove={spotlightHandler}>
       <CardHeader
         actions={
           panel && !editing ? (
@@ -99,12 +100,12 @@ export function VerificationPanelCard({
           <ReadoutList>
             <Readout label="Channel">
               #{channels.find((c) => c.id === panel.channelId)?.name ?? "unknown"}{" "}
-              <span className="tabular font-mono text-[11px] text-fg-subtle">
+              <span className="tabular font-mono text-[13px] text-fg-subtle">
                 {panel.channelId}
               </span>
             </Readout>
             <Readout label="Message">
-              <span className="tabular font-mono text-[12px]">
+              <span className="tabular font-mono text-[14px]">
                 {panel.messageId}
               </span>
             </Readout>
@@ -113,7 +114,7 @@ export function VerificationPanelCard({
             </Readout>
           </ReadoutList>
           <CardBody className="flex items-center justify-between gap-3 border-t border-border">
-            <p className="text-[12px] leading-5 text-fg-muted">
+            <p className="text-[14px] leading-5 text-fg-muted">
               Deleted the message in Discord? Remove the record so it stops
               pointing at nothing.
             </p>
@@ -242,7 +243,6 @@ function PanelForm({
           label="Message ID"
           htmlFor="panel-message"
           className="min-w-[12rem] flex-1 gap-1"
-          hint="Copy Message ID on the panel message"
         >
           <Input
             id="panel-message"
@@ -252,17 +252,28 @@ function PanelForm({
             onChange={(e) => setMessageId(e.target.value)}
           />
         </Field>
-        <div className="flex items-center gap-2 pb-px">
-          <Button type="submit" variant="primary" disabled={isPending}>
-            {isPending ? "Saving…" : "Save location"}
-          </Button>
-          {onCancel ? (
-            <Button type="button" variant="ghost" onClick={onCancel}>
-              Cancel
+        <div className="flex flex-col gap-1">
+          {/* Invisible spacer matching Field's Label row, so these buttons -
+           * which have no label of their own - still bottom-align with the
+           * inputs. */}
+          <span aria-hidden className="invisible text-[14px] leading-4">
+            spacer
+          </span>
+          <div className="flex items-center gap-2">
+            <Button type="submit" variant="primary" disabled={isPending}>
+              {isPending ? "Saving…" : "Save location"}
             </Button>
-          ) : null}
+            {onCancel ? (
+              <Button type="button" variant="ghost" onClick={onCancel}>
+                Cancel
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
+      <p className="text-[13px] leading-4 text-fg-subtle">
+        Copy Message ID on the panel message.
+      </p>
       <ActionError error={error} />
     </form>
   );

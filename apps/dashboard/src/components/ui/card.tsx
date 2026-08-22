@@ -56,7 +56,7 @@ export function CardTitle({
     <h3
       data-slot="card-title"
       className={cn(
-        "font-display text-[14px] leading-5 font-semibold tracking-[0.01em] text-fg",
+        "font-display text-[16px] leading-5 font-semibold tracking-[0.01em] text-fg",
         className,
       )}
       {...props}
@@ -71,7 +71,7 @@ export function CardDescription({
   return (
     <p
       data-slot="card-description"
-      className={cn("mt-0.5 text-[12px] leading-5 text-fg-muted", className)}
+      className={cn("mt-0.5 text-[14px] leading-5 text-fg-muted", className)}
       {...props}
     />
   );
@@ -93,7 +93,7 @@ export function CardFooter({
     <div
       data-slot="card-footer"
       className={cn(
-        "flex items-center gap-2 border-t border-border bg-bg-subtle px-4 py-2.5 text-[12px] text-fg-muted",
+        "flex items-center gap-2 border-t border-border bg-bg-subtle px-4 py-2.5 text-[14px] text-fg-muted",
         className,
       )}
       {...props}

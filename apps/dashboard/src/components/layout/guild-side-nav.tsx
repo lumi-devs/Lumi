@@ -48,7 +48,7 @@ export function GuildSideNav({
   return (
     <SideNav
       groups={groups}
-      tag="Control room"
+      tag="Dashboard"
       switcher={
         <GuildSwitcher
           guildId={guildId}
@@ -89,10 +89,10 @@ function GuildSwitcher({
       <DropdownMenuTrigger className="flex w-full items-center gap-2.5 rounded-control border border-border bg-surface-hover px-2.5 py-2 text-left outline-none transition-colors hover:border-border-strong">
         <GuildAvatar name={guildName} icon={guildIcon} />
         <span className="min-w-0 flex-1">
-          <span className="font-display block truncate text-[12.5px] font-semibold text-fg">
+          <span className="font-display block truncate text-[14.5px] font-semibold text-fg">
             {guildName}
           </span>
-          <span className="tabular block font-mono text-[10.5px] text-fg-subtle">
+          <span className="tabular block font-mono text-[12.5px] text-fg-subtle">
             {MEMBERS.format(memberCount)} members
           </span>
         </span>
@@ -112,7 +112,7 @@ function GuildSwitcher({
           </DropdownMenuItem>
         ))}
         <DropdownMenuItem asChild>
-          <Link href="/">
+          <Link href="/guilds">
             <Layers3 aria-hidden />
             All servers
           </Link>
@@ -135,7 +135,7 @@ function GuildAvatar({
     <span
       className={cn(
         "flex shrink-0 items-center justify-center overflow-hidden rounded-control border border-border bg-bg-subtle font-semibold text-fg-muted",
-        small ? "size-5 text-[10px]" : "size-7 text-[11px]",
+        small ? "size-5 text-[12px]" : "size-7 text-[13px]",
       )}
     >
       {icon ? (

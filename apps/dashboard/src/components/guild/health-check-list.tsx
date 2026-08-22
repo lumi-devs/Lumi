@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "#/lib/utils";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
+import { ProgressRing } from "#/components/ui/progress-ring";
 import { useStaggerIn } from "#/lib/animate";
 import type { DashboardRoleView, DashboardModuleView } from "#/lib/dashboard-data";
 
@@ -150,13 +151,13 @@ function CheckRow({ check }: { check: HealthCheck }) {
         <Icon className="size-3.5" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] leading-5 font-medium text-fg">{check.title}</p>
-        <p className="mt-0.5 text-[12px] leading-5 text-fg-muted">{check.detail}</p>
+        <p className="text-[15px] leading-5 font-medium text-fg">{check.title}</p>
+        <p className="mt-0.5 text-[14px] leading-5 text-fg-muted">{check.detail}</p>
       </div>
       {!check.ok && check.fixHref ? (
         <Link
           href={check.fixHref}
-          className="shrink-0 self-center text-[12px] font-medium text-accent-fg hover:underline"
+          className="shrink-0 self-center text-[14px] font-medium text-accent-fg hover:underline"
         >
           {check.fixLabel ?? "Fix"}
         </Link>
@@ -182,7 +183,16 @@ export function HealthCheckList({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader
+        actions={
+          <ProgressRing
+            value={(passing / checks.length) * 100}
+            size={40}
+            strokeWidth={4}
+            label={`${passing}/${checks.length}`}
+          />
+        }
+      >
         <CardTitle>Health Check</CardTitle>
         <CardDescription>
           {passing} of {checks.length} checks passing.

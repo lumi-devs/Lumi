@@ -18,7 +18,7 @@ export function Glyph({
       aria-hidden
       className={cn(
         "inline-flex shrink-0 items-center justify-center rounded-control border border-border bg-bg-subtle leading-none select-none",
-        size === "sm" ? "size-5 text-[11px]" : "size-7 text-[13px]",
+        size === "sm" ? "size-5 text-[13px]" : "size-7 text-[15px]",
         className,
       )}
     >

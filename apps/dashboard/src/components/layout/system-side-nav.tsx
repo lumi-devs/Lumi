@@ -18,8 +18,8 @@ export function SystemSideNav({
       tag="System"
       switcher={
         <Link
-          href="/"
-          className="flex w-full items-center gap-2.5 rounded-control border border-border bg-surface-hover px-2.5 py-2 text-[12.5px] font-medium text-fg-muted transition-colors hover:border-border-strong hover:text-fg"
+          href="/guilds"
+          className="flex w-full items-center gap-2.5 rounded-control border border-border bg-surface-hover px-2.5 py-2 text-[14.5px] font-medium text-fg-muted transition-colors hover:border-border-strong hover:text-fg"
         >
           <ArrowLeft aria-hidden className="size-4 shrink-0 text-fg-subtle" />
           Back to servers

@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PanelLeft } from "lucide-react";
+import { motion } from "motion/react";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "#/components/ui/sheet";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
+import { SPRING_SNAPPY } from "#/lib/animate";
 import type { GuildNavGroup } from "#/lib/guild-nav";
 
 // Why this whole tree is a Client Component: `GuildNavGroup.icon` holds raw
@@ -27,7 +29,7 @@ export function SideNav({
   footer,
 }: {
   groups: GuildNavGroup[];
-  /** Mono kicker under the wordmark — "CONTROL ROOM" / "SYSTEM". */
+  /** Mono kicker under the wordmark — "DASHBOARD" / "SYSTEM". */
   tag: string;
   /** Guild switcher card (or any header block) shown above the nav groups. */
   switcher?: React.ReactNode;
@@ -112,10 +114,10 @@ function SideNavBody({
           className="size-6.5 shrink-0 rounded-[7px] bg-linear-155 from-accent to-accent-hover"
         />
         <span className={cn("min-w-0", labelBlock)}>
-          <span className="font-display block text-[15px] leading-5 font-bold tracking-[0.01em] text-fg">
+          <span className="font-display block text-[17px] leading-5 font-bold tracking-[0.01em] text-fg">
             Lumi
           </span>
-          <span className="block font-mono text-[10px] tracking-[0.08em] text-fg-subtle uppercase">
+          <span className="block font-mono text-[12px] tracking-[0.08em] text-fg-subtle uppercase">
             {tag}
           </span>
         </span>
@@ -130,7 +132,7 @@ function SideNavBody({
           <div key={group.title}>
             <p
               className={cn(
-                "font-display mb-1.5 px-2.5 text-[10px] font-semibold tracking-[0.1em] text-fg-subtle uppercase",
+                "font-display mb-1.5 px-2.5 text-[12px] font-semibold tracking-[0.1em] text-fg-subtle uppercase",
                 labelBlock,
               )}
             >
@@ -154,21 +156,32 @@ function SideNavBody({
                       title={link.label}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "flex items-center gap-2.5 rounded-control px-2.5 py-1.5 text-[13px] transition-colors",
+                        "relative flex items-center gap-2.5 rounded-control px-2.5 py-1.5 text-[15px] transition-colors",
                         forceExpanded ? "" : "justify-center lg:justify-start",
                         active
-                          ? "bg-accent-soft text-accent-fg"
+                          ? "text-accent-fg"
                           : "text-fg-muted hover:bg-surface-hover hover:text-fg",
                       )}
                     >
+                      {active ? (
+                        // Namespaced per rail/drawer instance - both can be
+                        // mounted simultaneously (drawer open on mobile), and
+                        // a shared layoutId across two live instances fights
+                        // itself.
+                        <motion.span
+                          layoutId={forceExpanded ? "nav-pill-drawer" : "nav-pill-rail"}
+                          className="absolute inset-0 rounded-control bg-accent-soft"
+                          transition={SPRING_SNAPPY}
+                        />
+                      ) : null}
                       <link.icon
                         aria-hidden
                         className={cn(
-                          "size-4 shrink-0",
+                          "relative z-10 size-4 shrink-0",
                           active ? "text-accent-fg" : "text-fg-subtle",
                         )}
                       />
-                      <span className={cn("truncate", labelInline)}>
+                      <span className={cn("relative z-10 truncate", labelInline)}>
                         {link.label}
                       </span>
                     </Link>
@@ -207,15 +220,15 @@ export function SideNavUser({
         {/* eslint-disable-next-line @next/next/no-img-element -- external Discord CDN avatar */}
         <img src={avatar} alt="" className="size-6.5 shrink-0 rounded-full" />
         <span className="min-w-0">
-          <span className="font-display block truncate text-[12px] font-semibold text-fg">
+          <span className="font-display block truncate text-[14px] font-semibold text-fg">
             {username}
           </span>
-          <span className="block font-mono text-[10.5px] text-fg-subtle">
+          <span className="block font-mono text-[12.5px] text-fg-subtle">
             {role}
           </span>
         </span>
       </Link>
-      <div className="flex gap-2 px-1 text-[10px] text-fg-subtle">
+      <div className="flex gap-2 px-1 text-[12px] text-fg-subtle">
         <Link href="/legal/privacy" className="underline hover:text-fg-muted">
           Privacy
         </Link>

@@ -160,14 +160,14 @@ function Rung({
             className="absolute top-8 bottom-0 left-1/2 w-px -translate-x-1/2 bg-border"
           />
         )}
-        <span className="tabular relative flex size-8 items-center justify-center rounded-control border border-border bg-bg-subtle font-mono text-[13px] text-fg">
+        <span className="tabular relative flex size-8 items-center justify-center rounded-control border border-border bg-bg-subtle font-mono text-[15px] text-fg">
           {rung.warnCount}
         </span>
       </div>
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="font-display text-[13px] leading-8 font-semibold tracking-[0.01em] text-fg">
+          <p className="font-display text-[15px] leading-8 font-semibold tracking-[0.01em] text-fg">
             {label}
             {rung.duration ? (
               <span className="text-fg-muted"> for {rung.duration}</span>
@@ -190,7 +190,7 @@ function Rung({
           </span>
         </div>
 
-        <p className="text-[12px] leading-5 text-fg-muted">
+        <p className="text-[14px] leading-5 text-fg-muted">
           {nextCount === undefined
             ? `Applies from ${rung.warnCount} warns onwards.`
             : `Applies from ${rung.warnCount} warns until ${nextCount}, where the next rule takes over.`}
@@ -266,7 +266,7 @@ function RuleForm({
         <Field
           label="At this many warns"
           htmlFor="threshold-count"
-          className="w-32 gap-1"
+          className="w-40 gap-1"
         >
           <Input
             id="threshold-count"
@@ -291,12 +291,7 @@ function RuleForm({
           </Select>
         </Field>
 
-        <Field
-          label="For"
-          htmlFor="threshold-duration"
-          className="w-32 gap-1"
-          hint={meta.duration === "required" ? "e.g. 30m, 2h, 7d" : undefined}
-        >
+        <Field label="For" htmlFor="threshold-duration" className="w-32 gap-1">
           <Input
             id="threshold-duration"
             value={meta.duration === "required" ? duration : ""}
@@ -306,14 +301,28 @@ function RuleForm({
           />
         </Field>
 
-        <Button type="submit" variant="primary" disabled={isPending}>
-          {isPending
-            ? "Saving…"
-            : replaces
-              ? "Replace rule"
-              : "Add rule"}
-        </Button>
+        <div className="flex flex-col gap-1">
+          {/* Invisible spacer matching Field's Label row, so the button - which
+           * has no label of its own - still bottom-aligns with the inputs
+           * instead of the flex row's tallest column. */}
+          <span aria-hidden className="invisible text-[14px] leading-4">
+            spacer
+          </span>
+          <Button type="submit" variant="primary" disabled={isPending}>
+            {isPending
+              ? "Saving…"
+              : replaces
+                ? "Replace rule"
+                : "Add rule"}
+          </Button>
+        </div>
       </div>
+
+      {meta.duration === "required" ? (
+        <p className="text-[13px] leading-4 text-fg-subtle">
+          Duration examples: 30m, 2h, 7d
+        </p>
+      ) : null}
 
       {replaces ? (
         <Alert variant="warning">
@@ -324,7 +333,7 @@ function RuleForm({
         </Alert>
       ) : null}
       {action === "quarantine" ? (
-        <Alert variant="info">
+        <Alert variant="warning">
           Quarantine needs a quarantine role configured for this server —
           without one the rule fires but has nothing to apply.
         </Alert>

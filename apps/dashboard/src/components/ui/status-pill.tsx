@@ -23,7 +23,7 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "flex items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1.5 font-mono text-[11px] text-fg-muted",
+        "flex items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1.5 font-mono text-[13px] text-fg-muted",
         className,
       )}
     >

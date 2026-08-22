@@ -1,6 +1,7 @@
 import { PlugZap } from "lucide-react";
 import { requireBotOwner } from "#/lib/auth-guards";
 import { getSystemBlocklist } from "#/lib/dashboard-fetch";
+import { exportSystemBlocklist } from "#/actions/system-export-actions";
 import { GlobalBlocklistPanel } from "#/components/system/global-blocklist-panel";
 import { Badge } from "#/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
@@ -63,6 +64,7 @@ export default async function SystemBlocklistPage({
             page={data?.page ?? page}
             pageSize={data?.pageSize ?? PAGE_SIZE}
             total={data?.total ?? 0}
+            exportAction={exportSystemBlocklist}
           />
         )}
       </div>

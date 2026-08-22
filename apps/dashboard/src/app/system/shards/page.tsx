@@ -39,7 +39,7 @@ export default async function SystemShardsPage() {
             </Badge>
           }
           meta={
-            <p className="font-mono text-[11px] text-fg-subtle">
+            <p className="font-mono text-[13px] text-fg-subtle">
               cluster {data.clusterName} · {data.shardCount} total shards
             </p>
           }

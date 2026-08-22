@@ -11,7 +11,7 @@ function UserCell({ id, names }: { id: string; names: Record<string, string> }) 
   return (
     <span className="flex flex-col">
       {name ? <span className="truncate text-fg">{name}</span> : null}
-      <span className="tabular font-mono text-[11px] text-fg-subtle">{id}</span>
+      <span className="tabular font-mono text-[13px] text-fg-subtle">{id}</span>
     </span>
   );
 }
@@ -32,7 +32,7 @@ export function guildAppealsColumns({
       cell: ({ row }) => (
         <span className="flex flex-col">
           <span className="tabular text-fg">#{row.original.caseNumber}</span>
-          <span className="text-[11px] text-fg-subtle">
+          <span className="text-[13px] text-fg-subtle">
             {caseActionLabel(row.original.action)}
           </span>
         </span>
@@ -64,7 +64,7 @@ export function guildAppealsColumns({
               {APPEAL_STATUS_LABELS[appeal.status]}
             </Badge>
             {appeal.reviewedBy ? (
-              <span className="text-[11px] text-fg-subtle">
+              <span className="text-[13px] text-fg-subtle">
                 by {memberNames[appeal.reviewedBy] ?? appeal.reviewedBy}
                 {appeal.reviewedAt ? ` · ${formatCaseDate(appeal.reviewedAt)}` : ""}
               </span>
@@ -77,7 +77,7 @@ export function guildAppealsColumns({
       id: "createdAt",
       header: "Submitted",
       accessorFn: (appeal) => appeal.createdAt,
-      meta: { className: "w-44 tabular whitespace-nowrap text-[12px] text-fg-muted" },
+      meta: { className: "w-44 tabular whitespace-nowrap text-[14px] text-fg-muted" },
       cell: ({ row }) => formatCaseDate(row.original.createdAt),
     },
     {

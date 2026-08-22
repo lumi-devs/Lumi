@@ -23,10 +23,10 @@ export function Readout({
         className,
       )}
     >
-      <dt className="font-display w-40 shrink-0 pt-0.5 text-[11px] tracking-[0.09em] text-fg-subtle uppercase">
+      <dt className="font-display w-40 shrink-0 pt-0.5 text-[13px] tracking-[0.09em] text-fg-subtle uppercase">
         {label}
       </dt>
-      <dd className="min-w-0 flex-1 text-[13px] leading-5 text-fg">{children}</dd>
+      <dd className="min-w-0 flex-1 text-[15px] leading-5 text-fg">{children}</dd>
     </div>
   );
 }

@@ -17,7 +17,7 @@ export function SiteHeader({
   compact?: boolean;
 }) {
   return (
-    <header className="sticky top-0 z-50 flex h-14 items-center gap-3 border-b border-border bg-bg/85 px-4 backdrop-blur-sm md:px-6">
+    <header className="glass sticky top-0 z-50 flex h-14 items-center gap-3 border-b border-border px-4 md:px-6">
       {compact ? null : (
         <Link href="/" className="shrink-0" aria-label="Lumi home">
           <Wordmark />
@@ -54,7 +54,7 @@ export function SiteHeader({
               height={20}
               className="size-5 rounded-full"
             />
-            <span className="max-w-[120px] truncate text-[12px] font-medium text-fg">
+            <span className="max-w-[120px] truncate text-[14px] font-medium text-fg">
               {session.username}
             </span>
           </Link>

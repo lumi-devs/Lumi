@@ -5,7 +5,7 @@ import { Wordmark } from "#/components/layout/wordmark";
 // bullet lists, hard line breaks) - not a general markdown renderer.
 export function Markdown({ source }: { source: string }) {
   const blocks = toBlocks(source);
-  return <div className="space-y-4 text-[15px] leading-7 text-fg">{blocks}</div>;
+  return <div className="space-y-4 text-[17px] leading-7 text-fg">{blocks}</div>;
 }
 
 function toBlocks(source: string): React.ReactNode[] {
@@ -46,7 +46,7 @@ function toBlocks(source: string): React.ReactNode[] {
       nodes.push(
         <div key={key++} className="mb-2 flex flex-col items-center gap-3 text-center">
           <Wordmark />
-          <h1 className="font-display text-[23px] font-semibold tracking-[0.01em] text-fg">
+          <h1 className="font-display text-[25px] font-semibold tracking-[0.01em] text-fg">
             {centeredTitle[1]}
           </h1>
         </div>,
@@ -66,7 +66,7 @@ function toBlocks(source: string): React.ReactNode[] {
       flushParagraph();
       flushList();
       nodes.push(
-        <h3 key={key++} className="font-display text-[16px] font-semibold text-fg">
+        <h3 key={key++} className="font-display text-[18px] font-semibold text-fg">
           {inline(h3[1]!)}
         </h3>,
       );
@@ -82,7 +82,7 @@ function toBlocks(source: string): React.ReactNode[] {
         <h2
           key={key++}
           id={id}
-          className="font-display pt-2 text-[18px] font-semibold text-fg"
+          className="font-display pt-2 text-[20px] font-semibold text-fg"
         >
           {inline(h2[1]!)}
         </h2>,

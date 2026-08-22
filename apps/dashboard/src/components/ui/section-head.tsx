@@ -14,13 +14,13 @@ export function SectionHead({
 }) {
   return (
     <div className={cn("mb-3 flex items-baseline justify-between gap-3", className)}>
-      <h2 className="font-display text-[13px] font-semibold tracking-[0.07em] text-fg-muted uppercase">
+      <h2 className="font-display text-[15px] font-semibold tracking-[0.07em] text-fg-muted uppercase">
         {title}
       </h2>
       {href ? (
         <Link
           href={href}
-          className="font-mono text-[12px] text-accent-fg hover:underline"
+          className="font-mono text-[14px] text-accent-fg hover:underline"
         >
           {linkLabel} →
         </Link>

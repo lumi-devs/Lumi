@@ -37,10 +37,10 @@ export function AppealIntakeForm({
             <CheckCircle className="size-4" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
+            <h1 className="font-display text-[19px] font-semibold tracking-[0.01em] text-fg">
               Appeal submitted
             </h1>
-            <p className="mt-1 text-[12px] leading-5 text-fg-muted">
+            <p className="mt-1 text-[14px] leading-5 text-fg-muted">
               The server's staff can now review it. There&rsquo;s nothing else to
               do here — you don&rsquo;t need to submit again.
             </p>
@@ -74,12 +74,12 @@ export function AppealIntakeForm({
           <Scale className="size-4" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-[17px] font-semibold tracking-[0.01em] text-fg">
+          <h1 className="font-display text-[19px] font-semibold tracking-[0.01em] text-fg">
             Appeal this {caseActionLabel(caseSummary.action).toLowerCase()}
           </h1>
         </div>
       </div>
-      <div className="mt-2 mb-4 rounded-control border border-border bg-bg-subtle p-3 text-[12px] leading-5 text-fg-muted">
+      <div className="mt-2 mb-4 rounded-control border border-border bg-bg-subtle p-3 text-[14px] leading-5 text-fg-muted">
         <p>
           Case #{caseSummary.caseNumber} · {formatCaseDate(caseSummary.createdAt)}
         </p>

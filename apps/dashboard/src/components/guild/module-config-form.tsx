@@ -12,6 +12,7 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { SettingRow } from "#/components/ui/input";
 import { ConfigFieldInput } from "./config-field-input";
 import { useServerAction } from "#/lib/use-server-action";
+import { useStaggerIn } from "#/lib/animate";
 import type {
   DashboardModuleView,
   DashboardRoleView,
@@ -30,6 +31,7 @@ export function ModuleConfigForm({
   channels: DashboardChannelView[];
 }) {
   const isCore = m.name === "core";
+  const fieldsRef = useStaggerIn<HTMLDivElement>("> div");
   const [enabled, setEnabled] = useState(m.enabled);
   const [config, setConfig] = useState<Record<string, unknown>>(m.config);
   const { isPending, error, setError, run } = useServerAction();
@@ -105,6 +107,7 @@ export function ModuleConfigForm({
           />
         ) : (
           <div
+            ref={fieldsRef}
             className={inactive ? "divide-y divide-border opacity-60" : "divide-y divide-border"}
           >
             {m.configFields.map((f) => (

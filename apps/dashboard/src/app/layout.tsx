@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Inter, JetBrains_Mono } from "next/font/google";
+import { Geist, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "#/components/theme-provider";
 import "./globals.css";
 
@@ -8,18 +8,14 @@ import "./globals.css";
 // better for the CSP in next.config.ts: no external font/style origin needs
 // allow-listing, and there's no render-blocking third-party font request.
 //
-// Geist carries chrome (headings, nav, buttons, labels, table headers); Inter
-// carries body copy. JetBrains Mono stays for IDs/timestamps/counts.
+// Geist carries chrome (headings, nav, buttons, labels, table headers). Body
+// copy uses the OS system-font stack directly (see --font-sans in
+// globals.css) rather than a shipped web font — on Apple platforms that's
+// San Francisco at zero bytes. JetBrains Mono stays for IDs/timestamps/counts.
 const display = Geist({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
   variable: "--font-geist",
-  display: "swap",
-});
-const body = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-inter",
   display: "swap",
 });
 const mono = JetBrains_Mono({
@@ -48,8 +44,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf8f5" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0e14" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f5f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0b0f" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -64,7 +60,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${display.variable} ${body.variable} ${mono.variable}`}
+      className={`${display.variable} ${mono.variable}`}
     >
       <body className="font-sans antialiased">
         <ThemeProvider>{children}</ThemeProvider>

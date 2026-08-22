@@ -176,7 +176,7 @@ services:
       - dashboard
 
   postgres:
-    image: postgres:17
+    image: docker.io/library/postgres:17
     container_name: lumi-postgres
     environment:
       POSTGRES_DB: lumi
@@ -201,7 +201,7 @@ services:
       - "127.0.0.1:5432:5432"
 
   pgbouncer:
-    image: edoburu/pgbouncer:latest
+    image: docker.io/edoburu/pgbouncer:latest
     container_name: lumi-pgbouncer
     environment:
       DB_HOST: postgres
@@ -234,7 +234,7 @@ services:
       - "127.0.0.1:6432:6432"
 
   redis:
-    image: redis:7-alpine
+    image: docker.io/library/redis:7-alpine
     container_name: lumi-redis
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction --requirepass ${REDIS_PASSWORD:-lumi}
     volumes:
@@ -284,7 +284,7 @@ services:
       - scale
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.116.0
+    image: docker.io/otel/opentelemetry-collector-contrib:0.116.0
     container_name: lumi-otel-collector
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
@@ -302,7 +302,7 @@ services:
       - "127.0.0.1:4318:4318"
 
   tempo:
-    image: grafana/tempo:2.6.1
+    image: docker.io/grafana/tempo:2.6.1
     container_name: lumi-tempo
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     volumes:
@@ -321,7 +321,7 @@ services:
           memory: 512m
 
   prometheus:
-    image: prom/prometheus:v3.0.1
+    image: docker.io/prom/prometheus:v3.0.1
     container_name: lumi-prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -346,7 +346,7 @@ services:
       - "127.0.0.1:9091:9090"
 
   grafana:
-    image: grafana/grafana:11.4.0
+    image: docker.io/grafana/grafana:11.4.0
     container_name: lumi-grafana
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}

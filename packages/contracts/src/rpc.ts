@@ -220,6 +220,23 @@ export interface TempVcGeneratorSetPayload {
   limit?: number;
 }
 
+export interface GuildSummariesPayload {
+  guildIds: string[];
+}
+
+/** Decorative only (icon/banner/member count) - not a substitute for `guild.dashboard.get`. */
+export interface GuildSummaryView {
+  guildId: string;
+  icon: string | null;
+  banner: string | null;
+  memberCount: number | null;
+}
+
+export interface GuildSummariesResult {
+  /** Omits any `guildId` the bot isn't actually in, rather than erroring the whole batch. */
+  summaries: GuildSummaryView[];
+}
+
 export interface AuditListPayload {
   userId?: string;
   action?: string;
@@ -397,6 +414,7 @@ export interface RpcRequestPayloads {
   "downloader.module.uninstall": ModuleUninstallPayload;
   "downloader.module.rollback": ModuleRollbackPayload;
   "guild.dashboard.get": never;
+  "guild.summaries.list": GuildSummariesPayload;
   "guild.module.toggle": ModuleTogglePayload;
   "guild.config.set": ConfigSetPayload;
   "guild.setup.run": never;
@@ -472,6 +490,7 @@ export const RPC_ACTIONS = {
   moduleUninstall: "downloader.module.uninstall",
   moduleRollback: "downloader.module.rollback",
   guildDashboardGet: "guild.dashboard.get",
+  guildSummariesList: "guild.summaries.list",
   guildModuleToggle: "guild.module.toggle",
   guildConfigSet: "guild.config.set",
   guildSetupRun: "guild.setup.run",

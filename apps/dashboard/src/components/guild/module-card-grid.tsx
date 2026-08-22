@@ -9,6 +9,8 @@ import { Badge } from "#/components/ui/badge";
 import { Glyph } from "#/components/ui/glyph";
 import { EmptyState } from "#/components/ui/empty-state";
 import { ActionError } from "#/components/action-error";
+import { TiltCard } from "#/components/motion/tilt-card";
+import { spotlightHandler } from "#/lib/animate";
 import { useOptimisticAction } from "#/lib/use-server-action";
 import type { DashboardModuleView } from "#/lib/dashboard-data";
 
@@ -52,9 +54,13 @@ function ModuleCard({
   const on = enabled || isCore;
 
   return (
-    <Card className="flex flex-col gap-2.5 p-4 transition-colors hover:border-border-strong">
+    <TiltCard className="h-full">
+      <Card
+        className="spotlight flex h-full flex-col gap-2.5 p-4 transition-colors hover:border-border-strong"
+        onMouseMove={spotlightHandler}
+      >
       <div className="flex items-start justify-between gap-2">
-        <Glyph emoji={m.emoji} className="size-8.5 text-[15px]" />
+        <Glyph emoji={m.emoji} className="size-8.5 text-[17px]" />
         {isCore ? (
           <Badge variant="neutral">Always on</Badge>
         ) : (
@@ -75,16 +81,16 @@ function ModuleCard({
 
       <Link
         href={`/guild/${guildId}/modules/${m.name}`}
-        className="font-display truncate text-[13.5px] font-semibold tracking-[0.01em] text-fg hover:underline"
+        className="font-display truncate text-[15.5px] font-semibold tracking-[0.01em] text-fg hover:underline"
       >
         {m.displayName}
       </Link>
 
-      <p className="line-clamp-2 text-[12px] leading-5 text-fg-muted">
+      <p className="line-clamp-2 text-[14px] leading-5 text-fg-muted">
         {m.description}
       </p>
 
-      <div className="tabular mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10.5px] text-fg-subtle">
+      <div className="tabular mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[12.5px] text-fg-subtle">
         <span className={on ? "text-success" : undefined}>
           {on ? "● active" : "○ disabled"}
         </span>
@@ -95,6 +101,7 @@ function ModuleCard({
       </div>
 
       <ActionError error={error} />
-    </Card>
+      </Card>
+    </TiltCard>
   );
 }
