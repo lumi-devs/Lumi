@@ -81,7 +81,7 @@ jobs:
         run: git diff --binary > /tmp/format.patch
 
       - name: Upload Formatting Patch
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: format-patch
           path: /tmp/format.patch
@@ -191,7 +191,7 @@ jobs:
         run: bun run bench > /tmp/bench-output.txt
 
       - name: Upload Benchmark Output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bench-output
           path: /tmp/bench-output.txt
