@@ -34,19 +34,6 @@
       "default": 60
     },
     {
-      "key": "response",
-      "type": "ENUM",
-      "label": "Response",
-      "description": "What to do when an executor trips a threshold.",
-      "group": "Anti-Nuke",
-      "default": "quarantine",
-      "choices": [
-        "log",
-        "quarantine",
-        "ban"
-      ]
-    },
-    {
       "key": "trusted_role_ids",
       "type": "STRING",
       "label": "Trusted Roles",
@@ -70,12 +57,38 @@
       "default": 5
     },
     {
+      "key": "response_bans",
+      "type": "ENUM",
+      "label": "Response — Bans",
+      "description": "Action taken when the ban threshold trips.",
+      "group": "Nuke Limits",
+      "default": "quarantine",
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ]
+    },
+    {
       "key": "max_kicks",
       "type": "NUMBER",
       "label": "Max Kicks",
       "description": "Kicks allowed per executor within the window.",
       "group": "Nuke Limits",
       "default": 5
+    },
+    {
+      "key": "response_kicks",
+      "type": "ENUM",
+      "label": "Response — Kicks",
+      "description": "Action taken when the kick threshold trips.",
+      "group": "Nuke Limits",
+      "default": "quarantine",
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ]
     },
     {
       "key": "max_channel_deletes",
@@ -86,6 +99,19 @@
       "default": 3
     },
     {
+      "key": "response_channel_deletes",
+      "type": "ENUM",
+      "label": "Response — Channel Deletes",
+      "description": "Action taken when the channel-delete threshold trips.",
+      "group": "Nuke Limits",
+      "default": "quarantine",
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ]
+    },
+    {
       "key": "max_role_deletes",
       "type": "NUMBER",
       "label": "Max Role Deletes",
@@ -94,12 +120,70 @@
       "default": 3
     },
     {
+      "key": "response_role_deletes",
+      "type": "ENUM",
+      "label": "Response — Role Deletes",
+      "description": "Action taken when the role-delete threshold trips.",
+      "group": "Nuke Limits",
+      "default": "quarantine",
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ]
+    },
+    {
       "key": "max_webhook_creates",
       "type": "NUMBER",
       "label": "Max Webhook Creates",
       "description": "Webhook creations allowed per executor within the window.",
       "group": "Nuke Limits",
       "default": 3
+    },
+    {
+      "key": "response_webhook_creates",
+      "type": "ENUM",
+      "label": "Response — Webhook Creates",
+      "description": "Action taken when the webhook-create threshold trips.",
+      "group": "Nuke Limits",
+      "default": "quarantine",
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ]
+    },
+    {
+      "key": "max_vanity_changes",
+      "type": "NUMBER",
+      "label": "Max Vanity URL Changes",
+      "description": "Vanity invite code changes allowed per executor within the window.",
+      "group": "Nuke Limits",
+      "default": 1
+    },
+    {
+      "key": "max_permission_grants",
+      "type": "NUMBER",
+      "label": "Max Dangerous Permission Grants",
+      "description": "Times @everyone can be granted a dangerous permission (Administrator, Manage Roles, etc.) per executor within the window before response fires. The grant itself is always reverted immediately.",
+      "group": "Nuke Limits",
+      "default": 1
+    },
+    {
+      "key": "max_quarantine_bypass",
+      "type": "NUMBER",
+      "label": "Max Quarantine Bypass Attempts",
+      "description": "Times an executor can attempt to change a quarantined member's roles per executor within the window before response fires. The change itself is always reverted immediately.",
+      "group": "Nuke Limits",
+      "default": 1
+    },
+    {
+      "key": "panic_lock_mod_commands",
+      "type": "BOOLEAN",
+      "label": "Lock Mod Commands During Panic",
+      "description": "While panic mode is active, only the server owner or whoever triggered it may run moderation commands.",
+      "group": "Panic Mode",
+      "default": false
     },
     {
       "key": "joingate_enabled",
@@ -147,6 +231,152 @@
       ]
     },
     {
+      "key": "raid_account_type",
+      "type": "ENUM",
+      "label": "Raid Response Scope",
+      "description": "Apply the raid action to every joiner, or only ones flagged suspicious (no avatar, low account age, similar username to a recent joiner, or bulk-created).",
+      "group": "Join Gate",
+      "default": "all",
+      "choices": [
+        "all",
+        "suspicious"
+      ]
+    },
+    {
+      "key": "raid_warn_role_ids",
+      "type": "STRING",
+      "label": "Raid Warn Roles",
+      "description": "Comma-separated role IDs mentioned in the log message when raid mode activates.",
+      "group": "Join Gate",
+      "list": true
+    },
+    {
+      "key": "filter_no_avatar_enabled",
+      "type": "BOOLEAN",
+      "label": "Filter: No Avatar",
+      "description": "Flag members who have never set a custom avatar.",
+      "group": "Join Gate Filters",
+      "default": false
+    },
+    {
+      "key": "filter_no_avatar_action",
+      "type": "ENUM",
+      "label": "No Avatar Action",
+      "description": "Action taken when the no-avatar filter trips.",
+      "group": "Join Gate Filters",
+      "default": "log",
+      "choices": [
+        "log",
+        "kick",
+        "timeout",
+        "quarantine"
+      ]
+    },
+    {
+      "key": "filter_min_age_enabled",
+      "type": "BOOLEAN",
+      "label": "Filter: Min Account Age",
+      "description": "Flag accounts younger than the configured age.",
+      "group": "Join Gate Filters",
+      "default": false
+    },
+    {
+      "key": "filter_min_age_hours",
+      "type": "NUMBER",
+      "label": "Min Account Age (hours)",
+      "description": "Accounts younger than this trip the filter.",
+      "group": "Join Gate Filters",
+      "default": 0
+    },
+    {
+      "key": "filter_min_age_action",
+      "type": "ENUM",
+      "label": "Min Age Action",
+      "description": "Action taken when the min-age filter trips.",
+      "group": "Join Gate Filters",
+      "default": "kick",
+      "choices": [
+        "log",
+        "kick",
+        "timeout",
+        "quarantine"
+      ]
+    },
+    {
+      "key": "filter_unverified_bot_enabled",
+      "type": "BOOLEAN",
+      "label": "Filter: Unverified Bots",
+      "description": "Flag bot accounts that aren't Discord-verified.",
+      "group": "Join Gate Filters",
+      "default": false
+    },
+    {
+      "key": "filter_unverified_bot_action",
+      "type": "ENUM",
+      "label": "Unverified Bot Action",
+      "description": "Action taken when the unverified-bot filter trips.",
+      "group": "Join Gate Filters",
+      "default": "kick",
+      "choices": [
+        "log",
+        "kick",
+        "timeout",
+        "quarantine"
+      ]
+    },
+    {
+      "key": "filter_username_pattern_enabled",
+      "type": "BOOLEAN",
+      "label": "Filter: Username Pattern",
+      "description": "Flag members whose username contains a configured substring.",
+      "group": "Join Gate Filters",
+      "default": false
+    },
+    {
+      "key": "filter_username_pattern",
+      "type": "STRING",
+      "label": "Username Patterns",
+      "description": "Comma-separated substrings matched (case-insensitively) against usernames.",
+      "group": "Join Gate Filters",
+      "list": true
+    },
+    {
+      "key": "filter_username_pattern_action",
+      "type": "ENUM",
+      "label": "Username Pattern Action",
+      "description": "Action taken when the username-pattern filter trips.",
+      "group": "Join Gate Filters",
+      "default": "log",
+      "choices": [
+        "log",
+        "kick",
+        "timeout",
+        "quarantine"
+      ]
+    },
+    {
+      "key": "filter_advertising_enabled",
+      "type": "BOOLEAN",
+      "label": "Filter: Advertising Account",
+      "description": "Flag members whose display name itself is a link or invite (ad/scam accounts).",
+      "group": "Join Gate Filters",
+      "default": false
+    },
+    {
+      "key": "filter_advertising_action",
+      "type": "ENUM",
+      "label": "Advertising Account Action",
+      "description": "Action taken when the advertising-account filter trips.",
+      "group": "Join Gate Filters",
+      "default": "kick",
+      "choices": [
+        "log",
+        "kick",
+        "timeout",
+        "quarantine"
+      ]
+    },
+    {
       "key": "verification_enabled",
       "type": "BOOLEAN",
       "label": "Verification",
@@ -185,12 +415,55 @@
       "default": false
     },
     {
+      "key": "verification_mode",
+      "type": "ENUM",
+      "label": "Verification Mode",
+      "description": "How members prove they're human: emoji sequence, one-click, or a web challenge on the dashboard.",
+      "group": "Verification",
+      "default": "emoji",
+      "choices": [
+        "emoji",
+        "none",
+        "web"
+      ]
+    },
+    {
+      "key": "verification_target",
+      "type": "ENUM",
+      "label": "Verification Target",
+      "description": "Require verification from everyone, or only accounts flagged as suspicious (new or no avatar).",
+      "group": "Verification",
+      "default": "everyone",
+      "choices": [
+        "everyone",
+        "suspicious"
+      ]
+    },
+    {
       "key": "panic_lock_channel_ids",
       "type": "STRING",
       "label": "Channels to Lock",
       "description": "Comma-separated channel IDs locked by /panic. Blank locks every text channel.",
       "group": "Panic Mode",
       "list": true
+    },
+    {
+      "key": "backup_interval_hours",
+      "type": "NUMBER",
+      "label": "Backup Interval (hours)",
+      "description": "How often to snapshot role/channel structure while Anti-Nuke is on, for the Restore System.",
+      "group": "Backups",
+      "default": 3
+    },
+    {
+      "key": "backup_keep_count",
+      "type": "NUMBER",
+      "label": "Backups to Keep",
+      "description": "Older backups past this count are pruned.",
+      "group": "Backups",
+      "default": 10
     }
-  ]
+  ],
+  "category": "Security",
+  "dashboardHref": "security"
 }

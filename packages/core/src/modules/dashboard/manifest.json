@@ -10,5 +10,6 @@
   "configOverrides": true,
   "targetService": "worker",
   "subStores": [],
-  "configFields": []
+  "configFields": [],
+  "category": "System"
 }

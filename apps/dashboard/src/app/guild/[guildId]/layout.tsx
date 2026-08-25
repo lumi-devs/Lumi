@@ -1,5 +1,5 @@
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildDashboard, getGuildPanicState } from "#/lib/dashboard-fetch";
 import { SiteHeader } from "#/components/layout/site-header";
 import { GuildSideNav } from "#/components/layout/guild-side-nav";
 import { InviteNeeded } from "#/components/invite-needed";
@@ -28,6 +28,12 @@ export default async function GuildLayout({
     );
   }
 
+  // Best-effort — a worker hiccup here shouldn't take the whole nav shell
+  // down, it just means the Security category's alert dot stays off.
+  const panicArmed = await getGuildPanicState(guildId, session.userId)
+    .then((p) => p.active)
+    .catch(() => false);
+
   return (
     <div className="flex min-h-svh">
       {/* Only serializable values cross here; see side-nav.tsx. */}
@@ -44,10 +50,11 @@ export default async function GuildLayout({
         username={session.username}
         avatar={session.avatar}
         isBotOwner={session.isBotOwner}
+        panicArmed={panicArmed}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <SiteHeader session={session} compact />
+        <SiteHeader session={session} compact panicArmed={panicArmed} />
         <div className="mx-auto w-full min-w-0 max-w-[88rem] flex-1 px-4 pt-5 pb-28 md:px-6">
           {children}
         </div>

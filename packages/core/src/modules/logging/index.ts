@@ -8,6 +8,7 @@ import { ChannelType } from "discord.js";
   version: "1.0.0",
   description:
     "Server event logs: message deletes/edits, joins, leaves, bans, unbans, nickname and role changes.",
+  category: "System",
   configSchema: cfg.object({
     log_channel_id: cfg.channel({
       group: "Setup",

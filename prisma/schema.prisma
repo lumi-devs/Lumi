@@ -41,18 +41,13 @@ model GlobalModuleState {
 }
 
 model Guild {
-  id              String   @id @map("guild_id") @db.VarChar(20)
-  prefix          String?  @db.VarChar(5)
-  modRoleId       String?  @map("mod_role_id") @db.VarChar(20)
-  adminRoleId     String?  @map("admin_role_id") @db.VarChar(20)
-  modLogChannelId String?  @map("mod_log_channel_id") @db.VarChar(20)
-  muteRoleId      String?  @map("mute_role_id") @db.VarChar(20)
-  locale                String   @default("en-US") @db.VarChar(10)
-  timezone              String   @default("UTC")   @db.VarChar(64)
-  noMentionSpamWindowMs Int?     @map("no_mention_spam_window_ms")
-  noMentionSpamLimit    Int?     @map("no_mention_spam_limit")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
+  id         String   @id @map("guild_id") @db.VarChar(20)
+  prefix     String?  @db.VarChar(5)
+  muteRoleId String?  @map("mute_role_id") @db.VarChar(20)
+  locale     String   @default("en-US") @db.VarChar(10)
+  timezone   String   @default("UTC")   @db.VarChar(64)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
 
   moduleStates      GuildModuleState[]
   moduleConfigs     GuildModuleConfig[]

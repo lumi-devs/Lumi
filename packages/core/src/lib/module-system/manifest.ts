@@ -44,6 +44,8 @@ export async function manifestFromMeta(
     targetService: "worker",
     subStores: await detectSubStores(dir),
     configFields,
+    category: meta.category,
+    dashboardHref: meta.dashboardHref,
   };
 }
 
@@ -60,6 +62,8 @@ export function metaFromManifest(manifest: ModuleManifest): ModuleMeta {
     conflicts: manifest.conflicts ?? [],
     configOverrides: manifest.configOverrides ?? false,
     configFields: manifest.configFields ?? [],
+    category: manifest.category,
+    dashboardHref: manifest.dashboardHref,
   };
 }
 

@@ -10,6 +10,8 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
   version: "1.0.0",
   description:
     "Wick-style server protection: anti-nuke detection with automatic quarantine.",
+  category: "Security",
+  dashboardHref: "security",
   configSchema: cfg.object({
     antinuke_enabled: cfg.boolean({
       group: "Anti-Nuke",
@@ -24,12 +26,6 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       default: 60,
       min: 10,
       max: 600,
-    }),
-    response: cfg.enum(["log", "quarantine", "ban"], {
-      group: "Anti-Nuke",
-      label: "Response",
-      description: "What to do when an executor trips a threshold.",
-      default: "quarantine",
     }),
     trusted_role_ids: cfg.string({
       group: "Anti-Nuke",
@@ -50,6 +46,12 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       min: 1,
       max: 50,
     }),
+    response_bans: cfg.enum(["log", "quarantine", "ban"], {
+      group: "Nuke Limits",
+      label: "Response — Bans",
+      description: "Action taken when the ban threshold trips.",
+      default: "quarantine",
+    }),
     max_kicks: cfg.number({
       group: "Nuke Limits",
       label: "Max Kicks",
@@ -57,6 +59,12 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       default: 5,
       min: 1,
       max: 50,
+    }),
+    response_kicks: cfg.enum(["log", "quarantine", "ban"], {
+      group: "Nuke Limits",
+      label: "Response — Kicks",
+      description: "Action taken when the kick threshold trips.",
+      default: "quarantine",
     }),
     max_channel_deletes: cfg.number({
       group: "Nuke Limits",
@@ -66,6 +74,12 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       min: 1,
       max: 50,
     }),
+    response_channel_deletes: cfg.enum(["log", "quarantine", "ban"], {
+      group: "Nuke Limits",
+      label: "Response — Channel Deletes",
+      description: "Action taken when the channel-delete threshold trips.",
+      default: "quarantine",
+    }),
     max_role_deletes: cfg.number({
       group: "Nuke Limits",
       label: "Max Role Deletes",
@@ -74,6 +88,12 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       min: 1,
       max: 50,
     }),
+    response_role_deletes: cfg.enum(["log", "quarantine", "ban"], {
+      group: "Nuke Limits",
+      label: "Response — Role Deletes",
+      description: "Action taken when the role-delete threshold trips.",
+      default: "quarantine",
+    }),
     max_webhook_creates: cfg.number({
       group: "Nuke Limits",
       label: "Max Webhook Creates",
@@ -81,6 +101,12 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       default: 3,
       min: 1,
       max: 50,
+    }),
+    response_webhook_creates: cfg.enum(["log", "quarantine", "ban"], {
+      group: "Nuke Limits",
+      label: "Response — Webhook Creates",
+      description: "Action taken when the webhook-create threshold trips.",
+      default: "quarantine",
     }),
     max_vanity_changes: cfg.number({
       group: "Nuke Limits",

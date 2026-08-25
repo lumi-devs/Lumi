@@ -20,6 +20,11 @@ export interface SwitcherGuild {
   icon: string | null;
 }
 
+// Static UX default from the design — Moderation and Security start
+// expanded (the categories most guilds touch), Community and System start
+// collapsed. Independent of live alert state.
+const DEFAULT_OPEN_CATEGORIES = new Set(["Moderation", "Security"]);
+
 export function GuildSideNav({
   guildId,
   guildName,
@@ -29,6 +34,7 @@ export function GuildSideNav({
   username,
   avatar,
   isBotOwner,
+  panicArmed,
 }: {
   guildId: string;
   guildName: string;
@@ -39,10 +45,18 @@ export function GuildSideNav({
   username: string;
   avatar: string;
   isBotOwner: boolean;
+  /** Drives the Security category's alert dot. */
+  panicArmed?: boolean;
 }) {
   const groups = [
     { title: "Overview", links: guildTopLinks(guildId) },
-    ...guildManagementGroups(guildId),
+    ...guildManagementGroups(guildId).map((group) => ({
+      ...group,
+      collapsible: true,
+      defaultOpen: DEFAULT_OPEN_CATEGORIES.has(group.title),
+      badge: group.links.length,
+      alertDot: group.title === "Security" ? Boolean(panicArmed) : false,
+    })),
   ];
 
   return (

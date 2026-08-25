@@ -24,5 +24,6 @@
       "description": "Prepend [AFK] to nickname while AFK.",
       "default": true
     }
-  ]
+  ],
+  "category": "Community"
 }

@@ -68,9 +68,6 @@ describe("dashboard module RPC handlers", () => {
       config: {
         getGuildSettings: vi.fn().mockResolvedValue({
           prefix: "!",
-          modRoleId: null,
-          adminRoleId: null,
-          modLogChannelId: null,
           muteRoleId: null,
         }),
         getAllModuleConfigsForGuild: vi.fn().mockResolvedValue(new Map()),

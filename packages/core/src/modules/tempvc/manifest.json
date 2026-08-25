@@ -16,5 +16,6 @@
     "services",
     "scheduled-tasks"
   ],
-  "configFields": []
+  "configFields": [],
+  "category": "System"
 }

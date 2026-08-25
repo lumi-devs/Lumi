@@ -9,6 +9,7 @@ import type { Piece } from "@sapphire/framework";
   emoji: Emojis.SHIELD,
   version: "1.0.0",
   disableable: false,
+  category: "System",
 })
 export class CoreModule extends Module {
   public constructor(

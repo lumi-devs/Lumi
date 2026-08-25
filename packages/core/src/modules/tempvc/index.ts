@@ -34,6 +34,7 @@ export async function getMaxGenerators(guildId: string): Promise<number> {
   version: "1.0.0",
   description:
     "On-demand temporary voice channels that delete themselves once empty, with an owner control panel.",
+  category: "System",
   configSchema: cfg.object({
     create_cooldown_seconds: cfg.number({
       label: "Creation Cooldown (seconds)",

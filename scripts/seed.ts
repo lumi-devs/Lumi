@@ -47,9 +47,6 @@ async function seed() {
     create: {
       id: sampleGuildId,
       prefix: '!',
-      modRoleId: '999888777666555444',
-      adminRoleId: '111222333444555666',
-      modLogChannelId: '555444333222111000',
       locale: 'en-US',
       timezone: 'UTC',
     },
@@ -85,7 +82,7 @@ async function seed() {
     create: {
       id: `${sampleGuildId}_mod_permit`,
       guildId: sampleGuildId,
-      targetId: '999888777666555444', // modRoleId
+      targetId: '999888777666555444', // sample mod role snowflake
       targetType: 'ROLE',
       node: 'mod.*',
       grantedBy: '100000000000000001',

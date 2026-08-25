@@ -7,6 +7,7 @@ import { Emojis } from "#lib/utilities/assets.js";
   emoji: Emojis.GEAR,
   version: "1.0.0",
   description: "General utility commands.",
+  category: "Community",
   configSchema: cfg.object({
     cooldown_seconds: cfg.number({
       label: "Cooldown (seconds)",

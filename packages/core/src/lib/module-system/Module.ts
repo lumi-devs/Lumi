@@ -29,6 +29,10 @@ export interface ModuleMeta {
   configFields?: ConfigField[];
   configSchema?: ModuleConfigSchema;
   configOverrides?: boolean;
+  /** Dashboard sidebar/grid grouping (e.g. "Moderation", "Security"). Falls back to "System" when absent. */
+  category?: string;
+  /** Dashboard route (relative to `/guild/:id/`) for a bespoke settings page, instead of the generic `/modules/[name]` form. */
+  dashboardHref?: string;
   onLoad?: () => void;
   onUnload?: () => void;
 }
@@ -48,6 +52,10 @@ export interface ModuleOptions extends Piece.Options {
   configSchema?: ModuleConfigSchema;
   configOverrides?: boolean;
   disableable?: boolean;
+  /** Dashboard sidebar/grid grouping (e.g. "Moderation", "Security"). Falls back to "System" when absent. */
+  category?: string;
+  /** Dashboard route (relative to `/guild/:id/`) for a bespoke settings page, instead of the generic `/modules/[name]` form. */
+  dashboardHref?: string;
 }
 
 /**
@@ -74,6 +82,8 @@ export function DefineModule(options: ModuleOptions) {
       configFields: fields,
       configSchema: options.configSchema,
       configOverrides: options.configOverrides ?? true,
+      category: options.category,
+      dashboardHref: options.dashboardHref,
     };
 
     (target as any).meta = meta;

@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import type { GuildSettingsPayload } from "@lumi/contracts";
 import { setGuildSettings } from "#/actions/guild-actions";
 import { SaveBar } from "#/components/save-bar";
@@ -14,59 +16,32 @@ import {
 import { Field, Input, Select } from "#/components/ui/input";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
-import type {
-  GuildSettings,
-  DashboardRoleView,
-  DashboardChannelView,
-} from "#/lib/dashboard-data";
-
-const LOG_CHANNEL_TYPES = new Set([0, 5]);
+import type { GuildSettings, DashboardRoleView } from "#/lib/dashboard-data";
 
 type FormState = GuildSettingsPayload;
 
 const FORM_KEYS = [
   "prefix",
-  "modRoleId",
-  "adminRoleId",
-  "modLogChannelId",
   "muteRoleId",
   "locale",
   "timezone",
-  "noMentionSpamWindowMs",
-  "noMentionSpamLimit",
 ] as const satisfies readonly (keyof FormState)[];
 
 const FIELD_LABELS: Record<keyof FormState, string> = {
   prefix: "Command prefix",
-  modRoleId: "Mod role",
-  adminRoleId: "Admin role",
-  modLogChannelId: "Mod log channel",
   muteRoleId: "Mute role",
   locale: "Locale",
   timezone: "Timezone",
-  noMentionSpamWindowMs: "No-mention-spam window (ms)",
-  noMentionSpamLimit: "No-mention-spam limit",
 };
 
-const NULLABLE_STRING_FIELDS = new Set<keyof FormState>([
-  "prefix",
-  "modRoleId",
-  "adminRoleId",
-  "modLogChannelId",
-  "muteRoleId",
-]);
+const NULLABLE_STRING_FIELDS = new Set<keyof FormState>(["prefix", "muteRoleId"]);
 
 function toFormState(settings: GuildSettings): FormState {
   return {
     prefix: settings.prefix ?? "",
-    modRoleId: (settings["modRoleId"]) ?? "",
-    adminRoleId: (settings["adminRoleId"]) ?? "",
-    modLogChannelId: (settings["modLogChannelId"]) ?? "",
     muteRoleId: (settings["muteRoleId"]) ?? "",
     locale: settings.locale ?? "en-US",
     timezone: (settings["timezone"]) ?? "UTC",
-    noMentionSpamWindowMs: (settings["noMentionSpamWindowMs"]) ?? null,
-    noMentionSpamLimit: (settings["noMentionSpamLimit"]) ?? null,
   };
 }
 
@@ -82,16 +57,15 @@ export function GeneralSettingsForm({
   guildId,
   settings,
   roles,
-  channels,
 }: {
   guildId: string;
   settings: GuildSettings;
   roles: DashboardRoleView[];
-  channels: DashboardChannelView[];
 }) {
   const sectionsRef = useStaggerIn<HTMLDivElement>("> div");
   const [baseline, setBaseline] = useState<FormState>(() => toFormState(settings));
   const [form, setForm] = useState<FormState>(baseline);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const { isPending, error, setError, run } = useServerAction();
 
   const baselineRef = useRef(baseline);
@@ -263,121 +237,51 @@ export function GeneralSettingsForm({
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Roles &amp; channels</CardTitle>
-            <CardDescription>
-              Staff roles and the mod log destination for this server.
-            </CardDescription>
+          <CardHeader
+            actions={
+              <button
+                type="button"
+                onClick={() => setAdvancedOpen((v) => !v)}
+                className="flex items-center gap-1.5 text-sm font-medium text-fg-muted transition-colors hover:text-fg"
+              >
+                <ChevronRight
+                  size={16}
+                  className={`transition-transform duration-200 ${advancedOpen ? "rotate-90" : ""}`}
+                />
+                Advanced
+                <span className="text-fg-subtle">· 2 settings · mute role, ignored channels</span>
+              </button>
+            }
+          >
+            <CardTitle>Advanced</CardTitle>
           </CardHeader>
-          <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Mod role" htmlFor="modRoleId">
-              <Select
-                id="modRoleId"
-                value={form.modRoleId ?? ""}
-                onChange={(e) => field("modRoleId", e.target.value || null)}
-              >
-                <option value="">None</option>
-                {roles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Admin role" htmlFor="adminRoleId">
-              <Select
-                id="adminRoleId"
-                value={form.adminRoleId ?? ""}
-                onChange={(e) => field("adminRoleId", e.target.value || null)}
-              >
-                <option value="">None</option>
-                {roles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Mute role" htmlFor="muteRoleId">
-              <Select
-                id="muteRoleId"
-                value={form.muteRoleId ?? ""}
-                onChange={(e) => field("muteRoleId", e.target.value || null)}
-              >
-                <option value="">None</option>
-                {roles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Mod log channel" htmlFor="modLogChannelId">
-              <Select
-                id="modLogChannelId"
-                value={form.modLogChannelId ?? ""}
-                onChange={(e) => field("modLogChannelId", e.target.value || null)}
-              >
-                <option value="">None</option>
-                {channels
-                  .filter((c) => LOG_CHANNEL_TYPES.has(c.type))
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      #{c.name}
+          {advancedOpen ? (
+            <CardBody className="grid animate-in fade-in slide-in-from-top-1 grid-cols-1 gap-4 duration-200 sm:grid-cols-2">
+              <Field label="Mute role" htmlFor="muteRoleId">
+                <Select
+                  id="muteRoleId"
+                  value={form.muteRoleId ?? ""}
+                  onChange={(e) => field("muteRoleId", e.target.value || null)}
+                >
+                  <option value="">None</option>
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
                     </option>
                   ))}
-              </Select>
-            </Field>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Mention spam</CardTitle>
-            <CardDescription>
-              Leave both blank to disable mention-spam protection entirely.
-            </CardDescription>
-          </CardHeader>
-          <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field
-              label="No-mention-spam limit"
-              htmlFor="noMentionSpamLimit"
-              hint="Mentions allowed inside the window."
-            >
-              <Input
-                id="noMentionSpamLimit"
-                type="number"
-                className="tabular"
-                placeholder="Disabled"
-                value={form.noMentionSpamLimit ?? ""}
-                onChange={(e) =>
-                  field(
-                    "noMentionSpamLimit",
-                    e.target.value === "" ? null : Number(e.target.value),
-                  )
-                }
-              />
-            </Field>
-            <Field
-              label="No-mention-spam window (ms)"
-              htmlFor="noMentionSpamWindowMs"
-              hint="Rolling window length in milliseconds."
-            >
-              <Input
-                id="noMentionSpamWindowMs"
-                type="number"
-                className="tabular"
-                placeholder="Disabled"
-                value={form.noMentionSpamWindowMs ?? ""}
-                onChange={(e) =>
-                  field(
-                    "noMentionSpamWindowMs",
-                    e.target.value === "" ? null : Number(e.target.value),
-                  )
-                }
-              />
-            </Field>
-          </CardBody>
+                </Select>
+              </Field>
+              <Field label="Ignored channels" htmlFor="ignored-channels-link">
+                <Link
+                  id="ignored-channels-link"
+                  href={`/guild/${guildId}/advanced`}
+                  className="flex h-9 items-center rounded-control border border-border bg-bg-subtle px-3 text-sm text-accent hover:underline"
+                >
+                  Manage on the Advanced page →
+                </Link>
+              </Field>
+            </CardBody>
+          ) : null}
         </Card>
       </div>
       <SaveBar

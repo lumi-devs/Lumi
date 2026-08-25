@@ -11,6 +11,7 @@ import {
 } from "@lumi/contracts";
 import { verifyAppealToken } from "#lib/appeals/token.js";
 import type { ModerationCase } from "@prisma/client";
+import type { GuildBackupData } from "#modules/security/lib/backup.js";
 import { s, type BaseValidator } from "@sapphire/shapeshift";
 import { getService, tryGetService } from "#lib/module-system/Service.js";
 import { checkModulesEnabled } from "#lib/module-check.js";
@@ -247,14 +248,9 @@ const ConfigSetSchema = s.object({
 
 const GuildSettingsSchema = s.object({
   prefix: s.string().lengthLessThanOrEqual(5).nullable().optional(),
-  modRoleId: SnowflakeSchema.nullable().optional(),
-  adminRoleId: SnowflakeSchema.nullable().optional(),
-  modLogChannelId: SnowflakeSchema.nullable().optional(),
   muteRoleId: SnowflakeSchema.nullable().optional(),
   locale: s.string().optional(),
   timezone: s.string().optional(),
-  noMentionSpamWindowMs: s.number().int().nullable().optional(),
-  noMentionSpamLimit: s.number().int().nullable().optional(),
 });
 
 const PermitCreateSchema = s.object({
@@ -495,6 +491,7 @@ function toRawConfigValue(value: unknown): string {
   version: "1.0.0",
   description:
     "Integrates the bot with the Lumi Web Dashboard. Provides RPC endpoints for management.",
+  category: "System",
 })
 export class DashboardModule extends Module {
   public override onLoad() {
@@ -536,6 +533,8 @@ export class DashboardModule extends Module {
           configFields: m.meta.configFields || [],
           config,
           isAddon: moduleStore.isAddonModule(m),
+          category: m.meta.category ?? "System",
+          dashboardHref: m.meta.dashboardHref ?? null,
         };
       });
 
@@ -952,6 +951,38 @@ export class DashboardModule extends Module {
         );
       }
       return { success: true };
+    });
+
+    registerRpcHandler(RPC_ACTIONS.guildBackupsList, async (req) => {
+      const { guildId } = await verifyGuildAccess(req);
+      const rows = await container.db.security.listBackups(guildId, 10);
+      return {
+        backups: rows.map((b) => {
+          const data = b.data as unknown as GuildBackupData;
+          return {
+            id: b.id,
+            createdAt: b.createdAt.toISOString(),
+            roleCount: data.roles.length,
+            channelCount: data.channels.length,
+          };
+        }),
+      };
+    });
+
+    const BackupRestoreSchema = s.object({
+      backupId: s.number().int().optional(),
+    });
+
+    registerRpcHandler(RPC_ACTIONS.guildBackupRestore, async (req) => {
+      const { guild } = await verifyGuildAccess(req);
+      const { backupId } = parsePayload(BackupRestoreSchema, req.data);
+
+      const security = tryGetService("security");
+      if (!security) throw new Error("The security module is not loaded");
+
+      const result = await security.restoreFromBackup(guild, backupId);
+      if (!result) throw new Error("No backup found to restore");
+      return { success: true, ...result };
     });
 
     registerRpcHandler(RPC_ACTIONS.guildTempVcGeneratorsList, async (req) => {
@@ -1488,6 +1519,8 @@ export class DashboardModule extends Module {
     rpcHandlers.delete(RPC_ACTIONS.guildVerificationPanelSet);
     rpcHandlers.delete(RPC_ACTIONS.guildVerificationPanelDelete);
     rpcHandlers.delete(RPC_ACTIONS.guildVerificationWebComplete);
+    rpcHandlers.delete(RPC_ACTIONS.guildBackupsList);
+    rpcHandlers.delete(RPC_ACTIONS.guildBackupRestore);
     rpcHandlers.delete(RPC_ACTIONS.guildTempVcGeneratorsList);
     rpcHandlers.delete(RPC_ACTIONS.guildTempVcGeneratorSet);
     rpcHandlers.delete(RPC_ACTIONS.guildTempVcRecordsList);

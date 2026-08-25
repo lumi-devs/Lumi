@@ -24,6 +24,8 @@ function makeModule(overrides: Partial<DashboardModuleView> = {}): DashboardModu
     configFields: [],
     config: {},
     isAddon: false,
+    category: "Community",
+    dashboardHref: null,
     ...overrides,
   };
 }

@@ -52,6 +52,7 @@ const COMPILED_KEYS = [
   version: "2.0.0",
   description:
     "Automod rule engine: filtered terms (Aho-Corasick), regex rules, invite/link blocking with allowlists, mention-spam and caps limits, with configurable punishment and logging.",
+  category: "Moderation",
   configSchema: cfg.object({
     terms: cfg.string({
       group: "Terms & Patterns",

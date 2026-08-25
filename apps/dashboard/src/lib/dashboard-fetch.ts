@@ -30,6 +30,7 @@ import type {
   BlocklistListPayload,
   CasesListPayload,
   ConfigHistoryListPayload,
+  GuildBackupView,
   GuildSummaryView,
   ModuleDataListPayload,
   SystemAuditListPayload,
@@ -110,6 +111,16 @@ export const getGuildPanicState = cache(
       actorId,
     });
     return data as PanicStateView;
+  },
+);
+
+export const getGuildBackups = cache(
+  async (guildId: string, actorId: string): Promise<GuildBackupView[]> => {
+    const data = (await rpcCall(RPC_ACTIONS.guildBackupsList, {
+      guildId,
+      actorId,
+    })) as { backups: GuildBackupView[] };
+    return data.backups;
   },
 );
 

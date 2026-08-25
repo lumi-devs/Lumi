@@ -95,14 +95,9 @@ export interface GuildSetupRunResult {
 /** Partial `Guild` model update from the dashboard's general-settings form. */
 export interface GuildSettingsPayload {
   prefix?: string | null;
-  modRoleId?: string | null;
-  adminRoleId?: string | null;
-  modLogChannelId?: string | null;
   muteRoleId?: string | null;
   locale?: string;
   timezone?: string;
-  noMentionSpamWindowMs?: number | null;
-  noMentionSpamLimit?: number | null;
 }
 
 export type PermitKind = "enforced" | "custom";
@@ -211,6 +206,21 @@ export interface PanicSetPayload {
 export interface VerificationPanelSetPayload {
   channelId: string;
   messageId: string;
+}
+
+export interface BackupRestorePayload {
+  backupId?: number;
+}
+
+export interface GuildBackupView {
+  id: number;
+  createdAt: string;
+  roleCount: number;
+  channelCount: number;
+}
+
+export interface GuildBackupsListResponse {
+  backups: GuildBackupView[];
 }
 
 /** `name: null` deletes the generator on `channelId`; any other value upserts it. */
@@ -435,6 +445,8 @@ export interface RpcRequestPayloads {
   "guild.verificationPanel.set": VerificationPanelSetPayload;
   "guild.verificationPanel.delete": never;
   "guild.verificationWeb.complete": never;
+  "guild.backups.list": never;
+  "guild.backups.restore": BackupRestorePayload;
   "guild.tempvc.generators.list": never;
   "guild.tempvc.generators.set": TempVcGeneratorSetPayload;
   "guild.tempvc.records.list": never;
@@ -511,6 +523,8 @@ export const RPC_ACTIONS = {
   guildVerificationPanelSet: "guild.verificationPanel.set",
   guildVerificationPanelDelete: "guild.verificationPanel.delete",
   guildVerificationWebComplete: "guild.verificationWeb.complete",
+  guildBackupsList: "guild.backups.list",
+  guildBackupRestore: "guild.backups.restore",
   guildTempVcGeneratorsList: "guild.tempvc.generators.list",
   guildTempVcGeneratorSet: "guild.tempvc.generators.set",
   guildTempVcRecordsList: "guild.tempvc.records.list",
