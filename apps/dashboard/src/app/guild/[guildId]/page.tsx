@@ -4,6 +4,7 @@ import {
   getGuildAuditLog,
   getGuildConfigHistory,
   getGuildDashboard,
+  getGuildPanicState,
   getSystemShards,
 } from "#/lib/dashboard-fetch";
 import { StatsGrid } from "#/components/stats-grid";
@@ -11,14 +12,15 @@ import { PageHeader } from "#/components/ui/page-header";
 import { SectionHead } from "#/components/ui/section-head";
 import { StatusPill, StatusStrip } from "#/components/ui/status-pill";
 import { GeneralSettingsForm } from "#/components/guild/general-settings-form";
-import { ModuleCardGrid } from "#/components/guild/module-card-grid";
+import { ModulesStatusStrip } from "#/components/guild/modules-status-strip";
+import { NeedsAttentionPanel, type AttentionRow } from "#/components/guild/needs-attention-panel";
 import { OverviewRail } from "#/components/guild/overview-rail";
 import { RecentAuditTable } from "#/components/guild/recent-audit-table";
 import { buildModuleLabelIndex } from "#/lib/config-labels";
+import { buildHealthChecks } from "#/lib/health-checks";
 import { extractMemberNames } from "#/lib/log-format";
 import { HEALTHY_STATUS } from "#/components/system/shard-fleet";
 
-const MODULE_CARDS = 6;
 const FEED_ROWS = 6;
 
 // Every panel below the header is a separate RPC read: one failing (the worker
@@ -42,7 +44,7 @@ export default async function GuildOverviewPage({
   const session = await requireGuild(guildId);
   const data = await getGuildDashboard(guildId, session.userId);
 
-  const [audit, appeals, history, shards] = await Promise.all([
+  const [audit, appeals, history, shards, panic] = await Promise.all([
     safe(
       getGuildAuditLog(guildId, session.userId, {
         page: 1,
@@ -65,6 +67,7 @@ export default async function GuildOverviewPage({
     // Fleet telemetry is an owner-only read; a guild manager simply doesn't get
     // that rail slot rather than getting a fabricated one.
     session.isBotOwner ? safe(getSystemShards(session.userId)) : null,
+    safe(getGuildPanicState(guildId, session.userId)),
   ]);
 
   const memberNames = extractMemberNames(data.members);
@@ -77,6 +80,57 @@ export default async function GuildOverviewPage({
   const openAppeals = appeals?.total ?? 0;
   const healthyShards =
     shards?.shards.filter((s) => s.status === HEALTHY_STATUS).length ?? 0;
+
+  const securityModule = data.modules.find((m) => m.name === "security");
+  const filterModule = data.modules.find((m) => m.name === "filter");
+  const failingChecks = buildHealthChecks(
+    guildId,
+    data.roles,
+    securityModule?.config,
+    filterModule,
+  ).filter((c) => !c.ok);
+
+  const attentionRows: AttentionRow[] = [];
+  if (panic?.active) {
+    attentionRows.push({
+      id: "panic-armed",
+      severity: "critical",
+      title: "Panic mode is armed",
+      detail: "Invites are paused and locked channels are read-only until this is reverted.",
+      actionHref: `/guild/${guildId}/security`,
+      actionLabel: "Details",
+    });
+  }
+  if (shards && (shards.missingShardIds.length > 0 || healthyShards < shards.shardCount)) {
+    attentionRows.push({
+      id: "shard-down",
+      severity: "critical",
+      title: "A shard is down",
+      detail: `Cluster ${shards.clusterName} · ${healthyShards} of ${shards.shardCount} shards healthy. Commands in channels on the affected shard won't respond.`,
+      actionHref: "/system/shards",
+      actionLabel: "Open fleet",
+    });
+  }
+  if (openAppeals > 0) {
+    attentionRows.push({
+      id: "appeals-pending",
+      severity: "warning",
+      title: `${openAppeals} appeal${openAppeals === 1 ? "" : "s"} waiting for review`,
+      detail: "Members are waiting on a moderation appeal decision.",
+      actionHref: `/guild/${guildId}/appeals`,
+      actionLabel: "Review",
+    });
+  }
+  for (const check of failingChecks) {
+    attentionRows.push({
+      id: check.id,
+      severity: "warning",
+      title: check.title,
+      detail: check.detail,
+      actionHref: check.fixHref ?? `/guild/${guildId}/health`,
+      actionLabel: check.fixLabel ?? "Details",
+    });
+  }
 
   return (
     // Page-load choreography: header → instrument strip → panels, on a 70ms
@@ -164,19 +218,20 @@ export default async function GuildOverviewPage({
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_17rem]">
         <div className="flex min-w-0 flex-col gap-6">
+          {attentionRows.length > 0 ? (
+            <div
+              className="rise"
+              style={{ "--rise-delay": "105ms" } as React.CSSProperties}
+            >
+              <NeedsAttentionPanel rows={attentionRows} />
+            </div>
+          ) : null}
+
           <section
             className="rise"
             style={{ "--rise-delay": "140ms" } as React.CSSProperties}
           >
-            <SectionHead
-              title="Modules"
-              href={`/guild/${guildId}/modules`}
-              linkLabel="Manage all"
-            />
-            <ModuleCardGrid
-              guildId={guildId}
-              modules={data.modules.slice(0, MODULE_CARDS)}
-            />
+            <ModulesStatusStrip guildId={guildId} modules={data.modules} />
           </section>
 
           <section
@@ -203,7 +258,6 @@ export default async function GuildOverviewPage({
               guildId={guildId}
               settings={data.settings}
               roles={data.roles}
-              channels={data.channels}
             />
           </section>
         </div>

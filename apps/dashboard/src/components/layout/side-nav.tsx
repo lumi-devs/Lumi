@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PanelLeft } from "lucide-react";
-import { motion } from "motion/react";
+import { ChevronRight, PanelLeft } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "#/components/ui/sheet";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
@@ -106,6 +106,12 @@ function SideNavBody({
   const labelBlock = forceExpanded ? "block" : "hidden lg:block";
   const labelInline = forceExpanded ? "inline" : "hidden lg:inline";
 
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      groups.map((g) => [g.title, g.collapsible ? (g.defaultOpen ?? true) : true]),
+    ),
+  );
+
   return (
     <>
       <div className="flex items-center gap-2.5 px-1 lg:px-2">
@@ -128,16 +134,47 @@ function SideNavBody({
       ) : null}
 
       <nav className="flex min-h-0 flex-1 flex-col gap-4.5 overflow-y-auto">
-        {groups.map((group) => (
+        {groups.map((group) => {
+          const isOpen = openGroups[group.title] ?? true;
+          const HeaderTag = group.collapsible ? "button" : "p";
+          return (
           <div key={group.title}>
-            <p
+            <HeaderTag
+              type={group.collapsible ? "button" : undefined}
+              onClick={
+                group.collapsible
+                  ? () =>
+                      setOpenGroups((prev) => ({ ...prev, [group.title]: !isOpen }))
+                  : undefined
+              }
               className={cn(
-                "font-display mb-1.5 px-2.5 text-[12px] font-semibold tracking-[0.1em] text-fg-subtle uppercase",
+                "font-display mb-1.5 flex w-full items-center gap-1 px-2.5 text-[12px] font-semibold tracking-[0.1em] text-fg-subtle uppercase",
+                group.collapsible && "cursor-pointer transition-colors hover:text-fg",
                 labelBlock,
               )}
             >
-              {group.title}
-            </p>
+              {group.collapsible ? (
+                <ChevronRight
+                  aria-hidden
+                  className={cn(
+                    "size-3.5 shrink-0 transition-transform duration-200",
+                    isOpen && "rotate-90",
+                  )}
+                />
+              ) : null}
+              <span className="truncate">{group.title}</span>
+              {group.alertDot ? (
+                <span
+                  aria-hidden
+                  className="size-1.5 shrink-0 rounded-full bg-danger"
+                />
+              ) : null}
+              {group.badge !== undefined ? (
+                <span className="ml-auto font-mono text-[11px] font-normal tracking-normal text-fg-subtle">
+                  {group.badge}
+                </span>
+              ) : null}
+            </HeaderTag>
             {/* The icon rail has no group labels, so a hairline keeps the
              * grouping legible at 64px instead of one undifferentiated list. */}
             {!forceExpanded ? (
@@ -146,7 +183,15 @@ function SideNavBody({
                 className="mx-2 mb-1.5 block h-px bg-border-soft lg:hidden"
               />
             ) : null}
-            <ul className="flex flex-col gap-px">
+            <AnimatePresence initial={false}>
+              {isOpen ? (
+                <motion.ul
+                  initial={group.collapsible ? { opacity: 0, height: 0 } : false}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  className="flex flex-col gap-px overflow-hidden"
+                >
               {group.links.map((link) => {
                 const active = isActive(pathname, link.href);
                 return (
@@ -188,9 +233,12 @@ function SideNavBody({
                   </li>
                 );
               })}
-            </ul>
+                </motion.ul>
+              ) : null}
+            </AnimatePresence>
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       {footer ? (

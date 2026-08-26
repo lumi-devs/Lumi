@@ -19,6 +19,13 @@ export const KNOWN_SUBSTORES = [
 
 export type KnownSubStore = (typeof KNOWN_SUBSTORES)[number];
 
+/**
+ * Dashboard sidebar/grid grouping. Not a closed enum on purpose — an addon
+ * or a future module can declare any label here and the sidebar/Modules grid
+ * will group and count it correctly without a central map to edit.
+ */
+export type ModuleCategory = string;
+
 export interface ModuleManifest {
   name: string;
   displayName: string;
@@ -35,4 +42,12 @@ export interface ModuleManifest {
   subStores: string[];
   /** Flat config fields derived from the Zod `configSchema` (panel + dashboard). */
   configFields: ConfigField[];
+  /** Dashboard sidebar/grid grouping (e.g. "Moderation", "Security"). Falls back to "System" when absent. */
+  category?: ModuleCategory;
+  /**
+   * Dashboard route path (relative to `/guild/:id/`) for this module's
+   * settings, when it has a bespoke page instead of the generic
+   * `/modules/[name]` config-field form. E.g. `"security"`.
+   */
+  dashboardHref?: string;
 }

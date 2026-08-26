@@ -16,7 +16,7 @@
         "@sapphire/decorators": "^6.2.0",
         "@sapphire/discord.js-utilities": "^7.3.3",
         "@sapphire/fetch": "^3.0.5",
-        "@sapphire/framework": "^5.5.0",
+        "@sapphire/framework": "^5.5.1",
         "@sapphire/pieces": "^4.4.1",
         "@sapphire/plugin-editable-commands": "^4.0.4",
         "@sapphire/plugin-i18next": "^8.0.0",
@@ -129,7 +129,7 @@
         "@sapphire/decorators": "^6.2.0",
         "@sapphire/discord.js-utilities": "^7.3.3",
         "@sapphire/fetch": "^3.0.5",
-        "@sapphire/framework": "^5.5.0",
+        "@sapphire/framework": "^5.5.1",
         "@sapphire/plugin-editable-commands": "^4.0.4",
         "@sapphire/plugin-hmr": "^3.0.2",
         "@sapphire/plugin-i18next": "^8.0.0",
@@ -889,7 +889,7 @@
 
     "@sapphire/fetch": ["@sapphire/fetch@3.0.5", "", {}, "sha512-YfH5iFFL+n21dEWfdNpSlN1Q4RH+84I9ZFLxtdlbqyWljkh1IwMU6UmHjnroiRJx9TwdFSQ0krHm4v0fV/VqiA=="],
 
-    "@sapphire/framework": ["@sapphire/framework@5.5.0", "", { "dependencies": { "@discordjs/builders": "^1.13.0", "@sapphire/discord-utilities": "^4.0.0", "@sapphire/discord.js-utilities": "^7.3.3", "@sapphire/lexure": "^1.1.12", "@sapphire/pieces": "^4.4.1", "@sapphire/ratelimits": "^2.4.11", "@sapphire/result": "^2.8.0", "@sapphire/stopwatch": "^1.5.4", "@sapphire/utilities": "^3.18.2" } }, "sha512-jC+zS8yR/MtJaTFEQutBBWj7Scuvny4d0adtQ3s0OCFWe3rUqNfENomBG3P4tsQ/kRF7L3WCqucyLV8ywG24hw=="],
+    "@sapphire/framework": ["@sapphire/framework@5.5.1", "", { "dependencies": { "@discordjs/builders": "^1.13.0", "@sapphire/discord-utilities": "^4.0.0", "@sapphire/discord.js-utilities": "^7.3.3", "@sapphire/lexure": "^1.1.12", "@sapphire/pieces": "^4.4.1", "@sapphire/ratelimits": "^2.4.11", "@sapphire/result": "^2.8.0", "@sapphire/stopwatch": "^1.5.4", "@sapphire/utilities": "^3.18.2" } }, "sha512-UlEoj3XRjSyGJg1+kD43q5YHfmDDJ1fNN5Ws3OifvgMNhnOrrL1diTjU1ALfLrfUbPuBCJWD1ZfIj/i/J4K9eQ=="],
 
     "@sapphire/lexure": ["@sapphire/lexure@1.1.12", "", { "dependencies": { "@sapphire/result": "^2.8.0" } }, "sha512-F7Z3QzRnAZGunRl24/qQMhzRogZU/foumu2EBBunRnQi/o/DLTCwdAbLgJATyPlvJa8N6FrJq0JJwvzM/vXoXg=="],
 

@@ -15,5 +15,6 @@
     "interaction-handlers",
     "scheduled-tasks"
   ],
-  "configFields": []
+  "configFields": [],
+  "category": "System"
 }

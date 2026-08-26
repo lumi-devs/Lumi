@@ -12,14 +12,18 @@ import { ActionError } from "#/components/action-error";
 import { TiltCard } from "#/components/motion/tilt-card";
 import { spotlightHandler } from "#/lib/animate";
 import { useOptimisticAction } from "#/lib/use-server-action";
+import { cn } from "#/lib/utils";
 import type { DashboardModuleView } from "#/lib/dashboard-data";
 
 export function ModuleCardGrid({
   guildId,
   modules,
+  alertsByModule,
 }: {
   guildId: string;
   modules: DashboardModuleView[];
+  /** Failing-health-check count per module name, if known. No fabricated alerts. */
+  alertsByModule?: Record<string, number>;
 }) {
   if (modules.length === 0) {
     return (
@@ -36,7 +40,12 @@ export function ModuleCardGrid({
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {modules.map((m) => (
-        <ModuleCard key={m.name} guildId={guildId} module={m} />
+        <ModuleCard
+          key={m.name}
+          guildId={guildId}
+          module={m}
+          alertCount={alertsByModule?.[m.name] ?? 0}
+        />
       ))}
     </div>
   );
@@ -45,18 +54,25 @@ export function ModuleCardGrid({
 function ModuleCard({
   guildId,
   module: m,
+  alertCount,
 }: {
   guildId: string;
   module: DashboardModuleView;
+  alertCount: number;
 }) {
   const isCore = m.name === "core";
   const { value: enabled, isPending, error, run } = useOptimisticAction(m.enabled);
   const on = enabled || isCore;
+  const hasAlert = alertCount > 0;
+  const href = `/guild/${guildId}/${m.dashboardHref ?? `modules/${m.name}`}`;
 
   return (
     <TiltCard className="h-full">
       <Card
-        className="spotlight flex h-full flex-col gap-2.5 p-4 transition-colors hover:border-border-strong"
+        className={cn(
+          "spotlight flex h-full flex-col gap-2.5 p-4 transition-colors hover:border-border-strong",
+          hasAlert && "border-warning",
+        )}
         onMouseMove={spotlightHandler}
       >
       <div className="flex items-start justify-between gap-2">
@@ -80,7 +96,7 @@ function ModuleCard({
       </div>
 
       <Link
-        href={`/guild/${guildId}/modules/${m.name}`}
+        href={href}
         className="font-display truncate text-[15.5px] font-semibold tracking-[0.01em] text-fg hover:underline"
       >
         {m.displayName}
@@ -91,9 +107,15 @@ function ModuleCard({
       </p>
 
       <div className="tabular mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[12.5px] text-fg-subtle">
-        <span className={on ? "text-success" : undefined}>
-          {on ? "● active" : "○ disabled"}
-        </span>
+        {hasAlert ? (
+          <span className="text-warning-fg">
+            {alertCount} alert{alertCount === 1 ? "" : "s"}
+          </span>
+        ) : (
+          <span className={on ? "text-success" : undefined}>
+            {on ? "● active" : "○ disabled"}
+          </span>
+        )}
         <span>
           {m.configFields.length} field{m.configFields.length === 1 ? "" : "s"}
         </span>

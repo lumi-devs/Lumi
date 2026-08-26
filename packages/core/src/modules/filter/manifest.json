@@ -200,5 +200,6 @@
       "group": "Heat Thresholds",
       "default": 10
     }
-  ]
+  ],
+  "category": "Moderation"
 }

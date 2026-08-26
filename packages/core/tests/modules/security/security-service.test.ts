@@ -23,8 +23,20 @@ const baseConfig = {
     channel_delete: 2,
     role_delete: 2,
     webhook_create: 2,
+    vanity_change: 1,
+    dangerous_permission_grant: 1,
+    quarantine_bypass: 1,
   },
-  response: "quarantine" as const,
+  responses: {
+    ban: "quarantine" as const,
+    kick: "quarantine" as const,
+    channel_delete: "quarantine" as const,
+    role_delete: "quarantine" as const,
+    webhook_create: "quarantine" as const,
+    vanity_change: "quarantine" as const,
+    dangerous_permission_grant: "quarantine" as const,
+    quarantine_bypass: "quarantine" as const,
+  },
   trustedRoleIds: [] as string[],
 };
 
@@ -90,11 +102,48 @@ describe("SecurityService.loadAntiNukeConfig", () => {
     expect(config.limits.ban).toBe(10);
     expect(config.limits.kick).toBe(5);
     expect(config.windowSeconds).toBe(60);
-    expect(config.response).toBe("quarantine");
+    expect(config.responses.ban).toBe("quarantine");
+    expect(config.responses.kick).toBe("quarantine");
     expect(config.trustedRoleIds).toEqual([
       "111111111111111111",
       "222222222222222222",
     ]);
+  });
+
+  it("defaults every kind to quarantine when unconfigured", async () => {
+    const service = makeService({
+      db: {
+        config: {
+          getAllModuleConfig: vi.fn().mockResolvedValue({
+            antinuke_enabled: true,
+          }),
+        },
+      },
+    });
+
+    const config = await service.loadAntiNukeConfig("g1");
+    expect(config.responses.ban).toBe("quarantine");
+    expect(config.responses.kick).toBe("quarantine");
+    expect(config.responses.channel_delete).toBe("quarantine");
+  });
+
+  it("reads each action's response independently", async () => {
+    const service = makeService({
+      db: {
+        config: {
+          getAllModuleConfig: vi.fn().mockResolvedValue({
+            antinuke_enabled: true,
+            response_bans: "ban",
+            response_kicks: "log",
+          }),
+        },
+      },
+    });
+
+    const config = await service.loadAntiNukeConfig("g1");
+    expect(config.responses.ban).toBe("ban");
+    expect(config.responses.kick).toBe("log");
+    expect(config.responses.channel_delete).toBe("quarantine");
   });
 });
 
@@ -195,7 +244,7 @@ describe("SecurityService.respond", () => {
 
     await service.respond(guild, "u1", "kick", 4, {
       ...baseConfig,
-      response: "log",
+      responses: { ...baseConfig.responses, kick: "log" },
     });
 
     expect(createModerationCase).toHaveBeenCalledWith(

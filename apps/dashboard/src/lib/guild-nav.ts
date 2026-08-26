@@ -28,6 +28,14 @@ export interface GuildNavLink {
 export interface GuildNavGroup {
   title: string;
   links: GuildNavLink[];
+  /** Renders a chevron toggle and lets the group collapse. Static groups (e.g. `/system`'s) omit this and always render expanded. */
+  collapsible?: boolean;
+  /** Only meaningful when `collapsible` is true. */
+  defaultOpen?: boolean;
+  /** Mono count badge next to the title. */
+  badge?: number;
+  /** Small red dot next to the title, for "something here needs attention". */
+  alertDot?: boolean;
 }
 
 // Shared by `GuildSideNav` (rendered) and `CommandPalette` (searched); a link

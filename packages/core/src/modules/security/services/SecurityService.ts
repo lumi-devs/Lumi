@@ -65,11 +65,13 @@ export type NukeKind =
   | "dangerous_permission_grant"
   | "quarantine_bypass";
 
+export type NukeResponse = "log" | "quarantine" | "ban";
+
 export interface AntiNukeConfig {
   enabled: boolean;
   windowSeconds: number;
   limits: Record<NukeKind, number>;
-  response: "log" | "quarantine" | "ban";
+  responses: Record<NukeKind, NukeResponse>;
   trustedRoleIds: string[];
 }
 
@@ -134,6 +136,25 @@ const KIND_LIMIT_KEYS: Record<NukeKind, string> = {
   quarantine_bypass: "max_quarantine_bypass",
 };
 
+/**
+ * Kinds with a dedicated per-action response field in the dashboard's
+ * anti-nuke table. Kinds without one here have no config UI yet and always
+ * use the default response.
+ */
+const KIND_RESPONSE_KEYS: Partial<Record<NukeKind, string>> = {
+  ban: "response_bans",
+  kick: "response_kicks",
+  channel_delete: "response_channel_deletes",
+  role_delete: "response_role_deletes",
+  webhook_create: "response_webhook_creates",
+};
+
+const DEFAULT_NUKE_RESPONSE: NukeResponse = "quarantine";
+
+function isNukeResponse(value: unknown): value is NukeResponse {
+  return value === "log" || value === "quarantine" || value === "ban";
+}
+
 /** Permissions that hand out server control - never allowed on `@everyone`. */
 export const DANGEROUS_PERMISSIONS = [
   PermissionFlagsBits.Administrator,
@@ -189,12 +210,30 @@ export class SecurityService extends Service {
         ),
         quarantine_bypass: getConfigNumber(raw, KIND_LIMIT_KEYS.quarantine_bypass, 1),
       },
-      response:
-        raw["response"] === "log" || raw["response"] === "ban"
-          ? raw["response"]
-          : "quarantine",
+      responses: this.loadResponses(raw),
       trustedRoleIds,
     };
+  }
+
+  /** Per-action responses; kinds without a config key use the default. */
+  private loadResponses(raw: Record<string, unknown>): Record<NukeKind, NukeResponse> {
+    const kinds: NukeKind[] = [
+      "ban",
+      "kick",
+      "channel_delete",
+      "role_delete",
+      "webhook_create",
+      "vanity_change",
+      "dangerous_permission_grant",
+      "quarantine_bypass",
+    ];
+    return Object.fromEntries(
+      kinds.map((kind) => {
+        const key = KIND_RESPONSE_KEYS[kind];
+        const value = key ? raw[key] : undefined;
+        return [kind, isNukeResponse(value) ? value : DEFAULT_NUKE_RESPONSE];
+      }),
+    ) as Record<NukeKind, NukeResponse>;
   }
 
   /**
@@ -252,8 +291,9 @@ export class SecurityService extends Service {
     const botUser = this.container.client.user;
     if (isNullish(botUser)) return;
 
+    const response = config.responses[kind];
     let outcome = "logged";
-    if (config.response === "quarantine") {
+    if (response === "quarantine") {
       const member = await guild.members.fetch(executorId).catch(() => null);
       if (member) {
         try {
@@ -270,7 +310,7 @@ export class SecurityService extends Service {
           );
         }
       }
-    } else if (config.response === "ban") {
+    } else if (response === "ban") {
       try {
         await guild.members.ban(executorId, { reason });
         const c = await this.db.moderation.createModerationCase({

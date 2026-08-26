@@ -64,3 +64,21 @@ export async function deleteVerificationPanel(
     return { ok: true };
   });
 }
+
+export async function restoreGuildBackup(
+  guildId: string,
+  backupId?: number,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await guardedSecurityAction(guildId);
+    await rpcCall(RPC_ACTIONS.guildBackupRestore, {
+      guildId,
+      actorId: session.userId,
+      data: { backupId },
+      // Recreating roles/channels on a large guild outruns the default deadline.
+      timeoutMs: 120_000,
+    });
+    revalidatePath(`/guild/${guildId}/security`);
+    return { ok: true };
+  });
+}

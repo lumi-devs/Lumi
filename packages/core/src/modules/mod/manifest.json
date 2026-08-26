@@ -34,5 +34,6 @@
       "label": "Warn Thresholds",
       "description": "JSON map of warn count → action. E.g. {\"3\":{\"action\":\"mute\",\"duration\":\"1h\"},\"5\":{\"action\":\"ban\"}}"
     }
-  ]
+  ],
+  "category": "Moderation"
 }

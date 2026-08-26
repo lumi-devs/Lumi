@@ -3,13 +3,8 @@ import type { AppealStatus, ConfigField } from "@lumi/contracts";
 export interface GuildSettings {
   prefix: string | null;
   locale: string;
-  modRoleId?: string | null;
-  adminRoleId?: string | null;
-  modLogChannelId?: string | null;
   muteRoleId?: string | null;
   timezone?: string;
-  noMentionSpamWindowMs?: number | null;
-  noMentionSpamLimit?: number | null;
   [key: string]: unknown;
 }
 
@@ -25,6 +20,10 @@ export interface DashboardModuleView {
   configFields: ConfigField[];
   config: Record<string, unknown>;
   isAddon: boolean;
+  /** Sidebar/grid grouping declared by the module's own manifest. */
+  category: string;
+  /** Bespoke dashboard route (relative to `/guild/:id/`), when the module has one instead of the generic config form. */
+  dashboardHref: string | null;
 }
 
 export interface DashboardRoleView {

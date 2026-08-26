@@ -21,6 +21,8 @@ function securityModule(): DashboardModuleView {
     enabled: true,
     isAddon: false,
     config: {},
+    category: "Security",
+    dashboardHref: null,
     configFields: [
       {
         key: "joingate_enabled",
@@ -44,6 +46,8 @@ function modModule(): DashboardModuleView {
     enabled: true,
     isAddon: false,
     config: {},
+    category: "Moderation",
+    dashboardHref: null,
     configFields: [
       {
         key: "log_channel_id",

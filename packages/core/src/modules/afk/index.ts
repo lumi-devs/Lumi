@@ -48,6 +48,7 @@ export async function isAfkNickPrefixEnabled(
   version: "1.0.0",
   description:
     "Set yourself AFK; mentions notify others and a prefix is added to your nickname.",
+  category: "Community",
   configSchema: cfg.object({
     nick_prefix_enabled: cfg.boolean({
       label: "Nickname Prefix",
