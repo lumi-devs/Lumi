@@ -154,12 +154,12 @@ describe("normalizeForMatch", () => {
   it.each([
     ["plain", "you are a badword ok"],
     ["uppercase", "you are a BADWORD ok"],
-    ["zero-width space", "you are a bad​word ok"],
-    ["zero-width joiner", "you are a bad‍word ok"],
-    ["word joiner", "you are a bad⁠word ok"],
-    ["soft hyphen", "you are a bad­word ok"],
+    ["zero-width space", "you are a bad\u200Bword ok"],
+    ["zero-width joiner", "you are a bad\u200Dword ok"],
+    ["word joiner", "you are a bad\u2060word ok"],
+    ["soft hyphen", "you are a bad\u00ADword ok"],
     ["fullwidth", "you are a ｂａｄｗｏｒｄ ok"],
-    ["combining mark", "you are a b́adword ok"],
+    ["combining mark", "you are a b\u0301adword ok"],
   ])("catches %s evasion", (_label, content) => {
     expect(hit(content)).toEqual({ rule: "term", detail: "badword" });
   });
@@ -169,6 +169,6 @@ describe("normalizeForMatch", () => {
   });
 
   it("drops terms that normalize away to nothing", () => {
-    expect(evaluateTerms(rules({ terms: ["​"] }), "anything")).toBeNull();
+    expect(evaluateTerms(rules({ terms: ["\u200B"] }), "anything")).toBeNull();
   });
 });

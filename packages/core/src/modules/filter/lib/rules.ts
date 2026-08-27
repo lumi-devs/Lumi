@@ -80,7 +80,8 @@ export function screenRegexRules(
   return out;
 }
 
-const INVISIBLE_RE = /[­​-‏⁠-⁤﻿]/gu;
+/** Soft hyphen, the zero-width/bidi block, word joiner, invisible operators, BOM. */
+const INVISIBLE_RE = /[\u00AD\u200B-\u200F\u2060-\u2064\uFEFF]/gu;
 
 /**
  * Fold a string to its bare matchable form. Must be applied to both configured
@@ -88,11 +89,12 @@ const INVISIBLE_RE = /[­​-‏⁠-⁤﻿]/gu;
  * silently stops matching.
  *
  * NFKD splits accents and expands fullwidth/styled forms to ASCII; stripping
- * \p{M} then drops the loose combining marks. Without this, `b​ad`,
- * `ｂａｄ` and `b́ad` all sail past a term list containing `bad`.
+ * \p{M} then drops the loose combining marks. Without this, a term list
+ * containing `bad` is evaded by inserting a zero-width space, by using the
+ * fullwidth forms, or by hanging a combining accent off the first letter.
  *
- * Does not cover cross-script homoglyphs (Cyrillic `е` vs Latin `e`) - those
- * are distinct codepoints and need a confusables table, tracked separately.
+ * Does not cover cross-script homoglyphs (Cyrillic vs Latin `e`) - those are
+ * distinct codepoints and need a confusables table, tracked separately.
  */
 export function normalizeForMatch(input: string): string {
   return input
