@@ -69,20 +69,34 @@ export class FilterMessageListener extends GuildMessageListener {
     );
     if (!activated) return;
 
-    const { modified } = await lockAllTextChannels(message.guild);
-    await scheduleTask(
-      "filter-auto-lockdown-unlock",
-      { guildId: message.guildId },
-      {
-        repeated: false,
-        delay: config.lockdownDurationMinutes * 60_000,
-        customJobOptions: {
-          jobId: `filter-auto-lockdown-unlock:${message.guildId}`,
-          removeOnComplete: true,
-          removeOnFail: true,
+    // Schedule the unlock before locking anything. If this fails there is no
+    // restart reconciliation for filter lockdowns, so locking first would leave
+    // the guild silently locked until an admin noticed - worse than the raid.
+    // A stray unlock job for a guild that never got locked is a no-op.
+    try {
+      await scheduleTask(
+        "filter-auto-lockdown-unlock",
+        { guildId: message.guildId },
+        {
+          repeated: false,
+          delay: config.lockdownDurationMinutes * 60_000,
+          customJobOptions: {
+            jobId: `filter-auto-lockdown-unlock:${message.guildId}`,
+            removeOnComplete: true,
+            removeOnFail: true,
+          },
         },
-      },
-    ).catch(swallow("Filter: schedule auto-lockdown unlock"));
+      );
+    } catch (err) {
+      this.container.logger.error(
+        `[Filter] Could not schedule auto-lockdown unlock for guild ${message.guildId}; skipping the lockdown rather than risk locking it indefinitely.`,
+        err,
+      );
+      await this.filterService.releaseAutoLockdown(message.guildId);
+      return;
+    }
+
+    const { modified } = await lockAllTextChannels(message.guild);
 
     await this.#logHeat(
       message,

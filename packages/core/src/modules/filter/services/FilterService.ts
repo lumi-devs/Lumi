@@ -444,6 +444,11 @@ export class FilterService extends Service {
     return activated === "OK";
   }
 
+  /** Undo `activateAutoLockdown` when the lockdown could not actually be carried out. */
+  public async releaseAutoLockdown(guildId: string): Promise<void> {
+    await this.redis.del(RedisKeys.filterAutoLockdown(guildId));
+  }
+
   /** Mark a guild as most-recently-used and return its rule set. */
   #touch(guildId: string): CompiledRules | null {
     const rules = this._guilds.get(guildId) ?? null;

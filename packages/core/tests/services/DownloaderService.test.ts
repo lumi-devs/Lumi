@@ -193,7 +193,7 @@ describe("DownloaderService", () => {
 
     it("throws ModuleAlreadyInstalledError if module is already installed", async () => {
       mockDb.downloader.readDownloaderRepo.mockResolvedValue({ id: "r1-id" });
-      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id" });
+      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id", repoId: "r1-id" });
       await expect(service.installModule("r1", "m1")).rejects.toThrow(ModuleAlreadyInstalledError);
     });
 
@@ -246,27 +246,27 @@ describe("DownloaderService", () => {
     });
 
     it("uninstalls module, removes directory, and deletes DB record", async () => {
-      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id" });
+      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id", repoId: "r1-id" });
 
       await service.uninstallModule("m1");
 
       expect(mockModuleStore.unload).toHaveBeenCalledWith("m1");
       expect(fs.rm).toHaveBeenCalledWith("/mock/addon_modules/m1", { recursive: true, force: true });
-      expect(mockDb.downloader.deleteInstalledDownloaderModule).toHaveBeenCalledWith("m1");
+      expect(mockDb.downloader.deleteInstalledDownloaderModule).toHaveBeenCalledWith("r1-id", "m1");
     });
 
     it("ignores 'does not exist' error during unload", async () => {
-      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id" });
+      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id", repoId: "r1-id" });
       mockModuleStore.unload.mockRejectedValue(new Error("Module does not exist in store"));
 
       await service.uninstallModule("m1");
 
       expect(fs.rm).toHaveBeenCalled();
-      expect(mockDb.downloader.deleteInstalledDownloaderModule).toHaveBeenCalledWith("m1");
+      expect(mockDb.downloader.deleteInstalledDownloaderModule).toHaveBeenCalledWith("r1-id", "m1");
     });
 
     it("rethrows non-'does not exist' error during unload", async () => {
-      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id" });
+      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id", repoId: "r1-id" });
       mockModuleStore.unload.mockRejectedValue(new Error("Unload crash"));
 
       await expect(service.uninstallModule("m1")).rejects.toThrow("Unload crash");
@@ -579,7 +579,7 @@ describe("DownloaderService", () => {
     });
 
     it("enables/disables the module via the ModuleStore and re-syncs commands", async () => {
-      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id" });
+      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id", repoId: "r1-id" });
       const syncSpy = vi.spyOn(service, "syncApplicationCommands").mockResolvedValue(undefined);
 
       await service.toggleModule("m1", false);
@@ -616,7 +616,7 @@ describe("DownloaderService", () => {
         name: "r1",
         installedModules: [{ moduleName: "m1" }],
       });
-      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id" });
+      mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id", repoId: "r1-id" });
 
       await service.removeRepo("r1");
 
