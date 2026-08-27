@@ -9,5 +9,10 @@ export {
   formatDuration,
 } from "#utilities/time.js";
 export { errorFrom, swallow, logError } from "#utilities/errors.js";
-export { acquireRedisLock, type RedisLockOptions } from "#core/lib/redis-lock.js";
+export {
+  acquireRedisLock,
+  verifyRedisLock,
+  type RedisLock,
+  type RedisLockOptions,
+} from "#core/lib/redis-lock.js";
 export type { GuildMessage } from "#lib/types.js";

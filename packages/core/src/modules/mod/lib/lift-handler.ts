@@ -15,7 +15,7 @@ export async function handleModLiftFire(
   // The fire stream is at-least-once (XAUTOCLAIM can redeliver a fire that is
   // still running elsewhere), so the active-check and the lift have to be
   // mutually exclusive across processes - otherwise the same case unbans twice.
-  const release = await acquireRedisLock(
+  const { release } = await acquireRedisLock(
     container.redis,
     `lumi:lock:mod-lift:${payload.caseId}`,
     { ttlMs: 30_000, acquireTimeoutMs: 60_000 },

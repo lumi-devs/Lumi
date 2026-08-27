@@ -34,7 +34,7 @@ export class QuarantineAction {
     }
 
     const key = RedisKeys.quarantineState(guild.id, targetMember.id);
-    const release = await acquireRedisLock(container.redis, `${key}:lock`);
+    const { release } = await acquireRedisLock(container.redis, `${key}:lock`);
     try {
       if (await container.redis.exists(key)) {
         throw new Error("ALREADY_QUARANTINED");
@@ -93,7 +93,7 @@ export class QuarantineAction {
     const { guild, targetMember, moderator, reason } = options;
 
     const key = RedisKeys.quarantineState(guild.id, targetMember.id);
-    const release = await acquireRedisLock(container.redis, `${key}:lock`);
+    const { release } = await acquireRedisLock(container.redis, `${key}:lock`);
     try {
       const saved = await container.redis.get(key);
       if (!saved) {
