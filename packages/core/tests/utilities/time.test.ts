@@ -7,6 +7,10 @@ describe("time utilities", () => {
     expect(formatDuration(90000)).toBe("1m");
   });
 
+  it("formatDuration clamps negative input to 0s", () => {
+    expect(formatDuration(-5000)).toBe("0s");
+  });
+
   it("parseDuration", () => {
     expect(parseDuration("1m")).toBe(60000);
     expect(parseDuration("2h30m")).toBe(9000000);

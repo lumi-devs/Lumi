@@ -27,7 +27,7 @@ export const AFK_REMOVAL_COOLDOWN_MS = 2_000;
 export const AFK_NICK_EDIT_COOLDOWN_MS = 1_000;
 
 export function afkDurationSince(since: Date): string {
-  return formatDuration(Math.max(0, Date.now() - since.getTime()));
+  return formatDuration(Date.now() - since.getTime());
 }
 
 export async function isAfkNickPrefixEnabled(
