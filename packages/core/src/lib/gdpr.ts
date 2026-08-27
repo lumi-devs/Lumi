@@ -1,18 +1,32 @@
 import { container } from "@sapphire/framework";
 
-/** Module hooks run before the core deletion so they can still resolve rows the core delete is about to remove. */
+export interface GdprDeletionResult {
+  /** Modules whose `deleteUserData` hook rejected; their data may still exist. */
+  failedModules: string[];
+}
+
+/**
+ * Module hooks run before the core deletion so they can still resolve rows the
+ * core delete is about to remove.
+ *
+ * A failing module hook does not abort the core deletion - partial erasure
+ * beats none - but it is reported so the caller can retry or escalate rather
+ * than record the request as fully satisfied.
+ */
 export async function executeGdprDeletion(
   userId: string,
   requester?: string,
-): Promise<void> {
+): Promise<GdprDeletionResult> {
   const modules = Array.from(container.moduleStore.values());
   const results = await Promise.allSettled(
     modules.map((m) => m.deleteUserData(userId, requester)),
   );
 
+  const failedModules: string[] = [];
   for (let i = 0; i < results.length; i++) {
     const res = results[i]!;
     if (res.status === "rejected") {
+      failedModules.push(modules[i]!.name);
       container.logger.error(
         `[GDPR] Module '${modules[i]!.name}' failed deleteUserData for ${userId}:`,
         res.reason,
@@ -21,6 +35,8 @@ export async function executeGdprDeletion(
   }
 
   await container.db.deleteUserData(userId);
+
+  return { failedModules };
 }
 
 /** Keyed by module name (core data under `"core"`); modules returning `null` are omitted. */

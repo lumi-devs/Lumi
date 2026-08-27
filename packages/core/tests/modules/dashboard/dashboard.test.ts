@@ -21,6 +21,7 @@ describe("dashboard module RPC handlers", () => {
       ownerId: OWNER_ID,
       name: "Test Guild",
       iconURL: vi.fn().mockReturnValue("https://example.com/icon.png"),
+      bannerURL: vi.fn().mockReturnValue("https://example.com/banner.png"),
       roles: {
         cache: new Collection([
           [

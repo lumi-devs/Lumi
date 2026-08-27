@@ -180,6 +180,10 @@ export class RedisEntityCache {
     });
   }
 
+  public async deleteUser(id: string): Promise<void> {
+    await this.redis.del(RedisKeys.entityUser(id));
+  }
+
   public async member(
     guildId: string,
     userId: string,
