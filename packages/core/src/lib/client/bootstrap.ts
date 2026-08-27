@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 import { shutdownTracing, runDrainSequence } from "@lumi/observability";
 import { LumiClient } from "./LumiClient.js";
-import { envParseString } from "#lib/env.js";
+import { envParseString, validateRequiredEnv } from "#lib/env.js";
 import { logError, errorFrom } from "#lib/utilities/errors.js";
 
 export interface BootstrapAppOptions extends LumiClient.Options {
@@ -37,6 +37,15 @@ export function registerProcessErrorHandlers(): void {
 export async function bootstrapClientApp(
   options: BootstrapAppOptions = {},
 ): Promise<LumiClient> {
+  try {
+    validateRequiredEnv(["BOT_TOKEN", "APPEAL_TOKEN_SECRET"]);
+  } catch (err: unknown) {
+    console.error(
+      `[Lumi] Fatal during bootstrap: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    process.exit(1);
+  }
+
   registerProcessErrorHandlers();
 
   const onlineMsg = options.onlineMessage ?? "[Lumi] Online";

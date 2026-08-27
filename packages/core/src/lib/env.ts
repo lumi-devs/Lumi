@@ -23,6 +23,19 @@ export function envParseInteger(key: string, defaultValue?: number): number {
 
 export const envIsDefined = (key: string) => Boolean(process.env[key]);
 
+/**
+ * Fails fast on every missing key at once, instead of the first caller of
+ * `envParseString`/`envParseInteger` for that key surfacing it mid-request.
+ */
+export function validateRequiredEnv(keys: readonly string[]): void {
+  const missing = keys.filter((key) => process.env[key] === undefined);
+  if (missing.length > 0) {
+    throw new Error(
+      `[ENV] Missing required environment variable(s): ${missing.join(", ")}`,
+    );
+  }
+}
+
 export function getConsumerId(): string {
   return (
     process.env["LUMI_CONSUMER_ID"] ??
