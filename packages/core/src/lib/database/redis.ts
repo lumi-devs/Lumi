@@ -68,7 +68,12 @@ export const RedisKeys = {
 
   botStats: () => "lumi:stats:bot",
 
-  auditLogsQueue: () => "lumi:queue:audit_logs",
+  /**
+   * Bucketed so the whole fleet does not XADD to one key. The braces are a
+   * Redis Cluster hash tag: each bucket hashes on its own number, so buckets
+   * land on different slots instead of one node absorbing every audit write.
+   */
+  auditLogsQueue: (bucket: number) => `lumi:queue:audit_logs:{${bucket}}`,
 
   schedulerLeader: () => "lumi:scheduler:leader",
 

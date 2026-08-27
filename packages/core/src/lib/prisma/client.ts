@@ -5,11 +5,13 @@ import { container } from "@sapphire/framework";
 import { Stopwatch } from "@sapphire/stopwatch";
 import { pgPoolSize, pgPoolUsed, pgPoolWaiting } from "@lumi/observability";
 
-const POOL_MAX = Number(process.env.POSTGRES_POOL_MAX ?? 10);
+import { resolvePgPoolSize } from "#lib/env.js";
+
+const POOL_MAX = resolvePgPoolSize();
 
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
-  max: Number.isFinite(POOL_MAX) && POOL_MAX > 0 ? POOL_MAX : 10,
+  max: POOL_MAX,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
 });
