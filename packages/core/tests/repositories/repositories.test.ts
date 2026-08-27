@@ -129,12 +129,37 @@ describe('ModerationRepository Tests', () => {
     });
   });
 
-  it('getActiveExpiringCases queries all active cases with non-null expiry', async () => {
+  it('iterateActiveExpiringCases keyset-paginates active cases with non-null expiry', async () => {
     mockPrisma.moderationCase.findMany.mockResolvedValue([{ id: 1, expiresAt: new Date() }]);
-    const res = await repo.getActiveExpiringCases();
-    expect(res).toHaveLength(1);
+
+    const pages = [];
+    for await (const page of repo.iterateActiveExpiringCases()) pages.push(page);
+
+    expect(pages).toHaveLength(1);
+    expect(pages[0]).toHaveLength(1);
     expect(mockPrisma.moderationCase.findMany).toHaveBeenCalledWith({
       where: { active: true, expiresAt: { not: null } },
+      orderBy: { id: 'asc' },
+      take: 500,
+    });
+  });
+
+  it('iterateActiveExpiringCases advances the cursor past the last id of a full page', async () => {
+    const full = Array.from({ length: 500 }, (_, i) => ({ id: i + 1 }));
+    mockPrisma.moderationCase.findMany
+      .mockResolvedValueOnce(full)
+      .mockResolvedValueOnce([{ id: 501 }]);
+
+    const seen = [];
+    for await (const page of repo.iterateActiveExpiringCases()) seen.push(page.length);
+
+    expect(seen).toEqual([500, 1]);
+    expect(mockPrisma.moderationCase.findMany).toHaveBeenLastCalledWith({
+      where: { active: true, expiresAt: { not: null } },
+      orderBy: { id: 'asc' },
+      take: 500,
+      cursor: { id: 500 },
+      skip: 1,
     });
   });
 

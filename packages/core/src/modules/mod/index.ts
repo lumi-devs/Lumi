@@ -64,11 +64,14 @@ export class ModModule extends Module {
   }
 
   public override async reconcileScheduledJobs(): Promise<void> {
-    const cases = await this.container.db.moderation.getActiveExpiringCases();
-    await Promise.all(cases.map((c) => scheduleCaseLift(this.container, c)));
-    if (cases.length > 0) {
+    let armed = 0;
+    for await (const page of this.container.db.moderation.iterateActiveExpiringCases()) {
+      await Promise.all(page.map((c) => scheduleCaseLift(this.container, c)));
+      armed += page.length;
+    }
+    if (armed > 0) {
       this.container.logger.debug(
-        `[mod] Re-armed ${cases.length} expiry job(s) on load.`,
+        `[mod] Re-armed ${armed} expiry job(s) on load.`,
       );
     }
   }

@@ -14,6 +14,15 @@ const AUDIT_CONSUMER = `${hostname()}:${process.pid}`;
 /** How long a delivered-but-unacked entry must sit before another run reclaims it. */
 const STALE_PENDING_MS = 60_000;
 
+/**
+ * Approximate cap on the buffer stream. If the flush task stops - a crash loop,
+ * a Postgres outage - the stream would otherwise grow without bound and take
+ * the cache tier down with it. At ~200 bytes an entry this is roughly 100 MB of
+ * headroom, far more than a healthy flush ever accumulates, so trimming only
+ * ever discards the oldest entries of an already-broken backlog.
+ */
+const AUDIT_STREAM_MAXLEN = 500_000;
+
 export interface AuditLogPayload {
   guildId: string;
   userId: string;
@@ -39,6 +48,9 @@ export class AuditRepository extends Repository {
   public async queueAuditLog(payload: AuditLogPayload) {
     await this.redis.xadd(
       RedisKeys.auditLogsQueue(),
+      "MAXLEN",
+      "~",
+      AUDIT_STREAM_MAXLEN,
       "*",
       "payload",
       JSON.stringify(payload),
@@ -50,7 +62,15 @@ export class AuditRepository extends Repository {
     const pipeline = this.redis.pipeline();
     const key = RedisKeys.auditLogsQueue();
     for (const payload of payloads) {
-      pipeline.xadd(key, "*", "payload", JSON.stringify(payload));
+      pipeline.xadd(
+        key,
+        "MAXLEN",
+        "~",
+        AUDIT_STREAM_MAXLEN,
+        "*",
+        "payload",
+        JSON.stringify(payload),
+      );
     }
     await pipeline.exec();
   }
