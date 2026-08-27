@@ -2,9 +2,10 @@ import { container } from "@sapphire/framework";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { formatAuditReason } from "#lib/utilities/misc.js";
-import { logToChannel, scheduleCaseLift, liftAllActiveCases } from "../lib/helpers.js";
+import { liftAllActiveCases } from "../lib/helpers.js";
 import { errorCode } from "#lib/utilities/errors.js";
 import { RedisKeys } from "#database/redis.js";
+import { runModerationAction } from "../lib/runModerationAction.js";
 
 export interface VoiceMuteApplyOptions {
   guild: Guild;
@@ -26,36 +27,36 @@ export class VoiceMuteAction {
     const { guild, targetMember, moderator, reason, durationMs } = options;
     const auditReason = formatAuditReason(moderator, reason);
 
-    await targetMember.voice.setMute(true, auditReason);
-    if (targetMember.voice.channel) {
-      await targetMember.voice.disconnect(auditReason);
-    }
-
     const expiresAt = new Date(Date.now() + durationMs);
 
-    const c = await container.db.moderation.createModerationCase({
-      guildId: guild.id,
-      userId: targetMember.id,
-      moderatorId: moderator.id,
-      action: "voice_mute",
-      reason,
-      durationSeconds: Math.floor(durationMs / 1000),
-      expiresAt,
+    return runModerationAction({
+      perform: async () => {
+        await targetMember.voice.setMute(true, auditReason);
+        if (targetMember.voice.channel) {
+          await targetMember.voice.disconnect(auditReason);
+        }
+
+        return container.db.moderation.createModerationCase({
+          guildId: guild.id,
+          userId: targetMember.id,
+          moderatorId: moderator.id,
+          action: "voice_mute",
+          reason,
+          durationSeconds: Math.floor(durationMs / 1000),
+          expiresAt,
+        });
+      },
+      scheduleLift: true,
+      log: (c) => ({
+        guildId: guild.id,
+        label: "🎙️ Voice Muted",
+        color: Colors.Orange,
+        targetId: targetMember.id,
+        moderator,
+        reason,
+        caseNumber: c.caseNumber,
+      }),
     });
-
-    await scheduleCaseLift(container, c);
-
-    await logToChannel(
-      guild.id,
-      "🎙️ Voice Muted",
-      Colors.Orange,
-      targetMember.id,
-      moderator,
-      reason,
-      c.caseNumber,
-    );
-
-    return c;
   }
 
   public static async undo(options: VoiceMuteUndoOptions) {
@@ -68,29 +69,30 @@ export class VoiceMuteAction {
     }
     const auditReason = formatAuditReason(moderator, reason);
 
-    await targetMember.voice.setMute(false, auditReason);
+    return runModerationAction({
+      perform: async () => {
+        await targetMember.voice.setMute(false, auditReason);
 
-    const c = await liftAllActiveCases(
-      container,
-      guild,
-      targetMember.id,
-      "voice_mute",
-      "unvoice_mute",
-      moderator.id,
-      reason,
-    );
-
-    await logToChannel(
-      guild.id,
-      "🎙️ Voice Unmuted",
-      Colors.Green,
-      targetMember.id,
-      moderator,
-      reason,
-      c.caseNumber,
-    );
-
-    return c;
+        return liftAllActiveCases(
+          container,
+          guild,
+          targetMember.id,
+          "voice_mute",
+          "unvoice_mute",
+          moderator.id,
+          reason,
+        );
+      },
+      log: (c) => ({
+        guildId: guild.id,
+        label: "🎙️ Voice Unmuted",
+        color: Colors.Green,
+        targetId: targetMember.id,
+        moderator,
+        reason,
+        caseNumber: c.caseNumber,
+      }),
+    });
   }
 
   public static async undoRaw(
