@@ -7,7 +7,7 @@ import {
   type Guild,
   type GuildMember,
 } from "discord.js";
-import { isNullish, tryParseJSON } from "@sapphire/utilities";
+import { isNullish, tryParseJSON, type Awaitable } from "@sapphire/utilities";
 import { Service, tryGetService } from "#lib/module-system/Service.js";
 import { RedisKeys } from "#database/redis.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
@@ -357,6 +357,32 @@ export class SecurityService extends Service {
         "security",
       );
     }
+  }
+
+  /**
+   * Shared anti-nuke tail: load config, bail if disabled, resolve the
+   * executor only once anti-nuke is confirmed on, check they aren't exempt,
+   * record the action, and respond if it tripped the limit.
+   */
+  public async evaluateNukeEvent(
+    guild: Guild,
+    kind: NukeKind,
+    resolveExecutorId: () => Awaitable<string | null | undefined>,
+  ): Promise<void> {
+    const config = await this.loadAntiNukeConfig(guild.id);
+    if (!config.enabled) return;
+
+    const executorId = await resolveExecutorId();
+    if (isNullish(executorId)) return;
+    if (await this.isExempt(guild, executorId, config)) return;
+
+    const count = await this.recordAction(guild, executorId, kind, config);
+    if (count === null) return;
+
+    this.logger.warn(
+      `[security] Anti-nuke tripped in ${guild.id}: ${executorId} triggered ${kind} ${count} time(s)`,
+    );
+    await this.respond(guild, executorId, kind, count, config);
   }
 
   public async isQuarantined(guildId: string, userId: string): Promise<boolean> {

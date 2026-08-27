@@ -1,7 +1,6 @@
 import { Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { AuditLogEvent, type Role } from "discord.js";
-import { isNullish } from "@sapphire/utilities";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetService } from "#lib/module-system/Service.js";
 import { swallow } from "#lib/utilities/errors.js";
@@ -34,30 +33,8 @@ export class SecurityRoleUpdateListener extends ModuleListener<
       "Security: reverted dangerous permission grant on @everyone",
     ).catch(swallow("Security: revert @everyone permissions"));
 
-    const config = await security.loadAntiNukeConfig(newRole.guild.id);
-    if (!config.enabled) return;
-
-    const executorId = await resolveAuditLogExecutor(newRole.guild, AuditLogEvent.RoleUpdate, newRole.id);
-    if (isNullish(executorId)) return;
-    if (await security.isExempt(newRole.guild, executorId, config)) return;
-
-    const count = await security.recordAction(
-      newRole.guild,
-      executorId,
-      "dangerous_permission_grant",
-      config,
-    );
-    if (count === null) return;
-
-    this.container.logger.warn(
-      `[security] Anti-nuke tripped in ${newRole.guild.id}: ${executorId} granted @everyone a dangerous permission ${count} time(s)`,
-    );
-    await security.respond(
-      newRole.guild,
-      executorId,
-      "dangerous_permission_grant",
-      count,
-      config,
+    await security.evaluateNukeEvent(newRole.guild, "dangerous_permission_grant", () =>
+      resolveAuditLogExecutor(newRole.guild, AuditLogEvent.RoleUpdate, newRole.id),
     );
   }
 

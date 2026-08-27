@@ -45,16 +45,6 @@ export class SecurityAuditLogListener extends ModuleListener<
       await security.flagRestorePending(guild.id);
     }
 
-    const config = await security.loadAntiNukeConfig(guild.id);
-    if (!config.enabled) return;
-    if (await security.isExempt(guild, executorId, config)) return;
-
-    const count = await security.recordAction(guild, executorId, kind, config);
-    if (count === null) return;
-
-    this.container.logger.warn(
-      `[security] Anti-nuke tripped in ${guild.id}: ${executorId} performed ${count} ${kind} actions`,
-    );
-    await security.respond(guild, executorId, kind, count, config);
+    await security.evaluateNukeEvent(guild, kind, () => executorId);
   }
 }
