@@ -1,28 +1,11 @@
-import {
-  Listener,
-  Events,
-  type ContextMenuCommandErrorPayload,
-} from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "@sapphire/framework";
 import type { RepliableInteraction } from "discord.js";
-import { errorCard, respond } from "#lib/utilities/command-response.js";
+import { respond } from "#lib/utilities/command-response.js";
+import { createErrorListener } from "#modules/core/lib/command-listener-factory.js";
 
-@ApplyOptions<Listener.Options>({ event: Events.ContextMenuCommandError })
-export class ContextMenuCommandErrorListener extends Listener<
-  typeof Events.ContextMenuCommandError
-> {
-  public async run(
-    error: unknown,
-    { interaction, command }: ContextMenuCommandErrorPayload,
-  ) {
-    const { card } = errorCard(`ContextMenu:${command.name}`, error);
-    try {
-      await respond(interaction as RepliableInteraction, card);
-    } catch (err: unknown) {
-      this.container.logger.error(
-        `[ContextMenu:${command.name}] Failed to send error card:`,
-        err,
-      );
-    }
-  }
-}
+export const ContextMenuCommandErrorListener = createErrorListener(
+  Events.ContextMenuCommandError,
+  "ContextMenu",
+  (payload) => payload.interaction as RepliableInteraction,
+  respond,
+);

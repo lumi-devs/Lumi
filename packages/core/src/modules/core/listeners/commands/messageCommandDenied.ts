@@ -1,17 +1,7 @@
-import {
-  Listener,
-  Events,
-  type UserError,
-  type MessageCommandDeniedPayload,
-} from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
-import { handleDenied } from "#lib/utilities/command-response.js";
+import { Events } from "@sapphire/framework";
+import { createDeniedListener } from "#modules/core/lib/command-listener-factory.js";
 
-@ApplyOptions<Listener.Options>({ event: Events.MessageCommandDenied })
-export class MessageCommandDeniedListener extends Listener<
-  typeof Events.MessageCommandDenied
-> {
-  public async run(error: UserError, payload: MessageCommandDeniedPayload) {
-    return handleDenied(payload.message, error, payload);
-  }
-}
+export const MessageCommandDeniedListener = createDeniedListener(
+  Events.MessageCommandDenied,
+  (payload) => payload.message,
+);
