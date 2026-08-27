@@ -186,9 +186,11 @@ model ModerationCase {
   @@index([moderatorId]) // GDPR anonymization + cross-guild moderator lookups
   @@index([guildId, active, expiresAt]) // per-guild expiry sweep
   // The startup re-arm and warn decay sweep every guild at once, so they cannot
-  // use any guildId-leading index.
-  @@index([active, expiresAt])
-  @@index([action, active])
+  // use any guildId-leading index. Both paginate on id, so id is part of the
+  // index: without it Postgres index-scans and then sorts every matching row
+  // just to take one page.
+  @@index([active, id])
+  @@index([action, active, id])
   @@map("moderation_cases")
 }
 
