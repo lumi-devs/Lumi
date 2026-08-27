@@ -14,7 +14,7 @@ import {
 } from "#utilities/cards.js";
 import { getVcRecord, patchVcRecord } from "#modules/tempvc/data.js";
 import { TVC } from "#modules/tempvc/keys.js";
-import { assertOwner } from "#modules/tempvc/lib/panel-helpers.js";
+import { resolveOwnedVc } from "#modules/tempvc/panel-guard.js";
 import type TempVcService from "#modules/tempvc/services/TempVcService.js";
 import { buildBackRows, buildPanel } from "#modules/tempvc/ui/panel.js";
 
@@ -43,14 +43,18 @@ export class TempVcPanelModalHandler extends BaseInteractionHandler {
     if (!interaction.inGuild()) return;
     await interaction.deferUpdate();
 
-    const channel = interaction.guild?.channels.cache.get(channelId);
-    if (!channel || !channel.isVoiceBased()) return;
-
-    const record = await getVcRecord(interaction.guildId, channelId);
-    if (!record) return;
     const member = interaction.member as GuildMember;
     const t = await fetchTyped(interaction);
-    assertOwner(this.service, member, channel, record.ownerId, t);
+    const resolved = await resolveOwnedVc(
+      interaction.guild,
+      interaction.guildId,
+      channelId,
+      this.service,
+      member,
+      t,
+    );
+    if (!resolved) return;
+    const { channel } = resolved;
 
     if (kind === "namem") {
       const name = interaction.fields.getTextInputValue("name").trim();
