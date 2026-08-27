@@ -154,7 +154,16 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
     t?: LumiT,
   ): Promise<void> {
     const { id, guildId } = channel;
-    await channel.delete("Deleted by owner via panel").catch(() => null);
+    const deleted = await channel
+      .delete("Deleted by owner via panel")
+      .then(() => true)
+      .catch(() => false);
+    if (!deleted) {
+      throw new UserError({
+        identifier: "TempVcDeleteFailed",
+        message: `${Emojis.CROSS} Failed to delete the voice channel. Try again.`,
+      });
+    }
     if (guildId) await removeVcRecord(guildId, id);
     await interaction
       .editReply({

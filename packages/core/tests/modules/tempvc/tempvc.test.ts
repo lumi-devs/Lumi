@@ -207,6 +207,49 @@ describe("TempVcService", () => {
       expect(mockChannel.delete).toHaveBeenCalledWith("Temp VC owner left before move");
       expect(setVcRecord).not.toHaveBeenCalled();
     });
+
+    it("deletes the created VC if setVcRecord fails", async () => {
+      const mockChannel = {
+        id: "vc-123",
+        guild: { id: "guild-1" },
+        parentId: "cat-123",
+        delete: vi.fn().mockResolvedValue(true),
+        send: vi.fn().mockResolvedValue(true),
+      };
+
+      const mockGuild = {
+        id: "guild-1",
+        channels: {
+          cache: { has: vi.fn(() => true) },
+          create: vi.fn().mockResolvedValue(mockChannel),
+        },
+      };
+
+      const mockMember = {
+        id: "member-1",
+        user: { tag: "User#1234" },
+        guild: mockGuild,
+        voice: { setChannel: vi.fn().mockResolvedValue(true) },
+      };
+
+      const mockGenerator = {
+        id: "gen-123",
+        parentId: "cat-123",
+        isVoiceBased: () => true,
+      };
+
+      (tempVcRegistry.nextNumber as any).mockResolvedValue(2);
+      (setVcRecord as any).mockRejectedValue(new Error("DB write failed"));
+
+      await expect(
+        service.createVc(mockMember as any, mockGenerator as any, {
+          name: "Gaming {}",
+          limit: 5,
+        })
+      ).rejects.toThrow("DB write failed");
+
+      expect(mockChannel.delete).toHaveBeenCalledWith("Temp VC record write failed");
+    });
   });
 
   describe("reorderChannels", () => {
@@ -422,8 +465,11 @@ describe("TempVcService", () => {
   });
 
   describe("reconcileGuild", () => {
-    it("scans guild vc records and schedules cleanup for each channel", async () => {
-      const mockGuild = { id: "guild-1" };
+    it("scans guild vc records and schedules cleanup for each channel that still exists", async () => {
+      const mockGuild = {
+        id: "guild-1",
+        channels: { cache: new Map([["vc-1", {}], ["vc-2", {}]]) },
+      };
       (listVcRecords as any).mockResolvedValue(
         new Map([
           ["vc-1", {} as any],
@@ -441,6 +487,35 @@ describe("TempVcService", () => {
       expect(scheduleTask).toHaveBeenCalledWith(
         "tempvc-cleanup",
         { guildId: "guild-1", channelId: "vc-2" },
+        expect.any(Object)
+      );
+      expect(removeVcRecord).not.toHaveBeenCalled();
+    });
+
+    it("removes records whose channel no longer exists instead of scheduling cleanup", async () => {
+      const mockGuild = {
+        id: "guild-1",
+        channels: { cache: new Map([["vc-1", {}]]) },
+      };
+      (listVcRecords as any).mockResolvedValue(
+        new Map([
+          ["vc-1", {} as any],
+          ["vc-gone", {} as any],
+        ])
+      );
+      (removeVcRecord as any).mockResolvedValue(undefined);
+
+      await service.reconcileGuild(mockGuild as any);
+
+      expect(removeVcRecord).toHaveBeenCalledWith("guild-1", "vc-gone");
+      expect(scheduleTask).toHaveBeenCalledWith(
+        "tempvc-cleanup",
+        { guildId: "guild-1", channelId: "vc-1" },
+        expect.any(Object)
+      );
+      expect(scheduleTask).not.toHaveBeenCalledWith(
+        "tempvc-cleanup",
+        { guildId: "guild-1", channelId: "vc-gone" },
         expect.any(Object)
       );
     });
