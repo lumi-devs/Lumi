@@ -15,6 +15,7 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { Emojis } from "#lib/utilities/assets.js";
+import { fitLines } from "./cards.js";
 import type { CardReply } from "./ui/types.js";
 
 export interface PaginationOptions {
@@ -178,7 +179,7 @@ export async function paginateList(options: PaginateListOptions) {
       );
 
       const slice = items.slice(pageIndex * perPage, (pageIndex + 1) * perPage);
-      const body = slice.length ? slice.join("\n") : "*Nothing here yet.*";
+      const body = slice.length ? fitLines(slice) : "*Nothing here yet.*";
 
       c.addTextDisplayComponents(new TextDisplayBuilder().setContent(body));
 

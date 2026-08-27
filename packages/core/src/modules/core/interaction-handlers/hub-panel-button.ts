@@ -156,6 +156,8 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
         }
         return undefined;
       }
+      case "update_all":
+        return this.#updateAllRepos(interaction, t);
       case "check_core":
         return this.#checkCore(interaction);
       case "update_core":
@@ -165,6 +167,57 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
       default:
         return undefined;
     }
+  }
+
+  /** Backs the "Update Addons" maintenance button: updates every added repo. */
+  async #updateAllRepos(interaction: ButtonInteraction, t?: LumiT) {
+    if (!(await hasOwnerPermit(interaction)))
+      throw new UserError({
+        identifier: "AccessDenied",
+        message: "Only Bot Owners can manage add-ons.",
+      });
+
+    const repos = await this.downloader.listRepos();
+    if (repos.length === 0) {
+      await interaction.followUp(
+        ephemeralCard(
+          makeInfoCard("No Repositories", "No add-on repositories are added."),
+        ),
+      );
+      return this.#renderAddonRepos(interaction, t);
+    }
+
+    const updated: string[] = [];
+    const failed: string[] = [];
+    for (const repo of repos) {
+      try {
+        await this.downloader.updateRepo(repo.name);
+        updated.push(repo.name);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        failed.push(`**${repo.name}** - ${msg}`);
+      }
+    }
+
+    await interaction.followUp(
+      ephemeralCard(
+        failed.length === 0
+          ? makeSuccessCard(
+              "Add-ons Updated",
+              `Updated ${updated.length} repositor${updated.length === 1 ? "y" : "ies"}.`,
+            )
+          : makeErrorCard(
+              "Some Add-ons Failed To Update",
+              [
+                updated.length > 0
+                  ? `Updated: ${updated.join(", ")}`
+                  : "Nothing updated.",
+                ...failed,
+              ].join("\n"),
+            ),
+      ),
+    );
+    return this.#renderAddonRepos(interaction, t);
   }
 
   async #checkCore(interaction: ButtonInteraction) {

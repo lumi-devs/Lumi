@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import type { ContainerBuilder } from "@discordjs/builders";
-import { makeListCard } from "#lib/utilities/cards.js";
+import { makeListCard,
+  fitLines,
+  TEXT_DISPLAY_LIMIT,
+} from "#lib/utilities/cards.js";
 
 describe("cards utility makeListCard", () => {
   it("formats empty item list correctly", () => {
@@ -43,5 +46,26 @@ describe("cards utility makeListCard", () => {
     expect(bodyContent).toContain("• Item 25");
     expect(bodyContent).not.toContain("• Item 26");
     expect(bodyContent).toContain("-# ...and 5 more item(s).");
+  });
+});
+
+describe("fitLines", () => {
+  it("passes short content through unchanged", () => {
+    expect(fitLines(["a", "b", "c"])).toBe("a\nb\nc");
+  });
+
+  it("keeps the body within the TextDisplay limit", () => {
+    const lines = Array.from({ length: 50 }, () => "x".repeat(200));
+    const body = fitLines(lines);
+
+    expect(body.length).toBeLessThanOrEqual(TEXT_DISPLAY_LIMIT);
+    expect(body).toContain("more item(s)");
+  });
+
+  // @discordjs/builders validates this client-side and throws, so overflowing
+  // fails the whole reply rather than being truncated in transit.
+  it("survives a single oversized line", () => {
+    const body = fitLines(["y".repeat(9000)]);
+    expect(body.length).toBeLessThanOrEqual(TEXT_DISPLAY_LIMIT);
   });
 });

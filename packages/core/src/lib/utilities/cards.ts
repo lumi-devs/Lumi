@@ -177,6 +177,40 @@ export const makeCard = (
   opts?: CardOptions,
 ) => wrap(buildContainer(title, body, opts, color || undefined));
 
+/** Discord's per-TextDisplay content limit for Components V2 messages. */
+export const TEXT_DISPLAY_LIMIT = 4000;
+
+/**
+ * Join lines into one TextDisplay body that fits Discord's limit.
+ *
+ * @discordjs/builders validates this client-side and throws, so an oversized
+ * body fails the entire reply rather than being truncated in transit - a
+ * per-item cap is not enough on its own, because enough capped items still
+ * overflow the total.
+ */
+export function fitLines(
+  lines: string[],
+  budget = TEXT_DISPLAY_LIMIT,
+): string {
+  const kept: string[] = [];
+  let used = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    const notice = `-# ...and ${lines.length - i} more item(s).`;
+    const cost = kept.length > 0 ? line.length + 1 : line.length;
+
+    if (used + cost > budget - (notice.length + 1)) {
+      kept.push(notice);
+      break;
+    }
+    kept.push(line);
+    used += cost;
+  }
+
+  return kept.join("\n").slice(0, budget);
+}
+
 export function makeListCard(
   title: string,
   items: string[],
@@ -192,7 +226,7 @@ export function makeListCard(
     if (items.length > maxVisibleItems) {
       lines.push(`-# ...and ${items.length - maxVisibleItems} more item(s).`);
     }
-    bodyParts.push(lines.join("\n"));
+    bodyParts.push(fitLines(lines));
   }
   return makeInfoCard(title, bodyParts, opts);
 }
