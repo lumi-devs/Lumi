@@ -1,4 +1,5 @@
-import type { Redis } from "ioredis";
+import type { RedisClient } from "#lib/database/cluster-safe.js";
+import { scanKeysSafe } from "#lib/database/cluster-safe.js";
 import { type ILogger, container } from "@sapphire/framework";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { Stopwatch } from "@sapphire/stopwatch";
@@ -71,7 +72,7 @@ export class DatabaseService {
 
   public constructor(
     private readonly prisma: DatabaseClient,
-    private readonly redis: Redis,
+    private readonly redis: RedisClient,
     logger: ILogger,
     /** Optional read replica; only the fleet-wide sweeps are routed to it. */
     reader: DatabaseClient = prisma,
@@ -144,19 +145,10 @@ export class DatabaseService {
       this.prisma.user.deleteMany({ where: { id: userId } }),
     ]);
 
-    let cursor = "0";
-    const keys: string[] = [];
-    do {
-      const [next, found] = await this.redis.scan(
-        cursor,
-        "MATCH",
-        RedisKeys.blockedPattern(userId),
-        "COUNT",
-        100,
-      );
-      cursor = next;
-      keys.push(...found);
-    } while (cursor !== "0");
+    const keys = await scanKeysSafe(
+      this.redis,
+      RedisKeys.blockedPattern(userId),
+    );
 
     if (keys.length) {
       await container.invalidation.invalidate(...keys);

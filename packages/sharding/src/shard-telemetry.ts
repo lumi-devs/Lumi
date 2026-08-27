@@ -7,7 +7,10 @@
 // rather than lingering as a stale "Ready", so a shard with no row is unambiguously
 // a shard nobody is running.
 
-import type { Redis } from "ioredis";
+import type { Cluster, Redis } from "ioredis";
+
+/** Either topology - callers may run Redis standalone, Sentinel, or Cluster. */
+type RedisClient = Redis | Cluster;
 import { tryParseJSON } from "@sapphire/utilities";
 
 /** Namespace used when `CLUSTER_NAME` is unset, so single-process deployments still report. */
@@ -38,7 +41,7 @@ export type ShardTelemetrySample = Omit<
 >;
 
 export interface ShardTelemetryPublisherOptions {
-  redis: Redis;
+  redis: RedisClient;
   clusterName: string;
   replicaId: string;
   sample: () => readonly ShardTelemetrySample[];
@@ -144,7 +147,7 @@ export interface ClusterShardsSnapshot {
 const GLOB_SPECIALS = /[*?[\]\\]/g;
 
 export interface ReadClusterShardsOptions {
-  redis: Redis;
+  redis: RedisClient;
   clusterName: string;
   /** SCAN batch size. Default 200. */
   scanCount?: number;
@@ -203,7 +206,7 @@ export async function readClusterShards(
 }
 
 async function scanKeys(
-  redis: Redis,
+  redis: RedisClient,
   pattern: string,
   count: number,
 ): Promise<string[]> {

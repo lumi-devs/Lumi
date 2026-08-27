@@ -1,4 +1,5 @@
 import type { Container } from "@sapphire/framework";
+import { pipelineBySlot } from "#lib/database/cluster-safe.js";
 import { tryParseJSON } from "@sapphire/utilities";
 import { type WarnThresholdAction } from "@lumi/contracts";
 import { parseDuration } from "#lib/utilities/time.js";
@@ -139,11 +140,14 @@ export async function decrementWarnCounts(
   entries: { guildId: string; userId: string }[],
 ): Promise<void> {
   if (entries.length === 0) return;
-  const pipeline = container.redis.pipeline();
-  for (const { guildId, userId } of entries) {
-    pipeline.eval(DECREMENT_WARN_COUNT_SCRIPT, 1, warnCountKey(guildId, userId));
-  }
-  await pipeline.exec();
+  await pipelineBySlot(
+    container.redis,
+    entries,
+    ({ guildId, userId }) => warnCountKey(guildId, userId),
+    (pipe, { guildId, userId }) => {
+      pipe.eval(DECREMENT_WARN_COUNT_SCRIPT, 1, warnCountKey(guildId, userId));
+    },
+  );
 }
 
 export async function resetWarnCount(

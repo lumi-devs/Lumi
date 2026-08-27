@@ -1,4 +1,5 @@
 import type { Blocklist, IgnoreEntry } from "@prisma/client";
+import { pipelineBySlot } from "#lib/database/cluster-safe.js";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
@@ -32,10 +33,17 @@ export class AccessRepository extends Repository {
       ? blocks.some((b) => b.guildId === guildId)
       : false;
 
-    const pipe = this.redis.pipeline();
-    pipe.setex(gKey, RedisTTL.blockedCache, gBlocked ? "1" : "0");
-    if (sKey) pipe.setex(sKey, RedisTTL.blockedCache, sBlocked ? "1" : "0");
-    await pipe.exec();
+    await pipelineBySlot(
+      this.redis,
+      [
+        { key: gKey, value: gBlocked },
+        ...(sKey ? [{ key: sKey, value: sBlocked }] : []),
+      ],
+      (entry) => entry.key,
+      (pipe, entry) => {
+        pipe.setex(entry.key, RedisTTL.blockedCache, entry.value ? "1" : "0");
+      },
+    );
 
     return gBlocked || sBlocked;
   }
@@ -60,10 +68,17 @@ export class AccessRepository extends Repository {
     const guild = rows.some((r) => r.channelId === null);
     const channel = rows.some((r) => r.channelId === channelId);
 
-    const pipe = this.redis.pipeline();
-    pipe.set(gKey, guild ? "1" : "0", "EX", RedisTTL.ignoreCache);
-    pipe.set(cKey, channel ? "1" : "0", "EX", RedisTTL.ignoreCache);
-    await pipe.exec();
+    await pipelineBySlot(
+      this.redis,
+      [
+        { key: gKey, value: guild },
+        { key: cKey, value: channel },
+      ],
+      (entry) => entry.key,
+      (pipe, entry) => {
+        pipe.set(entry.key, entry.value ? "1" : "0", "EX", RedisTTL.ignoreCache);
+      },
+    );
 
     return { guild, channel };
   }

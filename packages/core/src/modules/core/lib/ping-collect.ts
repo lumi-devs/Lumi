@@ -1,4 +1,5 @@
 import os from "node:os";
+import type { RedisClient } from "#lib/database/cluster-safe.js";
 import path from "node:path";
 import { promises as fs, existsSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -6,7 +7,6 @@ import { fileURLToPath } from "node:url";
 import { container } from "@sapphire/framework";
 import { fetch, FetchResultTypes } from "@sapphire/fetch";
 import { Stopwatch } from "@sapphire/stopwatch";
-import type { Redis } from "ioredis";
 import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
 import { logError } from "#lib/utilities/errors.js";
 
@@ -198,13 +198,13 @@ function parseRedisInfo(raw: string) {
   return result;
 }
 
-async function probeRedisRead(redis: Redis) {
+async function probeRedisRead(redis: RedisClient) {
   const sw = new Stopwatch();
   await redis.get("lumi:ping:probe");
   return sw.stop().duration;
 }
 
-async function probeRedisWrite(redis: Redis) {
+async function probeRedisWrite(redis: RedisClient) {
   const sw = new Stopwatch();
   await redis.set("lumi:ping:probe", "1", "EX", 30);
   return sw.stop().duration;
@@ -277,7 +277,7 @@ async function postgresStats() {
   }
 }
 
-async function redisStats(redis: Redis) {
+async function redisStats(redis: RedisClient) {
   try {
     const raw = await redis.info();
     const info = parseRedisInfo(raw);
@@ -299,7 +299,7 @@ async function redisStats(redis: Redis) {
       redisTotalKeys: dbSize,
     };
   } catch (err: unknown) {
-    logError("Ping: Redis stats failed", err);
+    logError("Ping: RedisClient stats failed", err);
     return {
       redisVersion: "unknown",
       redisUptimeSecs: 0,

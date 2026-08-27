@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { container } from "@sapphire/framework";
-import type { Redis } from "ioredis";
+import type { RedisClient } from "#lib/database/cluster-safe.js";
 
 /**
  * Lightweight Redis-backed mutex. Mutual exclusion across processes; a
@@ -38,7 +38,7 @@ end
 
 /** Checks a lock is still held by `token` - detects a stale holder (lease expired, reacquired elsewhere) before a guarded write. */
 export async function verifyRedisLock(
-  redis: Redis,
+  redis: RedisClient,
   key: string,
   token: string,
 ): Promise<boolean> {
@@ -74,7 +74,7 @@ export interface RedisLock {
 }
 
 export async function acquireRedisLock(
-  redis: Redis,
+  redis: RedisClient,
   key: string,
   options: RedisLockOptions = {},
 ): Promise<RedisLock> {

@@ -1,7 +1,8 @@
 import { container } from "@sapphire/framework";
 import { tryParseJSON } from "@sapphire/utilities";
 import { envIsDefined, envParseInteger, envParseString } from "#lib/env.js";
-import { Redis, type RedisOptions } from "ioredis";
+import { Redis, Cluster, type RedisOptions } from "ioredis";
+import { delSafe, type RedisClient } from "#lib/database/cluster-safe.js";
 import { logError } from "#lib/utilities/errors.js";
 
 export const RedisKeys = {
@@ -156,14 +157,42 @@ export function redisConnectionOptions(): RedisOptions {
   };
 }
 
-export function createRedisClient(): Redis {
-  const client = new Redis({
-    ...redisConnectionOptions(),
-    db: envParseInteger("REDIS_CACHE_DB", 0),
-    lazyConnect: true,
-    maxRetriesPerRequest: 3,
-    enableReadyCheck: true,
-  });
+/**
+ * Comma-separated `host:port` list enables Cluster mode. Cluster has no
+ * numbered databases, so REDIS_CACHE_DB is ignored there - the key prefix
+ * already namespaces everything.
+ */
+function clusterNodes(): { host: string; port: number }[] | null {
+  const raw = process.env["REDIS_CLUSTER_NODES"];
+  if (!raw) return null;
+  const nodes = raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [host = "localhost", port] = entry.split(":");
+      return { host, port: Number(port) || 6379 };
+    });
+  return nodes.length > 0 ? nodes : null;
+}
+
+export function createRedisClient(): RedisClient {
+  const nodes = clusterNodes();
+  const client: RedisClient = nodes
+    ? new Cluster(nodes, {
+        lazyConnect: true,
+        redisOptions: {
+          ...redisConnectionOptions(),
+          maxRetriesPerRequest: 3,
+        },
+      })
+    : new Redis({
+        ...redisConnectionOptions(),
+        db: envParseInteger("REDIS_CACHE_DB", 0),
+        lazyConnect: true,
+        maxRetriesPerRequest: 3,
+        enableReadyCheck: true,
+      });
 
   client.on("error", (err) => logError("Redis", err));
   client.on("connect", () => container.logger.debug("[Redis] Connected"));
@@ -190,7 +219,7 @@ export function parseRedisConnectionOption(): RedisOptions {
 const INVALIDATION_CHANNEL = "lumi:cache:invalidate";
 
 export class InvalidationBus {
-  readonly #subscriber: Redis;
+  readonly #subscriber: RedisClient;
   #listeners = new Set<(keys: string[]) => void>();
   #resyncListeners = new Set<() => void | Promise<void>>();
   #started = false;
@@ -198,7 +227,7 @@ export class InvalidationBus {
   #handlerAttached = false;
   #connectionDropped = false;
 
-  public constructor(subscriber: Redis) {
+  public constructor(subscriber: RedisClient) {
     this.#subscriber = subscriber;
   }
 
@@ -223,7 +252,7 @@ export class InvalidationBus {
   /** Delete locally and broadcast to peers. */
   public async invalidate(...keys: string[]): Promise<void> {
     if (keys.length === 0) return;
-    await container.redis.del(...keys);
+    await delSafe(container.redis, keys);
     await container.redis.publish(
       INVALIDATION_CHANNEL,
       JSON.stringify({ keys }),

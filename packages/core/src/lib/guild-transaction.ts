@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
+import type { RedisClient } from "#lib/database/cluster-safe.js";
 import type { Guild } from "@prisma/client";
 import type { DatabaseClient } from "#lib/prisma/client.js";
-import type { Redis } from "ioredis";
 import { RedisKeys } from "#lib/database/redis.js";
 import { acquireRedisLock, verifyRedisLock } from "#lib/redis-lock.js";
 
@@ -34,7 +34,7 @@ export class GuildWriteTransaction {
     private readonly release: () => Promise<void>,
     private readonly guildId: string,
     private readonly prisma: DatabaseClient,
-    private readonly redis: Redis,
+    private readonly redis: RedisClient,
     private readonly lockToken: string,
   ) {}
 
@@ -113,7 +113,7 @@ export class GuildWriteTransaction {
 
 export async function createGuildTransaction(
   guildId: string,
-  redis: Redis,
+  redis: RedisClient,
   prisma: DatabaseClient,
 ): Promise<GuildWriteTransaction> {
   const { release, token } = await acquireRedisLock(redis, GUILD_LOCK(guildId), {

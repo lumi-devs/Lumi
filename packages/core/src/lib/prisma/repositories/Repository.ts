@@ -1,4 +1,4 @@
-import type { Redis } from "ioredis";
+import type { RedisClient } from "#lib/database/cluster-safe.js";
 import { type ILogger, container } from "@sapphire/framework";
 import { cacheHits, cacheMisses } from "@lumi/observability";
 import type { DatabaseClient } from "#lib/prisma/client.js";
@@ -10,7 +10,7 @@ const inflight = new Map<string, Promise<unknown>>();
 export abstract class Repository {
   public constructor(
     protected readonly prisma: DatabaseClient,
-    protected readonly redis: Redis,
+    protected readonly redis: RedisClient,
     protected readonly logger: ILogger,
     protected readonly db: DatabaseService,
     /**

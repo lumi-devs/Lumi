@@ -1,4 +1,5 @@
 import { container } from "@sapphire/framework";
+import { delSafe, pipelineBySlot, scanKeysSafe } from "#lib/database/cluster-safe.js";
 import { isNullish, filterNullish, tryParseJSON } from "@sapphire/utilities";
 import { AfkKeys, AfkTTL } from "../keys.js";
 import { sanitizeReason } from "../index.js";
@@ -12,28 +13,15 @@ export interface AfkMention {
   ts: number;
 }
 
-async function scanKeys(pattern: string) {
-  let cursor = "0";
-  const found: string[] = [];
-  do {
-    const [next, keys] = await container.redis.scan(
-      cursor,
-      "MATCH",
-      pattern,
-      "COUNT",
-      100,
-    );
-    cursor = next;
-    found.push(...keys);
-  } while (cursor !== "0");
-  return found;
+function scanKeys(pattern: string) {
+  return scanKeysSafe(container.redis, pattern);
 }
 
 async function invalidateKeys(keys: string[]) {
   if (container.invalidation) {
     await container.invalidation.invalidate(...keys);
   } else {
-    await container.redis.del(...keys);
+    await delSafe(container.redis, keys);
   }
 }
 
@@ -199,13 +187,16 @@ export async function addAfkMentionsBatch(
   mentions: { userId: string; mention: AfkMention }[],
 ): Promise<void> {
   if (!mentions.length) return;
-  const pipeline = container.redis.multi();
-  for (const { userId, mention } of mentions) {
-    const key = AfkKeys.mentions(guildId, userId);
-    pipeline
-      .lpush(key, JSON.stringify(mention))
-      .ltrim(key, 0, 24)
-      .expire(key, AfkTTL.mentions);
-  }
-  await pipeline.exec();
+  await pipelineBySlot(
+    container.redis,
+    mentions,
+    ({ userId }) => AfkKeys.mentions(guildId, userId),
+    (pipe, { userId, mention }) => {
+      const key = AfkKeys.mentions(guildId, userId);
+      pipe
+        .lpush(key, JSON.stringify(mention))
+        .ltrim(key, 0, 24)
+        .expire(key, AfkTTL.mentions);
+    },
+  );
 }

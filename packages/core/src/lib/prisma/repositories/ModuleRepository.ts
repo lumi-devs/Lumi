@@ -1,4 +1,5 @@
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { mgetSafe } from "#lib/database/cluster-safe.js";
 import { container } from "@sapphire/framework";
 import { tryParseJSON } from "@sapphire/utilities";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
@@ -117,7 +118,7 @@ export class ModuleRepository extends Repository {
       RedisKeys.moduleEnabled(n, guildId),
     );
 
-    const raw = await this.redis.mget(...globalKeys, ...guildKeys);
+    const raw = await mgetSafe(this.redis, [...globalKeys, ...guildKeys]);
     const half = moduleNames.length;
 
     const enabled = new Array<boolean>(half).fill(false);
