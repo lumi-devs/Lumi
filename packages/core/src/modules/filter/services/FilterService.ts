@@ -443,7 +443,8 @@ export class FilterService extends Service {
   }
 
   #evictIfNeeded(): void {
-    while (this._guilds.size > FilterService.MAX_GUILDS) {
+    const limit = this.#cacheLimit();
+    while (this._guilds.size > limit) {
       const oldest = this._guilds.keys().next().value;
       if (oldest === undefined) break;
       this._guilds.delete(oldest);
@@ -452,7 +453,23 @@ export class FilterService extends Service {
     }
   }
 
-  private static readonly MAX_GUILDS = 10_000;
+  /**
+   * Hold at most what this process actually serves. A fixed ceiling is wrong in
+   * both directions: too low and a large shard evicts guilds it is still
+   * filtering for, recompiling their rules on the next message; too high and it
+   * is not a bound at all. Sizing to the live guild count means an active guild
+   * is never evicted, and the map cannot outgrow the shard.
+   *
+   * The floor covers startup, before the guild cache has populated.
+   */
+  #cacheLimit(): number {
+    return Math.max(
+      FilterService.MIN_CACHED_GUILDS,
+      this.container.client.guilds.cache.size,
+    );
+  }
+
+  private static readonly MIN_CACHED_GUILDS = 1_000;
 }
 
 declare module "#lib/module-system/Service.js" {

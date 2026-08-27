@@ -39,8 +39,29 @@ export class AfkRepository extends Repository {
     return count;
   }
 
-  public findAll(): Promise<AfkEntry[]> {
-    return this.prisma.afkEntry.findMany();
+  /**
+   * Every AFK entry, in keyset-paginated batches. The stale sweep has to see
+   * entries whose guild the bot has since left, so it cannot be narrowed to the
+   * cached guild set - pagination is what keeps it from loading the whole table.
+   */
+  public async *iterateAll(pageSize = 1_000): AsyncGenerator<AfkEntry[]> {
+    let cursor: { userId: string; guildId: string } | undefined;
+
+    for (;;) {
+      const page = await this.prisma.afkEntry.findMany({
+        orderBy: [{ userId: "asc" }, { guildId: "asc" }],
+        take: pageSize,
+        ...(cursor === undefined
+          ? {}
+          : { cursor: { userId_guildId: cursor }, skip: 1 }),
+      });
+
+      if (page.length === 0) return;
+      yield page;
+      if (page.length < pageSize) return;
+      const last = page[page.length - 1]!;
+      cursor = { userId: last.userId, guildId: last.guildId };
+    }
   }
 
   public findForGuild(guildId: string): Promise<AfkEntry[]> {

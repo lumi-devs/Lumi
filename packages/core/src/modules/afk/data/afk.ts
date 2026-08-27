@@ -113,8 +113,8 @@ export async function clearAllAfkForUser(userId: string): Promise<number> {
   return count;
 }
 
-export function getAllAfkEntries(): Promise<AfkEntry[]> {
-  return container.db.afk.findAll();
+export function iterateAllAfkEntries(): AsyncGenerator<AfkEntry[]> {
+  return container.db.afk.iterateAll();
 }
 
 export function getAfkEntriesForGuild(guildId: string): Promise<AfkEntry[]> {

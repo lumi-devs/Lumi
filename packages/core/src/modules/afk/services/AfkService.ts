@@ -12,9 +12,13 @@ import {
   getAfkEntry,
   setAfkEntry,
   setAfkCooldown,
-  getAllAfkEntries,
+  iterateAllAfkEntries,
   clearAfkEntry,
 } from "../data/afk.js";
+import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
+
+/** Member fetches are per-entry Discord API calls, so the sweep is capped rather than unbounded. */
+const SWEEP_CONCURRENCY = 10;
 
 @ApplyOptions<Piece.Options>({ name: "afk" })
 export default class AfkService extends Service {
@@ -57,7 +61,6 @@ export default class AfkService extends Service {
   }
 
   public async cleanStaleEntries() {
-    const entries = await getAllAfkEntries();
     let removed = 0;
 
     const shardCount = this.container.client.shard?.count ?? 1;
@@ -67,25 +70,28 @@ export default class AfkService extends Service {
       if (await clearAfkEntry(guildId, userId)) removed++;
     };
 
-    for (const entry of entries) {
-      const shardId = Number(
-        (BigInt(entry.guildId) >> 22n) % BigInt(shardCount),
+    for await (const page of iterateAllAfkEntries()) {
+      const mine = page.filter((entry) =>
+        myShards.includes(
+          Number((BigInt(entry.guildId) >> 22n) % BigInt(shardCount)),
+        ),
       );
-      if (!myShards.includes(shardId)) continue;
 
-      const guild = this.container.client.guilds.cache.get(entry.guildId);
-      if (!guild) {
-        await tryRemoveEntry(entry.guildId, entry.userId);
-        continue;
-      }
+      await mapWithConcurrency(mine, SWEEP_CONCURRENCY, async (entry) => {
+        const guild = this.container.client.guilds.cache.get(entry.guildId);
+        if (!guild) {
+          await tryRemoveEntry(entry.guildId, entry.userId);
+          return;
+        }
 
-      const memberExists = await guild.members
-        .fetch(entry.userId)
-        .then(() => true)
-        .catch(() => false);
-      if (!memberExists) {
-        await tryRemoveEntry(entry.guildId, entry.userId);
-      }
+        const memberExists = await guild.members
+          .fetch(entry.userId)
+          .then(() => true)
+          .catch(() => false);
+        if (!memberExists) {
+          await tryRemoveEntry(entry.guildId, entry.userId);
+        }
+      });
     }
 
     return removed;
