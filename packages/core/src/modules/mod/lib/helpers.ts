@@ -62,10 +62,12 @@ export async function liftAllActiveCases(
     userId,
     action,
   );
-  for (const active of activeCases) {
-    await container.db.moderation.liftModerationCase(active.id);
-    await cancelTask(liftJobId(active.id)).catch(() => null);
-  }
+  await container.db.moderation.liftModerationCases(
+    activeCases.map((c) => c.id),
+  );
+  await Promise.all(
+    activeCases.map((c) => cancelTask(liftJobId(c.id)).catch(() => null)),
+  );
 
   return container.db.moderation.createModerationCase({
     guildId: guild.id,

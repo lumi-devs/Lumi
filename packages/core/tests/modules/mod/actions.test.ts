@@ -39,6 +39,7 @@ vi.mock('@sapphire/framework', () => ({
         createModerationCase: vi.fn(),
         getActiveCases: vi.fn().mockResolvedValue([]),
         liftModerationCase: vi.fn(),
+        liftModerationCases: vi.fn(),
         getWarnThresholds: vi.fn(),
         setWarnThreshold: vi.fn(),
         removeWarnThreshold: vi.fn(),
@@ -393,7 +394,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     });
 
     expect(container.db.moderation.getActiveCases).toHaveBeenCalledWith('g-1', 'u-1', 'mute');
-    expect(container.db.moderation.liftModerationCase).toHaveBeenCalledWith(55);
+    expect(container.db.moderation.liftModerationCases).toHaveBeenCalledWith([55]);
     expect(cancelTask).toHaveBeenCalledWith('mod-lift:55');
   });
 
@@ -423,7 +424,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
 
     expect(mockMember.voice.setMute).toHaveBeenCalledWith(false, expect.anything());
     expect(container.db.moderation.getActiveCases).toHaveBeenCalledWith('g-1', 'u-1', 'voice_mute');
-    expect(container.db.moderation.liftModerationCase).toHaveBeenCalledWith(77);
+    expect(container.db.moderation.liftModerationCases).toHaveBeenCalledWith([77]);
     expect(cancelTask).toHaveBeenCalledWith('mod-lift:77');
   });
 
