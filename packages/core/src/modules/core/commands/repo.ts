@@ -5,10 +5,8 @@ import { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { AutocompleteInteraction } from "discord.js";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { paginateList } from "#lib/utilities/pagination.js";
-import {
-  filterAutocompleteChoices,
-  respondWithChoices,
-} from "#lib/utilities/autocomplete.js";
+import { respondWithChoices } from "#lib/utilities/autocomplete.js";
+import { repoNameChoices } from "#lib/downloader/autocomplete.js";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -131,14 +129,14 @@ export class RepoCommand extends BaseSubcommand {
       return respondWithChoices(interaction, []);
     }
 
-    const repos = await this.downloaderService.listRepos();
-    const names = repos.map((r) => r.name);
-    if (focused.name === "name" && interaction.options.getSubcommand(false) === "update") {
-      names.push("all");
-    }
+    const extra =
+      focused.name === "name" &&
+      interaction.options.getSubcommand(false) === "update"
+        ? ["all"]
+        : undefined;
     return respondWithChoices(
       interaction,
-      filterAutocompleteChoices(names, focused.value),
+      await repoNameChoices(this.downloaderService, focused.value, { extra }),
     );
   }
 
