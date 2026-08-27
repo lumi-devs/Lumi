@@ -1,4 +1,5 @@
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { disconnectDatabase } from "#lib/prisma/client.js";
 import { installEntityPopulator } from "#lib/entity-cache/entity-populator.js";
 import {
   envParseString,
@@ -169,9 +170,9 @@ export class LumiClient extends SapphireClient {
     }
     await container.invalidation.close();
     await container.redis.quit().catch(warnOnCleanupError("Redis quit"));
-    await container.prisma
-      .$disconnect()
-      .catch(warnOnCleanupError("Prisma disconnect"));
+    // $disconnect alone leaves the pg Pool open: the adapter is constructed from
+    // a pool we own, so Prisma never ends it. Both pools drain here.
+    await disconnectDatabase().catch(warnOnCleanupError("Database disconnect"));
   }
 
   public override fetchPrefix = async (message: Message) => {

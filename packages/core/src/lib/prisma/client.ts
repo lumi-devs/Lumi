@@ -26,8 +26,8 @@ const poolStatsTimer = setInterval(() => {
 }, 10_000);
 poolStatsTimer.unref();
 
-const createPrismaClient = () => {
-  const baseClient = new PrismaClient({ adapter });
+const createPrismaClient = (clientAdapter: PrismaPg) => {
+  const baseClient = new PrismaClient({ adapter: clientAdapter });
 
   return baseClient.$extends({
     query: {
@@ -50,7 +50,47 @@ const createPrismaClient = () => {
   });
 };
 
-export const prisma = createPrismaClient();
+export const prisma = createPrismaClient(adapter);
+
+/**
+ * Optional read-only client for cross-guild scans.
+ *
+ * Deliberately NOT blanket read routing. This codebase reads its own writes all
+ * over the place - set a config, invalidate, read it back - so sending every
+ * read to a replica would turn replication lag into a diffuse correctness bug.
+ * Callers opt in, and only where staleness is provably harmless: sweeps that
+ * re-arm jobs or decay counters converge on the next run regardless.
+ *
+ * Falls back to the primary when POSTGRES_REPLICA_URL is unset, so nothing has
+ * to branch on whether a replica exists.
+ */
+const replicaUrl = process.env["POSTGRES_REPLICA_URL"];
+
+const replicaPool = replicaUrl
+  ? new Pool({
+      connectionString: replicaUrl,
+      max: POOL_MAX,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
+    })
+  : null;
+
+export const prismaReader = replicaPool
+  ? createPrismaClient(new PrismaPg(replicaPool))
+  : prisma;
+
+export const hasReadReplica = replicaPool !== null;
+
+/** Drain both pools on shutdown; neither is closed anywhere else. */
+export async function disconnectDatabase(): Promise<void> {
+  poolStatsTimer.close();
+  await prisma.$disconnect().catch(() => undefined);
+  if (replicaPool) {
+    await prismaReader.$disconnect().catch(() => undefined);
+    await replicaPool.end().catch(() => undefined);
+  }
+  await pool.end().catch(() => undefined);
+}
 
 export type DatabaseClient = typeof prisma;
 

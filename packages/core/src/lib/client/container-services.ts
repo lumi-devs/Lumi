@@ -9,7 +9,7 @@ import { envParseInteger, getDevModulePaths } from "#lib/env.js";
 import { ModuleStore } from "#lib/module-system/ModuleStore.js";
 import { ServiceStore } from "#lib/module-system/ServiceStore.js";
 import { permitResolver } from "#lib/permissions/PermitResolver.js";
-import { prisma } from "#lib/prisma/client.js";
+import { prisma, prismaReader } from "#lib/prisma/client.js";
 import { DatabaseService } from "#lib/prisma/DatabaseService.js";
 import { createEventBus, type OwnedEventBus } from "@lumi/event-bus";
 import {
@@ -76,7 +76,7 @@ export function installContainerServices(
     prisma,
     redis,
     invalidation: new InvalidationBus(createRedisClient()),
-    db: new DatabaseService(prisma, redis, container.logger),
+    db: new DatabaseService(prisma, redis, container.logger, prismaReader),
     entityCache: new RedisEntityCache(redis),
     eventBus: ownedEventBus.bus,
     moduleStore,

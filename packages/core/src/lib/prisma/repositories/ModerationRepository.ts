@@ -162,8 +162,11 @@ export class ModerationRepository extends Repository {
   ): AsyncGenerator<ModerationCase[]> {
     let cursor: number | undefined;
 
+    // Fleet-wide scans, and both callers converge on the next run if a page is
+    // slightly stale: the startup re-arm reschedules jobs that are idempotent,
+    // and warn decay re-evaluates every tick. Safe to keep off the primary.
     for (;;) {
-      const page = await this.prisma.moderationCase.findMany({
+      const page = await this.reader.moderationCase.findMany({
         where,
         orderBy: { id: "asc" },
         take: pageSize,

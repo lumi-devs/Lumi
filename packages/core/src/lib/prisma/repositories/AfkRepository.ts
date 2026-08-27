@@ -48,7 +48,7 @@ export class AfkRepository extends Repository {
     let cursor: { userId: string; guildId: string } | undefined;
 
     for (;;) {
-      const page = await this.prisma.afkEntry.findMany({
+      const page = await this.reader.afkEntry.findMany({
         orderBy: [{ userId: "asc" }, { guildId: "asc" }],
         take: pageSize,
         ...(cursor === undefined

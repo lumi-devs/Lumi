@@ -13,6 +13,12 @@ export abstract class Repository {
     protected readonly redis: Redis,
     protected readonly logger: ILogger,
     protected readonly db: DatabaseService,
+    /**
+     * Read-only client for fleet-wide scans that tolerate replication lag.
+     * Defaults to the writer, so single-database deployments and tests behave
+     * exactly as before and nothing has to branch on whether a replica exists.
+     */
+    protected readonly reader: DatabaseClient = prisma,
   ) {}
 
   /** Invalidates cache keys across all peers via the InvalidationBus. */
