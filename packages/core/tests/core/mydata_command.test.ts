@@ -59,9 +59,9 @@ describe("MyDataCommand", () => {
     };
   });
 
-  describe("whatthisdoes", () => {
+  describe("whatdata", () => {
     it("replies with privacy information card", async () => {
-      await command.whatthisdoes(mockCtx);
+      await command.whatData(mockCtx);
       expect(mockCtx.reply).toHaveBeenCalledTimes(1);
       const arg = mockCtx.reply.mock.calls[0][0];
       expect(JSON.stringify(arg)).toContain("End-User Data & Privacy in Lumi");
@@ -101,14 +101,14 @@ describe("MyDataCommand", () => {
     });
   });
 
-  describe("owninfo", () => {
+  describe("getmydata", () => {
     it("exports user data and attaches json file", async () => {
       vi.spyOn(gdpr, "executeGdprExport").mockResolvedValue({
         core: { blocklisted: false },
         afk: { afk: false },
       });
 
-      await command.ownInfo(mockCtx);
+      await command.getMyData(mockCtx);
       expect(gdpr.executeGdprExport).toHaveBeenCalledWith("123456789");
       expect(mockCtx.message.reply).toHaveBeenCalledTimes(1);
       const arg = mockCtx.message.reply.mock.calls[0][0];
@@ -118,12 +118,12 @@ describe("MyDataCommand", () => {
     });
   });
 
-  describe("deleteuser", () => {
+  describe("forgetme", () => {
     it("cancels deletion when user denies prompt", async () => {
       vi.spyOn(confirm, "confirmPrompt").mockResolvedValue(false);
       const deleteSpy = vi.spyOn(gdpr, "executeGdprDeletion");
 
-      await command.deleteUser(mockCtx);
+      await command.forgetMe(mockCtx);
       expect(confirm.confirmPrompt).toHaveBeenCalledTimes(1);
       expect(deleteSpy).not.toHaveBeenCalled();
       const arg = mockCtx.reply.mock.calls[0][0];
@@ -134,7 +134,7 @@ describe("MyDataCommand", () => {
       vi.spyOn(confirm, "confirmPrompt").mockResolvedValue(true);
       vi.spyOn(gdpr, "executeGdprDeletion").mockResolvedValue({ failedModules: [] });
 
-      await command.deleteUser(mockCtx);
+      await command.forgetMe(mockCtx);
       expect(confirm.confirmPrompt).toHaveBeenCalledTimes(1);
       expect(gdpr.executeGdprDeletion).toHaveBeenCalledWith("123456789", "testuser#0001");
       const arg = mockCtx.reply.mock.calls[0][0];

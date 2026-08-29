@@ -21,13 +21,10 @@ import type { DownloaderService } from "#lib/services/DownloaderService.js";
     "View and manage end-user data, privacy disclosures, and GDPR actions",
   prefixEnabled: true,
   subcommands: [
-    { name: "whatthisdoes", run: "whatthisdoes", default: true },
-    { name: "whatdata", run: "whatthisdoes" },
+    { name: "whatdata", run: "whatData", default: true },
     { name: "3rdparty", run: "thirdParty" },
-    { name: "owninfo", run: "ownInfo" },
-    { name: "getmydata", run: "ownInfo" },
-    { name: "deleteuser", run: "deleteUser" },
-    { name: "forgetme", run: "deleteUser" },
+    { name: "getmydata", run: "getMyData" },
+    { name: "forgetme", run: "forgetMe" },
   ],
 })
 export class MyDataCommand extends BaseSubcommand {
@@ -47,22 +44,10 @@ export class MyDataCommand extends BaseSubcommand {
         )
         .addSubcommand((s) =>
           s
-            .setName("whatthisdoes")
-            .setDescription(
-              "Learn about end-user data collection, privacy, and GDPR rights",
-            ),
-        )
-        .addSubcommand((s) =>
-          s
             .setName("3rdparty")
             .setDescription(
               "View privacy & data statements for installed 3rd-party addons",
             ),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("owninfo")
-            .setDescription("Export a complete copy of all your stored data"),
         )
         .addSubcommand((s) =>
           s
@@ -71,16 +56,9 @@ export class MyDataCommand extends BaseSubcommand {
         )
         .addSubcommand((s) =>
           s
-            .setName("deleteuser")
-            .setDescription(
-              "Request complete deletion and anonymization of your data",
-            ),
-        )
-        .addSubcommand((s) =>
-          s
             .setName("forgetme")
             .setDescription(
-              "Have Lumi forget and anonymize all data stored about you",
+              "Have Lumi delete and anonymize all data stored about you",
             ),
         ),
     );
@@ -90,15 +68,15 @@ export class MyDataCommand extends BaseSubcommand {
     return getService("downloader");
   }
 
-  public async whatthisdoes(ctx: CommandContext) {
+  public async whatData(ctx: CommandContext) {
     const card = makeInfoCard(
       `${Emojis.SHIELD} End-User Data & Privacy in Lumi`,
       [
         "Lumi respects user privacy and complies with GDPR and CCPA data rights:",
         "",
         "• **Data Collection**: Lumi only stores data required for features you use (e.g. AFK status, moderation history, temporary voice channels, and server permissions).",
-        "• **Right of Access (`/mydata owninfo`)**: You can request an export of all data associated with your user ID across the bot.",
-        "• **Right to Erasure (`/mydata deleteuser`)**: You can request permanent deletion and anonymization of your stored data.",
+        "• **Right of Access (`/mydata getmydata`)**: You can request an export of all data associated with your user ID across the bot.",
+        "• **Right to Erasure (`/mydata forgetme`)**: You can request permanent deletion and anonymization of your stored data.",
         "• **3rd-Party Addons (`/mydata 3rdparty`)**: You can inspect privacy statements provided by installed community addons.",
       ].join("\n"),
     );
@@ -131,7 +109,7 @@ export class MyDataCommand extends BaseSubcommand {
     await ctx.reply(card);
   }
 
-  public async ownInfo(ctx: CommandContext) {
+  public async getMyData(ctx: CommandContext) {
     const userId = ctx.user.id;
     const exportData = await executeGdprExport(userId);
 
@@ -166,7 +144,7 @@ export class MyDataCommand extends BaseSubcommand {
     }
   }
 
-  public async deleteUser(ctx: CommandContext) {
+  public async forgetMe(ctx: CommandContext) {
     const userId = ctx.user.id;
 
     const confirmed = await confirmPrompt(ctx, {
