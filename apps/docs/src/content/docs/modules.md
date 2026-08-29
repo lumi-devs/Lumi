@@ -54,6 +54,73 @@ If the worst happens and someone guts your server anyway, `/restore` rebuilds it
 
 The word/link filter doesn't just react to one bad message - it keeps a running "heat" score per member that goes up with rule-breaking and cools down over time on its own. Cross a threshold and the punishment escalates automatically, so a repeat offender gets caught even if no single message would have triggered anything on its own.
 
+## Module & Addon Architecture
+
+Lumi divides functionality into **First-Party Built-in Modules** and **Third-Party Community Addons**:
+
+### 1. Built-in Modules (First-Party)
+* **Location**: Reside directly inside the monorepo under `packages/core/src/modules/` (`CORE_PATH`).
+* **Zero Handrolled Versions**: Built-in modules never maintain independent version strings or manual `info.json` files. They dynamically inherit `CoreVersion` (`packages/core/package.json`) at runtime via `@DefineModule` and at build time via `manifestFromMeta()`. When a new release is cut, all built-in modules advance in lockstep with the core engine.
+* **Immutability & Safety**: Built-in modules cannot be uninstalled, updated, or pinned by the Downloader. Critical core features (`CoreModule` handling `/lumi panel`, module toggles, permissions, and shutdown) are hard-locked against unloading (`disableable: false`).
+
+---
+
+### 2. Third-Party Addons (Downloader Architecture)
+Third-party modules are managed by the Downloader system via external Git repositories:
+
+#### A. Repository Management & Storage
+* Users register repositories via `,repo add <name> <git_url>`.
+* Lumi clones the repo into `data/3rd-party-modules/<repo_name>/`.
+
+#### B. The `info.json` Contract
+Every individual addon in a repository provides an `info.json` metadata file:
+
+```json
+{
+  "name": "economy",
+  "author": ["AuthorName"],
+  "version": "2.1.0",
+  "min_bot_version": "3.2.0",
+  "description": "Custom server currency and games.",
+  "requirements": [],
+  "end_user_data_statement": "Stores user IDs and balance amounts."
+}
+```
+
+* **Compatibility Check**: Downloader parses `min_bot_version` using semver. If the running Lumi version falls outside this range, Downloader blocks installation or update to prevent runtime crashes.
+* **Dependencies**: Downloader inspects the `requirements` array and validates that all module prerequisites are satisfied before enabling.
+
+#### C. Installation & Tracking (`InstalledModule`)
+* When `,download install <repo> <addon>` runs, Downloader symlinks the addon package into `data/installed-modules/<addon_name>`.
+* Tracks the installation state in the database:
+  ```json
+  {
+    "repo_name": "community-repo",
+    "module_name": "economy",
+    "commit": "a1b2c3d...",
+    "pinned": false
+  }
+  ```
+
+#### D. Pinning Mechanism
+* `,module pin <addon>` sets `pinned: true`.
+* When the bot owner runs `,module update` or `,repo update`, pinned addons are skipped during git pulls, locking them to a verified commit.
+
+---
+
+### 3. Module Discovery & Precedence Order
+When modules are discovered at startup, `ModuleStore` iterates through search paths in a strict hierarchy:
+
+```
+1. installed_path     →  data/installed-modules/       (3rd-party installed addons)
+2. dev_paths           →  LUMI_DEV_PATHS                (Development directories)
+3. CORE_PATH          →  packages/core/src/modules/    (Built-in modules)
+```
+
+Highest-priority paths resolve first, allowing third-party extensions or development checkouts to override or extend standard functionality while ensuring built-in core modules serve as the reliable baseline.
+
+---
+
 ## Data and privacy
 
 If someone asks Lumi to delete their data, it goes through every feature that's currently loaded and asks each one to remove what it's stored about that person, then clears the shared records too. Most of the built-in features support this; a couple don't implement it yet, so it isn't airtight across every corner of the bot, but it's a real deletion, not a token gesture.
