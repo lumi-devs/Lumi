@@ -3,6 +3,7 @@ import {
   capsPercent,
   compileRules,
   evaluate,
+  evaluateTerms,
   screenRegexRules,
   findBlockedInvite,
   findBlockedLink,
@@ -143,5 +144,31 @@ describe("evaluate", () => {
   it("prefers term hits over later rules", () => {
     const r = rules({ terms: ["spam"], blockInvites: true });
     expect(evaluate(r, "spam discord.gg/x", 0)?.rule).toBe("term");
+  });
+});
+
+describe("normalizeForMatch", () => {
+  const withTerm = rules({ terms: ["badword"] });
+  const hit = (content: string) => evaluateTerms(withTerm, content);
+
+  it.each([
+    ["plain", "you are a badword ok"],
+    ["uppercase", "you are a BADWORD ok"],
+    ["zero-width space", "you are a bad\u200Bword ok"],
+    ["zero-width joiner", "you are a bad\u200Dword ok"],
+    ["word joiner", "you are a bad\u2060word ok"],
+    ["soft hyphen", "you are a bad\u00ADword ok"],
+    ["fullwidth", "you are a ｂａｄｗｏｒｄ ok"],
+    ["combining mark", "you are a b\u0301adword ok"],
+  ])("catches %s evasion", (_label, content) => {
+    expect(hit(content)).toEqual({ rule: "term", detail: "badword" });
+  });
+
+  it("does not match unrelated content", () => {
+    expect(hit("you are a good person")).toBeNull();
+  });
+
+  it("drops terms that normalize away to nothing", () => {
+    expect(evaluateTerms(rules({ terms: ["\u200B"] }), "anything")).toBeNull();
   });
 });

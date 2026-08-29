@@ -242,6 +242,7 @@ export class DownloaderService extends Service {
     });
 
     await this.container.db.downloader.deleteInstalledDownloaderModule(
+      installedCheck.repoId,
       moduleName,
     );
   }
@@ -662,6 +663,7 @@ export class DownloaderService extends Service {
       );
     }
     await this.container.db.downloader.setInstalledDownloaderModulePinned(
+      installed.repoId,
       moduleName,
       pinned,
     );

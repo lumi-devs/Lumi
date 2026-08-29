@@ -350,6 +350,15 @@ export class DownloadResolver {
       }
     }
 
+    // Two repos can each ship a module of the same name. Overwriting silently
+    // would leave the DB claiming both are installed while only one is linked.
+    const existingTarget = await fs.readlink(targetPath).catch(() => null);
+    if (existingTarget !== null && path.resolve(existingTarget) !== path.resolve(sourcePath)) {
+      throw new Error(
+        `A module named "${moduleName}" is already installed from a different repository (${existingTarget}). Uninstall it before installing this one.`,
+      );
+    }
+
     await fs.rm(targetPath, { recursive: true, force: true }).catch(() => {});
     await fs.symlink(sourcePath, targetPath, "dir");
 

@@ -94,7 +94,20 @@ Config declared in `configSchema` is automatically editable via `/config` and th
 
 ## Addon-specific rules
 
-These are stricter than the built-in module rules because addons run untrusted, outside this repo, and can't ship schema migrations:
+> [!WARNING]
+> **Addons are not sandboxed.** They are loaded with a plain dynamic `import()` into
+> the bot's own process, so an addon can do anything the bot process can: read every
+> guild's data, use `container` directly, reach the network and the filesystem, and
+> execute arbitrary code. `validateAddon` is a **static linter, not a security
+> boundary** - it reads the source once at install time and is trivially bypassed
+> (for example by a computed dynamic `import()`).
+>
+> Treat installing an addon exactly like running `npm install` on an unvetted
+> package. Installation is restricted to the bot owner for this reason. The rules
+> below are conventions that keep addons forward-compatible across core refactors -
+> they are not enforced isolation, and must not be relied on for security.
+
+These conventions are stricter than the built-in module rules because addons live outside this repo and can't ship schema migrations:
 
 - **Import through the SDK, never Lumi's internal paths.** Addon code must import from `"lumi"` and its subpaths - `"lumi"` (`Module`, `DefineModule`, `cfg`, `Service`/`getService`), `"lumi/commands"` (`BaseCommand`, `BaseSubcommand`, `CommandContext`), `"lumi/permissions"`, `"lumi/scheduling"`, `"lumi/ui"` (cards, `Emojis`, pagination, `confirmPrompt`), `"lumi/utils"` - never `#core/*`, `#lib/*`, `#utilities/*`, or `#database/*`. Those are implementation details that move on any core refactor; the addon linter emits a warning if it sees one of them imported directly (see `validateAddon` in the downloader).
 - **Dependency isolation**: list external packages in `info.json`'s `requirements` array. The downloader creates a private `package.json` inside the addon directory and runs `bun add` there - never assume anything about the bot's root `package.json`.

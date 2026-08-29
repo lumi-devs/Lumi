@@ -80,6 +80,30 @@ export function screenRegexRules(
   return out;
 }
 
+/** Soft hyphen, the zero-width/bidi block, word joiner, invisible operators, BOM. */
+const INVISIBLE_RE = /[\u00AD\u200B-\u200F\u2060-\u2064\uFEFF]/gu;
+
+/**
+ * Fold a string to its bare matchable form. Must be applied to both configured
+ * terms and message content, or the two sides stop agreeing and every term
+ * silently stops matching.
+ *
+ * NFKD splits accents and expands fullwidth/styled forms to ASCII; stripping
+ * \p{M} then drops the loose combining marks. Without this, a term list
+ * containing `bad` is evaded by inserting a zero-width space, by using the
+ * fullwidth forms, or by hanging a combining accent off the first letter.
+ *
+ * Does not cover cross-script homoglyphs (Cyrillic vs Latin `e`) - those are
+ * distinct codepoints and need a confusables table, tracked separately.
+ */
+export function normalizeForMatch(input: string): string {
+  return input
+    .normalize("NFKD")
+    .replace(INVISIBLE_RE, "")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase();
+}
+
 export function compileRules(
   config: RuleConfig,
   onRegexError?: (pattern: string, reason: string) => void,
@@ -88,7 +112,7 @@ export function compileRules(
     matcher:
       config.terms.length > 0
         ? (new AhoCorasick(
-            config.terms.map((t) => t.toLowerCase()),
+            config.terms.map(normalizeForMatch).filter((t) => t.length > 0),
           ) as AhoMatcher)
         : null,
     regexSources: screenRegexRules(config.regexRules, onRegexError),
@@ -146,7 +170,7 @@ export function evaluateTerms(
   content: string,
 ): FilterHit | null {
   if (!rules.matcher) return null;
-  const results = rules.matcher.search(content.toLowerCase());
+  const results = rules.matcher.search(normalizeForMatch(content));
   const term = results[0]?.[1]?.[0];
   return term ? { rule: "term", detail: term } : null;
 }

@@ -314,7 +314,7 @@ export class RepoCommand extends BaseSubcommand {
 
   public async modules(ctx: CommandContext): Promise<void> {
     const t = await ctx.fetchT();
-    const repoName = (await ctx.getString("repo", { required: true }))!;
+    const repoName = (await ctx.getString("repo_name", { required: true }))!;
 
     try {
       const [modules, installed] = await Promise.all([

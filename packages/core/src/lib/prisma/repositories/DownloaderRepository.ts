@@ -50,8 +50,10 @@ export class DownloaderRepository extends Repository {
     });
   }
 
-  public deleteInstalledDownloaderModule(moduleName: string) {
-    return this.prisma.downloaderModule.deleteMany({ where: { moduleName } });
+  public deleteInstalledDownloaderModule(repoId: number, moduleName: string) {
+    return this.prisma.downloaderModule.deleteMany({
+      where: { repoId, moduleName },
+    });
   }
 
   public readAllInstalledDownloaderModules() {
@@ -80,11 +82,12 @@ export class DownloaderRepository extends Repository {
   }
 
   public setInstalledDownloaderModulePinned(
+    repoId: number,
     moduleName: string,
     pinned: boolean,
   ) {
     return this.prisma.downloaderModule.updateMany({
-      where: { moduleName },
+      where: { repoId, moduleName },
       data: { pinned },
     });
   }

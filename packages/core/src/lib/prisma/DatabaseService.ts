@@ -132,7 +132,8 @@ export class DatabaseService {
    * IgnoreEntry has no userId column.  AfkEntry is handled by the AFK module
    * hook.  ModerationCase anonymization is handled by the mod module hook
    * (ModerationRepository.anonymizeUser) - do not duplicate it here.
-   * Blocklist Redis keys are scanned and invalidated last.
+   * Blocklist Redis keys are scanned and invalidated, then the entity-cache
+   * user projection is purged last.
    */
   public async deleteUserData(userId: string): Promise<void> {
     await this.prisma.$transaction([
@@ -158,6 +159,10 @@ export class DatabaseService {
     if (keys.length) {
       await container.invalidation.invalidate(...keys);
     }
+
+    // The entity cache holds a username projection under its own TTL, so
+    // without this an erased user stays readable there for up to a day.
+    await container.entityCache.deleteUser(userId);
   }
 
   public async exportUserData(

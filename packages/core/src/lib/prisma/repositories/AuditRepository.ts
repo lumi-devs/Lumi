@@ -1,8 +1,18 @@
 import type { AuditLedger, Prisma } from "@prisma/client";
+import { hostname } from "node:os";
 import { RedisKeys } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
 import { tryParseJSON } from "@sapphire/utilities";
+
+/**
+ * Per-process, so two overlapping workers cannot both read the other's pending
+ * entries and insert the same audit rows twice.
+ */
+const AUDIT_CONSUMER = `${hostname()}:${process.pid}`;
+
+/** How long a delivered-but-unacked entry must sit before another run reclaims it. */
+const STALE_PENDING_MS = 60_000;
 
 export interface AuditLogPayload {
   guildId: string;
@@ -50,31 +60,38 @@ export class AuditRepository extends Repository {
     await this.#ensureGroup(key);
 
     type XReadGroupReply = [string, [string, string[]][]][] | null;
+    type XAutoClaimReply = [string, [string, string[]][], string[]?] | null;
 
-    let results = (await this.redis.xreadgroup(
-      "GROUP",
+    // Reclaim entries a previous run delivered but never acked - a crash, or an
+    // overlapping deploy - before taking anything new. XAUTOCLAIM is used
+    // rather than a pending read against our own name because the consumer name
+    // is per-process, so the stranded entries belong to a name we no longer use.
+    const claimed = (await this.redis.xautoclaim(
+      key,
       "audit_workers",
-      "worker_1",
+      AUDIT_CONSUMER,
+      STALE_PENDING_MS,
+      "0-0",
       "COUNT",
       batchSize,
-      "STREAMS",
-      key,
-      "0",
-    )) as XReadGroupReply;
-    if (!results?.[0]?.[1]?.length) {
-      results = (await this.redis.xreadgroup(
+    )) as XAutoClaimReply;
+
+    let messages = claimed?.[1] ?? [];
+
+    if (!messages.length) {
+      const results = (await this.redis.xreadgroup(
         "GROUP",
         "audit_workers",
-        "worker_1",
+        AUDIT_CONSUMER,
         "COUNT",
         batchSize,
         "STREAMS",
         key,
         ">",
       )) as XReadGroupReply;
+      messages = results?.[0]?.[1] ?? [];
     }
 
-    const messages = results?.[0]?.[1] ?? [];
     if (!messages.length) return 0;
 
     const entries: { id: string; payload: AuditLogPayload }[] = [];

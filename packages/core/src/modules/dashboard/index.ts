@@ -478,10 +478,34 @@ function paginate(filter: { page?: number; pageSize?: number }) {
 
 // `ConfigService.setConfig` takes the raw string a Discord user would have
 // typed, not an already-typed value.
+//
+// Rejects non-primitives rather than coercing: the schema types `value` as
+// `s.any()`, so an object reaching String() would be stored as the literal
+// "[object Object]" and silently corrupt the guild's config.
 function toRawConfigValue(value: unknown): string {
-  return Array.isArray(value)
-    ? value.map((entry) => String(entry)).join(",")
-    : String(value);
+  if (Array.isArray(value)) {
+    const bad = value.find((entry) => !isPrimitiveConfigValue(entry));
+    if (bad !== undefined) {
+      throw new TypeError(
+        `Unsupported config list entry of type ${typeof bad}; expected string, number or boolean.`,
+      );
+    }
+    return value.map((entry) => String(entry)).join(",");
+  }
+  if (!isPrimitiveConfigValue(value)) {
+    throw new TypeError(
+      `Unsupported config value of type ${value === null ? "null" : typeof value}; expected string, number or boolean.`,
+    );
+  }
+  return String(value);
+}
+
+function isPrimitiveConfigValue(value: unknown): boolean {
+  return (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  );
 }
 
 @DefineModule({

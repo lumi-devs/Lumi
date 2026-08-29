@@ -16,11 +16,18 @@ export type GuildMessage = Message<true>;
 export const LumiEvents = {
   /** Fired for every guild message from a non-bot, non-webhook user. */
   GuildUserMessage: "lumiGuildUserMessage",
+  /**
+   * Fired when such a message is edited. Kept separate from GuildUserMessage so
+   * consumers can re-screen the new content without rate-based counters
+   * treating one message as several.
+   */
+  GuildUserMessageEdit: "lumiGuildUserMessageEdit",
 } as const;
 
 declare module "discord.js" {
   interface ClientEvents {
     lumiGuildUserMessage: [message: Message<true>];
+    lumiGuildUserMessageEdit: [message: Message<true>];
   }
 }
 

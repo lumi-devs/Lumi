@@ -150,8 +150,10 @@ export function initCoreRpcHandlers() {
   registerRpcHandler(RPC_ACTIONS.gdprDelete, async (req) => {
     requireBotOwner(req);
     const { userId, requester } = parsePayload(GdprDeleteSchema, req.data);
-    await executeGdprDeletion(userId, requester);
-    return { success: true };
+    const { failedModules } = await executeGdprDeletion(userId, requester);
+    return failedModules.length > 0
+      ? { success: false, failedModules }
+      : { success: true };
   });
 
   registerRpcHandler(RPC_ACTIONS.gdprExport, async (req) => {
