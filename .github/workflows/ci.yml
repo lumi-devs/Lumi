@@ -173,7 +173,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v7
-      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/nix-installer-action@v22
       - uses: DeterminateSystems/magic-nix-cache-action@v9
       - name: Verify Nix Flake Output
         run: nix flake check --extra-experimental-features "nix-command flakes"
