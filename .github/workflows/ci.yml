@@ -144,6 +144,29 @@ jobs:
           files: ./coverage/lcov.info,./coverage/dashboard/lcov.info
           fail_ci_if_error: false
 
+  build:
+    name: Build
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run db:generate
+      - name: Build Monorepo Packages & Apps
+        run: bun turbo run build
+
+
   validate-examples:
     name: Validate Example Addons
     needs: changes
