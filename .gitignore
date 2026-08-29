@@ -40,3 +40,5 @@ indirections.txt
 # it, or move the addon into a real lumi-addons checkout when it's ready).
 /addons/
 .bug-hunter/
+apps/docs/AGENTS.md
+apps/docs/CLAUDE.md
