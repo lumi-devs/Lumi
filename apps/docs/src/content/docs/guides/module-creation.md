@@ -352,7 +352,7 @@ const value = await container.db.guildKV.getModuleData<MyType>(guildId, "my_modu
 
 **Cache invalidation** goes through `container.invalidation.invalidate(...key)`, never a raw `container.redis.del` on a key other processes might also cache - `InvalidationBus` broadcasts the deletion over Redis pub/sub so every process's local cache stays coherent.
 
-**GDPR**: implement `deleteUserData(userId)` and `exportUserData(userId)` on your `Module` subclass if you store per-user data - both are invoked end-to-end by the GDPR RPC flow (see Step 1).
+**GDPR & Privacy Statements**: If your module stores per-user data, declare `endUserDataStatement: "..."` in `@DefineModule` and implement both `deleteUserData(userId, requester)` and `exportUserData(userId)` on your `Module` subclass. If your module stores no persistent user data, declare `endUserDataStatement: NoEndUserData()` (imported from `#core/module-system/Module.js` or `"lumi"`). Both lifecycle hooks are invoked end-to-end by the GDPR RPC flow (see Step 1).
 
 ## Step 9: Translations
 
