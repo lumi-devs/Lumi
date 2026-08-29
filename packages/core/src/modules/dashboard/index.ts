@@ -36,8 +36,6 @@ import {
   description:
     "Integrates the bot with the Lumi Web Dashboard. Provides RPC endpoints for management.",
   short: "Web dashboard integration and RPC management endpoints.",
-  endUserDataStatement:
-    "Does not persistently store end-user data. Transmits ephemeral RPC requests between worker and dashboard.",
   category: "System",
 })
 export class DashboardModule extends Module {

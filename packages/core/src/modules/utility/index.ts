@@ -7,8 +7,6 @@ import { Emojis } from "#lib/utilities/assets.js";
   emoji: Emojis.GEAR,
   description: "General utility commands.",
   short: "Helpful server tools, avatar lookups, and user info commands.",
-  endUserDataStatement:
-    "Does not persistently store end-user data. Commands fetch and return live Discord API data directly.",
   category: "Community",
   configSchema: cfg.object({
     cooldown_seconds: cfg.number({
