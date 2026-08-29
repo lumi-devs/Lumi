@@ -95,11 +95,32 @@ export const getDocBySlug = (slugArray: string[]): DocContent | null => {
   }
 
   // Parse HTML
-  // We need to inject ids into headings for TOC
   const renderer = new marked.Renderer();
-  renderer.heading = ({text, depth}) => {
-    const id = text.toLowerCase().replace(/[^\w]+/g, "-");
-    return `<h${depth} id="${id}">${text}</h${depth}>`;
+  renderer.heading = ({ text, depth }) => {
+    const plainText = text.replace(/<[^>]*>/g, "").trim();
+    const id = plainText.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-");
+    return `<h${depth} id="${id}" class="group flex items-center gap-2"><span>${text}</span><a href="#${id}" class="opacity-0 group-hover:opacity-100 text-[var(--fg-subtle)] hover:text-[var(--accent)] transition-opacity text-sm ml-1">#</a></h${depth}>`;
+  };
+
+  renderer.code = ({ text, lang }) => {
+    const language = lang || "text";
+    const escaped = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+    return `<div class="my-6 rounded-xl overflow-hidden border border-[var(--border-strong)] bg-[#0A0D14] shadow-lg">
+      <div class="flex items-center justify-between px-4 py-2 bg-[var(--surface-active)] border-b border-[var(--border-strong)] text-xs font-mono text-[var(--fg-muted)]">
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#FF5F56]/80"></span>
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#FFBD2E]/80"></span>
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#27C93F]/80"></span>
+          <span class="ml-2 font-medium uppercase tracking-wider text-[11px] text-[var(--fg-subtle)]">${language}</span>
+        </div>
+      </div>
+      <pre class="p-4 overflow-x-auto text-[13px] leading-relaxed text-[#E2E8F0] font-mono"><code>${escaped}</code></pre>
+    </div>`;
   };
   
   const html = marked(content, { renderer }) as string;

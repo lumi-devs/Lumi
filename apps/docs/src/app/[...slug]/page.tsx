@@ -39,7 +39,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
             )}
           </div>
           <div
-            className="pb-12 pt-8 prose prose-invert max-w-none prose-headings:scroll-m-20 prose-a:text-[var(--accent)] prose-a:no-underline hover:prose-a:underline prose-pre:bg-[var(--surface-active)] prose-pre:border prose-pre:border-[var(--border-strong)] prose-img:rounded-xl prose-img:border prose-img:border-[var(--border)]"
+            className="doc-content pb-12 pt-8 min-w-0 w-full"
             dangerouslySetInnerHTML={{ __html: doc.html }}
           />
           <hr className="border-[var(--border)] my-8" />
