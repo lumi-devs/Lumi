@@ -181,6 +181,17 @@ export function createRedisClient(): RedisClient {
   const client: RedisClient = nodes
     ? new Cluster(nodes, {
         lazyConnect: true,
+        scaleReads:
+          (process.env["REDIS_CLUSTER_SCALE_READS"] as
+            | "all"
+            | "slave"
+            | "master") || "master",
+        slotsRefreshTimeout: envParseInteger(
+          "REDIS_CLUSTER_SLOTS_REFRESH_TIMEOUT_MS",
+          2000,
+        ),
+        clusterRetryStrategy: (times) =>
+          Math.min(100 * Math.pow(2, times), 2000),
         redisOptions: {
           ...redisConnectionOptions(),
           maxRetriesPerRequest: 3,

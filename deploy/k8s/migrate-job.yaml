@@ -16,7 +16,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: migrate
-          image: ghcr.io/your-org/lumi:latest
+          image: ghcr.io/lumi-devs/lumi:latest
           imagePullPolicy: IfNotPresent
           command: ["bunx", "prisma", "migrate", "deploy"]
           envFrom:

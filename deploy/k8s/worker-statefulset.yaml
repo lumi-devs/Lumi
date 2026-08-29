@@ -39,7 +39,7 @@ spec:
       terminationGracePeriodSeconds: 60
       containers:
         - name: worker
-          image: ghcr.io/your-org/lumi:latest  # replace with your registry
+          image: ghcr.io/lumi-devs/lumi:latest
           imagePullPolicy: IfNotPresent
           command: ["bun", "apps/worker/src/main.ts"]
           envFrom:

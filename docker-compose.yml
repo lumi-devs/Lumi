@@ -146,7 +146,10 @@ services:
   # verify against in this environment). `command` below assumes a future
   # image stage that includes `apps/dashboard/.next` and node_modules.
   dashboard:
-    <<: *lumi-service
+    image: ghcr.io/lumi-devs/lumi-dashboard:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
     container_name: lumi-dashboard
     command:
       ["bun", "run", "--cwd", "apps/dashboard", "start"]

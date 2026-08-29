@@ -1,5 +1,5 @@
 import type { RESTOptions } from "@discordjs/rest";
-import { getDiscordProxyUrl } from "#lib/env.js";
+import { envParseInteger, getDiscordProxyUrl } from "#lib/env.js";
 
 export interface BuildRestOptions {
   /**
@@ -20,13 +20,17 @@ export function buildRestOptions(
 
   const base: Partial<RESTOptions> = {
     invalidRequestWarningInterval: 500,
+    timeout: envParseInteger("DISCORD_REST_TIMEOUT_MS", 15_000),
+    retries: envParseInteger("DISCORD_REST_RETRIES", 3),
   };
 
   if (!enableProxy || !proxyUrl) return base;
 
+  const cleanUrl = proxyUrl.replace(/\/api(\/v\d+)?\/?$/, "").replace(/\/+$/, "");
+
   return {
     ...base,
-    api: `${proxyUrl}/api`,
+    api: `${cleanUrl}/api`,
     globalRequestsPerSecond: Number.POSITIVE_INFINITY,
   };
 }

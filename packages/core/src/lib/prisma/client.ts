@@ -9,11 +9,15 @@ import { resolvePgPoolSize } from "#lib/env.js";
 
 const POOL_MAX = resolvePgPoolSize();
 
+const primaryUrl = process.env["POSTGRES_URL"] || process.env["DATABASE_URL"];
+const appName = process.env["POSTGRES_APP_NAME"] || `lumi-worker-${process.env["SHARDS"] ?? "0"}`;
+
 const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
+  connectionString: primaryUrl,
   max: POOL_MAX,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
+  application_name: appName,
 });
 
 const adapter = new PrismaPg(pool);
@@ -64,7 +68,10 @@ export const prisma = createPrismaClient(adapter);
  * Falls back to the primary when POSTGRES_REPLICA_URL is unset, so nothing has
  * to branch on whether a replica exists.
  */
-const replicaUrl = process.env["POSTGRES_REPLICA_URL"];
+const replicaUrl =
+  process.env["POSTGRES_REPLICA_URL"] ||
+  process.env["DATABASE_READ_URL"] ||
+  process.env["DATABASE_REPLICA_URL"];
 
 const replicaPool = replicaUrl
   ? new Pool({
@@ -72,6 +79,7 @@ const replicaPool = replicaUrl
       max: POOL_MAX,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000,
+      application_name: `${appName}-replica`,
     })
   : null;
 

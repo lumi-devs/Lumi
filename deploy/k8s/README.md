@@ -101,16 +101,13 @@ flowchart TD
 | Manifest File | Kind | Name | Purpose |
 |---|---|---|---|
 | [`namespace.yaml`](./namespace.yaml) | `Namespace` | `lumi` | Isolated Kubernetes namespace for all Lumi components. |
-| [`configmap.yaml`](./configmap.yaml) | `ConfigMap` | `lumi-env` | Non-sensitive environment configuration (endpoints, ports, log settings, `DISCORD_PROXY_URL`, `CLUSTER_NAME`). |
+| [`configmap.yaml`](./configmap.yaml) | `ConfigMap` | `lumi-env` | Non-sensitive environment configuration (endpoints, ports, log settings, `DISCORD_PROXY_URL`, `CLUSTER_NAME`, Redis cluster / replica options). |
 | [`secret.example.yaml`](./secret.example.yaml) | `Secret` | `lumi-secrets` | Sensitive credential placeholders (`BOT_TOKEN`, database passwords, secret keys). |
 | [`lumi-data-pvc.yaml`](./lumi-data-pvc.yaml) | `PersistentVolumeClaim` | `lumi-data` | Shared storage volume for persistent data and dynamic addons (`/app/data`). |
 | [`migrate-job.yaml`](./migrate-job.yaml) | `Job` | `migrate` | Database migration job executing `bunx prisma migrate deploy`. |
-| [`worker-statefulset.yaml`](./worker-statefulset.yaml) | `StatefulSet` + `Service` | `worker`, `worker-headless` | Sharded worker fleet with headless service for metrics discovery. |
-| [`scheduler-deployment.yaml`](./scheduler-deployment.yaml) | `Deployment` | `scheduler` | Task scheduler managing BullMQ queues (uses `Recreate` deployment strategy). |
+| [`worker-statefulset.yaml`](./worker-statefulset.yaml) | `StatefulSet` + `Service` | `worker`, `worker-headless` | Sharded worker fleet with headless service for metrics discovery and shard 0 primary role. |
+| [`dashboard-deployment.yaml`](./dashboard-deployment.yaml) | `Deployment` + `Service` | `dashboard` | Next.js admin dashboard web application (reaches worker RPC over `worker-0`). |
 | [`nirn-proxy-deployment.yaml`](./nirn-proxy-deployment.yaml) | `Deployment` + `Service` | `nirn-proxy` | Shared Discord REST rate-limit proxy for the worker fleet. |
-
-> [!NOTE]
-> **There is no dashboard manifest here.** `apps/dashboard` has no Kubernetes `Deployment` or `Service` in this directory, and the shared container image has no `next build` stage yet either (see [docs/dashboard.md](../../docs/dashboard.md#running-it)). `secret.example.yaml` carries `DISCORD_OAUTH2_CLIENT_SECRET` and `DASHBOARD_SESSION_SECRET` - the names `apps/dashboard/src/lib/env.ts` actually reads - so the Secret is ready when a manifest is added, but nothing in this directory consumes them today.
 
 ---
 
@@ -141,11 +138,14 @@ kubectl -n lumi wait --for=condition=complete job/migrate --timeout=120s
 ### Step 3: Deploy Applications
 
 ```bash
-# REST proxy first - workers read DISCORD_PROXY_URL at boot
+# 1. REST proxy first - workers read DISCORD_PROXY_URL at boot
 kubectl apply -f nirn-proxy-deployment.yaml
 
-kubectl apply -f scheduler-deployment.yaml
+# 2. Worker fleet (shard 0 assumes primary role for RPC & BullMQ)
 kubectl apply -f worker-statefulset.yaml
+
+# 3. Next.js Dashboard Frontend
+kubectl apply -f dashboard-deployment.yaml
 ```
 
 ---

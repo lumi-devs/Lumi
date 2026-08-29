@@ -7,10 +7,20 @@ data:
   REDIS_HOST: "redis.lumi.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_CACHE_DB: "0"
+  # For Redis Cluster (multi-master):
+  # REDIS_CLUSTER_NODES: "redis-node-1:6379,redis-node-2:6379,redis-node-3:6379"
+  # REDIS_CLUSTER_SCALE_READS: "slave"
 
   POSTGRES_URL: "postgresql://lumi@pgbouncer.lumi.svc.cluster.local:6432/lumi"
+  # Optional Read-Replica for cross-guild queries:
+  # POSTGRES_REPLICA_URL: "postgresql://lumi@pgbouncer-replica.lumi.svc.cluster.local:6432/lumi"
   DIRECT_POSTGRES_URL: "postgresql://lumi@postgres.lumi.svc.cluster.local:5432/lumi"
   POSTGRES_POOL_MAX: "10"
+
+  # Memory and Sweeper tuning for 500+ shards:
+  CACHE_MESSAGE_LIMIT: "50"
+  CACHE_MEMBER_LIMIT: "50"
+  CACHE_USER_LIMIT: "200"
 
   # Cross-pod: the dashboard reaches the worker over the Service, so the bind
   # has to be routable. Authentication is RPC_INTERNAL_TOKEN (see
@@ -33,6 +43,5 @@ data:
   DISCORD_PROXY_URL: "http://nirn-proxy.lumi.svc.cluster.local:8080"
 
   CLUSTER_NAME: "lumi-prod"
-
 
   SCHEDULER_LEADER_LOCK: "true"

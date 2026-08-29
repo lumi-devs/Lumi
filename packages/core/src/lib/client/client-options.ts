@@ -29,11 +29,11 @@ export function buildClientOptions(): ClientOptions {
   return {
     makeCache: Options.cacheWithLimits({
       ...Options.DefaultMakeCacheSettings,
-      MessageManager: 50,
+      MessageManager: envParseInteger("CACHE_MESSAGE_LIMIT", 50),
       ReactionManager: 0,
-      GuildMemberManager: 50,
-      ThreadManager: 25,
-      UserManager: 200,
+      GuildMemberManager: envParseInteger("CACHE_MEMBER_LIMIT", 50),
+      ThreadManager: envParseInteger("CACHE_THREAD_LIMIT", 25),
+      UserManager: envParseInteger("CACHE_USER_LIMIT", 200),
       StageInstanceManager: 0,
       GuildScheduledEventManager: 0,
       AutoModerationRuleManager: 0,
@@ -47,16 +47,19 @@ export function buildClientOptions(): ClientOptions {
     }),
     sweepers: {
       ...Options.DefaultSweeperSettings,
-      messages: { interval: 300, lifetime: 600 },
+      messages: {
+        interval: envParseInteger("SWEEPER_MESSAGES_INTERVAL", 300),
+        lifetime: envParseInteger("SWEEPER_MESSAGES_LIFETIME", 600),
+      },
       users: {
         interval: 3600,
         filter: () => (user) => user.bot && user.id !== user.client.user.id,
       },
       threads: { interval: 3600, lifetime: 3600 },
       guildMembers: {
-        interval: 1800,
+        interval: envParseInteger("SWEEPER_MEMBERS_INTERVAL", 1800),
         filter: Sweepers.filterByLifetime({
-          lifetime: 1800,
+          lifetime: envParseInteger("SWEEPER_MEMBERS_LIFETIME", 1800),
           excludeFromSweep: (m) => m.id === m.client.user.id,
         }),
       },

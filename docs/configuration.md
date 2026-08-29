@@ -63,7 +63,13 @@ No default - the app will not boot without these.
 | `SHARD_LIST` | `auto` | Comma-separated shard IDs this replica's `ShardingManager` spawns children for, e.g. `0,1,2`. |
 | `TOTAL_SHARDS` | `auto` | Pin the total shard count instead of following Discord's recommendation. |
 | `CLUSTER_NAME` | *(unset)* | Namespaces the shard telemetry each shard publishes to Redis for the dashboard's fleet view. Shard ownership itself is static, set per replica via `SHARD_LIST` - set `CLUSTER_NAME` to the same value on every replica sharing a fleet so the dashboard can tell them apart. |
+| `REDIS_CLUSTER_NODES` | *(unset)* | Comma-separated `host:port` pairs enabling multi-master Redis Cluster mode. |
+| `REDIS_CLUSTER_SCALE_READS` | `master` | Read-scaling target for Redis Cluster (`master`, `slave`, `all`). |
 | `REDIS_SENTINELS` / `REDIS_SENTINEL_NAME` / `REDIS_SENTINEL_PASSWORD` | *(unset)* | Switch Redis connections to Sentinel-aware mode. `REDIS_SENTINEL_NAME` defaults `mymaster`. |
+| `POSTGRES_REPLICA_URL` | *(unset)* | Optional PostgreSQL read replica for cross-guild queries & sweeps. |
+| `CACHE_MESSAGE_LIMIT` / `CACHE_MEMBER_LIMIT` / `CACHE_USER_LIMIT` / `CACHE_THREAD_LIMIT` | `50` / `50` / `200` / `25` | Per-shard in-memory Discord.js manager cache capacities. |
+| `SWEEPER_MESSAGES_INTERVAL` / `SWEEPER_MESSAGES_LIFETIME` | `300` / `600` | Gateway message cache sweep interval and message retention in seconds. |
+| `SWEEPER_MEMBERS_INTERVAL` / `SWEEPER_MEMBERS_LIFETIME` | `1800` / `1800` | Gateway guild member sweep interval and retention in seconds. |
 | `EVENT_STREAM_MAXLEN` | `100000` | Redis Stream trim length (event bus). |
 | `EVENT_STREAM_MAX_DELIVERIES` | `5` | Deliveries before a message is moved to `<stream>:dlq`. |
 | `EVENT_STREAM_CLAIM_MIN_IDLE_MS` | `60000` | Idle time before a pending entry is eligible for reclaim. |
@@ -71,7 +77,8 @@ No default - the app will not boot without these.
 | `EVENT_STREAM_CLAIM_INTERVAL_MS` | `30000` | How often the reclaim (`XAUTOCLAIM`) loop runs. |
 | `EVENT_STREAM_STATS_INTERVAL_MS` | `10000` | How often stream-length/lag stats are polled and exported. |
 | `ENTITY_CACHE_POPULATE` | `false` | |
-| `DISCORD_PROXY_URL` | *(unset)* | Point at a shared Discord REST rate-limit proxy (e.g. `nirn-proxy`). Multi-replica deployments only - leave unset for single-process runs. |
+| `DISCORD_PROXY_URL` / `DISCORD_REST_PROXY_URL` / `REST_PROXY_URL` | *(unset)* | Point at a shared Discord REST rate-limit proxy (e.g. `nirn-proxy`). Multi-replica deployments only - leave unset for single-process runs. |
+| `DISCORD_REST_TIMEOUT_MS` / `DISCORD_REST_RETRIES` | `15000` / `3` | Discord REST request timeout and retry attempts. |
 
 ### Dashboard
 
