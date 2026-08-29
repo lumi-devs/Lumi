@@ -22,9 +22,12 @@ import type { DownloaderService } from "#lib/services/DownloaderService.js";
   prefixEnabled: true,
   subcommands: [
     { name: "whatthisdoes", run: "whatthisdoes", default: true },
+    { name: "whatdata", run: "whatthisdoes" },
     { name: "3rdparty", run: "thirdParty" },
     { name: "owninfo", run: "ownInfo" },
+    { name: "getmydata", run: "ownInfo" },
     { name: "deleteuser", run: "deleteUser" },
+    { name: "forgetme", run: "deleteUser" },
   ],
 })
 export class MyDataCommand extends BaseSubcommand {
@@ -35,6 +38,13 @@ export class MyDataCommand extends BaseSubcommand {
       b
         .setName(this.name)
         .setDescription(this.description)
+        .addSubcommand((s) =>
+          s
+            .setName("whatdata")
+            .setDescription(
+              "Learn about end-user data collection, privacy, and GDPR rights",
+            ),
+        )
         .addSubcommand((s) =>
           s
             .setName("whatthisdoes")
@@ -56,9 +66,21 @@ export class MyDataCommand extends BaseSubcommand {
         )
         .addSubcommand((s) =>
           s
+            .setName("getmydata")
+            .setDescription("Export a complete copy of all your stored data"),
+        )
+        .addSubcommand((s) =>
+          s
             .setName("deleteuser")
             .setDescription(
               "Request complete deletion and anonymization of your data",
+            ),
+        )
+        .addSubcommand((s) =>
+          s
+            .setName("forgetme")
+            .setDescription(
+              "Have Lumi forget and anonymize all data stored about you",
             ),
         ),
     );
