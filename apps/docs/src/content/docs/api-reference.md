@@ -392,7 +392,7 @@ Type-only export - the message shape `GuildMessageListener.handle()` receives (L
 
 ## What's deliberately not exported
 
-- **`container.prisma` / any Prisma model type.** Addons get no database schema of their own - persist through `container.db.guildKV` (generic per-guild key/value store) or `container.redis`. See [Addon Publishing Guide](/Lumi/guides/addon-publishing/#addon-specific-rules).
+- **`container.prisma` / any Prisma model type.** Addons get no database schema of their own - persist through `container.db.guildKV` (generic per-guild key/value store) or `container.redis`. See [Addon Publishing Guide](/guides/addon-publishing#addon-development-rules).
 - **`DatabaseService` methods beyond `guildKV`.** The full repository facade (`container.db.afk`, `container.db.moderation`, etc.) is for built-in modules with dedicated Prisma tables.
 - **`stores.registerPath`.** The Downloader already registers an addon's path; calling it yourself is a linter warning.
 - **Raw `EmbedBuilder`.** Use the card helpers in `lumi/ui` - this is a hard lint error, not a warning.
