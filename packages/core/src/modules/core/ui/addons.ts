@@ -47,6 +47,8 @@ export interface AddonRepoModuleRow {
   name: string;
   version: string;
   short?: string;
+  description?: string;
+  endUserDataStatement?: string;
   hidden?: boolean;
   isInstalled: boolean;
 }
@@ -326,11 +328,17 @@ export function buildAddonRepoModulesView(
       : t
         ? t(PanelsKeys.AddonsStatusAvailable)
         : "Available";
+
+    const lines = [
+      `**${m.name}** (v${m.version}) - *${status}*`,
+      `-# ${m.short ? cutText(m.short, 90) : m.description ? cutText(m.description, 90) : "No description."}`,
+    ];
+    if (m.endUserDataStatement) {
+      lines.push(`-# 🛡️ **Privacy:** ${cutText(m.endUserDataStatement, 80)}`);
+    }
+
     return settingRow(
-      [
-        `**${m.name}** (v${m.version}) - *${status}*`,
-        `-# ${m.short ? cutText(m.short, 90) : "No description."}`,
-      ],
+      lines,
       {
         customId: `lumi:addon:modact:${m.isInstalled ? "uninstall" : "install"}:${repoName}:${m.name}`,
         label: m.isInstalled

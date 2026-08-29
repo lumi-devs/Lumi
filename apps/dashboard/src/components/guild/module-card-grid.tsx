@@ -103,7 +103,7 @@ function ModuleCard({
       </Link>
 
       <p className="line-clamp-2 text-[14px] leading-5 text-fg-muted">
-        {m.description}
+        {m.short || m.description}
       </p>
 
       <div className="tabular mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[12.5px] text-fg-subtle">

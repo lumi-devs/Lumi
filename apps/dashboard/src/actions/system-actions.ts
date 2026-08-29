@@ -124,6 +124,10 @@ export async function rollbackModule(
 export interface RepoModuleView {
   name: string;
   version?: string;
+  short?: string;
+  description?: string;
+  author?: string[];
+  end_user_data_statement?: string;
   isInstalled: boolean;
   commit: string | null;
   pinned: boolean;

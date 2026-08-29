@@ -23,6 +23,8 @@ export interface ModuleMeta {
   displayName: string;
   emoji: string;
   description: string;
+  short?: string;
+  endUserDataStatement?: string;
   version: string;
   disableable?: boolean;
   conflicts?: string[];
@@ -46,6 +48,8 @@ export interface ModuleOptions extends Piece.Options {
   displayName?: string;
   emoji?: string;
   description?: string;
+  short?: string;
+  endUserDataStatement?: string;
   version?: string;
   conflicts?: string[];
   dependencies?: string[];
@@ -76,6 +80,8 @@ export function DefineModule(options: ModuleOptions) {
       displayName: options.displayName ?? options.name ?? target.name,
       emoji: options.emoji ?? Emojis.GEAR,
       description: options.description ?? "",
+      short: options.short,
+      endUserDataStatement: options.endUserDataStatement,
       version: options.version ?? CoreVersion,
       disableable: options.disableable ?? true,
       conflicts: options.conflicts ?? [],

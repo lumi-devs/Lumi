@@ -45,6 +45,8 @@ export function registerGuildRpcHandlers(): void {
         displayName: m.meta.displayName,
         emoji: m.meta.emoji,
         description: m.meta.description,
+        short: m.meta.short,
+        endUserDataStatement: m.meta.endUserDataStatement,
         version: m.meta.version,
         conflicts: m.meta.conflicts ?? [],
         dependencies: m.meta.dependencies ?? [],

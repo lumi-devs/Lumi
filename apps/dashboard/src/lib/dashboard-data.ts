@@ -13,6 +13,8 @@ export interface DashboardModuleView {
   displayName: string;
   emoji: string;
   description: string;
+  short?: string;
+  endUserDataStatement?: string;
   version: string;
   conflicts: string[];
   dependencies: string[];

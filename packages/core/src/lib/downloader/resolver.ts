@@ -24,10 +24,10 @@ const execGit = (args: string[]) =>
 /** Rejection handler that rethrows a git/bun execFile failure as a clean Error with stderr. */
 const execError =
   (context: string) =>
-  (err: NodeJS.ErrnoException & { stderr?: string }): never => {
-    const msg = (err.stderr || err.message || String(err)).trim();
-    throw new Error(`${context}${msg ? `: ${msg}` : ""}`);
-  };
+    (err: NodeJS.ErrnoException & { stderr?: string }): never => {
+      const msg = (err.stderr || err.message || String(err)).trim();
+      throw new Error(`${context}${msg ? `: ${msg}` : ""}`);
+    };
 
 
 const repoSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
@@ -98,7 +98,7 @@ export class DownloadResolver {
           container.logger?.warn?.(
             `[Downloader] ${name} exists at ${repoPath} but is not a valid git repository. Cleaning up...`,
           );
-          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
         }
       }
 
@@ -115,10 +115,10 @@ export class DownloadResolver {
           container.logger?.warn?.(
             `[Downloader] Git pull failed for ${name}, attempting clean clone fallback...`,
           );
-          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
           const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
           await execGit(cloneArgs).catch(async (cloneErr) => {
-            await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+            await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
             execError("Git clone failed")(cloneErr);
           });
         });
@@ -129,7 +129,7 @@ export class DownloadResolver {
         await fs.mkdir(MODULE_ROOT, { recursive: true });
         const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
         await execGit(cloneArgs).catch(async () => {
-          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
           throw new Error("Git clone failed");
         });
       }
@@ -300,6 +300,8 @@ export class DownloadResolver {
         displayName: info.short || info.name || moduleName,
         emoji: info.emoji || "📦",
         description: info.description || "",
+        short: info.short,
+        endUserDataStatement: info.end_user_data_statement,
         version: info.version || "1.0.0",
         disableable: true,
         dependencies: info.dependencies || [],
@@ -346,7 +348,7 @@ export class DownloadResolver {
         });
         await fs
           .symlink(process.cwd(), nodeModulesLumiPath, "dir")
-          .catch(() => {});
+          .catch(() => { });
       }
     }
 
@@ -362,7 +364,7 @@ export class DownloadResolver {
       );
     }
 
-    await fs.rm(targetPath, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(targetPath, { recursive: true, force: true }).catch(() => { });
     await fs.symlink(sourcePath, targetPath, "dir");
 
     container.logger?.info?.(

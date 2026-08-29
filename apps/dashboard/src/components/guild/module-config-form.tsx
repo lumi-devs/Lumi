@@ -93,7 +93,12 @@ export function ModuleConfigForm({
             <Glyph emoji={m.emoji} />
             <div className="min-w-0">
               <CardTitle>{m.displayName}</CardTitle>
-              <CardDescription>{m.description}</CardDescription>
+              <CardDescription>{m.short ? `${m.short} — ${m.description}` : m.description}</CardDescription>
+              {m.endUserDataStatement && (
+                <p className="mt-1 text-[12px] text-fg-subtle">
+                  <span className="font-medium text-fg-muted">Data & Privacy:</span> {m.endUserDataStatement}
+                </p>
+              )}
             </div>
           </div>
         </CardHeader>

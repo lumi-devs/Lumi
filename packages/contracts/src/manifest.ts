@@ -44,6 +44,10 @@ export interface ModuleManifest {
   configFields: ConfigField[];
   /** Dashboard sidebar/grid grouping (e.g. "Moderation", "Security"). Falls back to "System" when absent. */
   category?: ModuleCategory;
+  /** Short one-line tagline for quick summary cards and compact displays. */
+  short?: string;
+  /** GDPR/CCPA disclosure of what end-user data this module stores and for how long. */
+  endUserDataStatement?: string;
   /**
    * Dashboard route path (relative to `/guild/:id/`) for this module's
    * settings, when it has a bespoke page instead of the generic

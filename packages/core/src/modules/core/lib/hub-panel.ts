@@ -128,6 +128,8 @@ export async function renderRepoModules(
         name: moduleInfo.name,
         version: moduleInfo.version,
         short: moduleInfo.short,
+        description: moduleInfo.description,
+        endUserDataStatement: moduleInfo.end_user_data_statement,
         hidden: moduleInfo.hidden,
         isInstalled: installed.has(moduleInfo.name),
       })),

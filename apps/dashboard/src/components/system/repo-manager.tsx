@@ -319,6 +319,17 @@ function RepoModuleRow({
               </span>
             )}
           </div>
+          {(m.short || m.description) && (
+            <p className="mt-0.5 truncate text-[13px] text-fg-muted">
+              {m.short || m.description}
+            </p>
+          )}
+          {m.end_user_data_statement && (
+            <p className="mt-0.5 truncate text-[12px] text-fg-subtle">
+              <span className="font-medium text-fg-muted">Data & Privacy:</span>{" "}
+              {m.end_user_data_statement}
+            </p>
+          )}
           {error && <p className="mt-1 text-[13px] text-danger">{error}</p>}
         </div>
 
