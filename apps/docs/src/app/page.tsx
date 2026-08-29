@@ -16,6 +16,9 @@ import {
   Database,
   KeyRound,
   Sliders,
+  Zap,
+  Server,
+  Lock,
 } from "lucide-react";
 
 export default function Home() {
@@ -23,9 +26,9 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
 
   const snippets = {
-    docker: "# Quickest production install with official Docker images\ncurl -fsSL https://raw.githubusercontent.com/lumi-devs/Lumi/main/docker-compose.yml -o docker-compose.yml\ncurl -fsSL https://raw.githubusercontent.com/lumi-devs/Lumi/main/.env.example -o .env\n# Fill in BOT_TOKEN & CLIENT_ID in .env, then:\ndocker compose up -d",
+    docker: "# 1. Quickest production install with official Docker images\ncurl -fsSL https://raw.githubusercontent.com/lumi-devs/Lumi/main/docker-compose.yml -o docker-compose.yml\ncurl -fsSL https://raw.githubusercontent.com/lumi-devs/Lumi/main/.env.example -o .env\n# 2. Fill in BOT_TOKEN & CLIENT_ID in .env, then:\ndocker compose up -d",
     setup: "# Local development / contributor setup from source\ngit clone https://github.com/lumi-devs/Lumi.git\ncd Lumi\nbun run setup",
-    addon: "# Scaffold a new isolated addon module\nbun run addon:create my-addon --dir ./addons",
+    addon: "# Scaffold a new isolated addon module with CLI\nbun run addon:create my-addon --dir ./addons",
   };
 
   const handleCopy = () => {
@@ -34,73 +37,37 @@ export default function Home() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const features = [
-    {
-      icon: <Layers className="h-6 w-6 text-[#748FFC]" />,
-      badge: "Addon SDK",
-      badgeColor: "bg-[#4C6EF5]/15 text-[#748FFC] border-[#4C6EF5]/30",
-      glowColor: "from-[#4C6EF5]/20 via-[#4C6EF5]/5 to-transparent",
-      borderColor: "hover:border-[#748FFC]/60 hover:shadow-[#4C6EF5]/20",
-      title: "Modular Addon SDK",
-      desc: "Isolate features into independent submodules. Zero cross-module leaks, unified @DefineModule lifecycle, and typed runtime config schemas.",
-      href: "/guides/quick-start-addon",
-    },
-    {
-      icon: <Cpu className="h-6 w-6 text-[#20C997]" />,
-      badge: "Distributed Fleet",
-      badgeColor: "bg-[#12B886]/15 text-[#20C997] border-[#12B886]/30",
-      glowColor: "from-[#12B886]/20 via-[#12B886]/5 to-transparent",
-      borderColor: "hover:border-[#20C997]/60 hover:shadow-[#12B886]/20",
-      title: "Distributed Sharding & Event Bus",
-      desc: "Native discord.js child process sharding coordinated with Redis Streams for atomic, synchronized scheduled tasks and cluster event dispatch.",
-      href: "/sharding",
-    },
-    {
-      icon: <LayoutDashboard className="h-6 w-6 text-[#FB923C]" />,
-      badge: "Next.js 16 Panel",
-      badgeColor: "bg-[#FB923C]/15 text-[#FB923C] border-[#FB923C]/30",
-      glowColor: "from-[#FB923C]/20 via-[#FB923C]/5 to-transparent",
-      borderColor: "hover:border-[#FB923C]/60 hover:shadow-[#FB923C]/20",
-      title: "Web Admin Dashboard",
-      desc: "Manage your bot fleet via an internal 66-action HTTP RPC bridge. Zero bot token or database exposure to the dashboard frontend.",
-      href: "/dashboard",
-    },
-    {
-      icon: <ShieldCheck className="h-6 w-6 text-[#F472B6]" />,
-      badge: "GDPR Compliant",
-      badgeColor: "bg-[#F472B6]/15 text-[#F472B6] border-[#F472B6]/30",
-      glowColor: "from-[#F472B6]/20 via-[#F472B6]/5 to-transparent",
-      borderColor: "hover:border-[#F472B6]/60 hover:shadow-[#F472B6]/20",
-      title: "GDPR & Privacy Governance",
-      desc: "Automated 90-day/365-day data retention sweeps, mandatory manifest privacy disclosures, and universal deleteUserData erasure hooks.",
-      href: "/privacy",
-    },
-    {
-      icon: <Database className="h-6 w-6 text-[#38BDF8]" />,
-      badge: "Prisma Tier",
-      badgeColor: "bg-[#38BDF8]/15 text-[#38BDF8] border-[#38BDF8]/30",
-      glowColor: "from-[#38BDF8]/20 via-[#38BDF8]/5 to-transparent",
-      borderColor: "hover:border-[#38BDF8]/60 hover:shadow-[#38BDF8]/20",
-      title: "PostgreSQL & DatabaseService",
-      desc: "Centralized repository pattern with PgBouncer connection pooling, unpooled direct migration channels, and in-memory offline mock drivers.",
-      href: "/database",
-    },
-    {
-      icon: <KeyRound className="h-6 w-6 text-[#C084FC]" />,
-      badge: "Permit RBAC",
-      badgeColor: "bg-[#A855F7]/15 text-[#C084FC] border-[#A855F7]/30",
-      glowColor: "from-[#A855F7]/20 via-[#A855F7]/5 to-transparent",
-      borderColor: "hover:border-[#C084FC]/60 hover:shadow-[#A855F7]/20",
-      title: "Permit Nodes & Permissions",
-      desc: "Dot-notation permit hierarchy with autocomplete, wildcard expansion, role/channel overrides, and typed CommandContext gating.",
-      href: "/permissions",
-    },
-  ];
-
   return (
     <div className="relative isolate min-h-[calc(100vh-4rem)] overflow-hidden">
       {/* Mathematical Parametric Geometry Canvas Background */}
       <MathCanvas />
+
+      {/* Floating HUD Telemetry Nodes (Zeon-style) */}
+      <div className="pointer-events-none absolute inset-0 -z-10 hidden xl:block max-w-[1700px] mx-auto">
+        <div className="absolute top-[22%] left-[3%] flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#4C6EF5]/30 bg-[#0B0F19]/80 backdrop-blur-md text-[11px] text-[#748FFC]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#4C6EF5] animate-pulse" />
+          <span className="font-semibold">Event Bus</span>
+          <span className="text-[var(--fg-subtle)] font-mono">0.34 ms</span>
+        </div>
+
+        <div className="absolute top-[18%] right-[4%] flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#12B886]/30 bg-[#0B0F19]/80 backdrop-blur-md text-[11px] text-[#20C997]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#12B886] animate-pulse" />
+          <span className="font-semibold">Gateway Shard Sync</span>
+          <span className="text-[var(--fg-subtle)] font-mono">1.21 ms</span>
+        </div>
+
+        <div className="absolute top-[52%] left-[2%] flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#FB923C]/30 bg-[#0B0F19]/80 backdrop-blur-md text-[11px] text-[#FB923C]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#FB923C] animate-pulse" />
+          <span className="font-semibold">RPC Bridge (8091)</span>
+          <span className="text-[var(--fg-subtle)] font-mono">66 Actions</span>
+        </div>
+
+        <div className="absolute top-[56%] right-[3%] flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#F472B6]/30 bg-[#0B0F19]/80 backdrop-blur-md text-[11px] text-[#F472B6]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#F472B6] animate-pulse" />
+          <span className="font-semibold">GDPR Retention</span>
+          <span className="text-[var(--fg-subtle)] font-mono">90d / 365d</span>
+        </div>
+      </div>
 
       {/* Hero Section */}
       <div className="mx-auto max-w-[1700px] px-6 lg:px-10 pb-16 pt-12 lg:flex lg:py-24 items-center justify-between gap-12">
@@ -112,7 +79,7 @@ export default function Home() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#12B886] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#12B886]"></span>
               </span>
-              <span className="font-semibold text-white">Lumi Framework</span>
+              <span className="font-semibold text-white">Lumi Framework v1.0.0</span>
               <span className="text-[var(--border-strong)]">•</span>
               <span>Next-Gen Modular Discord Bot Architecture</span>
             </div>
@@ -189,7 +156,7 @@ export default function Home() {
                   className="flex items-center gap-1.5 text-xs text-[var(--fg-muted)] hover:text-white transition-colors cursor-pointer px-2.5 py-1 rounded-lg hover:bg-[var(--surface-hover)] border border-transparent hover:border-[var(--border)]"
                   title="Copy command"
                 >
-                  {copied ? <Check className="h-3.5 w-3.5 text-[#12B886]" /> : <Copy className="h-3.5 w-3.5 text-[var(--fg-muted)]" />}
+                  {copied ? <Check className="h-3.5 w-3.5 text-[#12B886]" /> : <Copy className="h-3.5 w-3.5" />}
                   <span>{copied ? "Copied!" : "Copy"}</span>
                 </button>
               </div>
@@ -225,6 +192,43 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Real-time Fleet Metrics Bar (Zeon-style) */}
+      <div className="mx-auto max-w-[1700px] px-6 lg:px-10 py-6 border-y border-[var(--border)] bg-[#0B0F19]/60 backdrop-blur-xl mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          <div className="space-y-1">
+            <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--fg-muted)] font-medium">
+              <Server className="h-3.5 w-3.5 text-[#12B886]" />
+              <span>Gateway Uptime</span>
+            </div>
+            <div className="text-2xl font-bold text-white tracking-tight font-mono">99.98%</div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--fg-muted)] font-medium">
+              <Zap className="h-3.5 w-3.5 text-[#748FFC]" />
+              <span>Event Bus Latency</span>
+            </div>
+            <div className="text-2xl font-bold text-white tracking-tight font-mono">&lt;0.4 ms</div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--fg-muted)] font-medium">
+              <Cpu className="h-3.5 w-3.5 text-[#FB923C]" />
+              <span>RPC Dispatch Bridge</span>
+            </div>
+            <div className="text-2xl font-bold text-white tracking-tight font-mono">66 Actions</div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--fg-muted)] font-medium">
+              <Lock className="h-3.5 w-3.5 text-[#F472B6]" />
+              <span>GDPR Governance</span>
+            </div>
+            <div className="text-2xl font-bold text-white tracking-tight font-mono">100% Sovereign</div>
+          </div>
+        </div>
+      </div>
+
       {/* Quick Doc Navigation Pills */}
       <div className="mx-auto max-w-[1700px] px-6 lg:px-10 pb-12">
         <div className="flex flex-wrap items-center justify-center gap-3">
@@ -249,7 +253,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 6-Card Color-Coded Bento Grid */}
+      {/* Asymmetric Zeon/Mintlify-Style Color-Coded Bento Grid */}
       <div className="mx-auto max-w-[1700px] px-6 lg:px-10 pb-28 pt-6">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] text-xs text-[#748FFC] font-semibold mb-4 shadow-sm">
@@ -264,41 +268,174 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, i) => (
-            <Link key={i} href={feature.href} className="block group">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-                className={`h-full p-7 rounded-2xl border border-[var(--border-strong)] bg-gradient-to-b ${feature.glowColor} bg-[var(--surface)]/90 backdrop-blur-xl shadow-xl transition-all duration-300 ${feature.borderColor} relative overflow-hidden flex flex-col justify-between`}
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="p-3 rounded-xl bg-[var(--surface-active)] border border-[var(--border-strong)] shadow-inner">
-                      {feature.icon}
-                    </div>
-                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wide border ${feature.badgeColor}`}>
-                      {feature.badge}
-                    </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[1fr]">
+          {/* Card 1: Addon SDK (2 cols wide) */}
+          <Link href="/guides/quick-start-addon" className="group lg:col-span-2 block h-full">
+            <div className="h-full p-8 md:p-10 rounded-3xl border border-[#4C6EF5]/30 bg-gradient-to-br from-[#4C6EF5]/15 via-[var(--surface)] to-[var(--surface)] backdrop-blur-xl shadow-xl hover:border-[#748FFC] hover:shadow-2xl hover:shadow-[#4C6EF5]/20 transition-all flex flex-col justify-between relative overflow-hidden">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#4C6EF5]/30 bg-[#4C6EF5]/10 shadow-inner">
+                  <Layers className="h-7 w-7 text-[#748FFC]" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#4C6EF5]/20 text-[#748FFC] border border-[#4C6EF5]/30">
+                    Addon SDK
+                  </span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] group-hover:bg-[#4C6EF5] group-hover:text-white transition-all">
+                    <ArrowRight className="h-4 w-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
                   </div>
-
-                  <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-white transition-colors">
-                    {feature.title}
-                  </h3>
-                  <p className="text-sm text-[#CBD5E1] leading-relaxed mb-6">
-                    {feature.desc}
-                  </p>
                 </div>
+              </div>
 
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-[#748FFC] group-hover:translate-x-1 transition-transform">
-                  <span>Explore Documentation</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
+              <div>
+                <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-[#748FFC] transition-colors">
+                  Zero-Leak Modular Addon SDK
+                </h3>
+                <p className="text-sm text-[#CBD5E1] leading-relaxed max-w-2xl">
+                  Isolate features into independent submodules with strict boundary validation. Unified <code className="bg-[#0B0F19] text-[#748FFC] px-1.5 py-0.5 rounded font-mono">@DefineModule</code> lifecycle hooks, typed config schemas via <code className="bg-[#0B0F19] text-[#748FFC] px-1.5 py-0.5 rounded font-mono">cfg.string</code>, and zero cross-module memory leakage.
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Card 2: Distributed Sharding (1 col) */}
+          <Link href="/sharding" className="group block h-full">
+            <div className="h-full p-8 rounded-3xl border border-[#12B886]/30 bg-gradient-to-br from-[#12B886]/15 via-[var(--surface)] to-[var(--surface)] backdrop-blur-xl shadow-xl hover:border-[#20C997] hover:shadow-2xl hover:shadow-[#12B886]/20 transition-all flex flex-col justify-between relative overflow-hidden">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#12B886]/30 bg-[#12B886]/10 shadow-inner">
+                  <Cpu className="h-7 w-7 text-[#20C997]" />
                 </div>
-              </motion.div>
-            </Link>
-          ))}
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#12B886]/20 text-[#20C997] border border-[#12B886]/30">
+                    Sharding
+                  </span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] group-hover:bg-[#12B886] group-hover:text-white transition-all">
+                    <ArrowRight className="h-4 w-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-[#20C997] transition-colors">
+                  Distributed Sharding & Event Bus
+                </h3>
+                <p className="text-sm text-[#CBD5E1] leading-relaxed">
+                  Child process isolation per gateway shard coordinated with Redis Streams for synchronized scheduled tasks and zero-coordination primary election.
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Card 3: Next.js Admin Dashboard (1 col) */}
+          <Link href="/dashboard" className="group block h-full">
+            <div className="h-full p-8 rounded-3xl border border-[#FB923C]/30 bg-gradient-to-br from-[#FB923C]/15 via-[var(--surface)] to-[var(--surface)] backdrop-blur-xl shadow-xl hover:border-[#FB923C] hover:shadow-2xl hover:shadow-[#FB923C]/20 transition-all flex flex-col justify-between relative overflow-hidden">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#FB923C]/30 bg-[#FB923C]/10 shadow-inner">
+                  <LayoutDashboard className="h-7 w-7 text-[#FB923C]" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#FB923C]/20 text-[#FB923C] border border-[#FB923C]/30">
+                    Dashboard
+                  </span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] group-hover:bg-[#FB923C] group-hover:text-white transition-all">
+                    <ArrowRight className="h-4 w-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-[#FB923C] transition-colors">
+                  Next.js 16 Web Admin Panel
+                </h3>
+                <p className="text-sm text-[#CBD5E1] leading-relaxed">
+                  Manage modules and permissions over an internal 66-action HTTP RPC bridge on port 8091 without bot token or database exposure.
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Card 4: GDPR Privacy (1 col) */}
+          <Link href="/privacy" className="group block h-full">
+            <div className="h-full p-8 rounded-3xl border border-[#F472B6]/30 bg-gradient-to-br from-[#F472B6]/15 via-[var(--surface)] to-[var(--surface)] backdrop-blur-xl shadow-xl hover:border-[#F472B6] hover:shadow-2xl hover:shadow-[#F472B6]/20 transition-all flex flex-col justify-between relative overflow-hidden">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#F472B6]/30 bg-[#F472B6]/10 shadow-inner">
+                  <ShieldCheck className="h-7 w-7 text-[#F472B6]" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#F472B6]/20 text-[#F472B6] border border-[#F472B6]/30">
+                    GDPR
+                  </span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] group-hover:bg-[#F472B6] group-hover:text-white transition-all">
+                    <ArrowRight className="h-4 w-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-[#F472B6] transition-colors">
+                  GDPR & Privacy Governance
+                </h3>
+                <p className="text-sm text-[#CBD5E1] leading-relaxed">
+                  Automated 90d/365d retention sweeps, manifest privacy disclosures, and universal deleteUserData right-to-erasure hooks.
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Card 5: Database & Prisma (1 col) */}
+          <Link href="/database" className="group block h-full">
+            <div className="h-full p-8 rounded-3xl border border-[#38BDF8]/30 bg-gradient-to-br from-[#38BDF8]/15 via-[var(--surface)] to-[var(--surface)] backdrop-blur-xl shadow-xl hover:border-[#38BDF8] hover:shadow-2xl hover:shadow-[#38BDF8]/20 transition-all flex flex-col justify-between relative overflow-hidden">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#38BDF8]/30 bg-[#38BDF8]/10 shadow-inner">
+                  <Database className="h-7 w-7 text-[#38BDF8]" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/30">
+                    Database
+                  </span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] group-hover:bg-[#38BDF8] group-hover:text-white transition-all">
+                    <ArrowRight className="h-4 w-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-[#38BDF8] transition-colors">
+                  Prisma ORM & Repositories
+                </h3>
+                <p className="text-sm text-[#CBD5E1] leading-relaxed">
+                  Centralized repository pattern on container.db with PgBouncer connection pooling and in-memory offline mock testing.
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Card 6: Permit RBAC (2 cols wide) */}
+          <Link href="/permissions" className="group lg:col-span-2 block h-full">
+            <div className="h-full p-8 md:p-10 rounded-3xl border border-[#A855F7]/30 bg-gradient-to-br from-[#A855F7]/15 via-[var(--surface)] to-[var(--surface)] backdrop-blur-xl shadow-xl hover:border-[#C084FC] hover:shadow-2xl hover:shadow-[#A855F7]/20 transition-all flex flex-col justify-between relative overflow-hidden">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#A855F7]/30 bg-[#A855F7]/10 shadow-inner">
+                  <KeyRound className="h-7 w-7 text-[#C084FC]" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#A855F7]/20 text-[#C084FC] border border-[#A855F7]/30">
+                    Permit RBAC
+                  </span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] group-hover:bg-[#A855F7] group-hover:text-white transition-all">
+                    <ArrowRight className="h-4 w-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-[#C084FC] transition-colors">
+                  Hierarchical Permit Nodes & Permissions
+                </h3>
+                <p className="text-sm text-[#CBD5E1] leading-relaxed max-w-2xl">
+                  UNIX-style dot-notation permission nodes with automatic autocomplete suggestions, wildcard expansion (<code className="bg-[#0B0F19] text-[#C084FC] px-1.5 py-0.5 rounded font-mono">admin.*</code>, <code className="bg-[#0B0F19] text-[#C084FC] px-1.5 py-0.5 rounded font-mono">mod.*</code>), per-guild role overrides, and channel permit masks.
+                </p>
+              </div>
+            </div>
+          </Link>
         </div>
       </div>
     </div>
