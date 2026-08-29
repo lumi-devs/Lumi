@@ -51,7 +51,7 @@ jobs:
   lint:
     name: Lint
     needs: changes
-    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' }}
+    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -81,7 +81,7 @@ jobs:
   typecheck:
     name: Typecheck
     needs: changes
-    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' }}
+    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -111,7 +111,7 @@ jobs:
   test:
     name: Test
     needs: changes
-    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' }}
+    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -147,7 +147,7 @@ jobs:
   build:
     name: Build
     needs: changes
-    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' }}
+    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -166,11 +166,10 @@ jobs:
       - name: Build Monorepo Packages & Apps
         run: bun turbo run build
 
-
   validate-examples:
     name: Validate Example Addons
     needs: changes
-    if: ${{ needs.changes.outputs.addons == 'true' || github.event_name == 'push' }}
+    if: ${{ needs.changes.outputs.addons == 'true' || github.event_name == 'push' || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -191,7 +190,7 @@ jobs:
   nix-check:
     name: Nix Flake Evaluation
     needs: changes
-    if: ${{ needs.changes.outputs.nix == 'true' || github.event_name == 'push' }}
+    if: ${{ needs.changes.outputs.nix == 'true' || github.event_name == 'push' || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
