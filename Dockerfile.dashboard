@@ -4,6 +4,11 @@ RUN apk add --no-cache dumb-init
 
 FROM base AS builder
 ENV NODE_ENV=development
+ENV SKIP_ENV_VALIDATION=1
+ENV RPC_HTTP_URL=http://127.0.0.1:8091
+ENV DISCORD_OAUTH2_CLIENT_ID=build-placeholder
+ENV DISCORD_OAUTH2_CLIENT_SECRET=build-placeholder
+ENV DASHBOARD_SESSION_SECRET=build-placeholder-session-secret-must-be-32chars
 
 COPY package.json bun.lock tsconfig.base.json tsconfig.json turbo.json prisma.config.ts ./
 COPY packages/ packages/
