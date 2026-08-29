@@ -1,9 +1,9 @@
-FROM oven/bun:1-alpine AS base
+FROM docker.io/oven/bun:1-alpine AS base
 WORKDIR /app
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init nodejs
 
 FROM base AS builder
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 ENV SKIP_ENV_VALIDATION=1
 ENV RPC_HTTP_URL=http://127.0.0.1:8091
 ENV DISCORD_OAUTH2_CLIENT_ID=build-placeholder
@@ -16,6 +16,7 @@ COPY apps/dashboard/ apps/dashboard/
 COPY apps/worker/package.json apps/worker/package.json
 COPY apps/docs/package.json apps/docs/package.json
 COPY prisma/ prisma/
+COPY .github/ .github/
 
 RUN bun install --frozen-lockfile
 RUN bunx prisma generate
@@ -32,6 +33,7 @@ COPY --from=builder /app/apps/dashboard ./apps/dashboard
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/bun.lock ./bun.lock
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/.github ./.github
 
 RUN chown -R bun:bun /app
 USER bun
