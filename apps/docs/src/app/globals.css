@@ -3,33 +3,36 @@
 
 :root {
   color-scheme: dark;
-  --bg: #090B14;
-  --bg-subtle: #0D1018;
-  --surface: #0F1219;
-  --surface-hover: #161B26;
-  --surface-active: #1C2231;
-  --border: #1E2433;
-  --border-soft: #161B26;
-  --border-strong: #2D3548;
-  --fg: #F0F2F8;
-  --fg-muted: #8B95B7;
-  --fg-subtle: #5F6A85;
+  --bg: #0B0F19;
+  --bg-subtle: #0F172A;
+  --surface: #131B2E;
+  --surface-hover: #1E293B;
+  --surface-active: #28354E;
+  --border: #1E293B;
+  --border-soft: #182234;
+  --border-strong: #334155;
+  --fg: #FFFFFF;
+  --fg-body: #E2E8F0;
+  --fg-muted: #94A3B8;
+  --fg-subtle: #64748B;
   --accent: #4C6EF5;
   --accent-hover: #3B5BDB;
-  --accent-soft: rgba(76, 110, 245, 0.14);
+  --accent-soft: rgba(76, 110, 245, 0.16);
   --accent-glow: #4C6EF5;
   --success: #12B886;
   --warning: #F59F00;
   --danger: #FA5252;
-  --glass-bg: rgba(15, 18, 25, 0.75);
+  --glass-bg: rgba(15, 23, 42, 0.85);
   --glass-border: rgba(255, 255, 255, 0.08);
 }
 
 body {
   background-color: var(--bg);
-  color: var(--fg);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--fg-body);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .glass {
@@ -57,18 +60,18 @@ body {
 
 /* Documentation Typography & Layout */
 .doc-content {
-  color: var(--fg-muted);
-  font-size: 1rem;
-  line-height: 1.75;
+  color: var(--fg-body);
+  font-size: 1.025rem;
+  line-height: 1.8;
 }
 
 .doc-content h1 {
   font-size: 2.25rem;
   font-weight: 800;
   letter-spacing: -0.025em;
-  color: var(--fg);
+  color: #FFFFFF;
   margin-top: 2rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
   line-height: 1.25;
 }
 
@@ -76,8 +79,8 @@ body {
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--fg);
-  margin-top: 2.5rem;
+  color: #FFFFFF;
+  margin-top: 2.75rem;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--border);
@@ -85,106 +88,190 @@ body {
 }
 
 .doc-content h3 {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: -0.015em;
-  color: var(--fg);
-  margin-top: 2rem;
+  color: #F8FAFC;
+  margin-top: 2.25rem;
   margin-bottom: 0.75rem;
   line-height: 1.4;
 }
 
 .doc-content h4 {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  color: var(--fg);
-  margin-top: 1.5rem;
+  color: #F8FAFC;
+  margin-top: 1.75rem;
   margin-bottom: 0.5rem;
 }
 
 .doc-content p {
   margin-top: 1.25rem;
   margin-bottom: 1.25rem;
-  line-height: 1.75;
+  line-height: 1.8;
+  color: var(--fg-body);
 }
 
 .doc-content a {
-  color: var(--accent);
+  color: #748FFC;
   font-weight: 500;
-  text-decoration: none;
-  transition: color 0.15s ease;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(116, 143, 252, 0.4);
+  transition: all 0.15s ease;
 }
 
 .doc-content a:hover {
-  color: #748FFC;
-  text-decoration: underline;
+  color: #93C5FD;
+  text-decoration-color: #93C5FD;
 }
 
 .doc-content strong {
-  color: var(--fg);
+  color: #FFFFFF;
   font-weight: 600;
+}
+
+.doc-content em {
+  color: #E2E8F0;
+  font-style: italic;
 }
 
 .doc-content ul {
   list-style-type: disc;
   padding-left: 1.5rem;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
 }
 
 .doc-content ol {
   list-style-type: decimal;
   padding-left: 1.5rem;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
 }
 
 .doc-content li {
-  margin-top: 0.375rem;
-  margin-bottom: 0.375rem;
-  line-height: 1.65;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.75;
+  color: var(--fg-body);
 }
 
 .doc-content li::marker {
   color: var(--accent);
 }
 
+/* Subtle, clean inline code */
 .doc-content code:not(pre code) {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  background-color: var(--surface-active);
-  color: #A5D8FF;
-  border: 1px solid var(--border-strong);
+  background-color: rgba(76, 110, 245, 0.12);
+  color: #93C5FD;
+  border: 1px solid rgba(76, 110, 245, 0.25);
   border-radius: 0.375rem;
-  padding: 0.15rem 0.4rem;
+  padding: 0.15rem 0.375rem;
   font-size: 0.875em;
+  font-weight: 500;
+  display: inline;
+}
+
+/* Prism syntax highlighting theme - High contrast & readable */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #64748B;
+  font-style: italic;
+}
+
+.token.punctuation {
+  color: #94A3B8;
+}
+
+.token.namespace {
+  opacity: 0.7;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: #FB923C;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: #34D399;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+  color: #F472B6;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: #818CF8;
+  font-weight: 600;
+}
+
+.token.function,
+.token.class-name {
+  color: #FBBF24;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+  color: #93C5FD;
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
 }
 
 .doc-content table {
   width: 100%;
-  margin-top: 1.75rem;
-  margin-bottom: 1.75rem;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
   border-collapse: separate;
   border-spacing: 0;
   border-radius: 0.75rem;
   overflow: hidden;
   border: 1px solid var(--border-strong);
-  font-size: 0.875rem;
+  font-size: 0.925rem;
 }
 
 .doc-content th {
   background-color: var(--surface-active);
-  padding: 0.75rem 1rem;
+  padding: 0.875rem 1.25rem;
   font-weight: 600;
   text-align: left;
-  color: var(--fg);
+  color: #FFFFFF;
   border-bottom: 1px solid var(--border-strong);
 }
 
 .doc-content td {
-  padding: 0.75rem 1rem;
-  color: var(--fg-muted);
+  padding: 0.875rem 1.25rem;
+  color: var(--fg-body);
   background-color: var(--surface);
   border-bottom: 1px solid var(--border);
+  line-height: 1.6;
 }
 
 .doc-content tr:last-child td {
@@ -201,3 +288,4 @@ body {
   margin-top: 2.5rem;
   margin-bottom: 2.5rem;
 }
+

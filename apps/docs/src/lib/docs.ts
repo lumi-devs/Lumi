@@ -2,6 +2,15 @@ import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
 import { marked } from "marked";
+import Prism from "prismjs";
+import "prismjs/components/prism-typescript.js";
+import "prismjs/components/prism-javascript.js";
+import "prismjs/components/prism-bash.js";
+import "prismjs/components/prism-json.js";
+import "prismjs/components/prism-yaml.js";
+import "prismjs/components/prism-markdown.js";
+import "prismjs/components/prism-sql.js";
+import "prismjs/components/prism-docker.js";
 
 const DOCS_DIR = path.join(process.cwd(), "src/content/docs");
 
@@ -103,13 +112,38 @@ export const getDocBySlug = (slugArray: string[]): DocContent | null => {
   };
 
   renderer.code = ({ text, lang }) => {
-    const language = lang || "text";
-    const escaped = text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+    const language = (lang || "text").toLowerCase().trim();
+    let highlighted = "";
+    
+    // Normalizing aliases
+    let prismLang = language;
+    if (prismLang === "ts" || prismLang === "tsx") prismLang = "typescript";
+    else if (prismLang === "js" || prismLang === "jsx") prismLang = "javascript";
+    else if (prismLang === "sh" || prismLang === "shell" || prismLang === "zsh") prismLang = "bash";
+    else if (prismLang === "yml") prismLang = "yaml";
+    else if (prismLang === "dockerfile") prismLang = "docker";
+
+    const grammar = Prism.languages[prismLang];
+    if (grammar) {
+      try {
+        highlighted = Prism.highlight(text, grammar, prismLang);
+      } catch {
+        highlighted = text
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+    } else {
+      highlighted = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     return `<div class="my-6 rounded-xl overflow-hidden border border-[var(--border-strong)] bg-[#0A0D14] shadow-lg">
       <div class="flex items-center justify-between px-4 py-2 bg-[var(--surface-active)] border-b border-[var(--border-strong)] text-xs font-mono text-[var(--fg-muted)]">
         <div class="flex items-center gap-2">
@@ -119,7 +153,7 @@ export const getDocBySlug = (slugArray: string[]): DocContent | null => {
           <span class="ml-2 font-medium uppercase tracking-wider text-[11px] text-[var(--fg-subtle)]">${language}</span>
         </div>
       </div>
-      <pre class="p-4 overflow-x-auto text-[13px] leading-relaxed text-[#E2E8F0] font-mono"><code>${escaped}</code></pre>
+      <pre class="p-4 overflow-x-auto text-[13px] leading-relaxed text-[#E2E8F0] font-mono"><code class="language-${prismLang}">${highlighted}</code></pre>
     </div>`;
   };
   

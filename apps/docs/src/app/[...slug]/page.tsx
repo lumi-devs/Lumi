@@ -21,9 +21,9 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
   }
 
   return (
-    <div className="mx-auto flex max-w-7xl px-6 lg:px-8">
+    <div className="mx-auto flex w-full max-w-[1700px] px-6 lg:px-10">
       <Sidebar />
-      <main className="relative py-6 lg:gap-10 lg:py-8 xl:grid xl:grid-cols-[1fr_250px] min-w-0 w-full flex-1">
+      <main className="relative py-6 lg:gap-12 lg:py-8 xl:grid xl:grid-cols-[minmax(0,1fr)_260px] min-w-0 w-full flex-1">
         <div className="mx-auto w-full min-w-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="mb-4 flex items-center space-x-1 text-sm text-[var(--fg-muted)]">
             <span className="truncate">Docs</span>

@@ -16,7 +16,7 @@ export default function Home() {
         />
       </div>
 
-      <div className="mx-auto max-w-7xl px-6 pb-24 pt-10 sm:pb-32 lg:flex lg:px-8 lg:py-40">
+      <div className="mx-auto max-w-[1700px] px-6 lg:px-10 pb-24 pt-10 sm:pb-32 lg:flex lg:py-40">
         <div className="mx-auto max-w-2xl lg:mx-0 lg:max-w-xl lg:flex-shrink-0 lg:pt-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <h1 className="mt-10 text-4xl font-bold tracking-tight text-[var(--fg)] sm:text-6xl">
@@ -59,7 +59,7 @@ export default function Home() {
       </div>
       
       {/* 4-Quadrant Feature Bento Grid */}
-      <div className="mx-auto max-w-7xl px-6 lg:px-8 pb-24">
+      <div className="mx-auto max-w-[1700px] px-6 lg:px-10 pb-24">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[
             { title: "Modular Architecture", desc: "Build components in isolation, hot-reload on the fly." },

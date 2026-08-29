@@ -1,16 +1,19 @@
 "use client";
 import Link from "next/link";
 import { Search, BookOpen } from "lucide-react";
+import { VersionSelector } from "@/components/version-selector";
 
 export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[var(--border)] glass">
-      <div className="flex h-16 items-center px-6 max-w-7xl mx-auto w-full gap-4">
-        <Link href="/" className="flex items-center gap-2 mr-4">
-          <BookOpen className="h-6 w-6 text-[var(--accent)]" />
-          <span className="font-bold text-lg hidden sm:inline-block">Lumi Docs</span>
-          <span className="text-xs bg-[var(--surface-active)] px-2 py-0.5 rounded-full border border-[var(--border-strong)] text-[var(--fg-muted)]">v1.0.0-prealpha</span>
-        </Link>
+      <div className="flex h-16 items-center px-6 lg:px-10 max-w-[1700px] mx-auto w-full gap-4">
+        <div className="flex items-center gap-3 mr-4">
+          <Link href="/" className="flex items-center gap-2">
+            <BookOpen className="h-6 w-6 text-[var(--accent)]" />
+            <span className="font-bold text-lg hidden sm:inline-block">Lumi Docs</span>
+          </Link>
+          <VersionSelector />
+        </div>
         <div className="flex-1 flex justify-center max-w-md ml-auto sm:ml-0">
           <button className="w-full inline-flex items-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-[var(--border)] bg-[var(--surface-hover)] shadow-sm hover:bg-[var(--surface-active)] hover:text-accent-foreground px-4 py-2 relative h-9 justify-start rounded-[0.5rem] text-sm text-[var(--fg-muted)]">
             <Search className="h-4 w-4" />
