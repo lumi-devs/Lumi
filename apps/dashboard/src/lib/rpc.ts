@@ -6,6 +6,7 @@ import type {
   RpcActionName,
   RpcRequestPayloads,
 } from "@lumi/contracts";
+import { injectTraceContext } from "@lumi/observability";
 import { env } from "./env";
 
 const DEFAULT_TIMEOUT_MS = 8000;
@@ -40,11 +41,14 @@ export class RpcClient {
     action: A,
     options: CallOptions<A> = {},
   ): Promise<RpcResponse["data"]> {
+    const traceCarrier = injectTraceContext();
     const request: RpcRequest = {
       id: randomUUID(),
       action,
       guildId: options.guildId,
       actorId: options.actorId,
+      traceparent: traceCarrier["traceparent"],
+      tracestate: traceCarrier["tracestate"],
       data: options.data,
     };
 

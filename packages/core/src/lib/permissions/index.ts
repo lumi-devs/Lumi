@@ -33,7 +33,10 @@ export async function hasRequiredPermit(
 ): Promise<boolean> {
   if (!target || typeof target !== "object") return false;
   const t = target as Record<string, unknown>;
-  const userId = (t.user as { id?: string })?.id ?? (t.userId as string);
+  const userId =
+    (t.user as { id?: string })?.id ??
+    (t.author as { id?: string })?.id ??
+    (t.userId as string);
   const guildId = (t.guildId as string | null) ?? (t.guild as { id?: string })?.id;
   if (!userId || !guildId) return false;
 

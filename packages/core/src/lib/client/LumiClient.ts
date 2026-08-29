@@ -176,32 +176,38 @@ export class LumiClient extends SapphireClient {
   }
 
   public override fetchPrefix = async (message: Message) => {
+    if (message.guild) {
+      const cacheKey = RedisKeys.guildPrefixes(message.guild.id);
+      const cached = await container.redis.get(cacheKey);
+      if (cached) {
+        const parsed = tryParseJSON(cached) as string[] | null;
+        if (Array.isArray(parsed)) return parsed;
+      }
+
+      const globalConfig = await container.db.global
+        .getGlobalConfig()
+        .catch(() => null);
+      const envFallback = envParseString("DEFAULT_PREFIX", ",");
+      const globalDefault = globalConfig?.defaultPrefix ?? envFallback;
+
+      const settings = await container.db.config.getGuildSettings(
+        message.guild.id,
+      );
+      const prefixes = settings.prefix ? [settings.prefix] : [globalDefault];
+
+      await container.redis.setex(
+        cacheKey,
+        RedisTTL.guildPrefix,
+        JSON.stringify(prefixes),
+      );
+      return prefixes;
+    }
+
     const globalConfig = await container.db.global
       .getGlobalConfig()
       .catch(() => null);
     const envFallback = envParseString("DEFAULT_PREFIX", ",");
-    const globalDefault = globalConfig?.defaultPrefix ?? envFallback;
-
-    if (!message.guild) return globalDefault;
-
-    const cacheKey = RedisKeys.guildPrefixes(message.guild.id);
-    const cached = await container.redis.get(cacheKey);
-    if (cached) {
-      const parsed = tryParseJSON(cached) as string[] | null;
-      if (Array.isArray(parsed)) return parsed;
-    }
-
-    const settings = await container.db.config.getGuildSettings(
-      message.guild.id,
-    );
-    const prefixes = settings.prefix ? [settings.prefix] : [globalDefault];
-
-    await container.redis.setex(
-      cacheKey,
-      RedisTTL.guildPrefix,
-      JSON.stringify(prefixes),
-    );
-    return prefixes;
+    return globalConfig?.defaultPrefix ?? envFallback;
   };
 
   /**

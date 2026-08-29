@@ -31,6 +31,7 @@ export abstract class Repository {
     ttl: number,
     fetcher: () => Promise<T>,
     parser: (data: string) => T = JSON.parse,
+    serializer: (data: T) => string = JSON.stringify,
   ): Promise<T> {
     const cache = key.split(":")[1] ?? "unknown";
     const cached = await this.redis.get(key);
@@ -53,7 +54,7 @@ export abstract class Repository {
 
     const flight = (async () => {
       const data = await fetcher();
-      const serialized = JSON.stringify(data);
+      const serialized = serializer(data);
       if (serialized !== undefined) {
         await this.redis.setex(key, ttl, serialized);
       }

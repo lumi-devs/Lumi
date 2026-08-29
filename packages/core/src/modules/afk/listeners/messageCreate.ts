@@ -167,13 +167,16 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
       userId: string;
       entry: NonNullable<Awaited<ReturnType<typeof getAfkEntry>>>;
     }
-    const hits: AfkHit[] = [];
-    for (const user of message.mentions.users.values()) {
-      if (user.id === message.author.id) continue;
-      const entry = await getAfkEntry(message.guildId, user.id);
-      if (!entry) continue;
-      hits.push({ userId: user.id, entry });
-    }
+    const mentionedUsers = [...message.mentions.users.values()].filter(
+      (user) => user.id !== message.author.id,
+    );
+    const lookupResults = await Promise.all(
+      mentionedUsers.map(async (user) => {
+        const entry = await getAfkEntry(message.guildId, user.id);
+        return entry ? { userId: user.id, entry } : null;
+      }),
+    );
+    const hits = lookupResults.filter((h): h is AfkHit => h !== null);
 
     if (!hits.length) return;
 

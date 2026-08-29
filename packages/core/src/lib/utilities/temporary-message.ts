@@ -22,10 +22,11 @@ export function deleteMessageLater(
   delayMs = TRANSIENT_REPLY_TTL,
   reason = "deleteMessageLater",
 ): void {
-  setTimeout(
+  const timer = setTimeout(
     () => void message.delete().catch(swallow(reason)),
     delayMs,
-  ).unref();
+  );
+  timer.unref?.();
 }
 
 /** {@link deleteMessageLater} for an interaction's own reply. */
@@ -34,8 +35,9 @@ export function deleteReplyLater(
   delayMs = TRANSIENT_REPLY_TTL,
   reason = "deleteReplyLater",
 ): void {
-  setTimeout(
+  const timer = setTimeout(
     () => void interaction.deleteReply().catch(swallow(reason)),
     delayMs,
-  ).unref();
+  );
+  timer.unref?.();
 }

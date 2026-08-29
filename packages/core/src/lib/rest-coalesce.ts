@@ -81,8 +81,17 @@ async function flush(channelId: string): Promise<void> {
         body: { messages: batch.map((e) => e.messageId) },
       });
       for (const e of batch) e.resolve();
-    } catch (err) {
-      for (const e of batch) e.reject(err);
+    } catch {
+      await Promise.all(
+        batch.map(async (e) => {
+          try {
+            await singleDelete(channelId, e.messageId);
+            e.resolve();
+          } catch (err) {
+            e.reject(err);
+          }
+        }),
+      );
     }
   }
 
