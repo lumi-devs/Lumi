@@ -148,7 +148,7 @@ Address feedback with follow-up commits on the same branch rather than force-pus
 
 ## Versioning & updates
 
-Bump `version` in `info.json` on any behavioral change - this is what `,repo update` / the dashboard's addon-update check compares against to know a new version is available. There's no separate changelog file requirement for addons (unlike core `Lumi`, which uses Changesets); a clear PR description and commit messages are sufficient.
+Bump `version` in `info.json` on any behavioral change — this is what `,repo update` / the dashboard's addon-update check compares against to know a new version is available. There's no separate changelog file requirement for addons (unlike core `Lumi`, which uses Changesets); a clear PR description and commit messages are sufficient.
 
-A bot owner can freeze an installed addon at its current version with `,module pin <name>` (mirroring Red's `[p]cog pin`) - `,module update <name>` and a bare `,module update` (all installed modules) both skip a pinned module instead of checking it for updates. `,module unpin <name>` removes the lock. This is entirely owner-side; your addon doesn't need to do anything to support it, but it's worth a line in your README if users might want to pin before a breaking version bump.
+A bot owner can freeze an installed addon at its current version with `,module pin <name>` — `,module update <name>` and a bare `,module update` (all installed modules) both skip a pinned module instead of checking it for updates. `,module unpin <name>` removes the lock. This is entirely owner-side; your addon doesn't need to do anything to support it, but it's worth a line in your README if users might want to pin before a breaking version bump.
 

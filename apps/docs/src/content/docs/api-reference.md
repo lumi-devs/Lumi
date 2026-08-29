@@ -7,8 +7,6 @@ The public, stable surface for addon code - everything importable from `"lumi"` 
 
 For a walkthrough of building something with this API, start with [Quick Start: Your First Addon](/Lumi/guides/quick-start-addon/), then the fuller [Module Creation Guide](/Lumi/guides/module-creation/) (written against the built-in `afk` module, but every extension point applies to addons identically). For the addon-specific rules on top of this API (no `container.prisma`, dependency isolation via `info.json`, etc.), see the [Addon Publishing Guide](/Lumi/guides/addon-publishing/).
 
-Named after Red-DiscordBot's `redbot.core` / `redbot.core.commands` / `redbot.core.utils.chat_formatting` split, if you're coming from that ecosystem.
-
 ```typescript
 import { Module, DefineModule, cfg, Service, getService } from "lumi";
 import { BaseCommand, BaseSubcommand, CommandContext } from "lumi/commands";
@@ -209,7 +207,7 @@ enum PermissionLevel {
 
 ### `hasRequiredPermit(target, permitNode): Promise<boolean>`
 
-Checks whether an interaction/message-like object satisfies a Wick-style permit node - bot-owner and guild-owner always pass, otherwise it consults `PermitResolver` (the same permit/deny rule set and anti-nuke quarantine check that command pieces get via `RequirePermitPrecondition`). Use this for interaction handlers, which never run through that precondition.
+Checks whether an interaction/message-like object satisfies a granular permit node - bot-owner and guild-owner always pass, otherwise it consults `PermitResolver` (the same permit/deny rule set and anti-nuke quarantine check that command pieces get via `RequirePermitPrecondition`). Use this for interaction handlers, which never run through that precondition.
 
 ### `isModuleEnabled(guildId, moduleName): Promise<boolean>`
 

@@ -46,7 +46,7 @@ When you're ready, hit **Revert** on the resulting message and everything goes b
 
 ### Backup & restore
 
-While anti-nuke is on, Lumi takes an hourly snapshot of your server's structure - every role, every channel, permissions, ordering, all of it. Wick calls this "imaging," if that's the term you've heard before.
+While anti-nuke is on, Lumi takes an hourly snapshot of your server's structure - every role, every channel, permissions, ordering, all of it.
 
 If the worst happens and someone guts your server anyway, `/restore` rebuilds it from the most recent snapshot. A panic-mode revert can also pull from this automatically.
 

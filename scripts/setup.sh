@@ -274,7 +274,7 @@ cat <<EOF
   2. bun run db:migrate   ${DIM}# applies prisma/schema.prisma to Postgres${RESET}
   3. bun run dev          ${DIM}# starts worker (+ dashboard via turbo)${RESET}
 
-See docs/GUIDE_SELF_HOSTING.md for the full walkthrough, or docs/configuration.md
+See docs/guides/self-hosting.mdx for the full walkthrough, or docs/configuration.md
 for every environment variable this project understands.
 EOF
 ok "Setup complete."

@@ -91,23 +91,23 @@ Next.js has no long-lived `main.ts` bootstrap - Server Components, Route Handler
 
 ## RPC action surface
 
-There are exactly 50 actions. The authoritative list is `RpcRequestPayloads` in `packages/contracts/src/rpc.ts`; each key is the wire action string and its value is the `data` payload the caller must send (`never` means the action takes no payload).
+There are 66 wire actions. The authoritative list is `RpcRequestPayloads` in `packages/contracts/src/rpc.ts`; each key is the wire action string and its value is the `data` payload the caller must send (`never` means the action takes no payload).
 
 | Group | Actions |
 | :--- | :--- |
 | Auth (1) | `auth.whoami` |
 | Global / GDPR (2) | `global.gdpr.delete`, `global.gdpr.export` |
 | Addon downloader (6) | `downloader.repo.add`, `downloader.repo.list`, `downloader.repo.modules`, `downloader.module.install`, `downloader.module.uninstall`, `downloader.module.rollback` |
-| Guild core (4) | `guild.dashboard.get`, `guild.module.toggle`, `guild.config.set`, `guild.settings.set` |
-| Permits (6) | `guild.permits.list`, `.create`, `.update`, `.delete`, `.assign`, `.unassign` |
-| Moderation (4) | `guild.cases.list`, `guild.cases.revoke`, `guild.warnThresholds.list`, `guild.warnThresholds.set` |
-| Security (5) | `guild.panic.get`, `guild.panic.set`, `guild.verificationPanel.get`, `.set`, `.delete` |
+| Guild core (6) | `guild.dashboard.get`, `guild.summaries.list`, `guild.module.toggle`, `guild.config.set`, `guild.setup.run`, `guild.settings.set` |
+| Permits (6) | `guild.permits.list`, `guild.permits.create`, `guild.permits.update`, `guild.permits.delete`, `guild.permits.assign`, `guild.permits.unassign` |
+| Moderation & Appeals (11) | `guild.cases.list`, `guild.cases.revoke`, `guild.warnThresholds.list`, `guild.warnThresholds.set`, `guild.modNotes.list`, `guild.modNotes.add`, `guild.modNotes.remove`, `guild.appeals.verify`, `guild.appeals.submit`, `guild.appeals.list`, `guild.appeals.review` |
+| Security & Backups (8) | `guild.panic.get`, `guild.panic.set`, `guild.verificationPanel.get`, `guild.verificationPanel.set`, `guild.verificationPanel.delete`, `guild.verificationWeb.complete`, `guild.backups.list`, `guild.backups.restore` |
 | Temp VC (3) | `guild.tempvc.generators.list`, `guild.tempvc.generators.set`, `guild.tempvc.records.list` |
 | Audit & history (3) | `guild.audit.list`, `guild.history.list`, `guild.history.rollback` |
 | Overrides (2) | `guild.overrides.list`, `guild.overrides.set` |
 | Guild blocklist (3) | `guild.blocklist.list`, `guild.blocklist.add`, `guild.blocklist.remove` |
 | Guild advanced (5) | `guild.afk.list`, `guild.ignored.list`, `guild.ignored.add`, `guild.ignored.remove`, `guild.moduleData.list` |
-| System (7) | `system.dashboard.get`, `system.maintenance.set`, `system.module.toggle`, `system.audit.list`, `system.blocklist.list`, `system.blocklist.add`, `system.blocklist.remove` |
+| System administration (10) | `system.dashboard.get`, `system.maintenance.set`, `system.module.toggle`, `system.module.clear`, `system.identity.set`, `system.audit.list`, `system.blocklist.list`, `system.blocklist.add`, `system.blocklist.remove`, `system.shards.get` |
 
 Guild-scoped actions carry `guildId`; every action carries `actorId` so the worker can attribute the change in its audit log and re-check the caller's permits on its own side. The handler registrations are in `packages/core/src/lib/rpc/core-rpc.ts`.
 
@@ -226,9 +226,11 @@ bun run --cwd apps/dashboard lint     # eslint src
 
 `worker` must be running and reachable at `RPC_HTTP_URL`, or every page that reads data will fail its RPC call.
 
-:::caution
-The `dashboard` Docker Compose profile does not work yet. The shared `Dockerfile` `runner` target has no `next build` stage and copies source only, while the Compose service runs `next start`, which needs a prebuilt `.next`. Starting it exits immediately with *"Could not find a production build in the '.next' directory"*. Run the dashboard directly (above) until that image stage exists.
-:::
+### Running with Docker & Kubernetes
+
+- **Docker Compose**: Run `docker compose --profile dashboard up` — uses the multi-stage `Dockerfile.dashboard` container image.
+- **Kubernetes**: Apply `deploy/k8s/dashboard-deployment.yaml` after the worker StatefulSet is online. The dashboard routes internal RPC traffic to the headless worker service (`http://worker-0.worker-headless.lumi.svc.cluster.local:8091`).
+- **Container Registry**: Multi-arch production images are published at `ghcr.io/lumi-devs/dashboard`.
 
 ## Testing
 

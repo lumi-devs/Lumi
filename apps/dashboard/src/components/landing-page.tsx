@@ -25,7 +25,7 @@ import { env } from "#/lib/env";
 const FEATURES: { icon: LucideIcon; title: string; desc: string }[] = [
   {
     icon: ShieldCheck,
-    title: "Anti-nuke & Wick permits",
+    title: "Anti-nuke & granular permits",
     desc: "Node-based permit trees that survive a compromised admin account.",
   },
   {

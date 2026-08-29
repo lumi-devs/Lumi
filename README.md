@@ -112,10 +112,7 @@ docker compose build
 docker compose up -d
 ```
 
-> [!WARNING]
-> The `dashboard` Compose profile does not work yet - the shared `Dockerfile` has no `next build` stage, so `next start` exits with *"Could not find a production build in the '.next' directory"*. Run the dashboard directly (`bun run --cwd apps/dashboard build && bun run --cwd apps/dashboard start`) until that image stage lands. See [docs/dashboard.md](docs/dashboard.md#running-it).
-
-For scaled-out deployments (multiple `worker` replicas), set `CLUSTER_NAME` and give each replica a disjoint `SHARD_LIST` so they divide the shard range between themselves. Full walkthrough: [docs/GUIDE_PRODUCTION_DEPLOYMENT.md](docs/GUIDE_PRODUCTION_DEPLOYMENT.md).
+For scaled-out deployments (multiple `worker` replicas), set `CLUSTER_NAME` and give each replica a disjoint `SHARD_LIST` so they divide the shard range between themselves. Full walkthrough: [docs/guides/production-deployment.md](docs/guides/production-deployment.md).
 
 </details>
 
@@ -125,14 +122,14 @@ For scaled-out deployments (multiple `worker` replicas), set `CLUSTER_NAME` and 
 - **Without Docker**: `git pull && bun install && bun run db:migrate`, then restart the process (or `/lumi update` from inside Discord to do it in-place).
 - **With Docker**:
   ```sh
-  docker pull ghcr.io/lumi-devs/lumi:latest
+  docker pull ghcr.io/lumi-devs/worker:latest
   docker compose up -d
   ```
   *(Tip: [Watchtower](https://containrrr.dev/watchtower/) automates this.)*
 
 </details>
 
-Full step-by-step guide, including the optional dashboard and observability stack: [docs/GUIDE_SELF_HOSTING.md](docs/GUIDE_SELF_HOSTING.md).
+Full step-by-step guide, including the dashboard and observability stack: [docs/guides/self-hosting.mdx](docs/guides/self-hosting.mdx).
 
 ---
 

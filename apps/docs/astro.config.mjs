@@ -23,28 +23,31 @@ export default defineConfig({
       },
       lastUpdated: true,
       pagination: true,
+      components: {
+        SiteTitle: "./src/components/SiteTitle.astro",
+      },
       expressiveCode: {
         themes: ["github-dark-default", "github-light"],
         styleOverrides: {
-          borderRadius: "0.7rem",
-          borderColor: "rgba(255, 138, 61, 0.22)",
+          borderRadius: "0.875rem",
+          borderColor: "rgba(255, 255, 255, 0.1)",
           codeFontFamily:
-            "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+            "'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, Monaco, Consolas, monospace",
           codeFontSize: "0.85rem",
           codeLineHeight: "1.65",
           frames: {
-            shadowColor: "rgba(0, 0, 0, 0.4)",
-            editorActiveTabIndicatorTopColor: "#ff8a3d",
-            editorActiveTabIndicatorBottomColor: "#ff8a3d",
-            terminalTitlebarDotsForeground: "#ff8a3d",
-            terminalTitlebarDotsOpacity: "0.6",
+            shadowColor: "rgba(0, 0, 0, 0.35)",
+            editorActiveTabIndicatorTopColor: "#0a84ff",
+            editorActiveTabIndicatorBottomColor: "#0a84ff",
+            terminalTitlebarDotsForeground: "#ff5f57",
+            terminalTitlebarDotsOpacity: "0.9",
           },
         },
       },
       head: [
         {
           tag: "meta",
-          attrs: { name: "theme-color", content: "#ff8a3d" },
+          attrs: { name: "theme-color", content: "#0071e3" },
         },
         {
           tag: "meta",
@@ -56,7 +59,7 @@ export default defineConfig({
         },
         {
           tag: "meta",
-          attrs: { name: "twitter:card", content: "summary" },
+          attrs: { name: "twitter:card", content: "summary_large_image" },
         },
         {
           tag: "link",
@@ -74,7 +77,7 @@ export default defineConfig({
           tag: "link",
           attrs: {
             rel: "stylesheet",
-            href: "https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap",
+            href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap",
           },
         },
       ],

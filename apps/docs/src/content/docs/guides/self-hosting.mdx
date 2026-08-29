@@ -140,15 +140,24 @@ RPC_HTTP_URL=http://localhost:8091   # or http://worker:8091 under Docker Compos
 
 Register `http://localhost:8080/api/auth/callback/discord` as a redirect under **OAuth2 → Redirects** on the Developer Portal - there's no separate redirect-URL setting to configure, it's derived from this.
 
-:::caution
-The Docker Compose `dashboard` profile doesn't work yet - it needs a manual build step the container doesn't do for you. Run the dashboard directly instead, below.
-:::
+<Tabs>
+<TabItem label="Docker Compose" icon="docker">
+
+```bash
+docker compose --profile dashboard up -d
+```
+
+</TabItem>
+<TabItem label="Bun directly" icon="bun">
 
 ```bash
 bun run --cwd apps/dashboard dev          # development
 # or
 bun run --cwd apps/dashboard build && bun run --cwd apps/dashboard start
 ```
+
+</TabItem>
+</Tabs>
 
 Visit `http://localhost:8080`. The bot needs to be running and reachable for any of it to work. More detail: [Dashboard Reference](/Lumi/dashboard/).
 

@@ -63,7 +63,7 @@ Feature modules live under `packages/core/src/modules/<name>/`, each exporting a
 decorated with `@DefineModule` (`packages/core/src/lib/module-system/Module.ts`), with a
 per-guild config schema (`packages/core/src/lib/module-system/config-schema.ts`) and
 sub-store directories (`commands/`, `listeners/`, `services/`, `interaction-handlers/`,
-`scheduled-tasks/`). Full walkthrough: [`docs/GUIDE_MODULE_CREATION.md`](docs/GUIDE_MODULE_CREATION.md).
+`scheduled-tasks/`). Full walkthrough: [`docs/guides/module-creation.md`](docs/guides/module-creation.md).
 
 **Zero cross-module import law**: a module must never import directly from a sibling
 module. Shared code belongs in `#lib/*`, `#database/*`, or `#utilities/*`.
@@ -73,7 +73,7 @@ from `data/3rd-party-modules/`) should not reach into `#core`/`#lib`/`#database`
 at all — the one stable, supported import surface is the `lumi` package itself
 (`packages/core/src/lib/addon-sdk/`, exported via the root `package.json` `"exports"` map:
 `lumi`, `lumi/commands`, `lumi/permissions`, `lumi/scheduling`, `lumi/ui`, `lumi/utils`).
-Full surface: [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md).
+Full surface: [`docs/api-reference.md`](docs/api-reference.md).
 
 ## RPC bridge (dashboard ↔ worker)
 
@@ -82,7 +82,7 @@ Every read/write is proxied over an internal HTTP RPC bridge to `apps/worker`
 (`apps/dashboard/src/lib/rpc.ts` calling `packages/core/src/lib/rpc/http-server.ts`, a
 `server-only` module reachable only from Server Components/Route Handlers/Server Actions).
 
-The action surface is exactly **50 actions**, defined once in `packages/contracts/src/rpc.ts`:
+The action surface is **66 actions**, defined once in `packages/contracts/src/rpc.ts`:
 `RpcRequestPayloads` maps each wire action string to its `data` payload, and `RPC_ACTIONS`
 gives the caller-side constants. Adding a dashboard capability means adding an entry there,
 a handler in `packages/core/src/lib/rpc/core-rpc.ts`, and a caller in
