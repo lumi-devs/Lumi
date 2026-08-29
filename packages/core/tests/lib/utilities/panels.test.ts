@@ -223,11 +223,11 @@ describe("Panel & Card Utility Standardization", () => {
 
   describe("Card Extensions & Formatting Helpers", () => {
     it("defaultCardColors palette is defined", () => {
-      expect(defaultCardColors.primary).toBe(0x5865f2);
-      expect(defaultCardColors.success).toBe(0x57f287);
-      expect(defaultCardColors.error).toBe(0xed4245);
-      expect(defaultCardColors.warning).toBe(0xfee75c);
-      expect(defaultCardColors.info).toBe(0x5865f2);
+      expect(defaultCardColors.primary).toBe(0x4c6ef5);
+      expect(defaultCardColors.success).toBe(0x12b886);
+      expect(defaultCardColors.error).toBe(0xfa5252);
+      expect(defaultCardColors.warning).toBe(0xf59f00);
+      expect(defaultCardColors.info).toBe(0x4c6ef5);
     });
 
     it("makeSuccessCard sets accent color", () => {

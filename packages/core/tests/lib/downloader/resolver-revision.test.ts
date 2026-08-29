@@ -65,6 +65,7 @@ async function writeModuleInfo(moduleDir: string, version: string) {
       short: "Revision Test",
       version,
       min_bot_version: "1.0.0",
+      end_user_data_statement: "Revision test privacy statement",
     }),
   );
   await fs.writeFile(

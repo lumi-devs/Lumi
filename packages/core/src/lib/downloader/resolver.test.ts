@@ -36,6 +36,7 @@ async function writeFixtureAddon() {
       short: "Fixture addon.",
       version: "1.0.0",
       requirements: ["some-package"],
+      end_user_data_statement: "Resolver test privacy statement",
     }),
   );
   await fs.writeFile(

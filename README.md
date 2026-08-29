@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/banner.png" alt="Lumi" width="800">
 
-  <p><strong>Fully modular, hot-swappable, self-hosted - built for communities that want control.</strong></p>
+  <p><strong>Fully modular, hot-swappable, self-hosted Discord bot — built for communities that want control.</strong></p>
 
   <p>
     <a href="https://github.com/lumi-devs/lumi/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/lumi-devs/lumi/ci.yml?branch=main&style=flat-square&label=CI&logo=github" alt="CI"></a>
@@ -11,16 +11,18 @@
   </p>
 
   <p>
-    <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.3%2B-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun"></a>
-    <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
+    <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.4%2B-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun"></a>
+    <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.x%20%2F%206.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
+    <a href="#"><img src="https://img.shields.io/badge/Theme-Midnight%20Sapphire-4C6EF5?style=flat-square" alt="Midnight Sapphire Theme"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-A42E2B?style=flat-square&logo=gnu&logoColor=white" alt="GPL v3"></a>
   </p>
 
   <p>
     <a href="#overview">Overview</a> •
+    <a href="#key-features">Features</a> •
     <a href="#self-hosting">Self-Hosting</a> •
     <a href="#architecture">Architecture</a> •
-    <a href="#translations">Translations</a> •
+    <a href="#data-privacy--gdpr">Privacy & GDPR</a> •
     <a href="docs/">Docs</a> •
     <a href="https://lumi-devs.github.io/Lumi/">Docs Site</a> •
     <a href="#contributing">Contributing</a>
@@ -31,11 +33,21 @@
 
 ## Overview
 
-> ⚠️ **Pre-Alpha Notice:** Lumi is currently in **pre-alpha**. Several components  including but not limited to the dashboard, Lumi Downloader, and various commands - are undocumented and subject to radical changes without notice. Expect breaking changes between updates.
+> ⚠️ **Pre-Alpha Notice:** Lumi is currently in **pre-alpha**. Several components — including the dashboard, Lumi Downloader, and various commands — are evolving rapidly. Expect breaking changes between updates.
 
-Lumi is a self-hosted, modular Discord bot built for communities that demand full control and high performance. Every feature is a hot-swappable module - toggle, configure, and extend without restarting the bot or touching core code.
+Lumi is a self-hosted, modular Discord bot built for communities that demand full control, rock-solid security, and high performance. Every feature is a hot-swappable module: toggle, configure, and extend without restarting the bot or touching core code.
 
-Built with **Bun**, **TypeScript**, **discord.js v14**, and the **[Sapphire Framework](https://sapphirejs.dev)**. Backed by **PostgreSQL 17** and **Redis 7**.
+Built with **Bun**, **TypeScript**, **discord.js v14**, and the **[Sapphire Framework](https://sapphirejs.dev)**. Backed by **PostgreSQL 17/18** (via Prisma 7) and **Redis 7/8**.
+
+---
+
+## Key Features
+
+- 🎨 **Midnight Sapphire Unified Design**: Consistent brand identity and color tokens across Discord Components v2 embeds, Next.js admin dashboard, and Astro documentation.
+- 🛡️ **Full GDPR & Privacy Compliance**: Self-service user data export (`/mydata getmydata`), right to erasure (`/mydata forgetme`), mandatory module data statements, and automatic data retention policies.
+- ⚡ **Next.js 16 Web Dashboard**: Real-time server management over an internal HTTP RPC bridge with rate limiting, server-side auth guards, and module bento grid controls.
+- 🧩 **Isolated Addon SDK**: Build custom community modules with zero cross-module leaks using the clean, typed `lumi` public SDK.
+- 📡 **Distributed Architecture**: Shard 0 election, Redis Streams event bus for scheduled tasks, and OpenTelemetry distributed tracing out of the box.
 
 ---
 
@@ -140,6 +152,17 @@ Every worker process is identical - there's no separate scheduler role. `apps/wo
 Gateway ingestion and bot logic intentionally live in one process. Scaling is horizontal: set `CLUSTER_NAME` and give each replica a disjoint `SHARD_LIST`. Exactly one shard per pod - the one holding shard id `0` - is elected "primary" with zero coordination and owns BullMQ job scheduling and the RPC/metrics HTTP surface. Multi-replica deployments route REST traffic through a shared `nirn-proxy` (`DISCORD_PROXY_URL`) so rate-limit buckets stay coordinated.
 
 Task queueing runs on **Redis Streams**/BullMQ; the dashboard talks to the worker over an **internal HTTP RPC bridge**. Detailed specifications are in [docs/architecture.md](docs/architecture.md).
+
+---
+
+## Data Privacy & GDPR
+
+Lumi is engineered with privacy-by-design and full GDPR/CCPA compliance:
+
+- **Right of Access (Article 15)**: Users can export all personal data stored across the bot via `/mydata getmydata` or the web dashboard.
+- **Right to Erasure (Article 17)**: Users can permanently purge and anonymize their profile, AFK data, and channel associations with `/mydata forgetme`.
+- **Addon Privacy Transparency**: Every 3rd-party module is required to declare an `end_user_data_statement` manifest, inspectable via `/mydata 3rdparty`.
+- **Automated Data Retention**: Stale audit ledgers and expired cases are automatically purged by scheduled sweeps.
 
 ---
 

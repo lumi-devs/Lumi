@@ -12,6 +12,7 @@ const GOOD_INFO = JSON.stringify({
   description: "A sample addon.",
   short: "Sample.",
   version: "1.0.0",
+  end_user_data_statement: "This addon does not store any user data.",
 });
 const GOOD_INDEX = `import { Module, DefineModule } from "lumi";
 @DefineModule({ name: "sample", displayName: "Sample", emoji: "🧪", version: "1.0.0", description: "d" })
@@ -67,6 +68,7 @@ describe("validateAddon", () => {
         description: "d",
         short: "s",
         version: "1.0.0",
+        end_user_data_statement: "d",
       }),
       "index.ts": GOOD_INDEX,
     });
@@ -77,7 +79,7 @@ describe("validateAddon", () => {
   it("flags the tasks/ naming trap", async () => {
     const dir = await makeAddon(
       "trap",
-      { "info.json": JSON.stringify({ name: "trap", author: ["T"], description: "d", short: "s", version: "1.0.0" }), "index.ts": GOOD_INDEX },
+      { "info.json": JSON.stringify({ name: "trap", author: ["T"], description: "d", short: "s", version: "1.0.0", end_user_data_statement: "d" }), "index.ts": GOOD_INDEX },
       ["tasks"],
     );
     const { errors } = await validateAddon(dir);
@@ -135,7 +137,7 @@ describe("validateAddon", () => {
 
   it("validates a valid manifest.json contract", async () => {
     const dir = await makeAddon("valid-manifest", {
-      "info.json": JSON.stringify({ name: "valid-manifest", author: ["T"], description: "d", short: "s", version: "1.0.0" }),
+      "info.json": JSON.stringify({ name: "valid-manifest", author: ["T"], description: "d", short: "s", version: "1.0.0", end_user_data_statement: "Valid privacy statement" }),
       "index.ts": `import { Module, DefineModule } from "lumi";\n@DefineModule({ name: "valid-manifest", displayName: "M", emoji: "🧪", version: "1.0.0", description: "d" })\nexport class MModule extends Module {}\n`,
       "manifest.json": JSON.stringify({
         name: "valid-manifest",

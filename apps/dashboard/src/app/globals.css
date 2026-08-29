@@ -3,11 +3,10 @@
 
 /* ── Lumi dashboard design tokens ─────────────────────────────────────────
  *
- * AESTHETIC DIRECTION: "Daylight" — a premium consumer console in the Apple
- * idiom. Cool graphite/paper neutrals (never warm, never pure black/white),
- * one confident cobalt-blue accent, glass chrome on nav/overlays, and soft
- * diffused elevation instead of hard drop shadows. Calm by default; motion
- * and depth are used to clarify state, not to decorate.
+ * AESTHETIC DIRECTION: "Midnight Sapphire" — a premium admin console bridging
+ * Discord heritage with modern SaaS refinement. Deep navy canvas with electric
+ * sapphire accent, glass chrome on nav/overlays, and soft diffused elevation.
+ * Calm by default; motion and depth clarify state, not decorate.
  *
  * Semantic tokens only. Nothing in the app should reference a raw colour or
  * a `white/40`-style alpha. Components consume `bg-surface` /
@@ -47,18 +46,18 @@
 
   /* Cobalt — the one saturated colour in the system. Reserved for the
    * primary action and the active route, never for decoration. */
-  --accent: #2953d8;
-  --accent-hover: #1f41b0;
-  --accent-soft: rgba(41, 83, 216, 0.09);
-  --accent-fg: #1f41b0;
-  --accent-glow: #4c7dff;
+  --accent: #3B5BDB;
+  --accent-hover: #2B4BC6;
+  --accent-soft: rgba(59, 91, 219, 0.09);
+  --accent-fg: #2B4BC6;
+  --accent-glow: #4C6EF5;
 
   /* Status */
-  --success: #12805a;
+  --success: #12805A;
   --success-soft: rgba(18, 128, 90, 0.1);
-  --warning: #92600a;
+  --warning: #92600A;
   --warning-soft: rgba(146, 96, 10, 0.1);
-  --danger: #c7333f;
+  --danger: #C7333F;
   --danger-soft: rgba(199, 51, 63, 0.09);
 
   /* Scrim behind a modal `<dialog>`. Dark in both themes — a light scrim
@@ -153,50 +152,50 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
 
-    --bg: #0a0b0f;
-    --bg-subtle: #0f1116;
-    --surface: #15171d;
-    --surface-hover: #1b1e25;
-    --surface-active: #21242c;
+    --bg: #090B14;
+    --bg-subtle: #0D1018;
+    --surface: #0F1219;
+    --surface-hover: #161B26;
+    --surface-active: #1C2231;
 
-    --border: #262931;
-    --border-soft: #1b1e24;
-    --border-strong: #383c46;
+    --border: #1E2433;
+    --border-soft: #161B26;
+    --border-strong: #2D3548;
 
-    --fg: #ecedf2;
-    --fg-muted: #969caa;
-    --fg-subtle: #5f6572;
+    --fg: #F0F2F8;
+    --fg-muted: #8B95B7;
+    --fg-subtle: #5F6A85;
     /* Deep navy on the bright dark-mode accent: white text on #5B8CFF is
      * borderline on AA at UI text sizes, navy is safely dark enough. */
-    --fg-on-accent: #0a1230;
+    --fg-on-accent: #FFFFFF;
 
-    --accent: #5b8cff;
-    --accent-hover: #7ba3ff;
-    --accent-soft: rgba(91, 140, 255, 0.14);
-    --accent-fg: #8fb2ff;
-    --accent-glow: #5b8cff;
+    --accent: #4C6EF5;
+    --accent-hover: #3B5BDB;
+    --accent-soft: rgba(76, 110, 245, 0.12);
+    --accent-fg: #6D8DF7;
+    --accent-glow: #4C6EF5;
 
-    --success: #34d399;
-    --success-soft: rgba(52, 211, 153, 0.12);
-    --warning: #fbbf24;
-    --warning-soft: rgba(251, 191, 36, 0.12);
-    --danger: #fb7185;
-    --danger-soft: rgba(251, 113, 133, 0.12);
+    --success: #12B886;
+    --success-soft: rgba(18, 184, 134, 0.12);
+    --warning: #F59F00;
+    --warning-soft: rgba(245, 159, 0, 0.12);
+    --danger: #FA5252;
+    --danger-soft: rgba(250, 82, 82, 0.12);
 
     --overlay: rgba(0, 0, 0, 0.55);
 
-    --ring: rgba(91, 140, 255, 0.42);
+    --ring: rgba(76, 110, 245, 0.42);
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
     --shadow-md:
       0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -10px rgba(0, 0, 0, 0.55);
     --shadow-lg:
       0 2px 4px rgba(0, 0, 0, 0.45), 0 26px 64px -16px rgba(0, 0, 0, 0.7);
     --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.4),
-      0 10px 28px -8px rgba(91, 140, 255, 0.35);
+      0 10px 28px -8px rgba(76, 110, 245, 0.35);
     --shadow-glow-accent: 0 1px 2px rgba(0, 0, 0, 0.4),
-      0 18px 44px -12px rgba(91, 140, 255, 0.25);
+      0 18px 44px -12px rgba(76, 110, 245, 0.25);
 
-    --glass-bg: rgba(21, 23, 29, 0.68);
+    --glass-bg: rgba(15, 18, 25, 0.68);
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-blur-sm: 10px;
     --glass-blur-md: 20px;
@@ -239,48 +238,48 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #0a0b0f;
-  --bg-subtle: #0f1116;
-  --surface: #15171d;
-  --surface-hover: #1b1e25;
-  --surface-active: #21242c;
+  --bg: #090B14;
+  --bg-subtle: #0D1018;
+  --surface: #0F1219;
+  --surface-hover: #161B26;
+  --surface-active: #1C2231;
 
-  --border: #262931;
-  --border-soft: #1b1e24;
-  --border-strong: #383c46;
+  --border: #1E2433;
+  --border-soft: #161B26;
+  --border-strong: #2D3548;
 
-  --fg: #ecedf2;
-  --fg-muted: #969caa;
-  --fg-subtle: #5f6572;
-  --fg-on-accent: #0a1230;
+  --fg: #F0F2F8;
+  --fg-muted: #8B95B7;
+  --fg-subtle: #5F6A85;
+  --fg-on-accent: #FFFFFF;
 
-  --accent: #5b8cff;
-  --accent-hover: #7ba3ff;
-  --accent-soft: rgba(91, 140, 255, 0.14);
-  --accent-fg: #8fb2ff;
-  --accent-glow: #5b8cff;
+  --accent: #4C6EF5;
+  --accent-hover: #3B5BDB;
+  --accent-soft: rgba(76, 110, 245, 0.12);
+  --accent-fg: #6D8DF7;
+  --accent-glow: #4C6EF5;
 
-  --success: #34d399;
-  --success-soft: rgba(52, 211, 153, 0.12);
-  --warning: #fbbf24;
-  --warning-soft: rgba(251, 191, 36, 0.12);
-  --danger: #fb7185;
-  --danger-soft: rgba(251, 113, 133, 0.12);
+  --success: #12B886;
+  --success-soft: rgba(18, 184, 134, 0.12);
+  --warning: #F59F00;
+  --warning-soft: rgba(245, 159, 0, 0.12);
+  --danger: #FA5252;
+  --danger-soft: rgba(250, 82, 82, 0.12);
 
   --overlay: rgba(0, 0, 0, 0.55);
 
-  --ring: rgba(91, 140, 255, 0.42);
+  --ring: rgba(76, 110, 245, 0.42);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md:
     0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -10px rgba(0, 0, 0, 0.55);
   --shadow-lg:
     0 2px 4px rgba(0, 0, 0, 0.45), 0 26px 64px -16px rgba(0, 0, 0, 0.7);
   --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.4),
-    0 10px 28px -8px rgba(91, 140, 255, 0.35);
+    0 10px 28px -8px rgba(76, 110, 245, 0.35);
   --shadow-glow-accent: 0 1px 2px rgba(0, 0, 0, 0.4),
-    0 18px 44px -12px rgba(91, 140, 255, 0.25);
+    0 18px 44px -12px rgba(76, 110, 245, 0.25);
 
-  --glass-bg: rgba(21, 23, 29, 0.68);
+  --glass-bg: rgba(15, 18, 25, 0.68);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-blur-sm: 10px;
   --glass-blur-md: 20px;

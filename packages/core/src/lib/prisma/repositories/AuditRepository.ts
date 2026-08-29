@@ -273,4 +273,11 @@ export class AuditRepository extends Repository {
         throw err;
     }
   }
+
+  public async purgeOldEntries(date: Date): Promise<number> {
+    const { count } = await this.prisma.auditLedger.deleteMany({
+      where: { createdAt: { lt: date } },
+    });
+    return count;
+  }
 }

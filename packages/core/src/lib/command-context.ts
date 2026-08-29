@@ -21,6 +21,7 @@ import {
 } from "#lib/utilities/cards.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
 import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
+import { BrandColors } from "#lib/branding/colors.js";
 
 export interface CtxOptionSpec {
   required?: boolean;
@@ -193,6 +194,22 @@ export class CommandContext {
     const value = await this.args!.pick("guildChannel").catch(() => null);
     if (value === null && spec.required) throw missingArgument(name);
     return value as GuildBasedChannel | null;
+  }
+
+  /**
+   * Resolves the guild-aware brand color for embeds.
+   * Checks guild config override, falls back to `BrandColors.primary`.
+   */
+  public async brandColor(): Promise<number> {
+    if (this.guildId) {
+      const color = await container.db.config.getModuleConfig(
+        this.guildId,
+        "core",
+        "brandColor"
+      );
+      if (typeof color === "number") return color;
+    }
+    return BrandColors.primary;
   }
 
   public async defer(opts: CtxReplyOptions = {}): Promise<void> {

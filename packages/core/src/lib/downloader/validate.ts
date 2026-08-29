@@ -22,7 +22,7 @@ const infoSchema = s.object({
   tags: s.array(s.string()).optional(),
   min_bot_version: s.string().optional(),
   max_bot_version: s.string().optional(),
-  end_user_data_statement: s.string().optional(),
+  end_user_data_statement: s.string(),
   hidden: s.boolean().optional(),
 });
 
@@ -222,7 +222,20 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
       const info = JSON.parse(await fs.readFile(infoPath, "utf8")) as unknown;
       const parsed = infoSchema.run(info);
       if (parsed.isErr()) {
-        errors.push(`info.json: (root) - ${parsed.error.message}`);
+        const err = parsed.error as any;
+        if (err.errors) {
+          for (const [key, propertyError] of err.errors) {
+            if (key === "end_user_data_statement" && propertyError.name === "MissingPropertyError") {
+              errors.push(
+                `info.json: "end_user_data_statement" is required. You must provide a clear statement explaining what user data this addon collects and why (or state that none is collected).`
+              );
+            } else {
+              errors.push(`info.json: "${String(key)}" - ${propertyError.message}`);
+            }
+          }
+        } else {
+          errors.push(`info.json: (root) - ${parsed.error.message}`);
+        }
       } else {
         const val = parsed.unwrap();
         if (val.name !== base) {
@@ -258,7 +271,14 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
       ) as unknown;
       const parsed = manifestSchema.run(manifest);
       if (parsed.isErr()) {
-        errors.push(`manifest.json: (root) - ${parsed.error.message}`);
+        const err = parsed.error as any;
+        if (err.errors) {
+          for (const [key, propertyError] of err.errors) {
+            errors.push(`manifest.json: "${String(key)}" - ${propertyError.message}`);
+          }
+        } else {
+          errors.push(`manifest.json: (root) - ${parsed.error.message}`);
+        }
       } else {
         const val = parsed.unwrap();
         if (val.name !== base) {

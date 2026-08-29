@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { ActivityType } from "discord.js";
 import { s } from "@sapphire/shapeshift";
 import { mergeDefault } from "@sapphire/utilities";
+import { BrandColors } from '#lib/branding/colors.js';
 
 const colorRecord = s.record(s.number().int()).optional();
 
@@ -81,18 +82,9 @@ export const BotConfig = mergeDefault(
   userConfig,
 ) as BotConfigType;
 
-/** Built-in card palette, used when an operator hasn't overridden a color via `config/bot.ts`. */
-export const defaultCardColors = {
-  primary: 0x5865f2,
-  info: 0x5865f2,
-  success: 0x57f287,
-  warning: 0xfee75c,
-  error: 0xed4245,
-  neutral: 0x4f545c,
-  gold: 0xffc800,
-  purple: 0x9b59b6,
-  cyan: 0x1abc9c,
-} as const;
+/** Built-in card palette, sourced from the Lumi brand system.
+ * Operators can override individual colours via `config/bot.ts` → `branding.colors`. */
+export const defaultCardColors = BrandColors;
 
 export type CardColorKey = keyof typeof defaultCardColors;
 

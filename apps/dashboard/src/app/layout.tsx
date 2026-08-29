@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "#/components/theme-provider";
+import { CookieConsent } from "#/components/cookie-consent";
 import "./globals.css";
 
 // Self-hosted via next/font (built at compile time, served from /_next/static)
@@ -63,7 +64,10 @@ export default function RootLayout({
       className={`${display.variable} ${mono.variable}`}
     >
       <body className="font-sans antialiased">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <CookieConsent />
+        </ThemeProvider>
       </body>
     </html>
   );

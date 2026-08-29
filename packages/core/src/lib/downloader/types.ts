@@ -15,6 +15,6 @@ export interface ModuleInfo {
   tags?: string[];
   min_bot_version?: string;
   max_bot_version?: string;
-  end_user_data_statement?: string;
+  end_user_data_statement: string;
   hidden?: boolean;
 }

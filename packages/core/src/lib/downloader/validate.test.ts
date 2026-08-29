@@ -10,6 +10,7 @@ const VALID_INFO = JSON.stringify({
   description: "A test addon.",
   short: "Test addon.",
   version: "1.0.0",
+  end_user_data_statement: "This addon does not store any user data.",
 });
 
 async function writeAddon(dir: string, indexSrc: string, infoJson = VALID_INFO) {
@@ -92,6 +93,7 @@ describe("validateAddon - min_bot_version semver compatibility", () => {
       short: "Test addon.",
       version: "1.0.0",
       min_bot_version: minBotVersion,
+      end_user_data_statement: "This addon does not store any user data.",
     });
     await writeAddon(dir, VALID_INDEX, info);
   }

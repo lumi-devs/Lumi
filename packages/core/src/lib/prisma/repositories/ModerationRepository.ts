@@ -295,4 +295,17 @@ export class ModerationRepository extends Repository {
       }
     });
   }
+
+  public async purgeOldCases(date: Date): Promise<number> {
+    const { count } = await this.prisma.moderationCase.deleteMany({
+      where: {
+        createdAt: { lt: date },
+        OR: [
+          { active: false },
+          { expiresAt: { lt: new Date() } }
+        ]
+      },
+    });
+    return count;
+  }
 }

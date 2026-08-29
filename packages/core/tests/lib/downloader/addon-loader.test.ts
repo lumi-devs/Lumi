@@ -64,6 +64,7 @@ describe("Add-on Module Classification (DownloadResolver#installModule)", () => 
       description: "Loader test module",
       short: "Loader test",
       version: "1.0.0",
+      end_user_data_statement: "This addon does not store any user data.",
     };
     await fs.writeFile(
       path.join(sourcePath, "info.json"),

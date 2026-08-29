@@ -47,6 +47,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
         short: "Valid Addon",
         version: "1.0.0",
         min_bot_version: "1.0.0",
+        end_user_data_statement: "Valid privacy statement",
       };
       await fs.writeFile(path.join(addonDir, "info.json"), JSON.stringify(infoJson));
 
@@ -96,6 +97,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
         short: "Mismatch",
         version: "1.0.0",
         min_bot_version: "4.0.0",
+        end_user_data_statement: "Mismatch addon privacy statement",
       };
       await fs.writeFile(path.join(addonDir, "info.json"), JSON.stringify(infoJson));
       await fs.writeFile(
@@ -121,6 +123,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
         short: "Version",
         version: "1.0.0",
         min_bot_version: "0.9.5",
+        end_user_data_statement: "Version addon privacy statement",
       };
       await fs.writeFile(path.join(addonDir, "info.json"), JSON.stringify(infoJson));
       await fs.writeFile(
