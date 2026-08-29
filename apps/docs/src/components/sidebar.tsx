@@ -7,33 +7,40 @@ export const NAVIGATION = [
   {
     title: "Getting Started",
     links: [
-      { title: "Self Hosting", href: "/guides/self-hosting" },
-      { title: "Configuration", href: "/configuration" },
+      { title: "Self-Hosting Guide", href: "/guides/self-hosting" },
+      { title: "Configuration Reference", href: "/configuration" },
       { title: "Production Deployment", href: "/guides/production-deployment" }
     ]
   },
   {
     title: "Core Architecture",
     links: [
-      { title: "Architecture", href: "/architecture" },
-      { title: "Modules", href: "/modules" },
-      { title: "Dashboard", href: "/dashboard" },
+      { title: "System Topology", href: "/architecture" },
+      { title: "Distributed Sharding", href: "/sharding" },
+      { title: "Event Bus & Redis", href: "/event-bus" },
+      { title: "Database & Prisma", href: "/database" },
+      { title: "Permissions & Permits", href: "/permissions" },
+      { title: "Observability & Metrics", href: "/observability" },
+      { title: "Core Modules", href: "/modules" },
+      { title: "Web Admin Dashboard", href: "/dashboard" }
+    ]
+  },
+  {
+    title: "Addon SDK",
+    links: [
+      { title: "Quick Start Guide", href: "/guides/quick-start-addon" },
+      { title: "Module Creation", href: "/guides/module-creation" },
+      { title: "Publishing & Manifests", href: "/guides/addon-publishing" },
+      { title: "API Reference", href: "/api-reference" }
+    ]
+  },
+  {
+    title: "Governance & Help",
+    links: [
+      { title: "Data Privacy & GDPR", href: "/privacy" },
+      { title: "License & Attribution", href: "/license" },
       { title: "FAQ", href: "/faq" },
       { title: "Troubleshooting", href: "/troubleshooting" }
-    ]
-  },
-  {
-    title: "Addon Development",
-    links: [
-      { title: "Quick Start", href: "/guides/quick-start-addon" },
-      { title: "Module Creation", href: "/guides/module-creation" },
-      { title: "Publishing", href: "/guides/addon-publishing" }
-    ]
-  },
-  {
-    title: "API Reference",
-    links: [
-      { title: "API Reference", href: "/api-reference" }
     ]
   }
 ];
