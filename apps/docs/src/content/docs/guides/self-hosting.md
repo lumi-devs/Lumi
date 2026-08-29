@@ -1,127 +1,153 @@
 ---
 title: "Self-Hosting Guide"
-description: "Get Lumi running on your own machine or server."
+description: "Deploy Lumi using official pre-built Docker containers or run locally with Bun."
 category: "Getting Started"
 ---
 
 # Self-Hosting Guide
 
-This walks through running Lumi for yourself - a personal server, a small community, or a custom deployment. If you outgrow a single instance later (thousands of members, multiple bot processes, zero-downtime deploys), see [Production Deployment](/Lumi/guides/production-deployment/) once you've got the basics working.
+The **recommended and supported method** to run Lumi in production is using the official pre-built **Docker Compose** stack published to GitHub Container Registry (`ghcr.io/lumi-devs/lumi:latest`). 
 
-## What you'll need
-
-| Requirement | Details |
-| :--- | :--- |
-| **[Bun](https://bun.sh)** | `1.3.0+` required for local execution. |
-| **[Docker](https://docs.docker.com/get-docker/) & Docker Compose** | The recommended way to run Postgres and Redis. |
-| **Discord Application** | Create one at the [Developer Portal](https://discord.com/developers/applications) with bot token and client ID. |
+If you are developing custom addons or hacking on the core framework, see the [Local Development Workflow](#method-b-local-development-with-bun-and-nix) below.
 
 ---
 
-## 1. Create a Discord Application
+## Prerequisites
 
-1. Open the [Discord Developer Portal](https://discord.com/developers/applications) → **New Application**.
+| Requirement | Notes |
+| :--- | :--- |
+| **[Docker](https://docs.docker.com/get-docker/) & Docker Compose v2+** | **Recommended.** Runs Lumi worker, dashboard, PostgreSQL, PgBouncer, and Redis with zero local dependencies. |
+| **Discord Application** | Create one at the [Discord Developer Portal](https://discord.com/developers/applications) with your bot token and client ID. |
+| **[Bun](https://bun.sh) `1.3.0+`** | *Only required for local development or manual source builds.* |
+
+---
+
+## Step 1: Create a Discord Application & Bot
+
+1. Navigate to the [Discord Developer Portal](https://discord.com/developers/applications) → **New Application**.
 2. Go to the **Bot** tab → click **Reset Token**, and copy your `BOT_TOKEN`.
-3. Under **Privileged Gateway Intents**, enable **Server Members Intent** and **Message Content Intent**.
-4. Go to **OAuth2 → General**, copy your `CLIENT_ID`.
-5. Under **OAuth2 → URL Generator**: check `bot` and `applications.commands`, select your guild permissions, and open the generated link to invite Lumi to your server.
+3. Under **Privileged Gateway Intents**, turn on:
+   - **Server Members Intent** (required for moderation and member tracking)
+   - **Message Content Intent** (required for prefix commands)
+4. Go to **OAuth2 → General**, and copy your **Client ID** (`CLIENT_ID`).
+5. Go to **OAuth2 → URL Generator**:
+   - Scopes: Select `bot` and `applications.commands`.
+   - Permissions: Select `Administrator` (or desired permissions).
+   - Open the generated URL in your browser to invite the bot to your Discord server.
 
 ---
 
-## 2. Clone and Configure
+## Method A: Docker Compose (Recommended for Production)
+
+Docker Compose deploys the entire Lumi stack using pre-built multi-architecture containers from `ghcr.io/lumi-devs/lumi:latest`.
+
+### 1. Download Compose Configuration
 
 ```bash
-git clone https://github.com/lumi-devs/Lumi.git
-cd Lumi
-bun run setup
+mkdir lumi && cd lumi
+curl -fsSL https://raw.githubusercontent.com/lumi-devs/Lumi/main/docker-compose.yml -o docker-compose.yml
+curl -fsSL https://raw.githubusercontent.com/lumi-devs/Lumi/main/.env.example -o .env
 ```
 
-`bun run setup` runs an interactive terminal wizard that configures `.env`, verifies your bot token with Discord's API, and spins up local Docker dependencies.
+### 2. Configure Environment (`.env`)
 
-### Manual Configuration
-
-If you prefer configuring by hand:
+Edit `.env` and fill in your Discord credentials and an RPC security secret:
 
 ```bash
-cp .env.example .env
+# Required Discord Credentials
+BOT_TOKEN=your_discord_bot_token_here
+CLIENT_ID=your_discord_client_id_here
+
+# Generate a secure 32-byte RPC secret for Dashboard <-> Worker communication
+RPC_INTERNAL_TOKEN=$(openssl rand -hex 32)
+
+# Passwords for internal Postgres & Redis services
+POSTGRES_PASSWORD=lumi_secure_pg_password
+REDIS_PASSWORD=lumi_secure_redis_password
 ```
 
-Set the essential environment variables in `.env`:
-
-| Variable | Description |
-| :--- | :--- |
-| `BOT_TOKEN` | Discord Bot Token from Step 1. |
-| `CLIENT_ID` | Discord Application Client ID from Step 1. |
-| `POSTGRES_PASSWORD` | Database password (default is fine for local dev). |
-| `POSTGRES_URL` | PostgreSQL connection URI (`postgresql://postgres:postgres@localhost:5432/lumi`). |
-| `DIRECT_POSTGRES_URL` | Unpooled connection URI for migrations. |
-| `REDIS_PASSWORD` | Redis auth password. |
-| `REDIS_URL` | Redis connection URI (`redis://localhost:6379`). |
-
----
-
-## 3. Start Postgres and Redis
-
-### Option A: Docker Compose (Recommended)
+### 3. Launch the Stack
 
 ```bash
-docker compose up -d postgres pgbouncer redis
+docker compose up -d
+```
+
+### 4. Verify Service Health
+
+```bash
 docker compose ps
 ```
 
-### Option B: Nix Devshell
+The stack automatically boots:
+- **`worker`**: Discord Gateway client and module executor.
+- **`dashboard`**: Next.js 16 Web Admin panel accessible at `http://localhost:8080`.
+- **`postgres` & `pgbouncer`**: Relational database and connection pool.
+- **`redis`**: Cache and Redis Streams event bus.
+- **`prometheus` & `grafana`**: Telemetry and metrics dashboard at `http://localhost:3000`.
+
+To view live bot logs:
 
 ```bash
-nix develop
-```
-
-Starts native PostgreSQL and Redis instances locally via the multi-platform Nix flake.
-
-### Option C: External / Cloud Databases
-
-Point `POSTGRES_URL` and `REDIS_URL` in `.env` to your hosted Postgres 17+ and Redis 7+ instances.
-
----
-
-## 4. Initialize Database Schema
-
-```bash
-bun install
-bun run db:generate   # Generates Prisma client
-bun run db:migrate    # Applies schema migrations
-```
-
----
-
-## 5. Start the Bot Worker
-
-### Development Mode (Hot-Reload)
-
-```bash
-bun run dev
-```
-
-### Production Worker
-
-```bash
-bun run start
-```
-
-### Docker Container
-
-```bash
-docker compose up -d worker
 docker compose logs -f worker
 ```
 
 ---
 
-## 6. Start the Web Admin Dashboard (Optional)
+## Method B: Local Development with Bun and Nix
 
-Lumi includes a Next.js administrative dashboard:
+For addon developers, framework contributors, or advanced users who prefer compiling from source:
+
+### 1. Clone the Monorepo
 
 ```bash
+git clone https://github.com/lumi-devs/Lumi.git
+cd Lumi
+```
+
+### 2. Run the Interactive Setup Wizard
+
+```bash
+bun run setup
+```
+
+The setup wizard (`scripts/setup.sh`):
+1. Prompts for `BOT_TOKEN`, `CLIENT_ID`, and database passwords.
+2. Validates your token directly against Discord's Gateway API.
+3. Automatically links shared `.env` files across monorepo workspace packages.
+4. Generates a secure `RPC_INTERNAL_TOKEN`.
+
+### 3. Start Local Infrastructure
+
+```bash
+# Option 1: Docker for Postgres and Redis only
+docker compose up -d postgres pgbouncer redis
+
+# Option 2: Nix multi-platform devshell (no Docker needed)
+nix develop
+```
+
+### 4. Initialize Database Schema
+
+```bash
+bun install
+bun run db:generate   # Generates Prisma client
+bun run db:migrate    # Runs database migrations
+```
+
+### 5. Start in Development Mode (Hot-Reload)
+
+```bash
+# Start the bot worker with file watching
+bun run dev
+
+# Start the web dashboard (in another terminal)
 bun run --cwd apps/dashboard dev
 ```
 
-Access the dashboard at `http://localhost:3000`. The dashboard communicates with the worker over an internal HTTP RPC bridge on port `3001`.
+---
+
+## Post-Installation Verification
+
+1. In Discord, type `/` in a channel where Lumi is present to confirm slash commands are registered.
+2. Open `http://localhost:8080` (or `http://localhost:3000` for dev) to access the administrative dashboard.
+3. Test a built-in command such as `/help` or `/afk`.

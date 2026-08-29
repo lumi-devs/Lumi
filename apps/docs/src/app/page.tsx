@@ -7,13 +7,13 @@ import { MathCanvas } from "@/components/math-canvas";
 import { Copy, Check, Cpu, ShieldCheck, LayoutDashboard, Layers, Sparkles, ArrowRight, Activity } from "lucide-react";
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"setup" | "addon" | "docker">("setup");
+  const [activeTab, setActiveTab] = useState<"docker" | "setup" | "addon">("docker");
   const [copied, setCopied] = useState(false);
 
   const snippets = {
-    setup: "git clone https://github.com/lumi-devs/Lumi.git\ncd Lumi\nbun run setup",
-    addon: "bun run addon:create my-addon --dir ./addons",
-    docker: "docker compose up -d",
+    docker: "# Quickest production install with official Docker images\ncurl -fsSL https://raw.githubusercontent.com/lumi-devs/Lumi/main/docker-compose.yml -o docker-compose.yml\ncurl -fsSL https://raw.githubusercontent.com/lumi-devs/Lumi/main/.env.example -o .env\n# Fill in BOT_TOKEN & CLIENT_ID in .env, then:\ndocker compose up -d",
+    setup: "# Local development / contributor setup from source\ngit clone https://github.com/lumi-devs/Lumi.git\ncd Lumi\nbun run setup",
+    addon: "# Scaffold a new isolated addon module\nbun run addon:create my-addon --dir ./addons",
   };
 
   const handleCopy = () => {
@@ -78,6 +78,16 @@ export default function Home() {
                   <span className="w-2.5 h-2.5 rounded-full bg-[#27C93F]/80" />
                   <div className="flex items-center gap-1 ml-3">
                     <button
+                      onClick={() => setActiveTab("docker")}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                        activeTab === "docker"
+                          ? "bg-[var(--surface)] text-white border border-[var(--border-strong)] shadow-sm"
+                          : "text-[var(--fg-muted)] hover:text-white"
+                      }`}
+                    >
+                      Docker Compose (Prod)
+                    </button>
+                    <button
                       onClick={() => setActiveTab("setup")}
                       className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                         activeTab === "setup"
@@ -85,7 +95,7 @@ export default function Home() {
                           : "text-[var(--fg-muted)] hover:text-white"
                       }`}
                     >
-                      Setup Wizard
+                      Dev Setup (Bun)
                     </button>
                     <button
                       onClick={() => setActiveTab("addon")}
@@ -96,16 +106,6 @@ export default function Home() {
                       }`}
                     >
                       Scaffold Addon
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("docker")}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                        activeTab === "docker"
-                          ? "bg-[var(--surface)] text-white border border-[var(--border-strong)] shadow-sm"
-                          : "text-[var(--fg-muted)] hover:text-white"
-                      }`}
-                    >
-                      Docker Compose
                     </button>
                   </div>
                 </div>

@@ -1,44 +1,58 @@
 ---
 title: "Troubleshooting"
-description: "Common problems and how to fix them."
+description: "Common troubleshooting scenarios, error diagnostics, and resolutions."
+category: "Governance & Help"
 ---
 
-Find your symptom below. This covers what most people actually run into on a single-server setup - if you're running a bigger, multi-instance deployment, also check [Production Deployment](/Lumi/guides/production-deployment/) and [Architecture](/Lumi/architecture/).
+# Troubleshooting Guide
 
-## The bot won't start, or won't fully come online
+## Bot Startup & Gateway Issues
 
-**It exits immediately after starting.** Almost always a bad or missing bot token. Check the logs, or run `bun run setup` again - it re-checks your token against Discord directly and tells you if something's wrong.
+### Process Exits Immediately on Boot
+- **Cause**: Missing or invalid `BOT_TOKEN` in `.env`.
+- **Resolution**: Verify your bot token in the Discord Developer Portal. Run `bun run setup` to validate your token against Discord's `/users/@me` endpoint.
 
-**It's running, but slash commands never show up.** The first time commands are registered globally, Discord can take up to an hour to roll them out everywhere. Test in one server while you wait - that usually shows up within a minute or two. Still nothing after an hour? Check the logs for a registration error.
+### Slash Commands Do Not Appear in Discord
+- **Cause**: Discord global application command propagation delay (up to 1 hour for global updates).
+- **Resolution**: Test in a specific development guild during initial testing, or check startup logs to verify that `Command.Registry` completed registration without 403 Forbidden errors.
 
-**It can't reach the database.** Make sure Postgres and its connection pooler are both actually healthy (`docker compose ps` should show `healthy`, not just `running`), and double-check your database URL points at the pooler, not straight at Postgres.
+### Database Connection Failure
+- **Cause**: PostgreSQL or PgBouncer container is not ready, or wrong credentials in `POSTGRES_URL`.
+- **Resolution**: Check service health with `docker compose ps`. Ensure your `POSTGRES_URL` points to port `5432` (or `6432` for PgBouncer). Run `bun run db:migrate` to verify schema connectivity.
 
-**Commands work, but AFK / member-join features / prefix commands quietly do nothing.** This is almost always a missing intent. Go to your bot's settings on the [Developer Portal](https://discord.com/developers/applications), open the **Bot** tab, and make sure **Server Members Intent** and **Message Content Intent** are both turned on. There's no error when this is off - the events just never arrive. Restart the bot after flipping them.
+### Commands Run But AFK / Member Events / Message Triggers Silently Fail
+- **Cause**: Missing Privileged Gateway Intents.
+- **Resolution**: In the Discord Developer Portal under your application's **Bot** tab, enable:
+  1. **Server Members Intent** (`GuildMembers`)
+  2. **Message Content Intent** (`MessageContent`)
+  Restart the bot after enabling intents.
 
-## The dashboard
+---
 
-**Login fails or loops back to the login page.** The redirect URL registered on your Discord application doesn't match what the dashboard is actually running on. It needs to be exactly `https://<your-dashboard-address>/api/auth/callback/discord` - scheme, host, and port all have to match.
+## Web Dashboard Issues
 
-**Pages load but nothing has any data, or every page redirects.** The dashboard can't reach the bot. Confirm the bot is running and that the dashboard is pointed at the right address for it - see [FAQ § do I need the dashboard](/Lumi/faq/#do-i-need-the-web-dashboard) if you're not sure it's worth chasing down.
+### Login Loop or OAuth2 Redirect Error
+- **Cause**: Mismatch between registered redirect URI and the dashboard origin.
+- **Resolution**: In the Discord Developer Portal under **OAuth2 → Redirects**, ensure you have added:
+  `https://<your-dashboard-domain>/api/auth/callback/discord` (or `http://localhost:8080/api/auth/callback/discord` for local testing).
 
-**Every action in the dashboard fails.** The dashboard and the bot need to agree on a shared internal token. If you've only set one on one side, or they don't match, this is what happens - set the same value on both and restart.
+### Dashboard Loads But Shows No Data / 401 Unauthorized Errors
+- **Cause**: The dashboard cannot communicate with the worker RPC server, or `RPC_INTERNAL_TOKEN` does not match between `.env` and the worker.
+- **Resolution**: Ensure `apps/worker` is running. In `.env`, set `RPC_INTERNAL_TOKEN` to an identical 32-byte hex string across both worker and dashboard processes.
 
-**Cookies won't stick behind a reverse proxy.** This usually means the app thinks it's being served over plain HTTP when it's actually HTTPS (common if your proxy terminates TLS). Make sure the dashboard's configured URL uses `https://`.
+---
 
-## Addons
+## Addon Issues
 
-**`,repo add` seems to hang.** It's actually waiting on a yes/no confirmation that times out after 30 seconds. If you missed it, just run the command again and answer promptly.
+### Addon Fails to Load or Commands Are Missing
+- **Cause**: Malformed `info.json`, invalid file naming, or unexported `@DefineModule`.
+- **Resolution**: Run the addon validator:
+  ```bash
+  bun run validate ./addons/<addon-name>
+  ```
+  Fix any flagged errors (such as missing `info.json`, incorrect sub-store folder names like `tasks/` instead of `scheduled-tasks/`, or forbidden cross-module imports).
 
-**An addon won't load, or its commands are missing.** Run `bun run validate <addon-path>` - it checks for the most common structural mistakes (wrong file layout, a scheduled task in the wrong folder, importing something it shouldn't).
+### Scheduled Tasks Never Fire
+- **Cause**: The task folder must be named exactly `scheduled-tasks/`. Folders named `tasks/` or `jobs/` are ignored.
+- **Resolution**: Rename to `scheduled-tasks/`, extend `RelayTask`, and register task handlers in your module's `onLoad()` hook using `registerTaskFireHandler`.
 
-**A scheduled task in an addon never fires.** Check the folder name - it needs to be exactly `scheduled-tasks/`. Anything else is silently ignored rather than erroring, which makes this an easy one to miss. See [API reference](/Lumi/api-reference/#lumischeduling).
-
-**A config option isn't showing up anywhere.** It needs to be declared as part of the module's config schema - if it's missing there, nothing else picks it up automatically. See [API reference § `cfg`](/Lumi/api-reference/#cfg).
-
-## Running at a bigger scale
-
-Multiple bot processes, sharding, Kubernetes, and metrics/tracing are covered in [Production Deployment](/Lumi/guides/production-deployment/) and [Architecture](/Lumi/architecture/) - those are a different set of problems from what most single-server setups run into, so they're not duplicated here.
-
-## Still stuck?
-
-[Open a discussion](https://github.com/lumi-devs/Lumi/discussions) or [file an issue](https://github.com/lumi-devs/Lumi/issues). Include your logs and what you've already tried - it saves a round-trip.

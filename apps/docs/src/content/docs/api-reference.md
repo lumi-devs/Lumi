@@ -1,22 +1,25 @@
 ---
 title: "Addon SDK API Reference"
 description: "Every export of the addon SDK - the addon-facing API surface."
+category: "Addon SDK"
 ---
 
-The public, stable surface for addon code - everything importable from `"lumi"` and its subpaths. This is the *only* import surface addon code should use; Lumi's internal `#core/*`, `#lib/*`, `#utilities/*`, and `#database/*` paths are implementation details that move on any core refactor (the addon linter warns if it sees one - see `bun run validate` in [`scripts/README.md`](https://github.com/lumi-devs/Lumi/blob/main/scripts/README.md)).
+# Addon SDK API Reference
 
-For a walkthrough of building something with this API, start with [Quick Start: Your First Addon](/Lumi/guides/quick-start-addon/), then the fuller [Module Creation Guide](/Lumi/guides/module-creation/) (written against the built-in `afk` module, but every extension point applies to addons identically). For the addon-specific rules on top of this API (no `container.prisma`, dependency isolation via `info.json`, etc.), see the [Addon Publishing Guide](/Lumi/guides/addon-publishing/).
+The public, stable surface for addon code - everything importable from `"lumi"` and its subpaths. This is the **only** import surface addon code should use; Lumi's internal `#core/*`, `#lib/*`, `#utilities/*`, and `#database/*` paths are implementation details that move on any core refactor (the addon validator flags them as errors).
+
+For a walkthrough of building something with this API, start with [Quick Start: Your First Addon](/guides/quick-start-addon), then the fuller [Module Creation Guide](/guides/module-creation) (written against the built-in `afk` module, but every extension point applies to addons identically). For the addon-specific rules on top of this API (no `container.prisma`, dependency isolation via `info.json`, etc.), see the [Addon Publishing Guide](/guides/addon-publishing).
 
 ```typescript
-import { Module, DefineModule, cfg, Service, getService } from "lumi";
+import { Module, DefineModule, cfg, Service, getService, NoEndUserData } from "lumi";
 import { BaseCommand, BaseSubcommand, CommandContext } from "lumi/commands";
-import { hasRequiredPermit, isModuleEnabled } from "lumi/permissions";
+import { hasRequiredPermit, isModuleEnabled, checkModulesEnabled } from "lumi/permissions";
 import { scheduleTask, RelayTask, registerTaskFireHandler } from "lumi/scheduling";
 import { makeSuccessCard, Emojis, confirmPrompt, paginateList } from "lumi/ui";
 import { BotConfig, relativeTimestamp, parseDuration } from "lumi/utils";
 ```
 
-Source: `packages/core/src/lib/addon-sdk/{index,commands,permissions,scheduling,ui,utils}.ts`. This page documents that file's actual re-exports - if the two ever disagree, the source is correct and this page is stale.
+Source: `packages/core/src/lib/addon-sdk/{index,commands,permissions,scheduling,ui,utils}.ts`.
 
 ---
 
@@ -36,7 +39,7 @@ abstract class Module extends Piece {
 }
 ```
 
-Base class for a module/addon's entrypoint class. Extends Sapphire's `Piece`. Implement `deleteUserData` and `exportUserData` if the addon stores anything keyed by a user ID (GDPR); documented no-ops (return `undefined`/`null`) are fine otherwise. See [Module Creation Guide § Lifecycle hooks](/Lumi/guides/module-creation/#lifecycle-hooks) for when each hook fires.
+Base class for a module/addon's entrypoint class. Extends Sapphire's `Piece`. Implement `deleteUserData` and `exportUserData` if the addon stores anything keyed by a user ID (GDPR). See [Module Creation Guide § Lifecycle hooks](/guides/module-creation#lifecycle-hooks) for when each hook fires.
 
 ### `DefineModule(options)`
 
@@ -93,7 +96,7 @@ abstract class ModuleListener<E extends keyof ClientEvents> extends Listener {
 }
 ```
 
-A Sapphire `Listener` that gates on the owning module being enabled for the guild before calling `handle()` - implement `handle`, never `run` (sealed). `GuildMessageListener` is a specialization pinned to Lumi's filtered guild-message event (bots/webhooks/system messages already excluded) - same `handle(message: GuildMessage)` contract. See [Module Creation Guide § Listeners](/Lumi/guides/module-creation/#step-4-listeners).
+A Sapphire `Listener` that gates on the owning module being enabled for the guild before calling `handle()` - implement `handle`, never `run` (sealed). `GuildMessageListener` is a specialization pinned to Lumi's filtered guild-message event (bots/webhooks/system messages already excluded) - same `handle(message: GuildMessage)` contract. See [Module Creation Guide § Listeners](/guides/module-creation#step-4-listeners).
 
 ```typescript
 import { ApplyOptions } from "@sapphire/decorators";
@@ -219,7 +222,7 @@ export { publishTaskFire };
 export { registerTaskFireHandler };
 ```
 
-Lumi's scheduled-task pieces (`@sapphire/plugin-scheduled-tasks`, BullMQ-backed) are pure *schedulers* - a piece never touches Discord directly, it republishes a "fire" event onto a Redis Stream, and whichever `worker` process consumes that stream does the actual work. See [Architecture § Redis Streams bus mechanics](/Lumi/architecture/#redis-streams-bus-mechanics) for delivery guarantees (at-least-once, DLQ after 5 deliveries) and [Module Creation Guide § Scheduled tasks](/Lumi/guides/module-creation/#step-7-scheduled-tasks) for the full walkthrough.
+Lumi's scheduled-task pieces (`@sapphire/plugin-scheduled-tasks`, BullMQ-backed) are pure *schedulers* - a piece never touches Discord directly, it republishes a "fire" event onto a Redis Stream, and whichever `worker` process consumes that stream does the actual work. See [Architecture § Redis Streams Bus Mechanics](/architecture#redis-streams-bus-mechanics) for delivery guarantees (at-least-once, DLQ after 5 deliveries) and [Module Creation Guide § Scheduled Tasks](/guides/module-creation#step-7-scheduled-tasks) for the full walkthrough.
 
 ### `RelayTask<N>`
 

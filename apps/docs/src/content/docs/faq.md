@@ -1,53 +1,69 @@
 ---
 title: "FAQ"
-description: "The questions people actually ask about running Lumi."
+description: "Frequently asked questions about self-hosting, configuration, addons, and operations."
+category: "Governance & Help"
 ---
+
+# Frequently Asked Questions
 
 ## What is Lumi?
 
-A Discord bot you run yourself - on your own computer, your own server, or a cheap VPS. You get moderation, anti-raid protection, verification, logging, and more, and it's your data the whole time. See [what Lumi does](/Lumi/modules/) for the full list.
+A modular, self-hosted Discord bot built on TypeScript, Bun, Sapphire Framework, discord.js v14, PostgreSQL (Prisma ORM), and Redis. You retain complete ownership and control over your database, message logs, and server configuration. See [Built-In Modules](/modules) for full details.
 
-## What's the difference between a "module" and an "addon"?
+---
 
-They work the same way under the hood - the difference is just where the code lives.
+## What is the difference between a "module" and an "addon"?
 
-- A **module** ships with Lumi itself, built in from the start.
-- An **addon** is a plugin someone else wrote, that you install separately (usually from [`lumi-addons`](https://github.com/lumi-devs/lumi-addons)) without needing to update the bot.
+They share the same runtime module engine (`@DefineModule`, `Module`, lifecycle hooks), but differ in packaging and distribution:
 
-Want to build one? Start with [Quick start](/Lumi/guides/quick-start-addon/) for an addon, or [Building a module](/Lumi/guides/module-creation/) if you're contributing to Lumi itself.
+- **Built-in Module**: Ships directly in the monorepo under `packages/core/src/modules/` and inherits versioning from `packages/core/package.json`.
+- **Addon**: An external package installed dynamically via Lumi's Downloader (such as from [`lumi-addons`](https://github.com/lumi-devs/lumi-addons)) into `data/installed-modules/` without rebuilding the core bot.
 
-## Do I need the web dashboard?
+To build an extension, see the [Quick Start Guide](/guides/quick-start-addon) or [Module Creation Guide](/guides/module-creation).
 
-No. Everything works from Discord using slash commands and `/lumi panel`. The dashboard is a nice-to-have for people who prefer clicking around a web page over typing commands - it's entirely optional, and you can turn it off without losing anything else. See [Self-hosting § the web dashboard](/Lumi/guides/self-hosting/#6-optional-the-web-dashboard) if you want it.
+---
+
+## Do I need to run the web dashboard?
+
+No. Lumi is fully operational from Discord using slash commands and the interactive `/lumi panel`. The dashboard (`apps/dashboard`) is an optional Next.js administration panel that talks to `apps/worker` via an internal HTTP RPC bridge. You can run the bot without starting `apps/dashboard`.
+
+---
 
 ## Is the verification challenge a real CAPTCHA?
 
-No - it's a row of emoji buttons the new member has to click in the right order. It stops simple join-and-spam bots, but it won't stop someone determined to get past it manually. Good first line of defense, not a silver bullet.
+No. The verification panel (`/verifypanel`) posts an interactive emoji sequence challenge designed to mitigate automated mass-join spam bots. It does not replace third-party enterprise CAPTCHA services, but stops uncoordinated automated join raids.
 
-## Is it safe to install addons?
+---
 
-Only as safe as the person who wrote them. Addon code runs inside the bot with full access to everything it can see - your server data, your database, all of it. Lumi doesn't review or vet addons before you install them. You'll get a one-time warning before anything is cloned - only say yes to addons from people you trust. See [Publishing an addon](/Lumi/guides/addon-publishing/#how-installation-works) and the [security policy](https://github.com/lumi-devs/Lumi/blob/main/SECURITY.md).
+## Is it safe to install third-party addons?
 
-## If I ask Lumi to delete my data, does it actually happen?
+Addons execute in-process inside the bot runtime. You should only install addons from repositories and authors you trust. Review the [Addon Publishing Guide](/guides/addon-publishing) and [Security Policy](https://github.com/lumi-devs/Lumi/blob/main/SECURITY.md).
 
-Mostly, yes. When a deletion request comes in, Lumi asks every loaded feature to remove anything it's stored about that user, then removes the shared records too. A couple of built-in features don't implement this yet, so it's not airtight everywhere - but it's not just a token gesture either. See [what Lumi does § data deletion](/Lumi/modules/#data-and-privacy) for the current state.
+---
 
-## How do I update?
+## How does GDPR data erasure work?
+
+When a user triggers data erasure (`global.gdpr.delete` RPC or owner commands), Lumi orchestrates `deleteUserData(userId)` across all loaded modules and repository tables, purging user-keyed rows from PostgreSQL and Redis.
+
+---
+
+## How do I update Lumi?
 
 ```bash
-git pull && bun install && bun run db:migrate
+git pull
+bun install
+bun run db:migrate
 ```
 
-Then restart the bot - `docker compose up -d --build worker` if you're on Docker, or just restart your process otherwise. Worth a quick look at the [changelog](https://github.com/lumi-devs/Lumi/blob/main/packages/core/CHANGELOG.md) or GitHub Releases first, in case anything needs manual attention. Details: [Self-hosting § updating](/Lumi/guides/self-hosting/#updating).
+Then restart your processes:
 
-## Is my data safe if the Redis container dies?
+```bash
+docker compose up -d --build worker
+```
 
-Yes. Redis only holds things that are fine to lose - caches, rate limits, queues - and it rebuilds them on its own. Postgres is where everything that actually matters lives, so that's the one worth backing up. See [Self-hosting § backups](/Lumi/guides/self-hosting/#backups).
+---
 
-## Can I help translate Lumi?
+## What happens if the Redis container restarts?
 
-Yes, please - translations happen through [Crowdin](https://crowdin.com/project/lumi-bot). See the [README](https://github.com/lumi-devs/Lumi/blob/main/README.md#translations) for how to jump in.
+PostgreSQL is the durable system of record. Redis is utilized for caching (DB `0`), BullMQ task queues (DB `1`), and the Redis Streams event bus. Temporary Redis loss does not corrupt durable server configuration or moderation records.
 
-## Something on this page is wrong
-
-That's a docs bug, not a you problem - [open an issue](https://github.com/lumi-devs/Lumi/issues) or start a [discussion](https://github.com/lumi-devs/Lumi/discussions) and we'll sort it out.

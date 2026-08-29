@@ -1,131 +1,141 @@
 ---
-title: "What Lumi does"
-description: "The nine built-in features, and how the security tools actually work."
+title: "Built-In Modules & Addons"
+description: "The nine built-in features, security tools, Downloader architecture, and GDPR lifecycle."
+category: "Core Architecture"
 ---
 
-Lumi ships with nine features built in. Everything's on by default except Core, which can't be turned off - it's the bot itself. Turn any of the others on or off per-server from `/lumi panel` → **Modules**.
+# Built-In Modules & Addons
 
-| Feature | What it's for |
+Lumi ships with nine built-in core modules under `packages/core/src/modules/`. Everything is enabled by default per guild except `core` (which is mandatory and cannot be disabled). Turn any module on or off per server using `/lumi panel` → **Modules** or the web dashboard.
+
+| Module | Purpose |
 | :--- | :--- |
-| **Core** | Help, about, module toggles, the config panel, permissions, the addon hub. Always on. |
-| **Moderation** | Warn, mute, kick, ban, timeout, quarantine - with case logs and warnings that fade over time. |
-| **Filter** | Blocks banned words, spam links, invite links, mention spam, and excessive caps, automatically. |
-| **Security** | Anti-raid and anti-nuke protection - see below, this one's worth understanding properly. |
-| **Logging** | A record of who joined, left, got banned, edited a message, changed a nickname - the stuff you want a paper trail for. |
-| **AFK** | Set yourself away; anyone who mentions you gets told, and your nickname gets an `[AFK]` tag. |
-| **Temp Voice Channels** | Members spin up their own voice channel on demand, and it disappears once everyone leaves. |
-| **Utility** | General-purpose commands. |
-| **Dashboard** | Lets the web dashboard talk to the bot. Turning this off only affects the dashboard - everything else keeps working. |
+| **`core`** | Help, about, module toggles, configuration panel, permit system, and addon hub. Always enabled (`disableable: false`). |
+| **`mod`** | Moderation suite: warn, mute, kick, ban, timeout, quarantine, case logs, mod notes, and decaying warnings. |
+| **`filter`** | Automated content filtering: banned words/regex, spam links, invite links, mention spam, and excessive caps. |
+| **`security`** | Anti-raid, anti-nuke audit protection, join gate verification, panic mode, and automated structural backups. |
+| **`logging`** | Comprehensive audit logs for member joins/leaves, message edits/deletions, bans, and nickname changes. |
+| **`afk`** | Away-from-keyboard status with mention notifications and `[AFK]` nickname tagging. |
+| **`tempvc`** | On-demand dynamic temporary voice channels that automatically clean up when empty. |
+| **`utility`** | General-purpose utilities and information commands. |
+| **`dashboard`** | Controls dashboard RPC access for the server. Disabling it blocks dashboard API access while preserving bot commands. |
 
-## The security suite
+---
 
-This is where Lumi earns its keep. Four things work together here: anti-nuke, the join gate, panic mode, and automatic backups.
+## The Security Suite
 
-### Anti-nuke: stopping a raid before it finishes
+The security suite (`security` module) integrates anti-nuke protection, the join gate, panic mode, and automated backups:
 
-Lumi watches the server's audit log for the kind of thing a compromised admin account or a malicious bot does - mass bans, mass kicks, deleting channels or roles, creating webhooks. If one person does too many of those too quickly, Lumi steps in before they can finish.
+### Anti-Nuke: Immediate Threat Mitigation
 
-You choose how aggressive the response is per action type: log it and move on, quarantine the person (strip their roles, drop them in a holding area), or ban them outright. The server owner, the bot itself, anyone with a trusted role, and staff with an enforced permission are always exempt - enforced permissions are the one thing that survives quarantine, so you can't accidentally lock out the people who are supposed to fix the problem.
+Lumi monitors the Discord audit log for rapid administrative changes—mass bans, mass kicks, channel deletions, role modifications, or webhook creations. If an account exceeds configured action thresholds:
 
-This needs Discord's audit-log permission enabled for the bot to see what's happening.
+1. **Configurable Actions**: Log only, quarantine (strip all roles and assign a quarantine role), or ban immediately.
+2. **Quarantine Immunity**: The server owner, the bot client, trusted roles, and administrators with an **enforced permit** tier are immune to quarantine, preventing staff lockouts.
+3. Requires the **View Audit Log** Discord permission.
 
-### Join gate & verification: keeping raids and bots out
+### Join Gate & Verification
 
-Before someone even gets a chance to cause trouble, Lumi can check them at the door:
+- **Account Age Filtering**: Flag or kick accounts younger than a configured threshold.
+- **Raid Detection**: Dynamically detects join surges and elevates join-gate enforcement (kick, timeout, or quarantine).
+- **Interactive Verification**: `/verifypanel` posts an interactive emoji challenge. Members who fail to verify within the time limit can be automatically kicked.
+- **Join Filters**: Blocks avatar-less accounts, unverified bots, suspicious usernames, or display names containing links/invites.
 
-- **New accounts** - flag or kick accounts younger than an age you set.
-- **Raid detection** - if too many people join in too short a window, Lumi treats it as a raid and switches every new joiner to a stricter response (kick, timeout, or quarantine) until things calm down.
-- **Verification** - `/verifypanel` posts a button that shows new members a short sequence of emoji to click in order. It's not a real CAPTCHA and won't stop someone determined to get through manually, but it stops the simple join-and-spam bots cold. Members who don't finish in time can be automatically kicked.
-- **Join filters** - independent checks you can turn on individually: no avatar set, an unverified bot account, a username that matches a pattern you define, or a display name that's obviously an ad (a link or invite baked into the name itself). Each one gets its own response.
+### Panic Mode
 
-### Panic mode: the "something is actively going wrong" button
+`/panic` initiates an emergency lockdown:
+- Mutes `@everyone` across configured text channels and pauses server invites.
+- Remembers channel permission overrides prior to panic mode.
+- One-click reversion restores previous channel states and unpauses invites.
 
-`/panic` locks the server down in one command - mutes `@everyone` across your text channels and pauses invites, so nothing new can happen while you figure out what's going on. It asks you to confirm first (20 seconds, cancels itself if you don't answer), and it remembers exactly how every channel was set up beforehand.
+### Backup & Restore
 
-When you're ready, hit **Revert** on the resulting message and everything goes back to exactly how it was - permissions, invites, all of it - in one click.
+- Anti-nuke periodically creates structural snapshots of the server (roles, channels, permissions, and position hierarchies).
+- `/restore` reconstructs corrupted server structure from the latest snapshot.
 
-### Backup & restore
+### Heat-Based Content Filtering
 
-While anti-nuke is on, Lumi takes an hourly snapshot of your server's structure - every role, every channel, permissions, ordering, all of it.
+The `filter` module calculates a running "heat" score per member. Infractions increase heat while a cooldown decay reduces it over time. Crossing configurable thresholds triggers automatic escalation (timeout, kick, or ban).
 
-If the worst happens and someone guts your server anyway, `/restore` rebuilds it from the most recent snapshot. A panic-mode revert can also pull from this automatically.
-
-### Filter that remembers
-
-The word/link filter doesn't just react to one bad message - it keeps a running "heat" score per member that goes up with rule-breaking and cools down over time on its own. Cross a threshold and the punishment escalates automatically, so a repeat offender gets caught even if no single message would have triggered anything on its own.
+---
 
 ## Module & Addon Architecture
 
-Lumi divides functionality into **First-Party Built-in Modules** and **Third-Party Community Addons**:
+Lumi distinguishes between **First-Party Built-In Modules** and **Third-Party Addons**:
 
-### 1. Built-in Modules (First-Party)
-* **Location**: Reside directly inside the monorepo under `packages/core/src/modules/` (`CORE_PATH`).
-* **Zero Handrolled Versions**: Built-in modules never maintain independent version strings or manual `info.json` files. They dynamically inherit `CoreVersion` (`packages/core/package.json`) at runtime via `@DefineModule` and at build time via `manifestFromMeta()`. When a new release is cut, all built-in modules advance in lockstep with the core engine.
-* **Immutability & Safety**: Built-in modules cannot be uninstalled, updated, or pinned by the Downloader. Critical core features (`CoreModule` handling `/lumi panel`, module toggles, permissions, and shutdown) are hard-locked against unloading (`disableable: false`).
+### 1. Built-In Modules (First-Party)
+
+- **Location**: Monorepo under `packages/core/src/modules/<name>/`.
+- **Version Inheritance**: Built-in modules dynamically inherit `version` from `packages/core/package.json` at build time via `manifestFromMeta()`.
+- **Manifest Generation**: Static metadata is generated into `manifest.json` using `bun run modules:manifest`.
+- **Safety**: Cannot be uninstalled or rolled back by the Downloader. Critical core features in `core` are marked `disableable: false`.
 
 ---
 
 ### 2. Third-Party Addons (Downloader Architecture)
-Third-party modules are managed by the Downloader system via external Git repositories:
 
-#### A. Repository Management & Storage
-* Users register repositories via `,repo add <name> <git_url>`.
-* Lumi clones the repo into `data/3rd-party-modules/<repo_name>/`.
+Addons are external modules distributed via Git repositories:
 
-#### B. The `info.json` Contract
-Every individual addon in a repository provides an `info.json` metadata file:
+#### A. Repository Registration
+
+```sh
+# Add a repository (stored in data/3rd-party-modules/<name>/)
+,repo add lumi-addons https://github.com/lumi-devs/lumi-addons.git
+
+# Install an addon
+,download install lumi-addons <addon-name>
+
+# Install at a specific git commit, branch, or tag
+,download install lumi-addons <addon-name> <revision>
+
+# Roll back an installed addon to a previous revision
+,download rollback <addon-name> <revision>
+
+# Pin an addon against automatic updates
+,module pin <addon-name>
+```
+
+#### B. The `info.json` Specification
+
+Every addon directory must contain an `info.json` metadata file:
 
 ```json
 {
-  "name": "economy",
+  "name": "welcome-messages",
   "author": ["AuthorName"],
-  "version": "2.1.0",
-  "min_bot_version": "3.2.0",
-  "description": "Custom server currency and games.",
+  "description": "Customizable welcome greetings.",
+  "short": "Welcome message addon.",
+  "version": "1.0.0",
   "requirements": [],
-  "end_user_data_statement": "Stores user IDs and balance amounts."
+  "end_user_data_statement": "This addon does not store personal user data."
 }
 ```
 
-* **Compatibility Check**: Downloader parses `min_bot_version` using semver. If the running Lumi version falls outside this range, Downloader blocks installation or update to prevent runtime crashes.
-* **Dependencies**: Downloader inspects the `requirements` array and validates that all module prerequisites are satisfied before enabling.
-
-#### C. Installation & Tracking (`InstalledModule`)
-* When `,download install <repo> <addon>` runs, Downloader symlinks the addon package into `data/installed-modules/<addon_name>`.
-* Tracks the installation state in the database:
-  ```json
-  {
-    "repo_name": "community-repo",
-    "module_name": "economy",
-    "commit": "a1b2c3d...",
-    "pinned": false
-  }
-  ```
-
-#### D. Pinning Mechanism
-* `,module pin <addon>` sets `pinned: true`.
-* When the bot owner runs `,module update` or `,repo update`, pinned addons are skipped during git pulls, locking them to a verified commit.
+- **Dependency Management**: External npm dependencies listed in `requirements` are installed into the addon's private directory.
+- **Pinning**: Pinned addons (`pinned: true`) are skipped during `,module update` or `,repo update`.
 
 ---
 
-### 3. Module Discovery & Precedence Order
-When modules are discovered at startup, `ModuleStore` iterates through search paths in a strict hierarchy:
+### 3. Module Discovery & Resolution Precedence
+
+When `ModuleStore` initializes on worker boot, it discovers modules according to the following precedence hierarchy:
 
 ```
-1. installed_path     →  data/installed-modules/       (3rd-party installed addons)
-2. dev_paths           →  LUMI_DEV_PATHS                (Development directories)
-3. CORE_PATH          →  packages/core/src/modules/    (Built-in modules)
+1. data/installed-modules/       (Installed third-party addons)
+2. LUMI_DEV_PATHS                (Local development directories)
+3. packages/core/src/modules/    (Built-in core modules)
 ```
 
-Highest-priority paths resolve first, allowing third-party extensions or development checkouts to override or extend standard functionality while ensuring built-in core modules serve as the reliable baseline.
+Higher precedence directories override lower ones with the same module name.
 
 ---
 
-## Data and privacy
+## Data Privacy & GDPR Lifecycle
 
-When a user requests data erasure (GDPR/CCPA right to erasure) or data export, Lumi initiates an orchestrated workflow across the entire runtime:
+Lumi enforces a unified GDPR erasure and export pipeline:
 
-1. **First-Party Built-in Modules**: Every built-in module implements dedicated `deleteUserData` and `exportUserData` lifecycle hooks. Modules that persistently store end-user data (`afk`, `mod`, `tempvc`, `core`) declare an explicit `endUserDataStatement` in their manifest. Data such as AFK entries, moderation records, and temporary voice channel ownership are either permanently scrubbed, anonymized, or purged from Redis and PostgreSQL.
-2. **Stateless / No-Data Modules (`NoEndUserData()`)**: Modules that do not store persistent end-user data (`dashboard`, `filter`, `logging`, `security`, `utility`) declare `endUserDataStatement: NoEndUserData()`. This provides self-documenting code assurance that the module was evaluated and confirmed to store zero user data, while cleanly omitting empty statement strings from serialized manifests and public API endpoints.
-3. **Third-Party Community Addons**: Third-party addons declare their data retention policies via the `end_user_data_statement` field in `info.json`. While official guidelines require third-party authors to implement `deleteUserData`, unverified community addons might omit or only partially implement erasure hooks. Server administrators can inspect each addon's privacy disclosure statement directly in the web dashboard or Discord admin panel prior to installation.
+1. **Built-in Modules**: Modules storing user data (`afk`, `mod`, `tempvc`, `core`) implement `deleteUserData(userId, requester)` and `exportUserData(userId)` hooks. Data is removed or anonymized across PostgreSQL and Redis.
+2. **Stateless Modules (`NoEndUserData()`)**: Modules storing zero user data (`dashboard`, `filter`, `logging`, `security`, `utility`) declare `endUserDataStatement: NoEndUserData()` (or `noEndUserData()`).
+3. **Third-Party Addons**: Must declare privacy disclosures in `info.json` under `end_user_data_statement` and implement `deleteUserData` overrides when handling user IDs.
+
 

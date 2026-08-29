@@ -1,154 +1,168 @@
 ---
 title: "Configuration Reference"
 description: "Complete reference for every environment variable, database pool tuning, cluster topology, Docker Compose service, and Kubernetes manifest."
+category: "Getting Started"
 ---
 
-Copy `.env.example` to `.env` and fill in the mandatory section before running anything. This page documents every variable, every Docker Compose service, and the Kubernetes manifests under `deploy/k8s/`.
+# Configuration Reference
+
+Copy `.env.example` to `.env` and fill in the mandatory section before running anything. This page documents every environment variable, every Docker Compose service, and the Kubernetes manifests under `deploy/k8s/`.
 
 ### One file, all services
 
-The repo-root `.env` is the single source of truth. `apps/worker/.env` and `apps/dashboard/.env` are symlinks to it — each app is started with its own directory as cwd and Bun auto-loads whatever `.env` it finds there, so the links are what stop separately-maintained copies from drifting apart. `scripts/setup.sh` creates them; `.env` is gitignored at every level, so they can't be committed and a fresh checkout needs that run (or `ln -s ../../.env apps/<app>/.env` by hand).
+The repository root `.env` is the single source of truth. `apps/worker/.env` and `apps/dashboard/.env` are symlinks pointing to it (`../../.env`). Each app runs with its own directory as current working directory and Bun auto-loads the `.env` it finds there. The symlinks keep separately maintained copies from drifting apart. Running `bun run setup` (or `bash scripts/setup.sh`) creates these symlinks automatically.
 
-The consequence is that a value in the root `.env` applies to *every* service. Anything that must differ per service is therefore left unset there and defaulted in code, or has a per-service key, as with `<SERVICE>_METRICS_PORT`.
+Because `.env` is gitignored at every level, a fresh clone needs `bun run setup` (or manual symlinking via `ln -s ../../.env apps/worker/.env && ln -s ../../.env apps/dashboard/.env`).
 
-## Environment variables
+A variable set in the root `.env` applies to every workspace app and service. Anything that must differ per service can be left unset and defaulted in code, or configured via a service-specific override such as `<SERVICE>_METRICS_PORT` (e.g. `DASHBOARD_METRICS_PORT`).
+
+---
+
+## Environment Variables
 
 ### Mandatory
 
-No default - the app will not boot without these.
+Lumi will fail to start if any of these variables are missing:
 
-| Variable | Purpose |
-| :--- | :--- |
-| `BOT_TOKEN` | Discord bot token. |
-| `CLIENT_ID` | Discord application (client) ID. |
-| `POSTGRES_URL` | Pooled Postgres connection string (point this at `pgbouncer` in multi-replica setups). |
-| `DIRECT_POSTGRES_URL` | Unpooled Postgres connection string, used for migrations. |
-| `POSTGRES_PASSWORD` | Default `lumi`. |
-| `POSTGRES_POOL_MAX` / `POSTGRES_POOL_TOTAL` | Connection pool budgeting (`POSTGRES_POOL_TOTAL` default `80` divided across shards, or fixed `POSTGRES_POOL_MAX` default `10` per process). |
-| `REDIS_URL` / `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` | Redis connection. `REDIS_HOST` defaults `localhost`, `REDIS_PORT` defaults `6379`. |
-| `REDIS_CACHE_DB` / `REDIS_TASK_DB` | Redis logical DB indices - `0` for caching, `1` for BullMQ task queues. |
-| `RPC_HTTP_HOST` / `RPC_HTTP_PORT` | Bind address for the internal RPC HTTP server. Defaults `127.0.0.1` / `8091`. Only the primary shard in a pod binds it (see [Architecture](/Lumi/architecture/)), so there's nothing else on a single host to collide with. Set `0.0.0.0` only where the dashboard runs in another container. Never published to the host. |
-| `RPC_INTERNAL_TOKEN` | Shared secret the dashboard sends as `Authorization: Bearer` on every internal RPC call. Required when `NODE_ENV=production` - the worker refuses to start the RPC server without it. Generate with `openssl rand -hex 32`. |
+| Variable | Purpose | Example / Default |
+| :--- | :--- | :--- |
+| `BOT_TOKEN` | Discord bot token from the Discord Developer Portal (Bot tab). | `MTA...` |
+| `CLIENT_ID` | Discord application (client) ID. | `123456789012345678` |
+| `POSTGRES_URL` | Pooled PostgreSQL connection string (connects via PgBouncer in multi-replica deployments). | `postgresql://lumi:lumi@localhost:5432/lumi` (or port `6432` for PgBouncer) |
+| `DIRECT_POSTGRES_URL` | Direct unpooled PostgreSQL connection string, used exclusively for migrations. | `postgresql://lumi:lumi@localhost:5432/lumi` |
+| `POSTGRES_PASSWORD` | PostgreSQL database password. | `lumi` |
+| `POSTGRES_POOL_MAX` / `POSTGRES_POOL_TOTAL` | Database connection pool budget. If `POSTGRES_POOL_MAX` is set, each process gets that fixed pool size (default `10`). Otherwise, `POSTGRES_POOL_TOTAL` (default `80`) is dynamically divided by the number of shards on the instance (minimum 2). | `10` / `80` |
+| `REDIS_URL` / `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` | Redis connection parameters. | `redis://localhost:6379`, `localhost`, `6379` |
+| `REDIS_CACHE_DB` / `REDIS_TASK_DB` | Logical Redis DB indices: `0` for cache-aside and telemetry, `1` for BullMQ task queues. | `0` and `1` |
+| `RPC_HTTP_HOST` / `RPC_HTTP_PORT` | Bind host and port for the worker's internal HTTP RPC bridge. Defaults to `127.0.0.1` and `8091`. Only the primary shard (holding Shard ID 0) binds this port. | `127.0.0.1` / `8091` |
+| `RPC_INTERNAL_TOKEN` | Shared secret token sent as `Authorization: Bearer <token>` on every dashboard-to-worker RPC call. Required when `NODE_ENV=production`. Generate with `openssl rand -hex 32`. | 32-byte hex string |
 
-### General settings
+---
+
+### General Settings
 
 | Variable | Default | Purpose |
 | :--- | :--- | :--- |
 | `OWNER_IDS` | *(empty)* | Comma-separated Discord user IDs with bot-owner access. |
-| `DEFAULT_PREFIX` | `,` | Prefix command trigger. |
+| `DEFAULT_PREFIX` | `,` | Prefix command trigger for legacy message commands. |
 | `NODE_ENV` | `development` | Runtime environment mode (`development`, `production`, `test`). |
-| `LUMI_CACHE_TTL` | `60` | Default cache TTL in seconds for entity caches. |
-| `LUMI_DEV_PATHS` | *(unset)* | Extra addon directories loaded in dev (e.g. a sibling `lumi-addons` checkout). |
-| `MODULE_UPDATE_AUTO_RESTART` | `true` when set | Whether an addon self-update triggers an automatic restart. |
+| `LUMI_CACHE_TTL` | `60` | Default cache TTL in seconds for entity and permission caches in Redis. |
+| `LUMI_DEV_PATHS` | *(unset)* | Comma- or colon-separated list of local directory paths to scan for addons during development (e.g. `./addons`). |
+| `MODULE_UPDATE_AUTO_RESTART` | `true` | Whether an addon self-update triggers an automatic worker restart. |
 
-### Logging & telemetry
+---
+
+### Logging & Telemetry
 
 | Variable | Default | Purpose |
 | :--- | :--- | :--- |
-| `LOG_LEVEL` | `info` | `trace`, `debug`, `info`, `warn`, `error`, `fatal`. |
-| `LOG_FORMAT` | `pretty` | Use `json` in production for log aggregation. |
-| `SERVICE_VERSION` | `0.0.0` | Semantic version injected into telemetry. |
-| `SERVICE_NAME` | `lumi` | Overrides the OTel/Prometheus service name. |
-| `OTEL_ENABLED` | `false` | Enable OpenTelemetry tracing (set `true` in Compose/k8s). |
+| `LOG_LEVEL` | `info` | Logging verbosity: `trace`, `debug`, `info`, `warn`, `error`, `fatal`. |
+| `LOG_FORMAT` | `pretty` | Log output format: `pretty` for local development, `json` for structured log aggregation. |
+| `SERVICE_VERSION` | `0.0.0` | Semantic version string injected into telemetry spans and metrics. |
+| `SERVICE_NAME` | `lumi` | OpenTelemetry and Prometheus service identifier. |
+| `OTEL_ENABLED` | `false` | Enable OpenTelemetry tracing (set `true` in production/Kubernetes). |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://otel-collector:4318` | HTTP endpoint for OTLP trace export. |
-| `OTEL_TRACES_SAMPLE_RATIO` | `1` | Lower in production (e.g. `0.1`) to cut trace volume. |
-| `METRICS_ENABLED` | `true` | Enable Prometheus metrics HTTP endpoint. |
-| `METRICS_PORT` | `9090` | Serves `/metrics`, `/healthz`, `/readyz`. |
-| `METRICS_HOST` | `127.0.0.1` | Set `0.0.0.0` where Prometheus scrapes across containers. |
-| `<SERVICE>_METRICS_PORT` | — | Per-service override, e.g. `DASHBOARD_METRICS_PORT`. |
-| `GRAFANA_USER` / `GRAFANA_PASSWORD` | — | Only used by the bundled Grafana Compose service. Required when running observability profile. |
+| `OTEL_TRACES_SAMPLE_RATIO` | `1` | Trace sampling ratio: `1` (100%) in development, lower (e.g. `0.1`) in high-traffic production. |
+| `METRICS_ENABLED` | `true` | Enable the Prometheus HTTP metrics and health check endpoint. |
+| `METRICS_PORT` | `9090` | Port serving `/metrics`, `/healthz`, and `/readyz`. Bound by the primary shard. |
+| `METRICS_HOST` | `127.0.0.1` | Bind interface for metrics. Set to `0.0.0.0` when scraped across containers or Kubernetes pods. |
+| `<SERVICE>_METRICS_PORT` | — | Per-service override (e.g. `DASHBOARD_METRICS_PORT`). |
+| `GRAFANA_USER` / `GRAFANA_PASSWORD` | `admin` / `admin` | Credentials for the bundled Grafana instance in Docker Compose. |
 
-### Enterprise mega-fleet scaling & topology (advanced)
+---
 
-| Variable | Default | Purpose |
-| :--- | :--- | :--- |
-| `LUMI_CONSUMER_ID` | *(unset)* | Stable identity for this replica in Redis Streams consumer groups; in k8s this is set from the pod name. |
-| `SHARD_LIST` | `auto` | Comma-separated shard IDs this replica's `ShardingManager` spawns children for, e.g. `0,1,2`. |
-| `TOTAL_SHARDS` | `auto` | Pin the total shard count instead of following Discord's recommendation. |
-| `CLUSTER_ID` / `TOTAL_CLUSTERS` / `SHARDS_PER_CLUSTER` | *(unset)* | Multi-cluster mega-fleet orchestration coordinates static cluster sharding. |
-| `CLUSTER_NAME` | *(unset)* | Namespaces the shard telemetry each shard publishes to Redis for the dashboard's fleet view. |
-| `POSTGRES_POOL_SIZE` | `10` | Base pool size for database connections per shard. |
-| `POSTGRES_MAX_OVERFLOW` | `5` | Max connection overflow allowed under transient spikes. |
-| `POSTGRES_POOL_TIMEOUT_SECONDS` | `10` | Pool acquisition timeout in seconds before throwing. |
-| `POSTGRES_IDLE_TIMEOUT_SECONDS` | `300` | Eviction threshold for idle connections in the pool. |
-| `POSTGRES_REPLICA_URL` | *(unset)* | Optional PostgreSQL read replica for cross-guild queries & sweeps. |
-| `REDIS_CLUSTER_MODE` | `false` | Enable native multi-node Redis Cluster mode. |
-| `REDIS_CLUSTER_NODES` | *(unset)* | Comma-separated `host:port` pairs enabling multi-master Redis Cluster mode. |
-| `REDIS_CLUSTER_SCALE_READS` | `master` | Read-scaling target for Redis Cluster (`master`, `slave`, `all`). |
-| `REDIS_MAX_RETRIES` | `5` | Maximum retry attempts for Redis command execution. |
-| `REDIS_COMMAND_TIMEOUT_MS` | `3000` | Command execution timeout in milliseconds. |
-| `REDIS_SENTINELS` / `REDIS_SENTINEL_NAME` / `REDIS_SENTINEL_PASSWORD` | *(unset)* | Switch Redis connections to Sentinel-aware mode. `REDIS_SENTINEL_NAME` defaults `mymaster`. |
-| `DISCORD_REST_GLOBAL_RATE_LIMIT` | `50` | Global requests per second limit for Discord REST API client. |
-| `DISCORD_REST_SWEEP_INTERVAL_SECONDS` | `60` | Interval in seconds for sweeping expired rate-limit buckets. |
-| `SHARD_RESPAWN_DELAY_MS` | `5000` | Delay between consecutive shard spawn operations during rollout. |
-| `SHARD_MAX_CONCURRENT_SPAWNS` | `2` | Number of shards permitted to initialize concurrently. |
-| `CACHE_MESSAGE_LIMIT` / `CACHE_MEMBER_LIMIT` / `CACHE_USER_LIMIT` / `CACHE_THREAD_LIMIT` | `50` / `50` / `200` / `25` | Per-shard in-memory Discord.js manager cache capacities. |
-| `SWEEPER_MESSAGES_INTERVAL` / `SWEEPER_MESSAGES_LIFETIME` | `300` / `600` | Gateway message cache sweep interval and message retention in seconds. |
-| `SWEEPER_MEMBERS_INTERVAL` / `SWEEPER_MEMBERS_LIFETIME` | `1800` / `1800` | Gateway guild member sweep interval and retention in seconds. |
-| `EVENT_STREAM_MAXLEN` | `100000` | Redis Stream trim length (event bus). |
-| `EVENT_STREAM_MAX_DELIVERIES` | `5` | Deliveries before a message is moved to `<stream>:dlq`. |
-| `EVENT_STREAM_CLAIM_MIN_IDLE_MS` | `60000` | Idle time before a pending entry is eligible for reclaim. |
-| `EVENT_STREAM_ACK_WAIT_MS` | `60000` | Timeout before unacknowledged messages are reclaimed. |
-| `EVENT_STREAM_CLAIM_INTERVAL_MS` | `30000` | How often the reclaim (`XAUTOCLAIM`) loop runs. |
-| `EVENT_STREAM_STATS_INTERVAL_MS` | `10000` | How often stream-length/lag stats are polled and exported. |
-| `ENTITY_CACHE_POPULATE` | `false` | Preload entity cache on shard startup. |
-| `DISCORD_PROXY_URL` / `DISCORD_REST_PROXY_URL` / `REST_PROXY_URL` | *(unset)* | Point at a shared Discord REST rate-limit proxy (e.g. `nirn-proxy`). Multi-replica deployments only. |
-| `DISCORD_REST_TIMEOUT_MS` / `DISCORD_REST_RETRIES` | `15000` / `3` | Discord REST request timeout and retry attempts. |
-
-### Dashboard
+### Fleet Scaling & Cluster Topology
 
 | Variable | Default | Purpose |
 | :--- | :--- | :--- |
-| `DASHBOARD_PORT` | `8080` | Listen port for Next.js web application. |
+| `LUMI_CONSUMER_ID` | `worker-<pid>` | Unique identifier for this worker replica in Redis Streams consumer groups (`HOSTNAME` in Kubernetes). |
+| `SHARD_LIST` | `auto` | Comma-separated list of shard IDs this replica spawns child processes for (e.g. `0,1,2,3`). |
+| `TOTAL_SHARDS` | `auto` | Total shard count across all replicas. `auto` follows Discord's recommendation. |
+| `CLUSTER_NAME` | *(unset)* | Namespaces shard telemetry published to Redis (`lumi:shards:<cluster>`). Unset defaults to `"default"`. |
+| `POSTGRES_REPLICA_URL` | *(unset)* | Optional read-replica connection string for cross-guild background sweeps (`prismaReader`). |
+| `EVENT_STREAM_MAXLEN` | `100000` | Approximate maximum length for Redis Streams event queues (`XADD ... MAXLEN ~ 100000`). |
+| `EVENT_STREAM_MAX_DELIVERIES` | `5` | Maximum delivery attempts before moving a poison message to `<stream>:dlq`. |
+| `EVENT_STREAM_CLAIM_MIN_IDLE_MS` | `60000` | Minimum idle time before an unacknowledged message is reclaimed via `XAUTOCLAIM`. |
+| `EVENT_STREAM_ACK_WAIT_MS` | `60000` | Timeout threshold before unacknowledged messages trigger recovery. |
+| `EVENT_STREAM_CLAIM_INTERVAL_MS` | `30000` | Frequency of the background message reclamation loop. |
+| `EVENT_STREAM_STATS_INTERVAL_MS` | `10000` | Interval for polling stream length and consumer lag metrics. |
+| `ENTITY_CACHE_POPULATE` | `false` | Preload Discord entity caches on shard boot. |
+| `DISCORD_PROXY_URL` / `REST_PROXY_URL` | *(unset)* | Shared outbound REST proxy (such as `nirn-proxy`) for rate-limit coordination across worker replicas. |
+| `DASHBOARD_PUBLIC_URL` | *(unset)* | Public base URL of the dashboard (e.g. `https://lumi.example.com`) used when generating ban appeal links. |
+
+---
+
+### Dashboard Settings
+
+| Variable | Default | Purpose |
+| :--- | :--- | :--- |
+| `DASHBOARD_PORT` | `8080` | Port for the Next.js web application (default `8080` in production, `3000` in `next dev`). |
 | `DASHBOARD_HOST` | `0.0.0.0` | Bind host interface. |
-| `DASHBOARD_SESSION_SECRET` | *(required for dashboard)* | Generate with `openssl rand -hex 32`. |
-| `DISCORD_OAUTH2_CLIENT_ID` / `DISCORD_OAUTH2_CLIENT_SECRET` | | From your Discord application's OAuth2 page. |
-| `AUTH_URL` | *(derived from request)* | The dashboard's externally visible origin (required if behind reverse proxy). |
-| `METRICS_ENABLED` / `METRICS_PORT` | `true` / `9090` | The dashboard's `/healthz`, `/readyz`, `/metrics` server. |
-| `CLIENT_IP_HEADER` | *(unset)* | Name of the client-IP header set by your reverse proxy (`cf-connecting-ip`, `x-real-ip`). |
-| `TRUSTED_PROXY_HOPS` | `1` | Number of trusted proxies in front of the dashboard. |
+| `DASHBOARD_SESSION_SECRET` / `AUTH_SECRET` | *(required)* | 32-byte secret for NextAuth JWT session encryption (`openssl rand -hex 32`). |
+| `DISCORD_OAUTH2_CLIENT_ID` | *(required)* | Discord application OAuth2 client ID. |
+| `DISCORD_OAUTH2_CLIENT_SECRET` | *(required)* | Discord application OAuth2 client secret. |
+| `AUTH_URL` | *(derived)* | Externally visible URL origin if the dashboard sits behind a TLS-terminating reverse proxy. |
+| `CLIENT_IP_HEADER` | *(unset)* | Reverse proxy client IP header (`cf-connecting-ip`, `x-real-ip`). |
+| `TRUSTED_PROXY_HOPS` | `1` | Number of upstream reverse proxy hops trusted for IP rate limiting. |
 
-There is **no** OAuth2 redirect-URI variable. NextAuth derives the callback from the incoming request; the path is `/api/auth/callback/discord`. Register `https://<your-dashboard-origin>/api/auth/callback/discord` under **OAuth2 → Redirects** on your Discord application.
+> [!NOTE]
+> NextAuth automatically derives the OAuth2 callback URI from the incoming request. The callback path is `/api/auth/callback/discord`. Register `https://<your-dashboard-domain>/api/auth/callback/discord` under **OAuth2 → Redirects** in the Discord Developer Portal.
 
-Full reference for the app itself: [Dashboard Reference](/Lumi/dashboard/).
+Full reference for the app itself: [Dashboard Reference](/dashboard).
 
-## Docker Compose
+---
 
-`docker-compose.yml` at the repo root defines:
+## Docker Compose Services
 
-| Service | Purpose |
-| :--- | :--- |
-| `worker` | Discord WS + all bot logic, spawned per-shard via `ShardingManager`. Always runs. |
-| `lumi-dev` (profile `development`) | Dev container with the repo bind-mounted, pretty/debug logging, interactive TTY. |
-| `worker-scale` (profile `scale`) | A second worker replica for local cluster testing. |
-| `dashboard` (profile `dashboard`) | Web dashboard on `${DASHBOARD_PORT:-8080}`, built via `Dockerfile.dashboard`. |
-| `postgres` | `postgres:18-alpine`, primary database. |
-| `pgbouncer` | Connection pooler in front of Postgres, transaction pool mode, port 6432. |
-| `redis` | `redis:7-alpine`, AOF persistence, `maxmemory 128mb` / `noeviction`. |
-| `nirn-proxy` (profile `scale`) | Shared Discord REST rate-limit proxy across replicas. |
-| `otel-collector`, `tempo`, `prometheus`, `grafana` (profile `observability`) | Full tracing/metrics stack, configs under `./config/observability/`. |
+The root `docker-compose.yml` defines the following services:
 
-Bring up the minimal stack with:
+| Service | Profile | Purpose |
+| :--- | :--- | :--- |
+| `worker` | *(default)* | The Discord bot worker process (`apps/worker`). Spawns shard child processes via `ShardingManager`. |
+| `postgres` | *(default)* | PostgreSQL 18 database (`postgres:18-alpine`). Port `5432`. |
+| `pgbouncer` | *(default)* | PgBouncer connection pooler in transaction mode. Port `6432`. |
+| `redis` | *(default)* | Redis 7 in-memory cache and Redis Streams message bus. Port `6379`. |
+| `dashboard` | `dashboard` | Next.js web administration dashboard (`apps/dashboard`). Port `8080`. |
+| `lumi-dev` | `development` | Interactive development container with repository bind-mounted. |
+| `worker-scale` | `scale` | Secondary worker replica for multi-shard cluster testing. |
+| `nirn-proxy` | `scale` | Shared Discord REST rate-limit proxy. |
+| `otel-collector`, `tempo`, `prometheus`, `grafana` | `observability` | Full OpenTelemetry tracing, Prometheus scraping (`9090`), and Grafana dashboard (`3000`). |
+
+To start the baseline stack:
 
 ```bash
-docker compose up worker postgres pgbouncer redis
+docker compose up -d worker postgres pgbouncer redis
 ```
 
-Add `--profile dashboard` to run the web UI, `--profile scale` for multi-worker testing, or `--profile observability` for metrics and tracing.
+To include the web dashboard and observability stack:
 
-## Kubernetes (`deploy/k8s/`)
+```bash
+docker compose --profile dashboard --profile observability up -d
+```
+
+---
+
+## Kubernetes Deployments (`deploy/k8s/`)
 
 | Manifest | Kind | Purpose |
 | :--- | :--- | :--- |
-| `namespace.yaml` | `Namespace` `lumi` | Isolated Kubernetes namespace for all Lumi components. |
-| `configmap.yaml` | `ConfigMap` `lumi-env` | Non-secret env: connection info, RPC host/port, OTel/metrics settings, `CLUSTER_NAME: "lumi-prod"`. |
-| `secret.example.yaml` | `Secret` template | Copy to `secret.yaml` and fill in — **never commit the filled version**. |
-| `lumi-data-pvc.yaml` | `PersistentVolumeClaim` | `ReadWriteMany`, 5Gi — shared storage for downloaded addon repo files. |
-| `migrate-job.yaml` | `Job` | Runs `prisma migrate deploy` once, before rollout, so workers don't race the same DDL. |
-| `worker-statefulset.yaml` | `StatefulSet` + headless `Service` | The sharded worker fleet. Shard 0 assumes primary role for BullMQ and RPC. |
-| `dashboard-deployment.yaml` | `Deployment` + `Service` | Next.js admin dashboard web application (reaches worker RPC on `worker-0`). |
-| `nirn-proxy-deployment.yaml` | `Deployment` + `Service` | `replicas: 2`, stateless Discord REST proxy shared by worker replicas. |
+| `namespace.yaml` | `Namespace` | Isolated `lumi` Kubernetes namespace. |
+| `configmap.yaml` | `ConfigMap` | Non-sensitive configuration (hosts, ports, metrics flags, cluster names). |
+| `secret.example.yaml` | `Secret` template | Template for sensitive secrets (`BOT_TOKEN`, `RPC_INTERNAL_TOKEN`, database passwords). |
+| `lumi-data-pvc.yaml` | `PersistentVolumeClaim` | `ReadWriteMany` persistent storage for downloaded addon repositories. |
+| `migrate-job.yaml` | `Job` | Runs `prisma migrate deploy` prior to rollout to prevent migration concurrency races. |
+| `worker-statefulset.yaml` | `StatefulSet` + headless `Service` | Sharded worker fleet. Shard 0 assumes primary role for BullMQ scheduling and RPC. |
+| `dashboard-deployment.yaml` | `Deployment` + `Service` | Next.js admin dashboard communicating with `worker-0` over internal HTTP RPC (`8091`). |
+| `nirn-proxy-deployment.yaml` | `Deployment` + `Service` | Stateless Discord REST proxy shared across worker replicas. |
 
-Deploy order: namespace → secrets/configmap → PVC → `migrate-job` (wait for completion) → `nirn-proxy` → `worker` → `dashboard`.
+Deployment order:
+1. `namespace.yaml`
+2. `configmap.yaml` and filled `secret.yaml`
+3. `lumi-data-pvc.yaml`
+4. `migrate-job.yaml` (wait for completion)
+5. `nirn-proxy-deployment.yaml`
+6. `worker-statefulset.yaml`
+7. `dashboard-deployment.yaml`
 
 See `deploy/k8s/README.md` for the full walkthrough.
+
