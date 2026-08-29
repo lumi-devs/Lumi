@@ -1,6 +1,7 @@
 import { Piece } from "@sapphire/framework";
 import type { Awaitable } from "@sapphire/utilities";
 import { Emojis } from "#lib/utilities/assets.js";
+import { CoreVersion } from "#utilities/misc.js";
 
 import {
   fieldsFromSchema,
@@ -75,7 +76,7 @@ export function DefineModule(options: ModuleOptions) {
       displayName: options.displayName ?? options.name ?? target.name,
       emoji: options.emoji ?? Emojis.GEAR,
       description: options.description ?? "",
-      version: options.version ?? "0.0.0",
+      version: options.version ?? CoreVersion,
       disableable: options.disableable ?? true,
       conflicts: options.conflicts ?? [],
       dependencies: options.dependencies ?? [],
@@ -120,7 +121,7 @@ export abstract class Module extends Piece {
     this.displayName = options.displayName ?? this.name;
     this.emoji = options.emoji ?? Emojis.GEAR;
     this.description = options.description ?? "";
-    this.version = options.version ?? "0.0.0";
+    this.version = options.version ?? CoreVersion;
     this.conflicts = options.conflicts ?? [];
     this.dependencies = options.dependencies ?? [];
     this.configFields =

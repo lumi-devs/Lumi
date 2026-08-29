@@ -7,9 +7,8 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
   name: "security",
   displayName: "Security",
   emoji: "🛡️",
-  version: "1.0.0",
   description:
-    "Wick-style server protection: anti-nuke detection with automatic quarantine.",
+    "Server protection: anti-nuke detection with automatic quarantine.",
   category: "Security",
   dashboardHref: "security",
   configSchema: cfg.object({

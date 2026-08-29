@@ -11,6 +11,7 @@ import {
   MANIFEST_FILE,
 } from "#lib/module-system/manifest.js";
 import { cfg, FieldType } from "#lib/module-system/config-schema.js";
+import { CoreVersion } from "#utilities/misc.js";
 
 describe("Module Manifest Utilities", () => {
   let tmpDir: string;
@@ -96,7 +97,7 @@ describe("Module Manifest Utilities", () => {
       ]);
       expect(manifest.displayName).toBe("schema-module");
       expect(manifest.emoji).toBe("⚙️");
-      expect(manifest.version).toBe("0.0.0");
+      expect(manifest.version).toBe(CoreVersion);
       expect(manifest.disableable).toBe(true);
     });
   });

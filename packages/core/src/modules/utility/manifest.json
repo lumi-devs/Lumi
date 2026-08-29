@@ -3,7 +3,7 @@
   "displayName": "Utility",
   "emoji": "⚙️",
   "description": "General utility commands.",
-  "version": "1.0.0",
+  "version": "3.2.0",
   "disableable": true,
   "dependencies": [],
   "conflicts": [],

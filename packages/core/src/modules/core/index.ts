@@ -7,7 +7,6 @@ import type { Piece } from "@sapphire/framework";
   displayName: "Core",
   description: "The built-in core module.",
   emoji: Emojis.SHIELD,
-  version: "1.0.0",
   disableable: false,
   category: "System",
 })

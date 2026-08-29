@@ -49,7 +49,6 @@ const COMPILED_KEYS = [
   name: "filter",
   displayName: "Filter",
   emoji: "🚫",
-  version: "2.0.0",
   description:
     "Automod rule engine: filtered terms (Aho-Corasick), regex rules, invite/link blocking with allowlists, mention-spam and caps limits, with configurable punishment and logging.",
   category: "Moderation",

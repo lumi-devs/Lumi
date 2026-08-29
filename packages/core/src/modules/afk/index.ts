@@ -45,7 +45,6 @@ export async function isAfkNickPrefixEnabled(
   name: "afk",
   displayName: "AFK",
   emoji: Emojis.AFK,
-  version: "1.0.0",
   description:
     "Set yourself AFK; mentions notify others and a prefix is added to your nickname.",
   category: "Community",

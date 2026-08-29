@@ -3,7 +3,7 @@
   "displayName": "Core",
   "emoji": "🛡️",
   "description": "The built-in core module.",
-  "version": "1.0.0",
+  "version": "3.2.0",
   "disableable": false,
   "dependencies": [],
   "conflicts": [],

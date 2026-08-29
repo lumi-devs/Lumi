@@ -3,7 +3,7 @@
   "displayName": "AFK",
   "emoji": "💤",
   "description": "Set yourself AFK; mentions notify others and a prefix is added to your nickname.",
-  "version": "1.0.0",
+  "version": "3.2.0",
   "disableable": true,
   "dependencies": [],
   "conflicts": [],

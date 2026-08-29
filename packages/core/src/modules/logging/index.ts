@@ -5,7 +5,6 @@ import { ChannelType } from "discord.js";
   name: "logging",
   displayName: "Logging",
   emoji: "📋",
-  version: "1.0.0",
   description:
     "Server event logs: message deletes/edits, joins, leaves, bans, unbans, nickname and role changes.",
   category: "System",

@@ -3,7 +3,7 @@
   "displayName": "Dashboard",
   "emoji": "🖥️",
   "description": "Integrates the bot with the Lumi Web Dashboard. Provides RPC endpoints for management.",
-  "version": "1.0.0",
+  "version": "3.2.0",
   "disableable": true,
   "dependencies": [],
   "conflicts": [],

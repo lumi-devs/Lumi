@@ -33,7 +33,6 @@ import {
   name: "dashboard",
   displayName: "Dashboard",
   emoji: "🖥️",
-  version: "1.0.0",
   description:
     "Integrates the bot with the Lumi Web Dashboard. Provides RPC endpoints for management.",
   category: "System",

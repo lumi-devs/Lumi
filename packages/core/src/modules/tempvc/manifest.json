@@ -3,7 +3,7 @@
   "displayName": "Temp Voice Channels",
   "emoji": "🔊",
   "description": "On-demand temporary voice channels that delete themselves once empty, with an owner control panel.",
-  "version": "1.0.0",
+  "version": "3.2.0",
   "disableable": true,
   "dependencies": [],
   "conflicts": [],
@@ -16,6 +16,28 @@
     "services",
     "scheduled-tasks"
   ],
-  "configFields": [],
+  "configFields": [
+    {
+      "key": "create_cooldown_seconds",
+      "type": "NUMBER",
+      "label": "Creation Cooldown (seconds)",
+      "description": "How long a member must wait between creating temp channels.",
+      "default": 30
+    },
+    {
+      "key": "max_generators",
+      "type": "NUMBER",
+      "label": "Max Generator Channels",
+      "description": "How many trigger channels can exist in this server at once.",
+      "default": 25
+    },
+    {
+      "key": "default_name_template",
+      "type": "STRING",
+      "label": "Default Channel Name Pattern",
+      "description": "Used to pre-fill new generators. Supports {username}, {name}, {number}, {position} — see the Voice Generators page for details.",
+      "default": "{username}'s Channel"
+    }
+  ],
   "category": "System"
 }

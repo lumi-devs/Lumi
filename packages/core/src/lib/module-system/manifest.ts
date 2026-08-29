@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fieldsFromSchema } from "./config-schema.js";
 import type { ModuleMeta, ModuleOptions } from "./Module.js";
+import { CoreVersion } from "#utilities/misc.js";
 import {
   KNOWN_SUBSTORES,
   type ModuleManifest,
@@ -36,7 +37,7 @@ export async function manifestFromMeta(
     displayName: meta.displayName ?? meta.name!,
     emoji: meta.emoji ?? "⚙️",
     description: meta.description ?? "",
-    version: meta.version ?? "0.0.0",
+    version: meta.version ?? CoreVersion,
     disableable: meta.disableable ?? true,
     dependencies: meta.dependencies ?? [],
     conflicts: meta.conflicts ?? [],

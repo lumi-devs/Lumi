@@ -3,7 +3,7 @@
   "displayName": "Filter",
   "emoji": "🚫",
   "description": "Automod rule engine: filtered terms (Aho-Corasick), regex rules, invite/link blocking with allowlists, mention-spam and caps limits, with configurable punishment and logging.",
-  "version": "2.0.0",
+  "version": "3.2.0",
   "disableable": true,
   "dependencies": [],
   "conflicts": [],
@@ -11,7 +11,8 @@
   "targetService": "worker",
   "subStores": [
     "listeners",
-    "services"
+    "services",
+    "scheduled-tasks"
   ],
   "configFields": [
     {
@@ -161,11 +162,99 @@
       "default": 10
     },
     {
+      "key": "heat_per_attachment",
+      "type": "NUMBER",
+      "label": "Heat per Attachment",
+      "description": "Heat added per attachment (image/embed-spam signal).",
+      "group": "Heat Scoring",
+      "default": 0
+    },
+    {
+      "key": "heat_per_emoji",
+      "type": "NUMBER",
+      "label": "Heat per Emoji",
+      "description": "Heat added per custom or unicode emoji in a message.",
+      "group": "Heat Scoring",
+      "default": 0
+    },
+    {
+      "key": "heat_per_link",
+      "type": "NUMBER",
+      "label": "Heat per Link",
+      "description": "Heat added when a message contains a URL (advertisement signal).",
+      "group": "Heat Scoring",
+      "default": 0
+    },
+    {
+      "key": "heat_webhook_multiplier",
+      "type": "NUMBER",
+      "label": "Webhook Multiplier",
+      "description": "Message/link heat is multiplied by this for webhook-sent messages. 1 disables special treatment.",
+      "group": "Heat Scoring",
+      "default": 1
+    },
+    {
       "key": "heat_decay_per_minute",
       "type": "NUMBER",
       "label": "Heat Decay / min",
       "description": "Heat points bled off per minute.",
       "group": "Heat Scoring",
+      "default": 10
+    },
+    {
+      "key": "heat_multiplier_enabled",
+      "type": "BOOLEAN",
+      "label": "Escalating Timeouts",
+      "description": "Geometrically increase the timeout duration for members who keep re-tripping heat after their previous timeout expires.",
+      "group": "Heat Escalation",
+      "default": false
+    },
+    {
+      "key": "heat_multiplier_base",
+      "type": "NUMBER",
+      "label": "Escalation Multiplier",
+      "description": "Each repeat timeout after the first multiplies the base duration by this much (e.g. 2 -> 1, 1, 2, 4, 8x the base).",
+      "group": "Heat Escalation",
+      "default": 2
+    },
+    {
+      "key": "heat_panic_raider_count",
+      "type": "NUMBER",
+      "label": "Heat Panic Raider Count",
+      "description": "Distinct members who must trip Timeout/Quarantine within the panic window to activate heat panic mode, instantly actioning any flagged member's next message. 0 disables.",
+      "group": "Heat Escalation",
+      "default": 0
+    },
+    {
+      "key": "heat_panic_window_seconds",
+      "type": "NUMBER",
+      "label": "Heat Panic Window (seconds)",
+      "description": "Window for counting distinct raiders toward heat panic mode.",
+      "group": "Heat Escalation",
+      "default": 30
+    },
+    {
+      "key": "lockdown_mention_threshold",
+      "type": "NUMBER",
+      "label": "Mention Flood Threshold",
+      "description": "Total non-exempt mentions guild-wide within the window that trigger an automatic server-wide lockdown. 0 disables.",
+      "group": "Auto Lockdown",
+      "default": 0
+    },
+    {
+      "key": "lockdown_window_seconds",
+      "type": "NUMBER",
+      "label": "Mention Flood Window (seconds)",
+      "description": "Window for counting mentions toward auto-lockdown.",
+      "group": "Auto Lockdown",
+      "default": 30
+    },
+    {
+      "key": "lockdown_duration_minutes",
+      "type": "NUMBER",
+      "label": "Auto-Lockdown Duration (minutes)",
+      "description": "How long the server-wide lockdown lasts before auto-unlocking.",
+      "group": "Auto Lockdown",
       "default": 10
     },
     {

@@ -5,7 +5,6 @@ import { Emojis } from "#lib/utilities/assets.js";
   name: "utility",
   displayName: "Utility",
   emoji: Emojis.GEAR,
-  version: "1.0.0",
   description: "General utility commands.",
   category: "Community",
   configSchema: cfg.object({

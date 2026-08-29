@@ -9,7 +9,6 @@ import { handleWarnDecayFire } from "./lib/warn-decay-handler.js";
   name: "mod",
   displayName: "Moderation",
   emoji: "🛡️",
-  version: "1.0.0",
   description: "Staff moderation: warn, mute, kick, ban - with case logging.",
   category: "Moderation",
   configSchema: cfg.object({

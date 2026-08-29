@@ -8,9 +8,11 @@ import { createRequire } from "node:module";
 const _req = createRequire(import.meta.url);
 // Changesets bumps packages/core/package.json on every release merge - the
 // single source of truth for this number, never hand-edit it elsewhere.
-const corePackageVersion = (
+export const CoreVersion = (
   _req("../../../package.json") as { version: string }
 ).version;
+export const coreVersion = CoreVersion;
+export const corePackageVersion = CoreVersion;
 
 export function cleanMention(raw: string): string {
   return raw.replace(/[<@&#!>]/g, "");

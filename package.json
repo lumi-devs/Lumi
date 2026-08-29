@@ -57,6 +57,7 @@
     "test": "vitest run && bun run --cwd apps/dashboard test",
     "test:coverage": "vitest run --coverage && bun run --cwd apps/dashboard test -- --coverage",
     "changeset": "bunx @changesets/cli",
+    "version:sync": "bunx @changesets/cli version && bun run modules:manifest",
     "verify:resilience": "bun scripts/verify-resilience.ts",
     "bench": "bun scripts/benchmark.ts"
   },

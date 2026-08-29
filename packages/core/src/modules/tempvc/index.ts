@@ -31,7 +31,6 @@ export async function getMaxGenerators(guildId: string): Promise<number> {
   name: MODULE_NAME,
   displayName: "Temp Voice Channels",
   emoji: "🔊",
-  version: "1.0.0",
   description:
     "On-demand temporary voice channels that delete themselves once empty, with an owner control panel.",
   category: "System",
