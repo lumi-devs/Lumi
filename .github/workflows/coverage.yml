@@ -34,7 +34,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
         continue-on-error: true
 
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v7
         if: steps.download.outcome == 'success'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

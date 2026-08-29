@@ -136,7 +136,7 @@ jobs:
           retention-days: 1
           if-no-files-found: error
       - name: Codecov Upload
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         continue-on-error: true
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
