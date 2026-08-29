@@ -9,7 +9,6 @@ const nextConfig: NextConfig = {
   assetPrefix: process.env.BASE_PATH || (isCI ? "/Lumi" : ""),
   trailingSlash: true,
   reactStrictMode: true,
-  // @ts-expect-error Next 16 experimental option
   agentRules: true,
   images: {
     unoptimized: true,
