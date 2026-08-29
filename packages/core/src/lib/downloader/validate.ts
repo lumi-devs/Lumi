@@ -16,11 +16,13 @@ const infoSchema = s.object({
     .array(s.string().lengthGreaterThanOrEqual(1))
     .lengthGreaterThanOrEqual(1),
   description: s.string().lengthGreaterThanOrEqual(1),
-  short: s.string().lengthGreaterThanOrEqual(1),
+  short: s.string().lengthGreaterThanOrEqual(1).optional(),
   version: s.string().regex(/^\d+\.\d+\.\d+/),
   requirements: s.array(s.string()).optional(),
   tags: s.array(s.string()).optional(),
   min_bot_version: s.string().optional(),
+  max_bot_version: s.string().optional(),
+  end_user_data_statement: s.string().optional(),
   hidden: s.boolean().optional(),
 });
 
@@ -198,6 +200,16 @@ function isVersionCompatible(
   return semver.gte(current, min);
 }
 
+function isMaxVersionCompatible(
+  maxVersion: string,
+  currentVersion: string,
+): boolean {
+  const max = normalizeVersion(maxVersion);
+  const current = normalizeVersion(currentVersion);
+  if (!max || !current) return false;
+  return semver.lte(current, max);
+}
+
 /** Validate a single addon directory. Returns collected errors + warnings. */
 export async function validateAddon(dir: string): Promise<ValidationResult> {
   const errors: string[] = [];
@@ -221,6 +233,11 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
         if (val.min_bot_version && !isVersionCompatible(val.min_bot_version, LumiInfo.version)) {
           errors.push(
             `info.json "min_bot_version" (${val.min_bot_version}) exceeds current Lumi version (${LumiInfo.version}).`,
+          );
+        }
+        if (val.max_bot_version && !isMaxVersionCompatible(val.max_bot_version, LumiInfo.version)) {
+          errors.push(
+            `info.json "max_bot_version" (${val.max_bot_version}) is lower than current Lumi version (${LumiInfo.version}).`,
           );
         }
       }

@@ -6,7 +6,7 @@ export interface ModuleInfo {
   name: string;
   author: string[];
   description: string;
-  short: string;
+  short?: string;
   version: string;
   emoji?: string;
   dependencies?: string[];
@@ -14,5 +14,7 @@ export interface ModuleInfo {
   requirements?: string[];
   tags?: string[];
   min_bot_version?: string;
+  max_bot_version?: string;
+  end_user_data_statement?: string;
   hidden?: boolean;
 }
