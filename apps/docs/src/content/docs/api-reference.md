@@ -10,7 +10,7 @@ For a walkthrough of building something with this API, start with [Quick Start: 
 ```typescript
 import { Module, DefineModule, cfg, Service, getService } from "lumi";
 import { BaseCommand, BaseSubcommand, CommandContext } from "lumi/commands";
-import { PermissionLevel, isModuleEnabled } from "lumi/permissions";
+import { hasRequiredPermit, isModuleEnabled } from "lumi/permissions";
 import { scheduleTask, RelayTask, registerTaskFireHandler } from "lumi/scheduling";
 import { makeSuccessCard, Emojis, confirmPrompt, paginateList } from "lumi/ui";
 import { BotConfig, relativeTimestamp, parseDuration } from "lumi/utils";
@@ -191,18 +191,9 @@ Re-exported from `@sapphire/framework` - the cooldown-scope enum (`User`/`Channe
 ## `lumi/permissions`
 
 ```typescript
-export { PermissionLevel, hasRequiredPermit } from "...";
+export { hasRequiredPermit } from "...";
 export { checkModulesEnabled } from "...";
 export { isModuleEnabled } from "...";
-```
-
-### `PermissionLevel`
-
-```typescript
-enum PermissionLevel {
-  EVERYONE = 0, USER = 1, MOD = 10, ADMIN = 20,
-  GUILD_OWNER = 30, OWNER = 31, BOT_OWNER = 40,
-}
 ```
 
 ### `hasRequiredPermit(target, permitNode): Promise<boolean>`

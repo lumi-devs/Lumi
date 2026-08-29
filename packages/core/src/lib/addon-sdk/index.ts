@@ -7,7 +7,7 @@
  *
  *   import { Module, DefineModule, cfg } from "lumi";
  *   import { BaseCommand, CommandContext } from "lumi/commands";
- *   import { PermissionLevel } from "lumi/permissions";
+ *   import { hasRequiredPermit } from "lumi/permissions";
  *   import { scheduleTask, RelayTask } from "lumi/scheduling";
  *   import { makeSuccessCard, Emojis } from "lumi/ui";
  *   import { BotConfig, relativeTimestamp } from "lumi/utils";

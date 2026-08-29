@@ -12,18 +12,8 @@ import { memberRoleIds } from "./preconditions/RequirePermit.js";
 
 export * from "./PermitResolver.js";
 
-export enum PermissionLevel {
-  EVERYONE = 0,
-  USER = 1,
-  MOD = 10,
-  ADMIN = 20,
-  GUILD_OWNER = 30,
-  OWNER = 31,
-  BOT_OWNER = 40,
-}
-
 /**
- * Wick-style permit-node check for interaction handlers, which (unlike
+ * Granular permit-node check for interaction handlers, which (unlike
  * Command pieces) never run through RequirePermitPrecondition. Mirrors
  * that precondition's guild/user/role extraction against `target`.
  */
