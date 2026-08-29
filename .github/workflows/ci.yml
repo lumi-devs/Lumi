@@ -254,7 +254,7 @@ jobs:
           
           failed=0
           for job in changes lint typecheck test build validate-examples nix-check; do
-            result=$(echo "$results" | jq -r ".$job.result // empty")
+            result=$(echo "$results" | jq -r --arg job "$job" '.[$job].result // empty')
             echo "Job $job: $result"
             if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
               echo "❌ Job $job failed or was cancelled."

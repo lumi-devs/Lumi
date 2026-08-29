@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
     paths:
-      - "docs/**"
       - "apps/docs/**"
   workflow_dispatch: {}
 
