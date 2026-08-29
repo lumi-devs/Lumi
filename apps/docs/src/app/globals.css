@@ -4,42 +4,40 @@
 :root {
   color-scheme: dark;
   
-  /* 4-Tier Elevation Grounding (Linear/Zeon Model) */
-  --bg: #08090D;
-  --bg-canvas: #08090D;
-  --bg-subtle: #0B0E17;
-  --surface: #0E121E;
-  --surface-hover: #141A2B;
-  --surface-active: #1B233A;
+  /* 4-Tier Elevation Grounding (Mintlify/Nextra Model) */
+  --bg: #090A0F;
+  --bg-canvas: #090A0F;
+  --bg-subtle: #0E1118;
+  --surface: #121622;
+  --surface-hover: #181E2E;
+  --surface-active: #20273D;
   
-  /* Precision Sub-Pixel Borders */
+  /* 1px Precision Sub-Pixel Borders */
   --border: rgba(255, 255, 255, 0.08);
   --border-soft: rgba(255, 255, 255, 0.04);
   --border-strong: rgba(255, 255, 255, 0.14);
-  --border-light: rgba(255, 255, 255, 0.22);
   
-  /* WCAG AAA Optical Contrast Hierarchy */
-  --fg: #FFFFFF;
-  --fg-body: #E2E8F0;
-  --fg-muted: #94A3B8;
-  --fg-subtle: #64748B;
+  /* WCAG AAA Optical Text Hierarchy */
+  --fg: #F4F4F5;
+  --fg-body: #D4D4D8;
+  --fg-muted: #A1A1AA;
+  --fg-subtle: #71717A;
   
-  /* Accents & Category Identifiers */
+  /* Restrained Single Brand Accent (Used purely for active states & focus) */
   --accent: #4C6EF5;
   --accent-hover: #3B5BDB;
-  --accent-soft: rgba(76, 110, 245, 0.14);
-  --accent-glow: rgba(76, 110, 245, 0.35);
+  --accent-soft: rgba(76, 110, 245, 0.12);
+  --accent-border: rgba(76, 110, 245, 0.35);
   
-  --color-indigo: #4C6EF5;
-  --color-mint: #12B886;
-  --color-amber: #FB923C;
-  --color-rose: #F472B6;
-  --color-cyan: #38BDF8;
-  --color-violet: #A855F7;
-  
-  --success: #12B886;
-  --warning: #F59F00;
-  --danger: #FA5252;
+  /* Admonition Status Tokens */
+  --callout-note-bg: rgba(76, 110, 245, 0.08);
+  --callout-note-border: #4C6EF5;
+  --callout-tip-bg: rgba(18, 184, 134, 0.08);
+  --callout-tip-border: #12B886;
+  --callout-warn-bg: rgba(245, 159, 0, 0.08);
+  --callout-warn-border: #F59F00;
+  --callout-danger-bg: rgba(250, 82, 82, 0.08);
+  --callout-danger-border: #FA5252;
   
   --glass-bg: rgba(14, 18, 30, 0.85);
   --glass-border: rgba(255, 255, 255, 0.08);
@@ -58,7 +56,7 @@ body {
 .card-premium {
   position: relative;
   background: var(--surface);
-  border-radius: 1.25rem;
+  border-radius: 1rem;
   overflow: hidden;
   border: 1px solid var(--border);
 }
@@ -71,8 +69,8 @@ body {
   padding: 1px;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.16) 0%,
-    rgba(255, 255, 255, 0.04) 40%,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.03) 40%,
     rgba(255, 255, 255, 0) 100%
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -93,7 +91,7 @@ body {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
 }
 
@@ -116,7 +114,7 @@ body {
 /* Documentation Typography & Layout */
 .doc-content {
   color: var(--fg-body);
-  font-size: 1.025rem;
+  font-size: 1rem;
   line-height: 1.8;
 }
 
@@ -125,7 +123,7 @@ body {
   font-weight: 800;
   letter-spacing: -0.03em;
   color: #FFFFFF;
-  margin-top: 2rem;
+  margin-top: 1.5rem;
   margin-bottom: 1.25rem;
   line-height: 1.2;
 }
@@ -143,19 +141,19 @@ body {
 }
 
 .doc-content h3 {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 600;
   letter-spacing: -0.02em;
-  color: #F8FAFC;
+  color: #F4F4F5;
   margin-top: 2.25rem;
   margin-bottom: 0.75rem;
   line-height: 1.4;
 }
 
 .doc-content h4 {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 600;
-  color: #F8FAFC;
+  color: #F4F4F5;
   margin-top: 1.75rem;
   margin-bottom: 0.5rem;
 }
@@ -172,7 +170,7 @@ body {
   font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 3px;
-  text-decoration-color: rgba(116, 143, 252, 0.4);
+  text-decoration-color: rgba(116, 143, 252, 0.35);
   transition: all 0.15s ease;
 }
 
@@ -187,7 +185,7 @@ body {
 }
 
 .doc-content em {
-  color: #E2E8F0;
+  color: #E4E4E7;
   font-style: italic;
 }
 
@@ -206,12 +204,13 @@ body {
 }
 
 .doc-content li {
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin-top: 0.45rem;
+  margin-bottom: 0.45rem;
   color: var(--fg-body);
   line-height: 1.75;
 }
 
+/* Mintlify-Grade Admonitions & Callouts */
 .doc-content blockquote {
   margin-top: 1.5rem;
   margin-bottom: 1.5rem;
@@ -219,7 +218,7 @@ body {
   border-left: 4px solid var(--accent);
   background: var(--surface);
   border-radius: 0 0.5rem 0.5rem 0;
-  color: #CBD5E1;
+  color: #D4D4D8;
   font-style: normal;
 }
 
@@ -235,8 +234,8 @@ code:not(pre code) {
   font-size: 0.875em;
   font-weight: 500;
   color: #93C5FD;
-  background-color: rgba(76, 110, 245, 0.12);
-  border: 1px solid rgba(76, 110, 245, 0.25);
+  background-color: rgba(76, 110, 245, 0.10);
+  border: 1px solid rgba(76, 110, 245, 0.22);
   padding: 0.15rem 0.375rem;
   border-radius: 0.375rem;
   box-decoration-break: clone;
@@ -282,13 +281,13 @@ code:not(pre code) {
 }
 
 .doc-content tr:nth-child(even) {
-  background-color: rgba(14, 18, 30, 0.4);
+  background-color: rgba(18, 22, 34, 0.4);
 }
 
 /* Prism.js Syntax Highlighting Overrides */
 code[class*="language-"],
 pre[class*="language-"] {
-  color: #E2E8F0;
+  color: #E4E4E7;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.875rem;
   line-height: 1.7;
@@ -305,12 +304,12 @@ pre[class*="language-"] {
 .token.prolog,
 .token.doctype,
 .token.cdata {
-  color: #64748B;
+  color: #71717A;
   font-style: italic;
 }
 
 .token.punctuation {
-  color: #94A3B8;
+  color: #A1A1AA;
 }
 
 .token.property,
