@@ -47,6 +47,9 @@ export async function isAfkNickPrefixEnabled(
   emoji: Emojis.AFK,
   description:
     "Set yourself AFK; mentions notify others and a prefix is added to your nickname.",
+  short: "Set yourself AFK with automated status and mention alerts.",
+  endUserDataStatement:
+    "Stores user ID, optional AFK reason message, and timestamps to notify others when mentioned. Cleared automatically upon return or on GDPR erasure.",
   category: "Community",
   configSchema: cfg.object({
     nick_prefix_enabled: cfg.boolean({

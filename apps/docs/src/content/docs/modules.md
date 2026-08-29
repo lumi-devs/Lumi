@@ -123,4 +123,7 @@ Highest-priority paths resolve first, allowing third-party extensions or develop
 
 ## Data and privacy
 
-If someone asks Lumi to delete their data, it goes through every feature that's currently loaded and asks each one to remove what it's stored about that person, then clears the shared records too. Most of the built-in features support this; a couple don't implement it yet, so it isn't airtight across every corner of the bot, but it's a real deletion, not a token gesture.
+When a user requests data erasure (GDPR/CCPA right to erasure) or data export, Lumi initiates an orchestrated workflow across the entire runtime:
+
+1. **First-Party Built-in Modules**: Every built-in module implements dedicated `deleteUserData` and `exportUserData` lifecycle hooks, accompanied by an explicit `endUserDataStatement` in its manifest. Data such as AFK entries, moderation records, and temporary voice channel ownership are either permanently scrubbed, anonymized, or purged from Redis and PostgreSQL.
+2. **Third-Party Community Addons**: Third-party addons declare their data retention policies via the `end_user_data_statement` field in `info.json`. While official guidelines require third-party authors to implement `deleteUserData`, unverified community addons might omit or only partially implement erasure hooks. Server administrators can inspect each addon's privacy disclosure statement directly in the web dashboard or Discord admin panel prior to installation.

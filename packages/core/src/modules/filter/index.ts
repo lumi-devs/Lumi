@@ -51,6 +51,9 @@ const COMPILED_KEYS = [
   emoji: "🚫",
   description:
     "Automod rule engine: filtered terms (Aho-Corasick), regex rules, invite/link blocking with allowlists, mention-spam and caps limits, with configurable punishment and logging.",
+  short: "Automod rule engine with regex patterns, invite blocking, and heat scoring.",
+  endUserDataStatement:
+    "Maintains ephemeral in-memory heat scores and spam counters. Does not persistently store end-user data.",
   category: "Moderation",
   configSchema: cfg.object({
     terms: cfg.string({

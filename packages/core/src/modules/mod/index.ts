@@ -10,6 +10,9 @@ import { handleWarnDecayFire } from "./lib/warn-decay-handler.js";
   displayName: "Moderation",
   emoji: "🛡️",
   description: "Staff moderation: warn, mute, kick, ban - with case logging.",
+  short: "Staff moderation tools: warn, mute, kick, ban, and case tracking.",
+  endUserDataStatement:
+    "Stores user IDs in moderation case records, warnings, and active punishments. Target user IDs are anonymized upon GDPR erasure while preserving audit integrity.",
   category: "Moderation",
   configSchema: cfg.object({
     log_channel_id: cfg.channel({

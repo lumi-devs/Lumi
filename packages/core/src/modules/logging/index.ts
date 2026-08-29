@@ -7,6 +7,9 @@ import { ChannelType } from "discord.js";
   emoji: "📋",
   description:
     "Server event logs: message deletes/edits, joins, leaves, bans, unbans, nickname and role changes.",
+  short: "Server event logging for moderation, messages, and member actions.",
+  endUserDataStatement:
+    "Relays ephemeral Discord events to designated server log channels in real time. Does not persistently store end-user data.",
   category: "System",
   configSchema: cfg.object({
     log_channel_id: cfg.channel({

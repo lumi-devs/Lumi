@@ -33,6 +33,9 @@ export async function getMaxGenerators(guildId: string): Promise<number> {
   emoji: "🔊",
   description:
     "On-demand temporary voice channels that delete themselves once empty, with an owner control panel.",
+  short: "On-demand temporary voice channels that clean up when empty.",
+  endUserDataStatement:
+    "Stores owner user ID on active temporary voice channel records. Deleted automatically when channel is empty or upon GDPR erasure.",
   category: "System",
   configSchema: cfg.object({
     create_cooldown_seconds: cfg.number({

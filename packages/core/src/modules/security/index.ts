@@ -9,6 +9,9 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
   emoji: "🛡️",
   description:
     "Server protection: anti-nuke detection with automatic quarantine.",
+  short: "Server protection: anti-nuke thresholds, raid detection, and verification.",
+  endUserDataStatement:
+    "Processes member join signals and audit events in real-time. Verification sessions and panic states are held in memory/Redis and cleared upon completion or GDPR erasure.",
   category: "Security",
   dashboardHref: "security",
   configSchema: cfg.object({

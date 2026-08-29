@@ -140,6 +140,9 @@ export class DatabaseService {
    */
   public async deleteUserData(userId: string): Promise<void> {
     await this.prisma.$transaction([
+      this.prisma.permitAssignment.deleteMany({
+        where: { targetType: "user", targetId: userId },
+      }),
       this.prisma.blocklist.deleteMany({ where: { userId } }),
       this.prisma.auditLedger.deleteMany({ where: { userId } }),
       this.prisma.user.deleteMany({ where: { id: userId } }),
