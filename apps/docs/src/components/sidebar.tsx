@@ -5,6 +5,7 @@ import clsx from "clsx";
 
 export const NAVIGATION = [
   {
+    kicker: "// GETTING STARTED",
     title: "Getting Started",
     links: [
       { title: "Self-Hosting Guide", href: "/guides/self-hosting" },
@@ -13,6 +14,7 @@ export const NAVIGATION = [
     ]
   },
   {
+    kicker: "// CORE ARCHITECTURE",
     title: "Core Architecture",
     links: [
       { title: "System Topology", href: "/architecture" },
@@ -26,6 +28,7 @@ export const NAVIGATION = [
     ]
   },
   {
+    kicker: "// ADDON SDK",
     title: "Addon SDK",
     links: [
       { title: "Quick Start Guide", href: "/guides/quick-start-addon" },
@@ -35,6 +38,7 @@ export const NAVIGATION = [
     ]
   },
   {
+    kicker: "// GOVERNANCE & HELP",
     title: "Governance & Help",
     links: [
       { title: "Data Privacy & GDPR", href: "/privacy" },
@@ -49,29 +53,37 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed top-16 z-30 -ml-2 hidden h-[calc(100vh-4rem)] w-full shrink-0 md:sticky md:block max-w-[240px] overflow-y-auto">
+    <aside className="fixed top-16 z-30 -ml-2 hidden h-[calc(100vh-4rem)] w-full shrink-0 md:sticky md:block max-w-[260px] overflow-y-auto">
       <div className="h-full py-6 pr-6 lg:py-8">
-        <div className="w-full">
+        <div className="w-full space-y-8">
           {NAVIGATION.map((group, index) => (
-            <div key={index} className="pb-8">
-              <h4 className="mb-1 rounded-md px-2 py-1 text-sm font-semibold text-[var(--fg)]">
-                {group.title}
-              </h4>
-              <div className="grid grid-flow-row auto-rows-max text-sm">
-                {group.links.map((link, i) => (
-                  <Link
-                    key={i}
-                    href={link.href}
-                    className={clsx(
-                      "group flex w-full items-center rounded-md border border-transparent px-2 py-1 hover:underline",
-                      pathname === link.href
-                        ? "text-[var(--accent)] font-medium"
-                        : "text-[var(--fg-muted)] hover:text-[var(--fg)]"
-                    )}
-                  >
-                    {link.title}
-                  </Link>
-                ))}
+            <div key={index} className="space-y-2">
+              <div className="px-2.5">
+                <span className="kicker-tag text-[10px] text-[var(--fg-subtle)] block">
+                  {group.kicker}
+                </span>
+                <h4 className="text-xs font-bold text-white tracking-tight mt-0.5">
+                  {group.title}
+                </h4>
+              </div>
+              <div className="grid grid-flow-row auto-rows-max text-xs space-y-0.5">
+                {group.links.map((link, i) => {
+                  const isActive = pathname === link.href;
+                  return (
+                    <Link
+                      key={i}
+                      href={link.href}
+                      className={clsx(
+                        "group flex w-full items-center rounded-xl px-3 py-2 transition-all",
+                        isActive
+                          ? "bg-[#4C6EF5]/15 text-[#748FFC] border border-[#4C6EF5]/30 font-semibold shadow-sm"
+                          : "text-[var(--fg-muted)] hover:text-white hover:bg-[var(--surface-hover)] border border-transparent"
+                      )}
+                    >
+                      <span>{link.title}</span>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           ))}

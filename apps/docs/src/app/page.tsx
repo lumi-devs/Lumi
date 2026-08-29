@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { DiscordCardPreview } from "@/components/discord-card-preview";
 import { MathCanvas } from "@/components/math-canvas";
+import { SpotlightCard } from "@/components/spotlight-card";
 import {
   Copy,
   Check,
@@ -42,29 +43,29 @@ export default function Home() {
       {/* Mathematical Parametric Geometry Canvas Background */}
       <MathCanvas />
 
-      {/* Floating HUD Telemetry Nodes (Zeon-style) */}
+      {/* Floating HUD Telemetry Nodes (Zeon-style Calibration Markers) */}
       <div className="pointer-events-none absolute inset-0 -z-10 hidden xl:block max-w-[1700px] mx-auto">
-        <div className="absolute top-[22%] left-[3%] flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#4C6EF5]/30 bg-[#0B0F19]/80 backdrop-blur-md text-[11px] text-[#748FFC]">
+        <div className="absolute top-[20%] left-[3%] flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-[#4C6EF5]/30 bg-[#08090D]/90 backdrop-blur-xl text-[11px] text-[#748FFC] shadow-2xl">
           <span className="w-1.5 h-1.5 rounded-full bg-[#4C6EF5] animate-pulse" />
-          <span className="font-semibold">Event Bus</span>
+          <span className="font-mono font-semibold tracking-wider uppercase">Event Bus</span>
           <span className="text-[var(--fg-subtle)] font-mono">0.34 ms</span>
         </div>
 
-        <div className="absolute top-[18%] right-[4%] flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#12B886]/30 bg-[#0B0F19]/80 backdrop-blur-md text-[11px] text-[#20C997]">
+        <div className="absolute top-[16%] right-[4%] flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-[#12B886]/30 bg-[#08090D]/90 backdrop-blur-xl text-[11px] text-[#20C997] shadow-2xl">
           <span className="w-1.5 h-1.5 rounded-full bg-[#12B886] animate-pulse" />
-          <span className="font-semibold">Gateway Shard Sync</span>
+          <span className="font-mono font-semibold tracking-wider uppercase">Gateway Shard Sync</span>
           <span className="text-[var(--fg-subtle)] font-mono">1.21 ms</span>
         </div>
 
-        <div className="absolute top-[52%] left-[2%] flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#FB923C]/30 bg-[#0B0F19]/80 backdrop-blur-md text-[11px] text-[#FB923C]">
+        <div className="absolute top-[52%] left-[2%] flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-[#FB923C]/30 bg-[#08090D]/90 backdrop-blur-xl text-[11px] text-[#FB923C] shadow-2xl">
           <span className="w-1.5 h-1.5 rounded-full bg-[#FB923C] animate-pulse" />
-          <span className="font-semibold">RPC Bridge (8091)</span>
+          <span className="font-mono font-semibold tracking-wider uppercase">RPC Bridge (8091)</span>
           <span className="text-[var(--fg-subtle)] font-mono">66 Actions</span>
         </div>
 
-        <div className="absolute top-[56%] right-[3%] flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#F472B6]/30 bg-[#0B0F19]/80 backdrop-blur-md text-[11px] text-[#F472B6]">
+        <div className="absolute top-[56%] right-[3%] flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-[#F472B6]/30 bg-[#08090D]/90 backdrop-blur-xl text-[11px] text-[#F472B6] shadow-2xl">
           <span className="w-1.5 h-1.5 rounded-full bg-[#F472B6] animate-pulse" />
-          <span className="font-semibold">GDPR Retention</span>
+          <span className="font-mono font-semibold tracking-wider uppercase">GDPR Purge</span>
           <span className="text-[var(--fg-subtle)] font-mono">90d / 365d</span>
         </div>
       </div>
@@ -73,46 +74,46 @@ export default function Home() {
       <div className="mx-auto max-w-[1700px] px-6 lg:px-10 pb-16 pt-12 lg:flex lg:py-24 items-center justify-between gap-12">
         <div className="mx-auto max-w-3xl lg:mx-0 lg:max-w-2xl lg:flex-shrink-0">
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            {/* Live Telemetry Pill */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[var(--border-strong)] bg-[var(--surface)]/90 backdrop-blur-md text-xs text-[var(--fg-muted)] mb-8 shadow-inner">
+            {/* Live Calibration Pill */}
+            <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-[var(--border-strong)] bg-[var(--surface)]/90 backdrop-blur-md text-xs text-[var(--fg-muted)] mb-8 shadow-inner">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#12B886] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#12B886]"></span>
               </span>
-              <span className="font-semibold text-white">Lumi Framework v1.0.0</span>
+              <span className="font-semibold text-white tracking-wide">Lumi Framework v1.0.0</span>
               <span className="text-[var(--border-strong)]">•</span>
-              <span>Next-Gen Modular Discord Bot Architecture</span>
+              <span className="kicker-tag text-[#748FFC]">SOVEREIGN BOT ARCHITECTURE</span>
             </div>
 
-            <h1 className="text-4xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl leading-[1.08]">
+            <h1 className="text-4xl font-black tracking-tighter text-white sm:text-6xl lg:text-7xl leading-[1.05]">
               The Modular Discord Bot Built for{" "}
               <span className="bg-gradient-to-r from-[#748FFC] via-[#4C6EF5] to-[#20C997] bg-clip-text text-transparent">
-                Total Control
+                Total Control.
               </span>
             </h1>
 
-            <p className="mt-6 text-lg leading-relaxed text-[#CBD5E1] max-w-xl">
+            <p className="mt-6 text-lg leading-relaxed text-[#CBD5E1] max-w-xl font-normal">
               Engineered with Bun 1.3, Sapphire Framework, Prisma/PostgreSQL, Redis Streams, and a Next.js admin dashboard. Fully self-hosted with zero telemetry and GDPR data governance.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <Link
                 href="/guides/self-hosting"
-                className="group relative inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-white shadow-xl shadow-[#4C6EF5]/20 hover:bg-[var(--accent-hover)] transition-all hover:scale-[1.02] cursor-pointer"
+                className="group relative inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-white shadow-xl shadow-[#4C6EF5]/25 hover:bg-[var(--accent-hover)] transition-all hover:scale-[1.02] cursor-pointer"
               >
                 <span>Deploy with Docker</span>
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
               <Link
                 href="/architecture"
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)]/80 px-6 py-3.5 text-sm font-semibold text-[#F8FAFC] backdrop-blur-md hover:border-[var(--accent)] hover:bg-[var(--surface-hover)] transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)]/90 px-6 py-3.5 text-sm font-semibold text-[#F8FAFC] backdrop-blur-md hover:border-[var(--accent)] hover:bg-[var(--surface-hover)] transition-all cursor-pointer"
               >
                 <span>System Architecture</span>
               </Link>
             </div>
 
             {/* Quick Install Interactive Terminal */}
-            <div className="mt-10 rounded-2xl border border-[var(--border-strong)] bg-[#0A0E17]/95 shadow-2xl backdrop-blur-xl overflow-hidden">
+            <div className="mt-10 rounded-2xl border border-[var(--border-strong)] bg-[#08090D]/95 shadow-2xl backdrop-blur-xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface-active)]/80 border-b border-[var(--border-strong)] text-xs">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F56]/80" />
@@ -175,16 +176,18 @@ export default function Home() {
             transition={{ duration: 0.7, delay: 0.2 }}
             className="w-full relative"
           >
-            {/* Ambient Sapphire Glow */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-[#4C6EF5]/30 to-[#12B886]/30 rounded-3xl blur-2xl -z-10" />
+            {/* Ambient Core Glow */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-[#4C6EF5]/20 to-[#12B886]/20 rounded-3xl blur-2xl -z-10" />
 
-            <div className="rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)]/90 backdrop-blur-2xl p-6 shadow-2xl">
+            <div className="rounded-3xl border border-[var(--border-strong)] bg-[var(--surface)]/95 backdrop-blur-2xl p-6 shadow-2xl card-premium">
               <div className="flex items-center justify-between pb-4 mb-4 border-b border-[var(--border)] text-xs text-[var(--fg-muted)]">
                 <div className="flex items-center gap-2">
                   <Sliders className="h-4 w-4 text-[#12B886]" />
                   <span className="font-semibold text-white">Interactive Discord Card Simulator</span>
                 </div>
-                <span className="font-mono text-[11px] bg-[var(--surface-active)] px-2 py-0.5 rounded border border-[var(--border)]">#cards.js</span>
+                <span className="kicker-tag text-[10px] bg-[var(--surface-active)] px-2.5 py-0.5 rounded border border-[var(--border)] text-[#748FFC]">
+                  #CARDS.JS
+                </span>
               </div>
               <DiscordCardPreview />
             </div>
@@ -192,44 +195,44 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Real-time Fleet Metrics Bar (Zeon-style) */}
-      <div className="mx-auto max-w-[1700px] px-6 lg:px-10 py-6 border-y border-[var(--border)] bg-[#0B0F19]/60 backdrop-blur-xl mb-12">
+      {/* Real-time Fleet Metrics Bar (Zeon-style Elevation) */}
+      <div className="mx-auto max-w-[1700px] px-6 lg:px-10 py-8 border-y border-[var(--border)] bg-[#08090D]/80 backdrop-blur-xl mb-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--fg-muted)] font-medium">
               <Server className="h-3.5 w-3.5 text-[#12B886]" />
-              <span>Gateway Uptime</span>
+              <span className="kicker-tag text-[10px]">GATEWAY UPTIME</span>
             </div>
-            <div className="text-2xl font-bold text-white tracking-tight font-mono">99.98%</div>
+            <div className="text-3xl font-black text-white tracking-tight font-mono">99.98%</div>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--fg-muted)] font-medium">
               <Zap className="h-3.5 w-3.5 text-[#748FFC]" />
-              <span>Event Bus Latency</span>
+              <span className="kicker-tag text-[10px]">EVENT BUS LATENCY</span>
             </div>
-            <div className="text-2xl font-bold text-white tracking-tight font-mono">&lt;0.4 ms</div>
+            <div className="text-3xl font-black text-white tracking-tight font-mono">&lt;0.4 ms</div>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--fg-muted)] font-medium">
               <Cpu className="h-3.5 w-3.5 text-[#FB923C]" />
-              <span>RPC Dispatch Bridge</span>
+              <span className="kicker-tag text-[10px]">RPC BRIDGE DISPATCH</span>
             </div>
-            <div className="text-2xl font-bold text-white tracking-tight font-mono">66 Actions</div>
+            <div className="text-3xl font-black text-white tracking-tight font-mono">66 Actions</div>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--fg-muted)] font-medium">
               <Lock className="h-3.5 w-3.5 text-[#F472B6]" />
-              <span>GDPR Governance</span>
+              <span className="kicker-tag text-[10px]">GDPR DATA ERASURE</span>
             </div>
-            <div className="text-2xl font-bold text-white tracking-tight font-mono">100% Sovereign</div>
+            <div className="text-3xl font-black text-white tracking-tight font-mono">100% Sovereign</div>
           </div>
         </div>
       </div>
 
-      {/* Quick Doc Navigation Pills */}
+      {/* Quick Navigation Pills */}
       <div className="mx-auto max-w-[1700px] px-6 lg:px-10 pb-12">
         <div className="flex flex-wrap items-center justify-center gap-3">
           {[
@@ -245,7 +248,7 @@ export default function Home() {
             <Link
               key={i}
               href={item.href}
-              className="px-4 py-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)]/80 hover:bg-[var(--surface-hover)] hover:border-[var(--accent)] text-xs font-medium text-white transition-all shadow-sm"
+              className="px-4 py-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)]/90 hover:bg-[var(--surface-hover)] hover:border-[var(--accent)] text-xs font-semibold text-white transition-all shadow-sm"
             >
               {item.label}
             </Link>
@@ -253,15 +256,15 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Asymmetric Zeon/Mintlify-Style Color-Coded Bento Grid */}
+      {/* Asymmetric Tier-1 Bento Grid with Dynamic Spotlight Cards */}
       <div className="mx-auto max-w-[1700px] px-6 lg:px-10 pb-28 pt-6">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] text-xs text-[#748FFC] font-semibold mb-4 shadow-sm">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>Architecture & Framework Engine</span>
+            <span className="kicker-tag text-[10px]">ENGINEERING CORE CAPABILITIES</span>
           </div>
-          <h2 className="text-3xl font-extrabold text-white tracking-tight sm:text-5xl">
-            Engineered for Sovereign Scaling
+          <h2 className="text-3xl font-black text-white tracking-tighter sm:text-5xl">
+            Engineered for Sovereign Scaling.
           </h2>
           <p className="mt-4 text-base text-[#94A3B8] leading-relaxed">
             Every layer designed from the ground up for modularity, isolation, and uncompromising performance.
@@ -271,14 +274,17 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[1fr]">
           {/* Card 1: Addon SDK (2 cols wide) */}
           <Link href="/guides/quick-start-addon" className="group lg:col-span-2 block h-full">
-            <div className="h-full p-8 md:p-10 rounded-3xl border border-[#4C6EF5]/30 bg-gradient-to-br from-[#4C6EF5]/15 via-[var(--surface)] to-[var(--surface)] backdrop-blur-xl shadow-xl hover:border-[#748FFC] hover:shadow-2xl hover:shadow-[#4C6EF5]/20 transition-all flex flex-col justify-between relative overflow-hidden">
+            <SpotlightCard
+              glowColor="rgba(76, 110, 245, 0.16)"
+              className="h-full p-8 md:p-10 hover:border-[#748FFC]/60"
+            >
               <div className="flex items-center justify-between mb-8">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#4C6EF5]/30 bg-[#4C6EF5]/10 shadow-inner">
                   <Layers className="h-7 w-7 text-[#748FFC]" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#4C6EF5]/20 text-[#748FFC] border border-[#4C6EF5]/30">
-                    Addon SDK
+                  <span className="kicker-tag text-[10px] px-3 py-1 rounded-full bg-[#4C6EF5]/15 text-[#748FFC] border border-[#4C6EF5]/30">
+                    ADDON SDK
                   </span>
                   <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] group-hover:bg-[#4C6EF5] group-hover:text-white transition-all">
                     <ArrowRight className="h-4 w-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
@@ -287,26 +293,29 @@ export default function Home() {
               </div>
 
               <div>
-                <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-[#748FFC] transition-colors">
+                <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-[#748FFC] transition-colors tracking-tight">
                   Zero-Leak Modular Addon SDK
                 </h3>
                 <p className="text-sm text-[#CBD5E1] leading-relaxed max-w-2xl">
-                  Isolate features into independent submodules with strict boundary validation. Unified <code className="bg-[#0B0F19] text-[#748FFC] px-1.5 py-0.5 rounded font-mono">@DefineModule</code> lifecycle hooks, typed config schemas via <code className="bg-[#0B0F19] text-[#748FFC] px-1.5 py-0.5 rounded font-mono">cfg.string</code>, and zero cross-module memory leakage.
+                  Isolate features into independent submodules with strict boundary validation. Unified <code className="bg-[#08090D] text-[#748FFC] px-1.5 py-0.5 rounded font-mono">@DefineModule</code> lifecycle hooks, typed config schemas via <code className="bg-[#08090D] text-[#748FFC] px-1.5 py-0.5 rounded font-mono">cfg.string</code>, and zero cross-module memory leakage.
                 </p>
               </div>
-            </div>
+            </SpotlightCard>
           </Link>
 
           {/* Card 2: Distributed Sharding (1 col) */}
           <Link href="/sharding" className="group block h-full">
-            <div className="h-full p-8 rounded-3xl border border-[#12B886]/30 bg-gradient-to-br from-[#12B886]/15 via-[var(--surface)] to-[var(--surface)] backdrop-blur-xl shadow-xl hover:border-[#20C997] hover:shadow-2xl hover:shadow-[#12B886]/20 transition-all flex flex-col justify-between relative overflow-hidden">
+            <SpotlightCard
+              glowColor="rgba(18, 184, 134, 0.16)"
+              className="h-full p-8 hover:border-[#20C997]/60"
+            >
               <div className="flex items-center justify-between mb-8">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#12B886]/30 bg-[#12B886]/10 shadow-inner">
                   <Cpu className="h-7 w-7 text-[#20C997]" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#12B886]/20 text-[#20C997] border border-[#12B886]/30">
-                    Sharding
+                  <span className="kicker-tag text-[10px] px-3 py-1 rounded-full bg-[#12B886]/15 text-[#20C997] border border-[#12B886]/30">
+                    SHARDING
                   </span>
                   <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] group-hover:bg-[#12B886] group-hover:text-white transition-all">
                     <ArrowRight className="h-4 w-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
@@ -315,26 +324,29 @@ export default function Home() {
               </div>
 
               <div>
-                <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-[#20C997] transition-colors">
+                <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-[#20C997] transition-colors tracking-tight">
                   Distributed Sharding & Event Bus
                 </h3>
                 <p className="text-sm text-[#CBD5E1] leading-relaxed">
                   Child process isolation per gateway shard coordinated with Redis Streams for synchronized scheduled tasks and zero-coordination primary election.
                 </p>
               </div>
-            </div>
+            </SpotlightCard>
           </Link>
 
           {/* Card 3: Next.js Admin Dashboard (1 col) */}
           <Link href="/dashboard" className="group block h-full">
-            <div className="h-full p-8 rounded-3xl border border-[#FB923C]/30 bg-gradient-to-br from-[#FB923C]/15 via-[var(--surface)] to-[var(--surface)] backdrop-blur-xl shadow-xl hover:border-[#FB923C] hover:shadow-2xl hover:shadow-[#FB923C]/20 transition-all flex flex-col justify-between relative overflow-hidden">
+            <SpotlightCard
+              glowColor="rgba(251, 146, 60, 0.16)"
+              className="h-full p-8 hover:border-[#FB923C]/60"
+            >
               <div className="flex items-center justify-between mb-8">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#FB923C]/30 bg-[#FB923C]/10 shadow-inner">
                   <LayoutDashboard className="h-7 w-7 text-[#FB923C]" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#FB923C]/20 text-[#FB923C] border border-[#FB923C]/30">
-                    Dashboard
+                  <span className="kicker-tag text-[10px] px-3 py-1 rounded-full bg-[#FB923C]/15 text-[#FB923C] border border-[#FB923C]/30">
+                    DASHBOARD
                   </span>
                   <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] group-hover:bg-[#FB923C] group-hover:text-white transition-all">
                     <ArrowRight className="h-4 w-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
@@ -343,25 +355,28 @@ export default function Home() {
               </div>
 
               <div>
-                <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-[#FB923C] transition-colors">
+                <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-[#FB923C] transition-colors tracking-tight">
                   Next.js 16 Web Admin Panel
                 </h3>
                 <p className="text-sm text-[#CBD5E1] leading-relaxed">
                   Manage modules and permissions over an internal 66-action HTTP RPC bridge on port 8091 without bot token or database exposure.
                 </p>
               </div>
-            </div>
+            </SpotlightCard>
           </Link>
 
           {/* Card 4: GDPR Privacy (1 col) */}
           <Link href="/privacy" className="group block h-full">
-            <div className="h-full p-8 rounded-3xl border border-[#F472B6]/30 bg-gradient-to-br from-[#F472B6]/15 via-[var(--surface)] to-[var(--surface)] backdrop-blur-xl shadow-xl hover:border-[#F472B6] hover:shadow-2xl hover:shadow-[#F472B6]/20 transition-all flex flex-col justify-between relative overflow-hidden">
+            <SpotlightCard
+              glowColor="rgba(244, 114, 182, 0.16)"
+              className="h-full p-8 hover:border-[#F472B6]/60"
+            >
               <div className="flex items-center justify-between mb-8">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#F472B6]/30 bg-[#F472B6]/10 shadow-inner">
                   <ShieldCheck className="h-7 w-7 text-[#F472B6]" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#F472B6]/20 text-[#F472B6] border border-[#F472B6]/30">
+                  <span className="kicker-tag text-[10px] px-3 py-1 rounded-full bg-[#F472B6]/15 text-[#F472B6] border border-[#F472B6]/30">
                     GDPR
                   </span>
                   <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] group-hover:bg-[#F472B6] group-hover:text-white transition-all">
@@ -371,26 +386,29 @@ export default function Home() {
               </div>
 
               <div>
-                <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-[#F472B6] transition-colors">
+                <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-[#F472B6] transition-colors tracking-tight">
                   GDPR & Privacy Governance
                 </h3>
                 <p className="text-sm text-[#CBD5E1] leading-relaxed">
                   Automated 90d/365d retention sweeps, manifest privacy disclosures, and universal deleteUserData right-to-erasure hooks.
                 </p>
               </div>
-            </div>
+            </SpotlightCard>
           </Link>
 
           {/* Card 5: Database & Prisma (1 col) */}
           <Link href="/database" className="group block h-full">
-            <div className="h-full p-8 rounded-3xl border border-[#38BDF8]/30 bg-gradient-to-br from-[#38BDF8]/15 via-[var(--surface)] to-[var(--surface)] backdrop-blur-xl shadow-xl hover:border-[#38BDF8] hover:shadow-2xl hover:shadow-[#38BDF8]/20 transition-all flex flex-col justify-between relative overflow-hidden">
+            <SpotlightCard
+              glowColor="rgba(56, 189, 248, 0.16)"
+              className="h-full p-8 hover:border-[#38BDF8]/60"
+            >
               <div className="flex items-center justify-between mb-8">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#38BDF8]/30 bg-[#38BDF8]/10 shadow-inner">
                   <Database className="h-7 w-7 text-[#38BDF8]" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/30">
-                    Database
+                  <span className="kicker-tag text-[10px] px-3 py-1 rounded-full bg-[#38BDF8]/15 text-[#38BDF8] border border-[#38BDF8]/30">
+                    DATABASE
                   </span>
                   <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] group-hover:bg-[#38BDF8] group-hover:text-white transition-all">
                     <ArrowRight className="h-4 w-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
@@ -399,26 +417,29 @@ export default function Home() {
               </div>
 
               <div>
-                <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-[#38BDF8] transition-colors">
+                <h3 className="text-xl font-bold text-white mb-2.5 group-hover:text-[#38BDF8] transition-colors tracking-tight">
                   Prisma ORM & Repositories
                 </h3>
                 <p className="text-sm text-[#CBD5E1] leading-relaxed">
                   Centralized repository pattern on container.db with PgBouncer connection pooling and in-memory offline mock testing.
                 </p>
               </div>
-            </div>
+            </SpotlightCard>
           </Link>
 
           {/* Card 6: Permit RBAC (2 cols wide) */}
           <Link href="/permissions" className="group lg:col-span-2 block h-full">
-            <div className="h-full p-8 md:p-10 rounded-3xl border border-[#A855F7]/30 bg-gradient-to-br from-[#A855F7]/15 via-[var(--surface)] to-[var(--surface)] backdrop-blur-xl shadow-xl hover:border-[#C084FC] hover:shadow-2xl hover:shadow-[#A855F7]/20 transition-all flex flex-col justify-between relative overflow-hidden">
+            <SpotlightCard
+              glowColor="rgba(168, 85, 247, 0.16)"
+              className="h-full p-8 md:p-10 hover:border-[#C084FC]/60"
+            >
               <div className="flex items-center justify-between mb-8">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#A855F7]/30 bg-[#A855F7]/10 shadow-inner">
                   <KeyRound className="h-7 w-7 text-[#C084FC]" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#A855F7]/20 text-[#C084FC] border border-[#A855F7]/30">
-                    Permit RBAC
+                  <span className="kicker-tag text-[10px] px-3 py-1 rounded-full bg-[#A855F7]/15 text-[#C084FC] border border-[#A855F7]/30">
+                    PERMIT RBAC
                   </span>
                   <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--surface)] group-hover:bg-[#A855F7] group-hover:text-white transition-all">
                     <ArrowRight className="h-4 w-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
@@ -427,14 +448,14 @@ export default function Home() {
               </div>
 
               <div>
-                <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-[#C084FC] transition-colors">
+                <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-[#C084FC] transition-colors tracking-tight">
                   Hierarchical Permit Nodes & Permissions
                 </h3>
                 <p className="text-sm text-[#CBD5E1] leading-relaxed max-w-2xl">
-                  UNIX-style dot-notation permission nodes with automatic autocomplete suggestions, wildcard expansion (<code className="bg-[#0B0F19] text-[#C084FC] px-1.5 py-0.5 rounded font-mono">admin.*</code>, <code className="bg-[#0B0F19] text-[#C084FC] px-1.5 py-0.5 rounded font-mono">mod.*</code>), per-guild role overrides, and channel permit masks.
+                  UNIX-style dot-notation permission nodes with automatic autocomplete suggestions, wildcard expansion (<code className="bg-[#08090D] text-[#C084FC] px-1.5 py-0.5 rounded font-mono">admin.*</code>, <code className="bg-[#08090D] text-[#C084FC] px-1.5 py-0.5 rounded font-mono">mod.*</code>), per-guild role overrides, and channel permit masks.
                 </p>
               </div>
-            </div>
+            </SpotlightCard>
           </Link>
         </div>
       </div>
