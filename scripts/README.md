@@ -104,7 +104,7 @@ bun run validate ./my-addons-repository
 
 **Command:** `bun run addon:create <name> [--dir <path>] [--display-name <text>] [--author <name>] [--force]`
 
-Scaffolds a new addon directory with the minimal boilerplate a real addon needs - `info.json`, `index.ts` (`@DefineModule` + a `configSchema` field + a no-op `deleteUserData`), one command stub, and a `README.md` - mirroring `examples/addon-example-1-hello-world`, the addon [`docs/QUICK_START_ADDON.md`](../docs/QUICK_START_ADDON.md) walks through.
+Scaffolds a new addon directory with the minimal boilerplate a real addon needs - `info.json`, `index.ts` (`@DefineModule` + a `configSchema` field + a no-op `deleteUserData`), one command stub, and a `README.md` - mirroring `examples/hello-world`, the addon [`docs/QUICK_START_ADDON.md`](../docs/QUICK_START_ADDON.md) walks through.
 
 #### Overview & Mechanics
 

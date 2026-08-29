@@ -1,8 +1,9 @@
 {
-  "name": "addon-example-1-hello-world",
+  "name": "hello-world",
   "author": ["Lumi Developers"],
   "description": "The simplest possible Lumi addon: one command, one config field, one listener.",
   "short": "A minimal starter addon.",
   "version": "1.0.0",
-  "requirements": []
+  "requirements": [],
+  "end_user_data_statement": "This addon does not collect or store any personal end-user data."
 }

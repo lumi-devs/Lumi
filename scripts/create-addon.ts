@@ -4,7 +4,7 @@
  *
  * Generates the minimal directory shape a real addon needs (`info.json`,
  * `index.ts` with `@DefineModule`/`cfg`, one command stub, a README) into
- * `./addons/<name>` by default - mirroring `examples/addon-example-1-hello-world`,
+ * `./addons/<name>` by default - mirroring `examples/hello-world`,
  * the addon the Quick Start guide (docs/QUICK_START_ADDON.md) walks through.
  *
  * `./addons/` is a plain local scratch directory (gitignored), the same shape
@@ -115,6 +115,7 @@ function infoJson(args: Args): string {
         short: `${args.displayName} addon.`,
         version: "1.0.0",
         requirements: [],
+        end_user_data_statement: "This addon does not store any personal user data.",
       },
       null,
       2,

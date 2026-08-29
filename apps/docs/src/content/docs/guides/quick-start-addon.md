@@ -109,7 +109,7 @@ Two more worked examples ship in [`examples/`](https://github.com/lumi-devs/Lumi
 
 | Example | Shows |
 | :--- | :--- |
-| [`addon-example-1-hello-world`](https://github.com/lumi-devs/Lumi/blob/main/examples/addon-example-1-hello-world/) | The shape above - one command, one config field, one listener with a custom `resolveGuildId`. |
-| [`addon-example-2-config-advanced`](https://github.com/lumi-devs/Lumi/blob/main/examples/addon-example-2-config-advanced/) | Multiple config field types, `container.db.guildKV` persistence. |
-| [`addon-example-3-full-featured`](https://github.com/lumi-devs/Lumi/blob/main/examples/addon-example-3-full-featured/) | Interaction handlers (buttons, modals), a service class, and a scheduled task - the giveaway addon referenced throughout the Module Creation Guide's more advanced steps. |
+| [`hello-world`](https://github.com/lumi-devs/Lumi/blob/main/examples/hello-world/) | The shape above - one command, one config field, one listener with a custom `resolveGuildId`. |
+| [`tag-manager`](https://github.com/lumi-devs/Lumi/blob/main/examples/tag-manager/) | Multiple config field types, `container.db.guildKV` persistence. |
+| [`giveaway`](https://github.com/lumi-devs/Lumi/blob/main/examples/giveaway/) | Interaction handlers (buttons, modals), a service class, and a scheduled task - the giveaway addon referenced throughout the Module Creation Guide's more advanced steps. |
 

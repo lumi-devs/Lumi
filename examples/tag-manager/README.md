@@ -1,6 +1,6 @@
-# Config Advanced
+# Tag Manager (Advanced Config)
 
-Builds on [Hello World](../addon-example-1-hello-world) with a config schema that exercises every field type, and real persistence.
+Builds on [Hello World](../hello-world) with a config schema that exercises every field type, and real persistence.
 
 ## What it shows
 
@@ -27,4 +27,4 @@ Builds on [Hello World](../addon-example-1-hello-world) with a config schema tha
 | `trigger_mode` | enum (`exact` \| `contains`) | `exact` |
 | `log_channel_id` | channel (optional) | *(unset)* |
 
-`trigger_mode` and `log_channel_id` are declared for the dashboard/config-panel walkthrough but aren't wired into command logic here - see [Full Featured](../addon-example-3-full-featured) for a config field that actually drives behavior end-to-end via a service and scheduled task.
+`trigger_mode` and `log_channel_id` are declared for the dashboard/config-panel walkthrough but aren't wired into command logic here - see [Giveaways](../giveaway) for a config field that actually drives behavior end-to-end via a service and scheduled task.

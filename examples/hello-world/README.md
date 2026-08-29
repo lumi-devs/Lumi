@@ -17,7 +17,7 @@ The minimal Lumi addon. Read this first, before the more advanced examples.
 Copy this directory into a `lumi-addons`-style checkout (or any directory listed in `LUMI_DEV_PATHS`) under its own top-level folder, e.g.:
 
 ```sh
-cp -r examples/addon-example-1-hello-world ../lumi-addons/hello-world
+cp -r examples/hello-world ../lumi-addons/hello-world
 ```
 
 Then restart the worker, or use `,download`/`,repo` if serving it from a real addon repository. See the [Addon Publishing Guide](../../docs/GUIDE_ADDON_PUBLISHING.md) for the full installation flow.
