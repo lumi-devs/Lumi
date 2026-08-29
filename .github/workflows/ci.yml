@@ -13,6 +13,11 @@ concurrency:
 
 permissions: {}
 
+env:
+  CI: "true"
+  NEXT_TELEMETRY_DISABLED: "1"
+  SKIP_ENV_VALIDATION: "1"
+
 jobs:
   changes:
     name: Detect Changed Paths
@@ -32,7 +37,9 @@ jobs:
           filters: |
             code:
               - 'apps/**'
+              - '!apps/**/*.md'
               - 'packages/**'
+              - '!packages/**/*.md'
               - 'prisma/**'
               - 'scripts/**'
               - 'package.json'
@@ -40,6 +47,7 @@ jobs:
               - 'tsconfig*.json'
               - 'eslint.config.*'
               - 'turbo.json'
+              - '.github/workflows/ci.yml'
             nix:
               - 'flake.nix'
               - 'flake.lock'
@@ -47,6 +55,7 @@ jobs:
               - 'examples/**'
               - 'scripts/validate-addon.ts'
               - 'packages/core/src/lib/downloader/**'
+              - 'packages/core/src/lib/addon-sdk/**'
 
   lint:
     name: Lint
@@ -63,11 +72,20 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - uses: actions/cache@v6
+      - name: Cache Bun dependencies
+        uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
           restore-keys: ${{ runner.os }}-bun-
+      - name: Cache Turborepo
+        uses: actions/cache@v6
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-lint-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-lint-
+            ${{ runner.os }}-turbo-
       - run: bun install --frozen-lockfile
       - run: bun run db:generate
       - name: Turbo Filtered Lint
@@ -93,11 +111,20 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - uses: actions/cache@v6
+      - name: Cache Bun dependencies
+        uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
           restore-keys: ${{ runner.os }}-bun-
+      - name: Cache Turborepo
+        uses: actions/cache@v6
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-typecheck-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-typecheck-
+            ${{ runner.os }}-turbo-
       - run: bun install --frozen-lockfile
       - run: bun run db:generate
       - name: Turbo Filtered Typecheck
@@ -120,7 +147,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - uses: actions/cache@v6
+      - name: Cache Bun dependencies
+        uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
@@ -156,11 +184,20 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - uses: actions/cache@v6
+      - name: Cache Bun dependencies
+        uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
           restore-keys: ${{ runner.os }}-bun-
+      - name: Cache Turborepo
+        uses: actions/cache@v6
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-build-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-build-
+            ${{ runner.os }}-turbo-
       - run: bun install --frozen-lockfile
       - run: bun run db:generate
       - name: Build Monorepo Packages & Apps
@@ -178,7 +215,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - uses: actions/cache@v6
+      - name: Cache Bun dependencies
+        uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
@@ -200,3 +238,33 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@v14
       - name: Verify Nix Flake Output
         run: nix flake check --extra-experimental-features "nix-command flakes"
+
+  ci-status:
+    name: CI Status / All Checks Passed
+    needs: [changes, lint, typecheck, test, build, validate-examples, nix-check]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Evaluate status of upstream jobs
+        run: |
+          results='${{ toJSON(needs) }}'
+          echo "Evaluating CI Results: $results"
+          
+          failed=0
+          for job in changes lint typecheck test build validate-examples nix-check; do
+            result=$(echo "$results" | jq -r ".$job.result // empty")
+            echo "Job $job: $result"
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+              echo "❌ Job $job failed or was cancelled."
+              failed=1
+            fi
+          done
+          
+          if [ $failed -ne 0 ]; then
+            echo "❌ One or more required CI jobs failed."
+            exit 1
+          fi
+          
+          echo "✅ All CI checks passed or skipped successfully."

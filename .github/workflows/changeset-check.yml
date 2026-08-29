@@ -17,19 +17,6 @@ jobs:
     name: Require Changeset on Package/App Code Changes
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Setup Bun Environment
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install Dependencies
-        run: bun install --frozen-lockfile
-
       - name: Check for Changeset Exemption or Required Changeset File
         uses: actions/github-script@v9
         with:
@@ -38,8 +25,8 @@ jobs:
             const labels = (pr.labels || []).map(l => l.name);
 
             // Auto-exempt Dependabot / Renovate / automated PRs
-            if (context.actor === 'dependabot[bot]' || context.actor === 'renovate[bot]' || pr.user.login.includes('bot')) {
-              core.info(`PR submitted by bot (${pr.user.login}) — skipping changeset requirement.`);
+            if (context.actor === 'dependabot[bot]' || context.actor === 'renovate[bot]' || (pr.user && pr.user.login.includes('bot'))) {
+              core.info(`PR submitted by bot (${pr.user ? pr.user.login : context.actor}) — skipping changeset requirement.`);
               return;
             }
 
