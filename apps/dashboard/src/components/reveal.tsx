@@ -2,8 +2,6 @@
 
 import { motion, useReducedMotion } from "motion/react";
 
-// Scroll-in wrapper for landing-page.tsx, split out so the marketing page
-// itself can stay a Server Component (it needs server-only env access).
 export function Reveal({
   children,
   delay = 0,

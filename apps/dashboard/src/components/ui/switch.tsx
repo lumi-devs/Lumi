@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { cn } from "#/lib/utils";
 
 export interface SwitchProps {
+  id?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
@@ -15,6 +16,7 @@ export interface SwitchProps {
 // "On" uses the accent, not green: green is reserved for machine status, so a
 // toggle's colour never competes with a health indicator.
 export function Switch({
+  id,
   checked,
   onChange,
   disabled,
@@ -23,6 +25,7 @@ export function Switch({
 }: SwitchProps) {
   return (
     <SwitchPrimitive.Root
+      id={id}
       checked={checked}
       onCheckedChange={onChange}
       disabled={disabled}

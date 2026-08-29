@@ -55,8 +55,6 @@ const FEATURES: { icon: LucideIcon; title: string; desc: string }[] = [
   },
 ];
 
-// Real, functional preview of the actual module toggle UI (not a fake
-// screenshot) - a representative slice of what /guild/[id]/modules renders.
 const PREVIEW_MODULES: { label: string; active: boolean }[] = [
   { label: "Anti-nuke", active: true },
   { label: "Auto-moderation", active: true },

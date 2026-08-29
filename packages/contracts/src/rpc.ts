@@ -20,10 +20,6 @@ export type RpcHandler<TIn = unknown, TOut = unknown> = (
   req: RpcRequest<TIn>,
 ) => Promise<TOut> | TOut;
 
-// ── Action registry ──────────────────────────────────────────────────────────
-// Single source of the RPC action strings. Bot (handler side) and dashboard
-// (caller side) reference these instead of re-typing the literals.
-
 /** GDPR requester provenance (wire values of the bot's `RequesterType` enum). */
 export type GdprRequester =
   "DISCORD_DELETED_USER" | "OWNER" | "USER" | "USER_STRICT";

@@ -31,6 +31,11 @@ indirections.txt
 /data/
 .agents/
 
+# Archives and binaries
+*.zip
+*.tar.gz
+*.exe
+
 # Local scratch dir for `bun run addon:create` output (point LUMI_DEV_PATHS at
 # it, or move the addon into a real lumi-addons checkout when it's ready).
 /addons/

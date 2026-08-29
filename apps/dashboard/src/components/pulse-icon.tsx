@@ -2,10 +2,6 @@
 
 import { motion, useReducedMotion } from "motion/react";
 
-// Distinct from `.pulse-live` (that means "genuinely online right now").
-// `icon` must be a rendered element, not a component reference - passing the
-// bare Lucide component from a Server Component parent crashes the RSC
-// boundary.
 export function PulseIcon({ icon }: { icon: React.ReactNode }) {
   const reduce = useReducedMotion();
   return (

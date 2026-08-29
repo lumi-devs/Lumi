@@ -2,17 +2,6 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
-// Theme is `system | light | dark`, applied via a `data-theme` attribute on
-// <html>. `system` removes the attribute entirely so the `prefers-color-scheme`
-// block in globals.css takes over — which means the common case (following
-// the OS) paints correctly on the very first frame with no script involved.
-//
-// This runs client-side after hydration rather than as a blocking inline
-// <head> script: next.config.ts ships `script-src 'self'` with no
-// 'unsafe-inline'/nonce in production, and a nonce-per-request setup would add
-// real complexity. The residual tradeoff is a one-frame flash *only* for users
-// who explicitly pinned a theme opposite to their OS setting.
-
 export const THEMES = ["system", "light", "dark"] as const;
 export type Theme = (typeof THEMES)[number];
 

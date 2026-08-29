@@ -31,13 +31,6 @@ export function hasAdvertisingIndicators(user: User): boolean {
   return ADVERTISING_PATTERN.test(displayName);
 }
 
-/**
- * Not implemented here yet - Phase 4's verification work may land a shared
- * `isSuspiciousAccount(user)` in `./suspicious.ts`; this file's join-gate
- * heuristics (no-avatar, min-age, username-similarity, creation clustering)
- * overlap with it and could be merged into one shared helper later.
- */
-
 const LEVENSHTEIN_MAX_LEN = 32;
 
 /** Bounded edit distance; recent-joiner usernames are short so this stays cheap. */

@@ -65,7 +65,7 @@ describe("ModuleConfigForm (dynamic config form editor + save bar)", () => {
     expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
   });
 
-  it("shows the save bar once a field value changes, and hides it again on Reset", () => {
+  it("shows the save bar once a field value changes, and hides it again on Reset", async () => {
     render(
       <ModuleConfigForm
         guildId="101"
@@ -80,8 +80,10 @@ describe("ModuleConfigForm (dynamic config form editor + save bar)", () => {
     expect(screen.getByText(/unsaved changes/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
-    expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Mod Role")).toHaveValue("");
+    await waitFor(() => {
+      expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Mod Role")).toHaveValue("");
+    });
   });
 
   it("on save, only sends the field(s) that actually changed", async () => {

@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Select as SelectPrimitive } from "radix-ui";
-import { Check, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "#/lib/utils";
 
 // Controls are 32px, matching the button scale so a control + button row lines up.
@@ -35,112 +34,30 @@ export function Textarea({
   );
 }
 
-// Radix reserves an empty-string Item value to mean "no selection", but
-// several call sites use value="" for an "Any / None / Select…" placeholder
-// option - map it to a sentinel at the Radix boundary only, so every call
-// site can keep passing plain <option value=""> children unchanged.
-const EMPTY_VALUE = "__lumi_select_empty__";
-const toRadixValue = (v: string) => (v === "" ? EMPTY_VALUE : v);
-const fromRadixValue = (v: string) => (v === EMPTY_VALUE ? "" : v);
-
-interface ParsedOption {
-  value: string;
-  label: React.ReactNode;
-  disabled?: boolean;
-}
-
-function parseOptions(children: React.ReactNode): ParsedOption[] {
-  const options: ParsedOption[] = [];
-  React.Children.forEach(children, (child) => {
-    if (!React.isValidElement<React.OptionHTMLAttributes<HTMLOptionElement>>(child)) return;
-    if (child.type !== "option") return;
-    options.push({
-      value: String(child.props.value ?? ""),
-      label: child.props.children,
-      disabled: child.props.disabled,
-    });
-  });
-  return options;
-}
-
 export function Select({
   id,
-  name,
-  value,
-  defaultValue,
-  disabled,
-  onChange,
   className,
   children,
-  ...rest
-}: {
-  id?: string;
-  name?: string;
-  value?: string;
-  defaultValue?: string;
-  disabled?: boolean;
-  onChange?: (event: { target: { value: string } }) => void;
-  className?: string;
-  children: React.ReactNode;
-} & Omit<
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>,
-  "value" | "defaultValue" | "disabled" | "className" | "id" | "asChild"
->) {
-  const options = React.useMemo(() => parseOptions(children), [children]);
-
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <SelectPrimitive.Root
-      value={value !== undefined ? toRadixValue(value) : undefined}
-      defaultValue={defaultValue !== undefined ? toRadixValue(defaultValue) : undefined}
-      disabled={disabled}
-      name={name}
-      onValueChange={(v) => onChange?.({ target: { value: fromRadixValue(v) } })}
-    >
-      <SelectPrimitive.Trigger
+    <div className="relative w-full">
+      <select
         id={id}
         className={cn(
           controlBase,
-          "flex items-center justify-between gap-2",
-          "data-[state=open]:border-accent data-[state=open]:bg-surface",
+          "appearance-none pr-8 cursor-pointer",
           className,
         )}
-        {...rest}
+        {...props}
       >
-        <SelectPrimitive.Value className="min-w-0 truncate text-left" />
-        <SelectPrimitive.Icon className="shrink-0">
-          <ChevronDown className="size-3.5 text-fg-subtle" aria-hidden />
-        </SelectPrimitive.Icon>
-      </SelectPrimitive.Trigger>
-      <SelectPrimitive.Portal>
-        <SelectPrimitive.Content
-          position="popper"
-          sideOffset={4}
-          className="z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-panel border border-border bg-surface p-1 shadow-e3"
-        >
-          <SelectPrimitive.Viewport className="max-h-64 overflow-y-auto">
-            {options.map((opt) => (
-              <SelectPrimitive.Item
-                key={opt.value}
-                value={toRadixValue(opt.value)}
-                disabled={opt.disabled}
-                className={cn(
-                  "relative flex cursor-pointer scroll-my-1 items-center gap-2 rounded-control px-2.5 py-2",
-                  "text-[15px] text-fg-muted outline-none select-none",
-                  "data-highlighted:bg-surface-hover data-highlighted:text-fg",
-                  "data-[state=checked]:font-medium data-[state=checked]:text-fg",
-                  "data-disabled:pointer-events-none data-disabled:opacity-50",
-                )}
-              >
-                <SelectPrimitive.ItemText>{opt.label}</SelectPrimitive.ItemText>
-                <SelectPrimitive.ItemIndicator className="ml-auto flex shrink-0 items-center">
-                  <Check className="size-3.5 text-accent-fg" aria-hidden />
-                </SelectPrimitive.ItemIndicator>
-              </SelectPrimitive.Item>
-            ))}
-          </SelectPrimitive.Viewport>
-        </SelectPrimitive.Content>
-      </SelectPrimitive.Portal>
-    </SelectPrimitive.Root>
+        {children}
+      </select>
+      <ChevronDown
+        className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-fg-subtle"
+        aria-hidden
+      />
+    </div>
   );
 }
 

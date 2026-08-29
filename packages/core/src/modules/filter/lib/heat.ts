@@ -91,9 +91,6 @@ export function escalatedTimeoutMinutes(
   return Math.round(baseMinutes * factor);
 }
 
-// No `g` flag: `.test()` on a global regex is stateful (tracks `lastIndex`
-// across calls on the same shared instance), which would corrupt results
-// across concurrent messages sharing this module-level regex.
 const HEAT_URL_RE = /https?:\/\/[^\s/<>"']+/i;
 const CUSTOM_EMOJI_RE = /<a?:\w+:\d+>/g;
 const UNICODE_EMOJI_RE = /\p{Extended_Pictographic}/gu;

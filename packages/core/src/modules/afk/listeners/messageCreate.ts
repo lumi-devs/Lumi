@@ -150,9 +150,6 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
   }
 
   async #notifyMentioned(message: GuildMessage) {
-    // Claimed up front rather than set after the reply: two mentioning
-    // messages in the same channel are handled concurrently and would both
-    // pass a read-only cooldown check.
     const claimedNotice = await claimAfkCooldown(
       AfkKeys.mentionCooldown(message.channelId),
       AFK_MENTION_COOLDOWN_MS,

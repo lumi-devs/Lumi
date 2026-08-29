@@ -22,8 +22,6 @@ export async function loadFeatures(
   return Promise.all(
     container.moduleStore
       .all()
-      // Non-disableable modules (e.g. "core", which hosts this very panel)
-      // aren't guild-toggleable features - keep them out of the list.
       .filter((record) => record.meta.disableable !== false)
       .map(async (record) => ({
         meta: record.meta,

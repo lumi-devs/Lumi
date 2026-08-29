@@ -37,7 +37,6 @@ export class SoftbanAction {
 
         const auditReason = formatAuditReason(moderator, `[Softban] ${reason}`);
 
-        // Ban and immediately unban
         await guild.members.ban(targetUser.id, {
           reason: auditReason,
           deleteMessageSeconds,

@@ -1,6 +1,4 @@
 import { describe, it, expect } from "vitest";
-// @ts-expect-error - BusEventEnvelope was removed
-import type { BusEventEnvelope } from "./bus.js";
 import type { BusEventMessage } from "./bus.js";
 
 describe("BusEventMessage", () => {

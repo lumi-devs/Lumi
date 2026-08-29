@@ -17,3 +17,25 @@ vi.mock("server-only", () => ({}));
 afterEach(() => {
   cleanup();
 });
+
+class MockIntersectionObserver implements IntersectionObserver {
+  readonly root: Element | Document | null = null;
+  readonly rootMargin: string = "";
+  readonly scrollMargin: string = "";
+  readonly thresholds: ReadonlyArray<number> = [];
+  disconnect = vi.fn();
+  observe = vi.fn();
+  takeRecords = vi.fn(() => []);
+  unobserve = vi.fn();
+}
+
+class MockResizeObserver implements ResizeObserver {
+  disconnect = vi.fn();
+  observe = vi.fn();
+  unobserve = vi.fn();
+}
+
+if (typeof window !== "undefined") {
+  window.IntersectionObserver ??= MockIntersectionObserver;
+  window.ResizeObserver ??= MockResizeObserver;
+}

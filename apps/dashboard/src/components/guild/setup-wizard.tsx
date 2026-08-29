@@ -19,7 +19,7 @@ export interface SetupChecklistItem {
 }
 
 /**
- * One-shot guided bootstrap (Wick-parity plan Phase 7). Everything it does
+ * One-shot guided bootstrap. Everything it does
  * — create the quarantine role, create #logs/#modlogs, flip Anti-Nuke/Join
  * Gate on — is also directly editable from the per-module config pages;
  * this just runs the whole batch through one RPC call and reports what it

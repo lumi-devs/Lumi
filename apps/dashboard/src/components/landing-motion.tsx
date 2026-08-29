@@ -11,10 +11,6 @@ import { Card } from "#/components/ui/card";
 import { spotlightHandler, SPRING_SOFT } from "#/lib/animate";
 import { cn } from "#/lib/utils";
 
-// landing-page.tsx stays a Server Component (server-only env access), so
-// anything needing a mouse handler or a hook has to live in a client file -
-// same reason Reveal/PulseIcon/TiltCard are split out.
-
 /** Word-by-word hero headline reveal, one block-level span per line. */
 export function HeroHeadline({ lines }: { lines: string[] }) {
   const reduce = useReducedMotion();

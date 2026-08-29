@@ -190,9 +190,10 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
     });
     expect(screen.getByText(/unsaved changes/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
-
-    expect(screen.getByLabelText("Mute role")).toHaveValue("999");
-    expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText("Mute role")).toHaveValue("999");
+      expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
+    });
 
     otherTab.close();
   });

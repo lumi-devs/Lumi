@@ -21,6 +21,7 @@ vi.mock("#/lib/env", () => ({
 }));
 
 const { default: HomePage } = await import("#/app/page");
+const { GuildPicker } = await import("#/components/guild-picker");
 
 function makeSession(overrides: Partial<Session> = {}): Session {
   return {
@@ -36,7 +37,7 @@ function makeSession(overrides: Partial<Session> = {}): Session {
   } as Session;
 }
 
-describe("/ (landing when signed out, server picker when signed in)", () => {
+describe("HomePage & GuildPicker", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("renders the public marketing landing page when there is no session", async () => {
@@ -44,35 +45,46 @@ describe("/ (landing when signed out, server picker when signed in)", () => {
 
     render(await HomePage());
 
-    expect(
-      screen.getByRole("heading", { name: /next-generation/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /login/i })).toBeInTheDocument();
-    // Guild picker content must not leak through for a signed-out visitor.
-    expect(screen.queryByText(/your servers/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/moderation/i);
+    expect(screen.getByRole("link", { name: "Login" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /add to discord/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /open dashboard/i })).toBeInTheDocument();
   });
 
-  it("renders the guild picker (not the landing page) once signed in", async () => {
+  it("renders the public marketing landing page with user profile in header when signed in", async () => {
     authMock.mockResolvedValue(
       makeSession({
+        username: "alex",
         guilds: [{ id: "101", name: "My Guild", icon: null, permissions: "0x20" }],
       }),
     );
 
     render(await HomePage());
 
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/moderation/i);
+    expect(screen.getByText("alex")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /log out/i })).toBeInTheDocument();
+  });
+
+  it("renders manageable servers in GuildPicker", () => {
+    const session = makeSession({
+      guilds: [{ id: "101", name: "My Guild", icon: null, permissions: "0x20" }],
+    });
+
+    render(<GuildPicker session={session} summaries={[]} />);
+
     expect(screen.getByText(/your servers/i)).toBeInTheDocument();
     expect(screen.getByText("My Guild")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("heading", { name: /next-generation/i }),
-    ).not.toBeInTheDocument();
   });
 
-  it("shows a 'no servers' message for a signed-in user who manages nothing", async () => {
-    authMock.mockResolvedValue(makeSession({ guilds: [] }));
+  it("shows a 'no servers' empty state in GuildPicker for a user who manages nothing", () => {
+    const session = makeSession({ guilds: [] });
 
-    render(await HomePage());
+    render(<GuildPicker session={session} summaries={[]} />);
 
-    expect(screen.getByText(/no servers where you have/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/no servers where you have manage server/i),
+    ).toBeInTheDocument();
   });
 });
+

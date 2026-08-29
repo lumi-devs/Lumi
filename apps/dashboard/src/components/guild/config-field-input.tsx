@@ -36,6 +36,7 @@ export function ConfigFieldInput({
     case FieldType.BOOLEAN:
       return (
         <Switch
+          id={field.key}
           checked={Boolean(value)}
           onChange={onChange}
           aria-label={field.label}
@@ -77,6 +78,7 @@ export function ConfigFieldInput({
       const shown = typeof value === "string" ? value : "";
       return (
         <Select
+          id={field.key}
           aria-label={field.label}
           value={shown}
           onChange={(e) => onChange(e.target.value || null)}
@@ -96,6 +98,7 @@ export function ConfigFieldInput({
       const options = channelOptionsFor(field, channels);
       return (
         <Select
+          id={field.key}
           aria-label={field.label}
           value={shown}
           onChange={(e) => onChange(e.target.value || null)}

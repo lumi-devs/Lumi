@@ -10,12 +10,6 @@ import { getClusterName, getConsumerId } from "#lib/env.js";
 
 const PUBLISH_MS = 10_000;
 
-// Prometheus scrapes the same numbers, but a scrape target is per-process. The
-// operator console needs one cluster-wide view, so each replica publishes its
-// own shards to shared Redis for `system.shards.get` to assemble.
-// Deliberately not `once: true`: Sapphire unloads a once-listener the moment it
-// fires, and this piece owns a publisher whose `onUnload` stops it and deletes
-// its rows — a once-listener would publish exactly one sample and then erase it.
 @ApplyOptions<Listener.Options>({ event: Events.ClientReady })
 export class ShardTelemetryListener extends Listener<typeof Events.ClientReady> {
   #publisher?: ShardTelemetryPublisher;
