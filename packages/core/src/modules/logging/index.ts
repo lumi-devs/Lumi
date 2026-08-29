@@ -1,4 +1,9 @@
-import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
+import {
+  Module,
+  DefineModule,
+  NoEndUserData,
+  cfg,
+} from "#lib/module-system/Module.js";
 import { ChannelType } from "discord.js";
 
 @DefineModule({
@@ -8,6 +13,7 @@ import { ChannelType } from "discord.js";
   description:
     "Server event logs: message deletes/edits, joins, leaves, bans, unbans, nickname and role changes.",
   short: "Server event logging for moderation, messages, and member actions.",
+  endUserDataStatement: NoEndUserData(),
   category: "System",
   configSchema: cfg.object({
     log_channel_id: cfg.channel({

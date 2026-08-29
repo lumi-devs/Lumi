@@ -1,4 +1,9 @@
-import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
+import {
+  Module,
+  DefineModule,
+  NoEndUserData,
+  cfg,
+} from "#core/module-system/Module.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleVerifySweepFire } from "./lib/verify-sweep-handler.js";
 import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
@@ -10,6 +15,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
   description:
     "Server protection: anti-nuke detection with automatic quarantine.",
   short: "Server protection: anti-nuke thresholds, raid detection, and verification.",
+  endUserDataStatement: NoEndUserData(),
   category: "Security",
   dashboardHref: "security",
   configSchema: cfg.object({

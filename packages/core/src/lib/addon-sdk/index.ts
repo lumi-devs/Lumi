@@ -19,6 +19,8 @@
 export {
   Module,
   DefineModule,
+  NoEndUserData,
+  noEndUserData,
   cfg,
   FieldType,
   parseConfigList,

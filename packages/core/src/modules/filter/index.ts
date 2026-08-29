@@ -1,4 +1,9 @@
-import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
+import {
+  Module,
+  DefineModule,
+  NoEndUserData,
+  cfg,
+} from "#lib/module-system/Module.js";
 import { parseConfigList } from "#lib/module-system/config-schema.js";
 import { tryGetService } from "#lib/module-system/Service.js";
 import { ChannelType } from "discord.js";
@@ -52,6 +57,7 @@ const COMPILED_KEYS = [
   description:
     "Automod rule engine: filtered terms (Aho-Corasick), regex rules, invite/link blocking with allowlists, mention-spam and caps limits, with configurable punishment and logging.",
   short: "Automod rule engine with regex patterns, invite blocking, and heat scoring.",
+  endUserDataStatement: NoEndUserData(),
   category: "Moderation",
   configSchema: cfg.object({
     terms: cfg.string({

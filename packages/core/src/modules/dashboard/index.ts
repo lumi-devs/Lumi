@@ -1,4 +1,8 @@
-import { Module, DefineModule } from "#lib/module-system/Module.js";
+import {
+  Module,
+  DefineModule,
+  NoEndUserData,
+} from "#lib/module-system/Module.js";
 import { container } from "@sapphire/framework";
 import {
   registerGuildRpcHandlers,
@@ -36,6 +40,7 @@ import {
   description:
     "Integrates the bot with the Lumi Web Dashboard. Provides RPC endpoints for management.",
   short: "Web dashboard integration and RPC management endpoints.",
+  endUserDataStatement: NoEndUserData(),
   category: "System",
 })
 export class DashboardModule extends Module {

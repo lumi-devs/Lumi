@@ -17,6 +17,16 @@ export {
   parseConfigList,
 } from "./config-schema.js";
 
+/**
+ * Explicit sentinel function declaring that a module does not persistently store
+ * end-user data (GDPR/CCPA compliant declaration).
+ */
+export function NoEndUserData(): undefined {
+  return undefined;
+}
+
+export const noEndUserData = NoEndUserData;
+
 /** Used during module discovery without executing the module's code. */
 export interface ModuleMeta {
   name: string;
