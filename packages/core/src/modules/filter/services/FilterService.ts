@@ -1,7 +1,8 @@
-import { Service, getService } from "#lib/module-system/Service.js";
+import { Service } from "#lib/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import { RedisKeys } from "#database/redis.js";
+import { parseConfigList } from "#lib/module-system/config-schema.js";
 import {
   compileRules,
   evaluateStatic,
@@ -68,46 +69,28 @@ export class FilterService extends Service {
   private readonly _versions = new Map<string, number>();
 
   public async loadGuild(guildId: string): Promise<void> {
-    const configService = getService("config");
-    const get = (key: string) =>
-      this.container.db.config.getModuleConfig(guildId, "filter", key);
-    const [
-      terms,
-      regexRules,
-      blockInvites,
-      inviteAllowlist,
-      blockLinks,
-      linkAllowlist,
-      maxMentions,
-      maxCapsPercent,
-      capsMinLength,
-    ] = await Promise.all([
-      configService.getConfigList(guildId, "filter", "terms"),
-      configService.getConfigList(guildId, "filter", "regex_rules"),
-      get("block_invites"),
-      configService.getConfigList(guildId, "filter", "invite_allowlist"),
-      get("block_links"),
-      configService.getConfigList(guildId, "filter", "link_allowlist"),
-      get("max_mentions"),
-      get("max_caps_percent"),
-      get("caps_min_length"),
-    ]);
+    // getModuleConfig resolves through getAllModuleConfig, so reading each key
+    // separately meant one Redis round trip per key against the same cache
+    // entry. Read the module's config once and derive every field from it.
+    const raw = await this.container.db.config.getAllModuleConfig(
+      guildId,
+      "filter",
+    );
+    const num = (key: string, fallback: number): number =>
+      typeof raw[key] === "number" ? raw[key] : fallback;
 
     this.rebuild(guildId, {
-      terms,
-      regexRules,
-      blockInvites: blockInvites === true,
-      inviteAllowlist,
-      blockLinks: blockLinks === true,
-      linkAllowlist,
-      maxMentions: typeof maxMentions === "number" ? maxMentions : 0,
-      maxCapsPercent: typeof maxCapsPercent === "number" ? maxCapsPercent : 0,
-      capsMinLength:
-        typeof capsMinLength === "number"
-          ? capsMinLength
-          : DEFAULT_CAPS_MIN_LENGTH,
+      terms: parseConfigList(raw["terms"] ?? null),
+      regexRules: parseConfigList(raw["regex_rules"] ?? null),
+      blockInvites: raw["block_invites"] === true,
+      inviteAllowlist: parseConfigList(raw["invite_allowlist"] ?? null),
+      blockLinks: raw["block_links"] === true,
+      linkAllowlist: parseConfigList(raw["link_allowlist"] ?? null),
+      maxMentions: num("max_mentions", 0),
+      maxCapsPercent: num("max_caps_percent", 0),
+      capsMinLength: num("caps_min_length", DEFAULT_CAPS_MIN_LENGTH),
     });
-    this._heat.set(guildId, await this.loadHeatConfig(guildId));
+    this._heat.set(guildId, this.buildHeatConfig(raw));
   }
 
   /** In-memory heat config for the hot message path; undefined until hydrated. */
@@ -232,12 +215,14 @@ export class FilterService extends Service {
   }
 
   public async loadHeatConfig(guildId: string): Promise<HeatConfig> {
-    const raw = await this.container.db.config.getAllModuleConfig(
-      guildId,
-      "filter",
+    return this.buildHeatConfig(
+      await this.container.db.config.getAllModuleConfig(guildId, "filter"),
     );
+  }
+
+  public buildHeatConfig(raw: Record<string, unknown>): HeatConfig {
     const num = (key: string, fallback: number): number =>
-      typeof raw[key] === "number" ? (raw[key]) : fallback;
+      typeof raw[key] === "number" ? raw[key] : fallback;
     return {
       enabled: raw["heat_enabled"] === true,
       perMessage: num("heat_per_message", 0),
@@ -458,7 +443,8 @@ export class FilterService extends Service {
   }
 
   #evictIfNeeded(): void {
-    while (this._guilds.size > FilterService.MAX_GUILDS) {
+    const limit = this.#cacheLimit();
+    while (this._guilds.size > limit) {
       const oldest = this._guilds.keys().next().value;
       if (oldest === undefined) break;
       this._guilds.delete(oldest);
@@ -467,7 +453,23 @@ export class FilterService extends Service {
     }
   }
 
-  private static readonly MAX_GUILDS = 10_000;
+  /**
+   * Hold at most what this process actually serves. A fixed ceiling is wrong in
+   * both directions: too low and a large shard evicts guilds it is still
+   * filtering for, recompiling their rules on the next message; too high and it
+   * is not a bound at all. Sizing to the live guild count means an active guild
+   * is never evicted, and the map cannot outgrow the shard.
+   *
+   * The floor covers startup, before the guild cache has populated.
+   */
+  #cacheLimit(): number {
+    return Math.max(
+      FilterService.MIN_CACHED_GUILDS,
+      this.container.client.guilds.cache.size,
+    );
+  }
+
+  private static readonly MIN_CACHED_GUILDS = 1_000;
 }
 
 declare module "#lib/module-system/Service.js" {

@@ -3,10 +3,12 @@ import { getService } from "#lib/module-system/Service.js";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { AutocompleteInteraction } from "discord.js";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
+import { respondWithChoices } from "#lib/utilities/autocomplete.js";
 import {
-  filterAutocompleteChoices,
-  respondWithChoices,
-} from "#lib/utilities/autocomplete.js";
+  installedModuleChoices,
+  repoModuleChoices,
+  repoNameChoices,
+} from "#lib/downloader/autocomplete.js";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -120,13 +122,9 @@ export class DownloadCommand extends BaseSubcommand {
     const focused = interaction.options.getFocused(true);
 
     if (focused.name === "repo") {
-      const repos = await this.downloaderService.listRepos();
       return respondWithChoices(
         interaction,
-        filterAutocompleteChoices(
-          repos.map((r) => r.name),
-          focused.value,
-        ),
+        await repoNameChoices(this.downloaderService, focused.value),
       );
     }
 
@@ -134,33 +132,20 @@ export class DownloadCommand extends BaseSubcommand {
 
     const subcommand = interaction.options.getSubcommand(false);
     if (subcommand === "install") {
-      const repoName = interaction.options.getString("repo");
-      if (!repoName) return respondWithChoices(interaction, []);
-      try {
-        const [modules, installed] = await Promise.all([
-          this.downloaderService.getModulesInRepo(repoName),
-          this.downloaderService.getInstalledModules(),
-        ]);
-        const installedNames = new Set(installed.map((m) => m.moduleName));
-        const names = modules
-          .filter((m) => !m.hidden && !installedNames.has(m.name))
-          .map((m) => m.name);
-        return respondWithChoices(
+      return respondWithChoices(
+        interaction,
+        await repoModuleChoices(
+          this.downloaderService,
           interaction,
-          filterAutocompleteChoices(names, focused.value),
-        );
-      } catch {
-        return respondWithChoices(interaction, []);
-      }
+          "repo",
+          focused.value,
+        ),
+      );
     }
 
-    const installed = await this.downloaderService.getInstalledModules();
     return respondWithChoices(
       interaction,
-      filterAutocompleteChoices(
-        installed.map((m) => m.moduleName),
-        focused.value,
-      ),
+      await installedModuleChoices(this.downloaderService, focused.value),
     );
   }
 

@@ -34,7 +34,7 @@ export class QuarantineAction {
     }
 
     const key = RedisKeys.quarantineState(guild.id, targetMember.id);
-    const release = await acquireRedisLock(container.redis, `${key}:lock`);
+    const { release } = await acquireRedisLock(container.redis, `${key}:lock`);
     try {
       if (await container.redis.exists(key)) {
         throw new Error("ALREADY_QUARANTINED");
@@ -45,9 +45,9 @@ export class QuarantineAction {
         targetMember.id,
         "quarantine",
       );
-      for (const stale of staleCases) {
-        await container.db.moderation.liftModerationCase(stale.id);
-      }
+      await container.db.moderation.liftModerationCases(
+        staleCases.map((c) => c.id),
+      );
 
       const savedRoles = targetMember.roles.cache
         .filter((r) => r.id !== guild.id && r.id !== quarantineRoleId)
@@ -93,7 +93,7 @@ export class QuarantineAction {
     const { guild, targetMember, moderator, reason } = options;
 
     const key = RedisKeys.quarantineState(guild.id, targetMember.id);
-    const release = await acquireRedisLock(container.redis, `${key}:lock`);
+    const { release } = await acquireRedisLock(container.redis, `${key}:lock`);
     try {
       const saved = await container.redis.get(key);
       if (!saved) {
@@ -125,9 +125,9 @@ export class QuarantineAction {
         targetMember.id,
         "quarantine",
       );
-      for (const active of activeCases) {
-        await container.db.moderation.liftModerationCase(active.id);
-      }
+      await container.db.moderation.liftModerationCases(
+        activeCases.map((c) => c.id),
+      );
 
       const c = await container.db.moderation.createModerationCase({
         guildId: guild.id,

@@ -21,6 +21,7 @@ describe("bootstrapClientApp", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     process.env.BOT_TOKEN = "mock.bot.token.12345";
+    process.env["APPEAL_TOKEN_SECRET"] = "test-appeal-secret";
     container.logger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -42,6 +43,24 @@ describe("bootstrapClientApp", () => {
     expect(mockClient.login).toHaveBeenCalledWith("mock.bot.token.12345");
     expect(container.logger.info).toHaveBeenCalledWith("[Lumi] Online");
     expect(client).toBe(mockClient as any);
+  });
+
+  it("exits before touching LumiClient when required env vars are missing", async () => {
+    (LumiClient.bootstrap as any).mockClear();
+    delete process.env.BOT_TOKEN;
+    delete process.env["APPEAL_TOKEN_SECRET"];
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
+      throw new Error("exit");
+    }) as any);
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(bootstrapClientApp({})).rejects.toThrow("exit");
+
+    expect(LumiClient.bootstrap).not.toHaveBeenCalled();
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("BOT_TOKEN, APPEAL_TOKEN_SECRET"),
+    );
   });
 
   it("destroys client and exits process if login fails", async () => {

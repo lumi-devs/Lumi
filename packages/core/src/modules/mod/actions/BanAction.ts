@@ -2,10 +2,9 @@ import { container } from "@sapphire/framework";
 import { type Guild, type User, Colors } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { formatAuditReason } from "#lib/utilities/misc.js";
-import { logToChannel } from "../lib/helpers.js";
 import { sendModActionDm } from "../lib/notify.js";
 import { errorCode } from "#lib/utilities/errors.js";
-import { sendAppealLinkDm } from "#lib/appeals/dm.js";
+import { runModerationAction } from "../lib/runModerationAction.js";
 
 export interface BanApplyOptions {
   guild: Guild;
@@ -32,40 +31,40 @@ export class BanAction {
       deleteMessageSeconds = 0,
     } = options;
 
-    await sendModActionDm(
-      targetUser,
-      "🔨",
-      "Banned",
-      guild,
-      `You have been banned from **${guild.name}**.\n\n**Reason:** ${reason}`,
-    );
+    return runModerationAction({
+      perform: async () => {
+        await sendModActionDm(
+          targetUser,
+          "🔨",
+          "Banned",
+          guild,
+          `You have been banned from **${guild.name}**.\n\n**Reason:** ${reason}`,
+        );
 
-    await guild.members.ban(targetUser.id, {
-      reason: formatAuditReason(moderator, reason),
-      deleteMessageSeconds,
+        await guild.members.ban(targetUser.id, {
+          reason: formatAuditReason(moderator, reason),
+          deleteMessageSeconds,
+        });
+
+        return container.db.moderation.createModerationCase({
+          guildId: guild.id,
+          userId: targetUser.id,
+          moderatorId: moderator.id,
+          action: "ban",
+          reason,
+        });
+      },
+      log: (c) => ({
+        guildId: guild.id,
+        label: "🔨 Banned",
+        color: Colors.DarkRed,
+        targetId: targetUser.id,
+        moderator,
+        reason,
+        caseNumber: c.caseNumber,
+      }),
+      appealDm: () => ({ targetUser, guild }),
     });
-
-    const c = await container.db.moderation.createModerationCase({
-      guildId: guild.id,
-      userId: targetUser.id,
-      moderatorId: moderator.id,
-      action: "ban",
-      reason,
-    });
-
-    await logToChannel(
-      guild.id,
-      "🔨 Banned",
-      Colors.DarkRed,
-      targetUser.id,
-      moderator,
-      reason,
-      c.caseNumber,
-    );
-
-    await sendAppealLinkDm(targetUser, guild, c);
-
-    return c;
   }
 
   public static async undo(options: BanUndoOptions) {

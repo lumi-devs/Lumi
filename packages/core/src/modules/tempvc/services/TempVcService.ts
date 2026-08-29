@@ -135,7 +135,12 @@ export default class TempVcService extends Service {
         hidden: false,
         createdAt: Date.now(),
       };
-      await setVcRecord(guild.id, vc.id, record);
+      try {
+        await setVcRecord(guild.id, vc.id, record);
+      } catch (err: unknown) {
+        await vc.delete("Temp VC record write failed").catch(() => null);
+        throw err;
+      }
 
       if (generator.parentId) {
         const { parentId } = generator;
@@ -276,6 +281,12 @@ export default class TempVcService extends Service {
   public async reconcileGuild(guild: Guild): Promise<void> {
     const records = await listVcRecords(guild.id);
     for (const [channelId] of records) {
+      if (!guild.channels.cache.has(channelId)) {
+        await removeVcRecord(guild.id, channelId).catch((err: unknown) => {
+          logError("TempVC: reconcile orphaned record removal failed", err);
+        });
+        continue;
+      }
       await this.scheduleCleanup(guild.id, channelId);
     }
   }

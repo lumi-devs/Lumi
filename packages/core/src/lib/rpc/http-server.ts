@@ -70,7 +70,7 @@ function readInternalToken(
 
 export function startRpcHttpServer(
   log: (level: "info" | "warn" | "error", msg: string, meta?: object) => void,
-): void {
+): ReturnType<typeof Bun.serve> | null {
   const port = envParseInteger("RPC_HTTP_PORT", 8091);
   // Loopback by default: an operator whose dashboard runs in a separate
   // container/pod opts into a routable bind explicitly (see docker-compose.yml,
@@ -79,7 +79,7 @@ export function startRpcHttpServer(
   const internalToken = readInternalToken(log);
 
   try {
-    Bun.serve({
+    const server = Bun.serve({
       hostname: host,
       port,
       async fetch(req) {
@@ -122,9 +122,11 @@ export function startRpcHttpServer(
       port,
       authenticated: internalToken !== null,
     });
+    return server;
   } catch (err: unknown) {
     // Mirrors the metrics server's stance: a bind failure here must never
     // take the worker down.
     logError("[RpcHttp] Failed to start internal RPC HTTP server", err);
+    return null;
   }
 }

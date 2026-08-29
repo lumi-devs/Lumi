@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { container } from "@sapphire/framework";
-import type { Redis } from "ioredis";
+import type { RedisClient } from "#lib/database/cluster-safe.js";
 
 /**
  * Lightweight Redis-backed mutex. Mutual exclusion across processes; a
@@ -28,6 +28,24 @@ else
 end
 `;
 
+export const REDIS_VERIFY_SCRIPT = `
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+  return 1
+else
+  return 0
+end
+`;
+
+/** Checks a lock is still held by `token` - detects a stale holder (lease expired, reacquired elsewhere) before a guarded write. */
+export async function verifyRedisLock(
+  redis: RedisClient,
+  key: string,
+  token: string,
+): Promise<boolean> {
+  const held = await redis.eval(REDIS_VERIFY_SCRIPT, 1, key, token);
+  return held === 1;
+}
+
 export interface RedisLockOptions {
   /** Lock lease in ms. Auto-renewed at lease/2 while held. */
   ttlMs?: number;
@@ -48,11 +66,18 @@ const DEFAULTS: Required<RedisLockOptions> = {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+export interface RedisLock {
+  /** Releases the lock. Safe to call more than once. */
+  release: () => Promise<void>;
+  /** Fencing token identifying this acquisition - use with `verifyRedisLock` to detect a stale holder. */
+  token: string;
+}
+
 export async function acquireRedisLock(
-  redis: Redis,
+  redis: RedisClient,
   key: string,
   options: RedisLockOptions = {},
-): Promise<() => Promise<void>> {
+): Promise<RedisLock> {
   const opts = { ...DEFAULTS, ...options };
   const token = randomUUID();
   const deadline = Date.now() + opts.acquireTimeoutMs;
@@ -92,10 +117,12 @@ export async function acquireRedisLock(
   );
   renew.unref?.();
 
-  return async () => {
+  const release = async () => {
     if (released) return;
     released = true;
     clearInterval(renew);
     await redis.eval(REDIS_RELEASE_SCRIPT, 1, key, token).catch(() => null);
   };
+
+  return { release, token };
 }

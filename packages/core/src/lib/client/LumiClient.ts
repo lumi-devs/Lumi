@@ -1,4 +1,5 @@
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { disconnectDatabase } from "#lib/prisma/client.js";
 import { installEntityPopulator } from "#lib/entity-cache/entity-populator.js";
 import {
   envParseString,
@@ -46,6 +47,7 @@ export class LumiClient extends SapphireClient {
   private _ownedEventBus: OwnedEventBus | null = null;
   private _detachEntityPopulator: (() => void) | null = null;
   private _taskFireConsumer: TaskFireConsumer | null = null;
+  private _rpcServer: ReturnType<typeof startRpcHttpServer> = null;
 
   public constructor(_options: LumiClient.Options = {}) {
     super(buildClientOptions());
@@ -70,7 +72,9 @@ export class LumiClient extends SapphireClient {
     // this process.
     if (isPrimaryShard()) {
       initCoreRpcHandlers();
-      startRpcHttpServer((level, msg, meta) => container.logger[level](msg, meta));
+      this._rpcServer = startRpcHttpServer((level, msg, meta) =>
+        container.logger[level](msg, meta),
+      );
     }
     await this.stores.get("modules").discover();
 
@@ -158,11 +162,17 @@ export class LumiClient extends SapphireClient {
       ?.close()
       .catch(warnOnCleanupError("EventBus close"));
     this._ownedEventBus = null;
+    if (this._rpcServer) {
+      await this._rpcServer
+        .stop()
+        .catch(warnOnCleanupError("RPC HTTP server stop"));
+      this._rpcServer = null;
+    }
     await container.invalidation.close();
     await container.redis.quit().catch(warnOnCleanupError("Redis quit"));
-    await container.prisma
-      .$disconnect()
-      .catch(warnOnCleanupError("Prisma disconnect"));
+    // $disconnect alone leaves the pg Pool open: the adapter is constructed from
+    // a pool we own, so Prisma never ends it. Both pools drain here.
+    await disconnectDatabase().catch(warnOnCleanupError("Database disconnect"));
   }
 
   public override fetchPrefix = async (message: Message) => {

@@ -20,10 +20,10 @@ import { makeSuccessCard } from "#utilities/cards.js";
 import { getVcRecord, removeVcRecord } from "#modules/tempvc/data.js";
 import { TVC, TempVcKeys } from "#modules/tempvc/keys.js";
 import {
-  assertOwner,
   showLimitModal,
   showRenameModal,
 } from "#modules/tempvc/lib/panel-helpers.js";
+import { resolveOwnedVc, resolveVc } from "#modules/tempvc/panel-guard.js";
 import type TempVcService from "#modules/tempvc/services/TempVcService.js";
 import {
   buildBlockView,
@@ -66,30 +66,38 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
     if (!opensModal) await interaction.deferUpdate();
 
     const t = await fetchTyped(interaction);
-    const channel = interaction.guild?.channels.cache.get(channelId);
-    if (!channel || !channel.isVoiceBased()) {
-      throw new UserError({
+    const member = interaction.member as GuildMember;
+    const notFound = {
+      channel: {
         identifier: "TempVcGone",
         message: `${Emojis.CROSS} ${t("tempvc:channelNoLongerExists")}`,
-      });
-    }
-
-    const record = await getVcRecord(interaction.guildId, channelId);
-    if (!record) {
-      throw new UserError({
+      },
+      record: {
         identifier: "TempVcUnmanaged",
         message: `${Emojis.CROSS} ${t("tempvc:channelNoLongerManaged")}`,
-      });
-    }
-
-    const member = interaction.member as GuildMember;
+      },
+    };
 
     if (action === "claim") {
+      const { channel, record } = (await resolveVc(
+        interaction.guild,
+        interaction.guildId,
+        channelId,
+        notFound,
+      ))!;
       await this.#claim(interaction, channel, record);
       return;
     }
 
-    assertOwner(this.service, member, channel, record.ownerId, t);
+    const { channel, record } = (await resolveOwnedVc(
+      interaction.guild,
+      interaction.guildId,
+      channelId,
+      this.service,
+      member,
+      t,
+      notFound,
+    ))!;
 
     switch (action) {
       case "panel":
@@ -154,7 +162,16 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
     t?: LumiT,
   ): Promise<void> {
     const { id, guildId } = channel;
-    await channel.delete("Deleted by owner via panel").catch(() => null);
+    const deleted = await channel
+      .delete("Deleted by owner via panel")
+      .then(() => true)
+      .catch(() => false);
+    if (!deleted) {
+      throw new UserError({
+        identifier: "TempVcDeleteFailed",
+        message: `${Emojis.CROSS} Failed to delete the voice channel. Try again.`,
+      });
+    }
     if (guildId) await removeVcRecord(guildId, id);
     await interaction
       .editReply({

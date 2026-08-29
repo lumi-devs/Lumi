@@ -1,4 +1,5 @@
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { mgetSafe, pipelineBySlot } from "#lib/database/cluster-safe.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 import { tryParseJSON } from "@sapphire/utilities";
 
@@ -93,7 +94,7 @@ export class PermissionRepository extends Repository {
       RedisKeys.targetPermits(guildId, t.targetType, t.targetId),
     );
 
-    const rawResults = keys.length > 0 ? await this.redis.mget(...keys) : [];
+    const rawResults = await mgetSafe(this.redis, keys);
     const tiers: TargetPermitPayload[] = new Array(chainTargets.length);
 
     const missingIndexes: number[] = [];
@@ -136,18 +137,22 @@ export class PermissionRepository extends Repository {
         assignmentsByTarget.get(key)!.push(assignment);
       }
 
-      const pipeline = this.redis.pipeline();
-
-      for (const i of missingIndexes) {
+      const writes = missingIndexes.map((i) => {
         const target = chainTargets[i]!;
         const key = `${target.targetType}:${target.targetId}`;
         const forTarget = assignmentsByTarget.get(key) ?? [];
         const payload = collapseAssignments(forTarget);
         tiers[i] = payload;
-        pipeline.setex(keys[i]!, RedisTTL.permits, JSON.stringify(payload));
-      }
-
-      await pipeline.exec();
+        return { cacheKey: keys[i]!, payload };
+      });
+      await pipelineBySlot(
+        this.redis,
+        writes,
+        (w) => w.cacheKey,
+        (pipe, w) => {
+          pipe.setex(w.cacheKey, RedisTTL.permits, JSON.stringify(w.payload));
+        },
+      );
     }
 
     const isQuarantined = await this.isUserQuarantined(guildId, userId);

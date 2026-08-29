@@ -4,7 +4,7 @@ import {
   setAfkEntry,
   clearAfkEntry,
   clearAllAfkForUser,
-  getAllAfkEntries,
+  iterateAllAfkEntries,
   getAfkEntriesForGuild,
   getAfkStats,
   getAfkMentions,
@@ -24,6 +24,7 @@ vi.mock("@sapphire/framework", () => ({
       setex: vi.fn(),
       del: vi.fn(),
       scan: vi.fn(),
+      pipeline: vi.fn().mockReturnThis(),
       multi: vi.fn().mockReturnThis(),
       lpush: vi.fn().mockReturnThis(),
       ltrim: vi.fn().mockReturnThis(),
@@ -39,7 +40,7 @@ vi.mock("@sapphire/framework", () => ({
         upsertEntry: vi.fn(),
         deleteEntry: vi.fn(),
         deleteAllForUser: vi.fn(),
-        findAll: vi.fn(),
+        iterateAll: vi.fn(),
         findForGuild: vi.fn(),
         countAll: vi.fn(),
       },
@@ -188,11 +189,18 @@ describe("AFK Module Tests", () => {
   });
 
   describe("AFK bulk & stats queries", () => {
-    it("getAllAfkEntries delegates to db.afk.findAll", async () => {
-      const mockAll = [{ id: "1" }];
-      (container.db.afk.findAll as any).mockResolvedValue(mockAll);
-      const res = await getAllAfkEntries();
-      expect(res).toBe(mockAll);
+    it("iterateAllAfkEntries delegates to db.afk.iterateAll", async () => {
+      const pages = [[{ id: "1" }], [{ id: "2" }]];
+      (container.db.afk.iterateAll as any).mockImplementation(
+        async function* () {
+          yield* pages;
+        },
+      );
+
+      const seen = [];
+      for await (const page of iterateAllAfkEntries()) seen.push(page);
+
+      expect(seen).toEqual(pages);
     });
 
     it("getAfkEntriesForGuild delegates to db.afk.findForGuild", async () => {
@@ -234,7 +242,11 @@ describe("AFK Module Tests", () => {
       ];
 
       await addAfkMentionsBatch("g1", mentions);
-      expect(container.redis.multi).toHaveBeenCalled();
+      // Batched writes go through a pipeline rather than MULTI: each user's
+      // mentions key hashes to its own slot, and a cross-slot transaction is
+      // not expressible in Redis Cluster.
+      expect(container.redis.pipeline).toHaveBeenCalled();
+      expect(container.redis.lpush).toHaveBeenCalledTimes(mentions.length);
     });
 
     it("addAfkMentionsBatch returns early for empty mentions array", async () => {

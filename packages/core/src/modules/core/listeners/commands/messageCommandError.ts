@@ -1,27 +1,10 @@
-import {
-  Listener,
-  Events,
-  type MessageCommandErrorPayload,
-} from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
-import { errorCard, respondMessage } from "#lib/utilities/command-response.js";
+import { Events } from "@sapphire/framework";
+import { respondMessage } from "#lib/utilities/command-response.js";
+import { createErrorListener } from "#modules/core/lib/command-listener-factory.js";
 
-@ApplyOptions<Listener.Options>({ event: Events.MessageCommandError })
-export class MessageCommandErrorListener extends Listener<
-  typeof Events.MessageCommandError
-> {
-  public async run(
-    error: unknown,
-    { message, command }: MessageCommandErrorPayload,
-  ) {
-    const { card } = errorCard(`MessageCommand:${command.name}`, error);
-    try {
-      await respondMessage(message, card);
-    } catch (err: unknown) {
-      this.container.logger.error(
-        `[MessageCommand:${command.name}] Failed to send error card:`,
-        err,
-      );
-    }
-  }
-}
+export const MessageCommandErrorListener = createErrorListener(
+  Events.MessageCommandError,
+  "MessageCommand",
+  (payload) => payload.message,
+  respondMessage,
+);

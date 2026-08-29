@@ -1,4 +1,4 @@
-import type { Redis } from "ioredis";
+import type { RedisClient } from "#lib/database/cluster-safe.js";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { ModuleStore } from "#lib/module-system/ModuleStore.js";
 import type { InvalidationBus } from "#lib/database/redis.js";
@@ -57,7 +57,7 @@ export type ConfigValueValidator = (
 declare module "@sapphire/pieces" {
   interface Container {
     readonly prisma: DatabaseClient;
-    readonly redis: Redis;
+    readonly redis: RedisClient;
     readonly invalidation: InvalidationBus;
     readonly db: DatabaseRepositories;
     readonly eventBus: EventBus;

@@ -1,4 +1,5 @@
 import { container } from "@sapphire/framework";
+import { pipelineBySlot } from "#lib/database/cluster-safe.js";
 
 const TTL_SECONDS = 24 * 60 * 60;
 
@@ -72,12 +73,40 @@ export async function seedVoiceStates(
 ): Promise<void> {
   if (voiceStates.length === 0) return;
   const { redis } = container;
-  const pipe = redis.multi();
+  // Each voice state writes an occupancy-set key and a user key that hash to
+  // different slots, so the writes are flattened per key rather than issued as
+  // one transaction.
+  type Write =
+    | { key: string; kind: "occupancy"; channelId: string; userId: string }
+    | { key: string; kind: "user"; channelId: string; userId: string };
+
+  const writes: Write[] = [];
   for (const v of voiceStates) {
     if (!v.channel_id) continue;
-    pipe.sadd(occKey(v.channel_id), v.user_id);
-    pipe.expire(occKey(v.channel_id), TTL_SECONDS);
-    pipe.set(userKey(v.user_id), v.channel_id, "EX", TTL_SECONDS);
+    writes.push({
+      key: occKey(v.channel_id),
+      kind: "occupancy",
+      channelId: v.channel_id,
+      userId: v.user_id,
+    });
+    writes.push({
+      key: userKey(v.user_id),
+      kind: "user",
+      channelId: v.channel_id,
+      userId: v.user_id,
+    });
   }
-  await pipe.exec();
+
+  await pipelineBySlot(
+    redis,
+    writes,
+    (w) => w.key,
+    (pipe, w) => {
+      if (w.kind === "occupancy") {
+        pipe.sadd(w.key, w.userId).expire(w.key, TTL_SECONDS);
+      } else {
+        pipe.set(w.key, w.channelId, "EX", TTL_SECONDS);
+      }
+    },
+  );
 }

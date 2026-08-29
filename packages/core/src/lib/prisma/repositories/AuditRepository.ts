@@ -1,5 +1,6 @@
 import type { AuditLedger, Prisma } from "@prisma/client";
 import { hostname } from "node:os";
+import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 import { RedisKeys } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
@@ -13,6 +14,40 @@ const AUDIT_CONSUMER = `${hostname()}:${process.pid}`;
 
 /** How long a delivered-but-unacked entry must sit before another run reclaims it. */
 const STALE_PENDING_MS = 60_000;
+
+/**
+ * Approximate cap on the buffer stream. If the flush task stops - a crash loop,
+ * a Postgres outage - the stream would otherwise grow without bound and take
+ * the cache tier down with it. At ~200 bytes an entry this is roughly 100 MB of
+ * headroom, far more than a healthy flush ever accumulates, so trimming only
+ * ever discards the oldest entries of an already-broken backlog.
+ */
+const AUDIT_STREAM_MAXLEN = 500_000;
+
+/**
+ * Number of stream buckets the fleet spreads audit writes across. Fixed rather
+ * than derived from shard count so the consumer knows the full key space
+ * without coordination, and so changing shard count never strands a bucket.
+ */
+const AUDIT_STREAM_BUCKETS = 16;
+
+/**
+ * This process always writes to the same bucket, which keeps each stream's
+ * entries roughly time-ordered and avoids scattering one process's writes.
+ */
+const WRITE_BUCKET = (() => {
+  const shards = process.env["SHARDS"];
+  if (shards) {
+    try {
+      const parsed: unknown = JSON.parse(shards);
+      const first = Array.isArray(parsed) ? parsed[0] : parsed;
+      if (typeof first === "number") return first % AUDIT_STREAM_BUCKETS;
+    } catch {
+      // fall through to pid
+    }
+  }
+  return process.pid % AUDIT_STREAM_BUCKETS;
+})();
 
 export interface AuditLogPayload {
   guildId: string;
@@ -38,7 +73,10 @@ export interface AuditLedgerFilter {
 export class AuditRepository extends Repository {
   public async queueAuditLog(payload: AuditLogPayload) {
     await this.redis.xadd(
-      RedisKeys.auditLogsQueue(),
+      RedisKeys.auditLogsQueue(WRITE_BUCKET),
+      "MAXLEN",
+      "~",
+      AUDIT_STREAM_MAXLEN,
       "*",
       "payload",
       JSON.stringify(payload),
@@ -48,15 +86,42 @@ export class AuditRepository extends Repository {
   public async queueAuditLogsBatch(payloads: AuditLogPayload[]) {
     if (!payloads.length) return;
     const pipeline = this.redis.pipeline();
-    const key = RedisKeys.auditLogsQueue();
+    const key = RedisKeys.auditLogsQueue(WRITE_BUCKET);
     for (const payload of payloads) {
-      pipeline.xadd(key, "*", "payload", JSON.stringify(payload));
+      pipeline.xadd(
+        key,
+        "MAXLEN",
+        "~",
+        AUDIT_STREAM_MAXLEN,
+        "*",
+        "payload",
+        JSON.stringify(payload),
+      );
     }
     await pipeline.exec();
   }
 
+  /**
+   * Drains every bucket, not just this process's own: the flush task is unicast,
+   * so whichever process handles a fire is responsible for the whole key space.
+   */
   public async flushAuditLogsToPostgres(batchSize = 500) {
-    const key = RedisKeys.auditLogsQueue();
+    const perBucket = Math.max(1, Math.floor(batchSize / AUDIT_STREAM_BUCKETS));
+    let total = 0;
+
+    await mapWithConcurrency(
+      Array.from({ length: AUDIT_STREAM_BUCKETS }, (_, i) => i),
+      4,
+      async (bucket) => {
+        total += await this.#flushBucket(bucket, perBucket);
+      },
+    );
+
+    return total;
+  }
+
+  async #flushBucket(bucket: number, batchSize: number) {
+    const key = RedisKeys.auditLogsQueue(bucket);
     await this.#ensureGroup(key);
 
     type XReadGroupReply = [string, [string, string[]][]][] | null;

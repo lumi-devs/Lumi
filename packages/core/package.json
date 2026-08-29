@@ -62,6 +62,7 @@
     "@sapphire/time-utilities": "^1.7.14",
     "@sapphire/utilities": "^3.18.2",
     "ahocorasick": "^1.0.2",
+    "cluster-key-slot": "^1.1.2",
     "colorette": "^2.0.20",
     "discord.js": "^14.27.0",
     "ioredis": "^6.0.0",

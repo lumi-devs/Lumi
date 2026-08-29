@@ -1,4 +1,5 @@
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { mgetSafe } from "#lib/database/cluster-safe.js";
 import { container } from "@sapphire/framework";
 import { tryParseJSON } from "@sapphire/utilities";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
@@ -117,45 +118,61 @@ export class ModuleRepository extends Repository {
       RedisKeys.moduleEnabled(n, guildId),
     );
 
-    const raw = await this.redis.mget(...globalKeys, ...guildKeys);
+    const raw = await mgetSafe(this.redis, [...globalKeys, ...guildKeys]);
     const half = moduleNames.length;
 
-    const result = new Map<string, boolean>();
+    const enabled = new Array<boolean>(half).fill(false);
 
-    for (let i = 0; i < moduleNames.length; i++) {
-      const name = moduleNames[i]!;
-
+    const globalMisses: number[] = [];
+    const passedGlobal: number[] = [];
+    for (let i = 0; i < half; i++) {
       const globalRaw = raw[i] ?? null;
       if (globalRaw === null) {
-        const globalEnabled = await this.isModuleGlobalEnabled(name);
-        if (!globalEnabled) {
-          result.set(name, false);
-          continue;
-        }
-      } else {
-        const globalEnabled = tryParseJSON(globalRaw) === true;
-        if (!globalEnabled) {
-          result.set(name, false);
-          continue;
-        }
+        globalMisses.push(i);
+      } else if (tryParseJSON(globalRaw) === true) {
+        passedGlobal.push(i);
       }
+    }
 
+    const globalResolved = await Promise.all(
+      globalMisses.map((i) => this.isModuleGlobalEnabled(moduleNames[i]!)),
+    );
+    for (const [k, i] of globalMisses.entries()) {
+      if (globalResolved[k]) {
+        passedGlobal.push(i);
+      }
+    }
+
+    const guildMisses: number[] = [];
+    const passedGuild: number[] = [];
+    for (const i of passedGlobal) {
       const guildRaw = raw[half + i] ?? null;
       if (guildRaw === null) {
-        const guildEnabled = await this.isModuleGuildEnabled(guildId, name);
-        if (!guildEnabled) {
-          result.set(name, false);
-          continue;
-        }
-      } else {
-        const guildEnabled = tryParseJSON(guildRaw) === true;
-        if (!guildEnabled) {
-          result.set(name, false);
-          continue;
-        }
+        guildMisses.push(i);
+      } else if (tryParseJSON(guildRaw) === true) {
+        passedGuild.push(i);
       }
+    }
 
-      result.set(name, await this.#configLevelEnabled(guildId, name));
+    const guildResolved = await Promise.all(
+      guildMisses.map((i) => this.isModuleGuildEnabled(guildId, moduleNames[i]!)),
+    );
+    for (const [k, i] of guildMisses.entries()) {
+      if (guildResolved[k]) {
+        passedGuild.push(i);
+      }
+    }
+
+    const configResolved = await Promise.all(
+      passedGuild.map((i) => this.#configLevelEnabled(guildId, moduleNames[i]!)),
+    );
+    for (const [k, i] of passedGuild.entries()) {
+      enabled[i] = configResolved[k]!;
+    }
+
+    const result = new Map<string, boolean>();
+    for (let i = 0; i < half; i++) {
+      result.set(moduleNames[i]!, enabled[i]!);
     }
 
     return result;

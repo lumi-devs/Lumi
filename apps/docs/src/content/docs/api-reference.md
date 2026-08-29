@@ -193,7 +193,7 @@ Re-exported from `@sapphire/framework` - the cooldown-scope enum (`User`/`Channe
 ## `lumi/permissions`
 
 ```typescript
-export { PermissionLevel, resolvePermissionLevel } from "...";
+export { PermissionLevel, hasRequiredPermit } from "...";
 export { checkModulesEnabled } from "...";
 export { isModuleEnabled } from "...";
 ```
@@ -207,9 +207,9 @@ enum PermissionLevel {
 }
 ```
 
-### `resolvePermissionLevel(target): Promise<number>`
+### `hasRequiredPermit(target, permitNode): Promise<boolean>`
 
-Resolves a `PermissionLevel` for an interaction/message-like object - checks bot-owner list, guild ownership, `Administrator`, then a set of moderator-shaped permissions (`ManageGuild`/`ManageRoles`/`ManageChannels`/`BanMembers`/`KickMembers`/`ManageMessages`), falling back to `USER`.
+Checks whether an interaction/message-like object satisfies a Wick-style permit node - bot-owner and guild-owner always pass, otherwise it consults `PermitResolver` (the same permit/deny rule set and anti-nuke quarantine check that command pieces get via `RequirePermitPrecondition`). Use this for interaction handlers, which never run through that precondition.
 
 ### `isModuleEnabled(guildId, moduleName): Promise<boolean>`
 

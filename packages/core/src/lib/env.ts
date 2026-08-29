@@ -23,6 +23,61 @@ export function envParseInteger(key: string, defaultValue?: number): number {
 
 export const envIsDefined = (key: string) => Boolean(process.env[key]);
 
+/**
+ * Fails fast on every missing key at once, instead of the first caller of
+ * `envParseString`/`envParseInteger` for that key surfacing it mid-request.
+ */
+export function validateRequiredEnv(keys: readonly string[]): void {
+  const missing = keys.filter((key) => process.env[key] === undefined);
+  if (missing.length > 0) {
+    throw new Error(
+      `[ENV] Missing required environment variable(s): ${missing.join(", ")}`,
+    );
+  }
+}
+
+/**
+ * How many shards this deployment runs, from the env `ShardingManager` injects.
+ * Readable at module scope, before the discord.js client exists.
+ */
+export function getShardCount(): number {
+  const raw = process.env["SHARD_COUNT"];
+  const n = raw === undefined ? Number.NaN : Number(raw);
+  if (Number.isFinite(n) && n > 0) return Math.floor(n);
+
+  const list = process.env["SHARDS"];
+  if (list) {
+    try {
+      const parsed: unknown = JSON.parse(list);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed.length;
+    } catch {
+      // fall through
+    }
+  }
+  return 1;
+}
+
+/**
+ * Per-process Postgres pool size.
+ *
+ * A fixed per-process pool multiplies by shard count, so a deployment that
+ * scales out silently walks into Postgres' `max_connections`: at the old flat
+ * 10, forty shards alone exhausted a default server. Divide a fleet-wide budget
+ * instead, so total connections stay flat as shards are added.
+ *
+ * `POSTGRES_POOL_MAX` still wins when set, for deployments fronted by a pooler
+ * where per-process sizing is the operator's call.
+ */
+export function resolvePgPoolSize(): number {
+  const explicit = Number(process.env["POSTGRES_POOL_MAX"]);
+  if (Number.isFinite(explicit) && explicit > 0) return Math.floor(explicit);
+
+  const budget = Number(process.env["POSTGRES_POOL_TOTAL"]);
+  const total = Number.isFinite(budget) && budget > 0 ? budget : 80;
+
+  return Math.max(2, Math.floor(total / getShardCount()));
+}
+
 export function getConsumerId(): string {
   return (
     process.env["LUMI_CONSUMER_ID"] ??

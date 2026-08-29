@@ -1,9 +1,9 @@
 import { container } from "@sapphire/framework";
+import type { RedisClient } from "#lib/database/cluster-safe.js";
 import type { Guild } from "@prisma/client";
 import type { DatabaseClient } from "#lib/prisma/client.js";
-import type { Redis } from "ioredis";
 import { RedisKeys } from "#lib/database/redis.js";
-import { acquireRedisLock } from "#lib/redis-lock.js";
+import { acquireRedisLock, verifyRedisLock } from "#lib/redis-lock.js";
 
 const GUILD_LOCK = (guildId: string) => `lumi:lock:guild:${guildId}`;
 const CONFIG_LOCK = (guildId: string, moduleName: string) =>
@@ -13,7 +13,7 @@ export async function configLock(
   guildId: string,
   moduleName: string,
 ): Promise<() => void> {
-  const release = await acquireRedisLock(
+  const { release } = await acquireRedisLock(
     container.redis,
     CONFIG_LOCK(guildId, moduleName),
     { ttlMs: 10_000, acquireTimeoutMs: 20_000 },
@@ -27,12 +27,15 @@ export class GuildWriteTransaction {
   #changes: Partial<Guild> = {};
   #hasChanges = false;
   #locking = true;
+  #used = false;
 
   public constructor(
     public readonly settings: Readonly<Guild>,
     private readonly release: () => Promise<void>,
     private readonly guildId: string,
     private readonly prisma: DatabaseClient,
+    private readonly redis: RedisClient,
+    private readonly lockToken: string,
   ) {}
 
   public get hasChanges() {
@@ -50,12 +53,27 @@ export class GuildWriteTransaction {
   }
 
   public async submit(): Promise<void> {
+    if (this.#used) {
+      throw new Error(
+        `GuildWriteTransaction for guild ${this.guildId} was already submitted; create a new transaction instead of reusing this one`,
+      );
+    }
+    this.#used = true;
+
     if (!this.#hasChanges) {
       await this.#release();
       return;
     }
 
     try {
+      const key = GUILD_LOCK(this.guildId);
+      const stillHeld = await verifyRedisLock(this.redis, key, this.lockToken);
+      if (!stillHeld) {
+        throw new Error(
+          `Lock lost before write for guild ${this.guildId}; refusing to write unlocked`,
+        );
+      }
+
       await this.prisma.guild.update({
         where: { id: this.guildId },
         data: this.#changes,
@@ -95,10 +113,10 @@ export class GuildWriteTransaction {
 
 export async function createGuildTransaction(
   guildId: string,
-  redis: Redis,
+  redis: RedisClient,
   prisma: DatabaseClient,
 ): Promise<GuildWriteTransaction> {
-  const release = await acquireRedisLock(redis, GUILD_LOCK(guildId), {
+  const { release, token } = await acquireRedisLock(redis, GUILD_LOCK(guildId), {
     ttlMs: 15_000,
     acquireTimeoutMs: 30_000,
   });
@@ -109,7 +127,7 @@ export async function createGuildTransaction(
       settings = await prisma.guild.create({ data: { id: guildId } });
     }
 
-    return new GuildWriteTransaction(settings, release, guildId, prisma);
+    return new GuildWriteTransaction(settings, release, guildId, prisma, redis, token);
   } catch (err) {
     await release();
     throw err;

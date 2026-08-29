@@ -1,7 +1,6 @@
 import { Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { AuditLogEvent, type GuildMember } from "discord.js";
-import { isNullish } from "@sapphire/utilities";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetService } from "#lib/module-system/Service.js";
 import { swallow } from "#lib/utilities/errors.js";
@@ -49,30 +48,8 @@ export class SecurityGuildMemberUpdateListener extends ModuleListener<
       .set([quarantineRoleId], "Security: quarantine hold - reverting unauthorized role change")
       .catch(swallow("Security: quarantine hold revert"));
 
-    const config = await security.loadAntiNukeConfig(newMember.guild.id);
-    if (!config.enabled) return;
-
-    const executorId = await resolveAuditLogExecutor(newMember.guild, AuditLogEvent.MemberRoleUpdate, newMember.id);
-    if (isNullish(executorId)) return;
-    if (await security.isExempt(newMember.guild, executorId, config)) return;
-
-    const count = await security.recordAction(
-      newMember.guild,
-      executorId,
-      "quarantine_bypass",
-      config,
-    );
-    if (count === null) return;
-
-    this.container.logger.warn(
-      `[security] Anti-nuke tripped in ${newMember.guild.id}: ${executorId} tried to bypass ${newMember.id}'s quarantine ${count} time(s)`,
-    );
-    await security.respond(
-      newMember.guild,
-      executorId,
-      "quarantine_bypass",
-      count,
-      config,
+    await security.evaluateNukeEvent(newMember.guild, "quarantine_bypass", () =>
+      resolveAuditLogExecutor(newMember.guild, AuditLogEvent.MemberRoleUpdate, newMember.id),
     );
   }
 

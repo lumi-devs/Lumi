@@ -141,7 +141,7 @@ export class ConfigRepository extends Repository {
     key: string,
     mutator: (current: T | null) => T | undefined | Promise<T | undefined>,
   ): Promise<T | undefined> {
-    const release = await acquireRedisLock(
+    const { release } = await acquireRedisLock(
       this.redis,
       `lock:config-mutate:${moduleName}:${guildId}:${key}`,
     );

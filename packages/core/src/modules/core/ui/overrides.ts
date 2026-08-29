@@ -20,10 +20,7 @@ import {
   buildSafeActionRows,
   createActionButton,
   createBackButton,
-  createChannelSelectMenu,
-  createRoleSelectMenu,
   createStringSelectMenu,
-  createUserSelectMenu,
 } from "#utilities/panels.js";
 import { StringSelectMenuOptionBuilder } from "@discordjs/builders";
 import {
@@ -176,69 +173,5 @@ export function buildOverridesView(
       ],
       { actionRows: buildSafeActionRows(rows) },
     ),
-  );
-}
-
-/**
- * Interactive target & field selection view for creating module overrides.
- * Replaces manual text ID input modals with native Discord entity select menus.
- */
-export function buildAddOverrideTargetView(
-  meta: ModuleMeta,
-  page = 0,
-): CardReply {
-  const fields = meta.configFields ?? [];
-  const keyMenu = createStringSelectMenu({
-    customId: `cfg:ov:pick_key:${meta.name}:${page}`,
-    placeholder: "Select Config Key to Override…",
-    options: fields.length
-      ? fields.slice(0, 25).map((f) =>
-          new StringSelectMenuOptionBuilder()
-            .setLabel(cutText(f.label, 100))
-            .setValue(f.key)
-            .setDescription(cutText(`Key: ${f.key}`, 100)),
-        )
-      : [
-          new StringSelectMenuOptionBuilder()
-            .setLabel("No configurable keys")
-            .setValue("_none"),
-        ],
-  });
-
-  const roleMenu = createRoleSelectMenu({
-    customId: `cfg:ov:pick_role:${meta.name}:${page}`,
-    placeholder: "Select Target Role for Override…",
-  });
-
-  const channelMenu = createChannelSelectMenu({
-    customId: `cfg:ov:pick_channel:${meta.name}:${page}`,
-    placeholder: "Select Target Channel for Override…",
-  });
-
-  const userMenu = createUserSelectMenu({
-    customId: `cfg:ov:pick_user:${meta.name}:${page}`,
-    placeholder: "Select Target User for Override…",
-  });
-
-  const backRow = row(
-    createBackButton(`cfg:ovr:${meta.name}:${page}`, "← Back to Overrides"),
-  );
-
-  return makeCard(
-    resolveCardColor("purple"),
-    `${Emojis.SHIELD} Add Override • ${meta.displayName}`,
-    [
-      formatSubtitle("Select target role, channel, or user via select menus."),
-      "Pick a target entity below to apply a custom config override.",
-    ],
-    {
-      actionRows: buildSafeActionRows([
-        backRow,
-        row(keyMenu),
-        row(roleMenu),
-        row(channelMenu),
-        row(userMenu),
-      ]),
-    },
   );
 }

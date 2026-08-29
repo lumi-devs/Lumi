@@ -5,6 +5,10 @@ import {
   type ApplicationCommandRegistry,
 } from "@sapphire/framework";
 import { cyan, gray, yellow, green } from "colorette";
+import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
+
+/** Caps simultaneous guild command fetches so the sync pass cannot trip Discord rate limits. */
+const GUILD_SYNC_CONCURRENCY = 10;
 
 @ApplyOptions<Listener.Options>({
   event: Events.ApplicationCommandRegistriesRegistered,
@@ -51,11 +55,11 @@ export class ApplicationCommandRegistriesRegisteredListener extends Listener {
     }
 
     let guildCmdCount = 0;
-    const guilds = client.guilds.cache;
+    const guilds = [...client.guilds.cache.values()];
 
-    for (const guild of guilds.values()) {
+    await mapWithConcurrency(guilds, GUILD_SYNC_CONCURRENCY, async (guild) => {
       const guildCommands = await guild.commands.fetch().catch(() => null);
-      if (!guildCommands || guildCommands.size === 0) continue;
+      if (!guildCommands || guildCommands.size === 0) return;
 
       for (const cmd of guildCommands.values()) {
         const registry = registries.get(cmd.name) as
@@ -78,7 +82,7 @@ export class ApplicationCommandRegistriesRegisteredListener extends Listener {
           guildCmdCount++;
         }
       }
-    }
+    });
 
     if (guildCmdCount > 0) {
       logger.info(

@@ -1,5 +1,8 @@
-import type { ModerationCase } from "@prisma/client";
+import type { ModerationCase, Prisma } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
+
+/** Batch size for the cross-guild sweeps, which are unbounded by nature. */
+const SWEEP_PAGE_SIZE = 500;
 
 /**
  * Moderation cases (`ModerationCase`) and the per-guild case counter
@@ -132,17 +135,51 @@ export class ModerationRepository extends Repository {
     return result.count > 0;
   }
 
-  /** Active cases that have a future or past expiry - used to re-arm lift jobs on startup. */
-  public getActiveExpiringCases(): Promise<ModerationCase[]> {
-    return this.prisma.moderationCase.findMany({
-      where: { active: true, expiresAt: { not: null } },
-    });
+  /**
+   * Active cases that have a future or past expiry - used to re-arm lift jobs
+   * on startup. Yielded in keyset-paginated batches so peak memory stays flat
+   * as guild count and case history grow, rather than loading the whole active
+   * backlog in one round trip.
+   */
+  public iterateActiveExpiringCases(
+    pageSize = SWEEP_PAGE_SIZE,
+  ): AsyncGenerator<ModerationCase[]> {
+    return this.#iterateCases(
+      { active: true, expiresAt: { not: null } },
+      pageSize,
+    );
   }
 
-  public getActiveWarnCases(): Promise<ModerationCase[]> {
-    return this.prisma.moderationCase.findMany({
-      where: { action: "warn", active: true },
-    });
+  public iterateActiveWarnCases(
+    pageSize = SWEEP_PAGE_SIZE,
+  ): AsyncGenerator<ModerationCase[]> {
+    return this.#iterateCases({ action: "warn", active: true }, pageSize);
+  }
+
+  async *#iterateCases(
+    where: Prisma.ModerationCaseWhereInput,
+    pageSize: number,
+  ): AsyncGenerator<ModerationCase[]> {
+    let cursor: number | undefined;
+
+    // Fleet-wide scans, and both callers converge on the next run if a page is
+    // slightly stale: the startup re-arm reschedules jobs that are idempotent,
+    // and warn decay re-evaluates every tick. Safe to keep off the primary.
+    for (;;) {
+      const page = await this.reader.moderationCase.findMany({
+        where,
+        orderBy: { id: "asc" },
+        take: pageSize,
+        ...(cursor === undefined
+          ? {}
+          : { cursor: { id: cursor }, skip: 1 }),
+      });
+
+      if (page.length === 0) return;
+      yield page;
+      if (page.length < pageSize) return;
+      cursor = page[page.length - 1]!.id;
+    }
   }
 
   public getModerationCaseById(id: number): Promise<ModerationCase | null> {

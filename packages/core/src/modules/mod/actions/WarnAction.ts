@@ -1,8 +1,8 @@
 import { container } from "@sapphire/framework";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { makeSuccessCard } from "#lib/utilities/cards.js";
-import { logToChannel } from "../lib/helpers.js";
 import { incrementWarnCount, checkThresholds } from "../lib/thresholds.js";
+import { runModerationAction } from "../lib/runModerationAction.js";
 
 export interface WarnApplyOptions {
   guild: Guild;
@@ -15,31 +15,34 @@ export class WarnAction {
   public static async apply(options: WarnApplyOptions) {
     const { guild, targetMember, moderator, reason } = options;
 
-    const c = await container.db.moderation.createModerationCase({
-      guildId: guild.id,
-      userId: targetMember.id,
-      moderatorId: moderator.id,
-      action: "warn",
-      reason,
+    const c = await runModerationAction({
+      perform: async () => {
+        const c = await container.db.moderation.createModerationCase({
+          guildId: guild.id,
+          userId: targetMember.id,
+          moderatorId: moderator.id,
+          action: "warn",
+          reason,
+        });
+
+        const dm = makeSuccessCard(
+          `⚠️ Warning - ${guild.name}`,
+          `**Reason:** ${reason}\n-# Case #${c.caseNumber}`,
+        );
+        await targetMember.send(dm).catch(() => null);
+
+        return c;
+      },
+      log: (c) => ({
+        guildId: guild.id,
+        label: "⚠️ Warned",
+        color: Colors.Yellow,
+        targetId: targetMember.id,
+        moderator,
+        reason,
+        caseNumber: c.caseNumber,
+      }),
     });
-
-    const dm = makeSuccessCard(
-      `⚠️ Warning - ${guild.name}`,
-      `**Reason:** ${reason}\n-# Case #${c.caseNumber}`,
-    );
-    await targetMember.send(dm).catch(() => null);
-
-    await logToChannel(
-      guild.id,
-      "⚠️ Warned",
-      Colors.Yellow,
-      targetMember.id,
-      moderator,
-      reason,
-      c.caseNumber,
-    ).catch((err: unknown) =>
-      container.logger.warn("[Warn] Log channel send failed:", err),
-    );
 
     const warnCount = await incrementWarnCount(
       container,

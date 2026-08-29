@@ -1,10 +1,11 @@
-import { container, Precondition, type Command } from "@sapphire/framework";
+import { container, type Command } from "@sapphire/framework";
 import type {
   ChatInputCommandInteraction,
   ContextMenuCommandInteraction,
   Message,
 } from "discord.js";
 import type { BaseCommand } from "#lib/commands.js";
+import { PermitPrecondition } from "#lib/permissions/PermitPrecondition.js";
 
 declare module "@sapphire/framework" {
   interface Preconditions {
@@ -42,54 +43,52 @@ export function memberRoleIds(member: unknown): string[] {
   return [];
 }
 
-export class RequirePermitPrecondition extends Precondition {
+export class RequirePermitPrecondition extends PermitPrecondition {
   public override messageRun(message: Message) {
-    if (!message.guild) return this.#outsideGuild();
+    if (!message.guild) return this.outsideGuild();
     const cmd = (message as Message & { command: Command }).command as BaseCommand | undefined;
     const permitNode = cmd?.requiredPermit;
     if (!permitNode) return this.ok();
-    return this.#check(message.guild.id, message.author.id, memberRoleIds(message.member), message.channelId, permitNode, message.guild.ownerId);
+    return this.checkPermit(
+      message.guild.id,
+      message.author.id,
+      memberRoleIds(message.member),
+      message.channelId,
+      permitNode,
+      message.guild.ownerId,
+      `You lack the required permit (\`${permitNode}\`) to execute this command.`,
+    );
   }
 
   public override chatInputRun(interaction: ChatInputCommandInteraction) {
-    if (!interaction.guild) return this.#outsideGuild();
+    if (!interaction.guild) return this.outsideGuild();
     const cmd = container.stores.get("commands").get(interaction.commandName) as BaseCommand | undefined;
     const permitNode = cmd?.requiredPermit;
     if (!permitNode) return this.ok();
-    return this.#check(interaction.guild.id, interaction.user.id, memberRoleIds(interaction.member), interaction.channelId, permitNode, interaction.guild.ownerId);
+    return this.checkPermit(
+      interaction.guild.id,
+      interaction.user.id,
+      memberRoleIds(interaction.member),
+      interaction.channelId,
+      permitNode,
+      interaction.guild.ownerId,
+      `You lack the required permit (\`${permitNode}\`) to execute this command.`,
+    );
   }
 
   public override contextMenuRun(interaction: ContextMenuCommandInteraction) {
-    if (!interaction.guild) return this.#outsideGuild();
+    if (!interaction.guild) return this.outsideGuild();
     const cmd = container.stores.get("commands").get(interaction.commandName) as BaseCommand | undefined;
     const permitNode = cmd?.requiredPermit;
     if (!permitNode) return this.ok();
-    return this.#check(interaction.guild.id, interaction.user.id, memberRoleIds(interaction.member), interaction.channelId, permitNode, interaction.guild.ownerId);
-  }
-
-  // A guild-scoped permit can never be satisfied outside a guild, so missing
-  // guild context must deny rather than skip the check.
-  #outsideGuild() {
-    return this.error({
-      identifier: "PermissionDenied",
-      message: "This command can only be used in a server.",
-    });
-  }
-
-  async #check(guildId: string, userId: string, roleIds: string[], channelId: string, permitNode: string, guildOwnerId?: string) {
-    const hasPermit = await container.permitResolver.hasPermit({
-      guildId,
-      userId,
-      roleIds,
-      channelId,
+    return this.checkPermit(
+      interaction.guild.id,
+      interaction.user.id,
+      memberRoleIds(interaction.member),
+      interaction.channelId,
       permitNode,
-      guildOwnerId,
-    });
-    return hasPermit
-      ? this.ok()
-      : this.error({
-          identifier: "PermissionDenied",
-          message: `You lack the required permit (\`${permitNode}\`) to execute this command.`,
-        });
+      interaction.guild.ownerId,
+      `You lack the required permit (\`${permitNode}\`) to execute this command.`,
+    );
   }
 }

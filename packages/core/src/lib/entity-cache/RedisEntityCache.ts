@@ -1,4 +1,4 @@
-import type { Redis } from "ioredis";
+import { pipelineBySlot, type RedisClient } from "#lib/database/cluster-safe.js";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 
 export interface CachedGuild {
@@ -68,7 +68,7 @@ const roleFields = (r: CachedRole): Record<string, string> => ({
 });
 
 export class RedisEntityCache {
-  public constructor(private readonly redis: Redis) {}
+  public constructor(private readonly redis: RedisClient) {}
 
   public async guild(id: string): Promise<CachedGuild | null> {
     const h = await this.redis.hgetall(RedisKeys.entityGuild(id));
@@ -115,12 +115,15 @@ export class RedisEntityCache {
 
   public async putChannels(channels: readonly CachedChannel[]): Promise<void> {
     if (channels.length === 0) return;
-    const pipe = this.redis.pipeline();
-    for (const c of channels) {
-      const key = RedisKeys.entityChannel(c.id);
-      pipe.hmset(key, channelFields(c)).expire(key, RedisTTL.entity);
-    }
-    await pipe.exec();
+    await pipelineBySlot(
+      this.redis,
+      channels,
+      (c) => RedisKeys.entityChannel(c.id),
+      (pipe, c) => {
+        const key = RedisKeys.entityChannel(c.id);
+        pipe.hmset(key, channelFields(c)).expire(key, RedisTTL.entity);
+      },
+    );
   }
 
   public async deleteChannel(id: string): Promise<void> {
@@ -146,12 +149,15 @@ export class RedisEntityCache {
 
   public async putRoles(roles: readonly CachedRole[]): Promise<void> {
     if (roles.length === 0) return;
-    const pipe = this.redis.pipeline();
-    for (const r of roles) {
-      const key = RedisKeys.entityRole(r.id);
-      pipe.hmset(key, roleFields(r)).expire(key, RedisTTL.entity);
-    }
-    await pipe.exec();
+    await pipelineBySlot(
+      this.redis,
+      roles,
+      (r) => RedisKeys.entityRole(r.id),
+      (pipe, r) => {
+        const key = RedisKeys.entityRole(r.id);
+        pipe.hmset(key, roleFields(r)).expire(key, RedisTTL.entity);
+      },
+    );
   }
 
   public async deleteRole(id: string): Promise<void> {

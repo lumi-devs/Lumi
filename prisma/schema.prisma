@@ -102,7 +102,6 @@ model GuildModuleConfig {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@id([guildId, moduleName, configKey])
-  @@index([guildId, moduleName])
   @@map("guild_module_config")
 }
 
@@ -185,7 +184,13 @@ model ModerationCase {
   @@index([guildId, createdAt])
   @@index([userId])
   @@index([moderatorId]) // GDPR anonymization + cross-guild moderator lookups
-  @@index([guildId, active, expiresAt]) // expiry sweep
+  @@index([guildId, active, expiresAt]) // per-guild expiry sweep
+  // The startup re-arm and warn decay sweep every guild at once, so they cannot
+  // use any guildId-leading index. Both paginate on id, so id is part of the
+  // index: without it Postgres index-scans and then sorts every matching row
+  // just to take one page.
+  @@index([active, id])
+  @@index([action, active, id])
   @@map("moderation_cases")
 }
 
@@ -239,7 +244,6 @@ model Blocklist {
   guild Guild? @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@unique([userId, guildId], name: "uq_blocklist_user_guild")
-  @@index([userId])
   @@index([guildId])
   @@map("blocklist")
 }
@@ -271,7 +275,9 @@ model AfkEntry {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@id([userId, guildId])
-  @@index([userId]) // GDPR cross-guild deletes
+  // userId is already the PK's leading column; guildId is not, so per-guild
+  // reads need their own index.
+  @@index([guildId])
   @@map("afk_entries")
 }
 
@@ -323,6 +329,8 @@ model AuditLedger {
 
   @@index([guildId, createdAt])
   @@index([guildId, userId])
+  // GDPR delete/export filter on userId across every guild.
+  @@index([userId])
   @@map("audit_ledger")
 }
 

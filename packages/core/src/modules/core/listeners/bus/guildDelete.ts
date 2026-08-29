@@ -1,4 +1,5 @@
 import { Listener, Events } from "@sapphire/framework";
+import { scanKeysSafe } from "#lib/database/cluster-safe.js";
 import { tryGetService } from "#lib/module-system/Service.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Guild } from "discord.js";
@@ -25,18 +26,9 @@ export class GuildDeleteEventBusListener extends Listener<
     const dynamicKeys: string[] = [];
     for (const pattern of patterns) {
       try {
-        let cursor = "0";
-        do {
-          const [next, found] = await this.container.redis.scan(
-            cursor,
-            "MATCH",
-            pattern,
-            "COUNT",
-            100,
-          );
-          cursor = next;
-          dynamicKeys.push(...found);
-        } while (cursor !== "0");
+        dynamicKeys.push(
+          ...(await scanKeysSafe(this.container.redis, pattern)),
+        );
       } catch (err: unknown) {
         this.container.logger.warn(
           `[GuildDelete] Redis SCAN failed for pattern ${pattern}:`,

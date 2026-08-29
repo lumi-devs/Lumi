@@ -33,6 +33,11 @@ import {
   filterAutocompleteChoices,
   respondWithChoices,
 } from "#lib/utilities/autocomplete.js";
+import {
+  installedModuleChoices,
+  repoModuleChoices,
+  repoNameChoices,
+} from "#lib/downloader/autocomplete.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "module",
@@ -67,51 +72,34 @@ export class ModuleCommand extends BaseSubcommand {
     const subcommand = interaction.options.getSubcommand(false);
 
     if (focused.name === "repo") {
-      const repos = await this.downloaderService.listRepos();
       return respondWithChoices(
         interaction,
-        filterAutocompleteChoices(
-          repos.map((r) => r.name),
-          focused.value,
-        ),
+        await repoNameChoices(this.downloaderService, focused.value),
       );
     }
 
     if (focused.name !== "module") return respondWithChoices(interaction, []);
 
     if (subcommand === "install") {
-      const repoName = interaction.options.getString("repo");
-      if (!repoName) return respondWithChoices(interaction, []);
-      try {
-        const [modules, installed] = await Promise.all([
-          this.downloaderService.getModulesInRepo(repoName),
-          this.downloaderService.getInstalledModules(),
-        ]);
-        const installedNames = new Set(installed.map((m) => m.moduleName));
-        const names = modules
-          .filter((m) => !m.hidden && !installedNames.has(m.name))
-          .map((m) => m.name);
-        return respondWithChoices(
+      return respondWithChoices(
+        interaction,
+        await repoModuleChoices(
+          this.downloaderService,
           interaction,
-          filterAutocompleteChoices(names, focused.value),
-        );
-      } catch {
-        return respondWithChoices(interaction, []);
-      }
+          "repo",
+          focused.value,
+        ),
+      );
     }
 
     if (["uninstall", "update", "pin", "unpin"].includes(subcommand ?? "")) {
-      const installed = await this.downloaderService.getInstalledModules();
-      const names = installed
-        .filter((m) => {
-          if (subcommand === "pin") return !m.pinned;
-          if (subcommand === "unpin") return m.pinned;
-          return true;
-        })
-        .map((m) => m.moduleName);
+      const pinned =
+        subcommand === "pin" ? false : subcommand === "unpin" ? true : undefined;
       return respondWithChoices(
         interaction,
-        filterAutocompleteChoices(names, focused.value),
+        await installedModuleChoices(this.downloaderService, focused.value, {
+          pinned,
+        }),
       );
     }
 

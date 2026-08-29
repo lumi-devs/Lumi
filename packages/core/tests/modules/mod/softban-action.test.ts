@@ -20,7 +20,7 @@ vi.mock("@sapphire/framework", () => ({
 }));
 
 vi.mock("#modules/mod/lib/helpers.js", () => ({
-  logToChannel: vi.fn(),
+  logToChannel: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe("SoftbanAction", () => {

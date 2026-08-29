@@ -242,10 +242,17 @@ export class PermissionService extends Service {
           permit = await this.createPermit(guildId, entry.name, "custom", entry.nodes);
           result.created++;
         }
-        for (const roleId of entry.roleIds) {
-          if (!/^\d{17,20}$/.test(roleId)) continue;
-          await this.container.db.permissions.assignPermit(guildId, permit.id, "role", roleId);
-        }
+        const roleIds = entry.roleIds.filter((id) => /^\d{17,20}$/.test(id));
+        await Promise.all(
+          roleIds.map((roleId) =>
+            this.container.db.permissions.assignPermit(
+              guildId,
+              permit.id,
+              "role",
+              roleId,
+            ),
+          ),
+        );
       } catch (err: unknown) {
         result.skipped.push({
           name: entry.name,
