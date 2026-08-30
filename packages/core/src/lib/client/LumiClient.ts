@@ -181,16 +181,19 @@ export class LumiClient extends SapphireClient {
         if (Array.isArray(parsed)) return parsed;
       }
 
-      const globalConfig = await container.db.global
-        .getGlobalConfig()
-        .catch(() => null);
-      const envFallback = envParseString("DEFAULT_PREFIX", ",");
-      const globalDefault = globalConfig?.defaultPrefix ?? envFallback;
-
       const settings = await container.db.config.getGuildSettings(
         message.guild.id,
       );
-      const prefixes = settings.prefix ? [settings.prefix] : [globalDefault];
+      let prefixes: string[];
+      if (settings.prefix) {
+        prefixes = [settings.prefix];
+      } else {
+        const globalConfig = await container.db.global
+          .getGlobalConfig()
+          .catch(() => null);
+        const envFallback = envParseString("DEFAULT_PREFIX", ",");
+        prefixes = [globalConfig?.defaultPrefix ?? envFallback];
+      }
 
       await container.redis.setex(
         cacheKey,
