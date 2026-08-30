@@ -16,7 +16,7 @@
   "dependencies": {
     "@lumi/contracts": "workspace:*",
     "@lumi/observability": "workspace:*",
-    "@tanstack/react-table": "^8",
+    "@tanstack/react-table": "^9",
     "animejs": "^4.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
