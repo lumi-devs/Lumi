@@ -4,7 +4,6 @@ import {
   InvalidationBus,
 } from "#lib/database/redis.js";
 import { ADDON_MODULES_ROOT } from "#lib/downloader/resolver.js";
-import { RedisEntityCache } from "#lib/entity-cache/RedisEntityCache.js";
 import { envParseInteger, getDevModulePaths } from "#lib/env.js";
 import { ModuleStore } from "#lib/module-system/ModuleStore.js";
 import { ServiceStore } from "#lib/module-system/ServiceStore.js";
@@ -48,9 +47,7 @@ export function installContainerServices(
   (client.stores.get("services") as Store<any> | undefined)?.registerPath(
     new URL("../services/", import.meta.url),
   );
-  (client.stores.get("utilities") as Store<any> | undefined)?.registerPath(
-    new URL("../utility-store/", import.meta.url),
-  );
+
 
   const redis = createRedisClient();
   const ownedEventBus = createEventBus({
@@ -77,7 +74,6 @@ export function installContainerServices(
     redis,
     invalidation: new InvalidationBus(createRedisClient()),
     db: new DatabaseService(prisma, redis, container.logger, prismaReader),
-    entityCache: new RedisEntityCache(redis),
     eventBus: ownedEventBus.bus,
     moduleStore,
     permitResolver,

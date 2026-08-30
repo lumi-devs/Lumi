@@ -1,10 +1,8 @@
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { disconnectDatabase } from "#lib/prisma/client.js";
-import { installEntityPopulator } from "#lib/entity-cache/entity-populator.js";
 import {
   envParseString,
   getConsumerId,
-  isEntityCachePopulateEnabled,
   isPrimaryShard,
 } from "#lib/env.js";
 import { registerCoreFireHandlers } from "#lib/core-fire-handlers.js";
@@ -45,9 +43,10 @@ import { ReadinessProbes } from "./ReadinessProbes.js";
 export class LumiClient extends SapphireClient {
   private _livenessInterval: ReturnType<typeof setInterval> | null = null;
   private _ownedEventBus: OwnedEventBus | null = null;
-  private _detachEntityPopulator: (() => void) | null = null;
   private _taskFireConsumer: TaskFireConsumer | null = null;
   private _rpcServer: ReturnType<typeof startRpcHttpServer> = null;
+  private _bullWorker: { on(e: string, fn: (...a: unknown[]) => void): void; off(e: string, fn: (...a: unknown[]) => void): void } | null = null;
+  private _bullFailedHandler: ((job: unknown, err: unknown) => void) | null = null;
 
   public constructor(_options: LumiClient.Options = {}) {
     super(buildClientOptions());
@@ -87,11 +86,13 @@ export class LumiClient extends SapphireClient {
         container.tasks as unknown as {
           worker?: {
             on(event: string, fn: (...args: unknown[]) => void): void;
+            off(event: string, fn: (...args: unknown[]) => void): void;
           };
         }
       ).worker;
       if (bullWorker) {
-        bullWorker.on("failed", (job: unknown, err: unknown) => {
+        this._bullWorker = bullWorker;
+        this._bullFailedHandler = (job: unknown, err: unknown) => {
           const taskName =
             (job as { name?: string } | undefined)?.name ?? "unknown";
           const attemptsMade =
@@ -106,7 +107,8 @@ export class LumiClient extends SapphireClient {
               err,
             );
           }
-        });
+        };
+        bullWorker.on("failed", this._bullFailedHandler);
       }
     }
 
@@ -117,12 +119,6 @@ export class LumiClient extends SapphireClient {
       consumerId: getConsumerId(),
     });
     await this._taskFireConsumer.start();
-
-    if (isEntityCachePopulateEnabled()) {
-      this._detachEntityPopulator = installEntityPopulator(
-        container.entityCache,
-      );
-    }
 
     this._livenessInterval = setInterval(async () => {
       try {
@@ -144,9 +140,10 @@ export class LumiClient extends SapphireClient {
       clearInterval(this._livenessInterval);
       this._livenessInterval = null;
     }
-    if (this._detachEntityPopulator) {
-      this._detachEntityPopulator();
-      this._detachEntityPopulator = null;
+    if (this._bullWorker && this._bullFailedHandler) {
+      this._bullWorker.off("failed", this._bullFailedHandler);
+      this._bullWorker = null;
+      this._bullFailedHandler = null;
     }
     if (this._taskFireConsumer) {
       await this._taskFireConsumer

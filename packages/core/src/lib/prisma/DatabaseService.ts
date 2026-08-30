@@ -157,9 +157,6 @@ export class DatabaseService {
       await container.invalidation.invalidate(...keys);
     }
 
-    // The entity cache holds a username projection under its own TTL, so
-    // without this an erased user stays readable there for up to a day.
-    await container.entityCache.deleteUser(userId);
   }
 
   public async exportUserData(

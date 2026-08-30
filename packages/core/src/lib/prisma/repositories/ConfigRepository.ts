@@ -44,11 +44,18 @@ export class ConfigRepository extends Repository {
       where: { id: guildId },
       data,
     });
-    await this.invalidate(RedisKeys.guildSettings(guildId));
-    if ("prefix" in data) {
-      await this.invalidate(RedisKeys.guildPrefixes(guildId));
-    }
+    await this.invalidateGuildSettings(guildId, "prefix" in data);
     return result;
+  }
+
+  /** Invalidates the guild settings cache and, optionally, the prefix cache. */
+  public async invalidateGuildSettings(
+    guildId: string,
+    prefixChanged = false,
+  ): Promise<void> {
+    const keys = [RedisKeys.guildSettings(guildId)];
+    if (prefixChanged) keys.push(RedisKeys.guildPrefixes(guildId));
+    await this.invalidate(...keys);
   }
 
   public async getModuleConfig(
@@ -73,20 +80,29 @@ export class ConfigRepository extends Repository {
     });
   }
 
-  public async getAllModuleConfigsForGuild(
+  public getAllModuleConfigsForGuild(
     guildId: string,
   ): Promise<Map<string, Record<string, unknown>>> {
-    const configs = await this.prisma.guildModuleConfig.findMany({
-      where: { guildId },
-    });
-    const result = new Map<string, Record<string, unknown>>();
-    for (const c of configs) {
-      if (!result.has(c.moduleName)) {
-        result.set(c.moduleName, {});
-      }
-      result.get(c.moduleName)![c.configKey] = c.value;
-    }
-    return result;
+    const cacheKey = RedisKeys.guildAllModuleConfigs(guildId);
+    return this.getOrSet(
+      cacheKey,
+      RedisTTL.guildAllModuleConfigs,
+      async () => {
+        const configs = await this.prisma.guildModuleConfig.findMany({
+          where: { guildId },
+        });
+        const result = new Map<string, Record<string, unknown>>();
+        for (const c of configs) {
+          if (!result.has(c.moduleName)) {
+            result.set(c.moduleName, {});
+          }
+          result.get(c.moduleName)![c.configKey] = c.value;
+        }
+        return result;
+      },
+      (raw) => new Map(JSON.parse(raw)),
+      (map) => JSON.stringify([...map.entries()]),
+    );
   }
 
   public async setModuleConfig(
@@ -102,7 +118,10 @@ export class ConfigRepository extends Repository {
       update: { value },
       create: { guildId, moduleName, configKey: key, value },
     });
-    await this.invalidate(RedisKeys.guildConfig(moduleName, guildId));
+    await this.invalidate(
+      RedisKeys.guildConfig(moduleName, guildId),
+      RedisKeys.guildAllModuleConfigs(guildId),
+    );
     return result;
   }
 
@@ -113,7 +132,10 @@ export class ConfigRepository extends Repository {
     const result = await this.prisma.guildModuleConfig.deleteMany({
       where: { guildId, moduleName },
     });
-    await this.invalidate(RedisKeys.guildConfig(moduleName, guildId));
+    await this.invalidate(
+      RedisKeys.guildConfig(moduleName, guildId),
+      RedisKeys.guildAllModuleConfigs(guildId),
+    );
     return result.count;
   }
 
@@ -125,7 +147,10 @@ export class ConfigRepository extends Repository {
     await this.prisma.guildModuleConfig.deleteMany({
       where: { guildId, moduleName, configKey: key },
     });
-    await this.invalidate(RedisKeys.guildConfig(moduleName, guildId));
+    await this.invalidate(
+      RedisKeys.guildConfig(moduleName, guildId),
+      RedisKeys.guildAllModuleConfigs(guildId),
+    );
   }
 
   /**

@@ -2,7 +2,6 @@ import { container } from "@sapphire/framework";
 import type { RedisClient } from "#lib/database/cluster-safe.js";
 import type { Guild } from "@prisma/client";
 import type { DatabaseClient } from "#lib/prisma/client.js";
-import { RedisKeys } from "#lib/database/redis.js";
 import { acquireRedisLock, verifyRedisLock } from "#lib/redis-lock.js";
 
 const GUILD_LOCK = (guildId: string) => `lumi:lock:guild:${guildId}`;
@@ -79,10 +78,10 @@ export class GuildWriteTransaction {
         data: this.#changes,
       });
 
-      const keysToInvalidate = [RedisKeys.guildSettings(this.guildId)];
-      if ("prefix" in this.#changes)
-        keysToInvalidate.push(RedisKeys.guildPrefixes(this.guildId));
-      await container.invalidation.invalidate(...keysToInvalidate);
+      await container.db.config.invalidateGuildSettings(
+        this.guildId,
+        "prefix" in this.#changes,
+      );
 
       this.#hasChanges = false;
     } finally {

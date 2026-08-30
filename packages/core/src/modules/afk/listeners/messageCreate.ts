@@ -25,6 +25,7 @@ import {
 } from "../index.js";
 import {
   getAfkEntry,
+  getAfkEntriesBatch,
   isAfkOnCooldown,
   claimAfkCooldown,
   getAfkMentions,
@@ -170,13 +171,17 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
     const mentionedUsers = [...message.mentions.users.values()].filter(
       (user) => user.id !== message.author.id,
     );
-    const lookupResults = await Promise.all(
-      mentionedUsers.map(async (user) => {
-        const entry = await getAfkEntry(message.guildId, user.id);
-        return entry ? { userId: user.id, entry } : null;
-      }),
-    );
-    const hits = lookupResults.filter((h): h is AfkHit => h !== null);
+    if (!mentionedUsers.length) return;
+
+    const mentionedIds = mentionedUsers.map((u) => u.id);
+    const afkMap = await getAfkEntriesBatch(message.guildId, mentionedIds);
+    const hits: AfkHit[] = [];
+    for (const userId of mentionedIds) {
+      const entry = afkMap.get(userId);
+      if (entry) {
+        hits.push({ userId, entry });
+      }
+    }
 
     if (!hits.length) return;
 

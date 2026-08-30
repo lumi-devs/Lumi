@@ -107,14 +107,6 @@ export function isPrimaryShard(): boolean {
   }
 }
 
-/**
- * Whether to run the Redis entity-cache populator. The projection is
- * provisioned-ahead infra for a future `GuildManager: 0` step and currently has
- * zero read callers, so populating it is pure write overhead on every dispatch.
- * Default off; opt in only when actively building the cache-backed read path.
- */
-export const isEntityCachePopulateEnabled = () =>
-  process.env["ENTITY_CACHE_POPULATE"] === "true";
 
 /**
  * Cluster name namespaces the shard telemetry each replica publishes to

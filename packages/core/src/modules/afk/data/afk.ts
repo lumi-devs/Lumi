@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { delSafe, pipelineBySlot, scanKeysSafe } from "#lib/database/cluster-safe.js";
+import { delSafe, mgetSafe, pipelineBySlot, scanKeysSafe } from "#lib/database/cluster-safe.js";
 import { isNullish, filterNullish, tryParseJSON } from "@sapphire/utilities";
 import { AfkKeys, AfkTTL } from "../keys.js";
 import { sanitizeReason } from "../index.js";
@@ -55,6 +55,44 @@ export async function getAfkEntry(
       return { ...parsed, since: new Date(parsed.since) };
     },
   );
+}
+
+export async function getAfkEntriesBatch(
+  guildId: string,
+  userIds: string[],
+): Promise<Map<string, AfkEntry>> {
+  const result = new Map<string, AfkEntry>();
+  if (userIds.length === 0) return result;
+
+  const keys = userIds.map((userId) => AfkKeys.afk(guildId, userId));
+  const rawValues = await mgetSafe(container.redis, keys);
+
+  const missingUserIds: string[] = [];
+  rawValues.forEach((raw, i) => {
+    const userId = userIds[i]!;
+    if (raw) {
+      const parsed = tryParseJSON(raw) as AfkEntry | null;
+      if (parsed) {
+        result.set(userId, { ...parsed, since: new Date(parsed.since) });
+        return;
+      }
+    }
+    missingUserIds.push(userId);
+  });
+
+  if (missingUserIds.length > 0) {
+    const dbEntries = await container.db.afk.findEntries(guildId, missingUserIds);
+    for (const entry of dbEntries) {
+      result.set(entry.userId, entry);
+      void container.redis.setex(
+        AfkKeys.afk(guildId, entry.userId),
+        AfkTTL.entry,
+        JSON.stringify(entry),
+      );
+    }
+  }
+
+  return result;
 }
 
 export async function setAfkEntry(

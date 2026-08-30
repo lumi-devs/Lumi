@@ -1,6 +1,6 @@
 import { Listener, container } from "@sapphire/framework";
 import type { GuildMember } from "discord.js";
-import { RedisKeys } from "#database/redis.js";
+import { RedisKeys, RedisTTL } from "#database/redis.js";
 
 export class QuarantineMemberAddListener extends Listener {
   public constructor(
@@ -20,6 +20,12 @@ export class QuarantineMemberAddListener extends Listener {
     const quarantineState = await container.redis.get(
       RedisKeys.quarantineState(guildId, userId),
     );
+
+    // "0" is a negative-cache sentinel written below when we confirm no active
+    // quarantine. Skip the DB lookup entirely for the overwhelming majority of
+    // joins that involve non-quarantined users.
+    if (quarantineState === "0") return;
+
     let isQuarantined = Boolean(quarantineState);
 
     if (!isQuarantined) {
@@ -30,6 +36,15 @@ export class QuarantineMemberAddListener extends Listener {
       );
       if (activeCases.length > 0) {
         isQuarantined = true;
+      } else {
+        // Cache the negative result for 60 s. The quarantine-application path
+        // writes a positive value that overwrites this, so there is no
+        // window where a user could evade re-quarantine on rejoin.
+        await container.redis.setex(
+          RedisKeys.quarantineState(guildId, userId),
+          RedisTTL.quarantineNegative,
+          "0",
+        );
       }
     }
 
@@ -50,3 +65,4 @@ export class QuarantineMemberAddListener extends Listener {
     }
   }
 }
+

@@ -5,6 +5,11 @@ import { createGuildTransaction } from "#lib/guild-transaction.js";
 vi.mock("@sapphire/framework", () => ({
   container: {
     invalidation: { invalidate: vi.fn().mockResolvedValue(undefined) },
+    db: {
+      config: {
+        invalidateGuildSettings: vi.fn().mockResolvedValue(undefined),
+      },
+    },
   },
 }));
 
@@ -60,6 +65,10 @@ describe("GuildWriteTransaction", () => {
       where: { id: "g-1" },
       data: { prefix: "!" },
     });
+    expect(container.db.config.invalidateGuildSettings).toHaveBeenCalledWith(
+      "g-1",
+      true,
+    );
     expect(txn.locking).toBe(false);
   });
 

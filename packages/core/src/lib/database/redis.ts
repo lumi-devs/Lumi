@@ -9,6 +9,8 @@ export const RedisKeys = {
   guildSettings: (guildId: string) => `lumi:settings:guild:${guildId}`,
   guildConfig: (module: string, guildId: string) =>
     `lumi:cfg:${module}:guild:${guildId}`,
+  guildAllModuleConfigs: (guildId: string) =>
+    `lumi:cfg:all:guild:${guildId}`,
   globalConfig: () => "lumi:cfg:global",
   guildPrefixes: (guildId: string) => `lumi:prefix:guild:${guildId}`,
 
@@ -78,18 +80,12 @@ export const RedisKeys = {
 
   schedulerLeader: () => "lumi:scheduler:leader",
 
-  entityGuild: (guildId: string) => `lumi:ent:guild:${guildId}`,
-  entityChannel: (channelId: string) => `lumi:ent:channel:${channelId}`,
-  entityRole: (roleId: string) => `lumi:ent:role:${roleId}`,
-  entityUser: (userId: string) => `lumi:ent:user:${userId}`,
-  entityMember: (guildId: string, userId: string) =>
-    `lumi:ent:member:${guildId}:${userId}`,
-
   addonUpdateCheck: () => "lumi:addon:update-check",
 } as const;
 
 export const RedisTTL = {
   guildConfig: 60,
+  guildAllModuleConfigs: 60,
   globalConfig: 120,
   guildPrefix: 60,
   permOverrides: 120,
@@ -100,10 +96,10 @@ export const RedisTTL = {
   botStats: 15,
   voiceMute: 300,
   quarantine: 30 * 24 * 60 * 60,
+  quarantineNegative: 60,
   warnThresholds: 300,
   warnCount: 365 * 24 * 3600,
   voiceOccupancy: 24 * 60 * 60,
-  entity: 60 * 60 * 24,
   addonUpdateCheck: 300,
 } as const;
 

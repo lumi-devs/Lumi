@@ -12,6 +12,16 @@ export class AfkRepository extends Repository {
     });
   }
 
+  public findEntries(guildId: string, userIds: string[]): Promise<AfkEntry[]> {
+    if (userIds.length === 0) return Promise.resolve([]);
+    return this.prisma.afkEntry.findMany({
+      where: {
+        guildId,
+        userId: { in: userIds },
+      },
+    });
+  }
+
   public upsertEntry(
     guildId: string,
     userId: string,

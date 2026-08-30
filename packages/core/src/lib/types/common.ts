@@ -61,8 +61,6 @@ declare module "@sapphire/pieces" {
     readonly invalidation: InvalidationBus;
     readonly db: DatabaseRepositories;
     readonly eventBus: EventBus;
-    /** Read-through projection of guilds/channels/roles/members. */
-    readonly entityCache: import("#lib/entity-cache/RedisEntityCache.js").RedisEntityCache;
     readonly moduleStore: ModuleStore;
     readonly permitResolver: import("#lib/permissions/PermitResolver.js").PermitResolver;
 
@@ -82,7 +80,7 @@ declare module "@sapphire/pieces" {
   }
 }
 
-import "@sapphire/plugin-utilities-store";
+
 import type { ServiceStore } from "#lib/module-system/ServiceStore.js";
 
 declare module "@sapphire/framework" {
