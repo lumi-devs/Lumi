@@ -47,7 +47,13 @@ function extractModuleMeta(mod: {
   default?: { meta?: ModuleMeta };
   [key: string]: unknown;
 }): ModuleMeta | undefined {
-  return mod.meta ?? mod.default?.meta;
+  if (mod.meta) return mod.meta;
+  if (mod.default?.meta) return mod.default.meta;
+  for (const v of Object.values(mod)) {
+    const m = (v as { meta?: ModuleMeta } | undefined)?.meta;
+    if (m?.name) return m;
+  }
+  return undefined;
 }
 
 /**
