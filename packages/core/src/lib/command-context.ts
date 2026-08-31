@@ -1,11 +1,11 @@
 import { container, UserError, type Args } from "@sapphire/framework";
 import { fetchT } from "@sapphire/plugin-i18next";
 import {
+  GuildMember,
   MessageFlags,
   type ChatInputCommandInteraction,
   type Guild,
   type GuildBasedChannel,
-  type GuildMember,
   type Message,
   type Role,
   type User,
@@ -159,7 +159,15 @@ export class CommandContext {
     spec: CtxOptionSpec = {},
   ): Promise<GuildMember | null> {
     if (this.isSlash) {
-      const member = this.interaction.options.getMember(name);
+      let member = this.interaction.options.getMember(name);
+      if (!member && typeof this.interaction.options.getUser === "function") {
+        const user = this.interaction.options.getUser(name);
+        if (user && this.interaction.guild) {
+          member =
+            this.interaction.guild.members.cache?.get(user.id) ??
+            (await this.interaction.guild.members.fetch(user.id).catch(() => null));
+        }
+      }
       if (!member && spec.required) throw missingArgument(name);
       return member as GuildMember | null;
     }

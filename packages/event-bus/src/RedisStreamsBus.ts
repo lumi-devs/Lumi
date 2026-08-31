@@ -443,7 +443,9 @@ export class RedisStreamsBus implements EventBus {
     deliveryCount: number,
   ): Promise<void> {
     const dlq = `${stream}:dlq`;
-    const body = fields[1] ?? "";
+    const bIndex = fields.indexOf("b");
+    const body =
+      (bIndex !== -1 && bIndex % 2 === 0 ? fields[bIndex + 1] : fields[1]) ?? "";
     await this.publisher.xadd(
       dlq,
       "MAXLEN",

@@ -38,8 +38,8 @@ export function deriveRepoNameFromUrl(url: string): string {
   // Sanitize any character the `resolver.ts` name regex would reject, then
   // trim leading/trailing hyphens (the regex requires the first character to
   // be alphanumeric or an underscore - never a hyphen).
-  name = name.replace(/[^a-zA-Z0-9_-]/g, "-");
-  name = name.replace(/^-+/, "").replace(/-+$/, "");
+  name = name.replace(/[^a-zA-Z0-9_-]+/g, "-");
+  name = name.replace(/^-+|-+$/g, "");
 
   return name.length > 0 ? name : FALLBACK;
 }
