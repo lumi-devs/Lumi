@@ -24,6 +24,7 @@ import type { Message } from "discord.js";
 import { warnOnCleanupError } from "./cleanup.js";
 import { buildClientOptions } from "./client-options.js";
 import { installContainerServices } from "./container-services.js";
+import { PrefixCache } from "./PrefixCache.js";
 import { ReadinessProbes } from "./ReadinessProbes.js";
 
 /**
@@ -47,11 +48,16 @@ export class LumiClient extends SapphireClient {
   private _rpcServer: Awaited<ReturnType<typeof startRpcHttpServer>> = null;
   private _bullWorker: { on(e: string, fn: (...a: unknown[]) => void): void; off(e: string, fn: (...a: unknown[]) => void): void } | null = null;
   private _bullFailedHandler: ((job: unknown, err: unknown) => void) | null = null;
+  private _prefixCache: PrefixCache = new PrefixCache();
+  private _prefixCacheUnbind: (() => void) | null = null;
 
   public constructor(_options: LumiClient.Options = {}) {
     super(buildClientOptions());
 
     this._ownedEventBus = installContainerServices(this);
+    this._prefixCacheUnbind = this._prefixCache.attachToInvalidationBus(
+      container.invalidation,
+    );
 
     ApplicationCommandRegistries.setDefaultBehaviorWhenNotIdentical(
       RegisterBehavior.Overwrite,
@@ -137,6 +143,10 @@ export class LumiClient extends SapphireClient {
   }
 
   public override async destroy() {
+    if (this._prefixCacheUnbind) {
+      this._prefixCacheUnbind();
+      this._prefixCacheUnbind = null;
+    }
     if (this._livenessInterval) {
       clearInterval(this._livenessInterval);
       this._livenessInterval = null;
@@ -173,13 +183,23 @@ export class LumiClient extends SapphireClient {
     await disconnectDatabase().catch(warnOnCleanupError("Database disconnect"));
   }
 
+  public get prefixCache(): PrefixCache {
+    return this._prefixCache;
+  }
+
   public override fetchPrefix = async (message: Message) => {
     if (message.guild) {
+      const cachedL1 = this._prefixCache.get(message.guild.id);
+      if (cachedL1) return cachedL1;
+
       const cacheKey = RedisKeys.guildPrefixes(message.guild.id);
-      const cached = await container.redis.get(cacheKey);
-      if (cached) {
-        const parsed = tryParseJSON(cached) as string[] | null;
-        if (Array.isArray(parsed)) return parsed;
+      const cachedL2 = await container.redis.get(cacheKey);
+      if (cachedL2) {
+        const parsed = tryParseJSON(cachedL2) as string[] | null;
+        if (Array.isArray(parsed)) {
+          this._prefixCache.set(message.guild.id, parsed);
+          return parsed;
+        }
       }
 
       const settings = await container.db.config.getGuildSettings(
@@ -201,14 +221,20 @@ export class LumiClient extends SapphireClient {
         RedisTTL.guildPrefix,
         JSON.stringify(prefixes),
       );
+      this._prefixCache.set(message.guild.id, prefixes);
       return prefixes;
     }
+
+    const cachedGlobal = this._prefixCache.getGlobal();
+    if (cachedGlobal) return cachedGlobal;
 
     const globalConfig = await container.db.global
       .getGlobalConfig()
       .catch(() => null);
     const envFallback = envParseString("DEFAULT_PREFIX", ",");
-    return globalConfig?.defaultPrefix ?? envFallback;
+    const prefix = globalConfig?.defaultPrefix ?? envFallback;
+    this._prefixCache.setGlobal(prefix);
+    return prefix;
   };
 
   /**
