@@ -261,6 +261,46 @@ describe("RedisStreamsBus", () => {
 
       await stopAndFlush(stop);
     });
+
+    it("recovers from NOGROUP error in xreadgroup by re-creating consumer group", async () => {
+      const bus = createBus();
+      subscriberMock.xreadgroup
+        .mockRejectedValueOnce(new Error("NOGROUP No such key 'stream-1' or consumer group 'g-1'"))
+        .mockResolvedValueOnce([
+          [
+            "stream-1",
+            [["1000-0", ["b", JSON.stringify({ recovered: true })]]],
+          ],
+        ]);
+
+      const handlerSpy = vi.fn().mockImplementation(async (msg) => {
+        await msg.ack();
+      });
+
+      const stop = await bus.consume(
+        ["stream-1"],
+        { group: "g-1", consumer: "c-1", blockMs: 10 },
+        handlerSpy,
+      );
+
+      // Initial ensureGroup call
+      expect(publisherMock.xgroup).toHaveBeenCalledWith(
+        "CREATE",
+        "stream-1",
+        "g-1",
+        "0",
+        "MKSTREAM",
+      );
+
+      await vi.advanceTimersByTimeAsync(600);
+
+      // Second ensureGroup call after NOGROUP error
+      expect(publisherMock.xgroup).toHaveBeenCalledTimes(2);
+      expect(handlerSpy).toHaveBeenCalledTimes(1);
+      expect(handlerSpy.mock.calls[0][0].body).toEqual({ recovered: true });
+
+      await stopAndFlush(stop);
+    });
   });
 
   describe("deliver & error handling / DLQ", () => {
@@ -411,6 +451,7 @@ describe("RedisStreamsBus", () => {
         "sendToDlq failed; leaving entry pending for retry",
         expect.objectContaining({ stream: "stream-1", id: "5000-0" }),
       );
+      expect((bus as any).inFlight.has("stream-1\05000-0")).toBe(false);
     });
 
     it("does not ack a malformed message if the DLQ write itself fails", async () => {
@@ -434,6 +475,7 @@ describe("RedisStreamsBus", () => {
         "sendToDlq failed; leaving entry pending for retry",
         expect.objectContaining({ stream: "stream-1", id: "6000-0" }),
       );
+      expect((bus as any).inFlight.has("stream-1\06000-0")).toBe(false);
     });
 
     it("handles malformed JSON message without crashing consumer read loop", async () => {
@@ -666,6 +708,25 @@ describe("RedisStreamsBus", () => {
       );
 
       await stopAndFlush(stop);
+    });
+
+    it("handles NOGROUP error in runClaim by re-creating consumer group", async () => {
+      const bus = createBus();
+      publisherMock.xautoclaim.mockRejectedValueOnce(
+        new Error("NOGROUP No such key 'stream-1' or consumer group 'g-1'"),
+      );
+
+      await expect(
+        (bus as any).runClaim(["stream-1"], { group: "g-1", consumer: "c-1" }, vi.fn()),
+      ).rejects.toThrow("NOGROUP");
+
+      expect(publisherMock.xgroup).toHaveBeenCalledWith(
+        "CREATE",
+        "stream-1",
+        "g-1",
+        "0",
+        "MKSTREAM",
+      );
     });
   });
 
