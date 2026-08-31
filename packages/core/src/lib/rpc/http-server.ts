@@ -106,9 +106,11 @@ export async function handleRpcHttpRequest(
   return Response.json(res);
 }
 
-export function startRpcHttpServer(
+export async function startRpcHttpServer(
   log: (level: "info" | "warn" | "error", msg: string, meta?: object) => void,
-): ReturnType<typeof Bun.serve> | null {
+  maxAttempts = 3,
+  initialDelayMs = 500,
+): Promise<ReturnType<typeof Bun.serve> | null> {
   const port = envParseInteger("RPC_HTTP_PORT", 8091);
   // Loopback by default: an operator whose dashboard runs in a separate
   // container/pod opts into a routable bind explicitly (see docker-compose.yml,
@@ -116,33 +118,48 @@ export function startRpcHttpServer(
   const host = envParseString("RPC_HTTP_HOST", "127.0.0.1");
   const internalToken = readInternalToken(log);
 
-  try {
-    const server = Bun.serve({
-      hostname: host,
-      port,
-      fetch(req) {
-        return handleRpcHttpRequest(req, internalToken);
-      },
-    });
-    log("info", "[RpcHttp] Internal RPC HTTP server listening", {
-      host,
-      port,
-      authenticated: internalToken !== null,
-    });
-    return server;
-  } catch (err: unknown) {
-    // Mirrors the metrics server's stance: a bind failure here must never
-    // take the worker down.
-    log("error", "[RpcHttp] Failed to start internal RPC HTTP server", {
-      host,
-      port,
-      error: err instanceof Error ? err.message : String(err),
-    });
+  let attempt = 0;
+  while (attempt < maxAttempts) {
+    attempt++;
     try {
-      logError("RpcHttp: Failed to start internal RPC HTTP server", err);
-    } catch {
-      // Container logger may not be available in isolated test environments
+      const server = Bun.serve({
+        hostname: host,
+        port,
+        fetch(req) {
+          return handleRpcHttpRequest(req, internalToken);
+        },
+      });
+      log("info", "[RpcHttp] Internal RPC HTTP server listening", {
+        host,
+        port,
+        authenticated: internalToken !== null,
+      });
+      return server;
+    } catch (err: unknown) {
+      if (attempt < maxAttempts) {
+        const delay = initialDelayMs * Math.pow(2, attempt - 1);
+        log(
+          "warn",
+          `[RpcHttp] Failed to bind internal RPC HTTP server on attempt ${attempt}/${maxAttempts}, retrying in ${delay}ms`,
+          { host, port, error: err instanceof Error ? err.message : String(err) },
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      } else {
+        // Mirrors the metrics server's stance: a bind failure here must never
+        // take the worker down.
+        log("error", "[RpcHttp] Failed to start internal RPC HTTP server", {
+          host,
+          port,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        try {
+          logError("RpcHttp: Failed to start internal RPC HTTP server", err);
+        } catch {
+          // Container logger may not be available in isolated test environments
+        }
+        return null;
+      }
     }
-    return null;
   }
+  return null;
 }

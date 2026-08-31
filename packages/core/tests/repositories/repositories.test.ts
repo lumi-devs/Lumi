@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ModerationRepository } from '#lib/prisma/repositories/ModerationRepository.js';
+import { ConfigRepository } from '#lib/prisma/repositories/ConfigRepository.js';
+import { GuildKVRepository } from '#lib/prisma/repositories/GuildKVRepository.js';
+import { container } from '@sapphire/framework';
 
 describe('ModerationRepository Tests', () => {
   let mockPrisma: any;
@@ -203,5 +206,158 @@ describe('ModerationRepository Tests', () => {
       where: { moderatorId: 'user123' },
       data: { moderatorId: '0' },
     });
+  });
+});
+
+describe('ConfigRepository Batch Operations', () => {
+  let mockPrisma: any;
+  let mockRedis: any;
+  let mockLogger: any;
+  let mockDb: any;
+  let mockInvalidation: any;
+  let repo: ConfigRepository;
+
+  beforeEach(() => {
+    mockPrisma = {
+      $transaction: vi.fn(async (ops: unknown[]) => ops),
+      guildModuleConfig: {
+        findMany: vi.fn(),
+        upsert: vi.fn(),
+      },
+    };
+    mockRedis = {
+      get: vi.fn().mockResolvedValue(null),
+      setex: vi.fn().mockResolvedValue('OK'),
+    };
+    mockLogger = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    mockDb = {};
+    mockInvalidation = {
+      invalidate: vi.fn().mockResolvedValue(undefined),
+    };
+    (container as any).invalidation = mockInvalidation;
+
+    repo = new ConfigRepository(mockPrisma, mockRedis, mockLogger, mockDb);
+  });
+
+  it('getModuleConfigs returns empty object when keys array is empty', async () => {
+    const res = await repo.getModuleConfigs('g1', 'core', []);
+    expect(res).toEqual({});
+    expect(mockPrisma.guildModuleConfig.findMany).not.toHaveBeenCalled();
+  });
+
+  it('getModuleConfigs returns matching keys from cached or fetched config', async () => {
+    mockPrisma.guildModuleConfig.findMany.mockResolvedValue([
+      { configKey: 'prefix', value: '!' },
+      { configKey: 'channel', value: '123' },
+      { configKey: 'role', value: '456' },
+    ]);
+
+    const res = await repo.getModuleConfigs('g1', 'core', ['prefix', 'role', 'missing']);
+    expect(res).toEqual({
+      prefix: '!',
+      role: '456',
+    });
+    expect(mockPrisma.guildModuleConfig.findMany).toHaveBeenCalledWith({
+      where: { guildId: 'g1', moduleName: 'core' },
+    });
+  });
+
+  it('setModuleConfigsMany does nothing when entries object is empty', async () => {
+    await repo.setModuleConfigsMany('g1', 'core', {});
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    expect(mockInvalidation.invalidate).not.toHaveBeenCalled();
+  });
+
+  it('setModuleConfigsMany upserts all entries in single transaction and invalidates caches', async () => {
+    await repo.setModuleConfigsMany('g1', 'core', {
+      prefix: '?',
+      logging: true,
+    });
+
+    expect(mockPrisma.$transaction).toHaveBeenCalled();
+    expect(mockInvalidation.invalidate).toHaveBeenCalledWith(
+      'lumi:cfg:core:guild:g1',
+      'lumi:cfg:all:guild:g1',
+    );
+  });
+});
+
+describe('GuildKVRepository Batch Operations', () => {
+  let mockPrisma: any;
+  let mockRedis: any;
+  let mockLogger: any;
+  let mockDb: any;
+  let repo: GuildKVRepository;
+
+  beforeEach(() => {
+    mockPrisma = {
+      $transaction: vi.fn(async (ops: unknown[]) => ops),
+      moduleData: {
+        findMany: vi.fn(),
+        upsert: vi.fn(),
+      },
+    };
+    mockRedis = {};
+    mockLogger = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    mockDb = {};
+
+    repo = new GuildKVRepository(mockPrisma, mockRedis, mockLogger, mockDb);
+  });
+
+  it('getModuleDataMany returns empty map when targets array is empty', async () => {
+    const res = await repo.getModuleDataMany('g1', 'tags', []);
+    expect(res.size).toBe(0);
+    expect(mockPrisma.moduleData.findMany).not.toHaveBeenCalled();
+  });
+
+  it('getModuleDataMany batches queries and returns map keyed by targetId:key', async () => {
+    mockPrisma.moduleData.findMany.mockResolvedValue([
+      { targetId: 't1', key: 'name', value: 'Alpha' },
+      { targetId: 't2', key: 'name', value: 'Beta' },
+    ]);
+
+    const res = await repo.getModuleDataMany('g1', 'tags', [
+      { targetId: 't1', key: 'name' },
+      { targetId: 't2', key: 'name' },
+    ]);
+
+    expect(res.get('t1:name')).toBe('Alpha');
+    expect(res.get('t2:name')).toBe('Beta');
+    expect(mockPrisma.moduleData.findMany).toHaveBeenCalledWith({
+      where: {
+        guildId: 'g1',
+        moduleName: 'tags',
+        OR: [
+          { targetId: 't1', key: 'name' },
+          { targetId: 't2', key: 'name' },
+        ],
+      },
+    });
+  });
+
+  it('setModuleDataMany returns 0 when entries array is empty', async () => {
+    const count = await repo.setModuleDataMany('g1', 'tags', []);
+    expect(count).toBe(0);
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('setModuleDataMany upserts entries in single transaction and returns count', async () => {
+    const count = await repo.setModuleDataMany('g1', 'tags', [
+      { targetId: 't1', key: 'name', value: 'Alpha' },
+      { targetId: 't2', key: 'name', value: 'Beta' },
+    ]);
+
+    expect(count).toBe(2);
+    expect(mockPrisma.$transaction).toHaveBeenCalled();
   });
 });

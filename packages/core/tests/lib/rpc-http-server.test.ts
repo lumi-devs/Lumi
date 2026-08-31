@@ -284,7 +284,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
       (globalThis as any).Bun = originalBun;
     });
 
-    it("starts server with configured host and port", () => {
+    it("starts server with configured host and port", async () => {
       process.env["RPC_HTTP_HOST"] = "127.0.0.1";
       process.env["RPC_HTTP_PORT"] = "8099";
       process.env["RPC_INTERNAL_TOKEN"] = "my-secret-token";
@@ -293,7 +293,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
       const mockServe = vi.fn().mockReturnValue(mockServer);
       (globalThis as any).Bun = { serve: mockServe };
 
-      const server = startRpcHttpServer(mockLogger);
+      const server = await startRpcHttpServer(mockLogger);
 
       expect(server).toBe(mockServer);
       expect(mockServe).toHaveBeenCalledWith(
@@ -314,7 +314,38 @@ describe("RPC HTTP Server & Auth Verification", () => {
       );
     });
 
-    it("handles server startup error gracefully and logs error", () => {
+    it("retries on bind failure and succeeds on subsequent attempt", async () => {
+      process.env["RPC_HTTP_HOST"] = "127.0.0.1";
+      process.env["RPC_HTTP_PORT"] = "8091";
+
+      const mockServer = { port: 8091, hostname: "127.0.0.1", stop: vi.fn() };
+      let attempts = 0;
+      const mockServe = vi.fn().mockImplementation(() => {
+        attempts++;
+        if (attempts === 1) {
+          throw new Error("EADDRINUSE: address already in use");
+        }
+        return mockServer;
+      });
+      (globalThis as any).Bun = { serve: mockServe };
+
+      const server = await startRpcHttpServer(mockLogger, 3, 10);
+
+      expect(server).toBe(mockServer);
+      expect(mockServe).toHaveBeenCalledTimes(2);
+      expect(mockLogger).toHaveBeenCalledWith(
+        "warn",
+        expect.stringContaining("Failed to bind internal RPC HTTP server on attempt 1/3"),
+        expect.anything(),
+      );
+      expect(mockLogger).toHaveBeenCalledWith(
+        "info",
+        "[RpcHttp] Internal RPC HTTP server listening",
+        expect.anything(),
+      );
+    });
+
+    it("handles server startup error gracefully after all retries fail", async () => {
       process.env["RPC_HTTP_HOST"] = "127.0.0.1";
       process.env["RPC_HTTP_PORT"] = "8091";
 
@@ -323,9 +354,10 @@ describe("RPC HTTP Server & Auth Verification", () => {
       });
       (globalThis as any).Bun = { serve: mockServe };
 
-      const failedServer = startRpcHttpServer(mockLogger);
+      const failedServer = await startRpcHttpServer(mockLogger, 2, 10);
 
       expect(failedServer).toBeNull();
+      expect(mockServe).toHaveBeenCalledTimes(2);
       expect(mockLogger).toHaveBeenCalledWith(
         "error",
         "[RpcHttp] Failed to start internal RPC HTTP server",

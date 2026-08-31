@@ -21,9 +21,11 @@ import { DEFAULT_CLUSTER_NAME, readClusterShards } from "@lumi/sharding";
 export class ReadinessProbes {
   /** Whether the gateway connection is usable. */
   protected readonly isReady: () => boolean;
+  protected readonly isRpcReady?: () => boolean;
 
   public constructor(options: ReadinessProbes.Options) {
     this.isReady = options.isReady;
+    this.isRpcReady = options.isRpcReady;
   }
 
   /** Declares every applicable probe. */
@@ -31,6 +33,7 @@ export class ReadinessProbes {
     this.registerInfrastructureProbes();
     this.registerDiscordProbe();
     this.registerSchedulerProbe();
+    this.registerRpcProbe();
   }
 
   /** Declares the probes shared by every process: the backing services. */
@@ -109,11 +112,22 @@ export class ReadinessProbes {
         : { status: "fail", detail: "tasks store missing" },
     );
   }
+
+  protected registerRpcProbe(): void {
+    if (!isPrimaryShard()) return;
+    registerReadinessProbe("rpc-server", () =>
+      (this.isRpcReady ? this.isRpcReady() : true)
+        ? { status: "ok" }
+        : { status: "fail", detail: "rpc server not running" },
+    );
+  }
 }
 
 export namespace ReadinessProbes {
   export interface Options {
     /** Reads the client's current gateway readiness. */
     isReady: () => boolean;
+    /** Reads the internal RPC HTTP server readiness. */
+    isRpcReady?: () => boolean;
   }
 }

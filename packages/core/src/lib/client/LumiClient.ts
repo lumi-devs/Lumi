@@ -44,7 +44,7 @@ export class LumiClient extends SapphireClient {
   private _livenessInterval: ReturnType<typeof setInterval> | null = null;
   private _ownedEventBus: OwnedEventBus | null = null;
   private _taskFireConsumer: TaskFireConsumer | null = null;
-  private _rpcServer: ReturnType<typeof startRpcHttpServer> = null;
+  private _rpcServer: Awaited<ReturnType<typeof startRpcHttpServer>> = null;
   private _bullWorker: { on(e: string, fn: (...a: unknown[]) => void): void; off(e: string, fn: (...a: unknown[]) => void): void } | null = null;
   private _bullFailedHandler: ((job: unknown, err: unknown) => void) | null = null;
 
@@ -71,7 +71,7 @@ export class LumiClient extends SapphireClient {
     // this process.
     if (isPrimaryShard()) {
       initCoreRpcHandlers();
-      this._rpcServer = startRpcHttpServer((level, msg, meta) =>
+      this._rpcServer = await startRpcHttpServer((level, msg, meta) =>
         container.logger[level](msg, meta),
       );
     }
@@ -130,6 +130,7 @@ export class LumiClient extends SapphireClient {
 
     new ReadinessProbes({
       isReady: () => this.isReady(),
+      isRpcReady: () => !isPrimaryShard() || this._rpcServer !== null,
     }).register();
 
     return result;
