@@ -67,6 +67,8 @@ model Guild {
   tempVcGenerators  TempVcGenerator[]
   tempVcRecords     TempVcRecord[]
   blocklistEntries  Blocklist[]
+  configHistory     ModuleConfigHistory[]
+  configOverrides   ModuleConfigOverride[]
 
   @@map("guilds")
 }
@@ -149,6 +151,7 @@ model PermitAssignment {
 
   @@unique([permitId, targetType, targetId], name: "uq_permit_assignment")
   @@index([guildId, targetType, targetId])
+  @@index([targetType, targetId])
   @@map("permit_assignments")
 }
 
@@ -182,6 +185,8 @@ model ModerationCase {
   @@unique([guildId, caseNumber], name: "uq_cases_guild_number")
   @@index([guildId, userId])
   @@index([guildId, createdAt])
+  @@index([guildId, moderatorId])
+  @@index([guildId, action])
   @@index([userId])
   @@index([moderatorId]) // GDPR anonymization + cross-guild moderator lookups
   @@index([guildId, active, expiresAt]) // per-guild expiry sweep
@@ -211,8 +216,11 @@ model Appeal {
   guild Guild          @relation(fields: [guildId], references: [id], onDelete: Cascade)
   case  ModerationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
+  @@index([guildId, status, createdAt])
+  @@index([guildId, createdAt])
   @@index([guildId, status])
   @@index([userId])
+  @@index([reviewedBy])
   @@map("appeals")
 }
 
@@ -228,7 +236,10 @@ model ModNote {
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
+  @@index([guildId, userId, createdAt])
   @@index([guildId, userId])
+  @@index([userId])
+  @@index([authorId])
   @@map("mod_notes")
 }
 
@@ -244,7 +255,9 @@ model Blocklist {
   guild Guild? @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@unique([userId, guildId], name: "uq_blocklist_user_guild")
+  @@index([guildId, createdAt])
   @@index([guildId])
+  @@index([blockedBy])
   @@map("blocklist")
 }
 
@@ -310,6 +323,7 @@ model DownloaderModule {
   repo DownloaderRepo @relation(fields: [repoId], references: [id], onDelete: Cascade)
 
   @@id([repoId, moduleName])
+  @@index([moduleName])
   @@map("downloader_modules")
 }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -329,6 +343,7 @@ model AuditLedger {
 
   @@index([guildId, createdAt])
   @@index([guildId, userId])
+  @@index([createdAt])
   // GDPR delete/export filter on userId across every guild.
   @@index([userId])
   @@map("audit_ledger")
@@ -346,6 +361,8 @@ model ModuleData {
   value      Json    // The dynamic payload
 
   @@id([guildId, moduleName, targetId, key])
+  @@index([moduleName, key])
+  @@index([targetId])
   @@map("module_dynamic_data")
 }
 
@@ -363,7 +380,12 @@ model ModuleConfigHistory {
   actorId    String   @map("actor_id")   @db.VarChar(20)
   createdAt  DateTime @default(now())    @map("created_at")
 
+  guild      Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
   @@index([guildId, moduleName])
+  @@index([guildId, createdAt])
+  @@index([guildId, moduleName, createdAt])
+  @@index([actorId])
   @@map("module_config_history")
 }
 
@@ -380,8 +402,11 @@ model ModuleConfigOverride {
   modelId    String @map("model_id")    @db.VarChar(20)
   value      Json
 
+  guild      Guild  @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
   @@unique([guildId, moduleName, key, modelType, modelId], name: "uq_config_override")
   @@index([guildId, moduleName])
+  @@index([modelId])
   @@map("module_config_overrides")
 }
 
@@ -416,6 +441,7 @@ model PanicState {
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
+  @@index([actorId])
   @@map("panic_states")
 }
 
