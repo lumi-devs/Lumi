@@ -1,10 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ES2022",
+    "target": "ESNext",
+    "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["ES2022"],
+    "lib": ["ESNext"],
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -24,7 +24,7 @@
     "noUnusedParameters": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
-    "verbatimModuleSyntax": false,
+    "verbatimModuleSyntax": true,
     "incremental": false,
     "noEmit": true
   }
