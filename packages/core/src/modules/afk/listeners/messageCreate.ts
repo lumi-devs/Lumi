@@ -45,8 +45,14 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
     const entry = await getAfkEntry(message.guildId, message.author.id);
     if (entry) {
       const prefixes = await this.container.client.fetchPrefix(message);
-      const prefixList = Array.isArray(prefixes) ? prefixes : [prefixes];
-      const isCommand = prefixList.some((p) => message.content.startsWith(p));
+      const prefixList = prefixes
+        ? Array.isArray(prefixes)
+          ? prefixes
+          : [prefixes]
+        : [];
+      const isCommand = prefixList.some(
+        (p) => typeof p === "string" && message.content.startsWith(p),
+      );
 
       if (
         !isCommand &&
