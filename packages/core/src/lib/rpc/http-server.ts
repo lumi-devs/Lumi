@@ -31,19 +31,19 @@ function digest(value: string): Buffer {
  * Constant-time compare over SHA-256 digests rather than the raw strings, so
  * neither the byte values nor the token *length* leak through timing.
  */
-function tokenMatches(expected: string, presented: string | null): boolean {
+export function tokenMatches(expected: string, presented: string | null): boolean {
   if (!presented) return false;
   return timingSafeEqual(digest(expected), digest(presented));
 }
 
-function presentedToken(req: Request): string | null {
+export function presentedToken(req: Request): string | null {
   const header = req.headers.get(AUTH_HEADER);
   if (!header?.startsWith(BEARER_PREFIX)) return null;
   const value = header.slice(BEARER_PREFIX.length).trim();
   return value.length > 0 ? value : null;
 }
 
-function readInternalToken(
+export function readInternalToken(
   log: (level: "info" | "warn" | "error", msg: string, meta?: object) => void,
 ): string | null {
   const token = process.env["RPC_INTERNAL_TOKEN"]?.trim();
@@ -68,6 +68,44 @@ function readInternalToken(
   return null;
 }
 
+export async function handleRpcHttpRequest(
+  req: Request,
+  internalToken: string | null,
+): Promise<Response> {
+  const { pathname } = new URL(req.url);
+  // Unauthenticated on purpose: liveness/readiness probes have no way to
+  // hold the secret, and it discloses nothing beyond "the process is up".
+  if (req.method === "GET" && pathname === "/healthz") {
+    return new Response("ok");
+  }
+  if (req.method !== "POST" || pathname !== "/rpc") {
+    return new Response("not found", { status: 404 });
+  }
+  if (internalToken && !tokenMatches(internalToken, presentedToken(req))) {
+    return Response.json(
+      { id: "", ok: false, error: "Unauthorized" },
+      { status: 401 },
+    );
+  }
+  let body: RpcRequest<unknown>;
+  try {
+    body = (await req.json()) as RpcRequest<unknown>;
+  } catch {
+    return Response.json(
+      { id: "", ok: false, error: "Malformed JSON body" },
+      { status: 400 },
+    );
+  }
+  if (!body?.action) {
+    return Response.json(
+      { id: body?.id ?? "", ok: false, error: "Missing action" },
+      { status: 400 },
+    );
+  }
+  const res = await dispatchRpc(body);
+  return Response.json(res);
+}
+
 export function startRpcHttpServer(
   log: (level: "info" | "warn" | "error", msg: string, meta?: object) => void,
 ): ReturnType<typeof Bun.serve> | null {
@@ -82,39 +120,8 @@ export function startRpcHttpServer(
     const server = Bun.serve({
       hostname: host,
       port,
-      async fetch(req) {
-        const { pathname } = new URL(req.url);
-        // Unauthenticated on purpose: liveness/readiness probes have no way to
-        // hold the secret, and it discloses nothing beyond "the process is up".
-        if (req.method === "GET" && pathname === "/healthz") {
-          return new Response("ok");
-        }
-        if (req.method !== "POST" || pathname !== "/rpc") {
-          return new Response("not found", { status: 404 });
-        }
-        if (internalToken && !tokenMatches(internalToken, presentedToken(req))) {
-          return Response.json(
-            { id: "", ok: false, error: "Unauthorized" },
-            { status: 401 },
-          );
-        }
-        let body: RpcRequest<unknown>;
-        try {
-          body = (await req.json()) as RpcRequest<unknown>;
-        } catch {
-          return Response.json(
-            { id: "", ok: false, error: "Malformed JSON body" },
-            { status: 400 },
-          );
-        }
-        if (!body?.action) {
-          return Response.json(
-            { id: body?.id ?? "", ok: false, error: "Missing action" },
-            { status: 400 },
-          );
-        }
-        const res = await dispatchRpc(body);
-        return Response.json(res);
+      fetch(req) {
+        return handleRpcHttpRequest(req, internalToken);
       },
     });
     log("info", "[RpcHttp] Internal RPC HTTP server listening", {
@@ -126,7 +133,16 @@ export function startRpcHttpServer(
   } catch (err: unknown) {
     // Mirrors the metrics server's stance: a bind failure here must never
     // take the worker down.
-    logError("[RpcHttp] Failed to start internal RPC HTTP server", err);
+    log("error", "[RpcHttp] Failed to start internal RPC HTTP server", {
+      host,
+      port,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    try {
+      logError("RpcHttp: Failed to start internal RPC HTTP server", err);
+    } catch {
+      // Container logger may not be available in isolated test environments
+    }
     return null;
   }
 }
