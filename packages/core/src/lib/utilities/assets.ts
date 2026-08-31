@@ -6,6 +6,7 @@
  * Use `Emojis.custom('<:name:id>', '🔷')` to resolve a custom emoji with a safe fallback.
  */
 import { join } from "node:path";
+import { parseEmoji } from "discord.js";
 import { errorCode } from "#lib/utilities/errors.js";
 
 const defaultEmojis = {
@@ -108,12 +109,12 @@ export const Emojis = {
    * @param emoji The emoji string to parse
    */
   parse(emoji: string): { name: string; id?: string; animated?: boolean } {
-    const match = emoji.match(/^<(a?):([a-zA-Z0-9_]+):(\d+)>$/);
-    if (match) {
+    const parsed = parseEmoji(emoji);
+    if (parsed && parsed.name) {
       return {
-        animated: match[1] === "a",
-        name: match[2]!,
-        id: match[3],
+        name: parsed.name,
+        ...(parsed.id ? { id: parsed.id } : {}),
+        ...(parsed.animated ? { animated: parsed.animated } : {}),
       };
     }
     return { name: emoji };
