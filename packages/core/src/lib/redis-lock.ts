@@ -100,10 +100,20 @@ export async function acquireRedisLock(
       if (released) return;
       redis
         .eval(REDIS_EXTEND_SCRIPT, 1, key, token, opts.ttlMs.toString())
-        .then(() => {
-          consecutiveRenewFailures = 0;
+        .then((res: unknown) => {
+          if (res === 1) {
+            consecutiveRenewFailures = 0;
+          } else {
+            consecutiveRenewFailures++;
+            const message = `[redis-lock] Failed to renew lock "${key}" (${consecutiveRenewFailures} consecutive failure${consecutiveRenewFailures === 1 ? "" : "s"})`;
+            if (container.logger) {
+              container.logger.error(message);
+            } else {
+              console.error(message);
+            }
+          }
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           consecutiveRenewFailures++;
           const message = `[redis-lock] Failed to renew lock "${key}" (${consecutiveRenewFailures} consecutive failure${consecutiveRenewFailures === 1 ? "" : "s"})`;
           if (container.logger) {
