@@ -1,7 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { container, type Command } from "@sapphire/framework";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
-import { getService } from "lumi";
+import { getUtility } from "lumi";
 import { BaseSubcommand, type CommandContext } from "lumi/commands";
 import { scheduleTask } from "lumi/scheduling";
 import { announceGiveawayEnd } from "../lib/announce.js";
@@ -67,7 +67,7 @@ export default class GiveawayCommand extends BaseSubcommand {
     const durationMs = minutes * 60_000;
     const placeholder = await channel.send({ content: `🎉 **${prize}**\nStarting...` });
 
-    const service = getService("giveaway");
+    const service = getUtility("giveaway");
     const { id } = await service.start({
       guildId: ctx.guildId,
       channelId: channel.id,

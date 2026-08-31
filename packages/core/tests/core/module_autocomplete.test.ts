@@ -2,15 +2,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
 import { ModuleCommand } from "#modules/core/commands/module.js";
 
-vi.mock("#lib/module-system/Service.js", async (importOriginal) => {
+vi.mock("#lib/module-system/Utility.js", async (importOriginal) => {
   const actual: any = await importOriginal();
   return {
     ...actual,
-    getService: vi.fn(),
+    getUtility: vi.fn(),
   };
 });
 
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 
 function makeInteraction(opts: {
   focusedName: string;
@@ -38,7 +38,7 @@ function makeInteraction(opts: {
 describe("ModuleCommand.autocompleteRun", () => {
   let command: ModuleCommand;
   let mockModuleStore: any;
-  let mockDownloaderService: any;
+  let mockDownloaderUtility: any;
 
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -51,7 +51,7 @@ describe("ModuleCommand.autocompleteRun", () => {
       ]),
     };
 
-    mockDownloaderService = {
+    mockDownloaderUtility = {
       listRepos: vi.fn().mockResolvedValue([
         { name: "official" },
         { name: "community" },
@@ -67,8 +67,8 @@ describe("ModuleCommand.autocompleteRun", () => {
       ]),
     };
 
-    (getService as any).mockImplementation((name: string) =>
-      name === "downloader" ? mockDownloaderService : null,
+    (getUtility as any).mockImplementation((name: string) =>
+      name === "downloader" ? mockDownloaderUtility : null,
     );
 
     (container as any).moduleStore = mockModuleStore;
@@ -127,7 +127,7 @@ describe("ModuleCommand.autocompleteRun", () => {
       strings: { repo: "official" },
     });
     await command.autocompleteRun(interaction);
-    expect(mockDownloaderService.getModulesInRepo).toHaveBeenCalledWith("official");
+    expect(mockDownloaderUtility.getModulesInRepo).toHaveBeenCalledWith("official");
     const [choices] = interaction.respond.mock.calls[0]!;
     expect(choices.map((c: any) => c.value)).toEqual(["starboard"]);
   });

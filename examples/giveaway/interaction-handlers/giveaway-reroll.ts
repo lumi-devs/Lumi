@@ -2,7 +2,7 @@ import { userMention } from "@discordjs/formatters";
 import { ApplyOptions } from "@sapphire/decorators";
 import { InteractionHandler, InteractionHandlerTypes, UserError } from "@sapphire/framework";
 import type { StringSelectMenuInteraction } from "discord.js";
-import { getService } from "lumi";
+import { getUtility } from "lumi";
 import { getGiveaway, updateGiveaway } from "../lib/store.js";
 
 @ApplyOptions<InteractionHandler.Options>({
@@ -33,7 +33,7 @@ export default class GiveawayRerollHandler extends InteractionHandler {
 
     await interaction.deferUpdate();
     const count = Number.parseInt(interaction.values[0] ?? "1", 10);
-    const service = getService("giveaway");
+    const service = getUtility("giveaway");
     const winners = await service.pickWinners(interaction.guildId, giveawayId, count);
     const updated = await updateGiveaway(interaction.guildId, giveawayId, { winners });
     if (!updated) return;

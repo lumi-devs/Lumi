@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { FilterMessageListener } from "#modules/filter/listeners/messageCreate.js";
 import { container } from "@sapphire/framework";
-import { getService, tryGetService } from "#lib/module-system/Service.js";
+import { getUtility, tryGetUtility } from "#lib/module-system/Utility.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 
-vi.mock("#lib/module-system/Service.js", () => ({
-  getService: vi.fn(),
-  tryGetService: vi.fn(),
+vi.mock("#lib/module-system/Utility.js", () => ({
+  getUtility: vi.fn(),
+  tryGetUtility: vi.fn(),
 }));
 
 vi.mock("#lib/utilities/temporary-message.js", () => ({
@@ -26,14 +26,14 @@ vi.mock("#lib/commands.js", async (importOriginal) => {
 
 describe("FilterMessageListener", () => {
   let listener: FilterMessageListener;
-  let mockFilterService: any;
-  let mockConfigService: any;
-  let mockGuildLogService: any;
+  let mockFilterUtility: any;
+  let mockConfigUtility: any;
+  let mockGuildLogUtility: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockFilterService = {
+    mockFilterUtility = {
       has: vi.fn().mockReturnValue(true),
       loadGuild: vi.fn().mockResolvedValue(undefined),
       test: vi.fn().mockReturnValue(null),
@@ -42,22 +42,22 @@ describe("FilterMessageListener", () => {
       activateAutoLockdown: vi.fn().mockResolvedValue(true),
     };
 
-    mockConfigService = {
+    mockConfigUtility = {
       getConfigList: vi.fn().mockResolvedValue([]),
     };
 
-    mockGuildLogService = {
+    mockGuildLogUtility = {
       dispatch: vi.fn().mockResolvedValue(undefined),
     };
 
-    (getService as any).mockImplementation((name: string) => {
-      if (name === "filter") return mockFilterService;
-      if (name === "config") return mockConfigService;
+    (getUtility as any).mockImplementation((name: string) => {
+      if (name === "filter") return mockFilterUtility;
+      if (name === "config") return mockConfigUtility;
       return null as any;
     });
 
-    (tryGetService as any).mockImplementation((name: string) => {
-      if (name === "guild-log") return mockGuildLogService;
+    (tryGetUtility as any).mockImplementation((name: string) => {
+      if (name === "guild-log") return mockGuildLogUtility;
       return null as any;
     });
 
@@ -99,11 +99,11 @@ describe("FilterMessageListener", () => {
     };
 
     await (listener as any).handle(mockMessage);
-    expect(mockFilterService.test).not.toHaveBeenCalled();
+    expect(mockFilterUtility.test).not.toHaveBeenCalled();
   });
 
   it("should load guild config if not loaded yet", async () => {
-    mockFilterService.has.mockReturnValue(false);
+    mockFilterUtility.has.mockReturnValue(false);
     const mockMessage = {
       guildId: "G1",
       member: { permissions: { has: vi.fn().mockReturnValue(false) } },
@@ -112,8 +112,8 @@ describe("FilterMessageListener", () => {
     };
 
     await (listener as any).handle(mockMessage);
-    expect(mockFilterService.loadGuild).toHaveBeenCalledWith("G1");
-    expect(mockFilterService.test).toHaveBeenCalledWith("G1", "hello world", 0);
+    expect(mockFilterUtility.loadGuild).toHaveBeenCalledWith("G1");
+    expect(mockFilterUtility.test).toHaveBeenCalledWith("G1", "hello world", 0);
   });
 
   it("should return early if test does not trigger a hit", async () => {
@@ -125,13 +125,13 @@ describe("FilterMessageListener", () => {
     };
 
     await (listener as any).handle(mockMessage);
-    expect(mockFilterService.test).toHaveBeenCalledWith("G1", "clean message", 2);
+    expect(mockFilterUtility.test).toHaveBeenCalledWith("G1", "clean message", 2);
   });
 
   it("should skip action if user has an exempt role", async () => {
     const mockHit = { rule: "badword", detail: "swearing" };
-    mockFilterService.test.mockReturnValue(mockHit);
-    mockConfigService.getConfigList.mockResolvedValue(["role-mod", "role-vip"]);
+    mockFilterUtility.test.mockReturnValue(mockHit);
+    mockConfigUtility.getConfigList.mockResolvedValue(["role-mod", "role-vip"]);
 
     const mockMessage = {
       guildId: "G1",
@@ -150,8 +150,8 @@ describe("FilterMessageListener", () => {
 
   it("should delete message, send warning, timeout member, and log when filter is hit", async () => {
     const mockHit = { rule: "invite", detail: "discord.gg/test" };
-    mockFilterService.test.mockReturnValue(mockHit);
-    mockConfigService.getConfigList.mockResolvedValue([]);
+    mockFilterUtility.test.mockReturnValue(mockHit);
+    mockConfigUtility.getConfigList.mockResolvedValue([]);
 
     container.db.config.getModuleConfig = vi.fn().mockImplementation((_gId, _mod, key) => {
       if (key === "warn_message") return "Hey {user}, no invite links! ({reason})";
@@ -184,7 +184,7 @@ describe("FilterMessageListener", () => {
     expect(mockSend).toHaveBeenCalledWith(expect.stringContaining("<@user-456>"));
     expect(deleteMessageLater).toHaveBeenCalledWith(mockWarnMessageObj, undefined, "Filter: delete warning");
     expect(mockTimeout).toHaveBeenCalledWith(600_000, expect.stringContaining("invite"));
-    expect(mockGuildLogService.dispatch).toHaveBeenCalledWith(
+    expect(mockGuildLogUtility.dispatch).toHaveBeenCalledWith(
       expect.objectContaining({
         guildId: "G1",
         moduleName: "filter",
@@ -196,7 +196,7 @@ describe("FilterMessageListener", () => {
 
   it("should handle error in message delete gracefully via swallow", async () => {
     const mockHit = { rule: "badword", detail: "swear" };
-    mockFilterService.test.mockReturnValue(mockHit);
+    mockFilterUtility.test.mockReturnValue(mockHit);
     container.db.config.getModuleConfig = vi.fn().mockResolvedValue(null);
 
     const mockMessage = {
@@ -218,7 +218,7 @@ describe("FilterMessageListener", () => {
 
   it("should handle empty warn message template without sending warning", async () => {
     const mockHit = { rule: "badword", detail: "swear" };
-    mockFilterService.test.mockReturnValue(mockHit);
+    mockFilterUtility.test.mockReturnValue(mockHit);
     container.db.config.getModuleConfig = vi.fn().mockImplementation((_g, _m, key) => {
       if (key === "warn_message") return "   "; // whitespace resulting in empty string
       return 0; // timeout disabled

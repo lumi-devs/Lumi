@@ -5,7 +5,7 @@ import { ChannelType, type GuildTextBasedChannel } from "discord.js";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { logError } from "#lib/utilities/errors.js";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { buildVerifyPanel } from "../lib/verify-panel.js";
 
 @ApplyOptions<BaseCommand.Options>({
@@ -37,7 +37,7 @@ export class VerifyPanelCommand extends BaseCommand {
     const t = await ctx.fetchT();
     const guild = ctx.guild!;
 
-    const verification = await getService("security").loadVerificationConfig(
+    const verification = await getUtility("security").loadVerificationConfig(
       guild.id,
     );
     if (!verification.enabled || !verification.verifiedRoleId) {

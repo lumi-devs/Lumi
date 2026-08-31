@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { registerRpcHandler } from "#lib/rpc/dispatch.js";
 import {
   RPC_ACTIONS,
@@ -166,7 +166,7 @@ export function initCoreRpcHandlers() {
   registerRpcHandler(RPC_ACTIONS.repoAdd, async (req) => {
     requireBotOwner(req);
     const { name, url, branch } = parsePayload(RepoAddSchema, req.data);
-    const service = getService("downloader");
+    const service = getUtility("downloader");
     const repo = await service.addRepo(name, url, branch || "default");
     return { success: true, repo };
   });
@@ -210,21 +210,21 @@ export function initCoreRpcHandlers() {
       ModuleInstallSchema,
       req.data,
     );
-    await getService("downloader").installModule(repoName, moduleName, revision);
+    await getUtility("downloader").installModule(repoName, moduleName, revision);
     return { success: true, moduleName };
   });
 
   registerRpcHandler(RPC_ACTIONS.moduleUninstall, async (req) => {
     requireBotOwner(req);
     const { moduleName } = parsePayload(ModuleUninstallSchema, req.data);
-    await getService("downloader").uninstallModule(moduleName);
+    await getUtility("downloader").uninstallModule(moduleName);
     return { success: true, moduleName };
   });
 
   registerRpcHandler(RPC_ACTIONS.moduleRollback, async (req) => {
     requireBotOwner(req);
     const { moduleName, revision } = parsePayload(ModuleRollbackSchema, req.data);
-    const result = await getService("downloader").rollbackModule(moduleName, revision);
+    const result = await getUtility("downloader").rollbackModule(moduleName, revision);
     return { success: true, moduleName, commit: result.commit };
   });
 

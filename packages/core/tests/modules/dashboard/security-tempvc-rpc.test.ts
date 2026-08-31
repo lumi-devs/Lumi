@@ -16,7 +16,7 @@ const MESSAGE_ID = "555555555555555555";
 describe("dashboard module security + tempvc RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let guild: any;
-  let services: Map<string, unknown>;
+  let utilities: Map<string, unknown>;
   let security: { enterPanic: ReturnType<typeof vi.fn>; revertPanic: ReturnType<typeof vi.fn> };
   let tempvc: { addGenerator: ReturnType<typeof vi.fn>; removeGenerator: ReturnType<typeof vi.fn> };
 
@@ -60,15 +60,15 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       removeGenerator: vi.fn().mockResolvedValue(true),
     };
 
-    services = new Map<string, unknown>([
+    utilities = new Map<string, unknown>([
       ["security", security],
       ["tempvc", tempvc],
     ]);
 
     container.stores = {
       get: vi.fn((name: string) =>
-        name === "services"
-          ? { get: (key: string) => services.get(key) }
+        name === "utilities"
+          ? { get: (key: string) => utilities.get(key) }
           : { loaded: () => [] },
       ),
     } as any;
@@ -186,7 +186,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
     });
 
     it("throws when the security module is unloaded", async () => {
-      services.delete("security");
+      utilities.delete("security");
 
       await expect(
         call(RPC_ACTIONS.guildPanicSet, { active: true }),
@@ -312,7 +312,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
     });
 
     it("throws when the tempvc module is unloaded", async () => {
-      services.delete("tempvc");
+      utilities.delete("tempvc");
 
       await expect(
         call(RPC_ACTIONS.guildTempVcGeneratorSet, {

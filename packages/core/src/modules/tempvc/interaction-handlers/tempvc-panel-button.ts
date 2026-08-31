@@ -14,7 +14,7 @@ import type {
 import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { Emojis } from "#utilities/assets.js";
 import { makeSuccessCard } from "#utilities/cards.js";
 import { getVcRecord, removeVcRecord } from "#modules/tempvc/data.js";
@@ -24,7 +24,7 @@ import {
   showRenameModal,
 } from "#modules/tempvc/lib/panel-helpers.js";
 import { resolveOwnedVc, resolveVc } from "#modules/tempvc/panel-guard.js";
-import type TempVcService from "#modules/tempvc/services/TempVcService.js";
+import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 import {
   buildBlockView,
   buildDeleteConfirmView,
@@ -41,8 +41,8 @@ import {
   interactionHandlerType: InteractionHandlerTypes.Button,
 })
 export class TempVcPanelButtonHandler extends BaseInteractionHandler {
-  private get service(): TempVcService {
-    return getService("tempvc");
+  private get service(): TempVcUtility {
+    return getUtility("tempvc");
   }
 
   public override parse(interaction: Interaction) {

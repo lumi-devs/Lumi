@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
-import { Service } from "lumi";
+import { Utility } from "lumi";
 import { GiveawayKeys } from "../keys.js";
 import { createGiveaway, getGiveaway, updateGiveaway, type GiveawayRecord } from "../lib/store.js";
 
@@ -16,7 +16,7 @@ interface StartParams {
 }
 
 @ApplyOptions<Piece.Options>({ name: "giveaway" })
-export default class GiveawayService extends Service {
+export default class GiveawayUtility extends Utility {
   public async start(params: StartParams): Promise<{ id: string; record: GiveawayRecord }> {
     const id = randomUUID();
     const record: GiveawayRecord = {
@@ -54,7 +54,7 @@ export default class GiveawayService extends Service {
 }
 
 declare module "lumi" {
-  interface Services {
-    giveaway: GiveawayService;
+  interface Utilities {
+    giveaway: GiveawayUtility;
   }
 }

@@ -2,16 +2,16 @@ import { container } from "@sapphire/framework";
 import { Colors, PermissionsBitField } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
 import { cutText } from "@sapphire/utilities";
-import { getService, tryGetService } from "#lib/module-system/Service.js";
+import { getUtility, tryGetUtility } from "#lib/module-system/Utility.js";
 import type { GuildMessage } from "#lib/types/common.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 import { fetchTyped } from "#lib/commands.js";
 import { getHitReason, type FilterHit } from "./rules.js";
-import type { FilterService } from "../services/FilterService.js";
+import type { FilterUtility } from "../utilities/FilterUtility.js";
 
 export async function isExempt(message: GuildMessage): Promise<boolean> {
-  const exemptRoles = await getService("config").getConfigList(
+  const exemptRoles = await getUtility("config").getConfigList(
     message.guildId,
     "filter",
     "exempt_roles",
@@ -69,7 +69,7 @@ export async function logHit(
   message: GuildMessage,
   hit: FilterHit,
 ): Promise<void> {
-  const logService = tryGetService("guild-log");
+  const logService = tryGetUtility("guild-log");
   await logService?.dispatch({
     guildId: message.guildId,
     moduleName: "filter",
@@ -105,7 +105,7 @@ export async function enforceHit(
  */
 export async function shouldScreen(
   message: GuildMessage,
-  filterService: FilterService,
+  filterService: FilterUtility,
 ): Promise<boolean> {
   if (message.member?.permissions.has(PermissionsBitField.Flags.ManageMessages))
     return false;
@@ -119,7 +119,7 @@ export async function shouldScreen(
 
 export async function runRules(
   message: GuildMessage,
-  filterService: FilterService,
+  filterService: FilterUtility,
   mentionCount: number,
 ): Promise<FilterHit | null> {
   return filterService.test(message.guildId, message.content, mentionCount);

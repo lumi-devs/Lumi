@@ -12,26 +12,26 @@ import type { WorkerRequest, WorkerResponse } from "./protocol.js";
  * Nothing on the event loop is blocked meanwhile - only this message's filtering
  * is delayed.
  */
-export const DEFAULT_EVAL_TIMEOUT_MS = 250;
+export const DefaultEvalTimeoutMs = 250;
 
 /** Budget for a save-time probe, which runs a pattern against nasty inputs. */
-export const DEFAULT_PROBE_TIMEOUT_MS = 250;
+export const DefaultProbeTimeoutMs = 250;
 
 /**
  * Budget for one bulk match batch. Larger than a single evaluation because a
  * batch covers a whole page of messages, but still bounded so a pattern that
  * only misbehaves on real content cannot pin the worker.
  */
-export const DEFAULT_MATCH_TIMEOUT_MS = 1_000;
+export const DefaultMatchTimeoutMs = 1_000;
 
 /** Contents per bulk match request; keeps one batch inside one budget. */
-export const MATCH_BATCH_SIZE = 100;
+export const MatchBatchSize = 100;
 
 /** Consecutive spawn failures after which the handler stops trying. */
-const MAX_SPAWN_FAILURES = 3;
+const MaxSpawnFailures = 3;
 
 /** How long a freshly spawned worker has to announce itself. */
-const READY_TIMEOUT_MS = 10_000;
+const ReadyTimeoutMs = 10_000;
 
 /**
  * An evaluation exceeded its budget. `patternIndex` is the pattern the worker
@@ -102,14 +102,14 @@ export class RegexWorkerHandler {
   #markReady: ((ok: boolean) => void) | null = null;
 
   public constructor(options: RegexWorkerOptions = {}) {
-    this.#evalTimeoutMs = options.evalTimeoutMs ?? DEFAULT_EVAL_TIMEOUT_MS;
-    this.#probeTimeoutMs = options.probeTimeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS;
-    this.#matchTimeoutMs = options.matchTimeoutMs ?? DEFAULT_MATCH_TIMEOUT_MS;
+    this.#evalTimeoutMs = options.evalTimeoutMs ?? DefaultEvalTimeoutMs;
+    this.#probeTimeoutMs = options.probeTimeoutMs ?? DefaultProbeTimeoutMs;
+    this.#matchTimeoutMs = options.matchTimeoutMs ?? DefaultMatchTimeoutMs;
   }
 
   /** False once the worker has failed to spawn too often; callers skip regex rules. */
   public get available(): boolean {
-    return this.#spawnFailures < MAX_SPAWN_FAILURES;
+    return this.#spawnFailures < MaxSpawnFailures;
   }
 
   /**
@@ -176,8 +176,8 @@ export class RegexWorkerHandler {
 
   /**
    * Positions in `contents` matched by `pattern`, evaluated inside the worker
-   * under {@link DEFAULT_MATCH_TIMEOUT_MS}. Callers with more than
-   * {@link MATCH_BATCH_SIZE} items should batch, so one hostile pattern costs
+   * under {@link DefaultMatchTimeoutMs}. Callers with more than
+   * {@link MatchBatchSize} items should batch, so one hostile pattern costs
    * one budget window rather than pinning the worker for the whole scan.
    *
    * Returns null when the worker is unavailable, so callers can fail closed
@@ -251,7 +251,7 @@ export class RegexWorkerHandler {
     const ready = await Promise.race([
       this.#ready ?? Promise.resolve(true),
       new Promise<boolean>((resolve) => {
-        const timer = setTimeout(() => resolve(false), READY_TIMEOUT_MS);
+        const timer = setTimeout(() => resolve(false), ReadyTimeoutMs);
         timer.unref?.();
       }),
     ]);
@@ -269,7 +269,7 @@ export class RegexWorkerHandler {
 
     const entry = resolveWorkerEntry();
     if (!entry) {
-      this.#spawnFailures = MAX_SPAWN_FAILURES;
+      this.#spawnFailures = MaxSpawnFailures;
       container.logger?.error(
         "[RegexWorker] Worker entrypoint not found; regex filter rules are disabled.",
       );

@@ -7,8 +7,8 @@ import { clearAllAfkForUser } from "./data/afk.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleAfkDeleteMessageFire } from "./lib/delete-handler.js";
 
-export const NICK_PREFIX = "[AFK] ";
-export const AFK_MAX_REASON_LENGTH = 100;
+export const NickPrefix = "[AFK] ";
+export const AfkMaxReasonLength = 100;
 
 export function sanitizeReason(reason: string): string {
   const f =
@@ -18,13 +18,13 @@ export function sanitizeReason(reason: string): string {
       .filter((l) => l.length > 0)
       .join(" ")
       .replace(/\s+/g, " ") || "AFK";
-  return cutText(f, AFK_MAX_REASON_LENGTH);
+  return cutText(f, AfkMaxReasonLength);
 }
 
-export const AFK_MENTION_COOLDOWN_MS = 5_000;
-export const AFK_WELCOME_COOLDOWN_MS = 5_000;
-export const AFK_REMOVAL_COOLDOWN_MS = 2_000;
-export const AFK_NICK_EDIT_COOLDOWN_MS = 1_000;
+export const AfkMentionCooldownMs = 5_000;
+export const AfkWelcomeCooldownMs = 5_000;
+export const AfkRemovalCooldownMs = 2_000;
+export const AfkNickEditCooldownMs = 1_000;
 
 export function afkDurationSince(since: Date): string {
   return formatDuration(Date.now() - since.getTime());

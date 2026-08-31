@@ -41,7 +41,7 @@ declare module "@sapphire/plugin-scheduled-tasks" {
   }
 }
 
-/** Modules register per-key invalidation callbacks here instead of patching ConfigService. */
+/** Modules register per-key invalidation callbacks here instead of patching ConfigUtility. */
 export type ConfigChangeHook = (guildId: string, key: string) => Promise<void>;
 
 /**
@@ -81,13 +81,7 @@ declare module "@sapphire/pieces" {
 }
 
 
-import type { ServiceStore } from "#lib/module-system/ServiceStore.js";
-
-declare module "@sapphire/framework" {
-  interface StoreRegistryEntries {
-    services: ServiceStore;
-  }
-}
+import "@sapphire/plugin-utilities-store";
 
 declare module "#lib/env.js" {
   interface Env {

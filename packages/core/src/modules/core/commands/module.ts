@@ -27,8 +27,8 @@ import { registerModuleCommand } from "#modules/core/lib/module-command/registry
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { AutocompleteInteraction } from "discord.js";
-import { getService } from "#lib/module-system/Service.js";
-import type { DownloaderService } from "#lib/services/DownloaderService.js";
+import { getUtility } from "#lib/module-system/Utility.js";
+import type { DownloaderUtility } from "#utilities/DownloaderUtility.js";
 import {
   filterAutocompleteChoices,
   respondWithChoices,
@@ -155,8 +155,8 @@ export class ModuleCommand extends BaseSubcommand {
     );
   }
 
-  private get downloaderService(): DownloaderService {
-    return getService("downloader");
+  private get downloaderService(): DownloaderUtility {
+    return getUtility("downloader");
   }
 
   public async enable(ctx: CommandContext): Promise<void> {

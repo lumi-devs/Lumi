@@ -22,7 +22,7 @@ import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 import { parseDuration, formatDuration } from "#lib/utilities/time.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
 import {
-  MATCH_BATCH_SIZE,
+  MatchBatchSize,
   getRegexWorker,
   validateRegexPattern,
 } from "#lib/regex-worker/index.js";
@@ -45,11 +45,11 @@ class PurgeAbortedError extends Error {
   }
 }
 
-const URL_RE = /https?:\/\/\S+/i;
-const DEFAULT_FILTER_SCAN = 100;
+const UrlRe = /https?:\/\/\S+/i;
+const DefaultFilterScan = 100;
 /** Hard cap on messages fetched while searching for filter matches, so a filter that rarely
  * hits (typo'd regex, inactive user) can't walk an entire channel's history. */
-const MAX_SCAN = 2000;
+const MaxScan = 2000;
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "purge",
@@ -173,7 +173,7 @@ export class PurgeCommand extends BaseSubcommand {
 
   public async user(ctx: CommandContext) {
     const target = await ctx.getUser("user", { required: true });
-    const amount = (await ctx.getInteger("amount")) ?? DEFAULT_FILTER_SCAN;
+    const amount = (await ctx.getInteger("amount")) ?? DefaultFilterScan;
     return this.runPurge(
       ctx,
       amount,
@@ -183,23 +183,23 @@ export class PurgeCommand extends BaseSubcommand {
   }
 
   public async bots(ctx: CommandContext) {
-    const amount = (await ctx.getInteger("amount")) ?? DEFAULT_FILTER_SCAN;
+    const amount = (await ctx.getInteger("amount")) ?? DefaultFilterScan;
     return this.runPurge(ctx, amount, (m) => m.author.bot, "sent by bots");
   }
 
   public async links(ctx: CommandContext) {
-    const amount = (await ctx.getInteger("amount")) ?? DEFAULT_FILTER_SCAN;
+    const amount = (await ctx.getInteger("amount")) ?? DefaultFilterScan;
     return this.runPurge(
       ctx,
       amount,
-      (m) => URL_RE.test(m.content),
+      (m) => UrlRe.test(m.content),
       "containing a link",
     );
   }
 
   public async regex(ctx: CommandContext) {
     const pattern = await ctx.getString("pattern", { required: true });
-    const amount = (await ctx.getInteger("amount")) ?? DEFAULT_FILTER_SCAN;
+    const amount = (await ctx.getInteger("amount")) ?? DefaultFilterScan;
     // The save-time probe only proves the pattern survives a canned corpus;
     // real message content can still trigger catastrophic backtracking. So the
     // match itself runs in the regex worker under a hard budget rather than on
@@ -215,8 +215,8 @@ export class PurgeCommand extends BaseSubcommand {
 
     const batchFilter: MessageBatchFilter = async (messages) => {
       const matched = new Set<string>();
-      for (let i = 0; i < messages.length; i += MATCH_BATCH_SIZE) {
-        const batch = messages.slice(i, i + MATCH_BATCH_SIZE);
+      for (let i = 0; i < messages.length; i += MatchBatchSize) {
+        const batch = messages.slice(i, i + MatchBatchSize);
         const indexes = await getRegexWorker()
           .matchAll(
             pattern!,
@@ -256,7 +256,7 @@ export class PurgeCommand extends BaseSubcommand {
         `Could not parse \`${raw}\` as a duration. Try something like \`10m\`, \`2h\`, or \`1d\`.`,
       );
     }
-    const amount = (await ctx.getInteger("amount")) ?? DEFAULT_FILTER_SCAN;
+    const amount = (await ctx.getInteger("amount")) ?? DefaultFilterScan;
     const cutoff = Date.now() - ms;
     return this.runPurge(
       ctx,
@@ -389,7 +389,7 @@ export class PurgeCommand extends BaseSubcommand {
     };
 
     try {
-      while (remaining > 0 && (!hasFilter || scanned < MAX_SCAN)) {
+      while (remaining > 0 && (!hasFilter || scanned < MaxScan)) {
         const limit = Math.min(remaining, 100);
 
         const fetchOptions: FetchMessagesOptions = {

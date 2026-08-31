@@ -6,7 +6,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { GuildMember, ModalSubmitInteraction } from "discord.js";
 import { fetchTyped } from "#lib/commands.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import {
   ephemeralCard,
   makeErrorCard,
@@ -15,7 +15,7 @@ import {
 import { getVcRecord, patchVcRecord } from "#modules/tempvc/data.js";
 import { TVC } from "#modules/tempvc/keys.js";
 import { resolveOwnedVc } from "#modules/tempvc/panel-guard.js";
-import type TempVcService from "#modules/tempvc/services/TempVcService.js";
+import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 import { buildBackRows, buildPanel } from "#modules/tempvc/ui/panel.js";
 
 const MODAL_KINDS = new Set(["namem", "limitm"]);
@@ -25,8 +25,8 @@ const MODAL_KINDS = new Set(["namem", "limitm"]);
   interactionHandlerType: InteractionHandlerTypes.ModalSubmit,
 })
 export class TempVcPanelModalHandler extends BaseInteractionHandler {
-  private get service(): TempVcService {
-    return getService("tempvc");
+  private get service(): TempVcUtility {
+    return getUtility("tempvc");
   }
 
   public override parse(interaction: ModalSubmitInteraction) {

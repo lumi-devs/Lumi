@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { tryGetService } from "#lib/module-system/Service.js";
+import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 
 /** Sweeps touch the Discord API per guild, so the fan-out stays capped. */
@@ -11,7 +11,7 @@ const SWEEP_CONCURRENCY = 10;
  * whose verification window elapsed.
  */
 export async function handleVerifySweepFire(): Promise<void> {
-  const security = tryGetService("security");
+  const security = tryGetUtility("security");
   if (!security) return;
   const guilds = [...container.client.guilds.cache.values()];
   await mapWithConcurrency(guilds, SWEEP_CONCURRENCY, async (guild) => {

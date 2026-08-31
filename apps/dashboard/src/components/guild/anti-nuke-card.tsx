@@ -18,7 +18,7 @@ const RESPONSE_TONE: Record<NukeResponse, string> = {
 };
 
 // One row per action kind the anti-nuke table exposes a dedicated response
-// for. Matches `KIND_RESPONSE_KEYS` in `SecurityService.ts` — the 3 kinds
+// for. Matches `KIND_RESPONSE_KEYS` in `SecurityUtility.ts` — the 3 kinds
 // without a per-action field there (vanity change, dangerous permission
 // grant, quarantine bypass) aren't editable here yet.
 const ROWS = [

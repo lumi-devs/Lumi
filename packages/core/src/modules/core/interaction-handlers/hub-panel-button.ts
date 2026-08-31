@@ -1,10 +1,10 @@
 import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { restartChoiceRow } from "#lib/restart.js";
-import type { DownloaderService } from "#lib/services/DownloaderService.js";
-import type { GuildSettingsService } from "#lib/services/GuildSettingsService.js";
+import type { DownloaderUtility } from "#utilities/DownloaderUtility.js";
+import type { GuildSettingsUtility } from "#utilities/GuildSettingsUtility.js";
 import {
   accessDenied,
   hasAdminPermit,
@@ -58,8 +58,8 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
     "uninstall",
   ]);
 
-  private get settings(): GuildSettingsService {
-    return getService("guild-settings");
+  private get settings(): GuildSettingsUtility {
+    return getUtility("guild-settings");
   }
 
   public override parse(interaction: ButtonInteraction) {
@@ -123,7 +123,7 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
           targetId &&
           (targetType === "role" || targetType === "user")
         ) {
-          const perms = getService("permissions");
+          const perms = getUtility("permissions");
           await perms
             .unassignPermit(
               interaction.guildId,
@@ -146,7 +146,7 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
           (rest[0] === "custom" || rest[0] === "enforced")
         ) {
           const kind = rest[0];
-          const perms = getService("permissions");
+          const perms = getUtility("permissions");
           const permits = (await perms.listPermits(interaction.guildId)).filter(
             (p) => p.kind === kind,
           );
@@ -521,8 +521,8 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
     );
   }
 
-  private get downloader(): DownloaderService {
-    return getService("downloader");
+  private get downloader(): DownloaderUtility {
+    return getUtility("downloader");
   }
 
   #openPrefixModal(interaction: ButtonInteraction) {

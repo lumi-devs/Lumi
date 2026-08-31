@@ -75,8 +75,8 @@ vi.mock('#lib/schedule-task.js', () => ({
   cancelTask: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('#lib/module-system/Service.js', () => ({
-  tryGetService: vi.fn(() => ({
+vi.mock('#lib/module-system/Utility.js', () => ({
+  tryGetUtility: vi.fn(() => ({
     dispatch: vi.fn()
   }))
 }));

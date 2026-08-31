@@ -1,4 +1,4 @@
-import { Service } from "#lib/module-system/Service.js";
+import { Utility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { type Piece } from "@sapphire/framework";
 import {
@@ -49,7 +49,7 @@ interface ApiCall {
 
 /**
  * The private shape of Sapphire's `ApplicationCommandRegistry` that
- * {@linkcode DownloaderService.syncApplicationCommands} depends on.
+ * {@linkcode DownloaderUtility.syncApplicationCommands} depends on.
  *
  * @remarks
  *
@@ -67,7 +67,7 @@ interface ApiCall {
  *
  * If Sapphire renames or reshapes this field, live addon installs stop
  * publishing their slash commands until the process is restarted;
- * {@linkcode DownloaderService.syncApplicationCommands} degrades to a warning
+ * {@linkcode DownloaderUtility.syncApplicationCommands} degrades to a warning
  * rather than throwing.
  */
 interface RegistryInternal {
@@ -90,12 +90,12 @@ export class ModuleAlreadyInstalledError extends Error {
 }
 
 @ApplyOptions<Piece.Options>({ name: "downloader" })
-export class DownloaderService extends Service {
+export class DownloaderUtility extends Utility {
   public override async onLoad() {
     super.onLoad();
     await this.syncInstalledModulesOnStartup().catch((err) => {
       this.container.logger.error(
-        "[DownloaderService] Failed to sync installed modules on startup:",
+        "[DownloaderUtility] Failed to sync installed modules on startup:",
         err,
       );
     });
@@ -120,7 +120,7 @@ export class DownloaderService extends Service {
         const sourceExists = await pathExists(sourcePath);
         if (!sourceExists) {
           this.container.logger.info(
-            `[DownloaderService] Restoring repo ${item.repo.name} for module ${item.moduleName}...`,
+            `[DownloaderUtility] Restoring repo ${item.repo.name} for module ${item.moduleName}...`,
           );
           await resolver
             .addRepo(
@@ -139,12 +139,12 @@ export class DownloaderService extends Service {
           await fs.symlink(sourcePath, targetPath, "dir");
           restoredAny = true;
           this.container.logger.info(
-            `[DownloaderService] Restored addon symlink for ${item.moduleName}`,
+            `[DownloaderUtility] Restored addon symlink for ${item.moduleName}`,
           );
         }
       } catch (err) {
         this.container.logger.warn(
-          `[DownloaderService] Failed to restore symlink for ${item.moduleName}:`,
+          `[DownloaderUtility] Failed to restore symlink for ${item.moduleName}:`,
           err,
         );
       }
@@ -182,13 +182,13 @@ export class DownloaderService extends Service {
         )
       : await resolver.installModule(repoName, moduleName);
     try {
-      this.container.logger.info("[DownloaderService] Discovering modules...");
+      this.container.logger.info("[DownloaderUtility] Discovering modules...");
       await this.container.moduleStore.discover(true);
       this.container.logger.info(
-        `[DownloaderService] Loading module ${moduleName}...`,
+        `[DownloaderUtility] Loading module ${moduleName}...`,
       );
       await this.container.moduleStore.loadModule(moduleName);
-      this.container.logger.info("[DownloaderService] Syncing commands...");
+      this.container.logger.info("[DownloaderUtility] Syncing commands...");
       await this.syncApplicationCommands();
       await this.container.db.downloader.writeInstalledDownloaderModule(
         repo.id,
@@ -236,7 +236,7 @@ export class DownloaderService extends Service {
     const targetPath = path.join(ADDON_MODULES_ROOT, moduleName);
     await fs.rm(targetPath, { recursive: true, force: true }).catch((err) => {
       this.container.logger.error(
-        `[DownloaderService] failed to remove symlink/directory at ${targetPath}:`,
+        `[DownloaderUtility] failed to remove symlink/directory at ${targetPath}:`,
         err,
       );
     });
@@ -279,7 +279,7 @@ export class DownloaderService extends Service {
     await execFileAsync("git", ["-C", repoPath, "fetch", "origin"]).catch(
       (err: NodeJS.ErrnoException & { stderr?: string }) => {
         this.container.logger.warn(
-          `[DownloaderService] git fetch failed for ${repo.name}; update check uses stale refs: ${(err.stderr ?? err.message).trim()}`,
+          `[DownloaderUtility] git fetch failed for ${repo.name}; update check uses stale refs: ${(err.stderr ?? err.message).trim()}`,
         );
       },
     );
@@ -384,7 +384,7 @@ export class DownloaderService extends Service {
       .then(() => false)
       .catch((err: NodeJS.ErrnoException & { stderr?: string }) => {
         this.container.logger.warn(
-          `[DownloaderService] git fetch failed for ${repo.name}; update check uses stale refs: ${(err.stderr ?? err.message).trim()}`,
+          `[DownloaderUtility] git fetch failed for ${repo.name}; update check uses stale refs: ${(err.stderr ?? err.message).trim()}`,
         );
         return true;
       });
@@ -503,7 +503,7 @@ export class DownloaderService extends Service {
       }
 
       this.container.logger.info(
-        `[DownloaderService] ${moduleName} checked out to ${revision} (${info.commit ?? "unknown"}) at ${repoPath}.`,
+        `[DownloaderUtility] ${moduleName} checked out to ${revision} (${info.commit ?? "unknown"}) at ${repoPath}.`,
       );
       return { updated: true, needsRestart: true };
     }
@@ -536,7 +536,7 @@ export class DownloaderService extends Service {
     );
 
     this.container.logger.info(
-      `[DownloaderService] ${moduleName} updated on disk; restart required to apply.`,
+      `[DownloaderUtility] ${moduleName} updated on disk; restart required to apply.`,
     );
     return { updated: true, changelog, needsRestart: true };
   }
@@ -586,7 +586,7 @@ export class DownloaderService extends Service {
     }
 
     this.container.logger.info(
-      `[DownloaderService] Rolled back ${moduleName} to ${revision} (${info.commit ?? "unknown"}).`,
+      `[DownloaderUtility] Rolled back ${moduleName} to ${revision} (${info.commit ?? "unknown"}).`,
     );
     return { commit: info.commit, needsRestart: true };
   }
@@ -600,7 +600,7 @@ export class DownloaderService extends Service {
         return JSON.parse(cached) as string[];
       } catch {
         this.container.logger.warn(
-          `[DownloaderService] Discarding corrupted update-check cache at ${cacheKey}.`,
+          `[DownloaderUtility] Discarding corrupted update-check cache at ${cacheKey}.`,
         );
       }
     }
@@ -613,7 +613,7 @@ export class DownloaderService extends Service {
         if (check.ok && check.hasUpdate) pending.push(mod.moduleName);
       } catch (err: unknown) {
         this.container.logger.warn(
-          `[DownloaderService] Update check failed for ${mod.moduleName}: ${String(err)}`,
+          `[DownloaderUtility] Update check failed for ${mod.moduleName}: ${String(err)}`,
         );
       }
     }
@@ -711,7 +711,7 @@ export class DownloaderService extends Service {
         await this.uninstallModule(mod.moduleName);
       } catch (err: unknown) {
         this.container.logger.warn(
-          `[DownloaderService] Failed to uninstall ${mod.moduleName} during repo removal:`,
+          `[DownloaderUtility] Failed to uninstall ${mod.moduleName} during repo removal:`,
           err,
         );
       }
@@ -742,7 +742,7 @@ export class DownloaderService extends Service {
     const { client } = this.container;
     if (!client.application) {
       this.container.logger.warn(
-        "[DownloaderService] client.application not ready; slash command sync skipped",
+        "[DownloaderUtility] client.application not ready; slash command sync skipped",
       );
       return;
     }
@@ -757,7 +757,7 @@ export class DownloaderService extends Service {
           await command.registerApplicationCommands(registry);
         } catch (err: unknown) {
           this.container.logger.error(
-            `[DownloaderService] registerApplicationCommands failed for ${command.name}:`,
+            `[DownloaderUtility] registerApplicationCommands failed for ${command.name}:`,
             err,
           );
         }
@@ -787,7 +787,7 @@ export class DownloaderService extends Service {
 
     if (registriesRead === 0 && commandStore.size > 0) {
       this.container.logger.warn(
-        "[DownloaderService] ApplicationCommandRegistry no longer exposes `apiCalls`; slash command sync skipped",
+        "[DownloaderUtility] ApplicationCommandRegistry no longer exposes `apiCalls`; slash command sync skipped",
       );
       return;
     }
@@ -798,11 +798,11 @@ export class DownloaderService extends Service {
           globalData as Parameters<typeof client.application.commands.set>[0],
         );
         this.container.logger.info(
-          `[DownloaderService] Synced ${globalData.length} global application commands.`,
+          `[DownloaderUtility] Synced ${globalData.length} global application commands.`,
         );
       } catch (err: unknown) {
         this.container.logger.error(
-          `[DownloaderService] Failed to sync global application commands: ${String(err)}`,
+          `[DownloaderUtility] Failed to sync global application commands: ${String(err)}`,
         );
       }
     }
@@ -813,19 +813,19 @@ export class DownloaderService extends Service {
           guildId,
         );
         this.container.logger.info(
-          `[DownloaderService] Synced ${data.length} commands for guild ${guildId}.`,
+          `[DownloaderUtility] Synced ${data.length} commands for guild ${guildId}.`,
         );
       } catch (err: unknown) {
         this.container.logger.error(
-          `[DownloaderService] Failed to sync commands for guild ${guildId}: ${String(err)}`,
+          `[DownloaderUtility] Failed to sync commands for guild ${guildId}: ${String(err)}`,
         );
       }
     }
   }
 }
 
-declare module "#lib/module-system/Service.js" {
-  interface Services {
-    downloader: DownloaderService;
+declare module "#lib/module-system/Utility.js" {
+  interface Utilities {
+    downloader: DownloaderUtility;
   }
 }

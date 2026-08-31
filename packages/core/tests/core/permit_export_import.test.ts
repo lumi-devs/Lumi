@@ -2,15 +2,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
 import { PermitCommand } from "#modules/core/commands/permit.js";
 
-vi.mock("#lib/module-system/Service.js", async (importOriginal) => {
+vi.mock("#lib/module-system/Utility.js", async (importOriginal) => {
   const actual: any = await importOriginal();
   return {
     ...actual,
-    getService: vi.fn(),
+    getUtility: vi.fn(),
   };
 });
 
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 
 describe("PermitCommand export/import", () => {
   let command: PermitCommand;
@@ -23,7 +23,7 @@ describe("PermitCommand export/import", () => {
       exportPermits: vi.fn(),
       importPermits: vi.fn(),
     };
-    (getService as any).mockReturnValue(mockPermissionsService);
+    (getUtility as any).mockReturnValue(mockPermissionsService);
 
     (container as any).logger = {
       info: vi.fn(),

@@ -40,6 +40,23 @@ export const commandDuration = new Histogram({
   registers: [registry],
 });
 
+// ── RED: utility piece execution ───────────────────────────────────────────────
+
+export const utilitiesTotal = new Counter({
+  name: "lumi_utilities_total",
+  help: "Utility methods executed, by utility/method/status",
+  labelNames: ["utility", "method", "status"] as const,
+  registers: [registry],
+});
+
+export const utilityDuration = new Histogram({
+  name: "lumi_utility_duration_seconds",
+  help: "Utility method execution latency in seconds",
+  labelNames: ["utility", "method"] as const,
+  buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1, 2],
+  registers: [registry],
+});
+
 // ── Event bus / queue ─────────────────────────────────────────────────────────
 
 export const busEventsPublished = new Counter({

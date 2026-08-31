@@ -1,8 +1,8 @@
 export {
-  DEFAULT_EVAL_TIMEOUT_MS,
-  DEFAULT_MATCH_TIMEOUT_MS,
-  DEFAULT_PROBE_TIMEOUT_MS,
-  MATCH_BATCH_SIZE,
+  DefaultEvalTimeoutMs,
+  DefaultMatchTimeoutMs,
+  DefaultProbeTimeoutMs,
+  MatchBatchSize,
   RegexTimeoutError,
   RegexWorkerHandler,
   RegexWorkerUnavailableError,
@@ -10,4 +10,4 @@ export {
   shutdownRegexWorker,
   type RegexWorkerOptions,
 } from "./RegexWorkerHandler.js";
-export { ADVERSARIAL_INPUTS, validateRegexPattern } from "./validate.js";
+export { AdversarialInputs, validateRegexPattern } from "./validate.js";

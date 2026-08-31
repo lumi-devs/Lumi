@@ -6,10 +6,10 @@ import { CoreVersion } from "#utilities/misc.js";
 import {
   KNOWN_SUBSTORES,
   type ModuleManifest,
-  type TargetService,
+  type TargetUtility,
 } from "@lumi/contracts";
 
-export { KNOWN_SUBSTORES, type ModuleManifest, type TargetService };
+export { KNOWN_SUBSTORES, type ModuleManifest, type TargetUtility };
 
 export const MANIFEST_FILE = "manifest.json";
 
@@ -44,7 +44,7 @@ export async function manifestFromMeta(
     dependencies: meta.dependencies ?? [],
     conflicts: meta.conflicts ?? [],
     configOverrides: meta.configOverrides ?? false,
-    targetService: "worker",
+    targetUtility: "worker",
     subStores: await detectSubStores(dir),
     configFields,
     category: meta.category,

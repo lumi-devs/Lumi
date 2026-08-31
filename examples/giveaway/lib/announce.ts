@@ -1,7 +1,7 @@
 import { userMention } from "@discordjs/formatters";
 import { container } from "@sapphire/framework";
 import { ActionRowBuilder, StringSelectMenuBuilder } from "discord.js";
-import { getService } from "lumi";
+import { getUtility } from "lumi";
 import { getGiveaway } from "./store.js";
 
 // The actual Discord-touching work behind the "giveaway-end" scheduled task.
@@ -12,7 +12,7 @@ export async function announceGiveawayEnd(guildId: string, giveawayId: string): 
   const before = await getGiveaway(guildId, giveawayId);
   if (!before || before.endedAt) return;
 
-  const service = getService("giveaway");
+  const service = getUtility("giveaway");
   const updated = await service.end(guildId, giveawayId);
   if (!updated) return;
 

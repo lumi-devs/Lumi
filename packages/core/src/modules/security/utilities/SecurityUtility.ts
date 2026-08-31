@@ -8,7 +8,7 @@ import {
   type GuildMember,
 } from "discord.js";
 import { isNullish, tryParseJSON, type Awaitable } from "@sapphire/utilities";
-import { Service, tryGetService } from "#lib/module-system/Service.js";
+import { Utility, tryGetUtility } from "#lib/module-system/Utility.js";
 import { RedisKeys } from "#database/redis.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { logToChannel } from "#lib/moderation/log.js";
@@ -180,7 +180,7 @@ function panicLockKey(guildId: string): string {
 }
 
 @ApplyOptions<Piece.Options>({ name: "security" })
-export class SecurityService extends Service {
+export class SecurityUtility extends Utility {
   public async loadAntiNukeConfig(guildId: string): Promise<AntiNukeConfig> {
     const raw = await this.db.config.getAllModuleConfig(guildId, "security");
 
@@ -729,7 +729,7 @@ export class SecurityService extends Service {
     if (isNullish(botUser)) return false;
 
     if (action === "log") {
-      const logService = tryGetService("guild-log");
+      const logService = tryGetUtility("guild-log");
       await logService?.dispatch({
         guildId: guild.id,
         moduleName: "security",
@@ -1046,8 +1046,8 @@ export class SecurityService extends Service {
   }
 }
 
-declare module "#lib/module-system/Service.js" {
-  interface Services {
-    security: SecurityService;
+declare module "#lib/module-system/Utility.js" {
+  interface Utilities {
+    security: SecurityUtility;
   }
 }

@@ -49,7 +49,7 @@ function setupModules(mods: Record<string, ModSpec>, order: string[] = Object.ke
 			emoji: '',
 			description: '',
 			version: '0.0.0',
-			targetService: 'worker' as const,
+			targetUtility: 'worker' as const,
 			subStores: [],
 			configFields: [],
 			...mods[name]

@@ -2,8 +2,8 @@ import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { FieldType } from "#lib/module-system/Module.js";
-import { getService } from "#lib/module-system/Service.js";
-import type { ConfigService } from "#lib/services/ConfigService.js";
+import { getUtility } from "#lib/module-system/Utility.js";
+import type { ConfigUtility } from "#utilities/ConfigUtility.js";
 import {
   configAccessDenied,
   hasPanelAccess,
@@ -41,8 +41,8 @@ import { TextInputStyle, type ButtonInteraction } from "discord.js";
   interactionHandlerType: InteractionHandlerTypes.Button,
 })
 export class ConfigPanelButtonHandler extends BaseInteractionHandler {
-  private get cfg(): ConfigService {
-    return getService("config");
+  private get cfg(): ConfigUtility {
+    return getUtility("config");
   }
 
   public override parse(interaction: ButtonInteraction) {

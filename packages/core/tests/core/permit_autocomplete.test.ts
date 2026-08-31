@@ -2,15 +2,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
 import { PermitCommand } from "#modules/core/commands/permit.js";
 
-vi.mock("#lib/module-system/Service.js", async (importOriginal) => {
+vi.mock("#lib/module-system/Utility.js", async (importOriginal) => {
   const actual: any = await importOriginal();
   return {
     ...actual,
-    getService: vi.fn(),
+    getUtility: vi.fn(),
   };
 });
 
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 
 function makeInteraction(opts: {
   guildId?: string | null;
@@ -50,7 +50,7 @@ describe("PermitCommand.autocompleteRun", () => {
       listPermits: vi.fn().mockResolvedValue([]),
       findPermitByName: vi.fn().mockResolvedValue(null),
     };
-    (getService as any).mockImplementation((name: string) =>
+    (getUtility as any).mockImplementation((name: string) =>
       name === "permissions" ? mockPermissions : null,
     );
     (container as any).client = { options: {} } as any;

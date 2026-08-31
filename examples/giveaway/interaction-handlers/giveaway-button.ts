@@ -1,7 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { InteractionHandler, InteractionHandlerTypes, UserError } from "@sapphire/framework";
 import { MessageFlags, type ButtonInteraction } from "discord.js";
-import { getService } from "lumi";
+import { getUtility } from "lumi";
 import { makeSuccessCard } from "lumi/ui";
 import { showEditPrizeModal } from "../lib/modals.js";
 import { getGiveaway } from "../lib/store.js";
@@ -47,7 +47,7 @@ export default class GiveawayButtonHandler extends InteractionHandler {
     }
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2 });
-    const service = getService("giveaway");
+    const service = getUtility("giveaway");
     const count = await service.enter(interaction.guildId, giveawayId, interaction.user.id);
     await interaction.editReply(
       makeSuccessCard("You're Entered!", `Good luck! ${count} ${count === 1 ? "person has" : "people have"} entered so far.`),

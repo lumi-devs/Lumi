@@ -3,7 +3,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { Colors, roleMention, type GuildMember } from "discord.js";
 import { userMention } from "@discordjs/formatters";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { tryGetService } from "#lib/module-system/Service.js";
+import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { isSuspiciousAccount } from "../lib/suspicious.js";
 
 @ApplyOptions<ModuleListener.Options>({
@@ -16,7 +16,7 @@ export class SecurityMemberJoinListener extends ModuleListener<
 > {
   protected async handle(member: GuildMember): Promise<void> {
     if (member.user.bot) return;
-    const security = tryGetService("security");
+    const security = tryGetUtility("security");
     if (!security) return;
 
     const verification = await security.loadVerificationConfig(member.guild.id);
@@ -50,7 +50,7 @@ export class SecurityMemberJoinListener extends ModuleListener<
       this.container.logger.warn(
         `[security] Raid mode activated in ${member.guild.id}: ${config.raidJoinCount}+ joins in ${config.raidWindowSeconds}s`,
       );
-      const logService = tryGetService("guild-log");
+      const logService = tryGetUtility("guild-log");
       const warnMentions = config.raidWarnRoleIds.map((id) => roleMention(id)).join(" ");
       await logService?.dispatch({
         guildId: member.guild.id,

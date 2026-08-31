@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
 import { ModuleCommand } from "#modules/core/commands/module.js";
-import { ModuleAlreadyInstalledError } from "#lib/services/DownloaderService.js";
+import { ModuleAlreadyInstalledError } from "#utilities/DownloaderUtility.js";
 
-vi.mock("#lib/module-system/Service.js", async (importOriginal) => {
+vi.mock("#lib/module-system/Utility.js", async (importOriginal) => {
   const actual: any = await importOriginal();
   return {
     ...actual,
-    getService: vi.fn(),
+    getUtility: vi.fn(),
   };
 });
 
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 
 /** Extracts the rendered text content of a CardReply (title + body) for content assertions. */
 function cardText(card: any): string {
@@ -21,7 +21,7 @@ function cardText(card: any): string {
 describe("ModuleCommand", () => {
   let command: ModuleCommand;
   let mockModuleStore: any;
-  let mockDownloaderService: any;
+  let mockDownloaderUtility: any;
   let mockStores: any;
 
   beforeEach(() => {
@@ -117,7 +117,7 @@ describe("ModuleCommand", () => {
       reload: vi.fn().mockResolvedValue(undefined),
     };
 
-    mockDownloaderService = {
+    mockDownloaderUtility = {
       installModule: vi.fn().mockResolvedValue(undefined),
       uninstallModule: vi.fn().mockResolvedValue(undefined),
       updateModule: vi.fn().mockResolvedValue({ updated: true, needsRestart: false }),
@@ -125,8 +125,8 @@ describe("ModuleCommand", () => {
       getInstalledModules: vi.fn().mockResolvedValue([]),
     };
 
-    (getService as any).mockImplementation((svcName: string) => {
-      if (svcName === "downloader") return mockDownloaderService;
+    (getUtility as any).mockImplementation((svcName: string) => {
+      if (svcName === "downloader") return mockDownloaderUtility;
       return null;
     });
 
@@ -310,11 +310,11 @@ describe("ModuleCommand", () => {
       const ctx = createMockCtx({ repo: "official", module: "economy", isSlash: false });
       await command.install(ctx as any);
       expect(ctx.reply).toHaveBeenCalledTimes(2); // Initial info card + success card
-      expect(mockDownloaderService.installModule).toHaveBeenCalledWith("official", "economy");
+      expect(mockDownloaderUtility.installModule).toHaveBeenCalledWith("official", "economy");
     });
 
     it("should handle ModuleAlreadyInstalledError with update button option", async () => {
-      mockDownloaderService.installModule.mockRejectedValue(new ModuleAlreadyInstalledError("economy"));
+      mockDownloaderUtility.installModule.mockRejectedValue(new ModuleAlreadyInstalledError("economy"));
       const ctx = createMockCtx({ repo: "official", module: "economy", isSlash: true });
       await command.install(ctx as any);
       expect(ctx.reply).toHaveBeenCalledWith(
@@ -329,7 +329,7 @@ describe("ModuleCommand", () => {
     });
 
     it("should handle generic install error", async () => {
-      mockDownloaderService.installModule.mockRejectedValue(new Error("Git clone failed"));
+      mockDownloaderUtility.installModule.mockRejectedValue(new Error("Git clone failed"));
       const ctx = createMockCtx({ repo: "official", module: "economy", isSlash: true });
       await command.install(ctx as any);
       expect(container.logger.warn).toHaveBeenCalled();
@@ -343,12 +343,12 @@ describe("ModuleCommand", () => {
     it("should uninstall third-party module successfully", async () => {
       const ctx = createMockCtx({ module: "economy", isSlash: false });
       await command.uninstall(ctx as any);
-      expect(mockDownloaderService.uninstallModule).toHaveBeenCalledWith("economy");
+      expect(mockDownloaderUtility.uninstallModule).toHaveBeenCalledWith("economy");
       expect(ctx.reply).toHaveBeenCalledTimes(2);
     });
 
     it("should handle uninstall failure", async () => {
-      mockDownloaderService.uninstallModule.mockRejectedValue(new Error("Module not found on disk"));
+      mockDownloaderUtility.uninstallModule.mockRejectedValue(new Error("Module not found on disk"));
       const ctx = createMockCtx({ module: "economy", isSlash: true });
       await command.uninstall(ctx as any);
       expect(container.logger.warn).toHaveBeenCalled();
@@ -363,7 +363,7 @@ describe("ModuleCommand", () => {
       const ctx = createMockCtx({ module: "afk", isSlash: false });
       await command.reloadModuleCmd(ctx as any);
       expect(mockModuleStore.reload).toHaveBeenCalledWith("afk");
-      expect(mockDownloaderService.syncApplicationCommands).toHaveBeenCalled();
+      expect(mockDownloaderUtility.syncApplicationCommands).toHaveBeenCalled();
       expect(container.logger.info).toHaveBeenCalled();
     });
 
@@ -380,27 +380,27 @@ describe("ModuleCommand", () => {
 
   describe("update subcommand", () => {
     it("should update single module when module parameter is passed", async () => {
-      mockDownloaderService.updateModule.mockResolvedValue({ updated: true, needsRestart: true });
+      mockDownloaderUtility.updateModule.mockResolvedValue({ updated: true, needsRestart: true });
       const ctx = createMockCtx({ module: "afk", isSlash: false });
       await command.update(ctx as any);
-      expect(mockDownloaderService.updateModule).toHaveBeenCalledWith("afk");
+      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith("afk");
       expect(ctx.reply).toHaveBeenCalledTimes(2);
     });
 
     it("should handle error during single module update", async () => {
-      mockDownloaderService.updateModule.mockRejectedValue(new Error("Network error"));
+      mockDownloaderUtility.updateModule.mockRejectedValue(new Error("Network error"));
       const ctx = createMockCtx({ module: "afk", isSlash: true });
       await command.update(ctx as any);
       expect(ctx.reply).toHaveBeenCalled();
     });
 
     it("should update all modules when module parameter is omitted", async () => {
-      mockDownloaderService.getInstalledModules.mockResolvedValue([
+      mockDownloaderUtility.getInstalledModules.mockResolvedValue([
         { moduleName: "economy" },
         { moduleName: "music" },
         { moduleName: "levels" },
       ]);
-      mockDownloaderService.updateModule
+      mockDownloaderUtility.updateModule
         .mockResolvedValueOnce({ updated: true, needsRestart: true }) // economy
         .mockResolvedValueOnce({ updated: false, needsRestart: false }) // music
         .mockRejectedValueOnce(new Error("Git pull failed")); // levels
@@ -408,14 +408,14 @@ describe("ModuleCommand", () => {
       const ctx = createMockCtx({ module: null, isSlash: false });
       await command.update(ctx as any);
 
-      expect(mockDownloaderService.updateModule).toHaveBeenCalledWith("economy");
-      expect(mockDownloaderService.updateModule).toHaveBeenCalledWith("music");
-      expect(mockDownloaderService.updateModule).toHaveBeenCalledWith("levels");
+      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith("economy");
+      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith("music");
+      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith("levels");
       expect(ctx.reply).toHaveBeenCalledTimes(2);
     });
 
     it("should warn when no third-party modules are installed for multi-update", async () => {
-      mockDownloaderService.getInstalledModules.mockResolvedValue([]);
+      mockDownloaderUtility.getInstalledModules.mockResolvedValue([]);
       const ctx = createMockCtx({ module: null, isSlash: true });
       await command.update(ctx as any);
       const text = cardText(ctx.reply.mock.calls.at(-1)![0]);
@@ -424,7 +424,7 @@ describe("ModuleCommand", () => {
     });
 
     it("should handle error in runAllModulesUpdate when getInstalledModules fails", async () => {
-      mockDownloaderService.getInstalledModules.mockRejectedValue(new Error("Database offline"));
+      mockDownloaderUtility.getInstalledModules.mockRejectedValue(new Error("Database offline"));
       const ctx = createMockCtx({ module: null, isSlash: true });
       await command.update(ctx as any);
       const text = cardText(ctx.reply.mock.calls.at(-1)![0]);

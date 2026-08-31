@@ -32,8 +32,8 @@ vi.mock('@sapphire/framework', () => ({
   }
 }));
 
-vi.mock('#lib/module-system/Service.js', () => ({
-  tryGetService: vi.fn(() => ({
+vi.mock('#lib/module-system/Utility.js', () => ({
+  tryGetUtility: vi.fn(() => ({
     dispatch: vi.fn()
   }))
 }));

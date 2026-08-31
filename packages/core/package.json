@@ -52,6 +52,7 @@
     "@sapphire/plugin-logger": "^4.1.0",
     "@sapphire/plugin-scheduled-tasks": "^10.0.4",
     "@sapphire/plugin-subcommands": "^7.0.1",
+    "@sapphire/plugin-utilities-store": "^2.0.3",
     "@sapphire/ratelimits": "^2.4.11",
     "@sapphire/shapeshift": "^5.0.0",
     "@sapphire/snowflake": "^3.5.5",

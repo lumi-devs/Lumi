@@ -4,8 +4,8 @@ import type { Guild } from "@prisma/client";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import { acquireRedisLock, verifyRedisLock } from "#lib/redis-lock.js";
 
-const GUILD_LOCK = (guildId: string) => `lumi:lock:guild:${guildId}`;
-const CONFIG_LOCK = (guildId: string, moduleName: string) =>
+const GuildLock = (guildId: string) => `lumi:lock:guild:${guildId}`;
+const ConfigLock = (guildId: string, moduleName: string) =>
   `lumi:lock:cfg:${moduleName}:${guildId}`;
 
 export async function configLock(
@@ -14,7 +14,7 @@ export async function configLock(
 ): Promise<() => void> {
   const { release } = await acquireRedisLock(
     container.redis,
-    CONFIG_LOCK(guildId, moduleName),
+    ConfigLock(guildId, moduleName),
     { ttlMs: 10_000, acquireTimeoutMs: 20_000 },
   );
   return () => {
@@ -65,7 +65,7 @@ export class GuildWriteTransaction {
     }
 
     try {
-      const key = GUILD_LOCK(this.guildId);
+      const key = GuildLock(this.guildId);
       const stillHeld = await verifyRedisLock(this.redis, key, this.lockToken);
       if (!stillHeld) {
         throw new Error(
@@ -115,7 +115,7 @@ export async function createGuildTransaction(
   redis: RedisClient,
   prisma: DatabaseClient,
 ): Promise<GuildWriteTransaction> {
-  const { release, token } = await acquireRedisLock(redis, GUILD_LOCK(guildId), {
+  const { release, token } = await acquireRedisLock(redis, GuildLock(guildId), {
     ttlMs: 15_000,
     acquireTimeoutMs: 30_000,
   });

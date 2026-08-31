@@ -1,6 +1,6 @@
 import type { BadgeColor } from "./types.js";
 
-const BADGE_MARKS: Record<BadgeColor, string> = {
+const BadgeMarks: Record<BadgeColor, string> = {
   green: "🟢",
   red: "🔴",
   yellow: "🟡",
@@ -10,7 +10,7 @@ const BADGE_MARKS: Record<BadgeColor, string> = {
 };
 
 export function badge(label: string, color: BadgeColor = "grey"): string {
-  return `${BADGE_MARKS[color]} \`${label}\``;
+  return `${BadgeMarks[color]} \`${label}\``;
 }
 
 export function formatStatusBadge(status: string, label?: string): string {

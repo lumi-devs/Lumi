@@ -2,7 +2,7 @@ import { Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { AuditLogEvent, type GuildMember } from "discord.js";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { tryGetService } from "#lib/module-system/Service.js";
+import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { resolveAuditLogExecutor } from "../lib/audit.js";
 
@@ -32,7 +32,7 @@ export class SecurityGuildMemberUpdateListener extends ModuleListener<
     const after = roleSet(newMember);
     if (sameRoles(before, after)) return;
 
-    const security = tryGetService("security");
+    const security = tryGetUtility("security");
     if (!security) return;
     if (!(await security.isQuarantined(newMember.guild.id, newMember.id))) return;
 

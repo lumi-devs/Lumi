@@ -9,7 +9,7 @@ import {
 import { verifyAppealToken } from "#lib/appeals/token.js";
 import type { ModerationCase } from "@prisma/client";
 import { s, type BaseValidator } from "@sapphire/shapeshift";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { ChannelType, type Guild } from "discord.js";
 
 /** Channel types sensible to offer in a CHANNEL config picker by default (no threads, no categories). */
@@ -82,7 +82,7 @@ export function cachedGuild(guildId: string): Guild {
 /**
  * One-shot guided bootstrap for the dashboard setup wizard: creates the
  * quarantine role and log channels a fresh guild needs and flips Anti-Nuke/Join
- * Gate on, reusing the same config write path (`ConfigService.setConfig`) as
+ * Gate on, reusing the same config write path (`ConfigUtility.setConfig`) as
  * every other dashboard mutation rather than writing to Postgres directly.
  * Idempotent — re-running it on an already-configured guild reuses what's
  * there instead of duplicating roles/channels or re-flipping settings that
@@ -92,7 +92,7 @@ export async function runGuildSetup(
   guild: Guild,
   actorId: string | undefined,
 ): Promise<GuildSetupRunResult> {
-  const config = getService("config");
+  const config = getUtility("config");
 
   const existingQuarantineRoleId = await container.db.config.getModuleConfig(
     guild.id,

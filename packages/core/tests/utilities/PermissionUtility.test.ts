@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
-import { PermissionService } from "#lib/services/PermissionService.js";
+import { PermissionUtility } from "#utilities/PermissionUtility.js";
 
-describe("PermissionService", () => {
-  let service: PermissionService;
+describe("PermissionUtility", () => {
+  let service: PermissionUtility;
   let mockPermissions: any;
 
   beforeEach(() => {
@@ -23,8 +23,8 @@ describe("PermissionService", () => {
 
     (container as any).db = { permissions: mockPermissions } as any;
 
-    service = new PermissionService(
-      { name: "permissions", store: { name: "services" } } as any,
+    service = new PermissionUtility(
+      { name: "permissions", store: { name: "utilities" } } as any,
       {},
     );
   });

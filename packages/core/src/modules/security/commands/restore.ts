@@ -2,7 +2,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { time, TimestampStyles } from "@discordjs/formatters";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "restore",
@@ -60,7 +60,7 @@ export class RestoreCommand extends BaseSubcommand {
   public async latest(ctx: CommandContext) {
     await ctx.defer();
     const guild = ctx.guild!;
-    const security = getService("security");
+    const security = getUtility("security");
 
     const result = await security.restoreFromBackup(guild);
     if (!result) {

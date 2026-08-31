@@ -9,7 +9,7 @@
   "dependencies": [],
   "conflicts": [],
   "configOverrides": true,
-  "targetService": "worker",
+  "targetUtility": "worker",
   "subStores": [],
   "configFields": [],
   "category": "System"

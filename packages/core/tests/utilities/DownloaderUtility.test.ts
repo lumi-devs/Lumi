@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { DownloaderService, ModuleAlreadyInstalledError } from "#lib/services/DownloaderService.js";
+import { DownloaderUtility, ModuleAlreadyInstalledError } from "#utilities/DownloaderUtility.js";
 import { container } from "@sapphire/framework";
 import { resolver } from "#lib/downloader/resolver.js";
 import { promises as fs } from "node:fs";
@@ -37,8 +37,8 @@ vi.mock("node:child_process", () => ({
   },
 }));
 
-describe("DownloaderService", () => {
-  let service: DownloaderService;
+describe("DownloaderUtility", () => {
+  let service: DownloaderUtility;
   let mockDb: any;
   let mockModuleStore: any;
   let mockLogger: any;
@@ -105,8 +105,8 @@ describe("DownloaderService", () => {
       get: vi.fn().mockReturnValue(mockCommandStore),
     } as any;
 
-    service = new DownloaderService(
-      { name: "downloader", store: { name: "services" } } as any,
+    service = new DownloaderUtility(
+      { name: "downloader", store: { name: "utilities" } } as any,
       {}
     );
   });
@@ -126,7 +126,7 @@ describe("DownloaderService", () => {
       await service.onLoad();
       expect(syncSpy).toHaveBeenCalled();
       expect(mockLogger.error).toHaveBeenCalledWith(
-        "[DownloaderService] Failed to sync installed modules on startup:",
+        "[DownloaderUtility] Failed to sync installed modules on startup:",
         expect.any(Error)
       );
     });
@@ -179,7 +179,7 @@ describe("DownloaderService", () => {
       await service.syncInstalledModulesOnStartup();
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        "[DownloaderService] Failed to restore symlink for mod1:",
+        "[DownloaderUtility] Failed to restore symlink for mod1:",
         expect.any(Error)
       );
     });
@@ -559,7 +559,7 @@ describe("DownloaderService", () => {
 
       expect(res).toEqual(["modA"]);
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.stringContaining("[DownloaderService] Update check failed for modB:")
+        expect.stringContaining("[DownloaderUtility] Update check failed for modB:")
       );
       expect(mockRedis.setex).toHaveBeenCalledWith(
         "lumi:addon:update-check",
@@ -630,7 +630,7 @@ describe("DownloaderService", () => {
       container.client = {} as any;
       await service.syncApplicationCommands();
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        "[DownloaderService] client.application not ready; slash command sync skipped"
+        "[DownloaderUtility] client.application not ready; slash command sync skipped"
       );
     });
 

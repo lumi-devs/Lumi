@@ -17,8 +17,8 @@ import {
 import { ephemeralCard } from "#lib/utilities/cards.js";
 import { paginateList } from "#lib/utilities/pagination.js";
 import { getMaxGenerators } from "../index.js";
-import { getService } from "#lib/module-system/Service.js";
-import type TempVcService from "../services/TempVcService.js";
+import { getUtility } from "#lib/module-system/Utility.js";
+import type TempVcUtility from "../utilities/TempVcUtility.js";
 import { getVcRecord } from "../data.js";
 import { buildPanel } from "../ui/panel.js";
 
@@ -107,8 +107,8 @@ export class TempVcCommand extends BaseSubcommand {
     );
   }
 
-  private get tempVcService(): TempVcService {
-    return getService("tempvc");
+  private get tempVcService(): TempVcUtility {
+    return getUtility("tempvc");
   }
 
   public async chatInputPanel(

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
-import { Service, getService, tryGetService } from "#lib/module-system/Service.js";
+import { Utility, getUtility, tryGetUtility } from "#lib/module-system/Utility.js";
 import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
 
-class DummyService extends Service {
+class DummyUtility extends Utility {
   public testAccessors() {
     return {
       logger: this.logger,
@@ -36,7 +36,7 @@ class FailingReconcileModule extends Module {
   }
 }
 
-describe("module-system Service and Module", () => {
+describe("module-system Utility and Module", () => {
   beforeEach(() => {
     container.logger = {
       info: vi.fn(),
@@ -48,35 +48,35 @@ describe("module-system Service and Module", () => {
     (container as any).db = { dummyDb: true } as any;
     (container as any).redis = { dummyRedis: true } as any;
 
-    const mockServicesStore = new Map();
+    const mockUtilitiesStore = new Map();
     container.stores = {
       get: (storeName: string) => {
-        if (storeName === "services") return mockServicesStore;
+        if (storeName === "utilities") return mockUtilitiesStore;
         return null;
       },
     } as any;
   });
 
-  describe("Service", () => {
-    it("accesses container services via getters", () => {
-      const service = new DummyService({} as any, { name: "dummy" });
-      const accessors = service.testAccessors();
+  describe("Utility", () => {
+    it("accesses container utilities via getters", () => {
+      const utility = new DummyUtility({} as any, { name: "dummy" });
+      const accessors = utility.testAccessors();
 
       expect(accessors.logger).toBe(container.logger);
       expect(accessors.db).toBe(container.db);
       expect(accessors.redis).toBe(container.redis);
     });
 
-    it("fetches service with tryGetService and throws on getService if missing", () => {
-      const mockStore = container.stores.get("services") as Map<string, any>;
-      const dummyServiceInstance = new DummyService({} as any, { name: "dummy" });
-      mockStore.set("dummy", dummyServiceInstance);
+    it("fetches utility with tryGetUtility and throws on getUtility if missing", () => {
+      const mockStore = container.stores.get("utilities") as Map<string, any>;
+      const dummyUtilityInstance = new DummyUtility({} as any, { name: "dummy" });
+      mockStore.set("dummy", dummyUtilityInstance);
 
-      expect(tryGetService("dummy" as any)).toBe(dummyServiceInstance);
-      expect(getService("dummy" as any)).toBe(dummyServiceInstance);
+      expect(tryGetUtility("dummy" as any)).toBe(dummyUtilityInstance);
+      expect(getUtility("dummy" as any)).toBe(dummyUtilityInstance);
 
-      expect(tryGetService("nonexistent" as any)).toBeUndefined();
-      expect(() => getService("nonexistent" as any)).toThrow('Service "nonexistent" is not loaded');
+      expect(tryGetUtility("nonexistent" as any)).toBeUndefined();
+      expect(() => getUtility("nonexistent" as any)).toThrow('Utility "nonexistent" is not loaded');
     });
   });
 

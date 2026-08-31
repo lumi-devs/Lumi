@@ -1,5 +1,5 @@
 import type { LumiT } from "#lib/i18n/index.js";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { hasRequiredPermit, PermitResolver } from "#lib/permissions/index.js";
 import { loadFeatures } from "#modules/core/lib/config-panel.js";
 import { buildAddonRepoModulesView } from "#modules/core/ui/addons.js";
@@ -110,7 +110,7 @@ export async function renderRepoModules(
   t?: LumiT,
   page = 0,
 ) {
-  const downloader = getService("downloader");
+  const downloader = getUtility("downloader");
   const [modules, installedDetailed] = await Promise.all([
     downloader.getModulesInRepo(repoName),
     downloader.getInstalledModulesDetailed(),

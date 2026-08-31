@@ -4,7 +4,7 @@ import {
   metaFromManifest,
   readManifest,
   type ModuleManifest,
-  type TargetService,
+  type TargetUtility,
 } from "./manifest.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -24,7 +24,7 @@ export interface ModuleRecord {
   /** Static manifest when discovery was manifest-driven (no code executed). */
   manifest?: ModuleManifest;
   /** Service that owns this module (workers run feature modules). */
-  targetService: TargetService;
+  targetUtility: TargetUtility;
   state?: ModuleState;
   failureReason?: string;
 }
@@ -576,7 +576,7 @@ export class ModuleStore extends Store<Module> {
     indexPath: string,
     meta: ModuleMeta,
     globalState: Map<string, boolean>,
-    targetService: TargetService,
+    targetUtility: TargetUtility,
     manifest?: ModuleManifest,
   ): ModuleRecord {
     return {
@@ -586,7 +586,7 @@ export class ModuleStore extends Store<Module> {
       enabled: globalState.get(name) ?? true,
       meta,
       ...(manifest ? { manifest } : {}),
-      targetService,
+      targetUtility,
     };
   }
 
@@ -606,7 +606,7 @@ export class ModuleStore extends Store<Module> {
         indexPath,
         metaFromManifest(manifest),
         globalState,
-        manifest.targetService,
+        manifest.targetUtility,
         manifest,
       ),
     );

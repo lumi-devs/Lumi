@@ -4,6 +4,7 @@ import "@sapphire/plugin-logger/register";
 import "@sapphire/plugin-hmr/register";
 import "@sapphire/plugin-subcommands/register";
 import "@sapphire/plugin-i18next/register";
+import "@sapphire/plugin-utilities-store/register";
 
 
 import { isPrimaryShard } from "#lib/env.js";

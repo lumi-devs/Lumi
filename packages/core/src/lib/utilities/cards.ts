@@ -178,7 +178,7 @@ export const makeCard = (
 ) => wrap(buildContainer(title, body, opts, color || undefined));
 
 /** Discord's per-TextDisplay content limit for Components V2 messages. */
-export const TEXT_DISPLAY_LIMIT = 4000;
+export const TextDisplayLimit = 4000;
 
 /**
  * Join lines into one TextDisplay body that fits Discord's limit.
@@ -190,7 +190,7 @@ export const TEXT_DISPLAY_LIMIT = 4000;
  */
 export function fitLines(
   lines: string[],
-  budget = TEXT_DISPLAY_LIMIT,
+  budget = TextDisplayLimit,
 ): string {
   const kept: string[] = [];
   let used = 0;

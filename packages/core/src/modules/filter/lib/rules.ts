@@ -178,7 +178,7 @@ export function evaluateTerms(
 /**
  * The bounded rules: invites, links, mentions and caps. All linear in the
  * message length, so they stay inline. Regex rules are *not* here - they run in
- * the regex worker (`FilterService.test`), between terms and these.
+ * the regex worker (`FilterUtility.test`), between terms and these.
  */
 export function evaluateStatic(
   rules: CompiledRules,

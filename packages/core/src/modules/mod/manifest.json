@@ -10,7 +10,7 @@
   "dependencies": [],
   "conflicts": [],
   "configOverrides": true,
-  "targetService": "worker",
+  "targetUtility": "worker",
   "subStores": [
     "commands",
     "listeners",

@@ -2,9 +2,9 @@ import { Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { AuditLogEvent, type Role } from "discord.js";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { tryGetService } from "#lib/module-system/Service.js";
+import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { swallow } from "#lib/utilities/errors.js";
-import { DANGEROUS_PERMISSIONS } from "../services/SecurityService.js";
+import { DANGEROUS_PERMISSIONS } from "../utilities/SecurityUtility.js";
 import { resolveAuditLogExecutor } from "../lib/audit.js";
 
 @ApplyOptions<ModuleListener.Options>({
@@ -23,7 +23,7 @@ export class SecurityRoleUpdateListener extends ModuleListener<
     );
     if (grantedDangerous.length === 0) return;
 
-    const security = tryGetService("security");
+    const security = tryGetUtility("security");
     if (!security) return;
 
     // Revert immediately - @everyone holding any of these is a live hole,

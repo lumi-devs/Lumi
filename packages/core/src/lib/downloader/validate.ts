@@ -56,7 +56,7 @@ const manifestSchema = s.object({
   dependencies: s.array(s.string()).optional(),
   conflicts: s.array(s.string()).optional(),
   configOverrides: s.boolean().optional(),
-  targetService: s.enum(["worker", "gateway", "scheduler", "api"]),
+  targetUtility: s.enum(["worker", "gateway", "scheduler", "api"]),
   subStores: s.array(s.string()),
   configFields: s.array(configFieldSchema),
 });

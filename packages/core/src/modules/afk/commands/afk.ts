@@ -1,12 +1,12 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { Command } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { AFK_MAX_REASON_LENGTH, sanitizeReason } from "../index.js";
+import { AfkMaxReasonLength, sanitizeReason } from "../index.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import type AfkService from "../services/AfkService.js";
+import type AfkUtility from "../utilities/AfkUtility.js";
 
 function afkStatusText(
   t: LumiT,
@@ -45,14 +45,14 @@ export default class AfkCommand extends BaseCommand {
     registry.registerChatInputCommand((builder) =>
       applyLocalizedBuilder(builder, "commands:afk").addStringOption((opt) =>
         applyLocalizedBuilder(opt, "commands:afkReason")
-          .setMaxLength(AFK_MAX_REASON_LENGTH)
+          .setMaxLength(AfkMaxReasonLength)
           .setRequired(false),
       ),
     );
   }
 
-  private get afkService(): AfkService {
-    return getService("afk");
+  private get afkService(): AfkUtility {
+    return getUtility("afk");
   }
 
   public override async run(ctx: CommandContext) {

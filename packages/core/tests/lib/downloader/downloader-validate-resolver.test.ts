@@ -57,7 +57,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
         emoji: "📦",
         description: "Valid addon test",
         version: "1.0.0",
-        targetService: "worker",
+        targetUtility: "worker",
         subStores: [],
         configFields: [],
       };

@@ -5,7 +5,7 @@ import {
   cfg,
 } from "#lib/module-system/Module.js";
 import { parseConfigList } from "#lib/module-system/config-schema.js";
-import { tryGetService } from "#lib/module-system/Service.js";
+import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { ChannelType } from "discord.js";
 import {
   shutdownRegexWorker,
@@ -15,7 +15,7 @@ import { DEFAULT_WARN_MESSAGE } from "./lib/rules.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleAutoLockdownUnlockFire } from "./lib/auto-lockdown-handler.js";
 
-/** Config keys the FilterService compiles into its per-guild rule set -
+/** Config keys the FilterUtility compiles into its per-guild rule set -
  * changing any of them must rebuild that guild's cache. */
 const COMPILED_KEYS = [
   "terms",
@@ -338,7 +338,7 @@ export class FilterModule extends Module {
       this.container.configChangeHooks.set(
         `filter:${key}`,
         async (guildId, _key) => {
-          const svc = tryGetService("filter");
+          const svc = tryGetUtility("filter");
           await svc?.loadGuild(guildId);
         },
       );

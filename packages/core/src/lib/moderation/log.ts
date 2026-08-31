@@ -1,4 +1,4 @@
-import { tryGetService } from "#lib/module-system/Service.js";
+import { tryGetUtility } from "#lib/module-system/Utility.js";
 import type { User } from "discord.js";
 
 /** Dispatches a moderation action card to the guild's configured mod-log. */
@@ -12,7 +12,7 @@ export async function logToChannel(
   caseNumber: number,
   moduleName = "mod",
 ): Promise<void> {
-  const logService = tryGetService("guild-log");
+  const logService = tryGetUtility("guild-log");
   await logService?.dispatch({
     guildId,
     moduleName,

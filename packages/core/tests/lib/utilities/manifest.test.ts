@@ -69,7 +69,7 @@ describe("Module Manifest Utilities", () => {
         dependencies: ["dep-1"],
         conflicts: ["conflict-1"],
         configOverrides: true,
-        targetService: "worker",
+        targetUtility: "worker",
         subStores: ["commands"],
         configFields: meta.configFields,
       });
@@ -114,7 +114,7 @@ describe("Module Manifest Utilities", () => {
         dependencies: ["base"],
         conflicts: [],
         configOverrides: false,
-        targetService: "worker" as const,
+        targetUtility: "worker" as const,
         subStores: ["commands"],
         configFields: [],
       };
@@ -147,7 +147,7 @@ describe("Module Manifest Utilities", () => {
         dependencies: [],
         conflicts: [],
         configOverrides: false,
-        targetService: "worker" as const,
+        targetUtility: "worker" as const,
         subStores: [],
         configFields: [],
       };

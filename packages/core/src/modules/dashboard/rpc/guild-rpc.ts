@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
 import { RPC_ACTIONS } from "@lumi/contracts";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { checkModulesEnabled } from "#lib/module-check.js";
 import {
   ConfigSetSchema,
@@ -153,7 +153,7 @@ export function registerGuildRpcHandlers(): void {
     }
 
     const raw = toRawConfigValue(value);
-    const { coerced } = await getService("config").setConfig(
+    const { coerced } = await getUtility("config").setConfig(
       guildId,
       moduleName,
       key,

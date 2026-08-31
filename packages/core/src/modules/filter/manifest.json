@@ -9,10 +9,10 @@
   "dependencies": [],
   "conflicts": [],
   "configOverrides": true,
-  "targetService": "worker",
+  "targetUtility": "worker",
   "subStores": [
     "listeners",
-    "services",
+    "utilities",
     "scheduled-tasks"
   ],
   "configFields": [

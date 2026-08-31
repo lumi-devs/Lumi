@@ -1,5 +1,5 @@
 import { Listener, Events } from "@sapphire/framework";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Client } from "discord.js";
 import { logError } from "#lib/utilities/errors.js";
@@ -23,7 +23,7 @@ export default class TempVcReadyListener extends Listener<
   typeof Events.ClientReady
 > {
   public async run(client: Client<true>) {
-    const service = getService("tempvc");
+    const service = getUtility("tempvc");
 
     tempVcRegistry.wire();
 

@@ -2,7 +2,7 @@ import { Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { AuditLogEvent, type Guild } from "discord.js";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { tryGetService } from "#lib/module-system/Service.js";
+import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { resolveAuditLogExecutor } from "../lib/audit.js";
 
 @ApplyOptions<ModuleListener.Options>({
@@ -20,7 +20,7 @@ export class SecurityGuildUpdateListener extends ModuleListener<
   protected async handle(oldGuild: Guild, newGuild: Guild): Promise<void> {
     if (oldGuild.vanityURLCode === newGuild.vanityURLCode) return;
 
-    const security = tryGetService("security");
+    const security = tryGetUtility("security");
     if (!security) return;
 
     await security.evaluateNukeEvent(newGuild, "vanity_change", () =>

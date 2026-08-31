@@ -307,7 +307,7 @@ export class DownloadResolver {
         dependencies: info.dependencies || [],
         conflicts: info.conflicts || [],
         configOverrides: false,
-        targetService: "worker",
+        targetUtility: "worker",
         subStores: await detectSubStores(sourcePath),
         configFields: [],
       };

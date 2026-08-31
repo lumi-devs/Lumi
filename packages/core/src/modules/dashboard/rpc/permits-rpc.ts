@@ -1,6 +1,6 @@
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
 import { RPC_ACTIONS } from "@lumi/contracts";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import {
   PermitAssignSchema,
   PermitCreateSchema,
@@ -15,7 +15,7 @@ import {
 export function registerPermitsRpcHandlers(): void {
   registerRpcHandler(RPC_ACTIONS.guildPermitsList, async (req) => {
     const { guildId } = await verifyGuildAccess(req);
-    const permits = await getService("permissions").listPermits(guildId);
+    const permits = await getUtility("permissions").listPermits(guildId);
     return { permits };
   });
 
@@ -23,7 +23,7 @@ export function registerPermitsRpcHandlers(): void {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { name, kind, nodes } = parsePayload(PermitCreateSchema, req.data);
-    const permit = await getService("permissions").createPermit(
+    const permit = await getUtility("permissions").createPermit(
       guildId,
       name,
       kind,
@@ -38,7 +38,7 @@ export function registerPermitsRpcHandlers(): void {
       PermitUpdateSchema,
       req.data,
     );
-    const perms = getService("permissions");
+    const perms = getUtility("permissions");
     if (name !== undefined) await perms.renamePermit(guildId, permitId, name);
     const permit =
       nodes !== undefined
@@ -51,7 +51,7 @@ export function registerPermitsRpcHandlers(): void {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { permitId } = parsePayload(PermitDeleteSchema, req.data);
-    await getService("permissions").deletePermit(guildId, permitId);
+    await getUtility("permissions").deletePermit(guildId, permitId);
     return { success: true };
   });
 
@@ -62,7 +62,7 @@ export function registerPermitsRpcHandlers(): void {
       PermitAssignSchema,
       req.data,
     );
-    await getService("permissions").assignPermit(
+    await getUtility("permissions").assignPermit(
       guildId,
       permitId,
       targetType,
@@ -78,7 +78,7 @@ export function registerPermitsRpcHandlers(): void {
       PermitAssignSchema,
       req.data,
     );
-    await getService("permissions").unassignPermit(
+    await getUtility("permissions").unassignPermit(
       guildId,
       permitId,
       targetType,

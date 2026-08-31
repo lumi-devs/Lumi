@@ -3,7 +3,7 @@ import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { AttachmentBuilder, MessageFlags, type AutocompleteInteraction } from "discord.js";
 import { BaseSubcommand, sendReply, type CommandContext } from "#lib/commands.js";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { logError } from "#lib/utilities/errors.js";
 import { KNOWN_PERMIT_NODES } from "#lib/permissions/permit-nodes.js";
 import {
@@ -152,7 +152,7 @@ export class PermitCommand extends BaseSubcommand {
       if (subcommand === "remove") {
         const name = interaction.options.getString("name");
         if (name) {
-          const permit = await getService("permissions").findPermitByName(
+          const permit = await getUtility("permissions").findPermitByName(
             guildId,
             name.trim(),
           );
@@ -174,7 +174,7 @@ export class PermitCommand extends BaseSubcommand {
       const subcommand = interaction.options.getSubcommand(false);
       if (subcommand === "create") return respondWithChoices(interaction, []);
 
-      const permits = await getService("permissions").listPermits(guildId);
+      const permits = await getUtility("permissions").listPermits(guildId);
       return respondWithChoices(
         interaction,
         filterAutocompleteChoices(
@@ -198,7 +198,7 @@ export class PermitCommand extends BaseSubcommand {
   }
 
   private async requirePermitByName(ctx: CommandContext, name: string) {
-    const perms = getService("permissions");
+    const perms = getUtility("permissions");
     const permit = await perms.findPermitByName(ctx.guildId!, name);
     if (!permit) {
       const t = await ctx.fetchT();
@@ -217,7 +217,7 @@ export class PermitCommand extends BaseSubcommand {
     const name = (await ctx.getString("name", { required: true }))!.trim();
     const node = (await ctx.getString("node", { required: true }))!.trim();
 
-    const perms = getService("permissions");
+    const perms = getUtility("permissions");
     try {
       await perms.createPermit(ctx.guildId!, name, "custom", [node]);
     } catch (err: unknown) {
@@ -242,7 +242,7 @@ export class PermitCommand extends BaseSubcommand {
     const permit = await this.requirePermitByName(ctx, name);
     if (!permit) return;
 
-    const perms = getService("permissions");
+    const perms = getUtility("permissions");
     try {
       await perms.deletePermit(ctx.guildId!, permit.id);
     } catch (err: unknown) {
@@ -268,7 +268,7 @@ export class PermitCommand extends BaseSubcommand {
     const permit = await this.requirePermitByName(ctx, name);
     if (!permit) return;
 
-    const perms = getService("permissions");
+    const perms = getUtility("permissions");
     try {
       await perms.updatePermitNodes(ctx.guildId!, permit.id, [
         ...permit.nodes,
@@ -305,7 +305,7 @@ export class PermitCommand extends BaseSubcommand {
       );
     }
 
-    const perms = getService("permissions");
+    const perms = getUtility("permissions");
     try {
       await perms.updatePermitNodes(ctx.guildId!, permit.id, remaining);
     } catch (err: unknown) {
@@ -337,7 +337,7 @@ export class PermitCommand extends BaseSubcommand {
     const permit = await this.requirePermitByName(ctx, name);
     if (!permit) return;
 
-    const perms = getService("permissions");
+    const perms = getUtility("permissions");
     try {
       await perms.assignPermit(
         ctx.guildId!,
@@ -374,7 +374,7 @@ export class PermitCommand extends BaseSubcommand {
     const permit = await this.requirePermitByName(ctx, name);
     if (!permit) return;
 
-    const perms = getService("permissions");
+    const perms = getUtility("permissions");
     try {
       await perms.unassignPermit(
         ctx.guildId!,
@@ -399,7 +399,7 @@ export class PermitCommand extends BaseSubcommand {
   public async list(ctx: CommandContext) {
     await ctx.defer();
     const t = await ctx.fetchT();
-    const perms = getService("permissions");
+    const perms = getUtility("permissions");
     const permits = await perms.listPermits(ctx.guildId!);
     if (!permits.length) {
       return ctx.replyInfo(
@@ -422,7 +422,7 @@ export class PermitCommand extends BaseSubcommand {
   public async export(ctx: CommandContext) {
     await ctx.defer();
     const t = await ctx.fetchT();
-    const perms = getService("permissions");
+    const perms = getUtility("permissions");
     const data = await perms.exportPermits(ctx.guildId!);
 
     if (data.permits.length === 0) {
@@ -480,7 +480,7 @@ export class PermitCommand extends BaseSubcommand {
       );
     }
 
-    const perms = getService("permissions");
+    const perms = getUtility("permissions");
     try {
       const result = await perms.importPermits(ctx.guildId!, parsed);
       const skippedLines = result.skipped

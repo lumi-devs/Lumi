@@ -1,9 +1,9 @@
 import { moduleUpdateResultCard } from "#lib/downloader/cards.js";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import {
   ModuleAlreadyInstalledError,
-  type DownloaderService,
-} from "#lib/services/DownloaderService.js";
+  type DownloaderUtility,
+} from "#utilities/DownloaderUtility.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import {
   makeErrorCard,
@@ -23,8 +23,8 @@ import {
 import { container } from "@sapphire/framework";
 import type { User } from "discord.js";
 
-function downloader(): DownloaderService {
-  return getService("downloader");
+function downloader(): DownloaderUtility {
+  return getUtility("downloader");
 }
 
 /**

@@ -4,7 +4,7 @@ import type { ConfigField } from "./config";
 
 
 /** Which deployable service runs a module. Workers run feature modules. */
-export type TargetService = "worker" | "gateway" | "scheduler" | "api";
+export type TargetUtility = "worker" | "gateway" | "scheduler" | "api";
 
 /** Sub-store directory names a module may declare (each = a Sapphire store name). */
 export const KNOWN_SUBSTORES = [
@@ -12,7 +12,7 @@ export const KNOWN_SUBSTORES = [
   "listeners",
   "interaction-handlers",
   "preconditions",
-  "services",
+  "utilities",
   "scheduled-tasks",
   "routes",
 ] as const;
@@ -37,7 +37,7 @@ export interface ModuleManifest {
   conflicts?: string[];
   configOverrides?: boolean;
   /** Which service loads this module (workers run feature modules). */
-  targetService: TargetService;
+  targetUtility: TargetUtility;
   /** Sub-store dirs present in the module, mounted by convention on load. */
   subStores: string[];
   /** Flat config fields derived from the Zod `configSchema` (panel + dashboard). */

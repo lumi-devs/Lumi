@@ -16,10 +16,10 @@ import { scheduleTask } from "#lib/schedule-task.js";
 import { AfkKeys } from "../keys.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import {
-  AFK_MENTION_COOLDOWN_MS,
-  AFK_NICK_EDIT_COOLDOWN_MS,
-  AFK_WELCOME_COOLDOWN_MS,
-  NICK_PREFIX,
+  AfkMentionCooldownMs,
+  AfkNickEditCooldownMs,
+  AfkWelcomeCooldownMs,
+  NickPrefix,
   afkDurationSince,
   sanitizeReason,
 } from "../index.js";
@@ -70,9 +70,9 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
       logError("AFK: Clear entry failed", err),
     );
 
-    if (message.member?.displayName.startsWith(NICK_PREFIX)) {
+    if (message.member?.displayName.startsWith(NickPrefix)) {
       const newNick = message.member.displayName
-        .slice(NICK_PREFIX.length)
+        .slice(NickPrefix.length)
         .trim();
       void this.#editNick(userId, () =>
         message.member!.setNickname(newNick || null),
@@ -82,7 +82,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
     if (
       !(await claimAfkCooldown(
         AfkKeys.welcomeCooldown(channelId, userId),
-        AFK_WELCOME_COOLDOWN_MS,
+        AfkWelcomeCooldownMs,
       ))
     )
       return;
@@ -153,7 +153,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
   async #notifyMentioned(message: GuildMessage) {
     const claimedNotice = await claimAfkCooldown(
       AfkKeys.mentionCooldown(message.channelId),
-      AFK_MENTION_COOLDOWN_MS,
+      AfkMentionCooldownMs,
     );
 
     const mentionBase = {
@@ -199,8 +199,8 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
         logError("AFK: Fetch member failed", err);
         return null;
       });
-    const name = member?.displayName.startsWith(NICK_PREFIX)
-      ? member.displayName.slice(NICK_PREFIX.length)
+    const name = member?.displayName.startsWith(NickPrefix)
+      ? member.displayName.slice(NickPrefix.length)
       : (member?.displayName ?? userId);
 
     if (!message.channel.isSendable() || !canSendMessages(message)) return;
@@ -237,7 +237,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
     if (
       !(await claimAfkCooldown(
         AfkKeys.nickEditCooldown(userId),
-        AFK_NICK_EDIT_COOLDOWN_MS,
+        AfkNickEditCooldownMs,
       ))
     )
       return;

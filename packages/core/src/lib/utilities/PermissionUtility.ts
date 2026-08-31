@@ -7,7 +7,7 @@ import {
   type PermitTargetType,
   type PermitWithAssignments,
 } from "#lib/prisma/repositories/PermissionRepository.js";
-import { Service } from "#lib/module-system/Service.js";
+import { Utility } from "#lib/module-system/Utility.js";
 import { cleanMention } from "#utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
@@ -15,7 +15,7 @@ import type { Piece } from "@sapphire/framework";
 const VALID_KINDS: ReadonlySet<string> = new Set(["enforced", "custom"]);
 
 @ApplyOptions<Piece.Options>({ name: "permissions" })
-export class PermissionService extends Service {
+export class PermissionUtility extends Utility {
   public listPermits(guildId: string): Promise<PermitWithAssignments[]> {
     return this.container.db.permissions.listPermits(guildId);
   }
@@ -304,8 +304,8 @@ export interface PermitImportResult {
   skipped: Array<{ name: string; reason: string }>;
 }
 
-declare module "#lib/module-system/Service.js" {
-  interface Services {
-    permissions: PermissionService;
+declare module "#lib/module-system/Utility.js" {
+  interface Utilities {
+    permissions: PermissionUtility;
   }
 }

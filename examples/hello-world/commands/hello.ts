@@ -19,7 +19,7 @@ export default class HelloCommand extends BaseCommand {
       return ctx.replyError("Guild Only", "This command only works inside a server.");
     }
 
-    // Read the module's own configSchema value back out via ConfigService.
+    // Read the module's own configSchema value back out via ConfigUtility.
     // Falls back to the default declared in the schema if never set.
     const greetingRaw = await container.db.config.getModuleConfig(
       ctx.guildId,

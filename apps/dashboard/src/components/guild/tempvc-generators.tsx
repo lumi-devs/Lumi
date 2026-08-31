@@ -27,7 +27,7 @@ import type {
 import { useServerAction } from "#/lib/use-server-action";
 
 /**
- * Mirrors `TempVcService.resolveGeneratorName`: substitutes `{}`/`{number}`
+ * Mirrors `TempVcUtility.resolveGeneratorName`: substitutes `{}`/`{number}`
  * (sequence number), `{position}` (alias of `{number}`), `{username}`, and
  * `{name}` (both shown as "Alex" here since the preview has no real member).
  * No placeholder appends the number to the end.

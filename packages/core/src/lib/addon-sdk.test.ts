@@ -38,8 +38,8 @@ describe("lumi addon SDK resolution", () => {
     expect(sdk.Module).toBeTypeOf("function");
     expect(sdk.DefineModule).toBeTypeOf("function");
     expect(sdk.cfg).toBeDefined();
-    expect(sdk.Service).toBeTypeOf("function");
-    expect(sdk.getService).toBeTypeOf("function");
+    expect(sdk.Utility).toBeTypeOf("function");
+    expect(sdk.getUtility).toBeTypeOf("function");
   });
 
   it("exposes command base classes from lumi/commands", async () => {

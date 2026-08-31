@@ -1,8 +1,8 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import type AfkService from "../services/AfkService.js";
+import type AfkUtility from "../utilities/AfkUtility.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "afkclean",
@@ -21,8 +21,8 @@ export default class AfkCleanCommand extends BaseCommand {
     );
   }
 
-  private get afkService(): AfkService {
-    return getService("afk");
+  private get afkService(): AfkUtility {
+    return getUtility("afk");
   }
 
   public override async run(ctx: CommandContext) {

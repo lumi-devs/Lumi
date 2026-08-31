@@ -12,13 +12,13 @@ import type {
 import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { ephemeralCard, makeSuccessCard } from "#utilities/cards.js";
 import type { VcRecord } from "#modules/tempvc/data.js";
 import { TVC } from "#modules/tempvc/keys.js";
 import { showLimitModal, showRenameModal } from "#modules/tempvc/lib/panel-helpers.js";
 import { resolveOwnedRecord } from "#modules/tempvc/panel-guard.js";
-import type TempVcService from "#modules/tempvc/services/TempVcService.js";
+import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 import {
   buildBackRows,
   buildBlockView,
@@ -73,8 +73,8 @@ const ACCESS_VERBS: Record<string, string> = {
   interactionHandlerType: InteractionHandlerTypes.SelectMenu,
 })
 export class TempVcPanelSelectHandler extends BaseInteractionHandler {
-  private get service(): TempVcService {
-    return getService("tempvc");
+  private get service(): TempVcUtility {
+    return getUtility("tempvc");
   }
 
   public override parse(interaction: AnySelectMenuInteraction) {

@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { tryGetService } from "#lib/module-system/Service.js";
+import { tryGetUtility } from "#lib/module-system/Utility.js";
 
 export interface AuditEntry {
   action: string;
@@ -35,7 +35,7 @@ export function loggable(
     const result = await original.apply(this, args);
 
     if (isAuditEntry(result)) {
-      const logService = tryGetService("guild-log");
+      const logService = tryGetUtility("guild-log");
 
       logService
         ?.dispatch(result)

@@ -3,7 +3,7 @@ import { container } from "@sapphire/framework";
 import {
   deleteMessageLater,
   deleteReplyLater,
-  TRANSIENT_REPLY_TTL,
+  TransientReplyTtl,
 } from "#lib/utilities/temporary-message.js";
 
 describe("temporary-message utilities", () => {
@@ -40,9 +40,9 @@ describe("temporary-message utilities", () => {
       delete: vi.fn().mockRejectedValue(new Error("Message already deleted")),
     } as any;
 
-    deleteMessageLater(mockMessage, TRANSIENT_REPLY_TTL, "test-delete-reason");
+    deleteMessageLater(mockMessage, TransientReplyTtl, "test-delete-reason");
 
-    expect(() => vi.advanceTimersByTime(TRANSIENT_REPLY_TTL)).not.toThrow();
+    expect(() => vi.advanceTimersByTime(TransientReplyTtl)).not.toThrow();
     await Promise.resolve();
 
     expect(container.logger.debug).toHaveBeenCalledWith(
@@ -70,9 +70,9 @@ describe("temporary-message utilities", () => {
       deleteReply: vi.fn().mockRejectedValue(new Error("Unknown interaction")),
     } as any;
 
-    deleteReplyLater(mockInteraction, TRANSIENT_REPLY_TTL, "test-reply-reason");
+    deleteReplyLater(mockInteraction, TransientReplyTtl, "test-reply-reason");
 
-    expect(() => vi.advanceTimersByTime(TRANSIENT_REPLY_TTL)).not.toThrow();
+    expect(() => vi.advanceTimersByTime(TransientReplyTtl)).not.toThrow();
     await Promise.resolve();
 
     expect(container.logger.debug).toHaveBeenCalledWith(

@@ -27,7 +27,7 @@ export {
   type ModuleMeta,
   type ModuleOptions,
 } from "./src/lib/module-system/Module.js";
-export { Service } from "./src/lib/module-system/Service.js";
+export { Utility } from "./src/lib/module-system/Utility.js";
 
 // Commands
 export {

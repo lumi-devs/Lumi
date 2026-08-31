@@ -1,9 +1,9 @@
 import type { AutocompleteInteraction } from "discord.js";
-import type { DownloaderService } from "#lib/services/DownloaderService.js";
+import type { DownloaderUtility } from "#utilities/DownloaderUtility.js";
 import { filterAutocompleteChoices } from "#lib/utilities/autocomplete.js";
 
 export async function repoNameChoices(
-  downloaderService: DownloaderService,
+  downloaderService: DownloaderUtility,
   focusedValue: string,
   opts?: { extra?: string[] },
 ): Promise<string[]> {
@@ -13,7 +13,7 @@ export async function repoNameChoices(
 }
 
 export async function installedModuleChoices(
-  downloaderService: DownloaderService,
+  downloaderService: DownloaderUtility,
   focusedValue: string,
   opts?: { pinned?: boolean },
 ): Promise<string[]> {
@@ -25,7 +25,7 @@ export async function installedModuleChoices(
 }
 
 export async function repoModuleChoices(
-  downloaderService: DownloaderService,
+  downloaderService: DownloaderUtility,
   interaction: AutocompleteInteraction,
   repoOptionName: string,
   focusedValue: string,

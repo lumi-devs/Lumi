@@ -6,7 +6,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { MessageFlags, type ButtonInteraction } from "discord.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { fetchTyped } from "#lib/commands.js";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { getDashboardPublicUrl } from "#lib/env.js";
 import {
@@ -58,7 +58,7 @@ export class VerifyInteractionHandler extends BaseInteractionHandler {
     }
 
     const t = await fetchTyped(interaction);
-    const security = getService("security");
+    const security = getUtility("security");
     const { guild } = interaction;
     const userId = interaction.user.id;
 

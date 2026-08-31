@@ -1,4 +1,4 @@
-import { Service } from "#lib/module-system/Service.js";
+import { Utility } from "#lib/module-system/Utility.js";
 import { isNullish, tryParseJSON } from "@sapphire/utilities";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
@@ -10,7 +10,7 @@ import {
 } from "#lib/i18n/index.js";
 
 @ApplyOptions<Piece.Options>({ name: "guild-settings" })
-export class GuildSettingsService extends Service {
+export class GuildSettingsUtility extends Utility {
   public async setDashboardLayout(guildId: string, rawLayout: string) {
     const layout = tryParseJSON(rawLayout);
     if (isNullish(layout)) {
@@ -96,8 +96,8 @@ export class GuildSettingsService extends Service {
   }
 }
 
-declare module "#lib/module-system/Service.js" {
-  interface Services {
-    "guild-settings": GuildSettingsService;
+declare module "#lib/module-system/Utility.js" {
+  interface Utilities {
+    "guild-settings": GuildSettingsUtility;
   }
 }

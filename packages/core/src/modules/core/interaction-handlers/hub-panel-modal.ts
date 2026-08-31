@@ -1,8 +1,8 @@
 import { fetchTyped } from "#lib/commands.js";
 import { deriveRepoNameFromUrl } from "#lib/downloader/url-helpers.js";
-import { getService } from "#lib/module-system/Service.js";
-import type { DownloaderService } from "#lib/services/DownloaderService.js";
-import type { GuildSettingsService } from "#lib/services/GuildSettingsService.js";
+import { getUtility } from "#lib/module-system/Utility.js";
+import type { DownloaderUtility } from "#utilities/DownloaderUtility.js";
+import type { GuildSettingsUtility } from "#utilities/GuildSettingsUtility.js";
 import {
   hasAdminPermit,
   hasOwnerPermit,
@@ -25,12 +25,12 @@ import { MessageFlags, type ModalSubmitInteraction } from "discord.js";
   interactionHandlerType: InteractionHandlerTypes.ModalSubmit,
 })
 export class HubPanelModalHandler extends InteractionHandler {
-  private get settings(): GuildSettingsService {
-    return getService("guild-settings");
+  private get settings(): GuildSettingsUtility {
+    return getUtility("guild-settings");
   }
 
-  private get downloader(): DownloaderService {
-    return getService("downloader");
+  private get downloader(): DownloaderUtility {
+    return getUtility("downloader");
   }
 
   public override parse(interaction: ModalSubmitInteraction) {

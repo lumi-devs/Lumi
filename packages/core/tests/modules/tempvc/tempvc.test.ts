@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import TempVcService, {
+import TempVcUtility, {
   resolveGeneratorName,
-} from "#modules/tempvc/services/TempVcService.js";
+} from "#modules/tempvc/utilities/TempVcUtility.js";
 import { container } from "@sapphire/framework";
 import { tempVcRegistry } from "#modules/tempvc/registry.js";
 import { scheduleTask } from "#lib/schedule-task.js";
@@ -40,8 +40,8 @@ vi.mock("#modules/tempvc/ui/panel.js", () => ({
   buildPanel: vi.fn(() => ({ content: "panel" })),
 }));
 
-describe("TempVcService", () => {
-  let service: TempVcService;
+describe("TempVcUtility", () => {
+  let service: TempVcUtility;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -68,8 +68,8 @@ describe("TempVcService", () => {
       },
     } as any;
 
-    service = new TempVcService(
-      { name: "tempvc", store: { name: "services" } } as any,
+    service = new TempVcUtility(
+      { name: "tempvc", store: { name: "utilities" } } as any,
       {}
     );
   });

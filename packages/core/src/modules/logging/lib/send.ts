@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { queueSend } from "#lib/outbound/send-queue.js";
 
 const MODULE = "logging";
@@ -21,7 +21,7 @@ export async function isIgnoredChannel(
   guildId: string,
   channelId: string,
 ): Promise<boolean> {
-  const ignored = await getService("config").getConfigList(
+  const ignored = await getUtility("config").getConfigList(
     guildId,
     MODULE,
     "ignored_channels",

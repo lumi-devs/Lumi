@@ -1,13 +1,13 @@
 import type { AutocompleteInteraction } from "discord.js";
 
 /** Discord caps autocomplete responses at 25 choices. */
-export const AUTOCOMPLETE_CHOICE_LIMIT = 25;
-const CHOICE_TEXT_MAX_LENGTH = 100;
+export const AutocompleteChoiceLimit = 25;
+const ChoiceTextMaxLength = 100;
 
 export function filterAutocompleteChoices(
   values: string[],
   focused: string,
-  limit = AUTOCOMPLETE_CHOICE_LIMIT,
+  limit = AutocompleteChoiceLimit,
 ): string[] {
   const query = focused.trim().toLowerCase();
   const matches = query
@@ -22,8 +22,8 @@ export async function respondWithChoices(
 ): Promise<void> {
   await interaction.respond(
     values.map((value) => ({
-      name: value.slice(0, CHOICE_TEXT_MAX_LENGTH),
-      value: value.slice(0, CHOICE_TEXT_MAX_LENGTH),
+      name: value.slice(0, ChoiceTextMaxLength),
+      value: value.slice(0, ChoiceTextMaxLength),
     })),
   );
 }

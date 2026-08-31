@@ -1,11 +1,11 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { makeSuccessCard, makeErrorCard } from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
-import type { GuildSettingsService } from "#lib/services/GuildSettingsService.js";
+import type { GuildSettingsUtility } from "#utilities/GuildSettingsUtility.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "dashboard",
@@ -37,8 +37,8 @@ export class DashboardCommand extends BaseSubcommand {
     );
   }
 
-  private get guildSettingsService(): GuildSettingsService {
-    return getService("guild-settings");
+  private get guildSettingsService(): GuildSettingsUtility {
+    return getUtility("guild-settings");
   }
 
   public async layout(ctx: CommandContext): Promise<void> {

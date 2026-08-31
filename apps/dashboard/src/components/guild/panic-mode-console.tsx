@@ -15,7 +15,7 @@ import type { DashboardChannelView, PanicStateView } from "#/lib/dashboard-data"
 import { formatCaseDate } from "#/lib/moderation-cases";
 import { useServerAction } from "#/lib/use-server-action";
 
-/** `SecurityService.enterPanic` stops after this many channels. */
+/** `SecurityUtility.enterPanic` stops after this many channels. */
 const CHANNEL_CAP = 40;
 
 export function PanicModeConsole({

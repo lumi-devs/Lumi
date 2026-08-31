@@ -4,30 +4,30 @@ import { MyDataCommand } from "#modules/core/commands/mydata.js";
 import * as gdpr from "#lib/gdpr.js";
 import * as confirm from "#lib/utilities/confirm.js";
 
-vi.mock("#lib/module-system/Service.js", async (importOriginal) => {
+vi.mock("#lib/module-system/Utility.js", async (importOriginal) => {
   const actual: any = await importOriginal();
   return {
     ...actual,
-    getService: vi.fn(),
+    getUtility: vi.fn(),
   };
 });
 
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 
 describe("MyDataCommand", () => {
   let command: MyDataCommand;
-  let mockDownloaderService: any;
+  let mockDownloaderUtility: any;
   let mockCtx: any;
 
   beforeEach(() => {
     vi.restoreAllMocks();
 
-    mockDownloaderService = {
+    mockDownloaderUtility = {
       getInstalledModules: vi.fn().mockResolvedValue([]),
     };
 
-    (getService as any).mockImplementation((name: string) => {
-      if (name === "downloader") return mockDownloaderService;
+    (getUtility as any).mockImplementation((name: string) => {
+      if (name === "downloader") return mockDownloaderUtility;
       return null;
     });
 
@@ -71,7 +71,7 @@ describe("MyDataCommand", () => {
 
   describe("3rdparty", () => {
     it("reports when no 3rd party addons are installed", async () => {
-      mockDownloaderService.getInstalledModules.mockResolvedValue([]);
+      mockDownloaderUtility.getInstalledModules.mockResolvedValue([]);
       await command.thirdParty(mockCtx);
       expect(mockCtx.reply).toHaveBeenCalledTimes(1);
       const arg = mockCtx.reply.mock.calls[0][0];
@@ -79,7 +79,7 @@ describe("MyDataCommand", () => {
     });
 
     it("lists 3rd party addons and privacy statements when installed", async () => {
-      mockDownloaderService.getInstalledModules.mockResolvedValue([
+      mockDownloaderUtility.getInstalledModules.mockResolvedValue([
         { repo_name: "test-repo", moduleName: "economy", commit: "abc", pinned: false },
       ]);
 

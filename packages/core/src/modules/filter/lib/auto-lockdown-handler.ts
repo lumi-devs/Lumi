@@ -2,7 +2,7 @@ import { container } from "@sapphire/framework";
 import { RedisKeys } from "#database/redis.js";
 import { unlockAllTextChannels } from "#lib/moderation/lockdown.js";
 import { swallow } from "#lib/utilities/errors.js";
-import { tryGetService } from "#lib/module-system/Service.js";
+import { tryGetUtility } from "#lib/module-system/Utility.js";
 import type { AutoLockdownUnlockPayload } from "../scheduled-tasks/autoLockdownUnlock.js";
 
 export async function handleAutoLockdownUnlockFire(
@@ -20,7 +20,7 @@ export async function handleAutoLockdownUnlockFire(
   await unlockAllTextChannels(guild);
   await container.redis.del(RedisKeys.filterAutoLockdown(guildId));
 
-  const logService = tryGetService("guild-log");
+  const logService = tryGetUtility("guild-log");
   await logService?.dispatch({
     guildId,
     moduleName: "filter",

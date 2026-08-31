@@ -1,4 +1,4 @@
-import { Service } from "#lib/module-system/Service.js";
+import { Utility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import { AsyncQueue } from "@sapphire/async-queue";
@@ -70,7 +70,7 @@ export function resolveGeneratorName(
 }
 
 @ApplyOptions<Piece.Options>({ name: "tempvc" })
-export default class TempVcService extends Service {
+export default class TempVcUtility extends Utility {
   /** True if this user must wait before creating another channel. */
   public async onCreateCooldown(
     guildId: string,
@@ -383,8 +383,8 @@ export default class TempVcService extends Service {
   }
 }
 
-declare module "#lib/module-system/Service.js" {
-  interface Services {
-    tempvc: TempVcService;
+declare module "#lib/module-system/Utility.js" {
+  interface Utilities {
+    tempvc: TempVcUtility;
   }
 }

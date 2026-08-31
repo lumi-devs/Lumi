@@ -91,7 +91,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
 
     container.stores = {
       get: vi.fn((name: string) =>
-        name === "services"
+        name === "utilities"
           ? { get: (key: string) => (key === "config" ? config : undefined) }
           : { loaded: () => [] },
       ),

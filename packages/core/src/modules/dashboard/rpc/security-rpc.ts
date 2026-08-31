@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
 import { RPC_ACTIONS } from "@lumi/contracts";
-import { tryGetService } from "#lib/module-system/Service.js";
+import { tryGetUtility } from "#lib/module-system/Utility.js";
 import type { GuildBackupData } from "#modules/security/lib/backup.js";
 import {
   BackupRestoreSchema,
@@ -47,7 +47,7 @@ export function registerSecurityRpcHandlers(): void {
     const actorId = await requireGuildManager(guildId, req.actorId);
     const { active, channelIds } = parsePayload(PanicSetSchema, req.data);
 
-    const security = tryGetService("security");
+    const security = tryGetUtility("security");
     if (!security) throw new Error("The security module is not loaded");
     const guild = cachedGuild(guildId);
 
@@ -114,7 +114,7 @@ export function registerSecurityRpcHandlers(): void {
     if (!actorId) throw new Error("actorId is required");
     SnowflakeSchema.parse(actorId);
 
-    const security = tryGetService("security");
+    const security = tryGetUtility("security");
     if (!security) throw new Error("The security module is not loaded");
 
     const config = await security.loadVerificationConfig(guildId);
@@ -152,7 +152,7 @@ export function registerSecurityRpcHandlers(): void {
     const { guild } = await verifyGuildAccess(req);
     const { backupId } = parsePayload(BackupRestoreSchema, req.data);
 
-    const security = tryGetService("security");
+    const security = tryGetUtility("security");
     if (!security) throw new Error("The security module is not loaded");
 
     const result = await security.restoreFromBackup(guild, backupId);

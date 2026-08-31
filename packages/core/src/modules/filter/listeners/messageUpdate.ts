@@ -1,8 +1,8 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { GuildMessageEditListener } from "#lib/module-system/GuildMessageEditListener.js";
 import type { GuildMessage } from "#lib/types/common.js";
-import type { FilterService } from "../services/FilterService.js";
+import type { FilterUtility } from "../utilities/FilterUtility.js";
 import { enforceHit, runRules, shouldScreen } from "../lib/enforce.js";
 
 /**
@@ -15,8 +15,8 @@ import { enforceHit, runRules, shouldScreen } from "../lib/enforce.js";
  */
 @ApplyOptions<GuildMessageEditListener.Options>({ module: "filter" })
 export class FilterMessageEditListener extends GuildMessageEditListener {
-  private get filterService(): FilterService {
-    return getService("filter");
+  private get filterService(): FilterUtility {
+    return getUtility("filter");
   }
 
   protected async handle(message: GuildMessage): Promise<void> {

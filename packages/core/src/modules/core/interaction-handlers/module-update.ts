@@ -1,5 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import {
   InteractionHandler,
   InteractionHandlerTypes,
@@ -10,14 +10,14 @@ import { makeErrorCard, makeInfoCard } from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
 import { moduleUpdateResultCard } from "#lib/downloader/cards.js";
-import type { DownloaderService } from "#lib/services/DownloaderService.js";
+import type { DownloaderUtility } from "#utilities/DownloaderUtility.js";
 
 @ApplyOptions<InteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,
 })
 export class ModuleUpdateInteractionHandler extends BaseInteractionHandler {
-  private get downloaderService(): DownloaderService {
-    return getService("downloader");
+  private get downloaderService(): DownloaderUtility {
+    return getUtility("downloader");
   }
 
   public override parse(interaction: ButtonInteraction) {

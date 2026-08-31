@@ -1,10 +1,10 @@
-import { tryGetService } from "#lib/module-system/Service.js";
+import { tryGetUtility } from "#lib/module-system/Utility.js";
 import type { TempVcCleanupPayload } from "../scheduled-tasks/cleanup.js";
 
 export async function handleTempVcCleanupFire(
   payload: TempVcCleanupPayload,
 ): Promise<void> {
-  const service = tryGetService("tempvc");
+  const service = tryGetUtility("tempvc");
   if (!service) return;
   await service.runCleanup(payload);
 }

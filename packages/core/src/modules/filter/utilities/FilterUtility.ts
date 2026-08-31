@@ -1,4 +1,4 @@
-import { Service } from "#lib/module-system/Service.js";
+import { Utility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import { RedisKeys } from "#database/redis.js";
@@ -62,7 +62,7 @@ function fingerprint(content: string): string {
 }
 
 @ApplyOptions<Piece.Options>({ name: "filter" })
-export class FilterService extends Service {
+export class FilterUtility extends Utility {
   private readonly _guilds = new Map<string, CompiledRules | null>();
   private readonly _heat = new Map<string, HeatConfig>();
   /** Bumped whenever a guild's patterns change, so the worker re-loads them. */
@@ -326,7 +326,7 @@ export class FilterService extends Service {
     const results = await this.redis
       .multi()
       .incr(key)
-      .expire(key, FilterService.VIOLATION_RESET_SECONDS)
+      .expire(key, FilterUtility.VIOLATION_RESET_SECONDS)
       .exec();
     return (results?.[0]?.[1] as number) ?? 1;
   }
@@ -358,13 +358,13 @@ export class FilterService extends Service {
       RedisKeys.filterHeatPanicFlagged(guildId, userId),
       "1",
       "EX",
-      FilterService.HEAT_PANIC_FLAG_SECONDS,
+      FilterUtility.HEAT_PANIC_FLAG_SECONDS,
     );
     const activated = await this.redis.set(
       RedisKeys.filterHeatPanicActive(guildId),
       String(Date.now()),
       "EX",
-      FilterService.HEAT_PANIC_FLAG_SECONDS,
+      FilterUtility.HEAT_PANIC_FLAG_SECONDS,
       "NX",
     );
     return activated === "OK";
@@ -376,7 +376,7 @@ export class FilterService extends Service {
       RedisKeys.filterHeatPanicFlagged(guildId, userId),
       "1",
       "EX",
-      FilterService.HEAT_PANIC_FLAG_SECONDS,
+      FilterUtility.HEAT_PANIC_FLAG_SECONDS,
     );
   }
 
@@ -407,7 +407,7 @@ export class FilterService extends Service {
       .incrby(key, count)
       .expire(
         key,
-        windowSeconds > 0 ? windowSeconds : FilterService.MENTION_WINDOW_DEFAULT_SECONDS,
+        windowSeconds > 0 ? windowSeconds : FilterUtility.MENTION_WINDOW_DEFAULT_SECONDS,
         "NX",
       )
       .exec();
@@ -464,7 +464,7 @@ export class FilterService extends Service {
    */
   #cacheLimit(): number {
     return Math.max(
-      FilterService.MIN_CACHED_GUILDS,
+      FilterUtility.MIN_CACHED_GUILDS,
       this.container.client.guilds.cache.size,
     );
   }
@@ -472,8 +472,8 @@ export class FilterService extends Service {
   private static readonly MIN_CACHED_GUILDS = 1_000;
 }
 
-declare module "#lib/module-system/Service.js" {
-  interface Services {
-    filter: FilterService;
+declare module "#lib/module-system/Utility.js" {
+  interface Utilities {
+    filter: FilterUtility;
   }
 }

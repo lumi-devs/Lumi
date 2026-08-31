@@ -8,7 +8,7 @@ export const MAX_REGEX_LENGTH = 256;
  * `(\w|\d)*!`, `(.*,)*` - within the probe budget. Each ends in a character the
  * pattern most likely cannot match, which is what forces exhaustive backtracking.
  */
-export const ADVERSARIAL_INPUTS: readonly string[] = [
+export const AdversarialInputs: readonly string[] = [
   `${"a".repeat(60)}!`,
   `${"ab".repeat(30)}!`,
   `${"1".repeat(60)}!`,
@@ -40,7 +40,7 @@ export async function validateRegexPattern(
   }
 
   const completed = await getRegexWorker().probe(pattern, [
-    ...ADVERSARIAL_INPUTS,
+    ...AdversarialInputs,
   ]);
   return completed
     ? null

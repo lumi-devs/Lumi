@@ -1,8 +1,8 @@
 import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
-import { getService } from "#lib/module-system/Service.js";
-import type { ConfigService } from "#lib/services/ConfigService.js";
+import { getUtility } from "#lib/module-system/Utility.js";
+import type { ConfigUtility } from "#utilities/ConfigUtility.js";
 import {
   configAccessDenied,
   hasPanelAccess,
@@ -25,8 +25,8 @@ import type { AnySelectMenuInteraction } from "discord.js";
   interactionHandlerType: InteractionHandlerTypes.SelectMenu,
 })
 export class ConfigPanelSelectHandler extends BaseInteractionHandler {
-  private get cfg(): ConfigService {
-    return getService("config");
+  private get cfg(): ConfigUtility {
+    return getUtility("config");
   }
 
   public override parse(interaction: AnySelectMenuInteraction) {

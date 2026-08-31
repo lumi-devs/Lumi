@@ -1,6 +1,6 @@
 import { Listener, Events } from "@sapphire/framework";
 import { scanKeysSafe } from "#lib/database/cluster-safe.js";
-import { tryGetService } from "#lib/module-system/Service.js";
+import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Guild } from "discord.js";
 import { RedisKeys } from "#lib/database/redis.js";
@@ -49,7 +49,7 @@ export class GuildDeleteEventBusListener extends Listener<
         );
     }
 
-    const filterSvc = tryGetService("filter");
+    const filterSvc = tryGetUtility("filter");
     filterSvc?.evict(guild.id);
   }
 }

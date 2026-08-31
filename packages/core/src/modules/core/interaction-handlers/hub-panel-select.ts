@@ -1,8 +1,8 @@
 import { fetchTyped } from "#lib/commands.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
-import { getService } from "#lib/module-system/Service.js";
-import type { GuildSettingsService } from "#lib/services/GuildSettingsService.js";
-import type { PermissionService } from "#lib/services/PermissionService.js";
+import { getUtility } from "#lib/module-system/Utility.js";
+import type { GuildSettingsUtility } from "#utilities/GuildSettingsUtility.js";
+import type { PermissionUtility } from "#utilities/PermissionUtility.js";
 import {
   accessDenied,
   hasAdminPermit,
@@ -40,12 +40,12 @@ const ownerOnly = () =>
   interactionHandlerType: InteractionHandlerTypes.SelectMenu,
 })
 export class HubPanelSelectHandler extends BaseInteractionHandler {
-  private get settings(): GuildSettingsService {
-    return getService("guild-settings");
+  private get settings(): GuildSettingsUtility {
+    return getUtility("guild-settings");
   }
 
-  private get perms(): PermissionService {
-    return getService("permissions");
+  private get perms(): PermissionUtility {
+    return getUtility("permissions");
   }
 
   public override parse(interaction: AnySelectMenuInteraction) {
@@ -85,7 +85,7 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
       const [act, repoName, moduleName] = val.split(":");
       if (!act || !repoName || !moduleName) return;
 
-      const downloader = getService("downloader");
+      const downloader = getUtility("downloader");
       try {
         if (act === "install") {
           await downloader.installModule(repoName, moduleName);
@@ -120,7 +120,7 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
     if (kind === "addon_autoupdate_interval") {
       if (!(await hasOwnerPermit(interaction))) throw ownerOnly();
       const minutes = Number(interaction.values[0]);
-      const downloader = getService("downloader");
+      const downloader = getUtility("downloader");
       await downloader.setAutoUpdateConfig({ intervalMinutes: minutes });
       const config = await downloader.getAutoUpdateConfig();
       return interaction.editReply(buildAutoUpdateSettingsView(config, t));

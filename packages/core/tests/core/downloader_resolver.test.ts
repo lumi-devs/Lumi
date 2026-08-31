@@ -340,7 +340,7 @@ describe("DownloadResolver Edge Cases", () => {
           disableable: true,
           dependencies: ["core"],
           conflicts: [],
-          targetService: "worker",
+          targetUtility: "worker",
           subStores: ["commands"],
         }),
       );

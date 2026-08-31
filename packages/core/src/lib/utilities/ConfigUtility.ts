@@ -1,4 +1,4 @@
-import { Service } from "#lib/module-system/Service.js";
+import { Utility } from "#lib/module-system/Utility.js";
 import { FieldType, parseConfigList } from "#lib/module-system/Module.js";
 import { cleanMention } from "#utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
@@ -7,7 +7,7 @@ import type { Prisma } from "@prisma/client";
 import { configLock } from "#lib/guild-transaction.js";
 
 @ApplyOptions<Piece.Options>({ name: "config" })
-export class ConfigService extends Service {
+export class ConfigUtility extends Utility {
   public async setConfig(
     guildId: string,
     moduleName: string,
@@ -133,7 +133,7 @@ export class ConfigService extends Service {
           })
           .catch((err: unknown) =>
             this.container.logger.warn(
-              `[ConfigService] Failed to write audit history for ${moduleName}:${key}:`,
+              `[ConfigUtility] Failed to write audit history for ${moduleName}:${key}:`,
               err,
             ),
         );
@@ -142,7 +142,7 @@ export class ConfigService extends Service {
     if (hook) {
       hook(guildId, key).catch((err: unknown) =>
         this.container.logger.warn(
-          `[ConfigService] Post-set hook failed for ${moduleName}:${key}:`,
+          `[ConfigUtility] Post-set hook failed for ${moduleName}:${key}:`,
           err,
         ),
       );
@@ -313,8 +313,8 @@ export class ConfigService extends Service {
   }
 }
 
-declare module "#lib/module-system/Service.js" {
-  interface Services {
-    config: ConfigService;
+declare module "#lib/module-system/Utility.js" {
+  interface Utilities {
+    config: ConfigUtility;
   }
 }

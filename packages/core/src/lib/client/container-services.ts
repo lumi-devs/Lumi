@@ -6,7 +6,6 @@ import {
 import { ADDON_MODULES_ROOT } from "#lib/downloader/resolver.js";
 import { envParseInteger, getDevModulePaths } from "#lib/env.js";
 import { ModuleStore } from "#lib/module-system/ModuleStore.js";
-import { ServiceStore } from "#lib/module-system/ServiceStore.js";
 import { permitResolver } from "#lib/permissions/PermitResolver.js";
 import { prisma, prismaReader } from "#lib/prisma/client.js";
 import { DatabaseService } from "#lib/prisma/DatabaseService.js";
@@ -41,11 +40,10 @@ export function installContainerServices(
   for (const devPath of getDevModulePaths()) {
     moduleStore.addRoot(pathToFileURL(`${devPath}/`));
   }
-  client.stores.register(new ServiceStore());
   client.stores.register(moduleStore);
   client.stores.registerPath(new URL("../permissions/", import.meta.url));
-  (client.stores.get("services") as Store<any> | undefined)?.registerPath(
-    new URL("../services/", import.meta.url),
+  (client.stores.get("utilities") as Store<any> | undefined)?.registerPath(
+    new URL("../utilities/", import.meta.url),
   );
 
 

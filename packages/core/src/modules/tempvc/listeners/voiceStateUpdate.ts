@@ -1,12 +1,12 @@
 import { Listener, Events } from "@sapphire/framework";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { VoiceState } from "discord.js";
 import { logError } from "#lib/utilities/errors.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { TEMPVC_CREATE_COOLDOWN_MS } from "../index.js";
 import { tempVcRegistry } from "../registry.js";
-import type TempVcService from "../services/TempVcService.js";
+import type TempVcUtility from "../utilities/TempVcUtility.js";
 import {
   trackVoiceState,
   isVoiceChannelEmpty,
@@ -19,8 +19,8 @@ import {
 export default class TempVcVoiceStateListener extends Listener<
   typeof Events.VoiceStateUpdate
 > {
-  private get service(): TempVcService {
-    return getService("tempvc");
+  private get service(): TempVcUtility {
+    return getUtility("tempvc");
   }
 
   public async run(oldState: VoiceState, newState: VoiceState) {

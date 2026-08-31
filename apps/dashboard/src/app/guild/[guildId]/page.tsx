@@ -21,7 +21,7 @@ import { buildHealthChecks } from "#/lib/health-checks";
 import { extractMemberNames } from "#/lib/log-format";
 import { HEALTHY_STATUS } from "#/components/system/shard-fleet";
 
-const FEED_ROWS = 6;
+const FeedRows = 6;
 
 // Every panel below the header is a separate RPC read: one failing (the worker
 // restarting mid-render, say) must degrade that panel only, never blank the
@@ -48,7 +48,7 @@ export default async function GuildOverviewPage({
     safe(
       getGuildAuditLog(guildId, session.userId, {
         page: 1,
-        pageSize: FEED_ROWS,
+        pageSize: FeedRows,
       }),
     ),
     safe(
@@ -61,7 +61,7 @@ export default async function GuildOverviewPage({
     safe(
       getGuildConfigHistory(guildId, session.userId, {
         page: 1,
-        pageSize: FEED_ROWS,
+        pageSize: FeedRows,
       }),
     ),
     // Fleet telemetry is an owner-only read; a guild manager simply doesn't get

@@ -1,5 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { AutocompleteInteraction } from "discord.js";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
@@ -23,7 +23,7 @@ import {
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
-import type { DownloaderService } from "#lib/services/DownloaderService.js";
+import type { DownloaderUtility } from "#utilities/DownloaderUtility.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "download",
@@ -112,8 +112,8 @@ export class DownloadCommand extends BaseSubcommand {
     );
   }
 
-  private get downloaderService(): DownloaderService {
-    return getService("downloader");
+  private get downloaderService(): DownloaderUtility {
+    return getUtility("downloader");
   }
 
   public override async autocompleteRun(

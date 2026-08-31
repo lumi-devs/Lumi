@@ -7,8 +7,8 @@ import {
 } from "discord.js";
 import { isNullish } from "@sapphire/utilities";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { tryGetService } from "#lib/module-system/Service.js";
-import type { NukeKind } from "../services/SecurityService.js";
+import { tryGetUtility } from "#lib/module-system/Utility.js";
+import type { NukeKind } from "../utilities/SecurityUtility.js";
 
 const KIND_BY_EVENT: Partial<Record<AuditLogEvent, NukeKind>> = {
   [AuditLogEvent.MemberBanAdd]: "ban",
@@ -35,7 +35,7 @@ export class SecurityAuditLogListener extends ModuleListener<
     const executorId = entry.executorId;
     if (isNullish(executorId)) return;
 
-    const security = tryGetService("security");
+    const security = tryGetUtility("security");
     if (!security) return;
 
     if (

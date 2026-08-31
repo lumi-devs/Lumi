@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import {
-  AUTOCOMPLETE_CHOICE_LIMIT,
+  AutocompleteChoiceLimit,
   filterAutocompleteChoices,
   respondWithChoices,
 } from "#lib/utilities/autocomplete.js";
@@ -23,8 +23,8 @@ describe("filterAutocompleteChoices", () => {
   it("caps results at 25 choices", () => {
     const values = Array.from({ length: 40 }, (_, i) => `value-${i}`);
     const result = filterAutocompleteChoices(values, "");
-    expect(result).toHaveLength(AUTOCOMPLETE_CHOICE_LIMIT);
-    expect(result).toEqual(values.slice(0, AUTOCOMPLETE_CHOICE_LIMIT));
+    expect(result).toHaveLength(AutocompleteChoiceLimit);
+    expect(result).toEqual(values.slice(0, AutocompleteChoiceLimit));
   });
 
   it("respects a custom limit", () => {

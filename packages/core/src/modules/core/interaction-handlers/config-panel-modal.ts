@@ -1,7 +1,7 @@
 import { fetchTyped } from "#lib/commands.js";
 import { FieldType } from "#lib/module-system/Module.js";
-import { getService } from "#lib/module-system/Service.js";
-import type { ConfigService } from "#lib/services/ConfigService.js";
+import { getUtility } from "#lib/module-system/Utility.js";
+import type { ConfigUtility } from "#utilities/ConfigUtility.js";
 import { hasPanelAccess, loadDetail } from "#modules/core/lib/config-panel.js";
 import { buildFeatureDetailView } from "#modules/core/ui/modules.js";
 import { buildOverridesView } from "#modules/core/ui/overrides.js";
@@ -21,8 +21,8 @@ const OVERRIDE_TYPES = new Set(["channel", "role", "user", "category"]);
   interactionHandlerType: InteractionHandlerTypes.ModalSubmit,
 })
 export class ConfigPanelModalHandler extends InteractionHandler {
-  private get cfg(): ConfigService {
-    return getService("config");
+  private get cfg(): ConfigUtility {
+    return getUtility("config");
   }
 
   public override parse(interaction: ModalSubmitInteraction) {

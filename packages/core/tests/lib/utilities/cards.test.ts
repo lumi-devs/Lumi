@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { ContainerBuilder } from "@discordjs/builders";
 import { makeListCard,
   fitLines,
-  TEXT_DISPLAY_LIMIT,
+  TextDisplayLimit,
 } from "#lib/utilities/cards.js";
 
 describe("cards utility makeListCard", () => {
@@ -58,7 +58,7 @@ describe("fitLines", () => {
     const lines = Array.from({ length: 50 }, () => "x".repeat(200));
     const body = fitLines(lines);
 
-    expect(body.length).toBeLessThanOrEqual(TEXT_DISPLAY_LIMIT);
+    expect(body.length).toBeLessThanOrEqual(TextDisplayLimit);
     expect(body).toContain("more item(s)");
   });
 
@@ -66,6 +66,6 @@ describe("fitLines", () => {
   // fails the whole reply rather than being truncated in transit.
   it("survives a single oversized line", () => {
     const body = fitLines(["y".repeat(9000)]);
-    expect(body.length).toBeLessThanOrEqual(TEXT_DISPLAY_LIMIT);
+    expect(body.length).toBeLessThanOrEqual(TextDisplayLimit);
   });
 });

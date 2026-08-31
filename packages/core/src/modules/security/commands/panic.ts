@@ -2,7 +2,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { ComponentType } from "discord.js";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import { getService } from "#lib/module-system/Service.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import {
   buildPanicAlreadyActiveCard,
   buildPanicCancelledCard,
@@ -70,7 +70,7 @@ export class PanicCommand extends BaseCommand {
             .filter((id) => id.length > 0)
         : [];
 
-    const result = await getService("security").enterPanic(
+    const result = await getUtility("security").enterPanic(
       guild,
       ctx.user.id,
       channelIds,

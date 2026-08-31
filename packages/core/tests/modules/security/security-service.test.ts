@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
 import { ChannelType } from "discord.js";
-import { SecurityService } from "#modules/security/services/SecurityService.js";
+import { SecurityUtility } from "#modules/security/utilities/SecurityUtility.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { logToChannel } from "#lib/moderation/log.js";
 import { MAX_ATTEMPTS, type CaptchaState } from "#modules/security/lib/captcha.js";
@@ -52,7 +52,7 @@ function makeService(overrides: {
   redis?: Record<string, unknown>;
   db?: Record<string, unknown>;
 }) {
-  const service = Object.create(SecurityService.prototype) as SecurityService;
+  const service = Object.create(SecurityUtility.prototype) as SecurityUtility;
   Object.defineProperty(service, "redis", {
     value: {
       incr: vi.fn(),
@@ -83,7 +83,7 @@ beforeEach(() => {
   (container as any).client = { user: { id: "bot-1" } };
 });
 
-describe("SecurityService.loadAntiNukeConfig", () => {
+describe("SecurityUtility.loadAntiNukeConfig", () => {
   it("parses config with defaults and trusted role list", async () => {
     const service = makeService({
       db: {
@@ -147,7 +147,7 @@ describe("SecurityService.loadAntiNukeConfig", () => {
   });
 });
 
-describe("SecurityService.recordAction", () => {
+describe("SecurityUtility.recordAction", () => {
   it("stays silent under the limit and sets the window expiry once", async () => {
     const multiMock = makeMultiMock(1);
     const multi = vi.fn(() => multiMock);
@@ -188,7 +188,7 @@ describe("SecurityService.recordAction", () => {
   });
 });
 
-describe("SecurityService.isExempt", () => {
+describe("SecurityUtility.isExempt", () => {
   it("exempts the guild owner and the bot itself", async () => {
     const service = makeService({});
     await expect(service.isExempt(guild, "owner-1", baseConfig)).resolves.toBe(
@@ -218,7 +218,7 @@ describe("SecurityService.isExempt", () => {
   });
 });
 
-describe("SecurityService.respond", () => {
+describe("SecurityUtility.respond", () => {
   it("quarantines the executor when configured", async () => {
     const service = makeService({});
     const member = { id: "u1" };
@@ -263,7 +263,7 @@ describe("SecurityService.respond", () => {
   });
 });
 
-describe("SecurityService.enterPanic / revertPanic", () => {
+describe("SecurityUtility.enterPanic / revertPanic", () => {
   it(
     "pauses invites, locks matching text channels, and snapshots prior overwrites",
     async () => {
@@ -372,7 +372,7 @@ describe("SecurityService.enterPanic / revertPanic", () => {
   });
 });
 
-describe("SecurityService.applyGateAction", () => {
+describe("SecurityUtility.applyGateAction", () => {
   it("kicks the member, creates a case, and logs to channel on the kick action", async () => {
     const kick = vi.fn().mockResolvedValue(undefined);
     const member = { id: "u1", kick };
@@ -446,7 +446,7 @@ describe("SecurityService.applyGateAction", () => {
   });
 });
 
-describe("SecurityService.grantVerified", () => {
+describe("SecurityUtility.grantVerified", () => {
   it("grants the verified role and strips the pending role", async () => {
     const roleSet = vi.fn().mockResolvedValue(undefined);
     const member = {
@@ -489,7 +489,7 @@ describe("SecurityService.grantVerified", () => {
   });
 });
 
-describe("SecurityService.advanceChallenge", () => {
+describe("SecurityUtility.advanceChallenge", () => {
   function makeChallengeRedis(initial: CaptchaState) {
     let stored: string | null = JSON.stringify(initial);
     const get = vi.fn(async () => {
@@ -538,7 +538,7 @@ describe("SecurityService.advanceChallenge", () => {
   });
 });
 
-describe("SecurityService join gate: advertising-account filter", () => {
+describe("SecurityUtility join gate: advertising-account filter", () => {
   function makeMember(displayName: string) {
     return {
       user: { globalName: displayName, username: "fallback", bot: false, avatar: "x" },

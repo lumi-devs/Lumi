@@ -1,11 +1,11 @@
-import { Service } from "#lib/module-system/Service.js";
+import { Utility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { container, type Piece } from "@sapphire/framework";
 import { queueSend } from "#lib/outbound/send-queue.js";
 import type { AuditEntry } from "#lib/loggable.js";
 
 @ApplyOptions<Piece.Options>({ name: "guild-log" })
-export class GuildLogService extends Service {
+export class GuildLogUtility extends Utility {
   /**
    * Queue an audit entry for the guild's log channel. Nobody is waiting on a
    * log line, so it goes through the outbound queue: a Discord outage or a
@@ -25,8 +25,8 @@ export class GuildLogService extends Service {
   }
 }
 
-declare module "#lib/module-system/Service.js" {
-  interface Services {
-    "guild-log": GuildLogService;
+declare module "#lib/module-system/Utility.js" {
+  interface Utilities {
+    "guild-log": GuildLogUtility;
   }
 }

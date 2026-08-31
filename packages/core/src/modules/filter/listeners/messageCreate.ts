@@ -1,10 +1,10 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { getService, tryGetService } from "#lib/module-system/Service.js";
+import { getUtility, tryGetUtility } from "#lib/module-system/Utility.js";
 import { Colors } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
 import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
 import type { GuildMessage } from "#lib/types/common.js";
-import type { FilterService } from "../services/FilterService.js";
+import type { FilterUtility } from "../utilities/FilterUtility.js";
 import { enforceHit, runRules, shouldScreen } from "../lib/enforce.js";
 import {
   containsLink,
@@ -22,8 +22,8 @@ import { fetchTyped } from "#lib/commands.js";
 
 @ApplyOptions<GuildMessageListener.Options>({ module: "filter" })
 export class FilterMessageListener extends GuildMessageListener {
-  private get filterService(): FilterService {
-    return getService("filter");
+  private get filterService(): FilterUtility {
+    return getUtility("filter");
   }
 
   protected async handle(message: GuildMessage): Promise<void> {
@@ -212,7 +212,7 @@ export class FilterMessageListener extends GuildMessageListener {
     action: string,
     reason: string,
   ): Promise<void> {
-    const logService = tryGetService("guild-log");
+    const logService = tryGetUtility("guild-log");
     await logService?.dispatch({
       guildId: message.guildId,
       moduleName: "filter",

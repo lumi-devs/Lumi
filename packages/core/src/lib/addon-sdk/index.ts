@@ -32,8 +32,8 @@ export {
 export { ModuleListener, type ModuleListenerOptions } from "#core/module-system/ModuleListener.js";
 export { GuildMessageListener } from "#core/module-system/GuildMessageListener.js";
 export {
-  Service,
-  getService,
-  tryGetService,
-  type Services,
-} from "#core/module-system/Service.js";
+  Utility,
+  getUtility,
+  tryGetUtility,
+  type Utilities,
+} from "#core/module-system/Utility.js";

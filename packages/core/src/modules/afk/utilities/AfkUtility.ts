@@ -1,10 +1,10 @@
-import { Service } from "#lib/module-system/Service.js";
+import { Utility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import type { GuildMember, User } from "discord.js";
 import {
-  NICK_PREFIX,
-  AFK_REMOVAL_COOLDOWN_MS,
+  NickPrefix,
+  AfkRemovalCooldownMs,
   isAfkNickPrefixEnabled,
 } from "../index.js";
 import { AfkKeys } from "../keys.js";
@@ -21,7 +21,7 @@ import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 const SWEEP_CONCURRENCY = 10;
 
 @ApplyOptions<Piece.Options>({ name: "afk" })
-export default class AfkService extends Service {
+export default class AfkUtility extends Utility {
   public async setAfk(
     guildId: string,
     member: GuildMember | null,
@@ -40,18 +40,18 @@ export default class AfkService extends Service {
       !existing &&
       member &&
       member.displayName &&
-      !member.displayName.startsWith(NICK_PREFIX)
+      !member.displayName.startsWith(NickPrefix)
     ) {
       if (await isAfkNickPrefixEnabled(guildId)) {
         void member
-          .setNickname(`${NICK_PREFIX}${member.displayName}`.slice(0, 32))
+          .setNickname(`${NickPrefix}${member.displayName}`.slice(0, 32))
           .catch(() => null);
       }
     }
 
     await setAfkCooldown(
       AfkKeys.removalCooldown(guildId, user.id),
-      AFK_REMOVAL_COOLDOWN_MS,
+      AfkRemovalCooldownMs,
     );
 
     return {
@@ -98,8 +98,8 @@ export default class AfkService extends Service {
   }
 }
 
-declare module "#lib/module-system/Service.js" {
-  interface Services {
-    afk: AfkService;
+declare module "#lib/module-system/Utility.js" {
+  interface Utilities {
+    afk: AfkUtility;
   }
 }

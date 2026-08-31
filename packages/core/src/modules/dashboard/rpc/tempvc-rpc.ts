@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
 import { RPC_ACTIONS } from "@lumi/contracts";
-import { tryGetService } from "#lib/module-system/Service.js";
+import { tryGetUtility } from "#lib/module-system/Utility.js";
 import {
   TempVcGeneratorSetSchema,
   parsePayload,
@@ -34,7 +34,7 @@ export function registerTempVcRpcHandlers(): void {
       req.data,
     );
 
-    const tempvc = tryGetService("tempvc");
+    const tempvc = tryGetUtility("tempvc");
     if (!tempvc) throw new Error("The tempvc module is not loaded");
 
     if (name === null) {
