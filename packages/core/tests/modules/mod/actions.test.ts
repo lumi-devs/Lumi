@@ -21,6 +21,9 @@ import { cancelTask } from '#lib/schedule-task.js';
 
 vi.mock('@sapphire/framework', () => ({
   container: {
+    invalidation: {
+      invalidate: vi.fn().mockResolvedValue(undefined)
+    },
     redis: {
       get: vi.fn(),
       setex: vi.fn(),
@@ -131,7 +134,7 @@ describe('Mod Thresholds Logic', () => {
 
   it('invalidateThresholds deletes redis key', async () => {
     await invalidateThresholds(container, 'g-1');
-    expect(container.redis.del).toHaveBeenCalledWith('lumi:mod:g-1:thresholds');
+    expect(container.invalidation.invalidate).toHaveBeenCalledWith('lumi:mod:g-1:thresholds');
   });
 
   it('incrementWarnCount initializes count from DB when key does not exist', async () => {
@@ -159,7 +162,7 @@ describe('Mod Thresholds Logic', () => {
     expect(container.redis.eval).toHaveBeenCalled();
 
     await resetWarnCount(container, 'g-1', 'u-1');
-    expect(container.redis.del).toHaveBeenCalledWith('lumi:mod:g-1:warns:u-1');
+    expect(container.invalidation.invalidate).toHaveBeenCalledWith('lumi:mod:g-1:warns:u-1');
   });
 
   it('checkThresholds executes kick action when threshold matches', async () => {

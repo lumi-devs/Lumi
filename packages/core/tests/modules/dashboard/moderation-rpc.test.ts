@@ -62,6 +62,10 @@ describe("dashboard module moderation RPC handlers", () => {
       del: vi.fn(),
     } as any;
 
+    (container as any).invalidation = {
+      invalidate: vi.fn().mockResolvedValue(undefined),
+    };
+
     (container as any).db = {
       moderation: new ModerationRepository(
         prisma as any,
@@ -309,7 +313,7 @@ describe("dashboard module moderation RPC handlers", () => {
 
       expect(res).toEqual({ success: true, warnCount: 4, deleted: false });
       expect(prisma.$all("warnThreshold")[0]!["action"]).toBe("quarantine");
-      expect(container.redis.del).toHaveBeenCalledWith(
+      expect(container.invalidation.invalidate).toHaveBeenCalledWith(
         `lumi:mod:${GUILD_ID}:thresholds`,
       );
     });
