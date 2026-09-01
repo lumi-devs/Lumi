@@ -110,7 +110,12 @@ export class ConfigRepository extends Repository {
     moduleName: string,
     key: string,
     value: Prisma.InputJsonValue,
+    actorId?: string,
   ): Promise<GuildModuleConfig> {
+    let oldValue: unknown = null;
+    if (actorId) {
+      oldValue = await this.getModuleConfig(guildId, moduleName, key);
+    }
     const result = await this.prisma.guildModuleConfig.upsert({
       where: {
         guildId_moduleName_configKey: { guildId, moduleName, configKey: key },
@@ -119,6 +124,23 @@ export class ConfigRepository extends Repository {
       create: { guildId, moduleName, configKey: key, value },
     });
     await this.invalidateModuleConfig(guildId, moduleName);
+    if (actorId) {
+      this.db.configHistory
+        ?.logConfigChange({
+          guildId,
+          moduleName,
+          key,
+          oldValue,
+          newValue: value,
+          actorId,
+        })
+        .catch((err: unknown) =>
+          this.logger.warn(
+            `[ConfigRepository] Failed to write audit history for ${moduleName}:${key}:`,
+            err,
+          ),
+        );
+    }
     return result;
   }
 
@@ -159,9 +181,15 @@ export class ConfigRepository extends Repository {
     guildId: string,
     moduleName: string,
     entries: Record<string, Prisma.InputJsonValue>,
+    actorId?: string,
   ): Promise<void> {
     const keys = Object.keys(entries);
     if (keys.length === 0) return;
+
+    let oldValues: Record<string, unknown> = {};
+    if (actorId) {
+      oldValues = await this.getModuleConfigs(guildId, moduleName, keys);
+    }
 
     await this.prisma.$transaction(
       keys.map((configKey) =>
@@ -187,6 +215,26 @@ export class ConfigRepository extends Repository {
     );
 
     await this.invalidateModuleConfig(guildId, moduleName);
+
+    if (actorId) {
+      for (const [key, value] of Object.entries(entries)) {
+        this.db.configHistory
+          ?.logConfigChange({
+            guildId,
+            moduleName,
+            key,
+            oldValue: oldValues[key] ?? null,
+            newValue: value,
+            actorId,
+          })
+          .catch((err: unknown) =>
+            this.logger.warn(
+              `[ConfigRepository] Failed to write audit history for ${moduleName}:${key}:`,
+              err,
+            ),
+          );
+      }
+    }
   }
 
   public async clearModuleConfig(
