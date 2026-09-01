@@ -300,9 +300,13 @@ export class InvalidationBus {
   }
 
   #onMessage = (_channel: string, payload: string) => {
-    const parsed = tryParseJSON(payload) as { keys?: string[] } | null;
-    if (!parsed?.keys) return;
-    for (const fn of this.#listeners) fn(parsed.keys);
+    const parsed = tryParseJSON(payload) as { keys?: unknown } | null;
+    if (!parsed || !Array.isArray(parsed.keys)) return;
+    const validKeys = parsed.keys.filter(
+      (k): k is string => typeof k === "string" && k.length > 0,
+    );
+    if (validKeys.length === 0) return;
+    for (const fn of this.#listeners) fn(validKeys);
   };
 
   #onClose = () => {

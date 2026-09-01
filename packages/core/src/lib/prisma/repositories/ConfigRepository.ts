@@ -125,6 +125,65 @@ export class ConfigRepository extends Repository {
     return result;
   }
 
+  /**
+   * Retrieves specific configuration keys for a module in a guild, utilizing cached module config.
+   */
+  public async getModuleConfigs(
+    guildId: string,
+    moduleName: string,
+    keys: string[],
+  ): Promise<Record<string, unknown>> {
+    if (keys.length === 0) return {};
+    const all = await this.getAllModuleConfig(guildId, moduleName);
+    const result: Record<string, unknown> = {};
+    for (const key of keys) {
+      if (key in all) {
+        result[key] = all[key];
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Upserts multiple module configuration keys in a single transaction and invalidates caches.
+   */
+  public async setModuleConfigsMany(
+    guildId: string,
+    moduleName: string,
+    entries: Record<string, Prisma.InputJsonValue>,
+  ): Promise<void> {
+    const keys = Object.keys(entries);
+    if (keys.length === 0) return;
+
+    await this.prisma.$transaction(
+      keys.map((configKey) =>
+        this.prisma.guildModuleConfig.upsert({
+          where: {
+            guildId_moduleName_configKey: {
+              guildId,
+              moduleName,
+              configKey,
+            },
+          },
+          create: {
+            guildId,
+            moduleName,
+            configKey,
+            value: entries[configKey]!,
+          },
+          update: {
+            value: entries[configKey]!,
+          },
+        }),
+      ),
+    );
+
+    await this.invalidate(
+      RedisKeys.guildConfig(moduleName, guildId),
+      RedisKeys.guildAllModuleConfigs(guildId),
+    );
+  }
+
   public async clearModuleConfig(
     guildId: string,
     moduleName: string,

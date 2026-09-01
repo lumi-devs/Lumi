@@ -26,6 +26,71 @@ export class GuildKVRepository extends Repository {
     return r ? (r.value as T) : null;
   }
 
+  /**
+   * Retrieves multiple module data entries for a guild and module in a single query.
+   * Returns a Map keyed by `${targetId}:${key}`.
+   */
+  public async getModuleDataMany<T = unknown>(
+    guildId: string,
+    module: string,
+    targets: { targetId: string; key: string }[],
+  ): Promise<Map<string, T>> {
+    const result = new Map<string, T>();
+    if (targets.length === 0) return result;
+
+    const rows = await this.prisma.moduleData.findMany({
+      where: {
+        guildId,
+        moduleName: module,
+        OR: targets.map((t) => ({ targetId: t.targetId, key: t.key })),
+      },
+    });
+
+    for (const row of rows) {
+      result.set(`${row.targetId}:${row.key}`, row.value as T);
+    }
+    return result;
+  }
+
+  /**
+   * Upserts multiple module data entries for a guild and module in a single transaction.
+   * Returns the number of entries written.
+   */
+  public async setModuleDataMany(
+    guildId: string,
+    module: string,
+    entries: { targetId: string; key: string; value: Prisma.InputJsonValue }[],
+  ): Promise<number> {
+    if (entries.length === 0) return 0;
+
+    await this.prisma.$transaction(
+      entries.map((e) =>
+        this.prisma.moduleData.upsert({
+          where: {
+            guildId_moduleName_targetId_key: {
+              guildId,
+              moduleName: module,
+              targetId: e.targetId,
+              key: e.key,
+            },
+          },
+          create: {
+            guildId,
+            moduleName: module,
+            targetId: e.targetId,
+            key: e.key,
+            value: e.value,
+          },
+          update: {
+            value: e.value,
+          },
+        }),
+      ),
+    );
+
+    return entries.length;
+  }
+
   public async setModuleData<T = unknown>(
     guildId: string,
     module: string,

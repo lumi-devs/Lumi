@@ -172,7 +172,22 @@ export class RedisStreamsBus implements EventBus {
           resp = await readConn.xreadgroup(...args);
         } catch (err) {
           if (this.closed || stopped) return;
-          this.log("error", "xreadgroup failed", { err: String(err) });
+          const msg = String(err);
+          this.log("error", "xreadgroup failed", { err: msg });
+          if (msg.includes("NOGROUP")) {
+            for (const stream of streams) {
+              this.knownGroups.delete(`${stream}::${opts.group}`);
+              try {
+                await this.ensureGroup(stream, opts.group, opts.startId ?? "0");
+              } catch (egErr) {
+                this.log("error", "ensureGroup recovery failed", {
+                  stream,
+                  group: opts.group,
+                  err: String(egErr),
+                });
+              }
+            }
+          }
           await sleep(500);
           continue;
         }
@@ -273,75 +288,80 @@ export class RedisStreamsBus implements EventBus {
     deliveryCount: number,
     handler: (msg: BusMessage<T>) => Promise<void>,
   ): Promise<void> {
-    // Deliveries beyond the limit go straight to the DLQ - don't even invoke
-    // the handler again. The entry has already been redelivered N times; we
-    // know it's poison.
-    if (deliveryCount > this.maxDeliveries) {
+    const inFlightKey = `${stream}\0${id}`;
+    if (this.inFlight.has(inFlightKey)) return;
+    this.inFlight.add(inFlightKey);
+
+    try {
+      // Deliveries beyond the limit go straight to the DLQ - don't even invoke
+      // the handler again. The entry has already been redelivered N times; we
+      // know it's poison.
+      if (deliveryCount > this.maxDeliveries) {
+        try {
+          await this.sendToDlq(stream, id, fields, deliveryCount);
+        } catch (err) {
+          this.log("error", "sendToDlq failed; leaving entry pending for retry", {
+            stream,
+            id,
+            err: String(err),
+          });
+          return;
+        }
+        await this.publisher.xack(stream, group, id);
+        this.log("warn", "dropped poison message to DLQ", {
+          stream,
+          id,
+          deliveryCount,
+        });
+        return;
+      }
+
+      let body: T;
       try {
-        await this.sendToDlq(stream, id, fields, deliveryCount);
+        body = decodeBody<T>(fields);
       } catch (err) {
-        this.log("error", "sendToDlq failed; leaving entry pending for retry", {
+        this.log("error", "malformed payload JSON or missing fields", {
           stream,
           id,
           err: String(err),
         });
+        try {
+          await this.sendToDlq(stream, id, fields, deliveryCount);
+        } catch (dlqErr) {
+          this.log("error", "sendToDlq failed; leaving entry pending for retry", {
+            stream,
+            id,
+            err: String(dlqErr),
+          });
+          return;
+        }
+        await this.publisher.xack(stream, group, id);
         return;
       }
-      await this.publisher.xack(stream, group, id);
-      this.log("warn", "dropped poison message to DLQ", {
-        stream,
-        id,
-        deliveryCount,
-      });
-      return;
-    }
 
-    let body: T;
-    try {
-      body = decodeBody<T>(fields);
-    } catch (err) {
-      this.log("error", "malformed payload JSON or missing fields", {
-        stream,
+      const msg: BusMessage<T> = {
         id,
-        err: String(err),
-      });
+        body,
+        deliveryCount,
+        ack: async () => {
+          await this.publisher.xack(stream, group, id);
+        },
+        nack: async () => {
+          // No-op - leaving the entry unacked makes it eligible for XAUTOCLAIM
+          // after claimMinIdleMs.
+        },
+      };
+
       try {
-        await this.sendToDlq(stream, id, fields, deliveryCount);
-      } catch (dlqErr) {
-        this.log("error", "sendToDlq failed; leaving entry pending for retry", {
+        await handler(msg);
+      } catch (err) {
+        this.log("error", "handler threw; leaving entry pending", {
           stream,
           id,
-          err: String(dlqErr),
+          deliveryCount,
+          err: String(err),
         });
-        return;
       }
-      await this.publisher.xack(stream, group, id);
-      return;
-    }
-
-    const msg: BusMessage<T> = {
-      id,
-      body,
-      deliveryCount,
-      ack: async () => {
-        await this.publisher.xack(stream, group, id);
-      },
-      nack: async () => {
-        // No-op - leaving the entry unacked makes it eligible for XAUTOCLAIM
-        // after claimMinIdleMs.
-      },
-    };
-    const inFlightKey = `${stream}\0${id}`;
-    this.inFlight.add(inFlightKey);
-    try {
-      await handler(msg);
-    } catch (err) {
-      this.log("error", "handler threw; leaving entry pending", {
-        stream,
-        id,
-        deliveryCount,
-        err: String(err),
-      });
     } finally {
       this.inFlight.delete(inFlightKey);
     }
@@ -358,59 +378,75 @@ export class RedisStreamsBus implements EventBus {
       let cursor = "0-0";
       // Bound the loop - claim up to ~128 entries per tick, then yield.
       for (let i = 0; i < 8; i++) {
-        const resp = (await this.pubStream.xautoclaim(
-          stream,
-          opts.group,
-          opts.consumer,
-          this.claimMinIdleMs,
-          cursor,
-          "COUNT",
-          16,
-        )) as [string, Array<[string, string[]]>, string[]] | null;
-        if (!resp) break;
+        let resp: [string, Array<[string, string[]]>, string[]?] | null = null;
+        try {
+          resp = (await this.pubStream.xautoclaim(
+            stream,
+            opts.group,
+            opts.consumer,
+            this.claimMinIdleMs,
+            cursor,
+            "COUNT",
+            16,
+          )) as [string, Array<[string, string[]]>, string[]?] | null;
+        } catch (err) {
+          if (String(err).includes("NOGROUP")) {
+            this.knownGroups.delete(`${stream}::${opts.group}`);
+            try {
+              await this.ensureGroup(stream, opts.group, opts.startId ?? "0");
+            } catch {
+              // Ignore recovery error and rethrow so caller catches
+            }
+          }
+          throw err;
+        }
+        if (!resp || !Array.isArray(resp)) break;
         const [nextCursor, entries] = resp;
-        for (const [id, fields] of entries) {
-          if (this.inFlight.has(`${stream}\0${id}`)) {
-            this.log("warn", "skipping reclaim of in-flight message", {
-              stream,
-              id,
-            });
-            continue;
-          }
-          let deliveryCount: number;
-          try {
-            deliveryCount = await this.pendingDeliveryCount(
-              stream,
-              opts.group,
-              id,
-            );
-          } catch (err) {
-            this.log("error", "pendingDeliveryCount failed", {
-              stream,
-              id,
-              err: String(err),
-            });
-            continue;
-          }
-          try {
-            await this.deliver(
-              stream,
-              opts.group,
-              id,
-              fields,
-              deliveryCount,
-              handler,
-            );
-          } catch (err) {
-            this.log("error", "claim deliver failed", {
-              stream,
-              id,
-              err: String(err),
-            });
+        if (Array.isArray(entries)) {
+          for (const [id, fields] of entries) {
+            if (this.inFlight.has(`${stream}\0${id}`)) {
+              this.log("warn", "skipping reclaim of in-flight message", {
+                stream,
+                id,
+              });
+              continue;
+            }
+            let deliveryCount: number;
+            try {
+              deliveryCount = await this.pendingDeliveryCount(
+                stream,
+                opts.group,
+                id,
+              );
+            } catch (err) {
+              this.log("error", "pendingDeliveryCount failed", {
+                stream,
+                id,
+                err: String(err),
+              });
+              continue;
+            }
+
+            try {
+              await this.deliver(
+                stream,
+                opts.group,
+                id,
+                fields,
+                deliveryCount,
+                handler,
+              );
+            } catch (err) {
+              this.log("error", "claim deliver failed", {
+                stream,
+                id,
+                err: String(err),
+              });
+            }
           }
         }
+        if (!nextCursor || nextCursor === "0-0" || nextCursor === cursor) break;
         cursor = nextCursor;
-        if (cursor === "0-0") break;
       }
     }
   }

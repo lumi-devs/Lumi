@@ -31,19 +31,19 @@ function digest(value: string): Buffer {
  * Constant-time compare over SHA-256 digests rather than the raw strings, so
  * neither the byte values nor the token *length* leak through timing.
  */
-function tokenMatches(expected: string, presented: string | null): boolean {
+export function tokenMatches(expected: string, presented: string | null): boolean {
   if (!presented) return false;
   return timingSafeEqual(digest(expected), digest(presented));
 }
 
-function presentedToken(req: Request): string | null {
+export function presentedToken(req: Request): string | null {
   const header = req.headers.get(AUTH_HEADER);
   if (!header?.startsWith(BEARER_PREFIX)) return null;
   const value = header.slice(BEARER_PREFIX.length).trim();
   return value.length > 0 ? value : null;
 }
 
-function readInternalToken(
+export function readInternalToken(
   log: (level: "info" | "warn" | "error", msg: string, meta?: object) => void,
 ): string | null {
   const token = process.env["RPC_INTERNAL_TOKEN"]?.trim();
@@ -68,9 +68,49 @@ function readInternalToken(
   return null;
 }
 
-export function startRpcHttpServer(
+export async function handleRpcHttpRequest(
+  req: Request,
+  internalToken: string | null,
+): Promise<Response> {
+  const { pathname } = new URL(req.url);
+  // Unauthenticated on purpose: liveness/readiness probes have no way to
+  // hold the secret, and it discloses nothing beyond "the process is up".
+  if (req.method === "GET" && pathname === "/healthz") {
+    return new Response("ok");
+  }
+  if (req.method !== "POST" || pathname !== "/rpc") {
+    return new Response("not found", { status: 404 });
+  }
+  if (internalToken && !tokenMatches(internalToken, presentedToken(req))) {
+    return Response.json(
+      { id: "", ok: false, error: "Unauthorized" },
+      { status: 401 },
+    );
+  }
+  let body: RpcRequest<unknown>;
+  try {
+    body = (await req.json()) as RpcRequest<unknown>;
+  } catch {
+    return Response.json(
+      { id: "", ok: false, error: "Malformed JSON body" },
+      { status: 400 },
+    );
+  }
+  if (!body?.action) {
+    return Response.json(
+      { id: body?.id ?? "", ok: false, error: "Missing action" },
+      { status: 400 },
+    );
+  }
+  const res = await dispatchRpc(body);
+  return Response.json(res);
+}
+
+export async function startRpcHttpServer(
   log: (level: "info" | "warn" | "error", msg: string, meta?: object) => void,
-): ReturnType<typeof Bun.serve> | null {
+  maxAttempts = 3,
+  initialDelayMs = 500,
+): Promise<ReturnType<typeof Bun.serve> | null> {
   const port = envParseInteger("RPC_HTTP_PORT", 8091);
   // Loopback by default: an operator whose dashboard runs in a separate
   // container/pod opts into a routable bind explicitly (see docker-compose.yml,
@@ -78,55 +118,48 @@ export function startRpcHttpServer(
   const host = envParseString("RPC_HTTP_HOST", "127.0.0.1");
   const internalToken = readInternalToken(log);
 
-  try {
-    const server = Bun.serve({
-      hostname: host,
-      port,
-      async fetch(req) {
-        const { pathname } = new URL(req.url);
-        // Unauthenticated on purpose: liveness/readiness probes have no way to
-        // hold the secret, and it discloses nothing beyond "the process is up".
-        if (req.method === "GET" && pathname === "/healthz") {
-          return new Response("ok");
-        }
-        if (req.method !== "POST" || pathname !== "/rpc") {
-          return new Response("not found", { status: 404 });
-        }
-        if (internalToken && !tokenMatches(internalToken, presentedToken(req))) {
-          return Response.json(
-            { id: "", ok: false, error: "Unauthorized" },
-            { status: 401 },
-          );
-        }
-        let body: RpcRequest<unknown>;
+  let attempt = 0;
+  while (attempt < maxAttempts) {
+    attempt++;
+    try {
+      const server = Bun.serve({
+        hostname: host,
+        port,
+        fetch(req) {
+          return handleRpcHttpRequest(req, internalToken);
+        },
+      });
+      log("info", "[RpcHttp] Internal RPC HTTP server listening", {
+        host,
+        port,
+        authenticated: internalToken !== null,
+      });
+      return server;
+    } catch (err: unknown) {
+      if (attempt < maxAttempts) {
+        const delay = initialDelayMs * Math.pow(2, attempt - 1);
+        log(
+          "warn",
+          `[RpcHttp] Failed to bind internal RPC HTTP server on attempt ${attempt}/${maxAttempts}, retrying in ${delay}ms`,
+          { host, port, error: err instanceof Error ? err.message : String(err) },
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      } else {
+        // Mirrors the metrics server's stance: a bind failure here must never
+        // take the worker down.
+        log("error", "[RpcHttp] Failed to start internal RPC HTTP server", {
+          host,
+          port,
+          error: err instanceof Error ? err.message : String(err),
+        });
         try {
-          body = (await req.json()) as RpcRequest<unknown>;
+          logError("RpcHttp: Failed to start internal RPC HTTP server", err);
         } catch {
-          return Response.json(
-            { id: "", ok: false, error: "Malformed JSON body" },
-            { status: 400 },
-          );
+          // Container logger may not be available in isolated test environments
         }
-        if (!body?.action) {
-          return Response.json(
-            { id: body?.id ?? "", ok: false, error: "Missing action" },
-            { status: 400 },
-          );
-        }
-        const res = await dispatchRpc(body);
-        return Response.json(res);
-      },
-    });
-    log("info", "[RpcHttp] Internal RPC HTTP server listening", {
-      host,
-      port,
-      authenticated: internalToken !== null,
-    });
-    return server;
-  } catch (err: unknown) {
-    // Mirrors the metrics server's stance: a bind failure here must never
-    // take the worker down.
-    logError("[RpcHttp] Failed to start internal RPC HTTP server", err);
-    return null;
+        return null;
+      }
+    }
   }
+  return null;
 }
