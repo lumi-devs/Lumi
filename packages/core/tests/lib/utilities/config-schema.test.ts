@@ -5,6 +5,7 @@ import {
   cfg,
   fieldsFromSchema,
   parseConfigList,
+  validateModuleConfigValue,
   snowflakeString,
   durationString,
   choiceEnum,
@@ -154,6 +155,20 @@ describe("Config Schema Utilities", () => {
       const validator = choiceEnum(["red", "green", "blue"] as const);
       expect(validator.parse("green")).toBe("green");
       expect(() => validator.parse("yellow")).toThrow();
+    });
+
+    it("validates config values using validateModuleConfigValue", () => {
+      const schema = cfg.object({
+        limit: cfg.number({ label: "Limit", description: "Limit value", min: 1, max: 10 }),
+        mode: cfg.enum(["a", "b"] as const, { label: "Mode", description: "Mode value" }),
+      });
+
+      expect(validateModuleConfigValue(schema, "limit", 5)).toBe(5);
+      expect(() => validateModuleConfigValue(schema, "limit", 20)).toThrow();
+      expect(validateModuleConfigValue(schema, "mode", "a")).toBe("a");
+      expect(() => validateModuleConfigValue(schema, "mode", "c")).toThrow();
+      // Undeclared keys pass through unchecked
+      expect(validateModuleConfigValue(schema, "unknownKey", "anything")).toBe("anything");
     });
   });
 });

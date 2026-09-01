@@ -23,6 +23,10 @@ export function envParseInteger(key: string, defaultValue?: number): number {
 
 export const envIsDefined = (key: string) => Boolean(process.env[key]);
 
+export const getNodeEnv = (): string => process.env["NODE_ENV"] || "development";
+export const isDevelopment = (): boolean => getNodeEnv() === "development";
+export const isProduction = (): boolean => getNodeEnv() === "production";
+
 /**
  * Fails fast on every missing key at once, instead of the first caller of
  * `envParseString`/`envParseInteger` for that key surfacing it mid-request.
@@ -34,6 +38,80 @@ export function validateRequiredEnv(keys: readonly string[]): void {
       `[ENV] Missing required environment variable(s): ${missing.join(", ")}`,
     );
   }
+}
+
+type EnvFieldParser<T> = (key: string, raw: string | undefined) => T;
+
+type EnvShape = Record<string, EnvFieldParser<unknown>>;
+
+export type EnvResult<T extends EnvShape> = {
+  readonly [K in keyof T]: ReturnType<T[K]>;
+};
+
+class MissingEnvError extends Error {
+  constructor() {
+    super("required but not set");
+    this.name = "MissingEnvError";
+  }
+}
+
+/** Field parser builders for defineEnv. */
+export const envField = {
+  string: (defaultValue?: string): EnvFieldParser<string> =>
+    (_key, raw) => {
+      if (raw !== undefined && raw !== "") return raw;
+      if (defaultValue !== undefined) return defaultValue;
+      throw new MissingEnvError();
+    },
+  integer: (defaultValue?: number): EnvFieldParser<number> =>
+    (key, raw) => {
+      if (raw !== undefined && raw.trim() !== "") {
+        const n = Number.parseInt(raw.trim(), 10);
+        if (!Number.isNaN(n)) return n;
+        throw new Error(`[ENV] Invalid integer: ${key}=${raw}`);
+      }
+      if (defaultValue !== undefined) return defaultValue;
+      throw new MissingEnvError();
+    },
+  boolean: (defaultValue?: boolean): EnvFieldParser<boolean> =>
+    (key, raw) => {
+      if (raw === "true") return true;
+      if (raw === "false") return false;
+      if (raw !== undefined && raw !== "") throw new Error(`[ENV] Invalid boolean: ${key}=${raw}`);
+      if (defaultValue !== undefined) return defaultValue;
+      throw new MissingEnvError();
+    },
+};
+
+/**
+ * Validates all keys up front and throws one combined error listing every
+ * missing/invalid variable — a misconfigured deployment fails at startup
+ * instead of mid-request when the first accessor runs.
+ */
+export function defineEnv<T extends EnvShape>(shape: T): EnvResult<T> {
+  const result: Record<string, unknown> = {};
+  const errors: string[] = [];
+
+  for (const [key, parser] of Object.entries(shape)) {
+    const raw = process.env[key];
+    try {
+      result[key] = parser(key, raw);
+    } catch (err) {
+      if (err instanceof MissingEnvError) {
+        errors.push(`  ${key}: required but not set`);
+      } else if (err instanceof Error) {
+        errors.push(`  ${err.message}`);
+      } else {
+        errors.push(`  ${key}: invalid value`);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`[ENV] Configuration errors:\n${errors.join("\n")}`);
+  }
+
+  return result as EnvResult<T>;
 }
 
 /**
@@ -164,3 +242,81 @@ export const getDashboardPublicUrl = (): string | null => {
   if (!raw) return null;
   return raw.replace(/\/+$/, "");
 };
+
+export const getPostgresUrl = (): string | undefined =>
+  process.env["POSTGRES_URL"] || process.env["DATABASE_URL"];
+
+export const getPostgresReplicaUrl = (): string | undefined =>
+  process.env["POSTGRES_REPLICA_URL"] ||
+  process.env["DATABASE_READ_URL"] ||
+  process.env["DATABASE_REPLICA_URL"];
+
+export const getPostgresAppName = (): string =>
+  process.env["POSTGRES_APP_NAME"] ||
+  `lumi-worker-${process.env["SHARDS"] ?? "0"}`;
+
+export function getRedisClusterNodes(): { host: string; port: number }[] | null {
+  const raw = process.env["REDIS_CLUSTER_NODES"];
+  if (!raw) return null;
+  const nodes = raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [host = "localhost", port] = entry.split(":");
+      return { host, port: Number(port) || 6379 };
+    });
+  return nodes.length > 0 ? nodes : null;
+}
+
+export const getRedisClusterScaleReads = (): "all" | "slave" | "master" =>
+  (process.env["REDIS_CLUSTER_SCALE_READS"] as "all" | "slave" | "master") || "master";
+
+export function getWriteBucket(streamBuckets = 16): number {
+  const shards = process.env["SHARDS"];
+  if (shards) {
+    try {
+      const parsed: unknown = JSON.parse(shards);
+      const first = Array.isArray(parsed) ? parsed[0] : parsed;
+      if (typeof first === "number") return first % streamBuckets;
+    } catch {
+      // fall through to pid
+    }
+  }
+  return process.pid % streamBuckets;
+}
+
+export const getRpcInternalToken = (): string | null => {
+  const token = process.env["RPC_INTERNAL_TOKEN"]?.trim();
+  return token && token.length > 0 ? token : null;
+};
+
+export const getBotToken = (): string => envParseString("BOT_TOKEN");
+
+export function getTotalShards(): number | "auto" {
+  const raw = process.env["TOTAL_SHARDS"];
+  if (!raw || raw === "auto") return "auto";
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 1) {
+    throw new Error(`[ENV] TOTAL_SHARDS=${raw} is not a positive integer (or "auto").`);
+  }
+  return n;
+}
+
+export function getShardList(): number[] | "auto" {
+  const raw = process.env["SHARD_LIST"];
+  if (!raw || raw === "auto") return "auto";
+  const ids = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .map((s) => {
+      const n = Number.parseInt(s, 10);
+      if (!Number.isFinite(n) || n < 0) {
+        throw new Error(`[ENV] SHARD_LIST contains non-integer "${s}".`);
+      }
+      return n;
+    });
+  return ids.length > 0 ? ids : "auto";
+}
+

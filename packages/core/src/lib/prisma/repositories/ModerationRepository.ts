@@ -186,6 +186,12 @@ export class ModerationRepository extends Repository {
     return this.prisma.moderationCase.findUnique({ where: { id } });
   }
 
+  /** Fetches many cases in one round trip - for batch lookups like appeals list pagination. */
+  public getModerationCasesByIds(ids: number[]): Promise<ModerationCase[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.prisma.moderationCase.findMany({ where: { id: { in: ids } } });
+  }
+
   public liftModerationCase(id: number): Promise<ModerationCase> {
     return this.prisma.moderationCase.update({
       where: { id },

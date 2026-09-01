@@ -1,6 +1,11 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { dispatchRpc } from "#lib/rpc/dispatch.js";
-import { envParseInteger, envParseString } from "#lib/env.js";
+import {
+  envParseInteger,
+  envParseString,
+  getRpcInternalToken,
+  isProduction,
+} from "#lib/env.js";
 import { logError } from "#lib/utilities/errors.js";
 import type { RpcRequest } from "@lumi/contracts";
 
@@ -46,13 +51,13 @@ export function presentedToken(req: Request): string | null {
 export function readInternalToken(
   log: (level: "info" | "warn" | "error", msg: string, meta?: object) => void,
 ): string | null {
-  const token = process.env["RPC_INTERNAL_TOKEN"]?.trim();
+  const token = getRpcInternalToken();
   if (token) return token;
 
   // Refusing to boot is the only safe answer in production: starting without
   // it would silently serve owner-gated actions to anyone who can reach the
   // port.
-  if (process.env["NODE_ENV"] === "production") {
+  if (isProduction()) {
     throw new Error(
       "[ENV] Missing: RPC_INTERNAL_TOKEN — the internal RPC server refuses to " +
         "start unauthenticated in production. Generate one with " +

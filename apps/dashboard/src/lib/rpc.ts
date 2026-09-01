@@ -113,7 +113,7 @@ export function getRpcClient(): RpcClient {
       env.rpcHttpUrl,
       env.rpcInternalToken,
       (msg) => {
-        if (process.env["NODE_ENV"] === "development") console.debug(msg);
+        if (env.isDevelopment) console.debug(msg);
       },
     );
   }

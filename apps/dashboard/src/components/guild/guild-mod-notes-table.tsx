@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { StickyNote } from "lucide-react";
 import { addModNote, removeModNote } from "#/actions/mod-notes-actions";
 import { ActionError } from "#/components/action-error";
@@ -29,14 +29,19 @@ export function GuildModNotesTable({
   const [notice, setNotice] = useState<string | null>(null);
   const { isPending, error, setError, run } = useServerAction();
 
-  const columns = guildModNotesColumns({
-    memberNames,
-    onRemove: (note) => {
+  const onRemove = useCallback(
+    (note: ModNoteView) => {
       setError(null);
       setNotice(null);
       setTarget(note);
     },
-  });
+    [setError],
+  );
+
+  const columns = useMemo(
+    () => guildModNotesColumns({ memberNames, onRemove }),
+    [memberNames, onRemove],
+  );
 
   function confirmRemove() {
     if (!target) return;

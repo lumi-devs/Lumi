@@ -22,7 +22,7 @@ const config = {
 describe("decayHeat", () => {
   it("bleeds off decayPerMinute for each elapsed minute", () => {
     const now = 600_000;
-    expect(decayHeat(30, now - 60_000, now, config as any)).toBe(20);
+    expect(decayHeat(30, now - 60_000, now, config.decayPerMinute)).toBe(20);
     expect(decayHeat(30, now - 120_000, now, 10)).toBe(10);
   });
 

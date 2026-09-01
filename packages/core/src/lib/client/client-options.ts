@@ -1,6 +1,6 @@
 import { parseRedisConnectionOption } from "#lib/database/redis.js";
 import { buildRestOptions } from "#lib/discord-rest.js";
-import { envParseInteger, envParseString } from "#lib/env.js";
+import { envParseInteger, envParseString, isDevelopment } from "#lib/env.js";
 import { buildI18nOptions } from "#lib/i18n/index.js";
 import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
 import { BotConfig } from "#lib/utilities/config.js";
@@ -93,13 +93,13 @@ export function buildClientOptions(): ClientOptions {
     logger: {
       instance: new PinoSapphireLogger(
         envParseString("SERVICE_NAME", "lumi"),
-        process.env["NODE_ENV"] === "development"
+        isDevelopment()
           ? LogLevel.Debug
           : LogLevel.Info,
       ),
     },
     hmr: {
-      enabled: process.env["NODE_ENV"] === "development",
+      enabled: isDevelopment(),
     },
     i18n: buildI18nOptions(),
     tasks: {
