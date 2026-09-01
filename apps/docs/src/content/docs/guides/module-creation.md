@@ -6,7 +6,7 @@ category: "Addon SDK"
 
 # Module Creation Guide
 
-This guide walks through building a Lumi module end-to-end, using the real `afk` module as a running example. It touches every extension point: configuration schema, services, commands, gated listeners, interaction handlers, and scheduled tasks.
+This guide walks through building a Lumi module end-to-end, using the real `afk` module as a running example. It touches every extension point: configuration schema, utilities, commands, gated listeners, interaction handlers, and scheduled tasks.
 
 ## Prerequisites
 
@@ -25,7 +25,7 @@ packages/core/src/modules/<your-module>/
   manifest.json               # Generated via bun run modules:manifest
   commands/                   # Commands extending BaseCommand or BaseSubcommand
   listeners/                  # Event listeners extending ModuleListener or GuildMessageListener
-  services/                   # Singleton business-logic services extending Service
+  utilities/                  # Singleton business-logic utilities extending Utility
   interaction-handlers/       # Button, select-menu, and modal handlers
   scheduled-tasks/            # BullMQ-backed scheduled tasks extending RelayTask
   lib/                        # Internal helper utilities
@@ -206,35 +206,35 @@ export default class MessageListener extends GuildMessageListener {
 
 ---
 
-## Step 5: Services
+## Step 5: Utilities
 
-Services encapsulate business logic:
+Utilities encapsulate business logic:
 
 ```typescript
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
-import { Service } from "#core/module-system/Service.js";
+import { Utility } from "#core/module-system/Utility.js";
 
 @ApplyOptions<Piece.Options>({ name: "my_module" })
-export default class MyService extends Service {
+export default class MyUtility extends Utility {
   public async executeAction(guildId: string) {
     // Access this.db, this.redis, this.logger
   }
 }
 
-declare module "#core/module-system/Service.js" {
-  interface Services {
-    my_module: MyService;
+declare module "#core/module-system/Utility.js" {
+  interface Utilities {
+    my_module: MyUtility;
   }
 }
 ```
 
-Access services anywhere:
+Access utilities anywhere:
 
 ```typescript
-import { getService, tryGetService } from "#core/module-system/Service.js";
+import { getUtility, tryGetUtility } from "#core/module-system/Utility.js";
 
-const service = getService("my_module");
+const utility = getUtility("my_module");
 ```
 
 ---

@@ -23,7 +23,7 @@
     <a href="#self-hosting">Self-Hosting</a> •
     <a href="#architecture">Architecture</a> •
     <a href="#data-privacy--gdpr">Privacy & GDPR</a> •
-    <a href="docs/">Docs</a> •
+    <a href="apps/docs/src/content/docs/">Docs</a> •
     <a href="https://lumi-devs.github.io/Lumi/">Docs Site</a> •
     <a href="#contributing">Contributing</a>
   </p>
