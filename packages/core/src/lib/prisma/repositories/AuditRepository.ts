@@ -3,6 +3,7 @@ import { hostname } from "node:os";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 import { RedisKeys } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
+import { getWriteBucket } from "#lib/env.js";
 
 import { tryParseJSON } from "@sapphire/utilities";
 
@@ -35,19 +36,7 @@ const AUDIT_STREAM_BUCKETS = 16;
  * This process always writes to the same bucket, which keeps each stream's
  * entries roughly time-ordered and avoids scattering one process's writes.
  */
-const WRITE_BUCKET = (() => {
-  const shards = process.env["SHARDS"];
-  if (shards) {
-    try {
-      const parsed: unknown = JSON.parse(shards);
-      const first = Array.isArray(parsed) ? parsed[0] : parsed;
-      if (typeof first === "number") return first % AUDIT_STREAM_BUCKETS;
-    } catch {
-      // fall through to pid
-    }
-  }
-  return process.pid % AUDIT_STREAM_BUCKETS;
-})();
+const WRITE_BUCKET = getWriteBucket(AUDIT_STREAM_BUCKETS);
 
 export interface AuditLogPayload {
   guildId: string;

@@ -1,6 +1,6 @@
 import { badge, makeInfoCard, type CardReply } from "#lib/utilities/cards.js";
 import { updatePanel } from "#lib/utilities/command-response.js";
-import { ActionRowBuilder, StringSelectMenuOptionBuilder } from "@discordjs/builders";
+import { ActionRowBuilder, StringSelectMenuOptionBuilder, type MessageActionRowComponentBuilder } from "@discordjs/builders";
 import { createActionButton, createStringSelectMenu, buildSafeActionRows } from "#lib/utilities/panels.js";
 import { container } from "@sapphire/framework";
 import {
@@ -101,7 +101,7 @@ export function buildWarnThresholdsPanel(
     );
   }
 
-  const row1 = new ActionRowBuilder<any>().addComponents(
+  const row1 = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
     createStringSelectMenu({
       customId: `wt:select_count:${selectedCount}:${selectedAction}:${selectedDuration}`,
       placeholder: `⚡ Select Warn Count Threshold (1 to 10)... Currently [${selectedCount}]`,
@@ -109,7 +109,7 @@ export function buildWarnThresholdsPanel(
     })
   );
 
-  const row2 = new ActionRowBuilder<any>().addComponents(
+  const row2 = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
     createStringSelectMenu({
       customId: `wt:select_action:${selectedCount}:${selectedAction}:${selectedDuration}`,
       placeholder: "🛡️ Select Punishment Action & Duration...",
@@ -126,7 +126,7 @@ export function buildWarnThresholdsPanel(
     })
   );
 
-  const row3 = new ActionRowBuilder<any>().addComponents(
+  const row3 = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
     createActionButton({
       customId: `wt:save_rule:${selectedCount}:${selectedAction}:${selectedDuration}`,
       label: `➕ Save Rule for ${selectedCount} Warns`,

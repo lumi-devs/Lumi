@@ -206,7 +206,7 @@ export function createActionButton(
   if (options.customId) button.setCustomId(options.customId);
   if (options.url) button.setURL(options.url);
   if (options.label) button.setLabel(options.label);
-  button.setStyle(options.style ?? ButtonStyle.Primary);
+  button.setStyle(options.style ?? (options.url ? ButtonStyle.Link : ButtonStyle.Primary));
   setEmojiIfPresent(button, options.emoji);
   if (options.disabled !== undefined) button.setDisabled(options.disabled);
   return button;
@@ -251,6 +251,7 @@ export function buildSafeActionRows<
   T extends AnyComponentBuilder = MessageActionRowComponentBuilder,
 >(rows: (ActionRowBuilder<T> | unknown)[]): ActionRowBuilder<T>[] {
   const MAX_ROWS = 5;
+  const MAX_COMPONENTS = 5;
   if (!rows || !Array.isArray(rows)) return [];
 
   const validRows = rows.filter((r): r is ActionRowBuilder<T> => r instanceof ActionRowBuilder);
@@ -260,9 +261,16 @@ export function buildSafeActionRows<
     container.logger?.warn(warningMsg);
   }
 
-  return validRows.slice(0, MAX_ROWS);
-}
+  const finalRows = validRows.slice(0, MAX_ROWS);
+  for (const row of finalRows) {
+    if (row.components.length > MAX_COMPONENTS) {
+      container.logger?.warn(`[PanelSafety] Component limit exceeded in row (${row.components.length} > ${MAX_COMPONENTS}). Truncating.`);
+      row.setComponents(row.components.slice(0, MAX_COMPONENTS));
+    }
+  }
 
+  return finalRows;
+}
 export interface CategoryTab {
   id: string;
   label: string;

@@ -1,5 +1,6 @@
 import { LogLevel, type ILogger } from "@sapphire/framework";
 import { createPinoLogger, type PinoLogger } from "@lumi/observability";
+import { isDevelopment } from "#lib/env.js";
 
 type PinoMethod = "trace" | "debug" | "info" | "warn" | "error" | "fatal";
 
@@ -19,8 +20,7 @@ export class PinoSapphireLogger implements ILogger {
 
   public constructor(service: string, level: LogLevel = LogLevel.Info) {
     this.level = level;
-    const format =
-      process.env["NODE_ENV"] === "development" ? "pretty" : "json";
+    const format = isDevelopment() ? "pretty" : "json";
     this.pino = createPinoLogger({ service, level: LEVEL_TO_PINO[level] ?? "info", format });
   }
 
