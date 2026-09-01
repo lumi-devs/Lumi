@@ -36,6 +36,73 @@ export function validateRequiredEnv(keys: readonly string[]): void {
   }
 }
 
+type EnvFieldParser<T> = (key: string, raw: string | undefined) => T;
+
+type EnvShape = Record<string, EnvFieldParser<unknown>>;
+
+export type EnvResult<T extends EnvShape> = {
+  readonly [K in keyof T]: ReturnType<T[K]>;
+};
+
+/** Field parser builders for defineEnv. */
+export const envField = {
+  string: (defaultValue?: string): EnvFieldParser<string> =>
+    (key, raw) => {
+      if (raw !== undefined && raw !== "") return raw;
+      if (defaultValue !== undefined) return defaultValue;
+      throw null;
+    },
+  integer: (defaultValue?: number): EnvFieldParser<number> =>
+    (key, raw) => {
+      if (raw !== undefined && raw.trim() !== "") {
+        const n = Number.parseInt(raw.trim(), 10);
+        if (!Number.isNaN(n)) return n;
+        throw new Error(`[ENV] Invalid integer: ${key}=${raw}`);
+      }
+      if (defaultValue !== undefined) return defaultValue;
+      throw null;
+    },
+  boolean: (defaultValue?: boolean): EnvFieldParser<boolean> =>
+    (key, raw) => {
+      if (raw === "true") return true;
+      if (raw === "false") return false;
+      if (raw !== undefined && raw !== "") throw new Error(`[ENV] Invalid boolean: ${key}=${raw}`);
+      if (defaultValue !== undefined) return defaultValue;
+      throw null;
+    },
+};
+
+/**
+ * Validates all keys up front and throws one combined error listing every
+ * missing/invalid variable — a misconfigured deployment fails at startup
+ * instead of mid-request when the first accessor runs.
+ */
+export function defineEnv<T extends EnvShape>(shape: T): EnvResult<T> {
+  const result: Record<string, unknown> = {};
+  const errors: string[] = [];
+
+  for (const [key, parser] of Object.entries(shape)) {
+    const raw = process.env[key];
+    try {
+      result[key] = parser(key, raw);
+    } catch (err) {
+      if (err === null) {
+        errors.push(`  ${key}: required but not set`);
+      } else if (err instanceof Error) {
+        errors.push(`  ${err.message}`);
+      } else {
+        errors.push(`  ${key}: invalid value`);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`[ENV] Configuration errors:\n${errors.join("\n")}`);
+  }
+
+  return result as EnvResult<T>;
+}
+
 /**
  * How many shards this deployment runs, from the env `ShardingManager` injects.
  * Readable at module scope, before the discord.js client exists.
