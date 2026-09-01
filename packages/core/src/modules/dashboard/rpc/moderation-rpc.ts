@@ -186,18 +186,19 @@ export function registerModerationRpcHandlers(): void {
       guildId,
       { status: filter.status, skip, take },
     );
-    const cases = await Promise.all(
-      appeals.map((a) => container.db.moderation.getModerationCaseById(a.caseId)),
+    const cases = await container.db.moderation.getModerationCasesByIds(
+      appeals.map((a) => a.caseId),
     );
+    const caseById = new Map(cases.map((c) => [c.id, c]));
 
     return {
-      appeals: appeals.map((a, i) => ({
+      appeals: appeals.map((a) => ({
         id: a.id,
         guildId: a.guildId,
         userId: a.userId,
         caseId: a.caseId,
-        caseNumber: cases[i]?.caseNumber ?? 0,
-        action: cases[i]?.action ?? "unknown",
+        caseNumber: caseById.get(a.caseId)?.caseNumber ?? 0,
+        action: caseById.get(a.caseId)?.action ?? "unknown",
         status: a.status,
         message: a.message,
         reviewedBy: a.reviewedBy,
