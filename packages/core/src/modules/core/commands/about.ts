@@ -94,7 +94,7 @@ export class AboutCommand extends BaseCommand {
         `**${data.codeLines.toLocaleString()}** lines of TypeScript across **${data.modules.length}** modules  •  **${data.depCount.toLocaleString()}** dependencies`,
     ];
 
-    const buttons: any[] = [];
+    const buttons: ButtonBuilder[] = [];
 
     const supportServer = BotConfig.branding.links?.supportServer;
     if (supportServer) {
@@ -140,7 +140,7 @@ export class AboutCommand extends BaseCommand {
       buttons.push(createActionButton({ style: ButtonStyle.Link, label: t("core:inviteBot"), url: inviteUrl, emoji: { name: "🎉" } }));
     }
 
-    const actionRows = buttons.length > 0 ? buildSafeActionRows([new ActionRowBuilder<any>().addComponents(...buttons)]) : [];
+    const actionRows = buttons.length > 0 ? buildSafeActionRows([new ActionRowBuilder<ButtonBuilder>().addComponents(buttons)]) : [];
 
     return makeCard(
       resolveCardColor("primary"),
