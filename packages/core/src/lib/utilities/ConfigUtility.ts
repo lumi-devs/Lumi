@@ -1,5 +1,6 @@
 import { Utility } from "#lib/module-system/Utility.js";
 import { FieldType, parseConfigList } from "#lib/module-system/Module.js";
+import { validateModuleConfigValue } from "#lib/module-system/config-schema.js";
 import { cleanMention } from "#utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
@@ -35,14 +36,9 @@ export class ConfigUtility extends Utility {
     }
 
     const schema = await this.container.moduleStore.getConfigSchema(moduleName);
-    const schemaField = (
-      schema as unknown as {
-        shape?: Record<string, { parse(v: unknown): unknown }>;
-      }
-    )?.shape?.[key];
-    if (schemaField) {
+    if (schema) {
       try {
-        schemaField.parse(coerced);
+        validateModuleConfigValue(schema, key, coerced);
       } catch (err: any) {
         const msg = err.message || String(err);
         throw new Error(`Invalid value for \`${key}\`: ${msg}`);

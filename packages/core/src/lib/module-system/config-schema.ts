@@ -124,6 +124,21 @@ export function fieldsFromSchema(schema: ModuleConfigSchema): ConfigField[] {
   return fields;
 }
 
+/**
+ * Validate a raw value against the field `key` declares in `schema`. Keys with
+ * no declared field pass through unchecked (mirrors the module's own schema
+ * being the sole source of truth — nothing to validate against otherwise).
+ */
+export function validateModuleConfigValue(
+  schema: ModuleConfigSchema,
+  key: string,
+  value: unknown,
+): unknown {
+  const { shape } = schema as unknown as ObjectLike;
+  const field = shape?.[key];
+  return field ? field.parse(value) : value;
+}
+
 /** Parses comma-separated configuration string lists. */
 export function parseConfigList(raw: unknown): string[] {
   if (Array.isArray(raw))
