@@ -291,3 +291,32 @@ export const getRpcInternalToken = (): string | null => {
   return token && token.length > 0 ? token : null;
 };
 
+export const getBotToken = (): string => envParseString("BOT_TOKEN");
+
+export function getTotalShards(): number | "auto" {
+  const raw = process.env["TOTAL_SHARDS"];
+  if (!raw || raw === "auto") return "auto";
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 1) {
+    throw new Error(`[ENV] TOTAL_SHARDS=${raw} is not a positive integer (or "auto").`);
+  }
+  return n;
+}
+
+export function getShardList(): number[] | "auto" {
+  const raw = process.env["SHARD_LIST"];
+  if (!raw || raw === "auto") return "auto";
+  const ids = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .map((s) => {
+      const n = Number.parseInt(s, 10);
+      if (!Number.isFinite(n) || n < 0) {
+        throw new Error(`[ENV] SHARD_LIST contains non-integer "${s}".`);
+      }
+      return n;
+    });
+  return ids.length > 0 ? ids : "auto";
+}
+

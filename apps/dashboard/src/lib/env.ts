@@ -31,6 +31,11 @@ function resolveAuthSecret(): string {
   );
 }
 
+function resolveTrustedHops(): number {
+  const raw = Number.parseInt(process.env["TRUSTED_PROXY_HOPS"] ?? "", 10);
+  return Number.isInteger(raw) && raw > 0 ? raw : 1;
+}
+
 export const env = {
   /** Internal-only HTTP RPC bridge to the worker, e.g. "http://worker:8091". */
   rpcHttpUrl: envStr("RPC_HTTP_URL", "http://127.0.0.1:8091"),
@@ -45,5 +50,20 @@ export const env = {
   authSecret: resolveAuthSecret(),
   host: envStr("DASHBOARD_HOST", "0.0.0.0"),
   port: envInt("DASHBOARD_PORT", 8080),
+  get redisUrl(): string | undefined {
+    return process.env["REDIS_URL"] || undefined;
+  },
+  get trustedProxyHops(): number {
+    return resolveTrustedHops();
+  },
+  get clientIpHeader(): string | undefined {
+    return process.env["CLIENT_IP_HEADER"]?.trim().toLowerCase() || undefined;
+  },
+  get isDevelopment(): boolean {
+    return (process.env["NODE_ENV"] || "development") === "development";
+  },
+  get isProduction(): boolean {
+    return process.env["NODE_ENV"] === "production";
+  },
 } as const;
 
