@@ -1,11 +1,7 @@
 import { badge, makeInfoCard, type CardReply } from "#lib/utilities/cards.js";
 import { updatePanel } from "#lib/utilities/command-response.js";
-import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  StringSelectMenuBuilder,
-  StringSelectMenuOptionBuilder,
-} from "@discordjs/builders";
+import { ActionRowBuilder, StringSelectMenuOptionBuilder } from "@discordjs/builders";
+import { createActionButton, createStringSelectMenu, buildSafeActionRows } from "#lib/utilities/panels.js";
 import { container } from "@sapphire/framework";
 import {
   ButtonStyle,
@@ -105,84 +101,58 @@ export function buildWarnThresholdsPanel(
     );
   }
 
-  const row1 = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-    new StringSelectMenuBuilder()
-      .setCustomId(
-        `wt:select_count:${selectedCount}:${selectedAction}:${selectedDuration}`,
-      )
-      .setPlaceholder(
-        `⚡ Select Warn Count Threshold (1 to 10)... Currently [${selectedCount}]`,
-      )
-      .addOptions(countSelectOptions),
+  const row1 = new ActionRowBuilder<any>().addComponents(
+    createStringSelectMenu({
+      customId: `wt:select_count:${selectedCount}:${selectedAction}:${selectedDuration}`,
+      placeholder: `⚡ Select Warn Count Threshold (1 to 10)... Currently [${selectedCount}]`,
+      options: countSelectOptions
+    })
   );
 
-  const row2 = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-    new StringSelectMenuBuilder()
-      .setCustomId(
-        `wt:select_action:${selectedCount}:${selectedAction}:${selectedDuration}`,
-      )
-      .setPlaceholder("🛡️ Select Punishment Action & Duration...")
-      .addOptions(
-        new StringSelectMenuOptionBuilder()
-          .setLabel("🔇 Mute - 1 Hour")
-          .setValue("action:mute:1h")
-          .setDescription("Timeout member for 1 Hour"),
-        new StringSelectMenuOptionBuilder()
-          .setLabel("🔇 Mute - 24 Hours")
-          .setValue("action:mute:24h")
-          .setDescription("Timeout member for 24 Hours"),
-        new StringSelectMenuOptionBuilder()
-          .setLabel("🔇 Mute - 7 Days")
-          .setValue("action:mute:7d")
-          .setDescription("Timeout member for 7 Days"),
-        new StringSelectMenuOptionBuilder()
-          .setLabel("👢 Kick Member")
-          .setValue("action:kick")
-          .setDescription("Kick member from server"),
-        new StringSelectMenuOptionBuilder()
-          .setLabel("🔨 Ban Member (Permanent)")
-          .setValue("action:ban")
-          .setDescription("Permanently ban member"),
-        new StringSelectMenuOptionBuilder()
-          .setLabel("☣️ Quarantine Member")
-          .setValue("action:quarantine")
-          .setDescription("Apply Anti-Nuke Quarantine role"),
-        new StringSelectMenuOptionBuilder()
-          .setLabel("🎙️ Voice Mute - 1 Hour")
-          .setValue("action:vcmute:1h")
-          .setDescription("Server-mute in voice for 1 Hour"),
-        new StringSelectMenuOptionBuilder()
-          .setLabel("🎙️ Voice Mute - 24 Hours")
-          .setValue("action:vcmute:24h")
-          .setDescription("Server-mute in voice for 24 Hours"),
-      ),
+  const row2 = new ActionRowBuilder<any>().addComponents(
+    createStringSelectMenu({
+      customId: `wt:select_action:${selectedCount}:${selectedAction}:${selectedDuration}`,
+      placeholder: "🛡️ Select Punishment Action & Duration...",
+      options: [
+        { label: "🔇 Mute - 1 Hour", value: "action:mute:1h", description: "Timeout member for 1 Hour" },
+        { label: "🔇 Mute - 24 Hours", value: "action:mute:24h", description: "Timeout member for 24 Hours" },
+        { label: "🔇 Mute - 7 Days", value: "action:mute:7d", description: "Timeout member for 7 Days" },
+        { label: "👢 Kick Member", value: "action:kick", description: "Kick member from server" },
+        { label: "🔨 Ban Member (Permanent)", value: "action:ban", description: "Permanently ban member" },
+        { label: "☣️ Quarantine Member", value: "action:quarantine", description: "Apply Anti-Nuke Quarantine role" },
+        { label: "🎙️ Voice Mute - 1 Hour", value: "action:vcmute:1h", description: "Server-mute in voice for 1 Hour" },
+        { label: "🎙️ Voice Mute - 24 Hours", value: "action:vcmute:24h", description: "Server-mute in voice for 24 Hours" },
+      ]
+    })
   );
 
-  const row3 = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(
-        `wt:save_rule:${selectedCount}:${selectedAction}:${selectedDuration}`,
-      )
-      .setLabel(`➕ Save Rule for ${selectedCount} Warns`)
-      .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-      .setCustomId(`wt:remove_rule:${selectedCount}`)
-      .setLabel(`🗑️ Remove ${selectedCount} Warns Rule`)
-      .setStyle(ButtonStyle.Danger)
-      .setDisabled(!currentRuleForSelected),
-    new ButtonBuilder()
-      .setCustomId("wt:preset_standard")
-      .setLabel("⚡ Apply 3-5-10 Preset")
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId("wt:clear_all")
-      .setLabel("🧹 Reset All")
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(entries.length === 0),
+  const row3 = new ActionRowBuilder<any>().addComponents(
+    createActionButton({
+      customId: `wt:save_rule:${selectedCount}:${selectedAction}:${selectedDuration}`,
+      label: `➕ Save Rule for ${selectedCount} Warns`,
+      style: ButtonStyle.Success
+    }),
+    createActionButton({
+      customId: `wt:remove_rule:${selectedCount}`,
+      label: `🗑️ Remove ${selectedCount} Warns Rule`,
+      style: ButtonStyle.Danger,
+      disabled: !currentRuleForSelected
+    }),
+    createActionButton({
+      customId: "wt:preset_standard",
+      label: "⚡ Apply 3-5-10 Preset",
+      style: ButtonStyle.Primary
+    }),
+    createActionButton({
+      customId: "wt:clear_all",
+      label: "🧹 Reset All",
+      style: ButtonStyle.Secondary,
+      disabled: entries.length === 0
+    })
   );
 
   return makeInfoCard("⚡ Warning Threshold Control Center", bodyText, {
-    actionRows: [row1, row2, row3],
+    actionRows: buildSafeActionRows([row1, row2, row3]),
   });
 }
 

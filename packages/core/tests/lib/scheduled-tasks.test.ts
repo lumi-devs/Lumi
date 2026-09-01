@@ -40,7 +40,7 @@ describe("shouldRunNow", () => {
 describe("RelayTask.run", () => {
   beforeEach(() => {
     container.logger = { debug: vi.fn(), warn: vi.fn() } as any;
-    container.eventBus = { publish: vi.fn().mockResolvedValue(undefined) } as any;
+    (container as any).eventBus = { publish: vi.fn().mockResolvedValue(undefined) } as any;
   });
 
   it("publishes the fire onto the task's stream with the given payload", async () => {

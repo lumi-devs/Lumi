@@ -4,7 +4,6 @@ import {
   acquireRedisLock,
   verifyRedisLock,
   REDIS_EXTEND_SCRIPT,
-  REDIS_RELEASE_SCRIPT,
 } from "#lib/redis-lock.js";
 
 function mockRedis() {

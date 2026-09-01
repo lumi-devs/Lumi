@@ -25,7 +25,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
       debug: vi.fn(),
     } as any;
 
-    container.db = {
+    (container as any).db = {
       config: {
         isDashboardEnabled: vi.fn().mockResolvedValue(true),
       },
@@ -232,7 +232,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
     });
 
     it("dispatches request and returns 200 when valid bearer token and payload provided", async () => {
-      registerRpcHandler("ping", async (req) => ({ pong: true, received: req.payload }));
+      registerRpcHandler("ping", async (req) => ({ pong: true, received: (req as any).payload }));
 
       const req = new Request("http://127.0.0.1/rpc", {
         method: "POST",

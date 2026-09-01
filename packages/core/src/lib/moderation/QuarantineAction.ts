@@ -113,12 +113,7 @@ export class QuarantineAction {
       );
 
       const permKey = RedisKeys.targetPermits(guild.id, "user", targetMember.id);
-      if (container.invalidation) {
-        await container.invalidation.invalidate(key);
-        await container.invalidation.invalidate(permKey);
-      } else {
-        await container.redis.del(key, permKey);
-      }
+      await container.invalidation.invalidate(key, permKey);
 
       const activeCases = await container.db.moderation.getActiveCases(
         guild.id,

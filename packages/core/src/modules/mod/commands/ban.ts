@@ -1,3 +1,5 @@
+import { respondWithChoices, filterAutocompleteChoices } from "#lib/utilities/autocomplete.js";
+import type { AutocompleteInteraction } from "discord.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
@@ -74,6 +76,29 @@ const BanRemove: ModerationSubcommand.Flow<string, ModerationCase> = {
   ],
 })
 export class BanCommand extends ModerationSubcommand {
+  public override async autocompleteRun(
+    interaction: AutocompleteInteraction,
+  ): Promise<void> {
+    const focused = interaction.options.getFocused(true);
+    if (focused.name === "reason") {
+      const presets = [
+        "Spam",
+        "Scam links",
+        "Raiding",
+        "Toxicity/Harassment",
+        "NSFW content",
+        "Ban evasion",
+        "Compromised account",
+        "Self-botting",
+      ];
+      return respondWithChoices(
+        interaction,
+        filterAutocompleteChoices(presets, focused.value),
+      );
+    }
+    return respondWithChoices(interaction, []);
+  }
+
   public override registerApplicationCommands(
     registry: ModerationSubcommand.Registry,
   ) {
@@ -85,7 +110,7 @@ export class BanCommand extends ModerationSubcommand {
               applyLocalizedBuilder(o, "commands:banUser").setRequired(true),
             )
             .addStringOption((o) =>
-              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason").setRequired(false).setAutocomplete(true),
             )
             .addIntegerOption((o) =>
               applyLocalizedBuilder(o, "commands:banDeleteDays")
@@ -100,7 +125,7 @@ export class BanCommand extends ModerationSubcommand {
               applyLocalizedBuilder(o, "commands:banUserId").setRequired(true),
             )
             .addStringOption((o) =>
-              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason").setRequired(false).setAutocomplete(true),
             ),
         ),
     );

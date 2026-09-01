@@ -61,7 +61,7 @@ describe("hub-panel view builders", () => {
       targetId: `${100000000000000000n + BigInt(i)}`,
     }));
 
-    const card = buildPermissionsView(overrides, 0);
+    const card = buildPermissionsView(overrides as any, 0);
     expect(sections(card)).toHaveLength(PERMS_PER_PAGE);
     expect(sections(card)[0]!.accessory?.custom_id).toContain("lumi:permdel:");
 

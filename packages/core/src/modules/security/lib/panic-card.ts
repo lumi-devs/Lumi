@@ -1,8 +1,9 @@
-import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
+import { ActionRowBuilder, type ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 import { time, TimestampStyles } from "@discordjs/formatters";
 import type { LumiT } from "#lib/i18n/index.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
+import { createActionButton, buildSafeActionRows } from "#lib/utilities/panels.js";
 import {
   resolveCardColor,
   makeCard,
@@ -18,10 +19,11 @@ export const PANIC_REVERT_ID = "sec:panic:revert";
 
 const revertRow = (label: string): ActionRowBuilder<ButtonBuilder> =>
   new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(PANIC_REVERT_ID)
-      .setLabel(label)
-      .setStyle(ButtonStyle.Success),
+    createActionButton({
+      customId: PANIC_REVERT_ID,
+      label,
+      style: ButtonStyle.Success,
+    })
   );
 
 /** The confirm/cancel prompt shown before panic mode locks anything down. */
@@ -30,13 +32,13 @@ export function buildPanicConfirmCard(t: LumiT): CardReply {
     t(PanelsKeys.PanicConfirmTitle),
     t(PanelsKeys.PanicConfirmBody),
     {
-      actionRows: [
+      actionRows: buildSafeActionRows([
         confirmRow({
           confirmId: PANIC_CONFIRM_ID,
           cancelId: PANIC_CANCEL_ID,
           confirmLabel: t(PanelsKeys.PanicConfirmButton),
         }),
-      ],
+      ]),
     },
   );
 }
@@ -65,7 +67,7 @@ export function buildPanicStatusCard(
         ? t(PanelsKeys.PanicInvitesPaused)
         : t(PanelsKeys.PanicInvitesFailed),
     }),
-    { actionRows: [revertRow(t(PanelsKeys.PanicRevertButton))] },
+    { actionRows: buildSafeActionRows([revertRow(t(PanelsKeys.PanicRevertButton))]) },
   );
 }
 
@@ -80,7 +82,7 @@ export function buildPanicAlreadyActiveCard(
     t(PanelsKeys.PanicAlreadyActiveBody, {
       since: time(startedAt, TimestampStyles.RelativeTime),
     }),
-    { actionRows: [revertRow(t(PanelsKeys.PanicRevertButton))] },
+    { actionRows: buildSafeActionRows([revertRow(t(PanelsKeys.PanicRevertButton))]) },
   );
 }
 

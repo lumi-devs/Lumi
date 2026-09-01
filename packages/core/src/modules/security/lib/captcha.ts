@@ -1,6 +1,7 @@
-import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
+import { ActionRowBuilder, type ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 import { Emojis } from "#lib/utilities/assets.js";
+import { createActionButton, buildSafeActionRows } from "#lib/utilities/panels.js";
 
 /** Visually distinct emoji; challenge indices point into this pool. */
 export const EMOJI_POOL = [
@@ -67,16 +68,17 @@ export function buildCaptchaRows(
     rows.push(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         slice.map((idx) =>
-          new ButtonBuilder()
-            .setCustomId(`${CAPTCHA_BUTTON_PREFIX}:${idx}`)
-            .setEmoji(Emojis.parse(EMOJI_POOL[idx]!))
-            .setStyle(solved.has(idx) ? ButtonStyle.Success : ButtonStyle.Secondary)
-            .setDisabled(solved.has(idx)),
+          createActionButton({
+            customId: `${CAPTCHA_BUTTON_PREFIX}:${idx}`,
+            emoji: Emojis.parse(EMOJI_POOL[idx]!),
+            style: solved.has(idx) ? ButtonStyle.Success : ButtonStyle.Secondary,
+            disabled: solved.has(idx),
+          })
         ),
       ),
     );
   }
-  return rows;
+  return buildSafeActionRows(rows);
 }
 
 /** The target sequence rendered as spaced emoji for the prompt line. */

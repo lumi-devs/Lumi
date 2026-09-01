@@ -155,11 +155,7 @@ export async function resetWarnCount(
   guildId: string,
   userId: string,
 ): Promise<void> {
-  if (container.invalidation) {
-    await container.invalidation.invalidate(warnCountKey(guildId, userId));
-  } else {
-    await container.redis.del(warnCountKey(guildId, userId));
-  }
+  await container.invalidation.invalidate(warnCountKey(guildId, userId));
 }
 
 /**

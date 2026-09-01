@@ -36,10 +36,10 @@ function createChaosPrisma() {
         checkHealth();
         return mockGuilds.get(where.id) ?? null;
       }),
-      upsert: vi.fn(async ({ where, create, update }: any) => {
+      upsert: vi.fn(async ({ where, create: _c, update: _u }: any) => {
         checkHealth();
         const existing = mockGuilds.get(where.id);
-        const data = existing ? { ...existing, ...update } : { id: where.id, ...create };
+        const data = existing ? { ...existing, ..._u } : { id: where.id, ..._c };
         mockGuilds.set(where.id, data);
         return data;
       }),
@@ -50,7 +50,7 @@ function createChaosPrisma() {
       }),
     },
     guildCaseCounter: {
-      upsert: vi.fn(async ({ where, create, update }: any) => {
+      upsert: vi.fn(async ({ where, create: _c, update: _u }: any) => {
         checkHealth();
         return { guildId: where.guildId, next: 2 };
       }),
@@ -119,8 +119,8 @@ describe("Chaos Suite: PostgreSQL Hard Drop & Pool Exhaustion", () => {
       setex: vi.fn().mockResolvedValue("OK"),
       del: vi.fn().mockResolvedValue(1),
     };
-    configRepo = new ConfigRepository(prisma as any, redis);
-    modRepo = new ModerationRepository(prisma as any, redis);
+    configRepo = new ConfigRepository(prisma as any, redis as any, {} as any, {} as any);
+    modRepo = new ModerationRepository(prisma as any, redis as any, {} as any, {} as any);
   });
 
   it("handles transient database drop gracefully without unhandled crashes", async () => {

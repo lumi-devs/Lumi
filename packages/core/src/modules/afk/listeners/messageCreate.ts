@@ -10,6 +10,7 @@ import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
 import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
 import type { GuildMessage } from "#lib/types/common.js";
 import { makeCard } from "#lib/utilities/cards.js";
+import { createActionButton, buildSafeActionRows } from "#lib/utilities/panels.js";
 import { logError } from "#lib/utilities/errors.js";
 import { canSendMessages } from "#lib/utilities/misc.js";
 import { scheduleTask } from "#lib/schedule-task.js";
@@ -96,15 +97,18 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
 
     const t = await fetchTyped(message);
 
-    const row = mentions.length
-      ? new ActionRowBuilder<ButtonBuilder>().addComponents(
-          new ButtonBuilder()
-            .setCustomId(`afk:mentions:${userId}`)
-            .setLabel(t("afk:viewMentionsButton", { count: mentions.length }))
-            .setEmoji(Emojis.parse(Emojis.MAIL))
-            .setStyle(ButtonStyle.Secondary),
-        )
-      : null;
+    const actionRows = mentions.length
+      ? buildSafeActionRows([
+          new ActionRowBuilder<ButtonBuilder>().addComponents(
+            createActionButton({
+              customId: `afk:mentions:${userId}`,
+              label: t("afk:viewMentionsButton", { count: mentions.length }),
+              emoji: Emojis.MAIL,
+              style: ButtonStyle.Secondary,
+            })
+          ),
+        ])
+      : [];
 
     const welcomeCard = new ContainerBuilder();
     welcomeCard.addTextDisplayComponents(
@@ -122,7 +126,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
         t("afk:welcomeBackBody", { duration: afkDurationSince(since) }),
       ),
     );
-    if (row) welcomeCard.addActionRowComponents(row);
+    if (actionRows.length > 0) welcomeCard.addActionRowComponents(...actionRows);
 
     const sent = await message
       .reply({

@@ -1,8 +1,9 @@
-import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
+import { ActionRowBuilder, type ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import type { LumiT } from "#lib/i18n/index.js";
+import { createActionButton, buildSafeActionRows } from "#lib/utilities/panels.js";
 import {
   resolveCardColor,
   makeCard,
@@ -20,16 +21,16 @@ export const VERIFY_BUTTON_ID = "sec:verify";
 
 /** The public, persistent verification card members interact with to gain the verified role. */
 export function buildVerifyPanel(t: LumiT): CardReply {
-  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(VERIFY_BUTTON_ID)
-      .setLabel(t(PanelsKeys.VerifyButton))
-      .setStyle(ButtonStyle.Success)
-      .setEmoji(Emojis.parse("✅")),
-  );
+  const button = createActionButton({
+    customId: VERIFY_BUTTON_ID,
+    label: t(PanelsKeys.VerifyButton),
+    style: ButtonStyle.Success,
+    emoji: Emojis.parse("✅"),
+  });
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
   return makeCard(resolveCardColor("success"), t(PanelsKeys.VerifyTitle), t(PanelsKeys.VerifyIntro), {
     footer: t(PanelsKeys.VerifyFooter),
-    actionRows: [row],
+    actionRows: buildSafeActionRows([row]),
   });
 }
 
@@ -74,14 +75,14 @@ export function buildWrongCard(t: LumiT, state: CaptchaState): CardReply {
 
 /** "web" mode: deep-links to the dashboard's `/verify/[guildId]` page instead of a challenge. */
 export function buildWebPromptCard(t: LumiT, url: string): CardReply {
-  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setStyle(ButtonStyle.Link)
-      .setURL(url)
-      .setLabel(t(PanelsKeys.VerifyWebButton))
-      .setEmoji(Emojis.parse("🔗")),
-  );
+  const button = createActionButton({
+    style: ButtonStyle.Link,
+    url: url,
+    label: t(PanelsKeys.VerifyWebButton),
+    emoji: Emojis.parse("🔗"),
+  });
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
   return makeInfoCard(t(PanelsKeys.VerifyWebTitle), t(PanelsKeys.VerifyWebIntro), {
-    actionRows: [row],
+    actionRows: buildSafeActionRows([row]),
   });
 }

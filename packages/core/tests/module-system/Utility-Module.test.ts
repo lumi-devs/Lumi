@@ -68,7 +68,7 @@ describe("module-system Utility and Module", () => {
     });
 
     it("fetches utility with tryGetUtility and throws on getUtility if missing", () => {
-      const mockStore = container.stores.get("utilities") as Map<string, any>;
+      const mockStore = container.stores.get("utilities") as unknown as Map<string, any>;
       const dummyUtilityInstance = new DummyUtility({} as any, { name: "dummy" });
       mockStore.set("dummy", dummyUtilityInstance);
 

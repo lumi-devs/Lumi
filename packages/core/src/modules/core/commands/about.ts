@@ -8,11 +8,8 @@ import {
   PermissionFlagsBits,
 } from "discord.js";
 import { time, TimestampStyles } from "@discordjs/formatters";
-import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  type MessageActionRowComponentBuilder,
-} from "@discordjs/builders";
+import { ActionRowBuilder } from "@discordjs/builders";
+import { createActionButton, buildSafeActionRows } from "#lib/utilities/panels.js";
 import { BaseCommand, sendReply, fetchTyped } from "#lib/commands.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
 import { LumiInfo } from "#lib/utilities/misc.js";
@@ -97,41 +94,21 @@ export class AboutCommand extends BaseCommand {
         `**${data.codeLines.toLocaleString()}** lines of TypeScript across **${data.modules.length}** modules  •  **${data.depCount.toLocaleString()}** dependencies`,
     ];
 
-    const buttons: ButtonBuilder[] = [];
+    const buttons: any[] = [];
 
     const supportServer = BotConfig.branding.links?.supportServer;
     if (supportServer) {
-      buttons.push(
-        new ButtonBuilder()
-          .setLabel(t("core:supportServer"))
-          .setStyle(ButtonStyle.Link)
-          .setURL(supportServer)
-          .setEmoji({ name: "🆘" }),
-      );
+      buttons.push(createActionButton({ style: ButtonStyle.Link, label: t("core:supportServer"), url: supportServer, emoji: { name: "🆘" } }));
     }
 
     const githubUrl = BotConfig.branding.links?.github || LumiInfo.github;
     if (githubUrl) {
-      buttons.push(
-        new ButtonBuilder()
-          .setLabel(t("core:github"))
-          .setStyle(ButtonStyle.Link)
-          .setURL(githubUrl)
-          .setEmoji(
-            Emojis.parse(Emojis.custom("<:github:950888087188283422>", "🐙")),
-          ),
-      );
+      buttons.push(createActionButton({ style: ButtonStyle.Link, label: t("core:github"), url: githubUrl, emoji: Emojis.parse(Emojis.custom("<:github:950888087188283422>", "🐙")) }));
     }
 
     const website = BotConfig.branding.links?.website;
     if (website) {
-      buttons.push(
-        new ButtonBuilder()
-          .setLabel(t("core:website"))
-          .setStyle(ButtonStyle.Link)
-          .setURL(website)
-          .setEmoji({ name: "🌐" }),
-      );
+      buttons.push(createActionButton({ style: ButtonStyle.Link, label: t("core:website"), url: website, emoji: { name: "🌐" } }));
     }
 
     const inviteUrl = this.container.client.generateInvite({
@@ -160,23 +137,10 @@ export class AboutCommand extends BaseCommand {
     });
 
     if (inviteUrl) {
-      buttons.push(
-        new ButtonBuilder()
-          .setLabel(t("core:inviteBot"))
-          .setStyle(ButtonStyle.Link)
-          .setURL(inviteUrl)
-          .setEmoji({ name: "🎉" }),
-      );
+      buttons.push(createActionButton({ style: ButtonStyle.Link, label: t("core:inviteBot"), url: inviteUrl, emoji: { name: "🎉" } }));
     }
 
-    const actionRows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
-    if (buttons.length > 0) {
-      actionRows.push(
-        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-          ...buttons,
-        ),
-      );
-    }
+    const actionRows = buttons.length > 0 ? buildSafeActionRows([new ActionRowBuilder<any>().addComponents(...buttons)]) : [];
 
     return makeCard(
       resolveCardColor("primary"),

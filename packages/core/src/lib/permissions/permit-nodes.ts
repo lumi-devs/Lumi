@@ -1,6 +1,7 @@
 /**
- * Mirrors apps/dashboard/src/lib/permit-nodes.ts - the set of permit nodes
- * actually referenced by `requiredPermit`/`checkPermit` across commands.
+ * The core set of permit nodes actually referenced by `requiredPermit`/`checkPermit`
+ * across commands. This list is mirrored and extended with UI-only metadata by
+ * `apps/dashboard/src/lib/permit-nodes.ts`.
  */
 export const KNOWN_PERMIT_NODE_GROUPS: { prefix: string; nodes: string[] }[] = [
   { prefix: "admin", nodes: ["admin.*", "admin.config"] },

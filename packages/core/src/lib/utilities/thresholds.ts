@@ -11,11 +11,7 @@ export async function invalidateThresholds(
   container: Container,
   guildId: string,
 ): Promise<void> {
-  if (container.invalidation) {
-    await container.invalidation.invalidate(thresholdKey(guildId));
-  } else {
-    await container.redis.del(thresholdKey(guildId));
-  }
+  await container.invalidation.invalidate(thresholdKey(guildId));
 }
 
 export function normalizeRuleDuration(

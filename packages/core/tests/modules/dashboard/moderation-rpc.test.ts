@@ -56,7 +56,7 @@ describe("dashboard module moderation RPC handlers", () => {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },
     } as any;
 
-    container.redis = {
+    (container as any).redis = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn(),
       del: vi.fn(),

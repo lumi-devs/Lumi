@@ -196,7 +196,7 @@ describe("PermitCommand export/import", () => {
 
       await command.import(ctx as any);
 
-      const [, body] = ctx.replySuccess.mock.calls[0];
+      const [, body] = ctx.replySuccess.mock.calls[0]!;
       expect(body).toContain("Bad");
       vi.unstubAllGlobals();
     });

@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { delSafe, mgetSafe, pipelineBySlot, scanKeysSafe } from "#lib/database/cluster-safe.js";
+import { mgetSafe, pipelineBySlot, scanKeysSafe } from "#lib/database/cluster-safe.js";
 import { isNullish, filterNullish, tryParseJSON } from "@sapphire/utilities";
 import { AfkKeys, AfkTTL } from "../keys.js";
 import { sanitizeReason } from "../index.js";
@@ -18,11 +18,7 @@ function scanKeys(pattern: string) {
 }
 
 async function invalidateKeys(keys: string[]) {
-  if (container.invalidation) {
-    await container.invalidation.invalidate(...keys);
-  } else {
-    await delSafe(container.redis, keys);
-  }
+  await container.invalidation.invalidate(...keys);
 }
 
 async function getOrSet<T>(
@@ -188,11 +184,7 @@ export async function clearAfkMentions(
   guildId: string,
   userId: string,
 ): Promise<void> {
-  if (container.invalidation) {
-    await container.invalidation.invalidate(AfkKeys.mentions(guildId, userId));
-  } else {
-    await container.redis.del(AfkKeys.mentions(guildId, userId));
-  }
+  await container.invalidation.invalidate(AfkKeys.mentions(guildId, userId));
 }
 
 export async function isAfkOnCooldown(key: string): Promise<boolean> {

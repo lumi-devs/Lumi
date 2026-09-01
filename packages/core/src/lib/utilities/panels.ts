@@ -174,7 +174,8 @@ export function createStringSelectMenu(
 }
 
 export interface CreateActionButtonOptions {
-  customId: string;
+  customId?: string;
+  url?: string;
   label?: string;
   style?: ButtonStyle;
   emoji?: string | APIMessageComponentEmoji;
@@ -201,7 +202,9 @@ export function createBackButton(
 export function createActionButton(
   options: CreateActionButtonOptions,
 ): ButtonBuilder {
-  const button = new ButtonBuilder().setCustomId(options.customId);
+  const button = new ButtonBuilder();
+  if (options.customId) button.setCustomId(options.customId);
+  if (options.url) button.setURL(options.url);
   if (options.label) button.setLabel(options.label);
   button.setStyle(options.style ?? ButtonStyle.Primary);
   setEmojiIfPresent(button, options.emoji);
