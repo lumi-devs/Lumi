@@ -36,20 +36,9 @@ Instead of running a separate scheduler daemon or coordinating leader election w
 ```ts
 // packages/core/src/lib/env.ts
 export function isPrimaryShard(): boolean {
-  if (!process.env["SHARDING_MANAGER"]) return true;
-  const raw = process.env["SHARDS"];
-  if (!raw) return true;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    const ids = Array.isArray(parsed) ? parsed : [parsed];
-    return ids.includes(0);
-  } catch {
-    return true;
-  }
+  return container.client?.shard?.ids.includes(0) ?? true;
 }
 ```
-
-A process not spawned under `ShardingManager` (such as a local dev run) is always primary. Under `ShardingManager`, the process holding **Shard ID `0`** is elected primary.
 
 The primary shard process automatically binds:
 1. **HTTP RPC Bridge (`8091`)**: Handles dashboard API mutations.

@@ -11,7 +11,7 @@ The public, stable surface for addon code - everything importable from `"lumi"` 
 For a walkthrough of building something with this API, start with [Quick Start: Your First Addon](/guides/quick-start-addon), then the fuller [Module Creation Guide](/guides/module-creation) (written against the built-in `afk` module, but every extension point applies to addons identically). For the addon-specific rules on top of this API (no `container.prisma`, dependency isolation via `info.json`, etc.), see the [Addon Publishing Guide](/guides/addon-publishing).
 
 ```typescript
-import { Module, DefineModule, cfg, Utility, getUtility, NoEndUserData } from "lumi";
+import { Module, DefineModule, cfg, Service, getService, NoEndUserData } from "lumi";
 import { BaseCommand, BaseSubcommand, CommandContext } from "lumi/commands";
 import { hasRequiredPermit, isModuleEnabled, checkModulesEnabled } from "lumi/permissions";
 import { scheduleTask, RelayTask, registerTaskFireHandler } from "lumi/scheduling";
@@ -109,29 +109,29 @@ export default class JoinListener extends ModuleListener<typeof Events.GuildMemb
 }
 ```
 
-### `Utility` / `getUtility` / `tryGetUtility`
+### `Service` / `getService` / `tryGetService`
 
 ```typescript
-class Utility extends Piece {
+class Service extends Piece {
   get logger(): Logger;
   get db(): DatabaseService;
   get redis(): Redis;
 }
-function getUtility<K extends keyof Utilities>(name: K): Utilities[K];    // throws if not loaded
-function tryGetUtility<K extends keyof Utilities>(name: K): Utilities[K] | undefined; // undefined if not loaded
+function getService<K extends keyof Services>(name: K): Services[K];    // throws if not loaded
+function tryGetService<K extends keyof Services>(name: K): Services[K] | undefined; // undefined if not loaded
 ```
 
-Singleton business-logic classes, kept separate from the thin command/listener/handler pieces that trigger them. Register the type with declaration merging so `getUtility` returns it typed:
+Singleton business-logic classes, kept separate from the thin command/listener/handler pieces that trigger them. Register the type with declaration merging so `getService` returns it typed:
 
 ```typescript
 declare module "lumi" {
-  interface Utilities {
-    "my-addon": MyAddonUtility;
+  interface Services {
+    "my-addon": MyAddonService;
   }
 }
 ```
 
-(Addons can `declare module "lumi"` for this since `Utilities` is re-exported from the SDK's top-level module - built-in modules do the same thing against `#lib/module-system/Utility.js` internally; either path augments the same interface.)
+(Addons can `declare module "lumi"` for this since `Services` is re-exported from the SDK's top-level module - built-in modules do the same thing against `#lib/module-system/Service.js` internally; either path augments the same interface.)
 
 ---
 
