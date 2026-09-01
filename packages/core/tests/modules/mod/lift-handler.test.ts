@@ -4,7 +4,9 @@ import { handleModLiftFire } from '#modules/mod/lib/lift-handler.js';
 
 vi.mock('@sapphire/framework', () => ({
   container: {
-    invalidation: undefined,
+    invalidation: {
+      invalidate: vi.fn().mockResolvedValue(undefined)
+    },
     redis: {
       del: vi.fn(),
       set: vi.fn().mockResolvedValue('OK'),
