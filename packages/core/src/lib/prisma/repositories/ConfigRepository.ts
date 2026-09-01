@@ -118,11 +118,19 @@ export class ConfigRepository extends Repository {
       update: { value },
       create: { guildId, moduleName, configKey: key, value },
     });
+    await this.invalidateModuleConfig(guildId, moduleName);
+    return result;
+  }
+
+  /** Invalidates the per-module and all-modules config caches for a guild. */
+  private async invalidateModuleConfig(
+    guildId: string,
+    moduleName: string,
+  ): Promise<void> {
     await this.invalidate(
       RedisKeys.guildConfig(moduleName, guildId),
       RedisKeys.guildAllModuleConfigs(guildId),
     );
-    return result;
   }
 
   /**
@@ -178,10 +186,7 @@ export class ConfigRepository extends Repository {
       ),
     );
 
-    await this.invalidate(
-      RedisKeys.guildConfig(moduleName, guildId),
-      RedisKeys.guildAllModuleConfigs(guildId),
-    );
+    await this.invalidateModuleConfig(guildId, moduleName);
   }
 
   public async clearModuleConfig(
@@ -191,10 +196,7 @@ export class ConfigRepository extends Repository {
     const result = await this.prisma.guildModuleConfig.deleteMany({
       where: { guildId, moduleName },
     });
-    await this.invalidate(
-      RedisKeys.guildConfig(moduleName, guildId),
-      RedisKeys.guildAllModuleConfigs(guildId),
-    );
+    await this.invalidateModuleConfig(guildId, moduleName);
     return result.count;
   }
 
@@ -206,10 +208,7 @@ export class ConfigRepository extends Repository {
     await this.prisma.guildModuleConfig.deleteMany({
       where: { guildId, moduleName, configKey: key },
     });
-    await this.invalidate(
-      RedisKeys.guildConfig(moduleName, guildId),
-      RedisKeys.guildAllModuleConfigs(guildId),
-    );
+    await this.invalidateModuleConfig(guildId, moduleName);
   }
 
   /**
