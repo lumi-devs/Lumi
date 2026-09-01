@@ -1,4 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
+import type { dataTableFeatures } from "#/components/ui/data-table";
 import type { AfkEntryView, DashboardMemberView } from "#/lib/dashboard-data";
 import { formatCaseDate, formatDuration } from "#/lib/moderation-cases";
 
@@ -8,7 +9,7 @@ export function afkColumns({
 }: {
   members: DashboardMemberView[];
   now: number;
-}): ColumnDef<AfkEntryView>[] {
+}): ColumnDef<typeof dataTableFeatures, AfkEntryView>[] {
   return [
     {
       id: "member",

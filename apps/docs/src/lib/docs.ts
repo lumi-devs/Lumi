@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
-import { marked } from "marked";
+import { marked, Renderer } from "marked";
 import Prism from "prismjs";
 import "prismjs/components/prism-typescript.js";
 import "prismjs/components/prism-javascript.js";
@@ -75,7 +75,7 @@ export const getAllDocs = (): DocMeta[] => {
   });
 };
 
-export const getDocBySlug = (slugArray: string[]): DocContent | null => {
+export const getDocBySlug = async (slugArray: string[]): Promise<DocContent | null> => {
   const slug = slugArray.join("/");
   const fullPath = path.join(DOCS_DIR, `${slug}.md`);
   const fullPathX = path.join(DOCS_DIR, `${slug}.mdx`);
@@ -104,9 +104,15 @@ export const getDocBySlug = (slugArray: string[]): DocContent | null => {
   }
 
   // Parse HTML
-  const renderer = new marked.Renderer();
+  const renderer = new Renderer();
   renderer.heading = ({ text, depth }) => {
-    const plainText = text.replace(/<[^>]*>/g, "").trim();
+    let plainText = text;
+    let previousPlainText;
+    do {
+      previousPlainText = plainText;
+      plainText = plainText.replace(/<[^>]*>/g, "");
+    } while (plainText !== previousPlainText);
+    plainText = plainText.trim();
     const id = plainText.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-");
     return `<h${depth} id="${id}" class="group flex items-center gap-2"><span>${text}</span><a href="#${id}" class="opacity-0 group-hover:opacity-100 text-[var(--fg-subtle)] hover:text-[var(--accent)] transition-opacity text-sm ml-1">#</a></h${depth}>`;
   };
@@ -157,7 +163,8 @@ export const getDocBySlug = (slugArray: string[]): DocContent | null => {
     </div>`;
   };
   
-  const html = marked(content, { renderer }) as string;
+  marked.use({ renderer });
+  const html = await marked(content) as string;
 
   const allDocs = getAllDocs();
   const currentIndex = allDocs.findIndex((d) => d.slug === slug);

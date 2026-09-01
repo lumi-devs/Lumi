@@ -1,4 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
+import type { dataTableFeatures } from "#/components/ui/data-table";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import type { ModerationCaseView } from "#/lib/dashboard-data";
@@ -27,7 +28,7 @@ export function moderationCasesColumns({
 }: {
   memberNames: Record<string, string>;
   onRevoke: (moderationCase: ModerationCaseView) => void;
-}): ColumnDef<ModerationCaseView>[] {
+}): ColumnDef<typeof dataTableFeatures, ModerationCaseView>[] {
   return [
     {
       id: "caseNumber",

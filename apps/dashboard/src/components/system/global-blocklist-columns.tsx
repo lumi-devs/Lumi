@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import type { dataTableFeatures } from "#/components/ui/data-table";
 import { unblockUserGlobally } from "#/actions/blocklist-actions";
 import { Button } from "#/components/ui/button";
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
@@ -81,7 +82,7 @@ export function globalBlocklistColumns({
   onUnblocked,
 }: {
   onUnblocked: (message: string) => void;
-}): ColumnDef<BlocklistEntryView>[] {
+}): ColumnDef<typeof dataTableFeatures, BlocklistEntryView>[] {
   return [
     {
       id: "userId",

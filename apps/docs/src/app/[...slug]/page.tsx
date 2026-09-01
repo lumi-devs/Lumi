@@ -14,7 +14,7 @@ export async function generateStaticParams() {
 
 export default async function DocPage({ params }: { params: Promise<{ slug: string[] }> }) {
   const resolvedParams = await params;
-  const doc = getDocBySlug(resolvedParams.slug);
+  const doc = await getDocBySlug(resolvedParams.slug);
 
   if (!doc) {
     notFound();
@@ -80,7 +80,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-12">
             {doc.prev ? (
               <Link
-                href={`/${doc.prev.slug}`}
+                href={`/${encodeURI(doc.prev.slug)}`}
                 className="group flex flex-col p-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-[var(--accent)] transition-all"
               >
                 <span className="text-xs font-semibold text-[var(--fg-subtle)] group-hover:text-[var(--accent)] flex items-center gap-1 mb-1 font-mono uppercase tracking-wider">
@@ -94,7 +94,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
 
             {doc.next ? (
               <Link
-                href={`/${doc.next.slug}`}
+                href={`/${encodeURI(doc.next.slug)}`}
                 className="group flex flex-col items-end text-right p-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] hover:border-[var(--accent)] transition-all"
               >
                 <span className="text-xs font-semibold text-[var(--fg-subtle)] group-hover:text-[var(--accent)] flex items-center gap-1 mb-1 font-mono uppercase tracking-wider">

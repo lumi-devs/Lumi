@@ -1,4 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
+import type { dataTableFeatures } from "#/components/ui/data-table";
 import { Button } from "#/components/ui/button";
 import type { BlocklistEntryView } from "#/lib/dashboard-data";
 import { formatCaseDate } from "#/lib/moderation-cases";
@@ -19,7 +20,7 @@ export function guildBlocklistColumns({
 }: {
   memberNames: Record<string, string>;
   onUnblock: (entry: BlocklistEntryView) => void;
-}): ColumnDef<BlocklistEntryView>[] {
+}): ColumnDef<typeof dataTableFeatures, BlocklistEntryView>[] {
   return [
     {
       id: "user",
