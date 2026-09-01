@@ -8,7 +8,7 @@ import {
   PermissionFlagsBits,
 } from "discord.js";
 import { time, TimestampStyles } from "@discordjs/formatters";
-import { ActionRowBuilder } from "@discordjs/builders";
+import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { createActionButton, buildSafeActionRows } from "#lib/utilities/panels.js";
 import { BaseCommand, sendReply, fetchTyped } from "#lib/commands.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
