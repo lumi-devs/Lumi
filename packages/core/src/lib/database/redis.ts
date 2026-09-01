@@ -1,6 +1,12 @@
 import { container } from "@sapphire/framework";
 import { tryParseJSON } from "@sapphire/utilities";
-import { envIsDefined, envParseInteger, envParseString } from "#lib/env.js";
+import {
+  envIsDefined,
+  envParseInteger,
+  envParseString,
+  getRedisClusterNodes,
+  getRedisClusterScaleReads,
+} from "#lib/env.js";
 import { Redis, Cluster, type RedisOptions } from "ioredis";
 import { delSafe, type RedisClient } from "#lib/database/cluster-safe.js";
 import { logError } from "#lib/utilities/errors.js";
@@ -153,35 +159,12 @@ export function redisConnectionOptions(): RedisOptions {
   };
 }
 
-/**
- * Comma-separated `host:port` list enables Cluster mode. Cluster has no
- * numbered databases, so REDIS_CACHE_DB is ignored there - the key prefix
- * already namespaces everything.
- */
-function clusterNodes(): { host: string; port: number }[] | null {
-  const raw = process.env["REDIS_CLUSTER_NODES"];
-  if (!raw) return null;
-  const nodes = raw
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-    .map((entry) => {
-      const [host = "localhost", port] = entry.split(":");
-      return { host, port: Number(port) || 6379 };
-    });
-  return nodes.length > 0 ? nodes : null;
-}
-
 export function createRedisClient(): RedisClient {
-  const nodes = clusterNodes();
+  const nodes = getRedisClusterNodes();
   const client: RedisClient = nodes
     ? new Cluster(nodes, {
         lazyConnect: true,
-        scaleReads:
-          (process.env["REDIS_CLUSTER_SCALE_READS"] as
-            | "all"
-            | "slave"
-            | "master") || "master",
+        scaleReads: getRedisClusterScaleReads(),
         slotsRefreshTimeout: envParseInteger(
           "REDIS_CLUSTER_SLOTS_REFRESH_TIMEOUT_MS",
           2000,

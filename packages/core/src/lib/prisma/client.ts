@@ -5,12 +5,17 @@ import { container } from "@sapphire/framework";
 import { Stopwatch } from "@sapphire/stopwatch";
 import { pgPoolSize, pgPoolUsed, pgPoolWaiting } from "@lumi/observability";
 
-import { resolvePgPoolSize } from "#lib/env.js";
+import {
+  getPostgresAppName,
+  getPostgresReplicaUrl,
+  getPostgresUrl,
+  resolvePgPoolSize,
+} from "#lib/env.js";
 
 const POOL_MAX = resolvePgPoolSize();
 
-const primaryUrl = process.env["POSTGRES_URL"] || process.env["DATABASE_URL"];
-const appName = process.env["POSTGRES_APP_NAME"] || `lumi-worker-${process.env["SHARDS"] ?? "0"}`;
+const primaryUrl = getPostgresUrl();
+const appName = getPostgresAppName();
 
 const pool = new Pool({
   connectionString: primaryUrl,
@@ -68,10 +73,7 @@ export const prisma = createPrismaClient(adapter);
  * Falls back to the primary when POSTGRES_REPLICA_URL is unset, so nothing has
  * to branch on whether a replica exists.
  */
-const replicaUrl =
-  process.env["POSTGRES_REPLICA_URL"] ||
-  process.env["DATABASE_READ_URL"] ||
-  process.env["DATABASE_REPLICA_URL"];
+const replicaUrl = getPostgresReplicaUrl();
 
 const replicaPool = replicaUrl
   ? new Pool({

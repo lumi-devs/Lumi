@@ -23,6 +23,10 @@ export function envParseInteger(key: string, defaultValue?: number): number {
 
 export const envIsDefined = (key: string) => Boolean(process.env[key]);
 
+export const getNodeEnv = (): string => process.env["NODE_ENV"] || "development";
+export const isDevelopment = (): boolean => getNodeEnv() === "development";
+export const isProduction = (): boolean => getNodeEnv() === "production";
+
 /**
  * Fails fast on every missing key at once, instead of the first caller of
  * `envParseString`/`envParseInteger` for that key surfacing it mid-request.
@@ -238,3 +242,52 @@ export const getDashboardPublicUrl = (): string | null => {
   if (!raw) return null;
   return raw.replace(/\/+$/, "");
 };
+
+export const getPostgresUrl = (): string | undefined =>
+  process.env["POSTGRES_URL"] || process.env["DATABASE_URL"];
+
+export const getPostgresReplicaUrl = (): string | undefined =>
+  process.env["POSTGRES_REPLICA_URL"] ||
+  process.env["DATABASE_READ_URL"] ||
+  process.env["DATABASE_REPLICA_URL"];
+
+export const getPostgresAppName = (): string =>
+  process.env["POSTGRES_APP_NAME"] ||
+  `lumi-worker-${process.env["SHARDS"] ?? "0"}`;
+
+export function getRedisClusterNodes(): { host: string; port: number }[] | null {
+  const raw = process.env["REDIS_CLUSTER_NODES"];
+  if (!raw) return null;
+  const nodes = raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [host = "localhost", port] = entry.split(":");
+      return { host, port: Number(port) || 6379 };
+    });
+  return nodes.length > 0 ? nodes : null;
+}
+
+export const getRedisClusterScaleReads = (): "all" | "slave" | "master" =>
+  (process.env["REDIS_CLUSTER_SCALE_READS"] as "all" | "slave" | "master") || "master";
+
+export function getWriteBucket(streamBuckets = 16): number {
+  const shards = process.env["SHARDS"];
+  if (shards) {
+    try {
+      const parsed: unknown = JSON.parse(shards);
+      const first = Array.isArray(parsed) ? parsed[0] : parsed;
+      if (typeof first === "number") return first % streamBuckets;
+    } catch {
+      // fall through to pid
+    }
+  }
+  return process.pid % streamBuckets;
+}
+
+export const getRpcInternalToken = (): string | null => {
+  const token = process.env["RPC_INTERNAL_TOKEN"]?.trim();
+  return token && token.length > 0 ? token : null;
+};
+
