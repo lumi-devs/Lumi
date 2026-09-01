@@ -44,13 +44,20 @@ export type EnvResult<T extends EnvShape> = {
   readonly [K in keyof T]: ReturnType<T[K]>;
 };
 
+class MissingEnvError extends Error {
+  constructor() {
+    super("required but not set");
+    this.name = "MissingEnvError";
+  }
+}
+
 /** Field parser builders for defineEnv. */
 export const envField = {
   string: (defaultValue?: string): EnvFieldParser<string> =>
     (_key, raw) => {
       if (raw !== undefined && raw !== "") return raw;
       if (defaultValue !== undefined) return defaultValue;
-      throw null;
+      throw new MissingEnvError();
     },
   integer: (defaultValue?: number): EnvFieldParser<number> =>
     (key, raw) => {
@@ -60,7 +67,7 @@ export const envField = {
         throw new Error(`[ENV] Invalid integer: ${key}=${raw}`);
       }
       if (defaultValue !== undefined) return defaultValue;
-      throw null;
+      throw new MissingEnvError();
     },
   boolean: (defaultValue?: boolean): EnvFieldParser<boolean> =>
     (key, raw) => {
@@ -68,7 +75,7 @@ export const envField = {
       if (raw === "false") return false;
       if (raw !== undefined && raw !== "") throw new Error(`[ENV] Invalid boolean: ${key}=${raw}`);
       if (defaultValue !== undefined) return defaultValue;
-      throw null;
+      throw new MissingEnvError();
     },
 };
 
@@ -86,7 +93,7 @@ export function defineEnv<T extends EnvShape>(shape: T): EnvResult<T> {
     try {
       result[key] = parser(key, raw);
     } catch (err) {
-      if (err === null) {
+      if (err instanceof MissingEnvError) {
         errors.push(`  ${key}: required but not set`);
       } else if (err instanceof Error) {
         errors.push(`  ${err.message}`);
