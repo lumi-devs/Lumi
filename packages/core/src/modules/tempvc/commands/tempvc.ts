@@ -1,3 +1,5 @@
+import { respondWithChoices, filterAutocompleteChoices } from "#lib/utilities/autocomplete.js";
+import type { AutocompleteInteraction } from "discord.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import {
@@ -41,7 +43,29 @@ import { buildPanel } from "../ui/panel.js";
   ],
 })
 export class TempVcCommand extends BaseSubcommand {
-  public override registerApplicationCommands(
+  public override async autocompleteRun(
+    interaction: AutocompleteInteraction,
+  ): Promise<void> {
+    const focused = interaction.options.getFocused(true);
+    if (focused.name === "name") {
+      const presets = [
+        "{}",
+        "Gaming {}",
+        "Chill {}",
+        "{username}'s VC",
+        "Stream {}",
+        "Study {}",
+      ];
+      return respondWithChoices(
+        interaction,
+        filterAutocompleteChoices(presets, focused.value),
+      );
+    }
+    return respondWithChoices(interaction, []);
+  }
+
+
+public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {
     registry.registerChatInputCommand((builder) =>
@@ -75,7 +99,8 @@ export class TempVcCommand extends BaseSubcommand {
                       'Name template: supports {}/{number}, {username}, {name}, {position}. E.g. "Gaming {}".',
                     )
                     .setMaxLength(90)
-                    .setRequired(true),
+                    .setRequired(true)
+                    .setAutocomplete(true),
                 )
                 .addIntegerOption((opt) =>
                   opt

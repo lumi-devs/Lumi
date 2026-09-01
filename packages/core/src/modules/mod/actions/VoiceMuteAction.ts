@@ -62,11 +62,7 @@ export class VoiceMuteAction {
   public static async undo(options: VoiceMuteUndoOptions) {
     const { guild, targetMember, moderator, reason } = options;
     const key = RedisKeys.voiceMuteState(guild.id, targetMember.id);
-    if (container.invalidation) {
-      await container.invalidation.invalidate(key);
-    } else {
-      await container.redis.del(key);
-    }
+    await container.invalidation.invalidate(key);
     const auditReason = formatAuditReason(moderator, reason);
 
     return runModerationAction({
@@ -101,11 +97,7 @@ export class VoiceMuteAction {
     reason: string,
   ): Promise<void> {
     const key = RedisKeys.voiceMuteState(guildId, targetId);
-    if (container.invalidation) {
-      await container.invalidation.invalidate(key);
-    } else {
-      await container.redis.del(key);
-    }
+    await container.invalidation.invalidate(key);
     await container.client.rest
       .patch(Routes.guildMember(guildId, targetId), {
         body: { mute: false },

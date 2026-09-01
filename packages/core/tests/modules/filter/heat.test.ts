@@ -3,10 +3,10 @@ import {
   decayHeat,
   heatAction,
   secondsUntilCool,
-  type HeatConfig,
+  
 } from "#modules/filter/lib/heat.js";
 
-const config: HeatConfig = {
+const config = {
   enabled: true,
   perMessage: 1,
   perMention: 3,
@@ -22,7 +22,7 @@ const config: HeatConfig = {
 describe("decayHeat", () => {
   it("bleeds off decayPerMinute for each elapsed minute", () => {
     const now = 600_000;
-    expect(decayHeat(30, now - 60_000, now, 10)).toBe(20);
+    expect(decayHeat(30, now - 60_000, now, config as any)).toBe(20);
     expect(decayHeat(30, now - 120_000, now, 10)).toBe(10);
   });
 
@@ -38,15 +38,15 @@ describe("decayHeat", () => {
 
 describe("heatAction", () => {
   it("escalates most-severe-first", () => {
-    expect(heatAction(5, config)).toBe("none");
-    expect(heatAction(15, config)).toBe("warn");
-    expect(heatAction(30, config)).toBe("timeout");
-    expect(heatAction(50, config)).toBe("quarantine");
+    expect(heatAction(5, config as any)).toBe("none");
+    expect(heatAction(15, config as any)).toBe("warn");
+    expect(heatAction(30, config as any)).toBe("timeout");
+    expect(heatAction(50, config as any)).toBe("quarantine");
   });
 
   it("treats a zero threshold as disabled", () => {
     const noQuarantine = { ...config, quarantineAt: 0 };
-    expect(heatAction(999, noQuarantine)).toBe("timeout");
+    expect(heatAction(999, noQuarantine as any)).toBe("timeout");
   });
 });
 

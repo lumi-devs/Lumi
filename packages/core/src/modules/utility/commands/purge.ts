@@ -1,3 +1,5 @@
+import { respondWithChoices, filterAutocompleteChoices } from "#lib/utilities/autocomplete.js";
+import type { AutocompleteInteraction } from "discord.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
@@ -68,7 +70,21 @@ const MaxScan = 2000;
   ],
 })
 export class PurgeCommand extends BaseSubcommand {
-  public override registerApplicationCommands(
+  public override async autocompleteRun(
+    interaction: AutocompleteInteraction,
+  ): Promise<void> {
+    const focused = interaction.options.getFocused(true);
+    if (focused.name === "duration") {
+      const presets = ["5m", "10m", "15m", "30m", "1h", "2h", "4h", "8h", "12h", "1d", "3d", "7d", "14d"];
+      return respondWithChoices(
+        interaction,
+        filterAutocompleteChoices(presets, focused.value),
+      );
+    }
+    return respondWithChoices(interaction, []);
+  }
+
+public override registerApplicationCommands(
     registry: ApplicationCommandRegistry,
   ) {
     registry.registerChatInputCommand((b) =>
@@ -153,7 +169,8 @@ export class PurgeCommand extends BaseSubcommand {
               o
                 .setName("duration")
                 .setDescription("How far back to reach, e.g. 10m, 2h, 1d")
-                .setRequired(true),
+                .setRequired(true)
+                .setAutocomplete(true),
             )
             .addIntegerOption((o) =>
               o

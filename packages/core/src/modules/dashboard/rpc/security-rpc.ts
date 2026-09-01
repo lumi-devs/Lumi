@@ -2,7 +2,8 @@ import { container } from "@sapphire/framework";
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
 import { RPC_ACTIONS } from "@lumi/contracts";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
-import type { GuildBackupData } from "#modules/security/lib/backup.js";
+import type { GuildBackupData } from "#lib/backup/backup-types.js";
+import { restoreGuildFromBackup } from "#lib/backup/restore-guild.js";
 import {
   BackupRestoreSchema,
   PanicSetSchema,
@@ -152,10 +153,7 @@ export function registerSecurityRpcHandlers(): void {
     const { guild } = await verifyGuildAccess(req);
     const { backupId } = parsePayload(BackupRestoreSchema, req.data);
 
-    const security = tryGetUtility("security");
-    if (!security) throw new Error("The security module is not loaded");
-
-    const result = await security.restoreFromBackup(guild, backupId);
+    const result = await restoreGuildFromBackup(guild, backupId);
     if (!result) throw new Error("No backup found to restore");
     return { success: true, ...result };
   });

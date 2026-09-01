@@ -18,7 +18,7 @@ export async function handleAutoLockdownUnlockFire(
   if (!guild) return;
 
   await unlockAllTextChannels(guild);
-  await container.redis.del(RedisKeys.filterAutoLockdown(guildId));
+  await container.invalidation.invalidate(RedisKeys.filterAutoLockdown(guildId));
 
   const logService = tryGetUtility("guild-log");
   await logService?.dispatch({

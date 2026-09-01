@@ -138,7 +138,6 @@ describe("Chaos Suite: Redis Restart & Lock Loss", () => {
       acquireRedisLock(redis as any, "lock:guild:healed", {
         ttlMs: 2000,
         acquireTimeoutMs: 100,
-        retryIntervalMs: 20,
       }),
     ).rejects.toThrow(/ECONNREFUSED|Timeout/);
 

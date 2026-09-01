@@ -10,39 +10,6 @@ import type { RedisClient } from "../../src/lib/database/cluster-safe.js";
 
 // A stand-in for ioredis' Cluster: every multi-key call asserts that all its
 // keys share a slot, which is exactly what a real cluster enforces.
-class FakeCluster {
-  public readonly mgetCalls: string[][] = [];
-  public readonly delCalls: string[][] = [];
-  public constructor(private readonly store: Map<string, string>) {}
-
-  #assertSameSlot(keys: string[]) {
-    const slots = new Set(keys.map((k) => calculateSlot(k)));
-    if (slots.size > 1) throw new Error("CROSSSLOT Keys don't hash to the same slot");
-  }
-
-  mget(...keys: string[]) {
-    this.#assertSameSlot(keys);
-    this.mgetCalls.push(keys);
-    return Promise.resolve(keys.map((k) => this.store.get(k) ?? null));
-  }
-
-  del(...keys: string[]) {
-    this.#assertSameSlot(keys);
-    this.delCalls.push(keys);
-    return Promise.resolve(keys.length);
-  }
-
-  pipeline() {
-    const keys: string[] = [];
-    const chain = {
-      set: (k: string) => { keys.push(k); return chain; },
-      exec: () => { this.#assertSameSlot(keys); return Promise.resolve([]); },
-    };
-    return chain;
-  }
-
-  nodes() { return []; }
-}
 
 // isCluster() uses instanceof, so a fake is treated as standalone. These tests
 // therefore exercise the standalone path plus the grouping logic directly.

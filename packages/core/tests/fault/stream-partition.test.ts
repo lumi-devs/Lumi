@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { TaskFireConsumer } from "#lib/task-fire-registry.js";
 
 describe("Chaos Suite: Redis Network Partition & Stream Consumer Reconnect", () => {
   beforeEach(() => {

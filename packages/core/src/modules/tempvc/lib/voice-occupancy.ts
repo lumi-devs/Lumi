@@ -57,11 +57,7 @@ export async function isVoiceChannelEmpty(channelId: string): Promise<boolean> {
 export async function clearVoiceChannelOccupancy(
   channelId: string,
 ): Promise<void> {
-  if (container.invalidation) {
-    await container.invalidation.invalidate(occKey(channelId));
-  } else {
-    await container.redis.del(occKey(channelId));
-  }
+  await container.invalidation.invalidate(occKey(channelId));
 }
 
 /** Bulk-load occupancy from a GUILD_CREATE voice_states array. */

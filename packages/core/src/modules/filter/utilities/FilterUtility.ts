@@ -275,7 +275,7 @@ export class FilterUtility extends Utility {
   }
 
   public async clearHeat(guildId: string, userId: string): Promise<void> {
-    await this.redis.del(RedisKeys.filterHeat(guildId, userId));
+    await this.container.invalidation.invalidate(RedisKeys.filterHeat(guildId, userId));
   }
 
   /** True when this message repeats the member's previous one within the window. */
@@ -431,7 +431,7 @@ export class FilterUtility extends Utility {
 
   /** Undo `activateAutoLockdown` when the lockdown could not actually be carried out. */
   public async releaseAutoLockdown(guildId: string): Promise<void> {
-    await this.redis.del(RedisKeys.filterAutoLockdown(guildId));
+    await this.container.invalidation.invalidate(RedisKeys.filterAutoLockdown(guildId));
   }
 
   /** Mark a guild as most-recently-used and return its rule set. */
