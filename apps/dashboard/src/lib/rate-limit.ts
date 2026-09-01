@@ -1,56 +1,25 @@
 import "server-only";
-import { RateLimiterMemory, RateLimiterRedis } from "rate-limiter-flexible";
-import Redis from "ioredis";
+import { RateLimiterMemory } from "rate-limiter-flexible";
 
 /**
- * Rate limiting utility using Redis for multi-instance coordination when available.
- * Falls back to in-memory rate limiting for local development or if Redis is not configured.
- * Multi-instance coordination ensures rate limits are respected across all dashboard replicas.
+ * In-memory rate limiting utility. Per Ground Rule 8, apps/dashboard must never
+ * connect to Redis directly, so rate limits are not coordinated across replicas.
  */
 
-let redisClient: Redis | null = null;
+const limiters = new Map<string, RateLimiterMemory>();
 
-if (process.env.REDIS_URL) {
-  redisClient = new Redis(process.env.REDIS_URL, {
-    enableOfflineQueue: false,
-    lazyConnect: true,
-  });
-  // Prevent unhandled error event crash/logs if Redis is unreachable
-  redisClient.on("error", () => {});
-} else {
-  console.warn("WARNING: No REDIS_URL configured. Falling back to in-memory rate limiting. Multi-instance coordination will not work.");
-}
-
-type RateLimiter = RateLimiterMemory | RateLimiterRedis;
-
-const limiters = new Map<string, RateLimiter>();
-
-function getLimiter(limit: number, windowMs: number): RateLimiter {
+function getLimiter(limit: number, windowMs: number): RateLimiterMemory {
   const cacheKey = `${limit}:${windowMs}`;
   let limiter = limiters.get(cacheKey);
-  
+
   if (!limiter) {
-    if (redisClient) {
-      limiter = new RateLimiterRedis({
-        storeClient: redisClient,
-        keyPrefix: `rl:${limit}:${windowMs}`,
-        points: limit,
-        duration: windowMs / 1000,
-        // The insurance limiter provides a secondary defense layer if Redis fails
-        insuranceLimiter: new RateLimiterMemory({
-          points: limit,
-          duration: windowMs / 1000,
-        }),
-      });
-    } else {
-      limiter = new RateLimiterMemory({
-        points: limit,
-        duration: windowMs / 1000,
-      });
-    }
+    limiter = new RateLimiterMemory({
+      points: limit,
+      duration: windowMs / 1000,
+    });
     limiters.set(cacheKey, limiter);
   }
-  
+
   return limiter;
 }
 
