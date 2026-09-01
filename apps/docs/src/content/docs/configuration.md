@@ -27,6 +27,7 @@ Lumi will fail to start if any of these variables are missing:
 | Variable | Purpose | Example / Default |
 | :--- | :--- | :--- |
 | `BOT_TOKEN` | Discord bot token from the Discord Developer Portal (Bot tab). | `MTA...` |
+| `APPEAL_TOKEN_SECRET` | Signs the ban/timeout appeal link's token (HMAC-SHA256). Bot-only. Generate with `openssl rand -hex 32`. | 32-byte hex string |
 | `CLIENT_ID` | Discord application (client) ID. | `123456789012345678` |
 | `POSTGRES_URL` | Pooled PostgreSQL connection string (connects via PgBouncer in multi-replica deployments). | `postgresql://lumi:lumi@localhost:5432/lumi` (or port `6432` for PgBouncer) |
 | `DIRECT_POSTGRES_URL` | Direct unpooled PostgreSQL connection string, used exclusively for migrations. | `postgresql://lumi:lumi@localhost:5432/lumi` |
