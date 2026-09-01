@@ -1,6 +1,7 @@
 import "server-only";
 import { RateLimiterMemory, RateLimiterRedis } from "rate-limiter-flexible";
 import Redis from "ioredis";
+import { env } from "./env";
 
 /**
  * Rate limiting utility using Redis for multi-instance coordination when available.
@@ -10,8 +11,8 @@ import Redis from "ioredis";
 
 let redisClient: Redis | null = null;
 
-if (process.env.REDIS_URL) {
-  redisClient = new Redis(process.env.REDIS_URL, {
+if (env.redisUrl) {
+  redisClient = new Redis(env.redisUrl, {
     enableOfflineQueue: false,
     lazyConnect: true,
   });

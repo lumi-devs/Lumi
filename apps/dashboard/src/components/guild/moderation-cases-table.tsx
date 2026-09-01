@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { revokeCase } from "#/actions/moderation-actions";
 import { Alert } from "#/components/ui/alert";
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
@@ -32,14 +32,19 @@ export function ModerationCasesTable({
   const [notice, setNotice] = useState<string | null>(null);
   const { isPending, error, setError, run } = useServerAction();
 
-  const columns = moderationCasesColumns({
-    memberNames,
-    onRevoke: (c) => {
+  const onRevoke = useCallback(
+    (c: ModerationCaseView) => {
       setError(null);
       setNotice(null);
       setTarget(c);
     },
-  });
+    [setError],
+  );
+
+  const columns = useMemo(
+    () => moderationCasesColumns({ memberNames, onRevoke }),
+    [memberNames, onRevoke],
+  );
 
   function confirm() {
     if (!target) return;

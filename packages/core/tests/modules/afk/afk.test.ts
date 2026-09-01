@@ -60,7 +60,7 @@ vi.mock("#modules/afk/index.js", () => ({
 describe("AFK Module Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (container as any).invalidation = undefined;
+    (container as any).invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
   });
 
   describe("AfkKeys and AfkTTL", () => {
@@ -129,14 +129,6 @@ describe("AFK Module Tests", () => {
   });
 
   describe("clearAfkEntry", () => {
-    it("deletes from DB and redis when invalidation is absent", async () => {
-      (container.db.afk.deleteEntry as any).mockResolvedValue(undefined);
-      const res = await clearAfkEntry("g1", "u1");
-      expect(res).toBe(true);
-      expect(container.db.afk.deleteEntry).toHaveBeenCalledWith("g1", "u1");
-      expect(container.redis.del).toHaveBeenCalledWith("lumi:afk:g1:u1");
-    });
-
     it("uses invalidation service when available", async () => {
       (container as any).invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
       (container.db.afk.deleteEntry as any).mockResolvedValue(undefined);
@@ -157,7 +149,7 @@ describe("AFK Module Tests", () => {
   });
 
   describe("clearAllAfkForUser", () => {
-    it("handles cursor scanning and redis del for user keys", async () => {
+    it("handles cursor scanning and invalidates user keys", async () => {
       (container.db.afk.deleteAllForUser as any).mockResolvedValue(2);
       (container.redis.scan as any)
         .mockResolvedValueOnce(["42", ["key1"]])
@@ -165,7 +157,7 @@ describe("AFK Module Tests", () => {
 
       const count = await clearAllAfkForUser("u1");
       expect(count).toBe(2);
-      expect(container.redis.del).toHaveBeenCalledWith("key1", "key2");
+      expect(container.invalidation.invalidate).toHaveBeenCalledWith("key1", "key2");
     });
 
     it("uses invalidation service for user keys when available", async () => {
@@ -254,11 +246,7 @@ describe("AFK Module Tests", () => {
       expect(container.redis.multi).not.toHaveBeenCalled();
     });
 
-    it("clearAfkMentions deletes mentions key or invalidates it", async () => {
-      await clearAfkMentions("g1", "u1");
-      expect(container.redis.del).toHaveBeenCalledWith("lumi:afk:mentions:g1:u1");
-
-      (container as any).invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
+    it("clearAfkMentions invalidates the mentions key", async () => {
       await clearAfkMentions("g1", "u1");
       expect(container.invalidation.invalidate).toHaveBeenCalledWith("lumi:afk:mentions:g1:u1");
     });

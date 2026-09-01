@@ -1,4 +1,5 @@
 import "server-only";
+import { env } from "./env";
 
 /**
  * Resolves the caller's IP for rate-limit keying.
@@ -22,13 +23,6 @@ import "server-only";
  * used verbatim and nothing else is consulted — that is the only fully
  * spoof-proof option, so prefer it.
  */
-
-const DEFAULT_TRUSTED_HOPS = 1;
-
-function trustedHops(): number {
-  const raw = Number.parseInt(process.env["TRUSTED_PROXY_HOPS"] ?? "", 10);
-  return Number.isInteger(raw) && raw > 0 ? raw : DEFAULT_TRUSTED_HOPS;
-}
 
 function normalize(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
@@ -59,7 +53,7 @@ export const UNKNOWN_CLIENT_IP = "unknown";
  * bucket rather than getting a free one each.
  */
 export function getClientIp(headers: Headers): string {
-  const configured = process.env["CLIENT_IP_HEADER"]?.trim().toLowerCase();
+  const configured = env.clientIpHeader;
   if (configured) {
     return normalize(headers.get(configured)) ?? UNKNOWN_CLIENT_IP;
   }
@@ -74,7 +68,7 @@ export function getClientIp(headers: Headers): string {
     const hops = forwarded.split(",");
     // Count back from the right: entry -N is the address the Nth-from-last
     // proxy observed. Anything further left was supplied by the client.
-    const index = hops.length - trustedHops();
+    const index = hops.length - env.trustedProxyHops;
     const candidate = normalize(hops[Math.max(index, 0)]);
     if (candidate) return candidate;
   }

@@ -1,47 +1,19 @@
 import { fileURLToPath } from "node:url";
 import { ShardingManager } from "discord.js";
+import { getBotToken, getTotalShards, getShardList } from "@lumi/core/env";
 
 // The manager process itself never opens a Discord connection or does
 // application work - only the children it spawns (shard-client.ts) do. No
 // telemetry/RPC HTTP surface is bound here, so there's nothing to gate or
 // conflict with the primary shard child's port.
 
-function envInt(key: string): number | undefined {
-  const raw = process.env[key];
-  if (!raw || raw === "auto") return undefined;
-  const n = Number.parseInt(raw, 10);
-  if (!Number.isFinite(n) || n < 1) {
-    throw new Error(`[Manager] ${key}=${raw} is not a positive integer (or "auto").`);
-  }
-  return n;
-}
-
-function envShardList(): number[] | undefined {
-  const raw = process.env["SHARD_LIST"];
-  if (!raw) return undefined;
-  const ids = raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0)
-    .map((s) => {
-      const n = Number.parseInt(s, 10);
-      if (!Number.isFinite(n) || n < 0) {
-        throw new Error(`[Manager] SHARD_LIST contains non-integer "${s}".`);
-      }
-      return n;
-    });
-  return ids.length > 0 ? ids : undefined;
-}
-
-const token = process.env["BOT_TOKEN"];
-if (!token) throw new Error("[ENV] Missing: BOT_TOKEN");
-
+const token = getBotToken();
 const shardFile = fileURLToPath(new URL("./shard-client.ts", import.meta.url));
 
 const manager = new ShardingManager(shardFile, {
   token,
-  totalShards: envInt("TOTAL_SHARDS") ?? "auto",
-  shardList: envShardList() ?? "auto",
+  totalShards: getTotalShards(),
+  shardList: getShardList(),
   respawn: true,
 });
 

@@ -1,5 +1,6 @@
 import { Utility } from "#lib/module-system/Utility.js";
 import { FieldType, parseConfigList } from "#lib/module-system/Module.js";
+import { validateModuleConfigValue } from "#lib/module-system/config-schema.js";
 import { cleanMention } from "#utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
@@ -35,14 +36,9 @@ export class ConfigUtility extends Utility {
     }
 
     const schema = await this.container.moduleStore.getConfigSchema(moduleName);
-    const schemaField = (
-      schema as unknown as {
-        shape?: Record<string, { parse(v: unknown): unknown }>;
-      }
-    )?.shape?.[key];
-    if (schemaField) {
+    if (schema) {
       try {
-        schemaField.parse(coerced);
+        validateModuleConfigValue(schema, key, coerced);
       } catch (err: any) {
         const msg = err.message || String(err);
         throw new Error(`Invalid value for \`${key}\`: ${msg}`);
@@ -110,34 +106,13 @@ export class ConfigUtility extends Utility {
     coerced: unknown,
     actorId?: string,
   ): Promise<void> {
-    const oldValue = await this.container.db.config.getModuleConfig(
-      guildId,
-      moduleName,
-      key,
-    );
     await this.container.db.config.setModuleConfig(
       guildId,
       moduleName,
       key,
       coerced as Prisma.InputJsonValue,
+      actorId,
     );
-    if (actorId) {
-        this.container.db.configHistory
-          .logConfigChange({
-            guildId,
-            moduleName,
-            key,
-            oldValue,
-            newValue: coerced,
-            actorId,
-          })
-          .catch((err: unknown) =>
-            this.container.logger.warn(
-              `[ConfigUtility] Failed to write audit history for ${moduleName}:${key}:`,
-              err,
-            ),
-        );
-    }
     const hook = this.container.configChangeHooks.get(`${moduleName}:${key}`);
     if (hook) {
       hook(guildId, key).catch((err: unknown) =>

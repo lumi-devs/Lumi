@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { UserX } from "lucide-react";
 import {
   blockUserInGuild,
@@ -33,14 +33,19 @@ export function GuildBlocklistTable({
   const [notice, setNotice] = useState<string | null>(null);
   const { isPending, error, setError, run } = useServerAction();
 
-  const columns = guildBlocklistColumns({
-    memberNames,
-    onUnblock: (entry) => {
+  const onUnblock = useCallback(
+    (entry: BlocklistEntryView) => {
       setError(null);
       setNotice(null);
       setTarget(entry);
     },
-  });
+    [setError],
+  );
+
+  const columns = useMemo(
+    () => guildBlocklistColumns({ memberNames, onUnblock }),
+    [memberNames, onUnblock],
+  );
 
   function confirmUnblock() {
     if (!target) return;
