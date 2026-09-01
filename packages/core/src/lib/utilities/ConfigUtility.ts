@@ -106,34 +106,13 @@ export class ConfigUtility extends Utility {
     coerced: unknown,
     actorId?: string,
   ): Promise<void> {
-    const oldValue = await this.container.db.config.getModuleConfig(
-      guildId,
-      moduleName,
-      key,
-    );
     await this.container.db.config.setModuleConfig(
       guildId,
       moduleName,
       key,
       coerced as Prisma.InputJsonValue,
+      actorId,
     );
-    if (actorId) {
-        this.container.db.configHistory
-          .logConfigChange({
-            guildId,
-            moduleName,
-            key,
-            oldValue,
-            newValue: coerced,
-            actorId,
-          })
-          .catch((err: unknown) =>
-            this.container.logger.warn(
-              `[ConfigUtility] Failed to write audit history for ${moduleName}:${key}:`,
-              err,
-            ),
-        );
-    }
     const hook = this.container.configChangeHooks.get(`${moduleName}:${key}`);
     if (hook) {
       hook(guildId, key).catch((err: unknown) =>

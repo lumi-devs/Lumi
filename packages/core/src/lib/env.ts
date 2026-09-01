@@ -47,7 +47,7 @@ export type EnvResult<T extends EnvShape> = {
 /** Field parser builders for defineEnv. */
 export const envField = {
   string: (defaultValue?: string): EnvFieldParser<string> =>
-    (key, raw) => {
+    (_key, raw) => {
       if (raw !== undefined && raw !== "") return raw;
       if (defaultValue !== undefined) return defaultValue;
       throw null;
