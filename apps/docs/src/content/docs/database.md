@@ -26,8 +26,8 @@ Modules must never access `container.prisma` directly. All database access flows
         ┌───────────────┬───────┴───────┬───────────────┐
         ▼               ▼               ▼               ▼
 ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│  guilds      │ │  moderation  │ │  audit       │ │  guildKV     │
-│ (GuildRepo)  │ │ (ModRepo)    │ │ (AuditRepo)  │ │ (KVRepo)     │
+│  config      │ │  moderation  │ │  audit       │ │  guildKV     │
+│ (ConfigRepo) │ │ (ModRepo)    │ │ (AuditRepo)  │ │ (KVRepo)     │
 └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
 ```
 
@@ -35,17 +35,17 @@ Modules must never access `container.prisma` directly. All database access flows
 
 | Repository | Access Property | Purpose |
 | :--- | :--- | :--- |
-| **GuildRepository** | `container.db.guilds` | Guild configuration, prefix, enabled modules, and locale settings. |
+| **ConfigRepository** | `container.db.config` | Guild configuration, prefix, enabled modules, and locale settings. |
 | **ModerationRepository** | `container.db.moderation` | Moderation cases (warn, mute, kick, ban), active timeouts, and case notes. |
 | **AuditRepository** | `container.db.audit` | Structured administrative audit logs with 90-day retention. |
 | **GuildKVRepository** | `container.db.guildKV` | Per-guild JSON key-value store used by modules for lightweight state. |
-| **PermitRepository** | `container.db.permits` | Guild permit rules, role overrides, and channel permit masks. |
+| **PermissionRepository** | `container.db.permissions` | Guild permit rules, role overrides, and channel permit masks. |
 
 ---
 
 ## Schema Migrations
 
-The Prisma schema is defined at `packages/core/src/lib/database/schema.prisma`.
+The Prisma schema is defined at `prisma/schema.prisma`.
 
 ### Common Commands
 
@@ -57,7 +57,7 @@ bun run db:generate
 bun run db:migrate
 
 # Create a new named migration after modifying schema.prisma
-bun prisma migrate dev --name <migration_name> --schema=packages/core/src/lib/database/schema.prisma
+bun prisma migrate dev --name <migration_name>
 ```
 
 ---
