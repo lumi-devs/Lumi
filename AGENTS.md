@@ -43,7 +43,7 @@ Always append `.js` to the specifier even though the source is `.ts`:
 | Alias | Resolves to |
 | :--- | :--- |
 | `#lib/*.js` | `packages/core/src/lib/*.ts` |
-| `#database/*.js` | `packages/core/src/lib/database/*.ts` |
+| `#database/*.js` | `packages/core/src/lib/database/*.ts` (Redis primitives only — `redis.ts`, `cluster-safe.ts`; the Prisma repositories and `DatabaseService` live in `#lib/prisma/*.js`) |
 | `#utilities/*.js` | `packages/core/src/lib/utilities/*.ts` |
 | `#core/lib/*.js`, `#core/*.js` | `packages/core/src/lib/*.ts` |
 | `#core/module-system/*.js` | `packages/core/src/lib/module-system/*.ts` |
