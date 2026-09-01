@@ -1,4 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
+import type { dataTableFeatures } from "#/components/ui/data-table";
 import { Button } from "#/components/ui/button";
 import type { ModNoteView } from "#/lib/dashboard-data";
 import { formatCaseDate } from "#/lib/moderation-cases";
@@ -19,7 +20,7 @@ export function guildModNotesColumns({
 }: {
   memberNames: Record<string, string>;
   onRemove: (note: ModNoteView) => void;
-}): ColumnDef<ModNoteView>[] {
+}): ColumnDef<typeof dataTableFeatures, ModNoteView>[] {
   return [
     {
       id: "message",

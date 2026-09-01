@@ -1,4 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
+import type { dataTableFeatures } from "#/components/ui/data-table";
 import type { AppealReviewStatus } from "@lumi/contracts";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
@@ -22,7 +23,7 @@ export function guildAppealsColumns({
 }: {
   memberNames: Record<string, string>;
   onReview: (appeal: AppealView, status: AppealReviewStatus) => void;
-}): ColumnDef<AppealView>[] {
+}): ColumnDef<typeof dataTableFeatures, AppealView>[] {
   return [
     {
       id: "case",

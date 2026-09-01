@@ -1,4 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
+import type { dataTableFeatures } from "#/components/ui/data-table";
 import { MoreHorizontal } from "lucide-react";
 import { hasSequencePlaceholder, resolveName } from "#/components/guild/tempvc-generators";
 import { Badge } from "#/components/ui/badge";
@@ -22,7 +23,7 @@ export function tempvcGeneratorsColumns({
   channels: DashboardChannelView[];
   onEdit: (generator: TempVcGeneratorView) => void;
   onRemove: (generator: TempVcGeneratorView) => void;
-}): ColumnDef<TempVcGeneratorView>[] {
+}): ColumnDef<typeof dataTableFeatures, TempVcGeneratorView>[] {
   return [
     {
       id: "trigger",

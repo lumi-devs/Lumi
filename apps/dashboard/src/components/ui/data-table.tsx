@@ -2,20 +2,30 @@
 
 import {
   type ColumnDef,
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  createCoreRowModel,
+  createFilteredRowModel,
+  createSortedRowModel,
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
+  type RowData,
+  rowSortingFeature,
+  tableFeatures,
+  useTable,
 } from "@tanstack/react-table";
 import { Table, TableScroll, TBody, TD, TH, THead, TR } from "#/components/ui/table";
 import { useStaggerIn } from "#/lib/animate";
 
-declare module "@tanstack/react-table" {
-  interface ColumnMeta<TData, TValue> {
-    className?: string;
-  }
-}
+export const dataTableFeatures = tableFeatures({
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  rowSortingFeature,
+  coreRowModel: createCoreRowModel(),
+  filteredRowModel: createFilteredRowModel(),
+  sortedRowModel: createSortedRowModel(),
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- phantom type-only slot per tableFeatures() contract
+  columnMeta: {} as { className?: string },
+});
 
 // Thin wrapper around the project's existing `Table` primitives — this repo
 // already ported the shadcn table markup with terser names (`TH`/`TD`/`TR`
@@ -23,23 +33,21 @@ declare module "@tanstack/react-table" {
 // through those rather than re-adding shadcn's originals. Pagination stays
 // with whoever owns the data (URL search params, server actions); this
 // component only ever renders one page's worth of rows.
-export function DataTable<TData, TValue>({
+export function DataTable<TData extends RowData, TValue>({
   columns,
   data,
   getRowId,
   className,
 }: {
-  columns: ColumnDef<TData, TValue>[];
+  columns: ColumnDef<typeof dataTableFeatures, TData, TValue>[];
   data: TData[];
   getRowId?: (row: TData) => string;
   className?: string;
 }) {
-  const table = useReactTable({
+  const table = useTable({
+    features: dataTableFeatures,
     data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
+    columns: columns as ColumnDef<typeof dataTableFeatures, TData>[],
     getRowId: getRowId ? (row) => getRowId(row) : undefined,
   });
 

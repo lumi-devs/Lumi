@@ -1,4 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
+import type { dataTableFeatures } from "#/components/ui/data-table";
 import { X } from "lucide-react";
 import { Badge } from "#/components/ui/badge";
 import { Switch } from "#/components/ui/switch";
@@ -13,7 +14,7 @@ export function moduleKillSwitchColumns({
   isPending: boolean;
   onToggle: (moduleName: string, enabled: boolean) => void;
   onClear: (moduleName: string) => void;
-}): ColumnDef<GlobalModuleStateView>[] {
+}): ColumnDef<typeof dataTableFeatures, GlobalModuleStateView>[] {
   return [
     {
       id: "module",
