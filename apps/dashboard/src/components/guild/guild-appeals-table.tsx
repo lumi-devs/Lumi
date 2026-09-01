@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { AppealReviewStatus } from "@lumi/contracts";
 import { reviewAppeal } from "#/actions/appeals-actions";
 import { Alert } from "#/components/ui/alert";
@@ -52,14 +52,19 @@ export function GuildAppealsTable({
   const [notice, setNotice] = useState<string | null>(null);
   const { isPending, error, setError, run } = useServerAction();
 
-  const columns = guildAppealsColumns({
-    memberNames,
-    onReview: (appeal, status) => {
+  const onReview = useCallback(
+    (appeal: AppealView, status: AppealReviewStatus) => {
       setError(null);
       setNotice(null);
       setTarget({ appeal, status });
     },
-  });
+    [setError],
+  );
+
+  const columns = useMemo(
+    () => guildAppealsColumns({ memberNames, onReview }),
+    [memberNames, onReview],
+  );
 
   function confirm() {
     if (!target) return;
