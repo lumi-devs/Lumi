@@ -1,6 +1,5 @@
 export * from "#utilities/assets.js";
 export * from "#utilities/cards.js";
-export * from "#utilities/command-errors.js";
 export * from "#utilities/command-response.js";
 export * from "#utilities/config.js";
 export * from "#utilities/errors.js";

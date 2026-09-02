@@ -8,9 +8,18 @@ import {
 } from "@lumi/contracts";
 import { verifyAppealToken } from "#lib/appeals/token.js";
 import type { ModerationCase } from "@prisma/client";
-import { s, type BaseValidator } from "@sapphire/shapeshift";
+import { s } from "@sapphire/shapeshift";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { ChannelType, type Guild } from "discord.js";
+import {
+  PageSchema,
+  PageSizeSchema,
+  SnowflakeSchema,
+  parsePayload,
+  paginate,
+} from "#lib/rpc/validation.js";
+
+export { SnowflakeSchema, parsePayload, paginate };
 
 /** Channel types sensible to offer in a CHANNEL config picker by default (no threads, no categories). */
 export const PICKABLE_CHANNEL_TYPES = new Set<ChannelType>([
@@ -22,8 +31,6 @@ export const PICKABLE_CHANNEL_TYPES = new Set<ChannelType>([
   ChannelType.GuildMedia,
 ]);
 
-export const SnowflakeSchema = s.string().regex(/^\d{17,20}$/);
-
 export function requireGuildId(guildId: string | null | undefined): string {
   try {
     if (!guildId) throw new Error();
@@ -31,15 +38,6 @@ export function requireGuildId(guildId: string | null | undefined): string {
     return guildId;
   } catch {
     throw new Error("guildId is required and must be a valid snowflake");
-  }
-}
-
-export function parsePayload<T>(schema: BaseValidator<T>, data: unknown): T {
-  try {
-    return schema.parse(data);
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`Bad payload: ${msg}`);
   }
 }
 
@@ -290,14 +288,6 @@ export const WarnThresholdSetSchema = s.object({
   duration: s.string().lengthLessThanOrEqual(32).nullable().optional(),
 });
 
-export const MAX_PAGE_SIZE = 100;
-export const PageSchema = s.number().int().greaterThanOrEqual(1).optional();
-export const PageSizeSchema = s
-  .number()
-  .int()
-  .greaterThanOrEqual(1)
-  .lessThanOrEqual(MAX_PAGE_SIZE)
-  .optional();
 export const ModuleNameSchema = s
   .string()
   .lengthGreaterThanOrEqual(1)
@@ -455,12 +445,6 @@ export async function resolveAppealToken(
   }
 
   return { ok: true, moderationCase, userId: payload.userId };
-}
-
-export function paginate(filter: { page?: number; pageSize?: number }) {
-  const page = filter.page ?? 1;
-  const pageSize = filter.pageSize ?? 25;
-  return { page, pageSize, skip: (page - 1) * pageSize, take: pageSize };
 }
 
 export function toRawConfigValue(value: unknown): string {

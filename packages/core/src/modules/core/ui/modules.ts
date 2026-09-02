@@ -8,6 +8,7 @@ import {
 } from "#lib/module-system/Module.js";
 import {
   formatFieldValue,
+  formatPageFooter,
   formatSubtitle,
   row,
   type Row,
@@ -113,7 +114,7 @@ export function buildFeatureListView(
                 page: safePage + 1,
                 total: totalPages,
               })
-            : `Page ${safePage + 1}/${totalPages} • Open a module to enable, disable, or configure it.`
+            : formatPageFooter(safePage, totalPages, "Open a module to enable, disable, or configure it.")
           : t
             ? t(PanelsKeys.ModulesFooter)
             : "Open a module to enable, disable, or configure it.",

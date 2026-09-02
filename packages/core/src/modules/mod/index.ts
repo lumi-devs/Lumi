@@ -29,6 +29,14 @@ import { handleWarnDecayFire } from "./lib/warn-decay-handler.js";
       description:
         'JSON map of warn count → action. E.g. {"3":{"action":"mute","duration":"1h"},"5":{"action":"ban"}}',
     }),
+    max_multi_targets: cfg.number({
+      label: "Max Targets Per Command",
+      description:
+        "How many members a single mod command (ban, kick, mute, quarantine, etc.) can target at once, e.g. `,mute @a @b @c`.",
+      default: 10,
+      min: 1,
+      max: 25,
+    }),
   }),
 })
 export class ModModule extends Module {

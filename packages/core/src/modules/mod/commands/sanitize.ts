@@ -46,7 +46,7 @@ export class SanitizeCommand extends ModerationCommand<
   }
 
   protected override resolveTarget(ctx: MC.RunContext) {
-    return ctx.getMember("member");
+    return ctx.getMembers("member", { required: true });
   }
 
   protected override resolveReason(): Promise<string> {

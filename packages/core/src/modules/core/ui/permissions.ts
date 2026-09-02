@@ -1,6 +1,6 @@
 import type { LumiT } from "#lib/i18n/index.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
-import { row, type Row } from "#modules/core/ui/common.js";
+import { row, type Row, formatPageFooter } from "#modules/core/ui/common.js";
 import { hubTabRow } from "#modules/core/ui/hub.js";
 import { Emojis } from "#utilities/assets.js";
 import {
@@ -108,7 +108,7 @@ export function buildPermissionsView(
             total: totalPages,
             count: assignments.length,
           })
-        : `Page ${safePage + 1} of ${totalPages} · ${assignments.length} assignment(s)`
+        : formatPageFooter(safePage, totalPages, `${assignments.length} assignment(s)`)
       : t
         ? t(PanelsKeys.PermsCountFooter, { count: assignments.length })
         : `${assignments.length} assignment(s)`;

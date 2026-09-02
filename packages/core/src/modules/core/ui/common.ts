@@ -1,4 +1,5 @@
 import { FieldType, type ConfigField } from "#lib/module-system/Module.js";
+import { formatSubtitle, formatPageFooter } from "#lib/utilities/ui/layout.js";
 import { Emojis } from "#utilities/assets.js";
 import {
   ActionRowBuilder,
@@ -20,10 +21,7 @@ export function row(...components: MessageActionRowComponentBuilder[]): Row {
   );
 }
 
-/** Renders text as Discord's small subtext line. */
-export function formatSubtitle(text: string): string {
-  return `-# ${text}`;
-}
+export { formatSubtitle, formatPageFooter };
 
 /**
  * Renders a stored config value the way the panel displays it.

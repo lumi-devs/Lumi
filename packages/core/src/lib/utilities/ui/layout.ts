@@ -63,3 +63,18 @@ export function formatBreadcrumbHeader(crumbs: string[]): string {
   if (crumbs.length === 0) return "";
   return formatBreadcrumbs(crumbs);
 }
+
+export function formatPageFooter(
+  pageIndex: number,
+  totalPages: number,
+  hintOrTotalItems?: string | number,
+): string {
+  const pageStr = `Page ${pageIndex + 1} of ${Math.max(1, totalPages)}`;
+  if (typeof hintOrTotalItems === "number") {
+    return `${pageStr} · ${hintOrTotalItems} item${hintOrTotalItems === 1 ? "" : "s"}`;
+  }
+  if (typeof hintOrTotalItems === "string" && hintOrTotalItems.length > 0) {
+    return `${pageStr} · ${hintOrTotalItems}`;
+  }
+  return pageStr;
+}

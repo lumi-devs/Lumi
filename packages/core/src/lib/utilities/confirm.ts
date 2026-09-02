@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ComponentType, type Message } from "discord.js";
+import { ComponentType, type Message, type GuildTextBasedChannel } from "discord.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
 import { confirmRow } from "#lib/utilities/ui/kit.js";
@@ -12,17 +12,29 @@ export interface ConfirmPromptOptions {
   cancelLabel?: string;
   /** Milliseconds to wait for a click before resolving to `false`. */
   time?: number;
+  /**
+   * Send the prompt to this channel instead of via `ctx`'s interaction/message
+   * reply. Use when `ctx`'s trigger message no longer exists (e.g. it was
+   * already deleted) but the confirmation still needs to be posted somewhere.
+   */
+  channel?: GuildTextBasedChannel;
+}
+
+export interface ConfirmPromptResult {
+  confirmed: boolean;
+  /** The confirmation message, so callers can edit it in place afterward. */
+  message: Message;
 }
 
 /**
  * Shows a Confirm/Cancel button prompt and resolves once the invoker clicks
- * one, or to `false` if the prompt times out. Works uniformly across the
- * slash and prefix `CommandContext` paths.
+ * one, or to `confirmed: false` if the prompt times out. Works uniformly
+ * across the slash, prefix, and channel-send paths.
  */
 export async function confirmPrompt(
   ctx: CommandContext,
   opts: ConfirmPromptOptions,
-): Promise<boolean> {
+): Promise<ConfirmPromptResult> {
   const id = randomUUID();
   const confirmId = `lumi:confirm:yes:${id}`;
   const cancelId = `lumi:confirm:no:${id}`;
@@ -39,7 +51,9 @@ export async function confirmPrompt(
   });
 
   let msg: Message;
-  if (ctx.isSlash) {
+  if (opts.channel) {
+    msg = await opts.channel.send({ ...card, allowedMentions: {} });
+  } else if (ctx.isSlash) {
     await sendInteractionReply(ctx.interaction, card, "edit");
     msg = await ctx.interaction.fetchReply();
   } else {
@@ -54,8 +68,8 @@ export async function confirmPrompt(
     });
     const confirmed = click.customId === confirmId;
     await click.deferUpdate().catch(() => {});
-    return confirmed;
+    return { confirmed, message: msg };
   } catch {
-    return false;
+    return { confirmed: false, message: msg };
   }
 }

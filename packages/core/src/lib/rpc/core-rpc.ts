@@ -2,6 +2,13 @@ import { container } from "@sapphire/framework";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { registerRpcHandler } from "#lib/rpc/dispatch.js";
 import {
+  PageSchema,
+  PageSizeSchema,
+  SnowflakeSchema,
+  parsePayload,
+  paginate,
+} from "#lib/rpc/validation.js";
+import {
   RPC_ACTIONS,
   type RpcRequest,
   type SystemShardsResponse,
@@ -11,20 +18,9 @@ import { getClusterName } from "#lib/env.js";
 import { resolver } from "#lib/downloader/resolver.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { executeGdprDeletion, executeGdprExport } from "#lib/gdpr.js";
-import { s, type BaseValidator } from "@sapphire/shapeshift";
-
-const SnowflakeSchema = s.string().regex(/^\d{17,20}$/);
+import { s } from "@sapphire/shapeshift";
 
 const SafeNameSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
-
-function parsePayload<T>(schema: BaseValidator<T>, data: unknown): T {
-  try {
-    return schema.parse(data);
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`Bad payload: ${msg}`);
-  }
-}
 
 // Returns the validated actor id so callers can attribute writes to them.
 // `req.actorId` is only meaningful because the RPC transport authenticated the
@@ -99,15 +95,6 @@ const SystemIdentitySchema = s.object({
   supportGuildId: SnowflakeSchema.nullable().optional(),
 });
 
-const MAX_PAGE_SIZE = 100;
-const PageSchema = s.number().int().greaterThanOrEqual(1).optional();
-const PageSizeSchema = s
-  .number()
-  .int()
-  .greaterThanOrEqual(1)
-  .lessThanOrEqual(MAX_PAGE_SIZE)
-  .optional();
-
 const SystemAuditListSchema = s.object({
   guildId: SnowflakeSchema.optional(),
   userId: SnowflakeSchema.optional(),
@@ -130,12 +117,6 @@ const SystemBlocklistAddSchema = s.object({
 const SystemBlocklistRemoveSchema = s.object({
   userId: SnowflakeSchema,
 });
-
-function paginate(filter: { page?: number; pageSize?: number }) {
-  const page = filter.page ?? 1;
-  const pageSize = filter.pageSize ?? 25;
-  return { page, pageSize, skip: (page - 1) * pageSize, take: pageSize };
-}
 
 export function initCoreRpcHandlers() {
   container.logger.info("[CoreSystem] Initializing Core RPC handlers...");

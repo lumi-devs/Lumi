@@ -3,6 +3,12 @@ import { container } from "@sapphire/framework";
 import { MyDataCommand } from "#modules/core/commands/mydata.js";
 import * as gdpr from "#lib/gdpr.js";
 import * as confirm from "#lib/utilities/confirm.js";
+import {
+  makeSuccessCard,
+  makeErrorCard,
+  makeWarningCard,
+  makeInfoCard,
+} from "#lib/utilities/cards.js";
 
 vi.mock("#lib/module-system/Utility.js", async (importOriginal) => {
   const actual: any = await importOriginal();
@@ -57,6 +63,18 @@ describe("MyDataCommand", () => {
         reply: vi.fn().mockResolvedValue(undefined),
       },
     };
+    mockCtx.replySuccess = vi.fn((title: string, body: string, opts?: any) =>
+      mockCtx.reply(makeSuccessCard(title, body), opts),
+    );
+    mockCtx.replyError = vi.fn((title: string, body: string, opts?: any) =>
+      mockCtx.reply(makeErrorCard(title, body), opts),
+    );
+    mockCtx.replyWarning = vi.fn((title: string, body: string, opts?: any) =>
+      mockCtx.reply(makeWarningCard(title, body), opts),
+    );
+    mockCtx.replyInfo = vi.fn((title: string, body: string, opts?: any) =>
+      mockCtx.reply(makeInfoCard(title, body), opts),
+    );
   });
 
   describe("whatdata", () => {
@@ -120,7 +138,10 @@ describe("MyDataCommand", () => {
 
   describe("forgetme", () => {
     it("cancels deletion when user denies prompt", async () => {
-      vi.spyOn(confirm, "confirmPrompt").mockResolvedValue(false);
+      vi.spyOn(confirm, "confirmPrompt").mockResolvedValue({
+        confirmed: false,
+        message: {} as any,
+      });
       const deleteSpy = vi.spyOn(gdpr, "executeGdprDeletion");
 
       await command.forgetMe(mockCtx);
@@ -131,7 +152,10 @@ describe("MyDataCommand", () => {
     });
 
     it("executes deletion when user confirms prompt", async () => {
-      vi.spyOn(confirm, "confirmPrompt").mockResolvedValue(true);
+      vi.spyOn(confirm, "confirmPrompt").mockResolvedValue({
+        confirmed: true,
+        message: {} as any,
+      });
       vi.spyOn(gdpr, "executeGdprDeletion").mockResolvedValue({ failedModules: [] });
 
       await command.forgetMe(mockCtx);

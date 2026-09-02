@@ -1,9 +1,10 @@
 # AGENTS.md
 
 Operating spec for any AI coding agent working in this repository. This is a
-map, not a manual — for anything not covered here, see [`docs/README.md`](docs/README.md)
-(the documentation index) or the [docs site](https://lumi-devs.github.io/Lumi/),
-which is built from `docs/` on every push to `main`.
+map, not a manual — for anything not covered here, see
+[`apps/docs/src/content/docs/`](apps/docs/src/content/docs/) or the
+[docs site](https://lumi-devs.github.io/Lumi/), which is built from that directory on
+every push to `main`.
 
 Lumi is a self-hosted, modular Discord bot: Bun + TypeScript, `@sapphire/framework` +
 discord.js v14, Prisma/PostgreSQL, Redis.
@@ -11,8 +12,8 @@ discord.js v14, Prisma/PostgreSQL, Redis.
 ## Repo shape
 
 Bun workspace monorepo (`workspaces: ["packages/*", "apps/*"]`). See
-[`docs/architecture.md`](docs/architecture.md) for the full system topology — treat it as
-source of truth for anything below.
+[`architecture.md`](apps/docs/src/content/docs/architecture.md) for the full system
+topology — treat it as source of truth for anything below.
 
 - `apps/worker` — the one bot entrypoint. `main.ts` is a thin discord.js `ShardingManager`
   that spawns one identical child process per shard it owns (`shard-client.ts`); every process
@@ -63,7 +64,7 @@ Feature modules live under `packages/core/src/modules/<name>/`, each exporting a
 decorated with `@DefineModule` (`packages/core/src/lib/module-system/Module.ts`), with a
 per-guild config schema (`packages/core/src/lib/module-system/config-schema.ts`) and
 sub-store directories (`commands/`, `listeners/`, `services/`, `interaction-handlers/`,
-`scheduled-tasks/`). Full walkthrough: [`docs/guides/module-creation.md`](docs/guides/module-creation.md).
+`scheduled-tasks/`). Full walkthrough: [`module-creation.md`](apps/docs/src/content/docs/guides/module-creation.md).
 
 **Zero cross-module import law**: a module must never import directly from a sibling
 module. Shared code belongs in `#lib/*`, `#database/*`, or `#utilities/*`.
@@ -73,7 +74,7 @@ from `data/3rd-party-modules/`) should not reach into `#core`/`#lib`/`#database`
 at all — the one stable, supported import surface is the `lumi` package itself
 (`packages/core/src/lib/addon-sdk/`, exported via the root `package.json` `"exports"` map:
 `lumi`, `lumi/commands`, `lumi/permissions`, `lumi/scheduling`, `lumi/ui`, `lumi/utils`).
-Full surface: [`docs/api-reference.md`](docs/api-reference.md).
+Full surface: [`api-reference.md`](apps/docs/src/content/docs/api-reference.md).
 
 ## RPC bridge (dashboard ↔ worker)
 
@@ -89,8 +90,8 @@ a handler in `packages/core/src/lib/rpc/core-rpc.ts`, and a caller in
 `apps/dashboard/src/lib/dashboard-fetch.ts` (reads) or `apps/dashboard/src/actions/*` (mutations)
 — never a direct database call from the dashboard.
 
-Full reference: [`docs/dashboard.md`](docs/dashboard.md). System-level view: the
-"Dashboard Frontend" section of [`docs/architecture.md`](docs/architecture.md).
+Full reference: [`dashboard.md`](apps/docs/src/content/docs/dashboard.md). System-level view: the
+"Dashboard Frontend" section of [`architecture.md`](apps/docs/src/content/docs/architecture.md).
 
 ## Repo-specific anti-patterns
 

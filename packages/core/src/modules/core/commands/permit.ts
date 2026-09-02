@@ -5,6 +5,7 @@ import { AttachmentBuilder, MessageFlags, type AutocompleteInteraction } from "d
 import { BaseSubcommand, sendReply, type CommandContext } from "#lib/commands.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { logError } from "#lib/utilities/errors.js";
+import type { LumiT } from "#lib/i18n/index.js";
 import { KNOWN_PERMIT_NODES } from "#lib/permissions/permit-nodes.js";
 import {
   filterAutocompleteChoices,
@@ -197,6 +198,26 @@ export class PermitCommand extends BaseSubcommand {
     return null;
   }
 
+  private async runPermitOp(
+    ctx: CommandContext,
+    t: LumiT,
+    label: string,
+    name: string,
+    fn: () => Promise<unknown>,
+  ): Promise<boolean> {
+    try {
+      await fn();
+      return true;
+    } catch (err: unknown) {
+      logError(`permit ${label}: guild=${ctx.guildId} name=${name}`, err);
+      await ctx.replyError(
+        t("commands:permitFailedTitle"),
+        err instanceof Error ? err.message : t("commands:permitFailed"),
+      );
+      return false;
+    }
+  }
+
   private async requirePermitByName(ctx: CommandContext, name: string) {
     const perms = getUtility("permissions");
     const permit = await perms.findPermitByName(ctx.guildId!, name);
@@ -218,15 +239,10 @@ export class PermitCommand extends BaseSubcommand {
     const node = (await ctx.getString("node", { required: true }))!.trim();
 
     const perms = getUtility("permissions");
-    try {
-      await perms.createPermit(ctx.guildId!, name, "custom", [node]);
-    } catch (err: unknown) {
-      logError(`permit create: guild=${ctx.guildId} name=${name}`, err);
-      return ctx.replyError(
-        t("commands:permitFailedTitle"),
-        err instanceof Error ? err.message : t("commands:permitFailed"),
-      );
-    }
+    const ok = await this.runPermitOp(ctx, t, "create", name, () =>
+      perms.createPermit(ctx.guildId!, name, "custom", [node]),
+    );
+    if (!ok) return;
 
     return ctx.replySuccess(
       t("commands:permitCreatedTitle"),
@@ -243,15 +259,10 @@ export class PermitCommand extends BaseSubcommand {
     if (!permit) return;
 
     const perms = getUtility("permissions");
-    try {
-      await perms.deletePermit(ctx.guildId!, permit.id);
-    } catch (err: unknown) {
-      logError(`permit delete: guild=${ctx.guildId} name=${name}`, err);
-      return ctx.replyError(
-        t("commands:permitFailedTitle"),
-        err instanceof Error ? err.message : t("commands:permitFailed"),
-      );
-    }
+    const ok = await this.runPermitOp(ctx, t, "delete", name, () =>
+      perms.deletePermit(ctx.guildId!, permit.id),
+    );
+    if (!ok) return;
 
     return ctx.replySuccess(
       t("commands:permitDeletedTitle"),
@@ -269,18 +280,13 @@ export class PermitCommand extends BaseSubcommand {
     if (!permit) return;
 
     const perms = getUtility("permissions");
-    try {
-      await perms.updatePermitNodes(ctx.guildId!, permit.id, [
+    const ok = await this.runPermitOp(ctx, t, "nodes add", name, () =>
+      perms.updatePermitNodes(ctx.guildId!, permit.id, [
         ...permit.nodes,
         node,
-      ]);
-    } catch (err: unknown) {
-      logError(`permit nodes add: guild=${ctx.guildId} name=${name}`, err);
-      return ctx.replyError(
-        t("commands:permitFailedTitle"),
-        err instanceof Error ? err.message : t("commands:permitFailed"),
-      );
-    }
+      ]),
+    );
+    if (!ok) return;
 
     return ctx.replySuccess(
       t("commands:permitNodeAddedTitle"),
@@ -306,15 +312,10 @@ export class PermitCommand extends BaseSubcommand {
     }
 
     const perms = getUtility("permissions");
-    try {
-      await perms.updatePermitNodes(ctx.guildId!, permit.id, remaining);
-    } catch (err: unknown) {
-      logError(`permit nodes remove: guild=${ctx.guildId} name=${name}`, err);
-      return ctx.replyError(
-        t("commands:permitFailedTitle"),
-        err instanceof Error ? err.message : t("commands:permitFailed"),
-      );
-    }
+    const ok = await this.runPermitOp(ctx, t, "nodes remove", name, () =>
+      perms.updatePermitNodes(ctx.guildId!, permit.id, remaining),
+    );
+    if (!ok) return;
 
     return ctx.replySuccess(
       t("commands:permitNodeRemovedTitle"),
@@ -338,20 +339,15 @@ export class PermitCommand extends BaseSubcommand {
     if (!permit) return;
 
     const perms = getUtility("permissions");
-    try {
-      await perms.assignPermit(
+    const ok = await this.runPermitOp(ctx, t, "assign", name, () =>
+      perms.assignPermit(
         ctx.guildId!,
         permit.id,
         target.targetType,
         target.targetId,
-      );
-    } catch (err: unknown) {
-      logError(`permit assign: guild=${ctx.guildId} name=${name}`, err);
-      return ctx.replyError(
-        t("commands:permitFailedTitle"),
-        err instanceof Error ? err.message : t("commands:permitFailed"),
-      );
-    }
+      ),
+    );
+    if (!ok) return;
 
     return ctx.replySuccess(
       t("commands:permitAssignedTitle"),
@@ -375,20 +371,15 @@ export class PermitCommand extends BaseSubcommand {
     if (!permit) return;
 
     const perms = getUtility("permissions");
-    try {
-      await perms.unassignPermit(
+    const ok = await this.runPermitOp(ctx, t, "unassign", name, () =>
+      perms.unassignPermit(
         ctx.guildId!,
         permit.id,
         target.targetType,
         target.targetId,
-      );
-    } catch (err: unknown) {
-      logError(`permit unassign: guild=${ctx.guildId} name=${name}`, err);
-      return ctx.replyError(
-        t("commands:permitFailedTitle"),
-        err instanceof Error ? err.message : t("commands:permitFailed"),
-      );
-    }
+      ),
+    );
+    if (!ok) return;
 
     return ctx.replySuccess(
       t("commands:permitUnassignedTitle"),

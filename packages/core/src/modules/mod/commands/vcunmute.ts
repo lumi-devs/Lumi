@@ -42,7 +42,7 @@ export class VcUnmuteCommand extends ModerationCommand<
   }
 
   protected override resolveTarget(ctx: MC.RunContext) {
-    return ctx.getMember("target");
+    return ctx.getMembers("target", { required: true });
   }
 
   protected override resolveReason(ctx: MC.RunContext) {

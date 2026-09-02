@@ -1,7 +1,9 @@
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
+import { confirmPrompt, type ConfirmPromptOptions } from "#lib/utilities/confirm.js";
 import { logError } from "#lib/utilities/errors.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import { isNullish } from "@sapphire/utilities";
 import { Result, container, type Awaitable } from "@sapphire/framework";
 import type { Guild, GuildMember, User } from "discord.js";
@@ -135,6 +137,93 @@ async function checkHierarchy(
  * @param ctx - The invocation this flow replies to.
  * @param flow - The hooks describing the one action being taken.
  */
+interface PreparedEntry<Target, Prepared> {
+  target: Target;
+  prepared: Prepared;
+}
+
+interface RejectedEntry<Target> {
+  target: Target;
+  reply: ModerationCommand.Reply;
+}
+
+/** Builds one line of the batch-result card for a target that didn't make it through. */
+function rejectedLine<Target extends ModerationCommand.TargetLike>(
+  entry: RejectedEntry<Target>,
+): string {
+  return `${Emojis.CROSS} <@${targetIdOf(entry.target)}> - ${entry.reply.body}`;
+}
+
+/**
+ * Combines every target's outcome into one reply. A single clean success keeps
+ * the flow's own success card verbatim (existing single-target callers see no
+ * change); anything else - multiple targets, or any failure - renders as a
+ * per-target checklist instead.
+ */
+function replyBatchResult<
+  Target extends ModerationCommand.TargetLike,
+  Outcome,
+  Prepared,
+>(
+  ctx: CommandContext,
+  t: LumiT,
+  flow: ModerationCommand.Flow<Target, Outcome, Prepared>,
+  successes: ModerationCommand.OutcomeContext<Target, Outcome, Prepared>[],
+  rejected: RejectedEntry<Target>[],
+): Promise<void> {
+  if (successes.length === 1 && rejected.length === 0) {
+    const success = flow.buildSuccessMessage(t, successes[0]!);
+    return ctx.replySuccess(success.title, success.body);
+  }
+
+  const lines = [
+    ...successes.map((outcomeContext) => {
+      const success = flow.buildSuccessMessage(t, outcomeContext);
+      return `${Emojis.CHECK} <@${targetIdOf(outcomeContext.target)}> - ${success.body}`;
+    }),
+    ...rejected.map(rejectedLine),
+  ];
+
+  const total = successes.length + rejected.length;
+  const title = `${successes.length}/${total} succeeded`;
+  const body = lines.join("\n");
+
+  return successes.length > 0
+    ? ctx.replySuccess(title, body)
+    : ctx.replyError(title, body);
+}
+
+/**
+ * Drives a single moderation flow to completion and replies with its outcome.
+ *
+ * @remarks
+ *
+ * The call order below is part of the contract, not an implementation detail:
+ * on the prefix path {@linkcode CommandContext} binds positional arguments in
+ * the order the getters are called, so a hook that reads an extra option must
+ * run in the slot the command's own option list puts it in.
+ *
+ * 1. Defer the reply, then resolve the guild's translator.
+ * 2. {@linkcode ModerationCommand.Flow.resolveTarget}. A nullish or empty
+ *    result ends the run with {@linkcode ModerationCommand.Flow.targetNotFound}.
+ *    Returning an array runs every step below once per target and replies
+ *    with one aggregated card instead of one reply per target.
+ * 3. Per target: {@linkcode ModerationCommand.Flow.preHandle} - the slot for
+ *    reading and validating options that sit between the target and the
+ *    reason. An `Err` drops that target from the batch with that reply
+ *    instead of ending the whole run.
+ * 4. {@linkcode ModerationCommand.Flow.resolveReason}, which consumes the rest
+ *    of a prefix invocation by default and so must run last - once, shared by
+ *    every target in the batch.
+ * 5. One confirmation prompt covering every surviving target.
+ * 6. {@linkcode ModerationCommand.Flow.action} per target, wrapped in a
+ *    `try`/`catch` only when the flow declares a `logScope`.
+ * 7. {@linkcode ModerationCommand.Flow.buildSuccessMessage} per target,
+ *    combined into the final reply.
+ *
+ * @param ctx - The invocation this flow replies to.
+ * @param flow - The hooks describing the one action being taken.
+ */
 export async function runModerationFlow<
   Target extends ModerationCommand.TargetLike,
   Outcome,
@@ -151,53 +240,108 @@ export async function runModerationFlow<
   const panicLocked = await checkPanicLock(ctx, t);
   if (panicLocked) return replyFailure(ctx, panicLocked);
 
-  const target = await flow.resolveTarget(ctx, t);
-  if (isNullish(target)) {
+  const resolved = await flow.resolveTarget(ctx, t);
+  const targets: Target[] = Array.isArray(resolved)
+    ? resolved
+    : isNullish(resolved)
+      ? []
+      : [resolved];
+  if (targets.length === 0) {
     return replyFailure(ctx, flow.targetNotFound?.(t) ?? memberNotFound(t));
   }
-
-  const outranked = await checkHierarchy(ctx, target, t);
-  if (outranked) return replyFailure(ctx, outranked);
-
-  const prepared: Result<Prepared, ModerationCommand.Reply> = flow.preHandle
-    ? await flow.preHandle(ctx, t, target)
-    : Result.ok(null as Prepared);
-  if (prepared.isErr()) return replyFailure(ctx, prepared.unwrapErr());
 
   const reason = flow.resolveReason
     ? await flow.resolveReason(ctx, t)
     : await readReason(ctx, t);
 
-  const context: ModerationCommand.ActionContext<Target, Prepared> = {
-    guild: ctx.guild!,
-    target,
-    moderator: ctx.user,
-    reason,
-    prepared: prepared.unwrap(),
-  };
+  const prepared: PreparedEntry<Target, Prepared>[] = [];
+  const rejected: RejectedEntry<Target>[] = [];
 
-  let outcome: Outcome;
-  if (logScope === undefined) {
-    outcome = await flow.action(context);
-  } else {
-    try {
-      outcome = await flow.action(context);
-    } catch (error: unknown) {
-      const expected = flow.mapExpectedError?.(t, error, context) ?? null;
-      if (expected) return replyFailure(ctx, expected);
-      logError(
-        `${logScope}: guild=${context.guild.id} target=${targetIdOf(context.target)}`,
-        error,
-      );
-      return replyFailure(
-        ctx,
-        flow.buildFailureMessage?.(t, context) ?? actionFailed(t),
-      );
+  for (const target of targets) {
+    const outranked = await checkHierarchy(ctx, target, t);
+    if (outranked) {
+      rejected.push({ target, reply: outranked });
+      continue;
+    }
+
+    const result: Result<Prepared, ModerationCommand.Reply> = flow.preHandle
+      ? await flow.preHandle(ctx, t, target)
+      : Result.ok(null as Prepared);
+    if (result.isErr()) {
+      rejected.push({ target, reply: result.unwrapErr() });
+      continue;
+    }
+
+    prepared.push({ target, prepared: result.unwrap() });
+  }
+
+  if (prepared.length === 0) {
+    return replyFailure(ctx, rejected[0]!.reply);
+  }
+
+  if (flow.confirm) {
+    const sample: ModerationCommand.ActionContext<Target, Prepared> = {
+      guild: ctx.guild!,
+      target: prepared[0]!.target,
+      moderator: ctx.user,
+      reason,
+      prepared: prepared[0]!.prepared,
+    };
+    const promptOpts = await flow.confirm(t, sample);
+    if (promptOpts) {
+      const finalOpts =
+        prepared.length > 1
+          ? {
+              ...promptOpts,
+              body: `${prepared.map((e) => `<@${targetIdOf(e.target)}>`).join(", ")}\n\n${reason}`,
+            }
+          : promptOpts;
+      const promptRes = await confirmPrompt(ctx, finalOpts);
+      if (!promptRes.confirmed) {
+        return;
+      }
     }
   }
 
-  const success = flow.buildSuccessMessage(t, { ...context, outcome });
-  return ctx.replySuccess(success.title, success.body);
+  const successes: ModerationCommand.OutcomeContext<Target, Outcome, Prepared>[] =
+    [];
+
+  for (const { target, prepared: preparedValue } of prepared) {
+    const context: ModerationCommand.ActionContext<Target, Prepared> = {
+      guild: ctx.guild!,
+      target,
+      moderator: ctx.user,
+      reason,
+      prepared: preparedValue,
+    };
+
+    if (logScope === undefined) {
+      const outcome = await flow.action(context);
+      successes.push({ ...context, outcome });
+      continue;
+    }
+
+    try {
+      const outcome = await flow.action(context);
+      successes.push({ ...context, outcome });
+    } catch (error: unknown) {
+      const expected = flow.mapExpectedError?.(t, error, context) ?? null;
+      if (expected) {
+        rejected.push({ target, reply: expected });
+        continue;
+      }
+      logError(
+        `${logScope}: guild=${context.guild.id} target=${targetIdOf(target)}`,
+        error,
+      );
+      rejected.push({
+        target,
+        reply: flow.buildFailureMessage?.(t, context) ?? actionFailed(t),
+      });
+    }
+  }
+
+  return replyBatchResult(ctx, t, flow, successes, rejected);
 }
 
 /**
@@ -241,13 +385,15 @@ export abstract class ModerationCommand<
   }
 
   /**
-   * Resolves the member, user or raw user id the action applies to. A nullish
-   * result ends the run with {@linkcode ModerationCommand.targetNotFound}.
+   * Resolves the member(s), user(s) or raw user id(s) the action applies to.
+   * A nullish or empty result ends the run with
+   * {@linkcode ModerationCommand.targetNotFound}; an array runs the rest of
+   * the flow once per target and replies with one aggregated card.
    */
   protected abstract resolveTarget(
     ctx: CommandContext,
     t: LumiT,
-  ): Awaitable<Target | null>;
+  ): Awaitable<Target | Target[] | null>;
 
   /** Applies the action, usually by delegating to `modules/mod/actions`. */
   protected abstract action(
@@ -301,6 +447,17 @@ export abstract class ModerationCommand<
     return null;
   }
 
+  /**
+   * Optionally returns options for a confirmation prompt shown before the action.
+   * Return null/undefined to skip confirmation.
+   */
+  protected confirm(
+    _t: LumiT,
+    _context: ModerationCommand.ActionContext<Target, Prepared>,
+  ): Awaitable<ConfirmPromptOptions | null | undefined> {
+    return null;
+  }
+
   /** The card shown when the action fails for an unexpected reason. */
   protected buildFailureMessage(
     t: LumiT,
@@ -316,6 +473,7 @@ export abstract class ModerationCommand<
       targetNotFound: (t) => this.targetNotFound(t),
       preHandle: (ctx, t, target) => this.preHandle(ctx, t, target),
       resolveReason: (ctx, t) => this.resolveReason(ctx, t),
+      confirm: (t, context) => this.confirm(t, context),
       action: (context) => this.action(context),
       mapExpectedError: (t, error, context) =>
         this.mapExpectedError(t, error, context),
@@ -369,7 +527,10 @@ export namespace ModerationCommand {
    */
   export interface Flow<Target extends TargetLike, Outcome, Prepared = null> {
     logScope?: string;
-    resolveTarget(ctx: CommandContext, t: LumiT): Awaitable<Target | null>;
+    resolveTarget(
+      ctx: CommandContext,
+      t: LumiT,
+    ): Awaitable<Target | Target[] | null>;
     targetNotFound?(t: LumiT): Reply;
     preHandle?(
       ctx: CommandContext,
@@ -377,6 +538,10 @@ export namespace ModerationCommand {
       target: Target,
     ): Awaitable<Result<Prepared, Reply>>;
     resolveReason?(ctx: CommandContext, t: LumiT): Awaitable<string>;
+    confirm?(
+      t: LumiT,
+      context: ActionContext<Target, Prepared>,
+    ): Awaitable<ConfirmPromptOptions | null | undefined>;
     action(context: ActionContext<Target, Prepared>): Promise<Outcome>;
     mapExpectedError?(
       t: LumiT,

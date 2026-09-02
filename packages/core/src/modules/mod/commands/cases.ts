@@ -184,7 +184,7 @@ export class CasesCommand extends BaseSubcommand {
     ]
       .filter((line) => line.length > 0)
       .join("\n");
-    return ctx.reply(makeInfoCard(`Case #${caseNumber}`, lines));
+    return ctx.replyInfo(`Case #${caseNumber}`, lines);
   }
 
   async #viewList(

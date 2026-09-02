@@ -7,18 +7,15 @@ import {
   Message,
   PermissionFlagsBits,
   type GuildTextBasedChannel,
-  type ButtonInteraction,
   type FetchMessagesOptions,
-  ComponentType,
-  ButtonStyle,
   Collection,
 } from "discord.js";
-import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import {
   makeErrorCard,
   makeSuccessCard,
   makeWarningCard,
 } from "#lib/utilities/cards.js";
+import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { logError, errorCode } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 import { parseDuration, formatDuration } from "#lib/utilities/time.js";
@@ -323,8 +320,8 @@ public override registerApplicationCommands(
 
     if (amount > 50) {
       const res = await this.promptForConfirmation(
+        ctx,
         channel,
-        ctx.user.id,
         amount,
         suffix,
         t,
@@ -533,77 +530,38 @@ public override registerApplicationCommands(
   }
 
   private async promptForConfirmation(
+    ctx: CommandContext,
     channel: GuildTextBasedChannel,
-    authorId: string,
     amount: number,
     suffix: string,
     t: LumiT,
   ): Promise<{ prompt: Message; confirmed: boolean }> {
-    const actionRows = [
-      new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder()
-          .setCustomId("purge-confirm")
-          .setLabel(t(LanguageKeys.Commands.PurgeConfirmBtn))
-          .setStyle(ButtonStyle.Danger),
-        new ButtonBuilder()
-          .setCustomId("purge-cancel")
-          .setLabel(t(LanguageKeys.Commands.PurgeCancelBtn))
-          .setStyle(ButtonStyle.Secondary),
-      ),
-    ];
-
-    const prompt = await channel.send({
-      ...makeWarningCard(
-        t(LanguageKeys.Commands.PurgeConfirmTitle),
-        `Are you sure you want to delete up to ${amount} message(s)${suffix}?`,
-        { actionRows },
-      ),
-      allowedMentions: {},
+    const { confirmed, message: prompt } = await confirmPrompt(ctx, {
+      channel,
+      title: t(LanguageKeys.Commands.PurgeConfirmTitle),
+      body: `Are you sure you want to delete up to ${amount} message(s)${suffix}?`,
+      confirmLabel: t(LanguageKeys.Commands.PurgeConfirmBtn),
+      cancelLabel: t(LanguageKeys.Commands.PurgeCancelBtn),
+      time: 15_000,
     });
 
-    try {
-      const filter = (i: ButtonInteraction) => i.user.id === authorId;
-      const confirmation = await prompt.awaitMessageComponent({
-        filter,
-        componentType: ComponentType.Button,
-        time: 15_000,
-      });
-
-      if (confirmation.customId === "purge-confirm") {
-        await confirmation.update({
-          ...makeSuccessCard(
-            t(LanguageKeys.Commands.PurgeInitiatingTitle),
-            `Proceeding with deletion of up to ${amount} message(s)${suffix}.`,
-          ),
-        });
-        return { prompt, confirmed: true };
-      }
-
-      await confirmation.update({
-        ...makeErrorCard(
-          t(LanguageKeys.Commands.PurgeCancelledTitle),
-          t(LanguageKeys.Commands.PurgeCancelledText),
-        ),
-      });
-      deleteMessageLater(
-        confirmation.message,
-        undefined,
-        "Purge: delete confirmation message",
-      );
-      return { prompt, confirmed: false };
-    } catch {
+    if (confirmed) {
       await prompt.edit({
-        ...makeErrorCard(
-          t(LanguageKeys.Commands.PurgeCancelledTitle),
-          t(LanguageKeys.Commands.PurgeTimeoutText),
+        ...makeSuccessCard(
+          t(LanguageKeys.Commands.PurgeInitiatingTitle),
+          `Proceeding with deletion of up to ${amount} message(s)${suffix}.`,
         ),
       });
-      deleteMessageLater(
-        prompt,
-        undefined,
-        "Purge: delete prompt after timeout",
-      );
-      return { prompt, confirmed: false };
+      return { prompt, confirmed: true };
     }
+
+    await prompt.edit({
+      ...makeErrorCard(
+        t(LanguageKeys.Commands.PurgeCancelledTitle),
+        t(LanguageKeys.Commands.PurgeCancelledText),
+      ),
+    });
+    deleteMessageLater(prompt, undefined, "Purge: delete prompt after cancel/timeout");
+    return { prompt, confirmed: false };
   }
 }

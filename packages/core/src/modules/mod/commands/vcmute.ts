@@ -2,7 +2,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry, Result } from "@sapphire/framework";
 import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
 import { VoiceMuteAction } from "../actions/VoiceMuteAction.js";
-import { parseDuration } from "#lib/utilities/time.js";
+import { formatDuration, parseDuration } from "#lib/utilities/time.js";
 import type { ModerationCase } from "@prisma/client";
 import type { GuildMember } from "discord.js";
 
@@ -13,7 +13,7 @@ type Flow = ModerationSubcommand.Flow<GuildMember, ModerationCase>;
 
 const VcMuteAdd: TimedFlow = {
   logScope: "vcmute add",
-  resolveTarget: (ctx) => ctx.getMember("target"),
+  resolveTarget: (ctx) => ctx.getMembers("target", { required: true }),
   preHandle: async (ctx) => {
     const durationStr = await ctx.getString("duration");
     const durationMs = durationStr
@@ -27,6 +27,11 @@ const VcMuteAdd: TimedFlow = {
     }
     return Result.ok(durationMs);
   },
+  confirm: (_t, { target, reason, prepared }) => ({
+    title: "Confirm Voice Mute",
+    body: `You're about to voice mute **${target.user.tag}** for **${formatDuration(prepared)}**.\n**Reason:** ${reason}`,
+    confirmLabel: "I understand, voice mute them",
+  }),
   action: ({ guild, target, moderator, reason, prepared }) =>
     VoiceMuteAction.apply({
       guild,
@@ -43,7 +48,7 @@ const VcMuteAdd: TimedFlow = {
 
 const VcMuteRemove: Flow = {
   logScope: "vcmute remove",
-  resolveTarget: (ctx) => ctx.getMember("target"),
+  resolveTarget: (ctx) => ctx.getMembers("target", { required: true }),
   action: ({ guild, target, moderator, reason }) =>
     VoiceMuteAction.undo({ guild, targetMember: target, moderator, reason }),
   buildSuccessMessage: (_t, { target, outcome }) => ({

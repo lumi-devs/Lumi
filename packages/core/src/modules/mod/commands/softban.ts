@@ -4,6 +4,7 @@ import {
   ModerationCommand,
   type ModerationCommand as MC,
 } from "#lib/moderation/ModerationCommand.js";
+import type { ConfirmPromptOptions } from "#lib/utilities/confirm.js";
 import { SoftbanAction } from "../actions/SoftbanAction.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import type { ModerationCase } from "@prisma/client";
@@ -51,7 +52,7 @@ export class SoftbanCommand extends ModerationCommand<
   }
 
   protected override resolveTarget(ctx: MC.RunContext) {
-    return ctx.getUser("target");
+    return ctx.getUsers("target", { required: true });
   }
 
   protected override async preHandle(ctx: MC.RunContext) {
@@ -63,6 +64,17 @@ export class SoftbanCommand extends ModerationCommand<
     return ctx
       .getString("reason")
       .then((r) => r ?? "Softban to purge recent message history.");
+  }
+
+  protected override confirm(
+    _t: LumiT,
+    { target, reason, prepared }: MC.ActionContext<User, number>,
+  ): ConfirmPromptOptions {
+    return {
+      title: "Confirm Softban",
+      body: `You're about to softban **${target.tag}**, banning and immediately unbanning them to purge **${prepared} day(s)** of message history.\n**Reason:** ${reason}`,
+      confirmLabel: "I understand, softban them",
+    };
   }
 
   protected override action({

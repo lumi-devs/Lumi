@@ -16,9 +16,14 @@ const SECONDS_PER_DAY = 86400;
 
 const BanAdd: ModerationSubcommand.Flow<User, ModerationCase, number> = {
   logScope: "ban",
-  resolveTarget: (ctx) => ctx.getUser("user"),
+  resolveTarget: (ctx) => ctx.getUsers("user", { required: true }),
   preHandle: async (ctx) =>
     Result.ok(ctx.isSlash ? ((await ctx.getInteger("delete_days")) ?? 0) : 0),
+  confirm: (t, { target, reason }) => ({
+    title: t(Root.BanConfirmTitle),
+    body: t(Root.BanConfirmBody, { user: userMention(target.id), reason }),
+    confirmLabel: t(Root.BanConfirmButton),
+  }),
   action: ({ guild, target, moderator, reason, prepared }) =>
     BanAction.apply({
       guild,

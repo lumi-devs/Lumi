@@ -8,13 +8,9 @@ import {
   resolveCardColor,
   makeCard,
   makeSuccessCard,
-  makeWarningCard,
   type CardReply,
 } from "#lib/utilities/cards.js";
-import { confirmRow } from "#lib/utilities/ui/kit.js";
 
-export const PANIC_CONFIRM_ID = "sec:panic:confirm";
-export const PANIC_CANCEL_ID = "sec:panic:cancel";
 export const PANIC_REVERT_ID = "sec:panic:revert";
 
 const revertRow = (label: string): ActionRowBuilder<ButtonBuilder> =>
@@ -25,23 +21,6 @@ const revertRow = (label: string): ActionRowBuilder<ButtonBuilder> =>
       style: ButtonStyle.Success,
     })
   );
-
-/** The confirm/cancel prompt shown before panic mode locks anything down. */
-export function buildPanicConfirmCard(t: LumiT): CardReply {
-  return makeWarningCard(
-    t(PanelsKeys.PanicConfirmTitle),
-    t(PanelsKeys.PanicConfirmBody),
-    {
-      actionRows: buildSafeActionRows([
-        confirmRow({
-          confirmId: PANIC_CONFIRM_ID,
-          cancelId: PANIC_CANCEL_ID,
-          confirmLabel: t(PanelsKeys.PanicConfirmButton),
-        }),
-      ]),
-    },
-  );
-}
 
 export function buildPanicCancelledCard(t: LumiT): CardReply {
   return makeCard(

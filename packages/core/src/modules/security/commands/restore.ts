@@ -3,6 +3,8 @@ import { time, TimestampStyles } from "@discordjs/formatters";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
 import { getUtility } from "#lib/module-system/Utility.js";
+import { confirmPrompt } from "#lib/utilities/confirm.js";
+import { makeErrorCard } from "#lib/utilities/cards.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "restore",
@@ -58,6 +60,18 @@ export class RestoreCommand extends BaseSubcommand {
   }
 
   public async latest(ctx: CommandContext) {
+    const { confirmed, message } = await confirmPrompt(ctx, {
+      title: "Confirm Restore",
+      body: "You're about to recreate any role or channel missing since the most recent backup. This can create a large number of roles/channels at once.",
+      confirmLabel: "I understand, restore it",
+    });
+    if (!confirmed) {
+      await message.edit({
+        ...makeErrorCard("Cancelled", "Restore was not performed."),
+      });
+      return;
+    }
+
     await ctx.defer();
     const guild = ctx.guild!;
     const security = getUtility("security");

@@ -1,14 +1,13 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
-import { ComponentType } from "discord.js";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
 import { getUtility } from "#lib/module-system/Utility.js";
+import { confirmPrompt } from "#lib/utilities/confirm.js";
+import { PanelsKeys } from "#lib/i18n/keys.js";
 import {
   buildPanicAlreadyActiveCard,
   buildPanicCancelledCard,
-  buildPanicConfirmCard,
   buildPanicStatusCard,
-  PANIC_CONFIRM_ID,
 } from "../lib/panic-card.js";
 
 @ApplyOptions<BaseCommand.Options>({
@@ -38,21 +37,12 @@ export class PanicCommand extends BaseCommand {
       );
     }
 
-    await ctx.reply(buildPanicConfirmCard(t));
-    const interaction = ctx.interaction;
-    let confirmed: boolean;
-    try {
-      const reply = await interaction.fetchReply();
-      const click = await reply.awaitMessageComponent({
-        filter: (i) => i.user.id === ctx.user.id,
-        componentType: ComponentType.Button,
-        time: 20_000,
-      });
-      confirmed = click.customId === PANIC_CONFIRM_ID;
-      await click.deferUpdate();
-    } catch {
-      confirmed = false;
-    }
+    const { confirmed } = await confirmPrompt(ctx, {
+      title: t(PanelsKeys.PanicConfirmTitle),
+      body: t(PanelsKeys.PanicConfirmBody),
+      confirmLabel: t(PanelsKeys.PanicConfirmButton),
+      time: 20_000,
+    });
 
     if (!confirmed) {
       return ctx.reply(buildPanicCancelledCard(t));

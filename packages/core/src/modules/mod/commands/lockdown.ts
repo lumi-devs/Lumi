@@ -2,6 +2,8 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
 import { lockAllTextChannels, unlockAllTextChannels } from "#lib/moderation/lockdown.js";
+import { confirmPrompt } from "#lib/utilities/confirm.js";
+import { makeErrorCard } from "#lib/utilities/cards.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "lockdown",
@@ -33,6 +35,18 @@ export class LockdownCommand extends BaseSubcommand {
   }
 
   public async enable(ctx: CommandContext) {
+    const { confirmed, message } = await confirmPrompt(ctx, {
+      title: "Confirm Lockdown",
+      body: "You're about to disable **SendMessages** for @everyone in every text channel of this server. Members will not be able to chat until lockdown is disabled.",
+      confirmLabel: "I understand, lock it down",
+    });
+    if (!confirmed) {
+      await message.edit({
+        ...makeErrorCard("Cancelled", "Lockdown was not enabled."),
+      });
+      return;
+    }
+
     await ctx.defer();
     const { modified, failed } = await lockAllTextChannels(ctx.guild!);
 

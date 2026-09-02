@@ -2,7 +2,7 @@ import { Events, Listener } from "@sapphire/framework";
 import { SubcommandPluginEvents } from "@sapphire/plugin-subcommands";
 import type { ClientEvents, Message, RepliableInteraction } from "discord.js";
 import {
-  errorCard,
+  resolveErrorCard,
   handleDenied,
 } from "#lib/utilities/command-response.js";
 import type { CardReply } from "#lib/utilities/cards.js";
@@ -54,7 +54,7 @@ export function createErrorListener<
 
     public async run(error: ClientEvents[E][0], payload: ClientEvents[E][1]) {
       const { name } = (payload as NamedCommand).command;
-      const { card } = errorCard(`${label}:${name}`, error);
+      const { card } = resolveErrorCard(`${label}:${name}`, error);
       try {
         await respond(getTarget(payload), card);
       } catch (err: unknown) {

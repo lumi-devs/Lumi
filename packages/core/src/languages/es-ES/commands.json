@@ -318,5 +318,17 @@
   "permitImportTooLarge": "That file is too large - permit exports are small JSON, something's wrong.",
   "permitImportInvalid": "Couldn't read that file as a permit export - make sure it's unmodified output from `/permit export`.",
   "permitImportDoneTitle": "Permits Imported",
-  "permitImportDone": "Created **{{created}}**, updated **{{updated}}**, skipped **{{skipped}}**."
+  "permitImportDone": "Created **{{created}}**, updated **{{updated}}**, skipped **{{skipped}}**.",
+  "kickConfirmTitle": "Confirm Kick",
+  "kickConfirmBody": "You are about to kick {{user}}. They can rejoin with a new invite.\n**Reason:** {{reason}}",
+  "kickConfirmButton": "I understand, kick them",
+  "banConfirmTitle": "Confirm Ban",
+  "banConfirmBody": "You are about to ban {{user}}. This removes them from the server until unbanned.\n**Reason:** {{reason}}",
+  "banConfirmButton": "I understand, ban them",
+  "timeoutConfirmTitle": "Confirm Timeout",
+  "timeoutConfirmBody": "You are about to timeout {{user}} for {{duration}}.\n**Reason:** {{reason}}",
+  "timeoutConfirmButton": "I understand, time them out",
+  "quarantineConfirmTitle": "Confirm Quarantine",
+  "quarantineConfirmBody": "You are about to quarantine {{user}}, stripping their roles until released.\n**Reason:** {{reason}}",
+  "quarantineConfirmButton": "I understand, quarantine them"
 }

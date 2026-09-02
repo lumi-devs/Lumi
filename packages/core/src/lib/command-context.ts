@@ -34,6 +34,13 @@ export interface CtxReplyOptions {
   ephemeral?: boolean;
 }
 
+/**
+ * Fallback for how many prefix-path targets `getMembers`/`getUsers` will
+ * resolve in one command when a guild hasn't configured
+ * `mod:max_multi_targets` (Moderation module → "Max Targets Per Command").
+ */
+export const defaultMaxMultiTargets = 10;
+
 function missingArgument(name: string): UserError {
   return new UserError({
     identifier: "MissingArgument",
@@ -174,6 +181,62 @@ export class CommandContext {
     const value = await this.args!.pick("member").catch(() => null);
     if (value === null && spec.required) throw missingArgument(name);
     return value;
+  }
+
+  /** Guild-configured cap for `getMembers`/`getUsers` (Moderation → "Max Targets Per Command"). */
+  private async maxMultiTargets(): Promise<number> {
+    if (!this.guildId) return defaultMaxMultiTargets;
+    const configured = await container.db.config.getModuleConfig(
+      this.guildId,
+      "mod",
+      "max_multi_targets",
+    );
+    return typeof configured === "number" && configured > 0
+      ? configured
+      : defaultMaxMultiTargets;
+  }
+
+  /**
+   * Resolves one or more members. Slash only ever yields a single member (the
+   * option picker isn't multi-select); prefix consumes as many
+   * mention/id-shaped tokens as follow, up to the guild's configured cap, so
+   * `,mute @a @b @c` and `,mute id1 id2 id3` both work.
+   */
+  public async getMembers(
+    name: string,
+    spec: CtxOptionSpec = {},
+  ): Promise<GuildMember[]> {
+    if (this.isSlash) {
+      const member = await this.getMember(name, spec);
+      return member ? [member] : [];
+    }
+    const result = await this.args!.repeatResult("member", {
+      times: await this.maxMultiTargets(),
+    });
+    if (result.isErr()) {
+      if (spec.required) throw missingArgument(name);
+      return [];
+    }
+    return result.unwrap();
+  }
+
+  /** {@linkcode CommandContext.getMembers}, but resolving bare users (no guild-membership required). */
+  public async getUsers(
+    name: string,
+    spec: CtxOptionSpec = {},
+  ): Promise<User[]> {
+    if (this.isSlash) {
+      const user = await this.getUser(name, spec);
+      return user ? [user] : [];
+    }
+    const result = await this.args!.repeatResult("user", {
+      times: await this.maxMultiTargets(),
+    });
+    if (result.isErr()) {
+      if (spec.required) throw missingArgument(name);
+      return [];
+    }
+    return result.unwrap();
   }
 
   public async getRole(

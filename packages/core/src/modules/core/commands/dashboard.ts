@@ -2,7 +2,6 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
-import { makeSuccessCard, makeErrorCard } from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
 import type { GuildSettingsUtility } from "#utilities/GuildSettingsUtility.js";
@@ -56,18 +55,14 @@ export class DashboardCommand extends BaseSubcommand {
       this.container.logger.info(
         `[Dashboard] ${Emojis.GEAR} Layout updated for guild ${ctx.guildId} by ${ctx.user.tag}`,
       );
-      await ctx.reply(
-        makeSuccessCard(
-          `${Emojis.GEAR} ${t("core:layoutUpdatedTitle")}`,
-          t("core:layoutUpdatedMessage", { layout: JSON.stringify(layout) }),
-        ),
+      await ctx.replySuccess(
+        `${Emojis.GEAR} ${t("core:layoutUpdatedTitle")}`,
+        t("core:layoutUpdatedMessage", { layout: JSON.stringify(layout) }),
       );
     } catch (err: unknown) {
-      await ctx.reply(
-        makeErrorCard(
-          t("core:failedUpdateLayoutTitle"),
-          errorFrom(err).message,
-        ),
+      await ctx.replyError(
+        t("core:failedUpdateLayoutTitle"),
+        errorFrom(err).message,
       );
     }
   }

@@ -170,7 +170,7 @@ export const getDocBySlug = async (slugArray: string[]): Promise<DocContent | nu
   };
   
   marked.use({ renderer });
-  const html = await marked(content) as string;
+  const html = await marked(content);
 
   const allDocs = getAllDocs();
   const currentIndex = allDocs.findIndex((d) => d.slug === slug);

@@ -15,11 +15,7 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import {
-  makeSuccessCard,
-  makeErrorCard,
-  makeInfoCard,
-} from "#lib/utilities/cards.js";
+import { makeInfoCard } from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
@@ -176,11 +172,9 @@ export class DownloadCommand extends BaseSubcommand {
     const revision =
       (await ctx.getString("revision", { required: false })) ?? undefined;
 
-    await ctx.reply(
-      makeInfoCard(
-        t("core:installingModuleTitle"),
-        t("core:installingModuleText", { moduleName, repoName }),
-      ),
+    await ctx.replyInfo(
+      t("core:installingModuleTitle"),
+      t("core:installingModuleText", { moduleName, repoName }),
     );
 
     try {
@@ -192,22 +186,18 @@ export class DownloadCommand extends BaseSubcommand {
       this.container.logger.info(
         `[Download] ${Emojis.DOWNLOAD} Installed ${moduleName} from ${repoName} by ${ctx.user.tag}`,
       );
-      await ctx.reply(
-        makeSuccessCard(
-          `${Emojis.INSTALL} ${t("core:moduleInstalledTitle")}`,
-          t("core:moduleInstalledText", { moduleName, repoName }),
-        ),
+      await ctx.replySuccess(
+        `${Emojis.INSTALL} ${t("core:moduleInstalledTitle")}`,
+        t("core:moduleInstalledText", { moduleName, repoName }),
       );
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       this.container.logger.warn(
         `[Download] ${Emojis.ERROR} Install failed: ${moduleName} - ${msg_}`,
       );
-      await ctx.reply(
-        makeErrorCard(
-          `${Emojis.ERROR} ${t("core:failedInstallModuleTitle")}`,
-          msg_,
-        ),
+      await ctx.replyError(
+        `${Emojis.ERROR} ${t("core:failedInstallModuleTitle")}`,
+        msg_,
       );
     }
   }
@@ -216,11 +206,9 @@ export class DownloadCommand extends BaseSubcommand {
     const t = await ctx.fetchT();
     const moduleName = (await ctx.getString("module", { required: true }))!;
 
-    await ctx.reply(
-      makeInfoCard(
-        t("core:uninstallingModuleTitle"),
-        t("core:uninstallingModuleText", { moduleName }),
-      ),
+    await ctx.replyInfo(
+      t("core:uninstallingModuleTitle"),
+      t("core:uninstallingModuleText", { moduleName }),
     );
 
     try {
@@ -228,20 +216,16 @@ export class DownloadCommand extends BaseSubcommand {
       this.container.logger.info(
         `[Download] Uninstalled ${moduleName} by ${ctx.user.tag}`,
       );
-      await ctx.reply(
-        makeSuccessCard(
-          t("core:moduleUninstalledTitle"),
-          t("core:moduleUninstalledText", { moduleName }),
-        ),
+      await ctx.replySuccess(
+        t("core:moduleUninstalledTitle"),
+        t("core:moduleUninstalledText", { moduleName }),
       );
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       this.container.logger.warn(
         `[Download] Uninstall failed: ${moduleName} - ${msg_}`,
       );
-      await ctx.reply(
-        makeErrorCard(t("core:failedUninstallModuleTitle"), msg_),
-      );
+      await ctx.replyError(t("core:failedUninstallModuleTitle"), msg_);
     }
   }
 
@@ -259,17 +243,13 @@ export class DownloadCommand extends BaseSubcommand {
       confirmLabel: "I understand, roll it back",
     });
     if (!agreed) {
-      await ctx.reply(
-        makeErrorCard("Cancelled", `Module **${moduleName}** was not rolled back.`),
-      );
+      await ctx.replyError("Cancelled", `Module **${moduleName}** was not rolled back.`);
       return;
     }
 
-    await ctx.reply(
-      makeInfoCard(
-        t("core:rollingBackModuleTitle"),
-        t("core:rollingBackModuleText", { moduleName, revision }),
-      ),
+    await ctx.replyInfo(
+      t("core:rollingBackModuleTitle"),
+      t("core:rollingBackModuleText", { moduleName, revision }),
     );
 
     try {
@@ -280,23 +260,19 @@ export class DownloadCommand extends BaseSubcommand {
       this.container.logger.info(
         `[Download] Rolled back ${moduleName} to ${revision} (${result.commit ?? "unknown"}) by ${ctx.user.tag}`,
       );
-      await ctx.reply(
-        makeSuccessCard(
-          t("core:moduleRolledBackTitle"),
-          t("core:moduleRolledBackText", {
-            moduleName,
-            commit: result.commit ?? revision,
-          }),
-        ),
+      await ctx.replySuccess(
+        t("core:moduleRolledBackTitle"),
+        t("core:moduleRolledBackText", {
+          moduleName,
+          commit: result.commit ?? revision,
+        }),
       );
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       this.container.logger.warn(
         `[Download] Rollback failed: ${moduleName} - ${msg_}`,
       );
-      await ctx.reply(
-        makeErrorCard(t("core:failedRollbackModuleTitle"), msg_),
-      );
+      await ctx.replyError(t("core:failedRollbackModuleTitle"), msg_);
     }
   }
 }

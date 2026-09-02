@@ -1,8 +1,10 @@
 import type { LumiT } from "#lib/i18n/index.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
+import type { ConfirmPromptOptions } from "#lib/utilities/confirm.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
+import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { GuildMember } from "discord.js";
 import { KickAction } from "../actions/index.js";
@@ -39,7 +41,21 @@ export class KickCommand extends ModerationCommand<
   }
 
   protected override resolveTarget(ctx: ModerationCommand.RunContext) {
-    return ctx.getMember("member");
+    return ctx.getMembers("member", { required: true });
+  }
+
+  protected override confirm(
+    t: LumiT,
+    { target, reason }: Context,
+  ): ConfirmPromptOptions {
+    return {
+      title: t(Root.KickConfirmTitle),
+      body: t(Root.KickConfirmBody, {
+        user: userMention(target.id),
+        reason,
+      }),
+      confirmLabel: t(Root.KickConfirmButton),
+    };
   }
 
   protected override action({ guild, target, moderator, reason }: Context) {

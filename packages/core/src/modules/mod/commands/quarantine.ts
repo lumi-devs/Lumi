@@ -2,6 +2,7 @@ import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
+import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { GuildMember } from "discord.js";
 import { QuarantineAction } from "../actions/index.js";
@@ -16,7 +17,15 @@ function isSentinel(error: unknown, message: string): boolean {
 
 const QuarantineAdd: Flow = {
   logScope: "quarantine add",
-  resolveTarget: (ctx) => ctx.getMember("member"),
+  resolveTarget: (ctx) => ctx.getMembers("member", { required: true }),
+  confirm: (t, { target, reason }) => ({
+    title: t(Root.QuarantineConfirmTitle),
+    body: t(Root.QuarantineConfirmBody, {
+      user: userMention(target.id),
+      reason,
+    }),
+    confirmLabel: t(Root.QuarantineConfirmButton),
+  }),
   action: ({ guild, target, moderator, reason }) =>
     QuarantineAction.apply({ guild, targetMember: target, moderator, reason }),
   mapExpectedError: (t, error, { target }) => {
@@ -46,7 +55,7 @@ const QuarantineAdd: Flow = {
 
 const QuarantineRemove: Flow = {
   logScope: "quarantine remove",
-  resolveTarget: (ctx) => ctx.getMember("member"),
+  resolveTarget: (ctx) => ctx.getMembers("member", { required: true }),
   action: ({ guild, target, moderator, reason }) =>
     QuarantineAction.undo({ guild, targetMember: target, moderator, reason }),
   mapExpectedError: (t, error, { target }) =>

@@ -45,7 +45,7 @@ export class UntimeoutCommand extends ModerationCommand<
   }
 
   protected override resolveTarget(ctx: ModerationCommand.RunContext) {
-    return ctx.getMember("member");
+    return ctx.getMembers("member", { required: true });
   }
 
   protected override action({ guild, target, moderator, reason }: Context) {

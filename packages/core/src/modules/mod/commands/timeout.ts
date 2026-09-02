@@ -4,6 +4,7 @@ import { formatDuration, parseDuration } from "#lib/utilities/time.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Result } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
+import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { GuildMember } from "discord.js";
 import { MuteAction } from "../actions/index.js";
@@ -16,7 +17,7 @@ type TimedFlow = ModerationSubcommand.Flow<GuildMember, ModerationCase, number>;
 
 const TimeoutAdd: TimedFlow = {
   logScope: "timeout add",
-  resolveTarget: (ctx) => ctx.getMember("member"),
+  resolveTarget: (ctx) => ctx.getMembers("member", { required: true }),
   preHandle: async (ctx, t) => {
     const input = await ctx.getString("duration");
     const durationMs = input ? parseDuration(input) : null;
@@ -34,6 +35,15 @@ const TimeoutAdd: TimedFlow = {
     }
     return Result.ok(durationMs);
   },
+  confirm: (t, { target, reason, prepared }) => ({
+    title: t(Root.TimeoutConfirmTitle),
+    body: t(Root.TimeoutConfirmBody, {
+      user: userMention(target.id),
+      duration: formatDuration(prepared),
+      reason,
+    }),
+    confirmLabel: t(Root.TimeoutConfirmButton),
+  }),
   action: ({ guild, target, moderator, reason, prepared }) =>
     MuteAction.apply({
       guild,
@@ -55,7 +65,7 @@ const TimeoutAdd: TimedFlow = {
 
 const TimeoutRemove: Flow = {
   logScope: "timeout remove",
-  resolveTarget: (ctx) => ctx.getMember("member"),
+  resolveTarget: (ctx) => ctx.getMembers("member", { required: true }),
   action: ({ guild, target, moderator, reason }) =>
     MuteAction.undo({ guild, targetMember: target, moderator, reason }),
   buildSuccessMessage: (t, { target }) => ({

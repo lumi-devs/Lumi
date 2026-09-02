@@ -13,11 +13,7 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import {
-  makeSuccessCard,
-  makeErrorCard,
-  makeInfoCard,
-} from "#lib/utilities/cards.js";
+import { makeInfoCard } from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
@@ -188,17 +184,13 @@ export class RepoCommand extends BaseSubcommand {
       confirmLabel: "I understand, add it",
     });
     if (!agreed) {
-      await ctx.reply(
-        makeErrorCard("Cancelled", `Repository **${name}** was not added.`),
-      );
+      await ctx.replyError("Cancelled", `Repository **${name}** was not added.`);
       return;
     }
 
-    await ctx.reply(
-      makeInfoCard(
-        t("core:addingRepoTitle"),
-        t("core:addingRepoText", { name }),
-      ),
+    await ctx.replyInfo(
+      t("core:addingRepoTitle"),
+      t("core:addingRepoText", { name }),
     );
 
     try {
@@ -206,20 +198,16 @@ export class RepoCommand extends BaseSubcommand {
       this.container.logger.info(
         `[Repo] ${Emojis.REPO} Added repository: ${name} (${url}@${branch}) by ${ctx.user.tag}`,
       );
-      await ctx.reply(
-        makeSuccessCard(
-          `${Emojis.REPO} ${t("core:repoAddedTitle")}`,
-          t("core:repoAddedText", { name }),
-        ),
+      await ctx.replySuccess(
+        `${Emojis.REPO} ${t("core:repoAddedTitle")}`,
+        t("core:repoAddedText", { name }),
       );
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       this.container.logger.warn(
         `[Repo] ${Emojis.ERROR} Failed to add repo: ${name} - ${msg_}`,
       );
-      await ctx.reply(
-        makeErrorCard(`${Emojis.ERROR} ${t("core:failedAddRepoTitle")}`, msg_),
-      );
+      await ctx.replyError(`${Emojis.ERROR} ${t("core:failedAddRepoTitle")}`, msg_);
     }
   }
 
@@ -227,11 +215,9 @@ export class RepoCommand extends BaseSubcommand {
     const t = await ctx.fetchT();
     const name = (await ctx.getString("name", { required: true }))!;
 
-    await ctx.reply(
-      makeInfoCard(
-        t("core:removingRepoTitle"),
-        t("core:removingRepoText", { name }),
-      ),
+    await ctx.replyInfo(
+      t("core:removingRepoTitle"),
+      t("core:removingRepoText", { name }),
     );
 
     try {
@@ -239,16 +225,12 @@ export class RepoCommand extends BaseSubcommand {
       this.container.logger.info(
         `[Repo] Removed repository: ${name} by ${ctx.user.tag}`,
       );
-      await ctx.reply(
-        makeSuccessCard(
-          `${Emojis.REPO} ${t("core:repoRemovedTitle")}`,
-          t("core:repoRemovedText", { name }),
-        ),
+      await ctx.replySuccess(
+        `${Emojis.REPO} ${t("core:repoRemovedTitle")}`,
+        t("core:repoRemovedText", { name }),
       );
     } catch (err: unknown) {
-      await ctx.reply(
-        makeErrorCard(t("core:failedRemoveRepoTitle"), errorFrom(err).message),
-      );
+      await ctx.replyError(t("core:failedRemoveRepoTitle"), errorFrom(err).message);
     }
   }
 
@@ -256,11 +238,9 @@ export class RepoCommand extends BaseSubcommand {
     const t = await ctx.fetchT();
     const name = (await ctx.getString("name", { required: true }))!;
 
-    await ctx.reply(
-      makeInfoCard(
-        t("core:updatingRepoTitle"),
-        t("core:updatingRepoText", { name }),
-      ),
+    await ctx.replyInfo(
+      t("core:updatingRepoTitle"),
+      t("core:updatingRepoText", { name }),
     );
 
     try {
@@ -268,22 +248,18 @@ export class RepoCommand extends BaseSubcommand {
       this.container.logger.info(
         `[Repo] ${Emojis.REPO} Updated repository: ${name} by ${ctx.user.tag}`,
       );
-      await ctx.reply(
-        makeSuccessCard(
-          `${Emojis.REPO} ${t("core:repoUpdatedTitle")}`,
-          t("core:repoUpdatedText", { name }),
-        ),
+      await ctx.replySuccess(
+        `${Emojis.REPO} ${t("core:repoUpdatedTitle")}`,
+        t("core:repoUpdatedText", { name }),
       );
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       this.container.logger.warn(
         `[Repo] ${Emojis.ERROR} Failed to update repo: ${name} - ${msg_}`,
       );
-      await ctx.reply(
-        makeErrorCard(
-          `${Emojis.ERROR} ${t("core:failedUpdateRepoTitle")}`,
-          msg_,
-        ),
+      await ctx.replyError(
+        `${Emojis.ERROR} ${t("core:failedUpdateRepoTitle")}`,
+        msg_,
       );
     }
   }
@@ -292,9 +268,7 @@ export class RepoCommand extends BaseSubcommand {
     const t = await ctx.fetchT();
     const repos = await this.downloaderService.listRepos();
     if (!repos.length) {
-      await ctx.reply(
-        makeErrorCard(t("core:noReposTitle"), t("core:noReposText")),
-      );
+      await ctx.replyError(t("core:noReposTitle"), t("core:noReposText"));
       return;
     }
 
@@ -321,11 +295,9 @@ export class RepoCommand extends BaseSubcommand {
       ]);
 
       if (!modules.length) {
-        await ctx.reply(
-          makeErrorCard(
-            t("core:noModulesFoundTitle"),
-            t("core:noModulesFoundText", { repoName }),
-          ),
+        await ctx.replyError(
+          t("core:noModulesFoundTitle"),
+          t("core:noModulesFoundText", { repoName }),
         );
         return;
       }
@@ -347,9 +319,7 @@ export class RepoCommand extends BaseSubcommand {
         perPage: 5,
       });
     } catch (err: unknown) {
-      await ctx.reply(
-        makeErrorCard(t("core:failedReadRepoTitle"), errorFrom(err).message),
-      );
+      await ctx.replyError(t("core:failedReadRepoTitle"), errorFrom(err).message);
     }
   }
 }

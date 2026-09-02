@@ -4,7 +4,6 @@ import { AttachmentBuilder } from "discord.js";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import {
   makeSuccessCard,
-  makeInfoCard,
   makeListCard,
   ephemeralCard,
 } from "#lib/utilities/cards.js";
@@ -69,7 +68,7 @@ export class MyDataCommand extends BaseSubcommand {
   }
 
   public async whatData(ctx: CommandContext) {
-    const card = makeInfoCard(
+    await ctx.replyInfo(
       `${Emojis.SHIELD} End-User Data & Privacy in Lumi`,
       [
         "Lumi respects user privacy and complies with GDPR and CCPA data rights:",
@@ -80,18 +79,15 @@ export class MyDataCommand extends BaseSubcommand {
         "• **3rd-Party Addons (`/mydata 3rdparty`)**: You can inspect privacy statements provided by installed community addons.",
       ].join("\n"),
     );
-    await ctx.reply(card);
   }
 
   public async thirdParty(ctx: CommandContext) {
     const installed = await this.downloaderService.getInstalledModules();
 
     if (installed.length === 0) {
-      await ctx.reply(
-        makeInfoCard(
-          "Third-Party Addons",
-          "This bot instance does not have any third-party addons installed.",
-        ),
+      await ctx.replyInfo(
+        "Third-Party Addons",
+        "This bot instance does not have any third-party addons installed.",
       );
       return;
     }
@@ -147,7 +143,7 @@ export class MyDataCommand extends BaseSubcommand {
   public async forgetMe(ctx: CommandContext) {
     const userId = ctx.user.id;
 
-    const confirmed = await confirmPrompt(ctx, {
+    const { confirmed } = await confirmPrompt(ctx, {
       title: `${Emojis.WARNING_SIGN} Request Data Deletion`,
       body: [
         "Are you sure you want to delete and anonymize all your stored data in Lumi?",
@@ -160,33 +156,21 @@ export class MyDataCommand extends BaseSubcommand {
     });
 
     if (!confirmed) {
-      await ctx.reply(
-        ephemeralCard(
-          makeInfoCard("Cancelled", "Data deletion request was cancelled."),
-        ),
-      );
+      await ctx.replyInfo("Cancelled", "Data deletion request was cancelled.");
       return;
     }
 
     const result = await executeGdprDeletion(userId, ctx.user.tag);
 
     if (result.failedModules.length > 0) {
-      await ctx.reply(
-        ephemeralCard(
-          makeInfoCard(
-            "Partial Deletion",
-            `Your core data was deleted, but the following modules failed to scrub data: \`${result.failedModules.join(", ")}\`. Please contact a bot administrator.`,
-          ),
-        ),
+      await ctx.replyInfo(
+        "Partial Deletion",
+        `Your core data was deleted, but the following modules failed to scrub data: \`${result.failedModules.join(", ")}\`. Please contact a bot administrator.`,
       );
     } else {
-      await ctx.reply(
-        ephemeralCard(
-          makeSuccessCard(
-            "Data Deleted",
-            "All your stored data has been permanently scrubbed and anonymized.",
-          ),
-        ),
+      await ctx.replySuccess(
+        "Data Deleted",
+        "All your stored data has been permanently scrubbed and anonymized.",
       );
     }
   }

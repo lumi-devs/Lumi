@@ -5,7 +5,7 @@ import { TableOfContents } from "@/components/toc";
 import Link from "next/link";
 import { ChevronRight, ChevronLeft, Clock, Edit3 } from "lucide-react";
 
-export async function generateStaticParams() {
+export function generateStaticParams() {
   const docs = getAllDocs();
   return docs.map((doc) => ({
     slug: doc.slug.split("/"),

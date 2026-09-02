@@ -3,11 +3,7 @@ import { restartChoiceRow } from "#lib/restart.js";
 import { loadFeatures } from "#modules/core/lib/config-panel.js";
 import { buildHubView } from "#modules/core/ui/hub.js";
 import { Emojis } from "#utilities/assets.js";
-import {
-  makeSuccessCard,
-  makeErrorCard,
-  makeInfoCard,
-} from "#utilities/cards.js";
+import { makeSuccessCard } from "#utilities/cards.js";
 import { updateLumiCore } from "#utilities/self-update.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry, container } from "@sapphire/framework";
@@ -68,20 +64,16 @@ export class LumiCommand extends BaseSubcommand {
   public async update(ctx: CommandContext): Promise<void> {
     await ctx.checkPermit("owner.*");
     const t = await ctx.fetchT();
-    await ctx.reply(
-      makeInfoCard(
-        t("core:updatingCoreTitle"),
-        `${Emojis.LOADING} ${t("core:updatingCoreText")}`,
-      ),
+    await ctx.replyInfo(
+      t("core:updatingCoreTitle"),
+      `${Emojis.LOADING} ${t("core:updatingCoreText")}`,
     );
 
     const res = await updateLumiCore();
     if (res.error) {
-      await ctx.reply(
-        makeErrorCard(
-          `${Emojis.ERROR} ${t("core:coreUpdateFailedTitle")}`,
-          res.error,
-        ),
+      await ctx.replyError(
+        `${Emojis.ERROR} ${t("core:coreUpdateFailedTitle")}`,
+        res.error,
       );
       return;
     }
@@ -101,11 +93,9 @@ export class LumiCommand extends BaseSubcommand {
       return;
     }
 
-    await ctx.reply(
-      makeSuccessCard(
-        `${Emojis.BOT} ${t("core:coreUpToDateTitle")}`,
-        t("core:coreUpToDateText", { currentCommit: res.currentCommit }),
-      ),
+    await ctx.replySuccess(
+      `${Emojis.BOT} ${t("core:coreUpToDateTitle")}`,
+      t("core:coreUpToDateText", { currentCommit: res.currentCommit }),
     );
   }
 }

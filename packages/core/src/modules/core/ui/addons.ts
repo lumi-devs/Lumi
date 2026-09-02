@@ -1,6 +1,6 @@
 import type { LumiT } from "#lib/i18n/index.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
-import { row, type Row } from "#modules/core/ui/common.js";
+import { formatPageFooter, row, type Row } from "#modules/core/ui/common.js";
 import { hubTabRow } from "#modules/core/ui/hub.js";
 import { Emojis } from "#utilities/assets.js";
 import { resolveCardColor, makeCard, type CardReply } from "#utilities/cards.js";
@@ -388,7 +388,13 @@ export function buildAddonRepoModulesView(
       sections,
       footer:
         totalPages > 1
-          ? `Page ${safePage + 1}/${totalPages} · Install or uninstall any module with one click.`
+          ? formatPageFooter(
+              safePage,
+              totalPages,
+              t
+                ? t(PanelsKeys.AddonsModulesFooter)
+                : "Install or uninstall any module with one click.",
+            )
           : t
             ? t(PanelsKeys.AddonsModulesFooter)
             : "Install or uninstall any module with one click.",
