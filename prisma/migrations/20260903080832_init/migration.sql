@@ -27,14 +27,9 @@ CREATE TABLE "global_module_state" (
 CREATE TABLE "guilds" (
     "guild_id" VARCHAR(20) NOT NULL,
     "prefix" VARCHAR(5),
-    "mod_role_id" VARCHAR(20),
-    "admin_role_id" VARCHAR(20),
-    "mod_log_channel_id" VARCHAR(20),
     "mute_role_id" VARCHAR(20),
     "locale" VARCHAR(10) NOT NULL DEFAULT 'en-US',
     "timezone" VARCHAR(64) NOT NULL DEFAULT 'UTC',
-    "no_mention_spam_window_ms" INTEGER,
-    "no_mention_spam_limit" INTEGER,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -77,6 +72,7 @@ CREATE TABLE "permits" (
     "guild_id" VARCHAR(20) NOT NULL,
     "name" VARCHAR(64) NOT NULL,
     "kind" VARCHAR(16) NOT NULL,
+    "polarity" VARCHAR(8) NOT NULL DEFAULT 'grant',
     "nodes" TEXT[],
     "builtin" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -331,9 +327,6 @@ CREATE TABLE "tempvc_records" (
 CREATE INDEX "guild_module_state_module_name_idx" ON "guild_module_state"("module_name");
 
 -- CreateIndex
-CREATE INDEX "guild_module_config_guild_id_module_name_idx" ON "guild_module_config"("guild_id", "module_name");
-
--- CreateIndex
 CREATE INDEX "permits_guild_id_kind_idx" ON "permits"("guild_id", "kind");
 
 -- CreateIndex
@@ -341,6 +334,9 @@ CREATE UNIQUE INDEX "permits_guild_id_name_key" ON "permits"("guild_id", "name")
 
 -- CreateIndex
 CREATE INDEX "permit_assignments_guild_id_target_type_target_id_idx" ON "permit_assignments"("guild_id", "target_type", "target_id");
+
+-- CreateIndex
+CREATE INDEX "permit_assignments_target_type_target_id_idx" ON "permit_assignments"("target_type", "target_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "permit_assignments_permit_id_target_type_target_id_key" ON "permit_assignments"("permit_id", "target_type", "target_id");
@@ -352,6 +348,12 @@ CREATE INDEX "moderation_cases_guild_id_user_id_idx" ON "moderation_cases"("guil
 CREATE INDEX "moderation_cases_guild_id_created_at_idx" ON "moderation_cases"("guild_id", "created_at");
 
 -- CreateIndex
+CREATE INDEX "moderation_cases_guild_id_moderator_id_idx" ON "moderation_cases"("guild_id", "moderator_id");
+
+-- CreateIndex
+CREATE INDEX "moderation_cases_guild_id_action_idx" ON "moderation_cases"("guild_id", "action");
+
+-- CreateIndex
 CREATE INDEX "moderation_cases_user_id_idx" ON "moderation_cases"("user_id");
 
 -- CreateIndex
@@ -361,10 +363,22 @@ CREATE INDEX "moderation_cases_moderator_id_idx" ON "moderation_cases"("moderato
 CREATE INDEX "moderation_cases_guild_id_active_expires_at_idx" ON "moderation_cases"("guild_id", "active", "expires_at");
 
 -- CreateIndex
+CREATE INDEX "moderation_cases_active_id_idx" ON "moderation_cases"("active", "id");
+
+-- CreateIndex
+CREATE INDEX "moderation_cases_action_active_id_idx" ON "moderation_cases"("action", "active", "id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "moderation_cases_guild_id_case_number_key" ON "moderation_cases"("guild_id", "case_number");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "appeals_case_id_key" ON "appeals"("case_id");
+
+-- CreateIndex
+CREATE INDEX "appeals_guild_id_status_created_at_idx" ON "appeals"("guild_id", "status", "created_at");
+
+-- CreateIndex
+CREATE INDEX "appeals_guild_id_created_at_idx" ON "appeals"("guild_id", "created_at");
 
 -- CreateIndex
 CREATE INDEX "appeals_guild_id_status_idx" ON "appeals"("guild_id", "status");
@@ -373,13 +387,28 @@ CREATE INDEX "appeals_guild_id_status_idx" ON "appeals"("guild_id", "status");
 CREATE INDEX "appeals_user_id_idx" ON "appeals"("user_id");
 
 -- CreateIndex
+CREATE INDEX "appeals_reviewed_by_idx" ON "appeals"("reviewed_by");
+
+-- CreateIndex
+CREATE INDEX "mod_notes_guild_id_user_id_created_at_idx" ON "mod_notes"("guild_id", "user_id", "created_at");
+
+-- CreateIndex
 CREATE INDEX "mod_notes_guild_id_user_id_idx" ON "mod_notes"("guild_id", "user_id");
 
 -- CreateIndex
-CREATE INDEX "blocklist_user_id_idx" ON "blocklist"("user_id");
+CREATE INDEX "mod_notes_user_id_idx" ON "mod_notes"("user_id");
+
+-- CreateIndex
+CREATE INDEX "mod_notes_author_id_idx" ON "mod_notes"("author_id");
+
+-- CreateIndex
+CREATE INDEX "blocklist_guild_id_created_at_idx" ON "blocklist"("guild_id", "created_at");
 
 -- CreateIndex
 CREATE INDEX "blocklist_guild_id_idx" ON "blocklist"("guild_id");
+
+-- CreateIndex
+CREATE INDEX "blocklist_blocked_by_idx" ON "blocklist"("blocked_by");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "blocklist_user_id_guild_id_key" ON "blocklist"("user_id", "guild_id");
@@ -391,10 +420,13 @@ CREATE INDEX "ignore_list_guild_id_idx" ON "ignore_list"("guild_id");
 CREATE UNIQUE INDEX "ignore_list_guild_id_channel_id_key" ON "ignore_list"("guild_id", "channel_id");
 
 -- CreateIndex
-CREATE INDEX "afk_entries_user_id_idx" ON "afk_entries"("user_id");
+CREATE INDEX "afk_entries_guild_id_idx" ON "afk_entries"("guild_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "downloader_repos_name_key" ON "downloader_repos"("name");
+
+-- CreateIndex
+CREATE INDEX "downloader_modules_module_name_idx" ON "downloader_modules"("module_name");
 
 -- CreateIndex
 CREATE INDEX "audit_ledger_guild_id_created_at_idx" ON "audit_ledger"("guild_id", "created_at");
@@ -403,13 +435,40 @@ CREATE INDEX "audit_ledger_guild_id_created_at_idx" ON "audit_ledger"("guild_id"
 CREATE INDEX "audit_ledger_guild_id_user_id_idx" ON "audit_ledger"("guild_id", "user_id");
 
 -- CreateIndex
+CREATE INDEX "audit_ledger_created_at_idx" ON "audit_ledger"("created_at");
+
+-- CreateIndex
+CREATE INDEX "audit_ledger_user_id_idx" ON "audit_ledger"("user_id");
+
+-- CreateIndex
+CREATE INDEX "module_dynamic_data_module_name_key_idx" ON "module_dynamic_data"("module_name", "key");
+
+-- CreateIndex
+CREATE INDEX "module_dynamic_data_target_id_idx" ON "module_dynamic_data"("target_id");
+
+-- CreateIndex
 CREATE INDEX "module_config_history_guild_id_module_name_idx" ON "module_config_history"("guild_id", "module_name");
+
+-- CreateIndex
+CREATE INDEX "module_config_history_guild_id_created_at_idx" ON "module_config_history"("guild_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "module_config_history_guild_id_module_name_created_at_idx" ON "module_config_history"("guild_id", "module_name", "created_at");
+
+-- CreateIndex
+CREATE INDEX "module_config_history_actor_id_idx" ON "module_config_history"("actor_id");
 
 -- CreateIndex
 CREATE INDEX "module_config_overrides_guild_id_module_name_idx" ON "module_config_overrides"("guild_id", "module_name");
 
 -- CreateIndex
+CREATE INDEX "module_config_overrides_model_id_idx" ON "module_config_overrides"("model_id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "module_config_overrides_guild_id_module_name_key_model_type_key" ON "module_config_overrides"("guild_id", "module_name", "key", "model_type", "model_id");
+
+-- CreateIndex
+CREATE INDEX "panic_states_actor_id_idx" ON "panic_states"("actor_id");
 
 -- CreateIndex
 CREATE INDEX "guild_backups_guild_id_created_at_idx" ON "guild_backups"("guild_id", "created_at");
@@ -461,6 +520,12 @@ ALTER TABLE "downloader_modules" ADD CONSTRAINT "downloader_modules_repo_id_fkey
 
 -- AddForeignKey
 ALTER TABLE "audit_ledger" ADD CONSTRAINT "audit_ledger_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "module_config_history" ADD CONSTRAINT "module_config_history_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "module_config_overrides" ADD CONSTRAINT "module_config_overrides_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "warn_thresholds" ADD CONSTRAINT "warn_thresholds_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;

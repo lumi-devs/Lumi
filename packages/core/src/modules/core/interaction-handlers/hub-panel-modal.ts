@@ -1,8 +1,8 @@
 import { fetchTyped } from "#lib/commands.js";
 import { deriveRepoNameFromUrl } from "#lib/downloader/url-helpers.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { DownloaderUtility } from "#utilities/DownloaderUtility.js";
-import type { GuildSettingsUtility } from "#utilities/GuildSettingsUtility.js";
+import type { DownloaderUtility } from "#utilities/pieces/DownloaderUtility.js";
+import type { GuildSettingsUtility } from "#utilities/pieces/GuildSettingsUtility.js";
 import {
   hasAdminPermit,
   hasOwnerPermit,

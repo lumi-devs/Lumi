@@ -35,4 +35,19 @@ export class ModNoteRepository extends Repository {
     });
     return count > 0;
   }
+
+  /**
+   * GDPR erasure. Notes where the user is the subject are deleted outright -
+   * unlike `ModerationCase`, nothing documents a need to keep them for audit
+   * integrity. Notes the user _authored_ about someone else are kept but
+   * have their author blanked to `"0"`, mirroring how
+   * `ModerationRepository.anonymizeUser` treats `moderatorId`.
+   */
+  public async deleteUserData(userId: string): Promise<void> {
+    await this.prisma.modNote.deleteMany({ where: { userId } });
+    await this.prisma.modNote.updateMany({
+      where: { authorId: userId },
+      data: { authorId: "0" },
+    });
+  }
 }

@@ -246,6 +246,34 @@ describe('ModuleStore', () => {
 			await expect(store.setEnabled('does-not-exist', true)).rejects.toThrow(/Unknown module/);
 		});
 
+		it('cascades disable to modules that depend on the module being disabled', async () => {
+			// c -> b -> a. Disabling a must transitively disable b and c too.
+			setupModules({ a: {}, b: { dependencies: ['a'] }, c: { dependencies: ['b'] } });
+			await store.discover();
+			expect(store.getRecord('a').enabled).toBe(true);
+			expect(store.getRecord('b').enabled).toBe(true);
+			expect(store.getRecord('c').enabled).toBe(true);
+
+			vi.spyOn(store, 'unload').mockResolvedValue({} as any);
+
+			await store.setEnabled('a', false, 'abuse');
+
+			expect(store.getRecord('a').enabled).toBe(false);
+			expect(store.getRecord('b').enabled).toBe(false);
+			expect(store.getRecord('c').enabled).toBe(false);
+			expect(container.db.modules.setModuleGlobalEnabled).toHaveBeenCalledWith('a', false, 'abuse');
+			expect(container.db.modules.setModuleGlobalEnabled).toHaveBeenCalledWith(
+				'b',
+				false,
+				"Depends on disabled module 'a'"
+			);
+			expect(container.db.modules.setModuleGlobalEnabled).toHaveBeenCalledWith(
+				'c',
+				false,
+				"Depends on disabled module 'b'"
+			);
+		});
+
 		it('serializes concurrent calls for the same module instead of double-loading it', async () => {
 			container.db.modules.getGlobalModuleStates = vi.fn().mockResolvedValue(new Map([['afk', false]]));
 			setupModules({ afk: {} });

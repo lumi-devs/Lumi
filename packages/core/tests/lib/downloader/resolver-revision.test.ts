@@ -64,7 +64,7 @@ async function writeModuleInfo(moduleDir: string, version: string) {
       description: "Revision test module",
       short: "Revision Test",
       version,
-      min_bot_version: "1.0.0",
+      min_bot_version: "0.1.0",
       end_user_data_statement: "Revision test privacy statement",
     }),
   );

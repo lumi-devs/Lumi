@@ -1,5 +1,64 @@
 # @lumi/dashboard
 
+## 0.3.0
+
+### Minor Changes
+
+- 3436080: **Enterprise & Mega-Fleet Scaling (100k-1M+ Guilds, 50-500+ Shards)**:
+  - Added Discord REST proxy support (`nirn-proxy`) with path normalization, infinite local request rate limit delegation, configurable request timeouts, and retry controls.
+  - Added Redis Cluster multi-master support with replica read scaling (`REDIS_CLUSTER_SCALE_READS`), dynamic slot refresh timeouts, and retry strategies.
+  - Added PostgreSQL read-replica connection pool aliases (`DATABASE_READ_URL`, `POSTGRES_REPLICA_URL`) and `application_name` tagging.
+  - Added environment-tunable cache limits and sweeper interval controls for high shard density.
+  - Added production multi-stage Next.js Dockerfile (`Dockerfile.dashboard`) and multi-target GitHub Actions container publishing to GHCR.
+  - Added Kubernetes deployment manifests for the dashboard and updated production statefulset configurations.
+- e99dc73: **Brand & Theme System**:
+
+  - Established the single-source-of-truth "Midnight Sapphire" brand system in `BrandColors` and `BrandTokens` (`#4C6EF5` primary sapphire accent, with emerald `#12B886` success, amber `#F59F00` warning, rose `#FA5252` error).
+  - Aligned bot card utilities (`makeInfoCard`, `makeSuccessCard`, etc.) and `apps/dashboard/src/app/globals.css` dark and light mode tokens with the Midnight Sapphire system.
+  - Added `ctx.brandColor()` helper to `CommandContext` for resolving per-guild theme colors.
+
+  **GDPR & Security**:
+
+  - Implemented `data-retention-sweep` daily scheduled task in core module for automated retention cleanup of stale audit ledger records and expired moderation cases.
+  - Enforced mandatory `end_user_data_statement` on addon manifests (`info.json`) with clear validator diagnostics.
+  - Upgraded dashboard rate limiting to `RateLimiterRedis` with graceful in-memory fallback for horizontal replica coordination.
+  - Added client-side GDPR cookie consent banner on the dashboard.
+
+  **Next.js 16 Documentation Site**:
+
+  - Migrated `apps/docs` from Astro to Next.js 16 (App Router) + React 19 + Tailwind CSS v4 + Motion (`motion/react`).
+  - Features animated landing hero, 4-quadrant feature Bento Grid, live Discord Card Preview simulator, macOS traffic-light code blocks, sticky table-of-contents scrollspy, command palette modal, and static export build support for GitHub Pages / CDN deployments.
+
+- 8531ee3: Migrate `@tanstack/react-table` to v9 and `marked` to v18; fix CodeQL stored-xss and multi-character sanitization alerts.
+
+### Patch Changes
+
+- 64a07d1: **Bug Fixes**: Fixed anti-nuke vanity-URL audit attribution to correlate the audit-log entry to the actual `vanity_url_code` change instead of accepting any recent GuildUpdate entry (B-BUG-1). Fixed guild restore to map recreated category ids so child channels keep their parent, and to restore role/channel `position` (B-BUG-2, B-BUG-3). Isolated per-case errors in the warn-decay sweep so one failing case can't starve the rest of the run (D-BUG-1). Fixed dashboard auth to stop clobbering `isBotOwner` right after it was correctly re-confirmed by the whoami RPC (A-BUG-1). Made the audit-log flush fall back to per-row inserts on batch failure instead of stalling forever behind one bad entry (C-BUG-1). Redis lock renewal failures are now tracked and logged instead of silently swallowed (C-BUG-2). Entity cache now clears optional fields on transition to empty instead of leaving stale data cached for 24h (C-BUG-3).
+- 7f53af7: Hardened GitHub Actions CI/CD workflows and container build pipeline:
+  - Add safe build-time environment variable fallbacks in `@lumi/dashboard` for Next.js static page collection.
+  - Optimized multi-stage `Dockerfile` and `Dockerfile.dashboard` for lightweight Alpine container execution.
+  - Added comprehensive Turborepo build verification job to `ci.yml`.
+  - Standardized PR, Push, and Merge Queue (`merge_group`) triggers across all workflows.
+- 026126f: Replaced the loose `getEnv(name, fallback="")` helper in `apps/dashboard/src/lib/env.ts` with strict `envStr` and `envInt` parsers that throw on missing required variables instead of silently returning empty strings. Added `resolveAuthSecret` to consolidate the `DASHBOARD_SESSION_SECRET`/`AUTH_SECRET` fallback chain. Semantics now match `packages/core`'s `envParseString`/`envParseInteger` — a misconfigured deployment fails fast at startup rather than at the first request.
+- dfa98f6: Fix Next.js container builds in `Dockerfile.dashboard`:
+  - Install `nodejs` in base Alpine container image for Next.js build runtime compatibility.
+  - Ensure `NODE_ENV=production` is set for static page generation and optimization.
+  - Include `.github/` directory in builder and runner stages for `/legal/privacy` and `/legal/terms` document rendering.
+- 84cd7cc: Redesign documentation with Apple Cupertino aesthetic and unify single source of truth:
+  - Refactor documentation styling in `apps/docs/src/styles/custom.css` with SF Pro / Inter typography, macOS window styled code blocks, frosted glass headers, and Apple pill controls.
+  - Unify documentation structure into `apps/docs/src/content/docs/` with root symlink `docs -> apps/docs/src/content/docs` to eliminate redundant copies.
+  - Synchronize documentation with active enterprise fleet configuration, Kubernetes deployment manifests, 27 Prisma models, and 66 RPC wire actions.
+  - Add version switcher for v0.1 in the docs header (`apps/docs/src/components/SiteTitle.astro`).
+  - Remove mentions of external Discord bots across docs and dashboard UI.
+- 9959510: Optimize GitHub Actions CI/CD workflows and automated checks:
+  - Implement granular paths filtering in `ci.yml` and `docker.yml` to smart-skip jobs on markdown/docs/unrelated changes.
+  - Add `ci-status` aggregator job in `ci.yml` (`if: always()`) for robust GitHub branch protection evaluation without false failures on skipped matrix jobs.
+  - Enable Turborepo and Bun local caching in GitHub Actions runners across all workflows.
+  - Streamline `changeset-check.yml` by eliminating redundant Bun setup and dependency installations.
+  - Set `NEXT_TELEMETRY_DISABLED=1` and `SKIP_ENV_VALIDATION=1` in CI environment.
+  - @lumi/observability@0.3.0
+  - @lumi/contracts@0.3.0
+
 ## 3.2.0
 
 ### Minor Changes

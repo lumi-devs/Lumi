@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
 import { ModuleCommand } from "#modules/core/commands/module.js";
-import { ModuleAlreadyInstalledError } from "#utilities/DownloaderUtility.js";
+import { ModuleAlreadyInstalledError } from "#utilities/pieces/DownloaderUtility.js";
 
 vi.mock("#lib/module-system/Utility.js", async (importOriginal) => {
   const actual: any = await importOriginal();

@@ -12,7 +12,7 @@ import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { executeGdprDeletion, executeGdprExport } from "#lib/gdpr.js";
 import { container } from "@sapphire/framework";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { DownloaderUtility } from "#utilities/DownloaderUtility.js";
+import type { DownloaderUtility } from "#utilities/pieces/DownloaderUtility.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "mydata",

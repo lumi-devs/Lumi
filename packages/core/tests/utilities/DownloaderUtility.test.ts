@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { DownloaderUtility, ModuleAlreadyInstalledError } from "#utilities/DownloaderUtility.js";
+import { DownloaderUtility, ModuleAlreadyInstalledError } from "#utilities/pieces/DownloaderUtility.js";
 import { container } from "@sapphire/framework";
 import { resolver } from "#lib/downloader/resolver.js";
 import { promises as fs } from "node:fs";

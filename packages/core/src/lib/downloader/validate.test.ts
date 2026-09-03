@@ -116,7 +116,7 @@ describe("validateAddon - min_bot_version semver compatibility", () => {
 
   it("accepts a v-prefixed min_bot_version that the current version satisfies", async () => {
     const dir = path.join(tmpRoot, "my-addon");
-    await writeWithMinBotVersion(dir, "v0.9.0");
+    await writeWithMinBotVersion(dir, "v0.2.0");
 
     const { errors } = await validateAddon(dir);
     expect(errors.some((e) => e.includes("min_bot_version"))).toBe(false);

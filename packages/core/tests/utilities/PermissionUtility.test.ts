@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
-import { PermissionUtility } from "#utilities/PermissionUtility.js";
+import { PermissionUtility } from "#utilities/pieces/PermissionUtility.js";
 
 describe("PermissionUtility", () => {
   let service: PermissionUtility;

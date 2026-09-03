@@ -279,6 +279,18 @@ export class ModuleStore extends Store<Module> {
       record.failureReason = undefined;
       const module = this.get(name);
       if (module) module.enabled = enabled;
+
+      if (!enabled) {
+        for (const dependent of this.#records.values()) {
+          if (dependent.enabled && dependent.meta.dependencies?.includes(name)) {
+            await this.setEnabled(
+              dependent.name,
+              false,
+              `Depends on disabled module '${name}'`,
+            );
+          }
+        }
+      }
     });
   }
 

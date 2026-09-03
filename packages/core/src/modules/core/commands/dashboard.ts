@@ -4,7 +4,7 @@ import { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
-import type { GuildSettingsUtility } from "#utilities/GuildSettingsUtility.js";
+import type { GuildSettingsUtility } from "#utilities/pieces/GuildSettingsUtility.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "dashboard",

@@ -91,7 +91,7 @@ const SystemModuleClearSchema = s.object({
 });
 
 const SystemIdentitySchema = s.object({
-  inviteUrl: s.string().url().nullable().optional(),
+  inviteUrl: s.string().url({ allowedProtocols: ["http:", "https:"] }).nullable().optional(),
   supportGuildId: SnowflakeSchema.nullable().optional(),
 });
 

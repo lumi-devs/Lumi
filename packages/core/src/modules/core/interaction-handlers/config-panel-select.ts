@@ -2,7 +2,7 @@ import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { ConfigUtility } from "#utilities/ConfigUtility.js";
+import type { ConfigUtility } from "#utilities/pieces/ConfigUtility.js";
 import {
   configAccessDenied,
   hasPanelAccess,

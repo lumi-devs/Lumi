@@ -276,7 +276,13 @@ export async function runModerationFlow<
   }
 
   if (prepared.length === 0) {
-    return replyFailure(ctx, rejected[0]!.reply);
+    // A single rejection keeps its specific reply (e.g. the hierarchy-denial
+    // title/body); more than one must go through the aggregated card below,
+    // or every rejection past the first is silently dropped.
+    if (rejected.length === 1) {
+      return replyFailure(ctx, rejected[0]!.reply);
+    }
+    return replyBatchResult(ctx, t, flow, [], rejected);
   }
 
   if (flow.confirm) {

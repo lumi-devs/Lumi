@@ -3,8 +3,8 @@ import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { restartChoiceRow } from "#lib/restart.js";
-import type { DownloaderUtility } from "#utilities/DownloaderUtility.js";
-import type { GuildSettingsUtility } from "#utilities/GuildSettingsUtility.js";
+import type { DownloaderUtility } from "#utilities/pieces/DownloaderUtility.js";
+import type { GuildSettingsUtility } from "#utilities/pieces/GuildSettingsUtility.js";
 import {
   accessDenied,
   hasAdminPermit,

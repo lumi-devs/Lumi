@@ -13,8 +13,8 @@
   <p>
     <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.3%2B-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun"></a>
     <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.x%20%2F%206.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
-    <a href="https://www.postgresql.org"><img src="https://img.shields.io/badge/PostgreSQL-17%2B-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL"></a>
-    <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-7%2B-DC382D?style=flat-square&logo=redis&logoColor=white" alt="Redis"></a>
+    <a href="https://www.postgresql.org"><img src="https://img.shields.io/badge/PostgreSQL-18-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL"></a>
+    <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-8-DC382D?style=flat-square&logo=redis&logoColor=white" alt="Redis"></a>
     <a href="https://discord.js.org"><img src="https://img.shields.io/badge/discord.js-v14-5865F2?style=flat-square&logo=discord&logoColor=white" alt="discord.js"></a>
     <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=next.js&logoColor=white" alt="Next.js"></a>
   </p>
@@ -32,13 +32,11 @@
 
 ---
 
-> ⚠️ **Pre-Alpha Notice:** Lumi is currently in **pre-alpha**. Several components — including the dashboard, Lumi Downloader, and various commands — are evolving rapidly. Expect breaking changes between updates.
-
 ## Overview
 
 Lumi is a self-hosted, modular Discord bot built for communities that demand full control, rock-solid security, and high performance. Every feature is a hot-swappable module: toggle, configure, and extend without restarting the bot or touching core code.
 
-Built with **Bun**, **TypeScript**, **discord.js v14**, and the **[Sapphire Framework](https://sapphirejs.dev)**. Backed by **PostgreSQL 17** (via Prisma) and **Redis 7**, with a **Next.js 16** admin dashboard.
+Built with **Bun**, **TypeScript**, **discord.js v14**, and the **[Sapphire Framework](https://sapphirejs.dev)**. Backed by **PostgreSQL 18** (via Prisma) and **Redis 8**, with a **Next.js 16** admin dashboard.
 
 ---
 
@@ -68,7 +66,7 @@ Built with **Bun**, **TypeScript**, **discord.js v14**, and the **[Sapphire Fram
 
 - [**Bun**](https://bun.sh) 1.3+ — runtime and package manager (always required, Docker or not)
 - A **Discord application** — bot token + client ID from the [Developer Portal](https://discord.com/developers/applications)
-- **PostgreSQL 17** and **Redis 7** — either via [Docker](https://docs.docker.com/get-docker/) or installed natively
+- **PostgreSQL 18** and **Redis 8** — either via [Docker](https://docs.docker.com/get-docker/) or installed natively
 
 ### Quick Start (production, Docker)
 

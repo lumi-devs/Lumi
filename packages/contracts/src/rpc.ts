@@ -1,3 +1,5 @@
+import { s } from "@sapphire/shapeshift";
+
 export interface RpcRequest<T = unknown> {
   id: string;
   action: string;
@@ -14,6 +16,24 @@ export interface RpcResponse<T = unknown> {
   ok: boolean;
   data?: T;
   error?: string;
+}
+
+/** Runtime check on the envelope only - dashboard and worker deploy independently, so this is the one shape TypeScript can't guarantee across the wire. */
+const RpcResponseEnvelopeSchema = s.object({
+  id: s.string(),
+  ok: s.boolean(),
+  data: s.unknown().optional(),
+  error: s.string().optional(),
+});
+
+/** Throws with a clear message if `raw` isn't a well-formed `RpcResponse` envelope. */
+export function parseRpcResponse<T = unknown>(raw: unknown): RpcResponse<T> {
+  try {
+    return RpcResponseEnvelopeSchema.parse(raw);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Malformed RPC response envelope: ${msg}`);
+  }
 }
 
 export type RpcHandler<TIn = unknown, TOut = unknown> = (

@@ -57,6 +57,23 @@ export class UserCommand extends BaseCommand {
       );
     }
 
+    // Discord only checks the *bot's* role against the target for the API call
+    // itself, so without this a member holding just Manage Nicknames could
+    // use the bot to rename anyone below the bot - moderators and admins
+    // included - who outranks them personally. Owner is exempt: they may not
+    // hold a role above everyone they can otherwise manage.
+    const moderator = ctx.member;
+    if (
+      moderator &&
+      ctx.guild?.ownerId !== moderator.id &&
+      member.roles.highest.position >= moderator.roles.highest.position
+    ) {
+      return ctx.replyError(
+        t(LanguageKeys.Commands.NickPermissionDeniedTitle),
+        t(LanguageKeys.Commands.NickRoleHierarchy),
+      );
+    }
+
     const me = ctx.guild?.members.me;
     if (me && member.roles.highest.position >= me.roles.highest.position) {
       return ctx.replyError(

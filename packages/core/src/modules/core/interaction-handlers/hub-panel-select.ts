@@ -1,8 +1,8 @@
 import { fetchTyped } from "#lib/commands.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { GuildSettingsUtility } from "#utilities/GuildSettingsUtility.js";
-import type { PermissionUtility } from "#utilities/PermissionUtility.js";
+import type { GuildSettingsUtility } from "#utilities/pieces/GuildSettingsUtility.js";
+import type { PermissionUtility } from "#utilities/pieces/PermissionUtility.js";
 import {
   accessDenied,
   hasAdminPermit,

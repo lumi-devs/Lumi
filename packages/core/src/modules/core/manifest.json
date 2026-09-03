@@ -5,7 +5,7 @@
   "description": "The built-in core module.",
   "short": "Essential bot commands, module management, and administrative panels.",
   "endUserDataStatement": "Stores user IDs in permit assignments, system blocklists, and audit logs. Handled centrally during GDPR erasure.",
-  "version": "3.2.0",
+  "version": "0.3.0",
   "disableable": false,
   "dependencies": [],
   "conflicts": [],

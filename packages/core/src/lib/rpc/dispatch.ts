@@ -1,6 +1,8 @@
 import { container } from "@sapphire/framework";
+import { Prisma } from "@prisma/client";
 import { runWithContext } from "@lumi/observability";
 import { logError, errorFrom } from "#lib/utilities/errors.js";
+import { handlePrismaError } from "#lib/prisma/errors.js";
 import type { RpcRequest, RpcResponse, RpcHandler } from "@lumi/contracts";
 
 export type { RpcRequest, RpcResponse, RpcHandler };
@@ -62,10 +64,19 @@ export async function dispatchRpc(req: RpcRequest<unknown>): Promise<RpcResponse
         container.logger.error(`[RPC] ${req.action} failed`, {
           durationMs: Date.now() - startedAt,
         });
+        // Prisma errors carry the query/file path/line in `.message` - never
+        // let those cross the wire raw, even though a caught-and-rethrown
+        // application `Error` (e.g. "A permit named X already exists.") is
+        // meant to reach the caller verbatim.
+        const isPrismaError =
+          err instanceof Prisma.PrismaClientKnownRequestError ||
+          err instanceof Prisma.PrismaClientValidationError ||
+          err instanceof Prisma.PrismaClientInitializationError;
+        const safeErr = isPrismaError ? handlePrismaError(err) : errorFrom(err);
         return {
           id: req.id,
           ok: false,
-          error: errorFrom(err).message ?? "Internal error",
+          error: safeErr.message ?? "Internal error",
         };
       }
     },

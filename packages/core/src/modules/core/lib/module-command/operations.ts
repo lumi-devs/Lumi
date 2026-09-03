@@ -3,7 +3,7 @@ import { getUtility } from "#lib/module-system/Utility.js";
 import {
   ModuleAlreadyInstalledError,
   type DownloaderUtility,
-} from "#utilities/DownloaderUtility.js";
+} from "#utilities/pieces/DownloaderUtility.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import {
   makeErrorCard,

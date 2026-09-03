@@ -1,10 +1,11 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import type {
-  RpcRequest,
-  RpcResponse,
-  RpcActionName,
-  RpcRequestPayloads,
+import {
+  parseRpcResponse,
+  type RpcRequest,
+  type RpcResponse,
+  type RpcActionName,
+  type RpcRequestPayloads,
 } from "@lumi/contracts";
 import { injectTraceContext } from "@lumi/observability";
 import { env } from "./env";
@@ -78,11 +79,19 @@ export class RpcClient {
       clearTimeout(timer);
     }
 
-    let response: RpcResponse;
+    let raw: unknown;
     try {
-      response = (await res.json()) as RpcResponse;
+      raw = await res.json();
     } catch (err: unknown) {
       this.log(`Discarding undecodable RPC response: ${String(err)}`);
+      throw new Error(`RPC ${action}: malformed response`);
+    }
+
+    let response: RpcResponse;
+    try {
+      response = parseRpcResponse(raw);
+    } catch (err: unknown) {
+      this.log(`Discarding malformed RPC envelope for ${action}: ${String(err)}`);
       throw new Error(`RPC ${action}: malformed response`);
     }
 

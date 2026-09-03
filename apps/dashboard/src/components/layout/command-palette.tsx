@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import type { Session } from "next-auth";
 import { AnimatePresence, motion } from "motion/react";
+import { Command } from "cmdk";
 import {
   Home,
   IdCard as ServerIcon,
@@ -35,9 +36,7 @@ interface PaletteSection {
 export function CommandPalette({ session }: { session: Session | null }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const itemRefs = useRef<Map<string, HTMLAnchorElement>>(new Map());
   const pathname = usePathname();
 
   const currentGuildId = pathname?.match(/^\/guild\/([^/]+)/)?.[1];
@@ -58,7 +57,6 @@ export function CommandPalette({ session }: { session: Session | null }) {
   useEffect(() => {
     if (open) {
       setQuery("");
-      setActiveIndex(0);
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);
@@ -117,24 +115,6 @@ export function CommandPalette({ session }: { session: Session | null }) {
     resetKey: open,
   });
 
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query]);
-
-  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActiveIndex((i) => Math.min(i + 1, flat.length - 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActiveIndex((i) => Math.max(i - 1, 0));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      const item = flat[activeIndex];
-      if (item) itemRefs.current.get(item.id)?.click();
-    }
-  }
-
   if (!session) return null;
 
   return (
@@ -175,96 +155,88 @@ export function CommandPalette({ session }: { session: Session | null }) {
             className="flex w-full max-w-2xl flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-e3"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-3 border-b border-border px-4 transition-colors focus-within:border-accent">
-              <Search className="size-5 shrink-0 text-fg-subtle" aria-hidden />
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={onKeyDown}
-                type="text"
-                placeholder="Search servers and settings…"
-                aria-label="Search servers and settings"
-                className="h-14 w-full bg-transparent text-[18px] text-fg outline-none! placeholder:text-fg-subtle"
-              />
-              <kbd className="shrink-0 rounded-control border border-border px-1.5 py-0.5 font-sans text-[13px] leading-4 text-fg-subtle">
-                Esc
-              </kbd>
-            </div>
+            <Command shouldFilter={false} loop label="Command palette" className="contents">
+              <div className="flex items-center gap-3 border-b border-border px-4 transition-colors focus-within:border-accent">
+                <Search className="size-5 shrink-0 text-fg-subtle" aria-hidden />
+                <Command.Input
+                  ref={inputRef}
+                  value={query}
+                  onValueChange={setQuery}
+                  placeholder="Search servers and settings…"
+                  className="h-14 w-full bg-transparent text-[18px] text-fg outline-none! placeholder:text-fg-subtle"
+                />
+                <kbd className="shrink-0 rounded-control border border-border px-1.5 py-0.5 font-sans text-[13px] leading-4 text-fg-subtle">
+                  Esc
+                </kbd>
+              </div>
 
-            <div ref={resultsRef} className="max-h-[28rem] overflow-y-auto p-2">
-              {flat.length === 0 ? (
-                <p className="px-3 py-8 text-center text-[16px] text-fg-subtle">
-                  No matches for “{query}”
-                </p>
-              ) : (
-                sections.map((section) => (
-                  <div key={section.title} className="mb-1 last:mb-0">
-                    <p className="font-display px-3 pt-2.5 pb-1.5 text-[14px] font-semibold tracking-[0.11em] text-fg-subtle uppercase">
-                      {section.title}
-                    </p>
-                    {section.items.map((item) => {
-                      const index = flat.indexOf(item);
-                      const active = index === activeIndex;
-                      return (
-                        <Link
-                          key={item.id}
-                          ref={(el) => {
-                            if (el) itemRefs.current.set(item.id, el);
-                            else itemRefs.current.delete(item.id);
-                          }}
-                          href={item.href}
-                          onClick={() => setOpen(false)}
-                          onMouseEnter={() => setActiveIndex(index)}
-                          className={cn(
-                            "flex w-full items-center gap-3 rounded-control px-3 py-2.5 text-left text-[16px] transition-colors",
-                            active
-                              ? "bg-accent-soft text-fg"
-                              : "text-fg-muted hover:bg-surface-hover hover:text-fg",
-                          )}
-                        >
-                          {item.iconUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element -- external Discord CDN icon, next/image adds no value here
-                            <img
-                              src={item.iconUrl}
-                              alt=""
-                              className="size-6 shrink-0 rounded-full object-cover"
-                            />
-                          ) : (
-                            <item.icon
-                              className={cn(
-                                "size-4 shrink-0",
-                                active ? "text-accent-fg" : "text-fg-subtle",
-                              )}
-                              aria-hidden
-                            />
-                          )}
-                          <span className="min-w-0 flex-1 truncate font-medium">
-                            {item.label}
-                          </span>
-                          {item.sublabel && (
-                            <span className="shrink-0 truncate font-mono text-[14px] text-fg-subtle">
-                              {item.sublabel}
+              <Command.List ref={resultsRef} className="max-h-[28rem] overflow-y-auto p-2">
+                {flat.length === 0 ? (
+                  <Command.Empty className="px-3 py-8 text-center text-[16px] text-fg-subtle">
+                    No matches for “{query}”
+                  </Command.Empty>
+                ) : (
+                  sections.map((section) => (
+                    <Command.Group
+                      key={section.title}
+                      heading={
+                        <p className="font-display px-3 pt-2.5 pb-1.5 text-[14px] font-semibold tracking-[0.11em] text-fg-subtle uppercase">
+                          {section.title}
+                        </p>
+                      }
+                      className="mb-1 last:mb-0"
+                    >
+                      {section.items.map((item) => (
+                        <Command.Item key={item.id} value={item.id} asChild onSelect={() => setOpen(false)}>
+                          <Link
+                            href={item.href}
+                            onClick={() => setOpen(false)}
+                            className={cn(
+                              "group flex w-full items-center gap-3 rounded-control px-3 py-2.5 text-left text-[16px] text-fg-muted transition-colors",
+                              "hover:bg-surface-hover hover:text-fg",
+                              "data-[selected=true]:bg-accent-soft data-[selected=true]:text-fg",
+                            )}
+                          >
+                            {item.iconUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element -- external Discord CDN icon, next/image adds no value here
+                              <img
+                                src={item.iconUrl}
+                                alt=""
+                                className="size-6 shrink-0 rounded-full object-cover"
+                              />
+                            ) : (
+                              <item.icon
+                                className="size-4 shrink-0 text-fg-subtle group-data-[selected=true]:text-accent-fg"
+                                aria-hidden
+                              />
+                            )}
+                            <span className="min-w-0 flex-1 truncate font-medium">
+                              {item.label}
                             </span>
-                          )}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                ))
-              )}
-            </div>
+                            {item.sublabel && (
+                              <span className="shrink-0 truncate font-mono text-[14px] text-fg-subtle">
+                                {item.sublabel}
+                              </span>
+                            )}
+                          </Link>
+                        </Command.Item>
+                      ))}
+                    </Command.Group>
+                  ))
+                )}
+              </Command.List>
 
-            <div className="flex items-center gap-3 border-t border-border px-4 py-2.5 text-[14px] text-fg-subtle">
-              <span className="flex items-center gap-1">
-                <kbd className="rounded border border-border bg-bg-subtle px-1 py-px font-sans">↑↓</kbd>
-                Navigate
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="rounded border border-border bg-bg-subtle px-1 py-px font-sans">↵</kbd>
-                Select
-              </span>
-            </div>
+              <div className="flex items-center gap-3 border-t border-border px-4 py-2.5 text-[14px] text-fg-subtle">
+                <span className="flex items-center gap-1">
+                  <kbd className="rounded border border-border bg-bg-subtle px-1 py-px font-sans">↑↓</kbd>
+                  Navigate
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="rounded border border-border bg-bg-subtle px-1 py-px font-sans">↵</kbd>
+                  Select
+                </span>
+              </div>
+            </Command>
           </motion.div>
           </motion.div>
         )}

@@ -4,7 +4,7 @@
   "emoji": "📋",
   "description": "Server event logs: message deletes/edits, joins, leaves, bans, unbans, nickname and role changes.",
   "short": "Server event logging for moderation, messages, and member actions.",
-  "version": "3.2.0",
+  "version": "0.3.0",
   "disableable": true,
   "dependencies": [],
   "conflicts": [],

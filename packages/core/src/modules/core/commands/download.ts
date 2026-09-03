@@ -19,7 +19,7 @@ import { makeInfoCard } from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
-import type { DownloaderUtility } from "#utilities/DownloaderUtility.js";
+import type { DownloaderUtility } from "#utilities/pieces/DownloaderUtility.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "download",

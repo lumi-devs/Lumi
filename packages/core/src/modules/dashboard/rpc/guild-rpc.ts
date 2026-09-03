@@ -3,6 +3,7 @@ import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
 import { RPC_ACTIONS } from "@lumi/contracts";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { checkModulesEnabled } from "#lib/module-check.js";
+import { isSupportedLanguage } from "#lib/i18n/index.js";
 import {
   ConfigSetSchema,
   GuildSettingsSchema,
@@ -128,6 +129,9 @@ export function registerGuildRpcHandlers(): void {
     if (moduleName === "core")
       throw new Error("Cannot disable the core module");
 
+    if (!container.stores.get("modules").get(moduleName))
+      throw new Error(`No module named \`${moduleName}\`.`);
+
     await container.db.modules.setModuleGuildEnabled(
       guildId,
       moduleName,
@@ -171,6 +175,17 @@ export function registerGuildRpcHandlers(): void {
   registerRpcHandler(RPC_ACTIONS.guildSettingsSet, async (req) => {
     const { guildId } = await verifyGuildAccess(req);
     const data = parsePayload(GuildSettingsSchema, req.data);
+
+    if (data.locale !== undefined && !isSupportedLanguage(data.locale)) {
+      throw new Error(`Unsupported locale \`${data.locale}\`.`);
+    }
+    if (data.timezone !== undefined) {
+      try {
+        new Intl.DateTimeFormat(undefined, { timeZone: data.timezone });
+      } catch {
+        throw new Error(`Unsupported timezone \`${data.timezone}\`.`);
+      }
+    }
 
     const tx = await container.db.transaction(guildId);
     try {

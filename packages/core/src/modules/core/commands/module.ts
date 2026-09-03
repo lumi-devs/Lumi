@@ -28,7 +28,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { AutocompleteInteraction } from "discord.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { DownloaderUtility } from "#utilities/DownloaderUtility.js";
+import type { DownloaderUtility } from "#utilities/pieces/DownloaderUtility.js";
 import {
   filterAutocompleteChoices,
   respondWithChoices,

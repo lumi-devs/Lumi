@@ -1,5 +1,5 @@
 import type { AutocompleteInteraction } from "discord.js";
-import type { DownloaderUtility } from "#utilities/DownloaderUtility.js";
+import type { DownloaderUtility } from "#utilities/pieces/DownloaderUtility.js";
 import { filterAutocompleteChoices } from "#lib/utilities/autocomplete.js";
 
 export async function repoNameChoices(

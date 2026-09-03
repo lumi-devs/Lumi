@@ -1,5 +1,7 @@
 # @lumi/contracts
 
+## 0.3.0
+
 ## 3.2.0
 
 ### Patch Changes

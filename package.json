@@ -1,6 +1,6 @@
 {
   "name": "lumi",
-  "version": "1.0.0",
+  "version": "0.3.0",
   "license": "GPL-3.0-only",
   "description": "Lumi - modular Discord bot (TypeScript / Sapphire / Postgres / Redis). Monorepo root.",
   "private": true,

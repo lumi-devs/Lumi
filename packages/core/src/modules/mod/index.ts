@@ -12,7 +12,7 @@ import { handleWarnDecayFire } from "./lib/warn-decay-handler.js";
   description: "Staff moderation: warn, mute, kick, ban - with case logging.",
   short: "Staff moderation tools: warn, mute, kick, ban, and case tracking.",
   endUserDataStatement:
-    "Stores user IDs in moderation case records, warnings, and active punishments. Target user IDs are anonymized upon GDPR erasure while preserving audit integrity.",
+    "Stores user IDs in moderation case records, warnings, active punishments, and staff notes. Target user IDs are anonymized upon GDPR erasure while preserving audit integrity; staff notes about the user are deleted.",
   category: "Moderation",
   configSchema: cfg.object({
     log_channel_id: cfg.channel({
@@ -56,6 +56,7 @@ export class ModModule extends Module {
 
   public override async deleteUserData(userId: string): Promise<void> {
     await this.container.db.moderation.anonymizeUser(userId);
+    await this.container.db.modNotes.deleteUserData(userId);
   }
 
   public override async exportUserData(

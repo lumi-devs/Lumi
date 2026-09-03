@@ -5,6 +5,7 @@ import { motion, useMotionValue, useReducedMotion, useSpring } from "motion/reac
 import { DiscordCardPreview } from "@/components/discord-card-preview";
 import { ArchitectureVisualizer } from "@/components/architecture-visualizer";
 import { useStaggerIn, SPRING_SOFT } from "@/lib/animate";
+import { version } from "../../package.json";
 import {
   Copy,
   Check,
@@ -97,7 +98,7 @@ export default function Home() {
           {/* Version / Framework Identifier */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] text-xs text-[var(--fg-muted)] mb-6 shadow-[var(--shadow-sm)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
-            <span className="font-semibold text-[var(--fg)]">Lumi Framework v1.0.0</span>
+            <span className="font-semibold text-[var(--fg)]">Lumi Framework v{version}</span>
             <span className="text-[var(--border-strong)]">•</span>
             <span className="font-mono text-[11px] text-[var(--accent)] font-semibold uppercase tracking-wider">
               Self-Hosted & Modular

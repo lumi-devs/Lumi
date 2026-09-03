@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { ChevronDown, Check, GitBranch, ExternalLink, Sparkles } from "lucide-react";
 import clsx from "clsx";
+import { version } from "../../package.json";
 
 export interface VersionOption {
   label: string;
@@ -14,18 +15,11 @@ export interface VersionOption {
 
 const VERSIONS: VersionOption[] = [
   {
-    label: "v1.0.0 (main)",
-    version: "1.0.0",
+    label: `v${version} (main)`,
+    version: version,
     tag: "latest",
     status: "latest",
     isCurrent: true,
-  },
-  {
-    label: "v1.0.0-prealpha",
-    version: "1.0.0-prealpha",
-    tag: "git:main",
-    status: "pre-release",
-    isCurrent: false,
   },
 ];
 
@@ -54,7 +48,7 @@ export function VersionSelector() {
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--success)] opacity-75"></span>
           <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--success)]"></span>
         </span>
-        <span className="font-mono font-semibold">v1.0.0 (main)</span>
+        <span className="font-mono font-semibold">v{version} (main)</span>
         <ChevronDown className={clsx("h-3 w-3 text-[var(--fg-muted)] transition-transform duration-200", isOpen && "rotate-180")} />
       </button>
 

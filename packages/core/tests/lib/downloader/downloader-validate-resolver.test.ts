@@ -46,7 +46,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
         description: "Valid addon test",
         short: "Valid Addon",
         version: "1.0.0",
-        min_bot_version: "1.0.0",
+        min_bot_version: "0.1.0",
         end_user_data_statement: "Valid privacy statement",
       };
       await fs.writeFile(path.join(addonDir, "info.json"), JSON.stringify(infoJson));
@@ -112,7 +112,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       );
     });
 
-    it("passes version compatibility for min_bot_version <= 1.0.0 (e.g. 0.9.0, 1.0.0, v1.0.0)", async () => {
+    it("passes version compatibility for a min_bot_version at or below the current version", async () => {
       const addonDir = path.join(tmpDir, "version-addon");
       await fs.mkdir(addonDir, { recursive: true });
 
@@ -122,7 +122,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
         description: "Version test",
         short: "Version",
         version: "1.0.0",
-        min_bot_version: "0.9.5",
+        min_bot_version: "0.2.0",
         end_user_data_statement: "Version addon privacy statement",
       };
       await fs.writeFile(path.join(addonDir, "info.json"), JSON.stringify(infoJson));

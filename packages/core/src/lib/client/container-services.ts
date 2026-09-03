@@ -43,7 +43,7 @@ export function installContainerServices(
   client.stores.register(moduleStore);
   client.stores.registerPath(new URL("../permissions/", import.meta.url));
   (client.stores.get("utilities") as Store<any> | undefined)?.registerPath(
-    new URL("../utilities/", import.meta.url),
+    new URL("../utilities/pieces/", import.meta.url),
   );
 
 

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ModerationRepository } from '#lib/prisma/repositories/ModerationRepository.js';
 import { ConfigRepository } from '#lib/prisma/repositories/ConfigRepository.js';
 import { GuildKVRepository } from '#lib/prisma/repositories/GuildKVRepository.js';
+import { ModNoteRepository } from '#lib/prisma/repositories/ModNoteRepository.js';
 import { container } from '@sapphire/framework';
 
 describe('ModerationRepository Tests', () => {
@@ -359,5 +360,37 @@ describe('GuildKVRepository Batch Operations', () => {
 
     expect(count).toBe(2);
     expect(mockPrisma.$transaction).toHaveBeenCalled();
+  });
+});
+
+describe('ModNoteRepository GDPR erasure', () => {
+  let mockPrisma: any;
+  let repo: ModNoteRepository;
+
+  beforeEach(() => {
+    mockPrisma = {
+      modNote: {
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+    repo = new ModNoteRepository(mockPrisma as any, {} as any, {} as any, {} as any);
+  });
+
+  it('deleteUserData removes notes where the user is the subject', async () => {
+    await repo.deleteUserData('u1');
+
+    expect(mockPrisma.modNote.deleteMany).toHaveBeenCalledWith({
+      where: { userId: 'u1' },
+    });
+  });
+
+  it('deleteUserData anonymizes authorId on notes the user wrote about someone else', async () => {
+    await repo.deleteUserData('u1');
+
+    expect(mockPrisma.modNote.updateMany).toHaveBeenCalledWith({
+      where: { authorId: 'u1' },
+      data: { authorId: '0' },
+    });
   });
 });
