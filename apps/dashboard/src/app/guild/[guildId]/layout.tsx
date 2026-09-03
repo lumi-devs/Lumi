@@ -2,6 +2,7 @@ import { requireGuild } from "#/lib/auth-guards";
 import { getGuildDashboard, getGuildPanicState } from "#/lib/dashboard-fetch";
 import { SiteHeader } from "#/components/layout/site-header";
 import { GuildSideNav } from "#/components/layout/guild-side-nav";
+import { Breadcrumbs } from "#/components/layout/breadcrumbs";
 import { InviteNeeded } from "#/components/invite-needed";
 import type { DashboardData } from "#/lib/dashboard-data";
 
@@ -56,6 +57,7 @@ export default async function GuildLayout({
       <div className="flex min-w-0 flex-1 flex-col">
         <SiteHeader session={session} compact panicArmed={panicArmed} />
         <div className="mx-auto w-full min-w-0 max-w-[88rem] flex-1 px-4 pt-5 pb-28 md:px-6">
+          <Breadcrumbs />
           {children}
         </div>
       </div>
