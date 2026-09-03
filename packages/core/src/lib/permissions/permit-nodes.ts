@@ -3,7 +3,7 @@
  * across commands. This list is mirrored and extended with UI-only metadata by
  * `apps/dashboard/src/lib/permit-nodes.ts`.
  */
-export const KNOWN_PERMIT_NODE_GROUPS: { prefix: string; nodes: string[] }[] = [
+export const KnownPermitNodeGroups: { prefix: string; nodes: string[] }[] = [
   { prefix: "admin", nodes: ["admin.*", "admin.config"] },
   {
     prefix: "mod",
@@ -12,13 +12,26 @@ export const KNOWN_PERMIT_NODE_GROUPS: { prefix: string; nodes: string[] }[] = [
       "mod.appeals",
       "mod.lockdown",
       "mod.notes",
-      "mod.softban",
-      "mod.voicemute",
+      "mod.softBan",
+      "mod.voiceMute",
     ],
   },
   { prefix: "owner", nodes: ["owner.*"] },
 ];
 
-export const KNOWN_PERMIT_NODES: string[] = KNOWN_PERMIT_NODE_GROUPS.flatMap(
-  (group) => group.nodes,
+const PermitNodeEmoji: Record<string, string> = {
+  "admin.*": "🔐",
+  "admin.config": "⚙️",
+  "mod.*": "🛡️",
+  "mod.appeals": "📜",
+  "mod.lockdown": "🔒",
+  "mod.notes": "📝",
+  "mod.softBan": "⏳",
+  "mod.voiceMute": "🔇",
+  "owner.*": "👑",
+};
+
+export const KNOWN_PERMIT_NODES_AUTOCOMPLETE: string[] = KnownPermitNodeGroups.flatMap(
+  (group) =>
+    group.nodes.map((node) => `${PermitNodeEmoji[node] || "•"} ${node}`),
 );

@@ -74,8 +74,8 @@ describe("PermitCommand.autocompleteRun", () => {
     });
     await command.autocompleteRun(interaction);
     expect(interaction.respond).toHaveBeenCalledWith([
-      { name: "admin.*", value: "admin.*" },
-      { name: "admin.config", value: "admin.config" },
+      { name: "🔐 admin.*", value: "🔐 admin.*" },
+      { name: "⚙️ admin.config", value: "⚙️ admin.config" },
     ]);
   });
 
@@ -88,12 +88,12 @@ describe("PermitCommand.autocompleteRun", () => {
     await command.autocompleteRun(interaction);
     const [choices] = interaction.respond.mock.calls[0]!;
     expect(choices.map((c: any) => c.value)).toEqual([
-      "mod.*",
-      "mod.appeals",
-      "mod.lockdown",
-      "mod.notes",
-      "mod.softban",
-      "mod.voicemute",
+      "🛡️ mod.*",
+      "📜 mod.appeals",
+      "🔒 mod.lockdown",
+      "📝 mod.notes",
+      "⏳ mod.softBan",
+      "🔇 mod.voiceMute",
     ]);
   });
 

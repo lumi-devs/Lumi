@@ -123,6 +123,7 @@ export function buildAddonsView(
     `${Emojis.REPO} ${t ? t(PanelsKeys.AddonsTitle) : "Add-ons & Updates"}`,
     body,
     {
+      breadcrumbs: ["Hub", "Addons"],
       footer: t
         ? t(PanelsKeys.AddonsFooter)
         : "Bot Owner access is required to add repositories or run updates.",
@@ -185,6 +186,7 @@ export function buildAddonReposView(
         ? t(PanelsKeys.AddonsReposEmpty)
         : "No repositories added yet. Click **Add Repository** to get started.",
     {
+      breadcrumbs: ["Hub", "Addons", "Configure Repositories"],
       sections,
       footer:
         "Update pulls the repo's latest commit for every installed module from it.",
@@ -291,6 +293,7 @@ export function buildAddonInstalledView(
         ? t(PanelsKeys.AddonsInstalledEmpty)
         : "No add-on modules are currently installed.",
     {
+      breadcrumbs: ["Hub", "Addons", "Configure Addons"],
       sections,
       footer: t
         ? t(PanelsKeys.AddonsInstalledFooter)
@@ -385,6 +388,7 @@ export function buildAddonRepoModulesView(
         ? t(PanelsKeys.AddonsModulesEmpty)
         : "No modules found in this repository.",
     {
+      breadcrumbs: ["Hub", "Addons", "Configure Addons", repoName],
       sections,
       footer:
         totalPages > 1

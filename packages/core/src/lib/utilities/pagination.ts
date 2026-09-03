@@ -190,9 +190,11 @@ export async function paginateList(options: PaginateListOptions) {
       );
 
       const footer =
-        totalPages > 1
-          ? `Page ${pageIndex + 1} of ${totalPages} · Total ${items.length} items`
-          : `Total ${items.length} items`;
+        items.length === 0
+          ? "No items"
+          : totalPages > 1
+            ? `Page ${pageIndex + 1} of ${totalPages} · ${items.length} total items`
+            : `${items.length} items total`;
 
       c.addTextDisplayComponents(
         new TextDisplayBuilder().setContent(`-# ${footer}`),

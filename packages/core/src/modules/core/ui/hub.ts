@@ -107,6 +107,7 @@ export function buildHubView(o: HubOverview, t?: LumiT): CardReply {
     `${Emojis.BOT} ${t ? t(PanelsKeys.HubTitle) : "Lumi Control Panel"}`,
     [glanceLines.join("\n"), hints],
     {
+      breadcrumbs: ["Hub"],
       footer: t ? t(PanelsKeys.HubFooter) : "Select a tab below to continue.",
       thumbnailUrl: o.iconUrl ?? undefined,
       actionRows: [hubTabRow("home", t)],
@@ -181,6 +182,7 @@ export function buildSettingsView(
     `${Emojis.GUILD} ${t ? t(PanelsKeys.SettingsTitle) : "Server Settings"}`,
     `${Emojis.GUILD} **${t ? t(PanelsKeys.SettingsLanguage) : "Language"}** - \`${settings.locale}\``,
     {
+      breadcrumbs: ["Hub", "Settings"],
       sections,
       actionRows: [
         row(langSelect),

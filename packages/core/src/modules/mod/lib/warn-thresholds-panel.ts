@@ -152,6 +152,7 @@ export function buildWarnThresholdsPanel(
   );
 
   return makeInfoCard("⚡ Warning Threshold Control Center", bodyText, {
+    breadcrumbs: ["Moderation", "Warn Thresholds"],
     actionRows: buildSafeActionRows([row1, row2, row3]),
   });
 }

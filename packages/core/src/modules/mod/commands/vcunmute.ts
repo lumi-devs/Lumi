@@ -14,7 +14,7 @@ import type { GuildMember } from "discord.js";
   aliases: ["voiceunmute", "vunmute"],
   description: "Unmute a member in server voice channels",
   preconditions: ["GuildOnly"],
-  requiredPermit: "mod.voicemute",
+  requiredPermit: "mod.voiceMute",
   prefixEnabled: true,
   logScope: "vcunmute",
 })

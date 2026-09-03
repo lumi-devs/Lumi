@@ -49,12 +49,12 @@ export class TempVcCommand extends BaseSubcommand {
     const focused = interaction.options.getFocused(true);
     if (focused.name === "name") {
       const presets = [
-        "{}",
-        "Gaming {}",
-        "Chill {}",
-        "{username}'s VC",
-        "Stream {}",
-        "Study {}",
+        "🎙️ {}",
+        "😎 Chill {}",
+        "🎮 Gaming {}",
+        "📚 Study {}",
+        "📺 Stream {}",
+        "👤 {username}'s VC",
       ];
       return respondWithChoices(
         interaction,

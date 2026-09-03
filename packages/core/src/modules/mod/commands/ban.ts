@@ -87,14 +87,14 @@ export class BanCommand extends ModerationSubcommand {
     const focused = interaction.options.getFocused(true);
     if (focused.name === "reason") {
       const presets = [
-        "Spam",
-        "Scam links",
-        "Raiding",
-        "Toxicity/Harassment",
-        "NSFW content",
-        "Ban evasion",
-        "Compromised account",
-        "Self-botting",
+        "⚠️ Ban evasion",
+        "🤖 Compromised account",
+        "🚫 NSFW content",
+        "🎯 Raiding",
+        "🔗 Scam links",
+        "⛔ Self-botting",
+        "📧 Spam",
+        "💬 Toxicity/Harassment",
       ];
       return respondWithChoices(
         interaction,
