@@ -62,7 +62,7 @@ const VcMuteRemove: Flow = {
   aliases: ["voicemute", "vmute"],
   description: "Voice mute a member in server voice channels",
   preconditions: ["GuildOnly"],
-  requiredPermit: "mod.voicemute",
+  requiredPermit: "mod.voiceMute",
   prefixEnabled: true,
   subcommands: [
     { name: "add", run: "add", default: true },

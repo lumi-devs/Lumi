@@ -16,7 +16,7 @@ import type { User } from "discord.js";
   description:
     "Softban a member (ban and immediately unban to clear recent messages)",
   preconditions: ["GuildOnly"],
-  requiredPermit: "mod.softban",
+  requiredPermit: "mod.softBan",
   prefixEnabled: true,
   logScope: "softban",
 })

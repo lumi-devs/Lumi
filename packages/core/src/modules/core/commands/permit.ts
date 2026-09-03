@@ -6,7 +6,7 @@ import { BaseSubcommand, sendReply, type CommandContext } from "#lib/commands.js
 import { getUtility } from "#lib/module-system/Utility.js";
 import { logError } from "#lib/utilities/errors.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { KNOWN_PERMIT_NODES } from "#lib/permissions/permit-nodes.js";
+import { KNOWN_PERMIT_NODES_AUTOCOMPLETE } from "#lib/permissions/permit-nodes.js";
 import {
   filterAutocompleteChoices,
   respondWithChoices,
@@ -167,7 +167,7 @@ export class PermitCommand extends BaseSubcommand {
       }
       return respondWithChoices(
         interaction,
-        filterAutocompleteChoices(KNOWN_PERMIT_NODES, focused.value),
+        filterAutocompleteChoices(KNOWN_PERMIT_NODES_AUTOCOMPLETE, focused.value),
       );
     }
 
