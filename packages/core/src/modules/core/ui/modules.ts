@@ -106,6 +106,7 @@ export function buildFeatureListView(
         ? t(PanelsKeys.ModulesEmpty)
         : "*No features registered.*",
     {
+      breadcrumbs: ["Hub", "Modules"],
       sections,
       footer:
         totalPages > 1
@@ -306,7 +307,7 @@ export function buildFeatureDetailView(
       guildEnabled ? resolveCardColor("primary") : resolveCardColor("warning"),
       `${meta.emoji} ${meta.displayName}`,
       body,
-      { sections, actionRows: buildSafeActionRows(rows) },
+      { breadcrumbs: ["Hub", "Modules", meta.displayName], sections, actionRows: buildSafeActionRows(rows) },
     ),
   );
 }
@@ -429,7 +430,7 @@ export function buildFieldEditView(
         `**${t ? t(PanelsKeys.FieldEditCurrent) : "Current value"}:** ${formatFieldValue(field, config[field.key])}`,
         `-# ${t ? t(PanelsKeys.FieldEditHint) : "Pick a new value below, or clear the selection to unset."}`,
       ],
-      { actionRows: buildSafeActionRows(rows) },
+      { breadcrumbs: ["Hub", "Modules", meta.displayName, field.label], actionRows: buildSafeActionRows(rows) },
     ),
   );
 }

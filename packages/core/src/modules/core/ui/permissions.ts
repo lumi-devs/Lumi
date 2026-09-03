@@ -122,7 +122,7 @@ export function buildPermissionsView(
         : t
           ? t(PanelsKeys.PermsEmpty)
           : "*No permits are assigned yet - every command uses its default access.*",
-      { sections, footer, actionRows: rows, separatorAboveActionRows: true },
+      { breadcrumbs: ["Hub", "Permissions"], sections, footer, actionRows: rows, separatorAboveActionRows: true },
     ),
   );
 }
@@ -132,6 +132,8 @@ export function buildPermitPickerView(
   permits: { id: number; name: string; builtin: boolean }[],
   t?: LumiT,
 ): CardReply {
+  const kindLabel = kind === "custom" ? "Custom" : "Enforced";
+
   if (permits.length === 0) {
     return makeCard(
       resolveCardColor("primary"),
@@ -139,7 +141,7 @@ export function buildPermitPickerView(
       t
         ? t(PanelsKeys.PermsNoPermits)
         : "No permits of this kind exist yet. Create one with `/permit create` or from the dashboard.",
-      { actionRows: [backToPermissionsRow(t)] },
+      { breadcrumbs: ["Hub", "Permissions", `Pick ${kindLabel} Permit`], actionRows: [backToPermissionsRow(t)] },
     );
   }
 
@@ -159,7 +161,7 @@ export function buildPermitPickerView(
     t
       ? t(PanelsKeys.PermsPickPermit)
       : "Pick which permit to assign.",
-    { actionRows: [row(select), backToPermissionsRow(t)] },
+    { breadcrumbs: ["Hub", "Permissions", `Pick ${kindLabel} Permit`], actionRows: [row(select), backToPermissionsRow(t)] },
   );
 }
 
@@ -188,6 +190,6 @@ export function buildPermitAssignTargetView(
       : kind === "enforced"
         ? "Pick the member to assign this permit to."
         : "Pick the role to assign this permit to.",
-    { actionRows: [row(select), backToPermissionsRow(t)] },
+    { breadcrumbs: ["Hub", "Permissions", permitName, "Pick Target"], actionRows: [row(select), backToPermissionsRow(t)] },
   );
 }
