@@ -123,12 +123,6 @@ export abstract class Module extends Piece {
 
   public override enabled = true;
 
-  /**
-   * Constructs a new Module instance.
-   *
-   * @param context - The loader context provided by Sapphire.
-   * @param options - Additional options to configure the module.
-   */
   public constructor(
     context: Piece.LoaderContext,
     options: ModuleOptions = {},
@@ -149,9 +143,6 @@ export abstract class Module extends Piece {
   /**
    * Hook called when a user requests their data to be deleted under GDPR/CCPA.
    * Modules that store user-specific data must override this method to scrub records.
-   *
-   * @param _userId - The ID of the user requesting deletion.
-   * @param _requester - The entity requesting the deletion (user or staff).
    */
   public deleteUserData(
     _userId: string,
@@ -165,8 +156,6 @@ export abstract class Module extends Piece {
    * Modules that store user-specific data must override this method and
    * return it in a plain, JSON-serializable shape. Returning `null` (the
    * default) omits this module from the combined export.
-   *
-   * @param _userId - The ID of the user requesting export.
    */
   public exportUserData(
     _userId: string,

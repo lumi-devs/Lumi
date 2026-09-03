@@ -44,13 +44,11 @@ export function SpotlightCard({
       onMouseLeave={handleMouseLeave}
       className={`card-premium group relative rounded-3xl bg-[var(--surface)] transition-all duration-300 ${className}`}
     >
-      {/* Dynamic Cursor Spotlight Layer */}
       <motion.div
         className="pointer-events-none absolute -inset-px rounded-3xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         style={{ background: spotlightBg }}
       />
-      
-      {/* Content */}
+
       <div className="relative z-10 h-full flex flex-col justify-between">{children}</div>
     </div>
   );

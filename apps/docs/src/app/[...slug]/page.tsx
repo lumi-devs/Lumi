@@ -20,7 +20,6 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
     notFound();
   }
 
-  // Calculate estimated reading time
   const wordCount = doc.content ? doc.content.split(/\s+/).length : 500;
   const readTimeMin = Math.max(1, Math.ceil(wordCount / 220));
 
@@ -32,7 +31,6 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
       <Sidebar />
       <main className="relative py-6 lg:gap-12 lg:py-8 xl:grid xl:grid-cols-[minmax(0,1fr)_260px] min-w-0 w-full flex-1">
         <div className="mx-auto w-full min-w-0 animate-in fade-in slide-in-from-bottom-3 duration-300">
-          {/* Breadcrumb Trail & Reading Time Metadata */}
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--fg-muted)] pb-4 border-b border-[var(--border)]">
             <div className="flex items-center space-x-1.5 font-mono">
               <Link href="/" className="hover:text-white transition-colors">
@@ -59,7 +57,6 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
             </div>
           </div>
 
-          {/* Doc Heading Banner */}
           <div className="space-y-3 pb-6">
             <h1 className="scroll-m-20 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
               {doc.meta.title}
@@ -69,13 +66,11 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
             )}
           </div>
 
-          {/* Rendered HTML Content */}
           <div
             className="doc-content pb-12 pt-2 min-w-0 w-full"
             dangerouslySetInnerHTML={{ __html: doc.html }}
           />
 
-          {/* Bottom Previous / Next Navigation Pager */}
           <hr className="border-[var(--border)] my-8" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-12">
             {doc.prev ? (

@@ -47,12 +47,7 @@ export type CommandReplyTarget =
   | MessageContextMenuCommandInteraction
   | UserContextMenuCommandInteraction;
 
-/**
- * Sends a structured reply (or follow-up) to a given command interaction.
- *
- * @param interaction - The interaction to reply to.
- * @param payload - The message payload.
- */
+/** Sends a structured reply (or follow-up) to a given command interaction. */
 export async function sendReply(
   interaction: CommandReplyTarget,
   payload: InteractionReplyOptions,

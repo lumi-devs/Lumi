@@ -95,8 +95,7 @@ export const getDocBySlug = async (slugArray: string[]): Promise<DocContent | nu
   }
 
   const { data, content } = matter(fileContents);
-  
-  // Extract TOC
+
   const toc: TocHeading[] = [];
   const lines = content.split("\n");
   for (const line of lines) {
@@ -109,7 +108,6 @@ export const getDocBySlug = async (slugArray: string[]): Promise<DocContent | nu
     }
   }
 
-  // Parse HTML
   const renderer = new Renderer();
   renderer.heading = ({ text, depth }) => {
     let plainText = text;
@@ -126,8 +124,7 @@ export const getDocBySlug = async (slugArray: string[]): Promise<DocContent | nu
   renderer.code = ({ text, lang }) => {
     const language = (lang || "text").toLowerCase().trim();
     let highlighted = "";
-    
-    // Normalizing aliases
+
     let prismLang = language;
     if (prismLang === "ts" || prismLang === "tsx") prismLang = "typescript";
     else if (prismLang === "js" || prismLang === "jsx") prismLang = "javascript";

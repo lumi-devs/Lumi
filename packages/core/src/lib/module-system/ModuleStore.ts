@@ -72,11 +72,7 @@ export class ModuleStore extends Store<Module> {
     super(Module, { name: "modules" });
   }
 
-  /**
-   * Adds a new root URL to the store for module discovery.
-   *
-   * @param root - The URL of the directory to search for modules.
-   */
+  /** Adds a new root URL to the store for module discovery. */
   public addRoot(root: URL) {
     this.#roots.push(root);
   }
@@ -84,7 +80,6 @@ export class ModuleStore extends Store<Module> {
   /**
    * Determines whether a module was discovered outside the core modules root (i.e. it's an addon).
    *
-   * @param record - The module record to check.
    * @returns `true` if the module's directory is not nested under the first registered root.
    */
   public isAddonModule(record: ModuleRecord): boolean {
@@ -190,11 +185,7 @@ export class ModuleStore extends Store<Module> {
     this.#discovered = true;
   }
 
-  /**
-   * Reloads a specific module dynamically by unloading and re-discovering it.
-   *
-   * @param name - The name of the module to reload.
-   */
+  /** Reloads a specific module dynamically by unloading and re-discovering it. */
   public async reload(name: string) {
     return withSerializedWork(`module-store:enable:${name}`, async () => {
       try {
@@ -307,12 +298,7 @@ export class ModuleStore extends Store<Module> {
     return Array.from(this.#records.values());
   }
 
-  /**
-   * Retrieves a specific module record by name.
-   *
-   * @param name - The name of the module to retrieve.
-   * @returns The {@link ModuleRecord} if found, otherwise `undefined`.
-   */
+  /** Retrieves a specific module record by name, or `undefined` if not found. */
   public getRecord(name: string) {
     return this.#records.get(name);
   }
@@ -374,11 +360,7 @@ export class ModuleStore extends Store<Module> {
     return super.construct(Ctor, record ? { ...data, name: record.name } : data);
   }
 
-  /**
-   * Loads a module and sequentially loads all of its child pieces across all registered Sapphire stores.
-   *
-   * @param name - The name of the module to load.
-   */
+  /** Loads a module and sequentially loads all of its child pieces across all registered Sapphire stores. */
   public async loadModule(name: string) {
     const record = this.#records.get(name);
     if (!record) throw new Error(`Module ${name} not found`);
@@ -434,7 +416,6 @@ export class ModuleStore extends Store<Module> {
   /**
    * Retrieves the configuration schema for a specific module, extracting it from the module's meta export.
    *
-   * @param name - The name of the module.
    * @returns The shape validation schema, or `undefined` if none is defined.
    */
   public async getConfigSchema(

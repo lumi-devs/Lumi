@@ -37,10 +37,7 @@ export abstract class BaseInteractionHandler extends InteractionHandler {
     }
   }
 
-  /**
-   * Safely acknowledges the interaction.
-   * @param interaction The interaction to acknowledge.
-   */
+  /** Safely acknowledges the interaction. */
   protected async acknowledge(interaction: AnyInteraction) {
     if (
       interaction.isMessageComponent() &&

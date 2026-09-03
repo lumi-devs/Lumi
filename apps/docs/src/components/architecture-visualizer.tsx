@@ -193,7 +193,6 @@ export function ArchitectureVisualizer() {
         </Link>
       </div>
 
-      {/* Interactive Node Flow Diagram */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 my-6">
         {NODES.map((node) => {
           const isSelected = node.id === selectedId;
@@ -217,7 +216,6 @@ export function ArchitectureVisualizer() {
         })}
       </div>
 
-      {/* Selected Node Deep-Dive Inspector */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 rounded-xl border border-[var(--border-strong)] bg-[var(--bg)] p-5">
         <div className="lg:col-span-6 flex flex-col justify-between space-y-4">
           <div>

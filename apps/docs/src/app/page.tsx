@@ -92,10 +92,8 @@ export default function Home() {
 
   return (
     <div className="relative isolate min-h-[calc(100vh-4rem)]">
-      {/* Hero Section */}
       <div className="hero-atmosphere mx-auto max-w-[1700px] px-6 lg:px-10 pb-16 pt-12 lg:flex lg:py-20 items-center justify-between gap-12">
         <div className="rise mx-auto max-w-3xl lg:mx-0 lg:max-w-2xl lg:flex-shrink-0">
-          {/* Version / Framework Identifier */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] text-xs text-[var(--fg-muted)] mb-6 shadow-[var(--shadow-sm)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
             <span className="font-semibold text-[var(--fg)]">Lumi Framework v{version}</span>
@@ -129,7 +127,6 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Quick Install Interactive Terminal */}
           <div className="mt-10 rounded-xl border border-[var(--border-strong)] bg-[var(--bg)] shadow-[var(--shadow-lg)] overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--surface)] border-b border-[var(--border)] text-xs">
               <div className="flex items-center gap-1.5">
@@ -182,7 +179,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Live Interactive Embed Simulator Showcase */}
         <div className="mx-auto mt-12 flex max-w-2xl lg:mx-0 lg:mt-0 lg:max-w-none lg:flex-none xl:w-[620px]">
           <div className="w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] p-6 shadow-2xl">
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-[var(--border)] text-xs text-[var(--fg-muted)]">
@@ -199,12 +195,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Interactive System Topology Visualizer Section */}
       <div className="mx-auto max-w-[1700px] px-6 lg:px-10 py-12">
         <ArchitectureVisualizer />
       </div>
 
-      {/* Persona-Grouped Documentation Tracks */}
       <div className="mx-auto max-w-[1700px] px-6 lg:px-10 pb-28 pt-8">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)] text-xs font-mono text-[var(--accent)] font-semibold mb-3">
@@ -220,7 +214,6 @@ export default function Home() {
         </div>
 
         <div ref={tracksRef} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Track 1: Self-Hosting & Operations */}
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 flex flex-col justify-between shadow-sm">
             <div>
               <div className="flex items-center gap-3 mb-4">
@@ -271,7 +264,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Track 2: Addon Development */}
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 flex flex-col justify-between shadow-sm">
             <div>
               <div className="flex items-center gap-3 mb-4">
@@ -322,7 +314,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Track 3: Administration & Governance */}
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 flex flex-col justify-between shadow-sm">
             <div>
               <div className="flex items-center gap-3 mb-4">

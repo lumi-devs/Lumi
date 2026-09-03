@@ -24,7 +24,6 @@ export function DiscordCardPreview() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Interactive Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
         <button
           onClick={() => setActiveType("success")}
@@ -92,7 +91,6 @@ export function DiscordCardPreview() {
         </button>
       </div>
 
-      {/* Discord Message Shell */}
       <div className="bg-[#313338] text-[#DBDEE1] rounded-2xl p-5 font-sans text-sm w-full border border-[#1E1F22] shadow-2xl transition-all">
         <div className="flex gap-3.5">
           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#4C6EF5] to-[#12B886] flex items-center justify-center shrink-0 shadow-md">
@@ -111,7 +109,6 @@ export function DiscordCardPreview() {
               <span className="text-[#949BA4] text-xs">Today at 12:42 PM</span>
             </div>
 
-            {/* Render Selected Card Type */}
             {activeType === "success" && (
               <div className="bg-[#2B2D31] rounded-lg flex flex-col border-l-4 border-[#12B886] p-4 my-2 transition-all">
                 <div className="flex items-center gap-2 font-semibold text-white mb-1.5">
@@ -200,7 +197,6 @@ export function DiscordCardPreview() {
               </div>
             )}
 
-            {/* Interactive Discord Reaction Bar */}
             <div className="flex items-center gap-2 mt-3 pt-2 border-t border-[#3F4147]">
               {Object.keys(reactions).map((emoji) => (
                 <button
