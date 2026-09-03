@@ -1,5 +1,49 @@
 # @lumi/worker
 
+## 3.3.0
+
+### Minor Changes
+
+- 3436080: **Enterprise & Mega-Fleet Scaling (100k-1M+ Guilds, 50-500+ Shards)**:
+  - Added Discord REST proxy support (`nirn-proxy`) with path normalization, infinite local request rate limit delegation, configurable request timeouts, and retry controls.
+  - Added Redis Cluster multi-master support with replica read scaling (`REDIS_CLUSTER_SCALE_READS`), dynamic slot refresh timeouts, and retry strategies.
+  - Added PostgreSQL read-replica connection pool aliases (`DATABASE_READ_URL`, `POSTGRES_REPLICA_URL`) and `application_name` tagging.
+  - Added environment-tunable cache limits and sweeper interval controls for high shard density.
+  - Added production multi-stage Next.js Dockerfile (`Dockerfile.dashboard`) and multi-target GitHub Actions container publishing to GHCR.
+  - Added Kubernetes deployment manifests for the dashboard and updated production statefulset configurations.
+
+### Patch Changes
+
+- 7f53af7: Hardened GitHub Actions CI/CD workflows and container build pipeline:
+  - Add safe build-time environment variable fallbacks in `@lumi/dashboard` for Next.js static page collection.
+  - Optimized multi-stage `Dockerfile` and `Dockerfile.dashboard` for lightweight Alpine container execution.
+  - Added comprehensive Turborepo build verification job to `ci.yml`.
+  - Standardized PR, Push, and Merge Queue (`merge_group`) triggers across all workflows.
+- 14d5067: Export `@lumi/core/env` subpath for lightweight runtime bootstrap and replace direct `process.env` bypasses across core and worker with unified env accessors.
+- 9959510: Optimize GitHub Actions CI/CD workflows and automated checks:
+  - Implement granular paths filtering in `ci.yml` and `docker.yml` to smart-skip jobs on markdown/docs/unrelated changes.
+  - Add `ci-status` aggregator job in `ci.yml` (`if: always()`) for robust GitHub branch protection evaluation without false failures on skipped matrix jobs.
+  - Enable Turborepo and Bun local caching in GitHub Actions runners across all workflows.
+  - Streamline `changeset-check.yml` by eliminating redundant Bun setup and dependency installations.
+  - Set `NEXT_TELEMETRY_DISABLED=1` and `SKIP_ENV_VALIDATION=1` in CI environment.
+- Updated dependencies [26b7418]
+- Updated dependencies [64a07d1]
+- Updated dependencies [7f53af7]
+- Updated dependencies [5f4b651]
+- Updated dependencies [026126f]
+- Updated dependencies [6434687]
+- Updated dependencies [1ad2046]
+- Updated dependencies [14d5067]
+- Updated dependencies [3436080]
+- Updated dependencies [e99dc73]
+- Updated dependencies [9959510]
+- Updated dependencies [98ac5b3]
+- Updated dependencies [624ed17]
+- Updated dependencies [624ed17]
+- Updated dependencies [ab7db3e]
+  - @lumi/core@3.3.0
+  - @lumi/observability@3.3.0
+
 ## 3.2.0
 
 ### Patch Changes

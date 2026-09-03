@@ -1,5 +1,73 @@
 # @lumi/core
 
+## 3.3.0
+
+### Minor Changes
+
+- 26b7418: **Module System & Release Versioning**: Built-in modules now dynamically inherit the bot release version (`CoreVersion` from `packages/core/package.json`), matching standard modular bot architecture. Removed manual static module version strings in favor of automated manifest synchronization during Changesets releases via `bun run version:sync`.
+- 3436080: **Enterprise & Mega-Fleet Scaling (100k-1M+ Guilds, 50-500+ Shards)**:
+  - Added Discord REST proxy support (`nirn-proxy`) with path normalization, infinite local request rate limit delegation, configurable request timeouts, and retry controls.
+  - Added Redis Cluster multi-master support with replica read scaling (`REDIS_CLUSTER_SCALE_READS`), dynamic slot refresh timeouts, and retry strategies.
+  - Added PostgreSQL read-replica connection pool aliases (`DATABASE_READ_URL`, `POSTGRES_REPLICA_URL`) and `application_name` tagging.
+  - Added environment-tunable cache limits and sweeper interval controls for high shard density.
+  - Added production multi-stage Next.js Dockerfile (`Dockerfile.dashboard`) and multi-target GitHub Actions container publishing to GHCR.
+  - Added Kubernetes deployment manifests for the dashboard and updated production statefulset configurations.
+- e99dc73: **Brand & Theme System**:
+  - Established the single-source-of-truth "Midnight Sapphire" brand system in `BrandColors` and `BrandTokens` (`#4C6EF5` primary sapphire accent, with emerald `#12B886` success, amber `#F59F00` warning, rose `#FA5252` error).
+  - Aligned bot card utilities (`makeInfoCard`, `makeSuccessCard`, etc.) and `apps/dashboard/src/app/globals.css` dark and light mode tokens with the Midnight Sapphire system.
+  - Added `ctx.brandColor()` helper to `CommandContext` for resolving per-guild theme colors.
+  
+  **GDPR & Security**:
+  - Implemented `data-retention-sweep` daily scheduled task in core module for automated retention cleanup of stale audit ledger records and expired moderation cases.
+  - Enforced mandatory `end_user_data_statement` on addon manifests (`info.json`) with clear validator diagnostics.
+  - Upgraded dashboard rate limiting to `RateLimiterRedis` with graceful in-memory fallback for horizontal replica coordination.
+  - Added client-side GDPR cookie consent banner on the dashboard.
+  
+  **Next.js 16 Documentation Site**:
+  - Migrated `apps/docs` from Astro to Next.js 16 (App Router) + React 19 + Tailwind CSS v4 + Motion (`motion/react`).
+  - Features animated landing hero, 4-quadrant feature Bento Grid, live Discord Card Preview simulator, macOS traffic-light code blocks, sticky table-of-contents scrollspy, command palette modal, and static export build support for GitHub Pages / CDN deployments.
+- 624ed17: **Addon SDK**: `acquireRedisLock` now returns `{ release, token }` instead of the release
+  function directly - `token` is a fencing token addons can pass to the new `verifyRedisLock`
+  to detect a stale lock holder before a guarded write. Update any addon calling
+  `acquireRedisLock` from `const release = await acquireRedisLock(...)` to
+  `const { release } = await acquireRedisLock(...)`.
+- 624ed17: **Addon SDK & Core Permissions**: Removed legacy `PermissionLevel` enum and `resolvePermissionLevel`.
+  Authorization in Lumi is fully unified around granular permit nodes (`hasRequiredPermit(target, permitNode)`, `PermitResolver`, and `RequirePermitPrecondition`), respecting dynamic role positions, channel overrides, polarities, and anti-nuke quarantine.
+- ab7db3e: **Security**: Added an Advertising Account join-gate filter that flags members whose display name is itself a link or invite (`filter_advertising_enabled`/`filter_advertising_action`), closing a gap identified against Wick's Join Gate.
+  
+  **Addon SDK**: Added `ConfigRepository.mutateModuleConfig` and `GuildKVRepository.mutateModuleData` - Redis-lock-guarded atomic read-modify-write for one config/KV row, so addon and module code doing get-then-set on a list no longer races a concurrent writer.
+  
+  **Permits**: Added `/permit export` and `/permit import` for bulk backup/copy of custom permits and their role assignments as JSON.
+  
+  **Docs**: Documented the previously-undocumented backup/restore ("imaging") system in `docs/modules.md`, the new Join Gate filter, and the deliberate decision to keep the dashboard RPC-split so the bot runs standalone without it.
+  
+  Also removed two stale worktrees left over from a prior session - their uncommitted diff would have reintroduced three bugs already fixed on `main` (panic-mode serialization/re-show guard, verification-timeout role check, backup restore position tracking).
+
+### Patch Changes
+
+- 64a07d1: **Bug Fixes**: Fixed anti-nuke vanity-URL audit attribution to correlate the audit-log entry to the actual `vanity_url_code` change instead of accepting any recent GuildUpdate entry (B-BUG-1). Fixed guild restore to map recreated category ids so child channels keep their parent, and to restore role/channel `position` (B-BUG-2, B-BUG-3). Isolated per-case errors in the warn-decay sweep so one failing case can't starve the rest of the run (D-BUG-1). Fixed dashboard auth to stop clobbering `isBotOwner` right after it was correctly re-confirmed by the whoami RPC (A-BUG-1). Made the audit-log flush fall back to per-row inserts on batch failure instead of stalling forever behind one bad entry (C-BUG-1). Redis lock renewal failures are now tracked and logged instead of silently swallowed (C-BUG-2). Entity cache now clears optional fields on transition to empty instead of leaving stale data cached for 24h (C-BUG-3).
+- 7f53af7: Hardened GitHub Actions CI/CD workflows and container build pipeline:
+  - Add safe build-time environment variable fallbacks in `@lumi/dashboard` for Next.js static page collection.
+  - Optimized multi-stage `Dockerfile` and `Dockerfile.dashboard` for lightweight Alpine container execution.
+  - Added comprehensive Turborepo build verification job to `ci.yml`.
+  - Standardized PR, Push, and Merge Queue (`merge_group`) triggers across all workflows.
+- 5f4b651: Unified audit logging in `ConfigRepository.setModuleConfig` and `setModuleConfigsMany` by accepting optional `actorId`. When provided, changes are automatically recorded in `db.configHistory.logConfigChange`, and `ConfigUtility` now delegates audit logging directly to the repository layer.
+- 026126f: Deduplicated guild config validation and cache-invalidation logic. Added `validateModuleConfigValue` to the module config-schema helpers and switched `ConfigUtility.setConfig` to use it instead of an inline duplicate of the same `schema.shape[key].parse()` check. Extracted the repeated per-module Redis invalidation key pair out of `ConfigRepository`'s four mutating methods into a single private helper. No behavior changes.
+- 6434687: Fixed pre-existing test infrastructure debt: moderation and AFK test suites never mocked `container.invalidation` (or asserted the removed `container.redis.del` fallback), left over from the phase 3 & 3.5 module restructuring that made `container.invalidation.invalidate()` the sole cache-invalidation path. No production behavior changes.
+- 1ad2046: Added `defineEnv` and `envField` parser builders (`string`, `integer`, `boolean`) to `packages/core/src/lib/env.ts`. This aggregates all missing and invalid environment variable errors into a single combined startup validation error, ensuring misconfigured deployments fail fast at bootstrap rather than failing mid-request.
+- 14d5067: Export `@lumi/core/env` subpath for lightweight runtime bootstrap and replace direct `process.env` bypasses across core and worker with unified env accessors.
+- 9959510: Optimize GitHub Actions CI/CD workflows and automated checks:
+  - Implement granular paths filtering in `ci.yml` and `docker.yml` to smart-skip jobs on markdown/docs/unrelated changes.
+  - Add `ci-status` aggregator job in `ci.yml` (`if: always()`) for robust GitHub branch protection evaluation without false failures on skipped matrix jobs.
+  - Enable Turborepo and Bun local caching in GitHub Actions runners across all workflows.
+  - Streamline `changeset-check.yml` by eliminating redundant Bun setup and dependency installations.
+  - Set `NEXT_TELEMETRY_DISABLED=1` and `SKIP_ENV_VALIDATION=1` in CI environment.
+- 98ac5b3: Add Phase 5 chaos fault injection test suite for high-availability verification.
+- @lumi/contracts@3.3.0
+  - @lumi/event-bus@3.3.0
+  - @lumi/observability@3.3.0
+  - @lumi/sharding@3.3.0
+
 ## 3.2.0
 
 ### Patch Changes

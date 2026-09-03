@@ -4,7 +4,7 @@
   "emoji": "🚫",
   "description": "Automod rule engine: filtered terms (Aho-Corasick), regex rules, invite/link blocking with allowlists, mention-spam and caps limits, with configurable punishment and logging.",
   "short": "Automod rule engine with regex patterns, invite blocking, and heat scoring.",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "disableable": true,
   "dependencies": [],
   "conflicts": [],

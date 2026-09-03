@@ -4,7 +4,7 @@
   "emoji": "🛡️",
   "description": "Server protection: anti-nuke detection with automatic quarantine.",
   "short": "Server protection: anti-nuke thresholds, raid detection, and verification.",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "disableable": true,
   "dependencies": [],
   "conflicts": [],

@@ -4,7 +4,7 @@
   "emoji": "⚙️",
   "description": "General utility commands.",
   "short": "Helpful server tools, avatar lookups, and user info commands.",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "disableable": true,
   "dependencies": [],
   "conflicts": [],

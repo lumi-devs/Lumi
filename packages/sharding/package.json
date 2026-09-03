@@ -1,6 +1,6 @@
 {
   "name": "@lumi/sharding",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "license": "GPL-3.0-only",
   "description": "Cross-process shard telemetry: publishes per-shard health to Redis and assembles the cluster-wide fleet view for the dashboard.",
   "type": "module",

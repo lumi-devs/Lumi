@@ -5,7 +5,7 @@
   "description": "Staff moderation: warn, mute, kick, ban - with case logging.",
   "short": "Staff moderation tools: warn, mute, kick, ban, and case tracking.",
   "endUserDataStatement": "Stores user IDs in moderation case records, warnings, and active punishments. Target user IDs are anonymized upon GDPR erasure while preserving audit integrity.",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "disableable": true,
   "dependencies": [],
   "conflicts": [],

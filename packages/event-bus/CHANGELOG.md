@@ -1,5 +1,7 @@
 # @lumi/event-bus
 
+## 3.3.0
+
 ## 3.2.0
 
 ### Patch Changes
