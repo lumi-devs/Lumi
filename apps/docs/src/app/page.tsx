@@ -1,8 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
+import { motion, useMotionValue, useReducedMotion, useSpring } from "motion/react";
 import { DiscordCardPreview } from "@/components/discord-card-preview";
 import { ArchitectureVisualizer } from "@/components/architecture-visualizer";
+import { useStaggerIn, SPRING_SOFT } from "@/lib/animate";
 import {
   Copy,
   Check,
@@ -15,9 +17,65 @@ import {
   Lock,
 } from "lucide-react";
 
+const MotionLink = motion(Link);
+
+/** Primary CTA that nudges toward the cursor, capped to a small radius. */
+function MagneticCta({
+  href,
+  className,
+  children,
+}: {
+  href: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLAnchorElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const springX = useSpring(x, SPRING_SOFT);
+  const springY = useSpring(y, SPRING_SOFT);
+
+  if (reduce) {
+    return (
+      <Link href={href} className={className}>
+        {children}
+      </Link>
+    );
+  }
+
+  function onMouseMove(e: React.MouseEvent<HTMLAnchorElement>) {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    const relX = e.clientX - (rect.left + rect.width / 2);
+    const relY = e.clientY - (rect.top + rect.height / 2);
+    x.set(Math.max(-8, Math.min(8, relX * 0.3)));
+    y.set(Math.max(-8, Math.min(8, relY * 0.3)));
+  }
+
+  function onMouseLeave() {
+    x.set(0);
+    y.set(0);
+  }
+
+  return (
+    <MotionLink
+      ref={ref}
+      href={href}
+      className={className}
+      style={{ x: springX, y: springY }}
+      onMouseMove={onMouseMove}
+      onMouseLeave={onMouseLeave}
+    >
+      {children}
+    </MotionLink>
+  );
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"docker" | "setup" | "addon">("docker");
   const [copied, setCopied] = useState(false);
+  const tracksRef = useStaggerIn<HTMLDivElement>(":scope > div", { delay: 90 });
 
   const snippets = {
     docker: "# 1. Download production docker-compose and sample env\ncurl -fsSL https://raw.githubusercontent.com/lumi-devs/Lumi/main/docker-compose.yml -o docker-compose.yml\ncurl -fsSL https://raw.githubusercontent.com/lumi-devs/Lumi/main/.env.example -o .env\n\n# 2. Configure BOT_TOKEN & CLIENT_ID in .env, then boot the stack:\ndocker compose up -d",
@@ -34,19 +92,19 @@ export default function Home() {
   return (
     <div className="relative isolate min-h-[calc(100vh-4rem)]">
       {/* Hero Section */}
-      <div className="mx-auto max-w-[1700px] px-6 lg:px-10 pb-16 pt-12 lg:flex lg:py-20 items-center justify-between gap-12">
-        <div className="mx-auto max-w-3xl lg:mx-0 lg:max-w-2xl lg:flex-shrink-0">
+      <div className="hero-atmosphere mx-auto max-w-[1700px] px-6 lg:px-10 pb-16 pt-12 lg:flex lg:py-20 items-center justify-between gap-12">
+        <div className="rise mx-auto max-w-3xl lg:mx-0 lg:max-w-2xl lg:flex-shrink-0">
           {/* Version / Framework Identifier */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] text-xs text-[var(--fg-muted)] mb-6 shadow-sm">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#12B886]" />
-            <span className="font-semibold text-white">Lumi Framework v1.0.0</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] text-xs text-[var(--fg-muted)] mb-6 shadow-[var(--shadow-sm)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
+            <span className="font-semibold text-[var(--fg)]">Lumi Framework v1.0.0</span>
             <span className="text-[var(--border-strong)]">•</span>
             <span className="font-mono text-[11px] text-[var(--accent)] font-semibold uppercase tracking-wider">
               Self-Hosted & Modular
             </span>
           </div>
 
-          <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-6xl lg:text-7xl leading-[1.08]">
+          <h1 className="text-4xl font-extrabold tracking-tight text-[var(--fg)] sm:text-6xl lg:text-7xl leading-[1.08]">
             The Modular Discord Bot Framework for Bun & Sapphire.
           </h1>
 
@@ -55,23 +113,23 @@ export default function Home() {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
-            <Link
+            <MagneticCta
               href="/guides/self-hosting"
-              className="group relative inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-[#4C6EF5]/20 hover:bg-[var(--accent-hover)] transition-all cursor-pointer"
+              className="group relative inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-[var(--fg-on-accent)] shadow-[var(--shadow-accent)] hover:bg-[var(--accent-hover)] transition-colors cursor-pointer"
             >
               <span>Deploy with Docker</span>
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Link>
+            </MagneticCta>
             <Link
               href="/architecture"
-              className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-6 py-3.5 text-sm font-semibold text-white hover:bg-[var(--surface-hover)] hover:border-[var(--accent)] transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-6 py-3.5 text-sm font-semibold text-[var(--fg)] hover:bg-[var(--surface-hover)] hover:border-[var(--accent)] transition-all cursor-pointer"
             >
               <span>System Topology</span>
             </Link>
           </div>
 
           {/* Quick Install Interactive Terminal */}
-          <div className="mt-10 rounded-xl border border-[var(--border-strong)] bg-[#08090D] shadow-xl overflow-hidden">
+          <div className="mt-10 rounded-xl border border-[var(--border-strong)] bg-[var(--bg)] shadow-[var(--shadow-lg)] overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--surface)] border-b border-[var(--border)] text-xs">
               <div className="flex items-center gap-1.5">
                 <Terminal className="h-3.5 w-3.5 text-[var(--accent)]" />
@@ -80,8 +138,8 @@ export default function Home() {
                     onClick={() => setActiveTab("docker")}
                     className={`px-2.5 py-1 rounded-md text-xs font-mono transition-all cursor-pointer ${
                       activeTab === "docker"
-                        ? "bg-[var(--surface-active)] text-white border border-[var(--border-strong)]"
-                        : "text-[var(--fg-muted)] hover:text-white"
+                        ? "bg-[var(--surface-active)] text-[var(--fg)] border border-[var(--border-strong)]"
+                        : "text-[var(--fg-muted)] hover:text-[var(--fg)]"
                     }`}
                   >
                     docker-compose.yml
@@ -90,8 +148,8 @@ export default function Home() {
                     onClick={() => setActiveTab("setup")}
                     className={`px-2.5 py-1 rounded-md text-xs font-mono transition-all cursor-pointer ${
                       activeTab === "setup"
-                        ? "bg-[var(--surface-active)] text-white border border-[var(--border-strong)]"
-                        : "text-[var(--fg-muted)] hover:text-white"
+                        ? "bg-[var(--surface-active)] text-[var(--fg)] border border-[var(--border-strong)]"
+                        : "text-[var(--fg-muted)] hover:text-[var(--fg)]"
                     }`}
                   >
                     bun run setup
@@ -100,8 +158,8 @@ export default function Home() {
                     onClick={() => setActiveTab("addon")}
                     className={`px-2.5 py-1 rounded-md text-xs font-mono transition-all cursor-pointer ${
                       activeTab === "addon"
-                        ? "bg-[var(--surface-active)] text-white border border-[var(--border-strong)]"
-                        : "text-[var(--fg-muted)] hover:text-white"
+                        ? "bg-[var(--surface-active)] text-[var(--fg)] border border-[var(--border-strong)]"
+                        : "text-[var(--fg-muted)] hover:text-[var(--fg)]"
                     }`}
                   >
                     addon:create
@@ -110,14 +168,14 @@ export default function Home() {
               </div>
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-1 text-xs font-mono text-[var(--fg-muted)] hover:text-white transition-colors cursor-pointer px-2 py-1 rounded hover:bg-[var(--surface-active)]"
+                className="flex items-center gap-1 text-xs font-mono text-[var(--fg-muted)] hover:text-[var(--fg)] transition-colors cursor-pointer px-2 py-1 rounded hover:bg-[var(--surface-active)]"
                 title="Copy command"
               >
-                {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? <Check className="h-3.5 w-3.5 text-[var(--success)]" /> : <Copy className="h-3.5 w-3.5" />}
                 <span>{copied ? "Copied" : "Copy"}</span>
               </button>
             </div>
-            <pre className="p-4 text-[13px] font-mono leading-relaxed text-[#93C5FD] overflow-x-auto whitespace-pre">
+            <pre className="p-4 text-[13px] font-mono leading-relaxed text-[var(--accent-fg)] overflow-x-auto whitespace-pre">
               <code>{snippets[activeTab]}</code>
             </pre>
           </div>
@@ -160,7 +218,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div ref={tracksRef} className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Track 1: Self-Hosting & Operations */}
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 flex flex-col justify-between shadow-sm">
             <div>

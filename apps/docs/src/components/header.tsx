@@ -5,17 +5,17 @@ import { VersionSelector } from "@/components/version-selector";
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[var(--border)] bg-[#08090D]/85 backdrop-blur-xl">
+    <header className="glass sticky top-0 z-50 w-full border-b border-[var(--border)]">
       <div className="flex h-16 items-center px-6 lg:px-10 max-w-[1700px] mx-auto w-full gap-4">
         <div className="flex items-center gap-3.5 mr-4">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#4C6EF5] to-[#12B886] p-0.5 shadow-lg shadow-[#4C6EF5]/20 group-hover:scale-105 transition-transform">
-              <div className="flex h-full w-full items-center justify-center rounded-[10px] bg-[#08090D]">
-                <Sparkles className="h-4 w-4 text-[#748FFC]" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--success)] p-0.5 shadow-[var(--shadow-accent)] group-hover:scale-105 transition-transform">
+              <div className="flex h-full w-full items-center justify-center rounded-[10px] bg-[var(--bg)]">
+                <Sparkles className="h-4 w-4 text-[var(--accent-fg)]" />
               </div>
             </div>
             <div className="flex flex-col">
-              <span className="font-extrabold text-sm text-white tracking-tight leading-none">
+              <span className="font-extrabold text-sm text-[var(--fg)] tracking-tight leading-none">
                 Lumi
               </span>
               <span className="kicker-tag text-[9px] text-[var(--fg-subtle)] leading-none mt-1">
@@ -31,7 +31,7 @@ export function Header() {
             <Search className="h-3.5 w-3.5 text-[var(--fg-muted)]" />
             <span className="hidden lg:inline-flex">Search documentation...</span>
             <span className="inline-flex lg:hidden">Search...</span>
-            <kbd className="pointer-events-none absolute right-[0.35rem] top-[0.35rem] hidden h-6 select-none items-center gap-1 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-active)] px-2 font-mono text-[10px] font-semibold text-white sm:flex">
+            <kbd className="pointer-events-none absolute right-[0.35rem] top-[0.35rem] hidden h-6 select-none items-center gap-1 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-active)] px-2 font-mono text-[10px] font-semibold text-[var(--fg)] sm:flex">
               <span className="text-[11px]">⌘</span>K
             </kbd>
           </button>
@@ -42,7 +42,7 @@ export function Header() {
             href="https://discord.gg"
             target="_blank"
             rel="noreferrer"
-            className="text-[var(--fg-muted)] hover:text-[#748FFC] transition-colors"
+            className="text-[var(--fg-muted)] hover:text-[var(--accent-fg)] transition-colors"
           >
             Discord
           </Link>
@@ -50,7 +50,7 @@ export function Header() {
             href="https://github.com/lumi-devs/Lumi"
             target="_blank"
             rel="noreferrer"
-            className="text-[var(--fg-muted)] hover:text-white transition-colors"
+            className="text-[var(--fg-muted)] hover:text-[var(--fg)] transition-colors"
           >
             <svg
               viewBox="0 0 24 24"

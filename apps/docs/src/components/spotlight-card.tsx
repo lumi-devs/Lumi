@@ -11,7 +11,7 @@ interface SpotlightCardProps {
 export function SpotlightCard({
   children,
   className = "",
-  glowColor = "rgba(76, 110, 245, 0.12)",
+  glowColor = "var(--accent-soft)",
 }: SpotlightCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const mouseX = useMotionValue(-1000);

@@ -1,55 +1,244 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* ── Lumi docs design tokens ───────────────────────────────────────────────
+ *
+ * AESTHETIC DIRECTION: "Midnight Sapphire" — the same semantic-token system
+ * and colour philosophy as apps/dashboard (deep navy canvas, electric
+ * sapphire accent, glass chrome, soft diffused elevation), adapted for a
+ * docs/marketing medium rather than an admin console: bigger type rhythm,
+ * a hero "atmosphere" wash, and long-form prose typography.
+ *
+ * Theme decision: this site stays dark-by-default, unconditionally (no
+ * `prefers-color-scheme` gate), matching its prior behaviour and avoiding a
+ * sweep of every hardcoded `text-white` heading across the marketing copy
+ * that a live light theme would expose. The light token set below is real
+ * and complete — same values as the dashboard's light theme — parked behind
+ * `[data-theme="light"]` so a future theme toggle is a CSS-value flip, not a
+ * redesign. See AGENTS handoff notes for the reasoning.
+ *
+ * Semantic tokens only: components consume `var(--surface)` /
+ * `var(--fg-muted)` / `var(--border)`, not raw hex, so the two token sets
+ * below are the only places actual colour values live (per-node diagram
+ * legend colours in architecture-visualizer.tsx are the one deliberate
+ * exception — they're a categorical palette, not theme chrome).
+ */
+
 :root {
   color-scheme: dark;
-  
-  /* 4-Tier Elevation Grounding (Mintlify/Nextra Model) */
-  --bg: #090A0F;
-  --bg-canvas: #090A0F;
-  --bg-subtle: #0E1118;
-  --surface: #121622;
-  --surface-hover: #181E2E;
-  --surface-active: #20273D;
-  
-  /* 1px Precision Sub-Pixel Borders */
-  --border: rgba(255, 255, 255, 0.08);
-  --border-soft: rgba(255, 255, 255, 0.04);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  
-  /* WCAG AAA Optical Text Hierarchy */
-  --fg: #F4F4F5;
-  --fg-body: #D4D4D8;
-  --fg-muted: #A1A1AA;
-  --fg-subtle: #71717A;
-  
-  /* Restrained Single Brand Accent (Used purely for active states & focus) */
-  --accent: #4C6EF5;
-  --accent-hover: #3B5BDB;
+
+  /* Surfaces */
+  --bg: #090b14;
+  --bg-subtle: #0d1018;
+  --surface: #0f1219;
+  --surface-hover: #161b26;
+  --surface-active: #1c2231;
+
+  /* Lines */
+  --border: #1e2433;
+  --border-soft: #161b26;
+  --border-strong: #2d3548;
+
+  /* Text */
+  --fg: #f0f2f8;
+  --fg-body: #d4d4d8;
+  --fg-muted: #8b95b7;
+  --fg-subtle: #5f6a85;
+  --fg-on-accent: #ffffff;
+
+  /* Cobalt accent — same values as the dashboard's dark theme */
+  --accent: #4c6ef5;
+  --accent-hover: #3b5bdb;
   --accent-soft: rgba(76, 110, 245, 0.12);
+  --accent-fg: #6d8df7;
   --accent-border: rgba(76, 110, 245, 0.35);
-  
-  /* Admonition Status Tokens */
-  --callout-note-bg: rgba(76, 110, 245, 0.08);
-  --callout-note-border: #4C6EF5;
-  --callout-tip-bg: rgba(18, 184, 134, 0.08);
-  --callout-tip-border: #12B886;
-  --callout-warn-bg: rgba(245, 159, 0, 0.08);
-  --callout-warn-border: #F59F00;
-  --callout-danger-bg: rgba(250, 82, 82, 0.08);
-  --callout-danger-border: #FA5252;
-  
-  --glass-bg: rgba(14, 18, 30, 0.85);
+  --accent-glow: #4c6ef5;
+
+  /* Status */
+  --success: #12b886;
+  --success-soft: rgba(18, 184, 134, 0.12);
+  --warning: #f59f00;
+  --warning-soft: rgba(245, 159, 0, 0.12);
+  --danger: #fa5252;
+  --danger-soft: rgba(250, 82, 82, 0.12);
+
+  --overlay: rgba(0, 0, 0, 0.55);
+  --ring: rgba(76, 110, 245, 0.42);
+
+  /* Soft, cool-tinted elevation — never pure black */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md:
+    0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -10px rgba(0, 0, 0, 0.55);
+  --shadow-lg:
+    0 2px 4px rgba(0, 0, 0, 0.45), 0 26px 64px -16px rgba(0, 0, 0, 0.7);
+  --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.4),
+    0 10px 28px -8px rgba(76, 110, 245, 0.35);
+  --shadow-glow-accent: 0 1px 2px rgba(0, 0, 0, 0.4),
+    0 18px 44px -12px rgba(76, 110, 245, 0.25);
+
+  /* Glass chrome (sticky header, dropdowns) */
+  --glass-bg: rgba(15, 18, 25, 0.68);
   --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur-sm: 10px;
+  --glass-blur-md: 20px;
+  --glass-blur-lg: 40px;
+
+  /* Admonition/callout tokens — derived from the semantic status tokens
+   * above rather than their own hardcoded hex. */
+  --callout-note-bg: var(--accent-soft);
+  --callout-note-border: var(--accent);
+  --callout-tip-bg: var(--success-soft);
+  --callout-tip-border: var(--success);
+  --callout-warn-bg: var(--warning-soft);
+  --callout-warn-border: var(--warning);
+  --callout-danger-bg: var(--danger-soft);
+  --callout-danger-border: var(--danger);
+
+  /* Single source of truth for transition/animation durations. */
+  --motion-instant: 75ms;
+  --motion-fast: 150ms;
+  --motion-normal: 300ms;
+  --motion-slow: 600ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
+
+/* Real light theme, same values as the dashboard's light theme. Not wired to
+ * `prefers-color-scheme` (see decision note above) — activates only via an
+ * explicit `data-theme="light"` on `<html>`, which nothing sets today. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f4f5f8;
+  --bg-subtle: #ebedf2;
+  --surface: #ffffff;
+  --surface-hover: #f5f6fa;
+  --surface-active: #eaedf3;
+
+  --border: #e1e4ea;
+  --border-soft: #ebedf2;
+  --border-strong: #c7cdd9;
+
+  --fg: #14161c;
+  --fg-body: #3a4150;
+  --fg-muted: #5a6270;
+  --fg-subtle: #8b93a3;
+  --fg-on-accent: #ffffff;
+
+  --accent: #3b5bdb;
+  --accent-hover: #2b4bc6;
+  --accent-soft: rgba(59, 91, 219, 0.09);
+  --accent-fg: #2b4bc6;
+  --accent-border: rgba(59, 91, 219, 0.3);
+  --accent-glow: #4c6ef5;
+
+  --success: #12805a;
+  --success-soft: rgba(18, 128, 90, 0.1);
+  --warning: #92600a;
+  --warning-soft: rgba(146, 96, 10, 0.1);
+  --danger: #c7333f;
+  --danger-soft: rgba(199, 51, 63, 0.09);
+
+  --overlay: rgba(10, 12, 18, 0.45);
+  --ring: rgba(41, 83, 216, 0.38);
+
+  --shadow-sm: 0 1px 2px rgba(20, 22, 30, 0.05);
+  --shadow-md:
+    0 1px 2px rgba(20, 22, 30, 0.04), 0 10px 30px -10px rgba(20, 22, 30, 0.12);
+  --shadow-lg:
+    0 2px 4px rgba(20, 22, 30, 0.05), 0 24px 60px -16px rgba(20, 22, 30, 0.18);
+  --shadow-accent: 0 1px 2px rgba(20, 22, 30, 0.06),
+    0 10px 28px -8px rgba(41, 83, 216, 0.28);
+  --shadow-glow-accent: 0 1px 2px rgba(20, 22, 30, 0.05),
+    0 16px 40px -12px rgba(76, 125, 255, 0.22);
+
+  --glass-bg: rgba(255, 255, 255, 0.68);
+  --glass-border: rgba(255, 255, 255, 0.6);
+
+  --callout-note-bg: var(--accent-soft);
+  --callout-note-border: var(--accent);
+  --callout-tip-bg: var(--success-soft);
+  --callout-tip-border: var(--success);
+  --callout-warn-bg: var(--warning-soft);
+  --callout-warn-border: var(--warning);
+  --callout-danger-bg: var(--danger-soft);
+  --callout-danger-border: var(--danger);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-active: var(--surface-active);
+
+  --color-border: var(--border);
+  --color-border-soft: var(--border-soft);
+  --color-border-strong: var(--border-strong);
+
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-fg-on-accent: var(--fg-on-accent);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-glow: var(--accent-glow);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --color-overlay: var(--overlay);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --shadow-e1: var(--shadow-sm);
+  --shadow-e2: var(--shadow-md);
+  --shadow-e3: var(--shadow-lg);
+  --shadow-accent: var(--shadow-accent);
+  --shadow-glow-accent: var(--shadow-glow-accent);
+
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+  --blur-glass-sm: var(--glass-blur-sm);
+  --blur-glass-md: var(--glass-blur-md);
+  --blur-glass-lg: var(--glass-blur-lg);
+
+  --duration-instant: var(--motion-instant);
+  --duration-fast: var(--motion-fast);
+  --duration-normal: var(--motion-normal);
+  --duration-slow: var(--motion-slow);
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────── */
 
 body {
   background-color: var(--bg);
   color: var(--fg-body);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-sans);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Linear-Style Directional Light Top-Rim Bevel */
@@ -79,16 +268,58 @@ body {
   pointer-events: none;
 }
 
+/* Glass chrome (sticky header, dropdowns) — translucent tint over
+ * backdrop-blur, with a solid-fill fallback for `prefers-reduced-transparency`
+ * so chrome never becomes unreadable when a user asks for less translucency. */
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur-md)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-md)) saturate(160%);
+  box-shadow: inset 0 1px 0 var(--glass-border);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* Cursor-tracked accent glow for hover-heavy surfaces (feature/track cards).
+ * `spotlightHandler` in lib/animate.ts sets --spot-x/y on mousemove; this
+ * just reads them. Host element must be `position: relative`. */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  transition: opacity var(--motion-normal) var(--ease-out);
+  background: radial-gradient(
+    220px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    var(--accent-soft),
+    transparent 70%
+  );
+}
+.spotlight:hover::before {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spotlight::before {
+    display: none;
+  }
 }
 
 /* Technical Monospace Kicker Header */
 .kicker-tag {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.15em;
@@ -111,6 +342,64 @@ body {
   background: var(--fg-subtle);
 }
 
+/* ── Page-load / entrance choreography ───────────────────────────────────
+ * Same 320ms beat as the dashboard's `.rise`, for the hero and track cards
+ * on first paint. `prefers-reduced-motion` above collapses it to 0.01ms. */
+@keyframes lumi-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: lumi-rise 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--rise-delay, 0ms);
+}
+
+/* Ambient hero background wash — scoped to the landing hero only,
+ * not global chrome. Registered custom property so the browser interpolates
+ * the drift smoothly instead of jumping at the keyframe midpoint. */
+@property --atmosphere-x {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 50%;
+}
+
+.hero-atmosphere {
+  position: relative;
+  isolation: isolate;
+}
+
+.hero-atmosphere::before {
+  content: "";
+  position: absolute;
+  inset: -6rem -2rem auto -2rem;
+  z-index: -1;
+  height: 28rem;
+  pointer-events: none;
+  background-image: radial-gradient(
+    56rem 28rem at var(--atmosphere-x, 50%) 0%,
+    var(--accent-glow),
+    transparent 70%
+  );
+  opacity: 0.14;
+  animation: lumi-atmosphere-drift 40s ease-in-out infinite;
+}
+
+@keyframes lumi-atmosphere-drift {
+  0%,
+  100% {
+    --atmosphere-x: 42%;
+  }
+  50% {
+    --atmosphere-x: 58%;
+  }
+}
+
 /* Documentation Typography & Layout */
 .doc-content {
   color: var(--fg-body);
@@ -122,7 +411,7 @@ body {
   font-size: 2.25rem;
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: #FFFFFF;
+  color: var(--fg);
   margin-top: 1.5rem;
   margin-bottom: 1.25rem;
   line-height: 1.2;
@@ -132,7 +421,7 @@ body {
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.025em;
-  color: #FFFFFF;
+  color: var(--fg);
   margin-top: 2.75rem;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
@@ -144,7 +433,7 @@ body {
   font-size: 1.2rem;
   font-weight: 600;
   letter-spacing: -0.02em;
-  color: #F4F4F5;
+  color: var(--fg);
   margin-top: 2.25rem;
   margin-bottom: 0.75rem;
   line-height: 1.4;
@@ -153,7 +442,7 @@ body {
 .doc-content h4 {
   font-size: 1.05rem;
   font-weight: 600;
-  color: #F4F4F5;
+  color: var(--fg);
   margin-top: 1.75rem;
   margin-bottom: 0.5rem;
 }
@@ -166,26 +455,26 @@ body {
 }
 
 .doc-content a {
-  color: #748FFC;
+  color: var(--accent-fg);
   font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 3px;
-  text-decoration-color: rgba(116, 143, 252, 0.35);
-  transition: all 0.15s ease;
+  text-decoration-color: color-mix(in srgb, var(--accent-fg) 35%, transparent);
+  transition: all var(--motion-fast) ease;
 }
 
 .doc-content a:hover {
-  color: #93C5FD;
-  text-decoration-color: #93C5FD;
+  color: var(--accent);
+  text-decoration-color: var(--accent);
 }
 
 .doc-content strong {
-  color: #FFFFFF;
+  color: var(--fg);
   font-weight: 600;
 }
 
 .doc-content em {
-  color: #E4E4E7;
+  color: var(--fg-body);
   font-style: italic;
 }
 
@@ -218,7 +507,7 @@ body {
   border-left: 4px solid var(--accent);
   background: var(--surface);
   border-radius: 0 0.5rem 0.5rem 0;
-  color: #D4D4D8;
+  color: var(--fg-body);
   font-style: normal;
 }
 
@@ -230,12 +519,12 @@ body {
 .doc-content code:not(pre code),
 code:not(pre code) {
   display: inline;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.875em;
   font-weight: 500;
-  color: #93C5FD;
-  background-color: rgba(76, 110, 245, 0.10);
-  border: 1px solid rgba(76, 110, 245, 0.22);
+  color: var(--accent-fg);
+  background-color: var(--accent-soft);
+  border: 1px solid var(--accent-border);
   padding: 0.15rem 0.375rem;
   border-radius: 0.375rem;
   box-decoration-break: clone;
@@ -265,7 +554,7 @@ code:not(pre code) {
 .doc-content th {
   padding: 0.875rem 1rem;
   font-weight: 700;
-  color: #FFFFFF;
+  color: var(--fg);
   background-color: var(--surface-active);
   border-bottom: 1px solid var(--border-strong);
 }
@@ -281,14 +570,16 @@ code:not(pre code) {
 }
 
 .doc-content tr:nth-child(even) {
-  background-color: rgba(18, 22, 34, 0.4);
+  background-color: var(--bg-subtle);
 }
 
-/* Prism.js Syntax Highlighting Overrides */
+/* Prism.js Syntax Highlighting Overrides — a fixed, content-neutral code
+ * palette (kept as literal hex, same as the dashboard's approach: syntax
+ * colours are a categorical scheme, not theme chrome). */
 code[class*="language-"],
 pre[class*="language-"] {
-  color: #E4E4E7;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #e4e4e7;
+  font-family: var(--font-mono);
   font-size: 0.875rem;
   line-height: 1.7;
   direction: ltr;
@@ -304,12 +595,12 @@ pre[class*="language-"] {
 .token.prolog,
 .token.doctype,
 .token.cdata {
-  color: #71717A;
+  color: #71717a;
   font-style: italic;
 }
 
 .token.punctuation {
-  color: #A1A1AA;
+  color: #a1a1aa;
 }
 
 .token.property,
@@ -319,7 +610,7 @@ pre[class*="language-"] {
 .token.constant,
 .token.symbol,
 .token.deleted {
-  color: #F472B6;
+  color: #f472b6;
 }
 
 .token.selector,
@@ -328,7 +619,7 @@ pre[class*="language-"] {
 .token.char,
 .token.builtin,
 .token.inserted {
-  color: #34D399;
+  color: #34d399;
 }
 
 .token.operator,
@@ -336,24 +627,24 @@ pre[class*="language-"] {
 .token.url,
 .language-css .token.string,
 .style .token.string {
-  color: #38BDF8;
+  color: #38bdf8;
 }
 
 .token.atrule,
 .token.attr-value,
 .token.keyword {
-  color: #818CF8;
+  color: #818cf8;
 }
 
 .token.function,
 .token.class-name {
-  color: #60A5FA;
+  color: #60a5fa;
 }
 
 .token.regex,
 .token.important,
 .token.variable {
-  color: #FB923C;
+  color: #fb923c;
 }
 
 .token.important,

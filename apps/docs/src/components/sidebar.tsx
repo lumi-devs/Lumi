@@ -62,7 +62,7 @@ export function Sidebar() {
                 <span className="kicker-tag text-[10px] text-[var(--fg-subtle)] block">
                   {group.kicker}
                 </span>
-                <h4 className="text-xs font-bold text-white tracking-tight mt-0.5">
+                <h4 className="text-xs font-bold text-[var(--fg)] tracking-tight mt-0.5">
                   {group.title}
                 </h4>
               </div>
@@ -76,8 +76,8 @@ export function Sidebar() {
                       className={clsx(
                         "group flex w-full items-center rounded-xl px-3 py-2 transition-all",
                         isActive
-                          ? "bg-[#4C6EF5]/15 text-[#748FFC] border border-[#4C6EF5]/30 font-semibold shadow-sm"
-                          : "text-[var(--fg-muted)] hover:text-white hover:bg-[var(--surface-hover)] border border-transparent"
+                          ? "bg-[var(--accent-soft)] text-[var(--accent-fg)] border border-[var(--accent-border)] font-semibold shadow-[var(--shadow-sm)]"
+                          : "text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] border border-transparent"
                       )}
                     >
                       <span>{link.title}</span>

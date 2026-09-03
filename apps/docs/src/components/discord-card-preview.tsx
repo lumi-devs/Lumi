@@ -31,8 +31,8 @@ export function DiscordCardPreview() {
           className={clsx(
             "px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
             activeType === "success"
-              ? "bg-[#12B886]/20 text-[#12B886] border border-[#12B886]/40"
-              : "bg-[var(--surface)] text-[var(--fg-muted)] hover:text-white border border-[var(--border)]"
+              ? "bg-[var(--success-soft)] text-[var(--success)] border border-[var(--success)]/40"
+              : "bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)] border border-[var(--border)]"
           )}
         >
           <CheckCircle2 className="h-3.5 w-3.5" />
@@ -44,8 +44,8 @@ export function DiscordCardPreview() {
           className={clsx(
             "px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
             activeType === "moderation"
-              ? "bg-[#4C6EF5]/20 text-[#748FFC] border border-[#4C6EF5]/40"
-              : "bg-[var(--surface)] text-[var(--fg-muted)] hover:text-white border border-[var(--border)]"
+              ? "bg-[var(--accent-soft)] text-[var(--accent-fg)] border border-[var(--accent-border)]"
+              : "bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)] border border-[var(--border)]"
           )}
         >
           <Shield className="h-3.5 w-3.5" />
@@ -58,7 +58,7 @@ export function DiscordCardPreview() {
             "px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
             activeType === "panel"
               ? "bg-[#FB923C]/20 text-[#FB923C] border border-[#FB923C]/40"
-              : "bg-[var(--surface)] text-[var(--fg-muted)] hover:text-white border border-[var(--border)]"
+              : "bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)] border border-[var(--border)]"
           )}
         >
           <Sliders className="h-3.5 w-3.5" />
@@ -70,8 +70,8 @@ export function DiscordCardPreview() {
           className={clsx(
             "px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
             activeType === "warning"
-              ? "bg-[#F59F00]/20 text-[#F59F00] border border-[#F59F00]/40"
-              : "bg-[var(--surface)] text-[var(--fg-muted)] hover:text-white border border-[var(--border)]"
+              ? "bg-[var(--warning-soft)] text-[var(--warning)] border border-[var(--warning)]/40"
+              : "bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)] border border-[var(--border)]"
           )}
         >
           <AlertTriangle className="h-3.5 w-3.5" />
@@ -83,8 +83,8 @@ export function DiscordCardPreview() {
           className={clsx(
             "px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap",
             activeType === "error"
-              ? "bg-[#FA5252]/20 text-[#FA5252] border border-[#FA5252]/40"
-              : "bg-[var(--surface)] text-[var(--fg-muted)] hover:text-white border border-[var(--border)]"
+              ? "bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/40"
+              : "bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)] border border-[var(--border)]"
           )}
         >
           <XCircle className="h-3.5 w-3.5" />

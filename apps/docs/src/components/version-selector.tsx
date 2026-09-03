@@ -51,15 +51,15 @@ export function VersionSelector() {
         aria-expanded={isOpen}
       >
         <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#12B886] opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-[#12B886]"></span>
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--success)] opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--success)]"></span>
         </span>
         <span className="font-mono font-semibold">v1.0.0 (main)</span>
         <ChevronDown className={clsx("h-3 w-3 text-[var(--fg-muted)] transition-transform duration-200", isOpen && "rotate-180")} />
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 mt-2 w-64 origin-top-left rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] p-2 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in zoom-in-95 duration-150">
+        <div className="glass absolute left-0 mt-2 w-64 origin-top-left rounded-xl border border-[var(--border-strong)] p-2 shadow-[var(--shadow-lg)] z-50 animate-in fade-in zoom-in-95 duration-150">
           <div className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--fg-subtle)]">
             Documentation Versions
           </div>
@@ -95,7 +95,7 @@ export function VersionSelector() {
               className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs text-[var(--fg-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--fg)] transition-colors"
             >
               <span className="flex items-center gap-2">
-                <Sparkles className="h-3.5 w-3.5 text-[#F59F00]" />
+                <Sparkles className="h-3.5 w-3.5 text-[var(--warning)]" />
                 <span>Releases & Changelog</span>
               </span>
               <ExternalLink className="h-3 w-3 text-[var(--fg-subtle)]" />

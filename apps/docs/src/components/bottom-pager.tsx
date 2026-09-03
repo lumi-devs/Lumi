@@ -28,7 +28,7 @@ export function BottomPager() {
             <ChevronLeft className="h-3.5 w-3.5" />
             <span>Previous</span>
           </div>
-          <span className="text-sm font-bold text-white group-hover:text-[var(--accent)] transition-colors">
+          <span className="text-sm font-bold text-[var(--fg)] group-hover:text-[var(--accent)] transition-colors">
             {prevLink.title}
           </span>
         </Link>
@@ -43,7 +43,7 @@ export function BottomPager() {
             <span>Next</span>
             <ChevronRight className="h-3.5 w-3.5" />
           </div>
-          <span className="text-sm font-bold text-white group-hover:text-[var(--accent)] transition-colors">
+          <span className="text-sm font-bold text-[var(--fg)] group-hover:text-[var(--accent)] transition-colors">
             {nextLink.title}
           </span>
         </Link>

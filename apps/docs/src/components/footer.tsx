@@ -15,7 +15,7 @@ export function Footer() {
               Modular, self-hosted Discord bot built on Bun, Sapphire, Prisma, and Next.js.
             </p>
             <div className="flex items-center gap-1.5 text-xs text-[var(--fg-muted)]">
-              <ShieldCheck className="h-4 w-4 text-[#12B886]" />
+              <ShieldCheck className="h-4 w-4 text-[var(--success)]" />
               <span>GPL-3.0 Licensed • Privacy-First</span>
             </div>
           </div>

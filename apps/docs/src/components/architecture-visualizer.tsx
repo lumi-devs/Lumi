@@ -176,7 +176,7 @@ export function ArchitectureVisualizer() {
             <Layers className="h-3.5 w-3.5" />
             <span>INTERACTIVE SYSTEM TOPOLOGY</span>
           </div>
-          <h3 className="text-xl font-bold text-white tracking-tight">
+          <h3 className="text-xl font-bold text-[var(--fg)] tracking-tight">
             How Lumi Processes Events at Scale
           </h3>
           <p className="text-xs text-[var(--fg-muted)] mt-1">
@@ -186,7 +186,7 @@ export function ArchitectureVisualizer() {
 
         <Link
           href={selectedNode.docHref}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[var(--surface-hover)] border border-[var(--border-strong)] hover:border-[var(--accent)] text-xs font-semibold text-white transition-colors"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[var(--surface-hover)] border border-[var(--border-strong)] hover:border-[var(--accent)] text-xs font-semibold text-[var(--fg)] transition-colors"
         >
           <span>Read {selectedNode.title} Docs</span>
           <ArrowRight className="h-3.5 w-3.5 text-[var(--accent)]" />
@@ -210,7 +210,7 @@ export function ArchitectureVisualizer() {
               <div className="mb-3 p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
                 {node.icon}
               </div>
-              <div className="text-xs font-bold text-white">{node.title}</div>
+              <div className="text-xs font-bold text-[var(--fg)]">{node.title}</div>
               <div className="text-[11px] text-[var(--fg-subtle)] mt-0.5">{node.subtitle}</div>
             </button>
           );
@@ -218,7 +218,7 @@ export function ArchitectureVisualizer() {
       </div>
 
       {/* Selected Node Deep-Dive Inspector */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 rounded-xl border border-[var(--border-strong)] bg-[#08090D] p-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 rounded-xl border border-[var(--border-strong)] bg-[var(--bg)] p-5">
         <div className="lg:col-span-6 flex flex-col justify-between space-y-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -226,7 +226,7 @@ export function ArchitectureVisualizer() {
                 {selectedNode.packagePath}
               </span>
             </div>
-            <h4 className="text-lg font-bold text-white tracking-tight">{selectedNode.title}</h4>
+            <h4 className="text-lg font-bold text-[var(--fg)] tracking-tight">{selectedNode.title}</h4>
             <p className="text-xs text-[var(--fg-body)] mt-2 leading-relaxed">
               {selectedNode.description}
             </p>
@@ -240,7 +240,7 @@ export function ArchitectureVisualizer() {
               {selectedNode.specs.map((s, i) => (
                 <div key={i} className="flex items-center justify-between py-1 px-2.5 rounded bg-[var(--surface)] border border-[var(--border-soft)]">
                   <span className="text-[var(--fg-muted)]">{s.label}:</span>
-                  <span className="font-mono font-medium text-white">{s.value}</span>
+                  <span className="font-mono font-medium text-[var(--fg)]">{s.value}</span>
                 </div>
               ))}
             </div>
@@ -255,13 +255,13 @@ export function ArchitectureVisualizer() {
             </div>
             <span>TypeScript</span>
           </div>
-          <pre className="p-3.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] overflow-x-auto text-[12px] font-mono text-[#93C5FD] leading-relaxed">
+          <pre className="p-3.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] overflow-x-auto text-[12px] font-mono text-[var(--accent-fg)] leading-relaxed">
             <code>{selectedNode.codeSnippet}</code>
           </pre>
           <div className="mt-3 flex items-center justify-end">
             <Link
               href={selectedNode.docHref}
-              className="text-xs font-semibold text-[var(--accent)] hover:text-[#93C5FD] inline-flex items-center gap-1 transition-colors"
+              className="text-xs font-semibold text-[var(--accent)] hover:text-[var(--accent-fg)] inline-flex items-center gap-1 transition-colors"
             >
               <span>Explore full architectural walkthrough</span>
               <ChevronRight className="h-3.5 w-3.5" />
