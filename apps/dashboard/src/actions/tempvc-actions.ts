@@ -28,7 +28,7 @@ export async function setTempVcGenerator(
       actorId: session.userId,
       data: { channelId, name, limit },
     });
-    revalidatePath(`/guild/${guildId}/tempvc`);
+    revalidatePath(`/guild/${guildId}/config/voice`);
     return { ok: true };
   });
 }
@@ -44,7 +44,7 @@ export async function deleteTempVcGenerator(
       actorId: session.userId,
       data: { channelId, name: null },
     });
-    revalidatePath(`/guild/${guildId}/tempvc`);
+    revalidatePath(`/guild/${guildId}/config/voice`);
     return { ok: true };
   });
 }

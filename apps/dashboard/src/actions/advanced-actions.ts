@@ -27,7 +27,7 @@ export async function addIgnoredChannel(
       actorId: session.userId,
       data: { channelId },
     });
-    revalidatePath(`/guild/${guildId}/advanced`);
+    revalidatePath(`/guild/${guildId}/config/advanced`);
     return { ok: true };
   });
 }
@@ -43,7 +43,7 @@ export async function removeIgnoredChannel(
       actorId: session.userId,
       data: { channelId },
     });
-    revalidatePath(`/guild/${guildId}/advanced`);
+    revalidatePath(`/guild/${guildId}/config/advanced`);
     return { ok: true };
   });
 }

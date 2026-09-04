@@ -106,6 +106,14 @@ function SideNavBody({
   const labelBlock = forceExpanded ? "block" : "hidden lg:block";
   const labelInline = forceExpanded ? "inline" : "hidden lg:inline";
 
+  // Nested routes make several hrefs match at once (`/moderation` and
+  // `/moderation/thresholds`); only the most specific one gets the pill, or two
+  // live `layoutId` pills would fight over the same animation.
+  const activeHref = groups
+    .flatMap((group) => group.links.map((link) => link.href))
+    .filter((href) => isActive(pathname, href))
+    .sort((a, b) => b.length - a.length)[0];
+
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(
       groups.map((g) => [g.title, g.collapsible ? (g.defaultOpen ?? true) : true]),
@@ -193,7 +201,7 @@ function SideNavBody({
                   className="flex flex-col gap-px overflow-hidden"
                 >
               {group.links.map((link) => {
-                const active = isActive(pathname, link.href);
+                const active = link.href === activeHref;
                 return (
                   <li key={link.href}>
                     <Link

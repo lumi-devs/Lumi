@@ -59,9 +59,9 @@ export function guildManagementGroups(guildId: string): GuildNavGroup[] {
       title: "Discipline & Appeals",
       links: [
         { href: `${base}/moderation`, label: "Moderation Cases", icon: Gavel },
-        { href: `${base}/warn-thresholds`, label: "Warn Thresholds", icon: TriangleAlert },
-        { href: `${base}/blocklist`, label: "Blocklist", icon: Ban },
-        { href: `${base}/mod-notes`, label: "Mod Notes", icon: StickyNote },
+        { href: `${base}/moderation/thresholds`, label: "Warn Thresholds", icon: TriangleAlert },
+        { href: `${base}/moderation/blocklist`, label: "Blocklist", icon: Ban },
+        { href: `${base}/moderation/notes`, label: "Mod Notes", icon: StickyNote },
         { href: `${base}/appeals`, label: "Appeals", icon: Scale },
       ],
     },
@@ -69,7 +69,7 @@ export function guildManagementGroups(guildId: string): GuildNavGroup[] {
       title: "Safety & Security",
       links: [
         { href: `${base}/security`, label: "Panic & Verification", icon: ShieldAlert },
-        { href: `${base}/overrides`, label: "Overrides", icon: SlidersHorizontal },
+        { href: `${base}/security/overrides`, label: "Overrides", icon: SlidersHorizontal },
       ],
     },
     {
@@ -82,16 +82,16 @@ export function guildManagementGroups(guildId: string): GuildNavGroup[] {
       title: "Monitoring & Diagnostics",
       links: [
         { href: `${base}/health`, label: "Health Dashboard", icon: HeartPulse },
-        { href: `${base}/audit`, label: "Audit Log", icon: ClipboardList },
+        { href: `${base}/monitoring/audit`, label: "Audit Log", icon: ClipboardList },
       ],
     },
     {
       title: "Configuration",
       links: [
         { href: `${base}/modules`, label: "Modules & Addons", icon: LayoutGrid },
-        { href: `${base}/tempvc`, label: "Voice Generators", icon: Volume2 },
-        { href: `${base}/history`, label: "Settings History", icon: History },
-        { href: `${base}/advanced`, label: "Advanced", icon: Wrench },
+        { href: `${base}/config/advanced`, label: "Advanced", icon: Wrench },
+        { href: `${base}/config/voice`, label: "Voice Generators", icon: Volume2 },
+        { href: `${base}/config/history`, label: "Settings History", icon: History },
       ],
     },
   ];

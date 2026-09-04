@@ -30,7 +30,7 @@ export async function setConfigOverride(
       actorId: session.userId,
       data: { moduleName, key, modelType, modelId, value },
     });
-    revalidatePath(`/guild/${guildId}/overrides`);
+    revalidatePath(`/guild/${guildId}/security/overrides`);
     return { ok: true };
   });
 }
@@ -49,7 +49,7 @@ export async function deleteConfigOverride(
       actorId: session.userId,
       data: { moduleName, key, modelType, modelId, value: null },
     });
-    revalidatePath(`/guild/${guildId}/overrides`);
+    revalidatePath(`/guild/${guildId}/security/overrides`);
     return { ok: true };
   });
 }

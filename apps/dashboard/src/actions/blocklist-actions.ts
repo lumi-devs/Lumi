@@ -38,7 +38,7 @@ export async function blockUserInGuild(
       actorId: session.userId,
       data: { userId, reason },
     });
-    revalidatePath(`/guild/${guildId}/blocklist`);
+    revalidatePath(`/guild/${guildId}/moderation/blocklist`);
     return { ok: true };
   });
 }
@@ -54,7 +54,7 @@ export async function unblockUserInGuild(
       actorId: session.userId,
       data: { userId },
     });
-    revalidatePath(`/guild/${guildId}/blocklist`);
+    revalidatePath(`/guild/${guildId}/moderation/blocklist`);
     return { ok: true };
   });
 }
