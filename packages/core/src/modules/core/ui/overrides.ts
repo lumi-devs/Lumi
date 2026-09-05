@@ -109,7 +109,7 @@ export function buildHistoryView(
         formatSubtitle("Configuration change log and rollback history."),
         lines.join("\n"),
       ],
-      { actionRows: buildSafeActionRows(rows) },
+      { breadcrumbs: ["Hub", "Modules", meta.displayName, "History"], actionRows: buildSafeActionRows(rows) },
     ),
   );
 }
@@ -171,7 +171,7 @@ export function buildOverridesView(
         lines.join("\n"),
         "-# Overrides apply a config value for a specific channel, role, user, or category.",
       ],
-      { actionRows: buildSafeActionRows(rows) },
+      { breadcrumbs: ["Hub", "Modules", meta.displayName, "Overrides"], actionRows: buildSafeActionRows(rows) },
     ),
   );
 }
