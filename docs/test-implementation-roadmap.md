@@ -3,6 +3,18 @@
 
 This document provides concrete patterns, fixtures, and examples for implementing the test gaps identified in `docs/test-strategy.md`.
 
+> **Status: proposal, not a description of the suite.** The `tests/fixtures/`
+> layer below — `createMockCommandContext`, `setupRpcHandler`, `DiscordErrors`
+> — was never built; the only shared fixture that exists is
+> `tests/mocks/prisma.ts`. The RPC snippets here also predate verification of
+> the handler contract: `rpcHandlers` is a `Map` (`.get(action)`, not index
+> access), and a handler returns its payload directly and *throws* on failure,
+> so `expect(result.ok)` never holds against a handler's return value — the
+> `{ ok, error }` envelope is built by `dispatchRpc` one layer up.
+>
+> For patterns verified against tests that actually run, use
+> `docs/test-patterns-reference.md`.
+
 ---
 
 ## Part 1: Test Fixture Patterns
