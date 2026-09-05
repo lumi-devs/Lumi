@@ -5,9 +5,9 @@ import { tempVcRegistry } from "./registry.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleTempVcCleanupFire } from "./lib/cleanup-handler.js";
 
-export const TEMPVC_CREATE_COOLDOWN_MS = 30_000;
-export const TEMPVC_CLEANUP_DELAY_MS = 8_000;
-export const TEMPVC_MAX_GENERATORS = 25;
+export const TempvcCreateCooldownMs = 30_000;
+export const TempvcCleanupDelayMs = 8_000;
+export const TempvcMaxGenerators = 25;
 
 export async function getCreateCooldownMs(guildId: string): Promise<number> {
   const value = await container.db.config.getModuleConfig(
@@ -15,7 +15,7 @@ export async function getCreateCooldownMs(guildId: string): Promise<number> {
     "tempvc",
     "create_cooldown_seconds",
   );
-  return typeof value === "number" ? value * 1_000 : TEMPVC_CREATE_COOLDOWN_MS;
+  return typeof value === "number" ? value * 1_000 : TempvcCreateCooldownMs;
 }
 
 export async function getMaxGenerators(guildId: string): Promise<number> {
@@ -24,7 +24,7 @@ export async function getMaxGenerators(guildId: string): Promise<number> {
     "tempvc",
     "max_generators",
   );
-  return typeof value === "number" ? value : TEMPVC_MAX_GENERATORS;
+  return typeof value === "number" ? value : TempvcMaxGenerators;
 }
 
 @DefineModule({

@@ -6,7 +6,7 @@ import { trace } from "@opentelemetry/api";
 import {
   resolveErrorCard,
   resolveCommandError,
-  ERROR_TITLES,
+  ErrorTitles,
   sendInteractionReply,
   updatePanel,
   respond,
@@ -64,7 +64,7 @@ describe("command-response utilities", () => {
       const outerResultErr = new ResultError("Outer Error", innerResultErr);
 
       const res = resolveCommandError("TestLabel", outerResultErr);
-      expect(res.title).toBe(ERROR_TITLES.PermissionDenied);
+      expect(res.title).toBe(ErrorTitles.PermissionDenied);
       expect(res.message).toBe("You lack permission");
       expect(res.expected).toBe(true);
     });

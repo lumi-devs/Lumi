@@ -11,7 +11,7 @@ import {
 
 export { KnownSubstores, type ModuleManifest, type TargetUtility };
 
-export const MANIFEST_FILE = "manifest.json";
+export const ManifestFile = "manifest.json";
 
 /** Detect which known sub-store directories exist inside a module dir. */
 export async function detectSubStores(dir: string): Promise<string[]> {
@@ -76,7 +76,7 @@ export function metaFromManifest(manifest: ModuleManifest): ModuleMeta {
 export async function readManifest(
   dir: string,
 ): Promise<ModuleManifest | null> {
-  const file = path.join(dir, MANIFEST_FILE);
+  const file = path.join(dir, ManifestFile);
   try {
     const raw = await fs.readFile(file, "utf8");
     return JSON.parse(raw) as ModuleManifest;
@@ -89,6 +89,6 @@ export async function writeManifest(
   dir: string,
   manifest: ModuleManifest,
 ): Promise<void> {
-  const file = path.join(dir, MANIFEST_FILE);
+  const file = path.join(dir, ManifestFile);
   await fs.writeFile(file, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 }

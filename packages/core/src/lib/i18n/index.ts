@@ -37,7 +37,7 @@ export type LumiT = TFunction<LumiNamespaces> &
   ) => TReturn);
 
 /** The language used when nothing more specific can be resolved. */
-export const DEFAULT_LANGUAGE = "en-US";
+export const DefaultLanguage = "en-US";
 
 /**
  * Languages that ship with Lumi. Each entry must:
@@ -48,14 +48,14 @@ export const DEFAULT_LANGUAGE = "en-US";
  * Translations are managed via Crowdin; untranslated stubs fall back to en-US.
  */
 // prettier-ignore
-export const SUPPORTED_LANGUAGES = [
+export const SupportedLanguages = [
   "cs", "da", "de", "el", "en-US", "es-ES", "fi", "fr", "hu", "it",
   "ja", "ko", "nl", "no", "pl", "pt-BR", "ro", "ru", "sv-SE", "tr",
   "uk", "vi", "zh-CN", "zh-TW",
 ] as const;
-export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+export type SupportedLanguage = (typeof SupportedLanguages)[number];
 
-const supported = new Set<string>(SUPPORTED_LANGUAGES);
+const supported = new Set<string>(SupportedLanguages);
 
 export function isSupportedLanguage(
   language: string,
@@ -102,8 +102,8 @@ export function buildI18nOptions(): InternationalizationOptions {
       returnEmptyString: false,
       returnNull: false,
       load: "all",
-      lng: DEFAULT_LANGUAGE,
-      fallbackLng: DEFAULT_LANGUAGE,
+      lng: DefaultLanguage,
+      fallbackLng: DefaultLanguage,
       defaultNS: "common",
       initImmediate: false,
       interpolation: { escapeValue: false },

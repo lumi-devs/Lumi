@@ -49,12 +49,12 @@ export interface PermitWithAssignments extends PermitRecord {
  * may target a user, role, or channel, feeding the precedence chain in
  * PermitResolver (user > channel > role, highest-position role first).
  */
-export const KIND_TARGET_TYPES: Record<PermitKind, ReadonlyArray<PermitTargetType>> = {
+export const KindTargetTypes: Record<PermitKind, ReadonlyArray<PermitTargetType>> = {
   enforced: ["user"],
   custom: ["user", "role", "channel"],
 };
 
-export const BUILTIN_PERMITS: ReadonlyArray<{
+export const BuiltinPermits: ReadonlyArray<{
   name: string;
   kind: PermitKind;
   nodes: string[];
@@ -170,7 +170,7 @@ export class PermissionRepository extends Repository {
   }
 
   public async ensureBuiltinPermits(guildId: string): Promise<void> {
-    for (const builtin of BUILTIN_PERMITS) {
+    for (const builtin of BuiltinPermits) {
       await this.prisma.permit.upsert({
         where: { uq_permit_guild_name: { guildId, name: builtin.name } },
         update: {},

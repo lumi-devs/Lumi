@@ -17,12 +17,12 @@ import {
   type CaptchaState,
 } from "./captcha.js";
 
-export const VERIFY_BUTTON_ID = "sec:verify";
+export const VerifyButtonId = "sec:verify";
 
 /** The public, persistent verification card members interact with to gain the verified role. */
 export function buildVerifyPanel(t: LumiT): CardReply {
   const button = createActionButton({
-    customId: VERIFY_BUTTON_ID,
+    customId: VerifyButtonId,
     label: t(PanelsKeys.VerifyButton),
     style: ButtonStyle.Success,
     emoji: Emojis.parse("✅"),

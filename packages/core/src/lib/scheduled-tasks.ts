@@ -24,7 +24,7 @@ export interface CatchUpMeta {
 }
 
 /** Default tolerance before a `catchUp: false` job is treated as stale. */
-export const DEFAULT_CATCHUP_GRACE_MS = 60_000;
+export const DefaultCatchupGraceMs = 60_000;
 
 /**
  * Decide whether a scheduled task should run now given its catch-up policy.
@@ -34,7 +34,7 @@ export const DEFAULT_CATCHUP_GRACE_MS = 60_000;
 export function shouldRunNow(
   taskName: string,
   payload?: unknown,
-  graceMs = DEFAULT_CATCHUP_GRACE_MS,
+  graceMs = DefaultCatchupGraceMs,
 ): boolean {
   if (!payload || typeof payload !== "object") return true;
   const meta = payload as CatchUpMeta;

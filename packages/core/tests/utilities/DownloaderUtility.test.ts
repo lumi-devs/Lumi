@@ -10,8 +10,8 @@ vi.mock("#lib/downloader/resolver.js", () => ({
     installModule: vi.fn().mockResolvedValue({ version: "1.0.0" }),
     getModulesInRepo: vi.fn().mockResolvedValue([{ name: "test-module" }]),
   },
-  ADDON_MODULES_ROOT: "/mock/addon_modules",
-  MODULE_ROOT: "/mock/modules",
+  AddonModulesRoot: "/mock/addon_modules",
+  ModuleRoot: "/mock/modules",
 }));
 
 vi.mock("node:fs", () => ({

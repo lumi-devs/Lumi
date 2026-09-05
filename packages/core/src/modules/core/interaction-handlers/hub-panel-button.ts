@@ -22,7 +22,7 @@ import {
   buildAutoUpdateSettingsView,
   buildRepoUpdateConfirmView,
 } from "#modules/core/ui/addons.js";
-import { DEFAULT_PREFIX } from "#modules/core/ui/hub.js";
+import { DefaultPrefix } from "#modules/core/ui/hub.js";
 import { buildFeatureListView } from "#modules/core/ui/modules.js";
 import { buildPermitPickerView } from "#modules/core/ui/permissions.js";
 import { Emojis } from "#utilities/assets.js";
@@ -537,7 +537,7 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
             .setMaxLength(5)
-            .setPlaceholder(`e.g. ${DEFAULT_PREFIX}`),
+            .setPlaceholder(`e.g. ${DefaultPrefix}`),
         ),
       );
     return interaction.showModal(modal);

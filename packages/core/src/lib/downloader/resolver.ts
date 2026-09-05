@@ -67,13 +67,13 @@ const reqsSchema = s.array(
   s.string().regex(/^[a-zA-Z0-9_.@/][a-zA-Z0-9_.@/-]*$/),
 );
 
-export const MODULE_ROOT = path.join(
+export const ModuleRoot = path.join(
   process.cwd(),
   "data",
   "3rd-party-modules",
 );
 /** Where symlinks for installed addons live - registered as a second ModuleStore root. */
-export const ADDON_MODULES_ROOT = path.join(
+export const AddonModulesRoot = path.join(
   process.cwd(),
   "data",
   "installed-modules",
@@ -90,7 +90,7 @@ export class DownloadResolver {
     branch = branchSchema.parse(branch);
 
     await withSerializedWork(name, async () => {
-      const repoPath = path.join(MODULE_ROOT, name);
+      const repoPath = path.join(ModuleRoot, name);
       const gitFolder = path.join(repoPath, ".git");
 
       if (await this._exists(repoPath)) {
@@ -126,7 +126,7 @@ export class DownloadResolver {
         await this._revalidateInstalledModules(name, repoPath);
       } else {
         container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
-        await fs.mkdir(MODULE_ROOT, { recursive: true });
+        await fs.mkdir(ModuleRoot, { recursive: true });
         const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
         await execGit(cloneArgs).catch(async () => {
           await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
@@ -138,7 +138,7 @@ export class DownloadResolver {
 
   public async getModulesInRepo(repoName: string): Promise<ModuleInfo[]> {
     repoName = repoSchema.parse(repoName);
-    const repoPath = path.join(MODULE_ROOT, repoName);
+    const repoPath = path.join(ModuleRoot, repoName);
 
     if (!(await this._exists(repoPath))) {
       throw new Error(
@@ -267,9 +267,9 @@ export class DownloadResolver {
     repoName = repoSchema.parse(repoName);
     moduleName = repoSchema.parse(moduleName);
 
-    const repoPath = path.join(MODULE_ROOT, repoName);
-    const sourcePath = path.join(MODULE_ROOT, repoName, moduleName);
-    const targetPath = path.join(ADDON_MODULES_ROOT, moduleName);
+    const repoPath = path.join(ModuleRoot, repoName);
+    const sourcePath = path.join(ModuleRoot, repoName, moduleName);
+    const targetPath = path.join(AddonModulesRoot, moduleName);
 
     if (!(await this._exists(sourcePath))) {
       throw new Error(`Module ${moduleName} not found in repo ${repoName}`);
@@ -314,7 +314,7 @@ export class DownloadResolver {
       await writeManifest(sourcePath, manifest);
     }
 
-    await fs.mkdir(ADDON_MODULES_ROOT, { recursive: true });
+    await fs.mkdir(AddonModulesRoot, { recursive: true });
 
     if (info.requirements?.length) {
       container.logger?.info?.(
@@ -378,15 +378,15 @@ export class DownloadResolver {
     repoName: string,
     repoPath: string,
   ): Promise<void> {
-    if (!(await this._exists(ADDON_MODULES_ROOT))) return;
+    if (!(await this._exists(AddonModulesRoot))) return;
 
-    const entries = await fs.readdir(ADDON_MODULES_ROOT, {
+    const entries = await fs.readdir(AddonModulesRoot, {
       withFileTypes: true,
     });
     const failures: string[] = [];
 
     for (const entry of entries) {
-      const linkPath = path.join(ADDON_MODULES_ROOT, entry.name);
+      const linkPath = path.join(AddonModulesRoot, entry.name);
       let real: string;
       try {
         real = await fs.realpath(linkPath);

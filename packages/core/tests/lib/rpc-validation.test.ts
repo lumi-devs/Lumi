@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { s } from "@sapphire/shapeshift";
 import {
-  MAX_PAGE_SIZE,
+  MaxPageSize,
   PageSchema,
   PageSizeSchema,
   SnowflakeSchema,
@@ -124,11 +124,11 @@ describe("PageSchema and PageSizeSchema", () => {
   });
 
   it("accepts a page size at the cap", () => {
-    expect(PageSizeSchema.parse(MAX_PAGE_SIZE)).toBe(MAX_PAGE_SIZE);
+    expect(PageSizeSchema.parse(MaxPageSize)).toBe(MaxPageSize);
   });
 
   it("rejects a page size above the cap", () => {
-    expect(() => PageSizeSchema.parse(MAX_PAGE_SIZE + 1)).toThrow();
+    expect(() => PageSizeSchema.parse(MaxPageSize + 1)).toThrow();
   });
 
   it.each([0, -5])("rejects page size %s", (value) => {

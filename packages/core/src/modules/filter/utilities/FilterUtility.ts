@@ -7,7 +7,7 @@ import {
   compileRules,
   evaluateStatic,
   evaluateTerms,
-  DEFAULT_CAPS_MIN_LENGTH,
+  DefaultCapsMinLength,
   type CompiledRules,
   type FilterHit,
   type RuleConfig,
@@ -88,7 +88,7 @@ export class FilterUtility extends Utility {
       linkAllowlist: parseConfigList(raw["link_allowlist"] ?? null),
       maxMentions: num("max_mentions", 0),
       maxCapsPercent: num("max_caps_percent", 0),
-      capsMinLength: num("caps_min_length", DEFAULT_CAPS_MIN_LENGTH),
+      capsMinLength: num("caps_min_length", DefaultCapsMinLength),
     });
     this._heat.set(guildId, this.buildHeatConfig(raw));
   }

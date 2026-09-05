@@ -7,7 +7,7 @@ import {
   screenRegexRules,
   findBlockedInvite,
   findBlockedLink,
-  MAX_REGEX_LENGTH,
+  MaxRegexLength,
   type RuleConfig,
 } from "../../../src/modules/filter/lib/rules.js";
 
@@ -84,7 +84,7 @@ describe("screenRegexRules", () => {
   it("skips invalid and oversized patterns, reporting them", () => {
     const errors: string[] = [];
     const screened = screenRegexRules(
-      ["valid\\d+", "([unclosed", "x".repeat(MAX_REGEX_LENGTH + 1)],
+      ["valid\\d+", "([unclosed", "x".repeat(MaxRegexLength + 1)],
       (p) => errors.push(p),
     );
     expect(screened).toEqual(["valid\\d+"]);

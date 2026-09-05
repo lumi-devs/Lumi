@@ -32,7 +32,7 @@ import {
  * preconditions and commands. The single source of truth shared by every
  * command-denied and command-error listener.
  */
-export const ERROR_TITLES: Partial<Record<string, string>> = {
+export const ErrorTitles: Partial<Record<string, string>> = {
   PermissionDenied: "Permission Denied",
   AccessDenied: "Access Denied",
   GuildOnly: "Server Only",
@@ -140,7 +140,7 @@ export function resolveCommandError(
 
   if (error instanceof UserError) {
     return {
-      title: ERROR_TITLES[error.identifier] ?? "Command Error",
+      title: ErrorTitles[error.identifier] ?? "Command Error",
       message: error.message,
       expected: true,
     };
@@ -300,7 +300,7 @@ export async function handleDenied(
 ): Promise<Message | undefined> {
   if (payload.context.silent) return;
 
-  const title = ERROR_TITLES[error.identifier] ?? "Command Error";
+  const title = ErrorTitles[error.identifier] ?? "Command Error";
 
   const ctx = error.context as
     ({ i18nKey?: string } & Record<string, unknown>) | undefined;

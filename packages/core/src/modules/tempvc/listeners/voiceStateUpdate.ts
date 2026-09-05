@@ -4,7 +4,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { VoiceState } from "discord.js";
 import { logError } from "#lib/utilities/errors.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
-import { TEMPVC_CREATE_COOLDOWN_MS } from "../index.js";
+import { TempvcCreateCooldownMs } from "../index.js";
 import { tempVcRegistry } from "../registry.js";
 import type TempVcUtility from "../utilities/TempVcUtility.js";
 import {
@@ -57,7 +57,7 @@ export default class TempVcVoiceStateListener extends Listener<
           await member
             .send(
               `⏳ Slow down - wait up to ${Math.round(
-                TEMPVC_CREATE_COOLDOWN_MS / 1000,
+                TempvcCreateCooldownMs / 1000,
               )}s before creating another channel.`,
             )
             .catch(() => null);

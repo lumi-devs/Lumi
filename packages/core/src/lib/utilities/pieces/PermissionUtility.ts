@@ -1,5 +1,5 @@
 import {
-  KIND_TARGET_TYPES,
+  KindTargetTypes,
   type PermitAssignmentRecord,
   type PermitKind,
   type PermitPolarity,
@@ -161,7 +161,7 @@ export class PermissionUtility extends Utility {
     permit: PermitRecord,
     targetType: PermitTargetType,
   ): void {
-    const allowed = KIND_TARGET_TYPES[permit.kind as PermitKind];
+    const allowed = KindTargetTypes[permit.kind as PermitKind];
     if (!allowed.includes(targetType)) {
       throw new Error(
         permit.kind === "enforced"

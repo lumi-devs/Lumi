@@ -114,7 +114,7 @@ export class PermitResolver {
     );
 
     // Enforced permits are only ever assigned to the "user" target type
-    // (KIND_TARGET_TYPES.enforced), which is always chain[0]/tiers[0] here.
+    // (KindTargetTypes.enforced), which is always chain[0]/tiers[0] here.
     const userTier = tiers[0];
     if (userTier) {
       if (anyNodeMatches(userTier.enforced.deny, permitNode)) return false;

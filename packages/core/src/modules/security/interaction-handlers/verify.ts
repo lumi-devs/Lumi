@@ -14,9 +14,9 @@ import {
   makeErrorCard,
   makeSuccessCard,
 } from "#lib/utilities/cards.js";
-import { CAPTCHA_BUTTON_PREFIX } from "../lib/captcha.js";
+import { CaptchaButtonPrefix } from "../lib/captcha.js";
 import {
-  VERIFY_BUTTON_ID,
+  VerifyButtonId,
   buildChallengeCard,
   buildProgressCard,
   buildWebPromptCard,
@@ -31,10 +31,10 @@ type Parsed = { kind: "start" } | { kind: "step"; idx: number };
 })
 export class VerifyInteractionHandler extends BaseInteractionHandler {
   public override parse(interaction: ButtonInteraction) {
-    if (interaction.customId === VERIFY_BUTTON_ID) {
+    if (interaction.customId === VerifyButtonId) {
       return this.some<Parsed>({ kind: "start" });
     }
-    if (interaction.customId.startsWith(`${CAPTCHA_BUTTON_PREFIX}:`)) {
+    if (interaction.customId.startsWith(`${CaptchaButtonPrefix}:`)) {
       const idx = Number.parseInt(interaction.customId.split(":")[2] ?? "", 10);
       if (Number.isNaN(idx)) return this.none();
       return this.some<Parsed>({ kind: "step", idx });

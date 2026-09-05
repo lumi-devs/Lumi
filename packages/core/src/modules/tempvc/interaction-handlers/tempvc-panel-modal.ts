@@ -13,7 +13,7 @@ import {
   makeSuccessCard,
 } from "#utilities/cards.js";
 import { getVcRecord, patchVcRecord } from "#modules/tempvc/data.js";
-import { TVC } from "#modules/tempvc/keys.js";
+import { Tvc } from "#modules/tempvc/keys.js";
 import { resolveOwnedVc } from "#modules/tempvc/panel-guard.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 import { buildBackRows, buildPanel } from "#modules/tempvc/ui/panel.js";
@@ -30,7 +30,7 @@ export class TempVcPanelModalHandler extends BaseInteractionHandler {
   }
 
   public override parse(interaction: ModalSubmitInteraction) {
-    if (!interaction.customId.startsWith(`${TVC}:`)) return this.none();
+    if (!interaction.customId.startsWith(`${Tvc}:`)) return this.none();
     const [, kind, channelId] = interaction.customId.split(":");
     if (!kind || !channelId || !ModalKinds.has(kind)) return this.none();
     return this.some({ kind, channelId });

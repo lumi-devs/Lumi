@@ -11,7 +11,7 @@ import {
   shutdownRegexWorker,
   validateRegexPattern,
 } from "#lib/regex-worker/index.js";
-import { DEFAULT_WARN_MESSAGE } from "./lib/rules.js";
+import { DefaultWarnMessage } from "./lib/rules.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleAutoLockdownUnlockFire } from "./lib/auto-lockdown-handler.js";
 
@@ -147,7 +147,7 @@ const CompiledKeys = [
       label: "Warning Message",
       description:
         "Transient warning sent after a deletion. Placeholders: {user}, {reason}. Empty disables the warning.",
-      default: DEFAULT_WARN_MESSAGE,
+      default: DefaultWarnMessage,
     }),
     log_channel_id: cfg.channel({
       group: "Punishment",

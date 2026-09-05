@@ -12,7 +12,7 @@ import {
 } from "discord.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { Emojis } from "#utilities/assets.js";
-import { TVC } from "#modules/tempvc/keys.js";
+import { Tvc } from "#modules/tempvc/keys.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 
 /**
@@ -53,7 +53,7 @@ export async function showRenameModal(
   t?: LumiT,
 ): Promise<void> {
   const modal = new ModalBuilder()
-    .setCustomId(`${TVC}:namem:${channel.id}`)
+    .setCustomId(`${Tvc}:namem:${channel.id}`)
     .setTitle(t ? t("tempvc:modalRenameTitle") : "Rename Voice Channel")
     .addComponents(
       new ActionRowBuilder<TextInputBuilder>().addComponents(
@@ -81,7 +81,7 @@ export async function showLimitModal(
   t?: LumiT,
 ): Promise<void> {
   const modal = new ModalBuilder()
-    .setCustomId(`${TVC}:limitm:${channel.id}`)
+    .setCustomId(`${Tvc}:limitm:${channel.id}`)
     .setTitle(t ? t("tempvc:modalLimitTitle") : "Set User Limit")
     .addComponents(
       new ActionRowBuilder<TextInputBuilder>().addComponents(

@@ -8,7 +8,7 @@ import {
   metaFromManifest,
   readManifest,
   writeManifest,
-  MANIFEST_FILE,
+  ManifestFile,
 } from "#lib/module-system/manifest.js";
 import { cfg, FieldType } from "#lib/module-system/config-schema.js";
 import { CoreVersion } from "#utilities/misc.js";
@@ -158,7 +158,7 @@ describe("Module Manifest Utilities", () => {
       expect(readBack).toEqual(manifest);
 
       // Verify file content format
-      const raw = await fs.readFile(path.join(tmpDir, MANIFEST_FILE), "utf8");
+      const raw = await fs.readFile(path.join(tmpDir, ManifestFile), "utf8");
       expect(raw.endsWith("\n")).toBe(true);
     });
 
@@ -166,7 +166,7 @@ describe("Module Manifest Utilities", () => {
       const missing = await readManifest(tmpDir);
       expect(missing).toBeNull();
 
-      await fs.writeFile(path.join(tmpDir, MANIFEST_FILE), "invalid json {");
+      await fs.writeFile(path.join(tmpDir, ManifestFile), "invalid json {");
       const invalid = await readManifest(tmpDir);
       expect(invalid).toBeNull();
     });

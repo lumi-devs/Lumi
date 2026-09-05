@@ -18,7 +18,7 @@ import { getUtility } from "#lib/module-system/Utility.js";
 import { Emojis } from "#utilities/assets.js";
 import { makeSuccessCard } from "#utilities/cards.js";
 import { getVcRecord, removeVcRecord } from "#modules/tempvc/data.js";
-import { TVC, TempVcKeys } from "#modules/tempvc/keys.js";
+import { Tvc, TempVcKeys } from "#modules/tempvc/keys.js";
 import {
   showLimitModal,
   showRenameModal,
@@ -47,7 +47,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
 
   public override parse(interaction: Interaction) {
     if (!interaction.isButton()) return this.none();
-    if (!interaction.customId.startsWith(`${TVC}:`)) return this.none();
+    if (!interaction.customId.startsWith(`${Tvc}:`)) return this.none();
     const [, action, channelId] = interaction.customId.split(":");
     if (!action || !channelId) return this.none();
     return this.some({ action, channelId });

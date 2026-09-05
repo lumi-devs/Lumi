@@ -1,7 +1,7 @@
 // @ts-expect-error - ahocorasick does not provide type declarations
 import AhoCorasick from "ahocorasick";
 import type { LumiT } from "#lib/i18n/index.js";
-import { MAX_REGEX_LENGTH } from "#lib/regex-worker/validate.js";
+import { MaxRegexLength } from "#lib/regex-worker/validate.js";
 
 interface AhoMatcher {
   search(text: string): Array<[number, string[]]>;
@@ -42,13 +42,13 @@ export interface CompiledRules {
 }
 
 /** Default for `capsMinLength` - avoids "OK" tripping the caps rule. */
-export const DEFAULT_CAPS_MIN_LENGTH = 12;
+export const DefaultCapsMinLength = 12;
 
 /** Default transient warning; `{user}` and `{reason}` are substituted. */
-export const DEFAULT_WARN_MESSAGE =
+export const DefaultWarnMessage =
   "{user}, your message was removed for containing {reason}.";
 
-export { MAX_REGEX_LENGTH };
+export { MaxRegexLength };
 
 const InviteRe =
   /(?:discord\.(?:gg|com\/invite)|discordapp\.com\/invite)\/([\w-]+)/i;
@@ -66,8 +66,8 @@ export function screenRegexRules(
 ): string[] {
   const out: string[] = [];
   for (const pattern of patterns) {
-    if (pattern.length > MAX_REGEX_LENGTH) {
-      onError?.(pattern, `longer than ${MAX_REGEX_LENGTH} chars`);
+    if (pattern.length > MaxRegexLength) {
+      onError?.(pattern, `longer than ${MaxRegexLength} chars`);
       continue;
     }
     try {
@@ -235,7 +235,7 @@ export function evaluate(
 }
 
 /** Human copy for the transient warning, per rule. */
-export const HIT_REASONS: Record<FilterHit["rule"], string> = {
+export const HitReasons: Record<FilterHit["rule"], string> = {
   term: "a filtered term",
   regex: "a filtered pattern",
   invite: "a server invite link",

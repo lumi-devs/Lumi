@@ -12,7 +12,7 @@ import type { RedisClient } from "#lib/database/cluster-safe.js";
  * mutual exclusion across workers matters, not ordering.
  */
 
-export const REDIS_RELEASE_SCRIPT = `
+export const RedisReleaseScript = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
   return redis.call('DEL', KEYS[1])
 else
@@ -20,7 +20,7 @@ else
 end
 `;
 
-export const REDIS_EXTEND_SCRIPT = `
+export const RedisExtendScript = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
   return redis.call('PEXPIRE', KEYS[1], ARGV[2])
 else
@@ -28,7 +28,7 @@ else
 end
 `;
 
-export const REDIS_VERIFY_SCRIPT = `
+export const RedisVerifyScript = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
   return 1
 else
@@ -42,7 +42,7 @@ export async function verifyRedisLock(
   key: string,
   token: string,
 ): Promise<boolean> {
-  const held = await redis.eval(REDIS_VERIFY_SCRIPT, 1, key, token);
+  const held = await redis.eval(RedisVerifyScript, 1, key, token);
   return held === 1;
 }
 
@@ -102,7 +102,7 @@ export async function acquireRedisLock(
     () => {
       if (released) return;
       redis
-        .eval(REDIS_EXTEND_SCRIPT, 1, key, token, opts.ttlMs.toString())
+        .eval(RedisExtendScript, 1, key, token, opts.ttlMs.toString())
         .then((res: unknown) => {
           if (res === 1) {
             consecutiveRenewFailures = 0;
@@ -135,7 +135,7 @@ export async function acquireRedisLock(
     if (released) return;
     released = true;
     clearInterval(renew);
-    await redis.eval(REDIS_RELEASE_SCRIPT, 1, key, token).catch(() => null);
+    await redis.eval(RedisReleaseScript, 1, key, token).catch(() => null);
   };
 
   return { release, token };

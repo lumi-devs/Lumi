@@ -3,8 +3,8 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { type Piece } from "@sapphire/framework";
 import {
   resolver,
-  ADDON_MODULES_ROOT,
-  MODULE_ROOT,
+  AddonModulesRoot,
+  ModuleRoot,
 } from "#lib/downloader/resolver.js";
 import { pathExists } from "#lib/downloader/validate.js";
 import { promises as fs } from "node:fs";
@@ -102,7 +102,7 @@ export class DownloaderUtility extends Utility {
   }
 
   public async syncInstalledModulesOnStartup() {
-    await fs.mkdir(ADDON_MODULES_ROOT, { recursive: true });
+    await fs.mkdir(AddonModulesRoot, { recursive: true });
     const installed =
       await this.container.db.downloader.readAllInstalledDownloaderModulesWithRepo();
     if (!installed.length) return;
@@ -110,11 +110,11 @@ export class DownloaderUtility extends Utility {
     let restoredAny = false;
     for (const item of installed) {
       const sourcePath = path.join(
-        MODULE_ROOT,
+        ModuleRoot,
         item.repo.name,
         item.moduleName,
       );
-      const targetPath = path.join(ADDON_MODULES_ROOT, item.moduleName);
+      const targetPath = path.join(AddonModulesRoot, item.moduleName);
 
       try {
         const sourceExists = await pathExists(sourcePath);
@@ -207,7 +207,7 @@ export class DownloaderUtility extends Utility {
         .unload(moduleName)
         .catch(() => undefined);
       await fs
-        .unlink(path.join(ADDON_MODULES_ROOT, moduleName))
+        .unlink(path.join(AddonModulesRoot, moduleName))
         .catch(() => undefined);
       throw err;
     }
@@ -233,7 +233,7 @@ export class DownloaderUtility extends Utility {
       }
     }
 
-    const targetPath = path.join(ADDON_MODULES_ROOT, moduleName);
+    const targetPath = path.join(AddonModulesRoot, moduleName);
     await fs.rm(targetPath, { recursive: true, force: true }).catch((err) => {
       this.container.logger.error(
         `[DownloaderUtility] failed to remove symlink/directory at ${targetPath}:`,
@@ -269,7 +269,7 @@ export class DownloaderUtility extends Utility {
       return { ok: false, reason: `Repository **${name}** was not found.` };
     }
 
-    const repoPath = path.join(MODULE_ROOT, repo.name);
+    const repoPath = path.join(ModuleRoot, repo.name);
     try {
       await fs.access(repoPath);
     } catch {
@@ -325,7 +325,7 @@ export class DownloaderUtility extends Utility {
   public async getRepoStatus(
     repoName: string,
   ): Promise<{ lastCommit: string | null; lastCommitTime: string | null }> {
-    const repoPath = path.join(MODULE_ROOT, repoName);
+    const repoPath = path.join(ModuleRoot, repoName);
     try {
       const { stdout } = await execFileAsync("git", [
         "-C",
@@ -366,7 +366,7 @@ export class DownloaderUtility extends Utility {
       };
     }
 
-    const repoPath = path.join(MODULE_ROOT, repo.name);
+    const repoPath = path.join(ModuleRoot, repo.name);
     const branch = repo.branch || "default";
 
     try {
@@ -485,7 +485,7 @@ export class DownloaderUtility extends Utility {
     }
 
     if (revision) {
-      const repoPath = path.join(MODULE_ROOT, repo.name);
+      const repoPath = path.join(ModuleRoot, repo.name);
       const info = await withSerializedWork(repo.name, () =>
         resolver.installModule(repo.name, moduleName, revision),
       );
@@ -513,7 +513,7 @@ export class DownloaderUtility extends Utility {
     if (!check.hasUpdate) return { updated: false };
 
     const { repoId, repoName, branch, remoteHash, changelog } = check;
-    const repoPath = path.join(MODULE_ROOT, repoName);
+    const repoPath = path.join(ModuleRoot, repoName);
 
     await withSerializedWork(repoName, async () => {
       const pullArgs = ["-C", repoPath, "pull"];

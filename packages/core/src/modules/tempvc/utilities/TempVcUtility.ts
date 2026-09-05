@@ -18,7 +18,7 @@ import {
   isVoiceChannelEmpty,
 } from "../lib/voice-occupancy.js";
 import {
-  TEMPVC_CLEANUP_DELAY_MS,
+  TempvcCleanupDelayMs,
   getCreateCooldownMs,
 } from "../index.js";
 import { ModuleName, TempVcKeys } from "../keys.js";
@@ -236,7 +236,7 @@ export default class TempVcUtility extends Utility {
       { guildId, channelId },
       {
         repeated: false,
-        delay: TEMPVC_CLEANUP_DELAY_MS,
+        delay: TempvcCleanupDelayMs,
         customJobOptions: {
           jobId: cleanupJobId(guildId, channelId),
           removeOnComplete: true,

@@ -19,13 +19,13 @@ vi.mock("node:child_process", async (importOriginal) => {
   };
 });
 
-const { resolver, MODULE_ROOT, ADDON_MODULES_ROOT } = await import("./resolver.js");
+const { resolver, ModuleRoot, AddonModulesRoot } = await import("./resolver.js");
 
 const RepoName = "resolver-test-repo";
 const ModuleName = "resolver-test-addon";
 
 async function writeFixtureAddon() {
-  const dir = path.join(MODULE_ROOT, RepoName, ModuleName);
+  const dir = path.join(ModuleRoot, RepoName, ModuleName);
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(
     path.join(dir, "info.json"),
@@ -48,8 +48,8 @@ async function writeFixtureAddon() {
 
 describe("DownloadResolver.installModule - requirements package boundary", () => {
   afterEach(async () => {
-    await fs.rm(path.join(MODULE_ROOT, RepoName), { recursive: true, force: true });
-    await fs.rm(path.join(ADDON_MODULES_ROOT, ModuleName), { recursive: true, force: true });
+    await fs.rm(path.join(ModuleRoot, RepoName), { recursive: true, force: true });
+    await fs.rm(path.join(AddonModulesRoot, ModuleName), { recursive: true, force: true });
   });
 
   it("symlinks node_modules/lumi into the addon's own directory when it declares requirements", async () => {

@@ -10,7 +10,7 @@ import {
   GuildSummariesMax,
   GuildSummariesSchema,
   ModuleToggleSchema,
-  PICKABLE_CHANNEL_TYPES,
+  PickableChannelTypes,
   parsePayload,
   requireGuildManager,
   runGuildSetup,
@@ -76,7 +76,7 @@ export function registerGuildRpcHandlers(): void {
       .sort((a, b) => a.name.localeCompare(b.name));
 
     const channels = guild.channels.cache
-      .filter((c) => PICKABLE_CHANNEL_TYPES.has(c.type))
+      .filter((c) => PickableChannelTypes.has(c.type))
       .map((c) => ({ id: c.id, name: c.name, type: c.type }));
 
     const members = guild.members.cache

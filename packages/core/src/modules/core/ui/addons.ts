@@ -20,7 +20,7 @@ import { ButtonStyle } from "discord.js";
 // Each row here is a Section with 2-3 text lines + 1 button = 4-5 real
 // components once nested, and card chrome already eats ~10-19 of Discord's
 // 40-component budget per message, so page sizes stay well under naive counts.
-export const ADDON_ROWS_PER_PAGE = 5;
+export const AddonRowsPerPage = 5;
 
 export interface AddonDashboardStats {
   repoCount: number;
@@ -58,7 +58,7 @@ export interface AutoUpdateStatus {
   intervalMinutes: number;
 }
 
-export const AUTO_UPDATE_INTERVALS: { label: string; minutes: number }[] = [
+export const AutoUpdateIntervals: { label: string; minutes: number }[] = [
   { label: "Every Hour", minutes: 60 },
   { label: "Every 6 Hours", minutes: 360 },
   { label: "Every 12 Hours", minutes: 720 },
@@ -134,7 +134,7 @@ export function buildAddonsView(
 }
 
 /**
- * The tracked-repository list. Only the first {@linkcode ADDON_ROWS_PER_PAGE}
+ * The tracked-repository list. Only the first {@linkcode AddonRowsPerPage}
  * repositories get a row; the remainder is summarised as a `+n more` line.
  */
 export function buildAddonReposView(
@@ -142,7 +142,7 @@ export function buildAddonReposView(
   t?: LumiT,
 ): CardReply {
   const sorted = [...repos].sort((a, b) => a.name.localeCompare(b.name));
-  const shown = sorted.slice(0, ADDON_ROWS_PER_PAGE);
+  const shown = sorted.slice(0, AddonRowsPerPage);
 
   const sections = shown.map((repo) =>
     settingRow(
@@ -240,7 +240,7 @@ export function buildAddonInstalledView(
   const sorted = [...installed].sort((a, b) =>
     a.moduleName.localeCompare(b.moduleName),
   );
-  const shown = sorted.slice(0, ADDON_ROWS_PER_PAGE);
+  const shown = sorted.slice(0, AddonRowsPerPage);
 
   const sections = shown.map((mod) =>
     settingRow(
@@ -319,11 +319,11 @@ export function buildAddonRepoModulesView(
   const sorted = [...visible].sort((a, b) => a.name.localeCompare(b.name));
   const totalPages = Math.max(
     1,
-    Math.ceil(sorted.length / ADDON_ROWS_PER_PAGE),
+    Math.ceil(sorted.length / AddonRowsPerPage),
   );
   const safePage = Math.max(0, Math.min(page, totalPages - 1));
-  const start = safePage * ADDON_ROWS_PER_PAGE;
-  const shown = sorted.slice(start, start + ADDON_ROWS_PER_PAGE);
+  const start = safePage * AddonRowsPerPage;
+  const shown = sorted.slice(start, start + AddonRowsPerPage);
 
   const sections = shown.map((m) => {
     const status = m.isInstalled
@@ -413,7 +413,7 @@ export function buildAutoUpdateSettingsView(
   t?: LumiT,
 ): CardReply {
   const intervalLabel =
-    AUTO_UPDATE_INTERVALS.find((i) => i.minutes === status.intervalMinutes)
+    AutoUpdateIntervals.find((i) => i.minutes === status.intervalMinutes)
       ?.label ?? `Every ${status.intervalMinutes} Minutes`;
 
   const toggleRow = row(
@@ -427,7 +427,7 @@ export function buildAutoUpdateSettingsView(
   const intervalSelect = createStringSelectMenu({
     customId: "lumi:addon:autoupdate_interval",
     placeholder: `⏱️ Check Interval: ${intervalLabel}`,
-    options: AUTO_UPDATE_INTERVALS.map((i) =>
+    options: AutoUpdateIntervals.map((i) =>
       new StringSelectMenuOptionBuilder()
         .setLabel(i.label)
         .setValue(String(i.minutes))

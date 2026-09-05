@@ -17,7 +17,7 @@ import type { LockedChannelSnapshot } from "#lib/prisma/repositories/SecurityRep
 import {
   advanceCaptcha,
   buildChallenge,
-  MAX_ATTEMPTS,
+  MaxAttempts,
   type CaptchaOutcome,
   type CaptchaState,
 } from "../lib/captcha.js";
@@ -157,7 +157,7 @@ function isNukeResponse(value: unknown): value is NukeResponse {
 }
 
 /** Permissions that hand out server control - never allowed on `@everyone`. */
-export const DANGEROUS_PERMISSIONS = [
+export const DangerousPermissions = [
   PermissionFlagsBits.Administrator,
   PermissionFlagsBits.ManageGuild,
   PermissionFlagsBits.ManageRoles,
@@ -589,7 +589,7 @@ export class SecurityUtility extends Utility {
       sequence,
       buttons,
       progress: 0,
-      attempts: MAX_ATTEMPTS,
+      attempts: MaxAttempts,
       expiresAt,
     };
     await this.redis

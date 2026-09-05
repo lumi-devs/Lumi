@@ -4,9 +4,9 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import type { Guild } from "@prisma/client";
 import {
-  DEFAULT_LANGUAGE,
+  DefaultLanguage,
   isSupportedLanguage,
-  SUPPORTED_LANGUAGES,
+  SupportedLanguages,
 } from "#lib/i18n/index.js";
 
 @ApplyOptions<Piece.Options>({ name: "guild-settings" })
@@ -54,7 +54,7 @@ export class GuildSettingsUtility extends Utility {
   public async setLanguage(guildId: string, language: string) {
     if (!isSupportedLanguage(language)) {
       throw new Error(
-        `Unsupported language. Supported: ${SUPPORTED_LANGUAGES.join(", ")}.`,
+        `Unsupported language. Supported: ${SupportedLanguages.join(", ")}.`,
       );
     }
 
@@ -69,9 +69,9 @@ export class GuildSettingsUtility extends Utility {
   public async resetLanguage(guildId: string) {
     await this.applyGuildUpdate(
       guildId,
-      { locale: DEFAULT_LANGUAGE },
-      (s) => s.locale === DEFAULT_LANGUAGE,
-      `Language is already set to ${DEFAULT_LANGUAGE}.`,
+      { locale: DefaultLanguage },
+      (s) => s.locale === DefaultLanguage,
+      `Language is already set to ${DefaultLanguage}.`,
     );
   }
 

@@ -5,7 +5,7 @@ import {
 } from "@discordjs/builders";
 import { ButtonStyle, type VoiceBasedChannel } from "discord.js";
 import { channelMention, userMention } from "@discordjs/formatters";
-import { TVC } from "../keys.js";
+import { Tvc } from "../keys.js";
 import type { VcRecord } from "../data.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import {
@@ -71,7 +71,7 @@ export function buildPanel(
   ];
 
   const menu = createStringSelectMenu({
-    customId: `${TVC}:panelmenu:${channel.id}`,
+    customId: `${Tvc}:panelmenu:${channel.id}`,
     placeholder: t ? t("tempvc:panelSelectPlaceholder") : "Manage Channel…",
     options: [
       {
@@ -145,7 +145,7 @@ export function buildPanel(
   });
 
   const claimBtn = createActionButton({
-    customId: `${TVC}:claim:${channel.id}`,
+    customId: `${Tvc}:claim:${channel.id}`,
     label: t ? t("tempvc:panelClaimButton") : "🎯 Claim Ownership",
     style: ButtonStyle.Primary,
   });
@@ -168,7 +168,7 @@ export function buildPanel(
 const backToPanelRow = (channelId: string, t?: LumiT) =>
   new ActionRowBuilder<ButtonBuilder>().addComponents(
     createBackButton(
-      `${TVC}:panel:${channelId}`,
+      `${Tvc}:panel:${channelId}`,
       t ? t("tempvc:backToPanel") : "← Back to Panel",
     ),
   );
@@ -227,7 +227,7 @@ function buildAccessView(
   t?: LumiT,
 ): PanelMessage {
   const userSelect = createUserSelectMenu({
-    customId: `${TVC}:select_${spec.key}:${channel.id}`,
+    customId: `${Tvc}:select_${spec.key}:${channel.id}`,
     placeholder: t
       ? t(`tempvc:${spec.key}UserPlaceholder`)
       : spec.fallbackUserPlaceholder,
@@ -236,7 +236,7 @@ function buildAccessView(
   });
 
   const roleSelect = createRoleSelectMenu({
-    customId: `${TVC}:select_${spec.key}_role:${channel.id}`,
+    customId: `${Tvc}:select_${spec.key}_role:${channel.id}`,
     placeholder: t
       ? t(`tempvc:${spec.key}RolePlaceholder`)
       : spec.fallbackRolePlaceholder,
@@ -263,7 +263,7 @@ export function buildKickView(
   t?: LumiT,
 ): PanelMessage {
   const userSelect = createUserSelectMenu({
-    customId: `${TVC}:select_kick:${channel.id}`,
+    customId: `${Tvc}:select_kick:${channel.id}`,
     placeholder: t
       ? t("tempvc:selectKickPlaceholder")
       : "Select member(s) to kick…",
@@ -323,7 +323,7 @@ export function buildTransferView(
   t?: LumiT,
 ): PanelMessage {
   const userSelect = createUserSelectMenu({
-    customId: `${TVC}:select_transfer:${channel.id}`,
+    customId: `${Tvc}:select_transfer:${channel.id}`,
     placeholder: t
       ? t("tempvc:transferPlaceholder")
       : "Select new channel owner…",
@@ -351,13 +351,13 @@ export function buildDeleteConfirmView(
   t?: LumiT,
 ): PanelMessage {
   const confirmBtn = createActionButton({
-    customId: `${TVC}:delyes:${channel.id}`,
+    customId: `${Tvc}:delyes:${channel.id}`,
     label: t ? t("tempvc:confirmDeleteButton") : "Confirm Delete",
     style: ButtonStyle.Danger,
   });
 
   const backBtn = createBackButton(
-    `${TVC}:panel:${channel.id}`,
+    `${Tvc}:panel:${channel.id}`,
     t ? t("tempvc:backToPanel") : "← Back to Panel",
   );
 
