@@ -22,7 +22,7 @@ import {
 export { SnowflakeSchema, parsePayload, paginate };
 
 /** Channel types sensible to offer in a CHANNEL config picker by default (no threads, no categories). */
-export const PICKABLE_CHANNEL_TYPES = new Set<ChannelType>([
+export const PickableChannelTypes = new Set<ChannelType>([
   ChannelType.GuildText,
   ChannelType.GuildAnnouncement,
   ChannelType.GuildVoice,
@@ -263,7 +263,7 @@ export const PermitAssignSchema = s.object({
   targetId: SnowflakeSchema,
 });
 
-export const MAX_CASES_PAGE_SIZE = 100;
+export const MaxCasesPageSize = 100;
 
 export const CasesListSchema = s.object({
   action: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(32).optional(),
@@ -274,7 +274,7 @@ export const CasesListSchema = s.object({
     .number()
     .int()
     .greaterThanOrEqual(1)
-    .lessThanOrEqual(MAX_CASES_PAGE_SIZE)
+    .lessThanOrEqual(MaxCasesPageSize)
     .optional(),
 });
 
@@ -380,7 +380,7 @@ export const ModNoteRemoveSchema = s.object({
 
 // Only ban/timeout cases are appealable - matches BanAction/MuteAction, the
 // only two call sites that ever DM an appeal link.
-export const APPEALABLE_CASE_ACTIONS = new Set(["ban", "mute"]);
+export const AppealableCaseActions = new Set(["ban", "mute"]);
 
 export const AppealVerifySchema = s.object({
   caseId: s.number().int().greaterThanOrEqual(1),
@@ -442,7 +442,7 @@ export async function resolveAppealToken(
   ) {
     return { ok: false, reason: "This appeal link is invalid or has expired." };
   }
-  if (!APPEALABLE_CASE_ACTIONS.has(moderationCase.action)) {
+  if (!AppealableCaseActions.has(moderationCase.action)) {
     return { ok: false, reason: "This case can't be appealed." };
   }
 

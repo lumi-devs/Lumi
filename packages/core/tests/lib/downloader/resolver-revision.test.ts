@@ -43,8 +43,8 @@ import { execFileSync } from "node:child_process";
 import { container } from "@sapphire/framework";
 import {
   DownloadResolver,
-  MODULE_ROOT,
-  ADDON_MODULES_ROOT,
+  ModuleRoot,
+  AddonModulesRoot,
 } from "#lib/downloader/resolver.js";
 
 // Uses execFileSync (untouched by the node:child_process mock below, which
@@ -158,7 +158,7 @@ describe("DownloadResolver - revision resolution & checkout", () => {
     });
   });
 
-  describe("installModule with a revision (real MODULE_ROOT fixture)", () => {
+  describe("installModule with a revision (real ModuleRoot fixture)", () => {
     const repoName = `test-repo-revision-${Date.now()}`;
     const moduleName = "test-module";
     let repoPath: string;
@@ -166,7 +166,7 @@ describe("DownloadResolver - revision resolution & checkout", () => {
     let firstCommit: string;
 
     beforeEach(async () => {
-      repoPath = path.join(MODULE_ROOT, repoName);
+      repoPath = path.join(ModuleRoot, repoName);
       moduleDir = path.join(repoPath, moduleName);
       await fs.mkdir(repoPath, { recursive: true });
       await git(repoPath, "init", "-q");
@@ -186,7 +186,7 @@ describe("DownloadResolver - revision resolution & checkout", () => {
     afterEach(async () => {
       await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
       await fs
-        .rm(path.join(ADDON_MODULES_ROOT, moduleName), { recursive: true, force: true })
+        .rm(path.join(AddonModulesRoot, moduleName), { recursive: true, force: true })
         .catch(() => {});
     });
 

@@ -136,7 +136,7 @@ model Permit {
 /// Assigns a Permit to a user, role, or channel. Enforced permits only ever
 /// have targetType="user" rows; custom permits may have targetType="user",
 /// "role", or "channel" rows — enforced at the service layer (see
-/// KIND_TARGET_TYPES in PermissionRepository.ts), not by a DB constraint.
+/// KindTargetTypes in PermissionRepository.ts), not by a DB constraint.
 model PermitAssignment {
   id         Int      @id @default(autoincrement())
   permitId   Int      @map("permit_id")

@@ -1,4 +1,4 @@
-import { SUPPORTED_LANGUAGES, type LumiT } from "#lib/i18n/index.js";
+import { SupportedLanguages, type LumiT } from "#lib/i18n/index.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { row, type Row } from "#modules/core/ui/common.js";
 import { Emojis } from "#utilities/assets.js";
@@ -16,7 +16,7 @@ import {
 } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 
-export const DEFAULT_PREFIX = ",";
+export const DefaultPrefix = ",";
 
 export type HubTabId =
   "home" | "modules" | "permissions" | "settings" | "addons";
@@ -75,7 +75,7 @@ export interface HubOverview {
 
 /** The hub landing card: a counts summary plus the per-tab hint list. */
 export function buildHubView(o: HubOverview, t?: LumiT): CardReply {
-  const prefix = o.prefix ?? DEFAULT_PREFIX;
+  const prefix = o.prefix ?? DefaultPrefix;
   const glanceLines = [
     t
       ? t(PanelsKeys.HubIntro)
@@ -122,7 +122,7 @@ export function buildSettingsView(
   t?: LumiT,
 ): CardReply {
   const prefixLabel = t ? t(PanelsKeys.SettingsPrefix) : "Prefix";
-  const prefixValue = `\`${settings.prefix ?? DEFAULT_PREFIX}\`${
+  const prefixValue = `\`${settings.prefix ?? DefaultPrefix}\`${
     settings.prefix
       ? ""
       : ` *${t ? t(PanelsKeys.SettingsPrefixDefault) : "(default)"}*`
@@ -145,7 +145,7 @@ export function buildSettingsView(
   const langSelect = createStringSelectMenu({
     customId: "lumi:setlang",
     placeholder: t ? t(PanelsKeys.SettingsChangeLanguage) : "Change language…",
-    options: SUPPORTED_LANGUAGES.slice(0, 25).map((lang) =>
+    options: SupportedLanguages.slice(0, 25).map((lang) =>
       new StringSelectMenuOptionBuilder()
         .setLabel(lang)
         .setValue(lang)

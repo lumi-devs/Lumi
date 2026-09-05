@@ -39,8 +39,8 @@ import { ButtonStyle, ChannelType } from "discord.js";
 // Each settingRow is a Section with up to 2 text lines + 1 button = ~4 real
 // components once nested, and card chrome (container/title/footer/tab row)
 // already eats ~18-19 of Discord's 40-component budget per message.
-export const FEATURES_PER_PAGE = 4;
-export const FIELDS_PER_PAGE = 5;
+export const FeaturesPerPage = 4;
+export const FieldsPerPage = 5;
 
 export interface FeatureListEntry {
   meta: ModuleMeta;
@@ -54,7 +54,7 @@ const formatStatusBadge = (status: "enabled" | "disabled", t?: LumiT) =>
 
 /**
  * The modules tab: one row per guild-toggleable module, sorted by display name
- * and paginated at {@linkcode FEATURES_PER_PAGE}.
+ * and paginated at {@linkcode FeaturesPerPage}.
  *
  * @param page - Zero-based page index; out-of-range values are clamped.
  */
@@ -66,10 +66,10 @@ export function buildFeatureListView(
   const sorted = [...features].sort((a, b) =>
     a.meta.displayName.localeCompare(b.meta.displayName),
   );
-  const totalPages = Math.max(1, Math.ceil(sorted.length / FEATURES_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(sorted.length / FeaturesPerPage));
   const safePage = Math.max(0, Math.min(page, totalPages - 1));
-  const start = safePage * FEATURES_PER_PAGE;
-  const pageFeatures = sorted.slice(start, start + FEATURES_PER_PAGE);
+  const start = safePage * FeaturesPerPage;
+  const pageFeatures = sorted.slice(start, start + FeaturesPerPage);
 
   const sections = pageFeatures.map((f) =>
     settingRow(
@@ -132,7 +132,7 @@ interface FieldSection {
 
 /**
  * Splits a module's fields into navigable sections: by explicit `group` when
- * the schema defines them, otherwise into `FIELDS_PER_PAGE` chunks so a large
+ * the schema defines them, otherwise into `FieldsPerPage` chunks so a large
  * ungrouped module never overflows the component budget. Small modules collapse
  * to a single unnamed section (no switcher).
  */
@@ -140,8 +140,8 @@ function chunkSection(
   name: string | null,
   fields: ConfigField[],
 ): FieldSection[] {
-  if (fields.length <= FIELDS_PER_PAGE) return [{ name, fields }];
-  return chunk(fields, FIELDS_PER_PAGE).map((pageFields, idx) => ({
+  if (fields.length <= FieldsPerPage) return [{ name, fields }];
+  return chunk(fields, FieldsPerPage).map((pageFields, idx) => ({
     name: name ? `${name} (${idx + 1})` : `Page ${idx + 1}`,
     fields: pageFields,
   }));

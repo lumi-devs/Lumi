@@ -5,7 +5,7 @@ import {
 import { buildHubView, buildSettingsView } from "#modules/core/ui/hub.js";
 import {
   buildPermissionsView,
-  PERMS_PER_PAGE,
+  PermsPerPage,
 } from "#modules/core/ui/permissions.js";
 import { describe, it, expect } from "vitest";
 
@@ -52,7 +52,7 @@ describe("hub-panel view builders", () => {
   });
 
   it("buildPermissionsView renders revoke accessories and paginates", () => {
-    const overrides = Array.from({ length: PERMS_PER_PAGE + 1 }, (_, i) => ({
+    const overrides = Array.from({ length: PermsPerPage + 1 }, (_, i) => ({
       permitId: i,
       permitName: `Permit ${i}`,
       kind: (i % 2 === 0 ? "enforced" : "custom"),
@@ -62,7 +62,7 @@ describe("hub-panel view builders", () => {
     }));
 
     const card = buildPermissionsView(overrides as any, 0);
-    expect(sections(card)).toHaveLength(PERMS_PER_PAGE);
+    expect(sections(card)).toHaveLength(PermsPerPage);
     expect(sections(card)[0]!.accessory?.custom_id).toContain("lumi:permdel:");
 
     const pageRow = actionRows(card).find((r) =>

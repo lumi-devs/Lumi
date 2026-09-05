@@ -23,7 +23,7 @@ import {
 import { roleMention, userMention } from "@discordjs/formatters";
 import { ButtonStyle } from "discord.js";
 
-export const PERMS_PER_PAGE = 4;
+export const PermsPerPage = 4;
 
 export type PermitKind = "custom" | "enforced";
 export type PermitTargetType = "role" | "user";
@@ -54,11 +54,11 @@ export function buildPermissionsView(
   page = 0,
   t?: LumiT,
 ): CardReply {
-  const totalPages = Math.max(1, Math.ceil(assignments.length / PERMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(assignments.length / PermsPerPage));
   const safePage = Math.max(0, Math.min(page, totalPages - 1));
   const shown = assignments.slice(
-    safePage * PERMS_PER_PAGE,
-    (safePage + 1) * PERMS_PER_PAGE,
+    safePage * PermsPerPage,
+    (safePage + 1) * PermsPerPage,
   );
 
   const sections = shown.map((a) =>

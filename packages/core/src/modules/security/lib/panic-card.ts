@@ -11,12 +11,12 @@ import {
   type CardReply,
 } from "#lib/utilities/cards.js";
 
-export const PANIC_REVERT_ID = "sec:panic:revert";
+export const PanicRevertId = "sec:panic:revert";
 
 const revertRow = (label: string): ActionRowBuilder<ButtonBuilder> =>
   new ActionRowBuilder<ButtonBuilder>().addComponents(
     createActionButton({
-      customId: PANIC_REVERT_ID,
+      customId: PanicRevertId,
       label,
       style: ButtonStyle.Success,
     })

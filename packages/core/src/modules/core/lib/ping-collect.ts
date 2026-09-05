@@ -105,7 +105,7 @@ export interface PingData {
   prismaVersion: string;
 }
 
-export const SESSION_START = Date.now();
+export const SessionStart = Date.now();
 export let sessionCommandCount = 0;
 const PingHistory: number[] = [];
 

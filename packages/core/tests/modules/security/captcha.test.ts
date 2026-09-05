@@ -3,27 +3,27 @@ import {
   advanceCaptcha,
   buildChallenge,
   buildCaptchaRows,
-  EMOJI_POOL,
-  MAX_ATTEMPTS,
-  SEQUENCE_LENGTH,
+  EmojiPool,
+  MaxAttempts,
+  SequenceLength,
   type CaptchaState,
 } from "#modules/security/lib/captcha.js";
 
 function freshState(): CaptchaState {
   const { sequence, buttons } = buildChallenge();
-  return { sequence, buttons, progress: 0, attempts: MAX_ATTEMPTS, expiresAt: Date.now() + 60_000 };
+  return { sequence, buttons, progress: 0, attempts: MaxAttempts, expiresAt: Date.now() + 60_000 };
 }
 
 describe("captcha challenge builder", () => {
   it("produces a sequence and a superset of shuffled buttons", () => {
     const { sequence, buttons } = buildChallenge();
-    expect(sequence).toHaveLength(SEQUENCE_LENGTH);
-    expect(buttons).toHaveLength(SEQUENCE_LENGTH * 2);
+    expect(sequence).toHaveLength(SequenceLength);
+    expect(buttons).toHaveLength(SequenceLength * 2);
     // every sequence index is clickable
     for (const idx of sequence) expect(buttons).toContain(idx);
     // indices are valid and unique
     expect(new Set(buttons).size).toBe(buttons.length);
-    for (const idx of buttons) expect(EMOJI_POOL[idx]).toBeDefined();
+    for (const idx of buttons) expect(EmojiPool[idx]).toBeDefined();
   });
 });
 
@@ -46,14 +46,14 @@ describe("advanceCaptcha", () => {
     const { outcome } = advanceCaptcha(state, wrong);
     expect(outcome).toBe("wrong");
     expect(state.progress).toBe(0);
-    expect(state.attempts).toBe(MAX_ATTEMPTS - 1);
+    expect(state.attempts).toBe(MaxAttempts - 1);
   });
 
   it("fails once all attempts are exhausted", () => {
     const state = freshState();
     const wrong = state.buttons.find((b) => b !== state.sequence[0])!;
     let last = "";
-    for (let i = 0; i < MAX_ATTEMPTS; i++) {
+    for (let i = 0; i < MaxAttempts; i++) {
       last = advanceCaptcha(state, wrong).outcome;
     }
     expect(last).toBe("failed");

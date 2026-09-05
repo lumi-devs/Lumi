@@ -5,7 +5,7 @@ import path from "node:path";
 import child_process from "node:child_process";
 import { container } from "@sapphire/framework";
 import { validateAddon, validateAddonOrRepo } from "#lib/downloader/validate.js";
-import { DownloadResolver, MODULE_ROOT } from "#lib/downloader/resolver.js";
+import { DownloadResolver, ModuleRoot } from "#lib/downloader/resolver.js";
 import { LumiInfo } from "#utilities/misc.js";
 
 describe("Downloader & Addon Helpers (validate & resolver)", () => {
@@ -301,7 +301,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
 
     it("reads modules from modules.json in getModulesInRepo if present", async () => {
       const repoName = "repo-with-index";
-      const repoPath = path.join(MODULE_ROOT, repoName);
+      const repoPath = path.join(ModuleRoot, repoName);
       await fs.mkdir(repoPath, { recursive: true });
 
       try {
@@ -323,7 +323,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
 
     it("falls back to scanning info.json files if modules.json is absent", async () => {
       const repoName = "repo-scan";
-      const repoPath = path.join(MODULE_ROOT, repoName);
+      const repoPath = path.join(ModuleRoot, repoName);
       const mod1Dir = path.join(repoPath, "mod-1");
       await fs.mkdir(mod1Dir, { recursive: true });
 

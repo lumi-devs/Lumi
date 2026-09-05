@@ -4,23 +4,23 @@ import path from "node:path";
 import { container } from "@sapphire/framework";
 import {
   DownloadResolver,
-  MODULE_ROOT,
-  ADDON_MODULES_ROOT,
+  ModuleRoot,
+  AddonModulesRoot,
 } from "#lib/downloader/resolver.js";
 
 /**
  * Verifies the real addon-installation/classification logic in
  * DownloadResolver#installModule: a module cloned into a repo under
- * MODULE_ROOT ("data/3rd-party-modules") is never loaded in place as a
+ * ModuleRoot ("data/3rd-party-modules") is never loaded in place as a
  * built-in feature module. It only becomes an active addon once it passes
- * validation and is symlinked into ADDON_MODULES_ROOT
+ * validation and is symlinked into AddonModulesRoot
  * ("data/installed-modules"), which is the root the ModuleStore actually
  * registers for addon discovery (see LumiClient).
  */
 describe("Add-on Module Classification (DownloadResolver#installModule)", () => {
   let resolver: DownloadResolver;
   const repoName = "loader-test-repo";
-  const repoPath = path.join(MODULE_ROOT, repoName);
+  const repoPath = path.join(ModuleRoot, repoName);
 
   beforeEach(async () => {
     resolver = new DownloadResolver();
@@ -36,24 +36,24 @@ describe("Add-on Module Classification (DownloadResolver#installModule)", () => 
   afterEach(async () => {
     await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
     await fs
-      .rm(path.join(ADDON_MODULES_ROOT, "loader-test-mod"), {
+      .rm(path.join(AddonModulesRoot, "loader-test-mod"), {
         recursive: true,
         force: true,
       })
       .catch(() => {});
   });
 
-  it("keeps MODULE_ROOT (raw repo checkouts) and ADDON_MODULES_ROOT (active addons) as distinct roots", () => {
-    expect(MODULE_ROOT.endsWith(path.join("data", "3rd-party-modules"))).toBe(
+  it("keeps ModuleRoot (raw repo checkouts) and AddonModulesRoot (active addons) as distinct roots", () => {
+    expect(ModuleRoot.endsWith(path.join("data", "3rd-party-modules"))).toBe(
       true,
     );
     expect(
-      ADDON_MODULES_ROOT.endsWith(path.join("data", "installed-modules")),
+      AddonModulesRoot.endsWith(path.join("data", "installed-modules")),
     ).toBe(true);
-    expect(MODULE_ROOT).not.toBe(ADDON_MODULES_ROOT);
+    expect(ModuleRoot).not.toBe(AddonModulesRoot);
   });
 
-  it("symlinks a valid module from the repo checkout into ADDON_MODULES_ROOT instead of loading it in place", async () => {
+  it("symlinks a valid module from the repo checkout into AddonModulesRoot instead of loading it in place", async () => {
     const moduleName = "loader-test-mod";
     const sourcePath = path.join(repoPath, moduleName);
     await fs.mkdir(sourcePath, { recursive: true });
@@ -78,12 +78,12 @@ describe("Add-on Module Classification (DownloadResolver#installModule)", () => 
     const result = await resolver.installModule(repoName, moduleName);
     expect(result.name).toBe(moduleName);
 
-    const targetPath = path.join(ADDON_MODULES_ROOT, moduleName);
+    const targetPath = path.join(AddonModulesRoot, moduleName);
     const stat = await fs.lstat(targetPath);
     expect(stat.isSymbolicLink()).toBe(true);
 
-    // The addon is activated via a symlink into ADDON_MODULES_ROOT that
-    // resolves back to its real location under MODULE_ROOT/3rd-party-modules -
+    // The addon is activated via a symlink into AddonModulesRoot that
+    // resolves back to its real location under ModuleRoot/3rd-party-modules -
     // it is never copied into the built-in modules tree.
     const real = await fs.realpath(targetPath);
     expect(real).toBe(await fs.realpath(sourcePath));
@@ -104,7 +104,7 @@ describe("Add-on Module Classification (DownloadResolver#installModule)", () => 
     );
 
     const targetExists = await fs
-      .access(path.join(ADDON_MODULES_ROOT, moduleName))
+      .access(path.join(AddonModulesRoot, moduleName))
       .then(() => true)
       .catch(() => false);
     expect(targetExists).toBe(false);
@@ -133,7 +133,7 @@ describe("Add-on Module Classification (DownloadResolver#installModule)", () => 
     ).rejects.toThrow("failed validation");
 
     const targetExists = await fs
-      .access(path.join(ADDON_MODULES_ROOT, moduleName))
+      .access(path.join(AddonModulesRoot, moduleName))
       .then(() => true)
       .catch(() => false);
     expect(targetExists).toBe(false);

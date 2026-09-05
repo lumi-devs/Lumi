@@ -20,8 +20,8 @@ import { Emojis } from "#lib/utilities/assets.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { formatDuration } from "#utilities/time.js";
 
-export const PING_FLAGS = MessageFlags.IsComponentsV2;
-export const EPHEMERAL_FLAGS =
+export const PingFlags = MessageFlags.IsComponentsV2;
+export const EphemeralFlags =
   MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral;
 
 export type PingCategory =

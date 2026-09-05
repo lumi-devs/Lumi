@@ -3,7 +3,7 @@ import {
   redisConnectionOptions,
   InvalidationBus,
 } from "#lib/database/redis.js";
-import { ADDON_MODULES_ROOT } from "#lib/downloader/resolver.js";
+import { AddonModulesRoot } from "#lib/downloader/resolver.js";
 import { envParseInteger, getDevModulePaths } from "#lib/env.js";
 import { ModuleStore } from "#lib/module-system/ModuleStore.js";
 import { permitResolver } from "#lib/permissions/PermitResolver.js";
@@ -36,7 +36,7 @@ export function installContainerServices(
 ): OwnedEventBus {
   const moduleStore = new ModuleStore();
   moduleStore.addRoot(new URL("../../modules/", import.meta.url));
-  moduleStore.addRoot(pathToFileURL(`${ADDON_MODULES_ROOT}/`));
+  moduleStore.addRoot(pathToFileURL(`${AddonModulesRoot}/`));
   for (const devPath of getDevModulePaths()) {
     moduleStore.addRoot(pathToFileURL(`${devPath}/`));
   }

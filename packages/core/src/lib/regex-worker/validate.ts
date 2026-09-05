@@ -1,7 +1,7 @@
 import { getRegexWorker } from "./RegexWorkerHandler.js";
 
 /** Patterns longer than this are rejected outright - length feeds blowup. */
-export const MAX_REGEX_LENGTH = 256;
+export const MaxRegexLength = 256;
 
 /**
  * Inputs chosen to blow up the classic backtracking shapes - `(a+)+$`,
@@ -29,8 +29,8 @@ export async function validateRegexPattern(
   pattern: string,
 ): Promise<string | null> {
   if (pattern.length === 0) return "pattern is empty";
-  if (pattern.length > MAX_REGEX_LENGTH) {
-    return `pattern is longer than ${MAX_REGEX_LENGTH} characters`;
+  if (pattern.length > MaxRegexLength) {
+    return `pattern is longer than ${MaxRegexLength} characters`;
   }
 
   try {

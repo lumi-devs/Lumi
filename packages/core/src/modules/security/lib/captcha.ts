@@ -4,7 +4,7 @@ import { Emojis } from "#lib/utilities/assets.js";
 import { createActionButton, buildSafeActionRows } from "#lib/utilities/panels.js";
 
 /** Visually distinct emoji; challenge indices point into this pool. */
-export const EMOJI_POOL = [
+export const EmojiPool = [
   "🍎",
   "🐶",
   "🚀",
@@ -19,13 +19,13 @@ export const EMOJI_POOL = [
   "🔥",
 ] as const;
 
-export const SEQUENCE_LENGTH = 4;
-export const MAX_ATTEMPTS = 3;
-export const CAPTCHA_BUTTON_PREFIX = "sec:vseq";
+export const SequenceLength = 4;
+export const MaxAttempts = 3;
+export const CaptchaButtonPrefix = "sec:vseq";
 
 /** Persisted per-member challenge state (Redis JSON). */
 export interface CaptchaState {
-  /** Indices into EMOJI_POOL, in the order they must be clicked. */
+  /** Indices into EmojiPool, in the order they must be clicked. */
   sequence: number[];
   /** All button indices (sequence + distractors), shuffled. */
   buttons: number[];
@@ -50,9 +50,9 @@ function cryptoShuffle<T>(input: readonly T[]): T[] {
 
 /** Builds a fresh sequence + shuffled button set (sequence interleaved with distractors). */
 export function buildChallenge(): { sequence: number[]; buttons: number[] } {
-  const pool = cryptoShuffle(EMOJI_POOL.map((_, i) => i));
-  const sequence = pool.slice(0, SEQUENCE_LENGTH);
-  const distractors = pool.slice(SEQUENCE_LENGTH, SEQUENCE_LENGTH * 2);
+  const pool = cryptoShuffle(EmojiPool.map((_, i) => i));
+  const sequence = pool.slice(0, SequenceLength);
+  const distractors = pool.slice(SequenceLength, SequenceLength * 2);
   return { sequence, buttons: cryptoShuffle([...sequence, ...distractors]) };
 }
 
@@ -69,8 +69,8 @@ export function buildCaptchaRows(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         slice.map((idx) =>
           createActionButton({
-            customId: `${CAPTCHA_BUTTON_PREFIX}:${idx}`,
-            emoji: Emojis.parse(EMOJI_POOL[idx]!),
+            customId: `${CaptchaButtonPrefix}:${idx}`,
+            emoji: Emojis.parse(EmojiPool[idx]!),
             style: solved.has(idx) ? ButtonStyle.Success : ButtonStyle.Secondary,
             disabled: solved.has(idx),
           })
@@ -83,7 +83,7 @@ export function buildCaptchaRows(
 
 /** The target sequence rendered as spaced emoji for the prompt line. */
 export function sequenceDisplay(sequence: number[]): string {
-  return sequence.map((i) => EMOJI_POOL[i]).join("  ");
+  return sequence.map((i) => EmojiPool[i]).join("  ");
 }
 
 export type CaptchaOutcome = "progress" | "solved" | "wrong" | "failed";

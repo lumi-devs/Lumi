@@ -34,7 +34,7 @@ vi.mock("#lib/module-system/manifest.js", () => ({
   writeManifest: vi.fn(),
 }));
 
-import { DownloadResolver, MODULE_ROOT, ADDON_MODULES_ROOT } from "#lib/downloader/resolver.js";
+import { DownloadResolver, ModuleRoot, AddonModulesRoot } from "#lib/downloader/resolver.js";
 import { validateAddon } from "#lib/downloader/validate.js";
 import { detectSubStores, writeManifest } from "#lib/module-system/manifest.js";
 // CI trigger comment
@@ -77,7 +77,7 @@ describe("DownloadResolver Edge Cases", () => {
 
   it("cleans up incomplete repository folder on clone failure", async () => {
     const repoName = "test_failed_clone";
-    const repoPath = path.join(MODULE_ROOT, repoName);
+    const repoPath = path.join(ModuleRoot, repoName);
 
     // Ensure clean start
     await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
@@ -96,7 +96,7 @@ describe("DownloadResolver Edge Cases", () => {
 
   it("removes non-git directory if addRepo encounters a corrupt folder without .git", async () => {
     const repoName = "test_corrupt_folder";
-    const repoPath = path.join(MODULE_ROOT, repoName);
+    const repoPath = path.join(ModuleRoot, repoName);
 
     // Manually create a non-git directory to simulate previous partial crash
     await fs.mkdir(repoPath, { recursive: true });
@@ -116,7 +116,7 @@ describe("DownloadResolver Edge Cases", () => {
 
   it("addRepo() pulls the latest changes for an already-cloned repo instead of re-cloning", async () => {
     const repoName = "existing_repo";
-    const repoPath = path.join(MODULE_ROOT, repoName);
+    const repoPath = path.join(ModuleRoot, repoName);
     const gitFolder = path.join(repoPath, ".git");
 
     vi.spyOn(fs, "access").mockImplementation((p: any) => {
@@ -150,13 +150,13 @@ describe("DownloadResolver Edge Cases", () => {
   it("addRepo() re-validates already-installed modules sourced from an updated repo and rejects if the pulled code now fails validation", async () => {
     const repoName = "existing_repo_revalidate";
     const moduleName = "economy";
-    const repoPath = path.join(MODULE_ROOT, repoName);
+    const repoPath = path.join(ModuleRoot, repoName);
     const gitFolder = path.join(repoPath, ".git");
     const modulePath = path.join(repoPath, moduleName);
-    const symlinkPath = path.join(ADDON_MODULES_ROOT, moduleName);
+    const symlinkPath = path.join(AddonModulesRoot, moduleName);
 
     vi.spyOn(fs, "access").mockImplementation((p: any) => {
-      if ([repoPath, gitFolder, ADDON_MODULES_ROOT].includes(String(p))) {
+      if ([repoPath, gitFolder, AddonModulesRoot].includes(String(p))) {
         return Promise.resolve(undefined);
       }
       const err: any = new Error("ENOENT");
@@ -164,7 +164,7 @@ describe("DownloadResolver Edge Cases", () => {
       throw err;
     });
     vi.spyOn(fs, "readdir").mockImplementation((p: any) => {
-      if (String(p) === ADDON_MODULES_ROOT) {
+      if (String(p) === AddonModulesRoot) {
         return Promise.resolve([{ name: moduleName }] as any);
       }
       throw new Error(`unexpected readdir: ${p}`);
@@ -265,8 +265,8 @@ describe("DownloadResolver Edge Cases", () => {
   describe("installModule()", () => {
     const repoName = "repo_x";
     const moduleName = "economy";
-    const sourcePath = path.join(MODULE_ROOT, repoName, moduleName);
-    const targetPath = path.join(ADDON_MODULES_ROOT, moduleName);
+    const sourcePath = path.join(ModuleRoot, repoName, moduleName);
+    const targetPath = path.join(AddonModulesRoot, moduleName);
     const infoPath = path.join(sourcePath, "info.json");
     const manifestPath = path.join(sourcePath, "manifest.json");
 

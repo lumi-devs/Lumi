@@ -5,8 +5,8 @@ import { BaseCommand } from "#lib/commands.js";
 import { collectPingData } from "#modules/core/lib/ping-collect.js";
 import {
   buildOverviewCard,
-  PING_FLAGS,
-  EPHEMERAL_FLAGS,
+  PingFlags,
+  EphemeralFlags,
 } from "#modules/core/lib/ping-cards.js";
 
 const LiveUpdatesDuration = 60_000;
@@ -36,7 +36,7 @@ export class PingCommand extends BaseCommand {
     const data = await collectPingData();
 
     if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply({ flags: EPHEMERAL_FLAGS });
+      await interaction.deferReply({ flags: EphemeralFlags });
     }
 
     const msg = await interaction.editReply({
@@ -62,7 +62,7 @@ export class PingCommand extends BaseCommand {
     const data = await collectPingData();
 
     let msg = await message.reply({
-      flags: PING_FLAGS,
+      flags: PingFlags,
       components: [
         buildOverviewCard({ roundTrip: null, ...data }, message.author.id),
       ],
@@ -72,7 +72,7 @@ export class PingCommand extends BaseCommand {
     const roundTrip = msg.createdTimestamp - message.createdTimestamp;
 
     msg = await msg.edit({
-      flags: PING_FLAGS,
+      flags: PingFlags,
       components: [
         buildOverviewCard({ roundTrip, ...data }, message.author.id),
       ],
@@ -109,7 +109,7 @@ export class PingCommand extends BaseCommand {
 
         await msg
           .edit({
-            flags: PING_FLAGS,
+            flags: PingFlags,
             components: [card],
             allowedMentions: {},
           })

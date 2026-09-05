@@ -4,7 +4,7 @@ import { ChannelType } from "discord.js";
 import { SecurityUtility } from "#modules/security/utilities/SecurityUtility.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { logToChannel } from "#lib/moderation/log.js";
-import { MAX_ATTEMPTS, type CaptchaState } from "#modules/security/lib/captcha.js";
+import { MaxAttempts, type CaptchaState } from "#modules/security/lib/captcha.js";
 
 vi.mock("#lib/moderation/QuarantineAction.js", () => ({
   QuarantineAction: { apply: vi.fn() },
@@ -512,7 +512,7 @@ describe("SecurityUtility.advanceChallenge", () => {
       sequence: [0, 1, 2, 3],
       buttons: [0, 1, 2, 3, 4, 5, 6, 7],
       progress: 0,
-      attempts: MAX_ATTEMPTS,
+      attempts: MaxAttempts,
       expiresAt: Date.now() + 60_000,
     };
     const redis = makeChallengeRedis(initial);
@@ -525,7 +525,7 @@ describe("SecurityUtility.advanceChallenge", () => {
 
     expect(r1?.outcome).toBe("wrong");
     expect(r2?.outcome).toBe("wrong");
-    expect(redis.read()?.attempts).toBe(MAX_ATTEMPTS - 2);
+    expect(redis.read()?.attempts).toBe(MaxAttempts - 2);
   });
 
   it("returns null when there is no active challenge to advance", async () => {

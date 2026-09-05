@@ -9,4 +9,4 @@ export const TempVcKeys = {
 } as const;
 
 /** Button / select / modal custom-id prefix. Format: `tvc:<action>:<channelId>`. */
-export const TVC = "tvc";
+export const Tvc = "tvc";

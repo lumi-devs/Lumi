@@ -15,13 +15,13 @@ export function parsePayload<T>(schema: BaseValidator<T>, data: unknown): T {
   }
 }
 
-export const MAX_PAGE_SIZE = 100;
+export const MaxPageSize = 100;
 export const PageSchema = s.number().int().greaterThanOrEqual(1).optional();
 export const PageSizeSchema = s
   .number()
   .int()
   .greaterThanOrEqual(1)
-  .lessThanOrEqual(MAX_PAGE_SIZE)
+  .lessThanOrEqual(MaxPageSize)
   .optional();
 
 export function paginate(filter: { page?: number; pageSize?: number }) {

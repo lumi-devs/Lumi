@@ -4,7 +4,7 @@
 export {
   RelayTask,
   shouldRunNow,
-  DEFAULT_CATCHUP_GRACE_MS,
+  DefaultCatchupGraceMs,
   type CatchUpMeta,
 } from "#lib/scheduled-tasks.js";
 export { scheduleTask, cancelTask } from "#lib/schedule-task.js";

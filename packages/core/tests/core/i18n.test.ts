@@ -5,9 +5,9 @@ import { join } from "node:path";
 import { InternationalizationHandler } from "@sapphire/plugin-i18next";
 import {
   buildI18nOptions,
-  DEFAULT_LANGUAGE,
+  DefaultLanguage,
   isSupportedLanguage,
-  SUPPORTED_LANGUAGES,
+  SupportedLanguages,
 } from "#lib/i18n/index.js";
 
 const LANGUAGE_ROOT = fileURLToPath(
@@ -51,8 +51,8 @@ describe("i18n framework", () => {
   });
 
   it("declares en-US as the default language", () => {
-    expect(DEFAULT_LANGUAGE).toBe("en-US");
-    expect(SUPPORTED_LANGUAGES).toContain("en-US");
+    expect(DefaultLanguage).toBe("en-US");
+    expect(SupportedLanguages).toContain("en-US");
   });
 
   it("isSupportedLanguage gates on the supported set", () => {
@@ -62,13 +62,13 @@ describe("i18n framework", () => {
 
   it("loads every supported language directory", () => {
     const loaded = [...handler.languages.keys()];
-    for (const lang of SUPPORTED_LANGUAGES) {
+    for (const lang of SupportedLanguages) {
       expect(loaded).toContain(lang);
     }
   });
 
   it("translates keys across namespaces with interpolation", () => {
-    const t = handler.getT(DEFAULT_LANGUAGE);
+    const t = handler.getT(DefaultLanguage);
     expect(t("common:success")).toBe("Success");
     expect(t("commands:languageCurrent", { language: "en-US" })).toContain(
       "en-US",
@@ -80,7 +80,7 @@ describe("i18n framework", () => {
     // These keys are passed as UserError context.i18nKey by the preconditions
     // and resolved by handleDenied. A typo here would silently fall back to the
     // English message, so assert they exist (don't return the missing-key tag).
-    const t = handler.getT(DEFAULT_LANGUAGE);
+    const t = handler.getT(DefaultLanguage);
     const keys = [
       "preconditions:administrator",
       "preconditions:moderator",
@@ -97,9 +97,9 @@ describe("i18n framework", () => {
   });
 
   it("keeps every language at key parity with en-US", async () => {
-    const reference = await namespaceKeys(DEFAULT_LANGUAGE);
-    for (const lang of SUPPORTED_LANGUAGES) {
-      if (lang === DEFAULT_LANGUAGE) continue;
+    const reference = await namespaceKeys(DefaultLanguage);
+    for (const lang of SupportedLanguages) {
+      if (lang === DefaultLanguage) continue;
       const candidate = await namespaceKeys(lang);
       expect([...candidate.keys()].sort()).toEqual(
         [...reference.keys()].sort(),

@@ -11,7 +11,7 @@ import { getUtility } from "#lib/module-system/Utility.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";
 import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
-import { PANIC_REVERT_ID, buildPanicRevertedCard } from "../lib/panic-card.js";
+import { PanicRevertId, buildPanicRevertedCard } from "../lib/panic-card.js";
 
 @ApplyOptions<InteractionHandler.Options>({
   name: "security-panic-revert",
@@ -19,7 +19,7 @@ import { PANIC_REVERT_ID, buildPanicRevertedCard } from "../lib/panic-card.js";
 })
 export class PanicRevertInteractionHandler extends BaseInteractionHandler {
   public override parse(interaction: ButtonInteraction) {
-    if (interaction.customId !== PANIC_REVERT_ID) return this.none();
+    if (interaction.customId !== PanicRevertId) return this.none();
     return this.some();
   }
 

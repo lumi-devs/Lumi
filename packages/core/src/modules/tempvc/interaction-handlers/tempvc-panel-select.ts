@@ -15,7 +15,7 @@ import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { ephemeralCard, makeSuccessCard } from "#utilities/cards.js";
 import type { VcRecord } from "#modules/tempvc/data.js";
-import { TVC } from "#modules/tempvc/keys.js";
+import { Tvc } from "#modules/tempvc/keys.js";
 import { showLimitModal, showRenameModal } from "#modules/tempvc/lib/panel-helpers.js";
 import { resolveOwnedRecord } from "#modules/tempvc/panel-guard.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
@@ -78,7 +78,7 @@ export class TempVcPanelSelectHandler extends BaseInteractionHandler {
   }
 
   public override parse(interaction: AnySelectMenuInteraction) {
-    if (!interaction.customId.startsWith(`${TVC}:`)) return this.none();
+    if (!interaction.customId.startsWith(`${Tvc}:`)) return this.none();
     const [, action, channelId] = interaction.customId.split(":");
     if (!action || !channelId || !SelectActions.has(action))
       return this.none();

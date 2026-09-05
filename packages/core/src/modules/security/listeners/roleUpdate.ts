@@ -4,7 +4,7 @@ import { AuditLogEvent, type Role } from "discord.js";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { swallow } from "#lib/utilities/errors.js";
-import { DANGEROUS_PERMISSIONS } from "../utilities/SecurityUtility.js";
+import { DangerousPermissions } from "../utilities/SecurityUtility.js";
 import { resolveAuditLogExecutor } from "../lib/audit.js";
 
 @ApplyOptions<ModuleListener.Options>({
@@ -18,7 +18,7 @@ export class SecurityRoleUpdateListener extends ModuleListener<
   protected async handle(oldRole: Role, newRole: Role): Promise<void> {
     if (newRole.id !== newRole.guild.roles.everyone.id) return;
 
-    const grantedDangerous = DANGEROUS_PERMISSIONS.filter(
+    const grantedDangerous = DangerousPermissions.filter(
       (bit) => newRole.permissions.has(bit) && !oldRole.permissions.has(bit),
     );
     if (grantedDangerous.length === 0) return;

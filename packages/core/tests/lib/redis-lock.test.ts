@@ -3,7 +3,7 @@ import { container } from "@sapphire/framework";
 import {
   acquireRedisLock,
   verifyRedisLock,
-  REDIS_EXTEND_SCRIPT,
+  RedisExtendScript,
 } from "#lib/redis-lock.js";
 
 function mockRedis() {
@@ -95,7 +95,7 @@ describe("redis-lock", () => {
 
       await vi.advanceTimersByTimeAsync(2000);
       expect(evalSpy).toHaveBeenCalledWith(
-        REDIS_EXTEND_SCRIPT,
+        RedisExtendScript,
         1,
         "lock:renew:1",
         lock.token,
