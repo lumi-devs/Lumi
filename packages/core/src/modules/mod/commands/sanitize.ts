@@ -10,10 +10,10 @@ import type { LumiT } from "#lib/i18n/index.js";
 import type { GuildMember } from "discord.js";
 
 const Root = LanguageKeys.Commands;
-const DEHOIST_REGEX = /^[\x21-\x40\x5B-\x60\x7B-\x7E\s]+/u;
+const DehoistRegex = /^[\x21-\x40\x5B-\x60\x7B-\x7E\s]+/u;
 
 function sanitizeName(name: string): string {
-  const dehoisted = name.replace(DEHOIST_REGEX, "").trim();
+  const dehoisted = name.replace(DehoistRegex, "").trim();
   return dehoisted.length >= 2 ? dehoisted : "Sanitized User";
 }
 

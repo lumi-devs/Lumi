@@ -17,7 +17,7 @@ export interface WarnThresholds {
   };
 }
 
-const ACTION_EMOJI: Record<string, string> = {
+const ActionEmoji: Record<string, string> = {
   mute: "🔇",
   kick: "👢",
   ban: "🔨",
@@ -47,7 +47,7 @@ export function buildWarnThresholdsPanel(
     entries.length > 0
       ? entries
           .map(([cnt, entry]) => {
-            const actionEmoji = ACTION_EMOJI[entry.action] ?? "🛡️";
+            const actionEmoji = ActionEmoji[entry.action] ?? "🛡️";
             const dur = entry.duration ? ` (${entry.duration})` : "";
             const badgeColor =
               entry.action === "ban"

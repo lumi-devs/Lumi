@@ -50,8 +50,8 @@ export interface PanicRevertResult {
   restoredStructure: { rolesRestored: number; channelsRestored: number } | null;
 }
 
-const PANIC_CHANNEL_CAP = 40;
-const PANIC_EDIT_DELAY_MS = 300;
+const PanicChannelCap = 40;
+const PanicEditDelayMs = 300;
 
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -79,7 +79,7 @@ export interface AntiNukeConfig {
 export type GateAction = "log" | "kick" | "timeout" | "quarantine";
 
 /** Severity order used to pick a single action when several filters trip at once. */
-const GATE_ACTION_SEVERITY: Record<GateAction, number> = {
+const GateActionSeverity: Record<GateAction, number> = {
   log: 0,
   kick: 1,
   timeout: 2,
@@ -126,7 +126,7 @@ export interface VerificationConfig {
   kickOnTimeout: boolean;
 }
 
-const KIND_LIMIT_KEYS: Record<NukeKind, string> = {
+const KindLimitKeys: Record<NukeKind, string> = {
   ban: "max_bans",
   kick: "max_kicks",
   channel_delete: "max_channel_deletes",
@@ -142,7 +142,7 @@ const KIND_LIMIT_KEYS: Record<NukeKind, string> = {
  * anti-nuke table. Kinds without one here have no config UI yet and always
  * use the default response.
  */
-const KIND_RESPONSE_KEYS: Partial<Record<NukeKind, string>> = {
+const KindResponseKeys: Partial<Record<NukeKind, string>> = {
   ban: "response_bans",
   kick: "response_kicks",
   channel_delete: "response_channel_deletes",
@@ -150,7 +150,7 @@ const KIND_RESPONSE_KEYS: Partial<Record<NukeKind, string>> = {
   webhook_create: "response_webhook_creates",
 };
 
-const DEFAULT_NUKE_RESPONSE: NukeResponse = "quarantine";
+const DefaultNukeResponse: NukeResponse = "quarantine";
 
 function isNukeResponse(value: unknown): value is NukeResponse {
   return value === "log" || value === "quarantine" || value === "ban";
@@ -166,11 +166,11 @@ export const DANGEROUS_PERMISSIONS = [
   PermissionFlagsBits.KickMembers,
 ] as const;
 
-const TRIPPED_COOLDOWN_SECONDS = 300;
-const RAID_MODE_SECONDS = 600;
-const GATE_TIMEOUT_MS = 60 * 60 * 1000;
-const RECENT_JOINERS_CAP = 20;
-const RECENT_JOINERS_TTL_SECONDS = 300;
+const TrippedCooldownSeconds = 300;
+const RaidModeSeconds = 600;
+const GateTimeoutMs = 60 * 60 * 1000;
+const RecentJoinersCap = 20;
+const RecentJoinersTtlSeconds = 300;
 
 function challengeLockKey(guildId: string, userId: string): string {
   return `security:verify-challenge:${guildId}:${userId}`;
@@ -198,18 +198,18 @@ export class SecurityUtility extends Utility {
       enabled: raw["antinuke_enabled"] === true,
       windowSeconds: getConfigNumber(raw, "window_seconds", 60),
       limits: {
-        ban: getConfigNumber(raw, KIND_LIMIT_KEYS.ban, 5),
-        kick: getConfigNumber(raw, KIND_LIMIT_KEYS.kick, 5),
-        channel_delete: getConfigNumber(raw, KIND_LIMIT_KEYS.channel_delete, 3),
-        role_delete: getConfigNumber(raw, KIND_LIMIT_KEYS.role_delete, 3),
-        webhook_create: getConfigNumber(raw, KIND_LIMIT_KEYS.webhook_create, 3),
-        vanity_change: getConfigNumber(raw, KIND_LIMIT_KEYS.vanity_change, 1),
+        ban: getConfigNumber(raw, KindLimitKeys.ban, 5),
+        kick: getConfigNumber(raw, KindLimitKeys.kick, 5),
+        channel_delete: getConfigNumber(raw, KindLimitKeys.channel_delete, 3),
+        role_delete: getConfigNumber(raw, KindLimitKeys.role_delete, 3),
+        webhook_create: getConfigNumber(raw, KindLimitKeys.webhook_create, 3),
+        vanity_change: getConfigNumber(raw, KindLimitKeys.vanity_change, 1),
         dangerous_permission_grant: getConfigNumber(
           raw,
-          KIND_LIMIT_KEYS.dangerous_permission_grant,
+          KindLimitKeys.dangerous_permission_grant,
           1,
         ),
-        quarantine_bypass: getConfigNumber(raw, KIND_LIMIT_KEYS.quarantine_bypass, 1),
+        quarantine_bypass: getConfigNumber(raw, KindLimitKeys.quarantine_bypass, 1),
       },
       responses: this.loadResponses(raw),
       trustedRoleIds,
@@ -230,9 +230,9 @@ export class SecurityUtility extends Utility {
     ];
     return Object.fromEntries(
       kinds.map((kind) => {
-        const key = KIND_RESPONSE_KEYS[kind];
+        const key = KindResponseKeys[kind];
         const value = key ? raw[key] : undefined;
-        return [kind, isNukeResponse(value) ? value : DEFAULT_NUKE_RESPONSE];
+        return [kind, isNukeResponse(value) ? value : DefaultNukeResponse];
       }),
     ) as Record<NukeKind, NukeResponse>;
   }
@@ -261,7 +261,7 @@ export class SecurityUtility extends Utility {
       RedisKeys.securityTripped(guild.id, executorId, kind),
       String(Date.now()),
       "EX",
-      TRIPPED_COOLDOWN_SECONDS,
+      TrippedCooldownSeconds,
       "NX",
     );
     return tripped === "OK" ? count : null;
@@ -444,7 +444,7 @@ export class SecurityUtility extends Utility {
     const consider = (hit: boolean, filterAction: GateAction, label: string) => {
       if (!hit) return;
       triggered.push(label);
-      if (action === null || GATE_ACTION_SEVERITY[filterAction] > GATE_ACTION_SEVERITY[action]) {
+      if (action === null || GateActionSeverity[filterAction] > GateActionSeverity[action]) {
         action = filterAction;
       }
     };
@@ -488,8 +488,8 @@ export class SecurityUtility extends Utility {
     await this.redis
       .multi()
       .lpush(key, JSON.stringify(joiner))
-      .ltrim(key, 0, RECENT_JOINERS_CAP - 1)
-      .expire(key, RECENT_JOINERS_TTL_SECONDS)
+      .ltrim(key, 0, RecentJoinersCap - 1)
+      .expire(key, RecentJoinersTtlSeconds)
       .exec();
   }
 
@@ -541,7 +541,7 @@ export class SecurityUtility extends Utility {
       RedisKeys.raidMode(guildId),
       String(Date.now()),
       "EX",
-      RAID_MODE_SECONDS,
+      RaidModeSeconds,
       "NX",
     );
     return started === "OK";
@@ -746,7 +746,7 @@ export class SecurityUtility extends Utility {
       if (action === "kick") {
         await member.kick(reason);
       } else if (action === "timeout") {
-        await member.timeout(GATE_TIMEOUT_MS, reason);
+        await member.timeout(GateTimeoutMs, reason);
       } else {
         await QuarantineAction.apply({
           guild,
@@ -870,7 +870,7 @@ export class SecurityUtility extends Utility {
                 c.type === ChannelType.GuildAnnouncement,
             );
 
-      const targets = candidates.slice(0, PANIC_CHANNEL_CAP);
+      const targets = candidates.slice(0, PanicChannelCap);
       const everyone = guild.roles.everyone;
       const snapshot: LockedChannelSnapshot = {};
       let lockedCount = 0;
@@ -896,7 +896,7 @@ export class SecurityUtility extends Utility {
             `[security] Panic: failed to lock channel ${channel.id} in ${guild.id}: ${String(err)}`,
           );
         }
-        await sleep(PANIC_EDIT_DELAY_MS);
+        await sleep(PanicEditDelayMs);
       }
 
       await this.db.security.savePanicState({
@@ -947,7 +947,7 @@ export class SecurityUtility extends Utility {
             `[security] Panic: failed to restore channel ${channelId} in ${guild.id}: ${String(err)}`,
           );
         }
-        await sleep(PANIC_EDIT_DELAY_MS);
+        await sleep(PanicEditDelayMs);
       }
 
       await this.db.security.clearPanicState(guild.id);

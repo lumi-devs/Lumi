@@ -21,7 +21,7 @@ import { useStaggerIn } from "#/lib/animate";
 // `checkThresholds` picks the single highest rule at or below the member's warn
 // count, so rules are ranges rather than a checklist — the ladder shows them
 // that way.
-const ACTIONS: {
+const Actions: {
   value: WarnThresholdAction;
   label: string;
   duration: "required" | "unused";
@@ -33,7 +33,7 @@ const ACTIONS: {
   { value: "vcmute", label: "Voice mute", duration: "required" },
 ];
 
-const ACTION_BY_VALUE = new Map(ACTIONS.map((a) => [a.value, a]));
+const ActionByValue = new Map(Actions.map((a) => [a.value, a]));
 
 export function WarnThresholdLadder({
   guildId,
@@ -147,7 +147,7 @@ function Rung({
   last: boolean;
   onRemove: () => void;
 }) {
-  const meta = ACTION_BY_VALUE.get(rung.action);
+  const meta = ActionByValue.get(rung.action);
   const label = meta?.label ?? rung.action;
   const durationMissing = meta?.duration === "required" && !rung.duration;
 
@@ -222,7 +222,7 @@ function RuleForm({
   const [duration, setDuration] = useState("1h");
   const { isPending, error, setError, run } = useServerAction();
 
-  const meta = ACTION_BY_VALUE.get(action)!;
+  const meta = ActionByValue.get(action)!;
   const count = Number.parseInt(warnCount, 10);
   const replaces = existing.find((r) => r.warnCount === count);
 
@@ -283,7 +283,7 @@ function RuleForm({
             value={action}
             onChange={(e) => setAction(e.target.value as WarnThresholdAction)}
           >
-            {ACTIONS.map((a) => (
+            {Actions.map((a) => (
               <option key={a.value} value={a.value}>
                 {a.label}
               </option>
@@ -327,7 +327,7 @@ function RuleForm({
       {replaces ? (
         <Alert variant="warning">
           {count} warns already applies{" "}
-          {(ACTION_BY_VALUE.get(replaces.action)?.label ?? replaces.action).toLowerCase()}
+          {(ActionByValue.get(replaces.action)?.label ?? replaces.action).toLowerCase()}
           {replaces.duration ? ` for ${replaces.duration}` : ""}. Saving replaces
           it.
         </Alert>

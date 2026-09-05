@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
@@ -21,13 +21,13 @@ export async function rollbackConfigChange(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedHistoryAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildHistoryRollback, {
+    await rpcCall(RpcActions.guildHistoryRollback, {
       guildId,
       actorId: session.userId,
       data: { entryId },
     });
     revalidatePath(`/guild/${guildId}/config/history`);
-    revalidatePath(`/guild/${guildId}/modules`);
+    revalidatePath(`/guild/${guildId}/config/modules`);
     return { ok: true };
   });
 }

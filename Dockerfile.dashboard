@@ -30,7 +30,6 @@ ENV DASHBOARD_HOST=0.0.0.0
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/apps/dashboard ./apps/dashboard
-COPY --from=builder /app/apps/dashboard/.next ./apps/dashboard/.next
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/bun.lock ./bun.lock
 COPY --from=builder /app/prisma ./prisma

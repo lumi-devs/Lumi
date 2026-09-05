@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import type { GuildBackupData } from "#lib/backup/backup-types.js";
 import { restoreGuildFromBackup } from "#lib/backup/restore-guild.js";
@@ -17,7 +17,7 @@ import {
 } from "../lib/helpers.js";
 
 export function registerSecurityRpcHandlers(): void {
-  registerRpcHandler(RPC_ACTIONS.guildPanicGet, async (req) => {
+  registerRpcHandler(RpcActions.guildPanicGet, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const state = await container.db.security.getPanicState(guildId);
@@ -43,7 +43,7 @@ export function registerSecurityRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildPanicSet, async (req) => {
+  registerRpcHandler(RpcActions.guildPanicSet, async (req) => {
     const guildId = requireGuildId(req.guildId);
     const actorId = await requireGuildManager(guildId, req.actorId);
     const { active, channelIds } = parsePayload(PanicSetSchema, req.data);
@@ -65,7 +65,7 @@ export function registerSecurityRpcHandlers(): void {
     return { success: true, active: true, ...result };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildVerificationPanelGet, async (req) => {
+  registerRpcHandler(RpcActions.guildVerificationPanelGet, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const panel = await container.db.security.getVerificationPanel(guildId);
@@ -81,7 +81,7 @@ export function registerSecurityRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildVerificationPanelSet, async (req) => {
+  registerRpcHandler(RpcActions.guildVerificationPanelSet, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { channelId, messageId } = parsePayload(
@@ -101,7 +101,7 @@ export function registerSecurityRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildVerificationPanelDelete, async (req) => {
+  registerRpcHandler(RpcActions.guildVerificationPanelDelete, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const deleted =
@@ -109,7 +109,7 @@ export function registerSecurityRpcHandlers(): void {
     return { success: true, deleted };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildVerificationWebComplete, async (req) => {
+  registerRpcHandler(RpcActions.guildVerificationWebComplete, async (req) => {
     const guildId = requireGuildId(req.guildId);
     const actorId = req.actorId;
     if (!actorId) throw new Error("actorId is required");
@@ -133,7 +133,7 @@ export function registerSecurityRpcHandlers(): void {
     return { success: true };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildBackupsList, async (req) => {
+  registerRpcHandler(RpcActions.guildBackupsList, async (req) => {
     const { guildId } = await verifyGuildAccess(req);
     const rows = await container.db.security.listBackups(guildId, 10);
     return {
@@ -149,7 +149,7 @@ export function registerSecurityRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildBackupRestore, async (req) => {
+  registerRpcHandler(RpcActions.guildBackupRestore, async (req) => {
     const { guild } = await verifyGuildAccess(req);
     const { backupId } = parsePayload(BackupRestoreSchema, req.data);
 
@@ -160,12 +160,12 @@ export function registerSecurityRpcHandlers(): void {
 }
 
 export function unregisterSecurityRpcHandlers(): void {
-  rpcHandlers.delete(RPC_ACTIONS.guildPanicGet);
-  rpcHandlers.delete(RPC_ACTIONS.guildPanicSet);
-  rpcHandlers.delete(RPC_ACTIONS.guildVerificationPanelGet);
-  rpcHandlers.delete(RPC_ACTIONS.guildVerificationPanelSet);
-  rpcHandlers.delete(RPC_ACTIONS.guildVerificationPanelDelete);
-  rpcHandlers.delete(RPC_ACTIONS.guildVerificationWebComplete);
-  rpcHandlers.delete(RPC_ACTIONS.guildBackupsList);
-  rpcHandlers.delete(RPC_ACTIONS.guildBackupRestore);
+  rpcHandlers.delete(RpcActions.guildPanicGet);
+  rpcHandlers.delete(RpcActions.guildPanicSet);
+  rpcHandlers.delete(RpcActions.guildVerificationPanelGet);
+  rpcHandlers.delete(RpcActions.guildVerificationPanelSet);
+  rpcHandlers.delete(RpcActions.guildVerificationPanelDelete);
+  rpcHandlers.delete(RpcActions.guildVerificationWebComplete);
+  rpcHandlers.delete(RpcActions.guildBackupsList);
+  rpcHandlers.delete(RpcActions.guildBackupRestore);
 }

@@ -1,7 +1,7 @@
 import { getClusterName, isPrimaryShard } from "#lib/env.js";
 import { registerReadinessProbe } from "@lumi/observability";
 import { container } from "@sapphire/framework";
-import { DEFAULT_CLUSTER_NAME, readClusterShards } from "@lumi/sharding";
+import { DefaultClusterName, readClusterShards } from "@lumi/sharding";
 
 /**
  * Declares the `/readyz` probes a client replica answers with.
@@ -79,7 +79,7 @@ export class ReadinessProbes {
       try {
         const snapshot = await readClusterShards({
           redis: container.redis,
-          clusterName: getClusterName() ?? DEFAULT_CLUSTER_NAME,
+          clusterName: getClusterName() ?? DefaultClusterName,
         });
         if (snapshot.missingShardIds.length > 0) {
           return {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { container } from "@sapphire/framework";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { rpcHandlers } from "#lib/rpc/dispatch.js";
 import { initCoreRpcHandlers } from "#lib/rpc/core-rpc.js";
 
@@ -65,11 +65,11 @@ describe("system.shards.get RPC handler", () => {
   });
 
   const call = (...actor: [] | [string | undefined]) => {
-    const handler = rpcHandlers.get(RPC_ACTIONS.systemShardsGet);
+    const handler = rpcHandlers.get(RpcActions.systemShardsGet);
     if (!handler) throw new Error("system.shards.get handler not registered");
     return handler({
       id: "req",
-      action: RPC_ACTIONS.systemShardsGet,
+      action: RpcActions.systemShardsGet,
       actorId: actor.length === 0 ? BOT_OWNER_ID : actor[0],
     });
   };

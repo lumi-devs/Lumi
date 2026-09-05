@@ -26,7 +26,7 @@ import {
   single,
 } from "#/lib/log-format";
 
-const PAGE_SIZE = 25;
+const PageSize = 25;
 
 export default async function BlocklistPage({
   params,
@@ -49,7 +49,7 @@ export default async function BlocklistPage({
   try {
     data = await getGuildBlocklist(guildId, session.userId, {
       page,
-      pageSize: PAGE_SIZE,
+      pageSize: PageSize,
     });
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";

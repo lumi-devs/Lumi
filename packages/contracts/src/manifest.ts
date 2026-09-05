@@ -7,7 +7,7 @@ import type { ConfigField } from "./config";
 export type TargetUtility = "worker" | "gateway" | "scheduler" | "api";
 
 /** Sub-store directory names a module may declare (each = a Sapphire store name). */
-export const KNOWN_SUBSTORES = [
+export const KnownSubstores = [
   "commands",
   "listeners",
   "interaction-handlers",
@@ -17,7 +17,7 @@ export const KNOWN_SUBSTORES = [
   "routes",
 ] as const;
 
-export type KnownSubStore = (typeof KNOWN_SUBSTORES)[number];
+export type KnownSubStore = (typeof KnownSubstores)[number];
 
 /**
  * Dashboard sidebar/grid grouping. Not a closed enum on purpose — an addon

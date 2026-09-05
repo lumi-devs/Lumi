@@ -2,7 +2,9 @@ import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,
   InteractionHandlerTypes,
+  UserError,
 } from "@sapphire/framework";
+import { PermitResolver } from "#lib/permissions/index.js";
 import { type ButtonInteraction } from "discord.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { makeSuccessCard, makeInfoCard } from "#lib/utilities/cards.js";
@@ -35,6 +37,12 @@ export class ModuleRestartInteractionHandler extends BaseInteractionHandler {
     { action, userId }: { action: "restart" | "cancel"; userId: string },
   ) {
     this.checkSecurity(interaction, userId);
+    if (!PermitResolver.isBotOwner(interaction.user.id)) {
+      throw new UserError({
+        identifier: "AccessDenied",
+        message: `${Emojis.CROSS} Only Bot Owners can restart Lumi.`,
+      });
+    }
     await this.acknowledge(interaction);
     const t = await fetchTyped(interaction);
 

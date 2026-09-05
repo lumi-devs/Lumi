@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "#/components/ui/sheet";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
-import { SPRING_SNAPPY } from "#/lib/animate";
+import { SpringSnappy } from "#/lib/animate";
 import type { GuildNavGroup } from "#/lib/guild-nav";
 
 // Why this whole tree is a Client Component: `GuildNavGroup.icon` holds raw
@@ -84,6 +84,30 @@ export function SideNav({
   );
 }
 
+const OpenGroupsKey = "lumi.nav.open-groups";
+
+// Both helpers swallow their failure: a browser with site data blocked throws on
+// access, and the nav must still render with its static defaults.
+function readOpenGroups(): Record<string, boolean> | null {
+  try {
+    const raw = localStorage.getItem(OpenGroupsKey);
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed === "object"
+      ? (parsed as Record<string, boolean>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeOpenGroups(state: Record<string, boolean>): void {
+  try {
+    localStorage.setItem(OpenGroupsKey, JSON.stringify(state));
+  } catch {
+    return;
+  }
+}
+
 // `forceExpanded` drops the `lg:` gating inside the drawer, where the rail's
 // icon-only width never applies.
 function SideNavBody({
@@ -120,6 +144,20 @@ function SideNavBody({
     ),
   );
 
+  // Restored after mount rather than in the initializer: the server has no
+  // localStorage, and a different first paint would fail hydration.
+  useEffect(() => {
+    const saved = readOpenGroups();
+    if (saved) setOpenGroups((prev) => ({ ...prev, ...saved }));
+  }, []);
+
+  const toggleGroup = (title: string) =>
+    setOpenGroups((prev) => {
+      const next = { ...prev, [title]: !(prev[title] ?? true) };
+      writeOpenGroups(next);
+      return next;
+    });
+
   return (
     <>
       <div className="flex items-center gap-2.5 px-1 lg:px-2">
@@ -149,12 +187,8 @@ function SideNavBody({
           <div key={group.title}>
             <HeaderTag
               type={group.collapsible ? "button" : undefined}
-              onClick={
-                group.collapsible
-                  ? () =>
-                      setOpenGroups((prev) => ({ ...prev, [group.title]: !isOpen }))
-                  : undefined
-              }
+              aria-expanded={group.collapsible ? isOpen : undefined}
+              onClick={group.collapsible ? () => toggleGroup(group.title) : undefined}
               className={cn(
                 "font-display mb-1.5 flex w-full items-center gap-1 px-2.5 text-[12px] font-semibold tracking-[0.1em] text-fg-subtle uppercase",
                 group.collapsible && "cursor-pointer transition-colors hover:text-fg",
@@ -209,8 +243,10 @@ function SideNavBody({
                       title={link.label}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "relative flex items-center gap-2.5 rounded-control px-2.5 py-1.5 text-[15px] transition-colors",
-                        forceExpanded ? "" : "justify-center lg:justify-start",
+                        "relative flex items-center gap-2.5 rounded-control px-2.5 text-[15px] transition-colors",
+                        // The drawer is the touch surface, so its rows clear the
+                        // 44px minimum target; the pointer-driven rail stays dense.
+                        forceExpanded ? "py-3" : "justify-center py-1.5 lg:justify-start",
                         active
                           ? "text-accent-fg"
                           : "text-fg-muted hover:bg-surface-hover hover:text-fg",
@@ -224,7 +260,7 @@ function SideNavBody({
                         <motion.span
                           layoutId={forceExpanded ? "nav-pill-drawer" : "nav-pill-rail"}
                           className="absolute inset-0 rounded-control bg-accent-soft"
-                          transition={SPRING_SNAPPY}
+                          transition={SpringSnappy}
                         />
                       ) : null}
                       <link.icon

@@ -15,7 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { guildManagementGroups, guildTopLinks } from "#/lib/guild-nav";
-import { SPRING_SNAPPY, useStaggerIn } from "#/lib/animate";
+import { SpringSnappy, useStaggerIn } from "#/lib/animate";
 import { guildIconUrl } from "#/lib/discord-format";
 import { cn } from "#/lib/utils";
 
@@ -148,7 +148,7 @@ export function CommandPalette({ session }: { session: Session | null }) {
             initial={{ opacity: 0, scale: 0.97, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: -8 }}
-            transition={SPRING_SNAPPY}
+            transition={SpringSnappy}
             role="dialog"
             aria-modal="true"
             aria-label="Command palette"

@@ -16,13 +16,13 @@ import { cn } from "#/lib/utils";
 import { since } from "#/lib/log-format";
 import { useStaggerIn } from "#/lib/animate";
 
-export const HEALTHY_STATUS = "Ready";
-export const OFFLINE_STATUSES = new Set(["Disconnected", "Idle"]);
-const SLOW_PING_MS = 500;
+export const HealthyStatus = "Ready";
+export const OfflineStatuses = new Set(["Disconnected", "Idle"]);
+const SlowPingMs = 500;
 
 function statusVariant(status: string) {
-  if (status === HEALTHY_STATUS) return "success" as const;
-  if (OFFLINE_STATUSES.has(status)) return "danger" as const;
+  if (status === HealthyStatus) return "success" as const;
+  if (OfflineStatuses.has(status)) return "danger" as const;
   return "warning" as const;
 }
 
@@ -95,7 +95,7 @@ function ShardRows({
                 <TD
                   className={cn(
                     "tabular text-right font-mono",
-                    shard.ping !== null && shard.ping >= SLOW_PING_MS
+                    shard.ping !== null && shard.ping >= SlowPingMs
                       ? "text-warning"
                       : "text-fg-muted",
                   )}
@@ -168,7 +168,7 @@ export function ShardFleet({ data }: { data: SystemShardsData }) {
     );
   }
 
-  const healthy = data.shards.filter((s) => s.status === HEALTHY_STATUS).length;
+  const healthy = data.shards.filter((s) => s.status === HealthyStatus).length;
 
   return (
     <div className="flex flex-col gap-4">

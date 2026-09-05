@@ -3,7 +3,7 @@ import { acquireRedisLock } from "#lib/redis-lock.js";
 import type { ModLiftPayload } from "../scheduled-tasks/modLift.js";
 import { MuteAction, BanAction, VoiceMuteAction } from "../actions/index.js";
 
-const ACTION_LABELS: Record<string, string> = {
+const ActionLabels: Record<string, string> = {
   mute: "Mute",
   ban: "Ban",
   voice_mute: "Voice Mute",
@@ -31,7 +31,7 @@ async function liftCase(payload: ModLiftPayload): Promise<void> {
   const c = await container.db.moderation.getModerationCaseById(payload.caseId);
   if (!c?.active) return;
 
-  const reason = `[AutoLift] ${ACTION_LABELS[c.action] ?? c.action} case #${c.caseNumber} expired`;
+  const reason = `[AutoLift] ${ActionLabels[c.action] ?? c.action} case #${c.caseNumber} expired`;
 
   try {
     if (c.action === "mute") {

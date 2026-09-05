@@ -252,7 +252,9 @@ export function makeEmptyCard(
   suggestion?: string,
   opts?: CardOptions,
 ): CardReply {
-  const body = suggestion ? [reason, "", `**Try:** ${suggestion}`] : reason;
+  const body = suggestion
+    ? fitLines([reason, "", `**Try:** ${suggestion}`])
+    : reason;
   return makeCard(
     resolveCardColor("info"),
     `📭 ${title}`,
@@ -296,7 +298,7 @@ export function makeBulkResultCard(
   const hasFailures = (results.failed ?? 0) > 0;
   const color = hasFailures ? resolveCardColor("warning") : resolveCardColor("success");
 
-  return makeCard(color, action, lines, opts);
+  return makeCard(color, action, fitLines(lines), opts);
 }
 
 export interface ErrorRecoveryOptions {
@@ -324,5 +326,5 @@ export function makeErrorRecoveryCard(
     }
   }
 
-  return makeErrorCard(`❌ ${title}`, body, opts);
+  return makeErrorCard(`❌ ${title}`, fitLines(body), opts);
 }

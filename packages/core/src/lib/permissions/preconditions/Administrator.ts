@@ -8,7 +8,7 @@ declare module "@sapphire/framework" {
   }
 }
 
-const DENIED_MESSAGE = "You need at least **Administrator** level to use this.";
+const DeniedMessage = "You need at least **Administrator** level to use this.";
 
 export class AdministratorPrecondition extends PermitPrecondition {
   public override messageRun(message: Message) {
@@ -20,7 +20,7 @@ export class AdministratorPrecondition extends PermitPrecondition {
       message.channelId,
       "admin.*",
       message.guild.ownerId,
-      DENIED_MESSAGE,
+      DeniedMessage,
     );
   }
 
@@ -33,7 +33,7 @@ export class AdministratorPrecondition extends PermitPrecondition {
       interaction.channelId,
       "admin.*",
       interaction.guild.ownerId,
-      DENIED_MESSAGE,
+      DeniedMessage,
     );
   }
 }

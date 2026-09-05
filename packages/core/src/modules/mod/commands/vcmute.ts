@@ -6,7 +6,7 @@ import { formatDuration, parseDuration } from "#lib/utilities/time.js";
 import type { ModerationCase } from "@prisma/client";
 import type { GuildMember } from "discord.js";
 
-const DEFAULT_DURATION_MS = 24 * 3600 * 1000;
+const DefaultDurationMs = 24 * 3600 * 1000;
 
 type TimedFlow = ModerationSubcommand.Flow<GuildMember, ModerationCase, number>;
 type Flow = ModerationSubcommand.Flow<GuildMember, ModerationCase>;
@@ -18,7 +18,7 @@ const VcMuteAdd: TimedFlow = {
     const durationStr = await ctx.getString("duration");
     const durationMs = durationStr
       ? parseDuration(durationStr)
-      : DEFAULT_DURATION_MS;
+      : DefaultDurationMs;
     if (!durationMs) {
       return Result.err({
         title: "Invalid Duration",

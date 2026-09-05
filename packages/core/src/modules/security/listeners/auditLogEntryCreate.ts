@@ -10,7 +10,7 @@ import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import type { NukeKind } from "../utilities/SecurityUtility.js";
 
-const KIND_BY_EVENT: Partial<Record<AuditLogEvent, NukeKind>> = {
+const KindByEvent: Partial<Record<AuditLogEvent, NukeKind>> = {
   [AuditLogEvent.MemberBanAdd]: "ban",
   [AuditLogEvent.MemberKick]: "kick",
   [AuditLogEvent.ChannelDelete]: "channel_delete",
@@ -30,7 +30,7 @@ export class SecurityAuditLogListener extends ModuleListener<
     entry: GuildAuditLogsEntry,
     guild: Guild,
   ): Promise<void> {
-    const kind = KIND_BY_EVENT[entry.action];
+    const kind = KindByEvent[entry.action];
     if (!kind) return;
     const executorId = entry.executorId;
     if (isNullish(executorId)) return;

@@ -1,35 +1,15 @@
-import { notFound } from "next/navigation";
-import { SlidersHorizontal } from "lucide-react";
-import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard } from "#/lib/dashboard-fetch";
-import { ModuleConfigForm } from "#/components/guild/module-config-form";
-import { PageHeader } from "#/components/ui/page-header";
+import { legacyRedirect, type LegacySearchParams } from "#/lib/legacy-redirect";
 
-export default async function GuildModuleConfigPage({
+export default async function LegacyModuleConfigPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ guildId: string; moduleName: string }>;
+  searchParams: Promise<LegacySearchParams>;
 }) {
   const { guildId, moduleName } = await params;
-  const session = await requireGuild(guildId);
-  const data = await getGuildDashboard(guildId, session.userId);
-
-  const mod = data.modules.find((m) => m.name === moduleName);
-  if (!mod) notFound();
-
-  return (
-    <div className="flex flex-col gap-4">
-      <PageHeader
-        title={mod.displayName}
-        description={mod.description}
-        icon={SlidersHorizontal}
-      />
-      <ModuleConfigForm
-        guildId={guildId}
-        module={mod}
-        roles={data.roles}
-        channels={data.channels}
-      />
-    </div>
+  legacyRedirect(
+    `/guild/${guildId}/config/modules/${moduleName}`,
+    await searchParams,
   );
 }

@@ -2,7 +2,7 @@ import { cn } from "#/lib/utils";
 
 export type StatusTone = "good" | "warn" | "bad" | "neutral";
 
-const DOT: Record<StatusTone, string> = {
+const Dot: Record<StatusTone, string> = {
   good: "bg-success shadow-[0_0_6px_var(--success)]",
   warn: "bg-warning shadow-[0_0_6px_var(--warning)]",
   bad: "bg-danger shadow-[0_0_6px_var(--danger)]",
@@ -27,7 +27,7 @@ export function StatusPill({
         className,
       )}
     >
-      <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", DOT[tone])} />
+      <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", Dot[tone])} />
       {label}
       <strong className="tabular font-semibold text-fg">{value}</strong>
     </span>

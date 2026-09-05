@@ -159,7 +159,7 @@ services:
       DASHBOARD_PORT: "8080"
       # Doubles as NextAuth's session JWT encryption secret — see
       # apps/dashboard/src/lib/env.ts.
-      DASHBOARD_SESSION_SECRET: "${DASHBOARD_SESSION_SECRET:-}"
+      DASHBOARD_SESSION_SECRET: "${DASHBOARD_SESSION_SECRET:?set DASHBOARD_SESSION_SECRET in .env - generate with: openssl rand -hex 32}"
       # Internal-only HTTP RPC bridge to the worker (see
       # packages/core/src/lib/rpc/http-server.ts) - reachable over lumi-net,
       # never published to the host.

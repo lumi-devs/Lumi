@@ -20,7 +20,7 @@ import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
 import type { AppealsListData, AppealView } from "#/lib/dashboard-data";
-import { APPEAL_STATUS_OPTIONS, isAppealStatus } from "#/lib/appeals";
+import { AppealStatusOptions, isAppealStatus } from "#/lib/appeals";
 import {
   countBy,
   extractMemberNames,
@@ -28,7 +28,7 @@ import {
   single,
 } from "#/lib/log-format";
 
-const PAGE_SIZE = 25;
+const PageSize = 25;
 
 export default async function AppealsPage({
   params,
@@ -53,7 +53,7 @@ export default async function AppealsPage({
   try {
     data = await getGuildAppeals(guildId, session.userId, {
       page,
-      pageSize: PAGE_SIZE,
+      pageSize: PageSize,
       ...(status ? { status } : {}),
     });
   } catch (err) {
@@ -106,7 +106,7 @@ export default async function AppealsPage({
                   name: "status",
                   label: "Status",
                   anyLabel: "All statuses",
-                  options: APPEAL_STATUS_OPTIONS,
+                  options: AppealStatusOptions,
                 },
               ]}
             />

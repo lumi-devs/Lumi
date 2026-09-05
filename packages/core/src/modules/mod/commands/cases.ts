@@ -206,9 +206,8 @@ export class CasesCommand extends BaseSubcommand {
     );
     if (cases.length === 0) {
       return ctx.replyEmpty(
-        "No Cases",
-        "This user has no moderation cases.",
-        "Run `,mod` to see available commands.",
+        t("commands:casesNoneTitle"),
+        t("commands:casesNone"),
       );
     }
     const lines = cases.map(

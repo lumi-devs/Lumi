@@ -1,10 +1,10 @@
 // Imported by both the server page and the client table so the two can't
 // drift in how they label or classify the same status — mirrors
-// `moderation-cases.ts`'s `CASE_ACTION_LABELS` pattern.
-import { APPEAL_STATUSES, type AppealStatus } from "@lumi/contracts";
+// `moderation-cases.ts`'s `CaseActionLabels` pattern.
+import { AppealStatuses, type AppealStatus } from "@lumi/contracts";
 import type { BadgeProps } from "#/components/ui/badge";
 
-export const APPEAL_STATUS_LABELS: Record<AppealStatus, string> = {
+export const AppealStatusLabels: Record<AppealStatus, string> = {
   pending: "Pending",
   approved: "Approved",
   denied: "Denied",
@@ -12,7 +12,7 @@ export const APPEAL_STATUS_LABELS: Record<AppealStatus, string> = {
   dismissed: "Dismissed",
 };
 
-export const APPEAL_STATUS_BADGE_VARIANT: Record<
+export const AppealStatusBadgeVariant: Record<
   AppealStatus,
   NonNullable<BadgeProps["variant"]>
 > = {
@@ -23,11 +23,11 @@ export const APPEAL_STATUS_BADGE_VARIANT: Record<
   dismissed: "neutral",
 };
 
-export const APPEAL_STATUS_OPTIONS = APPEAL_STATUSES.map((value) => ({
+export const AppealStatusOptions = AppealStatuses.map((value) => ({
   value,
-  label: APPEAL_STATUS_LABELS[value],
+  label: AppealStatusLabels[value],
 }));
 
 export function isAppealStatus(value: string): value is AppealStatus {
-  return (APPEAL_STATUSES as readonly string[]).includes(value);
+  return (AppealStatuses as readonly string[]).includes(value);
 }

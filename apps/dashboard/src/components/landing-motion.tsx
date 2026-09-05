@@ -8,7 +8,7 @@ import {
   useSpring,
 } from "motion/react";
 import { Card } from "#/components/ui/card";
-import { spotlightHandler, SPRING_SOFT } from "#/lib/animate";
+import { spotlightHandler, SpringSoft } from "#/lib/animate";
 import { cn } from "#/lib/utils";
 
 /** Word-by-word hero headline reveal, one block-level span per line. */
@@ -79,8 +79,8 @@ export function MagneticCta({
   const ref = useRef<HTMLAnchorElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  const springX = useSpring(x, SPRING_SOFT);
-  const springY = useSpring(y, SPRING_SOFT);
+  const springX = useSpring(x, SpringSoft);
+  const springY = useSpring(y, SpringSoft);
 
   if (reduce) {
     return (

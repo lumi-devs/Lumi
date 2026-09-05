@@ -5,9 +5,9 @@ interface CacheEntry<T> {
   expiresAt: number;
 }
 
-const DEFAULT_TTL_MS = 300_000; // 5 minutes (matches RedisTTL.guildPrefix)
-const DEFAULT_MAX_ENTRIES = 5_000;
-const PREFIX_KEY_PATTERN = /^lumi:(?:prefix|settings|cfg:core):guild:([a-zA-Z0-9_-]+)$/;
+const DefaultTtlMs = 300_000; // 5 minutes (matches RedisTTL.guildPrefix)
+const DefaultMaxEntries = 5_000;
+const PrefixKeyPattern = /^lumi:(?:prefix|settings|cfg:core):guild:([a-zA-Z0-9_-]+)$/;
 
 export class PrefixCache {
   readonly #guildCache = new Map<string, CacheEntry<string[]>>();
@@ -16,8 +16,8 @@ export class PrefixCache {
   readonly #defaultTtlMs: number;
 
   public constructor(options?: { maxEntries?: number; defaultTtlMs?: number }) {
-    this.#maxEntries = options?.maxEntries ?? DEFAULT_MAX_ENTRIES;
-    this.#defaultTtlMs = options?.defaultTtlMs ?? DEFAULT_TTL_MS;
+    this.#maxEntries = options?.maxEntries ?? DefaultMaxEntries;
+    this.#defaultTtlMs = options?.defaultTtlMs ?? DefaultTtlMs;
   }
 
   public get(guildId: string): string[] | null {
@@ -82,7 +82,7 @@ export class PrefixCache {
         this.clear();
         continue;
       }
-      const match = PREFIX_KEY_PATTERN.exec(key);
+      const match = PrefixKeyPattern.exec(key);
       if (match?.[1]) {
         this.delete(match[1]);
       }

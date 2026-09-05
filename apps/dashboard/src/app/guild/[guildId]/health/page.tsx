@@ -19,7 +19,7 @@ export default async function GuildHealthPage({
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        title="Health Check"
+        title="Health dashboard"
         description="A read-only scan of common misconfigurations: role hierarchy, dangerous permissions, and security/filter settings left off."
         icon={Activity}
       />

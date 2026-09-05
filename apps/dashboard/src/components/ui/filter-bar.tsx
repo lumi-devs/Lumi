@@ -28,7 +28,7 @@ export type FilterField =
       options: { value: string; label: string }[];
     };
 
-const DEBOUNCE_MS = 350;
+const DebounceMs = 350;
 
 export function FilterBar({
   fields,
@@ -85,7 +85,7 @@ export function FilterBar({
     const next = { ...drafts, [name]: value };
     setState({ query, drafts: next });
     if (timer.current) clearTimeout(timer.current);
-    if (debounce) timer.current = setTimeout(() => commit(next), DEBOUNCE_MS);
+    if (debounce) timer.current = setTimeout(() => commit(next), DebounceMs);
     else commit(next);
   }
 

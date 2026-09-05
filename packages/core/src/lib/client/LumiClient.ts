@@ -6,6 +6,8 @@ import {
   isPrimaryShard,
 } from "#lib/env.js";
 import { registerCoreFireHandlers } from "#lib/core-fire-handlers.js";
+import type { RedisLock } from "#lib/redis-lock.js";
+import { acquireSchedulerLock } from "#lib/scheduler-lock.js";
 import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
 import { initCoreRpcHandlers } from "#lib/rpc/core-rpc.js";
 import { startRpcHttpServer } from "#lib/rpc/http-server.js";
@@ -46,6 +48,7 @@ export class LumiClient extends SapphireClient {
   private _ownedEventBus: OwnedEventBus | null = null;
   private _taskFireConsumer: TaskFireConsumer | null = null;
   private _rpcServer: Awaited<ReturnType<typeof startRpcHttpServer>> = null;
+  private _schedulerLock: RedisLock | null = null;
   private _bullWorker: { on(e: string, fn: (...a: unknown[]) => void): void; off(e: string, fn: (...a: unknown[]) => void): void } | null = null;
   private _bullFailedHandler: ((job: unknown, err: unknown) => void) | null = null;
   private _prefixCache: PrefixCache = new PrefixCache();
@@ -76,6 +79,10 @@ export class LumiClient extends SapphireClient {
     // that's whichever child holds shard 0; standalone (dev) it's always
     // this process.
     if (isPrimaryShard()) {
+      this._schedulerLock = await acquireSchedulerLock(container.redis, () => {
+        container.logger.error("[Primary] Lost scheduler lock, exiting");
+        process.exit(1);
+      });
       initCoreRpcHandlers();
       this._rpcServer = await startRpcHttpServer((level, msg, meta) =>
         container.logger[level](msg, meta),
@@ -175,6 +182,12 @@ export class LumiClient extends SapphireClient {
         .stop()
         .catch(warnOnCleanupError("RPC HTTP server stop"));
       this._rpcServer = null;
+    }
+    if (this._schedulerLock) {
+      await this._schedulerLock
+        .release()
+        .catch(warnOnCleanupError("Scheduler lock release"));
+      this._schedulerLock = null;
     }
     await container.invalidation.close();
     await container.redis.quit().catch(warnOnCleanupError("Redis quit"));

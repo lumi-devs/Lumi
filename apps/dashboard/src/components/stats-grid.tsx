@@ -24,14 +24,14 @@ function StatValue({ stat }: { stat: Stat }) {
   return <>{stat.value}</>;
 }
 
-const TONE: Record<NonNullable<Stat["tone"]>, string> = {
+const Tone: Record<NonNullable<Stat["tone"]>, string> = {
   default: "text-fg",
   success: "text-success",
   warning: "text-warning",
   danger: "text-danger",
 };
 
-const TREND_TONE: Record<"up" | "down", string> = {
+const TrendTone: Record<"up" | "down", string> = {
   up: "text-success",
   down: "text-danger",
 };
@@ -55,7 +55,7 @@ export function StatsGrid({ stats }: { stats: Stat[] }) {
           <dd
             className={cn(
               "tabular mt-2.5 flex items-baseline gap-1.5 font-mono text-[28px] leading-7 font-semibold",
-              TONE[s.tone ?? "default"],
+              Tone[s.tone ?? "default"],
             )}
             title={String(s.value)}
           >
@@ -71,7 +71,7 @@ export function StatsGrid({ stats }: { stats: Stat[] }) {
               <span
                 className={cn(
                   "inline-flex shrink-0 items-center gap-0.5 text-[13px] font-medium",
-                  TREND_TONE[s.trend.direction],
+                  TrendTone[s.trend.direction],
                 )}
               >
                 {s.trend.direction === "up" ? (

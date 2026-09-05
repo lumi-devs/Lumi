@@ -23,7 +23,7 @@ import { Pagination } from "#/components/ui/pagination";
 import { buildModuleLabelIndex } from "#/lib/config-labels";
 import type { AuditEntryView, AuditListData } from "#/lib/dashboard-data";
 import {
-  AUDIT_PLATFORM_OPTIONS,
+  AuditPlatformOptions,
   countBy,
   filterHref,
   formatShortDay,
@@ -32,7 +32,7 @@ import {
   single,
 } from "#/lib/log-format";
 
-const PAGE_SIZE = 30;
+const PageSize = 30;
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -62,7 +62,7 @@ export default async function AuditPage({
   try {
     data = await getGuildAuditLog(guildId, session.userId, {
       page,
-      pageSize: PAGE_SIZE,
+      pageSize: PageSize,
       ...(action ? { action } : {}),
       ...(userId && !badUserFilter ? { userId } : {}),
       ...(platform ? { platform } : {}),
@@ -151,7 +151,7 @@ export default async function AuditPage({
                   name: "platform",
                   label: "Came from",
                   anyLabel: "Discord and dashboard",
-                  options: AUDIT_PLATFORM_OPTIONS,
+                  options: AuditPlatformOptions,
                 },
               ]}
             />
@@ -230,7 +230,7 @@ export default async function AuditPage({
               description="The first line lands here as soon as someone changes a setting, runs a moderation command, or acts on this server from the dashboard. Every line keeps who did it, when, and the values involved."
               action={
                 <Link
-                  href={`/guild/${guildId}/modules`}
+                  href={`/guild/${guildId}/config/modules`}
                   className={buttonVariants({ variant: "secondary", size: "sm" })}
                 >
                   Go to modules

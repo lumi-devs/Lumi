@@ -8,7 +8,7 @@ import { cyan, gray, yellow, green } from "colorette";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 
 /** Caps simultaneous guild command fetches so the sync pass cannot trip Discord rate limits. */
-const GUILD_SYNC_CONCURRENCY = 10;
+const GuildSyncConcurrency = 10;
 
 @ApplyOptions<Listener.Options>({
   event: Events.ApplicationCommandRegistriesRegistered,
@@ -57,7 +57,7 @@ export class ApplicationCommandRegistriesRegisteredListener extends Listener {
     let guildCmdCount = 0;
     const guilds = [...client.guilds.cache.values()];
 
-    await mapWithConcurrency(guilds, GUILD_SYNC_CONCURRENCY, async (guild) => {
+    await mapWithConcurrency(guilds, GuildSyncConcurrency, async (guild) => {
       const guildCommands = await guild.commands.fetch().catch(() => null);
       if (!guildCommands || guildCommands.size === 0) return;
 

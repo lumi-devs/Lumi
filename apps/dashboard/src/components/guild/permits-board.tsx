@@ -20,7 +20,7 @@ import type {
   PermitAssignmentView,
   PermitView,
 } from "#/lib/dashboard-data";
-import { KNOWN_PERMIT_NODE_GROUPS } from "#/lib/permit-nodes";
+import { KnownPermitNodeGroups } from "#/lib/permit-nodes";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
 
@@ -185,7 +185,7 @@ function CreatePermitCard({
   );
 }
 
-const ALL_KNOWN_NODES = KNOWN_PERMIT_NODE_GROUPS.flatMap((g) => g.nodes);
+const AllKnownNodes = KnownPermitNodeGroups.flatMap((g) => g.nodes);
 
 function NodeChecklist({
   nodes,
@@ -204,7 +204,7 @@ function NodeChecklist({
     query === "" || label.toLowerCase().includes(query) || description.toLowerCase().includes(query);
 
   const unknownNodes = nodes.filter(
-    (n) => !ALL_KNOWN_NODES.some((known) => known.node === n),
+    (n) => !AllKnownNodes.some((known) => known.node === n),
   );
 
   return (
@@ -216,7 +216,7 @@ function NodeChecklist({
         aria-label="Search permit nodes"
       />
       <div className="flex flex-col gap-4">
-        {KNOWN_PERMIT_NODE_GROUPS.map((group) => {
+        {KnownPermitNodeGroups.map((group) => {
           const visible = group.nodes.filter((n) => matches(n.label, n.description));
           if (visible.length === 0) return null;
           return (

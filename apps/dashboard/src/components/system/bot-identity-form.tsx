@@ -14,7 +14,7 @@ import { Field, Input } from "#/components/ui/input";
 import { Button } from "#/components/ui/button";
 import { ActionError } from "#/components/action-error";
 import { useServerAction } from "#/lib/use-server-action";
-import { SPRING_SNAPPY } from "#/lib/animate";
+import { SpringSnappy } from "#/lib/animate";
 
 export function BotIdentityForm({
   inviteUrl,
@@ -71,7 +71,7 @@ export function BotIdentityForm({
                 initial={reduce ? false : { opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.96 }}
-                transition={SPRING_SNAPPY}
+                transition={SpringSnappy}
               >
                 <ActionError error={error} />
               </motion.div>

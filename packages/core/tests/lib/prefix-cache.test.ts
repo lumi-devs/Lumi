@@ -157,3 +157,76 @@ describe("InvalidationBus payload guards", () => {
     expect(listener).toHaveBeenCalledWith(["valid-key-1", "valid-key-2"]);
   });
 });
+
+describe("InvalidationBus resync watermark", () => {
+  async function attach() {
+    const handlers: Record<string, (...args: any[]) => void> = {};
+    const fakeSubscriber = {
+      on: vi.fn((event: string, fn: any) => {
+        handlers[event] = fn;
+      }),
+      subscribe: vi.fn().mockResolvedValue(undefined),
+      unsubscribe: vi.fn().mockResolvedValue(undefined),
+      quit: vi.fn().mockResolvedValue("OK"),
+    };
+    const bus = new InvalidationBus(fakeSubscriber as any);
+    await bus.start();
+    return { bus, handlers };
+  }
+
+  test("hands resync listeners the newest invalidation timestamp seen", async () => {
+    const { bus, handlers } = await attach();
+    const resync = vi.fn();
+    bus.onResync(resync);
+
+    handlers["message"]!(
+      "chan",
+      JSON.stringify({ keys: ["k1"], time: 1_000 }),
+    );
+    handlers["message"]!(
+      "chan",
+      JSON.stringify({ keys: ["k2"], time: 5_000 }),
+    );
+
+    handlers["close"]!();
+    handlers["ready"]!();
+
+    expect(resync).toHaveBeenCalledWith({ cutoff: 5_000 });
+  });
+
+  test("never moves the watermark backwards on out-of-order delivery", async () => {
+    const { bus, handlers } = await attach();
+    const resync = vi.fn();
+    bus.onResync(resync);
+
+    handlers["message"]!(
+      "chan",
+      JSON.stringify({ keys: ["k1"], time: 5_000 }),
+    );
+    handlers["message"]!(
+      "chan",
+      JSON.stringify({ keys: ["k2"], time: 1_000 }),
+    );
+    handlers["message"]!("chan", JSON.stringify({ keys: ["k3"] }));
+    handlers["message"]!(
+      "chan",
+      JSON.stringify({ keys: ["k4"], time: "nope" }),
+    );
+
+    handlers["close"]!();
+    handlers["ready"]!();
+
+    expect(resync).toHaveBeenCalledWith({ cutoff: 5_000 });
+  });
+
+  test("reports a zero cutoff when no invalidation was ever received", async () => {
+    const { bus, handlers } = await attach();
+    const resync = vi.fn();
+    bus.onResync(resync);
+
+    handlers["close"]!();
+    handlers["ready"]!();
+
+    expect(resync).toHaveBeenCalledWith({ cutoff: 0 });
+  });
+});

@@ -9,11 +9,11 @@ import {
   paginate,
 } from "#lib/rpc/validation.js";
 import {
-  RPC_ACTIONS,
+  RpcActions,
   type RpcRequest,
   type SystemShardsResponse,
 } from "@lumi/contracts";
-import { DEFAULT_CLUSTER_NAME, readClusterShards } from "@lumi/sharding";
+import { DefaultClusterName, readClusterShards } from "@lumi/sharding";
 import { getClusterName } from "#lib/env.js";
 import { resolver } from "#lib/downloader/resolver.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
@@ -124,11 +124,11 @@ export function initCoreRpcHandlers() {
   // Self-check only — tells the caller whether *their own* actorId is a bot
   // owner, so the dashboard can defer to `PermitResolver.isBotOwner`'s
   // application-owner fallback instead of keeping its own env-var list.
-  registerRpcHandler(RPC_ACTIONS.authWhoAmI, (req) => {
+  registerRpcHandler(RpcActions.authWhoAmI, (req) => {
     return { isBotOwner: req.actorId ? PermitResolver.isBotOwner(req.actorId) : false };
   });
 
-  registerRpcHandler(RPC_ACTIONS.gdprDelete, async (req) => {
+  registerRpcHandler(RpcActions.gdprDelete, async (req) => {
     requireBotOwner(req);
     const { userId, requester } = parsePayload(GdprDeleteSchema, req.data);
     const { failedModules } = await executeGdprDeletion(userId, requester);
@@ -137,14 +137,14 @@ export function initCoreRpcHandlers() {
       : { success: true };
   });
 
-  registerRpcHandler(RPC_ACTIONS.gdprExport, async (req) => {
+  registerRpcHandler(RpcActions.gdprExport, async (req) => {
     const { userId } = parsePayload(GdprExportSchema, req.data);
     requireSelfOrBotOwner(req, userId);
     const data = await executeGdprExport(userId);
     return { success: true, data };
   });
 
-  registerRpcHandler(RPC_ACTIONS.repoAdd, async (req) => {
+  registerRpcHandler(RpcActions.repoAdd, async (req) => {
     requireBotOwner(req);
     const { name, url, branch } = parsePayload(RepoAddSchema, req.data);
     const service = getUtility("downloader");
@@ -152,13 +152,13 @@ export function initCoreRpcHandlers() {
     return { success: true, repo };
   });
 
-  registerRpcHandler(RPC_ACTIONS.repoList, async (req) => {
+  registerRpcHandler(RpcActions.repoList, async (req) => {
     requireBotOwner(req);
     const repos = await container.db.downloader.readAllDownloaderRepos();
     return { repos };
   });
 
-  registerRpcHandler(RPC_ACTIONS.repoModules, async (req) => {
+  registerRpcHandler(RpcActions.repoModules, async (req) => {
     requireBotOwner(req);
     const { repoName } = parsePayload(RepoModulesSchema, req.data);
     const modules = await resolver.getModulesInRepo(repoName);
@@ -185,7 +185,7 @@ export function initCoreRpcHandlers() {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.moduleInstall, async (req) => {
+  registerRpcHandler(RpcActions.moduleInstall, async (req) => {
     requireBotOwner(req);
     const { repoName, moduleName, revision } = parsePayload(
       ModuleInstallSchema,
@@ -195,14 +195,14 @@ export function initCoreRpcHandlers() {
     return { success: true, moduleName };
   });
 
-  registerRpcHandler(RPC_ACTIONS.moduleUninstall, async (req) => {
+  registerRpcHandler(RpcActions.moduleUninstall, async (req) => {
     requireBotOwner(req);
     const { moduleName } = parsePayload(ModuleUninstallSchema, req.data);
     await getUtility("downloader").uninstallModule(moduleName);
     return { success: true, moduleName };
   });
 
-  registerRpcHandler(RPC_ACTIONS.moduleRollback, async (req) => {
+  registerRpcHandler(RpcActions.moduleRollback, async (req) => {
     requireBotOwner(req);
     const { moduleName, revision } = parsePayload(ModuleRollbackSchema, req.data);
     const result = await getUtility("downloader").rollbackModule(moduleName, revision);
@@ -210,14 +210,14 @@ export function initCoreRpcHandlers() {
   });
 
   // Bot Owner system panel.
-  registerRpcHandler(RPC_ACTIONS.systemDashboardGet, async (req) => {
+  registerRpcHandler(RpcActions.systemDashboardGet, async (req) => {
     requireBotOwner(req);
     const [global, moduleStates, shardSnapshot] = await Promise.all([
       container.db.global.getGlobalConfig(),
       container.db.modules.getGlobalModuleStatesDetailed(),
       readClusterShards({
         redis: container.redis,
-        clusterName: getClusterName() ?? DEFAULT_CLUSTER_NAME,
+        clusterName: getClusterName() ?? DefaultClusterName,
       }),
     ]);
     const moduleStore = container.stores.get("modules");
@@ -247,7 +247,7 @@ export function initCoreRpcHandlers() {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.systemMaintenanceSet, async (req) => {
+  registerRpcHandler(RpcActions.systemMaintenanceSet, async (req) => {
     requireBotOwner(req);
     const { maintenanceMode, maintenanceMessage } = parsePayload(
       SystemMaintenanceSchema,
@@ -260,7 +260,7 @@ export function initCoreRpcHandlers() {
     return { success: true, maintenanceMode: global.maintenanceMode };
   });
 
-  registerRpcHandler(RPC_ACTIONS.systemModuleToggle, async (req) => {
+  registerRpcHandler(RpcActions.systemModuleToggle, async (req) => {
     requireBotOwner(req);
     const { moduleName, enabled, reason } = parsePayload(
       SystemModuleToggleSchema,
@@ -274,14 +274,14 @@ export function initCoreRpcHandlers() {
     return { success: true, moduleName, enabled };
   });
 
-  registerRpcHandler(RPC_ACTIONS.systemModuleClear, async (req) => {
+  registerRpcHandler(RpcActions.systemModuleClear, async (req) => {
     requireBotOwner(req);
     const { moduleName } = parsePayload(SystemModuleClearSchema, req.data);
     await container.db.modules.clearModuleGlobalState(moduleName);
     return { success: true, moduleName };
   });
 
-  registerRpcHandler(RPC_ACTIONS.systemIdentitySet, async (req) => {
+  registerRpcHandler(RpcActions.systemIdentitySet, async (req) => {
     requireBotOwner(req);
     const { inviteUrl, supportGuildId } = parsePayload(
       SystemIdentitySchema,
@@ -300,7 +300,7 @@ export function initCoreRpcHandlers() {
 
   // Unlike `guild.audit.list`, this reads the ledger across every guild, so it
   // stays bot-owner only even when a `guildId` filter narrows it to one.
-  registerRpcHandler(RPC_ACTIONS.systemAuditList, async (req) => {
+  registerRpcHandler(RpcActions.systemAuditList, async (req) => {
     requireBotOwner(req);
     const filter = parsePayload(SystemAuditListSchema, req.data ?? {});
     const { page, pageSize, skip, take } = paginate(filter);
@@ -330,7 +330,7 @@ export function initCoreRpcHandlers() {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.systemBlocklistList, async (req) => {
+  registerRpcHandler(RpcActions.systemBlocklistList, async (req) => {
     requireBotOwner(req);
     const filter = parsePayload(SystemBlocklistListSchema, req.data ?? {});
     const { page, pageSize, skip, take } = paginate(filter);
@@ -354,7 +354,7 @@ export function initCoreRpcHandlers() {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.systemBlocklistAdd, async (req) => {
+  registerRpcHandler(RpcActions.systemBlocklistAdd, async (req) => {
     const actorId = requireBotOwner(req);
     const { userId, reason } = parsePayload(SystemBlocklistAddSchema, req.data);
     if (PermitResolver.isBotOwner(userId)) {
@@ -367,7 +367,7 @@ export function initCoreRpcHandlers() {
     return { success: true, userId };
   });
 
-  registerRpcHandler(RPC_ACTIONS.systemBlocklistRemove, async (req) => {
+  registerRpcHandler(RpcActions.systemBlocklistRemove, async (req) => {
     requireBotOwner(req);
     const { userId } = parsePayload(SystemBlocklistRemoveSchema, req.data);
     await container.db.access.removeBlocklistEntry(userId, null);
@@ -377,11 +377,11 @@ export function initCoreRpcHandlers() {
   // Answered from shared Redis rather than this process's own `client.ws`: the
   // RPC lands on whichever worker picks it up, which owns at most its own slice
   // of the shard range.
-  registerRpcHandler(RPC_ACTIONS.systemShardsGet, async (req) => {
+  registerRpcHandler(RpcActions.systemShardsGet, async (req) => {
     requireBotOwner(req);
     const snapshot = await readClusterShards({
       redis: container.redis,
-      clusterName: getClusterName() ?? DEFAULT_CLUSTER_NAME,
+      clusterName: getClusterName() ?? DefaultClusterName,
     });
 
     return {

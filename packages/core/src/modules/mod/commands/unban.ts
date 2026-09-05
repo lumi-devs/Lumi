@@ -8,7 +8,7 @@ import type { ModerationCase } from "@prisma/client";
 import { BanAction } from "../actions/index.js";
 
 const Root = LanguageKeys.Commands;
-const USER_ID_PATTERN = /^\d{17,20}$/;
+const UserIdPattern = /^\d{17,20}$/;
 
 type Context = ModerationCommand.ActionContext<string>;
 type Success = ModerationCommand.OutcomeContext<string, ModerationCase>;
@@ -56,7 +56,7 @@ export class UnbanCommand extends ModerationCommand<string, ModerationCase> {
     t: LumiT,
     target: string,
   ) {
-    if (USER_ID_PATTERN.test(target)) return Result.ok(null);
+    if (UserIdPattern.test(target)) return Result.ok(null);
     return Result.err({
       title: t(Root.BanInvalidIdTitle),
       body: t(Root.BanInvalidId),

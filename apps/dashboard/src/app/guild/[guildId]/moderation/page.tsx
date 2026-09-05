@@ -28,9 +28,9 @@ import {
   pageNumber,
   single,
 } from "#/lib/log-format";
-import { CASE_ACTION_OPTIONS } from "#/lib/moderation-cases";
+import { CaseActionOptions } from "#/lib/moderation-cases";
 
-const PAGE_SIZE = 25;
+const PageSize = 25;
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -66,7 +66,7 @@ export default async function ModerationPage({
   try {
     data = await getGuildCases(guildId, session.userId, {
       page,
-      pageSize: PAGE_SIZE,
+      pageSize: PageSize,
       ...(action ? { action } : {}),
       ...(userId && isSnowflake(userId) ? { userId } : {}),
       ...(moderatorId && isSnowflake(moderatorId) ? { moderatorId } : {}),
@@ -127,7 +127,7 @@ export default async function ModerationPage({
                   name: "action",
                   label: "Action",
                   anyLabel: "All actions",
-                  options: CASE_ACTION_OPTIONS,
+                  options: CaseActionOptions,
                 },
                 {
                   type: "search",

@@ -169,7 +169,7 @@ interface LumiCommandExtras {
   cooldownScope?: BucketScope;
 }
 
-const CTX_WRAPPER_PREFIX = { chat: "__ctxCi$", message: "__ctxMsg$" } as const;
+const CtxWrapperPrefix = { chat: "__ctxCi$", message: "__ctxMsg$" } as const;
 
 type CtxHandler = (ctx: CommandContext) => unknown;
 
@@ -206,9 +206,9 @@ function transformRunMappings(
     collected.add(run);
     return {
       ...rest,
-      chatInputRun: `${CTX_WRAPPER_PREFIX.chat}${run}`,
+      chatInputRun: `${CtxWrapperPrefix.chat}${run}`,
       ...(prefixEnabled
-        ? { messageRun: `${CTX_WRAPPER_PREFIX.message}${run}` }
+        ? { messageRun: `${CtxWrapperPrefix.message}${run}` }
         : {}),
     };
   });
@@ -228,7 +228,7 @@ function defineCtxWrappers(
         `Subcommand mapping "run: ${name}" does not match a method on ${piece.constructor.name}.`,
       );
     }
-    target[`${CTX_WRAPPER_PREFIX.chat}${name}`] = (
+    target[`${CtxWrapperPrefix.chat}${name}`] = (
       interaction: ChatInputCommandInteraction,
     ) =>
       (handler as CtxHandler).call(
@@ -236,7 +236,7 @@ function defineCtxWrappers(
         CommandContext.fromInteraction(interaction),
       );
     if (prefixEnabled) {
-      target[`${CTX_WRAPPER_PREFIX.message}${name}`] = (
+      target[`${CtxWrapperPrefix.message}${name}`] = (
         message: Message,
         args: Args,
       ) =>

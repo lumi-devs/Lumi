@@ -3,7 +3,7 @@
  * permit nodes actually referenced by `requiredPermit`/`checkPermit` across
  * commands, extended with human labels/descriptions for the dashboard picker.
  */
-export const KNOWN_PERMIT_NODE_GROUPS: {
+export const KnownPermitNodeGroups: {
   prefix: string;
   nodes: { node: string; label: string; description: string }[];
 }[] = [
@@ -48,12 +48,12 @@ export const KNOWN_PERMIT_NODE_GROUPS: {
         description: "Add and view private staff notes on a member's moderation history.",
       },
       {
-        node: "mod.softban",
+        node: "mod.softBan",
         label: "Softban members",
         description: "Ban then immediately unban to purge a member's recent messages.",
       },
       {
-        node: "mod.voicemute",
+        node: "mod.voiceMute",
         label: "Voice mute members",
         description: "Mute and unmute members in voice channels.",
       },
@@ -71,6 +71,6 @@ export const KNOWN_PERMIT_NODE_GROUPS: {
   },
 ];
 
-export const KNOWN_PERMIT_NODES: string[] = KNOWN_PERMIT_NODE_GROUPS.flatMap((group) =>
+export const KnownPermitNodes: string[] = KnownPermitNodeGroups.flatMap((group) =>
   group.nodes.map((n) => n.node),
 );

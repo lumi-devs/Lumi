@@ -11,8 +11,8 @@ import type { User } from "discord.js";
 import { BanAction } from "../actions/index.js";
 
 const Root = LanguageKeys.Commands;
-const USER_ID_PATTERN = /^\d{17,20}$/;
-const SECONDS_PER_DAY = 86400;
+const UserIdPattern = /^\d{17,20}$/;
+const SecondsPerDay = 86400;
 
 const BanAdd: ModerationSubcommand.Flow<User, ModerationCase, number> = {
   logScope: "ban",
@@ -30,7 +30,7 @@ const BanAdd: ModerationSubcommand.Flow<User, ModerationCase, number> = {
       targetUser: target,
       moderator,
       reason,
-      deleteMessageSeconds: prepared * SECONDS_PER_DAY,
+      deleteMessageSeconds: prepared * SecondsPerDay,
     }),
   buildSuccessMessage: (t, { target, reason, outcome }) => ({
     title: t(Root.BanSuccessTitle),
@@ -49,7 +49,7 @@ const BanRemove: ModerationSubcommand.Flow<string, ModerationCase> = {
     return (raw ?? "").replace(/\D/g, "");
   },
   preHandle: (_ctx, t, target) =>
-    USER_ID_PATTERN.test(target)
+    UserIdPattern.test(target)
       ? Result.ok(null)
       : Result.err({
           title: t(Root.BanInvalidIdTitle),

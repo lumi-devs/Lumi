@@ -43,7 +43,7 @@ function isIpish(value: string): boolean {
   return /^\d{1,3}(\.\d{1,3}){3}$/.test(value) || /^[0-9a-fA-F:.]+$/.test(value);
 }
 
-export const UNKNOWN_CLIENT_IP = "unknown";
+export const UnknownClientIp = "unknown";
 
 /**
  * @param headers the incoming request headers (`await headers()` in a Server
@@ -55,7 +55,7 @@ export const UNKNOWN_CLIENT_IP = "unknown";
 export function getClientIp(headers: Headers): string {
   const configured = env.clientIpHeader;
   if (configured) {
-    return normalize(headers.get(configured)) ?? UNKNOWN_CLIENT_IP;
+    return normalize(headers.get(configured)) ?? UnknownClientIp;
   }
 
   for (const header of ["cf-connecting-ip", "x-real-ip"]) {
@@ -73,5 +73,5 @@ export function getClientIp(headers: Headers): string {
     if (candidate) return candidate;
   }
 
-  return UNKNOWN_CLIENT_IP;
+  return UnknownClientIp;
 }

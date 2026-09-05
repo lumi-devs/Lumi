@@ -35,9 +35,9 @@ const thresholdFiredKey = (guildId: string, userId: string, count: number) =>
   `lumi:mod:${guildId}:threshold-fired:${userId}:${count}`;
 
 /** How long a fired threshold stays claimed - long enough to cover a retry storm. */
-const THRESHOLD_FIRED_TTL = 60;
+const ThresholdFiredTtl = 60;
 
-const THRESHOLD_TTL = 300;
+const ThresholdTtl = 300;
 
 export async function getThresholds(
   container: Container,
@@ -60,7 +60,7 @@ export async function getThresholds(
 
   await container.redis.setex(
     thresholdKey(guildId),
-    THRESHOLD_TTL,
+    ThresholdTtl,
     JSON.stringify(parsed),
   );
   return parsed;
@@ -92,7 +92,7 @@ export async function resetAllThresholds(
   await invalidateThresholds(container, guildId);
 }
 
-const WARN_COUNT_TTL = 365 * 24 * 3600;
+const WarnCountTtl = 365 * 24 * 3600;
 
 export async function incrementWarnCount(
   container: Container,
@@ -108,13 +108,13 @@ export async function incrementWarnCount(
       userId,
       "warn",
     );
-    await container.redis.set(key, String(cases.length), "EX", WARN_COUNT_TTL);
+    await container.redis.set(key, String(cases.length), "EX", WarnCountTtl);
     return cases.length;
   }
 
   const pipe = container.redis.pipeline();
   pipe.incr(key);
-  pipe.expire(key, WARN_COUNT_TTL);
+  pipe.expire(key, WarnCountTtl);
   const results = await pipe.exec();
   if (!results || results[0]?.[0]) {
     container.logger.error("[Thresholds] Redis pipeline execution failed:", results?.[0]?.[0]);
@@ -123,7 +123,7 @@ export async function incrementWarnCount(
   return (results?.[0]?.[1] as number | null) ?? 0;
 }
 
-const DECREMENT_WARN_COUNT_SCRIPT =
+const DecrementWarnCountScript =
   "local v = tonumber(redis.call('GET', KEYS[1])); if v and v > 0 then return redis.call('DECR', KEYS[1]) end return v or 0";
 
 export async function decrementWarnCount(
@@ -131,7 +131,7 @@ export async function decrementWarnCount(
   guildId: string,
   userId: string,
 ): Promise<void> {
-  await container.redis.eval(DECREMENT_WARN_COUNT_SCRIPT, 1, warnCountKey(guildId, userId));
+  await container.redis.eval(DecrementWarnCountScript, 1, warnCountKey(guildId, userId));
 }
 
 /** Batched variant of {@linkcode decrementWarnCount} - one pipeline instead of N round trips. */
@@ -145,7 +145,7 @@ export async function decrementWarnCounts(
     entries,
     ({ guildId, userId }) => warnCountKey(guildId, userId),
     (pipe, { guildId, userId }) => {
-      pipe.eval(DECREMENT_WARN_COUNT_SCRIPT, 1, warnCountKey(guildId, userId));
+      pipe.eval(DecrementWarnCountScript, 1, warnCountKey(guildId, userId));
     },
   );
 }
@@ -164,7 +164,7 @@ export async function resetWarnCount(
  * still describe an intended punishment, and a Discord timeout cannot be
  * permanent, so there is no "no duration" reading of the rule to honour.
  */
-const FALLBACK_THRESHOLD_DURATION_MS = 60 * 60 * 1000;
+const FallbackThresholdDurationMs = 60 * 60 * 1000;
 
 function resolveThresholdDuration(
   container: Container,
@@ -178,9 +178,9 @@ function resolveThresholdDuration(
   container.logger.warn(
     `[Thresholds] Guild ${guildId}: the ${entry.action} rule at ${targetCount} warns has an unusable duration (${
       entry.duration ? `"${entry.duration}"` : "none set"
-    }) - applying ${FALLBACK_THRESHOLD_DURATION_MS / 60000}m instead. Save the rule again with a valid duration.`,
+    }) - applying ${FallbackThresholdDurationMs / 60000}m instead. Save the rule again with a valid duration.`,
   );
-  return FALLBACK_THRESHOLD_DURATION_MS;
+  return FallbackThresholdDurationMs;
 }
 
 export async function checkThresholds(
@@ -207,7 +207,7 @@ export async function checkThresholds(
     thresholdFiredKey(guildId, userId, targetCount),
     "1",
     "EX",
-    THRESHOLD_FIRED_TTL,
+    ThresholdFiredTtl,
     "NX",
   );
   if (claimed !== "OK") return;

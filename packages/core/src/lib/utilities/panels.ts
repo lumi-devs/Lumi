@@ -250,22 +250,22 @@ export function createPaginationRow(
 export function buildSafeActionRows<
   T extends AnyComponentBuilder = MessageActionRowComponentBuilder,
 >(rows: (ActionRowBuilder<T> | unknown)[]): ActionRowBuilder<T>[] {
-  const MAX_ROWS = 5;
-  const MAX_COMPONENTS = 5;
+  const MaxRows = 5;
+  const MaxComponents = 5;
   if (!rows || !Array.isArray(rows)) return [];
 
   const validRows = rows.filter((r): r is ActionRowBuilder<T> => r instanceof ActionRowBuilder);
 
-  if (validRows.length > MAX_ROWS) {
-    const warningMsg = `[PanelSafety] ActionRow limit exceeded (${validRows.length} > ${MAX_ROWS}). Truncating to first ${MAX_ROWS} rows.`;
+  if (validRows.length > MaxRows) {
+    const warningMsg = `[PanelSafety] ActionRow limit exceeded (${validRows.length} > ${MaxRows}). Truncating to first ${MaxRows} rows.`;
     container.logger?.warn(warningMsg);
   }
 
-  const finalRows = validRows.slice(0, MAX_ROWS);
+  const finalRows = validRows.slice(0, MaxRows);
   for (const row of finalRows) {
-    if (row.components.length > MAX_COMPONENTS) {
-      container.logger?.warn(`[PanelSafety] Component limit exceeded in row (${row.components.length} > ${MAX_COMPONENTS}). Truncating.`);
-      row.setComponents(row.components.slice(0, MAX_COMPONENTS));
+    if (row.components.length > MaxComponents) {
+      container.logger?.warn(`[PanelSafety] Component limit exceeded in row (${row.components.length} > ${MaxComponents}). Truncating.`);
+      row.setComponents(row.components.slice(0, MaxComponents));
     }
   }
 

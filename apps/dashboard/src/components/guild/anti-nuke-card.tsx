@@ -11,7 +11,7 @@ import { cn } from "#/lib/utils";
 
 type NukeResponse = "log" | "quarantine" | "ban";
 
-const RESPONSE_TONE: Record<NukeResponse, string> = {
+const ResponseTone: Record<NukeResponse, string> = {
   log: "text-fg-muted",
   quarantine: "text-warning-fg",
   ban: "text-danger-fg",
@@ -21,7 +21,7 @@ const RESPONSE_TONE: Record<NukeResponse, string> = {
 // for. Matches `KIND_RESPONSE_KEYS` in `SecurityUtility.ts` — the 3 kinds
 // without a per-action field there (vanity change, dangerous permission
 // grant, quarantine bypass) aren't editable here yet.
-const ROWS = [
+const Rows = [
   { kind: "bans", label: "Bans", limitKey: "max_bans", responseKey: "response_bans" },
   { kind: "kicks", label: "Kicks", limitKey: "max_kicks", responseKey: "response_kicks" },
   {
@@ -44,7 +44,7 @@ const ROWS = [
   },
 ] as const;
 
-const EXTRA_FIELDS = ["window_seconds", "trusted_role_ids"] as const;
+const ExtraFields = ["window_seconds", "trusted_role_ids"] as const;
 
 export function AntiNukeCard({
   guildId,
@@ -57,8 +57,8 @@ export function AntiNukeCard({
   missingAuditLogPermission?: boolean;
 }) {
   const editableKeys = [
-    ...ROWS.flatMap((r) => [r.limitKey, r.responseKey]),
-    ...EXTRA_FIELDS,
+    ...Rows.flatMap((r) => [r.limitKey, r.responseKey]),
+    ...ExtraFields,
   ];
   const baseline = Object.fromEntries(editableKeys.map((k) => [k, config[k]]));
   const [form, setForm] = useState<Record<string, unknown>>(baseline);
@@ -152,7 +152,7 @@ export function AntiNukeCard({
             <span>Limit</span>
             <span>Response</span>
           </div>
-          {ROWS.map((row) => {
+          {Rows.map((row) => {
             const response = (form[row.responseKey] as NukeResponse) ?? "quarantine";
             return (
               <div
@@ -171,7 +171,7 @@ export function AntiNukeCard({
                   aria-label={`${row.label} response`}
                   value={response}
                   onChange={(e) => set(row.responseKey, e.target.value)}
-                  className={cn(RESPONSE_TONE[response])}
+                  className={cn(ResponseTone[response])}
                 >
                   <option value="log">Log only</option>
                   <option value="quarantine">Quarantine</option>

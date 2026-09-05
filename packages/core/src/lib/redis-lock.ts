@@ -55,13 +55,16 @@ export interface RedisLockOptions {
   retryDelayMs?: number;
   /** Cap on backoff. */
   maxRetryDelayMs?: number;
+  /** Called when a renewal finds the lease is no longer ours. */
+  onLostLock?: () => void;
 }
 
-const DEFAULTS: Required<RedisLockOptions> = {
+const Defaults: Required<RedisLockOptions> = {
   ttlMs: 15_000,
   acquireTimeoutMs: 30_000,
   retryDelayMs: 25,
   maxRetryDelayMs: 250,
+  onLostLock: () => undefined,
 };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -78,7 +81,7 @@ export async function acquireRedisLock(
   key: string,
   options: RedisLockOptions = {},
 ): Promise<RedisLock> {
-  const opts = { ...DEFAULTS, ...options };
+  const opts = { ...Defaults, ...options };
   const token = randomUUID();
   const deadline = Date.now() + opts.acquireTimeoutMs;
   let delay = opts.retryDelayMs;
@@ -111,6 +114,7 @@ export async function acquireRedisLock(
             } else {
               console.error(message);
             }
+            opts.onLostLock();
           }
         })
         .catch((err: unknown) => {

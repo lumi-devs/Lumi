@@ -31,7 +31,7 @@ export interface GuildBackupData {
   channels: ChannelSnapshot[];
 }
 
-const RESTORABLE_CHANNEL_TYPES = new Set<number>([
+const RestorableChannelTypes = new Set<number>([
   ChannelType.GuildText,
   ChannelType.GuildVoice,
   ChannelType.GuildCategory,
@@ -60,7 +60,7 @@ export function snapshotGuild(guild: Guild): GuildBackupData {
     }));
 
   const channels: ChannelSnapshot[] = guild.channels.cache
-    .filter((channel) => RESTORABLE_CHANNEL_TYPES.has(channel.type))
+    .filter((channel) => RestorableChannelTypes.has(channel.type))
     .map((channel) => ({
       id: channel.id,
       name: channel.name,

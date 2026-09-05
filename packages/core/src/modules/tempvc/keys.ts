@@ -1,4 +1,4 @@
-export const MODULE_NAME = "tempvc";
+export const ModuleName = "tempvc";
 
 export const TempVcKeys = {
   /** Per-user creation cooldown. */

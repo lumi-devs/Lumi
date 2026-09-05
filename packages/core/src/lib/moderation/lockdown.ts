@@ -12,7 +12,7 @@ export interface LockdownResult {
  * at a time made that proportional to the channel count; this caps concurrent
  * edits instead of serializing them.
  */
-const LOCKDOWN_CONCURRENCY = 10;
+const LockdownConcurrency = 10;
 
 async function setEveryoneSendMessages(
   guild: Guild,
@@ -26,7 +26,7 @@ async function setEveryoneSendMessages(
   let modified = 0;
   let failed = 0;
 
-  await mapWithConcurrency(text, LOCKDOWN_CONCURRENCY, async (channel) => {
+  await mapWithConcurrency(text, LockdownConcurrency, async (channel) => {
     try {
       await channel.permissionOverwrites.edit(guild.id, {
         SendMessages: value,

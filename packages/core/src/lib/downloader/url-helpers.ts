@@ -16,14 +16,14 @@
  * editable field - this only supplies a sane default.
  */
 export function deriveRepoNameFromUrl(url: string): string {
-  const FALLBACK = "repo";
-  if (!url) return FALLBACK;
+  const Fallback = "repo";
+  if (!url) return Fallback;
 
   // Drop surrounding whitespace/angle-brackets and any query/hash noise,
   // then a trailing slash.
   let val = url.trim().replace(/^<|>$/g, "");
   val = (val.split(/[?#]/)[0] ?? "").replace(/\/+$/, "");
-  if (!val) return FALLBACK;
+  if (!val) return Fallback;
 
   // Split on both "/" and ":" so the SSH shorthand ("git@host:owner/repo")
   // and HTTP(S)/SSH-URL forms ("https://host/owner/repo") all resolve the
@@ -41,5 +41,5 @@ export function deriveRepoNameFromUrl(url: string): string {
   name = name.replace(/[^a-zA-Z0-9_-]+/g, "-");
   name = name.replace(/^-+|-+$/g, "");
 
-  return name.length > 0 ? name : FALLBACK;
+  return name.length > 0 ? name : Fallback;
 }

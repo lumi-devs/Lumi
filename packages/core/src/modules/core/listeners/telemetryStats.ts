@@ -10,7 +10,7 @@ import {
 } from "@lumi/observability";
 import { getDiscordProxyUrl } from "#lib/env.js";
 
-const REFRESH_MS = 15_000;
+const RefreshMs = 15_000;
 
 @ApplyOptions<Listener.Options>({ once: true, event: Events.ClientReady })
 export class TelemetryStatsListener extends Listener<
@@ -62,7 +62,7 @@ export class TelemetryStatsListener extends Listener<
     };
 
     refresh();
-    this.#refreshTimer = setInterval(refresh, REFRESH_MS);
+    this.#refreshTimer = setInterval(refresh, RefreshMs);
     this.#refreshTimer.unref();
   }
 

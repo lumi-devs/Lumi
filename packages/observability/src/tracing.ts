@@ -26,7 +26,7 @@ import {
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
 
-const TRACER_NAME = "lumi";
+const TracerName = "lumi";
 let provider: NodeTracerProvider | null = null;
 
 export interface TracingOptions {
@@ -99,7 +99,7 @@ export async function shutdownTracing(): Promise<void> {
 }
 
 export function getTracer() {
-  return trace.getTracer(TRACER_NAME);
+  return trace.getTracer(TracerName);
 }
 
 /** Run `fn` inside a new active span; records exceptions + ERROR status, always ends the span. */

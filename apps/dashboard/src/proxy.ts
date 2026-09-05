@@ -28,17 +28,17 @@ function contentSecurityPolicy(nonce: string): string {
  * /api/auth/csrf are polled by the client on ordinary page loads and limiting
  * those would break normal use.
  */
-const RATE_LIMITED_AUTH_PATH = /^\/api\/auth\/(?:signin|callback)(?:\/|$)/;
+const RateLimitedAuthPath = /^\/api\/auth\/(?:signin|callback)(?:\/|$)/;
 
 // One sign-in costs ~2 requests (signin POST, then the callback redirect), so
 // this is ~10 full flows per minute per IP — well clear of a human retrying,
 // and still a hard ceiling on callback/state brute-forcing. Matches the
 // 10-per-minute budget the /login server action already applies.
-const AUTH_RATE_LIMIT = 20;
-const AUTH_RATE_WINDOW_MS = 60_000;
+const AuthRateLimit = 20;
+const AuthRateWindowMs = 60_000;
 
 export function isRateLimitedAuthPath(pathname: string): boolean {
-  return RATE_LIMITED_AUTH_PATH.test(pathname);
+  return RateLimitedAuthPath.test(pathname);
 }
 
 async function tooManyAuthRequests(
@@ -49,15 +49,15 @@ async function tooManyAuthRequests(
   const ip = getClientIp(request.headers);
   const limited = await isRateLimited(
     `auth-endpoint:${ip}`,
-    AUTH_RATE_LIMIT,
-    AUTH_RATE_WINDOW_MS,
+    AuthRateLimit,
+    AuthRateWindowMs,
   );
   if (!limited) return null;
 
   return new NextResponse("Too Many Requests", {
     status: 429,
     headers: {
-      "retry-after": String(AUTH_RATE_WINDOW_MS / 1000),
+      "retry-after": String(AuthRateWindowMs / 1000),
       "cache-control": "no-store",
     },
   });

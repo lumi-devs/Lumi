@@ -11,7 +11,6 @@ import { StatsGrid } from "#/components/stats-grid";
 import { PageHeader } from "#/components/ui/page-header";
 import { SectionHead } from "#/components/ui/section-head";
 import { StatusPill, StatusStrip } from "#/components/ui/status-pill";
-import { GeneralSettingsForm } from "#/components/guild/general-settings-form";
 import { ModulesStatusStrip } from "#/components/guild/modules-status-strip";
 import { NeedsAttentionPanel, type AttentionRow } from "#/components/guild/needs-attention-panel";
 import { OverviewRail } from "#/components/guild/overview-rail";
@@ -19,7 +18,7 @@ import { RecentAuditTable } from "#/components/guild/recent-audit-table";
 import { buildModuleLabelIndex } from "#/lib/config-labels";
 import { buildHealthChecks } from "#/lib/health-checks";
 import { extractMemberNames } from "#/lib/log-format";
-import { HEALTHY_STATUS } from "#/components/system/shard-fleet";
+import { HealthyStatus } from "#/components/system/shard-fleet";
 
 const FeedRows = 6;
 
@@ -79,7 +78,7 @@ export default async function GuildOverviewPage({
   ).length;
   const openAppeals = appeals?.total ?? 0;
   const healthyShards =
-    shards?.shards.filter((s) => s.status === HEALTHY_STATUS).length ?? 0;
+    shards?.shards.filter((s) => s.status === HealthyStatus).length ?? 0;
 
   const securityModule = data.modules.find((m) => m.name === "security");
   const filterModule = data.modules.find((m) => m.name === "filter");
@@ -249,17 +248,6 @@ export default async function GuildOverviewPage({
             />
           </section>
 
-          <section>
-            <SectionHead title="Server settings" />
-            {/* Beat 4 lives inside the form (on its card stack, not on this
-             * section) because the SaveBar it also renders is `position:
-             * fixed` — a running transform on an ancestor would re-parent it. */}
-            <GeneralSettingsForm
-              guildId={guildId}
-              settings={data.settings}
-              roles={data.roles}
-            />
-          </section>
         </div>
 
         <OverviewRail

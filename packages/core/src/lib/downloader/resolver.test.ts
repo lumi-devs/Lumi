@@ -21,16 +21,16 @@ vi.mock("node:child_process", async (importOriginal) => {
 
 const { resolver, MODULE_ROOT, ADDON_MODULES_ROOT } = await import("./resolver.js");
 
-const REPO_NAME = "resolver-test-repo";
-const MODULE_NAME = "resolver-test-addon";
+const RepoName = "resolver-test-repo";
+const ModuleName = "resolver-test-addon";
 
 async function writeFixtureAddon() {
-  const dir = path.join(MODULE_ROOT, REPO_NAME, MODULE_NAME);
+  const dir = path.join(MODULE_ROOT, RepoName, ModuleName);
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(
     path.join(dir, "info.json"),
     JSON.stringify({
-      name: MODULE_NAME,
+      name: ModuleName,
       author: ["Someone"],
       description: "Fixture addon for resolver tests.",
       short: "Fixture addon.",
@@ -41,21 +41,21 @@ async function writeFixtureAddon() {
   );
   await fs.writeFile(
     path.join(dir, "index.ts"),
-    `import { Module, DefineModule } from "lumi";\n\n@DefineModule({ name: "${MODULE_NAME}" })\nexport class Fixture extends Module {}\n`,
+    `import { Module, DefineModule } from "lumi";\n\n@DefineModule({ name: "${ModuleName}" })\nexport class Fixture extends Module {}\n`,
   );
   return dir;
 }
 
 describe("DownloadResolver.installModule - requirements package boundary", () => {
   afterEach(async () => {
-    await fs.rm(path.join(MODULE_ROOT, REPO_NAME), { recursive: true, force: true });
-    await fs.rm(path.join(ADDON_MODULES_ROOT, MODULE_NAME), { recursive: true, force: true });
+    await fs.rm(path.join(MODULE_ROOT, RepoName), { recursive: true, force: true });
+    await fs.rm(path.join(ADDON_MODULES_ROOT, ModuleName), { recursive: true, force: true });
   });
 
   it("symlinks node_modules/lumi into the addon's own directory when it declares requirements", async () => {
     const sourceDir = await writeFixtureAddon();
 
-    await resolver.installModule(REPO_NAME, MODULE_NAME);
+    await resolver.installModule(RepoName, ModuleName);
 
     // Regression: this synthetic package.json becomes the nearest package
     // boundary for the addon's own files, which - without the symlink -

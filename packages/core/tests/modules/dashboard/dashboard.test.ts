@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
 import { Collection } from "discord.js";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { rpcHandlers } from "#lib/rpc/dispatch.js";
 import { DashboardModule } from "#modules/dashboard/index.js";
 
@@ -87,7 +87,7 @@ describe("dashboard module RPC handlers", () => {
   });
 
   const getHandler = () => {
-    const handler = rpcHandlers.get(RPC_ACTIONS.guildDashboardGet);
+    const handler = rpcHandlers.get(RpcActions.guildDashboardGet);
     if (!handler) throw new Error("guildDashboardGet handler not registered");
     return handler;
   };
@@ -102,7 +102,7 @@ describe("dashboard module RPC handlers", () => {
     await expect(
       handler({
         id: "req-1",
-        action: RPC_ACTIONS.guildDashboardGet,
+        action: RpcActions.guildDashboardGet,
         guildId: GUILD_ID,
         actorId: INTRUDER_ID,
       }),
@@ -116,7 +116,7 @@ describe("dashboard module RPC handlers", () => {
 
     const result = (await handler({
       id: "req-2",
-      action: RPC_ACTIONS.guildDashboardGet,
+      action: RpcActions.guildDashboardGet,
       guildId: GUILD_ID,
       actorId: OWNER_ID,
     })) as any;
@@ -149,7 +149,7 @@ describe("dashboard module RPC handlers", () => {
 
     const result = (await handler({
       id: "req-3",
-      action: RPC_ACTIONS.guildDashboardGet,
+      action: RpcActions.guildDashboardGet,
       guildId: GUILD_ID,
       actorId: MANAGER_ID,
     })) as any;

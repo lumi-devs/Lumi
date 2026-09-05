@@ -24,7 +24,7 @@ export interface SwitcherGuild {
 // start expanded (the categories most guilds touch), Community & Engagement,
 // Monitoring & Diagnostics start expanded, Configuration starts collapsed.
 // Independent of live alert state.
-const DEFAULT_OPEN_CATEGORIES = new Set([
+const DefaultOpenCategories = new Set([
   "Discipline & Appeals",
   "Safety & Security",
   "Community & Engagement",
@@ -59,7 +59,7 @@ export function GuildSideNav({
     ...guildManagementGroups(guildId).map((group) => ({
       ...group,
       collapsible: true,
-      defaultOpen: DEFAULT_OPEN_CATEGORIES.has(group.title),
+      defaultOpen: DefaultOpenCategories.has(group.title),
       badge: group.links.length,
       alertDot: group.title === "Safety & Security" ? Boolean(panicArmed) : false,
     })),
@@ -89,7 +89,7 @@ export function GuildSideNav({
   );
 }
 
-const MEMBERS = new Intl.NumberFormat("en-GB");
+const Members = new Intl.NumberFormat("en-GB");
 
 function GuildSwitcher({
   guildId,
@@ -113,7 +113,7 @@ function GuildSwitcher({
             {guildName}
           </span>
           <span className="tabular block font-mono text-[12.5px] text-fg-subtle">
-            {MEMBERS.format(memberCount)} members
+            {Members.format(memberCount)} members
           </span>
         </span>
         <ChevronsUpDown aria-hidden className="size-3.5 shrink-0 text-fg-subtle" />

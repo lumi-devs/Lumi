@@ -20,21 +20,21 @@ import type { GuildSettings, DashboardRoleView } from "#/lib/dashboard-data";
 
 type FormState = GuildSettingsPayload;
 
-const FORM_KEYS = [
+const FormKeys = [
   "prefix",
   "muteRoleId",
   "locale",
   "timezone",
 ] as const satisfies readonly (keyof FormState)[];
 
-const FIELD_LABELS: Record<keyof FormState, string> = {
+const FieldLabels: Record<keyof FormState, string> = {
   prefix: "Command prefix",
   muteRoleId: "Mute role",
   locale: "Locale",
   timezone: "Timezone",
 };
 
-const NULLABLE_STRING_FIELDS = new Set<keyof FormState>(["prefix", "muteRoleId"]);
+const NullableStringFields = new Set<keyof FormState>(["prefix", "muteRoleId"]);
 
 function toFormState(settings: GuildSettings): FormState {
   return {
@@ -89,7 +89,7 @@ export function GeneralSettingsForm({
       let changed = false;
       const next = { ...currentForm };
 
-      for (const key of FORM_KEYS) {
+      for (const key of FormKeys) {
         if (JSON.stringify(newBaseline[key]) === JSON.stringify(oldBaseline[key])) {
           continue;
         }
@@ -110,7 +110,7 @@ export function GeneralSettingsForm({
       setBaseline(newBaseline);
 
       if (conflicts.length > 0) {
-        const names = conflicts.map((k) => FIELD_LABELS[k]).join(", ");
+        const names = conflicts.map((k) => FieldLabels[k]).join(", ");
         setError(
           `${names} ${conflicts.length === 1 ? "was" : "were"} changed in another tab while you were editing. ` +
             "Your unsaved changes were kept — Save to overwrite, or Reset to load the latest value.",
@@ -167,7 +167,7 @@ export function GeneralSettingsForm({
       const patch = Object.fromEntries(
         changedKeys.map((key) => {
           const value = form[key];
-          return [key, NULLABLE_STRING_FIELDS.has(key) && value === "" ? null : value];
+          return [key, NullableStringFields.has(key) && value === "" ? null : value];
         }),
       ) as GuildSettingsPayload;
 

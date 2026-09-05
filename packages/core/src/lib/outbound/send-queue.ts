@@ -24,7 +24,7 @@ import type { AuditEntry } from "#lib/loggable.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import { renderAuditCard, renderLogCard, type LogCard } from "./render.js";
 
-const QUEUE_LABEL = "outbound-send";
+const QueueLabel = "outbound-send";
 
 export interface OutboundSendPayload {
   channelId: string;
@@ -70,14 +70,14 @@ export async function handleSendMessageFire(
   }
 
   pending++;
-  queueDepth.set({ queue: QUEUE_LABEL }, pending);
+  queueDepth.set({ queue: QueueLabel }, pending);
   await queue.wait();
   try {
     await deliver(payload);
   } finally {
     queue.shift();
     pending--;
-    queueDepth.set({ queue: QUEUE_LABEL }, pending);
+    queueDepth.set({ queue: QueueLabel }, pending);
     if (queue.remaining === 0) channelQueues.delete(channelId);
   }
 }

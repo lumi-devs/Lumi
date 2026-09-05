@@ -1,8 +1,8 @@
 import { container } from "@sapphire/framework";
 import {
-  APPEAL_REVIEW_STATUSES,
-  APPEAL_STATUSES,
-  WARN_THRESHOLD_ACTIONS,
+  AppealReviewStatuses,
+  AppealStatuses,
+  WarnThresholdActions,
   type GuildSetupRunResult,
   type RpcRequest,
 } from "@lumi/contracts";
@@ -284,7 +284,7 @@ export const CaseRevokeSchema = s.object({
 
 export const WarnThresholdSetSchema = s.object({
   warnCount: s.number().int().greaterThanOrEqual(1),
-  action: s.enum(WARN_THRESHOLD_ACTIONS).nullable(),
+  action: s.enum(WarnThresholdActions).nullable(),
   duration: s.string().lengthLessThanOrEqual(32).nullable().optional(),
 });
 
@@ -316,6 +316,8 @@ export const TempVcGeneratorSetSchema = s.object({
 export const GuildSummariesSchema = s.object({
   guildIds: s.array(SnowflakeSchema).lengthGreaterThanOrEqual(1),
 });
+
+export const GuildSummariesMax = 200;
 
 export const AuditListSchema = s.object({
   userId: SnowflakeSchema.optional(),
@@ -392,14 +394,14 @@ export const AppealSubmitSchema = s.object({
 });
 
 export const AppealsListSchema = s.object({
-  status: s.enum(APPEAL_STATUSES).optional(),
+  status: s.enum(AppealStatuses).optional(),
   page: PageSchema,
   pageSize: PageSizeSchema,
 });
 
 export const AppealReviewSchema = s.object({
   id: s.number().int().greaterThanOrEqual(1),
-  status: s.enum(APPEAL_REVIEW_STATUSES),
+  status: s.enum(AppealReviewStatuses),
 });
 
 export const IgnoredChannelSchema = s.object({

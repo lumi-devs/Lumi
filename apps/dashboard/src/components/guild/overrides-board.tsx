@@ -36,7 +36,7 @@ import type {
 import { formatConfigValue, isSnowflake, isUnset } from "#/lib/log-format";
 import { useServerAction } from "#/lib/use-server-action";
 
-const CATEGORY_CHANNEL_TYPE = 4;
+const CategoryChannelType = 4;
 
 // `guild.overrides.set` treats a null value as a delete, so an override whose
 // value was never filled in would silently remove a row instead of creating
@@ -46,7 +46,7 @@ function isBlankValue(value: unknown): boolean {
   return isUnset(value) || (typeof value === "string" && value.trim() === "");
 }
 
-const TARGET_TYPES: { value: ConfigOverrideModelType; label: string }[] = [
+const TargetTypes: { value: ConfigOverrideModelType; label: string }[] = [
   { value: "channel", label: "Channel" },
   { value: "role", label: "Role" },
   { value: "user", label: "Member" },
@@ -498,7 +498,7 @@ function AddOverrideForm({
               setModelId("");
             }}
           >
-            {TARGET_TYPES.map((t) => (
+            {TargetTypes.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
               </option>
@@ -544,7 +544,7 @@ function AddOverrideForm({
       {field ? (
         <Field
           htmlFor={field.key}
-          label={`Value for this ${TARGET_TYPES.find((t) => t.value === modelType)?.label.toLowerCase()}`}
+          label={`Value for this ${TargetTypes.find((t) => t.value === modelType)?.label.toLowerCase()}`}
           hint={`Server-wide, ${field.label || field.key} is ${describeValue(field, moduleView?.config[field.key], directory) ?? "not set"}.`}
           className="max-w-sm"
         >
@@ -623,7 +623,7 @@ function targetOptionsFor(
       return directory.roles.map((r) => ({ id: r.id, label: `@${r.name}` }));
     case "category":
       return directory.channels
-        .filter((c) => c.type === CATEGORY_CHANNEL_TYPE)
+        .filter((c) => c.type === CategoryChannelType)
         .map((c) => ({ id: c.id, label: c.name }));
     case "user":
       return directory.members.map((m) => ({
@@ -632,7 +632,7 @@ function targetOptionsFor(
       }));
     default:
       return directory.channels
-        .filter((c) => c.type !== CATEGORY_CHANNEL_TYPE)
+        .filter((c) => c.type !== CategoryChannelType)
         .map((c) => ({ id: c.id, label: `#${c.name}` }));
   }
 }

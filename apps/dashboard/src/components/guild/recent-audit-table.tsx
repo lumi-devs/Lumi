@@ -5,7 +5,7 @@ import { Table, TBody, TD, TH, THead, TR, TableScroll } from "#/components/ui/ta
 import { formatTime, splitAction } from "#/lib/log-format";
 import type { AuditEntryView } from "#/lib/dashboard-data";
 
-const PLATFORM_TONE: Record<string, string> = {
+const PlatformTone: Record<string, string> = {
   web: "bg-accent-soft text-accent-fg",
   discord: "bg-success-soft text-success",
 };
@@ -65,7 +65,7 @@ export function RecentAuditTable({
                   <TD>
                     <span
                       className={`inline-flex rounded-full px-2 py-px font-mono text-[12.5px] ${
-                        PLATFORM_TONE[entry.platform] ?? "bg-bg-subtle text-fg-muted"
+                        PlatformTone[entry.platform] ?? "bg-bg-subtle text-fg-muted"
                       }`}
                     >
                       {entry.platform === "web" ? "dashboard" : entry.platform}

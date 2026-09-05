@@ -159,8 +159,8 @@ export function usePageTimeline(refs: {
  * and pill-slide feel; SOFT is for larger surfaces (cards, panels, the save
  * bar) where SNAPPY's stiffness reads as jittery at that size.
  */
-export const SPRING_SNAPPY = { type: "spring", stiffness: 500, damping: 30 } as const;
-export const SPRING_SOFT = { type: "spring", stiffness: 260, damping: 26 } as const;
+export const SpringSnappy = { type: "spring", stiffness: 500, damping: 30 } as const;
+export const SpringSoft = { type: "spring", stiffness: 260, damping: 26 } as const;
 
 /**
  * Cursor-tracked glow for `.spotlight` (globals.css) — sets the CSS custom

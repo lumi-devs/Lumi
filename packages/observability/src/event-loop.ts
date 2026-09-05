@@ -7,10 +7,10 @@ import { Gauge } from "prom-client";
 import { registry } from "./metrics";
 
 /** Sampling resolution; also the floor on what the histogram can report. */
-const RESOLUTION_MS = 20;
+const ResolutionMs = 20;
 
 /** How often the histogram is drained into the gauges. */
-const REPORT_INTERVAL_MS = 10_000;
+const ReportIntervalMs = 10_000;
 
 /**
  * Event-loop delay in seconds, by quantile. `max` is the one that matters for
@@ -32,11 +32,11 @@ let timer: ReturnType<typeof setInterval> | null = null;
  * never holds the process open).
  */
 export function startEventLoopMonitor(
-  intervalMs = REPORT_INTERVAL_MS,
+  intervalMs = ReportIntervalMs,
 ): () => void {
   if (histogram) return stopEventLoopMonitor;
 
-  const h = monitorEventLoopDelay({ resolution: RESOLUTION_MS });
+  const h = monitorEventLoopDelay({ resolution: ResolutionMs });
   h.enable();
   histogram = h;
 

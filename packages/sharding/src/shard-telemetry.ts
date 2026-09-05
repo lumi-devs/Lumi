@@ -14,7 +14,7 @@ type RedisClient = Redis | Cluster;
 import { tryParseJSON } from "@sapphire/utilities";
 
 /** Namespace used when `CLUSTER_NAME` is unset, so single-process deployments still report. */
-export const DEFAULT_CLUSTER_NAME = "default";
+export const DefaultClusterName = "default";
 
 const shardKey = (cluster: string, shardId: number) =>
   `lumi:cluster:${cluster}:shard:${shardId}`;
@@ -144,7 +144,7 @@ export interface ClusterShardsSnapshot {
   missingShardIds: number[];
 }
 
-const GLOB_SPECIALS = /[*?[\]\\]/g;
+const GlobSpecials = /[*?[\]\\]/g;
 
 export interface ReadClusterShardsOptions {
   redis: RedisClient;
@@ -161,7 +161,7 @@ export async function readClusterShards(
   opts: ReadClusterShardsOptions,
 ): Promise<ClusterShardsSnapshot> {
   const { redis, clusterName } = opts;
-  const pattern = `lumi:cluster:${clusterName.replace(GLOB_SPECIALS, "\\$&")}:shard:*`;
+  const pattern = `lumi:cluster:${clusterName.replace(GlobSpecials, "\\$&")}:shard:*`;
 
   const shardKeys = await scanKeys(redis, pattern, opts.scanCount ?? 200);
 

@@ -17,7 +17,7 @@ import { handleAutoLockdownUnlockFire } from "./lib/auto-lockdown-handler.js";
 
 /** Config keys the FilterUtility compiles into its per-guild rule set -
  * changing any of them must rebuild that guild's cache. */
-const COMPILED_KEYS = [
+const CompiledKeys = [
   "terms",
   "regex_rules",
   "block_invites",
@@ -334,7 +334,7 @@ export class FilterModule extends Module {
       "unicast",
       handleAutoLockdownUnlockFire,
     );
-    for (const key of COMPILED_KEYS) {
+    for (const key of CompiledKeys) {
       this.container.configChangeHooks.set(
         `filter:${key}`,
         async (guildId, _key) => {
@@ -359,7 +359,7 @@ export class FilterModule extends Module {
   }
 
   public override async onUnload() {
-    for (const key of COMPILED_KEYS) {
+    for (const key of CompiledKeys) {
       this.container.configChangeHooks.delete(`filter:${key}`);
     }
     this.container.configValueValidators.delete("filter:regex_rules");

@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import {
   TempVcGeneratorSetSchema,
@@ -10,7 +10,7 @@ import {
 } from "../lib/helpers.js";
 
 export function registerTempVcRpcHandlers(): void {
-  registerRpcHandler(RPC_ACTIONS.guildTempVcGeneratorsList, async (req) => {
+  registerRpcHandler(RpcActions.guildTempVcGeneratorsList, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const generators = await container.db.tempvc.listGenerators(guildId);
@@ -26,7 +26,7 @@ export function registerTempVcRpcHandlers(): void {
 
   // Routed through the tempvc service rather than `db.tempvc` so its
   // in-memory generator registry is invalidated across every shard.
-  registerRpcHandler(RPC_ACTIONS.guildTempVcGeneratorSet, async (req) => {
+  registerRpcHandler(RpcActions.guildTempVcGeneratorSet, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { channelId, name, limit } = parsePayload(
@@ -50,7 +50,7 @@ export function registerTempVcRpcHandlers(): void {
     return { success: true, channelId, deleted: false };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildTempVcRecordsList, async (req) => {
+  registerRpcHandler(RpcActions.guildTempVcRecordsList, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const records = await container.db.tempvc.listRecords(guildId);
@@ -71,7 +71,7 @@ export function registerTempVcRpcHandlers(): void {
 }
 
 export function unregisterTempVcRpcHandlers(): void {
-  rpcHandlers.delete(RPC_ACTIONS.guildTempVcGeneratorsList);
-  rpcHandlers.delete(RPC_ACTIONS.guildTempVcGeneratorSet);
-  rpcHandlers.delete(RPC_ACTIONS.guildTempVcRecordsList);
+  rpcHandlers.delete(RpcActions.guildTempVcGeneratorsList);
+  rpcHandlers.delete(RpcActions.guildTempVcGeneratorSet);
+  rpcHandlers.delete(RpcActions.guildTempVcRecordsList);
 }

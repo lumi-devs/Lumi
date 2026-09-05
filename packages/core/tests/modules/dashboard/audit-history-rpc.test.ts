@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { rpcHandlers } from "#lib/rpc/dispatch.js";
 import { DashboardModule } from "#modules/dashboard/index.js";
 import { AuditRepository } from "#lib/prisma/repositories/AuditRepository.js";
@@ -122,7 +122,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
         makeAudit({ id: 2, createdAt: new Date("2026-01-02T00:00:00.000Z") }),
       ]);
 
-      const res = (await call(RPC_ACTIONS.guildAuditList, {})) as any;
+      const res = (await call(RpcActions.guildAuditList, {})) as any;
 
       expect(res.total).toBe(2);
       expect(res.page).toBe(1);
@@ -138,17 +138,17 @@ describe("dashboard module audit + history + override RPC handlers", () => {
         makeAudit({ id: 3, action: "config.delete", userId: INTRUDER_ID }),
       ]);
 
-      const byAction = (await call(RPC_ACTIONS.guildAuditList, {
+      const byAction = (await call(RpcActions.guildAuditList, {
         action: "config.",
       })) as any;
       expect(byAction.total).toBe(2);
 
-      const byPlatform = (await call(RPC_ACTIONS.guildAuditList, {
+      const byPlatform = (await call(RpcActions.guildAuditList, {
         platform: "discord",
       })) as any;
       expect(byPlatform.total).toBe(1);
 
-      const byUser = (await call(RPC_ACTIONS.guildAuditList, {
+      const byUser = (await call(RpcActions.guildAuditList, {
         userId: INTRUDER_ID,
       })) as any;
       expect(byUser.total).toBe(1);
@@ -166,7 +166,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
         ),
       );
 
-      const res = (await call(RPC_ACTIONS.guildAuditList, {
+      const res = (await call(RpcActions.guildAuditList, {
         page: 2,
         pageSize: 2,
       })) as any;
@@ -181,17 +181,17 @@ describe("dashboard module audit + history + override RPC handlers", () => {
         makeAudit({ id: 2, guildId: OTHER_GUILD_ID }),
       ]);
 
-      const res = (await call(RPC_ACTIONS.guildAuditList, {})) as any;
+      const res = (await call(RpcActions.guildAuditList, {})) as any;
       expect(res.total).toBe(1);
       expect(res.entries[0].id).toBe(1);
     });
 
     it("rejects an unknown platform and an oversized page", async () => {
       await expect(
-        call(RPC_ACTIONS.guildAuditList, { platform: "carrier-pigeon" }),
+        call(RpcActions.guildAuditList, { platform: "carrier-pigeon" }),
       ).rejects.toThrow("Bad payload");
       await expect(
-        call(RPC_ACTIONS.guildAuditList, { pageSize: 500 }),
+        call(RpcActions.guildAuditList, { pageSize: 500 }),
       ).rejects.toThrow("Bad payload");
     });
 
@@ -199,7 +199,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
       denyPermissions();
 
       await expect(
-        call(RPC_ACTIONS.guildAuditList, {}, INTRUDER_ID),
+        call(RpcActions.guildAuditList, {}, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
     });
   });
@@ -212,7 +212,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
         makeHistory({ id: "h3", guildId: OTHER_GUILD_ID }),
       ]);
 
-      const res = (await call(RPC_ACTIONS.guildHistoryList, {})) as any;
+      const res = (await call(RpcActions.guildHistoryList, {})) as any;
 
       expect(res.total).toBe(2);
       expect(res.entries.map((e: any) => e.id)).toEqual(["h2", "h1"]);
@@ -225,7 +225,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
         makeHistory({ id: "h2", moduleName: "afk", key: "enabled" }),
       ]);
 
-      const res = (await call(RPC_ACTIONS.guildHistoryList, {
+      const res = (await call(RpcActions.guildHistoryList, {
         moduleName: "afk",
       })) as any;
 
@@ -237,7 +237,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
       denyPermissions();
 
       await expect(
-        call(RPC_ACTIONS.guildHistoryList, {}, INTRUDER_ID),
+        call(RpcActions.guildHistoryList, {}, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
     });
   });
@@ -246,7 +246,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
     it("re-applies the previous value through the config service", async () => {
       prisma.$seed("moduleConfigHistory", [makeHistory({ id: "h1" })]);
 
-      const res = (await call(RPC_ACTIONS.guildHistoryRollback, {
+      const res = (await call(RpcActions.guildHistoryRollback, {
         entryId: "h1",
       })) as any;
 
@@ -270,7 +270,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
         makeHistory({ id: "h1", oldValue: null }),
       ]);
 
-      const res = (await call(RPC_ACTIONS.guildHistoryRollback, {
+      const res = (await call(RpcActions.guildHistoryRollback, {
         entryId: "h1",
       })) as any;
 
@@ -288,7 +288,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
         makeHistory({ id: "h1", oldValue: ["a", "b"] }),
       ]);
 
-      await call(RPC_ACTIONS.guildHistoryRollback, { entryId: "h1" });
+      await call(RpcActions.guildHistoryRollback, { entryId: "h1" });
 
       expect(config.setConfig).toHaveBeenCalledWith(
         GUILD_ID,
@@ -305,7 +305,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
       ]);
 
       await expect(
-        call(RPC_ACTIONS.guildHistoryRollback, { entryId: "h1" }),
+        call(RpcActions.guildHistoryRollback, { entryId: "h1" }),
       ).rejects.toThrow("History entry h1 not found");
       expect(config.setConfig).not.toHaveBeenCalled();
     });
@@ -315,7 +315,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
       prisma.$seed("moduleConfigHistory", [makeHistory({ id: "h1" })]);
 
       await expect(
-        call(RPC_ACTIONS.guildHistoryRollback, { entryId: "h1" }, INTRUDER_ID),
+        call(RpcActions.guildHistoryRollback, { entryId: "h1" }, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
       expect(config.setConfig).not.toHaveBeenCalled();
     });
@@ -353,10 +353,10 @@ describe("dashboard module audit + history + override RPC handlers", () => {
         },
       ]);
 
-      const all = (await call(RPC_ACTIONS.guildOverridesList, {})) as any;
+      const all = (await call(RpcActions.guildOverridesList, {})) as any;
       expect(all.overrides.map((o: any) => o.id)).toEqual(["o2", "o1"]);
 
-      const scoped = (await call(RPC_ACTIONS.guildOverridesList, {
+      const scoped = (await call(RpcActions.guildOverridesList, {
         moduleName: "mod",
       })) as any;
       expect(scoped.overrides).toHaveLength(1);
@@ -364,7 +364,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
     });
 
     it("upserts an override", async () => {
-      const res = (await call(RPC_ACTIONS.guildOverridesSet, {
+      const res = (await call(RpcActions.guildOverridesSet, {
         moduleName: "mod",
         key: "enabled",
         modelType: "channel",
@@ -392,7 +392,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
         },
       ]);
 
-      const res = (await call(RPC_ACTIONS.guildOverridesSet, {
+      const res = (await call(RpcActions.guildOverridesSet, {
         moduleName: "mod",
         key: "enabled",
         modelType: "channel",
@@ -406,7 +406,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
 
     it("rejects an unknown model type", async () => {
       await expect(
-        call(RPC_ACTIONS.guildOverridesSet, {
+        call(RpcActions.guildOverridesSet, {
           moduleName: "mod",
           key: "enabled",
           modelType: "planet",
@@ -421,7 +421,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
 
       await expect(
         call(
-          RPC_ACTIONS.guildOverridesSet,
+          RpcActions.guildOverridesSet,
           {
             moduleName: "mod",
             key: "enabled",

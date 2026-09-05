@@ -2,8 +2,8 @@ import { container, UserError } from "@sapphire/framework";
 import { envParseString } from "#lib/env.js";
 import type { PermitTargetType } from "#lib/prisma/repositories/PermissionRepository.js";
 
-const OWNER_IDS: ReadonlySet<string> = new Set(
-  envParseString("OWNER_IDS", "")
+const OwnerIds: ReadonlySet<string> = new Set(
+  envParseString("OwnerIds", "")
     .split(",")
     .map((id) => id.trim())
     .filter((id) => id.length > 0),
@@ -48,9 +48,9 @@ function anyNodeMatches(nodes: readonly string[], permitNode: string): boolean {
  * wildcard node matching, and Anti-Nuke Quarantine interception.
  */
 export class PermitResolver {
-  /** Checks if a user is a Bot Owner (via OWNER_IDS env or application owner). */
+  /** Checks if a user is a Bot Owner (via OwnerIds env or application owner). */
   public static isBotOwner(userId: string): boolean {
-    if (OWNER_IDS.has(userId)) return true;
+    if (OwnerIds.has(userId)) return true;
     const app = container.client?.application;
     if (app?.owner) {
       if ("members" in app.owner) {

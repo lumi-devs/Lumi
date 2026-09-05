@@ -12,14 +12,14 @@ import {
   resolvePgPoolSize,
 } from "#lib/env.js";
 
-const POOL_MAX = resolvePgPoolSize();
+const PoolMax = resolvePgPoolSize();
 
 const primaryUrl = getPostgresUrl();
 const appName = getPostgresAppName();
 
 const pool = new Pool({
   connectionString: primaryUrl,
-  max: POOL_MAX,
+  max: PoolMax,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
   application_name: appName,
@@ -78,7 +78,7 @@ const replicaUrl = getPostgresReplicaUrl();
 const replicaPool = replicaUrl
   ? new Pool({
       connectionString: replicaUrl,
-      max: POOL_MAX,
+      max: PoolMax,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000,
       application_name: `${appName}-replica`,

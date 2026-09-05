@@ -18,7 +18,7 @@ import {
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 
 /** Member fetches are per-entry Discord API calls, so the sweep is capped rather than unbounded. */
-const SWEEP_CONCURRENCY = 10;
+const SweepConcurrency = 10;
 
 @ApplyOptions<Piece.Options>({ name: "afk" })
 export default class AfkUtility extends Utility {
@@ -77,7 +77,7 @@ export default class AfkUtility extends Utility {
         ),
       );
 
-      await mapWithConcurrency(mine, SWEEP_CONCURRENCY, async (entry) => {
+      await mapWithConcurrency(mine, SweepConcurrency, async (entry) => {
         const guild = this.container.client.guilds.cache.get(entry.guildId);
         if (!guild) {
           await tryRemoveEntry(entry.guildId, entry.userId);

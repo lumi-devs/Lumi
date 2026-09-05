@@ -1,23 +1,25 @@
 import { container } from "@sapphire/framework";
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { checkModulesEnabled } from "#lib/module-check.js";
 import { isSupportedLanguage } from "#lib/i18n/index.js";
 import {
   ConfigSetSchema,
   GuildSettingsSchema,
+  GuildSummariesMax,
   GuildSummariesSchema,
   ModuleToggleSchema,
   PICKABLE_CHANNEL_TYPES,
   parsePayload,
+  requireGuildManager,
   runGuildSetup,
   toRawConfigValue,
   verifyGuildAccess,
 } from "../lib/helpers.js";
 
 export function registerGuildRpcHandlers(): void {
-  registerRpcHandler(RPC_ACTIONS.guildDashboardGet, async (req) => {
+  registerRpcHandler(RpcActions.guildDashboardGet, async (req) => {
     const { guildId, guild } = await verifyGuildAccess(req);
 
     const settings = await container.db.config.getGuildSettings(guildId);
@@ -100,10 +102,20 @@ export function registerGuildRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildSummariesList, (req) => {
+  registerRpcHandler(RpcActions.guildSummariesList, async (req) => {
     const { guildIds } = parsePayload(GuildSummariesSchema, req.data);
 
-    const summaries = guildIds.flatMap((guildId) => {
+    const allowed = await Promise.all(
+      guildIds.slice(0, GuildSummariesMax).map((guildId: string) =>
+        requireGuildManager(guildId, req.actorId).then(
+          () => guildId,
+          () => null,
+        ),
+      ),
+    );
+
+    const summaries = allowed.flatMap((guildId) => {
+      if (!guildId) return [];
       const guild = container.client.guilds.cache.get(guildId);
       if (!guild) return [];
       return [
@@ -119,7 +131,7 @@ export function registerGuildRpcHandlers(): void {
     return { summaries };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildModuleToggle, async (req) => {
+  registerRpcHandler(RpcActions.guildModuleToggle, async (req) => {
     const { guildId } = await verifyGuildAccess(req);
     const { moduleName, enabled } = parsePayload(
       ModuleToggleSchema,
@@ -140,7 +152,7 @@ export function registerGuildRpcHandlers(): void {
     return { success: true, enabled };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildConfigSet, async (req) => {
+  registerRpcHandler(RpcActions.guildConfigSet, async (req) => {
     const { guildId } = await verifyGuildAccess(req);
     const { moduleName, key, value } = parsePayload(
       ConfigSetSchema,
@@ -167,12 +179,12 @@ export function registerGuildRpcHandlers(): void {
     return { success: true, key, value: coerced };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildSetupRun, async (req) => {
+  registerRpcHandler(RpcActions.guildSetupRun, async (req) => {
     const { guild, actorId } = await verifyGuildAccess(req);
     return runGuildSetup(guild, actorId);
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildSettingsSet, async (req) => {
+  registerRpcHandler(RpcActions.guildSettingsSet, async (req) => {
     const { guildId } = await verifyGuildAccess(req);
     const data = parsePayload(GuildSettingsSchema, req.data);
 
@@ -200,10 +212,10 @@ export function registerGuildRpcHandlers(): void {
 }
 
 export function unregisterGuildRpcHandlers(): void {
-  rpcHandlers.delete(RPC_ACTIONS.guildDashboardGet);
-  rpcHandlers.delete(RPC_ACTIONS.guildSummariesList);
-  rpcHandlers.delete(RPC_ACTIONS.guildModuleToggle);
-  rpcHandlers.delete(RPC_ACTIONS.guildConfigSet);
-  rpcHandlers.delete(RPC_ACTIONS.guildSetupRun);
-  rpcHandlers.delete(RPC_ACTIONS.guildSettingsSet);
+  rpcHandlers.delete(RpcActions.guildDashboardGet);
+  rpcHandlers.delete(RpcActions.guildSummariesList);
+  rpcHandlers.delete(RpcActions.guildModuleToggle);
+  rpcHandlers.delete(RpcActions.guildConfigSet);
+  rpcHandlers.delete(RpcActions.guildSetupRun);
+  rpcHandlers.delete(RpcActions.guildSettingsSet);
 }

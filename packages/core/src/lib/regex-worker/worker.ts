@@ -9,7 +9,7 @@ import { parentPort } from "node:worker_threads";
 import type { WorkerRequest, WorkerResponse } from "./protocol.js";
 
 /** Pattern sets are keyed by `<guildId>:<version>`; bounded, oldest evicted. */
-const MAX_SETS = 2_000;
+const MaxSets = 2_000;
 
 const sets = new Map<string, RegExp[]>();
 
@@ -35,7 +35,7 @@ function compile(patterns: string[]): RegExp[] {
 function store(key: string, patterns: string[]): void {
   sets.delete(key);
   sets.set(key, compile(patterns));
-  while (sets.size > MAX_SETS) {
+  while (sets.size > MaxSets) {
     const oldest = sets.keys().next().value;
     if (oldest === undefined) break;
     sets.delete(oldest);

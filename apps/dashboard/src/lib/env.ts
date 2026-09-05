@@ -24,11 +24,18 @@ function envInt(key: string, fallback?: number): number {
 // NextAuth reads AUTH_SECRET by convention; DASHBOARD_SESSION_SECRET is
 // kept for deploy-config continuity with older deployments.
 function resolveAuthSecret(): string {
-  return envStr(
-    "DASHBOARD_SESSION_SECRET",
-    process.env["AUTH_SECRET"] ||
-      "dummy_session_secret_for_nextjs_build_and_bootstrap_32chars_long",
-  );
+  const provided =
+    process.env["DASHBOARD_SESSION_SECRET"] || process.env["AUTH_SECRET"];
+  if (provided) return provided;
+
+  if (process.env["NODE_ENV"] === "production") {
+    throw new Error(
+      "[ENV] Missing: DASHBOARD_SESSION_SECRET — the dashboard refuses to start " +
+        "with the public build placeholder as its session-signing key. " +
+        "Generate one with `openssl rand -hex 32`.",
+    );
+  }
+  return "dummy_session_secret_for_nextjs_build_and_bootstrap_32chars_long";
 }
 
 function resolveTrustedHops(): number {

@@ -22,7 +22,7 @@ import {
 } from "#/components/landing-motion";
 import { env } from "#/lib/env";
 
-const FEATURES: { icon: LucideIcon; title: string; desc: string }[] = [
+const Features: { icon: LucideIcon; title: string; desc: string }[] = [
   {
     icon: ShieldCheck,
     title: "Anti-nuke & granular permits",
@@ -55,7 +55,7 @@ const FEATURES: { icon: LucideIcon; title: string; desc: string }[] = [
   },
 ];
 
-const PREVIEW_MODULES: { label: string; active: boolean }[] = [
+const PreviewModules: { label: string; active: boolean }[] = [
   { label: "Anti-nuke", active: true },
   { label: "Auto-moderation", active: true },
   { label: "Temp voice", active: true },
@@ -117,7 +117,7 @@ export function LandingPage() {
                 Modules
               </p>
               <ul className="flex flex-col gap-1">
-                {PREVIEW_MODULES.map((m) => (
+                {PreviewModules.map((m) => (
                   <li
                     key={m.label}
                     className="flex items-center justify-between rounded-control border border-border-soft bg-bg-subtle px-3 py-2"
@@ -144,7 +144,7 @@ export function LandingPage() {
           </h2>
         </Reveal>
         <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map(({ icon: Icon, title, desc }, i) => (
+          {Features.map(({ icon: Icon, title, desc }, i) => (
             <Reveal key={title} delay={i * 0.06}>
               <SpotlightBox className="flex gap-3.5 rounded-panel p-2 -m-2">
                 <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-control border border-border bg-surface text-fg-muted transition-[transform,color,border-color] duration-fast ease-[var(--ease-out)] hover:-translate-y-0.5 hover:border-border-strong hover:text-accent-fg">

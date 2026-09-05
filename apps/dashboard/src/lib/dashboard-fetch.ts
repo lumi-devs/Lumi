@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { rpcCall } from "./rpc";
 import type {
   AfkEntryView,
@@ -38,7 +38,7 @@ import type {
 
 export const getGuildDashboard = cache(
   async (guildId: string, actorId: string): Promise<DashboardData> => {
-    const data = await rpcCall(RPC_ACTIONS.guildDashboardGet, {
+    const data = await rpcCall(RpcActions.guildDashboardGet, {
       guildId,
       actorId,
     });
@@ -59,7 +59,7 @@ export async function getGuildSummaries(
 ): Promise<GuildSummaryView[]> {
   if (guildIds.length === 0) return [];
   try {
-    const data = (await rpcCall(RPC_ACTIONS.guildSummariesList, {
+    const data = (await rpcCall(RpcActions.guildSummariesList, {
       actorId,
       data: { guildIds },
     })) as { summaries: GuildSummaryView[] };
@@ -71,7 +71,7 @@ export async function getGuildSummaries(
 
 export const getGuildPermits = cache(
   async (guildId: string, actorId: string): Promise<PermitView[]> => {
-    const data = (await rpcCall(RPC_ACTIONS.guildPermitsList, {
+    const data = (await rpcCall(RpcActions.guildPermitsList, {
       guildId,
       actorId,
     })) as { permits: PermitView[] };
@@ -86,7 +86,7 @@ export async function getGuildCases(
   actorId: string,
   filter: CasesListPayload = {},
 ): Promise<CasesListData> {
-  const data = await rpcCall(RPC_ACTIONS.guildCasesList, {
+  const data = await rpcCall(RpcActions.guildCasesList, {
     guildId,
     actorId,
     data: filter,
@@ -96,7 +96,7 @@ export async function getGuildCases(
 
 export const getGuildWarnThresholds = cache(
   async (guildId: string, actorId: string): Promise<WarnThresholdView[]> => {
-    const data = (await rpcCall(RPC_ACTIONS.guildWarnThresholdsList, {
+    const data = (await rpcCall(RpcActions.guildWarnThresholdsList, {
       guildId,
       actorId,
     })) as { thresholds: WarnThresholdView[] };
@@ -106,7 +106,7 @@ export const getGuildWarnThresholds = cache(
 
 export const getGuildPanicState = cache(
   async (guildId: string, actorId: string): Promise<PanicStateView> => {
-    const data = await rpcCall(RPC_ACTIONS.guildPanicGet, {
+    const data = await rpcCall(RpcActions.guildPanicGet, {
       guildId,
       actorId,
     });
@@ -116,7 +116,7 @@ export const getGuildPanicState = cache(
 
 export const getGuildBackups = cache(
   async (guildId: string, actorId: string): Promise<GuildBackupView[]> => {
-    const data = (await rpcCall(RPC_ACTIONS.guildBackupsList, {
+    const data = (await rpcCall(RpcActions.guildBackupsList, {
       guildId,
       actorId,
     })) as { backups: GuildBackupView[] };
@@ -129,7 +129,7 @@ export const getGuildVerificationPanel = cache(
     guildId: string,
     actorId: string,
   ): Promise<VerificationPanelView | null> => {
-    const data = (await rpcCall(RPC_ACTIONS.guildVerificationPanelGet, {
+    const data = (await rpcCall(RpcActions.guildVerificationPanelGet, {
       guildId,
       actorId,
     })) as { panel: VerificationPanelView | null };
@@ -139,7 +139,7 @@ export const getGuildVerificationPanel = cache(
 
 export const getGuildTempVcGenerators = cache(
   async (guildId: string, actorId: string): Promise<TempVcGeneratorView[]> => {
-    const data = (await rpcCall(RPC_ACTIONS.guildTempVcGeneratorsList, {
+    const data = (await rpcCall(RpcActions.guildTempVcGeneratorsList, {
       guildId,
       actorId,
     })) as { generators: TempVcGeneratorView[] };
@@ -149,7 +149,7 @@ export const getGuildTempVcGenerators = cache(
 
 export const getGuildTempVcRecords = cache(
   async (guildId: string, actorId: string): Promise<TempVcRecordView[]> => {
-    const data = (await rpcCall(RPC_ACTIONS.guildTempVcRecordsList, {
+    const data = (await rpcCall(RpcActions.guildTempVcRecordsList, {
       guildId,
       actorId,
     })) as { records: TempVcRecordView[] };
@@ -165,7 +165,7 @@ export async function getGuildAuditLog(
   actorId: string,
   filter: AuditListPayload = {},
 ): Promise<AuditListData> {
-  const data = await rpcCall(RPC_ACTIONS.guildAuditList, {
+  const data = await rpcCall(RpcActions.guildAuditList, {
     guildId,
     actorId,
     data: filter,
@@ -178,7 +178,7 @@ export async function getGuildConfigHistory(
   actorId: string,
   filter: ConfigHistoryListPayload = {},
 ): Promise<ConfigHistoryListData> {
-  const data = await rpcCall(RPC_ACTIONS.guildHistoryList, {
+  const data = await rpcCall(RpcActions.guildHistoryList, {
     guildId,
     actorId,
     data: filter,
@@ -191,7 +191,7 @@ export async function getGuildOverrides(
   actorId: string,
   moduleName?: string,
 ): Promise<ConfigOverrideView[]> {
-  const data = (await rpcCall(RPC_ACTIONS.guildOverridesList, {
+  const data = (await rpcCall(RpcActions.guildOverridesList, {
     guildId,
     actorId,
     data: { moduleName },
@@ -204,7 +204,7 @@ export async function getGuildBlocklist(
   actorId: string,
   filter: BlocklistListPayload = {},
 ): Promise<BlocklistListData> {
-  const data = await rpcCall(RPC_ACTIONS.guildBlocklistList, {
+  const data = await rpcCall(RpcActions.guildBlocklistList, {
     guildId,
     actorId,
     data: filter,
@@ -217,7 +217,7 @@ export async function getGuildModNotes(
   actorId: string,
   userId: string,
 ): Promise<ModNoteView[]> {
-  const data = (await rpcCall(RPC_ACTIONS.guildModNotesList, {
+  const data = (await rpcCall(RpcActions.guildModNotesList, {
     guildId,
     actorId,
     data: { userId },
@@ -230,7 +230,7 @@ export async function getGuildAppeals(
   actorId: string,
   filter: AppealsListPayload = {},
 ): Promise<AppealsListData> {
-  const data = await rpcCall(RPC_ACTIONS.guildAppealsList, {
+  const data = await rpcCall(RpcActions.guildAppealsList, {
     guildId,
     actorId,
     data: filter,
@@ -245,7 +245,7 @@ export async function verifyAppealToken(
   caseId: number,
   token: string,
 ): Promise<AppealVerifyResult> {
-  const data = await rpcCall(RPC_ACTIONS.guildAppealsVerify, {
+  const data = await rpcCall(RpcActions.guildAppealsVerify, {
     guildId,
     data: { caseId, token },
   });
@@ -254,7 +254,7 @@ export async function verifyAppealToken(
 
 export const getGuildAfkEntries = cache(
   async (guildId: string, actorId: string): Promise<AfkEntryView[]> => {
-    const data = (await rpcCall(RPC_ACTIONS.guildAfkList, {
+    const data = (await rpcCall(RpcActions.guildAfkList, {
       guildId,
       actorId,
     })) as { entries: AfkEntryView[] };
@@ -264,7 +264,7 @@ export const getGuildAfkEntries = cache(
 
 export const getGuildIgnoredChannels = cache(
   async (guildId: string, actorId: string): Promise<IgnoredChannelView[]> => {
-    const data = (await rpcCall(RPC_ACTIONS.guildIgnoredList, {
+    const data = (await rpcCall(RpcActions.guildIgnoredList, {
       guildId,
       actorId,
     })) as { entries: IgnoredChannelView[] };
@@ -277,7 +277,7 @@ export async function getGuildModuleData(
   actorId: string,
   filter: ModuleDataListPayload = {},
 ): Promise<ModuleDataListData> {
-  const data = await rpcCall(RPC_ACTIONS.guildModuleDataList, {
+  const data = await rpcCall(RpcActions.guildModuleDataList, {
     guildId,
     actorId,
     data: filter,
@@ -287,7 +287,7 @@ export async function getGuildModuleData(
 
 export const getSystemDashboard = cache(
   async (actorId: string): Promise<SystemDashboardData> => {
-    const data = await rpcCall(RPC_ACTIONS.systemDashboardGet, { actorId });
+    const data = await rpcCall(RpcActions.systemDashboardGet, { actorId });
     return data as SystemDashboardData;
   },
 );
@@ -296,7 +296,7 @@ export async function getSystemAuditLog(
   actorId: string,
   filter: SystemAuditListPayload = {},
 ): Promise<AuditListData> {
-  const data = await rpcCall(RPC_ACTIONS.systemAuditList, {
+  const data = await rpcCall(RpcActions.systemAuditList, {
     actorId,
     data: filter,
   });
@@ -307,7 +307,7 @@ export async function getSystemBlocklist(
   actorId: string,
   filter: BlocklistListPayload = {},
 ): Promise<BlocklistListData> {
-  const data = await rpcCall(RPC_ACTIONS.systemBlocklistList, {
+  const data = await rpcCall(RpcActions.systemBlocklistList, {
     actorId,
     data: filter,
   });
@@ -316,7 +316,7 @@ export async function getSystemBlocklist(
 
 export const getSystemShards = cache(
   async (actorId: string): Promise<SystemShardsData> => {
-    const data = await rpcCall(RPC_ACTIONS.systemShardsGet, { actorId });
+    const data = await rpcCall(RpcActions.systemShardsGet, { actorId });
     return data as SystemShardsData;
   },
 );

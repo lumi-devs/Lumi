@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { requireBotOwner, requireGuild } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
@@ -33,7 +33,7 @@ export async function blockUserInGuild(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedGuildBlocklistAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildBlocklistAdd, {
+    await rpcCall(RpcActions.guildBlocklistAdd, {
       guildId,
       actorId: session.userId,
       data: { userId, reason },
@@ -49,7 +49,7 @@ export async function unblockUserInGuild(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedGuildBlocklistAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildBlocklistRemove, {
+    await rpcCall(RpcActions.guildBlocklistRemove, {
       guildId,
       actorId: session.userId,
       data: { userId },
@@ -65,7 +65,7 @@ export async function blockUserGlobally(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedGlobalBlocklistAction();
-    await rpcCall(RPC_ACTIONS.systemBlocklistAdd, {
+    await rpcCall(RpcActions.systemBlocklistAdd, {
       actorId: session.userId,
       data: { userId, reason },
     });
@@ -79,7 +79,7 @@ export async function unblockUserGlobally(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedGlobalBlocklistAction();
-    await rpcCall(RPC_ACTIONS.systemBlocklistRemove, {
+    await rpcCall(RpcActions.systemBlocklistRemove, {
       actorId: session.userId,
       data: { userId },
     });

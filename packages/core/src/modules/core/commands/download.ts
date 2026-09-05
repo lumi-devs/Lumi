@@ -234,7 +234,7 @@ export class DownloadCommand extends BaseSubcommand {
     const moduleName = (await ctx.getString("module", { required: true }))!;
     const revision = (await ctx.getString("revision", { required: true }))!;
 
-    const agreed = await confirmPrompt(ctx, {
+    const { confirmed } = await confirmPrompt(ctx, {
       title: `${Emojis.WARNING_SIGN} Rollback Warning`,
       body: [
         `You're about to check out **${moduleName}** to revision \`${revision}\`.`,
@@ -242,7 +242,7 @@ export class DownloadCommand extends BaseSubcommand {
       ].join("\n\n"),
       confirmLabel: "I understand, roll it back",
     });
-    if (!agreed) {
+    if (!confirmed) {
       await ctx.replyError("Cancelled", `Module **${moduleName}** was not rolled back.`);
       return;
     }

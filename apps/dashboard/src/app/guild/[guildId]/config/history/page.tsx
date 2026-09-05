@@ -31,7 +31,7 @@ import {
   single,
 } from "#/lib/log-format";
 
-const PAGE_SIZE = 25;
+const PageSize = 25;
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -62,7 +62,7 @@ export default async function HistoryPage({
   try {
     data = await getGuildConfigHistory(guildId, session.userId, {
       page,
-      pageSize: PAGE_SIZE,
+      pageSize: PageSize,
       ...(moduleName ? { moduleName } : {}),
       ...(key ? { key } : {}),
       ...(actorId && !badActorFilter ? { actorId } : {}),
@@ -218,7 +218,7 @@ export default async function HistoryPage({
               description="The first time anyone edits a module setting — from this dashboard or from Discord — the old and new values are recorded here so the change can be read and put back."
               action={
                 <Link
-                  href={`/guild/${guildId}/modules`}
+                  href={`/guild/${guildId}/config/modules`}
                   className={buttonVariants({ variant: "primary", size: "sm" })}
                 >
                   Configure a module

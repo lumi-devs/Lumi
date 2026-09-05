@@ -8,7 +8,7 @@ import { Switch } from "#/components/ui/switch";
 import { Input, Select, Field } from "#/components/ui/input";
 import { useServerAction } from "#/lib/use-server-action";
 
-const EDITABLE_KEYS = [
+const EditableKeys = [
   "joingate_enabled",
   "verification_enabled",
   "min_account_age_hours",
@@ -24,7 +24,7 @@ export function JoinGateCard({
   guildId: string;
   config: Record<string, unknown>;
 }) {
-  const baseline = Object.fromEntries(EDITABLE_KEYS.map((k) => [k, config[k]]));
+  const baseline = Object.fromEntries(EditableKeys.map((k) => [k, config[k]]));
   const [form, setForm] = useState<Record<string, unknown>>(baseline);
   const { isPending, error, setError, run } = useServerAction();
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { rpcHandlers } from "#lib/rpc/dispatch.js";
 import { DashboardModule } from "#modules/dashboard/index.js";
 import { AfkRepository } from "#lib/prisma/repositories/AfkRepository.js";
@@ -94,7 +94,7 @@ describe("dashboard module advanced inspector RPC handlers", () => {
         },
       ]);
 
-      const res = (await call(RPC_ACTIONS.guildAfkList)) as any;
+      const res = (await call(RpcActions.guildAfkList)) as any;
 
       expect(res.entries).toEqual([
         {
@@ -109,7 +109,7 @@ describe("dashboard module advanced inspector RPC handlers", () => {
       denyPermissions();
 
       await expect(
-        call(RPC_ACTIONS.guildAfkList, undefined, INTRUDER_ID),
+        call(RpcActions.guildAfkList, undefined, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
     });
   });
@@ -132,7 +132,7 @@ describe("dashboard module advanced inspector RPC handlers", () => {
         { id: 3, guildId: OTHER_GUILD_ID, channelId: CHANNEL_ID, createdAt: new Date() },
       ]);
 
-      const res = (await call(RPC_ACTIONS.guildIgnoredList)) as any;
+      const res = (await call(RpcActions.guildIgnoredList)) as any;
 
       expect(res.entries).toEqual([
         { id: 1, channelId: CHANNEL_ID, createdAt: "2026-01-01T00:00:00.000Z" },
@@ -141,7 +141,7 @@ describe("dashboard module advanced inspector RPC handlers", () => {
     });
 
     it("adds a channel rule", async () => {
-      const res = (await call(RPC_ACTIONS.guildIgnoredAdd, {
+      const res = (await call(RpcActions.guildIgnoredAdd, {
         channelId: CHANNEL_ID,
       })) as any;
 
@@ -153,7 +153,7 @@ describe("dashboard module advanced inspector RPC handlers", () => {
     });
 
     it("adds the guild-wide rule when channelId is null", async () => {
-      await call(RPC_ACTIONS.guildIgnoredAdd, { channelId: null });
+      await call(RpcActions.guildIgnoredAdd, { channelId: null });
 
       expect(prisma.$all("ignoreEntry")[0]!["channelId"]).toBeNull();
     });
@@ -164,7 +164,7 @@ describe("dashboard module advanced inspector RPC handlers", () => {
       ]);
 
       await expect(
-        call(RPC_ACTIONS.guildIgnoredAdd, { channelId: CHANNEL_ID }),
+        call(RpcActions.guildIgnoredAdd, { channelId: CHANNEL_ID }),
       ).rejects.toThrow("is already ignored");
       expect(prisma.$all("ignoreEntry")).toHaveLength(1);
     });
@@ -175,7 +175,7 @@ describe("dashboard module advanced inspector RPC handlers", () => {
         { id: 2, guildId: GUILD_ID, channelId: null, createdAt: new Date() },
       ]);
 
-      await call(RPC_ACTIONS.guildIgnoredRemove, { channelId: CHANNEL_ID });
+      await call(RpcActions.guildIgnoredRemove, { channelId: CHANNEL_ID });
 
       const rows = prisma.$all("ignoreEntry");
       expect(rows).toHaveLength(1);
@@ -186,7 +186,7 @@ describe("dashboard module advanced inspector RPC handlers", () => {
       denyPermissions();
 
       await expect(
-        call(RPC_ACTIONS.guildIgnoredAdd, { channelId: CHANNEL_ID }, INTRUDER_ID),
+        call(RpcActions.guildIgnoredAdd, { channelId: CHANNEL_ID }, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
       expect(prisma.$all("ignoreEntry")).toHaveLength(0);
     });
@@ -221,7 +221,7 @@ describe("dashboard module advanced inspector RPC handlers", () => {
     it("returns this guild's rows with the unpaginated total", async () => {
       seedRows();
 
-      const res = (await call(RPC_ACTIONS.guildModuleDataList, {})) as any;
+      const res = (await call(RpcActions.guildModuleDataList, {})) as any;
 
       expect(res.total).toBe(2);
       expect(res.page).toBe(1);
@@ -235,18 +235,18 @@ describe("dashboard module advanced inspector RPC handlers", () => {
     it("filters by module, target and key", async () => {
       seedRows();
 
-      const byModule = (await call(RPC_ACTIONS.guildModuleDataList, {
+      const byModule = (await call(RpcActions.guildModuleDataList, {
         moduleName: "mod",
       })) as any;
       expect(byModule.total).toBe(1);
       expect(byModule.entries[0].key).toBe("notes");
 
-      const byTarget = (await call(RPC_ACTIONS.guildModuleDataList, {
+      const byTarget = (await call(RpcActions.guildModuleDataList, {
         targetId: OWNER_ID,
       })) as any;
       expect(byTarget.total).toBe(1);
 
-      const byKey = (await call(RPC_ACTIONS.guildModuleDataList, {
+      const byKey = (await call(RpcActions.guildModuleDataList, {
         key: "missing",
       })) as any;
       expect(byKey.total).toBe(0);
@@ -254,7 +254,7 @@ describe("dashboard module advanced inspector RPC handlers", () => {
 
     it("rejects an oversized page", async () => {
       await expect(
-        call(RPC_ACTIONS.guildModuleDataList, { pageSize: 500 }),
+        call(RpcActions.guildModuleDataList, { pageSize: 500 }),
       ).rejects.toThrow("Bad payload");
     });
 
@@ -262,7 +262,7 @@ describe("dashboard module advanced inspector RPC handlers", () => {
       denyPermissions();
 
       await expect(
-        call(RPC_ACTIONS.guildModuleDataList, {}, INTRUDER_ID),
+        call(RpcActions.guildModuleDataList, {}, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
     });
   });

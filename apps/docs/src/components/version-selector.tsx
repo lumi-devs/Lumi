@@ -13,7 +13,7 @@ export interface VersionOption {
   isCurrent?: boolean;
 }
 
-const VERSIONS: VersionOption[] = [
+const Versions: VersionOption[] = [
   {
     label: `v${version} (main)`,
     version: version,
@@ -58,7 +58,7 @@ export function VersionSelector() {
             Documentation Versions
           </div>
           <div className="space-y-1">
-            {VERSIONS.map((v, i) => (
+            {Versions.map((v, i) => (
               <div
                 key={i}
                 onClick={() => setIsOpen(false)}

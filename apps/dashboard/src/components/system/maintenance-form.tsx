@@ -16,7 +16,7 @@ import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
 import { ActionError } from "#/components/action-error";
 import { useOptimisticAction } from "#/lib/use-server-action";
-import { SPRING_SNAPPY } from "#/lib/animate";
+import { SpringSnappy } from "#/lib/animate";
 
 export function MaintenanceForm({
   maintenanceMode,
@@ -93,7 +93,7 @@ export function MaintenanceForm({
               initial={reduce ? false : { opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.96 }}
-              transition={SPRING_SNAPPY}
+              transition={SpringSnappy}
             >
               <ActionError error={error} className="mt-1" />
             </motion.div>

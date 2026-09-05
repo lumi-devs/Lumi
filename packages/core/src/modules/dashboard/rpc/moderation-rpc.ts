@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import {
   AppealReviewSchema,
   AppealSubmitSchema,
@@ -22,7 +22,7 @@ import {
 } from "../lib/helpers.js";
 
 export function registerModerationRpcHandlers(): void {
-  registerRpcHandler(RPC_ACTIONS.guildBlocklistList, async (req) => {
+  registerRpcHandler(RpcActions.guildBlocklistList, async (req) => {
     const { guildId } = await verifyGuildAccess(req);
     const filter = parsePayload(BlocklistListSchema, req.data ?? {});
     const { page, pageSize, skip, take } = paginate(filter);
@@ -46,7 +46,7 @@ export function registerModerationRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildBlocklistAdd, async (req) => {
+  registerRpcHandler(RpcActions.guildBlocklistAdd, async (req) => {
     const guildId = requireGuildId(req.guildId);
     const actorId = await requireGuildManager(guildId, req.actorId);
     const { userId, reason } = parsePayload(BlocklistAddSchema, req.data);
@@ -64,7 +64,7 @@ export function registerModerationRpcHandlers(): void {
     return { success: true, userId };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildBlocklistRemove, async (req) => {
+  registerRpcHandler(RpcActions.guildBlocklistRemove, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { userId } = parsePayload(BlocklistRemoveSchema, req.data);
@@ -72,7 +72,7 @@ export function registerModerationRpcHandlers(): void {
     return { success: true, userId };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildModNotesList, async (req) => {
+  registerRpcHandler(RpcActions.guildModNotesList, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { userId } = parsePayload(ModNoteListSchema, req.data);
@@ -89,7 +89,7 @@ export function registerModerationRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildModNotesAdd, async (req) => {
+  registerRpcHandler(RpcActions.guildModNotesAdd, async (req) => {
     const guildId = requireGuildId(req.guildId);
     const actorId = await requireGuildManager(guildId, req.actorId);
     const { userId, message } = parsePayload(ModNoteAddSchema, req.data);
@@ -113,7 +113,7 @@ export function registerModerationRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildModNotesRemove, async (req) => {
+  registerRpcHandler(RpcActions.guildModNotesRemove, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { id } = parsePayload(ModNoteRemoveSchema, req.data);
@@ -123,7 +123,7 @@ export function registerModerationRpcHandlers(): void {
 
   // Public, unauthenticated: reachable by a punished user with no dashboard
   // access at all. Authorization is the signed token, not `actorId`/session.
-  registerRpcHandler(RPC_ACTIONS.guildAppealsVerify, async (req) => {
+  registerRpcHandler(RpcActions.guildAppealsVerify, async (req) => {
     const guildId = requireGuildId(req.guildId);
     const { caseId, token } = parsePayload(AppealVerifySchema, req.data);
 
@@ -144,7 +144,7 @@ export function registerModerationRpcHandlers(): void {
   });
 
   // Public, unauthenticated - see guildAppealsVerify above.
-  registerRpcHandler(RPC_ACTIONS.guildAppealsSubmit, async (req) => {
+  registerRpcHandler(RpcActions.guildAppealsSubmit, async (req) => {
     const guildId = requireGuildId(req.guildId);
     const { caseId, token, message } = parsePayload(
       AppealSubmitSchema,
@@ -176,7 +176,7 @@ export function registerModerationRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildAppealsList, async (req) => {
+  registerRpcHandler(RpcActions.guildAppealsList, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const filter = parsePayload(AppealsListSchema, req.data ?? {});
@@ -211,7 +211,7 @@ export function registerModerationRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildAppealsReview, async (req) => {
+  registerRpcHandler(RpcActions.guildAppealsReview, async (req) => {
     const guildId = requireGuildId(req.guildId);
     const actorId = await requireGuildManager(guildId, req.actorId);
     const { id, status } = parsePayload(AppealReviewSchema, req.data);
@@ -248,7 +248,7 @@ export function registerModerationRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildAfkList, async (req) => {
+  registerRpcHandler(RpcActions.guildAfkList, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const entries = await container.db.afk.findForGuild(guildId);
@@ -262,7 +262,7 @@ export function registerModerationRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildIgnoredList, async (req) => {
+  registerRpcHandler(RpcActions.guildIgnoredList, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const entries = await container.db.access.listIgnoreEntries(guildId);
@@ -276,7 +276,7 @@ export function registerModerationRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildIgnoredAdd, async (req) => {
+  registerRpcHandler(RpcActions.guildIgnoredAdd, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { channelId } = parsePayload(IgnoredChannelSchema, req.data);
@@ -295,7 +295,7 @@ export function registerModerationRpcHandlers(): void {
     return { success: true, channelId };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildIgnoredRemove, async (req) => {
+  registerRpcHandler(RpcActions.guildIgnoredRemove, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { channelId } = parsePayload(IgnoredChannelSchema, req.data);
@@ -305,18 +305,18 @@ export function registerModerationRpcHandlers(): void {
 }
 
 export function unregisterModerationRpcHandlers(): void {
-  rpcHandlers.delete(RPC_ACTIONS.guildBlocklistList);
-  rpcHandlers.delete(RPC_ACTIONS.guildBlocklistAdd);
-  rpcHandlers.delete(RPC_ACTIONS.guildBlocklistRemove);
-  rpcHandlers.delete(RPC_ACTIONS.guildModNotesList);
-  rpcHandlers.delete(RPC_ACTIONS.guildModNotesAdd);
-  rpcHandlers.delete(RPC_ACTIONS.guildModNotesRemove);
-  rpcHandlers.delete(RPC_ACTIONS.guildAppealsVerify);
-  rpcHandlers.delete(RPC_ACTIONS.guildAppealsSubmit);
-  rpcHandlers.delete(RPC_ACTIONS.guildAppealsList);
-  rpcHandlers.delete(RPC_ACTIONS.guildAppealsReview);
-  rpcHandlers.delete(RPC_ACTIONS.guildAfkList);
-  rpcHandlers.delete(RPC_ACTIONS.guildIgnoredList);
-  rpcHandlers.delete(RPC_ACTIONS.guildIgnoredAdd);
-  rpcHandlers.delete(RPC_ACTIONS.guildIgnoredRemove);
+  rpcHandlers.delete(RpcActions.guildBlocklistList);
+  rpcHandlers.delete(RpcActions.guildBlocklistAdd);
+  rpcHandlers.delete(RpcActions.guildBlocklistRemove);
+  rpcHandlers.delete(RpcActions.guildModNotesList);
+  rpcHandlers.delete(RpcActions.guildModNotesAdd);
+  rpcHandlers.delete(RpcActions.guildModNotesRemove);
+  rpcHandlers.delete(RpcActions.guildAppealsVerify);
+  rpcHandlers.delete(RpcActions.guildAppealsSubmit);
+  rpcHandlers.delete(RpcActions.guildAppealsList);
+  rpcHandlers.delete(RpcActions.guildAppealsReview);
+  rpcHandlers.delete(RpcActions.guildAfkList);
+  rpcHandlers.delete(RpcActions.guildIgnoredList);
+  rpcHandlers.delete(RpcActions.guildIgnoredAdd);
+  rpcHandlers.delete(RpcActions.guildIgnoredRemove);
 }

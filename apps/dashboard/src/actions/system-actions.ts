@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RPC_ACTIONS, type GdprRequester } from "@lumi/contracts";
+import { RpcActions, type GdprRequester } from "@lumi/contracts";
 import { requireBotOwner } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
@@ -22,7 +22,7 @@ export async function setMaintenanceMode(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSystemAction();
-    await rpcCall(RPC_ACTIONS.systemMaintenanceSet, {
+    await rpcCall(RpcActions.systemMaintenanceSet, {
       actorId: session.userId,
       data: { maintenanceMode, maintenanceMessage },
     });
@@ -37,7 +37,7 @@ export async function setBotIdentity(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSystemAction();
-    await rpcCall(RPC_ACTIONS.systemIdentitySet, {
+    await rpcCall(RpcActions.systemIdentitySet, {
       actorId: session.userId,
       data: { inviteUrl, supportGuildId },
     });
@@ -53,7 +53,7 @@ export async function toggleGlobalModule(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSystemAction();
-    await rpcCall(RPC_ACTIONS.systemModuleToggle, {
+    await rpcCall(RpcActions.systemModuleToggle, {
       actorId: session.userId,
       data: { moduleName, enabled, reason },
     });
@@ -65,7 +65,7 @@ export async function toggleGlobalModule(
 export async function clearGlobalModule(moduleName: string): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSystemAction();
-    await rpcCall(RPC_ACTIONS.systemModuleClear, {
+    await rpcCall(RpcActions.systemModuleClear, {
       actorId: session.userId,
       data: { moduleName },
     });
@@ -81,7 +81,7 @@ export async function addRepo(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSystemAction();
-    await rpcCall(RPC_ACTIONS.repoAdd, {
+    await rpcCall(RpcActions.repoAdd, {
       actorId: session.userId,
       data: { name, url, branch },
     });
@@ -97,7 +97,7 @@ export async function installModule(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSystemAction();
-    await rpcCall(RPC_ACTIONS.moduleInstall, {
+    await rpcCall(RpcActions.moduleInstall, {
       actorId: session.userId,
       data: { repoName, moduleName, revision },
     });
@@ -112,7 +112,7 @@ export async function rollbackModule(
 ): Promise<{ ok: true; commit: string | null } | { ok: false; error: string }> {
   return runAction(async () => {
     const session = await guardedSystemAction();
-    const result = (await rpcCall(RPC_ACTIONS.moduleRollback, {
+    const result = (await rpcCall(RpcActions.moduleRollback, {
       actorId: session.userId,
       data: { moduleName, revision },
     })) as { commit: string | null };
@@ -138,7 +138,7 @@ export async function listRepoModules(
 ): Promise<{ ok: true; modules: RepoModuleView[] } | { ok: false; error: string }> {
   return runAction(async () => {
     const session = await guardedSystemAction();
-    const result = (await rpcCall(RPC_ACTIONS.repoModules, {
+    const result = (await rpcCall(RpcActions.repoModules, {
       actorId: session.userId,
       data: { repoName },
     })) as { modules: RepoModuleView[] };
@@ -149,7 +149,7 @@ export async function listRepoModules(
 export async function uninstallModule(moduleName: string): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSystemAction();
-    await rpcCall(RPC_ACTIONS.moduleUninstall, {
+    await rpcCall(RpcActions.moduleUninstall, {
       actorId: session.userId,
       data: { moduleName },
     });
@@ -164,7 +164,7 @@ export async function gdprDeleteUser(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSystemAction();
-    await rpcCall(RPC_ACTIONS.gdprDelete, {
+    await rpcCall(RpcActions.gdprDelete, {
       actorId: session.userId,
       data: { userId, requester },
     });

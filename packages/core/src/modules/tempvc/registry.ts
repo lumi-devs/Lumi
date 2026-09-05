@@ -8,13 +8,13 @@ interface ManagedVc {
   number: number;
 }
 
-const SIG_PREFIX = "lumi:tempvc:sig:";
+const SigPrefix = "lumi:tempvc:sig:";
 const sig = {
   vcAdd: (g: string, c: string, gen: string, n: number) =>
-    `${SIG_PREFIX}vcadd:${g}:${c}:${gen}:${n}`,
-  vcDel: (g: string, c: string) => `${SIG_PREFIX}vcdel:${g}:${c}`,
-  vcReload: (g: string) => `${SIG_PREFIX}vcreload:${g}`,
-  genReload: (g: string) => `${SIG_PREFIX}genreload:${g}`,
+    `${SigPrefix}vcadd:${g}:${c}:${gen}:${n}`,
+  vcDel: (g: string, c: string) => `${SigPrefix}vcdel:${g}:${c}`,
+  vcReload: (g: string) => `${SigPrefix}vcreload:${g}`,
+  genReload: (g: string) => `${SigPrefix}genreload:${g}`,
 };
 
 /**
@@ -40,8 +40,8 @@ class TempVcRegistry {
     this.#wired = true;
     container.invalidation.onInvalidate((keys) => {
       for (const key of keys) {
-        if (!key.startsWith(SIG_PREFIX)) continue;
-        const [kind, g, c, gen, n] = key.slice(SIG_PREFIX.length).split(":");
+        if (!key.startsWith(SigPrefix)) continue;
+        const [kind, g, c, gen, n] = key.slice(SigPrefix.length).split(":");
         if (kind === "vcadd" && g && c && gen && n) {
           this.#localAddVc(g, c, { generatorId: gen, number: Number(n) });
         } else if (kind === "vcdel" && g && c) {

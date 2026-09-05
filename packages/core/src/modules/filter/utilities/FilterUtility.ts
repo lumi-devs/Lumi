@@ -19,8 +19,8 @@ import {
   RegexWorkerUnavailableError,
 } from "#lib/regex-worker/index.js";
 
-const DUPLICATE_WINDOW_SECONDS = 30;
-const WARN_COOLDOWN_SECONDS = 30;
+const DuplicateWindowSeconds = 30;
+const WarnCooldownSeconds = 30;
 
 /**
  * Decay-then-add in one round trip. A burst of messages from one member is
@@ -29,7 +29,7 @@ const WARN_COOLDOWN_SECONDS = 30;
  * spammer's heat stops climbing exactly when it should be climbing fastest.
  * Mirrors `decayHeat`/`secondsUntilCool` from ../lib/heat.js.
  */
-const ADD_HEAT_SCRIPT = `
+const AddHeatScript = `
 local h = tonumber(redis.call('HGET', KEYS[1], 'h')) or 0
 local t = tonumber(redis.call('HGET', KEYS[1], 't'))
 local now = tonumber(ARGV[1])
@@ -263,7 +263,7 @@ export class FilterUtility extends Utility {
     const now = Date.now();
     const next = Number.parseFloat(
       (await this.redis.eval(
-        ADD_HEAT_SCRIPT,
+        AddHeatScript,
         1,
         key,
         String(now),
@@ -288,7 +288,7 @@ export class FilterUtility extends Utility {
     const key = RedisKeys.filterLastMsg(guildId, userId);
     const fp = fingerprint(content);
     const prev = await this.redis.getset(key, fp);
-    await this.redis.expire(key, DUPLICATE_WINDOW_SECONDS);
+    await this.redis.expire(key, DuplicateWindowSeconds);
     return prev === fp;
   }
 
@@ -306,7 +306,7 @@ export class FilterUtility extends Utility {
       `${RedisKeys.filterHeatActed(guildId, userId)}:${action}`,
       "1",
       "EX",
-      WARN_COOLDOWN_SECONDS,
+      WarnCooldownSeconds,
       "NX",
     );
     return set === "OK";

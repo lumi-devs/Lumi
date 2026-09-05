@@ -10,7 +10,7 @@ import { PageHeader } from "#/components/ui/page-header";
 import type { BlocklistListData } from "#/lib/dashboard-data";
 import { pageNumber, single } from "#/lib/log-format";
 
-const PAGE_SIZE = 25;
+const PageSize = 25;
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -26,7 +26,7 @@ export default async function SystemBlocklistPage({
   let data: BlocklistListData | null = null;
   let failure: string | null = null;
   try {
-    data = await getSystemBlocklist(session.userId, { page, pageSize: PAGE_SIZE });
+    data = await getSystemBlocklist(session.userId, { page, pageSize: PageSize });
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }
@@ -62,7 +62,7 @@ export default async function SystemBlocklistPage({
           <GlobalBlocklistPanel
             entries={data?.entries ?? []}
             page={data?.page ?? page}
-            pageSize={data?.pageSize ?? PAGE_SIZE}
+            pageSize={data?.pageSize ?? PageSize}
             total={data?.total ?? 0}
             exportAction={exportSystemBlocklist}
           />

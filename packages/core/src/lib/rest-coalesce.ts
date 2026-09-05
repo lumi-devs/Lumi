@@ -2,9 +2,9 @@ import { container } from "@sapphire/framework";
 import { Routes } from "discord-api-types/v10";
 import { DiscordSnowflake } from "@sapphire/snowflake";
 
-const MAX_BATCH = 100;
-const FLUSH_DELAY_MS = 1_500;
-const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
+const MaxBatch = 100;
+const FlushDelayMs = 1_500;
+const TwoWeeksMs = 14 * 24 * 60 * 60 * 1000;
 
 interface PendingEntry {
   messageId: string;
@@ -31,7 +31,7 @@ export function coalesceMessageDelete(
   messageId: string,
 ): Promise<void> {
   const ageMs = Date.now() - DiscordSnowflake.timestampFrom(messageId);
-  if (ageMs >= TWO_WEEKS_MS) {
+  if (ageMs >= TwoWeeksMs) {
     return singleDelete(channelId, messageId);
   }
 
@@ -42,12 +42,12 @@ export function coalesceMessageDelete(
       queues.set(channelId, q);
     }
     q.entries.push({ messageId, resolve, reject });
-    if (q.entries.length >= MAX_BATCH) {
+    if (q.entries.length >= MaxBatch) {
       void flush(channelId);
       return;
     }
     if (!q.timer) {
-      q.timer = setTimeout(() => void flush(channelId), FLUSH_DELAY_MS);
+      q.timer = setTimeout(() => void flush(channelId), FlushDelayMs);
       q.timer.unref?.();
     }
   });
@@ -64,7 +64,7 @@ async function flush(channelId: string): Promise<void> {
   }
 
   while (q.entries.length > 0) {
-    const batch = q.entries.splice(0, MAX_BATCH);
+    const batch = q.entries.splice(0, MaxBatch);
     if (batch.length === 1) {
       const e = batch[0]!;
       try {
@@ -100,7 +100,7 @@ async function flush(channelId: string): Promise<void> {
     queues.delete(channelId);
   } else if (!q.timer) {
     // Entries arrived while we were awaiting the REST call — reschedule flush.
-    q.timer = setTimeout(() => void flush(channelId), FLUSH_DELAY_MS);
+    q.timer = setTimeout(() => void flush(channelId), FlushDelayMs);
     q.timer.unref?.();
   }
 }

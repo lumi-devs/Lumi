@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 
-export const NAVIGATION = [
+export const Navigation = [
   {
     kicker: "// GETTING STARTED",
     title: "Getting Started",
@@ -56,7 +56,7 @@ export function Sidebar() {
     <aside className="fixed top-16 z-30 -ml-2 hidden h-[calc(100vh-4rem)] w-full shrink-0 md:sticky md:block max-w-[260px] overflow-y-auto">
       <div className="h-full py-6 pr-6 lg:py-8">
         <div className="w-full space-y-8">
-          {NAVIGATION.map((group, index) => (
+          {Navigation.map((group, index) => (
             <div key={index} className="space-y-2">
               <div className="px-2.5">
                 <span className="kicker-tag text-[10px] text-[var(--fg-subtle)] block">

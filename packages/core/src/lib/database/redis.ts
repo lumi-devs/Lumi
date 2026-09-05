@@ -206,16 +206,26 @@ export function parseRedisConnectionOption(): RedisOptions {
   };
 }
 
-const INVALIDATION_CHANNEL = "lumi:cache:invalidate";
+const InvalidationChannel = "lumi:cache:invalidate";
+
+export interface ResyncContext {
+  /**
+   * Timestamp of the newest invalidation this process actually received.
+   * Anything changed after it may have been published while the subscriber
+   * was disconnected, so a resync only has to cover that window.
+   */
+  cutoff: number;
+}
 
 export class InvalidationBus {
   readonly #subscriber: RedisClient;
   #listeners = new Set<(keys: string[]) => void>();
-  #resyncListeners = new Set<() => void | Promise<void>>();
+  #resyncListeners = new Set<(ctx: ResyncContext) => void | Promise<void>>();
   #started = false;
   #startPromise: Promise<void> | null = null;
   #handlerAttached = false;
   #connectionDropped = false;
+  #lastInvalidationTime = 0;
 
   public constructor(subscriber: RedisClient) {
     this.#subscriber = subscriber;
@@ -226,7 +236,7 @@ export class InvalidationBus {
     return () => this.#listeners.delete(fn);
   }
 
-  public onResync(fn: () => void | Promise<void>): () => void {
+  public onResync(fn: (ctx: ResyncContext) => void | Promise<void>): () => void {
     this.#resyncListeners.add(fn);
     return () => this.#resyncListeners.delete(fn);
   }
@@ -244,8 +254,8 @@ export class InvalidationBus {
     if (keys.length === 0) return;
     await delSafe(container.redis, keys);
     await container.redis.publish(
-      INVALIDATION_CHANNEL,
-      JSON.stringify({ keys }),
+      InvalidationChannel,
+      JSON.stringify({ keys, time: Date.now() }),
     );
   }
 
@@ -257,7 +267,7 @@ export class InvalidationBus {
   public async stop(): Promise<void> {
     if (!this.#started) return;
     await this.#subscriber
-      .unsubscribe(INVALIDATION_CHANNEL)
+      .unsubscribe(InvalidationChannel)
       .catch((err: unknown) => logError("Redis: unsubscribe failed", err));
     this.#started = false;
   }
@@ -278,13 +288,22 @@ export class InvalidationBus {
       this.#subscriber.on("ready", this.#onReady);
       this.#handlerAttached = true;
     }
-    await this.#subscriber.subscribe(INVALIDATION_CHANNEL);
+    await this.#subscriber.subscribe(InvalidationChannel);
     this.#started = true;
   }
 
   #onMessage = (_channel: string, payload: string) => {
-    const parsed = tryParseJSON(payload) as { keys?: unknown } | null;
+    const parsed = tryParseJSON(payload) as {
+      keys?: unknown;
+      time?: unknown;
+    } | null;
     if (!parsed || !Array.isArray(parsed.keys)) return;
+    if (
+      typeof parsed.time === "number" &&
+      parsed.time > this.#lastInvalidationTime
+    ) {
+      this.#lastInvalidationTime = parsed.time;
+    }
     const validKeys = parsed.keys.filter(
       (k): k is string => typeof k === "string" && k.length > 0,
     );
@@ -299,8 +318,9 @@ export class InvalidationBus {
   #onReady = () => {
     if (!this.#connectionDropped) return;
     this.#connectionDropped = false;
+    const ctx: ResyncContext = { cutoff: this.#lastInvalidationTime };
     for (const fn of this.#resyncListeners) {
-      Promise.resolve(fn()).catch((err: unknown) =>
+      Promise.resolve(fn(ctx)).catch((err: unknown) =>
         logError("Redis: invalidation resync failed", err),
       );
     }

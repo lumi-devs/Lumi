@@ -5,8 +5,13 @@ import { buildHubView } from "#modules/core/ui/hub.js";
 import { Emojis } from "#utilities/assets.js";
 import { makeSuccessCard } from "#utilities/cards.js";
 import { updateLumiCore } from "#utilities/self-update.js";
+import { PermitResolver } from "#lib/permissions/index.js";
 import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry, container } from "@sapphire/framework";
+import {
+  ApplicationCommandRegistry,
+  container,
+  UserError,
+} from "@sapphire/framework";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "lumi",
@@ -62,7 +67,13 @@ export class LumiCommand extends BaseSubcommand {
   }
 
   public async update(ctx: CommandContext): Promise<void> {
-    await ctx.checkPermit("owner.*");
+    // Not `owner.*`: PermitResolver's guild-owner bypass satisfies that node.
+    if (!PermitResolver.isBotOwner(ctx.user.id)) {
+      throw new UserError({
+        identifier: "AccessDenied",
+        message: `${Emojis.CROSS} Only Bot Owners can update Lumi core.`,
+      });
+    }
     const t = await ctx.fetchT();
     await ctx.replyInfo(
       t("core:updatingCoreTitle"),

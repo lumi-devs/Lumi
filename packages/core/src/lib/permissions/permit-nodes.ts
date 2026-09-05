@@ -31,7 +31,9 @@ const PermitNodeEmoji: Record<string, string> = {
   "owner.*": "👑",
 };
 
-export const KNOWN_PERMIT_NODES_AUTOCOMPLETE: string[] = KnownPermitNodeGroups.flatMap(
-  (group) =>
-    group.nodes.map((node) => `${PermitNodeEmoji[node] || "•"} ${node}`),
-);
+export const KnownPermitNodesAutocomplete: string[] =
+  KnownPermitNodeGroups.flatMap((group) => group.nodes);
+
+export function permitNodeLabel(node: string): string {
+  return `${PermitNodeEmoji[node] || "•"} ${node}`;
+}

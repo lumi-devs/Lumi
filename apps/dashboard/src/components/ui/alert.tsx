@@ -16,7 +16,7 @@ const alertVariants = cva(
   },
 );
 
-const DEFAULT_ICON: Record<string, LucideIcon> = {
+const DefaultIcon: Record<string, LucideIcon> = {
   info: Info,
   warning: AlertTriangle,
   danger: CircleAlert,
@@ -35,7 +35,7 @@ export function Alert({
   children,
   ...props
 }: AlertProps) {
-  const Icon = icon === null ? null : (icon ?? DEFAULT_ICON[variant ?? "info"]!);
+  const Icon = icon === null ? null : (icon ?? DefaultIcon[variant ?? "info"]!);
   return (
     <div
       data-slot="alert"
