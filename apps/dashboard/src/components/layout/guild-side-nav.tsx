@@ -20,10 +20,16 @@ export interface SwitcherGuild {
   icon: string | null;
 }
 
-// Static UX default from the design — Moderation and Security start
-// expanded (the categories most guilds touch), Community and System start
-// collapsed. Independent of live alert state.
-const DEFAULT_OPEN_CATEGORIES = new Set(["Moderation", "Security"]);
+// Static UX default from the design — Discipline & Appeals and Safety & Security
+// start expanded (the categories most guilds touch), Community & Engagement,
+// Monitoring & Diagnostics start expanded, Configuration starts collapsed.
+// Independent of live alert state.
+const DEFAULT_OPEN_CATEGORIES = new Set([
+  "Discipline & Appeals",
+  "Safety & Security",
+  "Community & Engagement",
+  "Monitoring & Diagnostics",
+]);
 
 export function GuildSideNav({
   guildId,
@@ -55,7 +61,7 @@ export function GuildSideNav({
       collapsible: true,
       defaultOpen: DEFAULT_OPEN_CATEGORIES.has(group.title),
       badge: group.links.length,
-      alertDot: group.title === "Security" ? Boolean(panicArmed) : false,
+      alertDot: group.title === "Safety & Security" ? Boolean(panicArmed) : false,
     })),
   ];
 

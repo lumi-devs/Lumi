@@ -56,35 +56,41 @@ export function guildManagementGroups(guildId: string): GuildNavGroup[] {
   const base = `/guild/${guildId}`;
   return [
     {
-      title: "Moderation",
+      title: "Discipline & Appeals",
       links: [
         { href: `${base}/moderation`, label: "Moderation Cases", icon: Gavel },
         { href: `${base}/warn-thresholds`, label: "Warn Thresholds", icon: TriangleAlert },
         { href: `${base}/blocklist`, label: "Blocklist", icon: Ban },
         { href: `${base}/mod-notes`, label: "Mod Notes", icon: StickyNote },
-      ],
-    },
-    {
-      title: "Security",
-      links: [
-        { href: `${base}/security`, label: "Panic & Verification", icon: ShieldAlert },
-        { href: `${base}/overrides`, label: "Overrides", icon: SlidersHorizontal },
-        { href: `${base}/health`, label: "Health Check", icon: HeartPulse },
-      ],
-    },
-    {
-      title: "Community",
-      links: [
-        { href: `${base}/permits`, label: "Permits", icon: IdCard },
         { href: `${base}/appeals`, label: "Appeals", icon: Scale },
       ],
     },
     {
-      title: "System",
+      title: "Safety & Security",
       links: [
+        { href: `${base}/security`, label: "Panic & Verification", icon: ShieldAlert },
+        { href: `${base}/overrides`, label: "Overrides", icon: SlidersHorizontal },
+      ],
+    },
+    {
+      title: "Community & Engagement",
+      links: [
+        { href: `${base}/permits`, label: "Permits", icon: IdCard },
+      ],
+    },
+    {
+      title: "Monitoring & Diagnostics",
+      links: [
+        { href: `${base}/health`, label: "Health Dashboard", icon: HeartPulse },
+        { href: `${base}/audit`, label: "Audit Log", icon: ClipboardList },
+      ],
+    },
+    {
+      title: "Configuration",
+      links: [
+        { href: `${base}/modules`, label: "Modules & Addons", icon: LayoutGrid },
         { href: `${base}/tempvc`, label: "Voice Generators", icon: Volume2 },
         { href: `${base}/history`, label: "Settings History", icon: History },
-        { href: `${base}/audit`, label: "Audit Log", icon: ClipboardList },
         { href: `${base}/advanced`, label: "Advanced", icon: Wrench },
       ],
     },
