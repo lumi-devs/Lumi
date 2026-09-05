@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
@@ -22,7 +22,7 @@ export async function addIgnoredChannel(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedAdvancedAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildIgnoredAdd, {
+    await rpcCall(RpcActions.guildIgnoredAdd, {
       guildId,
       actorId: session.userId,
       data: { channelId },
@@ -38,7 +38,7 @@ export async function removeIgnoredChannel(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedAdvancedAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildIgnoredRemove, {
+    await rpcCall(RpcActions.guildIgnoredRemove, {
       guildId,
       actorId: session.userId,
       data: { channelId },

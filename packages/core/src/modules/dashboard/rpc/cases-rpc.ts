@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import {
   removeThresholdRule,
   setThresholdRule,
@@ -16,7 +16,7 @@ import {
 } from "../lib/helpers.js";
 
 export function registerCasesRpcHandlers(): void {
-  registerRpcHandler(RPC_ACTIONS.guildCasesList, async (req) => {
+  registerRpcHandler(RpcActions.guildCasesList, async (req) => {
     const { guildId } = await verifyGuildAccess(req);
     const filter = parsePayload(CasesListSchema, req.data ?? {});
 
@@ -49,7 +49,7 @@ export function registerCasesRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildCasesRevoke, async (req) => {
+  registerRpcHandler(RpcActions.guildCasesRevoke, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { caseNumber } = parsePayload(CaseRevokeSchema, req.data);
@@ -67,7 +67,7 @@ export function registerCasesRpcHandlers(): void {
     return { success: true, caseNumber };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildWarnThresholdsList, async (req) => {
+  registerRpcHandler(RpcActions.guildWarnThresholdsList, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const thresholds =
@@ -82,7 +82,7 @@ export function registerCasesRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildWarnThresholdsSet, async (req) => {
+  registerRpcHandler(RpcActions.guildWarnThresholdsSet, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { warnCount, action, duration } = parsePayload(
@@ -102,8 +102,8 @@ export function registerCasesRpcHandlers(): void {
 }
 
 export function unregisterCasesRpcHandlers(): void {
-  rpcHandlers.delete(RPC_ACTIONS.guildCasesList);
-  rpcHandlers.delete(RPC_ACTIONS.guildCasesRevoke);
-  rpcHandlers.delete(RPC_ACTIONS.guildWarnThresholdsList);
-  rpcHandlers.delete(RPC_ACTIONS.guildWarnThresholdsSet);
+  rpcHandlers.delete(RpcActions.guildCasesList);
+  rpcHandlers.delete(RpcActions.guildCasesRevoke);
+  rpcHandlers.delete(RpcActions.guildWarnThresholdsList);
+  rpcHandlers.delete(RpcActions.guildWarnThresholdsSet);
 }

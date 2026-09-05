@@ -2,13 +2,13 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
-export const THEMES = ["system", "light", "dark"] as const;
-export type Theme = (typeof THEMES)[number];
+export const Themes = ["system", "light", "dark"] as const;
+export type Theme = (typeof Themes)[number];
 
-const STORAGE_KEY = "lumi-dashboard-theme";
+const StorageKey = "lumi-dashboard-theme";
 
 function isTheme(value: string | null): value is Theme {
-  return value !== null && (THEMES as readonly string[]).includes(value);
+  return value !== null && (Themes as readonly string[]).includes(value);
 }
 
 function applyTheme(theme: Theme): void {
@@ -34,7 +34,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
+    const stored = window.localStorage.getItem(StorageKey);
     if (isTheme(stored)) {
       setThemeState(stored);
       applyTheme(stored);
@@ -46,7 +46,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const commit = () => {
       setThemeState(next);
       applyTheme(next);
-      window.localStorage.setItem(STORAGE_KEY, next);
+      window.localStorage.setItem(StorageKey, next);
     };
     // `applyTheme` is a plain DOM mutation (not React-managed), so the
     // browser can capture it as-is for the transition - no flushSync needed.

@@ -174,7 +174,7 @@ export class RepoCommand extends BaseSubcommand {
     const branch =
       (await ctx.getString("branch", { required: false })) ?? "default";
 
-    const agreed = await confirmPrompt(ctx, {
+    const { confirmed } = await confirmPrompt(ctx, {
       title: `${Emojis.WARNING_SIGN} Third-Party Code Warning`,
       body: [
         `You're about to clone **${name}** (\`${url}\`) as a module repository.`,
@@ -183,7 +183,7 @@ export class RepoCommand extends BaseSubcommand {
       ].join("\n\n"),
       confirmLabel: "I understand, add it",
     });
-    if (!agreed) {
+    if (!confirmed) {
       await ctx.replyError("Cancelled", `Repository **${name}** was not added.`);
       return;
     }

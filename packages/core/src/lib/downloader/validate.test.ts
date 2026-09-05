@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { validateAddon } from "./validate.js";
 
-const VALID_INFO = JSON.stringify({
+const ValidInfo = JSON.stringify({
   name: "my-addon",
   author: ["Someone"],
   description: "A test addon.",
@@ -13,7 +13,7 @@ const VALID_INFO = JSON.stringify({
   end_user_data_statement: "This addon does not store any user data.",
 });
 
-async function writeAddon(dir: string, indexSrc: string, infoJson = VALID_INFO) {
+async function writeAddon(dir: string, indexSrc: string, infoJson = ValidInfo) {
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(path.join(dir, "info.json"), infoJson);
   await fs.writeFile(path.join(dir, "index.ts"), indexSrc);
@@ -83,7 +83,7 @@ describe("validateAddon - min_bot_version semver compatibility", () => {
     await fs.rm(tmpRoot, { recursive: true, force: true });
   });
 
-  const VALID_INDEX = `import { Module, DefineModule } from "lumi";\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`;
+  const ValidIndex = `import { Module, DefineModule } from "lumi";\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`;
 
   async function writeWithMinBotVersion(dir: string, minBotVersion: string) {
     const info = JSON.stringify({
@@ -95,7 +95,7 @@ describe("validateAddon - min_bot_version semver compatibility", () => {
       min_bot_version: minBotVersion,
       end_user_data_statement: "This addon does not store any user data.",
     });
-    await writeAddon(dir, VALID_INDEX, info);
+    await writeAddon(dir, ValidIndex, info);
   }
 
   it("flags a pre-release min_bot_version whose numeric part exceeds the current version", async () => {
@@ -142,13 +142,13 @@ describe("validateAddon - memory-leak heuristics", () => {
     await fs.rm(tmpRoot, { recursive: true, force: true });
   });
 
-  const HEADER = `import { Module, DefineModule } from "lumi";\n\n`;
+  const Header = `import { Module, DefineModule } from "lumi";\n\n`;
 
   it("warns on an unstored setInterval/setTimeout handle", async () => {
     const dir = path.join(tmpRoot, "my-addon");
     await writeAddon(
       dir,
-      `${HEADER}setInterval(() => {}, 1000);\nsetTimeout(() => {}, 1000);\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
+      `${Header}setInterval(() => {}, 1000);\nsetTimeout(() => {}, 1000);\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
     );
 
     const { warnings } = await validateAddon(dir);
@@ -160,7 +160,7 @@ describe("validateAddon - memory-leak heuristics", () => {
     const dir = path.join(tmpRoot, "my-addon");
     await writeAddon(
       dir,
-      `${HEADER}const handle = setInterval(() => {}, 1000);\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
+      `${Header}const handle = setInterval(() => {}, 1000);\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
     );
 
     const { warnings } = await validateAddon(dir);
@@ -171,7 +171,7 @@ describe("validateAddon - memory-leak heuristics", () => {
     const dir = path.join(tmpRoot, "my-addon");
     await writeAddon(
       dir,
-      `${HEADER}const handle = setInterval(() => {}, 1000);\nclearInterval(handle);\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
+      `${Header}const handle = setInterval(() => {}, 1000);\nclearInterval(handle);\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
     );
 
     const { warnings } = await validateAddon(dir);
@@ -182,7 +182,7 @@ describe("validateAddon - memory-leak heuristics", () => {
     const dir = path.join(tmpRoot, "my-addon");
     await writeAddon(
       dir,
-      `${HEADER}class Thing {\n  timer: NodeJS.Timeout;\n  start() { this.timer = setInterval(() => {}, 1000); }\n  stop() { clearInterval(this.timer); }\n}\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
+      `${Header}class Thing {\n  timer: NodeJS.Timeout;\n  start() { this.timer = setInterval(() => {}, 1000); }\n  stop() { clearInterval(this.timer); }\n}\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
     );
 
     const { warnings } = await validateAddon(dir);
@@ -193,7 +193,7 @@ describe("validateAddon - memory-leak heuristics", () => {
     const dir = path.join(tmpRoot, "my-addon");
     await writeAddon(
       dir,
-      `${HEADER}process.on("uncaughtException", () => {});\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
+      `${Header}process.on("uncaughtException", () => {});\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
     );
 
     const { warnings } = await validateAddon(dir);
@@ -204,7 +204,7 @@ describe("validateAddon - memory-leak heuristics", () => {
     const dir = path.join(tmpRoot, "my-addon");
     await writeAddon(
       dir,
-      `${HEADER}process.on("uncaughtException", () => {});\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {\n  onUnload() { /* cleanup */ }\n}\n`,
+      `${Header}process.on("uncaughtException", () => {});\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {\n  onUnload() { /* cleanup */ }\n}\n`,
     );
 
     const { warnings } = await validateAddon(dir);
@@ -215,7 +215,7 @@ describe("validateAddon - memory-leak heuristics", () => {
     const dir = path.join(tmpRoot, "my-addon");
     await writeAddon(
       dir,
-      `${HEADER}let activeGiveaways = 0;\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
+      `${Header}let activeGiveaways = 0;\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
     );
 
     const { warnings } = await validateAddon(dir);
@@ -226,7 +226,7 @@ describe("validateAddon - memory-leak heuristics", () => {
     const dir = path.join(tmpRoot, "my-addon");
     await writeAddon(
       dir,
-      `${HEADER}const seen = new Map();\n\nfunction track(id: string) { seen.set(id, Date.now()); }\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
+      `${Header}const seen = new Map();\n\nfunction track(id: string) { seen.set(id, Date.now()); }\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
     );
 
     const { warnings } = await validateAddon(dir);
@@ -237,7 +237,7 @@ describe("validateAddon - memory-leak heuristics", () => {
     const dir = path.join(tmpRoot, "my-addon");
     await writeAddon(
       dir,
-      `${HEADER}const seen = new Map();\n\nfunction track(id: string) {\n  if (seen.size > 100) seen.clear();\n  seen.set(id, Date.now());\n}\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
+      `${Header}const seen = new Map();\n\nfunction track(id: string) {\n  if (seen.size > 100) seen.clear();\n  seen.set(id, Date.now());\n}\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
     );
 
     const { warnings } = await validateAddon(dir);
@@ -248,7 +248,7 @@ describe("validateAddon - memory-leak heuristics", () => {
     const dir = path.join(tmpRoot, "my-addon");
     await writeAddon(
       dir,
-      `${HEADER}let counter = 0;\nconst seen = [];\nsetInterval(() => { seen.push(counter++); }, 1000);\nprocess.on("SIGTERM", () => {});\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
+      `${Header}let counter = 0;\nconst seen = [];\nsetInterval(() => { seen.push(counter++); }, 1000);\nprocess.on("SIGTERM", () => {});\n\n@DefineModule({ name: "my-addon" })\nexport class MyAddon extends Module {}\n`,
     );
 
     const { errors, warnings } = await validateAddon(dir);

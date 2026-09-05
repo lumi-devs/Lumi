@@ -23,20 +23,20 @@ export function matchesUsernamePattern(username: string, patterns: string[]): bo
  * require). Distinct from `matchesUsernamePattern`: this is a fixed
  * link/invite structural check, not a user-configured substring list.
  */
-const ADVERTISING_PATTERN =
+const AdvertisingPattern =
   /(discord\.gg\/|discordapp\.com\/invite\/|t\.me\/|https?:\/\/|www\.[a-z0-9-]+\.[a-z]{2,})/i;
 
 export function hasAdvertisingIndicators(user: User): boolean {
   const displayName = user.globalName ?? user.username;
-  return ADVERTISING_PATTERN.test(displayName);
+  return AdvertisingPattern.test(displayName);
 }
 
-const LEVENSHTEIN_MAX_LEN = 32;
+const LevenshteinMaxLen = 32;
 
 /** Bounded edit distance; recent-joiner usernames are short so this stays cheap. */
 export function levenshteinDistance(a: string, b: string): number {
-  const s1 = a.slice(0, LEVENSHTEIN_MAX_LEN);
-  const s2 = b.slice(0, LEVENSHTEIN_MAX_LEN);
+  const s1 = a.slice(0, LevenshteinMaxLen);
+  const s2 = b.slice(0, LevenshteinMaxLen);
   const rows = s1.length + 1;
   const cols = s2.length + 1;
   const dp: number[] = new Array(rows * cols).fill(0);
@@ -54,7 +54,7 @@ export function levenshteinDistance(a: string, b: string): number {
   return dp[rows * cols - 1] ?? 0;
 }
 
-const SIMILARITY_DISTANCE_THRESHOLD = 2;
+const SimilarityDistanceThreshold = 2;
 
 /** Same-prefix or near-identical usernames within a short window smell like a bot batch. */
 export function isUsernameSimilar(a: string, b: string): boolean {
@@ -63,7 +63,7 @@ export function isUsernameSimilar(a: string, b: string): boolean {
   if (shortestPrefix >= 4 && a.slice(0, shortestPrefix) === b.slice(0, shortestPrefix)) {
     return true;
   }
-  return levenshteinDistance(a, b) <= SIMILARITY_DISTANCE_THRESHOLD;
+  return levenshteinDistance(a, b) <= SimilarityDistanceThreshold;
 }
 
 export interface RecentJoiner {
@@ -76,8 +76,8 @@ export function creationDayBucket(createdTimestamp: number): number {
   return Math.floor(createdTimestamp / 86_400_000);
 }
 
-const CLUSTER_SHARE_THRESHOLD = 0.5;
-const CLUSTER_MIN_SAMPLE = 3;
+const ClusterShareThreshold = 0.5;
+const ClusterMinSample = 3;
 
 /**
  * True when an unusual share of recent joiners were created on the same day
@@ -88,12 +88,12 @@ export function isCreationClustered(
   createdTimestamp: number,
   recentJoiners: RecentJoiner[],
 ): boolean {
-  if (recentJoiners.length < CLUSTER_MIN_SAMPLE) return false;
+  if (recentJoiners.length < ClusterMinSample) return false;
   const bucket = creationDayBucket(createdTimestamp);
   const sameDay = recentJoiners.filter(
     (j) => creationDayBucket(j.createdTimestamp) === bucket,
   ).length;
-  return sameDay / recentJoiners.length >= CLUSTER_SHARE_THRESHOLD;
+  return sameDay / recentJoiners.length >= ClusterShareThreshold;
 }
 
 /** Any recent joiner whose username is similar to `username`. */

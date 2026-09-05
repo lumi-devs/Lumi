@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { getUtility } from "#lib/module-system/Utility.js";
 import {
   AuditListSchema,
@@ -17,7 +17,7 @@ import {
 } from "../lib/helpers.js";
 
 export function registerAuditRpcHandlers(): void {
-  registerRpcHandler(RPC_ACTIONS.guildAuditList, async (req) => {
+  registerRpcHandler(RpcActions.guildAuditList, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const filter = parsePayload(AuditListSchema, req.data ?? {});
@@ -48,7 +48,7 @@ export function registerAuditRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildHistoryList, async (req) => {
+  registerRpcHandler(RpcActions.guildHistoryList, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const filter = parsePayload(ConfigHistoryListSchema, req.data ?? {});
@@ -79,7 +79,7 @@ export function registerAuditRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildHistoryRollback, async (req) => {
+  registerRpcHandler(RpcActions.guildHistoryRollback, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { entryId } = parsePayload(ConfigHistoryRollbackSchema, req.data);
@@ -119,7 +119,7 @@ export function registerAuditRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildOverridesList, async (req) => {
+  registerRpcHandler(RpcActions.guildOverridesList, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { moduleName } = parsePayload(OverridesListSchema, req.data ?? {});
@@ -142,7 +142,7 @@ export function registerAuditRpcHandlers(): void {
     };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildOverridesSet, async (req) => {
+  registerRpcHandler(RpcActions.guildOverridesSet, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { moduleName, key, modelType, modelId, value } = parsePayload(
@@ -168,7 +168,7 @@ export function registerAuditRpcHandlers(): void {
     return { success: true, deleted: false };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildModuleDataList, async (req) => {
+  registerRpcHandler(RpcActions.guildModuleDataList, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const filter = parsePayload(ModuleDataListSchema, req.data ?? {});
@@ -188,10 +188,10 @@ export function registerAuditRpcHandlers(): void {
 }
 
 export function unregisterAuditRpcHandlers(): void {
-  rpcHandlers.delete(RPC_ACTIONS.guildAuditList);
-  rpcHandlers.delete(RPC_ACTIONS.guildHistoryList);
-  rpcHandlers.delete(RPC_ACTIONS.guildHistoryRollback);
-  rpcHandlers.delete(RPC_ACTIONS.guildOverridesList);
-  rpcHandlers.delete(RPC_ACTIONS.guildOverridesSet);
-  rpcHandlers.delete(RPC_ACTIONS.guildModuleDataList);
+  rpcHandlers.delete(RpcActions.guildAuditList);
+  rpcHandlers.delete(RpcActions.guildHistoryList);
+  rpcHandlers.delete(RpcActions.guildHistoryRollback);
+  rpcHandlers.delete(RpcActions.guildOverridesList);
+  rpcHandlers.delete(RpcActions.guildOverridesSet);
+  rpcHandlers.delete(RpcActions.guildModuleDataList);
 }

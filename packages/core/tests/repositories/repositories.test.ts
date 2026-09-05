@@ -81,6 +81,24 @@ describe('ModerationRepository Tests', () => {
     expect(result.caseNumber).toBe(1);
   });
 
+  it('createModerationCase allocates the case number under Serializable isolation', async () => {
+    mockPrisma.moderationCase.findFirst.mockResolvedValue({ caseNumber: 5 });
+    mockPrisma.guildCaseCounter.upsert.mockResolvedValue({ guildId: 'g1', next: 7 });
+    mockPrisma.moderationCase.create.mockResolvedValue({ id: 1, caseNumber: 6 });
+
+    await repo.createModerationCase({
+      guildId: 'g1',
+      userId: 'u1',
+      moderatorId: 'm1',
+      action: 'warn',
+    });
+
+    expect(mockPrisma.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      { isolationLevel: 'Serializable' },
+    );
+  });
+
   it('getModerationCases queries cases by guild and user with optional action', async () => {
     mockPrisma.moderationCase.findMany.mockResolvedValue([{ id: 1 }]);
     const casesWithAction = await repo.getModerationCases('g1', 'u1', 'warn');

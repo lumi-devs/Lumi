@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { rpcHandlers } from "#lib/rpc/dispatch.js";
 import { DashboardModule } from "#modules/dashboard/index.js";
 import { AccessRepository } from "#lib/prisma/repositories/AccessRepository.js";
@@ -92,7 +92,7 @@ describe("dashboard module guild blocklist RPC handlers", () => {
       makeBlock({ id: 4, guildId: OTHER_GUILD_ID }),
     ]);
 
-    const res = (await call(RPC_ACTIONS.guildBlocklistList, {})) as any;
+    const res = (await call(RpcActions.guildBlocklistList, {})) as any;
 
     expect(res.total).toBe(2);
     expect(res.entries.map((e: any) => e.id)).toEqual([2, 1]);
@@ -107,7 +107,7 @@ describe("dashboard module guild blocklist RPC handlers", () => {
       ),
     );
 
-    const res = (await call(RPC_ACTIONS.guildBlocklistList, {
+    const res = (await call(RpcActions.guildBlocklistList, {
       page: 2,
       pageSize: 2,
     })) as any;
@@ -117,7 +117,7 @@ describe("dashboard module guild blocklist RPC handlers", () => {
   });
 
   it("adds a guild-scoped entry attributed to the acting manager", async () => {
-    const res = (await call(RPC_ACTIONS.guildBlocklistAdd, {
+    const res = (await call(RpcActions.guildBlocklistAdd, {
       userId: TARGET_ID,
       reason: "raiding",
     })) as any;
@@ -133,14 +133,14 @@ describe("dashboard module guild blocklist RPC handlers", () => {
     prisma.$seed("blocklist", [makeBlock({ id: 1 })]);
 
     await expect(
-      call(RPC_ACTIONS.guildBlocklistAdd, { userId: TARGET_ID }),
+      call(RpcActions.guildBlocklistAdd, { userId: TARGET_ID }),
     ).rejects.toThrow("already blocklisted in this server");
   });
 
   it("does not treat a global row as a guild one", async () => {
     prisma.$seed("blocklist", [makeBlock({ id: 1, guildId: null })]);
 
-    await call(RPC_ACTIONS.guildBlocklistAdd, { userId: TARGET_ID });
+    await call(RpcActions.guildBlocklistAdd, { userId: TARGET_ID });
 
     expect(prisma.$all("blocklist")).toHaveLength(2);
   });
@@ -151,7 +151,7 @@ describe("dashboard module guild blocklist RPC handlers", () => {
       makeBlock({ id: 2, guildId: null }),
     ]);
 
-    await call(RPC_ACTIONS.guildBlocklistRemove, { userId: TARGET_ID });
+    await call(RpcActions.guildBlocklistRemove, { userId: TARGET_ID });
 
     const rows = prisma.$all("blocklist");
     expect(rows).toHaveLength(1);
@@ -162,13 +162,13 @@ describe("dashboard module guild blocklist RPC handlers", () => {
     denyPermissions();
 
     await expect(
-      call(RPC_ACTIONS.guildBlocklistList, {}, INTRUDER_ID),
+      call(RpcActions.guildBlocklistList, {}, INTRUDER_ID),
     ).rejects.toThrow("Missing ManageGuild permission");
     await expect(
-      call(RPC_ACTIONS.guildBlocklistAdd, { userId: TARGET_ID }, INTRUDER_ID),
+      call(RpcActions.guildBlocklistAdd, { userId: TARGET_ID }, INTRUDER_ID),
     ).rejects.toThrow("Missing ManageGuild permission");
     await expect(
-      call(RPC_ACTIONS.guildBlocklistRemove, { userId: TARGET_ID }, INTRUDER_ID),
+      call(RpcActions.guildBlocklistRemove, { userId: TARGET_ID }, INTRUDER_ID),
     ).rejects.toThrow("Missing ManageGuild permission");
     expect(prisma.$all("blocklist")).toHaveLength(0);
   });

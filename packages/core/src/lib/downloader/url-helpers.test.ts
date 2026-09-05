@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { deriveRepoNameFromUrl } from "./url-helpers.js";
 
-const NAME_RE = /^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/;
+const NameRe = /^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/;
 
 describe("deriveRepoNameFromUrl", () => {
   it("derives from a plain HTTPS URL", () => {
@@ -36,13 +36,13 @@ describe("deriveRepoNameFromUrl", () => {
 
   it("sanitizes characters the name regex rejects (e.g. dots)", () => {
     const derived = deriveRepoNameFromUrl("https://github.com/owner/my.repo.name");
-    expect(derived).toMatch(NAME_RE);
+    expect(derived).toMatch(NameRe);
     expect(derived).toBe("my-repo-name");
   });
 
   it("never returns a name starting with a hyphen", () => {
     const derived = deriveRepoNameFromUrl("https://github.com/owner/--weird-repo");
-    expect(derived).toMatch(NAME_RE);
+    expect(derived).toMatch(NameRe);
   });
 
   it("falls back to a default name when nothing usable remains", () => {
@@ -60,7 +60,7 @@ describe("deriveRepoNameFromUrl", () => {
       "https://gitlab.com/group/sub-group/repo.git",
     ];
     for (const url of inputs) {
-      expect(deriveRepoNameFromUrl(url)).toMatch(NAME_RE);
+      expect(deriveRepoNameFromUrl(url)).toMatch(NameRe);
     }
   });
 });

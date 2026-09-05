@@ -3,7 +3,7 @@ import type { DashboardMemberView } from "./dashboard-data";
 
 // Formatted in UTC so a Server Component and the client that hydrates it can
 // never disagree about the rendered string.
-const DAY_FORMAT = new Intl.DateTimeFormat("en-GB", {
+const DayFormat = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
   day: "numeric",
   month: "long",
@@ -11,7 +11,7 @@ const DAY_FORMAT = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-const TIME_FORMAT = new Intl.DateTimeFormat("en-GB", {
+const TimeFormat = new Intl.DateTimeFormat("en-GB", {
   hour: "2-digit",
   minute: "2-digit",
   second: "2-digit",
@@ -19,13 +19,13 @@ const TIME_FORMAT = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-const STAMP_FORMAT = new Intl.DateTimeFormat("en-GB", {
+const StampFormat = new Intl.DateTimeFormat("en-GB", {
   dateStyle: "medium",
   timeStyle: "short",
   timeZone: "UTC",
 });
 
-const SHORT_DAY_FORMAT = new Intl.DateTimeFormat("en-GB", {
+const ShortDayFormat = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "short",
   year: "numeric",
@@ -39,22 +39,22 @@ function parse(iso: string): Date | null {
 
 export function formatDay(iso: string): string {
   const date = parse(iso);
-  return date ? DAY_FORMAT.format(date) : "Unknown date";
+  return date ? DayFormat.format(date) : "Unknown date";
 }
 
 export function formatShortDay(iso: string): string {
   const date = parse(iso);
-  return date ? SHORT_DAY_FORMAT.format(date) : "Unknown";
+  return date ? ShortDayFormat.format(date) : "Unknown";
 }
 
 export function formatTime(iso: string): string {
   const date = parse(iso);
-  return date ? TIME_FORMAT.format(date) : "--:--:--";
+  return date ? TimeFormat.format(date) : "--:--:--";
 }
 
 export function formatStamp(iso: string): string {
   const date = parse(iso);
-  return date ? `${STAMP_FORMAT.format(date)} UTC` : "Unknown";
+  return date ? `${StampFormat.format(date)} UTC` : "Unknown";
 }
 
 export interface DayGroup<T> {
@@ -138,7 +138,7 @@ export function splitAction(action: string): {
   return { scope: action.slice(0, index), verb: action.slice(index + 1) };
 }
 
-export const AUDIT_PLATFORM_OPTIONS = [
+export const AuditPlatformOptions = [
   { value: "discord", label: "Discord" },
   { value: "web", label: "Dashboard" },
 ];

@@ -63,7 +63,7 @@ export function isSupportedLanguage(
   return supported.has(language);
 }
 
-const LANGUAGE_ROOT = fileURLToPath(
+const LanguageRoot = fileURLToPath(
   new URL("../../languages/", import.meta.url),
 );
 
@@ -94,7 +94,7 @@ export function buildI18nOptions(): InternationalizationOptions {
   return {
     defaultMissingKey: "default",
     defaultNS: "common",
-    defaultLanguageDirectory: LANGUAGE_ROOT,
+    defaultLanguageDirectory: LanguageRoot,
     fetchLanguage,
     i18next: (_namespaces, languages) => ({
       supportedLngs: languages,

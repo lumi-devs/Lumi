@@ -2,7 +2,7 @@ import { container } from "@sapphire/framework";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { queueSend } from "#lib/outbound/send-queue.js";
 
-const MODULE = "logging";
+const Module = "logging";
 
 export async function isToggleEnabled(
   guildId: string,
@@ -10,7 +10,7 @@ export async function isToggleEnabled(
 ): Promise<boolean> {
   const toggle = await container.db.config.getModuleConfig(
     guildId,
-    MODULE,
+    Module,
     toggleKey,
   );
   return toggle !== false;
@@ -23,7 +23,7 @@ export async function isIgnoredChannel(
 ): Promise<boolean> {
   const ignored = await getUtility("config").getConfigList(
     guildId,
-    MODULE,
+    Module,
     "ignored_channels",
   );
   return ignored.includes(channelId);
@@ -43,7 +43,7 @@ export async function sendLog(
 ): Promise<void> {
   const channelId = await container.db.config.getModuleConfig(
     guildId,
-    MODULE,
+    Module,
     "log_channel_id",
   );
   if (!channelId || typeof channelId !== "string") return;

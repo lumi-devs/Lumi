@@ -8,10 +8,10 @@ import { ConfirmDialog } from "#/components/ui/confirm-dialog";
 import { DataTable } from "#/components/ui/data-table";
 import { guildAppealsColumns } from "#/components/guild/guild-appeals-columns";
 import type { AppealView } from "#/lib/dashboard-data";
-import { APPEAL_STATUS_LABELS } from "#/lib/appeals";
+import { AppealStatusLabels } from "#/lib/appeals";
 import { useServerAction } from "#/lib/use-server-action";
 
-const REVIEW_COPY: Record<AppealReviewStatus, { title: string; description: string; tone: "danger" | "primary" }> = {
+const ReviewCopy: Record<AppealReviewStatus, { title: string; description: string; tone: "danger" | "primary" }> = {
   approved: {
     title: "Approve this appeal?",
     description:
@@ -75,7 +75,7 @@ export function GuildAppealsTable({
         setError(result.error ?? "Reviewing the appeal failed. Try again.");
         return;
       }
-      setNotice(`Appeal for case #${appeal.caseNumber} marked ${APPEAL_STATUS_LABELS[status].toLowerCase()}.`);
+      setNotice(`Appeal for case #${appeal.caseNumber} marked ${AppealStatusLabels[status].toLowerCase()}.`);
       setTarget(null);
     });
   }
@@ -86,7 +86,7 @@ export function GuildAppealsTable({
     setError(null);
   }
 
-  const copy = target ? REVIEW_COPY[target.status] : null;
+  const copy = target ? ReviewCopy[target.status] : null;
 
   return (
     <>

@@ -20,7 +20,7 @@ import type {
 } from "#/lib/dashboard-data";
 import { useServerAction } from "#/lib/use-server-action";
 
-const WHOLE_SERVER = "__server__";
+const WholeServer = "__server__";
 
 // A `channelId: null` row silences every command in every channel, not one
 // more ignored channel — hence its own row treatment and confirmation.
@@ -85,7 +85,7 @@ export function IgnoredChannelsList({
       setError("Pick a channel, or choose the whole server.");
       return;
     }
-    if (picked === WHOLE_SERVER) {
+    if (picked === WholeServer) {
       setConfirmingServer(true);
       return;
     }
@@ -178,7 +178,7 @@ export function IgnoredChannelsList({
             >
               <option value="">Pick a channel…</option>
               {serverIgnored ? null : (
-                <option value={WHOLE_SERVER}>The whole server</option>
+                <option value={WholeServer}>The whole server</option>
               )}
               {options.map((channel) => (
                 <option key={channel.id} value={channel.id}>
@@ -197,7 +197,7 @@ export function IgnoredChannelsList({
             <Button type="submit" variant="primary" disabled={isPending}>
               {isPending
                 ? "Saving…"
-                : picked === WHOLE_SERVER
+                : picked === WholeServer
                   ? "Ignore the whole server"
                   : "Ignore channel"}
             </Button>

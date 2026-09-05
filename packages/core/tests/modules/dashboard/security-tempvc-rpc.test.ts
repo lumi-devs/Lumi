@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { rpcHandlers } from "#lib/rpc/dispatch.js";
 import { DashboardModule } from "#modules/dashboard/index.js";
 import { SecurityRepository } from "#lib/prisma/repositories/SecurityRepository.js";
@@ -93,7 +93,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
 
   describe("guild.panic.get", () => {
     it("reports an inactive guild with no panic row", async () => {
-      const res = (await call(RPC_ACTIONS.guildPanicGet)) as any;
+      const res = (await call(RpcActions.guildPanicGet)) as any;
 
       expect(res).toEqual({
         active: false,
@@ -115,7 +115,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
         },
       ]);
 
-      const res = (await call(RPC_ACTIONS.guildPanicGet)) as any;
+      const res = (await call(RpcActions.guildPanicGet)) as any;
 
       expect(res.active).toBe(true);
       expect(res.invitesPaused).toBe(true);
@@ -127,14 +127,14 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       denyPermissions();
 
       await expect(
-        call(RPC_ACTIONS.guildPanicGet, undefined, INTRUDER_ID),
+        call(RpcActions.guildPanicGet, undefined, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
     });
   });
 
   describe("guild.panic.set", () => {
     it("enters panic through the security service", async () => {
-      const res = (await call(RPC_ACTIONS.guildPanicSet, {
+      const res = (await call(RpcActions.guildPanicSet, {
         active: true,
         channelIds: [CHANNEL_ID],
       })) as any;
@@ -163,13 +163,13 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       ]);
 
       await expect(
-        call(RPC_ACTIONS.guildPanicSet, { active: true }),
+        call(RpcActions.guildPanicSet, { active: true }),
       ).rejects.toThrow("Panic mode is already active");
       expect(security.enterPanic).not.toHaveBeenCalled();
     });
 
     it("reverts panic through the security service", async () => {
-      const res = (await call(RPC_ACTIONS.guildPanicSet, {
+      const res = (await call(RpcActions.guildPanicSet, {
         active: false,
       })) as any;
 
@@ -181,7 +181,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       security.revertPanic.mockResolvedValue(null);
 
       await expect(
-        call(RPC_ACTIONS.guildPanicSet, { active: false }),
+        call(RpcActions.guildPanicSet, { active: false }),
       ).rejects.toThrow("Panic mode is not active");
     });
 
@@ -189,7 +189,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       utilities.delete("security");
 
       await expect(
-        call(RPC_ACTIONS.guildPanicSet, { active: true }),
+        call(RpcActions.guildPanicSet, { active: true }),
       ).rejects.toThrow("The security module is not loaded");
     });
 
@@ -197,7 +197,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       denyPermissions();
 
       await expect(
-        call(RPC_ACTIONS.guildPanicSet, { active: true }, INTRUDER_ID),
+        call(RpcActions.guildPanicSet, { active: true }, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
       expect(security.enterPanic).not.toHaveBeenCalled();
     });
@@ -205,12 +205,12 @@ describe("dashboard module security + tempvc RPC handlers", () => {
 
   describe("guild.verificationPanel", () => {
     it("returns null when the guild has no panel", async () => {
-      const res = (await call(RPC_ACTIONS.guildVerificationPanelGet)) as any;
+      const res = (await call(RpcActions.guildVerificationPanelGet)) as any;
       expect(res).toEqual({ panel: null });
     });
 
     it("upserts and reads back the panel reference", async () => {
-      await call(RPC_ACTIONS.guildVerificationPanelSet, {
+      await call(RpcActions.guildVerificationPanelSet, {
         channelId: CHANNEL_ID,
         messageId: MESSAGE_ID,
       });
@@ -225,7 +225,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
         },
       ]);
 
-      const res = (await call(RPC_ACTIONS.guildVerificationPanelGet)) as any;
+      const res = (await call(RpcActions.guildVerificationPanelGet)) as any;
       expect(res.panel).toEqual({
         channelId: CHANNEL_ID,
         messageId: MESSAGE_ID,
@@ -238,8 +238,8 @@ describe("dashboard module security + tempvc RPC handlers", () => {
         { guildId: GUILD_ID, channelId: CHANNEL_ID, messageId: MESSAGE_ID },
       ]);
 
-      const first = (await call(RPC_ACTIONS.guildVerificationPanelDelete)) as any;
-      const second = (await call(RPC_ACTIONS.guildVerificationPanelDelete)) as any;
+      const first = (await call(RpcActions.guildVerificationPanelDelete)) as any;
+      const second = (await call(RpcActions.guildVerificationPanelDelete)) as any;
 
       expect(first).toEqual({ success: true, deleted: true });
       expect(second).toEqual({ success: true, deleted: false });
@@ -251,7 +251,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
 
       await expect(
         call(
-          RPC_ACTIONS.guildVerificationPanelSet,
+          RpcActions.guildVerificationPanelSet,
           { channelId: CHANNEL_ID, messageId: MESSAGE_ID },
           INTRUDER_ID,
         ),
@@ -266,7 +266,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
         { guildId: "999999999999999999", channelId: MESSAGE_ID, name: "Other {}", limit: 0 },
       ]);
 
-      const res = (await call(RPC_ACTIONS.guildTempVcGeneratorsList)) as any;
+      const res = (await call(RpcActions.guildTempVcGeneratorsList)) as any;
 
       expect(res.generators).toEqual([
         { channelId: CHANNEL_ID, name: "Gaming {}", limit: 5 },
@@ -274,7 +274,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
     });
 
     it("upserts through the tempvc service so its registry is invalidated", async () => {
-      const res = (await call(RPC_ACTIONS.guildTempVcGeneratorSet, {
+      const res = (await call(RpcActions.guildTempVcGeneratorSet, {
         channelId: CHANNEL_ID,
         name: "Gaming {}",
         limit: 5,
@@ -289,7 +289,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
     });
 
     it("defaults the user limit to unlimited", async () => {
-      await call(RPC_ACTIONS.guildTempVcGeneratorSet, {
+      await call(RpcActions.guildTempVcGeneratorSet, {
         channelId: CHANNEL_ID,
         name: "Gaming {}",
       });
@@ -301,7 +301,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
     });
 
     it("deletes the generator when name is null", async () => {
-      const res = (await call(RPC_ACTIONS.guildTempVcGeneratorSet, {
+      const res = (await call(RpcActions.guildTempVcGeneratorSet, {
         channelId: CHANNEL_ID,
         name: null,
       })) as any;
@@ -315,7 +315,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       utilities.delete("tempvc");
 
       await expect(
-        call(RPC_ACTIONS.guildTempVcGeneratorSet, {
+        call(RpcActions.guildTempVcGeneratorSet, {
           channelId: CHANNEL_ID,
           name: "Gaming {}",
         }),
@@ -327,7 +327,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
 
       await expect(
         call(
-          RPC_ACTIONS.guildTempVcGeneratorSet,
+          RpcActions.guildTempVcGeneratorSet,
           { channelId: CHANNEL_ID, name: "Gaming {}" },
           INTRUDER_ID,
         ),
@@ -363,7 +363,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
         },
       ]);
 
-      const res = (await call(RPC_ACTIONS.guildTempVcRecordsList)) as any;
+      const res = (await call(RpcActions.guildTempVcRecordsList)) as any;
 
       expect(res.records).toEqual([
         {
@@ -383,7 +383,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       denyPermissions();
 
       await expect(
-        call(RPC_ACTIONS.guildTempVcRecordsList, undefined, INTRUDER_ID),
+        call(RpcActions.guildTempVcRecordsList, undefined, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
     });
   });

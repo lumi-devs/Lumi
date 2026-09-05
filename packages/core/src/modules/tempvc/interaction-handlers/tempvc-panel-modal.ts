@@ -18,7 +18,7 @@ import { resolveOwnedVc } from "#modules/tempvc/panel-guard.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 import { buildBackRows, buildPanel } from "#modules/tempvc/ui/panel.js";
 
-const MODAL_KINDS = new Set(["namem", "limitm"]);
+const ModalKinds = new Set(["namem", "limitm"]);
 
 @ApplyOptions<InteractionHandler.Options>({
   name: "tempvc-panel-modal",
@@ -32,7 +32,7 @@ export class TempVcPanelModalHandler extends BaseInteractionHandler {
   public override parse(interaction: ModalSubmitInteraction) {
     if (!interaction.customId.startsWith(`${TVC}:`)) return this.none();
     const [, kind, channelId] = interaction.customId.split(":");
-    if (!kind || !channelId || !MODAL_KINDS.has(kind)) return this.none();
+    if (!kind || !channelId || !ModalKinds.has(kind)) return this.none();
     return this.some({ kind, channelId });
   }
 

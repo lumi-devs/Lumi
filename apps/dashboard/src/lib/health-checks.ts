@@ -3,14 +3,14 @@ import type { DashboardRoleView, DashboardModuleView } from "#/lib/dashboard-dat
 // Native Discord permission bits (see Module.js `cfg` conventions elsewhere
 // for why this stays dependency-free instead of importing discord.js on the
 // client): https://discord.com/developers/docs/topics/permissions
-const PERM_KICK_MEMBERS = 1n << 1n;
-const PERM_BAN_MEMBERS = 1n << 2n;
-const PERM_ADMINISTRATOR = 1n << 3n;
+const PermKickMembers = 1n << 1n;
+const PermBanMembers = 1n << 2n;
+const PermAdministrator = 1n << 3n;
 
-const DANGEROUS_PERMS: Array<{ bit: bigint; label: string }> = [
-  { bit: PERM_ADMINISTRATOR, label: "Administrator" },
-  { bit: PERM_BAN_MEMBERS, label: "Ban Members" },
-  { bit: PERM_KICK_MEMBERS, label: "Kick Members" },
+const DangerousPerms: Array<{ bit: bigint; label: string }> = [
+  { bit: PermAdministrator, label: "Administrator" },
+  { bit: PermBanMembers, label: "Ban Members" },
+  { bit: PermKickMembers, label: "Kick Members" },
 ];
 
 export interface HealthCheck {
@@ -55,7 +55,7 @@ export function buildHealthChecks(
   });
 
   const dangerousRoles = roles.filter(
-    (r) => !r.isBotRole && DANGEROUS_PERMS.some((p) => hasFlag(r.permissions, p.bit)),
+    (r) => !r.isBotRole && DangerousPerms.some((p) => hasFlag(r.permissions, p.bit)),
   );
   checks.push({
     id: "dangerous-role-permissions",
@@ -119,7 +119,7 @@ export function buildHealthChecks(
     detail: heatMisconfigured
       ? "Heat thresholds are configured, but the Heat System toggle is off, so they never trigger."
       : "Heat scoring thresholds and the Heat System toggle are in sync.",
-    fixHref: `${base}/modules/filter`,
+    fixHref: `${base}/config/modules/filter`,
     fixLabel: "Configure",
   });
 

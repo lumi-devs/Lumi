@@ -12,7 +12,7 @@ import { cleanMention } from "#utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 
-const VALID_KINDS: ReadonlySet<string> = new Set(["enforced", "custom"]);
+const ValidKinds: ReadonlySet<string> = new Set(["enforced", "custom"]);
 
 @ApplyOptions<Piece.Options>({ name: "permissions" })
 export class PermissionUtility extends Utility {
@@ -188,7 +188,7 @@ export class PermissionUtility extends Utility {
   }
 
   private assertValidKind(kind: string): asserts kind is PermitKind {
-    if (!VALID_KINDS.has(kind)) {
+    if (!ValidKinds.has(kind)) {
       throw new Error(`Invalid permit kind "${kind}".`);
     }
   }

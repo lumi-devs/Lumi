@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
-import { MODULE_NAME } from "./keys.js";
+import { ModuleName } from "./keys.js";
 import { tempVcRegistry } from "./registry.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleTempVcCleanupFire } from "./lib/cleanup-handler.js";
@@ -28,7 +28,7 @@ export async function getMaxGenerators(guildId: string): Promise<number> {
 }
 
 @DefineModule({
-  name: MODULE_NAME,
+  name: ModuleName,
   displayName: "Temp Voice Channels",
   emoji: "🔊",
   description:

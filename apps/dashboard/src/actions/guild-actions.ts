@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  RPC_ACTIONS,
+  RpcActions,
   type GuildSettingsPayload,
   type GuildSetupRunResult,
   type PermitKind,
@@ -30,7 +30,7 @@ export async function toggleGuildModule(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildModuleToggle, {
+    await rpcCall(RpcActions.guildModuleToggle, {
       guildId,
       actorId: session.userId,
       data: { moduleName, enabled },
@@ -48,12 +48,12 @@ export async function setGuildConfigField(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildConfigSet, {
+    await rpcCall(RpcActions.guildConfigSet, {
       guildId,
       actorId: session.userId,
       data: { moduleName, key, value },
     });
-    revalidatePath(`/guild/${guildId}/modules/${moduleName}`);
+    revalidatePath(`/guild/${guildId}/config/modules/${moduleName}`);
     return { ok: true };
   });
 }
@@ -63,13 +63,13 @@ export async function runGuildSetup(
 ): Promise<ActionResult & { result?: GuildSetupRunResult }> {
   return runAction(async () => {
     const session = await guardedAction(guildId);
-    const result = (await rpcCall(RPC_ACTIONS.guildSetupRun, {
+    const result = (await rpcCall(RpcActions.guildSetupRun, {
       guildId,
       actorId: session.userId,
     })) as GuildSetupRunResult;
     revalidatePath(`/guild/${guildId}`);
-    revalidatePath(`/guild/${guildId}/modules/security`);
-    revalidatePath(`/guild/${guildId}/modules/mod`);
+    revalidatePath(`/guild/${guildId}/config/modules/security`);
+    revalidatePath(`/guild/${guildId}/config/modules/mod`);
     revalidatePath(`/guild/${guildId}/setup`);
     return { ok: true, result };
   });
@@ -81,7 +81,7 @@ export async function setGuildSettings(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildSettingsSet, {
+    await rpcCall(RpcActions.guildSettingsSet, {
       guildId,
       actorId: session.userId,
       data,
@@ -99,7 +99,7 @@ export async function createPermit(
 ): Promise<ActionResult & { permitId?: number }> {
   return runAction(async () => {
     const session = await guardedAction(guildId);
-    const res = (await rpcCall(RPC_ACTIONS.guildPermitsCreate, {
+    const res = (await rpcCall(RpcActions.guildPermitsCreate, {
       guildId,
       actorId: session.userId,
       data: { name, kind, nodes },
@@ -116,7 +116,7 @@ export async function updatePermit(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildPermitsUpdate, {
+    await rpcCall(RpcActions.guildPermitsUpdate, {
       guildId,
       actorId: session.userId,
       data: { permitId, ...data },
@@ -132,7 +132,7 @@ export async function deletePermit(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildPermitsDelete, {
+    await rpcCall(RpcActions.guildPermitsDelete, {
       guildId,
       actorId: session.userId,
       data: { permitId },
@@ -150,7 +150,7 @@ export async function assignPermit(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildPermitsAssign, {
+    await rpcCall(RpcActions.guildPermitsAssign, {
       guildId,
       actorId: session.userId,
       data: { permitId, targetType, targetId },
@@ -168,7 +168,7 @@ export async function unassignPermit(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildPermitsUnassign, {
+    await rpcCall(RpcActions.guildPermitsUnassign, {
       guildId,
       actorId: session.userId,
       data: { permitId, targetType, targetId },

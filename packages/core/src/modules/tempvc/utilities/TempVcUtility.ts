@@ -21,7 +21,7 @@ import {
   TEMPVC_CLEANUP_DELAY_MS,
   getCreateCooldownMs,
 } from "../index.js";
-import { MODULE_NAME, TempVcKeys } from "../keys.js";
+import { ModuleName, TempVcKeys } from "../keys.js";
 import {
   getVcRecord,
   listVcRecords,
@@ -335,7 +335,7 @@ export default class TempVcUtility extends Utility {
   }
 
   public get moduleName() {
-    return MODULE_NAME;
+    return ModuleName;
   }
 
   public async addGenerator(

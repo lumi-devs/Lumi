@@ -5,9 +5,9 @@
  * event. Each listener calls `db.isModuleEnabled` which results in separate
  * Redis round-trips per module. This module consolidates those lookups:
  *
- * - All calls within WINDOW_MS (200ms) for the same guildId share a single
+ * - All calls within WindowMs (200ms) for the same guildId share a single
  *   batched Redis MGET via `db.areModulesEnabled`.
- * - After WINDOW_MS the entry is evicted so the next event gets a fresh result.
+ * - After WindowMs the entry is evicted so the next event gets a fresh result.
  *
  * Usage:
  *   import { checkModulesEnabled } from "#lib/module-check.js";
@@ -17,7 +17,7 @@
 
 import { container } from "@sapphire/framework";
 
-const WINDOW_MS = 200;
+const WindowMs = 200;
 
 interface Entry {
   promise: Promise<Map<string, boolean>>;
@@ -32,7 +32,7 @@ function cacheKey(guildId: string, modules: string[]): string {
 
 /**
  * Returns the enabled state for all `modules` in `guildId`.
- * Concurrent calls within WINDOW_MS are coalesced into a single MGET.
+ * Concurrent calls within WindowMs are coalesced into a single MGET.
  */
 export async function checkModulesEnabled(
   guildId: string,
@@ -42,7 +42,7 @@ export async function checkModulesEnabled(
   const key = cacheKey(guildId, modules);
   const existing = cache.get(key);
 
-  if (existing && now - existing.at < WINDOW_MS) {
+  if (existing && now - existing.at < WindowMs) {
     return existing.promise;
   }
 
@@ -51,7 +51,7 @@ export async function checkModulesEnabled(
 
   setTimeout(() => {
     if (cache.get(key)?.at === now) cache.delete(key);
-  }, WINDOW_MS + 10);
+  }, WindowMs + 10);
 
   return promise;
 }

@@ -186,7 +186,7 @@ interface AccessViewSpec {
   fallbackRolePlaceholder: string;
 }
 
-const ACCESS_VIEWS: Record<AccessViewSpec["key"], AccessViewSpec> = {
+const AccessViews: Record<AccessViewSpec["key"], AccessViewSpec> = {
   trust: {
     key: "trust",
     fallbackTitle: "✅ Trust User or Role",
@@ -290,7 +290,7 @@ export function buildTrustView(
   _record: VcRecord,
   t?: LumiT,
 ): PanelMessage {
-  return buildAccessView(channel, ACCESS_VIEWS.trust, t);
+  return buildAccessView(channel, AccessViews.trust, t);
 }
 
 export function buildUntrustView(
@@ -298,7 +298,7 @@ export function buildUntrustView(
   _record: VcRecord,
   t?: LumiT,
 ): PanelMessage {
-  return buildAccessView(channel, ACCESS_VIEWS.untrust, t);
+  return buildAccessView(channel, AccessViews.untrust, t);
 }
 
 export function buildBlockView(
@@ -306,7 +306,7 @@ export function buildBlockView(
   _record: VcRecord,
   t?: LumiT,
 ): PanelMessage {
-  return buildAccessView(channel, ACCESS_VIEWS.block, t);
+  return buildAccessView(channel, AccessViews.block, t);
 }
 
 export function buildUnblockView(
@@ -314,7 +314,7 @@ export function buildUnblockView(
   _record: VcRecord,
   t?: LumiT,
 ): PanelMessage {
-  return buildAccessView(channel, ACCESS_VIEWS.unblock, t);
+  return buildAccessView(channel, AccessViews.unblock, t);
 }
 
 export function buildTransferView(

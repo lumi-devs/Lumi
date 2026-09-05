@@ -9,8 +9,8 @@ import {
   EPHEMERAL_FLAGS,
 } from "#modules/core/lib/ping-cards.js";
 
-const LIVE_UPDATES_DURATION = 60_000;
-const LIVE_UPDATE_INTERVAL = 10_000;
+const LiveUpdatesDuration = 60_000;
+const LiveUpdateInterval = 10_000;
 /** Per-user live-update interval handles; ensures at most one active interval per user. */
 const activeIntervals = new Map<string, ReturnType<typeof setInterval>>();
 export const pingViewStates = new Map<
@@ -90,7 +90,7 @@ export class PingCommand extends BaseCommand {
 
     const start = Date.now();
     const interval = setInterval(async () => {
-      if (Date.now() - start >= LIVE_UPDATES_DURATION) {
+      if (Date.now() - start >= LiveUpdatesDuration) {
         clearInterval(interval);
         activeIntervals.delete(userId);
         pingViewStates.delete(userId);
@@ -123,7 +123,7 @@ export class PingCommand extends BaseCommand {
         activeIntervals.delete(userId);
         pingViewStates.delete(userId);
       }
-    }, LIVE_UPDATE_INTERVAL).unref();
+    }, LiveUpdateInterval).unref();
 
     activeIntervals.set(userId, interval);
   }

@@ -1,7 +1,7 @@
 // Imported by both the server page and the client table so the two can't drift
 // in how they label or classify the same row.
 
-export const CASE_ACTION_LABELS: Record<string, string> = {
+export const CaseActionLabels: Record<string, string> = {
   ban: "Ban",
   unban: "Unban",
   softban: "Softban",
@@ -18,7 +18,7 @@ export const CASE_ACTION_LABELS: Record<string, string> = {
 
 // Revoking one of these in the dashboard only closes the record; it does not
 // lift the restriction in Discord — see `moderation-cases-table`.
-const RESTRICTING_ACTIONS = new Set([
+const RestrictingActions = new Set([
   "ban",
   "softban",
   "mute",
@@ -27,39 +27,39 @@ const RESTRICTING_ACTIONS = new Set([
 ]);
 
 /** Actions the bot's scheduled lift task can undo in Discord when they expire. */
-const AUTO_LIFTED_ACTIONS = new Set(["ban", "mute", "voice_mute"]);
+const AutoLiftedActions = new Set(["ban", "mute", "voice_mute"]);
 
 export function caseActionLabel(action: string): string {
   return (
-    CASE_ACTION_LABELS[action] ??
+    CaseActionLabels[action] ??
     action.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())
   );
 }
 
 export function isRestrictingAction(action: string): boolean {
-  return RESTRICTING_ACTIONS.has(action);
+  return RestrictingActions.has(action);
 }
 
 export function isAutoLiftedAction(action: string): boolean {
-  return AUTO_LIFTED_ACTIONS.has(action);
+  return AutoLiftedActions.has(action);
 }
 
-export const CASE_ACTION_OPTIONS = Object.entries(CASE_ACTION_LABELS).map(
+export const CaseActionOptions = Object.entries(CaseActionLabels).map(
   ([value, label]) => ({ value, label }),
 );
 
 /** `"0"` is what a GDPR erasure leaves behind in `userId`/`moderatorId`. */
-export const ANONYMIZED_ID = "0";
+export const AnonymizedId = "0";
 
-const SNOWFLAKE = /^\d{15,20}$/;
+const Snowflake = /^\d{15,20}$/;
 
 export function isSnowflake(value: string): boolean {
-  return SNOWFLAKE.test(value);
+  return Snowflake.test(value);
 }
 
 // Formatted in UTC so a Server Component and the client that hydrates it can
 // never disagree about the rendered string.
-const DATE_FORMAT = new Intl.DateTimeFormat("en-GB", {
+const DateFormat = new Intl.DateTimeFormat("en-GB", {
   dateStyle: "medium",
   timeStyle: "short",
   timeZone: "UTC",
@@ -68,7 +68,7 @@ const DATE_FORMAT = new Intl.DateTimeFormat("en-GB", {
 export function formatCaseDate(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "Unknown";
-  return `${DATE_FORMAT.format(date)} UTC`;
+  return `${DateFormat.format(date)} UTC`;
 }
 
 export function formatDuration(seconds: number): string {

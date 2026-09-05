@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion, useMotionValue, useReducedMotion, useSpring } from "motion/react";
 import { DiscordCardPreview } from "@/components/discord-card-preview";
 import { ArchitectureVisualizer } from "@/components/architecture-visualizer";
-import { useStaggerIn, SPRING_SOFT } from "@/lib/animate";
+import { useStaggerIn, SpringSoft } from "@/lib/animate";
 import { version } from "../../package.json";
 import {
   Copy,
@@ -34,8 +34,8 @@ function MagneticCta({
   const ref = useRef<HTMLAnchorElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  const springX = useSpring(x, SPRING_SOFT);
-  const springY = useSpring(y, SPRING_SOFT);
+  const springX = useSpring(x, SpringSoft);
+  const springY = useSpring(y, SpringSoft);
 
   if (reduce) {
     return (

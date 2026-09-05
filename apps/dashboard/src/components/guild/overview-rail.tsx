@@ -11,7 +11,7 @@ import {
   resolveConfigValue,
   type ModuleLabelIndex,
 } from "#/lib/config-labels";
-import { HEALTHY_STATUS, OFFLINE_STATUSES } from "#/components/system/shard-fleet";
+import { HealthyStatus, OfflineStatuses } from "#/components/system/shard-fleet";
 import type {
   ConfigHistoryEntryView,
   DashboardChannelView,
@@ -80,9 +80,9 @@ function ShardHealth({ shards }: { shards: SystemShardsData }) {
           const shard = byId.get(id);
           const tone = !shard
             ? "bad"
-            : shard.status === HEALTHY_STATUS
+            : shard.status === HealthyStatus
               ? "good"
-              : OFFLINE_STATUSES.has(shard.status)
+              : OfflineStatuses.has(shard.status)
                 ? "bad"
                 : "warn";
           return (

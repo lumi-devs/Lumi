@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RPC_ACTIONS, type WarnThresholdAction } from "@lumi/contracts";
+import { RpcActions, type WarnThresholdAction } from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
@@ -22,7 +22,7 @@ export async function revokeCase(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedModerationAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildCasesRevoke, {
+    await rpcCall(RpcActions.guildCasesRevoke, {
       guildId,
       actorId: session.userId,
       data: { caseNumber },
@@ -40,7 +40,7 @@ export async function setWarnThreshold(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedModerationAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildWarnThresholdsSet, {
+    await rpcCall(RpcActions.guildWarnThresholdsSet, {
       guildId,
       actorId: session.userId,
       data: { warnCount, action, duration },
@@ -56,7 +56,7 @@ export async function deleteWarnThreshold(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedModerationAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildWarnThresholdsSet, {
+    await rpcCall(RpcActions.guildWarnThresholdsSet, {
       guildId,
       actorId: session.userId,
       data: { warnCount, action: null },

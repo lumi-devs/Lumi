@@ -4,19 +4,19 @@ import { fieldsFromSchema } from "./config-schema.js";
 import type { ModuleMeta, ModuleOptions } from "./Module.js";
 import { CoreVersion } from "#utilities/misc.js";
 import {
-  KNOWN_SUBSTORES,
+  KnownSubstores,
   type ModuleManifest,
   type TargetUtility,
 } from "@lumi/contracts";
 
-export { KNOWN_SUBSTORES, type ModuleManifest, type TargetUtility };
+export { KnownSubstores, type ModuleManifest, type TargetUtility };
 
 export const MANIFEST_FILE = "manifest.json";
 
 /** Detect which known sub-store directories exist inside a module dir. */
 export async function detectSubStores(dir: string): Promise<string[]> {
   const present: string[] = [];
-  for (const name of KNOWN_SUBSTORES) {
+  for (const name of KnownSubstores) {
     const stat = await fs.stat(path.join(dir, name)).catch(() => null);
     if (stat?.isDirectory()) present.push(name);
   }

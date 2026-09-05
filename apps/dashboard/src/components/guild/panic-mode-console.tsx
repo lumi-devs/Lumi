@@ -16,7 +16,7 @@ import { formatCaseDate } from "#/lib/moderation-cases";
 import { useServerAction } from "#/lib/use-server-action";
 
 /** `SecurityUtility.enterPanic` stops after this many channels. */
-const CHANNEL_CAP = 40;
+const ChannelCap = 40;
 
 export function PanicModeConsole({
   guildId,
@@ -35,7 +35,7 @@ export function PanicModeConsole({
   const reduceMotion = useReducedMotion();
 
   const scoped = picked.length > 0;
-  const targetCount = Math.min(scoped ? picked.length : channels.length, CHANNEL_CAP);
+  const targetCount = Math.min(scoped ? picked.length : channels.length, ChannelCap);
 
   function toggle(channelId: string) {
     setPicked((prev) =>
@@ -275,7 +275,7 @@ function ChannelScope({
         </p>
         <p className="text-[14px] text-fg-muted">
           {picked.length === 0
-            ? `Every text channel (${Math.min(channels.length, CHANNEL_CAP)} of ${channels.length})`
+            ? `Every text channel (${Math.min(channels.length, ChannelCap)} of ${channels.length})`
             : `${picked.length} selected`}
           {picked.length > 0 ? (
             <button
@@ -304,9 +304,9 @@ function ChannelScope({
           ))}
         </ul>
       </div>
-      {channels.length > CHANNEL_CAP && picked.length === 0 ? (
+      {channels.length > ChannelCap && picked.length === 0 ? (
         <p className="border-t border-border px-3 py-2 text-[13px] leading-4 text-fg-subtle">
-          Lumi locks at most {CHANNEL_CAP} channels in one run. Pick the
+          Lumi locks at most {ChannelCap} channels in one run. Pick the
           channels that matter if this server has more.
         </p>
       ) : null}

@@ -1,7 +1,7 @@
 import type { Guild } from "discord.js";
 import { AuditLogEvent } from "discord.js";
 
-const RECENT_AUDIT_ENTRY_MS = 10_000;
+const RecentAuditEntryMs = 10_000;
 
 /**
  * Fetches the most recent audit log entry for a given event type and validates:
@@ -21,7 +21,7 @@ export async function resolveAuditLogExecutor(
 		.fetchAuditLogs({ type: eventType, limit: 1 })
 		.catch(() => null);
 	const entry = logs?.entries.first();
-	if (!entry || Date.now() - entry.createdTimestamp > RECENT_AUDIT_ENTRY_MS) {
+	if (!entry || Date.now() - entry.createdTimestamp > RecentAuditEntryMs) {
 		return null;
 	}
 	if (targetId !== undefined && entry.targetId !== targetId) {

@@ -25,8 +25,8 @@ import type { RpcRequest } from "@lumi/contracts";
  * `dispatchRpc`.
  */
 
-const AUTH_HEADER = "authorization";
-const BEARER_PREFIX = "Bearer ";
+const AuthHeader = "authorization";
+const BearerPrefix = "Bearer ";
 
 function digest(value: string): Buffer {
   return createHash("sha256").update(value, "utf8").digest();
@@ -42,9 +42,9 @@ export function tokenMatches(expected: string, presented: string | null): boolea
 }
 
 export function presentedToken(req: Request): string | null {
-  const header = req.headers.get(AUTH_HEADER);
-  if (!header?.startsWith(BEARER_PREFIX)) return null;
-  const value = header.slice(BEARER_PREFIX.length).trim();
+  const header = req.headers.get(AuthHeader);
+  if (!header?.startsWith(BearerPrefix)) return null;
+  const value = header.slice(BearerPrefix.length).trim();
   return value.length > 0 ? value : null;
 }
 

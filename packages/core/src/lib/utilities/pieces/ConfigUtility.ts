@@ -217,7 +217,7 @@ export class ConfigUtility extends Utility {
     ]);
     if (overrides.length === 0) return base;
 
-    const PRIORITY: Record<string, number> = {
+    const Priority: Record<string, number> = {
       user: 0,
       channel: 1,
       role: 2,
@@ -227,7 +227,7 @@ export class ConfigUtility extends Utility {
     let bestValue: unknown = base;
 
     for (const o of overrides) {
-      const p = PRIORITY[o.modelType];
+      const p = Priority[o.modelType];
       if (p === undefined || p >= bestPriority) continue;
 
       const matches =

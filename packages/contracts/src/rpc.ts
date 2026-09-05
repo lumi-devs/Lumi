@@ -178,7 +178,7 @@ export interface CaseRevokePayload {
   caseNumber: number;
 }
 
-export const WARN_THRESHOLD_ACTIONS = [
+export const WarnThresholdActions = [
   "mute",
   "kick",
   "ban",
@@ -186,24 +186,24 @@ export const WARN_THRESHOLD_ACTIONS = [
   "vcmute",
 ] as const;
 
-export type WarnThresholdAction = (typeof WARN_THRESHOLD_ACTIONS)[number];
+export type WarnThresholdAction = (typeof WarnThresholdActions)[number];
 
 /** Actions applied for a fixed window - a rule without a parseable duration is unusable. */
-export const WARN_THRESHOLD_TIMED_ACTIONS = ["mute", "vcmute"] as const;
+export const WarnThresholdTimedActions = ["mute", "vcmute"] as const;
 
 export type WarnThresholdTimedAction =
-  (typeof WARN_THRESHOLD_TIMED_ACTIONS)[number];
+  (typeof WarnThresholdTimedActions)[number];
 
 export function isWarnThresholdAction(
   value: string,
 ): value is WarnThresholdAction {
-  return (WARN_THRESHOLD_ACTIONS as readonly string[]).includes(value);
+  return (WarnThresholdActions as readonly string[]).includes(value);
 }
 
 export function warnThresholdNeedsDuration(
   action: WarnThresholdAction,
 ): action is WarnThresholdTimedAction {
-  return (WARN_THRESHOLD_TIMED_ACTIONS as readonly string[]).includes(action);
+  return (WarnThresholdTimedActions as readonly string[]).includes(action);
 }
 
 /** `action: null` deletes the rule for `warnCount`; any other value upserts it. */
@@ -330,18 +330,18 @@ export interface ModNoteRemovePayload {
 }
 
 /** Reviewer-facing decisions - `pending` is the initial state, never set by a review call. */
-export const APPEAL_REVIEW_STATUSES = [
+export const AppealReviewStatuses = [
   "approved",
   "denied",
   "denied_blacklisted",
   "dismissed",
 ] as const;
 
-export type AppealReviewStatus = (typeof APPEAL_REVIEW_STATUSES)[number];
+export type AppealReviewStatus = (typeof AppealReviewStatuses)[number];
 
-export const APPEAL_STATUSES = ["pending", ...APPEAL_REVIEW_STATUSES] as const;
+export const AppealStatuses = ["pending", ...AppealReviewStatuses] as const;
 
-export type AppealStatus = (typeof APPEAL_STATUSES)[number];
+export type AppealStatus = (typeof AppealStatuses)[number];
 
 /** Public, unauthenticated - `token` is the signed link param, verified entirely server-side. */
 export interface AppealVerifyPayload {
@@ -509,7 +509,7 @@ export interface WhoAmIResponse {
 
 export type RpcActionName = keyof RpcRequestPayloads;
 
-export const RPC_ACTIONS = {
+export const RpcActions = {
   gdprDelete: "global.gdpr.delete",
   repoAdd: "downloader.repo.add",
   repoList: "downloader.repo.list",

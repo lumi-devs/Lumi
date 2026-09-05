@@ -12,12 +12,12 @@ import "prismjs/components/prism-markdown.js";
 import "prismjs/components/prism-sql.js";
 import "prismjs/components/prism-docker.js";
 
-const DOCS_DIR = path.join(process.cwd(), "src/content/docs");
-const DOCS_DIR_RESOLVED = path.resolve(DOCS_DIR);
+const DocsDir = path.join(process.cwd(), "src/content/docs");
+const DocsDirResolved = path.resolve(DocsDir);
 
 const isContainedInDocsDir = (candidatePath: string): boolean => {
   const resolved = path.resolve(candidatePath);
-  return resolved.startsWith(DOCS_DIR_RESOLVED + path.sep);
+  return resolved.startsWith(DocsDirResolved + path.sep);
 };
 
 export interface DocMeta {
@@ -59,10 +59,10 @@ const getSlugsFromDir = (dir: string, baseDir: string): string[] => {
 };
 
 export const getAllDocs = (): DocMeta[] => {
-  const slugs = getSlugsFromDir(DOCS_DIR, DOCS_DIR);
+  const slugs = getSlugsFromDir(DocsDir, DocsDir);
   return slugs.map((slug) => {
-    const fullPath = path.join(DOCS_DIR, `${slug}.md`);
-    const fullPathX = path.join(DOCS_DIR, `${slug}.mdx`);
+    const fullPath = path.join(DocsDir, `${slug}.md`);
+    const fullPathX = path.join(DocsDir, `${slug}.mdx`);
     let fileContents = "";
     if (isContainedInDocsDir(fullPath) && fs.existsSync(fullPath)) {
       fileContents = fs.readFileSync(fullPath, "utf8");
@@ -83,8 +83,8 @@ export const getAllDocs = (): DocMeta[] => {
 
 export const getDocBySlug = async (slugArray: string[]): Promise<DocContent | null> => {
   const slug = slugArray.join("/");
-  const fullPath = path.join(DOCS_DIR, `${slug}.md`);
-  const fullPathX = path.join(DOCS_DIR, `${slug}.mdx`);
+  const fullPath = path.join(DocsDir, `${slug}.md`);
+  const fullPathX = path.join(DocsDir, `${slug}.mdx`);
   let fileContents = "";
   if (isContainedInDocsDir(fullPath) && fs.existsSync(fullPath)) {
     fileContents = fs.readFileSync(fullPath, "utf8");

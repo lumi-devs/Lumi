@@ -8,7 +8,7 @@ declare module "@sapphire/framework" {
   }
 }
 
-const DENIED_MESSAGE = "You need at least **Moderator** level to use this.";
+const DeniedMessage = "You need at least **Moderator** level to use this.";
 
 export class ModeratorPrecondition extends PermitPrecondition {
   public override messageRun(message: Message) {
@@ -20,7 +20,7 @@ export class ModeratorPrecondition extends PermitPrecondition {
       message.channelId,
       "mod.*",
       message.guild.ownerId,
-      DENIED_MESSAGE,
+      DeniedMessage,
     );
   }
 
@@ -33,7 +33,7 @@ export class ModeratorPrecondition extends PermitPrecondition {
       interaction.channelId,
       "mod.*",
       interaction.guild.ownerId,
-      DENIED_MESSAGE,
+      DeniedMessage,
     );
   }
 }

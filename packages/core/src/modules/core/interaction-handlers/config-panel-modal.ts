@@ -14,7 +14,7 @@ import {
 } from "@sapphire/framework";
 import type { ModalSubmitInteraction } from "discord.js";
 
-const OVERRIDE_TYPES = new Set(["channel", "role", "user", "category"]);
+const OverrideTypes = new Set(["channel", "role", "user", "category"]);
 
 @ApplyOptions<InteractionHandler.Options>({
   name: "config-panel-modal",
@@ -153,7 +153,7 @@ export class ConfigPanelModalHandler extends InteractionHandler {
       const field = record.meta.configFields?.find((f) => f.key === key);
       if (!field)
         return this.#err(interaction, `\`${key}\` is not a valid config key.`);
-      if (!OVERRIDE_TYPES.has(type))
+      if (!OverrideTypes.has(type))
         return this.#err(
           interaction,
           "Target type must be one of: channel, role, user, category.",

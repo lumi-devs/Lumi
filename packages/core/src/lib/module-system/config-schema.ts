@@ -10,10 +10,10 @@ export type ModuleConfigSchema = BaseValidator<Record<string, unknown>>;
 type FieldMeta = Omit<ConfigField, "key">;
 
 /** UI/coercion metadata keyed by the exact Shapeshift schema instance it decorates. */
-const REGISTRY = new WeakMap<BaseValidator<any>, FieldMeta>();
+const Registry = new WeakMap<BaseValidator<any>, FieldMeta>();
 
 function tag<T extends BaseValidator<any>>(schema: T, meta: FieldMeta): T {
-  REGISTRY.set(schema, meta);
+  Registry.set(schema, meta);
   return schema;
 }
 
@@ -116,7 +116,7 @@ export function fieldsFromSchema(schema: ModuleConfigSchema): ConfigField[] {
   const { shape } = schema as unknown as ObjectLike;
   if (shape) {
     for (const [key, field] of Object.entries(shape)) {
-      const meta = REGISTRY.get(field);
+      const meta = Registry.get(field);
       if (!meta) continue;
       fields.push({ key, ...meta });
     }

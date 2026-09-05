@@ -9,7 +9,7 @@ import {
 
 type RunMethod = "chatInputRun" | "messageRun" | "contextMenuRun";
 
-const TYPE_LABEL: Record<RunMethod, string> = {
+const TypeLabel: Record<RunMethod, string> = {
   chatInputRun: "chat",
   messageRun: "message",
   contextMenuRun: "context",
@@ -87,7 +87,7 @@ export function instrumentCommandPiece(piece: { name: string }): void {
       configurable: true,
       writable: true,
       value(this: unknown, source: unknown, ...rest: unknown[]) {
-        return instrumentedRun(piece.name, TYPE_LABEL[method], source, () =>
+        return instrumentedRun(piece.name, TypeLabel[method], source, () =>
           fn.call(this, source, ...rest),
         );
       },

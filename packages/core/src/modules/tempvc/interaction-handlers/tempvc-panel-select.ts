@@ -31,7 +31,7 @@ import {
   buildUntrustView,
 } from "#modules/tempvc/ui/panel.js";
 
-const SELECT_ACTIONS = new Set([
+const SelectActions = new Set([
   "select_kick",
   "select_trust",
   "select_trust_role",
@@ -51,7 +51,7 @@ const SELECT_ACTIONS = new Set([
   "panelmenu",
 ]);
 
-const ACCESS_VERBS: Record<string, string> = {
+const AccessVerbs: Record<string, string> = {
   select_kick: "Kicked",
   ksel: "Kicked",
   select_trust: "Trusted",
@@ -80,7 +80,7 @@ export class TempVcPanelSelectHandler extends BaseInteractionHandler {
   public override parse(interaction: AnySelectMenuInteraction) {
     if (!interaction.customId.startsWith(`${TVC}:`)) return this.none();
     const [, action, channelId] = interaction.customId.split(":");
-    if (!action || !channelId || !SELECT_ACTIONS.has(action))
+    if (!action || !channelId || !SelectActions.has(action))
       return this.none();
     return this.some({ action, channelId });
   }
@@ -263,7 +263,7 @@ export class TempVcPanelSelectHandler extends BaseInteractionHandler {
       }
     }
     if (done.length === 0) return t("tempvc:noChangesApplied");
-    const verb = ACCESS_VERBS[action] ?? "Processed";
+    const verb = AccessVerbs[action] ?? "Processed";
     return `${verb}: ${done.join(", ")}`;
   }
 

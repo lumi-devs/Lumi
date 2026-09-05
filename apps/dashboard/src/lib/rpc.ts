@@ -10,7 +10,7 @@ import {
 import { injectTraceContext } from "@lumi/observability";
 import { env } from "./env";
 
-const DEFAULT_TIMEOUT_MS = 8000;
+const DefaultTimeoutMs = 8000;
 
 interface CallOptions<A extends RpcActionName> {
   guildId?: string;
@@ -56,7 +56,7 @@ export class RpcClient {
     const controller = new AbortController();
     const timer = setTimeout(
       () => controller.abort(),
-      options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+      options.timeoutMs ?? DefaultTimeoutMs,
     );
 
     let res: Response;

@@ -19,10 +19,11 @@ export function filterAutocompleteChoices(
 export async function respondWithChoices(
   interaction: AutocompleteInteraction,
   values: string[],
+  label?: (value: string) => string,
 ): Promise<void> {
   await interaction.respond(
     values.map((value) => ({
-      name: value.slice(0, ChoiceTextMaxLength),
+      name: (label ? label(value) : value).slice(0, ChoiceTextMaxLength),
       value: value.slice(0, ChoiceTextMaxLength),
     })),
   );

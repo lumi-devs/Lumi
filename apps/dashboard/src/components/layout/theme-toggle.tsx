@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import { useTheme, type Theme } from "#/components/theme-provider";
 import { cn } from "#/lib/utils";
 
-const OPTIONS: { value: Theme; label: string; icon: typeof Sun }[] = [
+const ThemeOptions: { value: Theme; label: string; icon: typeof Sun }[] = [
   { value: "system", label: "System theme", icon: Monitor },
   { value: "light", label: "Light theme", icon: Sun },
   { value: "dark", label: "Dark theme", icon: Moon },
@@ -20,7 +20,7 @@ export function ThemeToggle() {
       aria-label="Colour theme"
       className="flex items-center gap-px rounded-full border border-border bg-bg-subtle p-px"
     >
-      {OPTIONS.map(({ value, label, icon: Icon }) => {
+      {ThemeOptions.map(({ value, label, icon: Icon }) => {
         const selected = ready && theme === value;
         return (
           <button

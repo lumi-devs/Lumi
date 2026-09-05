@@ -3,7 +3,7 @@ import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 
 /** Sweeps touch the Discord API per guild, so the fan-out stays capped. */
-const SWEEP_CONCURRENCY = 10;
+const SweepConcurrency = 10;
 
 /**
  * Broadcast fire handler for the periodic verification sweep. Each worker
@@ -14,7 +14,7 @@ export async function handleVerifySweepFire(): Promise<void> {
   const security = tryGetUtility("security");
   if (!security) return;
   const guilds = [...container.client.guilds.cache.values()];
-  await mapWithConcurrency(guilds, SWEEP_CONCURRENCY, async (guild) => {
+  await mapWithConcurrency(guilds, SweepConcurrency, async (guild) => {
     const enabled = await container.db.modules
       .isModuleEnabled(guild.id, "security")
       .catch(() => false);

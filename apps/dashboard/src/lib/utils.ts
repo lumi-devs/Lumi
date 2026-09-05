@@ -20,12 +20,12 @@ export function cn(...inputs: ClassValue[]): string {
  * `resolver.ts` (`/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/`).
  */
 export function deriveRepoNameFromUrl(url: string): string {
-  const FALLBACK = "repo";
-  if (!url) return FALLBACK;
+  const Fallback = "repo";
+  if (!url) return Fallback;
 
   let val = url.trim().replace(/^<|>$/g, "");
   val = (val.split(/[?#]/)[0] ?? "").replace(/\/+$/, "");
-  if (!val) return FALLBACK;
+  if (!val) return Fallback;
 
   const segments = val.split(/[/:]+/).filter(Boolean);
   let name = segments[segments.length - 1] ?? "";
@@ -34,5 +34,5 @@ export function deriveRepoNameFromUrl(url: string): string {
   name = name.replace(/[^a-zA-Z0-9_-]/g, "-");
   name = name.replace(/^-+/, "").replace(/-+$/, "");
 
-  return name.length > 0 ? name : FALLBACK;
+  return name.length > 0 ? name : Fallback;
 }

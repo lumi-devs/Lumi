@@ -10,7 +10,7 @@ import "server-only";
 // Components (e.g. GuildPicker) can use the CDN URL helpers without pulling
 // in this file's `server-only` marker.
 
-const DISCORD_API = "https://discord.com/api/v10";
+const DiscordApi = "https://discord.com/api/v10";
 
 export type { OAuthGuild } from "./discord-format";
 export { canManage, userAvatarUrl, guildIconUrl } from "./discord-format";
@@ -42,7 +42,7 @@ export class DiscordApiError extends Error {
 export async function fetchUserGuilds(
   accessToken: string,
 ): Promise<OAuthGuild[]> {
-  const res = await fetch(`${DISCORD_API}/users/@me/guilds`, {
+  const res = await fetch(`${DiscordApi}/users/@me/guilds`, {
     headers: { Authorization: `Bearer ${accessToken}` },
     // Guild membership changes frequently enough that caching would show
     // stale "you can manage this server" state after a permission change.

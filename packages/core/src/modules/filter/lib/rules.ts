@@ -50,10 +50,10 @@ export const DEFAULT_WARN_MESSAGE =
 
 export { MAX_REGEX_LENGTH };
 
-const INVITE_RE =
+const InviteRe =
   /(?:discord\.(?:gg|com\/invite)|discordapp\.com\/invite)\/([\w-]+)/i;
 
-const URL_RE = /https?:\/\/([^\s/<>"']+)/gi;
+const UrlRe = /https?:\/\/([^\s/<>"']+)/gi;
 
 /**
  * Screen user-supplied regex rules: length-capped and syntax-checked, with
@@ -81,7 +81,7 @@ export function screenRegexRules(
 }
 
 /** Soft hyphen, the zero-width/bidi block, word joiner, invisible operators, BOM. */
-const INVISIBLE_RE = /[\u00AD\u200B-\u200F\u2060-\u2064\uFEFF]/gu;
+const InvisibleRe = /[\u00AD\u200B-\u200F\u2060-\u2064\uFEFF]/gu;
 
 /**
  * Fold a string to its bare matchable form. Must be applied to both configured
@@ -99,7 +99,7 @@ const INVISIBLE_RE = /[\u00AD\u200B-\u200F\u2060-\u2064\uFEFF]/gu;
 export function normalizeForMatch(input: string): string {
   return input
     .normalize("NFKD")
-    .replace(INVISIBLE_RE, "")
+    .replace(InvisibleRe, "")
     .replace(/\p{M}/gu, "")
     .toLowerCase();
 }
@@ -125,7 +125,7 @@ export function findBlockedInvite(
   content: string,
   allowlist: string[],
 ): string | null {
-  const match = INVITE_RE.exec(content);
+  const match = InviteRe.exec(content);
   if (!match?.[1]) return null;
   const code = match[1];
   return allowlist.some((a) => a.toLowerCase() === code.toLowerCase())
@@ -138,7 +138,7 @@ export function findBlockedLink(
   content: string,
   allowlist: string[],
 ): string | null {
-  for (const match of content.matchAll(URL_RE)) {
+  for (const match of content.matchAll(UrlRe)) {
     const host = match[1]?.split(":")[0]?.toLowerCase();
     if (!host) continue;
     const allowed = allowlist.some((domain) => {

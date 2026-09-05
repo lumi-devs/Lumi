@@ -4,17 +4,17 @@
 // server component, so this isn't just a client-bundle-size guard - the
 // import breaks the build outright.
 
-const TEXT = 0;
-const VOICE = 2;
-const ANNOUNCEMENT = 5;
-const STAGE = 13;
+const ChannelTypeText = 0;
+const ChannelTypeVoice = 2;
+const ChannelTypeAnnouncement = 5;
+const ChannelTypeStage = 13;
 
 export function isTextChannel(type: number): boolean {
-  return type === TEXT || type === ANNOUNCEMENT;
+  return type === ChannelTypeText || type === ChannelTypeAnnouncement;
 }
 
 export function isVoiceChannel(type: number): boolean {
-  return type === VOICE || type === STAGE;
+  return type === ChannelTypeVoice || type === ChannelTypeStage;
 }
 
 export function isCommandChannel(type: number): boolean {

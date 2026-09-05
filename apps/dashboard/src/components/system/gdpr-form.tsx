@@ -16,7 +16,7 @@ import { Checkbox } from "#/components/ui/switch";
 import { Button } from "#/components/ui/button";
 import { Alert } from "#/components/ui/alert";
 import { useServerAction } from "#/lib/use-server-action";
-import { SPRING_SNAPPY } from "#/lib/animate";
+import { SpringSnappy } from "#/lib/animate";
 
 export function GdprForm() {
   const [userId, setUserId] = useState("");
@@ -85,7 +85,7 @@ export function GdprForm() {
               initial={reduce ? false : { opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.96 }}
-              transition={SPRING_SNAPPY}
+              transition={SpringSnappy}
             >
               {failed ? (
                 <Alert variant="danger">{result}</Alert>

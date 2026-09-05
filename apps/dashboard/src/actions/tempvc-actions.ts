@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
@@ -23,7 +23,7 @@ export async function setTempVcGenerator(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedTempVcAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildTempVcGeneratorSet, {
+    await rpcCall(RpcActions.guildTempVcGeneratorSet, {
       guildId,
       actorId: session.userId,
       data: { channelId, name, limit },
@@ -39,7 +39,7 @@ export async function deleteTempVcGenerator(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedTempVcAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildTempVcGeneratorSet, {
+    await rpcCall(RpcActions.guildTempVcGeneratorSet, {
       guildId,
       actorId: session.userId,
       data: { channelId, name: null },

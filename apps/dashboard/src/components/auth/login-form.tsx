@@ -11,7 +11,7 @@ import {
 } from "motion/react";
 import { Button } from "#/components/ui/button";
 import { ActionError } from "#/components/action-error";
-import { SPRING_SNAPPY, SPRING_SOFT } from "#/lib/animate";
+import { SpringSnappy, SpringSoft } from "#/lib/animate";
 
 export interface LoginActionState {
   error: string | null;
@@ -28,8 +28,8 @@ export function LoginForm({
   const reduce = useReducedMotion();
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  const springX = useSpring(x, SPRING_SOFT);
-  const springY = useSpring(y, SPRING_SOFT);
+  const springX = useSpring(x, SpringSoft);
+  const springY = useSpring(y, SpringSoft);
 
   function onMouseMove(e: React.MouseEvent<HTMLButtonElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -82,7 +82,7 @@ export function LoginForm({
             initial={reduce ? false : { opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={reduce ? undefined : { opacity: 0, scale: 0.95 }}
-            transition={SPRING_SNAPPY}
+            transition={SpringSnappy}
           >
             <ActionError error={state.error} className="mt-3" />
           </motion.div>

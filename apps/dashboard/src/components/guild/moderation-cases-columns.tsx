@@ -4,14 +4,14 @@ import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import type { ModerationCaseView } from "#/lib/dashboard-data";
 import {
-  ANONYMIZED_ID,
+  AnonymizedId,
   caseActionLabel,
   formatCaseDate,
   formatDuration,
 } from "#/lib/moderation-cases";
 
 function UserCell({ id, name }: { id: string; name?: string }) {
-  if (id === ANONYMIZED_ID) {
+  if (id === AnonymizedId) {
     return <span className="text-fg-subtle">Erased on request</span>;
   }
   return (

@@ -2,13 +2,13 @@ import { Listener, Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Status } from "discord.js";
 import {
-  DEFAULT_CLUSTER_NAME,
+  DefaultClusterName,
   ShardTelemetryPublisher,
   type ShardTelemetrySample,
 } from "@lumi/sharding";
 import { getClusterName, getConsumerId } from "#lib/env.js";
 
-const PUBLISH_MS = 10_000;
+const PublishMs = 10_000;
 
 @ApplyOptions<Listener.Options>({ event: Events.ClientReady })
 export class ShardTelemetryListener extends Listener<typeof Events.ClientReady> {
@@ -35,10 +35,10 @@ export class ShardTelemetryListener extends Listener<typeof Events.ClientReady> 
 
     this.#publisher = new ShardTelemetryPublisher({
       redis,
-      clusterName: getClusterName() ?? DEFAULT_CLUSTER_NAME,
+      clusterName: getClusterName() ?? DefaultClusterName,
       replicaId: getConsumerId(),
       sample,
-      intervalMs: PUBLISH_MS,
+      intervalMs: PublishMs,
       log: (level, msg, meta) => logger[level](`[ShardTelemetry] ${msg}`, meta),
     });
 

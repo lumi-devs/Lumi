@@ -1,6 +1,6 @@
 import type { User } from "discord.js";
 
-const SUSPICIOUS_ACCOUNT_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const SuspiciousAccountAgeMs = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Coarse "throwaway account" heuristic shared by verification targeting and
@@ -11,5 +11,5 @@ const SUSPICIOUS_ACCOUNT_AGE_MS = 7 * 24 * 60 * 60 * 1000;
  */
 export function isSuspiciousAccount(user: User): boolean {
   const ageMs = Date.now() - user.createdTimestamp;
-  return ageMs < SUSPICIOUS_ACCOUNT_AGE_MS || user.avatar === null;
+  return ageMs < SuspiciousAccountAgeMs || user.avatar === null;
 }

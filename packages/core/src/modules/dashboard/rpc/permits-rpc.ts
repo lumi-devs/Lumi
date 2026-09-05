@@ -1,5 +1,5 @@
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { getUtility } from "#lib/module-system/Utility.js";
 import {
   PermitAssignSchema,
@@ -13,13 +13,13 @@ import {
 } from "../lib/helpers.js";
 
 export function registerPermitsRpcHandlers(): void {
-  registerRpcHandler(RPC_ACTIONS.guildPermitsList, async (req) => {
+  registerRpcHandler(RpcActions.guildPermitsList, async (req) => {
     const { guildId } = await verifyGuildAccess(req);
     const permits = await getUtility("permissions").listPermits(guildId);
     return { permits };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildPermitsCreate, async (req) => {
+  registerRpcHandler(RpcActions.guildPermitsCreate, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { name, kind, nodes } = parsePayload(PermitCreateSchema, req.data);
@@ -32,7 +32,7 @@ export function registerPermitsRpcHandlers(): void {
     return { success: true, permit };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildPermitsUpdate, async (req) => {
+  registerRpcHandler(RpcActions.guildPermitsUpdate, async (req) => {
     const { guildId } = await verifyGuildAccess(req);
     const { permitId, name, nodes } = parsePayload(
       PermitUpdateSchema,
@@ -47,7 +47,7 @@ export function registerPermitsRpcHandlers(): void {
     return { success: true, permit };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildPermitsDelete, async (req) => {
+  registerRpcHandler(RpcActions.guildPermitsDelete, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { permitId } = parsePayload(PermitDeleteSchema, req.data);
@@ -55,7 +55,7 @@ export function registerPermitsRpcHandlers(): void {
     return { success: true };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildPermitsAssign, async (req) => {
+  registerRpcHandler(RpcActions.guildPermitsAssign, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { permitId, targetType, targetId } = parsePayload(
@@ -71,7 +71,7 @@ export function registerPermitsRpcHandlers(): void {
     return { success: true };
   });
 
-  registerRpcHandler(RPC_ACTIONS.guildPermitsUnassign, async (req) => {
+  registerRpcHandler(RpcActions.guildPermitsUnassign, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
     const { permitId, targetType, targetId } = parsePayload(
@@ -89,10 +89,10 @@ export function registerPermitsRpcHandlers(): void {
 }
 
 export function unregisterPermitsRpcHandlers(): void {
-  rpcHandlers.delete(RPC_ACTIONS.guildPermitsList);
-  rpcHandlers.delete(RPC_ACTIONS.guildPermitsCreate);
-  rpcHandlers.delete(RPC_ACTIONS.guildPermitsUpdate);
-  rpcHandlers.delete(RPC_ACTIONS.guildPermitsDelete);
-  rpcHandlers.delete(RPC_ACTIONS.guildPermitsAssign);
-  rpcHandlers.delete(RPC_ACTIONS.guildPermitsUnassign);
+  rpcHandlers.delete(RpcActions.guildPermitsList);
+  rpcHandlers.delete(RpcActions.guildPermitsCreate);
+  rpcHandlers.delete(RpcActions.guildPermitsUpdate);
+  rpcHandlers.delete(RpcActions.guildPermitsDelete);
+  rpcHandlers.delete(RpcActions.guildPermitsAssign);
+  rpcHandlers.delete(RpcActions.guildPermitsUnassign);
 }

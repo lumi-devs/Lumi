@@ -107,7 +107,7 @@ export interface PingData {
 
 export const SESSION_START = Date.now();
 export let sessionCommandCount = 0;
-const PING_HISTORY: number[] = [];
+const PingHistory: number[] = [];
 
 let lastSampleTime = Date.now();
 let lastCmdCount = 0;
@@ -121,8 +121,8 @@ let cachedTxRate = 0;
 export function recordInvocation(wsPing: number) {
   sessionCommandCount++;
   if (wsPing > 0) {
-    PING_HISTORY.push(wsPing);
-    if (PING_HISTORY.length > 20) PING_HISTORY.shift();
+    PingHistory.push(wsPing);
+    if (PingHistory.length > 20) PingHistory.shift();
   }
 
   const now = Date.now();
@@ -139,11 +139,11 @@ export function recordInvocation(wsPing: number) {
 }
 
 function computeJitter() {
-  if (PING_HISTORY.length < 2) return 0;
-  const mean = PING_HISTORY.reduce((a, b) => a + b, 0) / PING_HISTORY.length;
+  if (PingHistory.length < 2) return 0;
+  const mean = PingHistory.reduce((a, b) => a + b, 0) / PingHistory.length;
   const variance =
-    PING_HISTORY.reduce((a, b) => a + Math.pow(b - mean, 2), 0) /
-    PING_HISTORY.length;
+    PingHistory.reduce((a, b) => a + Math.pow(b - mean, 2), 0) /
+    PingHistory.length;
   return Math.sqrt(variance);
 }
 
@@ -210,17 +210,17 @@ async function probeRedisWrite(redis: RedisClient) {
   return sw.stop().duration;
 }
 
-const STAT_TTL_MS = 5_000;
+const StatTtlMs = 5_000;
 
 interface TtlCache<T> {
   value: T | null;
   at: number;
 }
 
-/** Memoize an expensive stat fetch for STAT_TTL_MS, caching the in-flight promise. */
+/** Memoize an expensive stat fetch for StatTtlMs, caching the in-flight promise. */
 function ttlCached<T>(cache: TtlCache<T>, fn: () => T): T {
   const now = Date.now();
-  if (!cache.value || now - cache.at > STAT_TTL_MS) {
+  if (!cache.value || now - cache.at > StatTtlMs) {
     cache.at = now;
     cache.value = fn();
   }
@@ -374,14 +374,14 @@ function findRepoRoot(startDir: string): string {
   }
 }
 
-const REPO_ROOT = findRepoRoot(path.dirname(fileURLToPath(import.meta.url)));
+const RepoRoot = findRepoRoot(path.dirname(fileURLToPath(import.meta.url)));
 
 let cachedDepCount: number | null = null;
 let cachedCodeLines: number | null = null;
 
 async function countDeps() {
   if (cachedDepCount !== null) return cachedDepCount;
-  const nmPath = path.join(REPO_ROOT, "node_modules");
+  const nmPath = path.join(RepoRoot, "node_modules");
   const dirs = await fs.readdir(nmPath).catch(() => []);
   cachedDepCount = dirs.filter((d) => !d.startsWith(".")).length;
   return cachedDepCount;
@@ -389,7 +389,7 @@ async function countDeps() {
 
 async function countCodeLines() {
   if (cachedCodeLines !== null) return cachedCodeLines;
-  const srcPath = path.join(REPO_ROOT, "packages", "core", "src");
+  const srcPath = path.join(RepoRoot, "packages", "core", "src");
   let total = 0;
   const walk = async (dir: string): Promise<void> => {
     const entries = await fs
@@ -432,10 +432,10 @@ let lastCollect: {
   at: number;
   data: Omit<PingData, "roundTrip">;
 } | null = null;
-const COLLECT_TTL_MS = 5_000;
+const CollectTtlMs = 5_000;
 
 export async function collectPingData(): Promise<Omit<PingData, "roundTrip">> {
-  if (lastCollect && Date.now() - lastCollect.at < COLLECT_TTL_MS) {
+  if (lastCollect && Date.now() - lastCollect.at < CollectTtlMs) {
     return lastCollect.data;
   }
   const data = await collectPingDataFresh();

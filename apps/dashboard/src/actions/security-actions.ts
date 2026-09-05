@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
@@ -22,7 +22,7 @@ export async function setPanicMode(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSecurityAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildPanicSet, {
+    await rpcCall(RpcActions.guildPanicSet, {
       guildId,
       actorId: session.userId,
       data: { active, channelIds },
@@ -41,7 +41,7 @@ export async function setVerificationPanel(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSecurityAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildVerificationPanelSet, {
+    await rpcCall(RpcActions.guildVerificationPanelSet, {
       guildId,
       actorId: session.userId,
       data: { channelId, messageId },
@@ -56,7 +56,7 @@ export async function deleteVerificationPanel(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSecurityAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildVerificationPanelDelete, {
+    await rpcCall(RpcActions.guildVerificationPanelDelete, {
       guildId,
       actorId: session.userId,
     });
@@ -71,7 +71,7 @@ export async function restoreGuildBackup(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSecurityAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildBackupRestore, {
+    await rpcCall(RpcActions.guildBackupRestore, {
       guildId,
       actorId: session.userId,
       data: { backupId },

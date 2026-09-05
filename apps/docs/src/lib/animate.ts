@@ -50,7 +50,7 @@ export function useStaggerIn<T extends HTMLElement>(
  * hover physics stay consistent with the dashboard's SOFT spring rather than
  * each component picking its own stiffness/damping.
  */
-export const SPRING_SOFT = { type: "spring", stiffness: 260, damping: 26 } as const;
+export const SpringSoft = { type: "spring", stiffness: 260, damping: 26 } as const;
 
 /**
  * Cursor-tracked glow for the `.spotlight` utility (globals.css) — sets the

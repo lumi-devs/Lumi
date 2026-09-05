@@ -1,10 +1,10 @@
 import { container } from "@sapphire/framework";
 import { pipelineBySlot } from "#lib/database/cluster-safe.js";
 
-const TTL_SECONDS = 24 * 60 * 60;
+const TtlSeconds = 24 * 60 * 60;
 
-const OCC_PREFIX = "lumi:tempvc:voice:occ:";
-const occKey = (channelId: string) => `${OCC_PREFIX}${channelId}`;
+const OccPrefix = "lumi:tempvc:voice:occ:";
+const occKey = (channelId: string) => `${OccPrefix}${channelId}`;
 const userKey = (userId: string) => `lumi:tempvc:voice:user:${userId}`;
 
 /**
@@ -14,7 +14,7 @@ const userKey = (userId: string) => `lumi:tempvc:voice:user:${userId}`;
  * and skip the SREM - leaving the user forever "in" a temp VC that then never
  * qualifies as empty for cleanup.
  */
-const TRACK_SCRIPT = `
+const TrackScript = `
 local prev = redis.call('GET', KEYS[1])
 if prev == false then prev = nil end
 local newChannel = ARGV[1]
@@ -38,13 +38,13 @@ export async function trackVoiceState(
   newChannelId: string | null,
 ): Promise<{ prevChannelId: string | null }> {
   const prev = (await container.redis.eval(
-    TRACK_SCRIPT,
+    TrackScript,
     1,
     userKey(userId),
     newChannelId ?? "",
     userId,
-    String(TTL_SECONDS),
-    OCC_PREFIX,
+    String(TtlSeconds),
+    OccPrefix,
   )) as string | null;
   return { prevChannelId: prev ?? null };
 }
@@ -99,9 +99,9 @@ export async function seedVoiceStates(
     (w) => w.key,
     (pipe, w) => {
       if (w.kind === "occupancy") {
-        pipe.sadd(w.key, w.userId).expire(w.key, TTL_SECONDS);
+        pipe.sadd(w.key, w.userId).expire(w.key, TtlSeconds);
       } else {
-        pipe.set(w.key, w.channelId, "EX", TTL_SECONDS);
+        pipe.set(w.key, w.channelId, "EX", TtlSeconds);
       }
     },
   );

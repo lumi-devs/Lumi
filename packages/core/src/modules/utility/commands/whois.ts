@@ -18,7 +18,7 @@ import { BaseCommand, sendReply, fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { makeCard, makeErrorCard, resolveCardColor } from "#lib/utilities/cards.js";
 
-const KEY_PERMISSIONS = [
+const KeyPermissions = [
   { flag: PermissionFlagsBits.Administrator, name: "Administrator" },
   { flag: PermissionFlagsBits.ManageGuild, name: "Manage Server" },
   { flag: PermissionFlagsBits.ManageRoles, name: "Manage Roles" },
@@ -163,7 +163,7 @@ export class WhoisCommand extends BaseCommand {
       if (member.permissions.has(PermissionFlagsBits.Administrator)) {
         keyPermsText = t("commands:whoisPermissionsAdmin");
       } else {
-        const perms = KEY_PERMISSIONS.filter((p) =>
+        const perms = KeyPermissions.filter((p) =>
           member.permissions.has(p.flag),
         ).map((p) => p.name);
         if (perms.length > 0) {

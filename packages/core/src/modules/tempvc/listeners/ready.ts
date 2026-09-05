@@ -12,7 +12,7 @@ import { tempVcRegistry } from "../registry.js";
  * serializing it turned guilds-per-shard directly into startup seconds. Capped
  * rather than unbounded because reconcile hits the Discord API per guild.
  */
-const RECONCILE_CONCURRENCY = 10;
+const ReconcileConcurrency = 10;
 
 @ApplyOptions<Listener.Options>({
   name: "tempvcReady",
@@ -28,7 +28,7 @@ export default class TempVcReadyListener extends Listener<
     tempVcRegistry.wire();
 
     const guilds = [...client.guilds.cache.values()];
-    await mapWithConcurrency(guilds, RECONCILE_CONCURRENCY, async (guild) => {
+    await mapWithConcurrency(guilds, ReconcileConcurrency, async (guild) => {
       if (!(await isModuleEnabled(guild.id, "tempvc"))) return;
       await service
         .reconcileGuild(guild)

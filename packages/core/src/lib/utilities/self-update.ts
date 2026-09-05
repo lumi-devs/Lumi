@@ -39,13 +39,13 @@ interface GitSnapshot {
   behindBy: number;
 }
 
-const PACKAGE_FILE = "packages/core/package.json";
+const PackageFile = "packages/core/package.json";
 
 async function readPackageVersion(ref?: string): Promise<string | undefined> {
   try {
     const output = ref
-      ? await execGit(["show", `${ref}:${PACKAGE_FILE}`])
-      : await fs.readFile(PACKAGE_FILE, "utf8");
+      ? await execGit(["show", `${ref}:${PackageFile}`])
+      : await fs.readFile(PackageFile, "utf8");
     const raw = typeof output === "string" ? output : output.stdout;
     const parsed = JSON.parse(raw) as { version?: string };
     return typeof parsed.version === "string" && parsed.version.length > 0

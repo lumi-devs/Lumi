@@ -50,7 +50,7 @@ export interface ReadinessReport {
   checks: Record<string, ProbeResult>;
 }
 
-const PROBE_TIMEOUT_MS = 2000;
+const ProbeTimeoutMs = 2000;
 
 async function runOne(probe: Probe): Promise<ProbeResult> {
   try {
@@ -59,7 +59,7 @@ async function runOne(probe: Probe): Promise<ProbeResult> {
       new Promise<ProbeResult>((resolve) =>
         setTimeout(
           () => resolve({ status: "fail", detail: "timeout" }),
-          PROBE_TIMEOUT_MS,
+          ProbeTimeoutMs,
         ),
       ),
     ]);

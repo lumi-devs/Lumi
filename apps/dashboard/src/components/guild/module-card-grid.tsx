@@ -64,7 +64,7 @@ function ModuleCard({
   const { value: enabled, isPending, error, run } = useOptimisticAction(m.enabled);
   const on = enabled || isCore;
   const hasAlert = alertCount > 0;
-  const href = `/guild/${guildId}/${m.dashboardHref ?? `modules/${m.name}`}`;
+  const href = `/guild/${guildId}/${m.dashboardHref ?? `config/modules/${m.name}`}`;
 
   return (
     <TiltCard className="h-full">

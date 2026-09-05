@@ -4,7 +4,7 @@ import { isDevelopment } from "#lib/env.js";
 
 type PinoMethod = "trace" | "debug" | "info" | "warn" | "error" | "fatal";
 
-const LEVEL_TO_PINO: Record<LogLevel, PinoMethod> = {
+const LevelToPino: Record<LogLevel, PinoMethod> = {
   [LogLevel.Trace]: "trace",
   [LogLevel.Debug]: "debug",
   [LogLevel.Info]: "info",
@@ -21,7 +21,7 @@ export class PinoSapphireLogger implements ILogger {
   public constructor(service: string, level: LogLevel = LogLevel.Info) {
     this.level = level;
     const format = isDevelopment() ? "pretty" : "json";
-    this.pino = createPinoLogger({ service, level: LEVEL_TO_PINO[level] ?? "info", format });
+    this.pino = createPinoLogger({ service, level: LevelToPino[level] ?? "info", format });
   }
 
   public has(level: LogLevel): boolean {
@@ -30,7 +30,7 @@ export class PinoSapphireLogger implements ILogger {
 
   public write(level: LogLevel, ...values: readonly unknown[]): void {
     if (!this.has(level)) return;
-    const method = LEVEL_TO_PINO[level] ?? "info";
+    const method = LevelToPino[level] ?? "info";
     if (typeof values[0] === "string") {
       const [msg, ...rest] = values;
       if (rest.length === 1 && typeof rest[0] === "object" && rest[0] !== null) {

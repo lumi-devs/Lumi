@@ -34,7 +34,7 @@ export function ModulesStatusStrip({
         ) : null}
       </p>
       <Link
-        href={`/guild/${guildId}/modules`}
+        href={`/guild/${guildId}/config/modules`}
         className="flex shrink-0 items-center gap-1 text-[14px] font-medium text-accent-fg hover:underline"
       >
         Manage modules

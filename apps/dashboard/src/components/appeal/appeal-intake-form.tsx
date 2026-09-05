@@ -11,8 +11,8 @@ import type { AppealCaseSummary } from "#/lib/dashboard-data";
 import { caseActionLabel, formatCaseDate } from "#/lib/moderation-cases";
 import { useServerAction } from "#/lib/use-server-action";
 
-const MIN_LENGTH = 20;
-const MAX_LENGTH = 2000;
+const MinLength = 20;
+const MaxLength = 2000;
 
 export function AppealIntakeForm({
   guildId,
@@ -53,8 +53,8 @@ export function AppealIntakeForm({
   function submit(event: React.FormEvent) {
     event.preventDefault();
     const trimmed = message.trim();
-    if (trimmed.length < MIN_LENGTH) {
-      setError(`Say a bit more — at least ${MIN_LENGTH} characters.`);
+    if (trimmed.length < MinLength) {
+      setError(`Say a bit more — at least ${MinLength} characters.`);
       return;
     }
     run(async () => {
@@ -96,12 +96,12 @@ export function AppealIntakeForm({
           label="Why should this be reconsidered?"
           htmlFor="appeal-message"
           className="gap-1"
-          hint={`${message.trim().length}/${MAX_LENGTH} characters`}
+          hint={`${message.trim().length}/${MaxLength} characters`}
         >
           <Textarea
             id="appeal-message"
             value={message}
-            maxLength={MAX_LENGTH}
+            maxLength={MaxLength}
             rows={6}
             placeholder="Explain what happened and why you think this decision should be reversed."
             onChange={(e) => setMessage(e.target.value)}

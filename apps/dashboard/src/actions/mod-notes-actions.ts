@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RPC_ACTIONS } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
@@ -22,7 +22,7 @@ export async function addModNote(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedModNotesAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildModNotesAdd, {
+    await rpcCall(RpcActions.guildModNotesAdd, {
       guildId,
       actorId: session.userId,
       data: { userId, message },
@@ -38,7 +38,7 @@ export async function removeModNote(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedModNotesAction(guildId);
-    await rpcCall(RPC_ACTIONS.guildModNotesRemove, {
+    await rpcCall(RpcActions.guildModNotesRemove, {
       guildId,
       actorId: session.userId,
       data: { id },

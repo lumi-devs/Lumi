@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { CheckCircle, XCircle } from "lucide-react";
 import { Wordmark } from "#/components/layout/wordmark";
 import { AppealIntakeForm } from "#/components/appeal/appeal-intake-form";
 import { Alert } from "#/components/ui/alert";
 import { verifyAppealToken } from "#/lib/dashboard-fetch";
-import { APPEAL_STATUS_LABELS, isAppealStatus } from "#/lib/appeals";
+import { isRateLimited } from "#/lib/rate-limit";
+import { getClientIp } from "#/lib/client-ip";
+import { AppealStatusLabels, isAppealStatus } from "#/lib/appeals";
 
 export const metadata: Metadata = { title: "Submit an appeal" };
 
@@ -27,9 +30,25 @@ export default async function AppealIntakePage({
 
   const invalid = !token || !Number.isInteger(caseId) || caseId < 1;
 
+  // Token verification is an unauthenticated oracle: without a limit a visitor
+  // can brute-force signed tokens by reloading this page.
+  const throttled =
+    !invalid &&
+    (await isRateLimited(
+      `appeal-verify:${getClientIp(await headers())}`,
+      20,
+      60 * 60_000,
+    ));
+
   let content: React.ReactNode;
   if (invalid) {
     content = <InvalidLink />;
+  } else if (throttled) {
+    content = (
+      <Alert variant="warning">
+        Too many attempts from this network. Try again later.
+      </Alert>
+    );
   } else {
     try {
       const result = await verifyAppealToken(guildId, caseId, token);
@@ -89,7 +108,7 @@ function InvalidLink({ reason }: { reason?: string }) {
 }
 
 function AlreadySubmitted({ status }: { status: string }) {
-  const label = isAppealStatus(status) ? APPEAL_STATUS_LABELS[status] : status;
+  const label = isAppealStatus(status) ? AppealStatusLabels[status] : status;
   return (
     <>
       <div className="mb-4 flex items-start gap-3">

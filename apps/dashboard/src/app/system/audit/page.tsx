@@ -22,7 +22,7 @@ import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
 import type { AuditEntryView, AuditListData } from "#/lib/dashboard-data";
 import {
-  AUDIT_PLATFORM_OPTIONS,
+  AuditPlatformOptions,
   countBy,
   filterHref,
   formatShortDay,
@@ -31,7 +31,7 @@ import {
   single,
 } from "#/lib/log-format";
 
-const PAGE_SIZE = 30;
+const PageSize = 30;
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -59,7 +59,7 @@ export default async function SystemAuditPage({
   try {
     data = await getSystemAuditLog(session.userId, {
       page,
-      pageSize: PAGE_SIZE,
+      pageSize: PageSize,
       ...(action ? { action } : {}),
       ...(userId && isSnowflake(userId) ? { userId } : {}),
       ...(guildId && isSnowflake(guildId) ? { guildId } : {}),
@@ -162,7 +162,7 @@ export default async function SystemAuditPage({
                   name: "platform",
                   label: "Came from",
                   anyLabel: "Discord and dashboard",
-                  options: AUDIT_PLATFORM_OPTIONS,
+                  options: AuditPlatformOptions,
                 },
               ]}
             />

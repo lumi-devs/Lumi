@@ -15,7 +15,7 @@ import { spotlightHandler, useStaggerIn } from "#/lib/animate";
 import { guildIconUrl } from "#/lib/discord-format";
 import { cn } from "#/lib/utils";
 
-const COLORS = [
+const Colors = [
   "#2953d8", "#12805a", "#c7333f", "#92600a",
   "#a23b8f", "#c1622f", "#6d5bd0", "#0f8a8a",
 ];
@@ -23,7 +23,7 @@ const COLORS = [
 function colorFor(id: string): string {
   let hash = 0;
   for (const ch of id) hash = ch.charCodeAt(0) + ((hash << 5) - hash);
-  return COLORS[Math.abs(hash) % COLORS.length]!;
+  return Colors[Math.abs(hash) % Colors.length]!;
 }
 
 function GuildTile({

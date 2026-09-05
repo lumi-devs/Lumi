@@ -9,9 +9,18 @@ const GUILD_ROUTES = fileURLToPath(
   new URL("../../src/app/guild/[guildId]", import.meta.url),
 );
 
+// A `${moduleName}` left in a redirect target names the `[moduleName]` segment
+// directory it lands in.
 function routeDirFor(href: string): string {
-  const rest = href.replace(`/guild/${GUILD_ID}`, "").replace(/^\//, "");
+  const rest = href
+    .replace(`/guild/${GUILD_ID}`, "")
+    .replace(/^\//, "")
+    .replace(/\$\{(\w+)\}/g, "[$1]");
   return rest ? join(GUILD_ROUTES, rest) : GUILD_ROUTES;
+}
+
+function isDynamic(href: string): boolean {
+  return href.includes("${");
 }
 
 const navHrefs = [
@@ -51,7 +60,9 @@ describe("guild route tree", () => {
       expect(existsSync(join(routeDirFor(to), "page.tsx")), `${from} -> ${to}`).toBe(
         true,
       );
-      expect(navHrefs, `${from} -> ${to}`).toContain(to);
+      if (!isDynamic(to)) {
+        expect(navHrefs, `${from} -> ${to}`).toContain(to);
+      }
     }
   });
 });

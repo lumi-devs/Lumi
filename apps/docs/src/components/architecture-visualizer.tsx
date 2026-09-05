@@ -27,7 +27,7 @@ interface NodeData {
   codeSnippet: string;
 }
 
-const NODES: NodeData[] = [
+const Nodes: NodeData[] = [
   {
     id: "gateway",
     title: "Discord Gateway",
@@ -166,7 +166,7 @@ const guild = await container.db.guilds.findById(guildId);`,
 
 export function ArchitectureVisualizer() {
   const [selectedId, setSelectedId] = useState<string>("gateway");
-  const selectedNode: NodeData = NODES.find((n) => n.id === selectedId) ?? (NODES[0] as NodeData);
+  const selectedNode: NodeData = Nodes.find((n) => n.id === selectedId) ?? (Nodes[0] as NodeData);
 
   return (
     <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 lg:p-8 shadow-2xl">
@@ -194,7 +194,7 @@ export function ArchitectureVisualizer() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 my-6">
-        {NODES.map((node) => {
+        {Nodes.map((node) => {
           const isSelected = node.id === selectedId;
           return (
             <button

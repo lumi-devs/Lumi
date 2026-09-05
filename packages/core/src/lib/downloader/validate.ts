@@ -61,7 +61,7 @@ const manifestSchema = s.object({
   configFields: s.array(configFieldSchema),
 });
 
-const IGNORED_DIRS = new Set(["node_modules", ".git", "dist", "build"]);
+const IgnoredDirs = new Set(["node_modules", ".git", "dist", "build"]);
 
 export async function pathExists(p: string): Promise<boolean> {
   try {
@@ -79,7 +79,7 @@ async function walkTsFiles(dir: string): Promise<string[]> {
     if (entry.name.startsWith(".") && entry.name !== ".") continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (IGNORED_DIRS.has(entry.name)) continue;
+      if (IgnoredDirs.has(entry.name)) continue;
       out.push(...(await walkTsFiles(full)));
     } else if (
       entry.isFile() &&
@@ -92,8 +92,8 @@ async function walkTsFiles(dir: string): Promise<string[]> {
   return out;
 }
 
-const IMPORT_RE = /(?:import|export)[^"'`]*?["']([^"'`]+)["']/g;
-const EMBED_IMPORT_RE =
+const ImportRe = /(?:import|export)[^"'`]*?["']([^"'`]+)["']/g;
+const EmbedImportRe =
   /import\s*(?:type\s*)?\{[^}]*\bEmbedBuilder\b[^}]*\}\s*from\s*["'](?:discord\.js|@discordjs\/builders)["']/;
 
 // ── Memory-leak heuristics ──────────────────────────────────────────────────
@@ -105,19 +105,19 @@ const EMBED_IMPORT_RE =
 // a warning, same severity tier as the internal-path-import check above -
 // never a hard failure.
 
-const TIMER_RE =
+const TimerRe =
   /(?:(?:const|let|var)\s+(\w+)\s*=\s*|([\w$][\w$.]*)\s*=\s*)?\b(setInterval|setTimeout)\s*\(/g;
 
-const LISTENER_RE = /\.(?:on|addListener)\s*\(\s*["'`]/;
-const LISTENER_CLEANUP_RE =
+const ListenerRe = /\.(?:on|addListener)\s*\(\s*["'`]/;
+const ListenerCleanupRe =
   /\b(?:onUnload|dispose|\.off\s*\(|removeListener|removeAllListeners)\b/;
 
 // Anchored at true line-start (no leading whitespace) as a cheap proxy for
 // "module scope" without a real parser - matches the formatting this repo
 // (and generated addon scaffolds) actually use.
-const GLOBAL_LET_RE = /^(?:export\s+)?let\s+(\w+)\b/gm;
+const GlobalLetRe = /^(?:export\s+)?let\s+(\w+)\b/gm;
 
-const GLOBAL_COLLECTION_RE =
+const GlobalCollectionRe =
   /^(?:export\s+)?const\s+(\w+)\s*(?::\s*[^=;]+)?=\s*(?:\[\s*\]|new\s+Map\s*\(\s*\)|new\s+Set\s*\(\s*\))/gm;
 
 function escapeRe(s: string): string {
@@ -126,9 +126,9 @@ function escapeRe(s: string): string {
 
 /** Appends best-effort memory-leak warnings for one addon source file to `warnings`. */
 function checkLeakHeuristics(src: string, rel: string, warnings: string[]): void {
-  TIMER_RE.lastIndex = 0;
+  TimerRe.lastIndex = 0;
   let m: RegExpExecArray | null;
-  while ((m = TIMER_RE.exec(src)) !== null) {
+  while ((m = TimerRe.exec(src)) !== null) {
     const varName = m[1] ?? m[2];
     const fn = m[3]!;
     const clearFn = fn === "setInterval" ? "clearInterval" : "clearTimeout";
@@ -148,21 +148,21 @@ function checkLeakHeuristics(src: string, rel: string, warnings: string[]): void
     }
   }
 
-  if (LISTENER_RE.test(src) && !LISTENER_CLEANUP_RE.test(src)) {
+  if (ListenerRe.test(src) && !ListenerCleanupRe.test(src)) {
     warnings.push(
       `${rel}: registers a listener via .on(...)/.addListener(...) but this file has no onUnload/dispose/.off(/.removeListener( - confirm it's torn down on module unload, or reloading the addon stacks duplicate listeners on the same emitter.`,
     );
   }
 
-  GLOBAL_LET_RE.lastIndex = 0;
-  while ((m = GLOBAL_LET_RE.exec(src)) !== null) {
+  GlobalLetRe.lastIndex = 0;
+  while ((m = GlobalLetRe.exec(src)) !== null) {
     warnings.push(
       `${rel}: module-level \`let ${m[1]}\` is mutable state shared by every guild this addon runs in, for the life of the process - prefer per-guild storage (container.db.guildKV / container.redis) over an in-memory module-level variable.`,
     );
   }
 
-  GLOBAL_COLLECTION_RE.lastIndex = 0;
-  while ((m = GLOBAL_COLLECTION_RE.exec(src)) !== null) {
+  GlobalCollectionRe.lastIndex = 0;
+  while ((m = GlobalCollectionRe.exec(src)) !== null) {
     const name = m[1]!;
     const escaped = escapeRe(name);
     const growsRe = new RegExp(`\\b${escaped}\\.(?:push|set|add)\\s*\\(`);
@@ -323,7 +323,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
     const src = await fs.readFile(file, "utf8");
     const rel = path.relative(dir, file);
 
-    if (EMBED_IMPORT_RE.test(src) || /\bnew\s+EmbedBuilder\s*\(/.test(src))
+    if (EmbedImportRe.test(src) || /\bnew\s+EmbedBuilder\s*\(/.test(src))
       errors.push(
         `${rel}: uses EmbedBuilder - user-facing replies must use the make*Card helpers from "lumi".`,
       );
@@ -339,8 +339,8 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
     checkLeakHeuristics(src, rel, warnings);
 
     let match: RegExpExecArray | null;
-    IMPORT_RE.lastIndex = 0;
-    while ((match = IMPORT_RE.exec(src)) !== null) {
+    ImportRe.lastIndex = 0;
+    while ((match = ImportRe.exec(src)) !== null) {
       const spec = match[1]!;
       if (spec.startsWith("#modules/")) {
         errors.push(

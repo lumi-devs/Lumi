@@ -23,7 +23,7 @@ import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
 import { isCommandChannel } from "#/lib/channel-types";
 
-const PAGE_SIZE = 25;
+const PageSize = 25;
 
 export default async function AdvancedPage({
   params,
@@ -52,7 +52,7 @@ export default async function AdvancedPage({
     settle(
       getGuildModuleData(guildId, session.userId, {
         page,
-        pageSize: PAGE_SIZE,
+        pageSize: PageSize,
         ...(moduleName ? { moduleName } : {}),
         ...(targetId ? { targetId } : {}),
         ...(key ? { key } : {}),

@@ -5,6 +5,7 @@ import {
   HeartPulse,
   History,
   IdCard,
+  LayoutDashboard,
   LayoutGrid,
   type LucideIcon,
   Package,
@@ -13,6 +14,7 @@ import {
   ShieldAlert,
   SlidersHorizontal,
   StickyNote,
+  TrendingUp,
   TriangleAlert,
   Volume2,
   Wand2,
@@ -43,9 +45,8 @@ export interface GuildNavGroup {
 export function guildTopLinks(guildId: string): GuildNavLink[] {
   const base = `/guild/${guildId}`;
   return [
-    { href: base, label: "General", icon: Settings },
-    { href: `${base}/modules`, label: "Modules", icon: LayoutGrid },
-    { href: `${base}/addons`, label: "Addons", icon: Package },
+    { href: base, label: "Overview", icon: LayoutDashboard },
+    { href: `${base}/config`, label: "Configuration", icon: Settings },
     { href: `${base}/setup`, label: "Guided Setup", icon: Wand2 },
   ];
 }
@@ -82,13 +83,16 @@ export function guildManagementGroups(guildId: string): GuildNavGroup[] {
       title: "Monitoring & Diagnostics",
       links: [
         { href: `${base}/health`, label: "Health Dashboard", icon: HeartPulse },
+        { href: `${base}/monitoring/activity`, label: "Activity & Trends", icon: TrendingUp },
         { href: `${base}/monitoring/audit`, label: "Audit Log", icon: ClipboardList },
       ],
     },
     {
       title: "Configuration",
       links: [
-        { href: `${base}/modules`, label: "Modules & Addons", icon: LayoutGrid },
+        { href: `${base}/config/modules`, label: "Modules", icon: LayoutGrid },
+        { href: `${base}/config/addons`, label: "Addons", icon: Package },
+        { href: `${base}/config/general`, label: "General", icon: Settings },
         { href: `${base}/config/advanced`, label: "Advanced", icon: Wrench },
         { href: `${base}/config/voice`, label: "Voice Generators", icon: Volume2 },
         { href: `${base}/config/history`, label: "Settings History", icon: History },

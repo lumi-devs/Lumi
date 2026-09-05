@@ -91,19 +91,19 @@ export function escalatedTimeoutMinutes(
   return Math.round(baseMinutes * factor);
 }
 
-const HEAT_URL_RE = /https?:\/\/[^\s/<>"']+/i;
-const CUSTOM_EMOJI_RE = /<a?:\w+:\d+>/g;
-const UNICODE_EMOJI_RE = /\p{Extended_Pictographic}/gu;
+const HeatUrlRe = /https?:\/\/[^\s/<>"']+/i;
+const CustomEmojiRe = /<a?:\w+:\d+>/g;
+const UnicodeEmojiRe = /\p{Extended_Pictographic}/gu;
 
 /** True if the message contains a link — a cheap advertisement/spam signal. */
 export function containsLink(content: string): boolean {
-  return HEAT_URL_RE.test(content);
+  return HeatUrlRe.test(content);
 }
 
 /** Counts custom (`<:name:id>`) and unicode emoji in a message. */
 export function countEmoji(content: string): number {
-  const custom = content.match(CUSTOM_EMOJI_RE)?.length ?? 0;
-  const withoutCustom = content.replace(CUSTOM_EMOJI_RE, "");
-  const unicode = withoutCustom.match(UNICODE_EMOJI_RE)?.length ?? 0;
+  const custom = content.match(CustomEmojiRe)?.length ?? 0;
+  const withoutCustom = content.replace(CustomEmojiRe, "");
+  const unicode = withoutCustom.match(UnicodeEmojiRe)?.length ?? 0;
   return custom + unicode;
 }

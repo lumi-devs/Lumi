@@ -3,7 +3,9 @@ import { getUtility } from "#lib/module-system/Utility.js";
 import {
   InteractionHandler,
   InteractionHandlerTypes,
+  UserError,
 } from "@sapphire/framework";
+import { PermitResolver } from "#lib/permissions/index.js";
 import { type ButtonInteraction } from "discord.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { makeErrorCard, makeInfoCard } from "#lib/utilities/cards.js";
@@ -34,6 +36,12 @@ export class ModuleUpdateInteractionHandler extends BaseInteractionHandler {
     { moduleName, userId }: { moduleName: string; userId: string },
   ) {
     this.checkSecurity(interaction, userId);
+    if (!PermitResolver.isBotOwner(interaction.user.id)) {
+      throw new UserError({
+        identifier: "AccessDenied",
+        message: `${Emojis.CROSS} Only Bot Owners can update modules.`,
+      });
+    }
 
     await this.acknowledge(interaction);
 

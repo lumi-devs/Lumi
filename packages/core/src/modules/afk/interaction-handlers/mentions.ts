@@ -20,7 +20,7 @@ import { getAfkMentions } from "../data/afk.js";
 
 import { fetchTyped } from "#lib/commands.js";
 
-const PAGE_SIZE = 5;
+const PageSize = 5;
 
 @ApplyOptions<InteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,
@@ -51,9 +51,9 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
     const t = await fetchTyped(interaction);
     const mentions = await getAfkMentions(interaction.guildId!, userId);
 
-    const totalPages = Math.max(1, Math.ceil(mentions.length / PAGE_SIZE));
+    const totalPages = Math.max(1, Math.ceil(mentions.length / PageSize));
     const safePage = Math.max(0, Math.min(page, totalPages - 1));
-    const pageItems = mentions.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+    const pageItems = mentions.slice(safePage * PageSize, (safePage + 1) * PageSize);
 
     const items = pageItems.map((m) => {
       const duration = formatDuration(

@@ -20,7 +20,7 @@ export interface AppealTokenPayload {
   exp: number;
 }
 
-const DEFAULT_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+const DefaultTtlMs = 14 * 24 * 60 * 60 * 1000;
 
 function secret(): string {
   return envParseString("APPEAL_TOKEN_SECRET");
@@ -32,7 +32,7 @@ function sign(payloadB64: string): string {
 
 export function generateAppealToken(
   payload: Omit<AppealTokenPayload, "exp">,
-  ttlMs = DEFAULT_TTL_MS,
+  ttlMs = DefaultTtlMs,
 ): string {
   const full: AppealTokenPayload = { ...payload, exp: Date.now() + ttlMs };
   const payloadB64 = Buffer.from(JSON.stringify(full)).toString("base64url");

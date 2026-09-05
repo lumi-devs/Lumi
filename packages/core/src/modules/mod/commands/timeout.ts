@@ -10,7 +10,7 @@ import type { GuildMember } from "discord.js";
 import { MuteAction } from "../actions/index.js";
 
 const Root = LanguageKeys.Commands;
-const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000;
+const MaxTimeoutMs = 28 * 24 * 60 * 60 * 1000;
 
 type Flow = ModerationSubcommand.Flow<GuildMember, ModerationCase>;
 type TimedFlow = ModerationSubcommand.Flow<GuildMember, ModerationCase, number>;
@@ -27,7 +27,7 @@ const TimeoutAdd: TimedFlow = {
         body: t(Root.TimeoutInvalidDuration),
       });
     }
-    if (durationMs > MAX_TIMEOUT_MS) {
+    if (durationMs > MaxTimeoutMs) {
       return Result.err({
         title: t(Root.TimeoutTooLongTitle),
         body: t(Root.TimeoutTooLong),

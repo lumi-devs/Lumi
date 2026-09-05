@@ -5,7 +5,7 @@ import { Input, Select } from "#/components/ui/input";
 import { Switch } from "#/components/ui/switch";
 import type { DashboardRoleView, DashboardChannelView } from "#/lib/dashboard-data";
 
-const DEFAULT_PICKABLE_CHANNEL_TYPES = new Set([0, 2, 5, 13, 15, 16]);
+const DefaultPickableChannelTypes = new Set([0, 2, 5, 13, 15, 16]);
 
 function channelOptionsFor(
   field: ConfigField,
@@ -15,7 +15,7 @@ function channelOptionsFor(
   return channels.filter((c) =>
     allow && allow.length > 0
       ? allow.includes(c.type)
-      : DEFAULT_PICKABLE_CHANNEL_TYPES.has(c.type),
+      : DefaultPickableChannelTypes.has(c.type),
   );
 }
 

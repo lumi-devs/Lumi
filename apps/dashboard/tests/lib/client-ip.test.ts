@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { getClientIp, UNKNOWN_CLIENT_IP } from "#/lib/client-ip";
+import { getClientIp, UnknownClientIp } from "#/lib/client-ip";
 
 function h(init: Record<string, string>): Headers {
   return new Headers(init);
@@ -45,7 +45,7 @@ describe("getClientIp", () => {
       ),
     ).toBe("203.0.113.9");
     expect(getClientIp(h({ "x-forwarded-for": "1.1.1.1" }))).toBe(
-      UNKNOWN_CLIENT_IP,
+      UnknownClientIp,
     );
   });
 
@@ -62,9 +62,9 @@ describe("getClientIp", () => {
   });
 
   it("falls back to a single shared bucket rather than a per-request one", () => {
-    expect(getClientIp(h({}))).toBe(UNKNOWN_CLIENT_IP);
+    expect(getClientIp(h({}))).toBe(UnknownClientIp);
     expect(getClientIp(h({ "x-forwarded-for": "not-an-ip" }))).toBe(
-      UNKNOWN_CLIENT_IP,
+      UnknownClientIp,
     );
   });
 });

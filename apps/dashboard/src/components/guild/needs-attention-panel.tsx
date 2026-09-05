@@ -17,24 +17,24 @@ export interface AttentionRow {
   actionLabel: string;
 }
 
-const SEVERITY_ICON: Record<AttentionSeverity, LucideIcon> = {
+const SeverityIcon: Record<AttentionSeverity, LucideIcon> = {
   critical: CircleAlert,
   warning: TriangleAlert,
 };
 
-const SEVERITY_TINT: Record<AttentionSeverity, string> = {
+const SeverityTint: Record<AttentionSeverity, string> = {
   critical: "bg-danger-soft text-danger-fg",
   warning: "bg-warning-soft text-warning-fg",
 };
 
-const DEFAULT_VISIBLE = 2;
+const DefaultVisible = 2;
 
 export function NeedsAttentionPanel({ rows }: { rows: AttentionRow[] }) {
   const [expanded, setExpanded] = useState(false);
   if (rows.length === 0) return null;
 
   const criticalCount = rows.filter((r) => r.severity === "critical").length;
-  const visible = expanded ? rows : rows.slice(0, DEFAULT_VISIBLE);
+  const visible = expanded ? rows : rows.slice(0, DefaultVisible);
   const remaining = rows.length - visible.length;
 
   return (
@@ -51,13 +51,13 @@ export function NeedsAttentionPanel({ rows }: { rows: AttentionRow[] }) {
       </CardHeader>
       <div className="divide-y divide-border">
         {visible.map((row) => {
-          const Icon = SEVERITY_ICON[row.severity];
+          const Icon = SeverityIcon[row.severity];
           return (
             <div key={row.id} className="flex items-start gap-3 px-4 py-3">
               <span
                 className={cn(
                   "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full",
-                  SEVERITY_TINT[row.severity],
+                  SeverityTint[row.severity],
                 )}
               >
                 <Icon className="size-3.5" aria-hidden />

@@ -66,7 +66,7 @@ function ModuleRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <Link
-            href={`/guild/${guildId}/modules/${m.name}`}
+            href={`/guild/${guildId}/config/modules/${m.name}`}
             className="font-display truncate text-[15px] font-semibold tracking-[0.01em] text-fg hover:underline"
           >
             {m.displayName}
@@ -99,7 +99,7 @@ function ModuleRow({
       </div>
 
       <Link
-        href={`/guild/${guildId}/modules/${m.name}`}
+        href={`/guild/${guildId}/config/modules/${m.name}`}
         aria-label={`Configure ${m.displayName}`}
         className="flex size-6 shrink-0 items-center justify-center rounded text-fg-subtle transition-colors hover:bg-surface-active hover:text-fg"
       >

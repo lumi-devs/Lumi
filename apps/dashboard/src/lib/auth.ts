@@ -11,7 +11,7 @@ import {
   type OAuthGuild,
 } from "./discord";
 import { rpcCall } from "./rpc";
-import { RPC_ACTIONS, type WhoAmIResponse } from "@lumi/contracts";
+import { RpcActions, type WhoAmIResponse } from "@lumi/contracts";
 
 interface DiscordRawProfile {
   id: string;
@@ -23,7 +23,7 @@ interface DiscordRawProfile {
 
 // How stale `guilds`/`isBotOwner` may get: a revoked Manage Server takes effect
 // within this window rather than lasting the full 8h session.
-const AUTHZ_TTL_MS = 5 * 60 * 1000;
+const AuthzTtlMs = 5 * 60 * 1000;
 
 interface AuthzSnapshot {
   at: number;
@@ -39,7 +39,7 @@ const authzCache = new Map<string, AuthzSnapshot>();
 async function refreshAuthorization(token: JWT): Promise<void> {
   const userId = token.userId ?? "";
   const cached = authzCache.get(userId);
-  if (cached && Date.now() - cached.at < AUTHZ_TTL_MS) {
+  if (cached && Date.now() - cached.at < AuthzTtlMs) {
     if (cached.guilds) token.guilds = cached.guilds;
     if (cached.isBotOwner !== undefined) token.isBotOwner = cached.isBotOwner;
     token.authRefreshedAt = cached.at;
@@ -56,11 +56,11 @@ async function refreshAuthorization(token: JWT): Promise<void> {
   authzCache.set(userId, snapshot);
   token.authRefreshedAt = snapshot.at;
   for (const [key, entry] of authzCache) {
-    if (snapshot.at - entry.at > AUTHZ_TTL_MS) authzCache.delete(key);
+    if (snapshot.at - entry.at > AuthzTtlMs) authzCache.delete(key);
   }
 
   try {
-    const whoami = (await rpcCall(RPC_ACTIONS.authWhoAmI, {
+    const whoami = (await rpcCall(RpcActions.authWhoAmI, {
       actorId: userId,
     })) as WhoAmIResponse;
     token.isBotOwner = whoami.isBotOwner;
@@ -128,7 +128,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         await refreshAuthorization(token);
         return token;
       }
-      if (Date.now() - (token.authRefreshedAt ?? 0) > AUTHZ_TTL_MS) {
+      if (Date.now() - (token.authRefreshedAt ?? 0) > AuthzTtlMs) {
         await refreshAuthorization(token);
       }
       return token;
