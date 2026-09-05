@@ -28,7 +28,9 @@ function resolveAuthSecret(): string {
     process.env["DASHBOARD_SESSION_SECRET"] || process.env["AUTH_SECRET"];
   if (provided) return provided;
 
-  if (process.env["NODE_ENV"] === "production") {
+  const building = process.env["NEXT_PHASE"] === "phase-production-build";
+
+  if (process.env["NODE_ENV"] === "production" && !building) {
     throw new Error(
       "[ENV] Missing: DASHBOARD_SESSION_SECRET — the dashboard refuses to start " +
         "with the public build placeholder as its session-signing key. " +
