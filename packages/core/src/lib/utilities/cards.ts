@@ -231,21 +231,6 @@ export function makeListCard(
   return makeInfoCard(title, bodyParts, opts);
 }
 
-export function makeLoadingCard(
-  message: string,
-  opts?: CardOptions,
-): CardReply {
-  return makeCard(
-    resolveCardColor("info"),
-    "⏳ Please Wait",
-    message,
-    {
-      ...opts,
-      footer: opts?.footer ?? "Processing...",
-    },
-  );
-}
-
 export function makeEmptyCard(
   title: string,
   reason: string,
@@ -266,65 +251,3 @@ export function makeEmptyCard(
   );
 }
 
-export interface BulkResultOptions {
-  succeeded?: number;
-  failed?: number;
-  total?: number;
-}
-
-export function makeBulkResultCard(
-  action: string,
-  results: BulkResultOptions,
-  opts?: CardOptions,
-): CardReply {
-  const lines: string[] = [];
-
-  if (results.succeeded !== undefined && results.succeeded > 0) {
-    lines.push(`✅ **Succeeded:** ${results.succeeded} item${results.succeeded === 1 ? "" : "s"}`);
-  }
-
-  if (results.failed !== undefined && results.failed > 0) {
-    lines.push(`❌ **Failed:** ${results.failed} item${results.failed === 1 ? "" : "s"}`);
-  }
-
-  if (results.total !== undefined) {
-    lines.push(`-# **Total:** ${results.total} item${results.total === 1 ? "" : "s"}`);
-  }
-
-  if (lines.length === 0) {
-    lines.push("-# No changes were made.");
-  }
-
-  const hasFailures = (results.failed ?? 0) > 0;
-  const color = hasFailures ? resolveCardColor("warning") : resolveCardColor("success");
-
-  return makeCard(color, action, fitLines(lines), opts);
-}
-
-export interface ErrorRecoveryOptions {
-  suggestions?: string[];
-  details?: string;
-}
-
-export function makeErrorRecoveryCard(
-  title: string,
-  issue: string,
-  recovery: ErrorRecoveryOptions = {},
-  opts?: CardOptions,
-): CardReply {
-  const body: string[] = [issue];
-
-  if (recovery.details) {
-    body.push(`-# ${recovery.details}`);
-  }
-
-  if (recovery.suggestions && recovery.suggestions.length > 0) {
-    body.push("");
-    body.push("**Try:**");
-    for (const suggestion of recovery.suggestions) {
-      body.push(`• ${suggestion}`);
-    }
-  }
-
-  return makeErrorCard(`❌ ${title}`, fitLines(body), opts);
-}

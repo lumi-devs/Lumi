@@ -17,13 +17,8 @@ import {
   makeInfoCard,
   makeSuccessCard,
   makeWarningCard,
-  makeLoadingCard,
   makeEmptyCard,
-  makeBulkResultCard,
-  makeErrorRecoveryCard,
   type CardReply,
-  type BulkResultOptions,
-  type ErrorRecoveryOptions,
 } from "#lib/utilities/cards.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
 import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
@@ -352,13 +347,6 @@ export class CommandContext {
     return this.reply(makeInfoCard(title, body), opts);
   }
 
-  public replyLoading(
-    message: string,
-    opts?: CtxReplyOptions,
-  ): Promise<void> {
-    return this.reply(makeLoadingCard(message), opts);
-  }
-
   public replyEmpty(
     title: string,
     reason: string,
@@ -366,23 +354,6 @@ export class CommandContext {
     opts?: CtxReplyOptions,
   ): Promise<void> {
     return this.reply(makeEmptyCard(title, reason, suggestion), opts);
-  }
-
-  public replyBulkResult(
-    action: string,
-    results: BulkResultOptions,
-    opts?: CtxReplyOptions,
-  ): Promise<void> {
-    return this.reply(makeBulkResultCard(action, results), opts);
-  }
-
-  public replyErrorRecovery(
-    title: string,
-    issue: string,
-    recovery?: ErrorRecoveryOptions,
-    opts?: CtxReplyOptions,
-  ): Promise<void> {
-    return this.reply(makeErrorRecoveryCard(title, issue, recovery), opts);
   }
 
   /** Localized translator for the invoker's guild language. */
