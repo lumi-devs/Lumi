@@ -26,7 +26,7 @@ export async function rollbackConfigChange(
       actorId: session.userId,
       data: { entryId },
     });
-    revalidatePath(`/guild/${guildId}/history`);
+    revalidatePath(`/guild/${guildId}/config/history`);
     revalidatePath(`/guild/${guildId}/modules`);
     return { ok: true };
   });

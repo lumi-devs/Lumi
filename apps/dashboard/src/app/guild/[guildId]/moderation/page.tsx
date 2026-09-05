@@ -218,7 +218,7 @@ export default async function ModerationPage({
               description="Lumi opens a case every time a moderator bans, kicks, mutes, warns or quarantines someone. Set warn thresholds so repeat offenders escalate without anyone watching."
               action={
                 <Link
-                  href={`/guild/${guildId}/warn-thresholds`}
+                  href={`/guild/${guildId}/moderation/thresholds`}
                   className={buttonVariants({ variant: "primary", size: "sm" })}
                 >
                   Set warn thresholds

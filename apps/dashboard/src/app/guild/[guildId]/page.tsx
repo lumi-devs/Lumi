@@ -240,7 +240,7 @@ export default async function GuildOverviewPage({
           >
             <SectionHead
               title="Recent audit events"
-              href={`/guild/${guildId}/audit`}
+              href={`/guild/${guildId}/monitoring/audit`}
               linkLabel="Full log"
             />
             <RecentAuditTable

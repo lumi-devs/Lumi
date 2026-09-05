@@ -27,7 +27,7 @@ export async function addModNote(
       actorId: session.userId,
       data: { userId, message },
     });
-    revalidatePath(`/guild/${guildId}/mod-notes`);
+    revalidatePath(`/guild/${guildId}/moderation/notes`);
     return { ok: true };
   });
 }
@@ -43,7 +43,7 @@ export async function removeModNote(
       actorId: session.userId,
       data: { id },
     });
-    revalidatePath(`/guild/${guildId}/mod-notes`);
+    revalidatePath(`/guild/${guildId}/moderation/notes`);
     return { ok: true };
   });
 }

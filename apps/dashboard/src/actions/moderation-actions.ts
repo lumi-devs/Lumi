@@ -45,7 +45,7 @@ export async function setWarnThreshold(
       actorId: session.userId,
       data: { warnCount, action, duration },
     });
-    revalidatePath(`/guild/${guildId}/warn-thresholds`);
+    revalidatePath(`/guild/${guildId}/moderation/thresholds`);
     return { ok: true };
   });
 }
@@ -61,7 +61,7 @@ export async function deleteWarnThreshold(
       actorId: session.userId,
       data: { warnCount, action: null },
     });
-    revalidatePath(`/guild/${guildId}/warn-thresholds`);
+    revalidatePath(`/guild/${guildId}/moderation/thresholds`);
     return { ok: true };
   });
 }

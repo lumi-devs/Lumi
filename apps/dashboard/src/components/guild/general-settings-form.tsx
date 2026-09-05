@@ -274,7 +274,7 @@ export function GeneralSettingsForm({
               <Field label="Ignored channels" htmlFor="ignored-channels-link">
                 <Link
                   id="ignored-channels-link"
-                  href={`/guild/${guildId}/advanced`}
+                  href={`/guild/${guildId}/config/advanced`}
                   className="flex h-9 items-center rounded-control border border-border bg-bg-subtle px-3 text-sm text-accent hover:underline"
                 >
                   Manage on the Advanced page →
