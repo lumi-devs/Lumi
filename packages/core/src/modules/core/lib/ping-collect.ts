@@ -2,9 +2,10 @@ import os from "node:os";
 import type { RedisClient } from "#lib/database/cluster-safe.js";
 import path from "node:path";
 import { promises as fs, existsSync } from "node:fs";
-import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import { container } from "@sapphire/framework";
+import { Prisma } from "@prisma/client";
+import { version as djsVersion } from "discord.js";
+import { container, version as sapphireVersion } from "@sapphire/framework";
 import { fetch, FetchResultTypes } from "@sapphire/fetch";
 import { Stopwatch } from "@sapphire/stopwatch";
 import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
@@ -411,15 +412,7 @@ async function countCodeLines() {
   return cachedCodeLines;
 }
 
-const _req = createRequire(import.meta.url);
-const djsVersion = (_req("discord.js/package.json") as { version: string })
-  .version;
-const sapphireVersion = (
-  _req("@sapphire/framework/package.json") as { version: string }
-).version;
-const prismaVersion = (
-  _req("@prisma/client/package.json") as { version: string }
-).version;
+const prismaVersion = Prisma.prismaVersion.client;
 
 declare const Bun: { version: string } | undefined;
 
