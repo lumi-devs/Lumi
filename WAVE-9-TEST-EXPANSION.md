@@ -95,19 +95,19 @@ Wave 9 is a **systematic test coverage expansion** targeting critical gaps that 
 **Use:** Copy-paste patterns when implementing tests
 
 **Sections:**
-- Fixture factories (`createMockCommandContext`, `setupRpcHandler`)
+- Proposed fixture factories (`createMockCommandContext`, `setupRpcHandler`) — never built
 - Command test patterns (basic, permissions, options, errors)
 - RPC test patterns (GET, SET, DELETE, error responses)
 - Integration test patterns (Discord errors, race conditions, validation, cache invalidation)
 - Debugging tips & running tests
 
 ### 3. `docs/test-patterns-reference.md`
-**What:** Quick lookup guide for specific test patterns
-**Use:** Find the right pattern before implementing
+**What:** Patterns verified against tests that actually run
+**Use:** The one to copy from; supersedes the roadmap's snippets where they disagree
 
 **Sections:**
-- Pattern index (command, RPC, integration)
-- Copy-paste templates for each pattern type
+- Running the suite (vitest, not `bun test`)
+- Command tests, RPC handler tests, Prisma mocking
 - Common test utilities & assertions
 - Debugging tips
 
@@ -179,6 +179,10 @@ packages/core/tests/
 ---
 
 ## Key Patterns to Remember
+
+> These sketches assume the proposed fixture layer, which was never built, and
+> the RPC one has the handler contract wrong. See
+> `docs/test-patterns-reference.md` for the working equivalents.
 
 ### Command Tests
 ```typescript
