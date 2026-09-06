@@ -68,19 +68,24 @@ function renderInlineToken(token: string, key: number): ReactNode {
   }
   const linkMatch = /^\[(.+)\]\((.+)\)$/.exec(token);
   if (linkMatch) {
-    return (
-      <a
-        key={key}
-        href={linkMatch[2]}
-        onClick={(e) => e.preventDefault()}
-        style={{ color: DiscordLink }}
-        className="hover:underline"
-      >
-        {linkMatch[1]}
-      </a>
-    );
+    const linkText = linkMatch[1] ?? "";
+    const linkHref = linkMatch[2] ?? "";
+    if (isSafeHttpUrl(linkHref)) {
+      return (
+        <a
+          key={key}
+          href={linkHref}
+          onClick={(e) => e.preventDefault()}
+          style={{ color: DiscordLink }}
+          className="hover:underline"
+        >
+          {linkText}
+        </a>
+      );
+    }
+    return <span key={key}>{token}</span>;
   }
-  if (/^https?:\/\//.test(token)) {
+  if (/^https?:\/\//.test(token) && isSafeHttpUrl(token)) {
     return (
       <a
         key={key}
@@ -94,6 +99,15 @@ function renderInlineToken(token: string, key: number): ReactNode {
     );
   }
   return <span key={key}>{token}</span>;
+}
+
+function isSafeHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 const inlineTest = new RegExp(inlinePattern.source);
