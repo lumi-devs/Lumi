@@ -3,7 +3,7 @@ import { envParseString } from "#lib/env.js";
 import type { PermitTargetType } from "#lib/prisma/repositories/PermissionRepository.js";
 
 const OwnerIds: ReadonlySet<string> = new Set(
-  envParseString("OwnerIds", "")
+  envParseString("OWNER_IDS", "")
     .split(",")
     .map((id) => id.trim())
     .filter((id) => id.length > 0),
