@@ -71,7 +71,7 @@ describe("HomePage & GuildPicker", () => {
       guilds: [{ id: "101", name: "My Guild", icon: null, permissions: "0x20" }],
     });
 
-    render(<GuildPicker session={session} summaries={[]} />);
+    render(<GuildPicker session={session} summaries={[]} clientId="client-123" />);
 
     expect(screen.getByText(/your servers/i)).toBeInTheDocument();
     expect(screen.getByText("My Guild")).toBeInTheDocument();
@@ -80,7 +80,7 @@ describe("HomePage & GuildPicker", () => {
   it("shows a 'no servers' empty state in GuildPicker for a user who manages nothing", () => {
     const session = makeSession({ guilds: [] });
 
-    render(<GuildPicker session={session} summaries={[]} />);
+    render(<GuildPicker session={session} summaries={[]} clientId="client-123" />);
 
     expect(
       screen.getByText(/no servers where you have manage server/i),

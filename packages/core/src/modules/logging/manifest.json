@@ -91,11 +91,10 @@
     },
     {
       "key": "ignored_channels",
-      "type": "STRING",
+      "type": "MULTI_CHANNEL",
       "label": "Ignored Channel IDs",
-      "description": "Comma-separated channel IDs whose message events are not logged.",
-      "group": "Setup",
-      "list": true
+      "description": "Channel IDs whose message events are not logged.",
+      "group": "Setup"
     }
   ],
   "category": "System"

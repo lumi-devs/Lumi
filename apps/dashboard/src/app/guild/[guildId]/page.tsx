@@ -17,6 +17,7 @@ import { OverviewRail } from "#/components/guild/overview-rail";
 import { RecentAuditTable } from "#/components/guild/recent-audit-table";
 import { buildModuleLabelIndex } from "#/lib/config-labels";
 import { buildHealthChecks } from "#/lib/health-checks";
+import { buildSetupIssues } from "#/components/guild/setup-issues";
 import { extractMemberNames } from "#/lib/log-format";
 import { HealthyStatus } from "#/components/system/shard-fleet";
 
@@ -118,6 +119,21 @@ export default async function GuildOverviewPage({
       detail: "Members are waiting on a moderation appeal decision.",
       actionHref: `/guild/${guildId}/appeals`,
       actionLabel: "Review",
+    });
+  }
+  const setupIssues = buildSetupIssues(data.modules);
+  if (setupIssues.length > 0) {
+    const [first, ...rest] = setupIssues;
+    attentionRows.push({
+      id: "guided-setup",
+      severity: "warning",
+      title: `${setupIssues.length} setup step${setupIssues.length === 1 ? "" : "s"} remaining`,
+      detail:
+        rest.length > 0
+          ? `${first!.title}, plus ${rest.length} more.`
+          : (first?.detail ?? first?.title ?? ""),
+      actionHref: `/guild/${guildId}/setup`,
+      actionLabel: "Complete setup",
     });
   }
   for (const check of failingChecks) {

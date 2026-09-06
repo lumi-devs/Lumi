@@ -234,6 +234,14 @@ export const ConfigSetSchema = s.object({
   value: s.any(),
 });
 
+/** Upper bound on entries per `guild.config.setMany` call. */
+export const GuildConfigSetManyMax = 50;
+
+export const ConfigSetManySchema = s.object({
+  moduleName: s.string().lengthGreaterThanOrEqual(1),
+  values: s.any(),
+});
+
 export const GuildSettingsSchema = s.object({
   prefix: s.string().lengthLessThanOrEqual(5).nullable().optional(),
   muteRoleId: SnowflakeSchema.nullable().optional(),
@@ -449,7 +457,7 @@ export async function resolveAppealToken(
   return { ok: true, moderationCase, userId: payload.userId };
 }
 
-export function toRawConfigValue(value: unknown): string {
+export function toRawConfigValue(value: unknown): unknown {
   if (Array.isArray(value)) {
     const bad = value.find((entry) => !isPrimitiveConfigValue(entry));
     if (bad !== undefined) {
@@ -457,14 +465,14 @@ export function toRawConfigValue(value: unknown): string {
         `Unsupported config list entry of type ${typeof bad}; expected string, number or boolean.`,
       );
     }
-    return value.map((entry) => String(entry)).join(",");
+    return value.map((entry) => String(entry));
   }
   if (!isPrimitiveConfigValue(value)) {
     throw new TypeError(
       `Unsupported config value of type ${value === null ? "null" : typeof value}; expected string, number or boolean.`,
     );
   }
-  return String(value);
+  return value;
 }
 
 export function isPrimitiveConfigValue(value: unknown): boolean {

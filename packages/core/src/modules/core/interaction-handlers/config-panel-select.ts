@@ -1,6 +1,7 @@
 import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { FieldType } from "#lib/module-system/Module.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import type { ConfigUtility } from "#utilities/pieces/ConfigUtility.js";
 import {
@@ -88,12 +89,18 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
       case "user": {
         if (!key) return;
         if (interaction.values.length > 0) {
-          const valStr = interaction.values.join(",");
+          const field = this.container.moduleStore
+            .getRecord(moduleName)
+            ?.meta.configFields?.find((f) => f.key === key);
+          const multi =
+            field?.type === FieldType.MULTI_ROLE ||
+            field?.type === FieldType.MULTI_CHANNEL ||
+            field?.type === FieldType.MULTI_USER;
           await this.cfg.setConfig(
             guildId,
             moduleName,
             key,
-            valStr,
+            multi ? [...interaction.values] : interaction.values.join(","),
             interaction.user.id,
           );
         } else {
@@ -129,9 +136,12 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
             guildId,
             entry.moduleName,
             entry.key,
-            typeof entry.oldValue === "object"
-              ? JSON.stringify(entry.oldValue)
-              : String(entry.oldValue),
+            Array.isArray(entry.oldValue) ||
+              typeof entry.oldValue === "string" ||
+              typeof entry.oldValue === "number" ||
+              typeof entry.oldValue === "boolean"
+              ? entry.oldValue
+              : JSON.stringify(entry.oldValue),
             interaction.user.id,
           );
         }

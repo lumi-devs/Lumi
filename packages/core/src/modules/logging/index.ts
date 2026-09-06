@@ -70,12 +70,11 @@ import { ChannelType } from "discord.js";
       description: "Log member role additions/removals.",
       default: true,
     }),
-    ignored_channels: cfg.string({
+    ignored_channels: cfg.multiChannel({
       group: "Setup",
       label: "Ignored Channel IDs",
       description:
-        "Comma-separated channel IDs whose message events are not logged.",
-      list: true,
+        "Channel IDs whose message events are not logged.",
     }),
   }),
 })

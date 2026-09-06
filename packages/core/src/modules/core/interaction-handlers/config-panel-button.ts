@@ -24,7 +24,7 @@ import { Emojis } from "#utilities/assets.js";
 import { ephemeralCard, makeErrorCard } from "#utilities/cards.js";
 import { respond } from "#utilities/command-response.js";
 import {
-  ActionRowBuilder,
+  LabelBuilder,
   ModalBuilder,
   TextInputBuilder,
 } from "@discordjs/builders";
@@ -76,7 +76,13 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
     if (action === "ovadd")
       return this.#openOverrideModal(interaction, guildId, moduleName);
     if (action === "fedit")
-      return this.#openFieldModal(interaction, guildId, moduleName, rest[0]);
+      return this.#openFieldModal(
+        interaction,
+        guildId,
+        moduleName,
+        rest[0],
+        rest[1],
+      );
 
     const t = await fetchTyped(interaction);
 
@@ -185,6 +191,7 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
     guildId: string,
     moduleName: string,
     key: string | undefined,
+    page?: string,
   ) {
     if (!key) return;
     const detail = await this.#requireDetail(guildId, moduleName);
@@ -192,22 +199,33 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
     if (!field) return;
 
     const current = detail.config[field.key];
+    const stored =
+      Array.isArray(current) && field.type === FieldType.STRING_LIST
+        ? current.map(String).join("\n")
+        : current;
     const input = new TextInputBuilder()
       .setCustomId("value")
-      .setLabel(field.label.slice(0, 45))
-      .setStyle(TextInputStyle.Short)
+      .setStyle(
+        field.type === FieldType.STRING ||
+          field.type === FieldType.STRING_LIST
+          ? TextInputStyle.Paragraph
+          : TextInputStyle.Short,
+      )
       .setRequired(Boolean(field.required));
-    if (field.description)
-      input.setPlaceholder(field.description.slice(0, 100));
-    if (current !== null && current !== undefined)
-      input.setValue(String(current).slice(0, 4000));
+    if (stored !== null && stored !== undefined)
+      input.setValue(String(stored).slice(0, 4000));
 
+    const label = new LabelBuilder()
+      .setLabel(field.label.slice(0, 45))
+      .setTextInputComponent(input);
+    if (field.description)
+      label.setDescription(field.description.slice(0, 100));
+
+    const sectionIndex = parseInt(page ?? "0", 10) || 0;
     const modal = new ModalBuilder()
-      .setCustomId(`cfg:fmodal:${moduleName}:${field.key}`)
+      .setCustomId(`cfg:fmodal:${moduleName}:${field.key}:${sectionIndex}`)
       .setTitle(field.label.slice(0, 45))
-      .addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(input),
-      );
+      .addLabelComponents(label);
 
     return interaction.showModal(modal);
   }
@@ -234,8 +252,10 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
     const fields = (detail.meta.configFields ?? [])
       .filter(
         (f) =>
-          (f.type === FieldType.STRING && !f.list) ||
-          f.type === FieldType.NUMBER,
+          f.type === FieldType.STRING ||
+          f.type === FieldType.STRING_LIST ||
+          f.type === FieldType.NUMBER ||
+          f.type === FieldType.DURATION,
       )
       .slice(0, 5);
     if (fields.length === 0) {
@@ -256,17 +276,25 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
 
     for (const f of fields) {
       const current = detail.config[f.key];
+      const stored =
+        Array.isArray(current) && f.type === FieldType.STRING_LIST
+          ? current.map(String).join("\n")
+          : current;
       const input = new TextInputBuilder()
         .setCustomId(f.key)
-        .setLabel(f.label.slice(0, 45))
-        .setStyle(TextInputStyle.Short)
+        .setStyle(
+          f.type === FieldType.STRING || f.type === FieldType.STRING_LIST
+            ? TextInputStyle.Paragraph
+            : TextInputStyle.Short,
+        )
         .setRequired(Boolean(f.required));
-      if (f.description) input.setPlaceholder(f.description.slice(0, 100));
-      if (current !== null && current !== undefined)
-        input.setValue(String(current).slice(0, 4000));
-      modal.addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(input),
-      );
+      if (stored !== null && stored !== undefined)
+        input.setValue(String(stored).slice(0, 4000));
+      const label = new LabelBuilder()
+        .setLabel(f.label.slice(0, 45))
+        .setTextInputComponent(input);
+      if (f.description) label.setDescription(f.description.slice(0, 100));
+      modal.addLabelComponents(label);
     }
 
     return interaction.showModal(modal);
@@ -282,17 +310,18 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
       .setCustomId(`cfg:ovmodal:${moduleName}`)
       .setTitle(`Override • ${detail.meta.displayName}`.slice(0, 45));
 
-    const mk = (id: string, label: string, placeholder: string) =>
-      new ActionRowBuilder<TextInputBuilder>().addComponents(
-        new TextInputBuilder()
-          .setCustomId(id)
-          .setLabel(label)
-          .setStyle(TextInputStyle.Short)
-          .setRequired(true)
-          .setPlaceholder(placeholder.slice(0, 100)),
-      );
+    const mk = (id: string, labelText: string, hint: string) =>
+      new LabelBuilder()
+        .setLabel(labelText)
+        .setDescription(hint.slice(0, 100))
+        .setTextInputComponent(
+          new TextInputBuilder()
+            .setCustomId(id)
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true),
+        );
 
-    modal.addComponents(
+    modal.addLabelComponents(
       mk("key", "Config key", "e.g. log_channel_id"),
       mk("type", "Target type", "channel, role, user, or category"),
       mk("target", "Target ID or mention", "e.g. #general or 123…"),

@@ -91,7 +91,7 @@ describe("SecurityUtility.loadAntiNukeConfig", () => {
           getAllModuleConfig: vi.fn().mockResolvedValue({
             antinuke_enabled: true,
             max_bans: 10,
-            trusted_role_ids: "111111111111111111, 222222222222222222",
+            trusted_role_ids: ["111111111111111111", "222222222222222222"],
           }),
         },
       },

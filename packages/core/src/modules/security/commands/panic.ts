@@ -2,6 +2,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
 import { getUtility } from "#lib/module-system/Utility.js";
+import { toStringArray } from "#lib/module-system/config-schema.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import {
@@ -52,13 +53,7 @@ export class PanicCommand extends BaseCommand {
       guild.id,
       "security",
     );
-    const channelIds =
-      typeof raw["panic_lock_channel_ids"] === "string"
-        ? raw["panic_lock_channel_ids"]
-            .split(",")
-            .map((id) => id.trim())
-            .filter((id) => id.length > 0)
-        : [];
+    const channelIds = toStringArray(raw["panic_lock_channel_ids"]);
 
     const result = await getUtility("security").enterPanic(
       guild,

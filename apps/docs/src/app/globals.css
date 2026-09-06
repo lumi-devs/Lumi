@@ -1,709 +1,178 @@
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap");
 @import "tailwindcss";
-@import "tw-animate-css";
-
-/* ── Lumi docs design tokens ───────────────────────────────────────────────
- *
- * AESTHETIC DIRECTION: "Midnight Sapphire" — the same semantic-token system
- * and colour philosophy as apps/dashboard (deep navy canvas, electric
- * sapphire accent, glass chrome, soft diffused elevation), adapted for a
- * docs/marketing medium rather than an admin console: bigger type rhythm,
- * a hero "atmosphere" wash, and long-form prose typography.
- *
- * Theme decision: this site stays dark-by-default, unconditionally (no
- * `prefers-color-scheme` gate), matching its prior behaviour and avoiding a
- * sweep of every hardcoded `text-white` heading across the marketing copy
- * that a live light theme would expose. The light token set below is real
- * and complete — same values as the dashboard's light theme — parked behind
- * `[data-theme="light"]` so a future theme toggle is a CSS-value flip, not a
- * redesign. See AGENTS handoff notes for the reasoning.
- *
- * Semantic tokens only: components consume `var(--surface)` /
- * `var(--fg-muted)` / `var(--border)`, not raw hex, so the two token sets
- * below are the only places actual colour values live (per-node diagram
- * legend colours in architecture-visualizer.tsx are the one deliberate
- * exception — they're a categorical palette, not theme chrome).
- */
 
 :root {
   color-scheme: dark;
-
-  /* Surfaces - calm, eye-friendly midnight slate */
-  --bg: #0f121a;
-  --bg-subtle: #131722;
-  --surface: #171c2a;
-  --surface-hover: #1e2436;
-  --surface-active: #242b40;
-
-  /* Lines - soft, muted borders */
-  --border: #22293d;
-  --border-soft: #1a2030;
-  --border-strong: #313a54;
-
-  /* Text - warm slate, easy on the eyes */
-  --fg: #f1f5f9;
-  --fg-body: #cbd5e1;
-  --fg-muted: #94a3b8;
-  --fg-subtle: #64748b;
-  --fg-on-accent: #ffffff;
-
-  /* Balanced sapphire accent */
-  --accent: #4f75f6;
-  --accent-hover: #3d63e4;
-  --accent-soft: rgba(79, 117, 246, 0.08);
-  --accent-fg: #819bfa;
-  --accent-border: rgba(79, 117, 246, 0.25);
-  --accent-glow: #4f75f6;
-
-  /* Status */
-  --success: #10b981;
-  --success-soft: rgba(16, 185, 129, 0.08);
-  --warning: #f59e0b;
-  --warning-soft: rgba(245, 158, 11, 0.08);
-  --danger: #ef4444;
-  --danger-soft: rgba(239, 68, 68, 0.08);
-
-  --overlay: rgba(0, 0, 0, 0.55);
-  --ring: rgba(76, 110, 245, 0.42);
-
-  /* Soft, cool-tinted elevation — never pure black */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-md:
-    0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -10px rgba(0, 0, 0, 0.55);
-  --shadow-lg:
-    0 2px 4px rgba(0, 0, 0, 0.45), 0 26px 64px -16px rgba(0, 0, 0, 0.7);
-  --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.4),
-    0 10px 28px -8px rgba(76, 110, 245, 0.35);
-  --shadow-glow-accent: 0 1px 2px rgba(0, 0, 0, 0.4),
-    0 18px 44px -12px rgba(76, 110, 245, 0.25);
-
-  /* Glass chrome (sticky header, dropdowns) */
-  --glass-bg: rgba(15, 18, 25, 0.68);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-blur-sm: 10px;
-  --glass-blur-md: 20px;
-  --glass-blur-lg: 40px;
-
-  /* Admonition/callout tokens — derived from the semantic status tokens
-   * above rather than their own hardcoded hex. */
-  --callout-note-bg: var(--accent-soft);
-  --callout-note-border: var(--accent);
-  --callout-tip-bg: var(--success-soft);
-  --callout-tip-border: var(--success);
-  --callout-warn-bg: var(--warning-soft);
-  --callout-warn-border: var(--warning);
-  --callout-danger-bg: var(--danger-soft);
-  --callout-danger-border: var(--danger);
-
-  /* Single source of truth for transition/animation durations. */
-  --motion-instant: 75ms;
-  --motion-fast: 150ms;
-  --motion-normal: 300ms;
-  --motion-slow: 600ms;
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-
-  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-heading: "Plus Jakarta Sans", "Geist", sans-serif;
-  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  --bg: #0b0e14;
+  --bg-raise: #10141d;
+  --surface: #141926;
+  --surface-hover: #1a2132;
+  --border: #232b40;
+  --border-soft: #1a2033;
+  --fg: #eef2f9;
+  --fg-body: #c3cad9;
+  --fg-muted: #8d96ad;
+  --fg-faint: #5d6579;
+  --accent: #6d8dff;
+  --accent-strong: #8fa6ff;
+  --accent-soft: rgb(109 141 255 / 0.1);
+  --accent-border: rgb(109 141 255 / 0.35);
+  --good: #34d399;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* Real light theme, same values as the dashboard's light theme. Not wired to
- * `prefers-color-scheme` (see decision note above) — activates only via an
- * explicit `data-theme="light"` on `<html>`, which nothing sets today. */
-:root[data-theme="light"] {
-  color-scheme: light;
-
-  --bg: #f4f5f8;
-  --bg-subtle: #ebedf2;
-  --surface: #ffffff;
-  --surface-hover: #f5f6fa;
-  --surface-active: #eaedf3;
-
-  --border: #e1e4ea;
-  --border-soft: #ebedf2;
-  --border-strong: #c7cdd9;
-
-  --fg: #14161c;
-  --fg-body: #3a4150;
-  --fg-muted: #5a6270;
-  --fg-subtle: #8b93a3;
-  --fg-on-accent: #ffffff;
-
-  --accent: #3b5bdb;
-  --accent-hover: #2b4bc6;
-  --accent-soft: rgba(59, 91, 219, 0.09);
-  --accent-fg: #2b4bc6;
-  --accent-border: rgba(59, 91, 219, 0.3);
-  --accent-glow: #4c6ef5;
-
-  --success: #12805a;
-  --success-soft: rgba(18, 128, 90, 0.1);
-  --warning: #92600a;
-  --warning-soft: rgba(146, 96, 10, 0.1);
-  --danger: #c7333f;
-  --danger-soft: rgba(199, 51, 63, 0.09);
-
-  --overlay: rgba(10, 12, 18, 0.45);
-  --ring: rgba(41, 83, 216, 0.38);
-
-  --shadow-sm: 0 1px 2px rgba(20, 22, 30, 0.05);
-  --shadow-md:
-    0 1px 2px rgba(20, 22, 30, 0.04), 0 10px 30px -10px rgba(20, 22, 30, 0.12);
-  --shadow-lg:
-    0 2px 4px rgba(20, 22, 30, 0.05), 0 24px 60px -16px rgba(20, 22, 30, 0.18);
-  --shadow-accent: 0 1px 2px rgba(20, 22, 30, 0.06),
-    0 10px 28px -8px rgba(41, 83, 216, 0.28);
-  --shadow-glow-accent: 0 1px 2px rgba(20, 22, 30, 0.05),
-    0 16px 40px -12px rgba(76, 125, 255, 0.22);
-
-  --glass-bg: rgba(255, 255, 255, 0.68);
-  --glass-border: rgba(255, 255, 255, 0.6);
-
-  --callout-note-bg: var(--accent-soft);
-  --callout-note-border: var(--accent);
-  --callout-tip-bg: var(--success-soft);
-  --callout-tip-border: var(--success);
-  --callout-warn-bg: var(--warning-soft);
-  --callout-warn-border: var(--warning);
-  --callout-danger-bg: var(--danger-soft);
-  --callout-danger-border: var(--danger);
+html {
+  scroll-behavior: smooth;
 }
-
-@theme inline {
-  --color-bg: var(--bg);
-  --color-bg-subtle: var(--bg-subtle);
-  --color-surface: var(--surface);
-  --color-surface-hover: var(--surface-hover);
-  --color-surface-active: var(--surface-active);
-
-  --color-border: var(--border);
-  --color-border-soft: var(--border-soft);
-  --color-border-strong: var(--border-strong);
-
-  --color-fg: var(--fg);
-  --color-fg-muted: var(--fg-muted);
-  --color-fg-subtle: var(--fg-subtle);
-  --color-fg-on-accent: var(--fg-on-accent);
-
-  --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
-  --color-accent-soft: var(--accent-soft);
-  --color-accent-fg: var(--accent-fg);
-  --color-accent-glow: var(--accent-glow);
-
-  --color-success: var(--success);
-  --color-success-soft: var(--success-soft);
-  --color-warning: var(--warning);
-  --color-warning-soft: var(--warning-soft);
-  --color-danger: var(--danger);
-  --color-danger-soft: var(--danger-soft);
-
-  --color-overlay: var(--overlay);
-
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
-
-  --shadow-e1: var(--shadow-sm);
-  --shadow-e2: var(--shadow-md);
-  --shadow-e3: var(--shadow-lg);
-  --shadow-accent: var(--shadow-accent);
-  --shadow-glow-accent: var(--shadow-glow-accent);
-
-  --color-glass-bg: var(--glass-bg);
-  --color-glass-border: var(--glass-border);
-  --blur-glass-sm: var(--glass-blur-sm);
-  --blur-glass-md: var(--glass-blur-md);
-  --blur-glass-lg: var(--glass-blur-lg);
-
-  --duration-instant: var(--motion-instant);
-  --duration-fast: var(--motion-fast);
-  --duration-normal: var(--motion-normal);
-  --duration-slow: var(--motion-slow);
-}
-
-/* ── Base ─────────────────────────────────────────────────────────────── */
 
 body {
-  background-color: var(--bg);
+  background: var(--bg);
   color: var(--fg-body);
-  font-family: var(--font-sans);
-  overflow-x: hidden;
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.7;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* Linear-Style Directional Light Top-Rim Bevel */
-.card-premium {
-  position: relative;
-  background: var(--surface);
-  border-radius: 1rem;
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-
-.card-premium::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(255, 255, 255, 0.03) 40%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-/* Glass chrome (sticky header, dropdowns) — translucent tint over
- * backdrop-blur, with a solid-fill fallback for `prefers-reduced-transparency`
- * so chrome never becomes unreadable when a user asks for less translucency. */
-.glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur-md)) saturate(160%);
-  -webkit-backdrop-filter: blur(var(--glass-blur-md)) saturate(160%);
-  box-shadow: inset 0 1px 0 var(--glass-border);
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .glass {
-    background: var(--surface);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-}
-
-/* Cursor-tracked accent glow for hover-heavy surfaces (feature/track cards).
- * `spotlightHandler` in lib/animate.ts sets --spot-x/y on mousemove; this
- * just reads them. Host element must be `position: relative`. */
-.spotlight {
-  position: relative;
-  isolation: isolate;
-}
-.spotlight::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  opacity: 0;
-  pointer-events: none;
-  border-radius: inherit;
-  transition: opacity var(--motion-normal) var(--ease-out);
-  background: radial-gradient(
-    220px circle at var(--spot-x, 50%) var(--spot-y, 50%),
-    var(--accent-soft),
-    transparent 70%
-  );
-}
-.spotlight:hover::before {
-  opacity: 1;
-}
-@media (prefers-reduced-motion: reduce) {
-  .spotlight::before {
-    display: none;
-  }
-}
-
-/* Technical Monospace Kicker Header */
-.kicker-tag {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-}
-
-/* Utility to completely hide scrollbar while preserving scroll behavior */
-.no-scrollbar::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-.no-scrollbar {
-  -ms-overflow-style: none !important;
-  scrollbar-width: none !important;
-}
-
-/* Custom scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--fg-subtle);
-}
-
-/* ── Page-load / entrance choreography ───────────────────────────────────
- * Same 320ms beat as the dashboard's `.rise`, for the hero and track cards
- * on first paint. `prefers-reduced-motion` above collapses it to 0.01ms. */
-@keyframes lumi-rise {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 8px, 0);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-.rise {
-  animation: lumi-rise 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: var(--rise-delay, 0ms);
-}
-
-/* Ambient hero background wash — scoped to the landing hero only,
- * not global chrome. Registered custom property so the browser interpolates
- * the drift smoothly instead of jumping at the keyframe midpoint. */
-@property --atmosphere-x {
-  syntax: "<percentage>";
-  inherits: false;
-  initial-value: 50%;
-}
-
-.hero-atmosphere {
-  position: relative;
-  isolation: isolate;
-}
-
-.hero-atmosphere::before {
-  content: "";
-  position: absolute;
-  inset: -6rem -2rem auto -2rem;
-  z-index: -1;
-  height: 28rem;
-  pointer-events: none;
-  background-image: radial-gradient(
-    56rem 28rem at var(--atmosphere-x, 50%) 0%,
-    var(--accent-glow),
-    transparent 70%
-  );
-  opacity: 0.14;
-  animation: lumi-atmosphere-drift 40s ease-in-out infinite;
-}
-
-@keyframes lumi-atmosphere-drift {
-  0%,
-  100% {
-    --atmosphere-x: 42%;
-  }
-  50% {
-    --atmosphere-x: 58%;
-  }
-}
-
-/* Documentation Typography & Layout */
-.doc-content {
-  color: var(--fg-body);
-  font-size: 0.96rem;
-  line-height: 1.75;
-}
-
-.doc-content h1 {
-  font-family: var(--font-heading);
-  font-size: 2.15rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+.doc-shell h1,
+.doc-shell h2,
+.doc-shell h3 {
   color: var(--fg);
-  margin-top: 2rem;
-  margin-bottom: 1.25rem;
-  line-height: 1.2;
-  scroll-margin-top: 5.5rem;
-}
-
-.doc-content h2 {
-  font-family: var(--font-heading);
-  font-size: 1.45rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--fg);
-  margin-top: 2.75rem;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border);
-  line-height: 1.35;
-  scroll-margin-top: 5.5rem;
+  line-height: 1.25;
+  scroll-margin-top: 6rem;
 }
 
-.doc-content h3 {
-  font-family: var(--font-heading);
-  font-size: 1.15rem;
-  font-weight: 600;
-  letter-spacing: -0.015em;
-  color: var(--fg);
+.doc-shell h1 {
+  font-size: 2.25rem;
+}
+
+.doc-shell h2 {
+  font-size: 1.4rem;
+  margin-top: 3rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--border-soft);
+}
+
+.doc-shell h3 {
+  font-size: 1.1rem;
   margin-top: 2rem;
-  margin-bottom: 0.75rem;
-  line-height: 1.4;
-  scroll-margin-top: 5.5rem;
 }
 
-.doc-content h4 {
-  font-family: var(--font-heading);
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--fg);
-  margin-top: 1.5rem;
-  margin-bottom: 0.5rem;
-  scroll-margin-top: 5.5rem;
-}
-
-.doc-content p {
+.doc-shell p {
   margin-top: 1rem;
-  margin-bottom: 1rem;
-  line-height: 1.75;
-  color: #c4cde0;
 }
 
-.doc-content a {
-  color: var(--accent-fg);
-  font-weight: 500;
+.doc-shell a {
+  color: var(--accent-strong);
+  text-decoration: none;
+}
+
+.doc-shell a:hover {
   text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: color-mix(in srgb, var(--accent-fg) 35%, transparent);
-  transition: all var(--motion-fast) ease;
 }
 
-.doc-content a:hover {
-  color: #8da4f9;
-  text-decoration-color: #8da4f9;
-}
-
-.doc-content strong {
-  color: var(--fg);
-  font-weight: 600;
-}
-
-.doc-content em {
-  color: var(--fg-body);
-  font-style: italic;
-}
-
-.doc-content ul {
-  list-style-type: disc;
-  padding-left: 1.5rem;
+.doc-shell ul,
+.doc-shell ol {
   margin-top: 1rem;
-  margin-bottom: 1rem;
-}
-
-.doc-content ol {
-  list-style-type: decimal;
   padding-left: 1.5rem;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
+  display: grid;
+  gap: 0.5rem;
 }
 
-.doc-content li {
-  margin-top: 0.35rem;
-  margin-bottom: 0.35rem;
-  color: #c4cde0;
-  line-height: 1.7;
+.doc-shell ul {
+  list-style: disc;
 }
 
-/* Callouts & Admonitions */
-.callout {
-  margin: 1.5rem 0;
-  padding: 1rem 1.25rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: #c4cde0;
-}
-.callout p {
-  margin: 0;
-  color: inherit;
-}
-.callout-note {
-  background: rgba(76, 110, 245, 0.08);
-  border-color: rgba(76, 110, 245, 0.3);
-}
-.callout-tip {
-  background: rgba(18, 184, 134, 0.08);
-  border-color: rgba(18, 184, 134, 0.3);
-}
-.callout-warning {
-  background: rgba(245, 159, 0, 0.08);
-  border-color: rgba(245, 159, 0, 0.3);
-}
-.callout-danger {
-  background: rgba(250, 82, 82, 0.08);
-  border-color: rgba(250, 82, 82, 0.3);
+.doc-shell ol {
+  list-style: decimal;
 }
 
-.doc-content blockquote {
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
-  padding: 0.875rem 1.25rem;
-  border-left: 3px solid var(--accent);
-  background: var(--surface);
-  border-radius: 0 0.5rem 0.5rem 0;
-  color: #c4cde0;
+.doc-shell li::marker {
+  color: var(--fg-faint);
 }
 
-.doc-content blockquote p {
-  margin: 0;
-  color: inherit;
-}
-
-/* Inline Code - calm, eye-friendly, no neon glare */
-.doc-content code:not(pre code),
-code:not(pre code) {
-  display: inline;
-  font-family: var(--font-mono);
+.doc-shell code {
+  font-family: var(--mono);
   font-size: 0.85em;
-  font-weight: 500;
-  color: #e2e8f0;
-  background-color: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 0.15rem 0.4rem;
-  border-radius: 0.35rem;
-  word-break: break-word;
-}
-
-.doc-content hr {
-  margin-top: 2.5rem;
-  margin-bottom: 2.5rem;
-  border: 0;
-  border-top: 1px solid var(--border);
-}
-
-/* Table Container & Table */
-.table-wrapper {
-  margin: 1.75rem 0;
-  overflow-x: auto;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border);
   background: var(--surface);
-}
-
-.doc-content table {
-  width: 100%;
-  text-align: left;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.doc-content th {
-  padding: 0.75rem 1rem;
-  font-weight: 600;
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  padding: 0.1em 0.4em;
   color: var(--fg);
-  background-color: var(--surface-active);
+  white-space: nowrap;
+}
+
+.doc-shell strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.doc-table-wrap {
+  margin-top: 1.25rem;
+  overflow-x: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+}
+
+table.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.doc-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+  background: var(--bg-raise);
+  padding: 0.7rem 1rem;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 
-.doc-content td {
-  padding: 0.75rem 1rem;
-  color: #c4cde0;
+.doc-table td {
+  padding: 0.7rem 1rem;
   border-bottom: 1px solid var(--border-soft);
+  vertical-align: top;
 }
 
-.doc-content tr:last-child td {
+.doc-table tr:last-child td {
   border-bottom: none;
 }
 
-.doc-content tr:nth-child(even) {
-  background-color: rgba(255, 255, 255, 0.015);
+.doc-table td:first-child code {
+  white-space: nowrap;
 }
 
-/* Prism.js Syntax Highlighting Overrides — a fixed, content-neutral code
- * palette (kept as literal hex, same as the dashboard's approach: syntax
- * colours are a categorical scheme, not theme chrome). */
-code[class*="language-"],
-pre[class*="language-"] {
-  color: #e4e4e7;
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  line-height: 1.7;
-  direction: ltr;
-  text-align: left;
-  white-space: pre;
-  word-spacing: normal;
-  word-break: normal;
-  tab-size: 2;
-  hyphens: none;
+.callout {
+  margin-top: 1.25rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 10px 10px 0;
+  background: var(--bg-raise);
+  padding: 0.9rem 1.1rem;
+  font-size: 0.925rem;
 }
 
-.token.comment,
-.token.prolog,
-.token.doctype,
-.token.cdata {
-  color: #71717a;
-  font-style: italic;
+.callout.warn {
+  border-left-color: var(--warn);
 }
 
-.token.punctuation {
-  color: #a1a1aa;
+.callout.good {
+  border-left-color: var(--good);
 }
 
-.token.property,
-.token.tag,
-.token.boolean,
-.token.number,
-.token.constant,
-.token.symbol,
-.token.deleted {
-  color: #f472b6;
+.callout p {
+  margin-top: 0;
 }
 
-.token.selector,
-.token.attr-name,
-.token.string,
-.token.char,
-.token.builtin,
-.token.inserted {
-  color: #34d399;
-}
-
-.token.operator,
-.token.entity,
-.token.url,
-.language-css .token.string,
-.style .token.string {
-  color: #38bdf8;
-}
-
-.token.atrule,
-.token.attr-value,
-.token.keyword {
-  color: #818cf8;
-}
-
-.token.function,
-.token.class-name {
-  color: #60a5fa;
-}
-
-.token.regex,
-.token.important,
-.token.variable {
-  color: #fb923c;
-}
-
-.token.important,
-.token.bold {
-  font-weight: bold;
-}
-
-.token.italic {
-  font-style: italic;
+::selection {
+  background: rgb(109 141 255 / 0.35);
 }

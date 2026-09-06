@@ -2,7 +2,8 @@ import { container } from "@sapphire/framework";
 import { Colors, PermissionsBitField } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
 import { cutText } from "@sapphire/utilities";
-import { getUtility, tryGetUtility } from "#lib/module-system/Utility.js";
+import { tryGetUtility } from "#lib/module-system/Utility.js";
+import { toStringArray } from "#lib/module-system/config-schema.js";
 import type { GuildMessage } from "#lib/types/common.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
@@ -11,11 +12,12 @@ import { getHitReason, type FilterHit } from "./rules.js";
 import type { FilterUtility } from "../utilities/FilterUtility.js";
 
 export async function isExempt(message: GuildMessage): Promise<boolean> {
-  const exemptRoles = await getUtility("config").getConfigList(
+  const stored = await container.db.config.getModuleConfig(
     message.guildId,
     "filter",
     "exempt_roles",
   );
+  const exemptRoles = toStringArray(stored);
   if (exemptRoles.length === 0) return false;
   const roles = message.member?.roles.cache;
   return roles ? exemptRoles.some((id) => roles.has(id)) : false;

@@ -21,7 +21,7 @@ export {
   Module,
   DefineModule,
   cfg,
-  parseConfigList,
+  toStringArray,
   FieldType,
   type ConfigField,
   type ModuleMeta,

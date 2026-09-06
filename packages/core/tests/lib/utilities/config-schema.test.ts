@@ -4,7 +4,7 @@ import { s } from "@sapphire/shapeshift";
 import {
   cfg,
   fieldsFromSchema,
-  parseConfigList,
+  toStringArray,
   validateModuleConfigValue,
   snowflakeString,
   durationString,
@@ -18,7 +18,7 @@ describe("Config Schema Utilities", () => {
       const schema = cfg.object({
         enabled: cfg.boolean({ label: "Enable Feature", description: "Toggle on/off", default: true }),
         maxLimit: cfg.number({ label: "Max Limit", description: "Upper limit", min: 1, max: 100, default: 50 }),
-        greeting: cfg.string({ label: "Greeting", description: "Welcome msg", list: false, default: "Hello" }),
+        greeting: cfg.string({ label: "Greeting", description: "Welcome msg", default: "Hello" }),
         mode: cfg.enum(["easy", "hard"] as const, { label: "Mode", description: "Difficulty", default: "easy" }),
         logChannel: cfg.channel({
           label: "Log Channel",
@@ -113,22 +113,18 @@ describe("Config Schema Utilities", () => {
     });
   });
 
-  describe("parseConfigList", () => {
+  describe("toStringArray", () => {
     it("returns string arrays untouched (filtering non-strings)", () => {
-      expect(parseConfigList(["a", "b", "c"])).toEqual(["a", "b", "c"]);
-      expect(parseConfigList(["a", 123, null, "b"])).toEqual(["a", "b"]);
+      expect(toStringArray(["a", "b", "c"])).toEqual(["a", "b", "c"]);
+      expect(toStringArray(["a", 123, null, "b"])).toEqual(["a", "b"]);
     });
 
-    it("splits comma-separated strings and trims whitespace", () => {
-      expect(parseConfigList("apple, banana , cherry")).toEqual(["apple", "banana", "cherry"]);
-      expect(parseConfigList("  one, , two ,")).toEqual(["one", "two"]);
-    });
-
-    it("returns an empty array for null, undefined, or non-string/array values", () => {
-      expect(parseConfigList(null)).toEqual([]);
-      expect(parseConfigList(undefined)).toEqual([]);
-      expect(parseConfigList(12345)).toEqual([]);
-      expect(parseConfigList({ foo: "bar" })).toEqual([]);
+    it("returns an empty array for strings, null, undefined, or other values", () => {
+      expect(toStringArray("apple, banana , cherry")).toEqual([]);
+      expect(toStringArray(null)).toEqual([]);
+      expect(toStringArray(undefined)).toEqual([]);
+      expect(toStringArray(12345)).toEqual([]);
+      expect(toStringArray({ foo: "bar" })).toEqual([]);
     });
   });
 
@@ -169,6 +165,113 @@ describe("Config Schema Utilities", () => {
       expect(() => validateModuleConfigValue(schema, "mode", "c")).toThrow();
       // Undeclared keys pass through unchecked
       expect(validateModuleConfigValue(schema, "unknownKey", "anything")).toBe("anything");
+    });
+  });
+
+  describe("duration, multi snowflake & slider fields", () => {
+    it("validates cfg.duration values against the duration pattern", () => {
+      const schema = cfg.duration({ label: "Cooldown", description: "Wait time" });
+      for (const v of ["30s", "10m", "2h", "7d"]) expect(schema.parse(v)).toBe(v);
+      for (const v of ["10x", "abc", "10", "", "m", "1.5h"]) {
+        expect(() => schema.parse(v)).toThrow();
+      }
+    });
+
+    it("exposes duration meta via fieldsFromSchema", () => {
+      const schema = cfg.object({
+        cooldown: cfg.duration({
+          label: "Cooldown",
+          description: "Wait time",
+          default: "15m",
+          group: "Limits",
+          quickPicks: ["5m", "15m", "1h", "24h", "7d"],
+        }),
+      });
+      expect(fieldsFromSchema(schema)).toEqual([
+        {
+          key: "cooldown",
+          type: FieldType.DURATION,
+          label: "Cooldown",
+          description: "Wait time",
+          default: "15m",
+          required: undefined,
+          group: "Limits",
+          quickPicks: ["5m", "15m", "1h", "24h", "7d"],
+        },
+      ]);
+      expect(validateModuleConfigValue(schema, "cooldown", "1h")).toBe("1h");
+      expect(() => validateModuleConfigValue(schema, "cooldown", "nope")).toThrow();
+    });
+
+    it("validates cfg.multiRole/cfg.multiChannel/cfg.multiUser snowflake arrays", () => {
+      const roles = cfg.multiRole({ label: "Roles", description: "Role list" });
+      const channels = cfg.multiChannel({
+        label: "Channels",
+        description: "Channel list",
+        channelTypes: [ChannelType.GuildText],
+      });
+      const users = cfg.multiUser({ label: "Users", description: "User list" });
+      const ids = ["123456789012345678", "987654321098765432"];
+      expect(roles.parse(ids)).toEqual(ids);
+      expect(channels.parse(ids)).toEqual(ids);
+      expect(users.parse(ids)).toEqual(ids);
+      expect(roles.parse([])).toEqual([]);
+      expect(users.parse([])).toEqual([]);
+      expect(() => roles.parse(["short"])).toThrow();
+      expect(() => users.parse(["short"])).toThrow();
+      expect(() => roles.parse(["123456789012345678", "nope"])).toThrow();
+      expect(() => channels.parse("123456789012345678")).toThrow();
+      expect(() => users.parse("123456789012345678")).toThrow();
+    });
+
+    it("validates cfg.stringList free-text arrays", () => {
+      const terms = cfg.stringList({ label: "Terms", description: "Term list" });
+      expect(terms.parse(["badword", "spam phrase"])).toEqual(["badword", "spam phrase"]);
+      expect(terms.parse([])).toEqual([]);
+      expect(() => terms.parse("badword")).toThrow();
+      expect(() => terms.parse([123])).toThrow();
+    });
+
+    it("exposes multi snowflake meta via fieldsFromSchema", () => {
+      const schema = cfg.object({
+        staffRoles: cfg.multiRole({
+          label: "Staff Roles",
+          description: "Staff list",
+          default: ["123456789012345678"],
+        }),
+        logChannels: cfg.multiChannel({ label: "Log Channels", description: "Log list" }),
+        watchUsers: cfg.multiUser({ label: "Watch Users", description: "User list" }),
+        badTerms: cfg.stringList({ label: "Bad Terms", description: "Term list" }),
+      });
+      const fields = fieldsFromSchema(schema);
+      expect(fields.find((f) => f.key === "staffRoles")).toEqual({
+        key: "staffRoles",
+        type: FieldType.MULTI_ROLE,
+        label: "Staff Roles",
+        description: "Staff list",
+        default: ["123456789012345678"],
+        required: undefined,
+      });
+      expect(fields.find((f) => f.key === "logChannels")?.type).toBe(
+        FieldType.MULTI_CHANNEL,
+      );
+      expect(fields.find((f) => f.key === "watchUsers")?.type).toBe(
+        FieldType.MULTI_USER,
+      );
+      expect(fields.find((f) => f.key === "badTerms")?.type).toBe(
+        FieldType.STRING_LIST,
+      );
+    });
+
+    it("passes number step through to field meta", () => {
+      const schema = cfg.object({
+        volume: cfg.number({ label: "Volume", description: "Level", step: 5, default: 50 }),
+        plain: cfg.number({ label: "Plain", description: "No slider" }),
+      });
+      const fields = fieldsFromSchema(schema);
+      expect(fields.find((f) => f.key === "volume")?.step).toBe(5);
+      expect(fields.find((f) => f.key === "plain")?.step).toBeUndefined();
+      expect(validateModuleConfigValue(schema, "volume", 25)).toBe(25);
     });
   });
 });

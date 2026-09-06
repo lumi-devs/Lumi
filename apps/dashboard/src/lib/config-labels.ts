@@ -79,15 +79,21 @@ export function resolveConfigValue(
   roles: DashboardRoleView[],
   channels: DashboardChannelView[],
 ): string {
-  if (type !== FieldType.CHANNEL && type !== FieldType.ROLE) {
+  if (
+    type !== FieldType.CHANNEL &&
+    type !== FieldType.ROLE &&
+    type !== FieldType.MULTI_CHANNEL &&
+    type !== FieldType.MULTI_ROLE
+  ) {
     return formatConfigValue(value);
   }
-  const prefix = type === FieldType.CHANNEL ? "#" : "@";
+  const prefix =
+    type === FieldType.CHANNEL || type === FieldType.MULTI_CHANNEL ? "#" : "@";
   const names = new Map(
-    (type === FieldType.CHANNEL ? channels : roles).map((item) => [
-      item.id,
-      item.name,
-    ]),
+    (type === FieldType.CHANNEL || type === FieldType.MULTI_CHANNEL
+      ? channels
+      : roles
+    ).map((item) => [item.id, item.name]),
   );
   if (Array.isArray(value)) {
     return value.length === 0

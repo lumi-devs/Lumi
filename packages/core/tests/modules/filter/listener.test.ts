@@ -42,9 +42,7 @@ describe("FilterMessageListener", () => {
       activateAutoLockdown: vi.fn().mockResolvedValue(true),
     };
 
-    mockConfigUtility = {
-      getConfigList: vi.fn().mockResolvedValue([]),
-    };
+    mockConfigUtility = {};
 
     mockGuildLogUtility = {
       dispatch: vi.fn().mockResolvedValue(undefined),
@@ -131,7 +129,7 @@ describe("FilterMessageListener", () => {
   it("should skip action if user has an exempt role", async () => {
     const mockHit = { rule: "badword", detail: "swearing" };
     mockFilterUtility.test.mockReturnValue(mockHit);
-    mockConfigUtility.getConfigList.mockResolvedValue(["role-mod", "role-vip"]);
+    (container.db.config.getModuleConfig as any).mockResolvedValue(["role-mod", "role-vip"]);
 
     const mockMessage = {
       guildId: "G1",
@@ -151,7 +149,6 @@ describe("FilterMessageListener", () => {
   it("should delete message, send warning, timeout member, and log when filter is hit", async () => {
     const mockHit = { rule: "invite", detail: "discord.gg/test" };
     mockFilterUtility.test.mockReturnValue(mockHit);
-    mockConfigUtility.getConfigList.mockResolvedValue([]);
 
     container.db.config.getModuleConfig = vi.fn().mockImplementation((_gId, _mod, key) => {
       if (key === "warn_message") return "Hey {user}, no invite links! ({reason})";

@@ -24,6 +24,7 @@ import type {
   DashboardChannelView,
   TempVcGeneratorView,
 } from "#/lib/dashboard-data";
+import type { ConfigField } from "@lumi/contracts";
 import { useServerAction } from "#/lib/use-server-action";
 
 /**
@@ -59,10 +60,13 @@ export function TempVcGenerators({
   guildId,
   generators,
   channels,
+  templateField,
 }: {
   guildId: string;
   generators: TempVcGeneratorView[];
   channels: DashboardChannelView[];
+  /** `default_name_template` schema field — the single source for the name-pattern docs and default. */
+  templateField?: ConfigField;
 }) {
   const [editing, setEditing] = useState<TempVcGeneratorView | null>(null);
   const [target, setTarget] = useState<TempVcGeneratorView | null>(null);
@@ -129,6 +133,7 @@ export function TempVcGenerators({
         generators={generators}
         channels={channels}
         editing={editing}
+        templateField={templateField}
         onCancel={() => setEditing(null)}
         onSaved={(message) => {
           setNotice(message);
@@ -160,6 +165,7 @@ function GeneratorForm({
   generators,
   channels,
   editing,
+  templateField,
   onSaved,
   onCancel,
 }: {
@@ -167,9 +173,15 @@ function GeneratorForm({
   generators: TempVcGeneratorView[];
   channels: DashboardChannelView[];
   editing: TempVcGeneratorView | null;
+  templateField?: ConfigField;
   onSaved: (message: string) => void;
   onCancel: () => void;
 }) {
+  const templateDocs = templateField?.description ?? "";
+  const templateDefault =
+    typeof templateField?.default === "string" && templateField.default.length > 0
+      ? templateField.default
+      : null;
   const taken = new Set(
     generators
       .map((g) => g.channelId)
@@ -180,7 +192,7 @@ function GeneratorForm({
   const [channelId, setChannelId] = useState(
     editing?.channelId ?? options[0]?.id ?? "",
   );
-  const [name, setName] = useState(editing?.name ?? "{}'s channel");
+  const [name, setName] = useState(editing?.name ?? templateDefault ?? "");
   const [limit, setLimit] = useState(String(editing?.limit ?? 0));
   const { isPending, error, setError, run } = useServerAction();
 
@@ -310,44 +322,24 @@ function GeneratorForm({
         label={
           <span className="inline-flex items-center gap-1">
             Name pattern
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label="Name pattern placeholders"
-                    className="inline-flex size-3.5 items-center justify-center rounded-full text-fg-subtle transition-colors hover:text-fg"
-                  >
-                    <Info className="size-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="w-auto max-w-none px-3 py-2.5">
-                  <div className="grid grid-cols-[max-content_1fr] items-baseline gap-x-3 gap-y-1 text-[13px]">
-                    {[
-                      { tokens: ["{}", "{number}", "{position}"], example: "1" },
-                      { tokens: ["{username}", "{name}"], example: "Alex" },
-                    ].map(({ tokens, example }) => (
-                      <div key={example} className="col-span-2 grid grid-cols-subgrid items-baseline">
-                        <span className="flex flex-wrap gap-x-1 font-mono text-background/70">
-                          {tokens.map((token, i) => (
-                            <span key={token}>
-                              {i > 0 ? <span className="text-background/50">/</span> : null}
-                              {token}
-                            </span>
-                          ))}
-                        </span>
-                        <span className="text-background/70">
-                          → <span className="text-background">“{example}”</span>
-                        </span>
-                      </div>
-                    ))}
-                    <div className="col-span-2 mt-0.5 border-t border-background/20 pt-1.5 text-background/60">
-                      No placeholder → number appended to the end.
-                    </div>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {templateDocs ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Name pattern placeholders"
+                      className="inline-flex size-3.5 items-center justify-center rounded-full text-fg-subtle transition-colors hover:text-fg"
+                    >
+                      <Info className="size-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs px-3 py-2.5 text-[13px]">
+                    {templateDocs}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : null}
           </span>
         }
         htmlFor="generator-name"
@@ -358,7 +350,7 @@ function GeneratorForm({
             id="generator-name"
             value={name}
             maxLength={100}
-            placeholder="{name}'s Channel"
+            placeholder={templateDefault ?? undefined}
             onChange={(e) => setName(e.target.value)}
             className="min-w-[12rem] flex-1"
           />

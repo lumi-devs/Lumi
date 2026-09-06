@@ -37,10 +37,13 @@ import { cutText } from "@sapphire/utilities";
 import { ButtonStyle, ChannelType } from "discord.js";
 
 // Each settingRow is a Section with up to 2 text lines + 1 button = ~4 real
-// components once nested, and card chrome (container/title/footer/tab row)
-// already eats ~18-19 of Discord's 40-component budget per message.
+// components once nested; card chrome (breadcrumbs/title/separator/status)
+// eats ~17 of Discord's 40-component budget, so chrome ~17 + 4N stays under
+// the cap with N = FieldsPerPage.
 export const FeaturesPerPage = 4;
 export const FieldsPerPage = 5;
+const MaxSelectOptions = 25;
+const MaxMultiValues = 25;
 
 export interface FeatureListEntry {
   meta: ModuleMeta;
@@ -51,6 +54,57 @@ const formatStatusBadge = (status: "enabled" | "disabled", t?: LumiT) =>
   status === "enabled"
     ? `${Emojis.SUCCESS} \`${t ? t(PanelsKeys.DetailEnabled) : "ENABLED"}\``
     : `${Emojis.ERROR} \`${t ? t(PanelsKeys.DetailDisabled) : "DISABLED"}\``;
+
+/** True when the stored value (or schema default) counts as configured. */
+const hasStoredValue = (field: ConfigField, value: unknown): boolean => {
+  const current = value ?? field.default ?? null;
+  if (current === null || current === "") return false;
+  if (Array.isArray(current)) return current.length > 0;
+  return true;
+};
+
+/** Per-field status glyph for the detail row headline. */
+const statusGlyphFor = (field: ConfigField, value: unknown): string => {
+  if (field.type === FieldType.BOOLEAN) {
+    const fallback =
+      field.default === undefined ? false : Boolean(field.default);
+    const current = value ?? fallback;
+    return current ? Emojis.CHECK : Emojis.CROSS;
+  }
+  return hasStoredValue(field, value) ? Emojis.SUCCESS : Emojis.ERROR;
+};
+
+/** ENUM fields with a bounded choice set render as an in-place select. */
+const isEnumField = (field: ConfigField): boolean =>
+  field.type === FieldType.ENUM &&
+  Array.isArray(field.choices) &&
+  field.choices.length > 0;
+
+/**
+ * Free-text editors. NUMBER covers the slider variant (a NUMBER field with
+ * `step`); on Discord every text-like field is edited through a modal input.
+ */
+const isTextField = (field: ConfigField): boolean =>
+  field.type === FieldType.STRING ||
+  field.type === FieldType.STRING_LIST ||
+  field.type === FieldType.NUMBER ||
+  field.type === FieldType.DURATION;
+
+/** Detail headline: status glyph + name + current value, description below. */
+const detailRowLines = (
+  field: ConfigField,
+  value: unknown,
+  t?: LumiT,
+): string[] => {
+  const required =
+    field.required === true
+      ? ` *${t ? t(PanelsKeys.DetailRequired) : "(required)"}*`
+      : "";
+  return [
+    `${statusGlyphFor(field, value)} **${field.label}**${required} - ${formatFieldValue(field, value)}`,
+    ...(field.description ? [`-# ${cutText(field.description, 90)}`] : []),
+  ];
+};
 
 /**
  * The modules tab: one row per guild-toggleable module, sorted by display name
@@ -167,8 +221,10 @@ function sectionsFor(fields: ConfigField[]): FieldSection[] {
 }
 
 /**
- * Module detail: fields render as section rows with inline accessory buttons
- * (booleans toggle in place, everything else opens a per-field edit subpanel).
+ * Module detail: every field renders as a status-glyph headline row with its
+ * description below. BOOLEAN fields toggle in place, ENUM fields render as an
+ * in-place string select with the current value preselected, picker fields
+ * open a native-picker subpanel, and text-like fields open a modal directly.
  * Large modules split into named subsections navigated by a "jump to section"
  * select, so the card never scrolls into a wall of settings.
  *
@@ -192,34 +248,56 @@ export function buildFeatureDetailView(
     t,
   );
 
-  const sections = current.fields.map((f) => {
-    const req = f.required
-      ? ` *${t ? t(PanelsKeys.DetailRequired) : "(required)"}*`
-      : "";
-    const lines = [
-      `**${f.label}**${req} - ${formatFieldValue(f, config[f.key])}`,
-      ...(f.description ? [`-# ${cutText(f.description, 90)}`] : []),
-    ];
+  const enumFields = current.fields.filter(isEnumField);
+  const rowFields = current.fields.filter((field) => !isEnumField(field));
 
-    if (f.type === FieldType.BOOLEAN) {
-      const def = f.default === undefined ? false : Boolean(f.default);
-      const on = Boolean(config[f.key] ?? def);
+  const sections = rowFields.map((field) => {
+    const lines = detailRowLines(field, config[field.key], t);
+
+    if (field.type === FieldType.BOOLEAN) {
+      const fallback =
+        field.default === undefined ? false : Boolean(field.default);
+      const on = Boolean(config[field.key] ?? fallback);
       return settingRow(lines, {
-        customId: `cfg:bool:${meta.name}:${f.key}:${idx}`,
+        customId: `cfg:bool:${meta.name}:${field.key}:${idx}`,
         label: on ? Emojis.CHECK : Emojis.CROSS,
         style: on ? ButtonStyle.Success : ButtonStyle.Secondary,
       });
     }
 
+    if (isTextField(field)) {
+      return settingRow(lines, {
+        customId: `cfg:fedit:${meta.name}:${field.key}:${idx}`,
+        label: t ? t(PanelsKeys.DetailEdit) : "Edit",
+        emoji: Emojis.EDIT,
+        style: ButtonStyle.Secondary,
+      });
+    }
+
     return settingRow(lines, {
-      customId: `cfg:field:${meta.name}:${f.key}:${idx}`,
+      customId: `cfg:field:${meta.name}:${field.key}:${idx}`,
       label: t ? t(PanelsKeys.DetailEdit) : "Edit",
       emoji: Emojis.EDIT,
       style: ButtonStyle.Secondary,
     });
   });
 
-  const rows: Row[] = [
+  const rows: Row[] = enumFields.map((field) =>
+    row(
+      createStringSelectMenu({
+        customId: `cfg:enum:${meta.name}:${field.key}:${idx}`,
+        placeholder: cutText(field.label, 100),
+        options: (field.choices ?? []).slice(0, MaxSelectOptions).map((choice) =>
+          new StringSelectMenuOptionBuilder()
+            .setLabel(cutText(choice, 100))
+            .setValue(choice)
+            .setDefault(choice === (config[field.key] ?? field.default)),
+        ),
+      }),
+    ),
+  );
+
+  rows.push(
     row(
       createActionButton({
         customId: `cfg:tog:${meta.name}:${idx}`,
@@ -240,7 +318,7 @@ export function buildFeatureDetailView(
         style: ButtonStyle.Secondary,
       }),
     ),
-  ];
+  );
 
   if (multi) {
     rows.push(
@@ -248,7 +326,7 @@ export function buildFeatureDetailView(
         createStringSelectMenu({
           customId: `cfg:gsel:${meta.name}`,
           placeholder: t ? t(PanelsKeys.DetailJump) : "Jump to a section…",
-          options: groups.slice(0, 25).map((sec, i) =>
+          options: groups.slice(0, MaxSelectOptions).map((sec, i) =>
             new StringSelectMenuOptionBuilder()
               .setLabel(cutText(sec.name ?? "Settings", 100))
               .setValue(String(i))
@@ -325,7 +403,10 @@ const resolveChannelTypes = (f: ConfigField): ChannelType[] => {
 };
 
 /**
- * Per-field edit subpanel hosting the single native picker for the field.
+ * Per-field edit subpanel hosting the single native picker for the field, or
+ * the modal entry button for text-like fields reached from stale messages.
+ * Multi pickers allow up to {@linkcode MaxMultiValues} values with a zero
+ * minimum so the selection can be cleared to unset the field.
  *
  * @param fieldPage - The detail subsection to return to, carried through the
  * picker's custom id so the back button lands on the right section.
@@ -337,13 +418,13 @@ export function buildFieldEditView(
   fieldPage = 0,
   t?: LumiT,
 ): CardReply {
-  const isRoleList = field.list && field.key.includes("role");
-  const isChannelList = field.list && field.key.includes("channel");
-  const isUserList = field.list && field.key.includes("user");
-
   const rows: Row[] = [];
 
-  if (field.type === FieldType.CHANNEL || isChannelList) {
+  if (
+    field.type === FieldType.CHANNEL ||
+    field.type === FieldType.MULTI_CHANNEL
+  ) {
+    const multi = field.type === FieldType.MULTI_CHANNEL;
     rows.push(
       row(
         createChannelSelectMenu({
@@ -351,29 +432,37 @@ export function buildFieldEditView(
           placeholder: cutText(field.label, 100),
           channelTypes: resolveChannelTypes(field),
           minValues: 0,
-          maxValues: isChannelList ? 25 : 1,
+          maxValues: multi ? MaxMultiValues : 1,
         }),
       ),
     );
-  } else if (field.type === FieldType.ROLE || isRoleList) {
+  } else if (
+    field.type === FieldType.ROLE ||
+    field.type === FieldType.MULTI_ROLE
+  ) {
+    const multi = field.type === FieldType.MULTI_ROLE;
     rows.push(
       row(
         createRoleSelectMenu({
           customId: `cfg:role:${meta.name}:${field.key}:${fieldPage}`,
           placeholder: cutText(field.label, 100),
           minValues: 0,
-          maxValues: isRoleList ? 25 : 1,
+          maxValues: multi ? MaxMultiValues : 1,
         }),
       ),
     );
-  } else if (field.type === FieldType.USER || isUserList) {
+  } else if (
+    field.type === FieldType.USER ||
+    field.type === FieldType.MULTI_USER
+  ) {
+    const multi = field.type === FieldType.MULTI_USER;
     rows.push(
       row(
         createUserSelectMenu({
           customId: `cfg:user:${meta.name}:${field.key}:${fieldPage}`,
           placeholder: cutText(field.label, 100),
           minValues: 0,
-          maxValues: isUserList ? 25 : 1,
+          maxValues: multi ? MaxMultiValues : 1,
         }),
       ),
     );
@@ -383,7 +472,7 @@ export function buildFieldEditView(
         createStringSelectMenu({
           customId: `cfg:enum:${meta.name}:${field.key}:${fieldPage}`,
           placeholder: cutText(field.label, 100),
-          options: field.choices.slice(0, 25).map((choice) =>
+          options: field.choices.slice(0, MaxSelectOptions).map((choice) =>
             new StringSelectMenuOptionBuilder()
               .setLabel(cutText(choice, 100))
               .setValue(choice)

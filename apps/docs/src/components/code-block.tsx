@@ -1,35 +1,64 @@
 "use client";
-import React, { useState } from "react";
+
+import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
-export function CodeBlock({ language, code }: { language: string; code: string }) {
+interface CodeBlockProps {
+  code: string;
+  language?: string;
+  title?: string;
+}
+
+export function CodeBlock({ code, language = "bash", title }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
 
-  const onCopy = () => {
-    void navigator.clipboard.writeText(code);
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch {
+      const area = document.createElement("textarea");
+      area.value = code;
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand("copy");
+      document.body.removeChild(area);
+    }
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    window.setTimeout(() => setCopied(false), 1600);
   };
 
   return (
-    <div className="relative group my-6 overflow-hidden rounded-lg bg-[var(--bg)] border border-[var(--border)] shadow-[var(--shadow-md)]">
-      <div className="flex items-center justify-between px-4 py-2 bg-[var(--surface)] border-b border-[var(--border)]">
-        <div className="flex space-x-2">
-          <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
-          <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
-          <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
-        </div>
-        {language && <span className="text-xs text-[var(--fg-muted)] font-mono">{language}</span>}
-      </div>
-      <div className="p-4 overflow-x-auto text-sm text-[var(--fg)] font-mono">
-        <pre><code>{code}</code></pre>
-      </div>
-      <button
-        onClick={onCopy}
-        className="absolute top-12 right-2 p-2 rounded-md bg-[var(--surface-active)] text-[var(--fg-muted)] opacity-0 group-hover:opacity-100 transition-opacity border border-[var(--border)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)]"
+    <div
+      className="mt-5 overflow-hidden rounded-[10px] border"
+      style={{ borderColor: "var(--border)", background: "#0d1119" }}
+    >
+      <div
+        className="flex items-center justify-between border-b px-4 py-2"
+        style={{ borderColor: "var(--border-soft)", background: "var(--bg-raise)" }}
       >
-        {copied ? <Check className="w-4 h-4 text-[var(--success)]" /> : <Copy className="w-4 h-4" />}
-      </button>
+        <span
+          className="font-mono text-[11px] font-medium uppercase tracking-[0.12em]"
+          style={{ color: "var(--fg-muted)" }}
+        >
+          {title ?? language}
+        </span>
+        <button
+          type="button"
+          onClick={() => void copyCode()}
+          className="flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-[11px] transition-colors"
+          style={{
+            borderColor: "var(--border)",
+            color: copied ? "var(--good)" : "var(--fg-muted)",
+          }}
+          aria-label="Copy code to clipboard"
+        >
+          {copied ? <Check size={13} /> : <Copy size={13} />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <pre className="overflow-x-auto p-4 font-mono text-[13px] leading-relaxed" style={{ color: "#dbe2f1" }}>
+        <code>{code}</code>
+      </pre>
     </div>
   );
 }

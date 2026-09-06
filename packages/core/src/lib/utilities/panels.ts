@@ -25,9 +25,16 @@ export {
   tabRow,
   confirmRow,
   backRow,
+  navRow,
+  pageFooter,
+  HubTabs,
+  SectionLineLimit,
+  ButtonLabelLimit,
   type AccessoryButton,
   type Tab,
   type ConfirmRowOptions,
+  type NavAction,
+  type NavRowOptions,
 } from "./ui/kit.js";
 
 function setEmojiIfPresent(

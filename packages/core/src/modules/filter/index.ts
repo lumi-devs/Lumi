@@ -4,7 +4,7 @@ import {
   NoEndUserData,
   cfg,
 } from "#lib/module-system/Module.js";
-import { parseConfigList } from "#lib/module-system/config-schema.js";
+import { toStringArray } from "#lib/module-system/config-schema.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { ChannelType } from "discord.js";
 import {
@@ -60,18 +60,16 @@ const CompiledKeys = [
   endUserDataStatement: NoEndUserData(),
   category: "Moderation",
   configSchema: cfg.object({
-    terms: cfg.string({
+    terms: cfg.stringList({
       group: "Terms & Patterns",
       label: "Filtered Terms",
-      description: "Comma-separated list of words/phrases to block.",
-      list: true,
+      description: "Words/phrases to block, one per line.",
     }),
-    regex_rules: cfg.string({
+    regex_rules: cfg.stringList({
       group: "Terms & Patterns",
       label: "Regex Rules",
       description:
-        "Comma-separated regular expressions to block (case-insensitive, max 256 chars each). Invalid patterns are skipped; patterns that backtrack catastrophically are rejected when saved.",
-      list: true,
+        "Regular expressions to block (case-insensitive, max 256 chars each), one per line. Invalid patterns are skipped; patterns that backtrack catastrophically are rejected when saved.",
     }),
     block_invites: cfg.boolean({
       group: "Invites & Links",
@@ -79,12 +77,11 @@ const CompiledKeys = [
       description: "Delete messages containing Discord server invites.",
       default: false,
     }),
-    invite_allowlist: cfg.string({
+    invite_allowlist: cfg.stringList({
       group: "Invites & Links",
       label: "Allowed Invite Codes",
       description:
-        "Comma-separated invite codes that are always allowed (e.g. your own server's).",
-      list: true,
+        "Invite codes that are always allowed (e.g. your own server's), one per line.",
     }),
     block_links: cfg.boolean({
       group: "Invites & Links",
@@ -93,12 +90,11 @@ const CompiledKeys = [
         "Delete messages containing links, except allowlisted domains.",
       default: false,
     }),
-    link_allowlist: cfg.string({
+    link_allowlist: cfg.stringList({
       group: "Invites & Links",
       label: "Allowed Link Domains",
       description:
-        "Comma-separated domains exempt from link blocking (subdomains included), e.g. youtube.com, github.com.",
-      list: true,
+        "Domains exempt from link blocking (subdomains included), one per line, e.g. youtube.com, github.com.",
     }),
     max_mentions: cfg.number({
       group: "Spam Limits",
@@ -126,12 +122,11 @@ const CompiledKeys = [
       min: 1,
       max: 500,
     }),
-    exempt_roles: cfg.string({
+    exempt_roles: cfg.multiRole({
       group: "Punishment",
       label: "Exempt Role IDs",
       description:
-        "Comma-separated role IDs that bypass all filter rules (members with Manage Messages are always exempt).",
-      list: true,
+        "Role IDs that bypass all filter rules (members with Manage Messages are always exempt).",
     }),
     timeout_minutes: cfg.number({
       group: "Punishment",
@@ -348,7 +343,7 @@ export class FilterModule extends Module {
     this.container.configValueValidators.set(
       "filter:regex_rules",
       async (value) => {
-        for (const pattern of parseConfigList(value)) {
+        for (const pattern of toStringArray(value)) {
           const reason = await validateRegexPattern(pattern);
           if (reason) return `\`${pattern}\` - ${reason}`;
         }

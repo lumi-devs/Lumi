@@ -11,6 +11,11 @@ export enum FieldType {
   CHANNEL = "CHANNEL",
   ROLE = "ROLE",
   USER = "USER",
+  DURATION = "DURATION",
+  MULTI_ROLE = "MULTI_ROLE",
+  MULTI_CHANNEL = "MULTI_CHANNEL",
+  MULTI_USER = "MULTI_USER",
+  STRING_LIST = "STRING_LIST",
 }
 
 export interface ConfigField {
@@ -23,8 +28,10 @@ export interface ConfigField {
   required?: boolean;
   /** For CHANNEL fields: restrict the channel-type picker. */
   channelTypes?: ChannelType[];
-  /** STRING fields whose stored value is a comma-separated list (read as `string[]`). */
-  list?: boolean;
+  /** NUMBER fields with `step` render as a range slider instead of a number box. */
+  step?: number;
+  /** DURATION quick-pick presets (e.g. `["5m", "15m", "1h", "24h", "7d"]`). */
+  quickPicks?: string[];
   /** Section this field belongs to in the config panel. Fields sharing a group
    * render together as one navigable subsection; omit for small modules. */
   group?: string;

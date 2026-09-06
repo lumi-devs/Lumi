@@ -14,7 +14,7 @@ export {
   type ConfigField,
   type ModuleConfigSchema,
   cfg,
-  parseConfigList,
+  toStringArray,
 } from "./config-schema.js";
 
 /**

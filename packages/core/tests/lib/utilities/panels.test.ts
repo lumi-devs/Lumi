@@ -21,6 +21,9 @@ import {
   buildSafeActionRows,
   formatBreadcrumbHeader,
   createCategorySubmenuRow,
+  navRow,
+  pageFooter,
+  HubTabs,
 } from "#utilities/panels.js";
 import {
   defaultCardColors,
@@ -129,6 +132,24 @@ describe("Panel & Card Utility Standardization", () => {
 
     it("exports utilities cleanly via index.ts", () => {
       expect(typeof createStringSelectFromIndex).toBe("function");
+    });
+
+    it("supports multi-select via min/maxValues on every entity menu", () => {
+      const builders = [
+        createUserSelectMenu({ customId: "m1", maxValues: 5 }),
+        createRoleSelectMenu({ customId: "m2", minValues: 1, maxValues: 5 }),
+        createChannelSelectMenu({ customId: "m3", maxValues: 5 }),
+        createMentionableSelectMenu({ customId: "m4", maxValues: 5 }),
+        createStringSelectMenu({
+          customId: "m5",
+          maxValues: 3,
+          options: [{ label: "A", value: "a" }],
+        }),
+      ];
+      for (const menu of builders) {
+        const data = menu.toJSON();
+        expect(data.max_values).toBeGreaterThan(1);
+      }
     });
   });
 
@@ -252,6 +273,44 @@ describe("Panel & Card Utility Standardization", () => {
     it("formatBreadcrumbs formats panel navigation path", () => {
       expect(formatBreadcrumbs(["Settings", "Security", "2FA"])).toBe(
         "Settings ❯ Security ❯ **2FA**",
+      );
+    });
+  });
+
+  describe("Kit Re-exports & Addon Parity", () => {
+    it("re-exports navRow, pageFooter, and HubTabs from the kit", () => {
+      const nav = navRow({
+        backId: "hub:back",
+        action: { customId: "hub:save", label: "Save" },
+      }).toJSON();
+      expect(nav.components).toHaveLength(2);
+      expect(pageFooter(0, 1).toJSON().content).toContain("Page 1 of 1");
+      expect(HubTabs.map((t) => t.id)).toContain("addons");
+    });
+
+    it("addon mirrors render identically to core kit rows", async () => {
+      const kit = await import("#lib/utilities/ui/kit.js");
+      const addon = await import("#lib/addon-sdk/ui.js");
+      const button = { customId: "a:edit", label: "Edit" };
+
+      expect(addon.addonSettingRow("line", button).toJSON()).toEqual(
+        kit.settingRow("line", button).toJSON(),
+      );
+      expect(addon.addonTabRow("p", HubTabs, "home").toJSON()).toEqual(
+        kit.tabRow("p", HubTabs, "home").toJSON(),
+      );
+      expect(addon.addonBackRow("a:back").toJSON()).toEqual(
+        kit.backRow("a:back").toJSON(),
+      );
+      const navOptions = {
+        backId: "a:back",
+        action: { customId: "a:go", label: "Go" },
+      };
+      expect(addon.addonNavRow(navOptions).toJSON()).toEqual(
+        kit.navRow(navOptions).toJSON(),
+      );
+      expect(addon.addonPageFooter(0, 2).toJSON()).toEqual(
+        kit.pageFooter(0, 2).toJSON(),
       );
     });
   });

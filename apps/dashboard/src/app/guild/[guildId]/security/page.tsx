@@ -105,13 +105,24 @@ export default async function SecurityPage({
 
       {securityModule ? (
         <div className="rise" style={{ "--rise-delay": "105ms" } as React.CSSProperties}>
-          <AntiNukeCard guildId={guildId} config={securityModule.config} />
+          <AntiNukeCard
+            guildId={guildId}
+            config={securityModule.config}
+            configFields={securityModule.configFields}
+            roles={dashboard.roles}
+            channels={dashboard.channels}
+          />
         </div>
       ) : null}
 
       {securityModule ? (
         <div className="rise" style={{ "--rise-delay": "140ms" } as React.CSSProperties}>
-          <JoinGateCard guildId={guildId} config={securityModule.config} />
+          <JoinGateCard
+            guildId={guildId}
+            config={securityModule.config}
+            configFields={securityModule.configFields}
+            roles={dashboard.roles}
+          />
         </div>
       ) : null}
 

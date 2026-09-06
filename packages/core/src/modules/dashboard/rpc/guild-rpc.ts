@@ -1,11 +1,17 @@
 import { container } from "@sapphire/framework";
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
-import { RpcActions } from "@lumi/contracts";
+import {
+  RpcActions,
+  type GuildChannelListItem,
+  type GuildRoleListItem,
+} from "@lumi/contracts";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { checkModulesEnabled } from "#lib/module-check.js";
 import { isSupportedLanguage } from "#lib/i18n/index.js";
 import {
+  ConfigSetManySchema,
   ConfigSetSchema,
+  GuildConfigSetManyMax,
   GuildSettingsSchema,
   GuildSummariesMax,
   GuildSummariesSchema,
@@ -17,6 +23,75 @@ import {
   toRawConfigValue,
   verifyGuildAccess,
 } from "../lib/helpers.js";
+
+/** Short-lived per-guild directory snapshot backing `guild.roles.list` and `guild.channels.list`. */
+const GuildDirectoryCacheTtlMs = 30_000;
+
+interface GuildDirectoryCacheEntry {
+  expiresAt: number;
+  roles: GuildRoleListItem[];
+  channels: GuildChannelListItem[];
+}
+
+const directoryCache = new Map<string, GuildDirectoryCacheEntry>();
+
+export function clearGuildDirectoryCache(guildId?: string): void {
+  if (guildId === undefined) directoryCache.clear();
+  else directoryCache.delete(guildId);
+}
+
+function readGuildDirectory(guildId: string): GuildDirectoryCacheEntry {
+  const cached = directoryCache.get(guildId);
+  if (cached && cached.expiresAt > Date.now()) return cached;
+
+  const guild = container.client.guilds.cache.get(guildId);
+  if (!guild) throw new Error("Guild not found in bot cache");
+
+  const fresh: GuildDirectoryCacheEntry = {
+    expiresAt: Date.now() + GuildDirectoryCacheTtlMs,
+    roles: guild.roles.cache
+      .filter((r) => r.id !== guild.id)
+      .map((r) => ({ id: r.id, name: r.name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    channels: guild.channels.cache
+      .filter((c) => PickableChannelTypes.has(c.type))
+      .map((c) => ({ id: c.id, name: c.name, type: c.type })),
+  };
+  directoryCache.set(guildId, fresh);
+  return fresh;
+}
+
+// Single-key config write shared by `guild.config.set` and
+// `guild.config.setMany`, so the batch path validates and persists exactly
+// like the per-field one.
+async function applyConfigSet(
+  guildId: string,
+  moduleName: string,
+  key: string,
+  value: unknown,
+  actorId: string | undefined,
+): Promise<unknown> {
+  const parsed = parsePayload(ConfigSetSchema, { moduleName, key, value });
+
+  if (parsed.value === null || parsed.value === undefined || parsed.value === "") {
+    await container.db.config.deleteModuleConfigKey(
+      guildId,
+      parsed.moduleName,
+      parsed.key,
+    );
+    return null;
+  }
+
+  const raw = toRawConfigValue(parsed.value);
+  const { coerced } = await getUtility("config").setConfig(
+    guildId,
+    parsed.moduleName,
+    parsed.key,
+    raw,
+    actorId,
+  );
+  return coerced;
+}
 
 export function registerGuildRpcHandlers(): void {
   registerRpcHandler(RpcActions.guildDashboardGet, async (req) => {
@@ -51,8 +126,6 @@ export function registerGuildRpcHandlers(): void {
         short: m.meta.short,
         endUserDataStatement: m.meta.endUserDataStatement,
         version: m.meta.version,
-        conflicts: m.meta.conflicts ?? [],
-        dependencies: m.meta.dependencies ?? [],
         enabled,
         configFields: m.meta.configFields || [],
         config,
@@ -68,7 +141,6 @@ export function registerGuildRpcHandlers(): void {
       .map((r) => ({
         id: r.id,
         name: r.name,
-        color: r.color,
         position: r.position,
         permissions: r.permissions.bitfield.toString(),
         isBotRole: r.id === botRoleId,
@@ -154,30 +226,50 @@ export function registerGuildRpcHandlers(): void {
   });
 
   registerRpcHandler(RpcActions.guildConfigSet, async (req) => {
-    const { guildId } = await verifyGuildAccess(req);
+    const { guildId, actorId } = await verifyGuildAccess(req);
     const { moduleName, key, value } = parsePayload(
       ConfigSetSchema,
       req.data,
     );
 
-    if (value === null || value === undefined || value === "") {
-      await container.db.config.deleteModuleConfigKey(
-        guildId,
-        moduleName,
-        key,
+    const coerced = await applyConfigSet(guildId, moduleName, key, value, actorId);
+    return { success: true, key, value: coerced };
+  });
+
+  registerRpcHandler(RpcActions.guildConfigSetMany, async (req) => {
+    const { guildId, actorId } = await verifyGuildAccess(req);
+    const { moduleName, values } = parsePayload(
+      ConfigSetManySchema,
+      req.data,
+    );
+
+    if (typeof values !== "object" || values === null || Array.isArray(values)) {
+      throw new Error("Bad payload: values must be an object");
+    }
+    const entries = Object.entries(values);
+    if (entries.length > GuildConfigSetManyMax) {
+      throw new Error(
+        `Bad payload: at most ${GuildConfigSetManyMax} values per call`,
       );
-      return { success: true, key, value: null };
     }
 
-    const raw = toRawConfigValue(value);
-    const { coerced } = await getUtility("config").setConfig(
-      guildId,
-      moduleName,
-      key,
-      raw,
-      req.actorId,
-    );
-    return { success: true, key, value: coerced };
+    const updated: Record<string, unknown> = {};
+    for (const [key, value] of entries) {
+      updated[key] = await applyConfigSet(guildId, moduleName, key, value, actorId);
+    }
+    return { success: true, updated };
+  });
+
+  registerRpcHandler(RpcActions.guildRolesList, async (req) => {
+    const { guildId } = await verifyGuildAccess(req);
+    const { roles } = readGuildDirectory(guildId);
+    return { roles };
+  });
+
+  registerRpcHandler(RpcActions.guildChannelsList, async (req) => {
+    const { guildId } = await verifyGuildAccess(req);
+    const { channels } = readGuildDirectory(guildId);
+    return { channels };
   });
 
   registerRpcHandler(RpcActions.guildSetupRun, async (req) => {
@@ -217,6 +309,9 @@ export function unregisterGuildRpcHandlers(): void {
   rpcHandlers.delete(RpcActions.guildSummariesList);
   rpcHandlers.delete(RpcActions.guildModuleToggle);
   rpcHandlers.delete(RpcActions.guildConfigSet);
+  rpcHandlers.delete(RpcActions.guildConfigSetMany);
+  rpcHandlers.delete(RpcActions.guildRolesList);
+  rpcHandlers.delete(RpcActions.guildChannelsList);
   rpcHandlers.delete(RpcActions.guildSetupRun);
   rpcHandlers.delete(RpcActions.guildSettingsSet);
 }

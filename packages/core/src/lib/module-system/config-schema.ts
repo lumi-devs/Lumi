@@ -49,7 +49,7 @@ export const cfg = {
     });
   },
 
-  number(o: BaseOpts & { default?: number; min?: number; max?: number }) {
+  number(o: BaseOpts & { default?: number; min?: number; max?: number; step?: number }) {
     let schema = s.number();
     if (o.min !== undefined) schema = schema.greaterThanOrEqual(o.min);
     if (o.max !== undefined) schema = schema.lessThanOrEqual(o.max);
@@ -57,16 +57,16 @@ export const cfg = {
       type: FieldType.NUMBER,
       ...base(o),
       default: o.default,
+      step: o.step,
     });
   },
 
-  /** Free-text. Pass `list: true` for comma-separated values (stored verbatim, read as `string[]`). */
-  string(o: BaseOpts & { default?: string; list?: boolean }) {
+  /** Free-text. */
+  string(o: BaseOpts & { default?: string }) {
     return tag(s.string(), {
       type: FieldType.STRING,
       ...base(o),
       default: o.default,
-      list: o.list,
     });
   },
 
@@ -106,6 +106,53 @@ export const cfg = {
       default: o.default,
     });
   },
+
+  /** Stored as a string like `"10m"`/`"2h"`/`"7d"`. */
+  duration(o: BaseOpts & { default?: string; quickPicks?: string[] }) {
+    return tag(durationString(), {
+      type: FieldType.DURATION,
+      ...base(o),
+      default: o.default,
+      quickPicks: o.quickPicks,
+    });
+  },
+
+  /** Stored as `string[]` of role snowflakes. */
+  multiRole(o: BaseOpts & { default?: string[] }) {
+    return tag(s.array(snowflake()), {
+      type: FieldType.MULTI_ROLE,
+      ...base(o),
+      default: o.default,
+    });
+  },
+
+  /** Stored as `string[]` of channel snowflakes. */
+  multiChannel(o: BaseOpts & { default?: string[]; channelTypes?: ChannelType[] }) {
+    return tag(s.array(snowflake()), {
+      type: FieldType.MULTI_CHANNEL,
+      ...base(o),
+      default: o.default,
+      channelTypes: o.channelTypes,
+    });
+  },
+
+  /** Stored as `string[]` of user snowflakes. */
+  multiUser(o: BaseOpts & { default?: string[] }) {
+    return tag(s.array(snowflake()), {
+      type: FieldType.MULTI_USER,
+      ...base(o),
+      default: o.default,
+    });
+  },
+
+  /** Stored as `string[]` of free-text entries. */
+  stringList(o: BaseOpts & { default?: string[] }) {
+    return tag(s.array(s.string()), {
+      type: FieldType.STRING_LIST,
+      ...base(o),
+      default: o.default,
+    });
+  },
 };
 
 type ObjectLike = { shape?: Record<string, BaseValidator<unknown>> };
@@ -139,16 +186,10 @@ export function validateModuleConfigValue(
   return field ? field.parse(value) : value;
 }
 
-/** Parses comma-separated configuration string lists. */
-export function parseConfigList(raw: unknown): string[] {
-  if (Array.isArray(raw))
-    return raw.filter((x): x is string => typeof x === "string");
-  if (typeof raw === "string")
-    return raw
-      .split(",")
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0);
-  return [];
+/** Reads a stored typed-array config value, dropping non-string entries. */
+export function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === "string");
 }
 
 export const snowflakeString = () => s.string().regex(/^\d{17,20}$/);

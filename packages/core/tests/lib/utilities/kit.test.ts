@@ -9,6 +9,11 @@ import {
   tabRow,
   confirmRow,
   backRow,
+  navRow,
+  pageFooter,
+  HubTabs,
+  SectionLineLimit,
+  ButtonLabelLimit,
 } from "#lib/utilities/ui/kit.js";
 
 describe("panel kit", () => {
@@ -72,5 +77,62 @@ describe("panel kit", () => {
     const json = backRow("cfg:back").toJSON();
     expect(json.components).toHaveLength(1);
     expect((json.components[0] as APIButtonComponentWithCustomId).custom_id).toBe("cfg:back");
+  });
+
+  it("navRow pairs a back button with one primary action", () => {
+    const json = navRow({
+      backId: "cfg:back",
+      action: { customId: "cfg:save", label: "Save" },
+    }).toJSON();
+
+    expect(json.components).toHaveLength(2);
+    const [back, action] = json.components as APIButtonComponentWithCustomId[];
+    expect(back!.custom_id).toBe("cfg:back");
+    expect(back!.style).toBe(2);
+    expect(action!.custom_id).toBe("cfg:save");
+    expect(action!.style).toBe(1);
+  });
+
+  it("pageFooter renders a muted page line", () => {
+    const json = pageFooter(0, 3, 12).toJSON();
+    expect(json.content).toBe("-# Page 1 of 3 · 12 items");
+  });
+
+  it("pageFooter passes a string hint through", () => {
+    const json = pageFooter(1, 2, "pick a tab below").toJSON();
+    expect(json.content).toBe("-# Page 2 of 2 · pick a tab below");
+  });
+
+  it("HubTabs covers the hub/detail/addon flows", () => {
+    expect(HubTabs.map((t) => t.id)).toEqual([
+      "home",
+      "modules",
+      "permissions",
+      "settings",
+      "addons",
+    ]);
+    const json = tabRow("lumi:tab", HubTabs, "home").toJSON();
+    expect(json.components).toHaveLength(5);
+  });
+
+  it("clips button labels to the label limit", () => {
+    const long = "x".repeat(ButtonLabelLimit + 20);
+    const setting = settingRow("line", { customId: "x", label: long }).toJSON();
+    expect(
+      (setting.accessory as APIButtonComponentWithCustomId).label,
+    ).toHaveLength(ButtonLabelLimit);
+    const nav = navRow({
+      backId: "b",
+      action: { customId: "a", label: long },
+    }).toJSON();
+    expect(
+      (nav.components[1] as APIButtonComponentWithCustomId).label,
+    ).toHaveLength(ButtonLabelLimit);
+  });
+
+  it("keeps sections within the line limit", () => {
+    const lines = ["a", "b", "c", "d", "e"];
+    const json = settingRow(lines, { customId: "x", label: "y" }).toJSON();
+    expect(json.components).toHaveLength(SectionLineLimit);
   });
 });

@@ -7,6 +7,11 @@ import {
 } from "@discordjs/builders";
 import { ButtonStyle, type APIMessageComponentEmoji } from "discord.js";
 import { Emojis } from "#lib/utilities/assets.js";
+import { formatPageFooter } from "#lib/utilities/ui/layout.js";
+
+export const SectionLineLimit = 3;
+
+export const ButtonLabelLimit = 80;
 
 export interface AccessoryButton {
   customId: string;
@@ -16,11 +21,31 @@ export interface AccessoryButton {
   disabled?: boolean;
 }
 
+export interface NavAction {
+  customId: string;
+  label: string;
+  style?: ButtonStyle;
+  emoji?: string | APIMessageComponentEmoji;
+  disabled?: boolean;
+}
+
+export interface NavRowOptions {
+  backId: string;
+  backLabel?: string;
+  action: NavAction;
+}
+
+const clipLabel = (label: string): string =>
+  label.length > ButtonLabelLimit ? label.slice(0, ButtonLabelLimit) : label;
+
+const clipLines = (lines: string | string[]): string[] =>
+  (Array.isArray(lines) ? lines : [lines]).slice(0, SectionLineLimit);
+
 const toButton = (b: AccessoryButton): ButtonBuilder => {
   const button = new ButtonBuilder()
     .setCustomId(b.customId)
     .setStyle(b.style ?? ButtonStyle.Secondary);
-  if (b.label) button.setLabel(b.label);
+  if (b.label) button.setLabel(clipLabel(b.label));
   if (b.emoji) {
     button.setEmoji(typeof b.emoji === "string" ? Emojis.parse(b.emoji) : b.emoji);
   }
@@ -37,7 +62,7 @@ export function settingRow(
   button: AccessoryButton,
 ): SectionBuilder {
   const section = new SectionBuilder().setButtonAccessory(toButton(button));
-  for (const line of (Array.isArray(lines) ? lines : [lines]).slice(0, 3)) {
+  for (const line of clipLines(lines)) {
     section.addTextDisplayComponents(new TextDisplayBuilder().setContent(line));
   }
   return section;
@@ -51,7 +76,7 @@ export function thumbRow(
   const section = new SectionBuilder().setThumbnailAccessory(
     new ThumbnailBuilder().setURL(imageUrl),
   );
-  for (const line of (Array.isArray(lines) ? lines : [lines]).slice(0, 3)) {
+  for (const line of clipLines(lines)) {
     section.addTextDisplayComponents(new TextDisplayBuilder().setContent(line));
   }
   return section;
@@ -62,6 +87,15 @@ export interface Tab {
   label: string;
   emoji?: string;
 }
+
+/** Hub and detail tab set backing the Home/Modules/Permissions/Settings/Addons bar. */
+export const HubTabs: readonly Tab[] = [
+  { id: "home", label: "Hub", emoji: "🤖" },
+  { id: "modules", label: "Modules", emoji: "⚙️" },
+  { id: "permissions", label: "Permissions", emoji: "🛡️" },
+  { id: "settings", label: "Settings", emoji: "🏰" },
+  { id: "addons", label: "Addons", emoji: "📦" },
+];
 
 /**
  * Panel tab bar. The active tab renders as a disabled Primary button; the rest
@@ -77,7 +111,7 @@ export function tabRow(
     const active = tab.id === activeId;
     const button = new ButtonBuilder()
       .setCustomId(`${prefix}:${tab.id}`)
-      .setLabel(tab.label)
+      .setLabel(clipLabel(tab.label))
       .setStyle(active ? ButtonStyle.Primary : ButtonStyle.Secondary)
       .setDisabled(active);
     if (tab.emoji) button.setEmoji(Emojis.parse(tab.emoji));
@@ -101,11 +135,11 @@ export function confirmRow(
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(options.confirmId)
-      .setLabel(options.confirmLabel ?? "Confirm")
+      .setLabel(clipLabel(options.confirmLabel ?? "Confirm"))
       .setStyle(options.confirmStyle ?? ButtonStyle.Danger),
     new ButtonBuilder()
       .setCustomId(options.cancelId)
-      .setLabel(options.cancelLabel ?? "Cancel")
+      .setLabel(clipLabel(options.cancelLabel ?? "Cancel"))
       .setStyle(ButtonStyle.Secondary),
   );
 }
@@ -118,7 +152,48 @@ export function backRow(
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(customId)
-      .setLabel(label)
+      .setLabel(clipLabel(label))
       .setStyle(ButtonStyle.Secondary),
+  );
+}
+
+/**
+ * Detail-view navigation: a Back button plus one primary action.
+ * Keeps subpanel footers uniform across hub, detail, and addon views.
+ */
+export function navRow(
+  options: NavRowOptions,
+): ActionRowBuilder<ButtonBuilder> {
+  const action = new ButtonBuilder()
+    .setCustomId(options.action.customId)
+    .setLabel(clipLabel(options.action.label))
+    .setStyle(options.action.style ?? ButtonStyle.Primary);
+  if (options.action.emoji) {
+    action.setEmoji(
+      typeof options.action.emoji === "string"
+        ? Emojis.parse(options.action.emoji)
+        : options.action.emoji,
+    );
+  }
+  if (options.action.disabled !== undefined) {
+    action.setDisabled(options.action.disabled);
+  }
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(options.backId)
+      .setLabel(clipLabel(options.backLabel ?? "← Back"))
+      .setStyle(ButtonStyle.Secondary),
+    action,
+  );
+}
+
+/** Small muted footer line for paged panels: `Page x of y` plus a hint. */
+export function pageFooter(
+  pageIndex: number,
+  totalPages: number,
+  hintOrTotalItems?: string | number,
+): TextDisplayBuilder {
+  return new TextDisplayBuilder().setContent(
+    `-# ${formatPageFooter(pageIndex, totalPages, hintOrTotalItems)}`,
   );
 }

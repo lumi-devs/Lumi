@@ -23,7 +23,7 @@ import {
 } from "../lib/captcha.js";
 import { snapshotGuild } from "#lib/backup/backup-types.js";
 import { restoreGuildFromBackup } from "#lib/backup/restore-guild.js";
-import { parseConfigList } from "#lib/module-system/config-schema.js";
+import { toStringArray } from "#lib/module-system/config-schema.js";
 import {
   hasNoAvatar,
   isUnverifiedBot,
@@ -184,14 +184,7 @@ export class SecurityUtility extends Utility {
   public async loadAntiNukeConfig(guildId: string): Promise<AntiNukeConfig> {
     const raw = await this.db.config.getAllModuleConfig(guildId, "security");
 
-    const trustedRaw = raw["trusted_role_ids"];
-    const trustedRoleIds =
-      typeof trustedRaw === "string"
-        ? trustedRaw
-            .split(",")
-            .map((id) => id.trim())
-            .filter((id) => id.length > 0)
-        : [];
+    const trustedRoleIds = toStringArray(raw["trusted_role_ids"]);
 
     return {
       enabled: raw["antinuke_enabled"] === true,
@@ -400,7 +393,7 @@ export class SecurityUtility extends Utility {
       raidWindowSeconds: getConfigNumber(raw, "raid_window_seconds", 30),
       raidAction: getConfigAction(raw, "raid_action", "kick"),
       raidAccountType: raw["raid_account_type"] === "suspicious" ? "suspicious" : "all",
-      raidWarnRoleIds: parseConfigList(raw["raid_warn_role_ids"]),
+      raidWarnRoleIds: toStringArray(raw["raid_warn_role_ids"]),
       filterNoAvatar: {
         enabled: raw["filter_no_avatar_enabled"] === true,
         action: getConfigAction(raw, "filter_no_avatar_action", "log"),
@@ -416,7 +409,7 @@ export class SecurityUtility extends Utility {
       },
       filterUsernamePattern: {
         enabled: raw["filter_username_pattern_enabled"] === true,
-        patterns: parseConfigList(raw["filter_username_pattern"]),
+        patterns: toStringArray(raw["filter_username_pattern"]),
         action: getConfigAction(raw, "filter_username_pattern_action", "log"),
       },
       filterAdvertising: {

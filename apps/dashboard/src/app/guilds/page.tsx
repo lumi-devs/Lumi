@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "#/lib/auth";
+import { env } from "#/lib/env";
 import { SiteHeader } from "#/components/layout/site-header";
 import { GuildPicker } from "#/components/guild-picker";
 import { getGuildSummaries } from "#/lib/dashboard-fetch";
@@ -17,7 +18,7 @@ export default async function GuildsPage() {
   return (
     <>
       <SiteHeader session={session} />
-      <GuildPicker session={session} summaries={summaries} />
+      <GuildPicker session={session} summaries={summaries} clientId={env.discordClientId} />
       <footer
         className="rise flex justify-center gap-3 py-6 text-[13px] text-fg-subtle"
         style={{ "--rise-delay": "140ms" } as React.CSSProperties}

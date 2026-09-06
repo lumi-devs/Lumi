@@ -32,8 +32,9 @@ export class ConfigPanelModalHandler extends InteractionHandler {
       !interaction.customId.startsWith("cfg:fmodal:")
     )
       return this.none();
-    const [, kind, moduleName, fieldKey] = interaction.customId.split(":");
-    return this.some({ kind, moduleName, fieldKey });
+    const [, kind, moduleName, fieldKey, fieldPage] =
+      interaction.customId.split(":");
+    return this.some({ kind, moduleName, fieldKey, fieldPage });
   }
 
   public async run(
@@ -42,7 +43,13 @@ export class ConfigPanelModalHandler extends InteractionHandler {
       kind,
       moduleName,
       fieldKey,
-    }: { kind: string; moduleName: string; fieldKey?: string },
+      fieldPage,
+    }: {
+      kind: string;
+      moduleName: string;
+      fieldKey?: string;
+      fieldPage?: string;
+    },
   ) {
     if (!interaction.inGuild()) return;
     await interaction.deferUpdate();
@@ -106,7 +113,12 @@ export class ConfigPanelModalHandler extends InteractionHandler {
       }
     } else if (kind === "modal") {
       for (const f of record.meta.configFields ?? []) {
-        if (f.type !== FieldType.STRING && f.type !== FieldType.NUMBER)
+        if (
+          f.type !== FieldType.STRING &&
+          f.type !== FieldType.STRING_LIST &&
+          f.type !== FieldType.NUMBER &&
+          f.type !== FieldType.DURATION
+        )
           continue;
         let raw: string;
         try {
@@ -189,11 +201,12 @@ export class ConfigPanelModalHandler extends InteractionHandler {
     const detail = await loadDetail(guildId, moduleName);
     if (!detail) return;
     const t = await fetchTyped(interaction);
+    const sectionIndex = parseInt(fieldPage ?? "0", 10) || 0;
     const view = buildFeatureDetailView(
       detail.meta,
       detail.config,
       detail.guildEnabled,
-      0,
+      sectionIndex,
       t,
     );
     return interaction.editReply(view);

@@ -33,11 +33,10 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       min: 10,
       max: 600,
     }),
-    trusted_role_ids: cfg.string({
+    trusted_role_ids: cfg.multiRole({
       group: "Anti-Nuke",
       label: "Trusted Roles",
-      description: "Comma-separated role IDs exempt from anti-nuke.",
-      list: true,
+      description: "Role IDs exempt from anti-nuke.",
     }),
     log_channel_id: cfg.channel({
       group: "Anti-Nuke",
@@ -190,12 +189,11 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
         "Apply the raid action to every joiner, or only ones flagged suspicious (no avatar, low account age, similar username to a recent joiner, or bulk-created).",
       default: "all",
     }),
-    raid_warn_role_ids: cfg.string({
+    raid_warn_role_ids: cfg.multiRole({
       group: "Join Gate",
       label: "Raid Warn Roles",
       description:
-        "Comma-separated role IDs mentioned in the log message when raid mode activates.",
-      list: true,
+        "Role IDs mentioned in the log message when raid mode activates.",
     }),
     filter_no_avatar_enabled: cfg.boolean({
       group: "Join Gate Filters",
@@ -247,11 +245,10 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       description: "Flag members whose username contains a configured substring.",
       default: false,
     }),
-    filter_username_pattern: cfg.string({
+    filter_username_pattern: cfg.stringList({
       group: "Join Gate Filters",
       label: "Username Patterns",
-      description: "Comma-separated substrings matched (case-insensitively) against usernames.",
-      list: true,
+      description: "Substrings matched (case-insensitively) against usernames, one per line.",
     }),
     filter_username_pattern_action: cfg.enum(["log", "kick", "timeout", "quarantine"], {
       group: "Join Gate Filters",
@@ -315,12 +312,11 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
         "Require verification from everyone, or only accounts flagged as suspicious (new or no avatar).",
       default: "everyone",
     }),
-    panic_lock_channel_ids: cfg.string({
+    panic_lock_channel_ids: cfg.multiChannel({
       group: "Panic Mode",
       label: "Channels to Lock",
       description:
-        "Comma-separated channel IDs locked by /panic. Blank locks every text channel.",
-      list: true,
+        "Channel IDs locked by /panic. Blank locks every text channel.",
     }),
     backup_interval_hours: cfg.number({
       group: "Backups",

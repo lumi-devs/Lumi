@@ -18,19 +18,17 @@
   "configFields": [
     {
       "key": "terms",
-      "type": "STRING",
+      "type": "STRING_LIST",
       "label": "Filtered Terms",
-      "description": "Comma-separated list of words/phrases to block.",
-      "group": "Terms & Patterns",
-      "list": true
+      "description": "Words/phrases to block, one per line.",
+      "group": "Terms & Patterns"
     },
     {
       "key": "regex_rules",
-      "type": "STRING",
+      "type": "STRING_LIST",
       "label": "Regex Rules",
-      "description": "Comma-separated regular expressions to block (case-insensitive, max 256 chars each). Invalid patterns are skipped; patterns that backtrack catastrophically are rejected when saved.",
-      "group": "Terms & Patterns",
-      "list": true
+      "description": "Regular expressions to block (case-insensitive, max 256 chars each), one per line. Invalid patterns are skipped; patterns that backtrack catastrophically are rejected when saved.",
+      "group": "Terms & Patterns"
     },
     {
       "key": "block_invites",
@@ -42,11 +40,10 @@
     },
     {
       "key": "invite_allowlist",
-      "type": "STRING",
+      "type": "STRING_LIST",
       "label": "Allowed Invite Codes",
-      "description": "Comma-separated invite codes that are always allowed (e.g. your own server's).",
-      "group": "Invites & Links",
-      "list": true
+      "description": "Invite codes that are always allowed (e.g. your own server's), one per line.",
+      "group": "Invites & Links"
     },
     {
       "key": "block_links",
@@ -58,11 +55,10 @@
     },
     {
       "key": "link_allowlist",
-      "type": "STRING",
+      "type": "STRING_LIST",
       "label": "Allowed Link Domains",
-      "description": "Comma-separated domains exempt from link blocking (subdomains included), e.g. youtube.com, github.com.",
-      "group": "Invites & Links",
-      "list": true
+      "description": "Domains exempt from link blocking (subdomains included), one per line, e.g. youtube.com, github.com.",
+      "group": "Invites & Links"
     },
     {
       "key": "max_mentions",
@@ -90,11 +86,10 @@
     },
     {
       "key": "exempt_roles",
-      "type": "STRING",
+      "type": "MULTI_ROLE",
       "label": "Exempt Role IDs",
-      "description": "Comma-separated role IDs that bypass all filter rules (members with Manage Messages are always exempt).",
-      "group": "Punishment",
-      "list": true
+      "description": "Role IDs that bypass all filter rules (members with Manage Messages are always exempt).",
+      "group": "Punishment"
     },
     {
       "key": "timeout_minutes",

@@ -2,6 +2,7 @@ import {
   ActionRowBuilder,
   ContainerBuilder,
   MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
   SectionBuilder,
   TextDisplayBuilder,
   ThumbnailBuilder,
@@ -32,6 +33,8 @@ export interface CardOptions {
   /** Adds a divider above actionRows - only used above the hub tab bar so it doesn't blend into the content above it. */
   separatorAboveActionRows?: boolean;
   mediaGallery?: MediaGalleryBuilder;
+  /** Convenience for a header banner: image urls rendered as a gallery near the top. */
+  headerImages?: string[];
 }
 
 export const ephemeralCard = (card: CardReply): CardReply => ({
@@ -78,6 +81,17 @@ function buildContainer(
   }
 
   c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(opts.divider ?? true));
+
+  const headerUrls = (opts.headerImages ?? [])
+    .filter((url) => url && url.length > 0)
+    .slice(0, 10);
+  if (headerUrls.length > 0) {
+    c.addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(
+        ...headerUrls.map((url) => new MediaGalleryItemBuilder({ media: { url } })),
+      ),
+    );
+  }
 
   if (opts.sections && opts.sections.length > 0) {
     for (const sec of opts.sections) {

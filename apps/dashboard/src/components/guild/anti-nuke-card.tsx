@@ -1,71 +1,88 @@
 "use client";
 
 import { useState } from "react";
-import { setGuildConfigField } from "#/actions/guild-actions";
+import type { ConfigField } from "@lumi/contracts";
+import {
+  setGuildConfigField,
+  setManyGuildConfigFields,
+} from "#/actions/guild-actions";
 import { SaveBar } from "#/components/save-bar";
+import { ConfigFieldInput } from "#/components/guild/config-field-input";
 import { Card, CardHeader, CardTitle, CardDescription, CardBody } from "#/components/ui/card";
-import { Select, Input, Field } from "#/components/ui/input";
+import { Field, Label } from "#/components/ui/input";
 import { Switch } from "#/components/ui/switch";
 import { useServerAction } from "#/lib/use-server-action";
-import { cn } from "#/lib/utils";
+import type {
+  DashboardChannelView,
+  DashboardRoleView,
+} from "#/lib/dashboard-data";
 
-type NukeResponse = "log" | "quarantine" | "ban";
+const SecurityModuleName = "security";
+const EnabledKey = "antinuke_enabled";
 
-const ResponseTone: Record<NukeResponse, string> = {
-  log: "text-fg-muted",
-  quarantine: "text-warning-fg",
-  ban: "text-danger-fg",
-};
+/** Non-matrix anti-nuke fields rendered above the per-kind table. */
+const ExtraKeys = ["window_seconds", "trusted_role_ids", "log_channel_id"];
 
-// One row per action kind the anti-nuke table exposes a dedicated response
-// for. Matches `KIND_RESPONSE_KEYS` in `SecurityUtility.ts` — the 3 kinds
-// without a per-action field there (vanity change, dangerous permission
-// grant, quarantine bypass) aren't editable here yet.
-const Rows = [
-  { kind: "bans", label: "Bans", limitKey: "max_bans", responseKey: "response_bans" },
-  { kind: "kicks", label: "Kicks", limitKey: "max_kicks", responseKey: "response_kicks" },
-  {
-    kind: "channel_deletes",
-    label: "Channel deletes",
-    limitKey: "max_channel_deletes",
-    responseKey: "response_channel_deletes",
-  },
-  {
-    kind: "role_deletes",
-    label: "Role deletes",
-    limitKey: "max_role_deletes",
-    responseKey: "response_role_deletes",
-  },
-  {
-    kind: "webhook_creates",
-    label: "Webhook creates",
-    limitKey: "max_webhook_creates",
-    responseKey: "response_webhook_creates",
-  },
-] as const;
+interface NukeRow {
+  limit: ConfigField;
+  response: ConfigField | null;
+  label: string;
+}
 
-const ExtraFields = ["window_seconds", "trusted_role_ids"] as const;
+function responseKeyFor(limitKey: string): string {
+  return `response_${limitKey.replace(/^max_/, "")}`;
+}
+
+/** Rows derive from the schema's `max_*` limit fields; a `response_*`
+ * counterpart is picked up when the schema carries one, otherwise the row
+ * is limit-only and the worker default applies. */
+function nukeRowsFor(configFields: ConfigField[]): NukeRow[] {
+  const byKey = new Map(configFields.map((f) => [f.key, f]));
+  return configFields
+    .filter((f) => f.key.startsWith("max_"))
+    .map((limit) => ({
+      limit,
+      response: byKey.get(responseKeyFor(limit.key)) ?? null,
+      label: limit.label.replace(/^Max /, ""),
+    }));
+}
+
+function extrasFor(configFields: ConfigField[]): ConfigField[] {
+  const byKey = new Map(configFields.map((f) => [f.key, f]));
+  return ExtraKeys.flatMap((key) => {
+    const field = byKey.get(key);
+    return field ? [field] : [];
+  });
+}
 
 export function AntiNukeCard({
   guildId,
   config,
+  configFields,
+  roles = [],
+  channels = [],
   missingAuditLogPermission,
 }: {
   guildId: string;
   config: Record<string, unknown>;
+  configFields: ConfigField[];
+  roles?: DashboardRoleView[];
+  channels?: DashboardChannelView[];
   /** True when the bot can't read the audit log, so anti-nuke can't see anything to respond to. */
   missingAuditLogPermission?: boolean;
 }) {
+  const rows = nukeRowsFor(configFields);
+  const extras = extrasFor(configFields);
   const editableKeys = [
-    ...Rows.flatMap((r) => [r.limitKey, r.responseKey]),
-    ...ExtraFields,
+    ...rows.flatMap((r) => (r.response ? [r.limit.key, r.response.key] : [r.limit.key])),
+    ...extras.map((f) => f.key),
   ];
   const baseline = Object.fromEntries(editableKeys.map((k) => [k, config[k]]));
   const [form, setForm] = useState<Record<string, unknown>>(baseline);
   const { isPending, error, setError, run } = useServerAction();
 
   const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
-  const enabled = Boolean(config["antinuke_enabled"]);
+  const enabled = Boolean(config[EnabledKey]);
 
   function set(key: string, value: unknown) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -73,21 +90,29 @@ export function AntiNukeCard({
 
   function handleToggleEnabled(next: boolean) {
     run(async () => {
-      const res = await setGuildConfigField(guildId, "security", "antinuke_enabled", next);
+      const res = await setGuildConfigField(
+        guildId,
+        SecurityModuleName,
+        EnabledKey,
+        next,
+      );
       if (!res.ok) setError(res.error ?? "Failed to toggle");
     });
   }
 
   function handleSave() {
-    const changedKeys = Object.keys(form).filter(
-      (k) => JSON.stringify(form[k]) !== JSON.stringify(baseline[k]),
+    const changed = Object.fromEntries(
+      editableKeys
+        .filter((k) => JSON.stringify(form[k]) !== JSON.stringify(baseline[k]))
+        .map((k) => [k, form[k]]),
     );
     run(async () => {
-      const results = await Promise.all(
-        changedKeys.map((key) => setGuildConfigField(guildId, "security", key, form[key])),
+      const res = await setManyGuildConfigFields(
+        guildId,
+        SecurityModuleName,
+        changed,
       );
-      const failed = results.find((r) => !r.ok);
-      if (failed) setError(failed.error ?? "Save failed");
+      if (!res.ok) setError(res.error ?? "Save failed");
     });
   }
 
@@ -120,31 +145,26 @@ export function AntiNukeCard({
           </CardBody>
         ) : null}
 
-        <CardBody className="border-t border-border">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <Field label="Detection window (s)" htmlFor="window_seconds">
-              <Input
-                id="window_seconds"
-                type="number"
-                className="tabular"
-                value={String(form.window_seconds ?? "")}
-                onChange={(e) => set("window_seconds", Number(e.target.value))}
-              />
-            </Field>
-            <Field
-              label="Trusted roles"
-              htmlFor="trusted_role_ids"
-              hint="Comma-separated role IDs, exempt from anti-nuke."
-              className="col-span-2 sm:col-span-1"
-            >
-              <Input
-                id="trusted_role_ids"
-                value={String(form.trusted_role_ids ?? "")}
-                onChange={(e) => set("trusted_role_ids", e.target.value)}
-              />
-            </Field>
-          </div>
-        </CardBody>
+        {extras.length > 0 ? (
+          <CardBody className="grid grid-cols-1 gap-4 border-t border-border sm:grid-cols-3">
+            {extras.map((field) => (
+              <Field
+                key={field.key}
+                label={field.label}
+                htmlFor={field.key}
+                hint={field.description}
+              >
+                <ConfigFieldInput
+                  field={field}
+                  value={form[field.key]}
+                  onChange={(value) => set(field.key, value)}
+                  roles={roles}
+                  channels={channels}
+                />
+              </Field>
+            ))}
+          </CardBody>
+        ) : null}
 
         <div className="divide-y divide-border border-t border-border">
           <div className="grid grid-cols-[1fr_7rem_10rem] gap-3 px-4 py-2 font-mono text-[11.5px] tracking-wide text-fg-subtle uppercase">
@@ -152,31 +172,36 @@ export function AntiNukeCard({
             <span>Limit</span>
             <span>Response</span>
           </div>
-          {Rows.map((row) => {
-            const response = (form[row.responseKey] as NukeResponse) ?? "quarantine";
+          {rows.map((row) => {
+            const response = row.response;
             return (
               <div
-                key={row.kind}
+                key={row.limit.key}
                 className="grid grid-cols-[1fr_7rem_10rem] items-center gap-3 px-4 py-3"
               >
-                <span className="text-[14.5px] text-fg">{row.label}</span>
-                <Input
-                  type="number"
-                  className="tabular h-8"
-                  aria-label={`${row.label} limit`}
-                  value={String(form[row.limitKey] ?? "")}
-                  onChange={(e) => set(row.limitKey, Number(e.target.value))}
+                <Label htmlFor={row.limit.key} className="text-[14.5px] font-normal text-fg">
+                  {row.label}
+                </Label>
+                <ConfigFieldInput
+                  field={row.limit}
+                  value={form[row.limit.key]}
+                  onChange={(value) => set(row.limit.key, value)}
+                  roles={roles}
+                  channels={channels}
                 />
-                <Select
-                  aria-label={`${row.label} response`}
-                  value={response}
-                  onChange={(e) => set(row.responseKey, e.target.value)}
-                  className={cn(ResponseTone[response])}
-                >
-                  <option value="log">Log only</option>
-                  <option value="quarantine">Quarantine</option>
-                  <option value="ban">Ban</option>
-                </Select>
+                {response ? (
+                  <ConfigFieldInput
+                    field={response}
+                    value={form[response.key]}
+                    onChange={(value) => set(response.key, value)}
+                    roles={roles}
+                    channels={channels}
+                  />
+                ) : (
+                  <span className="text-[14px] text-fg-subtle" title="No per-kind response in the schema — the worker default applies.">
+                    —
+                  </span>
+                )}
               </div>
             );
           })}

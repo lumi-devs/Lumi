@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
+import { MessageFlags } from "discord.js";
 import type { ContainerBuilder } from "@discordjs/builders";
-import { makeListCard,
+import {
+  makeListCard,
+  makeInfoCard,
+  ephemeralCard,
+  noPingCard,
   fitLines,
   TextDisplayLimit,
 } from "#lib/utilities/cards.js";
@@ -67,5 +72,47 @@ describe("fitLines", () => {
   it("survives a single oversized line", () => {
     const body = fitLines(["y".repeat(9000)]);
     expect(body.length).toBeLessThanOrEqual(TextDisplayLimit);
+  });
+});
+
+describe("card chrome", () => {
+  it("wires the IsComponentsV2 flag on every card", () => {
+    const card = makeInfoCard("Title", "Body");
+    expect(card.flags).toBe(MessageFlags.IsComponentsV2);
+  });
+
+  it("ephemeralCard keeps the components flag and adds Ephemeral", () => {
+    const card = ephemeralCard(makeInfoCard("Title", "Body"));
+    expect(card.flags! & MessageFlags.IsComponentsV2).toBeTruthy();
+    expect(card.flags! & MessageFlags.Ephemeral).toBeTruthy();
+  });
+
+  it("noPingCard suppresses mentions", () => {
+    const card = noPingCard(makeInfoCard("Title", "Body"));
+    expect(card.allowedMentions).toEqual({ parse: [] });
+  });
+
+  it("renders the thumbnailUrl home-card pattern beside the body", () => {
+    const card = makeInfoCard("Title", "Hello", {
+      thumbnailUrl: "https://cdn.example/icon.png",
+    });
+    const container = card.components[0] as ContainerBuilder;
+    const data = container.toJSON() as {
+      components: {
+        type: number;
+        accessory?: { media?: { url?: string } };
+      }[];
+    };
+    const section = data.components.find((c) => c.type === 9);
+    expect(section?.accessory?.media?.url).toBe("https://cdn.example/icon.png");
+  });
+
+  it("renders headerImages as a media gallery", () => {
+    const card = makeInfoCard("Title", "Body", {
+      headerImages: ["https://cdn.example/banner.png"],
+    });
+    const container = card.components[0] as ContainerBuilder;
+    const data = container.toJSON() as { components: { type: number }[] };
+    expect(data.components.some((c) => c.type === 14)).toBe(true);
   });
 });

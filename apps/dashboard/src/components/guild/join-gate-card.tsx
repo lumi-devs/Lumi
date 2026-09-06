@@ -1,30 +1,42 @@
 "use client";
 
 import { useState } from "react";
-import { setGuildConfigField } from "#/actions/guild-actions";
+import { FieldType, type ConfigField } from "@lumi/contracts";
+import { setManyGuildConfigFields } from "#/actions/guild-actions";
 import { SaveBar } from "#/components/save-bar";
+import { ConfigFieldInput } from "#/components/guild/config-field-input";
 import { Card, CardHeader, CardTitle, CardDescription, CardBody } from "#/components/ui/card";
-import { Switch } from "#/components/ui/switch";
-import { Input, Select, Field } from "#/components/ui/input";
+import { Field, Label } from "#/components/ui/input";
 import { useServerAction } from "#/lib/use-server-action";
+import type { DashboardRoleView } from "#/lib/dashboard-data";
 
-const EditableKeys = [
-  "joingate_enabled",
-  "verification_enabled",
-  "min_account_age_hours",
-  "raid_join_count",
-  "raid_window_seconds",
-  "raid_action",
-] as const;
+const SecurityModuleName = "security";
+
+/** Schema groups this card owns, in render order. Everything else about
+ * the fields — keys, labels, descriptions, widgets — comes from the schema. */
+const JoinGateGroups = ["Join Gate", "Join Gate Filters", "Verification"];
+
+function groupsFor(configFields: ConfigField[]): { name: string; fields: ConfigField[] }[] {
+  return JoinGateGroups.flatMap((name) => {
+    const fields = configFields.filter((f) => f.group === name);
+    return fields.length > 0 ? [{ name, fields }] : [];
+  });
+}
 
 export function JoinGateCard({
   guildId,
   config,
+  configFields,
+  roles = [],
 }: {
   guildId: string;
   config: Record<string, unknown>;
+  configFields: ConfigField[];
+  roles?: DashboardRoleView[];
 }) {
-  const baseline = Object.fromEntries(EditableKeys.map((k) => [k, config[k]]));
+  const groups = groupsFor(configFields);
+  const editableKeys = groups.flatMap((g) => g.fields.map((f) => f.key));
+  const baseline = Object.fromEntries(editableKeys.map((k) => [k, config[k]]));
   const [form, setForm] = useState<Record<string, unknown>>(baseline);
   const { isPending, error, setError, run } = useServerAction();
 
@@ -35,15 +47,18 @@ export function JoinGateCard({
   }
 
   function handleSave() {
-    const changedKeys = Object.keys(form).filter(
-      (k) => JSON.stringify(form[k]) !== JSON.stringify(baseline[k]),
+    const changed = Object.fromEntries(
+      editableKeys
+        .filter((k) => JSON.stringify(form[k]) !== JSON.stringify(baseline[k]))
+        .map((k) => [k, form[k]]),
     );
     run(async () => {
-      const results = await Promise.all(
-        changedKeys.map((key) => setGuildConfigField(guildId, "security", key, form[key])),
+      const res = await setManyGuildConfigFields(
+        guildId,
+        SecurityModuleName,
+        changed,
       );
-      const failed = results.find((r) => !r.ok);
-      if (failed) setError(failed.error ?? "Save failed");
+      if (!res.ok) setError(res.error ?? "Save failed");
     });
   }
 
@@ -58,59 +73,64 @@ export function JoinGateCard({
           </CardDescription>
         </CardHeader>
 
-        <CardBody className="grid grid-cols-1 gap-3 border-t border-border bg-bg-subtle sm:grid-cols-2">
-          <SettingToggle
-            label="Join gate"
-            checked={Boolean(form.joingate_enabled)}
-            onChange={(v) => set("joingate_enabled", v)}
-          />
-          <SettingToggle
-            label="Verification"
-            checked={Boolean(form.verification_enabled)}
-            onChange={(v) => set("verification_enabled", v)}
-          />
-        </CardBody>
-
-        <CardBody className="grid grid-cols-1 gap-4 border-t border-border sm:grid-cols-3">
-          <Field label="Min account age (h)" htmlFor="min_account_age_hours">
-            <Input
-              id="min_account_age_hours"
-              type="number"
-              className="tabular"
-              value={String(form.min_account_age_hours ?? "")}
-              onChange={(e) => set("min_account_age_hours", Number(e.target.value))}
-            />
-          </Field>
-          <Field label="Raid join count" htmlFor="raid_join_count">
-            <Input
-              id="raid_join_count"
-              type="number"
-              className="tabular"
-              value={String(form.raid_join_count ?? "")}
-              onChange={(e) => set("raid_join_count", Number(e.target.value))}
-            />
-          </Field>
-          <Field label="Raid window (s)" htmlFor="raid_window_seconds">
-            <Input
-              id="raid_window_seconds"
-              type="number"
-              className="tabular"
-              value={String(form.raid_window_seconds ?? "")}
-              onChange={(e) => set("raid_window_seconds", Number(e.target.value))}
-            />
-          </Field>
-          <Field label="Gate action" htmlFor="raid_action" className="sm:col-span-3">
-            <Select
-              id="raid_action"
-              value={String(form.raid_action ?? "kick")}
-              onChange={(e) => set("raid_action", e.target.value)}
-            >
-              <option value="kick">Kick</option>
-              <option value="timeout">Timeout</option>
-              <option value="quarantine">Quarantine</option>
-            </Select>
-          </Field>
-        </CardBody>
+        {groups.map((group, index) => {
+          const toggles = group.fields.filter((f) => f.type === FieldType.BOOLEAN);
+          const inputs = group.fields.filter((f) => f.type !== FieldType.BOOLEAN);
+          return (
+            <div key={group.name} className={index === 0 ? undefined : "border-t border-border"}>
+              <h4 className="border-b border-border bg-bg-subtle px-4 py-1.5 font-display text-[13px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
+                {group.name}
+              </h4>
+              {toggles.length > 0 ? (
+                <CardBody className="grid grid-cols-1 gap-3 bg-bg-subtle sm:grid-cols-2">
+                  {toggles.map((field) => (
+                    <div
+                      key={field.key}
+                      className="flex items-center justify-between gap-3 rounded-control border border-border bg-surface px-3 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <Label htmlFor={field.key} className="block text-[14.5px]">
+                          {field.label}
+                        </Label>
+                        {field.description ? (
+                          <p className="mt-0.5 text-[13px] leading-4 text-fg-subtle">
+                            {field.description}
+                          </p>
+                        ) : null}
+                      </div>
+                      <ConfigFieldInput
+                        field={field}
+                        value={form[field.key]}
+                        onChange={(value) => set(field.key, value)}
+                        roles={roles}
+                      />
+                    </div>
+                  ))}
+                </CardBody>
+              ) : null}
+              {inputs.length > 0 ? (
+                <CardBody className="grid grid-cols-1 gap-4 border-t border-border sm:grid-cols-3">
+                  {inputs.map((field) => (
+                    <Field
+                      key={field.key}
+                      label={field.label}
+                      htmlFor={field.key}
+                      hint={field.description}
+                      className={field.type === FieldType.ENUM ? "sm:col-span-3" : undefined}
+                    >
+                      <ConfigFieldInput
+                        field={field}
+                        value={form[field.key]}
+                        onChange={(value) => set(field.key, value)}
+                        roles={roles}
+                      />
+                    </Field>
+                  ))}
+                </CardBody>
+              ) : null}
+            </div>
+          );
+        })}
       </Card>
       <SaveBar
         dirty={dirty}
@@ -120,22 +140,5 @@ export function JoinGateCard({
         onReset={() => setForm(baseline)}
       />
     </>
-  );
-}
-
-function SettingToggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-control border border-border bg-surface px-3 py-2.5">
-      <span className="text-[14.5px] font-medium text-fg">{label}</span>
-      <Switch checked={checked} onChange={onChange} aria-label={label} />
-    </div>
   );
 }

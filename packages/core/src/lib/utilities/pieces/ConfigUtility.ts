@@ -1,5 +1,5 @@
 import { Utility } from "#lib/module-system/Utility.js";
-import { FieldType, parseConfigList } from "#lib/module-system/Module.js";
+import { FieldType } from "#lib/module-system/Module.js";
 import { validateModuleConfigValue } from "#lib/module-system/config-schema.js";
 import { cleanMention } from "#utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
@@ -13,7 +13,7 @@ export class ConfigUtility extends Utility {
     guildId: string,
     moduleName: string,
     key: string,
-    rawValue: string,
+    rawValue: unknown,
     actorId?: string,
   ) {
     const meta = this.container.moduleStore.getRecord(moduleName)?.meta;
@@ -246,24 +246,12 @@ export class ConfigUtility extends Utility {
     return bestValue;
   }
 
-  /**
-   * Typed read for comma-list STRING fields. Values are stored verbatim; this
-   * applies the single shared `parseConfigList` transform so callers get `string[]`.
-   */
-  public async getConfigList(
-    guildId: string,
-    moduleName: string,
-    key: string,
-  ): Promise<string[]> {
-    return parseConfigList(
-      await this.container.db.config.getModuleConfig(guildId, moduleName, key),
-    );
-  }
-
-  public coerce(value: string, type: FieldType, choices?: string[]): unknown {
-    const lower = value.toLowerCase();
+  public coerce(value: unknown, type: FieldType, choices?: string[]): unknown {
     switch (type) {
       case FieldType.BOOLEAN: {
+        if (typeof value === "boolean") return value;
+        if (typeof value !== "string") return null;
+        const lower = value.toLowerCase();
         const trueSet = new Set(["true", "yes", "1", "on"]);
         const falseSet = new Set(["false", "no", "0", "off"]);
         if (trueSet.has(lower)) return true;
@@ -271,16 +259,45 @@ export class ConfigUtility extends Utility {
         return null;
       }
       case FieldType.NUMBER: {
+        if (typeof value === "number") return value;
+        if (typeof value !== "string") return null;
         const n = Number(value);
         return isNaN(n) ? null : n;
       }
       case FieldType.ENUM:
-        return choices?.includes(value) ? value : null;
+        return typeof value === "string" && choices?.includes(value) ? value : null;
       case FieldType.CHANNEL:
       case FieldType.ROLE:
       case FieldType.USER: {
+        if (typeof value !== "string") return null;
         const id = cleanMention(value);
         return /^\d{17,20}$/.test(id) ? id : null;
+      }
+      case FieldType.DURATION:
+        return typeof value === "string" ? value : null;
+      case FieldType.MULTI_ROLE:
+      case FieldType.MULTI_CHANNEL:
+      case FieldType.MULTI_USER: {
+        const entries = Array.isArray(value)
+          ? value.map(String)
+          : typeof value === "string"
+            ? value.split(/[,\n]/)
+            : null;
+        if (!entries) return null;
+        return entries
+          .map((entry) => cleanMention(entry.trim()))
+          .filter((id) => id.length > 0);
+      }
+      case FieldType.STRING_LIST: {
+        const entries = Array.isArray(value)
+          ? value.map(String)
+          : typeof value === "string"
+            ? value.split(/\r?\n/)
+            : null;
+        if (!entries) return null;
+        return entries
+          .map((entry) => entry.trim())
+          .filter((entry) => entry.length > 0);
       }
       default:
         return value;

@@ -283,7 +283,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
       expect(res.value).toBeNull();
     });
 
-    it("joins a list value back into the raw comma form the config service expects", async () => {
+    it("passes a list value through as a typed array", async () => {
       prisma.$seed("moduleConfigHistory", [
         makeHistory({ id: "h1", oldValue: ["a", "b"] }),
       ]);
@@ -294,7 +294,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
         GUILD_ID,
         "mod",
         "logChannel",
-        "a,b",
+        ["a", "b"],
         OWNER_ID,
       );
     });

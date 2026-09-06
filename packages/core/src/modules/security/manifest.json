@@ -36,11 +36,10 @@
     },
     {
       "key": "trusted_role_ids",
-      "type": "STRING",
+      "type": "MULTI_ROLE",
       "label": "Trusted Roles",
-      "description": "Comma-separated role IDs exempt from anti-nuke.",
-      "group": "Anti-Nuke",
-      "list": true
+      "description": "Role IDs exempt from anti-nuke.",
+      "group": "Anti-Nuke"
     },
     {
       "key": "log_channel_id",
@@ -245,11 +244,10 @@
     },
     {
       "key": "raid_warn_role_ids",
-      "type": "STRING",
+      "type": "MULTI_ROLE",
       "label": "Raid Warn Roles",
-      "description": "Comma-separated role IDs mentioned in the log message when raid mode activates.",
-      "group": "Join Gate",
-      "list": true
+      "description": "Role IDs mentioned in the log message when raid mode activates.",
+      "group": "Join Gate"
     },
     {
       "key": "filter_no_avatar_enabled",
@@ -335,11 +333,10 @@
     },
     {
       "key": "filter_username_pattern",
-      "type": "STRING",
+      "type": "STRING_LIST",
       "label": "Username Patterns",
-      "description": "Comma-separated substrings matched (case-insensitively) against usernames.",
-      "group": "Join Gate Filters",
-      "list": true
+      "description": "Substrings matched (case-insensitively) against usernames, one per line.",
+      "group": "Join Gate Filters"
     },
     {
       "key": "filter_username_pattern_action",
@@ -442,11 +439,10 @@
     },
     {
       "key": "panic_lock_channel_ids",
-      "type": "STRING",
+      "type": "MULTI_CHANNEL",
       "label": "Channels to Lock",
-      "description": "Comma-separated channel IDs locked by /panic. Blank locks every text channel.",
-      "group": "Panic Mode",
-      "list": true
+      "description": "Channel IDs locked by /panic. Blank locks every text channel.",
+      "group": "Panic Mode"
     },
     {
       "key": "backup_interval_hours",

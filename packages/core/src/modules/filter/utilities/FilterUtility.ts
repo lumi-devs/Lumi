@@ -2,7 +2,7 @@ import { Utility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import { RedisKeys } from "#database/redis.js";
-import { parseConfigList } from "#lib/module-system/config-schema.js";
+import { toStringArray } from "#lib/module-system/config-schema.js";
 import {
   compileRules,
   evaluateStatic,
@@ -80,12 +80,12 @@ export class FilterUtility extends Utility {
       typeof raw[key] === "number" ? raw[key] : fallback;
 
     this.rebuild(guildId, {
-      terms: parseConfigList(raw["terms"] ?? null),
-      regexRules: parseConfigList(raw["regex_rules"] ?? null),
+      terms: toStringArray(raw["terms"]),
+      regexRules: toStringArray(raw["regex_rules"]),
       blockInvites: raw["block_invites"] === true,
-      inviteAllowlist: parseConfigList(raw["invite_allowlist"] ?? null),
+      inviteAllowlist: toStringArray(raw["invite_allowlist"]),
       blockLinks: raw["block_links"] === true,
-      linkAllowlist: parseConfigList(raw["link_allowlist"] ?? null),
+      linkAllowlist: toStringArray(raw["link_allowlist"]),
       maxMentions: num("max_mentions", 0),
       maxCapsPercent: num("max_caps_percent", 0),
       capsMinLength: num("caps_min_length", DefaultCapsMinLength),

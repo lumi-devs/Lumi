@@ -26,42 +26,104 @@ function colorFor(id: string): string {
   return Colors[Math.abs(hash) % Colors.length]!;
 }
 
+export function inviteUrlFor(clientId: string, guildId: string): string {
+  return `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot%20applications.commands&guild_id=${guildId}&disable_guild_select=true`;
+}
+
 function GuildTile({
   guild,
   summary,
   hero,
+  installed,
+  clientId,
 }: {
   guild: OAuthGuild;
   /** Real bot-side data (icon/banner/member count), when the fetch succeeded. */
   summary?: GuildSummaryView;
   /** Larger, 2x2 lead tile - the one server most worth surfacing first. */
   hero?: boolean;
+  /** False when Lumi is not in this server (no bot-side summary came back). */
+  installed: boolean;
+  /** Discord OAuth2 client id, for building per-guild invite links. */
+  clientId: string;
 }) {
   const icon = summary?.icon ?? guildIconUrl(guild.id, guild.icon);
   const color = colorFor(guild.id);
   const initial = guild.name.slice(0, 1).toUpperCase();
   const banner = summary?.banner;
+  const tileClass = cn(
+    "group relative flex h-full flex-col justify-between overflow-hidden rounded-panel border border-border bg-surface bg-cover bg-center p-4",
+    "transition-[transform,box-shadow,border-color] duration-normal ease-[var(--ease-out)]",
+    "hover:-translate-y-0.5 hover:border-border-strong hover:shadow-glow-accent",
+  );
+  const tileStyle = {
+    backgroundImage: banner
+      ? // Scrim + real server banner. The scrim is a fixed black gradient
+        // (not a theme token) on purpose - it exists to keep the text on
+        // top legible against an arbitrary photo, in either theme, the
+        // same way a Spotify/Netflix card overlay would.
+        `linear-gradient(to top, rgba(0,0,0,0.68), rgba(0,0,0,0.15) 55%, rgba(0,0,0,0.4)), url(${banner})`
+      : `radial-gradient(120% 100% at 100% 0%, color-mix(in srgb, ${color} 12%, transparent), transparent 60%)`,
+  };
 
   return (
     <TiltCard className={hero ? "sm:col-span-2 sm:row-span-2" : undefined}>
-      <Link
-        href={`/guild/${guild.id}`}
-        onMouseMove={spotlightHandler}
-        className={cn(
-          "spotlight group relative flex h-full flex-col justify-between overflow-hidden rounded-panel border border-border bg-surface bg-cover bg-center p-4",
-          "transition-[transform,box-shadow,border-color] duration-normal ease-[var(--ease-out)]",
-          "hover:-translate-y-0.5 hover:border-border-strong hover:shadow-glow-accent",
-        )}
-        style={{
-          backgroundImage: banner
-            ? // Scrim + real server banner. The scrim is a fixed black gradient
-              // (not a theme token) on purpose - it exists to keep the text on
-              // top legible against an arbitrary photo, in either theme, the
-              // same way a Spotify/Netflix card overlay would.
-              `linear-gradient(to top, rgba(0,0,0,0.68), rgba(0,0,0,0.15) 55%, rgba(0,0,0,0.4)), url(${banner})`
-            : `radial-gradient(120% 100% at 100% 0%, color-mix(in srgb, ${color} 12%, transparent), transparent 60%)`,
-        }}
-      >
+      {installed ? (
+        <Link
+          href={`/guild/${guild.id}`}
+          onMouseMove={spotlightHandler}
+          className={cn(tileClass, "spotlight")}
+          style={tileStyle}
+        >
+          <TileChrome
+            guild={guild}
+            icon={icon}
+            color={color}
+            initial={initial}
+            banner={banner}
+            hero={hero}
+            memberCount={summary?.memberCount}
+          />
+        </Link>
+      ) : (
+        <div className={tileClass} style={tileStyle}>
+          <TileChrome
+            guild={guild}
+            icon={icon}
+            color={color}
+            initial={initial}
+            banner={banner}
+            hero={hero}
+            memberCount={summary?.memberCount}
+            inviteUrl={inviteUrlFor(clientId, guild.id)}
+          />
+        </div>
+      )}
+    </TiltCard>
+  );
+}
+
+function TileChrome({
+  guild,
+  icon,
+  color,
+  initial,
+  banner,
+  hero,
+  memberCount,
+  inviteUrl,
+}: {
+  guild: OAuthGuild;
+  icon: string | null;
+  color: string;
+  initial: string;
+  banner: string | null | undefined;
+  hero?: boolean;
+  memberCount?: number | null;
+  inviteUrl?: string;
+}) {
+  return (
+    <>
         {/* Decorative watermark - only when there's no real banner to show instead. */}
         {banner ? null : (
           <span
@@ -94,14 +156,20 @@ function GuildTile({
             )}
           </span>
           <Badge
-            variant={banner ? undefined : guild.owner ? "accent" : "neutral"}
+            variant={inviteUrl ? "neutral" : banner ? undefined : guild.owner ? "accent" : "neutral"}
             className={cn(
               "shrink-0",
               banner ? "border-white/25 bg-black/35 text-white" : "",
             )}
           >
-            {guild.owner ? <Crown className="size-3" aria-hidden /> : null}
-            {guild.owner ? "Owner" : "Manager"}
+            {inviteUrl ? (
+              "Invite needed"
+            ) : (
+              <>
+                {guild.owner ? <Crown className="size-3" aria-hidden /> : null}
+                {guild.owner ? "Owner" : "Manager"}
+              </>
+            )}
           </Badge>
         </div>
 
@@ -115,44 +183,68 @@ function GuildTile({
           >
             {guild.name}
           </p>
-          {hero && summary?.memberCount ? (
+          {hero && memberCount ? (
             <p
               className={cn(
                 "tabular mt-0.5 text-[14.5px]",
                 banner ? "text-white/70" : "text-fg-subtle",
               )}
             >
-              {summary.memberCount.toLocaleString()} members
+              {memberCount.toLocaleString()} members
             </p>
           ) : null}
-          <p
-            className={cn(
-              "mt-1 flex items-center gap-1 transition-colors",
-              banner
-                ? "text-white/75 group-hover:text-white"
-                : "text-fg-muted group-hover:text-accent-fg",
-              hero ? "text-[15px]" : "text-[14px]",
-            )}
-          >
-            Open dashboard
-            <ArrowRight
-              aria-hidden
-              className="size-3.5 transition-transform duration-fast group-hover:translate-x-0.5"
-            />
-          </p>
+          {inviteUrl ? (
+            <a
+              href={inviteUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={cn(
+                "mt-1 flex items-center gap-1 transition-colors",
+                banner
+                  ? "text-white/75 group-hover:text-white"
+                  : "text-fg-muted group-hover:text-accent-fg",
+                hero ? "text-[15px]" : "text-[14px]",
+                "font-medium text-accent-fg hover:underline",
+              )}
+            >
+              Invite Lumi
+              <ArrowRight
+                aria-hidden
+                className="size-3.5 transition-transform duration-fast group-hover:translate-x-0.5"
+              />
+            </a>
+          ) : (
+            <p
+              className={cn(
+                "mt-1 flex items-center gap-1 transition-colors",
+                banner
+                  ? "text-white/75 group-hover:text-white"
+                  : "text-fg-muted group-hover:text-accent-fg",
+                hero ? "text-[15px]" : "text-[14px]",
+              )}
+            >
+              Open dashboard
+              <ArrowRight
+                aria-hidden
+                className="size-3.5 transition-transform duration-fast group-hover:translate-x-0.5"
+              />
+            </p>
+          )}
         </div>
-      </Link>
-    </TiltCard>
+    </>
   );
 }
 
 export function GuildPicker({
   session,
   summaries = [],
+  clientId,
 }: {
   session: Session;
   /** Real bot-side icon/banner/member-count data, keyed by guild id when present. */
   summaries?: GuildSummaryView[];
+  /** Discord OAuth2 client id, for building per-guild invite links. */
+  clientId: string;
 }) {
   const [query, setQuery] = useState("");
   // Tiles are now `TiltCard` divs (the tilt wrapper), not anchors directly.
@@ -230,11 +322,19 @@ export function GuildPicker({
             <GuildTile
               guild={heroGuild}
               summary={summaryByGuildId.get(heroGuild.id)}
+              installed={summaryByGuildId.has(heroGuild.id)}
+              clientId={clientId}
               hero
             />
           ) : null}
           {restGuilds.map((g) => (
-            <GuildTile key={g.id} guild={g} summary={summaryByGuildId.get(g.id)} />
+            <GuildTile
+              key={g.id}
+              guild={g}
+              summary={summaryByGuildId.get(g.id)}
+              installed={summaryByGuildId.has(g.id)}
+              clientId={clientId}
+            />
           ))}
         </div>
       )}

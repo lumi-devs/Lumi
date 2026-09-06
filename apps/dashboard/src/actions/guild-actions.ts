@@ -58,6 +58,23 @@ export async function setGuildConfigField(
   });
 }
 
+export async function setManyGuildConfigFields(
+  guildId: string,
+  moduleName: string,
+  values: Record<string, unknown>,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await guardedAction(guildId);
+    await rpcCall(RpcActions.guildConfigSetMany, {
+      guildId,
+      actorId: session.userId,
+      data: { moduleName, values },
+    });
+    revalidatePath(`/guild/${guildId}/config/modules/${moduleName}`);
+    return { ok: true };
+  });
+}
+
 export async function runGuildSetup(
   guildId: string,
 ): Promise<ActionResult & { result?: GuildSetupRunResult }> {

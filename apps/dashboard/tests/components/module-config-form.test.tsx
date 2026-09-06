@@ -166,8 +166,7 @@ describe("ModuleConfigForm (dynamic config form editor + save bar)", () => {
     expect(screen.getByText(/unsaved changes/i)).toBeInTheDocument();
   });
 
-  it("toggling the module's enable switch calls toggleGuildModule independently of the save bar", async () => {
-    toggleGuildModule.mockResolvedValue({ ok: true });
+  it("toggling the module's enable switch calls toggleGuildModule independently of the save bar", async () => {    toggleGuildModule.mockResolvedValue({ ok: true });
     render(
       <ModuleConfigForm
         guildId="101"
@@ -186,5 +185,113 @@ describe("ModuleConfigForm (dynamic config form editor + save bar)", () => {
     // not require (or trigger) the dirty-field save bar.
     expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
     expect(setGuildConfigField).not.toHaveBeenCalled();
+  });
+
+  it("renders ungrouped fields with no tab strip", () => {
+    render(
+      <ModuleConfigForm
+        guildId="101"
+        module={makeModule()}
+        roles={roles}
+        channels={channels}
+      />,
+    );
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Mod Role")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Verbose Logging" })).toBeInTheDocument();
+  });
+});
+
+function makeGroupedModule(): DashboardModuleView {
+  const base = makeModule();
+  return {
+    ...base,
+    configFields: [
+      {
+        key: "logChannelId",
+        label: "Log Channel",
+        type: FieldType.CHANNEL,
+        description: "Where moderation events are posted.",
+        group: "Logging",
+      },
+      {
+        key: "verbose",
+        label: "Verbose Logging",
+        type: FieldType.BOOLEAN,
+        description: "Include debug lines in the log output.",
+        group: "Logging",
+      },
+      {
+        key: "muteDuration",
+        label: "Mute Duration",
+        type: FieldType.DURATION,
+        description: "Default mute length.",
+        group: "Punishments",
+      },
+    ],
+    config: { logChannelId: "", verbose: false, muteDuration: "15m" },
+  };
+}
+
+describe("ModuleConfigForm (group tabs + search)", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("renders one tab per group and shows only the active group's fields", () => {
+    render(
+      <ModuleConfigForm
+        guildId="101"
+        module={makeGroupedModule()}
+        roles={roles}
+        channels={channels}
+      />,
+    );
+
+    const tablist = screen.getByRole("tablist", { name: /setting groups/i });
+    expect(tablist).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /logging/i })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: /punishments/i })).toHaveAttribute("aria-selected", "false");
+
+    expect(screen.getByLabelText("Log Channel")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Mute Duration")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: /punishments/i }));
+    expect(screen.getByLabelText("Mute Duration")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Log Channel")).not.toBeInTheDocument();
+  });
+
+  it("filters fields by label or description text", () => {
+    render(
+      <ModuleConfigForm
+        guildId="101"
+        module={makeGroupedModule()}
+        roles={roles}
+        channels={channels}
+      />,
+    );
+
+    // "debug lines" only appears in the Verbose Logging description, which
+    // lives in the non-active group — search must surface it anyway.
+    fireEvent.change(screen.getByLabelText(/search .* settings/i), {
+      target: { value: "debug lines" },
+    });
+    expect(screen.getByLabelText("Verbose Logging")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Log Channel")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Mute Duration")).not.toBeInTheDocument();
+  });
+
+  it("shows an empty state when nothing matches the search", () => {
+    render(
+      <ModuleConfigForm
+        guildId="101"
+        module={makeGroupedModule()}
+        roles={roles}
+        channels={channels}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/search .* settings/i), {
+      target: { value: "zzz-no-such-setting" },
+    });
+    expect(screen.getByText(/no matching settings/i)).toBeInTheDocument();
   });
 });

@@ -23,7 +23,7 @@ export {
   noEndUserData,
   cfg,
   FieldType,
-  parseConfigList,
+  toStringArray,
   type ModuleMeta,
   type ModuleOptions,
   type ConfigField,

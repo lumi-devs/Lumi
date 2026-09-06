@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { SlidersHorizontal } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import { setGuildConfigField, toggleGuildModule } from "#/actions/guild-actions";
 import { SaveBar } from "#/components/save-bar";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
@@ -9,16 +9,20 @@ import { Switch } from "#/components/ui/switch";
 import { Badge } from "#/components/ui/badge";
 import { Glyph } from "#/components/ui/glyph";
 import { EmptyState } from "#/components/ui/empty-state";
-import { SettingRow } from "#/components/ui/input";
+import { Input, SettingRow } from "#/components/ui/input";
 import { ConfigFieldInput } from "./config-field-input";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
+import { cn } from "#/lib/utils";
 import type {
   DashboardModuleView,
   DashboardRoleView,
   DashboardChannelView,
 } from "#/lib/dashboard-data";
 import type { ConfigField } from "@lumi/contracts";
+
+/** Fallback section for fields that declare no `group`. */
+const FallbackGroupName = "General";
 
 /** Groups fields by their declared `group`, preserving first-seen order.
  * Mirrors the Discord panel's section split (`sectionsFor` in
@@ -30,7 +34,7 @@ function sectionsFor(fields: ConfigField[]): { name: string | null; fields: Conf
   const order: string[] = [];
   const map = new Map<string, ConfigField[]>();
   for (const f of fields) {
-    const g = f.group ?? "General";
+    const g = f.group ?? FallbackGroupName;
     let arr = map.get(g);
     if (!arr) {
       arr = [];
@@ -61,6 +65,33 @@ export function ModuleConfigForm({
 
   const dirty = JSON.stringify(config) !== JSON.stringify(m.config);
   const inactive = !enabled && !isCore;
+
+  const sections = useMemo(() => sectionsFor(m.configFields), [m.configFields]);
+  const tabbed = sections.length > 1;
+  const [query, setQuery] = useState("");
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const visibleGroup = activeGroup ?? sections[0]?.name ?? null;
+
+  const needle = query.trim().toLowerCase();
+  const searching = needle.length > 0;
+  const renderedSections = sections
+    .map((section) => ({
+      ...section,
+      fields: section.fields.filter(
+        (f) =>
+          !searching ||
+          f.label.toLowerCase().includes(needle) ||
+          f.description.toLowerCase().includes(needle) ||
+          f.key.toLowerCase().includes(needle),
+      ),
+    }))
+    .filter((section) => {
+      if (searching) return section.fields.length > 0;
+      if (tabbed) return section.name === visibleGroup;
+      return true;
+    });
+  const showHeaders = !tabbed || searching;
+  const matchCount = renderedSections.reduce((n, s) => n + s.fields.length, 0);
 
   function handleToggle(next: boolean) {
     const prev = enabled;
@@ -135,17 +166,75 @@ export function ModuleConfigForm({
           />
         ) : (
           <div ref={fieldsRef} className={inactive ? "opacity-60" : undefined}>
-            {sectionsFor(m.configFields).map((section) => (
-              <div key={section.name ?? "__flat"}>
-                {section.name ? (
-                  <h4 className="cfg-row font-display flex items-baseline justify-between gap-3 border-y border-border bg-bg-subtle px-4 py-1.5 text-[13px] font-semibold tracking-[0.09em] text-fg-subtle uppercase">
-                    <span>{section.name}</span>
-                    <span className="tabular">
-                      {section.fields.length}{" "}
-                      {section.fields.length === 1 ? "setting" : "settings"}
-                    </span>
-                  </h4>
-                ) : null}
+            <div className="border-b border-border px-4 py-2.5">
+              <div className="relative">
+                <Search
+                  aria-hidden
+                  className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-fg-subtle"
+                />
+                <Input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search settings…"
+                  aria-label={`Search ${m.displayName} settings`}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+            {tabbed && !searching ? (
+              <div
+                role="tablist"
+                aria-label={`${m.displayName} setting groups`}
+                className="flex gap-1 overflow-x-auto border-b border-border px-4 py-2"
+              >
+                {sections.map((section) => {
+                  const selected = section.name === visibleGroup;
+                  return (
+                    <button
+                      key={section.name ?? FallbackGroupName}
+                      type="button"
+                      role="tab"
+                      aria-selected={selected}
+                      onClick={() => setActiveGroup(section.name)}
+                      className={cn(
+                        "font-display inline-flex h-8 shrink-0 items-center gap-1.5 rounded-control px-2.5 text-[13px] font-semibold tracking-[0.02em] whitespace-nowrap transition-colors duration-fast",
+                        selected
+                          ? "bg-accent-soft text-accent-fg"
+                          : "text-fg-muted hover:bg-bg-subtle hover:text-fg",
+                      )}
+                    >
+                      {section.name}
+                      <span className="tabular text-[12px] opacity-70">
+                        {section.fields.length}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+            {searching && matchCount === 0 ? (
+              <EmptyState
+                compact
+                icon={Search}
+                title="No matching settings"
+                description={`Nothing in ${m.displayName} matches “${query.trim()}”.`}
+              />
+            ) : (
+              renderedSections.map((section) => (
+                <div
+                  key={section.name ?? "__flat"}
+                  role={tabbed && !searching ? "tabpanel" : undefined}
+                >
+                  {showHeaders && section.name ? (
+                    <h4 className="cfg-row font-display flex items-baseline justify-between gap-3 border-y border-border bg-bg-subtle px-4 py-1.5 text-[13px] font-semibold tracking-[0.09em] text-fg-subtle uppercase">
+                      <span>{section.name}</span>
+                      <span className="tabular">
+                        {section.fields.length}{" "}
+                        {section.fields.length === 1 ? "setting" : "settings"}
+                      </span>
+                    </h4>
+                  ) : null}
                 <div className="divide-y divide-border">
                   {section.fields.map((f) => (
                     <SettingRow
@@ -169,7 +258,8 @@ export function ModuleConfigForm({
                   ))}
                 </div>
               </div>
-            ))}
+              ))
+            )}
           </div>
         )}
       </Card>

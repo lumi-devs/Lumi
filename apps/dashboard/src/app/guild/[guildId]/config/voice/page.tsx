@@ -33,6 +33,9 @@ export default async function TempVcPage({
 
   const dashboard = await getGuildDashboard(guildId, session.userId);
   const voiceChannels = dashboard.channels.filter((c) => isVoiceChannel(c.type));
+  const templateField = dashboard.modules
+    .find((m) => m.name === "tempvc")
+    ?.configFields.find((f) => f.key === "default_name_template");
   const channelNames = Object.fromEntries(
     dashboard.channels.map((c) => [c.id, c.name]),
   );
@@ -96,6 +99,7 @@ export default async function TempVcPage({
               guildId={guildId}
               generators={generators}
               channels={voiceChannels}
+              templateField={templateField}
             />
           )}
         </Card>

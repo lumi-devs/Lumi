@@ -92,6 +92,40 @@ export interface ConfigSetPayload {
   value?: unknown;
 }
 
+/** Batch config write: one `guild.config.set` validation+write per entry. */
+export interface ConfigSetManyPayload {
+  moduleName: string;
+  values: Record<string, unknown>;
+}
+
+/** Per-key outcome of `guild.config.setMany` (coerced value, or null when deleted). */
+export interface GuildConfigSetManyResult {
+  success: boolean;
+  updated: Record<string, unknown>;
+}
+
+/** Minimal role row for dropdown hydration. */
+export interface GuildRoleListItem {
+  id: string;
+  name: string;
+}
+
+export interface GuildRolesListResponse {
+  roles: GuildRoleListItem[];
+}
+
+/** Minimal channel row for dropdown hydration. */
+export interface GuildChannelListItem {
+  id: string;
+  name: string;
+  /** Raw discord.js `ChannelType` number. */
+  type: number;
+}
+
+export interface GuildChannelsListResponse {
+  channels: GuildChannelListItem[];
+}
+
 /** One created-or-reused item in a `guild.setup.run` result (a role or a channel). */
 export interface GuildSetupItemResult {
   id: string;
@@ -443,6 +477,9 @@ export interface RpcRequestPayloads {
   "guild.summaries.list": GuildSummariesPayload;
   "guild.module.toggle": ModuleTogglePayload;
   "guild.config.set": ConfigSetPayload;
+  "guild.config.setMany": ConfigSetManyPayload;
+  "guild.roles.list": never;
+  "guild.channels.list": never;
   "guild.setup.run": never;
   "guild.settings.set": GuildSettingsPayload;
   "guild.permits.list": never;
@@ -521,6 +558,9 @@ export const RpcActions = {
   guildSummariesList: "guild.summaries.list",
   guildModuleToggle: "guild.module.toggle",
   guildConfigSet: "guild.config.set",
+  guildConfigSetMany: "guild.config.setMany",
+  guildRolesList: "guild.roles.list",
+  guildChannelsList: "guild.channels.list",
   guildSetupRun: "guild.setup.run",
   guildSettingsSet: "guild.settings.set",
   guildPermitsList: "guild.permits.list",

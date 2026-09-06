@@ -31,6 +31,8 @@ import type {
   CasesListPayload,
   ConfigHistoryListPayload,
   GuildBackupView,
+  GuildChannelListItem,
+  GuildRoleListItem,
   GuildSummaryView,
   ModuleDataListPayload,
   SystemAuditListPayload,
@@ -69,7 +71,6 @@ export async function getGuildSummaries(
     return [];
   }
 }
-
 export const getGuildPermits = cache(
   async (guildId: string, actorId: string): Promise<PermitView[]> => {
     const data = (await rpcCall(RpcActions.guildPermitsList, {
@@ -77,6 +78,29 @@ export const getGuildPermits = cache(
       actorId,
     })) as { permits: PermitView[] };
     return data.permits;
+  },
+);
+
+export const getGuildRoles = cache(
+  async (guildId: string, actorId: string): Promise<GuildRoleListItem[]> => {
+    const data = (await rpcCall(RpcActions.guildRolesList, {
+      guildId,
+      actorId,
+    })) as { roles: GuildRoleListItem[] };
+    return data.roles;
+  },
+);
+
+export const getGuildChannels = cache(
+  async (
+    guildId: string,
+    actorId: string,
+  ): Promise<GuildChannelListItem[]> => {
+    const data = (await rpcCall(RpcActions.guildChannelsList, {
+      guildId,
+      actorId,
+    })) as { channels: GuildChannelListItem[] };
+    return data.channels;
   },
 );
 

@@ -674,6 +674,20 @@ function describeValue(
   directory: Directory,
 ): string | null {
   if (isUnset(value)) return null;
+  if (Array.isArray(value) && field) {
+    if (field.type === FieldType.MULTI_CHANNEL) {
+      return value
+        .map((id) => directory.channels.find((c) => c.id === id)?.name ?? String(id))
+        .map((n) => `#${n}`)
+        .join(", ");
+    }
+    if (field.type === FieldType.MULTI_ROLE) {
+      return value
+        .map((id) => directory.roles.find((r) => r.id === id)?.name ?? String(id))
+        .map((n) => `@${n}`)
+        .join(", ");
+    }
+  }
   if (typeof value === "string" && field) {
     if (field.type === FieldType.CHANNEL) {
       const channel = directory.channels.find((c) => c.id === value);
