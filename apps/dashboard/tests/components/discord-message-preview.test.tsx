@@ -21,6 +21,23 @@ describe("MarkdownLite", () => {
     expect(screen.getByText("general")).toBeInTheDocument();
     expect(screen.getByText("@alex")).toBeInTheDocument();
   });
+
+  it("does not render javascript: URIs as clickable links", () => {
+    const { container } = render(<MarkdownLite text="[click me](javascript:alert(1))" />);
+    expect(screen.queryByRole("link", { name: "click me" })).not.toBeInTheDocument();
+    expect(container.textContent).toContain("[click me](javascript:alert(1))");
+  });
+
+  it("does not render a bare non-http scheme as a clickable link", () => {
+    render(<MarkdownLite text="visit javascript:alert(1) now" />);
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("still renders safe http/https links as clickable", () => {
+    render(<MarkdownLite text="See https://example.com/path for details" />);
+    const link = screen.getByRole("link", { name: "https://example.com/path" });
+    expect(link).toHaveAttribute("href", "https://example.com/path");
+  });
 });
 
 describe("DiscordMessagePreview", () => {
