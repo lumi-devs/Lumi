@@ -28,12 +28,12 @@ export {
   type ModuleOptions,
   type ConfigField,
   type ModuleConfigSchema,
-} from "#core/module-system/Module.js";
-export { ModuleListener, type ModuleListenerOptions } from "#core/module-system/ModuleListener.js";
-export { GuildMessageListener } from "#core/module-system/GuildMessageListener.js";
+} from "#lib/module-system/Module.js";
+export { ModuleListener, type ModuleListenerOptions } from "#lib/module-system/ModuleListener.js";
+export { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
 export {
   Utility,
   getUtility,
   tryGetUtility,
   type Utilities,
-} from "#core/module-system/Utility.js";
+} from "#lib/module-system/Utility.js";

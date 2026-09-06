@@ -14,5 +14,5 @@ export {
   verifyRedisLock,
   type RedisLock,
   type RedisLockOptions,
-} from "#core/lib/redis-lock.js";
+} from "#lib/redis-lock.js";
 export type { GuildMessage } from "#lib/types.js";

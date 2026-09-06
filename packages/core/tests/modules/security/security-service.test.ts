@@ -561,7 +561,6 @@ describe("SecurityUtility join gate: advertising-account filter", () => {
     const service = makeService({});
     const config = {
       enabled: true,
-      minAccountAgeHours: 0,
       raidJoinCount: 10,
       raidWindowSeconds: 30,
       raidAction: "kick" as const,
@@ -583,7 +582,6 @@ describe("SecurityUtility join gate: advertising-account filter", () => {
     const service = makeService({});
     const config = {
       enabled: true,
-      minAccountAgeHours: 0,
       raidJoinCount: 10,
       raidWindowSeconds: 30,
       raidAction: "kick" as const,

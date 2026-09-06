@@ -108,6 +108,84 @@ describe("PrefixCache", () => {
     expect(cache.size).toBe(0);
     expect(cache.getGlobal()).toBeNull();
   });
+
+  test("coalesces concurrent misses into a single fetcher call (stampede protection)", async () => {
+    const cache = new PrefixCache();
+    const fetcher = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return ["!", "?"];
+    });
+
+    const results = await Promise.all([
+      cache.getOrFetch("guild-1", fetcher),
+      cache.getOrFetch("guild-1", fetcher),
+      cache.getOrFetch("guild-1", fetcher),
+      cache.getOrFetch("guild-1", fetcher),
+    ]);
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(results).toEqual([
+      ["!", "?"],
+      ["!", "?"],
+      ["!", "?"],
+      ["!", "?"],
+    ]);
+    expect(cache.get("guild-1")).toEqual(["!", "?"]);
+  });
+
+  test("cleans up in-flight promise when fetcher fails so retry is possible", async () => {
+    const cache = new PrefixCache();
+    let attempt = 0;
+    const failingFetcher = vi.fn(async () => {
+      attempt++;
+      if (attempt === 1) throw new Error("DB down");
+      return ["$"];
+    });
+
+    await expect(cache.getOrFetch("guild-fail", failingFetcher)).rejects.toThrow("DB down");
+    expect(cache.get("guild-fail")).toBeNull();
+
+    const result = await cache.getOrFetch("guild-fail", failingFetcher);
+    expect(result).toEqual(["$"]);
+    expect(failingFetcher).toHaveBeenCalledTimes(2);
+  });
+
+  test("coalesces concurrent global prefix misses", async () => {
+    const cache = new PrefixCache();
+    const fetcher = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return ">";
+    });
+
+    const results = await Promise.all([
+      cache.getOrFetchGlobal(fetcher),
+      cache.getOrFetchGlobal(fetcher),
+      cache.getOrFetchGlobal(fetcher),
+    ]);
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(results).toEqual([">", ">", ">"]);
+    expect(cache.getGlobal()).toBe(">");
+  });
+
+  test("refetches after TTL expiry via getOrFetch", async () => {
+    const cache = new PrefixCache({ defaultTtlMs: 20 });
+    const fetcher = vi.fn(async () => ["!"]);
+
+    const first = await cache.getOrFetch("guild-ttl", fetcher);
+    expect(first).toEqual(["!"]);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    const second = await cache.getOrFetch("guild-ttl", fetcher);
+    expect(second).toEqual(["!"]);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    fetcher.mockResolvedValueOnce(["?", "!"]);
+    const third = await cache.getOrFetch("guild-ttl", fetcher);
+    expect(third).toEqual(["?", "!"]);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("InvalidationBus payload guards", () => {

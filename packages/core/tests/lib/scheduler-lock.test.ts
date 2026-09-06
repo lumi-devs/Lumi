@@ -77,7 +77,38 @@ describe("scheduler-lock", () => {
     redis.store.set(RedisKeys.schedulerLeader(), "another-process");
     await vi.advanceTimersByTimeAsync(15_000);
 
-    expect(onLost).toHaveBeenCalled();
+    expect(onLost).toHaveBeenCalledTimes(1);
+  });
+
+  it("invokes onLost only once across multiple consecutive renewal failures", async () => {
+    const onLost = vi.fn();
+    const lock = await acquireSchedulerLock(redis as never, onLost);
+
+    redis.store.set(RedisKeys.schedulerLeader(), "another-process");
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(onLost).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(onLost).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(onLost).toHaveBeenCalledTimes(1);
+
+    await lock.release();
+  });
+
+  it("allows immediate acquisition by another claimant after clean release", async () => {
+    const first = await acquireSchedulerLock(redis as never, vi.fn());
+    expect(redis.store.has(RedisKeys.schedulerLeader())).toBe(true);
+
+    await first.release();
+    expect(redis.store.has(RedisKeys.schedulerLeader())).toBe(false);
+
+    const second = await acquireSchedulerLock(redis as never, vi.fn());
+    expect(redis.store.has(RedisKeys.schedulerLeader())).toBe(true);
+
+    await second.release();
   });
 
   it("stays quiet while the lease is still ours", async () => {

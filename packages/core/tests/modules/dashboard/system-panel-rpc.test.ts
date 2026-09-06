@@ -235,4 +235,37 @@ describe("system panel RPC handlers", () => {
       ).rejects.toThrow("Bad payload");
     });
   });
+
+  describe("system.module.toggle", () => {
+    it("calls moduleStore.setEnabled when available", async () => {
+      const setEnabledSpy = vi.fn().mockResolvedValue(undefined);
+      (container as any).stores = {
+        get: vi.fn().mockReturnValue({
+          setEnabled: setEnabledSpy,
+        }),
+      };
+
+      const res = (await call(RpcActions.systemModuleToggle, {
+        moduleName: "mod",
+        enabled: false,
+        reason: "testing",
+      })) as any;
+
+      expect(res).toEqual({ success: true, moduleName: "mod", enabled: false });
+      expect(setEnabledSpy).toHaveBeenCalledWith("mod", false, "testing");
+    });
+
+    it("throws when moduleStore is missing", async () => {
+      (container as any).stores = {
+        get: vi.fn().mockReturnValue(null),
+      };
+
+      await expect(
+        call(RpcActions.systemModuleToggle, {
+          moduleName: "mod",
+          enabled: true,
+        }),
+      ).rejects.toThrow("ModuleStore not initialized");
+    });
+  });
 });

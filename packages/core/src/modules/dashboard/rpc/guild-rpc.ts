@@ -103,6 +103,7 @@ export function registerGuildRpcHandlers(): void {
   });
 
   registerRpcHandler(RpcActions.guildSummariesList, async (req) => {
+    if (!req.actorId) throw new Error("actorId is required");
     const { guildIds } = parsePayload(GuildSummariesSchema, req.data);
 
     const allowed = await Promise.all(

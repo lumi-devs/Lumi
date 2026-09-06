@@ -26,7 +26,7 @@ export function handlePrismaError(error: unknown): Error {
         return new DatabaseError("Operation timed out.", error.code, error);
       default:
         return new DatabaseError(
-          `Database error occurred: ${error.message}`,
+          `Database error occurred (code: ${error.code}).`,
           error.code,
           error,
         );

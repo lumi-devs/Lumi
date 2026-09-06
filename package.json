@@ -32,9 +32,6 @@
     "#lib/*.js": "./packages/core/src/lib/*.ts",
     "#database/*.js": "./packages/core/src/lib/database/*.ts",
     "#utilities/*.js": "./packages/core/src/lib/utilities/*.ts",
-    "#core/lib/*.js": "./packages/core/src/lib/*.ts",
-    "#core/module-system/*.js": "./packages/core/src/lib/module-system/*.ts",
-    "#core/*.js": "./packages/core/src/lib/*.ts",
     "#root/*.js": "./packages/core/src/*.ts",
     "#modules/*.js": "./packages/core/src/modules/*.ts"
   },

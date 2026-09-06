@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
-import { acquireRedisLock } from "#core/lib/redis-lock.js";
+import { acquireRedisLock } from "#lib/redis-lock.js";
 
 /**
  * Generic per-module key/value storage (`ModuleData`), keyed by

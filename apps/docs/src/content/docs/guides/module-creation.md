@@ -38,8 +38,8 @@ packages/core/src/modules/<your-module>/
 `packages/core/src/modules/<your-module>/index.ts`:
 
 ```typescript
-import { DefineModule, Module, cfg, NoEndUserData } from "#core/module-system/Module.js";
-import { Emojis } from "#utilities/assets.js";
+import { DefineModule, Module, cfg, NoEndUserData } from "lumi";
+import { Emojis } from "lumi/ui";
 
 @DefineModule({
   name: "my_module",
@@ -96,7 +96,7 @@ interface ModuleOptions extends Piece.Options {
 
 ## Step 2: Configuration Schema
 
-Config fields are constructed using `cfg.*` from `#core/module-system/Module.js`:
+Config fields are constructed using `cfg.*` from `"lumi"`:
 
 ```typescript
 configSchema: cfg.object({
@@ -172,7 +172,7 @@ Extend `ModuleListener` to automatically gate execution on the module being enab
 import { ApplyOptions } from "@sapphire/decorators";
 import { Events } from "@sapphire/framework";
 import type { GuildMember } from "discord.js";
-import { ModuleListener } from "#core/module-system/ModuleListener.js";
+import { ModuleListener } from "lumi";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "my-module-greet",
@@ -190,8 +190,8 @@ For filtered user messages (excluding bots, webhooks, and system messages), exte
 
 ```typescript
 import { ApplyOptions } from "@sapphire/decorators";
-import { GuildMessageListener } from "#core/module-system/GuildMessageListener.js";
-import type { GuildMessage } from "#lib/types.js";
+import { GuildMessageListener } from "lumi";
+import type { GuildMessage } from "lumi/utils";
 
 @ApplyOptions<GuildMessageListener.Options>({
   name: "my-module-message",
@@ -213,7 +213,7 @@ Utilities encapsulate business logic:
 ```typescript
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
-import { Utility } from "#core/module-system/Utility.js";
+import { Utility } from "lumi";
 
 @ApplyOptions<Piece.Options>({ name: "my_module" })
 export default class MyUtility extends Utility {
@@ -222,7 +222,7 @@ export default class MyUtility extends Utility {
   }
 }
 
-declare module "#core/module-system/Utility.js" {
+declare module "lumi" {
   interface Utilities {
     my_module: MyUtility;
   }
@@ -232,7 +232,7 @@ declare module "#core/module-system/Utility.js" {
 Access utilities anywhere:
 
 ```typescript
-import { getUtility, tryGetUtility } from "#core/module-system/Utility.js";
+import { getUtility, tryGetUtility } from "lumi";
 
 const utility = getUtility("my_module");
 ```

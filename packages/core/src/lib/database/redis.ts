@@ -275,6 +275,14 @@ export class InvalidationBus {
   /** Permanent teardown - pause, then quit the owned subscriber connection. */
   public async close(): Promise<void> {
     await this.stop();
+    if (this.#handlerAttached) {
+      this.#subscriber.removeListener?.("message", this.#onMessage);
+      this.#subscriber.removeListener?.("close", this.#onClose);
+      this.#subscriber.removeListener?.("ready", this.#onReady);
+      this.#handlerAttached = false;
+    }
+    this.#listeners.clear();
+    this.#resyncListeners.clear();
     await this.#subscriber
       .quit()
       .catch((err: unknown) => logError("Redis: quit failed", err));

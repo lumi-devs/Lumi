@@ -24,9 +24,6 @@
     "#lib/*.js": "./src/lib/*.ts",
     "#database/*.js": "./src/lib/database/*.ts",
     "#utilities/*.js": "./src/lib/utilities/*.ts",
-    "#core/lib/*.js": "./src/lib/*.ts",
-    "#core/module-system/*.js": "./src/lib/module-system/*.ts",
-    "#core/*.js": "./src/lib/*.ts",
     "#root/*.js": "./src/*.ts",
     "#modules/*.js": "./src/modules/*.ts"
   },

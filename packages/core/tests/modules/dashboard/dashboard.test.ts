@@ -158,4 +158,21 @@ describe("dashboard module RPC handlers", () => {
     expect(guild.members.fetch).toHaveBeenCalledWith(MANAGER_ID);
     expect(container.db.config.getGuildSettings).toHaveBeenCalledWith(GUILD_ID);
   });
+
+  describe("guildSummariesList — actorId guard", () => {
+    it("rejects a request with no actorId", async () => {
+      const handler = rpcHandlers.get(RpcActions.guildSummariesList);
+      if (!handler) throw new Error("guildSummariesList handler not registered");
+
+      await expect(
+        handler({
+          id: "req-nosession",
+          action: RpcActions.guildSummariesList,
+          guildId: undefined,
+          actorId: undefined,
+          data: { guildIds: [GUILD_ID] },
+        }),
+      ).rejects.toThrow("actorId is required");
+    });
+  });
 });

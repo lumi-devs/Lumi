@@ -266,11 +266,11 @@ export function initCoreRpcHandlers() {
       SystemModuleToggleSchema,
       req.data,
     );
-    await container.db.modules.setModuleGlobalEnabled(
-      moduleName,
-      enabled,
-      reason,
-    );
+    const moduleStore = container.stores.get("modules");
+    if (!moduleStore) {
+      throw new Error("ModuleStore not initialized");
+    }
+    await moduleStore.setEnabled(moduleName, enabled, reason);
     return { success: true, moduleName, enabled };
   });
 

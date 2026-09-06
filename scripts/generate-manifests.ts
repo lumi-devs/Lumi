@@ -6,8 +6,8 @@ import {
   manifestFromMeta,
   writeManifest,
   type ModuleManifest,
-} from "#core/module-system/manifest.js";
-import type { ModuleMeta, ModuleOptions } from "#core/module-system/Module.js";
+} from "#lib/module-system/manifest.js";
+import type { ModuleMeta, ModuleOptions } from "#lib/module-system/Module.js";
 
 // Build-time generator for per-module `manifest.json`. Imports each module's
 // `index.ts` to read its in-code `meta` (the Zod `configSchema` stays the single

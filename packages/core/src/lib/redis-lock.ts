@@ -114,7 +114,9 @@ export async function acquireRedisLock(
             } else {
               console.error(message);
             }
-            opts.onLostLock();
+            if (consecutiveRenewFailures === 1) {
+              opts.onLostLock();
+            }
           }
         })
         .catch((err: unknown) => {
@@ -124,6 +126,9 @@ export async function acquireRedisLock(
             container.logger.error(message, err);
           } else {
             console.error(message, err);
+          }
+          if (consecutiveRenewFailures === 1) {
+            opts.onLostLock();
           }
         });
     },

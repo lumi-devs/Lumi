@@ -14,6 +14,9 @@ function createMockSubscriber() {
     subscribe: vi.fn().mockResolvedValue(undefined),
     unsubscribe: vi.fn().mockResolvedValue(undefined),
     quit: vi.fn().mockResolvedValue(undefined),
+    removeListener: vi.fn((event: string) => {
+      handlers.delete(event);
+    }),
     emit: (event: string, ...args: any[]) => handlers.get(event)?.(...args),
     hasHandler: (event: string) => handlers.has(event),
   };
@@ -325,6 +328,9 @@ describe("InvalidationBus", () => {
       await bus.close();
 
       expect(subscriber.unsubscribe).toHaveBeenCalled();
+      expect(subscriber.removeListener).toHaveBeenCalledWith("message", expect.any(Function));
+      expect(subscriber.removeListener).toHaveBeenCalledWith("close", expect.any(Function));
+      expect(subscriber.removeListener).toHaveBeenCalledWith("ready", expect.any(Function));
       expect(subscriber.quit).toHaveBeenCalled();
     });
 

@@ -167,4 +167,74 @@ describe("ModerationCase number allocation under concurrency", () => {
     // guild-a's two cases are 1 and 2 in some order.
     expect([a1.caseNumber, a2.caseNumber].sort()).toEqual([1, 2]);
   });
+
+  it("handles high concurrency across multiple interleaved guilds without collisions", async () => {
+    const prisma = new FakePrisma();
+    const repo = makeRepo(prisma);
+
+    const guilds = ["guild-1", "guild-2", "guild-3", "guild-4", "guild-5"];
+    const casesPerGuild = 20;
+
+    const allPromises = guilds.flatMap((guildId) =>
+      Array.from({ length: casesPerGuild }, (_, i) =>
+        repo.createModerationCase({
+          guildId,
+          userId: `user-${i}`,
+          moderatorId: "mod",
+          action: "mute",
+        }),
+      ),
+    );
+
+    const results = await Promise.all(allPromises);
+    expect(results.length).toBe(guilds.length * casesPerGuild);
+
+    for (const guildId of guilds) {
+      const guildCases = results
+        .filter((c) => c.guildId === guildId)
+        .map((c) => c.caseNumber)
+        .sort((a, b) => a - b);
+
+      expect(guildCases.length).toBe(casesPerGuild);
+      expect(new Set(guildCases).size).toBe(casesPerGuild);
+      expect(guildCases).toEqual(
+        Array.from({ length: casesPerGuild }, (_, i) => i + 1),
+      );
+    }
+  });
+
+  it("hands out contiguous numbers when existing cases already exist", async () => {
+    const prisma = new FakePrisma();
+    const repo = makeRepo(prisma);
+    const guildId = "guild-seeded";
+
+    // Pre-populate 5 cases sequentially
+    for (let i = 1; i <= 5; i++) {
+      await repo.createModerationCase({
+        guildId,
+        userId: `seed-${i}`,
+        moderatorId: "mod",
+        action: "warn",
+      });
+    }
+
+    // Run 15 concurrent creations
+    const N = 15;
+    const concurrentResults = await Promise.all(
+      Array.from({ length: N }, (_, i) =>
+        repo.createModerationCase({
+          guildId,
+          userId: `concurrent-${i}`,
+          moderatorId: "mod",
+          action: "kick",
+        }),
+      ),
+    );
+
+    const numbers = concurrentResults
+      .map((c) => c.caseNumber)
+      .sort((a, b) => a - b);
+    expect(new Set(numbers).size).toBe(N);
+    expect(numbers).toEqual(Array.from({ length: N }, (_, i) => i + 6));
+  });
 });

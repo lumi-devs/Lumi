@@ -14,6 +14,8 @@ export class PrefixCache {
   #globalEntry: CacheEntry<string> | null = null;
   readonly #maxEntries: number;
   readonly #defaultTtlMs: number;
+  readonly #inFlight = new Map<string, Promise<string[]>>();
+  #inFlightGlobal: Promise<string> | null = null;
 
   public constructor(options?: { maxEntries?: number; defaultTtlMs?: number }) {
     this.#maxEntries = options?.maxEntries ?? DefaultMaxEntries;
@@ -31,7 +33,9 @@ export class PrefixCache {
   }
 
   public set(guildId: string, prefixes: string[], ttlMs?: number): void {
-    if (this.#guildCache.size >= this.#maxEntries && !this.#guildCache.has(guildId)) {
+    if (this.#guildCache.has(guildId)) {
+      this.#guildCache.delete(guildId);
+    } else if (this.#guildCache.size >= this.#maxEntries) {
       const oldestKey = this.#guildCache.keys().next().value;
       if (oldestKey !== undefined) {
         this.#guildCache.delete(oldestKey);
@@ -43,7 +47,33 @@ export class PrefixCache {
     });
   }
 
+  public async getOrFetch(
+    guildId: string,
+    fetcher: () => Promise<string[]>,
+    ttlMs?: number,
+  ): Promise<string[]> {
+    const cached = this.get(guildId);
+    if (cached !== null) return cached;
+
+    const existing = this.#inFlight.get(guildId);
+    if (existing) return existing;
+
+    const promise = (async () => {
+      try {
+        const result = await fetcher();
+        this.set(guildId, result, ttlMs);
+        return result;
+      } finally {
+        this.#inFlight.delete(guildId);
+      }
+    })();
+
+    this.#inFlight.set(guildId, promise);
+    return promise;
+  }
+
   public delete(guildId: string): boolean {
+    this.#inFlight.delete(guildId);
     return this.#guildCache.delete(guildId);
   }
 
@@ -63,13 +93,39 @@ export class PrefixCache {
     };
   }
 
+  public async getOrFetchGlobal(
+    fetcher: () => Promise<string>,
+    ttlMs?: number,
+  ): Promise<string> {
+    const cached = this.getGlobal();
+    if (cached !== null) return cached;
+
+    if (this.#inFlightGlobal) return this.#inFlightGlobal;
+
+    const promise = (async () => {
+      try {
+        const result = await fetcher();
+        this.setGlobal(result, ttlMs);
+        return result;
+      } finally {
+        this.#inFlightGlobal = null;
+      }
+    })();
+
+    this.#inFlightGlobal = promise;
+    return promise;
+  }
+
   public deleteGlobal(): void {
     this.#globalEntry = null;
+    this.#inFlightGlobal = null;
   }
 
   public clear(): void {
     this.#guildCache.clear();
     this.#globalEntry = null;
+    this.#inFlight.clear();
+    this.#inFlightGlobal = null;
   }
 
   public get size(): number {

@@ -136,11 +136,15 @@ describe("redis-lock", () => {
       delete (container as any).logger;
     });
 
-    it("handles Redis connection failure during renewal", async () => {
+    it("handles Redis connection failure during renewal and notifies onLostLock once", async () => {
       const errorLogger = vi.fn();
+      const onLostLock = vi.fn();
       (container as any).logger = { error: errorLogger };
 
-      const lock = await acquireRedisLock(redis as any, "lock:renew:err", { ttlMs: 4000 });
+      const lock = await acquireRedisLock(redis as any, "lock:renew:err", {
+        ttlMs: 4000,
+        onLostLock,
+      });
 
       const redisErr = new Error("Connection reset by peer");
       redis.eval.mockRejectedValueOnce(redisErr);
@@ -149,6 +153,61 @@ describe("redis-lock", () => {
 
       expect(errorLogger).toHaveBeenCalledWith(
         '[redis-lock] Failed to renew lock "lock:renew:err" (1 consecutive failure)',
+        redisErr,
+      );
+      expect(onLostLock).toHaveBeenCalledTimes(1);
+
+      // Subsequent failure should not trigger onLostLock again
+      redis.eval.mockRejectedValueOnce(new Error("Still down"));
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(onLostLock).toHaveBeenCalledTimes(1);
+
+      await lock.release();
+      delete (container as any).logger;
+    });
+
+    it("calls onLostLock on the first renewal failure only, not on subsequent failures", async () => {
+      const onLostLock = vi.fn();
+      const lock = await acquireRedisLock(redis as any, "lock:renew:stolen:callback", {
+        ttlMs: 4000,
+        onLostLock,
+      });
+
+      redis.store.delete("lock:renew:stolen:callback");
+
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(onLostLock).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(onLostLock).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(onLostLock).toHaveBeenCalledTimes(1);
+
+      await lock.release();
+    });
+
+    it("renews after temporary Redis failure that recovers", async () => {
+      const errorLogger = vi.fn();
+      (container as any).logger = { error: errorLogger };
+
+      const lock = await acquireRedisLock(redis as any, "lock:renew:recover", { ttlMs: 4000 });
+
+      const redisErr = new Error("Temporary network timeout");
+      redis.eval.mockRejectedValueOnce(redisErr);
+
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(errorLogger).toHaveBeenCalledWith(
+        '[redis-lock] Failed to renew lock "lock:renew:recover" (1 consecutive failure)',
+        redisErr,
+      );
+
+      await vi.advanceTimersByTimeAsync(2000);
+
+      redis.eval.mockRejectedValueOnce(redisErr);
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(errorLogger).toHaveBeenLastCalledWith(
+        '[redis-lock] Failed to renew lock "lock:renew:recover" (1 consecutive failure)',
         redisErr,
       );
 
@@ -199,6 +258,47 @@ describe("redis-lock", () => {
       await vi.advanceTimersByTimeAsync(10000);
 
       expect(redis.eval.mock.calls.length).toBe(evalCount);
+    });
+  });
+
+  describe("concurrency and mutual exclusion", () => {
+    it("allows only one concurrent acquirer for the same lock key", async () => {
+      const lock1 = await acquireRedisLock(redis as any, "lock:concurrent", {
+        acquireTimeoutMs: 50,
+      });
+      expect(redis.store.get("lock:concurrent")).toBe(lock1.token);
+
+      const acquire2 = acquireRedisLock(redis as any, "lock:concurrent", {
+        acquireTimeoutMs: 50,
+      });
+
+      const assertion = expect(acquire2).rejects.toThrow(
+        "Timeout acquiring Redis lock: lock:concurrent",
+      );
+
+      await vi.advanceTimersByTimeAsync(100);
+      await assertion;
+
+      await lock1.release();
+    });
+
+    it("allows immediate acquisition after lock released before TTL expiry", async () => {
+      const lock1 = await acquireRedisLock(redis as any, "lock:handoff", {
+        ttlMs: 30_000,
+        acquireTimeoutMs: 1_000,
+      });
+
+      await vi.advanceTimersByTimeAsync(5_000);
+      await lock1.release();
+
+      const lock2 = await acquireRedisLock(redis as any, "lock:handoff", {
+        acquireTimeoutMs: 50,
+      });
+      expect(lock2.token).toBeDefined();
+      expect(lock2.token).not.toBe(lock1.token);
+      expect(redis.store.get("lock:handoff")).toBe(lock2.token);
+
+      await lock2.release();
     });
   });
 });

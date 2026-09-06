@@ -3,7 +3,7 @@ import {
   DefineModule,
   NoEndUserData,
   cfg,
-} from "#core/module-system/Module.js";
+} from "#lib/module-system/Module.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleVerifySweepFire } from "./lib/verify-sweep-handler.js";
 import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";

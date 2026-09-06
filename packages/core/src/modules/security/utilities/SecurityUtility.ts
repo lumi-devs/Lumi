@@ -95,7 +95,6 @@ export interface JoinGateFilterConfig {
 
 export interface JoinGateConfig {
   enabled: boolean;
-  minAccountAgeHours: number;
   raidJoinCount: number;
   raidWindowSeconds: number;
   raidAction: GateAction;
@@ -394,11 +393,9 @@ export class SecurityUtility extends Utility {
 
   public async loadJoinGateConfig(guildId: string): Promise<JoinGateConfig> {
     const raw = await this.db.config.getAllModuleConfig(guildId, "security");
-    const legacyMinAge = getConfigNumber(raw, "min_account_age_hours", 0);
 
     return {
       enabled: raw["joingate_enabled"] === true,
-      minAccountAgeHours: legacyMinAge,
       raidJoinCount: getConfigNumber(raw, "raid_join_count", 10),
       raidWindowSeconds: getConfigNumber(raw, "raid_window_seconds", 30),
       raidAction: getConfigAction(raw, "raid_action", "kick"),
@@ -409,9 +406,8 @@ export class SecurityUtility extends Utility {
         action: getConfigAction(raw, "filter_no_avatar_action", "log"),
       },
       filterMinAge: {
-        // legacy `min_account_age_hours` is the fallback default until reconfigured
         enabled: raw["filter_min_age_enabled"] === true,
-        hours: getConfigNumber(raw, "filter_min_age_hours", legacyMinAge),
+        hours: getConfigNumber(raw, "filter_min_age_hours", 0),
         action: getConfigAction(raw, "filter_min_age_action", "kick"),
       },
       filterUnverifiedBot: {

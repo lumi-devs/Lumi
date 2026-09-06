@@ -1,7 +1,7 @@
 import type { Guild, GuildModuleConfig, Prisma } from "@prisma/client";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
-import { acquireRedisLock } from "#core/lib/redis-lock.js";
+import { acquireRedisLock } from "#lib/redis-lock.js";
 
 /** Repository for guild settings and module configurations. */
 export class ConfigRepository extends Repository {
