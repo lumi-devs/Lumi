@@ -70,11 +70,12 @@ function renderInlineToken(token: string, key: number): ReactNode {
   if (linkMatch) {
     const linkText = linkMatch[1] ?? "";
     const linkHref = linkMatch[2] ?? "";
-    if (isSafeHttpUrl(linkHref)) {
+    const safeHref = sanitizeHttpUrlForHref(linkHref);
+    if (safeHref) {
       return (
         <a
           key={key}
-          href={linkHref}
+          href={safeHref}
           onClick={(e) => e.preventDefault()}
           style={{ color: DiscordLink }}
           className="hover:underline"
@@ -85,11 +86,12 @@ function renderInlineToken(token: string, key: number): ReactNode {
     }
     return <span key={key}>{token}</span>;
   }
-  if (/^https?:\/\//.test(token) && isSafeHttpUrl(token)) {
+  const safeTokenHref = /^https?:\/\//.test(token) ? sanitizeHttpUrlForHref(token) : null;
+  if (safeTokenHref) {
     return (
       <a
         key={key}
-        href={token}
+        href={safeTokenHref}
         onClick={(e) => e.preventDefault()}
         style={{ color: DiscordLink }}
         className="hover:underline"
@@ -107,6 +109,25 @@ function isSafeHttpUrl(value: string): boolean {
     return url.protocol === "http:" || url.protocol === "https:";
   } catch {
     return false;
+  }
+}
+
+function sanitizeHttpUrlForHref(value: string): string | null {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return null;
+    }
+    return url
+      .toString()
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#x27;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/`/g, "&#x60;");
+  } catch {
+    return null;
   }
 }
 
