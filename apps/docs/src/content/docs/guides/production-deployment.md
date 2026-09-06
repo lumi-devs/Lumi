@@ -64,7 +64,7 @@ services:
       retries: 5
 
   pgbouncer:
-    image: edoburu/pgbouncer:v1.22.0
+    image: edoburu/pgbouncer:v1.25.2-p0
     restart: unless-stopped
     depends_on:
       postgres:
@@ -85,7 +85,7 @@ services:
       - "127.0.0.1:6432:5432"
 
   redis:
-    image: redis:7-alpine
+    image: redis:8.8-alpine
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "noeviction"]
     volumes:

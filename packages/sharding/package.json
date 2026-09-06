@@ -12,7 +12,7 @@
     "@sapphire/utilities": "^3.18.2"
   },
   "peerDependencies": {
-    "ioredis": "^5.4.0"
+    "ioredis": "^6.0.0"
   },
   "peerDependenciesMeta": {
     "ioredis": {

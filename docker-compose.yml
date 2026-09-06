@@ -237,7 +237,7 @@ services:
       - "127.0.0.1:6432:6432"
 
   redis:
-    image: docker.io/library/redis:8-alpine
+    image: docker.io/library/redis:8.8-alpine
     container_name: lumi-redis
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction --requirepass ${REDIS_PASSWORD:-lumi}
     volumes:
@@ -287,7 +287,7 @@ services:
       - scale
 
   otel-collector:
-    image: docker.io/otel/opentelemetry-collector-contrib:0.145.0
+    image: docker.io/otel/opentelemetry-collector-contrib:0.159.0
     container_name: lumi-otel-collector
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
@@ -324,7 +324,7 @@ services:
           memory: 512m
 
   prometheus:
-    image: docker.io/prom/prometheus:v3.7.0
+    image: docker.io/prom/prometheus:v3.14.0
     container_name: lumi-prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -349,7 +349,7 @@ services:
       - "127.0.0.1:9091:9090"
 
   grafana:
-    image: docker.io/grafana/grafana:12.4.0
+    image: docker.io/grafana/grafana:13.2.1
     container_name: lumi-grafana
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
