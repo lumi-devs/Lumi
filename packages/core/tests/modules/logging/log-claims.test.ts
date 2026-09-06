@@ -92,7 +92,7 @@ describe("logging claim store", () => {
 
   describe("normalizeLogClaimCode", () => {
     it("accepts exact codes case-insensitively with surrounding whitespace", () => {
-      expect(normalizeLogClaimCode("  ab12cd  ")).toBe("AB12CD");
+      expect(normalizeLogClaimCode("  ab23cd  ")).toBe("AB23CD");
     });
 
     it("rejects wrong lengths and ambiguous characters", () => {

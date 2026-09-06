@@ -6,7 +6,7 @@ import { mgetSafe } from "#lib/database/cluster-safe.js";
 export const LogClaimCodeLength = 6;
 export const LogClaimCodeTtlMs = RedisTTL.logClaimCode * 1000;
 
-const CodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ123456789";
+const CodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
 export interface LogClaim {
   channelId: string;
