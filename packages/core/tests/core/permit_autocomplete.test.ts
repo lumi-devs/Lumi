@@ -76,6 +76,8 @@ describe("PermitCommand.autocompleteRun", () => {
     expect(interaction.respond).toHaveBeenCalledWith([
       { name: "🔐 admin.*", value: "admin.*" },
       { name: "⚙️ admin.config", value: "admin.config" },
+      { name: "👋 admin.welcome", value: "admin.welcome" },
+      { name: "💰 economy.admin", value: "economy.admin" },
     ]);
   });
 
@@ -93,6 +95,8 @@ describe("PermitCommand.autocompleteRun", () => {
       "mod.notes",
       "mod.softBan",
       "mod.voiceMute",
+      "mod.say",
+      "mod.dm",
     ]);
   });
 

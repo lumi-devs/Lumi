@@ -26,6 +26,7 @@ import { AppealRepository } from "#lib/prisma/repositories/AppealRepository.js";
 import { GlobalRepository } from "#lib/prisma/repositories/GlobalRepository.js";
 import { SecurityRepository } from "#lib/prisma/repositories/SecurityRepository.js";
 import { TempVcRepository } from "#lib/prisma/repositories/TempVcRepository.js";
+import { EconomyRepository } from "#lib/prisma/repositories/EconomyRepository.js";
 
 export type {
   TargetPermitPayload,
@@ -69,6 +70,7 @@ export class DatabaseService {
   public readonly appeals: AppealRepository;
   public readonly security: SecurityRepository;
   public readonly tempvc: TempVcRepository;
+  public readonly economy: EconomyRepository;
 
   public constructor(
     private readonly prisma: DatabaseClient,
@@ -104,6 +106,7 @@ export class DatabaseService {
     this.appeals = new AppealRepository(prisma, redis, logger, this);
     this.security = new SecurityRepository(prisma, redis, logger, this);
     this.tempvc = new TempVcRepository(prisma, redis, logger, this);
+    this.economy = new EconomyRepository(prisma, redis, logger, this);
   }
 
   /** Ensures a Guild row exists so dependent rows can satisfy their FK. */

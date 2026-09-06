@@ -6,6 +6,7 @@ import {
   getGuildTempVcRecords,
 } from "#/lib/dashboard-fetch";
 import { TempVcGenerators } from "#/components/guild/tempvc-generators";
+import { TempVcPreviewPlayground } from "#/components/guild/tempvc-preview-playground";
 import { TempVcLiveChannels } from "#/components/guild/tempvc-live-channels";
 import { Badge } from "#/components/ui/badge";
 import {
@@ -106,6 +107,27 @@ export default async function TempVcPage({
       </div>
 
       <div className="rise" style={{ "--rise-delay": "140ms" } as React.CSSProperties}>
+        <Card>
+          <CardHeader>
+            <CardTitle>See it in action — edit it live</CardTitle>
+            <CardDescription>
+              Try a channel-name template and watch the voice row and control
+              panel update instantly.
+            </CardDescription>
+          </CardHeader>
+          <div className="p-4">
+            <TempVcPreviewPlayground
+              defaultTemplate={
+                typeof templateField?.default === "string"
+                  ? templateField.default
+                  : undefined
+              }
+            />
+          </div>
+        </Card>
+      </div>
+
+      <div className="rise" style={{ "--rise-delay": "210ms" } as React.CSSProperties}>
         <Card>
           <CardHeader
             actions={

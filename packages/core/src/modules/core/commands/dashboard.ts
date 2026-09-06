@@ -53,10 +53,10 @@ export class DashboardCommand extends BaseSubcommand {
         rawLayout,
       );
       this.container.logger.info(
-        `[Dashboard] ${Emojis.GEAR} Layout updated for guild ${ctx.guildId} by ${ctx.user.tag}`,
+        `[Dashboard] ${Emojis.Gear} Layout updated for guild ${ctx.guildId} by ${ctx.user.tag}`,
       );
       await ctx.replySuccess(
-        `${Emojis.GEAR} ${t("core:layoutUpdatedTitle")}`,
+        `${Emojis.Gear} ${t("core:layoutUpdatedTitle")}`,
         t("core:layoutUpdatedMessage", { layout: JSON.stringify(layout) }),
       );
     } catch (err: unknown) {

@@ -80,17 +80,17 @@ export function resolveConfigValue(
   channels: DashboardChannelView[],
 ): string {
   if (
-    type !== FieldType.CHANNEL &&
-    type !== FieldType.ROLE &&
-    type !== FieldType.MULTI_CHANNEL &&
-    type !== FieldType.MULTI_ROLE
+    type !== FieldType.Channel &&
+    type !== FieldType.Role &&
+    type !== FieldType.MultiChannel &&
+    type !== FieldType.MultiRole
   ) {
     return formatConfigValue(value);
   }
   const prefix =
-    type === FieldType.CHANNEL || type === FieldType.MULTI_CHANNEL ? "#" : "@";
+    type === FieldType.Channel || type === FieldType.MultiChannel ? "#" : "@";
   const names = new Map(
-    (type === FieldType.CHANNEL || type === FieldType.MULTI_CHANNEL
+    (type === FieldType.Channel || type === FieldType.MultiChannel
       ? channels
       : roles
     ).map((item) => [item.id, item.name]),

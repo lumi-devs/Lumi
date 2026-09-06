@@ -152,7 +152,7 @@ export class DownloadCommand extends BaseSubcommand {
         new ButtonBuilder()
           .setCustomId("lumi:tab:addons")
           .setLabel(t("core:openAddonsManager"))
-          .setEmoji(Emojis.parse(Emojis.REPO))
+          .setEmoji(Emojis.parse(Emojis.Repo))
           .setStyle(ButtonStyle.Primary),
       );
 
@@ -184,19 +184,19 @@ export class DownloadCommand extends BaseSubcommand {
         revision,
       );
       this.container.logger.info(
-        `[Download] ${Emojis.DOWNLOAD} Installed ${moduleName} from ${repoName} by ${ctx.user.tag}`,
+        `[Download] ${Emojis.Download} Installed ${moduleName} from ${repoName} by ${ctx.user.tag}`,
       );
       await ctx.replySuccess(
-        `${Emojis.INSTALL} ${t("core:moduleInstalledTitle")}`,
+        `${Emojis.Install} ${t("core:moduleInstalledTitle")}`,
         t("core:moduleInstalledText", { moduleName, repoName }),
       );
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       this.container.logger.warn(
-        `[Download] ${Emojis.ERROR} Install failed: ${moduleName} - ${msg_}`,
+        `[Download] ${Emojis.Error} Install failed: ${moduleName} - ${msg_}`,
       );
       await ctx.replyError(
-        `${Emojis.ERROR} ${t("core:failedInstallModuleTitle")}`,
+        `${Emojis.Error} ${t("core:failedInstallModuleTitle")}`,
         msg_,
       );
     }
@@ -235,7 +235,7 @@ export class DownloadCommand extends BaseSubcommand {
     const revision = (await ctx.getString("revision", { required: true }))!;
 
     const { confirmed } = await confirmPrompt(ctx, {
-      title: `${Emojis.WARNING_SIGN} Rollback Warning`,
+      title: `${Emojis.WarningSign} Rollback Warning`,
       body: [
         `You're about to check out **${moduleName}** to revision \`${revision}\`.`,
         "This runs whatever code exists at that commit inside the bot process. A restart is required to fully apply the change.",

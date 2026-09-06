@@ -1,0 +1,146 @@
+{
+  "name": "economy",
+  "displayName": "Economy",
+  "emoji": "🪙",
+  "description": "Guild bank with wallet and vault balances, payday, taxed transfers, slots, and a fully audited transaction ledger.",
+  "short": "Guild currency with payday, transfers, slots, and an audit ledger.",
+  "endUserDataStatement": "Stores user ID with wallet and bank balances, payday timestamps, and a transaction history per server. Deleted on GDPR erasure.",
+  "version": "0.3.0",
+  "disableable": true,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": true,
+  "targetUtility": "worker",
+  "subStores": [
+    "commands"
+  ],
+  "configFields": [
+    {
+      "key": "currency_name",
+      "type": "STRING",
+      "label": "Currency Name",
+      "description": "Name of the server currency shown on balances.",
+      "group": "Currency",
+      "default": "credits"
+    },
+    {
+      "key": "currency_emoji",
+      "type": "STRING",
+      "label": "Currency Emoji",
+      "description": "Emoji shown next to currency amounts.",
+      "group": "Currency",
+      "default": "🪙"
+    },
+    {
+      "key": "starting_wallet",
+      "type": "NUMBER",
+      "label": "Starting Wallet",
+      "description": "Wallet balance granted to a member's first account.",
+      "group": "Currency",
+      "default": 100
+    },
+    {
+      "key": "starting_bank",
+      "type": "NUMBER",
+      "label": "Starting Bank",
+      "description": "Bank balance granted to a member's first account.",
+      "group": "Currency",
+      "default": 0
+    },
+    {
+      "key": "max_balance",
+      "type": "NUMBER",
+      "label": "Maximum Balance",
+      "description": "Wallet plus bank can never exceed this total.",
+      "group": "Currency",
+      "default": 1000000
+    },
+    {
+      "key": "payday_amount",
+      "type": "NUMBER",
+      "label": "Payday Amount",
+      "description": "Currency granted by each payday claim.",
+      "group": "Payday",
+      "default": 120
+    },
+    {
+      "key": "payday_cooldown",
+      "type": "DURATION",
+      "label": "Payday Cooldown",
+      "description": "How long a member waits between payday claims.",
+      "group": "Payday",
+      "default": "5m",
+      "quickPicks": [
+        "1m",
+        "5m",
+        "15m",
+        "1h",
+        "24h"
+      ]
+    },
+    {
+      "key": "transfer_tax_percent",
+      "type": "NUMBER",
+      "label": "Transfer Tax (%)",
+      "description": "Percentage burned on every member-to-member transfer.",
+      "group": "Transfers",
+      "default": 0,
+      "step": 1
+    },
+    {
+      "key": "slot_min_bid",
+      "type": "NUMBER",
+      "label": "Slots Minimum Bid",
+      "description": "Smallest allowed slots bid.",
+      "group": "Slots",
+      "default": 5
+    },
+    {
+      "key": "slot_max_bid",
+      "type": "NUMBER",
+      "label": "Slots Maximum Bid",
+      "description": "Largest allowed slots bid.",
+      "group": "Slots",
+      "default": 100
+    },
+    {
+      "key": "slot_cooldown",
+      "type": "DURATION",
+      "label": "Slots Cooldown",
+      "description": "How long a member waits between slot pulls.",
+      "group": "Slots",
+      "default": "5s",
+      "quickPicks": [
+        "5s",
+        "15s",
+        "1m",
+        "5m"
+      ]
+    },
+    {
+      "key": "slot_daily_cap",
+      "type": "NUMBER",
+      "label": "Slots Daily Wager Cap",
+      "description": "Maximum total a member may wager on slots per day. 0 disables the cap.",
+      "group": "Slots",
+      "default": 1000
+    },
+    {
+      "key": "slot_payouts",
+      "type": "STRING_LIST",
+      "label": "Slots Payouts",
+      "description": "Slot machine multipliers as key:multiplier entries (jackpot, cloverThree, cherriesThree, twoSix, cherriesTwo, threeKind, twoKind).",
+      "group": "Slots",
+      "default": [
+        "jackpot:50",
+        "cloverThree:25",
+        "cherriesThree:20",
+        "twoSix:4",
+        "cherriesTwo:3",
+        "threeKind:10",
+        "twoKind:2"
+      ]
+    }
+  ],
+  "category": "Community"
+}

@@ -37,7 +37,7 @@
       "key": "default_name_template",
       "type": "STRING",
       "label": "Default Channel Name Pattern",
-      "description": "Used to pre-fill new generators. Supports {username}, {name}, {number}, {position} — see the Voice Generators page for details.",
+      "description": "Used to pre-fill new generators. Supports {username}, {name}/{nickname}, {number}, {position} — see the Voice Generators page for details.",
       "default": "{username}'s Channel"
     }
   ],

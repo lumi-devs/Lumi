@@ -69,7 +69,7 @@ describe("pipelineBySlot", () => {
   it("throws instead of silently dropping a failed pipeline", async () => {
     const failure = new Error("READONLY replica");
     const chain = {
-      set: () => chain,
+      set: (_key: string) => chain,
       exec: vi.fn().mockResolvedValue([[failure, null]]),
     };
     const redis = { pipeline: () => chain };

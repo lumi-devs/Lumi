@@ -258,6 +258,23 @@ export interface VerificationPanelSetPayload {
   messageId: string;
 }
 
+/** One channel pending as a log destination, claimed in Discord via `log claim`. */
+export interface LogClaimView {
+  channelId: string;
+  authorId: string;
+  messageId: string;
+  claimedAt: string;
+}
+
+export const LogClaimOutcomes = ["confirmed", "dismissed"] as const;
+
+export type LogClaimOutcome = (typeof LogClaimOutcomes)[number];
+
+export interface LogClaimDismissPayload {
+  channelId: string;
+  outcome: LogClaimOutcome;
+}
+
 export interface BackupRestorePayload {
   backupId?: number;
 }
@@ -278,6 +295,33 @@ export interface TempVcGeneratorSetPayload {
   channelId: string;
   name: string | null;
   limit?: number;
+}
+
+export type ReactionRoleMenuMode = "buttons" | "select" | "reactions";
+
+export interface ReactionRoleOptionPayload {
+  id?: string;
+  label: string;
+  emoji?: string | null;
+  description?: string | null;
+  roleId: string;
+  requiredRoleId?: string | null;
+}
+
+/** Full-menu upsert for `guild.reactionroles.menus.set`. */
+export interface ReactionRoleMenuSetPayload {
+  id: string;
+  title: string;
+  description?: string | null;
+  color?: string | null;
+  mode: ReactionRoleMenuMode;
+  exclusive?: boolean;
+  maxRoles?: number;
+  options: ReactionRoleOptionPayload[];
+}
+
+export interface ReactionRoleMenuDeletePayload {
+  id: string;
 }
 
 export interface GuildSummariesPayload {
@@ -497,12 +541,17 @@ export interface RpcRequestPayloads {
   "guild.verificationPanel.get": never;
   "guild.verificationPanel.set": VerificationPanelSetPayload;
   "guild.verificationPanel.delete": never;
+  "guild.logClaims.list": never;
+  "guild.logClaims.dismiss": LogClaimDismissPayload;
   "guild.verificationWeb.complete": never;
   "guild.backups.list": never;
   "guild.backups.restore": BackupRestorePayload;
   "guild.tempvc.generators.list": never;
   "guild.tempvc.generators.set": TempVcGeneratorSetPayload;
   "guild.tempvc.records.list": never;
+  "guild.reactionroles.menus.list": never;
+  "guild.reactionroles.menus.set": ReactionRoleMenuSetPayload;
+  "guild.reactionroles.menus.delete": ReactionRoleMenuDeletePayload;
   "guild.audit.list": AuditListPayload;
   "guild.history.list": ConfigHistoryListPayload;
   "guild.history.rollback": ConfigHistoryRollbackPayload;
@@ -578,12 +627,17 @@ export const RpcActions = {
   guildVerificationPanelGet: "guild.verificationPanel.get",
   guildVerificationPanelSet: "guild.verificationPanel.set",
   guildVerificationPanelDelete: "guild.verificationPanel.delete",
+  guildLogClaimsList: "guild.logClaims.list",
+  guildLogClaimsDismiss: "guild.logClaims.dismiss",
   guildVerificationWebComplete: "guild.verificationWeb.complete",
   guildBackupsList: "guild.backups.list",
   guildBackupRestore: "guild.backups.restore",
   guildTempVcGeneratorsList: "guild.tempvc.generators.list",
   guildTempVcGeneratorSet: "guild.tempvc.generators.set",
   guildTempVcRecordsList: "guild.tempvc.records.list",
+  guildReactionRoleMenusList: "guild.reactionroles.menus.list",
+  guildReactionRoleMenuSet: "guild.reactionroles.menus.set",
+  guildReactionRoleMenuDelete: "guild.reactionroles.menus.delete",
   guildAuditList: "guild.audit.list",
   guildHistoryList: "guild.history.list",
   guildHistoryRollback: "guild.history.rollback",

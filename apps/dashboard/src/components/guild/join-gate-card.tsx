@@ -74,8 +74,8 @@ export function JoinGateCard({
         </CardHeader>
 
         {groups.map((group, index) => {
-          const toggles = group.fields.filter((f) => f.type === FieldType.BOOLEAN);
-          const inputs = group.fields.filter((f) => f.type !== FieldType.BOOLEAN);
+          const toggles = group.fields.filter((f) => f.type === FieldType.Boolean);
+          const inputs = group.fields.filter((f) => f.type !== FieldType.Boolean);
           return (
             <div key={group.name} className={index === 0 ? undefined : "border-t border-border"}>
               <h4 className="border-b border-border bg-bg-subtle px-4 py-1.5 font-display text-[13px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
@@ -116,7 +116,7 @@ export function JoinGateCard({
                       label={field.label}
                       htmlFor={field.key}
                       hint={field.description}
-                      className={field.type === FieldType.ENUM ? "sm:col-span-3" : undefined}
+                      className={field.type === FieldType.Enum ? "sm:col-span-3" : undefined}
                     >
                       <ConfigFieldInput
                         field={field}

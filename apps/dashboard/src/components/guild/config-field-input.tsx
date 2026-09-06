@@ -40,7 +40,7 @@ export function ConfigFieldInput({
   channels?: DashboardChannelView[];
 }) {
   switch (field.type) {
-    case FieldType.BOOLEAN:
+    case FieldType.Boolean:
       return (
         <Switch
           id={field.key}
@@ -50,7 +50,7 @@ export function ConfigFieldInput({
         />
       );
 
-    case FieldType.ENUM:
+    case FieldType.Enum:
       return (
         <Select
           id={field.key}
@@ -68,7 +68,7 @@ export function ConfigFieldInput({
         </Select>
       );
 
-    case FieldType.NUMBER: {
+    case FieldType.Number: {
       if (field.step !== undefined) {
         const numeric = Number(value);
         const shown = Number.isFinite(numeric) ? numeric : 0;
@@ -107,7 +107,7 @@ export function ConfigFieldInput({
       );
     }
 
-    case FieldType.DURATION: {
+    case FieldType.Duration: {
       const picks = field.quickPicks ?? [];
       const shown = typeof value === "string" ? value : "";
       const listId = `${field.key}-picks`;
@@ -149,7 +149,7 @@ export function ConfigFieldInput({
       );
     }
 
-    case FieldType.MULTI_ROLE: {
+    case FieldType.MultiRole: {
       const selected = Array.isArray(value) ? value.map(String) : [];
       return (
         <MultiIdPicker
@@ -157,13 +157,13 @@ export function ConfigFieldInput({
           fieldLabel={field.label}
           selected={selected}
           options={roles.map((r) => ({ id: r.id, name: `@${r.name}` }))}
-          summary={resolveConfigValue(FieldType.MULTI_ROLE, selected, roles, channels)}
+          summary={resolveConfigValue(FieldType.MultiRole, selected, roles, channels)}
           onChange={onChange}
         />
       );
     }
 
-    case FieldType.MULTI_CHANNEL: {
+    case FieldType.MultiChannel: {
       const selected = Array.isArray(value) ? value.map(String) : [];
       const options = channelOptionsFor(field, channels);
       return (
@@ -172,13 +172,13 @@ export function ConfigFieldInput({
           fieldLabel={field.label}
           selected={selected}
           options={options.map((c) => ({ id: c.id, name: `#${c.name}` }))}
-          summary={resolveConfigValue(FieldType.MULTI_CHANNEL, selected, roles, channels)}
+          summary={resolveConfigValue(FieldType.MultiChannel, selected, roles, channels)}
           onChange={onChange}
         />
       );
     }
 
-    case FieldType.MULTI_USER: {
+    case FieldType.MultiUser: {
       const selected = Array.isArray(value) ? value.map(String) : [];
       return (
         <MultiIdPicker
@@ -186,13 +186,13 @@ export function ConfigFieldInput({
           fieldLabel={field.label}
           selected={selected}
           options={[]}
-          summary={resolveConfigValue(FieldType.MULTI_USER, selected, roles, channels)}
+          summary={resolveConfigValue(FieldType.MultiUser, selected, roles, channels)}
           onChange={onChange}
         />
       );
     }
 
-    case FieldType.STRING_LIST: {
+    case FieldType.StringList: {
       const selected = Array.isArray(value) ? value.map(String) : [];
       return (
         <MultiTextPicker
@@ -204,7 +204,7 @@ export function ConfigFieldInput({
       );
     }
 
-    case FieldType.ROLE: {
+    case FieldType.Role: {
       const shown = typeof value === "string" ? value : "";
       return (
         <Select
@@ -223,7 +223,7 @@ export function ConfigFieldInput({
       );
     }
 
-    case FieldType.CHANNEL: {
+    case FieldType.Channel: {
       const shown = typeof value === "string" ? value : "";
       const options = channelOptionsFor(field, channels);
       return (
@@ -245,9 +245,9 @@ export function ConfigFieldInput({
 
     default: {
       const placeholder =
-        field.type === FieldType.USER ? "User ID" : "";
+        field.type === FieldType.User ? "User ID" : "";
       const shown = typeof value === "string" ? value : "";
-      const isSnowflake = field.type === FieldType.USER;
+      const isSnowflake = field.type === FieldType.User;
       return (
         <Input
           id={field.key}

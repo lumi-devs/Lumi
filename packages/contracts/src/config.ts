@@ -4,18 +4,18 @@ import type { ChannelType } from "discord.js";
 
 
 export enum FieldType {
-  BOOLEAN = "BOOLEAN",
-  NUMBER = "NUMBER",
-  STRING = "STRING",
-  ENUM = "ENUM",
-  CHANNEL = "CHANNEL",
-  ROLE = "ROLE",
-  USER = "USER",
-  DURATION = "DURATION",
-  MULTI_ROLE = "MULTI_ROLE",
-  MULTI_CHANNEL = "MULTI_CHANNEL",
-  MULTI_USER = "MULTI_USER",
-  STRING_LIST = "STRING_LIST",
+  Boolean = "BOOLEAN",
+  Number = "NUMBER",
+  String = "STRING",
+  Enum = "ENUM",
+  Channel = "CHANNEL",
+  Role = "ROLE",
+  User = "USER",
+  Duration = "DURATION",
+  MultiRole = "MULTI_ROLE",
+  MultiChannel = "MULTI_CHANNEL",
+  MultiUser = "MULTI_USER",
+  StringList = "STRING_LIST",
 }
 
 export interface ConfigField {

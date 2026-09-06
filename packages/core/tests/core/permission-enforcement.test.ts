@@ -14,6 +14,9 @@ import { UnbanCommand } from "#modules/mod/commands/unban.js";
 import { QuarantineCommand } from "#modules/mod/commands/quarantine.js";
 import { UnquarantineCommand } from "#modules/mod/commands/unquarantine.js";
 import { LockdownCommand } from "#modules/mod/commands/lockdown.js";
+import { LockCommand } from "#modules/mod/commands/lock.js";
+import { SayCommand } from "#modules/mod/commands/say.js";
+import { DmCommand } from "#modules/mod/commands/dm.js";
 import { NotesCommand } from "#modules/mod/commands/notes.js";
 import { CasesCommand } from "#modules/mod/commands/cases.js";
 import { SanitizeCommand } from "#modules/mod/commands/sanitize.js";
@@ -38,6 +41,9 @@ const destructiveModCommands = [
   { name: "quarantine", Ctor: QuarantineCommand, permit: "mod.*" },
   { name: "unquarantine", Ctor: UnquarantineCommand, permit: "mod.*" },
   { name: "lockdown", Ctor: LockdownCommand, permit: "mod.lockdown" },
+  { name: "lock", Ctor: LockCommand, permit: "mod.lockdown" },
+  { name: "say", Ctor: SayCommand, permit: "mod.say" },
+  { name: "dm", Ctor: DmCommand, permit: "mod.dm" },
   { name: "notes", Ctor: NotesCommand, permit: "mod.notes" },
   { name: "cases", Ctor: CasesCommand, permit: "mod.*" },
   { name: "sanitize", Ctor: SanitizeCommand, permit: "mod.*" },

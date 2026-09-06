@@ -21,6 +21,11 @@ export const KnownPermitNodeGroups: {
         label: "Configure moderation settings",
         description: "Edit auto-moderation settings like warning escalation thresholds.",
       },
+      {
+        node: "admin.welcome",
+        label: "Preview welcome cards",
+        description: "Render welcome, goodbye, and DM greeting previews with /welcome.",
+      },
     ],
   },
   {
@@ -52,6 +57,46 @@ export const KnownPermitNodeGroups: {
         label: "Voice mute members",
         description: "Mute and unmute members in voice channels.",
       },
+      {
+        node: "mod.say",
+        label: "Relay messages",
+        description: "Send a message through the bot into any channel.",
+      },
+      {
+        node: "mod.dm",
+        label: "Relay direct messages",
+        description: "Send a direct message through the bot to any user.",
+      },
+    ],
+  },
+  {
+    prefix: "economy",
+    nodes: [
+      {
+        node: "economy.*",
+        label: "Full economy access",
+        description: "Every economy command, including staff balance adjustments.",
+      },
+      {
+        node: "economy.admin",
+        label: "Adjust balances",
+        description: "Set, add, or remove any member's wallet or bank balance with an audit reason.",
+      },
+    ],
+  },
+  {
+    prefix: "reactionroles",
+    nodes: [
+      {
+        node: "reactionroles.*",
+        label: "Full reaction-roles access",
+        description: "Every reaction-roles command: create, post, and manage self-serve role menus.",
+      },
+      {
+        node: "reactionroles.manage",
+        label: "Manage role menus",
+        description: "Create role menus, edit their options and gates, post them, and delete them.",
+      },
     ],
   },
   {
@@ -61,6 +106,21 @@ export const KnownPermitNodeGroups: {
         node: "owner.*",
         label: "Full owner access",
         description: "Every owner-tier command, including AFK-cleanup tooling and AFK stats.",
+      },
+      {
+        node: "owner.serverlock",
+        label: "Manage server lock",
+        description: "Lock the bot to its current servers so it leaves newly joined ones.",
+      },
+      {
+        node: "owner.leave",
+        label: "Leave servers",
+        description: "Make the bot leave any server with the sv leave command.",
+      },
+      {
+        node: "owner.announce",
+        label: "Global announcements",
+        description: "Broadcast one message to every server with the announce command.",
       },
     ],
   },

@@ -22,7 +22,7 @@ export class ReadyListener extends Listener<typeof Events.ClientReady> {
 
     logger.debug(gray("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     logger.debug(
-      `${bold(green(` ${Emojis.FIRE} Lumi `))} ${cyan(tag)} ${gray("|")} ${guilds} guilds`,
+      `${bold(green(` ${Emojis.Fire} Lumi `))} ${cyan(tag)} ${gray("|")} ${guilds} guilds`,
     );
     logger.debug(
       `${gray(" Modules:")}  ${modules} ${gray("|")} Commands: ${commands}`,

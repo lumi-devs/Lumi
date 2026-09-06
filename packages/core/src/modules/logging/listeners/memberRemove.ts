@@ -29,6 +29,6 @@ export class LoggingMemberRemoveListener extends ModuleListener<
         `**Joined**: ${time(member.joinedAt, TimestampStyles.RelativeTime)}`,
       );
     }
-    await sendLog(member.guild.id, Colors.Grey, "Member Left", lines);
+    await sendLog(member.guild.id, "member_leaves", Colors.Grey, "Member Left", lines);
   }
 }

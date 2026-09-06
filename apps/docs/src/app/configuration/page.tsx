@@ -10,6 +10,13 @@ export const metadata: Metadata = {
 const secrets = `openssl rand -hex 32   # RPC_INTERNAL_TOKEN, DASHBOARD_SESSION_SECRET
 openssl rand -base64 24  # GRAFANA_PASSWORD (observability profile)`;
 
+const emojiExample = `// config/emojis.ts
+export default {
+  Success: "🎉",
+  Error: "<:sadge:1234567890123456789>",
+  Gear: "<a:spin:1234567890123456789>",
+};`;
+
 interface EnvRow {
   name: string;
   required: string;
@@ -154,6 +161,28 @@ export default function ConfigurationPage() {
 
       <h2>Generating secrets</h2>
       <CodeBlock code={secrets} language="bash" title="Secrets" />
+
+      <h2>Custom emojis</h2>
+      <p>
+        Every emoji Lumi uses in cards, status messages, and command replies comes from one
+        place: <code>packages/core/src/lib/utilities/assets.ts</code>. To swap any of them for
+        your own — a custom Discord emoji, or just a different unicode glyph — create{" "}
+        <code>config/emojis.ts</code> at the repo root (or edit the one already checked in with
+        every key commented out) and export the keys you want to override:
+      </p>
+      <CodeBlock code={emojiExample} language="typescript" title="config/emojis.ts" />
+      <p>
+        Keys you don&apos;t set keep Lumi&apos;s default. A custom Discord emoji uses the same
+        format Discord itself renders it as in a sent message —{" "}
+        <code>{"<:name:id>"}</code>, or <code>{"<a:name:id>"}</code> if it&apos;s animated — copy
+        it straight out of a Discord message (type a backslash before the emoji to see its raw
+        form). The bot needs to actually be in a server that has that emoji for it to render.
+      </p>
+      <p>
+        <code>config/emojis.ts</code> lists every available key as a comment, with its default
+        value, so you can see everything that&apos;s overridable without leaving the file.
+        Changes apply on the next restart — there&apos;s no hot-reload for this file.
+      </p>
     </DocPage>
   );
 }

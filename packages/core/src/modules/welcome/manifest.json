@@ -1,0 +1,99 @@
+{
+  "name": "welcome",
+  "displayName": "Welcome",
+  "emoji": "👋",
+  "description": "Greets new members with a welcome card, posts goodbye cards on leave, assigns join roles, and optionally sends a DM greeting.",
+  "short": "Welcome cards, goodbye cards, join roles, and DM greetings.",
+  "endUserDataStatement": "No persistent user data. Join and leave events are rendered into cards at delivery time and are not stored.",
+  "version": "0.3.0",
+  "disableable": true,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": true,
+  "targetUtility": "worker",
+  "subStores": [
+    "commands",
+    "listeners"
+  ],
+  "configFields": [
+    {
+      "key": "welcomeEnabled",
+      "type": "BOOLEAN",
+      "label": "Welcome Message Enabled",
+      "description": "Post a welcome card when a member joins.",
+      "group": "Welcome Message",
+      "default": true
+    },
+    {
+      "key": "welcomeChannel",
+      "type": "CHANNEL",
+      "label": "Welcome Channel",
+      "description": "Channel where welcome cards are posted.",
+      "group": "Welcome Message",
+      "channelTypes": [
+        0,
+        5
+      ]
+    },
+    {
+      "key": "welcomeTemplate",
+      "type": "STRING",
+      "label": "Welcome Template",
+      "description": "Posted when a member joins. Placeholders: {user} mention, {username}, {server}, {memberCount}. Unknown placeholders are left as-is.",
+      "group": "Welcome Message",
+      "default": "Welcome {user} to {server}! You are member #{memberCount}."
+    },
+    {
+      "key": "goodbyeEnabled",
+      "type": "BOOLEAN",
+      "label": "Goodbye Message Enabled",
+      "description": "Post a goodbye card when a member leaves.",
+      "group": "Goodbye Message",
+      "default": false
+    },
+    {
+      "key": "goodbyeChannel",
+      "type": "CHANNEL",
+      "label": "Goodbye Channel",
+      "description": "Channel where goodbye cards are posted.",
+      "group": "Goodbye Message",
+      "channelTypes": [
+        0,
+        5
+      ]
+    },
+    {
+      "key": "goodbyeTemplate",
+      "type": "STRING",
+      "label": "Goodbye Template",
+      "description": "Posted when a member leaves. Placeholders: {user} mention, {username}, {server}, {memberCount}. Unknown placeholders are left as-is.",
+      "group": "Goodbye Message",
+      "default": "{username} has left {server}."
+    },
+    {
+      "key": "autoRoles",
+      "type": "MULTI_ROLE",
+      "label": "Auto Roles",
+      "description": "Roles assigned automatically when a member joins.",
+      "group": "Join Extras",
+      "default": []
+    },
+    {
+      "key": "dmWelcomeEnabled",
+      "type": "BOOLEAN",
+      "label": "DM Greeting Enabled",
+      "description": "Send the new member a DM greeting on join.",
+      "group": "Join Extras",
+      "default": false
+    },
+    {
+      "key": "dmWelcomeTemplate",
+      "type": "STRING",
+      "label": "DM Greeting Template",
+      "description": "Sent as a DM to new members. Placeholders: {user} mention, {username}, {server}, {memberCount}. Unknown placeholders are left as-is.",
+      "group": "Join Extras",
+      "default": "Welcome to {server}, {username}!"
+    }
+  ],
+  "category": "Community"
+}

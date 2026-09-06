@@ -45,7 +45,7 @@ const backToPermissionsRow = (t?: LumiT): Row =>
     new ButtonBuilder()
       .setCustomId("lumi:tab:permissions")
       .setLabel(t ? t(PanelsKeys.BackToHub) : "Back")
-      .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+      .setEmoji(Emojis.parse(Emojis.ArrowLeft))
       .setStyle(ButtonStyle.Secondary),
   );
 
@@ -64,7 +64,7 @@ export function buildPermissionsView(
   const sections = shown.map((a) =>
     settingRow(
       [
-        `${a.kind === "enforced" ? Emojis.SHIELD : Emojis.CHECK} ${a.permitName}${a.builtin ? " 🔒" : ""}`,
+        `${a.kind === "enforced" ? Emojis.Shield : Emojis.Check} ${a.permitName}${a.builtin ? " 🔒" : ""}`,
         `-# ${a.kind} · ${a.targetType} ${assignmentMention(a)}`,
       ],
       {
@@ -79,12 +79,12 @@ export function buildPermissionsView(
     new ButtonBuilder()
       .setCustomId("lumi:permit:grant:custom")
       .setLabel(t ? t(PanelsKeys.PermsGrantCustom) : "Assign Custom…")
-      .setEmoji(Emojis.parse(Emojis.CHECK))
+      .setEmoji(Emojis.parse(Emojis.Check))
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
       .setCustomId("lumi:permit:grant:enforced")
       .setLabel(t ? t(PanelsKeys.PermsGrantEnforced) : "Assign Enforced…")
-      .setEmoji(Emojis.parse(Emojis.SHIELD))
+      .setEmoji(Emojis.parse(Emojis.Shield))
       .setStyle(ButtonStyle.Primary),
   );
 
@@ -116,9 +116,9 @@ export function buildPermissionsView(
   return noPingCard(
     makeCard(
       resolveCardColor("primary"),
-      `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsTitle) : "Permits"}`,
+      `${Emojis.Shield} ${t ? t(PanelsKeys.PermsTitle) : "Permits"}`,
       shown.length
-        ? `-# ${Emojis.CHECK} ${t ? t(PanelsKeys.PermsLegend) : "custom · enforced. Enforced permits survive anti-nuke quarantine."}`
+        ? `-# ${Emojis.Check} ${t ? t(PanelsKeys.PermsLegend) : "custom · enforced. Enforced permits survive anti-nuke quarantine."}`
         : t
           ? t(PanelsKeys.PermsEmpty)
           : "*No permits are assigned yet - every command uses its default access.*",
@@ -137,7 +137,7 @@ export function buildPermitPickerView(
   if (permits.length === 0) {
     return makeCard(
       resolveCardColor("primary"),
-      `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsPickPermit) : "Pick a Permit"}`,
+      `${Emojis.Shield} ${t ? t(PanelsKeys.PermsPickPermit) : "Pick a Permit"}`,
       t
         ? t(PanelsKeys.PermsNoPermits)
         : "No permits of this kind exist yet. Create one with `/permit create` or from the dashboard.",
@@ -157,7 +157,7 @@ export function buildPermitPickerView(
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.SHIELD} ${t ? t(PanelsKeys.PermsPickPermit) : "Pick a Permit"}`,
+    `${Emojis.Shield} ${t ? t(PanelsKeys.PermsPickPermit) : "Pick a Permit"}`,
     t
       ? t(PanelsKeys.PermsPickPermit)
       : "Pick which permit to assign.",
@@ -184,7 +184,7 @@ export function buildPermitAssignTargetView(
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.SHIELD} ${permitName}`,
+    `${Emojis.Shield} ${permitName}`,
     t
       ? t(PanelsKeys.PermsPickTarget)
       : kind === "enforced"

@@ -25,6 +25,10 @@ import {
   unregisterTempVcRpcHandlers,
 } from "./rpc/tempvc-rpc.js";
 import {
+  registerReactionRolesRpcHandlers,
+  unregisterReactionRolesRpcHandlers,
+} from "./rpc/reactionroles-rpc.js";
+import {
   registerAuditRpcHandlers,
   unregisterAuditRpcHandlers,
 } from "./rpc/audit-rpc.js";
@@ -32,6 +36,10 @@ import {
   registerModerationRpcHandlers,
   unregisterModerationRpcHandlers,
 } from "./rpc/moderation-rpc.js";
+import {
+  registerLoggingRpcHandlers,
+  unregisterLoggingRpcHandlers,
+} from "./rpc/logging-rpc.js";
 
 @DefineModule({
   name: "dashboard",
@@ -52,8 +60,10 @@ export class DashboardModule extends Module {
     registerCasesRpcHandlers();
     registerSecurityRpcHandlers();
     registerTempVcRpcHandlers();
+    registerReactionRolesRpcHandlers();
     registerAuditRpcHandlers();
     registerModerationRpcHandlers();
+    registerLoggingRpcHandlers();
 
     return super.onLoad();
   }
@@ -66,8 +76,10 @@ export class DashboardModule extends Module {
     unregisterCasesRpcHandlers();
     unregisterSecurityRpcHandlers();
     unregisterTempVcRpcHandlers();
+    unregisterReactionRolesRpcHandlers();
     unregisterAuditRpcHandlers();
     unregisterModerationRpcHandlers();
+    unregisterLoggingRpcHandlers();
 
     return super.onUnload();
   }

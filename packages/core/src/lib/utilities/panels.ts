@@ -230,7 +230,7 @@ export function createPaginationRow(
   const prevBtn = new ButtonBuilder()
     .setCustomId(`${customIdPrefix}:prev:${Math.max(0, currentPage - 1)}`)
     .setLabel("Prev")
-    .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+    .setEmoji(Emojis.parse(Emojis.ArrowLeft))
     .setStyle(ButtonStyle.Secondary)
     .setDisabled(disabled || isFirstPage);
 
@@ -243,7 +243,7 @@ export function createPaginationRow(
   const nextBtn = new ButtonBuilder()
     .setCustomId(`${customIdPrefix}:next:${currentPage + 1}`)
     .setLabel("Next")
-    .setEmoji(Emojis.parse(Emojis.ARROW_RIGHT))
+    .setEmoji(Emojis.parse(Emojis.ArrowRight))
     .setStyle(ButtonStyle.Secondary)
     .setDisabled(disabled || isLastPage);
 

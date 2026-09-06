@@ -96,7 +96,7 @@ public override registerApplicationCommands(
                   opt
                     .setName("name")
                     .setDescription(
-                      'Name template: supports {}/{number}, {username}, {name}, {position}. E.g. "Gaming {}".',
+                      'Name template: supports {}/{number}, {username}, {name}/{nickname}, {position}. E.g. "Gaming {}".',
                     )
                     .setMaxLength(90)
                     .setRequired(true)

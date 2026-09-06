@@ -18,6 +18,6 @@ export class LoggingBanAddListener extends ModuleListener<
 
     const lines = [`**Member**: ${userMention(ban.user.id)} (${ban.user.id})`];
     if (ban.reason) lines.push(`**Reason**: ${escapeMarkdown(ban.reason)}`);
-    await sendLog(ban.guild.id, Colors.DarkRed, "Member Banned", lines);
+    await sendLog(ban.guild.id, "member_bans", Colors.DarkRed, "Member Banned", lines);
   }
 }

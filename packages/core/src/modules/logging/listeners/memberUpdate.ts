@@ -22,7 +22,7 @@ export class LoggingMemberUpdateListener extends ModuleListener<
 
     if (!oldMember.partial && oldMember.nickname !== newMember.nickname) {
       if (await isToggleEnabled(guildId, "nickname_changes")) {
-        await sendLog(guildId, Colors.Blue, "Nickname Changed", [
+        await sendLog(guildId, "nickname_changes", Colors.Blue, "Nickname Changed", [
           `**Member**: ${userMention(newMember.id)} (${newMember.id})`,
           `**Before**: ${oldMember.nickname ? escapeMarkdown(oldMember.nickname) : "*none*"}`,
           `**After**: ${newMember.nickname ? escapeMarkdown(newMember.nickname) : "*none*"}`,
@@ -52,7 +52,7 @@ export class LoggingMemberUpdateListener extends ModuleListener<
           lines.push(
             `**Removed**: ${removed.map((r) => roleMention(r.id)).join(" ")}`,
           );
-        await sendLog(guildId, Colors.Purple, "Roles Updated", lines);
+        await sendLog(guildId, "role_changes", Colors.Purple, "Roles Updated", lines);
       }
     }
   }

@@ -28,7 +28,7 @@ export class LoggingMessageUpdateListener extends ModuleListener<
     if (!(await isToggleEnabled(guildId, "message_edits"))) return;
     if (await isIgnoredChannel(guildId, newMessage.channelId)) return;
 
-    await sendLog(guildId, Colors.Orange, "Message Edited", [
+    await sendLog(guildId, "message_edits", Colors.Orange, "Message Edited", [
       `**Author**: ${newMessage.author ? `${userMention(newMessage.author.id)} (${newMessage.author.id})` : "unknown (uncached message)"}`,
       `**Channel**: ${channelMention(newMessage.channelId)}`,
       `**Before**: ${oldMessage.content ? escapeMarkdown(cutText(oldMessage.content, 450)) : "*unknown (uncached message)*"}`,

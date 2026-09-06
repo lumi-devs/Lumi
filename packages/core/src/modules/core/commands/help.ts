@@ -32,7 +32,7 @@ export function getCategories(containerInstance: typeof container) {
 
     if (!categories[moduleName]) categories[moduleName] = [];
     categories[moduleName].push(cmd);
-    categoryEmojis[moduleName] ??= record?.meta.emoji ?? Emojis.GEAR;
+    categoryEmojis[moduleName] ??= record?.meta.emoji ?? Emojis.Gear;
     totalCommandsCount++;
   }
 
@@ -109,11 +109,11 @@ export class HelpCommand extends BaseCommand {
   ) {
     const categoryName = data.sortedCategories[data.pageIndex] || "Core";
     const categoryCommands = data.categories[categoryName] || [];
-    const categoryEmoji = data.categoryEmojis[categoryName] ?? Emojis.GEAR;
+    const categoryEmoji = data.categoryEmojis[categoryName] ?? Emojis.Gear;
 
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `## ${Emojis.SHIELD} ${t(LanguageKeys.Commands.HelpTitle)}`,
+        `## ${Emojis.Shield} ${t(LanguageKeys.Commands.HelpTitle)}`,
       ),
     );
     c.addSeparatorComponents(

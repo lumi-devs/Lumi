@@ -75,7 +75,7 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
       new ButtonBuilder()
         .setCustomId(`afk:mentions:${userId}:${safePage - 1}`)
         .setLabel("Previous")
-        .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+        .setEmoji(Emojis.parse(Emojis.ArrowLeft))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(safePage <= 0),
       new ButtonBuilder()
@@ -86,13 +86,13 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
       new ButtonBuilder()
         .setCustomId(`afk:mentions:${userId}:${safePage + 1}`)
         .setLabel("Next")
-        .setEmoji(Emojis.parse(Emojis.ARROW_RIGHT))
+        .setEmoji(Emojis.parse(Emojis.ArrowRight))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(safePage >= totalPages - 1)
     ) : undefined;
 
     const card = makeListCard(
-      `${Emojis.MAIL} ${t("afk:mentionsTitle")}`,
+      `${Emojis.Mail} ${t("afk:mentionsTitle")}`,
       items,
       row ? { actionRows: [row] } : {}
     );

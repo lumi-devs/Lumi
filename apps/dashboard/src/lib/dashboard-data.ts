@@ -127,6 +127,18 @@ export interface VerificationPanelView {
   createdAt: string;
 }
 
+export interface LogClaimView {
+  channelId: string;
+  authorId: string;
+  messageId: string;
+  claimedAt: string;
+}
+
+export interface LogTypeOption {
+  key: string;
+  label: string;
+}
+
 export interface TempVcGeneratorView {
   channelId: string;
   /** Name template; `{}` is the number slot. */
@@ -144,6 +156,32 @@ export interface TempVcRecordView {
   locked: boolean;
   hidden: boolean;
   createdAt: string;
+}
+
+export type ReactionRoleMenuModeView = "buttons" | "select" | "reactions";
+
+export interface ReactionRoleOptionView {
+  id: string;
+  label: string;
+  emoji: string | null;
+  description: string | null;
+  roleId: string;
+  requiredRoleId: string | null;
+}
+
+export interface ReactionRoleMenuView {
+  id: string;
+  title: string;
+  description: string | null;
+  color: string | null;
+  mode: ReactionRoleMenuModeView;
+  exclusive: boolean;
+  maxRoles: number;
+  channelId: string | null;
+  messageIds: string[];
+  options: ReactionRoleOptionView[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AuditEntryView {

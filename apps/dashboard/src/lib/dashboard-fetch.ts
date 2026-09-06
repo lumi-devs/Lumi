@@ -13,10 +13,12 @@ import type {
   ConfigOverrideView,
   DashboardData,
   IgnoredChannelView,
+  LogClaimView,
   ModNoteView,
   ModuleDataListData,
   PanicStateView,
   PermitView,
+  ReactionRoleMenuView,
   SystemDashboardData,
   SystemShardsData,
   TempVcGeneratorView,
@@ -162,6 +164,16 @@ export const getGuildVerificationPanel = cache(
   },
 );
 
+export const getGuildLogClaims = cache(
+  async (guildId: string, actorId: string): Promise<LogClaimView[]> => {
+    const data = (await rpcCall(RpcActions.guildLogClaimsList, {
+      guildId,
+      actorId,
+    })) as { claims: LogClaimView[] };
+    return data.claims;
+  },
+);
+
 export const getGuildTempVcGenerators = cache(
   async (guildId: string, actorId: string): Promise<TempVcGeneratorView[]> => {
     const data = (await rpcCall(RpcActions.guildTempVcGeneratorsList, {
@@ -179,6 +191,16 @@ export const getGuildTempVcRecords = cache(
       actorId,
     })) as { records: TempVcRecordView[] };
     return data.records;
+  },
+);
+
+export const getGuildReactionRoleMenus = cache(
+  async (guildId: string, actorId: string): Promise<ReactionRoleMenuView[]> => {
+    const data = (await rpcCall(RpcActions.guildReactionRoleMenusList, {
+      guildId,
+      actorId,
+    })) as { menus: ReactionRoleMenuView[] };
+    return data.menus;
   },
 );
 

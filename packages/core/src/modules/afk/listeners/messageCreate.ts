@@ -103,7 +103,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
             createActionButton({
               customId: `afk:mentions:${userId}`,
               label: t("afk:viewMentionsButton", { count: mentions.length }),
-              emoji: Emojis.MAIL,
+              emoji: Emojis.Mail,
               style: ButtonStyle.Secondary,
             })
           ),
@@ -113,7 +113,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
     const welcomeCard = new ContainerBuilder();
     welcomeCard.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `**${Emojis.WAVE} ${t("afk:welcomeBackTitle")}**`,
+        `**${Emojis.Wave} ${t("afk:welcomeBackTitle")}**`,
       ),
     );
     welcomeCard.addSeparatorComponents(
@@ -218,7 +218,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
       .reply({
         ...makeCard(
           0,
-          `${Emojis.AFK} ${name} is AFK`,
+          `${Emojis.Afk} ${name} is AFK`,
           `**Reason:** ${sanitizeReason(entry.reason)}\n**AFK for:** ${afkDurationSince(entry.since)}`,
         ),
         allowedMentions: { repliedUser: true },

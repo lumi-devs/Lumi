@@ -6,7 +6,7 @@ export interface GeneratorConfig {
   /**
    * Name template. Supports `{}`/`{number}` (sequence number, e.g.
    * "Gaming {}" → "Gaming 1"), `{username}` (Discord username),
-   * `{name}` (display name/nickname), and `{position}` (alias of
+   * `{name}`/`{nickname}` (display name), and `{position}` (alias of
    * `{number}`). No placeholder appends the number to the end.
    */
   name: string;

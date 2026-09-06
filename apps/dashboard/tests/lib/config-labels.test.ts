@@ -27,7 +27,7 @@ function securityModule(): DashboardModuleView {
       {
         key: "joingate_enabled",
         label: "Join Gate",
-        type: FieldType.BOOLEAN,
+        type: FieldType.Boolean,
         description: "",
       },
     ],
@@ -52,7 +52,7 @@ function modModule(): DashboardModuleView {
       {
         key: "log_channel_id",
         label: "Log Channel",
-        type: FieldType.CHANNEL,
+        type: FieldType.Channel,
         description: "",
       },
     ],
@@ -95,7 +95,7 @@ describe("resolveConfigValue", () => {
     const roleField = {
       key: "muted_role_id",
       label: "Muted Role",
-      type: FieldType.ROLE,
+      type: FieldType.Role,
       description: "",
     };
     const labels = buildModuleLabelIndex([
@@ -144,7 +144,7 @@ describe("resolveConfigValue", () => {
   });
 
   it("passes non-channel/role values through unchanged", () => {
-    expect(resolveConfigValue(FieldType.STRING, "hello", [], [])).toBe(
+    expect(resolveConfigValue(FieldType.String, "hello", [], [])).toBe(
       "hello",
     );
     expect(resolveConfigValue(undefined, 42, [], [])).toBe("42");
@@ -152,7 +152,7 @@ describe("resolveConfigValue", () => {
 
   it("leaves a channel/role id as-is when it can't be resolved", () => {
     expect(
-      resolveConfigValue(FieldType.CHANNEL, "1537376009148571650", [], []),
+      resolveConfigValue(FieldType.Channel, "1537376009148571650", [], []),
     ).toBe("1537376009148571650");
   });
 });

@@ -39,7 +39,7 @@ export class ModuleUpdateInteractionHandler extends BaseInteractionHandler {
     if (!PermitResolver.isBotOwner(interaction.user.id)) {
       throw new UserError({
         identifier: "AccessDenied",
-        message: `${Emojis.CROSS} Only Bot Owners can update modules.`,
+        message: `${Emojis.Cross} Only Bot Owners can update modules.`,
       });
     }
 
@@ -48,7 +48,7 @@ export class ModuleUpdateInteractionHandler extends BaseInteractionHandler {
     await interaction.editReply(
       makeInfoCard(
         "Updating Module",
-        `${Emojis.LOADING} Checking and downloading updates for **${moduleName}**...`,
+        `${Emojis.Loading} Checking and downloading updates for **${moduleName}**...`,
       ),
     );
 
@@ -59,7 +59,7 @@ export class ModuleUpdateInteractionHandler extends BaseInteractionHandler {
       );
     } catch (err: unknown) {
       await interaction.editReply(
-        makeErrorCard(`${Emojis.ERROR} Update Failed`, errorFrom(err).message),
+        makeErrorCard(`${Emojis.Error} Update Failed`, errorFrom(err).message),
       );
     }
   }

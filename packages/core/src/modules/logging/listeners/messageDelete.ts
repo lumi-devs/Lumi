@@ -34,6 +34,6 @@ export class LoggingMessageDeleteListener extends ModuleListener<
     if (message.attachments?.size) {
       lines.push(`**${t("logging:attachments")}**: ${message.attachments.size}`);
     }
-    await sendLog(guildId, Colors.Red, t("logging:messageDeleted"), lines);
+    await sendLog(guildId, "message_deletes", Colors.Red, t("logging:messageDeleted"), lines);
   }
 }

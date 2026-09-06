@@ -16,7 +16,7 @@ export class LoggingBanRemoveListener extends ModuleListener<
   protected async handle(ban: GuildBan): Promise<void> {
     if (!(await isToggleEnabled(ban.guild.id, "member_unbans"))) return;
 
-    await sendLog(ban.guild.id, Colors.Green, "Member Unbanned", [
+    await sendLog(ban.guild.id, "member_unbans", Colors.Green, "Member Unbanned", [
       `**Member**: ${userMention(ban.user.id)} (${ban.user.id})`,
     ]);
   }

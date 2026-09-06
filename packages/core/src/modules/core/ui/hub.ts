@@ -22,26 +22,26 @@ export type HubTabId =
   "home" | "modules" | "permissions" | "settings" | "addons";
 
 const hubTabs = (t?: LumiT): Tab[] => [
-  { id: "home", label: t ? t(PanelsKeys.TabHome) : "Hub", emoji: Emojis.BOT },
+  { id: "home", label: t ? t(PanelsKeys.TabHome) : "Hub", emoji: Emojis.Bot },
   {
     id: "modules",
     label: t ? t(PanelsKeys.TabModules) : "Modules",
-    emoji: Emojis.GEAR,
+    emoji: Emojis.Gear,
   },
   {
     id: "permissions",
     label: t ? t(PanelsKeys.TabPermissions) : "Permissions",
-    emoji: Emojis.SHIELD,
+    emoji: Emojis.Shield,
   },
   {
     id: "settings",
     label: t ? t(PanelsKeys.TabSettings) : "Settings",
-    emoji: Emojis.GUILD,
+    emoji: Emojis.Guild,
   },
   {
     id: "addons",
     label: t ? t(PanelsKeys.TabAddons) : "Addons",
-    emoji: Emojis.REPO,
+    emoji: Emojis.Repo,
   },
 ];
 
@@ -60,7 +60,7 @@ export function backToHubRow(t?: LumiT): Row {
     new ButtonBuilder()
       .setCustomId("lumi:tab:home")
       .setLabel(t ? t(PanelsKeys.BackToHub) : "Back to Hub")
-      .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+      .setEmoji(Emojis.parse(Emojis.ArrowLeft))
       .setStyle(ButtonStyle.Secondary),
   );
 }
@@ -80,7 +80,7 @@ export function buildHubView(o: HubOverview, t?: LumiT): CardReply {
     t
       ? t(PanelsKeys.HubIntro)
       : "Manage everything for this server from one place - no scattered commands to remember.",
-    `${Emojis.GEAR} ${
+    `${Emojis.Gear} ${
       t
         ? t(PanelsKeys.HubGlanceModules, {
             enabled: o.enabledCount,
@@ -88,7 +88,7 @@ export function buildHubView(o: HubOverview, t?: LumiT): CardReply {
           })
         : `**${o.enabledCount}** of **${o.moduleCount}** modules enabled`
     }`,
-    `${Emojis.GUILD} ${
+    `${Emojis.Guild} ${
       t
         ? t(PanelsKeys.HubGlanceLocale, { locale: o.locale, prefix })
         : `Language \`${o.locale}\`  •  Prefix \`${prefix}\``
@@ -96,15 +96,15 @@ export function buildHubView(o: HubOverview, t?: LumiT): CardReply {
   ];
 
   const hints = [
-    `${Emojis.GEAR} **${t ? t(PanelsKeys.TabModules) : "Modules"}** - ${t ? t(PanelsKeys.TabHintModules) : "enable, disable, and configure every feature"}`,
-    `${Emojis.SHIELD} **${t ? t(PanelsKeys.TabPermissions) : "Permissions"}** - ${t ? t(PanelsKeys.TabHintPermissions) : "permit grants and per-command overrides"}`,
-    `${Emojis.GUILD} **${t ? t(PanelsKeys.TabSettings) : "Settings"}** - ${t ? t(PanelsKeys.TabHintSettings) : "server language and command prefix"}`,
-    `${Emojis.REPO} **${t ? t(PanelsKeys.TabAddons) : "Addons"}** - ${t ? t(PanelsKeys.TabHintAddons) : "extend Lumi with add-on modules"}`,
+    `${Emojis.Gear} **${t ? t(PanelsKeys.TabModules) : "Modules"}** - ${t ? t(PanelsKeys.TabHintModules) : "enable, disable, and configure every feature"}`,
+    `${Emojis.Shield} **${t ? t(PanelsKeys.TabPermissions) : "Permissions"}** - ${t ? t(PanelsKeys.TabHintPermissions) : "permit grants and per-command overrides"}`,
+    `${Emojis.Guild} **${t ? t(PanelsKeys.TabSettings) : "Settings"}** - ${t ? t(PanelsKeys.TabHintSettings) : "server language and command prefix"}`,
+    `${Emojis.Repo} **${t ? t(PanelsKeys.TabAddons) : "Addons"}** - ${t ? t(PanelsKeys.TabHintAddons) : "extend Lumi with add-on modules"}`,
   ].join("\n");
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.BOT} ${t ? t(PanelsKeys.HubTitle) : "Lumi Control Panel"}`,
+    `${Emojis.Bot} ${t ? t(PanelsKeys.HubTitle) : "Lumi Control Panel"}`,
     [glanceLines.join("\n"), hints],
     {
       breadcrumbs: ["Hub"],
@@ -131,13 +131,13 @@ export function buildSettingsView(
   const sections: SectionBuilder[] = [
     settingRow(
       [
-        `${Emojis.TERMINAL} **${prefixLabel}** - ${prefixValue}`,
+        `${Emojis.Terminal} **${prefixLabel}** - ${prefixValue}`,
         `-# ${t ? t(PanelsKeys.SettingsFooter) : "Prefix commands work for a curated set of moderation and utility commands."}`,
       ],
       {
         customId: "lumi:prefix:set",
         label: t ? t(PanelsKeys.SettingsEdit) : "Edit",
-        emoji: Emojis.EDIT,
+        emoji: Emojis.Edit,
       },
     ),
   ];
@@ -157,7 +157,7 @@ export function buildSettingsView(
     new ButtonBuilder()
       .setCustomId("lumi:prefix:reset")
       .setLabel(t ? t(PanelsKeys.SettingsReset) : "Reset")
-      .setEmoji(Emojis.parse(Emojis.UNINSTALL))
+      .setEmoji(Emojis.parse(Emojis.Uninstall))
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(settings.prefix === null),
     new ButtonBuilder()
@@ -168,19 +168,19 @@ export function buildSettingsView(
     new ButtonBuilder()
       .setCustomId("lumi:check_core")
       .setLabel(t ? t(PanelsKeys.SettingsCheckCore) : "Check Core")
-      .setEmoji(Emojis.parse(Emojis.BOT))
+      .setEmoji(Emojis.parse(Emojis.Bot))
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId("lumi:update_core")
       .setLabel(t ? t(PanelsKeys.SettingsUpdateCore) : "Update Lumi Core")
-      .setEmoji(Emojis.parse(Emojis.BOT))
+      .setEmoji(Emojis.parse(Emojis.Bot))
       .setStyle(ButtonStyle.Primary),
   );
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.GUILD} ${t ? t(PanelsKeys.SettingsTitle) : "Server Settings"}`,
-    `${Emojis.GUILD} **${t ? t(PanelsKeys.SettingsLanguage) : "Language"}** - \`${settings.locale}\``,
+    `${Emojis.Guild} ${t ? t(PanelsKeys.SettingsTitle) : "Server Settings"}`,
+    `${Emojis.Guild} **${t ? t(PanelsKeys.SettingsLanguage) : "Language"}** - \`${settings.locale}\``,
     {
       breadcrumbs: ["Hub", "Settings"],
       sections,

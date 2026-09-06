@@ -4,6 +4,7 @@ import { LanguageKeys } from "#lib/i18n/keys.js";
 import { confirmPrompt, type ConfirmPromptOptions } from "#lib/utilities/confirm.js";
 import { logError } from "#lib/utilities/errors.js";
 import { Emojis } from "#lib/utilities/assets.js";
+import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 import { isNullish } from "@sapphire/utilities";
 import { Result, container, type Awaitable } from "@sapphire/framework";
 import type { Guild, GuildMember, User } from "discord.js";
@@ -147,11 +148,20 @@ interface RejectedEntry<Target> {
   reply: ModerationCommand.Reply;
 }
 
+/** How many mass-action targets may run concurrently. Sequential stays the default. */
+const DefaultBatchConcurrency = 1;
+/** Delay between starting batched Discord API mutations, so a 25-target run does not burst. */
+const BatchStaggerMs = 250;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /** Builds one line of the batch-result card for a target that didn't make it through. */
 function rejectedLine<Target extends ModerationCommand.TargetLike>(
   entry: RejectedEntry<Target>,
 ): string {
-  return `${Emojis.CROSS} <@${targetIdOf(entry.target)}> - ${entry.reply.body}`;
+  return `${Emojis.Cross} <@${targetIdOf(entry.target)}> - ${entry.reply.body}`;
 }
 
 /**
@@ -179,7 +189,7 @@ function replyBatchResult<
   const lines = [
     ...successes.map((outcomeContext) => {
       const success = flow.buildSuccessMessage(t, outcomeContext);
-      return `${Emojis.CHECK} <@${targetIdOf(outcomeContext.target)}> - ${success.body}`;
+      return `${Emojis.Check} <@${targetIdOf(outcomeContext.target)}> - ${success.body}`;
     }),
     ...rejected.map(rejectedLine),
   ];
@@ -312,7 +322,10 @@ export async function runModerationFlow<
   const successes: ModerationCommand.OutcomeContext<Target, Outcome, Prepared>[] =
     [];
 
-  for (const { target, prepared: preparedValue } of prepared) {
+  const runOne = async ({
+    target,
+    prepared: preparedValue,
+  }: PreparedEntry<Target, Prepared>): Promise<void> => {
     const context: ModerationCommand.ActionContext<Target, Prepared> = {
       guild: ctx.guild!,
       target,
@@ -324,7 +337,7 @@ export async function runModerationFlow<
     if (logScope === undefined) {
       const outcome = await flow.action(context);
       successes.push({ ...context, outcome });
-      continue;
+      return;
     }
 
     try {
@@ -334,7 +347,7 @@ export async function runModerationFlow<
       const expected = flow.mapExpectedError?.(t, error, context) ?? null;
       if (expected) {
         rejected.push({ target, reply: expected });
-        continue;
+        return;
       }
       logError(
         `${logScope}: guild=${context.guild.id} target=${targetIdOf(target)}`,
@@ -345,6 +358,17 @@ export async function runModerationFlow<
         reply: flow.buildFailureMessage?.(t, context) ?? actionFailed(t),
       });
     }
+  };
+
+  if (prepared.length === 1) {
+    await runOne(prepared[0]!);
+  } else {
+    // A batch of mass-action targets is staggered, not fired all at once, so
+    // a 25-target `/ban` doesn't burst the guild's audit-log/ban rate limit.
+    await mapWithConcurrency(prepared, DefaultBatchConcurrency, async (entry) => {
+      await runOne(entry);
+      await sleep(BatchStaggerMs);
+    });
   }
 
   return replyBatchResult(ctx, t, flow, successes, rejected);

@@ -74,7 +74,7 @@ function setupShell(
 ): CardReply {
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.SHIELD} Server Setup — Step ${step} of ${SetupTotalSteps}`,
+    `${Emojis.Shield} Server Setup — Step ${step} of ${SetupTotalSteps}`,
     [setupProgressLines(step, state).join("\n"), `**${heading}**\n${hint}`],
     {
       breadcrumbs: ["Setup"],
@@ -171,7 +171,7 @@ export function buildSetupStepView(
             state.minAgeHours !== null
               ? `Min age: ${state.minAgeHours}h`
               : "Set min age…",
-          emoji: Emojis.EDIT,
+          emoji: Emojis.Edit,
           style: ButtonStyle.Secondary,
         }),
         createActionButton({
@@ -202,7 +202,7 @@ export function buildSetupReviewView(state: SetupWizardState): CardReply {
   ].join("\n");
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.SHIELD} Server Setup — Review`,
+    `${Emojis.Shield} Server Setup — Review`,
     [setupProgressLines(SetupTotalSteps, settled).join("\n"), summary],
     {
       breadcrumbs: ["Setup", "Review"],
@@ -233,7 +233,7 @@ export function buildSetupSuccessCard(state: SetupWizardState): CardReply {
     `Verification: ${settled.verificationMode ? (verificationLabels[settled.verificationMode] ?? settled.verificationMode) : "Unchanged"}`,
     `Join gate: ${settled.joinGateEnabled ? `On (min age ${settled.minAgeHours}h)` : "Off"}`,
   ].join("\n");
-  return makeSuccessCard(`${Emojis.CHECK} Setup Complete`, recap, {
+  return makeSuccessCard(`${Emojis.Check} Setup Complete`, recap, {
     breadcrumbs: ["Setup"],
     footer: "Open the Hub to fine-tune every module.",
     actionRows: buildSafeActionRows([
@@ -241,7 +241,7 @@ export function buildSetupSuccessCard(state: SetupWizardState): CardReply {
         createActionButton({
           customId: "lumi:tab:home",
           label: "Open Hub",
-          emoji: Emojis.BOT,
+          emoji: Emojis.Bot,
           style: ButtonStyle.Primary,
         }),
       ),

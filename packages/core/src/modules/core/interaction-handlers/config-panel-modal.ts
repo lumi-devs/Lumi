@@ -114,10 +114,10 @@ export class ConfigPanelModalHandler extends InteractionHandler {
     } else if (kind === "modal") {
       for (const f of record.meta.configFields ?? []) {
         if (
-          f.type !== FieldType.STRING &&
-          f.type !== FieldType.STRING_LIST &&
-          f.type !== FieldType.NUMBER &&
-          f.type !== FieldType.DURATION
+          f.type !== FieldType.String &&
+          f.type !== FieldType.StringList &&
+          f.type !== FieldType.Number &&
+          f.type !== FieldType.Duration
         )
           continue;
         let raw: string;

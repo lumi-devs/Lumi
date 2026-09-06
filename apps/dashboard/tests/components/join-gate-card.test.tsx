@@ -14,15 +14,15 @@ const { JoinGateCard } = await import("#/components/guild/join-gate-card");
 const GateActions = ["log", "kick", "timeout", "quarantine"];
 
 function bool(key: string, label: string, group: string): ConfigField {
-  return { key, label, type: FieldType.BOOLEAN, description: `${label} description.`, group };
+  return { key, label, type: FieldType.Boolean, description: `${label} description.`, group };
 }
 
 function num(key: string, label: string, group: string): ConfigField {
-  return { key, label, type: FieldType.NUMBER, description: `${label} description.`, group };
+  return { key, label, type: FieldType.Number, description: `${label} description.`, group };
 }
 
 function gateAction(key: string, label: string, group: string, choices: string[] = GateActions): ConfigField {
-  return { key, label, type: FieldType.ENUM, description: `${label} description.`, choices, group };
+  return { key, label, type: FieldType.Enum, description: `${label} description.`, choices, group };
 }
 
 /** Mirrors the security module's join-gate / filter / verification schema. */
@@ -33,7 +33,7 @@ const configFields: ConfigField[] = [
   num("raid_window_seconds", "Raid Window (seconds)", "Join Gate"),
   gateAction("raid_action", "Gate Action", "Join Gate", ["kick", "timeout", "quarantine"]),
   gateAction("raid_account_type", "Raid Response Scope", "Join Gate", ["all", "suspicious"]),
-  { key: "raid_warn_role_ids", label: "Raid Warn Roles", type: FieldType.MULTI_ROLE, description: "Mentioned on raid mode.", group: "Join Gate" },
+  { key: "raid_warn_role_ids", label: "Raid Warn Roles", type: FieldType.MultiRole, description: "Mentioned on raid mode.", group: "Join Gate" },
   bool("filter_no_avatar_enabled", "Filter: No Avatar", "Join Gate Filters"),
   gateAction("filter_no_avatar_action", "No Avatar Action", "Join Gate Filters"),
   bool("filter_min_age_enabled", "Filter: Min Account Age", "Join Gate Filters"),
@@ -42,13 +42,13 @@ const configFields: ConfigField[] = [
   bool("filter_unverified_bot_enabled", "Filter: Unverified Bots", "Join Gate Filters"),
   gateAction("filter_unverified_bot_action", "Unverified Bot Action", "Join Gate Filters"),
   bool("filter_username_pattern_enabled", "Filter: Username Pattern", "Join Gate Filters"),
-  { key: "filter_username_pattern", label: "Username Patterns", type: FieldType.STRING_LIST, description: "Substrings.", group: "Join Gate Filters" },
+  { key: "filter_username_pattern", label: "Username Patterns", type: FieldType.StringList, description: "Substrings.", group: "Join Gate Filters" },
   gateAction("filter_username_pattern_action", "Username Pattern Action", "Join Gate Filters"),
   bool("filter_advertising_enabled", "Filter: Advertising Account", "Join Gate Filters"),
   gateAction("filter_advertising_action", "Advertising Account Action", "Join Gate Filters"),
   bool("verification_enabled", "Verification", "Verification"),
-  { key: "verified_role_id", label: "Verified Role", type: FieldType.ROLE, description: "Granted on pass.", group: "Verification" },
-  { key: "verification_pending_role_id", label: "Pending Role", type: FieldType.ROLE, description: "Assigned on join.", group: "Verification" },
+  { key: "verified_role_id", label: "Verified Role", type: FieldType.Role, description: "Granted on pass.", group: "Verification" },
+  { key: "verification_pending_role_id", label: "Pending Role", type: FieldType.Role, description: "Assigned on join.", group: "Verification" },
   num("verification_timeout_minutes", "Verify Timeout (minutes)", "Verification"),
   bool("verification_kick_on_timeout", "Kick on Timeout", "Verification"),
   gateAction("verification_mode", "Verification Mode", "Verification", ["emoji", "none", "web"]),

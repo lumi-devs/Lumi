@@ -19,7 +19,7 @@ const channels = [{ id: "111", name: "Lobby", type: 2 }];
 const templateField: ConfigField = {
   key: "default_name_template",
   label: "Default Channel Name Pattern",
-  type: FieldType.STRING,
+  type: FieldType.String,
   description:
     "Used to pre-fill new generators. Supports {username}, {name}, {number}, {position}.",
   default: "{username}'s Channel",

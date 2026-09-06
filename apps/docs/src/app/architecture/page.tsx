@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DocPage } from "@/components/doc-page";
 import { CodeBlock } from "@/components/code-block";
+import { rpcActionCount } from "@/lib/rpc-actions";
 
 export const metadata: Metadata = {
   title: "Architecture",
@@ -54,8 +55,8 @@ export default function ArchitecturePage() {
       </p>
       <p>
         The action surface is defined once in <code>packages/contracts/src/rpc.ts</code>:{" "}
-        <code>RpcRequestPayloads</code> maps each of the 69 wire action strings to its payload,
-        with <code>never</code> marking actions that take no data. See{" "}
+        <code>RpcRequestPayloads</code> maps each of the {rpcActionCount} wire action strings to
+        its payload, with <code>never</code> marking actions that take no data. See{" "}
         <a href="/rpc">RPC Reference</a> for the full table.
       </p>
 

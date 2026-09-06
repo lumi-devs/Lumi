@@ -12,6 +12,7 @@ import {
 } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { errorCode, logError } from "#lib/utilities/errors.js";
+import { renderTemplate } from "#lib/utilities/template.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import {
   clearVoiceChannelOccupancy,
@@ -45,8 +46,8 @@ const cleanupJobId = (guildId: string, channelId: string) =>
 /**
  * Resolves a generator's name template into a channel name.
  * Supports `{}`/`{number}` (sequence number, kept both for backwards
- * compatibility), `{username}` (raw account username), `{name}` (display
- * name/nickname), and `{position}` (alias of `{number}`). Falls back to
+ * compatibility), `{username}` (raw account username), `{name}`/`{nickname}`
+ * (display name), and `{position}` (alias of `{number}`). Falls back to
  * appending the number when no placeholder is present. Truncated to
  * Discord's 100-character channel name limit after all substitutions.
  */
@@ -55,16 +56,18 @@ export function resolveGeneratorName(
   { number, member }: { number: number; member: GuildMember },
 ): string {
   const trimmed = template.trim();
-  const hasPlaceholder = /\{\}|\{number\}|\{position\}|\{username\}|\{name\}/.test(
-    trimmed,
-  );
+  const hasPlaceholder =
+    /\{\}|\{number\}|\{position\}|\{username\}|\{name\}|\{nickname\}/.test(
+      trimmed,
+    );
   const substituted = hasPlaceholder
-    ? trimmed
-        .replaceAll("{}", String(number))
-        .replaceAll("{number}", String(number))
-        .replaceAll("{position}", String(number))
-        .replaceAll("{username}", member.user.username)
-        .replaceAll("{name}", member.displayName)
+    ? renderTemplate(trimmed.replaceAll("{}", "{number}"), {
+        number: String(number),
+        position: String(number),
+        username: member.user.username,
+        name: member.displayName,
+        nickname: member.displayName,
+      })
     : `${trimmed} ${number}`;
   return [...substituted].slice(0, 100).join("");
 }

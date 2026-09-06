@@ -71,19 +71,19 @@ export class LumiCommand extends BaseSubcommand {
     if (!PermitResolver.isBotOwner(ctx.user.id)) {
       throw new UserError({
         identifier: "AccessDenied",
-        message: `${Emojis.CROSS} Only Bot Owners can update Lumi core.`,
+        message: `${Emojis.Cross} Only Bot Owners can update Lumi core.`,
       });
     }
     const t = await ctx.fetchT();
     await ctx.replyInfo(
       t("core:updatingCoreTitle"),
-      `${Emojis.LOADING} ${t("core:updatingCoreText")}`,
+      `${Emojis.Loading} ${t("core:updatingCoreText")}`,
     );
 
     const res = await updateLumiCore();
     if (res.error) {
       await ctx.replyError(
-        `${Emojis.ERROR} ${t("core:coreUpdateFailedTitle")}`,
+        `${Emojis.Error} ${t("core:coreUpdateFailedTitle")}`,
         res.error,
       );
       return;
@@ -97,7 +97,7 @@ export class LumiCommand extends BaseSubcommand {
         changelog: res.changelog,
       });
       await ctx.reply(
-        makeSuccessCard(`${Emojis.BOT} ${t("core:coreUpdatedTitle")}`, body, {
+        makeSuccessCard(`${Emojis.Bot} ${t("core:coreUpdatedTitle")}`, body, {
           actionRows: [restartChoiceRow(ctx.user.id)],
         }),
       );
@@ -105,7 +105,7 @@ export class LumiCommand extends BaseSubcommand {
     }
 
     await ctx.replySuccess(
-      `${Emojis.BOT} ${t("core:coreUpToDateTitle")}`,
+      `${Emojis.Bot} ${t("core:coreUpToDateTitle")}`,
       t("core:coreUpToDateText", { currentCommit: res.currentCommit }),
     );
   }

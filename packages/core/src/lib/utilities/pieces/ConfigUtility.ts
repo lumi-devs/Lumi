@@ -29,7 +29,7 @@ export class ConfigUtility extends Utility {
     const coerced = this.coerce(rawValue, field.type, field.choices);
     if (coerced === null) {
       const hint =
-        field.type === FieldType.ENUM
+        field.type === FieldType.Enum
           ? `Choices: ${field.choices!.join(", ")}`
           : `Expected ${field.type}.`;
       throw new Error(`Invalid value: ${hint}`);
@@ -76,7 +76,7 @@ export class ConfigUtility extends Utility {
   ): Promise<boolean> {
     const meta = this.container.moduleStore.getRecord(moduleName)?.meta;
     const field = meta?.configFields?.find((f) => f.key === key);
-    if (!field || field.type !== FieldType.BOOLEAN) {
+    if (!field || field.type !== FieldType.Boolean) {
       throw new Error(`\`${key}\` is not a boolean config key.`);
     }
 
@@ -248,7 +248,7 @@ export class ConfigUtility extends Utility {
 
   public coerce(value: unknown, type: FieldType, choices?: string[]): unknown {
     switch (type) {
-      case FieldType.BOOLEAN: {
+      case FieldType.Boolean: {
         if (typeof value === "boolean") return value;
         if (typeof value !== "string") return null;
         const lower = value.toLowerCase();
@@ -258,26 +258,26 @@ export class ConfigUtility extends Utility {
         if (falseSet.has(lower)) return false;
         return null;
       }
-      case FieldType.NUMBER: {
+      case FieldType.Number: {
         if (typeof value === "number") return value;
         if (typeof value !== "string") return null;
         const n = Number(value);
         return isNaN(n) ? null : n;
       }
-      case FieldType.ENUM:
+      case FieldType.Enum:
         return typeof value === "string" && choices?.includes(value) ? value : null;
-      case FieldType.CHANNEL:
-      case FieldType.ROLE:
-      case FieldType.USER: {
+      case FieldType.Channel:
+      case FieldType.Role:
+      case FieldType.User: {
         if (typeof value !== "string") return null;
         const id = cleanMention(value);
         return /^\d{17,20}$/.test(id) ? id : null;
       }
-      case FieldType.DURATION:
+      case FieldType.Duration:
         return typeof value === "string" ? value : null;
-      case FieldType.MULTI_ROLE:
-      case FieldType.MULTI_CHANNEL:
-      case FieldType.MULTI_USER: {
+      case FieldType.MultiRole:
+      case FieldType.MultiChannel:
+      case FieldType.MultiUser: {
         const entries = Array.isArray(value)
           ? value.map(String)
           : typeof value === "string"
@@ -288,7 +288,7 @@ export class ConfigUtility extends Utility {
           .map((entry) => cleanMention(entry.trim()))
           .filter((id) => id.length > 0);
       }
-      case FieldType.STRING_LIST: {
+      case FieldType.StringList: {
         const entries = Array.isArray(value)
           ? value.map(String)
           : typeof value === "string"

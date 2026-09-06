@@ -19,7 +19,7 @@ function field(overrides: Partial<ConfigField>): ConfigField {
   return {
     key: "testKey",
     label: "Test Field",
-    type: FieldType.STRING,
+    type: FieldType.String,
     description: "A test field.",
     ...overrides,
   };
@@ -30,7 +30,7 @@ describe("ConfigFieldInput", () => {
     const onChange = vi.fn();
     render(
       <ConfigFieldInput
-        field={field({ key: "limit", label: "Limit", type: FieldType.NUMBER, step: 5 })}
+        field={field({ key: "limit", label: "Limit", type: FieldType.Number, step: 5 })}
         value={25}
         onChange={onChange}
       />,
@@ -48,7 +48,7 @@ describe("ConfigFieldInput", () => {
     const onChange = vi.fn();
     render(
       <ConfigFieldInput
-        field={field({ key: "limit", label: "Limit", type: FieldType.NUMBER })}
+        field={field({ key: "limit", label: "Limit", type: FieldType.Number })}
         value={7}
         onChange={onChange}
       />,
@@ -64,7 +64,7 @@ describe("ConfigFieldInput", () => {
         field={field({
           key: "muteDuration",
           label: "Mute Duration",
-          type: FieldType.DURATION,
+          type: FieldType.Duration,
           quickPicks: ["5m", "15m", "1h"],
         })}
         value="5m"
@@ -84,7 +84,7 @@ describe("ConfigFieldInput", () => {
     const onChange = vi.fn();
     render(
       <ConfigFieldInput
-        field={field({ key: "pingRoles", label: "Ping Roles", type: FieldType.MULTI_ROLE })}
+        field={field({ key: "pingRoles", label: "Ping Roles", type: FieldType.MultiRole })}
         value={["111"]}
         onChange={onChange}
         roles={roles}
@@ -106,7 +106,7 @@ describe("ConfigFieldInput", () => {
     const onChange = vi.fn();
     render(
       <ConfigFieldInput
-        field={field({ key: "watchChannels", label: "Watch Channels", type: FieldType.MULTI_CHANNEL })}
+        field={field({ key: "watchChannels", label: "Watch Channels", type: FieldType.MultiChannel })}
         value={[]}
         onChange={onChange}
         roles={roles}
@@ -128,7 +128,7 @@ describe("ConfigFieldInput", () => {
     const onChange = vi.fn();
     render(
       <ConfigFieldInput
-        field={field({ key: "watchUsers", label: "Watch Users", type: FieldType.MULTI_USER })}
+        field={field({ key: "watchUsers", label: "Watch Users", type: FieldType.MultiUser })}
         value={[]}
         onChange={onChange}
         roles={roles}
@@ -148,7 +148,7 @@ describe("ConfigFieldInput", () => {
   it("STRING_LIST adds and removes plain text entries", () => {    const onChange = vi.fn();
     const { rerender } = render(
       <ConfigFieldInput
-        field={field({ key: "badTerms", label: "Bad Terms", type: FieldType.STRING_LIST })}
+        field={field({ key: "badTerms", label: "Bad Terms", type: FieldType.StringList })}
         value={["spam"]}
         onChange={onChange}
       />,
@@ -165,7 +165,7 @@ describe("ConfigFieldInput", () => {
 
     rerender(
       <ConfigFieldInput
-        field={field({ key: "badTerms", label: "Bad Terms", type: FieldType.STRING_LIST })}
+        field={field({ key: "badTerms", label: "Bad Terms", type: FieldType.StringList })}
         value={["spam"]}
         onChange={onChange}
       />,
@@ -186,7 +186,7 @@ describe("ConfigFieldInput", () => {
     ];
     render(
       <ConfigFieldInput
-        field={field({ key: "logChannel", label: "Log Channel", type: FieldType.CHANNEL })}
+        field={field({ key: "logChannel", label: "Log Channel", type: FieldType.Channel })}
         value={null}
         onChange={onChange}
         roles={roles}
@@ -211,7 +211,7 @@ describe("ConfigFieldInput", () => {
         field={field({
           key: "lounge",
           label: "Lounge",
-          type: FieldType.CHANNEL,
+          type: FieldType.Channel,
           channelTypes: [2],
         })}
         value={null}

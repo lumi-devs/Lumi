@@ -2,6 +2,7 @@ import { respondWithChoices, filterAutocompleteChoices } from "#lib/utilities/au
 import type { AutocompleteInteraction } from "discord.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
+import { parseSnowflakeList, resolveUsers } from "#lib/moderation/multi-target.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Result } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
@@ -14,9 +15,27 @@ const Root = LanguageKeys.Commands;
 const UserIdPattern = /^\d{17,20}$/;
 const SecondsPerDay = 86400;
 
+/** Merges the single `user` option with the `users` mass-target string, deduped and capped. */
+async function resolveBanTargets(
+  ctx: ModerationSubcommand.RunContext,
+): Promise<User[]> {
+  if (!ctx.isSlash) return ctx.getUsers("user", { required: true });
+
+  const single = await ctx.getUser("user");
+  const extra = await ctx.getString("users");
+  const ids = new Set(extra ? parseSnowflakeList(extra) : []);
+  if (single) ids.add(single.id);
+  if (ids.size === 0) return [];
+
+  const resolved = await resolveUsers([...ids]);
+  return single && !resolved.some((u) => u.id === single.id)
+    ? [single, ...resolved]
+    : resolved;
+}
+
 const BanAdd: ModerationSubcommand.Flow<User, ModerationCase, number> = {
   logScope: "ban",
-  resolveTarget: (ctx) => ctx.getUsers("user", { required: true }),
+  resolveTarget: (ctx) => resolveBanTargets(ctx),
   preHandle: async (ctx) =>
     Result.ok(ctx.isSlash ? ((await ctx.getInteger("delete_days")) ?? 0) : 0),
   confirm: (t, { target, reason }) => ({
@@ -112,7 +131,10 @@ export class BanCommand extends ModerationSubcommand {
         .addSubcommand((s) =>
           applyLocalizedBuilder(s, "commands:banAdd")
             .addUserOption((o) =>
-              applyLocalizedBuilder(o, "commands:banUser").setRequired(true),
+              applyLocalizedBuilder(o, "commands:banUser").setRequired(false),
+            )
+            .addStringOption((o) =>
+              applyLocalizedBuilder(o, "commands:banUsers").setRequired(false),
             )
             .addStringOption((o) =>
               applyLocalizedBuilder(o, "commands:modReason").setRequired(false).setAutocomplete(true),

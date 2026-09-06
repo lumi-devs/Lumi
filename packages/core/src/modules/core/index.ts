@@ -33,7 +33,7 @@ async function handleDataRetentionFire(): Promise<void> {
   short: "Essential bot commands, module management, and administrative panels.",
   endUserDataStatement:
     "Stores user IDs in permit assignments, system blocklists, and audit logs. Handled centrally during GDPR erasure.",
-  emoji: Emojis.SHIELD,
+  emoji: Emojis.Shield,
   disableable: false,
   category: "System",
 })
@@ -48,7 +48,7 @@ export class CoreModule extends Module {
       enabled: true,
       displayName: "Core",
       description: "The built-in core module.",
-      emoji: Emojis.SHIELD,
+      emoji: Emojis.Shield,
     });
   }
 

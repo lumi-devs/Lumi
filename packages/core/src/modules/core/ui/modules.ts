@@ -52,8 +52,8 @@ export interface FeatureListEntry {
 
 const formatStatusBadge = (status: "enabled" | "disabled", t?: LumiT) =>
   status === "enabled"
-    ? `${Emojis.SUCCESS} \`${t ? t(PanelsKeys.DetailEnabled) : "ENABLED"}\``
-    : `${Emojis.ERROR} \`${t ? t(PanelsKeys.DetailDisabled) : "DISABLED"}\``;
+    ? `${Emojis.Success} \`${t ? t(PanelsKeys.DetailEnabled) : "ENABLED"}\``
+    : `${Emojis.Error} \`${t ? t(PanelsKeys.DetailDisabled) : "DISABLED"}\``;
 
 /** True when the stored value (or schema default) counts as configured. */
 const hasStoredValue = (field: ConfigField, value: unknown): boolean => {
@@ -65,18 +65,18 @@ const hasStoredValue = (field: ConfigField, value: unknown): boolean => {
 
 /** Per-field status glyph for the detail row headline. */
 const statusGlyphFor = (field: ConfigField, value: unknown): string => {
-  if (field.type === FieldType.BOOLEAN) {
+  if (field.type === FieldType.Boolean) {
     const fallback =
       field.default === undefined ? false : Boolean(field.default);
     const current = value ?? fallback;
-    return current ? Emojis.CHECK : Emojis.CROSS;
+    return current ? Emojis.Check : Emojis.Cross;
   }
-  return hasStoredValue(field, value) ? Emojis.SUCCESS : Emojis.ERROR;
+  return hasStoredValue(field, value) ? Emojis.Success : Emojis.Error;
 };
 
 /** ENUM fields with a bounded choice set render as an in-place select. */
 const isEnumField = (field: ConfigField): boolean =>
-  field.type === FieldType.ENUM &&
+  field.type === FieldType.Enum &&
   Array.isArray(field.choices) &&
   field.choices.length > 0;
 
@@ -85,10 +85,10 @@ const isEnumField = (field: ConfigField): boolean =>
  * `step`); on Discord every text-like field is edited through a modal input.
  */
 const isTextField = (field: ConfigField): boolean =>
-  field.type === FieldType.STRING ||
-  field.type === FieldType.STRING_LIST ||
-  field.type === FieldType.NUMBER ||
-  field.type === FieldType.DURATION;
+  field.type === FieldType.String ||
+  field.type === FieldType.StringList ||
+  field.type === FieldType.Number ||
+  field.type === FieldType.Duration;
 
 /** Detail headline: status glyph + name + current value, description below. */
 const detailRowLines = (
@@ -128,7 +128,7 @@ export function buildFeatureListView(
   const sections = pageFeatures.map((f) =>
     settingRow(
       [
-        `${f.guildEnabled ? Emojis.SUCCESS : Emojis.ERROR} ${f.meta.emoji} **${f.meta.displayName}**`,
+        `${f.guildEnabled ? Emojis.Success : Emojis.Error} ${f.meta.emoji} **${f.meta.displayName}**`,
         `-# ${f.meta.description ? cutText(f.meta.description, 90) : "No description"}`,
       ],
       {
@@ -153,7 +153,7 @@ export function buildFeatureListView(
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.GEAR} ${t ? t(PanelsKeys.ModulesTitle) : "Feature Modules"}`,
+    `${Emojis.Gear} ${t ? t(PanelsKeys.ModulesTitle) : "Feature Modules"}`,
     pageFeatures.length
       ? ""
       : t
@@ -254,13 +254,13 @@ export function buildFeatureDetailView(
   const sections = rowFields.map((field) => {
     const lines = detailRowLines(field, config[field.key], t);
 
-    if (field.type === FieldType.BOOLEAN) {
+    if (field.type === FieldType.Boolean) {
       const fallback =
         field.default === undefined ? false : Boolean(field.default);
       const on = Boolean(config[field.key] ?? fallback);
       return settingRow(lines, {
         customId: `cfg:bool:${meta.name}:${field.key}:${idx}`,
-        label: on ? Emojis.CHECK : Emojis.CROSS,
+        label: on ? Emojis.Check : Emojis.Cross,
         style: on ? ButtonStyle.Success : ButtonStyle.Secondary,
       });
     }
@@ -269,7 +269,7 @@ export function buildFeatureDetailView(
       return settingRow(lines, {
         customId: `cfg:fedit:${meta.name}:${field.key}:${idx}`,
         label: t ? t(PanelsKeys.DetailEdit) : "Edit",
-        emoji: Emojis.EDIT,
+        emoji: Emojis.Edit,
         style: ButtonStyle.Secondary,
       });
     }
@@ -277,7 +277,7 @@ export function buildFeatureDetailView(
     return settingRow(lines, {
       customId: `cfg:field:${meta.name}:${field.key}:${idx}`,
       label: t ? t(PanelsKeys.DetailEdit) : "Edit",
-      emoji: Emojis.EDIT,
+      emoji: Emojis.Edit,
       style: ButtonStyle.Secondary,
     });
   });
@@ -308,13 +308,13 @@ export function buildFeatureDetailView(
           : t
             ? t(PanelsKeys.DetailEnable)
             : "Enable Module",
-        emoji: guildEnabled ? Emojis.CROSS : Emojis.CHECK,
+        emoji: guildEnabled ? Emojis.Cross : Emojis.Check,
         style: guildEnabled ? ButtonStyle.Danger : ButtonStyle.Success,
       }),
       createActionButton({
         customId: `cfg:rst:${meta.name}:${idx}`,
         label: t ? t(PanelsKeys.DetailReset) : "Reset",
-        emoji: Emojis.UNINSTALL,
+        emoji: Emojis.Uninstall,
         style: ButtonStyle.Secondary,
       }),
     ),
@@ -346,7 +346,7 @@ export function buildFeatureDetailView(
     createActionButton({
       customId: `cfg:hist:${meta.name}:${idx}`,
       label: t ? t(PanelsKeys.DetailHistory) : "History",
-      emoji: Emojis.CLOCK,
+      emoji: Emojis.Clock,
       style: ButtonStyle.Secondary,
     }),
   ];
@@ -356,7 +356,7 @@ export function buildFeatureDetailView(
       createActionButton({
         customId: `cfg:ovr:${meta.name}:${idx}`,
         label: t ? t(PanelsKeys.DetailOverrides) : "Overrides",
-        emoji: Emojis.SHIELD,
+        emoji: Emojis.Shield,
         style: ButtonStyle.Secondary,
       }),
     );
@@ -421,10 +421,10 @@ export function buildFieldEditView(
   const rows: Row[] = [];
 
   if (
-    field.type === FieldType.CHANNEL ||
-    field.type === FieldType.MULTI_CHANNEL
+    field.type === FieldType.Channel ||
+    field.type === FieldType.MultiChannel
   ) {
-    const multi = field.type === FieldType.MULTI_CHANNEL;
+    const multi = field.type === FieldType.MultiChannel;
     rows.push(
       row(
         createChannelSelectMenu({
@@ -437,10 +437,10 @@ export function buildFieldEditView(
       ),
     );
   } else if (
-    field.type === FieldType.ROLE ||
-    field.type === FieldType.MULTI_ROLE
+    field.type === FieldType.Role ||
+    field.type === FieldType.MultiRole
   ) {
-    const multi = field.type === FieldType.MULTI_ROLE;
+    const multi = field.type === FieldType.MultiRole;
     rows.push(
       row(
         createRoleSelectMenu({
@@ -452,10 +452,10 @@ export function buildFieldEditView(
       ),
     );
   } else if (
-    field.type === FieldType.USER ||
-    field.type === FieldType.MULTI_USER
+    field.type === FieldType.User ||
+    field.type === FieldType.MultiUser
   ) {
-    const multi = field.type === FieldType.MULTI_USER;
+    const multi = field.type === FieldType.MultiUser;
     rows.push(
       row(
         createUserSelectMenu({
@@ -466,7 +466,7 @@ export function buildFieldEditView(
         }),
       ),
     );
-  } else if (field.type === FieldType.ENUM && field.choices?.length) {
+  } else if (field.type === FieldType.Enum && field.choices?.length) {
     rows.push(
       row(
         createStringSelectMenu({
@@ -487,7 +487,7 @@ export function buildFieldEditView(
         createActionButton({
           customId: `cfg:fedit:${meta.name}:${field.key}:${fieldPage}`,
           label: t ? t(PanelsKeys.FieldEditEnterValue) : "Enter value…",
-          emoji: Emojis.EDIT,
+          emoji: Emojis.Edit,
           style: ButtonStyle.Primary,
         }),
       ),

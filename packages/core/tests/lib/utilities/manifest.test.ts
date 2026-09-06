@@ -54,7 +54,7 @@ describe("Module Manifest Utilities", () => {
         conflicts: ["conflict-1"],
         configOverrides: true,
         configFields: [
-          { key: "enabled", type: FieldType.BOOLEAN, label: "Enabled", description: "Enable feature" },
+          { key: "enabled", type: FieldType.Boolean, label: "Enabled", description: "Enable feature" },
         ],
       };
 

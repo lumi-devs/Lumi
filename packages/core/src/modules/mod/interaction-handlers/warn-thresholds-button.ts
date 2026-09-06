@@ -36,7 +36,7 @@ export class WarnThresholdsButtonHandler extends InteractionHandler {
     if (!(await hasRequiredPermit(interaction, "admin.config"))) {
       throw new UserError({
         identifier: "AccessDenied",
-        message: `${Emojis.CROSS} You need the Admin permission level to manage warning thresholds.`,
+        message: `${Emojis.Cross} You need the Admin permission level to manage warning thresholds.`,
       });
     }
 

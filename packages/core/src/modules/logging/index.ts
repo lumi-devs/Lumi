@@ -18,8 +18,23 @@ import { ChannelType } from "discord.js";
   configSchema: cfg.object({
     log_channel_id: cfg.channel({
       group: "Setup",
-      label: "Log Channel",
-      description: "Channel where server events are logged.",
+      label: "Default Log Channel",
+      description:
+        "Fallback channel for log types without their own channel below. Empty disables logging.",
+      channelTypes: [ChannelType.GuildText],
+    }),
+    message_log_channel_id: cfg.channel({
+      group: "Setup",
+      label: "Message Log Channel",
+      description:
+        "Channel for message deletes and edits. Falls back to the default log channel.",
+      channelTypes: [ChannelType.GuildText],
+    }),
+    member_log_channel_id: cfg.channel({
+      group: "Setup",
+      label: "Member Log Channel",
+      description:
+        "Channel for joins, leaves, bans, unbans, nickname and role changes. Falls back to the default log channel.",
       channelTypes: [ChannelType.GuildText],
     }),
     message_deletes: cfg.boolean({

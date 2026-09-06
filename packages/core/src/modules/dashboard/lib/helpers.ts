@@ -2,6 +2,7 @@ import { container } from "@sapphire/framework";
 import {
   AppealReviewStatuses,
   AppealStatuses,
+  LogClaimOutcomes,
   WarnThresholdActions,
   type GuildSetupRunResult,
   type RpcRequest,
@@ -315,10 +316,39 @@ export const VerificationPanelSetSchema = s.object({
   messageId: SnowflakeSchema,
 });
 
+export const LogClaimDismissSchema = s.object({
+  channelId: SnowflakeSchema,
+  outcome: s.enum(LogClaimOutcomes),
+});
+
 export const TempVcGeneratorSetSchema = s.object({
   channelId: SnowflakeSchema,
   name: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(100).nullable(),
   limit: s.number().int().greaterThanOrEqual(0).lessThanOrEqual(99).optional(),
+});
+
+export const ReactionRoleOptionSchema = s.object({
+  id: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(32).optional(),
+  label: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(80),
+  emoji: s.string().lengthLessThanOrEqual(100).nullable().optional(),
+  description: s.string().lengthLessThanOrEqual(100).nullable().optional(),
+  roleId: SnowflakeSchema,
+  requiredRoleId: SnowflakeSchema.nullable().optional(),
+});
+
+export const ReactionRoleMenuSetSchema = s.object({
+  id: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(40),
+  title: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(100),
+  description: s.string().lengthLessThanOrEqual(1000).nullable().optional(),
+  color: s.string().lengthLessThanOrEqual(7).nullable().optional(),
+  mode: s.enum(["buttons", "select", "reactions"] as const),
+  exclusive: s.boolean().optional(),
+  maxRoles: s.number().int().greaterThanOrEqual(1).lessThanOrEqual(25).optional(),
+  options: s.array(ReactionRoleOptionSchema).lengthLessThanOrEqual(25),
+});
+
+export const ReactionRoleMenuDeleteSchema = s.object({
+  id: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(40),
 });
 
 export const GuildSummariesSchema = s.object({

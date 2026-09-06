@@ -14,6 +14,7 @@ import {
   ShieldAlert,
   SlidersHorizontal,
   StickyNote,
+  Ticket,
   TrendingUp,
   TriangleAlert,
   Volume2,
@@ -77,6 +78,7 @@ export function guildManagementGroups(guildId: string): GuildNavGroup[] {
       title: "Community & Engagement",
       links: [
         { href: `${base}/permits`, label: "Permits", icon: IdCard },
+        { href: `${base}/config/roles`, label: "Reaction Roles", icon: Ticket },
       ],
     },
     {

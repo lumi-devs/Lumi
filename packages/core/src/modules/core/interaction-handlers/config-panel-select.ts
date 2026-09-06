@@ -93,9 +93,9 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
             .getRecord(moduleName)
             ?.meta.configFields?.find((f) => f.key === key);
           const multi =
-            field?.type === FieldType.MULTI_ROLE ||
-            field?.type === FieldType.MULTI_CHANNEL ||
-            field?.type === FieldType.MULTI_USER;
+            field?.type === FieldType.MultiRole ||
+            field?.type === FieldType.MultiChannel ||
+            field?.type === FieldType.MultiUser;
           await this.cfg.setConfig(
             guildId,
             moduleName,

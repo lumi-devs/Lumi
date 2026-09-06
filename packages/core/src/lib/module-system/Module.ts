@@ -88,7 +88,7 @@ export function DefineModule(options: ModuleOptions) {
     const meta: ModuleMeta = {
       name: options.name ?? target.name.toLowerCase().replace(/module$/, ""),
       displayName: options.displayName ?? options.name ?? target.name,
-      emoji: options.emoji ?? Emojis.GEAR,
+      emoji: options.emoji ?? Emojis.Gear,
       description: options.description ?? "",
       short: options.short,
       endUserDataStatement: options.endUserDataStatement,
@@ -129,7 +129,7 @@ export abstract class Module extends Piece {
   ) {
     super(context, options);
     this.displayName = options.displayName ?? this.name;
-    this.emoji = options.emoji ?? Emojis.GEAR;
+    this.emoji = options.emoji ?? Emojis.Gear;
     this.description = options.description ?? "";
     this.version = options.version ?? CoreVersion;
     this.conflicts = options.conflicts ?? [];

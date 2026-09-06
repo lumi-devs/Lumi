@@ -1,5 +1,14 @@
-import { ChannelType, type Guild } from "discord.js";
+import {
+  ChannelType,
+  PermissionFlagsBits,
+  type Guild,
+  type NewsChannel,
+  type TextChannel,
+} from "discord.js";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
+
+/** A channel type with a `permissionOverwrites` manager - what `/lock` and `/lockdown` operate on. */
+export type LockableChannel = TextChannel | NewsChannel;
 
 export interface LockdownResult {
   modified: number;
@@ -48,4 +57,34 @@ export function lockAllTextChannels(guild: Guild): Promise<LockdownResult> {
 /** Clears the @everyone SendMessages override set by `lockAllTextChannels`. */
 export function unlockAllTextChannels(guild: Guild): Promise<LockdownResult> {
   return setEveryoneSendMessages(guild, null);
+}
+
+/** Whether @everyone is currently denied SendMessages on this one channel. */
+export function isChannelLocked(channel: LockableChannel): boolean {
+  const overwrite = channel.permissionOverwrites.cache.get(channel.guild.id);
+  return overwrite?.deny.has(PermissionFlagsBits.SendMessages) ?? false;
+}
+
+/** Denies @everyone SendMessages on one channel. Distinct from server-wide `lockAllTextChannels`. */
+export async function lockChannel(
+  channel: LockableChannel,
+  reason?: string,
+): Promise<void> {
+  await channel.permissionOverwrites.edit(
+    channel.guild.id,
+    { SendMessages: false },
+    { reason },
+  );
+}
+
+/** Clears the @everyone SendMessages override set by `lockChannel`. */
+export async function unlockChannel(
+  channel: LockableChannel,
+  reason?: string,
+): Promise<void> {
+  await channel.permissionOverwrites.edit(
+    channel.guild.id,
+    { SendMessages: null },
+    { reason },
+  );
 }

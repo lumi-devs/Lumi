@@ -74,6 +74,11 @@ export const RedisKeys = {
   guildIgnored: (guildId: string) => `lumi:ignore:guild:${guildId}`,
   channelIgnored: (guildId: string, channelId: string) =>
     `lumi:ignore:channel:${guildId}:${channelId}`,
+  logClaimCode: (guildId: string, code: string) =>
+    `lumi:logging:${guildId}:claimcode:${code}`,
+  logClaim: (guildId: string, channelId: string) =>
+    `lumi:logging:${guildId}:claim:${channelId}`,
+  logClaimIndex: (guildId: string) => `lumi:logging:${guildId}:claims`,
 
   botStats: () => "lumi:stats:bot",
 
@@ -107,6 +112,8 @@ export const RedisTTL = {
   warnCount: 365 * 24 * 3600,
   voiceOccupancy: 24 * 60 * 60,
   addonUpdateCheck: 300,
+  logClaimCode: 600,
+  logClaim: 24 * 60 * 60,
 } as const;
 
 /**

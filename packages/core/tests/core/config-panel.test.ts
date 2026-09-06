@@ -66,7 +66,7 @@ const sampleMeta = (fields: ConfigField[]): ModuleMeta => ({
 const boolField: ConfigField = {
   key: "flag",
   label: "Enabled flag",
-  type: FieldType.BOOLEAN,
+  type: FieldType.Boolean,
   description: "Flip it.",
   default: false,
 };
@@ -74,21 +74,21 @@ const boolField: ConfigField = {
 const textField: ConfigField = {
   key: "title",
   label: "Title",
-  type: FieldType.STRING,
+  type: FieldType.String,
   description: "Header text.",
 };
 
 const durationField: ConfigField = {
   key: "slowmode",
   label: "Slowmode",
-  type: FieldType.DURATION,
+  type: FieldType.Duration,
   description: "How long.",
 };
 
 const enumField: ConfigField = {
   key: "mode",
   label: "Mode",
-  type: FieldType.ENUM,
+  type: FieldType.Enum,
   description: "Pick one.",
   choices: ["off", "strict"],
   default: "off",
@@ -97,28 +97,28 @@ const enumField: ConfigField = {
 const channelField: ConfigField = {
   key: "logChannel",
   label: "Log channel",
-  type: FieldType.CHANNEL,
+  type: FieldType.Channel,
   description: "Where logs go.",
 };
 
 const multiRoleField: ConfigField = {
   key: "managerRoles",
   label: "Managers",
-  type: FieldType.MULTI_ROLE,
+  type: FieldType.MultiRole,
   description: "Who can manage.",
 };
 
 const multiUserField: ConfigField = {
   key: "watchUsers",
   label: "Watch Users",
-  type: FieldType.MULTI_USER,
+  type: FieldType.MultiUser,
   description: "Who to watch.",
 };
 
 const stringListField: ConfigField = {
   key: "badTerms",
   label: "Bad Terms",
-  type: FieldType.STRING_LIST,
+  type: FieldType.StringList,
   description: "Terms to block.",
 };
 

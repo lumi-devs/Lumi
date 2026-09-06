@@ -111,7 +111,7 @@ describe("getCategories", () => {
     const { categoryEmojis } = getCategories(container);
 
     expect(categoryEmojis["Moderation"]).toBe("🛡️");
-    expect(categoryEmojis["Utility"]).toBe(Emojis.GEAR);
+    expect(categoryEmojis["Utility"]).toBe(Emojis.Gear);
   });
 
   it("counts every non-hidden command across all categories", () => {

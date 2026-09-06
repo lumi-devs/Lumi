@@ -50,8 +50,8 @@ export async function setModuleEnabled(
     await container.moduleStore.setEnabled(name, enabled);
     return makeSuccessCard(
       enabled
-        ? `${Emojis.CHECK} Enabled Module`
-        : `${Emojis.CROSS} Disabled Module`,
+        ? `${Emojis.Check} Enabled Module`
+        : `${Emojis.Cross} Disabled Module`,
       `Successfully ${enabled ? "enabled" : "disabled"} **${record.meta.displayName}** globally.`,
     );
   } catch (err: unknown) {
@@ -73,10 +73,10 @@ export async function installModule(
   try {
     await downloader().installModule(repoName, moduleName);
     container.logger.debug(
-      `[Module] ${Emojis.INSTALL} Installed: ${moduleName} from ${repoName} by ${user.tag}`,
+      `[Module] ${Emojis.Install} Installed: ${moduleName} from ${repoName} by ${user.tag}`,
     );
     return makeSuccessCard(
-      `${Emojis.INSTALL} Module Installed`,
+      `${Emojis.Install} Module Installed`,
       `Successfully installed and loaded **${moduleName}** from **${repoName}**.`,
     );
   } catch (err: unknown) {
@@ -86,9 +86,9 @@ export async function installModule(
 
     const message = errorFrom(err).message;
     container.logger.warn(
-      `[Module] ${Emojis.ERROR} Install failed: ${moduleName} - ${message}`,
+      `[Module] ${Emojis.Error} Install failed: ${moduleName} - ${message}`,
     );
-    return makeErrorCard(`${Emojis.ERROR} Failed to Install Module`, message);
+    return makeErrorCard(`${Emojis.Error} Failed to Install Module`, message);
   }
 }
 
@@ -99,18 +99,18 @@ export async function uninstallModule(
   try {
     await downloader().uninstallModule(moduleName);
     container.logger.debug(
-      `[Module] ${Emojis.UNINSTALL} Uninstalled: ${moduleName} by ${user.tag}`,
+      `[Module] ${Emojis.Uninstall} Uninstalled: ${moduleName} by ${user.tag}`,
     );
     return makeSuccessCard(
-      `${Emojis.UNINSTALL} Module Uninstalled`,
+      `${Emojis.Uninstall} Module Uninstalled`,
       `Successfully uninstalled **${moduleName}**.`,
     );
   } catch (err: unknown) {
     const message = errorFrom(err).message;
     container.logger.warn(
-      `[Module] ${Emojis.ERROR} Uninstall failed: ${moduleName} - ${message}`,
+      `[Module] ${Emojis.Error} Uninstall failed: ${moduleName} - ${message}`,
     );
-    return makeErrorCard(`${Emojis.ERROR} Failed to Uninstall Module`, message);
+    return makeErrorCard(`${Emojis.Error} Failed to Uninstall Module`, message);
   }
 }
 
@@ -127,13 +127,13 @@ export async function reloadModule(
     await downloader().syncApplicationCommands();
     container.logger.info(`[Module] Reloaded: ${moduleName} by ${userTag}`);
     return makeSuccessCard(
-      `${Emojis.CHECK} Module Reloaded`,
+      `${Emojis.Check} Module Reloaded`,
       `**${moduleName}** has been reloaded. Its full source subtree was re-evaluated and slash commands (if any) re-synced.`,
     );
   } catch (err: unknown) {
     const message = errorFrom(err).message;
     container.logger.warn(`[Module] Reload failed: ${moduleName} - ${message}`);
-    return makeErrorCard(`${Emojis.ERROR} Reload Failed`, message);
+    return makeErrorCard(`${Emojis.Error} Reload Failed`, message);
   }
 }
 
@@ -151,7 +151,7 @@ export async function updateModule(
     return moduleUpdateResultCard(result, moduleName, userId);
   } catch (err: unknown) {
     return makeErrorCard(
-      `${Emojis.ERROR} Update Failed`,
+      `${Emojis.Error} Update Failed`,
       errorFrom(err).message,
     );
   }
@@ -200,7 +200,7 @@ export async function updateAllModules(userId: string): Promise<CardReply> {
     return multiUpdateReportCard(outcomes, userId);
   } catch (err: unknown) {
     return makeErrorCard(
-      `${Emojis.ERROR} Multi-Update Failed`,
+      `${Emojis.Error} Multi-Update Failed`,
       errorFrom(err).message,
     );
   }
@@ -213,7 +213,7 @@ export async function pinModule(moduleName: string): Promise<CardReply> {
     return modulePinnedCard(moduleName);
   } catch (err: unknown) {
     return makeErrorCard(
-      `${Emojis.ERROR} Pin Failed`,
+      `${Emojis.Error} Pin Failed`,
       errorFrom(err).message,
     );
   }
@@ -226,7 +226,7 @@ export async function unpinModule(moduleName: string): Promise<CardReply> {
     return moduleUnpinnedCard(moduleName);
   } catch (err: unknown) {
     return makeErrorCard(
-      `${Emojis.ERROR} Unpin Failed`,
+      `${Emojis.Error} Unpin Failed`,
       errorFrom(err).message,
     );
   }

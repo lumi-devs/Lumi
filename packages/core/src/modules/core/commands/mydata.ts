@@ -69,7 +69,7 @@ export class MyDataCommand extends BaseSubcommand {
 
   public async whatData(ctx: CommandContext) {
     await ctx.replyInfo(
-      `${Emojis.SHIELD} End-User Data & Privacy in Lumi`,
+      `${Emojis.Shield} End-User Data & Privacy in Lumi`,
       [
         "Lumi respects user privacy and complies with GDPR and CCPA data rights:",
         "",
@@ -144,7 +144,7 @@ export class MyDataCommand extends BaseSubcommand {
     const userId = ctx.user.id;
 
     const { confirmed } = await confirmPrompt(ctx, {
-      title: `${Emojis.WARNING_SIGN} Request Data Deletion`,
+      title: `${Emojis.WarningSign} Request Data Deletion`,
       body: [
         "Are you sure you want to delete and anonymize all your stored data in Lumi?",
         "",

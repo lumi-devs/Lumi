@@ -12,23 +12,23 @@ vi.mock("#/actions/guild-actions", () => ({
 const { SetupWizard } = await import("#/components/guild/setup-wizard");
 
 function channel(key: string, label: string): ConfigField {
-  return { key, label, type: FieldType.CHANNEL, description: `${label} description.` };
+  return { key, label, type: FieldType.Channel, description: `${label} description.` };
 }
 
 function role(key: string, label: string): ConfigField {
-  return { key, label, type: FieldType.ROLE, description: `${label} description.` };
+  return { key, label, type: FieldType.Role, description: `${label} description.` };
 }
 
 function bool(key: string, label: string): ConfigField {
-  return { key, label, type: FieldType.BOOLEAN, description: `${label} description.` };
+  return { key, label, type: FieldType.Boolean, description: `${label} description.` };
 }
 
 function num(key: string, label: string): ConfigField {
-  return { key, label, type: FieldType.NUMBER, description: `${label} description.` };
+  return { key, label, type: FieldType.Number, description: `${label} description.` };
 }
 
 function enumField(key: string, label: string, choices: string[]): ConfigField {
-  return { key, label, type: FieldType.ENUM, description: `${label} description.`, choices };
+  return { key, label, type: FieldType.Enum, description: `${label} description.`, choices };
 }
 
 const securityFields: ConfigField[] = [

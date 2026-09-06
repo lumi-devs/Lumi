@@ -20,14 +20,14 @@ export function moduleUpdateResultCard(
 ): CardReply {
   if (result.pinned) {
     return makeSuccessCard(
-      `${Emojis.PIN} Module Pinned`,
+      `${Emojis.Pin} Module Pinned`,
       `**${moduleName}** is pinned and was skipped. Run \`,module unpin ${moduleName}\` first if you want to update it.`,
     );
   }
 
   if (!result.updated) {
     return makeSuccessCard(
-      `${Emojis.CHECK} Module Up-To-Date`,
+      `${Emojis.Check} Module Up-To-Date`,
       `**${moduleName}** is already running the latest version!`,
     );
   }
@@ -38,14 +38,14 @@ export function moduleUpdateResultCard(
 
   if (result.needsRestart) {
     return makeSuccessCard(
-      `${Emojis.DOWNLOAD} Module Updated`,
+      `${Emojis.Download} Module Updated`,
       `Updated **${moduleName}** on disk. Bun can't hot-swap module code, so a restart is needed to load it.\n\n${changelogStr}`,
       { actionRows: [restartChoiceRow(userId)] },
     );
   }
 
   return makeSuccessCard(
-    `${Emojis.DOWNLOAD} Module Updated`,
+    `${Emojis.Download} Module Updated`,
     `Successfully updated and hot-reloaded **${moduleName}**!\n\n${changelogStr}`,
   );
 }

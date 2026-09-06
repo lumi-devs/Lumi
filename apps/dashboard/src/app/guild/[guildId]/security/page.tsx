@@ -9,11 +9,12 @@ import {
 import { toggleGuildModule } from "#/actions/guild-actions";
 import { PanicModeConsole } from "#/components/guild/panic-mode-console";
 import { VerificationPanelCard } from "#/components/guild/verification-panel-card";
+import { VerificationPreviewPlayground } from "#/components/guild/verification-preview-playground";
 import { AntiNukeCard } from "#/components/guild/anti-nuke-card";
 import { JoinGateCard } from "#/components/guild/join-gate-card";
 import { BackupsCard } from "#/components/guild/backups-card";
 import { ModuleMasterToggle } from "#/components/guild/module-master-toggle";
-import { Card, CardHeader, CardTitle } from "#/components/ui/card";
+import { Card, CardBody, CardDescription, CardHeader, CardTitle } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
 import { PageHeader } from "#/components/ui/page-header";
 import { isTextChannel } from "#/lib/channel-types";
@@ -147,6 +148,21 @@ export default async function SecurityPage({
             channels={textChannels}
           />
         )}
+      </div>
+
+      <div className="rise" style={{ "--rise-delay": "192ms" } as React.CSSProperties}>
+        <Card>
+          <CardHeader>
+            <CardTitle>See it in action — edit it live</CardTitle>
+            <CardDescription>
+              Draft the verification welcome copy and watch the panel members
+              see update instantly.
+            </CardDescription>
+          </CardHeader>
+          <CardBody>
+            <VerificationPreviewPlayground />
+          </CardBody>
+        </Card>
       </div>
 
       <div className="rise" style={{ "--rise-delay": "210ms" } as React.CSSProperties}>

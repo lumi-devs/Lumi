@@ -87,28 +87,74 @@ export default function ModulesPage() {
         <code>required</code> flag, <code>default</code>, and panel <code>group</code>. The
         available builders, matching the <code>FieldType</code> contract, are:
       </p>
-      <ul>
-        <li>
-          <code>cfg.string</code>, <code>cfg.number</code>, <code>cfg.boolean</code>,{" "}
-          <code>cfg.enum</code> — scalars. A <code>number</code> with <code>step</code> renders as
-          a range slider instead of a number box.
-        </li>
-        <li>
-          <code>cfg.channel</code>, <code>cfg.role</code>, <code>cfg.user</code> — Discord
-          snowflake pickers (channels accept a <code>channelTypes</code> restriction).
-        </li>
-        <li>
-          <code>cfg.duration</code> — stored as a string like <code>10m</code>, <code>2h</code>,{" "}
-          <code>7d</code>, with optional <code>quickPicks</code> presets.
-        </li>
-        <li>
-          <code>cfg.multiRole</code>, <code>cfg.multiChannel</code>,{" "}
-          <code>cfg.multiUser</code> — stored as string arrays of snowflakes.
-        </li>
-        <li>
-          <code>cfg.stringList</code> — a string array of free-text entries.
-        </li>
-      </ul>
+      <div className="doc-table-wrap">
+        <table className="doc-table">
+          <thead>
+            <tr>
+              <th>Builder</th>
+              <th>Extra options</th>
+              <th>Renders as</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>cfg.object(shape)</code></td>
+              <td>—</td>
+              <td>wraps the whole schema</td>
+            </tr>
+            <tr>
+              <td><code>cfg.boolean({"{ default }"})</code></td>
+              <td>—</td>
+              <td>Toggle</td>
+            </tr>
+            <tr>
+              <td><code>cfg.number({"{ default, min, max, step }"})</code></td>
+              <td><code>min</code>/<code>max</code> become validation bounds; a <code>step</code> renders a range slider instead of a number box</td>
+              <td>Number input</td>
+            </tr>
+            <tr>
+              <td><code>cfg.string({"{ default, list }"})</code></td>
+              <td><code>list: true</code> parses comma-separated input, stored as <code>string[]</code></td>
+              <td>Text input</td>
+            </tr>
+            <tr>
+              <td><code>cfg.enum(choices, {"{ default }"})</code></td>
+              <td><code>choices</code> is a <code>const</code> tuple</td>
+              <td>Select dropdown</td>
+            </tr>
+            <tr>
+              <td><code>cfg.channel({"{ default, channelTypes }"})</code></td>
+              <td>snowflake-validated</td>
+              <td>Channel picker</td>
+            </tr>
+            <tr>
+              <td><code>cfg.role({"{ default }"})</code></td>
+              <td>snowflake-validated</td>
+              <td>Role picker</td>
+            </tr>
+            <tr>
+              <td><code>cfg.user({"{ default }"})</code></td>
+              <td>snowflake-validated</td>
+              <td>User picker</td>
+            </tr>
+            <tr>
+              <td><code>cfg.duration({"{ default, quickPicks }"})</code></td>
+              <td>stored as a string like <code>10m</code>, <code>2h</code>, <code>7d</code>; optional <code>quickPicks</code> presets</td>
+              <td>Duration picker</td>
+            </tr>
+            <tr>
+              <td><code>cfg.multiRole</code> / <code>cfg.multiChannel</code> / <code>cfg.multiUser</code></td>
+              <td>snowflake-validated</td>
+              <td>Multi-select picker, stored as <code>string[]</code></td>
+            </tr>
+            <tr>
+              <td><code>cfg.stringList({"{ default }"})</code></td>
+              <td>—</td>
+              <td>free-text list, stored as <code>string[]</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <h2>Module layout</h2>
       <CodeBlock code={layout} language="text" title="Directory layout" />

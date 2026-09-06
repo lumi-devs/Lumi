@@ -30,30 +30,33 @@ import { useServerAction } from "#/lib/use-server-action";
 /**
  * Mirrors `TempVcUtility.resolveGeneratorName`: substitutes `{}`/`{number}`
  * (sequence number), `{position}` (alias of `{number}`), `{username}`, and
- * `{name}` (both shown as "Alex" here since the preview has no real member).
- * No placeholder appends the number to the end.
+ * `{name}`/`{nickname}` (all shown as "Alex" here since the preview has no
+ * real member). No placeholder appends the number to the end.
  */
 /** Whether the resolved name actually changes from one generated channel to the next. */
 export function hasSequencePlaceholder(template: string): boolean {
   const trimmed = template.trim();
-  const hasNamedPlaceholder = /\{number\}|\{position\}|\{username\}|\{name\}/.test(
-    trimmed,
-  );
+  const hasNamedPlaceholder =
+    /\{number\}|\{position\}|\{username\}|\{name\}|\{nickname\}/.test(
+      trimmed,
+    );
   return !hasNamedPlaceholder || /\{\}|\{number\}|\{position\}/.test(trimmed);
 }
 
 export function resolveName(template: string, number: number): string {
   const trimmed = template.trim();
-  const hasPlaceholder = /\{\}|\{number\}|\{position\}|\{username\}|\{name\}/.test(
-    trimmed,
-  );
+  const hasPlaceholder =
+    /\{\}|\{number\}|\{position\}|\{username\}|\{name\}|\{nickname\}/.test(
+      trimmed,
+    );
   if (!hasPlaceholder) return `${trimmed} ${number}`;
   return trimmed
     .replaceAll("{}", String(number))
     .replaceAll("{number}", String(number))
     .replaceAll("{position}", String(number))
     .replaceAll("{username}", "Alex")
-    .replaceAll("{name}", "Alex");
+    .replaceAll("{name}", "Alex")
+    .replaceAll("{nickname}", "Alex");
 }
 
 export function TempVcGenerators({

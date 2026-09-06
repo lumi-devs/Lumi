@@ -675,13 +675,13 @@ function describeValue(
 ): string | null {
   if (isUnset(value)) return null;
   if (Array.isArray(value) && field) {
-    if (field.type === FieldType.MULTI_CHANNEL) {
+    if (field.type === FieldType.MultiChannel) {
       return value
         .map((id) => directory.channels.find((c) => c.id === id)?.name ?? String(id))
         .map((n) => `#${n}`)
         .join(", ");
     }
-    if (field.type === FieldType.MULTI_ROLE) {
+    if (field.type === FieldType.MultiRole) {
       return value
         .map((id) => directory.roles.find((r) => r.id === id)?.name ?? String(id))
         .map((n) => `@${n}`)
@@ -689,15 +689,15 @@ function describeValue(
     }
   }
   if (typeof value === "string" && field) {
-    if (field.type === FieldType.CHANNEL) {
+    if (field.type === FieldType.Channel) {
       const channel = directory.channels.find((c) => c.id === value);
       return channel ? `#${channel.name}` : value;
     }
-    if (field.type === FieldType.ROLE) {
+    if (field.type === FieldType.Role) {
       const role = directory.roles.find((r) => r.id === value);
       return role ? `@${role.name}` : value;
     }
-    if (field.type === FieldType.USER) {
+    if (field.type === FieldType.User) {
       const member = directory.members.find((m) => m.id === value);
       return member ? member.displayName || member.username : value;
     }

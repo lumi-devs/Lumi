@@ -123,7 +123,7 @@ export function hasSetupAccess(interaction: SetupInteraction): boolean {
 export const setupAccessDenied = () =>
   new UserError({
     identifier: "AccessDenied",
-    message: `${Emojis.CROSS} You need the Manage Server permission to run setup.`,
+    message: `${Emojis.Cross} You need the Manage Server permission to run setup.`,
   });
 
 export async function finishSetupWizard(

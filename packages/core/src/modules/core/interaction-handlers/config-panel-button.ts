@@ -200,14 +200,14 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
 
     const current = detail.config[field.key];
     const stored =
-      Array.isArray(current) && field.type === FieldType.STRING_LIST
+      Array.isArray(current) && field.type === FieldType.StringList
         ? current.map(String).join("\n")
         : current;
     const input = new TextInputBuilder()
       .setCustomId("value")
       .setStyle(
-        field.type === FieldType.STRING ||
-          field.type === FieldType.STRING_LIST
+        field.type === FieldType.String ||
+          field.type === FieldType.StringList
           ? TextInputStyle.Paragraph
           : TextInputStyle.Short,
       )
@@ -238,7 +238,7 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
     if (!detail)
       throw new UserError({
         identifier: "UnknownModule",
-        message: `${Emojis.CROSS} Module \`${moduleName}\` no longer exists.`,
+        message: `${Emojis.Cross} Module \`${moduleName}\` no longer exists.`,
       });
     return detail;
   }
@@ -252,10 +252,10 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
     const fields = (detail.meta.configFields ?? [])
       .filter(
         (f) =>
-          f.type === FieldType.STRING ||
-          f.type === FieldType.STRING_LIST ||
-          f.type === FieldType.NUMBER ||
-          f.type === FieldType.DURATION,
+          f.type === FieldType.String ||
+          f.type === FieldType.StringList ||
+          f.type === FieldType.Number ||
+          f.type === FieldType.Duration,
       )
       .slice(0, 5);
     if (fields.length === 0) {
@@ -277,13 +277,13 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
     for (const f of fields) {
       const current = detail.config[f.key];
       const stored =
-        Array.isArray(current) && f.type === FieldType.STRING_LIST
+        Array.isArray(current) && f.type === FieldType.StringList
           ? current.map(String).join("\n")
           : current;
       const input = new TextInputBuilder()
         .setCustomId(f.key)
         .setStyle(
-          f.type === FieldType.STRING || f.type === FieldType.STRING_LIST
+          f.type === FieldType.String || f.type === FieldType.StringList
             ? TextInputStyle.Paragraph
             : TextInputStyle.Short,
         )

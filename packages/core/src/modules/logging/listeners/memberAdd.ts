@@ -16,7 +16,7 @@ export class LoggingMemberAddListener extends ModuleListener<
   protected async handle(member: GuildMember): Promise<void> {
     if (!(await isToggleEnabled(member.guild.id, "member_joins"))) return;
 
-    await sendLog(member.guild.id, Colors.Green, "Member Joined", [
+    await sendLog(member.guild.id, "member_joins", Colors.Green, "Member Joined", [
       `**Member**: ${userMention(member.id)} (${member.id})`,
       `**Account created**: ${time(member.user.createdAt, TimestampStyles.RelativeTime)}`,
       `**Member count**: ${member.guild.memberCount}`,

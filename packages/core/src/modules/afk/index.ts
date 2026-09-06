@@ -44,7 +44,7 @@ export async function isAfkNickPrefixEnabled(
 @DefineModule({
   name: "afk",
   displayName: "AFK",
-  emoji: Emojis.AFK,
+  emoji: Emojis.Afk,
   description:
     "Set yourself AFK; mentions notify others and a prefix is added to your nickname.",
   short: "Set yourself AFK with automated status and mention alerts.",

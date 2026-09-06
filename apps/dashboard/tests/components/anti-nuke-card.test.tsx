@@ -16,14 +16,14 @@ const { AntiNukeCard } = await import("#/components/guild/anti-nuke-card");
 const NukeResponses = ["log", "quarantine", "ban"];
 
 function num(key: string, label: string): ConfigField {
-  return { key, label, type: FieldType.NUMBER, description: `${label} description.` };
+  return { key, label, type: FieldType.Number, description: `${label} description.` };
 }
 
 function response(key: string, label: string): ConfigField {
   return {
     key,
     label,
-    type: FieldType.ENUM,
+    type: FieldType.Enum,
     description: `${label} description.`,
     choices: NukeResponses,
   };
@@ -33,10 +33,10 @@ function response(key: string, label: string): ConfigField {
  * `response_*` counterparts (vanity / permission grants / quarantine bypass
  * are limit-only). */
 const configFields: ConfigField[] = [
-  { key: "antinuke_enabled", label: "Anti-Nuke", type: FieldType.BOOLEAN, description: "Watch the audit log." },
+  { key: "antinuke_enabled", label: "Anti-Nuke", type: FieldType.Boolean, description: "Watch the audit log." },
   num("window_seconds", "Detection Window"),
-  { key: "trusted_role_ids", label: "Trusted Roles", type: FieldType.MULTI_ROLE, description: "Exempt roles." },
-  { key: "log_channel_id", label: "Security Log Channel", type: FieldType.CHANNEL, description: "Alerts go here." },
+  { key: "trusted_role_ids", label: "Trusted Roles", type: FieldType.MultiRole, description: "Exempt roles." },
+  { key: "log_channel_id", label: "Security Log Channel", type: FieldType.Channel, description: "Alerts go here." },
   num("max_bans", "Max Bans"),
   response("response_bans", "Response — Bans"),
   num("max_kicks", "Max Kicks"),

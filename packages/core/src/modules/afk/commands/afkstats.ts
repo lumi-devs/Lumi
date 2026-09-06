@@ -27,7 +27,7 @@ export default class AfkStatsCommand extends BaseCommand {
     return ctx.reply(
       makeCard(
         0,
-        `${Emojis.ANALYTICS} ${t("afk:statsTitle")}`,
+        `${Emojis.Analytics} ${t("afk:statsTitle")}`,
         t("afk:statsBody", { activeEntries, activeCooldowns }),
       ),
     );

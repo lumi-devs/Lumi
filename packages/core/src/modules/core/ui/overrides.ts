@@ -104,7 +104,7 @@ export function buildHistoryView(
   return noPingCard(
     makeCard(
       resolveCardColor("info"),
-      `${Emojis.CLOCK} ${meta.displayName} • History`,
+      `${Emojis.Clock} ${meta.displayName} • History`,
       [
         formatSubtitle("Configuration change log and rollback history."),
         lines.join("\n"),
@@ -140,7 +140,7 @@ export function buildOverridesView(
       createActionButton({
         customId: `cfg:ovadd:${meta.name}:${page}`,
         label: "Add Override…",
-        emoji: Emojis.EDIT,
+        emoji: Emojis.Edit,
         style: ButtonStyle.Primary,
       }),
     ),
@@ -163,7 +163,7 @@ export function buildOverridesView(
   return noPingCard(
     makeCard(
       resolveCardColor("purple"),
-      `${Emojis.SHIELD} ${meta.displayName} • Overrides`,
+      `${Emojis.Shield} ${meta.displayName} • Overrides`,
       [
         formatSubtitle(
           "Targeted configuration overrides for channels, roles, and users.",

@@ -69,6 +69,8 @@ model Guild {
   blocklistEntries  Blocklist[]
   configHistory     ModuleConfigHistory[]
   configOverrides   ModuleConfigOverride[]
+  economyAccounts   EconomyAccount[]
+  economyTxns       EconomyTransaction[]
 
   @@map("guilds")
 }
@@ -503,4 +505,43 @@ model TempVcRecord {
   @@id([guildId, channelId])
   @@index([ownerId]) // GDPR cross-guild deletes
   @@map("tempvc_records")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODULE: economy (guild-scoped bank + audited transaction ledger)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model EconomyAccount {
+  guildId      String    @map("guild_id") @db.VarChar(20)
+  userId       String    @map("user_id") @db.VarChar(20)
+  wallet       Int       @default(0)
+  bank         Int       @default(0)
+  lastPaydayAt DateTime? @map("last_payday_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@id([guildId, userId])
+  // guildId leads the PK so per-guild reads are covered; cross-guild GDPR
+  // lookups by userId need their own index.
+  @@index([userId])
+  @@map("economy_accounts")
+}
+
+model EconomyTransaction {
+  id           Int      @id @default(autoincrement())
+  guildId      String   @map("guild_id") @db.VarChar(20)
+  userId       String   @map("user_id") @db.VarChar(20)
+  kind         String   @db.VarChar(32)
+  amount       Int
+  balanceAfter Int      @map("balance_after")
+  reason       String?  @db.VarChar(500)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, userId, createdAt])
+  @@index([guildId, createdAt])
+  // GDPR delete/export filter on userId across every guild.
+  @@index([userId])
+  @@map("economy_transactions")
 }

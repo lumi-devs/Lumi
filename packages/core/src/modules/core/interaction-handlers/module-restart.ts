@@ -40,7 +40,7 @@ export class ModuleRestartInteractionHandler extends BaseInteractionHandler {
     if (!PermitResolver.isBotOwner(interaction.user.id)) {
       throw new UserError({
         identifier: "AccessDenied",
-        message: `${Emojis.CROSS} Only Bot Owners can restart Lumi.`,
+        message: `${Emojis.Cross} Only Bot Owners can restart Lumi.`,
       });
     }
     await this.acknowledge(interaction);
@@ -49,7 +49,7 @@ export class ModuleRestartInteractionHandler extends BaseInteractionHandler {
     if (action === "cancel") {
       await interaction.editReply(
         makeInfoCard(
-          `${Emojis.CROSS} ${t("core:restartCancelledTitle")}`,
+          `${Emojis.Cross} ${t("core:restartCancelledTitle")}`,
           t("core:restartCancelledText"),
         ),
       );
@@ -58,7 +58,7 @@ export class ModuleRestartInteractionHandler extends BaseInteractionHandler {
 
     await interaction.editReply(
       makeSuccessCard(
-        `${Emojis.LOADING} ${t("core:restartingTitle")}`,
+        `${Emojis.Loading} ${t("core:restartingTitle")}`,
         t("core:restartingText"),
       ),
     );

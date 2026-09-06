@@ -292,7 +292,7 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
       const body = `Successfully updated Lumi core codebase! (**${res.commitsCount}** new commit(s) pulled).\n\n**New Commit:** \`${res.latestCommit}\` (from \`${res.currentCommit}\`)\n\n**Changelog:**\n\`\`\`\n${res.changelog}\n\`\`\``;
       return interaction.editReply(
         ephemeralCard(
-          makeSuccessCard(`${Emojis.BOT} Lumi Core Updated`, body, {
+          makeSuccessCard(`${Emojis.Bot} Lumi Core Updated`, body, {
             actionRows: [restartChoiceRow(interaction.user.id)],
           }),
         ),
@@ -302,7 +302,7 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
     return interaction.editReply(
       ephemeralCard(
         makeSuccessCard(
-          `${Emojis.BOT} Lumi Core Up to Date`,
+          `${Emojis.Bot} Lumi Core Up to Date`,
           `Lumi core is already running the latest commit (\`${res.currentCommit}\`).`,
         ),
       ),

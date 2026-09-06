@@ -75,7 +75,7 @@ export class ServerInfoCommand extends BaseCommand {
         })}\n` +
         `${t("commands:serverinfoGuildId", { id: guild.id })}`,
 
-      `### ${Emojis.MEMBERS} ${t("commands:serverinfoMembersTitle")}\n` +
+      `### ${Emojis.Members} ${t("commands:serverinfoMembersTitle")}\n` +
         `${t("commands:serverinfoTotalMembers", { count: guild.memberCount })}\n${
           guild.premiumSubscriptionCount
             ? `${t("commands:serverinfoServerBoosts", {
@@ -85,13 +85,13 @@ export class ServerInfoCommand extends BaseCommand {
             : ""
         }`,
 
-      `### ${Emojis.GATEWAY} ${t("commands:serverinfoChannelsTitle")}\n` +
+      `### ${Emojis.Gateway} ${t("commands:serverinfoChannelsTitle")}\n` +
         `${t("commands:serverinfoTextChannels", { count: textChannels })}\n` +
         `${t("commands:serverinfoVoiceChannels", { count: voiceChannels })}\n` +
         `${t("commands:serverinfoCategories", { count: categoryChannels })}\n` +
         `${t("commands:serverinfoTotalChannels", { count: channels.size })}`,
 
-      `### ${Emojis.GEAR} ${t("commands:serverinfoFeaturesTitle")}\n` +
+      `### ${Emojis.Gear} ${t("commands:serverinfoFeaturesTitle")}\n` +
         `${t("commands:serverinfoRoles", { count: roleCount })}\n` +
         `${t("commands:serverinfoEmojis", { count: emojiCount })}\n` +
         `${t("commands:serverinfoVerificationLevel", { level: guild.verificationLevel })}`,

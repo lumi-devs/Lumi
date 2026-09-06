@@ -11,6 +11,7 @@
   "configOverrides": true,
   "targetUtility": "worker",
   "subStores": [
+    "commands",
     "listeners",
     "scheduled-tasks"
   ],
@@ -18,8 +19,28 @@
     {
       "key": "log_channel_id",
       "type": "CHANNEL",
-      "label": "Log Channel",
-      "description": "Channel where server events are logged.",
+      "label": "Default Log Channel",
+      "description": "Fallback channel for log types without their own channel below. Empty disables logging.",
+      "group": "Setup",
+      "channelTypes": [
+        0
+      ]
+    },
+    {
+      "key": "message_log_channel_id",
+      "type": "CHANNEL",
+      "label": "Message Log Channel",
+      "description": "Channel for message deletes and edits. Falls back to the default log channel.",
+      "group": "Setup",
+      "channelTypes": [
+        0
+      ]
+    },
+    {
+      "key": "member_log_channel_id",
+      "type": "CHANNEL",
+      "label": "Member Log Channel",
+      "description": "Channel for joins, leaves, bans, unbans, nickname and role changes. Falls back to the default log channel.",
       "group": "Setup",
       "channelTypes": [
         0

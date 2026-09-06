@@ -7,6 +7,7 @@ import {
   getGuildModuleData,
 } from "#/lib/dashboard-fetch";
 import { AfkList } from "#/components/guild/afk-list";
+import { AfkPreviewPlayground } from "#/components/guild/afk-preview-playground";
 import { IgnoredChannelsList } from "#/components/guild/ignored-channels-list";
 import { ModuleDataTable } from "#/components/guild/module-data-table";
 import { Badge } from "#/components/ui/badge";
@@ -118,6 +119,21 @@ export default async function AdvancedPage({
           ) : (
             <LoadFailure what="The ignore list" error={ignored.error} />
           )}
+        </Card>
+      </div>
+
+      <div className="rise" style={{ "--rise-delay": "140ms" } as React.CSSProperties}>
+        <Card>
+          <CardHeader>
+            <CardTitle>See it in action — edit it live</CardTitle>
+            <CardDescription>
+              Edit the away message and watch the AFK notice members see update
+              instantly.
+            </CardDescription>
+          </CardHeader>
+          <div className="p-4">
+            <AfkPreviewPlayground />
+          </div>
         </Card>
       </div>
 

@@ -70,11 +70,11 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
     const notFound = {
       channel: {
         identifier: "TempVcGone",
-        message: `${Emojis.CROSS} ${t("tempvc:channelNoLongerExists")}`,
+        message: `${Emojis.Cross} ${t("tempvc:channelNoLongerExists")}`,
       },
       record: {
         identifier: "TempVcUnmanaged",
-        message: `${Emojis.CROSS} ${t("tempvc:channelNoLongerManaged")}`,
+        message: `${Emojis.Cross} ${t("tempvc:channelNoLongerManaged")}`,
       },
     };
 
@@ -169,7 +169,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
     if (!deleted) {
       throw new UserError({
         identifier: "TempVcDeleteFailed",
-        message: `${Emojis.CROSS} Failed to delete the voice channel. Try again.`,
+        message: `${Emojis.Cross} Failed to delete the voice channel. Try again.`,
       });
     }
     if (guildId) await removeVcRecord(guildId, id);
@@ -194,14 +194,14 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
     if (member.voice.channelId !== channel.id) {
       throw new UserError({
         identifier: "TempVcClaimNotIn",
-        message: `${Emojis.CROSS} ${t("tempvc:mustBeInChannelToClaim")}`,
+        message: `${Emojis.Cross} ${t("tempvc:mustBeInChannelToClaim")}`,
       });
     }
     const owner = channel.members.get(record.ownerId);
     if (owner) {
       throw new UserError({
         identifier: "TempVcOwnerPresent",
-        message: `${Emojis.CROSS} ${t("tempvc:ownerStillHere")}`,
+        message: `${Emojis.Cross} ${t("tempvc:ownerStillHere")}`,
       });
     }
 
@@ -215,7 +215,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
     if (guard === null) {
       throw new UserError({
         identifier: "TempVcClaimRace",
-        message: `${Emojis.LOADING} ${t("tempvc:someoneElseClaiming")}`,
+        message: `${Emojis.Loading} ${t("tempvc:someoneElseClaiming")}`,
       });
     }
 

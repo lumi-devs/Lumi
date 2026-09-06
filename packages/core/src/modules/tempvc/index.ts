@@ -55,7 +55,7 @@ export async function getMaxGenerators(guildId: string): Promise<number> {
     default_name_template: cfg.string({
       label: "Default Channel Name Pattern",
       description:
-        "Used to pre-fill new generators. Supports {username}, {name}, {number}, {position} — see the Voice Generators page for details.",
+        "Used to pre-fill new generators. Supports {username}, {name}/{nickname}, {number}, {position} — see the Voice Generators page for details.",
       default: "{username}'s Channel",
     }),
   }),

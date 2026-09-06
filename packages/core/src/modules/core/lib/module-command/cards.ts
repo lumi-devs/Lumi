@@ -14,9 +14,9 @@ import { ButtonStyle } from "discord.js";
 
 /** Maps a module's runtime state to its status indicator emoji. */
 function stateEmoji(state: string | undefined): string {
-  if (state === "loaded") return Emojis.SUCCESS;
-  if (state === "failed") return Emojis.WARNING;
-  return Emojis.CROSS;
+  if (state === "loaded") return Emojis.Success;
+  if (state === "failed") return Emojis.Warning;
+  return Emojis.Cross;
 }
 
 export function noModulesDiscoveredCard(): CardReply {
@@ -65,7 +65,7 @@ export function moduleInfoCard(
 
   if (pinned) {
     detailLines.push(
-      `**Update Lock:** ${Emojis.PIN} Pinned (\`,module update\` skips this module)`,
+      `**Update Lock:** ${Emojis.Pin} Pinned (\`,module update\` skips this module)`,
     );
   }
 
@@ -123,12 +123,12 @@ export function moduleAlreadyInstalledCard(
     new ButtonBuilder()
       .setCustomId(`module:update:${moduleName}:${userId}`)
       .setLabel("Update Module")
-      .setEmoji(Emojis.parse(Emojis.DOWNLOAD))
+      .setEmoji(Emojis.parse(Emojis.Download))
       .setStyle(ButtonStyle.Primary),
   );
 
   return makeWarningCard(
-    `${Emojis.WARNING} Already Installed`,
+    `${Emojis.Warning} Already Installed`,
     `**${moduleName}** is already installed. Would you like to update it instead?`,
     { actionRows: [updateRow] },
   );
@@ -144,21 +144,21 @@ export function uninstallProgressCard(moduleName: string): CardReply {
 export function reloadProgressCard(moduleName: string): CardReply {
   return makeInfoCard(
     "Reloading Module",
-    `${Emojis.LOADING} Unloading and reloading **${moduleName}**...`,
+    `${Emojis.Loading} Unloading and reloading **${moduleName}**...`,
   );
 }
 
 export function updateProgressCard(moduleName: string): CardReply {
   return makeInfoCard(
     "Updating Module",
-    `${Emojis.LOADING} Checking and downloading updates for **${moduleName}**...`,
+    `${Emojis.Loading} Checking and downloading updates for **${moduleName}**...`,
   );
 }
 
 export function updateAllProgressCard(): CardReply {
   return makeInfoCard(
     "Updating All Modules",
-    `${Emojis.LOADING} Scanning and updating all installed modules...`,
+    `${Emojis.Loading} Scanning and updating all installed modules...`,
   );
 }
 
@@ -171,14 +171,14 @@ export function noInstalledModulesCard(): CardReply {
 
 export function modulePinnedCard(moduleName: string): CardReply {
   return makeSuccessCard(
-    `${Emojis.PIN} Module Pinned`,
+    `${Emojis.Pin} Module Pinned`,
     `**${moduleName}** is now pinned. \`,module update ${moduleName}\` and \`,module update\` (all) will both skip it until you run \`,module unpin ${moduleName}\`.`,
   );
 }
 
 export function moduleUnpinnedCard(moduleName: string): CardReply {
   return makeSuccessCard(
-    `${Emojis.CHECK} Module Unpinned`,
+    `${Emojis.Check} Module Unpinned`,
     `**${moduleName}** is unpinned and will be updated normally again.`,
   );
 }
@@ -205,19 +205,19 @@ export function multiUpdateReportCard(
     .filter((outcome) => outcome.status === "updated")
     .map(
       (outcome) =>
-        `${Emojis.SUCCESS} **${outcome.moduleName}**${outcome.needsRestart ? "" : " (hot-reloaded)"}`,
+        `${Emojis.Success} **${outcome.moduleName}**${outcome.needsRestart ? "" : " (hot-reloaded)"}`,
     );
   const skipped = outcomes
     .filter((outcome) => outcome.status === "up-to-date")
     .map((outcome) => `- **${outcome.moduleName}** (up-to-date)`);
   const pinned = outcomes
     .filter((outcome) => outcome.status === "skipped-pinned")
-    .map((outcome) => `${Emojis.PIN} **${outcome.moduleName}** (pinned)`);
+    .map((outcome) => `${Emojis.Pin} **${outcome.moduleName}** (pinned)`);
   const failed = outcomes
     .filter((outcome) => outcome.status === "failed")
     .map(
       (outcome) =>
-        `${Emojis.ERROR} **${outcome.moduleName}** - ${outcome.error}`,
+        `${Emojis.Error} **${outcome.moduleName}** - ${outcome.error}`,
     );
   const needsRestart = outcomes.some(
     (outcome) => outcome.status === "updated" && outcome.needsRestart,
@@ -246,12 +246,12 @@ export function moduleHelpCard(): CardReply {
     new ButtonBuilder()
       .setCustomId("lumi:tab:modules")
       .setLabel("Open Modules Panel")
-      .setEmoji(Emojis.parse(Emojis.GEAR))
+      .setEmoji(Emojis.parse(Emojis.Gear))
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId("lumi:tab:addons")
       .setLabel("Open Add-ons Manager")
-      .setEmoji(Emojis.parse(Emojis.REPO))
+      .setEmoji(Emojis.parse(Emojis.Repo))
       .setStyle(ButtonStyle.Secondary),
   );
 

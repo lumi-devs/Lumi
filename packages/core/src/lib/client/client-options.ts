@@ -68,6 +68,7 @@ export function buildClientOptions(): ClientOptions {
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMembers,
       GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.GuildMessageReactions,
       GatewayIntentBits.GuildVoiceStates,
       GatewayIntentBits.MessageContent,
       GatewayIntentBits.GuildModeration,

@@ -21,12 +21,12 @@ function afkStatusText(
   }
   if (status === "UPDATED_AFK") {
     return {
-      title: `${Emojis.EDIT} ${t("commands:afkUpdatedTitle")}`,
+      title: `${Emojis.Edit} ${t("commands:afkUpdatedTitle")}`,
       body: t("commands:afkUpdated", { reason }),
     };
   }
   return {
-    title: `${Emojis.AFK} ${t("commands:afkSetTitle")}`,
+    title: `${Emojis.Afk} ${t("commands:afkSetTitle")}`,
     body: t("commands:afkSet", { reason }),
   };
 }

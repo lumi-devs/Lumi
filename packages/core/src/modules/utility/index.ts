@@ -9,7 +9,7 @@ import { Emojis } from "#lib/utilities/assets.js";
 @DefineModule({
   name: "utility",
   displayName: "Utility",
-  emoji: Emojis.GEAR,
+  emoji: Emojis.Gear,
   description: "General utility commands.",
   short: "Helpful server tools, avatar lookups, and user info commands.",
   endUserDataStatement: NoEndUserData(),

@@ -54,7 +54,7 @@ export async function paginateContainer(options: PaginationOptions) {
           new ButtonBuilder()
             .setCustomId(`${customIdPrefix}:prev`)
             .setLabel("Previous")
-            .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+            .setEmoji(Emojis.parse(Emojis.ArrowLeft))
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(disabled || pageIndex <= 0),
           new ButtonBuilder()
@@ -65,7 +65,7 @@ export async function paginateContainer(options: PaginationOptions) {
           new ButtonBuilder()
             .setCustomId(`${customIdPrefix}:next`)
             .setLabel("Next")
-            .setEmoji(Emojis.parse(Emojis.ARROW_RIGHT))
+            .setEmoji(Emojis.parse(Emojis.ArrowRight))
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(disabled || pageIndex >= totalPages - 1),
         );

@@ -55,11 +55,11 @@ function executiveSection(
   fields: [string, string][],
   _insight?: string,
 ): string {
-  const header = `${Emojis.SPACE}__${title}__:`;
+  const header = `${Emojis.Space}__${title}__:`;
   const lines = fields
     .map(
       ([label, value]) =>
-        `${Emojis.SPACE}${Emojis.SPACE}**${label}:** ${value}`,
+        `${Emojis.Space}${Emojis.Space}**${label}:** ${value}`,
     )
     .join("\n");
   return `${header}\n${lines}`;
@@ -100,18 +100,18 @@ export function buildOverviewCard(
   const c = new ContainerBuilder();
 
   const E = {
-    online: Emojis.SUCCESS,
-    space: Emojis.SPACE,
-    latency: Emojis.LATENCY,
-    uptime: Emojis.UPTIME,
-    trade: Emojis.TRADE,
-    memory: Emojis.MEMORY,
-    cpu: Emojis.CPU,
-    position: Emojis.POSITION,
-    servers: Emojis.SERVERS,
-    members: Emojis.MEMBERS,
-    redis: Emojis.REDIS,
-    sql: Emojis.SQL,
+    online: Emojis.Success,
+    space: Emojis.Space,
+    latency: Emojis.Latency,
+    uptime: Emojis.Uptime,
+    trade: Emojis.Trade,
+    memory: Emojis.Memory,
+    cpu: Emojis.Cpu,
+    position: Emojis.Position,
+    servers: Emojis.Servers,
+    members: Emojis.Members,
+    redis: Emojis.Redis,
+    sql: Emojis.Sql,
   };
 
   const fmtCount = (count: number) =>
@@ -194,13 +194,13 @@ export function buildGatewayCard(data: PingData, t?: LumiT): ContainerBuilder {
     );
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `${Emojis.SPACE}__${t ? t("core:pingActiveShards") : "Active Shards"}__:`,
+        `${Emojis.Space}__${t ? t("core:pingActiveShards") : "Active Shards"}__:`,
       ),
     );
     const shardLines = data.shards
       .map(
         (s) =>
-          `${Emojis.SPACE}${Emojis.SPACE}**Shard ${s.id}:** ${fmtMs(s.ping)} | ${s.status} | Sequence ${s.sequence || 0}`,
+          `${Emojis.Space}${Emojis.Space}**Shard ${s.id}:** ${fmtMs(s.ping)} | ${s.status} | Sequence ${s.sequence || 0}`,
       )
       .join("\n");
     c.addTextDisplayComponents(new TextDisplayBuilder().setContent(shardLines));
@@ -252,7 +252,7 @@ export function buildEngineCard(data: PingData, t?: LumiT): ContainerBuilder {
 }
 
 export function buildHostCard(data: PingData, t?: LumiT): ContainerBuilder {
-  const c = detailCard(`${Emojis.CPU} System Infrastructure`, data);
+  const c = detailCard(`${Emojis.Cpu} System Infrastructure`, data);
 
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
@@ -293,7 +293,7 @@ export function buildHostCard(data: PingData, t?: LumiT): ContainerBuilder {
 
 export function buildPostgresCard(data: PingData, t?: LumiT): ContainerBuilder {
   const c = detailCard(
-    `${Emojis.DATABASE} ${t ? t("core:pingDbHealth") : "Database Health"}`,
+    `${Emojis.Database} ${t ? t("core:pingDbHealth") : "Database Health"}`,
     data,
   );
 
@@ -331,12 +331,12 @@ export function buildPostgresCard(data: PingData, t?: LumiT): ContainerBuilder {
     );
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `${Emojis.SPACE}__${Emojis.ANALYTICS} Table Storage__:`,
+        `${Emojis.Space}__${Emojis.Analytics} Table Storage__:`,
       ),
     );
     const tableLines = data.tableSizes
       .map(
-        (t) => `${Emojis.SPACE}${Emojis.SPACE}**${t.name}:** ${fmtKB(t.bytes)}`,
+        (t) => `${Emojis.Space}${Emojis.Space}**${t.name}:** ${fmtKB(t.bytes)}`,
       )
       .join("\n");
     c.addTextDisplayComponents(new TextDisplayBuilder().setContent(tableLines));
@@ -347,7 +347,7 @@ export function buildPostgresCard(data: PingData, t?: LumiT): ContainerBuilder {
 
 export function buildRedisCard(data: PingData, t?: LumiT): ContainerBuilder {
   const c = detailCard(
-    `${Emojis.CACHE} ${t ? t("core:pingCachePerformance") : "Cache Performance"}`,
+    `${Emojis.Cache} ${t ? t("core:pingCachePerformance") : "Cache Performance"}`,
     data,
   );
 
@@ -383,7 +383,7 @@ export function buildRedisCard(data: PingData, t?: LumiT): ContainerBuilder {
 
 export function buildBotCard(data: PingData, t?: LumiT): ContainerBuilder {
   const c = detailCard(
-    `${Emojis.BOT} ${t ? t("core:pingSummary") : "Bot System Summary"}`,
+    `${Emojis.Bot} ${t ? t("core:pingSummary") : "Bot System Summary"}`,
     data,
   );
 
@@ -456,7 +456,7 @@ export function buildDetailCard(
       new ButtonBuilder()
         .setCustomId(`ping:overview:${userId}`)
         .setLabel(t ? t("core:btnBack") : "Back to Overview")
-        .setEmoji(Emojis.parse(Emojis.ARROW_LEFT))
+        .setEmoji(Emojis.parse(Emojis.ArrowLeft))
         .setStyle(ButtonStyle.Secondary),
     ),
   );

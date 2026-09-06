@@ -47,7 +47,7 @@ describe("Config Schema Utilities", () => {
 
       expect(fields.find((f) => f.key === "enabled")).toEqual({
         key: "enabled",
-        type: FieldType.BOOLEAN,
+        type: FieldType.Boolean,
         label: "Enable Feature",
         description: "Toggle on/off",
         default: true,
@@ -56,7 +56,7 @@ describe("Config Schema Utilities", () => {
 
       expect(fields.find((f) => f.key === "maxLimit")).toEqual({
         key: "maxLimit",
-        type: FieldType.NUMBER,
+        type: FieldType.Number,
         label: "Max Limit",
         description: "Upper limit",
         default: 50,
@@ -65,7 +65,7 @@ describe("Config Schema Utilities", () => {
 
       expect(fields.find((f) => f.key === "logChannel")).toEqual({
         key: "logChannel",
-        type: FieldType.CHANNEL,
+        type: FieldType.Channel,
         label: "Log Channel",
         description: "Target channel",
         default: undefined,
@@ -75,7 +75,7 @@ describe("Config Schema Utilities", () => {
 
       expect(fields.find((f) => f.key === "mode")).toEqual({
         key: "mode",
-        type: FieldType.ENUM,
+        type: FieldType.Enum,
         label: "Mode",
         description: "Difficulty",
         default: "easy",
@@ -190,7 +190,7 @@ describe("Config Schema Utilities", () => {
       expect(fieldsFromSchema(schema)).toEqual([
         {
           key: "cooldown",
-          type: FieldType.DURATION,
+          type: FieldType.Duration,
           label: "Cooldown",
           description: "Wait time",
           default: "15m",
@@ -246,20 +246,20 @@ describe("Config Schema Utilities", () => {
       const fields = fieldsFromSchema(schema);
       expect(fields.find((f) => f.key === "staffRoles")).toEqual({
         key: "staffRoles",
-        type: FieldType.MULTI_ROLE,
+        type: FieldType.MultiRole,
         label: "Staff Roles",
         description: "Staff list",
         default: ["123456789012345678"],
         required: undefined,
       });
       expect(fields.find((f) => f.key === "logChannels")?.type).toBe(
-        FieldType.MULTI_CHANNEL,
+        FieldType.MultiChannel,
       );
       expect(fields.find((f) => f.key === "watchUsers")?.type).toBe(
-        FieldType.MULTI_USER,
+        FieldType.MultiUser,
       );
       expect(fields.find((f) => f.key === "badTerms")?.type).toBe(
-        FieldType.STRING_LIST,
+        FieldType.StringList,
       );
     });
 

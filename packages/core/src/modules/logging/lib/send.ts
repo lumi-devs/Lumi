@@ -4,6 +4,22 @@ import { queueSend } from "#lib/outbound/send-queue.js";
 
 const Module = "logging";
 
+export const MessageLogChannelKey = "message_log_channel_id";
+export const MemberLogChannelKey = "member_log_channel_id";
+export const DefaultLogChannelKey = "log_channel_id";
+
+/** Toggle key (as checked by `isToggleEnabled`) to its per-type channel key. */
+export const LogToggleChannels: Record<string, string> = {
+  message_deletes: MessageLogChannelKey,
+  message_edits: MessageLogChannelKey,
+  member_joins: MemberLogChannelKey,
+  member_leaves: MemberLogChannelKey,
+  member_bans: MemberLogChannelKey,
+  member_unbans: MemberLogChannelKey,
+  nickname_changes: MemberLogChannelKey,
+  role_changes: MemberLogChannelKey,
+};
+
 export async function isToggleEnabled(
   guildId: string,
   toggleKey: string,
@@ -30,24 +46,48 @@ export async function isIgnoredChannel(
   return ignored.includes(channelId);
 }
 
+async function readChannelKey(
+  guildId: string,
+  key: string,
+): Promise<string | null> {
+  const stored = await container.db.config.getModuleConfig(
+    guildId,
+    Module,
+    key,
+  );
+  return typeof stored === "string" && stored ? stored : null;
+}
+
 /**
- * Queue a log card for the guild's logging channel. Nothing waits on a log
- * card, so it goes through the outbound queue rather than an inline REST call -
- * a rate-limited log channel then parks one queue slot instead of blocking the
- * event handler that produced it.
+ * Per-type channel first, then the default log channel, then null (disabled).
+ */
+export async function resolveLogChannel(
+  guildId: string,
+  toggleKey: string,
+): Promise<string | null> {
+  const perTypeKey = LogToggleChannels[toggleKey];
+  if (perTypeKey) {
+    const perType = await readChannelKey(guildId, perTypeKey);
+    if (perType) return perType;
+  }
+  return readChannelKey(guildId, DefaultLogChannelKey);
+}
+
+/**
+ * Queue a log card for the guild's channel for `toggleKey`. Nothing waits on
+ * a log card, so it goes through the outbound queue rather than an inline
+ * REST call - a rate-limited log channel then parks one queue slot instead
+ * of blocking the event handler that produced it.
  */
 export async function sendLog(
   guildId: string,
+  toggleKey: string,
   color: number,
   title: string,
   lines: string[],
 ): Promise<void> {
-  const channelId = await container.db.config.getModuleConfig(
-    guildId,
-    Module,
-    "log_channel_id",
-  );
-  if (!channelId || typeof channelId !== "string") return;
+  const channelId = await resolveLogChannel(guildId, toggleKey);
+  if (!channelId) return;
 
   await queueSend({ channelId, logCard: { color, title, lines } });
 }

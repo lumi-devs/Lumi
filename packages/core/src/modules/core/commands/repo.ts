@@ -143,7 +143,7 @@ export class RepoCommand extends BaseSubcommand {
         new ButtonBuilder()
           .setCustomId("lumi:tab:addons")
           .setLabel(t("core:openAddonsManager"))
-          .setEmoji(Emojis.parse(Emojis.REPO))
+          .setEmoji(Emojis.parse(Emojis.Repo))
           .setStyle(ButtonStyle.Primary),
       );
 
@@ -175,7 +175,7 @@ export class RepoCommand extends BaseSubcommand {
       (await ctx.getString("branch", { required: false })) ?? "default";
 
     const { confirmed } = await confirmPrompt(ctx, {
-      title: `${Emojis.WARNING_SIGN} Third-Party Code Warning`,
+      title: `${Emojis.WarningSign} Third-Party Code Warning`,
       body: [
         `You're about to clone **${name}** (\`${url}\`) as a module repository.`,
         "Modules installed from it run **inside the bot process** with full access to its database, cache, and Discord client. Lumi does not review or vet third-party repositories.",
@@ -196,18 +196,18 @@ export class RepoCommand extends BaseSubcommand {
     try {
       await this.downloaderService.addRepo(name, url, branch);
       this.container.logger.info(
-        `[Repo] ${Emojis.REPO} Added repository: ${name} (${url}@${branch}) by ${ctx.user.tag}`,
+        `[Repo] ${Emojis.Repo} Added repository: ${name} (${url}@${branch}) by ${ctx.user.tag}`,
       );
       await ctx.replySuccess(
-        `${Emojis.REPO} ${t("core:repoAddedTitle")}`,
+        `${Emojis.Repo} ${t("core:repoAddedTitle")}`,
         t("core:repoAddedText", { name }),
       );
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       this.container.logger.warn(
-        `[Repo] ${Emojis.ERROR} Failed to add repo: ${name} - ${msg_}`,
+        `[Repo] ${Emojis.Error} Failed to add repo: ${name} - ${msg_}`,
       );
-      await ctx.replyError(`${Emojis.ERROR} ${t("core:failedAddRepoTitle")}`, msg_);
+      await ctx.replyError(`${Emojis.Error} ${t("core:failedAddRepoTitle")}`, msg_);
     }
   }
 
@@ -226,7 +226,7 @@ export class RepoCommand extends BaseSubcommand {
         `[Repo] Removed repository: ${name} by ${ctx.user.tag}`,
       );
       await ctx.replySuccess(
-        `${Emojis.REPO} ${t("core:repoRemovedTitle")}`,
+        `${Emojis.Repo} ${t("core:repoRemovedTitle")}`,
         t("core:repoRemovedText", { name }),
       );
     } catch (err: unknown) {
@@ -246,19 +246,19 @@ export class RepoCommand extends BaseSubcommand {
     try {
       await this.downloaderService.updateRepo(name);
       this.container.logger.info(
-        `[Repo] ${Emojis.REPO} Updated repository: ${name} by ${ctx.user.tag}`,
+        `[Repo] ${Emojis.Repo} Updated repository: ${name} by ${ctx.user.tag}`,
       );
       await ctx.replySuccess(
-        `${Emojis.REPO} ${t("core:repoUpdatedTitle")}`,
+        `${Emojis.Repo} ${t("core:repoUpdatedTitle")}`,
         t("core:repoUpdatedText", { name }),
       );
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       this.container.logger.warn(
-        `[Repo] ${Emojis.ERROR} Failed to update repo: ${name} - ${msg_}`,
+        `[Repo] ${Emojis.Error} Failed to update repo: ${name} - ${msg_}`,
       );
       await ctx.replyError(
-        `${Emojis.ERROR} ${t("core:failedUpdateRepoTitle")}`,
+        `${Emojis.Error} ${t("core:failedUpdateRepoTitle")}`,
         msg_,
       );
     }

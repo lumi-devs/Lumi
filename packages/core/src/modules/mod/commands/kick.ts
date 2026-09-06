@@ -1,6 +1,7 @@
 import type { LumiT } from "#lib/i18n/index.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
+import { parseSnowflakeList, resolveMembers } from "#lib/moderation/multi-target.js";
 import type { ConfirmPromptOptions } from "#lib/utilities/confirm.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
@@ -34,14 +35,28 @@ export class KickCommand extends ModerationCommand<
     registry.registerChatInputCommand((b) =>
       applyLocalizedBuilder(b, "commands:kick")
         .addUserOption((o) =>
-          applyLocalizedBuilder(o, "commands:kickMember").setRequired(true),
+          applyLocalizedBuilder(o, "commands:kickMember").setRequired(false),
+        )
+        .addStringOption((o) =>
+          applyLocalizedBuilder(o, "commands:kickMembers").setRequired(false),
         )
         .addStringOption((o) => applyLocalizedBuilder(o, "commands:modReason")),
     );
   }
 
-  protected override resolveTarget(ctx: ModerationCommand.RunContext) {
-    return ctx.getMembers("member", { required: true });
+  protected override async resolveTarget(ctx: ModerationCommand.RunContext) {
+    if (!ctx.isSlash) return ctx.getMembers("member", { required: true });
+
+    const single = await ctx.getMember("member");
+    const extra = await ctx.getString("members");
+    const ids = new Set(extra ? parseSnowflakeList(extra) : []);
+    if (single) ids.add(single.id);
+    if (ids.size === 0) return [];
+
+    const resolved = await resolveMembers(ctx.guild!, [...ids]);
+    return single && !resolved.some((m) => m.id === single.id)
+      ? [single, ...resolved]
+      : resolved;
   }
 
   protected override confirm(

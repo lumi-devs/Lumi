@@ -2,8 +2,10 @@
 
 Operating spec for any AI coding agent working in this repository. This is a
 map, not a manual — for anything not covered here, see
-[`apps/docs/src/content/docs/`](apps/docs/src/content/docs/) or the
-[docs site](https://lumi-devs.github.io/Lumi/), which is built from that directory on
+[`agents/`](agents/README.md) for deep-dive reference material grounded in the
+actual source (architecture, conventions, domain guides, step-by-step
+workflows), or [`apps/docs/`](apps/docs/src/app/) — the public, user-facing
+docs site (self-hosters and add-on authors), built from that directory on
 every push to `main`.
 
 Lumi is a self-hosted, modular Discord bot: Bun + TypeScript, `@sapphire/framework` +
@@ -12,7 +14,8 @@ discord.js v14, Prisma/PostgreSQL, Redis.
 ## Repo shape
 
 Bun workspace monorepo (`workspaces: ["packages/*", "apps/*"]`). See
-[`architecture.md`](apps/docs/src/content/docs/architecture.md) for the full system
+[`agents/architecture/`](agents/architecture/) and the
+[Architecture doc site page](apps/docs/src/app/architecture/page.tsx) for the full system
 topology — treat it as source of truth for anything below.
 
 - `apps/worker` — the one bot entrypoint. `main.ts` is a thin discord.js `ShardingManager`
@@ -65,6 +68,9 @@ decorated with `@DefineModule` (`packages/core/src/lib/module-system/Module.ts`)
 per-guild config schema (`packages/core/src/lib/module-system/config-schema.ts`) and
 sub-store directories (`commands/`, `listeners/`, `services/`, `interaction-handlers/`,
 `scheduled-tasks/`). Full walkthrough: [`module-creation.md`](apps/docs/src/content/docs/guides/module-creation.md).
+For the agent-facing deep dive (lifecycle hooks, config schema builders, real gotchas), see
+[`agents/architecture/module-system.md`](agents/architecture/module-system.md) and
+[`agents/workflows/adding-a-module.md`](agents/workflows/adding-a-module.md).
 
 **Zero cross-module import law**: a module must never import directly from a sibling
 module. Shared code belongs in `#lib/*`, `#database/*`, or `#utilities/*`.
@@ -74,7 +80,8 @@ from `data/3rd-party-modules/`) should not reach into `#core`/`#lib`/`#database`
 at all — the one stable, supported import surface is the `lumi` package itself
 (`packages/core/src/lib/addon-sdk/`, exported via the root `package.json` `"exports"` map:
 `lumi`, `lumi/commands`, `lumi/permissions`, `lumi/scheduling`, `lumi/ui`, `lumi/utils`).
-Full surface: [`api-reference.md`](apps/docs/src/content/docs/api-reference.md).
+Full surface: [`agents/architecture/addon-sdk.md`](agents/architecture/addon-sdk.md) and the
+[API Reference doc site page](apps/docs/src/app/modules/page.tsx).
 
 ## RPC bridge (dashboard ↔ worker)
 
@@ -83,15 +90,18 @@ Every read/write is proxied over an internal HTTP RPC bridge to `apps/worker`
 (`apps/dashboard/src/lib/rpc.ts` calling `packages/core/src/lib/rpc/http-server.ts`, a
 `server-only` module reachable only from Server Components/Route Handlers/Server Actions).
 
-The action surface is **66 actions**, defined once in `packages/contracts/src/rpc.ts`:
-`RpcRequestPayloads` maps each wire action string to its `data` payload, and `RPC_ACTIONS`
-gives the caller-side constants. Adding a dashboard capability means adding an entry there,
-a handler in `packages/core/src/lib/rpc/core-rpc.ts`, and a caller in
-`apps/dashboard/src/lib/dashboard-fetch.ts` (reads) or `apps/dashboard/src/actions/*` (mutations)
-— never a direct database call from the dashboard.
+The action surface is defined once in `packages/contracts/src/rpc.ts`:
+`RpcRequestPayloads` maps each wire action string to its `data` payload, and `RpcActions`
+gives the caller-side constants (check the file directly for the current count — it grows
+with every dashboard capability). Adding a dashboard capability means adding an entry there,
+a handler in `packages/core/src/lib/rpc/core-rpc.ts` or a `packages/core/src/modules/dashboard/rpc/*.ts`
+file, and a caller in `apps/dashboard/src/lib/dashboard-fetch.ts` (reads) or
+`apps/dashboard/src/actions/*` (mutations) — never a direct database call from the dashboard.
+Full walkthrough: [`agents/architecture/rpc-bridge.md`](agents/architecture/rpc-bridge.md) and
+[`agents/workflows/adding-an-rpc-action.md`](agents/workflows/adding-an-rpc-action.md).
 
 Full reference: [`dashboard.md`](apps/docs/src/content/docs/dashboard.md). System-level view: the
-"Dashboard Frontend" section of [`architecture.md`](apps/docs/src/content/docs/architecture.md).
+[Architecture doc site page](apps/docs/src/app/architecture/page.tsx).
 
 ## Repo-specific anti-patterns
 

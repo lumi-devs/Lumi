@@ -76,21 +76,21 @@ export class AboutCommand extends BaseCommand {
       data.wsPing < 150 ? "success" : data.wsPing < 300 ? "warning" : "error";
 
     const body = [
-      `${Emojis.BOT} **${tagline}**\n` +
+      `${Emojis.Bot} **${tagline}**\n` +
         `${t("core:aboutUptime", { age: ageText })} — Codename **${LumiInfo.codename}**`,
 
-      `### ${Emojis.ANALYTICS} ${instanceStatsHeader}\n` +
+      `### ${Emojis.Analytics} ${instanceStatsHeader}\n` +
         `**${t("core:servers")}:** ${fmtCount(serverCount)}  •  **${t("core:members")}:** ${fmtCount(userCount)}  •  **${t("core:channels")}:** ${fmtCount(channelCount)}\n` +
         `**${t("core:uptime")}:** ${time(bootTime, TimestampStyles.RelativeTime)}  •  **${t("core:hostUptime")}:** ${time(hostBootTime, TimestampStyles.RelativeTime)}\n` +
         `**Ping:** ${formatStatusBadge(pingStatus, `${Math.round(data.wsPing)}ms`)}  •  **Memory:** ${fmtMB(data.rss)}  •  **CPU:** ${data.cpuPercent.toFixed(1)}%`,
 
-      `### ${Emojis.GEAR} ${coreArchHeader}\n` +
+      `### ${Emojis.Gear} ${coreArchHeader}\n` +
         `**${t("core:lumiVersion")}:** v${LumiInfo.version}  •  **${t("core:runtimeEnvironment")}:** ${data.runtime}\n` +
         `**${t("core:coreLibraries")}:** discord.js v${data.djsVersion} · Sapphire v${data.sapphireVersion}\n` +
         `**${t("core:storageCache")}:** Prisma v${data.prismaVersion} · Redis v${data.redisVersion}\n` +
         `**${t("core:eventPipeline")}:** BullMQ`,
 
-      `### ${Emojis.REPO} Codebase\n` +
+      `### ${Emojis.Repo} Codebase\n` +
         `**${data.codeLines.toLocaleString()}** lines of TypeScript across **${data.modules.length}** modules  •  **${data.depCount.toLocaleString()}** dependencies`,
     ];
 

@@ -24,7 +24,7 @@ export type PanelInteraction =
 export const accessDenied = () =>
   new UserError({
     identifier: "AccessDenied",
-    message: `${Emojis.CROSS} You need the \`admin.*\` permit to manage this server.`,
+    message: `${Emojis.Cross} You need the \`admin.*\` permit to manage this server.`,
   });
 
 /** Wick-style permit check for the hub panel: same node /lumi requires. */

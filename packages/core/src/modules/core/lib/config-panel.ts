@@ -65,5 +65,5 @@ export async function hasPanelAccess(
 export const configAccessDenied = () =>
   new UserError({
     identifier: "AccessDenied",
-    message: `${Emojis.CROSS} You need the Admin permission level to manage configuration.`,
+    message: `${Emojis.Cross} You need the Admin permission level to manage configuration.`,
   });

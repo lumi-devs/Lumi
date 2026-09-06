@@ -43,7 +43,7 @@ export const cfg = {
 
   boolean(o: BaseOpts & { default?: boolean }) {
     return tag(s.boolean(), {
-      type: FieldType.BOOLEAN,
+      type: FieldType.Boolean,
       ...base(o),
       default: o.default,
     });
@@ -54,7 +54,7 @@ export const cfg = {
     if (o.min !== undefined) schema = schema.greaterThanOrEqual(o.min);
     if (o.max !== undefined) schema = schema.lessThanOrEqual(o.max);
     return tag(schema, {
-      type: FieldType.NUMBER,
+      type: FieldType.Number,
       ...base(o),
       default: o.default,
       step: o.step,
@@ -64,7 +64,7 @@ export const cfg = {
   /** Free-text. */
   string(o: BaseOpts & { default?: string }) {
     return tag(s.string(), {
-      type: FieldType.STRING,
+      type: FieldType.String,
       ...base(o),
       default: o.default,
     });
@@ -75,7 +75,7 @@ export const cfg = {
     o: BaseOpts & { default?: C[number] },
   ) {
     return tag(s.enum(choices), {
-      type: FieldType.ENUM,
+      type: FieldType.Enum,
       ...base(o),
       default: o.default,
       choices: [...choices],
@@ -84,7 +84,7 @@ export const cfg = {
 
   channel(o: BaseOpts & { default?: string; channelTypes?: ChannelType[] }) {
     return tag(snowflake(), {
-      type: FieldType.CHANNEL,
+      type: FieldType.Channel,
       ...base(o),
       default: o.default,
       channelTypes: o.channelTypes,
@@ -93,7 +93,7 @@ export const cfg = {
 
   role(o: BaseOpts & { default?: string }) {
     return tag(snowflake(), {
-      type: FieldType.ROLE,
+      type: FieldType.Role,
       ...base(o),
       default: o.default,
     });
@@ -101,7 +101,7 @@ export const cfg = {
 
   user(o: BaseOpts & { default?: string }) {
     return tag(snowflake(), {
-      type: FieldType.USER,
+      type: FieldType.User,
       ...base(o),
       default: o.default,
     });
@@ -110,7 +110,7 @@ export const cfg = {
   /** Stored as a string like `"10m"`/`"2h"`/`"7d"`. */
   duration(o: BaseOpts & { default?: string; quickPicks?: string[] }) {
     return tag(durationString(), {
-      type: FieldType.DURATION,
+      type: FieldType.Duration,
       ...base(o),
       default: o.default,
       quickPicks: o.quickPicks,
@@ -120,7 +120,7 @@ export const cfg = {
   /** Stored as `string[]` of role snowflakes. */
   multiRole(o: BaseOpts & { default?: string[] }) {
     return tag(s.array(snowflake()), {
-      type: FieldType.MULTI_ROLE,
+      type: FieldType.MultiRole,
       ...base(o),
       default: o.default,
     });
@@ -129,7 +129,7 @@ export const cfg = {
   /** Stored as `string[]` of channel snowflakes. */
   multiChannel(o: BaseOpts & { default?: string[]; channelTypes?: ChannelType[] }) {
     return tag(s.array(snowflake()), {
-      type: FieldType.MULTI_CHANNEL,
+      type: FieldType.MultiChannel,
       ...base(o),
       default: o.default,
       channelTypes: o.channelTypes,
@@ -139,7 +139,7 @@ export const cfg = {
   /** Stored as `string[]` of user snowflakes. */
   multiUser(o: BaseOpts & { default?: string[] }) {
     return tag(s.array(snowflake()), {
-      type: FieldType.MULTI_USER,
+      type: FieldType.MultiUser,
       ...base(o),
       default: o.default,
     });
@@ -148,7 +148,7 @@ export const cfg = {
   /** Stored as `string[]` of free-text entries. */
   stringList(o: BaseOpts & { default?: string[] }) {
     return tag(s.array(s.string()), {
-      type: FieldType.STRING_LIST,
+      type: FieldType.StringList,
       ...base(o),
       default: o.default,
     });

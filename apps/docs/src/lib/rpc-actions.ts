@@ -81,6 +81,8 @@ export const rpcGroups: RpcGroup[] = [
       { name: "guild.verificationPanel.set", payload: "VerificationPanelSetPayload { channelId, messageId }", summary: "Bind the verification panel." },
       { name: "guild.verificationPanel.delete", payload: none, summary: "Remove the verification panel." },
       { name: "guild.verificationWeb.complete", payload: none, summary: "Complete a web verification flow." },
+      { name: "guild.logClaims.list", payload: none, summary: "List channels pending as log destinations." },
+      { name: "guild.logClaims.dismiss", payload: "LogClaimDismissPayload { channelId, outcome }", summary: "Resolve a claim as confirmed or dismissed; audit-logged." },
       { name: "guild.backups.list", payload: none, summary: "List guild backups (role/channel counts)." },
       { name: "guild.backups.restore", payload: "BackupRestorePayload { backupId? }", summary: "Restore a guild backup." },
       { name: "guild.tempvc.generators.list", payload: none, summary: "List temporary-voice generator channels." },

@@ -32,7 +32,7 @@ export abstract class BaseInteractionHandler extends InteractionHandler {
     if (interaction.user.id !== ownerId) {
       throw new UserError({
         identifier: "AccessDenied",
-        message: `${Emojis.CROSS} Only the original invoker can use these components.`,
+        message: `${Emojis.Cross} Only the original invoker can use these components.`,
       });
     }
   }

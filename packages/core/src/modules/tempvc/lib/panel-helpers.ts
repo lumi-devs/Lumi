@@ -37,7 +37,7 @@ export function assertOwner(
   if (service.canManage(member, channel)) return;
   throw new UserError({
     identifier: "TempVcNotOwner",
-    message: `${Emojis.CROSS} ${t ? t("tempvc:onlyOwner") : "Only the channel owner can use these controls."}`,
+    message: `${Emojis.Cross} ${t ? t("tempvc:onlyOwner") : "Only the channel owner can use these controls."}`,
   });
 }
 

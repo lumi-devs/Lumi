@@ -34,34 +34,34 @@ export function formatFieldValue(field: ConfigField, value: unknown): string {
   if (val === null || val === "") return "-# *(not set)*";
 
   switch (field.type) {
-    case FieldType.CHANNEL:
+    case FieldType.Channel:
       return channelMention(String(val));
-    case FieldType.ROLE:
+    case FieldType.Role:
       return roleMention(String(val));
-    case FieldType.MULTI_CHANNEL: {
+    case FieldType.MultiChannel: {
       const ids = Array.isArray(val) ? val : [];
       if (ids.length === 0) return "-# *(not set)*";
       return ids.map((id) => channelMention(String(id))).join(", ");
     }
-    case FieldType.MULTI_ROLE: {
+    case FieldType.MultiRole: {
       const ids = Array.isArray(val) ? val : [];
       if (ids.length === 0) return "-# *(not set)*";
       return ids.map((id) => roleMention(String(id))).join(", ");
     }
-    case FieldType.MULTI_USER: {
+    case FieldType.MultiUser: {
       const ids = Array.isArray(val) ? val : [];
       if (ids.length === 0) return "-# *(not set)*";
       return ids.map((id) => userMention(String(id))).join(", ");
     }
-    case FieldType.STRING_LIST: {
+    case FieldType.StringList: {
       const items = Array.isArray(val) ? val.map(String) : [];
       if (items.length === 0) return "-# *(not set)*";
       return `\`${cutText(items.join(", "), 120)}\``;
     }
-    case FieldType.USER:
+    case FieldType.User:
       return userMention(String(val));
-    case FieldType.BOOLEAN:
-      return val ? `${Emojis.CHECK} Yes` : `${Emojis.CROSS} No`;
+    case FieldType.Boolean:
+      return val ? `${Emojis.Check} Yes` : `${Emojis.Cross} No`;
     default:
       return `\`${cutText(String(val), 120)}\``;
   }

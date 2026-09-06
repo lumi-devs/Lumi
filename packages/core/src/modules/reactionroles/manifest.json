@@ -1,0 +1,31 @@
+{
+  "name": "reactionroles",
+  "displayName": "Reaction Roles",
+  "emoji": "🎭",
+  "description": "Self-serve role menus with buttons, a multi-pick dropdown, or raw message reactions, including exclusive and gated options.",
+  "short": "Self-serve role menus via buttons, dropdown, or reactions.",
+  "endUserDataStatement": "Stores role-menu definitions (titles, role IDs, gates) per server. Role assignments themselves live on Discord and are removed by unassigning the role.",
+  "version": "0.3.0",
+  "disableable": true,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": true,
+  "targetUtility": "worker",
+  "subStores": [
+    "commands",
+    "listeners",
+    "interaction-handlers",
+    "utilities"
+  ],
+  "configFields": [
+    {
+      "key": "max_menus",
+      "type": "NUMBER",
+      "label": "Max Role Menus",
+      "description": "How many role menus can exist in this server at once.",
+      "default": 25
+    }
+  ],
+  "category": "Community",
+  "dashboardHref": "config/roles"
+}
