@@ -85,11 +85,12 @@ function renderInlineToken(token: string, key: number): ReactNode {
     }
     return <span key={key}>{token}</span>;
   }
-  if (/^https?:\/\//.test(token) && isSafeHttpUrl(token)) {
+  const safeTokenHref = /^https?:\/\//.test(token) ? getSafeHttpUrl(token) : null;
+  if (safeTokenHref) {
     return (
       <a
         key={key}
-        href={token}
+        href={safeTokenHref}
         onClick={(e) => e.preventDefault()}
         style={{ color: DiscordLink }}
         className="hover:underline"
@@ -101,13 +102,20 @@ function renderInlineToken(token: string, key: number): ReactNode {
   return <span key={key}>{token}</span>;
 }
 
-function isSafeHttpUrl(value: string): boolean {
+function getSafeHttpUrl(value: string): string | null {
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      return url.toString();
+    }
+    return null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+function isSafeHttpUrl(value: string): boolean {
+  return getSafeHttpUrl(value) !== null;
 }
 
 const inlineTest = new RegExp(inlinePattern.source);
