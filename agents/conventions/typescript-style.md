@@ -37,14 +37,14 @@ type-checked rules back off:
 '@typescript-eslint/no-redundant-type-constituents': 'off'
 ```
 
-`ORIGINAL_REQUEST.md` (repo root) documents a session that set out to re-enable
-exactly this list — `no-explicit-any`, the `no-unsafe-*` family,
-`no-misused-promises`, `await-thenable`, `switch-exhaustiveness-check`,
-`no-unused-vars` — under a "10/10 Code Hygiene" mandate. The suppressions above are
-still live, so treat that effort as unresolved rather than as an implicit go-ahead
-to write unsafe code because the linter won't catch it. Don't add `any`,
-`@ts-ignore`, or `@ts-nocheck` just because the type-checked variants are currently
-off; `noUnusedLocals`/`noUnusedParameters`/`strict` are all on at the `tsc` level
+A prior hardening effort set out to re-enable exactly this list —
+`no-explicit-any`, the `no-unsafe-*` family, `no-misused-promises`,
+`await-thenable`, `switch-exhaustiveness-check`, `no-unused-vars` — under a
+"10/10 Code Hygiene" mandate. The suppressions above are still live, so treat
+that effort as unresolved rather than as an implicit go-ahead to write unsafe
+code because the linter won't catch it. Don't add `any`, `@ts-ignore`, or
+`@ts-nocheck` just because the type-checked variants are currently off;
+`noUnusedLocals`/`noUnusedParameters`/`strict` are all on at the `tsc` level
 (`packages/typescript-config/base.json:8,23,24`) regardless of what ESLint enforces.
 
 On top of the base config, the root `eslint.config.mjs` adds repo-specific rules
