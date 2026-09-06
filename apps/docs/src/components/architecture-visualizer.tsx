@@ -1,6 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
+import Prism from "prismjs";
+import "prismjs/components/prism-typescript.js";
 import {
   Server,
   Cpu,
@@ -168,6 +170,17 @@ export function ArchitectureVisualizer() {
   const [selectedId, setSelectedId] = useState<string>("gateway");
   const selectedNode: NodeData = Nodes.find((n) => n.id === selectedId) ?? (Nodes[0] as NodeData);
 
+  const highlightedSnippet = useMemo(() => {
+    try {
+      if (Prism.languages.typescript) {
+        return Prism.highlight(selectedNode.codeSnippet, Prism.languages.typescript, "typescript");
+      }
+    } catch {
+      // fallback
+    }
+    return selectedNode.codeSnippet;
+  }, [selectedNode.codeSnippet]);
+
   return (
     <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 lg:p-8 shadow-2xl">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[var(--border)]">
@@ -248,18 +261,21 @@ export function ArchitectureVisualizer() {
         <div className="lg:col-span-6 flex flex-col justify-between">
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-[var(--border)] text-xs text-[var(--fg-muted)] font-mono">
             <div className="flex items-center gap-1.5">
-              <Code2 className="h-3.5 w-3.5 text-[var(--accent)]" />
-              <span>Implementation Blueprint</span>
+              <Code2 className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
+              <span className="font-semibold text-white">Implementation Blueprint</span>
             </div>
-            <span>TypeScript</span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)] text-[var(--fg-subtle)]">TypeScript</span>
           </div>
-          <pre className="p-3.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] overflow-x-auto text-[12px] font-mono text-[var(--accent-fg)] leading-relaxed">
-            <code>{selectedNode.codeSnippet}</code>
+          <pre className="p-4 rounded-xl bg-[#090d16] border border-[var(--border)] overflow-x-auto text-[12px] font-mono leading-relaxed text-[#e2e8f0]">
+            <code
+              className="language-typescript"
+              dangerouslySetInnerHTML={{ __html: highlightedSnippet }}
+            />
           </pre>
           <div className="mt-3 flex items-center justify-end">
             <Link
               href={selectedNode.docHref}
-              className="text-xs font-semibold text-[var(--accent)] hover:text-[var(--accent-fg)] inline-flex items-center gap-1 transition-colors"
+              className="text-xs font-semibold text-[var(--accent-fg)] hover:text-white inline-flex items-center gap-1 transition-colors"
             >
               <span>Explore full architectural walkthrough</span>
               <ChevronRight className="h-3.5 w-3.5" />

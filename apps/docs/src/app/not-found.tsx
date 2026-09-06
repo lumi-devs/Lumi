@@ -5,7 +5,7 @@ export default function NotFound() {
   return (
     <div className="mx-auto flex w-full max-w-[1700px] px-6 lg:px-10">
       <Sidebar />
-      <main className="flex-1 py-12 flex flex-col items-center justify-center min-h-[50vh]">
+      <main className="flex-1 py-12 flex flex-col items-center justify-center min-h-[50vh] md:pl-10 lg:pl-14">
         <h1 className="text-8xl font-bold text-[var(--fg)] tracking-tighter">404</h1>
         <p className="mt-4 text-xl text-[var(--fg-muted)]">Page not found</p>
         <p className="mt-2 text-sm text-[var(--fg-subtle)] text-center max-w-md mb-8">

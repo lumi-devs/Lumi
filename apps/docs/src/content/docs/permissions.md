@@ -1,59 +1,84 @@
 ---
-title: "Permissions & Permit Nodes"
-description: "Hierarchical permit node system, command gating, and guild permission overrides."
+title: "Permissions & Permit System"
+description: "How Lumi's granular permit node hierarchy works, role overrides, and command gating."
 category: "Core Architecture"
 ---
 
-# Permissions & Permit System
+Discord's built-in permissions (like `Administrator` or `Manage Messages`) are all-or-nothing. If you give a moderator permission to manage messages, they might also be able to pin spam or delete announcements.
 
-Lumi implements a dot-notation permit system inspired by UNIX permissions and RBAC (Role-Based Access Control).
-
-## Permit Node Hierarchy
-
-Permit nodes are structured hierarchically using dot notation:
-
-```
-admin.*                  # Wildcard granting all administrative capabilities
-admin.config.read        # Read guild configuration
-admin.config.write       # Modify guild configuration
-mod.*                    # All moderation actions
-mod.ban                  # Issue or revoke guild bans
-mod.mute                 # Apply timeouts
-mod.warn                 # Issue warnings
-utility.tag.create       # Create custom tags
-```
-
-The canonical list of registered nodes is defined in `packages/core/src/lib/permissions/permit-nodes.ts`.
+Lumi replaces this with a **permit node system** inspired by UNIX permissions and Role-Based Access Control (RBAC). It allows you to grant specific commands to specific roles or channels without granting full Discord administrative power.
 
 ---
 
-## Gating Commands
+## Permit Nodes Explained
 
-To require a permit on a Sapphire command:
+Permit nodes use simple dot notation:
 
-```ts
-import { LumiCommand } from "#lib/commands.js";
+| Node | What it allows |
+| :--- | :--- |
+| `mod.ban` | Ban or unban members. |
+| `mod.mute` | Timeout members. |
+| `mod.warn` | Issue warnings or check warning history. |
+| `mod.*` | Wildcard: allows every moderation action. |
+| `admin.config.read` | View server settings and module toggles. |
+| `admin.config.write` | Change server configuration and prefix. |
+| `admin.*` | Full bot administration access on this server. |
+
+When checking a user's permissions, Lumi evaluates hierarchically: possessing `mod.*` automatically grants access to `mod.ban`, `mod.mute`, and `mod.warn`.
+
+---
+
+## Configuring Permits for Your Server
+
+Server owners and administrators can assign permit nodes to roles or members using slash commands or the web dashboard:
+
+### Granting a Permit
+```
+/permit grant role:@Moderator node:mod.warn
+```
+
+### Checking Active Permits
+```
+/permit list
+```
+
+### Revoking a Permit
+```
+/permit revoke role:@Moderator node:mod.warn
+```
+
+You can also restrict commands to specific channels using channel overrides (for example, allowing `/tag create` only in `#bot-commands`).
+
+---
+
+## Using Permits in Custom Commands
+
+When writing custom slash commands or addons with the `@lumi` SDK, you can protect them by specifying `requiredPermit`:
+
+```typescript
+import { LumiCommand, type CommandContext } from "lumi";
 
 export class BanCommand extends LumiCommand {
-  public constructor(context: LumiCommand.LoaderContext, options: LumiCommand.Options) {
+  public constructor(context: LumiCommand.Context) {
     super(context, {
-      ...options,
       name: "ban",
-      description: "Ban a user from the server.",
+      description: "Ban a member from the server",
       requiredPermit: "mod.ban",
     });
   }
 
-  public override async chatInputRun(interaction: LumiCommand.ChatInputCommandInteraction) {
-    // Execution will only reach here if the user has `mod.ban` or `admin.*`
+  public override async chatInputRun(ctx: CommandContext) {
+    // Lumi automatically checks if the user has `mod.ban` or `admin.*`
+    // If they lack the permit, they receive a clean error card and this code never runs.
+    const target = ctx.options.getUser("user", true);
+    await ctx.guild?.members.ban(target.id);
+    return ctx.replySuccess("Member Banned", `<@${target.id}> was banned.`);
   }
 }
 ```
 
 ---
 
-## Guild Overrides & Autocomplete
+## Bot Owner Superuser
 
-1. **Role Overrides**: Guild owners can bind any permit node to specific Discord roles via `/permit grant` or the web dashboard.
-2. **Channel Overrides**: Deny or grant specific nodes inside designated channels.
-3. **Autocomplete Integration**: Command options accepting permit strings automatically suggest registered nodes using `filterAutocompleteChoices` from `#utilities/autocomplete.js`.
+The bot owner (configured via `OWNER_IDS` in your `.env` file) automatically bypasses all permit checks across all servers. This ensures you never get locked out of administrative commands on your own self-hosted bot.

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
+import Prism from "prismjs";
+import "prismjs/components/prism-typescript.js";
 import { DiscordCardPreview } from "@/components/discord-card-preview";
 import { ArchitectureVisualizer } from "@/components/architecture-visualizer";
 import { version } from "../../package.json";
@@ -48,6 +50,17 @@ export default function Home() {
   const [activeShowcase, setActiveShowcase] = useState<"cards" | "addon" | "topology">("cards");
   const [copiedInstall, setCopiedInstall] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+
+  const highlightedAddonCode = useMemo(() => {
+    try {
+      if (Prism.languages.typescript) {
+        return Prism.highlight(CODE_EXAMPLE, Prism.languages.typescript, "typescript");
+      }
+    } catch {
+      // fallback
+    }
+    return CODE_EXAMPLE;
+  }, []);
 
   const installCommand = "docker compose up -d";
 
@@ -151,8 +164,8 @@ export default function Home() {
                 onClick={() => setActiveShowcase("cards")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeShowcase === "cards"
-                    ? "bg-[var(--surface-active)] text-white shadow-sm"
-                    : "text-[var(--fg-muted)] hover:text-[var(--fg)]"
+                    ? "bg-[var(--surface-active)] text-white shadow-sm border border-[var(--border-strong)]"
+                    : "text-[var(--fg-muted)] hover:text-[var(--fg)] border border-transparent"
                 }`}
               >
                 <Sparkles className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
@@ -163,8 +176,8 @@ export default function Home() {
                 onClick={() => setActiveShowcase("addon")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeShowcase === "addon"
-                    ? "bg-[var(--surface-active)] text-white shadow-sm"
-                    : "text-[var(--fg-muted)] hover:text-[var(--fg)]"
+                    ? "bg-[var(--surface-active)] text-white shadow-sm border border-[var(--border-strong)]"
+                    : "text-[var(--fg-muted)] hover:text-[var(--fg)] border border-transparent"
                 }`}
               >
                 <Code2 className="h-3.5 w-3.5 text-[var(--success)]" />
@@ -175,8 +188,8 @@ export default function Home() {
                 onClick={() => setActiveShowcase("topology")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeShowcase === "topology"
-                    ? "bg-[var(--surface-active)] text-white shadow-sm"
-                    : "text-[var(--fg-muted)] hover:text-[var(--fg)]"
+                    ? "bg-[var(--surface-active)] text-white shadow-sm border border-[var(--border-strong)]"
+                    : "text-[var(--fg-muted)] hover:text-[var(--fg)] border border-transparent"
                 }`}
               >
                 <Layers className="h-3.5 w-3.5 text-[#FB923C]" />
@@ -230,8 +243,11 @@ export default function Home() {
                   </button>
                 </div>
 
-                <pre className="p-4 rounded-xl bg-[#07090f] border border-[var(--border-soft)] text-[12.5px] font-mono leading-relaxed text-[#c9d1d9] overflow-x-auto whitespace-pre">
-                  <code>{CODE_EXAMPLE}</code>
+                <pre className="p-4 rounded-xl bg-[#090d16] border border-[var(--border)] text-[12.5px] font-mono leading-relaxed text-[#e2e8f0] overflow-x-auto whitespace-pre">
+                  <code
+                    className="language-typescript"
+                    dangerouslySetInnerHTML={{ __html: highlightedAddonCode }}
+                  />
                 </pre>
               </div>
             )}

@@ -4,7 +4,7 @@ import { BookOpen, ShieldCheck } from "lucide-react";
 export function Footer() {
   return (
     <footer className="border-t border-[var(--border)] bg-[var(--bg-subtle)] text-[var(--fg-muted)] text-sm mt-20">
-      <div className="mx-auto max-w-[1700px] px-6 lg:px-10 py-12">
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-[var(--fg)] font-semibold">

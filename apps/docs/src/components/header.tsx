@@ -6,7 +6,7 @@ import { VersionSelector } from "@/components/version-selector";
 export function Header() {
   return (
     <header className="glass sticky top-0 z-50 w-full border-b border-[var(--border)]">
-      <div className="flex h-16 items-center px-6 lg:px-10 max-w-[1700px] mx-auto w-full gap-4">
+      <div className="flex h-16 items-center px-4 sm:px-6 lg:px-8 max-w-[1440px] mx-auto w-full gap-4">
         <div className="flex items-center gap-3.5 mr-4">
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--success)] p-0.5 shadow-[var(--shadow-accent)] group-hover:scale-105 transition-transform">

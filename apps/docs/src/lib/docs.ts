@@ -11,6 +11,7 @@ import "prismjs/components/prism-yaml.js";
 import "prismjs/components/prism-markdown.js";
 import "prismjs/components/prism-sql.js";
 import "prismjs/components/prism-docker.js";
+import { getAdjacentDocs } from "./navigation";
 
 const DocsDir = path.join(process.cwd(), "src/content/docs");
 const DocsDirResolved = path.resolve(DocsDir);
@@ -96,6 +97,16 @@ export const getDocBySlug = async (slugArray: string[]): Promise<DocContent | nu
 
   const { data, content } = matter(fileContents);
 
+  const createHeadingSlug = (raw: string): string => {
+    return raw
+      .toLowerCase()
+      .replace(/<[^>]*>/g, "")
+      .replace(/[`'"]/g, "")
+      .replace(/[^\w\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-");
+  };
+
   const toc: TocHeading[] = [];
   const lines = content.split("\n");
   for (const line of lines) {
@@ -103,22 +114,38 @@ export const getDocBySlug = async (slugArray: string[]): Promise<DocContent | nu
     if (match) {
       const depth = match?.[1]?.length || 2;
       const text = match?.[2]?.trim() || '';
-      const id = text.toLowerCase().replace(/[^\w]+/g, "-");
+      const id = createHeadingSlug(text);
       toc.push({ depth, text, id });
     }
   }
 
   const renderer = new Renderer();
   renderer.heading = ({ text, depth }) => {
-    let plainText = text;
-    let previousPlainText;
-    do {
-      previousPlainText = plainText;
-      plainText = plainText.replace(/<[^>]*>/g, "");
-    } while (plainText !== previousPlainText);
-    plainText = plainText.trim();
-    const id = plainText.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-");
+    if (depth === 1) {
+      // Suppress duplicate H1 in body because the page header already displays it
+      return "";
+    }
+    const id = createHeadingSlug(text);
     return `<h${depth} id="${id}" class="group flex items-center gap-2"><span>${text}</span><a href="#${id}" class="opacity-0 group-hover:opacity-100 text-[var(--fg-subtle)] hover:text-[var(--accent)] transition-opacity text-sm ml-1">#</a></h${depth}>`;
+  };
+
+  renderer.blockquote = ({ text }) => {
+    let type = "note";
+    let clean = text.trim();
+    if (clean.includes("[!NOTE]")) {
+      type = "note";
+      clean = clean.replace(/\[!NOTE\]/g, "");
+    } else if (clean.includes("[!TIP]")) {
+      type = "tip";
+      clean = clean.replace(/\[!TIP\]/g, "");
+    } else if (clean.includes("[!WARNING]")) {
+      type = "warning";
+      clean = clean.replace(/\[!WARNING\]/g, "");
+    } else if (clean.includes("[!DANGER]")) {
+      type = "danger";
+      clean = clean.replace(/\[!DANGER\]/g, "");
+    }
+    return `<div class="callout callout-${type}">${clean}</div>`;
   };
 
   renderer.code = ({ text, lang }) => {
@@ -153,26 +180,34 @@ export const getDocBySlug = async (slugArray: string[]): Promise<DocContent | nu
         .replace(/'/g, "&#039;");
     }
 
-    return `<div class="my-6 rounded-xl overflow-hidden border border-[var(--border-strong)] bg-[#0A0D14] shadow-lg">
-      <div class="flex items-center justify-between px-4 py-2 bg-[var(--surface-active)] border-b border-[var(--border-strong)] text-xs font-mono text-[var(--fg-muted)]">
+    const encodedCode = Buffer.from(text).toString("base64");
+
+    return `<div class="code-block-wrapper my-6 rounded-xl overflow-hidden border border-[var(--border)] bg-[#07090f] shadow-lg">
+      <div class="flex items-center justify-between px-4 py-2.5 bg-[var(--surface)] border-b border-[var(--border)] text-xs font-mono">
         <div class="flex items-center gap-2">
-          <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#FF5F56]/80"></span>
-          <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#FFBD2E]/80"></span>
-          <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#27C93F]/80"></span>
-          <span class="ml-2 font-medium uppercase tracking-wider text-[11px] text-[var(--fg-subtle)]">${language}</span>
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#FF5F56]/70"></span>
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#FFBD2E]/70"></span>
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#27C93F]/70"></span>
+          <span class="ml-2 font-medium uppercase tracking-wider text-[11px] text-[var(--accent-fg)]">${language}</span>
         </div>
+        <button
+          type="button"
+          class="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono text-[var(--fg-muted)] hover:text-white rounded bg-[var(--surface-active)] border border-[var(--border)] transition-all cursor-pointer"
+          onclick="navigator.clipboard.writeText(atob('${encodedCode}')).then(()=>{this.innerText='✓ Copied'; setTimeout(()=>{this.innerText='Copy'}, 2000)});"
+        >
+          Copy
+        </button>
       </div>
       <pre class="p-4 overflow-x-auto text-[13px] leading-relaxed text-[#E2E8F0] font-mono"><code class="language-${prismLang}">${highlighted}</code></pre>
     </div>`;
   };
-  
-  marked.use({ renderer });
-  const html = await marked(content);
 
-  const allDocs = getAllDocs();
-  const currentIndex = allDocs.findIndex((d) => d.slug === slug);
-  const prev = currentIndex > 0 ? allDocs[currentIndex - 1] : undefined;
-  const next = currentIndex < allDocs.length - 1 ? allDocs[currentIndex + 1] : undefined;
+  marked.use({ renderer });
+  let rawHtml = await marked(content);
+  // Wrap all tables in an auto-scrolling container
+  const html = rawHtml.replace(/<table>/g, '<div class="table-wrapper"><table>').replace(/<\/table>/g, '</table></div>');
+
+  const { prev, next } = getAdjacentDocs(slug);
 
   return {
     meta: {
