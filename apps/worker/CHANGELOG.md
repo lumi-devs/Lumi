@@ -1,5 +1,16 @@
 # @lumi/worker
 
+## 0.4.0
+
+### Patch Changes
+
+- Updated dependencies [3031488]
+- Updated dependencies [5d776e1]
+- Updated dependencies [237cd1e]
+- Updated dependencies [9d45618]
+  - @lumi/core@0.4.0
+  - @lumi/observability@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes
