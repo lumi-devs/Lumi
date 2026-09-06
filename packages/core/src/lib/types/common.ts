@@ -87,8 +87,8 @@ declare module "#lib/env.js" {
   interface Env {
     BOT_TOKEN: string;
     CLIENT_ID: string;
-    OwnerIds: string;
-    DefaultPrefix: string;
+    OWNER_IDS: string;
+    DEFAULT_PREFIX: string;
     NODE_ENV: "development" | "production" | "test";
     LOG_LEVEL: "trace" | "debug" | "info" | "warn" | "error" | "fatal";
     POSTGRES_URL: string;
