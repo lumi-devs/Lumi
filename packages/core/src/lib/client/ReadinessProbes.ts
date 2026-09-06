@@ -81,6 +81,9 @@ export class ReadinessProbes {
           redis: container.redis,
           clusterName: getClusterName() ?? DefaultClusterName,
         });
+        if (snapshot.shards.length === 0) {
+          return { status: "fail", detail: "no shard telemetry observed" };
+        }
         if (snapshot.missingShardIds.length > 0) {
           return {
             status: "fail",

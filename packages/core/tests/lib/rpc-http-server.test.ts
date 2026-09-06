@@ -275,6 +275,36 @@ describe("RPC HTTP Server & Auth Verification", () => {
         data: { online: true },
       });
     });
+
+    it("returns 500 without leaking internals when dispatch itself throws", async () => {
+      registerRpcHandler("boom", async () => ({ unreachable: true }));
+      (container as any).db.config.isDashboardEnabled.mockRejectedValueOnce(
+        new Error("connect ECONNREFUSED postgres:5432"),
+      );
+
+      const req = new Request("http://127.0.0.1/rpc", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${TEST_TOKEN}`,
+        },
+        body: JSON.stringify({ id: "db-down", action: "boom", guildId: "123" }),
+      });
+      const res = await handleRpcHttpRequest(req, TEST_TOKEN);
+
+      expect(res.status).toBe(500);
+      const data = await res.json();
+      expect(data).toEqual({ id: "db-down", ok: false, error: "Internal error" });
+    });
+
+    it("logs when a handler registration replaces an existing action", async () => {
+      registerRpcHandler("dup", async () => ({ v: 1 }));
+      registerRpcHandler("dup", async () => ({ v: 2 }));
+
+      expect(container.logger.error).toHaveBeenCalledWith(
+        expect.stringContaining("Handler for action 'dup' is being replaced"),
+      );
+    });
   });
 
   describe("startRpcHttpServer (Server lifecycle and error handling)", () => {
@@ -314,6 +344,19 @@ describe("RPC HTTP Server & Auth Verification", () => {
       );
     });
 
+    it("refuses a routable bind without a token instead of serving unauthenticated", async () => {
+      process.env["RPC_HTTP_HOST"] = "0.0.0.0";
+      process.env["RPC_HTTP_PORT"] = "8091";
+      delete process.env["RPC_INTERNAL_TOKEN"];
+      process.env["NODE_ENV"] = "development";
+      (globalThis as any).Bun = { serve: vi.fn() };
+
+      await expect(startRpcHttpServer(mockLogger)).rejects.toThrow(
+        /not loopback/,
+      );
+      expect((globalThis as any).Bun.serve).not.toHaveBeenCalled();
+    });
+
     it("retries on bind failure and succeeds on subsequent attempt", async () => {
       process.env["RPC_HTTP_HOST"] = "127.0.0.1";
       process.env["RPC_HTTP_PORT"] = "8091";
@@ -345,8 +388,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
       );
     });
 
-    it("handles server startup error gracefully after all retries fail", async () => {
-      process.env["RPC_HTTP_HOST"] = "127.0.0.1";
+    it("handles server startup error gracefully after all retries fail", async () => {      process.env["RPC_HTTP_HOST"] = "127.0.0.1";
       process.env["RPC_HTTP_PORT"] = "8091";
 
       const mockServe = vi.fn().mockImplementation(() => {

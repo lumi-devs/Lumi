@@ -64,7 +64,8 @@ export async function getGuildSummaries(
       data: { guildIds },
     })) as { summaries: GuildSummaryView[] };
     return data.summaries;
-  } catch {
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes("Unauthorized")) throw err;
     return [];
   }
 }
@@ -194,7 +195,7 @@ export async function getGuildOverrides(
   const data = (await rpcCall(RpcActions.guildOverridesList, {
     guildId,
     actorId,
-    data: { moduleName },
+    ...(moduleName === undefined ? {} : { data: { moduleName } }),
   })) as { overrides: ConfigOverrideView[] };
   return data.overrides;
 }

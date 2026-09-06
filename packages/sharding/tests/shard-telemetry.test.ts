@@ -11,35 +11,20 @@ function fakeRedis() {
   const store = new Map<string, string>();
   const commands: { cmd: string; args: unknown[] }[] = [];
 
-  const multi = () => {
-    const queued: (() => void)[] = [];
-    const chain: any = {
-      set: (key: string, value: string, ..._rest: unknown[]) => {
-        queued.push(() => store.set(key, value));
-        commands.push({ cmd: "set", args: [key, value] });
-        return chain;
-      },
-      del: (key: string) => {
-        queued.push(() => store.delete(key));
-        commands.push({ cmd: "del", args: [key] });
-        return chain;
-      },
-      exec: () => {
-        for (const run of queued) run();
-        return Promise.resolve([]);
-      },
-    };
-    return chain;
-  };
-
   return {
     store,
     commands,
-    multi,
+    set: vi.fn((key: string, value: string, ..._rest: unknown[]) => {
+      store.set(key, value);
+      commands.push({ cmd: "set", args: [key, value] });
+      return Promise.resolve("OK");
+    }),
+    del: vi.fn((...keys: string[]) => {
+      for (const key of keys) store.delete(key);
+      commands.push({ cmd: "del", args: keys });
+      return Promise.resolve(keys.length);
+    }),
     get: vi.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
-    mget: vi.fn((...keys: string[]) =>
-      Promise.resolve(keys.map((k) => store.get(k) ?? null)),
-    ),
     scan: vi.fn((_cursor: string, _m: string, pattern: string) => {
       const prefix = pattern.replace(/\\(.)/g, "$1").replace(/\*$/, "");
       return Promise.resolve([
@@ -165,5 +150,28 @@ describe("readClusterShards", () => {
     expect(snapshot.shards).toEqual([]);
     expect(snapshot.replicas).toEqual([]);
     expect(snapshot.missingShardIds).toEqual([]);
+  });
+
+  it("scans every master instead of one node on Cluster", async () => {
+    const key0 = `lumi:cluster:${CLUSTER}:shard:0`;
+    const key1 = `lumi:cluster:${CLUSTER}:shard:1`;
+    const row = (shardId: number) =>
+      JSON.stringify({ ...sample(shardId), replicaId: "gw-a", updatedAt: 1 });
+    const cluster = {
+      nodes: vi.fn(() => [
+        { scan: vi.fn(async () => ["0", [key0]]) },
+        { scan: vi.fn(async () => ["0", [key1]]) },
+      ]),
+      get: vi.fn(async (key: string) =>
+        key === key0 ? row(0) : key === key1 ? row(1) : null,
+      ),
+      set: vi.fn(async () => "OK"),
+      del: vi.fn(async () => 1),
+    } as any;
+
+    const snapshot = await readClusterShards({ redis: cluster, clusterName: CLUSTER });
+
+    expect(cluster.nodes).toHaveBeenCalledWith("master");
+    expect(snapshot.shards.map((s) => s.shardId)).toEqual([0, 1]);
   });
 });

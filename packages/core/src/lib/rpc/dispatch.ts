@@ -13,6 +13,11 @@ export function registerRpcHandler<TIn, TOut>(
   action: string,
   handler: RpcHandler<TIn, TOut>,
 ): void {
+  if (rpcHandlers.has(action)) {
+    container.logger.error(
+      `[Rpc] Handler for action '${action}' is being replaced. If these are different owners, one of them is hijacking the other's RPC action.`,
+    );
+  }
   rpcHandlers.set(action, handler as RpcHandler<unknown, unknown>);
 }
 

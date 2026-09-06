@@ -21,11 +21,8 @@ function envInt(key: string, fallback?: number): number {
   throw new Error(`[ENV] Missing required variable: ${key}`);
 }
 
-// NextAuth reads AUTH_SECRET by convention; DASHBOARD_SESSION_SECRET is
-// kept for deploy-config continuity with older deployments.
 function resolveAuthSecret(): string {
-  const provided =
-    process.env["DASHBOARD_SESSION_SECRET"] || process.env["AUTH_SECRET"];
+  const provided = process.env["DASHBOARD_SESSION_SECRET"];
   if (provided) return provided;
 
   const building = process.env["NEXT_PHASE"] === "phase-production-build";
@@ -59,9 +56,6 @@ export const env = {
   authSecret: resolveAuthSecret(),
   host: envStr("DASHBOARD_HOST", "0.0.0.0"),
   port: envInt("DASHBOARD_PORT", 8080),
-  get redisUrl(): string | undefined {
-    return process.env["REDIS_URL"] || undefined;
-  },
   get trustedProxyHops(): number {
     return resolveTrustedHops();
   },

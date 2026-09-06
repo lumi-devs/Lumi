@@ -33,11 +33,6 @@ export const KnownPermitNodeGroups: {
           "Every core moderation command: ban, unban, kick, timeout, warn, quarantine, purge, and case history.",
       },
       {
-        node: "mod.appeals",
-        label: "Review member appeals",
-        description: "Review and decide on ban appeals submitted through the public appeal form.",
-      },
-      {
         node: "mod.lockdown",
         label: "Lock down channels",
         description: "Lock a channel to stop new messages during a raid or incident.",

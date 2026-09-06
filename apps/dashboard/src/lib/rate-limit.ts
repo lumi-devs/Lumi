@@ -32,11 +32,8 @@ export async function isRateLimited(
     const limiter = getLimiter(limit, windowMs);
     await limiter.consume(key);
     return false;
-  } catch (error) {
-    // rate-limiter-flexible rejects the promise (rather than throwing) when
-    // the key is out of points — that rejection *is* the "limited" signal.
-    // If Redis is disconnected and an insuranceLimiter is provided, the library
-    // automatically delegates to the insuranceLimiter.
+  } catch {
+    // consume() rejects when the key is out of points; fail closed otherwise.
     return true;
   }
 }

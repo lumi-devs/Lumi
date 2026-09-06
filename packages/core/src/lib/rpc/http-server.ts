@@ -107,8 +107,14 @@ export async function handleRpcHttpRequest(
       { status: 400 },
     );
   }
-  const res = await dispatchRpc(body);
-  return Response.json(res);
+  try {
+    return Response.json(await dispatchRpc(body));
+  } catch {
+    return Response.json(
+      { id: body?.id ?? "", ok: false, error: "Internal error" },
+      { status: 500 },
+    );
+  }
 }
 
 export async function startRpcHttpServer(
@@ -122,6 +128,13 @@ export async function startRpcHttpServer(
   // where only the RPC-serving services set 0.0.0.0).
   const host = envParseString("RPC_HTTP_HOST", "127.0.0.1");
   const internalToken = readInternalToken(log);
+  if (!internalToken && host !== "127.0.0.1" && host !== "localhost" && host !== "::1") {
+    throw new Error(
+      "[ENV] RPC_INTERNAL_TOKEN is unset and RPC_HTTP_HOST is not loopback — " +
+        "refusing to serve unauthenticated RPC on a routable interface. Set " +
+        "RPC_INTERNAL_TOKEN or bind RPC_HTTP_HOST to 127.0.0.1.",
+    );
+  }
 
   let attempt = 0;
   while (attempt < maxAttempts) {

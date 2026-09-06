@@ -223,11 +223,7 @@ export function getDevModulePaths(): string[] {
  * `http://nirn-proxy:8080` - `/api` is appended by `buildRestOptions()`.
  */
 export const getDiscordProxyUrl = (): string | null => {
-  const raw = (
-    process.env["DISCORD_PROXY_URL"] ||
-    process.env["DISCORD_REST_PROXY_URL"] ||
-    process.env["REST_PROXY_URL"]
-  )?.trim();
+  const raw = process.env["DISCORD_PROXY_URL"]?.trim();
   if (!raw) return null;
   return raw.replace(/\/+$/, "");
 };
@@ -244,12 +240,10 @@ export const getDashboardPublicUrl = (): string | null => {
 };
 
 export const getPostgresUrl = (): string | undefined =>
-  process.env["POSTGRES_URL"] || process.env["DATABASE_URL"];
+  process.env["POSTGRES_URL"];
 
 export const getPostgresReplicaUrl = (): string | undefined =>
-  process.env["POSTGRES_REPLICA_URL"] ||
-  process.env["DATABASE_READ_URL"] ||
-  process.env["DATABASE_REPLICA_URL"];
+  process.env["POSTGRES_REPLICA_URL"];
 
 export const getPostgresAppName = (): string =>
   process.env["POSTGRES_APP_NAME"] ||

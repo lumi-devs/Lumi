@@ -644,11 +644,10 @@ export class SecurityUtility extends Utility {
 
   /** Drops all pending state for a member (on success or failure). */
   public async clearChallenge(guildId: string, userId: string): Promise<void> {
-    await this.redis
-      .multi()
-      .del(RedisKeys.verifyChallenge(guildId, userId))
-      .zrem(RedisKeys.verifyPending(guildId), userId)
-      .exec();
+    await this.container.invalidation.invalidate(
+      RedisKeys.verifyChallenge(guildId, userId),
+    );
+    await this.redis.zrem(RedisKeys.verifyPending(guildId), userId);
   }
 
   /** Grants the verified role and strips the pending role once a member passes. */
@@ -813,7 +812,9 @@ export class SecurityUtility extends Utility {
   }
 
   public async clearRestorePending(guildId: string): Promise<void> {
-    await this.redis.del(RedisKeys.securityRestorePending(guildId));
+    await this.container.invalidation.invalidate(
+      RedisKeys.securityRestorePending(guildId),
+    );
   }
 
   /**

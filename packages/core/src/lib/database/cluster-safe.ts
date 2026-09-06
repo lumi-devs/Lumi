@@ -96,7 +96,7 @@ export async function pipelineBySlot<T>(
   if (!isCluster(redis)) {
     const pipe = redis.pipeline();
     for (const item of items) apply(pipe, item);
-    await pipe.exec();
+    assertExecResults(await pipe.exec());
     return;
   }
 
@@ -112,9 +112,18 @@ export async function pipelineBySlot<T>(
     [...groups.values()].map(async (group) => {
       const pipe = redis.pipeline();
       for (const item of group) apply(pipe, item);
-      await pipe.exec();
+      assertExecResults(await pipe.exec());
     }),
   );
+}
+
+function assertExecResults(results: unknown): void {
+  if (results === null) throw new Error("Redis pipeline was discarded");
+  if (!Array.isArray(results)) return;
+  const failure = results.find(
+    (entry) => Array.isArray(entry) && entry[0] != null,
+  ) as [unknown] | undefined;
+  if (failure) throw failure[0];
 }
 
 /** DEL over keys that may span slots. */

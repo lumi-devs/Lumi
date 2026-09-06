@@ -13,6 +13,13 @@ import type { Cluster, Redis } from "ioredis";
 type RedisClient = Redis | Cluster;
 import { tryParseJSON } from "@sapphire/utilities";
 
+function isClusterClient(redis: RedisClient): boolean {
+  return (
+    typeof (redis as { nodes?: unknown }).nodes === "function" &&
+    (redis as Cluster).nodes("master").length > 0
+  );
+}
+
 /** Namespace used when `CLUSTER_NAME` is unset, so single-process deployments still report. */
 export const DefaultClusterName = "default";
 
@@ -77,49 +84,42 @@ export class ShardTelemetryPublisher {
   public async publish(): Promise<void> {
     const rows = this.opts.sample();
     const now = Date.now();
-    const pipe = this.opts.redis.multi();
+    const writes: Promise<unknown>[] = [];
     const seen = new Set<number>();
     for (const row of rows) {
       seen.add(row.shardId);
-      pipe.set(
-        shardKey(this.opts.clusterName, row.shardId),
-        JSON.stringify({
-          ...row,
-          replicaId: this.opts.replicaId,
-          updatedAt: now,
-        } satisfies ShardTelemetry),
-        "PX",
-        this.ttlMs,
+      writes.push(
+        this.opts.redis.set(
+          shardKey(this.opts.clusterName, row.shardId),
+          JSON.stringify({
+            ...row,
+            replicaId: this.opts.replicaId,
+            updatedAt: now,
+          } satisfies ShardTelemetry),
+          "PX",
+          this.ttlMs,
+        ),
       );
     }
-    // A shard handed to another replica must stop being reported by us
-    // immediately; waiting for the TTL would show it twice.
     for (const shardId of this.published) {
       if (!seen.has(shardId)) {
-        pipe.del(shardKey(this.opts.clusterName, shardId));
+        writes.push(this.opts.redis.del(shardKey(this.opts.clusterName, shardId)));
       }
     }
     this.published = seen;
-    // `exec()` resolves with per-command `[err, result]` pairs rather than
-    // rejecting, so without this a telemetry write can fail on every tick and
-    // the fleet view just shows nothing.
-    const results = await pipe.exec();
-    if (results === null) throw new Error("shard telemetry MULTI was discarded");
-    const failure = results.find(([err]) => err)?.[0];
-    if (failure) throw failure;
+    await Promise.all(writes);
   }
 
   public async stop(): Promise<void> {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
     if (this.published.size === 0) return;
-    const pipe = this.opts.redis.multi();
-    for (const shardId of this.published) {
-      pipe.del(shardKey(this.opts.clusterName, shardId));
-    }
+    const keys = [...this.published].map((shardId) =>
+      shardKey(this.opts.clusterName, shardId),
+    );
     this.published = new Set();
     try {
-      await pipe.exec();
+      await Promise.all(keys.map((key) => this.opts.redis.del(key)));
     } catch (err) {
       this.opts.log?.("warn", "shard telemetry cleanup failed", {
         err: String(err),
@@ -167,7 +167,7 @@ export async function readClusterShards(
 
   const rows: ShardTelemetry[] = [];
   if (shardKeys.length > 0) {
-    const values = await redis.mget(...shardKeys);
+    const values = await Promise.all(shardKeys.map((key) => redis.get(key)));
     for (const raw of values) {
       if (!raw) continue;
       const parsed = tryParseJSON(raw) as ShardTelemetry | null;
@@ -210,10 +210,26 @@ async function scanKeys(
   pattern: string,
   count: number,
 ): Promise<string[]> {
+  if (isClusterClient(redis)) {
+    const perNode = await Promise.all(
+      (redis as Cluster)
+        .nodes("master")
+        .map((node) => scanNode(node, pattern, count)),
+    );
+    return perNode.flat();
+  }
+  return scanNode(redis, pattern, count);
+}
+
+async function scanNode(
+  node: Pick<Redis, "scan">,
+  pattern: string,
+  count: number,
+): Promise<string[]> {
   const found: string[] = [];
   let cursor = "0";
   do {
-    const [next, keys] = await redis.scan(
+    const [next, keys] = await node.scan(
       cursor,
       "MATCH",
       pattern,

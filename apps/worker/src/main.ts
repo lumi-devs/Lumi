@@ -37,18 +37,22 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
   // group, so this has to happen explicitly.
   const exits = shards.map(
     (shard) =>
-      new Promise<void>((resolve) => {
-        if (!shard.process) {
-          resolve();
+      new Promise<boolean>((resolve) => {
+        const proc = shard.process;
+        if (!proc || proc.exitCode !== null || proc.signalCode !== null) {
+          resolve(true);
           return;
         }
-        shard.process.once("exit", () => resolve());
-        shard.process.kill(signal);
+        proc.once("exit", () => resolve(true));
+        proc.kill(signal);
       }),
   );
-  const timeout = new Promise<void>((resolve) => setTimeout(resolve, 55_000));
-  await Promise.race([Promise.all(exits), timeout]);
-  process.exit(0);
+  const timeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 55_000));
+  const drained = await Promise.race([
+    Promise.all(exits).then(() => true),
+    timeout,
+  ]);
+  process.exit(drained ? 0 : 1);
 }
 process.once("SIGINT", () => void shutdown("SIGINT"));
 process.once("SIGTERM", () => void shutdown("SIGTERM"));

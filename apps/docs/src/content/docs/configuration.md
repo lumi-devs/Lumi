@@ -88,7 +88,7 @@ Lumi will fail to start if any of these variables are missing:
 | `EVENT_STREAM_CLAIM_INTERVAL_MS` | `30000` | Frequency of the background message reclamation loop. |
 | `EVENT_STREAM_STATS_INTERVAL_MS` | `10000` | Interval for polling stream length and consumer lag metrics. |
 | `ENTITY_CACHE_POPULATE` | `false` | Preload Discord entity caches on shard boot. |
-| `DISCORD_PROXY_URL` / `REST_PROXY_URL` | *(unset)* | Shared outbound REST proxy (such as `nirn-proxy`) for rate-limit coordination across worker replicas. |
+| `DISCORD_PROXY_URL` | *(unset)* | Shared outbound REST proxy (such as `nirn-proxy`) for rate-limit coordination across worker replicas. |
 | `DASHBOARD_PUBLIC_URL` | *(unset)* | Public base URL of the dashboard (e.g. `https://lumi.example.com`) used when generating ban appeal links. |
 
 ---
@@ -100,7 +100,7 @@ Lumi will fail to start if any of these variables are missing:
 | `DASHBOARD_PORT` | `8080` | Port for the Next.js web application (default `8080` in production, `3000` in `next dev`). |
 | `DASHBOARD_HOST` | `0.0.0.0` | Bind host interface. |
 | `RPC_HTTP_URL` | `http://127.0.0.1:8091` | Internal HTTP RPC endpoint connecting the dashboard to the worker. |
-| `DASHBOARD_SESSION_SECRET` / `AUTH_SECRET` | *(required)* | 32-byte secret for NextAuth JWT session encryption (`openssl rand -hex 32`). |
+| `DASHBOARD_SESSION_SECRET` | *(required)* | 32-byte secret for NextAuth JWT session encryption (`openssl rand -hex 32`). |
 | `DISCORD_OAUTH2_CLIENT_ID` | *(required)* | Discord application OAuth2 client ID. |
 | `DISCORD_OAUTH2_CLIENT_SECRET` | *(required)* | Discord application OAuth2 client secret. |
 | `AUTH_URL` | *(derived)* | Externally visible URL origin if the dashboard sits behind a TLS-terminating reverse proxy. |

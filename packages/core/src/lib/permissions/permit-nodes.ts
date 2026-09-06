@@ -9,7 +9,6 @@ export const KnownPermitNodeGroups: { prefix: string; nodes: string[] }[] = [
     prefix: "mod",
     nodes: [
       "mod.*",
-      "mod.appeals",
       "mod.lockdown",
       "mod.notes",
       "mod.softBan",
@@ -23,7 +22,6 @@ const PermitNodeEmoji: Record<string, string> = {
   "admin.*": "🔐",
   "admin.config": "⚙️",
   "mod.*": "🛡️",
-  "mod.appeals": "📜",
   "mod.lockdown": "🔒",
   "mod.notes": "📝",
   "mod.softBan": "⏳",

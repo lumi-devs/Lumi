@@ -203,7 +203,7 @@ export const getDocBySlug = async (slugArray: string[]): Promise<DocContent | nu
   };
 
   marked.use({ renderer });
-  let rawHtml = await marked(content);
+  const rawHtml = await marked(content);
   // Wrap all tables in an auto-scrolling container
   const html = rawHtml.replace(/<table>/g, '<div class="table-wrapper"><table>').replace(/<\/table>/g, '</table></div>');
 

@@ -189,7 +189,9 @@ export class LumiClient extends SapphireClient {
         .catch(warnOnCleanupError("Scheduler lock release"));
       this._schedulerLock = null;
     }
-    await container.invalidation.close();
+    await container.invalidation
+      .close()
+      .catch(warnOnCleanupError("Invalidation close"));
     await container.redis.quit().catch(warnOnCleanupError("Redis quit"));
     // $disconnect alone leaves the pg Pool open: the adapter is constructed from
     // a pool we own, so Prisma never ends it. Both pools drain here.

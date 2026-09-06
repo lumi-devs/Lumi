@@ -65,6 +65,21 @@ describe("pipelineBySlot", () => {
     await pipelineBySlot(asClient(redis), [], (k: string) => k, () => {});
     expect(redis.pipeline).not.toHaveBeenCalled();
   });
+
+  it("throws instead of silently dropping a failed pipeline", async () => {
+    const failure = new Error("READONLY replica");
+    const chain = {
+      set: () => chain,
+      exec: vi.fn().mockResolvedValue([[failure, null]]),
+    };
+    const redis = { pipeline: () => chain };
+
+    await expect(
+      pipelineBySlot(asClient(redis), ["a"], (k) => k, (p) => {
+        (p as unknown as typeof chain).set("a");
+      }),
+    ).rejects.toBe(failure);
+  });
 });
 
 describe("scanKeysSafe", () => {
