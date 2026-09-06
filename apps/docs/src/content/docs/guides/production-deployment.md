@@ -49,7 +49,7 @@ A production-ready `docker-compose.prod.yml`:
 ```yaml
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-lumi}
@@ -79,6 +79,8 @@ services:
       MAX_CLIENT_CONN: 1000
       DEFAULT_POOL_SIZE: 25
       RESERVE_POOL_SIZE: 5
+      AUTH_TYPE: md5
+      MAX_PREPARED_STATEMENTS: 100
     ports:
       - "127.0.0.1:6432:5432"
 
@@ -104,10 +106,11 @@ services:
         condition: service_healthy
     env_file: .env.production
     environment:
-      POSTGRES_URL: "postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD}@pgbouncer:5432/${POSTGRES_DB:-lumi}?pgbouncer=true"
+      POSTGRES_URL: "postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB:-lumi}"
       DIRECT_POSTGRES_URL: "postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-lumi}"
-      REDIS_URL: "redis://redis:6379/0"
-      REDIS_TASK_URL: "redis://redis:6379/1"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_TASK_DB: 1
       TOTAL_SHARDS: "auto"
       RPC_HTTP_PORT: 8091
       METRICS_PORT: 9090

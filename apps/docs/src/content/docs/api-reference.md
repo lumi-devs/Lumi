@@ -6,9 +6,9 @@ category: "Addon SDK"
 
 # Addon SDK API Reference
 
-The public, stable surface for addon code - everything importable from `"lumi"` and its subpaths. This is the **only** import surface addon code should use; Lumi's internal `#core/*`, `#lib/*`, `#utilities/*`, and `#database/*` paths are implementation details that move on any core refactor (the addon validator flags them as errors).
+The public, stable surface for addon code comprises `@lumi` and its subpaths. Addons must only import from these entry points. Internal paths (`#lib/*`, `#utilities/*`, `#database/*`) are private implementation details, and the addon validator treats direct internal imports as errors.
 
-For a walkthrough of building something with this API, start with [Quick Start: Your First Addon](/guides/quick-start-addon), then the fuller [Module Creation Guide](/guides/module-creation) (written against the built-in `afk` module, but every extension point applies to addons identically). For the addon-specific rules on top of this API (no `container.prisma`, dependency isolation via `info.json`, etc.), see the [Addon Publishing Guide](/guides/addon-publishing).
+For implementation walkthroughs, see [Quick Start: Your First Addon](/guides/quick-start-addon) and the [Module Creation Guide](/guides/module-creation). For publishing requirements and manifest rules, consult the [Addon Publishing Guide](/guides/addon-publishing).
 
 ```typescript
 import { Module, DefineModule, cfg, Utility, getUtility, NoEndUserData } from "lumi";
@@ -131,14 +131,27 @@ declare module "lumi" {
 }
 ```
 
-(Addons can `declare module "lumi"` for this since `Utilities` is re-exported from the SDK's top-level module - built-in modules do the same thing against `#lib/module-system/Utility.js` internally; either path augments the same interface.)
+Addons declare interface augmentations on `"lumi"` to provide static typing for custom utilities.
 
 ---
 
 ## `lumi/commands`
 
 ```typescript
-export { BaseCommand, BaseSubcommand, CommandContext, BucketScope, type ReplyOptions };
+export {
+  BaseCommand,
+  BaseSubcommand,
+  CommandContext,
+  BucketScope,
+  sendReply,
+  replySuccess,
+  replyError,
+  replyWarning,
+  replyInfo,
+  assertPermit,
+  type ReplyOptions,
+  type CommandReplyTarget,
+};
 ```
 
 ### `BaseCommand`
@@ -163,7 +176,7 @@ export default class HelloCommand extends BaseCommand {
 
 ### `BaseSubcommand`
 
-Same idea for multi-subcommand commands - extend it instead of `BaseCommand` and use Sapphire's `{ run: "methodName" }` mapping; each mapped method is rewritten to receive a `CommandContext`.
+Extend `BaseSubcommand` for multi-level commands. Sapphire's `{ run: "methodName" }` mappings automatically provide a `CommandContext` to each subcommand handler.
 
 ### `CommandContext`
 
@@ -194,9 +207,7 @@ Re-exported from `@sapphire/framework` - the cooldown-scope enum (`User`/`Channe
 ## `lumi/permissions`
 
 ```typescript
-export { hasRequiredPermit } from "...";
-export { checkModulesEnabled } from "...";
-export { isModuleEnabled } from "...";
+export { hasRequiredPermit, checkModulesEnabled, isModuleEnabled };
 ```
 
 ### `hasRequiredPermit(target, permitNode): Promise<boolean>`
@@ -216,13 +227,13 @@ Batched form - coalesces concurrent lookups for the same guild within a 200ms wi
 ## `lumi/scheduling`
 
 ```typescript
-export { RelayTask, shouldRunNow, DEFAULT_CATCHUP_GRACE_MS, type CatchUpMeta };
+export { RelayTask, shouldRunNow, DefaultCatchupGraceMs, type CatchUpMeta };
 export { scheduleTask, cancelTask };
 export { publishTaskFire };
 export { registerTaskFireHandler };
 ```
 
-Lumi's scheduled-task pieces (`@sapphire/plugin-scheduled-tasks`, BullMQ-backed) are pure *schedulers* - a piece never touches Discord directly, it republishes a "fire" event onto a Redis Stream, and whichever `worker` process consumes that stream does the actual work. See [Architecture § Redis Streams Bus Mechanics](/architecture#redis-streams-bus-mechanics) for delivery guarantees (at-least-once, DLQ after 5 deliveries) and [Module Creation Guide § Scheduled Tasks](/guides/module-creation#step-7-scheduled-tasks) for the full walkthrough.
+Lumi's scheduled-task pieces (`@sapphire/plugin-scheduled-tasks`, BullMQ-backed) are pure schedulers. A piece never touches Discord directly; it republishes a fire event onto a Redis Stream, and worker consumer groups process the actual execution. See [Architecture § Redis Streams Bus Mechanics](/architecture#redis-streams-bus-mechanics) for delivery guarantees and [Module Creation Guide § Scheduled Tasks](/guides/module-creation#step-7-scheduled-tasks) for walkthroughs.
 
 ### `RelayTask<N>`
 
@@ -231,11 +242,11 @@ Lumi's scheduled-task pieces (`@sapphire/plugin-scheduled-tasks`, BullMQ-backed)
 export class CleanupTask extends RelayTask<"my-addon-cleanup"> {}
 ```
 
-That's the whole piece for a recurring (cron) task - `RelayTask.run()` applies catch-up policy and publishes the fire for you.
+Recurring cron task base class. `RelayTask.run()` applies catch-up policy and publishes the task fire event over the bus.
 
-### `shouldRunNow(taskName, payload, graceMs?): boolean` / `CatchUpMeta` / `DEFAULT_CATCHUP_GRACE_MS`
+### `shouldRunNow(taskName, payload, graceMs?): boolean` / `CatchUpMeta` / `DefaultCatchupGraceMs`
 
-`CatchUpMeta` (`{ scheduledFor?: number; catchUp?: boolean }`) lets a payload opt out of running if it's overdue by more than `graceMs` (default `DEFAULT_CATCHUP_GRACE_MS` = 60,000ms) - for time-sensitive one-shots like "delete this ephemeral message after 20s", which shouldn't fire hours late after an outage. `shouldRunNow` is what `RelayTask.run()` calls internally; you only need it directly if you're not using `RelayTask`.
+`CatchUpMeta` (`{ scheduledFor?: number; catchUp?: boolean }`) lets a payload opt out of running if it's overdue by more than `graceMs` (default `DefaultCatchupGraceMs` = 60,000ms). This prevents stale one-shots from firing long after downtime. `shouldRunNow` is what `RelayTask.run()` evaluates internally.
 
 ### `scheduleTask(name, payload, options?)` / `cancelTask(jobId)`
 
@@ -271,7 +282,7 @@ export { paginateList, paginateContainer };
 export { Emojis };
 ```
 
-Card helpers are the **required** replacement for raw `new EmbedBuilder()` - the addon linter hard-errors on `EmbedBuilder` usage.
+Card helpers in `lumi/ui` are the standard interface for rich replies. The addon validator blocks direct instantiation of `EmbedBuilder`.
 
 ### `make*Card(title, body, options?): CardReply`
 
@@ -296,9 +307,11 @@ interface CardOptions {
 }
 ```
 
-`resolveCardColor(key)` returns a color int for the given key (`"primary"`, `"info"`, `"success"`, `"warning"`, `"error"`, `"neutral"`, `"gold"`, `"purple"`, `"cyan"`) - it checks the operator's branding overrides in `config/bot.ts` first, then falls back to the built-in palette. `defaultCardColors` is the raw object (`{ primary: 0x5865f2, info: 0x5865f2, ... }`) if you need to access the palette directly. Use `resolveCardColor` when composing a card manually instead of through a `make*Card` helper. `ephemeralCard(card)` / `noPingCard(card)` wrap an existing `CardReply` to add the ephemeral flag / suppress mention pings, respectively - useful when you built the card once and need both an ephemeral and non-ephemeral send path.
+- **`resolveCardColor(key)`**: Returns the RGB integer for keys (`"primary"`, `"info"`, `"success"`, `"warning"`, `"error"`, `"neutral"`, `"gold"`, `"purple"`, `"cyan"`), prioritizing branding overrides in `config/bot.ts`.
+- **`defaultCardColors`**: Direct map of default palette hex values.
+- **`ephemeralCard(card)` / `noPingCard(card)`**: Wraps a `CardReply` to mark it ephemeral or suppress user mentions.
 
-On a `CommandContext`, the equivalent one-call helpers are `ctx.replySuccess`/`replyError`/`replyWarning`/`replyInfo` (see `lumi/commands` above) - reach for `make*Card` directly only when you need the `CardReply` object itself (e.g. sending from a listener with no `CommandContext`, or building a multi-step message).
+On a `CommandContext`, the equivalent one-call helpers are `ctx.replySuccess`/`replyError`/`replyWarning`/`replyInfo` (see `lumi/commands` above). Use `make*Card` directly when building multi-step components or sending from standalone listeners.
 
 ### `confirmPrompt(ctx, options): Promise<boolean>`
 
@@ -346,7 +359,7 @@ Named emoji constants used throughout the built-in UI (`Emojis.AFK`, `Emojis.GEA
 export { BotConfig };
 export { relativeTimestamp, shortTimestamp, parseDuration, formatDuration };
 export { errorFrom, swallow, logError };
-export { acquireRedisLock, type RedisLockOptions };
+export { acquireRedisLock, verifyRedisLock, type RedisLock, type RedisLockOptions };
 export type { GuildMessage };
 ```
 
@@ -373,16 +386,21 @@ swallow(reason: string): (err: unknown) => null  // drop-in for .catch(() => nul
 
 `somePromise.catch(swallow("MyAddon: background refresh failed"))` instead of a silent `.catch(() => null)` - failures stay visible in debug logs without crashing the caller.
 
-### `acquireRedisLock(redis, key, options?): Promise<() => Promise<void>>`
+### `acquireRedisLock(redis, key, options?): Promise<RedisLock>`
 
 ```typescript
 interface RedisLockOptions {
   ttlMs?: number;             // lock lease, auto-renewed at ttlMs/2 while held
   acquireTimeoutMs?: number;  // max wait before giving up
 }
+
+interface RedisLock {
+  release: () => Promise<void>;
+  token: string;
+}
 ```
 
-Distributed lock over `container.redis` (or any `Redis` instance) - resolves to a release function once acquired, throws/rejects on timeout. Use for cross-process mutual exclusion (e.g. "only one worker should run this cleanup at a time").
+Distributed lock over `container.redis` (or any `Redis` instance). Resolves to a `RedisLock` with auto-renewal and release function. Use for cluster-wide mutual exclusion.
 
 ### `GuildMessage`
 

@@ -18,7 +18,7 @@ category: "Governance & Help"
 
 ### Database Connection Failure
 - **Cause**: PostgreSQL or PgBouncer container is not ready, or wrong credentials in `POSTGRES_URL`.
-- **Resolution**: Check service health with `docker compose ps`. Ensure your `POSTGRES_URL` points to port `5432` (or `6432` for PgBouncer). Run `bun run db:migrate` to verify schema connectivity.
+- **Resolution**: Check service health with `docker compose ps`. Ensure your `POSTGRES_URL` points to port `5432` (or `6432` for PgBouncer). Run `bunx prisma migrate status` to test schema connectivity.
 
 ### Commands Run But AFK / Member Events / Message Triggers Silently Fail
 - **Cause**: Missing Privileged Gateway Intents.
@@ -50,7 +50,7 @@ category: "Governance & Help"
   ```bash
   bun run validate ./addons/<addon-name>
   ```
-  Fix any flagged errors (such as missing `info.json`, incorrect sub-store folder names like `tasks/` instead of `scheduled-tasks/`, or forbidden cross-module imports).
+  Fix any flagged errors: ensure `info.json` includes `end_user_data_statement`, use `scheduled-tasks/` (not `tasks/`), and verify that all imports use the public SDK (`lumi`, `lumi/*`) rather than internal paths (`#lib/*`, `#utilities/*`, `#database/*`).
 
 ### Scheduled Tasks Never Fire
 - **Cause**: The task folder must be named exactly `scheduled-tasks/`. Folders named `tasks/` or `jobs/` are ignored.

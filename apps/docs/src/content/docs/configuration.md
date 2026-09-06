@@ -45,7 +45,7 @@ Lumi will fail to start if any of these variables are missing:
 | Variable | Default | Purpose |
 | :--- | :--- | :--- |
 | `OWNER_IDS` | *(empty)* | Comma-separated Discord user IDs with bot-owner access. |
-| `DEFAULT_PREFIX` | `,` | Prefix command trigger for legacy message commands. |
+| `DEFAULT_PREFIX` | `,` | Prefix command trigger for text-based message commands. |
 | `NODE_ENV` | `development` | Runtime environment mode (`development`, `production`, `test`). |
 | `LUMI_CACHE_TTL` | `60` | Default cache TTL in seconds for entity and permission caches in Redis. |
 | `LUMI_DEV_PATHS` | *(unset)* | Comma- or colon-separated list of local directory paths to scan for addons during development (e.g. `./addons`). |
@@ -99,6 +99,7 @@ Lumi will fail to start if any of these variables are missing:
 | :--- | :--- | :--- |
 | `DASHBOARD_PORT` | `8080` | Port for the Next.js web application (default `8080` in production, `3000` in `next dev`). |
 | `DASHBOARD_HOST` | `0.0.0.0` | Bind host interface. |
+| `RPC_HTTP_URL` | `http://127.0.0.1:8091` | Internal HTTP RPC endpoint connecting the dashboard to the worker. |
 | `DASHBOARD_SESSION_SECRET` / `AUTH_SECRET` | *(required)* | 32-byte secret for NextAuth JWT session encryption (`openssl rand -hex 32`). |
 | `DISCORD_OAUTH2_CLIENT_ID` | *(required)* | Discord application OAuth2 client ID. |
 | `DISCORD_OAUTH2_CLIENT_SECRET` | *(required)* | Discord application OAuth2 client secret. |

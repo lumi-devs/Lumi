@@ -58,8 +58,9 @@ Edit `.env` and fill in your Discord credentials and an RPC security secret:
 BOT_TOKEN=your_discord_bot_token_here
 CLIENT_ID=your_discord_client_id_here
 
-# Generate a secure 32-byte RPC secret for Dashboard <-> Worker communication
-RPC_INTERNAL_TOKEN=$(openssl rand -hex 32)
+# Generate 32-byte hex secrets with: openssl rand -hex 32
+RPC_INTERNAL_TOKEN=generate_and_paste_32_byte_hex_secret_here
+APPEAL_TOKEN_SECRET=generate_and_paste_32_byte_hex_secret_here
 
 # Passwords for internal Postgres & Redis services
 POSTGRES_PASSWORD=lumi_secure_pg_password

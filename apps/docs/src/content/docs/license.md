@@ -21,7 +21,7 @@ Lumi is free, open-source software released under the **GNU General Public Licen
 
 ## Addon SDK Licensing Flexibility
 
-Third-party modules created using the standalone `lumi` Addon SDK (`packages/core/src/lib/addon-sdk`) that import only from public SDK entry points (`lumi`, `lumi/commands`, `lumi/permissions`, etc.) can be released under your license of choice (MIT, Apache 2.0, BSD, or proprietary) when distributed independently from the core bot monorepo.
+Third-party modules built using the public `lumi` Addon SDK (`lumi`, `lumi/commands`, `lumi/ui`, `lumi/permissions`, `lumi/scheduling`, `lumi/utils`) that import exclusively from public SDK entry points can be licensed under terms of your choice (MIT, Apache 2.0, BSD, or proprietary) when distributed independently from the Lumi core repository.
 
 ---
 

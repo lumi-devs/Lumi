@@ -21,16 +21,18 @@ Lumi is architected with strict, privacy-by-default data governance designed to 
 Lumi schedules an automated daily background sweep (`data-retention-sweep`) registered in the core runtime module:
 
 ```ts
-// packages/core/src/modules/core/scheduled-tasks/dataRetention.ts
-export class DataRetentionSweepTask extends RelayTask {
-  public override async fire(): Promise<void> {
-    const auditRetentionDays = 90;
-    const modRetentionDays = 365;
+// Task definition (packages/core/src/modules/core/scheduled-tasks/dataRetention.ts)
+@ApplyOptions<ScheduledTask.Options>({
+  name: "data-retention-sweep",
+  pattern: "0 3 * * *",
+})
+export class DataRetentionSweepTask extends RelayTask<"data-retention-sweep"> {}
 
-    await this.container.db.audit.purgeOldEntries(auditRetentionDays);
-    await this.container.db.moderation.purgeOldCases(modRetentionDays);
-  }
-}
+// Worker execution handler registered in module onLoad()
+registerTaskFireHandler("data-retention-sweep", "unicast", async () => {
+  await container.db.audit.purgeOldEntries(90);
+  await container.db.moderation.purgeOldCases(365);
+});
 ```
 
 ### Retention Timelines
@@ -59,8 +61,8 @@ import { DefineModule, Module } from "lumi";
 })
 export class CustomTagsModule extends Module {
   public override async deleteUserData(userId: string): Promise<void> {
-    // Purge or anonymize any user-scoped entries in the key-value store
-    await this.container.db.guildKV.deleteByUser(userId);
+    // Purge module-specific user records from cache and storage
+    await this.container.redis.del(`tags:user:${userId}`);
   }
 }
 ```

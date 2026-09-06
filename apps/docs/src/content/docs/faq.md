@@ -25,7 +25,7 @@ To build an extension, see the [Quick Start Guide](/guides/quick-start-addon) or
 
 ## Do I need to run the web dashboard?
 
-No. Lumi is fully operational from Discord using slash commands and the interactive `/lumi panel`. The dashboard (`apps/dashboard`) is an optional Next.js administration panel that talks to `apps/worker` via an internal HTTP RPC bridge. You can run the bot without starting `apps/dashboard`.
+No. Lumi is fully functional directly from Discord via slash commands and `/lumi panel`. The Next.js dashboard (`apps/dashboard`) is optional and connects to `apps/worker` over an authenticated RPC bridge.
 
 ---
 
@@ -52,12 +52,7 @@ When a user triggers data erasure (`global.gdpr.delete` RPC or owner commands), 
 ```bash
 git pull
 bun install
-bun run db:migrate
-```
-
-Then restart your processes:
-
-```bash
+bunx prisma migrate deploy
 docker compose up -d --build worker
 ```
 
@@ -65,5 +60,5 @@ docker compose up -d --build worker
 
 ## What happens if the Redis container restarts?
 
-PostgreSQL is the durable system of record. Redis is utilized for caching (DB `0`), BullMQ task queues (DB `1`), and the Redis Streams event bus. Temporary Redis loss does not corrupt durable server configuration or moderation records.
+PostgreSQL serves as the durable system of record. Redis manages caching (DB `0`), BullMQ task queues (DB `1`), and the Redis Streams event bus. Temporary Redis restarts do not compromise persistent configuration or moderation records.
 

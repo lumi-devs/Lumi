@@ -60,7 +60,7 @@ export class WelcomeMessagesModule extends Module {
 }
 ```
 
-Every import comes from `"lumi"` or dedicated subpaths (`"lumi/commands"`, `"lumi/ui"`, `"lumi/permissions"`, `"lumi/scheduling"`, `"lumi/utils"`). Addon code must **never** import Lumi's internal `#core/*`, `#lib/*`, `#utilities/*`, or `#database/*` paths.
+Every import comes from `"lumi"` or dedicated subpaths (`"lumi/commands"`, `"lumi/ui"`, `"lumi/permissions"`, `"lumi/scheduling"`, `"lumi/utils"`). Addons must only import from these public SDK entry points.
 
 ---
 
@@ -87,7 +87,7 @@ bun run dev
 Once the worker boots, enable the module in your Discord server:
 
 ```
-/modules enable welcome-messages
+/module enable welcome-messages
 ```
 
 Run `/welcome_messages`. The command executes and replies with the configured message, reading it from `container.db.config`:
@@ -116,7 +116,7 @@ This verifies:
 - Valid `info.json` schema and semver tags.
 - `@DefineModule` metadata export in `index.ts`.
 - Exact directory naming for sub-stores (`commands/`, `listeners/`, `scheduled-tasks/`, `services/`).
-- Zero forbidden cross-module or internal `#lib/*` imports.
+- Exclusive use of the public `lumi` SDK (zero forbidden internal imports).
 - Absence of raw `EmbedBuilder` calls (enforces `lumi/ui` card builders).
 
 ---

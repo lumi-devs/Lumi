@@ -24,7 +24,7 @@ Addons are third-party (or first-party optional) modules distributed outside the
 ,download rollback <addon-name> <revision>
 
 # 5. Enable the addon in a server
-/modules enable <addon-name>
+/module enable <addon-name>
 ```
 
 ---
@@ -101,7 +101,7 @@ export class MyAddonModule extends Module {
    - `"lumi/scheduling"`
    - `"lumi/ui"`
    - `"lumi/utils"`
-   Never import internal `#core/*`, `#lib/*`, `#database/*`, or `#utilities/*` paths.
+   Never import internal monorepo paths (`#lib/*`, `#database/*`, or `#utilities/*`).
 
 2. **No Direct Database Access**:
    Never import or use `container.prisma`. Persist dynamic addon state via `container.db.guildKV`:

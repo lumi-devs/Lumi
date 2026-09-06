@@ -45,7 +45,7 @@ Lumi monitors the Discord audit log for rapid administrative changes—mass bans
 
 `/panic` initiates an emergency lockdown:
 - Mutes `@everyone` across configured text channels and pauses server invites.
-- Remembers channel permission overrides prior to panic mode.
+- Preserves pre-lockdown channel permission overrides for clean restoration.
 - One-click reversion restores previous channel states and unpauses invites.
 
 ### Backup & Restore

@@ -18,7 +18,7 @@ Three architectural rules define the app:
 
 ### Standalone Bot Operation
 
-`apps/worker` never depends on `apps/dashboard` being online. Self-hosters who prefer managing Lumi exclusively via Discord slash commands and `/lumi panel` can omit running `apps/dashboard` entirely, or disable the dashboard module per-guild via `/modules disable dashboard`.
+`apps/worker` never depends on `apps/dashboard` being online. Self-hosters who prefer managing Lumi exclusively via Discord slash commands and `/lumi panel` can omit running `apps/dashboard` entirely, or disable the dashboard module per-guild via `/module disable dashboard`.
 
 ---
 
@@ -39,32 +39,44 @@ src/
 
 ### Route Inventory
 
-| Route | Guard | Purpose |
-| :--- | :--- | :--- |
-| `/` | none | Landing page when signed out, server picker when signed in. |
-| `/login` | none | Branded sign-in screen. Initiates Discord OAuth2 via NextAuth. |
-| `/api/auth/[...nextauth]` | none | NextAuth route handler (`/signin`, `/callback/discord`, `/session`, `/signout`). |
-| `/account` | `requireSession` | Self-service GDPR export of the signed-in user's data. |
-| `/guild-picker` | `requireSession` | Server selection list for switching guilds. |
-| `/guild/[guildId]` | `requireGuild` | General settings: prefix, mute role, locale, timezone. |
-| `/guild/[guildId]/modules` | `requireGuild` | Per-guild module toggle grid. |
-| `/guild/[guildId]/modules/[moduleName]` | `requireGuild` | Schema-driven dynamic configuration form for a specific module. |
-| `/guild/[guildId]/permits` | `requireGuild` | Permit management: create/edit custom permits, role/user assignments. |
-| `/guild/[guildId]/moderation` | `requireGuild` | Moderation case log, search, filter, and case revocation. |
-| `/guild/[guildId]/warn-thresholds` | `requireGuild` | Escalating automated warning threshold rules. |
-| `/guild/[guildId]/security` | `requireGuild` | Panic mode toggle, join gate, and verification panel settings. |
-| `/guild/[guildId]/tempvc` | `requireGuild` | Temporary voice channel generators and active channel records. |
-| `/guild/[guildId]/overrides` | `requireGuild` | Channel, role, user, and category configuration overrides. |
-| `/guild/[guildId]/history` | `requireGuild` | Configuration change audit ledger with one-click rollback. |
-| `/guild/[guildId]/audit` | `requireGuild` | Guild administrative action audit log. |
-| `/guild/[guildId]/blocklist` | `requireGuild` | Per-guild user blocklist management. |
-| `/guild/[guildId]/advanced` | `requireGuild` | Ignored channels, active AFK records, and raw module data. |
-| `/system` | `requireBotOwner` | Global bot configuration and maintenance mode. |
-| `/system/modules` | `requireBotOwner` | Global module kill-switches. |
-| `/system/addons` | `requireBotOwner` | Addon repository management: add, install, uninstall, rollback. |
-| `/system/blocklist` | `requireBotOwner` | Global user blocklist. |
-| `/system/audit` | `requireBotOwner` | Cross-guild system audit logs. |
-| `/system/shards` | `requireBotOwner` | Real-time gateway shard telemetry fleet monitor. |
+| Route Group | Route | Guard | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Public & Auth** | `/` | none | Marketing landing page when signed out; redirect to `/guilds` when signed in. |
+| | `/login` | none | Branded sign-in screen initiating Discord OAuth2 via NextAuth. |
+| | `/api/auth/[...nextauth]` | none | NextAuth route handler (`/signin`, `/callback/discord`, `/session`, `/signout`). |
+| | `/legal/privacy`, `/legal/terms` | none | Public data privacy policy and service terms. |
+| | `/appeal/[guildId]/[caseId]` | signed token | Public moderation case appeal portal protected by HMAC signature. |
+| | `/verify/[guildId]` | `requireSession` | Web verification gate for new server members. |
+| **User & Overview** | `/account` | `requireSession` | Self-service GDPR export of the signed-in user's data. |
+| | `/guilds` | `requireSession` | Server selection directory for switching between authorized guilds. |
+| **Guild Core** | `/guild/[guildId]` | `requireGuild` | Overview dashboard: server health, quick stats, and primary shortcuts. |
+| | `/guild/[guildId]/setup` | `requireGuild` | Guided server onboarding and baseline configuration wizard. |
+| | `/guild/[guildId]/health` | `requireGuild` | Diagnostic server health check and shard latency monitor. |
+| | `/guild/[guildId]/appeals` | `requireGuild` | Inbound member moderation appeals queue and review interface. |
+| | `/guild/[guildId]/permits` | `requireGuild` | Permit nodes and custom RBAC role/user assignment. |
+| **Guild Config** | `/guild/[guildId]/config` | `requireGuild` | Configuration hub and module overview. |
+| | `/guild/[guildId]/config/general` | `requireGuild` | Prefix, mute role, bot nickname, default timezone, and locale. |
+| | `/guild/[guildId]/config/modules` | `requireGuild` | Per-guild module toggle grid. |
+| | `/guild/[guildId]/config/modules/[moduleName]` | `requireGuild` | Schema-driven dynamic configuration form for a specific module. |
+| | `/guild/[guildId]/config/addons` | `requireGuild` | Community addon management and guild-level settings. |
+| | `/guild/[guildId]/config/voice` | `requireGuild` | Temporary voice channel generators and active channel records. |
+| | `/guild/[guildId]/config/history` | `requireGuild` | Configuration change audit ledger with one-click rollback. |
+| | `/guild/[guildId]/config/advanced` | `requireGuild` | Ignored channels, active AFK records, and raw module key-value store. |
+| **Moderation** | `/guild/[guildId]/moderation` | `requireGuild` | Moderation case log, search, filter, and case revocation. |
+| | `/guild/[guildId]/moderation/thresholds` | `requireGuild` | Escalating automated warning threshold rules. |
+| | `/guild/[guildId]/moderation/notes` | `requireGuild` | Staff mod notes per user. |
+| | `/guild/[guildId]/moderation/blocklist` | `requireGuild` | Per-guild user blocklist management. |
+| **Security & Monitor** | `/guild/[guildId]/security` | `requireGuild` | Panic mode toggle, join gate, and verification settings. |
+| | `/guild/[guildId]/security/overrides` | `requireGuild` | Channel, role, user, and category configuration overrides. |
+| | `/guild/[guildId]/monitoring/audit` | `requireGuild` | Guild administrative action audit log. |
+| | `/guild/[guildId]/monitoring/activity` | `requireGuild` | Member activity trends and message throughput charts. |
+| **System Admin** | `/system` | `requireBotOwner` | Global bot configuration and maintenance mode. |
+| | `/system/modules` | `requireBotOwner` | Global module kill-switches. |
+| | `/system/addons` | `requireBotOwner` | Addon repository management: add, install, uninstall, rollback. |
+| | `/system/blocklist` | `requireBotOwner` | Global user blocklist. |
+| | `/system/audit` | `requireBotOwner` | Cross-guild system audit logs. |
+| | `/system/shards` | `requireBotOwner` | Real-time gateway shard telemetry fleet monitor. |
+| | `/system/users` | `requireBotOwner` | Global user inspection and GDPR right-to-be-forgotten deletion. |
 
 ---
 
@@ -107,7 +119,7 @@ The 66 actions defined in `packages/contracts/src/rpc.ts`:
 - **Library**: [NextAuth.js (Auth.js v5)](https://authjs.dev) with Discord OAuth2 provider (`src/lib/auth.ts`).
 - **OAuth2 Scopes**: `identify guilds`.
 - **JWT Sessions**: Encrypted using `DASHBOARD_SESSION_SECRET` with an 8-hour maximum lifetime.
-- **Authorization Cache**: Guild management permissions and bot-owner status are refreshed at most once per 5 minutes (`AUTHZ_TTL_MS = 300_000`), protecting against token stampedes.
+- **Authorization Cache**: Guild management permissions and bot-owner status are refreshed at most once per 5 minutes (`AuthzTtlMs = 5 * 60 * 1000`), protecting against token stampedes.
 - **Guards**:
   - `requireSession()`: Redirects unauthenticated users to `/login`.
   - `requireGuild(guildId)`: IDOR guard verifying Manage Server permission for `guildId`. Throws `notFound()` if unauthorized.
