@@ -9,8 +9,8 @@ import {
   uninstallModule,
   rollbackModule,
   listRepoModules,
-  type RepoModuleView,
 } from "#/actions/system-actions";
+import type { RepoModuleView } from "@lumi/contracts";
 import {
   Card,
   CardBody,

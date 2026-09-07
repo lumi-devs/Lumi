@@ -100,11 +100,13 @@ export async function dismissLogClaim(
   guildId: string,
   channelId: string,
 ): Promise<boolean> {
-  const removed = await container.redis.del(
-    RedisKeys.logClaim(guildId, channelId),
-  );
-  await container.redis.srem(RedisKeys.logClaimIndex(guildId), channelId);
-  return removed > 0;
+  const key = RedisKeys.logClaim(guildId, channelId);
+  const existed = await container.redis.exists(key);
+  await Promise.all([
+    container.invalidation.invalidate(key),
+    container.redis.srem(RedisKeys.logClaimIndex(guildId), channelId),
+  ]);
+  return existed > 0;
 }
 
 function parseLogClaim(raw: string | null): LogClaim | null {

@@ -41,6 +41,24 @@ import {
   unregisterLoggingRpcHandlers,
 } from "./rpc/logging-rpc.js";
 
+const RpcHandlerSets = [
+  { register: registerGuildRpcHandlers, unregister: unregisterGuildRpcHandlers },
+  { register: registerPermitsRpcHandlers, unregister: unregisterPermitsRpcHandlers },
+  { register: registerCasesRpcHandlers, unregister: unregisterCasesRpcHandlers },
+  { register: registerSecurityRpcHandlers, unregister: unregisterSecurityRpcHandlers },
+  { register: registerTempVcRpcHandlers, unregister: unregisterTempVcRpcHandlers },
+  {
+    register: registerReactionRolesRpcHandlers,
+    unregister: unregisterReactionRolesRpcHandlers,
+  },
+  { register: registerAuditRpcHandlers, unregister: unregisterAuditRpcHandlers },
+  {
+    register: registerModerationRpcHandlers,
+    unregister: unregisterModerationRpcHandlers,
+  },
+  { register: registerLoggingRpcHandlers, unregister: unregisterLoggingRpcHandlers },
+];
+
 @DefineModule({
   name: "dashboard",
   displayName: "Dashboard",
@@ -55,15 +73,7 @@ export class DashboardModule extends Module {
   public override onLoad() {
     container.logger.info("[Dashboard] Initializing domain RPC handlers...");
 
-    registerGuildRpcHandlers();
-    registerPermitsRpcHandlers();
-    registerCasesRpcHandlers();
-    registerSecurityRpcHandlers();
-    registerTempVcRpcHandlers();
-    registerReactionRolesRpcHandlers();
-    registerAuditRpcHandlers();
-    registerModerationRpcHandlers();
-    registerLoggingRpcHandlers();
+    for (const set of RpcHandlerSets) set.register();
 
     return super.onLoad();
   }
@@ -71,15 +81,7 @@ export class DashboardModule extends Module {
   public override onUnload() {
     container.logger.info("[Dashboard] Unloading domain RPC handlers...");
 
-    unregisterGuildRpcHandlers();
-    unregisterPermitsRpcHandlers();
-    unregisterCasesRpcHandlers();
-    unregisterSecurityRpcHandlers();
-    unregisterTempVcRpcHandlers();
-    unregisterReactionRolesRpcHandlers();
-    unregisterAuditRpcHandlers();
-    unregisterModerationRpcHandlers();
-    unregisterLoggingRpcHandlers();
+    for (const set of RpcHandlerSets) set.unregister();
 
     return super.onUnload();
   }

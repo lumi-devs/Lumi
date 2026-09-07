@@ -14,7 +14,7 @@ import {
   requireGuildId,
   requireGuildManager,
   toRawConfigValue,
-} from "../lib/helpers.js";
+} from "#lib/rpc/helpers.js";
 
 export function registerAuditRpcHandlers(): void {
   registerRpcHandler(RpcActions.guildAuditList, async (req) => {

@@ -93,8 +93,12 @@ export class PermissionRepository extends Repository {
     const keys = chainTargets.map((t) =>
       RedisKeys.targetPermits(guildId, t.targetType, t.targetId),
     );
+    // The quarantine key holds a value exactly when the user is quarantined,
+    // so its presence rides along on the same MGET instead of a second RTT.
+    const quarantineKey = RedisKeys.quarantineState(guildId, userId);
 
-    const rawResults = await mgetSafe(this.redis, keys);
+    const rawResults = await mgetSafe(this.redis, [...keys, quarantineKey]);
+    const isQuarantined = rawResults[rawResults.length - 1] != null;
     const tiers: TargetPermitPayload[] = new Array(chainTargets.length);
 
     const missingIndexes: number[] = [];
@@ -154,8 +158,6 @@ export class PermissionRepository extends Repository {
         },
       );
     }
-
-    const isQuarantined = await this.isUserQuarantined(guildId, userId);
 
     return { tiers, isQuarantined };
   }

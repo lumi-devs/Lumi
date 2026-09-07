@@ -1,4 +1,26 @@
 import { s } from "@sapphire/shapeshift";
+import type {
+  AfkEntryView,
+  AppealsListData,
+  AppealVerifyResult,
+  AuditListData,
+  BlocklistListData,
+  CasesListData,
+  ConfigHistoryListData,
+  ConfigOverrideView,
+  DashboardData,
+  IgnoredChannelView,
+  ModNoteView,
+  ModuleDataListData,
+  PanicStateView,
+  ReactionRoleMenuView,
+  RepoModuleView,
+  SystemDashboardData,
+  TempVcGeneratorView,
+  TempVcRecordView,
+  VerificationPanelView,
+  WarnThresholdView,
+} from "./views.js";
 
 export interface RpcRequest<T = unknown> {
   id: string;
@@ -11,12 +33,9 @@ export interface RpcRequest<T = unknown> {
   data?: T;
 }
 
-export interface RpcResponse<T = unknown> {
-  id: string;
-  ok: boolean;
-  data?: T;
-  error?: string;
-}
+export type RpcResponse<T = unknown> =
+  | { id: string; ok: true; data?: T; error?: never }
+  | { id: string; ok: false; data?: never; error: string };
 
 /** Runtime check on the envelope only - dashboard and worker deploy independently, so this is the one shape TypeScript can't guarantee across the wire. */
 const RpcResponseEnvelopeSchema = s.object({
@@ -28,12 +47,20 @@ const RpcResponseEnvelopeSchema = s.object({
 
 /** Throws with a clear message if `raw` isn't a well-formed `RpcResponse` envelope. */
 export function parseRpcResponse<T = unknown>(raw: unknown): RpcResponse<T> {
+  let envelope: { id: string; ok: boolean; data?: T; error?: string };
   try {
-    return RpcResponseEnvelopeSchema.parse(raw);
+    envelope = RpcResponseEnvelopeSchema.parse(raw);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Malformed RPC response envelope: ${msg}`);
   }
+  if (!envelope.ok && typeof envelope.error !== "string") {
+    throw new Error("Malformed RPC response envelope: ok:false without error");
+  }
+  if (envelope.ok && envelope.error !== undefined) {
+    throw new Error("Malformed RPC response envelope: ok:true with error");
+  }
+  return envelope as RpcResponse<T>;
 }
 
 export type RpcHandler<TIn = unknown, TOut = unknown> = (
@@ -592,6 +619,62 @@ export interface RpcRequestPayloads {
 export interface WhoAmIResponse {
   isBotOwner: boolean;
 }
+
+/** Maps each RPC action to its response `data` shape. Actions absent here
+ *  return `unknown` — add the shape when the dashboard starts consuming it. */
+export interface RpcResponsePayloads {
+  "guild.dashboard.get": DashboardData;
+  "guild.summaries.list": GuildSummariesResult;
+  "guild.permits.list": PermitsListResponse;
+  "guild.permits.create": { success: boolean; permit: { id: number } };
+  "guild.roles.list": GuildRolesListResponse;
+  "guild.channels.list": GuildChannelsListResponse;
+  "guild.setup.run": GuildSetupRunResult;
+  "guild.cases.list": CasesListData;
+  "guild.warnThresholds.list": {
+    thresholds: WarnThresholdView[];
+  };
+  "guild.panic.get": PanicStateView;
+  "guild.backups.list": GuildBackupsListResponse;
+  "guild.verificationPanel.get": {
+    panel: VerificationPanelView | null;
+  };
+  "guild.logClaims.list": { claims: LogClaimView[] };
+  "guild.tempvc.generators.list": {
+    generators: TempVcGeneratorView[];
+  };
+  "guild.tempvc.records.list": {
+    records: TempVcRecordView[];
+  };
+  "guild.reactionroles.menus.list": {
+    menus: ReactionRoleMenuView[];
+  };
+  "guild.audit.list": AuditListData;
+  "guild.history.list": ConfigHistoryListData;
+  "guild.overrides.list": {
+    overrides: ConfigOverrideView[];
+  };
+  "guild.blocklist.list": BlocklistListData;
+  "guild.modNotes.list": { notes: ModNoteView[] };
+  "guild.appeals.verify": AppealVerifyResult;
+  "guild.appeals.list": AppealsListData;
+  "guild.afk.list": { entries: AfkEntryView[] };
+  "guild.ignored.list": { entries: IgnoredChannelView[] };
+  "guild.moduleData.list": ModuleDataListData;
+  "downloader.repo.modules": {
+    modules: RepoModuleView[];
+  };
+  "downloader.module.rollback": { commit: string | null };
+  "auth.whoami": WhoAmIResponse;
+  "global.gdpr.export": { success: boolean; data: GdprExportResult };
+  "system.dashboard.get": SystemDashboardData;
+  "system.audit.list": AuditListData;
+  "system.blocklist.list": BlocklistListData;
+  "system.shards.get": SystemShardsResponse;
+}
+
+export type RpcResponseData<A extends RpcActionName> =
+  A extends keyof RpcResponsePayloads ? RpcResponsePayloads[A] : unknown;
 
 export type RpcActionName = keyof RpcRequestPayloads;
 

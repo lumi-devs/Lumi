@@ -7,6 +7,7 @@ export {
   RegexWorkerHandler,
   RegexWorkerUnavailableError,
   getRegexWorker,
+  getRegexProbeWorker,
   shutdownRegexWorker,
   type RegexWorkerOptions,
 } from "./RegexWorkerHandler.js";

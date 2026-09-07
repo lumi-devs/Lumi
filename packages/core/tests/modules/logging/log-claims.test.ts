@@ -76,6 +76,12 @@ function createFakeRedis() {
     async mget(...keys: string[]) {
       return keys.map((key) => strings.get(key) ?? null);
     },
+    async exists(...keys: string[]) {
+      return keys.filter((key) => strings.has(key)).length;
+    },
+    async publish(_channel: string, _message: string) {
+      return 0;
+    },
   };
 }
 
@@ -88,6 +94,9 @@ describe("logging claim store", () => {
     vi.clearAllMocks();
     redis = createFakeRedis();
     (container as any).redis = redis;
+    (container as any).invalidation = {
+      invalidate: (...keys: string[]) => redis.del(...keys),
+    };
   });
 
   describe("normalizeLogClaimCode", () => {

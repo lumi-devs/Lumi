@@ -3,7 +3,7 @@ import { container } from "@sapphire/framework";
 import { Collection, ChannelType } from "discord.js";
 import { RpcActions } from "@lumi/contracts";
 import { rpcHandlers } from "#lib/rpc/dispatch.js";
-import { GuildConfigSetManyMax } from "#modules/dashboard/lib/helpers.js";
+import { GuildConfigSetManyMax } from "#lib/rpc/helpers.js";
 import {
   clearGuildDirectoryCache,
   registerGuildRpcHandlers,

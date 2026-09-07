@@ -17,6 +17,7 @@ import {
 } from "discord.js";
 import { container } from "@sapphire/framework";
 import { Emojis } from "#utilities/assets.js";
+import { clipLabel } from "./ui/kit.js";
 
 export { formatBreadcrumbHeader, formatStatusBadge, formatSubtitle, formatBreadcrumbs } from "./ui/layout.js";
 export {
@@ -30,6 +31,7 @@ export {
   HubTabs,
   SectionLineLimit,
   ButtonLabelLimit,
+  clipLabel,
   type AccessoryButton,
   type Tab,
   type ConfirmRowOptions,
@@ -202,7 +204,7 @@ export function createBackButton(
 ): ButtonBuilder {
   return new ButtonBuilder()
     .setCustomId(customId)
-    .setLabel(label)
+    .setLabel(clipLabel(label))
     .setStyle(ButtonStyle.Secondary);
 }
 
@@ -212,7 +214,7 @@ export function createActionButton(
   const button = new ButtonBuilder();
   if (options.customId) button.setCustomId(options.customId);
   if (options.url) button.setURL(options.url);
-  if (options.label) button.setLabel(options.label);
+  if (options.label) button.setLabel(clipLabel(options.label));
   button.setStyle(options.style ?? (options.url ? ButtonStyle.Link : ButtonStyle.Primary));
   setEmojiIfPresent(button, options.emoji);
   if (options.disabled !== undefined) button.setDisabled(options.disabled);

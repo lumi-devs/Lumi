@@ -5,6 +5,7 @@ import { confirmPrompt, type ConfirmPromptOptions } from "#lib/utilities/confirm
 import { logError } from "#lib/utilities/errors.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
+import { sleep } from "#lib/runtime.js";
 import { isNullish } from "@sapphire/utilities";
 import { Result, container, type Awaitable } from "@sapphire/framework";
 import type { Guild, GuildMember, User } from "discord.js";
@@ -363,7 +364,7 @@ export async function runModerationFlow<
     // a 25-target `/ban` doesn't burst the guild's audit-log/ban rate limit.
     await mapWithConcurrency(prepared, DefaultBatchConcurrency, async (entry) => {
       await runOne(entry);
-      await Bun.sleep(BatchStaggerMs);
+      await sleep(BatchStaggerMs);
     });
   }
 

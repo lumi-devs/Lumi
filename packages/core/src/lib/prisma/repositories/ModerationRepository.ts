@@ -1,4 +1,5 @@
 import { Prisma, type ModerationCase } from "@prisma/client";
+import { sleep } from "#lib/runtime.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
 /** Batch size for the cross-guild sweeps, which are unbounded by nature. */
@@ -9,7 +10,7 @@ const SweepPageSize = 500;
  * (`GuildCaseCounter`).
  */
 export class ModerationRepository extends Repository {
-  public createModerationCase(data: {
+  public async createModerationCase(data: {
     guildId: string;
     userId: string;
     moderatorId: string;
@@ -20,47 +21,61 @@ export class ModerationRepository extends Repository {
   }): Promise<ModerationCase> {
     // Read Committed lets two concurrent creates read the same max case number
     // and hand out the same one; only Serializable orders them.
-    return this.prisma.$transaction(
-      async (tx) => {
-        const maxCase = await tx.moderationCase.findFirst({
-          where: { guildId: data.guildId },
-          orderBy: { caseNumber: "desc" },
-          select: { caseNumber: true },
-        });
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.prisma.$transaction(
+          async (tx) => {
+            const maxCase = await tx.moderationCase.findFirst({
+              where: { guildId: data.guildId },
+              orderBy: { caseNumber: "desc" },
+              select: { caseNumber: true },
+            });
 
-        const maxNum = maxCase?.caseNumber ?? 0;
+            const maxNum = maxCase?.caseNumber ?? 0;
 
-        const counter = await tx.guildCaseCounter.upsert({
-          where: { guildId: data.guildId },
-          create: { guildId: data.guildId, next: maxNum + 2 },
-          update: { next: { increment: 1 } },
-        });
+            const counter = await tx.guildCaseCounter.upsert({
+              where: { guildId: data.guildId },
+              create: { guildId: data.guildId, next: maxNum + 2 },
+              update: { next: { increment: 1 } },
+            });
 
-        const caseNumber = Math.max(counter.next - 1, maxNum + 1);
+            const caseNumber = Math.max(counter.next - 1, maxNum + 1);
 
-        if (caseNumber >= counter.next) {
-          await tx.guildCaseCounter.update({
-            where: { guildId: data.guildId },
-            data: { next: caseNumber + 1 },
-          });
-        }
+            if (caseNumber >= counter.next) {
+              await tx.guildCaseCounter.update({
+                where: { guildId: data.guildId },
+                data: { next: caseNumber + 1 },
+              });
+            }
 
-        return tx.moderationCase.create({
-          data: {
-            guildId: data.guildId,
-            caseNumber,
-            userId: data.userId,
-            moderatorId: data.moderatorId,
-            action: data.action,
-            reason: data.reason,
-            duration: data.durationSeconds,
-            expiresAt: data.expiresAt,
-            active: true,
+            return tx.moderationCase.create({
+              data: {
+                guildId: data.guildId,
+                caseNumber,
+                userId: data.userId,
+                moderatorId: data.moderatorId,
+                action: data.action,
+                reason: data.reason,
+                duration: data.durationSeconds,
+                expiresAt: data.expiresAt,
+                active: true,
+              },
+            });
           },
-        });
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (err) {
+        // Retry serialization failures under raid concurrency.
+        if (
+          attempt >= 3 ||
+          !(err instanceof Prisma.PrismaClientKnownRequestError) ||
+          err.code !== "P2034"
+        ) {
+          throw err;
+        }
+        await sleep(10 + Math.random() * 15);
+      }
+    }
   }
 
   public getModerationCases(

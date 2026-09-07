@@ -22,7 +22,7 @@ import {
   runGuildSetup,
   toRawConfigValue,
   verifyGuildAccess,
-} from "../lib/helpers.js";
+} from "#lib/rpc/helpers.js";
 
 /** Short-lived per-guild directory snapshot backing `guild.roles.list` and `guild.channels.list`. */
 const GuildDirectoryCacheTtlMs = 30_000;
@@ -151,15 +151,15 @@ export function registerGuildRpcHandlers(): void {
       .filter((c) => PickableChannelTypes.has(c.type))
       .map((c) => ({ id: c.id, name: c.name, type: c.type }));
 
-    const members = guild.members.cache
-      .filter((m) => !m.user.bot)
-      .map((m) => ({
-        id: m.id,
-        username: m.user.username,
-        displayName: m.displayName,
-      }))
-      .sort((a, b) => a.displayName.localeCompare(b.displayName))
-      .slice(0, 200);
+    // Directory sample for id->name lookups, not a census: take the first 200
+    // cached non-bot members and sort those, instead of sorting the whole cache.
+    const members: { id: string; username: string; displayName: string }[] = [];
+    for (const m of guild.members.cache.values()) {
+      if (m.user.bot) continue;
+      members.push({ id: m.id, username: m.user.username, displayName: m.displayName });
+      if (members.length >= 200) break;
+    }
+    members.sort((a, b) => a.displayName.localeCompare(b.displayName));
 
     return {
       name: guild.name,

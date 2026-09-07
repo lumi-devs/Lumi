@@ -6,6 +6,7 @@ import {
   type RpcResponse,
   type RpcActionName,
   type RpcRequestPayloads,
+  type RpcResponseData,
 } from "@lumi/contracts";
 import { injectTraceContext } from "@lumi/observability";
 import { env } from "./env";
@@ -62,7 +63,7 @@ export class RpcClient {
   public async call<A extends RpcActionName>(
     action: A,
     options: CallOptions<A> = {},
-  ): Promise<RpcResponse["data"]> {
+  ): Promise<RpcResponseData<A>> {
     const traceCarrier = injectTraceContext();
     const request: RpcRequest = {
       id: randomUUID(),
@@ -117,7 +118,7 @@ export class RpcClient {
     }
 
     if (!response.ok) throw new RpcError("RPC_ERROR", action, response.error ?? "RPC error");
-    return response.data;
+    return response.data as RpcResponseData<A>;
   }
 
   /** Hits the worker's `/healthz` — used by the readiness probe. */
@@ -155,6 +156,6 @@ export function getRpcClient(): RpcClient {
 export function rpcCall<A extends RpcActionName>(
   action: A,
   options?: CallOptions<A>,
-): Promise<RpcResponse["data"]> {
+): Promise<RpcResponseData<A>> {
   return getRpcClient().call(action, options);
 }

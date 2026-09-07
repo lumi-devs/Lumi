@@ -14,7 +14,7 @@ import {
   requireGuildId,
   requireGuildManager,
   verifyGuildAccess,
-} from "../lib/helpers.js";
+} from "#lib/rpc/helpers.js";
 
 export function registerSecurityRpcHandlers(): void {
   registerRpcHandler(RpcActions.guildPanicGet, async (req) => {

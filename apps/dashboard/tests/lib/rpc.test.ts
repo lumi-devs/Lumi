@@ -107,13 +107,14 @@ describe("RpcClient", () => {
     ).rejects.toThrow("Guild not found in bot cache");
   });
 
-  it("rejects with a generic error when ok: false but no error message is given", async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ id: "unused", ok: false }));
+  it("rejects as malformed when ok: false carries no error message", async () => {
+    const malformed = { id: "unused", ok: false } as unknown as RpcResponse;
+    fetchMock.mockResolvedValue(jsonResponse(malformed));
 
     const client = new RpcClient("http://worker:8091");
     await expect(
       client.call("guild.dashboard.get", { guildId: "101" }),
-    ).rejects.toThrow("RPC error");
+    ).rejects.toThrow("malformed response");
   });
 
   it("times out and rejects if the request takes longer than timeoutMs", async () => {

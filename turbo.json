@@ -22,18 +22,10 @@
       "cache": false,
       "persistent": true
     },
-    "lint": {
-      "dependsOn": ["^build"]
-    },
-    "typecheck": {
-      "dependsOn": ["^build"]
-    },
-    "//#lint:all": {
-      "dependsOn": ["^build"]
-    },
-    "//#typecheck:all": {
-      "dependsOn": ["^build"]
-    },
+    "lint": {},
+    "typecheck": {},
+    "//#lint:all": {},
+    "//#typecheck:all": {},
     "test": {}
   }
 }

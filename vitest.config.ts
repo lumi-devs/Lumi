@@ -6,6 +6,7 @@ export default defineConfig({
 	},
 	test: {
 		environment: 'node',
+		setupFiles: ['./vitest.setup.ts'],
 		// Multiple forks under CI's Bun lose the Bun global entirely (works fine locally, single-fork).
 		poolOptions: {
 			forks: {

@@ -16,10 +16,10 @@ export async function exportMyData(): Promise<GdprExportActionResult> {
     return { ok: false, error: "Too many requests — slow down." };
   }
   try {
-    const res = (await rpcCall(RpcActions.gdprExport, {
+    const res = await rpcCall(RpcActions.gdprExport, {
       actorId: session.userId,
       data: { userId: session.userId },
-    })) as { data: GdprExportResult };
+    });
     return { ok: true, data: res.data };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Export failed" };

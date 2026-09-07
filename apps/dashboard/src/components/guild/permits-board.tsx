@@ -20,7 +20,7 @@ import type {
   PermitAssignmentView,
   PermitView,
 } from "#/lib/dashboard-data";
-import { KnownPermitNodeGroups } from "#/lib/permit-nodes";
+import { KnownPermitNodeGroups, KnownDashboardPermitNodes } from "#/lib/permit-nodes";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
 
@@ -185,7 +185,7 @@ function CreatePermitCard({
   );
 }
 
-const AllKnownNodes = KnownPermitNodeGroups.flatMap((g) => g.nodes);
+const AllKnownNodes = KnownDashboardPermitNodes.map((node) => ({ node }));
 
 function NodeChecklist({
   nodes,

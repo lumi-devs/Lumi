@@ -19,7 +19,7 @@ import {
   requireGuildManager,
   resolveAppealToken,
   verifyGuildAccess,
-} from "../lib/helpers.js";
+} from "#lib/rpc/helpers.js";
 
 export function registerModerationRpcHandlers(): void {
   registerRpcHandler(RpcActions.guildBlocklistList, async (req) => {

@@ -16,6 +16,17 @@ import { fakeSpawnResult } from "../../helpers/mock-bun-spawn.js";
 // afterEach(vi.restoreAllMocks()) reverts spies after every test.
 let spawnSpy: ReturnType<typeof vi.spyOn<typeof Bun, "spawn">>;
 
+// These suites shell out to real git, which reaches `execFileAsync`. Hiding
+// the `Bun` global routes it through the `node:child_process` fallback.
+let savedBun: unknown;
+function hideBunGlobal(): void {
+  savedBun = (globalThis as { Bun?: unknown }).Bun;
+  (globalThis as { Bun?: unknown }).Bun = undefined;
+}
+function restoreBunGlobal(): void {
+  (globalThis as { Bun?: unknown }).Bun = savedBun as typeof Bun;
+}
+
 async function git(cwd: string, ...args: string[]): Promise<string> {
   return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
 }
@@ -67,6 +78,7 @@ describe("DownloadResolver - revision resolution & checkout", () => {
     let secondCommit: string;
 
     beforeEach(async () => {
+      hideBunGlobal();
       repoPath = path.join(tmpDir, "repo");
       await fs.mkdir(repoPath, { recursive: true });
       await git(repoPath, "init", "-q");
@@ -113,6 +125,7 @@ describe("DownloadResolver - revision resolution & checkout", () => {
     });
 
     it("throws with the full candidate list when a short SHA is ambiguous", async () => {
+      restoreBunGlobal();
       spawnSpy.mockImplementationOnce(
         () => fakeSpawnResult(`${firstCommit}\n${secondCommit}\n`) as any,
       );
@@ -120,6 +133,10 @@ describe("DownloadResolver - revision resolution & checkout", () => {
       await expect(resolver.resolveRevision(repoPath, "deadbee")).rejects.toThrow(
         /ambiguous/,
       );
+    });
+
+    afterEach(() => {
+      restoreBunGlobal();
     });
   });
 
@@ -131,6 +148,7 @@ describe("DownloadResolver - revision resolution & checkout", () => {
     let firstCommit: string;
 
     beforeEach(async () => {
+      hideBunGlobal();
       repoPath = path.join(ModuleRoot, repoName);
       moduleDir = path.join(repoPath, moduleName);
       await fs.mkdir(repoPath, { recursive: true });
@@ -149,6 +167,7 @@ describe("DownloadResolver - revision resolution & checkout", () => {
     });
 
     afterEach(async () => {
+      restoreBunGlobal();
       await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
       await fs
         .rm(path.join(AddonModulesRoot, moduleName), { recursive: true, force: true })

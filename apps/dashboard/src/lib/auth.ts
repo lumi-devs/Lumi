@@ -11,7 +11,7 @@ import {
   type OAuthGuild,
 } from "./discord";
 import { rpcCall } from "./rpc";
-import { RpcActions, type WhoAmIResponse } from "@lumi/contracts";
+import { RpcActions } from "@lumi/contracts";
 
 interface DiscordRawProfile {
   id: string;
@@ -60,9 +60,9 @@ async function refreshAuthorization(token: JWT): Promise<void> {
   }
 
   try {
-    const whoami = (await rpcCall(RpcActions.authWhoAmI, {
+    const whoami = await rpcCall(RpcActions.authWhoAmI, {
       actorId: userId,
-    })) as WhoAmIResponse;
+    });
     token.isBotOwner = whoami.isBotOwner;
     snapshot.isBotOwner = whoami.isBotOwner;
   } catch {

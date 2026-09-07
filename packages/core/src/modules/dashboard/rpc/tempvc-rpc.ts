@@ -7,7 +7,7 @@ import {
   parsePayload,
   requireGuildId,
   requireGuildManager,
-} from "../lib/helpers.js";
+} from "#lib/rpc/helpers.js";
 
 export function registerTempVcRpcHandlers(): void {
   registerRpcHandler(RpcActions.guildTempVcGeneratorsList, async (req) => {

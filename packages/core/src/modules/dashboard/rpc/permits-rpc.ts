@@ -10,7 +10,7 @@ import {
   requireGuildId,
   requireGuildManager,
   verifyGuildAccess,
-} from "../lib/helpers.js";
+} from "#lib/rpc/helpers.js";
 
 export function registerPermitsRpcHandlers(): void {
   registerRpcHandler(RpcActions.guildPermitsList, async (req) => {

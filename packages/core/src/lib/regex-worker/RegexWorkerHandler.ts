@@ -379,6 +379,7 @@ function resolveWorkerEntry(): URL | null {
 }
 
 let shared: RegexWorkerHandler | null = null;
+let probeShared: RegexWorkerHandler | null = null;
 
 /** Process-wide handler; the pool is deliberately one worker until measured. */
 export function getRegexWorker(): RegexWorkerHandler {
@@ -386,8 +387,17 @@ export function getRegexWorker(): RegexWorkerHandler {
   return shared;
 }
 
+/** Save-time probes run here so adversarial patterns never queue behind live filter traffic. */
+export function getRegexProbeWorker(): RegexWorkerHandler {
+  probeShared ??= new RegexWorkerHandler();
+  return probeShared;
+}
+
 export async function shutdownRegexWorker(): Promise<void> {
   const handler = shared;
+  const probe = probeShared;
   shared = null;
+  probeShared = null;
   await handler?.destroy();
+  await probe?.destroy();
 }

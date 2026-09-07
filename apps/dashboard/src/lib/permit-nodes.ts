@@ -1,11 +1,15 @@
 /**
- * Mirrors packages/core/src/lib/permissions/permit-nodes.ts - the set of
- * permit nodes actually referenced by `requiredPermit`/`checkPermit` across
- * commands, extended with human labels/descriptions for the dashboard picker.
+ * Dashboard view of the canonical permit vocabulary (`@lumi/contracts`).
+ * Node membership is single-sourced in contracts; this file only adds the
+ * human labels/descriptions for the picker.
  */
+import { KnownPermitNodes, type PermitNode } from "@lumi/contracts";
+export type { PermitNode };
+export { KnownPermitNodes };
+
 export const KnownPermitNodeGroups: {
   prefix: string;
-  nodes: { node: string; label: string; description: string }[];
+  nodes: { node: PermitNode; label: string; description: string }[];
 }[] = [
   {
     prefix: "admin",
@@ -126,6 +130,4 @@ export const KnownPermitNodeGroups: {
   },
 ];
 
-export const KnownPermitNodes: string[] = KnownPermitNodeGroups.flatMap((group) =>
-  group.nodes.map((n) => n.node),
-);
+export const KnownDashboardPermitNodes: PermitNode[] = KnownPermitNodes;

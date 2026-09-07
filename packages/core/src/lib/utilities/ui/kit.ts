@@ -35,7 +35,7 @@ export interface NavRowOptions {
   action: NavAction;
 }
 
-const clipLabel = (label: string): string =>
+export const clipLabel = (label: string): string =>
   label.length > ButtonLabelLimit ? label.slice(0, ButtonLabelLimit) : label;
 
 const clipLines = (lines: string | string[]): string[] =>

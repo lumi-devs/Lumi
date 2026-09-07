@@ -20,7 +20,6 @@ import {
   SapphireClient,
   container,
 } from "@sapphire/framework";
-import "@sapphire/plugin-hmr/register";
 import { tryParseJSON } from "@sapphire/utilities";
 import type { Message } from "discord.js";
 import { warnOnCleanupError } from "./cleanup.js";

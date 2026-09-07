@@ -1,4 +1,4 @@
-import { getRegexWorker } from "./RegexWorkerHandler.js";
+import { getRegexProbeWorker } from "./RegexWorkerHandler.js";
 
 /** Patterns longer than this are rejected outright - length feeds blowup. */
 export const MaxRegexLength = 256;
@@ -39,7 +39,7 @@ export async function validateRegexPattern(
     return err instanceof Error ? err.message : String(err);
   }
 
-  const completed = await getRegexWorker().probe(pattern, [
+  const completed = await getRegexProbeWorker().probe(pattern, [
     ...AdversarialInputs,
   ]);
   return completed

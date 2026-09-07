@@ -21,20 +21,41 @@ async function invalidateKeys(keys: string[]) {
   await container.invalidation.invalidate(...keys);
 }
 
+const inflight = new Map<string, Promise<unknown>>();
+// Process-local by design: every mutation for a guild runs on its owning shard.
+const negativeUntil = new Map<string, number>();
+const NegativeTtlMs = 15_000;
+
 async function getOrSet<T>(
   key: string,
   ttl: number,
   fetcher: () => Promise<T>,
   parser: (data: string) => T,
 ): Promise<T> {
+  const neg = negativeUntil.get(key);
+  if (neg !== undefined && neg > Date.now()) return null as T;
   const cached = await container.redis.get(key);
   if (cached) return parser(cached);
 
-  const data = await fetcher();
-  if (!isNullish(data)) {
-    await container.redis.setex(key, ttl, JSON.stringify(data));
+  const pending = inflight.get(key);
+  if (pending) return pending as Promise<T>;
+  const run = (async () => {
+    const data = await fetcher();
+    if (isNullish(data)) {
+      if (negativeUntil.size > 5000) negativeUntil.clear();
+      negativeUntil.set(key, Date.now() + NegativeTtlMs);
+    } else {
+      negativeUntil.delete(key);
+      await container.redis.setex(key, ttl, JSON.stringify(data));
+    }
+    return data;
+  })();
+  inflight.set(key, run);
+  try {
+    return await run;
+  } finally {
+    inflight.delete(key);
   }
-  return data;
 }
 
 export async function getAfkEntry(
@@ -60,6 +81,7 @@ export async function getAfkEntriesBatch(
   const result = new Map<string, AfkEntry>();
   if (userIds.length === 0) return result;
 
+  const now = Date.now();
   const keys = userIds.map((userId) => AfkKeys.afk(guildId, userId));
   const rawValues = await mgetSafe(container.redis, keys);
 
@@ -73,19 +95,35 @@ export async function getAfkEntriesBatch(
         return;
       }
     }
-    missingUserIds.push(userId);
+    const neg = negativeUntil.get(keys[i]!);
+    if (neg === undefined || neg <= now) missingUserIds.push(userId);
   });
 
   if (missingUserIds.length > 0) {
     const dbEntries = await container.db.afk.findEntries(guildId, missingUserIds);
+    const found = new Set<string>();
     for (const entry of dbEntries) {
       result.set(entry.userId, entry);
-      void container.redis.setex(
-        AfkKeys.afk(guildId, entry.userId),
-        AfkTTL.entry,
-        JSON.stringify(entry),
-      );
+      found.add(entry.userId);
     }
+    if (negativeUntil.size > 5000) negativeUntil.clear();
+    for (const userId of missingUserIds) {
+      if (!found.has(userId)) {
+        negativeUntil.set(AfkKeys.afk(guildId, userId), now + NegativeTtlMs);
+      }
+    }
+    await pipelineBySlot(
+      container.redis,
+      dbEntries,
+      (entry) => AfkKeys.afk(guildId, entry.userId),
+      (pipe, entry) => {
+        pipe.setex(
+          AfkKeys.afk(guildId, entry.userId),
+          AfkTTL.entry,
+          JSON.stringify(entry),
+        );
+      },
+    );
   }
 
   return result;
@@ -101,6 +139,7 @@ export async function setAfkEntry(
     userId,
     sanitizeReason(reason),
   );
+  negativeUntil.delete(AfkKeys.afk(guildId, userId));
   await container.redis.setex(
     AfkKeys.afk(guildId, userId),
     AfkTTL.entry,
@@ -115,6 +154,7 @@ export async function clearAfkEntry(
 ): Promise<boolean> {
   try {
     await container.db.afk.deleteEntry(guildId, userId);
+    negativeUntil.delete(AfkKeys.afk(guildId, userId));
     await invalidateKeys([AfkKeys.afk(guildId, userId)]);
     return true;
   } catch (err: unknown) {
@@ -131,6 +171,9 @@ export async function clearAllAfkForUser(userId: string): Promise<number> {
   const keys = await scanKeys(AfkKeys.allForUserPattern(userId));
   if (keys.length) {
     await invalidateKeys(keys);
+  }
+  for (const key of negativeUntil.keys()) {
+    if (key.endsWith(`:${userId}`)) negativeUntil.delete(key);
   }
   return count;
 }

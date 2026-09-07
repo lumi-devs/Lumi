@@ -1,34 +1,17 @@
 /**
- * The core set of permit nodes actually referenced by `requiredPermit`/`checkPermit`
- * across commands. This list is mirrored and extended with UI-only metadata by
- * `apps/dashboard/src/lib/permit-nodes.ts`.
+ * Bot-side view of the canonical permit vocabulary (`@lumi/contracts`).
+ * Node membership lives in contracts; this module only adds chat affordances
+ * (emoji labels, autocomplete list) so the dashboard picker can't drift.
  */
-export const KnownPermitNodeGroups: { prefix: string; nodes: string[] }[] = [
-  { prefix: "admin", nodes: ["admin.*", "admin.config", "admin.welcome"] },
-  {
-    prefix: "mod",
-    nodes: [
-      "mod.*",
-      "mod.lockdown",
-      "mod.notes",
-      "mod.softBan",
-      "mod.voiceMute",
-      "mod.say",
-      "mod.dm",
-    ],
-  },
-  {
-    prefix: "economy",
-    nodes: ["economy.*", "economy.admin"],
-  },
-  {
-    prefix: "reactionroles",
-    nodes: ["reactionroles.*", "reactionroles.manage"],
-  },
-  { prefix: "owner", nodes: ["owner.*", "owner.serverlock", "owner.leave", "owner.announce"] },
-];
+export {
+  KnownPermitNodeGroups,
+  KnownPermitNodes,
+  type PermitNode,
+  type PermitNodeGroup,
+} from "@lumi/contracts";
+import type { PermitNode } from "@lumi/contracts";
 
-const PermitNodeEmoji: Record<string, string> = {
+const PermitNodeEmoji: Record<PermitNode, string> = {
   "economy.*": "🪙",
   "economy.admin": "💰",
   "reactionroles.*": "🎭",
@@ -49,9 +32,8 @@ const PermitNodeEmoji: Record<string, string> = {
   "owner.announce": "🔔",
 };
 
-export const KnownPermitNodesAutocomplete: string[] =
-  KnownPermitNodeGroups.flatMap((group) => group.nodes);
+export { KnownPermitNodes as KnownPermitNodesAutocomplete } from "@lumi/contracts";
 
 export function permitNodeLabel(node: string): string {
-  return `${PermitNodeEmoji[node] || "•"} ${node}`;
+  return `${PermitNodeEmoji[node as PermitNode] ?? "•"} ${node}`;
 }

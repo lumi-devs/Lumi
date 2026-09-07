@@ -55,49 +55,15 @@ import {
   backRow,
   navRow,
   pageFooter,
-  type AccessoryButton,
-  type Tab,
-  type ConfirmRowOptions,
-  type NavRowOptions,
 } from "#utilities/ui/kit.js";
 
-/** Addon mirror of `settingRow`: label lines plus an inline action button. */
-export function addonSettingRow(
-  lines: string | string[],
-  button: AccessoryButton,
-) {
-  return settingRow(lines, button);
-}
-
-/** Addon mirror of `tabRow`: shared tab bar with one active tab. */
-export function addonTabRow(
-  prefix: string,
-  tabs: readonly Tab[],
-  activeId: string,
-) {
-  return tabRow(prefix, tabs, activeId);
-}
-
-/** Addon mirror of `confirmRow`: danger confirm plus secondary cancel. */
-export function addonConfirmRow(options: ConfirmRowOptions) {
-  return confirmRow(options);
-}
-
-/** Addon mirror of `backRow`: lone secondary back button. */
-export function addonBackRow(customId: string, label?: string) {
-  return backRow(customId, label);
-}
-
-/** Addon mirror of `navRow`: back button plus one primary action. */
-export function addonNavRow(options: NavRowOptions) {
-  return navRow(options);
-}
-
-/** Addon mirror of `pageFooter`: muted `Page x of y` footer line. */
-export function addonPageFooter(
-  pageIndex: number,
-  totalPages: number,
-  hintOrTotalItems?: string | number,
-) {
-  return pageFooter(pageIndex, totalPages, hintOrTotalItems);
-}
+/**
+ * Stable `addon*` aliases over the kit primitives. Same builders, same bytes —
+ * the names exist so third-party code doesn't import `#utilities` internals.
+ */
+export const addonSettingRow = settingRow;
+export const addonTabRow = tabRow;
+export const addonConfirmRow = confirmRow;
+export const addonBackRow = backRow;
+export const addonNavRow = navRow;
+export const addonPageFooter = pageFooter;

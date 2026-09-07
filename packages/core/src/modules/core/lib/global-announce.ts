@@ -8,6 +8,7 @@ import {
   type TextChannel,
 } from "discord.js";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
+import { sleep } from "#lib/runtime.js";
 
 export type AnnounceOutcome = "sent" | "failed" | "skipped";
 
@@ -117,7 +118,7 @@ export async function runGlobalAnnounce<T extends { id: string }>(
       } catch {
         results.push({ guildId: guild.id, outcome: "failed" });
       } finally {
-        if (staggerMs > 0) await Bun.sleep(staggerMs);
+        if (staggerMs > 0) await sleep(staggerMs);
       }
     },
   );

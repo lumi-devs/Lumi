@@ -4,7 +4,7 @@ import {
   cachedGuild,
   requireGuildId,
   requireGuildManager,
-} from "#modules/dashboard/lib/helpers.js";
+} from "#lib/rpc/helpers.js";
 import { dispatchRpc, registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
 
 const GUILD_ID = "123456789012345678";

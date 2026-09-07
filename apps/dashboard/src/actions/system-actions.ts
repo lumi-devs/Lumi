@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RpcActions, type GdprRequester } from "@lumi/contracts";
+import { RpcActions, type GdprRequester, type RepoModuleView } from "@lumi/contracts";
 import { requireBotOwner } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
@@ -112,25 +112,13 @@ export async function rollbackModule(
 ): Promise<{ ok: true; commit: string | null } | { ok: false; error: string }> {
   return runAction(async () => {
     const session = await guardedSystemAction();
-    const result = (await rpcCall(RpcActions.moduleRollback, {
+    const result = await rpcCall(RpcActions.moduleRollback, {
       actorId: session.userId,
       data: { moduleName, revision },
-    })) as { commit: string | null };
+    });
     revalidatePath("/system/addons");
     return { ok: true, commit: result.commit };
   });
-}
-
-export interface RepoModuleView {
-  name: string;
-  version?: string;
-  short?: string;
-  description?: string;
-  author?: string[];
-  end_user_data_statement?: string;
-  isInstalled: boolean;
-  commit: string | null;
-  pinned: boolean;
 }
 
 export async function listRepoModules(
@@ -138,10 +126,10 @@ export async function listRepoModules(
 ): Promise<{ ok: true; modules: RepoModuleView[] } | { ok: false; error: string }> {
   return runAction(async () => {
     const session = await guardedSystemAction();
-    const result = (await rpcCall(RpcActions.repoModules, {
+    const result = await rpcCall(RpcActions.repoModules, {
       actorId: session.userId,
       data: { repoName },
-    })) as { modules: RepoModuleView[] };
+    });
     return { ok: true, modules: result.modules };
   });
 }

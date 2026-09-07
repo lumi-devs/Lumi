@@ -1,8 +1,8 @@
 // Pino structured logger factory with request context and OpenTelemetry trace propagation.
 
 
+import { createRequire } from "node:module";
 import { pino, type Logger as PinoLogger } from "pino";
-import PinoPretty from "pino-pretty";
 import { activeTraceIds, getRequestContext } from "./context";
 
 export interface PinoLoggerOptions {
@@ -32,7 +32,8 @@ export function createPinoLogger(opts: PinoLoggerOptions): PinoLogger {
   };
 
   if (opts.format === "pretty") {
-    // Synchronous stream (no worker thread) - robust under Bun.
+    const require = createRequire(import.meta.url);
+    const PinoPretty = require("pino-pretty") as typeof import("pino-pretty");
     return pino(
       base,
       PinoPretty({

@@ -80,10 +80,10 @@ export async function runGuildSetup(
 ): Promise<ActionResult & { result?: GuildSetupRunResult }> {
   return runAction(async () => {
     const session = await guardedAction(guildId);
-    const result = (await rpcCall(RpcActions.guildSetupRun, {
+    const result = await rpcCall(RpcActions.guildSetupRun, {
       guildId,
       actorId: session.userId,
-    })) as GuildSetupRunResult;
+    });
     revalidatePath(`/guild/${guildId}`);
     revalidatePath(`/guild/${guildId}/config/modules/security`);
     revalidatePath(`/guild/${guildId}/config/modules/mod`);
@@ -116,11 +116,11 @@ export async function createPermit(
 ): Promise<ActionResult & { permitId?: number }> {
   return runAction(async () => {
     const session = await guardedAction(guildId);
-    const res = (await rpcCall(RpcActions.guildPermitsCreate, {
+    const res = await rpcCall(RpcActions.guildPermitsCreate, {
       guildId,
       actorId: session.userId,
       data: { name, kind, nodes },
-    })) as { permit: { id: number } };
+    });
     revalidatePath(`/guild/${guildId}/permits`);
     return { ok: true, permitId: res.permit.id };
   });
