@@ -1,0 +1,30 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignore": ["config/*.ts", "examples/**"],
+  "ignoreDependencies": ["postcss-load-config"],
+  "workspaces": {
+    "packages/core": {
+      "entry": [
+        "src/lib/addon-sdk/*.ts",
+        "src/lib/utilities/pieces/**/*.ts",
+        "src/lib/permissions/**/*.ts",
+        "src/modules/**/index.ts",
+        "src/modules/**/{commands,listeners,interaction-handlers,scheduled-tasks,services,rpc,utilities}/**/*.ts"
+      ],
+      "project": ["src/**/*.ts", "!**/*.test.ts"]
+    },
+    "packages/observability": {
+      "entry": ["src/*.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "apps/worker": {
+      "project": ["src/**/*.ts"]
+    },
+    "apps/dashboard": {
+      "next": true
+    },
+    "apps/docs": {
+      "next": true
+    }
+  }
+}

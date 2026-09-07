@@ -6,8 +6,15 @@ export default defineConfig({
 	},
 	test: {
 		environment: 'node',
+		// Multiple forks under CI's Bun lose the Bun global entirely (works fine locally, single-fork).
+		poolOptions: {
+			forks: {
+				singleFork: true,
+			},
+		},
 		include: ['packages/**/*.test.ts', 'packages/**/*.spec.ts'],
 		coverage: {
+			provider: 'istanbul',
 			reporter: ['text', 'json', 'html', 'lcov']
 		}
 	}

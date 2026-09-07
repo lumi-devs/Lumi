@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import child_process from "node:child_process";
 import { container } from "@sapphire/framework";
 import { validateAddon, validateAddonOrRepo } from "#lib/downloader/validate.js";
 import { DownloadResolver, ModuleRoot } from "#lib/downloader/resolver.js";
 import { LumiInfo } from "#utilities/misc.js";
+import { fakeSpawnResult } from "../../helpers/mock-bun-spawn.js";
 
 describe("Downloader & Addon Helpers (validate & resolver)", () => {
   let tmpDir: string;
@@ -18,15 +18,9 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       error: vi.fn(),
       debug: vi.fn(),
     } as any;
-    vi.spyOn(child_process, "execFile").mockImplementation((...args: any[]) => {
-      const cb = args[args.length - 1];
-      if (typeof cb === "function") {
-        const error: any = new Error("Git clone failed");
-        error.stderr = "Git clone failed";
-        cb(error, "", "Git clone failed");
-      }
-      return {} as any;
-    });
+    vi.spyOn(Bun, "spawn").mockImplementation(
+      () => fakeSpawnResult("", "Git clone failed", 1) as any,
+    );
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "lumi-downloader-test-"));
   });
 

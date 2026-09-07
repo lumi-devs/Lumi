@@ -39,8 +39,8 @@ export class ConfigUtility extends Utility {
     if (schema) {
       try {
         validateModuleConfigValue(schema, key, coerced);
-      } catch (err: any) {
-        const msg = err.message || String(err);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
         throw new Error(`Invalid value for \`${key}\`: ${msg}`);
       }
     }

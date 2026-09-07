@@ -53,9 +53,6 @@ export interface PanicRevertResult {
 const PanicChannelCap = 40;
 const PanicEditDelayMs = 300;
 
-const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
-
 export type NukeKind =
   | "ban"
   | "kick"
@@ -886,7 +883,7 @@ export class SecurityUtility extends Utility {
             `[security] Panic: failed to lock channel ${channel.id} in ${guild.id}: ${String(err)}`,
           );
         }
-        await sleep(PanicEditDelayMs);
+        await Bun.sleep(PanicEditDelayMs);
       }
 
       await this.db.security.savePanicState({
@@ -937,7 +934,7 @@ export class SecurityUtility extends Utility {
             `[security] Panic: failed to restore channel ${channelId} in ${guild.id}: ${String(err)}`,
           );
         }
-        await sleep(PanicEditDelayMs);
+        await Bun.sleep(PanicEditDelayMs);
       }
 
       await this.db.security.clearPanicState(guild.id);
