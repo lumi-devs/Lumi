@@ -96,10 +96,6 @@ export function resolveAnnounceChannel(
 const AnnounceConcurrency = 3;
 const AnnounceStaggerMs = 750;
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /**
  * Delivers `deliver` to every guild with bounded concurrency and a stagger
  * pause after each send so fleet-wide broadcasts stay under rate limits.
@@ -121,7 +117,7 @@ export async function runGlobalAnnounce<T extends { id: string }>(
       } catch {
         results.push({ guildId: guild.id, outcome: "failed" });
       } finally {
-        if (staggerMs > 0) await sleep(staggerMs);
+        if (staggerMs > 0) await Bun.sleep(staggerMs);
       }
     },
   );

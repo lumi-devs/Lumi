@@ -153,10 +153,6 @@ const DefaultBatchConcurrency = 1;
 /** Delay between starting batched Discord API mutations, so a 25-target run does not burst. */
 const BatchStaggerMs = 250;
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /** Builds one line of the batch-result card for a target that didn't make it through. */
 function rejectedLine<Target extends ModerationCommand.TargetLike>(
   entry: RejectedEntry<Target>,
@@ -367,7 +363,7 @@ export async function runModerationFlow<
     // a 25-target `/ban` doesn't burst the guild's audit-log/ban rate limit.
     await mapWithConcurrency(prepared, DefaultBatchConcurrency, async (entry) => {
       await runOne(entry);
-      await sleep(BatchStaggerMs);
+      await Bun.sleep(BatchStaggerMs);
     });
   }
 
