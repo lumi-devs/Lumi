@@ -24,18 +24,7 @@ vi.mock("node:fs", () => ({
   },
 }));
 
-const { mockExecFile } = vi.hoisted(() => ({
-  mockExecFile: vi.fn((_file, _args, cb) => {
-    cb(null, { stdout: "hash123\n", stderr: "" });
-  }),
-}));
-
-vi.mock("node:child_process", () => ({
-  execFile: mockExecFile,
-  default: {
-    execFile: mockExecFile,
-  },
-}));
+import { fakeSpawnResult } from "../helpers/mock-bun-spawn.js";
 
 describe("DownloaderUtility", () => {
   let service: DownloaderUtility;
@@ -45,9 +34,13 @@ describe("DownloaderUtility", () => {
   let mockClient: any;
   let mockCommandStore: any;
   let mockRedis: any;
+  let spawnSpy: ReturnType<typeof vi.spyOn<typeof Bun, "spawn">>;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    spawnSpy = vi
+      .spyOn(Bun, "spawn")
+      .mockImplementation(() => fakeSpawnResult("hash123\n") as any);
 
     mockDb = {
       downloader: {
@@ -305,18 +298,14 @@ describe("DownloaderUtility", () => {
 
   describe("getRepoStatus", () => {
     it("parses the last commit hash and relative time from git log", async () => {
-      mockExecFile.mockImplementation((_file: string, _args: string[], cb: any) => {
-        cb(null, { stdout: "abc1234|2 days ago\n", stderr: "" });
-      });
+      spawnSpy.mockImplementation(() => fakeSpawnResult("abc1234|2 days ago\n") as any);
 
       const res = await service.getRepoStatus("repo1");
       expect(res).toEqual({ lastCommit: "abc1234", lastCommitTime: "2 days ago" });
     });
 
     it("returns nulls when git log fails", async () => {
-      mockExecFile.mockImplementation((_file: string, _args: string[], cb: any) => {
-        cb(new Error("not a git repository"));
-      });
+      spawnSpy.mockImplementation(() => fakeSpawnResult("", "not a git repository", 1) as any);
 
       const res = await service.getRepoStatus("repo1");
       expect(res).toEqual({ lastCommit: null, lastCommitTime: null });
@@ -340,14 +329,9 @@ describe("DownloaderUtility", () => {
       mockDb.downloader.readDownloaderRepoById.mockResolvedValue({ id: "r1-id", name: "repo1", branch: "main" });
 
       (fs.access as any).mockResolvedValue(true);
-      mockExecFile.mockImplementation((_file: string, args: string[], cb: any) => {
-        if (args.includes("rev-parse")) {
-          cb(null, { stdout: "hash123\n", stderr: "" });
-        } else if (args.includes("fetch")) {
-          cb(null, { stdout: "", stderr: "" });
-        } else {
-          cb(null, { stdout: "", stderr: "" });
-        }
+      spawnSpy.mockImplementation((cmd: string[]) => {
+        if (cmd.includes("rev-parse")) return fakeSpawnResult("hash123\n") as any;
+        return fakeSpawnResult("") as any;
       });
 
       const res = await service.updateModule("m1");
@@ -359,18 +343,12 @@ describe("DownloaderUtility", () => {
       mockDb.downloader.readDownloaderRepoById.mockResolvedValue({ id: "r1-id", name: "repo1", branch: "main" });
 
       (fs.access as any).mockResolvedValue(true);
-      mockExecFile.mockImplementation((_file: string, args: string[], cb: any) => {
-        if (args.includes("rev-parse") && args.includes("HEAD")) {
-          cb(null, { stdout: "oldhash\n", stderr: "" });
-        } else if (args.includes("rev-parse") && args.includes("@{u}")) {
-          cb(null, { stdout: "origin/main\n", stderr: "" });
-        } else if (args.includes("rev-parse") && args.includes("origin/main")) {
-          cb(null, { stdout: "newhash\n", stderr: "" });
-        } else if (args.includes("log")) {
-          cb(null, { stdout: "feat: new feature\n", stderr: "" });
-        } else {
-          cb(null, { stdout: "", stderr: "" });
-        }
+      spawnSpy.mockImplementation((cmd: string[]) => {
+        if (cmd.includes("rev-parse") && cmd.includes("HEAD")) return fakeSpawnResult("oldhash\n") as any;
+        if (cmd.includes("rev-parse") && cmd.includes("@{u}")) return fakeSpawnResult("origin/main\n") as any;
+        if (cmd.includes("rev-parse") && cmd.includes("origin/main")) return fakeSpawnResult("newhash\n") as any;
+        if (cmd.includes("log")) return fakeSpawnResult("feat: new feature\n") as any;
+        return fakeSpawnResult("") as any;
       });
 
       const res = await service.updateModule("m1");
@@ -383,14 +361,9 @@ describe("DownloaderUtility", () => {
       mockDb.downloader.readDownloaderRepoById.mockResolvedValue({ id: "r1-id", name: "repo1", branch: "main" });
 
       (fs.access as any).mockResolvedValue(true);
-      mockExecFile.mockImplementation((_file: string, args: string[], cb: any) => {
-        if (args.includes("pull")) {
-          const err: any = new Error("Conflict");
-          err.stderr = "Git pull conflict";
-          cb(err);
-        } else {
-          cb(null, { stdout: "newhash\n", stderr: "" });
-        }
+      spawnSpy.mockImplementation((cmd: string[]) => {
+        if (cmd.includes("pull")) return fakeSpawnResult("", "Git pull conflict", 1) as any;
+        return fakeSpawnResult("newhash\n") as any;
       });
 
       await expect(service.updateModule("m1")).rejects.toThrow("Git pull failed: Git pull conflict");
@@ -404,25 +377,25 @@ describe("DownloaderUtility", () => {
 
       let activePulls = 0;
       let maxActivePulls = 0;
-      mockExecFile.mockImplementation((_file: string, args: string[], cb: any) => {
-        if (args.includes("rev-parse") && args.includes("HEAD")) {
-          cb(null, { stdout: "oldhash\n", stderr: "" });
-        } else if (args.includes("rev-parse") && args.includes("@{u}")) {
-          cb(null, { stdout: "origin/main\n", stderr: "" });
-        } else if (args.includes("rev-parse") && args.includes("origin/main")) {
-          cb(null, { stdout: "newhash\n", stderr: "" });
-        } else if (args.includes("log")) {
-          cb(null, { stdout: "feat: change\n", stderr: "" });
-        } else if (args.includes("pull")) {
+      spawnSpy.mockImplementation((cmd: string[]) => {
+        if (cmd.includes("rev-parse") && cmd.includes("HEAD")) return fakeSpawnResult("oldhash\n") as any;
+        if (cmd.includes("rev-parse") && cmd.includes("@{u}")) return fakeSpawnResult("origin/main\n") as any;
+        if (cmd.includes("rev-parse") && cmd.includes("origin/main")) return fakeSpawnResult("newhash\n") as any;
+        if (cmd.includes("log")) return fakeSpawnResult("feat: change\n") as any;
+        if (cmd.includes("pull")) {
           activePulls++;
           maxActivePulls = Math.max(maxActivePulls, activePulls);
-          setTimeout(() => {
-            activePulls--;
-            cb(null, { stdout: "", stderr: "" });
-          }, 20);
-        } else {
-          cb(null, { stdout: "", stderr: "" });
+          return {
+            ...fakeSpawnResult(""),
+            exited: new Promise((resolve) => {
+              setTimeout(() => {
+                activePulls--;
+                resolve(0);
+              }, 20);
+            }),
+          } as any;
         }
+        return fakeSpawnResult("") as any;
       });
 
       const [res1, res2] = await Promise.all([
@@ -541,18 +514,12 @@ describe("DownloaderUtility", () => {
       });
 
       (fs.access as any).mockResolvedValue(true);
-      mockExecFile.mockImplementation((_file: string, args: string[], cb: any) => {
-        if (args.includes("rev-parse") && args.includes("HEAD")) {
-          cb(null, { stdout: "oldhash\n", stderr: "" });
-        } else if (args.includes("rev-parse") && args.includes("@{u}")) {
-          cb(null, { stdout: "origin/main\n", stderr: "" });
-        } else if (args.includes("rev-parse") && args.includes("origin/main")) {
-          cb(null, { stdout: "newhash\n", stderr: "" });
-        } else if (args.includes("log")) {
-          cb(null, { stdout: "feat: change\n", stderr: "" });
-        } else {
-          cb(null, { stdout: "", stderr: "" });
-        }
+      spawnSpy.mockImplementation((cmd: string[]) => {
+        if (cmd.includes("rev-parse") && cmd.includes("HEAD")) return fakeSpawnResult("oldhash\n") as any;
+        if (cmd.includes("rev-parse") && cmd.includes("@{u}")) return fakeSpawnResult("origin/main\n") as any;
+        if (cmd.includes("rev-parse") && cmd.includes("origin/main")) return fakeSpawnResult("newhash\n") as any;
+        if (cmd.includes("log")) return fakeSpawnResult("feat: change\n") as any;
+        return fakeSpawnResult("") as any;
       });
 
       const res = await service.checkForUpdates();

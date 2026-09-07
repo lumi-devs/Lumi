@@ -1,11 +1,9 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { promises as fs, existsSync } from "node:fs";
 import { join } from "node:path";
 import { container } from "@sapphire/framework";
 import { LumiInfo } from "#utilities/misc.js";
+import { execFileAsync } from "#utilities/exec-file.js";
 
-const execFileAsync = promisify(execFile);
 const execGit = (args: string[]) =>
   execFileAsync("git", args, {
     timeout: 45_000,

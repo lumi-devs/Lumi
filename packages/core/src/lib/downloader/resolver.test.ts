@@ -1,23 +1,13 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { fakeSpawnResult } from "../../../tests/helpers/mock-bun-spawn.js";
 
-vi.mock("node:child_process", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:child_process")>();
-  return {
-    ...actual,
-    // Real network/`bun add` isn't available in CI; installModule only needs
-    // this call to resolve so the code after it (the regression under test)
-    // runs. Every other resolver.ts codepath uses git via execFile too, but
-    // this test never reaches those.
-    execFile: (
-      _cmd: string,
-      _args: string[],
-      _opts: unknown,
-      callback: (err: null, result: { stdout: string; stderr: string }) => void,
-    ) => callback(null, { stdout: "", stderr: "" }),
-  };
-});
+// Real network/`bun add` isn't available in CI; installModule only needs
+// this call to resolve so the code after it (the regression under test)
+// runs. Every other resolver.ts codepath uses git too, but this test never
+// reaches those.
+vi.spyOn(Bun, "spawn").mockImplementation(() => fakeSpawnResult("") as any);
 
 const { resolver, ModuleRoot, AddonModulesRoot } = await import("./resolver.js");
 

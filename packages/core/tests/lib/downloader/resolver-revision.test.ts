@@ -3,42 +3,6 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const { mockExecFile } = vi.hoisted(() => ({ mockExecFile: vi.fn() }));
-
-// `resolver.ts` does `promisify(execFile)` on the named import it captured at
-// module load - since this mock replaces that import, the mock also needs
-// its own `promisify.custom` implementation (Node's real `execFile` has one
-// that resolves `{ stdout, stderr }`; a plain `vi.fn()` doesn't, so a naive
-// `promisify()` of it would resolve with just the raw first callback arg).
-// The custom impl below still funnels through `mockExecFile` itself so
-// `mockImplementationOnce` overrides in individual tests keep working.
-vi.mock("node:child_process", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("node:child_process")>();
-  const { promisify } = await import("node:util");
-
-  mockExecFile.mockImplementation((...args: unknown[]) =>
-    (actual.execFile as any)(...args),
-  );
-  (mockExecFile as any)[promisify.custom] = (...callArgs: unknown[]) =>
-    new Promise((resolve, reject) => {
-      mockExecFile(...callArgs, (err: unknown, stdout: string, stderr: string) => {
-        if (err) {
-          if (stderr !== undefined) (err as any).stderr = stderr;
-          reject(err);
-        } else {
-          resolve({ stdout, stderr });
-        }
-      });
-    });
-
-  return {
-    ...actual,
-    execFile: mockExecFile,
-    default: { ...(actual as any).default, execFile: mockExecFile },
-  };
-});
-
 import { execFileSync } from "node:child_process";
 import { container } from "@sapphire/framework";
 import {
@@ -46,10 +10,12 @@ import {
   ModuleRoot,
   AddonModulesRoot,
 } from "#lib/downloader/resolver.js";
+import { fakeSpawnResult } from "../../helpers/mock-bun-spawn.js";
 
-// Uses execFileSync (untouched by the node:child_process mock below, which
-// only wraps `execFile`) so test-fixture git setup never goes through the
-// same interception path being exercised by the resolver itself.
+// Re-installed in beforeEach below, not module scope: the file's own
+// afterEach(vi.restoreAllMocks()) reverts spies after every test.
+let spawnSpy: ReturnType<typeof vi.spyOn<typeof Bun, "spawn">>;
+
 async function git(cwd: string, ...args: string[]): Promise<string> {
   return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
 }
@@ -87,6 +53,7 @@ describe("DownloadResolver - revision resolution & checkout", () => {
     } as any;
     resolver = new DownloadResolver();
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "lumi-resolver-revision-"));
+    spawnSpy = vi.spyOn(Bun, "spawn");
   });
 
   afterEach(async () => {
@@ -131,7 +98,7 @@ describe("DownloadResolver - revision resolution & checkout", () => {
     });
 
     it("checkoutRevision detaches HEAD at the resolved commit without re-cloning", async () => {
-      mockExecFile.mockClear();
+      spawnSpy.mockClear();
 
       const resolved = await resolver.checkoutRevision(repoPath, firstCommit);
       expect(resolved).toBe(firstCommit);
@@ -139,18 +106,16 @@ describe("DownloadResolver - revision resolution & checkout", () => {
       const head = await git(repoPath, "rev-parse", "HEAD");
       expect(head).toBe(firstCommit);
 
-      const cloneCalls = mockExecFile.mock.calls.filter(
-        ([, cmdArgs]) => Array.isArray(cmdArgs) && cmdArgs.includes("clone"),
+      const cloneCalls = spawnSpy.mock.calls.filter(
+        ([cmd]) => Array.isArray(cmd) && cmd.includes("clone"),
       );
       expect(cloneCalls).toHaveLength(0);
     });
 
     it("throws with the full candidate list when a short SHA is ambiguous", async () => {
-      mockExecFile.mockImplementationOnce((...args: any[]) => {
-        const cb = args[args.length - 1];
-        cb(null, `${firstCommit}\n${secondCommit}\n`, "");
-        return {} as any;
-      });
+      spawnSpy.mockImplementationOnce(
+        () => fakeSpawnResult(`${firstCommit}\n${secondCommit}\n`) as any,
+      );
 
       await expect(resolver.resolveRevision(repoPath, "deadbee")).rejects.toThrow(
         /ambiguous/,

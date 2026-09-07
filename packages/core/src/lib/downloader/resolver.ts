@@ -1,8 +1,6 @@
 import { container } from "@sapphire/framework";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import type { ModuleInfo } from "./types.js";
 import { validateAddon } from "./validate.js";
 import { s } from "@sapphire/shapeshift";
@@ -13,8 +11,8 @@ import {
   type ModuleManifest,
 } from "#lib/module-system/manifest.js";
 import { withSerializedWork } from "#lib/utilities/misc.js";
+import { execFileAsync } from "#lib/utilities/exec-file.js";
 
-const execFileAsync = promisify(execFile);
 const execGit = (args: string[]) =>
   execFileAsync("git", args, {
     timeout: 30000,

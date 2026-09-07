@@ -3,29 +3,6 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-// `resolver.ts` does `const execFileAsync = promisify(execFile)` at module-load
-// time, capturing a direct function reference. A `vi.spyOn(child_process,
-// "execFile")` installed later (e.g. in a beforeEach) never reaches that
-// captured reference, so it silently does nothing. Mocking the whole
-// `node:child_process` module - which Vitest hoists above all imports -
-// intercepts it at resolution time instead, before resolver.ts ever captures
-// a reference.
-const { mockExecFile } = vi.hoisted(() => ({
-  mockExecFile: vi.fn((...args: any[]) => {
-    const cb = args[args.length - 1];
-    if (typeof cb === "function") {
-      const error: any = new Error("Git clone failed");
-      error.stderr = "Git clone failed";
-      cb(error, "", "Git clone failed");
-    }
-    return {} as any;
-  }),
-}));
-vi.mock("node:child_process", () => ({
-  execFile: mockExecFile,
-  default: { execFile: mockExecFile },
-}));
-
 vi.mock("#lib/downloader/validate.js", () => ({
   validateAddon: vi.fn(),
 }));
@@ -37,12 +14,12 @@ vi.mock("#lib/module-system/manifest.js", () => ({
 import { DownloadResolver, ModuleRoot, AddonModulesRoot } from "#lib/downloader/resolver.js";
 import { validateAddon } from "#lib/downloader/validate.js";
 import { detectSubStores, writeManifest } from "#lib/module-system/manifest.js";
-// CI trigger comment
-
+import { fakeSpawnResult } from "../helpers/mock-bun-spawn.js";
 
 describe("DownloadResolver Edge Cases", () => {
   let resolver: DownloadResolver;
   let testDir: string;
+  let spawnSpy: ReturnType<typeof vi.spyOn<typeof Bun, "spawn">>;
 
   beforeAll(async () => {
     resolver = new DownloadResolver();
@@ -50,16 +27,9 @@ describe("DownloadResolver Edge Cases", () => {
   });
 
   beforeEach(() => {
-    mockExecFile.mockClear();
-    mockExecFile.mockImplementation((...args: any[]) => {
-      const cb = args[args.length - 1];
-      if (typeof cb === "function") {
-        const error: any = new Error("Git clone failed");
-        error.stderr = "Git clone failed";
-        cb(error, "", "Git clone failed");
-      }
-      return {} as any;
-    });
+    spawnSpy = vi
+      .spyOn(Bun, "spawn")
+      .mockImplementation(() => fakeSpawnResult("", "Git clone failed", 1) as any);
   });
 
   afterAll(async () => {
@@ -127,19 +97,13 @@ describe("DownloadResolver Edge Cases", () => {
     });
     const rmSpy = vi.spyOn(fs, "rm").mockResolvedValue(undefined);
 
-    mockExecFile.mockImplementation((...args: any[]) => {
-      const cb = args[args.length - 1];
-      if (typeof cb === "function") cb(null, "", "");
-      return {} as any;
-    });
+    spawnSpy.mockImplementation(() => fakeSpawnResult("") as any);
 
     await resolver.addRepo(repoName, "https://github.com/some-org/existing-repo.git");
 
-    expect(mockExecFile).toHaveBeenCalledWith(
-      "git",
-      ["-C", repoPath, "pull"],
+    expect(spawnSpy).toHaveBeenCalledWith(
+      ["git", "-C", repoPath, "pull"],
       expect.any(Object),
-      expect.any(Function),
     );
     // A successful pull never falls back to deleting and re-cloning the repo.
     expect(rmSpy).not.toHaveBeenCalled();
@@ -174,11 +138,7 @@ describe("DownloadResolver Edge Cases", () => {
       throw new Error(`unexpected realpath: ${p}`);
     });
 
-    mockExecFile.mockImplementation((...args: any[]) => {
-      const cb = args[args.length - 1];
-      if (typeof cb === "function") cb(null, "", "");
-      return {} as any;
-    });
+    spawnSpy.mockImplementation(() => fakeSpawnResult("") as any);
 
     (validateAddon as any).mockResolvedValue({
       errors: [
@@ -207,15 +167,18 @@ describe("DownloadResolver Edge Cases", () => {
 
     let active = 0;
     let maxActive = 0;
-    mockExecFile.mockImplementation((...args: any[]) => {
-      const cb = args[args.length - 1];
+    spawnSpy.mockImplementation(() => {
       active++;
       maxActive = Math.max(maxActive, active);
-      setTimeout(() => {
-        active--;
-        cb(null, "", "");
-      }, 20);
-      return {} as any;
+      return {
+        ...fakeSpawnResult(""),
+        exited: new Promise((resolve) => {
+          setTimeout(() => {
+            active--;
+            resolve(0);
+          }, 20);
+        }),
+      } as any;
     });
 
     await Promise.all([
@@ -224,7 +187,7 @@ describe("DownloadResolver Edge Cases", () => {
     ]);
 
     expect(maxActive).toBe(1);
-    expect(mockExecFile).toHaveBeenCalledTimes(2);
+    expect(spawnSpy).toHaveBeenCalledTimes(2);
 
     vi.restoreAllMocks();
   });
@@ -241,15 +204,18 @@ describe("DownloadResolver Edge Cases", () => {
 
     let active = 0;
     let maxActive = 0;
-    mockExecFile.mockImplementation((...args: any[]) => {
-      const cb = args[args.length - 1];
+    spawnSpy.mockImplementation(() => {
       active++;
       maxActive = Math.max(maxActive, active);
-      setTimeout(() => {
-        active--;
-        cb(null, "", "");
-      }, 20);
-      return {} as any;
+      return {
+        ...fakeSpawnResult(""),
+        exited: new Promise((resolve) => {
+          setTimeout(() => {
+            active--;
+            resolve(0);
+          }, 20);
+        }),
+      } as any;
     });
 
     await Promise.all([

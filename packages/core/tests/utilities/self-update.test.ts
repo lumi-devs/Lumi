@@ -1,17 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-const { mockExecFile } = vi.hoisted(() => ({
-  mockExecFile: vi.fn(),
-}));
+import { fakeSpawnResult } from "../helpers/mock-bun-spawn.js";
 
 const { mockExistsSync, mockReadFile } = vi.hoisted(() => ({
   mockExistsSync: vi.fn(),
   mockReadFile: vi.fn(),
-}));
-
-vi.mock("node:child_process", () => ({
-  execFile: mockExecFile,
-  default: { execFile: mockExecFile },
 }));
 
 vi.mock("node:fs", () => ({
@@ -38,27 +30,22 @@ interface MockEntry {
   error?: Error;
 }
 
-/** Drives `execFile("git"|"bun", args, opts, cb)` from a `"file args..."` keyed map. */
+let spawnSpy: ReturnType<typeof vi.spyOn<typeof Bun, "spawn">>;
+
+/** Drives Bun.spawn(["git"|"bun", ...args], opts) from a `"file args..."` keyed map. */
 function respondWith(map: Record<string, MockEntry>) {
-  mockExecFile.mockImplementation(
-    (file: string, args: string[], _opts: unknown, cb: (err: unknown, res?: unknown) => void) => {
-      const key = `${file} ${args.join(" ")}`;
-      const entry = map[key];
-      if (!entry) {
-        cb(new Error(`self-update.test.ts: no mock registered for "${key}"`));
-        return;
-      }
-      if (entry.error) {
-        cb(entry.error);
-      } else {
-        cb(null, { stdout: entry.stdout ?? "", stderr: "" });
-      }
-    },
-  );
+  spawnSpy.mockImplementation((cmd: string[]) => {
+    const key = cmd.join(" ");
+    const entry = map[key];
+    if (!entry) return fakeSpawnResult("", `no mock registered for "${key}"`, 1) as any;
+    if (entry.error) return fakeSpawnResult("", entry.error.message, 1) as any;
+    return fakeSpawnResult(entry.stdout ?? "") as any;
+  });
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  spawnSpy = vi.spyOn(Bun, "spawn");
   mockReadFile.mockRejectedValue(new Error("ENOENT"));
 });
 
@@ -75,7 +62,7 @@ describe("getCoreUpdateStatus", () => {
       behindBy: 0,
       error: "Running via Docker. Cannot check git status.",
     });
-    expect(mockExecFile).not.toHaveBeenCalled();
+    expect(spawnSpy).not.toHaveBeenCalled();
   });
 
   it("computes behindBy and version fields from git output", async () => {
@@ -129,13 +116,13 @@ describe("getCoreUpdateStatus", () => {
 
     const status = await getCoreUpdateStatus();
 
-    expect(status).toEqual({
+    expect(status).toMatchObject({
       upToDate: false,
       branch: "unknown",
       currentCommit: "unknown",
       behindBy: 0,
-      error: "git not found",
     });
+    expect(status.error).toContain("git not found");
   });
 });
 
@@ -148,7 +135,7 @@ describe("updateLumiCore", () => {
     expect(result.updated).toBe(false);
     expect(result.currentCommit).toBe("unknown");
     expect(result.error).toContain("Docker");
-    expect(mockExecFile).not.toHaveBeenCalled();
+    expect(spawnSpy).not.toHaveBeenCalled();
   });
 
   it("does not pull or install when already up to date", async () => {
@@ -164,12 +151,10 @@ describe("updateLumiCore", () => {
     const result = await updateLumiCore();
 
     expect(result).toEqual({ updated: false, currentCommit: "abc1234" });
-    const calledFiles = mockExecFile.mock.calls.map((c) => c[0] as string);
+    const calledFiles = spawnSpy.mock.calls.map((c) => (c[0] as string[])[0]);
     expect(calledFiles).not.toContain("bun");
     expect(
-      mockExecFile.mock.calls.some(
-        (c) => (c[1] as string[]).includes("pull"),
-      ),
+      spawnSpy.mock.calls.some((c) => (c[0] as string[]).includes("pull")),
     ).toBe(false);
   });
 
@@ -198,15 +183,15 @@ describe("updateLumiCore", () => {
       changelog: "def5678 fix bug",
     });
 
-    const pullCall = mockExecFile.mock.calls.find(
-      (c) => c[0] === "git" && (c[1] as string[]).includes("pull"),
+    const pullCall = spawnSpy.mock.calls.find(
+      (c) => (c[0] as string[])[0] === "git" && (c[0] as string[]).includes("pull"),
     );
     expect(pullCall).toBeDefined();
-    expect(pullCall?.[1]).toEqual(["pull", "--ff-only", "origin", "main"]);
+    expect((pullCall?.[0] as string[]).slice(1)).toEqual(["pull", "--ff-only", "origin", "main"]);
 
-    const installCall = mockExecFile.mock.calls.find((c) => c[0] === "bun");
+    const installCall = spawnSpy.mock.calls.find((c) => (c[0] as string[])[0] === "bun");
     expect(installCall).toBeDefined();
-    expect(installCall?.[1]).toEqual(["install", "--frozen-lockfile"]);
+    expect((installCall?.[0] as string[]).slice(1)).toEqual(["install", "--frozen-lockfile"]);
   });
 
   it("falls back to plain bun install when --frozen-lockfile fails", async () => {
@@ -228,11 +213,8 @@ describe("updateLumiCore", () => {
     const result = await updateLumiCore();
 
     expect(result.updated).toBe(true);
-    const fallbackInstall = mockExecFile.mock.calls.find(
-      (c) =>
-        c[0] === "bun" &&
-        (c[1] as string[]).length === 1 &&
-        (c[1] as string[])[0] === "install",
+    const fallbackInstall = spawnSpy.mock.calls.find(
+      (c) => (c[0] as string[]).length === 2 && (c[0] as string[])[1] === "install",
     );
     expect(fallbackInstall).toBeDefined();
   });
@@ -257,6 +239,6 @@ describe("updateLumiCore", () => {
 
     expect(result.updated).toBe(false);
     expect(result.currentCommit).toBe("unknown");
-    expect(result.error).toBe("not a fast-forward");
+    expect(result.error).toContain("not a fast-forward");
   });
 });

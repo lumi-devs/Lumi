@@ -9,11 +9,10 @@ import {
 import { pathExists } from "#lib/downloader/validate.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { errorFrom } from "#lib/utilities/errors.js";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { withSerializedWork } from "#lib/utilities/misc.js";
+import { execFileAsync } from "#lib/utilities/exec-file.js";
 
 export interface AutoUpdateConfig {
   enabled: boolean;
@@ -38,8 +37,6 @@ export type RepoUpdateCheck =
   | { ok: false; reason: string }
   | { ok: true; hasUpdate: false }
   | { ok: true; hasUpdate: true; changelog: string };
-
-const execFileAsync = promisify(execFile);
 
 /** One queued registration as Sapphire records it on a command's registry. */
 interface ApiCall {
