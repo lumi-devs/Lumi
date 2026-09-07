@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { s } from "@sapphire/shapeshift";
+import { CombinedPropertyError, s } from "@sapphire/shapeshift";
 import semver from "semver";
 import { LumiInfo } from "#utilities/misc.js";
 
@@ -222,8 +222,8 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
       const info = JSON.parse(await fs.readFile(infoPath, "utf8")) as unknown;
       const parsed = infoSchema.run(info);
       if (parsed.isErr()) {
-        const err = parsed.error as any;
-        if (err.errors) {
+        const err = parsed.error;
+        if (err instanceof CombinedPropertyError) {
           for (const [key, propertyError] of err.errors) {
             if (key === "end_user_data_statement" && propertyError.name === "MissingPropertyError") {
               errors.push(
@@ -234,7 +234,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
             }
           }
         } else {
-          errors.push(`info.json: (root) - ${parsed.error.message}`);
+          errors.push(`info.json: (root) - ${err.message}`);
         }
       } else {
         const val = parsed.unwrap();
@@ -271,13 +271,13 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
       ) as unknown;
       const parsed = manifestSchema.run(manifest);
       if (parsed.isErr()) {
-        const err = parsed.error as any;
-        if (err.errors) {
+        const err = parsed.error;
+        if (err instanceof CombinedPropertyError) {
           for (const [key, propertyError] of err.errors) {
             errors.push(`manifest.json: "${String(key)}" - ${propertyError.message}`);
           }
         } else {
-          errors.push(`manifest.json: (root) - ${parsed.error.message}`);
+          errors.push(`manifest.json: (root) - ${err.message}`);
         }
       } else {
         const val = parsed.unwrap();
