@@ -8,6 +8,7 @@ export default defineConfig({
 		environment: 'node',
 		include: ['packages/**/*.test.ts', 'packages/**/*.spec.ts'],
 		coverage: {
+			provider: 'istanbul',
 			reporter: ['text', 'json', 'html', 'lcov']
 		}
 	}

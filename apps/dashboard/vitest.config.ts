@@ -35,6 +35,7 @@ export default defineConfig({
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     setupFiles: ["./tests/setup.ts"],
     coverage: {
+      provider: "istanbul",
       reporter: ["text", "json", "html", "lcov"],
       // Land alongside the root suite's report (../../coverage/lcov.info)
       // instead of the default apps/dashboard/coverage, so a single
