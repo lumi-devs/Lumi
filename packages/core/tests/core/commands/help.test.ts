@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
+import { MessageFlags } from "discord.js";
 import { getCategories, HelpCommand } from "#modules/core/commands/help.js";
 import { Emojis } from "#lib/utilities/assets.js";
 
@@ -175,7 +176,9 @@ describe("HelpCommand", () => {
 
     await command.chatInputRun(interaction);
 
-    expect(interaction.deferReply).toHaveBeenCalledWith({ ephemeral: true });
+    expect(interaction.deferReply).toHaveBeenCalledWith({
+      flags: MessageFlags.Ephemeral,
+    });
     expect(paginateContainer).toHaveBeenCalled();
   });
 
