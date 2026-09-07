@@ -31,7 +31,7 @@ export function LoginForm({
   const springX = useSpring(x, SpringSoft);
   const springY = useSpring(y, SpringSoft);
 
-  function onMouseMove(e: React.MouseEvent<HTMLButtonElement>) {
+  function onMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
     const relX = e.clientX - (rect.left + rect.width / 2);
     const relY = e.clientY - (rect.top + rect.height / 2);
@@ -51,15 +51,17 @@ export function LoginForm({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
+      <motion.div
+        style={reduce ? undefined : { x: springX, y: springY }}
+        onMouseMove={reduce ? undefined : onMouseMove}
+        onMouseLeave={reduce ? undefined : onMouseLeave}
+      >
       <Button
         type="submit"
         variant="primary"
         size="lg"
         className="w-full"
         disabled={isPending}
-        style={reduce ? undefined : { x: springX, y: springY }}
-        onMouseMove={reduce ? undefined : onMouseMove}
-        onMouseLeave={reduce ? undefined : onMouseLeave}
       >
         {isPending ? (
           <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -76,6 +78,7 @@ export function LoginForm({
         )}
         {isPending ? "Redirecting to Discord…" : "Continue with Discord"}
       </Button>
+      </motion.div>
       <AnimatePresence>
         {state.error ? (
           <motion.div

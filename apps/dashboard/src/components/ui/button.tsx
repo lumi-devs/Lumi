@@ -1,20 +1,20 @@
 "use client";
 
 import { Slot } from "radix-ui";
-import { motion, type HTMLMotionProps } from "motion/react";
+import type { ButtonHTMLAttributes } from "react";
 import type { VariantProps } from "class-variance-authority";
 import { buttonVariants } from "./button-variants";
 import { cn } from "#/lib/utils";
 
 export interface ButtonProps
-  extends Omit<HTMLMotionProps<"button">, "ref">,
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "ref">,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 
 // Radix `Slot` for `asChild` (render as a Link/anchor while keeping button
-// styling), `motion.button` for the press-scale — the one bit of tactile
-// feedback every clickable surface in the app shares.
+// styling). Press feedback is a CSS active-scale so this primitive ships
+// zero animation runtime.
 export function Button({
   className,
   variant,
@@ -23,20 +23,21 @@ export function Button({
   ...props
 }: ButtonProps) {
   if (asChild) {
-    // `asChild` merges styling onto a single child element (e.g. a `Link`),
-    // which never receives the motion-only props below — safe to widen.
+    // `asChild` merges styling onto a single child element (e.g. a `Link`).
     return (
       <Slot.Root
         className={cn(buttonVariants({ variant, size }), className)}
-        {...(props as React.HTMLAttributes<HTMLElement>)}
+        {...props}
       />
     );
   }
   return (
-    <motion.button
-      whileTap={{ scale: 0.97 }}
-      transition={{ type: "spring", stiffness: 500, damping: 30 }}
-      className={cn(buttonVariants({ variant, size }), className)}
+    <button
+      className={cn(
+        buttonVariants({ variant, size }),
+        "transition-transform duration-100 active:scale-[0.97]",
+        className,
+      )}
       {...props}
     />
   );

@@ -105,6 +105,15 @@ export const rpcGroups: RpcGroup[] = [
     ],
   },
   {
+    title: "Reaction roles",
+    note: "Role menus served from the reactionroles module.",
+    actions: [
+      { name: "guild.reactionroles.menus.list", payload: "none", summary: "List role menus for a guild." },
+      { name: "guild.reactionroles.menus.set", payload: "ReactionRoleMenuSetPayload { id?, title, options }", summary: "Create or update a role menu with its options." },
+      { name: "guild.reactionroles.menus.delete", payload: "ReactionRoleMenuDeletePayload { id }", summary: "Delete a role menu." },
+    ],
+  },
+  {
     title: "Audit and history",
     note: "Who changed what, and a way back.",
     actions: [

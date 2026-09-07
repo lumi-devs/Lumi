@@ -167,7 +167,12 @@ export async function readClusterShards(
 
   const rows: ShardTelemetry[] = [];
   if (shardKeys.length > 0) {
-    const values = await Promise.all(shardKeys.map((key) => redis.get(key)));
+    let values: (string | null)[];
+    try {
+      values = await redis.mget(...shardKeys);
+    } catch {
+      values = await Promise.all(shardKeys.map((key) => redis.get(key)));
+    }
     for (const raw of values) {
       if (!raw) continue;
       const parsed = tryParseJSON(raw) as ShardTelemetry | null;
@@ -178,14 +183,17 @@ export async function readClusterShards(
 
   const shardCount = rows.reduce((max, r) => Math.max(max, r.shardCount ?? 0), 0);
 
-  const replicaIds = new Set<string>(rows.map((r) => r.replicaId));
+  const byReplica = new Map<string, number[]>();
+  for (const r of rows) {
+    const bucket = byReplica.get(r.replicaId);
+    if (bucket) bucket.push(r.shardId);
+    else byReplica.set(r.replicaId, [r.shardId]);
+  }
 
-  const replicas: ClusterReplicaState[] = [...replicaIds]
-    .map((replicaId) => ({
+  const replicas: ClusterReplicaState[] = [...byReplica]
+    .map(([replicaId, reportingShardIds]) => ({
       replicaId,
-      reportingShardIds: rows
-        .filter((r) => r.replicaId === replicaId)
-        .map((r) => r.shardId),
+      reportingShardIds,
     }))
     .sort((a, b) => a.replicaId.localeCompare(b.replicaId));
 

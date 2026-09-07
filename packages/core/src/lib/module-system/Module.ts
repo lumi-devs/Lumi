@@ -73,11 +73,19 @@ export interface ModuleOptions extends Piece.Options {
   dashboardHref?: string;
 }
 
+/** Host for decorator-attached module metadata. */
+interface WithModuleMeta {
+  meta?: ModuleMeta;
+}
+
 /**
  * A class decorator to attach metadata to a {@link Module} piece.
  * Automatically parses configuration schemas into runtime config fields.
  */
 export function DefineModule(options: ModuleOptions) {
+  // any[] is intentional here: the decorator must accept any Module subclass
+  // constructor signature (context + options variants). Narrowing to unknown[]
+  // breaks assignability under strictFunctionTypes.
   return function <T extends abstract new (...args: any[]) => Module>(
     target: T,
   ) {
@@ -103,7 +111,7 @@ export function DefineModule(options: ModuleOptions) {
       dashboardHref: options.dashboardHref,
     };
 
-    (target as any).meta = meta;
+    (target as WithModuleMeta).meta = meta;
     return target;
   };
 }
@@ -136,7 +144,7 @@ export abstract class Module extends Piece {
     this.dependencies = options.dependencies ?? [];
     this.configFields =
       options.configFields ??
-      (this.constructor as any).meta?.configFields ??
+      (this.constructor as WithModuleMeta).meta?.configFields ??
       (options.configSchema ? fieldsFromSchema(options.configSchema) : []);
   }
 

@@ -11,6 +11,27 @@ import { injectTraceContext } from "@lumi/observability";
 import { env } from "./env";
 
 const DefaultTimeoutMs = 8000;
+const HeavyReadTimeoutMs = 12000;
+const MutationTimeoutMs = 15000;
+
+export type RpcErrorCode = "TIMEOUT" | "WORKER_DOWN" | "RPC_ERROR" | "MALFORMED";
+
+export class RpcError extends Error {
+  public readonly code: RpcErrorCode;
+  public readonly action: string;
+  public constructor(code: RpcErrorCode, action: string, message?: string) {
+    super(message ?? `RPC ${action}: ${code}`);
+    this.name = "RpcError";
+    this.code = code;
+    this.action = action;
+  }
+}
+
+function defaultTimeoutFor(action: string): number {
+  if (action === "guild.dashboard.get" || action.endsWith(".audit.list")) return HeavyReadTimeoutMs;
+  if (action.endsWith(".list") || action.endsWith(".get")) return DefaultTimeoutMs;
+  return MutationTimeoutMs;
+}
 
 interface CallOptions<A extends RpcActionName> {
   guildId?: string;
@@ -56,7 +77,7 @@ export class RpcClient {
     const controller = new AbortController();
     const timer = setTimeout(
       () => controller.abort(),
-      options.timeoutMs ?? DefaultTimeoutMs,
+      options.timeoutMs ?? defaultTimeoutFor(action),
     );
 
     let res: Response;
@@ -72,9 +93,9 @@ export class RpcClient {
       });
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
-        throw new Error(`RPC timed out: ${action}`);
+        throw new RpcError("TIMEOUT", action, `RPC timed out: ${action}`);
       }
-      throw err instanceof Error ? err : new Error(String(err));
+      throw new RpcError("WORKER_DOWN", action, err instanceof Error ? err.message : String(err));
     } finally {
       clearTimeout(timer);
     }
@@ -84,7 +105,7 @@ export class RpcClient {
       raw = await res.json();
     } catch (err: unknown) {
       this.log(`Discarding undecodable RPC response: ${String(err)}`);
-      throw new Error(`RPC ${action}: malformed response`);
+      throw new RpcError("MALFORMED", action, `RPC ${action}: malformed response`);
     }
 
     let response: RpcResponse;
@@ -92,17 +113,19 @@ export class RpcClient {
       response = parseRpcResponse(raw);
     } catch (err: unknown) {
       this.log(`Discarding malformed RPC envelope for ${action}: ${String(err)}`);
-      throw new Error(`RPC ${action}: malformed response`);
+      throw new RpcError("MALFORMED", action, `RPC ${action}: malformed response`);
     }
 
-    if (!response.ok) throw new Error(response.error ?? "RPC error");
+    if (!response.ok) throw new RpcError("RPC_ERROR", action, response.error ?? "RPC error");
     return response.data;
   }
 
   /** Hits the worker's `/healthz` — used by the readiness probe. */
   public async healthy(): Promise<boolean> {
     try {
-      const res = await fetch(`${this.baseUrl}/healthz`);
+      const res = await fetch(`${this.baseUrl}/healthz`, {
+        signal: AbortSignal.timeout(2000),
+      });
       return res.ok;
     } catch {
       return false;

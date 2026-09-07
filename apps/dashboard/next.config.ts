@@ -21,6 +21,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // This repo maintains its own AGENTS.md; next dev otherwise writes over it.
   agentRules: false,
+  experimental: {
+    optimizePackageImports: ["lucide-react", "motion", "radix-ui", "cmdk"],
+  },
   // Leaving `experimental.serverActions.allowedOrigins` unset keeps Next's
   // built-in Server Action CSRF check strictly same-origin.
   headers() {

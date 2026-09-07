@@ -90,7 +90,10 @@ export default function DashboardPage() {
           <code>packages/contracts/src/rpc.ts</code>.
         </li>
         <li>
-          A handler in <code>packages/core/src/lib/rpc/core-rpc.ts</code> on the worker side.
+          A guild-scoped handler in{" "}
+          <code>packages/core/src/modules/dashboard/rpc/&lt;domain&gt;-rpc.ts</code> (registered
+          from the dashboard module&apos;s <code>onLoad</code>). Only bot-owner-only,
+          non-guild-scoped actions live in <code>packages/core/src/lib/rpc/core-rpc.ts</code>.
         </li>
         <li>
           A caller in <code>apps/dashboard/src/lib/dashboard-fetch.ts</code> for reads, or{" "}

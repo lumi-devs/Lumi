@@ -1,7 +1,6 @@
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
 import { RpcActions } from "@lumi/contracts";
-import { tryGetUtility } from "#lib/module-system/Utility.js";
-import type ReactionRolesUtility from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 import {
   ReactionRoleMenuDeleteSchema,
   ReactionRoleMenuSetSchema,
@@ -10,10 +9,8 @@ import {
   requireGuildManager,
 } from "../lib/helpers.js";
 
-function reactionRoles(): ReactionRolesUtility {
-  const service = tryGetUtility("reactionroles");
-  if (!service) throw new Error("The reactionroles module is not loaded");
-  return service;
+function reactionRoles() {
+  return getUtility("reactionroles");
 }
 
 function toView(menu: {

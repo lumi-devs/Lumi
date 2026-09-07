@@ -6,11 +6,17 @@ Grounded in `packages/core/src/lib/utilities/cards.ts`, `commands.ts`/`command-c
 
 ## Why raw `new EmbedBuilder()` is banned
 
-There is no ESLint `no-restricted-syntax` rule for this — `packages/eslint-config/index.js`
-carries no reference to `EmbedBuilder` at all, and it's mostly rule *relaxations* (`no-unsafe-*`
-off, etc.), not restrictions. The actual enforcement is the addon validator in
-`packages/core/src/lib/downloader/validate.ts`, which regex-scans every third-party module
-file at install/update time:
+Two gates, one per surface:
+
+- **First-party (`packages/core/src`)**: root `eslint.config.mjs:23-46` has a
+  `no-restricted-imports` rule blocking `EmbedBuilder` from `discord.js` /
+  `@discordjs/builders` repo-wide, plus `62-79` banning raw `interaction.reply` /
+  `MessageFlags.Ephemeral` in `commands/*.ts` (must go through `ctx.reply*`), plus
+  `82-96` blocking sibling-module imports. `packages/eslint-config` itself carries
+  no `EmbedBuilder` reference — the rule lives in the root config.
+- **Third-party addons**: the addon validator in
+  `packages/core/src/lib/downloader/validate.ts` regex-scans every module file at
+  install/update time:
 
 ```ts
 // validate.ts:97
@@ -23,11 +29,11 @@ if (EmbedImportRe.test(src) || /\bnew\s+EmbedBuilder\s*\(/.test(src))
   );
 ```
 
-For first-party code (`packages/core/src`) there's no automated gate at all — it's pure
-convention, and it holds: grepping the whole `packages/core/src` tree for `EmbedBuilder` turns
+For first-party code the lint rule is the gate and it holds: grepping the whole `packages/core/src` tree for `EmbedBuilder` turns
 up zero usages outside this validator's own regex strings. Every card in the codebase goes
 through `#utilities/cards.js`, which is itself built entirely on Components V2 primitives, not
-`EmbedBuilder`.
+`EmbedBuilder`. `CardReply.components` is typed as `readonly ContainerBuilder[]`
+(`utilities/ui/types.ts`), not `any[]` — a V2 message has no `embeds` field at all.
 
 ## Components V2 in this codebase
 

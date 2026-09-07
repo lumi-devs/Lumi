@@ -1,7 +1,6 @@
 "use client";
 
 import { Switch as SwitchPrimitive } from "radix-ui";
-import { motion } from "motion/react";
 import { cn } from "#/lib/utils";
 
 export interface SwitchProps {
@@ -41,13 +40,15 @@ export function Switch({
       {...aria}
     >
       <SwitchPrimitive.Thumb asChild>
-        <motion.span
+        <span
           className={cn(
-            "pointer-events-none inline-block size-3.5 rounded-full",
+            "pointer-events-none inline-block size-3.5 rounded-full transition-colors",
             checked ? "bg-white" : "bg-fg-subtle",
           )}
-          animate={{ x: checked ? 18 : 3 }}
-          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          style={{
+            transform: `translateX(${checked ? 18 : 3}px)`,
+            transition: "transform 150ms ease-out",
+          }}
         />
       </SwitchPrimitive.Thumb>
     </SwitchPrimitive.Root>

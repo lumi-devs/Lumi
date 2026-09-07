@@ -47,11 +47,13 @@ export class GreeterModule extends Module {}`;
 
 const layout = `packages/core/src/modules/greeter/
   index.ts                  # the @DefineModule class above
-  commands/                 # Sapphire slash / context-menu commands
-  listeners/                # Discord gateway event listeners
-  services/                 # long-lived helpers, fetched from the container
-  interaction-handlers/     # button / select-menu / modal handlers
-  scheduled-tasks/          # BullMQ-fired effects, fanned out over Redis`;
+  manifest.json             # generated via \`bun run modules:manifest\`, keep in sync
+  commands/                 # auto-discovered: slash / context-menu commands
+  listeners/                # auto-discovered: Discord gateway event listeners
+  interaction-handlers/     # auto-discovered: button / select-menu / modal handlers
+  scheduled-tasks/          # auto-discovered: BullMQ-fired effects, fanned out over Redis
+  utilities/                # auto-discovered: shared stateful logic (Utility subclass)
+  lib/ | services/ | data/  # plain code you import yourself - never auto-loaded`;
 
 export default function ModulesPage() {
   return (

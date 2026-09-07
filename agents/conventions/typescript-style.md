@@ -2,9 +2,10 @@
 
 ## Lint config: what's actually on
 
-Shared config lives in `packages/eslint-config/index.js` and is consumed by every
-workspace package's own `eslint.config.mjs` (root `eslint.config.mjs:3` imports it as
-`baseConfig`, then layers repo-specific rules on top). It starts from
+Shared config lives in `packages/eslint-config/index.js` and is consumed by the root
+`eslint.config.mjs` (root `eslint.config.mjs:3` imports it as
+`baseConfig`, then layers repo-specific rules on top — there is no per-package
+`eslint.config.mjs`). It starts from
 `eslint.configs.recommended` + `tseslint.configs.recommendedTypeChecked` (full
 type-aware linting, `parserOptions.project: true`), then turns a specific set of
 type-checked rules back off:
@@ -66,9 +67,9 @@ that matter more day to day than the type-checked ones above:
 `packages/typescript-config/base.json` is the shared `tsconfig` base: `strict: true`,
 `noUncheckedIndexedAccess`, `noImplicitOverride`, `noFallthroughCasesInSwitch`,
 `experimentalDecorators` + `emitDecoratorMetadata` (Sapphire's `@ApplyOptions`
-decorators need these), `verbatimModuleSyntax`. The root `tsconfig.json` extends
-`tsconfig.base.json`, which extends this and layers on the `#lib/*.js`-style path
-aliases and `@lumi/*` package aliases. `apps/dashboard` has its own tsconfig (DOM
+decorators need these), `verbatimModuleSyntax`. Path aliases split two ways: `#lib/*.js`-style
+subpath imports live in the root `package.json` `"imports"` map, `@lumi/*` package aliases
+live in `tsconfig.base.json` paths (which extends this base). `apps/dashboard` has its own tsconfig (DOM
 lib, JSX) — that's why `bun run typecheck` runs `turbo run typecheck:all` (root
 `tsc --noEmit -p tsconfig.json`, which excludes the dashboard) and then a separate
 `turbo run typecheck --filter=@lumi/dashboard`.
@@ -161,9 +162,9 @@ section (`// ---- Helpers ----`) — split the file or trust the reader instead.
   SCREAMING_SNAKE_CASE**, because they're not really TypeScript identifiers — they
   mirror the actual shell env var name (`process.env["BOT_TOKEN"]`,
   `.env.example`, deploy configs, Nix). See the `Env` interface augmentation in
-  `packages/core/src/lib/types/common.ts:86-124`: `BOT_TOKEN`, `POSTGRES_URL`,
-  `REDIS_HOST`, `RPC_INTERNAL_TOKEN`, etc. `envParseString("BOT_TOKEN")`
-  (`packages/core/src/lib/env.ts:288`) takes the literal env var name as its
+  `packages/core/src/lib/types/common.ts` (`BOT_TOKEN`, `POSTGRES_URL`,
+  `REDIS_HOST`, `RPC_INTERNAL_TOKEN`, etc.). `envParseString("BOT_TOKEN")`
+  (`packages/core/src/lib/env.ts`, used by `getBotToken()`) takes the literal env var name as its
   argument — that string has to match the real shell variable, so it can't be
   camelCased. This is the one place SCREAMING_SNAKE_CASE is correct; everywhere
   else (including constants that happen to hold config-ish values) it isn't. There

@@ -190,10 +190,10 @@ of the known sub-store directories physically exist) and the derived
 }
 ```
 
-Keep `configFields` in sync with the `configSchema` by hand for a first-party
-module (there's no build step that regenerates this file automatically for
-core modules the way an addon's manifest is checked at install time) — verify
-against the schema table in step 3 for the correct `type` string
+Keep `configFields` in sync with the `configSchema` by running
+`bun run modules:manifest` (`scripts/generate-manifests.ts` regenerates manifests from the
+live `@DefineModule` meta) and verifying the diff — verify against the schema table in
+step 3 for the correct `type` string
 (`BOOLEAN`, `NUMBER`, `STRING`, `ENUM`, `CHANNEL`, `ROLE`, `USER`, `DURATION`,
 `MULTI_ROLE`, `MULTI_CHANNEL`, `MULTI_USER`, `STRING_LIST`).
 

@@ -28,8 +28,9 @@ export interface RpcResponse<T = unknown> {
 ```
 
 `RpcRequestPayloads` (`rpc.ts:512-587`) is the single map from action string to its `data`
-payload type — 66 entries at the time of writing (count the object's own keys, don't take that
-number as fixed). `RpcActions` (`rpc.ts:598-673`) is the parallel object of camelCase
+payload type — count its own keys rather than trusting a hardcoded number here, it grows
+with every dashboard capability (74 at last audit, including the three
+`guild.reactionroles.menus.*` actions). `RpcActions` (`rpc.ts:598-673`) is the parallel object of camelCase
 constants the caller actually imports, e.g. `RpcActions.guildModNotesAdd ===
 "guild.modNotes.add"`. There is no `RPC_ACTIONS` export — the real name is `RpcActions`
 (worth noting since it's easy to guess the SCREAMING_CASE name by analogy with other
@@ -83,7 +84,10 @@ Handlers for one domain are grouped into one file with a `register*RpcHandlers()
 `unregister*RpcHandlers()` pair (moderation, guild, permits, cases, security, tempvc,
 reactionroles, audit, logging — see `packages/core/src/modules/dashboard/rpc/*.ts`), wired up
 from the `dashboard` module's own `onLoad`/`onUnload`
-(`packages/core/src/modules/dashboard/index.ts:55-85`). A handful of bot-owner-only,
+(`packages/core/src/modules/dashboard/index.ts:55-85`). Reaction-role menus
+(`guild.reactionroles.menus.list/set/delete` in `reactionroles-rpc.ts`) are the canonical
+example of a domain that must resolve its utility via `getUtility("reactionroles")` rather
+than importing from a sibling module. A handful of bot-owner-only,
 non-guild-scoped actions (GDPR, downloader/repo management, system panel) live directly in
 `packages/core/src/lib/rpc/core-rpc.ts` and are registered once from `LumiClient`'s boot
 sequence instead, not from the `dashboard` module's lifecycle.
@@ -122,10 +126,12 @@ to update elsewhere.
 ## Reads vs. mutations
 
 - **Reads** go through `apps/dashboard/src/lib/dashboard-fetch.ts`, wrapped in React's
-  `cache()` (e.g. `getGuildDashboard`, `dashboard-fetch.ts:43-51`) so multiple Server
+  `cache()` (e.g. `getGuildDashboard`) so multiple Server
   Components rendering the same request-scoped data don't refetch. These are plain async
   functions, not Server Actions — no `"use server"`, no rate limiting, no
-  `revalidatePath`.
+  `revalidatePath`. RPC timeouts are per-action (`guild.dashboard.get` and audit lists get
+  12s, plain lists 8s, mutations 15s) and surface as typed `RpcError` with
+  `TIMEOUT | WORKER_DOWN | RPC_ERROR | MALFORMED` codes — catch by `code`, not message match.
 - **Mutations** live under `apps/dashboard/src/actions/*.ts`, each file `"use server"`,
   each exported function wrapped in `runAction` (`apps/dashboard/src/lib/action-result.ts:8-19`)
   which converts a thrown `Error` into `{ ok: false, error }` while still letting
@@ -183,10 +189,10 @@ plain `Error` with a clean message; don't let a raw Prisma exception escape unca
 
 ## Gotchas actually found in the code
 
-- **8-second client-side timeout, not configurable per dashboard route by default.**
-  `RpcClient.call`'s `DefaultTimeoutMs = 8000` (`apps/dashboard/src/lib/rpc.ts:13`) aborts via
-  `AbortController` and throws `RPC timed out: <action>` — a slow handler (large `guild.audit.list`
-  page, a big backup restore) needs either a real perf fix or an explicit `timeoutMs` override
+- **8s default client-side timeout, per-action overrides.**
+  `RpcClient.call` aborts via
+  `AbortController` and throws `RpcError("TIMEOUT")` — a slow handler (large `guild.audit.list`
+  page, a big backup restore) gets 12s/15s via `defaultTimeoutFor()`, or an explicit `timeoutMs` override
   passed through `CallOptions`, not just "it'll be fine."
 - **A malformed response is deliberately swallowed, not surfaced verbatim.** If the worker's
   JSON body doesn't parse or doesn't match the `RpcResponse` envelope (`parseRpcResponse`,

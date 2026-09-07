@@ -292,6 +292,24 @@ export class MockModelDelegate {
     return this.rows.filter((r) => matches(r, args.where)).length;
   };
 
+  public aggregate = async (args: { _sum?: Rec; where?: Rec } = {}) => {
+    await tick();
+    const matched = this.rows.filter((r) => matches(r, args.where));
+    const out: Rec = { _sum: {} };
+    if (args._sum) {
+      const sums = out._sum as Rec;
+      for (const field of Object.keys(args._sum)) {
+        let total: number | null = null;
+        for (const row of matched) {
+          const v = row[field];
+          if (typeof v === "number") total = (total ?? 0) + v;
+        }
+        sums[field] = total;
+      }
+    }
+    return out;
+  };
+
   public create = async (args: { data: Rec; select?: Rec }) => {
     await tick();
     const record = { ...args.data };

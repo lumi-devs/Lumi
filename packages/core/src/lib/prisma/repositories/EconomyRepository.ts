@@ -368,11 +368,11 @@ export class EconomyRepository extends Repository {
     kinds: string[],
     since: Date,
   ): Promise<number> {
-    const rows = await this.prisma.economyTransaction.findMany({
+    const result = await this.prisma.economyTransaction.aggregate({
+      _sum: { amount: true },
       where: { guildId, userId, kind: { in: kinds }, createdAt: { gte: since } },
-      select: { amount: true },
     });
-    return (rows as { amount: number }[]).reduce((sum, row) => sum + row.amount, 0);
+    return result._sum.amount ?? 0;
   }
 
   public findTransactionsForUser(

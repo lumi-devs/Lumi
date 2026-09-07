@@ -170,19 +170,21 @@ export class PermissionRepository extends Repository {
   }
 
   public async ensureBuiltinPermits(guildId: string): Promise<void> {
-    for (const builtin of BuiltinPermits) {
-      await this.prisma.permit.upsert({
-        where: { uq_permit_guild_name: { guildId, name: builtin.name } },
-        update: {},
-        create: {
-          guildId,
-          name: builtin.name,
-          kind: builtin.kind,
-          nodes: builtin.nodes,
-          builtin: true,
-        },
-      });
-    }
+    await this.prisma.$transaction(
+      BuiltinPermits.map((builtin) =>
+        this.prisma.permit.upsert({
+          where: { uq_permit_guild_name: { guildId, name: builtin.name } },
+          update: {},
+          create: {
+            guildId,
+            name: builtin.name,
+            kind: builtin.kind,
+            nodes: builtin.nodes,
+            builtin: true,
+          },
+        }),
+      ),
+    );
   }
 
   public async listPermits(guildId: string): Promise<PermitWithAssignments[]> {

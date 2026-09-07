@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Boxes, LayoutDashboard, Plug, Rocket, Server, Terminal } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
+import { rpcActionCount } from "@/lib/rpc-actions";
 
 export const metadata: Metadata = {
   title: "Lumi Docs",
@@ -46,7 +47,7 @@ const cards = [
   {
     icon: Terminal,
     title: "RPC Reference",
-    body: "All 69 dashboard-to-worker actions, grouped with their payloads.",
+    body: `All ${rpcActionCount} dashboard-to-worker actions, grouped with their payloads.`,
     href: "/rpc",
   },
 ];

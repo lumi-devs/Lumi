@@ -107,7 +107,8 @@ If you throw for a user-facing reason, throw a plain `Error("clean message")`
 message being useful to the dashboard.
 
 Register the corresponding teardown in that file's `unregister*RpcHandlers()`
-(`rpcHandlers.delete(RpcActions.guildModNotesList)`, `moderation-rpc.ts:311`) —
+(e.g. `rpcHandlers.delete(RpcActions.guildModNotesList)` near the end of
+`moderation-rpc.ts`) —
 every handler needs a matching delete or a module reload leaks a duplicate
 registration.
 

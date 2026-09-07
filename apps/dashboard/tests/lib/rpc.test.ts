@@ -164,7 +164,10 @@ describe("RpcClient", () => {
       fetchMock.mockResolvedValueOnce({ ok: true } as Response);
       const client = new RpcClient("http://worker:8091");
       await expect(client.healthy()).resolves.toBe(true);
-      expect(fetchMock).toHaveBeenCalledWith("http://worker:8091/healthz");
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://worker:8091/healthz",
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
     });
 
     it("returns false when the worker is unreachable", async () => {

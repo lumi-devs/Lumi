@@ -11,8 +11,6 @@ const _req = createRequire(import.meta.url);
 export const CoreVersion = (
   _req("../../../package.json") as { version: string }
 ).version;
-export const coreVersion = CoreVersion;
-export const corePackageVersion = CoreVersion;
 
 export function cleanMention(raw: string): string {
   return raw.replace(/[<@&#!>]/g, "");
@@ -37,7 +35,7 @@ export function formatAuditReason(
 }
 
 export const LumiInfo = {
-  version: corePackageVersion,
+  version: CoreVersion,
   codename: "Elysian",
   tagline: "The next-generation modular Discord command center",
   inception: new Date("2026-07-11T07:50:00Z"),

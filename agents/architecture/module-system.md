@@ -47,7 +47,9 @@ Actual defaults applied in the decorator (`Module.ts:88-104`), not assumptions:
   it finds one, see `agents/architecture/addon-sdk.md`).
 - `configOverrides`: `options.configOverrides ?? true`.
 
-Every real module in this repo (`mod`, `logging`, `welcome`, `economy`) uses `configSchema`,
+Every real module in this repo (e.g. `mod`, `logging`, `welcome`, `economy` — 12 total:
+`afk`, `core`, `dashboard`, `economy`, `filter`, `logging`, `mod`, `reactionroles`,
+`security`, `tempvc`, `utility`, `welcome`) uses `configSchema`,
 never hand-written `configFields`.
 
 ## Lifecycle hooks
