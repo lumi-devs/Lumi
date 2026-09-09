@@ -1,0 +1,37 @@
+---
+title: Updating
+description: How to update a running Lumi deployment.
+---
+
+## Ordinary updates
+
+```bash title="Compose"
+git pull
+bun install
+bunx prisma migrate deploy   # uses DIRECT_POSTGRES_URL, not the pooled URL
+docker compose up -d --build
+```
+
+```bash title="Kubernetes"
+kubectl apply -f migrate-job.yaml
+kubectl -n lumi wait --for=condition=complete job/migrate --timeout=120s
+kubectl -n lumi rollout restart statefulset/worker
+kubectl -n lumi rollout restart deployment/dashboard
+```
+
+Migrations run through `DIRECT_POSTGRES_URL`, bypassing PgBouncer — pooled connections can't run
+DDL reliably. See [Architecture](/docs/reference/architecture#postgres-system-of-record).
+
+## 0.3 → 0.4
+
+This release includes intentional breaking changes to the addon SDK surface, RPC contracts, and
+some database columns and config keys, alongside a squash of the migration history to a single
+0.4 baseline. There is no supported in-place upgrade path from a 0.3 deployment — start 0.4 on a
+fresh database rather than migrating an existing one. Check the
+[changelog](/docs/meta/changelog) for what changed before updating a deployment you care about.
+
+## Version support
+
+This site documents `main` — there's no versioned/pinned docs history. If you're running an
+older release, treat the current docs as aspirational for anything that doesn't match your
+version's actual behavior, and check the changelog for what changed since your release.

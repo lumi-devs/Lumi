@@ -1,0 +1,38 @@
+---
+title: Permits
+description: What a permit node is, and how to grant one to a role or user.
+---
+
+Lumi gates commands with **permit nodes** — dot-notation strings like `mod.notes` or
+`admin.config` — rather than raw Discord permissions. A member runs a gated command only if they
+hold a **permit** that grants the node the command requires.
+
+## Named permits
+
+`/permit` (bot-owner/admin, `admin.*`) manages named, Wick-style permits: create one, add or
+remove nodes from it, then assign or unassign it to a role or user.
+
+| Subcommand | Description |
+| :--- | :--- |
+| `/permit create` | Create a new permit. |
+| `/permit delete` | Delete a permit. |
+| `/permit nodes add` \| `remove` | Edit which nodes a permit grants. |
+| `/permit assign` \| `unassign` | Grant or revoke a permit for a role or user. |
+| `/permit list` | List permits and their assignments (default subcommand). |
+| `/permit export` | Export the permit configuration. |
+
+The dashboard's permit editor covers the same operations without the command syntax.
+
+## Wildcard grants
+
+A node ending in `.*` (e.g. `mod.*`) grants its own bare namespace (`mod`) and everything
+prefixed with it (`mod.notes`, `mod.say`, and any future node under `mod.`) — without needing to
+list every node individually. `*` grants everything. See
+[Permits reference](/docs/reference/permits) for the full node vocabulary, and
+[Commands](/docs/reference/commands) for which node each command requires.
+
+## Bot owners
+
+Bot owners (the Discord application's own owner, plus anyone listed in `OWNER_IDS`) bypass the
+permit system entirely for owner-scoped commands and RPC actions — they're not granted via
+`/permit`.

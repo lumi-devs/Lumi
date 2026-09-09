@@ -1,0 +1,52 @@
+---
+title: Scaling
+description: How shard count, replica count, and connection budgets relate.
+---
+
+Scaling Lumi means scaling shards, not requests — there's no request-per-second autoscaling
+target, since almost all traffic arrives over persistent Discord gateway connections.
+
+## Shard assignment is static
+
+Each worker replica is told which shard IDs it owns via `SHARD_LIST` (or `TOTAL_SHARDS` to let
+Discord decide the total), and there's no runtime coordination between replicas — no rebalance
+path while running. Under Kubernetes, the `worker` `StatefulSet` exists specifically because
+each pod owns per-shard state (WebSocket session, sequence number); replica count there is a
+shard-assignment decision, not an autoscaler target. Under Compose, the `scale` profile's
+`worker-scale` service is the same idea with one extra replica.
+
+To scale out: pick a shards-per-replica target (start around 16–32), divide total shard count by
+it, set `SHARD_LIST` per replica accordingly, and restart. Under Kubernetes:
+
+```bash
+kubectl -n lumi scale statefulset/worker --replicas=4
+```
+
+Rolling updates use `maxUnavailable: 1` so at most one shard range is offline at a time; each
+replacement pod spends a fresh Discord `IDENTIFY` on restart. Watch `shardLatency`,
+`shardStatus`, `guildCount`, and `rest429Total` in Prometheus when tuning.
+
+## The REST proxy
+
+A single worker tracks its own Discord REST rate-limit buckets locally. Once more than one
+worker shares a bot token, those buckets must be coordinated centrally — that's what nirn-proxy
+does (`scale` Compose profile, or the standalone `nirn-proxy` Deployment under Kubernetes). Every
+worker replica routes outbound REST calls through it via `DISCORD_PROXY_URL`; it doesn't touch
+the gateway WebSocket connections, only REST.
+
+## Postgres connection budget
+
+A fixed per-process connection pool multiplies by shard count as you scale out, which can exceed
+Postgres's `max_connections` fast. `POSTGRES_POOL_TOTAL` (default 80) is a fleet-wide budget
+divided across shards instead — each process derives its own pool size from
+`total / shard_count`. `POSTGRES_POOL_MAX` overrides that derivation directly, which matters
+behind PgBouncer's own pooling. See
+[Environment Variables](/docs/reference/environment-variables) for both.
+
+## Fleet visibility
+
+Regardless of deployment shape, every gateway process publishes shard telemetry to Redis,
+namespaced per replica by `CLUSTER_NAME`. The dashboard's fleet view (`system.shards.get`)
+reports replicas, per-shard status and ping, and any expected shard ID no process is currently
+reporting — the first place to look when scaling out doesn't seem to have taken effect. See
+[Architecture](/docs/reference/architecture#fleet-visibility).

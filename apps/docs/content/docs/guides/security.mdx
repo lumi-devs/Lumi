@@ -1,0 +1,57 @@
+---
+title: Security
+description: Anti-nuke thresholds, raid detection, verification, and panic mode.
+---
+
+The `security` module (🛡️) watches the audit log for mass destructive actions and can respond
+automatically — quarantine, ban, or just log — plus a join gate for raids and throwaway
+accounts, member verification, and a manual panic switch.
+
+## Commands
+
+| Command | Permit | Description |
+| :--- | :--- | :--- |
+| `/panic` | `admin.*` | Lock down the server: pause invites and mute `@everyone` in text channels. |
+| `/restore list` \| `latest` | `admin.*` | Restore server structure from a role/channel backup. |
+| `/verifypanel` | `admin.*` | Post the member verification panel in a channel. |
+
+## Anti-nuke
+
+Turn on with **Anti-Nuke** (`antinuke_enabled`). Every destructive action type — bans, kicks,
+channel deletes, role deletes, webhook creates, vanity URL changes, dangerous permission grants,
+and quarantine-bypass attempts — has its own per-executor limit within a sliding
+**Detection Window** (`window_seconds`, default 60s) and its own response
+(`log` / `quarantine` / `ban`). Dangerous permission grants and quarantine-bypass attempts are
+always reverted immediately regardless of response. **Trusted Roles** (`trusted_role_ids`) are
+exempt.
+
+## Join gate
+
+**Join Gate** (`joingate_enabled`) screens new members. A **Raid Join Count**
+(`raid_join_count`) of joins within a **Raid Window** (`raid_window_seconds`) activates raid
+mode, applying the **Gate Action** (`kick` / `timeout` / `quarantine`) either to every joiner or
+only ones flagged suspicious, depending on **Raid Response Scope** (`raid_account_type`).
+
+Independent per-filter checks — each with its own enable flag and action — flag members by: no
+avatar, minimum account age, unverified bot accounts, a username substring pattern, or a display
+name that is itself a link/invite (advertising accounts).
+
+## Verification
+
+**Verification** (`verification_enabled`) requires members to pass a challenge before receiving
+the **Verified Role** (`verified_role_id`). Modes: `emoji` (react-the-sequence captcha), `none`,
+or `web` (a challenge on the dashboard). **Verification Target** scopes it to everyone or only
+suspicious accounts; an optional **Pending Role** is held until verification completes, with a
+timeout that can kick unverified members.
+
+## Panic mode
+
+`/panic` (or the automatic mention-flood auto-lockdown, configured on `filter` — see
+[Automod](/docs/guides/automod)) locks channels listed in `panic_lock_channel_ids`, or every
+text channel if blank. **Lock Mod Commands During Panic** restricts moderation commands to the
+server owner or whoever triggered panic mode while it's active.
+
+## Backups
+
+While Anti-Nuke is on, role/channel structure is snapshotted every `backup_interval_hours`
+hours, keeping the most recent `backup_keep_count` — restorable with `/restore`.

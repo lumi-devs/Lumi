@@ -1,0 +1,17 @@
+---
+title: Data and Privacy
+description: What each built-in module stores about end users, per its own manifest.
+---
+
+import { DataPrivacyTable } from "@/components/generated-tables";
+
+Every module declares its own `endUserDataStatement` in `manifest.json`. This table renders that
+field verbatim, one row per module — generated, not hand-summarized, so it can't drift from what
+a module's manifest actually claims. A module with no statement listed here declares none in its
+manifest; that gap is a real one, not a rendering omission.
+
+GDPR erasure (`global.gdpr.delete`) and export (`global.gdpr.export`) are handled centrally — see
+the RPC actions in the [RPC reference](/docs/reference/rpc) — and each module's statement
+describes what happens to its own data when erasure runs.
+
+<DataPrivacyTable />

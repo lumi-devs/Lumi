@@ -1,0 +1,45 @@
+---
+title: Logging
+description: Server event logs for messages, joins, leaves, bans, and role changes.
+---
+
+The `logging` module (📋) posts server event logs: message deletes/edits, joins, leaves, bans,
+unbans, nickname changes, and role changes — each routed to its own channel or a shared default.
+
+## Commands
+
+| Command | Permit | Description |
+| :--- | :--- | :--- |
+| `/log claim` | `mod.*` | Issue a one-time code to claim a channel as a log destination — post the code as a message in the target channel (Manage Server required to post it), then a manager confirms the claim on the dashboard. The code is single-use and expires quickly. |
+
+## Config
+
+**Setup**
+
+| Key | Description |
+| :--- | :--- |
+| `log_channel_id` | Fallback channel for log types without their own channel below. Empty disables logging. |
+| `message_log_channel_id` | Channel for message deletes and edits. Falls back to the default. |
+| `member_log_channel_id` | Channel for joins, leaves, bans, unbans, nickname and role changes. Falls back to the default. |
+| `ignored_channels` | Channel IDs whose message events are not logged. |
+
+**Message Events**
+
+| Key | Default |
+| :--- | :--- |
+| `message_deletes` | on |
+| `message_edits` | on |
+
+**Member Events**
+
+| Key | Default |
+| :--- | :--- |
+| `member_joins` | on |
+| `member_leaves` | on |
+| `member_bans` | on |
+| `member_unbans` | on |
+| `nickname_changes` | on |
+| `role_changes` | on |
+
+Pending channel claims (from `/log claim`) are managed on the dashboard — see
+`guild.logClaims.list` / `guild.logClaims.dismiss` in the [RPC reference](/docs/reference/rpc).

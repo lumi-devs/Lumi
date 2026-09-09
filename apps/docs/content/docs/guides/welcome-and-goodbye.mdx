@@ -1,0 +1,45 @@
+---
+title: Welcome and Goodbye
+description: Welcome and goodbye cards, join roles, and DM greetings.
+---
+
+The `welcome` module (👋) greets new members with a welcome card, optionally posts a goodbye
+card on leave, assigns join roles, and can send a DM greeting. It stores no persistent user
+data — join/leave events are rendered into cards at delivery time only.
+
+## Commands
+
+| Command | Permit | Description |
+| :--- | :--- | :--- |
+| `/welcome` | `admin.welcome` | Preview the welcome, goodbye, or DM greeting card without waiting for a real join/leave. |
+
+## Placeholders
+
+Welcome, goodbye, and DM templates all support `{user}` (mention), `{username}`, `{server}`,
+and `{memberCount}`. Unknown placeholders are left as-is.
+
+## Config
+
+**Welcome Message**
+
+| Key | Description | Default |
+| :--- | :--- | :--- |
+| `welcomeEnabled` | Post a welcome card when a member joins. | on |
+| `welcomeChannel` | Channel where welcome cards are posted. | — |
+| `welcomeTemplate` | Text posted with the card. | `Welcome {user} to {server}! You are member #{memberCount}.` |
+
+**Goodbye Message**
+
+| Key | Description | Default |
+| :--- | :--- | :--- |
+| `goodbyeEnabled` | Post a goodbye card when a member leaves. | off |
+| `goodbyeChannel` | Channel where goodbye cards are posted. | — |
+| `goodbyeTemplate` | Text posted with the card. | `{username} has left {server}.` |
+
+**Join Extras**
+
+| Key | Description | Default |
+| :--- | :--- | :--- |
+| `autoRoles` | Roles assigned automatically when a member joins. | none |
+| `dmWelcomeEnabled` | Send the new member a DM greeting on join. | off |
+| `dmWelcomeTemplate` | DM text. | `Welcome to {server}, {username}!` |

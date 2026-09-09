@@ -1,0 +1,12 @@
+---
+title: Prerequisites
+description: What you need installed before you boot Lumi.
+---
+
+- **Nix** with flakes enabled. Everything else (Bun, tooling) comes from the repo devshell —
+  enter it with `nix develop` before running any `bun` command.
+- **Docker** with the Compose v2 plugin, for Postgres, PgBouncer, Redis, and the worker
+  containers.
+- A **Discord application** with a bot token (`BOT_TOKEN`), invited to your test server.
+
+Continue to [Quickstart](/docs/getting-started/quickstart) to boot the stack.

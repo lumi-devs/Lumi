@@ -1,0 +1,22 @@
+---
+title: Overview
+description: The current state of third-party add-ons, and what's changing.
+---
+
+Third-party modules plug into the same loader as built-in ones — downloaded modules are
+symlinked into `packages/core/src/modules/` alongside `afk`, `mod`, `welcome`, and the rest.
+
+## Authoring docs are deliberately not here yet
+
+Lumi's add-on SDK is being redesigned this release around a real runtime sandbox — today,
+downloaded module code runs in-process with no execution boundary, which the 0.4 release is
+replacing with worker-thread/process isolation and a message-passing API. Because that redesign
+changes the add-on-facing surface (imports, permissions, how a module talks to the host), any
+authoring guide written against the current surface would describe an API that's about to
+change. That documentation lands once the sandbox ships.
+
+## What's still true today
+
+Installing, browsing, and managing add-ons that already exist — as an admin, through the
+dashboard or `/download` — is unaffected by the sandbox redesign and documented in
+[Distribution](/docs/addons/distribution).

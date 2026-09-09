@@ -1,0 +1,33 @@
+---
+title: RPC Reference
+description: Every dashboard-to-worker RPC action, generated from the contract.
+---
+
+import { RpcTable, RpcCount } from "@/components/generated-tables";
+
+The dashboard never touches Postgres, Redis, or the bot token. It posts one of <RpcCount />
+actions to the worker's internal RPC server, and the worker executes it.
+
+## Envelope
+
+Every call carries `id`, `action`, optional `guildId` and `actorId`, an optional W3C
+`traceparent` so the handler continues the caller's trace, and `data`. The contract lives in
+`packages/contracts/src/rpc.ts`: `RpcRequestPayloads` maps each wire action string to its `data`
+payload, where `none` below means the contract types the payload as `never`. Responses are
+checked with `parseRpcResponse`, which rejects malformed envelopes — the two sides deploy
+independently, so the envelope is the one shape TypeScript cannot guarantee.
+
+```json title="Request envelope"
+// POST <worker>/rpc  (RPC_INTERNAL_TOKEN bearer)
+{
+  "id": "req-001",
+  "action": "guild.config.set",
+  "guildId": "123456789012345678",
+  "actorId": "987654321098765432",
+  "data": { "moduleName": "greeter", "key": "message", "value": "Hi!" }
+}
+```
+
+## Actions
+
+<RpcTable />

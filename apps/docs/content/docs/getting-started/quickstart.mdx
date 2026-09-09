@@ -1,0 +1,75 @@
+---
+title: Quickstart
+description: Boot the full Lumi stack with Nix and Docker Compose.
+---
+
+## Configure the environment
+
+Copy the example env file and fill in at least the bot token and the RPC secret. The RPC secret
+authenticates dashboard-to-worker calls — leaving it unset is a hard failure, not an insecure
+default.
+
+```bash title=".env"
+# Discord application credentials
+BOT_TOKEN=...
+
+# Shared secret for dashboard -> worker RPC (generate with: openssl rand -hex 32)
+RPC_INTERNAL_TOKEN=...
+
+# Dashboard session encryption + Discord OAuth2
+DASHBOARD_SESSION_SECRET=...
+DISCORD_OAUTH2_CLIENT_ID=...
+DISCORD_OAUTH2_CLIENT_SECRET=...
+
+# Local database password (defaults to "lumi" when unset)
+POSTGRES_PASSWORD=...
+```
+
+Every variable is documented with its real default in
+[Environment Variables](/docs/reference/environment-variables).
+
+## Boot the stack
+
+```bash title="Boot"
+nix develop
+bun install
+cp .env.example .env   # then fill in the values above
+docker compose up -d
+```
+
+This starts the default profile:
+
+- `worker` — the bot, with its internal RPC port exposed to other containers only (never
+  published to the host).
+- `postgres` (Postgres 18) behind `pgbouncer` in transaction-pooling mode, plus `redis` (Redis 8)
+  with persistence on.
+
+Loopback-bound ports on your machine: Postgres `5432`, PgBouncer `6432`, Redis `6379`.
+
+## Optional profiles
+
+- `--profile dashboard` — the Next.js admin panel on port `8080`. Needs the `DASHBOARD_*` and
+  `DISCORD_OAUTH2_*` values above.
+- `--profile development` — a `lumi-dev` container with the repo bind-mounted for live container
+  hacking.
+- `--profile scale` — a second worker replica plus the nirn outbound REST proxy, the shape a
+  multi-worker deployment takes.
+- `--profile observability` — OpenTelemetry collector, Tempo, Prometheus, and Grafana (Grafana
+  listens on `127.0.0.1:3001`).
+
+See [Deploy](/docs/deploy/overview) for the full picture, including Kubernetes.
+
+## Run from source
+
+For day-to-day development, run the processes directly instead of in containers:
+
+```bash title="Dev runs"
+# Bot worker with live reload (needs Postgres + Redis reachable)
+bun run --filter @lumi/worker dev
+
+# Dashboard on http://localhost:8080
+bun run --cwd apps/dashboard dev
+```
+
+Next: [Configuration](/docs/getting-started/configuration), or jump straight to
+[First commands](/docs/getting-started/first-commands) once the bot is online.

@@ -1,0 +1,28 @@
+---
+title: Language Support
+description: Which languages Lumi actually speaks today, and how that changes.
+---
+
+Lumi ships 24 locale directories (`packages/core/src/languages/`), each with the same set of
+translated namespace files. Every string a command, panel, or precondition can show goes through
+this i18n layer rather than being hard-coded in English.
+
+## Only English has real translations right now
+
+As of this release, `en-US` is the only locale with actual translations. The other 23 locale
+directories currently contain the same English text as `en-US`, checked in as a starting point
+rather than as finished translations — don't assume a string you find under a non-`en-US`
+locale directory is a real translation.
+
+Translations are intended to be managed through Crowdin (a `crowdin.yml` workflow already exists
+in the repo), which is the real path for a non-English locale to catch up. If you'd like to
+contribute a translation, that's where it happens — see
+[Contributing](/docs/meta/contributing).
+
+## Per-server language
+
+Each guild can set its own language independently of every other guild's. Whatever a locale's
+current translation coverage is, Lumi always has a complete string set to fall back on: every
+locale is required to have the exact same set of translation keys as `en-US`, even while the
+values themselves are still English duplicates — so nothing renders as a missing-key placeholder
+regardless of how complete a translation is.

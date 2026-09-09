@@ -1,0 +1,27 @@
+---
+title: Overview
+description: Choosing between a single container, Docker Compose profiles, and Kubernetes.
+---
+
+Lumi ships two deployment paths, both built from the same worker image.
+
+## Docker Compose
+
+The default for self-hosting a single bot. `docker compose up -d` runs one worker against
+Postgres/PgBouncer/Redis; opt-in profiles add the dashboard, a second worker replica plus a
+shared REST proxy, or a full observability stack. See
+[Docker Compose](/docs/deploy/docker-compose).
+
+## Kubernetes
+
+For running Lumi as part of a larger cluster, or when you need the worker fleet managed by
+Kubernetes primitives — a `StatefulSet` for shard-owning workers, a `Job` for migrations, and
+readiness/liveness probes wired to the worker's own health endpoints. See
+[Kubernetes](/docs/deploy/kubernetes).
+
+## Picking one
+
+Start with Compose. Move to Kubernetes only once you're actually running Lumi across more than
+one host or want cluster-native scaling and rollout mechanics — the worker process itself is
+identical either way, and `SHARD_LIST`/`TOTAL_SHARDS` mean the same thing in both. See
+[Scaling](/docs/deploy/scaling) for how shard count relates to replica count under either path.

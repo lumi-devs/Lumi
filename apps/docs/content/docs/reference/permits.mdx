@@ -1,0 +1,15 @@
+---
+title: Permits
+description: The full permit-node vocabulary, generated from source.
+---
+
+import { PermitsTable, PermitCount } from "@/components/generated-tables";
+
+<PermitCount /> permit nodes, read directly from `packages/core/src/lib/permissions/permit-nodes.ts`
+— the canonical vocabulary. A node ending in `.*` (e.g. `mod.*`) grants its own bare namespace
+and everything prefixed with it; `*` grants everything. This list is what `/permit create`'s
+autocomplete and the dashboard's permit editor suggest — the resolver itself will match a
+wildcard grant against a node that isn't in this list, but only registered nodes are
+discoverable. See [Permits guide](/docs/guides/permits) for how to grant one.
+
+<PermitsTable />

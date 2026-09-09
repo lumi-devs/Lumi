@@ -1,0 +1,27 @@
+---
+title: Custom Emojis
+description: Override the emojis Lumi uses in cards, status messages, and replies.
+---
+
+Every emoji Lumi uses in cards, status messages, and command replies comes from one place:
+`packages/core/src/lib/utilities/assets.ts`. To swap any of them for your own — a custom Discord
+emoji, or just a different unicode glyph — create `config/emojis.ts` at the repo root (or edit
+the one already checked in with every key commented out) and export the keys you want to
+override:
+
+```typescript title="config/emojis.ts"
+export default {
+  Success: "🎉",
+  Error: "<:sadge:1234567890123456789>",
+  Gear: "<a:spin:1234567890123456789>",
+};
+```
+
+Keys you don't set keep Lumi's default. A custom Discord emoji uses the same format Discord
+itself renders it as in a sent message — `<:name:id>`, or `<a:name:id>` if it's animated — copy
+it straight out of a Discord message (type a backslash before the emoji to see its raw form).
+The bot needs to actually be in a server that has that emoji for it to render.
+
+`config/emojis.ts` lists every available key as a comment, with its default value, so you can
+see everything that's overridable without leaving the file. Changes apply on the next restart —
+there's no hot-reload for this file.

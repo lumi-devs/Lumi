@@ -1,0 +1,80 @@
+---
+title: Architecture
+description: How the sharded worker, dashboard, Postgres, and Redis fit together.
+---
+
+import { RpcCount } from "@/components/generated-tables";
+
+One bot entrypoint that fans out into identical shard processes, a dashboard that only talks
+HTTP, and two datastores with strict roles.
+
+## The worker fleet
+
+`apps/worker/src/main.ts` is a thin discord.js `ShardingManager`. The manager process itself
+never opens a Discord connection and does no application work — it spawns one identical child
+process per shard it owns (`shard-client.ts`) and forwards shutdown signals to them. Every child
+owns the gateway connections for its shards and runs every command, module, and interaction
+handler.
+
+There is no separate scheduler role and no leader election. Exactly one shard per pod — the one
+holding shard id `0` — is the primary (`isPrimaryShard()` in `packages/core/src/lib/env.ts`) and
+additionally owns BullMQ job scheduling plus the RPC/metrics HTTP surface. A standalone dev run
+with no `ShardingManager` is always primary.
+
+```text title="Process topology"
+manager (apps/worker/src/main.ts)
+  ShardingManager — spawns children, forwards signals, never touches Discord
+  │
+  ├─ shard child (shard-client.ts) — gateway + every command, module, handler
+  ├─ shard child — same image, different shard ids
+  └─ ★ primary child (holds shard 0)
+       └─ also owns BullMQ scheduling + RPC/metrics HTTP on :8091
+
+dashboard (Next.js) ──RPC+token──▶ primary child :8091 ──▶ Postgres / Redis
+```
+
+## The dashboard RPC bridge
+
+`apps/dashboard` never opens a Postgres or Redis connection and never holds the bot token. Every
+read and write is proxied over an internal HTTP RPC bridge to the worker: a `server-only` client
+posts an envelope (`id`, `action`, `guildId`, `actorId`, optional `traceparent`, `data`) to the
+primary shard, authenticated by `RPC_INTERNAL_TOKEN`. A dashboard outage or traffic spike can
+therefore never affect Discord gateway latency.
+
+The action surface is defined once in `packages/contracts/src/rpc.ts`: `RpcRequestPayloads` maps
+each of the <RpcCount /> wire action strings to its payload, with `never` marking actions that
+take no data. See [RPC Reference](/docs/reference/rpc) for the full table.
+
+## Postgres: system of record
+
+Postgres is the durable store, fronted by PgBouncer in transaction-pooling mode. The worker
+connects through the pooler (`POSTGRES_URL`), while migrations use the direct URL
+(`DIRECT_POSTGRES_URL`) — pooled connections cannot run DDL reliably. Because a fixed
+per-process pool multiplies by shard count, the pool size is derived from a fleet-wide budget
+(`POSTGRES_POOL_TOTAL`, default 80) divided across shards; `POSTGRES_POOL_MAX` overrides it for
+pooler-fronted setups. Modules reach the database through `container.db`, never the raw Prisma
+client.
+
+## Redis: bus, cache, and coordination
+
+Redis carries everything ephemeral: the Streams event bus (`packages/event-bus`) relaying fired
+scheduled-task effects from the primary shard to every shard, shared caches invalidated through
+the invalidation bus rather than raw deletes, and shard telemetry. Redis can run standalone,
+behind sentinels, or as a cluster (`REDIS_CLUSTER_NODES`); the dashboard never connects to it at
+all.
+
+## Fleet visibility
+
+Each gateway process publishes shard telemetry to Redis (`packages/sharding`), namespaced per
+replica by `CLUSTER_NAME`. The dashboard fleet view reads it back through `system.shards.get`,
+which reports replicas, per-shard status and ping, and the expected shard ids no process is
+reporting. Shard assignment itself stays discord.js's job — the telemetry layer only observes.
+
+## Outbound traffic and observability
+
+A single worker talks to Discord directly. Once multiple workers share a bot token, point
+`DISCORD_PROXY_URL` at the shared outbound REST proxy (nirn-proxy, `scale` Compose profile) so
+REST calls are centrally rate-limited. Tracing, metrics, and health probes come from
+`packages/observability` — OpenTelemetry to the collector, Tempo for traces, Prometheus for
+metrics, Grafana for display — all behind the `observability` Compose profile. See
+[Observability](/docs/deploy/observability).
