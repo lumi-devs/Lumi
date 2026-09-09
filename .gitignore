@@ -42,3 +42,9 @@ indirections.txt
 .bug-hunter/
 apps/docs/AGENTS.md
 apps/docs/CLAUDE.md
+# Fumadocs build-time source collection and generated data (apps/docs).
+apps/docs/.source/
+apps/docs/src/generated/
+
+# Release working notes (audits, checkpoints, raw tool output). Scratch, not source.
+/.lumi-0.4/
