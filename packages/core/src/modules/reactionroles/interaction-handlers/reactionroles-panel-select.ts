@@ -18,6 +18,7 @@ import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { isReactionRoleMode } from "#modules/reactionroles/data.js";
 import { Rr } from "#modules/reactionroles/keys.js";
 import type ReactionRolesUtility from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
+import { ReactionRoleMenuLockedError } from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
 import { requireManagePermit } from "#modules/reactionroles/lib/panel-guard.js";
 import {
   buildMenuDetailCard,
@@ -132,7 +133,9 @@ export class ReactionRolesPanelSelectHandler extends BaseInteractionHandler {
         .followUp(
           ephemeralCard(
             makeErrorCard(
-              t("reactionroles:panelFailedTitle"),
+              err instanceof ReactionRoleMenuLockedError
+                ? t("reactionroles:menuLockedTitle")
+                : t("reactionroles:panelFailedTitle"),
               err instanceof Error ? err.message : "Try again.",
             ),
           ),

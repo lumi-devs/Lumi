@@ -1,6 +1,6 @@
 import { Utility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
-import type { Piece } from "@sapphire/framework";
+import { container, type Piece } from "@sapphire/framework";
 import type {
   Guild,
   GuildMember,
@@ -8,7 +8,8 @@ import type {
   Message,
 } from "discord.js";
 import { logError } from "#lib/utilities/errors.js";
-import { ModuleName } from "../keys.js";
+import { acquireRedisLock } from "#lib/redis-lock.js";
+import { ModuleName, ReactionRoleKeys } from "../keys.js";
 import {
   deleteMenu,
   findMenuByMessage,
@@ -37,10 +38,39 @@ import { getMaxMenus } from "../index.js";
 export type { RoleToggleResult };
 export type { ReactionRoleMenu, ReactionRoleMode, ReactionRoleOption };
 
+/** Thrown when a menu write can't get the per-menu lock before another staff member's edit finishes. */
+export class ReactionRoleMenuLockedError extends Error {
+  public constructor() {
+    super("Someone else is editing this menu right now — try again in a moment.");
+    this.name = "ReactionRoleMenuLockedError";
+  }
+}
+
 @ApplyOptions<Piece.Options>({ name: "reactionroles" })
 export default class ReactionRolesUtility extends Utility {
   public get moduleName() {
     return ModuleName;
+  }
+
+  private async withMenuLock<T>(
+    guildId: string,
+    menuId: string,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    let lock;
+    try {
+      lock = await acquireRedisLock(
+        container.redis,
+        ReactionRoleKeys.menuWrite(guildId, menuId),
+      );
+    } catch {
+      throw new ReactionRoleMenuLockedError();
+    }
+    try {
+      return await fn();
+    } finally {
+      await lock.release();
+    }
   }
 
   public async listMenus(guildId: string): Promise<ReactionRoleMenu[]> {
@@ -111,42 +141,46 @@ export default class ReactionRolesUtility extends Utility {
       maxRoles?: number;
     },
   ): Promise<ReactionRoleMenu> {
-    const existing = await getMenu(guildId, menuId);
-    if (!existing) throw new Error("That role menu no longer exists.");
-    const next: ReactionRoleMenu = {
-      ...existing,
-      title: patch.title?.trim() || existing.title,
-      description:
-        patch.description === undefined ? existing.description : patch.description?.trim() || null,
-      color: patch.color === undefined ? existing.color : patch.color?.trim() || null,
-      mode: patch.mode ?? existing.mode,
-      exclusive: patch.exclusive ?? existing.exclusive,
-      maxRoles: patch.maxRoles ?? existing.maxRoles,
-    };
-    const errors = validateMenuDraft({
-      title: next.title,
-      description: next.description,
-      color: next.color,
-      mode: next.mode,
-      maxRoles: next.maxRoles,
+    return this.withMenuLock(guildId, menuId, async () => {
+      const existing = await getMenu(guildId, menuId);
+      if (!existing) throw new Error("That role menu no longer exists.");
+      const next: ReactionRoleMenu = {
+        ...existing,
+        title: patch.title?.trim() || existing.title,
+        description:
+          patch.description === undefined ? existing.description : patch.description?.trim() || null,
+        color: patch.color === undefined ? existing.color : patch.color?.trim() || null,
+        mode: patch.mode ?? existing.mode,
+        exclusive: patch.exclusive ?? existing.exclusive,
+        maxRoles: patch.maxRoles ?? existing.maxRoles,
+      };
+      const errors = validateMenuDraft({
+        title: next.title,
+        description: next.description,
+        color: next.color,
+        mode: next.mode,
+        maxRoles: next.maxRoles,
+      });
+      if (errors.length > 0) throw new Error(errors[0]!.message);
+      const cap = maxOptionsForMode(next.mode);
+      if (next.options.length > cap) {
+        throw new Error(
+          `${next.mode === "select" ? "Dropdown" : next.mode === "reactions" ? "Reaction" : "Button"} menus hold at most ${cap} options — remove ${next.options.length - cap} first.`,
+        );
+      }
+      if (next.exclusive) next.maxRoles = 1;
+      const saved = await saveMenu(next);
+      await reactionRoleRegistry.invalidateMenus(guildId);
+      return saved;
     });
-    if (errors.length > 0) throw new Error(errors[0]!.message);
-    const cap = maxOptionsForMode(next.mode);
-    if (next.options.length > cap) {
-      throw new Error(
-        `${next.mode === "select" ? "Dropdown" : next.mode === "reactions" ? "Reaction" : "Button"} menus hold at most ${cap} options — remove ${next.options.length - cap} first.`,
-      );
-    }
-    if (next.exclusive) next.maxRoles = 1;
-    const saved = await saveMenu(next);
-    await reactionRoleRegistry.invalidateMenus(guildId);
-    return saved;
   }
 
   public async deleteMenu(guildId: string, menuId: string): Promise<boolean> {
-    const removed = await deleteMenu(guildId, menuId);
-    if (removed) await reactionRoleRegistry.invalidateMenus(guildId);
-    return removed;
+    return this.withMenuLock(guildId, menuId, async () => {
+      const removed = await deleteMenu(guildId, menuId);
+      if (removed) await reactionRoleRegistry.invalidateMenus(guildId);
+      return removed;
+    });
   }
 
   public async addOption(
@@ -160,30 +194,32 @@ export default class ReactionRolesUtility extends Utility {
       requiredRoleId?: string | null;
     },
   ): Promise<ReactionRoleMenu> {
-    const menu = await getMenu(guildId, menuId);
-    if (!menu) throw new Error("That role menu no longer exists.");
-    const errors = validateOptionDraft(input);
-    if (errors.length > 0) throw new Error(errors[0]!.message);
-    if (menu.options.length >= maxOptionsForMode(menu.mode)) {
-      throw new Error(
-        `This menu already has the maximum of ${maxOptionsForMode(menu.mode)} options for ${menu.mode} mode.`,
-      );
-    }
-    if (menu.options.some((o) => o.roleId === input.roleId)) {
-      throw new Error("That role is already an option on this menu.");
-    }
-    const id = this.resolveOptionId(menu, input.label);
-    const option: ReactionRoleOption = {
-      id,
-      label: input.label.trim(),
-      emoji: input.emoji?.trim() || null,
-      description: input.description?.trim() || null,
-      roleId: input.roleId,
-      requiredRoleId: input.requiredRoleId?.trim() || null,
-    };
-    const saved = await saveMenu({ ...menu, options: [...menu.options, option] });
-    await reactionRoleRegistry.invalidateMenus(guildId);
-    return saved;
+    return this.withMenuLock(guildId, menuId, async () => {
+      const menu = await getMenu(guildId, menuId);
+      if (!menu) throw new Error("That role menu no longer exists.");
+      const errors = validateOptionDraft(input);
+      if (errors.length > 0) throw new Error(errors[0]!.message);
+      if (menu.options.length >= maxOptionsForMode(menu.mode)) {
+        throw new Error(
+          `This menu already has the maximum of ${maxOptionsForMode(menu.mode)} options for ${menu.mode} mode.`,
+        );
+      }
+      if (menu.options.some((o) => o.roleId === input.roleId)) {
+        throw new Error("That role is already an option on this menu.");
+      }
+      const id = this.resolveOptionId(menu, input.label);
+      const option: ReactionRoleOption = {
+        id,
+        label: input.label.trim(),
+        emoji: input.emoji?.trim() || null,
+        description: input.description?.trim() || null,
+        roleId: input.roleId,
+        requiredRoleId: input.requiredRoleId?.trim() || null,
+      };
+      const saved = await saveMenu({ ...menu, options: [...menu.options, option] });
+      await reactionRoleRegistry.invalidateMenus(guildId);
+      return saved;
+    });
   }
 
   public async editOption(
@@ -198,29 +234,31 @@ export default class ReactionRolesUtility extends Utility {
       requiredRoleId?: string | null;
     },
   ): Promise<ReactionRoleMenu> {
-    const menu = await getMenu(guildId, menuId);
-    if (!menu) throw new Error("That role menu no longer exists.");
-    const index = menu.options.findIndex((o) => o.id === optionId);
-    if (index === -1) throw new Error("That option no longer exists on this menu.");
-    const errors = validateOptionDraft(input);
-    if (errors.length > 0) throw new Error(errors[0]!.message);
-    if (
-      menu.options.some((o, i) => i !== index && o.roleId === input.roleId)
-    ) {
-      throw new Error("That role is already another option on this menu.");
-    }
-    const options = [...menu.options];
-    options[index] = {
-      id: optionId,
-      label: input.label.trim(),
-      emoji: input.emoji?.trim() || null,
-      description: input.description?.trim() || null,
-      roleId: input.roleId,
-      requiredRoleId: input.requiredRoleId?.trim() || null,
-    };
-    const saved = await saveMenu({ ...menu, options });
-    await reactionRoleRegistry.invalidateMenus(guildId);
-    return saved;
+    return this.withMenuLock(guildId, menuId, async () => {
+      const menu = await getMenu(guildId, menuId);
+      if (!menu) throw new Error("That role menu no longer exists.");
+      const index = menu.options.findIndex((o) => o.id === optionId);
+      if (index === -1) throw new Error("That option no longer exists on this menu.");
+      const errors = validateOptionDraft(input);
+      if (errors.length > 0) throw new Error(errors[0]!.message);
+      if (
+        menu.options.some((o, i) => i !== index && o.roleId === input.roleId)
+      ) {
+        throw new Error("That role is already another option on this menu.");
+      }
+      const options = [...menu.options];
+      options[index] = {
+        id: optionId,
+        label: input.label.trim(),
+        emoji: input.emoji?.trim() || null,
+        description: input.description?.trim() || null,
+        roleId: input.roleId,
+        requiredRoleId: input.requiredRoleId?.trim() || null,
+      };
+      const saved = await saveMenu({ ...menu, options });
+      await reactionRoleRegistry.invalidateMenus(guildId);
+      return saved;
+    });
   }
 
   public async removeOption(
@@ -228,17 +266,19 @@ export default class ReactionRolesUtility extends Utility {
     menuId: string,
     optionId: string,
   ): Promise<ReactionRoleMenu> {
-    const menu = await getMenu(guildId, menuId);
-    if (!menu) throw new Error("That role menu no longer exists.");
-    if (!menu.options.some((o) => o.id === optionId)) {
-      throw new Error("That option no longer exists on this menu.");
-    }
-    const saved = await saveMenu({
-      ...menu,
-      options: menu.options.filter((o) => o.id !== optionId),
+    return this.withMenuLock(guildId, menuId, async () => {
+      const menu = await getMenu(guildId, menuId);
+      if (!menu) throw new Error("That role menu no longer exists.");
+      if (!menu.options.some((o) => o.id === optionId)) {
+        throw new Error("That option no longer exists on this menu.");
+      }
+      const saved = await saveMenu({
+        ...menu,
+        options: menu.options.filter((o) => o.id !== optionId),
+      });
+      await reactionRoleRegistry.invalidateMenus(guildId);
+      return saved;
     });
-    await reactionRoleRegistry.invalidateMenus(guildId);
-    return saved;
   }
 
   public async postMenu(
@@ -260,8 +300,12 @@ export default class ReactionRolesUtility extends Utility {
         });
       }
     }
-    const next = await trackMenuMessage(menu, channel.id, message.id);
-    await reactionRoleRegistry.invalidateMenus(guild.id);
+    const next = await this.withMenuLock(guild.id, menuId, async () => {
+      const fresh = (await getMenu(guild.id, menuId)) ?? menu;
+      const tracked = await trackMenuMessage(fresh, channel.id, message.id);
+      await reactionRoleRegistry.invalidateMenus(guild.id);
+      return tracked;
+    });
     return { menu: next, message };
   }
 

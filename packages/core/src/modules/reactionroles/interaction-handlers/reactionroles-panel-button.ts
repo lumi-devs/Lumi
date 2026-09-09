@@ -15,6 +15,7 @@ import { logError } from "#lib/utilities/errors.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { Rr } from "#modules/reactionroles/keys.js";
 import type ReactionRolesUtility from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
+import { ReactionRoleMenuLockedError } from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
 import { requireManagePermit } from "#modules/reactionroles/lib/panel-guard.js";
 import {
   buildDeleteConfirmCard,
@@ -164,11 +165,19 @@ export class ReactionRolesPanelButtonHandler extends BaseInteractionHandler {
     } catch (err: unknown) {
       logError("ReactionRoles: panel button failed", err);
       const t = await fetchTyped(interaction).catch(() => null);
+      const isLocked = err instanceof ReactionRoleMenuLockedError;
+      const title = isLocked
+        ? t
+          ? t("reactionroles:menuLockedTitle")
+          : "Someone else is editing this menu"
+        : t
+          ? t("reactionroles:panelFailedTitle")
+          : "Panel update failed";
       await interaction
         .editReply(
           ephemeralCard(
             makeErrorCard(
-              t ? t("reactionroles:panelFailedTitle") : "Panel update failed",
+              title,
               err instanceof Error ? err.message : "Try again.",
             ),
           ),

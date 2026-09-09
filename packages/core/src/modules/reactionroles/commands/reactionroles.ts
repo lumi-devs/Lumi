@@ -23,6 +23,7 @@ import { ephemeralCard } from "#lib/utilities/cards.js";
 import { paginateList } from "#lib/utilities/pagination.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import type ReactionRolesUtility from "../utilities/ReactionRolesUtility.js";
+import { ReactionRoleMenuLockedError } from "../utilities/ReactionRolesUtility.js";
 import { isReactionRoleMode, maxOptionsForMode } from "../data.js";
 import { buildMenuDetailCard, buildMenuListCard } from "../ui/panel.js";
 
@@ -305,7 +306,15 @@ export class ReactionRolesCommand extends BaseSubcommand {
   ): Promise<void> {
     const t = await fetchTyped(interaction);
     const menuId = interaction.options.getString("menu", true);
-    const removed = await this.service.deleteMenu(interaction.guildId!, menuId);
+    let removed: boolean;
+    try {
+      removed = await this.service.deleteMenu(interaction.guildId!, menuId);
+    } catch (err: unknown) {
+      if (err instanceof ReactionRoleMenuLockedError) {
+        return replyError(interaction, t("reactionroles:menuLockedTitle"), err.message);
+      }
+      throw err;
+    }
     if (!removed) {
       return replyError(
         interaction,
@@ -366,6 +375,9 @@ export class ReactionRolesCommand extends BaseSubcommand {
         }),
       );
     } catch (err: unknown) {
+      if (err instanceof ReactionRoleMenuLockedError) {
+        return replyError(interaction, t("reactionroles:menuLockedTitle"), err.message);
+      }
       return replyError(
         interaction,
         t("reactionroles:menuPostFailedTitle"),
@@ -428,6 +440,9 @@ export class ReactionRolesCommand extends BaseSubcommand {
         }),
       );
     } catch (err: unknown) {
+      if (err instanceof ReactionRoleMenuLockedError) {
+        return replyError(interaction, t("reactionroles:menuLockedTitle"), err.message);
+      }
       return replyError(
         interaction,
         t("reactionroles:optionAddFailedTitle"),
@@ -457,6 +472,9 @@ export class ReactionRolesCommand extends BaseSubcommand {
         }),
       );
     } catch (err: unknown) {
+      if (err instanceof ReactionRoleMenuLockedError) {
+        return replyError(interaction, t("reactionroles:menuLockedTitle"), err.message);
+      }
       return replyError(
         interaction,
         t("reactionroles:optionRemoveFailedTitle"),

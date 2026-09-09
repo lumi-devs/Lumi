@@ -12,6 +12,7 @@ import { logError } from "#lib/utilities/errors.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { Rr } from "#modules/reactionroles/keys.js";
 import type ReactionRolesUtility from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
+import { ReactionRoleMenuLockedError } from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
 import { requireManagePermit } from "#modules/reactionroles/lib/panel-guard.js";
 import { buildMenuDetailCard } from "#modules/reactionroles/ui/panel.js";
 
@@ -106,7 +107,9 @@ export class ReactionRolesPanelModalHandler extends BaseInteractionHandler {
       logError("ReactionRoles: panel modal failed", err);
       const reply = ephemeralCard(
         makeErrorCard(
-          t("reactionroles:panelFailedTitle"),
+          err instanceof ReactionRoleMenuLockedError
+            ? t("reactionroles:menuLockedTitle")
+            : t("reactionroles:panelFailedTitle"),
           err instanceof Error ? err.message : "Try again.",
         ),
       );
