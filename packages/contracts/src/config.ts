@@ -35,4 +35,8 @@ export interface ConfigField {
   /** Section this field belongs to in the config panel. Fields sharing a group
    * render together as one navigable subsection; omit for small modules. */
   group?: string;
+  /** Coarser split above `group`, for modules whose dashboard page is divided
+   * into tabs. Groups sharing a section become subsections of one tab, in
+   * declaration order. Omit and the module renders as a single section. */
+  section?: string;
 }

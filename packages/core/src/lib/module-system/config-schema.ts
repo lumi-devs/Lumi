@@ -26,6 +26,9 @@ interface BaseOpts {
   /** Panel subsection this field belongs to. Fields sharing a group render
    * together as one navigable section; omit for small modules. */
   group?: string;
+  /** Coarser split above `group`, for modules whose dashboard page is divided
+   * into tabs. Omit and the module renders as a single section. */
+  section?: string;
 }
 
 const base = (o: BaseOpts) => ({
@@ -33,6 +36,7 @@ const base = (o: BaseOpts) => ({
   description: o.description,
   required: o.required,
   group: o.group,
+  section: o.section,
 });
 
 /** Config field builders tagged with UI metadata. */
