@@ -1,0 +1,22 @@
+{
+  "name": "hello-world",
+  "displayName": "Hello World",
+  "emoji": "👋",
+  "description": "The simplest possible Lumi addon.",
+  "version": "1.0.0",
+  "targetUtility": "worker",
+  "subStores": ["commands"],
+  "configFields": [
+    {
+      "key": "greeting",
+      "label": "Greeting",
+      "type": "STRING",
+      "description": "The message /hello replies with.",
+      "default": "Hello from Lumi!"
+    }
+  ],
+  "capabilities": {
+    "discord": ["reply"],
+    "kv": false
+  }
+}

@@ -2,7 +2,9 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { CombinedPropertyError, s } from "@sapphire/shapeshift";
 import semver from "semver";
+import { AddonDiscordCapabilities } from "@lumi/contracts";
 import { LumiInfo } from "#utilities/misc.js";
+import { unknownDiscordCapabilities } from "#lib/addon-sandbox/capabilities.js";
 
 /** Static, import-free structural validation for an addon directory. */
 export interface ValidationResult {
@@ -264,7 +266,11 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
   }
 
   const manifestPath = path.join(dir, "manifest.json");
-  if (await pathExists(manifestPath)) {
+  if (!(await pathExists(manifestPath))) {
+    errors.push(
+      "Missing manifest.json. An addon is discovered from its manifest - reading metadata out of index.ts would mean running addon code in the bot's own process.",
+    );
+  } else {
     try {
       const manifest = JSON.parse(
         await fs.readFile(manifestPath, "utf8"),
@@ -286,6 +292,13 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
             `manifest.json "name" (${val.name}) must match the directory name (${base}).`,
           );
         }
+      }
+      for (const unknown of unknownDiscordCapabilities(
+        (manifest as { capabilities?: unknown }).capabilities,
+      )) {
+        errors.push(
+          `manifest.json: unknown Discord capability "${unknown}". Valid names: ${AddonDiscordCapabilities.join(", ")}.`,
+        );
       }
     } catch (err) {
       errors.push(
@@ -311,10 +324,12 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
     errors.push("Missing index.ts (module entrypoint).");
   }
 
-  if (await pathExists(path.join(dir, "tasks"))) {
-    errors.push(
-      'Found a "tasks/" directory - BullMQ pieces MUST live in "scheduled-tasks/" (a "tasks/" directory is silently never scanned).',
-    );
+  for (const stale of ["tasks", "scheduled-tasks"]) {
+    if (await pathExists(path.join(dir, stale))) {
+      errors.push(
+        `Found a "${stale}/" directory, which is never scanned. A sandboxed addon cannot own a scheduled-task piece - call registerTaskFireHandler() from "lumi/scheduling" in index.ts instead.`,
+      );
+    }
   }
 
   const files = (await pathExists(dir)) ? await walkTsFiles(dir) : [];
@@ -327,9 +342,9 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
       errors.push(
         `${rel}: uses EmbedBuilder - user-facing replies must use the make*Card helpers from "lumi".`,
       );
-    if (/\bcontainer\.prisma\b/.test(src))
+    if (/\bcontainer\b/.test(src))
       errors.push(
-        `${rel}: touches container.prisma - addons get no schema; persist via container.db.guildKV or container.redis.`,
+        `${rel}: uses Sapphire's \`container\` - it does not exist in an addon process. Persist via "lumi/kv", read settings via "lumi/config", act on Discord via "lumi/discord".`,
       );
     if (/\bstores\.registerPath\s*\(/.test(src))
       warnings.push(
@@ -349,8 +364,11 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
         continue;
       }
       if (/^#(core|lib|utilities|database|root)\//.test(spec)) {
+        // Not a boundary, just a better error than a resolution failure at
+        // spawn time: an addon process resolves `lumi`/`lumi/*` and nothing
+        // else, so these specifiers do not exist for it.
         errors.push(
-          `${rel}: imports Lumi's internal path "${spec}" directly - addons are restricted to the public API surface: "lumi" (Module/DefineModule/cfg/Service), "lumi/commands" (BaseCommand/BaseSubcommand/CommandContext), "lumi/permissions", "lumi/scheduling", "lumi/ui" (cards/Emojis/pagination), or "lumi/utils".`,
+          `${rel}: imports Lumi's internal path "${spec}", which does not resolve inside an addon process. Use "lumi" and its subpaths.`,
         );
       }
       if (spec.startsWith(".")) {

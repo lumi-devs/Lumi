@@ -37,10 +37,4 @@ import { cfg, DefineModule, Module } from "lumi";
     }),
   }),
 })
-export class TagManagerModule extends Module {
-  public override async deleteUserData(): Promise<void> {
-    // Tags are stored per-tag-name, not per-user - nothing to scrub here.
-    // (If you tracked "created by" and wanted to honor deletion requests by
-    // anonymizing authorship, this is where you'd do it.)
-  }
-}
+export class TagManagerModule extends Module {}

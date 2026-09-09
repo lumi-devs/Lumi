@@ -238,6 +238,32 @@ export class GuildKVRepository extends Repository {
    * Deletes many KV rows for a `module + key` across `{ guildId, targetId }`
    * targets in a single query; returns the number of rows removed.
    */
+  /**
+   * Every row a module keyed to one target, across every guild. Used for GDPR
+   * erasure and export of a sandboxed addon's data, which the host owns on the
+   * addon's behalf.
+   */
+  public async listModuleDataForTarget<T = unknown>(
+    module: string,
+    targetId: string,
+  ): Promise<{ guildId: string; key: string; value: T }[]> {
+    const rows = await this.prisma.moduleData.findMany({
+      where: { moduleName: module, targetId },
+    });
+    return rows.map((r) => ({ guildId: r.guildId, key: r.key, value: r.value as T }));
+  }
+
+  /** {@linkcode listModuleDataForTarget}, but deleting. Returns the row count removed. */
+  public async deleteModuleDataForTarget(
+    module: string,
+    targetId: string,
+  ): Promise<number> {
+    const { count } = await this.prisma.moduleData.deleteMany({
+      where: { moduleName: module, targetId },
+    });
+    return count;
+  }
+
   public async deleteModuleDataMany(
     module: string,
     key: string,

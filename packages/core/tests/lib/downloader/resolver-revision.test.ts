@@ -46,6 +46,19 @@ async function writeModuleInfo(moduleDir: string, version: string) {
     }),
   );
   await fs.writeFile(
+    path.join(moduleDir, "manifest.json"),
+    JSON.stringify({
+      name: path.basename(moduleDir),
+      displayName: path.basename(moduleDir),
+      emoji: "🧪",
+      description: "Revision test module",
+      version,
+      targetUtility: "worker",
+      subStores: [],
+      configFields: [],
+    }),
+  );
+  await fs.writeFile(
     path.join(moduleDir, "index.ts"),
     `@DefineModule({ name: "${path.basename(moduleDir)}" })\nexport class TestModule {}\n`,
   );

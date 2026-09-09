@@ -1,21 +1,23 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { container, type Command } from "@sapphire/framework";
-import { BaseSubcommand, type CommandContext } from "lumi/commands";
+import { BaseSubcommand, type CommandContext, type CommandRegistry } from "lumi/commands";
+import { getModuleConfig } from "lumi/config";
 import { deleteTag, getTag, listTags, resetTags, setTag } from "../lib/store.js";
 
-@ApplyOptions<BaseSubcommand.Options>({
-  name: "tag",
-  description: "Manage and recall custom tags.",
-  subcommands: [
-    { name: "add", run: "add" },
-    { name: "remove", run: "remove" },
-    { name: "list", run: "list" },
-    { name: "reset", run: "reset" },
-    { name: "get", run: "get" },
-  ],
-})
 export default class TagCommand extends BaseSubcommand {
-  public override registerApplicationCommands(registry: Command.Registry) {
+  public constructor() {
+    super({
+      name: "tag",
+      description: "Manage and recall custom tags.",
+      subcommands: [
+        { name: "add", run: "add" },
+        { name: "remove", run: "remove" },
+        { name: "list", run: "list" },
+        { name: "reset", run: "reset" },
+        { name: "get", run: "get" },
+      ],
+    });
+  }
+
+  public override registerApplicationCommands(registry: CommandRegistry) {
     registry.registerChatInputCommand((builder) =>
       builder
         .setName(this.name)
@@ -49,8 +51,7 @@ export default class TagCommand extends BaseSubcommand {
   public async add(ctx: CommandContext) {
     if (!ctx.guildId) return ctx.replyError("Guild Only", "This command only works in a server.");
 
-    const enabled = await container.db.config.getModuleConfig(ctx.guildId, "tag-manager", "enabled");
-    if (enabled === false) {
+    if ((await getModuleConfig("enabled")) === false) {
       return ctx.replyWarning("Disabled", "Tags are disabled for this server - enable them from `/config`.");
     }
 
@@ -59,7 +60,7 @@ export default class TagCommand extends BaseSubcommand {
 
     const existing = await getTag(ctx.guildId, name);
     if (!existing) {
-      const maxTagsRaw = await container.db.config.getModuleConfig(ctx.guildId, "tag-manager", "max_tags");
+      const maxTagsRaw = await getModuleConfig("max_tags");
       const maxTags = typeof maxTagsRaw === "number" ? maxTagsRaw : 25;
       const current = await listTags(ctx.guildId);
       if (current.length >= maxTags) {
@@ -89,9 +90,11 @@ export default class TagCommand extends BaseSubcommand {
 
     const tag = await getTag(ctx.guildId, name);
     if (!tag) {
-      const fallbackRaw = await container.db.config.getModuleConfig(ctx.guildId, "tag-manager", "default_response");
-      const fallback = typeof fallbackRaw === "string" ? fallbackRaw : "That tag doesn't exist.";
-      return ctx.replyWarning("Not Found", fallback);
+      const fallback = await getModuleConfig("default_response");
+      return ctx.replyWarning(
+        "Not Found",
+        typeof fallback === "string" ? fallback : "That tag doesn't exist.",
+      );
     }
 
     return ctx.replyInfo(`\`${name}\``, tag.response);
@@ -103,8 +106,7 @@ export default class TagCommand extends BaseSubcommand {
 
     if (tags.length === 0) return ctx.replyInfo("No Tags", "This server has no tags yet - create one with `/tag add`.");
 
-    const names = tags.map((t) => `\`${t.name}\``).join(", ");
-    return ctx.replyInfo(`Tags (${tags.length})`, names);
+    return ctx.replyInfo(`Tags (${tags.length})`, tags.map((t) => `\`${t.name}\``).join(", "));
   }
 
   public async reset(ctx: CommandContext) {

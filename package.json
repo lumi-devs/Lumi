@@ -9,15 +9,20 @@
     "packages/*",
     "apps/*"
   ],
-  "comment:imports": "Safety net for downloaded addons: they are symlinked into packages/core/src/modules but live (realpath) under data/3rd-party-modules, so their #core/#lib/#utilities specifiers resolve up to THIS root package.json. Mirrors packages/core/package.json's imports map.",
-  "comment:exports": "The public addon API, namespaced with dedicated subpaths (`lumi`, `lumi/commands`, `lumi/permissions`, `lumi/scheduling`, `lumi/ui`, `lumi/utils`). Since addon files' nearest package.json is this one (see comment:imports above), `import ... from \"lumi\"` (and its subpaths) self-resolve here via Node/Bun package self-reference - the one stable import surface third-party addon code should use instead of #core/#lib/#utilities/#database.",
+  "comment:imports": "Internal specifiers for this repo's own code. Addons no longer resolve against this file: an installed addon's nearest package.json is the one AddonHost writes to data/3rd-party-modules, which maps `lumi` and nothing else - so #lib/#database/#utilities do not resolve from addon source at all.",
+  "comment:exports": "The addon API. Addon code runs in its own process (packages/core/src/lib/addon-sandbox) with no bot token, database URL or Redis URL, and reaches the bot only through these subpaths. This map is mirrored at runtime into data/3rd-party-modules/package.json; it lives here too so examples/ and repo tooling resolve the same surface an installed addon gets.",
   "exports": {
-    ".": "./packages/core/src/lib/addon-sdk/index.ts",
-    "./commands": "./packages/core/src/lib/addon-sdk/commands.ts",
-    "./permissions": "./packages/core/src/lib/addon-sdk/permissions.ts",
-    "./scheduling": "./packages/core/src/lib/addon-sdk/scheduling.ts",
-    "./ui": "./packages/core/src/lib/addon-sdk/ui.ts",
-    "./utils": "./packages/core/src/lib/addon-sdk/utils.ts"
+    ".": "./packages/core/src/lib/addon-sandbox/sdk/index.ts",
+    "./commands": "./packages/core/src/lib/addon-sandbox/sdk/commands.ts",
+    "./config": "./packages/core/src/lib/addon-sandbox/sdk/config.ts",
+    "./discord": "./packages/core/src/lib/addon-sandbox/sdk/discord.ts",
+    "./interactions": "./packages/core/src/lib/addon-sandbox/sdk/interactions.ts",
+    "./kv": "./packages/core/src/lib/addon-sandbox/sdk/kv.ts",
+    "./permissions": "./packages/core/src/lib/addon-sandbox/sdk/permissions.ts",
+    "./redis": "./packages/core/src/lib/addon-sandbox/sdk/redis.ts",
+    "./scheduling": "./packages/core/src/lib/addon-sandbox/sdk/scheduling.ts",
+    "./ui": "./packages/core/src/lib/addon-sandbox/sdk/ui.ts",
+    "./utils": "./packages/core/src/lib/addon-sandbox/sdk/utils.ts"
   },
   "imports": {
     "#lib/commands.js": "./packages/core/src/lib/commands.ts",

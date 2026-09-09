@@ -18,21 +18,10 @@ import { announceGiveawayEnd } from "./lib/announce.js";
     }),
   }),
 })
-export class GiveawayModule extends Module {
-  public override onLoad() {
-    // "unicast": exactly one worker instance ends any given giveaway, even
-    // if the fire event is delivered to a cluster of several workers -
-    // ending a giveaway is a once-only side effect (announces winners),
-    // not something every replica should redo independently.
-    registerTaskFireHandler("giveaway-end", "unicast", async (payload) => {
-      await announceGiveawayEnd(payload.guildId, payload.giveawayId);
-    });
-    return super.onLoad();
-  }
+export class GiveawayModule extends Module {}
 
-  public override async deleteUserData(): Promise<void> {
-    // Giveaway records reference hosts/winners by Discord ID, but that ID is
-    // already publicly visible in the giveaway message itself while the
-    // giveaway is live - there's no additional private data to scrub here.
-  }
-}
+// The host owns the queue and fires exactly one worker's handler per job, so
+// a giveaway is ended once even across a cluster of replicas.
+registerTaskFireHandler("giveaway-end", async (payload) => {
+  await announceGiveawayEnd(payload.guildId as string, payload.giveawayId as string);
+});

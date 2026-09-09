@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
 import { RepoCommand } from "#modules/core/commands/repo.js";
+import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 
 vi.mock("#lib/module-system/Utility.js", async (importOriginal) => {
   const actual: any = await importOriginal();
@@ -52,6 +53,7 @@ describe("RepoCommand", () => {
       debug: vi.fn(),
     } as any;
     (container as any).client = { options: {} };
+    vi.spyOn(PermitResolver, "isBotOwner").mockReturnValue(true);
 
     command = new RepoCommand(
       {
@@ -289,6 +291,9 @@ describe("RepoCommand", () => {
       focusedValue = "",
     ) {
       return {
+        guildId: "guild-1",
+        user: { id: "owner-1" },
+        respond: vi.fn().mockResolvedValue(undefined),
         options: {
           getFocused: vi
             .fn()
@@ -355,6 +360,18 @@ describe("RepoCommand", () => {
       expect(respondWithChoices).toHaveBeenCalledWith(expect.anything(), [
         "extra",
       ]);
+    });
+
+    it("responds empty and does not look up repos for a non-owner", async () => {
+      (PermitResolver.isBotOwner as any).mockReturnValue(false);
+      downloader.listRepos.mockResolvedValue([{ name: "addons" }]);
+      const interaction = autocompleteInteraction("name", "remove");
+
+      await command.autocompleteRun(interaction);
+
+      expect(interaction.respond).toHaveBeenCalledWith([]);
+      expect(respondWithChoices).not.toHaveBeenCalled();
+      expect(downloader.listRepos).not.toHaveBeenCalled();
     });
   });
 });

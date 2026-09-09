@@ -4,3 +4,4 @@ export * from "./views";
 export * from "./bus";
 export * from "./config";
 export * from "./manifest";
+export * from "./addon-sandbox";

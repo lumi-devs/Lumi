@@ -71,6 +71,19 @@ describe("Add-on Module Classification (DownloadResolver#installModule)", () => 
       JSON.stringify(info),
     );
     await fs.writeFile(
+      path.join(sourcePath, "manifest.json"),
+      JSON.stringify({
+        name: moduleName,
+        displayName: moduleName,
+        emoji: "🧪",
+        description: "Loader test module",
+        version: "1.0.0",
+        targetUtility: "worker",
+        subStores: [],
+        configFields: [],
+      }),
+    );
+    await fs.writeFile(
       path.join(sourcePath, "index.ts"),
       `@DefineModule({ name: "${moduleName}" })\nexport class LoaderTestModule {}`,
     );

@@ -1,0 +1,24 @@
+{
+  "name": "giveaway",
+  "displayName": "Giveaways",
+  "emoji": "🎉",
+  "description": "Run giveaways with an entry button, scheduled ending, and host-only rerolls.",
+  "version": "1.0.0",
+  "targetUtility": "worker",
+  "subStores": ["commands", "interaction-handlers"],
+  "configFields": [
+    {
+      "key": "default_winner_count",
+      "label": "Default Winner Count",
+      "type": "NUMBER",
+      "description": "Used when /giveaway start omits the winners option.",
+      "default": 1
+    }
+  ],
+  "capabilities": {
+    "discord": ["reply", "sendMessage", "editMessage"],
+    "kv": true,
+    "redis": true,
+    "scheduling": true
+  }
+}

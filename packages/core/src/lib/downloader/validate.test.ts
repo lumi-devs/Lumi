@@ -13,9 +13,21 @@ const ValidInfo = JSON.stringify({
   end_user_data_statement: "This addon does not store any user data.",
 });
 
+const ValidManifest = JSON.stringify({
+  name: "my-addon",
+  displayName: "My Addon",
+  emoji: "🧪",
+  description: "A test addon.",
+  version: "1.0.0",
+  targetUtility: "worker",
+  subStores: [],
+  configFields: [],
+});
+
 async function writeAddon(dir: string, indexSrc: string, infoJson = ValidInfo) {
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(path.join(dir, "info.json"), infoJson);
+  await fs.writeFile(path.join(dir, "manifest.json"), ValidManifest);
   await fs.writeFile(path.join(dir, "index.ts"), indexSrc);
 }
 

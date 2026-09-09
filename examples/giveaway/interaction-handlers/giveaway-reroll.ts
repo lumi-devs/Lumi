@@ -1,46 +1,35 @@
 import { userMention } from "@discordjs/formatters";
-import { ApplyOptions } from "@sapphire/decorators";
-import { InteractionHandler, InteractionHandlerTypes, UserError } from "@sapphire/framework";
-import type { StringSelectMenuInteraction } from "discord.js";
-import { getUtility } from "lumi";
-import { getGiveaway, updateGiveaway } from "../lib/store.js";
+import {
+  BaseInteractionHandler,
+  InteractionContext,
+  deferUpdate,
+  editReply,
+} from "lumi/interactions";
+import { getGiveaway, pickWinners, updateGiveaway } from "../lib/store.js";
 
-@ApplyOptions<InteractionHandler.Options>({
-  name: "giveaway-reroll",
-  interactionHandlerType: InteractionHandlerTypes.SelectMenu,
-})
-export default class GiveawayRerollHandler extends InteractionHandler {
-  public override parse(interaction: StringSelectMenuInteraction) {
-    if (!interaction.customId.startsWith("giveaway:reroll:")) return this.none();
-    const giveawayId = interaction.customId.split(":")[2];
-    if (!giveawayId) return this.none();
-    return this.some({ giveawayId });
-  }
+export default class GiveawayRerollHandler extends BaseInteractionHandler {
+  public readonly prefix = "giveaway:reroll:";
 
-  public async run(
-    interaction: StringSelectMenuInteraction,
-    { giveawayId }: { giveawayId: string },
-  ): Promise<void> {
-    if (!interaction.guildId) return;
+  public async run(ctx: InteractionContext): Promise<void> {
+    const giveawayId = ctx.customId.split(":")[2];
+    if (!giveawayId || !ctx.guildId) return;
 
-    const record = await getGiveaway(interaction.guildId, giveawayId);
-    if (!record || !record.endedAt) {
-      throw new UserError({ identifier: "GiveawayNotEnded", message: "This giveaway hasn't ended yet." });
-    }
-    if (interaction.user.id !== record.hostId) {
-      throw new UserError({ identifier: "GiveawayNotHost", message: "Only the giveaway host can reroll winners." });
+    const record = await getGiveaway(ctx.guildId, giveawayId);
+    if (!record?.endedAt) return ctx.replyError("Not Ended", "This giveaway hasn't ended yet.");
+    if (ctx.user.id !== record.hostId) {
+      return ctx.replyError("Not the Host", "Only the giveaway host can reroll winners.");
     }
 
-    await interaction.deferUpdate();
-    const count = Number.parseInt(interaction.values[0] ?? "1", 10);
-    const service = getUtility("giveaway");
-    const winners = await service.pickWinners(interaction.guildId, giveawayId, count);
-    const updated = await updateGiveaway(interaction.guildId, giveawayId, { winners });
+    await deferUpdate();
+    const count = Number.parseInt(ctx.values[0] ?? "1", 10);
+    const winners = await pickWinners(ctx.guildId, giveawayId, count);
+    const updated = await updateGiveaway(ctx.guildId, giveawayId, { winners });
     if (!updated) return;
 
-    const winnersText = winners.length ? winners.map((id) => userMention(id)).join(", ") : "No valid entries.";
-    await interaction.editReply({
-      content: `🎉 **Giveaway ended: ${updated.prize}**\nWinners: ${winnersText}`,
+    await editReply({
+      content: `🎉 **Giveaway ended: ${updated.prize}**\nWinners: ${
+        winners.length ? winners.map((id) => userMention(id)).join(", ") : "No valid entries."
+      }`,
     });
   }
 }

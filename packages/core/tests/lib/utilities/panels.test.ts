@@ -290,7 +290,7 @@ describe("Panel & Card Utility Standardization", () => {
 
     it("addon mirrors render identically to core kit rows", async () => {
       const kit = await import("#lib/utilities/ui/kit.js");
-      const addon = await import("#lib/addon-sdk/ui.js");
+      const addon = await import("#lib/addon-sandbox/sdk/ui.js");
       const button = { customId: "a:edit", label: "Edit" };
 
       expect(addon.addonSettingRow("line", button).toJSON()).toEqual(

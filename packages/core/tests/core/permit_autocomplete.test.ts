@@ -20,8 +20,13 @@ function makeInteraction(opts: {
   strings?: Record<string, string | null>;
 }) {
   const respond = vi.fn().mockResolvedValue(undefined);
+  const guildId = "guildId" in opts ? opts.guildId : "guild-1";
   return {
-    guildId: "guildId" in opts ? opts.guildId : "guild-1",
+    guildId,
+    guild: guildId ? { id: guildId, ownerId: "owner-1" } : null,
+    user: { id: "admin-1" },
+    member: { roles: { cache: new Map() } },
+    channelId: "channel-1",
     respond,
     options: {
       getFocused: vi.fn().mockReturnValue({
@@ -54,6 +59,9 @@ describe("PermitCommand.autocompleteRun", () => {
       name === "permissions" ? mockPermissions : null,
     );
     (container as any).client = { options: {} } as any;
+    (container as any).permitResolver = {
+      hasPermit: vi.fn().mockResolvedValue(true),
+    };
 
     command = new PermitCommand(
       {
@@ -165,6 +173,17 @@ describe("PermitCommand.autocompleteRun", () => {
       guildId: null,
       focusedName: "node",
       focusedValue: "",
+    });
+    await command.autocompleteRun(interaction);
+    expect(interaction.respond).toHaveBeenCalledWith([]);
+  });
+
+  it("responds empty and does not leak permit nodes for a user lacking admin.*", async () => {
+    (container as any).permitResolver.hasPermit.mockResolvedValue(false);
+    const interaction = makeInteraction({
+      focusedName: "node",
+      focusedValue: "adm",
+      subcommand: "create",
     });
     await command.autocompleteRun(interaction);
     expect(interaction.respond).toHaveBeenCalledWith([]);

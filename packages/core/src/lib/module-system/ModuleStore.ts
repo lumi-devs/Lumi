@@ -1,4 +1,9 @@
-import { Store, container, type Command } from "@sapphire/framework";
+import {
+  Store,
+  container,
+  InteractionHandlerTypes,
+  type Command,
+} from "@sapphire/framework";
 import { Module, type ModuleMeta } from "./Module.js";
 import {
   metaFromManifest,
@@ -11,6 +16,15 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { BaseValidator } from "@sapphire/shapeshift";
 import { withSerializedWork } from "#lib/utilities/misc.js";
+import { AddonHost } from "#lib/addon-sandbox/AddonHost.js";
+import {
+  registerProxyCommands,
+  unregisterProxyCommands,
+} from "#lib/addon-sandbox/proxy-command.js";
+import { ProxyModule } from "#lib/addon-sandbox/proxy-module.js";
+import { AddonInteractionRouter } from "#lib/addon-sandbox/interaction-router.js";
+import { AddonRelayTaskName } from "#lib/addon-sandbox/relay-task.js";
+import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 
 export type ModuleState =
   "discovered" | "loaded" | "failed" | "disabled" | "skipped-conflict";
@@ -67,6 +81,8 @@ export class ModuleStore extends Store<Module> {
   #invalidationListenerSet = false;
   #guarded = new WeakSet<Command>();
   #schemaCache = new Map<string, BaseValidator<any> | undefined>();
+  readonly #addons = new AddonHost();
+  #addonRoutingReady = false;
 
   public constructor() {
     super(Module, { name: "modules" });
@@ -83,11 +99,13 @@ export class ModuleStore extends Store<Module> {
    * @returns `true` if the module's directory is not nested under the first registered root.
    */
   public isAddonModule(record: ModuleRecord): boolean {
+    return this.#isAddonPath(record.dir);
+  }
+
+  #isAddonPath(dir: string): boolean {
     const coreRoot = this.#roots[0];
     if (!coreRoot) return false;
-    const coreRootPath = path.resolve(fileURLToPath(coreRoot));
-    const recordDir = path.resolve(record.dir);
-    return !isPathInside(recordDir, coreRootPath);
+    return !isPathInside(path.resolve(dir), path.resolve(fileURLToPath(coreRoot)));
   }
 
   /**
@@ -113,6 +131,14 @@ export class ModuleStore extends Store<Module> {
     for (const record of this.#records.values()) {
       if (record.enabled) {
         try {
+          // Addons take the sandbox path here too. Sapphire's loader imports a
+          // file before checking what it exports, so importing an addon's index
+          // to find out whether it is one would already have run its code in
+          // this process.
+          if (this.isAddonModule(record)) {
+            await this.#loadAddon(record);
+            continue;
+          }
           const indexPath = await this.#findIndex(record.dir);
           if (indexPath) await this.load(record.dir, path.basename(indexPath));
           record.state = "loaded";
@@ -178,6 +204,9 @@ export class ModuleStore extends Store<Module> {
     for (const name of topo) {
       const record = this.#records.get(name)!;
       if (!record.enabled) continue;
+      // Registering an addon's directory would have Sapphire load its pieces
+      // into this process, which is the boundary the sandbox exists to draw.
+      if (this.isAddonModule(record)) continue;
 
       container.stores.registerPath(record.dir);
     }
@@ -208,6 +237,11 @@ export class ModuleStore extends Store<Module> {
     const name =
       typeof nameOrPiece === "string" ? nameOrPiece : nameOrPiece.name;
     const record = this.#records.get(name);
+
+    if (record && this.isAddonModule(record)) {
+      this.#addons.stop(name);
+      unregisterProxyCommands(record.dir);
+    }
 
     if (record) {
       for (const store of container.stores.values()) {
@@ -364,6 +398,9 @@ export class ModuleStore extends Store<Module> {
   public async loadModule(name: string) {
     const record = this.#records.get(name);
     if (!record) throw new Error(`Module ${name} not found`);
+
+    if (this.isAddonModule(record)) return this.#loadAddon(record);
+
     const failures: Error[] = [];
 
     for (const store of container.stores.values()) {
@@ -414,6 +451,74 @@ export class ModuleStore extends Store<Module> {
   }
 
   /**
+   * The two host-side pieces every sandboxed addon shares: one interaction
+   * handler that routes components by custom-id prefix, and one fire handler
+   * that routes scheduled jobs back into the addon that queued them.
+   */
+  #ensureAddonRouting() {
+    if (this.#addonRoutingReady) return;
+    this.#addonRoutingReady = true;
+
+    // A respawned child re-reports its pieces; a failed one leaves none behind.
+    this.#addons.onRespawn = (record, commands) =>
+      registerProxyCommands(this.#addons, record.name, record.dir, commands);
+    this.#addons.onFailed = (record) => unregisterProxyCommands(record.dir);
+
+    const store = container.stores.get("interaction-handlers");
+    // Sapphire dispatches components and modal submits down separate paths, so
+    // the same router is registered once for each.
+    for (const [name, type] of [
+      ["addon-component-router", InteractionHandlerTypes.MessageComponent],
+      ["addon-modal-router", InteractionHandlerTypes.ModalSubmit],
+    ] as const) {
+      store.set(
+        name,
+        new AddonInteractionRouter(
+          { name, path: "", root: "", store },
+          this.#addons,
+          name,
+          type,
+        ),
+      );
+    }
+
+    registerTaskFireHandler(AddonRelayTaskName, "unicast", async (payload) => {
+      await this.#addons.fireTask(payload.addon, payload.task, payload.payload);
+    });
+  }
+
+  /**
+   * Addons never load into this process. Their code runs in a child process
+   * that holds no bot token, database URL or Redis URL; what lands here is a
+   * set of proxy command pieces that forward invocations across the boundary.
+   */
+  async #loadAddon(record: ModuleRecord) {
+    this.#ensureAddonRouting();
+    try {
+      const commands = await this.#addons.start(record);
+      registerProxyCommands(this.#addons, record.name, record.dir, commands);
+      this.set(
+        record.name,
+        new ProxyModule(
+          { name: record.name, path: record.dir, root: record.dir, store: this },
+          { ...record.meta, name: record.name },
+        ),
+      );
+      this.attachModuleGuards();
+      record.enabled = true;
+      record.state = "loaded";
+      record.failureReason = undefined;
+    } catch (err: unknown) {
+      const reason = err instanceof Error ? err.message : String(err);
+      unregisterProxyCommands(record.dir);
+      record.enabled = false;
+      record.state = "failed";
+      record.failureReason = reason;
+      throw new Error(`Module ${record.name} failed to load: ${reason}`);
+    }
+  }
+
+  /**
    * Retrieves the configuration schema for a specific module, extracting it from the module's meta export.
    *
    * @returns The shape validation schema, or `undefined` if none is defined.
@@ -429,6 +534,10 @@ export class ModuleStore extends Store<Module> {
       this.#schemaCache.set(name, record.meta.configSchema);
       return record.meta.configSchema;
     }
+
+    // An addon's schema comes from its manifest's `configFields`; importing its
+    // index to read a live `configSchema` would run addon code in this process.
+    if (this.isAddonModule(record)) return undefined;
 
     try {
       const mod = await import(record.indexUrl);
@@ -548,6 +657,13 @@ export class ModuleStore extends Store<Module> {
       if (manifest) {
         const effectiveIndex = indexPath || path.join(sub, "manifest.json");
         this.#ingestManifest(sub, effectiveIndex, manifest, found, globalState);
+      } else if (indexPath && this.#isAddonPath(sub)) {
+        // Discovering a built-in reads its `meta` by importing it. Doing that
+        // for an addon would run its top-level code in this process before any
+        // sandbox exists, so an addon must describe itself in a manifest.
+        container.logger.warn(
+          `[ModuleStore] Ignoring addon without a manifest.json: ${sub}`,
+        );
       } else if (indexPath) {
         await this.#ingest(sub, indexPath, found, globalState, bustCache);
       }

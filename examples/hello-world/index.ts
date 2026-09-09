@@ -14,8 +14,4 @@ import { cfg, DefineModule, Module } from "lumi";
     }),
   }),
 })
-export class HelloWorldModule extends Module {
-  public override async deleteUserData(): Promise<void> {
-    // No-op: this addon stores no data keyed by a user ID.
-  }
-}
+export class HelloWorldModule extends Module {}

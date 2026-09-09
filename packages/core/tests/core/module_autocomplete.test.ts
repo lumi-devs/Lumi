@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { container } from "@sapphire/framework";
 import { ModuleCommand } from "#modules/core/commands/module.js";
+import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 
 vi.mock("#lib/module-system/Utility.js", async (importOriginal) => {
   const actual: any = await importOriginal();
@@ -21,6 +22,11 @@ function makeInteraction(opts: {
   const respond = vi.fn().mockResolvedValue(undefined);
   return {
     respond,
+    guildId: "guild-1",
+    guild: { id: "guild-1", ownerId: "owner-1" },
+    user: { id: "owner-1" },
+    member: { roles: { cache: new Map() } },
+    channelId: "channel-1",
     options: {
       getFocused: vi.fn().mockReturnValue({
         name: opts.focusedName,
@@ -73,6 +79,7 @@ describe("ModuleCommand.autocompleteRun", () => {
 
     (container as any).moduleStore = mockModuleStore;
     (container as any).client = { options: {} } as any;
+    vi.spyOn(PermitResolver, "isBotOwner").mockReturnValue(true);
 
     command = new ModuleCommand(
       {
@@ -175,5 +182,17 @@ describe("ModuleCommand.autocompleteRun", () => {
     expect(interaction.respond).toHaveBeenCalledWith([
       { name: "economy", value: "economy" },
     ]);
+  });
+
+  it("responds empty and does not look up repos for a non-owner", async () => {
+    (PermitResolver.isBotOwner as any).mockReturnValue(false);
+    const interaction = makeInteraction({
+      focusedName: "repo",
+      focusedValue: "comm",
+      subcommand: "install",
+    });
+    await command.autocompleteRun(interaction);
+    expect(interaction.respond).toHaveBeenCalledWith([]);
+    expect(mockDownloaderUtility.listRepos).not.toHaveBeenCalled();
   });
 });

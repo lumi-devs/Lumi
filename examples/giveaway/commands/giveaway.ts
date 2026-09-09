@@ -1,23 +1,26 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { container, type Command } from "@sapphire/framework";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
-import { getUtility } from "lumi";
-import { BaseSubcommand, type CommandContext } from "lumi/commands";
-import { scheduleTask } from "lumi/scheduling";
+import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
+import { ButtonStyle } from "discord-api-types/v10";
+import { BaseSubcommand, type CommandContext, type CommandRegistry } from "lumi/commands";
+import { getModuleConfig } from "lumi/config";
+import * as discord from "lumi/discord";
+import { schedule } from "lumi/scheduling";
 import { announceGiveawayEnd } from "../lib/announce.js";
-import { getGiveaway } from "../lib/store.js";
+import { getGiveaway, startGiveaway } from "../lib/store.js";
 
-@ApplyOptions<BaseSubcommand.Options>({
-  name: "giveaway",
-  description: "Run a giveaway.",
-  requiredPermit: "mod.giveaway",
-  subcommands: [
-    { name: "start", run: "start" },
-    { name: "end", run: "end" },
-  ],
-})
 export default class GiveawayCommand extends BaseSubcommand {
-  public override registerApplicationCommands(registry: Command.Registry) {
+  public constructor() {
+    super({
+      name: "giveaway",
+      description: "Run a giveaway.",
+      requiredPermit: "mod.giveaway",
+      subcommands: [
+        { name: "start", run: "start" },
+        { name: "end", run: "end" },
+      ],
+    });
+  }
+
+  public override registerApplicationCommands(registry: CommandRegistry) {
     registry.registerChatInputCommand((builder) =>
       builder
         .setName(this.name)
@@ -53,24 +56,18 @@ export default class GiveawayCommand extends BaseSubcommand {
 
     const prize = (await ctx.getString("prize", { required: true }))!;
     const minutes = (await ctx.getInteger("minutes", { required: true }))!;
-    const defaultWinnersRaw = await container.db.config.getModuleConfig(
-      ctx.guildId,
-      "giveaway",
-      "default_winner_count",
-    );
+    const defaultWinnersRaw = await getModuleConfig("default_winner_count");
     const defaultWinners = typeof defaultWinnersRaw === "number" ? defaultWinnersRaw : 1;
     const winnerCount = (await ctx.getInteger("winners")) ?? defaultWinners;
 
-    const channel = ctx.interaction.channel;
-    if (!channel?.isSendable()) return ctx.replyError("Cannot Post", "I can't send messages in this channel.");
-
     const durationMs = minutes * 60_000;
-    const placeholder = await channel.send({ content: `🎉 **${prize}**\nStarting...` });
+    const placeholder = await discord.channels.send(ctx.channelId, {
+      content: `🎉 **${prize}**\nStarting...`,
+    });
 
-    const service = getUtility("giveaway");
-    const { id } = await service.start({
+    const { id } = await startGiveaway({
       guildId: ctx.guildId,
-      channelId: channel.id,
+      channelId: ctx.channelId,
       messageId: placeholder.id,
       prize,
       winnerCount,
@@ -84,16 +81,16 @@ export default class GiveawayCommand extends BaseSubcommand {
     );
 
     const endsAtUnix = Math.floor((Date.now() + durationMs) / 1000);
-    await placeholder.edit({
+    await discord.messages.edit(ctx.channelId, placeholder.id, {
       content: `🎉 **${prize}**\nEnds <t:${endsAtUnix}:R> - ${winnerCount} winner${winnerCount === 1 ? "" : "s"}.`,
-      components: [row],
+      components: [row.toJSON()],
     });
 
-    // One-shot delayed task - the actual ending logic lives in the
-    // "giveaway-end" fire handler (index.ts), not here.
-    await scheduleTask("giveaway-end", { guildId: ctx.guildId, giveawayId: id }, { delay: durationMs });
+    // One-shot delayed job - the ending logic lives in the "giveaway-end" fire
+    // handler (index.ts), on whichever worker the host routes the fire to.
+    await schedule("giveaway-end", { guildId: ctx.guildId, giveawayId: id }, { delay: durationMs });
 
-    return ctx.replySuccess("Giveaway Started", `Posted in ${channel}. ID: \`${id}\``);
+    return ctx.replySuccess("Giveaway Started", `Posted. ID: \`${id}\``);
   }
 
   public async end(ctx: CommandContext) {
@@ -104,9 +101,8 @@ export default class GiveawayCommand extends BaseSubcommand {
     if (!record) return ctx.replyError("Not Found", "No giveaway with that ID.");
     if (record.endedAt) return ctx.replyWarning("Already Ended", "That giveaway already ended.");
 
-    // Shares the exact same code path the scheduled task uses, so a manual
-    // early end and a scheduled end can never disagree about what "ended"
-    // means or double-announce winners.
+    // Shares the exact code path the scheduled end uses, so a manual early end
+    // and a scheduled end can never disagree or double-announce winners.
     await announceGiveawayEnd(ctx.guildId, id);
     return ctx.replySuccess("Giveaway Ended", "Winners have been announced.");
   }

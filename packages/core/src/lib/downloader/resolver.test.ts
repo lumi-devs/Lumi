@@ -30,6 +30,19 @@ async function writeFixtureAddon() {
     }),
   );
   await fs.writeFile(
+    path.join(dir, "manifest.json"),
+    JSON.stringify({
+      name: ModuleName,
+      displayName: ModuleName,
+      emoji: "🧪",
+      description: "Fixture addon for resolver tests.",
+      version: "1.0.0",
+      targetUtility: "worker",
+      subStores: [],
+      configFields: [],
+    }),
+  );
+  await fs.writeFile(
     path.join(dir, "index.ts"),
     `import { Module, DefineModule } from "lumi";\n\n@DefineModule({ name: "${ModuleName}" })\nexport class Fixture extends Module {}\n`,
   );

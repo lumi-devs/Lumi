@@ -1,3 +1,4 @@
+import type { AddonCapabilities } from "./addon-sandbox";
 import type { ConfigField } from "./config";
 
 // Serializable module manifest contract for discovery and lifecycle metadata.
@@ -40,6 +41,12 @@ export interface ModuleManifest {
   targetUtility: TargetUtility;
   /** Sub-store dirs present in the module, mounted by convention on load. */
   subStores: string[];
+  /**
+   * What a sandboxed addon may ask the host to do. Absent means the
+   * least-privilege floor (reply to your own invocation, and your own KV).
+   * Ignored for built-in modules, which run in-process and trusted.
+   */
+  capabilities?: AddonCapabilities;
   /** Flat config fields derived from the Zod `configSchema` (panel + dashboard). */
   configFields: ConfigField[];
   /** Dashboard sidebar/grid grouping (e.g. "Moderation", "Security"). Falls back to "System" when absent. */

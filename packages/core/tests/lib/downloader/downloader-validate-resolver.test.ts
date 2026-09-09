@@ -121,6 +121,19 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       };
       await fs.writeFile(path.join(addonDir, "info.json"), JSON.stringify(infoJson));
       await fs.writeFile(
+        path.join(addonDir, "manifest.json"),
+        JSON.stringify({
+          name: "version-addon",
+          displayName: "Version",
+          emoji: "📦",
+          description: "Version test",
+          version: "1.0.0",
+          targetUtility: "worker",
+          subStores: [],
+          configFields: [],
+        })
+      );
+      await fs.writeFile(
         path.join(addonDir, "index.ts"),
         `@DefineModule({ name: "version-addon" })\nexport class TestModule {}`
       );
@@ -178,10 +191,10 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
 
       const result = await validateAddon(addonDir);
       expect(result.errors).toContain(
-        'Found a "tasks/" directory - BullMQ pieces MUST live in "scheduled-tasks/" (a "tasks/" directory is silently never scanned).'
+        'Found a "tasks/" directory, which is never scanned. A sandboxed addon cannot own a scheduled-task piece - call registerTaskFireHandler() from "lumi/scheduling" in index.ts instead.'
       );
       expect(result.errors.some((e) => e.includes("uses EmbedBuilder"))).toBe(true);
-      expect(result.errors.some((e) => e.includes("touches container.prisma"))).toBe(true);
+      expect(result.errors.some((e) => e.includes("does not exist in an addon process"))).toBe(true);
       expect(result.errors.some((e) => e.includes('imports another module via "#modules/afk/index.js"'))).toBe(true);
       expect(result.errors.some((e) => e.includes('relative import "../outside.js" escapes'))).toBe(true);
       expect(result.warnings.some((w) => w.includes("calls stores.registerPath"))).toBe(true);
