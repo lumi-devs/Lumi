@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { inviteUrlFor } from "#/lib/invite";
+import { useRefreshAfterInvite } from "#/lib/use-refresh-after-invite";
 import Link from "next/link";
 import type { Session } from "next-auth";
 import type { GuildSummaryView } from "@lumi/contracts";
@@ -26,16 +28,15 @@ function colorFor(id: string): string {
   return Colors[Math.abs(hash) % Colors.length]!;
 }
 
-export function inviteUrlFor(clientId: string, guildId: string): string {
-  return `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot%20applications.commands&guild_id=${guildId}&disable_guild_select=true`;
-}
 
 function GuildTile({
   guild,
   summary,
   hero,
   installed,
+  onInvite,
   clientId,
+  returnTo,
 }: {
   guild: OAuthGuild;
   /** Real bot-side data (icon/banner/member count), when the fetch succeeded. */
@@ -46,6 +47,9 @@ function GuildTile({
   installed: boolean;
   /** Discord OAuth2 client id, for building per-guild invite links. */
   clientId: string;
+  /** Registered OAuth2 return URL, when configured. */
+  returnTo?: string;
+  onInvite?: () => void;
 }) {
   const icon = summary?.icon ?? guildIconUrl(guild.id, guild.icon);
   const color = colorFor(guild.id);
@@ -95,7 +99,8 @@ function GuildTile({
             banner={banner}
             hero={hero}
             memberCount={summary?.memberCount}
-            inviteUrl={inviteUrlFor(clientId, guild.id)}
+            inviteUrl={inviteUrlFor(clientId, guild.id, returnTo)}
+            onInvite={onInvite}
           />
         </div>
       )}
@@ -112,6 +117,7 @@ function TileChrome({
   hero,
   memberCount,
   inviteUrl,
+  onInvite,
 }: {
   guild: OAuthGuild;
   icon: string | null;
@@ -121,6 +127,7 @@ function TileChrome({
   hero?: boolean;
   memberCount?: number | null;
   inviteUrl?: string;
+  onInvite?: () => void;
 }) {
   return (
     <>
@@ -196,6 +203,7 @@ function TileChrome({
           {inviteUrl ? (
             <a
               href={inviteUrl}
+              onClick={onInvite}
               target="_blank"
               rel="noreferrer"
               className={cn(
@@ -239,14 +247,18 @@ export function GuildPicker({
   session,
   summaries = [],
   clientId,
+  returnTo,
 }: {
   session: Session;
   /** Real bot-side icon/banner/member-count data, keyed by guild id when present. */
   summaries?: GuildSummaryView[];
   /** Discord OAuth2 client id, for building per-guild invite links. */
   clientId: string;
+  /** Registered OAuth2 return URL, when configured. */
+  returnTo?: string;
 }) {
   const [query, setQuery] = useState("");
+  const { markPending } = useRefreshAfterInvite();
   // Tiles are now `TiltCard` divs (the tilt wrapper), not anchors directly.
   const gridRef = useStaggerIn<HTMLDivElement>("> div", { delay: 30 });
   const summaryByGuildId = useMemo(
@@ -324,6 +336,8 @@ export function GuildPicker({
               summary={summaryByGuildId.get(heroGuild.id)}
               installed={summaryByGuildId.has(heroGuild.id)}
               clientId={clientId}
+              onInvite={markPending}
+              returnTo={returnTo}
               hero
             />
           ) : null}
@@ -334,6 +348,8 @@ export function GuildPicker({
               summary={summaryByGuildId.get(g.id)}
               installed={summaryByGuildId.has(g.id)}
               clientId={clientId}
+              onInvite={markPending}
+              returnTo={returnTo}
             />
           ))}
         </div>

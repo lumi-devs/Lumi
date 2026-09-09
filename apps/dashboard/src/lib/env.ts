@@ -67,6 +67,12 @@ export const env = {
   rpcInternalToken: resolveRpcInternalToken(),
   discordClientId: envStr("DISCORD_OAUTH2_CLIENT_ID", "dummy_discord_client_id"),
   discordClientSecret: envStr("DISCORD_OAUTH2_CLIENT_SECRET", "dummy_discord_client_secret"),
+  /** Public origin of this dashboard, e.g. https://dash.example.com. Set it to
+   *  return the user here after a bot invite instead of leaving them on
+   *  Discord's dead-end "authorized" page. `<origin>/oauth/guild` must be
+   *  registered as an OAuth2 redirect on the Discord application first, or
+   *  Discord rejects the invite with "Invalid OAuth2 redirect URL". */
+  dashboardPublicUrl: envStr("DASHBOARD_PUBLIC_URL", ""),
   /** NextAuth session/JWT encryption secret. */
   authSecret: resolveAuthSecret(),
   host: envStr("DASHBOARD_HOST", "0.0.0.0"),

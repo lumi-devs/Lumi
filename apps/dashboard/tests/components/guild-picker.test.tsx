@@ -1,9 +1,16 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { Session } from "next-auth";
 import type { GuildSummaryView } from "@lumi/contracts";
 import { GuildPicker } from "#/components/guild-picker";
+
+// GuildPicker refreshes the server list when the tab is returned to after an
+// invite; the router is not mounted in a bare render.
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 
 const ClientId = "client-123";
 

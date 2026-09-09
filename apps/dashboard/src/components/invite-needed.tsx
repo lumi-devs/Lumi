@@ -5,9 +5,10 @@ import { buttonVariants } from "#/components/ui/button-variants";
 import { Reveal } from "#/components/reveal";
 import { PulseIcon } from "#/components/pulse-icon";
 import { env } from "#/lib/env";
+import { InviteLink } from "#/components/invite-link";
+import { inviteReturnToFrom } from "#/lib/invite";
 
 export function InviteNeeded({ guildId }: { guildId: string }) {
-  const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${env.discordClientId}&permissions=8&scope=bot%20applications.commands&guild_id=${guildId}&disable_guild_select=true`;
   return (
     <main className="mx-auto flex w-full max-w-lg flex-col gap-3 px-4 pt-10 pb-24">
       <Link
@@ -33,14 +34,14 @@ export function InviteNeeded({ guildId }: { guildId: string }) {
               that the Dashboard module is enabled for this guild.
             </p>
           </div>
-          <a
-            href={inviteUrl}
-            target="_blank"
-            rel="noreferrer"
+          <InviteLink
+            clientId={env.discordClientId}
+            guildId={guildId}
+            returnTo={inviteReturnToFrom(env.dashboardPublicUrl)}
             className={buttonVariants({ variant: "primary", size: "lg" })}
           >
             Invite Lumi
-          </a>
+          </InviteLink>
           <p className="font-mono text-[13px] text-fg-subtle">{guildId}</p>
         </Card>
       </Reveal>

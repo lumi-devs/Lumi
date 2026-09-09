@@ -9,6 +9,13 @@ import type { Session } from "next-auth";
 // logic (landing vs. guild picker), not an integration test of NextAuth
 // itself.
 const authMock = vi.fn<() => Promise<Session | null>>();
+// GuildPicker refreshes the server list on returning to the tab after an
+// invite; the app router is not mounted in a bare render.
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 vi.mock("#/lib/auth", () => ({
   auth: authMock,
   signIn: vi.fn(),

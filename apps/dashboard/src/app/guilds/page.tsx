@@ -4,6 +4,7 @@ import { auth } from "#/lib/auth";
 import { env } from "#/lib/env";
 import { SiteHeader } from "#/components/layout/site-header";
 import { GuildPicker } from "#/components/guild-picker";
+import { inviteReturnToFrom } from "#/lib/invite";
 import { getGuildSummaries } from "#/lib/dashboard-fetch";
 
 export default async function GuildsPage() {
@@ -18,7 +19,12 @@ export default async function GuildsPage() {
   return (
     <>
       <SiteHeader session={session} />
-      <GuildPicker session={session} summaries={summaries} clientId={env.discordClientId} />
+      <GuildPicker
+        session={session}
+        summaries={summaries}
+        clientId={env.discordClientId}
+        returnTo={inviteReturnToFrom(env.dashboardPublicUrl)}
+      />
       <footer
         className="rise flex justify-center gap-3 py-6 text-[13px] text-fg-subtle"
         style={{ "--rise-delay": "140ms" } as React.CSSProperties}
