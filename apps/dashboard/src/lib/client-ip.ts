@@ -58,11 +58,6 @@ export function getClientIp(headers: Headers): string {
     return normalize(headers.get(configured)) ?? UnknownClientIp;
   }
 
-  for (const header of ["cf-connecting-ip", "x-real-ip"]) {
-    const value = normalize(headers.get(header));
-    if (value) return value;
-  }
-
   const forwarded = headers.get("x-forwarded-for");
   if (forwarded) {
     const hops = forwarded.split(",");

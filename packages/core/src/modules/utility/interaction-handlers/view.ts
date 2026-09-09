@@ -5,6 +5,7 @@ import {
 import { ApplyOptions } from "@sapphire/decorators";
 import { ButtonInteraction, MessageFlags } from "discord.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { handleMediaRequest } from "../lib/media-utils.js";
 
 @ApplyOptions<InteractionHandler.Options>({
@@ -22,6 +23,8 @@ export default class UserMediaViewHandler extends BaseInteractionHandler {
     interaction: ButtonInteraction,
     { userId, type }: { userId: string; type: string },
   ) {
+    if (!interaction.inGuild()) return;
+    if (!(await isModuleEnabled(interaction.guildId, "utility"))) return;
     await interaction.deferReply({
       flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     });

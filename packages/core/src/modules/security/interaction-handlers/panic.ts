@@ -10,6 +10,7 @@ import { fetchTyped } from "#lib/commands.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";
+import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
 import { PanicRevertId, buildPanicRevertedCard } from "../lib/panic-card.js";
 
@@ -26,6 +27,7 @@ export class PanicRevertInteractionHandler extends BaseInteractionHandler {
   public async run(interaction: ButtonInteraction) {
     if (!interaction.inGuild() || !interaction.guild) return;
     await interaction.deferUpdate();
+    if (!(await isModuleEnabled(interaction.guild.id, "security"))) return;
     const t = await fetchTyped(interaction);
 
     const hasPermit = await container.permitResolver.hasPermit({

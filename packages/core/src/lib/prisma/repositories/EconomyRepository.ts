@@ -394,4 +394,11 @@ export class EconomyRepository extends Repository {
     ]);
     return { accounts: accounts.count, transactions: transactions.count };
   }
+
+  public async purgeOldTransactions(date: Date): Promise<number> {
+    const { count } = await this.prisma.economyTransaction.deleteMany({
+      where: { createdAt: { lt: date } },
+    });
+    return count;
+  }
 }

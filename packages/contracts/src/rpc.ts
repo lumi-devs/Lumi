@@ -678,6 +678,63 @@ export type RpcResponseData<A extends RpcActionName> =
 
 export type RpcActionName = keyof RpcRequestPayloads;
 
+/** Every action `RpcResponsePayloads` declares a shape for - runtime mirror of
+ *  its keys, so callers can catch the worker returning `ok:true` with no
+ *  `data` instead of silently casting `undefined` to the declared shape.
+ *  The `satisfies` + exhaustiveness check below fails to compile if this list
+ *  drifts from `RpcResponsePayloads`. */
+const ResponseDataActions = [
+  "guild.dashboard.get",
+  "guild.summaries.list",
+  "guild.permits.list",
+  "guild.permits.create",
+  "guild.roles.list",
+  "guild.channels.list",
+  "guild.setup.run",
+  "guild.cases.list",
+  "guild.warnThresholds.list",
+  "guild.panic.get",
+  "guild.backups.list",
+  "guild.verificationPanel.get",
+  "guild.logClaims.list",
+  "guild.tempvc.generators.list",
+  "guild.tempvc.records.list",
+  "guild.reactionroles.menus.list",
+  "guild.audit.list",
+  "guild.history.list",
+  "guild.overrides.list",
+  "guild.blocklist.list",
+  "guild.modNotes.list",
+  "guild.appeals.verify",
+  "guild.appeals.list",
+  "guild.afk.list",
+  "guild.ignored.list",
+  "guild.moduleData.list",
+  "downloader.repo.modules",
+  "downloader.module.rollback",
+  "auth.whoami",
+  "global.gdpr.export",
+  "system.dashboard.get",
+  "system.audit.list",
+  "system.blocklist.list",
+  "system.shards.get",
+] as const satisfies readonly (keyof RpcResponsePayloads)[];
+
+type MissingResponseDataAction = Exclude<
+  keyof RpcResponsePayloads,
+  (typeof ResponseDataActions)[number]
+>;
+// If this errors, an action was added to RpcResponsePayloads without being
+// added to ResponseDataActions above.
+const _assertResponseDataActionsComplete: MissingResponseDataAction extends never
+  ? true
+  : never = true;
+void _assertResponseDataActionsComplete;
+
+export const RpcResponseDataActions: ReadonlySet<RpcActionName> = new Set(
+  ResponseDataActions,
+);
+
 export const RpcActions = {
   gdprDelete: "global.gdpr.delete",
   repoAdd: "downloader.repo.add",

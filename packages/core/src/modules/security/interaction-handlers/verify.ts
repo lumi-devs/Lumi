@@ -9,6 +9,7 @@ import { fetchTyped } from "#lib/commands.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { getDashboardPublicUrl } from "#lib/env.js";
+import { isModuleEnabled } from "#lib/utilities/misc.js";
 import {
   ephemeralCard,
   makeErrorCard,
@@ -44,6 +45,7 @@ export class VerifyInteractionHandler extends BaseInteractionHandler {
 
   public async run(interaction: ButtonInteraction, parsed: Parsed) {
     if (!interaction.inGuild() || !interaction.guild) return;
+    if (!(await isModuleEnabled(interaction.guild.id, "security"))) return;
 
     // "start" is a fresh ephemeral reply (the Verify button lives on a
     // shared public panel); "step" edits that per-user ephemeral challenge

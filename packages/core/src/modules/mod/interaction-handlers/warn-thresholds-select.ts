@@ -4,6 +4,7 @@ import {
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import type { StringSelectMenuInteraction } from "discord.js";
+import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { updateWarnThresholdsPanel } from "../lib/warn-thresholds-panel.js";
 
 @ApplyOptions<InteractionHandler.Options>({
@@ -19,7 +20,9 @@ export class WarnThresholdsSelectHandler extends InteractionHandler {
     interaction: StringSelectMenuInteraction,
     parsed: { customId: string },
   ): Promise<void> {
+    if (!interaction.inGuild()) return;
     await interaction.deferUpdate();
+    if (!(await isModuleEnabled(interaction.guildId, "mod"))) return;
     const parts = parsed.customId.replace("wt:", "").split(":");
     const subAction = parts[0];
     const value = interaction.values[0] ?? "";

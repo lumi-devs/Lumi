@@ -16,6 +16,7 @@ import { formatDuration } from "#utilities/time.js";
 import { makeListCard, ephemeralCard } from "#lib/utilities/cards.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { Emojis } from "#lib/utilities/assets.js";
+import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { getAfkMentions } from "../data/afk.js";
 
 import { fetchTyped } from "#lib/commands.js";
@@ -36,7 +37,9 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
     interaction: ButtonInteraction,
     { userId, page }: { userId: string; page: number },
   ) {
+    if (!interaction.inGuild()) return;
     this.checkSecurity(interaction, userId);
+    if (!(await isModuleEnabled(interaction.guildId, "afk"))) return;
 
     // Which defer to use depends only on the source message's own flags
     // (known synchronously), so defer before the async lookups below to
@@ -49,7 +52,7 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
       });
 
     const t = await fetchTyped(interaction);
-    const mentions = await getAfkMentions(interaction.guildId!, userId);
+    const mentions = await getAfkMentions(interaction.guildId, userId);
 
     const totalPages = Math.max(1, Math.ceil(mentions.length / PageSize));
     const safePage = Math.max(0, Math.min(page, totalPages - 1));
@@ -61,7 +64,7 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
       );
       const link = hyperlink(
         t("afk:jumpToMessage"),
-        messageLink(m.channelId, m.messageId, interaction.guildId!),
+        messageLink(m.channelId, m.messageId, interaction.guildId),
       );
       return t("afk:mentionLine", {
         user: userMention(m.authorId),

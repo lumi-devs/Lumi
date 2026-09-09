@@ -2,6 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import {
   parseRpcResponse,
+  RpcResponseDataActions,
   type RpcRequest,
   type RpcResponse,
   type RpcActionName,
@@ -118,6 +119,13 @@ export class RpcClient {
     }
 
     if (!response.ok) throw new RpcError("RPC_ERROR", action, response.error ?? "RPC error");
+    if (
+      RpcResponseDataActions.has(action) &&
+      (response.data === undefined || response.data === null)
+    ) {
+      this.log(`RPC ${action}: response ok but missing expected data`);
+      throw new RpcError("MALFORMED", action, `RPC ${action}: response missing expected data`);
+    }
     return response.data as RpcResponseData<A>;
   }
 

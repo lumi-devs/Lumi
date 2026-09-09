@@ -24,17 +24,29 @@ describe("getClientIp", () => {
     expect(new Set([a, b, c]).size).toBe(1);
   });
 
-  it("prefers a proxy-set client-IP header over X-Forwarded-For", () => {
+  it("ignores cf-connecting-ip/x-real-ip unless CLIENT_IP_HEADER names them", () => {
+    // These headers are attacker-settable like any other unless the operator
+    // opts in via CLIENT_IP_HEADER, so trusting them unconditionally would
+    // let a client hand itself a fresh rate-limit bucket per request.
+    expect(
+      getClientIp(
+        h({ "x-forwarded-for": "1.1.1.1, 203.0.113.7", "x-real-ip": "9.9.9.9" }),
+      ),
+    ).toBe("203.0.113.7");
+    expect(
+      getClientIp(
+        h({ "x-forwarded-for": "1.1.1.1, 203.0.113.7", "cf-connecting-ip": "9.9.9.9" }),
+      ),
+    ).toBe("203.0.113.7");
+  });
+
+  it("trusts x-real-ip only once declared via CLIENT_IP_HEADER", () => {
+    process.env["CLIENT_IP_HEADER"] = "x-real-ip";
     expect(
       getClientIp(
         h({ "x-forwarded-for": "1.1.1.1", "x-real-ip": "203.0.113.7" }),
       ),
     ).toBe("203.0.113.7");
-    expect(
-      getClientIp(
-        h({ "x-forwarded-for": "1.1.1.1", "cf-connecting-ip": "203.0.113.8" }),
-      ),
-    ).toBe("203.0.113.8");
   });
 
   it("uses only the operator-declared header when CLIENT_IP_HEADER is set", () => {
@@ -57,8 +69,12 @@ describe("getClientIp", () => {
   });
 
   it("strips ports so one client can't split its budget across them", () => {
-    expect(getClientIp(h({ "x-real-ip": "203.0.113.7:51234" }))).toBe("203.0.113.7");
-    expect(getClientIp(h({ "x-real-ip": "[2001:db8::1]:443" }))).toBe("2001:db8::1");
+    expect(getClientIp(h({ "x-forwarded-for": "203.0.113.7:51234" }))).toBe(
+      "203.0.113.7",
+    );
+    expect(getClientIp(h({ "x-forwarded-for": "[2001:db8::1]:443" }))).toBe(
+      "2001:db8::1",
+    );
   });
 
   it("falls back to a single shared bucket rather than a per-request one", () => {

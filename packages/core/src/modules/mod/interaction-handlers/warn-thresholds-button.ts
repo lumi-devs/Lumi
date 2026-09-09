@@ -9,6 +9,7 @@ import type { ButtonInteraction } from "discord.js";
 import { isWarnThresholdAction } from "@lumi/contracts";
 import { hasRequiredPermit } from "#lib/permissions/index.js";
 import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";
+import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { Emojis } from "#utilities/assets.js";
 import {
   removeThresholdRule,
@@ -31,8 +32,10 @@ export class WarnThresholdsButtonHandler extends InteractionHandler {
     interaction: ButtonInteraction,
     parsed: { customId: string },
   ): Promise<void> {
+    if (!interaction.inGuild()) return;
     await interaction.deferUpdate();
 
+    if (!(await isModuleEnabled(interaction.guildId, "mod"))) return;
     if (!(await hasRequiredPermit(interaction, "admin.config"))) {
       throw new UserError({
         identifier: "AccessDenied",
@@ -42,7 +45,7 @@ export class WarnThresholdsButtonHandler extends InteractionHandler {
 
     const parts = parsed.customId.replace("wt:", "").split(":");
     const subAction = parts[0];
-    const guildId = interaction.guildId!;
+    const guildId = interaction.guildId;
 
     let selectedCount = 3;
     let selectedAction = "mute";

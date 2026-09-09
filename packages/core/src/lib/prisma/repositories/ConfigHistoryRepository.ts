@@ -82,4 +82,11 @@ export class ConfigHistoryRepository extends Repository {
       where: { id },
     });
   }
+
+  public async purgeOldEntries(date: Date): Promise<number> {
+    const { count } = await this.prisma.moduleConfigHistory.deleteMany({
+      where: { createdAt: { lt: date } },
+    });
+    return count;
+  }
 }

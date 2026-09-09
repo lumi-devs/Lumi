@@ -15,6 +15,7 @@ import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
+import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { Emojis } from "#utilities/assets.js";
 import { makeSuccessCard } from "#utilities/cards.js";
 import { getVcRecord, removeVcRecord } from "#modules/tempvc/data.js";
@@ -58,6 +59,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
     { action, channelId }: { action: string; channelId: string },
   ): Promise<void> {
     if (!interaction.inGuild()) return;
+    if (!(await isModuleEnabled(interaction.guildId, "tempvc"))) return;
 
     // showModal() must be the interaction's first response, so "name"/"limit"
     // can't defer first; every other action defers immediately to beat

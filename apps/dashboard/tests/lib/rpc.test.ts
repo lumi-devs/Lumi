@@ -59,7 +59,7 @@ describe("RpcClient", () => {
 
   it("sends the internal token as a bearer header when one is configured", async () => {
     fetchMock.mockResolvedValue(
-      jsonResponse({ id: "unused", ok: true, data: null }),
+      jsonResponse({ id: "unused", ok: true, data: {} }),
     );
 
     const client = new RpcClient("http://worker:8091", "s3cret");
@@ -71,7 +71,7 @@ describe("RpcClient", () => {
 
   it("omits the bearer header when no token is configured", async () => {
     fetchMock.mockResolvedValue(
-      jsonResponse({ id: "unused", ok: true, data: null }),
+      jsonResponse({ id: "unused", ok: true, data: {} }),
     );
 
     const client = new RpcClient("http://worker:8091");
@@ -105,6 +105,28 @@ describe("RpcClient", () => {
     await expect(
       client.call("guild.dashboard.get", { guildId: "101" }),
     ).rejects.toThrow("Guild not found in bot cache");
+  });
+
+  it("rejects as malformed when ok: true carries no data for an action that expects it", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ id: "unused", ok: true, data: undefined }),
+    );
+
+    const client = new RpcClient("http://worker:8091");
+    await expect(
+      client.call("guild.dashboard.get", { guildId: "101" }),
+    ).rejects.toThrow("response missing expected data");
+  });
+
+  it("does not require data for actions with no declared response shape", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ id: "unused", ok: true, data: undefined }),
+    );
+
+    const client = new RpcClient("http://worker:8091");
+    await expect(
+      client.call("guild.module.toggle", { guildId: "101" }),
+    ).resolves.toBeUndefined();
   });
 
   it("rejects as malformed when ok: false carries no error message", async () => {

@@ -7,6 +7,7 @@ import type { GuildMember, ModalSubmitInteraction } from "discord.js";
 import { fetchTyped } from "#lib/commands.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
+import { isModuleEnabled } from "#lib/utilities/misc.js";
 import {
   ephemeralCard,
   makeErrorCard,
@@ -42,6 +43,7 @@ export class TempVcPanelModalHandler extends BaseInteractionHandler {
   ): Promise<void> {
     if (!interaction.inGuild()) return;
     await interaction.deferUpdate();
+    if (!(await isModuleEnabled(interaction.guildId, "tempvc"))) return;
 
     const member = interaction.member as GuildMember;
     const t = await fetchTyped(interaction);

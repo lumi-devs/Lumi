@@ -6,7 +6,7 @@ import { proxy, isRateLimitedAuthPath, config } from "#/proxy";
 // budgets carry across cases within a file.
 function request(path: string, ip: string): NextRequest {
   return new NextRequest(`https://dash.example.com${path}`, {
-    headers: { "x-real-ip": ip },
+    headers: { "x-forwarded-for": ip },
   });
 }
 

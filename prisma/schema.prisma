@@ -220,7 +220,6 @@ model Appeal {
 
   @@index([guildId, status, createdAt])
   @@index([guildId, createdAt])
-  @@index([guildId, status])
   @@index([userId])
   @@index([reviewedBy])
   @@map("appeals")
@@ -239,7 +238,6 @@ model ModNote {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@index([guildId, userId, createdAt])
-  @@index([guildId, userId])
   @@index([userId])
   @@index([authorId])
   @@map("mod_notes")
@@ -384,7 +382,6 @@ model ModuleConfigHistory {
 
   guild      Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
-  @@index([guildId, moduleName])
   @@index([guildId, createdAt])
   @@index([guildId, moduleName, createdAt])
   @@index([actorId])
