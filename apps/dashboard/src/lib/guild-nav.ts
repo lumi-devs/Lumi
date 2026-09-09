@@ -28,7 +28,16 @@ export interface GuildNavLink {
   icon: LucideIcon;
 }
 
+export type GuildNavGroupId =
+  | "discipline"
+  | "safety"
+  | "community"
+  | "monitoring"
+  | "configuration";
+
 export interface GuildNavGroup {
+  /** Stable across title rewordings — what callers key behaviour off. */
+  id?: GuildNavGroupId;
   title: string;
   links: GuildNavLink[];
   /** Renders a chevron toggle and lets the group collapse. Static groups (e.g. `/system`'s) omit this and always render expanded. */
@@ -58,7 +67,9 @@ export function guildManagementGroups(guildId: string): GuildNavGroup[] {
   const base = `/guild/${guildId}`;
   return [
     {
+      id: "discipline",
       title: "Discipline & Appeals",
+      defaultOpen: true,
       links: [
         { href: `${base}/moderation`, label: "Moderation Cases", icon: Gavel },
         { href: `${base}/moderation/thresholds`, label: "Warn Thresholds", icon: TriangleAlert },
@@ -68,21 +79,27 @@ export function guildManagementGroups(guildId: string): GuildNavGroup[] {
       ],
     },
     {
+      id: "safety",
       title: "Safety & Security",
+      defaultOpen: true,
       links: [
         { href: `${base}/security`, label: "Panic & Verification", icon: ShieldAlert },
         { href: `${base}/security/overrides`, label: "Overrides", icon: SlidersHorizontal },
       ],
     },
     {
+      id: "community",
       title: "Community & Engagement",
+      defaultOpen: true,
       links: [
         { href: `${base}/permits`, label: "Permits", icon: IdCard },
         { href: `${base}/config/roles`, label: "Reaction Roles", icon: Ticket },
       ],
     },
     {
+      id: "monitoring",
       title: "Monitoring & Diagnostics",
+      defaultOpen: true,
       links: [
         { href: `${base}/health`, label: "Health Dashboard", icon: HeartPulse },
         { href: `${base}/monitoring/activity`, label: "Activity & Trends", icon: TrendingUp },
@@ -90,7 +107,9 @@ export function guildManagementGroups(guildId: string): GuildNavGroup[] {
       ],
     },
     {
+      id: "configuration",
       title: "Configuration",
+      defaultOpen: false,
       links: [
         { href: `${base}/config/modules`, label: "Modules", icon: LayoutGrid },
         { href: `${base}/config/addons`, label: "Addons", icon: Package },

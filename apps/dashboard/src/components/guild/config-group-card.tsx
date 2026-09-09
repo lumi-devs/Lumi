@@ -8,33 +8,47 @@ import { ConfigFieldInput } from "#/components/guild/config-field-input";
 import { Card, CardHeader, CardTitle, CardDescription, CardBody } from "#/components/ui/card";
 import { Field, Label } from "#/components/ui/input";
 import { useServerAction } from "#/lib/use-server-action";
-import type { DashboardRoleView } from "#/lib/dashboard-data";
+import type { DashboardChannelView, DashboardRoleView } from "#/lib/dashboard-data";
 
-const SecurityModuleName = "security";
-
-/** Schema groups this card owns, in render order. Everything else about
- * the fields — keys, labels, descriptions, widgets — comes from the schema. */
-const JoinGateGroups = ["Join Gate", "Join Gate Filters", "Verification"];
-
-function groupsFor(configFields: ConfigField[]): { name: string; fields: ConfigField[] }[] {
-  return JoinGateGroups.flatMap((name) => {
+function groupsFor(
+  configFields: ConfigField[],
+  names: string[],
+): { name: string; fields: ConfigField[] }[] {
+  return names.flatMap((name) => {
     const fields = configFields.filter((f) => f.group === name);
     return fields.length > 0 ? [{ name, fields }] : [];
   });
 }
 
-export function JoinGateCard({
+/**
+ * Renders the named schema groups of one module as an editable card. Only the
+ * group names are chosen by the caller — keys, labels, descriptions, widgets
+ * and ordering all come from the module's own schema, so a field added in core
+ * shows up here without a dashboard change.
+ */
+export function ConfigGroupCard({
   guildId,
+  moduleName,
+  title,
+  description,
+  groups: groupNames,
   config,
   configFields,
   roles = [],
+  channels = [],
 }: {
   guildId: string;
+  moduleName: string;
+  title: string;
+  description?: string;
+  /** Schema group names to render, in this order. Empty groups are skipped. */
+  groups: string[];
   config: Record<string, unknown>;
   configFields: ConfigField[];
   roles?: DashboardRoleView[];
+  channels?: DashboardChannelView[];
 }) {
-  const groups = groupsFor(configFields);
+  const groups = groupsFor(configFields, groupNames);
   const editableKeys = groups.flatMap((g) => g.fields.map((f) => f.key));
   const baseline = Object.fromEntries(editableKeys.map((k) => [k, config[k]]));
   const [form, setForm] = useState<Record<string, unknown>>(baseline);
@@ -53,34 +67,38 @@ export function JoinGateCard({
         .map((k) => [k, form[k]]),
     );
     run(async () => {
-      const res = await setManyGuildConfigFields(
-        guildId,
-        SecurityModuleName,
-        changed,
-      );
+      const res = await setManyGuildConfigFields(guildId, moduleName, changed);
       if (!res.ok) setError(res.error ?? "Save failed");
     });
   }
+
+  if (groups.length === 0) return null;
+
+  // A single group already has the card title above it; a second heading
+  // repeating it reads as an empty row.
+  const showHeadings = groups.length > 1;
 
   return (
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Join gate &amp; verification</CardTitle>
-          <CardDescription>
-            Screen new members for raids and throwaway accounts, and require the
-            verification panel before granting access.
-          </CardDescription>
+          <CardTitle>{title}</CardTitle>
+          {description ? <CardDescription>{description}</CardDescription> : null}
         </CardHeader>
 
         {groups.map((group, index) => {
           const toggles = group.fields.filter((f) => f.type === FieldType.Boolean);
           const inputs = group.fields.filter((f) => f.type !== FieldType.Boolean);
           return (
-            <div key={group.name} className={index === 0 ? undefined : "border-t border-border"}>
-              <h4 className="border-b border-border bg-bg-subtle px-4 py-1.5 font-display text-[13px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
-                {group.name}
-              </h4>
+            <div
+              key={group.name}
+              className={index === 0 ? undefined : "border-t border-border"}
+            >
+              {showHeadings ? (
+                <h4 className="font-display border-b border-border bg-bg-subtle px-4 py-1.5 text-[13px] font-semibold tracking-[0.09em] text-fg-subtle uppercase">
+                  {group.name}
+                </h4>
+              ) : null}
               {toggles.length > 0 ? (
                 <CardBody className="grid grid-cols-1 gap-3 bg-bg-subtle sm:grid-cols-2">
                   {toggles.map((field) => (
@@ -103,26 +121,40 @@ export function JoinGateCard({
                         value={form[field.key]}
                         onChange={(value) => set(field.key, value)}
                         roles={roles}
+                        channels={channels}
                       />
                     </div>
                   ))}
                 </CardBody>
               ) : null}
               {inputs.length > 0 ? (
-                <CardBody className="grid grid-cols-1 gap-4 border-t border-border sm:grid-cols-3">
+                <CardBody
+                  className={
+                    toggles.length > 0
+                      ? "grid grid-cols-1 gap-4 border-t border-border sm:grid-cols-3"
+                      : "grid grid-cols-1 gap-4 sm:grid-cols-3"
+                  }
+                >
                   {inputs.map((field) => (
                     <Field
                       key={field.key}
                       label={field.label}
                       htmlFor={field.key}
                       hint={field.description}
-                      className={field.type === FieldType.Enum ? "sm:col-span-3" : undefined}
+                      className={
+                        field.type === FieldType.Enum ||
+                        field.type === FieldType.MultiChannel ||
+                        field.type === FieldType.MultiRole
+                          ? "sm:col-span-3"
+                          : undefined
+                      }
                     >
                       <ConfigFieldInput
                         field={field}
                         value={form[field.key]}
                         onChange={(value) => set(field.key, value)}
                         roles={roles}
+                        channels={channels}
                       />
                     </Field>
                   ))}

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { PlugZap } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import {
@@ -11,15 +12,20 @@ import { PanicModeConsole } from "#/components/guild/panic-mode-console";
 import { VerificationPanelCard } from "#/components/guild/verification-panel-card";
 import { VerificationPreviewPlayground } from "#/components/guild/verification-preview-playground";
 import { AntiNukeCard } from "#/components/guild/anti-nuke-card";
-import { JoinGateCard } from "#/components/guild/join-gate-card";
+import { ConfigGroupCard } from "#/components/guild/config-group-card";
 import { BackupsCard } from "#/components/guild/backups-card";
 import { ModuleMasterToggle } from "#/components/guild/module-master-toggle";
 import { Card, CardBody, CardDescription, CardHeader, CardTitle } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
 import { PageHeader } from "#/components/ui/page-header";
+import { SectionTabs, type PageSection } from "#/components/ui/section-tabs";
 import { isTextChannel } from "#/lib/channel-types";
+import { sectionsOf } from "#/lib/config-sections";
+import { SecurityWidgets } from "#/lib/security-widgets";
 import type { GuildBackupView } from "@lumi/contracts";
 import type { PanicStateView, VerificationPanelView } from "#/lib/dashboard-data";
+
+const SecurityModuleName = "security";
 
 export default async function SecurityPage({
   params,
@@ -31,7 +37,9 @@ export default async function SecurityPage({
 
   const dashboard = await getGuildDashboard(guildId, session.userId);
   const textChannels = dashboard.channels.filter((c) => isTextChannel(c.type));
-  const securityModule = dashboard.modules.find((m) => m.name === "security");
+  const securityModule = dashboard.modules.find((m) => m.name === SecurityModuleName);
+  const configFields = securityModule?.configFields ?? [];
+  const config = securityModule?.config ?? {};
 
   let panic: PanicStateView | null = null;
   let panicFailure: string | null = null;
@@ -61,27 +69,13 @@ export default async function SecurityPage({
     ? dashboard.members.find((m) => m.id === actorId)
     : undefined;
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="rise" style={{ "--rise-delay": "0ms" } as React.CSSProperties}>
-        <PageHeader
-          title="Security"
-          description="Anti-nuke, the join gate, panic mode and automatic backups — the tools that stop a raid before it finishes."
-          actions={
-            securityModule ? (
-              <ModuleMasterToggle
-                guildId={guildId}
-                moduleName="security"
-                enabled={securityModule.enabled}
-                toggle={toggleGuildModule}
-              />
-            ) : undefined
-          }
-        />
-      </div>
-
-      <div className="rise" style={{ "--rise-delay": "70ms" } as React.CSSProperties}>
-        {panic === null ? (
+  // Widgets are the only thing the dashboard chooses. Which sections exist,
+  // what they are called, which groups they hold and in what order all come
+  // from the security module's own `configSchema`.
+  const widgets: Record<string, { before?: ReactNode; after?: ReactNode }> = {
+    [SecurityWidgets.panic]: {
+      before:
+        panic === null ? (
           <Card>
             <CardHeader>
               <CardTitle>Panic mode</CardTitle>
@@ -101,72 +95,122 @@ export default async function SecurityPage({
             channels={textChannels}
             actorName={actor ? actor.displayName || actor.username : undefined}
           />
-        )}
-      </div>
-
-      {securityModule ? (
-        <div className="rise" style={{ "--rise-delay": "105ms" } as React.CSSProperties}>
-          <AntiNukeCard
-            guildId={guildId}
-            config={securityModule.config}
-            configFields={securityModule.configFields}
-            roles={dashboard.roles}
-            channels={dashboard.channels}
-          />
-        </div>
-      ) : null}
-
-      {securityModule ? (
-        <div className="rise" style={{ "--rise-delay": "140ms" } as React.CSSProperties}>
-          <JoinGateCard
-            guildId={guildId}
-            config={securityModule.config}
-            configFields={securityModule.configFields}
-            roles={dashboard.roles}
-          />
-        </div>
-      ) : null}
-
-      <div className="rise" style={{ "--rise-delay": "175ms" } as React.CSSProperties}>
-        {panelFailure !== null ? (
+        ),
+    },
+    [SecurityWidgets.joinGate]: {
+      after: (
+        <>
+          {panelFailure !== null ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Verification panel</CardTitle>
+              </CardHeader>
+              <EmptyState
+                compact
+                icon={PlugZap}
+                title="The panel record couldn't be loaded"
+                description="Check that the bot is online and connected to the message broker, then reload this page."
+                footnote={panelFailure}
+              />
+            </Card>
+          ) : (
+            <VerificationPanelCard
+              guildId={guildId}
+              panel={panel}
+              channels={textChannels}
+            />
+          )}
           <Card>
             <CardHeader>
-              <CardTitle>Verification panel</CardTitle>
+              <CardTitle>See it in action — edit it live</CardTitle>
+              <CardDescription>
+                Draft the verification welcome copy and watch the panel members
+                see update instantly.
+              </CardDescription>
             </CardHeader>
+            <CardBody>
+              <VerificationPreviewPlayground />
+            </CardBody>
+          </Card>
+        </>
+      ),
+    },
+    [SecurityWidgets.backups]: {
+      after: <BackupsCard guildId={guildId} backups={backups} />,
+    },
+  };
+
+  const sections: PageSection[] = sectionsOf(configFields).map((section) => {
+    const extras = widgets[section.name];
+    // The nuke matrix renders its whole section itself — a limit-per-action
+    // grid reads far better than the flat field list the generic card gives.
+    const custom = section.name === SecurityWidgets.antiNuke;
+    return {
+      id: section.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      label: section.name,
+      count: section.fieldCount,
+      alert: section.name === SecurityWidgets.panic && Boolean(panic?.active),
+      content: (
+        <>
+          {extras?.before}
+          {custom ? (
+            <AntiNukeCard
+              guildId={guildId}
+              config={config}
+              configFields={configFields}
+              roles={dashboard.roles}
+              channels={dashboard.channels}
+            />
+          ) : (
+            <ConfigGroupCard
+              guildId={guildId}
+              moduleName={SecurityModuleName}
+              title={`${section.name} settings`}
+              groups={section.groups.flatMap((g) => (g.name ? [g.name] : []))}
+              config={config}
+              configFields={configFields}
+              roles={dashboard.roles}
+              channels={dashboard.channels}
+            />
+          )}
+          {extras?.after}
+        </>
+      ),
+    };
+  });
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="rise" style={{ "--rise-delay": "0ms" } as React.CSSProperties}>
+        <PageHeader
+          title="Security"
+          description="Anti-nuke, the join gate, panic mode and automatic backups — the tools that stop a raid before it finishes."
+          actions={
+            securityModule ? (
+              <ModuleMasterToggle
+                guildId={guildId}
+                moduleName={SecurityModuleName}
+                enabled={securityModule.enabled}
+                toggle={toggleGuildModule}
+              />
+            ) : undefined
+          }
+        />
+      </div>
+
+      <div className="rise" style={{ "--rise-delay": "70ms" } as React.CSSProperties}>
+        {sections.length > 0 ? (
+          <SectionTabs sections={sections} ariaLabel="Security sections" />
+        ) : (
+          <Card>
             <EmptyState
               compact
               icon={PlugZap}
-              title="The panel record couldn't be loaded"
-              description="Check that the bot is online and connected to the message broker, then reload this page."
-              footnote={panelFailure}
+              title="The security module isn't loaded"
+              description="Lumi didn't report a security module for this server, so its settings can't be shown. Check that the module is installed and the bot is online."
             />
           </Card>
-        ) : (
-          <VerificationPanelCard
-            guildId={guildId}
-            panel={panel}
-            channels={textChannels}
-          />
         )}
-      </div>
-
-      <div className="rise" style={{ "--rise-delay": "192ms" } as React.CSSProperties}>
-        <Card>
-          <CardHeader>
-            <CardTitle>See it in action — edit it live</CardTitle>
-            <CardDescription>
-              Draft the verification welcome copy and watch the panel members
-              see update instantly.
-            </CardDescription>
-          </CardHeader>
-          <CardBody>
-            <VerificationPreviewPlayground />
-          </CardBody>
-        </Card>
-      </div>
-
-      <div className="rise" style={{ "--rise-delay": "210ms" } as React.CSSProperties}>
-        <BackupsCard guildId={guildId} backups={backups} />
       </div>
     </div>
   );

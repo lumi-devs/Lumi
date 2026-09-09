@@ -20,8 +20,8 @@ import type {
 const SecurityModuleName = "security";
 const EnabledKey = "antinuke_enabled";
 
-/** Non-matrix anti-nuke fields rendered above the per-kind table. */
-const ExtraKeys = ["window_seconds", "trusted_role_ids", "log_channel_id"];
+const LimitsGroup = "Nuke Limits";
+const SettingsGroup = "Anti-Nuke";
 
 interface NukeRow {
   limit: ConfigField;
@@ -39,7 +39,7 @@ function responseKeyFor(limitKey: string): string {
 function nukeRowsFor(configFields: ConfigField[]): NukeRow[] {
   const byKey = new Map(configFields.map((f) => [f.key, f]));
   return configFields
-    .filter((f) => f.key.startsWith("max_"))
+    .filter((f) => f.group === LimitsGroup && f.key.startsWith("max_"))
     .map((limit) => ({
       limit,
       response: byKey.get(responseKeyFor(limit.key)) ?? null,
@@ -47,12 +47,12 @@ function nukeRowsFor(configFields: ConfigField[]): NukeRow[] {
     }));
 }
 
+/** Everything in the anti-nuke group except the master toggle, which the card
+ * header owns. Derived so a setting added to the group in core shows up here. */
 function extrasFor(configFields: ConfigField[]): ConfigField[] {
-  const byKey = new Map(configFields.map((f) => [f.key, f]));
-  return ExtraKeys.flatMap((key) => {
-    const field = byKey.get(key);
-    return field ? [field] : [];
-  });
+  return configFields.filter(
+    (f) => f.group === SettingsGroup && f.key !== EnabledKey,
+  );
 }
 
 export function AntiNukeCard({

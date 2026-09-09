@@ -9,7 +9,7 @@ vi.mock("#/actions/guild-actions", () => ({
   setManyGuildConfigFields,
 }));
 
-const { JoinGateCard } = await import("#/components/guild/join-gate-card");
+const { ConfigGroupCard } = await import("#/components/guild/config-group-card");
 
 const GateActions = ["log", "kick", "timeout", "quarantine"];
 
@@ -90,7 +90,10 @@ const roles = [
 
 function renderCard() {
   return render(
-    <JoinGateCard
+    <ConfigGroupCard
+      moduleName="security"
+      title="Join gate & verification"
+      groups={["Join Gate", "Join Gate Filters", "Verification"]}
       guildId="guild-1"
       config={config}
       configFields={configFields}
@@ -99,7 +102,7 @@ function renderCard() {
   );
 }
 
-describe("JoinGateCard (schema-driven filter matrix)", () => {
+describe("ConfigGroupCard (schema-driven group rendering)", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("renders the full join-gate, filter, and verification matrix from the schema", () => {
