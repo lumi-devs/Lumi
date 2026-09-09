@@ -4,7 +4,6 @@ import { requireGuild } from "#/lib/auth-guards";
 import { getGuildCases, getGuildDashboard } from "#/lib/dashboard-fetch";
 import { exportGuildCases } from "#/actions/guild-export-actions";
 import { ModerationCasesTable } from "#/components/guild/moderation-cases-table";
-import { ModerationPreviewCard } from "#/components/guild/moderation-preview-card";
 import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
 import { Alert } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
@@ -238,20 +237,6 @@ export default async function ModerationPage({
               />
             </CardFooter>
           ) : null}
-        </Card>
-      </div>
-      <div className="rise" style={{ "--rise-delay": "140ms" } as React.CSSProperties}>
-        <Card>
-          <CardHeader>
-            <CardTitle>See it in action — edit it live</CardTitle>
-            <CardDescription>
-              A sample case card, shaped like the bot&apos;s real output. Tweak
-              the fields and watch it update instantly.
-            </CardDescription>
-          </CardHeader>
-          <div className="p-4">
-            <ModerationPreviewCard />
-          </div>
         </Card>
       </div>
     </div>

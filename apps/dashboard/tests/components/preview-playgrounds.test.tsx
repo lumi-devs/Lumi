@@ -7,7 +7,6 @@ import {
 } from "#/components/guild/tempvc-preview-playground";
 import { AfkPreviewPlayground } from "#/components/guild/afk-preview-playground";
 import { VerificationPreviewPlayground } from "#/components/guild/verification-preview-playground";
-import { ModerationPreviewCard } from "#/components/guild/moderation-preview-card";
 import { ReactionRolesPreviewPlayground } from "#/components/guild/reactionroles-preview-playground";
 
 describe("resolvePreviewName", () => {
@@ -105,18 +104,5 @@ describe("ReactionRolesPreviewPlayground", () => {
         "React to this message to claim a role. Remove your reaction to give it back.",
       ),
     ).toBeInTheDocument();
-  });
-});
-describe("ModerationPreviewCard", () => {
-  it("edits to the reason update the sample case card instantly", () => {
-    render(<ModerationPreviewCard />);
-    expect(screen.getByText("Case #1042")).toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText("Reason"), {
-      target: { value: "Raiding the welcome channel" },
-    });
-    expect(
-      screen.getAllByText("Raiding the welcome channel").length,
-    ).toBeGreaterThan(0);
   });
 });

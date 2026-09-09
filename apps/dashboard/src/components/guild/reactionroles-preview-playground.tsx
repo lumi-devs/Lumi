@@ -7,7 +7,7 @@ import { Button } from "#/components/ui/button";
 import {
   DiscordMessagePreview,
   type PreviewButton,
-  type PreviewEmbed,
+  type PreviewContainer,
 } from "#/components/guild/discord-message-preview";
 
 type PlaygroundMode = "buttons" | "select" | "reactions";
@@ -61,12 +61,22 @@ export function ReactionRolesPreviewPlayground() {
       : "-# This is what members see once the menu is posted.",
   ];
 
-  const embed: PreviewEmbed = {
+  // Mirrors buildContainer() in the bot: heading, subtitle, divider, body,
+  // subtext footer, then the action row - not an embed.
+  const container: PreviewContainer = {
     accentColor: "#5865f2",
-    title: `🎭 ${title.trim() || "Role menu"}`,
-    body,
-    footer:
-      mode === "buttons" ? "Buttons · Up to 2" : mode === "select" ? "Dropdown · Up to 2" : "Reactions",
+    components: [
+      { kind: "text", content: `## 🎭 ${title.trim() || "Role menu"}` },
+      { kind: "separator", divider: true },
+      ...body
+        .filter((line) => line.trim().length > 0)
+        .map((content) => ({ kind: "text" as const, content })),
+      { kind: "separator", divider: false },
+      {
+        kind: "text",
+        content: `-# ${mode === "buttons" ? "Buttons · Up to 2" : mode === "select" ? "Dropdown · Up to 2" : "Reactions"}`,
+      },
+    ],
   };
 
   const buttons: PreviewButton[] | undefined =
@@ -167,7 +177,7 @@ export function ReactionRolesPreviewPlayground() {
         <DiscordMessagePreview
           channelName="role-menu"
           channelTopic="Claim your roles"
-          embed={embed}
+          container={container}
           selectPlaceholder={mode === "select" ? "Choose your roles…" : undefined}
           buttons={buttons}
         />

@@ -134,14 +134,23 @@ export function MarkdownLite({ text }: { text: string }) {
   return (
     <>
       {text.split("\n").map((line, i) => {
-        if (line.startsWith("## ")) {
+        // Discord sizes its headings well above body text; the bot's card
+        // titles are `## `, so rendering them at body size understates them.
+        const heading = line.startsWith("### ")
+          ? { size: "text-[16px]", skip: 4 }
+          : line.startsWith("## ")
+            ? { size: "text-[20px]", skip: 3 }
+            : line.startsWith("# ")
+              ? { size: "text-[24px]", skip: 2 }
+              : null;
+        if (heading) {
           return (
             <span
               key={i}
-              className="block text-[15px] font-semibold"
+              className={cn("mt-1 block font-bold leading-tight", heading.size)}
               style={{ color: DiscordHeading }}
             >
-              {renderInlineLine(line.slice(3), i)}
+              {renderInlineLine(line.slice(heading.skip), i)}
               {i < text.split("\n").length - 1 ? <br /> : null}
             </span>
           );
@@ -423,6 +432,7 @@ export function DiscordMessagePreview({
   avatarColor,
   body,
   embed,
+  container,
   selectPlaceholder,
   buttons,
 }: {
@@ -435,6 +445,8 @@ export function DiscordMessagePreview({
   avatarColor?: string;
   body?: string;
   embed?: PreviewEmbed;
+  /** A Components V2 container - what the bot actually sends. */
+  container?: PreviewContainer;
   selectPlaceholder?: string;
   buttons?: PreviewButton[];
 }) {
@@ -453,7 +465,23 @@ export function DiscordMessagePreview({
           body={<MarkdownLite text={body} />}
         />
       ) : null}
-      {embed ? (
+      {container ? (
+        <div className={embedIndent}>
+          {/* V2 action rows live inside the container, not beneath it. */}
+          <DiscordContainerCard
+            container={{
+              ...container,
+              components: [
+                ...container.components,
+                ...(selectPlaceholder
+                  ? [{ kind: "select" as const, placeholder: selectPlaceholder }]
+                  : []),
+                ...(buttons ? [{ kind: "buttons" as const, buttons }] : []),
+              ],
+            }}
+          />
+        </div>
+      ) : embed ? (
         <div className={embedIndent}>
           <DiscordEmbedCard embed={embed} />
           {selectPlaceholder ? <DiscordSelectMenu placeholder={selectPlaceholder} /> : null}
@@ -474,5 +502,62 @@ export function DiscordMessagePreview({
         </>
       )}
     </DiscordPreviewShell>
+  );
+}
+
+/**
+ * One component inside a Components V2 container, mirroring what
+ * `buildContainer` in the bot's `lib/utilities/cards.ts` actually assembles.
+ */
+export type PreviewV2Component =
+  | { kind: "text"; content: string }
+  | { kind: "separator"; divider?: boolean }
+  | { kind: "buttons"; buttons: PreviewButton[] }
+  | { kind: "select"; placeholder: string };
+
+export interface PreviewContainer {
+  accentColor?: string;
+  components: PreviewV2Component[];
+}
+
+/**
+ * A Components V2 container, which is what the bot sends — not an embed.
+ * The visible differences matter: `##` is a real heading rather than an embed
+ * title, `-#` is subtext, separators are drawn rules, and the accent is a
+ * stripe on a full-width container rather than an embed's left bar.
+ */
+export function DiscordContainerCard({ container }: { container: PreviewContainer }) {
+  return (
+    <div
+      className="my-1 flex max-w-[520px] overflow-hidden rounded-lg border"
+      style={{ backgroundColor: DiscordCardBg, borderColor: "rgba(255,255,255,0.06)" }}
+    >
+      <div
+        className="w-1 shrink-0"
+        style={{ backgroundColor: container.accentColor ?? DiscordBlurple }}
+      />
+      <div className="flex min-w-0 flex-1 flex-col gap-2 p-3">
+        {container.components.map((component, i) => {
+          if (component.kind === "separator") {
+            return component.divider === false ? (
+              <div key={i} className="h-1" />
+            ) : (
+              <hr key={i} className="border-0 border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }} />
+            );
+          }
+          if (component.kind === "buttons") {
+            return <DiscordButtonRow key={i} buttons={component.buttons} />;
+          }
+          if (component.kind === "select") {
+            return <DiscordSelectMenu key={i} placeholder={component.placeholder} />;
+          }
+          return (
+            <p key={i} className="text-[14px] leading-[1.4]" style={{ color: DiscordText }}>
+              <MarkdownLite text={component.content} />
+            </p>
+          );
+        })}
+      </div>
+    </div>
   );
 }
