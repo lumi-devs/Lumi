@@ -14,7 +14,8 @@ code, the code wins — these files can drift, `AGENTS.md` and the source can't.
 - **`conventions/`** — repo-wide standards: TypeScript/naming style, testing
   patterns, git/commit conventions, the i18n key-parity system.
 - **`domains/`** — specific subsystems: database access patterns, the permit
-  vocabulary, UI component builders, autocomplete wiring.
+  vocabulary, UI component builders, autocomplete wiring, and how dashboard
+  pages derive their layout from module config schemas.
 - **`workflows/`** — step-by-step recipes for common tasks: adding a module,
   a command, an RPC action, a dashboard page. Each one works through a real
   existing example rather than a hypothetical.

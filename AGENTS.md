@@ -119,6 +119,14 @@ Full reference: [`dashboard.md`](apps/docs/src/content/docs/dashboard.md). Syste
 - **Panels**: admin-facing panel UI (hub, config, module subpanels) uses the panel kit
   (`#utilities/panels.js`) builders (`settingRow`, `tabRow`, `confirmRow`, `backRow`,
   `createPaginationRow`, ...) rather than hand-rolled section/button layouts.
+- **Dashboard settings pages**: a page never names a module's settings, groups or tabs
+  itself — it derives them from the module's `configSchema` (`section`/`group` on each
+  field) via `sectionsOf()` in `apps/dashboard/src/lib/config-sections.ts`, and renders
+  them with `SectionTabs` + `ConfigGroupCard`. A field added in core must appear on the
+  dashboard with no dashboard change. Where a non-schema widget has to be placed by hand
+  (a console, a record list), the name it matches is covered by a test against the core
+  source. Full reference:
+  [`agents/domains/dashboard-design.md`](agents/domains/dashboard-design.md).
 - **Permit nodes**: the canonical vocabulary of dot-notation permit strings (`mod.ban`,
   `admin.*`, ...) lives in `packages/core/src/lib/permissions/permit-nodes.ts`, sourced from
   every command's actual `requiredPermit`. Register a new node there when adding a
