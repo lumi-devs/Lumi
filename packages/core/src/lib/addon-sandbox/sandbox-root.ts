@@ -1,4 +1,5 @@
 import path from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { ModuleRoot } from "#lib/downloader/resolver.js";
 
@@ -29,6 +30,7 @@ function shimFile(subpath: string): string {
 // so `#lib/*` and `#database/*` do not resolve from addon code. Targets point at
 // generated shims because an exports target may not escape its own package.
 export async function ensureSandboxRoot(): Promise<void> {
+  await mkdir(path.join(ModuleRoot, ShimDir), { recursive: true });
   const writes: Promise<unknown>[] = [];
   const exports: Record<string, string> = {};
 
@@ -36,7 +38,7 @@ export async function ensureSandboxRoot(): Promise<void> {
     const shim = shimFile(subpath);
     exports[subpath] = `./${ShimDir}/${shim}`;
     writes.push(
-      Bun.write(
+      writeFile(
         path.join(ModuleRoot, ShimDir, shim),
         `export * from ${JSON.stringify(path.join(SdkDir, file))};\n`,
       ),
@@ -44,7 +46,7 @@ export async function ensureSandboxRoot(): Promise<void> {
   }
 
   writes.push(
-    Bun.write(
+    writeFile(
       path.join(ModuleRoot, "package.json"),
       `${JSON.stringify({ name: "lumi", private: true, type: "module", exports }, null, 2)}\n`,
     ),

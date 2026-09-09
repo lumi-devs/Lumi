@@ -1,36 +1,56 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeAll } from "vitest";
+import { ensureSandboxRoot } from "./sandbox-root.js";
 
 /**
- * The addon SDK is reachable exactly the way addon code reaches it: as a bare
- * `"lumi"` / `"lumi/*"` specifier, from a file where the Downloader actually
- * puts addons. What matters as much as the resolutions that succeed are the
- * ones that must fail — an addon process resolves `lumi` and nothing else.
+ * Resolution is the boundary. An addon file's nearest package.json is the one
+ * `ensureSandboxRoot` writes, which maps `lumi` and nothing else, so what must
+ * be asserted is both what resolves and what does not.
  */
 describe("lumi addon SDK resolution", () => {
-  // This file lives at packages/core/src/lib/addon-sandbox/; five levels up
-  // from its directory is the repo root.
   const repoRoot = new URL("../../../../../", import.meta.url);
   const fakeAddonFile = new URL(
     "data/3rd-party-modules/some-repo/some-addon/index.ts",
     repoRoot,
   ).href;
 
-  it("resolves the top-level lumi specifier to the sandbox SDK", async () => {
+  beforeAll(async () => {
+    await ensureSandboxRoot();
+  });
+
+  it("resolves the top-level lumi specifier through the sandbox root", async () => {
     const resolved = await import.meta.resolve("lumi", fakeAddonFile);
-    expect(resolved).toContain("addon-sandbox/sdk/index.ts");
+    expect(resolved).toContain("data/3rd-party-modules/.lumi-sdk/index.ts");
   });
 
   it.each([
-    "lumi/commands",
-    "lumi/config",
-    "lumi/discord",
-    "lumi/kv",
-    "lumi/permissions",
-    "lumi/ui",
-    "lumi/utils",
-  ])("resolves the %s subpath", async (specifier) => {
-    const resolved = await import.meta.resolve(specifier, fakeAddonFile);
-    expect(resolved).toContain(`addon-sandbox/sdk/${specifier.split("/")[1]}.ts`);
+    "commands",
+    "config",
+    "discord",
+    "interactions",
+    "kv",
+    "permissions",
+    "redis",
+    "scheduling",
+    "ui",
+    "utils",
+  ])("resolves lumi/%s", async (subpath) => {
+    const resolved = await import.meta.resolve(`lumi/${subpath}`, fakeAddonFile);
+    expect(resolved).toContain(`.lumi-sdk/${subpath}.ts`);
+  });
+
+  it.each([
+    "#lib/env.js",
+    "#lib/commands.js",
+    "#database/redis.js",
+    "#utilities/misc.js",
+    "#modules/mod/index.js",
+    "#root/main.js",
+  ])("refuses to resolve the internal specifier %s", (specifier) => {
+    expect(() => import.meta.resolve(specifier, fakeAddonFile)).toThrow();
+  });
+
+  it("refuses a lumi subpath that is not in the map", () => {
+    expect(() => import.meta.resolve("lumi/internals", fakeAddonFile)).toThrow();
   });
 
   it("exposes the module fundamentals from the top-level import", async () => {
