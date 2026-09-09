@@ -323,6 +323,31 @@ CREATE TABLE "tempvc_records" (
     CONSTRAINT "tempvc_records_pkey" PRIMARY KEY ("guild_id","channel_id")
 );
 
+-- CreateTable
+CREATE TABLE "economy_accounts" (
+    "guild_id" VARCHAR(20) NOT NULL,
+    "user_id" VARCHAR(20) NOT NULL,
+    "wallet" INTEGER NOT NULL DEFAULT 0,
+    "bank" INTEGER NOT NULL DEFAULT 0,
+    "last_payday_at" TIMESTAMP(3),
+
+    CONSTRAINT "economy_accounts_pkey" PRIMARY KEY ("guild_id","user_id")
+);
+
+-- CreateTable
+CREATE TABLE "economy_transactions" (
+    "id" SERIAL NOT NULL,
+    "guild_id" VARCHAR(20) NOT NULL,
+    "user_id" VARCHAR(20) NOT NULL,
+    "kind" VARCHAR(32) NOT NULL,
+    "amount" INTEGER NOT NULL,
+    "balance_after" INTEGER NOT NULL,
+    "reason" VARCHAR(500),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "economy_transactions_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE INDEX "guild_module_state_module_name_idx" ON "guild_module_state"("module_name");
 
@@ -381,9 +406,6 @@ CREATE INDEX "appeals_guild_id_status_created_at_idx" ON "appeals"("guild_id", "
 CREATE INDEX "appeals_guild_id_created_at_idx" ON "appeals"("guild_id", "created_at");
 
 -- CreateIndex
-CREATE INDEX "appeals_guild_id_status_idx" ON "appeals"("guild_id", "status");
-
--- CreateIndex
 CREATE INDEX "appeals_user_id_idx" ON "appeals"("user_id");
 
 -- CreateIndex
@@ -391,9 +413,6 @@ CREATE INDEX "appeals_reviewed_by_idx" ON "appeals"("reviewed_by");
 
 -- CreateIndex
 CREATE INDEX "mod_notes_guild_id_user_id_created_at_idx" ON "mod_notes"("guild_id", "user_id", "created_at");
-
--- CreateIndex
-CREATE INDEX "mod_notes_guild_id_user_id_idx" ON "mod_notes"("guild_id", "user_id");
 
 -- CreateIndex
 CREATE INDEX "mod_notes_user_id_idx" ON "mod_notes"("user_id");
@@ -447,9 +466,6 @@ CREATE INDEX "module_dynamic_data_module_name_key_idx" ON "module_dynamic_data"(
 CREATE INDEX "module_dynamic_data_target_id_idx" ON "module_dynamic_data"("target_id");
 
 -- CreateIndex
-CREATE INDEX "module_config_history_guild_id_module_name_idx" ON "module_config_history"("guild_id", "module_name");
-
--- CreateIndex
 CREATE INDEX "module_config_history_guild_id_created_at_idx" ON "module_config_history"("guild_id", "created_at");
 
 -- CreateIndex
@@ -475,6 +491,18 @@ CREATE INDEX "guild_backups_guild_id_created_at_idx" ON "guild_backups"("guild_i
 
 -- CreateIndex
 CREATE INDEX "tempvc_records_owner_id_idx" ON "tempvc_records"("owner_id");
+
+-- CreateIndex
+CREATE INDEX "economy_accounts_user_id_idx" ON "economy_accounts"("user_id");
+
+-- CreateIndex
+CREATE INDEX "economy_transactions_guild_id_user_id_created_at_idx" ON "economy_transactions"("guild_id", "user_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "economy_transactions_guild_id_created_at_idx" ON "economy_transactions"("guild_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "economy_transactions_user_id_idx" ON "economy_transactions"("user_id");
 
 -- AddForeignKey
 ALTER TABLE "guild_module_state" ADD CONSTRAINT "guild_module_state_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -544,3 +572,19 @@ ALTER TABLE "tempvc_generators" ADD CONSTRAINT "tempvc_generators_guild_id_fkey"
 
 -- AddForeignKey
 ALTER TABLE "tempvc_records" ADD CONSTRAINT "tempvc_records_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "economy_accounts" ADD CONSTRAINT "economy_accounts_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "economy_transactions" ADD CONSTRAINT "economy_transactions_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- A nullable column carrying "global scope" inside a composite UNIQUE does not
+-- dedupe in Postgres: NULL is never equal to NULL, so (user_id, NULL) can be
+-- inserted any number of times. Prisma cannot express a partial index, so the
+-- null-scoped halves of these two constraints are declared here.
+CREATE UNIQUE INDEX "uq_blocklist_user_global"
+  ON "blocklist"("user_id") WHERE "guild_id" IS NULL;
+
+CREATE UNIQUE INDEX "uq_ignore_guild_wide"
+  ON "ignore_list"("guild_id") WHERE "channel_id" IS NULL;
