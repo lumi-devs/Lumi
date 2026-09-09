@@ -13,7 +13,7 @@
 
   <p>
     <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.3%2B-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun"></a>
-    <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.x%20%2F%206.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
+    <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-6.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
     <a href="https://www.postgresql.org"><img src="https://img.shields.io/badge/PostgreSQL-18-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL"></a>
     <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-7%2B-DC382D?style=flat-square&logo=redis&logoColor=white" alt="Redis"></a>
     <a href="https://discord.js.org"><img src="https://img.shields.io/badge/discord.js-v14-5865F2?style=flat-square&logo=discord&logoColor=white" alt="discord.js"></a>
@@ -21,8 +21,6 @@
   </p>
 
   <p>
-    <a href="#features">Features</a>
-    •
     <a href="#quickstart">Quickstart</a>
     •
     <a href="https://lumi-devs.github.io/Lumi/">Documentation</a>
@@ -41,25 +39,9 @@
 
 **Lumi** is a self-hosted, fully modular Discord bot built with [Bun](https://bun.sh), the [Sapphire Framework](https://sapphirejs.dev), and [Redis Streams](https://redis.io).
 
-Like classic modular bots, every feature in Lumi is an independent module that can be toggled per server. Community addons can be installed from Git repositories via an in-chat Downloader or authored using the typed `@lumi` SDK. It includes an optional Next.js 16 web dashboard that talks to worker processes over an internal RPC bridge without requiring direct database access.
+Every feature in Lumi is an independent module that can be enabled or disabled per server from `/module` or the web dashboard. Community addons can be installed from Git repositories via an in-chat Downloader or authored with the typed `lumi` SDK. An optional Next.js web dashboard talks to the worker over an internal RPC bridge without requiring direct database access.
 
----
-
-## Features
-
-Lumi ships with nine built-in modules. Everything except `core` can be enabled or disabled per guild using `/lumi panel` or the web dashboard:
-
-| Module | What it does |
-| :--- | :--- |
-| **`core`** | Help, bot info, module toggles, configuration panel, permit system, and addon downloader. (Always enabled) |
-| **`mod`** | Moderation actions (warn, mute, kick, ban, timeout), case logging, staff notes, and automated escalating warning thresholds. |
-| **`filter`** | Message content filtering: banned words, regex patterns, invite links, link allowlists, and mention spam limits. |
-| **`security`** | Anti-raid mitigation, panic mode (one-click channel lock with override restore), join gate verification, and structural backups. |
-| **`logging`** | Channel audit logging for member events, message edits/deletions, server changes, and voice activity. |
-| **`afk`** | Away status with mention notifications and optional `[AFK]` nickname tagging. |
-| **`tempvc`** | Dynamic temporary voice channels that create on join and clean up when empty. |
-| **`utility`** | Server info, user lookup, avatar viewing, poll creation, and bot diagnostics. |
-| **`dashboard`** | RPC bridge for the Next.js administration console. Can be disabled per guild to restrict management to Discord. |
+See the [documentation site](https://lumi-devs.github.io/Lumi/) for the full list of modules and what each one does.
 
 ---
 
@@ -124,7 +106,7 @@ Lumi includes a Downloader system for installing third-party addons directly fro
 
 ### Authoring an Addon
 
-Addons are authored in TypeScript using the `@lumi` SDK. Scaffold a new module in seconds:
+Addons are authored in TypeScript using the `lumi` SDK. Scaffold a new module in seconds:
 
 ```sh
 bun run addon:create my-addon --dir ./addons
@@ -176,12 +158,12 @@ Read the [Module Creation Guide](https://lumi-devs.github.io/Lumi/guides/module-
                                   │
           ┌───────────────────────┼──────────────────────┐
           ▼                       ▼                      ▼
-┌──────────────────┐   ┌────────────────────┐  ┌──────────────────┐
-│   Redis 7 / 8    │   │  PgBouncer (6432)  │  │  Next.js 16 App  │
-│  - Event Streams │   │        │           │  │  - Web Dashboard │
-│  - BullMQ Tasks  │   │  PostgreSQL 18     │  │  - HMAC RPC (8091)│
-│  - L1/L2 Cache   │   │  - Durable Storage │  │  - Permit RBAC   │
-└──────────────────┘   └────────────────────┘  └──────────────────┘
+┌──────────────────┐   ┌────────────────────┐  ┌────────────────────┐
+│   Redis 7 / 8    │   │  PgBouncer (6432)  │  │  Next.js 16 App    │
+│  - Event Streams │   │        │           │  │  - Web Dashboard   │
+│  - BullMQ Tasks  │   │  PostgreSQL 18     │  │  - Token RPC (8091)│
+│  - L1/L2 Cache   │   │  - Durable Storage │  │  - Permit RBAC     │
+└──────────────────┘   └────────────────────┘  └────────────────────┘
 ```
 
 - **Process Model**: `apps/worker` is a `ShardingManager` that spawns child processes per assigned shard. Shard child processes connect to the Discord Gateway and execute command logic in-process.
@@ -223,7 +205,7 @@ bun run lint
 
 ## Translations
 
-Translations are managed with [Crowdin](https://crowdin.com). All locale strings live under `locales/{locale}/*.json`.
+Translations are managed with [Crowdin](https://crowdin.com). All locale strings live under `packages/core/src/languages/{locale}/`.
 
 Contributions for new languages and corrections are welcome.
 
