@@ -5,7 +5,7 @@
   "description": "Guild bank with wallet and vault balances, payday, taxed transfers, slots, and a fully audited transaction ledger.",
   "short": "Guild currency with payday, transfers, slots, and an audit ledger.",
   "endUserDataStatement": "Stores user ID with wallet and bank balances, payday timestamps, and a transaction history per server. Deleted on GDPR erasure.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "disableable": true,
   "dependencies": [],
   "conflicts": [],

@@ -5,7 +5,7 @@
   "description": "Greets new members with a welcome card, posts goodbye cards on leave, assigns join roles, and optionally sends a DM greeting.",
   "short": "Welcome cards, goodbye cards, join roles, and DM greetings.",
   "endUserDataStatement": "No persistent user data. Join and leave events are rendered into cards at delivery time and are not stored.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "disableable": true,
   "dependencies": [],
   "conflicts": [],
@@ -39,7 +39,7 @@
       "key": "welcomeTemplate",
       "type": "STRING",
       "label": "Welcome Template",
-      "description": "Posted when a member joins. Placeholders: {user} mention, {username}, {server}, {memberCount}. Unknown placeholders are left as-is.",
+      "description": "Posted when a member joins. Placeholders: {user} mention, {username}, {nickname}, {server}, {memberCount} (alias {memberNumber}). Unknown placeholders are left as-is.",
       "group": "Welcome Message",
       "default": "Welcome {user} to {server}! You are member #{memberCount}."
     },
@@ -66,7 +66,7 @@
       "key": "goodbyeTemplate",
       "type": "STRING",
       "label": "Goodbye Template",
-      "description": "Posted when a member leaves. Placeholders: {user} mention, {username}, {server}, {memberCount}. Unknown placeholders are left as-is.",
+      "description": "Posted when a member leaves. Placeholders: {user} mention, {username}, {nickname}, {server}, {memberCount} (alias {memberNumber}). Unknown placeholders are left as-is.",
       "group": "Goodbye Message",
       "default": "{username} has left {server}."
     },
@@ -90,7 +90,7 @@
       "key": "dmWelcomeTemplate",
       "type": "STRING",
       "label": "DM Greeting Template",
-      "description": "Sent as a DM to new members. Placeholders: {user} mention, {username}, {server}, {memberCount}. Unknown placeholders are left as-is.",
+      "description": "Sent as a DM to new members. Placeholders: {user} mention, {username}, {nickname}, {server}, {memberCount} (alias {memberNumber}). Unknown placeholders are left as-is.",
       "group": "Join Extras",
       "default": "Welcome to {server}, {username}!"
     }
