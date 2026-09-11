@@ -5,3 +5,4 @@ export * from "./bus";
 export * from "./config";
 export * from "./manifest";
 export * from "./addon-sandbox";
+export * from "./message-blocks";
