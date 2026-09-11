@@ -83,7 +83,6 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       const addonDir = path.join(tmpDir, "my-addon");
       await fs.mkdir(addonDir, { recursive: true });
 
-      // Name mismatch and min_bot_version higher than 1.0.0
       const infoJson = {
         name: "wrong-name",
         author: ["Tester"],

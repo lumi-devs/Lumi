@@ -22,6 +22,7 @@ import type {
   VerificationPanelView,
   WarnThresholdView,
 } from "./views.js";
+import type { MessageDocumentV2 } from "./message-blocks.js";
 
 export interface RpcRequest<T = unknown> {
   id: string;
@@ -345,6 +346,13 @@ export interface BackupRestorePayload {
   backupId?: number;
 }
 
+export const WelcomeTestKinds = ["welcome", "goodbye"] as const;
+export type WelcomeTestKind = (typeof WelcomeTestKinds)[number];
+
+export interface WelcomeSendTestPayload {
+  kind: WelcomeTestKind;
+}
+
 export interface GuildBackupView {
   id: number;
   createdAt: string;
@@ -384,6 +392,11 @@ export interface ReactionRoleMenuSetPayload {
   exclusive?: boolean;
   maxRoles?: number;
   options: ReactionRoleOptionPayload[];
+  /** Optional block-based layout replacing the title/description header —
+   * the options list and mode-dependent controls (buttons/select) always
+   * stay appended below regardless, since those are what the pick
+   * interaction handlers dispatch on. */
+  richContent?: MessageDocumentV2;
 }
 
 export interface ReactionRoleMenuDeletePayload {
@@ -613,6 +626,7 @@ export interface RpcRequestPayloads {
   "guild.verificationWeb.complete": never;
   "guild.backups.list": never;
   "guild.backups.restore": BackupRestorePayload;
+  "guild.welcome.sendTest": WelcomeSendTestPayload;
   "guild.tempvc.generators.list": never;
   "guild.tempvc.generators.set": TempVcGeneratorSetPayload;
   "guild.tempvc.records.list": never;
@@ -676,6 +690,7 @@ export interface RpcResponsePayloads {
   };
   "guild.panic.get": PanicStateView;
   "guild.backups.list": GuildBackupsListResponse;
+  "guild.welcome.sendTest": { sent: boolean };
   "guild.verificationPanel.get": {
     panel: VerificationPanelView | null;
   };
@@ -737,6 +752,7 @@ const ResponseDataActions = [
   "guild.warnThresholds.list",
   "guild.panic.get",
   "guild.backups.list",
+  "guild.welcome.sendTest",
   "guild.verificationPanel.get",
   "guild.verificationPanel.set",
   "guild.logClaims.list",
@@ -817,6 +833,7 @@ export const RpcActions = {
   guildVerificationWebComplete: "guild.verificationWeb.complete",
   guildBackupsList: "guild.backups.list",
   guildBackupRestore: "guild.backups.restore",
+  guildWelcomeSendTest: "guild.welcome.sendTest",
   guildTempVcGeneratorsList: "guild.tempvc.generators.list",
   guildTempVcGeneratorSet: "guild.tempvc.generators.set",
   guildTempVcRecordsList: "guild.tempvc.records.list",

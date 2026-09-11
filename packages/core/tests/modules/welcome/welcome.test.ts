@@ -160,11 +160,11 @@ describe("loadWelcomeConfig", () => {
       welcomeThumbnailUrl: null,
       welcomeImageUrls: [],
       welcomeFooter: null,
-      welcomeActionButtons: [],
       welcomeRichContent: { blocks: [] },
       goodbyeEnabled: WelcomeDefaults.goodbyeEnabled,
       goodbyeChannel: null,
       goodbyeTemplate: WelcomeDefaults.goodbyeTemplate,
+      goodbyeRichContent: { blocks: [] },
       autoRoles: [],
       dmWelcomeEnabled: WelcomeDefaults.dmWelcomeEnabled,
       dmWelcomeTemplate: WelcomeDefaults.dmWelcomeTemplate,
@@ -179,11 +179,6 @@ describe("loadWelcomeConfig", () => {
       welcomeAccentColor: "#5865F2",
       welcomeImageUrls: ["https://example.com/a.png", 42],
       welcomeFooter: "Enjoy {server}",
-      welcomeActionButtons: [
-        { label: "Rules", url: "https://example.com/rules" },
-        { label: "", url: "https://example.com/empty" },
-        "nope",
-      ],
       goodbyeEnabled: true,
       goodbyeChannel: "222222222222222222",
       goodbyeTemplate: "Bye {username}",
@@ -198,9 +193,6 @@ describe("loadWelcomeConfig", () => {
     expect(config.welcomeAccentColor).toBe("#5865F2");
     expect(config.welcomeImageUrls).toEqual(["https://example.com/a.png"]);
     expect(config.welcomeFooter).toBe("Enjoy {server}");
-    expect(config.welcomeActionButtons).toEqual([
-      { label: "Rules", url: "https://example.com/rules" },
-    ]);
     expect(config.goodbyeEnabled).toBe(true);
     expect(config.goodbyeChannel).toBe("222222222222222222");
     expect(config.goodbyeTemplate).toBe("Bye {username}");

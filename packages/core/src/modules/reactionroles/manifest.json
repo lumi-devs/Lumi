@@ -23,7 +23,9 @@
       "type": "NUMBER",
       "label": "Max Role Menus",
       "description": "How many role menus can exist in this server at once.",
-      "default": 25
+      "default": 25,
+      "min": 1,
+      "max": 25
     }
   ],
   "category": "Community",

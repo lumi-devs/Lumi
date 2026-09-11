@@ -157,7 +157,6 @@ describe("Module Manifest Utilities", () => {
 
       expect(readBack).toEqual(manifest);
 
-      // Verify file content format
       const raw = await fs.readFile(path.join(tmpDir, ManifestFile), "utf8");
       expect(raw.endsWith("\n")).toBe(true);
     });

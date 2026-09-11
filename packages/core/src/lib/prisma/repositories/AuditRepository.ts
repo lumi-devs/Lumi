@@ -6,6 +6,7 @@ import { Repository } from "#lib/prisma/repositories/Repository.js";
 import { getWriteBucket } from "#lib/env.js";
 
 import { tryParseJSON } from "@sapphire/utilities";
+import { Time } from "@sapphire/time-utilities";
 
 /**
  * Per-process, so two overlapping workers cannot both read the other's pending
@@ -14,7 +15,7 @@ import { tryParseJSON } from "@sapphire/utilities";
 const AuditConsumer = `${hostname()}:${process.pid}`;
 
 /** How long a delivered-but-unacked entry must sit before another run reclaims it. */
-const StalePendingMs = 60_000;
+const StalePendingMs = Time.Minute;
 
 /**
  * Approximate cap on the buffer stream. If the flush task stops - a crash loop,

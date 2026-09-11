@@ -29,7 +29,6 @@ describe("Config Schema Utilities", () => {
         adminUser: cfg.user({ label: "Admin User", description: "Owner user" }),
       });
 
-      // Test validation of valid shape
       const validData = {
         enabled: true,
         maxLimit: 10,
@@ -41,7 +40,6 @@ describe("Config Schema Utilities", () => {
       };
       expect(schema.parse(validData)).toEqual(validData);
 
-      // Extract metadata
       const fields = fieldsFromSchema(schema);
       expect(fields).toHaveLength(7);
 
@@ -121,11 +119,9 @@ describe("Config Schema Utilities", () => {
     });
 
     it("handles schemas without shape or containing untagged fields in fieldsFromSchema", () => {
-      // Schema without shape
       const primitiveSchema = s.string() as any;
       expect(fieldsFromSchema(primitiveSchema)).toEqual([]);
 
-      // Schema with untagged fields
       const mixedSchema = s.object({
         tagged: cfg.boolean({ label: "Tagged", description: "Tagged field" }),
         untagged: s.string(),

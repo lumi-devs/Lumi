@@ -1,4 +1,5 @@
 import { container } from "@sapphire/framework";
+import { s, type BaseValidator } from "@sapphire/shapeshift";
 import type {
   MessageComponentInteraction,
   ModalSubmitInteraction,
@@ -57,6 +58,124 @@ function scopedGuild(scope: HostCallScope, requested?: string): string {
 }
 
 type OptionGetter = "getString" | "getInteger" | "getNumber" | "getBoolean";
+
+// Validated once here, at the boundary where an addon subprocess's JSON crosses
+// into the host - request.data's TypeScript annotations below only ever described
+// the shape at compile time. Every field that flows into a Redis/DB key or a
+// Discord API call is checked at runtime; free-form payloads (Discord message/
+// modal builders) are left as s.unknown() since discord.js itself validates them.
+const ParamSchemas: Record<string, BaseValidator<unknown>> = {
+  "ctx.option": s.object({
+    getter: s.union([
+      s.literal("getString"),
+      s.literal("getInteger"),
+      s.literal("getNumber"),
+      s.literal("getBoolean"),
+    ]),
+    name: s.string(),
+    spec: s.unknown().optional(),
+  }) as BaseValidator<unknown>,
+
+  "ctx.defer": s.object({
+    ephemeral: s.boolean().optional(),
+    update: s.boolean().optional(),
+  }) as BaseValidator<unknown>,
+
+  "ctx.reply": s.object({
+    card: s.unknown(),
+    ephemeral: s.boolean().optional(),
+  }) as BaseValidator<unknown>,
+
+  "ctx.editReply": s.object({
+    payload: s.unknown(),
+  }) as BaseValidator<unknown>,
+
+  "ctx.checkPermit": s.object({
+    node: s.string(),
+  }) as BaseValidator<unknown>,
+
+  "ctx.showModal": s.object({
+    modal: s.unknown(),
+  }) as BaseValidator<unknown>,
+
+  "config.get": s.object({
+    key: s.string(),
+    guildId: s.string().optional(),
+  }) as BaseValidator<unknown>,
+
+  "kv.get": s.object({
+    guildId: s.string(),
+    targetId: s.string(),
+    key: s.string(),
+  }) as BaseValidator<unknown>,
+
+  "kv.set": s.object({
+    guildId: s.string(),
+    targetId: s.string(),
+    key: s.string(),
+    value: s.unknown(),
+  }) as BaseValidator<unknown>,
+
+  "kv.delete": s.object({
+    guildId: s.string(),
+    targetId: s.string(),
+    key: s.string(),
+  }) as BaseValidator<unknown>,
+
+  "kv.list": s.object({
+    key: s.string(),
+    guildId: s.string().optional(),
+  }) as BaseValidator<unknown>,
+
+  "redis.sadd": s.object({
+    key: s.string(),
+    members: s.string().array(),
+  }) as BaseValidator<unknown>,
+
+  "redis.srem": s.object({
+    key: s.string(),
+    members: s.string().array(),
+  }) as BaseValidator<unknown>,
+
+  "redis.scard": s.object({
+    key: s.string(),
+  }) as BaseValidator<unknown>,
+
+  "redis.smembers": s.object({
+    key: s.string(),
+  }) as BaseValidator<unknown>,
+
+  "redis.del": s.object({
+    key: s.string(),
+  }) as BaseValidator<unknown>,
+
+  "schedule.add": s.object({
+    task: s.string(),
+    payload: s.record(s.unknown()),
+    delay: s.number().optional(),
+  }) as BaseValidator<unknown>,
+
+  "discord.channels.send": s.object({
+    channelId: s.string(),
+    payload: s.unknown(),
+  }) as BaseValidator<unknown>,
+
+  "discord.messages.fetch": s.object({
+    channelId: s.string(),
+    messageId: s.string(),
+  }) as BaseValidator<unknown>,
+
+  "discord.messages.edit": s.object({
+    channelId: s.string(),
+    messageId: s.string(),
+    payload: s.unknown(),
+  }) as BaseValidator<unknown>,
+
+  "log": s.object({
+    level: s.union([s.literal("info"), s.literal("warn"), s.literal("error")]),
+    message: s.string(),
+  }) as BaseValidator<unknown>,
+};
 
 const Methods = {
   async "ctx.option"(
@@ -242,9 +361,10 @@ export function callHostMethod(
   if (!Object.hasOwn(Methods, request.action)) {
     throw new Error(`Unknown addon method "${request.action}"`);
   }
+  const data = ParamSchemas[request.action]!.parse(request.data);
   const method = Methods[request.action] as (
     params: unknown,
     scope: HostCallScope,
   ) => unknown;
-  return Promise.resolve(method(request.data, scope));
+  return Promise.resolve(method(data, scope));
 }

@@ -83,6 +83,12 @@ export async function getMaxGenerators(guildId: string): Promise<number> {
       default: "",
       format: "color",
     }),
+    panel_rich_content: cfg.componentsV2Blocks({
+      label: "Advanced Layout",
+      description:
+        "Optional block-based layout (Section, Media Gallery, Separator) for the panel's title and body. When it has any blocks, it replaces the title and message above. The manage-channel menu and Claim Ownership button are always attached below regardless — they're what the panel's controls dispatch on, so they can't be removed here.",
+      templateVars: ["channel", "owner", "limit", "status"],
+    }),
   }),
 })
 export class TempVcModule extends Module {

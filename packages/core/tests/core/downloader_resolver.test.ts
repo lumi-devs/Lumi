@@ -37,7 +37,6 @@ describe("DownloadResolver Edge Cases", () => {
   });
 
   it("handles valid URLs and strips markdown brackets <...>", async () => {
-    // Should not throw URL parsing error for bracketed URLs
     await expect(
       resolver.addRepo("test_bracket", "<https://github.com/invalid-org/nonexistent-repo-12345.git>"),
     ).rejects.toThrow("Git clone failed");
@@ -49,14 +48,12 @@ describe("DownloadResolver Edge Cases", () => {
     const repoName = "test_failed_clone";
     const repoPath = path.join(ModuleRoot, repoName);
 
-    // Ensure clean start
     await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
 
     await expect(
       resolver.addRepo(repoName, "https://github.com/invalid-org/nonexistent-repo-99999.git"),
     ).rejects.toThrow();
 
-    // Verify corrupt folder was cleaned up automatically
     const exists = await fs
       .access(repoPath)
       .then(() => true)
@@ -76,7 +73,6 @@ describe("DownloadResolver Edge Cases", () => {
       resolver.addRepo(repoName, "https://github.com/invalid-org/nonexistent-repo-88888.git"),
     ).rejects.toThrow();
 
-    // Folder should be cleaned up on failure
     const exists = await fs
       .access(repoPath)
       .then(() => true)

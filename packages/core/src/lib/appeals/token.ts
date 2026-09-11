@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { envParseString } from "#lib/env.js";
+import { Time } from "@sapphire/time-utilities";
 
 /**
  * Signed, tamper-proof, expiring token embedded in the appeal link DMed on
@@ -20,7 +21,7 @@ export interface AppealTokenPayload {
   exp: number;
 }
 
-const DefaultTtlMs = 14 * 24 * 60 * 60 * 1000;
+const DefaultTtlMs = 14 * Time.Day;
 
 function secret(): string {
   return envParseString("APPEAL_TOKEN_SECRET");

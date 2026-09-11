@@ -4,7 +4,7 @@ import {
   StringSelectMenuBuilder,
 } from "@discordjs/builders";
 import { container } from "@sapphire/framework";
-import { ButtonStyle, type VoiceBasedChannel } from "discord.js";
+import { ButtonStyle, MessageFlags, type VoiceBasedChannel } from "discord.js";
 import { channelMention, userMention } from "@discordjs/formatters";
 import {
   ModuleName,
@@ -13,6 +13,8 @@ import {
   Tvc,
 } from "../keys.js";
 import { parseHexColor } from "#lib/message-content.js";
+import { renderMessageBlocksV2Container } from "#lib/utilities/message-blocks-v2.js";
+import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
 import type { VcRecord } from "../data.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import {
@@ -173,6 +175,21 @@ export async function buildPanel(
     ? t("tempvc:panelFooter")
     : "Settings are restricted to the owner. Anyone can claim if the owner leaves.";
 
+  if (configured.richContent.blocks.length > 0) {
+    const container = renderMessageBlocksV2Container(configured.richContent, {
+      channel: channelMention(channel.id),
+      owner: userMention(record.ownerId),
+      limit: limitStr,
+      status: `${lockBadge} · ${hideBadge}`,
+    });
+    container.addActionRowComponents(...rows);
+    return {
+      flags: MessageFlags.IsComponentsV2,
+      components: [container],
+      allowedMentions: { parse: [] },
+    };
+  }
+
   return makeCard(
     parseHexColor(configured.color) ?? resolveCardColor("primary"),
     title,
@@ -185,15 +202,17 @@ interface PanelConfig {
   title: string | null;
   message: string | null;
   color: string | null;
+  richContent: MessageDocumentV2;
 }
 
 async function readPanelConfig(guildId: string): Promise<PanelConfig> {
-  const [title, message, color] = await Promise.all([
+  const [title, message, color, richContent] = await Promise.all([
     readString(guildId, "panel_title"),
     readString(guildId, "panel_message"),
     readString(guildId, "panel_color"),
+    container.db.config.getModuleConfig(guildId, ModuleName, "panel_rich_content"),
   ]);
-  return { title, message, color };
+  return { title, message, color, richContent: clampMessageDocumentV2(richContent) };
 }
 
 async function readString(guildId: string, key: string): Promise<string | null> {

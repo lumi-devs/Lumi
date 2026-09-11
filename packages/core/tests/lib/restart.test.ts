@@ -50,10 +50,7 @@ describe("Bot Restart & State Management Utilities", () => {
     it("schedules process restart and is idempotent when called multiple times", async () => {
       const killSpy = vi.spyOn(process, "kill").mockImplementation(() => true);
 
-      // First call schedules restart
       scheduleProcessRestart("First attempt", 1500);
-
-      // Second call should be ignored (idempotent)
       scheduleProcessRestart("Second attempt", 1500);
 
       expect(container.logger.warn).toHaveBeenCalledWith(
@@ -64,14 +61,12 @@ describe("Bot Restart & State Management Utilities", () => {
       );
       expect(killSpy).not.toHaveBeenCalled();
 
-      // Wait for the real scheduled restart to fire process.kill
       await sleep(1500);
 
       expect(container.logger.warn).toHaveBeenCalledWith(
         `[Restart] Sending SIGTERM to self (pid ${process.pid})`
       );
 
-      // Explicit assertions for scheduleProcessRestart call counts / killSpy calls
       expect(killSpy).toHaveBeenCalledTimes(1);
       expect(killSpy).toHaveBeenCalledWith(process.pid, "SIGTERM");
     });

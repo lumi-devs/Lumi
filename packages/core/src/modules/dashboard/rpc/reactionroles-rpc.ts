@@ -1,5 +1,5 @@
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
-import { RpcActions } from "@lumi/contracts";
+import { RpcActions, clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
 import { getUtility } from "#lib/module-system/Utility.js";
 import {
   ReactionRoleMenuDeleteSchema,
@@ -31,6 +31,7 @@ function toView(menu: {
     roleId: string;
     requiredRoleId: string | null;
   }[];
+  richContent: MessageDocumentV2;
   createdAt: number;
   updatedAt: number;
 }) {
@@ -45,6 +46,7 @@ function toView(menu: {
     channelId: menu.channelId,
     messageIds: menu.messageIds,
     options: menu.options,
+    richContent: menu.richContent,
     createdAt: new Date(menu.createdAt).toISOString(),
     updatedAt: new Date(menu.updatedAt).toISOString(),
   };
@@ -74,6 +76,7 @@ export function registerReactionRolesRpcHandlers(): void {
       requiredRoleId: o.requiredRoleId ?? null,
     }));
 
+    const richContent = clampMessageDocumentV2(payload.richContent);
     const menu = existing
       ? await service.updateMenu(guildId, payload.id, {
           title: payload.title,
@@ -82,6 +85,7 @@ export function registerReactionRolesRpcHandlers(): void {
           mode: payload.mode,
           exclusive: payload.exclusive ?? false,
           maxRoles: payload.maxRoles ?? 1,
+          richContent,
         })
       : await service.createMenu(guildId, {
           title: payload.title,
@@ -90,6 +94,7 @@ export function registerReactionRolesRpcHandlers(): void {
           mode: payload.mode,
           exclusive: payload.exclusive ?? false,
           maxRoles: payload.maxRoles ?? 1,
+          richContent,
         });
 
     const currentIds = new Set(menu.options.map((o) => o.id));

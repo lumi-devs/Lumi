@@ -11,7 +11,6 @@
   "configOverrides": true,
   "targetUtility": "worker",
   "subStores": [
-    "commands",
     "listeners",
     "scheduled-tasks"
   ],
@@ -22,29 +21,35 @@
       "label": "Default Log Channel",
       "description": "Fallback channel for log types without their own channel below. Empty disables logging.",
       "group": "Setup",
+      "section": "Setup",
       "channelTypes": [
         0
-      ]
+      ],
+      "claimable": true
     },
     {
       "key": "message_log_channel_id",
       "type": "CHANNEL",
       "label": "Message Log Channel",
       "description": "Channel for message deletes and edits. Falls back to the default log channel.",
-      "group": "Setup",
+      "group": "Message Events",
+      "section": "Message Events",
       "channelTypes": [
         0
-      ]
+      ],
+      "claimable": true
     },
     {
       "key": "member_log_channel_id",
       "type": "CHANNEL",
       "label": "Member Log Channel",
       "description": "Channel for joins, leaves, bans, unbans, nickname and role changes. Falls back to the default log channel.",
-      "group": "Setup",
+      "group": "Member Events",
+      "section": "Member Events",
       "channelTypes": [
         0
-      ]
+      ],
+      "claimable": true
     },
     {
       "key": "message_deletes",
@@ -52,7 +57,21 @@
       "label": "Message Deletes",
       "description": "Log deleted messages.",
       "group": "Message Events",
-      "default": true
+      "section": "Message Events",
+      "default": true,
+      "pairedWith": "message_deletes_channel_id"
+    },
+    {
+      "key": "message_deletes_channel_id",
+      "type": "CHANNEL",
+      "label": "Message Deletes Channel",
+      "description": "Override for deleted messages. Empty uses the Message Events channel.",
+      "group": "Message Events",
+      "section": "Message Events",
+      "channelTypes": [
+        0
+      ],
+      "claimable": true
     },
     {
       "key": "message_edits",
@@ -60,7 +79,21 @@
       "label": "Message Edits",
       "description": "Log edited messages (before/after).",
       "group": "Message Events",
-      "default": true
+      "section": "Message Events",
+      "default": true,
+      "pairedWith": "message_edits_channel_id"
+    },
+    {
+      "key": "message_edits_channel_id",
+      "type": "CHANNEL",
+      "label": "Message Edits Channel",
+      "description": "Override for edited messages. Empty uses the Message Events channel.",
+      "group": "Message Events",
+      "section": "Message Events",
+      "channelTypes": [
+        0
+      ],
+      "claimable": true
     },
     {
       "key": "member_joins",
@@ -68,7 +101,21 @@
       "label": "Member Joins",
       "description": "Log members joining the server.",
       "group": "Member Events",
-      "default": true
+      "section": "Member Events",
+      "default": true,
+      "pairedWith": "member_joins_channel_id"
+    },
+    {
+      "key": "member_joins_channel_id",
+      "type": "CHANNEL",
+      "label": "Member Joins Channel",
+      "description": "Override for member joins. Empty uses the Member Events channel.",
+      "group": "Member Events",
+      "section": "Member Events",
+      "channelTypes": [
+        0
+      ],
+      "claimable": true
     },
     {
       "key": "member_leaves",
@@ -76,7 +123,21 @@
       "label": "Member Leaves",
       "description": "Log members leaving the server.",
       "group": "Member Events",
-      "default": true
+      "section": "Member Events",
+      "default": true,
+      "pairedWith": "member_leaves_channel_id"
+    },
+    {
+      "key": "member_leaves_channel_id",
+      "type": "CHANNEL",
+      "label": "Member Leaves Channel",
+      "description": "Override for member leaves. Empty uses the Member Events channel.",
+      "group": "Member Events",
+      "section": "Member Events",
+      "channelTypes": [
+        0
+      ],
+      "claimable": true
     },
     {
       "key": "member_bans",
@@ -84,7 +145,21 @@
       "label": "Member Bans",
       "description": "Log bans.",
       "group": "Member Events",
-      "default": true
+      "section": "Member Events",
+      "default": true,
+      "pairedWith": "member_bans_channel_id"
+    },
+    {
+      "key": "member_bans_channel_id",
+      "type": "CHANNEL",
+      "label": "Member Bans Channel",
+      "description": "Override for bans. Empty uses the Member Events channel.",
+      "group": "Member Events",
+      "section": "Member Events",
+      "channelTypes": [
+        0
+      ],
+      "claimable": true
     },
     {
       "key": "member_unbans",
@@ -92,7 +167,21 @@
       "label": "Member Unbans",
       "description": "Log unbans.",
       "group": "Member Events",
-      "default": true
+      "section": "Member Events",
+      "default": true,
+      "pairedWith": "member_unbans_channel_id"
+    },
+    {
+      "key": "member_unbans_channel_id",
+      "type": "CHANNEL",
+      "label": "Member Unbans Channel",
+      "description": "Override for unbans. Empty uses the Member Events channel.",
+      "group": "Member Events",
+      "section": "Member Events",
+      "channelTypes": [
+        0
+      ],
+      "claimable": true
     },
     {
       "key": "nickname_changes",
@@ -100,7 +189,21 @@
       "label": "Nickname Changes",
       "description": "Log nickname changes.",
       "group": "Member Events",
-      "default": true
+      "section": "Member Events",
+      "default": true,
+      "pairedWith": "nickname_changes_channel_id"
+    },
+    {
+      "key": "nickname_changes_channel_id",
+      "type": "CHANNEL",
+      "label": "Nickname Changes Channel",
+      "description": "Override for nickname changes. Empty uses the Member Events channel.",
+      "group": "Member Events",
+      "section": "Member Events",
+      "channelTypes": [
+        0
+      ],
+      "claimable": true
     },
     {
       "key": "role_changes",
@@ -108,14 +211,29 @@
       "label": "Role Changes",
       "description": "Log member role additions/removals.",
       "group": "Member Events",
-      "default": true
+      "section": "Member Events",
+      "default": true,
+      "pairedWith": "role_changes_channel_id"
+    },
+    {
+      "key": "role_changes_channel_id",
+      "type": "CHANNEL",
+      "label": "Role Changes Channel",
+      "description": "Override for role changes. Empty uses the Member Events channel.",
+      "group": "Member Events",
+      "section": "Member Events",
+      "channelTypes": [
+        0
+      ],
+      "claimable": true
     },
     {
       "key": "ignored_channels",
       "type": "MULTI_CHANNEL",
       "label": "Ignored Channel IDs",
       "description": "Channel IDs whose message events are not logged.",
-      "group": "Setup"
+      "group": "Setup",
+      "section": "Setup"
     }
   ],
   "category": "System"

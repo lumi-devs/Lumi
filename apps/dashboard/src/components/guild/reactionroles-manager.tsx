@@ -22,13 +22,14 @@ import {
 } from "#/components/guild/reactionroles-columns";
 import { DiscordMessagePreview } from "#/components/guild/discord-message-preview";
 import { buildMenuPreview } from "#/lib/reactionroles-preview";
+import { MessageBuilderV2 } from "#/components/guild/message-builder-v2";
 import type {
   DashboardRoleView,
   ReactionRoleMenuModeView,
   ReactionRoleMenuView,
   ReactionRoleOptionView,
 } from "#/lib/dashboard-data";
-import type { ReactionRoleMenuSetPayload } from "@lumi/contracts";
+import type { MessageDocumentV2, ReactionRoleMenuSetPayload } from "@lumi/contracts";
 import { useServerAction } from "#/lib/use-server-action";
 
 const HexColorPattern = /^#[0-9a-fA-F]{6}$/;
@@ -207,6 +208,9 @@ function MenuForm({
   const [options, setOptions] = useState<OptionDraft[]>(() =>
     editing ? editing.options.map(toDraft) : [blankDraft()],
   );
+  const [richContent, setRichContent] = useState<MessageDocumentV2>(
+    editing?.richContent ?? { blocks: [] },
+  );
   const { isPending, error, setError, run } = useServerAction();
 
   if (!open) {
@@ -233,6 +237,7 @@ function MenuForm({
       emoji: o.emoji,
       role: o.roleId ? roleName(roles, o.roleId) : "",
     })),
+    richContent,
   });
 
   function submit(event: React.FormEvent) {
@@ -315,6 +320,7 @@ function MenuForm({
         roleId: o.roleId,
         requiredRoleId: o.requiredRoleId || null,
       })),
+      richContent,
     };
     run(async () => {
       const result = await setReactionRoleMenu(guildId, payload);
@@ -361,6 +367,20 @@ function MenuForm({
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Pick the squads you play with — change them anytime."
         ></Textarea>
+      </Field>
+
+      <Field
+        label="Advanced Layout"
+        htmlFor="rr-menu-rich-content"
+        className="gap-1"
+        hint="Optional block-based layout replacing the title and description above. The options list and the button/dropdown controls below always stay attached."
+      >
+        <MessageBuilderV2
+          value={richContent}
+          onChange={(value) => setRichContent(value as MessageDocumentV2)}
+          fieldLabel="Advanced Layout"
+          showPreview={false}
+        />
       </Field>
 
       <div className="flex flex-wrap items-end gap-4">

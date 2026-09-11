@@ -42,7 +42,6 @@ import {
         accentColorKey: "welcomeAccentColor",
         footerKey: "welcomeFooter",
         imageUrlsKey: "welcomeImageUrls",
-        buttonsKey: "welcomeActionButtons",
         thumbnailKey: "welcomeThumbnailUrl",
       },
     }),
@@ -70,24 +69,6 @@ import {
       description:
         "Small footer line under the welcome card. Falls back to the auto-role line when empty.",
     }),
-    welcomeActionButtons: cfg.objectArray(
-      {
-        label: cfg.string({
-          label: "Label",
-          description: "Button text.",
-        }),
-        url: cfg.string({
-          label: "URL",
-          description: "Where the button links.",
-        }),
-      },
-      {
-        group: "Welcome Message",
-        label: "Action Buttons",
-        description: "Link buttons under the welcome card (max 5).",
-        default: [],
-      },
-    ),
     welcomeRichContent: cfg.componentsV2Blocks({
       group: "Welcome Message",
       label: "Advanced Layout",
@@ -113,6 +94,13 @@ import {
       description: `Posted when a member leaves. ${GoodbyeTemplateDocs}`,
       default: WelcomeDefaults.goodbyeTemplate,
       format: "template",
+      templateVars: MessageTemplateVars.map((v) => v.name),
+    }),
+    goodbyeRichContent: cfg.componentsV2Blocks({
+      group: "Goodbye Message",
+      label: "Advanced Layout",
+      description:
+        "Optional block-based layout (Section, Media Gallery, Separator, Action Row) for the goodbye card. When it has any blocks, it replaces the plain template above.",
       templateVars: MessageTemplateVars.map((v) => v.name),
     }),
     autoRoles: cfg.multiRole({

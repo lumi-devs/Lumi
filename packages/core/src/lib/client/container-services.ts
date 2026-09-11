@@ -16,6 +16,7 @@ import {
   streamLength,
 } from "@lumi/observability";
 import { container, Store, type SapphireClient } from "@sapphire/framework";
+import { Time } from "@sapphire/time-utilities";
 import { pathToFileURL } from "node:url";
 
 /**
@@ -55,7 +56,7 @@ export function installContainerServices(
     },
     defaultMaxLen: envParseInteger("EVENT_STREAM_MAXLEN", 100_000),
     maxDeliveries: envParseInteger("EVENT_STREAM_MAX_DELIVERIES", 5),
-    claimMinIdleMs: envParseInteger("EVENT_STREAM_CLAIM_MIN_IDLE_MS", 60_000),
+    claimMinIdleMs: envParseInteger("EVENT_STREAM_CLAIM_MIN_IDLE_MS", Time.Minute),
     claimIntervalMs: envParseInteger("EVENT_STREAM_CLAIM_INTERVAL_MS", 30_000),
     statsIntervalMs: envParseInteger("EVENT_STREAM_STATS_INTERVAL_MS", 10_000),
     onStats: (s) => {

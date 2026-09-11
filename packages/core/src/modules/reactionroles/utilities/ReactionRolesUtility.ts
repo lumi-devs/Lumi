@@ -34,6 +34,7 @@ import {
   type RoleToggleResult,
 } from "../lib/role-toggle.js";
 import { getMaxMenus } from "../index.js";
+import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
 
 export type { RoleToggleResult };
 export type { ReactionRoleMenu, ReactionRoleMode, ReactionRoleOption };
@@ -93,6 +94,7 @@ export default class ReactionRolesUtility extends Utility {
       mode?: ReactionRoleMode;
       exclusive?: boolean;
       maxRoles?: number;
+      richContent?: MessageDocumentV2;
     },
   ): Promise<ReactionRoleMenu> {
     const errors = validateMenuDraft({
@@ -122,6 +124,7 @@ export default class ReactionRolesUtility extends Utility {
       channelId: null,
       messageIds: [],
       options: [],
+      richContent: clampMessageDocumentV2(input.richContent),
       createdAt: now,
       updatedAt: now,
     });
@@ -139,6 +142,7 @@ export default class ReactionRolesUtility extends Utility {
       mode?: ReactionRoleMode;
       exclusive?: boolean;
       maxRoles?: number;
+      richContent?: MessageDocumentV2;
     },
   ): Promise<ReactionRoleMenu> {
     return this.withMenuLock(guildId, menuId, async () => {
@@ -153,6 +157,10 @@ export default class ReactionRolesUtility extends Utility {
         mode: patch.mode ?? existing.mode,
         exclusive: patch.exclusive ?? existing.exclusive,
         maxRoles: patch.maxRoles ?? existing.maxRoles,
+        richContent:
+          patch.richContent === undefined
+            ? existing.richContent
+            : clampMessageDocumentV2(patch.richContent),
       };
       const errors = validateMenuDraft({
         title: next.title,

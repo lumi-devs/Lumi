@@ -16,6 +16,7 @@ import {
 import { ChannelPicker, channelOptionsFor } from "#/components/guild/channel-picker";
 import { MultiSelect } from "#/components/ui/multi-select";
 import { MessageBuilderV2 } from "#/components/guild/message-builder-v2";
+import { SendTestMessageButton } from "#/components/guild/send-test-message-button";
 import type { DashboardRoleView, DashboardChannelView } from "#/lib/dashboard-data";
 
 /** Used only by sliders on fields whose module declares no `max`. */
@@ -49,6 +50,7 @@ export function ConfigFieldInput({
   channels = [],
   guildId,
   config,
+  saveAndTest,
 }: {
   field: ConfigField;
   value: unknown;
@@ -59,6 +61,10 @@ export function ConfigFieldInput({
   /** The module's full config record, keyed by field key. Only consulted for
    * `format: "template"` fields that declare `richPreview` sibling keys. */
   config?: Record<string, unknown>;
+  /** When set, this field's preview renders a "Save & send test" button that
+   * persists any unsaved changes and posts a real test message — the preview
+   * is never just a read-only mockup when this is wired up. */
+  saveAndTest?: { label: string; action: () => Promise<{ ok: boolean; error?: string }> };
 }) {
   switch (field.type) {
     case FieldType.Boolean:
@@ -268,6 +274,7 @@ export function ConfigFieldInput({
             shown={shown}
             onChange={onChange}
             richPreview={resolveRichPreview(field.richPreview, config)}
+            saveAndTest={saveAndTest}
           />
         );
       }
@@ -309,6 +316,7 @@ export function ConfigFieldInput({
           onChange={onChange}
           templateVars={field.templateVars}
           fieldLabel={field.label}
+          saveAndTest={saveAndTest}
         />
       );
 
@@ -675,6 +683,7 @@ function TemplateComposer({
   shown,
   onChange,
   richPreview,
+  saveAndTest,
 }: {
   fieldKey: string;
   fieldLabel: string;
@@ -682,6 +691,7 @@ function TemplateComposer({
   shown: string;
   onChange: (value: unknown) => void;
   richPreview?: ResolvedRichPreview;
+  saveAndTest?: { label: string; action: () => Promise<{ ok: boolean; error?: string }> };
 }) {
   const [debounced, setDebounced] = useState(shown);
   const [expanded, setExpanded] = useState(false);
@@ -768,6 +778,9 @@ function TemplateComposer({
         body={previewContainer ? undefined : resolveTemplatePreview(debounced)}
         container={previewContainer}
       />
+      {saveAndTest ? (
+        <SendTestMessageButton label={saveAndTest.label} action={saveAndTest.action} />
+      ) : null}
       <dialog
         ref={dialogRef}
         aria-label={`${fieldLabel} editor`}
@@ -810,6 +823,9 @@ function TemplateComposer({
                 body={previewContainer ? undefined : resolveTemplatePreview(debounced)}
                 container={previewContainer}
               />
+              {saveAndTest ? (
+                <SendTestMessageButton label={saveAndTest.label} action={saveAndTest.action} />
+              ) : null}
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-border bg-bg-subtle px-4 py-3">
               <Button type="button" variant="primary" onClick={() => setExpanded(false)} autoFocus>

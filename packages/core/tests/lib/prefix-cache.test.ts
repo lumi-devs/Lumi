@@ -91,12 +91,10 @@ describe("PrefixCache", () => {
 
     const unbind = cache.attachToInvalidationBus(bus);
 
-    // Trigger start to register listeners
     bus.start();
 
     expect(typeof messageListener).toBe("function");
 
-    // Invalidate guild-1
     messageListener!(
       "lumi:cache:invalidate",
       JSON.stringify({ keys: ["lumi:prefix:guild:guild-1"] }),
@@ -207,27 +205,22 @@ describe("InvalidationBus payload guards", () => {
 
     expect(typeof messageListener).toBe("function");
 
-    // Invalid JSON
     messageListener!("chan", "not-json{");
     expect(listener).not.toHaveBeenCalled();
 
-    // Not an object or null
     messageListener!("chan", "null");
     messageListener!("chan", "123");
     messageListener!("chan", '"string"');
     expect(listener).not.toHaveBeenCalled();
 
-    // keys is not an array
     messageListener!("chan", JSON.stringify({ keys: "string-key" }));
     messageListener!("chan", JSON.stringify({ keys: 123 }));
     messageListener!("chan", JSON.stringify({ keys: null }));
     expect(listener).not.toHaveBeenCalled();
 
-    // keys has non-strings or empty strings
     messageListener!("chan", JSON.stringify({ keys: ["", null, 123, undefined] }));
     expect(listener).not.toHaveBeenCalled();
 
-    // Valid keys mixed with invalid keys
     messageListener!(
       "chan",
       JSON.stringify({ keys: ["valid-key-1", "", 123, "valid-key-2"] }),

@@ -1,6 +1,7 @@
 import { respondWithChoices, filterAutocompleteChoices } from "#lib/utilities/autocomplete.js";
 import type { AutocompleteInteraction } from "discord.js";
 import { ApplyOptions } from "@sapphire/decorators";
+import { Time } from "@sapphire/time-utilities";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
 import {
@@ -432,7 +433,7 @@ public override registerApplicationCommands(
           : null;
 
         const now = Date.now();
-        const fourteenDaysAgo = now - 14 * 24 * 60 * 60 * 1000;
+        const fourteenDaysAgo = now - 14 * Time.Day;
 
         const youngMessages: Message[] = [];
         const oldMessages: Message[] = [];

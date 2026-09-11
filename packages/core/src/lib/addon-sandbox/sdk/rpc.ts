@@ -46,7 +46,7 @@ export function call<T = unknown>(action: AddonRpcMethod, data?: unknown): Promi
 
 function send(message: { type: "rpc-request"; request: unknown }): void {
   if (!process.send) throw new Error("Addon child started without an IPC channel");
-  process.send(message);
+  process.send(JSON.parse(JSON.stringify(message)));
 }
 
 export type { HostToChild };

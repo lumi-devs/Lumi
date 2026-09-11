@@ -1,4 +1,5 @@
 import { container } from "@sapphire/framework";
+import { Time } from "@sapphire/time-utilities";
 import { acquireRedisLock } from "#lib/redis-lock.js";
 import type { ModLiftPayload } from "../scheduled-tasks/modLift.js";
 import { MuteAction, BanAction, VoiceMuteAction } from "../actions/index.js";
@@ -18,7 +19,7 @@ export async function handleModLiftFire(
   const { release } = await acquireRedisLock(
     container.redis,
     `lumi:lock:mod-lift:${payload.caseId}`,
-    { ttlMs: 30_000, acquireTimeoutMs: 60_000 },
+    { ttlMs: Time.Second * 30, acquireTimeoutMs: Time.Minute },
   );
   try {
     await liftCase(payload);

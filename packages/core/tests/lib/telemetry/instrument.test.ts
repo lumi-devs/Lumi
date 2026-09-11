@@ -41,7 +41,6 @@ describe("Telemetry & Instrumentation (instrumentCommandPiece)", () => {
 
     instrumentCommandPiece(piece);
 
-    // Call chatInputRun
     const interactionSource = {
       guildId: "guild-999",
       user: { id: "user-888" },
@@ -75,7 +74,6 @@ describe("Telemetry & Instrumentation (instrumentCommandPiece)", () => {
     expect(lastMockSpan?.setAttribute).toHaveBeenCalledWith("discord.guild.id", "guild-999");
     expect(lastMockSpan?.setAttribute).toHaveBeenCalledWith("discord.user.id", "user-888");
 
-    // Call messageRun
     const messageSource = {
       guild: { id: "guild-777" },
       author: { id: "user-666" },
@@ -98,7 +96,6 @@ describe("Telemetry & Instrumentation (instrumentCommandPiece)", () => {
     expect(lastMockSpan?.setAttribute).toHaveBeenCalledWith("discord.guild.id", "guild-777");
     expect(lastMockSpan?.setAttribute).toHaveBeenCalledWith("discord.user.id", "user-666");
 
-    // Call contextMenuRun
     const resContext = await piece.contextMenuRun(interactionSource);
     expect(resContext).toBe("context-result");
     expect(observability.commandDuration.startTimer).toHaveBeenCalledWith({
@@ -155,7 +152,6 @@ describe("Telemetry & Instrumentation (instrumentCommandPiece)", () => {
     };
     instrumentCommandPiece(piece);
 
-    // Source without guild or user
     await piece.chatInputRun({});
     expect(lastMockSpan?.setAttribute).toHaveBeenCalledWith("lumi.command", "attribCommand");
     expect(lastMockSpan?.setAttribute).toHaveBeenCalledWith("lumi.command.type", "chat");

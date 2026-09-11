@@ -1,4 +1,5 @@
 import { container } from "@sapphire/framework";
+import { Time } from "@sapphire/time-utilities";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { ModuleInfo } from "./types.js";
@@ -336,7 +337,7 @@ export class DownloadResolver {
       await execFileAsync(
         "bun",
         ["add", "--ignore-scripts", ...reqs],
-        { cwd: sourcePath, timeout: 60000 },
+        { cwd: sourcePath, timeout: Time.Minute },
       ).catch(execError("Requirement installation failed"));
 
       const nodeModulesLumiPath = path.join(sourcePath, "node_modules", "lumi");

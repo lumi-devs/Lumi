@@ -18,6 +18,7 @@ import { handleWarnDecayFire } from "./lib/warn-decay-handler.js";
     log_channel_id: cfg.channel({
       label: "Mod Log Channel",
       description: "Channel where moderation action embeds are posted.",
+      claimable: true,
     }),
     quarantine_role_id: cfg.role({
       label: "Quarantine Role",

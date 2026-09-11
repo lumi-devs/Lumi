@@ -3,11 +3,6 @@ import { toStringArray } from "#lib/module-system/Module.js";
 import { MessageTemplateDocs } from "#lib/message-content.js";
 import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
 
-export interface WelcomeActionButton {
-  label: string;
-  url: string;
-}
-
 export interface WelcomeModuleConfig {
   welcomeEnabled: boolean;
   welcomeChannel: string | null;
@@ -16,11 +11,11 @@ export interface WelcomeModuleConfig {
   welcomeThumbnailUrl: string | null;
   welcomeImageUrls: string[];
   welcomeFooter: string | null;
-  welcomeActionButtons: WelcomeActionButton[];
   welcomeRichContent: MessageDocumentV2;
   goodbyeEnabled: boolean;
   goodbyeChannel: string | null;
   goodbyeTemplate: string;
+  goodbyeRichContent: MessageDocumentV2;
   autoRoles: string[];
   dmWelcomeEnabled: boolean;
   dmWelcomeTemplate: string;
@@ -30,7 +25,6 @@ export const WelcomeDefaults = {
   welcomeEnabled: true,
   welcomeTemplate: "Welcome {user} to {server}! You are member #{memberCount}.",
   welcomeImageUrls: [],
-  welcomeActionButtons: [],
   goodbyeEnabled: false,
   goodbyeTemplate: "{username} has left {server}.",
   dmWelcomeEnabled: false,
@@ -48,17 +42,6 @@ async function getConfigValue(
   return container.db.config.getModuleConfig(guildId, "welcome", key);
 }
 
-function toActionButtons(value: unknown): WelcomeActionButton[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((entry): WelcomeActionButton[] => {
-    if (typeof entry !== "object" || entry === null) return [];
-    const { label, url } = entry as Record<string, unknown>;
-    if (typeof label !== "string" || typeof url !== "string") return [];
-    if (label.length === 0 || url.length === 0) return [];
-    return [{ label, url }];
-  });
-}
-
 export async function loadWelcomeConfig(
   guildId: string,
 ): Promise<WelcomeModuleConfig> {
@@ -70,11 +53,11 @@ export async function loadWelcomeConfig(
     welcomeThumbnailUrl,
     welcomeImageUrls,
     welcomeFooter,
-    welcomeActionButtons,
     welcomeRichContent,
     goodbyeEnabled,
     goodbyeChannel,
     goodbyeTemplate,
+    goodbyeRichContent,
     autoRoles,
     dmWelcomeEnabled,
     dmWelcomeTemplate,
@@ -86,11 +69,11 @@ export async function loadWelcomeConfig(
     getConfigValue(guildId, "welcomeThumbnailUrl"),
     getConfigValue(guildId, "welcomeImageUrls"),
     getConfigValue(guildId, "welcomeFooter"),
-    getConfigValue(guildId, "welcomeActionButtons"),
     getConfigValue(guildId, "welcomeRichContent"),
     getConfigValue(guildId, "goodbyeEnabled"),
     getConfigValue(guildId, "goodbyeChannel"),
     getConfigValue(guildId, "goodbyeTemplate"),
+    getConfigValue(guildId, "goodbyeRichContent"),
     getConfigValue(guildId, "autoRoles"),
     getConfigValue(guildId, "dmWelcomeEnabled"),
     getConfigValue(guildId, "dmWelcomeTemplate"),
@@ -120,7 +103,6 @@ export async function loadWelcomeConfig(
       typeof welcomeFooter === "string" && welcomeFooter.length > 0
         ? welcomeFooter
         : null,
-    welcomeActionButtons: toActionButtons(welcomeActionButtons),
     welcomeRichContent: clampMessageDocumentV2(welcomeRichContent),
     goodbyeEnabled:
       typeof goodbyeEnabled === "boolean"
@@ -132,6 +114,7 @@ export async function loadWelcomeConfig(
       typeof goodbyeTemplate === "string" && goodbyeTemplate.length > 0
         ? goodbyeTemplate
         : WelcomeDefaults.goodbyeTemplate,
+    goodbyeRichContent: clampMessageDocumentV2(goodbyeRichContent),
     autoRoles: toStringArray(autoRoles),
     dmWelcomeEnabled:
       typeof dmWelcomeEnabled === "boolean"

@@ -56,6 +56,7 @@ function makeMenu(overrides: Partial<ReactionRoleMenu> = {}): ReactionRoleMenu {
         requiredRoleId: "444444444444444444",
       },
     ],
+    richContent: { blocks: [] },
     createdAt: now,
     updatedAt: now,
     ...overrides,

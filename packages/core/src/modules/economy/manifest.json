@@ -37,7 +37,9 @@
       "label": "Starting Wallet",
       "description": "Wallet balance granted to a member's first account.",
       "group": "Currency",
-      "default": 100
+      "default": 100,
+      "min": 0,
+      "max": 100000
     },
     {
       "key": "starting_bank",
@@ -45,7 +47,9 @@
       "label": "Starting Bank",
       "description": "Bank balance granted to a member's first account.",
       "group": "Currency",
-      "default": 0
+      "default": 0,
+      "min": 0,
+      "max": 100000
     },
     {
       "key": "max_balance",
@@ -53,7 +57,9 @@
       "label": "Maximum Balance",
       "description": "Wallet plus bank can never exceed this total.",
       "group": "Currency",
-      "default": 1000000
+      "default": 1000000,
+      "min": 1000,
+      "max": 2000000000
     },
     {
       "key": "payday_amount",
@@ -61,7 +67,9 @@
       "label": "Payday Amount",
       "description": "Currency granted by each payday claim.",
       "group": "Payday",
-      "default": 120
+      "default": 120,
+      "min": 1,
+      "max": 100000
     },
     {
       "key": "payday_cooldown",
@@ -85,7 +93,9 @@
       "description": "Percentage burned on every member-to-member transfer.",
       "group": "Transfers",
       "default": 0,
-      "step": 1
+      "step": 1,
+      "min": 0,
+      "max": 50
     },
     {
       "key": "slot_min_bid",
@@ -93,7 +103,9 @@
       "label": "Slots Minimum Bid",
       "description": "Smallest allowed slots bid.",
       "group": "Slots",
-      "default": 5
+      "default": 5,
+      "min": 1,
+      "max": 100000
     },
     {
       "key": "slot_max_bid",
@@ -101,7 +113,9 @@
       "label": "Slots Maximum Bid",
       "description": "Largest allowed slots bid.",
       "group": "Slots",
-      "default": 100
+      "default": 100,
+      "min": 1,
+      "max": 100000
     },
     {
       "key": "slot_cooldown",
@@ -123,7 +137,9 @@
       "label": "Slots Daily Wager Cap",
       "description": "Maximum total a member may wager on slots per day. 0 disables the cap.",
       "group": "Slots",
-      "default": 1000
+      "default": 1000,
+      "min": 0,
+      "max": 1000000
     },
     {
       "key": "slot_payouts",

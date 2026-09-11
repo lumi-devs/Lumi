@@ -53,6 +53,24 @@ export function renderMessageBlocksV2(
   raw: unknown,
   vars: Record<string, string> = {},
 ): CardReply {
+  return {
+    flags: MessageFlags.IsComponentsV2,
+    components: [renderMessageBlocksV2Container(raw, vars)],
+    allowedMentions: { parse: [] },
+  };
+}
+
+/**
+ * Same rendering as {@link renderMessageBlocksV2}, but returns the raw
+ * `ContainerBuilder` instead of a finished `CardReply` — for callers (like
+ * the tempvc panel) that need to append their own always-present controls
+ * (action rows whose custom IDs interaction handlers dispatch on) after the
+ * admin's own blocks, rather than letting the blocks replace everything.
+ */
+export function renderMessageBlocksV2Container(
+  raw: unknown,
+  vars: Record<string, string> = {},
+): ContainerBuilder {
   const doc: MessageDocumentV2 = clampMessageDocumentV2(raw);
   const container = new ContainerBuilder();
   const color = parseHexColor(doc.accentColor) ?? resolveCardColor("info");
@@ -102,9 +120,5 @@ export function renderMessageBlocksV2(
     }
   }
 
-  return {
-    flags: MessageFlags.IsComponentsV2,
-    components: [container],
-    allowedMentions: { parse: [] },
-  };
+  return container;
 }

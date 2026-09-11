@@ -1,4 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
+import { Time } from "@sapphire/time-utilities";
 import { getUtility, tryGetUtility } from "#lib/module-system/Utility.js";
 import { Colors } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
@@ -81,7 +82,7 @@ export class FilterMessageListener extends GuildMessageListener {
         { guildId: message.guildId },
         {
           repeated: false,
-          delay: config.lockdownDurationMinutes * 60_000,
+          delay: config.lockdownDurationMinutes * Time.Minute,
           customJobOptions: {
             jobId: `filter-auto-lockdown-unlock:${message.guildId}`,
             removeOnComplete: true,
@@ -129,7 +130,7 @@ export class FilterMessageListener extends GuildMessageListener {
         const reason =
           "Heat panic mode: flagged raider posted during the active raid window";
         await member
-          .timeout(config.timeoutMinutes * 60_000, reason)
+          .timeout(config.timeoutMinutes * Time.Minute, reason)
           .catch(swallow("Filter: heat panic timeout"));
         await this.#logHeat(message, "Heat Panic - Timeout", reason);
       }
@@ -214,7 +215,7 @@ export class FilterMessageListener extends GuildMessageListener {
       );
       const reason = `Heat escalation: reached ${Math.round(level)} heat (violation #${violations})`;
       await member
-        .timeout(minutes * 60_000, reason)
+        .timeout(minutes * Time.Minute, reason)
         .catch(swallow("Filter: heat timeout"));
       await this.#logHeat(message, "Heat - Timeout", reason);
     } else if (action === "warn") {

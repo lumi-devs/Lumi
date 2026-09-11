@@ -1,6 +1,7 @@
 import type { User } from "discord.js";
+import { Time } from "@sapphire/time-utilities";
 
-const SuspiciousAccountAgeMs = 7 * 24 * 60 * 60 * 1000;
+const SuspiciousAccountAgeMs = 7 * Time.Day;
 
 /**
  * Coarse "throwaway account" heuristic shared by verification targeting and

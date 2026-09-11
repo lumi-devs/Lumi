@@ -181,6 +181,7 @@ const CompiledKeys = [
       label: "Log Channel",
       description: "Channel where filter hits are logged.",
       channelTypes: [ChannelType.GuildText],
+      claimable: true,
     }),
     heat_enabled: cfg.boolean({
       group: "Heat Scoring",

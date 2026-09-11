@@ -40,6 +40,10 @@ import {
   registerLoggingRpcHandlers,
   unregisterLoggingRpcHandlers,
 } from "./rpc/logging-rpc.js";
+import {
+  registerWelcomeRpcHandlers,
+  unregisterWelcomeRpcHandlers,
+} from "./rpc/welcome-rpc.js";
 
 const RpcHandlerSets = [
   { register: registerGuildRpcHandlers, unregister: unregisterGuildRpcHandlers },
@@ -57,6 +61,7 @@ const RpcHandlerSets = [
     unregister: unregisterModerationRpcHandlers,
   },
   { register: registerLoggingRpcHandlers, unregister: unregisterLoggingRpcHandlers },
+  { register: registerWelcomeRpcHandlers, unregister: unregisterWelcomeRpcHandlers },
 ];
 
 @DefineModule({

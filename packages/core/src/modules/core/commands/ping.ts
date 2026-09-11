@@ -1,5 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { BucketScope, Command } from "@sapphire/framework";
+import { Time } from "@sapphire/time-utilities";
 import { type ChatInputCommandInteraction, type Message } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
 import { collectPingData } from "#modules/core/lib/ping-collect.js";
@@ -9,8 +10,8 @@ import {
   EphemeralFlags,
 } from "#modules/core/lib/ping-cards.js";
 
-const LiveUpdatesDuration = 60_000;
-const LiveUpdateInterval = 10_000;
+const LiveUpdatesDuration = Time.Minute;
+const LiveUpdateInterval = Time.Second * 10;
 /** Per-user live-update interval handles; ensures at most one active interval per user. */
 const activeIntervals = new Map<string, ReturnType<typeof setInterval>>();
 export const pingViewStates = new Map<

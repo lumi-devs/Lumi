@@ -238,7 +238,6 @@ describe("Task Fire Registry & Consumer", () => {
         nack: vi.fn().mockResolvedValue(undefined),
       };
 
-      // Force invocation with task name that is not in global registry
       await (consumer as any).handle("nonExistentTask" as any, mockMsg);
 
       expect(container.logger.warn).toHaveBeenCalledWith(

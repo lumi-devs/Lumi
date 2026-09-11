@@ -11,6 +11,7 @@ import { Emojis } from "#lib/utilities/assets.js";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 import { sleep } from "#lib/runtime.js";
 import { isNullish } from "@sapphire/utilities";
+import { Time } from "@sapphire/time-utilities";
 import { Result, container, type Awaitable } from "@sapphire/framework";
 import type { Guild, GuildMember, User } from "discord.js";
 
@@ -125,7 +126,7 @@ export async function checkDuplicateCase(
   );
   if (!recent) return true;
 
-  const ageMinutes = (Date.now() - recent.createdAt.getTime()) / 60_000;
+  const ageMinutes = (Date.now() - recent.createdAt.getTime()) / Time.Minute;
   if (ageMinutes > windowMinutes) return true;
 
   const result = await confirmPrompt(ctx, {

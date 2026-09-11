@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
-import { setGuildConfigField, toggleGuildModule } from "#/actions/guild-actions";
+import { sendWelcomeTest, setGuildConfigField, toggleGuildModule } from "#/actions/guild-actions";
 import { SaveBar } from "#/components/save-bar";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
 import { Switch } from "#/components/ui/switch";
@@ -20,10 +20,40 @@ import type {
   DashboardRoleView,
   DashboardChannelView,
 } from "#/lib/dashboard-data";
-import { FieldType, type ConfigField } from "@lumi/contracts";
+import { FieldType, type ConfigField, type WelcomeTestKind } from "@lumi/contracts";
+
+/** Welcome module only: which "send test" kind each preview-bearing field
+ * belongs to, so its preview can carry a working Save & send test button
+ * instead of being a disconnected mockup. */
+const TestKindForField: Record<string, WelcomeTestKind> = {
+  welcomeTemplate: "welcome",
+  welcomeRichContent: "welcome",
+  goodbyeTemplate: "goodbye",
+  goodbyeRichContent: "goodbye",
+};
 
 /** Fallback section for fields that declare no `group`. */
 const FallbackGroupName = "General";
+
+/** Welcome module only: simple fields whose effect is fully covered once the
+ * paired Advanced Layout block editor has content — the worker uses the rich
+ * layout instead of these the moment it has any blocks, so leaving them look
+ * live at that point is misleading rather than merely redundant. */
+const SupersededByRichContent: Record<string, string> = {
+  welcomeAccentColor: "welcomeRichContent",
+  welcomeThumbnailUrl: "welcomeRichContent",
+  welcomeImageUrls: "welcomeRichContent",
+  welcomeFooter: "welcomeRichContent",
+};
+
+function hasBlocks(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as { blocks?: unknown }).blocks) &&
+    (value as { blocks: unknown[] }).blocks.length > 0
+  );
+}
 
 /** Groups fields by their declared `group`, preserving first-seen order.
  * Mirrors the Discord panel's section split (`sectionsFor` in
@@ -119,6 +149,23 @@ export function ModuleConfigForm({
       const failed = results.find((r) => !r.ok);
       if (failed) setError(failed.error ?? "Save failed");
     });
+  }
+
+  /** Persists every unsaved field, then fires the test send — the button
+   * attached to a preview does both so there's no separate disconnected
+   * "Save" step before the preview's send actually reflects it. */
+  async function saveAndTest(kind: WelcomeTestKind): Promise<{ ok: boolean; error?: string }> {
+    const changedKeys = Object.keys(config).filter(
+      (k) => JSON.stringify(config[k]) !== JSON.stringify(m.config[k]),
+    );
+    if (changedKeys.length > 0) {
+      const results = await Promise.all(
+        changedKeys.map((key) => setGuildConfigField(guildId, m.name, key, config[key])),
+      );
+      const failed = results.find((r) => !r.ok);
+      if (failed) return { ok: false, error: failed.error ?? "Save failed" };
+    }
+    return sendWelcomeTest(guildId, kind);
   }
 
   return (
@@ -259,29 +306,52 @@ export function ModuleConfigForm({
                     ) : null}
                     {otherFields.length > 0 ? (
                       <div className="divide-y divide-border-soft">
-                        {otherFields.map((f) => (
-                          <SettingRow
-                            key={f.key}
-                            htmlFor={f.key}
-                            label={f.label}
-                            hint={f.description}
-                            wide={isWideField(f)}
-                            className="cfg-row transition-colors duration-fast hover:bg-bg-subtle/60"
-                            control={
-                              <ConfigFieldInput
-                                field={f}
-                                value={config[f.key]}
-                                onChange={(value) =>
-                                  setConfig((c) => ({ ...c, [f.key]: value }))
-                                }
-                                config={config}
-                                roles={roles}
-                                channels={channels}
-                                guildId={guildId}
-                              />
-                            }
-                          />
-                        ))}
+                        {otherFields.map((f) => {
+                          const richKey = m.name === "welcome" ? SupersededByRichContent[f.key] : undefined;
+                          const superseded = richKey ? hasBlocks(config[richKey]) : false;
+                          const testKind = m.name === "welcome" ? TestKindForField[f.key] : undefined;
+                          return (
+                            <SettingRow
+                              key={f.key}
+                              htmlFor={f.key}
+                              label={f.label}
+                              hint={f.description}
+                              description={
+                                superseded
+                                  ? "Superseded by Advanced Layout below — clear its blocks to use this again."
+                                  : undefined
+                              }
+                              wide={isWideField(f)}
+                              className={cn(
+                                "cfg-row transition-colors duration-fast hover:bg-bg-subtle/60",
+                                superseded && "opacity-50",
+                              )}
+                              control={
+                                <div className={superseded ? "pointer-events-none" : undefined}>
+                                  <ConfigFieldInput
+                                    field={f}
+                                    value={config[f.key]}
+                                    onChange={(value) =>
+                                      setConfig((c) => ({ ...c, [f.key]: value }))
+                                    }
+                                    config={config}
+                                    roles={roles}
+                                    channels={channels}
+                                    guildId={guildId}
+                                    saveAndTest={
+                                      testKind
+                                        ? {
+                                            label: `Save & send test ${testKind} message`,
+                                            action: () => saveAndTest(testKind),
+                                          }
+                                        : undefined
+                                    }
+                                  />
+                                </div>
+                              }
+                            />
+                          );
+                        })}
                       </div>
                     ) : null}
                   </div>

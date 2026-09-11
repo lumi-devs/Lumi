@@ -2,8 +2,9 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   StringSelectMenuBuilder,
+  TextDisplayBuilder,
 } from "@discordjs/builders";
-import { ButtonStyle, roleMention } from "discord.js";
+import { ButtonStyle, MessageFlags, roleMention } from "discord.js";
 import { Rr } from "../keys.js";
 import {
   parseMenuColor,
@@ -20,6 +21,7 @@ import {
   createActionButton,
   createStringSelectMenu,
 } from "#utilities/panels.js";
+import { renderMessageBlocksV2Container } from "#lib/utilities/message-blocks-v2.js";
 
 function safeEmoji(emoji: string | null) {
   if (!emoji) return undefined;
@@ -101,6 +103,23 @@ export function buildMenuCard(menu: ReactionRoleMenu): CardReply {
       : [];
 
   const rows = buildSafeActionRows([...buttonRows, ...selectRows]);
+
+  if (menu.richContent.blocks.length > 0) {
+    // The admin's blocks replace the title/description header only — the
+    // options list is generated from live role state and the button/select
+    // rows are what the pick handlers dispatch on, so both always stay
+    // appended, the same way the tempvc panel keeps its controls.
+    const container = renderMessageBlocksV2Container(menu.richContent);
+    for (const option of menu.options) {
+      container.addTextDisplayComponents(new TextDisplayBuilder().setContent(optionLine(option)));
+    }
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(`-# ${menuModeBadge(menu)}`),
+    );
+    if (rows.length > 0) container.addActionRowComponents(...rows);
+    return { flags: MessageFlags.IsComponentsV2, components: [container], allowedMentions: { parse: [] } };
+  }
+
   return makeCard(parseMenuColor(menu.color), menu.title, body, {
     footer: menuModeBadge(menu),
     actionRows: rows.length > 0 ? rows : undefined,

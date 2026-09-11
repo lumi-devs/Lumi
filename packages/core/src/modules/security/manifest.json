@@ -19,11 +19,29 @@
   ],
   "configFields": [
     {
+      "key": "panic_lock_mod_commands",
+      "type": "BOOLEAN",
+      "label": "Lock Mod Commands During Panic",
+      "description": "While panic mode is active, only the server owner or whoever triggered it may run moderation commands.",
+      "group": "Panic Mode",
+      "section": "Panic mode",
+      "default": false
+    },
+    {
+      "key": "panic_lock_channel_ids",
+      "type": "MULTI_CHANNEL",
+      "label": "Channels to Lock",
+      "description": "Channel IDs locked by /panic. Blank locks every text channel.",
+      "group": "Panic Mode",
+      "section": "Panic mode"
+    },
+    {
       "key": "antinuke_enabled",
       "type": "BOOLEAN",
       "label": "Anti-Nuke",
       "description": "Watch the audit log for mass destructive actions.",
       "group": "Anti-Nuke",
+      "section": "Anti-nuke",
       "default": false
     },
     {
@@ -32,21 +50,27 @@
       "label": "Detection Window",
       "description": "Sliding window in seconds for counting actions.",
       "group": "Anti-Nuke",
-      "default": 60
+      "section": "Anti-nuke",
+      "default": 60,
+      "min": 10,
+      "max": 600
     },
     {
       "key": "trusted_role_ids",
       "type": "MULTI_ROLE",
       "label": "Trusted Roles",
       "description": "Role IDs exempt from anti-nuke.",
-      "group": "Anti-Nuke"
+      "group": "Anti-Nuke",
+      "section": "Anti-nuke"
     },
     {
       "key": "log_channel_id",
       "type": "CHANNEL",
       "label": "Security Log Channel",
       "description": "Channel for anti-nuke alerts (falls back to mod log).",
-      "group": "Anti-Nuke"
+      "group": "Anti-Nuke",
+      "section": "Anti-nuke",
+      "claimable": true
     },
     {
       "key": "max_bans",
@@ -54,7 +78,10 @@
       "label": "Max Bans",
       "description": "Bans allowed per executor within the window.",
       "group": "Nuke Limits",
-      "default": 5
+      "section": "Anti-nuke",
+      "default": 5,
+      "min": 1,
+      "max": 50
     },
     {
       "key": "response_bans",
@@ -62,6 +89,7 @@
       "label": "Response — Bans",
       "description": "Action taken when the ban threshold trips.",
       "group": "Nuke Limits",
+      "section": "Anti-nuke",
       "default": "quarantine",
       "choices": [
         "log",
@@ -75,7 +103,10 @@
       "label": "Max Kicks",
       "description": "Kicks allowed per executor within the window.",
       "group": "Nuke Limits",
-      "default": 5
+      "section": "Anti-nuke",
+      "default": 5,
+      "min": 1,
+      "max": 50
     },
     {
       "key": "response_kicks",
@@ -83,6 +114,7 @@
       "label": "Response — Kicks",
       "description": "Action taken when the kick threshold trips.",
       "group": "Nuke Limits",
+      "section": "Anti-nuke",
       "default": "quarantine",
       "choices": [
         "log",
@@ -96,7 +128,10 @@
       "label": "Max Channel Deletes",
       "description": "Channel deletions allowed per executor within the window.",
       "group": "Nuke Limits",
-      "default": 3
+      "section": "Anti-nuke",
+      "default": 3,
+      "min": 1,
+      "max": 50
     },
     {
       "key": "response_channel_deletes",
@@ -104,6 +139,7 @@
       "label": "Response — Channel Deletes",
       "description": "Action taken when the channel-delete threshold trips.",
       "group": "Nuke Limits",
+      "section": "Anti-nuke",
       "default": "quarantine",
       "choices": [
         "log",
@@ -117,7 +153,10 @@
       "label": "Max Role Deletes",
       "description": "Role deletions allowed per executor within the window.",
       "group": "Nuke Limits",
-      "default": 3
+      "section": "Anti-nuke",
+      "default": 3,
+      "min": 1,
+      "max": 50
     },
     {
       "key": "response_role_deletes",
@@ -125,6 +164,7 @@
       "label": "Response — Role Deletes",
       "description": "Action taken when the role-delete threshold trips.",
       "group": "Nuke Limits",
+      "section": "Anti-nuke",
       "default": "quarantine",
       "choices": [
         "log",
@@ -138,7 +178,10 @@
       "label": "Max Webhook Creates",
       "description": "Webhook creations allowed per executor within the window.",
       "group": "Nuke Limits",
-      "default": 3
+      "section": "Anti-nuke",
+      "default": 3,
+      "min": 1,
+      "max": 50
     },
     {
       "key": "response_webhook_creates",
@@ -146,6 +189,7 @@
       "label": "Response — Webhook Creates",
       "description": "Action taken when the webhook-create threshold trips.",
       "group": "Nuke Limits",
+      "section": "Anti-nuke",
       "default": "quarantine",
       "choices": [
         "log",
@@ -159,7 +203,10 @@
       "label": "Max Vanity URL Changes",
       "description": "Vanity invite code changes allowed per executor within the window.",
       "group": "Nuke Limits",
-      "default": 1
+      "section": "Anti-nuke",
+      "default": 1,
+      "min": 1,
+      "max": 10
     },
     {
       "key": "max_permission_grants",
@@ -167,7 +214,10 @@
       "label": "Max Dangerous Permission Grants",
       "description": "Times @everyone can be granted a dangerous permission (Administrator, Manage Roles, etc.) per executor within the window before response fires. The grant itself is always reverted immediately.",
       "group": "Nuke Limits",
-      "default": 1
+      "section": "Anti-nuke",
+      "default": 1,
+      "min": 1,
+      "max": 10
     },
     {
       "key": "max_quarantine_bypass",
@@ -175,15 +225,10 @@
       "label": "Max Quarantine Bypass Attempts",
       "description": "Times an executor can attempt to change a quarantined member's roles per executor within the window before response fires. The change itself is always reverted immediately.",
       "group": "Nuke Limits",
-      "default": 1
-    },
-    {
-      "key": "panic_lock_mod_commands",
-      "type": "BOOLEAN",
-      "label": "Lock Mod Commands During Panic",
-      "description": "While panic mode is active, only the server owner or whoever triggered it may run moderation commands.",
-      "group": "Panic Mode",
-      "default": false
+      "section": "Anti-nuke",
+      "default": 1,
+      "min": 1,
+      "max": 10
     },
     {
       "key": "joingate_enabled",
@@ -191,6 +236,7 @@
       "label": "Join Gate",
       "description": "Screen new members for raids and throwaway accounts.",
       "group": "Join Gate",
+      "section": "Join gate",
       "default": false
     },
     {
@@ -199,7 +245,11 @@
       "label": "Min Account Age (hours)",
       "description": "Accounts younger than this are gated. 0 disables the check.",
       "group": "Join Gate",
-      "default": 0
+      "section": "Join gate",
+      "enabledBy": "joingate_enabled",
+      "default": 0,
+      "min": 0,
+      "max": 8760
     },
     {
       "key": "raid_join_count",
@@ -207,7 +257,11 @@
       "label": "Raid Join Count",
       "description": "Joins within the raid window that activate raid mode.",
       "group": "Join Gate",
-      "default": 10
+      "section": "Join gate",
+      "enabledBy": "joingate_enabled",
+      "default": 10,
+      "min": 3,
+      "max": 100
     },
     {
       "key": "raid_window_seconds",
@@ -215,7 +269,11 @@
       "label": "Raid Window (seconds)",
       "description": "Window for counting joins toward raid detection.",
       "group": "Join Gate",
-      "default": 30
+      "section": "Join gate",
+      "enabledBy": "joingate_enabled",
+      "default": 30,
+      "min": 5,
+      "max": 300
     },
     {
       "key": "raid_action",
@@ -223,6 +281,8 @@
       "label": "Gate Action",
       "description": "Action applied to gated joiners during a raid.",
       "group": "Join Gate",
+      "section": "Join gate",
+      "enabledBy": "joingate_enabled",
       "default": "kick",
       "choices": [
         "kick",
@@ -236,6 +296,8 @@
       "label": "Raid Response Scope",
       "description": "Apply the raid action to every joiner, or only ones flagged suspicious (no avatar, low account age, similar username to a recent joiner, or bulk-created).",
       "group": "Join Gate",
+      "section": "Join gate",
+      "enabledBy": "joingate_enabled",
       "default": "all",
       "choices": [
         "all",
@@ -247,7 +309,9 @@
       "type": "MULTI_ROLE",
       "label": "Raid Warn Roles",
       "description": "Role IDs mentioned in the log message when raid mode activates.",
-      "group": "Join Gate"
+      "group": "Join Gate",
+      "section": "Join gate",
+      "enabledBy": "joingate_enabled"
     },
     {
       "key": "filter_no_avatar_enabled",
@@ -255,6 +319,8 @@
       "label": "Filter: No Avatar",
       "description": "Flag members who have never set a custom avatar.",
       "group": "Join Gate Filters",
+      "section": "Join gate",
+      "enabledBy": "joingate_enabled",
       "default": false
     },
     {
@@ -263,6 +329,8 @@
       "label": "No Avatar Action",
       "description": "Action taken when the no-avatar filter trips.",
       "group": "Join Gate Filters",
+      "section": "Join gate",
+      "enabledBy": "filter_no_avatar_enabled",
       "default": "log",
       "choices": [
         "log",
@@ -277,6 +345,8 @@
       "label": "Filter: Min Account Age",
       "description": "Flag accounts younger than the configured age.",
       "group": "Join Gate Filters",
+      "section": "Join gate",
+      "enabledBy": "joingate_enabled",
       "default": false
     },
     {
@@ -285,7 +355,11 @@
       "label": "Min Account Age (hours)",
       "description": "Accounts younger than this trip the filter.",
       "group": "Join Gate Filters",
-      "default": 0
+      "section": "Join gate",
+      "enabledBy": "filter_min_age_enabled",
+      "default": 0,
+      "min": 0,
+      "max": 8760
     },
     {
       "key": "filter_min_age_action",
@@ -293,6 +367,8 @@
       "label": "Min Age Action",
       "description": "Action taken when the min-age filter trips.",
       "group": "Join Gate Filters",
+      "section": "Join gate",
+      "enabledBy": "filter_min_age_enabled",
       "default": "kick",
       "choices": [
         "log",
@@ -307,6 +383,8 @@
       "label": "Filter: Unverified Bots",
       "description": "Flag bot accounts that aren't Discord-verified.",
       "group": "Join Gate Filters",
+      "section": "Join gate",
+      "enabledBy": "joingate_enabled",
       "default": false
     },
     {
@@ -315,6 +393,8 @@
       "label": "Unverified Bot Action",
       "description": "Action taken when the unverified-bot filter trips.",
       "group": "Join Gate Filters",
+      "section": "Join gate",
+      "enabledBy": "filter_unverified_bot_enabled",
       "default": "kick",
       "choices": [
         "log",
@@ -329,6 +409,8 @@
       "label": "Filter: Username Pattern",
       "description": "Flag members whose username contains a configured substring.",
       "group": "Join Gate Filters",
+      "section": "Join gate",
+      "enabledBy": "joingate_enabled",
       "default": false
     },
     {
@@ -336,7 +418,9 @@
       "type": "STRING_LIST",
       "label": "Username Patterns",
       "description": "Substrings matched (case-insensitively) against usernames, one per line.",
-      "group": "Join Gate Filters"
+      "group": "Join Gate Filters",
+      "section": "Join gate",
+      "enabledBy": "filter_username_pattern_enabled"
     },
     {
       "key": "filter_username_pattern_action",
@@ -344,6 +428,8 @@
       "label": "Username Pattern Action",
       "description": "Action taken when the username-pattern filter trips.",
       "group": "Join Gate Filters",
+      "section": "Join gate",
+      "enabledBy": "filter_username_pattern_enabled",
       "default": "log",
       "choices": [
         "log",
@@ -358,6 +444,8 @@
       "label": "Filter: Advertising Account",
       "description": "Flag members whose display name itself is a link or invite (ad/scam accounts).",
       "group": "Join Gate Filters",
+      "section": "Join gate",
+      "enabledBy": "joingate_enabled",
       "default": false
     },
     {
@@ -366,6 +454,8 @@
       "label": "Advertising Account Action",
       "description": "Action taken when the advertising-account filter trips.",
       "group": "Join Gate Filters",
+      "section": "Join gate",
+      "enabledBy": "filter_advertising_enabled",
       "default": "kick",
       "choices": [
         "log",
@@ -380,6 +470,7 @@
       "label": "Verification",
       "description": "Require members to verify via the panel for the verified role.",
       "group": "Verification",
+      "section": "Join gate",
       "default": false
     },
     {
@@ -387,14 +478,18 @@
       "type": "ROLE",
       "label": "Verified Role",
       "description": "Role granted after passing the emoji captcha.",
-      "group": "Verification"
+      "group": "Verification",
+      "section": "Join gate",
+      "enabledBy": "verification_enabled"
     },
     {
       "key": "verification_pending_role_id",
       "type": "ROLE",
       "label": "Pending Role",
       "description": "Role assigned on join and removed once verified. Optional.",
-      "group": "Verification"
+      "group": "Verification",
+      "section": "Join gate",
+      "enabledBy": "verification_enabled"
     },
     {
       "key": "verification_timeout_minutes",
@@ -402,7 +497,11 @@
       "label": "Verify Timeout (minutes)",
       "description": "How long a member has to pass the captcha.",
       "group": "Verification",
-      "default": 10
+      "section": "Join gate",
+      "enabledBy": "verification_enabled",
+      "default": 10,
+      "min": 1,
+      "max": 1440
     },
     {
       "key": "verification_kick_on_timeout",
@@ -410,6 +509,8 @@
       "label": "Kick on Timeout",
       "description": "Kick members who don't verify before the timeout.",
       "group": "Verification",
+      "section": "Join gate",
+      "enabledBy": "verification_enabled",
       "default": false
     },
     {
@@ -418,6 +519,8 @@
       "label": "Verification Mode",
       "description": "How members prove they're human: emoji sequence, one-click, or a web challenge on the dashboard.",
       "group": "Verification",
+      "section": "Join gate",
+      "enabledBy": "verification_enabled",
       "default": "emoji",
       "choices": [
         "emoji",
@@ -431,6 +534,8 @@
       "label": "Verification Target",
       "description": "Require verification from everyone, or only accounts flagged as suspicious (new or no avatar).",
       "group": "Verification",
+      "section": "Join gate",
+      "enabledBy": "verification_enabled",
       "default": "everyone",
       "choices": [
         "everyone",
@@ -438,19 +543,15 @@
       ]
     },
     {
-      "key": "panic_lock_channel_ids",
-      "type": "MULTI_CHANNEL",
-      "label": "Channels to Lock",
-      "description": "Channel IDs locked by /panic. Blank locks every text channel.",
-      "group": "Panic Mode"
-    },
-    {
       "key": "backup_interval_hours",
       "type": "NUMBER",
       "label": "Backup Interval (hours)",
       "description": "How often to snapshot role/channel structure while Anti-Nuke is on, for the Restore System.",
       "group": "Backups",
-      "default": 3
+      "section": "Backups",
+      "default": 3,
+      "min": 1,
+      "max": 168
     },
     {
       "key": "backup_keep_count",
@@ -458,7 +559,10 @@
       "label": "Backups to Keep",
       "description": "Older backups past this count are pruned.",
       "group": "Backups",
-      "default": 10
+      "section": "Backups",
+      "default": 10,
+      "min": 1,
+      "max": 50
     }
   ],
   "category": "Security",

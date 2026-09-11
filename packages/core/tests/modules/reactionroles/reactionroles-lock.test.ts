@@ -129,6 +129,7 @@ describe("ReactionRolesUtility menu-write locking", () => {
       channelId: null,
       messageIds: [],
       options: [],
+      richContent: { blocks: [] },
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });

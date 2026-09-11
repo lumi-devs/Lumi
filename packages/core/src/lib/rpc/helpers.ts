@@ -336,6 +336,10 @@ export const LogClaimDismissSchema = s.object({
   outcome: s.enum(LogClaimOutcomes),
 });
 
+export const WelcomeSendTestSchema = s.object({
+  kind: s.union([s.literal("welcome"), s.literal("goodbye")]),
+});
+
 export const TempVcGeneratorSetSchema = s.object({
   channelId: SnowflakeSchema,
   name: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(100).nullable(),
@@ -360,6 +364,7 @@ export const ReactionRoleMenuSetSchema = s.object({
   exclusive: s.boolean().optional(),
   maxRoles: s.number().int().greaterThanOrEqual(1).lessThanOrEqual(25).optional(),
   options: s.array(ReactionRoleOptionSchema).lengthLessThanOrEqual(25),
+  richContent: s.unknown().optional(),
 });
 
 export const ReactionRoleMenuDeleteSchema = s.object({

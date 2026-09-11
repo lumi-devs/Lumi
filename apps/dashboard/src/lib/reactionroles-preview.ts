@@ -1,7 +1,10 @@
+import type { MessageDocumentV2 } from "@lumi/contracts";
 import type {
   PreviewButton,
   PreviewContainer,
+  PreviewV2Component,
 } from "#/components/guild/discord-message-preview";
+import { blockToPreview } from "#/components/guild/message-builder-v2";
 
 export type MenuPreviewMode = "buttons" | "select" | "reactions";
 
@@ -19,6 +22,10 @@ export interface MenuPreviewDraft {
   options: MenuPreviewOption[];
   /** Hex accent, or empty for Discord's blurple. */
   color?: string;
+  /** When it has blocks, replaces the title/description header — the
+   * options list and mode footnote below always stay, matching the
+   * worker's `buildMenuCard`. */
+  richContent?: MessageDocumentV2;
 }
 
 export interface MenuPreview {
@@ -35,25 +42,31 @@ export interface MenuPreview {
  */
 export function buildMenuPreview(draft: MenuPreviewDraft): MenuPreview {
   const filled = draft.options.filter((o) => o.label.trim().length > 0);
-  const body = [
-    draft.description.trim() || "Pick your roles below.",
-    ...filled.map((o) => {
-      const emoji = o.emoji.trim() ? `${o.emoji.trim()} ` : "";
-      return `${emoji}**${o.label.trim()}** → @${o.role.trim() || o.label.trim()}`;
-    }),
-    draft.mode === "reactions"
-      ? "-# React to this message to claim a role. Remove your reaction to give it back."
-      : "-# This is what members see once the menu is posted.",
-  ];
+  const optionLines = filled.map((o) => {
+    const emoji = o.emoji.trim() ? `${o.emoji.trim()} ` : "";
+    return `${emoji}**${o.label.trim()}** → @${o.role.trim() || o.label.trim()}`;
+  });
+
+  const hasRichContent = (draft.richContent?.blocks.length ?? 0) > 0;
+  const header: PreviewV2Component[] = hasRichContent
+    ? draft.richContent!.blocks.map(blockToPreview)
+    : [
+        { kind: "text", content: `## 🎭 ${draft.title.trim() || "Role menu"}` },
+        { kind: "separator", divider: true },
+        { kind: "text", content: draft.description.trim() || "Pick your roles below." },
+      ];
 
   const container: PreviewContainer = {
     accentColor: draft.color?.trim() || "#5865f2",
     components: [
-      { kind: "text", content: `## 🎭 ${draft.title.trim() || "Role menu"}` },
-      { kind: "separator", divider: true },
-      ...body
-        .filter((line) => line.trim().length > 0)
-        .map((content) => ({ kind: "text" as const, content })),
+      ...header,
+      ...optionLines.map((content) => ({ kind: "text" as const, content })),
+      draft.mode === "reactions"
+        ? {
+            kind: "text" as const,
+            content: "-# React to this message to claim a role. Remove your reaction to give it back.",
+          }
+        : { kind: "text" as const, content: "-# This is what members see once the menu is posted." },
       { kind: "separator", divider: false },
       { kind: "text", content: `-# ${modeFootnote(draft.mode)}` },
     ],

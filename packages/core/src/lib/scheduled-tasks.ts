@@ -1,5 +1,6 @@
 import { container } from "@sapphire/framework";
 import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
+import { Time } from "@sapphire/time-utilities";
 import type { ScheduledTasks } from "#lib/types/common.js";
 import { publishTaskFire } from "#lib/scheduler-bus.js";
 
@@ -24,7 +25,7 @@ export interface CatchUpMeta {
 }
 
 /** Default tolerance before a `catchUp: false` job is treated as stale. */
-export const DefaultCatchupGraceMs = 60_000;
+export const DefaultCatchupGraceMs = Time.Minute;
 
 /**
  * Decide whether a scheduled task should run now given its catch-up policy.

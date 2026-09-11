@@ -1,6 +1,7 @@
 import { container } from "@sapphire/framework";
 import { parseHexColor, isHexColor } from "#lib/message-content.js";
 import { isSnowflakeId } from "#utilities/misc.js";
+import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
 
 export type ReactionRoleMode = "buttons" | "select" | "reactions";
 
@@ -31,6 +32,7 @@ export interface ReactionRoleMenu {
   channelId: string | null;
   messageIds: string[];
   options: ReactionRoleOption[];
+  richContent: MessageDocumentV2;
   createdAt: number;
   updatedAt: number;
 }
@@ -288,6 +290,7 @@ function toMenu(value: unknown, guildId: string): ReactionRoleMenu | null {
         } satisfies ReactionRoleOption,
       ];
     }),
+    richContent: clampMessageDocumentV2(raw.richContent),
     createdAt: typeof raw.createdAt === "number" ? raw.createdAt : Date.now(),
     updatedAt: typeof raw.updatedAt === "number" ? raw.updatedAt : Date.now(),
   };

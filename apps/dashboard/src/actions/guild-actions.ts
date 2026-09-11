@@ -7,6 +7,7 @@ import {
   type GuildSetupRunResult,
   type PermitKind,
   type PermitTargetType,
+  type WelcomeTestKind,
 } from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
@@ -110,6 +111,21 @@ export async function setGuildSettings(
       data,
     });
     revalidatePath(`/guild/${guildId}`);
+    return { ok: true };
+  });
+}
+
+export async function sendWelcomeTest(
+  guildId: string,
+  kind: WelcomeTestKind,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await guardedAction(guildId);
+    await rpcCall(RpcActions.guildWelcomeSendTest, {
+      guildId,
+      actorId: session.userId,
+      data: { kind },
+    });
     return { ok: true };
   });
 }

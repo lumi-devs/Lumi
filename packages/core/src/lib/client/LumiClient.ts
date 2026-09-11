@@ -1,4 +1,5 @@
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { Time } from "@sapphire/time-utilities";
 import { disconnectDatabase } from "#lib/prisma/client.js";
 import {
   envParseString,
@@ -138,7 +139,7 @@ export class LumiClient extends SapphireClient {
       } catch (err: unknown) {
         container.logger.error("[Database] Liveness check failed:", err);
       }
-    }, 60_000);
+    }, Time.Minute);
 
     new ReadinessProbes({
       isReady: () => this.isReady(),

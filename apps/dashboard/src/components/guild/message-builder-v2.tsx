@@ -1,15 +1,36 @@
 "use client";
 
+import { useState } from "react";
 import type {
   MessageBlockButton,
   MessageBlockV2,
   MessageDocumentV2,
   SectionAccessory,
 } from "@lumi/contracts";
-import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Layers,
+  Minus,
+  Images,
+  Plus,
+  SquareMousePointer,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { Input, Textarea } from "#/components/ui/input";
 import { Select } from "#/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "#/components/ui/dropdown-menu";
+import { SendTestMessageButton } from "#/components/guild/send-test-message-button";
 import {
   DiscordMessagePreview,
   type PreviewButton,
@@ -51,11 +72,53 @@ function move<T>(arr: T[], from: number, to: number): T[] {
   return next;
 }
 
+const BlockIcons: Record<MessageBlockV2["type"], typeof Layers> = {
+  section: Layers,
+  mediaGallery: Images,
+  separator: Minus,
+  actionRow: SquareMousePointer,
+};
+
+const BlockTitles: Record<MessageBlockV2["type"], string> = {
+  section: "Section",
+  mediaGallery: "Media Gallery",
+  separator: "Separator",
+  actionRow: "Action Row",
+};
+
+/** Same-shape problems the real Discord API would reject the block for — surfaced
+ * inline so an admin catches them before Save rather than from a failed send. */
+function blockProblem(block: MessageBlockV2): string | null {
+  switch (block.type) {
+    case "section":
+      if (!block.texts.some((t) => t.trim().length > 0)) {
+        return "Needs at least one non-empty text.";
+      }
+      if (block.accessory?.type === "thumbnail" && block.accessory.url.trim().length === 0) {
+        return "Thumbnail accessory needs a URL.";
+      }
+      return null;
+    case "mediaGallery":
+      return block.imageUrls.some((u) => u.trim().length > 0)
+        ? null
+        : "Needs at least one image URL.";
+    case "separator":
+      return null;
+    case "actionRow": {
+      if (block.buttons.length === 0) return "Must contain at least one button.";
+      const badLink = block.buttons.find(
+        (b) => b.style === "link" && (b.url ?? "").trim().length === 0,
+      );
+      return badLink ? "A link-style button needs a URL." : null;
+    }
+  }
+}
+
 function toPreviewButton(b: MessageBlockButton): PreviewButton {
   return { label: b.label || "Button", style: b.style, emoji: b.emoji };
 }
 
-function blockToPreview(block: MessageBlockV2): PreviewV2Component {
+export function blockToPreview(block: MessageBlockV2): PreviewV2Component {
   switch (block.type) {
     case "section":
       return {
@@ -98,13 +161,22 @@ export function MessageBuilderV2({
   onChange,
   templateVars = [],
   fieldLabel,
+  saveAndTest,
+  showPreview = true,
 }: {
   value: unknown;
   onChange: (value: unknown) => void;
   templateVars?: string[];
   fieldLabel: string;
+  saveAndTest?: { label: string; action: () => Promise<{ ok: boolean; error?: string }> };
+  /** Set false when the surrounding form already renders its own preview
+   * combining these blocks with other content (e.g. reaction-role menus,
+   * where the options list and controls always get appended below) — two
+   * previews of the same message on one page is just noise. */
+  showPreview?: boolean;
 }) {
   const doc = normalize(value);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   function setDoc(next: MessageDocumentV2) {
     onChange(next);
@@ -124,6 +196,24 @@ export function MessageBuilderV2({
 
   function addBlock(type: MessageBlockV2["type"]) {
     setDoc({ ...doc, blocks: [...doc.blocks, blankBlock(type)] });
+  }
+
+  function duplicateBlock(index: number) {
+    const source = doc.blocks[index];
+    if (!source) return;
+    const copy = { ...source, id: newId() };
+    const next = [...doc.blocks];
+    next.splice(index + 1, 0, copy);
+    setDoc({ ...doc, blocks: next });
+  }
+
+  function toggleCollapsed(id: string) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   const previewContainer: PreviewContainer = {
@@ -152,29 +242,42 @@ export function MessageBuilderV2({
             index={i}
             total={doc.blocks.length}
             templateVars={templateVars}
+            collapsed={collapsed.has(block.id)}
             onChange={(next) => updateBlock(i, next)}
             onRemove={() => removeBlock(i)}
             onMove={(dir) => moveBlock(i, dir)}
+            onDuplicate={() => duplicateBlock(i)}
+            onToggleCollapsed={() => toggleCollapsed(block.id)}
           />
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Add block">
-        <Button type="button" variant="secondary" size="sm" onClick={() => addBlock("section")}>
-          <Plus aria-hidden className="size-3.5" /> Section
-        </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={() => addBlock("mediaGallery")}>
-          <Plus aria-hidden className="size-3.5" /> Media Gallery
-        </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={() => addBlock("separator")}>
-          <Plus aria-hidden className="size-3.5" /> Separator
-        </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={() => addBlock("actionRow")}>
-          <Plus aria-hidden className="size-3.5" /> Action Row
-        </Button>
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="secondary" size="sm" className="w-fit">
+            <Plus aria-hidden className="size-3.5" /> Add Component
+            <ChevronDown aria-hidden className="size-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          {(Object.keys(BlockTitles) as MessageBlockV2["type"][]).map((type) => {
+            const Icon = BlockIcons[type];
+            return (
+              <DropdownMenuItem key={type} onSelect={() => addBlock(type)}>
+                <Icon aria-hidden className="size-3.5" />
+                {BlockTitles[type]}
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-      <DiscordMessagePreview channelName="preview" container={previewContainer} />
+      {showPreview ? (
+        <DiscordMessagePreview channelName="preview" container={previewContainer} />
+      ) : null}
+      {saveAndTest ? (
+        <SendTestMessageButton label={saveAndTest.label} action={saveAndTest.action} />
+      ) : null}
     </div>
   );
 }
@@ -184,32 +287,56 @@ function BlockEditor({
   index,
   total,
   templateVars,
+  collapsed,
   onChange,
   onRemove,
   onMove,
+  onDuplicate,
+  onToggleCollapsed,
 }: {
   block: MessageBlockV2;
   index: number;
   total: number;
   templateVars: string[];
+  collapsed: boolean;
   onChange: (next: MessageBlockV2) => void;
   onRemove: () => void;
   onMove: (dir: -1 | 1) => void;
+  onDuplicate: () => void;
+  onToggleCollapsed: () => void;
 }) {
-  const titles: Record<MessageBlockV2["type"], string> = {
-    section: "Section",
-    mediaGallery: "Media Gallery",
-    separator: "Separator",
-    actionRow: "Action Row",
-  };
+  const Icon = BlockIcons[block.type];
+  const problem = blockProblem(block);
 
   return (
     <div className="flex flex-col gap-2 rounded-panel border border-border p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[13px] font-medium text-fg-muted">
-          {index + 1}. {titles[block.type]}
-        </span>
+        <button
+          type="button"
+          onClick={onToggleCollapsed}
+          className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium text-fg-muted hover:text-fg"
+        >
+          {collapsed ? (
+            <ChevronRight aria-hidden className="size-3.5 shrink-0" />
+          ) : (
+            <ChevronDown aria-hidden className="size-3.5 shrink-0" />
+          )}
+          <Icon aria-hidden className="size-3.5 shrink-0" />
+          <span className="truncate">
+            {index + 1}. {BlockTitles[block.type]}
+          </span>
+          {problem ? <TriangleAlert aria-hidden className="size-3.5 shrink-0 text-danger" /> : null}
+        </button>
         <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label="Duplicate block"
+            onClick={onDuplicate}
+          >
+            <Copy aria-hidden className="size-3.5" />
+          </Button>
           <Button
             type="button"
             variant="ghost"
@@ -236,7 +363,14 @@ function BlockEditor({
         </div>
       </div>
 
-      {block.type === "section" ? (
+      {problem ? (
+        <p className="flex items-center gap-1.5 rounded-control bg-danger-soft px-2.5 py-1.5 text-[13px] text-danger">
+          <TriangleAlert aria-hidden className="size-3.5 shrink-0" />
+          {problem}
+        </p>
+      ) : null}
+
+      {collapsed ? null : block.type === "section" ? (
         <SectionEditor block={block} templateVars={templateVars} onChange={onChange} />
       ) : block.type === "mediaGallery" ? (
         <MediaGalleryEditor block={block} onChange={onChange} />

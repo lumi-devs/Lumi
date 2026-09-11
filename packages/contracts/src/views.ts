@@ -4,6 +4,7 @@ import type {
   WarnThresholdAction,
 } from "./rpc.js";
 import type { ConfigField } from "./config.js";
+import type { MessageDocumentV2 } from "./message-blocks.js";
 export type {
   LogClaimView,
   PermitKind,
@@ -179,6 +180,7 @@ export interface ReactionRoleMenuView {
   channelId: string | null;
   messageIds: string[];
   options: ReactionRoleOptionView[];
+  richContent: MessageDocumentV2;
   createdAt: string;
   updatedAt: string;
 }

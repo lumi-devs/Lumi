@@ -15,6 +15,7 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { Emojis } from "#lib/utilities/assets.js";
+import { Time } from "@sapphire/time-utilities";
 import { fitLines } from "./cards.js";
 import type { CardReply } from "./ui/types.js";
 
@@ -34,7 +35,7 @@ export async function paginateContainer(options: PaginationOptions) {
     totalPages,
     userId,
     customIdPrefix = "page",
-    time = 60_000,
+    time = Time.Minute,
     ephemeral = false,
     render,
   } = options;
@@ -156,7 +157,7 @@ export async function paginateList(options: PaginateListOptions) {
     perPage = 10,
     ephemeral = false,
     customIdPrefix = "list",
-    time = 60_000,
+    time = Time.Minute,
   } = options;
 
   const totalPages = Math.max(1, Math.ceil(items.length / perPage));

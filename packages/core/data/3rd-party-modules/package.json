@@ -1,0 +1,18 @@
+{
+  "name": "lumi",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./.lumi-sdk/index.ts",
+    "./commands": "./.lumi-sdk/commands.ts",
+    "./config": "./.lumi-sdk/config.ts",
+    "./discord": "./.lumi-sdk/discord.ts",
+    "./interactions": "./.lumi-sdk/interactions.ts",
+    "./kv": "./.lumi-sdk/kv.ts",
+    "./permissions": "./.lumi-sdk/permissions.ts",
+    "./redis": "./.lumi-sdk/redis.ts",
+    "./scheduling": "./.lumi-sdk/scheduling.ts",
+    "./ui": "./.lumi-sdk/ui.ts",
+    "./utils": "./.lumi-sdk/utils.ts"
+  }
+}

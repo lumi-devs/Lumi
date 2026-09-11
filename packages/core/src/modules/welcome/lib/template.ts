@@ -10,6 +10,8 @@ import {
   type MessageButton,
 } from "#lib/message-content.js";
 import { renderTemplate } from "#lib/utilities/template.js";
+import { renderMessageBlocksV2 } from "#lib/utilities/message-blocks-v2.js";
+import type { WelcomeModuleConfig } from "./config.js";
 
 export interface WelcomeTemplateVars {
   user: string;
@@ -99,6 +101,35 @@ export function buildWelcomeCard(
 
 export function buildGoodbyeCard(body: string) {
   return makeInfoCard("Member left", splitOnSeparator(body));
+}
+
+export function renderWelcomeCard(
+  config: WelcomeModuleConfig,
+  vars: WelcomeTemplateVars,
+): CardReply {
+  if (config.welcomeRichContent.blocks.length > 0) {
+    return renderMessageBlocksV2(config.welcomeRichContent, welcomeTemplateVarsRecord(vars));
+  }
+  const autoRoleLine =
+    config.autoRoles.length > 0
+      ? `Auto-role${config.autoRoles.length === 1 ? "" : "s"}: ${config.autoRoles.map((id) => `<@&${id}>`).join(" ")}`
+      : undefined;
+  return buildWelcomeCard(renderWelcomeTemplate(config.welcomeTemplate, vars), autoRoleLine, {
+    accentColor: config.welcomeAccentColor,
+    thumbnailUrl: config.welcomeThumbnailUrl,
+    imageUrls: config.welcomeImageUrls,
+    footer: config.welcomeFooter,
+  });
+}
+
+export function renderGoodbyeCard(
+  config: WelcomeModuleConfig,
+  vars: WelcomeTemplateVars,
+): CardReply {
+  if (config.goodbyeRichContent.blocks.length > 0) {
+    return renderMessageBlocksV2(config.goodbyeRichContent, welcomeTemplateVarsRecord(vars));
+  }
+  return buildGoodbyeCard(renderWelcomeTemplate(config.goodbyeTemplate, vars));
 }
 
 export function buildDmWelcomeCard(serverName: string, body: string) {

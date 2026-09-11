@@ -2,6 +2,7 @@ import { container } from "@sapphire/framework";
 import { Colors, PermissionsBitField } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
 import { cutText } from "@sapphire/utilities";
+import { Time } from "@sapphire/time-utilities";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
 import type { GuildMessage } from "#lib/types/common.js";
@@ -80,7 +81,7 @@ async function punish(
   if (typeof minutes !== "number" || minutes <= 0) return;
   await message.member
     ?.timeout(
-      minutes * 60_000,
+      minutes * Time.Minute,
       `[Filter] Message matched ${hit.rule} rule (${hit.detail})`,
     )
     .catch(swallow("Filter: timeout member"));

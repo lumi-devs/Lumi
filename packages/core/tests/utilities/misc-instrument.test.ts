@@ -89,11 +89,9 @@ describe("misc utilities & telemetry instrumentation", () => {
 
       expect(canSendMessages(mockMessage)).toBe(true);
 
-      // Channel missing permissions
       mockMessage.channel.permissionsFor.mockReturnValue(null);
       expect(canSendMessages(mockMessage)).toBe(false);
 
-      // Non-guild channel
       const nonGuildMsg = {
         channel: { isGuildBased: () => false },
       } as any;
@@ -132,7 +130,6 @@ describe("misc utilities & telemetry instrumentation", () => {
 
       instrumentCommandPiece(piece);
 
-      // Test chatInputRun success
       const chatRes = await piece.chatInputRun({ guildId: "g-1", user: { id: "u-1" } });
       expect(chatRes).toBe("chat-ok");
       expect(observability.commandsTotal.inc).toHaveBeenCalledWith({
@@ -141,7 +138,6 @@ describe("misc utilities & telemetry instrumentation", () => {
         status: "success",
       });
 
-      // Test messageRun error
       await expect(piece.messageRun({ guild: { id: "g-2" }, author: { id: "u-2" } })).rejects.toThrow("msg-fail");
       expect(observability.commandsTotal.inc).toHaveBeenCalledWith({
         command: "test-command",

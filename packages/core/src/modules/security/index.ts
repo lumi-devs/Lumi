@@ -61,6 +61,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       group: "Anti-Nuke",
       label: "Security Log Channel",
       description: "Channel for anti-nuke alerts (falls back to mod log).",
+      claimable: true,
     }),
     max_bans: cfg.number({
       section: "Anti-nuke",

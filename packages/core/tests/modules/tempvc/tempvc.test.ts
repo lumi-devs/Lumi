@@ -51,7 +51,6 @@ describe("TempVcUtility", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Directly assign mock properties to the global container
     (container as any).redis = {
       set: vi.fn(),
     } as any;
@@ -159,7 +158,6 @@ describe("TempVcUtility", () => {
 
       expect(mockChannel.send).toHaveBeenCalled();
 
-      // Check reordering scheduled
       await sleep(1000);
       expect(listVcRecords).toHaveBeenCalled();
     }, 6000);

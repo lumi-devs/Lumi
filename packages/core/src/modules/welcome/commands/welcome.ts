@@ -6,8 +6,8 @@ import { sendWelcomeCard } from "../lib/send.js";
 import { loadWelcomeConfig } from "../lib/config.js";
 import {
   buildDmWelcomeCard,
-  buildGoodbyeCard,
-  buildWelcomeCard,
+  renderGoodbyeCard,
+  renderWelcomeCard,
   renderWelcomeTemplate,
   templateVarsFor,
 } from "../lib/template.js";
@@ -89,24 +89,13 @@ export class WelcomeCommand extends BaseCommand {
 
     const card =
       kind === "goodbye"
-        ? buildGoodbyeCard(renderWelcomeTemplate(config.goodbyeTemplate, vars))
+        ? renderGoodbyeCard(config, vars)
         : kind === "dm"
           ? buildDmWelcomeCard(
               guild.name,
               renderWelcomeTemplate(config.dmWelcomeTemplate, vars),
             )
-          : buildWelcomeCard(
-              renderWelcomeTemplate(config.welcomeTemplate, vars),
-              config.autoRoles.length > 0
-                ? `Auto-role${config.autoRoles.length === 1 ? "" : "s"}: ${config.autoRoles.map((id) => `<@&${id}>`).join(" ")}`
-                : undefined,
-              {
-                accentColor: config.welcomeAccentColor,
-                imageUrls: config.welcomeImageUrls,
-                footer: config.welcomeFooter,
-                buttons: config.welcomeActionButtons,
-              },
-            );
+          : renderWelcomeCard(config, vars);
 
     const destination = await ctx.getChannel("channel");
     if (destination) {

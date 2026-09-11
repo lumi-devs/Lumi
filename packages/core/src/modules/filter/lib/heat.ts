@@ -1,3 +1,5 @@
+import { Time } from "@sapphire/time-utilities";
+
 export interface HeatConfig {
   enabled: boolean;
   /** Points added for every message from a non-exempt member. */
@@ -58,7 +60,7 @@ export function decayHeat(
   decayPerMinute: number,
 ): number {
   if (decayPerMinute <= 0) return Math.max(0, stored);
-  const minutes = Math.max(0, (now - lastTs) / 60_000);
+  const minutes = Math.max(0, (now - lastTs) / Time.Minute);
   return Math.max(0, stored - minutes * decayPerMinute);
 }
 

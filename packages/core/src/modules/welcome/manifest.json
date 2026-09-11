@@ -59,7 +59,6 @@
         "accentColorKey": "welcomeAccentColor",
         "footerKey": "welcomeFooter",
         "imageUrlsKey": "welcomeImageUrls",
-        "buttonsKey": "welcomeActionButtons",
         "thumbnailKey": "welcomeThumbnailUrl"
       }
     },
@@ -93,28 +92,6 @@
       "label": "Footer",
       "description": "Small footer line under the welcome card. Falls back to the auto-role line when empty.",
       "group": "Welcome Message"
-    },
-    {
-      "key": "welcomeActionButtons",
-      "type": "OBJECT_ARRAY",
-      "label": "Action Buttons",
-      "description": "Link buttons under the welcome card (max 5).",
-      "group": "Welcome Message",
-      "default": [],
-      "subfields": [
-        {
-          "key": "label",
-          "type": "STRING",
-          "label": "Label",
-          "description": "Button text."
-        },
-        {
-          "key": "url",
-          "type": "STRING",
-          "label": "URL",
-          "description": "Where the button links."
-        }
-      ]
     },
     {
       "key": "welcomeRichContent",
@@ -165,6 +142,28 @@
       "group": "Goodbye Message",
       "default": "{username} has left {server}.",
       "format": "template",
+      "templateVars": [
+        "user",
+        "userId",
+        "username",
+        "nickname",
+        "userAvatarUrl",
+        "server",
+        "serverId",
+        "serverIconUrl",
+        "memberCount",
+        "memberNumber"
+      ]
+    },
+    {
+      "key": "goodbyeRichContent",
+      "type": "COMPONENTS_V2_BLOCKS",
+      "label": "Advanced Layout",
+      "description": "Optional block-based layout (Section, Media Gallery, Separator, Action Row) for the goodbye card. When it has any blocks, it replaces the plain template above.",
+      "group": "Goodbye Message",
+      "default": {
+        "blocks": []
+      },
       "templateVars": [
         "user",
         "userId",
