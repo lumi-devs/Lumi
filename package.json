@@ -57,8 +57,8 @@
     "modules:manifest": "bun scripts/generate-manifests.ts",
     "validate": "bun scripts/validate-addon.ts",
     "addon:create": "bun scripts/create-addon.ts",
-    "test": "vitest run && bun run --cwd apps/dashboard test",
-    "test:coverage": "vitest run --coverage && bun run --cwd apps/dashboard test -- --coverage",
+    "test": "bun test --parallel && bun run --cwd apps/dashboard test",
+    "test:coverage": "bun test --parallel --coverage && bun run --cwd apps/dashboard test -- --coverage",
     "changeset": "bunx @changesets/cli",
     "version:sync": "bunx @changesets/cli version && bun run modules:manifest",
     "verify:resilience": "bun scripts/verify-resilience.ts",
@@ -96,8 +96,6 @@
     "@types/pg": "^8.23.1",
     "@typescript-eslint/eslint-plugin": "^8.69.0",
     "@typescript-eslint/parser": "^8.69.0",
-    "@vitest/coverage-istanbul": "5.0.0",
-    "@vitest/coverage-v8": "^5.0.0",
     "discord-api-types": "^0.38.55",
     "discord.js": "^14.27.0",
     "dotenv": "^17.4.2",
@@ -107,8 +105,7 @@
     "prisma": "^7.10.0",
     "turbo": "^2.10.12",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.69.0",
-    "vitest": "^5.0.0"
+    "typescript-eslint": "^8.69.0"
   },
   "packageManager": "bun@1.4.2",
   "overrides": {
