@@ -359,6 +359,7 @@ const rpcSummaries: Record<string, string> = {
   "guild.verificationPanel.set": "Bind the verification panel.",
   "guild.verificationPanel.delete": "Remove the verification panel.",
   "guild.logClaims.list": "List channels pending as log destinations.",
+  "guild.logClaims.issue": "Issue a one-time code to claim a log channel.",
   "guild.logClaims.dismiss": "Resolve a claim as confirmed or dismissed; audit-logged.",
   "guild.verificationWeb.complete": "Complete a web verification flow.",
   "guild.backups.list": "List guild backups (role/channel counts).",
