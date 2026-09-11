@@ -27,6 +27,10 @@ export default class GiveawayButtonHandler extends BaseInteractionHandler {
       return ctx.showModal(editPrizeModal(giveawayId, record.prize));
     }
 
+    if (record.requiredRoleId && !ctx.member?.roles.includes(record.requiredRoleId)) {
+      return ctx.replyError("Missing Role", "You don't have the role required to enter this giveaway.");
+    }
+
     await ctx.defer();
     const count = await enterGiveaway(ctx.guildId, giveawayId, ctx.user.id);
     return ctx.replySuccess(

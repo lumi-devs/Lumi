@@ -18,6 +18,7 @@ export interface GiveawayRecord {
   endsAt: number;
   endedAt?: number;
   winners?: string[];
+  requiredRoleId?: string | null;
 }
 
 export interface StartParams {
@@ -28,6 +29,7 @@ export interface StartParams {
   winnerCount: number;
   hostId: string;
   durationMs: number;
+  requiredRoleId?: string | null;
 }
 
 export async function getGiveaway(guildId: string, id: string): Promise<GiveawayRecord | null> {
@@ -58,6 +60,7 @@ export async function startGiveaway(
     hostId: params.hostId,
     createdAt: Date.now(),
     endsAt: Date.now() + params.durationMs,
+    requiredRoleId: params.requiredRoleId ?? null,
   };
   await kv.set(params.guildId, id, KEY, record);
   return { id, record };

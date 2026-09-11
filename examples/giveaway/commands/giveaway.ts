@@ -40,6 +40,11 @@ export default class GiveawayCommand extends BaseSubcommand {
             )
             .addIntegerOption((opt) =>
               opt.setName("winners").setDescription("Number of winners.").setMinValue(1).setMaxValue(20),
+            )
+            .addStringOption((opt) =>
+              opt
+                .setName("required_role")
+                .setDescription("Role mention or ID members must hold to enter."),
             ),
         )
         .addSubcommand((sub) =>
@@ -59,6 +64,13 @@ export default class GiveawayCommand extends BaseSubcommand {
     const defaultWinnersRaw = await getModuleConfig("default_winner_count");
     const defaultWinners = typeof defaultWinnersRaw === "number" ? defaultWinnersRaw : 1;
     const winnerCount = (await ctx.getInteger("winners")) ?? defaultWinners;
+    const requiredRoleRaw = await ctx.getString("required_role");
+    const requiredRoleId = requiredRoleRaw
+      ? requiredRoleRaw.match(/^(?:<@&)?(\d{17,20})>?$/)?.[1] ?? null
+      : null;
+    if (requiredRoleRaw && !requiredRoleId) {
+      return ctx.replyError("Invalid Role", "Give a role mention or ID for `required_role`.");
+    }
 
     const durationMs = minutes * 60_000;
     const placeholder = await discord.channels.send(ctx.channelId, {
@@ -73,6 +85,7 @@ export default class GiveawayCommand extends BaseSubcommand {
       winnerCount,
       hostId: ctx.user.id,
       durationMs,
+      requiredRoleId,
     });
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
