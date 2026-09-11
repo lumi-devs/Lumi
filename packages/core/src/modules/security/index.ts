@@ -186,6 +186,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       default: 0,
       min: 0,
       max: 8760,
+      enabledBy: "joingate_enabled",
     }),
     raid_join_count: cfg.number({
       section: "Join gate",
@@ -195,6 +196,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       default: 10,
       min: 3,
       max: 100,
+      enabledBy: "joingate_enabled",
     }),
     raid_window_seconds: cfg.number({
       section: "Join gate",
@@ -204,6 +206,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       default: 30,
       min: 5,
       max: 300,
+      enabledBy: "joingate_enabled",
     }),
     raid_action: cfg.enum(["kick", "timeout", "quarantine"], {
       section: "Join gate",
@@ -211,6 +214,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       label: "Gate Action",
       description: "Action applied to gated joiners during a raid.",
       default: "kick",
+      enabledBy: "joingate_enabled",
     }),
     raid_account_type: cfg.enum(["all", "suspicious"], {
       section: "Join gate",
@@ -219,6 +223,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       description:
         "Apply the raid action to every joiner, or only ones flagged suspicious (no avatar, low account age, similar username to a recent joiner, or bulk-created).",
       default: "all",
+      enabledBy: "joingate_enabled",
     }),
     raid_warn_role_ids: cfg.multiRole({
       section: "Join gate",
@@ -226,6 +231,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       label: "Raid Warn Roles",
       description:
         "Role IDs mentioned in the log message when raid mode activates.",
+      enabledBy: "joingate_enabled",
     }),
     filter_no_avatar_enabled: cfg.boolean({
       section: "Join gate",
@@ -233,6 +239,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       label: "Filter: No Avatar",
       description: "Flag members who have never set a custom avatar.",
       default: false,
+      enabledBy: "joingate_enabled",
     }),
     filter_no_avatar_action: cfg.enum(["log", "kick", "timeout", "quarantine"], {
       section: "Join gate",
@@ -240,6 +247,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       label: "No Avatar Action",
       description: "Action taken when the no-avatar filter trips.",
       default: "log",
+      enabledBy: "filter_no_avatar_enabled",
     }),
     filter_min_age_enabled: cfg.boolean({
       section: "Join gate",
@@ -247,6 +255,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       label: "Filter: Min Account Age",
       description: "Flag accounts younger than the configured age.",
       default: false,
+      enabledBy: "joingate_enabled",
     }),
     filter_min_age_hours: cfg.number({
       section: "Join gate",
@@ -256,6 +265,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       default: 0,
       min: 0,
       max: 8760,
+      enabledBy: "filter_min_age_enabled",
     }),
     filter_min_age_action: cfg.enum(["log", "kick", "timeout", "quarantine"], {
       section: "Join gate",
@@ -263,6 +273,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       label: "Min Age Action",
       description: "Action taken when the min-age filter trips.",
       default: "kick",
+      enabledBy: "filter_min_age_enabled",
     }),
     filter_unverified_bot_enabled: cfg.boolean({
       section: "Join gate",
@@ -270,6 +281,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       label: "Filter: Unverified Bots",
       description: "Flag bot accounts that aren't Discord-verified.",
       default: false,
+      enabledBy: "joingate_enabled",
     }),
     filter_unverified_bot_action: cfg.enum(["log", "kick", "timeout", "quarantine"], {
       section: "Join gate",
@@ -277,6 +289,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       label: "Unverified Bot Action",
       description: "Action taken when the unverified-bot filter trips.",
       default: "kick",
+      enabledBy: "filter_unverified_bot_enabled",
     }),
     filter_username_pattern_enabled: cfg.boolean({
       section: "Join gate",
@@ -284,12 +297,14 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       label: "Filter: Username Pattern",
       description: "Flag members whose username contains a configured substring.",
       default: false,
+      enabledBy: "joingate_enabled",
     }),
     filter_username_pattern: cfg.stringList({
       section: "Join gate",
       group: "Join Gate Filters",
       label: "Username Patterns",
       description: "Substrings matched (case-insensitively) against usernames, one per line.",
+      enabledBy: "filter_username_pattern_enabled",
     }),
     filter_username_pattern_action: cfg.enum(["log", "kick", "timeout", "quarantine"], {
       section: "Join gate",
@@ -297,6 +312,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       label: "Username Pattern Action",
       description: "Action taken when the username-pattern filter trips.",
       default: "log",
+      enabledBy: "filter_username_pattern_enabled",
     }),
     filter_advertising_enabled: cfg.boolean({
       section: "Join gate",
@@ -304,6 +320,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       label: "Filter: Advertising Account",
       description: "Flag members whose display name itself is a link or invite (ad/scam accounts).",
       default: false,
+      enabledBy: "joingate_enabled",
     }),
     filter_advertising_action: cfg.enum(["log", "kick", "timeout", "quarantine"], {
       section: "Join gate",
@@ -311,6 +328,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       label: "Advertising Account Action",
       description: "Action taken when the advertising-account filter trips.",
       default: "kick",
+      enabledBy: "filter_advertising_enabled",
     }),
     verification_enabled: cfg.boolean({
       section: "Join gate",
@@ -324,12 +342,14 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       group: "Verification",
       label: "Verified Role",
       description: "Role granted after passing the emoji captcha.",
+      enabledBy: "verification_enabled",
     }),
     verification_pending_role_id: cfg.role({
       section: "Join gate",
       group: "Verification",
       label: "Pending Role",
       description: "Role assigned on join and removed once verified. Optional.",
+      enabledBy: "verification_enabled",
     }),
     verification_timeout_minutes: cfg.number({
       section: "Join gate",
@@ -339,6 +359,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       default: 10,
       min: 1,
       max: 1440,
+      enabledBy: "verification_enabled",
     }),
     verification_kick_on_timeout: cfg.boolean({
       section: "Join gate",
@@ -346,6 +367,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       label: "Kick on Timeout",
       description: "Kick members who don't verify before the timeout.",
       default: false,
+      enabledBy: "verification_enabled",
     }),
     verification_mode: cfg.enum(["emoji", "none", "web"], {
       section: "Join gate",
@@ -354,6 +376,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       description:
         "How members prove they're human: emoji sequence, one-click, or a web challenge on the dashboard.",
       default: "emoji",
+      enabledBy: "verification_enabled",
     }),
     verification_target: cfg.enum(["everyone", "suspicious"], {
       section: "Join gate",
@@ -362,6 +385,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
       description:
         "Require verification from everyone, or only accounts flagged as suspicious (new or no avatar).",
       default: "everyone",
+      enabledBy: "verification_enabled",
     }),
     backup_interval_hours: cfg.number({
       section: "Backups",

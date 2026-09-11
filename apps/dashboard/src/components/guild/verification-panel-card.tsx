@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ExternalLink } from "lucide-react";
 import {
   deleteVerificationPanel,
-  setVerificationPanel,
+  postVerificationPanel,
 } from "#/actions/security-actions";
 import { ActionError } from "#/components/action-error";
 import { Alert } from "#/components/ui/alert";
@@ -18,18 +18,20 @@ import {
   CardTitle,
 } from "#/components/ui/card";
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
-import { Field, Input, Select } from "#/components/ui/input";
+import { Field } from "#/components/ui/input";
+import { Select } from "#/components/ui/select";
+import { Switch } from "#/components/ui/switch";
 import { Readout, ReadoutList } from "#/components/ui/readout";
 import { spotlightHandler } from "#/lib/animate";
 import type {
   DashboardChannelView,
   VerificationPanelView,
 } from "#/lib/dashboard-data";
-import { formatCaseDate, isSnowflake } from "#/lib/moderation-cases";
+import { formatCaseDate } from "#/lib/moderation-cases";
 import { useServerAction } from "#/lib/use-server-action";
 
-// Bookkeeping only: the Verify button is matched by custom ID, so a panel works
-// whether or not it is recorded here, and nothing here touches a Discord message.
+const CreateChannelValue = "__create__";
+
 export function VerificationPanelCard({
   guildId,
   panel,
@@ -72,7 +74,7 @@ export function VerificationPanelCard({
                 <ExternalLink aria-hidden />
               </a>
               <Button size="sm" onClick={() => setEditing(true)}>
-                Point elsewhere
+                Move it
               </Button>
             </>
           ) : null
@@ -80,10 +82,10 @@ export function VerificationPanelCard({
       >
         <CardTitle>Verification panel</CardTitle>
         <CardDescription>
-          Where <code className="font-mono">/verifypanel</code> last posted the
-          panel members click to get verified. Changing it here only updates
-          Lumi&rsquo;s note of the location — it never posts, moves or deletes a
-          message.
+          Where Lumi posted the panel members click to get verified. Saving
+          below posts a fresh panel if none is tracked yet, edits the existing
+          message in place if you keep the same channel, or moves it to a
+          different channel when you pick one.
         </CardDescription>
       </CardHeader>
 
@@ -179,32 +181,58 @@ function PanelForm({
   const [channelId, setChannelId] = useState(
     panel?.channelId ?? channels[0]?.id ?? "",
   );
-  const [messageId, setMessageId] = useState(panel?.messageId ?? "");
+  const [confirmingMove, setConfirmingMove] = useState(false);
+  const [deleteOldMessage, setDeleteOldMessage] = useState(false);
   const { isPending, error, setError, run } = useServerAction();
+
+  const isMove = Boolean(
+    panel && (channelId === CreateChannelValue || channelId !== panel.channelId),
+  );
+  const oldChannelName = panel
+    ? channels.find((c) => c.id === panel.channelId)?.name
+    : undefined;
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!channelId) {
-      setError("Pick the channel the panel was posted in.");
+      setError("Pick the channel to post the panel in.");
       return;
     }
-    if (!isSnowflake(messageId.trim())) {
-      setError(
-        "That isn't a message ID. Right-click the panel message in Discord with Developer Mode on and choose Copy Message ID.",
-      );
+    if (isMove) {
+      setError(null);
+      setConfirmingMove(true);
       return;
     }
+    post();
+  }
+
+  function post() {
     run(async () => {
-      const result = await setVerificationPanel(
-        guildId,
-        channelId,
-        messageId.trim(),
-      );
+      const result = await postVerificationPanel(guildId, {
+        channelId: channelId === CreateChannelValue ? undefined : channelId,
+        createChannel: channelId === CreateChannelValue,
+        deleteOldMessage: isMove ? deleteOldMessage : undefined,
+      });
       if (!result.ok) {
-        setError(result.error ?? "Saving the record failed. Try again.");
+        setError(result.error ?? "Posting the panel failed. Try again.");
         return;
       }
-      onSaved("Panel location saved.");
+      setConfirmingMove(false);
+      const channelName =
+        channels.find((c) => c.id === result.channelId)?.name ?? "the channel";
+      if (result.createdChannel) {
+        onSaved(`Created #${channelName} and posted the panel there.`);
+      } else if (result.moved) {
+        onSaved(
+          result.oldMessageDeleted
+            ? `Moved the panel to #${channelName} and deleted the old message.`
+            : `Moved the panel to #${channelName}. The old message was left behind.`,
+        );
+      } else if (result.edited) {
+        onSaved(`Updated the panel message in #${channelName}.`);
+      } else {
+        onSaved(`Posted a new panel in #${channelName}.`);
+      }
     });
   }
 
@@ -213,7 +241,8 @@ function PanelForm({
       <CardBody>
         <Alert variant="warning">
           Lumi can&rsquo;t see any text channels in this server, so there&rsquo;s
-          nowhere to record a panel. Check the bot&rsquo;s channel permissions.
+          nowhere to post a panel. Check the bot&rsquo;s channel permissions, or
+          create one below.
         </Alert>
       </CardBody>
     );
@@ -229,33 +258,22 @@ function PanelForm({
         >
           <Select
             id="panel-channel"
+            aria-label="Channel"
             value={channelId}
-            onChange={(e) => setChannelId(e.target.value)}
-          >
-            {channels.map((channel) => (
-              <option key={channel.id} value={channel.id}>
-                #{channel.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field
-          label="Message ID"
-          htmlFor="panel-message"
-          className="min-w-[12rem] flex-1 gap-1"
-        >
-          <Input
-            id="panel-message"
-            value={messageId}
-            inputMode="numeric"
-            placeholder="e.g. 328473289473289473"
-            onChange={(e) => setMessageId(e.target.value)}
+            onValueChange={(next) => setChannelId(next)}
+            options={[
+              ...channels.map((channel) => ({
+                value: channel.id,
+                label: `#${channel.name}`,
+              })),
+              { value: CreateChannelValue, label: "+ Create new channel (#verify-here)" },
+            ]}
           />
         </Field>
         <div className="flex flex-col gap-1">
-          {/* Invisible spacer matching Field's Label row, so these buttons -
-           * which have no label of their own - still bottom-align with the
-           * inputs. */}
+          {/* Invisible spacer matching Field's Label row, so this button -
+           * which has no label of its own - still bottom-aligns with the
+           * input. */}
           <span aria-hidden className="invisible text-[14px] leading-4">
             spacer
           </span>
@@ -272,9 +290,57 @@ function PanelForm({
         </div>
       </div>
       <p className="text-[13px] leading-4 text-fg-subtle">
-        Copy Message ID on the panel message.
+        {channelId === CreateChannelValue
+          ? "Lumi will create #verify-here and post the panel there."
+          : panel && channelId === panel.channelId
+            ? "Lumi will edit the existing panel message in place."
+            : "Lumi will post a new panel message in this channel."}
       </p>
       <ActionError error={error} />
+
+      <ConfirmDialog
+        open={confirmingMove}
+        title="Move the verification panel?"
+        description={
+          <>
+            This posts a new panel in{" "}
+            {channelId === CreateChannelValue ? (
+              <>the new #verify-here channel</>
+            ) : (
+              <>#{channels.find((c) => c.id === channelId)?.name ?? "the selected channel"}</>
+            )}
+            {oldChannelName ? (
+              <>
+                {" "}
+                and stops tracking the one in #{oldChannelName}. That old message
+                is left exactly as it is — its Verify button keeps working, but
+                it&rsquo;s no longer the panel Lumi points members to. Only Lumi&rsquo;s
+                own tracked panel message is ever touched — nothing else in the
+                channel is affected.
+              </>
+            ) : null}
+          </>
+        }
+        confirmLabel="Move panel"
+        pendingLabel="Moving…"
+        pending={isPending}
+        error={error}
+        onConfirm={post}
+        onClose={() => {
+          if (isPending) return;
+          setConfirmingMove(false);
+          setError(null);
+        }}
+      >
+        <label className="flex items-center gap-2 text-[14px] text-fg">
+          <Switch
+            checked={deleteOldMessage}
+            onChange={setDeleteOldMessage}
+            aria-label="Also delete the old message"
+          />
+          Also delete the old message{oldChannelName ? ` in #${oldChannelName}` : ""}
+        </label>
+      </ConfirmDialog>
     </form>
   );
 }

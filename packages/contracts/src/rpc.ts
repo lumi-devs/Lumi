@@ -18,6 +18,7 @@ import type {
   SystemDashboardData,
   TempVcGeneratorView,
   TempVcRecordView,
+  VerificationPanelSetResult,
   VerificationPanelView,
   WarnThresholdView,
 } from "./views.js";
@@ -33,9 +34,33 @@ export interface RpcRequest<T = unknown> {
   data?: T;
 }
 
+/**
+ * Machine-readable causes a failing handler can name. Callers must branch on
+ * these rather than on `error` text: a missing guild and a database outage are
+ * both "the request failed", but only one of them means "invite the bot".
+ */
+export const RpcFailureCodes = {
+  /** The bot is not in the guild (or cannot see it). */
+  GuildNotFound: "GUILD_NOT_FOUND",
+} as const;
+
+export type RpcFailureCode =
+  (typeof RpcFailureCodes)[keyof typeof RpcFailureCodes];
+
+/** Thrown by an RPC handler to put a `code` on the failure envelope. */
+export class CodedRpcError extends Error {
+  public readonly code: RpcFailureCode;
+
+  public constructor(code: RpcFailureCode, message: string) {
+    super(message);
+    this.name = "CodedRpcError";
+    this.code = code;
+  }
+}
+
 export type RpcResponse<T = unknown> =
-  | { id: string; ok: true; data?: T; error?: never }
-  | { id: string; ok: false; data?: never; error: string };
+  | { id: string; ok: true; data?: T; error?: never; code?: never }
+  | { id: string; ok: false; data?: never; error: string; code?: RpcFailureCode };
 
 /** Runtime check on the envelope only - dashboard and worker deploy independently, so this is the one shape TypeScript can't guarantee across the wire. */
 const RpcResponseEnvelopeSchema = s.object({
@@ -43,11 +68,18 @@ const RpcResponseEnvelopeSchema = s.object({
   ok: s.boolean(),
   data: s.unknown().optional(),
   error: s.string().optional(),
+  code: s.string().optional(),
 });
 
 /** Throws with a clear message if `raw` isn't a well-formed `RpcResponse` envelope. */
 export function parseRpcResponse<T = unknown>(raw: unknown): RpcResponse<T> {
-  let envelope: { id: string; ok: boolean; data?: T; error?: string };
+  let envelope: {
+    id: string;
+    ok: boolean;
+    data?: T;
+    error?: string;
+    code?: string;
+  };
   try {
     envelope = RpcResponseEnvelopeSchema.parse(raw);
   } catch (err: unknown) {
@@ -280,12 +312,19 @@ export interface PanicSetPayload {
   channelIds?: string[];
 }
 
+/**
+ * `channelId` targets an existing channel; `createChannel` has the bot create
+ * a fresh one instead. Exactly one of the two must be given. `deleteOldMessage`
+ * only matters when the target channel differs from the currently tracked
+ * one — it deletes the orphaned message left behind in the old channel.
+ */
 export interface VerificationPanelSetPayload {
-  channelId: string;
-  messageId: string;
+  channelId?: string;
+  createChannel?: boolean;
+  deleteOldMessage?: boolean;
 }
 
-/** One channel pending as a log destination, claimed in Discord via `log claim`. */
+/** One channel pending as a log destination, claimed by posting a claim code in Discord. */
 export interface LogClaimView {
   channelId: string;
   authorId: string;
@@ -569,6 +608,7 @@ export interface RpcRequestPayloads {
   "guild.verificationPanel.set": VerificationPanelSetPayload;
   "guild.verificationPanel.delete": never;
   "guild.logClaims.list": never;
+  "guild.logClaims.issue": never;
   "guild.logClaims.dismiss": LogClaimDismissPayload;
   "guild.verificationWeb.complete": never;
   "guild.backups.list": never;
@@ -639,7 +679,9 @@ export interface RpcResponsePayloads {
   "guild.verificationPanel.get": {
     panel: VerificationPanelView | null;
   };
+  "guild.verificationPanel.set": VerificationPanelSetResult;
   "guild.logClaims.list": { claims: LogClaimView[] };
+  "guild.logClaims.issue": { code: string; expiresIn: number };
   "guild.tempvc.generators.list": {
     generators: TempVcGeneratorView[];
   };
@@ -696,7 +738,9 @@ const ResponseDataActions = [
   "guild.panic.get",
   "guild.backups.list",
   "guild.verificationPanel.get",
+  "guild.verificationPanel.set",
   "guild.logClaims.list",
+  "guild.logClaims.issue",
   "guild.tempvc.generators.list",
   "guild.tempvc.records.list",
   "guild.reactionroles.menus.list",
@@ -768,6 +812,7 @@ export const RpcActions = {
   guildVerificationPanelSet: "guild.verificationPanel.set",
   guildVerificationPanelDelete: "guild.verificationPanel.delete",
   guildLogClaimsList: "guild.logClaims.list",
+  guildLogClaimsIssue: "guild.logClaims.issue",
   guildLogClaimsDismiss: "guild.logClaims.dismiss",
   guildVerificationWebComplete: "guild.verificationWeb.complete",
   guildBackupsList: "guild.backups.list",

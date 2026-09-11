@@ -84,21 +84,25 @@ export function registerSecurityRpcHandlers(): void {
   registerRpcHandler(RpcActions.guildVerificationPanelSet, async (req) => {
     const guildId = requireGuildId(req.guildId);
     await requireGuildManager(guildId, req.actorId);
-    const { channelId, messageId } = parsePayload(
+    const { channelId, createChannel, deleteOldMessage } = parsePayload(
       VerificationPanelSetSchema,
       req.data,
     );
+    if (!channelId && !createChannel) {
+      throw new Error("Pick a channel or choose to create a new one.");
+    }
+
+    const security = tryGetUtility("security");
+    if (!security) throw new Error("The security module is not loaded");
 
     await container.db.ensureGuild(guildId);
-    const panel = await container.db.security.saveVerificationPanel({
-      guildId,
+    const guild = cachedGuild(guildId);
+    const result = await security.postOrEditVerifyPanel(guild, {
       channelId,
-      messageId,
+      createChannel,
+      deleteOldMessage,
     });
-    return {
-      success: true,
-      panel: { channelId: panel.channelId, messageId: panel.messageId },
-    };
+    return { success: true, ...result };
   });
 
   registerRpcHandler(RpcActions.guildVerificationPanelDelete, async (req) => {

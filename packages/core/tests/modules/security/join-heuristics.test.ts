@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import type { User } from "discord.js";
 import { hasAdvertisingIndicators } from "#modules/security/lib/join-heuristics.js";
 

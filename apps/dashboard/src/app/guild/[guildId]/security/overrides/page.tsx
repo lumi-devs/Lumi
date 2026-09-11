@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PlugZap, SearchX } from "lucide-react";
+import { SearchX } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildDashboard, getGuildOverrides } from "#/lib/dashboard-fetch";
 import { OverridesBoard } from "#/components/guild/overrides-board";
@@ -8,6 +8,7 @@ import { buttonVariants } from "#/components/ui/button-variants";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
 import { FilterBar } from "#/components/ui/filter-bar";
+import { LoadFailure } from "#/components/ui/load-failure";
 import { PageHeader } from "#/components/ui/page-header";
 import type { ConfigOverrideView } from "#/lib/dashboard-data";
 import { single } from "#/lib/log-format";
@@ -88,12 +89,11 @@ export default async function OverridesPage({
               Nothing on this screen can be changed until the bot answers.
             </CardDescription>
           </CardHeader>
-          <EmptyState
-            compact
-            icon={PlugZap}
+          <LoadFailure
+            what="The overrides"
+            error={failure}
             title="The overrides couldn't be read"
             description="The bot answered with an error instead of the list. Check that it is online and connected to the message broker, then reload."
-            footnote={failure}
           />
         </Card>
       ) : moduleName && overrides && overrides.length === 0 ? (

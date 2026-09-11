@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { PlugZap } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
+import { guildManagementGroups } from "#/lib/guild-nav";
 import {
   getGuildBackups,
   getGuildDashboard,
@@ -17,6 +18,7 @@ import { BackupsCard } from "#/components/guild/backups-card";
 import { ModuleMasterToggle } from "#/components/guild/module-master-toggle";
 import { Card, CardBody, CardDescription, CardHeader, CardTitle } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
+import { LoadFailure } from "#/components/ui/load-failure";
 import { PageHeader } from "#/components/ui/page-header";
 import { SectionTabs, type PageSection } from "#/components/ui/section-tabs";
 import { isTextChannel } from "#/lib/channel-types";
@@ -34,6 +36,10 @@ export default async function SecurityPage({
 }) {
   const { guildId } = await params;
   const session = await requireGuild(guildId);
+
+  const navIcon = guildManagementGroups(guildId)
+    .flatMap((g) => g.links)
+    .find((l) => l.href === `/guild/${guildId}/security`)?.icon;
 
   const dashboard = await getGuildDashboard(guildId, session.userId);
   const textChannels = dashboard.channels.filter((c) => isTextChannel(c.type));
@@ -80,12 +86,11 @@ export default async function SecurityPage({
             <CardHeader>
               <CardTitle>Panic mode</CardTitle>
             </CardHeader>
-            <EmptyState
-              compact
-              icon={PlugZap}
+            <LoadFailure
+              what="Panic mode state"
+              error={panicFailure}
               title="Panic mode state is unavailable"
               description="Lumi couldn't report whether this server is locked down, so the switch is hidden rather than shown in a state that might be wrong. If a raid is in progress, run /panic in Discord."
-              footnote={panicFailure ?? undefined}
             />
           </Card>
         ) : (
@@ -105,13 +110,7 @@ export default async function SecurityPage({
               <CardHeader>
                 <CardTitle>Verification panel</CardTitle>
               </CardHeader>
-              <EmptyState
-                compact
-                icon={PlugZap}
-                title="The panel record couldn't be loaded"
-                description="Check that the bot is online and connected to the message broker, then reload this page."
-                footnote={panelFailure}
-              />
+              <LoadFailure what="The panel record" error={panelFailure} />
             </Card>
           ) : (
             <VerificationPanelCard
@@ -129,7 +128,23 @@ export default async function SecurityPage({
               </CardDescription>
             </CardHeader>
             <CardBody>
-              <VerificationPreviewPlayground />
+              <VerificationPreviewPlayground
+                initialTitle={
+                  typeof config["verification_panel_title"] === "string"
+                    ? config["verification_panel_title"]
+                    : undefined
+                }
+                initialWelcome={
+                  typeof config["verification_panel_welcome"] === "string"
+                    ? config["verification_panel_welcome"]
+                    : undefined
+                }
+                initialFooter={
+                  typeof config["verification_panel_footer"] === "string"
+                    ? config["verification_panel_footer"]
+                    : undefined
+                }
+              />
             </CardBody>
           </Card>
         </>
@@ -183,6 +198,7 @@ export default async function SecurityPage({
     <div className="flex flex-col gap-4">
       <div className="rise" style={{ "--rise-delay": "0ms" } as React.CSSProperties}>
         <PageHeader
+          icon={navIcon}
           title="Security"
           description="Anti-nuke, the join gate, panic mode and automatic backups — the tools that stop a raid before it finishes."
           actions={

@@ -1,6 +1,6 @@
 import type { ModuleMeta } from "#lib/module-system/Module.js";
 import { SecurityModule } from "#modules/security/index.js";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 const fields = (SecurityModule as unknown as { meta: ModuleMeta }).meta.configFields;
 

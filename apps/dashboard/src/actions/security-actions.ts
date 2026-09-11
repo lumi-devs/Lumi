@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RpcActions } from "@lumi/contracts";
+import { RpcActions, type VerificationPanelSetResult } from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
 import { rpcCall } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
@@ -34,20 +34,29 @@ export async function setPanicMode(
   });
 }
 
-export async function setVerificationPanel(
+/**
+ * Posts (or edits in place) the verification panel message. `channelId`
+ * targets an existing channel; `createChannel` has the bot create a fresh
+ * one instead. `deleteOldMessage` only matters when the target differs from
+ * the currently tracked channel — it deletes the message left behind there.
+ */
+export async function postVerificationPanel(
   guildId: string,
-  channelId: string,
-  messageId: string,
-): Promise<ActionResult> {
+  input: {
+    channelId?: string;
+    createChannel?: boolean;
+    deleteOldMessage?: boolean;
+  },
+): Promise<ActionResult & Partial<VerificationPanelSetResult>> {
   return runAction(async () => {
     const session = await guardedSecurityAction(guildId);
-    await rpcCall(RpcActions.guildVerificationPanelSet, {
+    const result = await rpcCall(RpcActions.guildVerificationPanelSet, {
       guildId,
       actorId: session.userId,
-      data: { channelId, messageId },
+      data: input,
     });
     revalidatePath(`/guild/${guildId}/security`);
-    return { ok: true };
+    return { ok: true, ...result };
   });
 }
 

@@ -119,6 +119,24 @@ export interface VerificationPanelView {
   createdAt: string;
 }
 
+/** Result of posting-or-editing the verification panel message. */
+export interface VerificationPanelSetResult {
+  success: true;
+  channelId: string;
+  messageId: string;
+  /** A brand new message was posted (either no panel was tracked, the target
+   * channel changed, or the previously tracked message could no longer be found). */
+  posted: boolean;
+  /** The existing tracked message was edited in place. */
+  edited: boolean;
+  /** The panel moved to a different channel than the one previously tracked. */
+  moved: boolean;
+  /** `createChannel` was requested and a new channel was created for it. */
+  createdChannel: boolean;
+  /** The old tracked message was deleted as part of a move. */
+  oldMessageDeleted: boolean;
+}
+
 export interface LogTypeOption {
   key: string;
   label: string;

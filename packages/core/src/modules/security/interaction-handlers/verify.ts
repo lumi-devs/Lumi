@@ -56,7 +56,7 @@ export class VerifyInteractionHandler extends BaseInteractionHandler {
         flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
       });
     } else {
-      await interaction.deferUpdate();
+      await this.acknowledge(interaction);
     }
 
     const t = await fetchTyped(interaction);

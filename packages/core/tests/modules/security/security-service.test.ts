@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { ChannelType } from "discord.js";
 import { SecurityUtility } from "#modules/security/utilities/SecurityUtility.js";
@@ -81,6 +81,11 @@ const guild = {
 beforeEach(() => {
   vi.clearAllMocks();
   (container as any).client = { user: { id: "bot-1" } };
+  // `SecurityUtility.respond` -> `isImmuneToAutomatedAction` reads the immune-role
+  // list off the real global container (not the `service.db` test double above).
+  (container as any).db = {
+    config: { getModuleConfig: vi.fn().mockResolvedValue(null) },
+  };
 });
 
 describe("SecurityUtility.loadAntiNukeConfig", () => {

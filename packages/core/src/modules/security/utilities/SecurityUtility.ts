@@ -6,11 +6,14 @@ import {
   PermissionFlagsBits,
   type Guild,
   type GuildMember,
+  type GuildTextBasedChannel,
 } from "discord.js";
 import { isNullish, tryParseJSON, type Awaitable } from "@sapphire/utilities";
+import { fetchTyped } from "#lib/commands.js";
 import { Utility, tryGetUtility } from "#lib/module-system/Utility.js";
 import { RedisKeys } from "#database/redis.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
+import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
 import { logToChannel } from "#lib/moderation/log.js";
 import { withSerializedWork } from "#lib/utilities/misc.js";
 import { sleep } from "#lib/runtime.js";
@@ -39,6 +42,7 @@ import {
   getConfigString,
   getConfigAction,
 } from "../lib/config-helpers.js";
+import { buildVerifyPanel, type VerifyPanelContent } from "../lib/verify-panel.js";
 
 export interface PanicResult {
   invitesPaused: boolean;
@@ -49,6 +53,16 @@ export interface PanicResult {
 export interface PanicRevertResult {
   restoredCount: number;
   restoredStructure: { rolesRestored: number; channelsRestored: number } | null;
+}
+
+export interface VerifyPanelSetResult {
+  channelId: string;
+  messageId: string;
+  posted: boolean;
+  edited: boolean;
+  moved: boolean;
+  createdChannel: boolean;
+  oldMessageDeleted: boolean;
 }
 
 const PanicChannelCap = 40;
@@ -286,7 +300,10 @@ export class SecurityUtility extends Utility {
     let outcome = "logged";
     if (response === "quarantine") {
       const member = await guild.members.fetch(executorId).catch(() => null);
-      if (member) {
+      const immune =
+        member !== null &&
+        (await isImmuneToAutomatedAction(this.container, guild.id, member));
+      if (member && !immune) {
         try {
           await QuarantineAction.apply({
             guild,
@@ -302,30 +319,36 @@ export class SecurityUtility extends Utility {
         }
       }
     } else if (response === "ban") {
-      try {
-        await guild.members.ban(executorId, { reason });
-        const c = await this.db.moderation.createModerationCase({
-          guildId: guild.id,
-          userId: executorId,
-          moderatorId: botUser.id,
-          action: "ban",
-          reason,
-        });
-        await logToChannel(
-          guild.id,
-          "🔨 Banned",
-          Colors.DarkRed,
-          executorId,
-          botUser,
-          reason,
-          c.caseNumber,
-          "security",
-        );
-        outcome = "banned";
-      } catch (err: unknown) {
-        this.logger.warn(
-          `[security] Ban failed for ${executorId} in ${guild.id}: ${String(err)}`,
-        );
+      const member = await guild.members.fetch(executorId).catch(() => null);
+      const immune =
+        member !== null &&
+        (await isImmuneToAutomatedAction(this.container, guild.id, member));
+      if (!immune) {
+        try {
+          await guild.members.ban(executorId, { reason });
+          const c = await this.db.moderation.createModerationCase({
+            guildId: guild.id,
+            userId: executorId,
+            moderatorId: botUser.id,
+            action: "ban",
+            reason,
+          });
+          await logToChannel(
+            guild.id,
+            "🔨 Banned",
+            Colors.DarkRed,
+            executorId,
+            botUser,
+            reason,
+            c.caseNumber,
+            "security",
+          );
+          outcome = "banned";
+        } catch (err: unknown) {
+          this.logger.warn(
+            `[security] Ban failed for ${executorId} in ${guild.id}: ${String(err)}`,
+          );
+        }
       }
     }
 
@@ -557,6 +580,124 @@ export class SecurityUtility extends Utility {
       pendingRoleId: getConfigString(raw, "verification_pending_role_id"),
       timeoutMinutes: timeout,
       kickOnTimeout: raw["verification_kick_on_timeout"] === true,
+    };
+  }
+
+  private async loadVerifyPanelContent(guildId: string): Promise<VerifyPanelContent> {
+    const raw = await this.db.config.getAllModuleConfig(guildId, "security");
+    return {
+      title: getConfigString(raw, "verification_panel_title"),
+      welcome: getConfigString(raw, "verification_panel_welcome"),
+      footer: getConfigString(raw, "verification_panel_footer"),
+    };
+  }
+
+  /**
+   * Posts the verification panel to `channelId` (or a freshly created
+   * channel), editing the currently tracked message in place when the target
+   * channel hasn't changed and that message still exists. Falls back to
+   * posting fresh whenever the tracked message can't be found or edited
+   * (channel access lost, message deleted out from under it), or when the
+   * target channel differs from the one currently tracked.
+   */
+  public async postOrEditVerifyPanel(
+    guild: Guild,
+    opts: {
+      channelId?: string;
+      createChannel?: boolean;
+      deleteOldMessage?: boolean;
+    },
+  ): Promise<VerifyPanelSetResult> {
+    const config = await this.loadVerificationConfig(guild.id);
+    if (!config.enabled || !config.verifiedRoleId) {
+      throw new Error(
+        "Turn on Verification and pick a Verified Role before posting the panel.",
+      );
+    }
+
+    const existing = await this.db.security.getVerificationPanel(guild.id);
+
+    let target: GuildTextBasedChannel;
+    let createdChannel = false;
+    if (opts.createChannel) {
+      target = await guild.channels.create({
+        name: "verify-here",
+        type: ChannelType.GuildText,
+        reason: "Dashboard: verification panel channel",
+      });
+      createdChannel = true;
+    } else {
+      if (!opts.channelId) throw new Error("channelId is required");
+      const channel = await guild.channels.fetch(opts.channelId).catch(() => null);
+      if (!channel?.isTextBased()) {
+        throw new Error(
+          "That channel doesn't exist or isn't a text channel Lumi can post in.",
+        );
+      }
+      target = channel;
+    }
+
+    const t = await fetchTyped(guild);
+    const content = await this.loadVerifyPanelContent(guild.id);
+    const card = buildVerifyPanel(t, content);
+
+    const movedChannel = Boolean(existing) && existing!.channelId !== target.id;
+
+    if (existing && !movedChannel) {
+      const message = await target.messages
+        .fetch(existing.messageId)
+        .catch(() => null);
+      if (message) {
+        try {
+          await message.edit(card);
+          return {
+            channelId: target.id,
+            messageId: message.id,
+            posted: false,
+            edited: true,
+            moved: false,
+            createdChannel,
+            oldMessageDeleted: false,
+          };
+        } catch (err: unknown) {
+          this.logger.warn(
+            `[security] Verify panel edit failed in ${guild.id}, posting fresh instead: ${String(err)}`,
+          );
+        }
+      }
+    }
+
+    let oldMessageDeleted = false;
+    if (existing && movedChannel && opts.deleteOldMessage) {
+      const oldChannel = await guild.channels
+        .fetch(existing.channelId)
+        .catch(() => null);
+      if (oldChannel?.isTextBased()) {
+        const oldMessage = await oldChannel.messages
+          .fetch(existing.messageId)
+          .catch(() => null);
+        if (oldMessage) {
+          await oldMessage.delete().catch(() => null);
+          oldMessageDeleted = true;
+        }
+      }
+    }
+
+    const message = await target.send(card);
+    await this.db.security.saveVerificationPanel({
+      guildId: guild.id,
+      channelId: target.id,
+      messageId: message.id,
+    });
+
+    return {
+      channelId: target.id,
+      messageId: message.id,
+      posted: true,
+      edited: false,
+      moved: movedChannel,
+      createdChannel,
+      oldMessageDeleted,
     };
   }
 

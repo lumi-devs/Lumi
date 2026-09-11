@@ -19,8 +19,15 @@ import {
 
 export const VerifyButtonId = "sec:verify";
 
+/** Guild-authored overrides for the panel's copy, from the dashboard's Panel Content fields. */
+export interface VerifyPanelContent {
+  title?: string | null;
+  welcome?: string | null;
+  footer?: string | null;
+}
+
 /** The public, persistent verification card members interact with to gain the verified role. */
-export function buildVerifyPanel(t: LumiT): CardReply {
+export function buildVerifyPanel(t: LumiT, content?: VerifyPanelContent): CardReply {
   const button = createActionButton({
     customId: VerifyButtonId,
     label: t(PanelsKeys.VerifyButton),
@@ -28,10 +35,15 @@ export function buildVerifyPanel(t: LumiT): CardReply {
     emoji: Emojis.parse("✅"),
   });
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
-  return makeCard(resolveCardColor("success"), t(PanelsKeys.VerifyTitle), t(PanelsKeys.VerifyIntro), {
-    footer: t(PanelsKeys.VerifyFooter),
-    actionRows: buildSafeActionRows([row]),
-  });
+  return makeCard(
+    resolveCardColor("success"),
+    content?.title || t(PanelsKeys.VerifyTitle),
+    content?.welcome || t(PanelsKeys.VerifyIntro),
+    {
+      footer: content?.footer || t(PanelsKeys.VerifyFooter),
+      actionRows: buildSafeActionRows([row]),
+    },
+  );
 }
 
 /** The fresh challenge shown when a member first clicks Verify. */

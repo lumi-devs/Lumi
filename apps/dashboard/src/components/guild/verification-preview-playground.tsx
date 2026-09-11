@@ -8,13 +8,24 @@ import {
   type PreviewEmbed,
 } from "#/components/guild/discord-message-preview";
 
-export function VerificationPreviewPlayground() {
-  const [title, setTitle] = useState("✅ Verify to join the server");
+export function VerificationPreviewPlayground({
+  initialTitle,
+  initialWelcome,
+  initialFooter,
+}: {
+  initialTitle?: string;
+  initialWelcome?: string;
+  initialFooter?: string;
+}) {
+  const [title, setTitle] = useState(
+    initialTitle || "✅ Verify to join the server",
+  );
   const [intro, setIntro] = useState(
-    "Welcome, @new-member! Click **Verify** below and tap the emoji in the order shown to get the @Member role and unlock the rest of the server.",
+    initialWelcome ||
+      "Welcome, @new-member! Click **Verify** below and tap the emoji in the order shown to get the @Member role and unlock the rest of the server.",
   );
   const [footer, setFooter] = useState(
-    "Having trouble? Ask a moderator in #support.",
+    initialFooter || "Having trouble? Ask a moderator in #support.",
   );
 
   const panel: PreviewEmbed = {
@@ -27,10 +38,10 @@ export function VerificationPreviewPlayground() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="neutral">Preview only — edits never save</Badge>
+        <Badge variant="neutral">Preview only — edits here don&rsquo;t save</Badge>
         <p className="text-[13px] text-fg-subtle">
-          Draft the welcome + verification copy here, then paste the final
-          wording into the panel setup.
+          Draft the wording here, then set it for real in the Panel Content
+          fields above. That&rsquo;s what actually gets posted.
         </p>
       </div>
       <Field label="Panel title" htmlFor="verify-preview-title">
