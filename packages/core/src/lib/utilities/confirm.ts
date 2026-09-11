@@ -1,9 +1,29 @@
 import { randomUUID } from "node:crypto";
-import { ComponentType, type Message, type GuildTextBasedChannel } from "discord.js";
-import type { CommandContext } from "#lib/command-context.js";
+import {
+  ComponentType,
+  type Message,
+  type GuildTextBasedChannel,
+  type RepliableInteraction,
+  type User,
+} from "discord.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
 import { confirmRow } from "#lib/utilities/ui/kit.js";
 import { makeWarningCard, type CardReply } from "#lib/utilities/cards.js";
+
+/**
+ * The slice of {@linkcode CommandContext} `confirmPrompt` actually needs -
+ * satisfied by a real `CommandContext` (slash or prefix) and also by a
+ * lightweight adapter for a flow that isn't a full command invocation (e.g. a
+ * context-menu command's follow-up modal), so that flow can share this same
+ * confirm-prompt machinery instead of re-implementing it.
+ */
+export interface ConfirmPromptContext {
+  user: User;
+  isSlash: boolean;
+  interaction: RepliableInteraction;
+  /** Only read when `isSlash` is false. */
+  message?: Message;
+}
 
 export interface ConfirmPromptOptions {
   title: string;
@@ -32,7 +52,7 @@ export interface ConfirmPromptResult {
  * across the slash, prefix, and channel-send paths.
  */
 export async function confirmPrompt(
-  ctx: CommandContext,
+  ctx: ConfirmPromptContext,
   opts: ConfirmPromptOptions,
 ): Promise<ConfirmPromptResult> {
   const id = randomUUID();
@@ -57,7 +77,7 @@ export async function confirmPrompt(
     await sendInteractionReply(ctx.interaction, card, "edit");
     msg = await ctx.interaction.fetchReply();
   } else {
-    msg = await ctx.message.reply({ ...card, allowedMentions: {} });
+    msg = await ctx.message!.reply({ ...card, allowedMentions: {} });
   }
 
   try {
