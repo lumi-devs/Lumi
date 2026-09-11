@@ -1,7 +1,9 @@
 import { container } from "@sapphire/framework";
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
 import {
+  CodedRpcError,
   RpcActions,
+  RpcFailureCodes,
   type GuildChannelListItem,
   type GuildRoleListItem,
 } from "@lumi/contracts";
@@ -45,7 +47,11 @@ function readGuildDirectory(guildId: string): GuildDirectoryCacheEntry {
   if (cached && cached.expiresAt > Date.now()) return cached;
 
   const guild = container.client.guilds.cache.get(guildId);
-  if (!guild) throw new Error("Guild not found in bot cache");
+  if (!guild)
+    throw new CodedRpcError(
+      RpcFailureCodes.GuildNotFound,
+      "Guild not found in bot cache",
+    );
 
   const fresh: GuildDirectoryCacheEntry = {
     expiresAt: Date.now() + GuildDirectoryCacheTtlMs,

@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { runWithContext } from "@lumi/observability";
 import { logError, errorFrom } from "#lib/utilities/errors.js";
 import { handlePrismaError } from "#lib/prisma/errors.js";
+import { CodedRpcError } from "@lumi/contracts";
 import type { RpcRequest, RpcResponse, RpcHandler } from "@lumi/contracts";
 
 export type { RpcRequest, RpcResponse, RpcHandler };
@@ -82,6 +83,7 @@ export async function dispatchRpc(req: RpcRequest<unknown>): Promise<RpcResponse
           id: req.id,
           ok: false,
           error: safeErr.message ?? "Internal error",
+          ...(err instanceof CodedRpcError ? { code: err.code } : {}),
         };
       }
     },
