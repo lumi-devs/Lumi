@@ -6,7 +6,7 @@ import { hasPanelAccess, loadDetail } from "#modules/core/lib/config-panel.js";
 import { buildFeatureDetailView } from "#modules/core/ui/modules.js";
 import { buildOverridesView } from "#modules/core/ui/overrides.js";
 import { ephemeralCard, makeErrorCard } from "#utilities/cards.js";
-import { cleanMention } from "#utilities/misc.js";
+import { cleanMention, isSnowflakeId } from "#utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,
@@ -171,7 +171,7 @@ export class ConfigPanelModalHandler extends InteractionHandler {
           "Target type must be one of: channel, role, user, category.",
         );
       const modelId = cleanMention(target);
-      if (!/^\d{17,20}$/.test(modelId))
+      if (!isSnowflakeId(modelId))
         return this.#err(
           interaction,
           "Provide a valid ID or mention as target.",

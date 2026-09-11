@@ -58,6 +58,11 @@ export function formatFieldValue(field: ConfigField, value: unknown): string {
       if (items.length === 0) return "-# *(not set)*";
       return `\`${cutText(items.join(", "), 120)}\``;
     }
+    case FieldType.ObjectArray: {
+      const items = Array.isArray(val) ? val : [];
+      if (items.length === 0) return "-# *(not set)*";
+      return `\`${items.length} ${items.length === 1 ? "entry" : "entries"}\` — edit in dashboard`;
+    }
     case FieldType.User:
       return userMention(String(val));
     case FieldType.Boolean:

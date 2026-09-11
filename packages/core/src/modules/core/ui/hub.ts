@@ -55,16 +55,6 @@ export function hubTabRow(active: HubTabId, t?: LumiT): Row {
   return tabRow("lumi:tab", hubTabs(t), active);
 }
 
-export function backToHubRow(t?: LumiT): Row {
-  return row(
-    new ButtonBuilder()
-      .setCustomId("lumi:tab:home")
-      .setLabel(t ? t(PanelsKeys.BackToHub) : "Back to Hub")
-      .setEmoji(Emojis.parse(Emojis.ArrowLeft))
-      .setStyle(ButtonStyle.Secondary),
-  );
-}
-
 export interface HubOverview {
   moduleCount: number;
   enabledCount: number;

@@ -144,7 +144,7 @@ export function buildOverviewCard(
   return c;
 }
 
-export function buildGatewayCard(data: PingData, t?: LumiT): ContainerBuilder {
+function buildGatewayCard(data: PingData, t?: LumiT): ContainerBuilder {
   const c = detailCard("📡 Gateway & Connection Status", data);
 
   const node = data.gatewayNode === "Unknown" ? "Analyzing…" : data.gatewayNode;
@@ -209,7 +209,7 @@ export function buildGatewayCard(data: PingData, t?: LumiT): ContainerBuilder {
   return c;
 }
 
-export function buildEngineCard(data: PingData, t?: LumiT): ContainerBuilder {
+function buildEngineCard(data: PingData, t?: LumiT): ContainerBuilder {
   const c = detailCard("🏎️ Performance & Memory", data);
 
   const heapPct = ((data.heapUsed / data.heapTotal) * 100).toFixed(1);
@@ -251,7 +251,7 @@ export function buildEngineCard(data: PingData, t?: LumiT): ContainerBuilder {
   return c;
 }
 
-export function buildHostCard(data: PingData, t?: LumiT): ContainerBuilder {
+function buildHostCard(data: PingData, t?: LumiT): ContainerBuilder {
   const c = detailCard(`${Emojis.Cpu} System Infrastructure`, data);
 
   c.addTextDisplayComponents(
@@ -291,7 +291,7 @@ export function buildHostCard(data: PingData, t?: LumiT): ContainerBuilder {
   return c;
 }
 
-export function buildPostgresCard(data: PingData, t?: LumiT): ContainerBuilder {
+function buildPostgresCard(data: PingData, t?: LumiT): ContainerBuilder {
   const c = detailCard(
     `${Emojis.Database} ${t ? t("core:pingDbHealth") : "Database Health"}`,
     data,
@@ -345,7 +345,7 @@ export function buildPostgresCard(data: PingData, t?: LumiT): ContainerBuilder {
   return c;
 }
 
-export function buildRedisCard(data: PingData, t?: LumiT): ContainerBuilder {
+function buildRedisCard(data: PingData, t?: LumiT): ContainerBuilder {
   const c = detailCard(
     `${Emojis.Cache} ${t ? t("core:pingCachePerformance") : "Cache Performance"}`,
     data,
@@ -381,7 +381,7 @@ export function buildRedisCard(data: PingData, t?: LumiT): ContainerBuilder {
   return c;
 }
 
-export function buildBotCard(data: PingData, t?: LumiT): ContainerBuilder {
+function buildBotCard(data: PingData, t?: LumiT): ContainerBuilder {
   const c = detailCard(
     `${Emojis.Bot} ${t ? t("core:pingSummary") : "Bot System Summary"}`,
     data,

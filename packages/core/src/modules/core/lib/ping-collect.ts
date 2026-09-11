@@ -106,7 +106,6 @@ export interface PingData {
   prismaVersion: string;
 }
 
-export const SessionStart = Date.now();
 export let sessionCommandCount = 0;
 const PingHistory: number[] = [];
 
@@ -414,11 +413,8 @@ async function countCodeLines() {
 
 const prismaVersion = Prisma.prismaVersion.client;
 
-declare const Bun: { version: string } | undefined;
-
 export function getRuntimeLabel() {
-  if (typeof Bun !== "undefined") return `Bun v${Bun.version}`;
-  return `Node.js ${process.version}`;
+  return `Bun v${Bun.version}`;
 }
 
 let lastCollect: {

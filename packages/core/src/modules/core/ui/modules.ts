@@ -1,6 +1,7 @@
 import { chunk } from "@sapphire/utilities";
 import type { LumiT } from "#lib/i18n/index.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
+import { sectionsOf } from "@lumi/contracts";
 import {
   FieldType,
   type ConfigField,
@@ -201,23 +202,20 @@ function chunkSection(
   }));
 }
 
+/**
+ * Flattens the shared section/group split into the panel's one-level list.
+ * Discord has a component budget the web doesn't, so `chunkSection` still
+ * splits anything too long to fit on one card.
+ */
 function sectionsFor(fields: ConfigField[]): FieldSection[] {
-  if (fields.some((f) => f.group)) {
-    const order: string[] = [];
-    const map = new Map<string, ConfigField[]>();
-    for (const f of fields) {
-      const g = f.group ?? "General";
-      let arr = map.get(g);
-      if (!arr) {
-        arr = [];
-        map.set(g, arr);
-        order.push(g);
-      }
-      arr.push(f);
-    }
-    return order.flatMap((name) => chunkSection(name, map.get(name)!));
-  }
-  return chunkSection(null, fields);
+  return sectionsOf(fields).flatMap((section) =>
+    section.groups.flatMap((group) => {
+      const named = group.name ?? (section.groups.length > 1 ? "General" : null);
+      const label =
+        [section.name, named].filter((part) => part).join(" · ") || null;
+      return chunkSection(label, group.fields);
+    }),
+  );
 }
 
 /**
@@ -390,17 +388,8 @@ export function buildFeatureDetailView(
   );
 }
 
-const resolveChannelTypes = (f: ConfigField): ChannelType[] => {
-  if (f.channelTypes?.length) return f.channelTypes;
-  if (
-    f.key.includes("base") ||
-    f.key.includes("voice") ||
-    f.key.includes("lounge")
-  ) {
-    return [ChannelType.GuildVoice, ChannelType.GuildStageVoice];
-  }
-  return [ChannelType.GuildText];
-};
+const resolveChannelTypes = (f: ConfigField): ChannelType[] =>
+  f.channelTypes?.length ? f.channelTypes : [ChannelType.GuildText];
 
 /**
  * Per-field edit subpanel hosting the single native picker for the field, or
