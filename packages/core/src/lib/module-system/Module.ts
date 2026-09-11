@@ -25,8 +25,6 @@ export function NoEndUserData(): undefined {
   return undefined;
 }
 
-export const noEndUserData = NoEndUserData;
-
 /** Used during module discovery without executing the module's code. */
 export interface ModuleMeta {
   name: string;

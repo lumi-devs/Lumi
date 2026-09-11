@@ -45,6 +45,10 @@ const configFieldSchema = s.object({
   choices: s.array(s.string()).optional(),
   required: s.boolean().optional(),
   channelTypes: s.array(s.number()).optional(),
+  claimable: s.boolean().optional(),
+  templateVars: s.array(s.string()).optional(),
+  pairedWith: s.string().optional(),
+  enabledBy: s.string().optional(),
   list: s.boolean().optional(),
 });
 

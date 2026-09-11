@@ -64,8 +64,6 @@ export function NoEndUserData(): undefined {
   return undefined;
 }
 
-export const noEndUserData = NoEndUserData;
-
 export const logger = {
   info: (message: string) => call("log", { level: "info", message }),
   warn: (message: string) => call("log", { level: "warn", message }),

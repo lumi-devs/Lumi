@@ -74,6 +74,7 @@ export function buildClientOptions(): ClientOptions {
       GatewayIntentBits.GuildModeration,
       GatewayIntentBits.GuildInvites,
       GatewayIntentBits.GuildWebhooks,
+      GatewayIntentBits.GuildPresences,
     ],
     partials: [Partials.Channel, Partials.GuildMember, Partials.Message],
     allowedMentions: { parse: ["users"], repliedUser: true },
@@ -99,9 +100,10 @@ export function buildClientOptions(): ClientOptions {
           : LogLevel.Info,
       ),
     },
-    hmr: {
-      enabled: isDevelopment(),
-    },
+    // Off even in development: under Bun's loader the plugin fails to re-read
+    // pieces and logs MissingExportsError for each one instead of reloading it.
+    // `bun --watch` (the worker's dev script) restarts the process anyway.
+    hmr: { enabled: false },
     i18n: buildI18nOptions(),
     tasks: {
       bull: {

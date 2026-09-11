@@ -89,8 +89,6 @@ export const prismaReader = replicaPool
   ? createPrismaClient(new PrismaPg(replicaPool))
   : prisma;
 
-export const hasReadReplica = replicaPool !== null;
-
 /** Drain both pools on shutdown; neither is closed anywhere else. */
 export async function disconnectDatabase(): Promise<void> {
   poolStatsTimer.close();
