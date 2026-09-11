@@ -13,6 +13,12 @@ export interface LogClaim {
   authorId: string;
   messageId: string;
   claimedAt: string;
+  /** Where the "claimed" reply itself lives — the thread, when the code was
+   * posted in one, since `channelId` is the thread's parent (the actual log
+   * destination). Falls back to `channelId` for claims from before this
+   * field existed. */
+  replyChannelId?: string;
+  replyMessageId?: string;
 }
 
 function randomLogClaimCode(): string {
@@ -99,14 +105,14 @@ export async function listLogClaims(guildId: string): Promise<LogClaim[]> {
 export async function dismissLogClaim(
   guildId: string,
   channelId: string,
-): Promise<boolean> {
+): Promise<LogClaim | null> {
   const key = RedisKeys.logClaim(guildId, channelId);
-  const existed = await container.redis.exists(key);
+  const claim = parseLogClaim(await container.redis.get(key));
   await Promise.all([
     container.invalidation.invalidate(key),
     container.redis.srem(RedisKeys.logClaimIndex(guildId), channelId),
   ]);
-  return existed > 0;
+  return claim;
 }
 
 function parseLogClaim(raw: string | null): LogClaim | null {
@@ -126,6 +132,12 @@ function parseLogClaim(raw: string | null): LogClaim | null {
       authorId: parsed.authorId,
       messageId: parsed.messageId,
       claimedAt: parsed.claimedAt,
+      ...(typeof parsed.replyChannelId === "string"
+        ? { replyChannelId: parsed.replyChannelId }
+        : {}),
+      ...(typeof parsed.replyMessageId === "string"
+        ? { replyMessageId: parsed.replyMessageId }
+        : {}),
     };
   } catch {
     return null;

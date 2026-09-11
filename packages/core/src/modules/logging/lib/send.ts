@@ -8,6 +8,18 @@ export const MessageLogChannelKey = "message_log_channel_id";
 export const MemberLogChannelKey = "member_log_channel_id";
 export const DefaultLogChannelKey = "log_channel_id";
 
+/** Toggle key (as checked by `isToggleEnabled`) to its per-event channel key. */
+export const LogEventChannels: Record<string, string> = {
+  message_deletes: "message_deletes_channel_id",
+  message_edits: "message_edits_channel_id",
+  member_joins: "member_joins_channel_id",
+  member_leaves: "member_leaves_channel_id",
+  member_bans: "member_bans_channel_id",
+  member_unbans: "member_unbans_channel_id",
+  nickname_changes: "nickname_changes_channel_id",
+  role_changes: "role_changes_channel_id",
+};
+
 /** Toggle key (as checked by `isToggleEnabled`) to its per-type channel key. */
 export const LogToggleChannels: Record<string, string> = {
   message_deletes: MessageLogChannelKey,
@@ -59,12 +71,18 @@ async function readChannelKey(
 }
 
 /**
- * Per-type channel first, then the default log channel, then null (disabled).
+ * Per-event channel first, then the category channel, then the default log
+ * channel, then null (disabled).
  */
 export async function resolveLogChannel(
   guildId: string,
   toggleKey: string,
 ): Promise<string | null> {
+  const eventKey = LogEventChannels[toggleKey];
+  if (eventKey) {
+    const eventChannel = await readChannelKey(guildId, eventKey);
+    if (eventChannel) return eventChannel;
+  }
   const perTypeKey = LogToggleChannels[toggleKey];
   if (perTypeKey) {
     const perType = await readChannelKey(guildId, perTypeKey);

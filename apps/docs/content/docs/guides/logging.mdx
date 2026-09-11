@@ -6,11 +6,13 @@ description: Server event logs for messages, joins, leaves, bans, and role chang
 The `logging` module (📋) posts server event logs: message deletes/edits, joins, leaves, bans,
 unbans, nickname changes, and role changes — each routed to its own channel or a shared default.
 
-## Commands
+## Claiming a channel
 
-| Command | Permit | Description |
-| :--- | :--- | :--- |
-| `/log claim` | `mod.*` | Issue a one-time code to claim a channel as a log destination — post the code as a message in the target channel (Manage Server required to post it), then a manager confirms the claim on the dashboard. The code is single-use and expires quickly. |
+There is no slash command for claiming. On the dashboard, every channel setting
+has a "Can't find your channel?" option that issues a one-time claim code — post
+the code as a message in the target channel (Manage Server required to post it),
+then a manager confirms the claim on the dashboard. The code is single-use and
+expires quickly.
 
 ## Config
 
@@ -41,5 +43,5 @@ unbans, nickname changes, and role changes — each routed to its own channel or
 | `nickname_changes` | on |
 | `role_changes` | on |
 
-Pending channel claims (from `/log claim`) are managed on the dashboard — see
-`guild.logClaims.list` / `guild.logClaims.dismiss` in the [RPC reference](/docs/reference/rpc).
+Pending channel claims (from dashboard-issued claim codes) are managed on the dashboard — see
+`guild.logClaims.list` / `guild.logClaims.issue` / `guild.logClaims.dismiss` in the [RPC reference](/docs/reference/rpc).

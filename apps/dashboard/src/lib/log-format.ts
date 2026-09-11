@@ -116,16 +116,6 @@ export function humanizeKey(key: string): string {
     .join(" ");
 }
 
-export function formatDetails(details: unknown): string | null {
-  if (details === null || details === undefined) return null;
-  if (typeof details === "string") return details;
-  try {
-    return JSON.stringify(details, null, 2);
-  } catch {
-    return String(details);
-  }
-}
-
 // Audit actions are dotted namespaces (`guild.config.update`): the last segment
 // is what happened, the rest is where. Split so a column of them scans on the
 // verb instead of on a shared prefix.
