@@ -13,7 +13,8 @@ import {
   CardTitle,
   CardDescription,
 } from "#/components/ui/card";
-import { Field, Input, Select } from "#/components/ui/input";
+import { Field, Input } from "#/components/ui/input";
+import { Select } from "#/components/ui/select";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
 import type { GuildSettings, DashboardRoleView } from "#/lib/dashboard-data";
@@ -260,16 +261,14 @@ export function GeneralSettingsForm({
               <Field label="Mute role" htmlFor="muteRoleId">
                 <Select
                   id="muteRoleId"
+                  aria-label="Mute role"
                   value={form.muteRoleId ?? ""}
-                  onChange={(e) => field("muteRoleId", e.target.value || null)}
-                >
-                  <option value="">None</option>
-                  {roles.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </Select>
+                  onValueChange={(next) => field("muteRoleId", next || null)}
+                  options={[
+                    { value: "", label: "None" },
+                    ...roles.map((r) => ({ value: r.id, label: r.name })),
+                  ]}
+                />
               </Field>
               <Field label="Ignored channels" htmlFor="ignored-channels-link">
                 <Link

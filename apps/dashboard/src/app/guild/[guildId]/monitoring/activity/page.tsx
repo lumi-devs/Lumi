@@ -21,7 +21,9 @@ import type { AuditListData, CasesListData } from "#/lib/dashboard-data";
 
 // The window both charts describe. Everything on this page is counted from
 // these rows, so the copy never claims a range wider than what was read.
-const RecordWindow = 200;
+// Capped at the RPC's `MaxPageSize` (`lib/rpc/validation.ts` in core) — asking
+// for more is rejected outright, which read as "activity couldn't be loaded".
+const RecordWindow = 100;
 
 export default async function GuildActivityPage({
   params,

@@ -438,6 +438,7 @@ export function SetupWizard({
                         }
                         roles={roles}
                         channels={channels}
+                        guildId={guildId}
                       />
                     }
                   />

@@ -44,7 +44,7 @@ export function SideNav({
 
   return (
     <>
-      <aside className="sticky top-0 hidden h-svh w-16 shrink-0 flex-col gap-5 overflow-y-auto border-r border-border-soft bg-surface px-2 py-5 md:flex lg:w-58 lg:gap-5 lg:px-3">
+      <aside className="sticky top-0 hidden h-svh w-16 shrink-0 flex-col gap-5 overflow-x-hidden overflow-y-auto border-r border-border-soft bg-surface px-2 py-5 md:flex lg:w-66 lg:gap-5 lg:px-3">
         <SideNavBody
           groups={groups}
           tag={tag}
@@ -179,7 +179,7 @@ function SideNavBody({
         <div className={cn(labelBlock)}>{switcher}</div>
       ) : null}
 
-      <nav className="flex min-h-0 flex-1 flex-col gap-4.5 overflow-y-auto">
+      <nav className="flex min-h-0 flex-1 flex-col gap-4.5 overflow-x-hidden overflow-y-auto">
         {groups.map((group) => {
           const isOpen = openGroups[group.title] ?? true;
           const HeaderTag = group.collapsible ? "button" : "p";
@@ -190,7 +190,7 @@ function SideNavBody({
               aria-expanded={group.collapsible ? isOpen : undefined}
               onClick={group.collapsible ? () => toggleGroup(group.title) : undefined}
               className={cn(
-                "font-display mb-1.5 flex w-full items-center gap-1 px-2.5 text-[12px] font-semibold tracking-[0.1em] text-fg-subtle uppercase",
+                "font-display mb-1.5 flex w-full items-center gap-1 px-2.5 text-left text-[12px] font-semibold tracking-[0.07em] text-fg-subtle uppercase",
                 group.collapsible && "cursor-pointer transition-colors hover:text-fg",
                 labelBlock,
               )}
@@ -204,7 +204,9 @@ function SideNavBody({
                   )}
                 />
               ) : null}
-              <span className="truncate">{group.title}</span>
+              {/* Wraps rather than truncates: a clipped "Monitoring & Diagnos…"
+               * tells the reader less than a second line does. */}
+              <span className="min-w-0 flex-1 leading-4">{group.title}</span>
               {group.alertDot ? (
                 <span
                   aria-hidden
@@ -212,7 +214,7 @@ function SideNavBody({
                 />
               ) : null}
               {group.badge !== undefined ? (
-                <span className="ml-auto font-mono text-[11px] font-normal tracking-normal text-fg-subtle">
+                <span className="shrink-0 pl-1 font-mono text-[11px] font-normal tracking-normal text-fg-subtle">
                   {group.badge}
                 </span>
               ) : null}

@@ -10,7 +10,8 @@ import {
   CardTitle,
   CardDescription,
 } from "#/components/ui/card";
-import { Field, Input, Select } from "#/components/ui/input";
+import { Field, Input } from "#/components/ui/input";
+import { Select } from "#/components/ui/select";
 import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
 import { Alert } from "#/components/ui/alert";
@@ -106,16 +107,17 @@ export function ModuleKillSwitchGrid({
             <Field label="Module name" htmlFor="moduleName">
               <Select
                 id="moduleName"
+                aria-label="Module name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-              >
-                <option value="">Select a module…</option>
-                {allModules.map((m) => (
-                  <option key={m.name} value={m.name}>
-                    {m.emoji} {m.displayName}
-                  </option>
-                ))}
-              </Select>
+                onValueChange={(next) => setName(next)}
+                options={[
+                  { value: "", label: "Select a module…" },
+                  ...allModules.map((m) => ({
+                    value: m.name,
+                    label: `${m.emoji} ${m.displayName}`,
+                  })),
+                ]}
+              />
             </Field>
             <Field label="Reason (optional)" htmlFor="reason">
               <Input

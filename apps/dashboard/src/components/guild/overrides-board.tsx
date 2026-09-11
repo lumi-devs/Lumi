@@ -22,7 +22,8 @@ import {
 } from "#/components/ui/card";
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
 import { EmptyState } from "#/components/ui/empty-state";
-import { Field, Input, Select } from "#/components/ui/input";
+import { Field, Input } from "#/components/ui/input";
+import { Select } from "#/components/ui/select";
 import { Glyph } from "#/components/ui/glyph";
 import { ValueChip } from "#/components/ui/value-chip";
 import { useStaggerIn } from "#/lib/animate";
@@ -293,6 +294,7 @@ function OverrideRow({
                 value={draft}
                 onChange={setDraft}
                 directory={directory}
+                guildId={guildId}
               />
             </div>
             <Button
@@ -445,20 +447,21 @@ function AddOverrideForm({
         <Field label="Module" htmlFor="override-module">
           <Select
             id="override-module"
+            aria-label="Module"
             value={moduleName}
-            onChange={(e) => {
-              setModuleName(e.target.value);
+            onValueChange={(next) => {
+              setModuleName(next);
               setKey("");
               setValue(null);
             }}
-          >
-            <option value="">Select a module…</option>
-            {modules.map((m) => (
-              <option key={m.name} value={m.name}>
-                {m.displayName || m.name}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: "", label: "Select a module…" },
+              ...modules.map((m) => ({
+                value: m.name,
+                label: m.displayName || m.name,
+              })),
+            ]}
+          />
         </Field>
 
         <Field
@@ -468,42 +471,40 @@ function AddOverrideForm({
         >
           <Select
             id="override-key"
+            aria-label="Setting"
             value={key}
             disabled={!moduleView}
-            onChange={(e) => {
-              setKey(e.target.value);
-              const next = moduleView?.configFields.find(
-                (f) => f.key === e.target.value,
+            onValueChange={(next) => {
+              setKey(next);
+              const found = moduleView?.configFields.find(
+                (f) => f.key === next,
               );
-              setValue(next ? (moduleView?.config[next.key] ?? null) : null);
+              setValue(found ? (moduleView?.config[found.key] ?? null) : null);
             }}
-          >
-            <option value="">
-              {moduleView ? "Select a setting…" : "Pick a module first"}
-            </option>
-            {(moduleView?.configFields ?? []).map((f) => (
-              <option key={f.key} value={f.key}>
-                {f.label || f.key}
-              </option>
-            ))}
-          </Select>
+            options={[
+              {
+                value: "",
+                label: moduleView ? "Select a setting…" : "Pick a module first",
+              },
+              ...(moduleView?.configFields ?? []).map((f) => ({
+                value: f.key,
+                label: f.label || f.key,
+              })),
+            ]}
+          />
         </Field>
 
         <Field label="Applies to" htmlFor="override-type">
           <Select
             id="override-type"
+            aria-label="Applies to"
             value={modelType}
-            onChange={(e) => {
-              setModelType(e.target.value as ConfigOverrideModelType);
+            onValueChange={(next) => {
+              setModelType(next as ConfigOverrideModelType);
               setModelId("");
             }}
-          >
-            {TargetTypes.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </Select>
+            options={TargetTypes.map((t) => ({ value: t.value, label: t.label }))}
+          />
         </Field>
 
         <Field
@@ -527,16 +528,14 @@ function AddOverrideForm({
           ) : (
             <Select
               id="override-target"
+              aria-label="Target"
               value={modelId}
-              onChange={(e) => setModelId(e.target.value)}
-            >
-              <option value="">Select…</option>
-              {targetOptions.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </Select>
+              onValueChange={(next) => setModelId(next)}
+              options={[
+                { value: "", label: "Select…" },
+                ...targetOptions.map((o) => ({ value: o.id, label: o.label })),
+              ]}
+            />
           )}
         </Field>
       </div>
@@ -553,6 +552,7 @@ function AddOverrideForm({
             value={value}
             onChange={setValue}
             directory={directory}
+            guildId={guildId}
           />
         </Field>
       ) : null}
@@ -588,11 +588,13 @@ function ValueInput({
   value,
   onChange,
   directory,
+  guildId,
 }: {
   field: ConfigField | undefined;
   value: unknown;
   onChange: (value: unknown) => void;
   directory: Directory;
+  guildId: string;
 }) {
   if (!field) {
     return (
@@ -610,6 +612,7 @@ function ValueInput({
       onChange={onChange}
       roles={directory.roles}
       channels={directory.channels}
+      guildId={guildId}
     />
   );
 }

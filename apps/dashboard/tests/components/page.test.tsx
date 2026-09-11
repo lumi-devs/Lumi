@@ -1,31 +1,15 @@
-// @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { render, screen } from "@testing-library/react";
 import type { Session } from "next-auth";
+import { authMock as sharedAuthMock } from "../setup";
 
 // app/page.tsx -> SiteHeader -> actions/auth-actions -> lib/auth calls
 // `NextAuth({...})` at module load using real env vars via lib/env — both
 // mocked here so this stays a hermetic unit test of the page's branching
 // logic (landing vs. guild picker), not an integration test of NextAuth
-// itself.
-const authMock = vi.fn<() => Promise<Session | null>>();
-// GuildPicker refreshes the server list on returning to the tab after an
-// invite; the app router is not mounted in a bare render.
-vi.mock("next/navigation", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("next/navigation")>()),
-  useRouter: () => ({ refresh: vi.fn() }),
-}));
-
-vi.mock("#/lib/auth", () => ({
-  auth: authMock,
-  signIn: vi.fn(),
-  signOut: vi.fn(),
-  handlers: { GET: vi.fn(), POST: vi.fn() },
-}));
-vi.mock("#/lib/env", () => ({
-  env: { discordClientId: "123456789012345678", botOwners: [] },
-  isBotOwner: () => false,
-}));
+// itself. `#/lib/auth` and `next/navigation` are mocked globally in
+// setup.ts; only `auth` is used from the former here.
+const authMock = sharedAuthMock.auth as ReturnType<typeof vi.fn<() => Promise<Session | null>>>;
 
 const { default: HomePage } = await import("#/app/page");
 const { GuildPicker } = await import("#/components/guild-picker");
@@ -70,7 +54,9 @@ describe("HomePage & GuildPicker", () => {
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/moderation/i);
     expect(screen.getByText("alex")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /log out/i })).toBeInTheDocument();
+
+    // Avatar + username trigger the account menu (Account / Sign out).
+    expect(screen.getByRole("button", { name: "alex" })).toBeInTheDocument();
   });
 
   it("renders manageable servers in GuildPicker", () => {

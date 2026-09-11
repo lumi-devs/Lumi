@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import {
   AnimatePresence,
@@ -10,12 +10,16 @@ import {
   useSpring,
 } from "motion/react";
 import { Button } from "#/components/ui/button";
+import { Checkbox } from "#/components/ui/switch";
 import { ActionError } from "#/components/action-error";
 import { SpringSnappy, SpringSoft } from "#/lib/animate";
 
 export interface LoginActionState {
   error: string | null;
 }
+
+export const AutoLoginKey = "lumi.autologin";
+const AutoLoginAttemptedKey = "lumi.autologin.attempted";
 
 export function LoginForm({
   action,
@@ -25,6 +29,10 @@ export function LoginForm({
   const [state, formAction, isPending] = useActionState<LoginActionState, FormData>(action, {
     error: null,
   });
+  // Initialized true (the opt-out default) and synced from storage in an
+  // effect so server and client render the same checkbox on first paint.
+  const [autoLogin, setAutoLogin] = useState(true);
+  const formRef = useRef<HTMLFormElement>(null);
   const reduce = useReducedMotion();
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -44,9 +52,32 @@ export function LoginForm({
     y.set(0);
   }
 
+  useEffect(() => {
+    let pref = true;
+    try {
+      pref = localStorage.getItem(AutoLoginKey) !== "false";
+      setAutoLogin(pref);
+      if (!pref || sessionStorage.getItem(AutoLoginAttemptedKey) === "1") return;
+      sessionStorage.setItem(AutoLoginAttemptedKey, "1");
+    } catch {
+      return;
+    }
+    formRef.current?.requestSubmit();
+  }, []);
+
+  function onSubmit() {
+    try {
+      localStorage.setItem(AutoLoginKey, autoLogin ? "true" : "false");
+    } catch {
+      // Private mode etc. — the login itself must still go through.
+    }
+  }
+
   return (
     <motion.form
+      ref={formRef}
       action={formAction}
+      onSubmit={onSubmit}
       initial={reduce ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
@@ -79,6 +110,14 @@ export function LoginForm({
         {isPending ? "Redirecting to Discord…" : "Continue with Discord"}
       </Button>
       </motion.div>
+      <label className="mt-3 flex cursor-pointer items-center gap-2 text-[13px] text-fg-subtle">
+        <Checkbox
+          checked={autoLogin}
+          onChange={setAutoLogin}
+          aria-label="Log in automatically next time"
+        />
+        Log in automatically next time
+      </label>
       <AnimatePresence>
         {state.error ? (
           <motion.div

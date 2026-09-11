@@ -1,6 +1,7 @@
 "use client";
 
 import { Switch as SwitchPrimitive } from "radix-ui";
+import { Check } from "lucide-react";
 import { cn } from "#/lib/utils";
 
 export interface SwitchProps {
@@ -63,18 +64,24 @@ export function Checkbox({
   ...aria
 }: SwitchProps) {
   return (
-    <input
-      type="checkbox"
-      checked={checked}
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
       disabled={disabled}
-      onChange={(e) => onChange(e.target.checked)}
+      onClick={() => onChange(!checked)}
       className={cn(
-        "size-3.5 shrink-0 cursor-pointer rounded-[4px] border border-border-strong bg-bg-subtle",
-        "accent-[var(--accent)]",
+        "flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-[4px] border transition-colors",
+        checked
+          ? "border-transparent bg-accent text-white"
+          : "border-border-strong bg-bg-subtle hover:border-accent",
         "disabled:cursor-not-allowed disabled:opacity-50",
+        "outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]",
         className,
       )}
       {...aria}
-    />
+    >
+      {checked ? <Check aria-hidden className="size-3" /> : null}
+    </button>
   );
 }

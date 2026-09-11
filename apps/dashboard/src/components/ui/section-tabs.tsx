@@ -2,6 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
+import { motion } from "motion/react";
 import { cn } from "#/lib/utils";
 
 export interface PageSection {
@@ -79,14 +80,22 @@ export function SectionTabs({
         })}
       </div>
 
-      <div
+      {/* Keyed remount (not AnimatePresence) so the previous panel's content
+       * unmounts synchronously on tab switch — a lingering exit animation
+       * would leave two panels' worth of form fields/ids in the DOM at once,
+       * which breaks anything that queries by label text mid-transition. */}
+      <motion.div
+        key={current.id}
         role="tabpanel"
         id={`${base}-panel-${current.id}`}
         aria-labelledby={`${base}-tab-${current.id}`}
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
         className="flex flex-col gap-4"
       >
         {current.content}
-      </div>
+      </motion.div>
     </div>
   );
 }

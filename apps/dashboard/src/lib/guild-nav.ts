@@ -104,6 +104,7 @@ export function guildManagementGroups(guildId: string): GuildNavGroup[] {
         { href: `${base}/health`, label: "Health Dashboard", icon: HeartPulse },
         { href: `${base}/monitoring/activity`, label: "Activity & Trends", icon: TrendingUp },
         { href: `${base}/monitoring/audit`, label: "Audit Log", icon: ClipboardList },
+        { href: `${base}/config/modules/logging`, label: "Logging", icon: SlidersHorizontal },
       ],
     },
     {

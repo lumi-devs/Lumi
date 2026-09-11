@@ -1,4 +1,4 @@
-import { AlertTriangle, PlugZap } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildWarnThresholds } from "#/lib/dashboard-fetch";
 import { WarnThresholdLadder } from "#/components/guild/warn-threshold-ladder";
@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "#/components/ui/card";
-import { EmptyState } from "#/components/ui/empty-state";
+import { LoadFailure } from "#/components/ui/load-failure";
 import { PageHeader } from "#/components/ui/page-header";
 import type { WarnThresholdView } from "#/lib/dashboard-data";
 
@@ -59,12 +59,10 @@ export default async function WarnThresholdsPage({
           </CardHeader>
 
           {failure !== null ? (
-            <EmptyState
-              compact
-              icon={PlugZap}
-              title="Thresholds couldn't be loaded"
+            <LoadFailure
+              what="Thresholds"
+              error={failure}
               description="The rule list came back from the bot with an error. Check that the bot is online and connected to the message broker, then reload this page."
-              footnote={failure}
             />
           ) : (
             <WarnThresholdLadder guildId={guildId} thresholds={thresholds ?? []} />

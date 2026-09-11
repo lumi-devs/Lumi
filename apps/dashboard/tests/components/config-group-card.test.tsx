@@ -1,13 +1,9 @@
-// @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { FieldType, type ConfigField } from "@lumi/contracts";
-import type { ActionResult } from "#/actions/guild-actions";
+import { guildActionsMock } from "../setup";
 
-const setManyGuildConfigFields = vi.fn<() => Promise<ActionResult>>();
-vi.mock("#/actions/guild-actions", () => ({
-  setManyGuildConfigFields,
-}));
+const { setManyGuildConfigFields } = guildActionsMock;
 
 const { ConfigGroupCard } = await import("#/components/guild/config-group-card");
 
@@ -130,16 +126,33 @@ describe("ConfigGroupCard (schema-driven group rendering)", () => {
     }
   });
 
+  it("opens the first group and folds the rest away until asked", () => {
+    renderCard();
+    const gate = screen.getByRole("button", { name: "Join Gate" });
+    const verification = screen.getByRole("button", { name: "Verification" });
+    expect(gate).toHaveAttribute("aria-expanded", "true");
+    expect(verification).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("Verified Role")).not.toBeVisible();
+
+    fireEvent.click(verification);
+    expect(verification).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Verified Role")).toBeVisible();
+  });
+
   it("edits role lists through the roles directory", () => {
     renderCard();
+    fireEvent.focus(screen.getByRole("combobox", { name: "Raid Warn Roles" }));
     expect(screen.getByRole("option", { name: "@Moderators" })).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByRole("option", { name: "@Moderators" }));
+    expect(screen.getByText(/unsaved changes/i)).toBeInTheDocument();
   });
 
   it("saves only changed fields in a single setMany call", async () => {
     setManyGuildConfigFields.mockResolvedValue({ ok: true });
     renderCard();
-    const candidates = screen.getAllByDisplayValue("kick");
-    fireEvent.change(candidates[0] as HTMLElement, { target: { value: "quarantine" } });
+    fireEvent.click(screen.getByLabelText("Gate Action"));
+    fireEvent.click(screen.getByRole("option", { name: "quarantine" }));
     expect(screen.getByText(/unsaved changes/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
@@ -147,5 +160,37 @@ describe("ConfigGroupCard (schema-driven group rendering)", () => {
     expect(setManyGuildConfigFields).toHaveBeenCalledWith("guild-1", "security", {
       raid_action: "quarantine",
     });
+  });
+});
+
+describe("ConfigGroupCard section swapping", () => {
+  it("does not report unsaved changes when the rendered groups change", () => {
+    // Section tabs render one card at a time, so React reuses this instance
+    // with different `groups` instead of remounting it.
+    const { rerender } = render(
+      <ConfigGroupCard
+        moduleName="security"
+        title="Join gate"
+        groups={["Join Gate"]}
+        guildId="guild-1"
+        config={config}
+        configFields={configFields}
+        roles={roles}
+      />,
+    );
+
+    rerender(
+      <ConfigGroupCard
+        moduleName="security"
+        title="Verification"
+        groups={["Verification"]}
+        guildId="guild-1"
+        config={config}
+        configFields={configFields}
+        roles={roles}
+      />,
+    );
+
+    expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
   });
 });

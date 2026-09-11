@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { animate, createTimeline, stagger, type JSAnimation } from "animejs";
+import { animate, stagger, type JSAnimation } from "animejs";
 
 function prefersReducedMotion(): boolean {
   return (
@@ -56,34 +56,6 @@ export function useStaggerIn<T extends HTMLElement>(
 }
 
 /**
- * A one-shot elastic "pop" on a single element whenever `watch` changes -
- * for a value that just flipped (a badge count, a status pill, a toggled
- * switch's label) rather than a page-load entrance. Distinct physics
- * (outElastic, not outQuint) so a live value change reads differently from
- * a list appearing.
- */
-export function usePopIn<T extends HTMLElement>(watch: unknown) {
-  const ref = useRef<T>(null);
-  const mounted = useRef(false);
-
-  useEffect(() => {
-    if (!mounted.current) {
-      mounted.current = true;
-      return;
-    }
-    const el = ref.current;
-    if (!el || prefersReducedMotion()) return;
-    animate(el, {
-      scale: [0.85, 1],
-      duration: 480,
-      ease: "outElastic(1, .6)",
-    });
-  }, [watch]);
-
-  return ref;
-}
-
-/**
  * Counts a number up from its previous value to `value` (anime.js animating
  * a plain JS object property, not a DOM node). Use for real stats that just
  * became available over RPC - a static number appearing on load doesn't
@@ -114,42 +86,6 @@ export function useCountUp(value: number, opts?: { duration?: number }) {
   }, [value]);
 
   return display;
-}
-
-/**
- * Full orchestrated entrance for the handful of "showcase" screens that
- * deserve one (guild overview, system panel) - chains header -> stat strip
- * -> first panel via anime.js timeline position offsets instead of hand-typed
- * `--rise-delay` ms values. Everywhere else keeps the lighter `.rise` CSS
- * class; this is the one place per session that spends the extra motion
- * budget (see the frontend-design principle: one orchestrated moment, not
- * every page doing the maximal version).
- */
-export function usePageTimeline(refs: {
-  header: React.RefObject<HTMLElement | null>;
-  stats?: React.RefObject<HTMLElement | null>;
-  panel: React.RefObject<HTMLElement | null>;
-}) {
-  useEffect(() => {
-    if (prefersReducedMotion()) return;
-    const { header, stats, panel } = refs;
-    if (!header.current || !panel.current) return;
-
-    const tl = createTimeline({ defaults: { duration: 420, ease: "outQuint" } });
-    tl.add(header.current, { opacity: [0, 1], translateY: [8, 0] });
-    if (stats?.current) {
-      tl.add(
-        stats.current,
-        { opacity: [0, 1], translateY: [8, 0] },
-        "-=280",
-      );
-    }
-    tl.add(panel.current, { opacity: [0, 1], translateY: [8, 0] }, "-=280");
-
-    return () => {
-      tl.pause();
-    };
-  }, []);
 }
 
 /**

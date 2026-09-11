@@ -187,6 +187,7 @@ export default async function AuditPage({
                 labels={labels}
                 roles={dashboard.roles}
                 channels={dashboard.channels}
+                members={dashboard.members}
               />
             </>
           ) : data && data.total > 0 ? (

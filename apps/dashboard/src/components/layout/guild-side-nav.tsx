@@ -6,6 +6,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#/components/ui/dropdown-menu";
 import { SideNav, SideNavUser } from "#/components/layout/side-nav";
@@ -108,6 +110,7 @@ function GuildSwitcher({
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="start" className="max-h-80 w-64 overflow-y-auto">
+        <DropdownMenuLabel>Servers</DropdownMenuLabel>
         {guilds.map((g) => (
           <DropdownMenuItem key={g.id} asChild>
             <Link href={`/guild/${g.id}`}>
@@ -119,6 +122,7 @@ function GuildSwitcher({
             </Link>
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/guilds">
             <Layers3 aria-hidden />

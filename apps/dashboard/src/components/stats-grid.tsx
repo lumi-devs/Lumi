@@ -38,19 +38,19 @@ const TrendTone: Record<"up" | "down", string> = {
 
 export function StatsGrid({ stats }: { stats: Stat[] }) {
   return (
-    <dl className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+    <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       {stats.map((s) => (
         <Card
           key={s.label}
-          className="px-4 pt-3.5 pb-3.5 transition-colors hover:border-border-strong"
+          className="px-4.5 pt-4 pb-4 transition-colors hover:border-border-strong"
         >
-          <dt className="font-display flex items-center gap-2 text-[13px] font-semibold tracking-[0.06em] text-fg-subtle uppercase">
+          <dt className="flex items-center justify-between gap-2">
+            <span className="truncate text-[13px] font-semibold tracking-[0.01em] text-fg-muted">
+              {s.label}
+            </span>
             {s.icon ? (
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-bg-subtle text-fg-muted">
-                <s.icon className="size-3" aria-hidden />
-              </span>
+              <s.icon className="size-3.5 shrink-0 text-fg-subtle" aria-hidden />
             ) : null}
-            <span className="truncate">{s.label}</span>
           </dt>
           <dd
             className={cn(

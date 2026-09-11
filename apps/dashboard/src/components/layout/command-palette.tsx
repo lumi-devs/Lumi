@@ -128,7 +128,7 @@ export function CommandPalette({ session }: { session: Session | null }) {
           aria-hidden
           className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-fg-subtle"
         />
-        Search servers and settings
+        <span className="min-w-0 flex-1 truncate">Search servers and settings</span>
         <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-control border border-border bg-surface px-1 py-px font-sans text-[12px] leading-4 text-fg-subtle">
           ⌘K
         </kbd>

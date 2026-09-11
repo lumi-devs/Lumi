@@ -10,7 +10,8 @@ import { Badge } from "#/components/ui/badge";
 import { Glyph } from "#/components/ui/glyph";
 import { EmptyState } from "#/components/ui/empty-state";
 import { Input, SettingRow } from "#/components/ui/input";
-import { ConfigFieldInput } from "./config-field-input";
+import { CollapsibleSection } from "#/components/ui/collapsible-section";
+import { ConfigFieldInput, isWideField } from "./config-field-input";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
 import { cn } from "#/lib/utils";
@@ -19,7 +20,7 @@ import type {
   DashboardRoleView,
   DashboardChannelView,
 } from "#/lib/dashboard-data";
-import type { ConfigField } from "@lumi/contracts";
+import { FieldType, type ConfigField } from "@lumi/contracts";
 
 /** Fallback section for fields that declare no `group`. */
 const FallbackGroupName = "General";
@@ -221,44 +222,91 @@ export function ModuleConfigForm({
                 description={`Nothing in ${m.displayName} matches “${query.trim()}”.`}
               />
             ) : (
-              renderedSections.map((section) => (
-                <div
-                  key={section.name ?? "__flat"}
-                  role={tabbed && !searching ? "tabpanel" : undefined}
-                >
-                  {showHeaders && section.name ? (
-                    <h4 className="cfg-row font-display flex items-baseline justify-between gap-3 border-y border-border bg-bg-subtle px-4 py-1.5 text-[13px] font-semibold tracking-[0.09em] text-fg-subtle uppercase">
-                      <span>{section.name}</span>
-                      <span className="tabular">
-                        {section.fields.length}{" "}
-                        {section.fields.length === 1 ? "setting" : "settings"}
-                      </span>
-                    </h4>
-                  ) : null}
-                <div className="divide-y divide-border">
-                  {section.fields.map((f) => (
-                    <SettingRow
-                      key={f.key}
-                      htmlFor={f.key}
-                      label={f.label}
-                      description={f.description}
-                      className="cfg-row transition-colors duration-fast hover:bg-bg-subtle/60"
-                      control={
-                        <ConfigFieldInput
-                          field={f}
-                          value={config[f.key]}
-                          onChange={(value) =>
-                            setConfig((c) => ({ ...c, [f.key]: value }))
-                          }
-                          roles={roles}
-                          channels={channels}
-                        />
-                      }
-                    />
-                  ))}
-                </div>
-              </div>
-              ))
+              renderedSections.map((section, index) => {
+                const toggleFields = section.fields.filter(
+                  (f) => f.type === FieldType.Boolean,
+                );
+                const otherFields = section.fields.filter(
+                  (f) => f.type !== FieldType.Boolean,
+                );
+                const rows = (
+                  <div className="flex flex-col gap-4 px-4 py-3">
+                    {toggleFields.length > 0 ? (
+                      <div className="flex flex-col gap-2">
+                        {toggleFields.map((f) => (
+                          <SettingRow
+                            key={f.key}
+                            htmlFor={f.key}
+                            label={f.label}
+                            hint={f.description}
+                            className="cfg-row rounded-control border border-border bg-surface px-3.5 transition-colors duration-fast hover:border-border-strong"
+                            control={
+                              <ConfigFieldInput
+                                field={f}
+                                value={config[f.key]}
+                                onChange={(value) =>
+                                  setConfig((c) => ({ ...c, [f.key]: value }))
+                                }
+                                config={config}
+                                roles={roles}
+                                channels={channels}
+                                guildId={guildId}
+                              />
+                            }
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                    {otherFields.length > 0 ? (
+                      <div className="divide-y divide-border-soft">
+                        {otherFields.map((f) => (
+                          <SettingRow
+                            key={f.key}
+                            htmlFor={f.key}
+                            label={f.label}
+                            hint={f.description}
+                            wide={isWideField(f)}
+                            className="cfg-row transition-colors duration-fast hover:bg-bg-subtle/60"
+                            control={
+                              <ConfigFieldInput
+                                field={f}
+                                value={config[f.key]}
+                                onChange={(value) =>
+                                  setConfig((c) => ({ ...c, [f.key]: value }))
+                                }
+                                config={config}
+                                roles={roles}
+                                channels={channels}
+                                guildId={guildId}
+                              />
+                            }
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+                const panelRole = tabbed && !searching ? "tabpanel" : undefined;
+                if (!showHeaders || !section.name) {
+                  return (
+                    <div key={section.name ?? "__flat"} role={panelRole}>
+                      {rows}
+                    </div>
+                  );
+                }
+                return (
+                  <CollapsibleSection
+                    key={section.name}
+                    title={section.name}
+                    count={section.fields.length}
+                    countLabel="setting"
+                    defaultOpen={index === 0 || searching}
+                    className="cfg-row"
+                  >
+                    <div role={panelRole}>{rows}</div>
+                  </CollapsibleSection>
+                );
+              })
             )}
           </div>
         )}

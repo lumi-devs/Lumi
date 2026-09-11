@@ -1,11 +1,9 @@
-// @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import type { ActionResult } from "#/actions/guild-actions";
 import type { DashboardModuleView } from "#/lib/dashboard-data";
+import { guildActionsMock } from "../setup";
 
-const toggleGuildModule = vi.fn<() => Promise<ActionResult>>();
-vi.mock("#/actions/guild-actions", () => ({ toggleGuildModule }));
+const { toggleGuildModule } = guildActionsMock;
 
 const { ModuleToggleGrid } = await import(
   "#/components/guild/module-toggle-grid"

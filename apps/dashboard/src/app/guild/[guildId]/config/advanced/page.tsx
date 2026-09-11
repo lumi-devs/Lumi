@@ -1,4 +1,3 @@
-import { PlugZap } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import {
   getGuildAfkEntries,
@@ -7,7 +6,6 @@ import {
   getGuildModuleData,
 } from "#/lib/dashboard-fetch";
 import { AfkList } from "#/components/guild/afk-list";
-import { AfkPreviewPlayground } from "#/components/guild/afk-preview-playground";
 import { IgnoredChannelsList } from "#/components/guild/ignored-channels-list";
 import { ModuleDataTable } from "#/components/guild/module-data-table";
 import { Badge } from "#/components/ui/badge";
@@ -18,11 +16,12 @@ import {
   CardHeader,
   CardTitle,
 } from "#/components/ui/card";
-import { EmptyState } from "#/components/ui/empty-state";
 import { FilterBar } from "#/components/ui/filter-bar";
+import { LoadFailure } from "#/components/ui/load-failure";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
 import { isCommandChannel } from "#/lib/channel-types";
+import { guildManagementGroups } from "#/lib/guild-nav";
 
 const PageSize = 25;
 
@@ -36,6 +35,10 @@ export default async function AdvancedPage({
   const { guildId } = await params;
   const session = await requireGuild(guildId);
   const query = await searchParams;
+
+  const navIcon = guildManagementGroups(guildId)
+    .flatMap((g) => g.links)
+    .find((l) => l.href === `/guild/${guildId}/config/advanced`)?.icon;
 
   const moduleName = single(query["module"]);
   const targetId = single(query["target"]);
@@ -65,6 +68,7 @@ export default async function AdvancedPage({
     <div className="flex flex-col gap-4">
       <div className="rise" style={{ "--rise-delay": "0ms" } as React.CSSProperties}>
         <PageHeader
+          icon={navIcon}
           title="Advanced"
           description="Three things that don't warrant a screen of their own: who's away, where Lumi stays quiet, and what its modules have written down."
         />
@@ -98,7 +102,11 @@ export default async function AdvancedPage({
               now={Date.now()}
             />
           ) : (
-            <LoadFailure what="The AFK list" error={afk.error} />
+            <LoadFailure
+              what="The AFK list"
+              error={afk.error}
+              description="Check that the bot is online and connected to the message broker, then reload this page. The other panels on this page are unaffected."
+            />
           )}
         </Card>
 
@@ -117,27 +125,16 @@ export default async function AdvancedPage({
               channels={commandChannels}
             />
           ) : (
-            <LoadFailure what="The ignore list" error={ignored.error} />
+            <LoadFailure
+              what="The ignore list"
+              error={ignored.error}
+              description="Check that the bot is online and connected to the message broker, then reload this page. The other panels on this page are unaffected."
+            />
           )}
         </Card>
       </div>
 
       <div className="rise" style={{ "--rise-delay": "140ms" } as React.CSSProperties}>
-        <Card>
-          <CardHeader>
-            <CardTitle>See it in action — edit it live</CardTitle>
-            <CardDescription>
-              Edit the away message and watch the AFK notice members see update
-              instantly.
-            </CardDescription>
-          </CardHeader>
-          <div className="p-4">
-            <AfkPreviewPlayground />
-          </div>
-        </Card>
-      </div>
-
-      <div className="rise" style={{ "--rise-delay": "210ms" } as React.CSSProperties}>
         <Card>
           <CardHeader
             actions={
@@ -203,23 +200,15 @@ export default async function AdvancedPage({
               ) : null}
             </>
           ) : (
-            <LoadFailure what="Stored module state" error={moduleData.error} />
+            <LoadFailure
+              what="Stored module state"
+              error={moduleData.error}
+              description="Check that the bot is online and connected to the message broker, then reload this page. The other panels on this page are unaffected."
+            />
           )}
         </Card>
       </div>
     </div>
-  );
-}
-
-function LoadFailure({ what, error }: { what: string; error: string | null }) {
-  return (
-    <EmptyState
-      compact
-      icon={PlugZap}
-      title={`${what} couldn't be loaded`}
-      description="Check that the bot is online and connected to the message broker, then reload this page. The other panels on this page are unaffected."
-      footnote={error ?? undefined}
-    />
   );
 }
 

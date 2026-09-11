@@ -146,7 +146,10 @@ export function AntiNukeCard({
         ) : null}
 
         {extras.length > 0 ? (
-          <CardBody className="grid grid-cols-1 gap-4 border-t border-border sm:grid-cols-3">
+          <CardBody
+            className="grid grid-cols-1 gap-4 border-t border-border sm:grid-cols-3 aria-disabled:pointer-events-none aria-disabled:opacity-50"
+            aria-disabled={!enabled}
+          >
             {extras.map((field) => (
               <Field
                 key={field.key}
@@ -160,13 +163,17 @@ export function AntiNukeCard({
                   onChange={(value) => set(field.key, value)}
                   roles={roles}
                   channels={channels}
+                  guildId={guildId}
                 />
               </Field>
             ))}
           </CardBody>
         ) : null}
 
-        <div className="divide-y divide-border border-t border-border">
+        <div
+          className="divide-y divide-border border-t border-border aria-disabled:pointer-events-none aria-disabled:opacity-50"
+          aria-disabled={!enabled}
+        >
           <div className="grid grid-cols-[1fr_7rem_10rem] gap-3 px-4 py-2 font-mono text-[11.5px] tracking-wide text-fg-subtle uppercase">
             <span>Action</span>
             <span>Limit</span>
@@ -188,6 +195,7 @@ export function AntiNukeCard({
                   onChange={(value) => set(row.limit.key, value)}
                   roles={roles}
                   channels={channels}
+                  guildId={guildId}
                 />
                 {response ? (
                   <ConfigFieldInput
@@ -196,6 +204,7 @@ export function AntiNukeCard({
                     onChange={(value) => set(response.key, value)}
                     roles={roles}
                     channels={channels}
+                    guildId={guildId}
                   />
                 ) : (
                   <span className="text-[14px] text-fg-subtle" title="No per-kind response in the schema — the worker default applies.">

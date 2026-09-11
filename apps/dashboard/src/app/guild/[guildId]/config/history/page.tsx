@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { History, PlugZap, SearchX } from "lucide-react";
+import { History, SearchX } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildConfigHistory, getGuildDashboard } from "#/lib/dashboard-fetch";
 import { exportGuildConfigHistory } from "#/actions/guild-export-actions";
@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
+import { LoadFailure } from "#/components/ui/load-failure";
 import { ExportLogButton } from "#/components/ui/export-log-button";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
@@ -151,12 +152,11 @@ export default async function HistoryPage({
           </div>
 
           {failure !== null ? (
-            <EmptyState
-              compact
-              icon={PlugZap}
+            <LoadFailure
+              what="The change log"
               title="The change log couldn't be read"
               description="The bot answered with an error instead of the history. Check that it is online and connected to the message broker, then reload."
-              footnote={failure}
+              error={failure}
             />
           ) : data && data.entries.length > 0 ? (
             <>

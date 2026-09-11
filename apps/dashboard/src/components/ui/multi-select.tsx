@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useId } from "react";
-import { Button } from "#/components/ui/button";
 
 interface MultiSelectOption {
   id: string;
@@ -46,14 +45,16 @@ export function MultiSelect({
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Backspace" && query === "" && value.length > 0) {
-      remove(value[value.length - 1]);
+      const last = value[value.length - 1];
+      if (last !== undefined) remove(last);
     }
     if (e.key === "Escape") {
       setOpen(false);
     }
     if (e.key === "Enter" && available.length > 0) {
       e.preventDefault();
-      select(available[0].id);
+      const first = available[0];
+      if (first !== undefined) select(first.id);
     }
   }
 

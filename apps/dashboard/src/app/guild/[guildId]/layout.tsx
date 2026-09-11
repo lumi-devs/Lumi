@@ -4,6 +4,8 @@ import { SiteHeader } from "#/components/layout/site-header";
 import { GuildSideNav } from "#/components/layout/guild-side-nav";
 import { Breadcrumbs } from "#/components/layout/breadcrumbs";
 import { InviteNeeded } from "#/components/invite-needed";
+import { GuildUnavailable } from "#/components/guild-unavailable";
+import { isGuildMissing } from "#/lib/rpc";
 import type { DashboardData } from "#/lib/dashboard-data";
 
 export default async function GuildLayout({
@@ -20,11 +22,21 @@ export default async function GuildLayout({
   let data: DashboardData;
   try {
     data = await getGuildDashboard(guildId, session.userId);
-  } catch {
+  } catch (err) {
+    // Only the bot saying it cannot see the guild means "invite it". Anything
+    // else (worker down, timeout, database error) is an outage, and telling an
+    // admin their bot was removed would send them to re-invite for nothing.
     return (
       <>
         <SiteHeader session={session} />
-        <InviteNeeded guildId={guildId} />
+        {isGuildMissing(err) ? (
+          <InviteNeeded guildId={guildId} />
+        ) : (
+          <GuildUnavailable
+            guildId={guildId}
+            error={err instanceof Error ? err.message : String(err)}
+          />
+        )}
       </>
     );
   }

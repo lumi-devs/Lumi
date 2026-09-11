@@ -1,14 +1,10 @@
-// @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import type { GuildSettingsPayload } from "@lumi/contracts";
-import type { ActionResult } from "#/actions/guild-actions";
 import type { GuildSettings, DashboardRoleView } from "#/lib/dashboard-data";
+import { guildActionsMock } from "../setup";
 
-const setGuildSettings = vi.fn<() => Promise<ActionResult>>();
-vi.mock("#/actions/guild-actions", () => ({
-  setGuildSettings,
-}));
+const { setGuildSettings } = guildActionsMock;
 
 const { GeneralSettingsForm } = await import(
   "#/components/guild/general-settings-form"
@@ -72,9 +68,8 @@ describe("GeneralSettingsForm (partial guild.settings.set save)", () => {
     render(<GeneralSettingsForm guildId="101" settings={makeSettings()} roles={roles} />);
     openAdvanced();
 
-    fireEvent.change(screen.getByLabelText("Mute role"), {
-      target: { value: "" },
-    });
+    fireEvent.click(screen.getByLabelText("Mute role"));
+    fireEvent.click(screen.getByRole("option", { name: "None" }));
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() =>
@@ -129,7 +124,7 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
   it("adopts a remote settings-updated broadcast from another tab for untouched fields", async () => {
     render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} roles={roles} />);
     openAdvanced();
-    expect(screen.getByLabelText("Mute role")).toHaveValue("444");
+    expect(screen.getByLabelText("Mute role")).toHaveTextContent("444");
 
     const otherTab = guildChannel("g1");
     otherTab.postMessage({
@@ -138,7 +133,7 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
     });
 
     await waitFor(() =>
-      expect(screen.getByLabelText("Mute role")).toHaveValue("999"),
+      expect(screen.getByLabelText("Mute role")).toHaveTextContent("999"),
     );
     expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
 
@@ -149,10 +144,9 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
     render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} roles={roles} />);
     openAdvanced();
 
-    fireEvent.change(screen.getByLabelText("Mute role"), {
-      target: { value: "LOCAL-EDIT" },
-    });
-    expect(screen.getByLabelText("Mute role")).toHaveValue("LOCAL-EDIT");
+    fireEvent.click(screen.getByLabelText("Mute role"));
+    fireEvent.click(screen.getByRole("option", { name: "LOCAL-EDIT" }));
+    expect(screen.getByLabelText("Mute role")).toHaveTextContent("LOCAL-EDIT");
 
     const otherTab = guildChannel("g1");
     otherTab.postMessage({
@@ -163,7 +157,7 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
     await waitFor(() =>
       expect(screen.getByLabelText("Command prefix")).toHaveValue("??"),
     );
-    expect(screen.getByLabelText("Mute role")).toHaveValue("LOCAL-EDIT");
+    expect(screen.getByLabelText("Mute role")).toHaveTextContent("LOCAL-EDIT");
     const conflictMessage = screen.getByText(/changed in another tab/i);
     expect(conflictMessage).toBeInTheDocument();
     expect(conflictMessage).toHaveTextContent("Mute role");
@@ -182,7 +176,7 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
       settings: formState({ muteRoleId: "999" }),
     });
     await waitFor(() =>
-      expect(screen.getByLabelText("Mute role")).toHaveValue("999"),
+      expect(screen.getByLabelText("Mute role")).toHaveTextContent("999"),
     );
 
     fireEvent.change(screen.getByLabelText("Command prefix"), {
@@ -191,7 +185,7 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
     expect(screen.getByText(/unsaved changes/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
     await waitFor(() => {
-      expect(screen.getByLabelText("Mute role")).toHaveValue("999");
+      expect(screen.getByLabelText("Mute role")).toHaveTextContent("999");
       expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
     });
 

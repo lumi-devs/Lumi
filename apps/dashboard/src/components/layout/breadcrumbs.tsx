@@ -19,30 +19,33 @@ function resolveTrail(guildId: string, pathname: string): Crumb[] {
     ...guildManagementGroups(guildId),
   ];
 
-  let match: { group: string; label: string; href: string } | null = null;
+  let match: { label: string; href: string } | null = null;
   for (const group of groups) {
     for (const link of group.links) {
       if (link.href === base) continue;
       const hit = pathname === link.href || pathname.startsWith(`${link.href}/`);
       if (hit && (!match || link.href.length > match.href.length)) {
-        match = { group: group.title, label: link.label, href: link.href };
+        match = { label: link.label, href: link.href };
       }
     }
   }
 
   if (!match) return [];
 
-  const trail: Crumb[] = [];
-  if (match.group) trail.push({ label: match.group });
-  trail.push({
-    label: match.label,
-    ...(pathname === match.href ? {} : { href: match.href }),
-  });
+  // Group titles ("Configuration", ...) are structural buckets without their
+  // own page — a crumb with nowhere to go adds no navigation value, so only
+  // the linked match trails.
+  const trail: Crumb[] = [
+    {
+      label: match.label,
+      ...(pathname === match.href ? {} : { href: match.href }),
+    },
+  ];
 
   const rest = pathname.slice(match.href.length).split("/").filter(Boolean);
   for (const [index, segment] of rest.entries()) {
     trail.push({
-      label: decodeURIComponent(segment),
+      label: prettifySegment(segment),
       ...(index === rest.length - 1
         ? {}
         : { href: `${match.href}/${rest.slice(0, index + 1).join("/")}` }),
@@ -50,6 +53,13 @@ function resolveTrail(guildId: string, pathname: string): Crumb[] {
   }
 
   return trail;
+}
+
+// Slugs read better with spaces; IDs and hashes pass through untouched.
+function prettifySegment(segment: string): string {
+  const text = decodeURIComponent(segment);
+  if (/^\d+$/.test(text)) return text;
+  return text.replace(/[-_]+/g, " ").replace(/^[a-z]/, (c) => c.toUpperCase());
 }
 
 export function Breadcrumbs() {

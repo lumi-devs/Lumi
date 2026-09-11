@@ -1,4 +1,4 @@
-import { Scale, PlugZap, SearchX } from "lucide-react";
+import { Scale, SearchX } from "lucide-react";
 import Link from "next/link";
 import { requireGuild } from "#/lib/auth-guards";
 import { getGuildAppeals, getGuildDashboard } from "#/lib/dashboard-fetch";
@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
+import { LoadFailure } from "#/components/ui/load-failure";
 import { ExportLogButton } from "#/components/ui/export-log-button";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
@@ -113,13 +114,7 @@ export default async function AppealsPage({
           </div>
 
           {failure !== null ? (
-            <EmptyState
-              compact
-              icon={PlugZap}
-              title="Appeals couldn't be loaded"
-              description="Check that the bot is online and connected to the message broker, then reload this page."
-              footnote={failure}
-            />
+            <LoadFailure what="Appeals" error={failure} />
           ) : data && data.appeals.length > 0 ? (
             <>
               {data.appeals.length > 1 ? (

@@ -14,6 +14,7 @@ import {
 import type {
   AuditEntryView,
   DashboardChannelView,
+  DashboardMemberView,
   DashboardRoleView,
 } from "#/lib/dashboard-data";
 import {
@@ -53,6 +54,20 @@ function objectDetailEntries(details: unknown): [string, unknown][] | null {
   return Object.entries(details as Record<string, unknown>);
 }
 
+function platformLabel(platform: string): string {
+  if (platform === "web") return "Dashboard";
+  return platform.charAt(0).toUpperCase() + platform.slice(1);
+}
+
+function actorName(
+  userId: string,
+  members: DashboardMemberView[] | undefined,
+): string | null {
+  const member = members?.find((m) => m.id === userId);
+  if (!member) return null;
+  return member.displayName || member.username;
+}
+
 function resolveDetailValue(
   value: unknown,
   roles: DashboardRoleView[] | undefined,
@@ -76,12 +91,14 @@ export function AuditTimeline({
   labels,
   roles,
   channels,
+  members,
   guildHref,
 }: {
   entries: AuditEntryView[];
   labels?: ModuleLabelIndex;
   roles?: DashboardRoleView[];
   channels?: DashboardChannelView[];
+  members?: DashboardMemberView[];
   guildHref?: (guildId: string) => string;
 }) {
   const days = groupByDay(entries, (e) => e.createdAt);
@@ -109,6 +126,7 @@ export function AuditTimeline({
                   labels={labels}
                   roles={roles}
                   channels={channels}
+                  members={members}
                   guildHref={guildHref}
                 />
               </li>
@@ -125,15 +143,18 @@ function AuditRow({
   labels,
   roles,
   channels,
+  members,
   guildHref,
 }: {
   entry: AuditEntryView;
   labels?: ModuleLabelIndex;
   roles?: DashboardRoleView[];
   channels?: DashboardChannelView[];
+  members?: DashboardMemberView[];
   guildHref?: (guildId: string) => string;
 }) {
   const { scope, verb } = splitAction(entry.action);
+  const actor = actorName(entry.userId, members);
   const configChange = labels ? asConfigChangeDetails(entry.details) : null;
   const entries = configChange ? null : objectDetailEntries(entry.details);
 
@@ -159,17 +180,21 @@ function AuditRow({
             ) : null}
             <span className="font-semibold">{verb}</span>
           </span>
-          <Badge variant="outline">
-            {entry.platform === "web" ? "Dashboard" : entry.platform}
-          </Badge>
+          <Badge variant="outline">{platformLabel(entry.platform)}</Badge>
         </div>
 
         <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-fg-muted">
           <span>
             by{" "}
-            <span className="tabular font-mono text-fg-subtle">
-              {entry.userId}
-            </span>
+            {actor ? (
+              <span title={entry.userId} className="text-fg-subtle">
+                {actor}
+              </span>
+            ) : (
+              <span className="tabular font-mono text-fg-subtle">
+                {entry.userId}
+              </span>
+            )}
           </span>
           {guildHref ? (
             <span>

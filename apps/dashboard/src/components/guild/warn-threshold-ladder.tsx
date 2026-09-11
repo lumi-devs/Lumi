@@ -12,7 +12,8 @@ import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
 import { EmptyState } from "#/components/ui/empty-state";
-import { Field, Input, Select } from "#/components/ui/input";
+import { Field, Input } from "#/components/ui/input";
+import { Select } from "#/components/ui/select";
 import { TriangleAlert } from "lucide-react";
 import type { WarnThresholdView } from "#/lib/dashboard-data";
 import { useServerAction } from "#/lib/use-server-action";
@@ -280,15 +281,11 @@ function RuleForm({
         <Field label="Lumi applies" htmlFor="threshold-action" className="w-44 gap-1">
           <Select
             id="threshold-action"
+            aria-label="Lumi applies"
             value={action}
-            onChange={(e) => setAction(e.target.value as WarnThresholdAction)}
-          >
-            {Actions.map((a) => (
-              <option key={a.value} value={a.value}>
-                {a.label}
-              </option>
-            ))}
-          </Select>
+            onValueChange={(next) => setAction(next as WarnThresholdAction)}
+            options={Actions.map((a) => ({ value: a.value, label: a.label }))}
+          />
         </Field>
 
         <Field label="For" htmlFor="threshold-duration" className="w-32 gap-1">

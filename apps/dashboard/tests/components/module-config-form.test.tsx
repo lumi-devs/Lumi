@@ -1,16 +1,10 @@
-// @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { FieldType } from "@lumi/contracts";
-import type { ActionResult } from "#/actions/guild-actions";
 import type { DashboardModuleView } from "#/lib/dashboard-data";
+import { guildActionsMock } from "../setup";
 
-const setGuildConfigField = vi.fn<() => Promise<ActionResult>>();
-const toggleGuildModule = vi.fn<() => Promise<ActionResult>>();
-vi.mock("#/actions/guild-actions", () => ({
-  setGuildConfigField,
-  toggleGuildModule,
-}));
+const { setGuildConfigField, toggleGuildModule } = guildActionsMock;
 
 const { ModuleConfigForm } = await import(
   "#/components/guild/module-config-form"
@@ -76,13 +70,14 @@ describe("ModuleConfigForm (dynamic config form editor + save bar)", () => {
     );
 
     const roleInput = screen.getByLabelText("Mod Role");
-    fireEvent.change(roleInput, { target: { value: "555555555555555555" } });
+    fireEvent.click(roleInput);
+    fireEvent.click(screen.getByRole("option", { name: "Moderators" }));
     expect(screen.getByText(/unsaved changes/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
     await waitFor(() => {
       expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
-      expect(screen.getByLabelText("Mod Role")).toHaveValue("");
+      expect(screen.getByLabelText("Mod Role")).toHaveTextContent("None");
     });
   });
 
@@ -97,9 +92,8 @@ describe("ModuleConfigForm (dynamic config form editor + save bar)", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("Mod Role"), {
-      target: { value: "555555555555555555" },
-    });
+    fireEvent.click(screen.getByLabelText("Mod Role"));
+    fireEvent.click(screen.getByRole("option", { name: "Moderators" }));
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() =>
@@ -125,9 +119,8 @@ describe("ModuleConfigForm (dynamic config form editor + save bar)", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("Mod Role"), {
-      target: { value: "555555555555555555" },
-    });
+    fireEvent.click(screen.getByLabelText("Mod Role"));
+    fireEvent.click(screen.getByRole("option", { name: "Moderators" }));
     fireEvent.click(screen.getByRole("switch", { name: "Verbose Logging" }));
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
@@ -157,9 +150,8 @@ describe("ModuleConfigForm (dynamic config form editor + save bar)", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("Mod Role"), {
-      target: { value: "555555555555555555" },
-    });
+    fireEvent.click(screen.getByLabelText("Mod Role"));
+    fireEvent.click(screen.getByRole("option", { name: "Moderators" }));
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     expect(await screen.findByText("Bad payload")).toBeInTheDocument();

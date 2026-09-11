@@ -43,10 +43,15 @@ export function buildHealthChecks(
   const higherRoles = botRole
     ? roles.filter((r) => r.position > botRole.position)
     : [];
+  const rolePositionOk = !botRole || higherRoles.length === 0;
   checks.push({
     id: "bot-role-position",
-    ok: !botRole || higherRoles.length === 0,
-    title: "Lumi's role is high enough in the hierarchy",
+    ok: rolePositionOk,
+    // Titles state what is actually true, not the goal: a failing row headed
+    // "… is enabled" next to a warning icon reads as a contradiction.
+    title: rolePositionOk
+      ? "Lumi's role is high enough in the hierarchy"
+      : "Lumi's role sits too low in the hierarchy",
     detail: botRole
       ? higherRoles.length === 0
         ? `Lumi's role (${botRole.name}) is at the top of the moderatable range.`
@@ -60,7 +65,10 @@ export function buildHealthChecks(
   checks.push({
     id: "dangerous-role-permissions",
     ok: dangerousRoles.length === 0,
-    title: "No unexpected roles hold dangerous permissions",
+    title:
+      dangerousRoles.length === 0
+        ? "No unexpected roles hold dangerous permissions"
+        : `${dangerousRoles.length} role${dangerousRoles.length === 1 ? "" : "s"} hold dangerous permissions`,
     detail:
       dangerousRoles.length === 0
         ? "No non-bot role carries native Kick, Ban, or Administrator permissions."
@@ -71,7 +79,7 @@ export function buildHealthChecks(
   checks.push({
     id: "joingate-enabled",
     ok: joingateEnabled,
-    title: "Join Gate is enabled",
+    title: joingateEnabled ? "Join Gate is enabled" : "Join Gate is off",
     detail: joingateEnabled
       ? "New members are screened for raids and throwaway accounts."
       : "New members join without account-age or raid screening.",
@@ -83,7 +91,7 @@ export function buildHealthChecks(
   checks.push({
     id: "verification-enabled",
     ok: verificationEnabled,
-    title: "Verification is enabled",
+    title: verificationEnabled ? "Verification is enabled" : "Verification is off",
     detail: verificationEnabled
       ? "Members must pass the verification panel before gaining access."
       : "Members aren't required to verify before participating.",
@@ -95,7 +103,7 @@ export function buildHealthChecks(
   checks.push({
     id: "antinuke-enabled",
     ok: antinukeEnabled,
-    title: "Anti-Nuke is enabled",
+    title: antinukeEnabled ? "Anti-Nuke is enabled" : "Anti-Nuke is off",
     detail: antinukeEnabled
       ? "Mass destructive actions are watched and auto-quarantined."
       : "Mass bans, kicks, or channel/role deletions won't trigger an automatic response.",
@@ -115,7 +123,9 @@ export function buildHealthChecks(
   checks.push({
     id: "filter-heat-configured",
     ok: !heatMisconfigured,
-    title: "Filter heat/spam settings match the Heat System toggle",
+    title: heatMisconfigured
+      ? "Filter heat thresholds are set but the Heat System is off"
+      : "Filter heat/spam settings match the Heat System toggle",
     detail: heatMisconfigured
       ? "Heat thresholds are configured, but the Heat System toggle is off, so they never trigger."
       : "Heat scoring thresholds and the Heat System toggle are in sync.",

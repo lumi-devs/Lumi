@@ -5,7 +5,6 @@ import {
   getGuildReactionRoleMenus,
 } from "#/lib/dashboard-fetch";
 import { ReactionRolesManager } from "#/components/guild/reactionroles-manager";
-import { ReactionRolesPreviewPlayground } from "#/components/guild/reactionroles-preview-playground";
 import { Badge } from "#/components/ui/badge";
 import {
   Card,
@@ -79,21 +78,6 @@ export default async function RolesPage({
               roles={dashboard.roles}
             />
           )}
-        </Card>
-      </div>
-
-      <div className="rise" style={{ "--rise-delay": "140ms" } as React.CSSProperties}>
-        <Card>
-          <CardHeader>
-            <CardTitle>See it in action — edit it live</CardTitle>
-            <CardDescription>
-              Draft a title, mode, and options and watch the exact menu card
-              members see update instantly.
-            </CardDescription>
-          </CardHeader>
-          <div className="p-4">
-            <ReactionRolesPreviewPlayground />
-          </div>
         </Card>
       </div>
     </div>

@@ -13,7 +13,6 @@ import type {
   ConfigOverrideView,
   DashboardData,
   IgnoredChannelView,
-  LogClaimView,
   ModNoteView,
   ModuleDataListData,
   PanicStateView,
@@ -33,8 +32,6 @@ import type {
   CasesListPayload,
   ConfigHistoryListPayload,
   GuildBackupView,
-  GuildChannelListItem,
-  GuildRoleListItem,
   GuildSummaryView,
   ModuleDataListPayload,
   SystemAuditListPayload,
@@ -79,29 +76,6 @@ export const getGuildPermits = cache(
       actorId,
     });
     return data.permits;
-  },
-);
-
-export const getGuildRoles = cache(
-  async (guildId: string, actorId: string): Promise<GuildRoleListItem[]> => {
-    const data = await rpcCall(RpcActions.guildRolesList, {
-      guildId,
-      actorId,
-    });
-    return data.roles;
-  },
-);
-
-export const getGuildChannels = cache(
-  async (
-    guildId: string,
-    actorId: string,
-  ): Promise<GuildChannelListItem[]> => {
-    const data = await rpcCall(RpcActions.guildChannelsList, {
-      guildId,
-      actorId,
-    });
-    return data.channels;
   },
 );
 
@@ -158,16 +132,6 @@ export const getGuildVerificationPanel = cache(
       actorId,
     });
     return data.panel;
-  },
-);
-
-export const getGuildLogClaims = cache(
-  async (guildId: string, actorId: string): Promise<LogClaimView[]> => {
-    const data = await rpcCall(RpcActions.guildLogClaimsList, {
-      guildId,
-      actorId,
-    });
-    return data.claims;
   },
 );
 
