@@ -37,6 +37,24 @@ import { handleWarnDecayFire } from "./lib/warn-decay-handler.js";
       min: 1,
       max: 25,
     }),
+    predefined_reasons: cfg.stringList({
+      label: "Predefined Reasons",
+      description:
+        "Common punishment reasons to suggest as autocomplete on the reason field, one per line.",
+    }),
+    immune_role_ids: cfg.multiRole({
+      label: "Immune Role IDs",
+      description:
+        "Role IDs exempt from automated escalation (heat timeouts/quarantine, anti-nuke responses, warn-threshold auto-actions). Manual staff commands (/ban, /warn, etc.) always work regardless.",
+    }),
+    duplicate_case_window_minutes: cfg.number({
+      label: "Duplicate Case Window (minutes)",
+      description:
+        "Before opening a new case, warn staff if a similar case against the same member was opened within this many minutes. 0 disables the check.",
+      default: 5,
+      min: 0,
+      max: 1440,
+    }),
   }),
 })
 export class ModModule extends Module {

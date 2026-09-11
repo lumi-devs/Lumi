@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Badge } from "#/components/ui/badge";
-import { Field, Input, Select, Textarea } from "#/components/ui/input";
+import { Field, Input, Textarea } from "#/components/ui/input";
+import { Select } from "#/components/ui/select";
 import { Button } from "#/components/ui/button";
 import {
   DiscordMessagePreview,
@@ -118,13 +119,15 @@ export function ReactionRolesPreviewPlayground() {
           <Field label="Mode" htmlFor="rr-preview-mode">
             <Select
               id="rr-preview-mode"
+              aria-label="Mode"
               value={mode}
-              onChange={(e) => setMode(e.target.value as PlaygroundMode)}
-            >
-              <option value="buttons">Buttons</option>
-              <option value="select">Dropdown</option>
-              <option value="reactions">Reactions</option>
-            </Select>
+              onValueChange={(next) => setMode(next as PlaygroundMode)}
+              options={[
+                { value: "buttons", label: "Buttons" },
+                { value: "select", label: "Dropdown" },
+                { value: "reactions", label: "Reactions" },
+              ]}
+            />
           </Field>
           <p className="text-[13px] text-fg-subtle">{modeHint(mode)}</p>
           <div className="flex flex-col gap-2">

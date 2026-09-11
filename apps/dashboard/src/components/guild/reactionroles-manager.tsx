@@ -13,12 +13,15 @@ import { Button } from "#/components/ui/button";
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
 import { DataTable } from "#/components/ui/data-table";
 import { EmptyState } from "#/components/ui/empty-state";
-import { Field, Input, Select, Textarea } from "#/components/ui/input";
+import { Field, Input, Textarea } from "#/components/ui/input";
+import { Select } from "#/components/ui/select";
 import { Switch } from "#/components/ui/switch";
 import {
   modeLabel,
   reactionrolesColumns,
 } from "#/components/guild/reactionroles-columns";
+import { DiscordMessagePreview } from "#/components/guild/discord-message-preview";
+import { buildMenuPreview } from "#/lib/reactionroles-preview";
 import type {
   DashboardRoleView,
   ReactionRoleMenuModeView,
@@ -220,6 +223,18 @@ function MenuForm({
     setOptions((prev) => prev.map((o) => (o.key === key ? { ...o, ...patch } : o)));
   }
 
+  const preview = buildMenuPreview({
+    title,
+    description,
+    color,
+    mode,
+    options: options.map((o) => ({
+      label: o.label,
+      emoji: o.emoji,
+      role: o.roleId ? roleName(roles, o.roleId) : "",
+    })),
+  });
+
   function submit(event: React.FormEvent) {
     event.preventDefault();
     const trimmedTitle = title.trim();
@@ -352,13 +367,15 @@ function MenuForm({
         <Field label="Mode" htmlFor="rr-menu-mode" className="w-44 gap-1">
           <Select
             id="rr-menu-mode"
+            aria-label="Mode"
             value={mode}
-            onChange={(e) => setMode(e.target.value as ReactionRoleMenuModeView)}
-          >
-            <option value="buttons">Buttons</option>
-            <option value="select">Dropdown</option>
-            <option value="reactions">Reactions</option>
-          </Select>
+            onValueChange={(next) => setMode(next as ReactionRoleMenuModeView)}
+            options={[
+              { value: "buttons", label: "Buttons" },
+              { value: "select", label: "Dropdown" },
+              { value: "reactions", label: "Reactions" },
+            ]}
+          />
         </Field>
         <Field label="Max roles" htmlFor="rr-menu-max" className="w-28 gap-1">
           <Input
@@ -419,30 +436,28 @@ function MenuForm({
             <Field label="Granted role" htmlFor={`rr-opt-role-${option.key}`} className="gap-1">
               <Select
                 id={`rr-opt-role-${option.key}`}
+                aria-label="Granted role"
                 value={option.roleId}
-                onChange={(e) => patchOption(option.key, { roleId: e.target.value })}
-              >
-                <option value="">Pick a role…</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
-                ))}
-              </Select>
+                onValueChange={(next) => patchOption(option.key, { roleId: next })}
+                options={[
+                  { value: "", label: "Pick a role…" },
+                  ...roles.map((role) => ({ value: role.id, label: role.name })),
+                ]}
+              />
             </Field>
             <Field label="Required role (optional)" htmlFor={`rr-opt-req-${option.key}`} className="gap-1">
               <Select
                 id={`rr-opt-req-${option.key}`}
+                aria-label="Required role (optional)"
                 value={option.requiredRoleId}
-                onChange={(e) => patchOption(option.key, { requiredRoleId: e.target.value })}
-              >
-                <option value="">None</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
-                ))}
-              </Select>
+                onValueChange={(next) =>
+                  patchOption(option.key, { requiredRoleId: next })
+                }
+                options={[
+                  { value: "", label: "None" },
+                  ...roles.map((role) => ({ value: role.id, label: role.name })),
+                ]}
+              />
             </Field>
             <Field label="Description (optional)" htmlFor={`rr-opt-desc-${option.key}`} className="gap-1 md:col-span-2">
               <Input
@@ -464,6 +479,22 @@ function MenuForm({
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <span className="text-[14px] font-medium text-fg">
+          Preview
+          <span className="ml-2 text-[13px] font-normal text-fg-subtle">
+            The card members see, from the draft above — nothing is saved yet.
+          </span>
+        </span>
+        <DiscordMessagePreview
+          channelName="role-menu"
+          channelTopic="Claim your roles"
+          container={preview.container}
+          selectPlaceholder={preview.selectPlaceholder}
+          buttons={preview.buttons}
+        />
       </div>
 
       <div className="flex items-center gap-2">

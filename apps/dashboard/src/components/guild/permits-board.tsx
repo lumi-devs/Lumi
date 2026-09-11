@@ -12,7 +12,8 @@ import { ActionError } from "#/components/action-error";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Card, CardBody, CardDescription, CardHeader, CardTitle } from "#/components/ui/card";
-import { Input, Label, Select } from "#/components/ui/input";
+import { Input, Label } from "#/components/ui/input";
+import { Select } from "#/components/ui/select";
 import { Checkbox } from "#/components/ui/switch";
 import type {
   DashboardMemberView,
@@ -482,21 +483,21 @@ function PermitCard({
 
           <div className="flex gap-2">
             <Select
+              aria-label={`Pick a ${targetType}`}
               value={pickedTarget}
-              onChange={(e) => setPickedTarget(e.target.value)}
+              onValueChange={(next) => setPickedTarget(next)}
               className="max-w-64"
-            >
-              <option value="">
-                {eligible.length === 0
-                  ? `No eligible ${targetType}s`
-                  : `Pick a ${targetType}…`}
-              </option>
-              {eligible.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
-                </option>
-              ))}
-            </Select>
+              options={[
+                {
+                  value: "",
+                  label:
+                    eligible.length === 0
+                      ? `No eligible ${targetType}s`
+                      : `Pick a ${targetType}…`,
+                },
+                ...eligible.map((t) => ({ value: t.id, label: t.label })),
+              ]}
+            />
             <Button
               variant="secondary"
               size="sm"

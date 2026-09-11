@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
 
 function fakeRoleCache(roles: Array<{ id: string; position: number }>): Map<string, { position: number }> {

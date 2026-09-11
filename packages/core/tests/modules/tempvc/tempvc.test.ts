@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import TempVcUtility, {
   resolveGeneratorName,
 } from "#modules/tempvc/utilities/TempVcUtility.js";
@@ -37,15 +37,19 @@ vi.mock("#modules/tempvc/registry.js", () => ({
 }));
 
 vi.mock("#modules/tempvc/ui/panel.js", () => ({
-  buildPanel: vi.fn(() => ({ content: "panel" })),
+  buildPanel: vi.fn(() => Promise.resolve({ content: "panel" })),
 }));
+
+// bun:test's fake-timer support only mocks the system clock (Date.now), not
+// the setTimeout queue, so the reorder-debounce check below waits on the
+// real clock instead.
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 describe("TempVcUtility", () => {
   let service: TempVcUtility;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
 
     // Directly assign mock properties to the global container
     (container as any).redis = {
@@ -74,9 +78,6 @@ describe("TempVcUtility", () => {
     );
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
 
   describe("onCreateCooldown", () => {
     it("returns false if NX set succeeds (no cooldown)", async () => {
@@ -159,9 +160,9 @@ describe("TempVcUtility", () => {
       expect(mockChannel.send).toHaveBeenCalled();
 
       // Check reordering scheduled
-      vi.advanceTimersByTime(1000);
+      await sleep(1000);
       expect(listVcRecords).toHaveBeenCalled();
-    });
+    }, 6000);
 
     it("deletes the created VC if user voice move fails", async () => {
       const mockChannel = {

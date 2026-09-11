@@ -38,7 +38,7 @@ export function ModuleCardGrid({
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {modules.map((m) => (
         <ModuleCard
           key={m.name}
@@ -70,16 +70,48 @@ function ModuleCard({
     <TiltCard className="h-full">
       <Card
         className={cn(
-          "spotlight flex h-full flex-col gap-2.5 p-4 transition-colors hover:border-border-strong",
-          hasAlert && "border-warning",
+          "spotlight flex h-full flex-col gap-3.5 p-4.5 transition-colors hover:border-border-strong",
+          hasAlert && "border-warning/35",
         )}
         onMouseMove={spotlightHandler}
       >
-      <div className="flex items-start justify-between gap-2">
-        <Glyph emoji={m.emoji} className="size-8.5 text-[17px]" />
+      <div className="flex items-center justify-between gap-2">
+        <Glyph
+          emoji={m.emoji}
+          className={cn("size-8.5 text-[17px]", hasAlert && "border-warning text-warning")}
+        />
         {isCore ? (
           <Badge variant="neutral">Always on</Badge>
+        ) : hasAlert ? (
+          <Badge variant="warning">
+            {alertCount} alert{alertCount === 1 ? "" : "s"}
+          </Badge>
         ) : (
+          <Badge variant={on ? "success" : "neutral"} dot>
+            {on ? "Active" : "Disabled"}
+          </Badge>
+        )}
+      </div>
+
+      <div>
+        <Link
+          href={href}
+          className="font-display truncate text-[15.5px] font-semibold tracking-[0.01em] text-fg hover:underline"
+        >
+          {m.displayName}
+        </Link>
+        <p className="mt-0.5 line-clamp-2 min-h-10 text-[14px] leading-5 text-fg-muted">
+          {m.short || m.description}
+        </p>
+      </div>
+
+      <div className="tabular mt-auto flex items-center justify-between gap-2 border-t border-border-soft pt-3 font-mono text-[12px] text-fg-subtle">
+        <span>
+          {m.configFields.length} field{m.configFields.length === 1 ? "" : "s"}
+          {" · "}
+          {m.isAddon ? `addon v${m.version}` : `v${m.version}`}
+        </span>
+        {isCore ? null : (
           <Switch
             checked={enabled}
             onChange={(next) =>
@@ -93,33 +125,6 @@ function ModuleCard({
             aria-label={`Toggle ${m.displayName}`}
           />
         )}
-      </div>
-
-      <Link
-        href={href}
-        className="font-display truncate text-[15.5px] font-semibold tracking-[0.01em] text-fg hover:underline"
-      >
-        {m.displayName}
-      </Link>
-
-      <p className="line-clamp-2 text-[14px] leading-5 text-fg-muted">
-        {m.short || m.description}
-      </p>
-
-      <div className="tabular mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[12.5px] text-fg-subtle">
-        {hasAlert ? (
-          <span className="text-warning-fg">
-            {alertCount} alert{alertCount === 1 ? "" : "s"}
-          </span>
-        ) : (
-          <span className={on ? "text-success" : undefined}>
-            {on ? "● active" : "○ disabled"}
-          </span>
-        )}
-        <span>
-          {m.configFields.length} field{m.configFields.length === 1 ? "" : "s"}
-        </span>
-        <span>{m.isAddon ? `addon v${m.version}` : `v${m.version}`}</span>
       </div>
 
       <ActionError error={error} />

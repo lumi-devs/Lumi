@@ -3,9 +3,16 @@ import {
   ButtonBuilder,
   StringSelectMenuBuilder,
 } from "@discordjs/builders";
+import { container } from "@sapphire/framework";
 import { ButtonStyle, type VoiceBasedChannel } from "discord.js";
 import { channelMention, userMention } from "@discordjs/formatters";
-import { Tvc } from "../keys.js";
+import {
+  ModuleName,
+  PanelMessageDefault,
+  PanelTitleDefault,
+  Tvc,
+} from "../keys.js";
+import { parseHexColor } from "#lib/message-content.js";
 import type { VcRecord } from "../data.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import {
@@ -27,12 +34,17 @@ import {
 
 export type PanelMessage = CardReply;
 
-/** Builds the SaaS owner control panel for a temporary voice channel. */
-export function buildPanel(
+/**
+ * Builds the SaaS owner control panel for a temporary voice channel. The
+ * heading, body and accent come from the module's `panel_*` config so a server
+ * can reword the card; the controls below it are always the same, since their
+ * custom IDs are what the interaction handlers dispatch on.
+ */
+export async function buildPanel(
   channel: VoiceBasedChannel,
   record: VcRecord,
   t?: LumiT,
-): PanelMessage {
+): Promise<PanelMessage> {
   const limitStr =
     channel.userLimit && channel.userLimit > 0
       ? String(channel.userLimit)
@@ -40,7 +52,9 @@ export function buildPanel(
         ? t("tempvc:unlimited")
         : "Unlimited";
 
-  const title = t ? t("tempvc:panelHeader") : "🔊 Voice Channel Controls";
+  const configured = await readPanelConfig(channel.guildId);
+  const title =
+    configured.title ?? (t ? t("tempvc:panelHeader") : PanelTitleDefault);
 
   const lockBadge = formatStatusBadge(
     record.locked ? "disabled" : "enabled",
@@ -63,12 +77,12 @@ export function buildPanel(
         : "VISIBLE",
   );
 
-  const body = [
-    `**Channel:** ${channelMention(channel.id)}`,
-    `**Owner:** ${userMention(record.ownerId)}`,
-    `**Limit:** \`${limitStr}\``,
-    `**Status:** ${lockBadge} · ${hideBadge}`,
-  ];
+  const body = renderPanelTemplate(configured.message ?? PanelMessageDefault, {
+    channel: channelMention(channel.id),
+    owner: userMention(record.ownerId),
+    limit: limitStr,
+    status: `${lockBadge} · ${hideBadge}`,
+  });
 
   const menu = createStringSelectMenu({
     customId: `${Tvc}:panelmenu:${channel.id}`,
@@ -159,10 +173,47 @@ export function buildPanel(
     ? t("tempvc:panelFooter")
     : "Settings are restricted to the owner. Anyone can claim if the owner leaves.";
 
-  return makeCard(resolveCardColor("primary"), title, body, {
-    footer,
-    actionRows: rows,
-  });
+  return makeCard(
+    parseHexColor(configured.color) ?? resolveCardColor("primary"),
+    title,
+    body,
+    { footer, actionRows: rows },
+  );
+}
+
+interface PanelConfig {
+  title: string | null;
+  message: string | null;
+  color: string | null;
+}
+
+async function readPanelConfig(guildId: string): Promise<PanelConfig> {
+  const [title, message, color] = await Promise.all([
+    readString(guildId, "panel_title"),
+    readString(guildId, "panel_message"),
+    readString(guildId, "panel_color"),
+  ]);
+  return { title, message, color };
+}
+
+async function readString(guildId: string, key: string): Promise<string | null> {
+  const stored = await container.db.config.getModuleConfig(
+    guildId,
+    ModuleName,
+    key,
+  );
+  return typeof stored === "string" && stored.trim().length > 0 ? stored : null;
+}
+
+/** Placeholder substitution for the panel body. Unknown tokens stay verbatim,
+ * matching how the welcome and sticky templates behave. */
+function renderPanelTemplate(
+  template: string,
+  vars: Record<string, string>,
+): string[] {
+  return template
+    .replace(/\{([A-Za-z]+)\}/g, (match, name: string) => vars[name] ?? match)
+    .split("\n");
 }
 
 const backToPanelRow = (channelId: string, t?: LumiT) =>

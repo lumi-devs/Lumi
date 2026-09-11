@@ -1,5 +1,6 @@
 import { container } from "@sapphire/framework";
-import type { Snowflake } from "discord.js";
+import { parseHexColor, isHexColor } from "#lib/message-content.js";
+import { isSnowflakeId } from "#utilities/misc.js";
 
 export type ReactionRoleMode = "buttons" | "select" | "reactions";
 
@@ -55,13 +56,7 @@ export const ReactionRoleLimits = {
   reactionsMaxOptions: 20,
 } as const;
 
-const SnowflakePattern = /^\d{17,20}$/;
-const SlugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const HexColorPattern = /^#[0-9a-fA-F]{6}$/;
-
-export function isSnowflake(value: string): value is Snowflake {
-  return SnowflakePattern.test(value);
-}
+export const parseMenuColor = parseHexColor;
 
 export function isReactionRoleMode(value: string): value is ReactionRoleMode {
   return (ReactionRoleModes as readonly string[]).includes(value);
@@ -76,20 +71,10 @@ export function normalizeMenuId(raw: string): string {
   return slug.length > 0 ? slug : "roles";
 }
 
-export function isMenuId(value: string): boolean {
-  return value.length >= 1 && value.length <= 64 && SlugPattern.test(value);
-}
-
 export function maxOptionsForMode(mode: ReactionRoleMode): number {
   if (mode === "select") return ReactionRoleLimits.selectMaxOptions;
   if (mode === "reactions") return ReactionRoleLimits.reactionsMaxOptions;
   return ReactionRoleLimits.buttonsMaxOptions;
-}
-
-export function parseMenuColor(color: string | null | undefined): number | undefined {
-  if (!color) return undefined;
-  if (!HexColorPattern.test(color)) return undefined;
-  return Number.parseInt(color.slice(1), 16);
 }
 
 export interface MenuValidationError {
@@ -123,7 +108,7 @@ export function validateMenuDraft(input: {
       message: `Description must be at most ${ReactionRoleLimits.descriptionMax} characters.`,
     });
   }
-  if (input.color != null && input.color.length > 0 && !HexColorPattern.test(input.color)) {
+  if (input.color != null && input.color.length > 0 && !isHexColor(input.color)) {
     errors.push({
       field: "color",
       message: "Color must be a hex value like #5865F2.",
@@ -178,11 +163,11 @@ export function validateOptionDraft(input: {
       message: `Description must be at most ${ReactionRoleLimits.optionDescriptionMax} characters.`,
     });
   }
-  if (!isSnowflake(input.roleId)) {
+  if (!isSnowflakeId(input.roleId)) {
     errors.push({ field: "roleId", message: "Role must be a valid role ID." });
   }
   const requiredRoleId = (input.requiredRoleId ?? "").trim();
-  if (requiredRoleId.length > 0 && !isSnowflake(requiredRoleId)) {
+  if (requiredRoleId.length > 0 && !isSnowflakeId(requiredRoleId)) {
     errors.push({
       field: "requiredRoleId",
       message: "Required role must be a valid role ID.",
@@ -288,7 +273,7 @@ function toMenu(value: unknown, guildId: string): ReactionRoleMenu | null {
       if (!entry || typeof entry !== "object") return [];
       const o = entry as Record<string, unknown>;
       if (typeof o.id !== "string" || typeof o.label !== "string") return [];
-      if (typeof o.roleId !== "string" || !isSnowflake(o.roleId)) return [];
+      if (typeof o.roleId !== "string" || !isSnowflakeId(o.roleId)) return [];
       return [
         {
           id: o.id,
@@ -297,7 +282,7 @@ function toMenu(value: unknown, guildId: string): ReactionRoleMenu | null {
           description: typeof o.description === "string" ? o.description : null,
           roleId: o.roleId,
           requiredRoleId:
-            typeof o.requiredRoleId === "string" && isSnowflake(o.requiredRoleId)
+            typeof o.requiredRoleId === "string" && isSnowflakeId(o.requiredRoleId)
               ? o.requiredRoleId
               : null,
         } satisfies ReactionRoleOption,

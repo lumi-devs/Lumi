@@ -12,7 +12,8 @@ import { Button } from "#/components/ui/button";
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
 import { DataTable } from "#/components/ui/data-table";
 import { EmptyState } from "#/components/ui/empty-state";
-import { Field, Input, Select } from "#/components/ui/input";
+import { Field, Input } from "#/components/ui/input";
+import { Select } from "#/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -265,19 +266,20 @@ function GeneratorForm({
         >
           <Select
             id="generator-channel"
+            aria-label="Trigger channel"
             value={channelId}
             disabled={editing !== null}
-            onChange={(e) => setChannelId(e.target.value)}
-          >
-            {editing && !options.some((c) => c.id === editing.channelId) ? (
-              <option value={editing.channelId}>{editing.channelId}</option>
-            ) : null}
-            {options.map((channel) => (
-              <option key={channel.id} value={channel.id}>
-                {channel.name}
-              </option>
-            ))}
-          </Select>
+            onValueChange={(next) => setChannelId(next)}
+            options={[
+              ...(editing && !options.some((c) => c.id === editing.channelId)
+                ? [{ value: editing.channelId, label: editing.channelId }]
+                : []),
+              ...options.map((channel) => ({
+                value: channel.id,
+                label: channel.name,
+              })),
+            ]}
+          />
         </Field>
 
         <Field

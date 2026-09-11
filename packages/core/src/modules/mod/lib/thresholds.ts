@@ -17,6 +17,7 @@ import {
   QuarantineAction,
   VoiceMuteAction,
 } from "../actions/index.js";
+import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
 
 /** Kept identical to the wire contract so a rule the dashboard can save is a rule the runner can apply. */
 export type ThresholdAction = WarnThresholdAction;
@@ -200,9 +201,17 @@ export async function checkThresholds(
   const entry = thresholds[String(targetCount)];
   if (!entry) return;
 
+  const guild = container.client.guilds.cache.get(guildId);
+  if (!guild) return;
+
+  const botUser = container.client.user;
+  if (!botUser) return;
+
   // Two warns landing at once can both resolve to the same threshold (and a
   // cold warn counter makes them resolve to the same count outright), which
-  // would apply the punishment twice. First one through wins.
+  // would apply the punishment twice. First one through wins. Claimed only
+  // after the guild/bot lookups above so an un-actionable run doesn't burn
+  // the claim and eat the firing.
   const claimed = await container.redis.set(
     thresholdFiredKey(guildId, userId, targetCount),
     "1",
@@ -212,16 +221,12 @@ export async function checkThresholds(
   );
   if (claimed !== "OK") return;
 
-  const guild = container.client.guilds.cache.get(guildId);
-  if (!guild) return;
-
-  const botUser = container.client.user;
-  if (!botUser) return;
   const reason = `Auto: ${warnCount} warn${warnCount === 1 ? "" : "s"} reached threshold (${targetCount}).`;
 
   if (entry.action === "mute") {
     const member = await guild.members.fetch(userId).catch(() => null);
     if (!member) return;
+    if (await isImmuneToAutomatedAction(container, guildId, member)) return;
     const ms = resolveThresholdDuration(container, guildId, targetCount, entry);
     await MuteAction.apply({
       guild,
@@ -238,6 +243,7 @@ export async function checkThresholds(
   } else if (entry.action === "kick") {
     const member = await guild.members.fetch(userId).catch(() => null);
     if (!member) return;
+    if (await isImmuneToAutomatedAction(container, guildId, member)) return;
     await KickAction.apply({
       guild,
       targetMember: member,
@@ -252,6 +258,9 @@ export async function checkThresholds(
   } else if (entry.action === "ban") {
     const user = await container.client.users.fetch(userId).catch(() => null);
     if (!user) return;
+    const member = await guild.members.fetch(userId).catch(() => null);
+    if (member && (await isImmuneToAutomatedAction(container, guildId, member)))
+      return;
     await BanAction.apply({
       guild,
       targetUser: user,
@@ -266,6 +275,7 @@ export async function checkThresholds(
   } else if (entry.action === "quarantine") {
     const member = await guild.members.fetch(userId).catch(() => null);
     if (!member) return;
+    if (await isImmuneToAutomatedAction(container, guildId, member)) return;
     await QuarantineAction.apply({
       guild,
       targetMember: member,
@@ -280,6 +290,7 @@ export async function checkThresholds(
   } else if (entry.action === "vcmute") {
     const member = await guild.members.fetch(userId).catch(() => null);
     if (!member) return;
+    if (await isImmuneToAutomatedAction(container, guildId, member)) return;
     const ms = resolveThresholdDuration(container, guildId, targetCount, entry);
     await VoiceMuteAction.apply({
       guild,

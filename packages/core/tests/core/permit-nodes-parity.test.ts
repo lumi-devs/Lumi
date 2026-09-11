@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { KnownPermitNodes } from "@lumi/contracts";
 import { KnownPermitNodesAutocomplete } from "#lib/permissions/permit-nodes.js";
 

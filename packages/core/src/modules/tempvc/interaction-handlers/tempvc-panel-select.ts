@@ -101,7 +101,7 @@ export class TempVcPanelSelectHandler extends BaseInteractionHandler {
     // lookups below. `interaction.values` is available synchronously.
     const selected = action === "panelmenu" ? interaction.values[0] : undefined;
     const opensModal = selected === "name" || selected === "limit";
-    if (!opensModal) await interaction.deferUpdate();
+    if (!opensModal) await this.acknowledge(interaction);
 
     const member = interaction.member as GuildMember;
     const t = await fetchTyped(interaction);
@@ -129,7 +129,7 @@ export class TempVcPanelSelectHandler extends BaseInteractionHandler {
             record,
             !record.locked,
           );
-          await interaction.editReply(buildPanel(channel, next, t));
+          await interaction.editReply(await buildPanel(channel, next, t));
           return;
         }
         case "hide": {
@@ -138,7 +138,7 @@ export class TempVcPanelSelectHandler extends BaseInteractionHandler {
             record,
             !record.hidden,
           );
-          await interaction.editReply(buildPanel(channel, next, t));
+          await interaction.editReply(await buildPanel(channel, next, t));
           return;
         }
         case "kick":

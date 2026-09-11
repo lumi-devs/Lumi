@@ -154,9 +154,11 @@ export default class TempVcUtility extends Utility {
         }, 1000);
       }
 
-      void vc.send(buildPanel(vc, record)).catch((err: unknown) => {
-        logError("TempVC: panel send failed", err);
-      });
+      void buildPanel(vc, record)
+        .then((panel) => vc.send(panel))
+        .catch((err: unknown) => {
+          logError("TempVC: panel send failed", err);
+        });
     } finally {
       queue.shift();
       if (queue.remaining === 0) creationQueues.delete(generator.id);

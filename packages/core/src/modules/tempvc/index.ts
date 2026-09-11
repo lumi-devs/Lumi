@@ -1,6 +1,10 @@
 import { container } from "@sapphire/framework";
 import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
-import { ModuleName } from "./keys.js";
+import {
+  ModuleName,
+  PanelMessageDefault,
+  PanelTitleDefault,
+} from "./keys.js";
 import { tempVcRegistry } from "./registry.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleTempVcCleanupFire } from "./lib/cleanup-handler.js";
@@ -57,6 +61,27 @@ export async function getMaxGenerators(guildId: string): Promise<number> {
       description:
         "Used to pre-fill new generators. Supports {username}, {name}/{nickname}, {number}, {position} — see the Voice Generators page for details.",
       default: "{username}'s Channel",
+      format: "template",
+      templateVars: ["username", "name", "nickname", "number", "position"],
+    }),
+    panel_title: cfg.string({
+      label: "Control Panel Title",
+      description: "Heading on the owner control panel posted in each temp channel.",
+      default: PanelTitleDefault,
+    }),
+    panel_message: cfg.string({
+      label: "Control Panel Message",
+      description:
+        "Body of the owner control panel. Supports {channel}, {owner}, {limit} and {status}. The controls themselves are always attached below it.",
+      default: PanelMessageDefault,
+      format: "template",
+      templateVars: ["channel", "owner", "limit", "status"],
+    }),
+    panel_color: cfg.string({
+      label: "Control Panel Accent Color",
+      description: "Hex accent for the control panel, like #5865F2. Empty uses the theme colour.",
+      default: "",
+      format: "color",
     }),
   }),
 })

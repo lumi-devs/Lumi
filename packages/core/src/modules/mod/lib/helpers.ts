@@ -1,6 +1,5 @@
 import type { Container } from "@sapphire/framework";
-import type { CommandContext } from "#lib/commands.js";
-import type { Guild, GuildMember } from "discord.js";
+import type { Guild } from "discord.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import { cancelTask } from "#lib/schedule-task.js";
 
@@ -67,31 +66,4 @@ export async function liftAllActiveCases(
     action: undoAction,
     reason,
   });
-}
-
-/**
- * Resolves a voice member from a user, validating guild membership.
- * Sends an error reply to the context if the member is not found.
- */
-export async function resolveVoiceMember(
-  ctx: CommandContext,
-  guild: Guild,
-): Promise<GuildMember | null> {
-  const user = await ctx.getUser("target");
-
-  if (!user) {
-    await ctx.replyError("User Required", "Please specify a target user.");
-    return null;
-  }
-
-  const member = await guild.members.fetch(user.id).catch(() => null);
-  if (!member) {
-    await ctx.replyError(
-      "Member Not Found",
-      "That user is not in this server.",
-    );
-    return null;
-  }
-
-  return member;
 }

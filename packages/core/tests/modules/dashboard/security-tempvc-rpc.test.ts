@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { RpcActions } from "@lumi/contracts";
 import { rpcHandlers } from "#lib/rpc/dispatch.js";
@@ -17,7 +17,11 @@ describe("dashboard module security + tempvc RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let guild: any;
   let utilities: Map<string, unknown>;
-  let security: { enterPanic: ReturnType<typeof vi.fn>; revertPanic: ReturnType<typeof vi.fn> };
+  let security: {
+    enterPanic: ReturnType<typeof vi.fn>;
+    revertPanic: ReturnType<typeof vi.fn>;
+    postOrEditVerifyPanel: ReturnType<typeof vi.fn>;
+  };
   let tempvc: { addGenerator: ReturnType<typeof vi.fn>; removeGenerator: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
@@ -54,6 +58,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
         .fn()
         .mockResolvedValue({ invitesPaused: true, lockedCount: 3, skippedCount: 0 }),
       revertPanic: vi.fn().mockResolvedValue({ restoredCount: 3 }),
+      postOrEditVerifyPanel: vi.fn(),
     };
     tempvc = {
       addGenerator: vi.fn().mockResolvedValue(undefined),
@@ -209,13 +214,38 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       expect(res).toEqual({ panel: null });
     });
 
-    it("upserts and reads back the panel reference", async () => {
-      await call(RpcActions.guildVerificationPanelSet, {
+    it("posts (or edits) the panel through the security utility", async () => {
+      security.postOrEditVerifyPanel.mockResolvedValue({
         channelId: CHANNEL_ID,
         messageId: MESSAGE_ID,
+        posted: true,
+        edited: false,
+        moved: false,
+        createdChannel: false,
+        oldMessageDeleted: false,
       });
 
+      const res = (await call(RpcActions.guildVerificationPanelSet, {
+        channelId: CHANNEL_ID,
+      })) as any;
+
       expect(container.db.ensureGuild).toHaveBeenCalledWith(GUILD_ID);
+      expect(security.postOrEditVerifyPanel).toHaveBeenCalledWith(guild, {
+        channelId: CHANNEL_ID,
+        createChannel: undefined,
+        deleteOldMessage: undefined,
+      });
+      expect(res).toEqual({
+        success: true,
+        channelId: CHANNEL_ID,
+        messageId: MESSAGE_ID,
+        posted: true,
+        edited: false,
+        moved: false,
+        createdChannel: false,
+        oldMessageDeleted: false,
+      });
+
       prisma.$seed("verificationPanel", [
         {
           guildId: GUILD_ID,
@@ -225,12 +255,19 @@ describe("dashboard module security + tempvc RPC handlers", () => {
         },
       ]);
 
-      const res = (await call(RpcActions.guildVerificationPanelGet)) as any;
-      expect(res.panel).toEqual({
+      const getRes = (await call(RpcActions.guildVerificationPanelGet)) as any;
+      expect(getRes.panel).toEqual({
         channelId: CHANNEL_ID,
         messageId: MESSAGE_ID,
         createdAt: "2026-01-01T00:00:00.000Z",
       });
+    });
+
+    it("rejects when neither a channel nor createChannel is given", async () => {
+      await expect(
+        call(RpcActions.guildVerificationPanelSet, {}),
+      ).rejects.toThrow("Pick a channel or choose to create a new one.");
+      expect(security.postOrEditVerifyPanel).not.toHaveBeenCalled();
     });
 
     it("deletes the panel and reports whether a row went away", async () => {
@@ -252,7 +289,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       await expect(
         call(
           RpcActions.guildVerificationPanelSet,
-          { channelId: CHANNEL_ID, messageId: MESSAGE_ID },
+          { channelId: CHANNEL_ID },
           INTRUDER_ID,
         ),
       ).rejects.toThrow("Missing ManageGuild permission");

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import ReactionRolesUtility, {
   ReactionRoleMenuLockedError,
@@ -151,19 +151,14 @@ describe("ReactionRolesUtility menu-write locking", () => {
   });
 
   it("throws ReactionRoleMenuLockedError when the lock can't be acquired in time", async () => {
-    vi.useFakeTimers();
-    try {
-      redis.store.set("lumi:reactionroles:write:guild-1:game-night", "someone-else");
+    // bun:test has no setTimeout-queue virtualization (only a Date.now() mock),
+    // so this can't fast-forward the lock's internal retry backoff — it just
+    // waits for the real ~30s acquire timeout to elapse on its own.
+    redis.store.set("lumi:reactionroles:write:guild-1:game-night", "someone-else");
 
-      const pending = service.updateMenu("guild-1", "game-night", { title: "Renamed" });
-      const assertion = expect(pending).rejects.toBeInstanceOf(ReactionRoleMenuLockedError);
-
-      await vi.advanceTimersByTimeAsync(31_000);
-      await assertion;
-    } finally {
-      vi.useRealTimers();
-    }
-  });
+    const pending = service.updateMenu("guild-1", "game-night", { title: "Renamed" });
+    await expect(pending).rejects.toBeInstanceOf(ReactionRoleMenuLockedError);
+  }, 35_000);
 
   it("releases the lock on a failed write so the next writer can proceed", async () => {
     await service.createMenu("guild-1", { title: "Game Night", mode: "buttons" });

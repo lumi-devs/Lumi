@@ -42,7 +42,7 @@ export class TempVcPanelModalHandler extends BaseInteractionHandler {
     { kind, channelId }: { kind: string; channelId: string },
   ): Promise<void> {
     if (!interaction.inGuild()) return;
-    await interaction.deferUpdate();
+    await this.acknowledge(interaction);
     if (!(await isModuleEnabled(interaction.guildId, "tempvc"))) return;
 
     const member = interaction.member as GuildMember;
@@ -96,7 +96,7 @@ export class TempVcPanelModalHandler extends BaseInteractionHandler {
 
     const fresh = await getVcRecord(interaction.guildId, channelId);
     if (fresh) {
-      await interaction.editReply(buildPanel(channel, fresh, t));
+      await interaction.editReply(await buildPanel(channel, fresh, t));
       return;
     }
     await interaction.followUp(

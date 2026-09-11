@@ -65,7 +65,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
     // can't defer first; every other action defers immediately to beat
     // Discord's 3s ack window before the i18n/Redis lookups below.
     const opensModal = action === "name" || action === "limit";
-    if (!opensModal) await interaction.deferUpdate();
+    if (!opensModal) await this.acknowledge(interaction);
 
     const t = await fetchTyped(interaction);
     const member = interaction.member as GuildMember;
@@ -103,7 +103,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
 
     switch (action) {
       case "panel":
-        await interaction.editReply(buildPanel(channel, record, t));
+        await interaction.editReply(await buildPanel(channel, record, t));
         return;
       case "name":
         await showRenameModal(interaction, channel, t);
@@ -123,7 +123,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
           record,
           !record.locked,
         );
-        await interaction.editReply(buildPanel(channel, next, t));
+        await interaction.editReply(await buildPanel(channel, next, t));
         return;
       }
       case "hide": {
@@ -132,7 +132,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
           record,
           !record.hidden,
         );
-        await interaction.editReply(buildPanel(channel, next, t));
+        await interaction.editReply(await buildPanel(channel, next, t));
         return;
       }
       case "kick":
@@ -223,6 +223,6 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
 
     const fullRecord = (await getVcRecord(interaction.guildId!, channel.id))!;
     const next = await this.service.setOwner(channel, fullRecord, member.id);
-    await interaction.editReply(buildPanel(channel, next, t));
+    await interaction.editReply(await buildPanel(channel, next, t));
   }
 }
