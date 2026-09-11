@@ -45,7 +45,7 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
     // (known synchronously), so defer before the async lookups below to
     // beat Discord's 3s ack window.
     const isEphemeral = interaction.message.flags.has(MessageFlags.Ephemeral);
-    if (isEphemeral) await interaction.deferUpdate();
+    if (isEphemeral) await this.acknowledge(interaction);
     else
       await interaction.deferReply({
         flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
