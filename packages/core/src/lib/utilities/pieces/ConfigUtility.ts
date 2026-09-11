@@ -1,7 +1,7 @@
 import { Utility } from "#lib/module-system/Utility.js";
 import { FieldType } from "#lib/module-system/Module.js";
 import { validateModuleConfigValue } from "#lib/module-system/config-schema.js";
-import { cleanMention } from "#utilities/misc.js";
+import { cleanMention, isSnowflakeId } from "#utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import type { Prisma } from "@prisma/client";
@@ -271,7 +271,7 @@ export class ConfigUtility extends Utility {
       case FieldType.User: {
         if (typeof value !== "string") return null;
         const id = cleanMention(value);
-        return /^\d{17,20}$/.test(id) ? id : null;
+        return isSnowflakeId(id) ? id : null;
       }
       case FieldType.Duration:
         return typeof value === "string" ? value : null;
@@ -299,6 +299,8 @@ export class ConfigUtility extends Utility {
           .map((entry) => entry.trim())
           .filter((entry) => entry.length > 0);
       }
+      case FieldType.ObjectArray:
+        return Array.isArray(value) ? value : null;
       default:
         return value;
     }

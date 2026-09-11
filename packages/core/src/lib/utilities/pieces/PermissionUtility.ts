@@ -8,7 +8,7 @@ import {
   type PermitWithAssignments,
 } from "#lib/prisma/repositories/PermissionRepository.js";
 import { Utility } from "#lib/module-system/Utility.js";
-import { cleanMention } from "#utilities/misc.js";
+import { cleanMention, isSnowflakeId } from "#utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 
@@ -173,7 +173,7 @@ export class PermissionUtility extends Utility {
 
   private parseTargetId(raw: string): string {
     const cleaned = cleanMention(raw);
-    if (!/^\d{17,20}$/.test(cleaned)) {
+    if (!isSnowflakeId(cleaned)) {
       throw new Error("Invalid mention or snowflake ID.");
     }
     return cleaned;
@@ -242,7 +242,7 @@ export class PermissionUtility extends Utility {
           permit = await this.createPermit(guildId, entry.name, "custom", entry.nodes);
           result.created++;
         }
-        const roleIds = entry.roleIds.filter((id) => /^\d{17,20}$/.test(id));
+        const roleIds = entry.roleIds.filter((id) => isSnowflakeId(id));
         await Promise.all(
           roleIds.map((roleId) =>
             this.container.db.permissions.assignPermit(

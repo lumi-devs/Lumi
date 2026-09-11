@@ -16,6 +16,12 @@ export function cleanMention(raw: string): string {
   return raw.replace(/[<@&#!>]/g, "");
 }
 
+const SnowflakePattern = /^\d{17,20}$/;
+
+export function isSnowflakeId(value: unknown): value is string {
+  return typeof value === "string" && SnowflakePattern.test(value);
+}
+
 export function formatAuditReason(
   actor: User,
   reason: string | null,
