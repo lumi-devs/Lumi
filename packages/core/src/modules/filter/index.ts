@@ -31,6 +31,9 @@ const CompiledKeys = [
   "heat_per_message",
   "heat_per_mention",
   "heat_per_duplicate",
+  "heat_per_similar",
+  "heat_similarity_threshold",
+  "heat_per_zalgo",
   "heat_per_filter_hit",
   "heat_per_attachment",
   "heat_per_emoji",
@@ -137,12 +140,41 @@ const CompiledKeys = [
       min: 0,
       max: 40_320,
     }),
+    spam_timeout_minutes: cfg.number({
+      group: "Punishment",
+      label: "Spam Timeout (minutes)",
+      description:
+        "Timeout for mention-spam/caps hits. 0 falls back to Timeout (minutes).",
+      default: 0,
+      min: 0,
+      max: 40_320,
+    }),
+    invite_timeout_minutes: cfg.number({
+      group: "Punishment",
+      label: "Invite Timeout (minutes)",
+      description:
+        "Timeout for invite-block hits. 0 falls back to Timeout (minutes).",
+      default: 0,
+      min: 0,
+      max: 40_320,
+    }),
+    link_timeout_minutes: cfg.number({
+      group: "Punishment",
+      label: "Link Timeout (minutes)",
+      description:
+        "Timeout for link-block hits. 0 falls back to Timeout (minutes).",
+      default: 0,
+      min: 0,
+      max: 40_320,
+    }),
     warn_message: cfg.string({
       group: "Punishment",
       label: "Warning Message",
       description:
         "Transient warning sent after a deletion. Placeholders: {user}, {reason}. Empty disables the warning.",
       default: DefaultWarnMessage,
+      format: "template",
+      templateVars: ["user", "reason"],
     }),
     log_channel_id: cfg.channel({
       group: "Punishment",
@@ -164,6 +196,7 @@ const CompiledKeys = [
       default: 0,
       min: 0,
       max: 100,
+      enabledBy: "heat_enabled",
     }),
     heat_per_mention: cfg.number({
       group: "Heat Scoring",
@@ -172,6 +205,7 @@ const CompiledKeys = [
       default: 3,
       min: 0,
       max: 100,
+      enabledBy: "heat_enabled",
     }),
     heat_per_duplicate: cfg.number({
       group: "Heat Scoring",
@@ -180,6 +214,38 @@ const CompiledKeys = [
       default: 5,
       min: 0,
       max: 100,
+      enabledBy: "heat_enabled",
+    }),
+    heat_per_similar: cfg.number({
+      group: "Heat Scoring",
+      label: "Heat per Similar Message",
+      description:
+        "Heat added when a message is a reworded/partial repeat of the member's previous one (fuzzier than an exact duplicate - usually configured lower than Heat per Duplicate).",
+      default: 0,
+      min: 0,
+      max: 100,
+      enabledBy: "heat_enabled",
+    }),
+    heat_similarity_threshold: cfg.number({
+      group: "Heat Scoring",
+      label: "Similarity Threshold",
+      description:
+        "How similar (0-1) to the member's previous message counts as a near-duplicate.",
+      default: 0.85,
+      min: 0,
+      max: 1,
+      step: 0.05,
+      enabledBy: "heat_enabled",
+    }),
+    heat_per_zalgo: cfg.number({
+      group: "Heat Scoring",
+      label: "Heat per Zalgo Message",
+      description:
+        "Heat added when a message has an unusually high ratio of combining marks (zalgo text).",
+      default: 0,
+      min: 0,
+      max: 100,
+      enabledBy: "heat_enabled",
     }),
     heat_per_filter_hit: cfg.number({
       group: "Heat Scoring",
@@ -188,6 +254,7 @@ const CompiledKeys = [
       default: 10,
       min: 0,
       max: 100,
+      enabledBy: "heat_enabled",
     }),
     heat_per_attachment: cfg.number({
       group: "Heat Scoring",
@@ -196,6 +263,7 @@ const CompiledKeys = [
       default: 0,
       min: 0,
       max: 100,
+      enabledBy: "heat_enabled",
     }),
     heat_per_emoji: cfg.number({
       group: "Heat Scoring",
@@ -204,6 +272,7 @@ const CompiledKeys = [
       default: 0,
       min: 0,
       max: 100,
+      enabledBy: "heat_enabled",
     }),
     heat_per_link: cfg.number({
       group: "Heat Scoring",
@@ -212,6 +281,7 @@ const CompiledKeys = [
       default: 0,
       min: 0,
       max: 100,
+      enabledBy: "heat_enabled",
     }),
     heat_webhook_multiplier: cfg.number({
       group: "Heat Scoring",
@@ -221,6 +291,7 @@ const CompiledKeys = [
       default: 1,
       min: 1,
       max: 20,
+      enabledBy: "heat_enabled",
     }),
     heat_decay_per_minute: cfg.number({
       group: "Heat Scoring",
@@ -229,6 +300,7 @@ const CompiledKeys = [
       default: 10,
       min: 1,
       max: 100,
+      enabledBy: "heat_enabled",
     }),
     heat_multiplier_enabled: cfg.boolean({
       group: "Heat Escalation",
@@ -236,6 +308,7 @@ const CompiledKeys = [
       description:
         "Geometrically increase the timeout duration for members who keep re-tripping heat after their previous timeout expires.",
       default: false,
+      enabledBy: "heat_enabled",
     }),
     heat_multiplier_base: cfg.number({
       group: "Heat Escalation",
@@ -245,6 +318,7 @@ const CompiledKeys = [
       default: 2,
       min: 2,
       max: 10,
+      enabledBy: "heat_multiplier_enabled",
     }),
     heat_panic_raider_count: cfg.number({
       group: "Heat Escalation",
@@ -254,6 +328,7 @@ const CompiledKeys = [
       default: 0,
       min: 0,
       max: 100,
+      enabledBy: "heat_enabled",
     }),
     heat_panic_window_seconds: cfg.number({
       group: "Heat Escalation",
@@ -262,6 +337,7 @@ const CompiledKeys = [
       default: 30,
       min: 5,
       max: 600,
+      enabledBy: "heat_enabled",
     }),
     lockdown_mention_threshold: cfg.number({
       group: "Auto Lockdown",
@@ -295,6 +371,7 @@ const CompiledKeys = [
       default: 15,
       min: 0,
       max: 1000,
+      enabledBy: "heat_enabled",
     }),
     heat_timeout: cfg.number({
       group: "Heat Thresholds",
@@ -303,6 +380,7 @@ const CompiledKeys = [
       default: 30,
       min: 0,
       max: 1000,
+      enabledBy: "heat_enabled",
     }),
     heat_quarantine: cfg.number({
       group: "Heat Thresholds",
@@ -311,6 +389,7 @@ const CompiledKeys = [
       default: 0,
       min: 0,
       max: 1000,
+      enabledBy: "heat_enabled",
     }),
     heat_timeout_minutes: cfg.number({
       group: "Heat Thresholds",
@@ -319,6 +398,7 @@ const CompiledKeys = [
       default: 10,
       min: 1,
       max: 40_320,
+      enabledBy: "heat_enabled",
     }),
   }),
 })

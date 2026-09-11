@@ -11,9 +11,11 @@ import {
   countEmoji,
   escalatedTimeoutMinutes,
   heatAction,
+  isZalgo,
   type HeatConfig,
 } from "../lib/heat.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
+import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
 import { lockAllTextChannels } from "#lib/moderation/lockdown.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import { swallow } from "#lib/utilities/errors.js";
@@ -147,11 +149,24 @@ export class FilterMessageListener extends GuildMessageListener {
     if (config.perLink > 0 && containsLink(message.content)) {
       points += config.perLink;
     }
-    if (
-      config.perDuplicate > 0 &&
-      (await this.filterService.isDuplicate(guildId, userId, message.content))
-    ) {
-      points += config.perDuplicate;
+    if (config.perDuplicate > 0 || config.perSimilar > 0) {
+      const { exact, similarity } = await this.filterService.checkDuplicate(
+        guildId,
+        userId,
+        message.content,
+      );
+      if (exact && config.perDuplicate > 0) {
+        points += config.perDuplicate;
+      } else if (
+        !exact &&
+        config.perSimilar > 0 &&
+        similarity >= config.similarityThreshold
+      ) {
+        points += config.perSimilar;
+      }
+    }
+    if (config.perZalgo > 0 && isZalgo(message.content)) {
+      points += config.perZalgo;
     }
     if (points <= 0) return;
 
@@ -170,6 +185,14 @@ export class FilterMessageListener extends GuildMessageListener {
     if (action === "none") return;
     if (!(await this.filterService.claimEscalation(guildId, userId, action)))
       return;
+
+    if (
+      (action === "quarantine" || action === "timeout") &&
+      member &&
+      (await isImmuneToAutomatedAction(this.container, guildId, member))
+    ) {
+      return;
+    }
 
     if (action === "quarantine" && member) {
       await this.filterService.clearHeat(guildId, userId);

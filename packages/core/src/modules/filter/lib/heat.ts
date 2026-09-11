@@ -6,6 +6,12 @@ export interface HeatConfig {
   perMention: number;
   /** Points added when a message repeats the member's previous one. */
   perDuplicate: number;
+  /** Points added when a message is a reworded/partial repeat of the member's previous one. */
+  perSimilar: number;
+  /** Similarity ratio (0-1) against the previous message above which `perSimilar` applies. */
+  similarityThreshold: number;
+  /** Points added when a message has an unusually high ratio of combining marks (zalgo text). */
+  perZalgo: number;
   /** Points added when a message trips a hard filter rule. */
   perFilterHit: number;
   /** Points added per attachment (image/embed-spam signal). */
@@ -106,4 +112,13 @@ export function countEmoji(content: string): number {
   const withoutCustom = content.replace(CustomEmojiRe, "");
   const unicode = withoutCustom.match(UnicodeEmojiRe)?.length ?? 0;
   return custom + unicode;
+}
+
+const CombiningMarkRe = /\p{M}/gu;
+
+/** True if combining marks (`\p{M}`) make up more than `ratioThreshold` of the message — zalgo text. */
+export function isZalgo(content: string, ratioThreshold = 0.5): boolean {
+  if (content.length === 0) return false;
+  const marks = content.match(CombiningMarkRe)?.length ?? 0;
+  return marks / content.length > ratioThreshold;
 }

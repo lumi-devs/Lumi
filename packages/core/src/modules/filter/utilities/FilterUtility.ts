@@ -52,13 +52,41 @@ redis.call('EXPIRE', KEYS[1], string.format('%d', ttl))
 return value
 `;
 
-/** djb2 — a cheap, short, non-cryptographic fingerprint of message content. */
-function fingerprint(content: string): string {
-  let hash = 5381;
-  for (let i = 0; i < content.length; i++) {
-    hash = ((hash << 5) + hash + content.charCodeAt(i)) | 0;
+/** Content is capped before storage/comparison to bound Redis memory and CPU cost. */
+const DuplicateContentCap = 300;
+/** Levenshtein is O(n*m); cap the compared length separately, tighter than storage. */
+const SimilarityCompareCap = 200;
+
+/** Bounded Levenshtein distance — local to `filter` so message-content comparison
+ * doesn't share a module boundary with `security`'s username-similarity check. */
+function levenshteinDistance(a: string, b: string): number {
+  const s1 = a.slice(0, SimilarityCompareCap);
+  const s2 = b.slice(0, SimilarityCompareCap);
+  const rows = s1.length + 1;
+  const cols = s2.length + 1;
+  const dp: number[] = new Array(rows * cols).fill(0);
+  for (let i = 0; i < rows; i++) dp[i * cols] = i;
+  for (let j = 0; j < cols; j++) dp[j] = j;
+  for (let i = 1; i < rows; i++) {
+    for (let j = 1; j < cols; j++) {
+      const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+      const del = (dp[(i - 1) * cols + j] ?? 0) + 1;
+      const ins = (dp[i * cols + j - 1] ?? 0) + 1;
+      const sub = (dp[(i - 1) * cols + j - 1] ?? 0) + cost;
+      dp[i * cols + j] = Math.min(del, ins, sub);
+    }
   }
-  return (hash >>> 0).toString(36);
+  return dp[rows * cols - 1] ?? 0;
+}
+
+/** 1.0 = identical (within the compare cap), 0.0 = completely different. */
+function similarityRatio(a: string, b: string): number {
+  const maxLen = Math.max(
+    Math.min(a.length, SimilarityCompareCap),
+    Math.min(b.length, SimilarityCompareCap),
+  );
+  if (maxLen === 0) return 1;
+  return 1 - levenshteinDistance(a, b) / maxLen;
 }
 
 @ApplyOptions<Piece.Options>({ name: "filter" })
@@ -228,6 +256,9 @@ export class FilterUtility extends Utility {
       perMessage: num("heat_per_message", 0),
       perMention: num("heat_per_mention", 0),
       perDuplicate: num("heat_per_duplicate", 0),
+      perSimilar: num("heat_per_similar", 0),
+      similarityThreshold: num("heat_similarity_threshold", 0.85),
+      perZalgo: num("heat_per_zalgo", 0),
       perFilterHit: num("heat_per_filter_hit", 10),
       perAttachment: num("heat_per_attachment", 0),
       perEmoji: num("heat_per_emoji", 0),
@@ -278,18 +309,25 @@ export class FilterUtility extends Utility {
     await this.container.invalidation.invalidate(RedisKeys.filterHeat(guildId, userId));
   }
 
-  /** True when this message repeats the member's previous one within the window. */
-  public async isDuplicate(
+  /**
+   * Compares this message against the member's previous one within the
+   * window: `exact` for an identical (capped) match, `similarity` as a
+   * Levenshtein ratio against it for reworded/copy-paste-variant spam.
+   */
+  public async checkDuplicate(
     guildId: string,
     userId: string,
     content: string,
-  ): Promise<boolean> {
-    if (content.trim().length === 0) return false;
+  ): Promise<{ exact: boolean; similarity: number }> {
+    const trimmed = content.trim();
+    if (trimmed.length === 0) return { exact: false, similarity: 0 };
+    const capped = trimmed.slice(0, DuplicateContentCap);
     const key = RedisKeys.filterLastMsg(guildId, userId);
-    const fp = fingerprint(content);
-    const prev = await this.redis.getset(key, fp);
+    const prev = await this.redis.getset(key, capped);
     await this.redis.expire(key, DuplicateWindowSeconds);
-    return prev === fp;
+    if (prev === null) return { exact: false, similarity: 0 };
+    if (prev === capped) return { exact: true, similarity: 1 };
+    return { exact: false, similarity: similarityRatio(prev, capped) };
   }
 
   /**

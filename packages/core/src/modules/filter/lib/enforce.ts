@@ -11,7 +11,7 @@ import { fetchTyped } from "#lib/commands.js";
 import { getHitReason, type FilterHit } from "./rules.js";
 import type { FilterUtility } from "../utilities/FilterUtility.js";
 
-export async function isExempt(message: GuildMessage): Promise<boolean> {
+async function isExempt(message: GuildMessage): Promise<boolean> {
   const stored = await container.db.config.getModuleConfig(
     message.guildId,
     "filter",
@@ -24,7 +24,7 @@ export async function isExempt(message: GuildMessage): Promise<boolean> {
 }
 
 /** Transient warning with the configurable template; empty string disables. */
-export async function warnUser(
+async function warnUser(
   message: GuildMessage,
   hit: FilterHit,
 ): Promise<void> {
@@ -48,16 +48,35 @@ export async function warnUser(
   if (warn) deleteMessageLater(warn, undefined, "Filter: delete warning");
 }
 
+/** Per-group timeout override key for a hit; null means use the global one. */
+function groupTimeoutKey(rule: FilterHit["rule"]): string | null {
+  if (rule === "invite") return "invite_timeout_minutes";
+  if (rule === "link") return "link_timeout_minutes";
+  if (rule === "mentions" || rule === "caps") return "spam_timeout_minutes";
+  return null;
+}
+
 /** Optional escalation: timeout the author for `timeout_minutes`. */
-export async function punish(
+async function punish(
   message: GuildMessage,
   hit: FilterHit,
 ): Promise<void> {
-  const minutes = await container.db.config.getModuleConfig(
-    message.guildId,
-    "filter",
-    "timeout_minutes",
-  );
+  const overrideKey = groupTimeoutKey(hit.rule);
+  const override = overrideKey
+    ? await container.db.config.getModuleConfig(
+        message.guildId,
+        "filter",
+        overrideKey,
+      )
+    : null;
+  const minutes =
+    typeof override === "number" && override > 0
+      ? override
+      : await container.db.config.getModuleConfig(
+          message.guildId,
+          "filter",
+          "timeout_minutes",
+        );
   if (typeof minutes !== "number" || minutes <= 0) return;
   await message.member
     ?.timeout(
@@ -67,7 +86,7 @@ export async function punish(
     .catch(swallow("Filter: timeout member"));
 }
 
-export async function logHit(
+async function logHit(
   message: GuildMessage,
   hit: FilterHit,
 ): Promise<void> {

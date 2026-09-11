@@ -234,17 +234,6 @@ export function evaluate(
   );
 }
 
-/** Human copy for the transient warning, per rule. */
-export const HitReasons: Record<FilterHit["rule"], string> = {
-  term: "a filtered term",
-  regex: "a filtered pattern",
-  invite: "a server invite link",
-  link: "a link that is not allowed here",
-  mentions: "too many mentions",
-  caps: "excessive caps",
-  phish: "a known phishing/scam link",
-};
-
 export function getHitReason(t: LumiT, rule: FilterHit["rule"]): string {
   switch (rule) {
     case "term":
