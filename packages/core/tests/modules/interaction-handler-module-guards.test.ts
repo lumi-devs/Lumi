@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import * as misc from "#lib/utilities/misc.js";
 
@@ -8,10 +8,6 @@ vi.mock("#lib/commands.js", () => ({
 
 vi.mock("#lib/permissions/index.js", () => ({
   hasRequiredPermit: vi.fn().mockResolvedValue(true),
-}));
-
-vi.mock("#modules/mod/lib/warn-thresholds-panel.js", () => ({
-  updateWarnThresholdsPanel: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("#modules/utility/lib/media-utils.js", () => ({
@@ -38,9 +34,11 @@ function pieceContext(name: string) {
 }
 
 describe("interaction handlers guard on per-guild module state", () => {
+  let isModuleEnabled: ReturnType<typeof vi.spyOn<typeof misc, "isModuleEnabled">>;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(misc, "isModuleEnabled");
+    isModuleEnabled = vi.spyOn(misc, "isModuleEnabled");
     (container as any).logger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -51,53 +49,6 @@ describe("interaction handlers guard on per-guild module state", () => {
     (container as any).db = {
       moderation: { resetWarnThresholds: vi.fn().mockResolvedValue(undefined) },
     };
-  });
-
-  it("mod warn-thresholds button skips work when mod is disabled", async () => {
-    const { hasRequiredPermit } = await import("#lib/permissions/index.js");
-    const { WarnThresholdsButtonHandler } = await import(
-      "#modules/mod/interaction-handlers/warn-thresholds-button.js"
-    );
-    const handler = new WarnThresholdsButtonHandler(pieceContext("wt-btn") as any);
-    const interaction = {
-      inGuild: () => true,
-      guildId: "g-1",
-      deferUpdate: vi.fn().mockResolvedValue(undefined),
-      followUp: vi.fn().mockResolvedValue(undefined),
-    };
-
-    vi.mocked(misc.isModuleEnabled).mockResolvedValue(false);
-    await handler.run(interaction as any, { customId: "wt:save_rule:3:bogus" });
-    expect(hasRequiredPermit).not.toHaveBeenCalled();
-    expect(misc.isModuleEnabled).toHaveBeenCalledWith("g-1", "mod");
-
-    vi.mocked(misc.isModuleEnabled).mockResolvedValue(true);
-    await handler.run(interaction as any, { customId: "wt:save_rule:3:bogus" });
-    expect(hasRequiredPermit).toHaveBeenCalled();
-  });
-
-  it("mod warn-thresholds select skips work when mod is disabled", async () => {
-    const { updateWarnThresholdsPanel } = await import(
-      "#modules/mod/lib/warn-thresholds-panel.js"
-    );
-    const { WarnThresholdsSelectHandler } = await import(
-      "#modules/mod/interaction-handlers/warn-thresholds-select.js"
-    );
-    const handler = new WarnThresholdsSelectHandler(pieceContext("wt-sel") as any);
-    const interaction = {
-      inGuild: () => true,
-      guildId: "g-1",
-      deferUpdate: vi.fn().mockResolvedValue(undefined),
-      values: ["count:5"],
-    };
-
-    vi.mocked(misc.isModuleEnabled).mockResolvedValue(false);
-    await handler.run(interaction as any, { customId: "wt:select_count" });
-    expect(updateWarnThresholdsPanel).not.toHaveBeenCalled();
-
-    vi.mocked(misc.isModuleEnabled).mockResolvedValue(true);
-    await handler.run(interaction as any, { customId: "wt:select_count" });
-    expect(updateWarnThresholdsPanel).toHaveBeenCalled();
   });
 
   it("security panic revert skips work when security is disabled", async () => {
@@ -115,11 +66,11 @@ describe("interaction handlers guard on per-guild module state", () => {
       deferUpdate: vi.fn().mockResolvedValue(undefined),
     };
 
-    vi.mocked(misc.isModuleEnabled).mockResolvedValue(false);
+    isModuleEnabled.mockResolvedValue(false);
     await handler.run(interaction as any);
     expect((container as any).permitResolver.hasPermit).not.toHaveBeenCalled();
 
-    vi.mocked(misc.isModuleEnabled).mockResolvedValue(true);
+    isModuleEnabled.mockResolvedValue(true);
     await expect(handler.run(interaction as any)).rejects.toThrow();
     expect((container as any).permitResolver.hasPermit).toHaveBeenCalled();
   });
@@ -138,7 +89,7 @@ describe("interaction handlers guard on per-guild module state", () => {
       deferUpdate: vi.fn().mockResolvedValue(undefined),
     };
 
-    vi.mocked(misc.isModuleEnabled).mockResolvedValue(false);
+    isModuleEnabled.mockResolvedValue(false);
     await handler.run(interaction as any, { kind: "start" });
     expect(interaction.deferReply).not.toHaveBeenCalled();
   });
@@ -155,12 +106,12 @@ describe("interaction handlers guard on per-guild module state", () => {
       client: { users: { fetch: vi.fn() } },
     };
 
-    vi.mocked(misc.isModuleEnabled).mockResolvedValue(false);
+    isModuleEnabled.mockResolvedValue(false);
     await handler.run(interaction as any, { userId: "u-1", type: "avatar" });
     expect(handleMediaRequest).not.toHaveBeenCalled();
     expect(interaction.deferReply).not.toHaveBeenCalled();
 
-    vi.mocked(misc.isModuleEnabled).mockResolvedValue(true);
+    isModuleEnabled.mockResolvedValue(true);
     await handler.run(interaction as any, { userId: "u-1", type: "avatar" });
     expect(handleMediaRequest).toHaveBeenCalled();
   });
@@ -179,7 +130,7 @@ describe("interaction handlers guard on per-guild module state", () => {
       deferUpdate: vi.fn().mockResolvedValue(undefined),
     };
 
-    vi.mocked(misc.isModuleEnabled).mockResolvedValue(false);
+    isModuleEnabled.mockResolvedValue(false);
     await handler.run(interaction as any, { userId: "u-1", page: 0 });
     expect(getAfkMentions).not.toHaveBeenCalled();
   });
@@ -198,7 +149,7 @@ describe("interaction handlers guard on per-guild module state", () => {
       deferUpdate: vi.fn().mockResolvedValue(undefined),
     };
 
-    vi.mocked(misc.isModuleEnabled).mockResolvedValue(false);
+    isModuleEnabled.mockResolvedValue(false);
     await handler.run(interaction as any, { action: "panel", channelId: "c-1" });
     expect(resolveOwnedVc).not.toHaveBeenCalled();
   });
@@ -217,7 +168,7 @@ describe("interaction handlers guard on per-guild module state", () => {
       deferUpdate: vi.fn().mockResolvedValue(undefined),
     };
 
-    vi.mocked(misc.isModuleEnabled).mockResolvedValue(false);
+    isModuleEnabled.mockResolvedValue(false);
     await handler.run(interaction as any, { kind: "namem", channelId: "c-1" });
     expect(resolveOwnedVc).not.toHaveBeenCalled();
   });
@@ -237,7 +188,7 @@ describe("interaction handlers guard on per-guild module state", () => {
       deferUpdate: vi.fn().mockResolvedValue(undefined),
     };
 
-    vi.mocked(misc.isModuleEnabled).mockResolvedValue(false);
+    isModuleEnabled.mockResolvedValue(false);
     await handler.run(interaction as any, { action: "panelmenu", channelId: "c-1" });
     expect(resolveOwnedRecord).not.toHaveBeenCalled();
   });

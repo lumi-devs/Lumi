@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { fmtId } from '#lib/utilities/misc.js';
 import { cutText as truncate } from '@sapphire/utilities';
 import { escapeMarkdown } from '@discordjs/formatters';

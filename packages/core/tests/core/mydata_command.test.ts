@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { MyDataCommand } from "#modules/core/commands/mydata.js";
 import * as gdpr from "#lib/gdpr.js";
@@ -10,8 +10,9 @@ import {
   makeInfoCard,
 } from "#lib/utilities/cards.js";
 
-vi.mock("#lib/module-system/Utility.js", async (importOriginal) => {
-  const actual: any = await importOriginal();
+const __actualModule12 = await import("#lib/module-system/Utility.js");
+vi.mock("#lib/module-system/Utility.js", () => {
+  const actual: any = __actualModule12;
   return {
     ...actual,
     getUtility: vi.fn(),

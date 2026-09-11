@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll } from "vitest";
+import { describe, expect, it, beforeAll } from "bun:test";
 import { ensureSandboxRoot } from "./sandbox-root.js";
 
 /**

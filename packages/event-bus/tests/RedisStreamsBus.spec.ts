@@ -1,6 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { RedisStreamsBus } from "../src/RedisStreamsBus.js";
 import type { Redis } from "ioredis";
+
+// bun:test's fake-timer support only mocks the system clock (Date.now),
+// not the setInterval/setTimeout queue, so there's no advanceTimersByTimeAsync
+// equivalent here — waits below use the real clock instead.
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 describe("RedisStreamsBus", () => {
   let publisherMock: any;
@@ -8,7 +13,6 @@ describe("RedisStreamsBus", () => {
   let logSpy: any;
 
   beforeEach(() => {
-    vi.useFakeTimers();
     logSpy = vi.fn();
 
     publisherMock = {
@@ -34,9 +38,6 @@ describe("RedisStreamsBus", () => {
     subscriberMock.duplicate = vi.fn().mockReturnValue(subscriberMock);
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
 
   const createBus = (opts = {}) => {
     return new RedisStreamsBus({
@@ -51,7 +52,7 @@ describe("RedisStreamsBus", () => {
 
   const stopAndFlush = async (stopFn: () => Promise<void>) => {
     const promise = stopFn();
-    await vi.advanceTimersByTimeAsync(100);
+    await sleep(100);
     await promise;
   };
 
@@ -226,7 +227,7 @@ describe("RedisStreamsBus", () => {
         handlerSpy,
       );
 
-      await vi.advanceTimersByTimeAsync(100);
+      await sleep(100);
 
       expect(handlerSpy).toHaveBeenCalledTimes(1);
       const msg = handlerSpy.mock.calls[0][0];
@@ -251,7 +252,7 @@ describe("RedisStreamsBus", () => {
         async () => {},
       );
 
-      await vi.advanceTimersByTimeAsync(600);
+      await sleep(600);
 
       expect(logSpy).toHaveBeenCalledWith(
         "error",
@@ -292,7 +293,7 @@ describe("RedisStreamsBus", () => {
         "MKSTREAM",
       );
 
-      await vi.advanceTimersByTimeAsync(600);
+      await sleep(600);
 
       // Second ensureGroup call after NOGROUP error
       expect(publisherMock.xgroup).toHaveBeenCalledTimes(2);
@@ -323,7 +324,7 @@ describe("RedisStreamsBus", () => {
         failingHandler,
       );
 
-      await vi.advanceTimersByTimeAsync(100);
+      await sleep(100);
 
       expect(logSpy).toHaveBeenCalledWith(
         "error",
@@ -512,7 +513,7 @@ describe("RedisStreamsBus", () => {
         handlerSpy,
       );
 
-      await vi.advanceTimersByTimeAsync(200);
+      await sleep(200);
 
       expect(publisherMock.xadd).toHaveBeenCalledWith(
         "stream-1:dlq",
@@ -576,7 +577,7 @@ describe("RedisStreamsBus", () => {
         handlerSpy,
       );
 
-      await vi.advanceTimersByTimeAsync(5000);
+      await sleep(5000);
 
       expect(publisherMock.xautoclaim).toHaveBeenCalledWith(
         "stream-1",
@@ -593,7 +594,7 @@ describe("RedisStreamsBus", () => {
       expect(msg.deliveryCount).toBe(2);
 
       await stopAndFlush(stop);
-    });
+    }, 8000);
 
     it("handles pendingDeliveryCount fallback when xpending returns null or empty", async () => {
       const bus = createBus();
@@ -699,7 +700,7 @@ describe("RedisStreamsBus", () => {
         async () => {},
       );
 
-      await vi.advanceTimersByTimeAsync(5000);
+      await sleep(5000);
 
       expect(logSpy).toHaveBeenCalledWith(
         "error",
@@ -708,7 +709,7 @@ describe("RedisStreamsBus", () => {
       );
 
       await stopAndFlush(stop);
-    });
+    }, 8000);
 
     it("handles NOGROUP error in runClaim by re-creating consumer group", async () => {
       const bus = createBus();
@@ -749,7 +750,7 @@ describe("RedisStreamsBus", () => {
         async () => {},
       );
 
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
 
       expect(onStatsSpy).toHaveBeenCalledWith({
         stream: "stream-1",
@@ -778,7 +779,7 @@ describe("RedisStreamsBus", () => {
         async () => {},
       );
 
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
 
       expect(onStatsSpy).toHaveBeenCalledWith({
         stream: "stream-1",
@@ -806,7 +807,7 @@ describe("RedisStreamsBus", () => {
         async () => {},
       );
 
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
 
       expect(logSpy).toHaveBeenCalledWith(
         "error",

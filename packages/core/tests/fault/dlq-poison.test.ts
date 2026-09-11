@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { RedisStreamsBus } from "@lumi/event-bus";
 
 describe("Chaos Suite: Redis Stream Poison Pill & DLQ Routing", () => {

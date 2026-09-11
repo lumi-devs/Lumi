@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'bun:test';
 import { container } from '@sapphire/framework';
 import { scheduleCaseLift } from '#modules/mod/lib/helpers.js';
 import { parseDuration, formatDuration } from '#lib/utilities/time.js';
@@ -409,8 +409,48 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     await expect(MuteAction.undoRaw('g-1', 'u-1', 'Reason')).resolves.toBeUndefined();
   });
 
+  it('VoiceMuteAction.apply still records the case when the target is not in voice', async () => {
+    const disconnect = vi.fn().mockResolvedValue({});
+    const mockMember = { id: 'u-1', voice: { channel: null, disconnect } };
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ id: 9, caseNumber: 19 });
+
+    await VoiceMuteAction.apply({
+      guild: { id: 'g-1' } as any,
+      targetMember: mockMember as any,
+      moderator: { id: 'm-1' } as any,
+      reason: 'Raiding',
+      durationMs: 60_000
+    });
+
+    expect(disconnect).not.toHaveBeenCalled();
+    expect(container.db.moderation.createModerationCase).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'u-1', action: 'voice_mute' })
+    );
+  });
+
+  it('VoiceMuteAction.apply evicts a connected target without server-muting them', async () => {
+    const disconnect = vi.fn().mockResolvedValue({});
+    const setMute = vi.fn().mockResolvedValue({});
+    const mockMember = { id: 'u-1', voice: { channel: { id: 'vc-1' }, disconnect, setMute } };
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ id: 9, caseNumber: 19 });
+
+    await VoiceMuteAction.apply({
+      guild: { id: 'g-1' } as any,
+      targetMember: mockMember as any,
+      moderator: { id: 'm-1' } as any,
+      reason: 'Raiding',
+      durationMs: 60_000
+    });
+
+    expect(disconnect).toHaveBeenCalled();
+    expect(setMute).not.toHaveBeenCalled();
+  });
+
   it('VoiceMuteAction.undo closes the original active case and cancels its pending auto-lift job', async () => {
-    const mockMember = { id: 'u-1', voice: { setMute: vi.fn().mockResolvedValue({}) } };
+    const mockMember = {
+      id: 'u-1',
+      voice: { channel: { id: 'vc-1' }, setMute: vi.fn().mockResolvedValue({}) }
+    };
     const mockMod = { id: 'm-1' };
     const mockGuild = { id: 'g-1' };
     (container.db.moderation.getActiveCases as any).mockResolvedValueOnce([

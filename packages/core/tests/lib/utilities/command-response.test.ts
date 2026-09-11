@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { UserError, ResultError, container } from "@sapphire/framework";
-import { resolveKey } from "@sapphire/plugin-i18next";
 import { DiscordAPIError, HTTPError, RESTJSONErrorCodes, MessageFlags } from "discord.js";
 import { trace } from "@opentelemetry/api";
 import {
@@ -15,8 +14,12 @@ import {
 } from "#lib/utilities/command-response.js";
 import * as temporaryMessage from "#lib/utilities/temporary-message.js";
 
+// bun:test has no `vi.mocked` type-narrowing helper, so the mock is kept as a
+// named reference here rather than cast after a normal import.
+const resolveKey = vi.fn();
+
 vi.mock("@sapphire/plugin-i18next", () => ({
-  resolveKey: vi.fn(),
+  resolveKey,
 }));
 
 vi.mock("#lib/utilities/temporary-message.js", () => ({
@@ -448,7 +451,7 @@ describe("command-response utilities", () => {
       });
       const payload = { context: { silent: false } } as any;
 
-      vi.mocked(resolveKey).mockResolvedValue("Resolved i18n message" as any);
+      resolveKey.mockResolvedValue("Resolved i18n message" as any);
 
       await handleDenied(interaction, error, payload);
       expect(resolveKey).toHaveBeenCalledWith(
@@ -473,7 +476,7 @@ describe("command-response utilities", () => {
       });
       const payload = { context: { silent: false } } as any;
 
-      vi.mocked(resolveKey).mockRejectedValue(new Error("i18n failed"));
+      resolveKey.mockRejectedValue(new Error("i18n failed"));
 
       await handleDenied(interaction, error, payload);
       expect(container.logger.warn).toHaveBeenCalledWith(

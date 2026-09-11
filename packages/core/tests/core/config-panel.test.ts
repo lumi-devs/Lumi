@@ -12,7 +12,7 @@ import {
 } from "#modules/core/ui/modules.js";
 import type { CardReply } from "#utilities/cards.js";
 import { resolveCardColor } from "#utilities/cards.js";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 type JsonNode = Record<string, any>;
 

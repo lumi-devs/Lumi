@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 
 vi.mock("#lib/outbound/send-queue.js", () => ({
@@ -69,6 +69,21 @@ describe("logging per-type channel resolution", () => {
     }
   });
 
+  it("prefers the per-event channel over the category channel", async () => {
+    configs = {
+      message_deletes_channel_id: "444444444444444444",
+      message_log_channel_id: MESSAGE_CHANNEL,
+      log_channel_id: DEFAULT_CHANNEL,
+    };
+
+    await expect(
+      resolveLogChannel(GUILD_ID, "message_deletes"),
+    ).resolves.toBe("444444444444444444");
+    await expect(
+      resolveLogChannel(GUILD_ID, "message_edits"),
+    ).resolves.toBe(MESSAGE_CHANNEL);
+  });
+
   it("falls back to the default log channel when no per-type channel is set", async () => {
     configs = { log_channel_id: DEFAULT_CHANNEL };
 
@@ -96,7 +111,7 @@ describe("logging per-type channel resolution", () => {
 
     await sendLog(GUILD_ID, "member_joins", 0x00ff00, "Member Joined", ["line"]);
 
-    expect(queueSend).toHaveBeenCalledOnce();
+    expect(queueSend).toHaveBeenCalledTimes(1);
     expect(queueSend).toHaveBeenCalledWith({
       channelId: MEMBER_CHANNEL,
       logCard: { color: 0x00ff00, title: "Member Joined", lines: ["line"] },

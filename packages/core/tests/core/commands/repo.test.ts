@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { RepoCommand } from "#modules/core/commands/repo.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 
-vi.mock("#lib/module-system/Utility.js", async (importOriginal) => {
-  const actual: any = await importOriginal();
+const __actualModule7 = await import("#lib/module-system/Utility.js");
+vi.mock("#lib/module-system/Utility.js", () => {
+  const actual: any = __actualModule7;
   return { ...actual, getUtility: vi.fn() };
 });
 
@@ -17,8 +18,9 @@ vi.mock("#lib/utilities/confirm.js", () => ({
   confirmPrompt: vi.fn().mockResolvedValue({ confirmed: true, message: {} }),
 }));
 
-vi.mock("#lib/utilities/autocomplete.js", async (importOriginal) => {
-  const actual: any = await importOriginal();
+const __actualModule8 = await import("#lib/utilities/autocomplete.js");
+vi.mock("#lib/utilities/autocomplete.js", () => {
+  const actual: any = __actualModule8;
   return { ...actual, respondWithChoices: vi.fn().mockResolvedValue(undefined) };
 });
 

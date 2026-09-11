@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { AfkCommandsKeys } from "#lib/i18n/keys/commands/afk.js";
 import { CoreCommandsKeys } from "#lib/i18n/keys/commands/core.js";
 import { ModerationCommandsKeys } from "#lib/i18n/keys/commands/mod.js";

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import type { ContainerBuilder } from "@discordjs/builders";
 import { moduleUpdateResultCard } from "#lib/downloader/cards.js";
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import {
   acquireRedisLock,
@@ -32,16 +32,19 @@ function mockRedis() {
   };
 }
 
+// bun:test's fake-timer support only mocks the system clock (Date.now), not
+// the setInterval/setTimeout queue, so these wait on the real clock instead —
+// acquireRedisLock's renewal interval and retry backoff are real timers.
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 describe("redis-lock", () => {
   let redis: ReturnType<typeof mockRedis>;
 
   beforeEach(() => {
-    vi.useFakeTimers();
     redis = mockRedis();
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -83,7 +86,7 @@ describe("redis-lock", () => {
         "Timeout acquiring Redis lock: lock:busy",
       );
 
-      await vi.advanceTimersByTimeAsync(200);
+      await sleep(200);
       await assertionPromise;
     });
   });
@@ -93,7 +96,7 @@ describe("redis-lock", () => {
       const lock = await acquireRedisLock(redis as any, "lock:renew:1", { ttlMs: 4000 });
       const evalSpy = redis.eval;
 
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
       expect(evalSpy).toHaveBeenCalledWith(
         RedisExtendScript,
         1,
@@ -113,28 +116,28 @@ describe("redis-lock", () => {
 
       redis.store.delete("lock:renew:stolen");
 
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
       expect(errorLogger).toHaveBeenCalledWith(
         '[redis-lock] Failed to renew lock "lock:renew:stolen" (1 consecutive failure)',
       );
 
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
       expect(errorLogger).toHaveBeenCalledWith(
         '[redis-lock] Failed to renew lock "lock:renew:stolen" (2 consecutive failures)',
       );
 
       redis.store.set("lock:renew:stolen", lock.token);
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
 
       redis.store.delete("lock:renew:stolen");
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
       expect(errorLogger).toHaveBeenLastCalledWith(
         '[redis-lock] Failed to renew lock "lock:renew:stolen" (1 consecutive failure)',
       );
 
       await lock.release();
       delete (container as any).logger;
-    });
+    }, 12_000);
 
     it("handles Redis connection failure during renewal and notifies onLostLock once", async () => {
       const errorLogger = vi.fn();
@@ -149,7 +152,7 @@ describe("redis-lock", () => {
       const redisErr = new Error("Connection reset by peer");
       redis.eval.mockRejectedValueOnce(redisErr);
 
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
 
       expect(errorLogger).toHaveBeenCalledWith(
         '[redis-lock] Failed to renew lock "lock:renew:err" (1 consecutive failure)',
@@ -159,12 +162,12 @@ describe("redis-lock", () => {
 
       // Subsequent failure should not trigger onLostLock again
       redis.eval.mockRejectedValueOnce(new Error("Still down"));
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
       expect(onLostLock).toHaveBeenCalledTimes(1);
 
       await lock.release();
       delete (container as any).logger;
-    });
+    }, 10_000);
 
     it("calls onLostLock on the first renewal failure only, not on subsequent failures", async () => {
       const onLostLock = vi.fn();
@@ -175,17 +178,17 @@ describe("redis-lock", () => {
 
       redis.store.delete("lock:renew:stolen:callback");
 
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
       expect(onLostLock).toHaveBeenCalledTimes(1);
 
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
       expect(onLostLock).toHaveBeenCalledTimes(1);
 
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
       expect(onLostLock).toHaveBeenCalledTimes(1);
 
       await lock.release();
-    });
+    }, 10_000);
 
     it("renews after temporary Redis failure that recovers", async () => {
       const errorLogger = vi.fn();
@@ -196,16 +199,16 @@ describe("redis-lock", () => {
       const redisErr = new Error("Temporary network timeout");
       redis.eval.mockRejectedValueOnce(redisErr);
 
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
       expect(errorLogger).toHaveBeenCalledWith(
         '[redis-lock] Failed to renew lock "lock:renew:recover" (1 consecutive failure)',
         redisErr,
       );
 
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
 
       redis.eval.mockRejectedValueOnce(redisErr);
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
       expect(errorLogger).toHaveBeenLastCalledWith(
         '[redis-lock] Failed to renew lock "lock:renew:recover" (1 consecutive failure)',
         redisErr,
@@ -213,7 +216,7 @@ describe("redis-lock", () => {
 
       await lock.release();
       delete (container as any).logger;
-    });
+    }, 10_000);
 
     it("falls back to console.error when container.logger is undefined", async () => {
       const originalLogger = container.logger;
@@ -223,7 +226,7 @@ describe("redis-lock", () => {
       const lock = await acquireRedisLock(redis as any, "lock:renew:console", { ttlMs: 4000 });
       redis.store.delete("lock:renew:console");
 
-      await vi.advanceTimersByTimeAsync(2000);
+      await sleep(2000);
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         '[redis-lock] Failed to renew lock "lock:renew:console" (1 consecutive failure)',
@@ -255,10 +258,10 @@ describe("redis-lock", () => {
       await lock.release();
 
       const evalCount = redis.eval.mock.calls.length;
-      await vi.advanceTimersByTimeAsync(10000);
+      await sleep(10000);
 
       expect(redis.eval.mock.calls.length).toBe(evalCount);
-    });
+    }, 12_000);
   });
 
   describe("concurrency and mutual exclusion", () => {
@@ -276,7 +279,7 @@ describe("redis-lock", () => {
         "Timeout acquiring Redis lock: lock:concurrent",
       );
 
-      await vi.advanceTimersByTimeAsync(100);
+      await sleep(100);
       await assertion;
 
       await lock1.release();
@@ -288,7 +291,7 @@ describe("redis-lock", () => {
         acquireTimeoutMs: 1_000,
       });
 
-      await vi.advanceTimersByTimeAsync(5_000);
+      await sleep(5_000);
       await lock1.release();
 
       const lock2 = await acquireRedisLock(redis as any, "lock:handoff", {
@@ -299,6 +302,6 @@ describe("redis-lock", () => {
       expect(redis.store.get("lock:handoff")).toBe(lock2.token);
 
       await lock2.release();
-    });
+    }, 8000);
   });
 });

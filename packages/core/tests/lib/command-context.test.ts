@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { UserError, container } from "@sapphire/framework";
 import * as i18n from "@sapphire/plugin-i18next";
 import { MessageFlags } from "discord.js";

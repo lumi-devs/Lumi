@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { fakeSpawnResult } from "../helpers/mock-bun-spawn.js";
 
-const { mockExistsSync, mockReadFile } = vi.hoisted(() => ({
-  mockExistsSync: vi.fn(),
-  mockReadFile: vi.fn(),
-}));
+// bun:test's `vi.mock` isn't hoisted above imports the way vitest's is, so
+// these just need to be declared before the `vi.mock` calls below — no
+// `vi.hoisted` wrapper required.
+const mockExistsSync = vi.fn();
+const mockReadFile = vi.fn();
 
 vi.mock("node:fs", () => ({
   existsSync: mockExistsSync,
@@ -30,7 +31,9 @@ interface MockEntry {
   error?: Error;
 }
 
-let spawnSpy: ReturnType<typeof vi.spyOn<typeof Bun, "spawn">>;
+let spawnSpy: ReturnType<typeof vi.spyOn<typeof Bun, "spawn">> & {
+  mockImplementation: (fn: (cmd: string[]) => unknown) => void;
+};
 
 /** Drives Bun.spawn(["git"|"bun", ...args], opts) from a `"file args..."` keyed map. */
 function respondWith(map: Record<string, MockEntry>) {
@@ -45,7 +48,7 @@ function respondWith(map: Record<string, MockEntry>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  spawnSpy = vi.spyOn(Bun, "spawn");
+  spawnSpy = vi.spyOn(Bun, "spawn") as typeof spawnSpy;
   mockReadFile.mockRejectedValue(new Error("ENOENT"));
 });
 

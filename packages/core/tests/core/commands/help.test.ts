@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { MessageFlags } from "discord.js";
 import { getCategories, HelpCommand } from "#modules/core/commands/help.js";

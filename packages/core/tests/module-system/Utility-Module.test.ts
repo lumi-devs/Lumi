@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { Utility, getUtility, tryGetUtility } from "#lib/module-system/Utility.js";
 import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";

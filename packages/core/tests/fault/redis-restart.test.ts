@@ -1,7 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { acquireRedisLock, verifyRedisLock } from "#lib/redis-lock.js";
 import { createGuildTransaction } from "#lib/guild-transaction.js";
+
+// bun:test's fake-timer support only mocks the system clock (Date.now), not
+// the setInterval/setTimeout queue, so these wait on the real clock instead.
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 vi.mock("@sapphire/framework", () => ({
   container: {
@@ -102,13 +106,8 @@ describe("Chaos Suite: Redis Restart & Lock Loss", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
     redis = createChaosRedis();
     prisma = mockPrisma();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   it("aborts GuildWriteTransaction cleanly when Redis restarts and flushes keys mid-transaction", async () => {
@@ -161,13 +160,13 @@ describe("Chaos Suite: Redis Restart & Lock Loss", () => {
 
     redis.simulateCrash();
 
-    await vi.advanceTimersByTimeAsync(500);
+    await sleep(500);
     expect(container.logger.error).toHaveBeenCalledWith(
       expect.stringContaining('[redis-lock] Failed to renew lock "lock:guild:outage" (1 consecutive failure)'),
       expect.any(Error),
     );
 
-    await vi.advanceTimersByTimeAsync(500);
+    await sleep(500);
     expect(container.logger.error).toHaveBeenCalledWith(
       expect.stringContaining('[redis-lock] Failed to renew lock "lock:guild:outage" (2 consecutive failures)'),
       expect.any(Error),

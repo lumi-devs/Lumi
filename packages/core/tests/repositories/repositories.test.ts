@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'bun:test';
 import { ModerationRepository } from '#lib/prisma/repositories/ModerationRepository.js';
 import { ConfigRepository } from '#lib/prisma/repositories/ConfigRepository.js';
 import { GuildKVRepository } from '#lib/prisma/repositories/GuildKVRepository.js';

@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { ChildToHost, HostToChild } from "@lumi/contracts";
 import { childEnv } from "./AddonHost.js";
 

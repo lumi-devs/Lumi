@@ -1,15 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import type { RpcResponse } from "@lumi/contracts";
 
 // lib/rpc.ts also imports `#/lib/env` (for the `getRpcClient()`/`rpcCall()`
-// convenience wrappers) — env.ts throws at *module load* time if
-// RPC_HTTP_URL etc. aren't set, which they deliberately aren't in a unit
-// test environment. `RpcClient` itself doesn't read `env`, but importing
-// the module would still throw without this.
-vi.mock("#/lib/env", () => ({
-  env: { rpcHttpUrl: "http://worker:8091", rpcInternalToken: "test-token" },
-}));
-
+// convenience wrappers, which this file doesn't exercise) — real env.ts has
+// dev-safe defaults for every field it reads, so it's fine to import for
+// real rather than mock (mocking it here would leak into every other test
+// file too, since bun:test's module mocks are process-wide, not per-file).
 const { RpcClient } = await import("#/lib/rpc");
 
 function jsonResponse(body: RpcResponse, ok = true): Response {
@@ -21,14 +17,15 @@ function jsonResponse(body: RpcResponse, ok = true): Response {
 
 describe("RpcClient", () => {
   const fetchMock = vi.fn();
+  const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
     fetchMock.mockReset();
-    vi.stubGlobal("fetch", fetchMock);
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
+    globalThis.fetch = originalFetch;
   });
 
   it("posts the request to <baseUrl>/rpc with action/guildId/actorId/data in the body", async () => {
@@ -89,7 +86,7 @@ describe("RpcClient", () => {
     const client = new RpcClient("http://worker:8091");
     await expect(
       client.call("guild.dashboard.get", { guildId: "101", actorId: "1" }),
-    ).resolves.toEqual({ name: "My Guild" });
+    ).resolves.toMatchObject({ name: "My Guild" });
   });
 
   it("rejects with the server's error message when the reply has ok: false", async () => {

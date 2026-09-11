@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { MessageFlags } from "discord.js";
 import type { ContainerBuilder } from "@discordjs/builders";
 import {

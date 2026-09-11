@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { FilterMessageListener } from "#modules/filter/listeners/messageCreate.js";
 import { container } from "@sapphire/framework";
 import { getUtility, tryGetUtility } from "#lib/module-system/Utility.js";
@@ -13,8 +13,9 @@ vi.mock("#lib/utilities/temporary-message.js", () => ({
   deleteMessageLater: vi.fn(),
 }));
 
-vi.mock("#lib/commands.js", async (importOriginal) => {
-  const actual: any = await importOriginal();
+const __actualModule15 = await import("#lib/commands.js");
+vi.mock("#lib/commands.js", () => {
+  const actual: any = __actualModule15;
   return {
     ...actual,
     fetchTyped: vi.fn().mockResolvedValue((key: string, _opts?: any) => {
@@ -189,6 +190,37 @@ describe("FilterMessageListener", () => {
         actorId: "bot-123",
       })
     );
+  });
+
+  it("should prefer the per-group timeout override over the global one", async () => {
+    const mockHit = { rule: "invite", detail: "discord.gg/test" };
+    mockFilterUtility.test.mockReturnValue(mockHit);
+
+    container.db.config.getModuleConfig = vi.fn().mockImplementation((_gId, _mod, key) => {
+      if (key === "warn_message") return "";
+      if (key === "invite_timeout_minutes") return 5;
+      if (key === "timeout_minutes") return 10;
+      return null;
+    });
+
+    const mockTimeout = vi.fn().mockResolvedValue(undefined);
+    const mockMessage = {
+      guildId: "G1",
+      channelId: "C1",
+      author: { id: "user-456", toString: () => "<@user-456>" },
+      member: {
+        permissions: { has: vi.fn().mockReturnValue(false) },
+        roles: { cache: { has: () => false } },
+        timeout: mockTimeout,
+      },
+      mentions: { users: { size: 0 }, roles: { size: 0 } },
+      content: "join discord.gg/test",
+      delete: vi.fn().mockResolvedValue(undefined),
+      channel: { send: vi.fn().mockResolvedValue(null) },
+    };
+
+    await (listener as any).handle(mockMessage);
+    expect(mockTimeout).toHaveBeenCalledWith(300_000, expect.stringContaining("invite"));
   });
 
   it("should handle error in message delete gracefully via swallow", async () => {

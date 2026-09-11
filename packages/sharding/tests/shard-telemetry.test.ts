@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, jest, beforeEach, afterEach } from "bun:test";
 import {
   ShardTelemetryPublisher,
   readClusterShards,
@@ -50,12 +50,12 @@ describe("ShardTelemetryPublisher", () => {
   let redis: ReturnType<typeof fakeRedis>;
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    jest.useFakeTimers();
     redis = fakeRedis();
   });
 
   afterEach(() => {
-    vi.useRealTimers();
+    jest.useRealTimers();
   });
 
   it("writes one TTL'd row per owned shard, stamped with the replica id", async () => {

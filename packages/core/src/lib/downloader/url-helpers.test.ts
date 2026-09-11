@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { deriveRepoNameFromUrl } from "./url-helpers.js";
 
 const NameRe = /^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/;

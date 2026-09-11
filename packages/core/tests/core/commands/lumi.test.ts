@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container, UserError } from "@sapphire/framework";
 import { LumiCommand } from "#modules/core/commands/lumi.js";
 

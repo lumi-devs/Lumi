@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import calculateSlot from "cluster-key-slot";
 import {
   delSafe,
@@ -57,7 +57,7 @@ describe("pipelineBySlot", () => {
     });
 
     expect(applied).toEqual(["a", "b", "c"]);
-    expect(chain.exec).toHaveBeenCalledOnce();
+    expect(chain.exec).toHaveBeenCalledTimes(1);
   });
 
   it("does nothing for an empty list", async () => {

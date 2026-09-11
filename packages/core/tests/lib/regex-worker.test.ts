@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll, afterEach } from "vitest";
+import { describe, expect, it, beforeAll, afterEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import {
   RegexTimeoutError,

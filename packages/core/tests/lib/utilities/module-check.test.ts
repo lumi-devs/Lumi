@@ -1,12 +1,19 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi, jest } from "bun:test";
 import { container } from "@sapphire/framework";
 import { checkModulesEnabled } from "#lib/module-check.js";
+
+// The cache eviction this file tests is gated on `Date.now()`, not on the
+// cleanup setTimeout actually firing (see module-check.ts) — so bun:test's
+// system-clock mock (which has no setTimeout-queue virtualization) is enough;
+// no real waiting needed.
+const advanceTime = (ms: number) => jest.setSystemTime(new Date(jest.now() + ms));
 
 describe("Module Check Utilities (checkModulesEnabled)", () => {
   let areModulesEnabledMock: any;
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date());
 
     areModulesEnabledMock = vi.fn();
     (container as any).db = {
@@ -17,7 +24,7 @@ describe("Module Check Utilities (checkModulesEnabled)", () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers();
+    jest.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -82,7 +89,7 @@ describe("Module Check Utilities (checkModulesEnabled)", () => {
     expect(areModulesEnabledMock).toHaveBeenCalledTimes(1);
 
     // Fast forward fake timers past WINDOW_MS (200ms + 10ms cleanup timer)
-    vi.advanceTimersByTime(250);
+    advanceTime(250);
 
     const res2 = await checkModulesEnabled("guild-expire", ["afk"]);
     expect(areModulesEnabledMock).toHaveBeenCalledTimes(2);
@@ -103,14 +110,14 @@ describe("Module Check Utilities (checkModulesEnabled)", () => {
     expect(areModulesEnabledMock).toHaveBeenCalledTimes(1);
 
     // Advance time slightly to t=50
-    vi.advanceTimersByTime(50);
+    advanceTime(50);
 
     // Refresh call requesting new module updates entry timestamp to t=50
     const promise2 = checkModulesEnabled("guild-refresh", ["afk", "filter"]);
     expect(areModulesEnabledMock).toHaveBeenCalledTimes(2);
 
     // Advance time to t=215 (when first cleanup timer from t=0 fires)
-    vi.advanceTimersByTime(165);
+    advanceTime(165);
 
     // Cache should NOT be evicted by first cleanup timer because timestamp changed from 0 to 50
     // Subsequent lookup at t=215 for cached modules returns cached promise without extra DB query
@@ -119,7 +126,7 @@ describe("Module Check Utilities (checkModulesEnabled)", () => {
     expect(areModulesEnabledMock).toHaveBeenCalledTimes(2);
 
     // Advance time past the refreshed cleanup timer (t = 50 + 210 = 260ms, advance by 50ms to t=265)
-    vi.advanceTimersByTime(50);
+    advanceTime(50);
 
     // Cache is now evicted; next request queries DB again
     const map3 = new Map([["afk", true], ["filter", true]]);

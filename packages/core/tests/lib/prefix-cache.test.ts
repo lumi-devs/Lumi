@@ -1,6 +1,6 @@
 import { PrefixCache } from "#lib/client/PrefixCache.js";
 import { InvalidationBus } from "#lib/database/redis.js";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "bun:test";
 
 describe("PrefixCache", () => {
   test("caches guild prefixes and returns them on hit", () => {

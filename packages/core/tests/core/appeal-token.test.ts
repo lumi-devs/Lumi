@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, jest } from "bun:test";
 
 const GUILD_ID = "123456789012345678";
 const USER_ID = "444444444444444444";
@@ -51,17 +51,17 @@ describe("appeal token", () => {
     const { generateAppealToken, verifyAppealToken } = await import(
       "#lib/appeals/token.js"
     );
-    vi.useFakeTimers();
+    jest.useFakeTimers();
     try {
-      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      jest.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
       const token = generateAppealToken(
         { guildId: GUILD_ID, caseId: 7, userId: USER_ID },
         1000,
       );
-      vi.setSystemTime(new Date("2026-01-01T00:00:02.000Z"));
+      jest.setSystemTime(new Date("2026-01-01T00:00:02.000Z"));
       expect(verifyAppealToken(token)).toBeNull();
     } finally {
-      vi.useRealTimers();
+      jest.useRealTimers();
     }
   });
 

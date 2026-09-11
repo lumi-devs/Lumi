@@ -1,23 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import type { Session } from "next-auth";
+import { nextNavigationMock, authMock as sharedAuthMock } from "../setup";
 
-// `redirect`/`notFound` normally throw a special Next control-flow error to
-// halt rendering — mocked here to do the same (rather than silently
-// returning) so a test that forgets to assert on them still fails loudly
-// instead of falling through to code that assumes an authenticated session.
-const redirect = vi.fn((url: string) => {
-  throw new Error(`NEXT_REDIRECT:${url}`);
-});
-const notFound = vi.fn(() => {
-  throw new Error("NEXT_NOT_FOUND");
-});
-vi.mock("next/navigation", () => ({ redirect, notFound }));
+// `redirect`/`notFound` throw a special Next control-flow error to halt
+// rendering (set up globally in setup.ts) so a test that forgets to assert
+// on them still fails loudly instead of falling through to code that
+// assumes an authenticated session.
+const { redirect, notFound } = nextNavigationMock;
 
 // `#/lib/auth` calls `NextAuth({...})` at module load time, which reads
 // required env vars via `#/lib/env` — never something a unit test should
-// pull in for real. Mock the one export auth-guards.ts actually uses.
-const authMock = vi.fn<() => Promise<Session | null>>();
-vi.mock("#/lib/auth", () => ({ auth: authMock }));
+// pull in for real. Mocked globally in setup.ts; only `auth` is used here.
+const authMock = sharedAuthMock.auth;
 
 const {
   authorizedGuild,
@@ -120,7 +114,7 @@ describe("requireGuild", () => {
     });
     authMock.mockResolvedValue(session);
     await expect(requireGuild("101")).rejects.toThrow("NEXT_NOT_FOUND");
-    expect(notFound).toHaveBeenCalledOnce();
+    expect(notFound).toHaveBeenCalledTimes(1);
   });
 
   it("404s for a guild the caller doesn't manage even when they manage a *different* guild", async () => {
@@ -154,7 +148,7 @@ describe("requireBotOwner (privilege-escalation guard)", () => {
     const session = makeSession({ isBotOwner: false });
     authMock.mockResolvedValue(session);
     await expect(requireBotOwner()).rejects.toThrow("NEXT_NOT_FOUND");
-    expect(notFound).toHaveBeenCalledOnce();
+    expect(notFound).toHaveBeenCalledTimes(1);
   });
 
   it("redirects unauthenticated callers to /login instead of leaking a 404 vs redirect distinction", async () => {

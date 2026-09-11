@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { ConfigRepository } from "#lib/prisma/repositories/ConfigRepository.js";
 import { RedisKeys } from "#lib/database/redis.js";
 import { container } from "@sapphire/framework";

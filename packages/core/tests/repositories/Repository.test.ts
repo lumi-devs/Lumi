@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 import { container } from "@sapphire/framework";
 import { cacheHits, cacheMisses } from "@lumi/observability";

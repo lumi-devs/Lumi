@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { RpcActions } from "@lumi/contracts";
 import { rpcHandlers } from "#lib/rpc/dispatch.js";
 import { DashboardModule } from "#modules/dashboard/index.js";
 
-vi.mock("#lib/module-system/Utility.js", async (importOriginal) => {
-  const actual: any = await importOriginal();
+const __actualModule11 = await import("#lib/module-system/Utility.js");
+vi.mock("#lib/module-system/Utility.js", () => {
+  const actual: any = __actualModule11;
   return { ...actual, getUtility: vi.fn() };
 });
 

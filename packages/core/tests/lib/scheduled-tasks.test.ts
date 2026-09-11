@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { shouldRunNow, RelayTask } from "#lib/scheduled-tasks.js";
 import { taskFireStream } from "#lib/scheduler-bus.js";

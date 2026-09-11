@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
 
 // Backs the "do not break when refactoring" contract on

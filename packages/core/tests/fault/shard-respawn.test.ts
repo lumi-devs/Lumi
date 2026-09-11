@@ -1,10 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { startRpcHttpServer } from "#lib/rpc/http-server.js";
 import { ReadinessProbes } from "#lib/client/ReadinessProbes.js";
 import { runReadinessProbes } from "@lumi/observability";
 
 describe("Chaos Suite: Shard 0 SIGKILL Respawn & RPC Re-bind", () => {
-  const originalBun = (globalThis as any).Bun;
   const originalRpcToken = process.env.RPC_INTERNAL_TOKEN;
 
   beforeEach(() => {
@@ -12,7 +11,7 @@ describe("Chaos Suite: Shard 0 SIGKILL Respawn & RPC Re-bind", () => {
   });
 
   afterEach(() => {
-    (globalThis as any).Bun = originalBun;
+    vi.restoreAllMocks();
     if (originalRpcToken !== undefined) {
       process.env.RPC_INTERNAL_TOKEN = originalRpcToken;
     } else {
@@ -26,15 +25,13 @@ describe("Chaos Suite: Shard 0 SIGKILL Respawn & RPC Re-bind", () => {
       stop: vi.fn(),
     };
 
-    (globalThis as any).Bun = {
-      serve: vi.fn((_opts: any) => {
-        attemptCount++;
-        if (attemptCount === 1) {
-          throw new Error("EADDRINUSE: Address already in use");
-        }
-        return mockServer;
-      }),
-    };
+    vi.spyOn(Bun, "serve").mockImplementation((_opts: any) => {
+      attemptCount++;
+      if (attemptCount === 1) {
+        throw new Error("EADDRINUSE: Address already in use");
+      }
+      return mockServer as any;
+    });
 
     const logger = vi.fn();
     const serverHandle = await startRpcHttpServer(logger, 3, 10);

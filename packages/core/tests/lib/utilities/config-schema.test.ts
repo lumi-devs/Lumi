@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { ChannelType } from "discord.js";
 import { s } from "@sapphire/shapeshift";
 import {
@@ -60,6 +60,8 @@ describe("Config Schema Utilities", () => {
         label: "Max Limit",
         description: "Upper limit",
         default: 50,
+        min: 1,
+        max: 100,
         required: undefined,
       });
 
@@ -94,6 +96,28 @@ describe("Config Schema Utilities", () => {
       expect(() => userSchema.parse("invalid-snowflake")).toThrow();
       expect(() => userSchema.parse("123")).toThrow(); // too short (< 17)
       expect(userSchema.parse("123456789012345678")).toBe("123456789012345678");
+    });
+
+    it("throws on a dangling enabledBy reference", () => {
+      const schema = cfg.object({
+        detail: cfg.string({ label: "Detail", description: "x", enabledBy: "missing" }),
+      });
+      expect(() => fieldsFromSchema(schema)).toThrow(/enabledBy/);
+    });
+
+    it("throws when enabledBy points at a non-boolean field", () => {
+      const schema = cfg.object({
+        limit: cfg.number({ label: "Limit", description: "x" }),
+        detail: cfg.string({ label: "Detail", description: "x", enabledBy: "limit" }),
+      });
+      expect(() => fieldsFromSchema(schema)).toThrow(/BOOLEAN/);
+    });
+
+    it("throws on a dangling pairedWith reference", () => {
+      const schema = cfg.object({
+        toggle: cfg.boolean({ label: "Toggle", description: "x", pairedWith: "missing" }),
+      });
+      expect(() => fieldsFromSchema(schema)).toThrow(/pairedWith/);
     });
 
     it("handles schemas without shape or containing untagged fields in fieldsFromSchema", () => {
@@ -272,6 +296,39 @@ describe("Config Schema Utilities", () => {
       expect(fields.find((f) => f.key === "volume")?.step).toBe(5);
       expect(fields.find((f) => f.key === "plain")?.step).toBeUndefined();
       expect(validateModuleConfigValue(schema, "volume", 25)).toBe(25);
+    });
+
+    it("exposes cfg.objectArray entries with subfield meta and validates rows", () => {
+      const schema = cfg.object({
+        entries: cfg.objectArray(
+          {
+            channel_id: cfg.channel({ label: "Channel", description: "Target" }),
+            message: cfg.string({ label: "Message", description: "Text" }),
+            enabled: cfg.boolean({ label: "Enabled", description: "On/off", default: true }),
+          },
+          { label: "Entries", description: "List", default: [] },
+        ),
+      });
+      const [field] = fieldsFromSchema(schema);
+      expect(field?.type).toBe(FieldType.ObjectArray);
+      expect(field?.subfields?.map((s) => [s.key, s.type])).toEqual([
+        ["channel_id", FieldType.Channel],
+        ["message", FieldType.String],
+        ["enabled", FieldType.Boolean],
+      ]);
+      const rows = [
+        { channel_id: "123456789012345678", message: "hi", enabled: true },
+      ];
+      expect(validateModuleConfigValue(schema, "entries", rows)).toEqual(rows);
+      expect(validateModuleConfigValue(schema, "entries", [])).toEqual([]);
+      expect(() =>
+        validateModuleConfigValue(schema, "entries", [
+          { channel_id: "short", message: "hi", enabled: true },
+        ]),
+      ).toThrow();
+      expect(() =>
+        cfg.objectArray({ bad: "nope" } as any, { label: "X", description: "Y" }),
+      ).toThrow();
     });
   });
 });

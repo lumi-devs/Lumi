@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { LoggingModule } from "#modules/logging/index.js";
 
 describe("LoggingModule", () => {

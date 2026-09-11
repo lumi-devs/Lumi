@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { AdministratorPrecondition } from "#lib/permissions/preconditions/Administrator.js";
 import { BotOwnerPrecondition } from "#lib/permissions/preconditions/BotOwner.js";

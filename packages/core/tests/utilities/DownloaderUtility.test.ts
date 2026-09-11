@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { DownloaderUtility, ModuleAlreadyInstalledError } from "#utilities/pieces/DownloaderUtility.js";
 import { container } from "@sapphire/framework";
 import { resolver } from "#lib/downloader/resolver.js";
@@ -34,13 +34,13 @@ describe("DownloaderUtility", () => {
   let mockClient: any;
   let mockCommandStore: any;
   let mockRedis: any;
-  let spawnSpy: ReturnType<typeof vi.spyOn<typeof Bun, "spawn">>;
+  let spawnSpy: { mockImplementation: (fn: (cmd: string[]) => unknown) => void };
 
   beforeEach(() => {
     vi.clearAllMocks();
     spawnSpy = vi
       .spyOn(Bun, "spawn")
-      .mockImplementation(() => fakeSpawnResult("hash123\n") as any);
+      .mockImplementation(() => fakeSpawnResult("hash123\n") as any) as unknown as typeof spawnSpy;
 
     mockDb = {
       downloader: {
@@ -287,12 +287,12 @@ describe("DownloaderUtility", () => {
     it("listRepos delegates to DB", async () => {
       mockDb.downloader.readAllDownloaderRepos.mockResolvedValue(["repo1"]);
       const res = await service.listRepos();
-      expect(res).toEqual(["repo1"]);
+      expect(res).toEqual(["repo1"] as any);
     });
 
     it("getModulesInRepo delegates to resolver", async () => {
       const res = await service.getModulesInRepo("r1");
-      expect(res).toEqual([{ name: "test-module" }]);
+      expect(res).toEqual([{ name: "test-module" }] as any);
     });
   });
 
@@ -563,12 +563,12 @@ describe("DownloaderUtility", () => {
   describe("getInstalledModules & getInstalledModulesDetailed", () => {
     it("getInstalledModules calls DB", async () => {
       mockDb.downloader.readAllInstalledDownloaderModules.mockResolvedValue(["mod1"]);
-      expect(await service.getInstalledModules()).toEqual(["mod1"]);
+      expect(await service.getInstalledModules()).toEqual(["mod1"] as any);
     });
 
     it("getInstalledModulesDetailed calls DB", async () => {
       mockDb.downloader.readAllInstalledDownloaderModulesWithRepo.mockResolvedValue([{ moduleName: "mod1" }]);
-      expect(await service.getInstalledModulesDetailed()).toEqual([{ moduleName: "mod1" }]);
+      expect(await service.getInstalledModulesDetailed()).toEqual([{ moduleName: "mod1" }] as any);
     });
   });
 

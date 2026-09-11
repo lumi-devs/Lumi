@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { initMetrics, registry, commandsTotal, cacheHits } from "../src/metrics.js";
 
 describe("Observability package metrics & registry", () => {

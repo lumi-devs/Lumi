@@ -19,7 +19,7 @@ import {
   setupProgressLines,
 } from "#modules/core/ui/setup-wizard.js";
 import type { CardReply } from "#utilities/cards.js";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 type JsonNode = Record<string, any>;
 

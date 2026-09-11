@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach } from "bun:test";
 import { createMockPrismaClient, type MockPrismaClient, type MockModelDelegate } from "./prisma.js";
 import { AfkRepository } from "#lib/prisma/repositories/AfkRepository.js";
 

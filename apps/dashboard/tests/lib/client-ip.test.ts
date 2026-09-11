@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach } from "bun:test";
 import { getClientIp, UnknownClientIp } from "#/lib/client-ip";
 
 function h(init: Record<string, string>): Headers {

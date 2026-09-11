@@ -1,6 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "bun:test";
 import { container } from "@sapphire/framework";
 import { handleDataRetentionFire } from "#modules/core/index.js";
+
+// bun:test has no `vi.mocked` type-narrowing helper — these fields are real
+// db-interface methods at the type level, stubbed with vi.fn() at runtime.
+function asMock<T extends (...args: any[]) => any>(fn: T): Mock<T> {
+  return fn as unknown as Mock<T>;
+}
 
 describe("core data retention sweep", () => {
   const originalEnv = { ...process.env };
@@ -40,10 +46,10 @@ describe("core data retention sweep", () => {
 
     await handleDataRetentionFire();
 
-    const [configHistoryDate] = vi.mocked(
+    const [configHistoryDate] = asMock(
       container.db.configHistory.purgeOldEntries,
     ).mock.calls[0] as [Date];
-    const [economyDate] = vi.mocked(
+    const [economyDate] = asMock(
       container.db.economy.purgeOldTransactions,
     ).mock.calls[0] as [Date];
 
@@ -55,7 +61,7 @@ describe("core data retention sweep", () => {
   });
 
   it("logs and swallows errors instead of throwing", async () => {
-    vi.mocked(container.db.configHistory.purgeOldEntries).mockRejectedValue(
+    asMock(container.db.configHistory.purgeOldEntries).mockRejectedValue(
       new Error("db down"),
     );
 

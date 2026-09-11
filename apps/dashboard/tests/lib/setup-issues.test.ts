@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { buildSetupIssues } from "#/components/guild/setup-issues";
 import type { DashboardModuleView } from "#/lib/dashboard-data";
 

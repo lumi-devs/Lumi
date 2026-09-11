@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { RpcActions } from "@lumi/contracts";
 import { rpcHandlers } from "#lib/rpc/dispatch.js";

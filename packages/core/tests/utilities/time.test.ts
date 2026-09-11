@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { parseDuration, formatDuration, relativeTimestamp, shortTimestamp } from "#utilities/time.js";
 
 describe("time utilities", () => {

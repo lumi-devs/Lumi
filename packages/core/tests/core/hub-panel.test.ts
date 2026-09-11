@@ -7,7 +7,7 @@ import {
   buildPermissionsView,
   PermsPerPage,
 } from "#modules/core/ui/permissions.js";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 
 type ComponentJson = {
   type: number;

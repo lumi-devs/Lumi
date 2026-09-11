@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { fakeSpawnResult } from "../../../tests/helpers/mock-bun-spawn.js";
 
 // Real network/`bun add` isn't available in CI; installModule only needs

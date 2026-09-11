@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { WhoisCommand } from "../../../src/modules/utility/commands/whois.js";
 import { container } from "@sapphire/framework";
 import { PermissionFlagsBits, type User, type GuildMember } from "discord.js";
 
-vi.mock("#lib/commands.js", async (importOriginal) => {
-  const actual: any = await importOriginal();
+const __actualModule9 = await import("#lib/commands.js");
+vi.mock("#lib/commands.js", () => {
+  const actual: any = __actualModule9;
   return {
     ...actual,
     sendReply: vi.fn().mockResolvedValue(undefined),

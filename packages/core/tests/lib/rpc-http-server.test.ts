@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import {
   startRpcHttpServer,
@@ -308,10 +308,8 @@ describe("RPC HTTP Server & Auth Verification", () => {
   });
 
   describe("startRpcHttpServer (Server lifecycle and error handling)", () => {
-    const originalBun = (globalThis as any).Bun;
-
     afterEach(() => {
-      (globalThis as any).Bun = originalBun;
+      vi.restoreAllMocks();
     });
 
     it("starts server with configured host and port", async () => {
@@ -320,8 +318,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
       process.env["RPC_INTERNAL_TOKEN"] = "my-secret-token";
 
       const mockServer = { port: 8099, hostname: "127.0.0.1", stop: vi.fn() };
-      const mockServe = vi.fn().mockReturnValue(mockServer);
-      (globalThis as any).Bun = { serve: mockServe };
+      const mockServe = vi.spyOn(Bun, "serve").mockReturnValue(mockServer as any);
 
       const server = await startRpcHttpServer(mockLogger);
 
@@ -349,12 +346,12 @@ describe("RPC HTTP Server & Auth Verification", () => {
       process.env["RPC_HTTP_PORT"] = "8091";
       delete process.env["RPC_INTERNAL_TOKEN"];
       process.env["NODE_ENV"] = "development";
-      (globalThis as any).Bun = { serve: vi.fn() };
+      const mockServe = vi.spyOn(Bun, "serve").mockReturnValue(undefined as any);
 
       await expect(startRpcHttpServer(mockLogger)).rejects.toThrow(
         /not loopback/,
       );
-      expect((globalThis as any).Bun.serve).not.toHaveBeenCalled();
+      expect(mockServe).not.toHaveBeenCalled();
     });
 
     it("retries on bind failure and succeeds on subsequent attempt", async () => {
@@ -370,7 +367,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
         }
         return mockServer;
       });
-      (globalThis as any).Bun = { serve: mockServe };
+      vi.spyOn(Bun, "serve").mockImplementation(mockServe as any);
 
       const server = await startRpcHttpServer(mockLogger, 3, 10);
 
@@ -394,7 +391,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
       const mockServe = vi.fn().mockImplementation(() => {
         throw new Error("EADDRINUSE: address already in use");
       });
-      (globalThis as any).Bun = { serve: mockServe };
+      vi.spyOn(Bun, "serve").mockImplementation(mockServe as any);
 
       const failedServer = await startRpcHttpServer(mockLogger, 2, 10);
 
