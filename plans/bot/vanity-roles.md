@@ -43,3 +43,9 @@ cfg.object({
   listeners/guildUpdate.ts   (keep vanity URL cache fresh)
   manifest.json
 ```
+
+## Decision
+
+BLOCKED — `buildClientOptions()` has no `GuildPresences` intent (verified in `packages/core/src/lib/client/client-options.ts`).
+Unblocks when the intent is added AND approved by Discord as a privileged intent for the bot's size.
+Do not implement the listeners until then.

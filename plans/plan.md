@@ -23,26 +23,28 @@ Docs code → `apps/docs/src/`
 
 ---
 
-## 1 — Sticky Messages (NEW MODULE)
-**Plan:** `plans/bot/sticky-messages.md`  
-**Status:** plan written, not implemented
+## 1 — Competitor Parity + Dashboard Declutter (DASHBOARD + CORE)
+**Plan:** `plans/dashboard/competitor-parity-and-declutter.md`
+**Status:** DONE — decluttering phase (the `enabledBy` wiring below) done; automod depth +
+case management maturity (item 5) also done. The hide-entirely-vs-grey-but-editable ASK
+was resolved as hide-entirely (see `isFieldVisible` in `config-group-card.tsx`).
 
-Key facts from codebase:
-- New module goes in `packages/core/src/modules/sticky/`
-- Follows the `@DefineModule` + `cfg.object(schema)` pattern from `welcome/index.ts`
-- `renderTemplate` from `#lib/utilities/template.ts` handles `{placeholder}` vars
-- Listener pattern from `filter/listeners/messageCreate.ts`
-
-**ASK USER:**
-- Should sticky posts support embeds (Components V2) or plain text only for v1?
-- Per-channel stickies or one per guild?
-- Should re-posting the sticky delete the old sticky message first (Zeon pattern)?
+Live Sapphire/Wick.bot dashboard study (browser automation, not just docs) plus a
+corrected inventory of what Lumi already has vs. actually lacks. Also wired the
+previously-unused `enabledBy` schema field into the dashboard renderer so dependent
+config hides until its governing toggle is on — the fix for "our dashboard is
+overloading." Has an open **ASK** (hide-entirely vs. grey-but-editable) that must be
+resolved before extending further. Read `plans/dashboard/module-agnostic-config.md`
+alongside it — that's the deeper renderer-consolidation plan this slots into.
 
 ---
 
 ## 2 — Components V2 / Embed Live Preview (DASHBOARD)
 **Plan:** `plans/dashboard/components-v2-preview.md`  
-**Status:** plan written, not implemented
+**Status:** DONE — `discord-message-preview.tsx` renders Components V2 (container/section/media
+gallery/separator, incl. a `---`-line syntax for `SeparatorBuilder`), wired through
+`config-field-input.tsx`'s `richPreview` field-schema property. Welcome template variables
+expanded (`userId`, `userAvatarUrl`, `serverId`, `serverIconUrl`) to match.
 
 Key facts from codebase:
 - Dashboard is schema-driven; `config-field-input.tsx` renders fields dynamically
@@ -58,7 +60,9 @@ Key facts from codebase:
 
 ## 3 — Giveaways (ADDON)
 **Plan:** `plans/bot/giveaways.md`  
-**Status:** plan written, not implemented
+**Status:** DONE — `examples/giveaway/` is the reference implementation; added a
+`required_role` entry option (string+regex, validated against `requiredRoleId`) checked at
+entry time in the button handler.
 
 Key facts from codebase:
 - Reference implementation already in `examples/giveaway/` — full structure: commands, interaction-handlers, scheduled-tasks, lib/store, lib/announce
@@ -73,17 +77,12 @@ Key facts from codebase:
 
 ---
 
-## 4 — Temp VCs
-**Plan:** N/A — already fully implemented  
-**Status:** DONE — `packages/core/src/modules/tempvc/` is a complete implementation with panel UI, voice state listeners, cleanup, registry, and dashboard RPC tests.
-
-Nothing to do.
-
----
-
-## 5 — Vanity Roles (ADDON)
+## 4 — Vanity Roles (ADDON)
 **Plan:** `plans/bot/vanity-roles.md`  
-**Status:** plan written, not implemented
+**Status:** DONE (redirected per user) — not a new addon; improved the existing `promoter`
+addon in the sibling `lumi-addons` repo instead (`promoter/lib/matching.ts`'s
+`vanityMatchTerms()`, wired into `evaluate.ts`'s combined match terms). Added
+`GatewayIntentBits.GuildPresences` to `client-options.ts` since it was missing.
 
 Key facts:
 - No existing module — new addon
@@ -97,43 +96,27 @@ Key facts:
 
 ---
 
-## 6 — Graduated Automod (FILTER MODULE EXTENSION)
-**Plan:** `plans/bot/graduated-automod.md`  
-**Status:** plan written, not implemented
-
-Key facts from codebase:
-- `filter/index.ts` already has heat scoring: `heat_warn`, `heat_timeout`, `heat_quarantine` thresholds
-- `heat.ts` computes heat per message based on rule hits
-- Mod module already has `warn_thresholds` (JSON map of warn count → action)
-- "Graduated automod" = condition stacking is largely the heat system already
-
-**ASK USER:**
-- What's actually missing vs what the heat system already does? Is it per-rule punishment mapping (e.g., "spam filter hit → mute 10m, link block hit → warn, invite block hit → kick")?
-- Or is it Sapphire-style "N violations within T seconds → escalate to next tier"?
-- Should this extend `filter/index.ts` or be a separate `automod` module?
+## 5 — Automod Depth + Case Management Maturity (FILTER + MOD MODULES)
+**Plan:** `plans/dashboard/competitor-parity-and-declutter.md` (§2, §3, §4)
+**Status:** DONE — similarity-ratio (Levenshtein) + zalgo detection added to `filter`'s heat
+scoring (`lib/heat.ts`, `FilterUtility.ts`); predefined punishment reasons, immune roles
+(`lib/moderation/immune-roles.ts`, wired into mod thresholds, filter heat escalation, and
+security anti-nuke response), a duplicate-case confirmation hook on `ModerationCommand`'s
+`Flow`, and a reply-to-message quick-punish context-menu command (`mod/commands/punish-author.ts`)
+that runs the same hierarchy/immune-role/duplicate-case checks as the slash commands via
+exported structural interfaces (`HierarchyCheckContext`/`DuplicateCaseCheckContext`) rather
+than widening `CommandContext`. Graduated/escalating automod itself (the original ask) was
+already fully built — `filter`'s heat system already does per-signal weighted scoring with
+geometric timeout escalation and panic-raider mode; not rebuilt.
 
 ---
 
-## 7 — `llms.txt` (DOCS APP)
-**Plan:** `plans/doc-improvements/llms-txt.md`  
-**Status:** plan written, not implemented
-
-Key facts from codebase:
-- Docs app is Next.js at `apps/docs/`
-- Routes live in `apps/docs/src/app/`
-- Generated content in `apps/docs/src/generated/` (modules.ts, commands.ts, rpc-actions.ts)
-- New route: `apps/docs/src/app/llms.txt/route.ts` → static `text/plain` response
-
-Implementation: Next.js Route Handler returning `text/plain`. Content generated at build time
-from `generated/modules.ts` and `generated/commands.ts`. No special infrastructure needed.
-
-**No open questions** — straightforward.
-
----
-
-## 8 — Preview Before Save (DASHBOARD UX PATTERN)
+## 6 — Preview Before Save (DASHBOARD UX PATTERN)
 **Plan:** `plans/dashboard/preview-before-save.md`  
-**Status:** plan written, not implemented
+**Status:** DONE (pre-existing, confirmed) — `config-group-card.tsx`/`module-config-form.tsx`
+already use an explicit save-button model (`dirty` diff vs. baseline, `SaveBar`), not
+save-on-blur; template/embed fields already get a live `ConfigFieldInput`/`TemplateComposer`
+preview before save via item 2's renderer.
 
 Key facts:
 - Currently config changes are committed immediately on input change (or on form submit — **confirm**)
@@ -147,13 +130,19 @@ Key facts:
 
 ---
 
-## 9 — Auto-Cleanup on Channel/Role Deletion (CORE PATTERN)
+## 7 — Auto-Cleanup on Channel/Role Deletion (CORE PATTERN)
 **Plan:** `plans/bot/auto-cleanup.md`  
-**Status:** plan written, not implemented
+**Status:** DONE (pre-existing, confirmed) — `core/lib/config-cleanup.ts` +
+`core/listeners/channelDelete.ts`/`roleDelete.ts` already scan all module configs and null
+out the stale reference on deletion.
 
 Key facts:
 - When a referenced channel or role is deleted, config fields pointing to it become stale
-- Currently: shows "channel not found" (the claim flow in `plans/logging/channel-not-found-claim.md`)
+- Currently: shows "channel not found" — the self-claim recovery flow for that case is
+  already fully implemented (see `apps/dashboard/src/components/guild/channel-picker.tsx`
+  and `packages/core/src/lib/logging/claims.ts`); this item is only about the *other* half
+  — proactively nulling out a stale reference the moment the channel/role is deleted,
+  before anyone notices it's broken
 - Zeon pattern: silently null out the stale ID in config rather than erroring
 
 Listeners needed: `channelDelete` and `roleDelete` guild events → scan all module configs for that ID → set to null
@@ -165,13 +154,14 @@ Listeners needed: `channelDelete` and `roleDelete` guild events → scan all mod
 
 ---
 
-## Cross-cutting open questions (ask before any implementation)
+## Cross-cutting open questions — resolved
 
-1. **lumi-addons location** — is `examples/` the addon workspace, or is there / should there be a
-   separate `lumi-addons/` directory or repo? Affects Giveaways and Vanity Roles placement.
+1. **lumi-addons location** — both: `examples/` stays the addon-starter/reference workspace
+   (Giveaways); real production addons (Vanity Roles → `promoter`) live in the sibling
+   `lumi-addons` repo, symlinked in as `.lumi`.
 
-2. **Presence intent** — required for Vanity Roles. Is `GatewayIntentBits.GuildPresences` in the bot startup?
+2. **Presence intent** — was missing; added `GatewayIntentBits.GuildPresences` to
+   `client-options.ts`.
 
-3. **Config save model** — save-on-blur or save-button per card? Affects Preview Before Save design.
-
-4. **Sticky embeds** — plain text only for v1 or Components V2 from the start?
+3. **Config save model** — explicit save-button per card (`SaveBar` + dirty diff), not
+   save-on-blur.
