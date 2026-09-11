@@ -31,7 +31,9 @@ export class VoiceMuteAction {
 
     return runModerationAction({
       perform: async () => {
-        await targetMember.voice.setMute(true, auditReason);
+        // Keeping them out of voice is the whole point, so there is no server
+        // mute to apply — only an eviction, and only when they are connected to
+        // evict. `voiceStateUpdate` re-evicts them for as long as the case runs.
         if (targetMember.voice.channel) {
           await targetMember.voice.disconnect(auditReason);
         }
@@ -67,7 +69,12 @@ export class VoiceMuteAction {
 
     return runModerationAction({
       perform: async () => {
-        await targetMember.voice.setMute(false, auditReason);
+        // Clears a server mute an earlier version of this action (or a
+        // moderator by hand) may have left on them; lifting is otherwise just
+        // the case rows.
+        if (targetMember.voice.channel) {
+          await targetMember.voice.setMute(false, auditReason);
+        }
 
         return liftAllActiveCases(
           container,

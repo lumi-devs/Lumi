@@ -4,11 +4,11 @@ import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Result } from "@sapphire/framework";
 import { userMention } from "@discordjs/formatters";
+import { isSnowflakeId } from "#utilities/misc.js";
 import type { ModerationCase } from "@prisma/client";
 import { BanAction } from "../actions/index.js";
 
 const Root = LanguageKeys.Commands;
-const UserIdPattern = /^\d{17,20}$/;
 
 type Context = ModerationCommand.ActionContext<string>;
 type Success = ModerationCommand.OutcomeContext<string, ModerationCase>;
@@ -56,7 +56,7 @@ export class UnbanCommand extends ModerationCommand<string, ModerationCase> {
     t: LumiT,
     target: string,
   ) {
-    if (UserIdPattern.test(target)) return Result.ok(null);
+    if (isSnowflakeId(target)) return Result.ok(null);
     return Result.err({
       title: t(Root.BanInvalidIdTitle),
       body: t(Root.BanInvalidId),

@@ -7,8 +7,9 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
-import type { GuildMember } from "discord.js";
+import type { AutocompleteInteraction, GuildMember } from "discord.js";
 import { KickAction } from "../actions/index.js";
+import { respondWithReasonChoices } from "../lib/reason-autocomplete.js";
 
 const Root = LanguageKeys.Commands;
 
@@ -24,6 +25,7 @@ type Success = ModerationCommand.OutcomeContext<GuildMember, ModerationCase>;
   cooldownLimit: 3,
   cooldownDelay: 5000,
   logScope: "kick",
+  duplicateCaseAction: "kick",
 })
 export class KickCommand extends ModerationCommand<
   GuildMember,
@@ -40,8 +42,16 @@ export class KickCommand extends ModerationCommand<
         .addStringOption((o) =>
           applyLocalizedBuilder(o, "commands:kickMembers").setRequired(false),
         )
-        .addStringOption((o) => applyLocalizedBuilder(o, "commands:modReason")),
+        .addStringOption((o) =>
+          applyLocalizedBuilder(o, "commands:modReason").setAutocomplete(true),
+        ),
     );
+  }
+
+  public override async autocompleteRun(
+    interaction: AutocompleteInteraction,
+  ): Promise<void> {
+    return respondWithReasonChoices(interaction);
   }
 
   protected override async resolveTarget(ctx: ModerationCommand.RunContext) {

@@ -6,8 +6,9 @@ import { Result } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
-import type { GuildMember } from "discord.js";
+import type { AutocompleteInteraction, GuildMember } from "discord.js";
 import { MuteAction } from "../actions/index.js";
+import { respondWithReasonChoices } from "../lib/reason-autocomplete.js";
 
 const Root = LanguageKeys.Commands;
 const MaxTimeoutMs = 28 * 24 * 60 * 60 * 1000;
@@ -17,6 +18,7 @@ type TimedFlow = ModerationSubcommand.Flow<GuildMember, ModerationCase, number>;
 
 const TimeoutAdd: TimedFlow = {
   logScope: "timeout add",
+  duplicateCaseAction: "mute",
   resolveTarget: (ctx) => ctx.getMembers("member", { required: true }),
   preHandle: async (ctx, t) => {
     const input = await ctx.getString("duration");
@@ -104,7 +106,9 @@ export class TimeoutCommand extends ModerationSubcommand {
               ),
             )
             .addStringOption((o) =>
-              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason")
+                .setRequired(false)
+                .setAutocomplete(true),
             ),
         )
         .addSubcommand((s) =>
@@ -115,10 +119,18 @@ export class TimeoutCommand extends ModerationSubcommand {
               ),
             )
             .addStringOption((o) =>
-              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason")
+                .setRequired(false)
+                .setAutocomplete(true),
             ),
         ),
     );
+  }
+
+  public override async autocompleteRun(
+    interaction: AutocompleteInteraction,
+  ): Promise<void> {
+    return respondWithReasonChoices(interaction);
   }
 
   public add(ctx: ModerationSubcommand.RunContext) {

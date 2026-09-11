@@ -4,8 +4,9 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
-import type { GuildMember } from "discord.js";
+import type { AutocompleteInteraction, GuildMember } from "discord.js";
 import { QuarantineAction } from "../actions/index.js";
+import { respondWithReasonChoices } from "../lib/reason-autocomplete.js";
 
 const Root = LanguageKeys.Commands;
 
@@ -17,6 +18,7 @@ function isSentinel(error: unknown, message: string): boolean {
 
 const QuarantineAdd: Flow = {
   logScope: "quarantine add",
+  duplicateCaseAction: "quarantine",
   resolveTarget: (ctx) => ctx.getMembers("member", { required: true }),
   confirm: (t, { target, reason }) => ({
     title: t(Root.QuarantineConfirmTitle),
@@ -100,7 +102,9 @@ export class QuarantineCommand extends ModerationSubcommand {
               ),
             )
             .addStringOption((o) =>
-              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason")
+                .setRequired(false)
+                .setAutocomplete(true),
             ),
         )
         .addSubcommand((s) =>
@@ -111,10 +115,18 @@ export class QuarantineCommand extends ModerationSubcommand {
               ),
             )
             .addStringOption((o) =>
-              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason")
+                .setRequired(false)
+                .setAutocomplete(true),
             ),
         ),
     );
+  }
+
+  public override async autocompleteRun(
+    interaction: AutocompleteInteraction,
+  ): Promise<void> {
+    return respondWithReasonChoices(interaction);
   }
 
   public add(ctx: ModerationSubcommand.RunContext) {

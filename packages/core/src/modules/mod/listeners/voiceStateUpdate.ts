@@ -38,9 +38,6 @@ export class VoiceStateUpdateListener extends Listener {
 
     if (isVoiceMuted) {
       await newState
-        .setMute(true, "Auto-enforcing voice mute")
-        .catch(() => null);
-      await newState
         .disconnect("User is currently voice muted.")
         .catch(() => null);
     }
