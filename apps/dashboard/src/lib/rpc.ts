@@ -2,7 +2,9 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import {
   parseRpcResponse,
+  RpcFailureCodes,
   RpcResponseDataActions,
+  type RpcFailureCode,
   type RpcRequest,
   type RpcResponse,
   type RpcActionName,
@@ -16,7 +18,12 @@ const DefaultTimeoutMs = 8000;
 const HeavyReadTimeoutMs = 12000;
 const MutationTimeoutMs = 15000;
 
-export type RpcErrorCode = "TIMEOUT" | "WORKER_DOWN" | "RPC_ERROR" | "MALFORMED";
+export type RpcErrorCode =
+  | "TIMEOUT"
+  | "WORKER_DOWN"
+  | "RPC_ERROR"
+  | "MALFORMED"
+  | RpcFailureCode;
 
 export class RpcError extends Error {
   public readonly code: RpcErrorCode;
@@ -27,6 +34,15 @@ export class RpcError extends Error {
     this.code = code;
     this.action = action;
   }
+}
+
+/**
+ * True when the bot itself reported it cannot see the guild. Every other
+ * failure — worker down, timeout, database error — means the request could not
+ * be answered, which is a different thing to tell the user.
+ */
+export function isGuildMissing(err: unknown): boolean {
+  return err instanceof RpcError && err.code === RpcFailureCodes.GuildNotFound;
 }
 
 function defaultTimeoutFor(action: string): number {
@@ -118,7 +134,12 @@ export class RpcClient {
       throw new RpcError("MALFORMED", action, `RPC ${action}: malformed response`);
     }
 
-    if (!response.ok) throw new RpcError("RPC_ERROR", action, response.error ?? "RPC error");
+    if (!response.ok)
+      throw new RpcError(
+        response.code ?? "RPC_ERROR",
+        action,
+        response.error ?? "RPC error",
+      );
     if (
       RpcResponseDataActions.has(action) &&
       (response.data === undefined || response.data === null)

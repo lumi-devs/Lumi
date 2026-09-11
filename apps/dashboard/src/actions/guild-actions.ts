@@ -53,7 +53,10 @@ export async function setGuildConfigField(
       actorId: session.userId,
       data: { moduleName, key, value },
     });
-    revalidatePath(`/guild/${guildId}/config/modules/${moduleName}`);
+    // Layout-wide: the same field is editable from /security, /config/modules
+    // and the logging page, so refreshing only the module route leaves whichever
+    // page the save came from showing stale values.
+    revalidatePath(`/guild/${guildId}`, "layout");
     return { ok: true };
   });
 }
@@ -70,7 +73,10 @@ export async function setManyGuildConfigFields(
       actorId: session.userId,
       data: { moduleName, values },
     });
-    revalidatePath(`/guild/${guildId}/config/modules/${moduleName}`);
+    // Layout-wide: the same field is editable from /security, /config/modules
+    // and the logging page, so refreshing only the module route leaves whichever
+    // page the save came from showing stale values.
+    revalidatePath(`/guild/${guildId}`, "layout");
     return { ok: true };
   });
 }
