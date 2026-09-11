@@ -34,7 +34,7 @@
  * `event-bus.test.ts` swaps `ioredis`:
  *
  * ```ts
- * import { vi } from "vitest";
+ * import { vi } from "bun:test";
  * import { createMockPrismaClient } from "../mocks/prisma.js";
  *
  * const mockClient = createMockPrismaClient();
