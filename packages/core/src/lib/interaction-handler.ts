@@ -2,6 +2,7 @@ import {
   InteractionHandler,
   UserError,
 } from "@sapphire/framework";
+import { DiscordAPIError, RESTJSONErrorCodes } from "discord.js";
 import type {
   ButtonInteraction,
   StringSelectMenuInteraction,
@@ -9,6 +10,7 @@ import type {
   RoleSelectMenuInteraction,
   MentionableSelectMenuInteraction,
   ChannelSelectMenuInteraction,
+  ModalSubmitInteraction,
 } from "discord.js";
 import { Emojis } from "#lib/utilities/assets.js";
 
@@ -18,7 +20,8 @@ export type AnyInteraction =
   | UserSelectMenuInteraction
   | RoleSelectMenuInteraction
   | MentionableSelectMenuInteraction
-  | ChannelSelectMenuInteraction;
+  | ChannelSelectMenuInteraction
+  | ModalSubmitInteraction;
 
 export abstract class BaseInteractionHandler extends InteractionHandler {
   /**
@@ -37,14 +40,24 @@ export abstract class BaseInteractionHandler extends InteractionHandler {
     }
   }
 
-  /** Safely acknowledges the interaction. */
+  /** `replied`/`deferred` are per-instance, so a duplicated dispatch races past
+   * them and Discord answers 40060. Losing that race still leaves the
+   * interaction acknowledged, which is all this promises. */
   protected async acknowledge(interaction: AnyInteraction) {
-    if (
-      interaction.isMessageComponent() &&
-      !interaction.replied &&
-      !interaction.deferred
-    ) {
+    const acknowledgeable =
+      interaction.isMessageComponent() || interaction.isModalSubmit();
+    if (!acknowledgeable || interaction.replied || interaction.deferred) return;
+
+    try {
       await interaction.deferUpdate();
+    } catch (err: unknown) {
+      if (
+        err instanceof DiscordAPIError &&
+        err.code === RESTJSONErrorCodes.InteractionHasAlreadyBeenAcknowledged
+      ) {
+        return;
+      }
+      throw err;
     }
   }
 }
