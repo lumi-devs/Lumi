@@ -3,6 +3,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { GuildMember } from "discord.js";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { logError } from "#lib/utilities/errors.js";
+import { renderMessageBlocksV2 } from "#lib/utilities/message-blocks-v2.js";
 import { loadWelcomeConfig } from "../lib/config.js";
 import { sendWelcomeCard } from "../lib/send.js";
 import {
@@ -10,6 +11,7 @@ import {
   buildWelcomeCard,
   renderWelcomeTemplate,
   templateVarsFor,
+  welcomeTemplateVarsRecord,
 } from "../lib/template.js";
 
 @ApplyOptions<ModuleListener.Options>({
@@ -27,7 +29,10 @@ export class WelcomeMemberAddListener extends ModuleListener<
       member.id,
       member.user.username,
       member.nickname,
+      member.displayAvatarURL(),
       member.guild.name,
+      member.guild.id,
+      member.guild.iconURL(),
       member.guild.memberCount,
     );
 
@@ -39,10 +44,19 @@ export class WelcomeMemberAddListener extends ModuleListener<
       await sendWelcomeCard(
         member.guild,
         config.welcomeChannel,
-        buildWelcomeCard(
-          renderWelcomeTemplate(config.welcomeTemplate, vars),
-          autoRoleLine,
-        ),
+        config.welcomeRichContent.blocks.length > 0
+          ? renderMessageBlocksV2(config.welcomeRichContent, welcomeTemplateVarsRecord(vars))
+          : buildWelcomeCard(
+              renderWelcomeTemplate(config.welcomeTemplate, vars),
+              autoRoleLine,
+              {
+                accentColor: config.welcomeAccentColor,
+                thumbnailUrl: config.welcomeThumbnailUrl,
+                imageUrls: config.welcomeImageUrls,
+                footer: config.welcomeFooter,
+                buttons: config.welcomeActionButtons,
+              },
+            ),
         "Welcome: Channel send failed",
       );
     }

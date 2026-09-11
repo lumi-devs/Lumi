@@ -39,9 +39,104 @@
       "key": "welcomeTemplate",
       "type": "STRING",
       "label": "Welcome Template",
-      "description": "Posted when a member joins. Placeholders: {user} mention, {username}, {server}, {memberCount}. Unknown placeholders are left as-is.",
+      "description": "Posted when a member joins. Placeholders: {user} mention, {userId}, {username}, {nickname}, {userAvatarUrl}, {server}, {serverId}, {serverIconUrl}, {memberCount} (alias {memberNumber}). Unknown placeholders are left as-is. A line containing only --- inserts a divider.",
       "group": "Welcome Message",
-      "default": "Welcome {user} to {server}! You are member #{memberCount}."
+      "default": "Welcome {user} to {server}! You are member #{memberCount}.",
+      "format": "template",
+      "templateVars": [
+        "user",
+        "userId",
+        "username",
+        "nickname",
+        "userAvatarUrl",
+        "server",
+        "serverId",
+        "serverIconUrl",
+        "memberCount",
+        "memberNumber"
+      ],
+      "richPreview": {
+        "accentColorKey": "welcomeAccentColor",
+        "footerKey": "welcomeFooter",
+        "imageUrlsKey": "welcomeImageUrls",
+        "buttonsKey": "welcomeActionButtons",
+        "thumbnailKey": "welcomeThumbnailUrl"
+      }
+    },
+    {
+      "key": "welcomeAccentColor",
+      "type": "STRING",
+      "label": "Accent Color",
+      "description": "Accent bar color for the welcome card as hex (e.g. #5865F2).",
+      "group": "Welcome Message",
+      "format": "color"
+    },
+    {
+      "key": "welcomeThumbnailUrl",
+      "type": "STRING",
+      "label": "Thumbnail",
+      "description": "Small image shown beside the welcome text. Image URL.",
+      "group": "Welcome Message",
+      "format": "image"
+    },
+    {
+      "key": "welcomeImageUrls",
+      "type": "STRING_LIST",
+      "label": "Images",
+      "description": "Image URLs shown as a gallery on the welcome card (max 10).",
+      "group": "Welcome Message",
+      "default": []
+    },
+    {
+      "key": "welcomeFooter",
+      "type": "STRING",
+      "label": "Footer",
+      "description": "Small footer line under the welcome card. Falls back to the auto-role line when empty.",
+      "group": "Welcome Message"
+    },
+    {
+      "key": "welcomeActionButtons",
+      "type": "OBJECT_ARRAY",
+      "label": "Action Buttons",
+      "description": "Link buttons under the welcome card (max 5).",
+      "group": "Welcome Message",
+      "default": [],
+      "subfields": [
+        {
+          "key": "label",
+          "type": "STRING",
+          "label": "Label",
+          "description": "Button text."
+        },
+        {
+          "key": "url",
+          "type": "STRING",
+          "label": "URL",
+          "description": "Where the button links."
+        }
+      ]
+    },
+    {
+      "key": "welcomeRichContent",
+      "type": "COMPONENTS_V2_BLOCKS",
+      "label": "Advanced Layout",
+      "description": "Optional block-based layout (Section, Media Gallery, Separator, Action Row) for the welcome card. When it has any blocks, it replaces the plain template and rich fields above.",
+      "group": "Welcome Message",
+      "default": {
+        "blocks": []
+      },
+      "templateVars": [
+        "user",
+        "userId",
+        "username",
+        "nickname",
+        "userAvatarUrl",
+        "server",
+        "serverId",
+        "serverIconUrl",
+        "memberCount",
+        "memberNumber"
+      ]
     },
     {
       "key": "goodbyeEnabled",
@@ -66,9 +161,22 @@
       "key": "goodbyeTemplate",
       "type": "STRING",
       "label": "Goodbye Template",
-      "description": "Posted when a member leaves. Placeholders: {user} mention, {username}, {server}, {memberCount}. Unknown placeholders are left as-is.",
+      "description": "Posted when a member leaves. Placeholders: {user} mention, {userId}, {username}, {nickname}, {userAvatarUrl}, {server}, {serverId}, {serverIconUrl}, {memberCount} (alias {memberNumber}). Unknown placeholders are left as-is. A line containing only --- inserts a divider.",
       "group": "Goodbye Message",
-      "default": "{username} has left {server}."
+      "default": "{username} has left {server}.",
+      "format": "template",
+      "templateVars": [
+        "user",
+        "userId",
+        "username",
+        "nickname",
+        "userAvatarUrl",
+        "server",
+        "serverId",
+        "serverIconUrl",
+        "memberCount",
+        "memberNumber"
+      ]
     },
     {
       "key": "autoRoles",
@@ -90,9 +198,22 @@
       "key": "dmWelcomeTemplate",
       "type": "STRING",
       "label": "DM Greeting Template",
-      "description": "Sent as a DM to new members. Placeholders: {user} mention, {username}, {server}, {memberCount}. Unknown placeholders are left as-is.",
+      "description": "Sent as a DM to new members. Placeholders: {user} mention, {userId}, {username}, {nickname}, {userAvatarUrl}, {server}, {serverId}, {serverIconUrl}, {memberCount} (alias {memberNumber}). Unknown placeholders are left as-is. A line containing only --- inserts a divider.",
       "group": "Join Extras",
-      "default": "Welcome to {server}, {username}!"
+      "default": "Welcome to {server}, {username}!",
+      "format": "template",
+      "templateVars": [
+        "user",
+        "userId",
+        "username",
+        "nickname",
+        "userAvatarUrl",
+        "server",
+        "serverId",
+        "serverIconUrl",
+        "memberCount",
+        "memberNumber"
+      ]
     }
   ],
   "category": "Community"

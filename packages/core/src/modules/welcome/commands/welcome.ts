@@ -80,7 +80,10 @@ export class WelcomeCommand extends BaseCommand {
       target.id,
       target.username,
       targetMember?.nickname ?? null,
+      target.displayAvatarURL(),
       guild.name,
+      guild.id,
+      guild.iconURL(),
       guild.memberCount,
     );
 
@@ -97,6 +100,12 @@ export class WelcomeCommand extends BaseCommand {
               config.autoRoles.length > 0
                 ? `Auto-role${config.autoRoles.length === 1 ? "" : "s"}: ${config.autoRoles.map((id) => `<@&${id}>`).join(" ")}`
                 : undefined,
+              {
+                accentColor: config.welcomeAccentColor,
+                imageUrls: config.welcomeImageUrls,
+                footer: config.welcomeFooter,
+                buttons: config.welcomeActionButtons,
+              },
             );
 
     const destination = await ctx.getChannel("channel");

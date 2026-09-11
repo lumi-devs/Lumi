@@ -1,0 +1,79 @@
+{
+  "name": "sticky",
+  "displayName": "Sticky Messages",
+  "emoji": "📌",
+  "description": "Re-posts a configured message to the bottom of a channel every time a new message is sent there.",
+  "short": "Keep a message pinned to the bottom of a channel.",
+  "version": "0.3.0",
+  "disableable": true,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": true,
+  "targetUtility": "worker",
+  "subStores": [
+    "listeners"
+  ],
+  "configFields": [
+    {
+      "key": "entries",
+      "type": "OBJECT_ARRAY",
+      "label": "Sticky Entries",
+      "description": "One entry per channel. The old sticky post is deleted before the new one goes up.",
+      "group": "Stickies",
+      "default": [],
+      "subfields": [
+        {
+          "key": "channel_id",
+          "type": "CHANNEL",
+          "label": "Channel",
+          "description": "Channel the sticky message is re-posted in."
+        },
+        {
+          "key": "message",
+          "type": "STRING",
+          "label": "Message",
+          "description": "Plain-text message re-posted after every new message in the channel.",
+          "format": "multiline"
+        },
+        {
+          "key": "enabled",
+          "type": "BOOLEAN",
+          "label": "Enabled",
+          "description": "Whether this sticky entry is active.",
+          "default": true
+        },
+        {
+          "key": "accentColor",
+          "type": "STRING",
+          "label": "Accent Color",
+          "description": "Card accent bar as hex (e.g. #5865F2). Empty uses the default.",
+          "format": "color"
+        },
+        {
+          "key": "imageUrls",
+          "type": "STRING_LIST",
+          "label": "Images",
+          "description": "Image URLs shown as a gallery (max 10).",
+          "default": []
+        },
+        {
+          "key": "thumbnailUrl",
+          "type": "STRING",
+          "label": "Thumbnail",
+          "description": "Small image shown beside the message text. Image URL.",
+          "format": "image"
+        },
+        {
+          "key": "richContent",
+          "type": "COMPONENTS_V2_BLOCKS",
+          "label": "Advanced Layout",
+          "description": "Optional block-based layout (Section, Media Gallery, Separator, Action Row) for this sticky message. When it has any blocks, it replaces the plain message text above.",
+          "default": {
+            "blocks": []
+          }
+        }
+      ]
+    }
+  ],
+  "category": "Community"
+}

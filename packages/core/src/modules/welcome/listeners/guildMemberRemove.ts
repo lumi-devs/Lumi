@@ -29,7 +29,10 @@ export class WelcomeMemberRemoveListener extends ModuleListener<
       member.id,
       member.user?.username ?? "Someone",
       member.nickname,
+      member.user?.displayAvatarURL() ?? "",
       member.guild.name,
+      member.guild.id,
+      member.guild.iconURL(),
       member.guild.memberCount,
     );
     await sendWelcomeCard(

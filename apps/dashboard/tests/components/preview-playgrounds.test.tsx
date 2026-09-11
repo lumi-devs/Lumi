@@ -1,5 +1,4 @@
-// @vitest-environment jsdom
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { render, screen, fireEvent } from "@testing-library/react";
 import {
   TempVcPreviewPlayground,
@@ -91,14 +90,12 @@ describe("ReactionRolesPreviewPlayground", () => {
     render(<ReactionRolesPreviewPlayground />);
     expect(screen.getAllByText("Valorant").length).toBeGreaterThan(0);
 
-    fireEvent.change(screen.getByLabelText("Mode"), {
-      target: { value: "select" },
-    });
+    fireEvent.click(screen.getByLabelText("Mode"));
+    fireEvent.click(screen.getByRole("option", { name: "Dropdown" }));
     expect(screen.getByText("Choose your roles…")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Mode"), {
-      target: { value: "reactions" },
-    });
+    fireEvent.click(screen.getByLabelText("Mode"));
+    fireEvent.click(screen.getByRole("option", { name: "Reactions" }));
     expect(
       screen.getByText(
         "React to this message to claim a role. Remove your reaction to give it back.",

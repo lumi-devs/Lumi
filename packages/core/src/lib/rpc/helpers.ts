@@ -2,7 +2,9 @@ import { container } from "@sapphire/framework";
 import {
   AppealReviewStatuses,
   AppealStatuses,
+  CodedRpcError,
   LogClaimOutcomes,
+  RpcFailureCodes,
   WarnThresholdActions,
   type GuildSetupRunResult,
   type RpcRequest,
@@ -42,6 +44,18 @@ export function requireGuildId(guildId: string | null | undefined): string {
   }
 }
 
+/**
+ * Carries a code so the dashboard can tell "the bot isn't in this guild" apart
+ * from an outage. Without it every failure reads as "invite the bot", which
+ * sends admins to re-invite a bot that is already there.
+ */
+function guildNotFound(): CodedRpcError {
+  return new CodedRpcError(
+    RpcFailureCodes.GuildNotFound,
+    "Guild not found in bot cache",
+  );
+}
+
 // Re-checked live against the guild rather than trusted from the dashboard
 // session, whose cached guild list can be up to `SESSION_TTL_MS` stale.
 export async function requireGuildManager(
@@ -50,7 +64,7 @@ export async function requireGuildManager(
 ): Promise<string> {
   if (!actorId) throw new Error("actorId is required");
   const guild = container.client.guilds.cache.get(guildId);
-  if (!guild) throw new Error("Guild not found in bot cache");
+  if (!guild) throw guildNotFound();
   if (guild.ownerId === actorId) return actorId;
 
   const member = await guild.members.fetch(actorId).catch(() => null);
@@ -74,7 +88,7 @@ export async function verifyGuildAccess(
 
 export function cachedGuild(guildId: string): Guild {
   const guild = container.client.guilds.cache.get(guildId);
-  if (!guild) throw new Error("Guild not found in bot cache");
+  if (!guild) throw guildNotFound();
   return guild;
 }
 
@@ -312,8 +326,9 @@ export const PanicSetSchema = s.object({
 });
 
 export const VerificationPanelSetSchema = s.object({
-  channelId: SnowflakeSchema,
-  messageId: SnowflakeSchema,
+  channelId: SnowflakeSchema.optional(),
+  createChannel: s.boolean().optional(),
+  deleteOldMessage: s.boolean().optional(),
 });
 
 export const LogClaimDismissSchema = s.object({
@@ -489,17 +504,24 @@ export async function resolveAppealToken(
 
 export function toRawConfigValue(value: unknown): unknown {
   if (Array.isArray(value)) {
-    const bad = value.find((entry) => !isPrimitiveConfigValue(entry));
-    if (bad !== undefined) {
-      throw new TypeError(
-        `Unsupported config list entry of type ${typeof bad}; expected string, number or boolean.`,
-      );
+    // A primitive-entry array (StringList, MultiRole, ...) gets stringified
+    // per entry; an object-entry array (ObjectArray, e.g. sticky entries) is
+    // passed through as-is — `ConfigUtility.coerce` validates its shape per
+    // the field's own type immediately after this.
+    if (value.every(isPrimitiveConfigValue)) {
+      return value.map((entry) => String(entry));
     }
-    return value.map((entry) => String(entry));
+    return value;
+  }
+  // Plain objects (e.g. a Components V2 block document) pass through
+  // unchanged for the same reason — shape validation happens downstream,
+  // scoped to the field's declared type.
+  if (value !== null && typeof value === "object") {
+    return value;
   }
   if (!isPrimitiveConfigValue(value)) {
     throw new TypeError(
-      `Unsupported config value of type ${value === null ? "null" : typeof value}; expected string, number or boolean.`,
+      `Unsupported config value of type ${value === null ? "null" : typeof value}; expected string, number, boolean, array or object.`,
     );
   }
   return value;

@@ -1,8 +1,7 @@
-// @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi } from "bun:test";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { FieldType, type ConfigField } from "@lumi/contracts";
-import { ConfigFieldInput } from "#/components/guild/config-field-input";
+import { ConfigFieldInput, resolveTemplatePreview } from "#/components/guild/config-field-input";
 import type { DashboardRoleView, DashboardChannelView } from "#/lib/dashboard-data";
 
 const roles: DashboardRoleView[] = [
@@ -80,7 +79,7 @@ describe("ConfigFieldInput", () => {
     expect(onChange).toHaveBeenCalledWith("1h");
   });
 
-  it("MULTI_ROLE lists guild roles and resolves selected names", () => {
+  it("MULTI_ROLE renders selected roles as removable chips", () => {
     const onChange = vi.fn();
     render(
       <ConfigFieldInput
@@ -92,17 +91,30 @@ describe("ConfigFieldInput", () => {
       />,
     );
 
-    expect(screen.getByRole("option", { name: "@Moderators" })).toBeInTheDocument();
-    expect(screen.getAllByText("@Moderators").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("@Moderators")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Add ID to Ping Roles"), {
-      target: { value: "999" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Add" }));
-    expect(onChange).toHaveBeenCalledWith(["111", "999"]);
+    fireEvent.click(screen.getByRole("button", { name: "Remove @Moderators" }));
+    expect(onChange).toHaveBeenCalledWith([]);
   });
 
-  it("MULTI_CHANNEL lists guild channels and accepts unknown IDs", () => {
+  it("MULTI_ROLE offers unselected roles through the combobox", () => {
+    const onChange = vi.fn();
+    render(
+      <ConfigFieldInput
+        field={field({ key: "pingRoles", label: "Ping Roles", type: FieldType.MultiRole })}
+        value={["111"]}
+        onChange={onChange}
+        roles={roles}
+        channels={channels}
+      />,
+    );
+
+    fireEvent.focus(screen.getByRole("combobox", { name: "Ping Roles" }));
+    fireEvent.mouseDown(screen.getByRole("option", { name: "@Helpers" }));
+    expect(onChange).toHaveBeenCalledWith(["111", "222"]);
+  });
+
+  it("MULTI_CHANNEL lists guild channels through the combobox", () => {
     const onChange = vi.fn();
     render(
       <ConfigFieldInput
@@ -114,14 +126,11 @@ describe("ConfigFieldInput", () => {
       />,
     );
 
+    fireEvent.focus(screen.getByRole("combobox", { name: "Watch Channels" }));
     expect(screen.getByRole("option", { name: "#mod-log" })).toBeInTheDocument();
-    expect(screen.getByText("Empty list")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Add ID to Watch Channels"), {
-      target: { value: "555" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Add" }));
-    expect(onChange).toHaveBeenCalledWith(["555"]);
+    fireEvent.mouseDown(screen.getByRole("option", { name: "#general" }));
+    expect(onChange).toHaveBeenCalledWith(["444"]);
   });
 
   it("MULTI_USER accepts IDs through the add box", () => {
@@ -138,11 +147,92 @@ describe("ConfigFieldInput", () => {
 
     expect(screen.getByText("Empty list")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Add ID to Watch Users"), {
+    fireEvent.change(screen.getByLabelText("Add entry to Watch Users"), {
       target: { value: "777" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
     expect(onChange).toHaveBeenCalledWith(["777"]);
+  });
+
+  it("STRING template fields render an always-on live preview", () => {
+    render(
+      <ConfigFieldInput
+        field={field({ key: "welcome_template", label: "Welcome Template", type: FieldType.String, format: "template" })}
+        value="Welcome {user} to {server}! You are member #{memberCount}."
+        onChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByText(/Welcome @Alex to Your Server/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Preview" })).not.toBeInTheDocument();
+  });
+
+  it("STRING template fields offer variable chips that insert at the cursor", () => {
+    const onChange = vi.fn();
+    render(
+      <ConfigFieldInput
+        field={field({ key: "welcome_template", label: "Welcome Template", type: FieldType.String, format: "template" })}
+        value="Hi "
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Insert {user}" }));
+    expect(onChange).toHaveBeenCalledWith("Hi {user}");
+  });
+
+  it("STRING template fields render a big textarea with an expandable editor", () => {
+    render(
+      <ConfigFieldInput
+        field={field({ key: "welcome_template", label: "Welcome Template", type: FieldType.String, format: "template" })}
+        value="Hello"
+        onChange={() => {}}
+      />,
+    );
+
+    const area = screen.getByLabelText("Welcome Template", { selector: "textarea" });
+    expect(Number(area.getAttribute("rows"))).toBeGreaterThanOrEqual(5);
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand Welcome Template editor" }));
+    expect(screen.getByRole("dialog", { name: "Welcome Template editor" })).toBeInTheDocument();
+  });
+
+  it('STRING fields with format "color" render a synced swatch and hex input', () => {
+    const onChange = vi.fn();
+    render(
+      <ConfigFieldInput
+        field={field({ key: "accent", label: "Accent", type: FieldType.String, format: "color" })}
+        value="#5865f2"
+        onChange={onChange}
+      />,
+    );
+
+    expect(screen.getByLabelText("Accent color")).toHaveValue("#5865f2");
+    expect(screen.getByLabelText("Accent hex value")).toHaveValue("#5865f2");
+
+    fireEvent.change(screen.getByLabelText("Accent hex value"), {
+      target: { value: "#ff0000" },
+    });
+    expect(onChange).toHaveBeenCalledWith("#ff0000");
+  });
+
+  it("STRING template preview leaves unknown placeholders verbatim", () => {
+    expect(resolveTemplatePreview("Hi {user}, see {mystery}")).toBe("Hi @Alex, see {mystery}");
+  });
+
+  it("STRING fields that do not declare format:template render a plain input with no preview", () => {
+    render(
+      <ConfigFieldInput
+        field={field({ key: "nickname_format", label: "Nickname Format", type: FieldType.String })}
+        value="[{level}] {username}"
+        onChange={() => {}}
+      />,
+    );
+
+    expect(
+      screen.getByDisplayValue("[{level}] {username}"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Template variables" })).not.toBeInTheDocument();
   });
 
   it("STRING_LIST adds and removes plain text entries", () => {    const onChange = vi.fn();
@@ -194,10 +284,14 @@ describe("ConfigFieldInput", () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Log Channel" }));
     expect(screen.getByRole("option", { name: "#mod-log" })).toBeInTheDocument();
     for (const name of ["#voice", "#news", "#stage", "#forum", "#media"]) {
       expect(screen.queryByRole("option", { name })).not.toBeInTheDocument();
     }
+
+    fireEvent.click(screen.getByRole("option", { name: "#mod-log" }));
+    expect(onChange).toHaveBeenCalledWith("111");
   });
 
   it("CHANNEL with explicit channelTypes respects them", () => {
@@ -221,7 +315,147 @@ describe("ConfigFieldInput", () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Lounge" }));
     expect(screen.getByRole("option", { name: "#voice" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "#mod-log" })).not.toBeInTheDocument();
+  });
+
+  it("OBJECT_ARRAY renders entries with subfields and add/remove", () => {
+    const onChange = vi.fn();
+    const entriesField = field({
+      key: "entries",
+      label: "Sticky Entries",
+      type: FieldType.ObjectArray,
+      subfields: [
+        { key: "channel_id", label: "Channel", type: FieldType.Channel, description: "" },
+        { key: "message", label: "Message", type: FieldType.String, description: "" },
+      ],
+    });
+    const { rerender } = render(
+      <ConfigFieldInput
+        field={entriesField}
+        value={[{ channel_id: "333", message: "hi" }]}
+        onChange={onChange}
+        roles={roles}
+        channels={channels}
+      />,
+    );
+
+    // Appears twice: the entry's collapsible chip header, and the Channel
+    // subfield's own picker button showing the resolved channel below it.
+    expect(screen.getAllByText("#mod-log").length).toBeGreaterThan(0);
+    expect(screen.getByDisplayValue("hi")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove entry 1" }));
+    expect(onChange).toHaveBeenCalledWith([]);
+
+    rerender(
+      <ConfigFieldInput
+        field={entriesField}
+        value={[]}
+        onChange={onChange}
+        roles={roles}
+        channels={channels}
+      />,
+    );
+    expect(screen.getByText("Empty list")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add entry" }));
+    expect(onChange).toHaveBeenCalledWith([{}]);
+  });
+});
+
+describe("ConfigFieldInput CHANNEL claim helper", () => {
+  const channelField = (claimable?: boolean) =>
+    field({ key: "log_channel_id", label: "Log Channel", type: FieldType.Channel, claimable });
+
+  it("offers the claim-code flow only when the schema declares the field claimable", () => {
+    render(
+      <ConfigFieldInput
+        field={channelField(true)}
+        value=""
+        onChange={vi.fn()}
+        channels={channels}
+        guildId="guild-1"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Log Channel" }));
+    expect(
+      screen.getByRole("button", { name: /use other channel/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("stays out of channel fields that never opted in", () => {
+    render(
+      <ConfigFieldInput
+        field={channelField()}
+        value=""
+        onChange={vi.fn()}
+        channels={channels}
+        guildId="guild-1"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Log Channel" }));
+    expect(
+      screen.queryByRole("button", { name: /use other channel/i }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("ConfigFieldInput NUMBER bounds", () => {
+  it("takes the slider range from the module's declared min/max", () => {
+    render(
+      <ConfigFieldInput
+        field={field({
+          key: "transfer_tax_percent",
+          label: "Transfer Tax",
+          type: FieldType.Number,
+          step: 1,
+          min: 0,
+          max: 50,
+        })}
+        value={10}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const slider = screen.getByRole("slider", { name: "Transfer Tax" });
+    expect(slider).toHaveAttribute("min", "0");
+    expect(slider).toHaveAttribute("max", "50");
+  });
+
+  it("bounds the plain number box too", () => {
+    render(
+      <ConfigFieldInput
+        field={field({ key: "cap", label: "Cap", type: FieldType.Number, min: 1, max: 25 })}
+        value={5}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const box = screen.getByRole("spinbutton");
+    expect(box).toHaveAttribute("min", "1");
+    expect(box).toHaveAttribute("max", "25");
+  });
+});
+
+describe("ConfigFieldInput template variables", () => {
+  it("offers the chips the field declares, not a global list", () => {
+    render(
+      <ConfigFieldInput
+        field={field({
+          key: "panel_message",
+          label: "Control Panel Message",
+          type: FieldType.String,
+          format: "template",
+          templateVars: ["channel", "owner", "limit", "status"],
+        })}
+        value=""
+        onChange={vi.fn()}
+      />,
+    );
+
+    const chips = screen.getByRole("group", { name: "Template variables" });
+    expect(within(chips).getByRole("button", { name: "Insert {owner}" })).toBeInTheDocument();
+    expect(within(chips).queryByRole("button", { name: "Insert {memberCount}" })).not.toBeInTheDocument();
   });
 });
