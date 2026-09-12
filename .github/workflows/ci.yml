@@ -53,9 +53,9 @@ jobs:
               - 'flake.lock'
             addons:
               - 'examples/**'
-              - 'scripts/validate-addon.ts'
+              - 'packages/core/scripts/validate-addon.ts'
               - 'packages/core/src/lib/downloader/**'
-              - 'packages/core/src/lib/addon-sdk/**'
+              - 'packages/core/src/lib/addon-sandbox/**'
 
   lint:
     name: Lint

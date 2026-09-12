@@ -11,7 +11,7 @@ import {
 import { isNullish, tryParseJSON, type Awaitable } from "@sapphire/utilities";
 import { fetchTyped } from "#lib/commands.js";
 import { Utility, tryGetUtility } from "#lib/module-system/Utility.js";
-import { RedisKeys } from "#database/redis.js";
+import { RedisKeys } from "#lib/database/redis.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
 import { logToChannel } from "#lib/moderation/log.js";

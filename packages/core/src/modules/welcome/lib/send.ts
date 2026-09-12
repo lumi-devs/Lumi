@@ -1,1 +1,1 @@
-export { sendWelcomeCard } from "#utilities/welcome.js";
+export { sendWelcomeCard } from "#lib/utilities/welcome.js";

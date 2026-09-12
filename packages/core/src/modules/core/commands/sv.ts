@@ -1,7 +1,7 @@
 import { BaseSubcommand, CommandContext } from "#lib/commands.js";
-import { Emojis } from "#utilities/assets.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
-import { isSnowflakeId } from "#utilities/misc.js";
+import { isSnowflakeId } from "#lib/utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 

@@ -13,7 +13,7 @@ import {
   type RpcRequest,
   type SystemShardsResponse,
 } from "@lumi/contracts";
-import { DefaultClusterName, readClusterShards } from "@lumi/sharding";
+import { DefaultClusterName, readClusterShards } from "#lib/sharding/shard-telemetry.js";
 import { getClusterName } from "#lib/env.js";
 import { resolver } from "#lib/downloader/resolver.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";

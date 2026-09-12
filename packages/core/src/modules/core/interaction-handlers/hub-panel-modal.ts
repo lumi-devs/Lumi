@@ -1,8 +1,8 @@
 import { fetchTyped } from "#lib/commands.js";
 import { deriveRepoNameFromUrl } from "#lib/downloader/url-helpers.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { DownloaderUtility } from "#utilities/pieces/DownloaderUtility.js";
-import type { GuildSettingsUtility } from "#utilities/pieces/GuildSettingsUtility.js";
+import type { DownloaderUtility } from "#lib/utilities/pieces/DownloaderUtility.js";
+import type { GuildSettingsUtility } from "#lib/utilities/pieces/GuildSettingsUtility.js";
 import {
   hasAdminPermit,
   hasOwnerPermit,
@@ -12,7 +12,7 @@ import {
   ephemeralCard,
   makeErrorCard,
   makeSuccessCard,
-} from "#utilities/cards.js";
+} from "#lib/utilities/cards.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,

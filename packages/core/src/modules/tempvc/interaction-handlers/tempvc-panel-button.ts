@@ -16,8 +16,8 @@ import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
-import { Emojis } from "#utilities/assets.js";
-import { makeSuccessCard } from "#utilities/cards.js";
+import { Emojis } from "#lib/utilities/assets.js";
+import { makeSuccessCard } from "#lib/utilities/cards.js";
 import { getVcRecord, removeVcRecord } from "#modules/tempvc/data.js";
 import { Tvc, TempVcKeys } from "#modules/tempvc/keys.js";
 import {

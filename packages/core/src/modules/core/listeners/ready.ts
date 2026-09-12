@@ -1,6 +1,6 @@
 import { Listener, Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
-import { bold, green, cyan, gray } from "colorette";
+import { styleText } from "node:util";
 import { Emojis } from "#lib/utilities/assets.js";
 
 @ApplyOptions<Listener.Options>({ once: true, event: Events.ClientReady })
@@ -20,17 +20,19 @@ export class ReadyListener extends Listener<typeof Events.ClientReady> {
       );
     });
 
-    logger.debug(gray("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    const rule = styleText("gray", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    const bar = styleText("gray", "|");
+    logger.debug(rule);
     logger.debug(
-      `${bold(green(` ${Emojis.Fire} Lumi `))} ${cyan(tag)} ${gray("|")} ${guilds} guilds`,
+      `${styleText(["bold", "green"], ` ${Emojis.Fire} Lumi `)} ${styleText("cyan", tag)} ${bar} ${guilds} guilds`,
     );
     logger.debug(
-      `${gray(" Modules:")}  ${modules} ${gray("|")} Commands: ${commands}`,
+      `${styleText("gray", " Modules:")}  ${modules} ${bar} Commands: ${commands}`,
     );
     logger.debug(
-      `${gray(" Memory: ")}  ${memMB}MB ${gray("|")} PID: ${process.pid}`,
+      `${styleText("gray", " Memory: ")}  ${memMB}MB ${bar} PID: ${process.pid}`,
     );
-    logger.debug(gray("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    logger.debug(rule);
 
     void this.#publishStats(guilds);
   }

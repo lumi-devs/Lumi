@@ -7,19 +7,19 @@ import {
   stepCustomId,
   type SetupWizardState,
 } from "#modules/core/lib/setup-wizard.js";
-import { Emojis } from "#utilities/assets.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import {
   makeCard,
   makeSuccessCard,
   resolveCardColor,
   type CardReply,
-} from "#utilities/cards.js";
+} from "#lib/utilities/cards.js";
 import {
   buildSafeActionRows,
   createActionButton,
   createChannelSelectMenu,
   createStringSelectMenu,
-} from "#utilities/panels.js";
+} from "#lib/utilities/panels.js";
 import {
   LabelBuilder,
   ModalBuilder,

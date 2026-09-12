@@ -8,7 +8,7 @@ import {
   type PermitWithAssignments,
 } from "#lib/prisma/repositories/PermissionRepository.js";
 import { Utility } from "#lib/module-system/Utility.js";
-import { cleanMention, isSnowflakeId } from "#utilities/misc.js";
+import { cleanMention, isSnowflakeId } from "#lib/utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 

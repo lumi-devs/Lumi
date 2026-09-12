@@ -1,8 +1,8 @@
 import { fetchTyped } from "#lib/commands.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { GuildSettingsUtility } from "#utilities/pieces/GuildSettingsUtility.js";
-import type { PermissionUtility } from "#utilities/pieces/PermissionUtility.js";
+import type { GuildSettingsUtility } from "#lib/utilities/pieces/GuildSettingsUtility.js";
+import type { PermissionUtility } from "#lib/utilities/pieces/PermissionUtility.js";
 import {
   accessDenied,
   hasAdminPermit,
@@ -20,7 +20,7 @@ import {
   ephemeralCard,
   makeErrorCard,
   makeWarningCard,
-} from "#utilities/cards.js";
+} from "#lib/utilities/cards.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,

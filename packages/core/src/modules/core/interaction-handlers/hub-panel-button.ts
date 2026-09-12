@@ -3,8 +3,8 @@ import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { restartChoiceRow } from "#lib/restart.js";
-import type { DownloaderUtility } from "#utilities/pieces/DownloaderUtility.js";
-import type { GuildSettingsUtility } from "#utilities/pieces/GuildSettingsUtility.js";
+import type { DownloaderUtility } from "#lib/utilities/pieces/DownloaderUtility.js";
+import type { GuildSettingsUtility } from "#lib/utilities/pieces/GuildSettingsUtility.js";
 import {
   accessDenied,
   hasAdminPermit,
@@ -25,14 +25,14 @@ import {
 import { DefaultPrefix } from "#modules/core/ui/hub.js";
 import { buildFeatureListView } from "#modules/core/ui/modules.js";
 import { buildPermitPickerView } from "#modules/core/ui/permissions.js";
-import { Emojis } from "#utilities/assets.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import {
   ephemeralCard,
   makeErrorCard,
   makeInfoCard,
   makeSuccessCard,
-} from "#utilities/cards.js";
-import { getCoreUpdateStatus, updateLumiCore } from "#utilities/self-update.js";
+} from "#lib/utilities/cards.js";
+import { getCoreUpdateStatus, updateLumiCore } from "#lib/utilities/self-update.js";
 import {
   ActionRowBuilder,
   ModalBuilder,

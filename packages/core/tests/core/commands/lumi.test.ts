@@ -6,7 +6,7 @@ vi.mock("#modules/core/lib/config-panel.js", () => ({
   loadFeatures: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock("#utilities/self-update.js", () => ({
+vi.mock("#lib/utilities/self-update.js", () => ({
   updateLumiCore: vi.fn(),
 }));
 
@@ -15,7 +15,7 @@ vi.mock("#modules/core/ui/hub.js", () => ({
 }));
 
 import { loadFeatures } from "#modules/core/lib/config-panel.js";
-import { updateLumiCore } from "#utilities/self-update.js";
+import { updateLumiCore } from "#lib/utilities/self-update.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { buildHubView } from "#modules/core/ui/hub.js";
 

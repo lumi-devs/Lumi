@@ -14,7 +14,7 @@ import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
-import { ephemeralCard, makeSuccessCard } from "#utilities/cards.js";
+import { ephemeralCard, makeSuccessCard } from "#lib/utilities/cards.js";
 import type { VcRecord } from "#modules/tempvc/data.js";
 import { Tvc } from "#modules/tempvc/keys.js";
 import { showLimitModal, showRenameModal } from "#modules/tempvc/lib/panel-helpers.js";

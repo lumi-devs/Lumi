@@ -8,7 +8,7 @@ import {
   buildPermissionsView,
   type PermitAssignmentRow,
 } from "#modules/core/ui/permissions.js";
-import { Emojis } from "#utilities/assets.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import { container, UserError } from "@sapphire/framework";
 import type {
   AnySelectMenuInteraction,

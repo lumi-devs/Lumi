@@ -4,7 +4,7 @@ import { RpcActions } from "@lumi/contracts";
 import {
   removeThresholdRule,
   setThresholdRule,
-} from "#utilities/thresholds.js";
+} from "#lib/utilities/thresholds.js";
 import {
   CaseRevokeSchema,
   CasesListSchema,

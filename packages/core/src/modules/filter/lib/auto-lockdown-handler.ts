@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { RedisKeys } from "#database/redis.js";
+import { RedisKeys } from "#lib/database/redis.js";
 import { unlockAllTextChannels } from "#lib/moderation/lockdown.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";

@@ -24,8 +24,7 @@ const ROOT = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 
 /** Roots to scan. Extra dirs (e.g. addon checkouts) may be passed as argv. */
 const ROOTS = [
-  path.join(ROOT, "packages/core/src/modules"),
-  path.join(ROOT, "packages/core/src/lib/modules"),
+  path.join(ROOT, "src/modules"),
   ...process.argv.slice(2).map((p) => path.resolve(p)),
 ];
 

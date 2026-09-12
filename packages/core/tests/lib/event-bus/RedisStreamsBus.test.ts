@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { RedisStreamsBus } from "../src/RedisStreamsBus.js";
+import { RedisStreamsBus } from "#lib/event-bus/RedisStreamsBus.js";
 import type { Redis } from "ioredis";
 
 // bun:test's fake-timer support only mocks the system clock (Date.now),

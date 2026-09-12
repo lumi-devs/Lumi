@@ -16,7 +16,7 @@ import {
   type APIMessageComponentEmoji,
 } from "discord.js";
 import { container } from "@sapphire/framework";
-import { Emojis } from "#utilities/assets.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import { clipLabel } from "./ui/kit.js";
 
 export { formatBreadcrumbHeader, formatStatusBadge, formatSubtitle, formatBreadcrumbs } from "./ui/layout.js";

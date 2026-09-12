@@ -13,7 +13,7 @@ import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
 import { initCoreRpcHandlers } from "#lib/rpc/core-rpc.js";
 import { startRpcHttpServer } from "#lib/rpc/http-server.js";
 import { TaskFireConsumer } from "#lib/task-fire-registry.js";
-import type { OwnedEventBus } from "@lumi/event-bus";
+import type { OwnedEventBus } from "#lib/event-bus/factory.js";
 import { failedJobsTotal } from "@lumi/observability";
 import {
   ApplicationCommandRegistries,

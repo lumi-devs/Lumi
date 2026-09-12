@@ -16,7 +16,7 @@ import {
   ephemeralCard,
   makeErrorCard,
   makeSuccessCard,
-} from "#utilities/cards.js";
+} from "#lib/utilities/cards.js";
 import { logError } from "#lib/utilities/errors.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { Rr } from "#modules/reactionroles/keys.js";

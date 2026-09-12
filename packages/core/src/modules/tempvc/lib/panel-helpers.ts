@@ -11,7 +11,7 @@ import {
   type VoiceBasedChannel,
 } from "discord.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { Emojis } from "#utilities/assets.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import { Tvc } from "#modules/tempvc/keys.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 

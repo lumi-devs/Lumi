@@ -1,7 +1,7 @@
 import { Utility } from "#lib/module-system/Utility.js";
 import { FieldType } from "#lib/module-system/Module.js";
 import { validateModuleConfigValue } from "#lib/module-system/config-schema.js";
-import { cleanMention, isSnowflakeId } from "#utilities/misc.js";
+import { cleanMention, isSnowflakeId } from "#lib/utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import type { Prisma } from "@prisma/client";

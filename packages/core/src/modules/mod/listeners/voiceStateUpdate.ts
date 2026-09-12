@@ -1,7 +1,7 @@
 import { Listener } from "@sapphire/framework";
 import type { VoiceState } from "discord.js";
 import { container } from "@sapphire/framework";
-import { RedisKeys, RedisTTL } from "#database/redis.js";
+import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 
 export class VoiceStateUpdateListener extends Listener {
   public constructor(

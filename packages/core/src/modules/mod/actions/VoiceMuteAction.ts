@@ -4,7 +4,7 @@ import { Routes } from "discord-api-types/v10";
 import { formatAuditReason } from "#lib/utilities/misc.js";
 import { liftAllActiveCases } from "../lib/helpers.js";
 import { errorCode } from "#lib/utilities/errors.js";
-import { RedisKeys } from "#database/redis.js";
+import { RedisKeys } from "#lib/database/redis.js";
 import { runModerationAction } from "../lib/runModerationAction.js";
 
 export interface VoiceMuteApplyOptions {

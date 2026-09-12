@@ -68,11 +68,11 @@
 
 - name: "area:event-bus"
   color: "1d76db"
-  description: "Changes in packages/event-bus messaging"
+  description: "Changes in the core Redis Streams event bus (packages/core/src/lib/event-bus)"
 
 - name: "area:sharding"
   color: "1d76db"
-  description: "Changes in packages/sharding cluster management"
+  description: "Changes in shard telemetry (packages/core/src/lib/sharding)"
 
 - name: "area:observability"
   color: "1d76db"

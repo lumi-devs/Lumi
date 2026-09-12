@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { PermissionUtility } from "#utilities/pieces/PermissionUtility.js";
+import { PermissionUtility } from "#lib/utilities/pieces/PermissionUtility.js";
 
 describe("PermissionUtility", () => {
   let service: PermissionUtility;

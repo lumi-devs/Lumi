@@ -2,7 +2,7 @@ import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
 import { container } from "@sapphire/framework";
 import { cutText } from "@sapphire/utilities";
 import { Emojis } from "#lib/utilities/assets.js";
-import { formatDuration } from "#utilities/time.js";
+import { formatDuration } from "#lib/utilities/time.js";
 import { clearAllAfkForUser } from "./data/afk.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleAfkDeleteMessageFire } from "./lib/delete-handler.js";

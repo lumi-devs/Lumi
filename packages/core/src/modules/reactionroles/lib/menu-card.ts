@@ -14,13 +14,13 @@ import {
 import {
   makeCard,
   type CardReply,
-} from "#utilities/cards.js";
-import { Emojis } from "#utilities/assets.js";
+} from "#lib/utilities/cards.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import {
   buildSafeActionRows,
   createActionButton,
   createStringSelectMenu,
-} from "#utilities/panels.js";
+} from "#lib/utilities/panels.js";
 import { renderMessageBlocksV2Container } from "#lib/utilities/message-blocks-v2.js";
 
 function safeEmoji(emoji: string | null) {

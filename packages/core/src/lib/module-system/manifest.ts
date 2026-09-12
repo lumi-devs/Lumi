@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fieldsFromSchema } from "./config-schema.js";
 import type { ModuleMeta, ModuleOptions } from "./Module.js";
-import { CoreVersion } from "#utilities/misc.js";
+import { CoreVersion } from "#lib/utilities/misc.js";
 import {
   KnownSubstores,
   type ModuleManifest,

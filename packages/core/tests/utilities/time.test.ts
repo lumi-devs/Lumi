@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { parseDuration, formatDuration, relativeTimestamp, shortTimestamp } from "#utilities/time.js";
+import { parseDuration, formatDuration, relativeTimestamp, shortTimestamp } from "#lib/utilities/time.js";
 
 describe("time utilities", () => {
   it("formatDuration", () => {

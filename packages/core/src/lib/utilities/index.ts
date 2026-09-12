@@ -1,10 +1,10 @@
-export * from "#utilities/assets.js";
-export * from "#utilities/cards.js";
-export * from "#utilities/command-response.js";
-export * from "#utilities/config.js";
-export * from "#utilities/errors.js";
-export * from "#utilities/misc.js";
-export * from "#utilities/pagination.js";
+export * from "#lib/utilities/assets.js";
+export * from "#lib/utilities/cards.js";
+export * from "#lib/utilities/command-response.js";
+export * from "#lib/utilities/config.js";
+export * from "#lib/utilities/errors.js";
+export * from "#lib/utilities/misc.js";
+export * from "#lib/utilities/pagination.js";
 export {
   createUserSelectMenu,
   createRoleSelectMenu,
@@ -23,8 +23,8 @@ export {
   type CreatePaginationRowOptions,
   type StringSelectOptionInput,
   type CategoryTab,
-} from "#utilities/panels.js";
+} from "#lib/utilities/panels.js";
 export { formatBreadcrumbHeader } from "#lib/utilities/ui/layout.js";
-export * from "#utilities/self-update.js";
-export * from "#utilities/temporary-message.js";
-export * from "#utilities/time.js";
+export * from "#lib/utilities/self-update.js";
+export * from "#lib/utilities/temporary-message.js";
+export * from "#lib/utilities/time.js";

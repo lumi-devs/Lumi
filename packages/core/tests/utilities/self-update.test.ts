@@ -24,7 +24,7 @@ import {
   getCoreUpdateStatus,
   updateLumiCore,
 } from "#lib/utilities/self-update.js";
-import { LumiInfo } from "#utilities/misc.js";
+import { LumiInfo } from "#lib/utilities/misc.js";
 
 interface MockEntry {
   stdout?: string;

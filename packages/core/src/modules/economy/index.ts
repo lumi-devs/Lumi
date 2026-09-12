@@ -1,6 +1,6 @@
 import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
 import { container } from "@sapphire/framework";
-import { parseDuration } from "#utilities/time.js";
+import { parseDuration } from "#lib/utilities/time.js";
 import {
   defaultSlotPayoutEntries,
   parseSlotPayouts,

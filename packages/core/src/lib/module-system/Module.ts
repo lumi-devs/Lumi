@@ -1,7 +1,7 @@
 import { Piece } from "@sapphire/framework";
 import type { Awaitable } from "@sapphire/utilities";
 import { Emojis } from "#lib/utilities/assets.js";
-import { CoreVersion } from "#utilities/misc.js";
+import { CoreVersion } from "#lib/utilities/misc.js";
 
 import {
   fieldsFromSchema,

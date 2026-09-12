@@ -10,7 +10,7 @@ import {
   normalizeRuleDuration,
   setThresholdRule,
   removeThresholdRule,
-} from "#utilities/thresholds.js";
+} from "#lib/utilities/thresholds.js";
 import {
   BanAction,
   MuteAction,

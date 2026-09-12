@@ -1,5 +1,5 @@
 import type { CommandContext } from "#lib/commands.js";
-import { formatDuration } from "#utilities/time.js";
+import { formatDuration } from "#lib/utilities/time.js";
 import {
   CooldownError,
   EconomyError,

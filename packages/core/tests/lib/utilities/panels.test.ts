@@ -24,7 +24,7 @@ import {
   navRow,
   pageFooter,
   HubTabs,
-} from "#utilities/panels.js";
+} from "#lib/utilities/panels.js";
 import {
   defaultCardColors,
   makeSuccessCard,
@@ -32,8 +32,8 @@ import {
   formatSubtitle,
   formatBreadcrumbs,
   resolveCardColor,
-} from "#utilities/cards.js";
-import { createStringSelectMenu as createStringSelectFromIndex } from "#utilities/index.js";
+} from "#lib/utilities/cards.js";
+import { createStringSelectMenu as createStringSelectFromIndex } from "#lib/utilities/index.js";
 
 describe("Panel & Card Utility Standardization", () => {
   beforeEach(() => {

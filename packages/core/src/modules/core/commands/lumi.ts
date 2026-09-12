@@ -2,9 +2,9 @@ import { BaseSubcommand, CommandContext } from "#lib/commands.js";
 import { restartChoiceRow } from "#lib/restart.js";
 import { loadFeatures } from "#modules/core/lib/config-panel.js";
 import { buildHubView } from "#modules/core/ui/hub.js";
-import { Emojis } from "#utilities/assets.js";
-import { makeSuccessCard } from "#utilities/cards.js";
-import { updateLumiCore } from "#utilities/self-update.js";
+import { Emojis } from "#lib/utilities/assets.js";
+import { makeSuccessCard } from "#lib/utilities/cards.js";
+import { updateLumiCore } from "#lib/utilities/self-update.js";
 import { PermitResolver } from "#lib/permissions/index.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {

@@ -7,7 +7,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { Result } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { userMention } from "@discordjs/formatters";
-import { isSnowflakeId } from "#utilities/misc.js";
+import { isSnowflakeId } from "#lib/utilities/misc.js";
 import type { ModerationCase } from "@prisma/client";
 import type { User } from "discord.js";
 import { BanAction } from "../actions/index.js";

@@ -3,5 +3,5 @@ export {
   shortTimestamp,
   parseDuration,
   formatDuration,
-} from "#utilities/time.js";
-export { errorFrom, swallow } from "#utilities/errors.js";
+} from "#lib/utilities/time.js";
+export { errorFrom, swallow } from "#lib/utilities/errors.js";

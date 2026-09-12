@@ -7,11 +7,8 @@
  * Invoked via: `bun run verify:resilience`
  */
 
-import {
-  createEventBus,
-  type EventBus,
-  type BusMessage,
-} from "@lumi/event-bus";
+import { createEventBus } from "#lib/event-bus/factory.js";
+import type { EventBus, BusMessage } from "#lib/event-bus/types.js";
 
 const REDIS_HOST = process.env["REDIS_HOST"] ?? "localhost";
 const REDIS_PORT = Number(process.env["REDIS_PORT"] ?? 6379);

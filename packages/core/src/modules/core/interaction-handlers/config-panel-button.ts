@@ -3,7 +3,7 @@ import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { FieldType } from "#lib/module-system/Module.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { ConfigUtility } from "#utilities/pieces/ConfigUtility.js";
+import type { ConfigUtility } from "#lib/utilities/pieces/ConfigUtility.js";
 import {
   configAccessDenied,
   hasPanelAccess,
@@ -20,9 +20,9 @@ import {
   buildHistoryView,
   buildOverridesView,
 } from "#modules/core/ui/overrides.js";
-import { Emojis } from "#utilities/assets.js";
-import { ephemeralCard, makeErrorCard } from "#utilities/cards.js";
-import { respond } from "#utilities/command-response.js";
+import { Emojis } from "#lib/utilities/assets.js";
+import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";
+import { respond } from "#lib/utilities/command-response.js";
 import {
   LabelBuilder,
   ModalBuilder,

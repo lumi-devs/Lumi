@@ -5,4 +5,4 @@ export {
   GoodbyeTemplateDocs,
   DmTemplateDocs,
   loadWelcomeConfig,
-} from "#utilities/welcome.js";
+} from "#lib/utilities/welcome.js";

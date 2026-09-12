@@ -12,7 +12,7 @@ import {
   hyperlink,
   messageLink,
 } from "@discordjs/formatters";
-import { formatDuration } from "#utilities/time.js";
+import { formatDuration } from "#lib/utilities/time.js";
 import { makeListCard, ephemeralCard } from "#lib/utilities/cards.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { Emojis } from "#lib/utilities/assets.js";

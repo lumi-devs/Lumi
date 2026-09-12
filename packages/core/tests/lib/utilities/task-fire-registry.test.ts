@@ -5,7 +5,7 @@ import {
   getRegisteredFireHandlers,
   TaskFireConsumer,
 } from "#lib/task-fire-registry.js";
-import type { EventBus } from "@lumi/event-bus";
+import type { EventBus } from "#lib/event-bus/types.js";
 
 describe("Task Fire Registry & Consumer", () => {
   let mockBus: any;

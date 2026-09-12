@@ -4,11 +4,11 @@
 
 'area:event-bus':
   - changed-files:
-      - any-glob-to-any-file: 'packages/event-bus/**'
+      - any-glob-to-any-file: 'packages/core/src/lib/event-bus/**'
 
 'area:sharding':
   - changed-files:
-      - any-glob-to-any-file: 'packages/sharding/**'
+      - any-glob-to-any-file: 'packages/core/src/lib/sharding/**'
 
 'area:observability':
   - changed-files:
@@ -20,7 +20,7 @@
 
 'area:sdk':
   - changed-files:
-      - any-glob-to-any-file: 'packages/sdk/**'
+      - any-glob-to-any-file: 'packages/core/src/lib/addon-sandbox/**'
 
 'area:dashboard':
   - changed-files:

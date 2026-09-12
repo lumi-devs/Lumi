@@ -9,19 +9,19 @@ import {
   row,
   type Row,
 } from "#modules/core/ui/common.js";
-import { Emojis } from "#utilities/assets.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import {
   resolveCardColor,
   makeCard,
   noPingCard,
   type CardReply,
-} from "#utilities/cards.js";
+} from "#lib/utilities/cards.js";
 import {
   buildSafeActionRows,
   createActionButton,
   createBackButton,
   createStringSelectMenu,
-} from "#utilities/panels.js";
+} from "#lib/utilities/panels.js";
 import { StringSelectMenuOptionBuilder } from "@discordjs/builders";
 import {
   channelMention,

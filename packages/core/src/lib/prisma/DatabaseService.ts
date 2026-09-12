@@ -2,7 +2,6 @@ import type { RedisClient } from "#lib/database/cluster-safe.js";
 import { scanKeysSafe } from "#lib/database/cluster-safe.js";
 import { type ILogger, container } from "@sapphire/framework";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
-import { Stopwatch } from "@sapphire/stopwatch";
 import { Prisma } from "@prisma/client";
 import {
   createGuildTransaction,
@@ -183,9 +182,9 @@ export class DatabaseService {
   }
 
   public async probePrisma(): Promise<number> {
-    const sw = new Stopwatch();
+    const start = performance.now();
     await this.prisma.$queryRaw(Prisma.sql`SELECT 1`);
-    return sw.stop().duration;
+    return performance.now() - start;
   }
 
   public async getPostgresStats(): Promise<{

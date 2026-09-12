@@ -12,7 +12,7 @@ import {
   ephemeralCard,
   makeErrorCard,
   makeSuccessCard,
-} from "#utilities/cards.js";
+} from "#lib/utilities/cards.js";
 import { getVcRecord, patchVcRecord } from "#modules/tempvc/data.js";
 import { Tvc } from "#modules/tempvc/keys.js";
 import { resolveOwnedVc } from "#modules/tempvc/panel-guard.js";

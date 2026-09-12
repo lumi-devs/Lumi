@@ -1,5 +1,5 @@
 import { getUtility } from "#lib/module-system/Utility.js";
-import { Emojis } from "#utilities/assets.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import { UserError } from "@sapphire/framework";
 import {
   PermissionFlagsBits,

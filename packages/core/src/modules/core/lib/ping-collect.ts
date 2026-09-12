@@ -6,8 +6,6 @@ import { fileURLToPath } from "node:url";
 import { Prisma } from "@prisma/client";
 import { version as djsVersion } from "discord.js";
 import { container, version as sapphireVersion } from "@sapphire/framework";
-import { fetch, FetchResultTypes } from "@sapphire/fetch";
-import { Stopwatch } from "@sapphire/stopwatch";
 import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
 import { logError } from "#lib/utilities/errors.js";
 
@@ -171,16 +169,13 @@ let cachedGatewayNode: string | null = null;
 async function getGatewayNode(): Promise<string> {
   if (cachedGatewayNode !== null) return cachedGatewayNode;
   try {
-    const text = await fetch(
-      "https://discord.com/cdn-cgi/trace",
-      {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        },
+    const response = await fetch("https://discord.com/cdn-cgi/trace", {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
       },
-      FetchResultTypes.Text,
-    );
+    });
+    const text = response.ok ? await response.text() : "";
     cachedGatewayNode = text.match(/colo=([A-Z0-9]+)/)?.[1] ?? "Unknown";
   } catch {
     cachedGatewayNode = "Unknown";
@@ -199,15 +194,15 @@ function parseRedisInfo(raw: string) {
 }
 
 async function probeRedisRead(redis: RedisClient) {
-  const sw = new Stopwatch();
+  const start = performance.now();
   await redis.get("lumi:ping:probe");
-  return sw.stop().duration;
+  return performance.now() - start;
 }
 
 async function probeRedisWrite(redis: RedisClient) {
-  const sw = new Stopwatch();
+  const start = performance.now();
   await redis.set("lumi:ping:probe", "1", "EX", 30);
-  return sw.stop().duration;
+  return performance.now() - start;
 }
 
 const StatTtlMs = 5_000;

@@ -1,7 +1,7 @@
 import { Utility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
-import { RedisKeys } from "#database/redis.js";
+import { RedisKeys } from "#lib/database/redis.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
 import {
   compileRules,

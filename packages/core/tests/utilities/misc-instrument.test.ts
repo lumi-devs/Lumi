@@ -11,10 +11,6 @@ import { instrumentCommandPiece } from "#lib/telemetry/instrument.js";
 import * as moduleCheck from "#lib/module-check.js";
 import * as observability from "@lumi/observability";
 
-vi.mock("@sapphire/discord.js-utilities", () => ({
-  isGuildBasedChannel: vi.fn().mockImplementation((ch: any) => ch?.isGuildBased?.() ?? false),
-}));
-
 vi.mock("@lumi/observability", () => {
   return {
     commandDuration: {
@@ -75,7 +71,6 @@ describe("misc utilities & telemetry instrumentation", () => {
     it("canSendMessages checks permissions for bot member in guild channel", () => {
       const mockMessage = {
         channel: {
-          isGuildBased: () => true,
           permissionsFor: vi.fn().mockReturnValue({
             has: vi.fn().mockReturnValue(true),
           }),
@@ -92,10 +87,8 @@ describe("misc utilities & telemetry instrumentation", () => {
       mockMessage.channel.permissionsFor.mockReturnValue(null);
       expect(canSendMessages(mockMessage)).toBe(false);
 
-      const nonGuildMsg = {
-        channel: { isGuildBased: () => false },
-      } as any;
-      expect(canSendMessages(nonGuildMsg)).toBe(false);
+      mockMessage.guild.members.me = null;
+      expect(canSendMessages(mockMessage)).toBe(false);
     });
 
     it("withSerializedWork serializes async work behind a key", async () => {

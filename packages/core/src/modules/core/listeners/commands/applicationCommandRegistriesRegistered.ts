@@ -4,11 +4,13 @@ import {
   Events,
   type ApplicationCommandRegistry,
 } from "@sapphire/framework";
-import { cyan, gray, yellow, green } from "colorette";
+import { styleText } from "node:util";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 
 /** Caps simultaneous guild command fetches so the sync pass cannot trip Discord rate limits. */
 const GuildSyncConcurrency = 10;
+
+const Tag = styleText("gray", "[CommandSync]");
 
 @ApplyOptions<Listener.Options>({
   event: Events.ApplicationCommandRegistriesRegistered,
@@ -20,7 +22,7 @@ export class ApplicationCommandRegistriesRegisteredListener extends Listener {
     this.container.moduleStore.attachModuleGuards();
 
     logger.info(
-      `${gray("[CommandSync]")} ${cyan("Querying Discord for existing application commands...")}`,
+      `${Tag} ${styleText("cyan", "Querying Discord for existing application commands...")}`,
     );
 
     const globalCommands = await client.application?.commands.fetch();
@@ -35,22 +37,20 @@ export class ApplicationCommandRegistriesRegisteredListener extends Listener {
 
       if (redundant.size > 0) {
         logger.warn(
-          `${gray("[CommandSync]")} ${yellow(`Deleting ${redundant.size} redundant global commands: ${redundant.map((c) => c.name).join(", ")}`)}`,
+          `${Tag} ${styleText("yellow", `Deleting ${redundant.size} redundant global commands: ${redundant.map((c) => c.name).join(", ")}`)}`,
         );
         for (const cmd of redundant.values()) {
           await cmd
             .delete()
             .catch((err) =>
               logger.error(
-                `${gray("[CommandSync]")} Failed to delete global command ${cmd.name}:`,
+                `${Tag} Failed to delete global command ${cmd.name}:`,
                 err,
               ),
             );
         }
       } else {
-        logger.info(
-          `${gray("[CommandSync]")} ${green("Global commands are in sync.")}`,
-        );
+        logger.info(`${Tag} ${styleText("green", "Global commands are in sync.")}`);
       }
     }
 
@@ -75,7 +75,7 @@ export class ApplicationCommandRegistriesRegisteredListener extends Listener {
             .delete()
             .catch((err: unknown) =>
               logger.warn(
-                `${gray("[CommandSync]")} Failed to delete guild command ${cmd.name} in ${guild.id}:`,
+                `${Tag} Failed to delete guild command ${cmd.name} in ${guild.id}:`,
                 err,
               ),
             );
@@ -86,7 +86,7 @@ export class ApplicationCommandRegistriesRegisteredListener extends Listener {
 
     if (guildCmdCount > 0) {
       logger.info(
-        `${gray("[CommandSync]")} ${yellow(`Cleaned up ${guildCmdCount} redundant guild-specific commands.`)}`,
+        `${Tag} ${styleText("yellow", `Cleaned up ${guildCmdCount} redundant guild-specific commands.`)}`,
       );
     }
   }

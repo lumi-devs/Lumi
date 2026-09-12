@@ -4,7 +4,7 @@ import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Result } from "@sapphire/framework";
 import { userMention } from "@discordjs/formatters";
-import { isSnowflakeId } from "#utilities/misc.js";
+import { isSnowflakeId } from "#lib/utilities/misc.js";
 import type { ModerationCase } from "@prisma/client";
 import { BanAction } from "../actions/index.js";
 

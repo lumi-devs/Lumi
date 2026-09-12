@@ -26,7 +26,7 @@ export {
   type CardReply,
   type CardOptions,
   type CardColorKey,
-} from "#utilities/cards.js";
+} from "#lib/utilities/cards.js";
 export {
   confirmRow,
   backRow,
@@ -43,10 +43,10 @@ export {
   type ConfirmRowOptions,
   type NavAction,
   type NavRowOptions,
-} from "#utilities/ui/kit.js";
-export { confirmPrompt, type ConfirmPromptOptions } from "#utilities/confirm.js";
-export { paginateList, paginateContainer } from "#utilities/pagination.js";
-export { Emojis } from "#utilities/assets.js";
+} from "#lib/utilities/ui/kit.js";
+export { confirmPrompt, type ConfirmPromptOptions } from "#lib/utilities/confirm.js";
+export { paginateList, paginateContainer } from "#lib/utilities/pagination.js";
+export { Emojis } from "#lib/utilities/assets.js";
 
 import {
   settingRow,
@@ -55,7 +55,7 @@ import {
   backRow,
   navRow,
   pageFooter,
-} from "#utilities/ui/kit.js";
+} from "#lib/utilities/ui/kit.js";
 
 /**
  * Stable `addon*` aliases over the kit primitives. Same builders, same bytes —

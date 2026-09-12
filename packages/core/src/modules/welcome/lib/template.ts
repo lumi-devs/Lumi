@@ -9,4 +9,4 @@ export {
   renderWelcomeCard,
   renderGoodbyeCard,
   buildDmWelcomeCard,
-} from "#utilities/welcome.js";
+} from "#lib/utilities/welcome.js";

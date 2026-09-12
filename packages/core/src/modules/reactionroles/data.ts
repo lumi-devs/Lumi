@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import { parseHexColor, isHexColor } from "#lib/message-content.js";
-import { isSnowflakeId } from "#utilities/misc.js";
+import { isSnowflakeId } from "#lib/utilities/misc.js";
 import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
 
 export type ReactionRoleMode = "buttons" | "select" | "reactions";

@@ -2,7 +2,7 @@ import type { RedisClient } from "#lib/database/cluster-safe.js";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { ModuleStore } from "#lib/module-system/ModuleStore.js";
 import type { InvalidationBus } from "#lib/database/redis.js";
-import type { EventBus } from "@lumi/event-bus";
+import type { EventBus } from "#lib/event-bus/types.js";
 import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 import type { Message } from "discord.js";
 import "@sapphire/pieces";

@@ -9,7 +9,7 @@ import { ModuleStore } from "#lib/module-system/ModuleStore.js";
 import { permitResolver } from "#lib/permissions/PermitResolver.js";
 import { prisma, prismaReader } from "#lib/prisma/client.js";
 import { DatabaseService } from "#lib/prisma/DatabaseService.js";
-import { createEventBus, type OwnedEventBus } from "@lumi/event-bus";
+import { createEventBus, type OwnedEventBus } from "#lib/event-bus/factory.js";
 import {
   streamConsumerLag,
   streamDlqLength,

@@ -1,7 +1,7 @@
 import { getClusterName, isPrimaryShard } from "#lib/env.js";
 import { registerReadinessProbe } from "@lumi/observability";
 import { container } from "@sapphire/framework";
-import { DefaultClusterName, readClusterShards } from "@lumi/sharding";
+import { DefaultClusterName, readClusterShards } from "#lib/sharding/shard-telemetry.js";
 
 /**
  * Declares the `/readyz` probes a client replica answers with.

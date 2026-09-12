@@ -24,7 +24,7 @@ import {
   resolveCardColor,
   formatStatusBadge,
   type CardReply,
-} from "#utilities/cards.js";
+} from "#lib/utilities/cards.js";
 import {
   createUserSelectMenu,
   createRoleSelectMenu,
@@ -32,7 +32,7 @@ import {
   createBackButton,
   createActionButton,
   buildSafeActionRows,
-} from "#utilities/panels.js";
+} from "#lib/utilities/panels.js";
 
 export type PanelMessage = CardReply;
 

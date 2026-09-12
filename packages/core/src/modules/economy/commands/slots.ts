@@ -1,7 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { container } from "@sapphire/framework";
 import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import { formatDuration } from "#utilities/time.js";
+import { formatDuration } from "#lib/utilities/time.js";
 import { BankService } from "../services/BankService.js";
 import {
   formatAmount,

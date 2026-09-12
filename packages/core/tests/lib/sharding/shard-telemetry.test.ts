@@ -3,7 +3,7 @@ import {
   ShardTelemetryPublisher,
   readClusterShards,
   type ShardTelemetrySample,
-} from "../src/shard-telemetry.js";
+} from "#lib/sharding/shard-telemetry.js";
 
 const CLUSTER = "test";
 

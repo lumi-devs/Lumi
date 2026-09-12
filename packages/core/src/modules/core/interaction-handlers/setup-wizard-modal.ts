@@ -4,7 +4,7 @@ import {
   stateFromSegments,
 } from "#modules/core/lib/setup-wizard.js";
 import { buildSetupStepView } from "#modules/core/ui/setup-wizard.js";
-import { ephemeralCard, makeErrorCard } from "#utilities/cards.js";
+import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,

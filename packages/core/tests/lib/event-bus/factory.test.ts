@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { createEventBus } from "../src/factory.js";
-import { RedisStreamsBus } from "../src/RedisStreamsBus.js";
+import { createEventBus } from "#lib/event-bus/factory.js";
+import { RedisStreamsBus } from "#lib/event-bus/RedisStreamsBus.js";
 
 const mockQuit = vi.fn().mockResolvedValue("OK");
 const mockInstances: any[] = [];

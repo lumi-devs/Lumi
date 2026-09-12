@@ -1,1 +1,1 @@
-export * from "#utilities/welcome.js";
+export * from "#lib/utilities/welcome.js";

@@ -1,5 +1,5 @@
 import { BaseCommand, CommandContext } from "#lib/commands.js";
-import { Emojis } from "#utilities/assets.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import {
   fitLines,
   makeInfoCard,

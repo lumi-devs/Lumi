@@ -1,7 +1,7 @@
 import type { ModuleMeta } from "#lib/module-system/Module.js";
 import { hasRequiredPermit } from "#lib/permissions/index.js";
 import type { FeatureListEntry } from "#modules/core/ui/modules.js";
-import { Emojis } from "#utilities/assets.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import { container, UserError } from "@sapphire/framework";
 import type {
   AnySelectMenuInteraction,

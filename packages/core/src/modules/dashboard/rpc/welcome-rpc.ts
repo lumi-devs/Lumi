@@ -6,7 +6,7 @@ import {
   renderWelcomeCard,
   sendWelcomeCard,
   templateVarsFor,
-} from "#utilities/welcome.js";
+} from "#lib/utilities/welcome.js";
 import {
   WelcomeSendTestSchema,
   parsePayload,
