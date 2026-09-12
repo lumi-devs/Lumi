@@ -17,8 +17,16 @@ const securityHeaders: { key: string; value: string }[] = [
   },
 ];
 
+const RepoRoot = path.join(import.meta.dirname, "../..");
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  output: "standalone",
+  outputFileTracingRoot: RepoRoot,
+  // The legal pages read these with fs at request time, which the tracer can't follow.
+  outputFileTracingIncludes: {
+    "/legal/*": ["./content/legal/**"],
+  },
   // This repo maintains its own AGENTS.md; next dev otherwise writes over it.
   agentRules: false,
   experimental: {

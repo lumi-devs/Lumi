@@ -21,7 +21,7 @@ x-lumi-service: &lumi-service
   build:
     context: .
     dockerfile: Dockerfile
-    target: runner
+    target: worker
   env_file:
     - path: .env
       required: false
@@ -88,7 +88,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: runner
+      target: worker
     container_name: lumi-dev
     env_file:
       - path: .env
@@ -139,20 +139,13 @@ services:
     profiles:
       - scale
 
-  # NOTE: apps/dashboard is now a Next.js app (see apps/dashboard/README.md).
-  # The shared `runner` Dockerfile target this service builds from does not
-  # yet have a `next build` stage / copy the `.next` output — that's
-  # follow-up work this rewrite didn't cover (no Docker runtime available to
-  # verify against in this environment). `command` below assumes a future
-  # image stage that includes `apps/dashboard/.next` and node_modules.
   dashboard:
     image: ghcr.io/lumi-devs/lumi-dashboard:latest
     build:
       context: .
-      dockerfile: Dockerfile.dashboard
+      dockerfile: Dockerfile
+      target: dashboard
     container_name: lumi-dashboard
-    command:
-      ["bun", "run", "--cwd", "apps/dashboard", "start"]
     environment:
       <<: *lumi-env
       DASHBOARD_HOST: "0.0.0.0"
