@@ -9,6 +9,7 @@ import type {
   ConfigHistoryListData,
   ConfigOverrideView,
   DashboardData,
+  DownloaderRepoView,
   IgnoredChannelView,
   ModNoteView,
   ModuleDataListData,
@@ -718,6 +719,9 @@ export interface RpcResponsePayloads {
   "guild.afk.list": { entries: AfkEntryView[] };
   "guild.ignored.list": { entries: IgnoredChannelView[] };
   "guild.moduleData.list": ModuleDataListData;
+  "downloader.repo.list": {
+    repos: DownloaderRepoView[];
+  };
   "downloader.repo.modules": {
     modules: RepoModuleView[];
   };
@@ -770,6 +774,7 @@ const ResponseDataActions = [
   "guild.afk.list",
   "guild.ignored.list",
   "guild.moduleData.list",
+  "downloader.repo.list",
   "downloader.repo.modules",
   "downloader.module.rollback",
   "auth.whoami",

@@ -134,4 +134,36 @@ describe("registerProcessErrorHandlers", () => {
     );
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
+
+  it("falls back to console.error when container.logger is undefined on unhandledRejection", () => {
+    delete (container as any).logger;
+    registerProcessErrorHandlers();
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => undefined) as any);
+    const reason = new Error("rejection without logger");
+
+    process.emit("unhandledRejection", reason, Promise.resolve() as any);
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "[Process: Unhandled promise rejection]",
+      reason,
+    );
+    expect(exitSpy).not.toHaveBeenCalled();
+  });
+
+  it("falls back to console.error and exits(1) when container.logger is undefined on uncaughtException", () => {
+    delete (container as any).logger;
+    registerProcessErrorHandlers();
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => undefined) as any);
+    const err = new Error("fatal without logger");
+
+    process.emit("uncaughtException", err, "uncaughtException" as any);
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "[Process] Uncaught exception - exiting:",
+      err,
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
 });

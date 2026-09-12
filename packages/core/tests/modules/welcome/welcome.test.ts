@@ -250,9 +250,13 @@ describe("message template vars", () => {
   it("exposes one canonical list covering every placeholder", () => {
     expect(MessageTemplateVars.map((v) => v.name)).toEqual([
       "user",
+      "userId",
       "username",
       "nickname",
+      "userAvatarUrl",
       "server",
+      "serverId",
+      "serverIconUrl",
       "memberCount",
       "memberNumber",
     ]);

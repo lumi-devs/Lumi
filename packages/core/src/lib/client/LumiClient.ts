@@ -57,6 +57,10 @@ export class LumiClient extends SapphireClient {
   public constructor(_options: LumiClient.Options = {}) {
     super(buildClientOptions());
 
+    if (!isPrimaryShard() && container.tasks) {
+      container.tasks.createRepeated = async () => {};
+    }
+
     this._ownedEventBus = installContainerServices(this);
     this._prefixCacheUnbind = this._prefixCache.attachToInvalidationBus(
       container.invalidation,
@@ -157,6 +161,11 @@ export class LumiClient extends SapphireClient {
     if (this._livenessInterval) {
       clearInterval(this._livenessInterval);
       this._livenessInterval = null;
+    }
+    if (container.tasks) {
+      await container.tasks
+        .close()
+        .catch(warnOnCleanupError("ScheduledTasks (BullMQ) close"));
     }
     if (this._bullWorker && this._bullFailedHandler) {
       this._bullWorker.off("failed", this._bullFailedHandler);

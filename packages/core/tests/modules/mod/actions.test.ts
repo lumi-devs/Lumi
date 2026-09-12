@@ -346,7 +346,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
   });
 
   it('MuteAction.apply applies timeout and creates moderation case', async () => {
-    const mockMember = { id: 'u-1', send: vi.fn().mockResolvedValue({}), timeout: vi.fn().mockResolvedValue({}) };
+    const mockMember = { id: 'u-1', user: { id: 'u-1', send: vi.fn().mockResolvedValue({}) }, send: vi.fn().mockResolvedValue({}), timeout: vi.fn().mockResolvedValue({}) };
     const mockMod = { id: 'm-1' };
     const mockGuild = { id: 'g-1', name: 'TestGuild' };
     (container.db.moderation.createModerationCase as any).mockResolvedValue({ id: 1, caseNumber: 10, expiresAt: new Date() });

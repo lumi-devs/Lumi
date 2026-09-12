@@ -129,6 +129,7 @@ describe("dashboard module RPC handlers", () => {
       {
         id: "444444444444444444",
         name: "Mods",
+        color: 0,
         position: 1,
         permissions: "0",
         isBotRole: true,

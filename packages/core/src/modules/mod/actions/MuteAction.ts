@@ -63,7 +63,10 @@ export class MuteAction {
         reason,
         caseNumber: c.caseNumber,
       }),
-      appealDm: () => ({ targetUser: targetMember.user, guild }),
+      appealDm: () =>
+        targetMember.user
+          ? { targetUser: targetMember.user, guild }
+          : null,
     });
   }
 

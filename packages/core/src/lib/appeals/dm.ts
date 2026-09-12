@@ -18,7 +18,7 @@ export async function sendAppealLinkDm(
   moderationCase: ModerationCase,
 ): Promise<void> {
   const baseUrl = getDashboardPublicUrl();
-  if (!baseUrl) return;
+  if (!baseUrl || !targetUser) return;
 
   const token = generateAppealToken({
     guildId: guild.id,

@@ -132,6 +132,8 @@ export function registerGuildRpcHandlers(): void {
         short: m.meta.short,
         endUserDataStatement: m.meta.endUserDataStatement,
         version: m.meta.version,
+        conflicts: m.meta.conflicts ?? [],
+        dependencies: m.meta.dependencies ?? [],
         enabled,
         configFields: m.meta.configFields || [],
         config,
@@ -147,6 +149,7 @@ export function registerGuildRpcHandlers(): void {
       .map((r) => ({
         id: r.id,
         name: r.name,
+        color: r.color,
         position: r.position,
         permissions: r.permissions.bitfield.toString(),
         isBotRole: r.id === botRoleId,

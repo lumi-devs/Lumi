@@ -1,12 +1,12 @@
 import { registerRpcHandler, rpcHandlers } from "#lib/rpc/dispatch.js";
 import { RpcActions } from "@lumi/contracts";
-import { loadWelcomeConfig } from "#modules/welcome/lib/config.js";
-import { sendWelcomeCard } from "#modules/welcome/lib/send.js";
 import {
+  loadWelcomeConfig,
   renderGoodbyeCard,
   renderWelcomeCard,
+  sendWelcomeCard,
   templateVarsFor,
-} from "#modules/welcome/lib/template.js";
+} from "#utilities/welcome.js";
 import {
   WelcomeSendTestSchema,
   parsePayload,

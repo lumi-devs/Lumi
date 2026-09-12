@@ -24,7 +24,11 @@ export async function delStickyMessageId(
   guildId: string,
   channelId: string,
 ): Promise<void> {
-  await container.redis.del(stickyKey(guildId, channelId));
+  if (container.invalidation) {
+    await container.invalidation.invalidate(stickyKey(guildId, channelId));
+  } else {
+    await container.redis.del(stickyKey(guildId, channelId));
+  }
 }
 
 const lastRepost = new Map<string, number>();

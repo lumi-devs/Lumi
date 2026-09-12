@@ -330,15 +330,15 @@ describe("guild config batch + directory RPC handlers", () => {
   });
 
   describe("guild.dashboard.get trims", () => {
-    it("omits the unread module + role fields from the payload", async () => {
+    it("includes the expected module + role fields in the payload", async () => {
       const res = (await call(RpcActions.guildDashboardGet)) as any;
 
       for (const m of res.modules) {
-        expect(m).not.toHaveProperty("conflicts");
-        expect(m).not.toHaveProperty("dependencies");
+        expect(m).toHaveProperty("conflicts");
+        expect(m).toHaveProperty("dependencies");
       }
       for (const r of res.roles) {
-        expect(r).not.toHaveProperty("color");
+        expect(r).toHaveProperty("color");
       }
       expect(res.roles[0]).toMatchObject({
         id: MOD_ROLE_ID,

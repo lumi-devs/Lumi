@@ -2,7 +2,11 @@
 // @lumi/sdk re-exports the addon-facing pieces below. Deep paths stay internal.
 
 export { LumiClient } from "./src/lib/client/LumiClient.js";
-export { bootstrapClientApp, type BootstrapAppOptions } from "./src/lib/client/bootstrap.js";
+export {
+  bootstrapClientApp,
+  registerProcessErrorHandlers,
+  type BootstrapAppOptions,
+} from "./src/lib/client/bootstrap.js";
 export { PinoSapphireLogger } from "./src/lib/logging/PinoSapphireLogger.js";
 
 import "./src/lib/types/common.js";

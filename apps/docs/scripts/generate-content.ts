@@ -196,6 +196,7 @@ const workerMeta: Record<string, EnvMeta> = {
 const dashboardMeta: Record<string, EnvMeta> = {
   DASHBOARD_HOST: { required: "no", fallback: "0.0.0.0", about: "Interface the dashboard binds." },
   DASHBOARD_PORT: { required: "no", fallback: "8080", about: "Port the dashboard listens on." },
+  DASHBOARD_PUBLIC_URL: { required: "no", fallback: "\"\"", about: "Public origin of the dashboard (e.g. https://dash.example.com) for post-invite OAuth2 redirects." },
   DASHBOARD_SESSION_SECRET: { required: "yes", fallback: "—", about: "NextAuth session JWT encryption secret." },
   DISCORD_OAUTH2_CLIENT_ID: { required: "yes", fallback: "—", about: "Discord application client id." },
   DISCORD_OAUTH2_CLIENT_SECRET: { required: "yes", fallback: "—", about: "Discord application client secret." },
@@ -364,6 +365,7 @@ const rpcSummaries: Record<string, string> = {
   "guild.verificationWeb.complete": "Complete a web verification flow.",
   "guild.backups.list": "List guild backups (role/channel counts).",
   "guild.backups.restore": "Restore a guild backup.",
+  "guild.welcome.sendTest": "Send a test welcome or goodbye message to a guild channel.",
   "guild.tempvc.generators.list": "List temporary-voice generator channels.",
   "guild.tempvc.generators.set": "Upsert a generator; null name deletes it.",
   "guild.tempvc.records.list": "List temporary-voice records.",

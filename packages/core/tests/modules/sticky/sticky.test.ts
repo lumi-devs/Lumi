@@ -33,6 +33,9 @@ describe("Sticky Module", () => {
       set: vi.fn(),
       del: vi.fn(),
     };
+    (container as any).invalidation = {
+      invalidate: vi.fn().mockResolvedValue(undefined),
+    };
     (container as any).db = {
       config: { getModuleConfig: vi.fn().mockResolvedValue(null) },
     };
@@ -73,7 +76,9 @@ describe("Sticky Module", () => {
       );
 
       await delStickyMessageId("g1", "c1");
-      expect(container.redis.del).toHaveBeenCalledWith("lumi:sticky:g1:c1");
+      expect(container.invalidation.invalidate).toHaveBeenCalledWith(
+        "lumi:sticky:g1:c1",
+      );
     });
   });
 

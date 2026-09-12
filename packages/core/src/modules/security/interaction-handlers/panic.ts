@@ -26,8 +26,8 @@ export class PanicRevertInteractionHandler extends BaseInteractionHandler {
 
   public async run(interaction: ButtonInteraction) {
     if (!interaction.inGuild() || !interaction.guild) return;
-    await this.acknowledge(interaction);
     if (!(await isModuleEnabled(interaction.guild.id, "security"))) return;
+    await this.acknowledge(interaction);
     const t = await fetchTyped(interaction);
 
     const hasPermit = await container.permitResolver.hasPermit({

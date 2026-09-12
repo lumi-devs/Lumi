@@ -12,6 +12,7 @@ import type {
   ConfigHistoryListData,
   ConfigOverrideView,
   DashboardData,
+  DownloaderRepoView,
   IgnoredChannelView,
   ModNoteView,
   ModuleDataListData,
@@ -318,3 +319,13 @@ export const getSystemShards = cache(
     return rpcCall(RpcActions.systemShardsGet, { actorId });
   },
 );
+
+export const getDownloaderRepos = cache(
+  async (actorId?: string): Promise<DownloaderRepoView[]> => {
+    const data = await rpcCall(RpcActions.repoList, {
+      ...(actorId !== undefined ? { actorId } : {}),
+    });
+    return data.repos;
+  },
+);
+

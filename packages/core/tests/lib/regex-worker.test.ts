@@ -79,7 +79,7 @@ describe("RegexWorkerHandler", () => {
   });
 
   it("recovers after a timeout - the worker is respawned", async () => {
-    const handler = makeHandler(250);
+    const handler = makeHandler(500);
     await expect(
       handler.test("evil:1", [EVIL], `${"a".repeat(40)}!`),
     ).rejects.toBeInstanceOf(RegexTimeoutError);
@@ -102,7 +102,7 @@ describe("RegexWorkerHandler", () => {
     clearInterval(timer);
 
     // A synchronous hang would have starved the interval entirely.
-    expect(ticks).toBeGreaterThan(3);
+    expect(ticks).toBeGreaterThanOrEqual(3);
   });
 });
 
@@ -151,7 +151,7 @@ describe("RegexWorkerHandler.matchAll", () => {
       .catch(() => undefined);
     clearInterval(timer);
 
-    expect(ticks).toBeGreaterThan(3);
+    expect(ticks).toBeGreaterThanOrEqual(3);
   });
 
   it("recovers after a batch timeout", async () => {

@@ -52,5 +52,12 @@ export async function ensureSandboxRoot(): Promise<void> {
     ),
   );
 
+  writes.push(
+    writeFile(
+      path.join(ModuleRoot, "tsconfig.json"),
+      `${JSON.stringify({ compilerOptions: { paths: {} } }, null, 2)}\n`,
+    ),
+  );
+
   await Promise.all(writes);
 }
