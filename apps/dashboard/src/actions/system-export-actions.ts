@@ -2,13 +2,13 @@
 
 import { requireBotOwner } from "#/lib/auth-guards";
 import { isRateLimited } from "#/lib/rate-limit";
-import { getSystemAuditLog, getSystemBlocklist } from "#/lib/dashboard-fetch";
+import { rpc } from "#/lib/rpc";
 import { fetchAllPages } from "#/lib/export-pages";
 import type { AuditEntryView, BlocklistEntryView } from "@lumi/contracts/views";
 import type { ExportResult } from "./guild-export-actions";
 
 export async function exportSystemAuditLog(
-  filter: { action?: string; userId?: string; guildId?: string; platform?: string } = {},
+  filter: { action?: string; userId?: string; guildId?: string; platform?: "discord" | "web" } = {},
 ): Promise<ExportResult<AuditEntryView>> {
   const session = await requireBotOwner();
   if (await isRateLimited(`system-export:${session.userId}`, 5, 60_000)) {
@@ -16,9 +16,10 @@ export async function exportSystemAuditLog(
   }
   try {
     const items = await fetchAllPages<AuditEntryView>((page, pageSize) =>
-      getSystemAuditLog(session.userId, { ...filter, page, pageSize }).then(
-        (data) => ({ items: data.entries, total: data.total }),
-      ),
+      rpc("system.audit.list", {
+        actorId: session.userId,
+        data: { ...filter, page, pageSize },
+      }).then((data) => ({ items: data.entries, total: data.total })),
     );
     return { ok: true, items };
   } catch (err) {
@@ -33,9 +34,10 @@ export async function exportSystemBlocklist(): Promise<ExportResult<BlocklistEnt
   }
   try {
     const items = await fetchAllPages<BlocklistEntryView>((page, pageSize) =>
-      getSystemBlocklist(session.userId, { page, pageSize }).then(
-        (data) => ({ items: data.entries, total: data.total }),
-      ),
+      rpc("system.blocklist.list", {
+        actorId: session.userId,
+        data: { page, pageSize },
+      }).then((data) => ({ items: data.entries, total: data.total })),
     );
     return { ok: true, items };
   } catch (err) {

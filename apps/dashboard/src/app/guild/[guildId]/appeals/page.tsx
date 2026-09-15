@@ -1,7 +1,8 @@
 import { Scale, SearchX } from "lucide-react";
 import Link from "next/link";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildAppeals, getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildEntities } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { exportGuildAppeals } from "#/actions/guild-export-actions";
 import { GuildAppealsTable } from "#/components/guild/guild-appeals-table";
 import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
@@ -41,16 +42,20 @@ export default async function AppealsPage({
   const status = isAppealStatus(statusParam) ? statusParam : undefined;
   const page = pageNumber(single(query["page"]));
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
-  const memberNames = extractMemberNames(dashboard.members);
+  const entities = await getGuildEntities(guildId, session.userId);
+  const memberNames = extractMemberNames(entities.members);
 
   let data: AppealsListData | null = null;
   let failure: string | null = null;
   try {
-    data = await getGuildAppeals(guildId, session.userId, {
-      page,
-      pageSize: PageSize,
-      ...(status ? { status } : {}),
+    data = await rpc("guild.appeals.list", {
+      guildId,
+      actorId: session.userId,
+      data: {
+        page,
+        pageSize: PageSize,
+        ...(status ? { status } : {}),
+      },
     });
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";

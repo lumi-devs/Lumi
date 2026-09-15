@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PlugZap, TrendingUp } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildAuditLog, getGuildCases } from "#/lib/dashboard-fetch";
+import { rpc } from "#/lib/rpc";
 import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
 import { StatsGrid } from "#/components/stats-grid";
 import { buttonVariants } from "#/components/ui/button-variants";
@@ -38,8 +38,16 @@ export default async function GuildActivityPage({
   let failure: string | null = null;
   try {
     [cases, audit] = await Promise.all([
-      getGuildCases(guildId, session.userId, { page: 1, pageSize: RecordWindow }),
-      getGuildAuditLog(guildId, session.userId, { page: 1, pageSize: RecordWindow }),
+      rpc("guild.cases.list", {
+        guildId,
+        actorId: session.userId,
+        data: { page: 1, pageSize: RecordWindow },
+      }),
+      rpc("guild.audit.list", {
+        guildId,
+        actorId: session.userId,
+        data: { page: 1, pageSize: RecordWindow },
+      }),
     ]);
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";

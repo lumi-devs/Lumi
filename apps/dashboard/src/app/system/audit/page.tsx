@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ClipboardList, PlugZap, SearchX } from "lucide-react";
 import { requireBotOwner } from "#/lib/auth-guards";
-import { getSystemAuditLog } from "#/lib/dashboard-fetch";
+import { rpc } from "#/lib/rpc";
 import { exportSystemAuditLog } from "#/actions/system-export-actions";
 import { AuditTimeline } from "#/components/audit-timeline";
 import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
@@ -47,16 +47,22 @@ export default async function SystemAuditPage({
     guildId && !isSnowflake(guildId) ? "Server ID" : null,
   ].filter((value): value is string => value !== null);
 
+  const narrowedPlatform =
+    platform === "discord" || platform === "web" ? platform : undefined;
+
   let data: AuditListData | null = null;
   let failure: string | null = null;
   try {
-    data = await getSystemAuditLog(session.userId, {
-      page,
-      pageSize: PageSize,
-      ...(action ? { action } : {}),
-      ...(userId && isSnowflake(userId) ? { userId } : {}),
-      ...(guildId && isSnowflake(guildId) ? { guildId } : {}),
-      ...(platform ? { platform } : {}),
+    data = await rpc("system.audit.list", {
+      actorId: session.userId,
+      data: {
+        page,
+        pageSize: PageSize,
+        ...(action ? { action } : {}),
+        ...(userId && isSnowflake(userId) ? { userId } : {}),
+        ...(guildId && isSnowflake(guildId) ? { guildId } : {}),
+        ...(narrowedPlatform ? { platform: narrowedPlatform } : {}),
+      },
     });
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
@@ -109,7 +115,7 @@ export default async function SystemAuditPage({
                         ...(action ? { action } : {}),
                         ...(userId && isSnowflake(userId) ? { userId } : {}),
                         ...(guildId && isSnowflake(guildId) ? { guildId } : {}),
-                        ...(platform ? { platform } : {}),
+                        ...(narrowedPlatform ? { platform: narrowedPlatform } : {}),
                       })}
                     />
                   ) : null}

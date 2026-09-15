@@ -1,6 +1,7 @@
 import { Shield } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard, getGuildPermits } from "#/lib/dashboard-fetch";
+import { getGuildEntities } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { PermitsBoard } from "#/components/guild/permits-board";
 import { PageHeader } from "#/components/ui/page-header";
 
@@ -11,9 +12,12 @@ export default async function PermitsPage({
 }) {
   const { guildId } = await params;
   const session = await requireGuild(guildId);
-  const [dashboard, permits] = await Promise.all([
-    getGuildDashboard(guildId, session.userId),
-    getGuildPermits(guildId, session.userId),
+  const [entities, permits] = await Promise.all([
+    getGuildEntities(guildId, session.userId),
+    rpc("guild.permits.list", {
+      guildId,
+      actorId: session.userId,
+    }).then((r) => r.permits),
   ]);
 
   return (
@@ -26,8 +30,8 @@ export default async function PermitsPage({
       <PermitsBoard
         guildId={guildId}
         initialPermits={permits}
-        roles={dashboard.roles}
-        members={dashboard.members}
+        roles={entities.roles}
+        members={entities.members}
       />
     </div>
   );

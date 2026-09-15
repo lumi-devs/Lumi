@@ -3,14 +3,7 @@
 import type { AppealStatus } from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
 import { isRateLimited } from "#/lib/rate-limit";
-import {
-  getGuildAppeals,
-  getGuildAuditLog,
-  getGuildBlocklist,
-  getGuildCases,
-  getGuildConfigHistory,
-  getGuildModNotes,
-} from "#/lib/dashboard-fetch";
+import { rpc } from "#/lib/rpc";
 import { fetchAllPages } from "#/lib/export-pages";
 import type { AppealView, AuditEntryView, BlocklistEntryView, ConfigHistoryEntryView, ModerationCaseView, ModNoteView } from "@lumi/contracts/views";
 import type { ActionResult } from "./guild-actions";
@@ -29,9 +22,11 @@ export async function exportGuildCases(
   }
   try {
     const items = await fetchAllPages<ModerationCaseView>((page, pageSize) =>
-      getGuildCases(guildId, session.userId, { ...filter, page, pageSize }).then(
-        (data) => ({ items: data.cases, total: data.total }),
-      ),
+      rpc("guild.cases.list", {
+        guildId,
+        actorId: session.userId,
+        data: { ...filter, page, pageSize },
+      }).then((data) => ({ items: data.cases, total: data.total })),
     );
     return { ok: true, items };
   } catch (err) {
@@ -41,7 +36,7 @@ export async function exportGuildCases(
 
 export async function exportGuildAuditLog(
   guildId: string,
-  filter: { action?: string; userId?: string; platform?: string } = {},
+  filter: { action?: string; userId?: string; platform?: "discord" | "web" } = {},
 ): Promise<ExportResult<AuditEntryView>> {
   const session = await requireGuild(guildId);
   if (await isRateLimited(`guild-export:${session.userId}`, 5, 60_000)) {
@@ -49,9 +44,11 @@ export async function exportGuildAuditLog(
   }
   try {
     const items = await fetchAllPages<AuditEntryView>((page, pageSize) =>
-      getGuildAuditLog(guildId, session.userId, { ...filter, page, pageSize }).then(
-        (data) => ({ items: data.entries, total: data.total }),
-      ),
+      rpc("guild.audit.list", {
+        guildId,
+        actorId: session.userId,
+        data: { ...filter, page, pageSize },
+      }).then((data) => ({ items: data.entries, total: data.total })),
     );
     return { ok: true, items };
   } catch (err) {
@@ -69,9 +66,11 @@ export async function exportGuildConfigHistory(
   }
   try {
     const items = await fetchAllPages<ConfigHistoryEntryView>((page, pageSize) =>
-      getGuildConfigHistory(guildId, session.userId, { ...filter, page, pageSize }).then(
-        (data) => ({ items: data.entries, total: data.total }),
-      ),
+      rpc("guild.history.list", {
+        guildId,
+        actorId: session.userId,
+        data: { ...filter, page, pageSize },
+      }).then((data) => ({ items: data.entries, total: data.total })),
     );
     return { ok: true, items };
   } catch (err) {
@@ -88,9 +87,11 @@ export async function exportGuildBlocklist(
   }
   try {
     const items = await fetchAllPages<BlocklistEntryView>((page, pageSize) =>
-      getGuildBlocklist(guildId, session.userId, { page, pageSize }).then(
-        (data) => ({ items: data.entries, total: data.total }),
-      ),
+      rpc("guild.blocklist.list", {
+        guildId,
+        actorId: session.userId,
+        data: { page, pageSize },
+      }).then((data) => ({ items: data.entries, total: data.total })),
     );
     return { ok: true, items };
   } catch (err) {
@@ -108,9 +109,11 @@ export async function exportGuildAppeals(
   }
   try {
     const items = await fetchAllPages<AppealView>((page, pageSize) =>
-      getGuildAppeals(guildId, session.userId, { ...filter, page, pageSize }).then(
-        (data) => ({ items: data.appeals, total: data.total }),
-      ),
+      rpc("guild.appeals.list", {
+        guildId,
+        actorId: session.userId,
+        data: { ...filter, page, pageSize },
+      }).then((data) => ({ items: data.appeals, total: data.total })),
     );
     return { ok: true, items };
   } catch (err) {
@@ -127,7 +130,12 @@ export async function exportGuildModNotes(
     return { ok: false, error: "Too many requests — slow down." };
   }
   try {
-    const items = await getGuildModNotes(guildId, session.userId, userId);
+    const result = await rpc("guild.modNotes.list", {
+      guildId,
+      actorId: session.userId,
+      data: { userId },
+    });
+    const items = result.notes;
     return { ok: true, items };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Export failed" };
