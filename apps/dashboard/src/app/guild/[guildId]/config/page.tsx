@@ -61,7 +61,7 @@ export default async function GuildConfigPage({
       href: `${base}/general`,
       label: "General",
       description:
-        "Command prefix, mute role, locale, and timezone — the basics every module reads from.",
+        "Command prefix and locale — the basics every module reads from.",
       icon: Settings,
     },
     {

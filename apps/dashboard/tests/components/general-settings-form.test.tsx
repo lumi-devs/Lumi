@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import type { GuildSettingsPayload } from "@lumi/contracts";
-import type { GuildSettings, DashboardRoleView } from "@lumi/contracts/views";
+import type { GuildSettings } from "@lumi/contracts/views";
 import { guildActionsMock } from "../setup";
 
 const { setGuildSettings } = guildActionsMock;
@@ -13,9 +13,7 @@ const { GeneralSettingsForm } = await import(
 function baseValues() {
   return {
     prefix: "!",
-    muteRoleId: "444",
     locale: "en-US",
-    timezone: "UTC",
   } as const;
 }
 
@@ -31,26 +29,12 @@ function guildChannel(guildId: string) {
   return new BroadcastChannel(`lumi:guild-settings:${guildId}`);
 }
 
-// Every role id referenced anywhere across these tests (including
-// cross-tab-broadcast sentinel values) must exist here so the role <select>
-// can represent it as an <option>.
-const roles: DashboardRoleView[] = [
-  { id: "444", name: "444", color: 0, position: 0, permissions: "0", isBotRole: false },
-  { id: "999", name: "999", color: 0, position: 0, permissions: "0", isBotRole: false },
-  { id: "LOCAL-EDIT", name: "LOCAL-EDIT", color: 0, position: 0, permissions: "0", isBotRole: false },
-  { id: "REMOTE-CHANGE", name: "REMOTE-CHANGE", color: 0, position: 0, permissions: "0", isBotRole: false },
-];
-
-function openAdvanced() {
-  fireEvent.click(screen.getByRole("button", { name: /advanced/i }));
-}
-
 describe("GeneralSettingsForm (partial guild.settings.set save)", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("on save, sends only the field(s) that actually changed", async () => {
     setGuildSettings.mockResolvedValue({ ok: true });
-    render(<GeneralSettingsForm guildId="101" settings={makeSettings()} roles={roles} />);
+    render(<GeneralSettingsForm guildId="101" settings={makeSettings()} />);
 
     fireEvent.change(screen.getByLabelText("Locale"), {
       target: { value: "fr-FR" },
@@ -63,37 +47,37 @@ describe("GeneralSettingsForm (partial guild.settings.set save)", () => {
     expect(setGuildSettings).toHaveBeenCalledTimes(1);
   });
 
-  it("normalizes an emptied nullable role field to null, but only sends that one field", async () => {
+  it("normalizes an emptied nullable prefix field to null, but only sends that one field", async () => {
     setGuildSettings.mockResolvedValue({ ok: true });
-    render(<GeneralSettingsForm guildId="101" settings={makeSettings()} roles={roles} />);
-    openAdvanced();
+    render(<GeneralSettingsForm guildId="101" settings={makeSettings()} />);
 
-    fireEvent.click(screen.getByLabelText("Mute role"));
-    fireEvent.click(screen.getByRole("option", { name: "None" }));
+    fireEvent.change(screen.getByLabelText("Command prefix"), {
+      target: { value: "" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() =>
-      expect(setGuildSettings).toHaveBeenCalledWith("101", { muteRoleId: null }),
+      expect(setGuildSettings).toHaveBeenCalledWith("101", { prefix: null }),
     );
     expect(setGuildSettings).toHaveBeenCalledTimes(1);
   });
 
   it("saves every changed field when more than one was edited", async () => {
     setGuildSettings.mockResolvedValue({ ok: true });
-    render(<GeneralSettingsForm guildId="101" settings={makeSettings()} roles={roles} />);
+    render(<GeneralSettingsForm guildId="101" settings={makeSettings()} />);
 
+    fireEvent.change(screen.getByLabelText("Command prefix"), {
+      target: { value: "?" },
+    });
     fireEvent.change(screen.getByLabelText("Locale"), {
       target: { value: "fr-FR" },
-    });
-    fireEvent.change(screen.getByLabelText("Timezone"), {
-      target: { value: "Europe/Paris" },
     });
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() =>
       expect(setGuildSettings).toHaveBeenCalledWith("101", {
+        prefix: "?",
         locale: "fr-FR",
-        timezone: "Europe/Paris",
       }),
     );
     expect(setGuildSettings).toHaveBeenCalledTimes(1);
@@ -101,7 +85,7 @@ describe("GeneralSettingsForm (partial guild.settings.set save)", () => {
 
   it("shows an error and keeps the save bar open when a save fails", async () => {
     setGuildSettings.mockResolvedValue({ ok: false, error: "Bad payload" });
-    render(<GeneralSettingsForm guildId="101" settings={makeSettings()} roles={roles} />);
+    render(<GeneralSettingsForm guildId="101" settings={makeSettings()} />);
 
     fireEvent.change(screen.getByLabelText("Locale"), {
       target: { value: "fr-FR" },
@@ -117,23 +101,22 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("hides the save bar until a field is edited", () => {
-    render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} roles={roles} />);
+    render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} />);
     expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
   });
 
   it("adopts a remote settings-updated broadcast from another tab for untouched fields", async () => {
-    render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} roles={roles} />);
-    openAdvanced();
-    expect(screen.getByLabelText("Mute role")).toHaveTextContent("444");
+    render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} />);
+    expect(screen.getByLabelText("Locale")).toHaveValue("en-US");
 
     const otherTab = guildChannel("g1");
     otherTab.postMessage({
       type: "settings-updated",
-      settings: formState({ muteRoleId: "999" }),
+      settings: formState({ locale: "fr-FR" }),
     });
 
     await waitFor(() =>
-      expect(screen.getByLabelText("Mute role")).toHaveTextContent("999"),
+      expect(screen.getByLabelText("Locale")).toHaveValue("fr-FR"),
     );
     expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
 
@@ -141,42 +124,41 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
   });
 
   it("keeps a locally-edited, unsaved field on remote conflict and surfaces an error, while still adopting other untouched fields", async () => {
-    render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} roles={roles} />);
-    openAdvanced();
+    render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} />);
 
-    fireEvent.click(screen.getByLabelText("Mute role"));
-    fireEvent.click(screen.getByRole("option", { name: "LOCAL-EDIT" }));
-    expect(screen.getByLabelText("Mute role")).toHaveTextContent("LOCAL-EDIT");
+    fireEvent.change(screen.getByLabelText("Locale"), {
+      target: { value: "LOCAL-EDIT" },
+    });
+    expect(screen.getByLabelText("Locale")).toHaveValue("LOCAL-EDIT");
 
     const otherTab = guildChannel("g1");
     otherTab.postMessage({
       type: "settings-updated",
-      settings: formState({ muteRoleId: "REMOTE-CHANGE", prefix: "??" }),
+      settings: formState({ locale: "REMOTE-CHANGE", prefix: "??" }),
     });
 
     await waitFor(() =>
       expect(screen.getByLabelText("Command prefix")).toHaveValue("??"),
     );
-    expect(screen.getByLabelText("Mute role")).toHaveTextContent("LOCAL-EDIT");
+    expect(screen.getByLabelText("Locale")).toHaveValue("LOCAL-EDIT");
     const conflictMessage = screen.getByText(/changed in another tab/i);
     expect(conflictMessage).toBeInTheDocument();
-    expect(conflictMessage).toHaveTextContent("Mute role");
+    expect(conflictMessage).toHaveTextContent("Locale");
     expect(screen.getByText(/careful.*unsaved changes/i)).toBeInTheDocument();
 
     otherTab.close();
   });
 
   it("Reset after a remote update loads the latest value, not the stale one from page load", async () => {
-    render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} roles={roles} />);
-    openAdvanced();
+    render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} />);
 
     const otherTab = guildChannel("g1");
     otherTab.postMessage({
       type: "settings-updated",
-      settings: formState({ muteRoleId: "999" }),
+      settings: formState({ locale: "fr-FR" }),
     });
     await waitFor(() =>
-      expect(screen.getByLabelText("Mute role")).toHaveTextContent("999"),
+      expect(screen.getByLabelText("Locale")).toHaveValue("fr-FR"),
     );
 
     fireEvent.change(screen.getByLabelText("Command prefix"), {
@@ -185,7 +167,7 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
     expect(screen.getByText(/unsaved changes/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
     await waitFor(() => {
-      expect(screen.getByLabelText("Mute role")).toHaveTextContent("999");
+      expect(screen.getByLabelText("Locale")).toHaveValue("fr-FR");
       expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
     });
 
@@ -194,7 +176,7 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
 
   it("broadcasts the saved settings on success so another open tab can pick them up", async () => {
     setGuildSettings.mockResolvedValue({ ok: true });
-    render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} roles={roles} />);
+    render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} />);
 
     const otherTab = guildChannel("g1");
     const updates: GuildSettingsPayload[] = [];
@@ -224,7 +206,7 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
       }
     };
 
-    render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} roles={roles} />);
+    render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} />);
 
     await waitFor(() =>
       expect(screen.getByLabelText("Command prefix")).toHaveValue("?"),

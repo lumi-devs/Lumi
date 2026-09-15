@@ -14,35 +14,28 @@ import {
   CardDescription,
 } from "#/components/ui/card";
 import { Field, Input } from "#/components/ui/input";
-import { Select } from "#/components/ui/select";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
-import type { GuildSettings, DashboardRoleView } from "@lumi/contracts/views";
+import type { GuildSettings } from "@lumi/contracts/views";
 
 type FormState = GuildSettingsPayload;
 
 const FormKeys = [
   "prefix",
-  "muteRoleId",
   "locale",
-  "timezone",
 ] as const satisfies readonly (keyof FormState)[];
 
-const FieldLabels: Record<keyof FormState, string> = {
+const FieldLabels: Record<(typeof FormKeys)[number], string> = {
   prefix: "Command prefix",
-  muteRoleId: "Mute role",
   locale: "Locale",
-  timezone: "Timezone",
 };
 
-const NullableStringFields = new Set<keyof FormState>(["prefix", "muteRoleId"]);
+const NullableStringFields = new Set<keyof FormState>(["prefix"]);
 
 function toFormState(settings: GuildSettings): FormState {
   return {
     prefix: settings.prefix ?? "",
-    muteRoleId: (settings["muteRoleId"]) ?? "",
     locale: settings.locale ?? "en-US",
-    timezone: (settings["timezone"]) ?? "UTC",
   };
 }
 
@@ -57,11 +50,9 @@ type SyncMessage =
 export function GeneralSettingsForm({
   guildId,
   settings,
-  roles,
 }: {
   guildId: string;
   settings: GuildSettings;
-  roles: DashboardRoleView[];
 }) {
   const sectionsRef = useStaggerIn<HTMLDivElement>("> div");
   const [baseline, setBaseline] = useState<FormState>(() => toFormState(settings));
@@ -86,7 +77,7 @@ export function GeneralSettingsForm({
     (newBaseline: FormState) => {
       const oldBaseline = baselineRef.current;
       const currentForm = formRef.current;
-      const conflicts: (keyof FormState)[] = [];
+      const conflicts: (typeof FormKeys)[number][] = [];
       let changed = false;
       const next = { ...currentForm };
 
@@ -227,13 +218,6 @@ export function GeneralSettingsForm({
                 onChange={(e) => field("locale", e.target.value)}
               />
             </Field>
-            <Field label="Timezone" htmlFor="timezone" hint="IANA name, e.g. Europe/Berlin.">
-              <Input
-                id="timezone"
-                value={form.timezone ?? ""}
-                onChange={(e) => field("timezone", e.target.value)}
-              />
-            </Field>
           </CardBody>
         </Card>
 
@@ -258,18 +242,6 @@ export function GeneralSettingsForm({
           </CardHeader>
           {advancedOpen ? (
             <CardBody className="grid animate-in fade-in slide-in-from-top-1 grid-cols-1 gap-4 duration-200 sm:grid-cols-2">
-              <Field label="Mute role" htmlFor="muteRoleId">
-                <Select
-                  id="muteRoleId"
-                  aria-label="Mute role"
-                  value={form.muteRoleId ?? ""}
-                  onValueChange={(next) => field("muteRoleId", next || null)}
-                  options={[
-                    { value: "", label: "None" },
-                    ...roles.map((r) => ({ value: r.id, label: r.name })),
-                  ]}
-                />
-              </Field>
               <Field label="Ignored channels" htmlFor="ignored-channels-link">
                 <Link
                   id="ignored-channels-link"

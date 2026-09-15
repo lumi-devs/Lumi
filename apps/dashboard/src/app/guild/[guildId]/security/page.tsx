@@ -23,8 +23,7 @@ import { PageHeader } from "#/components/ui/page-header";
 import { SectionTabs, type PageSection } from "#/components/ui/section-tabs";
 import { isTextChannel } from "#/lib/channel-types";
 import { sectionsOf } from "@lumi/contracts";
-import { SecurityWidgets } from "#/lib/security-widgets";
-import type { GuildBackupView } from "@lumi/contracts";
+import type { GuildBackupView, ConfigWidget } from "@lumi/contracts";
 import type { PanicStateView, VerificationPanelView } from "@lumi/contracts/views";
 
 const SecurityModuleName = "security";
@@ -84,8 +83,8 @@ export default async function SecurityPage({
   // Widgets are the only thing the dashboard chooses. Which sections exist,
   // what they are called, which groups they hold and in what order all come
   // from the security module's own `configSchema`.
-  const widgets: Record<string, { before?: ReactNode; after?: ReactNode }> = {
-    [SecurityWidgets.panic]: {
+  const widgets: Partial<Record<ConfigWidget, { before?: ReactNode; after?: ReactNode }>> = {
+    "panic-console": {
       before:
         panic === null ? (
           <Card>
@@ -108,7 +107,7 @@ export default async function SecurityPage({
           />
         ),
     },
-    [SecurityWidgets.joinGate]: {
+    "join-gate": {
       after: (
         <>
           {panelFailure !== null ? (
@@ -156,21 +155,21 @@ export default async function SecurityPage({
         </>
       ),
     },
-    [SecurityWidgets.backups]: {
+    backups: {
       after: <BackupsCard guildId={guildId} backups={backups} />,
     },
   };
 
   const sections: PageSection[] = sectionsOf(configFields).map((section) => {
-    const extras = widgets[section.name];
+    const extras = section.widget ? widgets[section.widget] : undefined;
     // The nuke matrix renders its whole section itself — a limit-per-action
     // grid reads far better than the flat field list the generic card gives.
-    const custom = section.name === SecurityWidgets.antiNuke;
+    const custom = section.widget === "anti-nuke";
     return {
       id: section.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
       label: section.name,
       count: section.fieldCount,
-      alert: section.name === SecurityWidgets.panic && Boolean(panic?.active),
+      alert: section.widget === "panic-console" && Boolean(panic?.active),
       content: (
         <>
           {extras?.before}
