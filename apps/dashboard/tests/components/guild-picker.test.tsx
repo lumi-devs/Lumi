@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { render, screen } from "@testing-library/react";
 import type { Session } from "next-auth";
-import type { GuildSummaryView } from "@lumi/contracts";
+import type { GuildSummaryView } from "@lumi/contracts/rpc";
 import { GuildPicker } from "#/components/guild-picker";
 
 // GuildPicker refreshes the server list when the tab is returned to after an

@@ -1,6 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { dataTableFeatures } from "#/components/ui/data-table";
-import type { AppealReviewStatus } from "@lumi/contracts";
+import type { AppealReviewStatus } from "@lumi/contracts/rpc";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import type { AppealView } from "@lumi/contracts/views";

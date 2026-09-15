@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { type VerificationPanelSetResult } from "@lumi/contracts";
+import { type VerificationPanelSetResult } from "@lumi/contracts/views";
 import { requireGuild } from "#/lib/auth-guards";
 import { rpc } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";

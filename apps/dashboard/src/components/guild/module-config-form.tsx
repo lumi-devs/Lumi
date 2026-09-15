@@ -16,7 +16,8 @@ import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
 import { cn } from "#/lib/utils";
 import type { DashboardModuleView, DashboardRoleView, DashboardChannelView } from "@lumi/contracts/views";
-import { FieldType, type ConfigField, type WelcomeTestKind } from "@lumi/contracts";
+import { FieldType, type ConfigField } from "@lumi/contracts";
+import type { WelcomeTestKind } from "@lumi/contracts/rpc";
 
 /** Welcome module only: which "send test" kind each preview-bearing field
  * belongs to, so its preview can carry a working Save & send test button

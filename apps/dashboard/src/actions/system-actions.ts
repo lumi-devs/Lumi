@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { type GdprRequester, type RepoModuleView } from "@lumi/contracts";
+import { type GdprRequester } from "@lumi/contracts/rpc";
+import { type RepoModuleView } from "@lumi/contracts/views";
 import { requireBotOwner } from "#/lib/auth-guards";
 import { rpc } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { render, screen } from "@testing-library/react";
 import * as navigation from "next/navigation";
-import { RpcFailureCodes } from "@lumi/contracts";
+import { RpcFailureCodes } from "@lumi/contracts/rpc";
 import { RpcError } from "#/lib/rpc";
 import GuildError from "#/app/guild/[guildId]/error";
 
@@ -18,7 +18,7 @@ describe("GuildError Boundary", () => {
       ["GuildNotFound RpcError", new RpcError(RpcFailureCodes.GuildNotFound, "guild.get", "Guild not found")],
       ["TIMEOUT RpcError", new RpcError("TIMEOUT", "guild.get", "RPC timed out: guild.get")],
       ["WORKER_DOWN RpcError", new RpcError("WORKER_DOWN", "guild.get", "Worker connection refused")],
-      ["RPC_ERROR RpcError", new RpcError("RPC_ERROR", "guild.get", "DB is down")],
+      ["HANDLER_ERROR RpcError", new RpcError(RpcFailureCodes.HandlerError, "guild.get", "DB is down")],
       ["generic Error", new Error("Something broke in component rendering")],
     ])("%s", (_label, error) => {
       render(<GuildError error={error} reset={() => {}} />);

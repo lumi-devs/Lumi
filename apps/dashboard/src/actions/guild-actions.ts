@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  type GuildSettingsPayload,
   type PermitKind,
   type PermitTargetType,
+  type RpcInput,
   type WelcomeTestKind,
-} from "@lumi/contracts";
+} from "@lumi/contracts/rpc";
 import { requireGuild } from "#/lib/auth-guards";
 import { rpc } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
@@ -82,7 +82,7 @@ export async function setManyGuildConfigFields(
 
 export async function setGuildSettings(
   guildId: string,
-  data: GuildSettingsPayload,
+  data: RpcInput<"guild.settings.set">,
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedAction(guildId);

@@ -10,7 +10,7 @@ import {
   rollbackModule,
   listRepoModules,
 } from "#/actions/system-actions";
-import type { RepoModuleView } from "@lumi/contracts";
+import type { RepoModuleView } from "@lumi/contracts/views";
 import {
   Card,
   CardBody,

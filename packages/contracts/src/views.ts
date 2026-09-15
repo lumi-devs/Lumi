@@ -1,22 +1,10 @@
-import type { AppealStatus, ReactionRoleMenuMode } from "./rpc.js";
+import type { ReactionRoleMenuMode } from "./rpc/reactionroles.js";
 import type { ConfigField } from "./config.js";
 import type { MessageDocumentV2 } from "./message-blocks.js";
-export type {
-  LogClaimView,
-  PermitKind,
-  PermitTargetType,
-  ReactionRoleMenuMode as ReactionRoleMenuModeView,
-  ShardStateView,
-  ClusterReplicaView,
-  WarnThresholdAction as WarnThresholdActionView,
-} from "./rpc.js";
-export type { AppealStatus };
 
 export interface GuildSettings {
   prefix: string | null;
   locale: string;
-  muteRoleId?: string | null;
-  timezone?: string;
   [key: string]: unknown;
 }
 
@@ -78,23 +66,6 @@ export interface GuildEntitiesData {
   /** A directory sample for id-to-name lookups, not a census. */
   members: DashboardMemberView[];
 }
-
-export interface DashboardData {
-  name: string;
-  icon: string | null;
-  banner: string | null;
-  memberCount: number;
-  settings: GuildSettings;
-  modules: DashboardModuleView[];
-  roles: DashboardRoleView[];
-  channels: DashboardChannelView[];
-  members: DashboardMemberView[];
-}
-
-export type {
-  PermitAssignmentPayload as PermitAssignmentView,
-  PermitPayload as PermitView,
-} from "./rpc.js";
 
 export interface ModerationCaseView {
   id: number;
@@ -367,5 +338,3 @@ export interface SystemDashboardData {
   allModules: { name: string; displayName: string; emoji: string }[];
   guildCount: number;
 }
-
-export type { SystemShardsResponse as SystemShardsData } from "./rpc.js";

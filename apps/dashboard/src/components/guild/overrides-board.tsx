@@ -2,11 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { ArrowRight, Plus, SlidersHorizontal, X } from "lucide-react";
-import {
-  FieldType,
-  type ConfigField,
-  type ConfigOverrideModelType,
-} from "@lumi/contracts";
+import { FieldType, type ConfigField } from "@lumi/contracts";
+import type { ConfigOverrideModelType } from "@lumi/contracts/rpc";
 import { deleteConfigOverride, setConfigOverride } from "#/actions/overrides-actions";
 import { ConfigFieldInput } from "#/components/guild/config-field-input";
 import { ActionError } from "#/components/action-error";

@@ -2,37 +2,22 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import {
   parseRpcResponse,
-  RpcResponseDataActions,
-  type RpcFailureCode,
-  type RpcRequest,
-  type RpcResponse,
-  type RpcActionName,
-  type RpcRequestPayloads,
-  type RpcResponseData,
-} from "@lumi/contracts";
-import {
-  parseRpcResponse as parseRouterResponse,
   rpcRouter,
-  RpcFailureCodes as RouterFailureCodes,
-  type RpcActionName as RouterActionName,
-  type RpcFailureCode as RouterFailureCode,
+  RpcFailureCodes,
+  type RpcActionName,
+  type RpcFailureCode,
   type RpcInput,
   type RpcOutput,
+  type RpcRequest,
 } from "@lumi/contracts/rpc";
 import { injectTraceContext } from "@lumi/observability";
 import { env } from "./env";
 
-const DefaultTimeoutMs = 8000;
-const HeavyReadTimeoutMs = 12000;
-const MutationTimeoutMs = 15000;
-
 export type RpcErrorCode =
   | "TIMEOUT"
   | "WORKER_DOWN"
-  | "RPC_ERROR"
   | "MALFORMED"
-  | RpcFailureCode
-  | RouterFailureCode;
+  | RpcFailureCode;
 
 export class RpcError extends Error {
   public readonly code: RpcErrorCode;
@@ -51,23 +36,10 @@ export class RpcError extends Error {
  * be answered, which is a different thing to tell the user.
  */
 export function isGuildMissing(err: unknown): boolean {
-  return err instanceof RpcError && err.code === RouterFailureCodes.GuildNotFound;
+  return err instanceof RpcError && err.code === RpcFailureCodes.GuildNotFound;
 }
 
-function defaultTimeoutFor(action: string): number {
-  if (action === "guild.dashboard.get" || action.endsWith(".audit.list")) return HeavyReadTimeoutMs;
-  if (action.endsWith(".list") || action.endsWith(".get")) return DefaultTimeoutMs;
-  return MutationTimeoutMs;
-}
-
-interface CallOptions<A extends RpcActionName> {
-  guildId?: string;
-  actorId?: string;
-  data?: RpcRequestPayloads[A];
-  timeoutMs?: number;
-}
-
-type RouterCallOptions<A extends RouterActionName> = {
+type CallOptions<A extends RpcActionName> = {
   guildId?: string;
   actorId?: string;
 } & (RpcInput<A> extends undefined ? { data?: undefined } : { data: RpcInput<A> });
@@ -141,43 +113,9 @@ export class RpcClient {
     }
   }
 
-  public async call<A extends RpcActionName>(
+  public async invoke<A extends RpcActionName>(
     action: A,
-    options: CallOptions<A> = {},
-  ): Promise<RpcResponseData<A>> {
-    const raw = await this.post(
-      action,
-      this.buildRequest(action, options.guildId, options.actorId, options.data),
-      options.timeoutMs ?? defaultTimeoutFor(action),
-    );
-
-    let response: RpcResponse;
-    try {
-      response = parseRpcResponse(raw);
-    } catch (err: unknown) {
-      this.log(`Discarding malformed RPC envelope for ${action}: ${String(err)}`);
-      throw new RpcError("MALFORMED", action, `RPC ${action}: malformed response`);
-    }
-
-    if (!response.ok)
-      throw new RpcError(
-        response.code ?? "RPC_ERROR",
-        action,
-        response.error ?? "RPC error",
-      );
-    if (
-      RpcResponseDataActions.has(action) &&
-      (response.data === undefined || response.data === null)
-    ) {
-      this.log(`RPC ${action}: response ok but missing expected data`);
-      throw new RpcError("MALFORMED", action, `RPC ${action}: response missing expected data`);
-    }
-    return response.data as RpcResponseData<A>;
-  }
-
-  public async invoke<A extends RouterActionName>(
-    action: A,
-    options: RouterCallOptions<A>,
+    options: CallOptions<A>,
   ): Promise<RpcOutput<A>> {
     const raw = await this.post(
       action,
@@ -186,7 +124,7 @@ export class RpcClient {
     );
     let response;
     try {
-      response = parseRouterResponse(raw);
+      response = parseRpcResponse(raw);
     } catch (err: unknown) {
       this.log(`Discarding malformed RPC envelope for ${action}: ${String(err)}`);
       throw new RpcError("MALFORMED", action, `RPC ${action}: malformed response`);
@@ -231,16 +169,9 @@ export function getRpcClient(): RpcClient {
   return globalForRpc.rpcClient;
 }
 
-export function rpcCall<A extends RpcActionName>(
+export function rpc<A extends RpcActionName>(
   action: A,
-  options?: CallOptions<A>,
-): Promise<RpcResponseData<A>> {
-  return getRpcClient().call(action, options);
-}
-
-export function rpc<A extends RouterActionName>(
-  action: A,
-  options: RouterCallOptions<A>,
+  options: CallOptions<A>,
 ): Promise<RpcOutput<A>> {
   return getRpcClient().invoke(action, options);
 }

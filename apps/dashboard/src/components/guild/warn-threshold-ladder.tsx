@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { WarnThresholdAction } from "@lumi/contracts";
+import type { WarnThresholdAction } from "@lumi/contracts/rpc";
 import {
   deleteWarnThreshold,
   setWarnThreshold,

@@ -1,6 +1,6 @@
 "use server";
 
-import { type GdprExportResult } from "@lumi/contracts";
+import { type GdprExportResult } from "@lumi/contracts/rpc";
 import { requireSession } from "#/lib/auth-guards";
 import { rpc } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";

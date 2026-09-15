@@ -1,7 +1,7 @@
 "use client";
 
 import { CircleSlash, Cpu, Network } from "lucide-react";
-import type { ClusterReplicaView, ShardStateView, SystemShardsData } from "@lumi/contracts/views";
+import type { ClusterReplicaView, RpcOutput, ShardStateView } from "@lumi/contracts/rpc";
 import { Alert } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
@@ -150,7 +150,7 @@ function ReplicaCard({
   );
 }
 
-export function ShardFleet({ data }: { data: SystemShardsData }) {
+export function ShardFleet({ data }: { data: RpcOutput<"system.shards.get"> }) {
   if (data.shards.length === 0 && data.shardCount === 0) {
     return (
       <Card>

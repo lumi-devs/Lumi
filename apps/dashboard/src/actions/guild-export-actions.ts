@@ -1,6 +1,6 @@
 "use server";
 
-import type { AppealStatus } from "@lumi/contracts";
+import type { AppealStatus } from "@lumi/contracts/rpc";
 import { requireGuild } from "#/lib/auth-guards";
 import { isRateLimited } from "#/lib/rate-limit";
 import { rpc } from "#/lib/rpc";

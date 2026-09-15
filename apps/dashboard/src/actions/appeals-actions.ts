@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { type AppealReviewStatus } from "@lumi/contracts";
+import { type AppealReviewStatus } from "@lumi/contracts/rpc";
 import { requireGuild } from "#/lib/auth-guards";
 import { rpc } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";

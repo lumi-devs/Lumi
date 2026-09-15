@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import type { AppealReviewStatus } from "@lumi/contracts";
+import type { AppealReviewStatus } from "@lumi/contracts/rpc";
 import { reviewAppeal } from "#/actions/appeals-actions";
 import { Alert } from "#/components/ui/alert";
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";

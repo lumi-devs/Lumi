@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { type ReactionRoleMenuSetPayload } from "@lumi/contracts";
+import type { RpcInput } from "@lumi/contracts/rpc";
 import { requireGuild } from "#/lib/auth-guards";
 import { rpc } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
@@ -17,7 +17,7 @@ async function guardedReactionRolesAction(guildId: string) {
 
 export async function setReactionRoleMenu(
   guildId: string,
-  menu: ReactionRoleMenuSetPayload,
+  menu: RpcInput<"guild.reactionroles.menus.set">,
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedReactionRolesAction(guildId);

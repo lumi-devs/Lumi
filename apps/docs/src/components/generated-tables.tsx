@@ -124,7 +124,7 @@ export function RpcTable() {
       <thead>
         <tr>
           <th>Action</th>
-          <th>Payload</th>
+          <th>Auth</th>
           <th>Description</th>
         </tr>
       </thead>
@@ -135,7 +135,7 @@ export function RpcTable() {
               <code>{action.name}</code>
             </td>
             <td>
-              <code>{action.payload}</code>
+              <code>{action.auth}</code>
             </td>
             <td>{action.summary}</td>
           </tr>

@@ -13,6 +13,7 @@
     "lint": "eslint src"
   },
   "dependencies": {
+    "@lumi/contracts": "workspace:*",
     "fumadocs-core": "^16.15.8",
     "fumadocs-mdx": "^15.4.0",
     "fumadocs-ui": "^16.15.8",

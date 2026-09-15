@@ -10,7 +10,7 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { Archive } from "lucide-react";
 import { formatCaseDate } from "#/lib/moderation-cases";
 import { useServerAction } from "#/lib/use-server-action";
-import type { GuildBackupView } from "@lumi/contracts";
+import type { GuildBackupView } from "@lumi/contracts/rpc";
 
 export function BackupsCard({
   guildId,

@@ -23,13 +23,14 @@ import {
 import { DiscordMessagePreview } from "#/components/guild/discord-message-preview";
 import { buildMenuPreview } from "#/lib/reactionroles-preview";
 import { MessageBuilderV2 } from "#/components/guild/message-builder-v2";
-import type { DashboardRoleView, ReactionRoleMenuModeView, ReactionRoleMenuView, ReactionRoleOptionView } from "@lumi/contracts/views";
-import type { MessageDocumentV2, ReactionRoleMenuSetPayload } from "@lumi/contracts";
+import type { DashboardRoleView, ReactionRoleMenuView, ReactionRoleOptionView } from "@lumi/contracts/views";
+import type { MessageDocumentV2 } from "@lumi/contracts";
+import type { ReactionRoleMenuMode, RpcInput } from "@lumi/contracts/rpc";
 import { useServerAction } from "#/lib/use-server-action";
 
 const HexColorPattern = /^#[0-9a-fA-F]{6}$/;
 
-function maxOptionsForMode(mode: ReactionRoleMenuModeView): number {
+function maxOptionsForMode(mode: ReactionRoleMenuMode): number {
   if (mode === "select") return 25;
   return 20;
 }
@@ -197,7 +198,7 @@ function MenuForm({
   const [title, setTitle] = useState(editing?.title ?? "");
   const [description, setDescription] = useState(editing?.description ?? "");
   const [color, setColor] = useState(editing?.color ?? "");
-  const [mode, setMode] = useState<ReactionRoleMenuModeView>(editing?.mode ?? "buttons");
+  const [mode, setMode] = useState<ReactionRoleMenuMode>(editing?.mode ?? "buttons");
   const [exclusive, setExclusive] = useState(editing?.exclusive ?? false);
   const [maxRoles, setMaxRoles] = useState(String(editing?.maxRoles ?? 1));
   const [options, setOptions] = useState<OptionDraft[]>(() =>
@@ -299,7 +300,7 @@ function MenuForm({
       }
     }
 
-    const payload: ReactionRoleMenuSetPayload = {
+    const payload: RpcInput<"guild.reactionroles.menus.set"> = {
       id: editing?.id ?? trimmedTitle,
       title: trimmedTitle,
       description: trimmedDescription || null,
@@ -384,7 +385,7 @@ function MenuForm({
             id="rr-menu-mode"
             aria-label="Mode"
             value={mode}
-            onValueChange={(next) => setMode(next as ReactionRoleMenuModeView)}
+            onValueChange={(next) => setMode(next as ReactionRoleMenuMode)}
             options={[
               { value: "buttons", label: "Buttons" },
               { value: "select", label: "Dropdown" },

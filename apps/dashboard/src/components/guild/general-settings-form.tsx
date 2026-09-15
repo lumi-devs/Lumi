@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";
-import type { GuildSettingsPayload } from "@lumi/contracts";
+import type { RpcInput } from "@lumi/contracts/rpc";
 import { setGuildSettings } from "#/actions/guild-actions";
 import { SaveBar } from "#/components/save-bar";
 import {
@@ -18,7 +18,7 @@ import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
 import type { GuildSettings } from "@lumi/contracts/views";
 
-type FormState = GuildSettingsPayload;
+type FormState = RpcInput<"guild.settings.set">;
 
 const FormKeys = [
   "prefix",
@@ -161,7 +161,7 @@ export function GeneralSettingsForm({
           const value = form[key];
           return [key, NullableStringFields.has(key) && value === "" ? null : value];
         }),
-      ) as GuildSettingsPayload;
+      ) as RpcInput<"guild.settings.set">;
 
       const res = await setGuildSettings(guildId, patch);
       if (!res.ok) {

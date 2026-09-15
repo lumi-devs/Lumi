@@ -23,7 +23,8 @@ import { PageHeader } from "#/components/ui/page-header";
 import { SectionTabs, type PageSection } from "#/components/ui/section-tabs";
 import { isTextChannel } from "#/lib/channel-types";
 import { sectionsOf } from "@lumi/contracts";
-import type { GuildBackupView, ConfigWidget } from "@lumi/contracts";
+import type { ConfigWidget } from "@lumi/contracts";
+import type { GuildBackupView } from "@lumi/contracts/rpc";
 import type { PanicStateView, VerificationPanelView } from "@lumi/contracts/views";
 
 const SecurityModuleName = "security";

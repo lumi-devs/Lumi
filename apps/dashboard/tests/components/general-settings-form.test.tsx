@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import type { GuildSettingsPayload } from "@lumi/contracts";
+import type { RpcInput } from "@lumi/contracts/rpc";
 import type { GuildSettings } from "@lumi/contracts/views";
 import { guildActionsMock } from "../setup";
 
@@ -21,7 +21,9 @@ function makeSettings(overrides: Partial<GuildSettings> = {}): GuildSettings {
   return { ...baseValues(), ...overrides };
 }
 
-function formState(overrides: Partial<GuildSettingsPayload> = {}): GuildSettingsPayload {
+function formState(
+  overrides: Partial<RpcInput<"guild.settings.set">> = {},
+): RpcInput<"guild.settings.set"> {
   return { ...baseValues(), ...overrides };
 }
 
@@ -179,7 +181,7 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
     render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} />);
 
     const otherTab = guildChannel("g1");
-    const updates: GuildSettingsPayload[] = [];
+    const updates: RpcInput<"guild.settings.set">[] = [];
     otherTab.onmessage = (event) => {
       if (event.data?.type === "settings-updated") updates.push(event.data.settings);
     };
