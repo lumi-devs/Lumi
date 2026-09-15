@@ -1,25 +1,37 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { Collection } from "discord.js";
-import { RpcActions } from "@lumi/contracts";
-import { rpcHandlers } from "#lib/rpc/dispatch.js";
-import { DashboardModule } from "#modules/dashboard/index.js";
+import type { RpcActionName } from "@lumi/contracts/rpc";
+import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
 const MANAGER_ID = "222222222222222222";
 const INTRUDER_ID = "333333333333333333";
+const MOD_ROLE_ID = "444444444444444444";
 
-describe("dashboard module RPC handlers", () => {
+const afkModule = {
+  meta: {
+    name: "afk",
+    displayName: "AFK",
+    emoji: "💤",
+    description: "Away status",
+    version: "1.0.0",
+    configFields: [{ key: "timeout", label: "Timeout", type: "NUMBER", description: "", default: 5 }],
+  },
+};
+
+describe("dashboard module guild read RPC handlers", () => {
   let guild: any;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
 
     guild = {
       id: GUILD_ID,
       ownerId: OWNER_ID,
       name: "Test Guild",
+      memberCount: 3,
       iconURL: vi.fn().mockReturnValue("https://example.com/icon.png"),
       bannerURL: vi.fn().mockReturnValue("https://example.com/banner.png"),
       roles: {
@@ -29,13 +41,13 @@ describe("dashboard module RPC handlers", () => {
             { id: GUILD_ID, name: "@everyone", color: 0, position: 0, permissions: { bitfield: 0n } },
           ],
           [
-            "444444444444444444",
+            MOD_ROLE_ID,
             {
-              id: "444444444444444444",
+              id: MOD_ROLE_ID,
               name: "Mods",
-              color: 0,
-              position: 1,
-              permissions: { bitfield: 0n },
+              color: 3447003,
+              position: 2,
+              permissions: { bitfield: 8n },
             },
           ],
         ]),
@@ -43,11 +55,12 @@ describe("dashboard module RPC handlers", () => {
       channels: {
         cache: new Collection([
           ["555555555555555555", { id: "555555555555555555", name: "general", type: 0 }],
+          ["777777777777777777", { id: "777777777777777777", name: "thread", type: 11 }],
         ]),
       },
       members: {
         fetch: vi.fn(),
-        me: { roles: { highest: { id: "444444444444444444" } } },
+        me: { roles: { highest: { id: MOD_ROLE_ID } } },
         cache: new Collection(),
       },
     };
@@ -60,119 +73,152 @@ describe("dashboard module RPC handlers", () => {
     } as any;
 
     container.client = {
-      guilds: {
-        cache: new Map([[GUILD_ID, guild]]),
-      },
+      guilds: { cache: new Map([[GUILD_ID, guild]]) },
     } as any;
 
     (container as any).db = {
       config: {
-        getGuildSettings: vi.fn().mockResolvedValue({
-          prefix: "!",
-          muteRoleId: null,
-        }),
-        getAllModuleConfigsForGuild: vi.fn().mockResolvedValue(new Map()),
+        getGuildSettings: vi.fn().mockResolvedValue({ prefix: "!", locale: "en-US" }),
+        getAllModuleConfig: vi.fn().mockResolvedValue({}),
       },
       modules: {
-        areModulesEnabled: vi.fn().mockResolvedValue(new Map()),
+        areModulesEnabled: vi.fn().mockResolvedValue(new Map([["afk", false]])),
       },
     } as any;
 
     container.stores = {
-      get: vi.fn().mockReturnValue({ loaded: () => [] }),
+      get: vi.fn().mockReturnValue({
+        loaded: () => [afkModule],
+        get: (name: string) => (name === "afk" ? afkModule : undefined),
+        isAddonModule: () => false,
+      }),
     } as any;
 
-    const mod = new DashboardModule({} as any, { name: "dashboard" });
-    await mod.onLoad();
+    registerRpcHandlers();
   });
 
-  const getHandler = () => {
-    const handler = rpcHandlers.get(RpcActions.guildDashboardGet);
-    if (!handler) throw new Error("guildDashboardGet handler not registered");
-    return handler;
+  const call = (action: RpcActionName, actorId: string | undefined, data?: unknown, guildId?: string) => {
+    const handler = getRpcHandler(action);
+    if (!handler) throw new Error(`${action} handler not registered`);
+    return handler({ id: "req", action, guildId: guildId ?? GUILD_ID, actorId, data });
   };
 
-  it("rejects an actor who is neither the guild owner nor has ManageGuild/Administrator", async () => {
-    guild.members.fetch.mockResolvedValue({
-      permissions: { has: vi.fn().mockReturnValue(false) },
+  describe("guild.shell.get", () => {
+    it("rejects an actor who is neither the guild owner nor has ManageGuild/Administrator", async () => {
+      guild.members.fetch.mockResolvedValue({
+        permissions: { has: vi.fn().mockReturnValue(false) },
+      });
+
+      await expect(call("guild.shell.get", INTRUDER_ID)).rejects.toThrow(
+        "Missing ManageGuild permission",
+      );
+      expect(container.db.config.getGuildSettings).not.toHaveBeenCalled();
     });
 
-    const handler = getHandler();
+    it("returns identity, settings and module manifests for the guild owner", async () => {
+      const result = (await call("guild.shell.get", OWNER_ID)) as any;
 
-    await expect(
-      handler({
-        id: "req-1",
-        action: RpcActions.guildDashboardGet,
-        guildId: GUILD_ID,
-        actorId: INTRUDER_ID,
-      }),
-    ).rejects.toThrow("Missing ManageGuild permission");
-
-    expect(container.db.config.getGuildSettings).not.toHaveBeenCalled();
-  });
-
-  it("returns guild settings + modules for the guild owner", async () => {
-    const handler = getHandler();
-
-    const result = (await handler({
-      id: "req-2",
-      action: RpcActions.guildDashboardGet,
-      guildId: GUILD_ID,
-      actorId: OWNER_ID,
-    })) as any;
-
-    expect(result.name).toBe("Test Guild");
-    expect(result.settings.prefix).toBe("!");
-    expect(container.db.config.getGuildSettings).toHaveBeenCalledWith(GUILD_ID);
-    expect(guild.members.fetch).not.toHaveBeenCalled();
-    expect(result.roles).toEqual([
-      {
-        id: "444444444444444444",
-        name: "Mods",
-        color: 0,
-        position: 1,
-        permissions: "0",
-        isBotRole: true,
-      },
-    ]);
-    expect(result.channels).toEqual([
-      { id: "555555555555555555", name: "general", type: 0 },
-    ]);
-  });
-
-  it("returns guild settings + modules for a non-owner actor with ManageGuild permission", async () => {
-    guild.members.fetch.mockResolvedValue({
-      permissions: { has: vi.fn((perm: string) => perm === "ManageGuild") },
+      expect(result.name).toBe("Test Guild");
+      expect(result.memberCount).toBe(3);
+      expect(result.settings.prefix).toBe("!");
+      expect(container.db.config.getGuildSettings).toHaveBeenCalledWith(GUILD_ID);
+      expect(guild.members.fetch).not.toHaveBeenCalled();
+      expect(result.modules).toEqual([
+        {
+          name: "afk",
+          displayName: "AFK",
+          emoji: "💤",
+          description: "Away status",
+          short: undefined,
+          endUserDataStatement: undefined,
+          version: "1.0.0",
+          conflicts: [],
+          dependencies: [],
+          enabled: false,
+          configFields: afkModule.meta.configFields,
+          isAddon: false,
+          category: "System",
+          dashboardHref: null,
+        },
+      ]);
+      expect(result.modules[0]).not.toHaveProperty("config");
     });
 
-    const handler = getHandler();
+    it("lets a non-owner actor with ManageGuild through", async () => {
+      guild.members.fetch.mockResolvedValue({
+        permissions: { has: vi.fn((perm: string) => perm === "ManageGuild") },
+      });
 
-    const result = (await handler({
-      id: "req-3",
-      action: RpcActions.guildDashboardGet,
-      guildId: GUILD_ID,
-      actorId: MANAGER_ID,
-    })) as any;
+      const result = (await call("guild.shell.get", MANAGER_ID)) as any;
 
-    expect(result.name).toBe("Test Guild");
-    expect(guild.members.fetch).toHaveBeenCalledWith(MANAGER_ID);
-    expect(container.db.config.getGuildSettings).toHaveBeenCalledWith(GUILD_ID);
+      expect(result.name).toBe("Test Guild");
+      expect(guild.members.fetch).toHaveBeenCalledWith(MANAGER_ID);
+    });
   });
 
-  describe("guildSummariesList — actorId guard", () => {
-    it("rejects a request with no actorId", async () => {
-      const handler = rpcHandlers.get(RpcActions.guildSummariesList);
-      if (!handler) throw new Error("guildSummariesList handler not registered");
+  describe("guild.module.get", () => {
+    it("returns one module with its config values filled from defaults", async () => {
+      const result = (await call("guild.module.get", OWNER_ID, { module: "afk" })) as any;
 
+      expect(result.name).toBe("afk");
+      expect(result.enabled).toBe(false);
+      expect(result.config).toEqual({ timeout: 5 });
+      expect(container.db.config.getAllModuleConfig).toHaveBeenCalledWith(GUILD_ID, "afk");
+    });
+
+    it("prefers stored values over defaults", async () => {
+      (container.db.config.getAllModuleConfig as any).mockResolvedValue({ timeout: 30 });
+
+      const result = (await call("guild.module.get", OWNER_ID, { module: "afk" })) as any;
+
+      expect(result.config).toEqual({ timeout: 30 });
+    });
+
+    it("rejects a module that is not loaded", async () => {
       await expect(
-        handler({
-          id: "req-nosession",
-          action: RpcActions.guildSummariesList,
-          guildId: undefined,
-          actorId: undefined,
-          data: { guildIds: [GUILD_ID] },
-        }),
+        call("guild.module.get", OWNER_ID, { module: "ghost" }),
+      ).rejects.toThrow("No module named");
+    });
+  });
+
+  describe("guild.entities.get", () => {
+    it("returns pickable roles and channels with the fields pickers need", async () => {
+      const result = (await call("guild.entities.get", OWNER_ID)) as any;
+
+      expect(result.roles).toEqual([
+        {
+          id: MOD_ROLE_ID,
+          name: "Mods",
+          color: 3447003,
+          position: 2,
+          permissions: "8",
+          isBotRole: true,
+        },
+      ]);
+      expect(result.channels).toEqual([
+        { id: "555555555555555555", name: "general", type: 0 },
+      ]);
+      expect(result.members).toEqual([]);
+    });
+  });
+
+  describe("guild.summaries.list", () => {
+    it("rejects a request with no actorId", async () => {
+      await expect(
+        call("guild.summaries.list", undefined, { guildIds: [GUILD_ID] }),
       ).rejects.toThrow("actorId is required");
+    });
+
+    it("omits guilds the actor cannot manage instead of failing the batch", async () => {
+      guild.members.fetch.mockResolvedValue({
+        permissions: { has: vi.fn().mockReturnValue(false) },
+      });
+
+      const result = (await call("guild.summaries.list", INTRUDER_ID, {
+        guildIds: [GUILD_ID],
+      })) as any;
+
+      expect(result).toEqual({ summaries: [] });
     });
   });
 });

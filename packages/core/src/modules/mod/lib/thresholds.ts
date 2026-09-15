@@ -1,7 +1,7 @@
 import type { Container } from "@sapphire/framework";
 import { pipelineBySlot } from "#lib/database/cluster-safe.js";
 import { tryParseJSON } from "@sapphire/utilities";
-import { type WarnThresholdAction } from "@lumi/contracts";
+import { type WarnThresholdAction } from "@lumi/contracts/rpc";
 import { parseDuration } from "#lib/utilities/time.js";
 import { Time } from "@sapphire/time-utilities";
 import { thresholdKey } from "#lib/utilities/thresholds.js";

@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { RpcActions } from "@lumi/contracts";
-import { rpcHandlers } from "#lib/rpc/dispatch.js";
-import { DashboardModule } from "#modules/dashboard/index.js";
+import type { RpcActionName } from "@lumi/contracts/rpc";
+import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
@@ -30,11 +29,11 @@ function makeCase(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe("dashboard module moderation RPC handlers", () => {
+describe("mod module cases and warn-threshold RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let guild: any;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
 
     prisma = createMockPrismaClient();
@@ -80,17 +79,16 @@ describe("dashboard module moderation RPC handlers", () => {
       get: vi.fn().mockReturnValue({ loaded: () => [] }),
     } as any;
 
-    const mod = new DashboardModule({} as any, { name: "dashboard" });
-    await mod.onLoad();
+    registerRpcHandlers();
   });
 
-  const handlerFor = (action: string) => {
-    const handler = rpcHandlers.get(action);
+  const handlerFor = (action: RpcActionName) => {
+    const handler = getRpcHandler(action);
     if (!handler) throw new Error(`${action} handler not registered`);
     return handler;
   };
 
-  const call = (action: string, data?: unknown, actorId = OWNER_ID) =>
+  const call = (action: RpcActionName, data?: unknown, actorId = OWNER_ID) =>
     handlerFor(action)({ id: "req", action, guildId: GUILD_ID, actorId, data });
 
   describe("guild.cases.list", () => {
@@ -100,7 +98,7 @@ describe("dashboard module moderation RPC handlers", () => {
       });
 
       await expect(
-        call(RpcActions.guildCasesList, {}, INTRUDER_ID),
+        call("guild.cases.list", {}, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
     });
 
@@ -110,7 +108,7 @@ describe("dashboard module moderation RPC handlers", () => {
         makeCase({ id: 2, caseNumber: 2, action: "ban" }),
       ]);
 
-      const res = (await call(RpcActions.guildCasesList, {})) as any;
+      const res = (await call("guild.cases.list", {})) as any;
 
       expect(res.total).toBe(2);
       expect(res.page).toBe(1);
@@ -127,19 +125,19 @@ describe("dashboard module moderation RPC handlers", () => {
         makeCase({ id: 3, caseNumber: 3, action: "ban", userId: OWNER_ID }),
       ]);
 
-      const byAction = (await call(RpcActions.guildCasesList, {
+      const byAction = (await call("guild.cases.list", {
         action: "ban",
       })) as any;
       expect(byAction.total).toBe(2);
 
-      const byUser = (await call(RpcActions.guildCasesList, {
+      const byUser = (await call("guild.cases.list", {
         action: "ban",
         userId: TARGET_ID,
       })) as any;
       expect(byUser.total).toBe(1);
       expect(byUser.cases[0].caseNumber).toBe(2);
 
-      const byModerator = (await call(RpcActions.guildCasesList, {
+      const byModerator = (await call("guild.cases.list", {
         moderatorId: INTRUDER_ID,
       })) as any;
       expect(byModerator.total).toBe(0);
@@ -153,7 +151,7 @@ describe("dashboard module moderation RPC handlers", () => {
         ),
       );
 
-      const res = (await call(RpcActions.guildCasesList, {
+      const res = (await call("guild.cases.list", {
         page: 2,
         pageSize: 2,
       })) as any;
@@ -168,14 +166,14 @@ describe("dashboard module moderation RPC handlers", () => {
         makeCase({ id: 2, caseNumber: 2, guildId: "999999999999999999" }),
       ]);
 
-      const res = (await call(RpcActions.guildCasesList, {})) as any;
+      const res = (await call("guild.cases.list", {})) as any;
       expect(res.total).toBe(1);
       expect(res.cases[0].caseNumber).toBe(1);
     });
 
     it("rejects a pageSize above the cap", async () => {
       await expect(
-        call(RpcActions.guildCasesList, { pageSize: 500 }),
+        call("guild.cases.list", { pageSize: 500 }),
       ).rejects.toThrow("Bad payload");
     });
   });
@@ -184,7 +182,7 @@ describe("dashboard module moderation RPC handlers", () => {
     it("marks the case inactive", async () => {
       prisma.$seed("moderationCase", [makeCase({ id: 7, caseNumber: 3 })]);
 
-      const res = (await call(RpcActions.guildCasesRevoke, {
+      const res = (await call("guild.cases.revoke", {
         caseNumber: 3,
       })) as any;
 
@@ -194,7 +192,7 @@ describe("dashboard module moderation RPC handlers", () => {
 
     it("throws for an unknown case number", async () => {
       await expect(
-        call(RpcActions.guildCasesRevoke, { caseNumber: 42 }),
+        call("guild.cases.revoke", { caseNumber: 42 }),
       ).rejects.toThrow("Case #42 not found");
     });
 
@@ -204,7 +202,7 @@ describe("dashboard module moderation RPC handlers", () => {
       ]);
 
       await expect(
-        call(RpcActions.guildCasesRevoke, { caseNumber: 3 }),
+        call("guild.cases.revoke", { caseNumber: 3 }),
       ).rejects.toThrow("Case #3 is already revoked");
     });
 
@@ -214,7 +212,7 @@ describe("dashboard module moderation RPC handlers", () => {
       ]);
 
       await expect(
-        call(RpcActions.guildCasesRevoke, { caseNumber: 3 }),
+        call("guild.cases.revoke", { caseNumber: 3 }),
       ).rejects.toThrow("Case #3 not found");
     });
 
@@ -225,7 +223,7 @@ describe("dashboard module moderation RPC handlers", () => {
       prisma.$seed("moderationCase", [makeCase({ id: 7, caseNumber: 3 })]);
 
       await expect(
-        call(RpcActions.guildCasesRevoke, { caseNumber: 3 }, INTRUDER_ID),
+        call("guild.cases.revoke", { caseNumber: 3 }, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
       expect(prisma.$all("moderationCase")[0]!["active"]).toBe(true);
     });
@@ -239,7 +237,7 @@ describe("dashboard module moderation RPC handlers", () => {
         { guildId: "999999999999999999", warnCount: 1, action: "kick", duration: null },
       ]);
 
-      const res = (await call(RpcActions.guildWarnThresholdsList)) as any;
+      const res = (await call("guild.warnThresholds.list")) as any;
 
       expect(res.thresholds).toEqual([
         { warnCount: 3, action: "mute", duration: "1h" },
@@ -253,14 +251,14 @@ describe("dashboard module moderation RPC handlers", () => {
       });
 
       await expect(
-        call(RpcActions.guildWarnThresholdsList, undefined, INTRUDER_ID),
+        call("guild.warnThresholds.list", undefined, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
     });
   });
 
   describe("guild.warnThresholds.set", () => {
     it("creates a rule", async () => {
-      const res = (await call(RpcActions.guildWarnThresholdsSet, {
+      const res = (await call("guild.warnThresholds.set", {
         warnCount: 3,
         action: "mute",
         duration: "1h",
@@ -277,7 +275,7 @@ describe("dashboard module moderation RPC handlers", () => {
         { guildId: GUILD_ID, warnCount: 3, action: "mute", duration: "1h" },
       ]);
 
-      await call(RpcActions.guildWarnThresholdsSet, {
+      await call("guild.warnThresholds.set", {
         warnCount: 3,
         action: "kick",
         duration: null,
@@ -294,7 +292,7 @@ describe("dashboard module moderation RPC handlers", () => {
         { guildId: GUILD_ID, warnCount: 5, action: "ban", duration: null },
       ]);
 
-      const res = (await call(RpcActions.guildWarnThresholdsSet, {
+      const res = (await call("guild.warnThresholds.set", {
         warnCount: 3,
         action: null,
       })) as any;
@@ -306,7 +304,7 @@ describe("dashboard module moderation RPC handlers", () => {
     });
 
     it("creates a quarantine rule and invalidates the cached ladder", async () => {
-      const res = (await call(RpcActions.guildWarnThresholdsSet, {
+      const res = (await call("guild.warnThresholds.set", {
         warnCount: 4,
         action: "quarantine",
       })) as any;
@@ -320,7 +318,7 @@ describe("dashboard module moderation RPC handlers", () => {
 
     it("rejects a mute rule whose duration cannot be parsed", async () => {
       await expect(
-        call(RpcActions.guildWarnThresholdsSet, {
+        call("guild.warnThresholds.set", {
           warnCount: 3,
           action: "mute",
           duration: "whenever",
@@ -331,7 +329,7 @@ describe("dashboard module moderation RPC handlers", () => {
 
     it("rejects an unknown escalation action", async () => {
       await expect(
-        call(RpcActions.guildWarnThresholdsSet, {
+        call("guild.warnThresholds.set", {
           warnCount: 3,
           action: "explode",
         }),
@@ -344,11 +342,7 @@ describe("dashboard module moderation RPC handlers", () => {
       });
 
       await expect(
-        call(
-          RpcActions.guildWarnThresholdsSet,
-          { warnCount: 3, action: "mute" },
-          INTRUDER_ID,
-        ),
+        call("guild.warnThresholds.set", { warnCount: 3, action: "mute" }, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
       expect(prisma.$all("warnThreshold")).toHaveLength(0);
     });

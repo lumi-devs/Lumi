@@ -7,7 +7,7 @@ import {
   presentedToken,
   readInternalToken,
 } from "../../src/lib/rpc/http-server.js";
-import { registerRpcHandler, rpcHandlers } from "../../src/lib/rpc/dispatch.js";
+import { registerRpcHandlers } from "../../src/lib/rpc/registry.js";
 
 describe("RPC HTTP Server & Auth Verification", () => {
   const originalEnv = { ...process.env };
@@ -16,7 +16,6 @@ describe("RPC HTTP Server & Auth Verification", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env = { ...originalEnv };
-    rpcHandlers.clear();
 
     container.logger = {
       info: vi.fn(),
@@ -30,6 +29,8 @@ describe("RPC HTTP Server & Auth Verification", () => {
         isDashboardEnabled: vi.fn().mockResolvedValue(true),
       },
     } as any;
+
+    registerRpcHandlers();
   });
 
   afterEach(() => {
@@ -158,13 +159,17 @@ describe("RPC HTTP Server & Auth Verification", () => {
       const req = new Request("http://127.0.0.1/rpc", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: "1", action: "testAction" }),
+        body: JSON.stringify({ id: "1", action: "auth.whoami" }),
       });
       const res = await handleRpcHttpRequest(req, TEST_TOKEN);
 
       expect(res.status).toBe(401);
-      const data = await res.json();
-      expect(data).toEqual({ id: "", ok: false, error: "Unauthorized" });
+      expect(await res.json()).toEqual({
+        id: "",
+        ok: false,
+        error: "Unauthorized",
+        code: "UNAUTHORIZED",
+      });
     });
 
     it("returns 401 Unauthorized when Authorization token is invalid", async () => {
@@ -174,13 +179,17 @@ describe("RPC HTTP Server & Auth Verification", () => {
           "Content-Type": "application/json",
           Authorization: "Bearer invalid-token",
         },
-        body: JSON.stringify({ id: "1", action: "testAction" }),
+        body: JSON.stringify({ id: "1", action: "auth.whoami" }),
       });
       const res = await handleRpcHttpRequest(req, TEST_TOKEN);
 
       expect(res.status).toBe(401);
-      const data = await res.json();
-      expect(data).toEqual({ id: "", ok: false, error: "Unauthorized" });
+      expect(await res.json()).toEqual({
+        id: "",
+        ok: false,
+        error: "Unauthorized",
+        code: "UNAUTHORIZED",
+      });
     });
 
     it("returns 401 Unauthorized when Authorization header is not Bearer", async () => {
@@ -190,13 +199,17 @@ describe("RPC HTTP Server & Auth Verification", () => {
           "Content-Type": "application/json",
           Authorization: "Basic invalid-credentials",
         },
-        body: JSON.stringify({ id: "1", action: "testAction" }),
+        body: JSON.stringify({ id: "1", action: "auth.whoami" }),
       });
       const res = await handleRpcHttpRequest(req, TEST_TOKEN);
 
       expect(res.status).toBe(401);
-      const data = await res.json();
-      expect(data).toEqual({ id: "", ok: false, error: "Unauthorized" });
+      expect(await res.json()).toEqual({
+        id: "",
+        ok: false,
+        error: "Unauthorized",
+        code: "UNAUTHORIZED",
+      });
     });
 
     it("returns 400 Bad Request when JSON body is malformed", async () => {
@@ -211,8 +224,12 @@ describe("RPC HTTP Server & Auth Verification", () => {
       const res = await handleRpcHttpRequest(req, TEST_TOKEN);
 
       expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data).toEqual({ id: "", ok: false, error: "Malformed JSON body" });
+      expect(await res.json()).toEqual({
+        id: "",
+        ok: false,
+        error: "Malformed JSON body",
+        code: "BAD_REQUEST",
+      });
     });
 
     it("returns 400 Bad Request when action is missing from request body", async () => {
@@ -227,57 +244,50 @@ describe("RPC HTTP Server & Auth Verification", () => {
       const res = await handleRpcHttpRequest(req, TEST_TOKEN);
 
       expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data).toEqual({ id: "req-123", ok: false, error: "Missing action" });
+      expect(await res.json()).toEqual({
+        id: "req-123",
+        ok: false,
+        error: "Missing action",
+        code: "BAD_REQUEST",
+      });
     });
 
     it("dispatches request and returns 200 when valid bearer token and payload provided", async () => {
-      registerRpcHandler("ping", async (req) => ({ pong: true, received: (req as any).payload }));
-
       const req = new Request("http://127.0.0.1/rpc", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${TEST_TOKEN}`,
         },
-        body: JSON.stringify({
-          id: "req-999",
-          action: "ping",
-          payload: { foo: "bar" },
-        }),
+        body: JSON.stringify({ id: "req-999", action: "auth.whoami" }),
       });
       const res = await handleRpcHttpRequest(req, TEST_TOKEN);
 
       expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data).toEqual({
+      expect(await res.json()).toEqual({
         id: "req-999",
         ok: true,
-        data: { pong: true, received: { foo: "bar" } },
+        data: { isBotOwner: false },
       });
     });
 
     it("allows unauthenticated requests in development mode when token is unset", async () => {
-      registerRpcHandler("status", async () => ({ online: true }));
-
       const req = new Request("http://127.0.0.1/rpc", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: "dev-req", action: "status" }),
+        body: JSON.stringify({ id: "dev-req", action: "auth.whoami" }),
       });
       const res = await handleRpcHttpRequest(req, null);
 
       expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data).toEqual({
+      expect(await res.json()).toEqual({
         id: "dev-req",
         ok: true,
-        data: { online: true },
+        data: { isBotOwner: false },
       });
     });
 
     it("returns 500 without leaking internals when dispatch itself throws", async () => {
-      registerRpcHandler("boom", async () => ({ unreachable: true }));
       (container as any).db.config.isDashboardEnabled.mockRejectedValueOnce(
         new Error("connect ECONNREFUSED postgres:5432"),
       );
@@ -288,22 +298,21 @@ describe("RPC HTTP Server & Auth Verification", () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${TEST_TOKEN}`,
         },
-        body: JSON.stringify({ id: "db-down", action: "boom", guildId: "123" }),
+        body: JSON.stringify({
+          id: "db-down",
+          action: "auth.whoami",
+          guildId: "123",
+        }),
       });
       const res = await handleRpcHttpRequest(req, TEST_TOKEN);
 
       expect(res.status).toBe(500);
-      const data = await res.json();
-      expect(data).toEqual({ id: "db-down", ok: false, error: "Internal error" });
-    });
-
-    it("logs when a handler registration replaces an existing action", async () => {
-      registerRpcHandler("dup", async () => ({ v: 1 }));
-      registerRpcHandler("dup", async () => ({ v: 2 }));
-
-      expect(container.logger.error).toHaveBeenCalledWith(
-        expect.stringContaining("Handler for action 'dup' is being replaced"),
-      );
+      expect(await res.json()).toEqual({
+        id: "db-down",
+        ok: false,
+        error: "Internal error",
+        code: "INTERNAL",
+      });
     });
   });
 
@@ -385,7 +394,8 @@ describe("RPC HTTP Server & Auth Verification", () => {
       );
     });
 
-    it("handles server startup error gracefully after all retries fail", async () => {      process.env["RPC_HTTP_HOST"] = "127.0.0.1";
+    it("handles server startup error gracefully after all retries fail", async () => {
+      process.env["RPC_HTTP_HOST"] = "127.0.0.1";
       process.env["RPC_HTTP_PORT"] = "8091";
 
       const mockServe = vi.fn().mockImplementation(() => {

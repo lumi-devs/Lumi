@@ -1,8 +1,4 @@
-import type {
-  AppealStatus,
-  ReactionRoleMenuMode,
-  WarnThresholdAction,
-} from "./rpc.js";
+import type { AppealStatus, ReactionRoleMenuMode } from "./rpc.js";
 import type { ConfigField } from "./config.js";
 import type { MessageDocumentV2 } from "./message-blocks.js";
 export type {
@@ -122,7 +118,7 @@ export interface CasesListData {
 
 export interface WarnThresholdView {
   warnCount: number;
-  action: WarnThresholdAction;
+  action: string;
   duration: string | null;
 }
 
@@ -142,7 +138,7 @@ export interface VerificationPanelView {
 
 /** Result of posting-or-editing the verification panel message. */
 export interface VerificationPanelSetResult {
-  success: true;
+  success: boolean;
   channelId: string;
   messageId: string;
   /** A brand new message was posted (either no panel was tracked, the target
@@ -277,7 +273,7 @@ export interface AppealView {
   caseId: number;
   caseNumber: number;
   action: string;
-  status: AppealStatus;
+  status: string;
   message: string;
   reviewedBy: string | null;
   reviewedAt: string | null;
@@ -303,7 +299,7 @@ export type AppealVerifyResult =
   | {
       valid: true;
       case: AppealCaseSummary;
-      existingStatus: AppealStatus | null;
+      existingStatus: string | null;
     };
 
 export interface AfkEntryView {

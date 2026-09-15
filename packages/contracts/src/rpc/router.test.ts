@@ -43,7 +43,7 @@ describe("rpcRouter", () => {
     const none: Equal<RpcInput<"guild.panic.get">, undefined> = true;
     const output: Equal<
       RpcOutput<"guild.cases.revoke">,
-      { success: true; caseNumber: number }
+      { success: boolean; caseNumber: number }
     > = true;
     expect([input, optionalInput, none, output]).toEqual([true, true, true, true]);
   });

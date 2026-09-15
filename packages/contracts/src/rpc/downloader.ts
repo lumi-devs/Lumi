@@ -5,7 +5,7 @@ import { rpcAction, RpcTimeouts } from "./define.js";
 const SafeNameSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
 
 export const downloaderRpc = {
-  "downloader.repo.add": rpcAction<{ success: true }>()({
+  "downloader.repo.add": rpcAction<{ success: boolean }>()({
     input: s.object({
       name: s.string().lengthGreaterThanOrEqual(1),
       url: s.string().url(),
@@ -30,7 +30,7 @@ export const downloaderRpc = {
     summary: "List modules a repo offers.",
   }),
   "downloader.module.install": rpcAction<{
-    success: true;
+    success: boolean;
     moduleName: string;
   }>()({
     input: s.object({
@@ -43,7 +43,7 @@ export const downloaderRpc = {
     summary: "Install a module from a repo.",
   }),
   "downloader.module.uninstall": rpcAction<{
-    success: true;
+    success: boolean;
     moduleName: string;
   }>()({
     input: s.object({ moduleName: SafeNameSchema }),
@@ -52,7 +52,7 @@ export const downloaderRpc = {
     summary: "Uninstall a module.",
   }),
   "downloader.module.rollback": rpcAction<{
-    success: true;
+    success: boolean;
     moduleName: string;
     commit: string | null;
   }>()({

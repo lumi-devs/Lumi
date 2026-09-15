@@ -17,44 +17,45 @@ export const RpcTimeouts = {
 
 type RpcInputValidator = BaseValidator<unknown> | undefined;
 
-interface RpcActionOptions<V extends RpcInputValidator> {
+interface RpcActionOptions<V extends RpcInputValidator, A extends RpcAuth> {
   input?: V;
-  auth: RpcAuth;
+  auth: A;
   /** Name of the module that must be loaded before the handler runs. */
   requiresEnabled?: string;
   timeoutMs: number;
   summary: string;
 }
 
-export interface RpcActionDef<V extends RpcInputValidator, O extends object>
-  extends RpcActionOptions<V> {
+export interface RpcActionDef<
+  V extends RpcInputValidator,
+  A extends RpcAuth,
+  O extends object,
+> extends RpcActionOptions<V, A> {
   /** Never set at runtime; carries the response type. */
   readonly output?: O;
 }
 
-/** Curried so the output type is explicit while the input type is inferred from the validator. */
+/** Curried so the output type is explicit while input and auth are inferred. */
 export function rpcAction<O extends object>() {
-  return <V extends RpcInputValidator = undefined>(
-    options: RpcActionOptions<V>,
-  ): RpcActionDef<V, O> => options;
+  return <A extends RpcAuth, V extends RpcInputValidator = undefined>(
+    options: RpcActionOptions<V, A>,
+  ): RpcActionDef<V, A, O> => options;
 }
 
 export interface RpcSliceEntry {
-  input?: { parse(value: unknown): unknown };
+  input?: BaseValidator<unknown>;
   auth: RpcAuth;
   requiresEnabled?: string;
   timeoutMs: number;
   summary: string;
 }
 
-export type RpcSlice = Record<string, RpcSliceEntry>;
-
 export type RpcInputOf<E> =
-  E extends RpcActionDef<infer V, object>
+  E extends RpcActionDef<infer V, RpcAuth, object>
     ? V extends BaseValidator<unknown>
       ? Unwrap<V>
       : undefined
     : never;
 
 export type RpcOutputOf<E> =
-  E extends RpcActionDef<RpcInputValidator, infer O> ? O : never;
+  E extends RpcActionDef<RpcInputValidator, RpcAuth, infer O> ? O : never;

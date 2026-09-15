@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { RpcActions } from "@lumi/contracts";
-import { rpcHandlers } from "#lib/rpc/dispatch.js";
-import { DashboardModule } from "#modules/dashboard/index.js";
+import type { RpcActionName } from "@lumi/contracts/rpc";
+import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { AccessRepository } from "#lib/prisma/repositories/AccessRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
@@ -24,11 +23,11 @@ function makeBlock(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe("dashboard module guild blocklist RPC handlers", () => {
+describe("core module guild blocklist RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let guild: any;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
 
     prisma = createMockPrismaClient();
@@ -66,17 +65,16 @@ describe("dashboard module guild blocklist RPC handlers", () => {
       get: vi.fn(() => ({ loaded: () => [], get: () => undefined })),
     } as any;
 
-    const mod = new DashboardModule({} as any, { name: "dashboard" });
-    await mod.onLoad();
+    registerRpcHandlers();
   });
 
-  const handlerFor = (action: string) => {
-    const handler = rpcHandlers.get(action);
+  const handlerFor = (action: RpcActionName) => {
+    const handler = getRpcHandler(action);
     if (!handler) throw new Error(`${action} handler not registered`);
     return handler;
   };
 
-  const call = (action: string, data?: unknown, actorId = OWNER_ID) =>
+  const call = (action: RpcActionName, data?: unknown, actorId = OWNER_ID) =>
     handlerFor(action)({ id: "req", action, guildId: GUILD_ID, actorId, data });
 
   const denyPermissions = () =>
@@ -92,7 +90,7 @@ describe("dashboard module guild blocklist RPC handlers", () => {
       makeBlock({ id: 4, guildId: OTHER_GUILD_ID }),
     ]);
 
-    const res = (await call(RpcActions.guildBlocklistList, {})) as any;
+    const res = (await call("guild.blocklist.list", {})) as any;
 
     expect(res.total).toBe(2);
     expect(res.entries.map((e: any) => e.id)).toEqual([2, 1]);
@@ -107,7 +105,7 @@ describe("dashboard module guild blocklist RPC handlers", () => {
       ),
     );
 
-    const res = (await call(RpcActions.guildBlocklistList, {
+    const res = (await call("guild.blocklist.list", {
       page: 2,
       pageSize: 2,
     })) as any;
@@ -117,7 +115,7 @@ describe("dashboard module guild blocklist RPC handlers", () => {
   });
 
   it("adds a guild-scoped entry attributed to the acting manager", async () => {
-    const res = (await call(RpcActions.guildBlocklistAdd, {
+    const res = (await call("guild.blocklist.add", {
       userId: TARGET_ID,
       reason: "raiding",
     })) as any;
@@ -133,14 +131,14 @@ describe("dashboard module guild blocklist RPC handlers", () => {
     prisma.$seed("blocklist", [makeBlock({ id: 1 })]);
 
     await expect(
-      call(RpcActions.guildBlocklistAdd, { userId: TARGET_ID }),
+      call("guild.blocklist.add", { userId: TARGET_ID }),
     ).rejects.toThrow("already blocklisted in this server");
   });
 
   it("does not treat a global row as a guild one", async () => {
     prisma.$seed("blocklist", [makeBlock({ id: 1, guildId: null })]);
 
-    await call(RpcActions.guildBlocklistAdd, { userId: TARGET_ID });
+    await call("guild.blocklist.add", { userId: TARGET_ID });
 
     expect(prisma.$all("blocklist")).toHaveLength(2);
   });
@@ -151,7 +149,7 @@ describe("dashboard module guild blocklist RPC handlers", () => {
       makeBlock({ id: 2, guildId: null }),
     ]);
 
-    await call(RpcActions.guildBlocklistRemove, { userId: TARGET_ID });
+    await call("guild.blocklist.remove", { userId: TARGET_ID });
 
     const rows = prisma.$all("blocklist");
     expect(rows).toHaveLength(1);
@@ -162,13 +160,13 @@ describe("dashboard module guild blocklist RPC handlers", () => {
     denyPermissions();
 
     await expect(
-      call(RpcActions.guildBlocklistList, {}, INTRUDER_ID),
+      call("guild.blocklist.list", {}, INTRUDER_ID),
     ).rejects.toThrow("Missing ManageGuild permission");
     await expect(
-      call(RpcActions.guildBlocklistAdd, { userId: TARGET_ID }, INTRUDER_ID),
+      call("guild.blocklist.add", { userId: TARGET_ID }, INTRUDER_ID),
     ).rejects.toThrow("Missing ManageGuild permission");
     await expect(
-      call(RpcActions.guildBlocklistRemove, { userId: TARGET_ID }, INTRUDER_ID),
+      call("guild.blocklist.remove", { userId: TARGET_ID }, INTRUDER_ID),
     ).rejects.toThrow("Missing ManageGuild permission");
     expect(prisma.$all("blocklist")).toHaveLength(0);
   });

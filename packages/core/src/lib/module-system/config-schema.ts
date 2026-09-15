@@ -3,6 +3,7 @@ import type { ChannelType } from "discord.js";
 import {
   FieldType,
   type ConfigField,
+  type ConfigWidget,
   type MessageDocumentV2,
 } from "@lumi/contracts";
 
@@ -35,6 +36,8 @@ interface BaseOpts {
   section?: string;
   /** This field only takes effect while the named BOOLEAN field is true. */
   enabledBy?: string;
+  /** The field's section also hosts this dashboard widget. */
+  widget?: ConfigWidget;
 }
 
 const base = (o: BaseOpts) => ({
@@ -44,6 +47,7 @@ const base = (o: BaseOpts) => ({
   group: o.group,
   section: o.section,
   enabledBy: o.enabledBy,
+  widget: o.widget,
 });
 
 /** Config field builders tagged with UI metadata. */

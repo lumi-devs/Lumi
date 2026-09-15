@@ -74,7 +74,7 @@ export const modRpc = {
     timeoutMs: RpcTimeouts.short,
     summary: "Paged moderation cases.",
   }),
-  "guild.cases.revoke": rpcAction<{ success: true; caseNumber: number }>()({
+  "guild.cases.revoke": rpcAction<{ success: boolean; caseNumber: number }>()({
     input: s.object({ caseNumber: s.number().int().greaterThanOrEqual(1) }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
@@ -88,7 +88,7 @@ export const modRpc = {
     summary: "List warn-count escalation rules.",
   }),
   "guild.warnThresholds.set": rpcAction<{
-    success: true;
+    success: boolean;
     warnCount: number;
     deleted: boolean;
   }>()({
@@ -109,7 +109,7 @@ export const modRpc = {
     timeoutMs: RpcTimeouts.short,
     summary: "Moderator notes for a user.",
   }),
-  "guild.modNotes.add": rpcAction<{ success: true; note: ModNoteView }>()({
+  "guild.modNotes.add": rpcAction<{ success: boolean; note: ModNoteView }>()({
     input: s.object({
       userId: SnowflakeSchema,
       message: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(1000),
@@ -118,7 +118,7 @@ export const modRpc = {
     timeoutMs: RpcTimeouts.long,
     summary: "Add a moderator note.",
   }),
-  "guild.modNotes.remove": rpcAction<{ success: true; deleted: boolean }>()({
+  "guild.modNotes.remove": rpcAction<{ success: boolean; deleted: boolean }>()({
     input: s.object({ id: s.number().int().greaterThanOrEqual(1) }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
@@ -131,7 +131,7 @@ export const modRpc = {
     summary: "Verify an appeal link token.",
   }),
   "guild.appeals.submit": rpcAction<{
-    success: true;
+    success: boolean;
     appeal: { id: number; status: string; createdAt: string };
   }>()({
     input: s.object({
@@ -153,7 +153,7 @@ export const modRpc = {
     summary: "Paged appeals for reviewers.",
   }),
   "guild.appeals.review": rpcAction<{
-    success: true;
+    success: boolean;
     appeal: {
       id: number;
       status: string;

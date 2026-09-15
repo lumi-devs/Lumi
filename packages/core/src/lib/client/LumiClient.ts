@@ -10,7 +10,7 @@ import { registerCoreFireHandlers } from "#lib/core-fire-handlers.js";
 import type { RedisLock } from "#lib/redis-lock.js";
 import { acquireSchedulerLock } from "#lib/scheduler-lock.js";
 import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
-import { initCoreRpcHandlers } from "#lib/rpc/core-rpc.js";
+import { registerRpcHandlers } from "#lib/rpc/registry.js";
 import { startRpcHttpServer } from "#lib/rpc/http-server.js";
 import { TaskFireConsumer } from "#lib/task-fire-registry.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";
@@ -90,7 +90,7 @@ export class LumiClient extends SapphireClient {
         container.logger.error("[Primary] Lost scheduler lock, exiting");
         process.exit(1);
       });
-      initCoreRpcHandlers();
+      registerRpcHandlers();
       this._rpcServer = await startRpcHttpServer((level, msg, meta) =>
         container.logger[level](msg, meta),
       );

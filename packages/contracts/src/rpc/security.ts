@@ -14,20 +14,16 @@ export interface GuildBackupView {
   channelCount: number;
 }
 
-export type PanicSetResult =
-  | {
-      success: true;
-      active: true;
-      invitesPaused: boolean;
-      lockedCount: number;
-      skippedCount: number;
-    }
-  | {
-      success: true;
-      active: false;
-      restoredCount: number;
-      restoredStructure: { rolesRestored: number; channelsRestored: number } | null;
-    };
+/** Entering reports the lockdown counts; reverting reports what was restored. */
+export interface PanicSetResult {
+  success: boolean;
+  active: boolean;
+  invitesPaused?: boolean;
+  lockedCount?: number;
+  skippedCount?: number;
+  restoredCount?: number;
+  restoredStructure?: { rolesRestored: number; channelsRestored: number } | null;
+}
 
 export const securityRpc = {
   "guild.panic.get": rpcAction<PanicStateView>()({
@@ -68,14 +64,14 @@ export const securityRpc = {
     summary: "Bind the verification panel.",
   }),
   "guild.verificationPanel.delete": rpcAction<{
-    success: true;
+    success: boolean;
     deleted: boolean;
   }>()({
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
     summary: "Remove the verification panel.",
   }),
-  "guild.verificationWeb.complete": rpcAction<{ success: true }>()({
+  "guild.verificationWeb.complete": rpcAction<{ success: boolean }>()({
     auth: "session",
     requiresEnabled: "security",
     timeoutMs: RpcTimeouts.long,
@@ -87,7 +83,7 @@ export const securityRpc = {
     summary: "List guild backups (role/channel counts).",
   }),
   "guild.backups.restore": rpcAction<{
-    success: true;
+    success: boolean;
     rolesRestored: number;
     channelsRestored: number;
   }>()({

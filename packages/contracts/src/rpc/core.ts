@@ -14,16 +14,18 @@ export type PermitKind = (typeof PermitKinds)[number];
 export const PermitTargetTypes = ["role", "user"] as const;
 export type PermitTargetType = (typeof PermitTargetTypes)[number];
 
+// Read models carry the stored strings, which are wider than the write-side
+// enums until the database constrains them.
 export interface PermitAssignmentView {
   id: number;
-  targetType: PermitTargetType;
+  targetType: string;
   targetId: string;
 }
 
 export interface PermitView {
   id: number;
   name: string;
-  kind: PermitKind;
+  kind: string;
   nodes: string[];
   builtin: boolean;
   assignments: PermitAssignmentView[];
@@ -56,7 +58,7 @@ export const coreRpc = {
     summary: "List permits with assignments.",
   }),
   "guild.permits.create": rpcAction<{
-    success: true;
+    success: boolean;
     permit: { id: number };
   }>()({
     input: s.object({
@@ -69,7 +71,7 @@ export const coreRpc = {
     summary: "Create an enforced or custom permit.",
   }),
   "guild.permits.update": rpcAction<{
-    success: true;
+    success: boolean;
     permit: { id: number } | null;
   }>()({
     input: s.object({
@@ -81,19 +83,19 @@ export const coreRpc = {
     timeoutMs: RpcTimeouts.long,
     summary: "Rename or re-scope a permit.",
   }),
-  "guild.permits.delete": rpcAction<{ success: true }>()({
+  "guild.permits.delete": rpcAction<{ success: boolean }>()({
     input: s.object({ permitId: s.number().int() }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
     summary: "Delete a permit.",
   }),
-  "guild.permits.assign": rpcAction<{ success: true }>()({
+  "guild.permits.assign": rpcAction<{ success: boolean }>()({
     input: PermitTargetSchema,
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
     summary: "Grant a permit to a role or user.",
   }),
-  "guild.permits.unassign": rpcAction<{ success: true }>()({
+  "guild.permits.unassign": rpcAction<{ success: boolean }>()({
     input: PermitTargetSchema,
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
@@ -105,13 +107,13 @@ export const coreRpc = {
     timeoutMs: RpcTimeouts.short,
     summary: "Paged guild blocklist.",
   }),
-  "guild.blocklist.add": rpcAction<{ success: true; userId: string }>()({
+  "guild.blocklist.add": rpcAction<{ success: boolean; userId: string }>()({
     input: BlocklistAddSchema,
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
     summary: "Block a user.",
   }),
-  "guild.blocklist.remove": rpcAction<{ success: true; userId: string }>()({
+  "guild.blocklist.remove": rpcAction<{ success: boolean; userId: string }>()({
     input: BlocklistRemoveSchema,
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
@@ -123,7 +125,7 @@ export const coreRpc = {
     summary: "List ignored channels.",
   }),
   "guild.ignored.add": rpcAction<{
-    success: true;
+    success: boolean;
     channelId: string | null;
   }>()({
     input: IgnoredChannelSchema,
@@ -132,7 +134,7 @@ export const coreRpc = {
     summary: "Ignore a channel; null targets the guild-wide row.",
   }),
   "guild.ignored.remove": rpcAction<{
-    success: true;
+    success: boolean;
     channelId: string | null;
   }>()({
     input: IgnoredChannelSchema,

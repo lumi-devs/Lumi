@@ -6,7 +6,7 @@ export const WelcomeTestKinds = ["welcome", "goodbye"] as const;
 export type WelcomeTestKind = (typeof WelcomeTestKinds)[number];
 
 export const welcomeRpc = {
-  "guild.welcome.sendTest": rpcAction<{ sent: true }>()({
+  "guild.welcome.sendTest": rpcAction<{ sent: boolean }>()({
     input: s.object({ kind: s.enum(WelcomeTestKinds) }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,

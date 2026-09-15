@@ -48,7 +48,7 @@ export const systemRpc = {
     summary: "System-panel overview.",
   }),
   "system.maintenance.set": rpcAction<{
-    success: true;
+    success: boolean;
     maintenanceMode: boolean;
   }>()({
     input: s.object({
@@ -60,7 +60,7 @@ export const systemRpc = {
     summary: "Toggle maintenance mode.",
   }),
   "system.module.toggle": rpcAction<{
-    success: true;
+    success: boolean;
     moduleName: string;
     enabled: boolean;
   }>()({
@@ -73,14 +73,14 @@ export const systemRpc = {
     timeoutMs: RpcTimeouts.long,
     summary: "Globally toggle a module.",
   }),
-  "system.module.clear": rpcAction<{ success: true; moduleName: string }>()({
+  "system.module.clear": rpcAction<{ success: boolean; moduleName: string }>()({
     input: s.object({ moduleName: s.string().lengthGreaterThanOrEqual(1) }),
     auth: "botOwner",
     timeoutMs: RpcTimeouts.long,
     summary: "Clear a module's global state.",
   }),
   "system.identity.set": rpcAction<{
-    success: true;
+    success: boolean;
     inviteUrl: string | null;
     supportGuildId: string | null;
   }>()({
@@ -108,13 +108,13 @@ export const systemRpc = {
     timeoutMs: RpcTimeouts.short,
     summary: "Global blocklist.",
   }),
-  "system.blocklist.add": rpcAction<{ success: true; userId: string }>()({
+  "system.blocklist.add": rpcAction<{ success: boolean; userId: string }>()({
     input: BlocklistAddSchema,
     auth: "botOwner",
     timeoutMs: RpcTimeouts.long,
     summary: "Add to the global blocklist.",
   }),
-  "system.blocklist.remove": rpcAction<{ success: true; userId: string }>()({
+  "system.blocklist.remove": rpcAction<{ success: boolean; userId: string }>()({
     input: BlocklistRemoveSchema,
     auth: "botOwner",
     timeoutMs: RpcTimeouts.long,

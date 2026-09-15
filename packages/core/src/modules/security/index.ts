@@ -21,6 +21,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
   configSchema: cfg.object({
     panic_lock_mod_commands: cfg.boolean({
       section: "Panic mode",
+      widget: "panic-console",
       group: "Panic Mode",
       label: "Lock Mod Commands During Panic",
       description:
@@ -36,6 +37,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
     }),
     antinuke_enabled: cfg.boolean({
       section: "Anti-nuke",
+      widget: "anti-nuke",
       group: "Anti-Nuke",
       label: "Anti-Nuke",
       description: "Watch the audit log for mass destructive actions.",
@@ -174,6 +176,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
     }),
     joingate_enabled: cfg.boolean({
       section: "Join gate",
+      widget: "join-gate",
       group: "Join Gate",
       label: "Join Gate",
       description: "Screen new members for raids and throwaway accounts.",
@@ -390,6 +393,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
     }),
     backup_interval_hours: cfg.number({
       section: "Backups",
+      widget: "backups",
       group: "Backups",
       label: "Backup Interval (hours)",
       description:

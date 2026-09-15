@@ -26,7 +26,7 @@ export const loggingRpc = {
     summary: "Issue a one-time code to claim a log channel.",
   }),
   "guild.logClaims.dismiss": rpcAction<{
-    success: true;
+    success: boolean;
     dismissed: boolean;
   }>()({
     input: s.object({

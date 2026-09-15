@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from "bun:test";
 import { container } from "@sapphire/framework";
-import { RpcActions } from "@lumi/contracts";
-import { rpcHandlers } from "#lib/rpc/dispatch.js";
-import { DashboardModule } from "#modules/dashboard/index.js";
+import type { RpcActionName } from "@lumi/contracts/rpc";
+import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
 import { AppealRepository } from "#lib/prisma/repositories/AppealRepository.js";
 import { AccessRepository } from "#lib/prisma/repositories/AccessRepository.js";
@@ -33,7 +32,7 @@ function makeCase(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe("dashboard module appeals RPC handlers", () => {
+describe("mod module appeals RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let guild: any;
   let generateAppealToken: (typeof import("#lib/appeals/token.js"))["generateAppealToken"];
@@ -43,7 +42,7 @@ describe("dashboard module appeals RPC handlers", () => {
     ({ generateAppealToken } = await import("#lib/appeals/token.js"));
   });
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
 
     prisma = createMockPrismaClient();
@@ -84,21 +83,20 @@ describe("dashboard module appeals RPC handlers", () => {
       get: vi.fn().mockReturnValue({ loaded: () => [] }),
     } as any;
 
-    const mod = new DashboardModule({} as any, { name: "dashboard" });
-    await mod.onLoad();
+    registerRpcHandlers();
   });
 
-  const handlerFor = (action: string) => {
-    const handler = rpcHandlers.get(action);
+  const handlerFor = (action: RpcActionName) => {
+    const handler = getRpcHandler(action);
     if (!handler) throw new Error(`${action} handler not registered`);
     return handler;
   };
 
   // Public handlers pass no actorId at all - that's the point.
-  const callPublic = (action: string, data?: unknown) =>
+  const callPublic = (action: RpcActionName, data?: unknown) =>
     handlerFor(action)({ id: "req", action, guildId: GUILD_ID, data });
 
-  const callAuthed = (action: string, data?: unknown, actorId = OWNER_ID) =>
+  const callAuthed = (action: RpcActionName, data?: unknown, actorId = OWNER_ID) =>
     handlerFor(action)({ id: "req", action, guildId: GUILD_ID, actorId, data });
 
   const token = (overrides: Partial<{ guildId: string; caseId: number; userId: string }> = {}) =>
@@ -108,7 +106,7 @@ describe("dashboard module appeals RPC handlers", () => {
     it("returns valid: true with the case summary for a well-formed token", async () => {
       prisma.$seed("moderationCase", [makeCase()]);
 
-      const res = (await callPublic(RpcActions.guildAppealsVerify, {
+      const res = (await callPublic("guild.appeals.verify", {
         caseId: 1,
         token: token(),
       })) as any;
@@ -139,7 +137,7 @@ describe("dashboard module appeals RPC handlers", () => {
         },
       ]);
 
-      const res = (await callPublic(RpcActions.guildAppealsVerify, {
+      const res = (await callPublic("guild.appeals.verify", {
         caseId: 1,
         token: token(),
       })) as any;
@@ -151,7 +149,7 @@ describe("dashboard module appeals RPC handlers", () => {
     it("rejects a token whose signature doesn't match", async () => {
       prisma.$seed("moderationCase", [makeCase()]);
 
-      const res = (await callPublic(RpcActions.guildAppealsVerify, {
+      const res = (await callPublic("guild.appeals.verify", {
         caseId: 1,
         token: `${token().split(".")[0]}.deadbeef`,
       })) as any;
@@ -165,7 +163,7 @@ describe("dashboard module appeals RPC handlers", () => {
     it("rejects a token minted for a different guild", async () => {
       prisma.$seed("moderationCase", [makeCase()]);
 
-      const res = (await callPublic(RpcActions.guildAppealsVerify, {
+      const res = (await callPublic("guild.appeals.verify", {
         caseId: 1,
         token: token({ guildId: OTHER_GUILD_ID }),
       })) as any;
@@ -176,7 +174,7 @@ describe("dashboard module appeals RPC handlers", () => {
     it("rejects a token minted for a different case id", async () => {
       prisma.$seed("moderationCase", [makeCase()]);
 
-      const res = (await callPublic(RpcActions.guildAppealsVerify, {
+      const res = (await callPublic("guild.appeals.verify", {
         caseId: 1,
         token: token({ caseId: 2 }),
       })) as any;
@@ -187,7 +185,7 @@ describe("dashboard module appeals RPC handlers", () => {
     it("rejects a token minted for a different user than the case's target", async () => {
       prisma.$seed("moderationCase", [makeCase()]);
 
-      const res = (await callPublic(RpcActions.guildAppealsVerify, {
+      const res = (await callPublic("guild.appeals.verify", {
         caseId: 1,
         token: token({ userId: INTRUDER_ID }),
       })) as any;
@@ -198,7 +196,7 @@ describe("dashboard module appeals RPC handlers", () => {
     it("rejects a case that belongs to another guild", async () => {
       prisma.$seed("moderationCase", [makeCase({ guildId: OTHER_GUILD_ID })]);
 
-      const res = (await callPublic(RpcActions.guildAppealsVerify, {
+      const res = (await callPublic("guild.appeals.verify", {
         caseId: 1,
         token: token(),
       })) as any;
@@ -209,7 +207,7 @@ describe("dashboard module appeals RPC handlers", () => {
     it("rejects a case action that isn't appealable", async () => {
       prisma.$seed("moderationCase", [makeCase({ action: "warn" })]);
 
-      const res = (await callPublic(RpcActions.guildAppealsVerify, {
+      const res = (await callPublic("guild.appeals.verify", {
         caseId: 1,
         token: token(),
       })) as any;
@@ -218,7 +216,7 @@ describe("dashboard module appeals RPC handlers", () => {
     });
 
     it("rejects an unknown case id", async () => {
-      const res = (await callPublic(RpcActions.guildAppealsVerify, {
+      const res = (await callPublic("guild.appeals.verify", {
         caseId: 404,
         token: token({ caseId: 404 }),
       })) as any;
@@ -231,7 +229,7 @@ describe("dashboard module appeals RPC handlers", () => {
     it("creates a pending appeal for a valid token", async () => {
       prisma.$seed("moderationCase", [makeCase()]);
 
-      const res = (await callPublic(RpcActions.guildAppealsSubmit, {
+      const res = (await callPublic("guild.appeals.submit", {
         caseId: 1,
         token: token(),
         message: "I was not the one who sent those messages.",
@@ -266,7 +264,7 @@ describe("dashboard module appeals RPC handlers", () => {
       ]);
 
       await expect(
-        callPublic(RpcActions.guildAppealsSubmit, {
+        callPublic("guild.appeals.submit", {
           caseId: 1,
           token: token(),
           message: "second attempt",
@@ -279,7 +277,7 @@ describe("dashboard module appeals RPC handlers", () => {
       prisma.$seed("moderationCase", [makeCase()]);
 
       await expect(
-        callPublic(RpcActions.guildAppealsSubmit, {
+        callPublic("guild.appeals.submit", {
           caseId: 1,
           token: "garbage",
           message: "please reconsider this decision",
@@ -296,7 +294,7 @@ describe("dashboard module appeals RPC handlers", () => {
       });
 
       await expect(
-        callAuthed(RpcActions.guildAppealsList, {}, INTRUDER_ID),
+        callAuthed("guild.appeals.list", {}, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
     });
 
@@ -330,7 +328,7 @@ describe("dashboard module appeals RPC handlers", () => {
         },
       ]);
 
-      const res = (await callAuthed(RpcActions.guildAppealsList, {})) as any;
+      const res = (await callAuthed("guild.appeals.list", {})) as any;
 
       expect(res.total).toBe(2);
       expect(res.appeals.map((a: any) => a.caseNumber)).toEqual([5, 1]);
@@ -355,7 +353,7 @@ describe("dashboard module appeals RPC handlers", () => {
         },
       ]);
 
-      const res = (await callAuthed(RpcActions.guildAppealsList, {
+      const res = (await callAuthed("guild.appeals.list", {
         status: "pending",
       })) as any;
 
@@ -384,7 +382,7 @@ describe("dashboard module appeals RPC handlers", () => {
     it("sets status, reviewedBy and reviewedAt", async () => {
       seedPendingAppeal();
 
-      const res = (await callAuthed(RpcActions.guildAppealsReview, {
+      const res = (await callAuthed("guild.appeals.review", {
         id: 1,
         status: "approved",
       })) as any;
@@ -402,7 +400,7 @@ describe("dashboard module appeals RPC handlers", () => {
     it("blacklists the appellant when denied_blacklisted", async () => {
       seedPendingAppeal();
 
-      await callAuthed(RpcActions.guildAppealsReview, {
+      await callAuthed("guild.appeals.review", {
         id: 1,
         status: "denied_blacklisted",
       });
@@ -418,7 +416,7 @@ describe("dashboard module appeals RPC handlers", () => {
         { id: 1, userId: TARGET_ID, guildId: GUILD_ID, reason: "prior", blockedBy: OWNER_ID, createdAt: new Date() },
       ]);
 
-      await callAuthed(RpcActions.guildAppealsReview, {
+      await callAuthed("guild.appeals.review", {
         id: 1,
         status: "denied_blacklisted",
       });
@@ -428,7 +426,7 @@ describe("dashboard module appeals RPC handlers", () => {
 
     it("throws for an unknown appeal id", async () => {
       await expect(
-        callAuthed(RpcActions.guildAppealsReview, { id: 42, status: "approved" }),
+        callAuthed("guild.appeals.review", { id: 42, status: "approved" }),
       ).rejects.toThrow("Appeal #42 not found");
     });
 
@@ -449,7 +447,7 @@ describe("dashboard module appeals RPC handlers", () => {
       ]);
 
       await expect(
-        callAuthed(RpcActions.guildAppealsReview, { id: 1, status: "approved" }),
+        callAuthed("guild.appeals.review", { id: 1, status: "approved" }),
       ).rejects.toThrow("Appeal #1 not found");
     });
 
@@ -460,7 +458,7 @@ describe("dashboard module appeals RPC handlers", () => {
       });
 
       await expect(
-        callAuthed(RpcActions.guildAppealsReview, { id: 1, status: "approved" }, INTRUDER_ID),
+        callAuthed("guild.appeals.review", { id: 1, status: "approved" }, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
       expect(prisma.$all("appeal")[0]!["status"]).toBe("pending");
     });

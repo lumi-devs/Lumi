@@ -63,7 +63,7 @@ export const dashboardRpc = {
     summary:
       "Decorative guild rows (icon, banner, member count); omits guilds the actor can't manage.",
   }),
-  "guild.module.toggle": rpcAction<{ success: true; enabled: boolean }>()({
+  "guild.module.toggle": rpcAction<{ success: boolean; enabled: boolean }>()({
     input: s.object({
       moduleName: s.string().lengthGreaterThanOrEqual(1),
       enabled: s.boolean(),
@@ -73,7 +73,7 @@ export const dashboardRpc = {
     summary: "Enable or disable a module for a guild.",
   }),
   "guild.config.set": rpcAction<{
-    success: true;
+    success: boolean;
     key: string;
     value: unknown;
   }>()({
@@ -87,7 +87,7 @@ export const dashboardRpc = {
     summary: "Write one config key (omitted value deletes it).",
   }),
   "guild.config.setMany": rpcAction<{
-    success: true;
+    success: boolean;
     /** Coerced value per key, or null when the key was deleted. */
     updated: Record<string, unknown>;
   }>()({
@@ -100,7 +100,7 @@ export const dashboardRpc = {
     summary: "Batch config write, validated per key.",
   }),
   "guild.settings.set": rpcAction<{
-    success: true;
+    success: boolean;
     settings: GuildSettings;
   }>()({
     input: s.object({
@@ -130,7 +130,7 @@ export const dashboardRpc = {
     summary: "Paged config change history.",
   }),
   "guild.history.rollback": rpcAction<{
-    success: true;
+    success: boolean;
     moduleName: string;
     key: string;
     value: unknown;
@@ -148,7 +148,7 @@ export const dashboardRpc = {
     timeoutMs: RpcTimeouts.short,
     summary: "List per-channel/role/user config overrides.",
   }),
-  "guild.overrides.set": rpcAction<{ success: true; deleted: boolean }>()({
+  "guild.overrides.set": rpcAction<{ success: boolean; deleted: boolean }>()({
     input: s.object({
       moduleName: ModuleNameSchema,
       key: ConfigKeySchema,

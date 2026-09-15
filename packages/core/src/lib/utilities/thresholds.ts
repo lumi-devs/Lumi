@@ -1,5 +1,5 @@
 import type { Container } from "@sapphire/framework";
-import { warnThresholdNeedsDuration, type WarnThresholdAction } from "@lumi/contracts";
+import { warnThresholdNeedsDuration, type WarnThresholdAction } from "@lumi/contracts/rpc";
 import { parseDuration } from "#lib/utilities/time.js";
 
 export type ThresholdAction = WarnThresholdAction;

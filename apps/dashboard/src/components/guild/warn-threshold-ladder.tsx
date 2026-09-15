@@ -34,7 +34,9 @@ const Actions: {
   { value: "vcmute", label: "Voice mute", duration: "required" },
 ];
 
-const ActionByValue = new Map(Actions.map((a) => [a.value, a]));
+const ActionByValue = new Map<string, (typeof Actions)[number]>(
+  Actions.map((a) => [a.value, a]),
+);
 
 export function WarnThresholdLadder({
   guildId,

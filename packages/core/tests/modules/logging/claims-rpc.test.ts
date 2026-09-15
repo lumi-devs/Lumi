@@ -1,20 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { RpcActions } from "@lumi/contracts";
+import type { RpcActionName } from "@lumi/contracts/rpc";
 import { LogClaimCodeTtlMs } from "#lib/logging/claims.js";
 import { RedisKeys } from "#lib/database/redis.js";
-import { rpcHandlers } from "#lib/rpc/dispatch.js";
-import { DashboardModule } from "#modules/dashboard/index.js";
+import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";
 
-describe("dashboard module logging RPC handlers", () => {
+describe("logging module claim RPC handlers", () => {
   let guild: any;
   let strings: Map<string, string>;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
     strings = new Map();
 
@@ -44,17 +43,16 @@ describe("dashboard module logging RPC handlers", () => {
       get: vi.fn((key: string) => Promise.resolve(strings.get(key) ?? null)),
     } as any;
 
-    const mod = new DashboardModule({} as any, { name: "dashboard" });
-    await mod.onLoad();
+    registerRpcHandlers();
   });
 
-  const handlerFor = (action: string) => {
-    const handler = rpcHandlers.get(action);
+  const handlerFor = (action: RpcActionName) => {
+    const handler = getRpcHandler(action);
     if (!handler) throw new Error(`${action} handler not registered`);
     return handler;
   };
 
-  const call = (action: string, actorId = OWNER_ID) =>
+  const call = (action: RpcActionName, actorId = OWNER_ID) =>
     handlerFor(action)({ id: "req", action, guildId: GUILD_ID, actorId });
 
   describe("guild.logClaims.issue", () => {
@@ -64,12 +62,12 @@ describe("dashboard module logging RPC handlers", () => {
       });
 
       await expect(
-        call(RpcActions.guildLogClaimsIssue, INTRUDER_ID),
+        call("guild.logClaims.issue", INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
     });
 
     it("issues a 6-char code with its TTL", async () => {
-      const res = (await call(RpcActions.guildLogClaimsIssue)) as any;
+      const res = (await call("guild.logClaims.issue")) as any;
 
       expect(res.code).toMatch(/^[A-Z2-9]{6}$/);
       expect(res.expiresIn).toBe(LogClaimCodeTtlMs);

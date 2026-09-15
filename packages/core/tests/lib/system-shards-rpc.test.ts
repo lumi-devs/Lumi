@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { RpcActions } from "@lumi/contracts";
-import { rpcHandlers } from "#lib/rpc/dispatch.js";
-import { initCoreRpcHandlers } from "#lib/rpc/core-rpc.js";
+import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 
 const BOT_OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";
@@ -57,7 +55,7 @@ describe("system.shards.get RPC handler", () => {
     } as any;
     (container as any).redis = fakeRedis(store);
 
-    initCoreRpcHandlers();
+    registerRpcHandlers();
   });
 
   afterEach(() => {
@@ -65,11 +63,11 @@ describe("system.shards.get RPC handler", () => {
   });
 
   const call = (...actor: [] | [string | undefined]) => {
-    const handler = rpcHandlers.get(RpcActions.systemShardsGet);
+    const handler = getRpcHandler("system.shards.get");
     if (!handler) throw new Error("system.shards.get handler not registered");
     return handler({
       id: "req",
-      action: RpcActions.systemShardsGet,
+      action: "system.shards.get",
       actorId: actor.length === 0 ? BOT_OWNER_ID : actor[0],
     });
   };

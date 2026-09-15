@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { RpcActions } from "@lumi/contracts";
-import { rpcHandlers } from "#lib/rpc/dispatch.js";
-import { initCoreRpcHandlers } from "#lib/rpc/core-rpc.js";
+import type { RpcActionName } from "@lumi/contracts/rpc";
+import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { AuditRepository } from "#lib/prisma/repositories/AuditRepository.js";
 import { AccessRepository } from "#lib/prisma/repositories/AccessRepository.js";
-import { createMockPrismaClient } from "../../mocks/prisma.js";
+import { createMockPrismaClient } from "../mocks/prisma.js";
 
 const GUILD_ID = "123456789012345678";
 const BOT_OWNER_ID = "111111111111111111";
@@ -72,16 +71,16 @@ describe("system panel RPC handlers", () => {
     db.access = new AccessRepository(prisma as any, redis as any, container.logger, db);
     (container as any).db = db;
 
-    initCoreRpcHandlers();
+    registerRpcHandlers();
   });
 
-  const handlerFor = (action: string) => {
-    const handler = rpcHandlers.get(action);
+  const handlerFor = (action: RpcActionName) => {
+    const handler = getRpcHandler(action);
     if (!handler) throw new Error(`${action} handler not registered`);
     return handler;
   };
 
-  const call = (action: string, data?: unknown, actorId = BOT_OWNER_ID) =>
+  const call = (action: RpcActionName, data?: unknown, actorId = BOT_OWNER_ID) =>
     handlerFor(action)({ id: "req", action, actorId, data });
 
   describe("system.audit.list", () => {
@@ -91,7 +90,7 @@ describe("system panel RPC handlers", () => {
         makeAudit({ id: 2, guildId: "999999999999999999" }),
       ]);
 
-      const res = (await call(RpcActions.systemAuditList, {})) as any;
+      const res = (await call("system.audit.list", {})) as any;
 
       expect(res.total).toBe(2);
       expect(res.page).toBe(1);
@@ -105,7 +104,7 @@ describe("system panel RPC handlers", () => {
         makeAudit({ id: 2, guildId: "999999999999999999" }),
       ]);
 
-      const res = (await call(RpcActions.systemAuditList, {
+      const res = (await call("system.audit.list", {
         guildId: GUILD_ID,
       })) as any;
 
@@ -121,7 +120,7 @@ describe("system panel RPC handlers", () => {
         ),
       );
 
-      const res = (await call(RpcActions.systemAuditList, {
+      const res = (await call("system.audit.list", {
         page: 2,
         pageSize: 2,
       })) as any;
@@ -132,13 +131,13 @@ describe("system panel RPC handlers", () => {
 
     it("rejects a non-owner", async () => {
       await expect(
-        call(RpcActions.systemAuditList, {}, INTRUDER_ID),
+        call("system.audit.list", {}, INTRUDER_ID),
       ).rejects.toThrow("Bot Owner authorization required");
     });
 
     it("rejects an oversized page", async () => {
       await expect(
-        call(RpcActions.systemAuditList, { pageSize: 500 }),
+        call("system.audit.list", { pageSize: 500 }),
       ).rejects.toThrow("Bad payload");
     });
   });
@@ -151,7 +150,7 @@ describe("system panel RPC handlers", () => {
         makeBlock({ id: 3, guildId: GUILD_ID }),
       ]);
 
-      const res = (await call(RpcActions.systemBlocklistList, {})) as any;
+      const res = (await call("system.blocklist.list", {})) as any;
 
       expect(res.total).toBe(2);
       expect(res.entries.map((e: any) => e.id)).toEqual([2, 1]);
@@ -159,7 +158,7 @@ describe("system panel RPC handlers", () => {
     });
 
     it("adds a global entry attributed to the acting owner", async () => {
-      const res = (await call(RpcActions.systemBlocklistAdd, {
+      const res = (await call("system.blocklist.add", {
         userId: TARGET_ID,
         reason: "abuse",
       })) as any;
@@ -174,7 +173,7 @@ describe("system panel RPC handlers", () => {
 
     it("refuses to blocklist a bot owner", async () => {
       await expect(
-        call(RpcActions.systemBlocklistAdd, { userId: BOT_OWNER_ID }),
+        call("system.blocklist.add", { userId: BOT_OWNER_ID }),
       ).rejects.toThrow("Cannot blocklist a bot owner");
       expect(prisma.$all("blocklist")).toHaveLength(0);
     });
@@ -183,7 +182,7 @@ describe("system panel RPC handlers", () => {
       prisma.$seed("blocklist", [makeBlock({ id: 1 })]);
 
       await expect(
-        call(RpcActions.systemBlocklistAdd, { userId: TARGET_ID }),
+        call("system.blocklist.add", { userId: TARGET_ID }),
       ).rejects.toThrow("already blocklisted globally");
       expect(prisma.$all("blocklist")).toHaveLength(1);
     });
@@ -191,7 +190,7 @@ describe("system panel RPC handlers", () => {
     it("does not treat a guild-scoped row as a global one", async () => {
       prisma.$seed("blocklist", [makeBlock({ id: 1, guildId: GUILD_ID })]);
 
-      await call(RpcActions.systemBlocklistAdd, { userId: TARGET_ID });
+      await call("system.blocklist.add", { userId: TARGET_ID });
 
       expect(prisma.$all("blocklist")).toHaveLength(2);
     });
@@ -202,7 +201,7 @@ describe("system panel RPC handlers", () => {
         makeBlock({ id: 2, guildId: GUILD_ID }),
       ]);
 
-      const res = (await call(RpcActions.systemBlocklistRemove, {
+      const res = (await call("system.blocklist.remove", {
         userId: TARGET_ID,
       })) as any;
 
@@ -214,24 +213,20 @@ describe("system panel RPC handlers", () => {
 
     it("rejects a non-owner on every entry point", async () => {
       await expect(
-        call(RpcActions.systemBlocklistList, {}, INTRUDER_ID),
+        call("system.blocklist.list", {}, INTRUDER_ID),
       ).rejects.toThrow("Bot Owner authorization required");
       await expect(
-        call(RpcActions.systemBlocklistAdd, { userId: TARGET_ID }, INTRUDER_ID),
+        call("system.blocklist.add", { userId: TARGET_ID }, INTRUDER_ID),
       ).rejects.toThrow("Bot Owner authorization required");
       await expect(
-        call(
-          RpcActions.systemBlocklistRemove,
-          { userId: TARGET_ID },
-          INTRUDER_ID,
-        ),
+        call("system.blocklist.remove", { userId: TARGET_ID }, INTRUDER_ID),
       ).rejects.toThrow("Bot Owner authorization required");
       expect(prisma.$all("blocklist")).toHaveLength(0);
     });
 
     it("rejects a malformed user id", async () => {
       await expect(
-        call(RpcActions.systemBlocklistAdd, { userId: "not-a-snowflake" }),
+        call("system.blocklist.add", { userId: "not-a-snowflake" }),
       ).rejects.toThrow("Bad payload");
     });
   });
@@ -245,7 +240,7 @@ describe("system panel RPC handlers", () => {
         }),
       };
 
-      const res = (await call(RpcActions.systemModuleToggle, {
+      const res = (await call("system.module.toggle", {
         moduleName: "mod",
         enabled: false,
         reason: "testing",
@@ -261,7 +256,7 @@ describe("system panel RPC handlers", () => {
       };
 
       await expect(
-        call(RpcActions.systemModuleToggle, {
+        call("system.module.toggle", {
           moduleName: "mod",
           enabled: true,
         }),

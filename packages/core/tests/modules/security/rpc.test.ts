@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { RpcActions } from "@lumi/contracts";
-import { rpcHandlers } from "#lib/rpc/dispatch.js";
-import { DashboardModule } from "#modules/dashboard/index.js";
+import type { RpcActionName } from "@lumi/contracts/rpc";
+import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { SecurityRepository } from "#lib/prisma/repositories/SecurityRepository.js";
-import { TempVcRepository } from "#lib/prisma/repositories/TempVcRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 const GUILD_ID = "123456789012345678";
@@ -13,18 +11,18 @@ const INTRUDER_ID = "333333333333333333";
 const CHANNEL_ID = "444444444444444444";
 const MESSAGE_ID = "555555555555555555";
 
-describe("dashboard module security + tempvc RPC handlers", () => {
+describe("security module RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let guild: any;
   let utilities: Map<string, unknown>;
+  let loadedModules: Set<string>;
   let security: {
     enterPanic: ReturnType<typeof vi.fn>;
     revertPanic: ReturnType<typeof vi.fn>;
     postOrEditVerifyPanel: ReturnType<typeof vi.fn>;
   };
-  let tempvc: { addGenerator: ReturnType<typeof vi.fn>; removeGenerator: ReturnType<typeof vi.fn> };
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
 
     prisma = createMockPrismaClient();
@@ -50,7 +48,6 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       ensureGuild: vi.fn().mockResolvedValue(undefined),
     } as any;
     db.security = new SecurityRepository(prisma as any, {} as any, container.logger, db);
-    db.tempvc = new TempVcRepository(prisma as any, {} as any, container.logger, db);
     (container as any).db = db;
 
     security = {
@@ -60,35 +57,31 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       revertPanic: vi.fn().mockResolvedValue({ restoredCount: 3 }),
       postOrEditVerifyPanel: vi.fn(),
     };
-    tempvc = {
-      addGenerator: vi.fn().mockResolvedValue(undefined),
-      removeGenerator: vi.fn().mockResolvedValue(true),
-    };
 
-    utilities = new Map<string, unknown>([
-      ["security", security],
-      ["tempvc", tempvc],
-    ]);
+    utilities = new Map<string, unknown>([["security", security]]);
+    loadedModules = new Set(["security"]);
 
     container.stores = {
       get: vi.fn((name: string) =>
         name === "utilities"
           ? { get: (key: string) => utilities.get(key) }
-          : { loaded: () => [] },
+          : {
+              loaded: () => [],
+              get: (key: string) => (loadedModules.has(key) ? { name: key } : undefined),
+            },
       ),
     } as any;
 
-    const mod = new DashboardModule({} as any, { name: "dashboard" });
-    await mod.onLoad();
+    registerRpcHandlers();
   });
 
-  const handlerFor = (action: string) => {
-    const handler = rpcHandlers.get(action);
+  const handlerFor = (action: RpcActionName) => {
+    const handler = getRpcHandler(action);
     if (!handler) throw new Error(`${action} handler not registered`);
     return handler;
   };
 
-  const call = (action: string, data?: unknown, actorId = OWNER_ID) =>
+  const call = (action: RpcActionName, data?: unknown, actorId = OWNER_ID) =>
     handlerFor(action)({ id: "req", action, guildId: GUILD_ID, actorId, data });
 
   const denyPermissions = () =>
@@ -98,7 +91,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
 
   describe("guild.panic.get", () => {
     it("reports an inactive guild with no panic row", async () => {
-      const res = (await call(RpcActions.guildPanicGet)) as any;
+      const res = (await call("guild.panic.get")) as any;
 
       expect(res).toEqual({
         active: false,
@@ -120,7 +113,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
         },
       ]);
 
-      const res = (await call(RpcActions.guildPanicGet)) as any;
+      const res = (await call("guild.panic.get")) as any;
 
       expect(res.active).toBe(true);
       expect(res.invitesPaused).toBe(true);
@@ -128,18 +121,26 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       expect(res.startedAt).toBe("2026-01-01T00:00:00.000Z");
     });
 
+    it("still answers while the security module is unloaded", async () => {
+      utilities.delete("security");
+      loadedModules.delete("security");
+
+      const res = (await call("guild.panic.get")) as any;
+      expect(res.active).toBe(false);
+    });
+
     it("rejects an actor without ManageGuild", async () => {
       denyPermissions();
 
       await expect(
-        call(RpcActions.guildPanicGet, undefined, INTRUDER_ID),
+        call("guild.panic.get", undefined, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
     });
   });
 
   describe("guild.panic.set", () => {
     it("enters panic through the security service", async () => {
-      const res = (await call(RpcActions.guildPanicSet, {
+      const res = (await call("guild.panic.set", {
         active: true,
         channelIds: [CHANNEL_ID],
       })) as any;
@@ -168,13 +169,13 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       ]);
 
       await expect(
-        call(RpcActions.guildPanicSet, { active: true }),
+        call("guild.panic.set", { active: true }),
       ).rejects.toThrow("Panic mode is already active");
       expect(security.enterPanic).not.toHaveBeenCalled();
     });
 
     it("reverts panic through the security service", async () => {
-      const res = (await call(RpcActions.guildPanicSet, {
+      const res = (await call("guild.panic.set", {
         active: false,
       })) as any;
 
@@ -186,15 +187,16 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       security.revertPanic.mockResolvedValue(null);
 
       await expect(
-        call(RpcActions.guildPanicSet, { active: false }),
+        call("guild.panic.set", { active: false }),
       ).rejects.toThrow("Panic mode is not active");
     });
 
     it("throws when the security module is unloaded", async () => {
       utilities.delete("security");
+      loadedModules.delete("security");
 
       await expect(
-        call(RpcActions.guildPanicSet, { active: true }),
+        call("guild.panic.set", { active: true }),
       ).rejects.toThrow("The security module is not loaded");
     });
 
@@ -202,7 +204,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       denyPermissions();
 
       await expect(
-        call(RpcActions.guildPanicSet, { active: true }, INTRUDER_ID),
+        call("guild.panic.set", { active: true }, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
       expect(security.enterPanic).not.toHaveBeenCalled();
     });
@@ -210,7 +212,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
 
   describe("guild.verificationPanel", () => {
     it("returns null when the guild has no panel", async () => {
-      const res = (await call(RpcActions.guildVerificationPanelGet)) as any;
+      const res = (await call("guild.verificationPanel.get")) as any;
       expect(res).toEqual({ panel: null });
     });
 
@@ -225,7 +227,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
         oldMessageDeleted: false,
       });
 
-      const res = (await call(RpcActions.guildVerificationPanelSet, {
+      const res = (await call("guild.verificationPanel.set", {
         channelId: CHANNEL_ID,
       })) as any;
 
@@ -255,7 +257,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
         },
       ]);
 
-      const getRes = (await call(RpcActions.guildVerificationPanelGet)) as any;
+      const getRes = (await call("guild.verificationPanel.get")) as any;
       expect(getRes.panel).toEqual({
         channelId: CHANNEL_ID,
         messageId: MESSAGE_ID,
@@ -265,7 +267,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
 
     it("rejects when neither a channel nor createChannel is given", async () => {
       await expect(
-        call(RpcActions.guildVerificationPanelSet, {}),
+        call("guild.verificationPanel.set", {}),
       ).rejects.toThrow("Pick a channel or choose to create a new one.");
       expect(security.postOrEditVerifyPanel).not.toHaveBeenCalled();
     });
@@ -275,8 +277,8 @@ describe("dashboard module security + tempvc RPC handlers", () => {
         { guildId: GUILD_ID, channelId: CHANNEL_ID, messageId: MESSAGE_ID },
       ]);
 
-      const first = (await call(RpcActions.guildVerificationPanelDelete)) as any;
-      const second = (await call(RpcActions.guildVerificationPanelDelete)) as any;
+      const first = (await call("guild.verificationPanel.delete")) as any;
+      const second = (await call("guild.verificationPanel.delete")) as any;
 
       expect(first).toEqual({ success: true, deleted: true });
       expect(second).toEqual({ success: true, deleted: false });
@@ -287,140 +289,7 @@ describe("dashboard module security + tempvc RPC handlers", () => {
       denyPermissions();
 
       await expect(
-        call(
-          RpcActions.guildVerificationPanelSet,
-          { channelId: CHANNEL_ID },
-          INTRUDER_ID,
-        ),
-      ).rejects.toThrow("Missing ManageGuild permission");
-    });
-  });
-
-  describe("guild.tempvc.generators", () => {
-    it("lists only this guild's generators", async () => {
-      prisma.$seed("tempVcGenerator", [
-        { guildId: GUILD_ID, channelId: CHANNEL_ID, name: "Gaming {}", limit: 5 },
-        { guildId: "999999999999999999", channelId: MESSAGE_ID, name: "Other {}", limit: 0 },
-      ]);
-
-      const res = (await call(RpcActions.guildTempVcGeneratorsList)) as any;
-
-      expect(res.generators).toEqual([
-        { channelId: CHANNEL_ID, name: "Gaming {}", limit: 5 },
-      ]);
-    });
-
-    it("upserts through the tempvc service so its registry is invalidated", async () => {
-      const res = (await call(RpcActions.guildTempVcGeneratorSet, {
-        channelId: CHANNEL_ID,
-        name: "Gaming {}",
-        limit: 5,
-      })) as any;
-
-      expect(container.db.ensureGuild).toHaveBeenCalledWith(GUILD_ID);
-      expect(tempvc.addGenerator).toHaveBeenCalledWith(GUILD_ID, CHANNEL_ID, {
-        name: "Gaming {}",
-        limit: 5,
-      });
-      expect(res).toEqual({ success: true, channelId: CHANNEL_ID, deleted: false });
-    });
-
-    it("defaults the user limit to unlimited", async () => {
-      await call(RpcActions.guildTempVcGeneratorSet, {
-        channelId: CHANNEL_ID,
-        name: "Gaming {}",
-      });
-
-      expect(tempvc.addGenerator).toHaveBeenCalledWith(GUILD_ID, CHANNEL_ID, {
-        name: "Gaming {}",
-        limit: 0,
-      });
-    });
-
-    it("deletes the generator when name is null", async () => {
-      const res = (await call(RpcActions.guildTempVcGeneratorSet, {
-        channelId: CHANNEL_ID,
-        name: null,
-      })) as any;
-
-      expect(tempvc.removeGenerator).toHaveBeenCalledWith(GUILD_ID, CHANNEL_ID);
-      expect(tempvc.addGenerator).not.toHaveBeenCalled();
-      expect(res).toEqual({ success: true, channelId: CHANNEL_ID, deleted: true });
-    });
-
-    it("throws when the tempvc module is unloaded", async () => {
-      utilities.delete("tempvc");
-
-      await expect(
-        call(RpcActions.guildTempVcGeneratorSet, {
-          channelId: CHANNEL_ID,
-          name: "Gaming {}",
-        }),
-      ).rejects.toThrow("The tempvc module is not loaded");
-    });
-
-    it("rejects an actor without ManageGuild", async () => {
-      denyPermissions();
-
-      await expect(
-        call(
-          RpcActions.guildTempVcGeneratorSet,
-          { channelId: CHANNEL_ID, name: "Gaming {}" },
-          INTRUDER_ID,
-        ),
-      ).rejects.toThrow("Missing ManageGuild permission");
-      expect(tempvc.addGenerator).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("guild.tempvc.records.list", () => {
-    it("projects live records with serialized dates", async () => {
-      prisma.$seed("tempVcRecord", [
-        {
-          guildId: GUILD_ID,
-          channelId: CHANNEL_ID,
-          ownerId: OWNER_ID,
-          generatorId: MESSAGE_ID,
-          name: "Gaming 1",
-          number: 1,
-          locked: true,
-          hidden: false,
-          createdAt: new Date("2026-01-01T00:00:00.000Z"),
-        },
-        {
-          guildId: "999999999999999999",
-          channelId: MESSAGE_ID,
-          ownerId: OWNER_ID,
-          generatorId: MESSAGE_ID,
-          name: "Other 1",
-          number: 1,
-          locked: false,
-          hidden: false,
-          createdAt: new Date(),
-        },
-      ]);
-
-      const res = (await call(RpcActions.guildTempVcRecordsList)) as any;
-
-      expect(res.records).toEqual([
-        {
-          channelId: CHANNEL_ID,
-          ownerId: OWNER_ID,
-          generatorId: MESSAGE_ID,
-          name: "Gaming 1",
-          number: 1,
-          locked: true,
-          hidden: false,
-          createdAt: "2026-01-01T00:00:00.000Z",
-        },
-      ]);
-    });
-
-    it("rejects an actor without ManageGuild", async () => {
-      denyPermissions();
-
-      await expect(
-        call(RpcActions.guildTempVcRecordsList, undefined, INTRUDER_ID),
+        call("guild.verificationPanel.set", { channelId: CHANNEL_ID }, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
     });
   });

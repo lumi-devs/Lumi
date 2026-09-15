@@ -30,7 +30,7 @@ export const reactionrolesRpc = {
     summary: "List role menus for a guild.",
   }),
   "guild.reactionroles.menus.set": rpcAction<{
-    success: true;
+    success: boolean;
     menu: ReactionRoleMenuView;
   }>()({
     input: s.object({
@@ -53,7 +53,7 @@ export const reactionrolesRpc = {
     summary: "Create or update a role menu with its options.",
   }),
   "guild.reactionroles.menus.delete": rpcAction<{
-    success: true;
+    success: boolean;
     id: string;
     deleted: boolean;
   }>()({

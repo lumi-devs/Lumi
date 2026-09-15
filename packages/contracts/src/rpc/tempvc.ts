@@ -12,7 +12,7 @@ export const tempvcRpc = {
     summary: "List temporary-voice generator channels.",
   }),
   "guild.tempvc.generators.set": rpcAction<{
-    success: true;
+    success: boolean;
     channelId: string;
     deleted: boolean;
   }>()({

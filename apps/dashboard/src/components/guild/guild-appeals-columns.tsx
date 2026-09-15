@@ -4,7 +4,11 @@ import type { AppealReviewStatus } from "@lumi/contracts";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import type { AppealView } from "@lumi/contracts/views";
-import { AppealStatusBadgeVariant, AppealStatusLabels } from "#/lib/appeals";
+import {
+  AppealStatusBadgeVariant,
+  AppealStatusLabels,
+  isAppealStatus,
+} from "#/lib/appeals";
 import { caseActionLabel, formatCaseDate } from "#/lib/moderation-cases";
 
 function UserCell({ id, names }: { id: string; names: Record<string, string> }) {
@@ -59,10 +63,11 @@ export function guildAppealsColumns({
       meta: { className: "w-40" },
       cell: ({ row }) => {
         const appeal = row.original;
+        const status = isAppealStatus(appeal.status) ? appeal.status : null;
         return (
           <span className="flex flex-col gap-1">
-            <Badge variant={AppealStatusBadgeVariant[appeal.status]}>
-              {AppealStatusLabels[appeal.status]}
+            <Badge variant={status ? AppealStatusBadgeVariant[status] : "neutral"}>
+              {status ? AppealStatusLabels[status] : appeal.status}
             </Badge>
             {appeal.reviewedBy ? (
               <span className="text-[13px] text-fg-subtle">
