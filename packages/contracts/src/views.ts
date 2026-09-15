@@ -24,7 +24,8 @@ export interface GuildSettings {
   [key: string]: unknown;
 }
 
-export interface DashboardModuleView {
+/** A module's manifest plus its enabled state for the guild, without config values. */
+export interface DashboardModuleSummaryView {
   name: string;
   displayName: string;
   emoji: string;
@@ -36,10 +37,13 @@ export interface DashboardModuleView {
   dependencies: string[];
   enabled: boolean;
   configFields: ConfigField[];
-  config: Record<string, unknown>;
   isAddon: boolean;
   category: string;
   dashboardHref: string | null;
+}
+
+export interface DashboardModuleView extends DashboardModuleSummaryView {
+  config: Record<string, unknown>;
 }
 
 export interface DashboardRoleView {
@@ -61,6 +65,22 @@ export interface DashboardMemberView {
   id: string;
   username: string;
   displayName: string;
+}
+
+export interface GuildShellData {
+  name: string;
+  icon: string | null;
+  banner: string | null;
+  memberCount: number;
+  settings: GuildSettings;
+  modules: DashboardModuleSummaryView[];
+}
+
+export interface GuildEntitiesData {
+  roles: DashboardRoleView[];
+  channels: DashboardChannelView[];
+  /** A directory sample for id-to-name lookups, not a census. */
+  members: DashboardMemberView[];
 }
 
 export interface DashboardData {
