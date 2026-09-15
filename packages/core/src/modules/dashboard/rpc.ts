@@ -54,7 +54,7 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
       .get("modules")
       .loaded()
       .find((m) => m.meta.name === input.module);
-    if (!module) throw new Error(`No module named \`${input.module}\`.`);
+    if (!module) return { module: null };
     const [enabled, stored] = await Promise.all([
       checkModulesEnabled(guildId, [module.meta.name]),
       container.db.config.getAllModuleConfig(guildId, module.meta.name),
@@ -64,8 +64,10 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
       config[field.key] = stored[field.key] ?? field.default ?? null;
     }
     return {
-      ...moduleSummary(module, enabled.get(module.meta.name) ?? true),
-      config,
+      module: {
+        ...moduleSummary(module, enabled.get(module.meta.name) ?? true),
+        config,
+      },
     };
   },
 

@@ -43,11 +43,12 @@ export const dashboardRpc = {
     summary:
       "Guild layout shell: name, icon, member count, settings, module manifests and enabled states.",
   }),
-  "guild.module.get": rpcAction<DashboardModuleView>()({
+  "guild.module.get": rpcAction<{ module: DashboardModuleView | null }>()({
     input: s.object({ module: ModuleNameSchema }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.medium,
-    summary: "One module's manifest, enabled state and config values.",
+    summary:
+      "One module's manifest, enabled state and config values; null when it isn't loaded.",
   }),
   "guild.entities.get": rpcAction<GuildEntitiesData>()({
     auth: "guildManager",

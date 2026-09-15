@@ -160,9 +160,9 @@ describe("dashboard module guild read RPC handlers", () => {
     it("returns one module with its config values filled from defaults", async () => {
       const result = (await call("guild.module.get", OWNER_ID, { module: "afk" })) as any;
 
-      expect(result.name).toBe("afk");
-      expect(result.enabled).toBe(false);
-      expect(result.config).toEqual({ timeout: 5 });
+      expect(result.module.name).toBe("afk");
+      expect(result.module.enabled).toBe(false);
+      expect(result.module.config).toEqual({ timeout: 5 });
       expect(container.db.config.getAllModuleConfig).toHaveBeenCalledWith(GUILD_ID, "afk");
     });
 
@@ -171,13 +171,14 @@ describe("dashboard module guild read RPC handlers", () => {
 
       const result = (await call("guild.module.get", OWNER_ID, { module: "afk" })) as any;
 
-      expect(result.config).toEqual({ timeout: 30 });
+      expect(result.module.config).toEqual({ timeout: 30 });
     });
 
-    it("rejects a module that is not loaded", async () => {
+    it("answers null for a module that is not loaded", async () => {
       await expect(
         call("guild.module.get", OWNER_ID, { module: "ghost" }),
-      ).rejects.toThrow("No module named");
+      ).resolves.toEqual({ module: null });
+      expect(container.db.config.getAllModuleConfig).not.toHaveBeenCalled();
     });
   });
 
