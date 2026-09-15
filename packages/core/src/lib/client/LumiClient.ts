@@ -23,11 +23,14 @@ import {
 } from "@sapphire/framework";
 import { tryParseJSON } from "@sapphire/utilities";
 import type { Message } from "discord.js";
-import { warnOnCleanupError } from "./cleanup.js";
 import { buildClientOptions } from "./client-options.js";
 import { installContainerServices } from "./container-services.js";
 import { PrefixCache } from "./PrefixCache.js";
 import { ReadinessProbes } from "./ReadinessProbes.js";
+
+// Teardown steps swallow their own failure so one unreachable resource can't strand the rest.
+const warnOnCleanupError = (what: string) => (err: unknown) =>
+  container.logger.warn(`[Client] ${what} failed:`, err);
 
 /**
  * The primary client for Lumi, extending {@linkcode SapphireClient}.

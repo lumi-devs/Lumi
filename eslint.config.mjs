@@ -124,5 +124,17 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    files: ['packages/*/tests/**/*.ts', 'packages/*/src/**/*.test.ts', 'apps/dashboard/tests/**/*.{ts,tsx}'],
+    rules: {
+      // bun:test types vi.mock/mock.module as returning a Promise, but module mocks are hoisted and never awaited.
+      '@typescript-eslint/no-floating-promises': [
+        'error',
+        { allowForKnownSafeCalls: [{ from: 'package', name: ['mock', 'module'], package: 'bun:test' }] },
+      ],
+      '@typescript-eslint/require-await': 'off',
+      'no-restricted-imports': 'off',
+    },
   }
 );

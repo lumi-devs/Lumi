@@ -1,4 +1,4 @@
-import type { CommandContext } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 import { formatDuration } from "#lib/utilities/time.js";
 import {
   CooldownError,

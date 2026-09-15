@@ -20,14 +20,9 @@ import { ExportLogButton } from "#/components/ui/export-log-button";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
-import type { AppealsListData, AppealView } from "#/lib/dashboard-data";
+import type { AppealsListData, AppealView } from "@lumi/contracts/views";
 import { AppealStatusOptions, isAppealStatus } from "#/lib/appeals";
-import {
-  countBy,
-  extractMemberNames,
-  pageNumber,
-  single,
-} from "#/lib/log-format";
+import { countBy, extractMemberNames, pageNumber, single } from "#/lib/log-format";
 
 const PageSize = 25;
 

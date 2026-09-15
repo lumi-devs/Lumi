@@ -36,7 +36,7 @@ describe("Chaos Suite: Shard 0 SIGKILL Respawn & RPC Re-bind", () => {
     const logger = vi.fn();
     const serverHandle = await startRpcHttpServer(logger, 3, 10);
 
-    expect(serverHandle).toBe(mockServer);
+    expect(serverHandle).toBe<typeof mockServer>(mockServer);
     expect(attemptCount).toBe(2);
     expect(logger).toHaveBeenCalledWith(
       "warn",

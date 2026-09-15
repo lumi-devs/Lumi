@@ -27,7 +27,7 @@ function shimFile(subpath: string): string {
 
 // The nearest package.json to every addon file. Named "lumi" so `import "lumi"`
 // self-resolves here rather than at the repo root, and carries no `imports` map
-// so `#lib/*` and `#database/*` do not resolve from addon code. Targets point at
+// so `#lib/*` and `#modules/*` do not resolve from addon code. Targets point at
 // generated shims because an exports target may not escape its own package.
 export async function ensureSandboxRoot(): Promise<void> {
   await mkdir(path.join(ModuleRoot, ShimDir), { recursive: true });

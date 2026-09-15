@@ -19,10 +19,7 @@ import {
 import { EmptyState } from "#/components/ui/empty-state";
 import { PageHeader } from "#/components/ui/page-header";
 import { isVoiceChannel } from "#/lib/channel-types";
-import type {
-  TempVcGeneratorView,
-  TempVcRecordView,
-} from "#/lib/dashboard-data";
+import type { TempVcGeneratorView, TempVcRecordView } from "@lumi/contracts/views";
 
 export default async function TempVcPage({
   params,

@@ -4,19 +4,18 @@ import { scheduleCaseLift } from '#modules/mod/lib/helpers.js';
 import { parseDuration, formatDuration } from '#lib/utilities/time.js';
 import {
   getThresholds,
-  invalidateThresholds,
   incrementWarnCount,
   decrementWarnCount,
   resetWarnCount,
-  checkThresholds,
-  setThresholdRule
+  checkThresholds
 } from '#modules/mod/lib/thresholds.js';
+import { invalidateThresholds, setThresholdRule } from '#lib/utilities/thresholds.js';
 import { BanAction } from '#modules/mod/actions/BanAction.js';
 import { MuteAction } from '#modules/mod/actions/MuteAction.js';
 import { VoiceMuteAction } from '#modules/mod/actions/VoiceMuteAction.js';
 import { KickAction } from '#modules/mod/actions/KickAction.js';
 import { WarnAction } from '#modules/mod/actions/WarnAction.js';
-import { QuarantineAction } from '#modules/mod/actions/QuarantineAction.js';
+import { QuarantineAction } from '#lib/moderation/QuarantineAction.js';
 import { cancelTask } from '#lib/schedule-task.js';
 
 vi.mock('@sapphire/framework', () => ({

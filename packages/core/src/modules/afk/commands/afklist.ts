@@ -2,7 +2,8 @@ import { ApplyOptions } from "@sapphire/decorators";
 
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { userMention } from "@discordjs/formatters";
-import { BaseCommand, type CommandContext } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 import { paginateList } from "#lib/utilities/pagination.js";
 import { afkDurationSince } from "../index.js";
 import { getAfkEntriesForGuild } from "../data/afk.js";

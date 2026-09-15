@@ -136,7 +136,7 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: |
           if [ "$EVENT_NAME" = "pull_request" ]; then
-            bun turbo run typecheck:all --filter="[origin/$BASE_REF...HEAD]" || bun run typecheck
+            bun turbo run typecheck --filter="[origin/$BASE_REF...HEAD]" || bun run typecheck
           else
             bun run typecheck
           fi

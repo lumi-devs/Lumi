@@ -12,14 +12,7 @@ import {
   getGuildModNotes,
 } from "#/lib/dashboard-fetch";
 import { fetchAllPages } from "#/lib/export-pages";
-import type {
-  AppealView,
-  AuditEntryView,
-  BlocklistEntryView,
-  ConfigHistoryEntryView,
-  ModerationCaseView,
-  ModNoteView,
-} from "#/lib/dashboard-data";
+import type { AppealView, AuditEntryView, BlocklistEntryView, ConfigHistoryEntryView, ModerationCaseView, ModNoteView } from "@lumi/contracts/views";
 import type { ActionResult } from "./guild-actions";
 
 export interface ExportResult<T> extends ActionResult {

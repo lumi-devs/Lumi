@@ -17,12 +17,8 @@ import { Emojis } from "#lib/utilities/assets.js";
 import { BotConfig } from "#lib/utilities/config.js";
 import { collectPingData } from "#modules/core/lib/ping-collect.js";
 import { fmtMB } from "#modules/core/lib/ping-cards.js";
-import {
-  makeCard,
-  ephemeralCard,
-  formatStatusBadge,
-  resolveCardColor,
-} from "#lib/utilities/cards.js";
+import { makeCard, ephemeralCard, formatStatusBadge } from "#lib/utilities/cards.js";
+import { resolveCardColor } from "#lib/utilities/config.js";
 
 @ApplyOptions<Command.Options>({
   name: "about",

@@ -8,7 +8,7 @@ import { PanelsKeys } from "#lib/i18n/keys/panels.js";
 import { PreconditionsKeys } from "#lib/i18n/keys/preconditions.js";
 
 export * from "#lib/i18n/keys/types.js";
-export { CommandsKeys, CommonKeys, PanelsKeys, PreconditionsKeys };
+export { PanelsKeys };
 
 export const LanguageKeys = {
   Common: CommonKeys,

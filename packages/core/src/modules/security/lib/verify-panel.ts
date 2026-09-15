@@ -5,13 +5,8 @@ import { Emojis } from "#lib/utilities/assets.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { createActionButton, buildSafeActionRows } from "#lib/utilities/panels.js";
-import {
-  resolveCardColor,
-  makeCard,
-  makeInfoCard,
-  makeWarningCard,
-  type CardReply,
-} from "#lib/utilities/cards.js";
+import { resolveCardColor } from "#lib/utilities/config.js";
+import { makeCard, makeInfoCard, makeWarningCard, type CardReply } from "#lib/utilities/cards.js";
 import {
   buildCaptchaRows,
   sequenceDisplay,

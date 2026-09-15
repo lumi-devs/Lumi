@@ -28,7 +28,7 @@ export interface GuildNavLink {
   icon: LucideIcon;
 }
 
-export type GuildNavGroupId =
+type GuildNavGroupId =
   | "discipline"
   | "safety"
   | "community"

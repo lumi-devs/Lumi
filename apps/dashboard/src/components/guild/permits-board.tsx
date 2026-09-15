@@ -15,12 +15,7 @@ import { Card, CardBody, CardDescription, CardHeader, CardTitle } from "#/compon
 import { Input, Label } from "#/components/ui/input";
 import { Select } from "#/components/ui/select";
 import { Checkbox } from "#/components/ui/switch";
-import type {
-  DashboardMemberView,
-  DashboardRoleView,
-  PermitAssignmentView,
-  PermitView,
-} from "#/lib/dashboard-data";
+import type { DashboardMemberView, DashboardRoleView, PermitAssignmentView, PermitView } from "@lumi/contracts/views";
 import { KnownPermitNodeGroups, KnownDashboardPermitNodes } from "#/lib/permit-nodes";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";

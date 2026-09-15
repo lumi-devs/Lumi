@@ -25,7 +25,6 @@
     "lint": {},
     "typecheck": {},
     "//#lint:all": {},
-    "//#typecheck:all": {},
     "test": {}
   }
 }

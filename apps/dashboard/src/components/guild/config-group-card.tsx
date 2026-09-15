@@ -12,7 +12,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardBody } from "#/compon
 import { CollapsibleSection } from "#/components/ui/collapsible-section";
 import { Field, HintTooltip, Label, SettingRow } from "#/components/ui/input";
 import { useServerAction } from "#/lib/use-server-action";
-import type { DashboardChannelView, DashboardRoleView } from "#/lib/dashboard-data";
+import type { DashboardChannelView, DashboardRoleView } from "@lumi/contracts/views";
 
 /**
  * A per-toggle channel override. Most toggles inherit their section's

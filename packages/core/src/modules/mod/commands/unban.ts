@@ -6,7 +6,7 @@ import { Result } from "@sapphire/framework";
 import { userMention } from "@discordjs/formatters";
 import { isSnowflakeId } from "#lib/utilities/misc.js";
 import type { ModerationCase } from "@prisma/client";
-import { BanAction } from "../actions/index.js";
+import { BanAction } from "#modules/mod/actions/BanAction.js";
 
 const Root = LanguageKeys.Commands;
 

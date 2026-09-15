@@ -1,16 +1,11 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Command } from "@sapphire/framework";
 import { ChannelType } from "discord.js";
-import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import { sendWelcomeCard } from "../lib/send.js";
-import { loadWelcomeConfig } from "../lib/config.js";
-import {
-  buildDmWelcomeCard,
-  renderGoodbyeCard,
-  renderWelcomeCard,
-  renderWelcomeTemplate,
-  templateVarsFor,
-} from "../lib/template.js";
+import { BaseCommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
+import { sendWelcomeCard } from "#lib/utilities/welcome.js";
+import { loadWelcomeConfig } from "#lib/utilities/welcome.js";
+import { buildDmWelcomeCard, renderGoodbyeCard, renderWelcomeCard, renderWelcomeTemplate, templateVarsFor } from "#lib/utilities/welcome.js";
 
 const PreviewKinds = ["welcome", "goodbye", "dm"] as const;
 type PreviewKind = (typeof PreviewKinds)[number];

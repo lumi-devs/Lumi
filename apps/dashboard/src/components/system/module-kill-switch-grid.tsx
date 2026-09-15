@@ -20,7 +20,7 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { moduleKillSwitchColumns } from "#/components/system/module-kill-switch-columns";
 import { ActionError } from "#/components/action-error";
 import { useServerAction } from "#/lib/use-server-action";
-import type { GlobalModuleStateView } from "#/lib/dashboard-data";
+import type { GlobalModuleStateView } from "@lumi/contracts/views";
 
 // Only modules with an explicit `GlobalModuleState` row appear; anything absent
 // is implicitly enabled bot-wide.

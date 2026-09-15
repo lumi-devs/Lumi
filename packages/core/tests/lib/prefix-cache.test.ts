@@ -73,7 +73,7 @@ describe("PrefixCache", () => {
     expect(cache.getGlobal()).toBeNull();
   });
 
-  test("attaches to InvalidationBus and unbinds cleanly", () => {
+  test("attaches to InvalidationBus and unbinds cleanly", async () => {
     let messageListener: ((channel: string, payload: string) => void) | undefined;
     const fakeSubscriber = {
       on: vi.fn((event: string, fn: any) => {
@@ -91,7 +91,7 @@ describe("PrefixCache", () => {
 
     const unbind = cache.attachToInvalidationBus(bus);
 
-    bus.start();
+    await bus.start();
 
     expect(typeof messageListener).toBe("function");
 
@@ -187,7 +187,7 @@ describe("PrefixCache", () => {
 });
 
 describe("InvalidationBus payload guards", () => {
-  test("filters malformed and non-array payloads without throwing", () => {
+  test("filters malformed and non-array payloads without throwing", async () => {
     let messageListener: ((channel: string, payload: string) => void) | undefined;
     const fakeSubscriber = {
       on: vi.fn((event: string, fn: any) => {
@@ -201,7 +201,7 @@ describe("InvalidationBus payload guards", () => {
     const bus = new InvalidationBus(fakeSubscriber as any);
     const listener = vi.fn();
     bus.onInvalidate(listener);
-    bus.start();
+    await bus.start();
 
     expect(typeof messageListener).toBe("function");
 

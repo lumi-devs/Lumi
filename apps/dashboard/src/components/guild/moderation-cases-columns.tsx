@@ -2,7 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { dataTableFeatures } from "#/components/ui/data-table";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
-import type { ModerationCaseView } from "#/lib/dashboard-data";
+import type { ModerationCaseView } from "@lumi/contracts/views";
 import {
   AnonymizedId,
   caseActionLabel,

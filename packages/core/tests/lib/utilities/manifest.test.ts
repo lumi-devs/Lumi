@@ -87,7 +87,7 @@ describe("Module Manifest Utilities", () => {
       expect(manifest.configFields).toEqual([
         {
           key: "logChannel",
-          type: "CHANNEL",
+          type: FieldType.Channel,
           label: "Log Channel",
           description: "Channel for logs",
           default: undefined,

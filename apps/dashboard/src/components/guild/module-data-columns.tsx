@@ -1,10 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { dataTableFeatures } from "#/components/ui/data-table";
 import { Glyph } from "#/components/ui/glyph";
-import type {
-  DashboardModuleView,
-  ModuleDataEntryView,
-} from "#/lib/dashboard-data";
+import type { DashboardModuleView, ModuleDataEntryView } from "@lumi/contracts/views";
 
 export function moduleDataColumns(
   modules: DashboardModuleView[],

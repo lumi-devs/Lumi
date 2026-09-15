@@ -18,13 +18,8 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { ExportLogButton } from "#/components/ui/export-log-button";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
-import type { BlocklistEntryView, BlocklistListData } from "#/lib/dashboard-data";
-import {
-  countBy,
-  extractMemberNames,
-  pageNumber,
-  single,
-} from "#/lib/log-format";
+import type { BlocklistEntryView, BlocklistListData } from "@lumi/contracts/views";
+import { countBy, extractMemberNames, pageNumber, single } from "#/lib/log-format";
 
 const PageSize = 25;
 

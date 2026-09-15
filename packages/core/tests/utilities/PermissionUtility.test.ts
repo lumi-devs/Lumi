@@ -340,7 +340,7 @@ describe("PermissionUtility", () => {
     it("still resolves the permit for its owning guild", async () => {
       await expect(
         service.getPermit("GUILD_B", FOREIGN_EXTRA_OWNER.id),
-      ).resolves.toEqual(FOREIGN_EXTRA_OWNER);
+      ).resolves.toEqual<typeof FOREIGN_EXTRA_OWNER>(FOREIGN_EXTRA_OWNER);
     });
   });
 

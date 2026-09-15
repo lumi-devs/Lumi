@@ -17,7 +17,7 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { PageHeader } from "#/components/ui/page-header";
 import { caseActionLabel } from "#/lib/moderation-cases";
 import { countBy, formatDay, groupByDay } from "#/lib/log-format";
-import type { AuditListData, CasesListData } from "#/lib/dashboard-data";
+import type { AuditListData, CasesListData } from "@lumi/contracts/views";
 
 // The window both charts describe. Everything on this page is counted from
 // these rows, so the copy never claims a range wider than what was read.

@@ -4,7 +4,7 @@ import { requireBotOwner } from "#/lib/auth-guards";
 import { isRateLimited } from "#/lib/rate-limit";
 import { getSystemAuditLog, getSystemBlocklist } from "#/lib/dashboard-fetch";
 import { fetchAllPages } from "#/lib/export-pages";
-import type { AuditEntryView, BlocklistEntryView } from "#/lib/dashboard-data";
+import type { AuditEntryView, BlocklistEntryView } from "@lumi/contracts/views";
 import type { ExportResult } from "./guild-export-actions";
 
 export async function exportSystemAuditLog(

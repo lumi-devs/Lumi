@@ -4,14 +4,14 @@
  */
 
 /** Install a pattern set under `key`; subsequent tests reference it by key. */
-export interface LoadRequest {
+interface LoadRequest {
   kind: "load";
   key: string;
   patterns: string[];
 }
 
 /** Evaluate `content` against the pattern set stored under `key`. */
-export interface TestRequest {
+interface TestRequest {
   kind: "test";
   id: number;
   key: string;
@@ -19,7 +19,7 @@ export interface TestRequest {
 }
 
 /** Run one pattern against adversarial inputs; used to vet saved patterns. */
-export interface ProbeRequest {
+interface ProbeRequest {
   kind: "probe";
   id: number;
   pattern: string;
@@ -31,7 +31,7 @@ export interface ProbeRequest {
  * bulk caller (e.g. `purge regex`) spends one budget per batch instead of
  * monopolising the worker with one request per item.
  */
-export interface MatchAllRequest {
+interface MatchAllRequest {
   kind: "matchAll";
   id: number;
   pattern: string;
@@ -45,33 +45,33 @@ export type WorkerRequest =
   | MatchAllRequest;
 
 /** Sent once at startup; spawn cost must not count against an eval budget. */
-export interface ReadyResponse {
+interface ReadyResponse {
   kind: "ready";
 }
 
 /** Sent before each pattern runs so the parent knows which one hung on timeout. */
-export interface ProgressResponse {
+interface ProgressResponse {
   kind: "progress";
   id: number;
   index: number;
 }
 
 /** `index` is the matching pattern's position, or null when nothing matched. */
-export interface ResultResponse {
+interface ResultResponse {
   kind: "result";
   id: number;
   index: number | null;
 }
 
 /** The referenced pattern set is not loaded (worker restarted mid-flight). */
-export interface UnknownResponse {
+interface UnknownResponse {
   kind: "unknown";
   id: number;
   key: string;
 }
 
 /** Positions in the request's `contents` that the pattern matched. */
-export interface MatchesResponse {
+interface MatchesResponse {
   kind: "matches";
   id: number;
   indexes: number[];

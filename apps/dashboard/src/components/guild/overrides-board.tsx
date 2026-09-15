@@ -27,14 +27,9 @@ import { Select } from "#/components/ui/select";
 import { Glyph } from "#/components/ui/glyph";
 import { ValueChip } from "#/components/ui/value-chip";
 import { useStaggerIn } from "#/lib/animate";
-import type {
-  ConfigOverrideView,
-  DashboardChannelView,
-  DashboardMemberView,
-  DashboardModuleView,
-  DashboardRoleView,
-} from "#/lib/dashboard-data";
-import { formatConfigValue, isSnowflake, isUnset } from "#/lib/log-format";
+import type { ConfigOverrideView, DashboardChannelView, DashboardMemberView, DashboardModuleView, DashboardRoleView } from "@lumi/contracts/views";
+import { formatConfigValue, isUnset } from "#/lib/log-format";
+import { isSnowflake } from "#/lib/moderation-cases";
 import { useServerAction } from "#/lib/use-server-action";
 
 const CategoryChannelType = 4;

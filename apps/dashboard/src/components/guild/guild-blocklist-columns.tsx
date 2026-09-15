@@ -1,7 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { dataTableFeatures } from "#/components/ui/data-table";
 import { Button } from "#/components/ui/button";
-import type { BlocklistEntryView } from "#/lib/dashboard-data";
+import type { BlocklistEntryView } from "@lumi/contracts/views";
 import { formatCaseDate } from "#/lib/moderation-cases";
 
 function UserCell({ id, names }: { id: string; names: Record<string, string> }) {

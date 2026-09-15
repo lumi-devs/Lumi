@@ -22,15 +22,9 @@ import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
 import { buildModuleLabelIndex } from "#/lib/config-labels";
-import type { ConfigHistoryEntryView, ConfigHistoryListData } from "#/lib/dashboard-data";
-import {
-  countBy,
-  extractMemberNames,
-  filterHref,
-  isSnowflake,
-  pageNumber,
-  single,
-} from "#/lib/log-format";
+import type { ConfigHistoryEntryView, ConfigHistoryListData } from "@lumi/contracts/views";
+import { countBy, extractMemberNames, filterHref, pageNumber, single } from "#/lib/log-format";
+import { isSnowflake } from "#/lib/moderation-cases";
 
 const PageSize = 25;
 

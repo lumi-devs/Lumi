@@ -1,6 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { dataTableFeatures } from "#/components/ui/data-table";
-import type { AfkEntryView, DashboardMemberView } from "#/lib/dashboard-data";
+import type { AfkEntryView, DashboardMemberView } from "@lumi/contracts/views";
 import { formatCaseDate, formatDuration } from "#/lib/moderation-cases";
 
 export function afkColumns({

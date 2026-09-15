@@ -7,7 +7,7 @@ export type PermitKind = "enforced" | "custom";
 export type PermitTargetType = "user" | "role" | "channel";
 export type PermitPolarity = "grant" | "deny";
 
-export interface PolarityBucket {
+interface PolarityBucket {
   grant: string[];
   deny: string[];
 }
@@ -54,7 +54,7 @@ export const KindTargetTypes: Record<PermitKind, ReadonlyArray<PermitTargetType>
   custom: ["user", "role", "channel"],
 };
 
-export const BuiltinPermits: ReadonlyArray<{
+const BuiltinPermits: ReadonlyArray<{
   name: string;
   kind: PermitKind;
   nodes: string[];

@@ -40,7 +40,7 @@ describe("WhoisCommand", () => {
         path: "/path/to/whois.ts",
         root: "/path/to",
         store: { name: "commands" } as any,
-      } as any,
+      },
       {}
     );
   });

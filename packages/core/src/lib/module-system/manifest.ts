@@ -9,7 +9,7 @@ import {
   type TargetUtility,
 } from "@lumi/contracts";
 
-export { KnownSubstores, type ModuleManifest, type TargetUtility };
+export { type ModuleManifest, type TargetUtility };
 
 export const ManifestFile = "manifest.json";
 

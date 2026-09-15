@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import type { GuildSettingsPayload } from "@lumi/contracts";
-import type { GuildSettings, DashboardRoleView } from "#/lib/dashboard-data";
+import type { GuildSettings, DashboardRoleView } from "@lumi/contracts/views";
 import { guildActionsMock } from "../setup";
 
 const { setGuildSettings } = guildActionsMock;

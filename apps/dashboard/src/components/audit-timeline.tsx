@@ -11,19 +11,9 @@ import {
   resolveConfigValue,
   type ModuleLabelIndex,
 } from "#/lib/config-labels";
-import type {
-  AuditEntryView,
-  DashboardChannelView,
-  DashboardMemberView,
-  DashboardRoleView,
-} from "#/lib/dashboard-data";
-import {
-  formatTime,
-  groupByDay,
-  humanizeKey,
-  isSnowflake,
-  splitAction,
-} from "#/lib/log-format";
+import type { AuditEntryView, DashboardChannelView, DashboardMemberView, DashboardRoleView } from "@lumi/contracts/views";
+import { formatTime, groupByDay, humanizeKey, splitAction } from "#/lib/log-format";
+import { isSnowflake } from "#/lib/moderation-cases";
 
 interface ConfigChangeDetails {
   moduleName: string;

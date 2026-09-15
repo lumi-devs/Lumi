@@ -19,10 +19,7 @@ import {
 import { SettingRow } from "#/components/ui/input";
 import { useServerAction } from "#/lib/use-server-action";
 import { cn } from "#/lib/utils";
-import type {
-  DashboardChannelView,
-  DashboardRoleView,
-} from "#/lib/dashboard-data";
+import type { DashboardChannelView, DashboardRoleView } from "@lumi/contracts/views";
 
 interface StepGroup {
   moduleName: string;

@@ -6,9 +6,9 @@ import type {
 } from "#/components/guild/discord-message-preview";
 import { blockToPreview } from "#/components/guild/message-builder-v2";
 
-export type MenuPreviewMode = "buttons" | "select" | "reactions";
+type MenuPreviewMode = "buttons" | "select" | "reactions";
 
-export interface MenuPreviewOption {
+interface MenuPreviewOption {
   label: string;
   emoji: string;
   /** Role name as members will read it, not the snowflake. */

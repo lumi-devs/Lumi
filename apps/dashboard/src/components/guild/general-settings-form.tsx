@@ -17,7 +17,7 @@ import { Field, Input } from "#/components/ui/input";
 import { Select } from "#/components/ui/select";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
-import type { GuildSettings, DashboardRoleView } from "#/lib/dashboard-data";
+import type { GuildSettings, DashboardRoleView } from "@lumi/contracts/views";
 
 type FormState = GuildSettingsPayload;
 

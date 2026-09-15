@@ -20,9 +20,8 @@
 import { AsyncQueue } from "@sapphire/async-queue";
 import { container } from "@sapphire/framework";
 import { queueDepth } from "@lumi/observability";
-import type { AuditEntry } from "#lib/loggable.js";
 import { scheduleTask } from "#lib/schedule-task.js";
-import { renderAuditCard, renderLogCard, type LogCard } from "./render.js";
+import { renderAuditCard, renderLogCard, type AuditEntry, type LogCard } from "./render.js";
 
 const QueueLabel = "outbound-send";
 

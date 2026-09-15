@@ -34,7 +34,7 @@ export function hasAdvertisingIndicators(user: User): boolean {
 const LevenshteinMaxLen = 32;
 
 /** Bounded edit distance; recent-joiner usernames are short so this stays cheap. */
-export function levenshteinDistance(a: string, b: string): number {
+function levenshteinDistance(a: string, b: string): number {
   const s1 = a.slice(0, LevenshteinMaxLen);
   const s2 = b.slice(0, LevenshteinMaxLen);
   const rows = s1.length + 1;
@@ -57,7 +57,7 @@ export function levenshteinDistance(a: string, b: string): number {
 const SimilarityDistanceThreshold = 2;
 
 /** Same-prefix or near-identical usernames within a short window smell like a bot batch. */
-export function isUsernameSimilar(a: string, b: string): boolean {
+function isUsernameSimilar(a: string, b: string): boolean {
   if (a === b) return true;
   const shortestPrefix = Math.min(a.length, b.length, 5);
   if (shortestPrefix >= 4 && a.slice(0, shortestPrefix) === b.slice(0, shortestPrefix)) {
@@ -72,7 +72,7 @@ export interface RecentJoiner {
 }
 
 /** Bucket by creation day - accounts minted in bulk for a raid share a creation date. */
-export function creationDayBucket(createdTimestamp: number): number {
+function creationDayBucket(createdTimestamp: number): number {
   return Math.floor(createdTimestamp / 86_400_000);
 }
 

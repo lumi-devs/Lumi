@@ -119,8 +119,8 @@ describe("Chaos Suite: PostgreSQL Hard Drop & Pool Exhaustion", () => {
       setex: vi.fn().mockResolvedValue("OK"),
       del: vi.fn().mockResolvedValue(1),
     };
-    configRepo = new ConfigRepository(prisma as any, redis as any, {} as any, {} as any);
-    modRepo = new ModerationRepository(prisma as any, redis as any, {} as any, {} as any);
+    configRepo = new ConfigRepository(prisma as any, redis, {} as any, {} as any);
+    modRepo = new ModerationRepository(prisma as any, redis, {} as any, {} as any);
   });
 
   it("handles transient database drop gracefully without unhandled crashes", async () => {

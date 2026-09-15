@@ -1,5 +1,4 @@
 import { Prisma, type ModerationCase } from "@prisma/client";
-import { sleep } from "#lib/runtime.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
 /** Batch size for the cross-guild sweeps, which are unbounded by nature. */
@@ -73,7 +72,7 @@ export class ModerationRepository extends Repository {
         ) {
           throw err;
         }
-        await sleep(10 + Math.random() * 15);
+        await Bun.sleep(10 + Math.random() * 15);
       }
     }
   }

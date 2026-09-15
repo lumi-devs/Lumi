@@ -4,14 +4,7 @@ import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
 import { instrumentCommandPiece } from "#lib/telemetry/instrument.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeInfoCard,
-  makeSuccessCard,
-  makeWarningCard,
-  type CardReply,
-} from "#lib/utilities/cards.js";
+import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "#lib/utilities/cards.js";
 import {
   BucketScope,
   Command,
@@ -35,7 +28,6 @@ import {
 } from "discord.js";
 
 export { fetchT };
-export { CommandContext } from "#lib/command-context.js";
 export { BucketScope };
 
 export interface ReplyOptions {

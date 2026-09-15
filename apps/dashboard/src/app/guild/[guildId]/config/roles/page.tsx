@@ -14,7 +14,7 @@ import {
 } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
 import { PageHeader } from "#/components/ui/page-header";
-import type { ReactionRoleMenuView } from "#/lib/dashboard-data";
+import type { ReactionRoleMenuView } from "@lumi/contracts/views";
 
 export default async function RolesPage({
   params,

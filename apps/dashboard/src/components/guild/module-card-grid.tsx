@@ -13,7 +13,7 @@ import { TiltCard } from "#/components/motion/tilt-card";
 import { spotlightHandler } from "#/lib/animate";
 import { useOptimisticAction } from "#/lib/use-server-action";
 import { cn } from "#/lib/utils";
-import type { DashboardModuleView } from "#/lib/dashboard-data";
+import type { DashboardModuleView } from "@lumi/contracts/views";
 
 export function ModuleCardGrid({
   guildId,

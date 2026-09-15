@@ -9,14 +9,14 @@ import { container, version as sapphireVersion } from "@sapphire/framework";
 import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
 import { logError } from "#lib/utilities/errors.js";
 
-export interface ShardInfo {
+interface ShardInfo {
   id: number;
   ping: number;
   status: string;
   sequence: number;
 }
 
-export interface TableStat {
+interface TableStat {
   name: string;
   bytes: bigint;
   deadTuples: bigint;
@@ -104,7 +104,7 @@ export interface PingData {
   prismaVersion: string;
 }
 
-export let sessionCommandCount = 0;
+let sessionCommandCount = 0;
 const PingHistory: number[] = [];
 
 let lastSampleTime = Date.now();
@@ -116,7 +116,7 @@ let cachedCommandsPerSec = 0;
 let cachedMessagesPerMin = 0;
 let cachedTxRate = 0;
 
-export function recordInvocation(wsPing: number) {
+function recordInvocation(wsPing: number) {
   sessionCommandCount++;
   if (wsPing > 0) {
     PingHistory.push(wsPing);

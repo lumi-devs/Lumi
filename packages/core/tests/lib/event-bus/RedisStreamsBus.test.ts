@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { RedisStreamsBus } from "#lib/event-bus/RedisStreamsBus.js";
-import type { Redis } from "ioredis";
 
 // bun:test's fake-timer support only mocks the system clock (Date.now),
 // not the setInterval/setTimeout queue, so there's no advanceTimersByTimeAsync
@@ -230,7 +229,7 @@ describe("RedisStreamsBus", () => {
       await sleep(100);
 
       expect(handlerSpy).toHaveBeenCalledTimes(1);
-      const msg = handlerSpy.mock.calls[0][0];
+      const msg = handlerSpy.mock.calls[0]![0];
       expect(msg.id).toBe("1000-0");
       expect(msg.body).toEqual({ payload: "test-data" });
       expect(msg.deliveryCount).toBe(1);
@@ -298,7 +297,7 @@ describe("RedisStreamsBus", () => {
       // Second ensureGroup call after NOGROUP error
       expect(publisherMock.xgroup).toHaveBeenCalledTimes(2);
       expect(handlerSpy).toHaveBeenCalledTimes(1);
-      expect(handlerSpy.mock.calls[0][0].body).toEqual({ recovered: true });
+      expect(handlerSpy.mock.calls[0]![0].body).toEqual({ recovered: true });
 
       await stopAndFlush(stop);
     });
@@ -452,7 +451,7 @@ describe("RedisStreamsBus", () => {
         "sendToDlq failed; leaving entry pending for retry",
         expect.objectContaining({ stream: "stream-1", id: "5000-0" }),
       );
-      expect((bus as any).inFlight.has("stream-1\05000-0")).toBe(false);
+      expect((bus as any).inFlight.has("stream-1\u00005000-0")).toBe(false);
     });
 
     it("does not ack a malformed message if the DLQ write itself fails", async () => {
@@ -476,7 +475,7 @@ describe("RedisStreamsBus", () => {
         "sendToDlq failed; leaving entry pending for retry",
         expect.objectContaining({ stream: "stream-1", id: "6000-0" }),
       );
-      expect((bus as any).inFlight.has("stream-1\06000-0")).toBe(false);
+      expect((bus as any).inFlight.has("stream-1\u00006000-0")).toBe(false);
     });
 
     it("handles malformed JSON message without crashing consumer read loop", async () => {
@@ -535,7 +534,7 @@ describe("RedisStreamsBus", () => {
       expect(publisherMock.xack).toHaveBeenCalledWith("stream-1", "g-1", "1000-0");
 
       expect(handlerSpy).toHaveBeenCalledTimes(1);
-      expect(handlerSpy.mock.calls[0][0].body).toEqual({ ok: true });
+      expect(handlerSpy.mock.calls[0]![0].body).toEqual({ ok: true });
 
       await stopAndFlush(stop);
     });
@@ -590,7 +589,7 @@ describe("RedisStreamsBus", () => {
       );
 
       expect(handlerSpy).toHaveBeenCalledTimes(1);
-      const msg = handlerSpy.mock.calls[0][0];
+      const msg = handlerSpy.mock.calls[0]![0];
       expect(msg.deliveryCount).toBe(2);
 
       await stopAndFlush(stop);
@@ -632,7 +631,7 @@ describe("RedisStreamsBus", () => {
         expect.objectContaining({ stream: "stream-1", id: "7000-0" }),
       );
       expect(handlerSpy).toHaveBeenCalledTimes(1);
-      expect(handlerSpy.mock.calls[0][0].id).toBe("7001-0");
+      expect(handlerSpy.mock.calls[0]![0].id).toBe("7001-0");
     });
 
     it("skips reclaiming a message whose handler is still in flight in this process", async () => {

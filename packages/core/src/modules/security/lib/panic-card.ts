@@ -4,12 +4,8 @@ import { time, TimestampStyles } from "@discordjs/formatters";
 import type { LumiT } from "#lib/i18n/index.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { createActionButton, buildSafeActionRows } from "#lib/utilities/panels.js";
-import {
-  resolveCardColor,
-  makeCard,
-  makeSuccessCard,
-  type CardReply,
-} from "#lib/utilities/cards.js";
+import { resolveCardColor } from "#lib/utilities/config.js";
+import { makeCard, makeSuccessCard, type CardReply } from "#lib/utilities/cards.js";
 
 export const PanicRevertId = "sec:panic:revert";
 

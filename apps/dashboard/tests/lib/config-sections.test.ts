@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { FieldType, type ConfigField } from "@lumi/contracts";
-import { sectionsOf } from "#/lib/config-sections";
+import { sectionsOf } from "@lumi/contracts";
 
 function field(
   key: string,

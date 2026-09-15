@@ -1,4 +1,5 @@
-import { BaseSubcommand, CommandContext } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
+import { CommandContext } from "#lib/command-context.js";
 import { restartChoiceRow } from "#lib/restart.js";
 import { loadFeatures } from "#modules/core/lib/config-panel.js";
 import { buildHubView } from "#modules/core/ui/hub.js";

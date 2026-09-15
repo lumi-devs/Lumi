@@ -11,7 +11,7 @@ import { DataTable } from "#/components/ui/data-table";
 import { EmptyState } from "#/components/ui/empty-state";
 import { Field, Textarea } from "#/components/ui/input";
 import { guildModNotesColumns } from "#/components/guild/guild-mod-notes-columns";
-import type { ModNoteView } from "#/lib/dashboard-data";
+import type { ModNoteView } from "@lumi/contracts/views";
 import { useServerAction } from "#/lib/use-server-action";
 
 export function GuildModNotesTable({

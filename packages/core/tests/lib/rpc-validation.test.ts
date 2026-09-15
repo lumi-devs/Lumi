@@ -116,7 +116,7 @@ describe("PageSchema and PageSizeSchema", () => {
   });
 
   it("accepts the first page", () => {
-    expect(PageSchema.parse(1)).toBe(1);
+    expect(PageSchema.parse<number | undefined>(1)).toBe(1);
   });
 
   it.each([0, -1, 1.5])("rejects page %s", (value) => {
@@ -124,7 +124,7 @@ describe("PageSchema and PageSizeSchema", () => {
   });
 
   it("accepts a page size at the cap", () => {
-    expect(PageSizeSchema.parse(MaxPageSize)).toBe(MaxPageSize);
+    expect(PageSizeSchema.parse<number | undefined>(MaxPageSize)).toBe(MaxPageSize);
   });
 
   it("rejects a page size above the cap", () => {

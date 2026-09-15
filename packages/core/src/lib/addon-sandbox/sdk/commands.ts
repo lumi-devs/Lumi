@@ -1,13 +1,6 @@
 import type { SlashCommandBuilder } from "@discordjs/builders";
 import type { AddonCommandInvocation, SerialisedMember, SerialisedUser } from "@lumi/contracts";
-import {
-  makeErrorCard,
-  makeInfoCard,
-  makeSuccessCard,
-  makeWarningCard,
-  makeEmptyCard,
-  type CardReply,
-} from "#lib/utilities/cards.js";
+import { makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, makeEmptyCard, type CardReply } from "#lib/utilities/cards.js";
 import { call } from "./rpc.js";
 
 export interface CtxOptionSpec {

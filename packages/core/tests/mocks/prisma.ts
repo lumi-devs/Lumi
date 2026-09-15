@@ -2,7 +2,7 @@
  * Offline in-memory Prisma mock for `bun test`.
  *
  * Mirrors the role `MockRedis` plays for `ioredis` in
- * `packages/core/tests/event-bus/event-bus.test.ts` / `packages/event-bus/tests/factory.spec.ts`:
+ * `packages/core/tests/lib/event-bus/{event-bus,factory}.test.ts`:
  * a small class that stands in for the real client so tests never need a live
  * backing service (here, a real Postgres instance via docker-compose).
  *

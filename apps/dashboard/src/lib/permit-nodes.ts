@@ -5,7 +5,6 @@
  */
 import { KnownPermitNodes, type PermitNode } from "@lumi/contracts";
 export type { PermitNode };
-export { KnownPermitNodes };
 
 export const KnownPermitNodeGroups: {
   prefix: string;

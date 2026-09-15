@@ -34,7 +34,7 @@ describe("CommandContext", () => {
       expect(ctx.isSlash).toBe(true);
       expect(ctx.interaction).toBe(mockInteraction);
       expect(() => ctx.message).toThrow("CommandContext: not a message");
-      expect(ctx.user).toEqual({ id: "user-1" });
+      expect(ctx.user).toEqual<{ id: string }>({ id: "user-1" });
       expect(ctx.member).toBe(mockInteraction.member);
       expect(ctx.guild).toBe(mockInteraction.guild);
       expect(ctx.guildId).toBe("guild-1");
@@ -60,10 +60,10 @@ describe("CommandContext", () => {
       expect(await ctx.getInteger("opt")).toBe(42);
       expect(await ctx.getNumber("opt")).toBe(3.14);
       expect(await ctx.getBoolean("opt")).toBe(true);
-      expect(await ctx.getUser("opt")).toEqual({ id: "u-2" });
-      expect(await ctx.getMember("opt")).toEqual({ id: "u-2" });
-      expect(await ctx.getRole("opt")).toEqual({ id: "r-1" });
-      expect(await ctx.getChannel("opt")).toEqual({ id: "c-1" });
+      expect(await ctx.getUser("opt")).toEqual<{ id: string }>({ id: "u-2" });
+      expect(await ctx.getMember("opt")).toEqual<{ id: string }>({ id: "u-2" });
+      expect(await ctx.getRole("opt")).toEqual<{ id: string }>({ id: "r-1" });
+      expect(await ctx.getChannel("opt")).toEqual<{ id: string }>({ id: "c-1" });
     });
 
     it("throws MissingArgument error when required member option is missing on slash path", async () => {
@@ -158,7 +158,7 @@ describe("CommandContext", () => {
       expect(ctx.isSlash).toBe(false);
       expect(ctx.message).toBe(mockMessage);
       expect(() => ctx.interaction).toThrow("CommandContext: not an interaction");
-      expect(ctx.user).toEqual({ id: "user-2" });
+      expect(ctx.user).toEqual<{ id: string }>({ id: "user-2" });
       expect(ctx.member).toBeNull();
     });
 

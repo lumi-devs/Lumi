@@ -3,7 +3,8 @@ import { PanelsKeys } from "#lib/i18n/keys.js";
 import { formatPageFooter, row, type Row } from "#modules/core/ui/common.js";
 import { hubTabRow } from "#modules/core/ui/hub.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { resolveCardColor, makeCard, type CardReply } from "#lib/utilities/cards.js";
+import { resolveCardColor } from "#lib/utilities/config.js";
+import { makeCard, type CardReply } from "#lib/utilities/cards.js";
 import {
   createPaginationRow,
   createStringSelectMenu,
@@ -20,7 +21,7 @@ import { ButtonStyle } from "discord.js";
 // Each row here is a Section with 2-3 text lines + 1 button = 4-5 real
 // components once nested, and card chrome already eats ~10-19 of Discord's
 // 40-component budget per message, so page sizes stay well under naive counts.
-export const AddonRowsPerPage = 5;
+const AddonRowsPerPage = 5;
 
 export interface AddonDashboardStats {
   repoCount: number;
@@ -58,7 +59,7 @@ export interface AutoUpdateStatus {
   intervalMinutes: number;
 }
 
-export const AutoUpdateIntervals: { label: string; minutes: number }[] = [
+const AutoUpdateIntervals: { label: string; minutes: number }[] = [
   { label: "Every Hour", minutes: 60 },
   { label: "Every 6 Hours", minutes: 360 },
   { label: "Every 12 Hours", minutes: 720 },

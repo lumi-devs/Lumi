@@ -3,13 +3,8 @@ import NextAuth, { type Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import Discord from "next-auth/providers/discord";
 import { env } from "./env";
-import {
-  canManage,
-  DiscordApiError,
-  fetchUserGuilds,
-  userAvatarUrl,
-  type OAuthGuild,
-} from "./discord";
+import { DiscordApiError, fetchUserGuilds, type OAuthGuild } from "./discord";
+import { canManage, userAvatarUrl } from "./discord-format";
 import { rpcCall } from "./rpc";
 import { RpcActions } from "@lumi/contracts";
 

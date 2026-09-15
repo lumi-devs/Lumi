@@ -6,15 +6,9 @@ import {
 } from "@discordjs/builders";
 import { ButtonStyle, MessageFlags, roleMention } from "discord.js";
 import { Rr } from "../keys.js";
-import {
-  parseMenuColor,
-  type ReactionRoleMenu,
-  type ReactionRoleOption,
-} from "../data.js";
-import {
-  makeCard,
-  type CardReply,
-} from "#lib/utilities/cards.js";
+import type { ReactionRoleMenu, ReactionRoleOption } from "../data.js";
+import { parseHexColor } from "#lib/message-content.js";
+import { makeCard, type CardReply } from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import {
   buildSafeActionRows,
@@ -43,7 +37,7 @@ function optionLine(option: ReactionRoleOption): string {
   return `${emoji}${label} → ${role}${description}${gate}`;
 }
 
-export function menuModeBadge(menu: ReactionRoleMenu): string {
+function menuModeBadge(menu: ReactionRoleMenu): string {
   const parts: string[] = [];
   if (menu.mode === "buttons") parts.push("Buttons");
   else if (menu.mode === "select") parts.push("Dropdown");
@@ -120,7 +114,7 @@ export function buildMenuCard(menu: ReactionRoleMenu): CardReply {
     return { flags: MessageFlags.IsComponentsV2, components: [container], allowedMentions: { parse: [] } };
   }
 
-  return makeCard(parseMenuColor(menu.color), menu.title, body, {
+  return makeCard(parseHexColor(menu.color), menu.title, body, {
     footer: menuModeBadge(menu),
     actionRows: rows.length > 0 ? rows : undefined,
   });

@@ -4,34 +4,25 @@ import { tryParseJSON } from "@sapphire/utilities";
 import { type WarnThresholdAction } from "@lumi/contracts";
 import { parseDuration } from "#lib/utilities/time.js";
 import { Time } from "@sapphire/time-utilities";
-import {
-  thresholdKey,
-  invalidateThresholds,
-  normalizeRuleDuration,
-  setThresholdRule,
-  removeThresholdRule,
-} from "#lib/utilities/thresholds.js";
-import {
-  BanAction,
-  MuteAction,
-  KickAction,
-  QuarantineAction,
-  VoiceMuteAction,
-} from "../actions/index.js";
+import { thresholdKey } from "#lib/utilities/thresholds.js";
+import { BanAction } from "#modules/mod/actions/BanAction.js";
+import { MuteAction } from "#modules/mod/actions/MuteAction.js";
+import { KickAction } from "#modules/mod/actions/KickAction.js";
+import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
+import { VoiceMuteAction } from "#modules/mod/actions/VoiceMuteAction.js";
 import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
 
 /** Kept identical to the wire contract so a rule the dashboard can save is a rule the runner can apply. */
-export type ThresholdAction = WarnThresholdAction;
-export { thresholdKey, invalidateThresholds, setThresholdRule, removeThresholdRule };
+type ThresholdAction = WarnThresholdAction;
 
-export interface ThresholdEntry {
+interface ThresholdEntry {
   action: ThresholdAction;
   duration?: string;
 }
 
 export type WarnThresholds = Record<string, ThresholdEntry>;
 
-export const warnCountKey = (guildId: string, userId: string) =>
+const warnCountKey = (guildId: string, userId: string) =>
   `lumi:mod:${guildId}:warns:${userId}`;
 const thresholdFiredKey = (guildId: string, userId: string, count: number) =>
   `lumi:mod:${guildId}:threshold-fired:${userId}:${count}`;
@@ -66,32 +57,6 @@ export async function getThresholds(
     JSON.stringify(parsed),
   );
   return parsed;
-}
-
-export async function saveThresholds(
-  container: Container,
-  guildId: string,
-  thresholds: WarnThresholds,
-): Promise<void> {
-  const list = Object.entries(thresholds)
-    .map(([countStr, entry]) => ({ count: Number(countStr), entry }))
-    .filter(({ count }) => !isNaN(count))
-    .map(({ count, entry }) => ({
-      warnCount: count,
-      action: entry.action,
-      duration: normalizeRuleDuration(entry.action, entry.duration),
-    }));
-
-  await container.db.moderation.setBulkWarnThresholds(guildId, list);
-  await invalidateThresholds(container, guildId);
-}
-
-export async function resetAllThresholds(
-  container: Container,
-  guildId: string,
-): Promise<void> {
-  await container.db.moderation.resetWarnThresholds(guildId);
-  await invalidateThresholds(container, guildId);
 }
 
 const WarnCountTtl = 365 * 24 * 3600;

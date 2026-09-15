@@ -5,13 +5,5 @@
     "allowImportingTsExtensions": true,
     "rootDir": "."
   },
-  "include": [
-    "packages/contracts/src",
-    "packages/observability/src",
-    "packages/core/index.ts",
-    "packages/core/src",
-    "apps/worker/src",
-    "examples",
-    "prisma.config.ts"
-  ]
+  "include": ["examples", "prisma.config.ts"]
 }

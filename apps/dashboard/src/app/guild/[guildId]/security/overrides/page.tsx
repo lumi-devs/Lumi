@@ -10,7 +10,7 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { LoadFailure } from "#/components/ui/load-failure";
 import { PageHeader } from "#/components/ui/page-header";
-import type { ConfigOverrideView } from "#/lib/dashboard-data";
+import type { ConfigOverrideView } from "@lumi/contracts/views";
 import { single } from "#/lib/log-format";
 
 type SearchParams = Record<string, string | string[] | undefined>;

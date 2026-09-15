@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import ReactionRolesUtility, {
   ReactionRoleMenuLockedError,

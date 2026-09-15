@@ -2,7 +2,7 @@ import { Utility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { container, type Piece } from "@sapphire/framework";
 import { queueSend } from "#lib/outbound/send-queue.js";
-import type { AuditEntry } from "#lib/loggable.js";
+import type { AuditEntry } from "#lib/outbound/render.js";
 
 @ApplyOptions<Piece.Options>({ name: "guild-log" })
 export class GuildLogUtility extends Utility {

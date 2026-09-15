@@ -1,4 +1,4 @@
-import type { DashboardRoleView, DashboardModuleView } from "#/lib/dashboard-data";
+import type { DashboardRoleView, DashboardModuleView } from "@lumi/contracts/views";
 
 // Native Discord permission bits (see Module.js `cfg` conventions elsewhere
 // for why this stays dependency-free instead of importing discord.js on the

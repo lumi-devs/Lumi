@@ -3,7 +3,7 @@ import { container } from "@sapphire/framework";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { mgetSafe } from "#lib/database/cluster-safe.js";
 
-export const LogClaimCodeLength = 6;
+const LogClaimCodeLength = 6;
 export const LogClaimCodeTtlMs = RedisTTL.logClaimCode * 1000;
 
 const CodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";

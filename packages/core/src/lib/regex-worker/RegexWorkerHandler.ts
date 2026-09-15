@@ -12,17 +12,17 @@ import type { WorkerRequest, WorkerResponse } from "./protocol.js";
  * Nothing on the event loop is blocked meanwhile - only this message's filtering
  * is delayed.
  */
-export const DefaultEvalTimeoutMs = 250;
+const DefaultEvalTimeoutMs = 250;
 
 /** Budget for a save-time probe, which runs a pattern against nasty inputs. */
-export const DefaultProbeTimeoutMs = 250;
+const DefaultProbeTimeoutMs = 250;
 
 /**
  * Budget for one bulk match batch. Larger than a single evaluation because a
  * batch covers a whole page of messages, but still bounded so a pattern that
  * only misbehaves on real content cannot pin the worker.
  */
-export const DefaultMatchTimeoutMs = 1_000;
+const DefaultMatchTimeoutMs = 1_000;
 
 /** Contents per bulk match request; keeps one batch inside one budget. */
 export const MatchBatchSize = 100;

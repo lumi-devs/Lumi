@@ -101,4 +101,3 @@ export async function disconnectDatabase(): Promise<void> {
 
 export type DatabaseClient = typeof prisma;
 
-export * from "@prisma/client";

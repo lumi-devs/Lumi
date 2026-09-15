@@ -10,8 +10,11 @@ vi.mock("@sapphire/framework", () => ({
   },
 }));
 
-vi.mock("#modules/mod/lib/helpers.js", () => ({
+vi.mock("#lib/moderation/log.js", () => ({
   logToChannel: vi.fn(),
+}));
+
+vi.mock("#modules/mod/lib/helpers.js", () => ({
   scheduleCaseLift: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -19,7 +22,8 @@ vi.mock("#lib/appeals/dm.js", () => ({
   sendAppealLinkDm: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { logToChannel, scheduleCaseLift } from "#modules/mod/lib/helpers.js";
+import { logToChannel } from "#lib/moderation/log.js";
+import { scheduleCaseLift } from "#modules/mod/lib/helpers.js";
 import { sendAppealLinkDm } from "#lib/appeals/dm.js";
 
 describe("runModerationAction", () => {

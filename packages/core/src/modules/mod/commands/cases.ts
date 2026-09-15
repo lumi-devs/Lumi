@@ -3,7 +3,8 @@ import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { time, TimestampStyles, userMention } from "@discordjs/formatters";
 import { chunk } from "@sapphire/utilities";
-import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 import { makeInfoCard } from "#lib/utilities/cards.js";
 import { decrementWarnCount } from "../lib/thresholds.js";
 

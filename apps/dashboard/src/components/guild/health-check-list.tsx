@@ -11,7 +11,7 @@ import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/ca
 import { ProgressRing } from "#/components/ui/progress-ring";
 import { useStaggerIn } from "#/lib/animate";
 import { buildHealthChecks, type HealthCheck } from "#/lib/health-checks";
-import type { DashboardRoleView, DashboardModuleView } from "#/lib/dashboard-data";
+import type { DashboardRoleView, DashboardModuleView } from "@lumi/contracts/views";
 
 function CheckRow({ check }: { check: HealthCheck }) {
   const Icon: LucideIcon = check.ok ? CircleCheck : CircleAlert;

@@ -15,11 +15,11 @@ export interface SetupWizardState {
   minAgeHours: number | null;
 }
 
-export const SetupNullToken = "skip";
-export const SetupUnsetToken = "x";
+const SetupNullToken = "skip";
+const SetupUnsetToken = "x";
 export const VerificationModes = ["emoji", "none", "web"] as const;
-export const DefaultMinAgeHours = 24;
-export const MaxAccountAgeHours = 8760;
+const DefaultMinAgeHours = 24;
+const MaxAccountAgeHours = 8760;
 
 export const emptySetupState = (): SetupWizardState => ({
   logChannelId: null,

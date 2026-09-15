@@ -16,7 +16,6 @@ import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
 import { logToChannel } from "#lib/moderation/log.js";
 import { withSerializedWork } from "#lib/utilities/misc.js";
-import { sleep } from "#lib/runtime.js";
 import type { LockedChannelSnapshot } from "#lib/prisma/repositories/SecurityRepository.js";
 import {
   advanceCaptcha,
@@ -1025,7 +1024,7 @@ export class SecurityUtility extends Utility {
             `[security] Panic: failed to lock channel ${channel.id} in ${guild.id}: ${String(err)}`,
           );
         }
-        await sleep(PanicEditDelayMs);
+        await Bun.sleep(PanicEditDelayMs);
       }
 
       await this.db.security.savePanicState({
@@ -1076,7 +1075,7 @@ export class SecurityUtility extends Utility {
             `[security] Panic: failed to restore channel ${channelId} in ${guild.id}: ${String(err)}`,
           );
         }
-        await sleep(PanicEditDelayMs);
+        await Bun.sleep(PanicEditDelayMs);
       }
 
       await this.db.security.clearPanicState(guild.id);

@@ -7,8 +7,6 @@ import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 import type { Message } from "discord.js";
 import "@sapphire/pieces";
 
-export type IntegerString = `${number}`;
-
 /** A Discord message that is guaranteed to be from a guild and from a non-bot user. */
 export type GuildMessage = Message<true>;
 
@@ -31,7 +29,7 @@ declare module "discord.js" {
   }
 }
 
-export type DatabaseRepositories = DatabaseService;
+type DatabaseRepositories = DatabaseService;
 
 export type { ScheduledTasks } from "@sapphire/plugin-scheduled-tasks";
 
@@ -42,14 +40,14 @@ declare module "@sapphire/plugin-scheduled-tasks" {
 }
 
 /** Modules register per-key invalidation callbacks here instead of patching ConfigUtility. */
-export type ConfigChangeHook = (guildId: string, key: string) => Promise<void>;
+type ConfigChangeHook = (guildId: string, key: string) => Promise<void>;
 
 /**
  * Guard run before a config value is persisted, for checks the schema cannot
  * express (e.g. proving a regex terminates). Return a reason to reject the
  * write, or null to accept it.
  */
-export type ConfigValueValidator = (
+type ConfigValueValidator = (
   value: unknown,
   guildId: string,
 ) => Promise<string | null> | string | null;
@@ -82,44 +80,3 @@ declare module "@sapphire/pieces" {
 
 
 import "@sapphire/plugin-utilities-store";
-
-declare module "#lib/env.js" {
-  interface Env {
-    BOT_TOKEN: string;
-    CLIENT_ID: string;
-    OWNER_IDS: string;
-    DEFAULT_PREFIX: string;
-    NODE_ENV: "development" | "production" | "test";
-    LOG_LEVEL: "trace" | "debug" | "info" | "warn" | "error" | "fatal";
-    POSTGRES_URL: string;
-    REDIS_HOST: string;
-    REDIS_PORT: IntegerString;
-    REDIS_PASSWORD: string;
-    REDIS_CACHE_DB: IntegerString;
-    REDIS_TASK_DB: IntegerString;
-    /** Comma-separated `host:port` Sentinel list. When set, all
-     * Redis clients (cache, BullMQ, streams, leader-lock) talk to Sentinels
-     * for master discovery + failover. Unset → direct REDIS_HOST/PORT. */
-    REDIS_SENTINELS: string;
-    /** Sentinel master name. Default "mymaster". */
-    REDIS_SENTINEL_NAME: string;
-    /** Password for Sentinel processes themselves (distinct from REDIS_PASSWORD for the master). */
-    REDIS_SENTINEL_PASSWORD: string;
-    /** Internal RPC HTTP server bind port. Default 8091. */
-    RPC_HTTP_PORT: IntegerString;
-    /** Internal RPC HTTP server bind host. Default "127.0.0.1"; set to
-     * "0.0.0.0" only where the dashboard reaches the worker over a container
-     * network. */
-    RPC_HTTP_HOST: string;
-    /** Shared secret the dashboard presents as `Authorization: Bearer <token>`
-     * on every internal RPC call. Required in production - the RPC server
-     * refuses to start without it. */
-    RPC_INTERNAL_TOKEN: string;
-    /** Approximate per-stream cap for bus events. Default 100000. */
-    EVENT_STREAM_MAXLEN: IntegerString;
-    /** Redis Streams consumer idle threshold in ms. Default 60000. */
-    EVENT_STREAM_ACK_WAIT_MS: IntegerString;
-    /** Stable per-replica consumer id for the worker pool. Falls back to $HOSTNAME, then pid. */
-    LUMI_CONSUMER_ID: string;
-  }
-}

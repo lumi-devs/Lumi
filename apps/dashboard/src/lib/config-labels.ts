@@ -3,12 +3,12 @@ import type {
   DashboardChannelView,
   DashboardModuleView,
   DashboardRoleView,
-} from "./dashboard-data";
+} from "@lumi/contracts/views";
 import { formatConfigValue } from "./log-format";
 
 // A plain object rather than a lookup closure because it crosses the
 // server/client boundary as props.
-export interface ModuleLabel {
+interface ModuleLabel {
   label: string;
   emoji: string;
   fields: Record<string, string>;

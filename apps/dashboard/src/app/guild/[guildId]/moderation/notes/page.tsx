@@ -15,12 +15,9 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { ExportLogButton } from "#/components/ui/export-log-button";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
-import type { ModNoteView } from "#/lib/dashboard-data";
-import {
-  extractMemberNames,
-  isSnowflake,
-  single,
-} from "#/lib/log-format";
+import type { ModNoteView } from "@lumi/contracts/views";
+import { extractMemberNames, single } from "#/lib/log-format";
+import { isSnowflake } from "#/lib/moderation-cases";
 
 export default async function ModNotesPage({
   params,

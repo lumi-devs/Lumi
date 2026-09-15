@@ -6,5 +6,3 @@ export interface CardReply {
   readonly components: readonly ContainerBuilder[];
   readonly allowedMentions?: MessageMentionOptions;
 }
-
-export type BadgeColor = "green" | "red" | "yellow" | "blue" | "grey" | "purple";

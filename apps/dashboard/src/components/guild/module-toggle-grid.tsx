@@ -11,7 +11,7 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { useStaggerIn } from "#/lib/animate";
 import { ActionError } from "#/components/action-error";
 import { useOptimisticAction } from "#/lib/use-server-action";
-import type { DashboardModuleView } from "#/lib/dashboard-data";
+import type { DashboardModuleView } from "@lumi/contracts/views";
 
 export function ModuleToggleGrid({
   guildId,

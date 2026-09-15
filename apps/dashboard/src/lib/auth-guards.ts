@@ -2,7 +2,7 @@ import "server-only";
 import { redirect, notFound } from "next/navigation";
 import type { Session } from "next-auth";
 import { auth } from "./auth";
-import { canManage } from "./discord";
+import { canManage } from "./discord-format";
 
 // IDOR guard: re-derived from the session server-side on every guild-scoped
 // render and every guild-scoped Server Action, never trusted from client state.

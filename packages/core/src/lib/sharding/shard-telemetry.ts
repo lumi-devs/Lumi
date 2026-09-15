@@ -26,7 +26,7 @@ export const DefaultClusterName = "default";
 const shardKey = (cluster: string, shardId: number) =>
   `lumi:cluster:${cluster}:shard:${shardId}`;
 
-export interface ShardTelemetry {
+interface ShardTelemetry {
   shardId: number;
   /** Process/replica currently holding this shard's WebSocket. */
   replicaId: string;
@@ -128,7 +128,7 @@ export class ShardTelemetryPublisher {
   }
 }
 
-export interface ClusterReplicaState {
+interface ClusterReplicaState {
   replicaId: string;
   /** Shard ids this replica is actually reporting telemetry for. */
   reportingShardIds: number[];

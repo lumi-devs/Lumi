@@ -4,5 +4,6 @@
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["src"]
+  // Sapphire loads core's pieces by directory, and their registry augmentations live in those files.
+  "include": ["src", "../../packages/core/src"]
 }

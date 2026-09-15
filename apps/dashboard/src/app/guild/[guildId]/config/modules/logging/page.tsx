@@ -9,7 +9,7 @@ import { Card } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
 import { PageHeader } from "#/components/ui/page-header";
 import { SectionTabs, type PageSection } from "#/components/ui/section-tabs";
-import { sectionsOf } from "#/lib/config-sections";
+import { sectionsOf } from "@lumi/contracts";
 
 const LoggingModuleName = "logging";
 

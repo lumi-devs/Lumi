@@ -16,11 +16,7 @@ import {
   buildPermitAssignTargetView,
   type PermitKind,
 } from "#modules/core/ui/permissions.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeWarningCard,
-} from "#lib/utilities/cards.js";
+import { ephemeralCard, makeErrorCard, makeWarningCard } from "#lib/utilities/cards.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,

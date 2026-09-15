@@ -22,10 +22,10 @@ import { LoadFailure } from "#/components/ui/load-failure";
 import { PageHeader } from "#/components/ui/page-header";
 import { SectionTabs, type PageSection } from "#/components/ui/section-tabs";
 import { isTextChannel } from "#/lib/channel-types";
-import { sectionsOf } from "#/lib/config-sections";
+import { sectionsOf } from "@lumi/contracts";
 import { SecurityWidgets } from "#/lib/security-widgets";
 import type { GuildBackupView } from "@lumi/contracts";
-import type { PanicStateView, VerificationPanelView } from "#/lib/dashboard-data";
+import type { PanicStateView, VerificationPanelView } from "@lumi/contracts/views";
 
 const SecurityModuleName = "security";
 

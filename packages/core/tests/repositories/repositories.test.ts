@@ -26,7 +26,7 @@ describe('ModerationRepository Tests', () => {
         update: vi.fn()
       }
     };
-    repo = new ModerationRepository(mockPrisma as any, {} as any, {} as any, {} as any);
+    repo = new ModerationRepository(mockPrisma, {} as any, {} as any, {} as any);
   });
 
   it('createModerationCase calculates case number and creates record in transaction', async () => {
@@ -136,7 +136,7 @@ describe('ModerationRepository Tests', () => {
   it('getModerationCase queries single case by guild and case number', async () => {
     mockPrisma.moderationCase.findUnique.mockResolvedValue({ id: 10, caseNumber: 3 });
     const c = await repo.getModerationCase('g1', 3);
-    expect(c).toEqual({ id: 10, caseNumber: 3 });
+    expect(c).toEqual<{ id: number; caseNumber: number }>({ id: 10, caseNumber: 3 });
     expect(mockPrisma.moderationCase.findUnique).toHaveBeenCalledWith({
       where: { uq_cases_guild_number: { guildId: 'g1', caseNumber: 3 } },
     });
@@ -145,7 +145,7 @@ describe('ModerationRepository Tests', () => {
   it('getModerationCaseById queries single case by primary key id', async () => {
     mockPrisma.moderationCase.findUnique.mockResolvedValue({ id: 42 });
     const c = await repo.getModerationCaseById(42);
-    expect(c).toEqual({ id: 42 });
+    expect(c).toEqual<{ id: number }>({ id: 42 });
     expect(mockPrisma.moderationCase.findUnique).toHaveBeenCalledWith({
       where: { id: 42 },
     });
@@ -392,7 +392,7 @@ describe('ModNoteRepository GDPR erasure', () => {
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     };
-    repo = new ModNoteRepository(mockPrisma as any, {} as any, {} as any, {} as any);
+    repo = new ModNoteRepository(mockPrisma, {} as any, {} as any, {} as any);
   });
 
   it('deleteUserData removes notes where the user is the subject', async () => {

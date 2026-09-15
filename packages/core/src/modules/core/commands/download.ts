@@ -2,7 +2,8 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { AutocompleteInteraction } from "discord.js";
-import { BaseSubcommand, CommandContext } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
+import { CommandContext } from "#lib/command-context.js";
 import { respondWithChoices } from "#lib/utilities/autocomplete.js";
 import {
   installedModuleChoices,

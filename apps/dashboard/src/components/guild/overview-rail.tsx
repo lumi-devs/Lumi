@@ -12,12 +12,7 @@ import {
   type ModuleLabelIndex,
 } from "#/lib/config-labels";
 import { HealthyStatus, OfflineStatuses } from "#/components/system/shard-fleet";
-import type {
-  ConfigHistoryEntryView,
-  DashboardChannelView,
-  DashboardRoleView,
-  SystemShardsData,
-} from "#/lib/dashboard-data";
+import type { ConfigHistoryEntryView, DashboardChannelView, DashboardRoleView, SystemShardsData } from "@lumi/contracts/views";
 
 export function OverviewRail({
   shards,

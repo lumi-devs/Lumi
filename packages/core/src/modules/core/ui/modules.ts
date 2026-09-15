@@ -16,12 +16,8 @@ import {
 } from "#modules/core/ui/common.js";
 import { hubTabRow } from "#modules/core/ui/hub.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import {
-  resolveCardColor,
-  makeCard,
-  noPingCard,
-  type CardReply,
-} from "#lib/utilities/cards.js";
+import { resolveCardColor } from "#lib/utilities/config.js";
+import { makeCard, noPingCard, type CardReply } from "#lib/utilities/cards.js";
 import {
   buildSafeActionRows,
   createActionButton,

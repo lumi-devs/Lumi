@@ -9,13 +9,7 @@ import {
   type ModuleConfigSchema,
 } from "./config-schema.js";
 
-export {
-  FieldType,
-  type ConfigField,
-  type ModuleConfigSchema,
-  cfg,
-  toStringArray,
-} from "./config-schema.js";
+export { FieldType, type ConfigField, cfg, toStringArray } from "./config-schema.js";
 
 /**
  * Explicit sentinel function declaring that a module does not persistently store

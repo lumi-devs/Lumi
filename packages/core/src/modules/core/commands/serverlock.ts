@@ -1,4 +1,5 @@
-import { BaseSubcommand, CommandContext } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
+import { CommandContext } from "#lib/command-context.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import {
   getServerLockState,

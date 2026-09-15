@@ -6,7 +6,7 @@ import { Breadcrumbs } from "#/components/layout/breadcrumbs";
 import { InviteNeeded } from "#/components/invite-needed";
 import { GuildUnavailable } from "#/components/guild-unavailable";
 import { isGuildMissing } from "#/lib/rpc";
-import type { DashboardData } from "#/lib/dashboard-data";
+import type { DashboardData } from "@lumi/contracts/views";
 
 export default async function GuildLayout({
   children,

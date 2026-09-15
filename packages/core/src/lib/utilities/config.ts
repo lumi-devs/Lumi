@@ -82,18 +82,14 @@ export const BotConfig = mergeDefault(
   userConfig,
 ) as BotConfigType;
 
-/** Built-in card palette, sourced from the Lumi brand system.
- * Operators can override individual colours via `config/bot.ts` → `branding.colors`. */
-export const defaultCardColors = BrandColors;
+export type CardColorKey = keyof typeof BrandColors;
 
-export type CardColorKey = keyof typeof defaultCardColors;
-
-/** Keys with no built-in accent bar unless the operator opts in via `config/bot.ts` - `defaultCardColors[key]` still names what that opt-in would use. */
+/** Keys with no built-in accent bar unless the operator opts in via `config/bot.ts` - `BrandColors[key]` still names what that opt-in would use. */
 const BlankByDefault: ReadonlySet<CardColorKey> = new Set(["primary"]);
 
 /** Single resolution path for card colors - checks the operator's `config/bot.ts` override before falling back to the built-in palette. */
 export function resolveCardColor(key: CardColorKey): number | undefined {
   const override = BotConfig.branding.colors?.[key];
   if (override !== undefined) return override;
-  return BlankByDefault.has(key) ? undefined : defaultCardColors[key];
+  return BlankByDefault.has(key) ? undefined : BrandColors[key];
 }

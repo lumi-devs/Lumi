@@ -6,7 +6,7 @@ import { checkModulesEnabled } from "#lib/module-check.js";
 // cleanup setTimeout actually firing (see module-check.ts) — so bun:test's
 // system-clock mock (which has no setTimeout-queue virtualization) is enough;
 // no real waiting needed.
-const advanceTime = (ms: number) => jest.setSystemTime(new Date(jest.now() + ms));
+const advanceTime = (ms: number) => jest.setSystemTime(new Date(Date.now() + ms));
 
 describe("Module Check Utilities (checkModulesEnabled)", () => {
   let areModulesEnabledMock: any;

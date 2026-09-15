@@ -1,4 +1,4 @@
-export type SlotReel =
+type SlotReel =
   | "cherries"
   | "cookie"
   | "two"
@@ -10,7 +10,7 @@ export type SlotReel =
   | "heart"
   | "snowflake";
 
-export const SlotDeck: readonly SlotReel[] = [
+const SlotDeck: readonly SlotReel[] = [
   "cherries",
   "cookie",
   "two",
@@ -23,7 +23,7 @@ export const SlotDeck: readonly SlotReel[] = [
   "snowflake",
 ];
 
-export const SlotEmoji: Record<SlotReel, string> = {
+const SlotEmoji: Record<SlotReel, string> = {
   cherries: "🍒",
   cookie: "🍪",
   two: "2️⃣",

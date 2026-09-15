@@ -7,7 +7,7 @@ import { Alert } from "#/components/ui/alert";
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
 import { DataTable } from "#/components/ui/data-table";
 import { guildAppealsColumns } from "#/components/guild/guild-appeals-columns";
-import type { AppealView } from "#/lib/dashboard-data";
+import type { AppealView } from "@lumi/contracts/views";
 import { AppealStatusLabels } from "#/lib/appeals";
 import { useServerAction } from "#/lib/use-server-action";
 

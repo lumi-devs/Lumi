@@ -322,7 +322,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
 
       const server = await startRpcHttpServer(mockLogger);
 
-      expect(server).toBe(mockServer);
+      expect(server).toBe<typeof mockServer>(mockServer);
       expect(mockServe).toHaveBeenCalledWith(
         expect.objectContaining({
           hostname: "127.0.0.1",
@@ -371,7 +371,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
 
       const server = await startRpcHttpServer(mockLogger, 3, 10);
 
-      expect(server).toBe(mockServer);
+      expect(server).toBe<typeof mockServer>(mockServer);
       expect(mockServe).toHaveBeenCalledTimes(2);
       expect(mockLogger).toHaveBeenCalledWith(
         "warn",

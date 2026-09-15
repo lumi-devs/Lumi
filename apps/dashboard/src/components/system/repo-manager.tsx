@@ -24,7 +24,7 @@ import { Badge } from "#/components/ui/badge";
 import { Alert } from "#/components/ui/alert";
 import { EmptyState } from "#/components/ui/empty-state";
 import { ActionError } from "#/components/action-error";
-import type { DownloaderRepoView } from "#/lib/dashboard-data";
+import type { DownloaderRepoView } from "@lumi/contracts/views";
 import { cn, deriveRepoNameFromUrl } from "#/lib/utils";
 
 export function RepoManager({ repos: initial }: { repos: DownloaderRepoView[] }) {

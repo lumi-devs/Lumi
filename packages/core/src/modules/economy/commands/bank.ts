@@ -1,7 +1,8 @@
 import { userMention } from "@discordjs/formatters";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 import { BankService } from "../services/BankService.js";
 import { formatAmount, getEconomyConfig } from "../index.js";
 import { reportEconomyError } from "../lib/respond.js";

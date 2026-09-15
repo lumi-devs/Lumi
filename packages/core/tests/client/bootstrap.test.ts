@@ -51,7 +51,7 @@ describe("bootstrapClientApp", () => {
     delete process.env["APPEAL_TOKEN_SECRET"];
     const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
       throw new Error("exit");
-    }) as any);
+    }));
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await expect(bootstrapClientApp({})).rejects.toThrow("exit");

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { FieldType } from "@lumi/contracts";
-import type { DashboardModuleView } from "#/lib/dashboard-data";
+import type { DashboardModuleView } from "@lumi/contracts/views";
 import { guildActionsMock } from "../setup";
 
 const { setGuildConfigField, toggleGuildModule } = guildActionsMock;

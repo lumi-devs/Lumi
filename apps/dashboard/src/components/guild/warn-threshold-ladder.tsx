@@ -15,7 +15,7 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { Field, Input } from "#/components/ui/input";
 import { Select } from "#/components/ui/select";
 import { TriangleAlert } from "lucide-react";
-import type { WarnThresholdView } from "#/lib/dashboard-data";
+import type { WarnThresholdView } from "@lumi/contracts/views";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
 

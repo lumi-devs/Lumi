@@ -188,7 +188,7 @@ export class RedisStreamsBus implements EventBus {
               }
             }
           }
-          await sleep(500);
+          await Bun.sleep(500);
           continue;
         }
         if (!resp) continue;
@@ -551,8 +551,4 @@ function decodeBody<T>(fields: string[]): T {
     if (fields[i] === "b") return JSON.parse(fields[i + 1]!) as T;
   }
   throw new Error("RedisStreamsBus: message missing `b` field");
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
 }

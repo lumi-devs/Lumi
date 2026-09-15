@@ -4,7 +4,7 @@ import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import type { GuildMember } from "discord.js";
-import { NotesAction } from "../actions/index.js";
+import { NotesAction } from "#modules/mod/actions/NotesAction.js";
 
 const Root = LanguageKeys.Commands;
 

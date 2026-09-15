@@ -19,25 +19,7 @@ import { container } from "@sapphire/framework";
 import { Emojis } from "#lib/utilities/assets.js";
 import { clipLabel } from "./ui/kit.js";
 
-export { formatBreadcrumbHeader, formatStatusBadge, formatSubtitle, formatBreadcrumbs } from "./ui/layout.js";
-export {
-  settingRow,
-  thumbRow,
-  tabRow,
-  confirmRow,
-  backRow,
-  navRow,
-  pageFooter,
-  HubTabs,
-  SectionLineLimit,
-  ButtonLabelLimit,
-  clipLabel,
-  type AccessoryButton,
-  type Tab,
-  type ConfirmRowOptions,
-  type NavAction,
-  type NavRowOptions,
-} from "./ui/kit.js";
+export { settingRow, tabRow, navRow, pageFooter, HubTabs, type Tab } from "./ui/kit.js";
 
 function setEmojiIfPresent(
   builder: StringSelectMenuOptionBuilder | ButtonBuilder,
@@ -102,7 +84,7 @@ export interface CreateMentionableSelectMenuOptions {
   disabled?: boolean;
 }
 
-export interface StringSelectOptionInput {
+interface StringSelectOptionInput {
   label: string;
   value: string;
   description?: string;

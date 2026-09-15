@@ -8,19 +8,14 @@ import { Button } from "#/components/ui/button";
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
 import { Glyph } from "#/components/ui/glyph";
 import { ValueChip } from "#/components/ui/value-chip";
-import type { ConfigHistoryEntryView } from "#/lib/dashboard-data";
+import type { ConfigHistoryEntryView } from "@lumi/contracts/views";
 import {
   fieldLabel,
   moduleEmoji,
   moduleLabel,
   type ModuleLabelIndex,
 } from "#/lib/config-labels";
-import {
-  formatConfigValue,
-  formatShortDay,
-  formatStamp,
-  isUnset,
-} from "#/lib/log-format";
+import { formatConfigValue, formatShortDay, formatStamp, isUnset } from "#/lib/log-format";
 import { useServerAction } from "#/lib/use-server-action";
 
 /**

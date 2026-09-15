@@ -3,7 +3,8 @@ import type { AutocompleteInteraction } from "discord.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Time } from "@sapphire/time-utilities";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 import {
   Message,
   PermissionFlagsBits,
@@ -11,11 +12,7 @@ import {
   type FetchMessagesOptions,
   Collection,
 } from "discord.js";
-import {
-  makeErrorCard,
-  makeSuccessCard,
-  makeWarningCard,
-} from "#lib/utilities/cards.js";
+import { makeErrorCard, makeSuccessCard, makeWarningCard } from "#lib/utilities/cards.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { logError, errorCode } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";

@@ -15,10 +15,7 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { Field } from "#/components/ui/input";
 import { Select } from "#/components/ui/select";
 import { useStaggerIn } from "#/lib/animate";
-import type {
-  DashboardChannelView,
-  IgnoredChannelView,
-} from "#/lib/dashboard-data";
+import type { DashboardChannelView, IgnoredChannelView } from "@lumi/contracts/views";
 import { useServerAction } from "#/lib/use-server-action";
 
 const WholeServer = "__server__";

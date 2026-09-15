@@ -12,7 +12,7 @@ import type { RedisClient } from "#lib/database/cluster-safe.js";
  * mutual exclusion across workers matters, not ordering.
  */
 
-export const RedisReleaseScript = `
+const RedisReleaseScript = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
   return redis.call('DEL', KEYS[1])
 else
@@ -28,7 +28,7 @@ else
 end
 `;
 
-export const RedisVerifyScript = `
+const RedisVerifyScript = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
   return 1
 else
@@ -67,8 +67,6 @@ const Defaults: Required<RedisLockOptions> = {
   onLostLock: () => undefined,
 };
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 export interface RedisLock {
   /** Releases the lock. Safe to call more than once. */
   release: () => Promise<void>;
@@ -92,7 +90,7 @@ export async function acquireRedisLock(
     if (Date.now() >= deadline) {
       throw new Error(`Timeout acquiring Redis lock: ${key}`);
     }
-    await sleep(delay);
+    await Bun.sleep(delay);
     delay = Math.min(delay * 2, opts.maxRetryDelayMs);
   }
 

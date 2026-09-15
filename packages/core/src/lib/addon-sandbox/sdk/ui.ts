@@ -7,9 +7,7 @@
  * last. Keep each section to three text lines and each button label to
  * eighty characters; the helpers below clip silently. Reuse `HubTabs` for
  * the Home/Modules/Permissions/Settings/Addons bar so addon views sit
- * inside the same navigation as core. The `addon*` helpers return fresh
- * builders on every call and render byte-identical output to their core
- * counterparts; prefer them over hand-rolled components.
+ * inside the same navigation as core.
  */
 export {
   makeCard,
@@ -21,12 +19,11 @@ export {
   makeEmptyCard,
   ephemeralCard,
   noPingCard,
-  resolveCardColor,
-  defaultCardColors,
   type CardReply,
   type CardOptions,
-  type CardColorKey,
 } from "#lib/utilities/cards.js";
+export { resolveCardColor, type CardColorKey } from "#lib/utilities/config.js";
+export { BrandColors } from "#lib/branding/colors.js";
 export {
   confirmRow,
   backRow,
@@ -47,23 +44,3 @@ export {
 export { confirmPrompt, type ConfirmPromptOptions } from "#lib/utilities/confirm.js";
 export { paginateList, paginateContainer } from "#lib/utilities/pagination.js";
 export { Emojis } from "#lib/utilities/assets.js";
-
-import {
-  settingRow,
-  tabRow,
-  confirmRow,
-  backRow,
-  navRow,
-  pageFooter,
-} from "#lib/utilities/ui/kit.js";
-
-/**
- * Stable `addon*` aliases over the kit primitives. Same builders, same bytes —
- * the names exist so third-party code doesn't import `#utilities` internals.
- */
-export const addonSettingRow = settingRow;
-export const addonTabRow = tabRow;
-export const addonConfirmRow = confirmRow;
-export const addonBackRow = backRow;
-export const addonNavRow = navRow;
-export const addonPageFooter = pageFooter;

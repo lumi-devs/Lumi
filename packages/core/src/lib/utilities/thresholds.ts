@@ -14,7 +14,7 @@ export async function invalidateThresholds(
   await container.invalidation.invalidate(thresholdKey(guildId));
 }
 
-export function normalizeRuleDuration(
+function normalizeRuleDuration(
   action: ThresholdAction,
   duration?: string | null,
 ): string | undefined {

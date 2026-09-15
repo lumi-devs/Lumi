@@ -83,11 +83,10 @@ describe("createEventBus", () => {
     expect(bus.statsIntervalMs).toBe(5000);
   });
 
-  it("uses claimMinIdleMs over ackWaitMs when both provided", () => {
+  it("passes claimMinIdleMs through to the bus", () => {
     const owned = createEventBus({
       redis: { host: "localhost" },
       claimMinIdleMs: 30000,
-      ackWaitMs: 45000,
     });
 
     const bus = owned.bus as any;

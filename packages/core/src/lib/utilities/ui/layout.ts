@@ -1,18 +1,3 @@
-import type { BadgeColor } from "./types.js";
-
-const BadgeMarks: Record<BadgeColor, string> = {
-  green: "🟢",
-  red: "🔴",
-  yellow: "🟡",
-  blue: "🔵",
-  grey: "⚪",
-  purple: "🟣",
-};
-
-export function badge(label: string, color: BadgeColor = "grey"): string {
-  return `${BadgeMarks[color]} \`${label}\``;
-}
-
 export function formatStatusBadge(status: string, label?: string): string {
   const normalized = status.toLowerCase();
   let icon = "⚪";

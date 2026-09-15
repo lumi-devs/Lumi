@@ -8,7 +8,7 @@ import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { AutocompleteInteraction, GuildMember } from "discord.js";
-import { MuteAction } from "../actions/index.js";
+import { MuteAction } from "#modules/mod/actions/MuteAction.js";
 import { respondWithReasonChoices } from "../lib/reason-autocomplete.js";
 
 const Root = LanguageKeys.Commands;

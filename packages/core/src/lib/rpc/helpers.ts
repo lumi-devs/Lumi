@@ -286,7 +286,7 @@ export const PermitAssignSchema = s.object({
   targetId: SnowflakeSchema,
 });
 
-export const MaxCasesPageSize = 100;
+const MaxCasesPageSize = 100;
 
 export const CasesListSchema = s.object({
   action: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(32).optional(),
@@ -311,11 +311,11 @@ export const WarnThresholdSetSchema = s.object({
   duration: s.string().lengthLessThanOrEqual(32).nullable().optional(),
 });
 
-export const ModuleNameSchema = s
+const ModuleNameSchema = s
   .string()
   .lengthGreaterThanOrEqual(1)
   .lengthLessThanOrEqual(64);
-export const ConfigKeySchema = s
+const ConfigKeySchema = s
   .string()
   .lengthGreaterThanOrEqual(1)
   .lengthLessThanOrEqual(64);
@@ -346,7 +346,7 @@ export const TempVcGeneratorSetSchema = s.object({
   limit: s.number().int().greaterThanOrEqual(0).lessThanOrEqual(99).optional(),
 });
 
-export const ReactionRoleOptionSchema = s.object({
+const ReactionRoleOptionSchema = s.object({
   id: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(32).optional(),
   label: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(80),
   emoji: s.string().lengthLessThanOrEqual(100).nullable().optional(),
@@ -438,7 +438,7 @@ export const ModNoteRemoveSchema = s.object({
 
 // Only ban/timeout cases are appealable - matches BanAction/MuteAction, the
 // only two call sites that ever DM an appeal link.
-export const AppealableCaseActions = new Set(["ban", "mute"]);
+const AppealableCaseActions = new Set(["ban", "mute"]);
 
 export const AppealVerifySchema = s.object({
   caseId: s.number().int().greaterThanOrEqual(1),
@@ -532,7 +532,7 @@ export function toRawConfigValue(value: unknown): unknown {
   return value;
 }
 
-export function isPrimitiveConfigValue(value: unknown): boolean {
+function isPrimitiveConfigValue(value: unknown): boolean {
   return (
     typeof value === "string" ||
     typeof value === "number" ||

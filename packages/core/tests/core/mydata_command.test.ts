@@ -3,12 +3,7 @@ import { container } from "@sapphire/framework";
 import { MyDataCommand } from "#modules/core/commands/mydata.js";
 import * as gdpr from "#lib/gdpr.js";
 import * as confirm from "#lib/utilities/confirm.js";
-import {
-  makeSuccessCard,
-  makeErrorCard,
-  makeWarningCard,
-  makeInfoCard,
-} from "#lib/utilities/cards.js";
+import { makeSuccessCard, makeErrorCard, makeWarningCard, makeInfoCard } from "#lib/utilities/cards.js";
 
 const __actualModule12 = await import("#lib/module-system/Utility.js");
 vi.mock("#lib/module-system/Utility.js", () => {
@@ -53,7 +48,7 @@ describe("MyDataCommand", () => {
         name: "mydata",
         description: "mydata command",
         subcommands: [],
-      } as any,
+      },
     );
 
     mockCtx = {

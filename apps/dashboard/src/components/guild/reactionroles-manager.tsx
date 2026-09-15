@@ -23,12 +23,7 @@ import {
 import { DiscordMessagePreview } from "#/components/guild/discord-message-preview";
 import { buildMenuPreview } from "#/lib/reactionroles-preview";
 import { MessageBuilderV2 } from "#/components/guild/message-builder-v2";
-import type {
-  DashboardRoleView,
-  ReactionRoleMenuModeView,
-  ReactionRoleMenuView,
-  ReactionRoleOptionView,
-} from "#/lib/dashboard-data";
+import type { DashboardRoleView, ReactionRoleMenuModeView, ReactionRoleMenuView, ReactionRoleOptionView } from "@lumi/contracts/views";
 import type { MessageDocumentV2, ReactionRoleMenuSetPayload } from "@lumi/contracts";
 import { useServerAction } from "#/lib/use-server-action";
 

@@ -27,17 +27,6 @@ import { SecurityRepository } from "#lib/prisma/repositories/SecurityRepository.
 import { TempVcRepository } from "#lib/prisma/repositories/TempVcRepository.js";
 import { EconomyRepository } from "#lib/prisma/repositories/EconomyRepository.js";
 
-export type {
-  TargetPermitPayload,
-  PolarityBucket,
-  PermitKind,
-  PermitTargetType,
-  PermitPolarity,
-  PermitRecord,
-  PermitAssignmentRecord,
-  PermitWithAssignments,
-} from "#lib/prisma/repositories/PermissionRepository.js";
-export type { AuditLogPayload } from "#lib/prisma/repositories/AuditRepository.js";
 export type { ConfigHistoryEntry } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
 export type { ConfigOverrideEntry } from "#lib/prisma/repositories/ConfigOverrideRepository.js";
 

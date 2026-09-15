@@ -3,12 +3,8 @@ import { PanelsKeys } from "#lib/i18n/keys.js";
 import { row, type Row, formatPageFooter } from "#modules/core/ui/common.js";
 import { hubTabRow } from "#modules/core/ui/hub.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import {
-  resolveCardColor,
-  makeCard,
-  noPingCard,
-  type CardReply,
-} from "#lib/utilities/cards.js";
+import { resolveCardColor } from "#lib/utilities/config.js";
+import { makeCard, noPingCard, type CardReply } from "#lib/utilities/cards.js";
 import {
   createPaginationRow,
   createRoleSelectMenu,
@@ -26,7 +22,7 @@ import { ButtonStyle } from "discord.js";
 export const PermsPerPage = 4;
 
 export type PermitKind = "custom" | "enforced";
-export type PermitTargetType = "role" | "user";
+type PermitTargetType = "role" | "user";
 
 export interface PermitAssignmentRow {
   permitId: number;

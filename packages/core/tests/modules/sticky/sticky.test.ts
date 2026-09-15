@@ -109,7 +109,7 @@ describe("Sticky Module", () => {
       expect(message.channel.messages.delete).toHaveBeenCalledWith("old-1");
       expect(message.channel.send).toHaveBeenCalledTimes(1);
       expect(
-        JSON.stringify(message.channel.send.mock.calls[0][0]),
+        JSON.stringify(message.channel.send.mock.calls[0]![0]),
       ).toContain("stay");
       expect(container.redis.set).toHaveBeenCalledWith(
         "lumi:sticky:guild-1:channel-1",
@@ -149,7 +149,7 @@ describe("Sticky Module", () => {
       const message = makeMessage({ channelId: "channel-rich" });
       await (listener as any).handle(message);
       expect(message.channel.send).toHaveBeenCalledTimes(1);
-      const json = JSON.stringify(message.channel.send.mock.calls[0][0]);
+      const json = JSON.stringify(message.channel.send.mock.calls[0]![0]);
       expect(json).toContain("stay rich");
       expect(json).toContain("5793266");
       expect(json).toContain("https://example.com/a.png");
@@ -168,7 +168,7 @@ describe("Sticky Module", () => {
       const message = makeMessage({ channelId: "channel-badhex" });
       await (listener as any).handle(message);
       expect(message.channel.send).toHaveBeenCalledTimes(1);
-      const json = JSON.stringify(message.channel.send.mock.calls[0][0]);
+      const json = JSON.stringify(message.channel.send.mock.calls[0]![0]);
       expect(json).toContain("stay plain");
       expect(json).not.toContain("not-a-color");
     });

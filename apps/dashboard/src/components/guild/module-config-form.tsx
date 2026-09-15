@@ -15,11 +15,7 @@ import { ConfigFieldInput, isWideField } from "./config-field-input";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
 import { cn } from "#/lib/utils";
-import type {
-  DashboardModuleView,
-  DashboardRoleView,
-  DashboardChannelView,
-} from "#/lib/dashboard-data";
+import type { DashboardModuleView, DashboardRoleView, DashboardChannelView } from "@lumi/contracts/views";
 import { FieldType, type ConfigField, type WelcomeTestKind } from "@lumi/contracts";
 
 /** Welcome module only: which "send test" kind each preview-bearing field

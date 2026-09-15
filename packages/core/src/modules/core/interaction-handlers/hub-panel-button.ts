@@ -26,12 +26,7 @@ import { DefaultPrefix } from "#modules/core/ui/hub.js";
 import { buildFeatureListView } from "#modules/core/ui/modules.js";
 import { buildPermitPickerView } from "#modules/core/ui/permissions.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeInfoCard,
-  makeSuccessCard,
-} from "#lib/utilities/cards.js";
+import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard } from "#lib/utilities/cards.js";
 import { getCoreUpdateStatus, updateLumiCore } from "#lib/utilities/self-update.js";
 import {
   ActionRowBuilder,

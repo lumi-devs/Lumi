@@ -3,10 +3,7 @@ import type { Guild } from "discord.js";
 import { container } from "@sapphire/framework";
 import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
 import { Emojis } from "#lib/utilities/assets.js";
-import {
-  makeInfoCard,
-  type CardReply,
-} from "#lib/utilities/cards.js";
+import { makeInfoCard, type CardReply } from "#lib/utilities/cards.js";
 import {
   MessageTemplateDocs,
   renderMessageContent,
@@ -53,7 +50,7 @@ export function templateVarsFor(
   };
 }
 
-export function welcomeTemplateVarsRecord(
+function welcomeTemplateVarsRecord(
   vars: WelcomeTemplateVars,
 ): Record<string, string> {
   return {

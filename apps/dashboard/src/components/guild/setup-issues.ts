@@ -1,4 +1,4 @@
-import type { DashboardModuleView } from "#/lib/dashboard-data";
+import type { DashboardModuleView } from "@lumi/contracts/views";
 
 export interface SetupIssue {
   id: string;

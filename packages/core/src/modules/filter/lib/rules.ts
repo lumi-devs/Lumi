@@ -96,7 +96,7 @@ const InvisibleRe = /[\u00AD\u200B-\u200F\u2060-\u2064\uFEFF]/gu;
  * Does not cover cross-script homoglyphs (Cyrillic vs Latin `e`) - those are
  * distinct codepoints and need a confusables table, tracked separately.
  */
-export function normalizeForMatch(input: string): string {
+function normalizeForMatch(input: string): string {
   return input
     .normalize("NFKD")
     .replace(InvisibleRe, "")

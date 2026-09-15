@@ -6,7 +6,6 @@ import { commandGroups, commandCount } from "@/generated/commands";
 import { permitNodeGroups, permitNodeCount } from "@/generated/permits";
 import { rpcActions, rpcActionCount } from "@/generated/rpc-actions";
 import { dataPrivacyRows } from "@/generated/data-privacy";
-import { modules } from "@/generated/modules";
 
 function EnvRows({ rows }: { rows: { name: string; required: string; fallback: string; about: string }[] }) {
   return (
@@ -164,37 +163,6 @@ export function DataPrivacyTable() {
           <tr key={row.name}>
             <td>{row.displayName}</td>
             <td>{row.statement ?? <em>Not stated in this module&apos;s manifest.</em>}</td>
-          </tr>
-        ))}
-      </tbody>
-    </Table>
-  );
-}
-
-export function ModuleCount() {
-  return <>{modules.length}</>;
-}
-
-export function ModulesTable() {
-  return (
-    <Table>
-      <thead>
-        <tr>
-          <th>Module</th>
-          <th>Category</th>
-          <th>Disableable</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-        {modules.map((m) => (
-          <tr key={m.name}>
-            <td>
-              {m.emoji} {m.displayName} (<code>{m.name}</code>)
-            </td>
-            <td>{m.category}</td>
-            <td>{m.disableable ? "yes" : "no"}</td>
-            <td>{m.short}</td>
           </tr>
         ))}
       </tbody>

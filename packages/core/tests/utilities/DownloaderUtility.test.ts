@@ -298,14 +298,14 @@ describe("DownloaderUtility", () => {
 
   describe("getRepoStatus", () => {
     it("parses the last commit hash and relative time from git log", async () => {
-      spawnSpy.mockImplementation(() => fakeSpawnResult("abc1234|2 days ago\n") as any);
+      spawnSpy.mockImplementation(() => fakeSpawnResult("abc1234|2 days ago\n"));
 
       const res = await service.getRepoStatus("repo1");
       expect(res).toEqual({ lastCommit: "abc1234", lastCommitTime: "2 days ago" });
     });
 
     it("returns nulls when git log fails", async () => {
-      spawnSpy.mockImplementation(() => fakeSpawnResult("", "not a git repository", 1) as any);
+      spawnSpy.mockImplementation(() => fakeSpawnResult("", "not a git repository", 1));
 
       const res = await service.getRepoStatus("repo1");
       expect(res).toEqual({ lastCommit: null, lastCommitTime: null });
@@ -330,8 +330,8 @@ describe("DownloaderUtility", () => {
 
       (fs.access as any).mockResolvedValue(true);
       spawnSpy.mockImplementation((cmd: string[]) => {
-        if (cmd.includes("rev-parse")) return fakeSpawnResult("hash123\n") as any;
-        return fakeSpawnResult("") as any;
+        if (cmd.includes("rev-parse")) return fakeSpawnResult("hash123\n");
+        return fakeSpawnResult("");
       });
 
       const res = await service.updateModule("m1");
@@ -344,11 +344,11 @@ describe("DownloaderUtility", () => {
 
       (fs.access as any).mockResolvedValue(true);
       spawnSpy.mockImplementation((cmd: string[]) => {
-        if (cmd.includes("rev-parse") && cmd.includes("HEAD")) return fakeSpawnResult("oldhash\n") as any;
-        if (cmd.includes("rev-parse") && cmd.includes("@{u}")) return fakeSpawnResult("origin/main\n") as any;
-        if (cmd.includes("rev-parse") && cmd.includes("origin/main")) return fakeSpawnResult("newhash\n") as any;
-        if (cmd.includes("log")) return fakeSpawnResult("feat: new feature\n") as any;
-        return fakeSpawnResult("") as any;
+        if (cmd.includes("rev-parse") && cmd.includes("HEAD")) return fakeSpawnResult("oldhash\n");
+        if (cmd.includes("rev-parse") && cmd.includes("@{u}")) return fakeSpawnResult("origin/main\n");
+        if (cmd.includes("rev-parse") && cmd.includes("origin/main")) return fakeSpawnResult("newhash\n");
+        if (cmd.includes("log")) return fakeSpawnResult("feat: new feature\n");
+        return fakeSpawnResult("");
       });
 
       const res = await service.updateModule("m1");
@@ -362,8 +362,8 @@ describe("DownloaderUtility", () => {
 
       (fs.access as any).mockResolvedValue(true);
       spawnSpy.mockImplementation((cmd: string[]) => {
-        if (cmd.includes("pull")) return fakeSpawnResult("", "Git pull conflict", 1) as any;
-        return fakeSpawnResult("newhash\n") as any;
+        if (cmd.includes("pull")) return fakeSpawnResult("", "Git pull conflict", 1);
+        return fakeSpawnResult("newhash\n");
       });
 
       await expect(service.updateModule("m1")).rejects.toThrow("Git pull failed: Git pull conflict");
@@ -378,10 +378,10 @@ describe("DownloaderUtility", () => {
       let activePulls = 0;
       let maxActivePulls = 0;
       spawnSpy.mockImplementation((cmd: string[]) => {
-        if (cmd.includes("rev-parse") && cmd.includes("HEAD")) return fakeSpawnResult("oldhash\n") as any;
-        if (cmd.includes("rev-parse") && cmd.includes("@{u}")) return fakeSpawnResult("origin/main\n") as any;
-        if (cmd.includes("rev-parse") && cmd.includes("origin/main")) return fakeSpawnResult("newhash\n") as any;
-        if (cmd.includes("log")) return fakeSpawnResult("feat: change\n") as any;
+        if (cmd.includes("rev-parse") && cmd.includes("HEAD")) return fakeSpawnResult("oldhash\n");
+        if (cmd.includes("rev-parse") && cmd.includes("@{u}")) return fakeSpawnResult("origin/main\n");
+        if (cmd.includes("rev-parse") && cmd.includes("origin/main")) return fakeSpawnResult("newhash\n");
+        if (cmd.includes("log")) return fakeSpawnResult("feat: change\n");
         if (cmd.includes("pull")) {
           activePulls++;
           maxActivePulls = Math.max(maxActivePulls, activePulls);
@@ -393,9 +393,9 @@ describe("DownloaderUtility", () => {
                 resolve(0);
               }, 20);
             }),
-          } as any;
+          };
         }
-        return fakeSpawnResult("") as any;
+        return fakeSpawnResult("");
       });
 
       const [res1, res2] = await Promise.all([
@@ -515,11 +515,11 @@ describe("DownloaderUtility", () => {
 
       (fs.access as any).mockResolvedValue(true);
       spawnSpy.mockImplementation((cmd: string[]) => {
-        if (cmd.includes("rev-parse") && cmd.includes("HEAD")) return fakeSpawnResult("oldhash\n") as any;
-        if (cmd.includes("rev-parse") && cmd.includes("@{u}")) return fakeSpawnResult("origin/main\n") as any;
-        if (cmd.includes("rev-parse") && cmd.includes("origin/main")) return fakeSpawnResult("newhash\n") as any;
-        if (cmd.includes("log")) return fakeSpawnResult("feat: change\n") as any;
-        return fakeSpawnResult("") as any;
+        if (cmd.includes("rev-parse") && cmd.includes("HEAD")) return fakeSpawnResult("oldhash\n");
+        if (cmd.includes("rev-parse") && cmd.includes("@{u}")) return fakeSpawnResult("origin/main\n");
+        if (cmd.includes("rev-parse") && cmd.includes("origin/main")) return fakeSpawnResult("newhash\n");
+        if (cmd.includes("log")) return fakeSpawnResult("feat: change\n");
+        return fakeSpawnResult("");
       });
 
       const res = await service.checkForUpdates();

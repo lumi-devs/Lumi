@@ -11,7 +11,7 @@ import {
 } from "#/components/ui/card";
 import { LoadFailure } from "#/components/ui/load-failure";
 import { PageHeader } from "#/components/ui/page-header";
-import type { WarnThresholdView } from "#/lib/dashboard-data";
+import type { WarnThresholdView } from "@lumi/contracts/views";
 
 export default async function WarnThresholdsPage({
   params,

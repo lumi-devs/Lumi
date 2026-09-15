@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, LayoutGrid } from "lucide-react";
 import { Card } from "#/components/ui/card";
-import type { DashboardModuleView } from "#/lib/dashboard-data";
+import type { DashboardModuleView } from "@lumi/contracts/views";
 
 export function ModulesStatusStrip({
   guildId,

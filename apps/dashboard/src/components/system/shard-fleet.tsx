@@ -1,11 +1,7 @@
 "use client";
 
 import { CircleSlash, Cpu, Network } from "lucide-react";
-import type {
-  ClusterReplicaView,
-  ShardStateView,
-  SystemShardsData,
-} from "#/lib/dashboard-data";
+import type { ClusterReplicaView, ShardStateView, SystemShardsData } from "@lumi/contracts/views";
 import { Alert } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";

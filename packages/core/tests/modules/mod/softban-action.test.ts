@@ -19,7 +19,7 @@ vi.mock("@sapphire/framework", () => ({
   },
 }));
 
-vi.mock("#modules/mod/lib/helpers.js", () => ({
+vi.mock("#lib/moderation/log.js", () => ({
   logToChannel: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -104,6 +104,6 @@ describe("SoftbanAction", () => {
       action: "softban",
       reason: "Spamming links",
     });
-    expect(caseResult).toEqual({ caseNumber: 42 });
+    expect(caseResult).toEqual<{ caseNumber: number }>({ caseNumber: 42 });
   });
 });

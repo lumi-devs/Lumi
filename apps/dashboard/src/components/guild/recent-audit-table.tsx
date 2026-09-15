@@ -3,7 +3,7 @@ import { Card } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
 import { Table, TBody, TD, TH, THead, TR, TableScroll } from "#/components/ui/table";
 import { formatTime, splitAction } from "#/lib/log-format";
-import type { AuditEntryView } from "#/lib/dashboard-data";
+import type { AuditEntryView } from "@lumi/contracts/views";
 
 const PlatformTone: Record<string, string> = {
   web: "bg-accent-soft text-accent-fg",

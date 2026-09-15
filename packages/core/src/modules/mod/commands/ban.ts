@@ -10,7 +10,7 @@ import { userMention } from "@discordjs/formatters";
 import { isSnowflakeId } from "#lib/utilities/misc.js";
 import type { ModerationCase } from "@prisma/client";
 import type { User } from "discord.js";
-import { BanAction } from "../actions/index.js";
+import { BanAction } from "#modules/mod/actions/BanAction.js";
 
 const Root = LanguageKeys.Commands;
 const SecondsPerDay = 86400;

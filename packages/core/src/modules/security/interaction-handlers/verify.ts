@@ -10,11 +10,7 @@ import { getUtility } from "#lib/module-system/Utility.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { getDashboardPublicUrl } from "#lib/env.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeSuccessCard,
-} from "#lib/utilities/cards.js";
+import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/utilities/cards.js";
 import { CaptchaButtonPrefix } from "../lib/captcha.js";
 import {
   VerifyButtonId,

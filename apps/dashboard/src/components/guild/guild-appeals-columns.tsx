@@ -3,7 +3,7 @@ import type { dataTableFeatures } from "#/components/ui/data-table";
 import type { AppealReviewStatus } from "@lumi/contracts";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
-import type { AppealView } from "#/lib/dashboard-data";
+import type { AppealView } from "@lumi/contracts/views";
 import { AppealStatusBadgeVariant, AppealStatusLabels } from "#/lib/appeals";
 import { caseActionLabel, formatCaseDate } from "#/lib/moderation-cases";
 

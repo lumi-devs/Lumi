@@ -20,14 +20,9 @@ import { ExportLogButton } from "#/components/ui/export-log-button";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
-import type { CasesListData, ModerationCaseView } from "#/lib/dashboard-data";
-import {
-  countBy,
-  extractMemberNames,
-  isSnowflake,
-  pageNumber,
-  single,
-} from "#/lib/log-format";
+import type { CasesListData, ModerationCaseView } from "@lumi/contracts/views";
+import { countBy, extractMemberNames, pageNumber, single } from "#/lib/log-format";
+import { isSnowflake } from "#/lib/moderation-cases";
 import { CaseActionOptions } from "#/lib/moderation-cases";
 
 const PageSize = 25;

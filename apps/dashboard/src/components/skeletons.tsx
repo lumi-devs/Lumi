@@ -3,7 +3,7 @@ import { cn } from "#/lib/utils";
 
 // These mirror the real layout's geometry so nothing jumps when data lands.
 
-export function SkeletonLine({ className }: { className?: string }) {
+function SkeletonLine({ className }: { className?: string }) {
   return <span className={cn("skeleton block h-3", className)} />;
 }
 

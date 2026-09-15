@@ -1,11 +1,11 @@
 import { container } from "@sapphire/framework";
-import { parseHexColor, isHexColor } from "#lib/message-content.js";
+import { isHexColor } from "#lib/message-content.js";
 import { isSnowflakeId } from "#lib/utilities/misc.js";
 import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
 
 export type ReactionRoleMode = "buttons" | "select" | "reactions";
 
-export const ReactionRoleModes: readonly ReactionRoleMode[] = [
+const ReactionRoleModes: readonly ReactionRoleMode[] = [
   "buttons",
   "select",
   "reactions",
@@ -37,12 +37,12 @@ export interface ReactionRoleMenu {
   updatedAt: number;
 }
 
-export interface ReactionRoleMessageRef {
+interface ReactionRoleMessageRef {
   menuId: string;
   channelId: string;
 }
 
-export const ReactionRoleLimits = {
+const ReactionRoleLimits = {
   maxMenus: 25,
   titleMin: 1,
   titleMax: 100,
@@ -58,9 +58,7 @@ export const ReactionRoleLimits = {
   reactionsMaxOptions: 20,
 } as const;
 
-export const parseMenuColor = parseHexColor;
-
-export function isReactionRoleMode(value: string): value is ReactionRoleMode {
+function isReactionRoleMode(value: string): value is ReactionRoleMode {
   return (ReactionRoleModes as readonly string[]).includes(value);
 }
 
@@ -184,7 +182,7 @@ export function validateOptionDraft(input: {
   return errors;
 }
 
-export type ToggleBlockReason =
+type ToggleBlockReason =
   | "unknownOption"
   | "missingRequiredRole"
   | "maxRolesReached";

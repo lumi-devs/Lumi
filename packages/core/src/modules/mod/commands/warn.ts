@@ -4,7 +4,7 @@ import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import type { AutocompleteInteraction, GuildMember } from "discord.js";
-import { WarnAction } from "../actions/index.js";
+import { WarnAction } from "#modules/mod/actions/WarnAction.js";
 import { respondWithReasonChoices } from "../lib/reason-autocomplete.js";
 
 const Root = LanguageKeys.Commands;

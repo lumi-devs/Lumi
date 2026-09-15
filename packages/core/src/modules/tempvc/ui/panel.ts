@@ -17,14 +17,8 @@ import { renderMessageBlocksV2Container } from "#lib/utilities/message-blocks-v2
 import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
 import type { VcRecord } from "../data.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import {
-  makeCard,
-  makeInfoCard,
-  makeErrorCard,
-  resolveCardColor,
-  formatStatusBadge,
-  type CardReply,
-} from "#lib/utilities/cards.js";
+import { makeCard, makeInfoCard, makeErrorCard, formatStatusBadge, type CardReply } from "#lib/utilities/cards.js";
+import { resolveCardColor } from "#lib/utilities/config.js";
 import {
   createUserSelectMenu,
   createRoleSelectMenu,

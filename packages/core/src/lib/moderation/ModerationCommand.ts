@@ -1,4 +1,5 @@
-import { BaseCommand, type CommandContext } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
 import {
@@ -9,7 +10,6 @@ import {
 import { logError } from "#lib/utilities/errors.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
-import { sleep } from "#lib/runtime.js";
 import { isNullish } from "@sapphire/utilities";
 import { Time } from "@sapphire/time-utilities";
 import { Result, container, type Awaitable } from "@sapphire/framework";
@@ -446,7 +446,7 @@ export async function runModerationFlow<
     // a 25-target `/ban` doesn't burst the guild's audit-log/ban rate limit.
     await mapWithConcurrency(prepared, DefaultBatchConcurrency, async (entry) => {
       await runOne(entry);
-      await sleep(BatchStaggerMs);
+      await Bun.sleep(BatchStaggerMs);
     });
   }
 

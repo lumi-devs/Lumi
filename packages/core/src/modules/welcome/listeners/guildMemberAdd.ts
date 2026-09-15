@@ -3,14 +3,9 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { GuildMember } from "discord.js";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { logError } from "#lib/utilities/errors.js";
-import { loadWelcomeConfig } from "../lib/config.js";
-import { sendWelcomeCard } from "../lib/send.js";
-import {
-  buildDmWelcomeCard,
-  renderWelcomeCard,
-  renderWelcomeTemplate,
-  templateVarsFor,
-} from "../lib/template.js";
+import { loadWelcomeConfig } from "#lib/utilities/welcome.js";
+import { sendWelcomeCard } from "#lib/utilities/welcome.js";
+import { buildDmWelcomeCard, renderWelcomeCard, renderWelcomeTemplate, templateVarsFor } from "#lib/utilities/welcome.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "welcomeMemberAdd",

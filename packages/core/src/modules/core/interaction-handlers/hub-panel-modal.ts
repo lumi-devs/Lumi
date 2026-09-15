@@ -8,11 +8,7 @@ import {
   hasOwnerPermit,
   renderSettings,
 } from "#modules/core/lib/hub-panel.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeSuccessCard,
-} from "#lib/utilities/cards.js";
+import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/utilities/cards.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,

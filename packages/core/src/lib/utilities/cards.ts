@@ -12,13 +12,12 @@ import {
 import { cutText } from "@sapphire/utilities";
 import { MessageFlags } from "discord.js";
 import { resolveCardColor } from "./config.js";
-import { badge, formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "./ui/layout.js";
+import { formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "./ui/layout.js";
 import type { CardReply } from "./ui/types.js";
 
 export type { CardReply } from "./ui/types.js";
-export { resolveCardColor, defaultCardColors, type CardColorKey } from "./config.js";
 
-export { formatStatusBadge, formatSubtitle, formatBreadcrumbs, badge };
+export { formatStatusBadge, formatSubtitle, formatBreadcrumbs };
 
 export interface CardOptions {
   subtitle?: string;

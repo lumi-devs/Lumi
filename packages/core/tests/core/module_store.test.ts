@@ -207,7 +207,7 @@ describe('ModuleStore', () => {
 			await store.discover();
 			expect(store.getRecord('afk').enabled).toBe(true);
 
-			const unloadSpy = vi.spyOn(store, 'unload').mockResolvedValue({} as any);
+			const unloadSpy = vi.spyOn(store, 'unload').mockResolvedValue({});
 
 			await store.setEnabled('afk', false, 'abuse');
 
@@ -254,7 +254,7 @@ describe('ModuleStore', () => {
 			expect(store.getRecord('b').enabled).toBe(true);
 			expect(store.getRecord('c').enabled).toBe(true);
 
-			vi.spyOn(store, 'unload').mockResolvedValue({} as any);
+			vi.spyOn(store, 'unload').mockResolvedValue({});
 
 			await store.setEnabled('a', false, 'abuse');
 

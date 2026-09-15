@@ -7,7 +7,7 @@ import { Alert } from "#/components/ui/alert";
 import { ActionError } from "#/components/action-error";
 import { Button } from "#/components/ui/button";
 import { Field, Textarea } from "#/components/ui/input";
-import type { AppealCaseSummary } from "#/lib/dashboard-data";
+import type { AppealCaseSummary } from "@lumi/contracts/views";
 import { caseActionLabel, formatCaseDate } from "#/lib/moderation-cases";
 import { useServerAction } from "#/lib/use-server-action";
 

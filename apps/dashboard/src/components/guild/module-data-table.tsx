@@ -2,10 +2,7 @@ import { Database } from "lucide-react";
 import { DataTable } from "#/components/ui/data-table";
 import { EmptyState } from "#/components/ui/empty-state";
 import { moduleDataColumns } from "#/components/guild/module-data-columns";
-import type {
-  DashboardModuleView,
-  ModuleDataEntryView,
-} from "#/lib/dashboard-data";
+import type { DashboardModuleView, ModuleDataEntryView } from "@lumi/contracts/views";
 
 export function ModuleDataTable({
   entries,

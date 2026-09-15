@@ -7,7 +7,7 @@ import { Badge } from "#/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
 import { PageHeader } from "#/components/ui/page-header";
-import type { BlocklistListData } from "#/lib/dashboard-data";
+import type { BlocklistListData } from "@lumi/contracts/views";
 import { pageNumber, single } from "#/lib/log-format";
 
 const PageSize = 25;

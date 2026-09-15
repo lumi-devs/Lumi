@@ -12,11 +12,7 @@ import { MessageFlags } from "discord.js";
 import { fetchTyped } from "#lib/commands.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeSuccessCard,
-} from "#lib/utilities/cards.js";
+import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/utilities/cards.js";
 import { logError } from "#lib/utilities/errors.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { Rr } from "#modules/reactionroles/keys.js";

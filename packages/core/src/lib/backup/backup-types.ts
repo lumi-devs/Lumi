@@ -1,6 +1,6 @@
 import { ChannelType, type Guild } from "discord.js";
 
-export interface RoleSnapshot {
+interface RoleSnapshot {
   id: string;
   name: string;
   color: number;
@@ -10,14 +10,14 @@ export interface RoleSnapshot {
   mentionable: boolean;
 }
 
-export interface ChannelOverwriteSnapshot {
+interface ChannelOverwriteSnapshot {
   id: string;
   type: 0 | 1;
   allow: string;
   deny: string;
 }
 
-export interface ChannelSnapshot {
+interface ChannelSnapshot {
   id: string;
   name: string;
   type: number;

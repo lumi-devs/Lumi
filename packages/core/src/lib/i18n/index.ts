@@ -12,7 +12,7 @@ import type { TypedFT, TypedT } from "#lib/i18n/keys.js";
  * cross-namespace prefixed keys (e.g. `t("commands:foo")`). Extend this when a
  * new namespace JSON is added under `src/languages/<lng>/`.
  */
-export type LumiNamespaces = [
+type LumiNamespaces = [
   "common",
   "commands",
   "preconditions",

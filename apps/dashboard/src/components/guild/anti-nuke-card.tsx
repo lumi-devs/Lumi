@@ -12,10 +12,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardBody } from "#/compon
 import { Field, Label } from "#/components/ui/input";
 import { Switch } from "#/components/ui/switch";
 import { useServerAction } from "#/lib/use-server-action";
-import type {
-  DashboardChannelView,
-  DashboardRoleView,
-} from "#/lib/dashboard-data";
+import type { DashboardChannelView, DashboardRoleView } from "@lumi/contracts/views";
 
 const SecurityModuleName = "security";
 const EnabledKey = "antinuke_enabled";

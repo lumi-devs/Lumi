@@ -5,7 +5,7 @@ import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { AutocompleteInteraction, GuildMember } from "discord.js";
-import { QuarantineAction } from "../actions/index.js";
+import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { respondWithReasonChoices } from "../lib/reason-autocomplete.js";
 
 const Root = LanguageKeys.Commands;

@@ -120,5 +120,3 @@ export const Emojis = {
     return { name: emoji };
   },
 } as const;
-
-export type EmojiKey = keyof typeof Emojis;

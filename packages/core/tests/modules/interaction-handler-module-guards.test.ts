@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container, InteractionHandlerTypes } from "@sapphire/framework";
 import * as misc from "#lib/utilities/misc.js";
 
 vi.mock("#lib/commands.js", () => ({
@@ -55,7 +55,9 @@ describe("interaction handlers guard on per-guild module state", () => {
     const { PanicRevertInteractionHandler } = await import(
       "#modules/security/interaction-handlers/panic.js"
     );
-    const handler = new PanicRevertInteractionHandler(pieceContext("panic") as any);
+    const handler = new PanicRevertInteractionHandler(pieceContext("panic"), {
+      interactionHandlerType: InteractionHandlerTypes.Button,
+    });
     const interaction = {
       inGuild: () => true,
       guild: { id: "g-1", ownerId: "owner-1" },
@@ -79,7 +81,9 @@ describe("interaction handlers guard on per-guild module state", () => {
     const { VerifyInteractionHandler } = await import(
       "#modules/security/interaction-handlers/verify.js"
     );
-    const handler = new VerifyInteractionHandler(pieceContext("verify") as any);
+    const handler = new VerifyInteractionHandler(pieceContext("verify"), {
+      interactionHandlerType: InteractionHandlerTypes.Button,
+    });
     const interaction = {
       inGuild: () => true,
       guild: { id: "g-1" },
@@ -98,7 +102,9 @@ describe("interaction handlers guard on per-guild module state", () => {
     const { handleMediaRequest } = await import("#modules/utility/lib/media-utils.js");
     const mod = await import("#modules/utility/interaction-handlers/view.js");
     const HandlerClass = mod.default;
-    const handler = new HandlerClass(pieceContext("view") as any);
+    const handler = new HandlerClass(pieceContext("view"), {
+      interactionHandlerType: InteractionHandlerTypes.Button,
+    });
     const interaction = {
       inGuild: () => true,
       guildId: "g-1",
@@ -120,7 +126,9 @@ describe("interaction handlers guard on per-guild module state", () => {
     const { getAfkMentions } = await import("#modules/afk/data/afk.js");
     const mod = await import("#modules/afk/interaction-handlers/mentions.js");
     const HandlerClass = mod.default;
-    const handler = new HandlerClass(pieceContext("afk-mentions") as any);
+    const handler = new HandlerClass(pieceContext("afk-mentions"), {
+      interactionHandlerType: InteractionHandlerTypes.Button,
+    });
     const interaction = {
       inGuild: () => true,
       guildId: "g-1",
@@ -140,7 +148,9 @@ describe("interaction handlers guard on per-guild module state", () => {
     const { TempVcPanelButtonHandler } = await import(
       "#modules/tempvc/interaction-handlers/tempvc-panel-button.js"
     );
-    const handler = new TempVcPanelButtonHandler(pieceContext("tvc-btn") as any);
+    const handler = new TempVcPanelButtonHandler(pieceContext("tvc-btn"), {
+      interactionHandlerType: InteractionHandlerTypes.Button,
+    });
     const interaction = {
       inGuild: () => true,
       guildId: "g-1",
@@ -159,7 +169,9 @@ describe("interaction handlers guard on per-guild module state", () => {
     const { TempVcPanelModalHandler } = await import(
       "#modules/tempvc/interaction-handlers/tempvc-panel-modal.js"
     );
-    const handler = new TempVcPanelModalHandler(pieceContext("tvc-modal") as any);
+    const handler = new TempVcPanelModalHandler(pieceContext("tvc-modal"), {
+      interactionHandlerType: InteractionHandlerTypes.ModalSubmit,
+    });
     const interaction = {
       inGuild: () => true,
       guildId: "g-1",
@@ -178,7 +190,9 @@ describe("interaction handlers guard on per-guild module state", () => {
     const { TempVcPanelSelectHandler } = await import(
       "#modules/tempvc/interaction-handlers/tempvc-panel-select.js"
     );
-    const handler = new TempVcPanelSelectHandler(pieceContext("tvc-select") as any);
+    const handler = new TempVcPanelSelectHandler(pieceContext("tvc-select"), {
+      interactionHandlerType: InteractionHandlerTypes.SelectMenu,
+    });
     const interaction = {
       inGuild: () => true,
       guildId: "g-1",

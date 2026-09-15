@@ -4,12 +4,12 @@ import { queueSend } from "#lib/outbound/send-queue.js";
 
 const Module = "logging";
 
-export const MessageLogChannelKey = "message_log_channel_id";
-export const MemberLogChannelKey = "member_log_channel_id";
-export const DefaultLogChannelKey = "log_channel_id";
+const MessageLogChannelKey = "message_log_channel_id";
+const MemberLogChannelKey = "member_log_channel_id";
+const DefaultLogChannelKey = "log_channel_id";
 
 /** Toggle key (as checked by `isToggleEnabled`) to its per-event channel key. */
-export const LogEventChannels: Record<string, string> = {
+const LogEventChannels: Record<string, string> = {
   message_deletes: "message_deletes_channel_id",
   message_edits: "message_edits_channel_id",
   member_joins: "member_joins_channel_id",
@@ -21,7 +21,7 @@ export const LogEventChannels: Record<string, string> = {
 };
 
 /** Toggle key (as checked by `isToggleEnabled`) to its per-type channel key. */
-export const LogToggleChannels: Record<string, string> = {
+const LogToggleChannels: Record<string, string> = {
   message_deletes: MessageLogChannelKey,
   message_edits: MessageLogChannelKey,
   member_joins: MemberLogChannelKey,

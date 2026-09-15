@@ -1,21 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { MessageFlags } from "discord.js";
-import {
-  buildDmWelcomeCard,
-  buildGoodbyeCard,
-  buildWelcomeCard,
-  renderWelcomeTemplate,
-  templateVarsFor,
-  type WelcomeTemplateVars,
-} from "#modules/welcome/lib/template.js";
-import {
-  WelcomeDefaults,
-  WelcomeTemplateDocs,
-  GoodbyeTemplateDocs,
-  DmTemplateDocs,
-  loadWelcomeConfig,
-} from "#modules/welcome/lib/config.js";
-import { sendWelcomeCard } from "#modules/welcome/lib/send.js";
+import { buildDmWelcomeCard, buildGoodbyeCard, buildWelcomeCard, renderWelcomeTemplate, templateVarsFor, type WelcomeTemplateVars } from "#lib/utilities/welcome.js";
+import { WelcomeDefaults, WelcomeTemplateDocs, GoodbyeTemplateDocs, DmTemplateDocs, loadWelcomeConfig } from "#lib/utilities/welcome.js";
+import { sendWelcomeCard } from "#lib/utilities/welcome.js";
 import {
   MessageContentSchema,
   MessageTemplateDocs,

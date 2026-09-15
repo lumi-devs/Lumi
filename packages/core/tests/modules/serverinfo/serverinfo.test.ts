@@ -39,7 +39,7 @@ describe("ServerInfoCommand", () => {
         path: "/path/to/serverinfo.ts",
         root: "/path/to",
         store: { name: "commands" } as any,
-      } as any,
+      },
       {}
     );
   });

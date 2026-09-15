@@ -10,7 +10,7 @@ export interface ExecFileResult {
   stderr: string;
 }
 
-export class ExecFileError extends Error {
+class ExecFileError extends Error {
   public readonly stderr: string;
   public readonly stdout: string;
   public readonly code: number | null;

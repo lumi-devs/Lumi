@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { render, screen, waitFor } from "@testing-library/react";
 import type { ActionResult } from "#/actions/guild-actions";
-import type { ModerationCaseView } from "#/lib/dashboard-data";
+import type { ModerationCaseView } from "@lumi/contracts/views";
 
 const revokeCase = vi.fn<() => Promise<ActionResult>>();
 vi.mock("#/actions/moderation-actions", () => ({ revokeCase }));

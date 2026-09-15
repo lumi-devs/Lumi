@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { animate, stagger, type JSAnimation } from "animejs";
+import { animate, stagger } from "animejs";
 
 function prefersReducedMotion(): boolean {
   return (
@@ -110,4 +110,3 @@ export function spotlightHandler(e: React.MouseEvent<HTMLElement>) {
   e.currentTarget.style.setProperty("--spot-y", `${e.clientY - rect.top}px`);
 }
 
-export type { JSAnimation };

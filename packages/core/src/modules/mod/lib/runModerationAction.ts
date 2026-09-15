@@ -1,10 +1,11 @@
 import { container } from "@sapphire/framework";
 import type { Guild, User } from "discord.js";
 import type { ModerationCase } from "@prisma/client";
-import { logToChannel, scheduleCaseLift } from "./helpers.js";
+import { logToChannel } from "#lib/moderation/log.js";
+import { scheduleCaseLift } from "./helpers.js";
 import { sendAppealLinkDm } from "#lib/appeals/dm.js";
 
-export interface ModerationLogEntry {
+interface ModerationLogEntry {
   guildId: string;
   label: string;
   color: number;
@@ -15,7 +16,7 @@ export interface ModerationLogEntry {
   moduleName?: string;
 }
 
-export interface ModerationAppealDm {
+interface ModerationAppealDm {
   targetUser: User;
   guild: Guild;
 }

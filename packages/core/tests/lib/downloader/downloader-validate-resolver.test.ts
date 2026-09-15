@@ -321,7 +321,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
         );
 
         const modules = await resolver.getModulesInRepo(repoName);
-        expect(modules).toEqual(modulesData);
+        expect(modules).toEqual<typeof modulesData>(modulesData);
       } finally {
         await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
       }

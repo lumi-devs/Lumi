@@ -11,15 +11,7 @@ import {
   type User,
 } from "discord.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeInfoCard,
-  makeSuccessCard,
-  makeWarningCard,
-  makeEmptyCard,
-  type CardReply,
-} from "#lib/utilities/cards.js";
+import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, makeEmptyCard, type CardReply } from "#lib/utilities/cards.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
 import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
 import { BrandColors } from "#lib/branding/colors.js";
@@ -40,7 +32,7 @@ export interface CtxReplyOptions {
  * resolve in one command when a guild hasn't configured
  * `mod:max_multi_targets` (Moderation module → "Max Targets Per Command").
  */
-export const defaultMaxMultiTargets = 10;
+const defaultMaxMultiTargets = 10;
 
 function missingArgument(name: string): UserError {
   return new UserError({

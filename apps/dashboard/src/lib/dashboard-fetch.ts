@@ -12,7 +12,6 @@ import type {
   ConfigHistoryListData,
   ConfigOverrideView,
   DashboardData,
-  DownloaderRepoView,
   IgnoredChannelView,
   ModNoteView,
   ModuleDataListData,
@@ -25,7 +24,7 @@ import type {
   TempVcRecordView,
   VerificationPanelView,
   WarnThresholdView,
-} from "./dashboard-data";
+} from "@lumi/contracts/views";
 import type {
   AppealsListPayload,
   AuditListPayload,
@@ -317,15 +316,6 @@ export async function getSystemBlocklist(
 export const getSystemShards = cache(
   async (actorId: string): Promise<SystemShardsData> => {
     return rpcCall(RpcActions.systemShardsGet, { actorId });
-  },
-);
-
-export const getDownloaderRepos = cache(
-  async (actorId?: string): Promise<DownloaderRepoView[]> => {
-    const data = await rpcCall(RpcActions.repoList, {
-      ...(actorId !== undefined ? { actorId } : {}),
-    });
-    return data.repos;
   },
 );
 

@@ -5,11 +5,11 @@ import { cn } from "#/lib/utils";
 // Resolved from the `--discord-*` tokens in globals.css, which carry both of
 // Discord's own themes, so the preview follows the dashboard's light/dark
 // setting. Blurple is a brand colour and identical in both.
-export const DiscordBg = "var(--discord-bg)";
-export const DiscordText = "var(--discord-text)";
-export const DiscordMuted = "var(--discord-muted)";
-export const DiscordLink = "var(--discord-link)";
-export const DiscordBlurple = "#5865F2";
+const DiscordBg = "var(--discord-bg)";
+const DiscordText = "var(--discord-text)";
+const DiscordMuted = "var(--discord-muted)";
+const DiscordLink = "var(--discord-link)";
+const DiscordBlurple = "#5865F2";
 const DiscordCardBg = "var(--discord-card-bg)";
 const DiscordCodeBg = "var(--discord-code-bg)";
 const DiscordHeading = "var(--discord-heading)";
@@ -183,7 +183,7 @@ export function MarkdownLite({ text }: { text: string }) {
   );
 }
 
-export interface PreviewField {
+interface PreviewField {
   name: string;
   value: string;
   inline?: boolean;
@@ -221,7 +221,7 @@ export interface PreviewVoiceRow {
   members?: string[];
 }
 
-export function DiscordPreviewShell({
+function DiscordPreviewShell({
   channelName,
   channelTopic,
   children,
@@ -251,7 +251,7 @@ export function DiscordPreviewShell({
   );
 }
 
-export function DiscordVoiceRow({ row }: { row: PreviewVoiceRow }) {
+function DiscordVoiceRow({ row }: { row: PreviewVoiceRow }) {
   const limit = row.userLimit && row.userLimit > 0 ? ` / ${row.userLimit}` : "";
   return (
     <div className="flex flex-col">
@@ -287,7 +287,7 @@ export function DiscordVoiceRow({ row }: { row: PreviewVoiceRow }) {
   );
 }
 
-export function DiscordMessage({
+function DiscordMessage({
   username,
   roleColor,
   bot,
@@ -339,7 +339,7 @@ export function DiscordMessage({
   );
 }
 
-export function DiscordEmbedCard({ embed }: { embed: PreviewEmbed }) {
+function DiscordEmbedCard({ embed }: { embed: PreviewEmbed }) {
   return (
     <div className="my-1 flex max-w-[520px] overflow-hidden rounded-lg" style={{ backgroundColor: DiscordCardBg }}>
       <div className="w-1 shrink-0" style={{ backgroundColor: embed.accentColor ?? DiscordBlurple }} />
@@ -389,7 +389,7 @@ export function DiscordEmbedCard({ embed }: { embed: PreviewEmbed }) {
   );
 }
 
-export function DiscordSelectMenu({ placeholder }: { placeholder: string }) {
+function DiscordSelectMenu({ placeholder }: { placeholder: string }) {
   return (
     <div
       className="my-1 flex max-w-[520px] items-center justify-between rounded px-3 py-2 text-[14px]"
@@ -401,7 +401,7 @@ export function DiscordSelectMenu({ placeholder }: { placeholder: string }) {
   );
 }
 
-export function DiscordButtonRow({ buttons }: { buttons: PreviewButton[] }) {
+function DiscordButtonRow({ buttons }: { buttons: PreviewButton[] }) {
   return (
     <div className="my-1 flex max-w-[520px] flex-wrap gap-2">
       {buttons.map((button) => (
@@ -542,7 +542,7 @@ export interface PreviewContainer {
 /** A Components V2 media gallery — what `MediaGalleryBuilder` renders on the
  * real card. Broken/empty URLs fall back to a placeholder tile rather than a
  * broken-image icon, since these are unvalidated user input in the editor. */
-export function DiscordMediaGallery({ imageUrls }: { imageUrls: string[] }) {
+function DiscordMediaGallery({ imageUrls }: { imageUrls: string[] }) {
   const urls = imageUrls.filter((u) => u.length > 0).slice(0, 10);
   if (urls.length === 0) return null;
   return (
@@ -574,7 +574,7 @@ export function DiscordMediaGallery({ imageUrls }: { imageUrls: string[] }) {
  * title, `-#` is subtext, separators are drawn rules, and the accent is a
  * stripe on a full-width container rather than an embed's left bar.
  */
-export function DiscordContainerCard({ container }: { container: PreviewContainer }) {
+function DiscordContainerCard({ container }: { container: PreviewContainer }) {
   // Mirrors `buildContainer`: when a thumbnail is set, the leading text
   // components (max 3) pair with it as one section instead of stacking full
   // width, and everything after renders below as usual.

@@ -5,11 +5,8 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import {
-  makeCard,
-  resolveCardColor,
-  type CardReply,
-} from "#lib/utilities/cards.js";
+import { makeCard, type CardReply } from "#lib/utilities/cards.js";
+import { resolveCardColor } from "#lib/utilities/config.js";
 import { renderTemplate } from "#lib/utilities/template.js";
 
 export interface MessageButton {
@@ -30,7 +27,7 @@ export interface MessageContent {
 const HexColorSchema = s.string().regex(/^#[0-9a-fA-F]{6}$/);
 const HttpUrlSchema = s.string().url();
 
-export const MessageButtonSchema = s.object({
+const MessageButtonSchema = s.object({
   label: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(80),
   url: HttpUrlSchema,
   emoji: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(100).optional(),

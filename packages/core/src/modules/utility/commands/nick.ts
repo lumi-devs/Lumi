@@ -1,7 +1,8 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
 import { PermissionFlagsBits } from "discord.js";
-import { BaseCommand, type CommandContext } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
 
 @ApplyOptions<BaseCommand.Options>({
