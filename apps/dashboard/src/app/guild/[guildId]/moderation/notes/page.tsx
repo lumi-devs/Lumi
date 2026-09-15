@@ -1,7 +1,8 @@
 import { Alert } from "#/components/ui/alert";
 import { PlugZap, StickyNote } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard, getGuildModNotes } from "#/lib/dashboard-fetch";
+import { getGuildEntities } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { exportGuildModNotes } from "#/actions/guild-export-actions";
 import { GuildModNotesTable } from "#/components/guild/guild-mod-notes-table";
 import { Badge } from "#/components/ui/badge";
@@ -32,9 +33,9 @@ export default async function ModNotesPage({
   const userId = single(query["user"]);
   const badUserFilter = Boolean(userId) && !isSnowflake(userId);
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
-  const memberNames = extractMemberNames(dashboard.members);
-  const memberOptions = [...dashboard.members]
+  const entities = await getGuildEntities(guildId, session.userId);
+  const memberNames = extractMemberNames(entities.members);
+  const memberOptions = [...entities.members]
     .sort((a, b) => a.displayName.localeCompare(b.displayName))
     .map((m) => ({ value: m.id, label: m.displayName }));
 
@@ -42,7 +43,13 @@ export default async function ModNotesPage({
   let failure: string | null = null;
   if (userId && !badUserFilter) {
     try {
-      notes = await getGuildModNotes(guildId, session.userId, userId);
+      notes = (
+        await rpc("guild.modNotes.list", {
+          guildId,
+          actorId: session.userId,
+          data: { userId },
+        })
+      ).notes;
     } catch (err) {
       failure = err instanceof Error ? err.message : "The request failed.";
     }

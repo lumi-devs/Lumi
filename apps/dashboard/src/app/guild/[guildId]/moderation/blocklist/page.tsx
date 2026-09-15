@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { PlugZap, SearchX } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildBlocklist, getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildEntities } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { exportGuildBlocklist } from "#/actions/guild-export-actions";
 import { GuildBlocklistTable } from "#/components/guild/guild-blocklist-table";
 import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
@@ -36,15 +37,19 @@ export default async function BlocklistPage({
 
   const page = pageNumber(single(query["page"]));
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
-  const memberNames = extractMemberNames(dashboard.members);
+  const entities = await getGuildEntities(guildId, session.userId);
+  const memberNames = extractMemberNames(entities.members);
 
   let data: BlocklistListData | null = null;
   let failure: string | null = null;
   try {
-    data = await getGuildBlocklist(guildId, session.userId, {
-      page,
-      pageSize: PageSize,
+    data = await rpc("guild.blocklist.list", {
+      guildId,
+      actorId: session.userId,
+      data: {
+        page,
+        pageSize: PageSize,
+      },
     });
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";

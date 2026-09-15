@@ -1,6 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildWarnThresholds } from "#/lib/dashboard-fetch";
+import { rpc } from "#/lib/rpc";
 import { WarnThresholdLadder } from "#/components/guild/warn-threshold-ladder";
 import { Badge } from "#/components/ui/badge";
 import {
@@ -24,7 +24,12 @@ export default async function WarnThresholdsPage({
   let thresholds: WarnThresholdView[] | null = null;
   let failure: string | null = null;
   try {
-    thresholds = await getGuildWarnThresholds(guildId, session.userId);
+    thresholds = (
+      await rpc("guild.warnThresholds.list", {
+        guildId,
+        actorId: session.userId,
+      })
+    ).thresholds;
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }
