@@ -1,6 +1,6 @@
 import { Settings } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildShell, getGuildEntities } from "#/lib/guild-reads";
 import { GeneralSettingsForm } from "#/components/guild/general-settings-form";
 import { PageHeader } from "#/components/ui/page-header";
 
@@ -11,7 +11,10 @@ export default async function GuildGeneralSettingsPage({
 }) {
   const { guildId } = await params;
   const session = await requireGuild(guildId);
-  const data = await getGuildDashboard(guildId, session.userId);
+  const [shell, entities] = await Promise.all([
+    getGuildShell(guildId, session.userId),
+    getGuildEntities(guildId, session.userId),
+  ]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -25,8 +28,8 @@ export default async function GuildGeneralSettingsPage({
        * re-parent it. */}
       <GeneralSettingsForm
         guildId={guildId}
-        settings={data.settings}
-        roles={data.roles}
+        settings={shell.settings}
+        roles={entities.roles}
       />
     </div>
   );

@@ -2,14 +2,14 @@ import { Database } from "lucide-react";
 import { DataTable } from "#/components/ui/data-table";
 import { EmptyState } from "#/components/ui/empty-state";
 import { moduleDataColumns } from "#/components/guild/module-data-columns";
-import type { DashboardModuleView, ModuleDataEntryView } from "@lumi/contracts/views";
+import type { DashboardModuleSummaryView, ModuleDataEntryView } from "@lumi/contracts/views";
 
 export function ModuleDataTable({
   entries,
   modules,
 }: {
   entries: ModuleDataEntryView[];
-  modules: DashboardModuleView[];
+  modules: DashboardModuleSummaryView[];
 }) {
   if (entries.length === 0) {
     return (

@@ -1,7 +1,7 @@
 import { FieldType } from "@lumi/contracts";
 import type {
   DashboardChannelView,
-  DashboardModuleView,
+  DashboardModuleSummaryView,
   DashboardRoleView,
 } from "@lumi/contracts/views";
 import { formatConfigValue } from "./log-format";
@@ -18,7 +18,7 @@ interface ModuleLabel {
 export type ModuleLabelIndex = Record<string, ModuleLabel>;
 
 export function buildModuleLabelIndex(
-  modules: DashboardModuleView[],
+  modules: DashboardModuleSummaryView[],
 ): ModuleLabelIndex {
   const index: ModuleLabelIndex = {};
   for (const mod of modules) {

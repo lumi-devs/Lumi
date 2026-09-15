@@ -11,7 +11,7 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { useStaggerIn } from "#/lib/animate";
 import { ActionError } from "#/components/action-error";
 import { useOptimisticAction } from "#/lib/use-server-action";
-import type { DashboardModuleView } from "@lumi/contracts/views";
+import type { DashboardModuleSummaryView } from "@lumi/contracts/views";
 
 export function ModuleToggleGrid({
   guildId,
@@ -20,7 +20,7 @@ export function ModuleToggleGrid({
   emptyDescription = "This guild's worker reported no loadable modules. Check that the bot process started cleanly.",
 }: {
   guildId: string;
-  modules: DashboardModuleView[];
+  modules: DashboardModuleSummaryView[];
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
@@ -50,7 +50,7 @@ function ModuleRow({
   module: m,
 }: {
   guildId: string;
-  module: DashboardModuleView;
+  module: DashboardModuleSummaryView;
 }) {
   const isCore = m.name === "core";
   const { value: enabled, isPending, error, run } = useOptimisticAction(m.enabled);

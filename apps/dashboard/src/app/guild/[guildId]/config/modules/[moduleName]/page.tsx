@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { SlidersHorizontal } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildModule, getGuildEntities } from "#/lib/guild-reads";
 import { ModuleConfigForm } from "#/components/guild/module-config-form";
 import { PageHeader } from "#/components/ui/page-header";
 
@@ -12,9 +12,12 @@ export default async function GuildModuleConfigPage({
 }) {
   const { guildId, moduleName } = await params;
   const session = await requireGuild(guildId);
-  const data = await getGuildDashboard(guildId, session.userId);
+  const [result, entities] = await Promise.all([
+    getGuildModule(guildId, session.userId, moduleName),
+    getGuildEntities(guildId, session.userId),
+  ]);
 
-  const mod = data.modules.find((m) => m.name === moduleName);
+  const mod = result.module;
   if (!mod) notFound();
 
   return (
@@ -27,8 +30,8 @@ export default async function GuildModuleConfigPage({
       <ModuleConfigForm
         guildId={guildId}
         module={mod}
-        roles={data.roles}
-        channels={data.channels}
+        roles={entities.roles}
+        channels={entities.channels}
       />
     </div>
   );

@@ -1,9 +1,7 @@
 import { Ticket, PlugZap } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import {
-  getGuildDashboard,
-  getGuildReactionRoleMenus,
-} from "#/lib/dashboard-fetch";
+import { getGuildEntities } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { ReactionRolesManager } from "#/components/guild/reactionroles-manager";
 import { Badge } from "#/components/ui/badge";
 import {
@@ -24,12 +22,14 @@ export default async function RolesPage({
   const { guildId } = await params;
   const session = await requireGuild(guildId);
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
+  const entities = await getGuildEntities(guildId, session.userId);
 
   let menus: ReactionRoleMenuView[] | null = null;
   let menusFailure: string | null = null;
   try {
-    menus = await getGuildReactionRoleMenus(guildId, session.userId);
+    menus = (
+      await rpc("guild.reactionroles.menus.list", { guildId, actorId: session.userId })
+    ).menus;
   } catch (err) {
     menusFailure = err instanceof Error ? err.message : "The request failed.";
   }
@@ -75,7 +75,7 @@ export default async function RolesPage({
             <ReactionRolesManager
               guildId={guildId}
               menus={menus}
-              roles={dashboard.roles}
+              roles={entities.roles}
             />
           )}
         </Card>
