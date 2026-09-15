@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { SearchX } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard, getGuildOverrides } from "#/lib/dashboard-fetch";
+import { getGuildEntities, getGuildModule, getGuildShell } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { OverridesBoard } from "#/components/guild/overrides-board";
 import { Badge } from "#/components/ui/badge";
 import { buttonVariants } from "#/components/ui/button-variants";
@@ -27,19 +28,30 @@ export default async function OverridesPage({
   const query = await searchParams;
   const moduleName = single(query["module"]);
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
+  const [shell, entities] = await Promise.all([
+    getGuildShell(guildId, session.userId),
+    getGuildEntities(guildId, session.userId),
+  ]);
 
   let overrides: ConfigOverrideView[] | null = null;
   let failure: string | null = null;
   try {
-    overrides = await getGuildOverrides(
-      guildId,
-      session.userId,
-      moduleName || undefined,
-    );
+    const name = moduleName || undefined;
+    overrides = (
+      await rpc("guild.overrides.list", {
+        guildId,
+        actorId: session.userId,
+        data: name === undefined ? {} : { moduleName: name },
+      })
+    ).overrides;
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }
+
+  const moduleReads = await Promise.all(
+    shell.modules.map((m) => getGuildModule(guildId, session.userId, m.name)),
+  );
+  const modules = moduleReads.flatMap((r) => (r.module ? [r.module] : []));
 
   return (
     <div className="flex flex-col gap-4">
@@ -71,7 +83,7 @@ export default async function OverridesPage({
                 name: "module",
                 label: "Module",
                 anyLabel: "All modules",
-                options: dashboard.modules.map((m) => ({
+                options: shell.modules.map((m) => ({
                   value: m.name,
                   label: m.displayName || m.name,
                 })),
@@ -116,11 +128,11 @@ export default async function OverridesPage({
         <OverridesBoard
           guildId={guildId}
           overrides={overrides ?? []}
-          modules={dashboard.modules}
+          modules={modules}
           directory={{
-            channels: dashboard.channels,
-            roles: dashboard.roles,
-            members: dashboard.members,
+            channels: entities.channels,
+            roles: entities.roles,
+            members: entities.members,
           }}
         />
       )}

@@ -1,6 +1,6 @@
 import { Activity } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildEntities, getGuildModule } from "#/lib/guild-reads";
 import { PageHeader } from "#/components/ui/page-header";
 import { HealthCheckList } from "#/components/guild/health-check-list";
 
@@ -11,10 +11,11 @@ export default async function GuildHealthPage({
 }) {
   const { guildId } = await params;
   const session = await requireGuild(guildId);
-  const data = await getGuildDashboard(guildId, session.userId);
-
-  const securityModule = data.modules.find((m) => m.name === "security");
-  const filterModule = data.modules.find((m) => m.name === "filter");
+  const [entities, security, filter] = await Promise.all([
+    getGuildEntities(guildId, session.userId),
+    getGuildModule(guildId, session.userId, "security"),
+    getGuildModule(guildId, session.userId, "filter"),
+  ]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -25,9 +26,9 @@ export default async function GuildHealthPage({
       />
       <HealthCheckList
         guildId={guildId}
-        roles={data.roles}
-        securityConfig={securityModule?.config}
-        filterModule={filterModule}
+        roles={entities.roles}
+        securityConfig={security.module?.config}
+        filterModule={filter.module ?? undefined}
       />
     </div>
   );

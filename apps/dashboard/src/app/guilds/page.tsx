@@ -5,13 +5,27 @@ import { env } from "#/lib/env";
 import { SiteHeader } from "#/components/layout/site-header";
 import { GuildPicker } from "#/components/guild-picker";
 import { inviteReturnToFrom } from "#/lib/invite";
-import { getGuildSummaries } from "#/lib/dashboard-fetch";
+import { rpc, RpcError } from "#/lib/rpc";
+import type { GuildSummaryView } from "@lumi/contracts/rpc";
+
+async function loadSummaries(
+  guildIds: string[],
+  actorId: string,
+): Promise<GuildSummaryView[]> {
+  if (guildIds.length === 0) return [];
+  try {
+    return (await rpc("guild.summaries.list", { actorId, data: { guildIds } })).summaries;
+  } catch (err: unknown) {
+    if (err instanceof RpcError && err.code === "UNAUTHORIZED") throw err;
+    return [];
+  }
+}
 
 export default async function GuildsPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const summaries = await getGuildSummaries(
+  const summaries = await loadSummaries(
     session.guilds.map((g) => g.id),
     session.userId,
   );

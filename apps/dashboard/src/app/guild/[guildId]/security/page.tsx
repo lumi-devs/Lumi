@@ -3,11 +3,11 @@ import { PlugZap } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { guildManagementGroups } from "#/lib/guild-nav";
 import {
-  getGuildBackups,
-  getGuildDashboard,
+  getGuildEntities,
+  getGuildModule,
   getGuildPanicState,
-  getGuildVerificationPanel,
-} from "#/lib/dashboard-fetch";
+} from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { toggleGuildModule } from "#/actions/guild-actions";
 import { PanicModeConsole } from "#/components/guild/panic-mode-console";
 import { VerificationPanelCard } from "#/components/guild/verification-panel-card";
@@ -41,9 +41,11 @@ export default async function SecurityPage({
     .flatMap((g) => g.links)
     .find((l) => l.href === `/guild/${guildId}/security`)?.icon;
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
-  const textChannels = dashboard.channels.filter((c) => isTextChannel(c.type));
-  const securityModule = dashboard.modules.find((m) => m.name === SecurityModuleName);
+  const [entities, { module: securityModule }] = await Promise.all([
+    getGuildEntities(guildId, session.userId),
+    getGuildModule(guildId, session.userId, SecurityModuleName),
+  ]);
+  const textChannels = entities.channels.filter((c) => isTextChannel(c.type));
   const configFields = securityModule?.configFields ?? [];
   const config = securityModule?.config ?? {};
 
@@ -58,21 +60,25 @@ export default async function SecurityPage({
   let panel: VerificationPanelView | null = null;
   let panelFailure: string | null = null;
   try {
-    panel = await getGuildVerificationPanel(guildId, session.userId);
+    panel = (
+      await rpc("guild.verificationPanel.get", { guildId, actorId: session.userId })
+    ).panel;
   } catch (err) {
     panelFailure = err instanceof Error ? err.message : "The request failed.";
   }
 
   let backups: GuildBackupView[] = [];
   try {
-    backups = await getGuildBackups(guildId, session.userId);
+    backups = (
+      await rpc("guild.backups.list", { guildId, actorId: session.userId })
+    ).backups;
   } catch {
     // Best-effort — the Backups card shows its own empty state either way.
   }
 
   const actorId = panic?.actorId;
   const actor = actorId
-    ? dashboard.members.find((m) => m.id === actorId)
+    ? entities.members.find((m) => m.id === actorId)
     : undefined;
 
   // Widgets are the only thing the dashboard chooses. Which sections exist,
@@ -173,8 +179,8 @@ export default async function SecurityPage({
               guildId={guildId}
               config={config}
               configFields={configFields}
-              roles={dashboard.roles}
-              channels={dashboard.channels}
+              roles={entities.roles}
+              channels={entities.channels}
             />
           ) : (
             <ConfigGroupCard
@@ -184,8 +190,8 @@ export default async function SecurityPage({
               groups={section.groups.flatMap((g) => (g.name ? [g.name] : []))}
               config={config}
               configFields={configFields}
-              roles={dashboard.roles}
-              channels={dashboard.channels}
+              roles={entities.roles}
+              channels={entities.channels}
             />
           )}
           {extras?.after}
