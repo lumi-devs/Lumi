@@ -4,7 +4,7 @@ import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { paginateList } from "#lib/utilities/pagination.js";
 import { BankService } from "../services/BankService.js";
-import { formatAmount, getEconomyConfig } from "../index.js";
+import { formatAmount, getEconomyConfig } from "../config.js";
 import { reportEconomyError } from "../lib/respond.js";
 
 @ApplyOptions<BaseCommand.Options>({

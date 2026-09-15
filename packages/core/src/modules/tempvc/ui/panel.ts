@@ -11,7 +11,7 @@ import {
   PanelMessageDefault,
   PanelTitleDefault,
   Tvc,
-} from "../keys.js";
+} from "../constants.js";
 import { parseHexColor } from "#lib/message-content.js";
 import { renderMessageBlocksV2Container } from "#lib/utilities/message-blocks-v2.js";
 import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";

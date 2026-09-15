@@ -16,7 +16,7 @@ import { getUtility } from "#lib/module-system/Utility.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { ephemeralCard, makeSuccessCard } from "#lib/utilities/cards.js";
 import type { VcRecord } from "#modules/tempvc/data.js";
-import { Tvc } from "#modules/tempvc/keys.js";
+import { Tvc } from "../constants.js";
 import { showLimitModal, showRenameModal } from "#modules/tempvc/lib/panel-helpers.js";
 import { resolveOwnedRecord } from "#modules/tempvc/panel-guard.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";

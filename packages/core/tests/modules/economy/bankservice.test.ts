@@ -7,7 +7,7 @@ import {
   InsufficientFundsError,
   InvalidAmountError,
 } from "#modules/economy/services/BankService.js";
-import type { EconomyConfig } from "#modules/economy/index.js";
+import type { EconomyConfig } from "#modules/economy/config.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 vi.mock("@sapphire/framework", () => ({ container: {} }));

@@ -1,3 +1,5 @@
+export const ReactionRoleMaxMenus = 25;
+
 export const ModuleName = "reactionroles";
 
 /** Button / select / modal custom-id prefix. Format: `rr:<action>:<menuId>[:<optionId>]`. */

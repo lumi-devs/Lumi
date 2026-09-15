@@ -14,16 +14,15 @@ import { createActionButton, buildSafeActionRows } from "#lib/utilities/panels.j
 import { logError } from "#lib/utilities/errors.js";
 import { canSendMessages } from "#lib/utilities/misc.js";
 import { scheduleTask } from "#lib/schedule-task.js";
-import { AfkKeys } from "../keys.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import {
+  AfkKeys,
   AfkMentionCooldownMs,
   AfkNickEditCooldownMs,
   AfkWelcomeCooldownMs,
   NickPrefix,
-  afkDurationSince,
-  sanitizeReason,
-} from "../index.js";
+} from "../constants.js";
+import { afkDurationSince, sanitizeReason } from "../services/format.js";
 import {
   getAfkEntry,
   getAfkEntriesBatch,

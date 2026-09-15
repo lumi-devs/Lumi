@@ -1,8 +1,8 @@
 import { container } from "@sapphire/framework";
 import { mgetSafe, pipelineBySlot, scanKeysSafe } from "#lib/database/cluster-safe.js";
 import { isNullish, filterNullish, tryParseJSON } from "@sapphire/utilities";
-import { AfkKeys, AfkTTL } from "../keys.js";
-import { sanitizeReason } from "../index.js";
+import { AfkKeys, AfkTTL } from "../constants.js";
+import { sanitizeReason } from "../services/format.js";
 import type { AfkEntry } from "@prisma/client";
 
 export interface AfkMention {

@@ -5,7 +5,7 @@ import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js
 import type { GuildMessage } from "#lib/types/common.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { renderMessageBlocksV2 } from "#lib/utilities/message-blocks-v2.js";
-import type { StickyEntry } from "../index.js";
+import type { StickyEntry } from "../config.js";
 import {
   getStickyMessageId,
   isStickyOnCooldown,

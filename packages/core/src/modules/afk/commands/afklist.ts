@@ -5,7 +5,7 @@ import { userMention } from "@discordjs/formatters";
 import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { paginateList } from "#lib/utilities/pagination.js";
-import { afkDurationSince } from "../index.js";
+import { afkDurationSince } from "../services/format.js";
 import { getAfkEntriesForGuild } from "../data/afk.js";
 
 @ApplyOptions<BaseCommand.Options>({

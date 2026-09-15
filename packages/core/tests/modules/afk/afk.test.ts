@@ -14,7 +14,7 @@ import {
   setAfkCooldown,
   addAfkMentionsBatch,
 } from "#modules/afk/data/afk.js";
-import { AfkKeys, AfkTTL } from "#modules/afk/keys.js";
+import { AfkKeys, AfkTTL } from "#modules/afk/constants.js";
 import { container } from "@sapphire/framework";
 
 vi.mock("@sapphire/framework", () => ({
@@ -53,7 +53,7 @@ vi.mock("@sapphire/framework", () => ({
   },
 }));
 
-vi.mock("#modules/afk/index.js", () => ({
+vi.mock("#modules/afk/services/format.js", () => ({
   sanitizeReason: vi.fn((s) => s),
 }));
 

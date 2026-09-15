@@ -2,12 +2,8 @@ import { Utility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import type { GuildMember, User } from "discord.js";
-import {
-  NickPrefix,
-  AfkRemovalCooldownMs,
-  isAfkNickPrefixEnabled,
-} from "../index.js";
-import { AfkKeys } from "../keys.js";
+import { NickPrefix, AfkRemovalCooldownMs, AfkKeys } from "../constants.js";
+import { isAfkNickPrefixEnabled } from "../config.js";
 import {
   getAfkEntry,
   setAfkEntry,

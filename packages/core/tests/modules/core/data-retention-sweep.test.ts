@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "bun:test";
 import { container } from "@sapphire/framework";
-import { handleDataRetentionFire } from "#modules/core/index.js";
+import { handleDataRetentionFire } from "#modules/core/services/data-retention.js";
 
 // bun:test has no `vi.mocked` type-narrowing helper — these fields are real
 // db-interface methods at the type level, stubbed with vi.fn() at runtime.

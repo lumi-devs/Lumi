@@ -5,7 +5,7 @@ import {
   TextDisplayBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle, MessageFlags, roleMention } from "discord.js";
-import { Rr } from "../keys.js";
+import { Rr } from "../constants.js";
 import type { ReactionRoleMenu, ReactionRoleOption } from "../data.js";
 import { parseHexColor } from "#lib/message-content.js";
 import { makeCard, type CardReply } from "#lib/utilities/cards.js";

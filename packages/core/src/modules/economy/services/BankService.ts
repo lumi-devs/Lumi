@@ -6,7 +6,7 @@ import {
   spinSlots,
   type SlotSpin,
 } from "../lib/slots.js";
-import type { EconomyConfig } from "../index.js";
+import type { EconomyConfig } from "../config.js";
 
 export class EconomyError extends Error {
   public readonly code: string;

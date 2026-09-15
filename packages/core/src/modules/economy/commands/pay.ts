@@ -3,7 +3,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { BankService } from "../services/BankService.js";
-import { formatAmount, getEconomyConfig } from "../index.js";
+import { formatAmount, getEconomyConfig } from "../config.js";
 import { reportEconomyError } from "../lib/respond.js";
 
 @ApplyOptions<BaseCommand.Options>({

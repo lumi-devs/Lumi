@@ -1,45 +1,9 @@
 import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
 import { container } from "@sapphire/framework";
-import { cutText } from "@sapphire/utilities";
 import { Emojis } from "#lib/utilities/assets.js";
-import { formatDuration } from "#lib/utilities/time.js";
 import { clearAllAfkForUser } from "./data/afk.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleAfkDeleteMessageFire } from "./lib/delete-handler.js";
-
-export const NickPrefix = "[AFK] ";
-export const AfkMaxReasonLength = 100;
-
-export function sanitizeReason(reason: string): string {
-  const f =
-    reason
-      ?.split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0)
-      .join(" ")
-      .replace(/\s+/g, " ") || "AFK";
-  return cutText(f, AfkMaxReasonLength);
-}
-
-export const AfkMentionCooldownMs = 5_000;
-export const AfkWelcomeCooldownMs = 5_000;
-export const AfkRemovalCooldownMs = 2_000;
-export const AfkNickEditCooldownMs = 1_000;
-
-export function afkDurationSince(since: Date): string {
-  return formatDuration(Date.now() - since.getTime());
-}
-
-export async function isAfkNickPrefixEnabled(
-  guildId: string,
-): Promise<boolean> {
-  const value = await container.db.config.getModuleConfig(
-    guildId,
-    "afk",
-    "nick_prefix_enabled",
-  );
-  return value !== false;
-}
 
 @DefineModule({
   name: "afk",

@@ -18,11 +18,8 @@ import {
   clearVoiceChannelOccupancy,
   isVoiceChannelEmpty,
 } from "../lib/voice-occupancy.js";
-import {
-  TempvcCleanupDelayMs,
-  getCreateCooldownMs,
-} from "../index.js";
-import { ModuleName, TempVcKeys } from "../keys.js";
+import { TempvcCleanupDelayMs, ModuleName, TempVcKeys } from "../constants.js";
+import { getCreateCooldownMs } from "../config.js";
 import {
   getVcRecord,
   listVcRecords,

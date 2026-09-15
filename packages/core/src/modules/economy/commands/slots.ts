@@ -8,8 +8,8 @@ import {
   formatAmount,
   getEconomyConfig,
   type EconomyConfig,
-} from "../index.js";
-import { EconomyKeys } from "../keys.js";
+} from "../config.js";
+import { EconomyKeys } from "../constants.js";
 import { SlotPayoutLabels, renderSlotGrid } from "../lib/slots.js";
 import { reportEconomyError } from "../lib/respond.js";
 

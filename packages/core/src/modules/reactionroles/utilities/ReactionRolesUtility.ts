@@ -9,7 +9,7 @@ import type {
 } from "discord.js";
 import { logError } from "#lib/utilities/errors.js";
 import { acquireRedisLock } from "#lib/redis-lock.js";
-import { ModuleName, ReactionRoleKeys } from "../keys.js";
+import { ModuleName, ReactionRoleKeys } from "../constants.js";
 import {
   deleteMenu,
   findMenuByMessage,
@@ -33,7 +33,7 @@ import {
   applySelectToggle,
   type RoleToggleResult,
 } from "../lib/role-toggle.js";
-import { getMaxMenus } from "../index.js";
+import { getMaxMenus } from "../config.js";
 import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
 
 export type { RoleToggleResult };

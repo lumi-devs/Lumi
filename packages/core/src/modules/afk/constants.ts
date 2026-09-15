@@ -1,3 +1,11 @@
+export const NickPrefix = "[AFK] ";
+export const AfkMaxReasonLength = 100;
+
+export const AfkMentionCooldownMs = 5_000;
+export const AfkWelcomeCooldownMs = 5_000;
+export const AfkRemovalCooldownMs = 2_000;
+export const AfkNickEditCooldownMs = 1_000;
+
 export const AfkKeys = {
   afk: (guildId: string, userId: string) => `lumi:afk:${guildId}:${userId}`,
   mentionCooldown: (channelId: string) => `lumi:afk:cd:mention:${channelId}`,

@@ -19,7 +19,7 @@ import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { makeSuccessCard } from "#lib/utilities/cards.js";
 import { getVcRecord, removeVcRecord } from "#modules/tempvc/data.js";
-import { Tvc, TempVcKeys } from "#modules/tempvc/keys.js";
+import { Tvc, TempVcKeys } from "../constants.js";
 import {
   showLimitModal,
   showRenameModal,

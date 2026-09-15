@@ -10,7 +10,7 @@ import { getUtility } from "#lib/module-system/Utility.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/utilities/cards.js";
 import { getVcRecord, patchVcRecord } from "#modules/tempvc/data.js";
-import { Tvc } from "#modules/tempvc/keys.js";
+import { Tvc } from "../constants.js";
 import { resolveOwnedVc } from "#modules/tempvc/panel-guard.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 import { buildBackRows, buildPanel } from "#modules/tempvc/ui/panel.js";
