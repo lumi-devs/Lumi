@@ -13,7 +13,7 @@ import {
 import type { Guild } from "discord.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 
-export interface RpcAuthContexts {
+interface RpcAuthContexts {
   guildManager: { guildId: string; actorId: string; guild: Guild };
   botOwner: { actorId: string };
   session: { actorId: string; guildId: string | undefined };

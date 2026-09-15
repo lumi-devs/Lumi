@@ -6,7 +6,7 @@ import { SiteHeader } from "#/components/layout/site-header";
 import { GuildPicker } from "#/components/guild-picker";
 import { inviteReturnToFrom } from "#/lib/invite";
 import { rpc, RpcError } from "#/lib/rpc";
-import type { GuildSummaryView } from "@lumi/contracts/rpc";
+import { RpcFailureCodes, type GuildSummaryView } from "@lumi/contracts/rpc";
 
 async function loadSummaries(
   guildIds: string[],
@@ -16,7 +16,7 @@ async function loadSummaries(
   try {
     return (await rpc("guild.summaries.list", { actorId, data: { guildIds } })).summaries;
   } catch (err: unknown) {
-    if (err instanceof RpcError && err.code === "UNAUTHORIZED") throw err;
+    if (err instanceof RpcError && err.code === RpcFailureCodes.Unauthorized) throw err;
     return [];
   }
 }
