@@ -1,5 +1,11 @@
 import { describe, it, expect } from "bun:test";
-import { PageSchema, PageSizeSchema, SnowflakeSchema } from "./schemas.js";
+import { s } from "@sapphire/shapeshift";
+import {
+  boundedArray,
+  PageSchema,
+  PageSizeSchema,
+  SnowflakeSchema,
+} from "./schemas.js";
 
 const MaxPageSize = 100;
 
@@ -54,5 +60,26 @@ describe("PageSchema and PageSizeSchema", () => {
 
   it.each([0, -5])("rejects page size %s", (value) => {
     expect(() => PageSizeSchema.parse(value)).toThrow();
+  });
+});
+
+describe("boundedArray", () => {
+  const schema = boundedArray(s.string(), { min: 1, max: 2 });
+
+  it("accepts a length within the bounds as a plain array", () => {
+    const parsed: string[] = schema.parse(["a", "b"]);
+    expect(parsed).toEqual(["a", "b"]);
+  });
+
+  it("rejects fewer items than the minimum", () => {
+    expect(() => schema.parse([])).toThrow("at least 1");
+  });
+
+  it("rejects more items than the maximum", () => {
+    expect(() => schema.parse(["a", "b", "c"])).toThrow("at most 2");
+  });
+
+  it("still validates each item", () => {
+    expect(() => schema.parse([1])).toThrow();
   });
 });

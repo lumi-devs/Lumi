@@ -1,6 +1,24 @@
-import { s } from "@sapphire/shapeshift";
+import { Result, s, type BaseValidator } from "@sapphire/shapeshift";
 
 export const SnowflakeSchema = s.string().regex(/^\d{17,20}$/);
+
+/** shapeshift's array length constraints narrow the type to tuples, which
+ * callers holding a plain array can't satisfy; this checks the bounds and keeps `T[]`. */
+export function boundedArray<T>(
+  item: BaseValidator<T>,
+  bounds: { min?: number; max?: number },
+) {
+  const { min = 0, max = Number.POSITIVE_INFINITY } = bounds;
+  return s.array(item).reshape((items): Result<T[]> => {
+    if (items.length < min) {
+      return Result.err(new RangeError(`Expected at least ${min} items`));
+    }
+    if (items.length > max) {
+      return Result.err(new RangeError(`Expected at most ${max} items`));
+    }
+    return Result.ok(items);
+  });
+}
 
 export const PageSchema = s.number().int().greaterThanOrEqual(1).optional();
 

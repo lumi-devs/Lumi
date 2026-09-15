@@ -1,7 +1,7 @@
 import { s } from "@sapphire/shapeshift";
 import type { ReactionRoleMenuView } from "../views.js";
 import { rpcAction, RpcTimeouts } from "./define.js";
-import { SnowflakeSchema } from "./schemas.js";
+import { boundedArray, SnowflakeSchema } from "./schemas.js";
 
 export const ReactionRoleMenuModes = ["buttons", "select", "reactions"] as const;
 
@@ -41,7 +41,7 @@ export const reactionrolesRpc = {
       mode: s.enum(ReactionRoleMenuModes),
       exclusive: s.boolean().optional(),
       maxRoles: s.number().int().greaterThanOrEqual(1).lessThanOrEqual(25).optional(),
-      options: s.array(ReactionRoleOptionSchema).lengthLessThanOrEqual(25),
+      options: boundedArray(ReactionRoleOptionSchema, { max: 25 }),
       /** Block layout replacing the title/description header; the options and
        * mode controls always stay appended below, since the pick handlers
        * dispatch on them. Clamped server-side. */

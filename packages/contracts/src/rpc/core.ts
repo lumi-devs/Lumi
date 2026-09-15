@@ -4,6 +4,7 @@ import { rpcAction, RpcTimeouts } from "./define.js";
 import {
   BlocklistAddSchema,
   BlocklistRemoveSchema,
+  boundedArray,
   PaginationSchema,
   SnowflakeSchema,
 } from "./schemas.js";
@@ -36,9 +37,9 @@ const PermitNameSchema = s
   .lengthGreaterThanOrEqual(1)
   .lengthLessThanOrEqual(64);
 
-const PermitNodesSchema = s
-  .array(s.string().lengthGreaterThanOrEqual(1))
-  .lengthGreaterThanOrEqual(1);
+const PermitNodesSchema = boundedArray(s.string().lengthGreaterThanOrEqual(1), {
+  min: 1,
+});
 
 const PermitTargetSchema = s.object({
   permitId: s.number().int(),

@@ -12,6 +12,7 @@ import type {
 import { rpcAction, RpcTimeouts } from "./define.js";
 import {
   AuditFilterShape,
+  boundedArray,
   ConfigKeySchema,
   ModuleNameSchema,
   PageSchema,
@@ -57,7 +58,7 @@ export const dashboardRpc = {
   }),
   "guild.summaries.list": rpcAction<{ summaries: GuildSummaryView[] }>()({
     input: s.object({
-      guildIds: s.array(SnowflakeSchema).lengthGreaterThanOrEqual(1),
+      guildIds: boundedArray(SnowflakeSchema, { min: 1 }),
     }),
     auth: "session",
     timeoutMs: RpcTimeouts.short,
