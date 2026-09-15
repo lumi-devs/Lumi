@@ -1,8 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { RpcActions } from "@lumi/contracts";
-import { rpcCall } from "#/lib/rpc";
+import { rpc } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
 import { getClientIp } from "#/lib/client-ip";
 import { runAction, type ActionResult } from "#/lib/action-result";
@@ -31,7 +30,7 @@ export async function submitAppeal(
       throw new Error("Too many appeal submissions — try again later.");
     }
 
-    await rpcCall(RpcActions.guildAppealsSubmit, {
+    await rpc("guild.appeals.submit", {
       guildId,
       data: { caseId, token, message },
     });

@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RpcActions, type VerificationPanelSetResult } from "@lumi/contracts";
+import { type VerificationPanelSetResult } from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
-import { rpcCall } from "#/lib/rpc";
+import { rpc } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
 import { runAction, type ActionResult } from "#/lib/action-result";
 
@@ -22,12 +22,10 @@ export async function setPanicMode(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSecurityAction(guildId);
-    await rpcCall(RpcActions.guildPanicSet, {
+    await rpc("guild.panic.set", {
       guildId,
       actorId: session.userId,
       data: { active, channelIds },
-      // Locking every channel outruns the default 8s RPC deadline on a large guild.
-      timeoutMs: 120_000,
     });
     revalidatePath(`/guild/${guildId}/security`);
     return { ok: true };
@@ -50,7 +48,7 @@ export async function postVerificationPanel(
 ): Promise<ActionResult & Partial<VerificationPanelSetResult>> {
   return runAction(async () => {
     const session = await guardedSecurityAction(guildId);
-    const result = await rpcCall(RpcActions.guildVerificationPanelSet, {
+    const result = await rpc("guild.verificationPanel.set", {
       guildId,
       actorId: session.userId,
       data: input,
@@ -65,7 +63,7 @@ export async function deleteVerificationPanel(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSecurityAction(guildId);
-    await rpcCall(RpcActions.guildVerificationPanelDelete, {
+    await rpc("guild.verificationPanel.delete", {
       guildId,
       actorId: session.userId,
     });
@@ -80,12 +78,10 @@ export async function restoreGuildBackup(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedSecurityAction(guildId);
-    await rpcCall(RpcActions.guildBackupRestore, {
+    await rpc("guild.backups.restore", {
       guildId,
       actorId: session.userId,
       data: { backupId },
-      // Recreating roles/channels on a large guild outruns the default deadline.
-      timeoutMs: 120_000,
     });
     revalidatePath(`/guild/${guildId}/security`);
     return { ok: true };

@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RpcActions, type ReactionRoleMenuSetPayload } from "@lumi/contracts";
+import { type ReactionRoleMenuSetPayload } from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
-import { rpcCall } from "#/lib/rpc";
+import { rpc } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
 import { runAction, type ActionResult } from "#/lib/action-result";
 
@@ -21,7 +21,7 @@ export async function setReactionRoleMenu(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedReactionRolesAction(guildId);
-    await rpcCall(RpcActions.guildReactionRoleMenuSet, {
+    await rpc("guild.reactionroles.menus.set", {
       guildId,
       actorId: session.userId,
       data: menu,
@@ -37,7 +37,7 @@ export async function deleteReactionRoleMenu(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedReactionRolesAction(guildId);
-    await rpcCall(RpcActions.guildReactionRoleMenuDelete, {
+    await rpc("guild.reactionroles.menus.delete", {
       guildId,
       actorId: session.userId,
       data: { id },

@@ -1,8 +1,7 @@
 "use server";
 
-import { RpcActions } from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
-import { rpcCall } from "#/lib/rpc";
+import { rpc } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
 import { runAction, type ActionResult } from "#/lib/action-result";
 
@@ -19,7 +18,7 @@ export async function issueLogClaim(
 ): Promise<ActionResult & { code?: string; expiresIn?: number }> {
   return runAction(async () => {
     const session = await guardedLogClaimAction(guildId);
-    const data = await rpcCall(RpcActions.guildLogClaimsIssue, {
+    const data = await rpc("guild.logClaims.issue", {
       guildId,
       actorId: session.userId,
     });
@@ -40,14 +39,14 @@ export async function pollChannelClaim(
 ): Promise<ActionResult & { channelId?: string }> {
   return runAction(async () => {
     const session = await guardedLogClaimAction(guildId);
-    const { claims } = await rpcCall(RpcActions.guildLogClaimsList, {
+    const { claims } = await rpc("guild.logClaims.list", {
       guildId,
       actorId: session.userId,
     });
     const claim = claims.find((c) => c.claimedAt > issuedAt);
     if (!claim) return { ok: true };
 
-    await rpcCall(RpcActions.guildLogClaimsDismiss, {
+    await rpc("guild.logClaims.dismiss", {
       guildId,
       actorId: session.userId,
       data: { channelId: claim.channelId, outcome: "confirmed" },

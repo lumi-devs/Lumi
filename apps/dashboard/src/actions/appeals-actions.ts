@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RpcActions, type AppealReviewStatus } from "@lumi/contracts";
+import { type AppealReviewStatus } from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
-import { rpcCall } from "#/lib/rpc";
+import { rpc } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
 import { runAction, type ActionResult } from "#/lib/action-result";
 
@@ -17,7 +17,7 @@ export async function reviewAppeal(
     if (await isRateLimited(`guild-action:${session.userId}`, 60, 60_000)) {
       throw new Error("Too many requests — slow down.");
     }
-    await rpcCall(RpcActions.guildAppealsReview, {
+    await rpc("guild.appeals.review", {
       guildId,
       actorId: session.userId,
       data: { id, status },

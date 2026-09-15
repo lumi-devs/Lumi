@@ -41,7 +41,6 @@ export const guildActionsMock = {
   toggleGuildModule: vi.fn(),
   setGuildConfigField: vi.fn(),
   setManyGuildConfigFields: vi.fn(),
-  runGuildSetup: vi.fn(),
   setGuildSettings: vi.fn(),
   sendWelcomeTest: vi.fn(),
   createPermit: vi.fn(),

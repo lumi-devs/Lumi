@@ -1,8 +1,8 @@
 "use server";
 
-import { RpcActions, type GdprExportResult } from "@lumi/contracts";
+import { type GdprExportResult } from "@lumi/contracts";
 import { requireSession } from "#/lib/auth-guards";
-import { rpcCall } from "#/lib/rpc";
+import { rpc } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
 import type { ActionResult } from "#/lib/action-result";
 
@@ -16,7 +16,7 @@ export async function exportMyData(): Promise<GdprExportActionResult> {
     return { ok: false, error: "Too many requests — slow down." };
   }
   try {
-    const res = await rpcCall(RpcActions.gdprExport, {
+    const res = await rpc("global.gdpr.export", {
       actorId: session.userId,
       data: { userId: session.userId },
     });

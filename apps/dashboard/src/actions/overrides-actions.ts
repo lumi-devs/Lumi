@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RpcActions, type ConfigOverrideModelType } from "@lumi/contracts";
+import { type ConfigOverrideModelType } from "@lumi/contracts";
 import { requireGuild } from "#/lib/auth-guards";
-import { rpcCall } from "#/lib/rpc";
+import { rpc } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
 import { runAction, type ActionResult } from "#/lib/action-result";
 
@@ -25,7 +25,7 @@ export async function setConfigOverride(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedOverrideAction(guildId);
-    await rpcCall(RpcActions.guildOverridesSet, {
+    await rpc("guild.overrides.set", {
       guildId,
       actorId: session.userId,
       data: { moduleName, key, modelType, modelId, value },
@@ -44,7 +44,7 @@ export async function deleteConfigOverride(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedOverrideAction(guildId);
-    await rpcCall(RpcActions.guildOverridesSet, {
+    await rpc("guild.overrides.set", {
       guildId,
       actorId: session.userId,
       data: { moduleName, key, modelType, modelId, value: null },
