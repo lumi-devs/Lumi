@@ -1,12 +1,12 @@
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard, getGuildPanicState } from "#/lib/dashboard-fetch";
+import { getGuildShell, getGuildPanicState } from "#/lib/guild-reads";
 import { SiteHeader } from "#/components/layout/site-header";
 import { GuildSideNav } from "#/components/layout/guild-side-nav";
 import { Breadcrumbs } from "#/components/layout/breadcrumbs";
 import { InviteNeeded } from "#/components/invite-needed";
 import { GuildUnavailable } from "#/components/guild-unavailable";
 import { isGuildMissing } from "#/lib/rpc";
-import type { DashboardData } from "@lumi/contracts/views";
+import type { GuildShellData } from "@lumi/contracts/views";
 
 export default async function GuildLayout({
   children,
@@ -19,9 +19,9 @@ export default async function GuildLayout({
   // A layout only guards the page render, so every Server Action re-checks too.
   const session = await requireGuild(guildId);
 
-  let data: DashboardData;
+  let data: GuildShellData;
   try {
-    data = await getGuildDashboard(guildId, session.userId);
+    data = await getGuildShell(guildId, session.userId);
   } catch (err) {
     // Only the bot saying it cannot see the guild means "invite it". Anything
     // else (worker down, timeout, database error) is an outage, and telling an

@@ -2,7 +2,6 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import {
   parseRpcResponse,
-  RpcFailureCodes,
   RpcResponseDataActions,
   type RpcFailureCode,
   type RpcRequest,
@@ -11,6 +10,15 @@ import {
   type RpcRequestPayloads,
   type RpcResponseData,
 } from "@lumi/contracts";
+import {
+  parseRpcResponse as parseRouterResponse,
+  rpcRouter,
+  RpcFailureCodes as RouterFailureCodes,
+  type RpcActionName as RouterActionName,
+  type RpcFailureCode as RouterFailureCode,
+  type RpcInput,
+  type RpcOutput,
+} from "@lumi/contracts/rpc";
 import { injectTraceContext } from "@lumi/observability";
 import { env } from "./env";
 
@@ -23,7 +31,8 @@ export type RpcErrorCode =
   | "WORKER_DOWN"
   | "RPC_ERROR"
   | "MALFORMED"
-  | RpcFailureCode;
+  | RpcFailureCode
+  | RouterFailureCode;
 
 export class RpcError extends Error {
   public readonly code: RpcErrorCode;
@@ -42,7 +51,7 @@ export class RpcError extends Error {
  * be answered, which is a different thing to tell the user.
  */
 export function isGuildMissing(err: unknown): boolean {
-  return err instanceof RpcError && err.code === RpcFailureCodes.GuildNotFound;
+  return err instanceof RpcError && err.code === RouterFailureCodes.GuildNotFound;
 }
 
 function defaultTimeoutFor(action: string): number {
@@ -57,6 +66,11 @@ interface CallOptions<A extends RpcActionName> {
   data?: RpcRequestPayloads[A];
   timeoutMs?: number;
 }
+
+type RouterCallOptions<A extends RouterActionName> = {
+  guildId?: string;
+  actorId?: string;
+} & (RpcInput<A> extends undefined ? { data?: undefined } : { data: RpcInput<A> });
 
 /**
  * Talks to the worker's internal HTTP RPC server directly over the docker
@@ -77,26 +91,27 @@ export class RpcClient {
     private readonly log: (msg: string) => void = () => {},
   ) {}
 
-  public async call<A extends RpcActionName>(
-    action: A,
-    options: CallOptions<A> = {},
-  ): Promise<RpcResponseData<A>> {
+  private buildRequest(
+    action: string,
+    guildId: string | undefined,
+    actorId: string | undefined,
+    data: unknown,
+  ): RpcRequest {
     const traceCarrier = injectTraceContext();
-    const request: RpcRequest = {
+    return {
       id: randomUUID(),
       action,
-      guildId: options.guildId,
-      actorId: options.actorId,
+      guildId,
+      actorId,
       traceparent: traceCarrier["traceparent"],
       tracestate: traceCarrier["tracestate"],
-      data: options.data,
+      data,
     };
+  }
 
+  private async post(action: string, request: RpcRequest, timeoutMs: number): Promise<unknown> {
     const controller = new AbortController();
-    const timer = setTimeout(
-      () => controller.abort(),
-      options.timeoutMs ?? defaultTimeoutFor(action),
-    );
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     let res: Response;
     try {
@@ -118,13 +133,23 @@ export class RpcClient {
       clearTimeout(timer);
     }
 
-    let raw: unknown;
     try {
-      raw = await res.json();
+      return await res.json();
     } catch (err: unknown) {
       this.log(`Discarding undecodable RPC response: ${String(err)}`);
       throw new RpcError("MALFORMED", action, `RPC ${action}: malformed response`);
     }
+  }
+
+  public async call<A extends RpcActionName>(
+    action: A,
+    options: CallOptions<A> = {},
+  ): Promise<RpcResponseData<A>> {
+    const raw = await this.post(
+      action,
+      this.buildRequest(action, options.guildId, options.actorId, options.data),
+      options.timeoutMs ?? defaultTimeoutFor(action),
+    );
 
     let response: RpcResponse;
     try {
@@ -148,6 +173,30 @@ export class RpcClient {
       throw new RpcError("MALFORMED", action, `RPC ${action}: response missing expected data`);
     }
     return response.data as RpcResponseData<A>;
+  }
+
+  public async invoke<A extends RouterActionName>(
+    action: A,
+    options: RouterCallOptions<A>,
+  ): Promise<RpcOutput<A>> {
+    const raw = await this.post(
+      action,
+      this.buildRequest(action, options.guildId, options.actorId, options.data),
+      rpcRouter[action].timeoutMs,
+    );
+    let response;
+    try {
+      response = parseRouterResponse(raw);
+    } catch (err: unknown) {
+      this.log(`Discarding malformed RPC envelope for ${action}: ${String(err)}`);
+      throw new RpcError("MALFORMED", action, `RPC ${action}: malformed response`);
+    }
+    if (!response.ok) throw new RpcError(response.code, action, response.error);
+    if (response.data === undefined || response.data === null) {
+      this.log(`RPC ${action}: response ok but missing expected data`);
+      throw new RpcError("MALFORMED", action, `RPC ${action}: response missing expected data`);
+    }
+    return response.data as RpcOutput<A>;
   }
 
   /** Hits the worker's `/healthz` — used by the readiness probe. */
@@ -187,4 +236,11 @@ export function rpcCall<A extends RpcActionName>(
   options?: CallOptions<A>,
 ): Promise<RpcResponseData<A>> {
   return getRpcClient().call(action, options);
+}
+
+export function rpc<A extends RouterActionName>(
+  action: A,
+  options: RouterCallOptions<A>,
+): Promise<RpcOutput<A>> {
+  return getRpcClient().invoke(action, options);
 }
