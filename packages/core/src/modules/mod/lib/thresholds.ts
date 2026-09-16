@@ -4,7 +4,7 @@ import { tryParseJSON } from "@sapphire/utilities";
 import { type WarnThresholdAction } from "@lumi/contracts/rpc";
 import { parseDuration } from "#lib/utilities/time.js";
 import { Time } from "@sapphire/time-utilities";
-import { thresholdKey } from "#lib/utilities/thresholds.js";
+import { thresholdKey } from "../services/threshold-rules.js";
 import { BanAction } from "#modules/mod/actions/BanAction.js";
 import { MuteAction } from "#modules/mod/actions/MuteAction.js";
 import { KickAction } from "#modules/mod/actions/KickAction.js";

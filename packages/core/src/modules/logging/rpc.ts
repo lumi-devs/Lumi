@@ -5,7 +5,7 @@ import {
   issueLogClaimCode,
   listLogClaims,
   LogClaimCodeTtlMs,
-} from "#lib/logging/claims.js";
+} from "./services/claims.js";
 import { implementRpc } from "#lib/rpc/implement.js";
 
 export const loggingRpcHandlers = implementRpc(loggingRpc, {

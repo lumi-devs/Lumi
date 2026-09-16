@@ -24,8 +24,8 @@ import {
   type CaptchaOutcome,
   type CaptchaState,
 } from "../lib/captcha.js";
-import { snapshotGuild } from "#lib/backup/backup-types.js";
-import { restoreGuildFromBackup } from "#lib/backup/restore-guild.js";
+import { snapshotGuild } from "../services/backup-types.js";
+import { restoreGuildFromBackup } from "../services/restore-guild.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
 import {
   hasNoAvatar,

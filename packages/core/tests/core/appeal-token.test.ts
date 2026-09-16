@@ -10,7 +10,7 @@ describe("appeal token", () => {
 
   it("round-trips a freshly generated token", async () => {
     const { generateAppealToken, verifyAppealToken } = await import(
-      "#lib/appeals/token.js"
+      "#modules/mod/services/appeal-token.js"
     );
     const token = generateAppealToken({ guildId: GUILD_ID, caseId: 7, userId: USER_ID });
     const payload = verifyAppealToken(token);
@@ -21,7 +21,7 @@ describe("appeal token", () => {
 
   it("rejects a token signed with a different secret", async () => {
     const { generateAppealToken, verifyAppealToken } = await import(
-      "#lib/appeals/token.js"
+      "#modules/mod/services/appeal-token.js"
     );
     const token = generateAppealToken({ guildId: GUILD_ID, caseId: 7, userId: USER_ID });
 
@@ -35,7 +35,7 @@ describe("appeal token", () => {
 
   it("rejects a tampered payload even with a valid-looking signature", async () => {
     const { generateAppealToken, verifyAppealToken } = await import(
-      "#lib/appeals/token.js"
+      "#modules/mod/services/appeal-token.js"
     );
     const token = generateAppealToken({ guildId: GUILD_ID, caseId: 7, userId: USER_ID });
     const [payloadB64, sig] = token.split(".");
@@ -49,7 +49,7 @@ describe("appeal token", () => {
 
   it("rejects an expired token", async () => {
     const { generateAppealToken, verifyAppealToken } = await import(
-      "#lib/appeals/token.js"
+      "#modules/mod/services/appeal-token.js"
     );
     jest.useFakeTimers();
     try {
@@ -68,7 +68,7 @@ describe("appeal token", () => {
   it.each(["", "not-a-token", "onlyonepart", "a.b.c", "abc.def"])(
     "rejects malformed input %j",
     async (input) => {
-      const { verifyAppealToken } = await import("#lib/appeals/token.js");
+      const { verifyAppealToken } = await import("#modules/mod/services/appeal-token.js");
       expect(verifyAppealToken(input)).toBeNull();
     },
   );

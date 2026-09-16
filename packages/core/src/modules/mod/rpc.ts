@@ -2,13 +2,13 @@ import { container } from "@sapphire/framework";
 import type { ModerationCase } from "@prisma/client";
 import { modRpc } from "@lumi/contracts/rpc";
 import type { AppealVerifyResult } from "@lumi/contracts/views";
-import { verifyAppealToken } from "#lib/appeals/token.js";
+import { verifyAppealToken } from "./services/appeal-token.js";
 import { implementRpc, requireGuildId } from "#lib/rpc/implement.js";
 import { paginate } from "#lib/rpc/validation.js";
 import {
   removeThresholdRule,
   setThresholdRule,
-} from "#lib/utilities/thresholds.js";
+} from "./services/threshold-rules.js";
 
 // Only ban/timeout cases are appealable - matches BanAction/MuteAction, the
 // only two call sites that ever DM an appeal link.

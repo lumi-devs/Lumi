@@ -9,7 +9,7 @@ import {
   normalizeLogClaimCode,
   peekLogClaimCode,
   registerLogClaim,
-} from "#lib/logging/claims.js";
+} from "#modules/logging/services/claims.js";
 
 const GUILD_ID = "123456789012345678";
 const ISSUER_ID = "111111111111111111";

@@ -6,7 +6,7 @@ import {
   renderWelcomeCard,
   sendWelcomeCard,
   templateVarsFor,
-} from "#lib/utilities/welcome.js";
+} from "./services/welcome.js";
 
 export const welcomeRpcHandlers = implementRpc(welcomeRpc, {
   "guild.welcome.sendTest": async ({ guild, actorId, input }) => {

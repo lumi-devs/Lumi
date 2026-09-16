@@ -10,7 +10,7 @@ import {
   normalizeLogClaimCode,
   peekLogClaimCode,
   registerLogClaim,
-} from "#lib/logging/claims.js";
+} from "../services/claims.js";
 
 @ApplyOptions<GuildMessageListener.Options>({
   name: "loggingClaimMessage",

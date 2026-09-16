@@ -10,7 +10,7 @@ export type AppealStatus =
 
 /**
  * Ban/timeout appeals (`Appeal`), owned by the `mod` module. Submitted
- * publicly through a signed link (see `#lib/appeals/token.js`) and reviewed
+ * publicly through a signed link (see `#modules/mod/services/appeal-token.js`) and reviewed
  * from the dashboard. One appeal per `ModerationCase` - enforced by the
  * unique `caseId` column, not re-checked here.
  */

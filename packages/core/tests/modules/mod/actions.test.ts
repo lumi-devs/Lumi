@@ -9,7 +9,7 @@ import {
   resetWarnCount,
   checkThresholds
 } from '#modules/mod/lib/thresholds.js';
-import { invalidateThresholds, setThresholdRule } from '#lib/utilities/thresholds.js';
+import { invalidateThresholds, setThresholdRule } from '#modules/mod/services/threshold-rules.js';
 import { BanAction } from '#modules/mod/actions/BanAction.js';
 import { MuteAction } from '#modules/mod/actions/MuteAction.js';
 import { VoiceMuteAction } from '#modules/mod/actions/VoiceMuteAction.js';

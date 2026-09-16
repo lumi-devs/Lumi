@@ -2,7 +2,7 @@ import type { Guild, User } from "discord.js";
 import type { ModerationCase } from "@prisma/client";
 import { getDashboardPublicUrl } from "#lib/env.js";
 import { makeInfoCard } from "#lib/utilities/cards.js";
-import { generateAppealToken } from "./token.js";
+import { generateAppealToken } from "./appeal-token.js";
 
 /**
  * DMs a signed appeal link for a just-created ban/timeout case. Silently

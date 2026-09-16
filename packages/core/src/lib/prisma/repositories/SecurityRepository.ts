@@ -1,6 +1,6 @@
 import type { GuildBackup, PanicState, VerificationPanel } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
-import type { GuildBackupData } from "#lib/backup/backup-types.js";
+import type { GuildBackupData } from "#modules/security/services/backup-types.js";
 
 /** Channel id → prior `@everyone` SendMessages allow state (true/false/null). */
 export type LockedChannelSnapshot = Record<string, boolean | null>;

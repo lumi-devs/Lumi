@@ -18,13 +18,13 @@ vi.mock("#modules/mod/lib/helpers.js", () => ({
   scheduleCaseLift: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("#lib/appeals/dm.js", () => ({
+vi.mock("#modules/mod/services/appeal-dm.js", () => ({
   sendAppealLinkDm: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { logToChannel } from "#lib/moderation/log.js";
 import { scheduleCaseLift } from "#modules/mod/lib/helpers.js";
-import { sendAppealLinkDm } from "#lib/appeals/dm.js";
+import { sendAppealLinkDm } from "#modules/mod/services/appeal-dm.js";
 
 describe("runModerationAction", () => {
   const mockCase: any = { id: 1, caseNumber: 5, expiresAt: null };

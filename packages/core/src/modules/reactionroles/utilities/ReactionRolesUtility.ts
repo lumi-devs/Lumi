@@ -36,9 +36,6 @@ import {
 import { getMaxMenus } from "../config.js";
 import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
 
-export type { RoleToggleResult };
-export type { ReactionRoleMenu, ReactionRoleMode, ReactionRoleOption };
-
 /** Thrown when a menu write can't get the per-menu lock before another staff member's edit finishes. */
 export class ReactionRoleMenuLockedError extends Error {
   public constructor() {

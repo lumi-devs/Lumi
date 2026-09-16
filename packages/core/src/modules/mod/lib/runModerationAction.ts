@@ -3,7 +3,7 @@ import type { Guild, User } from "discord.js";
 import type { ModerationCase } from "@prisma/client";
 import { logToChannel } from "#lib/moderation/log.js";
 import { scheduleCaseLift } from "./helpers.js";
-import { sendAppealLinkDm } from "#lib/appeals/dm.js";
+import { sendAppealLinkDm } from "../services/appeal-dm.js";
 
 interface ModerationLogEntry {
   guildId: string;

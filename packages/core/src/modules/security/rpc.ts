@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 import { SnowflakeSchema, securityRpc } from "@lumi/contracts/rpc";
-import type { GuildBackupData } from "#lib/backup/backup-types.js";
-import { restoreGuildFromBackup } from "#lib/backup/restore-guild.js";
+import type { GuildBackupData } from "./services/backup-types.js";
+import { restoreGuildFromBackup } from "./services/restore-guild.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import {
   cachedGuild,
