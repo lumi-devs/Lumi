@@ -6,8 +6,8 @@ import { makeWarningCard } from "#lib/utilities/cards.js";
 import {
   getServerLockState,
   shouldLeaveOnJoin,
-} from "#modules/core/lib/server-lock.js";
-import { resolveAnnounceChannel } from "#modules/core/lib/global-announce.js";
+} from "../services/server-lock.js";
+import { resolveAnnounceChannel } from "../services/global-announce.js";
 
 @ApplyOptions<Listener.Options>({ event: Events.GuildCreate })
 export class GuildCreateListener extends Listener<typeof Events.GuildCreate> {

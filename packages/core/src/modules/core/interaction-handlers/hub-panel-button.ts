@@ -13,8 +13,8 @@ import {
   renderPermissions,
   renderRepoModules,
   renderSettings,
-} from "#modules/core/lib/hub-panel.js";
-import { loadFeatures } from "#modules/core/lib/config-panel.js";
+} from "../services/hub-panel.js";
+import { loadFeatures } from "../services/config-panel.js";
 import {
   buildAddonInstalledView,
   buildAddonReposView,

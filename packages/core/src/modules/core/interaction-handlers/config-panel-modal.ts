@@ -2,7 +2,7 @@ import { fetchTyped } from "#lib/commands.js";
 import { FieldType } from "#lib/module-system/Module.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import type { ConfigUtility } from "#lib/utilities/pieces/ConfigUtility.js";
-import { hasPanelAccess, loadDetail } from "#modules/core/lib/config-panel.js";
+import { hasPanelAccess, loadDetail } from "../services/config-panel.js";
 import { buildFeatureDetailView } from "#modules/core/ui/modules.js";
 import { buildOverridesView } from "#modules/core/ui/overrides.js";
 import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";

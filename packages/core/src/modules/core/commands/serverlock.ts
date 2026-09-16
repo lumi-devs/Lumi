@@ -4,7 +4,7 @@ import { Emojis } from "#lib/utilities/assets.js";
 import {
   getServerLockState,
   setServerLockState,
-} from "#modules/core/lib/server-lock.js";
+} from "../services/server-lock.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 

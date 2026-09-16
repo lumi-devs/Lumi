@@ -1,6 +1,6 @@
 import { Events } from "@sapphire/framework";
 import type { RepliableInteraction } from "discord.js";
-import { createDeniedListener } from "#modules/core/lib/command-listener-factory.js";
+import { createDeniedListener } from "#modules/core/services/command-listener-factory.js";
 
 export const ContextMenuCommandDeniedListener = createDeniedListener(
   Events.ContextMenuCommandDenied,

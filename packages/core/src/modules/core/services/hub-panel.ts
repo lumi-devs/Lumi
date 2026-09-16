@@ -1,7 +1,7 @@
 import type { LumiT } from "#lib/i18n/index.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { hasRequiredPermit, PermitResolver } from "#lib/permissions/index.js";
-import { loadFeatures } from "#modules/core/lib/config-panel.js";
+import { loadFeatures } from "./config-panel.js";
 import { buildAddonRepoModulesView } from "#modules/core/ui/addons.js";
 import { buildHubView, buildSettingsView } from "#modules/core/ui/hub.js";
 import {

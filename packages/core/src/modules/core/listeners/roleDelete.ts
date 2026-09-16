@@ -1,7 +1,7 @@
 import { Listener, Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Role } from "discord.js";
-import { clearStaleConfigRefs } from "../lib/config-cleanup.js";
+import { clearStaleConfigRefs } from "../services/config-cleanup.js";
 
 @ApplyOptions<Listener.Options>({ event: Events.GuildRoleDelete })
 export class RoleDeleteListener extends Listener<

@@ -15,7 +15,7 @@ import {
   multiUpdateReportCard,
   noInstalledModulesCard,
   type ModuleUpdateOutcome,
-} from "#modules/core/lib/module-command/cards.js";
+} from "#modules/core/ui/module-command-cards.js";
 import { container } from "@sapphire/framework";
 import type { User } from "discord.js";
 

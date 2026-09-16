@@ -8,7 +8,7 @@ import {
   configAccessDenied,
   hasPanelAccess,
   loadDetail,
-} from "#modules/core/lib/config-panel.js";
+} from "../services/config-panel.js";
 import { buildFeatureDetailView } from "#modules/core/ui/modules.js";
 import {
   buildHistoryView,

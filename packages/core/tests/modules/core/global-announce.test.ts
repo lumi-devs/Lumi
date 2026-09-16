@@ -4,7 +4,7 @@ import {
   resolveAnnounceChannel,
   runGlobalAnnounce,
   summarizeAnnounce,
-} from "../../../src/modules/core/lib/global-announce.js";
+} from "#modules/core/services/global-announce.js";
 
 interface FakeChannel {
   id: string;

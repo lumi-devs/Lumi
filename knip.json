@@ -26,7 +26,7 @@
         "src/lib/permissions/preconditions/*.ts",
         "src/lib/utilities/pieces/*.ts",
         "src/modules/*/index.ts",
-        "src/modules/*/{commands,listeners,interaction-handlers,scheduled-tasks,services,utilities}/**/*.ts",
+        "src/modules/*/{commands,listeners,interaction-handlers,scheduled-tasks,utilities}/**/*.ts",
         "scripts/*.ts",
         "tests/**/*.test.ts",
         "src/**/*.test.ts"

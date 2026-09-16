@@ -6,7 +6,7 @@ import {
   resolveAnnounceChannel,
   runGlobalAnnounce,
   type AnnounceSummary,
-} from "#modules/core/lib/global-announce.js";
+} from "../services/global-announce.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 

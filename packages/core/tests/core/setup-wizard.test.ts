@@ -10,7 +10,7 @@ import {
   segmentsFromState,
   stepCustomId,
   type SetupWizardState,
-} from "#modules/core/lib/setup-wizard.js";
+} from "#modules/core/services/setup-wizard.js";
 import {
   SetupTotalSteps,
   buildSetupReviewView,

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, spyOn } from "bun:test";
 import { container } from "@sapphire/framework";
-import { collectPingData, getRuntimeLabel } from "#modules/core/lib/ping-collect.js";
+import { collectPingData, getRuntimeLabel } from "#modules/core/services/ping-collect.js";
 
 const Semver = /^\d+\.\d+\.\d+/;
 

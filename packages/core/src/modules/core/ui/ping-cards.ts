@@ -15,7 +15,7 @@ import {
 } from "@discordjs/builders";
 import { time, TimestampStyles } from "@discordjs/formatters";
 import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
-import type { PingData } from "./ping-collect.js";
+import type { PingData } from "../services/ping-collect.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { formatDuration } from "#lib/utilities/time.js";

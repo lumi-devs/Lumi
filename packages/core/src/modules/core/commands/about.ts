@@ -15,8 +15,8 @@ import { LanguageKeys } from "#lib/i18n/keys.js";
 import { LumiInfo } from "#lib/utilities/misc.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { BotConfig } from "#lib/utilities/config.js";
-import { collectPingData } from "#modules/core/lib/ping-collect.js";
-import { fmtMB } from "#modules/core/lib/ping-cards.js";
+import { collectPingData } from "../services/ping-collect.js";
+import { fmtMB } from "../ui/ping-cards.js";
 import { makeCard, ephemeralCard, formatStatusBadge } from "#lib/utilities/cards.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
 

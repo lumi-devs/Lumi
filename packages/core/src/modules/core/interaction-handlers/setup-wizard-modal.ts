@@ -2,7 +2,7 @@ import {
   hasSetupAccess,
   parseMinAgeHours,
   stateFromSegments,
-} from "#modules/core/lib/setup-wizard.js";
+} from "../services/setup-wizard.js";
 import { buildSetupStepView } from "#modules/core/ui/setup-wizard.js";
 import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";
 import { ApplyOptions } from "@sapphire/decorators";

@@ -2,7 +2,7 @@ import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
 import { restartChoiceRow } from "#lib/restart.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "#lib/utilities/cards.js";
-import type { ModulePiecesInfo } from "#modules/core/lib/module-command/pieces.js";
+import type { ModulePiecesInfo } from "../services/module-command/pieces.js";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 

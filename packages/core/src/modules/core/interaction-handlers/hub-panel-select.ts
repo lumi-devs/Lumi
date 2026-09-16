@@ -10,7 +10,7 @@ import {
   renderPermissions,
   renderRepoModules,
   renderSettings,
-} from "#modules/core/lib/hub-panel.js";
+} from "../services/hub-panel.js";
 import { buildAutoUpdateSettingsView } from "#modules/core/ui/addons.js";
 import {
   buildPermitAssignTargetView,

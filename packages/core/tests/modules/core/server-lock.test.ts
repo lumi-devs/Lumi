@@ -5,7 +5,7 @@ import {
   parseServerLockState,
   setServerLockState,
   shouldLeaveOnJoin,
-} from "../../../src/modules/core/lib/server-lock.js";
+} from "#modules/core/services/server-lock.js";
 
 describe("parseServerLockState", () => {
   it("defaults to disabled for missing or malformed blobs", () => {

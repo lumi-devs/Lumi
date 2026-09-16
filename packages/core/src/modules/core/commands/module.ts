@@ -12,7 +12,7 @@ import {
   uninstallProgressCard,
   updateAllProgressCard,
   updateProgressCard,
-} from "#modules/core/lib/module-command/cards.js";
+} from "../ui/module-command-cards.js";
 import {
   installModule,
   pinModule,
@@ -22,9 +22,9 @@ import {
   unpinModule,
   updateAllModules,
   updateModule,
-} from "#modules/core/lib/module-command/operations.js";
-import { getModulePiecesInfo } from "#modules/core/lib/module-command/pieces.js";
-import { registerModuleCommand } from "#modules/core/lib/module-command/registry.js";
+} from "../services/module-command/operations.js";
+import { getModulePiecesInfo } from "../services/module-command/pieces.js";
+import { registerModuleCommand } from "../services/module-command/registry.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { AutocompleteInteraction } from "discord.js";

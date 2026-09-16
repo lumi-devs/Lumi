@@ -10,7 +10,7 @@ import {
   loadDetail,
   loadFeatures,
   type FeatureDetail,
-} from "#modules/core/lib/config-panel.js";
+} from "../services/config-panel.js";
 import {
   buildFeatureDetailView,
   buildFeatureListView,

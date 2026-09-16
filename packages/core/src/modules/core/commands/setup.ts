@@ -3,7 +3,7 @@ import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { PermissionFlagsBits } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
-import { emptySetupState } from "#modules/core/lib/setup-wizard.js";
+import { emptySetupState } from "../services/setup-wizard.js";
 import { buildSetupStepView } from "#modules/core/ui/setup-wizard.js";
 
 @ApplyOptions<BaseCommand.Options>({

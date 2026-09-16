@@ -6,7 +6,7 @@ import {
   normalizeSetupState,
   setupAccessDenied,
   stateFromSegments,
-} from "#modules/core/lib/setup-wizard.js";
+} from "../services/setup-wizard.js";
 import {
   buildSetupAgeModal,
   buildSetupReviewView,

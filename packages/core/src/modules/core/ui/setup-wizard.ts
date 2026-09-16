@@ -6,7 +6,7 @@ import {
   normalizeSetupState,
   stepCustomId,
   type SetupWizardState,
-} from "#modules/core/lib/setup-wizard.js";
+} from "../services/setup-wizard.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { makeCard, makeSuccessCard, type CardReply } from "#lib/utilities/cards.js";
 import { resolveCardColor } from "#lib/utilities/config.js";

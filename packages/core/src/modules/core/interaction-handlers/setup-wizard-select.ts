@@ -5,7 +5,7 @@ import {
   hasSetupAccess,
   setupAccessDenied,
   stateFromSegments,
-} from "#modules/core/lib/setup-wizard.js";
+} from "../services/setup-wizard.js";
 import { buildSetupStepView } from "#modules/core/ui/setup-wizard.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {

@@ -1,7 +1,7 @@
 import { BaseSubcommand } from "#lib/commands.js";
 import { CommandContext } from "#lib/command-context.js";
 import { restartChoiceRow } from "#lib/restart.js";
-import { loadFeatures } from "#modules/core/lib/config-panel.js";
+import { loadFeatures } from "../services/config-panel.js";
 import { buildHubView } from "#modules/core/ui/hub.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { makeSuccessCard } from "#lib/utilities/cards.js";

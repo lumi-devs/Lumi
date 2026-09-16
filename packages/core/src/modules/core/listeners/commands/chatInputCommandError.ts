@@ -1,6 +1,6 @@
 import { Events } from "@sapphire/framework";
 import { respond } from "#lib/utilities/command-response.js";
-import { createErrorListener } from "#modules/core/lib/command-listener-factory.js";
+import { createErrorListener } from "#modules/core/services/command-listener-factory.js";
 
 export const ChatInputCommandErrorListener = createErrorListener(
   Events.ChatInputCommandError,
