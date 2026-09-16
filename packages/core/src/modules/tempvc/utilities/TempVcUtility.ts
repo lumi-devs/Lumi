@@ -19,7 +19,7 @@ import {
   isVoiceChannelEmpty,
 } from "../lib/voice-occupancy.js";
 import { TempvcCleanupDelayMs, ModuleName, TempVcKeys } from "../constants.js";
-import { getCreateCooldownMs } from "../config.js";
+import { getCreateCooldownMs, getMaxGenerators } from "../config.js";
 import {
   getVcRecord,
   listVcRecords,
@@ -345,6 +345,15 @@ export default class TempVcUtility extends Utility {
     channelId: string,
     config: GeneratorConfig,
   ): Promise<void> {
+    const generators = await listGenerators(guildId);
+    if (!generators.has(channelId)) {
+      const maxGenerators = await getMaxGenerators(guildId);
+      if (generators.size >= maxGenerators) {
+        throw new Error(
+          `This server already has the maximum of ${maxGenerators} voice generators.`,
+        );
+      }
+    }
     await setGenerator(guildId, channelId, config);
   }
 

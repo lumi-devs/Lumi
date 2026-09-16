@@ -558,9 +558,39 @@ describe("TempVcUtility", () => {
 
   describe("generator management", () => {
     it("addGenerator calls setGenerator", async () => {
+      (listGenerators as any).mockResolvedValue(new Map());
       const config = { name: "Gen", limit: 0 };
       await service.addGenerator("guild-1", "chan-1", config);
       expect(setGenerator).toHaveBeenCalledWith("guild-1", "chan-1", config);
+    });
+
+    it("rejects a new generator at the configured limit", async () => {
+      (container.db.config.getModuleConfig as any).mockResolvedValue(2);
+      (listGenerators as any).mockResolvedValue(
+        new Map([
+          ["chan-1", { name: "Gen", limit: 0 }],
+          ["chan-2", { name: "Gen", limit: 0 }],
+        ]),
+      );
+
+      await expect(
+        service.addGenerator("guild-1", "chan-3", { name: "Gen", limit: 0 }),
+      ).rejects.toThrow("maximum of 2 voice generators");
+      expect(setGenerator).not.toHaveBeenCalled();
+    });
+
+    it("still updates an existing generator at the limit", async () => {
+      (container.db.config.getModuleConfig as any).mockResolvedValue(2);
+      (listGenerators as any).mockResolvedValue(
+        new Map([
+          ["chan-1", { name: "Gen", limit: 0 }],
+          ["chan-2", { name: "Gen", limit: 0 }],
+        ]),
+      );
+
+      const config = { name: "Renamed", limit: 5 };
+      await service.addGenerator("guild-1", "chan-2", config);
+      expect(setGenerator).toHaveBeenCalledWith("guild-1", "chan-2", config);
     });
 
     it("removeGenerator calls removeGenerator", async () => {
