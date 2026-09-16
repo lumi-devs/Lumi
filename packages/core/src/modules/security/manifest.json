@@ -25,6 +25,7 @@
       "description": "While panic mode is active, only the server owner or whoever triggered it may run moderation commands.",
       "group": "Panic Mode",
       "section": "Panic mode",
+      "widget": "panic-console",
       "default": false
     },
     {
@@ -42,6 +43,7 @@
       "description": "Watch the audit log for mass destructive actions.",
       "group": "Anti-Nuke",
       "section": "Anti-nuke",
+      "widget": "anti-nuke",
       "default": false
     },
     {
@@ -237,6 +239,7 @@
       "description": "Screen new members for raids and throwaway accounts.",
       "group": "Join Gate",
       "section": "Join gate",
+      "widget": "join-gate",
       "default": false
     },
     {
@@ -549,6 +552,7 @@
       "description": "How often to snapshot role/channel structure while Anti-Nuke is on, for the Restore System.",
       "group": "Backups",
       "section": "Backups",
+      "widget": "backups",
       "default": 3,
       "min": 1,
       "max": 168
