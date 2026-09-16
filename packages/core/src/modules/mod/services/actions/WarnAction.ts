@@ -1,8 +1,8 @@
 import { container } from "@sapphire/framework";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { makeSuccessCard } from "#lib/utilities/cards.js";
-import { incrementWarnCount, checkThresholds } from "../lib/thresholds.js";
-import { runModerationAction } from "../lib/runModerationAction.js";
+import { incrementWarnCount, checkThresholds } from "../thresholds.js";
+import { runModerationAction } from "../runModerationAction.js";
 
 export interface WarnApplyOptions {
   guild: Guild;

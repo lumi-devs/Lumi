@@ -5,7 +5,7 @@ import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { DangerousPermissions } from "../utilities/SecurityUtility.js";
-import { resolveAuditLogExecutor } from "../lib/audit.js";
+import { resolveAuditLogExecutor } from "../services/audit.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "securityRoleUpdate",

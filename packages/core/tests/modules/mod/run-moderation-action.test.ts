@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { runModerationAction } from "#modules/mod/lib/runModerationAction.js";
+import { runModerationAction } from "#modules/mod/services/runModerationAction.js";
 
 vi.mock("@sapphire/framework", () => ({
   container: {
@@ -14,7 +14,7 @@ vi.mock("#lib/moderation/log.js", () => ({
   logToChannel: vi.fn(),
 }));
 
-vi.mock("#modules/mod/lib/helpers.js", () => ({
+vi.mock("#modules/mod/services/helpers.js", () => ({
   scheduleCaseLift: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -23,7 +23,7 @@ vi.mock("#modules/mod/services/appeal-dm.js", () => ({
 }));
 
 import { logToChannel } from "#lib/moderation/log.js";
-import { scheduleCaseLift } from "#modules/mod/lib/helpers.js";
+import { scheduleCaseLift } from "#modules/mod/services/helpers.js";
 import { sendAppealLinkDm } from "#modules/mod/services/appeal-dm.js";
 
 describe("runModerationAction", () => {

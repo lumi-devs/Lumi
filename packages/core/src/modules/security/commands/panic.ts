@@ -10,7 +10,7 @@ import {
   buildPanicAlreadyActiveCard,
   buildPanicCancelledCard,
   buildPanicStatusCard,
-} from "../lib/panic-card.js";
+} from "../ui/panic-card.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "panic",

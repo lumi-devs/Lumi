@@ -5,8 +5,8 @@ import {
   cfg,
 } from "#lib/module-system/Module.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
-import { handleVerifySweepFire } from "./lib/verify-sweep-handler.js";
-import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
+import { handleVerifySweepFire } from "./services/verify-sweep-handler.js";
+import { handleBackupSnapshotFire } from "./services/backup-snapshot-handler.js";
 
 @DefineModule({
   name: "security",

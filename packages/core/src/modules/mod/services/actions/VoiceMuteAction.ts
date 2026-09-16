@@ -2,10 +2,10 @@ import { container } from "@sapphire/framework";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { formatAuditReason } from "#lib/utilities/misc.js";
-import { liftAllActiveCases } from "../lib/helpers.js";
+import { liftAllActiveCases } from "../helpers.js";
 import { errorCode } from "#lib/utilities/errors.js";
 import { RedisKeys } from "#lib/database/redis.js";
-import { runModerationAction } from "../lib/runModerationAction.js";
+import { runModerationAction } from "../runModerationAction.js";
 
 export interface VoiceMuteApplyOptions {
   guild: Guild;

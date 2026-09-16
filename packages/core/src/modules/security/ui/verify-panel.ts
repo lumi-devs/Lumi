@@ -11,7 +11,7 @@ import {
   buildCaptchaRows,
   sequenceDisplay,
   type CaptchaState,
-} from "./captcha.js";
+} from "../services/captcha.js";
 
 export const VerifyButtonId = "sec:verify";
 

@@ -23,7 +23,7 @@ import {
   MaxAttempts,
   type CaptchaOutcome,
   type CaptchaState,
-} from "../lib/captcha.js";
+} from "../services/captcha.js";
 import { snapshotGuild } from "../services/backup-types.js";
 import { restoreGuildFromBackup } from "../services/restore-guild.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
@@ -35,13 +35,13 @@ import {
   hasSimilarRecentJoiner,
   isCreationClustered,
   type RecentJoiner,
-} from "../lib/join-heuristics.js";
+} from "../services/join-heuristics.js";
 import {
   getConfigNumber,
   getConfigString,
   getConfigAction,
-} from "../lib/config-helpers.js";
-import { buildVerifyPanel, type VerifyPanelContent } from "../lib/verify-panel.js";
+} from "../services/config-helpers.js";
+import { buildVerifyPanel, type VerifyPanelContent } from "../ui/verify-panel.js";
 
 export interface PanicResult {
   invitesPaused: boolean;

@@ -4,7 +4,7 @@ import {
   ModerationCommand,
   type ModerationCommand as MC,
 } from "#lib/moderation/ModerationCommand.js";
-import { VoiceMuteAction } from "../actions/VoiceMuteAction.js";
+import { VoiceMuteAction } from "../services/actions/VoiceMuteAction.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import type { ModerationCase } from "@prisma/client";
 import type { GuildMember } from "discord.js";

@@ -1,4 +1,4 @@
-import { respondWithReasonChoices } from "../lib/reason-autocomplete.js";
+import { respondWithReasonChoices } from "../services/reason-autocomplete.js";
 import type { AutocompleteInteraction } from "discord.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
@@ -10,7 +10,7 @@ import { userMention } from "@discordjs/formatters";
 import { isSnowflakeId } from "#lib/utilities/misc.js";
 import type { ModerationCase } from "@prisma/client";
 import type { User } from "discord.js";
-import { BanAction } from "#modules/mod/actions/BanAction.js";
+import { BanAction } from "#modules/mod/services/actions/BanAction.js";
 
 const Root = LanguageKeys.Commands;
 const SecondsPerDay = 86400;

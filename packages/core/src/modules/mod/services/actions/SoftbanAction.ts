@@ -1,8 +1,8 @@
 import { container } from "@sapphire/framework";
 import { type Guild, type User, Colors } from "discord.js";
 import { formatAuditReason } from "#lib/utilities/misc.js";
-import { sendModActionDm } from "../lib/notify.js";
-import { runModerationAction } from "../lib/runModerationAction.js";
+import { sendModActionDm } from "../notify.js";
+import { runModerationAction } from "../runModerationAction.js";
 
 export interface SoftbanApplyOptions {
   guild: Guild;

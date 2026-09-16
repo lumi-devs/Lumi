@@ -2,9 +2,9 @@ import { container } from "@sapphire/framework";
 import { Time } from "@sapphire/time-utilities";
 import { acquireRedisLock } from "#lib/redis-lock.js";
 import type { ModLiftPayload } from "../scheduled-tasks/modLift.js";
-import { MuteAction } from "#modules/mod/actions/MuteAction.js";
-import { BanAction } from "#modules/mod/actions/BanAction.js";
-import { VoiceMuteAction } from "#modules/mod/actions/VoiceMuteAction.js";
+import { MuteAction } from "#modules/mod/services/actions/MuteAction.js";
+import { BanAction } from "#modules/mod/services/actions/BanAction.js";
+import { VoiceMuteAction } from "#modules/mod/services/actions/VoiceMuteAction.js";
 
 const ActionLabels: Record<string, string> = {
   mute: "Mute",

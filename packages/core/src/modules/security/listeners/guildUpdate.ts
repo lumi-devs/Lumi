@@ -3,7 +3,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { AuditLogEvent, type Guild } from "discord.js";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
-import { resolveAuditLogExecutor } from "../lib/audit.js";
+import { resolveAuditLogExecutor } from "../services/audit.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "securityGuildUpdate",

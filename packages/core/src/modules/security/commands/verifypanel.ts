@@ -7,7 +7,7 @@ import type { CommandContext } from "#lib/command-context.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { logError } from "#lib/utilities/errors.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import { buildVerifyPanel } from "../lib/verify-panel.js";
+import { buildVerifyPanel } from "../ui/verify-panel.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "verifypanel",

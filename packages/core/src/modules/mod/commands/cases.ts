@@ -6,7 +6,7 @@ import { chunk } from "@sapphire/utilities";
 import { BaseSubcommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { makeInfoCard } from "#lib/utilities/cards.js";
-import { decrementWarnCount } from "../lib/thresholds.js";
+import { decrementWarnCount } from "../services/thresholds.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "cases",

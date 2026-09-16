@@ -4,7 +4,7 @@ import { Colors, roleMention, type GuildMember } from "discord.js";
 import { userMention } from "@discordjs/formatters";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
-import { isSuspiciousAccount } from "../lib/suspicious.js";
+import { isSuspiciousAccount } from "../services/suspicious.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "securityMemberJoin",

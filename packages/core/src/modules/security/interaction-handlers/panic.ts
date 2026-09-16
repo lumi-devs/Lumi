@@ -12,7 +12,7 @@ import { PanelsKeys } from "#lib/i18n/keys.js";
 import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
-import { PanicRevertId, buildPanicRevertedCard } from "../lib/panic-card.js";
+import { PanicRevertId, buildPanicRevertedCard } from "../ui/panic-card.js";
 
 @ApplyOptions<InteractionHandler.Options>({
   name: "security-panic-revert",

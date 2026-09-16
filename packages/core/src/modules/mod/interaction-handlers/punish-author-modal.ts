@@ -17,11 +17,11 @@ import {
   checkHierarchy,
   type DuplicateCaseCheckContext,
 } from "#lib/moderation/ModerationCommand.js";
-import { BanAction } from "#modules/mod/actions/BanAction.js";
-import { KickAction } from "#modules/mod/actions/KickAction.js";
-import { MuteAction } from "#modules/mod/actions/MuteAction.js";
+import { BanAction } from "#modules/mod/services/actions/BanAction.js";
+import { KickAction } from "#modules/mod/services/actions/KickAction.js";
+import { MuteAction } from "#modules/mod/services/actions/MuteAction.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
-import { WarnAction } from "#modules/mod/actions/WarnAction.js";
+import { WarnAction } from "#modules/mod/services/actions/WarnAction.js";
 import { PunishAuthorModalPrefix } from "./punish-author-select.js";
 
 const DefaultReason = "No reason provided.";

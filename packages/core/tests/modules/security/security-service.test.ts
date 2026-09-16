@@ -4,7 +4,7 @@ import { ChannelType } from "discord.js";
 import { SecurityUtility } from "#modules/security/utilities/SecurityUtility.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { logToChannel } from "#lib/moderation/log.js";
-import { MaxAttempts, type CaptchaState } from "#modules/security/lib/captcha.js";
+import { MaxAttempts, type CaptchaState } from "#modules/security/services/captcha.js";
 
 vi.mock("#lib/moderation/QuarantineAction.js", () => ({
   QuarantineAction: { apply: vi.fn() },

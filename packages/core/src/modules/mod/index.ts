@@ -1,9 +1,9 @@
 import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { invalidateThresholds } from "./services/threshold-rules.js";
-import { scheduleCaseLift } from "./lib/helpers.js";
-import { handleModLiftFire } from "./lib/lift-handler.js";
-import { handleWarnDecayFire } from "./lib/warn-decay-handler.js";
+import { scheduleCaseLift } from "./services/helpers.js";
+import { handleModLiftFire } from "./services/lift-handler.js";
+import { handleWarnDecayFire } from "./services/warn-decay-handler.js";
 
 @DefineModule({
   name: "mod",

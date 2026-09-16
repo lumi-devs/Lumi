@@ -4,7 +4,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { GuildMember } from "discord.js";
-import { MuteAction } from "#modules/mod/actions/MuteAction.js";
+import { MuteAction } from "#modules/mod/services/actions/MuteAction.js";
 
 type Context = ModerationCommand.ActionContext<GuildMember>;
 type Success = ModerationCommand.OutcomeContext<GuildMember, ModerationCase>;

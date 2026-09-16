@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
 import { container } from '@sapphire/framework';
-import { scheduleCaseLift } from '#modules/mod/lib/helpers.js';
+import { scheduleCaseLift } from '#modules/mod/services/helpers.js';
 import { parseDuration, formatDuration } from '#lib/utilities/time.js';
 import {
   getThresholds,
@@ -8,13 +8,13 @@ import {
   decrementWarnCount,
   resetWarnCount,
   checkThresholds
-} from '#modules/mod/lib/thresholds.js';
+} from '#modules/mod/services/thresholds.js';
 import { invalidateThresholds, setThresholdRule } from '#modules/mod/services/threshold-rules.js';
-import { BanAction } from '#modules/mod/actions/BanAction.js';
-import { MuteAction } from '#modules/mod/actions/MuteAction.js';
-import { VoiceMuteAction } from '#modules/mod/actions/VoiceMuteAction.js';
-import { KickAction } from '#modules/mod/actions/KickAction.js';
-import { WarnAction } from '#modules/mod/actions/WarnAction.js';
+import { BanAction } from '#modules/mod/services/actions/BanAction.js';
+import { MuteAction } from '#modules/mod/services/actions/MuteAction.js';
+import { VoiceMuteAction } from '#modules/mod/services/actions/VoiceMuteAction.js';
+import { KickAction } from '#modules/mod/services/actions/KickAction.js';
+import { WarnAction } from '#modules/mod/services/actions/WarnAction.js';
 import { QuarantineAction } from '#lib/moderation/QuarantineAction.js';
 import { cancelTask } from '#lib/schedule-task.js';
 

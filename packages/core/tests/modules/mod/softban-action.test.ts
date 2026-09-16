@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { SoftbanAction } from "#modules/mod/actions/SoftbanAction.js";
+import { SoftbanAction } from "#modules/mod/services/actions/SoftbanAction.js";
 
 vi.mock("@sapphire/framework", () => ({
   container: {
