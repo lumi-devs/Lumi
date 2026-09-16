@@ -1,10 +1,6 @@
-import {
-  Module,
-  DefineModule,
-  NoEndUserData,
-  cfg,
-} from "#lib/module-system/Module.js";
-import { toStringArray } from "#lib/module-system/config-schema.js";
+import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { NoEndUserData } from "#lib/module-system/meta.js";
+import { cfg, toStringArray } from "#lib/module-system/config-schema.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { ChannelType } from "discord.js";
 import {

@@ -13,7 +13,7 @@ import {
 import { renderTemplate } from "#lib/utilities/template.js";
 import { renderMessageBlocksV2 } from "#lib/utilities/message-blocks-v2.js";
 import { logError } from "#lib/utilities/errors.js";
-import { toStringArray } from "#lib/module-system/Module.js";
+import { toStringArray } from "#lib/module-system/config-schema.js";
 
 export interface WelcomeTemplateVars {
   user: string;

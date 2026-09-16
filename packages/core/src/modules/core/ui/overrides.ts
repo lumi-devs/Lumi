@@ -1,4 +1,4 @@
-import type { ModuleMeta } from "#lib/module-system/Module.js";
+import type { ModuleMeta } from "#lib/module-system/meta.js";
 import type {
   ConfigHistoryEntry,
   ConfigOverrideEntry,

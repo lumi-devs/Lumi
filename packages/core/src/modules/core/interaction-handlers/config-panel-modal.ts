@@ -1,5 +1,5 @@
 import { fetchTyped } from "#lib/commands.js";
-import { FieldType } from "#lib/module-system/Module.js";
+import { FieldType } from "#lib/module-system/config-schema.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import type { ConfigUtility } from "#lib/utilities/pieces/ConfigUtility.js";
 import { hasPanelAccess, loadDetail } from "../services/config-panel.js";

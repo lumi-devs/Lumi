@@ -1,4 +1,4 @@
-import type { ModuleMeta } from "#lib/module-system/Module.js";
+import type { ModuleMeta } from "#lib/module-system/meta.js";
 import { hasRequiredPermit } from "#lib/permissions/index.js";
 import type { FeatureListEntry } from "#modules/core/ui/modules.js";
 import { Emojis } from "#lib/utilities/assets.js";

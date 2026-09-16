@@ -1,4 +1,5 @@
-import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
+import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { cfg } from "#lib/module-system/config-schema.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { invalidateThresholds } from "./services/threshold-rules.js";
 import { scheduleCaseLift } from "./services/helpers.js";

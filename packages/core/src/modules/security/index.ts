@@ -1,9 +1,6 @@
-import {
-  Module,
-  DefineModule,
-  NoEndUserData,
-  cfg,
-} from "#lib/module-system/Module.js";
+import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { NoEndUserData } from "#lib/module-system/meta.js";
+import { cfg } from "#lib/module-system/config-schema.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleVerifySweepFire } from "./services/verify-sweep-handler.js";
 import { handleBackupSnapshotFire } from "./services/backup-snapshot-handler.js";

@@ -1,8 +1,5 @@
-import {
-  FieldType,
-  type ConfigField,
-  type ModuleMeta,
-} from "#lib/module-system/Module.js";
+import { FieldType, type ConfigField } from "#lib/module-system/config-schema.js";
+import type { ModuleMeta } from "#lib/module-system/meta.js";
 import {
   FeaturesPerPage,
   FieldsPerPage,

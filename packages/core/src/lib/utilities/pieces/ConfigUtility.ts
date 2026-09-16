@@ -1,5 +1,5 @@
 import { Utility } from "#lib/module-system/Utility.js";
-import { FieldType } from "#lib/module-system/Module.js";
+import { FieldType } from "#lib/module-system/config-schema.js";
 import { validateModuleConfigValue } from "#lib/module-system/config-schema.js";
 import { cleanMention, isSnowflakeId } from "#lib/utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";

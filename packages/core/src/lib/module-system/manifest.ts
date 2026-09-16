@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fieldsFromSchema } from "./config-schema.js";
-import type { ModuleMeta, ModuleOptions } from "./Module.js";
+import type { ModuleDefinition, ModuleMeta } from "./meta.js";
 import { CoreVersion } from "#lib/utilities/misc.js";
 import {
   KnownSubstores,
@@ -25,7 +25,7 @@ export async function detectSubStores(dir: string): Promise<string[]> {
 
 /** Build a serialisable manifest from a module's in-code `meta`. */
 export async function manifestFromMeta(
-  meta: ModuleMeta | ModuleOptions,
+  meta: ModuleMeta | ModuleDefinition,
   dir: string,
 ): Promise<ModuleManifest> {
   const configFields =

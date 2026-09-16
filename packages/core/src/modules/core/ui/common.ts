@@ -1,4 +1,4 @@
-import { FieldType, type ConfigField } from "#lib/module-system/Module.js";
+import { FieldType, type ConfigField } from "#lib/module-system/config-schema.js";
 import { formatSubtitle, formatPageFooter } from "#lib/utilities/ui/layout.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import {

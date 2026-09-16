@@ -4,7 +4,8 @@ import {
   InteractionHandlerTypes,
   type Command,
 } from "@sapphire/framework";
-import { Module, type ModuleMeta } from "./Module.js";
+import { Module } from "./Module.js";
+import type { ModuleMeta } from "./meta.js";
 import {
   metaFromManifest,
   readManifest,

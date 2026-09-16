@@ -1,8 +1,5 @@
-import {
-  Module,
-  DefineModule,
-  NoEndUserData,
-} from "#lib/module-system/Module.js";
+import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { NoEndUserData } from "#lib/module-system/meta.js";
 
 @DefineModule({
   name: "dashboard",

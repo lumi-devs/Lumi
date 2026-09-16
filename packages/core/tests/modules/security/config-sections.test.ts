@@ -1,5 +1,5 @@
 import { sectionsOf } from "@lumi/contracts";
-import type { ModuleMeta } from "#lib/module-system/Module.js";
+import type { ModuleMeta } from "#lib/module-system/meta.js";
 import { SecurityModule } from "#modules/security/index.js";
 import { describe, expect, it } from "bun:test";
 

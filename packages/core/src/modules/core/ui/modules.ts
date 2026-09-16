@@ -2,11 +2,8 @@ import { chunk } from "@sapphire/utilities";
 import type { LumiT } from "#lib/i18n/index.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { sectionsOf } from "@lumi/contracts";
-import {
-  FieldType,
-  type ConfigField,
-  type ModuleMeta,
-} from "#lib/module-system/Module.js";
+import { FieldType, type ConfigField } from "#lib/module-system/config-schema.js";
+import type { ModuleMeta } from "#lib/module-system/meta.js";
 import {
   formatFieldValue,
   formatPageFooter,

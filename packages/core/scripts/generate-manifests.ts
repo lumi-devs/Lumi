@@ -7,7 +7,7 @@ import {
   writeManifest,
   type ModuleManifest,
 } from "#lib/module-system/manifest.js";
-import type { ModuleMeta, ModuleOptions } from "#lib/module-system/Module.js";
+import type { ModuleDefinition, ModuleMeta } from "#lib/module-system/meta.js";
 
 // Build-time generator for per-module `manifest.json`. Imports each module's
 // `index.ts` to read its in-code `meta` (the Zod `configSchema` stays the single
@@ -42,7 +42,7 @@ async function findIndex(dir: string): Promise<string | null> {
   return null;
 }
 
-function extractMeta(mod: Record<string, unknown>): ModuleMeta | ModuleOptions | null {
+function extractMeta(mod: Record<string, unknown>): ModuleMeta | ModuleDefinition | null {
   const direct = (mod as { meta?: ModuleMeta }).meta;
   if (direct) return direct;
   const def = (mod as { default?: { meta?: ModuleMeta } }).default;
