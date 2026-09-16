@@ -3,21 +3,21 @@ import TempVcUtility, {
   resolveGeneratorName,
 } from "#modules/tempvc/utilities/TempVcUtility.js";
 import { container } from "@sapphire/framework";
-import { tempVcRegistry } from "#modules/tempvc/registry.js";
+import { tempVcRegistry } from "#modules/tempvc/services/registry.js";
 import { scheduleTask } from "#lib/schedule-task.js";
-import { isVoiceChannelEmpty, clearVoiceChannelOccupancy } from "#modules/tempvc/lib/voice-occupancy.js";
-import { setVcRecord, patchVcRecord, listVcRecords, listGenerators, removeVcRecord, getVcRecord, setGenerator, removeGenerator } from "#modules/tempvc/data.js";
+import { isVoiceChannelEmpty, clearVoiceChannelOccupancy } from "#modules/tempvc/services/voice-occupancy.js";
+import { setVcRecord, patchVcRecord, listVcRecords, listGenerators, removeVcRecord, getVcRecord, setGenerator, removeGenerator } from "#modules/tempvc/data/tempvc.js";
 
 vi.mock("#lib/schedule-task.js", () => ({
   scheduleTask: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("#modules/tempvc/lib/voice-occupancy.js", () => ({
+vi.mock("#modules/tempvc/services/voice-occupancy.js", () => ({
   isVoiceChannelEmpty: vi.fn(),
   clearVoiceChannelOccupancy: vi.fn(),
 }));
 
-vi.mock("#modules/tempvc/data.js", () => ({
+vi.mock("#modules/tempvc/data/tempvc.js", () => ({
   setVcRecord: vi.fn(),
   patchVcRecord: vi.fn(),
   listVcRecords: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock("#modules/tempvc/data.js", () => ({
   removeGenerator: vi.fn(),
 }));
 
-vi.mock("#modules/tempvc/registry.js", () => ({
+vi.mock("#modules/tempvc/services/registry.js", () => ({
   tempVcRegistry: {
     nextNumber: vi.fn(),
     addVc: vi.fn(),

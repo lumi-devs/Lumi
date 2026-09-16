@@ -2,7 +2,7 @@ import { clampMessageDocumentV2 } from "@lumi/contracts";
 import { reactionrolesRpc } from "@lumi/contracts/rpc";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { implementRpc } from "#lib/rpc/implement.js";
-import type { ReactionRoleMenu } from "./data.js";
+import type { ReactionRoleMenu } from "./data/reactionroles.js";
 
 function toView(menu: ReactionRoleMenu) {
   return {

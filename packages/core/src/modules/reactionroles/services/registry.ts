@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import { logError } from "#lib/utilities/errors.js";
-import { getMenu, listMenus, type ReactionRoleMenu } from "./data.js";
+import { getMenu, listMenus, type ReactionRoleMenu } from "../data/reactionroles.js";
 
 const SigPrefix = "lumi:reactionroles:sig:";
 const sig = {
@@ -59,7 +59,7 @@ class ReactionRoleRegistry {
     for (const menu of this.#menus.get(guildId)?.values() ?? []) {
       if (menu.messageIds.includes(messageId)) return menu;
     }
-    const { findMenuByMessage } = await import("./data.js");
+    const { findMenuByMessage } = await import("../data/reactionroles.js");
     const fresh = await findMenuByMessage(guildId, messageId).catch(
       (err: unknown) => {
         logError("ReactionRoles: message lookup", err);

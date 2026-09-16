@@ -10,7 +10,7 @@ import {
   getStickyMessageId,
   isStickyOnCooldown,
   setStickyMessageId,
-} from "../lib/sticky-store.js";
+} from "../data/sticky-store.js";
 
 function findStickyEntry(
   entries: unknown,

@@ -1,8 +1,8 @@
 import { UserError } from "@sapphire/framework";
 import type { Guild, GuildMember, VoiceBasedChannel } from "discord.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { getVcRecord, type VcRecord } from "#modules/tempvc/data.js";
-import { assertOwner } from "#modules/tempvc/lib/panel-helpers.js";
+import { getVcRecord, type VcRecord } from "../data/tempvc.js";
+import { assertOwner } from "./panel-helpers.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 
 export interface ResolvedVc {

@@ -7,7 +7,7 @@ import {
   setStickyMessageId,
   StickyCooldownMs,
   stickyKey,
-} from "#modules/sticky/lib/sticky-store.js";
+} from "#modules/sticky/data/sticky-store.js";
 import { StickyMessageListener } from "#modules/sticky/listeners/messageCreate.js";
 
 function makeMessage(overrides: Record<string, unknown> = {}) {

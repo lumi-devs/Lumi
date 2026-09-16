@@ -5,7 +5,7 @@ import {
   toggleBlockedMessage,
   type ReactionRoleMenu,
   type TogglePlan,
-} from "../data.js";
+} from "../data/reactionroles.js";
 
 export interface RoleToggleResult {
   plan: TogglePlan;

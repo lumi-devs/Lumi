@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import { logError } from "#lib/utilities/errors.js";
-import type { GeneratorConfig } from "./data.js";
+import type { GeneratorConfig } from "../data/tempvc.js";
 
 /** Lightweight per-VC fact kept hot in memory for the voice event path. */
 interface ManagedVc {

@@ -4,7 +4,7 @@ import {
   defaultSlotPayoutEntries,
   parseSlotPayouts,
   type SlotPayoutKey,
-} from "./lib/slots.js";
+} from "./services/slots.js";
 import { EconomyModuleName } from "./constants.js";
 
 export interface EconomyConfig {

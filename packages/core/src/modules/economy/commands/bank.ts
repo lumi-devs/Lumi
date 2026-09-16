@@ -5,7 +5,7 @@ import { BaseSubcommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { BankService } from "../services/BankService.js";
 import { formatAmount, getEconomyConfig } from "../config.js";
-import { reportEconomyError } from "../lib/respond.js";
+import { reportEconomyError } from "../services/respond.js";
 
 type Vault = "wallet" | "bank";
 

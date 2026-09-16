@@ -15,7 +15,7 @@ import {
   validateMenuDraft,
   validateOptionDraft,
   type ReactionRoleMenu,
-} from "#modules/reactionroles/data.js";
+} from "#modules/reactionroles/data/reactionroles.js";
 
 function makeMenu(overrides: Partial<ReactionRoleMenu> = {}): ReactionRoleMenu {
   const now = Date.now();

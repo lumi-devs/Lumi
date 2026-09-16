@@ -5,7 +5,7 @@ import {
   resolveSlotPayout,
   spinSlots,
   type SlotSpin,
-} from "../lib/slots.js";
+} from "./slots.js";
 import type { EconomyConfig } from "../config.js";
 
 export class EconomyError extends Error {

@@ -18,13 +18,13 @@ import { getUtility } from "#lib/module-system/Utility.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { makeSuccessCard } from "#lib/utilities/cards.js";
-import { getVcRecord, removeVcRecord } from "#modules/tempvc/data.js";
+import { getVcRecord, removeVcRecord } from "#modules/tempvc/data/tempvc.js";
 import { Tvc, TempVcKeys } from "../constants.js";
 import {
   showLimitModal,
   showRenameModal,
-} from "#modules/tempvc/lib/panel-helpers.js";
-import { resolveOwnedVc, resolveVc } from "#modules/tempvc/panel-guard.js";
+} from "#modules/tempvc/services/panel-helpers.js";
+import { resolveOwnedVc, resolveVc } from "#modules/tempvc/services/panel-guard.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 import {
   buildBlockView,

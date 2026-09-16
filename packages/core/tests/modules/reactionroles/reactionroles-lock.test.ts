@@ -116,7 +116,7 @@ describe("ReactionRolesUtility menu-write locking", () => {
     // Same race as the test above, but bypassing ReactionRolesUtility and calling
     // the underlying data.ts read-modify-write directly - proves the race is real
     // at the storage layer the lock guards, not an artifact of the utility mock.
-    const { saveMenu, getMenu: rawGetMenu } = await import("#modules/reactionroles/data.js");
+    const { saveMenu, getMenu: rawGetMenu } = await import("#modules/reactionroles/data/reactionroles.js");
     await saveMenu({
       id: "unlocked",
       guildId: "guild-1",

@@ -5,12 +5,12 @@ import type { VoiceState } from "discord.js";
 import { logError } from "#lib/utilities/errors.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { TempvcCreateCooldownMs } from "../constants.js";
-import { tempVcRegistry } from "../registry.js";
+import { tempVcRegistry } from "../services/registry.js";
 import type TempVcUtility from "../utilities/TempVcUtility.js";
 import {
   trackVoiceState,
   isVoiceChannelEmpty,
-} from "../lib/voice-occupancy.js";
+} from "../services/voice-occupancy.js";
 
 @ApplyOptions<Listener.Options>({
   name: "tempvcVoiceStateUpdate",

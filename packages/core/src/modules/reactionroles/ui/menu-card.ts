@@ -6,7 +6,7 @@ import {
 } from "@discordjs/builders";
 import { ButtonStyle, MessageFlags, roleMention } from "discord.js";
 import { Rr } from "../constants.js";
-import type { ReactionRoleMenu, ReactionRoleOption } from "../data.js";
+import type { ReactionRoleMenu, ReactionRoleOption } from "../data/reactionroles.js";
 import { parseHexColor } from "#lib/message-content.js";
 import { makeCard, type CardReply } from "#lib/utilities/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";

@@ -1,5 +1,5 @@
 import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
-import { defaultSlotPayoutEntries } from "./lib/slots.js";
+import { defaultSlotPayoutEntries } from "./services/slots.js";
 import { EconomyModuleName } from "./constants.js";
 
 @DefineModule({

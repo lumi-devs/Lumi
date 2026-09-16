@@ -17,7 +17,7 @@ import { scheduleTask } from "#lib/schedule-task.js";
 import {
   clearVoiceChannelOccupancy,
   isVoiceChannelEmpty,
-} from "../lib/voice-occupancy.js";
+} from "../services/voice-occupancy.js";
 import { TempvcCleanupDelayMs, ModuleName, TempVcKeys } from "../constants.js";
 import { getCreateCooldownMs, getMaxGenerators } from "../config.js";
 import {
@@ -31,8 +31,8 @@ import {
   removeGenerator,
   type GeneratorConfig,
   type VcRecord,
-} from "../data.js";
-import { tempVcRegistry } from "../registry.js";
+} from "../data/tempvc.js";
+import { tempVcRegistry } from "../services/registry.js";
 import { buildPanel } from "../ui/panel.js";
 
 const creationQueues = new Collection<string, AsyncQueue>();

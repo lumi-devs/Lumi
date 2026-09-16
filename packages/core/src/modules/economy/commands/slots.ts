@@ -10,8 +10,8 @@ import {
   type EconomyConfig,
 } from "../config.js";
 import { EconomyKeys } from "../constants.js";
-import { SlotPayoutLabels, renderSlotGrid } from "../lib/slots.js";
-import { reportEconomyError } from "../lib/respond.js";
+import { SlotPayoutLabels, renderSlotGrid } from "../services/slots.js";
+import { reportEconomyError } from "../services/respond.js";
 
 async function claimSlotCooldown(config: EconomyConfig, guildId: string, userId: string): Promise<boolean> {
   if (config.slotCooldownMs <= 0) return true;

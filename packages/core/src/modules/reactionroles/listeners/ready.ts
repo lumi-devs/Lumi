@@ -2,7 +2,7 @@ import { Listener, Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Client } from "discord.js";
 import { logError } from "#lib/utilities/errors.js";
-import { reactionRoleRegistry } from "../registry.js";
+import { reactionRoleRegistry } from "../services/registry.js";
 
 @ApplyOptions<Listener.Options>({
   name: "reactionrolesReady",

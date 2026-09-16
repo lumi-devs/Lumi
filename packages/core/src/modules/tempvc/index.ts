@@ -4,9 +4,9 @@ import {
   PanelMessageDefault,
   PanelTitleDefault,
 } from "./constants.js";
-import { tempVcRegistry } from "./registry.js";
+import { tempVcRegistry } from "./services/registry.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
-import { handleTempVcCleanupFire } from "./lib/cleanup-handler.js";
+import { handleTempVcCleanupFire } from "./services/cleanup-handler.js";
 
 @DefineModule({
   name: ModuleName,
