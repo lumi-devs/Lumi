@@ -8,7 +8,7 @@ import "./preconditions/NotBlocked.js";
 import "./preconditions/NotIgnored.js";
 import "./preconditions/RequirePermit.js";
 import { permitResolver } from "./PermitResolver.js";
-import { memberRoleIds } from "./preconditions/RequirePermit.js";
+import { memberRoleIds } from "./subject.js";
 
 export * from "./PermitResolver.js";
 

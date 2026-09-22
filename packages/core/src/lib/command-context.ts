@@ -13,7 +13,7 @@ import {
 import type { LumiT } from "#lib/i18n/index.js";
 import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, makeEmptyCard, type CardReply } from "#lib/ui/cards.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
-import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
+import { permitSubject } from "#lib/permissions/subject.js";
 import { BrandColors } from "#lib/branding/colors.js";
 
 export interface CtxOptionSpec {
@@ -355,30 +355,14 @@ export class CommandContext {
 
   /** Per-subcommand permit check - throws a rendered denial. */
   public async checkPermit(permitNode: string): Promise<void> {
-    const guildId = this.guildId;
-    if (!guildId) {
+    const subject = permitSubject(this.guild, this.user.id, this.member, this.channelId);
+    if (!subject) {
       throw new UserError({
         identifier: "PermissionDenied",
         message: "This command can only be used in a server.",
       });
     }
-    const userId = this.user.id;
-    const roleIds = memberRoleIds(this.member);
-    const guildOwnerId = this.guild?.ownerId;
-    const hasPermit = await container.permitResolver.hasPermit({
-      guildId,
-      userId,
-      roleIds,
-      channelId: this.channelId,
-      permitNode,
-      guildOwnerId,
-    });
-    if (!hasPermit) {
-      throw new UserError({
-        identifier: "PermissionDenied",
-        message: `You lack the required permit (\`${permitNode}\`) to use this.`,
-      });
-    }
+    await container.permitResolver.assertPermit({ ...subject, permitNode });
   }
 
   public static fromInteraction(

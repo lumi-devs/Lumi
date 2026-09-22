@@ -1,4 +1,5 @@
 import { Precondition, container } from "@sapphire/framework";
+import type { PermitSubject } from "#lib/permissions/subject.js";
 
 export abstract class PermitPrecondition extends Precondition {
   // A guild-scoped permit can never be satisfied outside a guild, so missing
@@ -10,23 +11,8 @@ export abstract class PermitPrecondition extends Precondition {
     });
   }
 
-  protected async checkPermit(
-    guildId: string,
-    userId: string,
-    roleIds: string[],
-    channelId: string,
-    permitNode: string,
-    guildOwnerId: string | undefined,
-    deniedMessage: string,
-  ) {
-    const hasPermit = await container.permitResolver.hasPermit({
-      guildId,
-      userId,
-      roleIds,
-      channelId,
-      permitNode,
-      guildOwnerId,
-    });
+  protected async checkPermit(subject: PermitSubject, permitNode: string, deniedMessage: string) {
+    const hasPermit = await container.permitResolver.hasPermit({ ...subject, permitNode });
     return hasPermit
       ? this.ok()
       : this.error({ identifier: "PermissionDenied", message: deniedMessage });

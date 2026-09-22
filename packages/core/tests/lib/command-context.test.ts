@@ -201,45 +201,52 @@ describe("CommandContext", () => {
 
   describe("checkPermit & fetchT", () => {
     it("passes when permit is granted", async () => {
-      const hasPermit = vi.fn().mockResolvedValue(true);
-      (container as any).permitResolver = { hasPermit };
+      const assertPermit = vi.fn().mockResolvedValue(undefined);
+      (container as any).permitResolver = { assertPermit };
 
       const roleIds = ["R1", "R2"];
       const ctx = CommandContext.fromInteraction({
-        guildId: "G1",
-        guild: { ownerId: "O1" },
+        guild: { id: "G1", ownerId: "O1" },
         user: { id: "U1" },
         member: { roles: { cache: new Map(roleIds.map((id) => [id, id])) } },
       } as any);
       await expect(ctx.checkPermit("mod.ban")).resolves.toBeUndefined();
 
-      expect(hasPermit).toHaveBeenCalledWith({
+      expect(assertPermit).toHaveBeenCalledWith({
         guildId: "G1",
         userId: "U1",
         roleIds,
+        channelId: undefined,
         permitNode: "mod.ban",
         guildOwnerId: "O1",
       });
     });
 
     it("throws UserError when permit is denied", async () => {
-      const hasPermit = vi.fn().mockResolvedValue(false);
-      (container as any).permitResolver = { hasPermit };
+      const assertPermit = vi.fn().mockRejectedValue(
+        new UserError({ identifier: "PermissionDenied", message: "denied" }),
+      );
+      (container as any).permitResolver = { assertPermit };
 
-      const ctx = CommandContext.fromInteraction({ guildId: "G1", guild: { ownerId: "O1" }, user: { id: "U1" }, member: { roles: { cache: new Map() } } } as any);
+      const ctx = CommandContext.fromInteraction({
+        guild: { id: "G1", ownerId: "O1" },
+        user: { id: "U1" },
+        member: { roles: { cache: new Map() } },
+      } as any);
       await expect(ctx.checkPermit("mod.ban")).rejects.toThrow(UserError);
 
-      expect(hasPermit).toHaveBeenCalledWith({
+      expect(assertPermit).toHaveBeenCalledWith({
         guildId: "G1",
         userId: "U1",
         roleIds: [],
+        channelId: undefined,
         permitNode: "mod.ban",
         guildOwnerId: "O1",
       });
     });
 
-    it("throws UserError when guildId is missing", async () => {
-      const ctx = CommandContext.fromInteraction({} as any);
+    it("throws UserError when guild is missing", async () => {
+      const ctx = CommandContext.fromInteraction({ user: { id: "U1" } } as any);
       await expect(ctx.checkPermit("mod.ban")).rejects.toThrow(UserError);
     });
 
