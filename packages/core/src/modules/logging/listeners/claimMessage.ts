@@ -3,7 +3,7 @@ import { container } from "@sapphire/framework";
 import { Colors, PermissionFlagsBits } from "discord.js";
 import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
 import type { GuildMessage } from "#lib/types/common.js";
-import { makeCard } from "#lib/utilities/cards.js";
+import { makeCard } from "#lib/ui/cards.js";
 import { logError } from "#lib/utilities/errors.js";
 import {
   consumeLogClaimCode,

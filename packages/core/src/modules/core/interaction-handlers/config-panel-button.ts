@@ -21,7 +21,7 @@ import {
   buildOverridesView,
 } from "#modules/core/ui/overrides.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";
+import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
 import { respond } from "#lib/utilities/command-response.js";
 import {
   LabelBuilder,

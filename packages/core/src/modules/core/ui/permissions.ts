@@ -4,14 +4,14 @@ import { row, type Row, formatPageFooter } from "#modules/core/ui/common.js";
 import { hubTabRow } from "#modules/core/ui/hub.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
-import { makeCard, noPingCard, type CardReply } from "#lib/utilities/cards.js";
+import { makeCard, noPingCard, type CardReply } from "#lib/ui/cards.js";
 import {
   createPaginationRow,
   createRoleSelectMenu,
   createStringSelectMenu,
   createUserSelectMenu,
   settingRow,
-} from "#lib/utilities/panels.js";
+} from "#lib/ui/panels.js";
 import {
   ButtonBuilder,
   StringSelectMenuOptionBuilder,

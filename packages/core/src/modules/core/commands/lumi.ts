@@ -4,7 +4,7 @@ import { restartChoiceRow } from "#lib/restart.js";
 import { loadFeatures } from "../services/config-panel.js";
 import { buildHubView } from "#modules/core/ui/hub.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { makeSuccessCard } from "#lib/utilities/cards.js";
+import { makeSuccessCard } from "#lib/ui/cards.js";
 import { updateLumiCore } from "#lib/utilities/self-update.js";
 import { PermitResolver } from "#lib/permissions/index.js";
 import { ApplyOptions } from "@sapphire/decorators";

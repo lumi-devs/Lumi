@@ -7,7 +7,7 @@ import {
   buildPermissionsView,
   PermsPerPage,
 } from "#modules/core/ui/permissions.js";
-import type { CardReply } from "#lib/utilities/cards.js";
+import type { CardReply } from "#lib/ui/cards.js";
 import { describe, it, expect } from "bun:test";
 
 type ComponentJson = {

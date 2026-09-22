@@ -16,7 +16,7 @@ import {
   type MessageReplyOptions,
 } from "discord.js";
 import { trace, SpanStatusCode } from "@opentelemetry/api";
-import { ephemeralCard, makeErrorCard, type CardReply } from "#lib/utilities/cards.js";
+import { ephemeralCard, makeErrorCard, type CardReply } from "#lib/ui/cards.js";
 import { errorFrom } from "#lib/utilities/errors.js";
 import {
   deleteMessageLater,

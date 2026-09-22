@@ -4,7 +4,7 @@ import { BaseSubcommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { lockAllTextChannels, unlockAllTextChannels } from "#lib/moderation/lockdown.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
-import { makeErrorCard } from "#lib/utilities/cards.js";
+import { makeErrorCard } from "#lib/ui/cards.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "lockdown",

@@ -4,7 +4,7 @@ import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
 import { instrumentCommandPiece } from "#lib/telemetry/instrument.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
-import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "#lib/utilities/cards.js";
+import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "#lib/ui/cards.js";
 import {
   BucketScope,
   Command,

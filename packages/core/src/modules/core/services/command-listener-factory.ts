@@ -5,7 +5,7 @@ import {
   resolveErrorCard,
   handleDenied,
 } from "#lib/utilities/command-response.js";
-import type { CardReply } from "#lib/utilities/cards.js";
+import type { CardReply } from "#lib/ui/cards.js";
 
 type DeniedEvent =
   | typeof Events.ChatInputCommandDenied

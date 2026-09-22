@@ -5,7 +5,7 @@ import type { ConfigUtility } from "#lib/utilities/pieces/ConfigUtility.js";
 import { hasPanelAccess, loadDetail } from "../services/config-panel.js";
 import { buildFeatureDetailView } from "#modules/core/ui/modules.js";
 import { buildOverridesView } from "#modules/core/ui/overrides.js";
-import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";
+import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
 import { cleanMention, isSnowflakeId } from "#lib/utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {

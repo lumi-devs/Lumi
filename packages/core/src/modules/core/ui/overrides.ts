@@ -11,13 +11,13 @@ import {
 } from "#modules/core/ui/common.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
-import { makeCard, noPingCard, type CardReply } from "#lib/utilities/cards.js";
+import { makeCard, noPingCard, type CardReply } from "#lib/ui/cards.js";
 import {
   buildSafeActionRows,
   createActionButton,
   createBackButton,
   createStringSelectMenu,
-} from "#lib/utilities/panels.js";
+} from "#lib/ui/panels.js";
 import { StringSelectMenuOptionBuilder } from "@discordjs/builders";
 import {
   channelMention,

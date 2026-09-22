@@ -8,13 +8,13 @@ import { ButtonStyle, MessageFlags, roleMention } from "discord.js";
 import { Rr } from "../constants.js";
 import type { ReactionRoleMenu, ReactionRoleOption } from "../data/reactionroles.js";
 import { parseHexColor } from "#lib/message-content.js";
-import { makeCard, type CardReply } from "#lib/utilities/cards.js";
+import { makeCard, type CardReply } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import {
   buildSafeActionRows,
   createActionButton,
   createStringSelectMenu,
-} from "#lib/utilities/panels.js";
+} from "#lib/ui/panels.js";
 import { renderMessageBlocksV2Container } from "#lib/utilities/message-blocks-v2.js";
 
 function safeEmoji(emoji: string | null) {

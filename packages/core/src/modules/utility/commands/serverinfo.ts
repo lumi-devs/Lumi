@@ -15,7 +15,7 @@ import {
 import { BaseCommand, sendReply, fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { makeCard } from "#lib/utilities/cards.js";
+import { makeCard } from "#lib/ui/cards.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
 
 @ApplyOptions<BaseCommand.Options>({

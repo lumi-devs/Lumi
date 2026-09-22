@@ -1,4 +1,4 @@
-import { makeSuccessCard, type CardReply } from "#lib/utilities/cards.js";
+import { makeSuccessCard, type CardReply } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { restartChoiceRow } from "#lib/restart.js";
 

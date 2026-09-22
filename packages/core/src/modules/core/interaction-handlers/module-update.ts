@@ -8,7 +8,7 @@ import {
 import { PermitResolver } from "#lib/permissions/index.js";
 import { type ButtonInteraction } from "discord.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
-import { makeErrorCard, makeInfoCard } from "#lib/utilities/cards.js";
+import { makeErrorCard, makeInfoCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
 import { moduleUpdateResultCard } from "#lib/downloader/cards.js";

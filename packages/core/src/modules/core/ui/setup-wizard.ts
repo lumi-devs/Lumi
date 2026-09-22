@@ -8,14 +8,14 @@ import {
   type SetupWizardState,
 } from "../services/setup-wizard.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { makeCard, makeSuccessCard, type CardReply } from "#lib/utilities/cards.js";
+import { makeCard, makeSuccessCard, type CardReply } from "#lib/ui/cards.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
 import {
   buildSafeActionRows,
   createActionButton,
   createChannelSelectMenu,
   createStringSelectMenu,
-} from "#lib/utilities/panels.js";
+} from "#lib/ui/panels.js";
 import {
   LabelBuilder,
   ModalBuilder,

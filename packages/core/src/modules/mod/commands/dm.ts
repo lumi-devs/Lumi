@@ -2,7 +2,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
-import { makeInfoCard } from "#lib/utilities/cards.js";
+import { makeInfoCard } from "#lib/ui/cards.js";
 
 const MaxMessageLength = 2000;
 

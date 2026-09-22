@@ -64,12 +64,12 @@ export default tseslint.config(
             {
               name: 'discord.js',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/utilities/cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
             },
             {
               name: '@discordjs/builders',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/utilities/cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
             },
           ],
         },

@@ -16,7 +16,7 @@ import {
 } from "@discordjs/builders";
 import { BaseCommand, sendReply, fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { makeCard, makeErrorCard } from "#lib/utilities/cards.js";
+import { makeCard, makeErrorCard } from "#lib/ui/cards.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
 
 const KeyPermissions = [

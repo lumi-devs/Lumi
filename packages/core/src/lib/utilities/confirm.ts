@@ -7,8 +7,8 @@ import {
   type User,
 } from "discord.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
-import { confirmRow } from "#lib/utilities/ui/kit.js";
-import { makeWarningCard, type CardReply } from "#lib/utilities/cards.js";
+import { confirmRow } from "#lib/ui/panels.js";
+import { makeWarningCard, type CardReply } from "#lib/ui/cards.js";
 
 /**
  * The slice of {@linkcode CommandContext} `confirmPrompt` actually needs -

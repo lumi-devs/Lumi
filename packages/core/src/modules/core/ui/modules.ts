@@ -14,7 +14,7 @@ import {
 import { hubTabRow } from "#modules/core/ui/hub.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
-import { makeCard, noPingCard, type CardReply } from "#lib/utilities/cards.js";
+import { makeCard, noPingCard, type CardReply } from "#lib/ui/cards.js";
 import {
   buildSafeActionRows,
   createActionButton,
@@ -25,7 +25,7 @@ import {
   createStringSelectMenu,
   createUserSelectMenu,
   settingRow,
-} from "#lib/utilities/panels.js";
+} from "#lib/ui/panels.js";
 import { StringSelectMenuOptionBuilder } from "@discordjs/builders";
 import { cutText } from "@sapphire/utilities";
 import { ButtonStyle, ChannelType } from "discord.js";

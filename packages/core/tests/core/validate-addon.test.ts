@@ -136,10 +136,10 @@ describe("validateAddon", () => {
     const dir = await makeAddon("aliases", {
       "info.json": JSON.stringify({ name: "aliases", author: ["T"], description: "d", short: "s", version: "1.0.0" }),
       "index.ts": GOOD_INDEX,
-      "lib/x.ts": `import { makeInfoCard } from "#lib/utilities/cards.js";\nimport { Utility } from "#lib/module-system/Utility.js";\nexport { makeInfoCard, Service };\n`,
+      "lib/x.ts": `import { makeInfoCard } from "#lib/ui/cards.js";\nimport { Utility } from "#lib/module-system/Utility.js";\nexport { makeInfoCard, Service };\n`,
     });
     const { errors } = await validateAddon(dir);
-    expect(errors.some((e) => e.includes('imports Lumi\'s internal path "#lib/utilities/cards.js"'))).toBe(true);
+    expect(errors.some((e) => e.includes('imports Lumi\'s internal path "#lib/ui/cards.js"'))).toBe(true);
     expect(errors.some((e) => e.includes('imports Lumi\'s internal path "#lib/module-system/Utility.js"'))).toBe(true);
   });
 

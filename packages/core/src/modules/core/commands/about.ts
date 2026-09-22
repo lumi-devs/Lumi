@@ -9,7 +9,7 @@ import {
 } from "discord.js";
 import { time, TimestampStyles } from "@discordjs/formatters";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
-import { createActionButton, buildSafeActionRows } from "#lib/utilities/panels.js";
+import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
 import { BaseCommand, sendReply, fetchTyped } from "#lib/commands.js";
 import { LanguageKeys } from "#lib/i18n/keys.js";
 import { LumiInfo } from "#lib/utilities/misc.js";
@@ -17,7 +17,8 @@ import { Emojis } from "#lib/utilities/assets.js";
 import { BotConfig } from "#lib/utilities/config.js";
 import { collectPingData } from "../services/ping-collect.js";
 import { fmtMB } from "../ui/ping-cards.js";
-import { makeCard, ephemeralCard, formatStatusBadge } from "#lib/utilities/cards.js";
+import { makeCard, ephemeralCard } from "#lib/ui/cards.js";
+import { formatStatusBadge } from "#lib/ui/layout.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
 
 @ApplyOptions<Command.Options>({

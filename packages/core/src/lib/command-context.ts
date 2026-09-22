@@ -11,7 +11,7 @@ import {
   type User,
 } from "discord.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, makeEmptyCard, type CardReply } from "#lib/utilities/cards.js";
+import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, makeEmptyCard, type CardReply } from "#lib/ui/cards.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
 import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
 import { BrandColors } from "#lib/branding/colors.js";

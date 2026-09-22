@@ -3,13 +3,13 @@ import { PanelsKeys } from "#lib/i18n/keys.js";
 import { row, type Row } from "#modules/core/ui/common.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
-import { makeCard, type CardReply } from "#lib/utilities/cards.js";
+import { makeCard, type CardReply } from "#lib/ui/cards.js";
 import {
   createStringSelectMenu,
   settingRow,
   tabRow,
   type Tab,
-} from "#lib/utilities/panels.js";
+} from "#lib/ui/panels.js";
 import {
   ButtonBuilder,
   SectionBuilder,

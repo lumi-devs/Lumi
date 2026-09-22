@@ -3,7 +3,7 @@ import { ApplicationCommandRegistry } from "@sapphire/framework";
 import { AttachmentBuilder } from "discord.js";
 import { BaseSubcommand } from "#lib/commands.js";
 import { CommandContext } from "#lib/command-context.js";
-import { makeSuccessCard, makeListCard, ephemeralCard } from "#lib/utilities/cards.js";
+import { makeSuccessCard, makeListCard, ephemeralCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { executeGdprDeletion, executeGdprExport } from "#lib/gdpr.js";

@@ -12,7 +12,7 @@ import {
   type FetchMessagesOptions,
   Collection,
 } from "discord.js";
-import { makeErrorCard, makeSuccessCard, makeWarningCard } from "#lib/utilities/cards.js";
+import { makeErrorCard, makeSuccessCard, makeWarningCard } from "#lib/ui/cards.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { logError, errorCode } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";

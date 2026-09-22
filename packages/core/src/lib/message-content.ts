@@ -5,7 +5,7 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import { makeCard, type CardReply } from "#lib/utilities/cards.js";
+import { makeCard, type CardReply } from "#lib/ui/cards.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
 import { renderTemplate } from "#lib/utilities/template.js";
 

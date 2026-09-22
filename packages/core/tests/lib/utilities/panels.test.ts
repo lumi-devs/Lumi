@@ -23,12 +23,12 @@ import {
   navRow,
   pageFooter,
   HubTabs,
-} from "#lib/utilities/panels.js";
-import { formatBreadcrumbHeader } from "#lib/utilities/ui/layout.js";
+} from "#lib/ui/panels.js";
+import { formatBreadcrumbHeader, formatStatusBadge, formatSubtitle, formatBreadcrumbs } from "#lib/ui/layout.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
 import { BrandColors } from "#lib/branding/colors.js";
-import { makeSuccessCard, formatStatusBadge, formatSubtitle, formatBreadcrumbs } from "#lib/utilities/cards.js";
-import { createStringSelectMenu as createStringSelectFromIndex } from "#lib/utilities/panels.js";
+import { makeSuccessCard } from "#lib/ui/cards.js";
+import { createStringSelectMenu as createStringSelectFromIndex } from "#lib/ui/panels.js";
 
 describe("Panel & Card Utility Standardization", () => {
   beforeEach(() => {
@@ -284,7 +284,7 @@ describe("Panel & Card Utility Standardization", () => {
     });
 
     it("lumi/ui exposes the core kit builders themselves", async () => {
-      const kit = await import("#lib/utilities/ui/kit.js");
+      const kit = await import("#lib/ui/panels.js");
       const addon = await import("#lib/addon-sandbox/sdk/ui.js");
 
       expect(addon.settingRow).toBe(kit.settingRow);

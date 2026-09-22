@@ -1,7 +1,7 @@
 import { ActionRowBuilder, type ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { createActionButton, buildSafeActionRows } from "#lib/utilities/panels.js";
+import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
 
 /** Visually distinct emoji; challenge indices point into this pool. */
 export const EmojiPool = [

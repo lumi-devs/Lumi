@@ -8,7 +8,7 @@ import type {
 import type { AddonRpcRequest } from "@lumi/contracts";
 import type { CommandContext, CtxOptionSpec } from "#lib/command-context.js";
 import { MessageFlags } from "discord.js";
-import { ephemeralCard, type CardReply } from "#lib/utilities/cards.js";
+import { ephemeralCard, type CardReply } from "#lib/ui/cards.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import { AddonRelayTaskName } from "./relay-task.js";

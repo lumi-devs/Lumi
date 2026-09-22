@@ -16,8 +16,7 @@ import {
 } from "@discordjs/builders";
 import { Emojis } from "#lib/utilities/assets.js";
 import { Time } from "@sapphire/time-utilities";
-import { fitLines } from "./cards.js";
-import type { CardReply } from "./ui/types.js";
+import { fitLines, type CardReply } from "#lib/ui/cards.js";
 
 export interface PaginationOptions {
   interactionOrMessage: ChatInputCommandInteraction | Message;

@@ -14,7 +14,7 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import { makeInfoCard } from "#lib/utilities/cards.js";
+import { makeInfoCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";

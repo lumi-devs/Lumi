@@ -5,7 +5,7 @@ import {
   type DownloaderUtility,
 } from "#lib/utilities/pieces/DownloaderUtility.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { makeErrorCard, makeSuccessCard, type CardReply } from "#lib/utilities/cards.js";
+import { makeErrorCard, makeSuccessCard, type CardReply } from "#lib/ui/cards.js";
 import { errorFrom } from "#lib/utilities/errors.js";
 import {
   moduleAlreadyInstalledCard,

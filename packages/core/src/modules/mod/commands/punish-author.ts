@@ -1,5 +1,5 @@
 import { BaseCommand, sendReply } from "#lib/commands.js";
-import { createStringSelectMenu } from "#lib/utilities/panels.js";
+import { createStringSelectMenu } from "#lib/ui/panels.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import {

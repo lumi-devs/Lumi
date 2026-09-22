@@ -10,14 +10,16 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { cutText } from "@sapphire/utilities";
+import type { MessageMentionOptions } from "discord.js";
 import { MessageFlags } from "discord.js";
-import { resolveCardColor } from "./config.js";
-import { formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "./ui/layout.js";
-import type { CardReply } from "./ui/types.js";
+import { resolveCardColor } from "#lib/utilities/config.js";
+import { formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "./layout.js";
 
-export type { CardReply } from "./ui/types.js";
-
-export { formatStatusBadge, formatSubtitle, formatBreadcrumbs };
+export interface CardReply {
+  readonly flags?: number;
+  readonly components: readonly ContainerBuilder[];
+  readonly allowedMentions?: MessageMentionOptions;
+}
 
 export interface CardOptions {
   subtitle?: string;

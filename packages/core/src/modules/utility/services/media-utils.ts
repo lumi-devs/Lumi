@@ -13,7 +13,7 @@ import {
   MediaGalleryItemBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { makeErrorCard, makeInfoCard } from "#lib/utilities/cards.js";
+import { makeErrorCard, makeInfoCard } from "#lib/ui/cards.js";
 import { container } from "@sapphire/framework";
 import { capitalizeFirstLetter } from "@sapphire/utilities";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";

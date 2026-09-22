@@ -9,8 +9,8 @@ import {
 import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
 import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
 import type { GuildMessage } from "#lib/types/common.js";
-import { makeCard } from "#lib/utilities/cards.js";
-import { createActionButton, buildSafeActionRows } from "#lib/utilities/panels.js";
+import { makeCard } from "#lib/ui/cards.js";
+import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
 import { logError } from "#lib/utilities/errors.js";
 import { canSendMessages } from "#lib/utilities/misc.js";
 import { scheduleTask } from "#lib/schedule-task.js";

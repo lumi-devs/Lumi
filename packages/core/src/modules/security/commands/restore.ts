@@ -5,7 +5,7 @@ import { BaseSubcommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
-import { makeErrorCard } from "#lib/utilities/cards.js";
+import { makeErrorCard } from "#lib/ui/cards.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "restore",

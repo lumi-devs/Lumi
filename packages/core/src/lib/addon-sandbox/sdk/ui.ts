@@ -21,7 +21,7 @@ export {
   noPingCard,
   type CardReply,
   type CardOptions,
-} from "#lib/utilities/cards.js";
+} from "#lib/ui/cards.js";
 export { resolveCardColor, type CardColorKey } from "#lib/utilities/config.js";
 export { BrandColors } from "#lib/branding/colors.js";
 export {
@@ -40,7 +40,7 @@ export {
   type ConfirmRowOptions,
   type NavAction,
   type NavRowOptions,
-} from "#lib/utilities/ui/kit.js";
+} from "#lib/ui/panels.js";
 export { confirmPrompt, type ConfirmPromptOptions } from "#lib/utilities/confirm.js";
 export { paginateList, paginateContainer } from "#lib/utilities/pagination.js";
 export { Emojis } from "#lib/utilities/assets.js";

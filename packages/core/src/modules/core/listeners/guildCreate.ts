@@ -2,7 +2,7 @@ import { Listener, Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Guild } from "discord.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { makeWarningCard } from "#lib/utilities/cards.js";
+import { makeWarningCard } from "#lib/ui/cards.js";
 import {
   getServerLockState,
   shouldLeaveOnJoin,

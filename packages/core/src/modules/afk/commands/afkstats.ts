@@ -2,7 +2,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
-import { makeCard } from "#lib/utilities/cards.js";
+import { makeCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { getAfkStats } from "../data/afk.js";
 
