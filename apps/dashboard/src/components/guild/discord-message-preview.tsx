@@ -512,7 +512,7 @@ export function DiscordMessagePreview({
 
 /**
  * One component inside a Components V2 container, mirroring what
- * `buildContainer` in the bot's `lib/utilities/cards.ts` actually assembles.
+ * `buildContainer` in the bot's `lib/ui/cards.ts` actually assembles.
  */
 export type PreviewV2Component =
   | { kind: "text"; content: string }
