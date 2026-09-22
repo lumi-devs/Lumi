@@ -29,7 +29,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { AutocompleteInteraction } from "discord.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { DownloaderUtility } from "#lib/utilities/pieces/DownloaderUtility.js";
+import type { DownloaderUtility } from "../utilities/DownloaderUtility.js";
 import {
   filterAutocompleteChoices,
   respondWithChoices,
@@ -38,7 +38,7 @@ import {
   installedModuleChoices,
   repoModuleChoices,
   repoNameChoices,
-} from "#lib/downloader/autocomplete.js";
+} from "../services/downloader-autocomplete.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "module",

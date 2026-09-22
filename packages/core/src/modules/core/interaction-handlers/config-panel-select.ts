@@ -3,7 +3,7 @@ import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { FieldType } from "#lib/module-system/config-schema.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { ConfigUtility } from "#lib/utilities/pieces/ConfigUtility.js";
+import type { ConfigUtility } from "../utilities/ConfigUtility.js";
 import {
   configAccessDenied,
   hasPanelAccess,

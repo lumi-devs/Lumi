@@ -1,10 +1,9 @@
 import { container } from "@sapphire/framework";
 import { accountRpcHandlers } from "#lib/rpc/account-rpc.js";
-import { downloaderRpcHandlers } from "#lib/rpc/downloader-rpc.js";
 import type { RpcBoundHandler, RpcImplementation } from "#lib/rpc/implement.js";
 import { systemRpcHandlers } from "#lib/rpc/system-rpc.js";
 import { afkRpcHandlers } from "#modules/afk/rpc.js";
-import { coreRpcHandlers } from "#modules/core/rpc.js";
+import { coreRpcHandlers, downloaderRpcHandlers } from "#modules/core/rpc.js";
 import { dashboardRpcHandlers } from "#modules/dashboard/rpc.js";
 import { loggingRpcHandlers } from "#modules/logging/rpc.js";
 import { modRpcHandlers } from "#modules/mod/rpc.js";

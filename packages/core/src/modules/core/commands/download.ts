@@ -9,7 +9,7 @@ import {
   installedModuleChoices,
   repoModuleChoices,
   repoNameChoices,
-} from "#lib/downloader/autocomplete.js";
+} from "../services/downloader-autocomplete.js";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -20,7 +20,7 @@ import { makeInfoCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
-import type { DownloaderUtility } from "#lib/utilities/pieces/DownloaderUtility.js";
+import type { DownloaderUtility } from "../utilities/DownloaderUtility.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "download",

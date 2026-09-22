@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { deriveRepoNameFromUrl } from "./url-helpers.js";
+import { deriveRepoNameFromUrl } from "#modules/core/services/url-helpers.js";
 
 const NameRe = /^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/;
 

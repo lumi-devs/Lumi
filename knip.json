@@ -24,7 +24,6 @@
         "src/lib/regex-worker/worker.ts",
         "src/lib/addon-sandbox/sdk/*.ts",
         "src/lib/permissions/preconditions/*.ts",
-        "src/lib/utilities/pieces/*.ts",
         "src/modules/*/index.ts",
         "src/modules/*/{commands,listeners,interaction-handlers,scheduled-tasks,utilities}/**/*.ts",
         "scripts/*.ts",

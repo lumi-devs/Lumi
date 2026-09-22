@@ -1,9 +1,9 @@
-import { moduleUpdateResultCard } from "#lib/downloader/cards.js";
+import { moduleUpdateResultCard } from "#modules/core/ui/module-update-card.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import {
   ModuleAlreadyInstalledError,
   type DownloaderUtility,
-} from "#lib/utilities/pieces/DownloaderUtility.js";
+} from "#modules/core/utilities/DownloaderUtility.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { makeErrorCard, makeSuccessCard, type CardReply } from "#lib/ui/cards.js";
 import { errorFrom } from "#lib/utilities/errors.js";

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import type { ContainerBuilder } from "@discordjs/builders";
-import { moduleUpdateResultCard } from "#lib/downloader/cards.js";
+import { moduleUpdateResultCard } from "#modules/core/ui/module-update-card.js";
 
 /** Flattens all text-display content in a container into a single string for substring assertions. */
 function textOf(container: ContainerBuilder): string {
@@ -21,7 +21,7 @@ function actionRowsOf(container: ContainerBuilder) {
   return data.components.filter((c) => c.type === 1);
 }
 
-describe("downloader/cards moduleUpdateResultCard", () => {
+describe("module-update-card moduleUpdateResultCard", () => {
   it("returns up-to-date card when result.updated is false", () => {
     const card = moduleUpdateResultCard(
       { updated: false },

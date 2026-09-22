@@ -11,8 +11,8 @@ import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { makeErrorCard, makeInfoCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
-import { moduleUpdateResultCard } from "#lib/downloader/cards.js";
-import type { DownloaderUtility } from "#lib/utilities/pieces/DownloaderUtility.js";
+import { moduleUpdateResultCard } from "../ui/module-update-card.js";
+import type { DownloaderUtility } from "../utilities/DownloaderUtility.js";
 
 @ApplyOptions<InteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,

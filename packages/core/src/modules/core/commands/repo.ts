@@ -1,5 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { deriveRepoNameFromUrl } from "#lib/downloader/url-helpers.js";
+import { deriveRepoNameFromUrl } from "../services/url-helpers.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { AutocompleteInteraction } from "discord.js";
@@ -7,7 +7,7 @@ import { BaseSubcommand } from "#lib/commands.js";
 import { CommandContext } from "#lib/command-context.js";
 import { paginateList } from "#lib/utilities/pagination.js";
 import { respondWithChoices } from "#lib/utilities/autocomplete.js";
-import { repoNameChoices } from "#lib/downloader/autocomplete.js";
+import { repoNameChoices } from "../services/downloader-autocomplete.js";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -18,7 +18,7 @@ import { makeInfoCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
-import type { DownloaderUtility } from "#lib/utilities/pieces/DownloaderUtility.js";
+import type { DownloaderUtility } from "../utilities/DownloaderUtility.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "repo",

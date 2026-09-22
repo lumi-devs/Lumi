@@ -11,7 +11,7 @@ export function cn(...inputs: ClassValue[]): string {
  * invent one by hand - e.g. `https://github.com/owner/repo(.git)` -> `repo`.
  *
  * Client-side duplicate of `deriveRepoNameFromUrl` in
- * `packages/core/src/lib/downloader/url-helpers.ts` (server-only reachable
+ * `packages/core/src/modules/core/services/url-helpers.ts` (server-only reachable
  * code - the dashboard app doesn't depend on `@lumi/core`). Keep the two in
  * sync if either changes; this is a few lines of pure string logic, not
  * worth sharing a module across the server/client boundary for.

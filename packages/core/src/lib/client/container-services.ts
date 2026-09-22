@@ -15,7 +15,7 @@ import {
   streamDlqLength,
   streamLength,
 } from "@lumi/observability";
-import { container, Store, type SapphireClient } from "@sapphire/framework";
+import { container, type SapphireClient } from "@sapphire/framework";
 import { Time } from "@sapphire/time-utilities";
 import { pathToFileURL } from "node:url";
 
@@ -43,10 +43,6 @@ export function installContainerServices(
   }
   client.stores.register(moduleStore);
   client.stores.registerPath(new URL("../permissions/", import.meta.url));
-  (client.stores.get("utilities") as Store<any> | undefined)?.registerPath(
-    new URL("../utilities/pieces/", import.meta.url),
-  );
-
 
   const redis = createRedisClient();
   const ownedEventBus = createEventBus({
