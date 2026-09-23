@@ -39,4 +39,11 @@ describe("lib/interactions custom-id codec", () => {
     );
     expect(parsed).toEqual({ action: "claim", channelId: "12345" });
   });
+
+  it("round-trips a compound prefix containing its own colon", () => {
+    const CompoundId = defineCustomId("afk:mentions", ["userId", "page"]);
+    const id = CompoundId.build({ userId: "999", page: "2" });
+    expect(id).toBe("afk:mentions:999:2");
+    expect(CompoundId.parse(id)).toEqual({ userId: "999", page: "2" });
+  });
 });

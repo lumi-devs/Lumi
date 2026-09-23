@@ -24,12 +24,12 @@ export function defineCustomId<const F extends readonly string[]>(
     },
     parse(customId) {
       if (!customId.startsWith(`${prefix}:`)) return null;
-      const segments = customId.split(":");
-      if (segments.length !== fields.length + 1) return null;
+      const segments = customId.slice(prefix.length + 1).split(":");
+      if (segments.length !== fields.length) return null;
       const result = {} as Record<F[number], string>;
       for (let i = 0; i < fields.length; i++) {
         const field = fields[i];
-        const value = segments[i + 1];
+        const value = segments[i];
         if (field === undefined || value === undefined || value.length === 0) {
           return null;
         }
