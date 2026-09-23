@@ -12,9 +12,7 @@ import {
   MessageFlags,
   type MessageContextMenuCommandInteraction,
 } from "discord.js";
-
-/** Encodes the target author in the select menu's customId; decoded by the select handler. */
-export const PunishAuthorSelectPrefix = "modqp:select";
+import { PunishAuthorSelectId } from "../constants.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "punish-author",
@@ -40,7 +38,7 @@ export class PunishAuthorCommand extends BaseCommand {
 
     const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
       createStringSelectMenu({
-        customId: `${PunishAuthorSelectPrefix}:${authorId}`,
+        customId: PunishAuthorSelectId.build({ authorId }),
         placeholder: "Choose a punishment...",
         options: [
           { label: "⚠️ Warn", value: "warn" },

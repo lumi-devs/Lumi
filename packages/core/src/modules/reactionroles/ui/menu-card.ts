@@ -5,7 +5,7 @@ import {
   TextDisplayBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle, MessageFlags, roleMention } from "discord.js";
-import { Rr } from "../constants.js";
+import { ReactionRolePickId, ReactionRoleSelectId } from "../constants.js";
 import type { ReactionRoleMenu, ReactionRoleOption } from "../data/reactionroles.js";
 import { parseHexColor } from "#lib/message-content.js";
 import { makeCard, type CardReply } from "#lib/ui/cards.js";
@@ -62,7 +62,7 @@ export function buildMenuCard(menu: ReactionRoleMenu): CardReply {
   if (menu.mode === "buttons") {
     const buttons = menu.options.map((option) =>
       createActionButton({
-        customId: `${Rr}:pick:${menu.id}:${option.id}`,
+        customId: ReactionRolePickId.build({ menuId: menu.id, optionId: option.id }),
         label: option.label.slice(0, 80),
         style: ButtonStyle.Secondary,
         emoji: safeEmoji(option.emoji),
@@ -81,7 +81,7 @@ export function buildMenuCard(menu: ReactionRoleMenu): CardReply {
       ? [
           new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
             createStringSelectMenu({
-              customId: `${Rr}:select:${menu.id}`,
+              customId: ReactionRoleSelectId.build({ menuId: menu.id }),
               placeholder: "Choose your roles…",
               minValues: 0,
               maxValues: Math.min(Math.max(menu.options.length, 1), 25),

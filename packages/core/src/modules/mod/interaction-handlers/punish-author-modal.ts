@@ -1,6 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import {
-  InteractionHandler,
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import {
@@ -9,7 +8,7 @@ import {
   type ModalSubmitInteraction,
 } from "discord.js";
 import { fetchT } from "@sapphire/plugin-i18next";
-import { isModuleEnabled } from "#lib/utilities/misc.js";
+import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
 import { parseDuration } from "#lib/utilities/time.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import {
@@ -22,7 +21,7 @@ import { KickAction } from "#modules/mod/services/actions/KickAction.js";
 import { MuteAction } from "#modules/mod/services/actions/MuteAction.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { WarnAction } from "#modules/mod/services/actions/WarnAction.js";
-import { PunishAuthorModalPrefix } from "./punish-author-select.js";
+import { PunishAuthorModalId } from "../constants.js";
 
 const DefaultReason = "No reason provided.";
 
@@ -35,30 +34,29 @@ const CaseActionFor: Record<string, string> = {
   timeout: "mute",
 };
 
-@ApplyOptions<InteractionHandler.Options>({
+@ApplyOptions<ModuleInteractionHandler.Options>({
   name: "punish-author-modal",
   interactionHandlerType: InteractionHandlerTypes.ModalSubmit,
+  module: "mod",
 })
-export class PunishAuthorModalHandler extends InteractionHandler {
+export class PunishAuthorModalHandler extends ModuleInteractionHandler<
+  ModalSubmitInteraction,
+  { action: string; authorId: string }
+> {
   public override parse(interaction: ModalSubmitInteraction) {
-    if (!interaction.customId.startsWith(`${PunishAuthorModalPrefix}:`)) {
-      return this.none();
-    }
-    const [, , action, authorId] = interaction.customId.split(":");
-    if (!action || !authorId || !(action in CaseActionFor)) return this.none();
-    return this.some({ action, authorId });
+    const parsed = PunishAuthorModalId.parse(interaction.customId);
+    if (!parsed || !(parsed.action in CaseActionFor)) return this.none();
+    return this.some(parsed);
   }
 
-  public async run(
+  protected override async handle(
     interaction: ModalSubmitInteraction,
     { action, authorId }: { action: string; authorId: string },
   ): Promise<void> {
-    if (!interaction.inGuild() || !interaction.guild) return;
+    const { guild } = interaction;
+    if (!guild) return;
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    if (!(await isModuleEnabled(interaction.guildId, "mod"))) return;
-
-    const guild = interaction.guild;
     const moderator = interaction.user;
     const t = (await fetchT(interaction)) as unknown as LumiT;
 

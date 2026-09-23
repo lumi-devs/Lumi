@@ -1,3 +1,5 @@
+import { defineCustomId } from "#lib/interactions/custom-id.js";
+
 export const NickPrefix = "[AFK] ";
 export const AfkMaxReasonLength = 100;
 
@@ -24,3 +26,5 @@ export const AfkTTL = {
   entry: 24 * 60 * 60,
   mentions: 24 * 60 * 60,
 } as const;
+
+export const AfkMentionsId = defineCustomId("afk:mentions", ["userId", "page"]);

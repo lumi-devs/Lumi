@@ -18,6 +18,7 @@ import { Emojis } from "#lib/utilities/assets.js";
 import {
   AfkKeys,
   AfkMentionCooldownMs,
+  AfkMentionsId,
   AfkNickEditCooldownMs,
   AfkWelcomeCooldownMs,
   NickPrefix,
@@ -100,7 +101,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
       ? buildSafeActionRows([
           new ActionRowBuilder<ButtonBuilder>().addComponents(
             createActionButton({
-              customId: `afk:mentions:${userId}`,
+              customId: AfkMentionsId.build({ userId, page: "0" }),
               label: t("afk:viewMentionsButton", { count: mentions.length }),
               emoji: Emojis.Mail,
               style: ButtonStyle.Secondary,

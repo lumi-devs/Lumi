@@ -1,37 +1,32 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import {
-  InteractionHandler,
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import type { StringSelectMenuInteraction } from "discord.js";
 import { LabelBuilder, ModalBuilder, TextInputBuilder } from "@discordjs/builders";
 import { TextInputStyle } from "discord.js";
-import { isModuleEnabled } from "#lib/utilities/misc.js";
-import { PunishAuthorSelectPrefix } from "../commands/punish-author.js";
+import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
+import { PunishAuthorModalId, PunishAuthorSelectId } from "../constants.js";
 
-export const PunishAuthorModalPrefix = "modqp:modal";
-
-@ApplyOptions<InteractionHandler.Options>({
+@ApplyOptions<ModuleInteractionHandler.Options>({
   name: "punish-author-select",
   interactionHandlerType: InteractionHandlerTypes.SelectMenu,
+  module: "mod",
 })
-export class PunishAuthorSelectHandler extends InteractionHandler {
+export class PunishAuthorSelectHandler extends ModuleInteractionHandler<
+  StringSelectMenuInteraction,
+  { authorId: string }
+> {
   public override parse(interaction: StringSelectMenuInteraction) {
-    if (!interaction.customId.startsWith(`${PunishAuthorSelectPrefix}:`)) {
-      return this.none();
-    }
-    const authorId = interaction.customId.split(":")[2];
-    if (!authorId) return this.none();
-    return this.some({ authorId });
+    const parsed = PunishAuthorSelectId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    return this.some(parsed);
   }
 
-  public async run(
+  protected override async handle(
     interaction: StringSelectMenuInteraction,
     { authorId }: { authorId: string },
   ): Promise<void> {
-    if (!interaction.inGuild()) return;
-    if (!(await isModuleEnabled(interaction.guildId, "mod"))) return;
-
     const action = interaction.values[0];
     if (!action) return;
 
@@ -45,7 +40,7 @@ export class PunishAuthorSelectHandler extends InteractionHandler {
       .setTextInputComponent(reasonInput);
 
     const modal = new ModalBuilder()
-      .setCustomId(`${PunishAuthorModalPrefix}:${action}:${authorId}`)
+      .setCustomId(PunishAuthorModalId.build({ action, authorId }))
       .setTitle(`Punish: ${action}`)
       .addLabelComponents(reasonLabel);
 

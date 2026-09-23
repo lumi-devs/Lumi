@@ -17,6 +17,7 @@ import { makeErrorCard, makeInfoCard } from "#lib/ui/cards.js";
 import { container } from "@sapphire/framework";
 import { capitalizeFirstLetter } from "@sapphire/utilities";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
+import { UserMediaViewId } from "../constants.js";
 
 interface MediaRequestContext {
   context: Message | RepliableInteraction;
@@ -121,7 +122,7 @@ export async function handleMediaRequest({
     actionRows.push(
       new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
         new ButtonBuilder()
-          .setCustomId(`user-media:view:${fetchedUser.id}:${mediaType}`)
+          .setCustomId(UserMediaViewId.build({ userId: fetchedUser.id, type: mediaType }))
           .setLabel(t(LanguageKeys.Commands.MediaViewBtn, { mediaType: capitalizeFirstLetter(mediaType) }))
           .setStyle(ButtonStyle.Primary),
       ),

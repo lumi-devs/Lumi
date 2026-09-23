@@ -1,5 +1,4 @@
 import {
-  InteractionHandler,
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
@@ -10,46 +9,48 @@ import type {
 } from "discord.js";
 import { MessageFlags } from "discord.js";
 import { fetchTyped } from "#lib/commands.js";
-import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
 import { logError } from "#lib/utilities/errors.js";
-import { isModuleEnabled } from "#lib/utilities/misc.js";
-import { Rr } from "../constants.js";
+import { ReactionRoleSelectId } from "../constants.js";
 import type ReactionRolesUtility from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
 
-@ApplyOptions<InteractionHandler.Options>({
+@ApplyOptions<ModuleInteractionHandler.Options>({
   name: "reactionroles-pick-select",
   interactionHandlerType: InteractionHandlerTypes.SelectMenu,
+  module: "reactionroles",
 })
-export class ReactionRolesPickSelectHandler extends BaseInteractionHandler {
+export class ReactionRolesPickSelectHandler extends ModuleInteractionHandler<
+  StringSelectMenuInteraction,
+  { menuId: string }
+> {
   private get service(): ReactionRolesUtility {
     return getUtility("reactionroles");
   }
 
   public override parse(interaction: Interaction) {
     if (!interaction.isStringSelectMenu()) return this.none();
-    if (!interaction.customId.startsWith(`${Rr}:select:`)) return this.none();
-    const [, , menuId] = interaction.customId.split(":");
-    if (!menuId) return this.none();
-    return this.some({ menuId });
+    const parsed = ReactionRoleSelectId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    return this.some(parsed);
   }
 
-  public async run(
+  protected override async handle(
     interaction: StringSelectMenuInteraction,
     { menuId }: { menuId: string },
   ): Promise<void> {
-    if (!interaction.inGuild()) return;
+    const { guild } = interaction;
+    if (!guild) return;
     await interaction.deferReply({
       flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     });
     const t = await fetchTyped(interaction);
-    if (!(await isModuleEnabled(interaction.guildId, "reactionroles"))) return;
 
     const member = interaction.member as GuildMember;
     try {
       const results = await this.service.toggleSelect(
-        interaction.guild!,
+        guild,
         member,
         menuId,
         interaction.values,

@@ -2,6 +2,7 @@ import { ActionRowBuilder, type ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
+import { CaptchaButtonId } from "../constants.js";
 
 /** Visually distinct emoji; challenge indices point into this pool. */
 export const EmojiPool = [
@@ -21,7 +22,6 @@ export const EmojiPool = [
 
 export const SequenceLength = 4;
 export const MaxAttempts = 3;
-export const CaptchaButtonPrefix = "sec:vseq";
 
 /** Persisted per-member challenge state (Redis JSON). */
 export interface CaptchaState {
@@ -69,7 +69,7 @@ export function buildCaptchaRows(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         slice.map((idx) =>
           createActionButton({
-            customId: `${CaptchaButtonPrefix}:${idx}`,
+            customId: CaptchaButtonId.build({ idx: String(idx) }),
             emoji: Emojis.parse(EmojiPool[idx]!),
             style: solved.has(idx) ? ButtonStyle.Success : ButtonStyle.Secondary,
             disabled: solved.has(idx),

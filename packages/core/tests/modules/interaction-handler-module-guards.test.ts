@@ -57,6 +57,7 @@ describe("interaction handlers guard on per-guild module state", () => {
     );
     const handler = new PanicRevertInteractionHandler(pieceContext("panic"), {
       interactionHandlerType: InteractionHandlerTypes.Button,
+      module: "security",
     });
     const interaction = {
       inGuild: () => true,
@@ -69,11 +70,11 @@ describe("interaction handlers guard on per-guild module state", () => {
     };
 
     isModuleEnabled.mockResolvedValue(false);
-    await handler.run(interaction as any);
+    await handler.run(interaction as any, undefined);
     expect((container as any).permitResolver.hasPermit).not.toHaveBeenCalled();
 
     isModuleEnabled.mockResolvedValue(true);
-    await expect(handler.run(interaction as any)).rejects.toThrow();
+    await expect(handler.run(interaction as any, undefined)).rejects.toThrow();
     expect((container as any).permitResolver.hasPermit).toHaveBeenCalled();
   });
 
@@ -83,6 +84,7 @@ describe("interaction handlers guard on per-guild module state", () => {
     );
     const handler = new VerifyInteractionHandler(pieceContext("verify"), {
       interactionHandlerType: InteractionHandlerTypes.Button,
+      module: "security",
     });
     const interaction = {
       inGuild: () => true,
@@ -104,6 +106,7 @@ describe("interaction handlers guard on per-guild module state", () => {
     const HandlerClass = mod.default;
     const handler = new HandlerClass(pieceContext("view"), {
       interactionHandlerType: InteractionHandlerTypes.Button,
+      module: "utility",
     });
     const interaction = {
       inGuild: () => true,
@@ -128,6 +131,7 @@ describe("interaction handlers guard on per-guild module state", () => {
     const HandlerClass = mod.default;
     const handler = new HandlerClass(pieceContext("afk-mentions"), {
       interactionHandlerType: InteractionHandlerTypes.Button,
+      module: "afk",
     });
     const interaction = {
       inGuild: () => true,
@@ -139,7 +143,7 @@ describe("interaction handlers guard on per-guild module state", () => {
     };
 
     isModuleEnabled.mockResolvedValue(false);
-    await handler.run(interaction as any, { userId: "u-1", page: 0 });
+    await handler.run(interaction as any, { userId: "u-1", page: "0" });
     expect(getAfkMentions).not.toHaveBeenCalled();
   });
 

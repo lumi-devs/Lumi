@@ -1,17 +1,15 @@
 import {
-  InteractionHandler,
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { MessageFlags, type ButtonInteraction } from "discord.js";
-import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
 import { fetchTyped } from "#lib/commands.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { getDashboardPublicUrl } from "#lib/env.js";
-import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
-import { CaptchaButtonPrefix } from "../services/captcha.js";
+import { CaptchaButtonId } from "../constants.js";
 import {
   VerifyButtonId,
   buildChallengeCard,
@@ -22,26 +20,31 @@ import {
 
 type Parsed = { kind: "start" } | { kind: "step"; idx: number };
 
-@ApplyOptions<InteractionHandler.Options>({
+@ApplyOptions<ModuleInteractionHandler.Options>({
   name: "security-verify",
   interactionHandlerType: InteractionHandlerTypes.Button,
+  module: "security",
 })
-export class VerifyInteractionHandler extends BaseInteractionHandler {
+export class VerifyInteractionHandler extends ModuleInteractionHandler<
+  ButtonInteraction,
+  Parsed
+> {
   public override parse(interaction: ButtonInteraction) {
     if (interaction.customId === VerifyButtonId) {
       return this.some<Parsed>({ kind: "start" });
     }
-    if (interaction.customId.startsWith(`${CaptchaButtonPrefix}:`)) {
-      const idx = Number.parseInt(interaction.customId.split(":")[2] ?? "", 10);
+    const parsed = CaptchaButtonId.parse(interaction.customId);
+    if (parsed) {
+      const idx = Number.parseInt(parsed.idx, 10);
       if (Number.isNaN(idx)) return this.none();
       return this.some<Parsed>({ kind: "step", idx });
     }
     return this.none();
   }
 
-  public async run(interaction: ButtonInteraction, parsed: Parsed) {
-    if (!interaction.inGuild() || !interaction.guild) return;
-    if (!(await isModuleEnabled(interaction.guild.id, "security"))) return;
+  protected override async handle(interaction: ButtonInteraction, parsed: Parsed) {
+    const { guild } = interaction;
+    if (!guild) return;
 
     // "start" is a fresh ephemeral reply (the Verify button lives on a
     // shared public panel); "step" edits that per-user ephemeral challenge
@@ -57,13 +60,12 @@ export class VerifyInteractionHandler extends BaseInteractionHandler {
 
     const t = await fetchTyped(interaction);
     const security = getUtility("security");
-    const { guild } = interaction;
     const userId = interaction.user.id;
 
     if (parsed.kind === "start") {
       const config = await security.loadVerificationConfig(guild.id);
       if (!config.enabled || !config.verifiedRoleId) {
-        return interaction.editReply(
+        await interaction.editReply(
           ephemeralCard(
             makeErrorCard(
               t(PanelsKeys.VerifyDisabledTitle),
@@ -71,20 +73,22 @@ export class VerifyInteractionHandler extends BaseInteractionHandler {
             ),
           ),
         );
+        return;
       }
       if (config.mode === "none") {
         await security.grantVerified(guild, userId);
-        return interaction.editReply(
+        await interaction.editReply(
           ephemeralCard(
             makeSuccessCard(t(PanelsKeys.VerifyOkTitle), t(PanelsKeys.VerifyOk)),
           ),
         );
+        return;
       }
 
       if (config.mode === "web") {
         const baseUrl = getDashboardPublicUrl();
         if (!baseUrl) {
-          return interaction.editReply(
+          await interaction.editReply(
             ephemeralCard(
               makeErrorCard(
                 t(PanelsKeys.VerifyWebUnavailableTitle),
@@ -92,44 +96,52 @@ export class VerifyInteractionHandler extends BaseInteractionHandler {
               ),
             ),
           );
+          return;
         }
-        return interaction.editReply(
+        await interaction.editReply(
           ephemeralCard(buildWebPromptCard(t, `${baseUrl}/verify/${guild.id}`)),
         );
+        return;
       }
 
       const state = await security.startChallenge(guild.id, userId, config);
-      return interaction.editReply(ephemeralCard(buildChallengeCard(t, state)));
+      await interaction.editReply(ephemeralCard(buildChallengeCard(t, state)));
+      return;
     }
 
     const result = await security.advanceChallenge(guild.id, userId, parsed.idx);
     if (!result) {
-      return interaction.editReply(
+      await interaction.editReply(
         makeErrorCard(
           t(PanelsKeys.VerifyExpiredTitle),
           t(PanelsKeys.VerifyExpired),
         ),
       );
+      return;
     }
 
     const { state, outcome } = result;
     switch (outcome) {
       case "solved":
         await security.grantVerified(guild, userId);
-        return interaction.editReply(
+        await interaction.editReply(
           makeSuccessCard(t(PanelsKeys.VerifyOkTitle), t(PanelsKeys.VerifyOk)),
         );
+        return;
       case "progress":
-        return interaction.editReply(buildProgressCard(t, state));
+        await interaction.editReply(buildProgressCard(t, state));
+        return;
       case "wrong":
-        return interaction.editReply(buildWrongCard(t, state));
+        await interaction.editReply(buildWrongCard(t, state));
+        return;
       case "failed":
-        return interaction.editReply(
+        await interaction.editReply(
           makeErrorCard(
             t(PanelsKeys.VerifyFailedTitle),
             t(PanelsKeys.VerifyFailed),
           ),
         );
+        return;
     }
   }
 }
