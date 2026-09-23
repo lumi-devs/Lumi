@@ -23,6 +23,7 @@ import {
 } from "@sapphire/framework";
 import { tryParseJSON } from "@sapphire/utilities";
 import type { Message } from "discord.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { buildClientOptions } from "./client-options.js";
 import { installContainerServices } from "./container-services.js";
 import { PrefixCache } from "./PrefixCache.js";
@@ -56,6 +57,7 @@ export class LumiClient extends SapphireClient {
   private _bullFailedHandler: ((job: unknown, err: unknown) => void) | null = null;
   private _prefixCache: PrefixCache = new PrefixCache();
   private _prefixCacheUnbind: (() => void) | null = null;
+  private _repositoryCacheUnbind: (() => void) | null = null;
 
   public constructor(_options: LumiClient.Options = {}) {
     super(buildClientOptions());
@@ -66,6 +68,9 @@ export class LumiClient extends SapphireClient {
 
     this._ownedEventBus = installContainerServices(this);
     this._prefixCacheUnbind = this._prefixCache.attachToInvalidationBus(
+      container.invalidation,
+    );
+    this._repositoryCacheUnbind = repositoryCache.attachToInvalidationBus(
       container.invalidation,
     );
 
@@ -161,6 +166,10 @@ export class LumiClient extends SapphireClient {
     if (this._prefixCacheUnbind) {
       this._prefixCacheUnbind();
       this._prefixCacheUnbind = null;
+    }
+    if (this._repositoryCacheUnbind) {
+      this._repositoryCacheUnbind();
+      this._repositoryCacheUnbind = null;
     }
     if (this._livenessInterval) {
       clearInterval(this._livenessInterval);

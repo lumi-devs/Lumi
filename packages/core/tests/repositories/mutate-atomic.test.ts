@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { ConfigRepository } from "#lib/prisma/repositories/ConfigRepository.js";
 import { GuildKVRepository } from "#lib/prisma/repositories/GuildKVRepository.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 
 vi.mock("@lumi/observability", () => ({
   cacheHits: { inc: vi.fn() },
@@ -37,9 +38,14 @@ describe("ConfigRepository.mutateModuleConfig", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     redis = mockRedis();
+    (container as any).redis = redis;
+    repositoryCache.clear();
     (container as any).invalidation = {
       invalidate: vi.fn((...keys: string[]) => {
-        for (const k of keys) redis.store.delete(k);
+        for (const k of keys) {
+          redis.store.delete(k);
+          repositoryCache.delete(k);
+        }
         return Promise.resolve();
       }),
     };

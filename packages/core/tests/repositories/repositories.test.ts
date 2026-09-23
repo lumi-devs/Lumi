@@ -3,6 +3,7 @@ import { ModerationRepository } from '#lib/prisma/repositories/ModerationReposit
 import { ConfigRepository } from '#lib/prisma/repositories/ConfigRepository.js';
 import { GuildKVRepository } from '#lib/prisma/repositories/GuildKVRepository.js';
 import { ModNoteRepository } from '#lib/prisma/repositories/ModNoteRepository.js';
+import { repositoryCache } from '#lib/prisma/repositories/Repository.js';
 import { container } from '@sapphire/framework';
 
 describe('ModerationRepository Tests', () => {
@@ -259,6 +260,8 @@ describe('ConfigRepository Batch Operations', () => {
       invalidate: vi.fn().mockResolvedValue(undefined),
     };
     (container as any).invalidation = mockInvalidation;
+    (container as any).redis = mockRedis;
+    repositoryCache.clear();
 
     repo = new ConfigRepository(mockPrisma, mockRedis, mockLogger, mockDb);
   });

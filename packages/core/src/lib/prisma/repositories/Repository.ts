@@ -1,10 +1,10 @@
 import type { RedisClient } from "#lib/database/cluster-safe.js";
+import { CacheStore } from "#lib/cache/CacheStore.js";
 import { type ILogger, container } from "@sapphire/framework";
-import { cacheHits, cacheMisses } from "@lumi/observability";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 
-const inflight = new Map<string, Promise<unknown>>();
+export const repositoryCache = new CacheStore();
 
 /** Base class for per-domain database repositories. */
 export abstract class Repository {
@@ -33,38 +33,23 @@ export abstract class Repository {
     parser: (data: string) => T = JSON.parse,
     serializer: (data: T) => string = JSON.stringify,
   ): Promise<T> {
-    const cache = key.split(":")[1] ?? "unknown";
-    const cached = await this.redis.get(key);
-    if (cached) {
+    const parseOrWarn = (data: string): T => {
       try {
-        const value = parser(cached);
-        cacheHits.inc({ cache });
-        return value;
+        return parser(data);
       } catch (err: unknown) {
         this.logger.warn(
           `[cache] Unparseable entry for ${key}, recomputing:`,
           err,
         );
+        throw err;
       }
-    }
-    cacheMisses.inc({ cache });
-
-    const pending = inflight.get(key);
-    if (pending) return pending as Promise<T>;
-
-    const flight = (async () => {
-      const data = await fetcher();
-      const serialized = serializer(data);
-      if (serialized !== undefined) {
-        await this.redis.setex(key, ttl, serialized);
-      }
-      return data;
-    })();
-    inflight.set(key, flight);
-    try {
-      return await flight;
-    } finally {
-      inflight.delete(key);
-    }
+    };
+    return repositoryCache.getOrLoad(
+      key,
+      ttl * 1000,
+      fetcher,
+      parseOrWarn,
+      serializer,
+    );
   }
 }

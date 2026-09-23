@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { ConfigRepository } from "#lib/prisma/repositories/ConfigRepository.js";
 import { RedisKeys } from "#lib/database/redis.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { container } from "@sapphire/framework";
 
 vi.mock("@lumi/observability", () => ({
@@ -37,6 +38,8 @@ describe("ConfigRepository", () => {
     (container as any).invalidation = {
       invalidate: vi.fn().mockResolvedValue(undefined),
     };
+    (container as any).redis = mockRedis;
+    repositoryCache.clear();
 
     const mockDb: any = {
       configHistory: mockConfigHistory,

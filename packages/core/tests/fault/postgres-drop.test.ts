@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { ConfigRepository } from "#lib/prisma/repositories/ConfigRepository.js";
 import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { container } from "@sapphire/framework";
 
 interface SimulatedDbState {
   isOnline: boolean;
@@ -119,6 +121,8 @@ describe("Chaos Suite: PostgreSQL Hard Drop & Pool Exhaustion", () => {
       setex: vi.fn().mockResolvedValue("OK"),
       del: vi.fn().mockResolvedValue(1),
     };
+    (container as any).redis = redis;
+    repositoryCache.clear();
     configRepo = new ConfigRepository(prisma as any, redis, {} as any, {} as any);
     modRepo = new ModerationRepository(prisma as any, redis, {} as any, {} as any);
   });
@@ -128,10 +132,12 @@ describe("Chaos Suite: PostgreSQL Hard Drop & Pool Exhaustion", () => {
     expect(prisma.guild.upsert).toHaveBeenCalledTimes(1);
 
     prisma.simulateHardDrop();
+    repositoryCache.clear();
 
     await expect(configRepo.getGuildSettings("guild-drop-1")).rejects.toThrow(/ECONNREFUSED/);
 
     prisma.simulateRecovery();
+    repositoryCache.clear();
 
     await expect(configRepo.getGuildSettings("guild-drop-1")).resolves.toBeDefined();
     expect(prisma.guild.upsert).toHaveBeenCalledTimes(3);
