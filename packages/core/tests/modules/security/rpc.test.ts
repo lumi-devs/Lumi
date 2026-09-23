@@ -70,7 +70,7 @@ describe("security module RPC handlers", () => {
     loadedModules = new Set(["security"]);
 
     container.stores = {
-      get: vi.fn((name: string) => ({
+      get: vi.fn(() => ({
         loaded: () => [],
         get: (key: string) => (loadedModules.has(key) ? { name: key } : undefined),
       })),
