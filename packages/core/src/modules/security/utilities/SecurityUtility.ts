@@ -2,19 +2,15 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
 import {
   ChannelType,
-  Colors,
   PermissionFlagsBits,
   type Guild,
   type GuildMember,
   type GuildTextBasedChannel,
 } from "discord.js";
-import { isNullish, tryParseJSON, type Awaitable } from "@sapphire/utilities";
+import { isNullish, tryParseJSON } from "@sapphire/utilities";
 import { fetchTyped } from "#lib/commands.js";
-import { Utility, tryGetUtility } from "#lib/module-system/Utility.js";
+import { Utility } from "#lib/module-system/Utility.js";
 import { RedisKeys } from "#lib/database/redis.js";
-import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
-import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
-import { logToChannel } from "#lib/moderation/log.js";
 import { withSerializedWork } from "#lib/utilities/misc.js";
 import type { LockedChannelSnapshot } from "#lib/prisma/repositories/SecurityRepository.js";
 import {
@@ -26,20 +22,9 @@ import {
 } from "../services/captcha.js";
 import { snapshotGuild } from "../services/backup-types.js";
 import { restoreGuildFromBackup } from "../services/restore-guild.js";
-import { toStringArray } from "#lib/module-system/config-schema.js";
-import {
-  hasNoAvatar,
-  isUnverifiedBot,
-  matchesUsernamePattern,
-  hasAdvertisingIndicators,
-  hasSimilarRecentJoiner,
-  isCreationClustered,
-  type RecentJoiner,
-} from "../services/join-heuristics.js";
 import {
   getConfigNumber,
   getConfigString,
-  getConfigAction,
 } from "../services/config-helpers.js";
 import { buildVerifyPanel, type VerifyPanelContent } from "../ui/verify-panel.js";
 
@@ -67,62 +52,6 @@ export interface VerifyPanelSetResult {
 const PanicChannelCap = 40;
 const PanicEditDelayMs = 300;
 
-export type NukeKind =
-  | "ban"
-  | "kick"
-  | "channel_delete"
-  | "role_delete"
-  | "webhook_create"
-  | "vanity_change"
-  | "dangerous_permission_grant"
-  | "quarantine_bypass";
-
-export type NukeResponse = "log" | "quarantine" | "ban";
-
-export interface AntiNukeConfig {
-  enabled: boolean;
-  windowSeconds: number;
-  limits: Record<NukeKind, number>;
-  responses: Record<NukeKind, NukeResponse>;
-  trustedRoleIds: string[];
-}
-
-export type GateAction = "log" | "kick" | "timeout" | "quarantine";
-
-/** Severity order used to pick a single action when several filters trip at once. */
-const GateActionSeverity: Record<GateAction, number> = {
-  log: 0,
-  kick: 1,
-  timeout: 2,
-  quarantine: 3,
-};
-
-export type RaidAccountType = "all" | "suspicious";
-
-export interface JoinGateFilterConfig {
-  enabled: boolean;
-  action: GateAction;
-}
-
-export interface JoinGateConfig {
-  enabled: boolean;
-  raidJoinCount: number;
-  raidWindowSeconds: number;
-  raidAction: GateAction;
-  raidAccountType: RaidAccountType;
-  raidWarnRoleIds: string[];
-  filterNoAvatar: JoinGateFilterConfig;
-  filterMinAge: JoinGateFilterConfig & { hours: number };
-  filterUnverifiedBot: JoinGateFilterConfig;
-  filterUsernamePattern: JoinGateFilterConfig & { patterns: string[] };
-  filterAdvertising: JoinGateFilterConfig;
-}
-
-export interface JoinFilterResult {
-  action: GateAction;
-  triggered: string[];
-}
-
 export type VerificationMode = "emoji" | "none" | "web";
 export type VerificationTarget = "everyone" | "suspicious";
 
@@ -136,36 +65,6 @@ export interface VerificationConfig {
   kickOnTimeout: boolean;
 }
 
-const KindLimitKeys: Record<NukeKind, string> = {
-  ban: "max_bans",
-  kick: "max_kicks",
-  channel_delete: "max_channel_deletes",
-  role_delete: "max_role_deletes",
-  webhook_create: "max_webhook_creates",
-  vanity_change: "max_vanity_changes",
-  dangerous_permission_grant: "max_permission_grants",
-  quarantine_bypass: "max_quarantine_bypass",
-};
-
-/**
- * Kinds with a dedicated per-action response field in the dashboard's
- * anti-nuke table. Kinds without one here have no config UI yet and always
- * use the default response.
- */
-const KindResponseKeys: Partial<Record<NukeKind, string>> = {
-  ban: "response_bans",
-  kick: "response_kicks",
-  channel_delete: "response_channel_deletes",
-  role_delete: "response_role_deletes",
-  webhook_create: "response_webhook_creates",
-};
-
-const DefaultNukeResponse: NukeResponse = "quarantine";
-
-function isNukeResponse(value: unknown): value is NukeResponse {
-  return value === "log" || value === "quarantine" || value === "ban";
-}
-
 /** Permissions that hand out server control - never allowed on `@everyone`. */
 export const DangerousPermissions = [
   PermissionFlagsBits.Administrator,
@@ -175,12 +74,6 @@ export const DangerousPermissions = [
   PermissionFlagsBits.BanMembers,
   PermissionFlagsBits.KickMembers,
 ] as const;
-
-const TrippedCooldownSeconds = 300;
-const RaidModeSeconds = 600;
-const GateTimeoutMs = 60 * 60 * 1000;
-const RecentJoinersCap = 20;
-const RecentJoinersTtlSeconds = 300;
 
 function challengeLockKey(guildId: string, userId: string): string {
   return `security:verify-challenge:${guildId}:${userId}`;
@@ -192,378 +85,6 @@ function panicLockKey(guildId: string): string {
 
 @ApplyOptions<Piece.Options>({ name: "security" })
 export class SecurityUtility extends Utility {
-  public async loadAntiNukeConfig(guildId: string): Promise<AntiNukeConfig> {
-    const raw = await this.db.config.getAllModuleConfig(guildId, "security");
-
-    const trustedRoleIds = toStringArray(raw["trusted_role_ids"]);
-
-    return {
-      enabled: raw["antinuke_enabled"] === true,
-      windowSeconds: getConfigNumber(raw, "window_seconds", 60),
-      limits: {
-        ban: getConfigNumber(raw, KindLimitKeys.ban, 5),
-        kick: getConfigNumber(raw, KindLimitKeys.kick, 5),
-        channel_delete: getConfigNumber(raw, KindLimitKeys.channel_delete, 3),
-        role_delete: getConfigNumber(raw, KindLimitKeys.role_delete, 3),
-        webhook_create: getConfigNumber(raw, KindLimitKeys.webhook_create, 3),
-        vanity_change: getConfigNumber(raw, KindLimitKeys.vanity_change, 1),
-        dangerous_permission_grant: getConfigNumber(
-          raw,
-          KindLimitKeys.dangerous_permission_grant,
-          1,
-        ),
-        quarantine_bypass: getConfigNumber(raw, KindLimitKeys.quarantine_bypass, 1),
-      },
-      responses: this.loadResponses(raw),
-      trustedRoleIds,
-    };
-  }
-
-  /** Per-action responses; kinds without a config key use the default. */
-  private loadResponses(raw: Record<string, unknown>): Record<NukeKind, NukeResponse> {
-    const kinds: NukeKind[] = [
-      "ban",
-      "kick",
-      "channel_delete",
-      "role_delete",
-      "webhook_create",
-      "vanity_change",
-      "dangerous_permission_grant",
-      "quarantine_bypass",
-    ];
-    return Object.fromEntries(
-      kinds.map((kind) => {
-        const key = KindResponseKeys[kind];
-        const value = key ? raw[key] : undefined;
-        return [kind, isNukeResponse(value) ? value : DefaultNukeResponse];
-      }),
-    ) as Record<NukeKind, NukeResponse>;
-  }
-
-  /**
-   * Records one action of `kind` for the executor and returns the running
-   * count when it exceeds the configured limit; null while under it or when
-   * this executor already tripped recently (response is in flight).
-   */
-  public async recordAction(
-    guild: Guild,
-    executorId: string,
-    kind: NukeKind,
-    config: AntiNukeConfig,
-  ): Promise<number | null> {
-    const key = RedisKeys.securityWindow(guild.id, executorId, kind);
-    const results = await this.redis
-      .multi()
-      .incr(key)
-      .expire(key, config.windowSeconds, "NX")
-      .exec();
-    const count = results?.[0]?.[1] as number;
-    if (count <= config.limits[kind]) return null;
-
-    const tripped = await this.redis.set(
-      RedisKeys.securityTripped(guild.id, executorId, kind),
-      String(Date.now()),
-      "EX",
-      TrippedCooldownSeconds,
-      "NX",
-    );
-    return tripped === "OK" ? count : null;
-  }
-
-  public async isExempt(
-    guild: Guild,
-    executorId: string,
-    config: AntiNukeConfig,
-  ): Promise<boolean> {
-    if (executorId === guild.ownerId) return true;
-    if (executorId === this.container.client.user?.id) return true;
-
-    if (config.trustedRoleIds.length === 0) return false;
-    const member = await guild.members.fetch(executorId).catch(() => null);
-    if (isNullish(member)) return false;
-    return config.trustedRoleIds.some((id) => member.roles.cache.has(id));
-  }
-
-  public async respond(
-    guild: Guild,
-    executorId: string,
-    kind: NukeKind,
-    count: number,
-    config: AntiNukeConfig,
-  ): Promise<void> {
-    const reason = `Anti-nuke: ${count} ${kind.replaceAll("_", " ")} actions in ${config.windowSeconds}s`;
-    const botUser = this.container.client.user;
-    if (isNullish(botUser)) return;
-
-    const response = config.responses[kind];
-    let outcome = "logged";
-    if (response === "quarantine") {
-      const member = await guild.members.fetch(executorId).catch(() => null);
-      const immune =
-        member !== null &&
-        (await isImmuneToAutomatedAction(this.container, guild.id, member));
-      if (member && !immune) {
-        try {
-          await QuarantineAction.apply({
-            guild,
-            targetMember: member,
-            moderator: botUser,
-            reason,
-          });
-          outcome = "quarantined";
-        } catch (err: unknown) {
-          this.logger.warn(
-            `[security] Quarantine failed for ${executorId} in ${guild.id}: ${String(err)}`,
-          );
-        }
-      }
-    } else if (response === "ban") {
-      const member = await guild.members.fetch(executorId).catch(() => null);
-      const immune =
-        member !== null &&
-        (await isImmuneToAutomatedAction(this.container, guild.id, member));
-      if (!immune) {
-        try {
-          await guild.members.ban(executorId, { reason });
-          const c = await this.db.moderation.createModerationCase({
-            guildId: guild.id,
-            userId: executorId,
-            moderatorId: botUser.id,
-            action: "ban",
-            reason,
-          });
-          await logToChannel(
-            guild.id,
-            "🔨 Banned",
-            Colors.DarkRed,
-            executorId,
-            botUser,
-            reason,
-            c.caseNumber,
-            "security",
-          );
-          outcome = "banned";
-        } catch (err: unknown) {
-          this.logger.warn(
-            `[security] Ban failed for ${executorId} in ${guild.id}: ${String(err)}`,
-          );
-        }
-      }
-    }
-
-    if (outcome === "logged") {
-      const c = await this.db.moderation.createModerationCase({
-        guildId: guild.id,
-        userId: executorId,
-        moderatorId: botUser.id,
-        action: "antinuke_alert",
-        reason,
-      });
-      await logToChannel(
-        guild.id,
-        "🚨 Anti-Nuke Alert",
-        Colors.Red,
-        executorId,
-        botUser,
-        reason,
-        c.caseNumber,
-        "security",
-      );
-    }
-  }
-
-  /**
-   * Shared anti-nuke tail: load config, bail if disabled, resolve the
-   * executor only once anti-nuke is confirmed on, check they aren't exempt,
-   * record the action, and respond if it tripped the limit.
-   */
-  public async evaluateNukeEvent(
-    guild: Guild,
-    kind: NukeKind,
-    resolveExecutorId: () => Awaitable<string | null | undefined>,
-  ): Promise<void> {
-    const config = await this.loadAntiNukeConfig(guild.id);
-    if (!config.enabled) return;
-
-    const executorId = await resolveExecutorId();
-    if (isNullish(executorId)) return;
-    if (await this.isExempt(guild, executorId, config)) return;
-
-    const count = await this.recordAction(guild, executorId, kind, config);
-    if (count === null) return;
-
-    this.logger.warn(
-      `[security] Anti-nuke tripped in ${guild.id}: ${executorId} triggered ${kind} ${count} time(s)`,
-    );
-    await this.respond(guild, executorId, kind, count, config);
-  }
-
-  public async isQuarantined(guildId: string, userId: string): Promise<boolean> {
-    return (
-      (await this.redis.exists(RedisKeys.quarantineState(guildId, userId))) === 1
-    );
-  }
-
-  public async loadJoinGateConfig(guildId: string): Promise<JoinGateConfig> {
-    const raw = await this.db.config.getAllModuleConfig(guildId, "security");
-
-    return {
-      enabled: raw["joingate_enabled"] === true,
-      raidJoinCount: getConfigNumber(raw, "raid_join_count", 10),
-      raidWindowSeconds: getConfigNumber(raw, "raid_window_seconds", 30),
-      raidAction: getConfigAction(raw, "raid_action", "kick"),
-      raidAccountType: raw["raid_account_type"] === "suspicious" ? "suspicious" : "all",
-      raidWarnRoleIds: toStringArray(raw["raid_warn_role_ids"]),
-      filterNoAvatar: {
-        enabled: raw["filter_no_avatar_enabled"] === true,
-        action: getConfigAction(raw, "filter_no_avatar_action", "log"),
-      },
-      filterMinAge: {
-        enabled: raw["filter_min_age_enabled"] === true,
-        hours: getConfigNumber(raw, "filter_min_age_hours", 0),
-        action: getConfigAction(raw, "filter_min_age_action", "kick"),
-      },
-      filterUnverifiedBot: {
-        enabled: raw["filter_unverified_bot_enabled"] === true,
-        action: getConfigAction(raw, "filter_unverified_bot_action", "kick"),
-      },
-      filterUsernamePattern: {
-        enabled: raw["filter_username_pattern_enabled"] === true,
-        patterns: toStringArray(raw["filter_username_pattern"]),
-        action: getConfigAction(raw, "filter_username_pattern_action", "log"),
-      },
-      filterAdvertising: {
-        enabled: raw["filter_advertising_enabled"] === true,
-        action: getConfigAction(raw, "filter_advertising_action", "kick"),
-      },
-    };
-  }
-
-  /**
-   * Runs every enabled join-gate filter against a member and returns the
-   * single most severe triggered action (quarantine > timeout > kick > log),
-   * or null when nothing tripped.
-   */
-  public evaluateJoinFilters(
-    member: GuildMember,
-    config: JoinGateConfig,
-  ): JoinFilterResult | null {
-    const triggered: string[] = [];
-    let action: GateAction | null = null;
-    const consider = (hit: boolean, filterAction: GateAction, label: string) => {
-      if (!hit) return;
-      triggered.push(label);
-      if (action === null || GateActionSeverity[filterAction] > GateActionSeverity[action]) {
-        action = filterAction;
-      }
-    };
-
-    if (config.filterNoAvatar.enabled) {
-      consider(hasNoAvatar(member.user), config.filterNoAvatar.action, "no avatar");
-    }
-    if (config.filterMinAge.enabled && config.filterMinAge.hours > 0) {
-      const ageMs = Date.now() - member.user.createdTimestamp;
-      consider(
-        ageMs < config.filterMinAge.hours * 60 * 60 * 1000,
-        config.filterMinAge.action,
-        `account younger than ${config.filterMinAge.hours}h`,
-      );
-    }
-    if (config.filterUnverifiedBot.enabled) {
-      consider(isUnverifiedBot(member.user), config.filterUnverifiedBot.action, "unverified bot");
-    }
-    if (config.filterUsernamePattern.enabled && config.filterUsernamePattern.patterns.length > 0) {
-      consider(
-        matchesUsernamePattern(member.user.username, config.filterUsernamePattern.patterns),
-        config.filterUsernamePattern.action,
-        "username pattern match",
-      );
-    }
-    if (config.filterAdvertising.enabled) {
-      consider(
-        hasAdvertisingIndicators(member.user),
-        config.filterAdvertising.action,
-        "advertising account",
-      );
-    }
-
-    if (action === null) return null;
-    return { action, triggered };
-  }
-
-  /** Tracks a joiner for the short-lived recent-joiners window used by the raid/similarity heuristics. */
-  public async recordRecentJoiner(guildId: string, joiner: RecentJoiner): Promise<void> {
-    const key = RedisKeys.recentJoiners(guildId);
-    await this.redis
-      .multi()
-      .lpush(key, JSON.stringify(joiner))
-      .ltrim(key, 0, RecentJoinersCap - 1)
-      .expire(key, RecentJoinersTtlSeconds)
-      .exec();
-  }
-
-  public async getRecentJoiners(guildId: string): Promise<RecentJoiner[]> {
-    const raw = await this.redis.lrange(RedisKeys.recentJoiners(guildId), 0, -1);
-    return raw
-      .map((r: string) => tryParseJSON(r) as RecentJoiner | null)
-      .filter((j: RecentJoiner | null): j is RecentJoiner => j !== null);
-  }
-
-  /**
-   * "Suspicious" scope for raid mode: no avatar, under the configured min
-   * age, a username too close to a recent joiner's, or an unusual share of
-   * recent joiners sharing this account's creation day - any one is enough,
-   * this doesn't need to be a tunable score.
-   */
-  public async isSuspiciousJoiner(
-    member: GuildMember,
-    config: JoinGateConfig,
-  ): Promise<boolean> {
-    if (hasNoAvatar(member.user)) return true;
-    const minAgeHours = config.filterMinAge.hours > 0 ? config.filterMinAge.hours : 24;
-    if (Date.now() - member.user.createdTimestamp < minAgeHours * 60 * 60 * 1000) return true;
-
-    const recent = await this.getRecentJoiners(member.guild.id);
-    if (hasSimilarRecentJoiner(member.user.username, recent)) return true;
-    if (isCreationClustered(member.user.createdTimestamp, recent)) return true;
-    return false;
-  }
-
-  /**
-   * Counts a join toward raid detection. Returns true when this join pushes
-   * the guild over the threshold and raid mode was newly activated.
-   */
-  public async recordJoin(
-    guildId: string,
-    config: JoinGateConfig,
-  ): Promise<boolean> {
-    const key = RedisKeys.joinBurst(guildId);
-    const results = await this.redis
-      .multi()
-      .incr(key)
-      .expire(key, config.raidWindowSeconds, "NX")
-      .exec();
-    const count = results?.[0]?.[1] as number;
-    if (count < config.raidJoinCount) return false;
-
-    const started = await this.redis.set(
-      RedisKeys.raidMode(guildId),
-      String(Date.now()),
-      "EX",
-      RaidModeSeconds,
-      "NX",
-    );
-    return started === "OK";
-  }
-
-  public async isRaidActive(guildId: string): Promise<boolean> {
-    return (await this.redis.exists(RedisKeys.raidMode(guildId))) === 1;
-  }
-
-  public async endRaidMode(guildId: string): Promise<void> {
-    await this.container.invalidation.invalidate(RedisKeys.raidMode(guildId));
-  }
-
   public async loadVerificationConfig(
     guildId: string,
   ): Promise<VerificationConfig> {
@@ -839,72 +360,6 @@ export class SecurityUtility extends Utility {
         }
       }
       await this.clearChallenge(guild.id, userId);
-    }
-  }
-
-  public async applyGateAction(
-    guild: Guild,
-    memberId: string,
-    action: GateAction,
-    reason: string,
-  ): Promise<boolean> {
-    const botUser = this.container.client.user;
-    if (isNullish(botUser)) return false;
-
-    if (action === "log") {
-      const logService = tryGetUtility("guild-log");
-      await logService?.dispatch({
-        guildId: guild.id,
-        moduleName: "security",
-        action: "📝 Gate Logged",
-        targetId: memberId,
-        actorId: botUser.id,
-        reason,
-        color: Colors.Yellow,
-      });
-      return true;
-    }
-
-    const member = await guild.members.fetch(memberId).catch(() => null);
-    if (isNullish(member)) return false;
-
-    try {
-      if (action === "kick") {
-        await member.kick(reason);
-      } else if (action === "timeout") {
-        await member.timeout(GateTimeoutMs, reason);
-      } else {
-        await QuarantineAction.apply({
-          guild,
-          targetMember: member,
-          moderator: botUser,
-          reason,
-        });
-        return true;
-      }
-      const c = await this.db.moderation.createModerationCase({
-        guildId: guild.id,
-        userId: memberId,
-        moderatorId: botUser.id,
-        action: action === "kick" ? "kick" : "mute",
-        reason,
-      });
-      await logToChannel(
-        guild.id,
-        action === "kick" ? "👢 Gate Kicked" : "🔇 Gate Timed Out",
-        Colors.Orange,
-        memberId,
-        botUser,
-        reason,
-        c.caseNumber,
-        "security",
-      );
-      return true;
-    } catch (err: unknown) {
-      this.logger.warn(
-        `[security] Gate ${action} failed for ${memberId} in ${guild.id}: ${String(err)}`,
-      );
-      return false;
     }
   }
 

@@ -2,6 +2,7 @@ import { container } from "@sapphire/framework";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
+import { loadAntiNukeConfig } from "./anti-nuke.js";
 
 const HourMs = 60 * 60 * 1000;
 
@@ -25,7 +26,7 @@ export async function handleBackupSnapshotFire(): Promise<void> {
       .catch(() => false);
     if (!enabled) return;
 
-    const antiNuke = await security.loadAntiNukeConfig(guild.id);
+    const antiNuke = await loadAntiNukeConfig(guild.id);
     if (!antiNuke.enabled) return;
 
     const { intervalHours, keepCount } = await security.loadBackupConfig(guild.id);

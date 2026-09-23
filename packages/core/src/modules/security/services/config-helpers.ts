@@ -1,4 +1,4 @@
-import type { GateAction } from "../utilities/SecurityUtility.js";
+import type { GateAction } from "./join-gate.js";
 
 /**
  * Extracts a number config value with a fallback default.

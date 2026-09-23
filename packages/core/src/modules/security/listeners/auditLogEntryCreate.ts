@@ -8,7 +8,7 @@ import {
 import { isNullish } from "@sapphire/utilities";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
-import type { NukeKind } from "../utilities/SecurityUtility.js";
+import { evaluateNukeEvent, type NukeKind } from "../services/anti-nuke.js";
 
 const KindByEvent: Partial<Record<AuditLogEvent, NukeKind>> = {
   [AuditLogEvent.MemberBanAdd]: "ban",
@@ -45,6 +45,6 @@ export class SecurityAuditLogListener extends ModuleListener<
       await security.flagRestorePending(guild.id);
     }
 
-    await security.evaluateNukeEvent(guild, kind, () => executorId);
+    await evaluateNukeEvent(guild, kind, () => executorId);
   }
 }

@@ -5,6 +5,15 @@ import { userMention } from "@discordjs/formatters";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { isSuspiciousAccount } from "../services/suspicious.js";
+import {
+  loadJoinGateConfig,
+  evaluateJoinFilters,
+  applyGateAction,
+  recordJoin,
+  isRaidActive,
+  isSuspiciousJoiner,
+  recordRecentJoiner,
+} from "../services/join-gate.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "securityMemberJoin",
@@ -27,13 +36,13 @@ export class SecurityMemberJoinListener extends ModuleListener<
       await security.assignPending(member, verification);
     }
 
-    const config = await security.loadJoinGateConfig(member.guild.id);
+    const config = await loadJoinGateConfig(member.guild.id);
     if (!config.enabled) return;
 
-    const filterResult = security.evaluateJoinFilters(member, config);
+    const filterResult = evaluateJoinFilters(member, config);
     let gated = false;
     if (filterResult) {
-      await security.applyGateAction(
+      await applyGateAction(
         member.guild,
         member.id,
         filterResult.action,
@@ -45,7 +54,7 @@ export class SecurityMemberJoinListener extends ModuleListener<
     // Every join counts toward the raid-burst window, even one the join gate
     // just kicked/banned - otherwise a raid whose joiners all trip the gate
     // never reaches the burst threshold that would activate raid mode.
-    const raidStarted = await security.recordJoin(member.guild.id, config);
+    const raidStarted = await recordJoin(member.guild.id, config);
     if (raidStarted) {
       this.container.logger.warn(
         `[security] Raid mode activated in ${member.guild.id}: ${config.raidJoinCount}+ joins in ${config.raidWindowSeconds}s`,
@@ -66,13 +75,13 @@ export class SecurityMemberJoinListener extends ModuleListener<
 
     if (gated) return;
 
-    if (await security.isRaidActive(member.guild.id)) {
+    if (await isRaidActive(member.guild.id)) {
       // Compare against joiners recorded *before* this one - checked first, tracked after.
       const shouldGate =
         config.raidAccountType === "all" ||
-        (await security.isSuspiciousJoiner(member, config));
+        (await isSuspiciousJoiner(member, config));
       if (shouldGate) {
-        await security.applyGateAction(
+        await applyGateAction(
           member.guild,
           member.id,
           config.raidAction,
@@ -81,7 +90,7 @@ export class SecurityMemberJoinListener extends ModuleListener<
       }
     }
 
-    await security.recordRecentJoiner(member.guild.id, {
+    await recordRecentJoiner(member.guild.id, {
       username: member.user.username,
       createdTimestamp: member.user.createdTimestamp,
     });

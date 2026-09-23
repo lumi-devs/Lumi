@@ -2,9 +2,9 @@ import { Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { AuditLogEvent, type GuildMember } from "discord.js";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { resolveAuditLogExecutor } from "../services/audit.js";
+import { evaluateNukeEvent, isQuarantined } from "../services/anti-nuke.js";
 
 function roleSet(member: GuildMember): Set<string> {
   return new Set(member.roles.cache.keys());
@@ -32,9 +32,7 @@ export class SecurityGuildMemberUpdateListener extends ModuleListener<
     const after = roleSet(newMember);
     if (sameRoles(before, after)) return;
 
-    const security = tryGetUtility("security");
-    if (!security) return;
-    if (!(await security.isQuarantined(newMember.guild.id, newMember.id))) return;
+    if (!(await isQuarantined(newMember.guild.id, newMember.id))) return;
 
     const quarantineRoleId = await this.container.db.config.getModuleConfig(
       newMember.guild.id,
@@ -48,7 +46,7 @@ export class SecurityGuildMemberUpdateListener extends ModuleListener<
       .set([quarantineRoleId], "Security: quarantine hold - reverting unauthorized role change")
       .catch(swallow("Security: quarantine hold revert"));
 
-    await security.evaluateNukeEvent(newMember.guild, "quarantine_bypass", () =>
+    await evaluateNukeEvent(newMember.guild, "quarantine_bypass", () =>
       resolveAuditLogExecutor(newMember.guild, AuditLogEvent.MemberRoleUpdate, newMember.id),
     );
   }
