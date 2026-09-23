@@ -81,6 +81,7 @@ export class LumiClient extends SapphireClient {
   public override async login(token?: string) {
     await container.prisma.$connect();
     await container.invalidation.start();
+    await container.signals.start();
 
     // Only one process per pod may bind RPC_HTTP_PORT. Under ShardingManager
     // that's whichever child holds shard 0; standalone (dev) it's always
@@ -204,6 +205,9 @@ export class LumiClient extends SapphireClient {
     await container.invalidation
       .close()
       .catch(warnOnCleanupError("Invalidation close"));
+    await container.signals
+      .close()
+      .catch(warnOnCleanupError("Signals close"));
     await container.redis.quit().catch(warnOnCleanupError("Redis quit"));
     // $disconnect alone leaves the pg Pool open: the adapter is constructed from
     // a pool we own, so Prisma never ends it. Both pools drain here.

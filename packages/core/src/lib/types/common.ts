@@ -1,7 +1,7 @@
 import type { RedisClient } from "#lib/database/cluster-safe.js";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { ModuleStore } from "#lib/module-system/ModuleStore.js";
-import type { InvalidationBus } from "#lib/database/redis.js";
+import type { InvalidationBus, SignalBus } from "#lib/database/redis.js";
 import type { EventBus } from "#lib/event-bus/types.js";
 import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 import type { Message } from "discord.js";
@@ -57,6 +57,7 @@ declare module "@sapphire/pieces" {
     readonly prisma: DatabaseClient;
     readonly redis: RedisClient;
     readonly invalidation: InvalidationBus;
+    readonly signals: SignalBus;
     readonly db: DatabaseRepositories;
     readonly eventBus: EventBus;
     readonly moduleStore: ModuleStore;

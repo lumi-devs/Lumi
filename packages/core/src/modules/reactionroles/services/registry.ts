@@ -2,11 +2,6 @@ import { container } from "@sapphire/framework";
 import { logError } from "#lib/utilities/errors.js";
 import { getMenu, listMenus, type ReactionRoleMenu } from "../data/reactionroles.js";
 
-const SigPrefix = "lumi:reactionroles:sig:";
-const sig = {
-  menusReload: (g: string) => `${SigPrefix}menusreload:${g}`,
-};
-
 class ReactionRoleRegistry {
   readonly #menus = new Map<string, Map<string, ReactionRoleMenu>>();
   readonly #loaded = new Set<string>();
@@ -16,17 +11,13 @@ class ReactionRoleRegistry {
   public wire(): void {
     if (this.#wired) return;
     this.#wired = true;
-    container.invalidation.onInvalidate((keys) => {
-      for (const key of keys) {
-        if (!key.startsWith(SigPrefix)) continue;
-        const rest = key.slice(SigPrefix.length);
-        if (rest.startsWith("menusreload:")) {
-          const guildId = rest.slice("menusreload:".length);
-          if (guildId) {
-            this.#menus.delete(guildId);
-            this.#loaded.delete(guildId);
-          }
-        }
+    container.signals.onSignal((topic, payload) => {
+      if (topic !== "reactionroles") return;
+      const g = payload.g;
+      if (typeof g !== "string") return;
+      if (payload.kind === "menusreload") {
+        this.#menus.delete(g);
+        this.#loaded.delete(g);
       }
     });
 
@@ -72,8 +63,8 @@ class ReactionRoleRegistry {
   public async invalidateMenus(guildId: string): Promise<void> {
     this.#menus.delete(guildId);
     this.#loaded.delete(guildId);
-    await container.invalidation
-      .invalidate(sig.menusReload(guildId))
+    await container.signals
+      .publish("reactionroles", { kind: "menusreload", g: guildId })
       .catch((err: unknown) => logError("ReactionRoles: registry broadcast", err));
   }
 

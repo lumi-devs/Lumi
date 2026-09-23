@@ -2,6 +2,7 @@ import {
   createRedisClient,
   redisConnectionOptions,
   InvalidationBus,
+  SignalBus,
 } from "#lib/database/redis.js";
 import { AddonModulesRoot } from "#lib/downloader/resolver.js";
 import { envParseInteger, getDevModulePaths } from "#lib/env.js";
@@ -68,6 +69,7 @@ export function installContainerServices(
     prisma,
     redis,
     invalidation: new InvalidationBus(createRedisClient()),
+    signals: new SignalBus(createRedisClient()),
     db: new DatabaseService(prisma, redis, container.logger, prismaReader),
     eventBus: ownedEventBus.bus,
     moduleStore,

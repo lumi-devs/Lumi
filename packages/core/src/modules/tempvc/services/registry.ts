@@ -8,15 +8,6 @@ interface ManagedVc {
   number: number;
 }
 
-const SigPrefix = "lumi:tempvc:sig:";
-const sig = {
-  vcAdd: (g: string, c: string, gen: string, n: number) =>
-    `${SigPrefix}vcadd:${g}:${c}:${gen}:${n}`,
-  vcDel: (g: string, c: string) => `${SigPrefix}vcdel:${g}:${c}`,
-  vcReload: (g: string) => `${SigPrefix}vcreload:${g}`,
-  genReload: (g: string) => `${SigPrefix}genreload:${g}`,
-};
-
 /**
  * Process-local index of generator channels and active temp VCs, keyed by
  * guild. Discord routes all of a guild's gateway events (voice, interactions,
@@ -38,21 +29,30 @@ class TempVcRegistry {
   public wire(): void {
     if (this.#wired) return;
     this.#wired = true;
-    container.invalidation.onInvalidate((keys) => {
-      for (const key of keys) {
-        if (!key.startsWith(SigPrefix)) continue;
-        const [kind, g, c, gen, n] = key.slice(SigPrefix.length).split(":");
-        if (kind === "vcadd" && g && c && gen && n) {
-          this.#localAddVc(g, c, { generatorId: gen, number: Number(n) });
-        } else if (kind === "vcdel" && g && c) {
-          this.#vcs.get(g)?.delete(c);
-        } else if (kind === "vcreload" && g) {
-          this.#vcs.delete(g);
-          this.#vcsLoaded.delete(g);
-        } else if (kind === "genreload" && g) {
-          this.#gens.delete(g);
-          this.#gensLoaded.delete(g);
+    container.signals.onSignal((topic, payload) => {
+      if (topic !== "tempvc") return;
+      const g = payload.g;
+      if (typeof g !== "string") return;
+      if (payload.kind === "vcadd") {
+        const c = payload.c;
+        const gen = payload.gen;
+        const n = payload.n;
+        if (
+          typeof c === "string" &&
+          typeof gen === "string" &&
+          typeof n === "number"
+        ) {
+          this.#localAddVc(g, c, { generatorId: gen, number: n });
         }
+      } else if (payload.kind === "vcdel") {
+        const c = payload.c;
+        if (typeof c === "string") this.#vcs.get(g)?.delete(c);
+      } else if (payload.kind === "vcreload") {
+        this.#vcs.delete(g);
+        this.#vcsLoaded.delete(g);
+      } else if (payload.kind === "genreload") {
+        this.#gens.delete(g);
+        this.#gensLoaded.delete(g);
       }
     });
 
@@ -109,28 +109,32 @@ class TempVcRegistry {
     vc: ManagedVc,
   ): Promise<void> {
     this.#localAddVc(guildId, channelId, vc);
-    await this.#broadcast(
-      sig.vcAdd(guildId, channelId, vc.generatorId, vc.number),
-    );
+    await this.#broadcast({
+      kind: "vcadd",
+      g: guildId,
+      c: channelId,
+      gen: vc.generatorId,
+      n: vc.number,
+    });
   }
 
   public async removeVc(guildId: string, channelId: string): Promise<void> {
     this.#vcs.get(guildId)?.delete(channelId);
-    await this.#broadcast(sig.vcDel(guildId, channelId));
+    await this.#broadcast({ kind: "vcdel", g: guildId, c: channelId });
   }
 
   /** Generator config changed; drop the cached set so it re-hydrates. */
   public async invalidateGenerators(guildId: string): Promise<void> {
     this.#gens.delete(guildId);
     this.#gensLoaded.delete(guildId);
-    await this.#broadcast(sig.genReload(guildId));
+    await this.#broadcast({ kind: "genreload", g: guildId });
   }
 
   /** Drop the cached VC set for a guild (used after a bulk/foreign mutation). */
   public async reloadVcs(guildId: string): Promise<void> {
     this.#vcs.delete(guildId);
     this.#vcsLoaded.delete(guildId);
-    await this.#broadcast(sig.vcReload(guildId));
+    await this.#broadcast({ kind: "vcreload", g: guildId });
   }
 
   #localAddVc(guildId: string, channelId: string, vc: ManagedVc): void {
@@ -142,9 +146,11 @@ class TempVcRegistry {
     map.set(channelId, vc);
   }
 
-  async #broadcast(key: string): Promise<void> {
-    await container.invalidation
-      .invalidate(key)
+  async #broadcast(
+    payload: Record<string, string | number>,
+  ): Promise<void> {
+    await container.signals
+      .publish("tempvc", payload)
       .catch((err: unknown) => logError("TempVC: registry broadcast", err));
   }
 

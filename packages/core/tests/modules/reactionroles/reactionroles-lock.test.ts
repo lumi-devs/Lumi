@@ -75,8 +75,8 @@ describe("ReactionRolesUtility menu-write locking", () => {
     vi.clearAllMocks();
     redis = mockRedis();
     (container as any).redis = redis;
-    (container as any).invalidation = {
-      invalidate: vi.fn().mockResolvedValue(undefined),
+    (container as any).signals = {
+      publish: vi.fn().mockResolvedValue(undefined),
     };
     (container as any).logger = {
       error: vi.fn(),
