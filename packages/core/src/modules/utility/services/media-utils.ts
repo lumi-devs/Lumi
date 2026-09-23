@@ -17,6 +17,7 @@ import { makeErrorCard, makeInfoCard } from "#lib/ui/cards.js";
 import { container } from "@sapphire/framework";
 import { capitalizeFirstLetter } from "@sapphire/utilities";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
+import { claimCooldown } from "#lib/cooldown.js";
 import { UserMediaViewId } from "../constants.js";
 
 interface MediaRequestContext {
@@ -28,18 +29,6 @@ interface MediaRequestContext {
 
 import { fetchT } from "@sapphire/plugin-i18next";
 import { LanguageKeys } from "#lib/i18n/keys.js";
-import { RateLimitManager } from "@sapphire/ratelimits";
-
-const mediaRateLimitManagers = new Map<number, RateLimitManager>();
-
-function getMediaRateLimitManager(seconds: number): RateLimitManager {
-  let mgr = mediaRateLimitManagers.get(seconds);
-  if (!mgr) {
-    mgr = new RateLimitManager(seconds * 1000, 1);
-    mediaRateLimitManagers.set(seconds, mgr);
-  }
-  return mgr;
-}
 
 export async function handleMediaRequest({
   context,
@@ -51,21 +40,25 @@ export async function handleMediaRequest({
   const interactionUser =
     context instanceof Message ? context.author : context.user;
   const { guildId } = context;
+  if (!guildId) return;
 
   const isButton = context instanceof ButtonInteraction;
 
   if (!isButton) {
     const cooldownSeconds =
       ((await container.db.config.getModuleConfig(
-        guildId!,
+        guildId,
         "utility",
         "cooldown_seconds",
       )) as number | null) ?? 10;
+    const cooldownMs = cooldownSeconds * 1000;
+    const cooldownKey = `lumi:media:${guildId}:${interactionUser.id}`;
 
-    const rateLimit = getMediaRateLimitManager(cooldownSeconds).acquire(interactionUser.id);
+    const claimed = await claimCooldown(cooldownKey, cooldownMs);
 
-    if (rateLimit.limited) {
-      const timeLeft = (rateLimit.remainingTime / 1000).toFixed(1);
+    if (!claimed) {
+      const remainingMs = await container.redis.pttl(cooldownKey);
+      const timeLeft = (Math.max(remainingMs, 0) / 1000).toFixed(1);
       const title = t(LanguageKeys.Commands.MediaCooldownTitle);
       const reply = t(LanguageKeys.Commands.MediaCooldown, { timeLeft });
 
@@ -89,7 +82,6 @@ export async function handleMediaRequest({
         flags: MessageFlags.Ephemeral,
       });
     }
-    rateLimit.consume();
   }
 
   const fetchedUser =

@@ -1,7 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { container } from "@sapphire/framework";
 import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
+import { claimCooldown } from "#lib/cooldown.js";
 import { formatDuration } from "#lib/utilities/time.js";
 import { BankService } from "../services/BankService.js";
 import {
@@ -15,14 +15,7 @@ import { reportEconomyError } from "../services/respond.js";
 
 async function claimSlotCooldown(config: EconomyConfig, guildId: string, userId: string): Promise<boolean> {
   if (config.slotCooldownMs <= 0) return true;
-  const set = await container.redis.set(
-    EconomyKeys.slotCooldown(guildId, userId),
-    "1",
-    "PX",
-    config.slotCooldownMs,
-    "NX",
-  );
-  return set !== null;
+  return claimCooldown(EconomyKeys.slotCooldown(guildId, userId), config.slotCooldownMs);
 }
 
 @ApplyOptions<BaseCommand.Options>({

@@ -64,7 +64,7 @@ export class StickyMessageListener extends GuildMessageListener {
     );
     const entry = findStickyEntry(entries, message.channelId);
     if (!entry) return;
-    if (isStickyOnCooldown(message.guildId, message.channelId)) return;
+    if (await isStickyOnCooldown(message.guildId, message.channelId)) return;
     const oldId = await getStickyMessageId(
       message.guildId,
       message.channelId,

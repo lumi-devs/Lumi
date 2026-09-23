@@ -14,6 +14,7 @@ import { Routes } from "discord-api-types/v10";
 import { errorCode, logError } from "#lib/utilities/errors.js";
 import { renderTemplate } from "#lib/utilities/template.js";
 import { scheduleTask } from "#lib/schedule-task.js";
+import { claimCooldown } from "#lib/cooldown.js";
 import {
   clearVoiceChannelOccupancy,
   isVoiceChannelEmpty,
@@ -77,14 +78,10 @@ export default class TempVcUtility extends Utility {
     userId: string,
   ): Promise<boolean> {
     const cooldownMs = await getCreateCooldownMs(guildId);
-    const set = await this.redis.set(
+    return !(await claimCooldown(
       TempVcKeys.createCooldown(guildId, userId),
-      "1",
-      "PX",
       cooldownMs,
-      "NX",
-    );
-    return set === null;
+    ));
   }
 
   /** Creates a temporary voice channel and moves the member in. */

@@ -30,7 +30,7 @@ describe("Sticky Module", () => {
     vi.clearAllMocks();
     (container as any).redis = {
       get: vi.fn(),
-      set: vi.fn(),
+      set: vi.fn().mockResolvedValue("OK"),
       del: vi.fn(),
     };
     (container as any).invalidation = {
@@ -83,11 +83,20 @@ describe("Sticky Module", () => {
   });
 
   describe("isStickyOnCooldown", () => {
-    it("should allow the first post then block reposts within 1s", () => {
-      expect(isStickyOnCooldown("g-cd", "c-cd", 1000)).toBe(false);
-      expect(isStickyOnCooldown("g-cd", "c-cd", 1000)).toBe(true);
-      expect(isStickyOnCooldown("g-cd", "c-cd", 1500)).toBe(true);
-      expect(isStickyOnCooldown("g-cd", "c-cd", 2001)).toBe(false);
+    it("should allow the first post then block a repost within the cooldown window", async () => {
+      (container.redis.set as any)
+        .mockResolvedValueOnce("OK")
+        .mockResolvedValueOnce(null);
+
+      expect(await isStickyOnCooldown("g-cd", "c-cd")).toBe(false);
+      expect(await isStickyOnCooldown("g-cd", "c-cd")).toBe(true);
+      expect(container.redis.set).toHaveBeenCalledWith(
+        "lumi:sticky:cd:g-cd:c-cd",
+        "1",
+        "PX",
+        StickyCooldownMs,
+        "NX",
+      );
     });
   });
 

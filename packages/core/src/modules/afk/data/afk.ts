@@ -1,5 +1,6 @@
 import { container } from "@sapphire/framework";
 import { mgetSafe, pipelineBySlot, scanKeysSafe } from "#lib/database/cluster-safe.js";
+import { claimCooldown, isOnCooldown } from "#lib/cooldown.js";
 import { isNullish, filterNullish, tryParseJSON } from "@sapphire/utilities";
 import { AfkKeys, AfkTTL } from "../constants.js";
 import { sanitizeReason } from "../services/format.js";
@@ -231,7 +232,7 @@ export async function clearAfkMentions(
 }
 
 export async function isAfkOnCooldown(key: string): Promise<boolean> {
-  return (await container.redis.exists(key)) === 1;
+  return isOnCooldown(key);
 }
 
 export async function setAfkCooldown(key: string, ms: number): Promise<void> {
@@ -247,8 +248,7 @@ export async function claimAfkCooldown(
   key: string,
   ms: number,
 ): Promise<boolean> {
-  const set = await container.redis.set(key, "1", "PX", ms, "NX");
-  return set === "OK";
+  return claimCooldown(key, ms);
 }
 
 /**
