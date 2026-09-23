@@ -1,5 +1,4 @@
 import {
-  InteractionHandler,
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
@@ -11,12 +10,11 @@ import type {
 } from "discord.js";
 import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { ephemeralCard, makeSuccessCard } from "#lib/ui/cards.js";
 import type { VcRecord } from "#modules/tempvc/data/tempvc.js";
-import { Tvc } from "../constants.js";
+import { TempVcPanelId } from "../constants.js";
 import { showLimitModal, showRenameModal } from "#modules/tempvc/services/panel-helpers.js";
 import { resolveOwnedRecord } from "#modules/tempvc/services/panel-guard.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
@@ -69,29 +67,31 @@ const AccessVerbs: Record<string, string> = {
   ubsel: "Unblocked",
 };
 
-@ApplyOptions<InteractionHandler.Options>({
+@ApplyOptions<ModuleInteractionHandler.Options>({
   name: "tempvc-panel-select",
   interactionHandlerType: InteractionHandlerTypes.SelectMenu,
+  module: "tempvc",
 })
-export class TempVcPanelSelectHandler extends BaseInteractionHandler {
+export class TempVcPanelSelectHandler extends ModuleInteractionHandler<
+  AnySelectMenuInteraction,
+  { action: string; channelId: string }
+> {
   private get service(): TempVcUtility {
     return getUtility("tempvc");
   }
 
   public override parse(interaction: AnySelectMenuInteraction) {
-    if (!interaction.customId.startsWith(`${Tvc}:`)) return this.none();
-    const [, action, channelId] = interaction.customId.split(":");
-    if (!action || !channelId || !SelectActions.has(action))
-      return this.none();
-    return this.some({ action, channelId });
+    const parsed = TempVcPanelId.parse(interaction.customId);
+    if (!parsed || !SelectActions.has(parsed.action)) return this.none();
+    return this.some(parsed);
   }
 
-  public async run(
+  protected override async handle(
     interaction: AnySelectMenuInteraction,
     { action, channelId }: { action: string; channelId: string },
   ): Promise<void> {
-    if (!interaction.inGuild()) return;
-    if (!(await isModuleEnabled(interaction.guildId, "tempvc"))) return;
+    const { guildId } = interaction;
+    if (!guildId) return;
     const channel = interaction.guild?.channels.cache.get(channelId);
     if (!channel || !channel.isVoiceBased()) return;
 
@@ -106,7 +106,7 @@ export class TempVcPanelSelectHandler extends BaseInteractionHandler {
     const member = interaction.member as GuildMember;
     const t = await fetchTyped(interaction);
     const record = await resolveOwnedRecord(
-      interaction.guildId,
+      guildId,
       channelId,
       channel,
       this.service,

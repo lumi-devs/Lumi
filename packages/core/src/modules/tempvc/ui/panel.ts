@@ -10,7 +10,7 @@ import {
   ModuleName,
   PanelMessageDefault,
   PanelTitleDefault,
-  Tvc,
+  TempVcPanelId,
 } from "../constants.js";
 import { parseHexColor } from "#lib/message-content.js";
 import { renderMessageBlocksV2Container } from "#lib/utilities/message-blocks-v2.js";
@@ -82,7 +82,7 @@ export async function buildPanel(
   });
 
   const menu = createStringSelectMenu({
-    customId: `${Tvc}:panelmenu:${channel.id}`,
+    customId: TempVcPanelId.build({ action: "panelmenu", channelId: channel.id }),
     placeholder: t ? t("tempvc:panelSelectPlaceholder") : "Manage Channel…",
     options: [
       {
@@ -156,7 +156,7 @@ export async function buildPanel(
   });
 
   const claimBtn = createActionButton({
-    customId: `${Tvc}:claim:${channel.id}`,
+    customId: TempVcPanelId.build({ action: "claim", channelId: channel.id }),
     label: t ? t("tempvc:panelClaimButton") : "🎯 Claim Ownership",
     style: ButtonStyle.Primary,
   });
@@ -233,7 +233,7 @@ function renderPanelTemplate(
 const backToPanelRow = (channelId: string, t?: LumiT) =>
   new ActionRowBuilder<ButtonBuilder>().addComponents(
     createBackButton(
-      `${Tvc}:panel:${channelId}`,
+      TempVcPanelId.build({ action: "panel", channelId }),
       t ? t("tempvc:backToPanel") : "← Back to Panel",
     ),
   );
@@ -292,7 +292,10 @@ function buildAccessView(
   t?: LumiT,
 ): PanelMessage {
   const userSelect = createUserSelectMenu({
-    customId: `${Tvc}:select_${spec.key}:${channel.id}`,
+    customId: TempVcPanelId.build({
+      action: `select_${spec.key}`,
+      channelId: channel.id,
+    }),
     placeholder: t
       ? t(`tempvc:${spec.key}UserPlaceholder`)
       : spec.fallbackUserPlaceholder,
@@ -301,7 +304,10 @@ function buildAccessView(
   });
 
   const roleSelect = createRoleSelectMenu({
-    customId: `${Tvc}:select_${spec.key}_role:${channel.id}`,
+    customId: TempVcPanelId.build({
+      action: `select_${spec.key}_role`,
+      channelId: channel.id,
+    }),
     placeholder: t
       ? t(`tempvc:${spec.key}RolePlaceholder`)
       : spec.fallbackRolePlaceholder,
@@ -328,7 +334,7 @@ export function buildKickView(
   t?: LumiT,
 ): PanelMessage {
   const userSelect = createUserSelectMenu({
-    customId: `${Tvc}:select_kick:${channel.id}`,
+    customId: TempVcPanelId.build({ action: "select_kick", channelId: channel.id }),
     placeholder: t
       ? t("tempvc:selectKickPlaceholder")
       : "Select member(s) to kick…",
@@ -388,7 +394,7 @@ export function buildTransferView(
   t?: LumiT,
 ): PanelMessage {
   const userSelect = createUserSelectMenu({
-    customId: `${Tvc}:select_transfer:${channel.id}`,
+    customId: TempVcPanelId.build({ action: "select_transfer", channelId: channel.id }),
     placeholder: t
       ? t("tempvc:transferPlaceholder")
       : "Select new channel owner…",
@@ -416,13 +422,13 @@ export function buildDeleteConfirmView(
   t?: LumiT,
 ): PanelMessage {
   const confirmBtn = createActionButton({
-    customId: `${Tvc}:delyes:${channel.id}`,
+    customId: TempVcPanelId.build({ action: "delyes", channelId: channel.id }),
     label: t ? t("tempvc:confirmDeleteButton") : "Confirm Delete",
     style: ButtonStyle.Danger,
   });
 
   const backBtn = createBackButton(
-    `${Tvc}:panel:${channel.id}`,
+    TempVcPanelId.build({ action: "panel", channelId: channel.id }),
     t ? t("tempvc:backToPanel") : "← Back to Panel",
   );
 

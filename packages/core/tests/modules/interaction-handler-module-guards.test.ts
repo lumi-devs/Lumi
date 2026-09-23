@@ -150,6 +150,7 @@ describe("interaction handlers guard on per-guild module state", () => {
     );
     const handler = new TempVcPanelButtonHandler(pieceContext("tvc-btn"), {
       interactionHandlerType: InteractionHandlerTypes.Button,
+      module: "tempvc",
     });
     const interaction = {
       inGuild: () => true,
@@ -171,6 +172,7 @@ describe("interaction handlers guard on per-guild module state", () => {
     );
     const handler = new TempVcPanelModalHandler(pieceContext("tvc-modal"), {
       interactionHandlerType: InteractionHandlerTypes.ModalSubmit,
+      module: "tempvc",
     });
     const interaction = {
       inGuild: () => true,
@@ -181,7 +183,7 @@ describe("interaction handlers guard on per-guild module state", () => {
     };
 
     isModuleEnabled.mockResolvedValue(false);
-    await handler.run(interaction as any, { kind: "namem", channelId: "c-1" });
+    await handler.run(interaction as any, { action: "namem", channelId: "c-1" });
     expect(resolveOwnedVc).not.toHaveBeenCalled();
   });
 
@@ -192,6 +194,7 @@ describe("interaction handlers guard on per-guild module state", () => {
     );
     const handler = new TempVcPanelSelectHandler(pieceContext("tvc-select"), {
       interactionHandlerType: InteractionHandlerTypes.SelectMenu,
+      module: "tempvc",
     });
     const interaction = {
       inGuild: () => true,

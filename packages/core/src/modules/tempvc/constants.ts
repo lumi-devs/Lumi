@@ -1,3 +1,5 @@
+import { defineCustomId } from "#lib/interactions/custom-id.js";
+
 export const TempvcCreateCooldownMs = 30_000;
 export const TempvcCleanupDelayMs = 8_000;
 export const TempvcMaxGenerators = 25;
@@ -13,7 +15,9 @@ export const TempVcKeys = {
 } as const;
 
 /** Button / select / modal custom-id prefix. Format: `tvc:<action>:<channelId>`. */
-export const Tvc = "tvc";
+const Tvc = "tvc";
+
+export const TempVcPanelId = defineCustomId(Tvc, ["action", "channelId"]);
 
 // Panel copy defaults live here rather than beside `buildPanel` so the config
 // schema can reference them without importing `ui/panel.js`, which tests mock.
