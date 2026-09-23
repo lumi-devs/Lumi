@@ -14,6 +14,7 @@ import {
   buildHistoryView,
   buildOverridesView,
 } from "#modules/core/ui/overrides.js";
+import { ConfigSelectId } from "../constants.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,
@@ -31,8 +32,10 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
   }
 
   public override parse(interaction: AnySelectMenuInteraction) {
-    if (!interaction.customId.startsWith("cfg:")) return this.none();
-    const [, action, moduleName, key, page] = interaction.customId.split(":");
+    const parsed = ConfigSelectId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    const { action, moduleName, rest } = parsed;
+    const [key, page] = rest;
     return this.some({ action, moduleName, key, page });
   }
 

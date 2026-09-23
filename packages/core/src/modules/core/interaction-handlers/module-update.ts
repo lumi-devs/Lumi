@@ -13,6 +13,7 @@ import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
 import { moduleUpdateResultCard } from "../ui/module-update-card.js";
 import type { DownloaderUtility } from "../utilities/DownloaderUtility.js";
+import { ModuleUpdateId } from "../constants.js";
 
 @ApplyOptions<InteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,
@@ -23,12 +24,9 @@ export class ModuleUpdateInteractionHandler extends BaseInteractionHandler {
   }
 
   public override parse(interaction: ButtonInteraction) {
-    if (!interaction.customId.startsWith("module:update:")) return this.none();
-
-    const [, , moduleName, userId] = interaction.customId.split(":");
-    if (!moduleName || !userId) return this.none();
-
-    return this.some({ moduleName, userId });
+    const parsed = ModuleUpdateId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    return this.some(parsed);
   }
 
   public override async run(

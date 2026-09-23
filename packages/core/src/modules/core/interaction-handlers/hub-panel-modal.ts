@@ -9,6 +9,7 @@ import {
   renderSettings,
 } from "../services/hub-panel.js";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
+import { HubAddonModalId } from "../constants.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,
@@ -32,11 +33,9 @@ export class HubPanelModalHandler extends InteractionHandler {
   public override parse(interaction: ModalSubmitInteraction) {
     if (interaction.customId === "lumi:prefixmodal")
       return this.some({ kind: "prefix" as const });
-    if (interaction.customId.startsWith("lumi:addonmodal:"))
-      return this.some({
-        kind: "addon" as const,
-        action: interaction.customId.split(":")[2],
-      });
+    const parsed = HubAddonModalId.parse(interaction.customId);
+    if (parsed)
+      return this.some({ kind: "addon" as const, action: parsed.action });
     return this.none();
   }
 

@@ -7,6 +7,7 @@ import {
   stateFromSegments,
 } from "../services/setup-wizard.js";
 import { buildSetupStepView } from "#modules/core/ui/setup-wizard.js";
+import { SetupStepId } from "../constants.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,
@@ -20,8 +21,9 @@ import type { AnySelectMenuInteraction } from "discord.js";
 })
 export class SetupWizardSelectHandler extends BaseInteractionHandler {
   public override parse(interaction: AnySelectMenuInteraction) {
-    if (!interaction.customId.startsWith("setup:step:")) return this.none();
-    const parts = interaction.customId.split(":");
+    const parsed = SetupStepId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    const parts = ["setup", "step", ...parsed.segments];
     const tail = parts[parts.length - 1];
     if (tail !== "ch" && tail !== "vmode") return this.none();
     return this.some({ tail, parts });

@@ -11,6 +11,7 @@ import { makeSuccessCard, makeInfoCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { scheduleProcessRestart } from "#lib/restart.js";
 import { fetchTyped } from "#lib/commands.js";
+import { ModuleRestartCancelId, ModuleRestartId } from "../constants.js";
 
 /**
  * Handles the "Restart Now / Cancel" choice shown after a module update that
@@ -22,14 +23,13 @@ import { fetchTyped } from "#lib/commands.js";
 })
 export class ModuleRestartInteractionHandler extends BaseInteractionHandler {
   public override parse(interaction: ButtonInteraction) {
-    const restart = interaction.customId.startsWith("module:restart:");
-    const cancel = interaction.customId.startsWith("module:restartcancel:");
-    if (!restart && !cancel) return this.none();
+    const cancel = ModuleRestartCancelId.parse(interaction.customId);
+    if (cancel) return this.some({ action: "cancel" as const, userId: cancel.userId });
 
-    const userId = interaction.customId.split(":")[2];
-    if (!userId) return this.none();
+    const restart = ModuleRestartId.parse(interaction.customId);
+    if (restart) return this.some({ action: "restart" as const, userId: restart.userId });
 
-    return this.some({ action: cancel ? "cancel" : "restart", userId });
+    return this.none();
   }
 
   public override async run(

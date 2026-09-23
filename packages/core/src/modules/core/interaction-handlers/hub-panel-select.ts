@@ -17,6 +17,11 @@ import {
   type PermitKind,
 } from "#modules/core/ui/permissions.js";
 import { ephemeralCard, makeErrorCard, makeWarningCard } from "#lib/ui/cards.js";
+import {
+  HubAddonModActionId,
+  HubPermitAssignId,
+  HubPermitPickId,
+} from "../constants.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,
@@ -46,13 +51,13 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
 
   public override parse(interaction: AnySelectMenuInteraction) {
     if (interaction.customId === "lumi:setlang") return this.some("lang");
-    if (interaction.customId.startsWith("lumi:permit:pick:"))
+    if (HubPermitPickId.parse(interaction.customId))
       return this.some("permit_pick");
-    if (interaction.customId.startsWith("lumi:permit:assign:"))
+    if (HubPermitAssignId.parse(interaction.customId))
       return this.some("permit_assign");
     if (interaction.customId === "lumi:addon:repo_pick")
       return this.some("addon_repo_pick");
-    if (interaction.customId.startsWith("lumi:addon:mod_action:"))
+    if (HubAddonModActionId.parse(interaction.customId))
       return this.some("addon_mod_action");
     if (interaction.customId === "lumi:addon:autoupdate_interval")
       return this.some("addon_autoupdate_interval");

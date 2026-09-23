@@ -18,6 +18,7 @@ import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
 import type { PingData } from "../services/ping-collect.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import type { LumiT } from "#lib/i18n/index.js";
+import { PingId } from "../constants.js";
 import { formatDuration } from "#lib/utilities/time.js";
 
 export const PingFlags = MessageFlags.IsComponentsV2;
@@ -454,7 +455,7 @@ export function buildDetailCard(
   c.addActionRowComponents(
     new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
       new ButtonBuilder()
-        .setCustomId(`ping:overview:${userId}`)
+        .setCustomId(PingId.build({ cat: "overview", userId }))
         .setLabel(t ? t("core:btnBack") : "Back to Overview")
         .setEmoji(Emojis.parse(Emojis.ArrowLeft))
         .setStyle(ButtonStyle.Secondary),

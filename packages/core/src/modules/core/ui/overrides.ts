@@ -28,6 +28,7 @@ import {
 } from "@discordjs/formatters";
 import { cutText } from "@sapphire/utilities";
 import { ButtonStyle } from "discord.js";
+import { ConfigButtonId } from "../constants.js";
 
 const overrideTargetMention = (o: ConfigOverrideEntry) => {
   switch (o.modelType) {
@@ -80,12 +81,25 @@ export function buildHistoryView(
   );
 
   rows.push(
-    row(createBackButton(`cfg:open:${meta.name}:${page}`, "← Back to Feature")),
+    row(
+      createBackButton(
+        ConfigButtonId.build({
+          action: "open",
+          moduleName: meta.name,
+          rest: [String(page)],
+        }),
+        "← Back to Feature",
+      ),
+    ),
   );
 
   if (rollbackable.length) {
     const rbSelect = createStringSelectMenu({
-      customId: `cfg:rb:${meta.name}:${page}`,
+      customId: ConfigButtonId.build({
+        action: "rb",
+        moduleName: meta.name,
+        rest: [String(page)],
+      }),
       placeholder: "Roll back a change…",
       options: rollbackable.slice(0, 25).map((e) =>
         new StringSelectMenuOptionBuilder()
@@ -132,9 +146,20 @@ export function buildOverridesView(
 
   rows.push(
     row(
-      createBackButton(`cfg:open:${meta.name}:${page}`, "← Back to Feature"),
+      createBackButton(
+        ConfigButtonId.build({
+          action: "open",
+          moduleName: meta.name,
+          rest: [String(page)],
+        }),
+        "← Back to Feature",
+      ),
       createActionButton({
-        customId: `cfg:ovadd:${meta.name}:${page}`,
+        customId: ConfigButtonId.build({
+          action: "ovadd",
+          moduleName: meta.name,
+          rest: [String(page)],
+        }),
         label: "Add Override…",
         emoji: Emojis.Edit,
         style: ButtonStyle.Primary,
@@ -144,7 +169,11 @@ export function buildOverridesView(
 
   if (overrides.length) {
     const rmSelect = createStringSelectMenu({
-      customId: `cfg:ovrm:${meta.name}:${page}`,
+      customId: ConfigButtonId.build({
+        action: "ovrm",
+        moduleName: meta.name,
+        rest: [String(page)],
+      }),
       placeholder: "Remove an override…",
       options: overrides.slice(0, 25).map((o) =>
         new StringSelectMenuOptionBuilder()

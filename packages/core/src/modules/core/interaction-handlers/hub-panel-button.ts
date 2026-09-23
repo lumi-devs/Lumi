@@ -28,6 +28,7 @@ import { buildPermitPickerView } from "#modules/core/ui/permissions.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard } from "#lib/ui/cards.js";
 import { getCoreUpdateStatus, updateLumiCore } from "#lib/utilities/self-update.js";
+import { HubAddonModalId, HubId } from "../constants.js";
 import {
   ActionRowBuilder,
   ModalBuilder,
@@ -58,8 +59,10 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
   }
 
   public override parse(interaction: ButtonInteraction) {
-    if (!interaction.customId.startsWith("lumi:")) return this.none();
-    const [, action, sub, ...rest] = interaction.customId.split(":");
+    const parsed = HubId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    const { action, rest: tail } = parsed;
+    const [sub, ...rest] = tail;
     return this.some({ action, sub, rest });
   }
 
@@ -554,7 +557,9 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
           .setPlaceholder(placeholder),
       );
 
-    const modal = new ModalBuilder().setCustomId(`lumi:addonmodal:${action}`);
+    const modal = new ModalBuilder().setCustomId(
+      HubAddonModalId.build({ action }),
+    );
 
     if (action === "add_repo") {
       modal

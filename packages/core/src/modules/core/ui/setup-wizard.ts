@@ -7,6 +7,7 @@ import {
   stepCustomId,
   type SetupWizardState,
 } from "../services/setup-wizard.js";
+import { SetupStepId } from "../constants.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { makeCard, makeSuccessCard, type CardReply } from "#lib/ui/cards.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
@@ -89,7 +90,7 @@ export function buildSetupStepView(
     return setupShell(1, "Log channel", state, "Pick where security alerts go.", [
       row(
         createChannelSelectMenu({
-          customId: "setup:step:1:ch",
+          customId: SetupStepId.build({ segments: ["1", "ch"] }),
           placeholder: "Select a log channel…",
           channelTypes: [ChannelType.GuildText, ChannelType.GuildAnnouncement],
           minValues: 0,

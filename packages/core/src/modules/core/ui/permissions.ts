@@ -18,6 +18,7 @@ import {
 } from "@discordjs/builders";
 import { roleMention, userMention } from "@discordjs/formatters";
 import { ButtonStyle } from "discord.js";
+import { HubPermitAssignId, HubPermitPickId } from "../constants.js";
 
 export const PermsPerPage = 4;
 
@@ -142,7 +143,7 @@ export function buildPermitPickerView(
   }
 
   const select = createStringSelectMenu({
-    customId: `lumi:permit:pick:${kind}`,
+    customId: HubPermitPickId.build({ kind }),
     placeholder: t ? t(PanelsKeys.PermsPickPermit) : "Pick a permit…",
     options: permits.slice(0, 25).map((p) =>
       new StringSelectMenuOptionBuilder()
@@ -170,11 +171,11 @@ export function buildPermitAssignTargetView(
   const select =
     kind === "enforced"
       ? createUserSelectMenu({
-          customId: `lumi:permit:assign:${permitId}`,
+          customId: HubPermitAssignId.build({ permitId: String(permitId) }),
           placeholder: t ? t(PanelsKeys.PermsPickTarget) : "Pick a member…",
         })
       : createRoleSelectMenu({
-          customId: `lumi:permit:assign:${permitId}`,
+          customId: HubPermitAssignId.build({ permitId: String(permitId) }),
           placeholder: t ? t(PanelsKeys.PermsPickTarget) : "Pick a role…",
         });
 

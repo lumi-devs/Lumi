@@ -10,6 +10,7 @@ import {
   type PingCategory,
 } from "../ui/ping-cards.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { PingId } from "../constants.js";
 
 @ApplyOptions<InteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.MessageComponent,
@@ -17,10 +18,9 @@ import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 export class PingInteractionHandler extends BaseInteractionHandler {
   public override parse(interaction: import("discord.js").Interaction) {
     if (!interaction.isMessageComponent()) return this.none();
-    if (!interaction.customId.startsWith("ping:")) return this.none();
-
-    const [prefix, cat, userId] = interaction.customId.split(":");
-    if (prefix !== "ping" || !cat || !userId) return this.none();
+    const parsed = PingId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    const { cat, userId } = parsed;
 
     let category = cat;
     if (category === "select" && interaction.isStringSelectMenu()) {

@@ -7,6 +7,11 @@ import { buildFeatureDetailView } from "#modules/core/ui/modules.js";
 import { buildOverridesView } from "#modules/core/ui/overrides.js";
 import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
 import { cleanMention, isSnowflakeId } from "#lib/utilities/misc.js";
+import {
+  ConfigFieldModalId,
+  ConfigModalId,
+  ConfigOverrideModalId,
+} from "../constants.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,
@@ -26,15 +31,34 @@ export class ConfigPanelModalHandler extends InteractionHandler {
   }
 
   public override parse(interaction: ModalSubmitInteraction) {
-    if (
-      !interaction.customId.startsWith("cfg:modal:") &&
-      !interaction.customId.startsWith("cfg:ovmodal:") &&
-      !interaction.customId.startsWith("cfg:fmodal:")
-    )
-      return this.none();
-    const [, kind, moduleName, fieldKey, fieldPage] =
-      interaction.customId.split(":");
-    return this.some({ kind, moduleName, fieldKey, fieldPage });
+    const fmodal = ConfigFieldModalId.parse(interaction.customId);
+    if (fmodal) {
+      return this.some({
+        kind: "fmodal",
+        moduleName: fmodal.moduleName,
+        fieldKey: fmodal.fieldKey,
+        fieldPage: fmodal.fieldPage,
+      });
+    }
+    const modal = ConfigModalId.parse(interaction.customId);
+    if (modal) {
+      return this.some({
+        kind: "modal",
+        moduleName: modal.moduleName,
+        fieldKey: undefined,
+        fieldPage: undefined,
+      });
+    }
+    const ovmodal = ConfigOverrideModalId.parse(interaction.customId);
+    if (ovmodal) {
+      return this.some({
+        kind: "ovmodal",
+        moduleName: ovmodal.moduleName,
+        fieldKey: undefined,
+        fieldPage: undefined,
+      });
+    }
+    return this.none();
   }
 
   public async run(

@@ -3,6 +3,7 @@ import { restartChoiceRow } from "#lib/restart.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "#lib/ui/cards.js";
 import type { ModulePiecesInfo } from "../services/module-command/pieces.js";
+import { ModuleUpdateId } from "../constants.js";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 
@@ -115,7 +116,7 @@ export function moduleAlreadyInstalledCard(
 ): CardReply {
   const updateRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId(`module:update:${moduleName}:${userId}`)
+      .setCustomId(ModuleUpdateId.build({ moduleName, userId }))
       .setLabel("Update Module")
       .setEmoji(Emojis.parse(Emojis.Download))
       .setStyle(ButtonStyle.Primary),
