@@ -3,6 +3,8 @@ import { container } from "@sapphire/framework";
 import ReactionRolesUtility, {
   ReactionRoleMenuLockedError,
 } from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
+import { ReactionRoleRepository } from "#modules/reactionroles/data/ReactionRoleRepository.js";
+import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 function mockRedis() {
   const store = new Map<string, string>();
@@ -27,44 +29,28 @@ function mockRedis() {
   };
 }
 
-function installMemoryKv() {
-  const rows = new Map<string, unknown>();
-  const keyOf = (guildId: string, module: string, targetId: string, key: string) =>
-    `${guildId}:${module}:${targetId}:${key}`;
+function installMockDb() {
+  const prisma = createMockPrismaClient();
+  const mockLogger = {
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    info: vi.fn(),
+  };
+  const mockDb = { ensureGuild: vi.fn().mockResolvedValue(undefined) };
   (container as any).db = {
-    ensureGuild: vi.fn().mockResolvedValue(undefined),
+    ...mockDb,
     config: {
       getModuleConfig: vi.fn().mockResolvedValue(null),
     },
-    guildKV: {
-      getModuleData: vi.fn(async (guildId: string, module: string, targetId: string, key: string) => {
-        return rows.get(keyOf(guildId, module, targetId, key)) ?? null;
-      }),
-      setModuleData: vi.fn(
-        async (guildId: string, module: string, targetId: string, key: string, value: unknown) => {
-          rows.set(keyOf(guildId, module, targetId, key), value);
-        },
-      ),
-      deleteModuleData: vi.fn(
-        async (guildId: string, module: string, targetId: string, key: string) => {
-          return rows.delete(keyOf(guildId, module, targetId, key)) ? 1 : 0;
-        },
-      ),
-      listModuleData: vi.fn(async (opts: { module: string; key: string; guildId?: string }) => {
-        const out: { guildId: string; targetId: string; value: unknown }[] = [];
-        for (const [k, value] of rows) {
-          const [guildId, module, ...rest] = k.split(":");
-          const key = rest.pop()!;
-          const targetId = rest.join(":");
-          if (module !== opts.module || key !== opts.key) continue;
-          if (opts.guildId && guildId !== opts.guildId) continue;
-          out.push({ guildId: guildId!, targetId, value });
-        }
-        return out;
-      }),
-    },
+    reactionRoles: new ReactionRoleRepository(
+      prisma as never,
+      {} as never,
+      mockLogger as never,
+      mockDb as never,
+    ),
   } as any;
-  return rows;
+  return prisma;
 }
 
 describe("ReactionRolesUtility menu-write locking", () => {
@@ -84,7 +70,7 @@ describe("ReactionRolesUtility menu-write locking", () => {
       debug: vi.fn(),
       info: vi.fn(),
     };
-    installMemoryKv();
+    installMockDb();
     service = new ReactionRolesUtility(
       { name: "reactionroles", store: { name: "utilities" } } as any,
       {},
@@ -112,7 +98,7 @@ describe("ReactionRolesUtility menu-write locking", () => {
     ]);
   });
 
-  it("loses an update when two writers race directly against the KV layer without the lock", async () => {
+  it("loses an update when two writers race directly against the repository without the lock", async () => {
     // Same race as the test above, but bypassing ReactionRolesUtility and calling
     // the underlying data.ts read-modify-write directly - proves the race is real
     // at the storage layer the lock guards, not an artifact of the utility mock.
@@ -134,21 +120,27 @@ describe("ReactionRolesUtility menu-write locking", () => {
       updatedAt: Date.now(),
     });
 
-    const raceWrite = async (roleId: string) => {
-      const current = (await rawGetMenu("guild-1", "unlocked"))!;
-      await saveMenu({
-        ...current,
-        options: [
-          ...current.options,
-          { id: roleId, label: roleId, emoji: null, description: null, roleId, requiredRoleId: null },
-        ],
-      });
-    };
+    // Both writers read the same stale snapshot before either writes back -
+    // the classic lost-update anomaly the per-menu lock exists to prevent.
+    // (A `Promise.all` race is nondeterministic against the repository's
+    // multi-statement delete-then-recreate write and can land on an
+    // interleaving where both options survive instead of one being lost;
+    // this reproduces the anomaly deterministically instead.)
+    const base = (await rawGetMenu("guild-1", "unlocked"))!;
+    const optionFor = (roleId: string) => ({
+      id: roleId,
+      label: roleId,
+      emoji: null,
+      description: null,
+      roleId,
+      requiredRoleId: null,
+    });
 
-    await Promise.all([raceWrite("111111111111111111"), raceWrite("222222222222222222")]);
+    await saveMenu({ ...base, options: [...base.options, optionFor("111111111111111111")] });
+    await saveMenu({ ...base, options: [...base.options, optionFor("222222222222222222")] });
 
     const after = await rawGetMenu("guild-1", "unlocked");
-    expect(after?.options.length).toBeLessThan(2);
+    expect(after?.options.map((o) => o.roleId)).toEqual(["222222222222222222"]);
   });
 
   it("throws ReactionRoleMenuLockedError when the lock can't be acquired in time", async () => {

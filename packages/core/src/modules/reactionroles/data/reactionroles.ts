@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 import { isHexColor } from "#lib/message-content.js";
 import { isSnowflakeId } from "#lib/utilities/misc.js";
-import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
+import type { MessageDocumentV2 } from "@lumi/contracts";
 
 export type ReactionRoleMode = "buttons" | "select" | "reactions";
 
@@ -35,11 +35,6 @@ export interface ReactionRoleMenu {
   richContent: MessageDocumentV2;
   createdAt: number;
   updatedAt: number;
-}
-
-interface ReactionRoleMessageRef {
-  menuId: string;
-  channelId: string;
 }
 
 const ReactionRoleLimits = {
@@ -240,86 +235,15 @@ export function toggleBlockedMessage(
   return `You already hold the maximum of ${menu.maxRoles} role(s) from this menu. Remove one first.`;
 }
 
-const KvModule = "reactionroles";
-const KvMenuKey = "menu";
-const KvMessageKey = "message";
-
-const menuTarget = (menuId: string) => `menu:${menuId}`;
-const messageTarget = (messageId: string) => `msg:${messageId}`;
-
-function toMenu(value: unknown, guildId: string): ReactionRoleMenu | null {
-  if (!value || typeof value !== "object") return null;
-  const raw = value as Record<string, unknown>;
-  if (typeof raw.id !== "string" || typeof raw.title !== "string") return null;
-  if (!Array.isArray(raw.options)) return null;
-  const mode = typeof raw.mode === "string" && isReactionRoleMode(raw.mode) ? raw.mode : "buttons";
-  return {
-    id: raw.id,
-    guildId: typeof raw.guildId === "string" ? raw.guildId : guildId,
-    title: raw.title,
-    description: typeof raw.description === "string" ? raw.description : null,
-    color: typeof raw.color === "string" ? raw.color : null,
-    mode,
-    exclusive: raw.exclusive === true,
-    maxRoles:
-      typeof raw.maxRoles === "number" && Number.isInteger(raw.maxRoles)
-        ? Math.min(Math.max(raw.maxRoles, 1), 25)
-        : 1,
-    channelId: typeof raw.channelId === "string" ? raw.channelId : null,
-    messageIds: Array.isArray(raw.messageIds)
-      ? raw.messageIds.filter((id): id is string => typeof id === "string")
-      : [],
-    options: (raw.options as unknown[]).flatMap((entry) => {
-      if (!entry || typeof entry !== "object") return [];
-      const o = entry as Record<string, unknown>;
-      if (typeof o.id !== "string" || typeof o.label !== "string") return [];
-      if (typeof o.roleId !== "string" || !isSnowflakeId(o.roleId)) return [];
-      return [
-        {
-          id: o.id,
-          label: o.label,
-          emoji: typeof o.emoji === "string" ? o.emoji : null,
-          description: typeof o.description === "string" ? o.description : null,
-          roleId: o.roleId,
-          requiredRoleId:
-            typeof o.requiredRoleId === "string" && isSnowflakeId(o.requiredRoleId)
-              ? o.requiredRoleId
-              : null,
-        } satisfies ReactionRoleOption,
-      ];
-    }),
-    richContent: clampMessageDocumentV2(raw.richContent),
-    createdAt: typeof raw.createdAt === "number" ? raw.createdAt : Date.now(),
-    updatedAt: typeof raw.updatedAt === "number" ? raw.updatedAt : Date.now(),
-  };
-}
-
 export async function listMenus(guildId: string): Promise<ReactionRoleMenu[]> {
-  const rows = await container.db.guildKV.listModuleData<unknown>({
-    module: KvModule,
-    key: KvMenuKey,
-    guildId,
-  });
-  const menus: ReactionRoleMenu[] = [];
-  for (const row of rows) {
-    const menu = toMenu(row.value, guildId);
-    if (menu) menus.push(menu);
-  }
-  menus.sort((a, b) => a.title.localeCompare(b.title));
-  return menus;
+  return container.db.reactionRoles.listMenus(guildId);
 }
 
 export async function getMenu(
   guildId: string,
   menuId: string,
 ): Promise<ReactionRoleMenu | null> {
-  const value = await container.db.guildKV.getModuleData<unknown>(
-    guildId,
-    KvModule,
-    menuTarget(menuId),
-    KvMenuKey,
-  );
-  return toMenu(value, guildId);
+  return container.db.reactionRoles.getMenu(guildId, menuId);
 }
 
 export async function resolveMenuId(guildId: string, desired: string): Promise<string> {
@@ -333,28 +257,11 @@ export async function resolveMenuId(guildId: string, desired: string): Promise<s
 }
 
 export async function saveMenu(menu: ReactionRoleMenu): Promise<ReactionRoleMenu> {
-  const next: ReactionRoleMenu = { ...menu, updatedAt: Date.now() };
-  await container.db.ensureGuild(menu.guildId);
-  await container.db.guildKV.setModuleData(
-    menu.guildId,
-    KvModule,
-    menuTarget(menu.id),
-    KvMenuKey,
-    next,
-  );
-  return next;
+  return container.db.reactionRoles.saveMenu(menu);
 }
 
 export async function deleteMenu(guildId: string, menuId: string): Promise<boolean> {
-  const existing = await getMenu(guildId, menuId);
-  if (!existing) return false;
-  await container.db.guildKV.deleteModuleData(guildId, KvModule, menuTarget(menuId), KvMenuKey);
-  for (const messageId of existing.messageIds) {
-    await container.db.guildKV
-      .deleteModuleData(guildId, KvModule, messageTarget(messageId), KvMessageKey)
-      .catch(() => 0);
-  }
-  return true;
+  return container.db.reactionRoles.deleteMenu(guildId, menuId);
 }
 
 export async function trackMenuMessage(
@@ -362,40 +269,16 @@ export async function trackMenuMessage(
   channelId: string,
   messageId: string,
 ): Promise<ReactionRoleMenu> {
-  const messageIds = menu.messageIds.includes(messageId)
-    ? menu.messageIds
-    : [...menu.messageIds, messageId];
-  const next = await saveMenu({ ...menu, channelId, messageIds });
-  await container.db.guildKV
-    .setModuleData<ReactionRoleMessageRef>(
-      menu.guildId,
-      KvModule,
-      messageTarget(messageId),
-      KvMessageKey,
-      { menuId: menu.id, channelId },
-    )
-    .catch(() => undefined);
-  return next;
+  return container.db.reactionRoles.trackMenuMessage(menu, channelId, messageId);
 }
 
 export async function findMenuByMessage(
   guildId: string,
   messageId: string,
 ): Promise<ReactionRoleMenu | null> {
-  const ref = await container.db.guildKV.getModuleData<ReactionRoleMessageRef>(
-    guildId,
-    KvModule,
-    messageTarget(messageId),
-    KvMessageKey,
-  );
-  if (!ref) {
-    const menus = await listMenus(guildId);
-    return menus.find((m) => m.messageIds.includes(messageId)) ?? null;
-  }
-  return getMenu(guildId, ref.menuId);
+  return container.db.reactionRoles.findMenuByMessage(guildId, messageId);
 }
 
 export async function countMenus(guildId: string): Promise<number> {
-  const menus = await listMenus(guildId);
-  return menus.length;
+  return container.db.reactionRoles.countMenus(guildId);
 }

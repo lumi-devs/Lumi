@@ -25,6 +25,7 @@ import { GlobalRepository } from "#lib/prisma/repositories/GlobalRepository.js";
 import { SecurityRepository } from "#modules/security/data/SecurityRepository.js";
 import { TempVcRepository } from "#modules/tempvc/data/TempVcRepository.js";
 import { EconomyRepository } from "#modules/economy/data/EconomyRepository.js";
+import { ReactionRoleRepository } from "#modules/reactionroles/data/ReactionRoleRepository.js";
 
 export type { ConfigHistoryEntry } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
 export type { ConfigOverrideEntry } from "#lib/prisma/repositories/ConfigOverrideRepository.js";
@@ -57,6 +58,7 @@ export class DatabaseService {
   public readonly security: SecurityRepository;
   public readonly tempvc: TempVcRepository;
   public readonly economy: EconomyRepository;
+  public readonly reactionRoles: ReactionRoleRepository;
 
   public constructor(
     private readonly prisma: DatabaseClient,
@@ -92,6 +94,7 @@ export class DatabaseService {
     this.security = new SecurityRepository(prisma, redis, logger, this);
     this.tempvc = new TempVcRepository(prisma, redis, logger, this);
     this.economy = new EconomyRepository(prisma, redis, logger, this);
+    this.reactionRoles = new ReactionRoleRepository(prisma, redis, logger, this);
   }
 
   /** Ensures a Guild row exists so dependent rows can satisfy their FK. */

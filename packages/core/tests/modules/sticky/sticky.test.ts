@@ -35,6 +35,7 @@ describe("Sticky Module", () => {
     };
     (container as any).invalidation = {
       invalidate: vi.fn().mockResolvedValue(undefined),
+      onResync: vi.fn(),
     };
     (container as any).db = {
       config: { getModuleConfig: vi.fn().mockResolvedValue(null) },

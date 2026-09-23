@@ -402,6 +402,7 @@ CREATE TABLE "reactionrole_menus" (
 CREATE TABLE "reactionrole_options" (
     "id" SERIAL NOT NULL,
     "menu_id" VARCHAR(32) NOT NULL,
+    "slug" VARCHAR(32) NOT NULL,
     "position" INTEGER NOT NULL DEFAULT 0,
     "label" VARCHAR(80) NOT NULL,
     "emoji" VARCHAR(100),
@@ -593,6 +594,9 @@ CREATE INDEX "reactionrole_menus_guild_id_idx" ON "reactionrole_menus"("guild_id
 
 -- CreateIndex
 CREATE INDEX "reactionrole_options_menu_id_position_idx" ON "reactionrole_options"("menu_id", "position");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "reactionrole_options_menu_id_slug_key" ON "reactionrole_options"("menu_id", "slug");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "sticky_messages_guild_id_channel_id_key" ON "sticky_messages"("guild_id", "channel_id");

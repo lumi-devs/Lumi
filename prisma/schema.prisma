@@ -654,6 +654,10 @@ model ReactionRoleMenu {
 model ReactionRoleOption {
   id             Int     @id @default(autoincrement())
   menuId         String  @map("menu_id") @db.VarChar(32)
+  // Caller-assigned slug, stable across a menu's full-option-array
+  // replacement on every save - baked into already-posted Discord
+  // button/select customIds, so it must never change once assigned.
+  slug           String  @db.VarChar(32)
   position       Int     @default(0)
   label          String  @db.VarChar(80)
   emoji          String? @db.VarChar(100)
@@ -663,6 +667,7 @@ model ReactionRoleOption {
 
   menu ReactionRoleMenu @relation(fields: [menuId], references: [id], onDelete: Cascade)
 
+  @@unique([menuId, slug])
   @@index([menuId, position])
   @@map("reactionrole_options")
 }
@@ -671,6 +676,11 @@ model ReactionRoleOption {
 // MODULE: sticky
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Unused for now: sticky entries are still edited entirely through the generic
+// module-config-schema mechanism (dashboard support is auto-derived from that
+// schema), and moving storage here would either break that or require a
+// config-schema/table dual-write the zero-cross-module-import law makes awkward.
+// Left in place for a future phase that builds the dashboard-side work to use it.
 model StickyMessage {
   id           Int      @id @default(autoincrement())
   guildId      String   @map("guild_id") @db.VarChar(20)
