@@ -103,6 +103,66 @@ export class DatabaseService {
     });
   }
 
+  /** Marks a guild as departed, starting its retention grace period. */
+  public async markGuildLeft(guildId: string): Promise<void> {
+    await this.prisma.guild
+      .update({
+        where: { id: guildId },
+        data: { leftAt: new Date() },
+      })
+      // The row may not exist if the bot left before ever writing one -
+      // nothing to mark departed in that case.
+      .catch(() => {});
+  }
+
+  /** Clears a departure mark on (re)join - upserts, a fresh guild has no row yet. */
+  public async markGuildRejoined(guildId: string): Promise<void> {
+    await this.prisma.guild.upsert({
+      where: { id: guildId },
+      create: { id: guildId },
+      update: { leftAt: null },
+    });
+  }
+
+  /** Of `guildIds`, the ones currently marked departed in Postgres. */
+  public async findDepartedGuildIds(guildIds: string[]): Promise<string[]> {
+    if (guildIds.length === 0) return [];
+    const rows = await this.prisma.guild.findMany({
+      where: { id: { in: guildIds }, leftAt: { not: null } },
+      select: { id: true },
+    });
+    return rows.map((row) => row.id);
+  }
+
+  /** Every guild id not currently marked departed. */
+  public async findActiveGuildIds(): Promise<string[]> {
+    const rows = await this.prisma.guild.findMany({
+      where: { leftAt: null },
+      select: { id: true },
+    });
+    return rows.map((row) => row.id);
+  }
+
+  /**
+   * Deletes every Guild row whose departure grace period has elapsed and
+   * returns the purged ids, so the caller can also evict their Redis state.
+   * Every child table's FK to Guild is `onDelete: Cascade`, so nothing else
+   * needs a manual delete.
+   */
+  public async purgeDepartedGuilds(cutoffDate: Date): Promise<string[]> {
+    const departed = await this.prisma.guild.findMany({
+      where: { leftAt: { lt: cutoffDate } },
+      select: { id: true },
+    });
+    if (departed.length === 0) return [];
+
+    await this.prisma.guild.deleteMany({
+      where: { leftAt: { lt: cutoffDate } },
+    });
+
+    return departed.map((row) => row.id);
+  }
+
   public async publishBotStats(stats: Record<string, unknown>): Promise<void> {
     await this.redis.setex(
       RedisKeys.botStats(),

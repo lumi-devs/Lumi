@@ -1,52 +1,29 @@
 import { Listener, Events } from "@sapphire/framework";
-import { scanKeysSafe } from "#lib/database/cluster-safe.js";
+import { evictGuildRedisState } from "#lib/database/guild-eviction.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Guild } from "discord.js";
-import { RedisKeys } from "#lib/database/redis.js";
 
 @ApplyOptions<Listener.Options>({ event: Events.GuildDelete })
 export class GuildDeleteEventBusListener extends Listener<
   typeof Events.GuildDelete
 > {
   public override async run(guild: Guild) {
+    // discord.js also fires this event when a Discord outage makes a guild
+    // temporarily unavailable (`guild.available === false`) - only a
+    // hydrated guild (`available === true`) means the bot was actually
+    // removed, so only that branch counts as a real departure.
     if (!guild.available) return;
 
-    const staticKeys = [
-      RedisKeys.guildSettings(guild.id),
-      RedisKeys.guildIgnored(guild.id),
-    ];
+    await this.container.db.markGuildLeft(guild.id);
 
-    const patterns = [
-      `lumi:cfg:*:guild:${guild.id}`,
-      `lumi:module:enabled:*:${guild.id}`,
-    ];
-
-    const dynamicKeys: string[] = [];
-    for (const pattern of patterns) {
-      try {
-        dynamicKeys.push(
-          ...(await scanKeysSafe(this.container.redis, pattern)),
-        );
-      } catch (err: unknown) {
-        this.container.logger.warn(
-          `[GuildDelete] Redis SCAN failed for pattern ${pattern}:`,
-          err,
-        );
-      }
-    }
-
-    const allKeys = [...staticKeys, ...dynamicKeys];
-    if (allKeys.length) {
-      await this.container.invalidation
-        .invalidate(...allKeys)
-        .catch((err: unknown) =>
-          this.container.logger.warn(
-            "[GuildDelete] Redis eviction failed:",
-            err,
-          ),
-        );
-    }
+    await evictGuildRedisState(
+      this.container.redis,
+      this.container.invalidation,
+      this.container.logger,
+      guild.id,
+      "GuildDelete",
+    );
 
     const filterSvc = tryGetUtility("filter");
     filterSvc?.evict(guild.id);

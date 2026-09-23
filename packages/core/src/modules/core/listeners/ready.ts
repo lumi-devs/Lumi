@@ -2,6 +2,7 @@ import { Listener, Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { styleText } from "node:util";
 import { Emojis } from "#lib/utilities/assets.js";
+import { getShardCount } from "#lib/env.js";
 
 @ApplyOptions<Listener.Options>({ once: true, event: Events.ClientReady })
 export class ReadyListener extends Listener<typeof Events.ClientReady> {
@@ -35,6 +36,7 @@ export class ReadyListener extends Listener<typeof Events.ClientReady> {
     logger.debug(rule);
 
     void this.#publishStats(guilds);
+    void this.#reconcileGuilds();
   }
 
   async #publishStats(guilds: number) {
@@ -51,5 +53,38 @@ export class ReadyListener extends Listener<typeof Events.ClientReady> {
       .catch((err) =>
         this.container.logger.warn("[Ready] Bot stats publish failed:", err),
       );
+  }
+
+  /**
+   * Catches up `Guild.leftAt` for departures/rejoins that happened while
+   * every shard covering that guild was offline, so no `guildCreate`/
+   * `guildDelete` ever fired for them.
+   */
+  async #reconcileGuilds(): Promise<void> {
+    try {
+      const { client, db } = this.container;
+      const cachedIds = [...client.guilds.cache.keys()];
+
+      const rejoined = await db.findDepartedGuildIds(cachedIds);
+      await Promise.all(rejoined.map((id) => db.markGuildRejoined(id)));
+
+      // `client.shard.ids` is the shard ids ShardingManager assigned to this
+      // process; only guilds computed to belong to one of them may be
+      // touched here, or two processes could race the same Postgres rows.
+      const myShardIds = this.container.client.shard?.ids ?? [0];
+      const shardCount = getShardCount();
+      const cachedSet = new Set(cachedIds);
+
+      const activeIds = await db.findActiveGuildIds();
+      const departed = activeIds.filter((id) => {
+        if (cachedSet.has(id)) return false;
+        const ownerShard = Number((BigInt(id) >> 22n) % BigInt(shardCount));
+        return myShardIds.includes(ownerShard);
+      });
+
+      await Promise.all(departed.map((id) => db.markGuildLeft(id)));
+    } catch (err) {
+      this.container.logger.warn("[Ready] Guild reconcile sweep failed:", err);
+    }
   }
 }

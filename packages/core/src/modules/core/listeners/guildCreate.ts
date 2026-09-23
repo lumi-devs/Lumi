@@ -15,7 +15,7 @@ export class GuildCreateListener extends Listener<typeof Events.GuildCreate> {
     this.container.logger.info(
       `[Guild] ${Emojis.Guild} Joined: ${guild.name} (${guild.id}) - ${guild.memberCount} members`,
     );
-    await this.container.db.config.getGuildSettings(guild.id);
+    await this.container.db.markGuildRejoined(guild.id);
     await this.container.db.permissions.ensureBuiltinPermits(guild.id);
     await this.leaveWhenLocked(guild);
   }
