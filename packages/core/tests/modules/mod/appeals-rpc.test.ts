@@ -3,7 +3,7 @@ import { container } from "@sapphire/framework";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
-import { AppealRepository } from "#lib/prisma/repositories/AppealRepository.js";
+import { AppealRepository } from "#modules/mod/data/AppealRepository.js";
 import { AccessRepository } from "#lib/prisma/repositories/AccessRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 

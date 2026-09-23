@@ -22,11 +22,12 @@ export class AfkRepository extends Repository {
     });
   }
 
-  public upsertEntry(
+  public async upsertEntry(
     guildId: string,
     userId: string,
     reason: string,
   ): Promise<AfkEntry> {
+    await this.db.ensureGuild(guildId);
     return this.prisma.afkEntry.upsert({
       where: { userId_guildId: { userId, guildId } },
       update: { reason, since: new Date() },
@@ -78,8 +79,30 @@ export class AfkRepository extends Repository {
     return this.prisma.afkEntry.findMany({ where: { guildId } });
   }
 
-  public findAllForUser(userId: string): Promise<AfkEntry[]> {
-    return this.prisma.afkEntry.findMany({ where: { userId } });
+  /**
+   * Every AFK entry for a user across every guild, keyset-paginated - a GDPR
+   * export must see the complete set, but a user can have at most one entry
+   * per guild the bot shares with them, which for a popular user can still
+   * span thousands of rows.
+   */
+  public async findAllForUser(userId: string, pageSize = 1_000): Promise<AfkEntry[]> {
+    const entries: AfkEntry[] = [];
+    let cursor: string | undefined;
+
+    for (;;) {
+      const page = await this.prisma.afkEntry.findMany({
+        where: { userId },
+        orderBy: { guildId: "asc" },
+        take: pageSize,
+        ...(cursor === undefined
+          ? {}
+          : { cursor: { userId_guildId: { userId, guildId: cursor } }, skip: 1 }),
+      });
+
+      entries.push(...page);
+      if (page.length < pageSize) return entries;
+      cursor = page[page.length - 1]!.guildId;
+    }
   }
 
   public countAll(): Promise<number> {

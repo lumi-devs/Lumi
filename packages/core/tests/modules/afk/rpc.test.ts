@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { AfkRepository } from "#lib/prisma/repositories/AfkRepository.js";
+import { AfkRepository } from "#modules/afk/data/AfkRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 const GUILD_ID = "123456789012345678";

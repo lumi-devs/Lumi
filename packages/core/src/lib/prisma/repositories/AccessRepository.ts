@@ -169,6 +169,7 @@ export class AccessRepository extends Repository {
       await this.invalidate(RedisKeys.guildIgnored(guildId));
       return null;
     }
+    await this.db.ensureGuild(guildId);
     const entry = await this.prisma.ignoreEntry.create({
       data: { guildId, channelId },
     });

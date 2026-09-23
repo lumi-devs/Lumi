@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { SecurityRepository } from "#lib/prisma/repositories/SecurityRepository.js";
+import { SecurityRepository } from "#modules/security/data/SecurityRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 import { enterPanic, revertPanic } from "#modules/security/services/panic.js";
 import { postOrEditVerifyPanel } from "#modules/security/services/verification.js";

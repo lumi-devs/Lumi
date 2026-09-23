@@ -22,6 +22,7 @@ export class ConfigHistoryRepository extends Repository {
     newValue: unknown;
     actorId: string;
   }): Promise<void> {
+    await this.db.ensureGuild(data.guildId);
     await this.prisma.moduleConfigHistory.create({
       data: {
         guildId: data.guildId,

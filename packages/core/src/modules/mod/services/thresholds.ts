@@ -70,13 +70,13 @@ export async function incrementWarnCount(
   const exists = await container.redis.exists(key);
 
   if (!exists) {
-    const cases = await container.db.moderation.getModerationCases(
+    const count = await container.db.moderation.countModerationCases(
       guildId,
       userId,
       "warn",
     );
-    await container.redis.set(key, String(cases.length), "EX", WarnCountTtl);
-    return cases.length;
+    await container.redis.set(key, String(count), "EX", WarnCountTtl);
+    return count;
   }
 
   const pipe = container.redis.pipeline();

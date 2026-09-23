@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 import { ChannelType, PermissionFlagsBits, type Guild } from "discord.js";
 import { withSerializedWork } from "#lib/utilities/misc.js";
-import type { LockedChannelSnapshot } from "#lib/prisma/repositories/SecurityRepository.js";
+import type { LockedChannelSnapshot } from "#modules/security/data/SecurityRepository.js";
 import { isRestorePending, restoreFromBackup, clearRestorePending } from "./backup.js";
 
 export interface PanicResult {

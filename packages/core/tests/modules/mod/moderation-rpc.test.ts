@@ -65,15 +65,16 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
       invalidate: vi.fn().mockResolvedValue(undefined),
     };
 
-    (container as any).db = {
-      moderation: new ModerationRepository(
-        prisma as any,
-        {} as any,
-        container.logger,
-        {} as any,
-      ),
+    const db: any = {
       ensureGuild: vi.fn().mockResolvedValue(undefined),
     };
+    db.moderation = new ModerationRepository(
+      prisma as any,
+      {} as any,
+      container.logger,
+      db,
+    );
+    (container as any).db = db;
 
     container.stores = {
       get: vi.fn().mockReturnValue({ loaded: () => [] }),

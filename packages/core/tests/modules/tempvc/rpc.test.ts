@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { TempVcRepository } from "#lib/prisma/repositories/TempVcRepository.js";
+import { TempVcRepository } from "#modules/tempvc/data/TempVcRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 const GUILD_ID = "123456789012345678";

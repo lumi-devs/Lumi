@@ -43,6 +43,7 @@ describe("ConfigRepository", () => {
 
     const mockDb: any = {
       configHistory: mockConfigHistory,
+      ensureGuild: vi.fn().mockResolvedValue(undefined),
     };
 
     const mockLogger: any = {
@@ -98,45 +99,6 @@ describe("ConfigRepository", () => {
         oldValue: "old_value",
         newValue: "new_value",
         actorId: "user_456",
-      });
-    });
-  });
-
-  describe("setModuleConfigsMany", () => {
-    it("upserts multiple keys in a transaction and logs history when actorId is given", async () => {
-      mockPrisma.guildModuleConfig.findMany.mockResolvedValue([
-        { configKey: "key1", value: "old1" },
-      ]);
-
-      await repo.setModuleConfigsMany(
-        "123",
-        "moderation",
-        { key1: "val1", key2: "val2" },
-        "actor_789",
-      );
-
-      expect(mockPrisma.$transaction).toHaveBeenCalled();
-      expect((container as any).invalidation.invalidate).toHaveBeenCalledWith(
-        RedisKeys.guildConfig("moderation", "123"),
-        RedisKeys.guildAllModuleConfigs("123"),
-      );
-
-      expect(mockConfigHistory.logConfigChange).toHaveBeenCalledWith({
-        guildId: "123",
-        moduleName: "moderation",
-        key: "key1",
-        oldValue: "old1",
-        newValue: "val1",
-        actorId: "actor_789",
-      });
-
-      expect(mockConfigHistory.logConfigChange).toHaveBeenCalledWith({
-        guildId: "123",
-        moduleName: "moderation",
-        key: "key2",
-        oldValue: null,
-        newValue: "val2",
-        actorId: "actor_789",
       });
     });
   });

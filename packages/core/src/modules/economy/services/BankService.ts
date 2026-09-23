@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import type { EconomyAccount, EconomyTxnKind } from "@prisma/client";
-import type { EconomyRepository } from "#lib/prisma/repositories/EconomyRepository.js";
+import type { EconomyRepository } from "#modules/economy/data/EconomyRepository.js";
 import {
   resolveSlotPayout,
   spinSlots,

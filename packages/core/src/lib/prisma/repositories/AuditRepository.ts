@@ -73,24 +73,6 @@ export class AuditRepository extends Repository {
     );
   }
 
-  public async queueAuditLogsBatch(payloads: AuditLogPayload[]) {
-    if (!payloads.length) return;
-    const pipeline = this.redis.pipeline();
-    const key = RedisKeys.auditLogsQueue(WriteBucket);
-    for (const payload of payloads) {
-      pipeline.xadd(
-        key,
-        "MAXLEN",
-        "~",
-        AuditStreamMaxlen,
-        "*",
-        "payload",
-        JSON.stringify(payload),
-      );
-    }
-    await pipeline.exec();
-  }
-
   /**
    * Drains every bucket, not just this process's own: the flush task is unicast,
    * so whichever process handles a fire is responsible for the whole key space.
@@ -183,6 +165,11 @@ export class AuditRepository extends Repository {
     let persistedEntryCount = 0;
 
     if (entries.length) {
+      const guildIds = new Set(entries.map(({ payload: p }) => p.guildId));
+      await Promise.all(
+        Array.from(guildIds, (guildId) => this.db.ensureGuild(guildId)),
+      );
+
       try {
         await this.prisma.auditLedger.createMany({
           data: entries.map(({ payload: p }) => ({

@@ -1,7 +1,6 @@
 import type { Guild, GuildModuleConfig, Prisma } from "@prisma/client";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
-import { acquireRedisLock } from "#lib/lock.js";
 
 /** Repository for guild settings and module configurations. */
 export class ConfigRepository extends Repository {
@@ -34,18 +33,6 @@ export class ConfigRepository extends Repository {
         };
       },
     );
-  }
-
-  public async updateGuildSettings(
-    guildId: string,
-    data: Partial<Omit<Guild, "id" | "createdAt" | "updatedAt">>,
-  ) {
-    const result = await this.prisma.guild.update({
-      where: { id: guildId },
-      data,
-    });
-    await this.invalidateGuildSettings(guildId, "prefix" in data);
-    return result;
   }
 
   /**
@@ -118,6 +105,7 @@ export class ConfigRepository extends Repository {
     if (actorId) {
       oldValue = await this.getModuleConfig(guildId, moduleName, key);
     }
+    await this.db.ensureGuild(guildId);
     const result = await this.prisma.guildModuleConfig.upsert({
       where: {
         guildId_moduleName_configKey: { guildId, moduleName, configKey: key },
@@ -176,69 +164,6 @@ export class ConfigRepository extends Repository {
     return result;
   }
 
-  /**
-   * Upserts multiple module configuration keys in a single transaction and invalidates caches.
-   */
-  public async setModuleConfigsMany(
-    guildId: string,
-    moduleName: string,
-    entries: Record<string, Prisma.InputJsonValue>,
-    actorId?: string,
-  ): Promise<void> {
-    const keys = Object.keys(entries);
-    if (keys.length === 0) return;
-
-    let oldValues: Record<string, unknown> = {};
-    if (actorId) {
-      oldValues = await this.getModuleConfigs(guildId, moduleName, keys);
-    }
-
-    await this.prisma.$transaction(
-      keys.map((configKey) =>
-        this.prisma.guildModuleConfig.upsert({
-          where: {
-            guildId_moduleName_configKey: {
-              guildId,
-              moduleName,
-              configKey,
-            },
-          },
-          create: {
-            guildId,
-            moduleName,
-            configKey,
-            value: entries[configKey]!,
-          },
-          update: {
-            value: entries[configKey]!,
-          },
-        }),
-      ),
-    );
-
-    await this.invalidateModuleConfig(guildId, moduleName);
-
-    if (actorId) {
-      for (const [key, value] of Object.entries(entries)) {
-        this.db.configHistory
-          ?.logConfigChange({
-            guildId,
-            moduleName,
-            key,
-            oldValue: oldValues[key] ?? null,
-            newValue: value,
-            actorId,
-          })
-          .catch((err: unknown) =>
-            this.logger.warn(
-              `[ConfigRepository] Failed to write audit history for ${moduleName}:${key}:`,
-              err,
-            ),
-          );
-      }
-    }
-  }
-
   public async clearModuleConfig(
     guildId: string,
     moduleName: string,
@@ -261,34 +186,4 @@ export class ConfigRepository extends Repository {
     await this.invalidateModuleConfig(guildId, moduleName);
   }
 
-  /**
-   * Atomic read-modify-write for one config key, guarded by a Redis lock
-   * scoped to (guildId, moduleName, key) - Redbot's `async with
-   * config.guild(g).some_list() as l:` pattern, for addon authors who'd
-   * otherwise do get-then-set by hand and race a concurrent writer.
-   * `mutator` returning `undefined` deletes the key instead of writing it.
-   */
-  public async mutateModuleConfig<T = unknown>(
-    guildId: string,
-    moduleName: string,
-    key: string,
-    mutator: (current: T | null) => T | undefined | Promise<T | undefined>,
-  ): Promise<T | undefined> {
-    const { release } = await acquireRedisLock(
-      this.redis,
-      `lock:config-mutate:${moduleName}:${guildId}:${key}`,
-    );
-    try {
-      const current = (await this.getModuleConfig(guildId, moduleName, key)) as T | null;
-      const next = await mutator(current);
-      if (next === undefined) {
-        await this.deleteModuleConfigKey(guildId, moduleName, key);
-      } else {
-        await this.setModuleConfig(guildId, moduleName, key, next as Prisma.InputJsonValue);
-      }
-      return next;
-    } finally {
-      await release();
-    }
-  }
 }

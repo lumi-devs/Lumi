@@ -60,15 +60,6 @@ export class ModuleRepository extends Repository {
     });
   }
 
-  public async getGuildModuleStates(
-    guildId: string,
-  ): Promise<Map<string, boolean>> {
-    const rows = await this.prisma.guildModuleState.findMany({
-      where: { guildId },
-    });
-    return new Map(rows.map((r) => [r.moduleName, r.enabled]));
-  }
-
   public isModuleGuildEnabled(guildId: string, name: string): Promise<boolean> {
     if (this.#isEssential(name)) {
       return Promise.resolve(true);
@@ -152,6 +143,7 @@ export class ModuleRepository extends Repository {
     if (!enabled && this.#isEssential(name)) {
       throw new Error(`Module '${name}' is essential and cannot be disabled.`);
     }
+    await this.db.ensureGuild(guildId);
     const updated = await this.prisma.guildModuleState.upsert({
       where: { guildId_moduleName: { guildId, moduleName: name } },
       update: { enabled },

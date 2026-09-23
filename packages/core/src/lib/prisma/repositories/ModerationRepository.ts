@@ -18,63 +18,41 @@ export class ModerationRepository extends Repository {
     durationSeconds?: number;
     expiresAt?: Date;
   }): Promise<ModerationCase> {
-    // Read Committed lets two concurrent creates read the same max case number
-    // and hand out the same one; only Serializable orders them.
-    for (let attempt = 0; ; attempt++) {
-      try {
-        return await this.prisma.$transaction(
-          async (tx) => {
-            const maxCase = await tx.moderationCase.findFirst({
-              where: { guildId: data.guildId },
-              orderBy: { caseNumber: "desc" },
-              select: { caseNumber: true },
-            });
+    await this.db.ensureGuild(data.guildId);
 
-            const maxNum = maxCase?.caseNumber ?? 0;
-
-            const counter = await tx.guildCaseCounter.upsert({
-              where: { guildId: data.guildId },
-              create: { guildId: data.guildId, next: maxNum + 2 },
-              update: { next: { increment: 1 } },
-            });
-
-            const caseNumber = Math.max(counter.next - 1, maxNum + 1);
-
-            if (caseNumber >= counter.next) {
-              await tx.guildCaseCounter.update({
-                where: { guildId: data.guildId },
-                data: { next: caseNumber + 1 },
-              });
-            }
-
-            return tx.moderationCase.create({
-              data: {
-                guildId: data.guildId,
-                caseNumber,
-                userId: data.userId,
-                moderatorId: data.moderatorId,
-                action: data.action,
-                reason: data.reason,
-                duration: data.durationSeconds,
-                expiresAt: data.expiresAt,
-                active: true,
-              },
-            });
-          },
-          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-        );
-      } catch (err) {
-        // Retry serialization failures under raid concurrency.
-        if (
-          attempt >= 3 ||
-          !(err instanceof Prisma.PrismaClientKnownRequestError) ||
-          err.code !== "P2034"
-        ) {
-          throw err;
-        }
-        await Bun.sleep(10 + Math.random() * 15);
-      }
+    // Reserves the next case number with one atomic upsert: Postgres's own
+    // row-level ON CONFLICT locking serializes concurrent reservations for
+    // the same guildId, so no application transaction, isolation level, or
+    // retry loop is needed - unlike a read-then-write, two racing callers
+    // physically cannot be handed the same number.
+    const reserved = await this.prisma.$queryRaw<{ caseNumber: number }[]>(
+      Prisma.sql`
+        INSERT INTO "guild_case_counter" ("guild_id", "next")
+        VALUES (${data.guildId}, 2)
+        ON CONFLICT ("guild_id") DO UPDATE SET "next" = "guild_case_counter"."next" + 1
+        RETURNING "next" - 1 AS "caseNumber"
+      `,
+    );
+    const row = reserved[0];
+    if (!row) {
+      throw new Error(
+        `Case counter upsert for guild ${data.guildId} returned no row.`,
+      );
     }
+
+    return this.prisma.moderationCase.create({
+      data: {
+        guildId: data.guildId,
+        caseNumber: row.caseNumber,
+        userId: data.userId,
+        moderatorId: data.moderatorId,
+        action: data.action,
+        reason: data.reason,
+        duration: data.durationSeconds,
+        expiresAt: data.expiresAt,
+        active: true,
+      },
+    });
   }
 
   public getModerationCases(
@@ -86,6 +64,16 @@ export class ModerationRepository extends Repository {
       where: { guildId, userId, ...(action ? { action } : {}) },
       orderBy: { caseNumber: "desc" },
       take: 10,
+    });
+  }
+
+  public countModerationCases(
+    guildId: string,
+    userId: string,
+    action?: CaseAction,
+  ): Promise<number> {
+    return this.prisma.moderationCase.count({
+      where: { guildId, userId, ...(action ? { action } : {}) },
     });
   }
 
@@ -264,12 +252,13 @@ export class ModerationRepository extends Repository {
     });
   }
 
-  public setWarnThreshold(data: {
+  public async setWarnThreshold(data: {
     guildId: string;
     warnCount: number;
     action: CaseAction;
     duration?: number;
   }) {
+    await this.db.ensureGuild(data.guildId);
     return this.prisma.warnThreshold.upsert({
       where: {
         guildId_warnCount: {
@@ -302,10 +291,11 @@ export class ModerationRepository extends Repository {
     });
   }
 
-  public setBulkWarnThresholds(
+  public async setBulkWarnThresholds(
     guildId: string,
     thresholds: Array<{ warnCount: number; action: CaseAction; duration?: number }>,
   ) {
+    await this.db.ensureGuild(guildId);
     return this.prisma.$transaction(async (tx) => {
       await tx.warnThreshold.deleteMany({ where: { guildId } });
       if (thresholds.length > 0) {

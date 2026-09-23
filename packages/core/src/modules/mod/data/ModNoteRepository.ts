@@ -7,12 +7,13 @@ import { Repository } from "#lib/prisma/repositories/Repository.js";
  * count toward warn thresholds. Pure persistence, no caching.
  */
 export class ModNoteRepository extends Repository {
-  public create(
+  public async create(
     guildId: string,
     userId: string,
     authorId: string,
     message: string,
   ): Promise<ModNote> {
+    await this.db.ensureGuild(guildId);
     return this.prisma.modNote.create({
       data: { guildId, userId, authorId, message },
     });

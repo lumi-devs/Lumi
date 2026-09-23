@@ -60,6 +60,7 @@ function createChaosPrisma() {
         checkHealth();
       }),
     },
+    caseCounters: new Map<string, number>(),
     moderationCase: {
       findFirst: vi.fn(async () => {
         checkHealth();
@@ -88,9 +89,13 @@ function createChaosPrisma() {
       }
       return Promise.all(fnOrArray);
     }),
-    $queryRaw: vi.fn(async () => {
+    $queryRaw: vi.fn(async (sql?: { values?: readonly unknown[] }) => {
       checkHealth();
-      return [{ 1: 1 }];
+      const guildId = sql?.values?.[0] as string | undefined;
+      if (guildId === undefined) return [{ 1: 1 }];
+      const next = (prisma.caseCounters.get(guildId) ?? 1) + 1;
+      prisma.caseCounters.set(guildId, next);
+      return [{ caseNumber: next - 1 }];
     }),
     simulateHardDrop: () => {
       state.isOnline = false;
@@ -123,8 +128,13 @@ describe("Chaos Suite: PostgreSQL Hard Drop & Pool Exhaustion", () => {
     };
     (container as any).redis = redis;
     repositoryCache.clear();
-    configRepo = new ConfigRepository(prisma as any, redis, {} as any, {} as any);
-    modRepo = new ModerationRepository(prisma as any, redis, {} as any, {} as any);
+    const db = {
+      ensureGuild: async (guildId: string) => {
+        await prisma.guild.upsert({ where: { id: guildId }, create: { id: guildId }, update: {} });
+      },
+    } as any;
+    configRepo = new ConfigRepository(prisma as any, redis, {} as any, db);
+    modRepo = new ModerationRepository(prisma as any, redis, {} as any, db);
   });
 
   it("handles transient database drop gracefully without unhandled crashes", async () => {

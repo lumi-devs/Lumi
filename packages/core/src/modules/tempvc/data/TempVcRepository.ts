@@ -93,9 +93,34 @@ export class TempVcRepository extends Repository {
     });
   }
 
-  /** All records owned by a user across guilds (for GDPR deletion). */
-  public findRecordsForOwner(ownerId: string): Promise<TempVcRecord[]> {
-    return this.prisma.tempVcRecord.findMany({ where: { ownerId } });
+  /**
+   * All records owned by a user across guilds, keyset-paginated (for GDPR
+   * export/deletion) - live temp channels are usually few, but a runaway
+   * creation bug shouldn't be able to silently truncate what a GDPR request
+   * sees.
+   */
+  public async findRecordsForOwner(
+    ownerId: string,
+    pageSize = 1_000,
+  ): Promise<TempVcRecord[]> {
+    const records: TempVcRecord[] = [];
+    let cursor: { guildId: string; channelId: string } | undefined;
+
+    for (;;) {
+      const page = await this.prisma.tempVcRecord.findMany({
+        where: { ownerId },
+        orderBy: [{ guildId: "asc" }, { channelId: "asc" }],
+        take: pageSize,
+        ...(cursor === undefined
+          ? {}
+          : { cursor: { guildId_channelId: cursor }, skip: 1 }),
+      });
+
+      records.push(...page);
+      if (page.length < pageSize) return records;
+      const last = page[page.length - 1]!;
+      cursor = { guildId: last.guildId, channelId: last.channelId };
+    }
   }
 
   public async deleteRecordsForOwner(ownerId: string): Promise<number> {

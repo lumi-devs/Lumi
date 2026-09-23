@@ -379,14 +379,58 @@ export class EconomyRepository extends Repository {
     return result._sum.amount ?? 0;
   }
 
-  public findTransactionsForUser(
+  /**
+   * Every transaction for a user across every guild, keyset-paginated - a
+   * GDPR export must see the complete ledger, and a long-lived member's
+   * transaction history can run to many thousands of rows.
+   */
+  public async findTransactionsForUser(
     userId: string,
+    pageSize = 1_000,
   ): Promise<EconomyTransaction[]> {
-    return this.prisma.economyTransaction.findMany({ where: { userId } });
+    const transactions: EconomyTransaction[] = [];
+    let cursor: number | undefined;
+
+    for (;;) {
+      const page = await this.prisma.economyTransaction.findMany({
+        where: { userId },
+        orderBy: { id: "asc" },
+        take: pageSize,
+        ...(cursor === undefined ? {} : { cursor: { id: cursor }, skip: 1 }),
+      });
+
+      transactions.push(...page);
+      if (page.length < pageSize) return transactions;
+      cursor = page[page.length - 1]!.id;
+    }
   }
 
-  public findAccountsForUser(userId: string): Promise<EconomyAccount[]> {
-    return this.prisma.economyAccount.findMany({ where: { userId } });
+  /**
+   * Every account for a user across every guild, keyset-paginated - a GDPR
+   * export must see the complete set, and a user can have one account per
+   * guild the bot shares with them.
+   */
+  public async findAccountsForUser(
+    userId: string,
+    pageSize = 1_000,
+  ): Promise<EconomyAccount[]> {
+    const accounts: EconomyAccount[] = [];
+    let cursor: string | undefined;
+
+    for (;;) {
+      const page = await this.prisma.economyAccount.findMany({
+        where: { userId },
+        orderBy: { guildId: "asc" },
+        take: pageSize,
+        ...(cursor === undefined
+          ? {}
+          : { cursor: { guildId_userId: { guildId: cursor, userId } }, skip: 1 }),
+      });
+
+      accounts.push(...page);
+      if (page.length < pageSize) return accounts;
+      cursor = page[page.length - 1]!.guildId;
+    }
   }
 
   public async deleteForUser(

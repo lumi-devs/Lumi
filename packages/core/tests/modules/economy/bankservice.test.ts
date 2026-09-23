@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { EconomyRepository } from "#lib/prisma/repositories/EconomyRepository.js";
+import { EconomyRepository } from "#modules/economy/data/EconomyRepository.js";
 import {
   BankService,
   CooldownError,

@@ -15,12 +15,13 @@ export type AppealStatus =
  * unique `caseId` column, not re-checked here.
  */
 export class AppealRepository extends Repository {
-  public create(
+  public async create(
     guildId: string,
     userId: string,
     caseId: number,
     message: string,
   ): Promise<Appeal> {
+    await this.db.ensureGuild(guildId);
     return this.prisma.appeal.create({
       // `status`/`createdAt` are set explicitly (rather than left to the
       // schema's `@default(...)`) so the offline mock Prisma client used in

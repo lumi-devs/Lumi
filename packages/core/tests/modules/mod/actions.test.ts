@@ -38,6 +38,7 @@ vi.mock('@sapphire/framework', () => ({
       },
       moderation: {
         getModerationCases: vi.fn(),
+        countModerationCases: vi.fn(),
         createModerationCase: vi.fn(),
         getActiveCases: vi.fn().mockResolvedValue([]),
         liftModerationCase: vi.fn(),
@@ -138,7 +139,7 @@ describe('Mod Thresholds Logic', () => {
 
   it('incrementWarnCount initializes count from DB when key does not exist', async () => {
     (container.redis.exists as any).mockResolvedValue(0);
-    (container.db.moderation.getModerationCases as any).mockResolvedValue([{}, {}]);
+    (container.db.moderation.countModerationCases as any).mockResolvedValue(2);
     const count = await incrementWarnCount(container, 'g-1', 'u-1');
     expect(count).toBe(2);
     expect(container.redis.set).toHaveBeenCalled();

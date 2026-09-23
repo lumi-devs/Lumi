@@ -24,6 +24,7 @@ export class ConfigOverrideRepository extends Repository {
     modelId: string;
     value: unknown;
   }): Promise<void> {
+    await this.db.ensureGuild(data.guildId);
     await this.prisma.moduleConfigOverride.upsert({
       where: {
         uq_config_override: {
