@@ -7,7 +7,6 @@ import {
 import type { DashboardModuleSummaryView } from "@lumi/contracts/views";
 import { ChannelType } from "discord.js";
 import { isSupportedLanguage } from "#lib/i18n/index.js";
-import { checkModulesEnabled } from "#lib/module-check.js";
 import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { implementRpc, requireGuildManager } from "#lib/rpc/implement.js";
@@ -32,7 +31,7 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
     const modules = container.stores.get("modules").loaded();
     const [settings, enabled] = await Promise.all([
       container.db.config.getGuildSettings(guildId),
-      checkModulesEnabled(
+      container.db.modules.areModulesEnabled(
         guildId,
         modules.map((m) => m.meta.name),
       ),
@@ -56,7 +55,7 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
       .find((m) => m.meta.name === input.module);
     if (!module) return { module: null };
     const [enabled, stored] = await Promise.all([
-      checkModulesEnabled(guildId, [module.meta.name]),
+      container.db.modules.areModulesEnabled(guildId, [module.meta.name]),
       container.db.config.getAllModuleConfig(guildId, module.meta.name),
     ]);
     const config: Record<string, unknown> = {};

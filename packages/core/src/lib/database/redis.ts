@@ -18,7 +18,6 @@ export const RedisKeys = {
   guildAllModuleConfigs: (guildId: string) =>
     `lumi:cfg:all:guild:${guildId}`,
   globalConfig: () => "lumi:cfg:global",
-  guildPrefixes: (guildId: string) => `lumi:prefix:guild:${guildId}`,
 
   moduleEnabled: (module: string, guildId: string) =>
     `lumi:module:enabled:${module}:${guildId}`,

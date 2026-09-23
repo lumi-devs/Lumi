@@ -15,6 +15,7 @@ import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarnin
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
 import { permitSubject } from "#lib/permissions/subject.js";
 import { BrandColors } from "#lib/branding/colors.js";
+import { getGuildContext } from "#lib/cache/GuildContext.js";
 
 export interface CtxOptionSpec {
   required?: boolean;
@@ -266,12 +267,8 @@ export class CommandContext {
    */
   public async brandColor(): Promise<number> {
     if (this.guildId) {
-      const color = await container.db.config.getModuleConfig(
-        this.guildId,
-        "core",
-        "brandColor"
-      );
-      if (typeof color === "number") return color;
+      const ctx = await getGuildContext(this.guildId);
+      return ctx.brandColor;
     }
     return BrandColors.primary;
   }

@@ -14,7 +14,6 @@ export class GuildDeleteEventBusListener extends Listener<
 
     const staticKeys = [
       RedisKeys.guildSettings(guild.id),
-      RedisKeys.guildPrefixes(guild.id),
       RedisKeys.guildIgnored(guild.id),
     ];
 

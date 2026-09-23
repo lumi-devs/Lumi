@@ -48,14 +48,16 @@ export class ConfigRepository extends Repository {
     return result;
   }
 
-  /** Invalidates the guild settings cache and, optionally, the prefix cache. */
+  /**
+   * Invalidates the guild settings cache. `prefixChanged` is accepted for
+   * call-site compatibility but no longer used - there is no separate
+   * prefix cache to evict since `RedisKeys.guildPrefixes`'s retirement.
+   */
   public async invalidateGuildSettings(
     guildId: string,
-    prefixChanged = false,
+    _prefixChanged = false,
   ): Promise<void> {
-    const keys = [RedisKeys.guildSettings(guildId)];
-    if (prefixChanged) keys.push(RedisKeys.guildPrefixes(guildId));
-    await this.invalidate(...keys);
+    await this.invalidate(RedisKeys.guildSettings(guildId));
   }
 
   public async getModuleConfig(

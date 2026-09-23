@@ -1,4 +1,3 @@
-import { container } from "@sapphire/framework";
 import type {
   InternationalizationContext,
   InternationalizationOptions,
@@ -6,6 +5,7 @@ import type {
 import type { TFunction } from "i18next";
 import { fileURLToPath } from "node:url";
 import type { TypedFT, TypedT } from "#lib/i18n/keys.js";
+import { getGuildContext } from "#lib/cache/GuildContext.js";
 
 /**
  * The namespaces Lumi ships. Kept as a tuple so a bound `TFunction` accepts
@@ -79,8 +79,8 @@ async function fetchLanguage(
   const { guild } = context;
   if (!guild) return null;
   try {
-    const settings = await container.db.config.getGuildSettings(guild.id);
-    return settings.locale || null;
+    const ctx = await getGuildContext(guild.id);
+    return ctx.locale || null;
   } catch {
     return null;
   }

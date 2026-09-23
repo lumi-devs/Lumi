@@ -1,4 +1,3 @@
-import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { Time } from "@sapphire/time-utilities";
 import { disconnectDatabase } from "#lib/prisma/client.js";
 import {
@@ -21,12 +20,10 @@ import {
   SapphireClient,
   container,
 } from "@sapphire/framework";
-import { tryParseJSON } from "@sapphire/utilities";
 import type { Message } from "discord.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { buildClientOptions } from "./client-options.js";
 import { installContainerServices } from "./container-services.js";
-import { PrefixCache } from "./PrefixCache.js";
 import { ReadinessProbes } from "./ReadinessProbes.js";
 
 // Teardown steps swallow their own failure so one unreachable resource can't strand the rest.
@@ -55,8 +52,6 @@ export class LumiClient extends SapphireClient {
   private _schedulerLock: RedisLock | null = null;
   private _bullWorker: { on(e: string, fn: (...a: unknown[]) => void): void; off(e: string, fn: (...a: unknown[]) => void): void } | null = null;
   private _bullFailedHandler: ((job: unknown, err: unknown) => void) | null = null;
-  private _prefixCache: PrefixCache = new PrefixCache();
-  private _prefixCacheUnbind: (() => void) | null = null;
   private _repositoryCacheUnbind: (() => void) | null = null;
 
   public constructor(_options: LumiClient.Options = {}) {
@@ -67,9 +62,6 @@ export class LumiClient extends SapphireClient {
     }
 
     this._ownedEventBus = installContainerServices(this);
-    this._prefixCacheUnbind = this._prefixCache.attachToInvalidationBus(
-      container.invalidation,
-    );
     this._repositoryCacheUnbind = repositoryCache.attachToInvalidationBus(
       container.invalidation,
     );
@@ -163,10 +155,6 @@ export class LumiClient extends SapphireClient {
   }
 
   public override async destroy() {
-    if (this._prefixCacheUnbind) {
-      this._prefixCacheUnbind();
-      this._prefixCacheUnbind = null;
-    }
     if (this._repositoryCacheUnbind) {
       this._repositoryCacheUnbind();
       this._repositoryCacheUnbind = null;
@@ -223,52 +211,26 @@ export class LumiClient extends SapphireClient {
     await disconnectDatabase().catch(warnOnCleanupError("Database disconnect"));
   }
 
-  public get prefixCache(): PrefixCache {
-    return this._prefixCache;
-  }
-
   public override fetchPrefix = async (message: Message) => {
     if (message.guild) {
-      return this._prefixCache.getOrFetch(message.guild.id, async () => {
-        const cacheKey = RedisKeys.guildPrefixes(message.guild!.id);
-        const cachedL2 = await container.redis.get(cacheKey);
-        if (cachedL2) {
-          const parsed = tryParseJSON(cachedL2) as string[] | null;
-          if (Array.isArray(parsed)) {
-            return parsed;
-          }
-        }
-
-        const settings = await container.db.config.getGuildSettings(
-          message.guild!.id,
-        );
-        let prefixes: string[];
-        if (settings.prefix) {
-          prefixes = [settings.prefix];
-        } else {
-          const globalConfig = await container.db.global
-            .getGlobalConfig()
-            .catch(() => null);
-          const envFallback = envParseString("DEFAULT_PREFIX", ",");
-          prefixes = [globalConfig?.defaultPrefix ?? envFallback];
-        }
-
-        await container.redis.setex(
-          cacheKey,
-          RedisTTL.guildPrefix,
-          JSON.stringify(prefixes),
-        );
-        return prefixes;
-      });
-    }
-
-    return this._prefixCache.getOrFetchGlobal(async () => {
+      const settings = await container.db.config.getGuildSettings(
+        message.guild.id,
+      );
+      if (settings.prefix) {
+        return [settings.prefix];
+      }
       const globalConfig = await container.db.global
         .getGlobalConfig()
         .catch(() => null);
       const envFallback = envParseString("DEFAULT_PREFIX", ",");
-      return globalConfig?.defaultPrefix ?? envFallback;
-    });
+      return [globalConfig?.defaultPrefix ?? envFallback];
+    }
+
+    const globalConfig = await container.db.global
+      .getGlobalConfig()
+      .catch(() => null);
+    const envFallback = envParseString("DEFAULT_PREFIX", ",");
+    return globalConfig?.defaultPrefix ?? envFallback;
   };
 
   /**

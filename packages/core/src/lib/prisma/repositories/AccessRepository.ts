@@ -1,5 +1,4 @@
 import type { Blocklist, GlobalBlock, IgnoreEntry } from "@prisma/client";
-import { pipelineBySlot } from "#lib/database/cluster-safe.js";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
@@ -13,79 +12,53 @@ export class AccessRepository extends Repository {
     userId: string,
     guildId: string | null,
   ): Promise<boolean> {
-    const gKey = RedisKeys.blocked(null, userId);
-    const sKey = guildId ? RedisKeys.blocked(guildId, userId) : null;
-
-    const [gCached, sCached] = await Promise.all([
-      this.redis.get(gKey),
-      sKey ? this.redis.get(sKey) : null,
-    ]);
-
-    if (gCached === "1" || sCached === "1") return true;
-    if (gCached === "0" && (!sKey || sCached === "0")) return false;
-
-    const [globalBlock, guildBlock] = await Promise.all([
-      this.prisma.globalBlock.findUnique({ where: { userId } }),
+    const [gBlocked, sBlocked] = await Promise.all([
+      this.getOrSet(RedisKeys.blocked(null, userId), RedisTTL.blockedCache, () =>
+        this.prisma.globalBlock
+          .findUnique({ where: { userId } })
+          .then((r) => r !== null),
+      ),
       guildId
-        ? this.prisma.blocklist.findFirst({ where: { userId, guildId } })
-        : Promise.resolve(null),
+        ? this.getOrSet(
+            RedisKeys.blocked(guildId, userId),
+            RedisTTL.blockedCache,
+            () =>
+              this.prisma.blocklist
+                .findFirst({ where: { userId, guildId } })
+                .then((r) => r !== null),
+          )
+        : Promise.resolve(false),
     ]);
-
-    const gBlocked = globalBlock !== null;
-    const sBlocked = guildBlock !== null;
-
-    await pipelineBySlot(
-      this.redis,
-      [
-        { key: gKey, value: gBlocked },
-        ...(sKey ? [{ key: sKey, value: sBlocked }] : []),
-      ],
-      (entry) => entry.key,
-      (pipe, entry) => {
-        pipe.setex(entry.key, RedisTTL.blockedCache, entry.value ? "1" : "0");
-      },
-    );
 
     return gBlocked || sBlocked;
   }
 
-  public async getIgnoreStatus(guildId: string, channelId: string) {
-    const gKey = RedisKeys.guildIgnored(guildId);
-    const cKey = RedisKeys.channelIgnored(guildId, channelId);
-
-    const [gCached, cCached] = await Promise.all([
-      this.redis.get(gKey),
-      this.redis.get(cKey),
-    ]);
-
-    if (gCached !== null && cCached !== null) {
-      return { guild: gCached === "1", channel: cCached === "1" };
-    }
-
-    const [guildRow, channelRow] = await Promise.all([
-      this.prisma.guild.findUnique({
-        where: { id: guildId },
-        select: { ignored: true },
-      }),
-      this.prisma.ignoreEntry.findUnique({
-        where: { uq_ignore_guild_channel: { guildId, channelId } },
-      }),
-    ]);
-
-    const guild = guildRow?.ignored ?? false;
-    const channel = channelRow !== null;
-
-    await pipelineBySlot(
-      this.redis,
-      [
-        { key: gKey, value: guild },
-        { key: cKey, value: channel },
-      ],
-      (entry) => entry.key,
-      (pipe, entry) => {
-        pipe.set(entry.key, entry.value ? "1" : "0", "EX", RedisTTL.ignoreCache);
-      },
+  /** Whole-guild ignore flag (`Guild.ignored`), cached on its own key. */
+  public isGuildIgnored(guildId: string): Promise<boolean> {
+    return this.getOrSet(
+      RedisKeys.guildIgnored(guildId),
+      RedisTTL.ignoreCache,
+      () =>
+        this.prisma.guild
+          .findUnique({ where: { id: guildId }, select: { ignored: true } })
+          .then((r) => r?.ignored ?? false),
     );
+  }
+
+  public async getIgnoreStatus(guildId: string, channelId: string) {
+    const [guild, channel] = await Promise.all([
+      this.isGuildIgnored(guildId),
+      this.getOrSet(
+        RedisKeys.channelIgnored(guildId, channelId),
+        RedisTTL.ignoreCache,
+        () =>
+          this.prisma.ignoreEntry
+            .findUnique({
+              where: { uq_ignore_guild_channel: { guildId, channelId } },
+            })
+            .then((r) => r !== null),
+      ),
+    ]);
 
     return { guild, channel };
   }
