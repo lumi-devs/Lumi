@@ -1,10 +1,16 @@
 import { container } from "@sapphire/framework";
-import type { ModerationCase } from "@prisma/client";
-import { modRpc } from "@lumi/contracts/rpc";
+import { CaseAction, type $Enums, type ModerationCase } from "@prisma/client";
+import {
+  CodedRpcError,
+  modRpc,
+  RpcFailureCodes,
+  warnThresholdNeedsDuration,
+} from "@lumi/contracts/rpc";
 import type { AppealVerifyResult } from "@lumi/contracts/views";
 import { verifyAppealToken } from "./services/appeal-token.js";
 import { implementRpc, requireGuildId } from "#lib/rpc/implement.js";
 import { paginate } from "#lib/rpc/validation.js";
+import { formatDuration, parseDuration } from "#lib/utilities/time.js";
 import {
   removeThresholdRule,
   setThresholdRule,
@@ -13,6 +19,10 @@ import {
 // Only ban/timeout cases are appealable - matches BanAction/MuteAction, the
 // only two call sites that ever DM an appeal link.
 const AppealableCaseActions = new Set(["ban", "mute"]);
+
+function isCaseAction(value: string): value is $Enums.CaseAction {
+  return (Object.values(CaseAction) as string[]).includes(value);
+}
 
 type AppealTokenResolution =
   | { ok: false; reason: string }
@@ -68,7 +78,7 @@ export const modRpcHandlers = implementRpc(modRpc, {
   "guild.cases.list": async ({ guildId, input }) => {
     const { page, pageSize, skip, take } = paginate(input);
     const { cases, total } = await container.db.moderation.listCases(guildId, {
-      action: input.action,
+      action: input.action && isCaseAction(input.action) ? input.action : undefined,
       userId: input.userId,
       moderatorId: input.moderatorId,
       skip,
@@ -114,7 +124,7 @@ export const modRpcHandlers = implementRpc(modRpc, {
       thresholds: thresholds.map((t) => ({
         warnCount: t.warnCount,
         action: t.action,
-        duration: t.duration,
+        duration: t.duration !== null ? formatDuration(t.duration * 1000) : null,
       })),
     };
   },
@@ -126,8 +136,27 @@ export const modRpcHandlers = implementRpc(modRpc, {
       return { success: true, warnCount, deleted: true };
     }
 
+    let durationSeconds: number | undefined;
+    if (warnThresholdNeedsDuration(action)) {
+      const trimmed = duration?.trim();
+      if (!trimmed) {
+        throw new CodedRpcError(
+          RpcFailureCodes.BadRequest,
+          `A ${action} threshold needs a duration such as "1h".`,
+        );
+      }
+      const ms = parseDuration(trimmed);
+      if (!ms) {
+        throw new CodedRpcError(
+          RpcFailureCodes.BadRequest,
+          `"${trimmed}" is not a duration Lumi understands - try a value such as "30m", "2h" or "7d".`,
+        );
+      }
+      durationSeconds = Math.round(ms / 1000);
+    }
+
     await container.db.ensureGuild(guildId);
-    await setThresholdRule(container, guildId, warnCount, action, duration);
+    await setThresholdRule(container, guildId, warnCount, action, durationSeconds);
     return { success: true, warnCount, deleted: false };
   },
 

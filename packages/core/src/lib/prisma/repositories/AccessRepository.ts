@@ -1,12 +1,12 @@
-import type { Blocklist, IgnoreEntry } from "@prisma/client";
+import type { Blocklist, GlobalBlock, IgnoreEntry } from "@prisma/client";
 import { pipelineBySlot } from "#lib/database/cluster-safe.js";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
 /**
- * Access control: the `Blocklist` (per-user, optionally per-guild) and
- * `IgnoreEntry` (per-channel/guild) tables, with their bespoke `"1"/"0"` Redis
- * caches.
+ * Access control: the global (`GlobalBlock`) and per-guild (`Blocklist`)
+ * block tables, plus `IgnoreEntry` (per-channel) and `Guild.ignored`
+ * (whole-guild), with their bespoke `"1"/"0"` Redis caches.
  */
 export class AccessRepository extends Repository {
   public async isUserBlocked(
@@ -24,14 +24,15 @@ export class AccessRepository extends Repository {
     if (gCached === "1" || sCached === "1") return true;
     if (gCached === "0" && (!sKey || sCached === "0")) return false;
 
-    const blocks = await this.prisma.blocklist.findMany({
-      where: { userId, OR: [{ guildId: null }, ...(guildId ? [{ guildId }] : [])] },
-    });
+    const [globalBlock, guildBlock] = await Promise.all([
+      this.prisma.globalBlock.findUnique({ where: { userId } }),
+      guildId
+        ? this.prisma.blocklist.findFirst({ where: { userId, guildId } })
+        : Promise.resolve(null),
+    ]);
 
-    const gBlocked = blocks.some((b) => b.guildId === null);
-    const sBlocked = guildId
-      ? blocks.some((b) => b.guildId === guildId)
-      : false;
+    const gBlocked = globalBlock !== null;
+    const sBlocked = guildBlock !== null;
 
     await pipelineBySlot(
       this.redis,
@@ -61,12 +62,18 @@ export class AccessRepository extends Repository {
       return { guild: gCached === "1", channel: cCached === "1" };
     }
 
-    const rows = await this.prisma.ignoreEntry.findMany({
-      where: { guildId, OR: [{ channelId: null }, { channelId }] },
-    });
+    const [guildRow, channelRow] = await Promise.all([
+      this.prisma.guild.findUnique({
+        where: { id: guildId },
+        select: { ignored: true },
+      }),
+      this.prisma.ignoreEntry.findUnique({
+        where: { uq_ignore_guild_channel: { guildId, channelId } },
+      }),
+    ]);
 
-    const guild = rows.some((r) => r.channelId === null);
-    const channel = rows.some((r) => r.channelId === channelId);
+    const guild = guildRow?.ignored ?? false;
+    const channel = channelRow !== null;
 
     await pipelineBySlot(
       this.redis,
@@ -87,8 +94,14 @@ export class AccessRepository extends Repository {
     userId: string,
     guildId?: string | null,
   ): Promise<boolean> {
+    if (!guildId) {
+      const block = await this.prisma.globalBlock.findUnique({
+        where: { userId },
+      });
+      return block !== null;
+    }
     const block = await this.prisma.blocklist.findFirst({
-      where: { userId, guildId: guildId ?? null },
+      where: { userId, guildId },
     });
     return block !== null;
   }
@@ -98,12 +111,19 @@ export class AccessRepository extends Repository {
     blockedBy: string,
     reason?: string,
     guildId?: string | null,
-  ): Promise<Blocklist> {
-    if (guildId) await this.db.ensureGuild(guildId);
+  ): Promise<Blocklist | GlobalBlock> {
+    if (!guildId) {
+      const entry = await this.prisma.globalBlock.create({
+        data: { userId, blockedBy, reason },
+      });
+      await this.invalidate(RedisKeys.blocked(null, userId));
+      return entry;
+    }
+    await this.db.ensureGuild(guildId);
     const entry = await this.prisma.blocklist.create({
       data: { userId, blockedBy, reason, guildId },
     });
-    await this.invalidate(RedisKeys.blocked(guildId ?? null, userId));
+    await this.invalidate(RedisKeys.blocked(guildId, userId));
     return entry;
   }
 
@@ -111,10 +131,13 @@ export class AccessRepository extends Repository {
     userId: string,
     guildId?: string | null,
   ): Promise<void> {
-    await this.prisma.blocklist.deleteMany({
-      where: { userId, guildId: guildId ?? null },
-    });
-    await this.invalidate(RedisKeys.blocked(guildId ?? null, userId));
+    if (!guildId) {
+      await this.prisma.globalBlock.deleteMany({ where: { userId } });
+      await this.invalidate(RedisKeys.blocked(null, userId));
+      return;
+    }
+    await this.prisma.blocklist.deleteMany({ where: { userId, guildId } });
+    await this.invalidate(RedisKeys.blocked(guildId, userId));
   }
 
   // `guildId` is required rather than optional because `null` is a meaningful
@@ -122,9 +145,20 @@ export class AccessRepository extends Repository {
   public async listBlocklist(
     guildId: string | null,
     opts: { skip?: number; take?: number } = {},
-  ): Promise<{ entries: Blocklist[]; total: number }> {
-    const where = { guildId };
+  ): Promise<{ entries: (Blocklist | GlobalBlock)[]; total: number }> {
+    if (!guildId) {
+      const [entries, total] = await this.prisma.$transaction([
+        this.prisma.globalBlock.findMany({
+          orderBy: { createdAt: "desc" },
+          skip: opts.skip ?? 0,
+          take: opts.take ?? 25,
+        }),
+        this.prisma.globalBlock.count(),
+      ]);
+      return { entries, total };
+    }
 
+    const where = { guildId };
     const [entries, total] = await this.prisma.$transaction([
       this.prisma.blocklist.findMany({
         where,
@@ -138,7 +172,6 @@ export class AccessRepository extends Repository {
     return { entries, total };
   }
 
-  // Includes the `channelId: null` guild-wide row.
   public listIgnoreEntries(guildId: string): Promise<IgnoreEntry[]> {
     return this.prisma.ignoreEntry.findMany({
       where: { guildId },
@@ -146,24 +179,27 @@ export class AccessRepository extends Repository {
     });
   }
 
-  public async isIgnored(guildId: string, channelId: string): Promise<boolean> {
-    const ignore = await this.prisma.ignoreEntry.findFirst({
-      where: { guildId, OR: [{ channelId }, { channelId: null }] },
-    });
-    return ignore !== null;
-  }
-
+  /**
+   * `channelId: null` sets/clears the whole-guild ignore flag (`Guild.ignored`)
+   * instead of an `IgnoreEntry` row, which now requires a real channel id.
+   */
   public async addIgnoreEntry(
     guildId: string,
     channelId?: string | null,
-  ): Promise<IgnoreEntry> {
+  ): Promise<IgnoreEntry | null> {
+    if (!channelId) {
+      await this.prisma.guild.upsert({
+        where: { id: guildId },
+        create: { id: guildId, ignored: true },
+        update: { ignored: true },
+      });
+      await this.invalidate(RedisKeys.guildIgnored(guildId));
+      return null;
+    }
     const entry = await this.prisma.ignoreEntry.create({
       data: { guildId, channelId },
     });
-    await this.invalidate(
-      RedisKeys.channelIgnored(guildId, channelId ?? "global"),
-    );
-    await this.invalidate(RedisKeys.guildIgnored(guildId));
+    await this.invalidate(RedisKeys.channelIgnored(guildId, channelId));
     return entry;
   }
 
@@ -171,12 +207,18 @@ export class AccessRepository extends Repository {
     guildId: string,
     channelId?: string | null,
   ): Promise<void> {
+    if (!channelId) {
+      await this.prisma.guild.upsert({
+        where: { id: guildId },
+        create: { id: guildId, ignored: false },
+        update: { ignored: false },
+      });
+      await this.invalidate(RedisKeys.guildIgnored(guildId));
+      return;
+    }
     await this.prisma.ignoreEntry.deleteMany({
-      where: { guildId, channelId: channelId ?? null },
+      where: { guildId, channelId },
     });
-    await this.invalidate(
-      RedisKeys.channelIgnored(guildId, channelId ?? "global"),
-    );
-    await this.invalidate(RedisKeys.guildIgnored(guildId));
+    await this.invalidate(RedisKeys.channelIgnored(guildId, channelId));
   }
 }

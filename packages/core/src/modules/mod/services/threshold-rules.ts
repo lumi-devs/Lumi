@@ -1,6 +1,5 @@
 import type { Container } from "@sapphire/framework";
-import { warnThresholdNeedsDuration, type WarnThresholdAction } from "@lumi/contracts/rpc";
-import { parseDuration } from "#lib/utilities/time.js";
+import type { WarnThresholdAction } from "@lumi/contracts/rpc";
 
 export type ThresholdAction = WarnThresholdAction;
 
@@ -14,35 +13,23 @@ export async function invalidateThresholds(
   await container.invalidation.invalidate(thresholdKey(guildId));
 }
 
-function normalizeRuleDuration(
-  action: ThresholdAction,
-  duration?: string | null,
-): string | undefined {
-  const trimmed = duration?.trim() || undefined;
-  if (!warnThresholdNeedsDuration(action)) return undefined;
-  if (!trimmed) {
-    throw new Error(`A ${action} threshold needs a duration such as "1h".`);
-  }
-  if (!parseDuration(trimmed)) {
-    throw new Error(
-      `"${trimmed}" is not a duration Lumi understands - try a value such as "30m", "2h" or "7d".`,
-    );
-  }
-  return trimmed;
-}
-
+/**
+ * `durationSeconds` is already validated and converted from the wire's
+ * human-readable string at the RPC boundary (`mod/rpc.ts`) - this only
+ * persists the storage-shaped value.
+ */
 export async function setThresholdRule(
   container: Container,
   guildId: string,
   count: number,
   action: ThresholdAction,
-  duration?: string | null,
+  durationSeconds?: number,
 ): Promise<void> {
   await container.db.moderation.setWarnThreshold({
     guildId,
     warnCount: count,
     action,
-    duration: normalizeRuleDuration(action, duration),
+    duration: durationSeconds,
   });
   await invalidateThresholds(container, guildId);
 }

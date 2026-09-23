@@ -14,13 +14,13 @@ export const WarnThresholdActions = [
   "kick",
   "ban",
   "quarantine",
-  "vcmute",
+  "voice_mute",
 ] as const;
 
 export type WarnThresholdAction = (typeof WarnThresholdActions)[number];
 
 /** Actions applied for a fixed window - a rule without a parseable duration is unusable. */
-export const WarnThresholdTimedActions = ["mute", "vcmute"] as const;
+export const WarnThresholdTimedActions = ["mute", "voice_mute"] as const;
 
 export type WarnThresholdTimedAction =
   (typeof WarnThresholdTimedActions)[number];
@@ -101,7 +101,7 @@ export const modRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
     summary:
-      "Upsert a rule; null action deletes it. mute/vcmute need a duration.",
+      "Upsert a rule; null action deletes it. mute/voice_mute need a duration.",
   }),
   "guild.modNotes.list": rpcAction<{ notes: ModNoteView[] }>()({
     input: s.object({ userId: SnowflakeSchema }),

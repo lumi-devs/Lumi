@@ -1,4 +1,8 @@
-import type { EconomyAccount, EconomyTransaction } from "@prisma/client";
+import type {
+  EconomyAccount,
+  EconomyTransaction,
+  EconomyTxnKind,
+} from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
 export interface EconomyMutationInput {
@@ -6,7 +10,7 @@ export interface EconomyMutationInput {
   userId: string;
   walletDelta: number;
   bankDelta: number;
-  kind: string;
+  kind: EconomyTxnKind;
   reason?: string;
   startWallet: number;
   startBank: number;
@@ -365,7 +369,7 @@ export class EconomyRepository extends Repository {
   public async sumKindsSince(
     guildId: string,
     userId: string,
-    kinds: string[],
+    kinds: EconomyTxnKind[],
     since: Date,
   ): Promise<number> {
     const result = await this.prisma.economyTransaction.aggregate({

@@ -117,7 +117,7 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
     });
     return {
       entries: entries.map((e) => ({
-        id: e.id,
+        id: "id" in e ? String(e.id) : e.userId,
         userId: e.userId,
         reason: e.reason,
         blockedBy: e.blockedBy,

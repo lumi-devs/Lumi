@@ -15,7 +15,6 @@ import { AccessRepository } from "#lib/prisma/repositories/AccessRepository.js";
 import { PermissionRepository } from "#lib/prisma/repositories/PermissionRepository.js";
 import { DownloaderRepository } from "#lib/prisma/repositories/DownloaderRepository.js";
 import { AuditRepository } from "#lib/prisma/repositories/AuditRepository.js";
-import { UserRepository } from "#lib/prisma/repositories/UserRepository.js";
 import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
 import { ConfigHistoryRepository } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
 import { ConfigOverrideRepository } from "#lib/prisma/repositories/ConfigOverrideRepository.js";
@@ -49,7 +48,6 @@ export class DatabaseService {
   public readonly permissions: PermissionRepository;
   public readonly downloader: DownloaderRepository;
   public readonly audit: AuditRepository;
-  public readonly users: UserRepository;
   public readonly moderation: ModerationRepository;
   public readonly configHistory: ConfigHistoryRepository;
   public readonly configOverrides: ConfigOverrideRepository;
@@ -75,7 +73,6 @@ export class DatabaseService {
     this.permissions = new PermissionRepository(prisma, redis, logger, this);
     this.downloader = new DownloaderRepository(prisma, redis, logger, this);
     this.audit = new AuditRepository(prisma, redis, logger, this);
-    this.users = new UserRepository(prisma, redis, logger, this);
     this.moderation = new ModerationRepository(prisma, redis, logger, this, reader);
     this.configHistory = new ConfigHistoryRepository(
       prisma,
@@ -119,9 +116,8 @@ export class DatabaseService {
    * hooks have run.  Spans several repositories' tables, so it lives on the
    * facade:
    *
-   *  - User        : delete the profile row
-   *  - Blocklist   : delete entries where this user is the subject
-   *  - AuditLedger : delete all action records for the user
+   *  - Blocklist/GlobalBlock : delete entries where this user is the subject
+   *  - AuditLedger           : delete all action records for the user
    *
    * IgnoreEntry has no userId column.  AfkEntry is handled by the AFK module
    * hook.  ModerationCase anonymization is handled by the mod module hook
@@ -135,8 +131,8 @@ export class DatabaseService {
         where: { targetType: "user", targetId: userId },
       }),
       this.prisma.blocklist.deleteMany({ where: { userId } }),
+      this.prisma.globalBlock.deleteMany({ where: { userId } }),
       this.prisma.auditLedger.deleteMany({ where: { userId } }),
-      this.prisma.user.deleteMany({ where: { id: userId } }),
     ]);
 
     const keys = await scanKeysSafe(
@@ -153,17 +149,17 @@ export class DatabaseService {
   public async exportUserData(
     userId: string,
   ): Promise<Record<string, unknown> | null> {
-    const [user, blocklist, auditLedger] = await Promise.all([
-      this.prisma.user.findUnique({ where: { id: userId } }),
+    const [blocklist, globalBlock, auditLedger] = await Promise.all([
       this.prisma.blocklist.findMany({ where: { userId } }),
+      this.prisma.globalBlock.findUnique({ where: { userId } }),
       this.prisma.auditLedger.findMany({ where: { userId } }),
     ]);
 
-    if (!user && blocklist.length === 0 && auditLedger.length === 0) {
+    if (!globalBlock && blocklist.length === 0 && auditLedger.length === 0) {
       return null;
     }
 
-    return { user, blocklist, auditLedger };
+    return { blocklist, globalBlock, auditLedger };
   }
 
   public transaction(guildId: string): Promise<GuildWriteTransaction> {

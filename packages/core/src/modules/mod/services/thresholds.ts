@@ -2,7 +2,6 @@ import type { Container } from "@sapphire/framework";
 import { pipelineBySlot } from "#lib/database/cluster-safe.js";
 import { tryParseJSON } from "@sapphire/utilities";
 import { type WarnThresholdAction } from "@lumi/contracts/rpc";
-import { parseDuration } from "#lib/utilities/time.js";
 import { Time } from "@sapphire/time-utilities";
 import { thresholdKey } from "./threshold-rules.js";
 import { BanAction } from "#modules/mod/services/actions/BanAction.js";
@@ -17,7 +16,8 @@ type ThresholdAction = WarnThresholdAction;
 
 interface ThresholdEntry {
   action: ThresholdAction;
-  duration?: string;
+  /** Seconds, mirroring the `WarnThreshold.duration` storage column. */
+  duration?: number;
 }
 
 export type WarnThresholds = Record<string, ThresholdEntry>;
@@ -139,7 +139,7 @@ function resolveThresholdDuration(
   targetCount: number,
   entry: ThresholdEntry,
 ): number {
-  const ms = entry.duration ? parseDuration(entry.duration) : null;
+  const ms = entry.duration ? entry.duration * 1000 : null;
   if (ms) return ms;
 
   container.logger.warn(
@@ -253,7 +253,7 @@ export async function checkThresholds(
         err,
       );
     });
-  } else if (entry.action === "vcmute") {
+  } else if (entry.action === "voice_mute") {
     const member = await guild.members.fetch(userId).catch(() => null);
     if (!member) return;
     if (await isImmuneToAutomatedAction(container, guildId, member)) return;

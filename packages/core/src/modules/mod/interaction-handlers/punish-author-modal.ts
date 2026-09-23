@@ -22,11 +22,12 @@ import { MuteAction } from "#modules/mod/services/actions/MuteAction.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { WarnAction } from "#modules/mod/services/actions/WarnAction.js";
 import { PunishAuthorModalId } from "../constants.js";
+import type { CaseAction } from "@prisma/client";
 
 const DefaultReason = "No reason provided.";
 
 /** The moderation-case `action` string each quick-punish choice maps to, for the duplicate-case window check. */
-const CaseActionFor: Record<string, string> = {
+const CaseActionFor: Record<string, CaseAction> = {
   ban: "ban",
   kick: "kick",
   warn: "warn",

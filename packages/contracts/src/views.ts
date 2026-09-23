@@ -190,7 +190,7 @@ export interface AuditListData {
 }
 
 export interface ConfigHistoryEntryView {
-  id: string;
+  id: number;
   moduleName: string;
   key: string;
   oldValue: unknown;
@@ -207,7 +207,7 @@ export interface ConfigHistoryListData {
 }
 
 export interface ConfigOverrideView {
-  id: string;
+  id: number;
   moduleName: string;
   key: string;
   modelType: string;
@@ -216,7 +216,8 @@ export interface ConfigOverrideView {
 }
 
 export interface BlocklistEntryView {
-  id: number;
+  /** The `Blocklist.id` for a guild-scoped entry, or `userId` for a global one - `GlobalBlock` has no integer id. */
+  id: string;
   userId: string;
   reason: string | null;
   blockedBy: string;

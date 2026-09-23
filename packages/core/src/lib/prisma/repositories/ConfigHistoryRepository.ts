@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
 export interface ConfigHistoryEntry {
-  id: string;
+  id: number;
   guildId: string;
   moduleName: string;
   key: string;
@@ -77,7 +77,7 @@ export class ConfigHistoryRepository extends Repository {
     return { entries, total };
   }
 
-  public getConfigHistoryEntry(id: string): Promise<ConfigHistoryEntry | null> {
+  public getConfigHistoryEntry(id: number): Promise<ConfigHistoryEntry | null> {
     return this.prisma.moduleConfigHistory.findUnique({
       where: { id },
     });

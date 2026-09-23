@@ -1,4 +1,4 @@
-import { Prisma, type ModerationCase } from "@prisma/client";
+import { Prisma, type CaseAction, type ModerationCase } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
 /** Batch size for the cross-guild sweeps, which are unbounded by nature. */
@@ -13,7 +13,7 @@ export class ModerationRepository extends Repository {
     guildId: string;
     userId: string;
     moderatorId: string;
-    action: string;
+    action: CaseAction;
     reason?: string;
     durationSeconds?: number;
     expiresAt?: Date;
@@ -80,7 +80,7 @@ export class ModerationRepository extends Repository {
   public getModerationCases(
     guildId: string,
     userId: string,
-    action?: string,
+    action?: CaseAction,
   ): Promise<ModerationCase[]> {
     return this.prisma.moderationCase.findMany({
       where: { guildId, userId, ...(action ? { action } : {}) },
@@ -92,7 +92,7 @@ export class ModerationRepository extends Repository {
   public async listCases(
     guildId: string,
     filter: {
-      action?: string;
+      action?: CaseAction;
       userId?: string;
       moderatorId?: string;
       skip?: number;
@@ -127,7 +127,7 @@ export class ModerationRepository extends Repository {
   public getActiveCases(
     guildId: string,
     userId: string,
-    action?: string,
+    action?: CaseAction,
   ): Promise<ModerationCase[]> {
     return this.prisma.moderationCase.findMany({
       where: { guildId, userId, active: true, ...(action ? { action } : {}) },
@@ -267,8 +267,8 @@ export class ModerationRepository extends Repository {
   public setWarnThreshold(data: {
     guildId: string;
     warnCount: number;
-    action: string;
-    duration?: string;
+    action: CaseAction;
+    duration?: number;
   }) {
     return this.prisma.warnThreshold.upsert({
       where: {
@@ -304,7 +304,7 @@ export class ModerationRepository extends Repository {
 
   public setBulkWarnThresholds(
     guildId: string,
-    thresholds: Array<{ warnCount: number; action: string; duration?: string }>,
+    thresholds: Array<{ warnCount: number; action: CaseAction; duration?: number }>,
   ) {
     return this.prisma.$transaction(async (tx) => {
       await tx.warnThreshold.deleteMany({ where: { guildId } });

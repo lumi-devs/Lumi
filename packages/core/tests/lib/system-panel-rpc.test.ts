@@ -28,7 +28,17 @@ function makeBlock(overrides: Record<string, unknown> = {}) {
   return {
     id: 1,
     userId: TARGET_ID,
-    guildId: null,
+    guildId: GUILD_ID,
+    reason: "spam",
+    blockedBy: BOT_OWNER_ID,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    ...overrides,
+  };
+}
+
+function makeGlobalBlock(overrides: Record<string, unknown> = {}) {
+  return {
+    userId: TARGET_ID,
     reason: "spam",
     blockedBy: BOT_OWNER_ID,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -144,16 +154,15 @@ describe("system panel RPC handlers", () => {
 
   describe("system.blocklist", () => {
     it("lists only global rows, newest first", async () => {
-      prisma.$seed("blocklist", [
-        makeBlock({ id: 1, createdAt: new Date("2026-01-01T00:00:00.000Z") }),
-        makeBlock({ id: 2, createdAt: new Date("2026-01-02T00:00:00.000Z") }),
-        makeBlock({ id: 3, guildId: GUILD_ID }),
+      prisma.$seed("globalBlock", [
+        makeGlobalBlock({ createdAt: new Date("2026-01-01T00:00:00.000Z") }),
       ]);
+      prisma.$seed("blocklist", [makeBlock({ id: 3, guildId: GUILD_ID })]);
 
       const res = (await call("system.blocklist.list", {})) as any;
 
-      expect(res.total).toBe(2);
-      expect(res.entries.map((e: any) => e.id)).toEqual([2, 1]);
+      expect(res.total).toBe(1);
+      expect(res.entries.map((e: any) => e.id)).toEqual([TARGET_ID]);
       expect(res.entries[0].blockedBy).toBe(BOT_OWNER_ID);
     });
 
@@ -164,27 +173,27 @@ describe("system panel RPC handlers", () => {
       })) as any;
 
       expect(res).toEqual({ success: true, userId: TARGET_ID });
-      const rows = prisma.$all("blocklist");
+      const rows = prisma.$all("globalBlock");
       expect(rows).toHaveLength(1);
-      expect(rows[0]!["guildId"]).toBeNull();
       expect(rows[0]!["blockedBy"]).toBe(BOT_OWNER_ID);
       expect(rows[0]!["reason"]).toBe("abuse");
+      expect(prisma.$all("blocklist")).toHaveLength(0);
     });
 
     it("refuses to blocklist a bot owner", async () => {
       await expect(
         call("system.blocklist.add", { userId: BOT_OWNER_ID }),
       ).rejects.toThrow("Cannot blocklist a bot owner");
-      expect(prisma.$all("blocklist")).toHaveLength(0);
+      expect(prisma.$all("globalBlock")).toHaveLength(0);
     });
 
     it("rejects a duplicate global entry", async () => {
-      prisma.$seed("blocklist", [makeBlock({ id: 1 })]);
+      prisma.$seed("globalBlock", [makeGlobalBlock()]);
 
       await expect(
         call("system.blocklist.add", { userId: TARGET_ID }),
       ).rejects.toThrow("already blocklisted globally");
-      expect(prisma.$all("blocklist")).toHaveLength(1);
+      expect(prisma.$all("globalBlock")).toHaveLength(1);
     });
 
     it("does not treat a guild-scoped row as a global one", async () => {
@@ -192,20 +201,20 @@ describe("system panel RPC handlers", () => {
 
       await call("system.blocklist.add", { userId: TARGET_ID });
 
-      expect(prisma.$all("blocklist")).toHaveLength(2);
+      expect(prisma.$all("blocklist")).toHaveLength(1);
+      expect(prisma.$all("globalBlock")).toHaveLength(1);
     });
 
     it("removes only the global row", async () => {
-      prisma.$seed("blocklist", [
-        makeBlock({ id: 1 }),
-        makeBlock({ id: 2, guildId: GUILD_ID }),
-      ]);
+      prisma.$seed("globalBlock", [makeGlobalBlock()]);
+      prisma.$seed("blocklist", [makeBlock({ id: 2, guildId: GUILD_ID })]);
 
       const res = (await call("system.blocklist.remove", {
         userId: TARGET_ID,
       })) as any;
 
       expect(res).toEqual({ success: true, userId: TARGET_ID });
+      expect(prisma.$all("globalBlock")).toHaveLength(0);
       const rows = prisma.$all("blocklist");
       expect(rows).toHaveLength(1);
       expect(rows[0]!["guildId"]).toBe(GUILD_ID);
@@ -221,7 +230,7 @@ describe("system panel RPC handlers", () => {
       await expect(
         call("system.blocklist.remove", { userId: TARGET_ID }, INTRUDER_ID),
       ).rejects.toThrow("Bot Owner authorization required");
-      expect(prisma.$all("blocklist")).toHaveLength(0);
+      expect(prisma.$all("globalBlock")).toHaveLength(0);
     });
 
     it("rejects a malformed user id", async () => {

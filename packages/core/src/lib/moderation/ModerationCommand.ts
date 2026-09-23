@@ -14,6 +14,7 @@ import { isNullish } from "@sapphire/utilities";
 import { Time } from "@sapphire/time-utilities";
 import { Result, container, type Awaitable } from "@sapphire/framework";
 import type { Guild, GuildMember, User } from "discord.js";
+import type { CaseAction } from "@prisma/client";
 
 const Root = LanguageKeys.Commands;
 
@@ -106,7 +107,7 @@ export async function checkDuplicateCase(
   ctx: DuplicateCaseCheckContext,
   t: LumiT,
   targetId: string,
-  action: string,
+  action: CaseAction,
 ): Promise<boolean> {
   const guild = ctx.guild;
   if (!guild) return true;
@@ -482,7 +483,7 @@ export abstract class ModerationCommand<
   protected readonly logScope: string | undefined;
 
   /** See {@linkcode ModerationCommand.Flow.duplicateCaseAction}. Subclasses that apply a punishment override this with their case `action` string. */
-  protected readonly duplicateCaseAction: string | undefined;
+  protected readonly duplicateCaseAction: CaseAction | undefined;
 
   public constructor(
     context: ModerationCommand.LoaderContext,
@@ -602,7 +603,7 @@ export namespace ModerationCommand {
     /** See {@linkcode ModerationCommand.logScope}. */
     logScope?: string;
     /** See {@linkcode ModerationCommand.duplicateCaseAction}. */
-    duplicateCaseAction?: string;
+    duplicateCaseAction?: CaseAction;
   };
   export type LoaderContext = BaseCommand.LoaderContext;
   export type Registry = BaseCommand.Registry;
@@ -644,7 +645,7 @@ export namespace ModerationCommand {
   export interface Flow<Target extends TargetLike, Outcome, Prepared = null> {
     logScope?: string;
     /** The case `action` string this flow's duplicate-case window check matches against (e.g. "kick", "warn"). Omit to skip the check. */
-    duplicateCaseAction?: string;
+    duplicateCaseAction?: CaseAction;
     resolveTarget(
       ctx: CommandContext,
       t: LumiT,

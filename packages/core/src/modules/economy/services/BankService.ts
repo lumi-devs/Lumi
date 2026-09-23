@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import type { EconomyAccount } from "@prisma/client";
+import type { EconomyAccount, EconomyTxnKind } from "@prisma/client";
 import type { EconomyRepository } from "#lib/prisma/repositories/EconomyRepository.js";
 import {
   resolveSlotPayout,
@@ -312,7 +312,7 @@ export class BankService {
     const current = vault === "wallet" ? account.wallet : account.bank;
     let walletDelta = 0;
     let bankDelta = 0;
-    let kind: string;
+    let kind: EconomyTxnKind;
     if (operation === "add") {
       const headroom = Math.max(
         0,

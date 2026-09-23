@@ -31,7 +31,8 @@ async function handleAddonAutoUpdateFire(): Promise<void> {
 
     const dueForCheck =
       config.lastCheckedAt === null ||
-      Date.now() - config.lastCheckedAt >= config.intervalMinutes * Time.Minute;
+      Date.now() - config.lastCheckedAt.getTime() >=
+        config.intervalMinutes * Time.Minute;
     if (!dueForCheck) return;
 
     const pending = await downloader.checkForUpdates();
@@ -47,7 +48,7 @@ async function handleAddonAutoUpdateFire(): Promise<void> {
       }
     }
 
-    await downloader.setAutoUpdateConfig({ lastCheckedAt: Date.now() });
+    await downloader.setAutoUpdateConfig({ lastCheckedAt: new Date() });
 
     if (restartNeeded) {
       scheduleProcessRestart("addon auto-update");

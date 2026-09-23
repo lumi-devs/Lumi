@@ -1,5 +1,6 @@
 import type { Container } from "@sapphire/framework";
 import type { Guild } from "discord.js";
+import type { CaseAction } from "@prisma/client";
 import { scheduleTask } from "#lib/schedule-task.js";
 import { cancelTask } from "#lib/schedule-task.js";
 
@@ -41,8 +42,8 @@ export async function liftAllActiveCases(
   container: Container,
   guild: Guild,
   userId: string,
-  action: string,
-  undoAction: string,
+  action: CaseAction,
+  undoAction: CaseAction,
   moderatorId: string,
   reason: string,
 ) {

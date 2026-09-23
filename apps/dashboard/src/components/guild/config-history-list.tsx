@@ -245,9 +245,9 @@ function chipText(value: unknown): string | null {
  */
 function findSupersedingChanges(
   entries: ConfigHistoryEntryView[],
-): Map<string, string> {
+): Map<number, string> {
   const newest = new Map<string, string>();
-  const superseded = new Map<string, string>();
+  const superseded = new Map<number, string>();
   for (const entry of entries) {
     const pair = `${entry.moduleName} ${entry.key}`;
     const seen = newest.get(pair);

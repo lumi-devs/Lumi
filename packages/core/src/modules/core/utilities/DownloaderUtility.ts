@@ -17,7 +17,7 @@ import { execFileAsync } from "#lib/utilities/exec-file.js";
 export interface AutoUpdateConfig {
   enabled: boolean;
   intervalMinutes: number;
-  lastCheckedAt: number | null;
+  lastCheckedAt: Date | null;
 }
 
 type ModuleUpdateCheck =
@@ -625,23 +625,24 @@ export class DownloaderUtility extends Utility {
 
   public async getAutoUpdateConfig(): Promise<AutoUpdateConfig> {
     const global = await this.container.db.global.getGlobalConfig();
-    const extra = (global.extra as Record<string, unknown> | null) ?? {};
-    const raw = extra.autoUpdate as Partial<AutoUpdateConfig> | undefined;
     return {
-      enabled: raw?.enabled ?? false,
-      intervalMinutes: raw?.intervalMinutes ?? 360,
-      lastCheckedAt: raw?.lastCheckedAt ?? null,
+      enabled: global.autoUpdateEnabled,
+      intervalMinutes: global.autoUpdateIntervalMinutes,
+      lastCheckedAt: global.autoUpdateLastCheckedAt,
     };
   }
 
   public async setAutoUpdateConfig(
     patch: Partial<AutoUpdateConfig>,
   ): Promise<void> {
-    const global = await this.container.db.global.getGlobalConfig();
-    const extra = (global.extra as Record<string, unknown> | null) ?? {};
-    const current = (extra.autoUpdate as Partial<AutoUpdateConfig>) ?? {};
     await this.container.db.global.updateGlobalConfig({
-      extra: { ...extra, autoUpdate: { ...current, ...patch } },
+      ...(patch.enabled !== undefined && { autoUpdateEnabled: patch.enabled }),
+      ...(patch.intervalMinutes !== undefined && {
+        autoUpdateIntervalMinutes: patch.intervalMinutes,
+      }),
+      ...(patch.lastCheckedAt !== undefined && {
+        autoUpdateLastCheckedAt: patch.lastCheckedAt,
+      }),
     });
   }
 

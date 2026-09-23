@@ -1,3 +1,30 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
+-- CreateEnum
+CREATE TYPE "PermitKind" AS ENUM ('enforced', 'custom');
+
+-- CreateEnum
+CREATE TYPE "PermitPolarity" AS ENUM ('grant', 'deny');
+
+-- CreateEnum
+CREATE TYPE "PermitTargetType" AS ENUM ('user', 'role', 'channel');
+
+-- CreateEnum
+CREATE TYPE "CaseAction" AS ENUM ('ban', 'unban', 'kick', 'mute', 'unmute', 'softban', 'voice_mute', 'unvoice_mute', 'warn', 'quarantine', 'unquarantine', 'antinuke_alert');
+
+-- CreateEnum
+CREATE TYPE "AppealStatus" AS ENUM ('pending', 'approved', 'denied', 'denied_blacklisted', 'dismissed');
+
+-- CreateEnum
+CREATE TYPE "OverrideTargetType" AS ENUM ('channel', 'category', 'role', 'user');
+
+-- CreateEnum
+CREATE TYPE "AuditPlatform" AS ENUM ('discord', 'web');
+
+-- CreateEnum
+CREATE TYPE "EconomyTxnKind" AS ENUM ('deposit', 'withdraw', 'transfer_out', 'transfer_in', 'slots_bid', 'slots_win', 'payday', 'admin_add', 'admin_remove', 'admin_set');
+
 -- CreateTable
 CREATE TABLE "global_config" (
     "id" INTEGER NOT NULL DEFAULT 1,
@@ -7,7 +34,11 @@ CREATE TABLE "global_config" (
     "maintenance_message" VARCHAR(500),
     "invite_url" VARCHAR(200),
     "support_guild_id" VARCHAR(20),
-    "extra" JSONB,
+    "server_lock_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "server_lock_guild_ids" TEXT[],
+    "auto_update_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "auto_update_interval_minutes" INTEGER NOT NULL DEFAULT 360,
+    "auto_update_last_checked_at" TIMESTAMP(3),
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "global_config_pkey" PRIMARY KEY ("id")
@@ -27,22 +58,13 @@ CREATE TABLE "global_module_state" (
 CREATE TABLE "guilds" (
     "guild_id" VARCHAR(20) NOT NULL,
     "prefix" VARCHAR(5),
-    "mute_role_id" VARCHAR(20),
     "locale" VARCHAR(10) NOT NULL DEFAULT 'en-US',
-    "timezone" VARCHAR(64) NOT NULL DEFAULT 'UTC',
+    "ignored" BOOLEAN NOT NULL DEFAULT false,
+    "left_at" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "guilds_pkey" PRIMARY KEY ("guild_id")
-);
-
--- CreateTable
-CREATE TABLE "users" (
-    "id" VARCHAR(20) NOT NULL,
-    "moderation_dm" BOOLEAN NOT NULL DEFAULT true,
-    "locale" VARCHAR(10),
-
-    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -71,8 +93,8 @@ CREATE TABLE "permits" (
     "id" SERIAL NOT NULL,
     "guild_id" VARCHAR(20) NOT NULL,
     "name" VARCHAR(64) NOT NULL,
-    "kind" VARCHAR(16) NOT NULL,
-    "polarity" VARCHAR(8) NOT NULL DEFAULT 'grant',
+    "kind" "PermitKind" NOT NULL,
+    "polarity" "PermitPolarity" NOT NULL DEFAULT 'grant',
     "nodes" TEXT[],
     "builtin" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -86,7 +108,7 @@ CREATE TABLE "permit_assignments" (
     "id" SERIAL NOT NULL,
     "permit_id" INTEGER NOT NULL,
     "guild_id" VARCHAR(20) NOT NULL,
-    "target_type" VARCHAR(16) NOT NULL,
+    "target_type" "PermitTargetType" NOT NULL,
     "target_id" VARCHAR(20) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -109,11 +131,10 @@ CREATE TABLE "moderation_cases" (
     "case_number" INTEGER NOT NULL,
     "user_id" VARCHAR(20) NOT NULL,
     "moderator_id" VARCHAR(20) NOT NULL,
-    "action" VARCHAR(32) NOT NULL,
+    "action" "CaseAction" NOT NULL,
     "reason" VARCHAR(1000),
     "duration_seconds" INTEGER,
     "expires_at" TIMESTAMP(3),
-    "message_id" VARCHAR(20),
     "active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -126,7 +147,7 @@ CREATE TABLE "appeals" (
     "guild_id" VARCHAR(20) NOT NULL,
     "user_id" VARCHAR(20) NOT NULL,
     "case_id" INTEGER NOT NULL,
-    "status" VARCHAR(24) NOT NULL DEFAULT 'pending',
+    "status" "AppealStatus" NOT NULL DEFAULT 'pending',
     "message" VARCHAR(2000) NOT NULL,
     "reviewed_by" VARCHAR(20),
     "reviewed_at" TIMESTAMP(3),
@@ -148,10 +169,20 @@ CREATE TABLE "mod_notes" (
 );
 
 -- CreateTable
+CREATE TABLE "global_blocklist" (
+    "user_id" VARCHAR(20) NOT NULL,
+    "reason" VARCHAR(500),
+    "blocked_by" VARCHAR(20) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "global_blocklist_pkey" PRIMARY KEY ("user_id")
+);
+
+-- CreateTable
 CREATE TABLE "blocklist" (
     "id" SERIAL NOT NULL,
+    "guild_id" VARCHAR(20) NOT NULL,
     "user_id" VARCHAR(20) NOT NULL,
-    "guild_id" VARCHAR(20),
     "reason" VARCHAR(500),
     "blocked_by" VARCHAR(20) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -163,7 +194,7 @@ CREATE TABLE "blocklist" (
 CREATE TABLE "ignore_list" (
     "id" SERIAL NOT NULL,
     "guild_id" VARCHAR(20) NOT NULL,
-    "channel_id" VARCHAR(20),
+    "channel_id" VARCHAR(20) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ignore_list_pkey" PRIMARY KEY ("id")
@@ -210,7 +241,7 @@ CREATE TABLE "audit_ledger" (
     "guild_id" VARCHAR(20) NOT NULL,
     "user_id" VARCHAR(20) NOT NULL,
     "action" VARCHAR(128) NOT NULL,
-    "platform" VARCHAR(32) NOT NULL,
+    "platform" "AuditPlatform" NOT NULL,
     "details" JSONB,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -230,7 +261,7 @@ CREATE TABLE "module_dynamic_data" (
 
 -- CreateTable
 CREATE TABLE "module_config_history" (
-    "id" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
     "guild_id" VARCHAR(20) NOT NULL,
     "module_name" VARCHAR(64) NOT NULL,
     "key" VARCHAR(64) NOT NULL,
@@ -244,11 +275,11 @@ CREATE TABLE "module_config_history" (
 
 -- CreateTable
 CREATE TABLE "module_config_overrides" (
-    "id" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
     "guild_id" VARCHAR(20) NOT NULL,
     "module_name" VARCHAR(64) NOT NULL,
     "key" VARCHAR(64) NOT NULL,
-    "model_type" VARCHAR(16) NOT NULL,
+    "model_type" "OverrideTargetType" NOT NULL,
     "model_id" VARCHAR(20) NOT NULL,
     "value" JSONB NOT NULL,
 
@@ -259,8 +290,8 @@ CREATE TABLE "module_config_overrides" (
 CREATE TABLE "warn_thresholds" (
     "guild_id" VARCHAR(20) NOT NULL,
     "warn_count" INTEGER NOT NULL,
-    "action" VARCHAR(32) NOT NULL,
-    "duration" VARCHAR(32),
+    "action" "CaseAction" NOT NULL,
+    "duration_seconds" INTEGER,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -339,7 +370,7 @@ CREATE TABLE "economy_transactions" (
     "id" SERIAL NOT NULL,
     "guild_id" VARCHAR(20) NOT NULL,
     "user_id" VARCHAR(20) NOT NULL,
-    "kind" VARCHAR(32) NOT NULL,
+    "kind" "EconomyTxnKind" NOT NULL,
     "amount" INTEGER NOT NULL,
     "balance_after" INTEGER NOT NULL,
     "reason" VARCHAR(500),
@@ -347,6 +378,59 @@ CREATE TABLE "economy_transactions" (
 
     CONSTRAINT "economy_transactions_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateTable
+CREATE TABLE "reactionrole_menus" (
+    "id" VARCHAR(32) NOT NULL,
+    "guild_id" VARCHAR(20) NOT NULL,
+    "title" VARCHAR(100) NOT NULL,
+    "description" VARCHAR(1000),
+    "color" VARCHAR(7),
+    "mode" VARCHAR(16) NOT NULL,
+    "exclusive" BOOLEAN NOT NULL DEFAULT false,
+    "max_roles" INTEGER NOT NULL DEFAULT 1,
+    "channel_id" VARCHAR(20),
+    "message_ids" TEXT[],
+    "rich_content" JSONB NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "reactionrole_menus_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "reactionrole_options" (
+    "id" SERIAL NOT NULL,
+    "menu_id" VARCHAR(32) NOT NULL,
+    "position" INTEGER NOT NULL DEFAULT 0,
+    "label" VARCHAR(80) NOT NULL,
+    "emoji" VARCHAR(100),
+    "description" VARCHAR(100),
+    "role_id" VARCHAR(20) NOT NULL,
+    "required_role_id" VARCHAR(20),
+
+    CONSTRAINT "reactionrole_options_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "sticky_messages" (
+    "id" SERIAL NOT NULL,
+    "guild_id" VARCHAR(20) NOT NULL,
+    "channel_id" VARCHAR(20) NOT NULL,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "content" VARCHAR(2000) NOT NULL,
+    "accent_color" VARCHAR(7),
+    "image_urls" TEXT[],
+    "thumbnail_url" VARCHAR(500),
+    "rich_content" JSONB,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "sticky_messages_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "guilds_left_at_idx" ON "guilds"("left_at");
 
 -- CreateIndex
 CREATE INDEX "guild_module_state_module_name_idx" ON "guild_module_state"("module_name");
@@ -421,10 +505,10 @@ CREATE INDEX "mod_notes_user_id_idx" ON "mod_notes"("user_id");
 CREATE INDEX "mod_notes_author_id_idx" ON "mod_notes"("author_id");
 
 -- CreateIndex
-CREATE INDEX "blocklist_guild_id_created_at_idx" ON "blocklist"("guild_id", "created_at");
+CREATE INDEX "global_blocklist_blocked_by_idx" ON "global_blocklist"("blocked_by");
 
 -- CreateIndex
-CREATE INDEX "blocklist_guild_id_idx" ON "blocklist"("guild_id");
+CREATE INDEX "blocklist_guild_id_created_at_idx" ON "blocklist"("guild_id", "created_at");
 
 -- CreateIndex
 CREATE INDEX "blocklist_blocked_by_idx" ON "blocklist"("blocked_by");
@@ -504,6 +588,15 @@ CREATE INDEX "economy_transactions_guild_id_created_at_idx" ON "economy_transact
 -- CreateIndex
 CREATE INDEX "economy_transactions_user_id_idx" ON "economy_transactions"("user_id");
 
+-- CreateIndex
+CREATE INDEX "reactionrole_menus_guild_id_idx" ON "reactionrole_menus"("guild_id");
+
+-- CreateIndex
+CREATE INDEX "reactionrole_options_menu_id_position_idx" ON "reactionrole_options"("menu_id", "position");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "sticky_messages_guild_id_channel_id_key" ON "sticky_messages"("guild_id", "channel_id");
+
 -- AddForeignKey
 ALTER TABLE "guild_module_state" ADD CONSTRAINT "guild_module_state_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -550,6 +643,9 @@ ALTER TABLE "downloader_modules" ADD CONSTRAINT "downloader_modules_repo_id_fkey
 ALTER TABLE "audit_ledger" ADD CONSTRAINT "audit_ledger_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "module_dynamic_data" ADD CONSTRAINT "module_dynamic_data_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "module_config_history" ADD CONSTRAINT "module_config_history_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -579,12 +675,12 @@ ALTER TABLE "economy_accounts" ADD CONSTRAINT "economy_accounts_guild_id_fkey" F
 -- AddForeignKey
 ALTER TABLE "economy_transactions" ADD CONSTRAINT "economy_transactions_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- A nullable column carrying "global scope" inside a composite UNIQUE does not
--- dedupe in Postgres: NULL is never equal to NULL, so (user_id, NULL) can be
--- inserted any number of times. Prisma cannot express a partial index, so the
--- null-scoped halves of these two constraints are declared here.
-CREATE UNIQUE INDEX "uq_blocklist_user_global"
-  ON "blocklist"("user_id") WHERE "guild_id" IS NULL;
+-- AddForeignKey
+ALTER TABLE "reactionrole_menus" ADD CONSTRAINT "reactionrole_menus_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-CREATE UNIQUE INDEX "uq_ignore_guild_wide"
-  ON "ignore_list"("guild_id") WHERE "channel_id" IS NULL;
+-- AddForeignKey
+ALTER TABLE "reactionrole_options" ADD CONSTRAINT "reactionrole_options_menu_id_fkey" FOREIGN KEY ("menu_id") REFERENCES "reactionrole_menus"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sticky_messages" ADD CONSTRAINT "sticky_messages_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
+

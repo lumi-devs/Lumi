@@ -16,7 +16,7 @@ async function guardedHistoryAction(guildId: string) {
 
 export async function rollbackConfigChange(
   guildId: string,
-  entryId: string,
+  entryId: number,
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await guardedHistoryAction(guildId);

@@ -28,7 +28,7 @@ function makeAudit(overrides: Record<string, unknown> = {}) {
 
 function makeHistory(overrides: Record<string, unknown> = {}) {
   return {
-    id: "h1",
+    id: 1,
     guildId: GUILD_ID,
     moduleName: "mod",
     key: "logChannel",
@@ -205,22 +205,22 @@ describe("dashboard module audit + history + override RPC handlers", () => {
   describe("guild.history.list", () => {
     it("returns newest-first entries scoped to the guild", async () => {
       prisma.$seed("moduleConfigHistory", [
-        makeHistory({ id: "h1", createdAt: new Date("2026-01-01T00:00:00.000Z") }),
-        makeHistory({ id: "h2", createdAt: new Date("2026-01-02T00:00:00.000Z") }),
-        makeHistory({ id: "h3", guildId: OTHER_GUILD_ID }),
+        makeHistory({ id: 1, createdAt: new Date("2026-01-01T00:00:00.000Z") }),
+        makeHistory({ id: 2, createdAt: new Date("2026-01-02T00:00:00.000Z") }),
+        makeHistory({ id: 3, guildId: OTHER_GUILD_ID }),
       ]);
 
       const res = (await call("guild.history.list", {})) as any;
 
       expect(res.total).toBe(2);
-      expect(res.entries.map((e: any) => e.id)).toEqual(["h2", "h1"]);
+      expect(res.entries.map((e: any) => e.id)).toEqual([2, 1]);
       expect(res.entries[0].createdAt).toBe("2026-01-02T00:00:00.000Z");
     });
 
     it("filters by module and key", async () => {
       prisma.$seed("moduleConfigHistory", [
-        makeHistory({ id: "h1", moduleName: "mod", key: "logChannel" }),
-        makeHistory({ id: "h2", moduleName: "afk", key: "enabled" }),
+        makeHistory({ id: 1, moduleName: "mod", key: "logChannel" }),
+        makeHistory({ id: 2, moduleName: "afk", key: "enabled" }),
       ]);
 
       const res = (await call("guild.history.list", {
@@ -228,7 +228,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
       })) as any;
 
       expect(res.total).toBe(1);
-      expect(res.entries[0].id).toBe("h2");
+      expect(res.entries[0].id).toBe(2);
     });
 
     it("rejects an actor without ManageGuild", async () => {
@@ -242,10 +242,10 @@ describe("dashboard module audit + history + override RPC handlers", () => {
 
   describe("guild.history.rollback", () => {
     it("re-applies the previous value through the config service", async () => {
-      prisma.$seed("moduleConfigHistory", [makeHistory({ id: "h1" })]);
+      prisma.$seed("moduleConfigHistory", [makeHistory({ id: 1 })]);
 
       const res = (await call("guild.history.rollback", {
-        entryId: "h1",
+        entryId: 1,
       })) as any;
 
       expect(config.setConfig).toHaveBeenCalledWith(
@@ -265,11 +265,11 @@ describe("dashboard module audit + history + override RPC handlers", () => {
 
     it("deletes the key when the change created it", async () => {
       prisma.$seed("moduleConfigHistory", [
-        makeHistory({ id: "h1", oldValue: null }),
+        makeHistory({ id: 1, oldValue: null }),
       ]);
 
       const res = (await call("guild.history.rollback", {
-        entryId: "h1",
+        entryId: 1,
       })) as any;
 
       expect(container.db.config.deleteModuleConfigKey).toHaveBeenCalledWith(
@@ -283,10 +283,10 @@ describe("dashboard module audit + history + override RPC handlers", () => {
 
     it("passes a list value through as a typed array", async () => {
       prisma.$seed("moduleConfigHistory", [
-        makeHistory({ id: "h1", oldValue: ["a", "b"] }),
+        makeHistory({ id: 1, oldValue: ["a", "b"] }),
       ]);
 
-      await call("guild.history.rollback", { entryId: "h1" });
+      await call("guild.history.rollback", { entryId: 1 });
 
       expect(config.setConfig).toHaveBeenCalledWith(
         GUILD_ID,
@@ -299,21 +299,21 @@ describe("dashboard module audit + history + override RPC handlers", () => {
 
     it("will not roll back another guild's history entry", async () => {
       prisma.$seed("moduleConfigHistory", [
-        makeHistory({ id: "h1", guildId: OTHER_GUILD_ID }),
+        makeHistory({ id: 1, guildId: OTHER_GUILD_ID }),
       ]);
 
       await expect(
-        call("guild.history.rollback", { entryId: "h1" }),
-      ).rejects.toThrow("History entry h1 not found");
+        call("guild.history.rollback", { entryId: 1 }),
+      ).rejects.toThrow("History entry 1 not found");
       expect(config.setConfig).not.toHaveBeenCalled();
     });
 
     it("rejects an actor without ManageGuild", async () => {
       denyPermissions();
-      prisma.$seed("moduleConfigHistory", [makeHistory({ id: "h1" })]);
+      prisma.$seed("moduleConfigHistory", [makeHistory({ id: 1 })]);
 
       await expect(
-        call("guild.history.rollback", { entryId: "h1" }, INTRUDER_ID),
+        call("guild.history.rollback", { entryId: 1 }, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
       expect(config.setConfig).not.toHaveBeenCalled();
     });

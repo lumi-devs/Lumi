@@ -65,7 +65,7 @@ export const coreRpcHandlers = implementRpc(coreRpc, {
     });
     return {
       entries: entries.map((e) => ({
-        id: e.id,
+        id: "id" in e ? String(e.id) : e.userId,
         userId: e.userId,
         reason: e.reason,
         blockedBy: e.blockedBy,
@@ -108,8 +108,12 @@ export const coreRpcHandlers = implementRpc(coreRpc, {
 
   "guild.ignored.add": async ({ guildId, input }) => {
     const { channelId } = input;
-    const existing = await container.db.access.listIgnoreEntries(guildId);
-    if (existing.some((e) => e.channelId === channelId)) {
+    const alreadyIgnored = channelId
+      ? (await container.db.access.listIgnoreEntries(guildId)).some(
+          (e) => e.channelId === channelId,
+        )
+      : (await container.db.config.getGuildSettings(guildId)).ignored;
+    if (alreadyIgnored) {
       throw new Error(
         channelId
           ? `<#${channelId}> is already ignored`

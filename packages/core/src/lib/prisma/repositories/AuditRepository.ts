@@ -1,4 +1,4 @@
-import type { AuditLedger, Prisma } from "@prisma/client";
+import type { AuditLedger, AuditPlatform, Prisma } from "@prisma/client";
 import { hostname } from "node:os";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 import { RedisKeys } from "#lib/database/redis.js";
@@ -43,7 +43,7 @@ export interface AuditLogPayload {
   guildId: string;
   userId: string;
   action: string;
-  platform: string;
+  platform: AuditPlatform;
   details?: unknown;
 }
 
@@ -51,7 +51,7 @@ export interface AuditLedgerFilter {
   guildId?: string;
   userId?: string;
   action?: string;
-  platform?: string;
+  platform?: AuditPlatform;
   skip?: number;
   take?: number;
 }

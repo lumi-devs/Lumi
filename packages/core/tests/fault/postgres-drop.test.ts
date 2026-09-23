@@ -145,7 +145,7 @@ describe("Chaos Suite: PostgreSQL Hard Drop & Pool Exhaustion", () => {
         guildId: "guild-drop-1",
         userId: "user-1",
         moderatorId: "mod-1",
-        action: "Warn",
+        action: "warn",
         reason: "Spamming",
       }),
     ).rejects.toThrow(/Timed out fetching a new connection/);
@@ -156,11 +156,11 @@ describe("Chaos Suite: PostgreSQL Hard Drop & Pool Exhaustion", () => {
       guildId: "guild-drop-1",
       userId: "user-1",
       moderatorId: "mod-1",
-      action: "Warn",
+      action: "warn",
       reason: "Spamming",
     });
     expect(created.id).toBeDefined();
-    expect(created.action).toBe("Warn");
+    expect(created.action).toBe("warn");
   });
 
   it("ensures health check query rejects during database drop and passes after recovery", async () => {

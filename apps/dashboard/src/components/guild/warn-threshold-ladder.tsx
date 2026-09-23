@@ -31,7 +31,7 @@ const Actions: {
   { value: "kick", label: "Kick", duration: "unused" },
   { value: "ban", label: "Ban", duration: "unused" },
   { value: "quarantine", label: "Quarantine", duration: "unused" },
-  { value: "vcmute", label: "Voice mute", duration: "required" },
+  { value: "voice_mute", label: "Voice mute", duration: "required" },
 ];
 
 const ActionByValue = new Map<string, (typeof Actions)[number]>(

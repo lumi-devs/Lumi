@@ -23,6 +23,16 @@ function makeBlock(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function makeGlobalBlock(overrides: Record<string, unknown> = {}) {
+  return {
+    userId: TARGET_ID,
+    reason: "spam",
+    blockedBy: OWNER_ID,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    ...overrides,
+  };
+}
+
 describe("core module guild blocklist RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let guild: any;
@@ -86,14 +96,14 @@ describe("core module guild blocklist RPC handlers", () => {
     prisma.$seed("blocklist", [
       makeBlock({ id: 1, createdAt: new Date("2026-01-01T00:00:00.000Z") }),
       makeBlock({ id: 2, createdAt: new Date("2026-01-02T00:00:00.000Z") }),
-      makeBlock({ id: 3, guildId: null }),
       makeBlock({ id: 4, guildId: OTHER_GUILD_ID }),
     ]);
+    prisma.$seed("globalBlock", [makeGlobalBlock()]);
 
     const res = (await call("guild.blocklist.list", {})) as any;
 
     expect(res.total).toBe(2);
-    expect(res.entries.map((e: any) => e.id)).toEqual([2, 1]);
+    expect(res.entries.map((e: any) => e.id)).toEqual(["2", "1"]);
     expect(res.entries[0].createdAt).toBe("2026-01-02T00:00:00.000Z");
   });
 
@@ -111,7 +121,7 @@ describe("core module guild blocklist RPC handlers", () => {
     })) as any;
 
     expect(res.total).toBe(5);
-    expect(res.entries.map((e: any) => e.id)).toEqual([3, 2]);
+    expect(res.entries.map((e: any) => e.id)).toEqual(["3", "2"]);
   });
 
   it("adds a guild-scoped entry attributed to the acting manager", async () => {
@@ -125,6 +135,7 @@ describe("core module guild blocklist RPC handlers", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]!["guildId"]).toBe(GUILD_ID);
     expect(rows[0]!["blockedBy"]).toBe(OWNER_ID);
+    expect(prisma.$all("globalBlock")).toHaveLength(0);
   });
 
   it("rejects a duplicate entry in the same guild", async () => {
@@ -136,24 +147,22 @@ describe("core module guild blocklist RPC handlers", () => {
   });
 
   it("does not treat a global row as a guild one", async () => {
-    prisma.$seed("blocklist", [makeBlock({ id: 1, guildId: null })]);
+    prisma.$seed("globalBlock", [makeGlobalBlock()]);
 
     await call("guild.blocklist.add", { userId: TARGET_ID });
 
-    expect(prisma.$all("blocklist")).toHaveLength(2);
+    expect(prisma.$all("blocklist")).toHaveLength(1);
+    expect(prisma.$all("globalBlock")).toHaveLength(1);
   });
 
   it("removes only this guild's row", async () => {
-    prisma.$seed("blocklist", [
-      makeBlock({ id: 1 }),
-      makeBlock({ id: 2, guildId: null }),
-    ]);
+    prisma.$seed("blocklist", [makeBlock({ id: 1 })]);
+    prisma.$seed("globalBlock", [makeGlobalBlock()]);
 
     await call("guild.blocklist.remove", { userId: TARGET_ID });
 
-    const rows = prisma.$all("blocklist");
-    expect(rows).toHaveLength(1);
-    expect(rows[0]!["guildId"]).toBeNull();
+    expect(prisma.$all("blocklist")).toHaveLength(0);
+    expect(prisma.$all("globalBlock")).toHaveLength(1);
   });
 
   it("rejects an actor without ManageGuild", async () => {

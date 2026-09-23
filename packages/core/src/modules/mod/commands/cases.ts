@@ -7,6 +7,11 @@ import { BaseSubcommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { makeInfoCard } from "#lib/ui/cards.js";
 import { decrementWarnCount } from "../services/thresholds.js";
+import { CaseAction, type $Enums } from "@prisma/client";
+
+function isCaseAction(value: string): value is $Enums.CaseAction {
+  return (Object.values(CaseAction) as string[]).includes(value);
+}
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "cases",
@@ -79,12 +84,13 @@ export class CasesCommand extends BaseSubcommand {
     await ctx.defer();
     let caseNumber: number | null = null;
     let userId: string | undefined;
-    let action: string | undefined;
+    let action: $Enums.CaseAction | undefined;
 
     if (ctx.isSlash) {
       caseNumber = await ctx.getInteger("case_number");
       userId = (await ctx.getUser("member"))?.id;
-      action = (await ctx.getString("action")) ?? undefined;
+      const rawAction = await ctx.getString("action");
+      action = rawAction && isCaseAction(rawAction) ? rawAction : undefined;
     } else {
       const first = await ctx.getString("member");
       if (first && /^\d+$/.test(first) && first.length < 8) {
@@ -191,7 +197,7 @@ export class CasesCommand extends BaseSubcommand {
   async #viewList(
     ctx: CommandContext,
     userId: string | undefined,
-    action: string | undefined,
+    action: $Enums.CaseAction | undefined,
   ) {
     const t = await ctx.fetchT();
     if (!userId) {

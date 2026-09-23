@@ -138,7 +138,7 @@ export const dashboardRpc = {
     value: unknown;
   }>()({
     input: s.object({
-      entryId: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(64),
+      entryId: s.number().int().greaterThanOrEqual(1),
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,

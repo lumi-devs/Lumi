@@ -104,7 +104,7 @@ export function buildHistoryView(
       options: rollbackable.slice(0, 25).map((e) =>
         new StringSelectMenuOptionBuilder()
           .setLabel(cutText(`Restore ${labelFor(e.key)}`, 100))
-          .setValue(e.id)
+          .setValue(String(e.id))
           .setDescription(cutText(`Roll back to its previous value`, 100)),
       ),
     });

@@ -18,8 +18,13 @@ import {
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import type { ModalSubmitInteraction } from "discord.js";
+import { OverrideTargetType, type $Enums } from "@prisma/client";
 
-const OverrideTypes = new Set(["channel", "role", "user", "category"]);
+function isOverrideTargetType(
+  value: string,
+): value is $Enums.OverrideTargetType {
+  return (Object.values(OverrideTargetType) as string[]).includes(value);
+}
 
 @ApplyOptions<InteractionHandler.Options>({
   name: "config-panel-modal",
@@ -189,7 +194,7 @@ export class ConfigPanelModalHandler extends InteractionHandler {
       const field = record.meta.configFields?.find((f) => f.key === key);
       if (!field)
         return this.#err(interaction, `\`${key}\` is not a valid config key.`);
-      if (!OverrideTypes.has(type))
+      if (!isOverrideTargetType(type))
         return this.#err(
           interaction,
           "Target type must be one of: channel, role, user, category.",

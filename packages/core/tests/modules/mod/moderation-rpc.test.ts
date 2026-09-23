@@ -233,7 +233,7 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
     it("returns this guild's rules ordered by warn count", async () => {
       prisma.$seed("warnThreshold", [
         { guildId: GUILD_ID, warnCount: 5, action: "ban", duration: null },
-        { guildId: GUILD_ID, warnCount: 3, action: "mute", duration: "1h" },
+        { guildId: GUILD_ID, warnCount: 3, action: "mute", duration: 3600 },
         { guildId: "999999999999999999", warnCount: 1, action: "kick", duration: null },
       ]);
 
@@ -272,7 +272,7 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
 
     it("updates an existing rule in place", async () => {
       prisma.$seed("warnThreshold", [
-        { guildId: GUILD_ID, warnCount: 3, action: "mute", duration: "1h" },
+        { guildId: GUILD_ID, warnCount: 3, action: "mute", duration: 3600 },
       ]);
 
       await call("guild.warnThresholds.set", {
@@ -288,7 +288,7 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
 
     it("deletes the rule when action is null", async () => {
       prisma.$seed("warnThreshold", [
-        { guildId: GUILD_ID, warnCount: 3, action: "mute", duration: "1h" },
+        { guildId: GUILD_ID, warnCount: 3, action: "mute", duration: 3600 },
         { guildId: GUILD_ID, warnCount: 5, action: "ban", duration: null },
       ]);
 

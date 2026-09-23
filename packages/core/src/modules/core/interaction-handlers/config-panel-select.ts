@@ -21,6 +21,13 @@ import {
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import type { AnySelectMenuInteraction } from "discord.js";
+import { OverrideTargetType, type $Enums } from "@prisma/client";
+
+function isOverrideTargetType(
+  value: string,
+): value is $Enums.OverrideTargetType {
+  return (Object.values(OverrideTargetType) as string[]).includes(value);
+}
 
 @ApplyOptions<InteractionHandler.Options>({
   name: "config-panel-select",
@@ -125,9 +132,11 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
         if (!interaction.isStringSelectMenu()) return;
         const historyId = interaction.values[0];
         if (!historyId) return;
+        const parsedHistoryId = Number(historyId);
+        if (!Number.isInteger(parsedHistoryId)) return;
         const entry =
           await this.container.db.configHistory.getConfigHistoryEntry(
-            historyId,
+            parsedHistoryId,
           );
         if (
           entry &&
@@ -162,6 +171,7 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
         if (!raw) return;
         const [modelType, modelId, ovKey] = raw.split("|");
         if (!modelType || !modelId || !ovKey) return;
+        if (!isOverrideTargetType(modelType)) return;
         await this.container.db.configOverrides.deleteConfigOverride({
           guildId,
           moduleName,
