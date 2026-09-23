@@ -53,7 +53,7 @@ export class ConfigUtility extends Utility {
       if (reason) throw new Error(`Invalid value for \`${key}\`: ${reason}`);
     }
 
-    const release = await configLock(guildId, moduleName);
+    const release = await configLock(guildId);
     try {
       await this.#write(guildId, moduleName, key, coerced, actorId);
     } finally {
@@ -80,7 +80,7 @@ export class ConfigUtility extends Utility {
       throw new Error(`\`${key}\` is not a boolean config key.`);
     }
 
-    const release = await configLock(guildId, moduleName);
+    const release = await configLock(guildId);
     try {
       const stored = await this.container.db.config.getModuleConfig(
         guildId,
@@ -149,7 +149,7 @@ export class ConfigUtility extends Utility {
       throw new Error(`No module named \`${name}\`.`);
     }
 
-    const release = await configLock(guildId, name);
+    const release = await configLock(guildId);
     try {
       const isEnabled = await this.container.db.modules.isModuleGuildEnabled(
         guildId,

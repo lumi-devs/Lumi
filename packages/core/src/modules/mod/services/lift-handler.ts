@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import { Time } from "@sapphire/time-utilities";
-import { acquireRedisLock } from "#lib/redis-lock.js";
+import { acquireRedisLock } from "#lib/lock.js";
 import type { ModLiftPayload } from "../scheduled-tasks/modLift.js";
 import { MuteAction } from "#modules/mod/services/actions/MuteAction.js";
 import { BanAction } from "#modules/mod/services/actions/BanAction.js";

@@ -8,7 +8,7 @@ import type {
   Message,
 } from "discord.js";
 import { logError } from "#lib/utilities/errors.js";
-import { acquireRedisLock } from "#lib/redis-lock.js";
+import { acquireRedisLock } from "#lib/lock.js";
 import { ModuleName, ReactionRoleKeys } from "../constants.js";
 import {
   deleteMenu,

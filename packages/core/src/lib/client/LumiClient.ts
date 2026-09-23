@@ -7,7 +7,7 @@ import {
   isPrimaryShard,
 } from "#lib/env.js";
 import { registerCoreFireHandlers } from "#lib/core-fire-handlers.js";
-import type { RedisLock } from "#lib/redis-lock.js";
+import type { RedisLock } from "#lib/lock.js";
 import { acquireSchedulerLock } from "#lib/scheduler-lock.js";
 import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
 import { registerRpcHandlers } from "#lib/rpc/registry.js";

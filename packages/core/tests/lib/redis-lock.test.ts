@@ -4,7 +4,7 @@ import {
   acquireRedisLock,
   verifyRedisLock,
   RedisExtendScript,
-} from "#lib/redis-lock.js";
+} from "#lib/lock.js";
 
 function mockRedis() {
   const store = new Map<string, string>();

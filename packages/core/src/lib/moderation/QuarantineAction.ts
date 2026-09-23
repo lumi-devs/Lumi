@@ -4,7 +4,7 @@ import { tryParseJSON } from "@sapphire/utilities";
 import { formatAuditReason } from "#lib/utilities/misc.js";
 import { RedisKeys } from "#lib/database/redis.js";
 import { logToChannel } from "#lib/moderation/log.js";
-import { acquireRedisLock } from "#lib/redis-lock.js";
+import { acquireRedisLock } from "#lib/lock.js";
 
 export interface QuarantineApplyOptions {
   guild: Guild;

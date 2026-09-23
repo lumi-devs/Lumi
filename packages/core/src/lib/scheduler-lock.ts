@@ -1,7 +1,7 @@
 import type { RedisClient } from "#lib/database/cluster-safe.js";
 import { RedisKeys } from "#lib/database/redis.js";
 import { getConsumerId } from "#lib/env.js";
-import { acquireRedisLock, type RedisLock } from "#lib/redis-lock.js";
+import { acquireRedisLock, type RedisLock } from "#lib/lock.js";
 
 /**
  * Exclusive fleet-wide lease on the scheduler role.

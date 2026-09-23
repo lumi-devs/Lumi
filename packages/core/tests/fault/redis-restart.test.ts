@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { acquireRedisLock, verifyRedisLock } from "#lib/redis-lock.js";
+import { acquireRedisLock, verifyRedisLock } from "#lib/lock.js";
 import { createGuildTransaction } from "#lib/guild-transaction.js";
 
 // bun:test's fake-timer support only mocks the system clock (Date.now), not
