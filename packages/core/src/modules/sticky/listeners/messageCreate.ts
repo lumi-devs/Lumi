@@ -19,6 +19,7 @@ import { stickyIndex } from "../services/sticky-index.js";
 export class StickyMessageListener extends GuildMessageListener {
   protected async handle(message: GuildMessage): Promise<void> {
     if (message.author.bot) return;
+    if (await isStickyOnCooldown(message.guildId, message.channelId)) return;
     const entries = await container.db.config.getModuleConfig(
       message.guildId,
       "sticky",
@@ -26,7 +27,6 @@ export class StickyMessageListener extends GuildMessageListener {
     );
     const entry = stickyIndex.find(message.guildId, message.channelId, entries);
     if (!entry) return;
-    if (await isStickyOnCooldown(message.guildId, message.channelId)) return;
     const oldId = await getStickyMessageId(
       message.guildId,
       message.channelId,

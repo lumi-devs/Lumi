@@ -12,5 +12,7 @@
   "memberBanned": "Member Banned",
   "memberUnbanned": "Member Unbanned",
   "nicknameChanged": "Nickname Changed",
-  "rolesUpdated": "Roles Updated"
+  "rolesUpdated": "Roles Updated",
+  "claimAddedTitle": "Added",
+  "claimAddedMessage": "This is pending as a log destination — the dashboard will pick it up automatically."
 }

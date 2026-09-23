@@ -1,4 +1,5 @@
 import { Prisma, type CaseAction, type ModerationCase } from "@prisma/client";
+import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
 /** Batch size for the cross-guild sweeps, which are unbounded by nature. */
@@ -121,6 +122,25 @@ export class ModerationRepository extends Repository {
       where: { guildId, userId, active: true, ...(action ? { action } : {}) },
       orderBy: { caseNumber: "desc" },
     });
+  }
+
+  /**
+   * Whether the user has an active `voice_mute` case, cached both positive
+   * and negative - the common case (no active mute) is checked on every
+   * relevant `voiceStateUpdate` and would otherwise pay a Postgres query per
+   * channel join forever.
+   */
+  public isVoiceMuted(guildId: string, userId: string): Promise<boolean> {
+    return this.getOrSet(
+      RedisKeys.voiceMuteState(guildId, userId),
+      RedisTTL.voiceMute,
+      () =>
+        this.prisma.moderationCase
+          .count({
+            where: { guildId, userId, action: "voice_mute", active: true },
+          })
+          .then((n) => n > 0),
+    );
   }
 
   public getModerationCase(

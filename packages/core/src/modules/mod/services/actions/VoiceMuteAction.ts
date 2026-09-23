@@ -38,6 +38,10 @@ export class VoiceMuteAction {
           await targetMember.voice.disconnect(auditReason);
         }
 
+        await container.invalidation.invalidate(
+          RedisKeys.voiceMuteState(guild.id, targetMember.id),
+        );
+
         return container.db.moderation.createModerationCase({
           guildId: guild.id,
           userId: targetMember.id,

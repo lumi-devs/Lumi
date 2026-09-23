@@ -2,6 +2,7 @@ import { Listener, Events } from "@sapphire/framework";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { VoiceState } from "discord.js";
+import { fetchTyped } from "#lib/commands.js";
 import { logError } from "#lib/utilities/errors.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { TempvcCreateCooldownMs } from "../constants.js";
@@ -30,6 +31,17 @@ export default class TempVcVoiceStateListener extends Listener<
 
     const guildId = (newState.guild ?? oldState.guild).id;
 
+    const relevant =
+      (oldState.channelId
+        ? await tempVcRegistry.isManagedVc(guildId, oldState.channelId)
+        : false) ||
+      (newState.channelId
+        ? (await tempVcRegistry.isManagedVc(guildId, newState.channelId)) ||
+          (await tempVcRegistry.getGenerator(guildId, newState.channelId)) !==
+            null
+        : false);
+    if (!relevant) return;
+
     const { prevChannelId } = await trackVoiceState(
       member.id,
       newState.channelId,
@@ -54,11 +66,12 @@ export default class TempVcVoiceStateListener extends Listener<
 
         if (await this.service.onCreateCooldown(guildId, member.id)) {
           await member.voice.disconnect().catch(() => null);
+          const t = await fetchTyped(newState.guild);
           await member
             .send(
-              `⏳ Slow down - wait up to ${Math.round(
-                TempvcCreateCooldownMs / 1000,
-              )}s before creating another channel.`,
+              `⏳ ${t("tempvc:createCooldownDm", {
+                seconds: Math.round(TempvcCreateCooldownMs / 1000),
+              })}`,
             )
             .catch(() => null);
           return;

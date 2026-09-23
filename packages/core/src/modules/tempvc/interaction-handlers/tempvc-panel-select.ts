@@ -50,22 +50,22 @@ const SelectActions = new Set([
   "panelmenu",
 ]);
 
-const AccessVerbs: Record<string, string> = {
-  select_kick: "Kicked",
-  ksel: "Kicked",
-  select_trust: "Trusted",
-  select_trust_role: "Trusted Role",
-  tsel: "Trusted",
-  select_untrust: "Untrusted",
-  select_untrust_role: "Untrusted Role",
-  usel: "Untrusted",
-  select_block: "Blocked",
-  select_block_role: "Blocked Role",
-  bsel: "Blocked",
-  select_unblock: "Unblocked",
-  select_unblock_role: "Unblocked Role",
-  ubsel: "Unblocked",
-};
+const AccessVerbKeys = {
+  select_kick: "tempvc:accessVerbKicked",
+  ksel: "tempvc:accessVerbKicked",
+  select_trust: "tempvc:accessVerbTrusted",
+  select_trust_role: "tempvc:accessVerbTrustedRole",
+  tsel: "tempvc:accessVerbTrusted",
+  select_untrust: "tempvc:accessVerbUntrusted",
+  select_untrust_role: "tempvc:accessVerbUntrustedRole",
+  usel: "tempvc:accessVerbUntrusted",
+  select_block: "tempvc:accessVerbBlocked",
+  select_block_role: "tempvc:accessVerbBlockedRole",
+  bsel: "tempvc:accessVerbBlocked",
+  select_unblock: "tempvc:accessVerbUnblocked",
+  select_unblock_role: "tempvc:accessVerbUnblockedRole",
+  ubsel: "tempvc:accessVerbUnblocked",
+} as const;
 
 @ApplyOptions<ModuleInteractionHandler.Options>({
   name: "tempvc-panel-select",
@@ -265,8 +265,9 @@ export class TempVcPanelSelectHandler extends ModuleInteractionHandler<
       }
     }
     if (done.length === 0) return t("tempvc:noChangesApplied");
-    const verb = AccessVerbs[action] ?? "Processed";
-    return `${verb}: ${done.join(", ")}`;
+    const verbKey = AccessVerbKeys[action as keyof typeof AccessVerbKeys];
+    const verb = verbKey ? t(verbKey) : t("tempvc:accessVerbProcessed");
+    return t("tempvc:accessResult", { verb, members: done.join(", ") });
   }
 
   async #transfer(

@@ -1,45 +1,42 @@
-import { Listener } from "@sapphire/framework";
+import { ApplyOptions } from "@sapphire/decorators";
+import { container, Events } from "@sapphire/framework";
 import type { VoiceState } from "discord.js";
-import { container } from "@sapphire/framework";
-import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 
-export class VoiceStateUpdateListener extends Listener {
-  public constructor(
-    context: Listener.LoaderContext,
-    options: Listener.Options,
-  ) {
-    super(context, {
-      ...options,
-      event: "voiceStateUpdate",
-    });
+@ApplyOptions<ModuleListener.Options>({
+  name: "modVoiceStateUpdate",
+  event: Events.VoiceStateUpdate,
+  module: "mod",
+})
+export class VoiceStateUpdateListener extends ModuleListener<
+  typeof Events.VoiceStateUpdate
+> {
+  protected override resolveGuildId(
+    oldState: VoiceState,
+    newState: VoiceState,
+  ): string | null {
+    return newState.guild?.id ?? oldState.guild?.id ?? null;
   }
 
-  public async run(_oldState: VoiceState, newState: VoiceState): Promise<void> {
+  protected async handle(
+    oldState: VoiceState,
+    newState: VoiceState,
+  ): Promise<void> {
     if (!newState.channelId || !newState.guild || !newState.member) return;
+
+    const channelChanged = oldState.channelId !== newState.channelId;
+    const muteFlagsChanged =
+      oldState.mute !== newState.mute ||
+      oldState.serverMute !== newState.serverMute;
+    if (!channelChanged && !muteFlagsChanged) return;
 
     const guildId = newState.guild.id;
     const userId = newState.member.id;
 
-    const key = RedisKeys.voiceMuteState(guildId, userId);
-    const isMutedInRedis = await container.redis.get(key);
-    let isVoiceMuted = Boolean(isMutedInRedis);
+    if (!(await container.db.moderation.isVoiceMuted(guildId, userId))) return;
 
-    if (!isVoiceMuted) {
-      const activeCases = await container.db.moderation.getActiveCases(
-        guildId,
-        userId,
-        "voice_mute",
-      );
-      if (activeCases.length > 0) {
-        isVoiceMuted = true;
-        await container.redis.set(key, "1", "EX", RedisTTL.voiceMute);
-      }
-    }
-
-    if (isVoiceMuted) {
-      await newState
-        .disconnect("User is currently voice muted.")
-        .catch(() => null);
-    }
+    await newState
+      .disconnect("User is currently voice muted.")
+      .catch(() => null);
   }
 }

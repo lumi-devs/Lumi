@@ -84,5 +84,19 @@
 	"statusLocked": "LOCKED",
 	"statusUnlocked": "UNLOCKED",
 	"statusHidden": "HIDDEN",
-	"statusVisible": "VISIBLE"
+	"statusVisible": "VISIBLE",
+	"createCooldownDm": "Slow down - wait up to {{seconds}}s before creating another channel.",
+	"deleteFailedTitle": "Delete Failed",
+	"deleteFailedMessage": "Failed to delete the voice channel. Try again.",
+	"accessVerbKicked": "Kicked",
+	"accessVerbTrusted": "Trusted",
+	"accessVerbTrustedRole": "Trusted Role",
+	"accessVerbUntrusted": "Untrusted",
+	"accessVerbUntrustedRole": "Untrusted Role",
+	"accessVerbBlocked": "Blocked",
+	"accessVerbBlockedRole": "Blocked Role",
+	"accessVerbUnblocked": "Unblocked",
+	"accessVerbUnblockedRole": "Unblocked Role",
+	"accessVerbProcessed": "Processed",
+	"accessResult": "{{verb}}: {{members}}"
 }

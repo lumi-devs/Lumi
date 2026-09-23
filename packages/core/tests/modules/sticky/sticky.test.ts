@@ -127,6 +127,15 @@ describe("Sticky Module", () => {
       );
     });
 
+    it("should check the cooldown before reading config, and skip the config read entirely when on cooldown", async () => {
+      (container.redis.set as any).mockResolvedValueOnce(null);
+      const message = makeMessage();
+      await (listener as any).handle(message);
+      expect(container.redis.set).toHaveBeenCalledTimes(1);
+      expect(container.db.config.getModuleConfig).not.toHaveBeenCalled();
+      expect(message.channel.send).not.toHaveBeenCalled();
+    });
+
     it("should do nothing when no entry matches the channel", async () => {
       (container.db.config.getModuleConfig as any).mockResolvedValue([
         { channel_id: "other", message: "stay", enabled: true },

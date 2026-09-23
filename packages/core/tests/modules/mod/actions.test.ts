@@ -414,6 +414,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     expect(container.db.moderation.createModerationCase).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'u-1', action: 'voice_mute' })
     );
+    expect(container.invalidation.invalidate).toHaveBeenCalledWith('lumi:mod:g-1:voicemute:u-1');
   });
 
   it('VoiceMuteAction.apply evicts a connected target without server-muting them', async () => {

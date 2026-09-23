@@ -127,6 +127,16 @@ export const KnownPermitNodeGroups: {
       },
     ],
   },
+  {
+    prefix: "logging",
+    nodes: [
+      {
+        node: "logging.claim",
+        label: "Claim log destinations",
+        description: "Claim a pending log-destination code posted in a channel.",
+      },
+    ],
+  },
 ];
 
 export const KnownDashboardPermitNodes: PermitNode[] = KnownPermitNodes;

@@ -81,18 +81,18 @@ export default class AfkMentionsHandler extends ModuleInteractionHandler<
     const row = totalPages > 1 ? new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(AfkMentionsId.build({ userId, page: String(safePage - 1) }))
-        .setLabel("Previous")
+        .setLabel(t("afk:previousButton"))
         .setEmoji(Emojis.parse(Emojis.ArrowLeft))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(safePage <= 0),
       new ButtonBuilder()
         .setCustomId(AfkMentionsId.build({ userId, page: "indicator" }))
-        .setLabel(`Page ${safePage + 1}/${totalPages}`)
+        .setLabel(t("afk:pageIndicator", { page: safePage + 1, totalPages }))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(true),
       new ButtonBuilder()
         .setCustomId(AfkMentionsId.build({ userId, page: String(safePage + 1) }))
-        .setLabel("Next")
+        .setLabel(t("afk:nextButton"))
         .setEmoji(Emojis.parse(Emojis.ArrowRight))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(safePage >= totalPages - 1)

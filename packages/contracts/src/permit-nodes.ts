@@ -32,7 +32,8 @@ export type PermitNode =
   | "owner.*"
   | "owner.serverlock"
   | "owner.leave"
-  | "owner.announce";
+  | "owner.announce"
+  | "logging.claim";
 
 export const KnownPermitNodeGroups: PermitNodeGroup[] = [
   { prefix: "admin", nodes: ["admin.*", "admin.config", "admin.welcome"] },
@@ -57,6 +58,7 @@ export const KnownPermitNodeGroups: PermitNodeGroup[] = [
     prefix: "owner",
     nodes: ["owner.*", "owner.serverlock", "owner.leave", "owner.announce"],
   },
+  { prefix: "logging", nodes: ["logging.claim"] },
 ];
 
 /** Flat list for autocomplete sources. */

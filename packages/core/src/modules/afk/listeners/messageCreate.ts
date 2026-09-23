@@ -214,12 +214,16 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
       : (member?.displayName ?? userId);
 
     if (!message.channel.isSendable() || !canSendMessages(message)) return;
+    const t = await fetchTyped(message);
     const sent = await message
       .reply({
         ...makeCard(
           0,
-          `${Emojis.Afk} ${name} is AFK`,
-          `**Reason:** ${sanitizeReason(entry.reason)}\n**AFK for:** ${afkDurationSince(entry.since)}`,
+          `${Emojis.Afk} ${t("afk:isAfkTitle", { name })}`,
+          t("afk:isAfkBody", {
+            reason: sanitizeReason(entry.reason),
+            duration: afkDurationSince(entry.since),
+          }),
         ),
         allowedMentions: { repliedUser: true },
       })

@@ -172,7 +172,9 @@ export class TempVcPanelButtonHandler extends ModuleInteractionHandler<
     if (!deleted) {
       throw new UserError({
         identifier: "TempVcDeleteFailed",
-        message: `${Emojis.Cross} Failed to delete the voice channel. Try again.`,
+        message: `${Emojis.Cross} ${
+          t ? t("tempvc:deleteFailedMessage") : "Failed to delete the voice channel. Try again."
+        }`,
       });
     }
     if (guildId) await removeVcRecord(guildId, id);
