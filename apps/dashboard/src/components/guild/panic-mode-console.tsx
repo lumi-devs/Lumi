@@ -15,7 +15,7 @@ import type { DashboardChannelView, PanicStateView } from "@lumi/contracts/views
 import { formatCaseDate } from "#/lib/moderation-cases";
 import { useServerAction } from "#/lib/use-server-action";
 
-/** `SecurityUtility.enterPanic` stops after this many channels. */
+/** `enterPanic` (security's `services/panic.ts`) stops after this many channels. */
 const ChannelCap = 40;
 
 export function PanicModeConsole({
