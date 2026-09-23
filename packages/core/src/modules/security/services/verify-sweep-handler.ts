@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
-import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
+import { sweepExpiredPending } from "./verification.js";
 
 /** Sweeps touch the Discord API per guild, so the fan-out stays capped. */
 const SweepConcurrency = 10;
@@ -11,15 +11,13 @@ const SweepConcurrency = 10;
  * whose verification window elapsed.
  */
 export async function handleVerifySweepFire(): Promise<void> {
-  const security = tryGetUtility("security");
-  if (!security) return;
   const guilds = [...container.client.guilds.cache.values()];
   await mapWithConcurrency(guilds, SweepConcurrency, async (guild) => {
     const enabled = await container.db.modules
       .isModuleEnabled(guild.id, "security")
       .catch(() => false);
     if (!enabled) return;
-    await security.sweepExpiredPending(guild).catch((err: unknown) => {
+    await sweepExpiredPending(guild).catch((err: unknown) => {
       container.logger.error(
         `[security] Verify sweep failed for ${guild.id}:`,
         err,

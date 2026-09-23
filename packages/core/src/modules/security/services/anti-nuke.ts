@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { Colors, type Guild } from "discord.js";
+import { Colors, PermissionFlagsBits, type Guild } from "discord.js";
 import { isNullish, type Awaitable } from "@sapphire/utilities";
 import { RedisKeys } from "#lib/database/redis.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
@@ -59,6 +59,16 @@ function isNukeResponse(value: unknown): value is NukeResponse {
 }
 
 const TrippedCooldownSeconds = 300;
+
+/** Permissions that hand out server control - never allowed on `@everyone`. */
+export const DangerousPermissions = [
+  PermissionFlagsBits.Administrator,
+  PermissionFlagsBits.ManageGuild,
+  PermissionFlagsBits.ManageRoles,
+  PermissionFlagsBits.ManageChannels,
+  PermissionFlagsBits.BanMembers,
+  PermissionFlagsBits.KickMembers,
+] as const;
 
 export async function loadAntiNukeConfig(guildId: string): Promise<AntiNukeConfig> {
   const raw = await container.db.config.getAllModuleConfig(guildId, "security");

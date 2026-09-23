@@ -6,7 +6,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { ButtonInteraction } from "discord.js";
 import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
 import { fetchTyped } from "#lib/commands.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { revertPanic } from "../services/panic.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
 import { memberRoleIds } from "#lib/permissions/subject.js";
@@ -49,7 +49,7 @@ export class PanicRevertInteractionHandler extends ModuleInteractionHandler<
       return;
     }
 
-    const result = await getUtility("security").revertPanic(guild);
+    const result = await revertPanic(guild);
     if (!result) {
       await interaction.editReply(
         makeErrorCard(t(PanelsKeys.PanicNotActiveTitle), t(PanelsKeys.PanicNotActive)),

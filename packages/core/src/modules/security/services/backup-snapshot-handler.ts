@@ -1,8 +1,8 @@
 import { container } from "@sapphire/framework";
-import { tryGetUtility } from "#lib/module-system/Utility.js";
 
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 import { loadAntiNukeConfig } from "./anti-nuke.js";
+import { loadBackupConfig, createBackup } from "./backup.js";
 
 const HourMs = 60 * 60 * 1000;
 
@@ -16,9 +16,6 @@ const BackupConcurrency = 5;
  * configured interval.
  */
 export async function handleBackupSnapshotFire(): Promise<void> {
-  const security = tryGetUtility("security");
-  if (!security) return;
-
   const guilds = [...container.client.guilds.cache.values()];
   await mapWithConcurrency(guilds, BackupConcurrency, async (guild) => {
     const enabled = await container.db.modules
@@ -29,12 +26,12 @@ export async function handleBackupSnapshotFire(): Promise<void> {
     const antiNuke = await loadAntiNukeConfig(guild.id);
     if (!antiNuke.enabled) return;
 
-    const { intervalHours, keepCount } = await security.loadBackupConfig(guild.id);
+    const { intervalHours, keepCount } = await loadBackupConfig(guild.id);
     const latest = await container.db.security.getLatestBackup(guild.id);
     const dueAt = latest ? latest.createdAt.getTime() + intervalHours * HourMs : 0;
     if (Date.now() < dueAt) return;
 
-    await security.createBackup(guild, keepCount).catch((err: unknown) => {
+    await createBackup(guild, keepCount).catch((err: unknown) => {
       container.logger.error(
         `[security] Backup snapshot failed for ${guild.id}:`,
         err,

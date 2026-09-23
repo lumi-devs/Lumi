@@ -3,9 +3,8 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { AuditLogEvent, type Role } from "discord.js";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { swallow } from "#lib/utilities/errors.js";
-import { DangerousPermissions } from "../utilities/SecurityUtility.js";
 import { resolveAuditLogExecutor } from "../services/audit.js";
-import { evaluateNukeEvent } from "../services/anti-nuke.js";
+import { DangerousPermissions, evaluateNukeEvent } from "../services/anti-nuke.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "securityRoleUpdate",

@@ -5,7 +5,12 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { MessageFlags, type ButtonInteraction } from "discord.js";
 import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
 import { fetchTyped } from "#lib/commands.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import {
+  loadVerificationConfig,
+  grantVerified,
+  startChallenge,
+  advanceChallenge,
+} from "../services/verification.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { getDashboardPublicUrl } from "#lib/env.js";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
@@ -59,11 +64,10 @@ export class VerifyInteractionHandler extends ModuleInteractionHandler<
     }
 
     const t = await fetchTyped(interaction);
-    const security = getUtility("security");
     const userId = interaction.user.id;
 
     if (parsed.kind === "start") {
-      const config = await security.loadVerificationConfig(guild.id);
+      const config = await loadVerificationConfig(guild.id);
       if (!config.enabled || !config.verifiedRoleId) {
         await interaction.editReply(
           ephemeralCard(
@@ -76,7 +80,7 @@ export class VerifyInteractionHandler extends ModuleInteractionHandler<
         return;
       }
       if (config.mode === "none") {
-        await security.grantVerified(guild, userId);
+        await grantVerified(guild, userId);
         await interaction.editReply(
           ephemeralCard(
             makeSuccessCard(t(PanelsKeys.VerifyOkTitle), t(PanelsKeys.VerifyOk)),
@@ -104,12 +108,12 @@ export class VerifyInteractionHandler extends ModuleInteractionHandler<
         return;
       }
 
-      const state = await security.startChallenge(guild.id, userId, config);
+      const state = await startChallenge(guild.id, userId, config);
       await interaction.editReply(ephemeralCard(buildChallengeCard(t, state)));
       return;
     }
 
-    const result = await security.advanceChallenge(guild.id, userId, parsed.idx);
+    const result = await advanceChallenge(guild.id, userId, parsed.idx);
     if (!result) {
       await interaction.editReply(
         makeErrorCard(
@@ -123,7 +127,7 @@ export class VerifyInteractionHandler extends ModuleInteractionHandler<
     const { state, outcome } = result;
     switch (outcome) {
       case "solved":
-        await security.grantVerified(guild, userId);
+        await grantVerified(guild, userId);
         await interaction.editReply(
           makeSuccessCard(t(PanelsKeys.VerifyOkTitle), t(PanelsKeys.VerifyOk)),
         );

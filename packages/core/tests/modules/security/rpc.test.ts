@@ -4,6 +4,19 @@ import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { SecurityRepository } from "#lib/prisma/repositories/SecurityRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
+import { enterPanic, revertPanic } from "#modules/security/services/panic.js";
+import { postOrEditVerifyPanel } from "#modules/security/services/verification.js";
+
+vi.mock("#modules/security/services/panic.js", () => ({
+  enterPanic: vi.fn(),
+  revertPanic: vi.fn(),
+}));
+
+vi.mock("#modules/security/services/verification.js", () => ({
+  postOrEditVerifyPanel: vi.fn(),
+  loadVerificationConfig: vi.fn(),
+  grantVerified: vi.fn(),
+}));
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
@@ -14,13 +27,10 @@ const MESSAGE_ID = "555555555555555555";
 describe("security module RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let guild: any;
-  let utilities: Map<string, unknown>;
   let loadedModules: Set<string>;
-  let security: {
-    enterPanic: ReturnType<typeof vi.fn>;
-    revertPanic: ReturnType<typeof vi.fn>;
-    postOrEditVerifyPanel: ReturnType<typeof vi.fn>;
-  };
+  const mockEnterPanic = enterPanic as ReturnType<typeof vi.fn>;
+  const mockRevertPanic = revertPanic as ReturnType<typeof vi.fn>;
+  const mockPostOrEditVerifyPanel = postOrEditVerifyPanel as ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -50,26 +60,20 @@ describe("security module RPC handlers", () => {
     db.security = new SecurityRepository(prisma as any, {} as any, container.logger, db);
     (container as any).db = db;
 
-    security = {
-      enterPanic: vi
-        .fn()
-        .mockResolvedValue({ invitesPaused: true, lockedCount: 3, skippedCount: 0 }),
-      revertPanic: vi.fn().mockResolvedValue({ restoredCount: 3 }),
-      postOrEditVerifyPanel: vi.fn(),
-    };
+    mockEnterPanic.mockResolvedValue({
+      invitesPaused: true,
+      lockedCount: 3,
+      skippedCount: 0,
+    });
+    mockRevertPanic.mockResolvedValue({ restoredCount: 3 });
 
-    utilities = new Map<string, unknown>([["security", security]]);
     loadedModules = new Set(["security"]);
 
     container.stores = {
-      get: vi.fn((name: string) =>
-        name === "utilities"
-          ? { get: (key: string) => utilities.get(key) }
-          : {
-              loaded: () => [],
-              get: (key: string) => (loadedModules.has(key) ? { name: key } : undefined),
-            },
-      ),
+      get: vi.fn((name: string) => ({
+        loaded: () => [],
+        get: (key: string) => (loadedModules.has(key) ? { name: key } : undefined),
+      })),
     } as any;
 
     registerRpcHandlers();
@@ -122,7 +126,6 @@ describe("security module RPC handlers", () => {
     });
 
     it("still answers while the security module is unloaded", async () => {
-      utilities.delete("security");
       loadedModules.delete("security");
 
       const res = (await call("guild.panic.get")) as any;
@@ -145,7 +148,7 @@ describe("security module RPC handlers", () => {
         channelIds: [CHANNEL_ID],
       })) as any;
 
-      expect(security.enterPanic).toHaveBeenCalledWith(guild, OWNER_ID, [
+      expect(mockEnterPanic).toHaveBeenCalledWith(guild, OWNER_ID, [
         CHANNEL_ID,
       ]);
       expect(res).toEqual({
@@ -171,7 +174,7 @@ describe("security module RPC handlers", () => {
       await expect(
         call("guild.panic.set", { active: true }),
       ).rejects.toThrow("Panic mode is already active");
-      expect(security.enterPanic).not.toHaveBeenCalled();
+      expect(mockEnterPanic).not.toHaveBeenCalled();
     });
 
     it("reverts panic through the security service", async () => {
@@ -179,12 +182,12 @@ describe("security module RPC handlers", () => {
         active: false,
       })) as any;
 
-      expect(security.revertPanic).toHaveBeenCalledWith(guild);
+      expect(mockRevertPanic).toHaveBeenCalledWith(guild);
       expect(res).toEqual({ success: true, active: false, restoredCount: 3 });
     });
 
     it("throws when reverting a guild that is not in panic", async () => {
-      security.revertPanic.mockResolvedValue(null);
+      mockRevertPanic.mockResolvedValue(null);
 
       await expect(
         call("guild.panic.set", { active: false }),
@@ -192,7 +195,6 @@ describe("security module RPC handlers", () => {
     });
 
     it("throws when the security module is unloaded", async () => {
-      utilities.delete("security");
       loadedModules.delete("security");
 
       await expect(
@@ -206,7 +208,7 @@ describe("security module RPC handlers", () => {
       await expect(
         call("guild.panic.set", { active: true }, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
-      expect(security.enterPanic).not.toHaveBeenCalled();
+      expect(mockEnterPanic).not.toHaveBeenCalled();
     });
   });
 
@@ -217,7 +219,7 @@ describe("security module RPC handlers", () => {
     });
 
     it("posts (or edits) the panel through the security utility", async () => {
-      security.postOrEditVerifyPanel.mockResolvedValue({
+      mockPostOrEditVerifyPanel.mockResolvedValue({
         channelId: CHANNEL_ID,
         messageId: MESSAGE_ID,
         posted: true,
@@ -232,7 +234,7 @@ describe("security module RPC handlers", () => {
       })) as any;
 
       expect(container.db.ensureGuild).toHaveBeenCalledWith(GUILD_ID);
-      expect(security.postOrEditVerifyPanel).toHaveBeenCalledWith(guild, {
+      expect(mockPostOrEditVerifyPanel).toHaveBeenCalledWith(guild, {
         channelId: CHANNEL_ID,
         createChannel: undefined,
         deleteOldMessage: undefined,
@@ -269,7 +271,7 @@ describe("security module RPC handlers", () => {
       await expect(
         call("guild.verificationPanel.set", {}),
       ).rejects.toThrow("Pick a channel or choose to create a new one.");
-      expect(security.postOrEditVerifyPanel).not.toHaveBeenCalled();
+      expect(mockPostOrEditVerifyPanel).not.toHaveBeenCalled();
     });
 
     it("deletes the panel and reports whether a row went away", async () => {

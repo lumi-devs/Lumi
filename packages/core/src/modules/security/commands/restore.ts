@@ -3,7 +3,7 @@ import { time, TimestampStyles } from "@discordjs/formatters";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { restoreFromBackup } from "../services/backup.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { makeErrorCard } from "#lib/ui/cards.js";
 
@@ -75,9 +75,8 @@ export class RestoreCommand extends BaseSubcommand {
 
     await ctx.defer();
     const guild = ctx.guild!;
-    const security = getUtility("security");
 
-    const result = await security.restoreFromBackup(guild);
+    const result = await restoreFromBackup(guild);
     if (!result) {
       return ctx.replyError(
         "No Backups Yet",

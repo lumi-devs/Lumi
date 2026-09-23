@@ -7,8 +7,8 @@ import {
 } from "discord.js";
 import { isNullish } from "@sapphire/utilities";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { evaluateNukeEvent, type NukeKind } from "../services/anti-nuke.js";
+import { flagRestorePending } from "../services/backup.js";
 
 const KindByEvent: Partial<Record<AuditLogEvent, NukeKind>> = {
   [AuditLogEvent.MemberBanAdd]: "ban",
@@ -35,14 +35,11 @@ export class SecurityAuditLogListener extends ModuleListener<
     const executorId = entry.executorId;
     if (isNullish(executorId)) return;
 
-    const security = tryGetUtility("security");
-    if (!security) return;
-
     if (
       (kind === "channel_delete" || kind === "role_delete") &&
       (await this.container.db.security.getPanicState(guild.id))
     ) {
-      await security.flagRestorePending(guild.id);
+      await flagRestorePending(guild.id);
     }
 
     await evaluateNukeEvent(guild, kind, () => executorId);

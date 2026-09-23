@@ -2,7 +2,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { enterPanic } from "../services/panic.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
@@ -56,7 +56,7 @@ export class PanicCommand extends BaseCommand {
     );
     const channelIds = toStringArray(raw["panic_lock_channel_ids"]);
 
-    const result = await getUtility("security").enterPanic(
+    const result = await enterPanic(
       guild,
       ctx.user.id,
       channelIds,

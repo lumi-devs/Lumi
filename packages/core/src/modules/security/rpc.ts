@@ -2,7 +2,12 @@ import { container } from "@sapphire/framework";
 import { SnowflakeSchema, securityRpc } from "@lumi/contracts/rpc";
 import type { GuildBackupData } from "./services/backup-types.js";
 import { restoreGuildFromBackup } from "./services/restore-guild.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { enterPanic, revertPanic } from "./services/panic.js";
+import {
+  postOrEditVerifyPanel,
+  loadVerificationConfig,
+  grantVerified,
+} from "./services/verification.js";
 import {
   cachedGuild,
   implementRpc,
@@ -33,9 +38,8 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
   },
 
   "guild.panic.set": async ({ guildId, guild, actorId, input }) => {
-    const security = getUtility("security");
     if (!input.active) {
-      const reverted = await security.revertPanic(guild);
+      const reverted = await revertPanic(guild);
       if (!reverted) throw new Error("Panic mode is not active");
       return { success: true, active: false, ...reverted };
     }
@@ -43,7 +47,7 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
     if (await container.db.security.getPanicState(guildId)) {
       throw new Error("Panic mode is already active");
     }
-    const result = await security.enterPanic(guild, actorId, input.channelIds ?? []);
+    const result = await enterPanic(guild, actorId, input.channelIds ?? []);
     return { success: true, active: true, ...result };
   },
 
@@ -65,7 +69,7 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
       throw new Error("Pick a channel or choose to create a new one.");
     }
     await container.db.ensureGuild(guildId);
-    const result = await getUtility("security").postOrEditVerifyPanel(guild, {
+    const result = await postOrEditVerifyPanel(guild, {
       channelId: input.channelId,
       createChannel: input.createChannel,
       deleteOldMessage: input.deleteOldMessage,
@@ -82,13 +86,12 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
     const verifiedGuildId = requireGuildId(guildId);
     SnowflakeSchema.parse(actorId);
 
-    const security = getUtility("security");
-    const config = await security.loadVerificationConfig(verifiedGuildId);
+    const config = await loadVerificationConfig(verifiedGuildId);
     if (!config.enabled || config.mode !== "web" || !config.verifiedRoleId) {
       throw new Error("Web verification is not enabled for this server");
     }
 
-    const granted = await security.grantVerified(
+    const granted = await grantVerified(
       cachedGuild(verifiedGuildId),
       actorId,
     );

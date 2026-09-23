@@ -14,7 +14,6 @@
     "commands",
     "listeners",
     "interaction-handlers",
-    "utilities",
     "scheduled-tasks"
   ],
   "configFields": [

@@ -5,6 +5,7 @@ import { userMention } from "@discordjs/formatters";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { isSuspiciousAccount } from "../services/suspicious.js";
+import { loadVerificationConfig, assignPending } from "../services/verification.js";
 import {
   loadJoinGateConfig,
   evaluateJoinFilters,
@@ -25,15 +26,13 @@ export class SecurityMemberJoinListener extends ModuleListener<
 > {
   protected async handle(member: GuildMember): Promise<void> {
     if (member.user.bot) return;
-    const security = tryGetUtility("security");
-    if (!security) return;
 
-    const verification = await security.loadVerificationConfig(member.guild.id);
+    const verification = await loadVerificationConfig(member.guild.id);
     if (
       verification.enabled &&
       (verification.target === "everyone" || isSuspiciousAccount(member.user))
     ) {
-      await security.assignPending(member, verification);
+      await assignPending(member, verification);
     }
 
     const config = await loadJoinGateConfig(member.guild.id);

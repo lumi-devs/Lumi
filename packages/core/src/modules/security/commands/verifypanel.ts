@@ -6,7 +6,7 @@ import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { PanelsKeys } from "#lib/i18n/keys.js";
 import { logError } from "#lib/utilities/errors.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { loadVerificationConfig } from "../services/verification.js";
 import { buildVerifyPanel } from "../ui/verify-panel.js";
 
 @ApplyOptions<BaseCommand.Options>({
@@ -38,9 +38,7 @@ export class VerifyPanelCommand extends BaseCommand {
     const t = await ctx.fetchT();
     const guild = ctx.guild!;
 
-    const verification = await getUtility("security").loadVerificationConfig(
-      guild.id,
-    );
+    const verification = await loadVerificationConfig(guild.id);
     if (!verification.enabled || !verification.verifiedRoleId) {
       return ctx.replyError(
         t(PanelsKeys.VerifyUnconfiguredTitle),
