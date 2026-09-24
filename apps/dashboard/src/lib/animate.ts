@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { animate, stagger } from "animejs";
+import { animate, stagger } from "motion";
+
+// `motion` has no named "outQuint"/"outExpo" ease (only linear/easeIn(Out)/
+// circ/back/anticipate) - these are the standard easings.net cubic-bezier
+// equivalents, so the curve shape matches the previous anime.js animation
+// exactly.
+const EASE_OUT_QUINT = [0.22, 1, 0.36, 1] as const;
+const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
 
 function prefersReducedMotion(): boolean {
   return (
@@ -23,8 +30,8 @@ export function useStaggerIn<T extends HTMLElement>(
   opts?: {
     delay?: number;
     resetKey?: unknown;
-    /** [cols, rows] - a real 2D stagger (origin center, radiating outward) for grid-shaped layouts (module toggle grids, stat tiles) instead of the linear list order, so a grid doesn't animate like a list wearing a grid's clothes. */
-    grid?: [number, number];
+    /** Radiate the stagger outward from the center item instead of the linear list order, for grid-shaped layouts (module toggle grids, stat tiles) so a grid doesn't animate like a list wearing a grid's clothes. */
+    grid?: boolean;
   },
 ) {
   const ref = useRef<T>(null);
@@ -41,15 +48,20 @@ export function useStaggerIn<T extends HTMLElement>(
     const items = el.querySelectorAll(selector);
     if (items.length === 0) return;
 
-    const grid = opts?.grid;
-    animate(items, {
-      opacity: [0, 1],
-      translateY: grid ? [10, 0] : [8, 0],
-      ...(grid ? { scale: [0.96, 1] } : {}),
-      duration: grid ? 520 : 420,
-      delay: stagger(opts?.delay ?? 40, grid ? { grid, from: "center" } : undefined),
-      ease: "outQuint",
-    });
+    const grid = opts?.grid ?? false;
+    animate(
+      items,
+      {
+        opacity: [0, 1],
+        y: grid ? [10, 0] : [8, 0],
+        ...(grid ? { scale: [0.96, 1] } : {}),
+      },
+      {
+        duration: (grid ? 520 : 420) / 1000,
+        delay: stagger((opts?.delay ?? 40) / 1000, grid ? { from: "center" } : undefined),
+        ease: EASE_OUT_QUINT,
+      },
+    );
   }, [opts?.resetKey]);
 
   return ref;
@@ -72,12 +84,10 @@ export function useCountUp(value: number, opts?: { duration?: number }) {
       prevRef.current = value;
       return;
     }
-    const from = { v: prevRef.current };
-    const anim = animate(from, {
-      v: value,
-      duration: opts?.duration ?? 900,
-      ease: "outExpo",
-      onUpdate: () => setDisplay(Math.round(from.v)),
+    const anim = animate(prevRef.current, value, {
+      duration: (opts?.duration ?? 900) / 1000,
+      ease: EASE_OUT_EXPO,
+      onUpdate: (latest) => setDisplay(Math.round(latest)),
     });
     prevRef.current = value;
     return () => {

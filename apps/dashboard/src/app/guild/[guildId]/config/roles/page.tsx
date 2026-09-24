@@ -22,14 +22,18 @@ export default async function RolesPage({
   const { guildId } = await params;
   const session = await requireGuild(guildId);
 
-  const entities = await getGuildEntities(guildId, session.userId);
+  const entitiesPromise = getGuildEntities(guildId, session.userId);
+  const menusPromise = rpc("guild.reactionroles.menus.list", {
+    guildId,
+    actorId: session.userId,
+  });
+
+  const entities = await entitiesPromise;
 
   let menus: ReactionRoleMenuView[] | null = null;
   let menusFailure: string | null = null;
   try {
-    menus = (
-      await rpc("guild.reactionroles.menus.list", { guildId, actorId: session.userId })
-    ).menus;
+    menus = (await menusPromise).menus;
   } catch (err) {
     menusFailure = err instanceof Error ? err.message : "The request failed.";
   }

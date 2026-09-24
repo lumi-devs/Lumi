@@ -1,18 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireGuild } from "#/lib/auth-guards";
 import { rpc } from "#/lib/rpc";
-import { isRateLimited } from "#/lib/rate-limit";
-import { runAction, type ActionResult } from "#/lib/action-result";
-
-async function guardedTempVcAction(guildId: string) {
-  const session = await requireGuild(guildId);
-  if (await isRateLimited(`guild-action:${session.userId}`, 60, 60_000)) {
-    throw new Error("Too many requests — slow down.");
-  }
-  return session;
-}
+import type { ActionResult } from "#/lib/action-result";
+import { guildAction } from "./_guard";
 
 export async function setTempVcGenerator(
   guildId: string,
@@ -20,8 +11,7 @@ export async function setTempVcGenerator(
   name: string,
   limit = 0,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedTempVcAction(guildId);
+  return guildAction(guildId, async (session) => {
     await rpc("guild.tempvc.generators.set", {
       guildId,
       actorId: session.userId,
@@ -36,8 +26,7 @@ export async function deleteTempVcGenerator(
   guildId: string,
   channelId: string,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedTempVcAction(guildId);
+  return guildAction(guildId, async (session) => {
     await rpc("guild.tempvc.generators.set", {
       guildId,
       actorId: session.userId,

@@ -33,7 +33,17 @@ export default async function ModNotesPage({
   const userId = single(query["user"]);
   const badUserFilter = Boolean(userId) && !isSnowflake(userId);
 
-  const entities = await getGuildEntities(guildId, session.userId);
+  const entitiesPromise = getGuildEntities(guildId, session.userId);
+  const notesPromise =
+    userId && !badUserFilter
+      ? rpc("guild.modNotes.list", {
+          guildId,
+          actorId: session.userId,
+          data: { userId },
+        })
+      : null;
+
+  const entities = await entitiesPromise;
   const memberNames = extractMemberNames(entities.members);
   const memberOptions = [...entities.members]
     .sort((a, b) => a.displayName.localeCompare(b.displayName))
@@ -41,15 +51,9 @@ export default async function ModNotesPage({
 
   let notes: ModNoteView[] | null = null;
   let failure: string | null = null;
-  if (userId && !badUserFilter) {
+  if (notesPromise) {
     try {
-      notes = (
-        await rpc("guild.modNotes.list", {
-          guildId,
-          actorId: session.userId,
-          data: { userId },
-        })
-      ).notes;
+      notes = (await notesPromise).notes;
     } catch (err) {
       failure = err instanceof Error ? err.message : "The request failed.";
     }

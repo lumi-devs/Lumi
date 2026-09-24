@@ -41,6 +41,13 @@ export default async function SecurityPage({
     .flatMap((g) => g.links)
     .find((l) => l.href === `/guild/${guildId}/security`)?.icon;
 
+  const panicPromise = getGuildPanicState(guildId, session.userId);
+  const panelPromise = rpc("guild.verificationPanel.get", {
+    guildId,
+    actorId: session.userId,
+  });
+  const backupsPromise = rpc("guild.backups.list", { guildId, actorId: session.userId });
+
   const [entities, { module: securityModule }] = await Promise.all([
     getGuildEntities(guildId, session.userId),
     getGuildModule(guildId, session.userId, SecurityModuleName),
@@ -52,7 +59,7 @@ export default async function SecurityPage({
   let panic: PanicStateView | null = null;
   let panicFailure: string | null = null;
   try {
-    panic = await getGuildPanicState(guildId, session.userId);
+    panic = await panicPromise;
   } catch (err) {
     panicFailure = err instanceof Error ? err.message : "The request failed.";
   }
@@ -60,18 +67,14 @@ export default async function SecurityPage({
   let panel: VerificationPanelView | null = null;
   let panelFailure: string | null = null;
   try {
-    panel = (
-      await rpc("guild.verificationPanel.get", { guildId, actorId: session.userId })
-    ).panel;
+    panel = (await panelPromise).panel;
   } catch (err) {
     panelFailure = err instanceof Error ? err.message : "The request failed.";
   }
 
   let backups: GuildBackupView[] = [];
   try {
-    backups = (
-      await rpc("guild.backups.list", { guildId, actorId: session.userId })
-    ).backups;
+    backups = (await backupsPromise).backups;
   } catch {
     // Best-effort — the Backups card shows its own empty state either way.
   }

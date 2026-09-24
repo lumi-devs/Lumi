@@ -37,20 +37,23 @@ export default async function BlocklistPage({
 
   const page = pageNumber(single(query["page"]));
 
-  const entities = await getGuildEntities(guildId, session.userId);
+  const entitiesPromise = getGuildEntities(guildId, session.userId);
+  const blocklistPromise = rpc("guild.blocklist.list", {
+    guildId,
+    actorId: session.userId,
+    data: {
+      page,
+      pageSize: PageSize,
+    },
+  });
+
+  const entities = await entitiesPromise;
   const memberNames = extractMemberNames(entities.members);
 
   let data: BlocklistListData | null = null;
   let failure: string | null = null;
   try {
-    data = await rpc("guild.blocklist.list", {
-      guildId,
-      actorId: session.userId,
-      data: {
-        page,
-        pageSize: PageSize,
-      },
-    });
+    data = await blocklistPromise;
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }

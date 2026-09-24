@@ -2,26 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { type VerificationPanelSetResult } from "@lumi/contracts/views";
-import { requireGuild } from "#/lib/auth-guards";
 import { rpc } from "#/lib/rpc";
-import { isRateLimited } from "#/lib/rate-limit";
-import { runAction, type ActionResult } from "#/lib/action-result";
-
-async function guardedSecurityAction(guildId: string) {
-  const session = await requireGuild(guildId);
-  if (await isRateLimited(`guild-action:${session.userId}`, 60, 60_000)) {
-    throw new Error("Too many requests — slow down.");
-  }
-  return session;
-}
+import type { ActionResult } from "#/lib/action-result";
+import { guildAction } from "./_guard";
 
 export async function setPanicMode(
   guildId: string,
   active: boolean,
   channelIds?: string[],
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedSecurityAction(guildId);
+  return guildAction(guildId, async (session) => {
     await rpc("guild.panic.set", {
       guildId,
       actorId: session.userId,
@@ -46,8 +36,7 @@ export async function postVerificationPanel(
     deleteOldMessage?: boolean;
   },
 ): Promise<ActionResult & Partial<VerificationPanelSetResult>> {
-  return runAction(async () => {
-    const session = await guardedSecurityAction(guildId);
+  return guildAction(guildId, async (session) => {
     const result = await rpc("guild.verificationPanel.set", {
       guildId,
       actorId: session.userId,
@@ -61,8 +50,7 @@ export async function postVerificationPanel(
 export async function deleteVerificationPanel(
   guildId: string,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedSecurityAction(guildId);
+  return guildAction(guildId, async (session) => {
     await rpc("guild.verificationPanel.delete", {
       guildId,
       actorId: session.userId,
@@ -76,8 +64,7 @@ export async function restoreGuildBackup(
   guildId: string,
   backupId?: number,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedSecurityAction(guildId);
+  return guildAction(guildId, async (session) => {
     await rpc("guild.backups.restore", {
       guildId,
       actorId: session.userId,

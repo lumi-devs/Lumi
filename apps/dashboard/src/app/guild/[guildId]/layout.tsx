@@ -19,9 +19,16 @@ export default async function GuildLayout({
   // A layout only guards the page render, so every Server Action re-checks too.
   const session = await requireGuild(guildId);
 
+  const shellPromise = getGuildShell(guildId, session.userId);
+  // Best-effort — a worker hiccup here shouldn't take the whole nav shell
+  // down, it just means the Security category's alert dot stays off.
+  const panicPromise = getGuildPanicState(guildId, session.userId)
+    .then((p) => p.active)
+    .catch(() => false);
+
   let data: GuildShellData;
   try {
-    data = await getGuildShell(guildId, session.userId);
+    data = await shellPromise;
   } catch (err) {
     // Only the bot saying it cannot see the guild means "invite it". Anything
     // else (worker down, timeout, database error) is an outage, and telling an
@@ -41,11 +48,7 @@ export default async function GuildLayout({
     );
   }
 
-  // Best-effort — a worker hiccup here shouldn't take the whole nav shell
-  // down, it just means the Security category's alert dot stays off.
-  const panicArmed = await getGuildPanicState(guildId, session.userId)
-    .then((p) => p.active)
-    .catch(() => false);
+  const panicArmed = await panicPromise;
 
   return (
     <div className="flex min-h-svh">

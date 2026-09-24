@@ -26,6 +26,15 @@ export default async function TempVcPage({
   const { guildId } = await params;
   const session = await requireGuild(guildId);
 
+  const generatorsPromise = rpc("guild.tempvc.generators.list", {
+    guildId,
+    actorId: session.userId,
+  });
+  const recordsPromise = rpc("guild.tempvc.records.list", {
+    guildId,
+    actorId: session.userId,
+  });
+
   const [shell, entities] = await Promise.all([
     getGuildShell(guildId, session.userId),
     getGuildEntities(guildId, session.userId),
@@ -41,9 +50,7 @@ export default async function TempVcPage({
   let generators: TempVcGeneratorView[] | null = null;
   let generatorFailure: string | null = null;
   try {
-    generators = (
-      await rpc("guild.tempvc.generators.list", { guildId, actorId: session.userId })
-    ).generators;
+    generators = (await generatorsPromise).generators;
   } catch (err) {
     generatorFailure = err instanceof Error ? err.message : "The request failed.";
   }
@@ -51,9 +58,7 @@ export default async function TempVcPage({
   let records: TempVcRecordView[] | null = null;
   let recordFailure: string | null = null;
   try {
-    records = (
-      await rpc("guild.tempvc.records.list", { guildId, actorId: session.userId })
-    ).records;
+    records = (await recordsPromise).records;
   } catch (err) {
     recordFailure = err instanceof Error ? err.message : "The request failed.";
   }

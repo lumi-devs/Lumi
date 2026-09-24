@@ -48,28 +48,31 @@ export default async function AuditPage({
 
   const badUserFilter = Boolean(userId) && !isSnowflake(userId);
 
+  const narrowedPlatform =
+    platform === "discord" || platform === "web" ? platform : undefined;
+
+  const auditPromise = rpc("guild.audit.list", {
+    guildId,
+    actorId: session.userId,
+    data: {
+      page,
+      pageSize: PageSize,
+      ...(action ? { action } : {}),
+      ...(userId && !badUserFilter ? { userId } : {}),
+      ...(narrowedPlatform ? { platform: narrowedPlatform } : {}),
+    },
+  });
+
   const [shell, entities] = await Promise.all([
     getGuildShell(guildId, session.userId),
     getGuildEntities(guildId, session.userId),
   ]);
   const labels = buildModuleLabelIndex(shell.modules);
-  const narrowedPlatform =
-    platform === "discord" || platform === "web" ? platform : undefined;
 
   let data: AuditListData | null = null;
   let failure: string | null = null;
   try {
-    data = await rpc("guild.audit.list", {
-      guildId,
-      actorId: session.userId,
-      data: {
-        page,
-        pageSize: PageSize,
-        ...(action ? { action } : {}),
-        ...(userId && !badUserFilter ? { userId } : {}),
-        ...(narrowedPlatform ? { platform: narrowedPlatform } : {}),
-      },
-    });
+    data = await auditPromise;
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }

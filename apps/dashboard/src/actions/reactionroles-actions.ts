@@ -2,25 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import type { RpcInput } from "@lumi/contracts/rpc";
-import { requireGuild } from "#/lib/auth-guards";
 import { rpc } from "#/lib/rpc";
-import { isRateLimited } from "#/lib/rate-limit";
-import { runAction, type ActionResult } from "#/lib/action-result";
-
-async function guardedReactionRolesAction(guildId: string) {
-  const session = await requireGuild(guildId);
-  if (await isRateLimited(`guild-action:${session.userId}`, 60, 60_000)) {
-    throw new Error("Too many requests — slow down.");
-  }
-  return session;
-}
+import type { ActionResult } from "#/lib/action-result";
+import { guildAction } from "./_guard";
 
 export async function setReactionRoleMenu(
   guildId: string,
   menu: RpcInput<"guild.reactionroles.menus.set">,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedReactionRolesAction(guildId);
+  return guildAction(guildId, async (session) => {
     await rpc("guild.reactionroles.menus.set", {
       guildId,
       actorId: session.userId,
@@ -35,8 +25,7 @@ export async function deleteReactionRoleMenu(
   guildId: string,
   id: string,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedReactionRolesAction(guildId);
+  return guildAction(guildId, async (session) => {
     await rpc("guild.reactionroles.menus.delete", {
       guildId,
       actorId: session.userId,

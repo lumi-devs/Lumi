@@ -1,8 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import dynamic from "next/dynamic";
 import { Geist, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "#/components/theme-provider";
-import { CookieConsent } from "#/components/cookie-consent";
 import "./globals.css";
+
+// The component itself already guards against SSR/CSR mismatch (renders
+// null until it has mounted and checked localStorage), so it doesn't need
+// `ssr: false` - this is purely a code-split, deferring `motion/react` and
+// the banner markup out of the initial bundle.
+const CookieConsent = dynamic(() =>
+  import("../components/cookie-consent").then((mod) => mod.CookieConsent),
+);
 
 // Self-hosted via next/font (built at compile time, served from /_next/static)
 // instead of an `@import url(fonts.googleapis.com/...)`. This is strictly

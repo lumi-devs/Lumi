@@ -49,6 +49,18 @@ export default async function HistoryPage({
 
   const badActorFilter = Boolean(actorId) && !isSnowflake(actorId);
 
+  const historyPromise = rpc("guild.history.list", {
+    guildId,
+    actorId: session.userId,
+    data: {
+      page,
+      pageSize: PageSize,
+      ...(moduleName ? { moduleName } : {}),
+      ...(key ? { key } : {}),
+      ...(actorId && !badActorFilter ? { actorId } : {}),
+    },
+  });
+
   const [shell, entities] = await Promise.all([
     getGuildShell(guildId, session.userId),
     getGuildEntities(guildId, session.userId),
@@ -59,17 +71,7 @@ export default async function HistoryPage({
   let data: ConfigHistoryListData | null = null;
   let failure: string | null = null;
   try {
-    data = await rpc("guild.history.list", {
-      guildId,
-      actorId: session.userId,
-      data: {
-        page,
-        pageSize: PageSize,
-        ...(moduleName ? { moduleName } : {}),
-        ...(key ? { key } : {}),
-        ...(actorId && !badActorFilter ? { actorId } : {}),
-      },
-    });
+    data = await historyPromise;
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }

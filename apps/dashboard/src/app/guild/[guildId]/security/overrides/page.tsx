@@ -28,6 +28,12 @@ export default async function OverridesPage({
   const query = await searchParams;
   const moduleName = single(query["module"]);
 
+  const overridesPromise = rpc("guild.overrides.list", {
+    guildId,
+    actorId: session.userId,
+    data: moduleName ? { moduleName } : {},
+  });
+
   const [shell, entities] = await Promise.all([
     getGuildShell(guildId, session.userId),
     getGuildEntities(guildId, session.userId),
@@ -36,14 +42,7 @@ export default async function OverridesPage({
   let overrides: ConfigOverrideView[] | null = null;
   let failure: string | null = null;
   try {
-    const name = moduleName || undefined;
-    overrides = (
-      await rpc("guild.overrides.list", {
-        guildId,
-        actorId: session.userId,
-        data: name === undefined ? {} : { moduleName: name },
-      })
-    ).overrides;
+    overrides = (await overridesPromise).overrides;
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }

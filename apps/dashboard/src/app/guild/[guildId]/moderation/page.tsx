@@ -51,7 +51,20 @@ export default async function ModerationPage({
     moderatorId && !isSnowflake(moderatorId) ? "Moderator ID" : null,
   ].filter((value): value is string => value !== null);
 
-  const entities = await getGuildEntities(guildId, session.userId);
+  const entitiesPromise = getGuildEntities(guildId, session.userId);
+  const casesPromise = rpc("guild.cases.list", {
+    guildId,
+    actorId: session.userId,
+    data: {
+      page,
+      pageSize: PageSize,
+      ...(action ? { action } : {}),
+      ...(userId && isSnowflake(userId) ? { userId } : {}),
+      ...(moderatorId && isSnowflake(moderatorId) ? { moderatorId } : {}),
+    },
+  });
+
+  const entities = await entitiesPromise;
   const memberNames = extractMemberNames(entities.members);
   const memberOptions = [...entities.members]
     .sort((a, b) => a.displayName.localeCompare(b.displayName))
@@ -60,17 +73,7 @@ export default async function ModerationPage({
   let data: CasesListData | null = null;
   let failure: string | null = null;
   try {
-    data = await rpc("guild.cases.list", {
-      guildId,
-      actorId: session.userId,
-      data: {
-        page,
-        pageSize: PageSize,
-        ...(action ? { action } : {}),
-        ...(userId && isSnowflake(userId) ? { userId } : {}),
-        ...(moderatorId && isSnowflake(moderatorId) ? { moderatorId } : {}),
-      },
-    });
+    data = await casesPromise;
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }

@@ -42,21 +42,24 @@ export default async function AppealsPage({
   const status = isAppealStatus(statusParam) ? statusParam : undefined;
   const page = pageNumber(single(query["page"]));
 
-  const entities = await getGuildEntities(guildId, session.userId);
+  const entitiesPromise = getGuildEntities(guildId, session.userId);
+  const appealsPromise = rpc("guild.appeals.list", {
+    guildId,
+    actorId: session.userId,
+    data: {
+      page,
+      pageSize: PageSize,
+      ...(status ? { status } : {}),
+    },
+  });
+
+  const entities = await entitiesPromise;
   const memberNames = extractMemberNames(entities.members);
 
   let data: AppealsListData | null = null;
   let failure: string | null = null;
   try {
-    data = await rpc("guild.appeals.list", {
-      guildId,
-      actorId: session.userId,
-      data: {
-        page,
-        pageSize: PageSize,
-        ...(status ? { status } : {}),
-      },
-    });
+    data = await appealsPromise;
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }

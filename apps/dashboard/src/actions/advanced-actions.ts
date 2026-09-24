@@ -1,26 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireGuild } from "#/lib/auth-guards";
 import { rpc } from "#/lib/rpc";
-import { isRateLimited } from "#/lib/rate-limit";
-import { runAction, type ActionResult } from "#/lib/action-result";
-
-async function guardedAdvancedAction(guildId: string) {
-  const session = await requireGuild(guildId);
-  if (await isRateLimited(`guild-action:${session.userId}`, 60, 60_000)) {
-    throw new Error("Too many requests — slow down.");
-  }
-  return session;
-}
+import type { ActionResult } from "#/lib/action-result";
+import { guildAction } from "./_guard";
 
 /** `channelId: null` ignores the whole guild rather than a single channel. */
 export async function addIgnoredChannel(
   guildId: string,
   channelId: string | null,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedAdvancedAction(guildId);
+  return guildAction(guildId, async (session) => {
     await rpc("guild.ignored.add", {
       guildId,
       actorId: session.userId,
@@ -35,8 +25,7 @@ export async function removeIgnoredChannel(
   guildId: string,
   channelId: string | null,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedAdvancedAction(guildId);
+  return guildAction(guildId, async (session) => {
     await rpc("guild.ignored.remove", {
       guildId,
       actorId: session.userId,
