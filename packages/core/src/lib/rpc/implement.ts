@@ -12,6 +12,7 @@ import {
 } from "@lumi/contracts/rpc";
 import type { Guild } from "discord.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
+import { checkGuildManagerRest } from "#lib/rpc/discord-rest-lookup.js";
 
 interface RpcAuthContexts {
   guildManager: { guildId: string; actorId: string; guild: Guild };
@@ -63,19 +64,27 @@ export function cachedGuild(guildId: string): Guild {
 
 // Re-checked live against the guild rather than trusted from the dashboard
 // session, whose cached guild list can be up to `SESSION_TTL_MS` stale.
+//
+// This goes over REST (`checkGuildManagerRest`), not `cachedGuild`'s gateway
+// cache: the gateway only caches guilds the current shard actually owns, so
+// a guild-existence/ManageGuild check sourced from it silently fails for any
+// guild on another shard. `cachedGuild` itself is left as-is below - it still
+// backs the `guild` field handlers use for real Discord actions (sending
+// messages, restoring backups, ...), which do need a live, gateway-bound
+// `Guild` instance and are out of scope for this pass.
 export async function requireGuildManager(
   guildId: string,
   actorId: string | undefined,
 ): Promise<string> {
   if (!actorId) throw forbidden("actorId is required");
-  const guild = cachedGuild(guildId);
-  if (guild.ownerId === actorId) return actorId;
-
-  const member = await guild.members.fetch(actorId).catch(() => null);
-  if (
-    !member?.permissions.has("ManageGuild") &&
-    !member?.permissions.has("Administrator")
-  ) {
+  const check = await checkGuildManagerRest(guildId, actorId);
+  if (!check) {
+    throw new CodedRpcError(
+      RpcFailureCodes.GuildNotFound,
+      "Guild not found in bot cache",
+    );
+  }
+  if (!check.isManager) {
     throw forbidden("Missing ManageGuild permission");
   }
   return actorId;

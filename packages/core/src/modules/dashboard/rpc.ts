@@ -9,6 +9,11 @@ import { ChannelType } from "discord.js";
 import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { implementRpc, requireGuildManager } from "#lib/rpc/implement.js";
+import {
+  fetchGuildRest,
+  guildBannerUrl,
+  guildIconUrl,
+} from "#lib/rpc/discord-rest-lookup.js";
 import { paginate } from "#lib/rpc/validation.js";
 
 const GuildSummariesMax = 200;
@@ -114,19 +119,22 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
       ),
     );
 
-    const summaries = allowed.flatMap((guildId) => {
-      if (!guildId) return [];
-      const guild = container.client.guilds.cache.get(guildId);
-      if (!guild) return [];
-      return [
-        {
+    const resolved = await Promise.all(
+      allowed.map(async (guildId) => {
+        if (!guildId) return null;
+        const guild = await fetchGuildRest(guildId);
+        if (!guild) return null;
+        return {
           guildId,
-          icon: guild.iconURL(),
-          banner: guild.bannerURL(),
-          memberCount: guild.memberCount,
-        },
-      ];
-    });
+          icon: guildIconUrl(guild),
+          banner: guildBannerUrl(guild),
+          memberCount: guild.approximate_member_count ?? 0,
+        };
+      }),
+    );
+    const summaries = resolved.filter(
+      (s): s is NonNullable<typeof s> => s !== null,
+    );
 
     return { summaries };
   },

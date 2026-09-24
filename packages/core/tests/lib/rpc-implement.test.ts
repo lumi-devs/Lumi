@@ -9,6 +9,7 @@ import {
   requireGuildManager,
 } from "#lib/rpc/implement.js";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
@@ -31,12 +32,16 @@ const DiscordErrors = {
   timeout: () => new Error("ETIMEDOUT: connect timed out"),
 };
 
-function memberWith(permissions: string[]) {
-  return {
-    permissions: {
-      has: vi.fn().mockImplementation((p: string) => permissions.includes(p)),
-    },
-  };
+/** discord.js's ManageGuild bit, used to build a fake role permission string. */
+const ManageGuildBit = (1n << 5n).toString();
+const AdministratorBit = (1n << 3n).toString();
+
+function everyoneRole(permissions = "0") {
+  return { id: GUILD_ID, permissions };
+}
+
+function memberWith(roleIds: string[]) {
+  return { roles: roleIds };
 }
 
 function mockLogger() {
@@ -48,22 +53,61 @@ function mockLogger() {
   } as any;
 }
 
-describe("RPC guild access under Discord API failures", () => {
-  let guild: any;
+/** Wires `container.client.rest.get` to answer the guild/member REST routes `checkGuildManagerRest` calls. */
+function mockRest(opts: {
+  guild?: { owner_id: string; roles: { id: string; permissions: string }[] } | null;
+  member?: unknown | Error;
+}) {
+  const get = vi.fn().mockImplementation((route: string) => {
+    if (route === `/guilds/${GUILD_ID}`) {
+      if (opts.guild === null || opts.guild === undefined) {
+        return Promise.reject(discordApiError("Unknown Guild", 10004, 404));
+      }
+      return Promise.resolve({ id: GUILD_ID, ...opts.guild });
+    }
+    if (route.startsWith(`/guilds/${GUILD_ID}/members/`)) {
+      if (opts.member instanceof Error) return Promise.reject(opts.member);
+      if (opts.member === undefined) {
+        return Promise.reject(discordApiError("Unknown Member", 10007, 404));
+      }
+      return Promise.resolve(opts.member);
+    }
+    return Promise.reject(new Error(`Unexpected route: ${route}`));
+  });
+  container.client = { rest: { get } } as any;
+  return get;
+}
 
+/** Minimal REST stub for tests that just need `guildManager` auth to pass for `ownerId`. */
+function ownerOnlyRest(guildId: string, ownerId: string) {
+  return {
+    get: vi.fn().mockImplementation((route: string) => {
+      if (route === `/guilds/${guildId}`) {
+        return Promise.resolve({
+          owner_id: ownerId,
+          roles: [{ id: guildId, permissions: "0" }],
+        });
+      }
+      return Promise.reject(new Error(`Unexpected route: ${route}`));
+    }),
+  };
+}
+
+function mockRedisCacheMiss() {
+  (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+}
+
+describe("RPC guild access under Discord API failures", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLogger();
+    repositoryCache.clear();
+    mockRedisCacheMiss();
 
-    guild = {
-      id: GUILD_ID,
-      ownerId: OWNER_ID,
-      members: { fetch: vi.fn() },
-    };
-
-    container.client = {
-      guilds: { cache: new Map([[GUILD_ID, guild]]) },
-    } as any;
+    mockRest({
+      guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+      member: memberWith([]),
+    });
   });
 
   describe("requireGuildId", () => {
@@ -91,8 +135,8 @@ describe("RPC guild access under Discord API failures", () => {
       ).rejects.toThrow("actorId is required");
     });
 
-    it("fails when the guild is not in the bot cache", async () => {
-      container.client = { guilds: { cache: new Map() } } as any;
+    it("fails when the guild is not found over REST", async () => {
+      mockRest({ guild: null });
 
       await expect(requireGuildManager(GUILD_ID, ACTOR_ID)).rejects.toMatchObject({
         message: "Guild not found in bot cache",
@@ -100,23 +144,38 @@ describe("RPC guild access under Discord API failures", () => {
       });
     });
 
-    it("lets the guild owner through without a member fetch", async () => {
+    it("lets the guild owner through without a member lookup", async () => {
+      const get = mockRest({
+        guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+      });
+
       await expect(requireGuildManager(GUILD_ID, OWNER_ID)).resolves.toBe(
         OWNER_ID,
       );
-      expect(guild.members.fetch).not.toHaveBeenCalled();
+      expect(get).not.toHaveBeenCalledWith(
+        expect.stringContaining("/members/"),
+      );
     });
 
     it("accepts a member holding ManageGuild", async () => {
-      guild.members.fetch.mockResolvedValue(memberWith(["ManageGuild"]));
+      mockRest({
+        guild: { owner_id: OWNER_ID, roles: [everyoneRole(ManageGuildBit)] },
+        member: memberWith([]),
+      });
 
       await expect(requireGuildManager(GUILD_ID, ACTOR_ID)).resolves.toBe(
         ACTOR_ID,
       );
     });
 
-    it("accepts a member holding Administrator", async () => {
-      guild.members.fetch.mockResolvedValue(memberWith(["Administrator"]));
+    it("accepts a member holding Administrator via an assigned role", async () => {
+      mockRest({
+        guild: {
+          owner_id: OWNER_ID,
+          roles: [everyoneRole(), { id: "role-1", permissions: AdministratorBit }],
+        },
+        member: memberWith(["role-1"]),
+      });
 
       await expect(requireGuildManager(GUILD_ID, ACTOR_ID)).resolves.toBe(
         ACTOR_ID,
@@ -124,7 +183,10 @@ describe("RPC guild access under Discord API failures", () => {
     });
 
     it("denies a member holding neither permission", async () => {
-      guild.members.fetch.mockResolvedValue(memberWith([]));
+      mockRest({
+        guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+        member: memberWith([]),
+      });
 
       await expect(requireGuildManager(GUILD_ID, ACTOR_ID)).rejects.toMatchObject({
         message: "Missing ManageGuild permission",
@@ -133,7 +195,10 @@ describe("RPC guild access under Discord API failures", () => {
     });
 
     it("denies when the member is no longer in the guild", async () => {
-      guild.members.fetch.mockResolvedValue(null);
+      mockRest({
+        guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+        member: undefined,
+      });
 
       await expect(requireGuildManager(GUILD_ID, ACTOR_ID)).rejects.toThrow(
         "Missing ManageGuild permission",
@@ -146,7 +211,10 @@ describe("RPC guild access under Discord API failures", () => {
       ["a 429 rate limit", DiscordErrors.rateLimited],
       ["a connection timeout", DiscordErrors.timeout],
     ])("denies rather than leaking %s", async (_label, makeError) => {
-      guild.members.fetch.mockRejectedValue(makeError());
+      mockRest({
+        guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+        member: makeError(),
+      });
 
       await expect(requireGuildManager(GUILD_ID, ACTOR_ID)).rejects.toThrow(
         "Missing ManageGuild permission",
@@ -154,7 +222,10 @@ describe("RPC guild access under Discord API failures", () => {
     });
 
     it("does not surface the raw Discord message to the caller", async () => {
-      guild.members.fetch.mockRejectedValue(DiscordErrors.rateLimited());
+      mockRest({
+        guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+        member: DiscordErrors.rateLimited(),
+      });
 
       await expect(
         requireGuildManager(GUILD_ID, ACTOR_ID),
@@ -162,7 +233,10 @@ describe("RPC guild access under Discord API failures", () => {
     });
 
     it("fails closed for an owner id that does not match the actor", async () => {
-      guild.members.fetch.mockRejectedValue(DiscordErrors.unknownMember());
+      mockRest({
+        guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+        member: DiscordErrors.unknownMember(),
+      });
 
       await expect(
         requireGuildManager(GUILD_ID, "999999999999999999"),
@@ -171,12 +245,21 @@ describe("RPC guild access under Discord API failures", () => {
   });
 
   describe("cachedGuild", () => {
-    it("returns the cached guild", () => {
+    it("returns the gateway-cached guild", () => {
+      const guild: any = { id: GUILD_ID, ownerId: OWNER_ID };
+      container.client = {
+        ...container.client,
+        guilds: { cache: new Map([[GUILD_ID, guild]]) },
+      } as any;
+
       expect(cachedGuild(GUILD_ID)).toBe(guild);
     });
 
     it("throws when the guild left or is unavailable", () => {
-      container.client = { guilds: { cache: new Map() } } as any;
+      container.client = {
+        ...container.client,
+        guilds: { cache: new Map() },
+      } as any;
 
       expect(() => cachedGuild(GUILD_ID)).toThrow("Guild not found in bot cache");
     });
@@ -187,10 +270,15 @@ describe("dispatchRpc error shaping", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLogger();
+    repositoryCache.clear();
+    mockRedisCacheMiss();
 
     container.client = {
       application: { owner: { id: OWNER_ID } },
       guilds: { cache: new Map() },
+      rest: {
+        get: vi.fn().mockRejectedValue(discordApiError("Unknown Guild", 10004, 404)),
+      },
     } as any;
 
     (container as any).db = {
@@ -328,10 +416,13 @@ describe("implementRpc input parsing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLogger();
+    repositoryCache.clear();
+    mockRedisCacheMiss();
 
     guild = { id: GUILD_ID, ownerId: OWNER_ID, members: { fetch: vi.fn() } };
     container.client = {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },
+      rest: ownerOnlyRest(GUILD_ID, OWNER_ID),
     } as any;
 
     (container as any).db = {
@@ -469,9 +560,12 @@ describe("static RPC registry", () => {
   });
 
   it("keeps serving a module's reads while that module is not loaded", async () => {
+    repositoryCache.clear();
+    mockRedisCacheMiss();
     const guild = { id: GUILD_ID, ownerId: OWNER_ID, members: { fetch: vi.fn() } };
     container.client = {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },
+      rest: ownerOnlyRest(GUILD_ID, OWNER_ID),
     } as any;
     container.stores = {
       get: vi.fn(() => ({ loaded: () => [], get: () => undefined })),
@@ -492,9 +586,12 @@ describe("static RPC registry", () => {
   });
 
   it("refuses a write that needs a module which is not loaded", async () => {
+    repositoryCache.clear();
+    mockRedisCacheMiss();
     const guild = { id: GUILD_ID, ownerId: OWNER_ID, members: { fetch: vi.fn() } };
     container.client = {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },
+      rest: ownerOnlyRest(GUILD_ID, OWNER_ID),
     } as any;
     container.stores = {
       get: vi.fn(() => ({ loaded: () => [], get: () => undefined })),

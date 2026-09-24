@@ -79,6 +79,11 @@ export const RedisKeys = {
     `lumi:logging:${guildId}:claim:${channelId}`,
   logClaimIndex: (guildId: string) => `lumi:logging:${guildId}:claims`,
 
+  restGuild: (guildId: string) => `lumi:rest:guild:${guildId}`,
+  restMember: (guildId: string, userId: string) =>
+    `lumi:rest:member:${guildId}:${userId}`,
+  restChannel: (channelId: string) => `lumi:rest:channel:${channelId}`,
+
   botStats: () => "lumi:stats:bot",
 
   /**
@@ -113,6 +118,12 @@ export const RedisTTL = {
   addonUpdateCheck: 300,
   logClaimCode: 600,
   logClaim: 24 * 60 * 60,
+
+  // Short enough to keep the dashboard's ManageGuild recheck close to live -
+  // it's already tolerant of the session cache's own staleness window.
+  restGuild: 20,
+  restMember: 20,
+  restChannel: 20,
 } as const;
 
 /**

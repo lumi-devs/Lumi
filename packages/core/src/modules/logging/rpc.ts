@@ -1,5 +1,7 @@
 import { container } from "@sapphire/framework";
 import { loggingRpc } from "@lumi/contracts/rpc";
+import { ChannelType } from "discord.js";
+import { Routes } from "discord-api-types/v10";
 import {
   dismissLogClaim,
   issueLogClaimCode,
@@ -7,6 +9,18 @@ import {
   LogClaimCodeTtlMs,
 } from "./services/claims.js";
 import { implementRpc } from "#lib/rpc/implement.js";
+import { fetchChannelRest } from "#lib/rpc/discord-rest-lookup.js";
+
+/** Matches discord.js's own `GuildTextBasedChannelTypes` - the channel types a message can be deleted from. */
+const DeletableChannelTypes = new Set<ChannelType>([
+  ChannelType.GuildText,
+  ChannelType.GuildAnnouncement,
+  ChannelType.AnnouncementThread,
+  ChannelType.PublicThread,
+  ChannelType.PrivateThread,
+  ChannelType.GuildVoice,
+  ChannelType.GuildStageVoice,
+]);
 
 export const loggingRpcHandlers = implementRpc(loggingRpc, {
   "guild.logClaims.list": async ({ guildId }) => ({
@@ -36,11 +50,11 @@ export const loggingRpcHandlers = implementRpc(loggingRpc, {
     // has resolved it, and left in place it just reads as stale noise.
     if (claim?.replyMessageId) {
       const replyChannelId = claim.replyChannelId ?? claim.channelId;
-      const channel =
-        container.client.channels.cache.get(replyChannelId) ??
-        (await container.client.channels.fetch(replyChannelId).catch(() => null));
-      if (channel?.isTextBased() && "messages" in channel) {
-        await channel.messages.delete(claim.replyMessageId).catch(() => null);
+      const channel = await fetchChannelRest(replyChannelId);
+      if (channel && DeletableChannelTypes.has(channel.type)) {
+        await container.client.rest
+          .delete(Routes.channelMessage(replyChannelId, claim.replyMessageId))
+          .catch(() => null);
       }
     }
 
