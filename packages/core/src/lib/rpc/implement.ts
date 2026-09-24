@@ -100,7 +100,20 @@ const authorizers: RpcAuthorizers = {
   guildManager: async (req) => {
     const guildId = requireGuildId(req.guildId);
     const actorId = await requireGuildManager(guildId, req.actorId);
-    return { guildId, actorId, guild: cachedGuild(guildId) };
+    // `guild` is a getter, not an eagerly resolved field: most guildManager
+    // handlers need a live, gateway-bound `Guild` for real Discord actions,
+    // but a couple (dashboard's guild.shell.get/guild.entities.get) fetch
+    // everything over REST instead and never touch this property - for
+    // those, resolving it eagerly here would defeat the point by throwing
+    // `GuildNotFound` whenever this shard doesn't own the guild's gateway
+    // connection, exactly the coupling REST reads were introduced to avoid.
+    return {
+      guildId,
+      actorId,
+      get guild(): Guild {
+        return cachedGuild(guildId);
+      },
+    };
   },
   botOwner: (req) => {
     if (!req.actorId || !PermitResolver.isBotOwner(req.actorId)) {
@@ -136,6 +149,25 @@ function requireModuleLoaded(name: string): void {
   }
 }
 
+// A plain `{ ...auth, input }` spread would invoke every getter on `auth`
+// (e.g. the `guildManager` context's lazy `guild`) just to copy its current
+// value, defeating the point of making it lazy. Copying property
+// descriptors instead of values leaves getters unresolved until a handler
+// actually reads them.
+function withInput<T extends object, I>(auth: T, input: I): T & { input: I } {
+  const merged = Object.create(
+    Object.getPrototypeOf(auth) as object,
+  ) as T & { input: I };
+  Object.defineProperties(merged, Object.getOwnPropertyDescriptors(auth));
+  Object.defineProperty(merged, "input", {
+    value: input,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+  return merged;
+}
+
 // Generic over the auth level itself (not an entry type) so indexing
 // `authorizers` by it keeps the context type tied to that level.
 function bindAction<A extends RpcAuth, I, O>(
@@ -153,7 +185,7 @@ function bindAction<A extends RpcAuth, I, O>(
     if (entry.requiresEnabled !== undefined) {
       requireModuleLoaded(entry.requiresEnabled);
     }
-    return handler({ ...auth, input });
+    return handler(withInput(auth, input));
   };
 }
 

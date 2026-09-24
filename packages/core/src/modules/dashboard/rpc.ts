@@ -10,11 +10,16 @@ import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { implementRpc, requireGuildManager } from "#lib/rpc/implement.js";
 import {
+  fetchBotMemberRest,
+  fetchGuildChannelsRest,
+  fetchGuildMembersSampleRest,
   fetchGuildRest,
+  fetchGuildRolesRest,
   guildBannerUrl,
   guildIconUrl,
 } from "#lib/rpc/discord-rest-lookup.js";
 import { paginate } from "#lib/rpc/validation.js";
+import type { APIRole } from "discord-api-types/v10";
 
 const GuildSummariesMax = 200;
 const GuildConfigSetManyMax = 50;
@@ -30,21 +35,48 @@ const PickableChannelTypes = new Set<ChannelType>([
   ChannelType.GuildMedia,
 ]);
 
+/** discord.js's `RoleManager#highest` tie-break: equal position favors the older (lower id) role. */
+function highestRoleId(
+  roleIds: readonly string[],
+  rolesById: ReadonlyMap<string, APIRole>,
+): string | undefined {
+  let highest: APIRole | undefined;
+  for (const id of roleIds) {
+    const role = rolesById.get(id);
+    if (!role) continue;
+    if (
+      !highest ||
+      role.position > highest.position ||
+      (role.position === highest.position && BigInt(role.id) < BigInt(highest.id))
+    ) {
+      highest = role;
+    }
+  }
+  return highest?.id;
+}
+
 export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
-  "guild.shell.get": async ({ guildId, guild }) => {
+  "guild.shell.get": async ({ guildId }) => {
     const modules = container.stores.get("modules").loaded();
-    const [settings, enabled] = await Promise.all([
+    const [settings, enabled, apiGuild] = await Promise.all([
       container.db.config.getGuildSettings(guildId),
       container.db.modules.areModulesEnabled(
         guildId,
         modules.map((m) => m.meta.name),
       ),
+      fetchGuildRest(guildId),
     ]);
+    if (!apiGuild) {
+      throw new CodedRpcError(
+        RpcFailureCodes.GuildNotFound,
+        "Guild not found in bot cache",
+      );
+    }
     return {
-      name: guild.name,
-      icon: guild.iconURL(),
-      banner: guild.bannerURL(),
-      memberCount: guild.memberCount,
+      name: apiGuild.name,
+      icon: guildIconUrl(apiGuild),
+      banner: guildBannerUrl(apiGuild),
+      memberCount: apiGuild.approximate_member_count ?? 0,
       settings,
       modules: modules.map((m) =>
         moduleSummary(m, enabled.get(m.meta.name) ?? true),
@@ -74,33 +106,43 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
     };
   },
 
-  "guild.entities.get": ({ guild }) => {
-    const botRoleId = guild.members.me?.roles.highest.id;
-    const roles = guild.roles.cache
-      .filter((r) => r.id !== guild.id)
+  "guild.entities.get": async ({ guildId }) => {
+    const [apiRoles, apiChannels, botMember, memberSample] = await Promise.all([
+      fetchGuildRolesRest(guildId),
+      fetchGuildChannelsRest(guildId),
+      fetchBotMemberRest(guildId),
+      fetchGuildMembersSampleRest(guildId, MemberSampleSize),
+    ]);
+
+    const rolesById = new Map((apiRoles ?? []).map((r) => [r.id, r]));
+    const botRoleId = highestRoleId(botMember?.roles ?? [], rolesById);
+
+    const roles = (apiRoles ?? [])
+      .filter((r) => r.id !== guildId)
       .map((r) => ({
         id: r.id,
         name: r.name,
         color: r.color,
         position: r.position,
-        permissions: r.permissions.bitfield.toString(),
+        permissions: r.permissions,
         isBotRole: r.id === botRoleId,
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    const channels = guild.channels.cache
+    const channels = (apiChannels ?? [])
       .filter((c) => PickableChannelTypes.has(c.type))
-      .map((c) => ({ id: c.id, name: c.name, type: c.type }));
+      .map((c) => ({ id: c.id, name: c.name ?? "", type: c.type }));
 
-    // Take the first cached non-bot members and sort those, instead of sorting
-    // the whole cache: the dashboard only needs names for ids it displays.
+    // A single-page REST member list (capped at MemberSampleSize), not the
+    // full paginated roster - the dashboard only needs names for ids it
+    // displays, same bound as the old gateway-cache read this replaces.
     const members: { id: string; username: string; displayName: string }[] = [];
-    for (const m of guild.members.cache.values()) {
-      if (m.user.bot) continue;
+    for (const m of memberSample ?? []) {
+      if (!m.user || m.user.bot) continue;
       members.push({
-        id: m.id,
+        id: m.user.id,
         username: m.user.username,
-        displayName: m.displayName,
+        displayName: m.nick ?? m.user.global_name ?? m.user.username,
       });
       if (members.length >= MemberSampleSize) break;
     }

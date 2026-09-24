@@ -1,14 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { Collection } from "discord.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
 const MANAGER_ID = "222222222222222222";
 const INTRUDER_ID = "333333333333333333";
 const MOD_ROLE_ID = "444444444444444444";
+const BOT_ID = "999999999999999999";
+
+/** discord.js's ManageGuild bit, used to build a fake role permission string. */
+const ManageGuildBit = (1n << 5n).toString();
 
 const afkModule = {
   meta: {
@@ -22,48 +26,56 @@ const afkModule = {
 };
 
 describe("dashboard module guild read RPC handlers", () => {
-  let guild: any;
+  let restGet: ReturnType<typeof vi.fn>;
+  let everyoneRole: { id: string; name: string; color: number; position: number; permissions: string };
+  let modRole: { id: string; name: string; color: number; position: number; permissions: string };
+  let channels: { id: string; name: string; type: number }[];
+  let memberSample: unknown[];
 
   beforeEach(() => {
     vi.clearAllMocks();
+    repositoryCache.clear();
 
-    guild = {
-      id: GUILD_ID,
-      ownerId: OWNER_ID,
-      name: "Test Guild",
-      memberCount: 3,
-      iconURL: vi.fn().mockReturnValue("https://example.com/icon.png"),
-      bannerURL: vi.fn().mockReturnValue("https://example.com/banner.png"),
-      roles: {
-        cache: new Collection([
-          [
-            GUILD_ID,
-            { id: GUILD_ID, name: "@everyone", color: 0, position: 0, permissions: { bitfield: 0n } },
-          ],
-          [
-            MOD_ROLE_ID,
-            {
-              id: MOD_ROLE_ID,
-              name: "Mods",
-              color: 3447003,
-              position: 2,
-              permissions: { bitfield: 8n },
-            },
-          ],
-        ]),
-      },
-      channels: {
-        cache: new Collection([
-          ["555555555555555555", { id: "555555555555555555", name: "general", type: 0 }],
-          ["777777777777777777", { id: "777777777777777777", name: "thread", type: 11 }],
-        ]),
-      },
-      members: {
-        fetch: vi.fn(),
-        me: { roles: { highest: { id: MOD_ROLE_ID } } },
-        cache: new Collection(),
-      },
-    };
+    everyoneRole = { id: GUILD_ID, name: "@everyone", color: 0, position: 0, permissions: "0" };
+    modRole = { id: MOD_ROLE_ID, name: "Mods", color: 3447003, position: 2, permissions: ManageGuildBit };
+    channels = [
+      { id: "555555555555555555", name: "general", type: 0 },
+      { id: "777777777777777777", name: "thread", type: 11 },
+    ];
+    memberSample = [];
+
+    restGet = vi.fn().mockImplementation((route: string) => {
+      if (route === `/guilds/${GUILD_ID}`) {
+        return Promise.resolve({
+          id: GUILD_ID,
+          owner_id: OWNER_ID,
+          name: "Test Guild",
+          icon: "icon-hash",
+          banner: "banner-hash",
+          approximate_member_count: 3,
+          roles: [everyoneRole, modRole],
+        });
+      }
+      if (route === `/guilds/${GUILD_ID}/roles`) {
+        return Promise.resolve([everyoneRole, modRole]);
+      }
+      if (route === `/guilds/${GUILD_ID}/channels`) {
+        return Promise.resolve(channels);
+      }
+      if (route === `/guilds/${GUILD_ID}/members`) {
+        return Promise.resolve(memberSample);
+      }
+      if (route === `/guilds/${GUILD_ID}/members/${BOT_ID}`) {
+        return Promise.resolve({ roles: [MOD_ROLE_ID], user: { id: BOT_ID, username: "lumi", bot: true } });
+      }
+      if (route === `/guilds/${GUILD_ID}/members/${MANAGER_ID}`) {
+        return Promise.resolve({ roles: [MOD_ROLE_ID] });
+      }
+      if (route === `/guilds/${GUILD_ID}/members/${INTRUDER_ID}`) {
+        return Promise.resolve({ roles: [] });
+      }
+      return Promise.reject(new Error(`Unexpected route: ${route}`));
+    });
 
     container.logger = {
       info: vi.fn(),
@@ -73,8 +85,17 @@ describe("dashboard module guild read RPC handlers", () => {
     } as any;
 
     container.client = {
-      guilds: { cache: new Map([[GUILD_ID, guild]]) },
+      rest: {
+        get: restGet,
+        cdn: {
+          icon: vi.fn((id: string, hash: string) => `https://cdn/${id}/icon/${hash}.png`),
+          banner: vi.fn((id: string, hash: string) => `https://cdn/${id}/banner/${hash}.png`),
+        },
+      },
+      user: { id: BOT_ID },
     } as any;
+
+    (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
 
     (container as any).db = {
       config: {
@@ -105,10 +126,6 @@ describe("dashboard module guild read RPC handlers", () => {
 
   describe("guild.shell.get", () => {
     it("rejects an actor who is neither the guild owner nor has ManageGuild/Administrator", async () => {
-      guild.members.fetch.mockResolvedValue({
-        permissions: { has: vi.fn().mockReturnValue(false) },
-      });
-
       await expect(call("guild.shell.get", INTRUDER_ID)).rejects.toThrow(
         "Missing ManageGuild permission",
       );
@@ -120,9 +137,11 @@ describe("dashboard module guild read RPC handlers", () => {
 
       expect(result.name).toBe("Test Guild");
       expect(result.memberCount).toBe(3);
+      expect(result.icon).toBe("https://cdn/123456789012345678/icon/icon-hash.png");
+      expect(result.banner).toBe("https://cdn/123456789012345678/banner/banner-hash.png");
       expect(result.settings.prefix).toBe("!");
       expect(container.db.config.getGuildSettings).toHaveBeenCalledWith(GUILD_ID);
-      expect(guild.members.fetch).not.toHaveBeenCalled();
+      expect(restGet).not.toHaveBeenCalledWith(`/guilds/${GUILD_ID}/members/${OWNER_ID}`);
       expect(result.modules).toEqual([
         {
           name: "afk",
@@ -145,14 +164,10 @@ describe("dashboard module guild read RPC handlers", () => {
     });
 
     it("lets a non-owner actor with ManageGuild through", async () => {
-      guild.members.fetch.mockResolvedValue({
-        permissions: { has: vi.fn((perm: string) => perm === "ManageGuild") },
-      });
-
       const result = (await call("guild.shell.get", MANAGER_ID)) as any;
 
       expect(result.name).toBe("Test Guild");
-      expect(guild.members.fetch).toHaveBeenCalledWith(MANAGER_ID);
+      expect(restGet).toHaveBeenCalledWith(`/guilds/${GUILD_ID}/members/${MANAGER_ID}`);
     });
   });
 
@@ -192,7 +207,7 @@ describe("dashboard module guild read RPC handlers", () => {
           name: "Mods",
           color: 3447003,
           position: 2,
-          permissions: "8",
+          permissions: ManageGuildBit,
           isBotRole: true,
         },
       ]);
@@ -200,6 +215,25 @@ describe("dashboard module guild read RPC handlers", () => {
         { id: "555555555555555555", name: "general", type: 0 },
       ]);
       expect(result.members).toEqual([]);
+    });
+
+    it("samples non-bot members from a single REST members page", async () => {
+      memberSample = [
+        { user: { id: "1", username: "alice", bot: false }, nick: null },
+        { user: { id: "2", username: "beep-bot", bot: true }, nick: null },
+        { user: { id: "3", username: "bob", global_name: "Bobby", bot: false }, nick: "Bobbo" },
+      ];
+
+      const result = (await call("guild.entities.get", OWNER_ID)) as any;
+
+      expect(result.members).toEqual([
+        { id: "1", username: "alice", displayName: "alice" },
+        { id: "3", username: "bob", displayName: "Bobbo" },
+      ]);
+      expect(restGet).toHaveBeenCalledWith(
+        `/guilds/${GUILD_ID}/members`,
+        expect.objectContaining({ query: expect.any(URLSearchParams) }),
+      );
     });
   });
 
@@ -211,10 +245,6 @@ describe("dashboard module guild read RPC handlers", () => {
     });
 
     it("omits guilds the actor cannot manage instead of failing the batch", async () => {
-      guild.members.fetch.mockResolvedValue({
-        permissions: { has: vi.fn().mockReturnValue(false) },
-      });
-
       const result = (await call("guild.summaries.list", INTRUDER_ID, {
         guildIds: [GUILD_ID],
       })) as any;
