@@ -22,9 +22,14 @@ system topology — treat it as source of truth for anything below.
   that spawns one identical child process per shard it owns (`shard-client.ts`); every process
   owns the Discord gateway connection(s) for its shards and runs every command, module, and
   interaction handler. There is no separate scheduler role - exactly one shard per pod (the one
-  holding shard id `0`) is elected "primary" with zero coordination and additionally owns BullMQ
-  job scheduling and the RPC/metrics HTTP surface (`isPrimaryShard()` in `packages/core/src/lib/env.ts`).
-- `apps/dashboard` — Next.js (App Router) web admin panel; talks to `worker` only over an
+  holding shard id `0`) is elected "primary" with zero coordination and owns BullMQ job
+  scheduling (`isPrimaryShard()` in `packages/core/src/lib/env.ts`). RPC serving is not part of
+  that primary-shard role — it's a separate `apps/api` process (see below), not gated by
+  shard/`isPrimaryShard()` at all.
+- `apps/api` — gateway-free RPC server for the dashboard. Boots a `SapphireClient` without
+  calling `.login()`, and owns `packages/core/src/lib/rpc/*` serving
+  (`registerRpcHandlers()`/`startRpcHttpServer()`). No BullMQ, no Discord gateway connection.
+- `apps/dashboard` — Next.js (App Router) web admin panel; talks to `apps/api` only over an
   internal HTTP RPC bridge, never touches Postgres/Redis directly.
 - `packages/core` — the framework itself: module loader, database service, command/permit
   system, addon sandbox/SDK, and (folded in from their own former packages) the Redis Streams
@@ -81,10 +86,10 @@ map: `lumi`, `lumi/commands`, `lumi/config`, `lumi/discord`, `lumi/interactions`
 `lumi/permissions`, `lumi/redis`, `lumi/scheduling`, `lumi/ui`, `lumi/utils`).
 Full surface: [`agents/architecture/addon-sdk.md`](agents/architecture/addon-sdk.md).
 
-## RPC bridge (dashboard ↔ worker)
+## RPC bridge (dashboard ↔ api)
 
 `apps/dashboard` never opens a Postgres or Redis connection and never holds the bot token.
-Every read/write is proxied over an internal HTTP RPC bridge to `apps/worker`
+Every read/write is proxied over an internal HTTP RPC bridge to `apps/api`
 (`apps/dashboard/src/lib/rpc.ts` calling `packages/core/src/lib/rpc/http-server.ts`, a
 `server-only` module reachable only from Server Components/Route Handlers/Server Actions).
 

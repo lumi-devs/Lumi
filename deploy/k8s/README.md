@@ -28,15 +28,19 @@ This directory contains production-ready **Kubernetes manifests** for deploying 
 Lumi runs as one bot application role plus supporting services. There is no separate gateway or
 scheduler process: each worker pod owns its own Discord WebSocket connection(s) and runs command,
 module, and interaction logic in the same process, and exactly one pod — whichever owns shard id
-`0` — is elected "primary" with zero coordination and additionally owns BullMQ job scheduling and
-the RPC/metrics HTTP surface (`isPrimaryShard()` in `packages/core/src/lib/env.ts`). Every pod,
-primary or not, still executes fired task effects for the shards it holds.
+`0` — is elected "primary" with zero coordination and additionally owns BullMQ job scheduling
+(`isPrimaryShard()` in `packages/core/src/lib/env.ts`). RPC serving is no longer part of that
+primary-shard role at all — it lives in a separate, gateway-free `api` Deployment (see below) that
+the dashboard talks to instead. Every worker pod, primary or not, still executes fired task effects
+for the shards it holds.
 
 - **`worker` (StatefulSet)**: Holds real Discord shards and runs all bot logic, including — on
   whichever pod owns shard 0 — job scheduling. StatefulSet, not Deployment, because each pod owns
   per-shard state (WebSocket session, sequence number). Replica count is a shard-assignment
   decision, not an autoscaler target — see [Scaling Workers](#-scaling-workers).
-- **`dashboard` (Deployment)**: Next.js admin dashboard; talks to the worker fleet only over the
+- **`api` (Deployment)**: Stateless RPC-serving process for the dashboard, extracted off shard 0 —
+  no Discord gateway connection, no BullMQ.
+- **`dashboard` (Deployment)**: Next.js admin dashboard; talks to the `api` service only over the
   internal HTTP RPC bridge.
 - **`nirn-proxy` (Deployment)**: Stateless shared Discord REST proxy. Every worker replica routes its REST calls through it via `DISCORD_PROXY_URL` so per-route and global rate-limit buckets stay coordinated across pods.
 - **`migrate` (Job)**: One-shot database migration (`bunx prisma migrate deploy`) run before application services start.
@@ -96,7 +100,7 @@ flowchart TD
 1. **Kubernetes Cluster**: Version `1.28` or higher.
 2. **`kubectl` CLI**: Installed and configured with cluster admin permissions.
 3. **Prometheus Operator / Server**: Configured to scrape pods annotated with `prometheus.io/scrape: "true"`.
-4. **External Data Plane**: PostgreSQL 17 (or PgBouncer) and Redis 7 deployed and reachable from inside the cluster. The dashboard talks to `worker` directly over an internal HTTP RPC port (`RPC_HTTP_PORT`, default 8091) — no message broker involved.
+4. **External Data Plane**: PostgreSQL 17 (or PgBouncer) and Redis 7 deployed and reachable from inside the cluster. The dashboard talks to the `api` service directly over an internal HTTP RPC port (`RPC_HTTP_PORT`, default 8091) — no message broker involved.
 
 ---
 
@@ -110,7 +114,8 @@ flowchart TD
 | [`lumi-data-pvc.yaml`](./lumi-data-pvc.yaml) | `PersistentVolumeClaim` | `lumi-data` | Shared storage volume for persistent data and dynamic addons (`/app/data`). |
 | [`migrate-job.yaml`](./migrate-job.yaml) | `Job` | `migrate` | Database migration job executing `bunx prisma migrate deploy`. |
 | [`worker-statefulset.yaml`](./worker-statefulset.yaml) | `StatefulSet` + `Service` | `worker`, `worker-headless` | Sharded worker fleet with headless service for metrics discovery and shard 0 primary role. |
-| [`dashboard-deployment.yaml`](./dashboard-deployment.yaml) | `Deployment` + `Service` | `dashboard` | Next.js admin dashboard web application (reaches worker RPC over `worker-0`). |
+| [`api-deployment.yaml`](./api-deployment.yaml) | `Deployment` + `Service` | `api` | Stateless RPC-serving process for the dashboard, extracted off shard 0. |
+| [`dashboard-deployment.yaml`](./dashboard-deployment.yaml) | `Deployment` + `Service` | `dashboard` | Next.js admin dashboard web application (reaches `api`'s ClusterIP service). |
 | [`nirn-proxy-deployment.yaml`](./nirn-proxy-deployment.yaml) | `Deployment` + `Service` | `nirn-proxy` | Shared Discord REST rate-limit proxy for the worker fleet. |
 
 ---
@@ -145,10 +150,13 @@ kubectl -n lumi wait --for=condition=complete job/migrate --timeout=120s
 # 1. REST proxy first - workers read DISCORD_PROXY_URL at boot
 kubectl apply -f nirn-proxy-deployment.yaml
 
-# 2. Worker fleet (shard 0 assumes primary role for RPC & BullMQ)
+# 2. Worker fleet (shard 0 assumes primary role for BullMQ)
 kubectl apply -f worker-statefulset.yaml
 
-# 3. Next.js Dashboard Frontend
+# 3. Stateless RPC-serving api process (dashboard depends on it)
+kubectl apply -f api-deployment.yaml
+
+# 4. Next.js Dashboard Frontend
 kubectl apply -f dashboard-deployment.yaml
 ```
 

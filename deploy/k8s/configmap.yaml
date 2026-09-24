@@ -22,13 +22,13 @@ data:
   CACHE_MEMBER_LIMIT: "50"
   CACHE_USER_LIMIT: "200"
 
-  # Cross-pod: the dashboard reaches the worker over the Service, so the bind
-  # has to be routable. Authentication is RPC_INTERNAL_TOKEN (see
-  # secret.example.yaml), not the network boundary - pair this with a
-  # NetworkPolicy restricting :8091 to the dashboard pods.
+  # Cross-pod: the dashboard reaches the api Service, so the bind has to be
+  # routable. Authentication is RPC_INTERNAL_TOKEN (see secret.example.yaml),
+  # not the network boundary - pair this with a NetworkPolicy restricting
+  # :8091 to the api pods.
   RPC_HTTP_HOST: "0.0.0.0"
   RPC_HTTP_PORT: "8091"
-  RPC_HTTP_URL: "http://worker.lumi.svc.cluster.local:8091"
+  RPC_HTTP_URL: "http://api.lumi.svc.cluster.local:8091"
 
   OTEL_ENABLED: "true"
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability:4318"
