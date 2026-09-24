@@ -8,7 +8,7 @@
 
 <br />
 
-This directory contains production-ready **Kubernetes manifests** for deploying Lumi as a sharded worker fleet with a separate scheduler and a shared Discord REST proxy.
+This directory contains production-ready **Kubernetes manifests** for deploying Lumi as a sharded worker fleet with a shared Discord REST proxy. There is no separate scheduler component — job scheduling is owned by one shard within the worker fleet itself (see below).
 
 ---
 
@@ -25,10 +25,19 @@ This directory contains production-ready **Kubernetes manifests** for deploying 
 
 ## 🌟 Overview & Architecture
 
-Lumi runs as two application roles. There is no separate gateway process: each worker pod owns its own Discord WebSocket connection and runs command, module, and interaction logic in the same process.
+Lumi runs as one bot application role plus supporting services. There is no separate gateway or
+scheduler process: each worker pod owns its own Discord WebSocket connection(s) and runs command,
+module, and interaction logic in the same process, and exactly one pod — whichever owns shard id
+`0` — is elected "primary" with zero coordination and additionally owns BullMQ job scheduling and
+the RPC/metrics HTTP surface (`isPrimaryShard()` in `packages/core/src/lib/env.ts`). Every pod,
+primary or not, still executes fired task effects for the shards it holds.
 
-- **`worker` (StatefulSet)**: Holds real Discord shards and runs all bot logic. StatefulSet, not Deployment, because each pod owns per-shard state (WebSocket session, sequence number). Replica count is a shard-assignment decision, not an autoscaler target — see [Scaling Workers](#-scaling-workers).
-- **`scheduler` (Deployment)**: Single replica (or HA with the leader lock) owning BullMQ delayed job queues and task fire triggers. No Discord WebSocket.
+- **`worker` (StatefulSet)**: Holds real Discord shards and runs all bot logic, including — on
+  whichever pod owns shard 0 — job scheduling. StatefulSet, not Deployment, because each pod owns
+  per-shard state (WebSocket session, sequence number). Replica count is a shard-assignment
+  decision, not an autoscaler target — see [Scaling Workers](#-scaling-workers).
+- **`dashboard` (Deployment)**: Next.js admin dashboard; talks to the worker fleet only over the
+  internal HTTP RPC bridge.
 - **`nirn-proxy` (Deployment)**: Stateless shared Discord REST proxy. Every worker replica routes its REST calls through it via `DISCORD_PROXY_URL` so per-route and global rate-limit buckets stay coordinated across pods.
 - **`migrate` (Job)**: One-shot database migration (`bunx prisma migrate deploy`) run before application services start.
 
@@ -56,10 +65,6 @@ flowchart TD
             NP[nirn-proxy Deployment<br/>Service :8080]
         end
 
-        subgraph Scheduling Layer
-            Sched[scheduler Deployment Pod]
-        end
-
         PVC[(lumi-data PVC)]
     end
 
@@ -74,15 +79,14 @@ flowchart TD
     W1 <-->|Shard telemetry & session state| Redis
 
     W0 <-->|Queries| DB
+    W1 <-->|Queries| DB
 
-    Sched <-->|BullMQ Tasks| Redis
-    Sched <-->|Sync State| DB
+    W0 <-->|BullMQ Tasks, primary shard only| Redis
 
     Prometheus -->|Scrape /metrics| WH
-    Prometheus -->|Scrape /metrics| Sched
 
     W0 <-->|Data Mount| PVC
-    Sched <-->|Data Mount| PVC
+    W1 <-->|Data Mount| PVC
 ```
 
 ---
@@ -171,7 +175,7 @@ Watch `shardLatency`, `shardStatus`, `guildCount`, and `rest429Total` in Prometh
 
 ```bash
 kubectl -n lumi logs -l app=worker --tail=100 -f
-kubectl -n lumi logs -l app=scheduler --tail=100 -f
+kubectl -n lumi logs -l app=dashboard --tail=100 -f
 kubectl -n lumi logs -l app=nirn-proxy --tail=100 -f
 ```
 
