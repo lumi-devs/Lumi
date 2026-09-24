@@ -1,7 +1,8 @@
 import { Alert } from "#/components/ui/alert";
 import { PlugZap, StickyNote } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard, getGuildModNotes } from "#/lib/dashboard-fetch";
+import { getGuildEntities } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { exportGuildModNotes } from "#/actions/guild-export-actions";
 import { GuildModNotesTable } from "#/components/guild/guild-mod-notes-table";
 import { Badge } from "#/components/ui/badge";
@@ -15,12 +16,9 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { ExportLogButton } from "#/components/ui/export-log-button";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
-import type { ModNoteView } from "#/lib/dashboard-data";
-import {
-  extractMemberNames,
-  isSnowflake,
-  single,
-} from "#/lib/log-format";
+import type { ModNoteView } from "@lumi/contracts/views";
+import { extractMemberNames, single } from "#/lib/log-format";
+import { isSnowflake } from "#/lib/moderation-cases";
 
 export default async function ModNotesPage({
   params,
@@ -35,17 +33,27 @@ export default async function ModNotesPage({
   const userId = single(query["user"]);
   const badUserFilter = Boolean(userId) && !isSnowflake(userId);
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
-  const memberNames = extractMemberNames(dashboard.members);
-  const memberOptions = [...dashboard.members]
+  const entitiesPromise = getGuildEntities(guildId, session.userId);
+  const notesPromise =
+    userId && !badUserFilter
+      ? rpc("guild.modNotes.list", {
+          guildId,
+          actorId: session.userId,
+          data: { userId },
+        })
+      : null;
+
+  const entities = await entitiesPromise;
+  const memberNames = extractMemberNames(entities.members);
+  const memberOptions = [...entities.members]
     .sort((a, b) => a.displayName.localeCompare(b.displayName))
     .map((m) => ({ value: m.id, label: m.displayName }));
 
   let notes: ModNoteView[] | null = null;
   let failure: string | null = null;
-  if (userId && !badUserFilter) {
+  if (notesPromise) {
     try {
-      notes = await getGuildModNotes(guildId, session.userId, userId);
+      notes = (await notesPromise).notes;
     } catch (err) {
       failure = err instanceof Error ? err.message : "The request failed.";
     }

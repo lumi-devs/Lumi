@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
-export const Themes = ["system", "light", "dark"] as const;
+const Themes = ["system", "light", "dark"] as const;
 export type Theme = (typeof Themes)[number];
 
 const StorageKey = "lumi-dashboard-theme";

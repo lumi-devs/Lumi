@@ -1,25 +1,33 @@
 import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
-import { FieldType } from "#lib/module-system/Module.js";
+import { FieldType } from "#lib/module-system/config-schema.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { ConfigUtility } from "#utilities/pieces/ConfigUtility.js";
+import type { ConfigUtility } from "../utilities/ConfigUtility.js";
 import {
   configAccessDenied,
   hasPanelAccess,
   loadDetail,
-} from "#modules/core/lib/config-panel.js";
+} from "../services/config-panel.js";
 import { buildFeatureDetailView } from "#modules/core/ui/modules.js";
 import {
   buildHistoryView,
   buildOverridesView,
 } from "#modules/core/ui/overrides.js";
+import { ConfigSelectId } from "../constants.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import type { AnySelectMenuInteraction } from "discord.js";
+import { OverrideTargetType, type $Enums } from "@prisma/client";
+
+function isOverrideTargetType(
+  value: string,
+): value is $Enums.OverrideTargetType {
+  return (Object.values(OverrideTargetType) as string[]).includes(value);
+}
 
 @ApplyOptions<InteractionHandler.Options>({
   name: "config-panel-select",
@@ -31,8 +39,10 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
   }
 
   public override parse(interaction: AnySelectMenuInteraction) {
-    if (!interaction.customId.startsWith("cfg:")) return this.none();
-    const [, action, moduleName, key, page] = interaction.customId.split(":");
+    const parsed = ConfigSelectId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    const { action, moduleName, rest } = parsed;
+    const [key, page] = rest;
     return this.some({ action, moduleName, key, page });
   }
 
@@ -122,9 +132,11 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
         if (!interaction.isStringSelectMenu()) return;
         const historyId = interaction.values[0];
         if (!historyId) return;
+        const parsedHistoryId = Number(historyId);
+        if (!Number.isInteger(parsedHistoryId)) return;
         const entry =
           await this.container.db.configHistory.getConfigHistoryEntry(
-            historyId,
+            parsedHistoryId,
           );
         if (
           entry &&
@@ -159,6 +171,7 @@ export class ConfigPanelSelectHandler extends BaseInteractionHandler {
         if (!raw) return;
         const [modelType, modelId, ovKey] = raw.split("|");
         if (!modelType || !modelId || !ovKey) return;
+        if (!isOverrideTargetType(modelType)) return;
         await this.container.db.configOverrides.deleteConfigOverride({
           guildId,
           moduleName,

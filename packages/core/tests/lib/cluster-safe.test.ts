@@ -13,7 +13,7 @@ import type { RedisClient } from "../../src/lib/database/cluster-safe.js";
 
 // isCluster() uses instanceof, so a fake is treated as standalone. These tests
 // therefore exercise the standalone path plus the grouping logic directly.
-const asClient = (c: unknown) => c as unknown as RedisClient;
+const asClient = (c: unknown) => c as RedisClient;
 
 describe("mgetSafe", () => {
   it("returns values in the order the keys were given", async () => {

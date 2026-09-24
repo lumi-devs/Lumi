@@ -2,21 +2,15 @@ import { container } from "@sapphire/framework";
 import type { RedisClient } from "#lib/database/cluster-safe.js";
 import type { Guild } from "@prisma/client";
 import type { DatabaseClient } from "#lib/prisma/client.js";
-import { acquireRedisLock, verifyRedisLock } from "#lib/redis-lock.js";
+import { acquireRedisLock, verifyRedisLock } from "#lib/lock.js";
 
 const GuildLock = (guildId: string) => `lumi:lock:guild:${guildId}`;
-const ConfigLock = (guildId: string, moduleName: string) =>
-  `lumi:lock:cfg:${moduleName}:${guildId}`;
 
-export async function configLock(
-  guildId: string,
-  moduleName: string,
-): Promise<() => void> {
-  const { release } = await acquireRedisLock(
-    container.redis,
-    ConfigLock(guildId, moduleName),
-    { ttlMs: 10_000, acquireTimeoutMs: 20_000 },
-  );
+export async function configLock(guildId: string): Promise<() => void> {
+  const { release } = await acquireRedisLock(container.redis, GuildLock(guildId), {
+    ttlMs: 10_000,
+    acquireTimeoutMs: 20_000,
+  });
   return () => {
     void release();
   };

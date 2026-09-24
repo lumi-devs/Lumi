@@ -6,7 +6,7 @@ import { Check, Search } from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import { useServerAction } from "#/lib/use-server-action";
-import type { DashboardChannelView } from "#/lib/dashboard-data";
+import type { DashboardChannelView } from "@lumi/contracts/views";
 
 // Matches the Discord panel fallback (`resolveChannelTypes` in
 // `packages/core/src/modules/core/ui/modules.ts`): text channels unless the

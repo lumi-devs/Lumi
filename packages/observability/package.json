@@ -9,6 +9,9 @@
     ".": "./src/index.ts",
     "./tracing": "./src/tracing.ts"
   },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
   "dependencies": {
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/context-async-hooks": "^2.9.0",

@@ -79,27 +79,11 @@ bun run dev
 
 ---
 
-## Changesets & Changelog Workflow
+## Releases & Release Notes
 
-Lumi uses **[Changesets](https://github.com/changesets/changesets)** to automate package versioning and release notes across our workspace packages (`@lumi/core`, `@lumi/worker`, `@lumi/dashboard`, etc.).
+Every workspace package is private and ships together, so there is no per-package versioning. Pushing a `v*` tag runs `.github/workflows/release.yml`, which publishes a GitHub Release with notes generated from the merged pull requests since the previous tag.
 
-### When to Add a Changeset
-
-If your PR introduces a feature, bug fix, refactor, or performance improvement in `packages/` or `apps/`, you **must** include a changeset file.
-
-### How to Create a Changeset
-
-1. Run the interactive CLI helper:
-   ```bash
-   bun changeset
-   ```
-2. Select the package(s) affected by your changes using spacebar.
-3. Select the bump level (`patch` for bug fixes/minor tweaks, `minor` for new features, `major` for breaking API changes).
-4. Enter a clear summary of your change for the release notes.
-5. Commit the generated markdown file inside `.changeset/` as part of your pull request.
-
-> [!NOTE]
-> PRs that only modify documentation, CI scripts, or workspace dependencies (`area:docs`, `area:ci`, `area:deps`, `docs-only`) are exempt from the changeset requirement.
+Because the notes are built from PR titles, give your PR a clear, specific title (for example `fix(mod): warn count ignores decayed cases`), and add the relevant `area:*` label.
 
 ---
 

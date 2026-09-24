@@ -15,7 +15,9 @@ import {
   validateMenuDraft,
   validateOptionDraft,
   type ReactionRoleMenu,
-} from "#modules/reactionroles/data.js";
+} from "#modules/reactionroles/data/reactionroles.js";
+import { ReactionRoleRepository } from "#modules/reactionroles/data/ReactionRoleRepository.js";
+import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 function makeMenu(overrides: Partial<ReactionRoleMenu> = {}): ReactionRoleMenu {
   const now = Date.now();
@@ -63,41 +65,25 @@ function makeMenu(overrides: Partial<ReactionRoleMenu> = {}): ReactionRoleMenu {
   };
 }
 
-function installMemoryKv() {
-  const rows = new Map<string, unknown>();
-  const keyOf = (guildId: string, module: string, targetId: string, key: string) =>
-    `${guildId}:${module}:${targetId}:${key}`;
+function installMockDb() {
+  const prisma = createMockPrismaClient();
+  const mockLogger = {
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    info: vi.fn(),
+  };
+  const mockDb = { ensureGuild: vi.fn().mockResolvedValue(undefined) };
   (container as any).db = {
-    ensureGuild: vi.fn().mockResolvedValue(undefined),
-    guildKV: {
-      getModuleData: vi.fn(async (guildId: string, module: string, targetId: string, key: string) => {
-        return rows.get(keyOf(guildId, module, targetId, key)) ?? null;
-      }),
-      setModuleData: vi.fn(
-        async (guildId: string, module: string, targetId: string, key: string, value: unknown) => {
-          rows.set(keyOf(guildId, module, targetId, key), value);
-        },
-      ),
-      deleteModuleData: vi.fn(
-        async (guildId: string, module: string, targetId: string, key: string) => {
-          return rows.delete(keyOf(guildId, module, targetId, key)) ? 1 : 0;
-        },
-      ),
-      listModuleData: vi.fn(async (opts: { module: string; key: string; guildId?: string }) => {
-        const out: { guildId: string; targetId: string; value: unknown }[] = [];
-        for (const [k, value] of rows) {
-          const [guildId, module, ...rest] = k.split(":");
-          const key = rest.pop()!;
-          const targetId = rest.join(":");
-          if (module !== opts.module || key !== opts.key) continue;
-          if (opts.guildId && guildId !== opts.guildId) continue;
-          out.push({ guildId: guildId!, targetId, value });
-        }
-        return out;
-      }),
-    },
+    ...mockDb,
+    reactionRoles: new ReactionRoleRepository(
+      prisma as never,
+      {} as never,
+      mockLogger as never,
+      mockDb as never,
+    ),
   } as any;
-  return rows;
+  return prisma;
 }
 
 describe("reactionroles validation", () => {
@@ -233,7 +219,7 @@ describe("reactionroles planToggle", () => {
 describe("reactionroles menu CRUD", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    installMemoryKv();
+    installMockDb();
     container.logger = {
       error: vi.fn(),
       warn: vi.fn(),
@@ -268,11 +254,61 @@ describe("reactionroles menu CRUD", () => {
     expect(await findMenuByMessage("guild-1", "unknown-message")).toBeNull();
   });
 
-  it("deletes menus and their message refs", async () => {
+  it("deletes menus", async () => {
     const menu = await saveMenu(makeMenu());
     await trackMenuMessage(menu, "channel-9", "message-7");
     expect(await deleteMenu("guild-1", "game-night")).toBe(true);
     expect(await deleteMenu("guild-1", "game-night")).toBe(false);
     expect(await countMenus("guild-1")).toBe(0);
+  });
+
+  it("does not let one guild read another guild's menu by id", async () => {
+    await saveMenu(makeMenu());
+    expect(await getMenu("guild-2", "game-night")).toBeNull();
+  });
+
+  it("round-trips option add/edit/remove through saveMenu's full-replace semantics", async () => {
+    const menu = await saveMenu(makeMenu({ options: [] }));
+    expect(menu.options).toEqual([]);
+
+    const withOption = await saveMenu({
+      ...menu,
+      options: [
+        {
+          id: "valorant",
+          label: "Valorant",
+          emoji: "🔫",
+          description: null,
+          roleId: "111111111111111111",
+          requiredRoleId: null,
+        },
+      ],
+    });
+    expect(withOption.options.map((o) => o.id)).toEqual(["valorant"]);
+
+    const edited = await saveMenu({
+      ...withOption,
+      options: [
+        {
+          ...withOption.options[0]!,
+          label: "Valorant (Competitive)",
+          roleId: "222222222222222222",
+        },
+      ],
+    });
+    expect(edited.options).toEqual([
+      {
+        id: "valorant",
+        label: "Valorant (Competitive)",
+        emoji: "🔫",
+        description: null,
+        roleId: "222222222222222222",
+        requiredRoleId: null,
+      },
+    ]);
+
+    const removed = await saveMenu({ ...edited, options: [] });
+    expect(removed.options).toEqual([]);
+    expect((await getMenu("guild-1", "game-night"))?.options).toEqual([]);
   });
 });

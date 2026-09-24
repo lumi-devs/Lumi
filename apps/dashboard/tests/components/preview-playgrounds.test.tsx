@@ -4,9 +4,7 @@ import {
   TempVcPreviewPlayground,
   resolvePreviewName,
 } from "#/components/guild/tempvc-preview-playground";
-import { AfkPreviewPlayground } from "#/components/guild/afk-preview-playground";
 import { VerificationPreviewPlayground } from "#/components/guild/verification-preview-playground";
-import { ReactionRolesPreviewPlayground } from "#/components/guild/reactionroles-preview-playground";
 
 describe("resolvePreviewName", () => {
   const who = { number: 3, username: "alex", displayName: "Alex" };
@@ -36,23 +34,6 @@ describe("TempVcPreviewPlayground", () => {
   });
 });
 
-describe("AfkPreviewPlayground", () => {
-  it("edits to the message update the AFK notice instantly", () => {
-    render(<AfkPreviewPlayground />);
-    expect(screen.getByText("💤 Alex is AFK")).toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText("AFK message"), {
-      target: { value: "in a meeting" },
-    });
-    expect(screen.getByText("in a meeting")).toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText("Member"), {
-      target: { value: "Sam" },
-    });
-    expect(screen.getByText("💤 Sam is AFK")).toBeInTheDocument();
-  });
-});
-
 describe("VerificationPreviewPlayground", () => {
   it("edits to the welcome text update the panel instantly", () => {
     render(<VerificationPreviewPlayground />);
@@ -64,42 +45,5 @@ describe("VerificationPreviewPlayground", () => {
     expect(
       screen.getAllByText("Brand new welcome copy here").length,
     ).toBeGreaterThan(1);
-  });
-});
-
-describe("ReactionRolesPreviewPlayground", () => {
-  it("edits to the title and options update the menu card instantly", () => {
-    render(<ReactionRolesPreviewPlayground />);
-    expect(screen.getByText("Preview only — edits never save")).toBeInTheDocument();
-    expect(screen.getByText("🎭 Game night roles")).toBeInTheDocument();
-    expect(screen.getAllByText("Valorant").length).toBeGreaterThan(0);
-
-    fireEvent.change(screen.getByLabelText("Title"), {
-      target: { value: "Movie club" },
-    });
-    expect(screen.getByText("🎭 Movie club")).toBeInTheDocument();
-    expect(screen.queryByText("🎭 Game night roles")).not.toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText("Option 1 label"), {
-      target: { value: "Chess" },
-    });
-    expect(screen.getAllByText("Chess").length).toBeGreaterThan(0);
-  });
-
-  it("switching modes swaps buttons for the dropdown and reaction hints", () => {
-    render(<ReactionRolesPreviewPlayground />);
-    expect(screen.getAllByText("Valorant").length).toBeGreaterThan(0);
-
-    fireEvent.click(screen.getByLabelText("Mode"));
-    fireEvent.click(screen.getByRole("option", { name: "Dropdown" }));
-    expect(screen.getByText("Choose your roles…")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByLabelText("Mode"));
-    fireEvent.click(screen.getByRole("option", { name: "Reactions" }));
-    expect(
-      screen.getByText(
-        "React to this message to claim a role. Remove your reaction to give it back.",
-      ),
-    ).toBeInTheDocument();
   });
 });

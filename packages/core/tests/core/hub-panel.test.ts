@@ -7,6 +7,7 @@ import {
   buildPermissionsView,
   PermsPerPage,
 } from "#modules/core/ui/permissions.js";
+import type { CardReply } from "#lib/ui/cards.js";
 import { describe, it, expect } from "bun:test";
 
 type ComponentJson = {
@@ -18,13 +19,13 @@ type ComponentJson = {
   disabled?: boolean;
 };
 
-const toJson = (card: { components: { toJSON(): unknown }[] }) =>
+const toJson = (card: CardReply) =>
   card.components[0]!.toJSON() as { components: ComponentJson[] };
 
-const actionRows = (card: { components: { toJSON(): unknown }[] }) =>
+const actionRows = (card: CardReply) =>
   toJson(card).components.filter((c) => c.type === 1);
 
-const sections = (card: { components: { toJSON(): unknown }[] }) =>
+const sections = (card: CardReply) =>
   toJson(card).components.filter((c) => c.type === 9);
 
 describe("hub-panel view builders", () => {

@@ -1,28 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RpcActions } from "@lumi/contracts";
-import { requireGuild } from "#/lib/auth-guards";
-import { rpcCall } from "#/lib/rpc";
-import { isRateLimited } from "#/lib/rate-limit";
-import { runAction, type ActionResult } from "#/lib/action-result";
-
-async function guardedModNotesAction(guildId: string) {
-  const session = await requireGuild(guildId);
-  if (await isRateLimited(`guild-action:${session.userId}`, 60, 60_000)) {
-    throw new Error("Too many requests — slow down.");
-  }
-  return session;
-}
+import { rpc } from "#/lib/rpc";
+import type { ActionResult } from "#/lib/action-result";
+import { guildAction } from "./_guard";
 
 export async function addModNote(
   guildId: string,
   userId: string,
   message: string,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedModNotesAction(guildId);
-    await rpcCall(RpcActions.guildModNotesAdd, {
+  return guildAction(guildId, async (session) => {
+    await rpc("guild.modNotes.add", {
       guildId,
       actorId: session.userId,
       data: { userId, message },
@@ -36,9 +25,8 @@ export async function removeModNote(
   guildId: string,
   id: number,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedModNotesAction(guildId);
-    await rpcCall(RpcActions.guildModNotesRemove, {
+  return guildAction(guildId, async (session) => {
+    await rpc("guild.modNotes.remove", {
       guildId,
       actorId: session.userId,
       data: { id },

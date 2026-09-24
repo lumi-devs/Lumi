@@ -1,28 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RpcActions, type WarnThresholdAction } from "@lumi/contracts";
-import { requireGuild } from "#/lib/auth-guards";
-import { rpcCall } from "#/lib/rpc";
-import { isRateLimited } from "#/lib/rate-limit";
-import { runAction } from "#/lib/action-result";
+import { type WarnThresholdAction } from "@lumi/contracts/rpc";
+import { rpc } from "#/lib/rpc";
 import type { ActionResult } from "./guild-actions";
-
-async function guardedModerationAction(guildId: string) {
-  const session = await requireGuild(guildId);
-  if (await isRateLimited(`guild-action:${session.userId}`, 60, 60_000)) {
-    throw new Error("Too many requests — slow down.");
-  }
-  return session;
-}
+import { guildAction } from "./_guard";
 
 export async function revokeCase(
   guildId: string,
   caseNumber: number,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedModerationAction(guildId);
-    await rpcCall(RpcActions.guildCasesRevoke, {
+  return guildAction(guildId, async (session) => {
+    await rpc("guild.cases.revoke", {
       guildId,
       actorId: session.userId,
       data: { caseNumber },
@@ -38,9 +27,8 @@ export async function setWarnThreshold(
   action: WarnThresholdAction,
   duration?: string | null,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedModerationAction(guildId);
-    await rpcCall(RpcActions.guildWarnThresholdsSet, {
+  return guildAction(guildId, async (session) => {
+    await rpc("guild.warnThresholds.set", {
       guildId,
       actorId: session.userId,
       data: { warnCount, action, duration },
@@ -54,9 +42,8 @@ export async function deleteWarnThreshold(
   guildId: string,
   warnCount: number,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedModerationAction(guildId);
-    await rpcCall(RpcActions.guildWarnThresholdsSet, {
+  return guildAction(guildId, async (session) => {
+    await rpc("guild.warnThresholds.set", {
       guildId,
       actorId: session.userId,
       data: { warnCount, action: null },

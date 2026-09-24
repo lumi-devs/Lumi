@@ -17,7 +17,7 @@ import { ChannelPicker, channelOptionsFor } from "#/components/guild/channel-pic
 import { MultiSelect } from "#/components/ui/multi-select";
 import { MessageBuilderV2 } from "#/components/guild/message-builder-v2";
 import { SendTestMessageButton } from "#/components/guild/send-test-message-button";
-import type { DashboardRoleView, DashboardChannelView } from "#/lib/dashboard-data";
+import type { DashboardRoleView, DashboardChannelView } from "@lumi/contracts/views";
 
 /** Used only by sliders on fields whose module declares no `max`. */
 const SliderFallbackMax = 100;

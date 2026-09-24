@@ -1,13 +1,13 @@
 import { PlugZap } from "lucide-react";
 import { requireBotOwner } from "#/lib/auth-guards";
-import { getSystemBlocklist } from "#/lib/dashboard-fetch";
+import { rpc } from "#/lib/rpc";
 import { exportSystemBlocklist } from "#/actions/system-export-actions";
 import { GlobalBlocklistPanel } from "#/components/system/global-blocklist-panel";
 import { Badge } from "#/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
 import { PageHeader } from "#/components/ui/page-header";
-import type { BlocklistListData } from "#/lib/dashboard-data";
+import type { BlocklistListData } from "@lumi/contracts/views";
 import { pageNumber, single } from "#/lib/log-format";
 
 const PageSize = 25;
@@ -26,7 +26,10 @@ export default async function SystemBlocklistPage({
   let data: BlocklistListData | null = null;
   let failure: string | null = null;
   try {
-    data = await getSystemBlocklist(session.userId, { page, pageSize: PageSize });
+    data = await rpc("system.blocklist.list", {
+      actorId: session.userId,
+      data: { page, pageSize: PageSize },
+    });
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }

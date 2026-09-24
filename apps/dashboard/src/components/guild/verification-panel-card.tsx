@@ -23,10 +23,7 @@ import { Select } from "#/components/ui/select";
 import { Switch } from "#/components/ui/switch";
 import { Readout, ReadoutList } from "#/components/ui/readout";
 import { spotlightHandler } from "#/lib/animate";
-import type {
-  DashboardChannelView,
-  VerificationPanelView,
-} from "#/lib/dashboard-data";
+import type { DashboardChannelView, VerificationPanelView } from "@lumi/contracts/views";
 import { formatCaseDate } from "#/lib/moderation-cases";
 import { useServerAction } from "#/lib/use-server-action";
 

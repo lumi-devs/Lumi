@@ -1,10 +1,7 @@
 import { Mic, PlugZap } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import {
-  getGuildDashboard,
-  getGuildTempVcGenerators,
-  getGuildTempVcRecords,
-} from "#/lib/dashboard-fetch";
+import { getGuildShell, getGuildEntities } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { TempVcGenerators } from "#/components/guild/tempvc-generators";
 import { TempVcPreviewPlayground } from "#/components/guild/tempvc-preview-playground";
 import { TempVcLiveChannels } from "#/components/guild/tempvc-live-channels";
@@ -19,10 +16,7 @@ import {
 import { EmptyState } from "#/components/ui/empty-state";
 import { PageHeader } from "#/components/ui/page-header";
 import { isVoiceChannel } from "#/lib/channel-types";
-import type {
-  TempVcGeneratorView,
-  TempVcRecordView,
-} from "#/lib/dashboard-data";
+import type { TempVcGeneratorView, TempVcRecordView } from "@lumi/contracts/views";
 
 export default async function TempVcPage({
   params,
@@ -32,19 +26,31 @@ export default async function TempVcPage({
   const { guildId } = await params;
   const session = await requireGuild(guildId);
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
-  const voiceChannels = dashboard.channels.filter((c) => isVoiceChannel(c.type));
-  const templateField = dashboard.modules
+  const generatorsPromise = rpc("guild.tempvc.generators.list", {
+    guildId,
+    actorId: session.userId,
+  });
+  const recordsPromise = rpc("guild.tempvc.records.list", {
+    guildId,
+    actorId: session.userId,
+  });
+
+  const [shell, entities] = await Promise.all([
+    getGuildShell(guildId, session.userId),
+    getGuildEntities(guildId, session.userId),
+  ]);
+  const voiceChannels = entities.channels.filter((c) => isVoiceChannel(c.type));
+  const templateField = shell.modules
     .find((m) => m.name === "tempvc")
     ?.configFields.find((f) => f.key === "default_name_template");
   const channelNames = Object.fromEntries(
-    dashboard.channels.map((c) => [c.id, c.name]),
+    entities.channels.map((c) => [c.id, c.name]),
   );
 
   let generators: TempVcGeneratorView[] | null = null;
   let generatorFailure: string | null = null;
   try {
-    generators = await getGuildTempVcGenerators(guildId, session.userId);
+    generators = (await generatorsPromise).generators;
   } catch (err) {
     generatorFailure = err instanceof Error ? err.message : "The request failed.";
   }
@@ -52,7 +58,7 @@ export default async function TempVcPage({
   let records: TempVcRecordView[] | null = null;
   let recordFailure: string | null = null;
   try {
-    records = await getGuildTempVcRecords(guildId, session.userId);
+    records = (await recordsPromise).records;
   } catch (err) {
     recordFailure = err instanceof Error ? err.message : "The request failed.";
   }
@@ -159,7 +165,7 @@ export default async function TempVcPage({
               <TempVcLiveChannels
                 records={records}
                 generators={generators ?? []}
-                members={dashboard.members}
+                members={entities.members}
                 channelNames={channelNames}
                 now={Date.now()}
               />

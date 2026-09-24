@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Wordmark } from "#/components/layout/wordmark";
 
-// Purpose-built for the two docs in .github/ (headers, hr, bold, links, flat
+// Purpose-built for the two docs in content/legal/ (headers, hr, bold, links, flat
 // bullet lists, hard line breaks) - not a general markdown renderer.
 export function Markdown({ source }: { source: string }) {
   const blocks = toBlocks(source);

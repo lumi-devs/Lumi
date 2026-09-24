@@ -1,12 +1,11 @@
 import { requireGuild } from "#/lib/auth-guards";
 import {
-  getGuildAppeals,
-  getGuildAuditLog,
-  getGuildConfigHistory,
-  getGuildDashboard,
+  getGuildEntities,
+  getGuildModule,
   getGuildPanicState,
-  getSystemShards,
-} from "#/lib/dashboard-fetch";
+  getGuildShell,
+} from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { StatsGrid } from "#/components/stats-grid";
 import { PageHeader } from "#/components/ui/page-header";
 import { SectionHead } from "#/components/ui/section-head";
@@ -42,52 +41,58 @@ export default async function GuildOverviewPage({
 }) {
   const { guildId } = await params;
   const session = await requireGuild(guildId);
-  const data = await getGuildDashboard(guildId, session.userId);
+  const [shell, entities, securityRead, filterRead, modRead] = await Promise.all([
+    getGuildShell(guildId, session.userId),
+    getGuildEntities(guildId, session.userId),
+    getGuildModule(guildId, session.userId, "security"),
+    getGuildModule(guildId, session.userId, "filter"),
+    getGuildModule(guildId, session.userId, "mod"),
+  ]);
 
   const [audit, appeals, history, shards, panic] = await Promise.all([
     safe(
-      getGuildAuditLog(guildId, session.userId, {
-        page: 1,
-        pageSize: FeedRows,
+      rpc("guild.audit.list", {
+        guildId,
+        actorId: session.userId,
+        data: { page: 1, pageSize: FeedRows },
       }),
     ),
     safe(
-      getGuildAppeals(guildId, session.userId, {
-        status: "pending",
-        page: 1,
-        pageSize: 1,
+      rpc("guild.appeals.list", {
+        guildId,
+        actorId: session.userId,
+        data: { status: "pending", page: 1, pageSize: 1 },
       }),
     ),
     safe(
-      getGuildConfigHistory(guildId, session.userId, {
-        page: 1,
-        pageSize: FeedRows,
+      rpc("guild.history.list", {
+        guildId,
+        actorId: session.userId,
+        data: { page: 1, pageSize: FeedRows },
       }),
     ),
     // Fleet telemetry is an owner-only read; a guild manager simply doesn't get
     // that rail slot rather than getting a fabricated one.
-    session.isBotOwner ? safe(getSystemShards(session.userId)) : null,
+    session.isBotOwner ? safe(rpc("system.shards.get", { actorId: session.userId })) : null,
     safe(getGuildPanicState(guildId, session.userId)),
   ]);
 
-  const memberNames = extractMemberNames(data.members);
-  const labels = buildModuleLabelIndex(data.modules);
+  const memberNames = extractMemberNames(entities.members);
+  const labels = buildModuleLabelIndex(shell.modules);
   const renderedAt = new Date().toISOString();
 
-  const enabledCount = data.modules.filter(
+  const enabledCount = shell.modules.filter(
     (m) => m.enabled || m.name === "core",
   ).length;
   const openAppeals = appeals?.total ?? 0;
   const healthyShards =
     shards?.shards.filter((s) => s.status === HealthyStatus).length ?? 0;
 
-  const securityModule = data.modules.find((m) => m.name === "security");
-  const filterModule = data.modules.find((m) => m.name === "filter");
   const failingChecks = buildHealthChecks(
     guildId,
-    data.roles,
-    securityModule?.config,
-    filterModule,
+    entities.roles,
+    securityRead.module?.config,
+    filterRead.module ?? undefined,
   ).filter((c) => !c.ok);
 
   const attentionRows: AttentionRow[] = [];
@@ -121,7 +126,10 @@ export default async function GuildOverviewPage({
       actionLabel: "Review",
     });
   }
-  const setupIssues = buildSetupIssues(data.modules);
+  const setupIssues = buildSetupIssues(
+    securityRead.module?.config ?? {},
+    modRead.module?.config ?? {},
+  );
   if (setupIssues.length > 0) {
     const [first, ...rest] = setupIssues;
     attentionRows.push({
@@ -157,19 +165,19 @@ export default async function GuildOverviewPage({
           className="pb-0"
           title={
             <span className="flex items-center gap-2.5">
-              {data.icon ? (
+              {shell.icon ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={data.icon}
+                  src={shell.icon}
                   alt=""
                   className="size-6 rounded-control object-cover"
                 />
               ) : (
                 <span className="flex size-6 items-center justify-center rounded-control border border-border bg-bg-subtle text-[13px] font-semibold text-fg-muted">
-                  {data.name.slice(0, 1).toUpperCase()}
+                  {shell.name.slice(0, 1).toUpperCase()}
                 </span>
               )}
-              {data.name}
+              {shell.name}
             </span>
           }
           description={
@@ -185,7 +193,7 @@ export default async function GuildOverviewPage({
               <StatusPill
                 tone={enabledCount > 1 ? "good" : "warn"}
                 label="Modules"
-                value={`${enabledCount}/${data.modules.length}`}
+                value={`${enabledCount}/${shell.modules.length}`}
               />
               <StatusPill
                 tone={openAppeals > 0 ? "warn" : "good"}
@@ -212,11 +220,11 @@ export default async function GuildOverviewPage({
       <div className="rise" style={{ "--rise-delay": "70ms" } as React.CSSProperties}>
         <StatsGrid
           stats={[
-            { label: "Members", value: data.memberCount, countUp: true },
+            { label: "Members", value: shell.memberCount, countUp: true },
             {
               label: "Modules enabled",
               value: enabledCount,
-              unit: `/ ${data.modules.length}`,
+              unit: `/ ${shell.modules.length}`,
             },
             {
               label: "Audit entries",
@@ -246,7 +254,7 @@ export default async function GuildOverviewPage({
             className="rise"
             style={{ "--rise-delay": "140ms" } as React.CSSProperties}
           >
-            <ModulesStatusStrip guildId={guildId} modules={data.modules} />
+            <ModulesStatusStrip guildId={guildId} modules={shell.modules} />
           </section>
 
           <section
@@ -272,8 +280,8 @@ export default async function GuildOverviewPage({
           changes={history?.entries ?? []}
           actorNames={memberNames}
           labels={labels}
-          roles={data.roles}
-          channels={data.channels}
+          roles={entities.roles}
+          channels={entities.channels}
           renderedAt={renderedAt}
         />
       </div>

@@ -13,13 +13,13 @@ body:
       label: Affected Package / Subsystem
       description: Select the primary package or service where the issue occurs
       options:
-        - "@lumi/core (Framework Core & Base Modules)"
-        - "@lumi/worker (Gateway Connection & Command Engine, worker role)"
-        - "@lumi/worker (BullMQ Task Engine, scheduler role)"
+        - "@lumi/core (Framework, Modules, Event Bus, Sharding Telemetry)"
+        - "@lumi/worker (Gateway, Commands, Scheduled Tasks)"
         - "@lumi/dashboard (Web Dashboard)"
-        - "@lumi/event-bus (Redis Streams Event Infrastructure)"
-        - "@lumi/sharding (Sharding Coordinator)"
-        - "@lumi/contracts / @lumi/sdk"
+        - "@lumi/contracts (Dashboard ↔ Worker RPC)"
+        - "Addon SDK (lumi/*, sandboxed addons)"
+        - "@lumi/observability (Logging, Tracing, Metrics)"
+        - "Docs site"
         - "Other / Unknown"
     validations:
       required: true

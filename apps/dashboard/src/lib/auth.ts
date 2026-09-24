@@ -3,15 +3,9 @@ import NextAuth, { type Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import Discord from "next-auth/providers/discord";
 import { env } from "./env";
-import {
-  canManage,
-  DiscordApiError,
-  fetchUserGuilds,
-  userAvatarUrl,
-  type OAuthGuild,
-} from "./discord";
-import { rpcCall } from "./rpc";
-import { RpcActions } from "@lumi/contracts";
+import { DiscordApiError, fetchUserGuilds, type OAuthGuild } from "./discord";
+import { canManage, userAvatarUrl } from "./discord-format";
+import { rpc } from "./rpc";
 
 interface DiscordRawProfile {
   id: string;
@@ -60,7 +54,7 @@ async function refreshAuthorization(token: JWT): Promise<void> {
   }
 
   try {
-    const whoami = await rpcCall(RpcActions.authWhoAmI, {
+    const whoami = await rpc("auth.whoami", {
       actorId: userId,
     });
     token.isBotOwner = whoami.isBotOwner;

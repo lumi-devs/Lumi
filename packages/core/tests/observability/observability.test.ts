@@ -82,14 +82,14 @@ describe('bootstrapTelemetry Tests', () => {
     delete process.env.SERVICE_NAME;
 
     bootstrapTelemetry('custom-service');
-    expect(process.env.SERVICE_NAME).toBe('custom-service');
+    expect(process.env.SERVICE_NAME).toBe<string | undefined>('custom-service');
   });
 
   it('defaults serviceName to "lumi" if serviceName and SERVICE_NAME are unset', () => {
     delete process.env.SERVICE_NAME;
 
     bootstrapTelemetry();
-    expect(process.env.SERVICE_NAME).toBe('lumi');
+    expect(process.env.SERVICE_NAME).toBe<string | undefined>('lumi');
   });
 });
 

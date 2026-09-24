@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
 import { container } from '@sapphire/framework';
-import { handleModLiftFire } from '#modules/mod/lib/lift-handler.js';
+import { handleModLiftFire } from '#modules/mod/services/lift-handler.js';
 
 vi.mock('@sapphire/framework', () => ({
   container: {

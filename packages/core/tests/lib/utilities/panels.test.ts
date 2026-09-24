@@ -19,21 +19,16 @@ import {
   createActionButton,
   createPaginationRow,
   buildSafeActionRows,
-  formatBreadcrumbHeader,
   createCategorySubmenuRow,
   navRow,
   pageFooter,
   HubTabs,
-} from "#utilities/panels.js";
-import {
-  defaultCardColors,
-  makeSuccessCard,
-  formatStatusBadge,
-  formatSubtitle,
-  formatBreadcrumbs,
-  resolveCardColor,
-} from "#utilities/cards.js";
-import { createStringSelectMenu as createStringSelectFromIndex } from "#utilities/index.js";
+} from "#lib/ui/panels.js";
+import { formatBreadcrumbHeader, formatStatusBadge, formatSubtitle, formatBreadcrumbs } from "#lib/ui/layout.js";
+import { resolveCardColor } from "#lib/utilities/config.js";
+import { BrandColors } from "#lib/branding/colors.js";
+import { makeSuccessCard } from "#lib/ui/cards.js";
+import { createStringSelectMenu as createStringSelectFromIndex } from "#lib/ui/panels.js";
 
 describe("Panel & Card Utility Standardization", () => {
   beforeEach(() => {
@@ -243,12 +238,12 @@ describe("Panel & Card Utility Standardization", () => {
   });
 
   describe("Card Extensions & Formatting Helpers", () => {
-    it("defaultCardColors palette is defined", () => {
-      expect(defaultCardColors.primary).toBe(0x4c6ef5);
-      expect(defaultCardColors.success).toBe(0x12b886);
-      expect(defaultCardColors.error).toBe(0xfa5252);
-      expect(defaultCardColors.warning).toBe(0xf59f00);
-      expect(defaultCardColors.info).toBe(0x4c6ef5);
+    it("BrandColors palette is defined", () => {
+      expect(BrandColors.primary).toBe(0x4c6ef5);
+      expect(BrandColors.success).toBe(0x12b886);
+      expect(BrandColors.error).toBe(0xfa5252);
+      expect(BrandColors.warning).toBe(0xf59f00);
+      expect(BrandColors.info).toBe(0x4c6ef5);
     });
 
     it("makeSuccessCard sets accent color", () => {
@@ -277,7 +272,7 @@ describe("Panel & Card Utility Standardization", () => {
     });
   });
 
-  describe("Kit Re-exports & Addon Parity", () => {
+  describe("Kit Re-exports & Addon Surface", () => {
     it("re-exports navRow, pageFooter, and HubTabs from the kit", () => {
       const nav = navRow({
         backId: "hub:back",
@@ -288,30 +283,15 @@ describe("Panel & Card Utility Standardization", () => {
       expect(HubTabs.map((t) => t.id)).toContain("addons");
     });
 
-    it("addon mirrors render identically to core kit rows", async () => {
-      const kit = await import("#lib/utilities/ui/kit.js");
+    it("lumi/ui exposes the core kit builders themselves", async () => {
+      const kit = await import("#lib/ui/panels.js");
       const addon = await import("#lib/addon-sandbox/sdk/ui.js");
-      const button = { customId: "a:edit", label: "Edit" };
 
-      expect(addon.addonSettingRow("line", button).toJSON()).toEqual(
-        kit.settingRow("line", button).toJSON(),
-      );
-      expect(addon.addonTabRow("p", HubTabs, "home").toJSON()).toEqual(
-        kit.tabRow("p", HubTabs, "home").toJSON(),
-      );
-      expect(addon.addonBackRow("a:back").toJSON()).toEqual(
-        kit.backRow("a:back").toJSON(),
-      );
-      const navOptions = {
-        backId: "a:back",
-        action: { customId: "a:go", label: "Go" },
-      };
-      expect(addon.addonNavRow(navOptions).toJSON()).toEqual(
-        kit.navRow(navOptions).toJSON(),
-      );
-      expect(addon.addonPageFooter(0, 2).toJSON()).toEqual(
-        kit.pageFooter(0, 2).toJSON(),
-      );
+      expect(addon.settingRow).toBe(kit.settingRow);
+      expect(addon.tabRow).toBe(kit.tabRow);
+      expect(addon.backRow).toBe(kit.backRow);
+      expect(addon.navRow).toBe(kit.navRow);
+      expect(addon.pageFooter).toBe(kit.pageFooter);
     });
   });
 });

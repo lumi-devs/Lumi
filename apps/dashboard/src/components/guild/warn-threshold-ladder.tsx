@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { WarnThresholdAction } from "@lumi/contracts";
+import type { WarnThresholdAction } from "@lumi/contracts/rpc";
 import {
   deleteWarnThreshold,
   setWarnThreshold,
@@ -15,7 +15,7 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { Field, Input } from "#/components/ui/input";
 import { Select } from "#/components/ui/select";
 import { TriangleAlert } from "lucide-react";
-import type { WarnThresholdView } from "#/lib/dashboard-data";
+import type { WarnThresholdView } from "@lumi/contracts/views";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
 
@@ -31,10 +31,12 @@ const Actions: {
   { value: "kick", label: "Kick", duration: "unused" },
   { value: "ban", label: "Ban", duration: "unused" },
   { value: "quarantine", label: "Quarantine", duration: "unused" },
-  { value: "vcmute", label: "Voice mute", duration: "required" },
+  { value: "voice_mute", label: "Voice mute", duration: "required" },
 ];
 
-const ActionByValue = new Map(Actions.map((a) => [a.value, a]));
+const ActionByValue = new Map<string, (typeof Actions)[number]>(
+  Actions.map((a) => [a.value, a]),
+);
 
 export function WarnThresholdLadder({
   guildId,

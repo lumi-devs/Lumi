@@ -1,6 +1,6 @@
 import { Sparkles } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildEntities, getGuildModule } from "#/lib/guild-reads";
 import { PageHeader } from "#/components/ui/page-header";
 import { SetupWizard } from "#/components/guild/setup-wizard";
 
@@ -11,10 +11,11 @@ export default async function GuildSetupPage({
 }) {
   const { guildId } = await params;
   const session = await requireGuild(guildId);
-  const data = await getGuildDashboard(guildId, session.userId);
-
-  const security = data.modules.find((m) => m.name === "security");
-  const mod = data.modules.find((m) => m.name === "mod");
+  const [entities, security, mod] = await Promise.all([
+    getGuildEntities(guildId, session.userId),
+    getGuildModule(guildId, session.userId, "security"),
+    getGuildModule(guildId, session.userId, "mod"),
+  ]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -25,12 +26,12 @@ export default async function GuildSetupPage({
       />
       <SetupWizard
         guildId={guildId}
-        securityFields={security?.configFields ?? []}
-        securityConfig={security?.config ?? {}}
-        modFields={mod?.configFields ?? []}
-        modConfig={mod?.config ?? {}}
-        roles={data.roles}
-        channels={data.channels}
+        securityFields={security.module?.configFields ?? []}
+        securityConfig={security.module?.config ?? {}}
+        modFields={mod.module?.configFields ?? []}
+        modConfig={mod.module?.config ?? {}}
+        roles={entities.roles}
+        channels={entities.channels}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 import { Listener, container } from "@sapphire/framework";
 import type { GuildMember } from "discord.js";
-import { RedisKeys, RedisTTL } from "#database/redis.js";
+import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 
 export class QuarantineMemberAddListener extends Listener {
   public constructor(

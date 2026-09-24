@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { ConfigRepository } from "#lib/prisma/repositories/ConfigRepository.js";
 import { RedisKeys } from "#lib/database/redis.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { container } from "@sapphire/framework";
 
 vi.mock("@lumi/observability", () => ({
@@ -37,9 +38,11 @@ describe("ConfigRepository", () => {
     (container as any).invalidation = {
       invalidate: vi.fn().mockResolvedValue(undefined),
     };
+    (container as any).redis = mockRedis;
+    repositoryCache.clear();
 
     const mockDb: any = {
-      configHistory: mockConfigHistory,
+      ensureGuild: vi.fn().mockResolvedValue(undefined),
     };
 
     const mockLogger: any = {
@@ -48,7 +51,13 @@ describe("ConfigRepository", () => {
       debug: vi.fn(),
     };
 
-    repo = new ConfigRepository(mockPrisma, mockRedis, mockLogger, mockDb);
+    repo = new ConfigRepository(
+      mockPrisma,
+      mockRedis,
+      mockLogger,
+      mockDb,
+      mockConfigHistory,
+    );
   });
 
   describe("setModuleConfig", () => {
@@ -95,45 +104,6 @@ describe("ConfigRepository", () => {
         oldValue: "old_value",
         newValue: "new_value",
         actorId: "user_456",
-      });
-    });
-  });
-
-  describe("setModuleConfigsMany", () => {
-    it("upserts multiple keys in a transaction and logs history when actorId is given", async () => {
-      mockPrisma.guildModuleConfig.findMany.mockResolvedValue([
-        { configKey: "key1", value: "old1" },
-      ]);
-
-      await repo.setModuleConfigsMany(
-        "123",
-        "moderation",
-        { key1: "val1", key2: "val2" },
-        "actor_789",
-      );
-
-      expect(mockPrisma.$transaction).toHaveBeenCalled();
-      expect((container as any).invalidation.invalidate).toHaveBeenCalledWith(
-        RedisKeys.guildConfig("moderation", "123"),
-        RedisKeys.guildAllModuleConfigs("123"),
-      );
-
-      expect(mockConfigHistory.logConfigChange).toHaveBeenCalledWith({
-        guildId: "123",
-        moduleName: "moderation",
-        key: "key1",
-        oldValue: "old1",
-        newValue: "val1",
-        actorId: "actor_789",
-      });
-
-      expect(mockConfigHistory.logConfigChange).toHaveBeenCalledWith({
-        guildId: "123",
-        moduleName: "moderation",
-        key: "key2",
-        oldValue: null,
-        newValue: "val2",
-        actorId: "actor_789",
       });
     });
   });

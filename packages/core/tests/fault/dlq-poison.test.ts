@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { RedisStreamsBus } from "@lumi/event-bus";
+import { RedisStreamsBus } from "#lib/event-bus/RedisStreamsBus.js";
 
 describe("Chaos Suite: Redis Stream Poison Pill & DLQ Routing", () => {
   let publisher: any;

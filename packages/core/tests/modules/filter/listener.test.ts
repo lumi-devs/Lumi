@@ -242,7 +242,7 @@ describe("FilterMessageListener", () => {
       channel: { send: vi.fn().mockResolvedValue(null) },
     };
 
-    await expect((listener as any).handle(mockMessage)).resolves.not.toThrow();
+    await expect((listener as any).handle(mockMessage)).resolves.toBeUndefined();
   });
 
   it("should handle empty warn message template without sending warning", async () => {

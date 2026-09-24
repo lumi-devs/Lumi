@@ -1,8 +1,8 @@
 import {
   fieldsFromSchema,
   type ConfigField,
-  type ModuleConfigSchema,
 } from "#lib/module-system/config-schema.js";
+import type { ModuleDefinition } from "#lib/module-system/meta.js";
 import { call } from "./rpc.js";
 
 export {
@@ -13,26 +13,10 @@ export {
   type ModuleConfigSchema,
 } from "#lib/module-system/config-schema.js";
 
-export interface ModuleOptions {
-  name: string;
-  displayName?: string;
-  emoji?: string;
-  description?: string;
-  short?: string;
-  endUserDataStatement?: string;
-  version?: string;
-  disableable?: boolean;
-  conflicts?: string[];
-  dependencies?: string[];
-  configFields?: ConfigField[];
-  configSchema?: ModuleConfigSchema;
-  category?: string;
-}
+export { NoEndUserData } from "#lib/module-system/meta.js";
 
-export interface ModuleMeta extends ModuleOptions {
-  displayName: string;
-  configFields: ConfigField[];
-}
+export type ModuleOptions = Omit<ModuleDefinition, "configOverrides" | "dashboardHref"> & { name: string };
+export type ModuleMeta = ModuleOptions & { displayName: string; configFields: ConfigField[] };
 
 interface WithModuleMeta {
   meta?: ModuleMeta;
@@ -58,10 +42,6 @@ export abstract class Module {
   get meta(): ModuleMeta | undefined {
     return (this.constructor as WithModuleMeta).meta;
   }
-}
-
-export function NoEndUserData(): undefined {
-  return undefined;
 }
 
 export const logger = {

@@ -43,4 +43,3 @@ export function Button({
   );
 }
 
-export { buttonVariants } from "./button-variants";

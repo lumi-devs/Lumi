@@ -11,7 +11,7 @@ import {
   ManifestFile,
 } from "#lib/module-system/manifest.js";
 import { cfg, FieldType } from "#lib/module-system/config-schema.js";
-import { CoreVersion } from "#utilities/misc.js";
+import { CoreVersion } from "#lib/utilities/misc.js";
 
 describe("Module Manifest Utilities", () => {
   let tmpDir: string;
@@ -87,7 +87,7 @@ describe("Module Manifest Utilities", () => {
       expect(manifest.configFields).toEqual([
         {
           key: "logChannel",
-          type: "CHANNEL",
+          type: FieldType.Channel,
           label: "Log Channel",
           description: "Channel for logs",
           default: undefined,

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PlugZap, SlidersHorizontal } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildModule, getGuildEntities } from "#/lib/guild-reads";
 import { toggleGuildModule } from "#/actions/guild-actions";
 import { ConfigGroupCard } from "#/components/guild/config-group-card";
 import { ModuleMasterToggle } from "#/components/guild/module-master-toggle";
@@ -9,7 +9,7 @@ import { Card } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
 import { PageHeader } from "#/components/ui/page-header";
 import { SectionTabs, type PageSection } from "#/components/ui/section-tabs";
-import { sectionsOf } from "#/lib/config-sections";
+import { sectionsOf } from "@lumi/contracts";
 
 const LoggingModuleName = "logging";
 
@@ -20,9 +20,12 @@ export default async function LoggingPage({
 }) {
   const { guildId } = await params;
   const session = await requireGuild(guildId);
-  const data = await getGuildDashboard(guildId, session.userId);
+  const [moduleResult, entities] = await Promise.all([
+    getGuildModule(guildId, session.userId, LoggingModuleName),
+    getGuildEntities(guildId, session.userId),
+  ]);
 
-  const mod = data.modules.find((m) => m.name === LoggingModuleName);
+  const mod = moduleResult.module;
   if (!mod) notFound();
 
   // Tabs, groups, fields and ordering all come from the logging module's own
@@ -42,8 +45,8 @@ export default async function LoggingPage({
           groups={section.groups.flatMap((g) => (g.name ? [g.name] : []))}
           config={mod.config}
           configFields={mod.configFields}
-          roles={data.roles}
-          channels={data.channels}
+          roles={entities.roles}
+          channels={entities.channels}
         />
       ),
     }),

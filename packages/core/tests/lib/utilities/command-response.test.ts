@@ -67,7 +67,7 @@ describe("command-response utilities", () => {
       const outerResultErr = new ResultError("Outer Error", innerResultErr);
 
       const res = resolveCommandError("TestLabel", outerResultErr);
-      expect(res.title).toBe(ErrorTitles.PermissionDenied);
+      expect(res.title).toBe<string | undefined>(ErrorTitles.PermissionDenied);
       expect(res.message).toBe("You lack permission");
       expect(res.expected).toBe(true);
     });
@@ -251,7 +251,7 @@ describe("command-response utilities", () => {
 
       const res = await sendInteractionReply(interaction, { content: "hello" }, "followUp");
       expect(interaction.followUp).toHaveBeenCalledWith({ content: "hello" });
-      expect(res).toEqual({ id: "msg-1" });
+      expect(res).toEqual<{ id: string }>({ id: "msg-1" });
     });
 
     it("handles replied interaction in edit mode with flags filtering", async () => {
@@ -272,7 +272,7 @@ describe("command-response utilities", () => {
         content: "hello",
         flags: MessageFlags.IsComponentsV2,
       });
-      expect(res).toEqual({ id: "msg-2" });
+      expect(res).toEqual<{ id: string }>({ id: "msg-2" });
     });
 
     it("handles deferred interaction with undefined flags", async () => {
@@ -285,7 +285,7 @@ describe("command-response utilities", () => {
 
       const res = await sendInteractionReply(interaction, { content: "deferred edit" });
       expect(interaction.editReply).toHaveBeenCalledWith({ content: "deferred edit" });
-      expect(res).toEqual({ id: "msg-3" });
+      expect(res).toEqual<{ id: string }>({ id: "msg-3" });
     });
 
     it("handles unreplied and undeferred interaction", async () => {
@@ -386,7 +386,7 @@ describe("command-response utilities", () => {
 
       const res = await respond(interaction, { content: "edit response" });
       expect(interaction.editReply).toHaveBeenCalled();
-      expect(res).toEqual({ id: "edited" });
+      expect(res).toEqual<{ id: string }>({ id: "edited" });
     });
 
     it("replies directly and schedules deletion if fresh interaction", async () => {
@@ -423,7 +423,7 @@ describe("command-response utilities", () => {
         undefined,
         "delete message after command error"
       );
-      expect(res).toEqual({ id: "reply-msg" });
+      expect(res).toEqual<{ id: string }>({ id: "reply-msg" });
     });
   });
 
@@ -451,7 +451,7 @@ describe("command-response utilities", () => {
       });
       const payload = { context: { silent: false } } as any;
 
-      resolveKey.mockResolvedValue("Resolved i18n message" as any);
+      resolveKey.mockResolvedValue("Resolved i18n message");
 
       await handleDenied(interaction, error, payload);
       expect(resolveKey).toHaveBeenCalledWith(

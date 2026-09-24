@@ -4,7 +4,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { GuildMember } from "discord.js";
-import { QuarantineAction } from "../actions/index.js";
+import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 
 type Context = ModerationCommand.ActionContext<GuildMember>;
 type Success = ModerationCommand.OutcomeContext<GuildMember, ModerationCase>;

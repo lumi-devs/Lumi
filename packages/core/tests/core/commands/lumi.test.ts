@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container, UserError } from "@sapphire/framework";
 import { LumiCommand } from "#modules/core/commands/lumi.js";
 
-vi.mock("#modules/core/lib/config-panel.js", () => ({
+vi.mock("#modules/core/services/config-panel.js", () => ({
   loadFeatures: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock("#utilities/self-update.js", () => ({
+vi.mock("#lib/utilities/self-update.js", () => ({
   updateLumiCore: vi.fn(),
 }));
 
@@ -14,8 +14,8 @@ vi.mock("#modules/core/ui/hub.js", () => ({
   buildHubView: vi.fn().mockReturnValue({ components: [] }),
 }));
 
-import { loadFeatures } from "#modules/core/lib/config-panel.js";
-import { updateLumiCore } from "#utilities/self-update.js";
+import { loadFeatures } from "#modules/core/services/config-panel.js";
+import { updateLumiCore } from "#lib/utilities/self-update.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { buildHubView } from "#modules/core/ui/hub.js";
 

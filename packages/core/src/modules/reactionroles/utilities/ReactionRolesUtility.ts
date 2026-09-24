@@ -8,8 +8,8 @@ import type {
   Message,
 } from "discord.js";
 import { logError } from "#lib/utilities/errors.js";
-import { acquireRedisLock } from "#lib/redis-lock.js";
-import { ModuleName, ReactionRoleKeys } from "../keys.js";
+import { acquireRedisLock } from "#lib/lock.js";
+import { ModuleName, ReactionRoleKeys } from "../constants.js";
 import {
   deleteMenu,
   findMenuByMessage,
@@ -25,19 +25,16 @@ import {
   type ReactionRoleMenu,
   type ReactionRoleMode,
   type ReactionRoleOption,
-} from "../data.js";
-import { reactionRoleRegistry } from "../registry.js";
-import { buildMenuCard } from "../lib/menu-card.js";
+} from "../data/reactionroles.js";
+import { reactionRoleRegistry } from "../services/registry.js";
+import { buildMenuCard } from "../ui/menu-card.js";
 import {
   applyOptionToggle,
   applySelectToggle,
   type RoleToggleResult,
-} from "../lib/role-toggle.js";
-import { getMaxMenus } from "../index.js";
+} from "../services/role-toggle.js";
+import { getMaxMenus } from "../config.js";
 import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
-
-export type { RoleToggleResult };
-export type { ReactionRoleMenu, ReactionRoleMode, ReactionRoleOption };
 
 /** Thrown when a menu write can't get the per-menu lock before another staff member's edit finishes. */
 export class ReactionRoleMenuLockedError extends Error {

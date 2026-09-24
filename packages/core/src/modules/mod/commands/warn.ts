@@ -1,13 +1,12 @@
 import type { LumiT } from "#lib/i18n/index.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import type { AutocompleteInteraction, GuildMember } from "discord.js";
-import { WarnAction } from "../actions/index.js";
-import { respondWithReasonChoices } from "../lib/reason-autocomplete.js";
+import { WarnAction } from "#modules/mod/services/actions/WarnAction.js";
+import { respondWithReasonChoices } from "../services/reason-autocomplete.js";
 
-const Root = LanguageKeys.Commands;
+const Root = "commands";
 
 type Warned = Awaited<ReturnType<typeof WarnAction.apply>>;
 type Context = ModerationCommand.ActionContext<GuildMember>;
@@ -57,8 +56,8 @@ export class WarnCommand extends ModerationCommand<GuildMember, Warned> {
     { target, reason, outcome }: Success,
   ) {
     return {
-      title: t(Root.WarnSuccessTitle),
-      body: t(Root.WarnSuccess, {
+      title: t(`${Root}:warnSuccessTitle`),
+      body: t(`${Root}:warnSuccess`, {
         user: target.user.username,
         reason,
         caseNumber: outcome.caseRecord.caseNumber,

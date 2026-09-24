@@ -2,11 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { ArrowRight, Plus, SlidersHorizontal, X } from "lucide-react";
-import {
-  FieldType,
-  type ConfigField,
-  type ConfigOverrideModelType,
-} from "@lumi/contracts";
+import { FieldType, type ConfigField } from "@lumi/contracts";
+import type { ConfigOverrideModelType } from "@lumi/contracts/rpc";
 import { deleteConfigOverride, setConfigOverride } from "#/actions/overrides-actions";
 import { ConfigFieldInput } from "#/components/guild/config-field-input";
 import { ActionError } from "#/components/action-error";
@@ -27,14 +24,9 @@ import { Select } from "#/components/ui/select";
 import { Glyph } from "#/components/ui/glyph";
 import { ValueChip } from "#/components/ui/value-chip";
 import { useStaggerIn } from "#/lib/animate";
-import type {
-  ConfigOverrideView,
-  DashboardChannelView,
-  DashboardMemberView,
-  DashboardModuleView,
-  DashboardRoleView,
-} from "#/lib/dashboard-data";
-import { formatConfigValue, isSnowflake, isUnset } from "#/lib/log-format";
+import type { ConfigOverrideView, DashboardChannelView, DashboardMemberView, DashboardModuleView, DashboardRoleView } from "@lumi/contracts/views";
+import { formatConfigValue, isUnset } from "#/lib/log-format";
+import { isSnowflake } from "#/lib/moderation-cases";
 import { useServerAction } from "#/lib/use-server-action";
 
 const CategoryChannelType = 4;

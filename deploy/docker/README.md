@@ -92,19 +92,33 @@ flowchart TD
 
 ## 🏗️ Dockerfile Multi-Stage Target Pipeline
 
-The root [`Dockerfile`](../../Dockerfile) uses a 3-stage optimization pipeline based on `oven/bun:1-alpine`:
+The root [`Dockerfile`](../../Dockerfile) uses one shared dependency chain that then branches into
+two independent final targets, `worker` and `dashboard`, based on `oven/bun:1-alpine`:
 
 ```mermaid
 graph LR
-    base[base<br/>oven/bun:1-alpine] --> builder[builder<br/>Install workspace & generate Prisma]
-    builder --> runner[runner<br/>Optimized runtime image]
+    base[base<br/>oven/bun:1-alpine] --> deps[deps<br/>bun install --frozen-lockfile]
+    deps --> source[source<br/>+ packages/, prisma/]
+    source --> worker[worker target<br/>prisma generate, runs main.ts]
+    source --> dbuild[dashboard-build<br/>next build]
+    base --> dashboard[dashboard target<br/>copies .next/standalone from dbuild]
+    dbuild --> dashboard
 ```
 
 ### Stage Summary
 
-1. **`base`**: Installs minimal Alpine utilities (`git`, `dumb-init`).
-2. **`builder`**: Copies workspace `package.json` files, source code, and Prisma schema; executes `bun install` + `bunx prisma generate`.
-3. **`runner`**: Copies built dependencies including the full `prisma/` directory and `prisma.config.ts`, mounts `/app/data` for addons, switches to unprivileged user `bun`, and executes production main targets.
+1. **`base`**: Installs minimal Alpine utilities (`dumb-init`).
+2. **`deps`**: Copies every workspace `package.json` and runs `bun install --frozen-lockfile`.
+3. **`source`**: Adds `tsconfig`/`prisma.config.ts`, the `packages/` workspaces, and the Prisma
+   schema — shared by both final targets below.
+4. **`worker`** (`docker compose build` target `worker`): adds `apps/worker/`, runs
+   `bunx prisma generate`, switches to unprivileged user `bun`, and on container start runs
+   `prisma migrate deploy` then `bun apps/worker/src/main.ts`.
+5. **`dashboard-build`** → **`dashboard`**: `dashboard-build` (from `source`) adds
+   `apps/dashboard/` and runs `bun run --filter=@lumi/dashboard build` (a real Next.js
+   standalone build, with placeholder env values that only matter at build time); the final
+   `dashboard` target (from `base`, not `source`) copies just `.next/standalone`, `.next/static`
+   and `public` out of it and runs `node apps/dashboard/server.js`.
 
 ---
 
@@ -117,7 +131,7 @@ Services are organized into distinct Compose **profiles** so you only run what y
 | `worker` | *(default)* | - | Default Lumi bot process. `ShardingManager` spawns one child per shard; the primary shard (id `0`) owns BullMQ and the RPC/metrics surface. |
 | `lumi-dev` | `development` | - | Interactive development container with live volume mounts and watch mode. |
 | `worker-scale` | `scale` | - | Additional worker replica claiming its own shard range. |
-| `dashboard` | `dashboard` | `8080:8080` | Web Administration Dashboard UI. **Not working yet** - see the note under [Execution & Operation Commands](#-execution--operation-commands). |
+| `dashboard` | `dashboard` | `8080:8080` | Web Administration Dashboard UI, built from the `dashboard` Dockerfile target (Next.js standalone output). |
 | `postgres` | *(core)* | `127.0.0.1:5432:5432` | PostgreSQL 17 primary database server. |
 | `pgbouncer` | *(core)* | `127.0.0.1:6432:6432` | PgBouncer transaction-level connection pooler. |
 | `redis` | *(core)* | `127.0.0.1:6379:6379` | Redis 7 data store for entity caching and event streams. |
@@ -183,10 +197,8 @@ Launch a second worker replica:
 docker compose --profile scale up -d
 ```
 
-> [!WARNING]
-> The `dashboard` profile does not work yet. The shared `Dockerfile` `runner` target has no `next build` stage and copies source only, while the service runs `next start`, which needs a prebuilt `.next` - the container exits immediately with *"Could not find a production build in the '.next' directory"*. Run the dashboard outside Docker until that image stage exists; see [docs/dashboard.md](../../docs/dashboard.md#running-it).
->
-> There is also no OAuth2 redirect-URI variable. NextAuth derives the callback from the request; register `<dashboard-origin>/api/auth/callback/discord` on your Discord application.
+> [!NOTE]
+> There is no OAuth2 redirect-URI variable. NextAuth derives the callback from the request; register `<dashboard-origin>/api/auth/callback/discord` on your Discord application.
 
 ### 4. Stopping Containers
 

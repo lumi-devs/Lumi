@@ -5,7 +5,7 @@ import path from "node:path";
 import { container } from "@sapphire/framework";
 import { validateAddon, validateAddonOrRepo } from "#lib/downloader/validate.js";
 import { DownloadResolver, ModuleRoot } from "#lib/downloader/resolver.js";
-import { LumiInfo } from "#utilities/misc.js";
+import { LumiInfo } from "#lib/utilities/misc.js";
 import { fakeSpawnResult } from "../../helpers/mock-bun-spawn.js";
 
 describe("Downloader & Addon Helpers (validate & resolver)", () => {
@@ -321,7 +321,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
         );
 
         const modules = await resolver.getModulesInRepo(repoName);
-        expect(modules).toEqual(modulesData);
+        expect(modules).toEqual<typeof modulesData>(modulesData);
       } finally {
         await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
       }

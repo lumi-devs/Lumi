@@ -1,4 +1,4 @@
-import type { ModuleMeta } from "#lib/module-system/Module.js";
+import type { ModuleMeta } from "#lib/module-system/meta.js";
 import type {
   ConfigHistoryEntry,
   ConfigOverrideEntry,
@@ -9,19 +9,15 @@ import {
   row,
   type Row,
 } from "#modules/core/ui/common.js";
-import { Emojis } from "#utilities/assets.js";
-import {
-  resolveCardColor,
-  makeCard,
-  noPingCard,
-  type CardReply,
-} from "#utilities/cards.js";
+import { Emojis } from "#lib/utilities/assets.js";
+import { resolveCardColor } from "#lib/utilities/config.js";
+import { makeCard, noPingCard, type CardReply } from "#lib/ui/cards.js";
 import {
   buildSafeActionRows,
   createActionButton,
   createBackButton,
   createStringSelectMenu,
-} from "#utilities/panels.js";
+} from "#lib/ui/panels.js";
 import { StringSelectMenuOptionBuilder } from "@discordjs/builders";
 import {
   channelMention,
@@ -32,6 +28,7 @@ import {
 } from "@discordjs/formatters";
 import { cutText } from "@sapphire/utilities";
 import { ButtonStyle } from "discord.js";
+import { ConfigButtonId } from "../constants.js";
 
 const overrideTargetMention = (o: ConfigOverrideEntry) => {
   switch (o.modelType) {
@@ -84,17 +81,30 @@ export function buildHistoryView(
   );
 
   rows.push(
-    row(createBackButton(`cfg:open:${meta.name}:${page}`, "← Back to Feature")),
+    row(
+      createBackButton(
+        ConfigButtonId.build({
+          action: "open",
+          moduleName: meta.name,
+          rest: [String(page)],
+        }),
+        "← Back to Feature",
+      ),
+    ),
   );
 
   if (rollbackable.length) {
     const rbSelect = createStringSelectMenu({
-      customId: `cfg:rb:${meta.name}:${page}`,
+      customId: ConfigButtonId.build({
+        action: "rb",
+        moduleName: meta.name,
+        rest: [String(page)],
+      }),
       placeholder: "Roll back a change…",
       options: rollbackable.slice(0, 25).map((e) =>
         new StringSelectMenuOptionBuilder()
           .setLabel(cutText(`Restore ${labelFor(e.key)}`, 100))
-          .setValue(e.id)
+          .setValue(String(e.id))
           .setDescription(cutText(`Roll back to its previous value`, 100)),
       ),
     });
@@ -136,9 +146,20 @@ export function buildOverridesView(
 
   rows.push(
     row(
-      createBackButton(`cfg:open:${meta.name}:${page}`, "← Back to Feature"),
+      createBackButton(
+        ConfigButtonId.build({
+          action: "open",
+          moduleName: meta.name,
+          rest: [String(page)],
+        }),
+        "← Back to Feature",
+      ),
       createActionButton({
-        customId: `cfg:ovadd:${meta.name}:${page}`,
+        customId: ConfigButtonId.build({
+          action: "ovadd",
+          moduleName: meta.name,
+          rest: [String(page)],
+        }),
         label: "Add Override…",
         emoji: Emojis.Edit,
         style: ButtonStyle.Primary,
@@ -148,7 +169,11 @@ export function buildOverridesView(
 
   if (overrides.length) {
     const rmSelect = createStringSelectMenu({
-      customId: `cfg:ovrm:${meta.name}:${page}`,
+      customId: ConfigButtonId.build({
+        action: "ovrm",
+        moduleName: meta.name,
+        rest: [String(page)],
+      }),
       placeholder: "Remove an override…",
       options: overrides.slice(0, 25).map((o) =>
         new StringSelectMenuOptionBuilder()

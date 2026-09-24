@@ -1,8 +1,8 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
 import { PermissionFlagsBits } from "discord.js";
-import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
+import { BaseCommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "nick",
@@ -43,8 +43,8 @@ export class UserCommand extends BaseCommand {
     );
     if (!member) {
       return ctx.replyError(
-        t(LanguageKeys.Commands.NickUsageTitle),
-        t(LanguageKeys.Commands.NickUsage),
+        t("commands:nickUsageTitle"),
+        t("commands:nickUsage"),
       );
     }
 
@@ -52,8 +52,8 @@ export class UserCommand extends BaseCommand {
 
     if (member.id === ctx.user.id) {
       return ctx.replyWarning(
-        t(LanguageKeys.Commands.NickInvalidTargetTitle),
-        t(LanguageKeys.Commands.NickInvalidTarget),
+        t("commands:nickInvalidTargetTitle"),
+        t("commands:nickInvalidTarget"),
       );
     }
 
@@ -69,16 +69,16 @@ export class UserCommand extends BaseCommand {
       member.roles.highest.position >= moderator.roles.highest.position
     ) {
       return ctx.replyError(
-        t(LanguageKeys.Commands.NickPermissionDeniedTitle),
-        t(LanguageKeys.Commands.NickRoleHierarchy),
+        t("commands:nickPermissionDeniedTitle"),
+        t("commands:nickRoleHierarchy"),
       );
     }
 
     const me = ctx.guild?.members.me;
     if (me && member.roles.highest.position >= me.roles.highest.position) {
       return ctx.replyError(
-        t(LanguageKeys.Commands.NickPermissionDeniedTitle),
-        t(LanguageKeys.Commands.NickRoleHierarchy),
+        t("commands:nickPermissionDeniedTitle"),
+        t("commands:nickRoleHierarchy"),
       );
     }
 
@@ -87,15 +87,15 @@ export class UserCommand extends BaseCommand {
       await member.setNickname(newNick);
 
       const title = newNick
-        ? t(LanguageKeys.Commands.NickSuccessTitle)
-        : t(LanguageKeys.Commands.NickResetTitle);
+        ? t("commands:nickSuccessTitle")
+        : t("commands:nickResetTitle");
       const desc = newNick
-        ? t(LanguageKeys.Commands.NickChangedDesc, {
+        ? t("commands:nickChangedDesc", {
             oldNick,
             newNick,
             tag: ctx.user.tag,
           })
-        : t(LanguageKeys.Commands.NickResetDesc, {
+        : t("commands:nickResetDesc", {
             oldNick,
             tag: ctx.user.tag,
           });
@@ -103,8 +103,8 @@ export class UserCommand extends BaseCommand {
       return ctx.replySuccess(title, desc);
     } catch {
       return ctx.replyError(
-        t(LanguageKeys.Commands.NickPermissionDeniedTitle),
-        t(LanguageKeys.Commands.NickFailed),
+        t("commands:nickPermissionDeniedTitle"),
+        t("commands:nickFailed"),
       );
     }
   }

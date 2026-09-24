@@ -2,12 +2,12 @@ import { Listener, Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Guild } from "discord.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { makeWarningCard } from "#lib/utilities/cards.js";
+import { makeWarningCard } from "#lib/ui/cards.js";
 import {
   getServerLockState,
   shouldLeaveOnJoin,
-} from "#modules/core/lib/server-lock.js";
-import { resolveAnnounceChannel } from "#modules/core/lib/global-announce.js";
+} from "../services/server-lock.js";
+import { resolveAnnounceChannel } from "../services/global-announce.js";
 
 @ApplyOptions<Listener.Options>({ event: Events.GuildCreate })
 export class GuildCreateListener extends Listener<typeof Events.GuildCreate> {
@@ -15,7 +15,7 @@ export class GuildCreateListener extends Listener<typeof Events.GuildCreate> {
     this.container.logger.info(
       `[Guild] ${Emojis.Guild} Joined: ${guild.name} (${guild.id}) - ${guild.memberCount} members`,
     );
-    await this.container.db.config.getGuildSettings(guild.id);
+    await this.container.db.markGuildRejoined(guild.id);
     await this.container.db.permissions.ensureBuiltinPermits(guild.id);
     await this.leaveWhenLocked(guild);
   }

@@ -1,35 +1,13 @@
-import { container } from "@sapphire/framework";
-import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
+import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { cfg } from "#lib/module-system/config-schema.js";
 import {
   ModuleName,
   PanelMessageDefault,
   PanelTitleDefault,
-} from "./keys.js";
-import { tempVcRegistry } from "./registry.js";
+} from "./constants.js";
+import { tempVcRegistry } from "./services/registry.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
-import { handleTempVcCleanupFire } from "./lib/cleanup-handler.js";
-
-export const TempvcCreateCooldownMs = 30_000;
-export const TempvcCleanupDelayMs = 8_000;
-export const TempvcMaxGenerators = 25;
-
-export async function getCreateCooldownMs(guildId: string): Promise<number> {
-  const value = await container.db.config.getModuleConfig(
-    guildId,
-    "tempvc",
-    "create_cooldown_seconds",
-  );
-  return typeof value === "number" ? value * 1_000 : TempvcCreateCooldownMs;
-}
-
-export async function getMaxGenerators(guildId: string): Promise<number> {
-  const value = await container.db.config.getModuleConfig(
-    guildId,
-    "tempvc",
-    "max_generators",
-  );
-  return typeof value === "number" ? value : TempvcMaxGenerators;
-}
+import { handleTempVcCleanupFire } from "./services/cleanup-handler.js";
 
 @DefineModule({
   name: ModuleName,

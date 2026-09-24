@@ -1,7 +1,7 @@
 // Imported by both the server page and the client table so the two can't drift
 // in how they label or classify the same row.
 
-export const CaseActionLabels: Record<string, string> = {
+const CaseActionLabels: Record<string, string> = {
   ban: "Ban",
   unban: "Unban",
   softban: "Softban",

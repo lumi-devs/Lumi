@@ -16,5 +16,8 @@
   "welcomeBackTitle": "Welcome Back!",
   "welcomeBackBody": "AFK removed.\nAFK for **{{duration}}**.",
   "isAfkTitle": "{{name}} is AFK",
-  "isAfkBody": "**Reason:** {{reason}}\n**AFK for:** {{duration}}"
+  "isAfkBody": "**Reason:** {{reason}}\n**AFK for:** {{duration}}",
+  "previousButton": "Previous",
+  "nextButton": "Next",
+  "pageIndicator": "Page {{page}}/{{totalPages}}"
 }

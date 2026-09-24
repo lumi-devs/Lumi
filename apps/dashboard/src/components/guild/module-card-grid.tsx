@@ -13,7 +13,7 @@ import { TiltCard } from "#/components/motion/tilt-card";
 import { spotlightHandler } from "#/lib/animate";
 import { useOptimisticAction } from "#/lib/use-server-action";
 import { cn } from "#/lib/utils";
-import type { DashboardModuleView } from "#/lib/dashboard-data";
+import type { DashboardModuleSummaryView } from "@lumi/contracts/views";
 
 export function ModuleCardGrid({
   guildId,
@@ -21,7 +21,7 @@ export function ModuleCardGrid({
   alertsByModule,
 }: {
   guildId: string;
-  modules: DashboardModuleView[];
+  modules: DashboardModuleSummaryView[];
   /** Failing-health-check count per module name, if known. No fabricated alerts. */
   alertsByModule?: Record<string, number>;
 }) {
@@ -57,7 +57,7 @@ function ModuleCard({
   alertCount,
 }: {
   guildId: string;
-  module: DashboardModuleView;
+  module: DashboardModuleSummaryView;
   alertCount: number;
 }) {
   const isCore = m.name === "core";

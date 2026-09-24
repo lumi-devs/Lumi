@@ -2,8 +2,8 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseCommand, replyError, sendReply, fetchTyped } from "#lib/commands.js";
 import { type ChatInputCommandInteraction, type GuildMember } from "discord.js";
-import { ephemeralCard } from "#lib/utilities/cards.js";
-import { getVcRecord } from "../data.js";
+import { ephemeralCard } from "#lib/ui/cards.js";
+import { getVcRecord } from "../data/tempvc.js";
 import { buildPanel } from "../ui/panel.js";
 
 @ApplyOptions<BaseCommand.Options>({

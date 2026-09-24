@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { Badge } from "#/components/ui/badge";
 import { Switch } from "#/components/ui/switch";
 import { Button } from "#/components/ui/button";
-import type { GlobalModuleStateView } from "#/lib/dashboard-data";
+import type { GlobalModuleStateView } from "@lumi/contracts/views";
 
 export function moduleKillSwitchColumns({
   isPending,

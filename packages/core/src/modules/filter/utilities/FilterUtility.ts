@@ -1,7 +1,7 @@
 import { Utility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
-import { RedisKeys } from "#database/redis.js";
+import { RedisKeys } from "#lib/database/redis.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
 import {
   compileRules,
@@ -11,8 +11,8 @@ import {
   type CompiledRules,
   type FilterHit,
   type RuleConfig,
-} from "../lib/rules.js";
-import { type HeatConfig } from "../lib/heat.js";
+} from "../services/rules.js";
+import { type HeatConfig } from "../services/heat.js";
 import {
   getRegexWorker,
   RegexTimeoutError,
@@ -27,7 +27,7 @@ const WarnCooldownSeconds = 30;
  * handled by concurrent listener invocations; an HGETALL/HSET pair around an
  * await lets them all read the same heat and write back the same value, so a
  * spammer's heat stops climbing exactly when it should be climbing fastest.
- * Mirrors `decayHeat`/`secondsUntilCool` from ../lib/heat.js.
+ * Mirrors `decayHeat`/`secondsUntilCool` from ../services/heat.js.
  */
 const AddHeatScript = `
 local h = tonumber(redis.call('HGET', KEYS[1], 'h')) or 0

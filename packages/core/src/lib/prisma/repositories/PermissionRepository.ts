@@ -7,7 +7,7 @@ export type PermitKind = "enforced" | "custom";
 export type PermitTargetType = "user" | "role" | "channel";
 export type PermitPolarity = "grant" | "deny";
 
-export interface PolarityBucket {
+interface PolarityBucket {
   grant: string[];
   deny: string[];
 }
@@ -54,7 +54,7 @@ export const KindTargetTypes: Record<PermitKind, ReadonlyArray<PermitTargetType>
   custom: ["user", "role", "channel"],
 };
 
-export const BuiltinPermits: ReadonlyArray<{
+const BuiltinPermits: ReadonlyArray<{
   name: string;
   kind: PermitKind;
   nodes: string[];
@@ -64,21 +64,6 @@ export const BuiltinPermits: ReadonlyArray<{
 ];
 
 export class PermissionRepository extends Repository {
-  public async getTargetPermits(
-    guildId: string,
-    targetType: PermitTargetType,
-    targetId: string,
-  ): Promise<TargetPermitPayload> {
-    const key = RedisKeys.targetPermits(guildId, targetType, targetId);
-    return this.getOrSet(key, RedisTTL.permits, async () => {
-      const assignments = await this.prisma.permitAssignment.findMany({
-        where: { guildId, targetType, targetId },
-        include: { permit: true },
-      });
-      return collapseAssignments(assignments);
-    });
-  }
-
   /**
    * Fetches per-tier permit payloads for the full precedence chain in one
    * batched round-trip, preserving `chainTargets`' order so PermitResolver
@@ -162,16 +147,8 @@ export class PermissionRepository extends Repository {
     return { tiers, isQuarantined };
   }
 
-  public async isUserQuarantined(
-    guildId: string,
-    userId: string,
-  ): Promise<boolean> {
-    const key = RedisKeys.quarantineState(guildId, userId);
-    const exists = await this.redis.exists(key);
-    return exists === 1;
-  }
-
   public async ensureBuiltinPermits(guildId: string): Promise<void> {
+    await this.db.ensureGuild(guildId);
     await this.prisma.$transaction(
       BuiltinPermits.map((builtin) =>
         this.prisma.permit.upsert({
@@ -225,6 +202,7 @@ export class PermissionRepository extends Repository {
     nodes: string[],
     polarity: PermitPolarity = "grant",
   ): Promise<PermitRecord> {
+    await this.db.ensureGuild(guildId);
     return this.prisma.permit.create({
       data: { guildId, name, kind, nodes, polarity, builtin: false },
     });

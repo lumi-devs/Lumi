@@ -9,7 +9,7 @@ import {
   findBlockedLink,
   MaxRegexLength,
   type RuleConfig,
-} from "../../../src/modules/filter/lib/rules.js";
+} from "#modules/filter/services/rules.js";
 
 const baseConfig: RuleConfig = {
   terms: [],

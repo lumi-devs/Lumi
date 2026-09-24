@@ -41,8 +41,8 @@ describe("lumi addon SDK resolution", () => {
   it.each([
     "#lib/env.js",
     "#lib/commands.js",
-    "#database/redis.js",
-    "#utilities/misc.js",
+    "#lib/database/redis.js",
+    "#lib/utilities/misc.js",
     "#modules/mod/index.js",
     "#root/main.js",
   ])("refuses to resolve the internal specifier %s", (specifier) => {

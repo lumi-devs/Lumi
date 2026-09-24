@@ -7,38 +7,15 @@
       "devDependencies": {
         "@discordjs/builders": "^1.14.1",
         "@discordjs/formatters": "^0.6.2",
-        "@discordjs/rest": "^2.6.3",
         "@eslint/js": "^10.0.1",
         "@next/eslint-plugin-next": "^16.3.4",
-        "@opentelemetry/api": "^1.9.1",
         "@prisma/client": "^7.10.0",
-        "@sapphire/async-queue": "^1.5.5",
-        "@sapphire/decorators": "^6.2.0",
-        "@sapphire/discord.js-utilities": "^7.3.3",
-        "@sapphire/fetch": "^3.0.5",
-        "@sapphire/framework": "^5.5.1",
-        "@sapphire/pieces": "^4.4.1",
-        "@sapphire/plugin-i18next": "^8.0.0",
-        "@sapphire/plugin-logger": "^4.1.0",
-        "@sapphire/plugin-scheduled-tasks": "^10.0.4",
-        "@sapphire/plugin-subcommands": "^7.0.1",
-        "@sapphire/plugin-utilities-store": "^2.0.3",
-        "@sapphire/ratelimits": "^2.4.11",
-        "@sapphire/shapeshift": "^5.0.0",
-        "@sapphire/snowflake": "^3.5.5",
-        "@sapphire/stopwatch": "^1.5.4",
-        "@sapphire/time-utilities": "^1.7.14",
-        "@sapphire/utilities": "^3.18.2",
         "@types/bun": "^1.4.1",
         "@types/node": "^26.4.1",
         "@types/pg": "^8.23.1",
-        "@typescript-eslint/eslint-plugin": "^8.69.0",
-        "@typescript-eslint/parser": "^8.69.0",
         "discord-api-types": "^0.38.55",
-        "discord.js": "^14.27.0",
         "dotenv": "^17.4.2",
         "eslint": "^10.10.0",
-        "i18next": "^26.4.2",
         "knip": "6.34.0",
         "prisma": "^7.10.0",
         "turbo": "^2.10.12",
@@ -83,6 +60,7 @@
       "name": "@lumi/docs",
       "version": "0.3.0",
       "dependencies": {
+        "@lumi/contracts": "workspace:*",
         "fumadocs-core": "^16.15.8",
         "fumadocs-mdx": "^15.4.0",
         "fumadocs-ui": "^16.15.8",
@@ -125,32 +103,30 @@
       "dependencies": {
         "@discordjs/builders": "^1.14.1",
         "@discordjs/formatters": "^0.6.2",
+        "@discordjs/rest": "^2.6.3",
         "@lumi/contracts": "workspace:*",
-        "@lumi/event-bus": "workspace:*",
         "@lumi/observability": "workspace:*",
-        "@lumi/sharding": "workspace:*",
+        "@opentelemetry/api": "^1.9.1",
         "@prisma/adapter-pg": "^7.10.0",
-        "@prisma/client": "^7.8.0",
+        "@prisma/client": "^7.10.0",
         "@sapphire/async-queue": "^1.5.5",
         "@sapphire/decorators": "^6.2.0",
-        "@sapphire/discord.js-utilities": "^7.3.3",
-        "@sapphire/fetch": "^3.0.5",
         "@sapphire/framework": "^5.5.1",
+        "@sapphire/pieces": "^4.4.1",
         "@sapphire/plugin-i18next": "^8.0.0",
         "@sapphire/plugin-logger": "^4.1.0",
         "@sapphire/plugin-scheduled-tasks": "^10.0.4",
         "@sapphire/plugin-subcommands": "^7.0.1",
         "@sapphire/plugin-utilities-store": "^2.0.3",
-        "@sapphire/ratelimits": "^2.4.11",
         "@sapphire/shapeshift": "^5.0.0",
         "@sapphire/snowflake": "^3.5.5",
-        "@sapphire/stopwatch": "^1.5.4",
         "@sapphire/time-utilities": "^1.7.14",
         "@sapphire/utilities": "^3.18.2",
         "ahocorasick": "^1.0.2",
         "cluster-key-slot": "^1.1.2",
-        "colorette": "^2.0.20",
+        "discord-api-types": "^0.38.55",
         "discord.js": "^14.27.0",
+        "i18next": "^26.4.2",
         "ioredis": "^6.0.0",
         "pg": "^8.23.0",
         "semver": "^7.8.5",
@@ -158,17 +134,6 @@
       "devDependencies": {
         "@sapphire/plugin-hmr": "^3.0.2",
         "@types/semver": "^7.8.0",
-      },
-    },
-    "packages/eslint-config": {
-      "name": "@lumi/eslint-config",
-      "version": "1.0.0",
-    },
-    "packages/event-bus": {
-      "name": "@lumi/event-bus",
-      "version": "0.3.0",
-      "dependencies": {
-        "ioredis": "^6.0.0",
       },
     },
     "packages/observability": {
@@ -192,23 +157,6 @@
       "devDependencies": {
         "pino-pretty": "^13.1.3",
       },
-    },
-    "packages/sharding": {
-      "name": "@lumi/sharding",
-      "version": "0.3.0",
-      "dependencies": {
-        "@sapphire/utilities": "^3.18.2",
-      },
-      "peerDependencies": {
-        "ioredis": "^6.0.0",
-      },
-      "optionalPeers": [
-        "ioredis",
-      ],
-    },
-    "packages/typescript-config": {
-      "name": "@lumi/typescript-config",
-      "version": "1.0.0",
     },
   },
   "overrides": {
@@ -280,7 +228,7 @@
 
     "@discordjs/builders": ["@discordjs/builders@1.14.1", "", { "dependencies": { "@discordjs/formatters": "^0.6.2", "@discordjs/util": "^1.2.0", "@sapphire/shapeshift": "^4.0.0", "discord-api-types": "^0.38.40", "fast-deep-equal": "^3.1.3", "ts-mixer": "^6.0.4", "tslib": "^2.6.3" } }, "sha512-gSKkhXLqs96TCzk66VZuHHl8z2bQMJFGwrXC0f33ngK+FLNau4hU1PYny3DNJfNdSH+gVMzE85/d5FQ2BpcNwQ=="],
 
-    "@discordjs/collection": ["@discordjs/collection@2.1.1", "", {}, "sha512-LiSusze9Tc7qF03sLCujF5iZp7K+vRNEDBZ86FT9aQAv3vxMLihUvKvpsCWiQ2DJq1tVckopKm1rxomgNUc9hg=="],
+    "@discordjs/collection": ["@discordjs/collection@1.5.3", "", {}, "sha512-SVb428OMd3WO1paV3rm6tSjM4wC+Kecaa1EUGX7vc6/fddvw/6lg90z4QtCqm21zvVe92vMMDt9+DkIvjXImQQ=="],
 
     "@discordjs/formatters": ["@discordjs/formatters@0.6.2", "", { "dependencies": { "discord-api-types": "^0.38.33" } }, "sha512-y4UPwWhH6vChKRkGdMB4odasUbHOUwy7KL+OVwF86PvT6QVOwElx+TiI1/6kcmcEe+g5YRXJFiXSXUdabqZOvQ=="],
 
@@ -478,15 +426,7 @@
 
     "@lumi/docs": ["@lumi/docs@workspace:apps/docs"],
 
-    "@lumi/eslint-config": ["@lumi/eslint-config@workspace:packages/eslint-config"],
-
-    "@lumi/event-bus": ["@lumi/event-bus@workspace:packages/event-bus"],
-
     "@lumi/observability": ["@lumi/observability@workspace:packages/observability"],
-
-    "@lumi/sharding": ["@lumi/sharding@workspace:packages/sharding"],
-
-    "@lumi/typescript-config": ["@lumi/typescript-config@workspace:packages/typescript-config"],
 
     "@lumi/worker": ["@lumi/worker@workspace:apps/worker"],
 
@@ -840,13 +780,11 @@
 
     "@sapphire/decorators": ["@sapphire/decorators@6.2.0", "", { "dependencies": { "tslib": "^2.8.1" } }, "sha512-st1DNDCNoZaZYz3fgCA99W87Bhe6XqM8y0G+Z9NBOBEqvOYkVNGcPMDrMiaZrPD9Z471k8fpLqJVUNSuWUx8Hg=="],
 
-    "@sapphire/discord-utilities": ["@sapphire/discord-utilities@3.5.0", "", { "dependencies": { "discord-api-types": "^0.38.1" } }, "sha512-H4SY5KTVDZrqA5QG7ob6etwqhdOb3TRSY2wv56f0tiobUdIr0irlrYvdmr8Kg/FRxWU+aiHDIISWGG5vBuxOGw=="],
+    "@sapphire/discord-utilities": ["@sapphire/discord-utilities@4.0.0", "", { "dependencies": { "discord-api-types": "^0.38.30" } }, "sha512-QAvrKNHgswz+ZX48WqSYpRiRzQcugNXXB1C3fR1qbpTJGd7Ckr2OWyFK88TyOksi3U2isrk8sMriTcAgaIe7Qg=="],
 
     "@sapphire/discord.js-utilities": ["@sapphire/discord.js-utilities@7.3.3", "", { "dependencies": { "@sapphire/discord-utilities": "^3.5.0", "@sapphire/duration": "^1.2.0", "@sapphire/utilities": "^3.18.2", "tslib": "^2.8.1" } }, "sha512-WDj+zjWgNCUSvzYDD0wY3TVeTUseHq0Nhk0wVWxSDjY8z2gFEVcpY7wF8/fbTDWP44LUG5sUQ4haIrIj2OjmkQ=="],
 
     "@sapphire/duration": ["@sapphire/duration@1.2.0", "", {}, "sha512-LxjOAFXz81WmrI8XX9YaVcAZDjQj/1p78lZCvkAWZB1nphOwz/D0dU3CBejmhOWx5dO5CszTkLJMNR0xuCK+Zg=="],
-
-    "@sapphire/fetch": ["@sapphire/fetch@3.0.5", "", {}, "sha512-YfH5iFFL+n21dEWfdNpSlN1Q4RH+84I9ZFLxtdlbqyWljkh1IwMU6UmHjnroiRJx9TwdFSQ0krHm4v0fV/VqiA=="],
 
     "@sapphire/framework": ["@sapphire/framework@5.5.1", "", { "dependencies": { "@discordjs/builders": "^1.13.0", "@sapphire/discord-utilities": "^4.0.0", "@sapphire/discord.js-utilities": "^7.3.3", "@sapphire/lexure": "^1.1.12", "@sapphire/pieces": "^4.4.1", "@sapphire/ratelimits": "^2.4.11", "@sapphire/result": "^2.8.0", "@sapphire/stopwatch": "^1.5.4", "@sapphire/utilities": "^3.18.2" } }, "sha512-UlEoj3XRjSyGJg1+kD43q5YHfmDDJ1fNN5Ws3OifvgMNhnOrrL1diTjU1ALfLrfUbPuBCJWD1ZfIj/i/J4K9eQ=="],
 
@@ -1468,7 +1406,7 @@
 
     "iconv-lite": ["iconv-lite@0.7.3", "", { "dependencies": { "safer-buffer": ">= 2.1.2 < 3.0.0" } }, "sha512-IKXpvIzjnC9XTAUbVBcMfGS0EPaIXtW6v+zr+RRp+hqULEpo0owZax6wyRwPOJbWbzjYspQwusTsfVr0ifh4uQ=="],
 
-    "ignore": ["ignore@7.0.6", "", {}, "sha512-BAg6QkE8W+TuQLrrw0Ugr7HegXduRuuj8/ti2kSOc+jz1dmx8/WNcjr6XGnq5YpDWxFwwaavqD0+jIUOKelTsw=="],
+    "ignore": ["ignore@5.3.2", "", {}, "sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g=="],
 
     "import-in-the-middle": ["import-in-the-middle@3.3.3", "", { "dependencies": { "cjs-module-lexer": "^2.2.0", "es-module-lexer": "^2.2.0", "module-details-from-path": "^1.0.4" } }, "sha512-AiohS3H80sXO6owEltjGX+glb7qXaDhBoJb9XcQVH4UI207xu/bDLUcadVKp7Qe576reg9yr/PXZjV5qx8gfbA=="],
 
@@ -2156,9 +2094,13 @@
 
     "@discordjs/formatters/discord-api-types": ["discord-api-types@0.38.52", "", {}, "sha512-uwe9EKfbjsmgWc2fdFjvDbj+dQqx3lp7wqDCmIha0jInuU+xeQjkCK9tMMn+p7RXfdVQORCInq4cD3U2ymDmyg=="],
 
+    "@discordjs/rest/@discordjs/collection": ["@discordjs/collection@2.1.1", "", {}, "sha512-LiSusze9Tc7qF03sLCujF5iZp7K+vRNEDBZ86FT9aQAv3vxMLihUvKvpsCWiQ2DJq1tVckopKm1rxomgNUc9hg=="],
+
     "@discordjs/rest/discord-api-types": ["discord-api-types@0.38.52", "", {}, "sha512-uwe9EKfbjsmgWc2fdFjvDbj+dQqx3lp7wqDCmIha0jInuU+xeQjkCK9tMMn+p7RXfdVQORCInq4cD3U2ymDmyg=="],
 
     "@discordjs/util/discord-api-types": ["discord-api-types@0.38.52", "", {}, "sha512-uwe9EKfbjsmgWc2fdFjvDbj+dQqx3lp7wqDCmIha0jInuU+xeQjkCK9tMMn+p7RXfdVQORCInq4cD3U2ymDmyg=="],
+
+    "@discordjs/ws/@discordjs/collection": ["@discordjs/collection@2.1.1", "", {}, "sha512-LiSusze9Tc7qF03sLCujF5iZp7K+vRNEDBZ86FT9aQAv3vxMLihUvKvpsCWiQ2DJq1tVckopKm1rxomgNUc9hg=="],
 
     "@discordjs/ws/discord-api-types": ["discord-api-types@0.38.52", "", {}, "sha512-uwe9EKfbjsmgWc2fdFjvDbj+dQqx3lp7wqDCmIha0jInuU+xeQjkCK9tMMn+p7RXfdVQORCInq4cD3U2ymDmyg=="],
 
@@ -2194,7 +2136,9 @@
 
     "@sapphire/discord-utilities/discord-api-types": ["discord-api-types@0.38.52", "", {}, "sha512-uwe9EKfbjsmgWc2fdFjvDbj+dQqx3lp7wqDCmIha0jInuU+xeQjkCK9tMMn+p7RXfdVQORCInq4cD3U2ymDmyg=="],
 
-    "@sapphire/framework/@sapphire/discord-utilities": ["@sapphire/discord-utilities@4.0.0", "", { "dependencies": { "discord-api-types": "^0.38.30" } }, "sha512-QAvrKNHgswz+ZX48WqSYpRiRzQcugNXXB1C3fR1qbpTJGd7Ckr2OWyFK88TyOksi3U2isrk8sMriTcAgaIe7Qg=="],
+    "@sapphire/discord.js-utilities/@sapphire/discord-utilities": ["@sapphire/discord-utilities@3.5.0", "", { "dependencies": { "discord-api-types": "^0.38.1" } }, "sha512-H4SY5KTVDZrqA5QG7ob6etwqhdOb3TRSY2wv56f0tiobUdIr0irlrYvdmr8Kg/FRxWU+aiHDIISWGG5vBuxOGw=="],
+
+    "@sapphire/pieces/@discordjs/collection": ["@discordjs/collection@2.1.1", "", {}, "sha512-LiSusze9Tc7qF03sLCujF5iZp7K+vRNEDBZ86FT9aQAv3vxMLihUvKvpsCWiQ2DJq1tVckopKm1rxomgNUc9hg=="],
 
     "@sapphire/plugin-i18next/i18next": ["i18next@25.10.10", "", { "dependencies": { "@babel/runtime": "^7.29.2" }, "peerDependencies": { "typescript": "^5 || ^6" }, "optionalPeers": ["typescript"] }, "sha512-cqUW2Z3EkRx7NqSyywjkgCLK7KLCL6IFVFcONG7nVYIJ3ekZ1/N5jUsihHV6Bq37NfhgtczxJcxduELtjTwkuQ=="],
 
@@ -2222,6 +2166,8 @@
 
     "@types/ws/@types/node": ["@types/node@26.1.2", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-Vu4a5UFA9rIIFJ7rB/Vaafh9lrCQszopTCx6KjFboXTGQbPNasehVR5TEiithSDGyd1DEiUByggTZsg8jukeIg=="],
 
+    "@typescript-eslint/eslint-plugin/ignore": ["ignore@7.0.6", "", {}, "sha512-BAg6QkE8W+TuQLrrw0Ugr7HegXduRuuj8/ti2kSOc+jz1dmx8/WNcjr6XGnq5YpDWxFwwaavqD0+jIUOKelTsw=="],
+
     "@typescript-eslint/utils/@eslint-community/eslint-utils": ["@eslint-community/eslint-utils@4.10.1", "", { "dependencies": { "eslint-visitor-keys": "^3.4.3" }, "peerDependencies": { "eslint": "^6.0.0 || ^7.0.0 || >=8.0.0" } }, "sha512-cuadcxVFE8sDK6iWJbs8Sn0av2Nrh2QSGQhVlBW9AaAHqHwjWsZHT8LJ4hFGPh7ASBV2deFdM7H/DPjulmh8rg=="],
 
     "@visx/vendor/d3-array": ["d3-array@3.2.1", "", { "dependencies": { "internmap": "1 - 2" } }, "sha512-gUY/qeHq/yNqqoCKNq4vtpFLdoCdvyNpWoC/KNjhGbhDuQpAM9sIQQKkXSNpXa9h5KySs/gzm7R88WkUutgwWQ=="],
@@ -2244,13 +2190,9 @@
 
     "data-urls/whatwg-url": ["whatwg-url@16.0.1", "", { "dependencies": { "@exodus/bytes": "^1.11.0", "tr46": "^6.0.0", "webidl-conversions": "^8.0.1" } }, "sha512-1to4zXBxmXHV3IiSSEInrreIlu02vUOvrhxJJH5vcxYTBDAx51cqZiKdyTxlecdKNSjj8EcxGBxNf6Vg+945gw=="],
 
-    "discord.js/@discordjs/collection": ["@discordjs/collection@1.5.3", "", {}, "sha512-SVb428OMd3WO1paV3rm6tSjM4wC+Kecaa1EUGX7vc6/fddvw/6lg90z4QtCqm21zvVe92vMMDt9+DkIvjXImQQ=="],
-
     "discord.js/discord-api-types": ["discord-api-types@0.38.52", "", {}, "sha512-uwe9EKfbjsmgWc2fdFjvDbj+dQqx3lp7wqDCmIha0jInuU+xeQjkCK9tMMn+p7RXfdVQORCInq4cD3U2ymDmyg=="],
 
     "eslint/@eslint-community/eslint-utils": ["@eslint-community/eslint-utils@4.10.1", "", { "dependencies": { "eslint-visitor-keys": "^3.4.3" }, "peerDependencies": { "eslint": "^6.0.0 || ^7.0.0 || >=8.0.0" } }, "sha512-cuadcxVFE8sDK6iWJbs8Sn0av2Nrh2QSGQhVlBW9AaAHqHwjWsZHT8LJ4hFGPh7ASBV2deFdM7H/DPjulmh8rg=="],
-
-    "eslint/ignore": ["ignore@5.3.2", "", {}, "sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g=="],
 
     "fast-glob/glob-parent": ["glob-parent@5.1.2", "", { "dependencies": { "is-glob": "^4.0.1" } }, "sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow=="],
 
@@ -2340,7 +2282,7 @@
 
     "@rolldown/binding-wasm32-wasi/@emnapi/core/@emnapi/wasi-threads": ["@emnapi/wasi-threads@2.0.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-9DsSk+o5NBX0CCJT8s0EROGSGxjR/tKu6aBTaVyq+SjAEQH4XcdcRxPBRzsBLizTTJ49MJjF+jgu3qnO9GLQcQ=="],
 
-    "@sapphire/framework/@sapphire/discord-utilities/discord-api-types": ["discord-api-types@0.38.52", "", {}, "sha512-uwe9EKfbjsmgWc2fdFjvDbj+dQqx3lp7wqDCmIha0jInuU+xeQjkCK9tMMn+p7RXfdVQORCInq4cD3U2ymDmyg=="],
+    "@sapphire/discord.js-utilities/@sapphire/discord-utilities/discord-api-types": ["discord-api-types@0.38.52", "", {}, "sha512-uwe9EKfbjsmgWc2fdFjvDbj+dQqx3lp7wqDCmIha0jInuU+xeQjkCK9tMMn+p7RXfdVQORCInq4cD3U2ymDmyg=="],
 
     "@types/pg-pool/@types/pg/@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
 

@@ -12,8 +12,8 @@ actions to the worker's internal RPC server, and the worker executes it.
 
 Every call carries `id`, `action`, optional `guildId` and `actorId`, an optional W3C
 `traceparent` so the handler continues the caller's trace, and `data`. The contract lives in
-`packages/contracts/src/rpc.ts`: `RpcRequestPayloads` maps each wire action string to its `data`
-payload, where `none` below means the contract types the payload as `never`. Responses are
+`packages/contracts/src/rpc/router.ts`: `rpcRouter` maps each wire action string to its handler
+definition — the auth requirement shown below, an input schema, and a summary. Responses are
 checked with `parseRpcResponse`, which rejects malformed envelopes — the two sides deploy
 independently, so the envelope is the one shape TypeScript cannot guarantee.
 

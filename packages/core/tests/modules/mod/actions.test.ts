@@ -1,22 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
 import { container } from '@sapphire/framework';
-import { scheduleCaseLift } from '#modules/mod/lib/helpers.js';
+import { scheduleCaseLift } from '#modules/mod/services/helpers.js';
 import { parseDuration, formatDuration } from '#lib/utilities/time.js';
 import {
   getThresholds,
-  invalidateThresholds,
   incrementWarnCount,
   decrementWarnCount,
   resetWarnCount,
-  checkThresholds,
-  setThresholdRule
-} from '#modules/mod/lib/thresholds.js';
-import { BanAction } from '#modules/mod/actions/BanAction.js';
-import { MuteAction } from '#modules/mod/actions/MuteAction.js';
-import { VoiceMuteAction } from '#modules/mod/actions/VoiceMuteAction.js';
-import { KickAction } from '#modules/mod/actions/KickAction.js';
-import { WarnAction } from '#modules/mod/actions/WarnAction.js';
-import { QuarantineAction } from '#modules/mod/actions/QuarantineAction.js';
+  checkThresholds
+} from '#modules/mod/services/thresholds.js';
+import { invalidateThresholds, setThresholdRule } from '#modules/mod/services/threshold-rules.js';
+import { BanAction } from '#modules/mod/services/actions/BanAction.js';
+import { MuteAction } from '#modules/mod/services/actions/MuteAction.js';
+import { VoiceMuteAction } from '#modules/mod/services/actions/VoiceMuteAction.js';
+import { KickAction } from '#modules/mod/services/actions/KickAction.js';
+import { WarnAction } from '#modules/mod/services/actions/WarnAction.js';
+import { QuarantineAction } from '#lib/moderation/QuarantineAction.js';
 import { cancelTask } from '#lib/schedule-task.js';
 
 vi.mock('@sapphire/framework', () => ({
@@ -39,6 +38,7 @@ vi.mock('@sapphire/framework', () => ({
       },
       moderation: {
         getModerationCases: vi.fn(),
+        countModerationCases: vi.fn(),
         createModerationCase: vi.fn(),
         getActiveCases: vi.fn().mockResolvedValue([]),
         liftModerationCase: vi.fn(),
@@ -139,7 +139,7 @@ describe('Mod Thresholds Logic', () => {
 
   it('incrementWarnCount initializes count from DB when key does not exist', async () => {
     (container.redis.exists as any).mockResolvedValue(0);
-    (container.db.moderation.getModerationCases as any).mockResolvedValue([{}, {}]);
+    (container.db.moderation.countModerationCases as any).mockResolvedValue(2);
     const count = await incrementWarnCount(container, 'g-1', 'u-1');
     expect(count).toBe(2);
     expect(container.redis.set).toHaveBeenCalled();
@@ -217,9 +217,9 @@ describe('Mod Thresholds Logic', () => {
     quarantineSpy.mockRestore();
   });
 
-  it('checkThresholds executes vcmute action with the configured duration', async () => {
+  it('checkThresholds executes voice_mute action with the configured duration', async () => {
     (container.redis.get as any).mockResolvedValue(
-      JSON.stringify({ '2': { action: 'vcmute', duration: '30m' } })
+      JSON.stringify({ '2': { action: 'voice_mute', duration: 1800 } })
     );
     const mockMember = { id: 'u-1' };
     (container.client.guilds.cache.get as any).mockReturnValue({
@@ -234,9 +234,9 @@ describe('Mod Thresholds Logic', () => {
     vcSpy.mockRestore();
   });
 
-  it('checkThresholds warns and falls back to an hour for a mute rule with a bad duration', async () => {
+  it('checkThresholds warns and falls back to an hour for a mute rule with no duration', async () => {
     (container.redis.get as any).mockResolvedValue(
-      JSON.stringify({ '3': { action: 'mute', duration: 'soon' } })
+      JSON.stringify({ '3': { action: 'mute' } })
     );
     (container.client.guilds.cache.get as any).mockReturnValue({
       id: 'g-1',
@@ -250,7 +250,7 @@ describe('Mod Thresholds Logic', () => {
     const warning = (container.logger.warn as any).mock.calls[0]?.[0] as string;
     expect(warning).toContain('g-1');
     expect(warning).toContain('3 warns');
-    expect(warning).toContain('soon');
+    expect(warning).toContain('none set');
     muteSpy.mockRestore();
   });
 
@@ -266,28 +266,16 @@ describe('Mod Thresholds Logic', () => {
     expect(container.logger.error).toHaveBeenCalledWith(expect.stringContaining('tempban'));
   });
 
-  it('setThresholdRule rejects a mute rule with no duration', async () => {
-    await expect(setThresholdRule(container, 'g-1', 3, 'mute')).rejects.toThrow(/duration/);
-    expect(container.db.moderation.setWarnThreshold).not.toHaveBeenCalled();
-  });
-
-  it('setThresholdRule rejects a vcmute rule with an unparseable duration', async () => {
-    await expect(
-      setThresholdRule(container, 'g-1', 3, 'vcmute', 'forever')
-    ).rejects.toThrow(/forever/);
-    expect(container.db.moderation.setWarnThreshold).not.toHaveBeenCalled();
-  });
-
-  it('setThresholdRule stores timed rules and drops durations that do not apply', async () => {
-    await setThresholdRule(container, 'g-1', 3, 'mute', ' 2h ');
+  it('setThresholdRule stores the already-converted seconds value as-is', async () => {
+    await setThresholdRule(container, 'g-1', 3, 'mute', 7200);
     expect(container.db.moderation.setWarnThreshold).toHaveBeenCalledWith({
       guildId: 'g-1',
       warnCount: 3,
       action: 'mute',
-      duration: '2h'
+      duration: 7200
     });
 
-    await setThresholdRule(container, 'g-1', 5, 'kick', '2h');
+    await setThresholdRule(container, 'g-1', 5, 'kick');
     expect(container.db.moderation.setWarnThreshold).toHaveBeenLastCalledWith({
       guildId: 'g-1',
       warnCount: 5,
@@ -346,7 +334,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
   });
 
   it('MuteAction.apply applies timeout and creates moderation case', async () => {
-    const mockMember = { id: 'u-1', send: vi.fn().mockResolvedValue({}), timeout: vi.fn().mockResolvedValue({}) };
+    const mockMember = { id: 'u-1', user: { id: 'u-1', send: vi.fn().mockResolvedValue({}) }, send: vi.fn().mockResolvedValue({}), timeout: vi.fn().mockResolvedValue({}) };
     const mockMod = { id: 'm-1' };
     const mockGuild = { id: 'g-1', name: 'TestGuild' };
     (container.db.moderation.createModerationCase as any).mockResolvedValue({ id: 1, caseNumber: 10, expiresAt: new Date() });
@@ -426,6 +414,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     expect(container.db.moderation.createModerationCase).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'u-1', action: 'voice_mute' })
     );
+    expect(container.invalidation.invalidate).toHaveBeenCalledWith('lumi:mod:g-1:voicemute:u-1');
   });
 
   it('VoiceMuteAction.apply evicts a connected target without server-muting them', async () => {

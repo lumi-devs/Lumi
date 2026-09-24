@@ -3,7 +3,7 @@ import path from "node:path";
 import { CombinedPropertyError, s } from "@sapphire/shapeshift";
 import semver from "semver";
 import { AddonDiscordCapabilities } from "@lumi/contracts";
-import { LumiInfo } from "#utilities/misc.js";
+import { LumiInfo } from "#lib/utilities/misc.js";
 import { unknownDiscordCapabilities } from "#lib/addon-sandbox/capabilities.js";
 
 /** Static, import-free structural validation for an addon directory. */

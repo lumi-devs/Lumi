@@ -14,6 +14,7 @@ import type {
   ChildToHost,
   HostToChild,
 } from "@lumi/contracts";
+import { RpcFailureCodes } from "@lumi/contracts/rpc";
 import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { isMethodAllowed, parseCapabilities } from "./capabilities.js";
@@ -189,6 +190,7 @@ class AddonProcess {
         id: request.id,
         ok: false,
         error: `Addon "${this.record.name}" lacks the capability for "${request.action}"`,
+        code: RpcFailureCodes.Forbidden,
       };
     }
     const scope = request.invocationId
@@ -203,7 +205,7 @@ class AddonProcess {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       container.logger.warn(`[addon:${this.record.name}] ${request.action} failed: ${message}`);
-      return { id: request.id, ok: false, error: message };
+      return { id: request.id, ok: false, error: message, code: RpcFailureCodes.HandlerError };
     }
   }
 

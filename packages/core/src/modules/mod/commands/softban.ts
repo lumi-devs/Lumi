@@ -5,7 +5,7 @@ import {
   type ModerationCommand as MC,
 } from "#lib/moderation/ModerationCommand.js";
 import type { ConfirmPromptOptions } from "#lib/utilities/confirm.js";
-import { SoftbanAction } from "../actions/SoftbanAction.js";
+import { SoftbanAction } from "../services/actions/SoftbanAction.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import type { ModerationCase } from "@prisma/client";
 import type { User } from "discord.js";

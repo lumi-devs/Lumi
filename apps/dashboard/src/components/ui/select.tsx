@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "#/lib/utils";
 
-export interface SelectOption {
+interface SelectOption {
   value: string;
   label: string;
 }

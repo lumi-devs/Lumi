@@ -8,6 +8,15 @@
 import { afterEach, expect, vi } from "bun:test";
 import { cleanup } from "@testing-library/react";
 import * as jestDomMatchers from "@testing-library/jest-dom/matchers";
+import { MotionGlobalConfig } from "motion/react";
+
+MotionGlobalConfig.skipAnimations = true;
+
+const realMotion = await import("motion/react");
+vi.mock("motion/react", () => ({
+  ...realMotion,
+  AnimatePresence: ({ children }: { children?: React.ReactNode }) => children,
+}));
 
 expect.extend(jestDomMatchers);
 
@@ -32,8 +41,8 @@ export const guildActionsMock = {
   toggleGuildModule: vi.fn(),
   setGuildConfigField: vi.fn(),
   setManyGuildConfigFields: vi.fn(),
-  runGuildSetup: vi.fn(),
   setGuildSettings: vi.fn(),
+  sendWelcomeTest: vi.fn(),
   createPermit: vi.fn(),
   updatePermit: vi.fn(),
   deletePermit: vi.fn(),

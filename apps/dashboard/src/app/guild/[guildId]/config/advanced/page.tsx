@@ -1,10 +1,6 @@
 import { requireGuild } from "#/lib/auth-guards";
-import {
-  getGuildAfkEntries,
-  getGuildDashboard,
-  getGuildIgnoredChannels,
-  getGuildModuleData,
-} from "#/lib/dashboard-fetch";
+import { getGuildShell, getGuildEntities } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { AfkList } from "#/components/guild/afk-list";
 import { IgnoredChannelsList } from "#/components/guild/ignored-channels-list";
 import { ModuleDataTable } from "#/components/guild/module-data-table";
@@ -45,21 +41,36 @@ export default async function AdvancedPage({
   const key = single(query["key"]);
   const page = pageNumber(single(query["page"]));
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
-  const commandChannels = dashboard.channels.filter((c) =>
+  const [shell, entities] = await Promise.all([
+    getGuildShell(guildId, session.userId),
+    getGuildEntities(guildId, session.userId),
+  ]);
+  const commandChannels = entities.channels.filter((c) =>
     isCommandChannel(c.type),
   );
 
   const [afk, ignored, moduleData] = await Promise.all([
-    settle(getGuildAfkEntries(guildId, session.userId)),
-    settle(getGuildIgnoredChannels(guildId, session.userId)),
     settle(
-      getGuildModuleData(guildId, session.userId, {
-        page,
-        pageSize: PageSize,
-        ...(moduleName ? { moduleName } : {}),
-        ...(targetId ? { targetId } : {}),
-        ...(key ? { key } : {}),
+      rpc("guild.afk.list", { guildId, actorId: session.userId }).then(
+        (r) => r.entries,
+      ),
+    ),
+    settle(
+      rpc("guild.ignored.list", { guildId, actorId: session.userId }).then(
+        (r) => r.entries,
+      ),
+    ),
+    settle(
+      rpc("guild.moduleData.list", {
+        guildId,
+        actorId: session.userId,
+        data: {
+          page,
+          pageSize: PageSize,
+          ...(moduleName ? { moduleName } : {}),
+          ...(targetId ? { targetId } : {}),
+          ...(key ? { key } : {}),
+        },
       }),
     ),
   ]);
@@ -98,7 +109,7 @@ export default async function AdvancedPage({
           {afk.data ? (
             <AfkList
               entries={afk.data}
-              members={dashboard.members}
+              members={entities.members}
               now={Date.now()}
             />
           ) : (
@@ -161,7 +172,7 @@ export default async function AdvancedPage({
                   name: "module",
                   label: "Module",
                   anyLabel: "All modules",
-                  options: dashboard.modules.map((m) => ({
+                  options: shell.modules.map((m) => ({
                     value: m.name,
                     label: m.displayName,
                   })),
@@ -186,7 +197,7 @@ export default async function AdvancedPage({
             <>
               <ModuleDataTable
                 entries={moduleData.data.entries}
-                modules={dashboard.modules}
+                modules={shell.modules}
               />
               {moduleData.data.total > 0 ? (
                 <CardFooter>

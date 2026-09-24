@@ -1,21 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { MessageFlags } from "discord.js";
-import {
-  buildDmWelcomeCard,
-  buildGoodbyeCard,
-  buildWelcomeCard,
-  renderWelcomeTemplate,
-  templateVarsFor,
-  type WelcomeTemplateVars,
-} from "#modules/welcome/lib/template.js";
-import {
-  WelcomeDefaults,
-  WelcomeTemplateDocs,
-  GoodbyeTemplateDocs,
-  DmTemplateDocs,
-  loadWelcomeConfig,
-} from "#modules/welcome/lib/config.js";
-import { sendWelcomeCard } from "#modules/welcome/lib/send.js";
+import { buildDmWelcomeCard, buildGoodbyeCard, buildWelcomeCard, renderWelcomeTemplate, templateVarsFor, type WelcomeTemplateVars } from "#modules/welcome/services/welcome.js";
+import { WelcomeDefaults, WelcomeTemplateDocs, GoodbyeTemplateDocs, DmTemplateDocs, loadWelcomeConfig } from "#modules/welcome/services/welcome.js";
+import { sendWelcomeCard } from "#modules/welcome/services/welcome.js";
 import {
   MessageContentSchema,
   MessageTemplateDocs,
@@ -250,9 +237,13 @@ describe("message template vars", () => {
   it("exposes one canonical list covering every placeholder", () => {
     expect(MessageTemplateVars.map((v) => v.name)).toEqual([
       "user",
+      "userId",
       "username",
       "nickname",
+      "userAvatarUrl",
       "server",
+      "serverId",
+      "serverIconUrl",
       "memberCount",
       "memberNumber",
     ]);

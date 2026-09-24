@@ -6,7 +6,7 @@ import { Alert } from "#/components/ui/alert";
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
 import { DataTable } from "#/components/ui/data-table";
 import { moderationCasesColumns } from "#/components/guild/moderation-cases-columns";
-import type { ModerationCaseView } from "#/lib/dashboard-data";
+import type { ModerationCaseView } from "@lumi/contracts/views";
 import {
   caseActionLabel,
   formatCaseDate,

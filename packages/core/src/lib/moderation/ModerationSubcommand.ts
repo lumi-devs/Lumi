@@ -1,4 +1,5 @@
-import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 import {
   runModerationFlow,
   type ModerationCommand,
@@ -30,7 +31,6 @@ export abstract class ModerationSubcommand extends BaseSubcommand {
 
 export namespace ModerationSubcommand {
   export type Options = BaseSubcommand.Options;
-  export type LoaderContext = BaseSubcommand.LoaderContext;
   export type Registry = BaseSubcommand.Registry;
   export type RunContext = CommandContext;
   export type Flow<

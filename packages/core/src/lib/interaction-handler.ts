@@ -45,7 +45,8 @@ export abstract class BaseInteractionHandler extends InteractionHandler {
    * interaction acknowledged, which is all this promises. */
   protected async acknowledge(interaction: AnyInteraction) {
     const acknowledgeable =
-      interaction.isMessageComponent() || interaction.isModalSubmit();
+      (typeof interaction.isMessageComponent === "function" && interaction.isMessageComponent()) ||
+      (typeof interaction.isModalSubmit === "function" && interaction.isModalSubmit());
     if (!acknowledgeable || interaction.replied || interaction.deferred) return;
 
     try {

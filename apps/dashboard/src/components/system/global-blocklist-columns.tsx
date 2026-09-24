@@ -4,7 +4,7 @@ import type { dataTableFeatures } from "#/components/ui/data-table";
 import { unblockUserGlobally } from "#/actions/blocklist-actions";
 import { Button } from "#/components/ui/button";
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
-import type { BlocklistEntryView } from "#/lib/dashboard-data";
+import type { BlocklistEntryView } from "@lumi/contracts/views";
 import { formatStamp } from "#/lib/log-format";
 import { useServerAction } from "#/lib/use-server-action";
 

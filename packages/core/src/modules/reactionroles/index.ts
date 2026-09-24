@@ -1,17 +1,6 @@
-import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
-import { container } from "@sapphire/framework";
-import { ModuleName } from "./keys.js";
-
-export const ReactionRoleMaxMenus = 25;
-
-export async function getMaxMenus(guildId: string): Promise<number> {
-  const value = await container.db.config.getModuleConfig(
-    guildId,
-    "reactionroles",
-    "max_menus",
-  );
-  return typeof value === "number" ? value : ReactionRoleMaxMenus;
-}
+import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { cfg } from "#lib/module-system/config-schema.js";
+import { ModuleName } from "./constants.js";
 
 @DefineModule({
   name: ModuleName,

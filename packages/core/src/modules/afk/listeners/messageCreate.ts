@@ -9,21 +9,21 @@ import {
 import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
 import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
 import type { GuildMessage } from "#lib/types/common.js";
-import { makeCard } from "#lib/utilities/cards.js";
-import { createActionButton, buildSafeActionRows } from "#lib/utilities/panels.js";
+import { makeCard } from "#lib/ui/cards.js";
+import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
 import { logError } from "#lib/utilities/errors.js";
 import { canSendMessages } from "#lib/utilities/misc.js";
 import { scheduleTask } from "#lib/schedule-task.js";
-import { AfkKeys } from "../keys.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import {
+  AfkKeys,
   AfkMentionCooldownMs,
+  AfkMentionsId,
   AfkNickEditCooldownMs,
   AfkWelcomeCooldownMs,
   NickPrefix,
-  afkDurationSince,
-  sanitizeReason,
-} from "../index.js";
+} from "../constants.js";
+import { afkDurationSince, sanitizeReason } from "../services/format.js";
 import {
   getAfkEntry,
   getAfkEntriesBatch,
@@ -101,7 +101,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
       ? buildSafeActionRows([
           new ActionRowBuilder<ButtonBuilder>().addComponents(
             createActionButton({
-              customId: `afk:mentions:${userId}`,
+              customId: AfkMentionsId.build({ userId, page: "0" }),
               label: t("afk:viewMentionsButton", { count: mentions.length }),
               emoji: Emojis.Mail,
               style: ButtonStyle.Secondary,
@@ -214,12 +214,16 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
       : (member?.displayName ?? userId);
 
     if (!message.channel.isSendable() || !canSendMessages(message)) return;
+    const t = await fetchTyped(message);
     const sent = await message
       .reply({
         ...makeCard(
           0,
-          `${Emojis.Afk} ${name} is AFK`,
-          `**Reason:** ${sanitizeReason(entry.reason)}\n**AFK for:** ${afkDurationSince(entry.since)}`,
+          `${Emojis.Afk} ${t("afk:isAfkTitle", { name })}`,
+          t("afk:isAfkBody", {
+            reason: sanitizeReason(entry.reason),
+            duration: afkDurationSince(entry.since),
+          }),
         ),
         allowedMentions: { repliedUser: true },
       })

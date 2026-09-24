@@ -41,9 +41,9 @@ posts an envelope (`id`, `action`, `guildId`, `actorId`, optional `traceparent`,
 primary shard, authenticated by `RPC_INTERNAL_TOKEN`. A dashboard outage or traffic spike can
 therefore never affect Discord gateway latency.
 
-The action surface is defined once in `packages/contracts/src/rpc.ts`: `RpcRequestPayloads` maps
-each of the <RpcCount /> wire action strings to its payload, with `never` marking actions that
-take no data. See [RPC Reference](/docs/reference/rpc) for the full table.
+The action surface is defined once in `packages/contracts/src/rpc/router.ts`: `rpcRouter` maps
+each of the <RpcCount /> wire action strings to its auth requirement, input schema and summary.
+See [RPC Reference](/docs/reference/rpc) for the full table.
 
 ## Postgres: system of record
 

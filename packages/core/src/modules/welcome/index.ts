@@ -1,12 +1,8 @@
-import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
+import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { cfg } from "#lib/module-system/config-schema.js";
 import { ChannelType } from "discord.js";
 import { MessageTemplateVars } from "#lib/message-content.js";
-import {
-  DmTemplateDocs,
-  GoodbyeTemplateDocs,
-  WelcomeDefaults,
-  WelcomeTemplateDocs,
-} from "./lib/config.js";
+import { DmTemplateDocs, GoodbyeTemplateDocs, WelcomeDefaults, WelcomeTemplateDocs } from "./services/welcome.js";
 
 @DefineModule({
   name: "welcome",

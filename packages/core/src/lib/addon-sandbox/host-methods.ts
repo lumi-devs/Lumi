@@ -8,7 +8,7 @@ import type {
 import type { AddonRpcRequest } from "@lumi/contracts";
 import type { CommandContext, CtxOptionSpec } from "#lib/command-context.js";
 import { MessageFlags } from "discord.js";
-import { ephemeralCard, type CardReply } from "#lib/utilities/cards.js";
+import { ephemeralCard, type CardReply } from "#lib/ui/cards.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import { AddonRelayTaskName } from "./relay-task.js";
@@ -74,107 +74,107 @@ const ParamSchemas: Record<string, BaseValidator<unknown>> = {
     ]),
     name: s.string(),
     spec: s.unknown().optional(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "ctx.defer": s.object({
     ephemeral: s.boolean().optional(),
     update: s.boolean().optional(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "ctx.reply": s.object({
     card: s.unknown(),
     ephemeral: s.boolean().optional(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "ctx.editReply": s.object({
     payload: s.unknown(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "ctx.checkPermit": s.object({
     node: s.string(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "ctx.showModal": s.object({
     modal: s.unknown(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "config.get": s.object({
     key: s.string(),
     guildId: s.string().optional(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "kv.get": s.object({
     guildId: s.string(),
     targetId: s.string(),
     key: s.string(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "kv.set": s.object({
     guildId: s.string(),
     targetId: s.string(),
     key: s.string(),
     value: s.unknown(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "kv.delete": s.object({
     guildId: s.string(),
     targetId: s.string(),
     key: s.string(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "kv.list": s.object({
     key: s.string(),
     guildId: s.string().optional(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "redis.sadd": s.object({
     key: s.string(),
     members: s.string().array(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "redis.srem": s.object({
     key: s.string(),
     members: s.string().array(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "redis.scard": s.object({
     key: s.string(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "redis.smembers": s.object({
     key: s.string(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "redis.del": s.object({
     key: s.string(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "schedule.add": s.object({
     task: s.string(),
     payload: s.record(s.unknown()),
     delay: s.number().optional(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "discord.channels.send": s.object({
     channelId: s.string(),
     payload: s.unknown(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "discord.messages.fetch": s.object({
     channelId: s.string(),
     messageId: s.string(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "discord.messages.edit": s.object({
     channelId: s.string(),
     messageId: s.string(),
     payload: s.unknown(),
-  }) as BaseValidator<unknown>,
+  }),
 
   "log": s.object({
     level: s.union([s.literal("info"), s.literal("warn"), s.literal("error")]),
     message: s.string(),
-  }) as BaseValidator<unknown>,
+  }),
 };
 
 const Methods = {

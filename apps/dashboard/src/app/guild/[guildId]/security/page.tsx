@@ -3,11 +3,11 @@ import { PlugZap } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
 import { guildManagementGroups } from "#/lib/guild-nav";
 import {
-  getGuildBackups,
-  getGuildDashboard,
+  getGuildEntities,
+  getGuildModule,
   getGuildPanicState,
-  getGuildVerificationPanel,
-} from "#/lib/dashboard-fetch";
+} from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { toggleGuildModule } from "#/actions/guild-actions";
 import { PanicModeConsole } from "#/components/guild/panic-mode-console";
 import { VerificationPanelCard } from "#/components/guild/verification-panel-card";
@@ -22,10 +22,10 @@ import { LoadFailure } from "#/components/ui/load-failure";
 import { PageHeader } from "#/components/ui/page-header";
 import { SectionTabs, type PageSection } from "#/components/ui/section-tabs";
 import { isTextChannel } from "#/lib/channel-types";
-import { sectionsOf } from "#/lib/config-sections";
-import { SecurityWidgets } from "#/lib/security-widgets";
-import type { GuildBackupView } from "@lumi/contracts";
-import type { PanicStateView, VerificationPanelView } from "#/lib/dashboard-data";
+import { sectionsOf } from "@lumi/contracts";
+import type { ConfigWidget } from "@lumi/contracts";
+import type { GuildBackupView } from "@lumi/contracts/rpc";
+import type { PanicStateView, VerificationPanelView } from "@lumi/contracts/views";
 
 const SecurityModuleName = "security";
 
@@ -41,16 +41,25 @@ export default async function SecurityPage({
     .flatMap((g) => g.links)
     .find((l) => l.href === `/guild/${guildId}/security`)?.icon;
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
-  const textChannels = dashboard.channels.filter((c) => isTextChannel(c.type));
-  const securityModule = dashboard.modules.find((m) => m.name === SecurityModuleName);
+  const panicPromise = getGuildPanicState(guildId, session.userId);
+  const panelPromise = rpc("guild.verificationPanel.get", {
+    guildId,
+    actorId: session.userId,
+  });
+  const backupsPromise = rpc("guild.backups.list", { guildId, actorId: session.userId });
+
+  const [entities, { module: securityModule }] = await Promise.all([
+    getGuildEntities(guildId, session.userId),
+    getGuildModule(guildId, session.userId, SecurityModuleName),
+  ]);
+  const textChannels = entities.channels.filter((c) => isTextChannel(c.type));
   const configFields = securityModule?.configFields ?? [];
   const config = securityModule?.config ?? {};
 
   let panic: PanicStateView | null = null;
   let panicFailure: string | null = null;
   try {
-    panic = await getGuildPanicState(guildId, session.userId);
+    panic = await panicPromise;
   } catch (err) {
     panicFailure = err instanceof Error ? err.message : "The request failed.";
   }
@@ -58,28 +67,28 @@ export default async function SecurityPage({
   let panel: VerificationPanelView | null = null;
   let panelFailure: string | null = null;
   try {
-    panel = await getGuildVerificationPanel(guildId, session.userId);
+    panel = (await panelPromise).panel;
   } catch (err) {
     panelFailure = err instanceof Error ? err.message : "The request failed.";
   }
 
   let backups: GuildBackupView[] = [];
   try {
-    backups = await getGuildBackups(guildId, session.userId);
+    backups = (await backupsPromise).backups;
   } catch {
     // Best-effort — the Backups card shows its own empty state either way.
   }
 
   const actorId = panic?.actorId;
   const actor = actorId
-    ? dashboard.members.find((m) => m.id === actorId)
+    ? entities.members.find((m) => m.id === actorId)
     : undefined;
 
   // Widgets are the only thing the dashboard chooses. Which sections exist,
   // what they are called, which groups they hold and in what order all come
   // from the security module's own `configSchema`.
-  const widgets: Record<string, { before?: ReactNode; after?: ReactNode }> = {
-    [SecurityWidgets.panic]: {
+  const widgets: Partial<Record<ConfigWidget, { before?: ReactNode; after?: ReactNode }>> = {
+    "panic-console": {
       before:
         panic === null ? (
           <Card>
@@ -102,7 +111,7 @@ export default async function SecurityPage({
           />
         ),
     },
-    [SecurityWidgets.joinGate]: {
+    "join-gate": {
       after: (
         <>
           {panelFailure !== null ? (
@@ -150,21 +159,21 @@ export default async function SecurityPage({
         </>
       ),
     },
-    [SecurityWidgets.backups]: {
+    backups: {
       after: <BackupsCard guildId={guildId} backups={backups} />,
     },
   };
 
   const sections: PageSection[] = sectionsOf(configFields).map((section) => {
-    const extras = widgets[section.name];
+    const extras = section.widget ? widgets[section.widget] : undefined;
     // The nuke matrix renders its whole section itself — a limit-per-action
     // grid reads far better than the flat field list the generic card gives.
-    const custom = section.name === SecurityWidgets.antiNuke;
+    const custom = section.widget === "anti-nuke";
     return {
       id: section.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
       label: section.name,
       count: section.fieldCount,
-      alert: section.name === SecurityWidgets.panic && Boolean(panic?.active),
+      alert: section.widget === "panic-console" && Boolean(panic?.active),
       content: (
         <>
           {extras?.before}
@@ -173,8 +182,8 @@ export default async function SecurityPage({
               guildId={guildId}
               config={config}
               configFields={configFields}
-              roles={dashboard.roles}
-              channels={dashboard.channels}
+              roles={entities.roles}
+              channels={entities.channels}
             />
           ) : (
             <ConfigGroupCard
@@ -184,8 +193,8 @@ export default async function SecurityPage({
               groups={section.groups.flatMap((g) => (g.name ? [g.name] : []))}
               config={config}
               configFields={configFields}
-              roles={dashboard.roles}
-              channels={dashboard.channels}
+              roles={entities.roles}
+              channels={entities.channels}
             />
           )}
           {extras?.after}

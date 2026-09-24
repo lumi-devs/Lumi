@@ -18,7 +18,6 @@ export const RedisKeys = {
   guildAllModuleConfigs: (guildId: string) =>
     `lumi:cfg:all:guild:${guildId}`,
   globalConfig: () => "lumi:cfg:global",
-  guildPrefixes: (guildId: string) => `lumi:prefix:guild:${guildId}`,
 
   moduleEnabled: (module: string, guildId: string) =>
     `lumi:module:enabled:${module}:${guildId}`,
@@ -338,6 +337,102 @@ export class InvalidationBus {
       Promise.resolve(fn(ctx)).catch((err: unknown) =>
         logError("Redis: invalidation resync failed", err),
       );
+    }
+  };
+}
+
+const SignalsChannel = "lumi:signals";
+
+export class SignalBus {
+  readonly #subscriber: RedisClient;
+  #listeners = new Set<
+    (topic: string, payload: Record<string, string | number>) => void
+  >();
+  #started = false;
+  #startPromise: Promise<void> | null = null;
+  #handlerAttached = false;
+
+  public constructor(subscriber: RedisClient) {
+    this.#subscriber = subscriber;
+  }
+
+  public onSignal(
+    fn: (topic: string, payload: Record<string, string | number>) => void,
+  ): () => void {
+    this.#listeners.add(fn);
+    return () => this.#listeners.delete(fn);
+  }
+
+  public start(): Promise<void> {
+    if (this.#started) return Promise.resolve();
+    this.#startPromise ??= this.#doStart().finally(() => {
+      this.#startPromise = null;
+    });
+    return this.#startPromise;
+  }
+
+  public async publish(
+    topic: string,
+    payload: Record<string, string | number>,
+  ): Promise<void> {
+    await container.redis.publish(
+      SignalsChannel,
+      JSON.stringify({ topic, payload, time: Date.now() }),
+    );
+  }
+
+  /**
+   * Pause delivery: unsubscribe and reset state, but keep the connection (and
+   * the message handler) alive so a subsequent start() can resume on the same
+   * client. Use close() for permanent teardown at shutdown.
+   */
+  public async stop(): Promise<void> {
+    if (!this.#started) return;
+    await this.#subscriber
+      .unsubscribe(SignalsChannel)
+      .catch((err: unknown) => logError("Redis: unsubscribe failed", err));
+    this.#started = false;
+  }
+
+  /** Permanent teardown - pause, then quit the owned subscriber connection. */
+  public async close(): Promise<void> {
+    await this.stop();
+    if (this.#handlerAttached) {
+      this.#subscriber.removeListener?.("message", this.#onMessage);
+      this.#handlerAttached = false;
+    }
+    this.#listeners.clear();
+    await this.#subscriber
+      .quit()
+      .catch((err: unknown) => logError("Redis: quit failed", err));
+  }
+
+  async #doStart(): Promise<void> {
+    if (this.#started) return;
+    if (!this.#handlerAttached) {
+      this.#subscriber.on("message", this.#onMessage);
+      this.#handlerAttached = true;
+    }
+    await this.#subscriber.subscribe(SignalsChannel);
+    this.#started = true;
+  }
+
+  #onMessage = (_channel: string, payload: string) => {
+    const parsed = tryParseJSON(payload) as {
+      topic?: unknown;
+      payload?: unknown;
+      time?: unknown;
+    } | null;
+    if (!parsed || typeof parsed.topic !== "string") return;
+    if (
+      !parsed.payload ||
+      typeof parsed.payload !== "object" ||
+      Array.isArray(parsed.payload)
+    ) {
+      return;
+    }
+    for (const fn of this.#listeners) {
+      fn(parsed.topic, parsed.payload as Record<string, string | number>);
     }
   };
 }

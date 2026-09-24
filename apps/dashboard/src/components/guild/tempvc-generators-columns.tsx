@@ -10,10 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "#/components/ui/dropdown-menu";
-import type {
-  DashboardChannelView,
-  TempVcGeneratorView,
-} from "#/lib/dashboard-data";
+import type { DashboardChannelView, TempVcGeneratorView } from "@lumi/contracts/views";
 
 export function tempvcGeneratorsColumns({
   channels,

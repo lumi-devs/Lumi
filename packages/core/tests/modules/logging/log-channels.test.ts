@@ -9,7 +9,7 @@ import { queueSend } from "#lib/outbound/send-queue.js";
 import {
   resolveLogChannel,
   sendLog,
-} from "#modules/logging/lib/send.js";
+} from "#modules/logging/services/send.js";
 
 const GUILD_ID = "123456789012345678";
 const MESSAGE_CHANNEL = "111111111111111111";

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Gavel, PlugZap, SearchX } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildCases, getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildEntities } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { exportGuildCases } from "#/actions/guild-export-actions";
 import { ModerationCasesTable } from "#/components/guild/moderation-cases-table";
 import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
@@ -20,14 +21,9 @@ import { ExportLogButton } from "#/components/ui/export-log-button";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
-import type { CasesListData, ModerationCaseView } from "#/lib/dashboard-data";
-import {
-  countBy,
-  extractMemberNames,
-  isSnowflake,
-  pageNumber,
-  single,
-} from "#/lib/log-format";
+import type { CasesListData, ModerationCaseView } from "@lumi/contracts/views";
+import { countBy, extractMemberNames, pageNumber, single } from "#/lib/log-format";
+import { isSnowflake } from "#/lib/moderation-cases";
 import { CaseActionOptions } from "#/lib/moderation-cases";
 
 const PageSize = 25;
@@ -55,22 +51,29 @@ export default async function ModerationPage({
     moderatorId && !isSnowflake(moderatorId) ? "Moderator ID" : null,
   ].filter((value): value is string => value !== null);
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
-  const memberNames = extractMemberNames(dashboard.members);
-  const memberOptions = [...dashboard.members]
+  const entitiesPromise = getGuildEntities(guildId, session.userId);
+  const casesPromise = rpc("guild.cases.list", {
+    guildId,
+    actorId: session.userId,
+    data: {
+      page,
+      pageSize: PageSize,
+      ...(action ? { action } : {}),
+      ...(userId && isSnowflake(userId) ? { userId } : {}),
+      ...(moderatorId && isSnowflake(moderatorId) ? { moderatorId } : {}),
+    },
+  });
+
+  const entities = await entitiesPromise;
+  const memberNames = extractMemberNames(entities.members);
+  const memberOptions = [...entities.members]
     .sort((a, b) => a.displayName.localeCompare(b.displayName))
     .map((m) => ({ value: m.id, label: m.displayName }));
 
   let data: CasesListData | null = null;
   let failure: string | null = null;
   try {
-    data = await getGuildCases(guildId, session.userId, {
-      page,
-      pageSize: PageSize,
-      ...(action ? { action } : {}),
-      ...(userId && isSnowflake(userId) ? { userId } : {}),
-      ...(moderatorId && isSnowflake(moderatorId) ? { moderatorId } : {}),
-    });
+    data = await casesPromise;
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }

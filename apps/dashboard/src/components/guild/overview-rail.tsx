@@ -12,12 +12,8 @@ import {
   type ModuleLabelIndex,
 } from "#/lib/config-labels";
 import { HealthyStatus, OfflineStatuses } from "#/components/system/shard-fleet";
-import type {
-  ConfigHistoryEntryView,
-  DashboardChannelView,
-  DashboardRoleView,
-  SystemShardsData,
-} from "#/lib/dashboard-data";
+import type { ConfigHistoryEntryView, DashboardChannelView, DashboardRoleView } from "@lumi/contracts/views";
+import type { RpcOutput } from "@lumi/contracts/rpc";
 
 export function OverviewRail({
   shards,
@@ -31,7 +27,7 @@ export function OverviewRail({
 }: {
   className?: string;
   /** Owner-only telemetry; `null` for non-owners and when the read failed. */
-  shards: SystemShardsData | null;
+  shards: RpcOutput<"system.shards.get"> | null;
   changes: ConfigHistoryEntryView[];
   actorNames: Record<string, string>;
   labels: ModuleLabelIndex;
@@ -68,7 +64,7 @@ function RailHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ShardHealth({ shards }: { shards: SystemShardsData }) {
+function ShardHealth({ shards }: { shards: RpcOutput<"system.shards.get"> }) {
   const byId = new Map(shards.shards.map((s) => [s.shardId, s]));
   const ids = Array.from({ length: shards.shardCount }, (_, i) => i);
 

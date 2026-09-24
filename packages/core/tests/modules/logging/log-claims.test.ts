@@ -9,7 +9,7 @@ import {
   normalizeLogClaimCode,
   peekLogClaimCode,
   registerLogClaim,
-} from "#lib/logging/claims.js";
+} from "#modules/logging/services/claims.js";
 
 const GUILD_ID = "123456789012345678";
 const ISSUER_ID = "111111111111111111";
@@ -164,13 +164,13 @@ describe("logging claim store", () => {
         "222222222222222222",
       ]);
 
-      await expect(
-        dismissLogClaim(GUILD_ID, "111111111111111111"),
-      ).resolves.toBe(true);
+      const dismissed = await dismissLogClaim(GUILD_ID, "111111111111111111");
+      expect(dismissed).not.toBeNull();
+      expect(dismissed?.channelId).toBe("111111111111111111");
       await expect(listLogClaims(GUILD_ID)).resolves.toHaveLength(1);
       await expect(
         dismissLogClaim(GUILD_ID, "111111111111111111"),
-      ).resolves.toBe(false);
+      ).resolves.toBeNull();
     });
 
     it("returns an empty list when nothing is pending", async () => {

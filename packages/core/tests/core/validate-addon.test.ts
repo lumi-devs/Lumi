@@ -136,20 +136,20 @@ describe("validateAddon", () => {
     const dir = await makeAddon("aliases", {
       "info.json": JSON.stringify({ name: "aliases", author: ["T"], description: "d", short: "s", version: "1.0.0" }),
       "index.ts": GOOD_INDEX,
-      "lib/x.ts": `import { makeInfoCard } from "#lib/utilities/cards.js";\nimport { Utility } from "#lib/module-system/Utility.js";\nexport { makeInfoCard, Service };\n`,
+      "lib/x.ts": `import { makeInfoCard } from "#lib/ui/cards.js";\nimport { Utility } from "#lib/module-system/Utility.js";\nexport { makeInfoCard, Service };\n`,
     });
     const { errors } = await validateAddon(dir);
-    expect(errors.some((e) => e.includes('imports Lumi\'s internal path "#lib/utilities/cards.js"'))).toBe(true);
+    expect(errors.some((e) => e.includes('imports Lumi\'s internal path "#lib/ui/cards.js"'))).toBe(true);
     expect(errors.some((e) => e.includes('imports Lumi\'s internal path "#lib/module-system/Utility.js"'))).toBe(true);
   });
 
   it("blocks direct #database/* alias imports too (closes the container.prisma bypass)", async () => {
     const dir = await makeAddon("database-bypass", {
       "info.json": JSON.stringify({ name: "database-bypass", author: ["T"], description: "d", short: "s", version: "1.0.0" }),
-      "index.ts": `${GOOD_INDEX}\nimport { prisma } from "#database/client.js";\nexport { prisma };\n`,
+      "index.ts": `${GOOD_INDEX}\nimport { prisma } from "#lib/database/client.js";\nexport { prisma };\n`,
     });
     const { errors } = await validateAddon(dir);
-    expect(errors.some((e) => e.includes('imports Lumi\'s internal path "#database/client.js"'))).toBe(true);
+    expect(errors.some((e) => e.includes('imports Lumi\'s internal path "#lib/database/client.js"'))).toBe(true);
   });
 
   it("validates a valid manifest.json contract", async () => {

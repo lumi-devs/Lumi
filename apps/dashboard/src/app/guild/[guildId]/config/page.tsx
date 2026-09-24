@@ -10,7 +10,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildShell } from "#/lib/guild-reads";
 import { Card } from "#/components/ui/card";
 import { PageHeader } from "#/components/ui/page-header";
 
@@ -30,11 +30,11 @@ export default async function GuildConfigPage({
 }) {
   const { guildId } = await params;
   const session = await requireGuild(guildId);
-  const data = await getGuildDashboard(guildId, session.userId);
+  const shell = await getGuildShell(guildId, session.userId);
   const base = `/guild/${guildId}/config`;
 
-  const modules = data.modules.filter((m) => !m.isAddon);
-  const addons = data.modules.filter((m) => m.isAddon);
+  const modules = shell.modules.filter((m) => !m.isAddon);
+  const addons = shell.modules.filter((m) => m.isAddon);
   const enabledModules = modules.filter((m) => m.enabled || m.name === "core");
 
   const areas: ConfigArea[] = [
@@ -61,7 +61,7 @@ export default async function GuildConfigPage({
       href: `${base}/general`,
       label: "General",
       description:
-        "Command prefix, mute role, locale, and timezone — the basics every module reads from.",
+        "Command prefix and locale — the basics every module reads from.",
       icon: Settings,
     },
     {

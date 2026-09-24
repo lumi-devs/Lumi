@@ -21,10 +21,7 @@ import {
   TooltipTrigger,
 } from "#/components/ui/tooltip";
 import { tempvcGeneratorsColumns } from "#/components/guild/tempvc-generators-columns";
-import type {
-  DashboardChannelView,
-  TempVcGeneratorView,
-} from "#/lib/dashboard-data";
+import type { DashboardChannelView, TempVcGeneratorView } from "@lumi/contracts/views";
 import type { ConfigField } from "@lumi/contracts";
 import { useServerAction } from "#/lib/use-server-action";
 

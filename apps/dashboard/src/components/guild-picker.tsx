@@ -5,7 +5,7 @@ import { inviteUrlFor } from "#/lib/invite";
 import { useRefreshAfterInvite } from "#/lib/use-refresh-after-invite";
 import Link from "next/link";
 import type { Session } from "next-auth";
-import type { GuildSummaryView } from "@lumi/contracts";
+import type { GuildSummaryView } from "@lumi/contracts/rpc";
 import type { OAuthGuild } from "#/lib/discord";
 import { ArrowRight, Crown, Layers3, Search, ServerOff } from "lucide-react";
 import { Badge } from "#/components/ui/badge";

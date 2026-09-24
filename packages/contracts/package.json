@@ -7,7 +7,11 @@
   "private": true,
   "exports": {
     ".": "./src/index.ts",
-    "./views": "./src/views.ts"
+    "./views": "./src/views.ts",
+    "./rpc": "./src/rpc/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "peerDependencies": {
     "discord.js": "^14.20.0"

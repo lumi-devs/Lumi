@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 
-export class DatabaseError extends Error {
+class DatabaseError extends Error {
   public constructor(
     message: string,
     public readonly code: string,

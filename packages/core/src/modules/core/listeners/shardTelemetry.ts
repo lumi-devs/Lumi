@@ -5,7 +5,7 @@ import {
   DefaultClusterName,
   ShardTelemetryPublisher,
   type ShardTelemetrySample,
-} from "@lumi/sharding";
+} from "#lib/sharding/shard-telemetry.js";
 import { getClusterName, getConsumerId } from "#lib/env.js";
 
 const PublishMs = 10_000;

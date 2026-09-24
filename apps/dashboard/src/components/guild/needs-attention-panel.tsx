@@ -6,7 +6,7 @@ import { CircleAlert, TriangleAlert, type LucideIcon } from "lucide-react";
 import { cn } from "#/lib/utils";
 import { Card, CardHeader, CardTitle } from "#/components/ui/card";
 
-export type AttentionSeverity = "critical" | "warning";
+type AttentionSeverity = "critical" | "warning";
 
 export interface AttentionRow {
   id: string;

@@ -5,8 +5,8 @@ import { logError } from "#lib/utilities/errors.js";
 import {
   seedVoiceStates,
   clearVoiceChannelOccupancy,
-} from "../lib/voice-occupancy.js";
-import { listVcRecords } from "../data.js";
+} from "../services/voice-occupancy.js";
+import { listVcRecords } from "../data/tempvc.js";
 
 @ApplyOptions<Listener.Options>({
   name: "tempvcRawGuildCreate",

@@ -1,16 +1,16 @@
 import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
-import { FieldType } from "#lib/module-system/Module.js";
+import { FieldType } from "#lib/module-system/config-schema.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { ConfigUtility } from "#utilities/pieces/ConfigUtility.js";
+import type { ConfigUtility } from "../utilities/ConfigUtility.js";
 import {
   configAccessDenied,
   hasPanelAccess,
   loadDetail,
   loadFeatures,
   type FeatureDetail,
-} from "#modules/core/lib/config-panel.js";
+} from "../services/config-panel.js";
 import {
   buildFeatureDetailView,
   buildFeatureListView,
@@ -20,9 +20,15 @@ import {
   buildHistoryView,
   buildOverridesView,
 } from "#modules/core/ui/overrides.js";
-import { Emojis } from "#utilities/assets.js";
-import { ephemeralCard, makeErrorCard } from "#utilities/cards.js";
-import { respond } from "#utilities/command-response.js";
+import { Emojis } from "#lib/utilities/assets.js";
+import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
+import { respond } from "#lib/utilities/command-response.js";
+import {
+  ConfigButtonId,
+  ConfigFieldModalId,
+  ConfigModalId,
+  ConfigOverrideModalId,
+} from "../constants.js";
 import {
   LabelBuilder,
   ModalBuilder,
@@ -46,9 +52,9 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
   }
 
   public override parse(interaction: ButtonInteraction) {
-    if (!interaction.customId.startsWith("cfg:")) return this.none();
-    const [, action, moduleName, ...rest] = interaction.customId.split(":");
-    return this.some({ action, moduleName, rest });
+    const parsed = ConfigButtonId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    return this.some(parsed);
   }
 
   public async run(
@@ -223,7 +229,13 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
 
     const sectionIndex = parseInt(page ?? "0", 10) || 0;
     const modal = new ModalBuilder()
-      .setCustomId(`cfg:fmodal:${moduleName}:${field.key}:${sectionIndex}`)
+      .setCustomId(
+        ConfigFieldModalId.build({
+          moduleName,
+          fieldKey: field.key,
+          fieldPage: String(sectionIndex),
+        }),
+      )
       .setTitle(field.label.slice(0, 45))
       .addLabelComponents(label);
 
@@ -271,7 +283,7 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
     }
 
     const modal = new ModalBuilder()
-      .setCustomId(`cfg:modal:${moduleName}`)
+      .setCustomId(ConfigModalId.build({ moduleName }))
       .setTitle(`Configure ${detail.meta.displayName}`.slice(0, 45));
 
     for (const f of fields) {
@@ -307,7 +319,7 @@ export class ConfigPanelButtonHandler extends BaseInteractionHandler {
   ) {
     const detail = await this.#requireDetail(guildId, moduleName);
     const modal = new ModalBuilder()
-      .setCustomId(`cfg:ovmodal:${moduleName}`)
+      .setCustomId(ConfigOverrideModalId.build({ moduleName }))
       .setTitle(`Override • ${detail.meta.displayName}`.slice(0, 45));
 
     const mk = (id: string, labelText: string, hint: string) =>

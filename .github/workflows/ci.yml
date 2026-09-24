@@ -53,9 +53,9 @@ jobs:
               - 'flake.lock'
             addons:
               - 'examples/**'
-              - 'scripts/validate-addon.ts'
+              - 'packages/core/scripts/validate-addon.ts'
               - 'packages/core/src/lib/downloader/**'
-              - 'packages/core/src/lib/addon-sdk/**'
+              - 'packages/core/src/lib/addon-sandbox/**'
 
   lint:
     name: Lint
@@ -136,7 +136,7 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: |
           if [ "$EVENT_NAME" = "pull_request" ]; then
-            bun turbo run typecheck:all --filter="[origin/$BASE_REF...HEAD]" || bun run typecheck
+            bun turbo run typecheck --filter="[origin/$BASE_REF...HEAD]" || bun run typecheck
           else
             bun run typecheck
           fi

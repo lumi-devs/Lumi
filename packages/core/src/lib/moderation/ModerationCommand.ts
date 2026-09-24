@@ -1,6 +1,6 @@
-import { BaseCommand, type CommandContext } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import {
   confirmPrompt,
   type ConfirmPromptContext,
@@ -9,13 +9,13 @@ import {
 import { logError } from "#lib/utilities/errors.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
-import { sleep } from "#lib/runtime.js";
 import { isNullish } from "@sapphire/utilities";
 import { Time } from "@sapphire/time-utilities";
 import { Result, container, type Awaitable } from "@sapphire/framework";
 import type { Guild, GuildMember, User } from "discord.js";
+import type { CaseAction } from "@prisma/client";
 
-const Root = LanguageKeys.Commands;
+const Root = "commands";
 
 function targetIdOf(target: ModerationCommand.TargetLike): string {
   return typeof target === "string" ? target : target.id;
@@ -39,7 +39,9 @@ export interface DuplicateCaseCheckContext
     ConfirmPromptContext {}
 
 async function readReason(ctx: CommandContext, t: LumiT): Promise<string> {
-  return (await ctx.getString("reason", { rest: true })) ?? t(Root.ModNoReason);
+  return (
+    (await ctx.getString("reason", { rest: true })) ?? t(`${Root}:modNoReason`)
+  );
 }
 
 function replyFailure(
@@ -51,15 +53,15 @@ function replyFailure(
 
 function memberNotFound(t: LumiT): ModerationCommand.Reply {
   return {
-    title: t(Root.ModMemberNotFoundTitle),
-    body: t(Root.ModMemberNotFound),
+    title: t(`${Root}:modMemberNotFoundTitle`),
+    body: t(`${Root}:modMemberNotFound`),
   };
 }
 
 function actionFailed(t: LumiT): ModerationCommand.Reply {
   return {
-    title: t(Root.ModActionFailedTitle),
-    body: t(Root.ModActionFailed),
+    title: t(`${Root}:modActionFailedTitle`),
+    body: t(`${Root}:modActionFailed`),
   };
 }
 
@@ -90,8 +92,8 @@ async function checkPanicLock(
   if (state.actorId === moderator.id) return null;
 
   return {
-    title: t(Root.ModPanicLockedTitle),
-    body: t(Root.ModPanicLocked),
+    title: t(`${Root}:modPanicLockedTitle`),
+    body: t(`${Root}:modPanicLocked`),
   };
 }
 
@@ -106,7 +108,7 @@ export async function checkDuplicateCase(
   ctx: DuplicateCaseCheckContext,
   t: LumiT,
   targetId: string,
-  action: string,
+  action: CaseAction,
 ): Promise<boolean> {
   const guild = ctx.guild;
   if (!guild) return true;
@@ -130,14 +132,14 @@ export async function checkDuplicateCase(
   if (ageMinutes > windowMinutes) return true;
 
   const result = await confirmPrompt(ctx, {
-    title: t(Root.ModDuplicateCaseTitle),
-    body: t(Root.ModDuplicateCaseBody, {
+    title: t(`${Root}:modDuplicateCaseTitle`),
+    body: t(`${Root}:modDuplicateCaseBody`, {
       caseNumber: recent.caseNumber,
       user: `<@${targetId}>`,
       minutes: Math.round(ageMinutes),
       moderator: `<@${recent.moderatorId}>`,
     }),
-    confirmLabel: t(Root.ModDuplicateCaseButton),
+    confirmLabel: t(`${Root}:modDuplicateCaseButton`),
   });
   return result.confirmed;
 }
@@ -165,8 +167,8 @@ export async function checkHierarchy(
   if (targetId === moderator.id) return null;
 
   const deny = (user: string): ModerationCommand.Reply => ({
-    title: t(Root.ModHierarchyTitle),
-    body: t(Root.ModHierarchy, { user }),
+    title: t(`${Root}:modHierarchyTitle`),
+    body: t(`${Root}:modHierarchy`, { user }),
   });
 
   if (targetId === guild.ownerId) return deny(`<@${targetId}>`);
@@ -446,7 +448,7 @@ export async function runModerationFlow<
     // a 25-target `/ban` doesn't burst the guild's audit-log/ban rate limit.
     await mapWithConcurrency(prepared, DefaultBatchConcurrency, async (entry) => {
       await runOne(entry);
-      await sleep(BatchStaggerMs);
+      await Bun.sleep(BatchStaggerMs);
     });
   }
 
@@ -482,7 +484,7 @@ export abstract class ModerationCommand<
   protected readonly logScope: string | undefined;
 
   /** See {@linkcode ModerationCommand.Flow.duplicateCaseAction}. Subclasses that apply a punishment override this with their case `action` string. */
-  protected readonly duplicateCaseAction: string | undefined;
+  protected readonly duplicateCaseAction: CaseAction | undefined;
 
   public constructor(
     context: ModerationCommand.LoaderContext,
@@ -602,7 +604,7 @@ export namespace ModerationCommand {
     /** See {@linkcode ModerationCommand.logScope}. */
     logScope?: string;
     /** See {@linkcode ModerationCommand.duplicateCaseAction}. */
-    duplicateCaseAction?: string;
+    duplicateCaseAction?: CaseAction;
   };
   export type LoaderContext = BaseCommand.LoaderContext;
   export type Registry = BaseCommand.Registry;
@@ -644,7 +646,7 @@ export namespace ModerationCommand {
   export interface Flow<Target extends TargetLike, Outcome, Prepared = null> {
     logScope?: string;
     /** The case `action` string this flow's duplicate-case window check matches against (e.g. "kick", "warn"). Omit to skip the check. */
-    duplicateCaseAction?: string;
+    duplicateCaseAction?: CaseAction;
     resolveTarget(
       ctx: CommandContext,
       t: LumiT,

@@ -4,7 +4,7 @@ import type { GatewayDispatchPayload } from "discord-api-types/v10";
 import { logError } from "#lib/utilities/errors.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import { planToggle } from "#modules/reactionroles/data.js";
+import { planToggle } from "#modules/reactionroles/data/reactionroles.js";
 import type ReactionRolesUtility from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
 
 interface ReactionPacket {

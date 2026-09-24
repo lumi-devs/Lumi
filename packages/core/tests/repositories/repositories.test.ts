@@ -2,21 +2,24 @@ import { describe, it, expect, vi, beforeEach } from 'bun:test';
 import { ModerationRepository } from '#lib/prisma/repositories/ModerationRepository.js';
 import { ConfigRepository } from '#lib/prisma/repositories/ConfigRepository.js';
 import { GuildKVRepository } from '#lib/prisma/repositories/GuildKVRepository.js';
-import { ModNoteRepository } from '#lib/prisma/repositories/ModNoteRepository.js';
+import { repositoryCache } from '#lib/prisma/repositories/Repository.js';
 import { container } from '@sapphire/framework';
 
 describe('ModerationRepository Tests', () => {
   let mockPrisma: any;
+  let mockDb: any;
   let repo: ModerationRepository;
 
   beforeEach(() => {
     mockPrisma = {
       $transaction: vi.fn((cb) => cb(mockPrisma)),
+      $queryRaw: vi.fn(),
       moderationCase: {
         findFirst: vi.fn(),
         findMany: vi.fn(),
         findUnique: vi.fn(),
         create: vi.fn(),
+        count: vi.fn(),
         deleteMany: vi.fn(),
         update: vi.fn(),
         updateMany: vi.fn()
@@ -26,12 +29,12 @@ describe('ModerationRepository Tests', () => {
         update: vi.fn()
       }
     };
-    repo = new ModerationRepository(mockPrisma as any, {} as any, {} as any, {} as any);
+    mockDb = { ensureGuild: vi.fn().mockResolvedValue(undefined) };
+    repo = new ModerationRepository(mockPrisma, {} as any, {} as any, mockDb);
   });
 
-  it('createModerationCase calculates case number and creates record in transaction', async () => {
-    mockPrisma.moderationCase.findFirst.mockResolvedValue({ caseNumber: 5 });
-    mockPrisma.guildCaseCounter.upsert.mockResolvedValue({ guildId: 'g1', next: 7 });
+  it('createModerationCase reserves the case number via the atomic upsert and creates the record', async () => {
+    mockPrisma.$queryRaw.mockResolvedValue([{ caseNumber: 6 }]);
     mockPrisma.moderationCase.create.mockResolvedValue({ id: 1, caseNumber: 6 });
 
     const result = await repo.createModerationCase({
@@ -42,6 +45,7 @@ describe('ModerationRepository Tests', () => {
       reason: 'test'
     });
 
+    expect(mockDb.ensureGuild).toHaveBeenCalledWith('g1');
     expect(result.caseNumber).toBe(6);
     expect(mockPrisma.moderationCase.create).toHaveBeenCalledWith({
       data: {
@@ -58,9 +62,8 @@ describe('ModerationRepository Tests', () => {
     });
   });
 
-  it('createModerationCase handles null maxCase and updates counter when caseNumber >= counter.next', async () => {
-    mockPrisma.moderationCase.findFirst.mockResolvedValue(null);
-    mockPrisma.guildCaseCounter.upsert.mockResolvedValue({ guildId: 'g1', next: 1 });
+  it('createModerationCase passes duration and expiry through to the created record', async () => {
+    mockPrisma.$queryRaw.mockResolvedValue([{ caseNumber: 1 }]);
     mockPrisma.moderationCase.create.mockResolvedValue({ id: 2, caseNumber: 1 });
 
     const now = new Date();
@@ -74,29 +77,29 @@ describe('ModerationRepository Tests', () => {
       expiresAt: now,
     });
 
-    expect(mockPrisma.guildCaseCounter.update).toHaveBeenCalledWith({
-      where: { guildId: 'g1' },
-      data: { next: 2 },
+    expect(mockPrisma.moderationCase.create).toHaveBeenCalledWith({
+      data: {
+        guildId: 'g1',
+        caseNumber: 1,
+        userId: 'u1',
+        moderatorId: 'm1',
+        action: 'mute',
+        reason: 'spam',
+        duration: 3600,
+        expiresAt: now,
+        active: true,
+      }
     });
     expect(result.caseNumber).toBe(1);
   });
 
-  it('createModerationCase allocates the case number under Serializable isolation', async () => {
-    mockPrisma.moderationCase.findFirst.mockResolvedValue({ caseNumber: 5 });
-    mockPrisma.guildCaseCounter.upsert.mockResolvedValue({ guildId: 'g1', next: 7 });
-    mockPrisma.moderationCase.create.mockResolvedValue({ id: 1, caseNumber: 6 });
-
-    await repo.createModerationCase({
-      guildId: 'g1',
-      userId: 'u1',
-      moderatorId: 'm1',
-      action: 'warn',
+  it('countModerationCases counts cases by guild and user with optional action', async () => {
+    mockPrisma.moderationCase.count.mockResolvedValue(11);
+    const count = await repo.countModerationCases('g1', 'u1', 'warn');
+    expect(count).toBe(11);
+    expect(mockPrisma.moderationCase.count).toHaveBeenCalledWith({
+      where: { guildId: 'g1', userId: 'u1', action: 'warn' },
     });
-
-    expect(mockPrisma.$transaction).toHaveBeenCalledWith(
-      expect.any(Function),
-      { isolationLevel: 'Serializable' },
-    );
   });
 
   it('getModerationCases queries cases by guild and user with optional action', async () => {
@@ -136,7 +139,7 @@ describe('ModerationRepository Tests', () => {
   it('getModerationCase queries single case by guild and case number', async () => {
     mockPrisma.moderationCase.findUnique.mockResolvedValue({ id: 10, caseNumber: 3 });
     const c = await repo.getModerationCase('g1', 3);
-    expect(c).toEqual({ id: 10, caseNumber: 3 });
+    expect(c).toEqual<{ id: number; caseNumber: number }>({ id: 10, caseNumber: 3 });
     expect(mockPrisma.moderationCase.findUnique).toHaveBeenCalledWith({
       where: { uq_cases_guild_number: { guildId: 'g1', caseNumber: 3 } },
     });
@@ -145,7 +148,7 @@ describe('ModerationRepository Tests', () => {
   it('getModerationCaseById queries single case by primary key id', async () => {
     mockPrisma.moderationCase.findUnique.mockResolvedValue({ id: 42 });
     const c = await repo.getModerationCaseById(42);
-    expect(c).toEqual({ id: 42 });
+    expect(c).toEqual<{ id: number }>({ id: 42 });
     expect(mockPrisma.moderationCase.findUnique).toHaveBeenCalledWith({
       where: { id: 42 },
     });
@@ -259,8 +262,12 @@ describe('ConfigRepository Batch Operations', () => {
       invalidate: vi.fn().mockResolvedValue(undefined),
     };
     (container as any).invalidation = mockInvalidation;
+    (container as any).redis = mockRedis;
+    repositoryCache.clear();
 
-    repo = new ConfigRepository(mockPrisma, mockRedis, mockLogger, mockDb);
+    repo = new ConfigRepository(mockPrisma, mockRedis, mockLogger, mockDb, {
+      logConfigChange: vi.fn().mockResolvedValue(undefined),
+    } as any);
   });
 
   it('getModuleConfigs returns empty object when keys array is empty', async () => {
@@ -286,24 +293,6 @@ describe('ConfigRepository Batch Operations', () => {
     });
   });
 
-  it('setModuleConfigsMany does nothing when entries object is empty', async () => {
-    await repo.setModuleConfigsMany('g1', 'core', {});
-    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
-    expect(mockInvalidation.invalidate).not.toHaveBeenCalled();
-  });
-
-  it('setModuleConfigsMany upserts all entries in single transaction and invalidates caches', async () => {
-    await repo.setModuleConfigsMany('g1', 'core', {
-      prefix: '?',
-      logging: true,
-    });
-
-    expect(mockPrisma.$transaction).toHaveBeenCalled();
-    expect(mockInvalidation.invalidate).toHaveBeenCalledWith(
-      'lumi:cfg:core:guild:g1',
-      'lumi:cfg:all:guild:g1',
-    );
-  });
 });
 
 describe('GuildKVRepository Batch Operations', () => {
@@ -364,51 +353,4 @@ describe('GuildKVRepository Batch Operations', () => {
     });
   });
 
-  it('setModuleDataMany returns 0 when entries array is empty', async () => {
-    const count = await repo.setModuleDataMany('g1', 'tags', []);
-    expect(count).toBe(0);
-    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
-  });
-
-  it('setModuleDataMany upserts entries in single transaction and returns count', async () => {
-    const count = await repo.setModuleDataMany('g1', 'tags', [
-      { targetId: 't1', key: 'name', value: 'Alpha' },
-      { targetId: 't2', key: 'name', value: 'Beta' },
-    ]);
-
-    expect(count).toBe(2);
-    expect(mockPrisma.$transaction).toHaveBeenCalled();
-  });
-});
-
-describe('ModNoteRepository GDPR erasure', () => {
-  let mockPrisma: any;
-  let repo: ModNoteRepository;
-
-  beforeEach(() => {
-    mockPrisma = {
-      modNote: {
-        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
-        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
-      },
-    };
-    repo = new ModNoteRepository(mockPrisma as any, {} as any, {} as any, {} as any);
-  });
-
-  it('deleteUserData removes notes where the user is the subject', async () => {
-    await repo.deleteUserData('u1');
-
-    expect(mockPrisma.modNote.deleteMany).toHaveBeenCalledWith({
-      where: { userId: 'u1' },
-    });
-  });
-
-  it('deleteUserData anonymizes authorId on notes the user wrote about someone else', async () => {
-    await repo.deleteUserData('u1');
-
-    expect(mockPrisma.modNote.updateMany).toHaveBeenCalledWith({
-      where: { authorId: 'u1' },
-      data: { authorId: '0' },
-    });
-  });
 });

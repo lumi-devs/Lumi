@@ -7,7 +7,7 @@ import {
   setStickyMessageId,
   StickyCooldownMs,
   stickyKey,
-} from "#modules/sticky/lib/sticky-store.js";
+} from "#modules/sticky/data/sticky-store.js";
 import { StickyMessageListener } from "#modules/sticky/listeners/messageCreate.js";
 
 function makeMessage(overrides: Record<string, unknown> = {}) {
@@ -30,8 +30,12 @@ describe("Sticky Module", () => {
     vi.clearAllMocks();
     (container as any).redis = {
       get: vi.fn(),
-      set: vi.fn(),
+      set: vi.fn().mockResolvedValue("OK"),
       del: vi.fn(),
+    };
+    (container as any).invalidation = {
+      invalidate: vi.fn().mockResolvedValue(undefined),
+      onResync: vi.fn(),
     };
     (container as any).db = {
       config: { getModuleConfig: vi.fn().mockResolvedValue(null) },
@@ -73,16 +77,27 @@ describe("Sticky Module", () => {
       );
 
       await delStickyMessageId("g1", "c1");
-      expect(container.redis.del).toHaveBeenCalledWith("lumi:sticky:g1:c1");
+      expect(container.invalidation.invalidate).toHaveBeenCalledWith(
+        "lumi:sticky:g1:c1",
+      );
     });
   });
 
   describe("isStickyOnCooldown", () => {
-    it("should allow the first post then block reposts within 1s", () => {
-      expect(isStickyOnCooldown("g-cd", "c-cd", 1000)).toBe(false);
-      expect(isStickyOnCooldown("g-cd", "c-cd", 1000)).toBe(true);
-      expect(isStickyOnCooldown("g-cd", "c-cd", 1500)).toBe(true);
-      expect(isStickyOnCooldown("g-cd", "c-cd", 2001)).toBe(false);
+    it("should allow the first post then block a repost within the cooldown window", async () => {
+      (container.redis.set as any)
+        .mockResolvedValueOnce("OK")
+        .mockResolvedValueOnce(null);
+
+      expect(await isStickyOnCooldown("g-cd", "c-cd")).toBe(false);
+      expect(await isStickyOnCooldown("g-cd", "c-cd")).toBe(true);
+      expect(container.redis.set).toHaveBeenCalledWith(
+        "lumi:sticky:cd:g-cd:c-cd",
+        "1",
+        "PX",
+        StickyCooldownMs,
+        "NX",
+      );
     });
   });
 
@@ -104,12 +119,21 @@ describe("Sticky Module", () => {
       expect(message.channel.messages.delete).toHaveBeenCalledWith("old-1");
       expect(message.channel.send).toHaveBeenCalledTimes(1);
       expect(
-        JSON.stringify(message.channel.send.mock.calls[0][0]),
+        JSON.stringify(message.channel.send.mock.calls[0]![0]),
       ).toContain("stay");
       expect(container.redis.set).toHaveBeenCalledWith(
         "lumi:sticky:guild-1:channel-1",
         "new-1",
       );
+    });
+
+    it("should check the cooldown before reading config, and skip the config read entirely when on cooldown", async () => {
+      (container.redis.set as any).mockResolvedValueOnce(null);
+      const message = makeMessage();
+      await (listener as any).handle(message);
+      expect(container.redis.set).toHaveBeenCalledTimes(1);
+      expect(container.db.config.getModuleConfig).not.toHaveBeenCalled();
+      expect(message.channel.send).not.toHaveBeenCalled();
     });
 
     it("should do nothing when no entry matches the channel", async () => {
@@ -144,7 +168,7 @@ describe("Sticky Module", () => {
       const message = makeMessage({ channelId: "channel-rich" });
       await (listener as any).handle(message);
       expect(message.channel.send).toHaveBeenCalledTimes(1);
-      const json = JSON.stringify(message.channel.send.mock.calls[0][0]);
+      const json = JSON.stringify(message.channel.send.mock.calls[0]![0]);
       expect(json).toContain("stay rich");
       expect(json).toContain("5793266");
       expect(json).toContain("https://example.com/a.png");
@@ -163,7 +187,7 @@ describe("Sticky Module", () => {
       const message = makeMessage({ channelId: "channel-badhex" });
       await (listener as any).handle(message);
       expect(message.channel.send).toHaveBeenCalledTimes(1);
-      const json = JSON.stringify(message.channel.send.mock.calls[0][0]);
+      const json = JSON.stringify(message.channel.send.mock.calls[0]![0]);
       expect(json).toContain("stay plain");
       expect(json).not.toContain("not-a-color");
     });

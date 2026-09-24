@@ -1,5 +1,4 @@
-export { isSnowflake } from "./moderation-cases";
-import type { DashboardMemberView } from "./dashboard-data";
+import type { DashboardMemberView } from "@lumi/contracts/views";
 
 // Formatted in UTC so a Server Component and the client that hydrates it can
 // never disagree about the rendered string.

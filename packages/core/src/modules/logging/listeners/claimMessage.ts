@@ -1,16 +1,18 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { container } from "@sapphire/framework";
-import { Colors, PermissionFlagsBits } from "discord.js";
+import { Colors } from "discord.js";
+import { fetchTyped } from "#lib/commands.js";
 import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
+import { memberRoleIds } from "#lib/permissions/subject.js";
 import type { GuildMessage } from "#lib/types/common.js";
-import { makeCard } from "#lib/utilities/cards.js";
+import { makeCard } from "#lib/ui/cards.js";
 import { logError } from "#lib/utilities/errors.js";
 import {
   consumeLogClaimCode,
   normalizeLogClaimCode,
   peekLogClaimCode,
   registerLogClaim,
-} from "#lib/logging/claims.js";
+} from "../services/claims.js";
 
 @ApplyOptions<GuildMessageListener.Options>({
   name: "loggingClaimMessage",
@@ -24,11 +26,18 @@ export default class LoggingClaimMessageListener extends GuildMessageListener {
     const guildId = message.guildId;
     if (!(await peekLogClaimCode(guildId, code))) return;
 
-    if (!message.member?.permissions.has(PermissionFlagsBits.ManageGuild)) {
-      return;
-    }
+    const hasPermit = await container.permitResolver.hasPermit({
+      guildId,
+      userId: message.author.id,
+      roleIds: memberRoleIds(message.member),
+      channelId: message.channelId,
+      permitNode: "logging.claim",
+      guildOwnerId: message.guild.ownerId,
+    });
+    if (!hasPermit) return;
     if (!(await consumeLogClaimCode(guildId, code))) return;
 
+    const t = await fetchTyped(message);
     const channel = message.channel;
     const channelId = channel?.isThread()
       ? (channel.parentId ?? message.channelId)
@@ -38,8 +47,8 @@ export default class LoggingClaimMessageListener extends GuildMessageListener {
       .reply({
         ...makeCard(
           Colors.Green,
-          "Added",
-          "This is pending as a log destination — the dashboard will pick it up automatically.",
+          t("logging:claimAddedTitle"),
+          t("logging:claimAddedMessage"),
         ),
       })
       .catch((err: unknown) => {

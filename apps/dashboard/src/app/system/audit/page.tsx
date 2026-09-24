@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ClipboardList, PlugZap, SearchX } from "lucide-react";
 import { requireBotOwner } from "#/lib/auth-guards";
-import { getSystemAuditLog } from "#/lib/dashboard-fetch";
+import { rpc } from "#/lib/rpc";
 import { exportSystemAuditLog } from "#/actions/system-export-actions";
 import { AuditTimeline } from "#/components/audit-timeline";
 import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
@@ -20,16 +20,9 @@ import { ExportLogButton } from "#/components/ui/export-log-button";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
-import type { AuditEntryView, AuditListData } from "#/lib/dashboard-data";
-import {
-  AuditPlatformOptions,
-  countBy,
-  filterHref,
-  formatShortDay,
-  isSnowflake,
-  pageNumber,
-  single,
-} from "#/lib/log-format";
+import type { AuditEntryView, AuditListData } from "@lumi/contracts/views";
+import { AuditPlatformOptions, countBy, filterHref, formatShortDay, pageNumber, single } from "#/lib/log-format";
+import { isSnowflake } from "#/lib/moderation-cases";
 
 const PageSize = 30;
 
@@ -54,16 +47,22 @@ export default async function SystemAuditPage({
     guildId && !isSnowflake(guildId) ? "Server ID" : null,
   ].filter((value): value is string => value !== null);
 
+  const narrowedPlatform =
+    platform === "discord" || platform === "web" ? platform : undefined;
+
   let data: AuditListData | null = null;
   let failure: string | null = null;
   try {
-    data = await getSystemAuditLog(session.userId, {
-      page,
-      pageSize: PageSize,
-      ...(action ? { action } : {}),
-      ...(userId && isSnowflake(userId) ? { userId } : {}),
-      ...(guildId && isSnowflake(guildId) ? { guildId } : {}),
-      ...(platform ? { platform } : {}),
+    data = await rpc("system.audit.list", {
+      actorId: session.userId,
+      data: {
+        page,
+        pageSize: PageSize,
+        ...(action ? { action } : {}),
+        ...(userId && isSnowflake(userId) ? { userId } : {}),
+        ...(guildId && isSnowflake(guildId) ? { guildId } : {}),
+        ...(narrowedPlatform ? { platform: narrowedPlatform } : {}),
+      },
     });
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
@@ -116,7 +115,7 @@ export default async function SystemAuditPage({
                         ...(action ? { action } : {}),
                         ...(userId && isSnowflake(userId) ? { userId } : {}),
                         ...(guildId && isSnowflake(guildId) ? { guildId } : {}),
-                        ...(platform ? { platform } : {}),
+                        ...(narrowedPlatform ? { platform: narrowedPlatform } : {}),
                       })}
                     />
                   ) : null}

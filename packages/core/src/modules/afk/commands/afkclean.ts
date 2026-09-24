@@ -1,7 +1,8 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseCommand, type CommandContext } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 import type AfkUtility from "../utilities/AfkUtility.js";
 
 @ApplyOptions<BaseCommand.Options>({

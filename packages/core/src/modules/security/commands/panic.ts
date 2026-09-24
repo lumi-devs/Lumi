@@ -1,15 +1,15 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { BaseCommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
+import { enterPanic } from "../services/panic.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
-import { PanelsKeys } from "#lib/i18n/keys.js";
 import {
   buildPanicAlreadyActiveCard,
   buildPanicCancelledCard,
   buildPanicStatusCard,
-} from "../lib/panic-card.js";
+} from "../ui/panic-card.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "panic",
@@ -39,9 +39,9 @@ export class PanicCommand extends BaseCommand {
     }
 
     const { confirmed } = await confirmPrompt(ctx, {
-      title: t(PanelsKeys.PanicConfirmTitle),
-      body: t(PanelsKeys.PanicConfirmBody),
-      confirmLabel: t(PanelsKeys.PanicConfirmButton),
+      title: t("panels:panicConfirmTitle"),
+      body: t("panels:panicConfirmBody"),
+      confirmLabel: t("panels:panicConfirmButton"),
       time: 20_000,
     });
 
@@ -55,7 +55,7 @@ export class PanicCommand extends BaseCommand {
     );
     const channelIds = toStringArray(raw["panic_lock_channel_ids"]);
 
-    const result = await getUtility("security").enterPanic(
+    const result = await enterPanic(
       guild,
       ctx.user.id,
       channelIds,

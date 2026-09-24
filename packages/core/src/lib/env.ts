@@ -1,6 +1,3 @@
-/** Extended by the augmentation in `src/core/types/common.ts`. */
-export interface Env {}
-
 export function envParseString(key: string, defaultValue?: string): string {
   const value = process.env[key];
   if (value !== undefined) return value;

@@ -14,15 +14,13 @@ import { Routes } from "discord-api-types/v10";
 import { errorCode, logError } from "#lib/utilities/errors.js";
 import { renderTemplate } from "#lib/utilities/template.js";
 import { scheduleTask } from "#lib/schedule-task.js";
+import { claimCooldown } from "#lib/cooldown.js";
 import {
   clearVoiceChannelOccupancy,
   isVoiceChannelEmpty,
-} from "../lib/voice-occupancy.js";
-import {
-  TempvcCleanupDelayMs,
-  getCreateCooldownMs,
-} from "../index.js";
-import { ModuleName, TempVcKeys } from "../keys.js";
+} from "../services/voice-occupancy.js";
+import { TempvcCleanupDelayMs, ModuleName, TempVcKeys } from "../constants.js";
+import { getCreateCooldownMs, getMaxGenerators } from "../config.js";
 import {
   getVcRecord,
   listVcRecords,
@@ -34,8 +32,8 @@ import {
   removeGenerator,
   type GeneratorConfig,
   type VcRecord,
-} from "../data.js";
-import { tempVcRegistry } from "../registry.js";
+} from "../data/tempvc.js";
+import { tempVcRegistry } from "../services/registry.js";
 import { buildPanel } from "../ui/panel.js";
 
 const creationQueues = new Collection<string, AsyncQueue>();
@@ -80,14 +78,10 @@ export default class TempVcUtility extends Utility {
     userId: string,
   ): Promise<boolean> {
     const cooldownMs = await getCreateCooldownMs(guildId);
-    const set = await this.redis.set(
+    return !(await claimCooldown(
       TempVcKeys.createCooldown(guildId, userId),
-      "1",
-      "PX",
       cooldownMs,
-      "NX",
-    );
-    return set === null;
+    ));
   }
 
   /** Creates a temporary voice channel and moves the member in. */
@@ -348,6 +342,15 @@ export default class TempVcUtility extends Utility {
     channelId: string,
     config: GeneratorConfig,
   ): Promise<void> {
+    const generators = await listGenerators(guildId);
+    if (!generators.has(channelId)) {
+      const maxGenerators = await getMaxGenerators(guildId);
+      if (generators.size >= maxGenerators) {
+        throw new Error(
+          `This server already has the maximum of ${maxGenerators} voice generators.`,
+        );
+      }
+    }
     await setGenerator(guildId, channelId, config);
   }
 

@@ -2,9 +2,11 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { Command } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import { BaseCommand, type CommandContext } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { AfkMaxReasonLength, sanitizeReason } from "../index.js";
+import { AfkMaxReasonLength } from "../constants.js";
+import { sanitizeReason } from "../services/format.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import type AfkUtility from "../utilities/AfkUtility.js";
 

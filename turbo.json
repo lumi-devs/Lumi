@@ -23,9 +23,10 @@
       "persistent": true
     },
     "lint": {},
-    "typecheck": {},
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
     "//#lint:all": {},
-    "//#typecheck:all": {},
     "test": {}
   }
 }

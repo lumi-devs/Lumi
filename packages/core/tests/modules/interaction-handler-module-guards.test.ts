@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container, InteractionHandlerTypes } from "@sapphire/framework";
 import * as misc from "#lib/utilities/misc.js";
 
 vi.mock("#lib/commands.js", () => ({
@@ -10,7 +10,7 @@ vi.mock("#lib/permissions/index.js", () => ({
   hasRequiredPermit: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock("#modules/utility/lib/media-utils.js", () => ({
+vi.mock("#modules/utility/services/media-utils.js", () => ({
   handleMediaRequest: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -18,7 +18,7 @@ vi.mock("#modules/afk/data/afk.js", () => ({
   getAfkMentions: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock("#modules/tempvc/panel-guard.js", () => ({
+vi.mock("#modules/tempvc/services/panel-guard.js", () => ({
   resolveVc: vi.fn().mockResolvedValue(null),
   resolveOwnedVc: vi.fn().mockResolvedValue(null),
   resolveOwnedRecord: vi.fn().mockResolvedValue(null),
@@ -55,7 +55,10 @@ describe("interaction handlers guard on per-guild module state", () => {
     const { PanicRevertInteractionHandler } = await import(
       "#modules/security/interaction-handlers/panic.js"
     );
-    const handler = new PanicRevertInteractionHandler(pieceContext("panic") as any);
+    const handler = new PanicRevertInteractionHandler(pieceContext("panic"), {
+      interactionHandlerType: InteractionHandlerTypes.Button,
+      module: "security",
+    });
     const interaction = {
       inGuild: () => true,
       guild: { id: "g-1", ownerId: "owner-1" },
@@ -67,11 +70,11 @@ describe("interaction handlers guard on per-guild module state", () => {
     };
 
     isModuleEnabled.mockResolvedValue(false);
-    await handler.run(interaction as any);
+    await handler.run(interaction as any, undefined);
     expect((container as any).permitResolver.hasPermit).not.toHaveBeenCalled();
 
     isModuleEnabled.mockResolvedValue(true);
-    await expect(handler.run(interaction as any)).rejects.toThrow();
+    await expect(handler.run(interaction as any, undefined)).rejects.toThrow();
     expect((container as any).permitResolver.hasPermit).toHaveBeenCalled();
   });
 
@@ -79,7 +82,10 @@ describe("interaction handlers guard on per-guild module state", () => {
     const { VerifyInteractionHandler } = await import(
       "#modules/security/interaction-handlers/verify.js"
     );
-    const handler = new VerifyInteractionHandler(pieceContext("verify") as any);
+    const handler = new VerifyInteractionHandler(pieceContext("verify"), {
+      interactionHandlerType: InteractionHandlerTypes.Button,
+      module: "security",
+    });
     const interaction = {
       inGuild: () => true,
       guild: { id: "g-1" },
@@ -95,10 +101,13 @@ describe("interaction handlers guard on per-guild module state", () => {
   });
 
   it("utility media view skips work when utility is disabled", async () => {
-    const { handleMediaRequest } = await import("#modules/utility/lib/media-utils.js");
+    const { handleMediaRequest } = await import("#modules/utility/services/media-utils.js");
     const mod = await import("#modules/utility/interaction-handlers/view.js");
     const HandlerClass = mod.default;
-    const handler = new HandlerClass(pieceContext("view") as any);
+    const handler = new HandlerClass(pieceContext("view"), {
+      interactionHandlerType: InteractionHandlerTypes.Button,
+      module: "utility",
+    });
     const interaction = {
       inGuild: () => true,
       guildId: "g-1",
@@ -120,7 +129,10 @@ describe("interaction handlers guard on per-guild module state", () => {
     const { getAfkMentions } = await import("#modules/afk/data/afk.js");
     const mod = await import("#modules/afk/interaction-handlers/mentions.js");
     const HandlerClass = mod.default;
-    const handler = new HandlerClass(pieceContext("afk-mentions") as any);
+    const handler = new HandlerClass(pieceContext("afk-mentions"), {
+      interactionHandlerType: InteractionHandlerTypes.Button,
+      module: "afk",
+    });
     const interaction = {
       inGuild: () => true,
       guildId: "g-1",
@@ -131,16 +143,19 @@ describe("interaction handlers guard on per-guild module state", () => {
     };
 
     isModuleEnabled.mockResolvedValue(false);
-    await handler.run(interaction as any, { userId: "u-1", page: 0 });
+    await handler.run(interaction as any, { userId: "u-1", page: "0" });
     expect(getAfkMentions).not.toHaveBeenCalled();
   });
 
   it("tempvc panel button skips work when tempvc is disabled", async () => {
-    const { resolveOwnedVc } = await import("#modules/tempvc/panel-guard.js");
+    const { resolveOwnedVc } = await import("#modules/tempvc/services/panel-guard.js");
     const { TempVcPanelButtonHandler } = await import(
       "#modules/tempvc/interaction-handlers/tempvc-panel-button.js"
     );
-    const handler = new TempVcPanelButtonHandler(pieceContext("tvc-btn") as any);
+    const handler = new TempVcPanelButtonHandler(pieceContext("tvc-btn"), {
+      interactionHandlerType: InteractionHandlerTypes.Button,
+      module: "tempvc",
+    });
     const interaction = {
       inGuild: () => true,
       guildId: "g-1",
@@ -155,11 +170,14 @@ describe("interaction handlers guard on per-guild module state", () => {
   });
 
   it("tempvc panel modal skips work when tempvc is disabled", async () => {
-    const { resolveOwnedVc } = await import("#modules/tempvc/panel-guard.js");
+    const { resolveOwnedVc } = await import("#modules/tempvc/services/panel-guard.js");
     const { TempVcPanelModalHandler } = await import(
       "#modules/tempvc/interaction-handlers/tempvc-panel-modal.js"
     );
-    const handler = new TempVcPanelModalHandler(pieceContext("tvc-modal") as any);
+    const handler = new TempVcPanelModalHandler(pieceContext("tvc-modal"), {
+      interactionHandlerType: InteractionHandlerTypes.ModalSubmit,
+      module: "tempvc",
+    });
     const interaction = {
       inGuild: () => true,
       guildId: "g-1",
@@ -169,16 +187,19 @@ describe("interaction handlers guard on per-guild module state", () => {
     };
 
     isModuleEnabled.mockResolvedValue(false);
-    await handler.run(interaction as any, { kind: "namem", channelId: "c-1" });
+    await handler.run(interaction as any, { action: "namem", channelId: "c-1" });
     expect(resolveOwnedVc).not.toHaveBeenCalled();
   });
 
   it("tempvc panel select skips work when tempvc is disabled", async () => {
-    const { resolveOwnedRecord } = await import("#modules/tempvc/panel-guard.js");
+    const { resolveOwnedRecord } = await import("#modules/tempvc/services/panel-guard.js");
     const { TempVcPanelSelectHandler } = await import(
       "#modules/tempvc/interaction-handlers/tempvc-panel-select.js"
     );
-    const handler = new TempVcPanelSelectHandler(pieceContext("tvc-select") as any);
+    const handler = new TempVcPanelSelectHandler(pieceContext("tvc-select"), {
+      interactionHandlerType: InteractionHandlerTypes.SelectMenu,
+      module: "tempvc",
+    });
     const interaction = {
       inGuild: () => true,
       guildId: "g-1",

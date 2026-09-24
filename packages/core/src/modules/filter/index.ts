@@ -1,19 +1,15 @@
-import {
-  Module,
-  DefineModule,
-  NoEndUserData,
-  cfg,
-} from "#lib/module-system/Module.js";
-import { toStringArray } from "#lib/module-system/config-schema.js";
+import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { NoEndUserData } from "#lib/module-system/meta.js";
+import { cfg, toStringArray } from "#lib/module-system/config-schema.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { ChannelType } from "discord.js";
 import {
   shutdownRegexWorker,
   validateRegexPattern,
 } from "#lib/regex-worker/index.js";
-import { DefaultWarnMessage } from "./lib/rules.js";
+import { DefaultWarnMessage } from "./services/rules.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
-import { handleAutoLockdownUnlockFire } from "./lib/auto-lockdown-handler.js";
+import { handleAutoLockdownUnlockFire } from "./services/auto-lockdown-handler.js";
 
 /** Config keys the FilterUtility compiles into its per-guild rule set -
  * changing any of them must rebuild that guild's cache. */

@@ -1,21 +1,16 @@
-name: Release & Versioning
+name: Release
 
 on:
   push:
-    branches:
-      - main
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    tags:
+      - "v*"
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
-  version-or-release:
-    name: Manage Version PR & GitHub Releases
+  release:
+    name: Publish GitHub Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -23,26 +18,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Bun Environment
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v6
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: ${{ runner.os }}-bun-
-
-      - name: Install Dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Create Version PR or Create Release Notes
-        uses: changesets/action@v1
-        with:
-          version: bun run version:sync
-          commit: "chore: version packages and sync module manifests"
-          title: "chore: version packages and sync module manifests"
+      - name: Create Release With Generated Notes
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

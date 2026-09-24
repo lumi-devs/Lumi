@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from "bun:test";
 import { createMockPrismaClient, type MockPrismaClient, type MockModelDelegate } from "./prisma.js";
-import { AfkRepository } from "#lib/prisma/repositories/AfkRepository.js";
+import { AfkRepository } from "#modules/afk/data/AfkRepository.js";
 
 describe("MockPrismaClient (offline in-memory Postgres test driver)", () => {
   let prisma: MockPrismaClient;
@@ -108,7 +108,15 @@ describe("MockPrismaClient (offline in-memory Postgres test driver)", () => {
       setex: () => Promise.resolve("OK"),
     } as never;
     const mockLogger = { warn: () => {}, info: () => {}, error: () => {} } as never;
-    const repo = new AfkRepository(prisma as never, mockRedis, mockLogger, {} as never);
+    const mockDb = {
+      ensureGuild: (guildId: string) =>
+        (prisma.guild as MockModelDelegate).upsert({
+          where: { id: guildId },
+          create: { id: guildId },
+          update: {},
+        }),
+    } as never;
+    const repo = new AfkRepository(prisma as never, mockRedis, mockLogger, mockDb);
 
     const upserted = await repo.upsertEntry("g1", "u1", "brb");
     expect(upserted).toMatchObject({ guildId: "g1", userId: "u1", reason: "brb" });

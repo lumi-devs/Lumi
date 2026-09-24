@@ -6,7 +6,6 @@ import { commandGroups, commandCount } from "@/generated/commands";
 import { permitNodeGroups, permitNodeCount } from "@/generated/permits";
 import { rpcActions, rpcActionCount } from "@/generated/rpc-actions";
 import { dataPrivacyRows } from "@/generated/data-privacy";
-import { modules } from "@/generated/modules";
 
 function EnvRows({ rows }: { rows: { name: string; required: string; fallback: string; about: string }[] }) {
   return (
@@ -125,7 +124,7 @@ export function RpcTable() {
       <thead>
         <tr>
           <th>Action</th>
-          <th>Payload</th>
+          <th>Auth</th>
           <th>Description</th>
         </tr>
       </thead>
@@ -136,7 +135,7 @@ export function RpcTable() {
               <code>{action.name}</code>
             </td>
             <td>
-              <code>{action.payload}</code>
+              <code>{action.auth}</code>
             </td>
             <td>{action.summary}</td>
           </tr>
@@ -164,37 +163,6 @@ export function DataPrivacyTable() {
           <tr key={row.name}>
             <td>{row.displayName}</td>
             <td>{row.statement ?? <em>Not stated in this module&apos;s manifest.</em>}</td>
-          </tr>
-        ))}
-      </tbody>
-    </Table>
-  );
-}
-
-export function ModuleCount() {
-  return <>{modules.length}</>;
-}
-
-export function ModulesTable() {
-  return (
-    <Table>
-      <thead>
-        <tr>
-          <th>Module</th>
-          <th>Category</th>
-          <th>Disableable</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-        {modules.map((m) => (
-          <tr key={m.name}>
-            <td>
-              {m.emoji} {m.displayName} (<code>{m.name}</code>)
-            </td>
-            <td>{m.category}</td>
-            <td>{m.disableable ? "yes" : "no"}</td>
-            <td>{m.short}</td>
           </tr>
         ))}
       </tbody>

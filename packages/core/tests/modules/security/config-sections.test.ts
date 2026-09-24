@@ -1,8 +1,9 @@
-import type { ModuleMeta } from "#lib/module-system/Module.js";
+import { sectionsOf } from "@lumi/contracts";
+import type { ModuleMeta } from "#lib/module-system/meta.js";
 import { SecurityModule } from "#modules/security/index.js";
 import { describe, expect, it } from "bun:test";
 
-const fields = (SecurityModule as unknown as { meta: ModuleMeta }).meta.configFields;
+const fields = (SecurityModule as unknown as { meta: ModuleMeta }).meta.configFields ?? [];
 
 describe("security config sections", () => {
   it("declares fields at all", () => {
@@ -43,5 +44,14 @@ describe("security config sections", () => {
     // Panic mode leads: it is the control someone reaches for mid-raid, so it
     // must not sit behind a tab that is not selected by default.
     expect(order).toEqual(["Panic mode", "Anti-nuke", "Join gate", "Backups"]);
+  });
+
+  it("names the dashboard widget each section hosts", () => {
+    expect(sectionsOf(fields).map((s) => [s.name, s.widget])).toEqual([
+      ["Panic mode", "panic-console"],
+      ["Anti-nuke", "anti-nuke"],
+      ["Join gate", "join-gate"],
+      ["Backups", "backups"],
+    ]);
   });
 });

@@ -139,7 +139,7 @@ export class PermitResolver {
     if (!allowed) {
       throw new UserError({
         identifier: "PermissionDenied",
-        message: `You lack the required permit node (\`${options.permitNode}\`) to execute this command.`,
+        message: `You lack the required permit (\`${options.permitNode}\`) to use this.`,
       });
     }
   }

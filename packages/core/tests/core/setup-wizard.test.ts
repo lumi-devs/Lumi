@@ -10,7 +10,7 @@ import {
   segmentsFromState,
   stepCustomId,
   type SetupWizardState,
-} from "#modules/core/lib/setup-wizard.js";
+} from "#modules/core/services/setup-wizard.js";
 import {
   SetupTotalSteps,
   buildSetupReviewView,
@@ -18,7 +18,7 @@ import {
   buildSetupSuccessCard,
   setupProgressLines,
 } from "#modules/core/ui/setup-wizard.js";
-import type { CardReply } from "#utilities/cards.js";
+import type { CardReply } from "#lib/ui/cards.js";
 import { describe, expect, it } from "bun:test";
 
 type JsonNode = Record<string, any>;

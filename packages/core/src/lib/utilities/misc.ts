@@ -1,7 +1,6 @@
 import type { User, Message } from "discord.js";
 import { PermissionsBitField } from "discord.js";
-import { isGuildBasedChannel } from "@sapphire/discord.js-utilities";
-import { checkModulesEnabled } from "#lib/module-check.js";
+import { container } from "@sapphire/framework";
 import { AsyncQueue } from "@sapphire/async-queue";
 import { createRequire } from "node:module";
 
@@ -61,13 +60,10 @@ export async function isModuleEnabled(
   guildId: string,
   module: string,
 ): Promise<boolean> {
-  const states = await checkModulesEnabled(guildId, [module]);
-  return states.get(module) ?? false;
+  return container.db.modules.isModuleEnabled(guildId, module);
 }
 
 export function canSendMessages(message: Message<true>): boolean {
-  if (!isGuildBasedChannel(message.channel)) return false;
-
   const { me } = message.guild.members;
   if (!me) return false;
   return (

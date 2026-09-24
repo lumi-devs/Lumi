@@ -1,6 +1,10 @@
 import { container } from "@sapphire/framework";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
+import {
+  ModuleRestartCancelId,
+  ModuleRestartId,
+} from "#modules/core/constants.js";
 
 /**
  * Self-restart support for applying downloaded-module code updates.
@@ -28,12 +32,12 @@ export function restartChoiceRow(
 ): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId(`module:restart:${userId}`)
+      .setCustomId(ModuleRestartId.build({ userId }))
       .setLabel("Restart Now")
       .setStyle(ButtonStyle.Danger)
       .setEmoji({ name: "🔄" }),
     new ButtonBuilder()
-      .setCustomId(`module:restartcancel:${userId}`)
+      .setCustomId(ModuleRestartCancelId.build({ userId }))
       .setLabel("Cancel")
       .setStyle(ButtonStyle.Secondary),
   );

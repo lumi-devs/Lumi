@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { PlugZap, SearchX } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildBlocklist, getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildEntities } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { exportGuildBlocklist } from "#/actions/guild-export-actions";
 import { GuildBlocklistTable } from "#/components/guild/guild-blocklist-table";
 import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
@@ -18,13 +19,8 @@ import { EmptyState } from "#/components/ui/empty-state";
 import { ExportLogButton } from "#/components/ui/export-log-button";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
-import type { BlocklistEntryView, BlocklistListData } from "#/lib/dashboard-data";
-import {
-  countBy,
-  extractMemberNames,
-  pageNumber,
-  single,
-} from "#/lib/log-format";
+import type { BlocklistEntryView, BlocklistListData } from "@lumi/contracts/views";
+import { countBy, extractMemberNames, pageNumber, single } from "#/lib/log-format";
 
 const PageSize = 25;
 
@@ -41,16 +37,23 @@ export default async function BlocklistPage({
 
   const page = pageNumber(single(query["page"]));
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
-  const memberNames = extractMemberNames(dashboard.members);
+  const entitiesPromise = getGuildEntities(guildId, session.userId);
+  const blocklistPromise = rpc("guild.blocklist.list", {
+    guildId,
+    actorId: session.userId,
+    data: {
+      page,
+      pageSize: PageSize,
+    },
+  });
+
+  const entities = await entitiesPromise;
+  const memberNames = extractMemberNames(entities.members);
 
   let data: BlocklistListData | null = null;
   let failure: string | null = null;
   try {
-    data = await getGuildBlocklist(guildId, session.userId, {
-      page,
-      pageSize: PageSize,
-    });
+    data = await blocklistPromise;
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }

@@ -1,14 +1,14 @@
 import { FieldType } from "@lumi/contracts";
 import type {
   DashboardChannelView,
-  DashboardModuleView,
+  DashboardModuleSummaryView,
   DashboardRoleView,
-} from "./dashboard-data";
+} from "@lumi/contracts/views";
 import { formatConfigValue } from "./log-format";
 
 // A plain object rather than a lookup closure because it crosses the
 // server/client boundary as props.
-export interface ModuleLabel {
+interface ModuleLabel {
   label: string;
   emoji: string;
   fields: Record<string, string>;
@@ -18,7 +18,7 @@ export interface ModuleLabel {
 export type ModuleLabelIndex = Record<string, ModuleLabel>;
 
 export function buildModuleLabelIndex(
-  modules: DashboardModuleView[],
+  modules: DashboardModuleSummaryView[],
 ): ModuleLabelIndex {
   const index: ModuleLabelIndex = {};
   for (const mod of modules) {

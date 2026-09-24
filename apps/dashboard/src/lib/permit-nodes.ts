@@ -5,7 +5,6 @@
  */
 import { KnownPermitNodes, type PermitNode } from "@lumi/contracts";
 export type { PermitNode };
-export { KnownPermitNodes };
 
 export const KnownPermitNodeGroups: {
   prefix: string;
@@ -125,6 +124,16 @@ export const KnownPermitNodeGroups: {
         node: "owner.announce",
         label: "Global announcements",
         description: "Broadcast one message to every server with the announce command.",
+      },
+    ],
+  },
+  {
+    prefix: "logging",
+    nodes: [
+      {
+        node: "logging.claim",
+        label: "Claim log destinations",
+        description: "Claim a pending log-destination code posted in a channel.",
       },
     ],
   },

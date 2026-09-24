@@ -48,7 +48,7 @@ describe("nick command hierarchy check", () => {
         path: "/path/to/nick.ts",
         root: "/path/to",
         store: { name: "commands" } as any,
-      } as any,
+      },
       {},
     );
   });

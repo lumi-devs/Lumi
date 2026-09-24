@@ -4,7 +4,8 @@ import {
   InteractionHandlerTypes,
   type Command,
 } from "@sapphire/framework";
-import { Module, type ModuleMeta } from "./Module.js";
+import { Module } from "./Module.js";
+import type { ModuleMeta } from "./meta.js";
 import {
   metaFromManifest,
   readManifest,
@@ -26,7 +27,7 @@ import { AddonInteractionRouter } from "#lib/addon-sandbox/interaction-router.js
 import { AddonRelayTaskName } from "#lib/addon-sandbox/relay-task.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 
-export type ModuleState =
+type ModuleState =
   "discovered" | "loaded" | "failed" | "disabled" | "skipped-conflict";
 
 export interface ModuleRecord {

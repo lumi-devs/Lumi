@@ -4,7 +4,7 @@ import { CheckCircle, XCircle } from "lucide-react";
 import { Wordmark } from "#/components/layout/wordmark";
 import { AppealIntakeForm } from "#/components/appeal/appeal-intake-form";
 import { Alert } from "#/components/ui/alert";
-import { verifyAppealToken } from "#/lib/dashboard-fetch";
+import { rpc } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
 import { getClientIp } from "#/lib/client-ip";
 import { AppealStatusLabels, isAppealStatus } from "#/lib/appeals";
@@ -51,7 +51,10 @@ export default async function AppealIntakePage({
     );
   } else {
     try {
-      const result = await verifyAppealToken(guildId, caseId, token);
+      const result = await rpc("guild.appeals.verify", {
+        guildId,
+        data: { caseId, token },
+      });
       content = result.valid ? (
         result.existingStatus !== null ? (
           <AlreadySubmitted status={result.existingStatus} />

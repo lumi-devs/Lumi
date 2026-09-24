@@ -2,11 +2,11 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { channelMention } from "@discordjs/formatters";
 import { ChannelType, type GuildTextBasedChannel } from "discord.js";
-import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import { PanelsKeys } from "#lib/i18n/keys.js";
+import { BaseCommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 import { logError } from "#lib/utilities/errors.js";
-import { getUtility } from "#lib/module-system/Utility.js";
-import { buildVerifyPanel } from "../lib/verify-panel.js";
+import { loadVerificationConfig } from "../services/verification.js";
+import { buildVerifyPanel } from "../ui/verify-panel.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "verifypanel",
@@ -37,13 +37,11 @@ export class VerifyPanelCommand extends BaseCommand {
     const t = await ctx.fetchT();
     const guild = ctx.guild!;
 
-    const verification = await getUtility("security").loadVerificationConfig(
-      guild.id,
-    );
+    const verification = await loadVerificationConfig(guild.id);
     if (!verification.enabled || !verification.verifiedRoleId) {
       return ctx.replyError(
-        t(PanelsKeys.VerifyUnconfiguredTitle),
-        t(PanelsKeys.VerifyUnconfigured),
+        t("panels:verifyUnconfiguredTitle"),
+        t("panels:verifyUnconfigured"),
       );
     }
 
@@ -54,8 +52,8 @@ export class VerifyPanelCommand extends BaseCommand {
         .catch(() => null) as GuildTextBasedChannel | null);
     if (!target?.isTextBased()) {
       return ctx.replyError(
-        t(PanelsKeys.VerifyUnconfiguredTitle),
-        t(PanelsKeys.VerifyUnconfigured),
+        t("panels:verifyUnconfiguredTitle"),
+        t("panels:verifyUnconfigured"),
       );
     }
 
@@ -69,14 +67,14 @@ export class VerifyPanelCommand extends BaseCommand {
     } catch (err: unknown) {
       logError(`verifypanel: guild=${guild.id} channel=${target.id}`, err);
       return ctx.replyError(
-        t(PanelsKeys.VerifyFailedTitle),
-        t(PanelsKeys.VerifyFailed),
+        t("panels:verifyFailedTitle"),
+        t("panels:verifyFailed"),
       );
     }
 
     return ctx.replySuccess(
-      t(PanelsKeys.VerifyPostedTitle),
-      t(PanelsKeys.VerifyPosted, { channel: channelMention(target.id) }),
+      t("panels:verifyPostedTitle"),
+      t("panels:verifyPosted", { channel: channelMention(target.id) }),
     );
   }
 }

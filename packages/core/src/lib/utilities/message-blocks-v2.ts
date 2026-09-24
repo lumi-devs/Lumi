@@ -18,7 +18,7 @@ import {
 import { parseHexColor } from "#lib/message-content.js";
 import { renderTemplate } from "./template.js";
 import { resolveCardColor } from "./config.js";
-import type { CardReply } from "./ui/types.js";
+import type { CardReply } from "#lib/ui/cards.js";
 
 const buttonStyleMap: Record<Exclude<MessageBlockButton["style"], "link">, ButtonStyle> = {
   primary: ButtonStyle.Primary,

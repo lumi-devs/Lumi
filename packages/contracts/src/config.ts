@@ -80,12 +80,18 @@ export interface ConfigField {
   pairedWith?: string;
   /** This field only takes effect while the named BOOLEAN field is true. */
   enabledBy?: string;
+  /** The section holding this field also hosts this non-field widget. */
+  widget?: ConfigWidget;
 }
+
+/** Non-field consoles a dashboard page mounts inside a config section. */
+export type ConfigWidget = "panic-console" | "anti-nuke" | "join-gate" | "backups";
 
 export interface ConfigSection {
   name: string;
   groups: { name: string | null; fields: ConfigField[] }[];
   fieldCount: number;
+  widget?: ConfigWidget;
 }
 
 /**
@@ -132,6 +138,7 @@ export function sectionsOf(fields: ConfigField[]): ConfigSection[] {
         fields: byGroup.get(group)!,
       })),
       fieldCount: sectionFields.length,
+      widget: sectionFields.find((field) => field.widget)?.widget,
     };
   });
 }

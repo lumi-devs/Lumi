@@ -1,6 +1,6 @@
 import { Activity, Gauge, Layers, Server } from "lucide-react";
 import { requireBotOwner } from "#/lib/auth-guards";
-import { getSystemShards } from "#/lib/dashboard-fetch";
+import { rpc } from "#/lib/rpc";
 import { ShardFleet } from "#/components/system/shard-fleet";
 import { StatsGrid } from "#/components/stats-grid";
 import { PageHeader } from "#/components/ui/page-header";
@@ -8,7 +8,7 @@ import { Badge } from "#/components/ui/badge";
 
 export default async function SystemShardsPage() {
   const session = await requireBotOwner();
-  const data = await getSystemShards(session.userId);
+  const data = await rpc("system.shards.get", { actorId: session.userId });
 
   const reporting = data.shards.length;
   const pings = data.shards

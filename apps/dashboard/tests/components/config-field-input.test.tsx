@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "bun:test";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { FieldType, type ConfigField } from "@lumi/contracts";
 import { ConfigFieldInput, resolveTemplatePreview } from "#/components/guild/config-field-input";
-import type { DashboardRoleView, DashboardChannelView } from "#/lib/dashboard-data";
+import type { DashboardRoleView, DashboardChannelView } from "@lumi/contracts/views";
 
 const roles: DashboardRoleView[] = [
   { id: "111", name: "Moderators", color: 0, position: 2, permissions: "0", isBotRole: false },

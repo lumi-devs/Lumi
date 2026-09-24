@@ -1,12 +1,9 @@
-import {
-  Module,
-  DefineModule,
-  NoEndUserData,
-  cfg,
-} from "#lib/module-system/Module.js";
+import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { NoEndUserData } from "#lib/module-system/meta.js";
+import { cfg } from "#lib/module-system/config-schema.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
-import { handleVerifySweepFire } from "./lib/verify-sweep-handler.js";
-import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
+import { handleVerifySweepFire } from "./services/verify-sweep-handler.js";
+import { handleBackupSnapshotFire } from "./services/backup-snapshot-handler.js";
 
 @DefineModule({
   name: "security",
@@ -21,6 +18,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
   configSchema: cfg.object({
     panic_lock_mod_commands: cfg.boolean({
       section: "Panic mode",
+      widget: "panic-console",
       group: "Panic Mode",
       label: "Lock Mod Commands During Panic",
       description:
@@ -36,6 +34,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
     }),
     antinuke_enabled: cfg.boolean({
       section: "Anti-nuke",
+      widget: "anti-nuke",
       group: "Anti-Nuke",
       label: "Anti-Nuke",
       description: "Watch the audit log for mass destructive actions.",
@@ -174,6 +173,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
     }),
     joingate_enabled: cfg.boolean({
       section: "Join gate",
+      widget: "join-gate",
       group: "Join Gate",
       label: "Join Gate",
       description: "Screen new members for raids and throwaway accounts.",
@@ -390,6 +390,7 @@ import { handleBackupSnapshotFire } from "./lib/backup-snapshot-handler.js";
     }),
     backup_interval_hours: cfg.number({
       section: "Backups",
+      widget: "backups",
       group: "Backups",
       label: "Backup Interval (hours)",
       description:

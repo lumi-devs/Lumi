@@ -1,11 +1,6 @@
 import type { AddonInteractionInvocation, SerialisedMember, SerialisedUser } from "@lumi/contracts";
-import type { CardReply } from "#lib/utilities/cards.js";
-import {
-  makeErrorCard,
-  makeInfoCard,
-  makeSuccessCard,
-  makeWarningCard,
-} from "#lib/utilities/cards.js";
+import type { CardReply } from "#lib/ui/cards.js";
+import { makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard } from "#lib/ui/cards.js";
 import { call } from "./rpc.js";
 
 export class InteractionContext {

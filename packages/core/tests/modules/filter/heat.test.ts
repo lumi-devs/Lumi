@@ -4,7 +4,7 @@ import {
   heatAction,
   secondsUntilCool,
   
-} from "#modules/filter/lib/heat.js";
+} from "#modules/filter/services/heat.js";
 
 const config = {
   enabled: true,

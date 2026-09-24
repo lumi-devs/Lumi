@@ -6,13 +6,14 @@ import {
   normalizeSetupState,
   setupAccessDenied,
   stateFromSegments,
-} from "#modules/core/lib/setup-wizard.js";
+} from "../services/setup-wizard.js";
 import {
   buildSetupAgeModal,
   buildSetupReviewView,
   buildSetupStepView,
   buildSetupSuccessCard,
 } from "#modules/core/ui/setup-wizard.js";
+import { SetupId } from "../constants.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,
@@ -26,12 +27,13 @@ import type { ButtonInteraction } from "discord.js";
 })
 export class SetupWizardButtonHandler extends BaseInteractionHandler {
   public override parse(interaction: ButtonInteraction) {
-    if (!interaction.customId.startsWith("setup:")) return this.none();
-    const parts = interaction.customId.split(":");
-    const head = parts[1];
+    const parsed = SetupId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    const { head, rest } = parsed;
     if (head !== "step" && head !== "finish" && head !== "agebtn") {
       return this.none();
     }
+    const parts = ["setup", head, ...rest];
     return this.some({ head, parts });
   }
 

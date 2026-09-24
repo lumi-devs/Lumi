@@ -1,11 +1,11 @@
 import { requireBotOwner } from "#/lib/auth-guards";
-import { getSystemDashboard } from "#/lib/dashboard-fetch";
+import { rpc } from "#/lib/rpc";
 import { ModuleKillSwitchGrid } from "#/components/system/module-kill-switch-grid";
 import { PageHeader } from "#/components/ui/page-header";
 
 export default async function SystemModulesPage() {
   const session = await requireBotOwner();
-  const data = await getSystemDashboard(session.userId);
+  const data = await rpc("system.dashboard.get", { actorId: session.userId });
 
   return (
     <div className="flex flex-col gap-4">

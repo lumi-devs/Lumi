@@ -49,3 +49,6 @@ apps/docs/src/generated/
 
 # Release working notes (audits, checkpoints, raw tool output). Scratch, not source.
 /.lumi-0.4/
+/.lumi-0.5/
+/ORIGINAL_REQUEST.md
+/PROJECT.md

@@ -1,25 +1,14 @@
 "use server";
 
-import { RpcActions } from "@lumi/contracts";
-import { requireGuild } from "#/lib/auth-guards";
-import { rpcCall } from "#/lib/rpc";
-import { isRateLimited } from "#/lib/rate-limit";
-import { runAction, type ActionResult } from "#/lib/action-result";
-
-async function guardedLogClaimAction(guildId: string) {
-  const session = await requireGuild(guildId);
-  if (await isRateLimited(`guild-action:${session.userId}`, 60, 60_000)) {
-    throw new Error("Too many requests — slow down.");
-  }
-  return session;
-}
+import { rpc } from "#/lib/rpc";
+import type { ActionResult } from "#/lib/action-result";
+import { guildAction } from "./_guard";
 
 export async function issueLogClaim(
   guildId: string,
 ): Promise<ActionResult & { code?: string; expiresIn?: number }> {
-  return runAction(async () => {
-    const session = await guardedLogClaimAction(guildId);
-    const data = await rpcCall(RpcActions.guildLogClaimsIssue, {
+  return guildAction(guildId, async (session) => {
+    const data = await rpc("guild.logClaims.issue", {
       guildId,
       actorId: session.userId,
     });
@@ -38,16 +27,15 @@ export async function pollChannelClaim(
   guildId: string,
   issuedAt: string,
 ): Promise<ActionResult & { channelId?: string }> {
-  return runAction(async () => {
-    const session = await guardedLogClaimAction(guildId);
-    const { claims } = await rpcCall(RpcActions.guildLogClaimsList, {
+  return guildAction(guildId, async (session) => {
+    const { claims } = await rpc("guild.logClaims.list", {
       guildId,
       actorId: session.userId,
     });
     const claim = claims.find((c) => c.claimedAt > issuedAt);
     if (!claim) return { ok: true };
 
-    await rpcCall(RpcActions.guildLogClaimsDismiss, {
+    await rpc("guild.logClaims.dismiss", {
       guildId,
       actorId: session.userId,
       data: { channelId: claim.channelId, outcome: "confirmed" },

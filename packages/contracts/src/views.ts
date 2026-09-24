@@ -1,30 +1,15 @@
-import type {
-  AppealStatus,
-  ReactionRoleMenuMode,
-  WarnThresholdAction,
-} from "./rpc.js";
-import type { ConfigField } from "./config.js";
-import type { MessageDocumentV2 } from "./message-blocks.js";
-export type {
-  LogClaimView,
-  PermitKind,
-  PermitTargetType,
-  ReactionRoleMenuMode as ReactionRoleMenuModeView,
-  ShardStateView,
-  ClusterReplicaView,
-  WarnThresholdAction as WarnThresholdActionView,
-} from "./rpc.js";
-export type { AppealStatus };
+import type { ReactionRoleMenuMode } from "./rpc/reactionroles";
+import type { ConfigField } from "./config";
+import type { MessageDocumentV2 } from "./message-blocks";
 
 export interface GuildSettings {
   prefix: string | null;
   locale: string;
-  muteRoleId?: string | null;
-  timezone?: string;
   [key: string]: unknown;
 }
 
-export interface DashboardModuleView {
+/** A module's manifest plus its enabled state for the guild, without config values. */
+export interface DashboardModuleSummaryView {
   name: string;
   displayName: string;
   emoji: string;
@@ -36,10 +21,13 @@ export interface DashboardModuleView {
   dependencies: string[];
   enabled: boolean;
   configFields: ConfigField[];
-  config: Record<string, unknown>;
   isAddon: boolean;
   category: string;
   dashboardHref: string | null;
+}
+
+export interface DashboardModuleView extends DashboardModuleSummaryView {
+  config: Record<string, unknown>;
 }
 
 export interface DashboardRoleView {
@@ -63,22 +51,21 @@ export interface DashboardMemberView {
   displayName: string;
 }
 
-export interface DashboardData {
+export interface GuildShellData {
   name: string;
   icon: string | null;
   banner: string | null;
   memberCount: number;
   settings: GuildSettings;
-  modules: DashboardModuleView[];
-  roles: DashboardRoleView[];
-  channels: DashboardChannelView[];
-  members: DashboardMemberView[];
+  modules: DashboardModuleSummaryView[];
 }
 
-export type {
-  PermitAssignmentPayload as PermitAssignmentView,
-  PermitPayload as PermitView,
-} from "./rpc.js";
+export interface GuildEntitiesData {
+  roles: DashboardRoleView[];
+  channels: DashboardChannelView[];
+  /** A directory sample for id-to-name lookups, not a census. */
+  members: DashboardMemberView[];
+}
 
 export interface ModerationCaseView {
   id: number;
@@ -102,7 +89,7 @@ export interface CasesListData {
 
 export interface WarnThresholdView {
   warnCount: number;
-  action: WarnThresholdAction;
+  action: string;
   duration: string | null;
 }
 
@@ -122,7 +109,7 @@ export interface VerificationPanelView {
 
 /** Result of posting-or-editing the verification panel message. */
 export interface VerificationPanelSetResult {
-  success: true;
+  success: boolean;
   channelId: string;
   messageId: string;
   /** A brand new message was posted (either no panel was tracked, the target
@@ -203,7 +190,7 @@ export interface AuditListData {
 }
 
 export interface ConfigHistoryEntryView {
-  id: string;
+  id: number;
   moduleName: string;
   key: string;
   oldValue: unknown;
@@ -220,7 +207,7 @@ export interface ConfigHistoryListData {
 }
 
 export interface ConfigOverrideView {
-  id: string;
+  id: number;
   moduleName: string;
   key: string;
   modelType: string;
@@ -229,7 +216,8 @@ export interface ConfigOverrideView {
 }
 
 export interface BlocklistEntryView {
-  id: number;
+  /** The `Blocklist.id` for a guild-scoped entry, or `userId` for a global one - `GlobalBlock` has no integer id. */
+  id: string;
   userId: string;
   reason: string | null;
   blockedBy: string;
@@ -257,7 +245,7 @@ export interface AppealView {
   caseId: number;
   caseNumber: number;
   action: string;
-  status: AppealStatus;
+  status: string;
   message: string;
   reviewedBy: string | null;
   reviewedAt: string | null;
@@ -283,7 +271,7 @@ export type AppealVerifyResult =
   | {
       valid: true;
       case: AppealCaseSummary;
-      existingStatus: AppealStatus | null;
+      existingStatus: string | null;
     };
 
 export interface AfkEntryView {
@@ -351,5 +339,3 @@ export interface SystemDashboardData {
   allModules: { name: string; displayName: string; emoji: string }[];
   guildCount: number;
 }
-
-export type { SystemShardsResponse as SystemShardsData } from "./rpc.js";

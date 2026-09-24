@@ -2,9 +2,10 @@ import {
   hasSetupAccess,
   parseMinAgeHours,
   stateFromSegments,
-} from "#modules/core/lib/setup-wizard.js";
+} from "../services/setup-wizard.js";
 import { buildSetupStepView } from "#modules/core/ui/setup-wizard.js";
-import { ephemeralCard, makeErrorCard } from "#utilities/cards.js";
+import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
+import { SetupAgeModalId } from "../constants.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,
@@ -18,10 +19,9 @@ import type { ModalSubmitInteraction } from "discord.js";
 })
 export class SetupWizardModalHandler extends InteractionHandler {
   public override parse(interaction: ModalSubmitInteraction) {
-    if (!interaction.customId.startsWith("setup:agemodal:")) {
-      return this.none();
-    }
-    return this.some({ segments: interaction.customId.split(":").slice(2) });
+    const parsed = SetupAgeModalId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    return this.some({ segments: parsed.segments });
   }
 
   public async run(

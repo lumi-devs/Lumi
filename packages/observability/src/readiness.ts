@@ -53,15 +53,18 @@ export interface ReadinessReport {
 const ProbeTimeoutMs = 2000;
 
 async function runOne(probe: Probe): Promise<ProbeResult> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
+    const timeoutPromise = new Promise<ProbeResult>((resolve) => {
+      timer = setTimeout(
+        () => resolve({ status: "fail", detail: "timeout" }),
+        ProbeTimeoutMs,
+      );
+      timer.unref?.();
+    });
     const result = await Promise.race<ProbeResult>([
-      Promise.resolve(probe.fn()),
-      new Promise<ProbeResult>((resolve) =>
-        setTimeout(
-          () => resolve({ status: "fail", detail: "timeout" }),
-          ProbeTimeoutMs,
-        ),
-      ),
+      Promise.resolve().then(() => probe.fn()),
+      timeoutPromise,
     ]);
     return result;
   } catch (err) {
@@ -72,6 +75,10 @@ async function runOne(probe: Probe): Promise<ProbeResult> {
       `[observability] readiness probe "${probe.name}" threw: ${String(err)}\n`,
     );
     return { status: "fail", detail: "probe error" };
+  } finally {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
   }
 }
 

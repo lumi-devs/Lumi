@@ -1,20 +1,6 @@
-import {
-  Module,
-  DefineModule,
-  NoEndUserData,
-  cfg,
-} from "#lib/module-system/Module.js";
-import type { MessageDocumentV2 } from "@lumi/contracts";
-
-export interface StickyEntry {
-  channel_id: string;
-  message: string;
-  enabled: boolean;
-  accentColor?: string;
-  imageUrls?: string[];
-  thumbnailUrl?: string;
-  richContent?: MessageDocumentV2;
-}
+import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { NoEndUserData } from "#lib/module-system/meta.js";
+import { cfg } from "#lib/module-system/config-schema.js";
 
 @DefineModule({
   name: "sticky",

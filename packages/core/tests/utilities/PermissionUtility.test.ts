@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { PermissionUtility } from "#utilities/pieces/PermissionUtility.js";
+import { PermissionUtility } from "#modules/core/utilities/PermissionUtility.js";
 
 describe("PermissionUtility", () => {
   let service: PermissionUtility;
@@ -340,7 +340,7 @@ describe("PermissionUtility", () => {
     it("still resolves the permit for its owning guild", async () => {
       await expect(
         service.getPermit("GUILD_B", FOREIGN_EXTRA_OWNER.id),
-      ).resolves.toEqual(FOREIGN_EXTRA_OWNER);
+      ).resolves.toEqual<typeof FOREIGN_EXTRA_OWNER>(FOREIGN_EXTRA_OWNER);
     });
   });
 

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ClipboardList, PlugZap, SearchX } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildAuditLog, getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildShell, getGuildEntities } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { exportGuildAuditLog } from "#/actions/guild-export-actions";
 import { AuditTimeline } from "#/components/audit-timeline";
 import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
@@ -21,16 +22,9 @@ import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
 import { buildModuleLabelIndex } from "#/lib/config-labels";
-import type { AuditEntryView, AuditListData } from "#/lib/dashboard-data";
-import {
-  AuditPlatformOptions,
-  countBy,
-  filterHref,
-  formatShortDay,
-  isSnowflake,
-  pageNumber,
-  single,
-} from "#/lib/log-format";
+import type { AuditEntryView, AuditListData } from "@lumi/contracts/views";
+import { AuditPlatformOptions, countBy, filterHref, formatShortDay, pageNumber, single } from "#/lib/log-format";
+import { isSnowflake } from "#/lib/moderation-cases";
 
 const PageSize = 30;
 
@@ -54,19 +48,31 @@ export default async function AuditPage({
 
   const badUserFilter = Boolean(userId) && !isSnowflake(userId);
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
-  const labels = buildModuleLabelIndex(dashboard.modules);
+  const narrowedPlatform =
+    platform === "discord" || platform === "web" ? platform : undefined;
 
-  let data: AuditListData | null = null;
-  let failure: string | null = null;
-  try {
-    data = await getGuildAuditLog(guildId, session.userId, {
+  const auditPromise = rpc("guild.audit.list", {
+    guildId,
+    actorId: session.userId,
+    data: {
       page,
       pageSize: PageSize,
       ...(action ? { action } : {}),
       ...(userId && !badUserFilter ? { userId } : {}),
-      ...(platform ? { platform } : {}),
-    });
+      ...(narrowedPlatform ? { platform: narrowedPlatform } : {}),
+    },
+  });
+
+  const [shell, entities] = await Promise.all([
+    getGuildShell(guildId, session.userId),
+    getGuildEntities(guildId, session.userId),
+  ]);
+  const labels = buildModuleLabelIndex(shell.modules);
+
+  let data: AuditListData | null = null;
+  let failure: string | null = null;
+  try {
+    data = await auditPromise;
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }
@@ -115,7 +121,7 @@ export default async function AuditPage({
                       action={exportGuildAuditLog.bind(null, guildId, {
                         ...(action ? { action } : {}),
                         ...(userId && !badUserFilter ? { userId } : {}),
-                        ...(platform ? { platform } : {}),
+                        ...(narrowedPlatform ? { platform: narrowedPlatform } : {}),
                       })}
                     />
                   ) : null}
@@ -185,9 +191,9 @@ export default async function AuditPage({
               <AuditTimeline
                 entries={data.entries}
                 labels={labels}
-                roles={dashboard.roles}
-                channels={dashboard.channels}
-                members={dashboard.members}
+                roles={entities.roles}
+                channels={entities.channels}
+                members={entities.members}
               />
             </>
           ) : data && data.total > 0 ? (

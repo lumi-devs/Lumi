@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "#/components/ui/dropdown-menu";
-import type { ReactionRoleMenuView } from "#/lib/dashboard-data";
+import type { ReactionRoleMenuView } from "@lumi/contracts/views";
 
 export function modeLabel(mode: ReactionRoleMenuView["mode"]): string {
   if (mode === "select") return "Dropdown";

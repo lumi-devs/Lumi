@@ -2,7 +2,6 @@ import { ButtonStyle } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder, type MessageActionRowComponentBuilder } from "@discordjs/builders";
 import {
   InteractionHandlerTypes,
-  InteractionHandler,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { ButtonInteraction, MessageFlags } from "discord.js";
@@ -12,34 +11,39 @@ import {
   hyperlink,
   messageLink,
 } from "@discordjs/formatters";
-import { formatDuration } from "#utilities/time.js";
-import { makeListCard, ephemeralCard } from "#lib/utilities/cards.js";
-import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { formatDuration } from "#lib/utilities/time.js";
+import { makeListCard, ephemeralCard } from "#lib/ui/cards.js";
+import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { getAfkMentions } from "../data/afk.js";
+import { AfkMentionsId } from "../constants.js";
 
 import { fetchTyped } from "#lib/commands.js";
 
 const PageSize = 5;
 
-@ApplyOptions<InteractionHandler.Options>({
+@ApplyOptions<ModuleInteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,
+  module: "afk",
 })
-export default class AfkMentionsHandler extends BaseInteractionHandler {
+export default class AfkMentionsHandler extends ModuleInteractionHandler<
+  ButtonInteraction,
+  { userId: string; page: string }
+> {
   public override parse(interaction: ButtonInteraction) {
-    if (!interaction.customId.startsWith("afk:mentions:")) return this.none();
-    const [, , userId, page] = interaction.customId.split(":");
-    return this.some({ userId, page: page ? parseInt(page, 10) : 0 });
+    const parsed = AfkMentionsId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    return this.some(parsed);
   }
 
-  public async run(
+  protected override async handle(
     interaction: ButtonInteraction,
-    { userId, page }: { userId: string; page: number },
+    { userId, page: pageStr }: { userId: string; page: string },
   ) {
-    if (!interaction.inGuild()) return;
+    const { guildId } = interaction;
+    if (!guildId) return;
     this.checkSecurity(interaction, userId);
-    if (!(await isModuleEnabled(interaction.guildId, "afk"))) return;
+    const page = parseInt(pageStr, 10);
 
     // Which defer to use depends only on the source message's own flags
     // (known synchronously), so defer before the async lookups below to
@@ -52,7 +56,7 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
       });
 
     const t = await fetchTyped(interaction);
-    const mentions = await getAfkMentions(interaction.guildId, userId);
+    const mentions = await getAfkMentions(guildId, userId);
 
     const totalPages = Math.max(1, Math.ceil(mentions.length / PageSize));
     const safePage = Math.max(0, Math.min(page, totalPages - 1));
@@ -64,7 +68,7 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
       );
       const link = hyperlink(
         t("afk:jumpToMessage"),
-        messageLink(m.channelId, m.messageId, interaction.guildId),
+        messageLink(m.channelId, m.messageId, guildId),
       );
       return t("afk:mentionLine", {
         user: userMention(m.authorId),
@@ -76,19 +80,19 @@ export default class AfkMentionsHandler extends BaseInteractionHandler {
 
     const row = totalPages > 1 ? new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
       new ButtonBuilder()
-        .setCustomId(`afk:mentions:${userId}:${safePage - 1}`)
-        .setLabel("Previous")
+        .setCustomId(AfkMentionsId.build({ userId, page: String(safePage - 1) }))
+        .setLabel(t("afk:previousButton"))
         .setEmoji(Emojis.parse(Emojis.ArrowLeft))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(safePage <= 0),
       new ButtonBuilder()
-        .setCustomId(`afk:mentions:${userId}:indicator`)
-        .setLabel(`Page ${safePage + 1}/${totalPages}`)
+        .setCustomId(AfkMentionsId.build({ userId, page: "indicator" }))
+        .setLabel(t("afk:pageIndicator", { page: safePage + 1, totalPages }))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(true),
       new ButtonBuilder()
-        .setCustomId(`afk:mentions:${userId}:${safePage + 1}`)
-        .setLabel("Next")
+        .setCustomId(AfkMentionsId.build({ userId, page: String(safePage + 1) }))
+        .setLabel(t("afk:nextButton"))
         .setEmoji(Emojis.parse(Emojis.ArrowRight))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(safePage >= totalPages - 1)

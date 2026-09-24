@@ -8,6 +8,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { rpcRouter } from "@lumi/contracts/rpc";
 
 const DOCS_ROOT = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const REPO_ROOT = path.resolve(DOCS_ROOT, "../../");
@@ -196,6 +197,7 @@ const workerMeta: Record<string, EnvMeta> = {
 const dashboardMeta: Record<string, EnvMeta> = {
   DASHBOARD_HOST: { required: "no", fallback: "0.0.0.0", about: "Interface the dashboard binds." },
   DASHBOARD_PORT: { required: "no", fallback: "8080", about: "Port the dashboard listens on." },
+  DASHBOARD_PUBLIC_URL: { required: "no", fallback: "\"\"", about: "Public origin of the dashboard (e.g. https://dash.example.com) for post-invite OAuth2 redirects." },
   DASHBOARD_SESSION_SECRET: { required: "yes", fallback: "—", about: "NextAuth session JWT encryption secret." },
   DISCORD_OAUTH2_CLIENT_ID: { required: "yes", fallback: "—", about: "Discord application client id." },
   DISCORD_OAUTH2_CLIENT_SECRET: { required: "yes", fallback: "—", about: "Discord application client secret." },
@@ -321,130 +323,17 @@ export const composeEnvVars: EnvRow[] = ${JSON.stringify(composeRows, null, 2)};
 }
 
 // --- 5. RPC actions -----------------------------------------------------------
-// The action -> payload-type mapping is mechanical from RpcRequestPayloads;
-// one-line summaries can't be derived from a type name, so they stay a
-// hand-maintained lookup that the generator checks for drift both ways.
-
-const rpcSummaries: Record<string, string> = {
-  "global.gdpr.delete": "Erase a user's data.",
-  "global.gdpr.export": "Export a user's data, keyed by module.",
-  "downloader.repo.add": "Register a module repo.",
-  "downloader.repo.list": "List registered repos.",
-  "downloader.repo.modules": "List modules a repo offers.",
-  "downloader.module.install": "Install a module from a repo.",
-  "downloader.module.uninstall": "Uninstall a module.",
-  "downloader.module.rollback": "Roll a module back to a revision.",
-  "guild.dashboard.get": "Full dashboard view for a guild.",
-  "guild.summaries.list": "Decorative guild rows (icon, banner, member count).",
-  "guild.module.toggle": "Enable or disable a module for a guild.",
-  "guild.config.set": "Write one config key (omitted value deletes it).",
-  "guild.config.setMany": "Batch config write, validated per key.",
-  "guild.roles.list": "Minimal role rows for dropdowns.",
-  "guild.channels.list": "Minimal channel rows for dropdowns.",
-  "guild.setup.run": "One-shot setup wizard bootstrap.",
-  "guild.settings.set": "General guild settings form.",
-  "guild.permits.list": "List permits with assignments.",
-  "guild.permits.create": "Create an enforced or custom permit.",
-  "guild.permits.update": "Rename or re-scope a permit.",
-  "guild.permits.delete": "Delete a permit.",
-  "guild.permits.assign": "Grant a permit to a role or user.",
-  "guild.permits.unassign": "Revoke a permit grant.",
-  "guild.cases.list": "Paged moderation cases.",
-  "guild.cases.revoke": "Revoke a case.",
-  "guild.warnThresholds.list": "List warn-count escalation rules.",
-  "guild.warnThresholds.set": "Upsert a rule; null action deletes it. mute/vcmute need a duration.",
-  "guild.panic.get": "Read panic-mode state.",
-  "guild.panic.set": "Lock down the guild, optionally narrowed to channels.",
-  "guild.verificationPanel.get": "Read the verification panel binding.",
-  "guild.verificationPanel.set": "Bind the verification panel.",
-  "guild.verificationPanel.delete": "Remove the verification panel.",
-  "guild.logClaims.list": "List channels pending as log destinations.",
-  "guild.logClaims.issue": "Issue a one-time code to claim a log channel.",
-  "guild.logClaims.dismiss": "Resolve a claim as confirmed or dismissed; audit-logged.",
-  "guild.verificationWeb.complete": "Complete a web verification flow.",
-  "guild.backups.list": "List guild backups (role/channel counts).",
-  "guild.backups.restore": "Restore a guild backup.",
-  "guild.tempvc.generators.list": "List temporary-voice generator channels.",
-  "guild.tempvc.generators.set": "Upsert a generator; null name deletes it.",
-  "guild.tempvc.records.list": "List temporary-voice records.",
-  "guild.reactionroles.menus.list": "List role menus for a guild.",
-  "guild.reactionroles.menus.set": "Create or update a role menu with its options.",
-  "guild.reactionroles.menus.delete": "Delete a role menu.",
-  "guild.audit.list": "Paged guild audit log.",
-  "guild.history.list": "Paged config change history.",
-  "guild.history.rollback": "Roll config back to a history entry.",
-  "guild.overrides.list": "List per-channel/role/user config overrides.",
-  "guild.overrides.set": "Upsert an override; null value deletes it.",
-  "guild.blocklist.list": "Paged guild blocklist.",
-  "guild.blocklist.add": "Block a user.",
-  "guild.blocklist.remove": "Unblock a user.",
-  "guild.modNotes.list": "Moderator notes for a user.",
-  "guild.modNotes.add": "Add a moderator note.",
-  "guild.modNotes.remove": "Remove a moderator note.",
-  "guild.appeals.verify": "Verify an appeal link token.",
-  "guild.appeals.submit": "Submit an appeal message.",
-  "guild.appeals.list": "Paged appeals for reviewers.",
-  "guild.appeals.review": "Approve, deny, blacklist-deny, or dismiss.",
-  "guild.afk.list": "List AFK entries.",
-  "guild.ignored.list": "List ignored channels.",
-  "guild.ignored.add": "Ignore a channel; null targets the guild-wide row.",
-  "guild.ignored.remove": "Un-ignore a channel.",
-  "guild.moduleData.list": "Inspect stored module data.",
-  "auth.whoami": "Returns { isBotOwner }; defers to the worker PermitResolver.",
-  "system.dashboard.get": "System-panel overview.",
-  "system.maintenance.set": "Toggle maintenance mode.",
-  "system.module.toggle": "Globally toggle a module.",
-  "system.module.clear": "Clear a module's global state.",
-  "system.identity.set": "Set invite URL and support guild.",
-  "system.audit.list": "Cross-guild audit log.",
-  "system.blocklist.list": "Global blocklist.",
-  "system.blocklist.add": "Add to the global blocklist.",
-  "system.blocklist.remove": "Remove from the global blocklist.",
-  "system.shards.get": "Shard telemetry: replicas, shard states, missing ids.",
-};
 
 async function generateRpcActions(): Promise<void> {
-  const src = await fs.readFile(
-    path.join(REPO_ROOT, "packages/contracts/src/rpc.ts"),
-    "utf8",
-  );
-  const blockMatch = src.match(
-    /export interface RpcRequestPayloads \{([\s\S]*?)\n\}/,
-  );
-  if (!blockMatch) {
-    throw new Error("[generate-content] Could not find RpcRequestPayloads in packages/contracts/src/rpc.ts");
-  }
-  const entries: { name: string; payload: string }[] = [];
-  for (const m of blockMatch[1]!.matchAll(/^\s*"([a-zA-Z.]+)":\s*(.+);\s*$/gm)) {
-    entries.push({ name: m[1]!, payload: m[2]! });
-  }
-  if (entries.length === 0) {
-    throw new Error("[generate-content] Parsed zero RPC actions out of RpcRequestPayloads — the regex likely no longer matches the file's shape.");
-  }
-
-  const problems: string[] = [];
-  const actionNames = new Set(entries.map((e) => e.name));
-  for (const name of actionNames) {
-    if (!(name in rpcSummaries)) problems.push(`rpc.ts declares "${name}" with no docs summary`);
-  }
-  for (const name of Object.keys(rpcSummaries)) {
-    if (!actionNames.has(name)) problems.push(`docs summary for "${name}" has no matching entry in RpcRequestPayloads`);
-  }
-  if (problems.length > 0) {
-    throw new Error(`[generate-content] RPC reference drifted from source:\n  ${problems.join("\n  ")}`);
-  }
-
-  const rows = entries.map((e) => ({
-    name: e.name,
-    payload: e.payload === "never" ? "none" : e.payload,
-    summary: rpcSummaries[e.name]!,
-  }));
+  const rows = Object.entries(rpcRouter)
+    .map(([name, entry]) => ({ name, auth: entry.auth, summary: entry.summary }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   await writeGenerated(
     "rpc-actions.ts",
     `export interface RpcActionRow {
   name: string;
-  payload: string;
+  auth: string;
   summary: string;
 }
 

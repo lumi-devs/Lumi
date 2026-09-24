@@ -3,7 +3,8 @@ import type { AutocompleteInteraction } from "discord.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Time } from "@sapphire/time-utilities";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 import {
   Message,
   PermissionFlagsBits,
@@ -11,16 +12,11 @@ import {
   type FetchMessagesOptions,
   Collection,
 } from "discord.js";
-import {
-  makeErrorCard,
-  makeSuccessCard,
-  makeWarningCard,
-} from "#lib/utilities/cards.js";
+import { makeErrorCard, makeSuccessCard, makeWarningCard } from "#lib/ui/cards.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { logError, errorCode } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 import { parseDuration, formatDuration } from "#lib/utilities/time.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import {
   MatchBatchSize,
   getRegexWorker,
@@ -292,8 +288,8 @@ public override registerApplicationCommands(
 
     if (!Number.isFinite(amount) || amount <= 0 || amount > 1000) {
       return ctx.replyError(
-        t(LanguageKeys.Commands.PurgeInvalidAmountTitle),
-        t(LanguageKeys.Commands.PurgeInvalidAmount),
+        t("commands:purgeInvalidAmountTitle"),
+        t("commands:purgeInvalidAmount"),
       );
     }
 
@@ -330,8 +326,8 @@ public override registerApplicationCommands(
       if (!res.confirmed) {
         if (ctx.isSlash) {
           await ctx.replyInfo(
-            t(LanguageKeys.Commands.PurgeCancelledTitle),
-            t(LanguageKeys.Commands.PurgeCancelledText),
+            t("commands:purgeCancelledTitle"),
+            t("commands:purgeCancelledText"),
           );
         }
         return;
@@ -340,7 +336,7 @@ public override registerApplicationCommands(
     } else {
       prompt = await channel.send({
         ...makeSuccessCard(
-          t(LanguageKeys.Commands.PurgeInitiatingTitle),
+          t("commands:purgeInitiatingTitle"),
           `Initiating deletion of up to ${amount} message(s)${suffix}.`,
         ),
         allowedMentions: {},
@@ -496,8 +492,8 @@ public override registerApplicationCommands(
         );
       const completedCard = await channel.send({
         ...makeSuccessCard(
-          t(LanguageKeys.Commands.PurgeCompleteTitle),
-          t(LanguageKeys.Commands.PurgeComplete, { count: deletedCount }),
+          t("commands:purgeCompleteTitle"),
+          t("commands:purgeComplete", { count: deletedCount }),
         ),
         allowedMentions: {},
       });
@@ -539,17 +535,17 @@ public override registerApplicationCommands(
   ): Promise<{ prompt: Message; confirmed: boolean }> {
     const { confirmed, message: prompt } = await confirmPrompt(ctx, {
       channel,
-      title: t(LanguageKeys.Commands.PurgeConfirmTitle),
+      title: t("commands:purgeConfirmTitle"),
       body: `Are you sure you want to delete up to ${amount} message(s)${suffix}?`,
-      confirmLabel: t(LanguageKeys.Commands.PurgeConfirmBtn),
-      cancelLabel: t(LanguageKeys.Commands.PurgeCancelBtn),
+      confirmLabel: t("commands:purgeConfirmBtn"),
+      cancelLabel: t("commands:purgeCancelBtn"),
       time: 15_000,
     });
 
     if (confirmed) {
       await prompt.edit({
         ...makeSuccessCard(
-          t(LanguageKeys.Commands.PurgeInitiatingTitle),
+          t("commands:purgeInitiatingTitle"),
           `Proceeding with deletion of up to ${amount} message(s)${suffix}.`,
         ),
       });
@@ -558,8 +554,8 @@ public override registerApplicationCommands(
 
     await prompt.edit({
       ...makeErrorCard(
-        t(LanguageKeys.Commands.PurgeCancelledTitle),
-        t(LanguageKeys.Commands.PurgeCancelledText),
+        t("commands:purgeCancelledTitle"),
+        t("commands:purgeCancelledText"),
       ),
     });
     deleteMessageLater(prompt, undefined, "Purge: delete prompt after cancel/timeout");

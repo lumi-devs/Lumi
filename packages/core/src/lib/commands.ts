@@ -1,21 +1,13 @@
 import { CommandContext } from "#lib/command-context.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
-import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
+import { memberRoleIds } from "#lib/permissions/subject.js";
 import { instrumentCommandPiece } from "#lib/telemetry/instrument.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeInfoCard,
-  makeSuccessCard,
-  makeWarningCard,
-  type CardReply,
-} from "#lib/utilities/cards.js";
+import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "#lib/ui/cards.js";
 import {
   BucketScope,
   Command,
-  UserError,
   container,
   type ApplicationCommandRegistry,
   type Args,
@@ -35,7 +27,6 @@ import {
 } from "discord.js";
 
 export { fetchT };
-export { CommandContext } from "#lib/command-context.js";
 export { BucketScope };
 
 export interface ReplyOptions {
@@ -78,43 +69,6 @@ export const replySuccess = makeReplyHelper(makeSuccessCard);
 export const replyError = makeReplyHelper(makeErrorCard);
 export const replyWarning = makeReplyHelper(makeWarningCard);
 export const replyInfo = makeReplyHelper(makeInfoCard);
-
-/**
- * Throws a `PermissionDenied` {@linkcode UserError} unless the invoking member
- * holds `permitNode` in the interaction's guild.
- *
- * @param interaction - The interaction whose invoker is being checked.
- * @param permitNode - The permit node to require, e.g. `admin.*`.
- */
-export async function assertPermit(
-  interaction: ChatInputCommandInteraction,
-  permitNode: string,
-): Promise<void> {
-  const guildId = interaction.guild?.id;
-  if (!guildId) {
-    throw new UserError({
-      identifier: "PermissionDenied",
-      message: "This command can only be used in a server.",
-    });
-  }
-  const userId = interaction.user.id;
-  const roleIds = memberRoleIds(interaction.member);
-  const guildOwnerId = interaction.guild?.ownerId;
-  const hasPermit = await container.permitResolver.hasPermit({
-    guildId,
-    userId,
-    roleIds,
-    channelId: interaction.channelId,
-    permitNode,
-    guildOwnerId,
-  });
-  if (!hasPermit) {
-    throw new UserError({
-      identifier: "PermissionDenied",
-      message: `You lack the required permit (\`${permitNode}\`) to use this.`,
-    });
-  }
-}
 
 /** Resolves the i18next translator for a target as Lumi's typed {@linkcode LumiT}. */
 export function fetchTyped(

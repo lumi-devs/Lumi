@@ -14,7 +14,7 @@ import {
   setAfkCooldown,
   addAfkMentionsBatch,
 } from "#modules/afk/data/afk.js";
-import { AfkKeys, AfkTTL } from "#modules/afk/keys.js";
+import { AfkKeys, AfkTTL } from "#modules/afk/constants.js";
 import { container } from "@sapphire/framework";
 
 vi.mock("@sapphire/framework", () => ({
@@ -53,7 +53,7 @@ vi.mock("@sapphire/framework", () => ({
   },
 }));
 
-vi.mock("#modules/afk/index.js", () => ({
+vi.mock("#modules/afk/services/format.js", () => ({
   sanitizeReason: vi.fn((s) => s),
 }));
 
@@ -192,14 +192,14 @@ describe("AFK Module Tests", () => {
       const seen = [];
       for await (const page of iterateAllAfkEntries()) seen.push(page);
 
-      expect(seen).toEqual(pages);
+      expect(seen).toEqual<typeof pages>(pages);
     });
 
     it("getAfkEntriesForGuild delegates to db.afk.findForGuild", async () => {
       const mockGuild = [{ id: "1" }];
       (container.db.afk.findForGuild as any).mockResolvedValue(mockGuild);
       const res = await getAfkEntriesForGuild("G1");
-      expect(res).toBe(mockGuild);
+      expect(res).toBe<typeof mockGuild>(mockGuild);
       expect(container.db.afk.findForGuild).toHaveBeenCalledWith("G1");
     });
 

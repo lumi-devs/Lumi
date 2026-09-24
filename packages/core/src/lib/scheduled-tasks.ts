@@ -25,7 +25,7 @@ export interface CatchUpMeta {
 }
 
 /** Default tolerance before a `catchUp: false` job is treated as stale. */
-export const DefaultCatchupGraceMs = Time.Minute;
+const DefaultCatchupGraceMs = Time.Minute;
 
 /**
  * Decide whether a scheduled task should run now given its catch-up policy.
