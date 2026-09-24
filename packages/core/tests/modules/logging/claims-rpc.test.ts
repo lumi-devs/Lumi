@@ -4,24 +4,47 @@ import type { RpcActionName } from "@lumi/contracts/rpc";
 import { LogClaimCodeTtlMs } from "#modules/logging/services/claims.js";
 import { RedisKeys } from "#lib/database/redis.js";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";
 
+function everyoneRole(permissions = "0") {
+  return { id: GUILD_ID, permissions };
+}
+
+function memberWith(roleIds: string[]) {
+  return { roles: roleIds };
+}
+
+function mockRest(opts: {
+  guild?: { owner_id: string; roles: { id: string; permissions: string }[] } | null;
+  member?: unknown;
+}) {
+  const get = vi.fn().mockImplementation((route: string) => {
+    if (route === `/guilds/${GUILD_ID}`) {
+      if (opts.guild === null || opts.guild === undefined) {
+        return Promise.reject(new Error("Unknown Guild"));
+      }
+      return Promise.resolve({ id: GUILD_ID, ...opts.guild });
+    }
+    if (route.startsWith(`/guilds/${GUILD_ID}/members/`)) {
+      if (opts.member === undefined) return Promise.reject(new Error("Unknown Member"));
+      return Promise.resolve(opts.member);
+    }
+    return Promise.reject(new Error(`Unexpected route: ${route}`));
+  });
+  return { rest: { get } };
+}
+
 describe("logging module claim RPC handlers", () => {
-  let guild: any;
   let strings: Map<string, string>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     strings = new Map();
-
-    guild = {
-      id: GUILD_ID,
-      ownerId: OWNER_ID,
-      members: { fetch: vi.fn() },
-    };
+    repositoryCache.clear();
 
     container.logger = {
       info: vi.fn(),
@@ -30,9 +53,10 @@ describe("logging module claim RPC handlers", () => {
       debug: vi.fn(),
     } as any;
 
-    container.client = {
-      guilds: { cache: new Map([[GUILD_ID, guild]]) },
-    } as any;
+    container.client = mockRest({
+      guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+      member: memberWith([]),
+    }) as any;
 
     (container as any).redis = {
       set: vi.fn((key: string, value: string, ...args: unknown[]) => {
@@ -41,6 +65,7 @@ describe("logging module claim RPC handlers", () => {
         return Promise.resolve("OK");
       }),
       get: vi.fn((key: string) => Promise.resolve(strings.get(key) ?? null)),
+      setex: vi.fn(),
     } as any;
 
     registerRpcHandlers();
@@ -57,9 +82,10 @@ describe("logging module claim RPC handlers", () => {
 
   describe("guild.logClaims.issue", () => {
     it("rejects an actor without ManageGuild", async () => {
-      guild.members.fetch.mockResolvedValue({
-        permissions: { has: vi.fn().mockReturnValue(false) },
-      });
+      container.client = mockRest({
+        guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+        member: memberWith([]),
+      }) as any;
 
       await expect(
         call("guild.logClaims.issue", INTRUDER_ID),

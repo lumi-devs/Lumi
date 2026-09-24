@@ -23,11 +23,27 @@ vi.mock("#lib/module-system/manifest.js", () => ({
 import { ModuleStore } from "#lib/module-system/ModuleStore.js";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { AfkRepository } from "#modules/afk/data/AfkRepository.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { createMockPrismaClient } from "../mocks/prisma.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
 const MODULE_DIR = "/test/modules/afk";
+
+/** Wires `container.client.rest.get` to answer `checkGuildManagerRest`'s guild route with a fixed owner, matching the old gateway-cache stub's `ownerId`. */
+function ownerOnlyRest(guildId: string, ownerId: string) {
+  return {
+    get: vi.fn().mockImplementation((route: string) => {
+      if (route === `/guilds/${guildId}`) {
+        return Promise.resolve({
+          owner_id: ownerId,
+          roles: [{ id: guildId, permissions: "0" }],
+        });
+      }
+      return Promise.reject(new Error(`Unexpected route: ${route}`));
+    }),
+  };
+}
 
 function setupAfkModule() {
   vi.spyOn(fs, "access").mockResolvedValue(undefined);
@@ -89,8 +105,10 @@ describe("static RPC registry survives ModuleStore#unload", () => {
     } as any;
     container.client = {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },
+      rest: ownerOnlyRest(GUILD_ID, OWNER_ID),
     } as any;
     (container as any).invalidation = { invalidate: vi.fn() };
+    repositoryCache.clear();
 
     const redis = {
       get: vi.fn().mockResolvedValue(null),
@@ -98,6 +116,7 @@ describe("static RPC registry survives ModuleStore#unload", () => {
       set: vi.fn(),
       pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
     };
+    (container as any).redis = redis;
 
     const db = { ensureGuild: vi.fn().mockResolvedValue(undefined) } as any;
     db.afk = new AfkRepository(prisma as any, redis as any, container.logger, db);

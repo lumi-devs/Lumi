@@ -6,6 +6,7 @@ import { ModerationRepository } from "#lib/prisma/repositories/ModerationReposit
 import { AppealRepository } from "#modules/mod/data/AppealRepository.js";
 import { AccessRepository } from "#lib/prisma/repositories/AccessRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 
 const GUILD_ID = "123456789012345678";
 const OTHER_GUILD_ID = "999999999999999999";
@@ -13,6 +14,34 @@ const OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";
 const TARGET_ID = "444444444444444444";
 const MOD_ID = "555555555555555555";
+
+function everyoneRole(permissions = "0") {
+  return { id: GUILD_ID, permissions };
+}
+
+function memberWith(roleIds: string[]) {
+  return { roles: roleIds };
+}
+
+function mockRest(opts: {
+  guild?: { owner_id: string; roles: { id: string; permissions: string }[] } | null;
+  member?: unknown;
+}) {
+  const get = vi.fn().mockImplementation((route: string) => {
+    if (route === `/guilds/${GUILD_ID}`) {
+      if (opts.guild === null || opts.guild === undefined) {
+        return Promise.reject(new Error("Unknown Guild"));
+      }
+      return Promise.resolve({ id: GUILD_ID, ...opts.guild });
+    }
+    if (route.startsWith(`/guilds/${GUILD_ID}/members/`)) {
+      if (opts.member === undefined) return Promise.reject(new Error("Unknown Member"));
+      return Promise.resolve(opts.member);
+    }
+    return Promise.reject(new Error(`Unexpected route: ${route}`));
+  });
+  return { rest: { get } };
+}
 
 function makeCase(overrides: Record<string, unknown> = {}) {
   return {
@@ -34,7 +63,6 @@ function makeCase(overrides: Record<string, unknown> = {}) {
 
 describe("mod module appeals RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
-  let guild: any;
   let generateAppealToken: (typeof import("#modules/mod/services/appeal-token.js"))["generateAppealToken"];
 
   beforeAll(async () => {
@@ -47,11 +75,7 @@ describe("mod module appeals RPC handlers", () => {
 
     prisma = createMockPrismaClient();
 
-    guild = {
-      id: GUILD_ID,
-      ownerId: OWNER_ID,
-      members: { fetch: vi.fn() },
-    };
+    repositoryCache.clear();
 
     container.logger = {
       info: vi.fn(),
@@ -60,18 +84,20 @@ describe("mod module appeals RPC handlers", () => {
       debug: vi.fn(),
     } as any;
 
-    container.client = {
-      guilds: { cache: new Map([[GUILD_ID, guild]]) },
-    } as any;
+    container.client = mockRest({
+      guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+      member: memberWith([]),
+    }) as any;
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
     const redis = {
       get: vi.fn().mockResolvedValue(null),
-      setex: vi.fn(),
+      setex: vi.fn().mockResolvedValue(undefined),
       del: vi.fn(),
       pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
     } as any;
+    (container as any).redis = redis;
 
     const db: any = { ensureGuild: vi.fn().mockResolvedValue(undefined) };
     db.moderation = new ModerationRepository(prisma as any, redis, container.logger, db);
@@ -289,9 +315,10 @@ describe("mod module appeals RPC handlers", () => {
 
   describe("guild.appeals.list", () => {
     it("rejects an actor without ManageGuild", async () => {
-      guild.members.fetch.mockResolvedValue({
-        permissions: { has: vi.fn().mockReturnValue(false) },
-      });
+      container.client = mockRest({
+        guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+        member: memberWith([]),
+      }) as any;
 
       await expect(
         callAuthed("guild.appeals.list", {}, INTRUDER_ID),
@@ -453,9 +480,10 @@ describe("mod module appeals RPC handlers", () => {
 
     it("rejects an actor without ManageGuild", async () => {
       seedPendingAppeal();
-      guild.members.fetch.mockResolvedValue({
-        permissions: { has: vi.fn().mockReturnValue(false) },
-      });
+      container.client = mockRest({
+        guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+        member: memberWith([]),
+      }) as any;
 
       await expect(
         callAuthed("guild.appeals.review", { id: 1, status: "approved" }, INTRUDER_ID),

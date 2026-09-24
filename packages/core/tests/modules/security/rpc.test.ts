@@ -6,6 +6,7 @@ import { SecurityRepository } from "#modules/security/data/SecurityRepository.js
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 import { enterPanic, revertPanic } from "#modules/security/services/panic.js";
 import { postOrEditVerifyPanel } from "#modules/security/services/verification.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 
 vi.mock("#modules/security/services/panic.js", () => ({
   enterPanic: vi.fn(),
@@ -23,6 +24,31 @@ const OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";
 const CHANNEL_ID = "444444444444444444";
 const MESSAGE_ID = "555555555555555555";
+
+function everyoneRole(permissions = "0") {
+  return { id: GUILD_ID, permissions };
+}
+
+function mockRest(opts: {
+  ownerId: string;
+  roles?: { id: string; permissions: string }[];
+  memberRoles?: string[];
+}) {
+  const get = vi.fn().mockImplementation((route: string) => {
+    if (route === `/guilds/${GUILD_ID}`) {
+      return Promise.resolve({
+        id: GUILD_ID,
+        owner_id: opts.ownerId,
+        roles: opts.roles ?? [everyoneRole()],
+      });
+    }
+    if (route.startsWith(`/guilds/${GUILD_ID}/members/`)) {
+      return Promise.resolve({ roles: opts.memberRoles ?? [] });
+    }
+    return Promise.reject(new Error(`Unexpected route: ${route}`));
+  });
+  return get;
+}
 
 describe("security module RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
@@ -52,7 +78,11 @@ describe("security module RPC handlers", () => {
 
     container.client = {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },
+      rest: { get: mockRest({ ownerId: OWNER_ID }) },
     } as any;
+
+    repositoryCache.clear();
+    (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
 
     const db = {
       ensureGuild: vi.fn().mockResolvedValue(undefined),
@@ -88,10 +118,12 @@ describe("security module RPC handlers", () => {
   const call = (action: RpcActionName, data?: unknown, actorId = OWNER_ID) =>
     handlerFor(action)({ id: "req", action, guildId: GUILD_ID, actorId, data });
 
-  const denyPermissions = () =>
-    guild.members.fetch.mockResolvedValue({
-      permissions: { has: vi.fn().mockReturnValue(false) },
-    });
+  const denyPermissions = () => {
+    container.client = {
+      ...container.client,
+      rest: { get: mockRest({ ownerId: OWNER_ID, memberRoles: [] }) },
+    } as any;
+  };
 
   describe("guild.panic.get", () => {
     it("reports an inactive guild with no panic row", async () => {

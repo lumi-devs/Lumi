@@ -2,24 +2,24 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";
 
+function everyoneRole(permissions = "0") {
+  return { id: GUILD_ID, permissions };
+}
+
 describe("dashboard module config write RPC handlers", () => {
-  let guild: any;
+  let restGet: ReturnType<typeof vi.fn>;
   let configUtility: any;
   let transaction: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    guild = {
-      id: GUILD_ID,
-      ownerId: OWNER_ID,
-      members: { fetch: vi.fn() },
-    };
+    repositoryCache.clear();
 
     container.logger = {
       info: vi.fn(),
@@ -28,9 +28,22 @@ describe("dashboard module config write RPC handlers", () => {
       debug: vi.fn(),
     } as any;
 
-    container.client = {
-      guilds: { cache: new Map([[GUILD_ID, guild]]) },
-    } as any;
+    restGet = vi.fn().mockImplementation((route: string) => {
+      if (route === `/guilds/${GUILD_ID}`) {
+        return Promise.resolve({
+          id: GUILD_ID,
+          owner_id: OWNER_ID,
+          roles: [everyoneRole()],
+        });
+      }
+      if (route === `/guilds/${GUILD_ID}/members/${INTRUDER_ID}`) {
+        return Promise.resolve({ roles: [] });
+      }
+      return Promise.reject(new Error(`Unexpected route: ${route}`));
+    });
+
+    container.client = { rest: { get: restGet } } as any;
+    (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
 
     transaction = {
       write: vi.fn(),
@@ -91,8 +104,18 @@ describe("dashboard module config write RPC handlers", () => {
     handlerFor(action)({ id: "req", action, guildId: GUILD_ID, actorId, data });
 
   const denyPermissions = () =>
-    guild.members.fetch.mockResolvedValue({
-      permissions: { has: vi.fn().mockReturnValue(false) },
+    restGet.mockImplementation((route: string) => {
+      if (route === `/guilds/${GUILD_ID}`) {
+        return Promise.resolve({
+          id: GUILD_ID,
+          owner_id: OWNER_ID,
+          roles: [everyoneRole()],
+        });
+      }
+      if (route === `/guilds/${GUILD_ID}/members/${INTRUDER_ID}`) {
+        return Promise.resolve({ roles: [] });
+      }
+      return Promise.reject(new Error(`Unexpected route: ${route}`));
     });
 
   describe("guild.module.toggle", () => {
