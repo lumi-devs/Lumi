@@ -56,7 +56,7 @@ export class PanicCommand extends BaseCommand {
     const channelIds = toStringArray(raw["panic_lock_channel_ids"]);
 
     const result = await enterPanic(
-      guild,
+      guild.id,
       ctx.user.id,
       channelIds,
     );

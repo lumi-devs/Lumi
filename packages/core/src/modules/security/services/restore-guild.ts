@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { ChannelType, type Guild } from "discord.js";
+import { ChannelType } from "discord.js";
 import {
   Routes,
   type APIRole,
@@ -8,6 +8,7 @@ import {
   type RESTPostAPIGuildRoleJSONBody,
 } from "discord-api-types/v10";
 import type { GuildBackupData } from "./backup-types.js";
+import { fetchGuildChannelsRest, fetchGuildRolesRest } from "#lib/rpc/discord-rest-lookup.js";
 
 interface LocalRoleOrder {
   id: string;
@@ -80,29 +81,31 @@ async function createRoleWithPosition(
  *
  * Discord mutations go through raw REST routes (`container.client.rest`)
  * rather than the gateway-cached `Guild`'s convenience methods, so this can
- * run on a shard/process that doesn't own this guild's gateway connection.
- * Existence checks (`guild.roles.cache`/`guild.channels.cache`) are left as
- * gateway-cache reads - only the mutating calls changed.
+ * run on a shard/process that doesn't own this guild's gateway connection -
+ * as can the existence checks (`fetchGuildRolesRest`/`fetchGuildChannelsRest`),
+ * also REST-sourced rather than `guild.roles.cache`/`guild.channels.cache`.
  */
 export async function restoreGuildFromBackup(
-  guild: Guild,
+  guildId: string,
   backupId?: number,
 ): Promise<{ rolesRestored: number; channelsRestored: number } | null> {
   const row = backupId
     ? await container.db.security.getBackup(backupId)
-    : await container.db.security.getLatestBackup(guild.id);
-  if (!row || row.guildId !== guild.id) return null;
+    : await container.db.security.getLatestBackup(guildId);
+  if (!row || row.guildId !== guildId) return null;
 
   const data = row.data as unknown as GuildBackupData;
   let rolesRestored = 0;
   const roleIdMap = new Map<string, string>();
 
+  const existingRoles = (await fetchGuildRolesRest(guildId)) ?? [];
+  const existingRoleIds = new Set(existingRoles.map((role) => role.id));
   let roleOrder: LocalRoleOrder[] = sortRoleOrder(
-    guild.roles.cache.map((role) => ({ id: role.id, position: role.rawPosition })),
+    existingRoles.map((role) => ({ id: role.id, position: role.position })),
   );
 
   for (const role of data.roles) {
-    if (guild.roles.cache.has(role.id)) {
+    if (existingRoleIds.has(role.id)) {
       roleIdMap.set(role.id, role.id);
       continue;
     }
@@ -115,7 +118,7 @@ export async function restoreGuildFromBackup(
         mentionable: role.mentionable,
       };
       const { role: created, order } = await createRoleWithPosition(
-        guild.id,
+        guildId,
         body,
         role.position,
         roleOrder,
@@ -126,7 +129,7 @@ export async function restoreGuildFromBackup(
       rolesRestored++;
     } catch (err: unknown) {
       container.logger.warn(
-        `[security] Restore: failed to recreate role ${role.name} in ${guild.id}: ${String(err)}`,
+        `[security] Restore: failed to recreate role ${role.name} in ${guildId}: ${String(err)}`,
       );
     }
   }
@@ -137,17 +140,18 @@ export async function restoreGuildFromBackup(
     a.type === ChannelType.GuildCategory ? -1 : b.type === ChannelType.GuildCategory ? 1 : 0,
   );
   const channelIdMap = new Map<string, string>();
+  const existingChannels = (await fetchGuildChannelsRest(guildId)) ?? [];
+  const existingChannelIds = new Set(existingChannels.map((channel) => channel.id));
 
   for (const channel of ordered) {
-    if (guild.channels.cache.has(channel.id)) {
+    if (existingChannelIds.has(channel.id)) {
       channelIdMap.set(channel.id, channel.id);
       continue;
     }
     try {
       const parentId = channel.parentId
         ? (channelIdMap.get(channel.parentId) ??
-            guild.channels.cache.get(channel.parentId)?.id ??
-            null)
+            (existingChannelIds.has(channel.parentId) ? channel.parentId : null))
         : null;
       const body: RESTPostAPIGuildChannelJSONBody = {
         name: channel.name,
@@ -161,7 +165,7 @@ export async function restoreGuildFromBackup(
           deny: ow.deny,
         })),
       };
-      const created = await container.client.rest.post(Routes.guildChannels(guild.id), {
+      const created = await container.client.rest.post(Routes.guildChannels(guildId), {
         body,
         reason: "Security: restoring from backup",
       });
@@ -169,7 +173,7 @@ export async function restoreGuildFromBackup(
       channelsRestored++;
     } catch (err: unknown) {
       container.logger.warn(
-        `[security] Restore: failed to recreate channel ${channel.name} in ${guild.id}: ${String(err)}`,
+        `[security] Restore: failed to recreate channel ${channel.name} in ${guildId}: ${String(err)}`,
       );
     }
   }

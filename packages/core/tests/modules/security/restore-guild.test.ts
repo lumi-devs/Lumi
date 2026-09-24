@@ -1,58 +1,55 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { Collection, ChannelType } from "discord.js";
+import { ChannelType } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { restoreGuildFromBackup } from "#modules/security/services/restore-guild.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 
 const GUILD_ID = "111111111111111111";
-const EVERYONE = { id: GUILD_ID, rawPosition: 0 };
-
-function fakeGuild(overrides: {
-  roles?: { id: string; rawPosition: number }[];
-  channels?: { id: string }[];
-} = {}) {
-  const rolesCache = new Collection<string, { id: string; rawPosition: number }>();
-  for (const role of overrides.roles ?? [EVERYONE]) rolesCache.set(role.id, role);
-
-  const channelsCache = new Collection<string, { id: string }>();
-  for (const channel of overrides.channels ?? []) channelsCache.set(channel.id, channel);
-
-  return {
-    id: GUILD_ID,
-    roles: { cache: rolesCache },
-    channels: { cache: channelsCache },
-  } as any;
-}
+const EVERYONE = { id: GUILD_ID, position: 0 };
 
 function mockContainer(overrides: {
   getBackup?: ReturnType<typeof vi.fn>;
   getLatestBackup?: ReturnType<typeof vi.fn>;
   restPost?: ReturnType<typeof vi.fn>;
   restPatch?: ReturnType<typeof vi.fn>;
+  roles?: { id: string; position: number }[];
+  channels?: { id: string }[];
 }) {
+  const roles = overrides.roles ?? [EVERYONE];
+  const channels = overrides.channels ?? [];
+
   (container as any).db = {
     security: {
       getBackup: overrides.getBackup ?? vi.fn(),
       getLatestBackup: overrides.getLatestBackup ?? vi.fn(),
     },
   };
+  const restGet = vi.fn().mockImplementation((route: string) => {
+    if (route === `/guilds/${GUILD_ID}/roles`) return Promise.resolve(roles);
+    if (route === `/guilds/${GUILD_ID}/channels`) return Promise.resolve(channels);
+    return Promise.reject(new Error(`Unexpected route: ${route}`));
+  });
   (container as any).client = {
     rest: {
+      get: restGet,
       post: overrides.restPost ?? vi.fn(),
       patch: overrides.restPatch ?? vi.fn(),
     },
   };
+  (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
   (container as any).logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn() };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  repositoryCache.clear();
 });
 
 describe("restoreGuildFromBackup", () => {
   it("returns null when no backup row matches the guild", async () => {
     mockContainer({ getLatestBackup: vi.fn().mockResolvedValue(null) });
-    const result = await restoreGuildFromBackup(fakeGuild(), undefined);
+    const result = await restoreGuildFromBackup(GUILD_ID, undefined);
     expect(result).toBeNull();
   });
 
@@ -63,11 +60,11 @@ describe("restoreGuildFromBackup", () => {
         data: { roles: [], channels: [] },
       }),
     });
-    const result = await restoreGuildFromBackup(fakeGuild(), undefined);
+    const result = await restoreGuildFromBackup(GUILD_ID, undefined);
     expect(result).toBeNull();
   });
 
-  it("skips roles/channels already present in the gateway cache", async () => {
+  it("skips roles/channels already present via REST", async () => {
     const existingRoleId = "222222222222222222";
     const existingChannelId = "333333333333333333";
     const restPost = vi.fn();
@@ -101,13 +98,11 @@ describe("restoreGuildFromBackup", () => {
       }),
       restPost,
       restPatch,
-    });
-    const guild = fakeGuild({
-      roles: [EVERYONE, { id: existingRoleId, rawPosition: 1 }],
+      roles: [EVERYONE, { id: existingRoleId, position: 1 }],
       channels: [{ id: existingChannelId }],
     });
 
-    const result = await restoreGuildFromBackup(guild, undefined);
+    const result = await restoreGuildFromBackup(GUILD_ID, undefined);
 
     expect(result).toEqual({ rolesRestored: 0, channelsRestored: 0 });
     expect(restPost).not.toHaveBeenCalled();
@@ -138,10 +133,10 @@ describe("restoreGuildFromBackup", () => {
       }),
       restPost,
       restPatch,
+      roles: [EVERYONE],
     });
-    const guild = fakeGuild({ roles: [EVERYONE] });
 
-    const result = await restoreGuildFromBackup(guild, 42);
+    const result = await restoreGuildFromBackup(GUILD_ID, 42);
 
     expect(result).toEqual({ rolesRestored: 1, channelsRestored: 0 });
     expect(restPost).toHaveBeenCalledWith(Routes.guildRoles(GUILD_ID), {
@@ -190,10 +185,10 @@ describe("restoreGuildFromBackup", () => {
       }),
       restPost,
       restPatch,
+      roles: [EVERYONE],
     });
-    const guild = fakeGuild({ roles: [EVERYONE] });
 
-    const result = await restoreGuildFromBackup(guild, undefined);
+    const result = await restoreGuildFromBackup(GUILD_ID, undefined);
 
     expect(result).toEqual({ rolesRestored: 0, channelsRestored: 0 });
     expect(container.logger.warn).toHaveBeenCalled();
@@ -245,10 +240,10 @@ describe("restoreGuildFromBackup", () => {
       }),
       restPost,
       restPatch,
+      roles: [EVERYONE],
     });
-    const guild = fakeGuild({ roles: [EVERYONE] });
 
-    const result = await restoreGuildFromBackup(guild, undefined);
+    const result = await restoreGuildFromBackup(GUILD_ID, undefined);
 
     expect(result).toEqual({ rolesRestored: 1, channelsRestored: 2 });
     expect(restPost).toHaveBeenNthCalledWith(1, Routes.guildRoles(GUILD_ID), expect.any(Object));
@@ -292,10 +287,10 @@ describe("restoreGuildFromBackup", () => {
         },
       }),
       restPost,
+      roles: [EVERYONE],
     });
-    const guild = fakeGuild({ roles: [EVERYONE] });
 
-    const result = await restoreGuildFromBackup(guild, undefined);
+    const result = await restoreGuildFromBackup(GUILD_ID, undefined);
 
     expect(result).toEqual({ rolesRestored: 0, channelsRestored: 0 });
     expect(container.logger.warn).toHaveBeenCalled();

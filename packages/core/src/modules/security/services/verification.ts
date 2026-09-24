@@ -5,9 +5,11 @@ import {
   type GuildMember,
   type GuildTextBasedChannel,
 } from "discord.js";
+import { Routes } from "discord-api-types/v10";
 import { isNullish, tryParseJSON } from "@sapphire/utilities";
 import { fetchTyped } from "#lib/commands.js";
 import { RedisKeys } from "#lib/database/redis.js";
+import { fetchGuildMemberRest } from "#lib/rpc/discord-rest-lookup.js";
 import { withSerializedWork } from "#lib/utilities/misc.js";
 import {
   advanceCaptcha,
@@ -263,20 +265,35 @@ async function clearChallenge(guildId: string, userId: string): Promise<void> {
   await container.redis.zrem(RedisKeys.verifyPending(guildId), userId);
 }
 
-/** Grants the verified role and strips the pending role once a member passes. */
-export async function grantVerified(guild: Guild, userId: string): Promise<boolean> {
-  const config = await loadVerificationConfig(guild.id);
+/**
+ * Grants the verified role and strips the pending role once a member passes.
+ *
+ * REST equivalent of `guild.members.fetch(userId)` +
+ * `member.roles.set([...], reason)`: discord.js's `GuildMemberRoleManager
+ * #cache` getter always includes the guild's own id (the implicit `@everyone`
+ * role, `cache.set(this.guild.id, this.guild.roles.everyone)`), so the old
+ * `member.roles.cache.keys()` read - and therefore the array `roles.set()`
+ * ultimately PATCHed - always carried `guild.id` alongside the member's real
+ * assigned roles. `APIGuildMember.roles` from REST does not include it, so it
+ * is added back explicitly to reproduce the exact same PATCH body.
+ */
+export async function grantVerified(guildId: string, userId: string): Promise<boolean> {
+  const config = await loadVerificationConfig(guildId);
   if (isNullish(config.verifiedRoleId)) return false;
-  const member = await guild.members.fetch(userId).catch(() => null);
+  const member = await fetchGuildMemberRest(guildId, userId);
   if (isNullish(member)) return false;
   try {
-    const nextRoles = new Set(member.roles.cache.keys());
+    const nextRoles = new Set(member.roles);
+    nextRoles.add(guildId);
     nextRoles.add(config.verifiedRoleId);
     if (config.pendingRoleId) nextRoles.delete(config.pendingRoleId);
-    await member.roles.set([...nextRoles], "Verification passed");
+    await container.client.rest.patch(Routes.guildMember(guildId, userId), {
+      body: { roles: [...nextRoles] },
+      reason: "Verification passed",
+    });
   } catch (err: unknown) {
     container.logger.warn(
-      `[security] Verify role grant failed for ${userId} in ${guild.id}: ${String(err)}`,
+      `[security] Verify role grant failed for ${userId} in ${guildId}: ${String(err)}`,
     );
     return false;
   }

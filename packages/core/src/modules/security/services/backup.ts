@@ -52,8 +52,8 @@ export async function clearRestorePending(guildId: string): Promise<void> {
  * hierarchy-adjacent position, and (for channels) parent + overwrites.
  */
 export async function restoreFromBackup(
-  guild: Guild,
+  guildId: string,
   backupId?: number,
 ): Promise<{ rolesRestored: number; channelsRestored: number } | null> {
-  return restoreGuildFromBackup(guild, backupId);
+  return restoreGuildFromBackup(guildId, backupId);
 }

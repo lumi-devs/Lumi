@@ -6,6 +6,8 @@ import { implementRpc } from "#lib/rpc/implement.js";
 import {
   fetchChannelRest,
   fetchGuildMemberRest,
+  fetchGuildRest,
+  guildIconUrl,
   memberAvatarUrl,
 } from "#lib/rpc/discord-rest-lookup.js";
 import { logError } from "#lib/utilities/errors.js";
@@ -48,27 +50,30 @@ function serializeCard(card: CardReply) {
 }
 
 export const welcomeRpcHandlers = implementRpc(welcomeRpc, {
-  "guild.welcome.sendTest": async ({ guild, actorId, input }) => {
+  "guild.welcome.sendTest": async ({ guildId, actorId, input }) => {
     const { kind } = input;
-    const config = await loadWelcomeConfig(guild.id);
+    const config = await loadWelcomeConfig(guildId);
     const channelId =
       kind === "welcome" ? config.welcomeChannel : config.goodbyeChannel;
     if (!channelId) {
       throw new Error(`Set a ${kind} channel before sending a test message.`);
     }
 
-    const member = await fetchGuildMemberRest(guild.id, actorId);
+    const guildData = await fetchGuildRest(guildId);
+    if (!guildData) throw new Error("Guild not found in bot cache");
+
+    const member = await fetchGuildMemberRest(guildId, actorId);
     if (!member) throw new Error("Could not resolve your member in this guild.");
 
     const vars = templateVarsFor(
       member.user.id,
       member.user.username,
       member.nick ?? null,
-      memberAvatarUrl(guild.id, member),
-      guild.name,
-      guild.id,
-      guild.iconURL(),
-      guild.memberCount,
+      memberAvatarUrl(guildId, member),
+      guildData.name,
+      guildId,
+      guildIconUrl(guildData),
+      guildData.approximate_member_count ?? 0,
     );
 
     const card =
@@ -80,7 +85,7 @@ export const welcomeRpcHandlers = implementRpc(welcomeRpc, {
     const sendable =
       channel !== null &&
       "guild_id" in channel &&
-      channel.guild_id === guild.id &&
+      channel.guild_id === guildId &&
       SendableChannelTypes.has(channel.type);
 
     const sent = sendable

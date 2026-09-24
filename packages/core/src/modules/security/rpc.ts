@@ -8,11 +8,7 @@ import {
   loadVerificationConfig,
   grantVerified,
 } from "./services/verification.js";
-import {
-  cachedGuild,
-  implementRpc,
-  requireGuildId,
-} from "#lib/rpc/implement.js";
+import { implementRpc, requireGuildId } from "#lib/rpc/implement.js";
 
 export const securityRpcHandlers = implementRpc(securityRpc, {
   "guild.panic.get": async ({ guildId }) => {
@@ -37,9 +33,9 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
     };
   },
 
-  "guild.panic.set": async ({ guildId, guild, actorId, input }) => {
+  "guild.panic.set": async ({ guildId, actorId, input }) => {
     if (!input.active) {
-      const reverted = await revertPanic(guild);
+      const reverted = await revertPanic(guildId);
       if (!reverted) throw new Error("Panic mode is not active");
       return { success: true, active: false, ...reverted };
     }
@@ -47,7 +43,7 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
     if (await container.db.security.getPanicState(guildId)) {
       throw new Error("Panic mode is already active");
     }
-    const result = await enterPanic(guild, actorId, input.channelIds ?? []);
+    const result = await enterPanic(guildId, actorId, input.channelIds ?? []);
     return { success: true, active: true, ...result };
   },
 
@@ -91,10 +87,7 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
       throw new Error("Web verification is not enabled for this server");
     }
 
-    const granted = await grantVerified(
-      cachedGuild(verifiedGuildId),
-      actorId,
-    );
+    const granted = await grantVerified(verifiedGuildId, actorId);
     if (!granted) {
       throw new Error(
         "Couldn't grant the verified role - make sure you're a member of the server and try again.",
@@ -118,8 +111,8 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
     };
   },
 
-  "guild.backups.restore": async ({ guild, input }) => {
-    const result = await restoreGuildFromBackup(guild, input.backupId);
+  "guild.backups.restore": async ({ guildId, input }) => {
+    const result = await restoreGuildFromBackup(guildId, input.backupId);
     if (!result) throw new Error("No backup found to restore");
     return { success: true, ...result };
   },

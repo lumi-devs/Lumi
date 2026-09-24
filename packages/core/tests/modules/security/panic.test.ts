@@ -1,74 +1,84 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { ChannelType } from "discord.js";
+import { ChannelType, PermissionFlagsBits } from "discord.js";
+import { Routes } from "discord-api-types/v10";
 import { enterPanic, revertPanic } from "#modules/security/services/panic.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+
+const SendMessagesBit = PermissionFlagsBits.SendMessages.toString();
 
 function setContainer(overrides: {
-  redis?: Record<string, unknown>;
   db?: Record<string, unknown>;
+  restGet?: ReturnType<typeof vi.fn>;
+  restPatch?: ReturnType<typeof vi.fn>;
+  restPut?: ReturnType<typeof vi.fn>;
 }) {
   (container as any).redis = {
     incr: vi.fn(),
     expire: vi.fn(),
     set: vi.fn(),
     exists: vi.fn().mockResolvedValue(0),
-    ...overrides.redis,
+    get: vi.fn().mockResolvedValue(null),
+    setex: vi.fn(),
   };
   (container as any).db = {
     ...overrides.db,
   };
+  (container as any).client = {
+    rest: {
+      get: overrides.restGet ?? vi.fn().mockRejectedValue(new Error("unexpected GET")),
+      patch: overrides.restPatch ?? vi.fn().mockResolvedValue(undefined),
+      put: overrides.restPut ?? vi.fn().mockResolvedValue(undefined),
+    },
+  };
   (container as any).logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn() };
 }
 
-const guild = {
-  id: "g1",
-  ownerId: "owner-1",
-  members: { fetch: vi.fn(), ban: vi.fn() },
-} as any;
-
 beforeEach(() => {
   vi.clearAllMocks();
+  repositoryCache.clear();
 });
 
 describe("enterPanic / revertPanic", () => {
   it(
     "pauses invites, locks matching text channels, and snapshots prior overwrites",
     async () => {
-      const disableInvites = vi.fn().mockResolvedValue(undefined);
-      const editC1 = vi.fn().mockResolvedValue(undefined);
-      const everyone = { id: "everyone-id" };
-      const channel1 = {
-        id: "c1",
-        type: ChannelType.GuildText,
-        permissionOverwrites: {
-          cache: { get: vi.fn().mockReturnValue(undefined) },
-          edit: editC1,
-        },
-      };
-      const voiceChannel = { id: "v1", type: ChannelType.GuildVoice };
+      const GUILD_ID = "g-panic";
+      const restGet = vi.fn().mockImplementation((route: string) => {
+        if (route === `/guilds/${GUILD_ID}`) {
+          return Promise.resolve({ id: GUILD_ID, features: [] });
+        }
+        if (route === `/guilds/${GUILD_ID}/channels`) {
+          return Promise.resolve([
+            { id: "c1", type: ChannelType.GuildText, permission_overwrites: [] },
+            { id: "v1", type: ChannelType.GuildVoice, permission_overwrites: [] },
+          ]);
+        }
+        return Promise.reject(new Error(`Unexpected route: ${route}`));
+      });
+      const restPatch = vi.fn().mockResolvedValue(undefined);
+      const restPut = vi.fn().mockResolvedValue(undefined);
       const savePanicState = vi.fn().mockResolvedValue(undefined);
       const getPanicState = vi.fn().mockResolvedValue(null);
-      const panicGuild = {
-        id: "g-panic",
-        disableInvites,
-        channels: {
-          cache: new Map([
-            ["c1", channel1],
-            ["v1", voiceChannel],
-          ]),
-        },
-        roles: { everyone },
-      } as any;
 
-      setContainer({ db: { security: { savePanicState, getPanicState } } });
+      setContainer({
+        db: { security: { savePanicState, getPanicState } },
+        restGet,
+        restPatch,
+        restPut,
+      });
 
-      const result = await enterPanic(panicGuild, "actor-1", []);
+      const result = await enterPanic(GUILD_ID, "actor-1", []);
 
-      expect(disableInvites).toHaveBeenCalledWith(true);
-      expect(editC1).toHaveBeenCalledWith(
-        everyone,
-        { SendMessages: false },
-        expect.objectContaining({ reason: expect.stringContaining("actor-1") }),
+      expect(restPatch).toHaveBeenCalledWith(Routes.guild(GUILD_ID), {
+        body: { features: ["INVITES_DISABLED"] },
+      });
+      expect(restPut).toHaveBeenCalledWith(
+        Routes.channelPermission("c1", GUILD_ID),
+        expect.objectContaining({
+          body: { id: GUILD_ID, type: 0, allow: "0", deny: SendMessagesBit },
+          reason: expect.stringContaining("actor-1"),
+        }),
       );
       // The voice channel isn't a GuildText/GuildAnnouncement channel, so only
       // c1 is a candidate and gets locked.
@@ -78,7 +88,7 @@ describe("enterPanic / revertPanic", () => {
         skippedCount: 0,
       });
       expect(savePanicState).toHaveBeenCalledWith({
-        guildId: "g-panic",
+        guildId: GUILD_ID,
         actorId: "actor-1",
         invitesPaused: true,
         lockedChannels: { c1: null },
@@ -90,40 +100,48 @@ describe("enterPanic / revertPanic", () => {
   it(
     "restores every snapshotted channel overwrite and resumes invites",
     async () => {
-      const disableInvites = vi.fn().mockResolvedValue(undefined);
-      const editC1 = vi.fn().mockResolvedValue(undefined);
-      const everyone = { id: "everyone-id" };
-      const channel1 = {
-        id: "c1",
-        permissionOverwrites: { edit: editC1 },
-      };
+      const GUILD_ID = "g-panic";
+      const restGet = vi.fn().mockImplementation((route: string) => {
+        if (route === `/guilds/${GUILD_ID}`) {
+          return Promise.resolve({ id: GUILD_ID, features: ["INVITES_DISABLED"] });
+        }
+        if (route === `/guilds/${GUILD_ID}/channels`) {
+          return Promise.resolve([
+            { id: "c1", type: ChannelType.GuildText, permission_overwrites: [] },
+          ]);
+        }
+        return Promise.reject(new Error(`Unexpected route: ${route}`));
+      });
+      const restPatch = vi.fn().mockResolvedValue(undefined);
+      const restPut = vi.fn().mockResolvedValue(undefined);
       const getPanicState = vi.fn().mockResolvedValue({
-        guildId: "g-panic",
+        guildId: GUILD_ID,
         actorId: "actor-1",
         invitesPaused: true,
         lockedChannels: { c1: true },
       });
       const clearPanicState = vi.fn().mockResolvedValue(undefined);
-      const panicGuild = {
-        id: "g-panic",
-        disableInvites,
-        channels: { cache: new Map([["c1", channel1]]) },
-        roles: { everyone },
-      } as any;
 
       setContainer({
         db: { security: { getPanicState, clearPanicState } },
+        restGet,
+        restPatch,
+        restPut,
       });
 
-      const result = await revertPanic(panicGuild);
+      const result = await revertPanic(GUILD_ID);
 
-      expect(disableInvites).toHaveBeenCalledWith(false);
-      expect(editC1).toHaveBeenCalledWith(
-        everyone,
-        { SendMessages: true },
-        expect.objectContaining({ reason: "Panic mode reverted" }),
+      expect(restPatch).toHaveBeenCalledWith(Routes.guild(GUILD_ID), {
+        body: { features: [] },
+      });
+      expect(restPut).toHaveBeenCalledWith(
+        Routes.channelPermission("c1", GUILD_ID),
+        expect.objectContaining({
+          body: { id: GUILD_ID, type: 0, allow: SendMessagesBit, deny: "0" },
+          reason: "Panic mode reverted",
+        }),
       );
-      expect(clearPanicState).toHaveBeenCalledWith("g-panic");
+      expect(clearPanicState).toHaveBeenCalledWith(GUILD_ID);
       expect(result).toEqual({ restoredCount: 1, restoredStructure: null });
     },
     10000,
@@ -133,7 +151,7 @@ describe("enterPanic / revertPanic", () => {
     const getPanicState = vi.fn().mockResolvedValue(null);
     setContainer({ db: { security: { getPanicState } } });
 
-    const result = await revertPanic(guild);
+    const result = await revertPanic("g1");
 
     expect(result).toBeNull();
   });

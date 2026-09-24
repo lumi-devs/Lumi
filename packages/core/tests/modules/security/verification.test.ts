@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
+import { Routes } from "discord-api-types/v10";
 import {
   grantVerified,
   advanceChallenge,
 } from "#modules/security/services/verification.js";
 import { MaxAttempts, type CaptchaState } from "#modules/security/services/captcha.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 
 function makeMultiMock(count: number) {
   return {
@@ -24,6 +26,8 @@ function setContainer(overrides: {
     set: vi.fn(),
     exists: vi.fn().mockResolvedValue(0),
     multi: vi.fn(() => makeMultiMock(1)),
+    get: vi.fn().mockResolvedValue(null),
+    setex: vi.fn(),
     ...overrides.redis,
   };
   (container as any).db = {
@@ -34,48 +38,55 @@ function setContainer(overrides: {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  repositoryCache.clear();
 });
 
 describe("grantVerified", () => {
   it("grants the verified role and strips the pending role", async () => {
-    const roleSet = vi.fn().mockResolvedValue(undefined);
-    const member = {
-      roles: {
-        set: roleSet,
-        cache: new Map([
-          ["pending-role", {}],
-          ["other-role", {}],
-        ]),
-      },
-    };
-    const fetch = vi.fn().mockResolvedValue(member);
+    const restPatch = vi.fn().mockResolvedValue(undefined);
+    const restGet = vi.fn().mockImplementation((route: string) => {
+      if (route === "/guilds/g1/members/u1") {
+        return Promise.resolve({
+          roles: ["pending-role", "other-role"],
+          user: { id: "u1" },
+        });
+      }
+      return Promise.reject(new Error(`Unexpected route: ${route}`));
+    });
     const getAllModuleConfig = vi.fn().mockResolvedValue({
       verification_enabled: true,
       verified_role_id: "verified-role",
       verification_pending_role_id: "pending-role",
     });
-    const verifyGuild = { id: "g1", members: { fetch } } as any;
     setContainer({ db: { config: { getAllModuleConfig } } });
+    (container as any).client = { rest: { get: restGet, patch: restPatch } };
 
-    const result = await grantVerified(verifyGuild, "u1");
+    const result = await grantVerified("g1", "u1");
 
-    expect(roleSet).toHaveBeenCalledTimes(1);
-    const [rolesArg, reasonArg] = roleSet.mock.calls[0] as [string[], string];
-    expect(new Set(rolesArg)).toEqual(new Set(["other-role", "verified-role"]));
-    expect(reasonArg).toBe("Verification passed");
+    expect(restPatch).toHaveBeenCalledTimes(1);
+    const [route, { body, reason }] = restPatch.mock.calls[0] as [
+      string,
+      { body: { roles: string[] }; reason: string },
+    ];
+    expect(route).toBe(Routes.guildMember("g1", "u1"));
+    // discord.js's own `GuildMemberRoleManager#cache` always includes the
+    // guild's own id (the implicit `@everyone` role), so the real PATCH this
+    // replaces always carried it too - reproduced here rather than dropped.
+    expect(new Set(body.roles)).toEqual(new Set(["other-role", "verified-role", "g1"]));
+    expect(reason).toBe("Verification passed");
     expect(result).toBe(true);
   });
 
   it("denies verification when the guild has no verified role configured", async () => {
-    const fetch = vi.fn();
+    const restGet = vi.fn();
     const getAllModuleConfig = vi.fn().mockResolvedValue({});
-    const verifyGuild = { id: "g1", members: { fetch } } as any;
     setContainer({ db: { config: { getAllModuleConfig } } });
+    (container as any).client = { rest: { get: restGet, patch: vi.fn() } };
 
-    const result = await grantVerified(verifyGuild, "u1");
+    const result = await grantVerified("g1", "u1");
 
     expect(result).toBe(false);
-    expect(fetch).not.toHaveBeenCalled();
+    expect(restGet).not.toHaveBeenCalled();
   });
 });
 

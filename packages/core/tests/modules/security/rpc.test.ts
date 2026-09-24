@@ -180,7 +180,7 @@ describe("security module RPC handlers", () => {
         channelIds: [CHANNEL_ID],
       })) as any;
 
-      expect(mockEnterPanic).toHaveBeenCalledWith(guild, OWNER_ID, [
+      expect(mockEnterPanic).toHaveBeenCalledWith(GUILD_ID, OWNER_ID, [
         CHANNEL_ID,
       ]);
       expect(res).toEqual({
@@ -214,7 +214,7 @@ describe("security module RPC handlers", () => {
         active: false,
       })) as any;
 
-      expect(mockRevertPanic).toHaveBeenCalledWith(guild);
+      expect(mockRevertPanic).toHaveBeenCalledWith(GUILD_ID);
       expect(res).toEqual({ success: true, active: false, restoredCount: 3 });
     });
 
