@@ -3,9 +3,9 @@ import type {
   PanicStateView,
   VerificationPanelSetResult,
   VerificationPanelView,
-} from "../views.js";
-import { rpcAction, RpcTimeouts } from "./define.js";
-import { SnowflakeSchema } from "./schemas.js";
+} from "../views";
+import { rpcAction, RpcTimeouts } from "./define";
+import { SnowflakeSchema } from "./schemas";
 
 export interface GuildBackupView {
   id: number;

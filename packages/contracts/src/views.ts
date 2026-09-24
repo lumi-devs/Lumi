@@ -1,6 +1,6 @@
-import type { ReactionRoleMenuMode } from "./rpc/reactionroles.js";
-import type { ConfigField } from "./config.js";
-import type { MessageDocumentV2 } from "./message-blocks.js";
+import type { ReactionRoleMenuMode } from "./rpc/reactionroles";
+import type { ConfigField } from "./config";
+import type { MessageDocumentV2 } from "./message-blocks";
 
 export interface GuildSettings {
   prefix: string | null;

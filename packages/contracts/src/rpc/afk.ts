@@ -1,5 +1,5 @@
-import type { AfkEntryView } from "../views.js";
-import { rpcAction, RpcTimeouts } from "./define.js";
+import type { AfkEntryView } from "../views";
+import { rpcAction, RpcTimeouts } from "./define";
 
 export const afkRpc = {
   "guild.afk.list": rpcAction<{ entries: AfkEntryView[] }>()({

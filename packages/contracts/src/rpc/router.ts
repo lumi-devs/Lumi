@@ -1,16 +1,16 @@
-import { accountRpc } from "./account.js";
-import { afkRpc } from "./afk.js";
-import { coreRpc } from "./core.js";
-import { dashboardRpc } from "./dashboard.js";
-import type { RpcInputOf, RpcOutputOf } from "./define.js";
-import { downloaderRpc } from "./downloader.js";
-import { loggingRpc } from "./logging.js";
-import { modRpc } from "./mod.js";
-import { reactionrolesRpc } from "./reactionroles.js";
-import { securityRpc } from "./security.js";
-import { systemRpc } from "./system.js";
-import { tempvcRpc } from "./tempvc.js";
-import { welcomeRpc } from "./welcome.js";
+import { accountRpc } from "./account";
+import { afkRpc } from "./afk";
+import { coreRpc } from "./core";
+import { dashboardRpc } from "./dashboard";
+import type { RpcInputOf, RpcOutputOf } from "./define";
+import { downloaderRpc } from "./downloader";
+import { loggingRpc } from "./logging";
+import { modRpc } from "./mod";
+import { reactionrolesRpc } from "./reactionroles";
+import { securityRpc } from "./security";
+import { systemRpc } from "./system";
+import { tempvcRpc } from "./tempvc";
+import { welcomeRpc } from "./welcome";
 
 export const rpcSlices = [
   accountRpc,

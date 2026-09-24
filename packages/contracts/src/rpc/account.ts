@@ -1,6 +1,6 @@
 import { s } from "@sapphire/shapeshift";
-import { rpcAction, RpcTimeouts } from "./define.js";
-import { SnowflakeSchema } from "./schemas.js";
+import { rpcAction, RpcTimeouts } from "./define";
+import { SnowflakeSchema } from "./schemas";
 
 /** GDPR requester provenance (wire values of the bot's `RequesterType` enum). */
 export const GdprRequesters = [

@@ -1,4 +1,4 @@
-import type { RpcRequest, RpcResponse } from "./rpc/envelope.js";
+import type { RpcRequest, RpcResponse } from "./rpc/envelope";
 
 export const AddonDiscordCapabilities = [
   "reply",

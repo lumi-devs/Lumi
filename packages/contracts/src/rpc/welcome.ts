@@ -1,5 +1,5 @@
 import { s } from "@sapphire/shapeshift";
-import { rpcAction, RpcTimeouts } from "./define.js";
+import { rpcAction, RpcTimeouts } from "./define";
 
 export const WelcomeTestKinds = ["welcome", "goodbye"] as const;
 

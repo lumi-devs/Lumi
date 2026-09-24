@@ -1,13 +1,13 @@
 import { s } from "@sapphire/shapeshift";
-import type { BlocklistListData, IgnoredChannelView } from "../views.js";
-import { rpcAction, RpcTimeouts } from "./define.js";
+import type { BlocklistListData, IgnoredChannelView } from "../views";
+import { rpcAction, RpcTimeouts } from "./define";
 import {
   BlocklistAddSchema,
   BlocklistRemoveSchema,
   boundedArray,
   PaginationSchema,
   SnowflakeSchema,
-} from "./schemas.js";
+} from "./schemas";
 
 export const PermitKinds = ["enforced", "custom"] as const;
 export type PermitKind = (typeof PermitKinds)[number];

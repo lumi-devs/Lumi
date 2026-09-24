@@ -1,7 +1,7 @@
 import { s } from "@sapphire/shapeshift";
-import type { TempVcGeneratorView, TempVcRecordView } from "../views.js";
-import { rpcAction, RpcTimeouts } from "./define.js";
-import { SnowflakeSchema } from "./schemas.js";
+import type { TempVcGeneratorView, TempVcRecordView } from "../views";
+import { rpcAction, RpcTimeouts } from "./define";
+import { SnowflakeSchema } from "./schemas";
 
 export const tempvcRpc = {
   "guild.tempvc.generators.list": rpcAction<{
