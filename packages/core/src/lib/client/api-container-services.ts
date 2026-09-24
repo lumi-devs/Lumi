@@ -20,11 +20,10 @@ export interface ApiContainerServices {
  *
  * RPC handlers (`modules/*\/rpc.ts`, audited directly rather than assumed)
  * only ever reach `container.client.rest` and `container.client.user.id` —
- * never gateway-cached state (`.guilds.cache`, `.channels.cache`, ...); that
- * residual gap is `implement.ts`'s `cachedGuild()`, called out in the API
- * extraction checkpoint as still requiring a real gateway connection and not
- * yet reachable from this process. So this builds a `SapphireClient` and
- * authenticates its REST manager, but deliberately never calls `login()` —
+ * never gateway-cached state (`.guilds.cache`, `.channels.cache`, ...); the
+ * last holdout, `implement.ts`'s now-deleted `cachedGuild()`, was closed by
+ * the API extraction checkpoint's Phase A6. So this builds a `SapphireClient`
+ * and authenticates its REST manager, but deliberately never calls `login()` —
  * that method both loads every Sapphire piece *and* opens the websocket in
  * one call (`node_modules/@sapphire/framework` `SapphireClient#login`), and
  * a gateway connection is exactly what this process must not hold. The

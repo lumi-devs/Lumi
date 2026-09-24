@@ -3,11 +3,7 @@ import { container } from "@sapphire/framework";
 import { rpcRouter, type RpcActionName } from "@lumi/contracts/rpc";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { dispatchRpc } from "#lib/rpc/dispatch.js";
-import {
-  cachedGuild,
-  requireGuildId,
-  requireGuildManager,
-} from "#lib/rpc/implement.js";
+import { requireGuildId, requireGuildManager } from "#lib/rpc/implement.js";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 
@@ -244,26 +240,6 @@ describe("RPC guild access under Discord API failures", () => {
     });
   });
 
-  describe("cachedGuild", () => {
-    it("returns the gateway-cached guild", () => {
-      const guild: any = { id: GUILD_ID, ownerId: OWNER_ID };
-      container.client = {
-        ...container.client,
-        guilds: { cache: new Map([[GUILD_ID, guild]]) },
-      } as any;
-
-      expect(cachedGuild(GUILD_ID)).toBe(guild);
-    });
-
-    it("throws when the guild left or is unavailable", () => {
-      container.client = {
-        ...container.client,
-        guilds: { cache: new Map() },
-      } as any;
-
-      expect(() => cachedGuild(GUILD_ID)).toThrow("Guild not found in bot cache");
-    });
-  });
 });
 
 describe("dispatchRpc error shaping", () => {

@@ -1,11 +1,12 @@
 import { container } from "@sapphire/framework";
-import { PermissionsBitField } from "discord.js";
+import { ChannelType, PermissionsBitField } from "discord.js";
 import { calculateUserDefaultAvatarIndex } from "@discordjs/rest";
 import {
   Routes,
   type APIChannel,
   type APIGuild,
   type APIGuildMember,
+  type APIMessage,
   type APIRole,
 } from "discord-api-types/v10";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
@@ -56,6 +57,34 @@ export async function fetchChannelRest(channelId: string): Promise<APIChannel | 
     (data) => JSON.parse(data) as APIChannel,
   ).catch(swallow("discord-rest-lookup: channel fetch failed"));
 }
+
+/**
+ * A single message by id, deliberately uncached: callers use this to decide
+ * whether to edit an existing message or post a fresh one (the verification
+ * panel), so a short-TTL cache-aside snapshot that could still say "found"
+ * seconds after a real delete would be actively wrong here.
+ */
+export async function fetchChannelMessageRest(
+  channelId: string,
+  messageId: string,
+): Promise<APIMessage | null> {
+  return (
+    container.client.rest.get(
+      Routes.channelMessage(channelId, messageId),
+    ) as Promise<APIMessage>
+  ).catch(() => null);
+}
+
+/** Mirrors discord.js's own `GuildTextBasedChannelTypes` - the channel types a message can be sent to, edited in, or deleted from. */
+export const GuildTextBasedChannelTypes = new Set<ChannelType>([
+  ChannelType.GuildText,
+  ChannelType.GuildAnnouncement,
+  ChannelType.AnnouncementThread,
+  ChannelType.PublicThread,
+  ChannelType.PrivateThread,
+  ChannelType.GuildVoice,
+  ChannelType.GuildStageVoice,
+]);
 
 export async function fetchGuildRolesRest(guildId: string): Promise<APIRole[] | null> {
   return repositoryCache.getOrLoad<APIRole[] | null>(

@@ -60,12 +60,12 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
     };
   },
 
-  "guild.verificationPanel.set": async ({ guildId, guild, input }) => {
+  "guild.verificationPanel.set": async ({ guildId, input }) => {
     if (!input.channelId && !input.createChannel) {
       throw new Error("Pick a channel or choose to create a new one.");
     }
     await container.db.ensureGuild(guildId);
-    const result = await postOrEditVerifyPanel(guild, {
+    const result = await postOrEditVerifyPanel(guildId, {
       channelId: input.channelId,
       createChannel: input.createChannel,
       deleteOldMessage: input.deleteOldMessage,

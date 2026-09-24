@@ -10,12 +10,11 @@ import {
   type RpcRequest,
   type RpcSliceEntry,
 } from "@lumi/contracts/rpc";
-import type { Guild } from "discord.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { checkGuildManagerRest } from "#lib/rpc/discord-rest-lookup.js";
 
 interface RpcAuthContexts {
-  guildManager: { guildId: string; actorId: string; guild: Guild };
+  guildManager: { guildId: string; actorId: string };
   botOwner: { actorId: string };
   session: { actorId: string; guildId: string | undefined };
   public: { actorId: string | undefined; guildId: string | undefined };
@@ -51,27 +50,13 @@ export function requireGuildId(guildId: string | null | undefined): string {
   );
 }
 
-export function cachedGuild(guildId: string): Guild {
-  const guild = container.client.guilds.cache.get(guildId);
-  if (!guild) {
-    throw new CodedRpcError(
-      RpcFailureCodes.GuildNotFound,
-      "Guild not found in bot cache",
-    );
-  }
-  return guild;
-}
-
 // Re-checked live against the guild rather than trusted from the dashboard
 // session, whose cached guild list can be up to `SESSION_TTL_MS` stale.
 //
-// This goes over REST (`checkGuildManagerRest`), not `cachedGuild`'s gateway
-// cache: the gateway only caches guilds the current shard actually owns, so
-// a guild-existence/ManageGuild check sourced from it silently fails for any
-// guild on another shard. `cachedGuild` itself is left as-is below - it still
-// backs the `guild` field handlers use for real Discord actions (sending
-// messages, restoring backups, ...), which do need a live, gateway-bound
-// `Guild` instance and are out of scope for this pass.
+// This goes over REST (`checkGuildManagerRest`), not a gateway cache: the
+// gateway only caches guilds the current shard actually owns, so a
+// guild-existence/ManageGuild check sourced from it would silently fail for
+// any guild on another shard (or on a gateway-less `apps/api` process).
 export async function requireGuildManager(
   guildId: string,
   actorId: string | undefined,
@@ -100,20 +85,7 @@ const authorizers: RpcAuthorizers = {
   guildManager: async (req) => {
     const guildId = requireGuildId(req.guildId);
     const actorId = await requireGuildManager(guildId, req.actorId);
-    // `guild` is a getter, not an eagerly resolved field: most guildManager
-    // handlers need a live, gateway-bound `Guild` for real Discord actions,
-    // but a couple (dashboard's guild.shell.get/guild.entities.get) fetch
-    // everything over REST instead and never touch this property - for
-    // those, resolving it eagerly here would defeat the point by throwing
-    // `GuildNotFound` whenever this shard doesn't own the guild's gateway
-    // connection, exactly the coupling REST reads were introduced to avoid.
-    return {
-      guildId,
-      actorId,
-      get guild(): Guild {
-        return cachedGuild(guildId);
-      },
-    };
+    return { guildId, actorId };
   },
   botOwner: (req) => {
     if (!req.actorId || !PermitResolver.isBotOwner(req.actorId)) {
@@ -149,23 +121,8 @@ function requireModuleLoaded(name: string): void {
   }
 }
 
-// A plain `{ ...auth, input }` spread would invoke every getter on `auth`
-// (e.g. the `guildManager` context's lazy `guild`) just to copy its current
-// value, defeating the point of making it lazy. Copying property
-// descriptors instead of values leaves getters unresolved until a handler
-// actually reads them.
 function withInput<T extends object, I>(auth: T, input: I): T & { input: I } {
-  const merged = Object.create(
-    Object.getPrototypeOf(auth) as object,
-  ) as T & { input: I };
-  Object.defineProperties(merged, Object.getOwnPropertyDescriptors(auth));
-  Object.defineProperty(merged, "input", {
-    value: input,
-    enumerable: true,
-    configurable: true,
-    writable: true,
-  });
-  return merged;
+  return { ...auth, input };
 }
 
 // Generic over the auth level itself (not an entry type) so indexing

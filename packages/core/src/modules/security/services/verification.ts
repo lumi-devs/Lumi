@@ -1,15 +1,17 @@
 import { container } from "@sapphire/framework";
-import {
-  ChannelType,
-  type Guild,
-  type GuildMember,
-  type GuildTextBasedChannel,
-} from "discord.js";
-import { Routes } from "discord-api-types/v10";
+import { ChannelType, type Guild, type GuildMember } from "discord.js";
+import { Routes, type APIChannel, type APIMessage } from "discord-api-types/v10";
 import { isNullish, tryParseJSON } from "@sapphire/utilities";
 import { fetchTyped } from "#lib/commands.js";
 import { RedisKeys } from "#lib/database/redis.js";
-import { fetchGuildMemberRest } from "#lib/rpc/discord-rest-lookup.js";
+import {
+  fetchChannelMessageRest,
+  fetchChannelRest,
+  fetchGuildMemberRest,
+  fetchGuildRest,
+  GuildTextBasedChannelTypes,
+} from "#lib/rpc/discord-rest-lookup.js";
+import { serializeCard } from "#lib/rpc/card-serialize.js";
 import { withSerializedWork } from "#lib/utilities/misc.js";
 import {
   advanceCaptcha,
@@ -75,6 +77,19 @@ async function loadVerifyPanelContent(guildId: string): Promise<VerifyPanelConte
   };
 }
 
+/** True for a `fetchChannelRest`/`fetchGuildChannelsRest` result that belongs to `guildId` and is a channel a message can be sent to/edited/deleted in - REST equivalent of a guild-scoped `guild.channels.fetch()` resolving to a text-based channel (that fetch throws, so callers get `null`, for a channel in a different guild or a non-text type). */
+function isSendableGuildChannel(
+  channel: APIChannel | null,
+  guildId: string,
+): boolean {
+  return (
+    channel !== null &&
+    "guild_id" in channel &&
+    channel.guild_id === guildId &&
+    GuildTextBasedChannelTypes.has(channel.type)
+  );
+}
+
 /**
  * Posts the verification panel to `channelId` (or a freshly created
  * channel), editing the currently tracked message in place when the target
@@ -82,59 +97,73 @@ async function loadVerifyPanelContent(guildId: string): Promise<VerifyPanelConte
  * posting fresh whenever the tracked message can't be found or edited
  * (channel access lost, message deleted out from under it), or when the
  * target channel differs from the one currently tracked.
+ *
+ * REST-only (no gateway-cached `Guild`/channel/message needed): channel
+ * create is `POST /guilds/{id}/channels` (same body shape as
+ * `restore-guild.ts`'s channel recreation), channel/message reads are
+ * `fetchChannelRest`/`fetchChannelMessageRest`, and the send/edit itself
+ * serializes the `CardReply` the same way `welcome/rpc.ts`'s test-send does
+ * (now shared via `#lib/rpc/card-serialize.js`).
  */
 export async function postOrEditVerifyPanel(
-  guild: Guild,
+  guildId: string,
   opts: {
     channelId?: string;
     createChannel?: boolean;
     deleteOldMessage?: boolean;
   },
 ): Promise<VerifyPanelSetResult> {
-  const config = await loadVerificationConfig(guild.id);
+  const config = await loadVerificationConfig(guildId);
   if (!config.enabled || !config.verifiedRoleId) {
     throw new Error(
       "Turn on Verification and pick a Verified Role before posting the panel.",
     );
   }
 
-  const existing = await container.db.security.getVerificationPanel(guild.id);
+  const existing = await container.db.security.getVerificationPanel(guildId);
 
-  let target: GuildTextBasedChannel;
+  let targetChannelId: string;
   let createdChannel = false;
   if (opts.createChannel) {
-    target = await guild.channels.create({
-      name: "verify-here",
-      type: ChannelType.GuildText,
+    const created = (await container.client.rest.post(Routes.guildChannels(guildId), {
+      body: { name: "verify-here", type: ChannelType.GuildText },
       reason: "Dashboard: verification panel channel",
-    });
+    })) as APIChannel;
+    targetChannelId = created.id;
     createdChannel = true;
   } else {
     if (!opts.channelId) throw new Error("channelId is required");
-    const channel = await guild.channels.fetch(opts.channelId).catch(() => null);
-    if (!channel?.isTextBased()) {
+    const channel = await fetchChannelRest(opts.channelId);
+    if (!isSendableGuildChannel(channel, guildId)) {
       throw new Error(
         "That channel doesn't exist or isn't a text channel Lumi can post in.",
       );
     }
-    target = channel;
+    targetChannelId = opts.channelId;
   }
 
-  const t = await fetchTyped(guild);
-  const content = await loadVerifyPanelContent(guild.id);
+  const guildData = await fetchGuildRest(guildId);
+  const t = await fetchTyped(
+    {
+      guild: { id: guildId, preferredLocale: guildData?.preferred_locale },
+    } as unknown as Parameters<typeof fetchTyped>[0],
+  );
+  const content = await loadVerifyPanelContent(guildId);
   const card = buildVerifyPanel(t, content);
+  const body = serializeCard(card);
 
-  const movedChannel = Boolean(existing) && existing!.channelId !== target.id;
+  const movedChannel = Boolean(existing) && existing!.channelId !== targetChannelId;
 
   if (existing && !movedChannel) {
-    const message = await target.messages
-      .fetch(existing.messageId)
-      .catch(() => null);
+    const message = await fetchChannelMessageRest(targetChannelId, existing.messageId);
     if (message) {
       try {
-        await message.edit(card);
+        await container.client.rest.patch(
+          Routes.channelMessage(targetChannelId, message.id),
+          { body },
+        );
         return {
-          channelId: target.id,
+          channelId: targetChannelId,
           messageId: message.id,
           posted: false,
           edited: true,
@@ -144,7 +173,7 @@ export async function postOrEditVerifyPanel(
         };
       } catch (err: unknown) {
         container.logger.warn(
-          `[security] Verify panel edit failed in ${guild.id}, posting fresh instead: ${String(err)}`,
+          `[security] Verify panel edit failed in ${guildId}, posting fresh instead: ${String(err)}`,
         );
       }
     }
@@ -152,30 +181,33 @@ export async function postOrEditVerifyPanel(
 
   let oldMessageDeleted = false;
   if (existing && movedChannel && opts.deleteOldMessage) {
-    const oldChannel = await guild.channels
-      .fetch(existing.channelId)
-      .catch(() => null);
-    if (oldChannel?.isTextBased()) {
-      const oldMessage = await oldChannel.messages
-        .fetch(existing.messageId)
-        .catch(() => null);
+    const oldChannel = await fetchChannelRest(existing.channelId);
+    if (isSendableGuildChannel(oldChannel, guildId)) {
+      const oldMessage = await fetchChannelMessageRest(
+        existing.channelId,
+        existing.messageId,
+      );
       if (oldMessage) {
-        await oldMessage.delete().catch(() => null);
+        await container.client.rest
+          .delete(Routes.channelMessage(existing.channelId, existing.messageId))
+          .catch(() => null);
         oldMessageDeleted = true;
       }
     }
   }
 
-  const message = await target.send(card);
+  const sent = (await container.client.rest.post(Routes.channelMessages(targetChannelId), {
+    body,
+  })) as APIMessage;
   await container.db.security.saveVerificationPanel({
-    guildId: guild.id,
-    channelId: target.id,
-    messageId: message.id,
+    guildId,
+    channelId: targetChannelId,
+    messageId: sent.id,
   });
 
   return {
-    channelId: target.id,
-    messageId: message.id,
+    channelId: targetChannelId,
+    messageId: sent.id,
     posted: true,
     edited: false,
     moved: movedChannel,

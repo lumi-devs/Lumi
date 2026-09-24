@@ -52,7 +52,6 @@ function mockRest(opts: {
 
 describe("security module RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
-  let guild: any;
   let loadedModules: Set<string>;
   const mockEnterPanic = enterPanic as ReturnType<typeof vi.fn>;
   const mockRevertPanic = revertPanic as ReturnType<typeof vi.fn>;
@@ -63,12 +62,6 @@ describe("security module RPC handlers", () => {
 
     prisma = createMockPrismaClient();
 
-    guild = {
-      id: GUILD_ID,
-      ownerId: OWNER_ID,
-      members: { fetch: vi.fn() },
-    };
-
     container.logger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -77,7 +70,6 @@ describe("security module RPC handlers", () => {
     } as any;
 
     container.client = {
-      guilds: { cache: new Map([[GUILD_ID, guild]]) },
       rest: { get: mockRest({ ownerId: OWNER_ID }) },
     } as any;
 
@@ -266,7 +258,7 @@ describe("security module RPC handlers", () => {
       })) as any;
 
       expect(container.db.ensureGuild).toHaveBeenCalledWith(GUILD_ID);
-      expect(mockPostOrEditVerifyPanel).toHaveBeenCalledWith(guild, {
+      expect(mockPostOrEditVerifyPanel).toHaveBeenCalledWith(GUILD_ID, {
         channelId: CHANNEL_ID,
         createChannel: undefined,
         deleteOldMessage: undefined,

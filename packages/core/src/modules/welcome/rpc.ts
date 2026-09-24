@@ -1,53 +1,23 @@
 import { container } from "@sapphire/framework";
 import { welcomeRpc } from "@lumi/contracts/rpc";
-import { ChannelType, type MessageMentionOptions } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { implementRpc } from "#lib/rpc/implement.js";
 import {
   fetchChannelRest,
   fetchGuildMemberRest,
   fetchGuildRest,
+  GuildTextBasedChannelTypes,
   guildIconUrl,
   memberAvatarUrl,
 } from "#lib/rpc/discord-rest-lookup.js";
+import { serializeCard } from "#lib/rpc/card-serialize.js";
 import { logError } from "#lib/utilities/errors.js";
-import type { CardReply } from "#lib/ui/cards.js";
 import {
   loadWelcomeConfig,
   renderGoodbyeCard,
   renderWelcomeCard,
   templateVarsFor,
 } from "./services/welcome.js";
-
-/** Matches discord.js's own `GuildTextBasedChannelTypes` - the channel types a message can be sent to. */
-const SendableChannelTypes = new Set<ChannelType>([
-  ChannelType.GuildText,
-  ChannelType.GuildAnnouncement,
-  ChannelType.AnnouncementThread,
-  ChannelType.PublicThread,
-  ChannelType.PrivateThread,
-  ChannelType.GuildVoice,
-  ChannelType.GuildStageVoice,
-]);
-
-function serializeAllowedMentions(mentions: MessageMentionOptions | undefined) {
-  if (!mentions) return undefined;
-  return {
-    parse: mentions.parse,
-    roles: mentions.roles,
-    users: mentions.users,
-    replied_user: mentions.repliedUser,
-  };
-}
-
-/** discord.js's `channel.send(card)` resolves builder instances to plain JSON itself; a raw REST post has to do that conversion here. */
-function serializeCard(card: CardReply) {
-  return {
-    flags: card.flags,
-    components: card.components.map((component) => component.toJSON()),
-    allowed_mentions: serializeAllowedMentions(card.allowedMentions),
-  };
-}
 
 export const welcomeRpcHandlers = implementRpc(welcomeRpc, {
   "guild.welcome.sendTest": async ({ guildId, actorId, input }) => {
@@ -86,7 +56,7 @@ export const welcomeRpcHandlers = implementRpc(welcomeRpc, {
       channel !== null &&
       "guild_id" in channel &&
       channel.guild_id === guildId &&
-      SendableChannelTypes.has(channel.type);
+      GuildTextBasedChannelTypes.has(channel.type);
 
     const sent = sendable
       ? await container.client.rest
