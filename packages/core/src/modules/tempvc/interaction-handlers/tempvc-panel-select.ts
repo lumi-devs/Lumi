@@ -1,5 +1,4 @@
 import {
-  InteractionHandler,
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
@@ -11,13 +10,13 @@ import type {
 } from "discord.js";
 import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import { ephemeralCard, makeSuccessCard } from "#utilities/cards.js";
-import type { VcRecord } from "#modules/tempvc/data.js";
-import { Tvc } from "#modules/tempvc/keys.js";
-import { showLimitModal, showRenameModal } from "#modules/tempvc/lib/panel-helpers.js";
-import { resolveOwnedRecord } from "#modules/tempvc/panel-guard.js";
+import { ephemeralCard, makeSuccessCard } from "#lib/ui/cards.js";
+import type { VcRecord } from "#modules/tempvc/data/tempvc.js";
+import { TempVcPanelId } from "../constants.js";
+import { showLimitModal, showRenameModal } from "#modules/tempvc/services/panel-helpers.js";
+import { resolveOwnedRecord } from "#modules/tempvc/services/panel-guard.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 import {
   buildBackRows,
@@ -51,45 +50,48 @@ const SelectActions = new Set([
   "panelmenu",
 ]);
 
-const AccessVerbs: Record<string, string> = {
-  select_kick: "Kicked",
-  ksel: "Kicked",
-  select_trust: "Trusted",
-  select_trust_role: "Trusted Role",
-  tsel: "Trusted",
-  select_untrust: "Untrusted",
-  select_untrust_role: "Untrusted Role",
-  usel: "Untrusted",
-  select_block: "Blocked",
-  select_block_role: "Blocked Role",
-  bsel: "Blocked",
-  select_unblock: "Unblocked",
-  select_unblock_role: "Unblocked Role",
-  ubsel: "Unblocked",
-};
+const AccessVerbKeys = {
+  select_kick: "tempvc:accessVerbKicked",
+  ksel: "tempvc:accessVerbKicked",
+  select_trust: "tempvc:accessVerbTrusted",
+  select_trust_role: "tempvc:accessVerbTrustedRole",
+  tsel: "tempvc:accessVerbTrusted",
+  select_untrust: "tempvc:accessVerbUntrusted",
+  select_untrust_role: "tempvc:accessVerbUntrustedRole",
+  usel: "tempvc:accessVerbUntrusted",
+  select_block: "tempvc:accessVerbBlocked",
+  select_block_role: "tempvc:accessVerbBlockedRole",
+  bsel: "tempvc:accessVerbBlocked",
+  select_unblock: "tempvc:accessVerbUnblocked",
+  select_unblock_role: "tempvc:accessVerbUnblockedRole",
+  ubsel: "tempvc:accessVerbUnblocked",
+} as const;
 
-@ApplyOptions<InteractionHandler.Options>({
+@ApplyOptions<ModuleInteractionHandler.Options>({
   name: "tempvc-panel-select",
   interactionHandlerType: InteractionHandlerTypes.SelectMenu,
+  module: "tempvc",
 })
-export class TempVcPanelSelectHandler extends BaseInteractionHandler {
+export class TempVcPanelSelectHandler extends ModuleInteractionHandler<
+  AnySelectMenuInteraction,
+  { action: string; channelId: string }
+> {
   private get service(): TempVcUtility {
     return getUtility("tempvc");
   }
 
   public override parse(interaction: AnySelectMenuInteraction) {
-    if (!interaction.customId.startsWith(`${Tvc}:`)) return this.none();
-    const [, action, channelId] = interaction.customId.split(":");
-    if (!action || !channelId || !SelectActions.has(action))
-      return this.none();
-    return this.some({ action, channelId });
+    const parsed = TempVcPanelId.parse(interaction.customId);
+    if (!parsed || !SelectActions.has(parsed.action)) return this.none();
+    return this.some(parsed);
   }
 
-  public async run(
+  protected override async handle(
     interaction: AnySelectMenuInteraction,
     { action, channelId }: { action: string; channelId: string },
   ): Promise<void> {
-    if (!interaction.inGuild()) return;
+    const { guildId } = interaction;
+    if (!guildId) return;
     const channel = interaction.guild?.channels.cache.get(channelId);
     if (!channel || !channel.isVoiceBased()) return;
 
@@ -99,12 +101,12 @@ export class TempVcPanelSelectHandler extends BaseInteractionHandler {
     // lookups below. `interaction.values` is available synchronously.
     const selected = action === "panelmenu" ? interaction.values[0] : undefined;
     const opensModal = selected === "name" || selected === "limit";
-    if (!opensModal) await interaction.deferUpdate();
+    if (!opensModal) await this.acknowledge(interaction);
 
     const member = interaction.member as GuildMember;
     const t = await fetchTyped(interaction);
     const record = await resolveOwnedRecord(
-      interaction.guildId,
+      guildId,
       channelId,
       channel,
       this.service,
@@ -127,7 +129,7 @@ export class TempVcPanelSelectHandler extends BaseInteractionHandler {
             record,
             !record.locked,
           );
-          await interaction.editReply(buildPanel(channel, next, t));
+          await interaction.editReply(await buildPanel(channel, next, t));
           return;
         }
         case "hide": {
@@ -136,7 +138,7 @@ export class TempVcPanelSelectHandler extends BaseInteractionHandler {
             record,
             !record.hidden,
           );
-          await interaction.editReply(buildPanel(channel, next, t));
+          await interaction.editReply(await buildPanel(channel, next, t));
           return;
         }
         case "kick":
@@ -263,8 +265,9 @@ export class TempVcPanelSelectHandler extends BaseInteractionHandler {
       }
     }
     if (done.length === 0) return t("tempvc:noChangesApplied");
-    const verb = AccessVerbs[action] ?? "Processed";
-    return `${verb}: ${done.join(", ")}`;
+    const verbKey = AccessVerbKeys[action as keyof typeof AccessVerbKeys];
+    const verb = verbKey ? t(verbKey) : t("tempvc:accessVerbProcessed");
+    return t("tempvc:accessResult", { verb, members: done.join(", ") });
   }
 
   async #transfer(

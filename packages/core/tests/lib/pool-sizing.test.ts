@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach } from "bun:test";
 import { getShardCount, resolvePgPoolSize } from "../../src/lib/env.js";
 
 const KEYS = ["SHARD_COUNT", "SHARDS", "POSTGRES_POOL_MAX", "POSTGRES_POOL_TOTAL"];

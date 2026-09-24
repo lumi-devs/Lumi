@@ -1,6 +1,5 @@
 import type { Prisma } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
-import { acquireRedisLock } from "#lib/redis-lock.js";
 
 /**
  * Generic per-module key/value storage (`ModuleData`), keyed by
@@ -52,45 +51,6 @@ export class GuildKVRepository extends Repository {
     return result;
   }
 
-  /**
-   * Upserts multiple module data entries for a guild and module in a single transaction.
-   * Returns the number of entries written.
-   */
-  public async setModuleDataMany(
-    guildId: string,
-    module: string,
-    entries: { targetId: string; key: string; value: Prisma.InputJsonValue }[],
-  ): Promise<number> {
-    if (entries.length === 0) return 0;
-
-    await this.prisma.$transaction(
-      entries.map((e) =>
-        this.prisma.moduleData.upsert({
-          where: {
-            guildId_moduleName_targetId_key: {
-              guildId,
-              moduleName: module,
-              targetId: e.targetId,
-              key: e.key,
-            },
-          },
-          create: {
-            guildId,
-            moduleName: module,
-            targetId: e.targetId,
-            key: e.key,
-            value: e.value,
-          },
-          update: {
-            value: e.value,
-          },
-        }),
-      ),
-    );
-
-    return entries.length;
-  }
-
   public async setModuleData<T = unknown>(
     guildId: string,
     module: string,
@@ -98,6 +58,7 @@ export class GuildKVRepository extends Repository {
     key: string,
     value: T,
   ) {
+    await this.db.ensureGuild(guildId);
     await this.prisma.moduleData.upsert({
       where: {
         guildId_moduleName_targetId_key: {
@@ -188,39 +149,6 @@ export class GuildKVRepository extends Repository {
     };
   }
 
-  /**
-   * Atomic read-modify-write for one KV row, guarded by a Redis lock scoped
-   * to (guildId, module, targetId, key) - for addon code that would
-   * otherwise do `getModuleData` then `setModuleData` by hand and race a
-   * concurrent writer (e.g. appending to a list). Mirrors Redbot's `async
-   * with config...() as l:` context-manager pattern. `mutator` returning
-   * `undefined` deletes the row instead of writing it.
-   */
-  public async mutateModuleData<T = unknown>(
-    guildId: string,
-    module: string,
-    targetId: string,
-    key: string,
-    mutator: (current: T | null) => T | undefined | Promise<T | undefined>,
-  ): Promise<T | undefined> {
-    const { release } = await acquireRedisLock(
-      this.redis,
-      `lock:kv-mutate:${module}:${guildId}:${targetId}:${key}`,
-    );
-    try {
-      const current = await this.getModuleData<T>(guildId, module, targetId, key);
-      const next = await mutator(current);
-      if (next === undefined) {
-        await this.deleteModuleData(guildId, module, targetId, key);
-      } else {
-        await this.setModuleData(guildId, module, targetId, key, next);
-      }
-      return next;
-    } finally {
-      await release();
-    }
-  }
-
   /** Deletes one KV row; returns the number of rows removed (0 or 1). */
   public async deleteModuleData(
     guildId: string,
@@ -235,21 +163,27 @@ export class GuildKVRepository extends Repository {
   }
 
   /**
-   * Deletes many KV rows for a `module + key` across `{ guildId, targetId }`
-   * targets in a single query; returns the number of rows removed.
+   * Every row a module keyed to one target, across every guild. Used for GDPR
+   * erasure and export of a sandboxed addon's data, which the host owns on the
+   * addon's behalf.
    */
-  public async deleteModuleDataMany(
+  public async listModuleDataForTarget<T = unknown>(
     module: string,
-    key: string,
-    targets: { guildId: string; targetId: string }[],
+    targetId: string,
+  ): Promise<{ guildId: string; key: string; value: T }[]> {
+    const rows = await this.prisma.moduleData.findMany({
+      where: { moduleName: module, targetId },
+    });
+    return rows.map((r) => ({ guildId: r.guildId, key: r.key, value: r.value as T }));
+  }
+
+  /** {@linkcode listModuleDataForTarget}, but deleting. Returns the row count removed. */
+  public async deleteModuleDataForTarget(
+    module: string,
+    targetId: string,
   ): Promise<number> {
-    if (targets.length === 0) return 0;
     const { count } = await this.prisma.moduleData.deleteMany({
-      where: {
-        moduleName: module,
-        key,
-        OR: targets.map((t) => ({ guildId: t.guildId, targetId: t.targetId })),
-      },
+      where: { moduleName: module, targetId },
     });
     return count;
   }

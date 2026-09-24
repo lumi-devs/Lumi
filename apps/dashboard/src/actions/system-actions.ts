@@ -1,28 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RpcActions, type GdprRequester, type RepoModuleView } from "@lumi/contracts";
-import { requireBotOwner } from "#/lib/auth-guards";
-import { rpcCall } from "#/lib/rpc";
-import { isRateLimited } from "#/lib/rate-limit";
-import { runAction } from "#/lib/action-result";
+import { type GdprRequester } from "@lumi/contracts/rpc";
+import { type RepoModuleView } from "@lumi/contracts/views";
+import { rpc } from "#/lib/rpc";
 import type { ActionResult } from "./guild-actions";
-
-async function guardedSystemAction() {
-  const session = await requireBotOwner();
-  if (await isRateLimited(`system-action:${session.userId}`, 60, 60_000)) {
-    throw new Error("Too many requests — slow down.");
-  }
-  return session;
-}
+import { ownerAction } from "./_guard";
 
 export async function setMaintenanceMode(
   maintenanceMode: boolean,
   maintenanceMessage?: string,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedSystemAction();
-    await rpcCall(RpcActions.systemMaintenanceSet, {
+  return ownerAction(async (session) => {
+    await rpc("system.maintenance.set", {
       actorId: session.userId,
       data: { maintenanceMode, maintenanceMessage },
     });
@@ -35,9 +25,8 @@ export async function setBotIdentity(
   inviteUrl: string | null,
   supportGuildId: string | null,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedSystemAction();
-    await rpcCall(RpcActions.systemIdentitySet, {
+  return ownerAction(async (session) => {
+    await rpc("system.identity.set", {
       actorId: session.userId,
       data: { inviteUrl, supportGuildId },
     });
@@ -51,9 +40,8 @@ export async function toggleGlobalModule(
   enabled: boolean,
   reason?: string,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedSystemAction();
-    await rpcCall(RpcActions.systemModuleToggle, {
+  return ownerAction(async (session) => {
+    await rpc("system.module.toggle", {
       actorId: session.userId,
       data: { moduleName, enabled, reason },
     });
@@ -63,9 +51,8 @@ export async function toggleGlobalModule(
 }
 
 export async function clearGlobalModule(moduleName: string): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedSystemAction();
-    await rpcCall(RpcActions.systemModuleClear, {
+  return ownerAction(async (session) => {
+    await rpc("system.module.clear", {
       actorId: session.userId,
       data: { moduleName },
     });
@@ -79,9 +66,8 @@ export async function addRepo(
   url: string,
   branch?: string,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedSystemAction();
-    await rpcCall(RpcActions.repoAdd, {
+  return ownerAction(async (session) => {
+    await rpc("downloader.repo.add", {
       actorId: session.userId,
       data: { name, url, branch },
     });
@@ -95,9 +81,8 @@ export async function installModule(
   moduleName: string,
   revision?: string,
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedSystemAction();
-    await rpcCall(RpcActions.moduleInstall, {
+  return ownerAction(async (session) => {
+    await rpc("downloader.module.install", {
       actorId: session.userId,
       data: { repoName, moduleName, revision },
     });
@@ -110,9 +95,8 @@ export async function rollbackModule(
   moduleName: string,
   revision: string,
 ): Promise<{ ok: true; commit: string | null } | { ok: false; error: string }> {
-  return runAction(async () => {
-    const session = await guardedSystemAction();
-    const result = await rpcCall(RpcActions.moduleRollback, {
+  return ownerAction(async (session) => {
+    const result = await rpc("downloader.module.rollback", {
       actorId: session.userId,
       data: { moduleName, revision },
     });
@@ -124,9 +108,8 @@ export async function rollbackModule(
 export async function listRepoModules(
   repoName: string,
 ): Promise<{ ok: true; modules: RepoModuleView[] } | { ok: false; error: string }> {
-  return runAction(async () => {
-    const session = await guardedSystemAction();
-    const result = await rpcCall(RpcActions.repoModules, {
+  return ownerAction(async (session) => {
+    const result = await rpc("downloader.repo.modules", {
       actorId: session.userId,
       data: { repoName },
     });
@@ -135,9 +118,8 @@ export async function listRepoModules(
 }
 
 export async function uninstallModule(moduleName: string): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedSystemAction();
-    await rpcCall(RpcActions.moduleUninstall, {
+  return ownerAction(async (session) => {
+    await rpc("downloader.module.uninstall", {
       actorId: session.userId,
       data: { moduleName },
     });
@@ -150,9 +132,8 @@ export async function gdprDeleteUser(
   userId: string,
   requester: GdprRequester = "OWNER",
 ): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await guardedSystemAction();
-    await rpcCall(RpcActions.gdprDelete, {
+  return ownerAction(async (session) => {
+    await rpc("global.gdpr.delete", {
       actorId: session.userId,
       data: { userId, requester },
     });

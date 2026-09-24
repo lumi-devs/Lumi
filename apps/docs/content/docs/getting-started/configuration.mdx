@@ -1,0 +1,47 @@
+---
+title: Configuration
+description: Every environment variable Lumi actually reads, and where it is read.
+---
+
+import { WorkerEnvTable, DashboardEnvTable, ComposeEnvTable } from "@/components/generated-tables";
+
+These tables are generated at build time from the actual source that reads each variable — see
+[Environment Variables](/docs/reference/environment-variables) for the full reference, including
+the observability profile's variables. If a variable isn't listed here, setting it is a silent
+no-op.
+
+## Worker and shared libraries
+
+Read by `packages/core/src/lib/env.ts`, the Redis client, the RPC HTTP server, and the permit
+resolver. `SHARD_COUNT`, `SHARDS`, `SHARDING_MANAGER`, and `HOSTNAME` are injected by the runtime
+— do not set them yourself.
+
+<WorkerEnvTable />
+
+## Dashboard
+
+Read by `apps/dashboard/src/lib/env.ts`. The dashboard holds no bot token and opens no database
+connection — it only needs its session secret, Discord OAuth2 credentials, and the worker RPC
+address.
+
+<DashboardEnvTable />
+
+The OAuth2 redirect URI is not a variable: register `<dashboard-origin>/api/auth/callback/discord`
+on your Discord application. There is no owner-list variable either — bot-owner detection goes
+through the `auth.whoami` RPC.
+
+## Compose-only values
+
+Consumed by `docker-compose.yml` itself rather than application code.
+
+<ComposeEnvTable />
+
+## Generating secrets
+
+```bash
+openssl rand -hex 32     # RPC_INTERNAL_TOKEN, DASHBOARD_SESSION_SECRET
+openssl rand -base64 24  # GRAFANA_PASSWORD (observability profile)
+```
+
+Custom emoji overrides live outside the environment entirely — see
+[Custom Emojis](/docs/guides/custom-emojis).

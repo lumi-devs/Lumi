@@ -1,12 +1,12 @@
-import type { Prisma } from "@prisma/client";
+import type { OverrideTargetType, Prisma } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
 export interface ConfigOverrideEntry {
-  id: string;
+  id: number;
   guildId: string;
   moduleName: string;
   key: string;
-  modelType: string;
+  modelType: OverrideTargetType;
   modelId: string;
   value: unknown;
 }
@@ -20,10 +20,11 @@ export class ConfigOverrideRepository extends Repository {
     guildId: string;
     moduleName: string;
     key: string;
-    modelType: string;
+    modelType: OverrideTargetType;
     modelId: string;
     value: unknown;
   }): Promise<void> {
+    await this.db.ensureGuild(data.guildId);
     await this.prisma.moduleConfigOverride.upsert({
       where: {
         uq_config_override: {
@@ -63,7 +64,7 @@ export class ConfigOverrideRepository extends Repository {
     guildId: string;
     moduleName: string;
     key: string;
-    modelType: string;
+    modelType: OverrideTargetType;
     modelId: string;
   }): Promise<boolean> {
     const result = await this.prisma.moduleConfigOverride.deleteMany({

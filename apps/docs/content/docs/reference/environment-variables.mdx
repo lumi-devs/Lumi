@@ -1,0 +1,34 @@
+---
+title: Environment Variables
+description: Every environment variable Lumi reads, generated from the source that reads it.
+---
+
+import { WorkerEnvTable, DashboardEnvTable, ObservabilityEnvTable, ComposeEnvTable } from "@/components/generated-tables";
+
+Exhaustive reference, generated at build time. For a narrative walkthrough of the variables you'll
+actually set on a first boot, see [Configuration](/docs/getting-started/configuration).
+
+## Worker and shared libraries
+
+Read by `packages/core/src/lib/env.ts`, the Redis client, the RPC HTTP server, the permit
+resolver, and the client options builder.
+
+<WorkerEnvTable />
+
+## Dashboard
+
+Read by `apps/dashboard/src/lib/env.ts`.
+
+<DashboardEnvTable />
+
+## Observability profile
+
+Consumed by `packages/observability` and the `observability` Compose profile.
+
+<ObservabilityEnvTable />
+
+## Compose-only values
+
+Consumed by `docker-compose.yml` itself rather than application code.
+
+<ComposeEnvTable />

@@ -4,7 +4,8 @@ import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 import { Button } from "./button";
-import { Field, Input, Select } from "./input";
+import { Field, Input } from "./input";
+import { Select } from "./select";
 import { cn } from "#/lib/utils";
 
 // Filters navigate with `replace`, not `push`, so a debounced search box does
@@ -139,16 +140,14 @@ export function FilterBar({
               <Select
                 id={id}
                 name={field.name}
+                aria-label={field.label}
                 value={value}
-                onChange={(e) => update(field.name, e.target.value, false)}
-              >
-                <option value="">{field.anyLabel}</option>
-                {field.options.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </Select>
+                onValueChange={(next) => update(field.name, next, false)}
+                options={[
+                  { value: "", label: field.anyLabel },
+                  ...field.options.map((o) => ({ value: o.value, label: o.label })),
+                ]}
+              />
             )}
           </Field>
         );

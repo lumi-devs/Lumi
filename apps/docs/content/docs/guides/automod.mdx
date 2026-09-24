@@ -1,0 +1,72 @@
+---
+title: Automod
+description: Filtered terms, regex rules, invite/link blocking, and heat-based escalation.
+---
+
+The `filter` module (🚫) is Lumi's automod rule engine: filtered terms matched with
+Aho-Corasick, regex rules, invite/link blocking with allowlists, mention-spam and caps limits,
+and a decaying per-member heat score for escalation. It has no slash commands of its own —
+everything is configured through the dashboard or `/config`.
+
+## Terms and patterns
+
+- **Filtered Terms** (`terms`) — words/phrases to block, one per line, matched with
+  Aho-Corasick.
+- **Regex Rules** (`regex_rules`) — case-insensitive regular expressions, max 256 characters
+  each, one per line. Invalid patterns are skipped; patterns that would backtrack
+  catastrophically are rejected when saved.
+
+## Invites and links
+
+- **Block Invites** (`block_invites`) deletes messages containing Discord invites, except codes
+  on the **Allowed Invite Codes** allowlist (e.g. your own server's).
+- **Block Links** (`block_links`) deletes messages containing links, except domains on the
+  **Allowed Link Domains** allowlist (subdomains included).
+
+## Spam limits
+
+- **Max Mentions** (`max_mentions`) — user+role mentions per message before the message is
+  removed. `0` disables the rule.
+- **Max Caps %** (`max_caps_percent`) — delete messages whose letters are more than this percent
+  uppercase, only once a message is at least **Caps Min Length** (`caps_min_length`) characters
+  long.
+
+## Punishment
+
+- **Exempt Roles** (`exempt_roles`) bypass every filter rule. Members with Manage Messages are
+  always exempt.
+- **Timeout** (`timeout_minutes`) times out the author on a filter hit; `0` disables the
+  punishment.
+- **Warning Message** (`warn_message`) is a transient reply after a deletion, with `{user}` and
+  `{reason}` placeholders. Empty disables it.
+- **Log Channel** (`log_channel_id`) receives filter hit logs.
+
+## Heat scoring
+
+When **Heat System** (`heat_enabled`) is on, each member accrues a decaying heat score:
+per-message, per-mention, per-duplicate-message, per-filter-hit, per-attachment, per-emoji, and
+per-link weights all add heat (`heat_per_*`), a webhook multiplier
+(`heat_webhook_multiplier`) scales message/link heat for webhook-sent messages, and heat bleeds
+off at a configurable rate (`heat_decay_per_minute`).
+
+Three thresholds escalate independently: **Warn Threshold** (`heat_warn`) sends a slow-down
+warning, **Timeout Threshold** (`heat_timeout`) times the member out for `heat_timeout_minutes`,
+and **Quarantine Threshold** (`heat_quarantine`) quarantines them. `0` disables any of the three.
+
+**Escalating Timeouts** (`heat_multiplier_enabled`) geometrically increases the timeout duration
+for members who keep re-tripping heat after their previous timeout expires, by
+`heat_multiplier_base` each repeat (e.g. base `2` → 1x, 1x, 2x, 4x, 8x the base duration).
+
+**Heat panic mode**: if `heat_panic_raider_count` distinct members trip Timeout or Quarantine
+within `heat_panic_window_seconds`, panic mode activates and instantly actions any flagged
+member's next message — a defense against coordinated raid bursts, not just individual spam.
+
+## Auto lockdown
+
+Independent of heat: if total non-exempt mentions guild-wide exceed
+`lockdown_mention_threshold` within `lockdown_window_seconds`, the server enters an automatic
+lockdown for `lockdown_duration_minutes` before auto-unlocking. `0` disables it. This is the
+automatic counterpart to `mod`'s manual `/lockdown` command.
+
+All config fields are also listed, generated from the module's manifest, wherever the dashboard
+renders `filter`'s settings form.

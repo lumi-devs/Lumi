@@ -103,7 +103,7 @@ field in four separate modules' `configSchema`: `filter/index.ts:147`, `mod/inde
 `logging/index.ts:19`, and `security/index.ts:41`. Each module owns its own
 `(moduleName, "log_channel_id")` row, so there's no live collision across modules today — but
 it does mean grepping for `log_channel_id` and renaming every hit is wrong; you have to check
-the `moduleName` in scope. Contrast with `logging/lib/send.ts:7-9`, which defines
+the `moduleName` in scope. Contrast with `logging/services/send.ts:7-9`, which defines
 `MessageLogChannelKey`/`MemberLogChannelKey`/`DefaultLogChannelKey` as constants specifically
 so that module's *own* three log-channel keys don't collide with each other or get
 typo'd inline — a pattern worth copying for any module introducing more than one channel-typed

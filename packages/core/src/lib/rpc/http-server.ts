@@ -7,7 +7,7 @@ import {
   isProduction,
 } from "#lib/env.js";
 import { logError } from "#lib/utilities/errors.js";
-import type { RpcRequest } from "@lumi/contracts";
+import { RpcFailureCodes, type RpcRequest } from "@lumi/contracts/rpc";
 
 /**
  * Internal-only HTTP entry point for the `dispatchRpc` pipeline — handler
@@ -19,7 +19,7 @@ import type { RpcRequest } from "@lumi/contracts";
  * Reachability is not authorization: every container on the compose network
  * (and anything with an SSRF primitive pointed at it) can open a socket here,
  * and `actorId` in the request body is an unsigned claim the handlers act on
- * — `requireBotOwner` would happily accept the bot owner's public snowflake
+ * — the bot-owner check would happily accept the bot owner's public snowflake
  * from a stranger. So every `/rpc` request must carry the shared secret in
  * `RPC_INTERNAL_TOKEN`, checked here before the body ever reaches
  * `dispatchRpc`.
@@ -88,7 +88,12 @@ export async function handleRpcHttpRequest(
   }
   if (internalToken && !tokenMatches(internalToken, presentedToken(req))) {
     return Response.json(
-      { id: "", ok: false, error: "Unauthorized" },
+      {
+        id: "",
+        ok: false,
+        error: "Unauthorized",
+        code: RpcFailureCodes.Unauthorized,
+      },
       { status: 401 },
     );
   }
@@ -97,13 +102,23 @@ export async function handleRpcHttpRequest(
     body = (await req.json()) as RpcRequest<unknown>;
   } catch {
     return Response.json(
-      { id: "", ok: false, error: "Malformed JSON body" },
+      {
+        id: "",
+        ok: false,
+        error: "Malformed JSON body",
+        code: RpcFailureCodes.BadRequest,
+      },
       { status: 400 },
     );
   }
   if (!body?.action) {
     return Response.json(
-      { id: body?.id ?? "", ok: false, error: "Missing action" },
+      {
+        id: body?.id ?? "",
+        ok: false,
+        error: "Missing action",
+        code: RpcFailureCodes.BadRequest,
+      },
       { status: 400 },
     );
   }
@@ -111,7 +126,12 @@ export async function handleRpcHttpRequest(
     return Response.json(await dispatchRpc(body));
   } catch {
     return Response.json(
-      { id: body?.id ?? "", ok: false, error: "Internal error" },
+      {
+        id: body?.id ?? "",
+        ok: false,
+        error: "Internal error",
+        code: RpcFailureCodes.Internal,
+      },
       { status: 500 },
     );
   }

@@ -1,20 +1,13 @@
 import { CommandContext } from "#lib/command-context.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
+import { PermitResolver } from "#lib/permissions/PermitResolver.js";
+import { memberRoleIds } from "#lib/permissions/subject.js";
 import { instrumentCommandPiece } from "#lib/telemetry/instrument.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeInfoCard,
-  makeSuccessCard,
-  makeWarningCard,
-  type CardReply,
-} from "#lib/utilities/cards.js";
+import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "#lib/ui/cards.js";
 import {
   BucketScope,
   Command,
-  UserError,
   container,
   type ApplicationCommandRegistry,
   type Args,
@@ -25,6 +18,7 @@ import {
   ApplicationIntegrationType,
   InteractionContextType,
   PermissionFlagsBits,
+  type AutocompleteInteraction,
   type ChatInputCommandInteraction,
   type InteractionReplyOptions,
   type Message,
@@ -33,7 +27,6 @@ import {
 } from "discord.js";
 
 export { fetchT };
-export { CommandContext } from "#lib/command-context.js";
 export { BucketScope };
 
 export interface ReplyOptions {
@@ -76,43 +69,6 @@ export const replySuccess = makeReplyHelper(makeSuccessCard);
 export const replyError = makeReplyHelper(makeErrorCard);
 export const replyWarning = makeReplyHelper(makeWarningCard);
 export const replyInfo = makeReplyHelper(makeInfoCard);
-
-/**
- * Throws a `PermissionDenied` {@linkcode UserError} unless the invoking member
- * holds `permitNode` in the interaction's guild.
- *
- * @param interaction - The interaction whose invoker is being checked.
- * @param permitNode - The permit node to require, e.g. `admin.*`.
- */
-export async function assertPermit(
-  interaction: ChatInputCommandInteraction,
-  permitNode: string,
-): Promise<void> {
-  const guildId = interaction.guild?.id;
-  if (!guildId) {
-    throw new UserError({
-      identifier: "PermissionDenied",
-      message: "This command can only be used in a server.",
-    });
-  }
-  const userId = interaction.user.id;
-  const roleIds = memberRoleIds(interaction.member);
-  const guildOwnerId = interaction.guild?.ownerId;
-  const hasPermit = await container.permitResolver.hasPermit({
-    guildId,
-    userId,
-    roleIds,
-    channelId: interaction.channelId,
-    permitNode,
-    guildOwnerId,
-  });
-  if (!hasPermit) {
-    throw new UserError({
-      identifier: "PermissionDenied",
-      message: `You lack the required permit (\`${permitNode}\`) to use this.`,
-    });
-  }
-}
 
 /** Resolves the i18next translator for a target as Lumi's typed {@linkcode LumiT}. */
 export function fetchTyped(
@@ -252,11 +208,29 @@ interface SharedCommandOptions extends LumiCommandExtras {
   preconditions?: Command.Options["preconditions"];
 }
 
+function declaresPrecondition(
+  preconditions: Command.Options["preconditions"],
+  name: string,
+): boolean {
+  return (
+    Array.isArray(preconditions) &&
+    preconditions.some((p) =>
+      typeof p === "string"
+        ? p === name
+        : typeof p === "object" && p !== null && "name" in p
+          ? p.name === name
+          : false,
+    )
+  );
+}
+
 interface ResolvedCommandDefaults {
   requiredPermit: string | undefined;
   integrationTypes: ApplicationIntegrationType[];
   contexts: InteractionContextType[];
   defaultMemberPermissions: bigint | undefined;
+  requiresGuildOnly: boolean;
+  requiresBotOwner: boolean;
 }
 
 function resolveCommandDefaults(
@@ -265,15 +239,7 @@ function resolveCommandDefaults(
   const discordPerm = mapRequiredPermitToDiscordPermission(
     options.requiredPermit,
   );
-  const isGuildOnly =
-    Array.isArray(options.preconditions) &&
-    options.preconditions.some((p) =>
-      typeof p === "string"
-        ? p === "GuildOnly"
-        : typeof p === "object" && p !== null && "name" in p
-          ? p.name === "GuildOnly"
-          : false,
-    );
+  const isGuildOnly = declaresPrecondition(options.preconditions, "GuildOnly");
   return {
     requiredPermit: options.requiredPermit,
     integrationTypes: options.integrationTypes ?? [
@@ -289,6 +255,8 @@ function resolveCommandDefaults(
           ]),
     ],
     defaultMemberPermissions: options.defaultMemberPermissions ?? discordPerm,
+    requiresGuildOnly: isGuildOnly,
+    requiresBotOwner: declaresPrecondition(options.preconditions, "BotOwner"),
   };
 }
 
@@ -397,6 +365,61 @@ function shadowRegistrationDefaults(piece: BaseCommand | BaseSubcommand): void {
 }
 
 /**
+ * Sapphire's autocomplete dispatcher calls `autocompleteRun` directly,
+ * skipping the command's `preconditions` container entirely (unlike
+ * `chatInputRun`/`messageRun`, which the framework only invokes after that
+ * container passes) - confirmed against `@sapphire/framework`'s
+ * `CorePossibleAutocompleteInteraction` listener. Re-running the *full*
+ * container isn't an option here: it dispatches through
+ * `container.stores.get("preconditions")`, which only exists once a real
+ * Sapphire client has loaded every precondition piece. So this mirrors the
+ * two access checks Lumi commands actually declare - `BotOwner` and
+ * `requiredPermit` - directly against the same primitives
+ * (`PermitResolver.isBotOwner`, `container.permitResolver.hasPermit`) their
+ * precondition classes use, off of the same `preconditions`/`requiredPermit`
+ * options every command already sets to gate its real run. Wiring this into
+ * the constructor - once, for every Lumi command - means a future command
+ * gets it for free rather than depending on its author remembering to add a
+ * check.
+ */
+function guardAutocompleteRun(
+  piece: Command,
+  gates: { requiresGuildOnly: boolean; requiresBotOwner: boolean; requiredPermit: string | undefined },
+): void {
+  if (typeof piece.autocompleteRun !== "function") return;
+  const original = piece.autocompleteRun.bind(piece);
+  piece.autocompleteRun = async (interaction: AutocompleteInteraction) => {
+    if (gates.requiresGuildOnly && !interaction.guildId) {
+      await interaction.respond([]);
+      return;
+    }
+    if (gates.requiresBotOwner && !PermitResolver.isBotOwner(interaction.user.id)) {
+      await interaction.respond([]);
+      return;
+    }
+    if (gates.requiredPermit) {
+      if (!interaction.guild) {
+        await interaction.respond([]);
+        return;
+      }
+      const hasPermit = await container.permitResolver.hasPermit({
+        guildId: interaction.guild.id,
+        userId: interaction.user.id,
+        roleIds: memberRoleIds(interaction.member),
+        channelId: interaction.channelId,
+        permitNode: gates.requiredPermit,
+        guildOwnerId: interaction.guild.ownerId,
+      });
+      if (!hasPermit) {
+        await interaction.respond([]);
+        return;
+      }
+    }
+    await original(interaction);
+  };
+}
+
+/**
  * The base class that all standalone Lumi commands must extend.
  *
  * @remarks
@@ -431,6 +454,11 @@ export abstract class BaseCommand extends Command implements CommandLike {
       }
     }
     instrumentCommandPiece(this);
+    guardAutocompleteRun(this, {
+      requiresGuildOnly: defaults.requiresGuildOnly,
+      requiresBotOwner: defaults.requiresBotOwner,
+      requiredPermit: defaults.requiredPermit,
+    });
     shadowRegistrationDefaults(this);
   }
 
@@ -492,6 +520,11 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
     this.defaultMemberPermissions = defaults.defaultMemberPermissions;
     defineCtxWrappers(this, runNames, options.prefixEnabled ?? false);
     instrumentCommandPiece(this);
+    guardAutocompleteRun(this, {
+      requiresGuildOnly: defaults.requiresGuildOnly,
+      requiresBotOwner: defaults.requiresBotOwner,
+      requiredPermit: defaults.requiredPermit,
+    });
     shadowRegistrationDefaults(this);
   }
 

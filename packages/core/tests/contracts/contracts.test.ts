@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { KnownSubstores } from '@lumi/contracts';
 
 describe('Contracts Package Tests', () => {

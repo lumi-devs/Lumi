@@ -1,16 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { RpcResponse } from "@lumi/contracts";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
+import type { RpcResponse } from "@lumi/contracts/rpc";
+import { rpcRouter } from "@lumi/contracts/rpc";
 
-// lib/rpc.ts also imports `#/lib/env` (for the `getRpcClient()`/`rpcCall()`
-// convenience wrappers) — env.ts throws at *module load* time if
-// RPC_HTTP_URL etc. aren't set, which they deliberately aren't in a unit
-// test environment. `RpcClient` itself doesn't read `env`, but importing
-// the module would still throw without this.
-vi.mock("#/lib/env", () => ({
-  env: { rpcHttpUrl: "http://worker:8091", rpcInternalToken: "test-token" },
-}));
-
-const { RpcClient } = await import("#/lib/rpc");
+// lib/rpc.ts also imports `#/lib/env` (for the `getRpcClient()` convenience
+// wrapper, which this file doesn't exercise) — real env.ts has dev-safe
+// defaults for every field it reads, so it's fine to import for real rather
+// than mock (mocking it here would leak into every other test file too,
+// since bun:test's module mocks are process-wide, not per-file).
+const { RpcClient, isGuildMissing, RpcError } = await import("#/lib/rpc");
 
 function jsonResponse(body: RpcResponse, ok = true): Response {
   return {
@@ -21,14 +18,15 @@ function jsonResponse(body: RpcResponse, ok = true): Response {
 
 describe("RpcClient", () => {
   const fetchMock = vi.fn();
+  const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
     fetchMock.mockReset();
-    vi.stubGlobal("fetch", fetchMock);
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
+    globalThis.fetch = originalFetch;
   });
 
   it("posts the request to <baseUrl>/rpc with action/guildId/actorId/data in the body", async () => {
@@ -37,7 +35,7 @@ describe("RpcClient", () => {
     );
 
     const client = new RpcClient("http://worker:8091");
-    await client.call("guild.module.toggle", {
+    await client.invoke("guild.module.toggle", {
       guildId: "101",
       actorId: "1",
       data: { moduleName: "afk", enabled: false },
@@ -59,11 +57,11 @@ describe("RpcClient", () => {
 
   it("sends the internal token as a bearer header when one is configured", async () => {
     fetchMock.mockResolvedValue(
-      jsonResponse({ id: "unused", ok: true, data: null }),
+      jsonResponse({ id: "unused", ok: true, data: {} }),
     );
 
     const client = new RpcClient("http://worker:8091", "s3cret");
-    await client.call("guild.dashboard.get", { guildId: "101" });
+    await client.invoke("guild.shell.get", { guildId: "101", actorId: "1" });
 
     const [, init] = fetchMock.mock.calls[0]!;
     expect(init.headers).toMatchObject({ authorization: "Bearer s3cret" });
@@ -71,68 +69,27 @@ describe("RpcClient", () => {
 
   it("omits the bearer header when no token is configured", async () => {
     fetchMock.mockResolvedValue(
-      jsonResponse({ id: "unused", ok: true, data: null }),
+      jsonResponse({ id: "unused", ok: true, data: {} }),
     );
 
     const client = new RpcClient("http://worker:8091");
-    await client.call("guild.dashboard.get", { guildId: "101" });
+    await client.invoke("guild.shell.get", { guildId: "101", actorId: "1" });
 
     const [, init] = fetchMock.mock.calls[0]!;
     expect(init.headers).not.toHaveProperty("authorization");
   });
 
-  it("resolves call() with response.data on a successful reply", async () => {
-    fetchMock.mockResolvedValue(
-      jsonResponse({ id: "unused", ok: true, data: { name: "My Guild" } }),
-    );
+  it("maps an aborted fetch to a TIMEOUT RpcError", async () => {
+    fetchMock.mockImplementation(() => {
+      const err = new Error("aborted");
+      err.name = "AbortError";
+      return Promise.reject(err);
+    });
 
     const client = new RpcClient("http://worker:8091");
     await expect(
-      client.call("guild.dashboard.get", { guildId: "101", actorId: "1" }),
-    ).resolves.toEqual({ name: "My Guild" });
-  });
-
-  it("rejects with the server's error message when the reply has ok: false", async () => {
-    fetchMock.mockResolvedValue(
-      jsonResponse({
-        id: "unused",
-        ok: false,
-        error: "Guild not found in bot cache",
-      }),
-    );
-
-    const client = new RpcClient("http://worker:8091");
-    await expect(
-      client.call("guild.dashboard.get", { guildId: "101" }),
-    ).rejects.toThrow("Guild not found in bot cache");
-  });
-
-  it("rejects as malformed when ok: false carries no error message", async () => {
-    const malformed = { id: "unused", ok: false } as unknown as RpcResponse;
-    fetchMock.mockResolvedValue(jsonResponse(malformed));
-
-    const client = new RpcClient("http://worker:8091");
-    await expect(
-      client.call("guild.dashboard.get", { guildId: "101" }),
-    ).rejects.toThrow("malformed response");
-  });
-
-  it("times out and rejects if the request takes longer than timeoutMs", async () => {
-    fetchMock.mockImplementation(
-      (_url: string, init: { signal: AbortSignal }) =>
-        new Promise((_resolve, reject) => {
-          init.signal.addEventListener("abort", () => {
-            const err = new Error("aborted");
-            err.name = "AbortError";
-            reject(err);
-          });
-        }),
-    );
-
-    const client = new RpcClient("http://worker:8091");
-    await expect(
-      client.call("guild.dashboard.get", { guildId: "101", timeoutMs: 15 }),
-    ).rejects.toThrow("RPC timed out: guild.dashboard.get");
+      client.invoke("guild.shell.get", { guildId: "101", actorId: "1" }),
+    ).rejects.toThrow("RPC timed out: guild.shell.get");
   });
 
   it("rejects immediately if fetch itself fails (worker unreachable)", async () => {
@@ -140,7 +97,7 @@ describe("RpcClient", () => {
 
     const client = new RpcClient("http://worker:8091");
     await expect(
-      client.call("guild.dashboard.get", { guildId: "101" }),
+      client.invoke("guild.shell.get", { guildId: "101", actorId: "1" }),
     ).rejects.toThrow("connect ECONNREFUSED");
   });
 
@@ -153,7 +110,7 @@ describe("RpcClient", () => {
 
     const client = new RpcClient("http://worker:8091", "", log);
     await expect(
-      client.call("guild.dashboard.get", { guildId: "101" }),
+      client.invoke("guild.shell.get", { guildId: "101", actorId: "1" }),
     ).rejects.toThrow("malformed response");
     expect(log).toHaveBeenCalledWith(
       expect.stringContaining("Discarding undecodable RPC response"),
@@ -175,6 +132,111 @@ describe("RpcClient", () => {
       fetchMock.mockRejectedValueOnce(new Error("connect ECONNREFUSED"));
       const client = new RpcClient("http://worker:8091");
       await expect(client.healthy()).resolves.toBe(false);
+    });
+  });
+
+  describe("RpcClient.invoke", () => {
+    it("posts action/guildId/actorId/data", async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse({ id: "x", ok: true, data: { module: null } }),
+      );
+
+      const client = new RpcClient("http://worker:8091");
+      await expect(
+        client.invoke("guild.module.get", {
+          guildId: "101",
+          actorId: "1",
+          data: { module: "afk" },
+        }),
+      ).resolves.toMatchObject({ module: null });
+
+      const [, init] = fetchMock.mock.calls[0]!;
+      const sent = JSON.parse(init.body as string);
+      expect(sent).toMatchObject({
+        action: "guild.module.get",
+        guildId: "101",
+        actorId: "1",
+        data: { module: "afk" },
+      });
+    });
+
+    it("uses the router timeout for the action", async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse({ id: "x", ok: true, data: {} }),
+      );
+      const spy = vi.spyOn(globalThis, "setTimeout");
+
+      const client = new RpcClient("http://worker:8091");
+      await client.invoke("guild.shell.get", { guildId: "101", actorId: "1" });
+
+      expect(spy).toHaveBeenCalledWith(
+        expect.any(Function),
+        rpcRouter["guild.shell.get"].timeoutMs,
+      );
+      spy.mockRestore();
+    });
+
+    it("throws RpcError carrying the envelope code", async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse({
+          id: "x",
+          ok: false,
+          error: "Guild not found in bot cache",
+          code: "GUILD_NOT_FOUND",
+        }),
+      );
+
+      const client = new RpcClient("http://worker:8091");
+      let caught: unknown;
+      try {
+        await client.invoke("guild.shell.get", { guildId: "101", actorId: "1" });
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBeInstanceOf(RpcError);
+      expect((caught as InstanceType<typeof RpcError>).code).toBe("GUILD_NOT_FOUND");
+      expect((caught as Error).message).toBe("Guild not found in bot cache");
+      expect(isGuildMissing(caught)).toBe(true);
+    });
+
+    it("passes other codes through", async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse({
+          id: "x",
+          ok: false,
+          error: "nope",
+          code: "FORBIDDEN",
+        }),
+      );
+
+      const client = new RpcClient("http://worker:8091");
+      let caught: unknown;
+      try {
+        await client.invoke("guild.shell.get", { guildId: "101", actorId: "1" });
+      } catch (err) {
+        caught = err;
+      }
+      expect((caught as InstanceType<typeof RpcError>).code).toBe("FORBIDDEN");
+      expect(isGuildMissing(caught)).toBe(false);
+    });
+
+    it("rejects ok:true without data", async () => {
+      fetchMock.mockResolvedValue(jsonResponse({ id: "x", ok: true }));
+
+      const client = new RpcClient("http://worker:8091");
+      await expect(
+        client.invoke("guild.shell.get", { guildId: "101", actorId: "1" }),
+      ).rejects.toThrow("response missing expected data");
+    });
+
+    it("rejects a failure envelope without a code as malformed", async () => {
+      const malformed = { id: "x", ok: false, error: "nope" } as unknown as RpcResponse;
+      fetchMock.mockResolvedValue(jsonResponse(malformed));
+
+      const client = new RpcClient("http://worker:8091");
+      await expect(
+        client.invoke("guild.shell.get", { guildId: "101", actorId: "1" }),
+      ).rejects.toThrow("malformed response");
     });
   });
 });

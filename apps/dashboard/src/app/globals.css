@@ -34,9 +34,9 @@
   --surface-active: #eaedf3;
 
   /* Lines */
-  --border: #e1e4ea;
-  --border-soft: #ebedf2;
-  --border-strong: #c7cdd9;
+  --border: #d3d8e2;
+  --border-soft: #e2e5ec;
+  --border-strong: #b7bfcf;
 
   /* Text */
   --fg: #14161c;
@@ -154,13 +154,13 @@
 
     --bg: #090B14;
     --bg-subtle: #0D1018;
-    --surface: #0F1219;
-    --surface-hover: #161B26;
-    --surface-active: #1C2231;
+    --surface: #12151F;
+    --surface-hover: #1A2030;
+    --surface-active: #212940;
 
-    --border: #1E2433;
-    --border-soft: #161B26;
-    --border-strong: #2D3548;
+    --border: #2A3244;
+    --border-soft: #1D2434;
+    --border-strong: #3A4460;
 
     --fg: #F0F2F8;
     --fg-muted: #8B95B7;
@@ -240,13 +240,13 @@
 
   --bg: #090B14;
   --bg-subtle: #0D1018;
-  --surface: #0F1219;
-  --surface-hover: #161B26;
-  --surface-active: #1C2231;
+  --surface: #12151F;
+  --surface-hover: #1A2030;
+  --surface-active: #212940;
 
-  --border: #1E2433;
-  --border-soft: #161B26;
-  --border-strong: #2D3548;
+  --border: #2A3244;
+  --border-soft: #1D2434;
+  --border-strong: #3A4460;
 
   --fg: #F0F2F8;
   --fg-muted: #8B95B7;
@@ -316,6 +316,67 @@
   --sidebar-accent-foreground: var(--fg);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
+}
+
+/* ── Discord preview palette ──────────────────────────────────────────────
+ *
+ * The message previews imitate Discord's own chrome, so their colours come
+ * from Discord's themes rather than the Lumi tokens above — the point is that
+ * the preview looks like the client the message will actually land in. They
+ * still follow the dashboard's light/dark resolution, so a preview never sits
+ * as a dark slab in a light page. Blurple is theme-independent by design.
+ */
+:root {
+  --discord-bg: #ffffff;
+  --discord-card-bg: #f2f3f5;
+  --discord-code-bg: #ebedef;
+  --discord-text: #2e3338;
+  --discord-muted: #5c5e66;
+  --discord-heading: #060607;
+  --discord-link: #0068e0;
+  --discord-chrome-border: #e3e5e8;
+  --discord-channel-icon: #6d6f78;
+  --discord-mention-bg: rgba(88, 101, 242, 0.15);
+  --discord-mention-fg: #3c45a5;
+  --discord-divider: rgba(6, 6, 7, 0.08);
+  --discord-container-border: rgba(6, 6, 7, 0.06);
+  --discord-button-secondary: #6d6f78;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --discord-bg: #313338;
+    --discord-card-bg: #2b2d31;
+    --discord-code-bg: #1e1f22;
+    --discord-text: #b5bac1;
+    --discord-muted: #949ba4;
+    --discord-heading: #dbdee1;
+    --discord-link: #00a8fc;
+    --discord-chrome-border: #26272b;
+    --discord-channel-icon: #80848e;
+    --discord-mention-bg: rgba(88, 101, 242, 0.3);
+    --discord-mention-fg: #c9cdfb;
+    --discord-divider: rgba(255, 255, 255, 0.08);
+    --discord-container-border: rgba(255, 255, 255, 0.06);
+    --discord-button-secondary: #4e5058;
+  }
+}
+
+:root[data-theme="dark"] {
+  --discord-bg: #313338;
+  --discord-card-bg: #2b2d31;
+  --discord-code-bg: #1e1f22;
+  --discord-text: #b5bac1;
+  --discord-muted: #949ba4;
+  --discord-heading: #dbdee1;
+  --discord-link: #00a8fc;
+  --discord-chrome-border: #26272b;
+  --discord-channel-icon: #80848e;
+  --discord-mention-bg: rgba(88, 101, 242, 0.3);
+  --discord-mention-fg: #c9cdfb;
+  --discord-divider: rgba(255, 255, 255, 0.08);
+  --discord-container-border: rgba(255, 255, 255, 0.06);
+  --discord-button-secondary: #4e5058;
 }
 
 @theme inline {

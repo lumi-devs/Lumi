@@ -1,10 +1,9 @@
-import { container } from "@sapphire/framework";
+import * as kv from "lumi/kv";
 
 // Addons can't ship Prisma migrations, so persistence goes through the
-// generic guildKV store: keyed by guildId + module + targetId + key.
-// The identifier that varies per record (the tag name) goes in `targetId`;
-// `key` just names the collection so listModuleData can filter on it.
-const MODULE = "tag-manager";
+// generic per-guild KV store, namespaced to this addon by the host. The
+// identifier that varies per record (the tag name) goes in `targetId`;
+// `key` just names the collection so `list` can filter on it.
 const KEY = "tag";
 
 export interface TagRecord {
@@ -14,20 +13,19 @@ export interface TagRecord {
 }
 
 export async function getTag(guildId: string, name: string): Promise<TagRecord | null> {
-  return container.db.guildKV.getModuleData<TagRecord>(guildId, MODULE, name, KEY);
+  return kv.get<TagRecord>(guildId, name, KEY);
 }
 
 export async function setTag(guildId: string, name: string, record: TagRecord): Promise<void> {
-  await container.db.guildKV.setModuleData(guildId, MODULE, name, KEY, record);
+  await kv.set(guildId, name, KEY, record);
 }
 
 export async function deleteTag(guildId: string, name: string): Promise<boolean> {
-  const deleted = await container.db.guildKV.deleteModuleData(guildId, MODULE, name, KEY);
-  return deleted > 0;
+  return (await kv.remove(guildId, name, KEY)) > 0;
 }
 
 export async function listTags(guildId: string): Promise<Array<{ name: string; record: TagRecord }>> {
-  const rows = await container.db.guildKV.listModuleData<TagRecord>({ module: MODULE, key: KEY, guildId });
+  const rows = await kv.list<TagRecord>(KEY, guildId);
   return rows.map((row) => ({ name: row.targetId, record: row.value }));
 }
 

@@ -1,6 +1,6 @@
 import { Activity, Server, Terminal, Power } from "lucide-react";
 import { requireBotOwner } from "#/lib/auth-guards";
-import { getSystemDashboard } from "#/lib/dashboard-fetch";
+import { rpc } from "#/lib/rpc";
 import { StatsGrid } from "#/components/stats-grid";
 import { MaintenanceForm } from "#/components/system/maintenance-form";
 import { BotIdentityForm } from "#/components/system/bot-identity-form";
@@ -9,7 +9,7 @@ import { Badge } from "#/components/ui/badge";
 
 export default async function SystemPage() {
   const session = await requireBotOwner();
-  const data = await getSystemDashboard(session.userId);
+  const data = await rpc("system.dashboard.get", { actorId: session.userId });
 
   return (
     // Same three-beat page-load choreography as the guild overview.

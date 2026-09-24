@@ -1,17 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { MyDataCommand } from "#modules/core/commands/mydata.js";
 import * as gdpr from "#lib/gdpr.js";
 import * as confirm from "#lib/utilities/confirm.js";
-import {
-  makeSuccessCard,
-  makeErrorCard,
-  makeWarningCard,
-  makeInfoCard,
-} from "#lib/utilities/cards.js";
+import { makeSuccessCard, makeErrorCard, makeWarningCard, makeInfoCard } from "#lib/ui/cards.js";
 
-vi.mock("#lib/module-system/Utility.js", async (importOriginal) => {
-  const actual: any = await importOriginal();
+const __actualModule12 = await import("#lib/module-system/Utility.js");
+vi.mock("#lib/module-system/Utility.js", () => {
+  const actual: any = __actualModule12;
   return {
     ...actual,
     getUtility: vi.fn(),
@@ -52,7 +48,7 @@ describe("MyDataCommand", () => {
         name: "mydata",
         description: "mydata command",
         subcommands: [],
-      } as any,
+      },
     );
 
     mockCtx = {

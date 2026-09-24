@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "bun:test";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { container } from "@sapphire/framework";
@@ -69,6 +69,19 @@ describe("Add-on Module Classification (DownloadResolver#installModule)", () => 
     await fs.writeFile(
       path.join(sourcePath, "info.json"),
       JSON.stringify(info),
+    );
+    await fs.writeFile(
+      path.join(sourcePath, "manifest.json"),
+      JSON.stringify({
+        name: moduleName,
+        displayName: moduleName,
+        emoji: "🧪",
+        description: "Loader test module",
+        version: "1.0.0",
+        targetUtility: "worker",
+        subStores: [],
+        configFields: [],
+      }),
     );
     await fs.writeFile(
       path.join(sourcePath, "index.ts"),

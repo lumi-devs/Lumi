@@ -1,10 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "bun:test";
 import { container } from "@sapphire/framework";
 import { ButtonStyle } from "discord.js";
 import {
   restartChoiceRow,
   scheduleProcessRestart,
 } from "#lib/restart.js";
+
+// bun:test's fake-timer support only mocks the system clock (Date.now), not
+// the setTimeout queue, so this waits on the real clock instead.
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 describe("Bot Restart & State Management Utilities", () => {
   beforeEach(() => {
@@ -14,11 +18,9 @@ describe("Bot Restart & State Management Utilities", () => {
       error: vi.fn(),
       debug: vi.fn(),
     } as any;
-    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -45,13 +47,10 @@ describe("Bot Restart & State Management Utilities", () => {
   });
 
   describe("scheduleProcessRestart", () => {
-    it("schedules process restart and is idempotent when called multiple times", () => {
+    it("schedules process restart and is idempotent when called multiple times", async () => {
       const killSpy = vi.spyOn(process, "kill").mockImplementation(() => true);
 
-      // First call schedules restart
       scheduleProcessRestart("First attempt", 1500);
-
-      // Second call should be ignored (idempotent)
       scheduleProcessRestart("Second attempt", 1500);
 
       expect(container.logger.warn).toHaveBeenCalledWith(
@@ -62,14 +61,12 @@ describe("Bot Restart & State Management Utilities", () => {
       );
       expect(killSpy).not.toHaveBeenCalled();
 
-      // Advance timers to trigger process.kill
-      vi.advanceTimersByTime(1500);
+      await sleep(1500);
 
       expect(container.logger.warn).toHaveBeenCalledWith(
         `[Restart] Sending SIGTERM to self (pid ${process.pid})`
       );
 
-      // Explicit assertions for scheduleProcessRestart call counts / killSpy calls
       expect(killSpy).toHaveBeenCalledTimes(1);
       expect(killSpy).toHaveBeenCalledWith(process.pid, "SIGTERM");
     });

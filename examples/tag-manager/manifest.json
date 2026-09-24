@@ -1,0 +1,20 @@
+{
+  "name": "tag-manager",
+  "displayName": "Tag Manager",
+  "emoji": "🏷️",
+  "description": "Create custom text tags that anyone can recall with /tag.",
+  "version": "1.0.0",
+  "targetUtility": "worker",
+  "subStores": ["commands"],
+  "configFields": [
+    { "key": "enabled", "label": "Enabled", "type": "BOOLEAN", "description": "Turn tag lookups on or off without disabling the whole addon.", "default": true },
+    { "key": "max_tags", "label": "Max Tags", "type": "NUMBER", "description": "Maximum number of tags this server can store.", "default": 25 },
+    { "key": "default_response", "label": "Not Found Message", "type": "STRING", "description": "Shown when a looked-up tag doesn't exist.", "default": "That tag doesn't exist." },
+    { "key": "trigger_mode", "label": "Trigger Mode", "type": "ENUM", "description": "'exact' matches the tag name exactly; 'contains' matches if the name appears anywhere in the input.", "default": "exact", "choices": ["exact", "contains"] },
+    { "key": "log_channel_id", "label": "Log Channel", "type": "CHANNEL", "description": "Optional channel to post a message whenever a tag is created or deleted.", "required": false }
+  ],
+  "capabilities": {
+    "discord": ["reply"],
+    "kv": true
+  }
+}

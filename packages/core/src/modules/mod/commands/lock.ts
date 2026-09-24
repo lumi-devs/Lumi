@@ -1,6 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseSubcommand, type CommandContext } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 import {
   isChannelLocked,
   lockChannel,

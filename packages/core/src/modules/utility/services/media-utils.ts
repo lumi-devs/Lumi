@@ -1,0 +1,148 @@
+import {
+  ButtonStyle,
+  ButtonInteraction,
+  Message,
+  MessageFlags,
+  User,
+  type RepliableInteraction,
+} from "discord.js";
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
+  type MessageActionRowComponentBuilder,
+} from "@discordjs/builders";
+import { makeErrorCard, makeInfoCard } from "#lib/ui/cards.js";
+import { container } from "@sapphire/framework";
+import { capitalizeFirstLetter } from "@sapphire/utilities";
+import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
+import { claimCooldown } from "#lib/cooldown.js";
+import { UserMediaViewId } from "../constants.js";
+
+interface MediaRequestContext {
+  context: Message | RepliableInteraction;
+  targetUser: User;
+  mediaType: "avatar" | "banner";
+  container: typeof container;
+}
+
+import { fetchT } from "@sapphire/plugin-i18next";
+
+export async function handleMediaRequest({
+  context,
+  targetUser,
+  mediaType,
+  container,
+}: MediaRequestContext) {
+  const t = await fetchT(context);
+  const interactionUser =
+    context instanceof Message ? context.author : context.user;
+  const { guildId } = context;
+  if (!guildId) return;
+
+  const isButton = context instanceof ButtonInteraction;
+
+  if (!isButton) {
+    const cooldownSeconds =
+      ((await container.db.config.getModuleConfig(
+        guildId,
+        "utility",
+        "cooldown_seconds",
+      )) as number | null) ?? 10;
+    const cooldownMs = cooldownSeconds * 1000;
+    const cooldownKey = `lumi:media:${guildId}:${interactionUser.id}`;
+
+    const claimed = await claimCooldown(cooldownKey, cooldownMs);
+
+    if (!claimed) {
+      const remainingMs = await container.redis.pttl(cooldownKey);
+      const timeLeft = (Math.max(remainingMs, 0) / 1000).toFixed(1);
+      const title = t("commands:mediaCooldownTitle");
+      const reply = t("commands:mediaCooldown", { timeLeft });
+
+      if (context instanceof Message) {
+        const msg = await context.reply({
+          ...makeErrorCard(title, reply),
+          allowedMentions: {},
+        });
+        deleteMessageLater(
+          msg,
+          undefined,
+          "user_media: delete cooldown notice",
+        );
+        return;
+      }
+      if (context.deferred || context.replied) {
+        return context.editReply(makeErrorCard(title, reply));
+      }
+      return context.reply({
+        ...makeErrorCard(title, reply),
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+  }
+
+  const fetchedUser =
+    mediaType === "banner" ? await targetUser.fetch(true) : targetUser;
+  const isSelf = interactionUser.id === fetchedUser.id;
+
+  let mediaUrl: string | null | undefined = null;
+  const { displayName } = fetchedUser;
+  const actionRows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
+  if (mediaType === "avatar") {
+    mediaUrl = fetchedUser.displayAvatarURL({ size: 4096, extension: "png" });
+    if (!fetchedUser.avatar) mediaUrl = null;
+  } else {
+    mediaUrl = fetchedUser.bannerURL({ size: 4096, extension: "png" });
+    if (!fetchedUser.banner) mediaUrl = null;
+  }
+
+  const shouldShowMedia = isSelf || isButton;
+
+  if (shouldShowMedia && mediaUrl) {
+    actionRows.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        new ButtonBuilder()
+          .setLabel(t("commands:mediaLinkBtn", { mediaType: capitalizeFirstLetter(mediaType) }))
+          .setStyle(ButtonStyle.Link)
+          .setURL(mediaUrl),
+      ),
+    );
+  } else if (mediaUrl) {
+    actionRows.push(
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(UserMediaViewId.build({ userId: fetchedUser.id, type: mediaType }))
+          .setLabel(t("commands:mediaViewBtn", { mediaType: capitalizeFirstLetter(mediaType) }))
+          .setStyle(ButtonStyle.Primary),
+      ),
+    );
+  }
+
+  const cardTitle = t("commands:mediaCardTitle", { displayName, mediaType: capitalizeFirstLetter(mediaType) });
+  const card = makeInfoCard(cardTitle, "", {
+    actionRows,
+    mediaGallery:
+      shouldShowMedia && mediaUrl
+        ? new MediaGalleryBuilder().addItems(
+            new MediaGalleryItemBuilder({ media: { url: mediaUrl } }),
+          )
+        : undefined,
+  });
+
+  const replyOptions = {
+    ...card,
+    allowedMentions: {},
+    flags: (card.flags ?? 0) | (isSelf ? 0 : MessageFlags.Ephemeral),
+  };
+
+  if (context instanceof Message) {
+    return context.reply(replyOptions);
+  }
+
+  if (context.deferred || context.replied) {
+    return context.editReply(replyOptions);
+  }
+  return context.reply(replyOptions);
+}

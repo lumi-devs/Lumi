@@ -1,9 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { RepoCommand } from "#modules/core/commands/repo.js";
+import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 
-vi.mock("#lib/module-system/Utility.js", async (importOriginal) => {
-  const actual: any = await importOriginal();
+const __actualModule7 = await import("#lib/module-system/Utility.js");
+vi.mock("#lib/module-system/Utility.js", () => {
+  const actual: any = __actualModule7;
   return { ...actual, getUtility: vi.fn() };
 });
 
@@ -16,8 +18,9 @@ vi.mock("#lib/utilities/confirm.js", () => ({
   confirmPrompt: vi.fn().mockResolvedValue({ confirmed: true, message: {} }),
 }));
 
-vi.mock("#lib/utilities/autocomplete.js", async (importOriginal) => {
-  const actual: any = await importOriginal();
+const __actualModule8 = await import("#lib/utilities/autocomplete.js");
+vi.mock("#lib/utilities/autocomplete.js", () => {
+  const actual: any = __actualModule8;
   return { ...actual, respondWithChoices: vi.fn().mockResolvedValue(undefined) };
 });
 
@@ -52,6 +55,7 @@ describe("RepoCommand", () => {
       debug: vi.fn(),
     } as any;
     (container as any).client = { options: {} };
+    vi.spyOn(PermitResolver, "isBotOwner").mockReturnValue(true);
 
     command = new RepoCommand(
       {
@@ -289,6 +293,9 @@ describe("RepoCommand", () => {
       focusedValue = "",
     ) {
       return {
+        guildId: "guild-1",
+        user: { id: "owner-1" },
+        respond: vi.fn().mockResolvedValue(undefined),
         options: {
           getFocused: vi
             .fn()
@@ -355,6 +362,18 @@ describe("RepoCommand", () => {
       expect(respondWithChoices).toHaveBeenCalledWith(expect.anything(), [
         "extra",
       ]);
+    });
+
+    it("responds empty and does not look up repos for a non-owner", async () => {
+      (PermitResolver.isBotOwner as any).mockReturnValue(false);
+      downloader.listRepos.mockResolvedValue([{ name: "addons" }]);
+      const interaction = autocompleteInteraction("name", "remove");
+
+      await command.autocompleteRun(interaction);
+
+      expect(interaction.respond).toHaveBeenCalledWith([]);
+      expect(respondWithChoices).not.toHaveBeenCalled();
+      expect(downloader.listRepos).not.toHaveBeenCalled();
     });
   });
 });

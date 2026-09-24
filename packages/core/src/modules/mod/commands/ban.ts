@@ -1,18 +1,17 @@
-import { respondWithChoices, filterAutocompleteChoices } from "#lib/utilities/autocomplete.js";
+import { respondWithReasonChoices } from "../services/reason-autocomplete.js";
 import type { AutocompleteInteraction } from "discord.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
 import { parseSnowflakeList, resolveUsers } from "#lib/moderation/multi-target.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Result } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { userMention } from "@discordjs/formatters";
+import { isSnowflakeId } from "#lib/utilities/misc.js";
 import type { ModerationCase } from "@prisma/client";
 import type { User } from "discord.js";
-import { BanAction } from "../actions/index.js";
+import { BanAction } from "#modules/mod/services/actions/BanAction.js";
 
-const Root = LanguageKeys.Commands;
-const UserIdPattern = /^\d{17,20}$/;
+const Root = "commands";
 const SecondsPerDay = 86400;
 
 /** Merges the single `user` option with the `users` mass-target string, deduped and capped. */
@@ -35,13 +34,14 @@ async function resolveBanTargets(
 
 const BanAdd: ModerationSubcommand.Flow<User, ModerationCase, number> = {
   logScope: "ban",
+  duplicateCaseAction: "ban",
   resolveTarget: (ctx) => resolveBanTargets(ctx),
   preHandle: async (ctx) =>
     Result.ok(ctx.isSlash ? ((await ctx.getInteger("delete_days")) ?? 0) : 0),
   confirm: (t, { target, reason }) => ({
-    title: t(Root.BanConfirmTitle),
-    body: t(Root.BanConfirmBody, { user: userMention(target.id), reason }),
-    confirmLabel: t(Root.BanConfirmButton),
+    title: t(`${Root}:banConfirmTitle`),
+    body: t(`${Root}:banConfirmBody`, { user: userMention(target.id), reason }),
+    confirmLabel: t(`${Root}:banConfirmButton`),
   }),
   action: ({ guild, target, moderator, reason, prepared }) =>
     BanAction.apply({
@@ -52,8 +52,8 @@ const BanAdd: ModerationSubcommand.Flow<User, ModerationCase, number> = {
       deleteMessageSeconds: prepared * SecondsPerDay,
     }),
   buildSuccessMessage: (t, { target, reason, outcome }) => ({
-    title: t(Root.BanSuccessTitle),
-    body: t(Root.BanSuccess, {
+    title: t(`${Root}:banSuccessTitle`),
+    body: t(`${Root}:banSuccess`, {
       user: userMention(target.id),
       reason,
       caseNumber: outcome.caseNumber,
@@ -68,21 +68,21 @@ const BanRemove: ModerationSubcommand.Flow<string, ModerationCase> = {
     return (raw ?? "").replace(/\D/g, "");
   },
   preHandle: (_ctx, t, target) =>
-    UserIdPattern.test(target)
+    isSnowflakeId(target)
       ? Result.ok(null)
       : Result.err({
-          title: t(Root.BanInvalidIdTitle),
-          body: t(Root.BanInvalidId),
+          title: t(`${Root}:banInvalidIdTitle`),
+          body: t(`${Root}:banInvalidId`),
         }),
   action: ({ guild, target, moderator, reason }) =>
     BanAction.undo({ guild, targetId: target, moderator, reason }),
   buildFailureMessage: (t) => ({
-    title: t(Root.ModActionFailedTitle),
-    body: t(Root.BanRemoveFailed),
+    title: t(`${Root}:modActionFailedTitle`),
+    body: t(`${Root}:banRemoveFailed`),
   }),
   buildSuccessMessage: (t, { target }) => ({
-    title: t(Root.BanRemoveSuccessTitle),
-    body: t(Root.BanRemoveSuccess, { user: userMention(target) }),
+    title: t(`${Root}:banRemoveSuccessTitle`),
+    body: t(`${Root}:banRemoveSuccess`, { user: userMention(target) }),
   }),
 };
 
@@ -103,24 +103,7 @@ export class BanCommand extends ModerationSubcommand {
   public override async autocompleteRun(
     interaction: AutocompleteInteraction,
   ): Promise<void> {
-    const focused = interaction.options.getFocused(true);
-    if (focused.name === "reason") {
-      const presets = [
-        "⚠️ Ban evasion",
-        "🤖 Compromised account",
-        "🚫 NSFW content",
-        "🎯 Raiding",
-        "🔗 Scam links",
-        "⛔ Self-botting",
-        "📧 Spam",
-        "💬 Toxicity/Harassment",
-      ];
-      return respondWithChoices(
-        interaction,
-        filterAutocompleteChoices(presets, focused.value),
-      );
-    }
-    return respondWithChoices(interaction, []);
+    return respondWithReasonChoices(interaction);
   }
 
   public override registerApplicationCommands(

@@ -1,11 +1,8 @@
-import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
+import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { cfg } from "#lib/module-system/config-schema.js";
 import { ChannelType } from "discord.js";
-import {
-  DmTemplateDocs,
-  GoodbyeTemplateDocs,
-  WelcomeDefaults,
-  WelcomeTemplateDocs,
-} from "./lib/config.js";
+import { MessageTemplateVars } from "#lib/message-content.js";
+import { DmTemplateDocs, GoodbyeTemplateDocs, WelcomeDefaults, WelcomeTemplateDocs } from "./services/welcome.js";
 
 @DefineModule({
   name: "welcome",
@@ -35,6 +32,45 @@ import {
       label: "Welcome Template",
       description: `Posted when a member joins. ${WelcomeTemplateDocs}`,
       default: WelcomeDefaults.welcomeTemplate,
+      format: "template",
+      templateVars: MessageTemplateVars.map((v) => v.name),
+      richPreview: {
+        accentColorKey: "welcomeAccentColor",
+        footerKey: "welcomeFooter",
+        imageUrlsKey: "welcomeImageUrls",
+        thumbnailKey: "welcomeThumbnailUrl",
+      },
+    }),
+    welcomeAccentColor: cfg.string({
+      group: "Welcome Message",
+      label: "Accent Color",
+      description: "Accent bar color for the welcome card as hex (e.g. #5865F2).",
+      format: "color",
+    }),
+    welcomeThumbnailUrl: cfg.string({
+      group: "Welcome Message",
+      label: "Thumbnail",
+      description: "Small image shown beside the welcome text. Image URL.",
+      format: "image",
+    }),
+    welcomeImageUrls: cfg.stringList({
+      group: "Welcome Message",
+      label: "Images",
+      description: "Image URLs shown as a gallery on the welcome card (max 10).",
+      default: [],
+    }),
+    welcomeFooter: cfg.string({
+      group: "Welcome Message",
+      label: "Footer",
+      description:
+        "Small footer line under the welcome card. Falls back to the auto-role line when empty.",
+    }),
+    welcomeRichContent: cfg.componentsV2Blocks({
+      group: "Welcome Message",
+      label: "Advanced Layout",
+      description:
+        "Optional block-based layout (Section, Media Gallery, Separator, Action Row) for the welcome card. When it has any blocks, it replaces the plain template and rich fields above.",
+      templateVars: MessageTemplateVars.map((v) => v.name),
     }),
     goodbyeEnabled: cfg.boolean({
       group: "Goodbye Message",
@@ -53,6 +89,15 @@ import {
       label: "Goodbye Template",
       description: `Posted when a member leaves. ${GoodbyeTemplateDocs}`,
       default: WelcomeDefaults.goodbyeTemplate,
+      format: "template",
+      templateVars: MessageTemplateVars.map((v) => v.name),
+    }),
+    goodbyeRichContent: cfg.componentsV2Blocks({
+      group: "Goodbye Message",
+      label: "Advanced Layout",
+      description:
+        "Optional block-based layout (Section, Media Gallery, Separator, Action Row) for the goodbye card. When it has any blocks, it replaces the plain template above.",
+      templateVars: MessageTemplateVars.map((v) => v.name),
     }),
     autoRoles: cfg.multiRole({
       group: "Join Extras",
@@ -71,6 +116,8 @@ import {
       label: "DM Greeting Template",
       description: `Sent as a DM to new members. ${DmTemplateDocs}`,
       default: WelcomeDefaults.dmWelcomeTemplate,
+      format: "template",
+      templateVars: MessageTemplateVars.map((v) => v.name),
     }),
   }),
 })

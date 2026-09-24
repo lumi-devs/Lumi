@@ -1,0 +1,50 @@
+---
+title: Observability
+description: Metrics, tracing, health probes, and graceful shutdown.
+---
+
+`packages/observability` provides Prometheus metrics, OpenTelemetry tracing, and graceful
+process drain sequencing, shared by the worker and (for tracing) the dashboard.
+
+## Metrics
+
+`METRICS_ENABLED` (default on) starts a tiny unauthenticated HTTP server on `METRICS_HOST`
+(default `127.0.0.1`, loopback-only unless overridden) and `METRICS_PORT` (default `9090`),
+serving:
+
+- `/metrics` — a `prom-client` Prometheus registry, `lumi_`-prefixed. Node/process default
+  metrics plus RED metrics (rate/errors/duration) for command handling and utility execution,
+  event-bus publish/consume counts, Redis Streams length and pending-entry gauges, queue depth,
+  and cache hit/miss counters. Exact metric names live in `packages/observability/src/metrics.ts`.
+- `/healthz` — liveness only: process is up, no dependency checks. What an orchestrator uses to
+  decide whether to restart the container.
+- `/readyz` — readiness: runs dependency probes and returns 503 if any fail, so the orchestrator
+  pulls the pod out of rotation without restarting it. Flips to 503 immediately once shutdown
+  begins (see below), ahead of the actual drain.
+
+Because these endpoints are unauthenticated, deployments where the scraper lives elsewhere (a
+container network, a Kubernetes `ServiceMonitor`) must set `METRICS_HOST=0.0.0.0` explicitly —
+the default binds loopback-only.
+
+## Tracing
+
+`OTEL_ENABLED` (default on) wires an OpenTelemetry SDK exporting OTLP to
+`OTEL_EXPORTER_OTLP_ENDPOINT` (default `collector:4318`), sampled at `OTEL_TRACES_SAMPLE_RATIO`.
+Every RPC call and many internal operations carry a W3C `traceparent`, so a dashboard request can
+be followed through to the worker operation it triggered — see
+[RPC Reference](/docs/reference/rpc). The `observability` Compose profile runs an OTel Collector,
+Tempo (trace storage), Prometheus (metric storage), and Grafana (`127.0.0.1:3001`) to view both.
+
+## Graceful shutdown
+
+On `SIGTERM`, each app runs a fixed sequence: mark itself draining (so `/readyz` flips to 503
+immediately), wait `preCloseGraceMs` (default 5s) for the load balancer/orchestrator to notice
+and stop routing new work, then run drain steps in order — each with its own timeout — under a
+hard `deadlineMs` ceiling (default 30s) so a hung step can't block exit forever. Steps run
+sequentially because closing order matters: detach the gateway handler, drain in-flight queue
+work, close the event bus, close Redis.
+
+## Config
+
+See the observability rows in [Environment Variables](/docs/reference/environment-variables)
+for the full variable list (`OTEL_*`, `METRICS_*`, `LOG_FORMAT`, `LOG_LEVEL`).

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
-import { setGuildConfigField, toggleGuildModule } from "#/actions/guild-actions";
+import { sendWelcomeTest, setGuildConfigField, toggleGuildModule } from "#/actions/guild-actions";
 import { SaveBar } from "#/components/save-bar";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
 import { Switch } from "#/components/ui/switch";
@@ -10,19 +10,47 @@ import { Badge } from "#/components/ui/badge";
 import { Glyph } from "#/components/ui/glyph";
 import { EmptyState } from "#/components/ui/empty-state";
 import { Input, SettingRow } from "#/components/ui/input";
-import { ConfigFieldInput } from "./config-field-input";
+import { CollapsibleSection } from "#/components/ui/collapsible-section";
+import { ConfigFieldInput, isWideField } from "./config-field-input";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
 import { cn } from "#/lib/utils";
-import type {
-  DashboardModuleView,
-  DashboardRoleView,
-  DashboardChannelView,
-} from "#/lib/dashboard-data";
-import type { ConfigField } from "@lumi/contracts";
+import type { DashboardModuleView, DashboardRoleView, DashboardChannelView } from "@lumi/contracts/views";
+import { FieldType, type ConfigField } from "@lumi/contracts";
+import type { WelcomeTestKind } from "@lumi/contracts/rpc";
+
+/** Welcome module only: which "send test" kind each preview-bearing field
+ * belongs to, so its preview can carry a working Save & send test button
+ * instead of being a disconnected mockup. */
+const TestKindForField: Record<string, WelcomeTestKind> = {
+  welcomeTemplate: "welcome",
+  welcomeRichContent: "welcome",
+  goodbyeTemplate: "goodbye",
+  goodbyeRichContent: "goodbye",
+};
 
 /** Fallback section for fields that declare no `group`. */
 const FallbackGroupName = "General";
+
+/** Welcome module only: simple fields whose effect is fully covered once the
+ * paired Advanced Layout block editor has content — the worker uses the rich
+ * layout instead of these the moment it has any blocks, so leaving them look
+ * live at that point is misleading rather than merely redundant. */
+const SupersededByRichContent: Record<string, string> = {
+  welcomeAccentColor: "welcomeRichContent",
+  welcomeThumbnailUrl: "welcomeRichContent",
+  welcomeImageUrls: "welcomeRichContent",
+  welcomeFooter: "welcomeRichContent",
+};
+
+function hasBlocks(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as { blocks?: unknown }).blocks) &&
+    (value as { blocks: unknown[] }).blocks.length > 0
+  );
+}
 
 /** Groups fields by their declared `group`, preserving first-seen order.
  * Mirrors the Discord panel's section split (`sectionsFor` in
@@ -118,6 +146,23 @@ export function ModuleConfigForm({
       const failed = results.find((r) => !r.ok);
       if (failed) setError(failed.error ?? "Save failed");
     });
+  }
+
+  /** Persists every unsaved field, then fires the test send — the button
+   * attached to a preview does both so there's no separate disconnected
+   * "Save" step before the preview's send actually reflects it. */
+  async function saveAndTest(kind: WelcomeTestKind): Promise<{ ok: boolean; error?: string }> {
+    const changedKeys = Object.keys(config).filter(
+      (k) => JSON.stringify(config[k]) !== JSON.stringify(m.config[k]),
+    );
+    if (changedKeys.length > 0) {
+      const results = await Promise.all(
+        changedKeys.map((key) => setGuildConfigField(guildId, m.name, key, config[key])),
+      );
+      const failed = results.find((r) => !r.ok);
+      if (failed) return { ok: false, error: failed.error ?? "Save failed" };
+    }
+    return sendWelcomeTest(guildId, kind);
   }
 
   return (
@@ -221,44 +266,114 @@ export function ModuleConfigForm({
                 description={`Nothing in ${m.displayName} matches “${query.trim()}”.`}
               />
             ) : (
-              renderedSections.map((section) => (
-                <div
-                  key={section.name ?? "__flat"}
-                  role={tabbed && !searching ? "tabpanel" : undefined}
-                >
-                  {showHeaders && section.name ? (
-                    <h4 className="cfg-row font-display flex items-baseline justify-between gap-3 border-y border-border bg-bg-subtle px-4 py-1.5 text-[13px] font-semibold tracking-[0.09em] text-fg-subtle uppercase">
-                      <span>{section.name}</span>
-                      <span className="tabular">
-                        {section.fields.length}{" "}
-                        {section.fields.length === 1 ? "setting" : "settings"}
-                      </span>
-                    </h4>
-                  ) : null}
-                <div className="divide-y divide-border">
-                  {section.fields.map((f) => (
-                    <SettingRow
-                      key={f.key}
-                      htmlFor={f.key}
-                      label={f.label}
-                      description={f.description}
-                      className="cfg-row transition-colors duration-fast hover:bg-bg-subtle/60"
-                      control={
-                        <ConfigFieldInput
-                          field={f}
-                          value={config[f.key]}
-                          onChange={(value) =>
-                            setConfig((c) => ({ ...c, [f.key]: value }))
-                          }
-                          roles={roles}
-                          channels={channels}
-                        />
-                      }
-                    />
-                  ))}
-                </div>
-              </div>
-              ))
+              renderedSections.map((section, index) => {
+                const toggleFields = section.fields.filter(
+                  (f) => f.type === FieldType.Boolean,
+                );
+                const otherFields = section.fields.filter(
+                  (f) => f.type !== FieldType.Boolean,
+                );
+                const rows = (
+                  <div className="flex flex-col gap-4 px-4 py-3">
+                    {toggleFields.length > 0 ? (
+                      <div className="flex flex-col gap-2">
+                        {toggleFields.map((f) => (
+                          <SettingRow
+                            key={f.key}
+                            htmlFor={f.key}
+                            label={f.label}
+                            hint={f.description}
+                            className="cfg-row rounded-control border border-border bg-surface px-3.5 transition-colors duration-fast hover:border-border-strong"
+                            control={
+                              <ConfigFieldInput
+                                field={f}
+                                value={config[f.key]}
+                                onChange={(value) =>
+                                  setConfig((c) => ({ ...c, [f.key]: value }))
+                                }
+                                config={config}
+                                roles={roles}
+                                channels={channels}
+                                guildId={guildId}
+                              />
+                            }
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                    {otherFields.length > 0 ? (
+                      <div className="divide-y divide-border-soft">
+                        {otherFields.map((f) => {
+                          const richKey = m.name === "welcome" ? SupersededByRichContent[f.key] : undefined;
+                          const superseded = richKey ? hasBlocks(config[richKey]) : false;
+                          const testKind = m.name === "welcome" ? TestKindForField[f.key] : undefined;
+                          return (
+                            <SettingRow
+                              key={f.key}
+                              htmlFor={f.key}
+                              label={f.label}
+                              hint={f.description}
+                              description={
+                                superseded
+                                  ? "Superseded by Advanced Layout below — clear its blocks to use this again."
+                                  : undefined
+                              }
+                              wide={isWideField(f)}
+                              className={cn(
+                                "cfg-row transition-colors duration-fast hover:bg-bg-subtle/60",
+                                superseded && "opacity-50",
+                              )}
+                              control={
+                                <div className={superseded ? "pointer-events-none" : undefined}>
+                                  <ConfigFieldInput
+                                    field={f}
+                                    value={config[f.key]}
+                                    onChange={(value) =>
+                                      setConfig((c) => ({ ...c, [f.key]: value }))
+                                    }
+                                    config={config}
+                                    roles={roles}
+                                    channels={channels}
+                                    guildId={guildId}
+                                    saveAndTest={
+                                      testKind
+                                        ? {
+                                            label: `Save & send test ${testKind} message`,
+                                            action: () => saveAndTest(testKind),
+                                          }
+                                        : undefined
+                                    }
+                                  />
+                                </div>
+                              }
+                            />
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+                const panelRole = tabbed && !searching ? "tabpanel" : undefined;
+                if (!showHeaders || !section.name) {
+                  return (
+                    <div key={section.name ?? "__flat"} role={panelRole}>
+                      {rows}
+                    </div>
+                  );
+                }
+                return (
+                  <CollapsibleSection
+                    key={section.name}
+                    title={section.name}
+                    count={section.fields.length}
+                    countLabel="setting"
+                    defaultOpen={index === 0 || searching}
+                    className="cfg-row"
+                  >
+                    <div role={panelRole}>{rows}</div>
+                  </CollapsibleSection>
+                );
+              })
             )}
           </div>
         )}

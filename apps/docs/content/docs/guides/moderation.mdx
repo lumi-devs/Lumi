@@ -1,0 +1,63 @@
+---
+title: Moderation
+description: Warnings, timeouts, bans, quarantine, and case logging.
+---
+
+The `mod` module (🛡️) provides staff moderation with per-action case logging. It cannot be
+disabled independently — see [module reference](/docs/reference/environment-variables) for how
+disabling works elsewhere; `mod` follows the ordinary per-guild toggle like any other feature
+module.
+
+## Commands
+
+| Command | Permit | What it does |
+| :--- | :--- | :--- |
+| `/warn` | `mod.*` | Warn a member; logged as a case. |
+| `/timeout` | `mod.*` | Time out or remove a timeout from a member. |
+| `/kick` | `mod.*` | Kick a member. |
+| `/ban` | `mod.*` | Ban or unban a user. |
+| `/unban` | `mod.*` | Unban a user by ID. |
+| `/softban` (`/sban`) | `mod.softBan` | Ban and immediately unban, clearing recent messages. |
+| `/quarantine` | `mod.*` | Quarantine or release a member (see below). |
+| `/vcmute` | `mod.voiceMute` | Voice mute a member in server voice channels. |
+| `/vcunmute` | `mod.voiceMute` | Voice unmute a member. |
+| `/lockdown` | `mod.lockdown` | Lock or unlock every text channel server-wide. |
+| `/lock` | `mod.lockdown` | Lock or unlock one channel. |
+| `/notes` | `mod.notes` | Add a staff-only note to a member. |
+| `/say` | `mod.say` | Relay a message through the bot into a channel. |
+| `/dm` | `mod.dm` | Relay a direct message through the bot to a user. |
+| `/sanitize` | `mod.*` | Strip hoisting characters from a member's nickname. |
+| `/cases` | `mod.*` | View or modify moderation cases. |
+| `/warnthresholds` | `admin.config` | Configure warn-count escalation rules (see below). |
+
+The full generated list, including subcommands, lives in [Commands](/docs/reference/commands).
+See [Permits](/docs/guides/permits) for what `mod.*` versus a scoped node like `mod.notes`
+means and how to grant one.
+
+## Quarantine
+
+Quarantining a member replaces all their roles with the configured **Quarantine Role**
+(`quarantine_role_id`). It's the automatic response the `security` module can apply when
+anti-nuke thresholds trip — see [Security](/docs/guides/security) — as well as a manual command.
+
+## Warn escalation
+
+`warn_thresholds` is a JSON map from warn count to an action, e.g.
+`{"3":{"action":"mute","duration":"1h"},"5":{"action":"ban"}}`. `/warnthresholds` opens an
+interactive panel for editing it instead of hand-writing JSON; the dashboard also exposes it as
+guild config.
+
+## Config
+
+| Key | Description |
+| :--- | :--- |
+| `log_channel_id` | Channel where moderation action embeds are posted. |
+| `quarantine_role_id` | Role assigned when a member is quarantined. |
+| `warn_thresholds` | JSON map of warn count → action. |
+| `max_multi_targets` | How many members a single command can target at once, e.g. `,mute @a @b @c`. Default 10. |
+
+## Data and privacy
+
+User IDs are stored in moderation case records, warnings, active punishments, and staff notes.
+Target user IDs are anonymized on GDPR erasure while preserving audit integrity; staff notes
+about the user are deleted. See [Data and Privacy](/docs/reference/data-and-privacy).

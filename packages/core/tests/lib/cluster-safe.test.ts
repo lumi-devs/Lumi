@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "bun:test";
 import calculateSlot from "cluster-key-slot";
 import {
   delSafe,
@@ -13,7 +13,7 @@ import type { RedisClient } from "../../src/lib/database/cluster-safe.js";
 
 // isCluster() uses instanceof, so a fake is treated as standalone. These tests
 // therefore exercise the standalone path plus the grouping logic directly.
-const asClient = (c: unknown) => c as unknown as RedisClient;
+const asClient = (c: unknown) => c as RedisClient;
 
 describe("mgetSafe", () => {
   it("returns values in the order the keys were given", async () => {
@@ -57,7 +57,7 @@ describe("pipelineBySlot", () => {
     });
 
     expect(applied).toEqual(["a", "b", "c"]);
-    expect(chain.exec).toHaveBeenCalledOnce();
+    expect(chain.exec).toHaveBeenCalledTimes(1);
   });
 
   it("does nothing for an empty list", async () => {

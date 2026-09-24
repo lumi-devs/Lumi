@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import {
   InteractionContextType,
@@ -22,9 +22,7 @@ import { CasesCommand } from "#modules/mod/commands/cases.js";
 import { SanitizeCommand } from "#modules/mod/commands/sanitize.js";
 import { VcMuteCommand } from "#modules/mod/commands/vcmute.js";
 import { VcUnmuteCommand } from "#modules/mod/commands/vcunmute.js";
-import { WarnThresholdsCommand } from "#modules/mod/commands/warnthresholds.js";
 import { LumiCommand } from "#modules/core/commands/lumi.js";
-import { DashboardCommand } from "#modules/core/commands/dashboard.js";
 import { RepoCommand } from "#modules/core/commands/repo.js";
 import { DownloadCommand } from "#modules/core/commands/download.js";
 import { HelpCommand } from "#modules/core/commands/help.js";
@@ -52,9 +50,7 @@ const destructiveModCommands = [
 ];
 
 const adminCommands = [
-  { name: "warnthresholds", Ctor: WarnThresholdsCommand, permit: "admin.config" },
   { name: "lumi", Ctor: LumiCommand, permit: "admin.*" },
-  { name: "dashboard", Ctor: DashboardCommand, permit: "admin.*" },
 ];
 
 function construct(Ctor: any, name: string) {

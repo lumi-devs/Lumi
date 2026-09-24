@@ -5,11 +5,10 @@ import {
   ModerationCommand,
   type ModerationCommand as MC,
 } from "#lib/moderation/ModerationCommand.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import type { GuildMember } from "discord.js";
 
-const Root = LanguageKeys.Commands;
+const Root = "commands";
 const DehoistRegex = /^[\x21-\x40\x5B-\x60\x7B-\x7E\s]+/u;
 
 function sanitizeName(name: string): string {
@@ -58,8 +57,8 @@ export class SanitizeCommand extends ModerationCommand<
     const sanitized = sanitizeName(current);
     if (sanitized === current) {
       return Result.err({
-        title: t(Root.SanitizeNothingTitle),
-        body: t(Root.SanitizeNothing, { user: target.user.username }),
+        title: t(`${Root}:sanitizeNothingTitle`),
+        body: t(`${Root}:sanitizeNothing`, { user: target.user.username }),
       });
     }
     return Result.ok(sanitized);
@@ -79,8 +78,8 @@ export class SanitizeCommand extends ModerationCommand<
     { target, outcome }: MC.OutcomeContext<GuildMember, SanitizeOutcome, string>,
   ) {
     return {
-      title: t(Root.SanitizeSuccessTitle),
-      body: t(Root.SanitizeSuccess, {
+      title: t(`${Root}:sanitizeSuccessTitle`),
+      body: t(`${Root}:sanitizeSuccess`, {
         user: target.user.username,
         before: outcome.before,
         after: outcome.after,

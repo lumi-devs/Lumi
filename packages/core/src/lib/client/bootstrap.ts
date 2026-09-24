@@ -17,7 +17,14 @@ export function registerProcessErrorHandlers(): void {
     process.off("unhandledRejection", installedRejectionHandler);
   }
   installedRejectionHandler = (reason: unknown) => {
-    logError("Process: Unhandled promise rejection", reason);
+    if (container.logger) {
+      logError("Process: Unhandled promise rejection", reason);
+    } else {
+      console.error(
+        "[Process: Unhandled promise rejection]",
+        errorFrom(reason),
+      );
+    }
   };
   process.on("unhandledRejection", installedRejectionHandler);
 
@@ -25,10 +32,14 @@ export function registerProcessErrorHandlers(): void {
     process.off("uncaughtException", installedExceptionHandler);
   }
   installedExceptionHandler = (err: unknown) => {
-    container.logger.fatal(
-      "[Process] Uncaught exception - exiting:",
-      errorFrom(err),
-    );
+    if (container.logger) {
+      container.logger.fatal(
+        "[Process] Uncaught exception - exiting:",
+        errorFrom(err),
+      );
+    } else {
+      console.error("[Process] Uncaught exception - exiting:", errorFrom(err));
+    }
     process.exit(1);
   };
   process.on("uncaughtException", installedExceptionHandler);

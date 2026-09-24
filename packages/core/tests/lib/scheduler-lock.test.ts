@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { RedisKeys } from "#lib/database/redis.js";
 import { acquireSchedulerLock } from "#lib/scheduler-lock.js";
@@ -28,17 +28,20 @@ function mockRedis() {
   };
 }
 
+// bun:test's fake-timer support only mocks the system clock (Date.now),
+// not the setInterval/setTimeout queue, so there's no advanceTimersByTimeAsync
+// equivalent here — these three tests wait on the real clock instead.
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 describe("scheduler-lock", () => {
   let redis: ReturnType<typeof mockRedis>;
 
   beforeEach(() => {
-    vi.useFakeTimers();
     redis = mockRedis();
     container.logger = { error: vi.fn() } as never;
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -75,10 +78,10 @@ describe("scheduler-lock", () => {
     await acquireSchedulerLock(redis as never, onLost);
 
     redis.store.set(RedisKeys.schedulerLeader(), "another-process");
-    await vi.advanceTimersByTimeAsync(15_000);
+    await sleep(15_000);
 
     expect(onLost).toHaveBeenCalledTimes(1);
-  });
+  }, 20_000);
 
   it("invokes onLost only once across multiple consecutive renewal failures", async () => {
     const onLost = vi.fn();
@@ -86,17 +89,17 @@ describe("scheduler-lock", () => {
 
     redis.store.set(RedisKeys.schedulerLeader(), "another-process");
 
-    await vi.advanceTimersByTimeAsync(15_000);
+    await sleep(15_000);
     expect(onLost).toHaveBeenCalledTimes(1);
 
-    await vi.advanceTimersByTimeAsync(15_000);
+    await sleep(15_000);
     expect(onLost).toHaveBeenCalledTimes(1);
 
-    await vi.advanceTimersByTimeAsync(15_000);
+    await sleep(15_000);
     expect(onLost).toHaveBeenCalledTimes(1);
 
     await lock.release();
-  });
+  }, 50_000);
 
   it("allows immediate acquisition by another claimant after clean release", async () => {
     const first = await acquireSchedulerLock(redis as never, vi.fn());
@@ -115,8 +118,8 @@ describe("scheduler-lock", () => {
     const onLost = vi.fn();
     await acquireSchedulerLock(redis as never, onLost);
 
-    await vi.advanceTimersByTimeAsync(45_000);
+    await sleep(45_000);
 
     expect(onLost).not.toHaveBeenCalled();
-  });
+  }, 50_000);
 });

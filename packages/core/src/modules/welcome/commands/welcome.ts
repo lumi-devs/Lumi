@@ -1,16 +1,11 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Command } from "@sapphire/framework";
 import { ChannelType } from "discord.js";
-import { BaseCommand, type CommandContext } from "#lib/commands.js";
-import { sendWelcomeCard } from "../lib/send.js";
-import { loadWelcomeConfig } from "../lib/config.js";
-import {
-  buildDmWelcomeCard,
-  buildGoodbyeCard,
-  buildWelcomeCard,
-  renderWelcomeTemplate,
-  templateVarsFor,
-} from "../lib/template.js";
+import { BaseCommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
+import { sendWelcomeCard } from "../services/welcome.js";
+import { loadWelcomeConfig } from "../services/welcome.js";
+import { buildDmWelcomeCard, renderGoodbyeCard, renderWelcomeCard, renderWelcomeTemplate, templateVarsFor } from "../services/welcome.js";
 
 const PreviewKinds = ["welcome", "goodbye", "dm"] as const;
 type PreviewKind = (typeof PreviewKinds)[number];
@@ -80,24 +75,22 @@ export class WelcomeCommand extends BaseCommand {
       target.id,
       target.username,
       targetMember?.nickname ?? null,
+      target.displayAvatarURL(),
       guild.name,
+      guild.id,
+      guild.iconURL(),
       guild.memberCount,
     );
 
     const card =
       kind === "goodbye"
-        ? buildGoodbyeCard(renderWelcomeTemplate(config.goodbyeTemplate, vars))
+        ? renderGoodbyeCard(config, vars)
         : kind === "dm"
           ? buildDmWelcomeCard(
               guild.name,
               renderWelcomeTemplate(config.dmWelcomeTemplate, vars),
             )
-          : buildWelcomeCard(
-              renderWelcomeTemplate(config.welcomeTemplate, vars),
-              config.autoRoles.length > 0
-                ? `Auto-role${config.autoRoles.length === 1 ? "" : "s"}: ${config.autoRoles.map((id) => `<@&${id}>`).join(" ")}`
-                : undefined,
-            );
+          : renderWelcomeCard(config, vars);
 
     const destination = await ctx.getChannel("channel");
     if (destination) {

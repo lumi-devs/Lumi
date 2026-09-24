@@ -1,10 +1,14 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import {
   deleteMessageLater,
   deleteReplyLater,
   TransientReplyTtl,
 } from "#lib/utilities/temporary-message.js";
+
+// bun:test's fake-timer support only mocks the system clock (Date.now), not
+// the setTimeout queue, so these wait on the real clock instead.
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 describe("temporary-message utilities", () => {
   beforeEach(() => {
@@ -14,11 +18,6 @@ describe("temporary-message utilities", () => {
       warn: vi.fn(),
       error: vi.fn(),
     } as any;
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   it("schedules deletion of message after specified delay", async () => {
@@ -30,10 +29,10 @@ describe("temporary-message utilities", () => {
 
     expect(mockMessage.delete).not.toHaveBeenCalled();
 
-    vi.advanceTimersByTime(3000);
+    await sleep(3000);
 
     expect(mockMessage.delete).toHaveBeenCalled();
-  });
+  }, 8000);
 
   it("handles message.delete failure gracefully", async () => {
     const mockMessage = {
@@ -42,14 +41,14 @@ describe("temporary-message utilities", () => {
 
     deleteMessageLater(mockMessage, TransientReplyTtl, "test-delete-reason");
 
-    expect(() => vi.advanceTimersByTime(TransientReplyTtl)).not.toThrow();
+    await sleep(TransientReplyTtl);
     await Promise.resolve();
 
     expect(container.logger.debug).toHaveBeenCalledWith(
       "[swallow] test-delete-reason:",
       "Message already deleted"
     );
-  });
+  }, 8000);
 
   it("schedules deletion of interaction reply after specified delay", async () => {
     const mockInteraction = {
@@ -60,10 +59,10 @@ describe("temporary-message utilities", () => {
 
     expect(mockInteraction.deleteReply).not.toHaveBeenCalled();
 
-    vi.advanceTimersByTime(4000);
+    await sleep(4000);
 
     expect(mockInteraction.deleteReply).toHaveBeenCalled();
-  });
+  }, 8000);
 
   it("handles interaction.deleteReply failure gracefully", async () => {
     const mockInteraction = {
@@ -72,12 +71,12 @@ describe("temporary-message utilities", () => {
 
     deleteReplyLater(mockInteraction, TransientReplyTtl, "test-reply-reason");
 
-    expect(() => vi.advanceTimersByTime(TransientReplyTtl)).not.toThrow();
+    await sleep(TransientReplyTtl);
     await Promise.resolve();
 
     expect(container.logger.debug).toHaveBeenCalledWith(
       "[swallow] test-reply-reason:",
       "Unknown interaction"
     );
-  });
+  }, 8000);
 });

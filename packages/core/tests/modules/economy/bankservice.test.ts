@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { EconomyRepository } from "#lib/prisma/repositories/EconomyRepository.js";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
+import { EconomyRepository } from "#modules/economy/data/EconomyRepository.js";
 import {
   BankService,
   CooldownError,
@@ -7,7 +7,7 @@ import {
   InsufficientFundsError,
   InvalidAmountError,
 } from "#modules/economy/services/BankService.js";
-import type { EconomyConfig } from "#modules/economy/index.js";
+import type { EconomyConfig } from "#modules/economy/config.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 vi.mock("@sapphire/framework", () => ({ container: {} }));

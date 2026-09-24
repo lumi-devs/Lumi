@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { FieldType } from "@lumi/contracts";
 import {
   buildModuleLabelIndex,
@@ -7,7 +7,7 @@ import {
   moduleLabel,
   resolveConfigValue,
 } from "#/lib/config-labels";
-import type { DashboardModuleView } from "#/lib/dashboard-data";
+import type { DashboardModuleView } from "@lumi/contracts/views";
 
 function securityModule(): DashboardModuleView {
   return {

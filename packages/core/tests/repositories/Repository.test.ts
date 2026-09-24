@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Repository } from "#lib/prisma/repositories/Repository.js";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
+import { Repository, repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { container } from "@sapphire/framework";
 import { cacheHits, cacheMisses } from "@lumi/observability";
 
@@ -51,6 +51,8 @@ describe("Base Repository", () => {
     };
 
     (container as any).invalidation = mockInvalidation;
+    (container as any).redis = mockRedis;
+    repositoryCache.clear();
 
     repo = new ConcreteRepository(mockPrisma, mockRedis, mockLogger, mockDb);
   });

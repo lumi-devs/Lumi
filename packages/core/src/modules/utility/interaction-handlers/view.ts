@@ -1,24 +1,27 @@
 import {
   InteractionHandlerTypes,
-  InteractionHandler,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { ButtonInteraction, MessageFlags } from "discord.js";
-import { BaseInteractionHandler } from "#lib/interaction-handler.js";
-import { handleMediaRequest } from "../lib/media-utils.js";
+import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
+import { handleMediaRequest } from "../services/media-utils.js";
+import { UserMediaViewId } from "../constants.js";
 
-@ApplyOptions<InteractionHandler.Options>({
+@ApplyOptions<ModuleInteractionHandler.Options>({
   interactionHandlerType: InteractionHandlerTypes.Button,
+  module: "utility",
 })
-export default class UserMediaViewHandler extends BaseInteractionHandler {
+export default class UserMediaViewHandler extends ModuleInteractionHandler<
+  ButtonInteraction,
+  { userId: string; type: string }
+> {
   public override parse(interaction: ButtonInteraction) {
-    if (!interaction.customId.startsWith("user-media:view:"))
-      return this.none();
-    const [, , userId, type] = interaction.customId.split(":");
-    return this.some({ userId, type });
+    const parsed = UserMediaViewId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    return this.some(parsed);
   }
 
-  public async run(
+  protected override async handle(
     interaction: ButtonInteraction,
     { userId, type }: { userId: string; type: string },
   ) {

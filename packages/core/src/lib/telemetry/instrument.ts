@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUIDv7 } from "bun";
 import { SpanKind } from "@opentelemetry/api";
 import {
   commandDuration,
@@ -42,7 +42,7 @@ async function instrumentedRun(
 
   return runWithContext(
     {
-      correlationId: randomUUID(),
+      correlationId: randomUUIDv7(),
       source: "command",
       name: command,
       guildId,

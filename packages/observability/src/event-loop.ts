@@ -2,7 +2,7 @@
 // process is keeping up: every handler shares one loop, so lag here is lag on
 // commands, heartbeats and gateway acks alike.
 
-import { monitorEventLoopDelay, type IntervalHistogram } from "node:perf_hooks";
+import { monitorEventLoopDelay, type ELDHistogram } from "node:perf_hooks";
 import { Gauge } from "prom-client";
 import { registry } from "./metrics";
 
@@ -23,7 +23,7 @@ export const eventLoopDelay = new Gauge({
   registers: [registry],
 });
 
-let histogram: IntervalHistogram | null = null;
+let histogram: ELDHistogram | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
 
 /**

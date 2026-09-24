@@ -1,6 +1,6 @@
-import { FieldType, type ConfigField } from "#lib/module-system/Module.js";
-import { formatSubtitle, formatPageFooter } from "#lib/utilities/ui/layout.js";
-import { Emojis } from "#utilities/assets.js";
+import { FieldType, type ConfigField } from "#lib/module-system/config-schema.js";
+import { formatSubtitle, formatPageFooter } from "#lib/ui/layout.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import {
   ActionRowBuilder,
   type MessageActionRowComponentBuilder,
@@ -57,6 +57,11 @@ export function formatFieldValue(field: ConfigField, value: unknown): string {
       const items = Array.isArray(val) ? val.map(String) : [];
       if (items.length === 0) return "-# *(not set)*";
       return `\`${cutText(items.join(", "), 120)}\``;
+    }
+    case FieldType.ObjectArray: {
+      const items = Array.isArray(val) ? val : [];
+      if (items.length === 0) return "-# *(not set)*";
+      return `\`${items.length} ${items.length === 1 ? "entry" : "entries"}\` — edit in dashboard`;
     }
     case FieldType.User:
       return userMention(String(val));

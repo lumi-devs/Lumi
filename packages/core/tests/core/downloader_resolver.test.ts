@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "bun:test";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -37,7 +37,6 @@ describe("DownloadResolver Edge Cases", () => {
   });
 
   it("handles valid URLs and strips markdown brackets <...>", async () => {
-    // Should not throw URL parsing error for bracketed URLs
     await expect(
       resolver.addRepo("test_bracket", "<https://github.com/invalid-org/nonexistent-repo-12345.git>"),
     ).rejects.toThrow("Git clone failed");
@@ -49,14 +48,12 @@ describe("DownloadResolver Edge Cases", () => {
     const repoName = "test_failed_clone";
     const repoPath = path.join(ModuleRoot, repoName);
 
-    // Ensure clean start
     await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
 
     await expect(
       resolver.addRepo(repoName, "https://github.com/invalid-org/nonexistent-repo-99999.git"),
     ).rejects.toThrow();
 
-    // Verify corrupt folder was cleaned up automatically
     const exists = await fs
       .access(repoPath)
       .then(() => true)
@@ -76,7 +73,6 @@ describe("DownloadResolver Edge Cases", () => {
       resolver.addRepo(repoName, "https://github.com/invalid-org/nonexistent-repo-88888.git"),
     ).rejects.toThrow();
 
-    // Folder should be cleaned up on failure
     const exists = await fs
       .access(repoPath)
       .then(() => true)
@@ -133,7 +129,7 @@ describe("DownloadResolver Edge Cases", () => {
       }
       throw new Error(`unexpected readdir: ${p}`);
     });
-    vi.spyOn(fs, "realpath").mockImplementation((p: any) => {
+    vi.spyOn<{ realpath: (path: string) => Promise<string> }, "realpath">(fs, "realpath").mockImplementation((p: any) => {
       if (String(p) === symlinkPath) return Promise.resolve(modulePath);
       throw new Error(`unexpected realpath: ${p}`);
     });
@@ -283,7 +279,7 @@ describe("DownloadResolver Edge Cases", () => {
 
       // manifest.json deliberately absent; everything else present.
       mockExistingPaths(new Set([sourcePath, infoPath]));
-      vi.spyOn(fs, "readFile").mockImplementation((p: any) => {
+      vi.spyOn<{ readFile: (path: string, encoding: BufferEncoding) => Promise<string> }, "readFile">(fs, "readFile").mockImplementation((p: any) => {
         if (String(p) === infoPath) return Promise.resolve(JSON.stringify(info));
         throw new Error(`unexpected readFile: ${p}`);
       });
@@ -310,7 +306,7 @@ describe("DownloadResolver Edge Cases", () => {
           subStores: ["commands"],
         }),
       );
-      expect(result).toEqual({ ...info, commit: null });
+      expect(result).toEqual<typeof info & { commit: null }>({ ...info, commit: null });
     });
 
     it("symlinks the source module into the addon modules root on a successful install", async () => {
@@ -318,7 +314,7 @@ describe("DownloadResolver Edge Cases", () => {
 
       // manifest.json already exists this time - auto-generation must be skipped.
       mockExistingPaths(new Set([sourcePath, infoPath, manifestPath]));
-      vi.spyOn(fs, "readFile").mockImplementation((p: any) => {
+      vi.spyOn<{ readFile: (path: string, encoding: BufferEncoding) => Promise<string> }, "readFile">(fs, "readFile").mockImplementation((p: any) => {
         if (String(p) === infoPath) return Promise.resolve(JSON.stringify(info));
         throw new Error(`unexpected readFile: ${p}`);
       });
@@ -330,13 +326,13 @@ describe("DownloadResolver Edge Cases", () => {
 
       expect(writeManifest).not.toHaveBeenCalled();
       expect(symlinkSpy).toHaveBeenCalledWith(sourcePath, targetPath, "dir");
-      expect(result).toEqual({ ...info, commit: null });
+      expect(result).toEqual<typeof info & { commit: null }>({ ...info, commit: null });
     });
 
     it("throws with the validation errors when the addon fails validation", async () => {
       const info = { name: moduleName, version: "1.0.0" };
       mockExistingPaths(new Set([sourcePath, infoPath, manifestPath]));
-      vi.spyOn(fs, "readFile").mockImplementation((p: any) => {
+      vi.spyOn<{ readFile: (path: string, encoding: BufferEncoding) => Promise<string> }, "readFile">(fs, "readFile").mockImplementation((p: any) => {
         if (String(p) === infoPath) return Promise.resolve(JSON.stringify(info));
         throw new Error(`unexpected readFile: ${p}`);
       });

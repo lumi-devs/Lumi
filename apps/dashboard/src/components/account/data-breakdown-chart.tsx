@@ -17,14 +17,17 @@ export function DataBreakdownChart({ data }: { data: Record<string, number> }) {
       {entries.map(([moduleName, count], index) => {
         const pct = (count / max) * 100;
         return (
-          <div key={moduleName} className="flex items-center gap-3">
+          <div
+            key={moduleName}
+            className="grid items-center gap-3 grid-cols-[minmax(0,14rem)_minmax(0,1fr)_2.5rem]"
+          >
             <span
               title={moduleName}
-              className="w-28 shrink-0 truncate text-xs font-medium text-fg-muted"
+              className="truncate text-xs font-medium text-fg-muted"
             >
               {moduleName}
             </span>
-            <div className="h-2.5 flex-1 overflow-hidden rounded-r-[4px] bg-bg-subtle">
+            <div className="h-2.5 max-w-lg overflow-hidden rounded-r-[4px] bg-bg-subtle">
               <motion.div
                 className="h-full rounded-r-[4px] bg-accent"
                 initial={{ width: reduce ? `${pct}%` : 0 }}
@@ -36,7 +39,7 @@ export function DataBreakdownChart({ data }: { data: Record<string, number> }) {
                 }
               />
             </div>
-            <span className="w-10 shrink-0 text-right font-mono text-[13px] text-fg-subtle tabular-nums">
+            <span className="text-right font-mono text-[13px] text-fg-subtle tabular-nums">
               {count}
             </span>
           </div>

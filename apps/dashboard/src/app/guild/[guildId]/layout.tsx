@@ -1,10 +1,12 @@
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard, getGuildPanicState } from "#/lib/dashboard-fetch";
+import { getGuildShell, getGuildPanicState } from "#/lib/guild-reads";
 import { SiteHeader } from "#/components/layout/site-header";
 import { GuildSideNav } from "#/components/layout/guild-side-nav";
 import { Breadcrumbs } from "#/components/layout/breadcrumbs";
 import { InviteNeeded } from "#/components/invite-needed";
-import type { DashboardData } from "#/lib/dashboard-data";
+import { GuildUnavailable } from "#/components/guild-unavailable";
+import { isGuildMissing } from "#/lib/rpc";
+import type { GuildShellData } from "@lumi/contracts/views";
 
 export default async function GuildLayout({
   children,
@@ -17,23 +19,36 @@ export default async function GuildLayout({
   // A layout only guards the page render, so every Server Action re-checks too.
   const session = await requireGuild(guildId);
 
-  let data: DashboardData;
+  const shellPromise = getGuildShell(guildId, session.userId);
+  // Best-effort — a worker hiccup here shouldn't take the whole nav shell
+  // down, it just means the Security category's alert dot stays off.
+  const panicPromise = getGuildPanicState(guildId, session.userId)
+    .then((p) => p.active)
+    .catch(() => false);
+
+  let data: GuildShellData;
   try {
-    data = await getGuildDashboard(guildId, session.userId);
-  } catch {
+    data = await shellPromise;
+  } catch (err) {
+    // Only the bot saying it cannot see the guild means "invite it". Anything
+    // else (worker down, timeout, database error) is an outage, and telling an
+    // admin their bot was removed would send them to re-invite for nothing.
     return (
       <>
         <SiteHeader session={session} />
-        <InviteNeeded guildId={guildId} />
+        {isGuildMissing(err) ? (
+          <InviteNeeded guildId={guildId} />
+        ) : (
+          <GuildUnavailable
+            guildId={guildId}
+            error={err instanceof Error ? err.message : String(err)}
+          />
+        )}
       </>
     );
   }
 
-  // Best-effort — a worker hiccup here shouldn't take the whole nav shell
-  // down, it just means the Security category's alert dot stays off.
-  const panicArmed = await getGuildPanicState(guildId, session.userId)
-    .then((p) => p.active)
-    .catch(() => false);
+  const panicArmed = await panicPromise;
 
   return (
     <div className="flex min-h-svh">

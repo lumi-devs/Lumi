@@ -2,6 +2,7 @@ import {
   createRedisClient,
   redisConnectionOptions,
   InvalidationBus,
+  SignalBus,
 } from "#lib/database/redis.js";
 import { AddonModulesRoot } from "#lib/downloader/resolver.js";
 import { envParseInteger, getDevModulePaths } from "#lib/env.js";
@@ -9,13 +10,14 @@ import { ModuleStore } from "#lib/module-system/ModuleStore.js";
 import { permitResolver } from "#lib/permissions/PermitResolver.js";
 import { prisma, prismaReader } from "#lib/prisma/client.js";
 import { DatabaseService } from "#lib/prisma/DatabaseService.js";
-import { createEventBus, type OwnedEventBus } from "@lumi/event-bus";
+import { createEventBus, type OwnedEventBus } from "#lib/event-bus/factory.js";
 import {
   streamConsumerLag,
   streamDlqLength,
   streamLength,
 } from "@lumi/observability";
-import { container, Store, type SapphireClient } from "@sapphire/framework";
+import { container, type SapphireClient } from "@sapphire/framework";
+import { Time } from "@sapphire/time-utilities";
 import { pathToFileURL } from "node:url";
 
 /**
@@ -42,10 +44,6 @@ export function installContainerServices(
   }
   client.stores.register(moduleStore);
   client.stores.registerPath(new URL("../permissions/", import.meta.url));
-  (client.stores.get("utilities") as Store<any> | undefined)?.registerPath(
-    new URL("../utilities/pieces/", import.meta.url),
-  );
-
 
   const redis = createRedisClient();
   const ownedEventBus = createEventBus({
@@ -55,7 +53,7 @@ export function installContainerServices(
     },
     defaultMaxLen: envParseInteger("EVENT_STREAM_MAXLEN", 100_000),
     maxDeliveries: envParseInteger("EVENT_STREAM_MAX_DELIVERIES", 5),
-    claimMinIdleMs: envParseInteger("EVENT_STREAM_CLAIM_MIN_IDLE_MS", 60_000),
+    claimMinIdleMs: envParseInteger("EVENT_STREAM_CLAIM_MIN_IDLE_MS", Time.Minute),
     claimIntervalMs: envParseInteger("EVENT_STREAM_CLAIM_INTERVAL_MS", 30_000),
     statsIntervalMs: envParseInteger("EVENT_STREAM_STATS_INTERVAL_MS", 10_000),
     onStats: (s) => {
@@ -71,6 +69,7 @@ export function installContainerServices(
     prisma,
     redis,
     invalidation: new InvalidationBus(createRedisClient()),
+    signals: new SignalBus(createRedisClient()),
     db: new DatabaseService(prisma, redis, container.logger, prismaReader),
     eventBus: ownedEventBus.bus,
     moduleStore,

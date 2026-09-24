@@ -1,30 +1,58 @@
 {
-  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "$schema": "https://unpkg.com/knip@6/schema.json",
   "ignore": ["config/*.ts", "examples/**"],
-  "ignoreDependencies": ["postcss-load-config"],
+  "ignoreDependencies": [
+    "postcss-load-config",
+    "tailwindcss",
+    "tw-animate-css",
+    "@discordjs/builders",
+    "@discordjs/formatters",
+    "discord-api-types"
+  ],
   "workspaces": {
+    ".": {
+      "entry": ["prisma.config.ts"],
+      "project": ["prisma.config.ts"]
+    },
     "packages/core": {
       "entry": [
-        "src/lib/addon-sdk/*.ts",
-        "src/lib/utilities/pieces/**/*.ts",
-        "src/lib/permissions/**/*.ts",
-        "src/modules/**/index.ts",
-        "src/modules/**/{commands,listeners,interaction-handlers,scheduled-tasks,services,rpc,utilities}/**/*.ts"
+        "index.ts",
+        "src/lib/client/setup.ts",
+        "src/lib/client/LumiClient.ts",
+        "src/lib/env.ts",
+        "src/runtime/*.ts",
+        "src/lib/regex-worker/worker.ts",
+        "src/lib/addon-sandbox/sdk/*.ts",
+        "src/lib/permissions/preconditions/*.ts",
+        "src/modules/*/index.ts",
+        "src/modules/*/{commands,listeners,interaction-handlers,scheduled-tasks,utilities}/**/*.ts",
+        "scripts/*.ts",
+        "tests/**/*.test.ts",
+        "src/**/*.test.ts"
       ],
-      "project": ["src/**/*.ts", "!**/*.test.ts"]
+      "project": ["index.ts", "src/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"]
     },
-    "packages/observability": {
-      "entry": ["src/*.ts"],
+    "packages/contracts": {
+      "entry": ["src/index.ts", "src/views.ts", "src/**/*.test.ts"],
       "project": ["src/**/*.ts"]
     },
+    "packages/observability": {
+      "entry": ["src/index.ts", "src/tracing.ts", "tests/**/*.test.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.ts"]
+    },
     "apps/worker": {
+      "entry": ["src/main.ts", "src/shard-client.ts"],
       "project": ["src/**/*.ts"]
     },
     "apps/dashboard": {
-      "next": true
+      "next": true,
+      "entry": ["tests/**/*.test.{ts,tsx}", "tests/setup.ts"],
+      "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"]
     },
     "apps/docs": {
-      "next": true
+      "next": true,
+      "entry": ["scripts/*.ts"],
+      "project": ["src/**/*.{ts,tsx}", "scripts/**/*.ts"]
     }
   }
 }

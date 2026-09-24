@@ -66,7 +66,9 @@
       "label": "Max Mentions",
       "description": "Maximum user+role mentions per message. 0 disables the rule.",
       "group": "Spam Limits",
-      "default": 0
+      "default": 0,
+      "min": 0,
+      "max": 50
     },
     {
       "key": "max_caps_percent",
@@ -74,7 +76,9 @@
       "label": "Max Caps %",
       "description": "Delete messages whose letters are more than this % uppercase. 0 disables the rule.",
       "group": "Spam Limits",
-      "default": 0
+      "default": 0,
+      "min": 0,
+      "max": 100
     },
     {
       "key": "caps_min_length",
@@ -82,7 +86,9 @@
       "label": "Caps Min Length",
       "description": "Messages shorter than this never trip the caps rule.",
       "group": "Spam Limits",
-      "default": 12
+      "default": 12,
+      "min": 1,
+      "max": 500
     },
     {
       "key": "exempt_roles",
@@ -97,7 +103,39 @@
       "label": "Timeout (minutes)",
       "description": "Timeout the author for this many minutes on a filter hit. 0 disables punishment.",
       "group": "Punishment",
-      "default": 0
+      "default": 0,
+      "min": 0,
+      "max": 40320
+    },
+    {
+      "key": "spam_timeout_minutes",
+      "type": "NUMBER",
+      "label": "Spam Timeout (minutes)",
+      "description": "Timeout for mention-spam/caps hits. 0 falls back to Timeout (minutes).",
+      "group": "Punishment",
+      "default": 0,
+      "min": 0,
+      "max": 40320
+    },
+    {
+      "key": "invite_timeout_minutes",
+      "type": "NUMBER",
+      "label": "Invite Timeout (minutes)",
+      "description": "Timeout for invite-block hits. 0 falls back to Timeout (minutes).",
+      "group": "Punishment",
+      "default": 0,
+      "min": 0,
+      "max": 40320
+    },
+    {
+      "key": "link_timeout_minutes",
+      "type": "NUMBER",
+      "label": "Link Timeout (minutes)",
+      "description": "Timeout for link-block hits. 0 falls back to Timeout (minutes).",
+      "group": "Punishment",
+      "default": 0,
+      "min": 0,
+      "max": 40320
     },
     {
       "key": "warn_message",
@@ -105,7 +143,12 @@
       "label": "Warning Message",
       "description": "Transient warning sent after a deletion. Placeholders: {user}, {reason}. Empty disables the warning.",
       "group": "Punishment",
-      "default": "{user}, your message was removed for containing {reason}."
+      "default": "{user}, your message was removed for containing {reason}.",
+      "format": "template",
+      "templateVars": [
+        "user",
+        "reason"
+      ]
     },
     {
       "key": "log_channel_id",
@@ -115,7 +158,8 @@
       "group": "Punishment",
       "channelTypes": [
         0
-      ]
+      ],
+      "claimable": true
     },
     {
       "key": "heat_enabled",
@@ -131,7 +175,10 @@
       "label": "Heat per Message",
       "description": "Heat added for every message. 0 disables the baseline.",
       "group": "Heat Scoring",
-      "default": 0
+      "enabledBy": "heat_enabled",
+      "default": 0,
+      "min": 0,
+      "max": 100
     },
     {
       "key": "heat_per_mention",
@@ -139,7 +186,10 @@
       "label": "Heat per Mention",
       "description": "Heat added per user/role mention in a message.",
       "group": "Heat Scoring",
-      "default": 3
+      "enabledBy": "heat_enabled",
+      "default": 3,
+      "min": 0,
+      "max": 100
     },
     {
       "key": "heat_per_duplicate",
@@ -147,7 +197,44 @@
       "label": "Heat per Duplicate",
       "description": "Heat added when a message repeats the member's previous one.",
       "group": "Heat Scoring",
-      "default": 5
+      "enabledBy": "heat_enabled",
+      "default": 5,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "heat_per_similar",
+      "type": "NUMBER",
+      "label": "Heat per Similar Message",
+      "description": "Heat added when a message is a reworded/partial repeat of the member's previous one (fuzzier than an exact duplicate - usually configured lower than Heat per Duplicate).",
+      "group": "Heat Scoring",
+      "enabledBy": "heat_enabled",
+      "default": 0,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "heat_similarity_threshold",
+      "type": "NUMBER",
+      "label": "Similarity Threshold",
+      "description": "How similar (0-1) to the member's previous message counts as a near-duplicate.",
+      "group": "Heat Scoring",
+      "enabledBy": "heat_enabled",
+      "default": 0.85,
+      "step": 0.05,
+      "min": 0,
+      "max": 1
+    },
+    {
+      "key": "heat_per_zalgo",
+      "type": "NUMBER",
+      "label": "Heat per Zalgo Message",
+      "description": "Heat added when a message has an unusually high ratio of combining marks (zalgo text).",
+      "group": "Heat Scoring",
+      "enabledBy": "heat_enabled",
+      "default": 0,
+      "min": 0,
+      "max": 100
     },
     {
       "key": "heat_per_filter_hit",
@@ -155,7 +242,10 @@
       "label": "Heat per Filter Hit",
       "description": "Heat added when a message trips a hard filter rule.",
       "group": "Heat Scoring",
-      "default": 10
+      "enabledBy": "heat_enabled",
+      "default": 10,
+      "min": 0,
+      "max": 100
     },
     {
       "key": "heat_per_attachment",
@@ -163,7 +253,10 @@
       "label": "Heat per Attachment",
       "description": "Heat added per attachment (image/embed-spam signal).",
       "group": "Heat Scoring",
-      "default": 0
+      "enabledBy": "heat_enabled",
+      "default": 0,
+      "min": 0,
+      "max": 100
     },
     {
       "key": "heat_per_emoji",
@@ -171,7 +264,10 @@
       "label": "Heat per Emoji",
       "description": "Heat added per custom or unicode emoji in a message.",
       "group": "Heat Scoring",
-      "default": 0
+      "enabledBy": "heat_enabled",
+      "default": 0,
+      "min": 0,
+      "max": 100
     },
     {
       "key": "heat_per_link",
@@ -179,7 +275,10 @@
       "label": "Heat per Link",
       "description": "Heat added when a message contains a URL (advertisement signal).",
       "group": "Heat Scoring",
-      "default": 0
+      "enabledBy": "heat_enabled",
+      "default": 0,
+      "min": 0,
+      "max": 100
     },
     {
       "key": "heat_webhook_multiplier",
@@ -187,7 +286,10 @@
       "label": "Webhook Multiplier",
       "description": "Message/link heat is multiplied by this for webhook-sent messages. 1 disables special treatment.",
       "group": "Heat Scoring",
-      "default": 1
+      "enabledBy": "heat_enabled",
+      "default": 1,
+      "min": 1,
+      "max": 20
     },
     {
       "key": "heat_decay_per_minute",
@@ -195,7 +297,10 @@
       "label": "Heat Decay / min",
       "description": "Heat points bled off per minute.",
       "group": "Heat Scoring",
-      "default": 10
+      "enabledBy": "heat_enabled",
+      "default": 10,
+      "min": 1,
+      "max": 100
     },
     {
       "key": "heat_multiplier_enabled",
@@ -203,6 +308,7 @@
       "label": "Escalating Timeouts",
       "description": "Geometrically increase the timeout duration for members who keep re-tripping heat after their previous timeout expires.",
       "group": "Heat Escalation",
+      "enabledBy": "heat_enabled",
       "default": false
     },
     {
@@ -211,7 +317,10 @@
       "label": "Escalation Multiplier",
       "description": "Each repeat timeout after the first multiplies the base duration by this much (e.g. 2 -> 1, 1, 2, 4, 8x the base).",
       "group": "Heat Escalation",
-      "default": 2
+      "enabledBy": "heat_multiplier_enabled",
+      "default": 2,
+      "min": 2,
+      "max": 10
     },
     {
       "key": "heat_panic_raider_count",
@@ -219,7 +328,10 @@
       "label": "Heat Panic Raider Count",
       "description": "Distinct members who must trip Timeout/Quarantine within the panic window to activate heat panic mode, instantly actioning any flagged member's next message. 0 disables.",
       "group": "Heat Escalation",
-      "default": 0
+      "enabledBy": "heat_enabled",
+      "default": 0,
+      "min": 0,
+      "max": 100
     },
     {
       "key": "heat_panic_window_seconds",
@@ -227,7 +339,10 @@
       "label": "Heat Panic Window (seconds)",
       "description": "Window for counting distinct raiders toward heat panic mode.",
       "group": "Heat Escalation",
-      "default": 30
+      "enabledBy": "heat_enabled",
+      "default": 30,
+      "min": 5,
+      "max": 600
     },
     {
       "key": "lockdown_mention_threshold",
@@ -235,7 +350,9 @@
       "label": "Mention Flood Threshold",
       "description": "Total non-exempt mentions guild-wide within the window that trigger an automatic server-wide lockdown. 0 disables.",
       "group": "Auto Lockdown",
-      "default": 0
+      "default": 0,
+      "min": 0,
+      "max": 10000
     },
     {
       "key": "lockdown_window_seconds",
@@ -243,7 +360,9 @@
       "label": "Mention Flood Window (seconds)",
       "description": "Window for counting mentions toward auto-lockdown.",
       "group": "Auto Lockdown",
-      "default": 30
+      "default": 30,
+      "min": 5,
+      "max": 600
     },
     {
       "key": "lockdown_duration_minutes",
@@ -251,7 +370,9 @@
       "label": "Auto-Lockdown Duration (minutes)",
       "description": "How long the server-wide lockdown lasts before auto-unlocking.",
       "group": "Auto Lockdown",
-      "default": 10
+      "default": 10,
+      "min": 1,
+      "max": 1440
     },
     {
       "key": "heat_warn",
@@ -259,7 +380,10 @@
       "label": "Warn Threshold",
       "description": "Heat at which the member gets a slow-down warning. 0 disables.",
       "group": "Heat Thresholds",
-      "default": 15
+      "enabledBy": "heat_enabled",
+      "default": 15,
+      "min": 0,
+      "max": 1000
     },
     {
       "key": "heat_timeout",
@@ -267,7 +391,10 @@
       "label": "Timeout Threshold",
       "description": "Heat at which the member is timed out. 0 disables.",
       "group": "Heat Thresholds",
-      "default": 30
+      "enabledBy": "heat_enabled",
+      "default": 30,
+      "min": 0,
+      "max": 1000
     },
     {
       "key": "heat_quarantine",
@@ -275,7 +402,10 @@
       "label": "Quarantine Threshold",
       "description": "Heat at which the member is quarantined. 0 disables.",
       "group": "Heat Thresholds",
-      "default": 0
+      "enabledBy": "heat_enabled",
+      "default": 0,
+      "min": 0,
+      "max": 1000
     },
     {
       "key": "heat_timeout_minutes",
@@ -283,7 +413,10 @@
       "label": "Heat Timeout (minutes)",
       "description": "Timeout duration applied at the timeout threshold.",
       "group": "Heat Thresholds",
-      "default": 10
+      "enabledBy": "heat_enabled",
+      "default": 10,
+      "min": 1,
+      "max": 40320
     }
   ],
   "category": "Moderation"

@@ -1,4 +1,4 @@
-import type { AuditLedger, Prisma } from "@prisma/client";
+import type { AuditLedger, AuditPlatform, Prisma } from "@prisma/client";
 import { hostname } from "node:os";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 import { RedisKeys } from "#lib/database/redis.js";
@@ -6,6 +6,7 @@ import { Repository } from "#lib/prisma/repositories/Repository.js";
 import { getWriteBucket } from "#lib/env.js";
 
 import { tryParseJSON } from "@sapphire/utilities";
+import { Time } from "@sapphire/time-utilities";
 
 /**
  * Per-process, so two overlapping workers cannot both read the other's pending
@@ -14,7 +15,7 @@ import { tryParseJSON } from "@sapphire/utilities";
 const AuditConsumer = `${hostname()}:${process.pid}`;
 
 /** How long a delivered-but-unacked entry must sit before another run reclaims it. */
-const StalePendingMs = 60_000;
+const StalePendingMs = Time.Minute;
 
 /**
  * Approximate cap on the buffer stream. If the flush task stops - a crash loop,
@@ -42,7 +43,7 @@ export interface AuditLogPayload {
   guildId: string;
   userId: string;
   action: string;
-  platform: string;
+  platform: AuditPlatform;
   details?: unknown;
 }
 
@@ -50,7 +51,7 @@ export interface AuditLedgerFilter {
   guildId?: string;
   userId?: string;
   action?: string;
-  platform?: string;
+  platform?: AuditPlatform;
   skip?: number;
   take?: number;
 }
@@ -70,24 +71,6 @@ export class AuditRepository extends Repository {
       "payload",
       JSON.stringify(payload),
     );
-  }
-
-  public async queueAuditLogsBatch(payloads: AuditLogPayload[]) {
-    if (!payloads.length) return;
-    const pipeline = this.redis.pipeline();
-    const key = RedisKeys.auditLogsQueue(WriteBucket);
-    for (const payload of payloads) {
-      pipeline.xadd(
-        key,
-        "MAXLEN",
-        "~",
-        AuditStreamMaxlen,
-        "*",
-        "payload",
-        JSON.stringify(payload),
-      );
-    }
-    await pipeline.exec();
   }
 
   /**
@@ -182,6 +165,11 @@ export class AuditRepository extends Repository {
     let persistedEntryCount = 0;
 
     if (entries.length) {
+      const guildIds = new Set(entries.map(({ payload: p }) => p.guildId));
+      await Promise.all(
+        Array.from(guildIds, (guildId) => this.db.ensureGuild(guildId)),
+      );
+
       try {
         await this.prisma.auditLedger.createMany({
           data: entries.map(({ payload: p }) => ({

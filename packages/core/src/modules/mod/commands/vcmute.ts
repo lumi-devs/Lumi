@@ -1,7 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ApplicationCommandRegistry, Result } from "@sapphire/framework";
 import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
-import { VoiceMuteAction } from "../actions/VoiceMuteAction.js";
+import { VoiceMuteAction } from "../services/actions/VoiceMuteAction.js";
 import { formatDuration, parseDuration } from "#lib/utilities/time.js";
 import type { ModerationCase } from "@prisma/client";
 import type { GuildMember } from "discord.js";

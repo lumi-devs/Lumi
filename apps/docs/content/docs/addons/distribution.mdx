@@ -1,0 +1,42 @@
+---
+title: Distribution
+description: Register a repo, browse it, and install, uninstall, or roll back a module.
+---
+
+Distribution runs through the downloader RPC actions and the equivalent `/repo` and `/download`
+commands — no shell access to the host required.
+
+## Repos
+
+| Command | RPC action | Description |
+| :--- | :--- | :--- |
+| `/repo add` | `downloader.repo.add` | Register a module repo. |
+| `/repo remove` | — | Unregister a repo. |
+| `/repo update` | — | Pull the repo's latest commit on its tracked branch. |
+| `/repo list` | `downloader.repo.list` | List registered repos. |
+| `/repo modules` | `downloader.repo.modules` | List modules a repo offers. |
+
+A repo tracks a branch, not a pinned commit — `/repo update` deploys whatever is on that branch
+at the time you run it.
+
+## Modules
+
+| Command | RPC action | Description |
+| :--- | :--- | :--- |
+| `/download install` | `downloader.module.install` | Install a module from a repo. |
+| `/download uninstall` | `downloader.module.uninstall` | Uninstall a module. |
+| `/download rollback` | `downloader.module.rollback` | Roll a module back to a pinned commit. |
+| `/download panel` | — | Interactive install/manage panel (default subcommand). |
+
+Installed modules are symlinked into `packages/core/src/modules/` from
+`data/3rd-party-modules/` and loaded exactly like built-in ones.
+
+## Local development
+
+Point the worker at out-of-tree module directories with `LUMI_DEV_PATHS` (the equivalent of
+RedBot's `--cog-path`). Modules there are discovered and loaded exactly like installed ones; the
+variable is env-only, non-persistent, and must never be set in production.
+
+```bash title="Dev module paths"
+LUMI_DEV_PATHS=/home/dev/my-modules:/home/dev/other-modules
+```

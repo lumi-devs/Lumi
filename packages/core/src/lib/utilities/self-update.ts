@@ -1,8 +1,9 @@
 import { promises as fs, existsSync } from "node:fs";
 import { join } from "node:path";
 import { container } from "@sapphire/framework";
-import { LumiInfo } from "#utilities/misc.js";
-import { execFileAsync } from "#utilities/exec-file.js";
+import { Time } from "@sapphire/time-utilities";
+import { LumiInfo } from "#lib/utilities/misc.js";
+import { execFileAsync } from "#lib/utilities/exec-file.js";
 
 const execGit = (args: string[]) =>
   execFileAsync("git", args, {
@@ -162,10 +163,10 @@ export async function updateLumiCore(): Promise<CoreUpdateResult> {
     try {
       await execFileAsync("bun", ["install", "--frozen-lockfile"], {
         cwd,
-        timeout: 60_000,
+        timeout: Time.Minute,
       });
     } catch {
-      await execFileAsync("bun", ["install"], { cwd, timeout: 60_000 }).catch(
+      await execFileAsync("bun", ["install"], { cwd, timeout: Time.Minute }).catch(
         () => {},
       );
     }

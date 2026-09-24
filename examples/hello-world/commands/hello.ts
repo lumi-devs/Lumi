@@ -1,14 +1,12 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { container, type Command } from "@sapphire/framework";
-import { BaseCommand, type CommandContext } from "lumi/commands";
+import { BaseCommand, type CommandContext, type CommandRegistry } from "lumi/commands";
+import { getModuleConfig } from "lumi/config";
 
-@ApplyOptions<BaseCommand.Options>({
-  name: "hello",
-  description: "Say hello.",
-  cooldownDelay: 5_000,
-})
 export default class HelloCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: Command.Registry) {
+  public constructor() {
+    super({ name: "hello", description: "Say hello.", cooldownDelay: 5_000 });
+  }
+
+  public override registerApplicationCommands(registry: CommandRegistry) {
     registry.registerChatInputCommand((builder) =>
       builder.setName(this.name).setDescription(this.description),
     );
@@ -19,15 +17,10 @@ export default class HelloCommand extends BaseCommand {
       return ctx.replyError("Guild Only", "This command only works inside a server.");
     }
 
-    // Read the module's own configSchema value back out via ConfigUtility.
-    // Falls back to the default declared in the schema if never set.
-    const greetingRaw = await container.db.config.getModuleConfig(
-      ctx.guildId,
-      "hello-world",
-      "greeting",
+    const greeting = await getModuleConfig("greeting");
+    return ctx.replySuccess(
+      "👋 Hello!",
+      typeof greeting === "string" ? greeting : "Hello from Lumi!",
     );
-    const greeting = typeof greetingRaw === "string" ? greetingRaw : null;
-
-    return ctx.replySuccess("👋 Hello!", greeting ?? "Hello from Lumi!");
   }
 }

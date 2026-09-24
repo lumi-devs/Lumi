@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import {
   advanceCaptcha,
   buildChallenge,
@@ -7,7 +7,7 @@ import {
   MaxAttempts,
   SequenceLength,
   type CaptchaState,
-} from "#modules/security/lib/captcha.js";
+} from "#modules/security/services/captcha.js";
 
 function freshState(): CaptchaState {
   const { sequence, buttons } = buildChallenge();
@@ -19,9 +19,7 @@ describe("captcha challenge builder", () => {
     const { sequence, buttons } = buildChallenge();
     expect(sequence).toHaveLength(SequenceLength);
     expect(buttons).toHaveLength(SequenceLength * 2);
-    // every sequence index is clickable
     for (const idx of sequence) expect(buttons).toContain(idx);
-    // indices are valid and unique
     expect(new Set(buttons).size).toBe(buttons.length);
     for (const idx of buttons) expect(EmojiPool[idx]).toBeDefined();
   });

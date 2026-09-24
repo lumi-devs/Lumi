@@ -1,6 +1,6 @@
 import { Package } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildShell } from "#/lib/guild-reads";
 import { ModuleToggleGrid } from "#/components/guild/module-toggle-grid";
 import { PageHeader } from "#/components/ui/page-header";
 import { Badge } from "#/components/ui/badge";
@@ -12,9 +12,9 @@ export default async function GuildAddonsPage({
 }) {
   const { guildId } = await params;
   const session = await requireGuild(guildId);
-  const data = await getGuildDashboard(guildId, session.userId);
+  const shell = await getGuildShell(guildId, session.userId);
 
-  const modules = data.modules.filter((m) => m.isAddon);
+  const modules = shell.modules.filter((m) => m.isAddon);
   const enabled = modules.filter((m) => m.enabled).length;
 
   return (

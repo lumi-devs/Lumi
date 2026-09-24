@@ -30,7 +30,7 @@ The worker application serves as the core processing engine at every deployment 
 
 - **Owns the Gateway Connection**: The worker opens its own Discord Gateway WebSocket and handles the resulting dispatches in-process. Gateway ingestion and command/interaction handling are never split across processes - discord.js's internal packet handling assumes single-process invariants.
 - **Sapphire Framework Foundation**: Built on Sapphire Framework v5, providing modular command registration, listener stores, argument parsing, and command execution pipelines.
-- **Dynamic Module Store**: Loads built-in feature modules (`afk`, `core`, `dashboard`, `filter`, `logging`, `mod`, `tempvc`, `utility`) and dynamically mounts external third-party addons from `/lumi-addons` or custom development paths (`LUMI_DEV_PATHS`).
+- **Dynamic Module Store**: Loads built-in feature modules (`afk`, `core`, `dashboard`, `economy`, `filter`, `logging`, `mod`, `reactionroles`, `security`, `sticky`, `tempvc`, `utility`, `welcome`) and dynamically mounts external third-party addons from `/lumi-addons` or custom development paths (`LUMI_DEV_PATHS`).
 - **Dashboard RPC Handler**: Serves synchronous HTTP RPC requests from `@lumi/dashboard` (`packages/core/src/lib/rpc/http-server.ts`) to fetch live guild configurations and apply module state changes.
 - **High-Performance Caching**: Integrates `RedisEntityCache` and an `InvalidationBus` to cache guild configurations and user states, reducing database load.
 - **Sharding via discord.js `ShardingManager`**: `apps/worker/src/main.ts` is a lightweight manager process - it constructs a `ShardingManager` and spawns one child process per shard it owns (`apps/worker/src/shard-client.ts`, where the actual `LumiClient` lives). `TOTAL_SHARDS`/`SHARD_LIST` control which shards this replica spawns; `CLUSTER_NAME` namespaces the shard telemetry each child publishes to Redis for the dashboard's fleet view. Replica count is a deliberate shards-per-replica decision, not a queue-lag autoscaler target.
@@ -83,12 +83,17 @@ Workers load and execute the following built-in modules located in `packages/cor
 |---|---|---|
 | `afk` | Automated AFK status manager | Sets AFK reason on user command; removes AFK and notifies mentions upon user activity. |
 | `core` | Core framework administration | Handles bot ping, system info, prefix management, and health checks. |
-| `dashboard` | Web dashboard RPC bridge | Exposes `guild.dashboard.get`, `guild.module.toggle`, and `guild.config.set` RPC actions. |
+| `dashboard` | Web dashboard RPC bridge | Exposes the guild-shell/module/config RPC actions the dashboard reads and mutates through. |
+| `economy` | Guild bank & currency | Wallet/vault balances, payday, taxed transfers, slots, and an audited transaction ledger. |
 | `filter` | Content & word filtering system | Automates deletion of prohibited words, invite links, and spam patterns. |
 | `logging` | Server audit & activity logger | Logs member joins/leaves, deleted messages, edited messages, and role changes to configured channels. |
 | `mod` | Server moderation suite | Executes kick, ban, softban, mute, timeout, purge, and infraction logging. |
+| `reactionroles` | Self-serve role menus | Buttons, a multi-pick dropdown, or raw message reactions, including exclusive and gated options. |
+| `security` | Server protection | Anti-nuke detection with automatic quarantine, raid/verification gating, and a restore system. |
+| `sticky` | Sticky channel messages | Re-posts a configured message to the bottom of a channel every time a new message is sent there. |
 | `tempvc` | Dynamic temporary voice channels | Automatically creates temporary voice channels on join and deletes them when empty. |
 | `utility` | Community utility tools | Server info, user info, avatar display, poll creation, and role pickers. |
+| `welcome` | Join/leave greetings | Welcome/goodbye cards, auto-role assignment, and an optional DM greeting. |
 
 ---
 

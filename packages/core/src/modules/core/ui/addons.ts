@@ -1,14 +1,14 @@
 import type { LumiT } from "#lib/i18n/index.js";
-import { PanelsKeys } from "#lib/i18n/keys.js";
 import { formatPageFooter, row, type Row } from "#modules/core/ui/common.js";
 import { hubTabRow } from "#modules/core/ui/hub.js";
-import { Emojis } from "#utilities/assets.js";
-import { resolveCardColor, makeCard, type CardReply } from "#utilities/cards.js";
+import { Emojis } from "#lib/utilities/assets.js";
+import { resolveCardColor } from "#lib/utilities/config.js";
+import { makeCard, type CardReply } from "#lib/ui/cards.js";
 import {
   createPaginationRow,
   createStringSelectMenu,
   settingRow,
-} from "#utilities/panels.js";
+} from "#lib/ui/panels.js";
 import {
   ButtonBuilder,
   StringSelectMenuOptionBuilder,
@@ -20,7 +20,7 @@ import { ButtonStyle } from "discord.js";
 // Each row here is a Section with 2-3 text lines + 1 button = 4-5 real
 // components once nested, and card chrome already eats ~10-19 of Discord's
 // 40-component budget per message, so page sizes stay well under naive counts.
-export const AddonRowsPerPage = 5;
+const AddonRowsPerPage = 5;
 
 export interface AddonDashboardStats {
   repoCount: number;
@@ -58,7 +58,7 @@ export interface AutoUpdateStatus {
   intervalMinutes: number;
 }
 
-export const AutoUpdateIntervals: { label: string; minutes: number }[] = [
+const AutoUpdateIntervals: { label: string; minutes: number }[] = [
   { label: "Every Hour", minutes: 60 },
   { label: "Every 6 Hours", minutes: 360 },
   { label: "Every 12 Hours", minutes: 720 },
@@ -70,7 +70,7 @@ const backToAddonsRow = (t?: LumiT): Row =>
   row(
     new ButtonBuilder()
       .setCustomId("lumi:tab:addons")
-      .setLabel(t ? t(PanelsKeys.BackToAddons) : "Back to Add-ons")
+      .setLabel(t ? t("panels:backToAddons") : "Back to Add-ons")
       .setEmoji(Emojis.parse(Emojis.ArrowLeft))
       .setStyle(ButtonStyle.Secondary),
   );
@@ -86,11 +86,11 @@ export function buildAddonsView(
 ): CardReply {
   const body = [
     t
-      ? t(PanelsKeys.AddonsIntro)
+      ? t("panels:addonsIntro")
       : "Add-ons let you expand Lumi with community modules. Every installed add-on works seamlessly alongside built-in features.",
     [
-      `${Emojis.Repo} **${t ? t(PanelsKeys.AddonsRepos) : "Tracked Repositories"}:** ${stats?.repoCount ?? 0}`,
-      `${Emojis.Download} **${t ? t(PanelsKeys.AddonsInstalled) : "Installed Add-ons"}:** ${stats?.installedCount ?? 0}`,
+      `${Emojis.Repo} **${t ? t("panels:addonsRepos") : "Tracked Repositories"}:** ${stats?.repoCount ?? 0}`,
+      `${Emojis.Download} **${t ? t("panels:addonsInstalled") : "Installed Add-ons"}:** ${stats?.installedCount ?? 0}`,
     ].join("\n"),
   ];
 
@@ -103,12 +103,12 @@ export function buildAddonsView(
   const navButtons = row(
     new ButtonBuilder()
       .setCustomId("lumi:addon:repos")
-      .setLabel(t ? t(PanelsKeys.AddonsBrowseRepos) : "Configure Repos")
+      .setLabel(t ? t("panels:addonsBrowseRepos") : "Configure Repos")
       .setEmoji(Emojis.parse(Emojis.Repo))
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId("lumi:addon:installed")
-      .setLabel(t ? t(PanelsKeys.AddonsBrowseInstalled) : "Configure Addons")
+      .setLabel(t ? t("panels:addonsBrowseInstalled") : "Configure Addons")
       .setEmoji(Emojis.parse(Emojis.Download))
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
@@ -120,12 +120,12 @@ export function buildAddonsView(
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.Repo} ${t ? t(PanelsKeys.AddonsTitle) : "Add-ons & Updates"}`,
+    `${Emojis.Repo} ${t ? t("panels:addonsTitle") : "Add-ons & Updates"}`,
     body,
     {
       breadcrumbs: ["Hub", "Addons"],
       footer: t
-        ? t(PanelsKeys.AddonsFooter)
+        ? t("panels:addonsFooter")
         : "Bot Owner access is required to add repositories or run updates.",
       actionRows: [navButtons, hubTabRow("addons", t)],
       separatorAboveActionRows: true,
@@ -149,11 +149,11 @@ export function buildAddonReposView(
       [
         `${Emojis.Repo} **${repo.name}** (\`${repo.branch}\`)`,
         `-# ${cutText(repo.url, 90)}`,
-        `-# ${t ? t(PanelsKeys.AddonsInstalled) : "Installed Add-ons"}: **${repo.installedCount}**`,
+        `-# ${t ? t("panels:addonsInstalled") : "Installed Add-ons"}: **${repo.installedCount}**`,
       ],
       {
         customId: `lumi:addon:update_repo:${repo.name}`,
-        label: t ? t(PanelsKeys.AddonsUpdateRepo) : "Update Repo",
+        label: t ? t("panels:addonsUpdateRepo") : "Update Repo",
         style: ButtonStyle.Primary,
       },
     ),
@@ -163,12 +163,12 @@ export function buildAddonReposView(
     row(
       new ButtonBuilder()
         .setCustomId("lumi:addon:add_repo")
-        .setLabel(t ? t(PanelsKeys.AddonsAddRepo) : "Add Repository")
+        .setLabel(t ? t("panels:addonsAddRepo") : "Add Repository")
         .setEmoji(Emojis.parse(Emojis.Repo))
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
         .setCustomId("lumi:addon:rm_repo")
-        .setLabel(t ? t(PanelsKeys.AddonsRemoveRepo) : "Remove Repository")
+        .setLabel(t ? t("panels:addonsRemoveRepo") : "Remove Repository")
         .setEmoji(Emojis.parse(Emojis.Uninstall))
         .setStyle(ButtonStyle.Danger),
     ),
@@ -177,13 +177,13 @@ export function buildAddonReposView(
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.Repo} ${t ? t(PanelsKeys.AddonsReposTitle) : "Configure Repositories"}`,
+    `${Emojis.Repo} ${t ? t("panels:addonsReposTitle") : "Configure Repositories"}`,
     sorted.length
       ? sorted.length > shown.length
         ? `-# +${sorted.length - shown.length} more`
         : ""
       : t
-        ? t(PanelsKeys.AddonsReposEmpty)
+        ? t("panels:addonsReposEmpty")
         : "No repositories added yet. Click **Add Repository** to get started.",
     {
       breadcrumbs: ["Hub", "Addons", "Configure Repositories"],
@@ -205,7 +205,7 @@ export function buildRepoUpdateConfirmView(
     row(
       new ButtonBuilder()
         .setCustomId(`lumi:addon:update_repo_confirm:${repoName}`)
-        .setLabel(t ? t(PanelsKeys.AddonsUpdateRepo) : "Update")
+        .setLabel(t ? t("panels:addonsUpdateRepo") : "Update")
         .setEmoji(Emojis.parse(Emojis.Download))
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
@@ -252,10 +252,10 @@ export function buildAddonInstalledView(
         customId: `lumi:addon:toggle:${mod.moduleName}`,
         label: mod.enabled
           ? t
-            ? t(PanelsKeys.DetailDisable)
+            ? t("panels:detailDisable")
             : "Disable"
           : t
-            ? t(PanelsKeys.DetailEnable)
+            ? t("panels:detailEnable")
             : "Enable",
         style: mod.enabled ? ButtonStyle.Danger : ButtonStyle.Success,
       },
@@ -284,19 +284,19 @@ export function buildAddonInstalledView(
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.Download} ${t ? t(PanelsKeys.AddonsInstalledTitle) : "Configure Addons"}`,
+    `${Emojis.Download} ${t ? t("panels:addonsInstalledTitle") : "Configure Addons"}`,
     sorted.length
       ? sorted.length > shown.length
         ? `-# +${sorted.length - shown.length} more`
         : ""
       : t
-        ? t(PanelsKeys.AddonsInstalledEmpty)
+        ? t("panels:addonsInstalledEmpty")
         : "No add-on modules are currently installed.",
     {
       breadcrumbs: ["Hub", "Addons", "Configure Addons"],
       sections,
       footer: t
-        ? t(PanelsKeys.AddonsInstalledFooter)
+        ? t("panels:addonsInstalledFooter")
         : "Toggling a module applies instantly - no restart needed.",
       actionRows: rows,
     },
@@ -327,9 +327,9 @@ export function buildAddonRepoModulesView(
 
   const sections = shown.map((m) => {
     const status = m.isInstalled
-      ? `${Emojis.Check} ${t ? t(PanelsKeys.AddonsStatusInstalled) : "Installed"}`
+      ? `${Emojis.Check} ${t ? t("panels:addonsStatusInstalled") : "Installed"}`
       : t
-        ? t(PanelsKeys.AddonsStatusAvailable)
+        ? t("panels:addonsStatusAvailable")
         : "Available";
 
     const lines = [
@@ -346,10 +346,10 @@ export function buildAddonRepoModulesView(
         customId: `lumi:addon:modact:${m.isInstalled ? "uninstall" : "install"}:${repoName}:${m.name}`,
         label: m.isInstalled
           ? t
-            ? t(PanelsKeys.AddonsUninstall)
+            ? t("panels:addonsUninstall")
             : "Uninstall"
           : t
-            ? t(PanelsKeys.AddonsInstall)
+            ? t("panels:addonsInstall")
             : "Install",
         style: m.isInstalled ? ButtonStyle.Danger : ButtonStyle.Success,
       },
@@ -360,7 +360,7 @@ export function buildAddonRepoModulesView(
     row(
       new ButtonBuilder()
         .setCustomId("lumi:addon:installed")
-        .setLabel(t ? t(PanelsKeys.BackToRepos) : "Back to Configure Addons")
+        .setLabel(t ? t("panels:backToRepos") : "Back to Configure Addons")
         .setEmoji(Emojis.parse(Emojis.ArrowLeft))
         .setStyle(ButtonStyle.Secondary),
     ),
@@ -379,13 +379,13 @@ export function buildAddonRepoModulesView(
     resolveCardColor("primary"),
     `${Emojis.Gear} ${
       t
-        ? t(PanelsKeys.AddonsModulesTitle, { repo: repoName })
+        ? t("panels:addonsModulesTitle", { repo: repoName })
         : `Available Modules in ${repoName}`
     }`,
     sorted.length
       ? ""
       : t
-        ? t(PanelsKeys.AddonsModulesEmpty)
+        ? t("panels:addonsModulesEmpty")
         : "No modules found in this repository.",
     {
       breadcrumbs: ["Hub", "Addons", "Configure Addons", repoName],
@@ -396,11 +396,11 @@ export function buildAddonRepoModulesView(
               safePage,
               totalPages,
               t
-                ? t(PanelsKeys.AddonsModulesFooter)
+                ? t("panels:addonsModulesFooter")
                 : "Install or uninstall any module with one click.",
             )
           : t
-            ? t(PanelsKeys.AddonsModulesFooter)
+            ? t("panels:addonsModulesFooter")
             : "Install or uninstall any module with one click.",
       actionRows: rows,
     },

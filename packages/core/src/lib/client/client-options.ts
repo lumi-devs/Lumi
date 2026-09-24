@@ -1,10 +1,9 @@
 import { parseRedisConnectionOption } from "#lib/database/redis.js";
 import { buildRestOptions } from "#lib/discord-rest.js";
-import { envParseInteger, envParseString, isDevelopment } from "#lib/env.js";
+import { envParseInteger, envParseString } from "#lib/env.js";
 import { buildI18nOptions } from "#lib/i18n/index.js";
 import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
 import { BotConfig } from "#lib/utilities/config.js";
-import { LogLevel } from "@sapphire/framework";
 import {
   GatewayIntentBits,
   Options,
@@ -74,6 +73,7 @@ export function buildClientOptions(): ClientOptions {
       GatewayIntentBits.GuildModeration,
       GatewayIntentBits.GuildInvites,
       GatewayIntentBits.GuildWebhooks,
+      GatewayIntentBits.GuildPresences,
     ],
     partials: [Partials.Channel, Partials.GuildMember, Partials.Message],
     allowedMentions: { parse: ["users"], repliedUser: true },
@@ -92,16 +92,12 @@ export function buildClientOptions(): ClientOptions {
     baseUserDirectory: new URL("../../", import.meta.url),
     defaultPrefix: envParseString("DEFAULT_PREFIX", ","),
     logger: {
-      instance: new PinoSapphireLogger(
-        envParseString("SERVICE_NAME", "lumi"),
-        isDevelopment()
-          ? LogLevel.Debug
-          : LogLevel.Info,
-      ),
+      instance: new PinoSapphireLogger(envParseString("SERVICE_NAME", "lumi")),
     },
-    hmr: {
-      enabled: isDevelopment(),
-    },
+    // Off even in development: under Bun's loader the plugin fails to re-read
+    // pieces and logs MissingExportsError for each one instead of reloading it.
+    // `bun --watch` (the worker's dev script) restarts the process anyway.
+    hmr: { enabled: false },
     i18n: buildI18nOptions(),
     tasks: {
       bull: {

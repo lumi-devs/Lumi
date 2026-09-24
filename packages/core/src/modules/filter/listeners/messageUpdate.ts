@@ -3,7 +3,7 @@ import { getUtility } from "#lib/module-system/Utility.js";
 import { GuildMessageEditListener } from "#lib/module-system/GuildMessageEditListener.js";
 import type { GuildMessage } from "#lib/types/common.js";
 import type { FilterUtility } from "../utilities/FilterUtility.js";
-import { enforceHit, runRules, shouldScreen } from "../lib/enforce.js";
+import { enforceHit, runRules, shouldScreen } from "../services/enforce.js";
 
 /**
  * Re-screens edited messages, which would otherwise let a member post something

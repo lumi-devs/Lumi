@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { fakeSpawnResult } from "../../../tests/helpers/mock-bun-spawn.js";
 
 // Real network/`bun add` isn't available in CI; installModule only needs
@@ -27,6 +27,19 @@ async function writeFixtureAddon() {
       version: "1.0.0",
       requirements: ["some-package"],
       end_user_data_statement: "Resolver test privacy statement",
+    }),
+  );
+  await fs.writeFile(
+    path.join(dir, "manifest.json"),
+    JSON.stringify({
+      name: ModuleName,
+      displayName: ModuleName,
+      emoji: "🧪",
+      description: "Fixture addon for resolver tests.",
+      version: "1.0.0",
+      targetUtility: "worker",
+      subStores: [],
+      configFields: [],
     }),
   );
   await fs.writeFile(

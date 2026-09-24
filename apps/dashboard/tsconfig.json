@@ -12,7 +12,7 @@
     "declarationMap": false,
     "module": "esnext",
     "moduleResolution": "bundler",
-    "types": ["node", "react", "react-dom"],
+    "types": ["node", "bun", "react", "react-dom"],
     "jsx": "preserve",
     "noEmit": true,
     "incremental": true,

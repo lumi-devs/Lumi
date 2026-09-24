@@ -8,7 +8,7 @@ import {
 } from "@discordjs/formatters";
 import { cutText } from "@sapphire/utilities";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { isIgnoredChannel, isToggleEnabled, sendLog } from "../lib/send.js";
+import { isIgnoredChannel, isToggleEnabled, sendLog } from "../services/send.js";
 import { fetchT } from "#lib/commands.js";
 
 @ApplyOptions<ModuleListener.Options>({

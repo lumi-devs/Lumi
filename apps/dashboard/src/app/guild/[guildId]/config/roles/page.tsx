@@ -1,11 +1,8 @@
 import { Ticket, PlugZap } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import {
-  getGuildDashboard,
-  getGuildReactionRoleMenus,
-} from "#/lib/dashboard-fetch";
+import { getGuildEntities } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { ReactionRolesManager } from "#/components/guild/reactionroles-manager";
-import { ReactionRolesPreviewPlayground } from "#/components/guild/reactionroles-preview-playground";
 import { Badge } from "#/components/ui/badge";
 import {
   Card,
@@ -15,7 +12,7 @@ import {
 } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
 import { PageHeader } from "#/components/ui/page-header";
-import type { ReactionRoleMenuView } from "#/lib/dashboard-data";
+import type { ReactionRoleMenuView } from "@lumi/contracts/views";
 
 export default async function RolesPage({
   params,
@@ -25,12 +22,18 @@ export default async function RolesPage({
   const { guildId } = await params;
   const session = await requireGuild(guildId);
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
+  const entitiesPromise = getGuildEntities(guildId, session.userId);
+  const menusPromise = rpc("guild.reactionroles.menus.list", {
+    guildId,
+    actorId: session.userId,
+  });
+
+  const entities = await entitiesPromise;
 
   let menus: ReactionRoleMenuView[] | null = null;
   let menusFailure: string | null = null;
   try {
-    menus = await getGuildReactionRoleMenus(guildId, session.userId);
+    menus = (await menusPromise).menus;
   } catch (err) {
     menusFailure = err instanceof Error ? err.message : "The request failed.";
   }
@@ -76,24 +79,9 @@ export default async function RolesPage({
             <ReactionRolesManager
               guildId={guildId}
               menus={menus}
-              roles={dashboard.roles}
+              roles={entities.roles}
             />
           )}
-        </Card>
-      </div>
-
-      <div className="rise" style={{ "--rise-delay": "140ms" } as React.CSSProperties}>
-        <Card>
-          <CardHeader>
-            <CardTitle>See it in action — edit it live</CardTitle>
-            <CardDescription>
-              Draft a title, mode, and options and watch the exact menu card
-              members see update instantly.
-            </CardDescription>
-          </CardHeader>
-          <div className="p-4">
-            <ReactionRolesPreviewPlayground />
-          </div>
         </Card>
       </div>
     </div>

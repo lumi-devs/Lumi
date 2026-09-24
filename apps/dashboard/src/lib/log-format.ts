@@ -1,5 +1,4 @@
-export { isSnowflake } from "./moderation-cases";
-import type { DashboardMemberView } from "./dashboard-data";
+import type { DashboardMemberView } from "@lumi/contracts/views";
 
 // Formatted in UTC so a Server Component and the client that hydrates it can
 // never disagree about the rendered string.
@@ -114,16 +113,6 @@ export function humanizeKey(key: string): string {
   return words
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
-}
-
-export function formatDetails(details: unknown): string | null {
-  if (details === null || details === undefined) return null;
-  if (typeof details === "string") return details;
-  try {
-    return JSON.stringify(details, null, 2);
-  } catch {
-    return String(details);
-  }
 }
 
 // Audit actions are dotted namespaces (`guild.config.update`): the last segment

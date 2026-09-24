@@ -1,11 +1,10 @@
 import Link from "next/link";
 import type { Session } from "next-auth";
-import { LogOut, Terminal } from "lucide-react";
-import { signOutAction } from "#/actions/auth-actions";
+import { Terminal } from "lucide-react";
 import { CommandPalette } from "./command-palette";
 import { ThemeToggle } from "./theme-toggle";
 import { Wordmark } from "./wordmark";
-import { Button } from "#/components/ui/button";
+import { AccountMenu } from "./account-menu";
 import { buttonVariants } from "#/components/ui/button-variants";
 
 export function SiteHeader({
@@ -52,34 +51,7 @@ export function SiteHeader({
 
           <ThemeToggle />
 
-          <Link
-            href="/account"
-            className="flex items-center gap-2 rounded-full border border-border bg-surface py-1 pr-2.5 pl-1 transition-colors hover:bg-surface-hover"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element -- external Discord CDN avatar, next/image adds no value here */}
-            <img
-              src={session.avatar}
-              alt=""
-              width={20}
-              height={20}
-              className="size-5 rounded-full"
-            />
-            <span className="max-w-[120px] truncate text-[14px] font-medium text-fg">
-              {session.username}
-            </span>
-          </Link>
-
-          <form action={signOutAction}>
-            <Button
-              type="submit"
-              variant="ghost"
-              size="icon"
-              title="Log out"
-              aria-label="Log out"
-            >
-              <LogOut aria-hidden />
-            </Button>
-          </form>
+          <AccountMenu username={session.username} avatar={session.avatar} />
         </>
       ) : (
         <>

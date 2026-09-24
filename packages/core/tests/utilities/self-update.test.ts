@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { fakeSpawnResult } from "../helpers/mock-bun-spawn.js";
 
-const { mockExistsSync, mockReadFile } = vi.hoisted(() => ({
-  mockExistsSync: vi.fn(),
-  mockReadFile: vi.fn(),
-}));
+// bun:test's `vi.mock` isn't hoisted above imports the way vitest's is, so
+// these just need to be declared before the `vi.mock` calls below — no
+// `vi.hoisted` wrapper required.
+const mockExistsSync = vi.fn();
+const mockReadFile = vi.fn();
 
 vi.mock("node:fs", () => ({
   existsSync: mockExistsSync,
@@ -23,29 +24,31 @@ import {
   getCoreUpdateStatus,
   updateLumiCore,
 } from "#lib/utilities/self-update.js";
-import { LumiInfo } from "#utilities/misc.js";
+import { LumiInfo } from "#lib/utilities/misc.js";
 
 interface MockEntry {
   stdout?: string;
   error?: Error;
 }
 
-let spawnSpy: ReturnType<typeof vi.spyOn<typeof Bun, "spawn">>;
+let spawnSpy: ReturnType<typeof vi.spyOn<typeof Bun, "spawn">> & {
+  mockImplementation: (fn: (cmd: string[]) => unknown) => void;
+};
 
 /** Drives Bun.spawn(["git"|"bun", ...args], opts) from a `"file args..."` keyed map. */
 function respondWith(map: Record<string, MockEntry>) {
   spawnSpy.mockImplementation((cmd: string[]) => {
     const key = cmd.join(" ");
     const entry = map[key];
-    if (!entry) return fakeSpawnResult("", `no mock registered for "${key}"`, 1) as any;
-    if (entry.error) return fakeSpawnResult("", entry.error.message, 1) as any;
-    return fakeSpawnResult(entry.stdout ?? "") as any;
+    if (!entry) return fakeSpawnResult("", `no mock registered for "${key}"`, 1);
+    if (entry.error) return fakeSpawnResult("", entry.error.message, 1);
+    return fakeSpawnResult(entry.stdout ?? "");
   });
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  spawnSpy = vi.spyOn(Bun, "spawn");
+  spawnSpy = vi.spyOn(Bun, "spawn") as typeof spawnSpy;
   mockReadFile.mockRejectedValue(new Error("ENOENT"));
 });
 
@@ -151,10 +154,10 @@ describe("updateLumiCore", () => {
     const result = await updateLumiCore();
 
     expect(result).toEqual({ updated: false, currentCommit: "abc1234" });
-    const calledFiles = spawnSpy.mock.calls.map((c) => (c[0] as string[])[0]);
+    const calledFiles = spawnSpy.mock.calls.map((c) => (c[0])[0]);
     expect(calledFiles).not.toContain("bun");
     expect(
-      spawnSpy.mock.calls.some((c) => (c[0] as string[]).includes("pull")),
+      spawnSpy.mock.calls.some((c) => (c[0]).includes("pull")),
     ).toBe(false);
   });
 
@@ -184,12 +187,12 @@ describe("updateLumiCore", () => {
     });
 
     const pullCall = spawnSpy.mock.calls.find(
-      (c) => (c[0] as string[])[0] === "git" && (c[0] as string[]).includes("pull"),
+      (c) => (c[0])[0] === "git" && (c[0]).includes("pull"),
     );
     expect(pullCall).toBeDefined();
     expect((pullCall?.[0] as string[]).slice(1)).toEqual(["pull", "--ff-only", "origin", "main"]);
 
-    const installCall = spawnSpy.mock.calls.find((c) => (c[0] as string[])[0] === "bun");
+    const installCall = spawnSpy.mock.calls.find((c) => (c[0])[0] === "bun");
     expect(installCall).toBeDefined();
     expect((installCall?.[0] as string[]).slice(1)).toEqual(["install", "--frozen-lockfile"]);
   });
@@ -214,7 +217,7 @@ describe("updateLumiCore", () => {
 
     expect(result.updated).toBe(true);
     const fallbackInstall = spawnSpy.mock.calls.find(
-      (c) => (c[0] as string[]).length === 2 && (c[0] as string[])[1] === "install",
+      (c) => (c[0]).length === 2 && (c[0])[1] === "install",
     );
     expect(fallbackInstall).toBeDefined();
   });

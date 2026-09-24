@@ -1,7 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown } from "lucide-react";
+import { CircleHelp } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "#/components/ui/tooltip";
 import { cn } from "#/lib/utils";
 
 // Controls are 32px, matching the button scale so a control + button row lines up.
@@ -24,40 +30,17 @@ export function Input({
 
 export function Textarea({
   className,
+  ref,
   ...props
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
+  ref?: React.Ref<HTMLTextAreaElement>;
+}) {
   return (
     <textarea
+      ref={ref}
       className={cn(controlBase, "h-auto min-h-16 py-1.5 leading-5", className)}
       {...props}
     />
-  );
-}
-
-export function Select({
-  id,
-  className,
-  children,
-  ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <div className="relative w-full">
-      <select
-        id={id}
-        className={cn(
-          controlBase,
-          "appearance-none pr-8 cursor-pointer",
-          className,
-        )}
-        {...props}
-      >
-        {children}
-      </select>
-      <ChevronDown
-        className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-fg-subtle"
-        aria-hidden
-      />
-    </div>
   );
 }
 
@@ -98,21 +81,86 @@ export function Field({
   );
 }
 
+/** The explanation as a hover/focus tooltip on a `?` beside the label, for
+ * surfaces where a whole column of near-identical descriptions is noise. */
+export function HintTooltip({
+  hint,
+  name,
+}: {
+  hint: React.ReactNode;
+  name: string;
+}) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={name}
+            className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-fg-subtle transition-colors hover:text-fg focus-visible:text-fg focus-visible:outline-none"
+          >
+            <CircleHelp aria-hidden className="size-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs px-3 py-2.5 text-[13px] leading-5">
+          {hint}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 // Description-left / control-right. Use when the control is small (a switch, a
-// short enum) and the explanation is the long part.
+// short enum) and the explanation is the long part. `wide` stacks the control
+// under the description instead, for editors that need the whole row. Pass
+// `hint` instead of `description` to fold the explanation into a `?` tooltip.
 export function SettingRow({
   label,
   htmlFor,
   description,
+  hint,
   control,
   className,
+  wide,
 }: {
   label: React.ReactNode;
   htmlFor?: string;
   description?: React.ReactNode;
+  hint?: React.ReactNode;
   control: React.ReactNode;
   className?: string;
+  wide?: boolean;
 }) {
+  const heading = (
+    <div className="min-w-0 flex-1">
+      <div className="flex items-center gap-1.5">
+        <Label htmlFor={htmlFor} className="block text-[15px] leading-5 tracking-[0.01em]">
+          {label}
+        </Label>
+        {hint ? (
+          <HintTooltip
+            hint={hint}
+            name={typeof label === "string" ? `About ${label}` : "More information"}
+          />
+        ) : null}
+      </div>
+      {description ? (
+        <p className="mt-0.5 text-[14px] leading-5 text-fg-muted">
+          {description}
+        </p>
+      ) : null}
+    </div>
+  );
+
+  if (wide) {
+    return (
+      <div className={cn("flex flex-col gap-2.5 px-4 py-3", className)}>
+        {heading}
+        <div className="w-full">{control}</div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -120,16 +168,7 @@ export function SettingRow({
         className,
       )}
     >
-      <div className="min-w-0 flex-1">
-        <Label htmlFor={htmlFor} className="block text-[15px] leading-5 tracking-[0.01em]">
-          {label}
-        </Label>
-        {description ? (
-          <p className="mt-0.5 text-[14px] leading-5 text-fg-muted">
-            {description}
-          </p>
-        ) : null}
-      </div>
+      {heading}
       <div className="flex w-full max-w-[15rem] shrink-0 justify-end pt-0.5">
         {control}
       </div>

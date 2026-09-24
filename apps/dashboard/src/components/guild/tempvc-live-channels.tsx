@@ -3,11 +3,7 @@
 import { Eye, EyeOff, Lock, Radio, Unlock } from "lucide-react";
 import { Badge, StatusDot } from "#/components/ui/badge";
 import { EmptyState } from "#/components/ui/empty-state";
-import type {
-  DashboardMemberView,
-  TempVcGeneratorView,
-  TempVcRecordView,
-} from "#/lib/dashboard-data";
+import type { DashboardMemberView, TempVcGeneratorView, TempVcRecordView } from "@lumi/contracts/views";
 import { formatCaseDate, formatDuration } from "#/lib/moderation-cases";
 import { useStaggerIn } from "#/lib/animate";
 

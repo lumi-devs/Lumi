@@ -2,7 +2,7 @@ import { Moon } from "lucide-react";
 import { afkColumns } from "#/components/guild/afk-columns";
 import { DataTable } from "#/components/ui/data-table";
 import { EmptyState } from "#/components/ui/empty-state";
-import type { AfkEntryView, DashboardMemberView } from "#/lib/dashboard-data";
+import type { AfkEntryView, DashboardMemberView } from "@lumi/contracts/views";
 
 export function AfkList({
   entries,

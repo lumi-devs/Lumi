@@ -2,14 +2,23 @@ import type { ReactNode } from "react";
 import { Check, ChevronDown, Hash, Link2, Volume2 } from "lucide-react";
 import { cn } from "#/lib/utils";
 
-export const DiscordBg = "#313338";
-export const DiscordText = "#b5bac1";
-export const DiscordMuted = "#949ba4";
-export const DiscordLink = "#00a8fc";
-export const DiscordBlurple = "#5865F2";
-const DiscordCardBg = "#2b2d31";
-const DiscordCodeBg = "#1e1f22";
-const DiscordHeading = "#dbdee1";
+// Resolved from the `--discord-*` tokens in globals.css, which carry both of
+// Discord's own themes, so the preview follows the dashboard's light/dark
+// setting. Blurple is a brand colour and identical in both.
+const DiscordBg = "var(--discord-bg)";
+const DiscordText = "var(--discord-text)";
+const DiscordMuted = "var(--discord-muted)";
+const DiscordLink = "var(--discord-link)";
+const DiscordBlurple = "#5865F2";
+const DiscordCardBg = "var(--discord-card-bg)";
+const DiscordCodeBg = "var(--discord-code-bg)";
+const DiscordHeading = "var(--discord-heading)";
+const DiscordChromeBorder = "var(--discord-chrome-border)";
+const DiscordChannelIcon = "var(--discord-channel-icon)";
+const DiscordMentionBg = "var(--discord-mention-bg)";
+const DiscordMentionFg = "var(--discord-mention-fg)";
+const DiscordDivider = "var(--discord-divider)";
+const DiscordContainerBorder = "var(--discord-container-border)";
 
 const inlinePattern =
   /(`[^`\n]+`|\*\*[^*\n]+\*\*|\*[^*\n]+\*|_[^_\n]+_|<#[^>\n]+>|<@&?[^>\n]+>|@(?:everyone|here)|#[a-z0-9_-]+|\[[^\]\n]+\]\([^)\n]+\)|https?:\/\/[^\s<]+)/g;
@@ -45,7 +54,7 @@ function renderInlineToken(token: string, key: number): ReactNode {
       <span
         key={key}
         className="inline-flex items-center gap-0.5 rounded px-1 font-medium"
-        style={{ backgroundColor: "rgba(88,101,242,0.3)", color: "#c9cdfb" }}
+        style={{ backgroundColor: DiscordMentionBg, color: DiscordMentionFg }}
       >
         <Hash aria-hidden className="size-3" />
         {name}
@@ -60,7 +69,7 @@ function renderInlineToken(token: string, key: number): ReactNode {
       <span
         key={key}
         className="rounded px-1 font-medium"
-        style={{ backgroundColor: "rgba(88,101,242,0.3)", color: "#c9cdfb" }}
+        style={{ backgroundColor: DiscordMentionBg, color: DiscordMentionFg }}
       >
         @{name.replace(/^@/, "")}
       </span>
@@ -134,14 +143,23 @@ export function MarkdownLite({ text }: { text: string }) {
   return (
     <>
       {text.split("\n").map((line, i) => {
-        if (line.startsWith("## ")) {
+        // Discord sizes its headings well above body text; the bot's card
+        // titles are `## `, so rendering them at body size understates them.
+        const heading = line.startsWith("### ")
+          ? { size: "text-[16px]", skip: 4 }
+          : line.startsWith("## ")
+            ? { size: "text-[20px]", skip: 3 }
+            : line.startsWith("# ")
+              ? { size: "text-[24px]", skip: 2 }
+              : null;
+        if (heading) {
           return (
             <span
               key={i}
-              className="block text-[15px] font-semibold"
+              className={cn("mt-1 block font-bold leading-tight", heading.size)}
               style={{ color: DiscordHeading }}
             >
-              {renderInlineLine(line.slice(3), i)}
+              {renderInlineLine(line.slice(heading.skip), i)}
               {i < text.split("\n").length - 1 ? <br /> : null}
             </span>
           );
@@ -165,7 +183,7 @@ export function MarkdownLite({ text }: { text: string }) {
   );
 }
 
-export interface PreviewField {
+interface PreviewField {
   name: string;
   value: string;
   inline?: boolean;
@@ -189,10 +207,10 @@ export interface PreviewButton {
 
 const buttonColors: Record<NonNullable<PreviewButton["style"]>, string> = {
   primary: DiscordBlurple,
-  secondary: "#4e5058",
+  secondary: "var(--discord-button-secondary)",
   success: "#23a55a",
   danger: "#da373c",
-  link: "#4e5058",
+  link: "var(--discord-button-secondary)",
 };
 
 export interface PreviewVoiceRow {
@@ -203,7 +221,7 @@ export interface PreviewVoiceRow {
   members?: string[];
 }
 
-export function DiscordPreviewShell({
+function DiscordPreviewShell({
   channelName,
   channelTopic,
   children,
@@ -216,10 +234,10 @@ export function DiscordPreviewShell({
     <div className="overflow-hidden rounded-xl border border-border" style={{ backgroundColor: DiscordBg }}>
       <div
         className="flex h-12 items-center gap-2 border-b px-4"
-        style={{ borderColor: "#26272b", boxShadow: "0 1px 0 rgba(0,0,0,0.2)" }}
+        style={{ borderColor: DiscordChromeBorder }}
       >
-        <Hash aria-hidden className="size-5 shrink-0" style={{ color: "#80848e" }} />
-        <span className="truncate text-[15px] font-bold" style={{ color: "#ffffff" }}>
+        <Hash aria-hidden className="size-5 shrink-0" style={{ color: DiscordChannelIcon }} />
+        <span className="truncate text-[15px] font-bold" style={{ color: DiscordHeading }}>
           {channelName}
         </span>
         {channelTopic ? (
@@ -233,7 +251,7 @@ export function DiscordPreviewShell({
   );
 }
 
-export function DiscordVoiceRow({ row }: { row: PreviewVoiceRow }) {
+function DiscordVoiceRow({ row }: { row: PreviewVoiceRow }) {
   const limit = row.userLimit && row.userLimit > 0 ? ` / ${row.userLimit}` : "";
   return (
     <div className="flex flex-col">
@@ -241,7 +259,7 @@ export function DiscordVoiceRow({ row }: { row: PreviewVoiceRow }) {
         className="flex items-center gap-1.5 rounded px-2 py-1"
         style={{ color: DiscordMuted }}
       >
-        <Volume2 aria-hidden className="size-4 shrink-0" style={{ color: "#80848e" }} />
+        <Volume2 aria-hidden className="size-4 shrink-0" style={{ color: DiscordChannelIcon }} />
         <span className="truncate text-[15px] font-medium">{row.name}</span>
         {row.locked ? <span className="text-[12px]">· locked</span> : null}
         {row.memberCount !== undefined ? (
@@ -269,7 +287,7 @@ export function DiscordVoiceRow({ row }: { row: PreviewVoiceRow }) {
   );
 }
 
-export function DiscordMessage({
+function DiscordMessage({
   username,
   roleColor,
   bot,
@@ -321,7 +339,7 @@ export function DiscordMessage({
   );
 }
 
-export function DiscordEmbedCard({ embed }: { embed: PreviewEmbed }) {
+function DiscordEmbedCard({ embed }: { embed: PreviewEmbed }) {
   return (
     <div className="my-1 flex max-w-[520px] overflow-hidden rounded-lg" style={{ backgroundColor: DiscordCardBg }}>
       <div className="w-1 shrink-0" style={{ backgroundColor: embed.accentColor ?? DiscordBlurple }} />
@@ -371,7 +389,7 @@ export function DiscordEmbedCard({ embed }: { embed: PreviewEmbed }) {
   );
 }
 
-export function DiscordSelectMenu({ placeholder }: { placeholder: string }) {
+function DiscordSelectMenu({ placeholder }: { placeholder: string }) {
   return (
     <div
       className="my-1 flex max-w-[520px] items-center justify-between rounded px-3 py-2 text-[14px]"
@@ -383,7 +401,7 @@ export function DiscordSelectMenu({ placeholder }: { placeholder: string }) {
   );
 }
 
-export function DiscordButtonRow({ buttons }: { buttons: PreviewButton[] }) {
+function DiscordButtonRow({ buttons }: { buttons: PreviewButton[] }) {
   return (
     <div className="my-1 flex max-w-[520px] flex-wrap gap-2">
       {buttons.map((button) => (
@@ -409,10 +427,6 @@ export function DiscordButtonRow({ buttons }: { buttons: PreviewButton[] }) {
   );
 }
 
-export function DiscordSeparator() {
-  return <div aria-hidden className="my-1 h-px w-full" style={{ backgroundColor: "#3f4147" }} />;
-}
-
 export function DiscordMessagePreview({
   channelName,
   channelTopic,
@@ -423,6 +437,7 @@ export function DiscordMessagePreview({
   avatarColor,
   body,
   embed,
+  container,
   selectPlaceholder,
   buttons,
 }: {
@@ -435,6 +450,8 @@ export function DiscordMessagePreview({
   avatarColor?: string;
   body?: string;
   embed?: PreviewEmbed;
+  /** A Components V2 container - what the bot actually sends. */
+  container?: PreviewContainer;
   selectPlaceholder?: string;
   buttons?: PreviewButton[];
 }) {
@@ -453,7 +470,23 @@ export function DiscordMessagePreview({
           body={<MarkdownLite text={body} />}
         />
       ) : null}
-      {embed ? (
+      {container ? (
+        <div className={embedIndent}>
+          {/* V2 action rows live inside the container, not beneath it. */}
+          <DiscordContainerCard
+            container={{
+              ...container,
+              components: [
+                ...container.components,
+                ...(selectPlaceholder
+                  ? [{ kind: "select" as const, placeholder: selectPlaceholder }]
+                  : []),
+                ...(buttons ? [{ kind: "buttons" as const, buttons }] : []),
+              ],
+            }}
+          />
+        </div>
+      ) : embed ? (
         <div className={embedIndent}>
           <DiscordEmbedCard embed={embed} />
           {selectPlaceholder ? <DiscordSelectMenu placeholder={selectPlaceholder} /> : null}
@@ -474,5 +507,182 @@ export function DiscordMessagePreview({
         </>
       )}
     </DiscordPreviewShell>
+  );
+}
+
+/**
+ * One component inside a Components V2 container, mirroring what
+ * `buildContainer` in the bot's `lib/ui/cards.ts` actually assembles.
+ */
+export type PreviewV2Component =
+  | { kind: "text"; content: string }
+  | { kind: "separator"; divider?: boolean }
+  | { kind: "buttons"; buttons: PreviewButton[] }
+  | { kind: "select"; placeholder: string }
+  | { kind: "media"; imageUrls: string[] }
+  /** A standalone Components V2 `Section`: 1-3 text bodies plus an
+   * accessory (a small thumbnail, or a single button) rendered beside
+   * them — the block builder's Section block. */
+  | {
+      kind: "section";
+      texts: string[];
+      accessory?:
+        | { type: "thumbnail"; url: string }
+        | { type: "button"; button: PreviewButton };
+    };
+
+export interface PreviewContainer {
+  accentColor?: string;
+  components: PreviewV2Component[];
+  /** Small image shown beside the leading text components, mirroring
+   * `buildContainer`'s `SectionBuilder` + `ThumbnailBuilder` pairing. */
+  thumbnailUrl?: string;
+}
+
+/** A Components V2 media gallery — what `MediaGalleryBuilder` renders on the
+ * real card. Broken/empty URLs fall back to a placeholder tile rather than a
+ * broken-image icon, since these are unvalidated user input in the editor. */
+function DiscordMediaGallery({ imageUrls }: { imageUrls: string[] }) {
+  const urls = imageUrls.filter((u) => u.length > 0).slice(0, 10);
+  if (urls.length === 0) return null;
+  return (
+    <div className="grid grid-cols-3 gap-1">
+      {urls.map((url, i) => (
+        <div
+          key={`${url}-${i}`}
+          className="aspect-square overflow-hidden rounded-md"
+          style={{ backgroundColor: DiscordCodeBg }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary user-supplied URLs, not a Next-optimizable local asset */}
+          <img
+            src={url}
+            alt=""
+            className="size-full object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A Components V2 container, which is what the bot sends — not an embed.
+ * The visible differences matter: `##` is a real heading rather than an embed
+ * title, `-#` is subtext, separators are drawn rules, and the accent is a
+ * stripe on a full-width container rather than an embed's left bar.
+ */
+function DiscordContainerCard({ container }: { container: PreviewContainer }) {
+  // Mirrors `buildContainer`: when a thumbnail is set, the leading text
+  // components (max 3) pair with it as one section instead of stacking full
+  // width, and everything after renders below as usual.
+  const thumbSplit = container.thumbnailUrl ? 3 : 0;
+  let textsSeen = 0;
+  const components = container.components.flatMap((component, i) => {
+    if (thumbSplit > 0 && component.kind === "text" && textsSeen < thumbSplit) {
+      textsSeen += 1;
+      return [{ ...component, _thumbnailPaired: true, _key: i }];
+    }
+    return [{ ...component, _key: i }];
+  });
+  const sectionParts = components.filter(
+    (c): c is Extract<PreviewV2Component, { kind: "text" }> & { _key: number } =>
+      "_thumbnailPaired" in c && c._thumbnailPaired === true,
+  );
+  const rest = components.filter((c) => !("_thumbnailPaired" in c));
+
+  return (
+    <div
+      className="my-1 flex max-w-[520px] overflow-hidden rounded-lg border"
+      style={{ backgroundColor: DiscordCardBg, borderColor: DiscordContainerBorder }}
+    >
+      <div
+        className="w-1 shrink-0"
+        style={{ backgroundColor: container.accentColor ?? DiscordBlurple }}
+      />
+      <div className="flex min-w-0 flex-1 flex-col gap-2 p-3">
+        {container.thumbnailUrl && sectionParts.length > 0 ? (
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              {sectionParts.map((part) => (
+                <p key={part._key} className="text-[14px] leading-[1.4]" style={{ color: DiscordText }}>
+                  <MarkdownLite text={part.content} />
+                </p>
+              ))}
+            </div>
+            <div
+              className="size-16 shrink-0 overflow-hidden rounded-md"
+              style={{ backgroundColor: DiscordCodeBg }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary user-supplied URL */}
+              <img
+                src={container.thumbnailUrl}
+                alt=""
+                className="size-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            </div>
+          </div>
+        ) : null}
+        {rest.map((component, i) => {
+          if (component.kind === "separator") {
+            return component.divider === false ? (
+              <div key={i} className="h-1" />
+            ) : (
+              <hr key={i} className="border-0 border-t" style={{ borderColor: DiscordDivider }} />
+            );
+          }
+          if (component.kind === "buttons") {
+            return <DiscordButtonRow key={i} buttons={component.buttons} />;
+          }
+          if (component.kind === "select") {
+            return <DiscordSelectMenu key={i} placeholder={component.placeholder} />;
+          }
+          if (component.kind === "media") {
+            return <DiscordMediaGallery key={i} imageUrls={component.imageUrls} />;
+          }
+          if (component.kind === "section") {
+            return (
+              <div key={i} className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  {component.texts.map((text, j) => (
+                    <p key={j} className="text-[14px] leading-[1.4]" style={{ color: DiscordText }}>
+                      <MarkdownLite text={text} />
+                    </p>
+                  ))}
+                </div>
+                {component.accessory?.type === "thumbnail" ? (
+                  <div
+                    className="size-16 shrink-0 overflow-hidden rounded-md"
+                    style={{ backgroundColor: DiscordCodeBg }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary user-supplied URL */}
+                    <img
+                      src={component.accessory.url}
+                      alt=""
+                      className="size-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  </div>
+                ) : component.accessory?.type === "button" ? (
+                  <DiscordButtonRow buttons={[component.accessory.button]} />
+                ) : null}
+              </div>
+            );
+          }
+          return (
+            <p key={i} className="text-[14px] leading-[1.4]" style={{ color: DiscordText }}>
+              <MarkdownLite text={component.content} />
+            </p>
+          );
+        })}
+      </div>
+    </div>
   );
 }

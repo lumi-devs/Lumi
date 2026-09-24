@@ -9,20 +9,16 @@ import {
 } from "discord.js";
 import { time, TimestampStyles } from "@discordjs/formatters";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
-import { createActionButton, buildSafeActionRows } from "#lib/utilities/panels.js";
+import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
 import { BaseCommand, sendReply, fetchTyped } from "#lib/commands.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import { LumiInfo } from "#lib/utilities/misc.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { BotConfig } from "#lib/utilities/config.js";
-import { collectPingData } from "#modules/core/lib/ping-collect.js";
-import { fmtMB } from "#modules/core/lib/ping-cards.js";
-import {
-  makeCard,
-  ephemeralCard,
-  formatStatusBadge,
-  resolveCardColor,
-} from "#lib/utilities/cards.js";
+import { collectPingData } from "../services/ping-collect.js";
+import { fmtMB } from "../ui/ping-cards.js";
+import { makeCard, ephemeralCard } from "#lib/ui/cards.js";
+import { formatStatusBadge } from "#lib/ui/layout.js";
+import { resolveCardColor } from "#lib/utilities/config.js";
 
 @ApplyOptions<Command.Options>({
   name: "about",
@@ -68,9 +64,9 @@ export class AboutCommand extends BaseCommand {
     const bootTime = new Date(Date.now() - data.uptime);
     const hostBootTime = new Date(Date.now() - data.osUptimeSecs * 1000);
 
-    const tagline = t(LanguageKeys.Commands.AboutTagline);
-    const instanceStatsHeader = t(LanguageKeys.Commands.AboutInstanceStats);
-    const coreArchHeader = t(LanguageKeys.Commands.AboutCoreArch);
+    const tagline = t("commands:aboutTagline");
+    const instanceStatsHeader = t("commands:aboutInstanceStats");
+    const coreArchHeader = t("commands:aboutCoreArch");
 
     const pingStatus =
       data.wsPing < 150 ? "success" : data.wsPing < 300 ? "warning" : "error";

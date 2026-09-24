@@ -1,20 +1,30 @@
 import { fetchTyped } from "#lib/commands.js";
-import { FieldType } from "#lib/module-system/Module.js";
+import { FieldType } from "#lib/module-system/config-schema.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { ConfigUtility } from "#utilities/pieces/ConfigUtility.js";
-import { hasPanelAccess, loadDetail } from "#modules/core/lib/config-panel.js";
+import type { ConfigUtility } from "../utilities/ConfigUtility.js";
+import { hasPanelAccess, loadDetail } from "../services/config-panel.js";
 import { buildFeatureDetailView } from "#modules/core/ui/modules.js";
 import { buildOverridesView } from "#modules/core/ui/overrides.js";
-import { ephemeralCard, makeErrorCard } from "#utilities/cards.js";
-import { cleanMention } from "#utilities/misc.js";
+import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
+import { cleanMention, isSnowflakeId } from "#lib/utilities/misc.js";
+import {
+  ConfigFieldModalId,
+  ConfigModalId,
+  ConfigOverrideModalId,
+} from "../constants.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import type { ModalSubmitInteraction } from "discord.js";
+import { OverrideTargetType, type $Enums } from "@prisma/client";
 
-const OverrideTypes = new Set(["channel", "role", "user", "category"]);
+function isOverrideTargetType(
+  value: string,
+): value is $Enums.OverrideTargetType {
+  return (Object.values(OverrideTargetType) as string[]).includes(value);
+}
 
 @ApplyOptions<InteractionHandler.Options>({
   name: "config-panel-modal",
@@ -26,15 +36,34 @@ export class ConfigPanelModalHandler extends InteractionHandler {
   }
 
   public override parse(interaction: ModalSubmitInteraction) {
-    if (
-      !interaction.customId.startsWith("cfg:modal:") &&
-      !interaction.customId.startsWith("cfg:ovmodal:") &&
-      !interaction.customId.startsWith("cfg:fmodal:")
-    )
-      return this.none();
-    const [, kind, moduleName, fieldKey, fieldPage] =
-      interaction.customId.split(":");
-    return this.some({ kind, moduleName, fieldKey, fieldPage });
+    const fmodal = ConfigFieldModalId.parse(interaction.customId);
+    if (fmodal) {
+      return this.some({
+        kind: "fmodal",
+        moduleName: fmodal.moduleName,
+        fieldKey: fmodal.fieldKey,
+        fieldPage: fmodal.fieldPage,
+      });
+    }
+    const modal = ConfigModalId.parse(interaction.customId);
+    if (modal) {
+      return this.some({
+        kind: "modal",
+        moduleName: modal.moduleName,
+        fieldKey: undefined,
+        fieldPage: undefined,
+      });
+    }
+    const ovmodal = ConfigOverrideModalId.parse(interaction.customId);
+    if (ovmodal) {
+      return this.some({
+        kind: "ovmodal",
+        moduleName: ovmodal.moduleName,
+        fieldKey: undefined,
+        fieldPage: undefined,
+      });
+    }
+    return this.none();
   }
 
   public async run(
@@ -165,13 +194,13 @@ export class ConfigPanelModalHandler extends InteractionHandler {
       const field = record.meta.configFields?.find((f) => f.key === key);
       if (!field)
         return this.#err(interaction, `\`${key}\` is not a valid config key.`);
-      if (!OverrideTypes.has(type))
+      if (!isOverrideTargetType(type))
         return this.#err(
           interaction,
           "Target type must be one of: channel, role, user, category.",
         );
       const modelId = cleanMention(target);
-      if (!/^\d{17,20}$/.test(modelId))
+      if (!isSnowflakeId(modelId))
         return this.#err(
           interaction,
           "Provide a valid ID or mention as target.",

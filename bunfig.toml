@@ -1,0 +1,4 @@
+[test]
+root = "packages"
+coverageReporter = ["text", "lcov"]
+coverageDir = "coverage"

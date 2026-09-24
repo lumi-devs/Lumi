@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { ArrowRight, LayoutGrid } from "lucide-react";
 import { Card } from "#/components/ui/card";
-import type { DashboardModuleView } from "#/lib/dashboard-data";
+import type { DashboardModuleSummaryView } from "@lumi/contracts/views";
 
 export function ModulesStatusStrip({
   guildId,
   modules,
 }: {
   guildId: string;
-  modules: DashboardModuleView[];
+  modules: DashboardModuleSummaryView[];
 }) {
   const enabledCount = modules.filter((m) => m.enabled || m.name === "core").length;
   const off = modules.filter((m) => !m.enabled && m.name !== "core" && !m.isAddon);

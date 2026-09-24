@@ -1,0 +1,41 @@
+---
+title: Temp Voice Channels
+description: On-demand voice channels that clean up when empty, with an owner control panel.
+---
+
+The `tempvc` module (🔊) creates a temporary voice channel when a member joins a designated
+**generator** channel, and deletes it automatically once it's empty. The member who created it
+gets an owner control panel to manage it.
+
+## Commands
+
+`/tempvc` has no `requiredPermit` of its own — generator management is intended for admins via
+the dashboard or server permissions, while the owner control panel (below) is scoped to whoever
+created the channel.
+
+| Command | Description |
+| :--- | :--- |
+| `/tempvc panel` | Open the owner control panel for your active temp channel. |
+| `/tempvc generator add` | Register a channel as a temp-VC generator. |
+| `/tempvc generator remove` | Remove a generator. |
+| `/tempvc generator list` | List registered generators. |
+
+## Name templates
+
+Channel names support `{username}`, `{name}`/`{nickname}`, `{number}`, and `{position}`
+placeholders. `/tempvc generator add`'s `name` option autocompletes with presets like
+`🎙️ {}`, `😎 Chill {}`, `🎮 Gaming {}`, `📚 Study {}`, `📺 Stream {}`, and `👤 {username}'s VC`.
+
+## Config
+
+| Key | Description | Default |
+| :--- | :--- | :--- |
+| `create_cooldown_seconds` | How long a member must wait between creating temp channels. | 30 |
+| `max_generators` | How many generator channels can exist at once. | 25 |
+| `default_name_template` | Pre-fills new generators. | `{username}'s Channel` |
+
+## Data and privacy
+
+Only the owner's user ID is stored, on the active channel record — deleted automatically when
+the channel empties, or on GDPR erasure. See
+[Data and Privacy](/docs/reference/data-and-privacy).

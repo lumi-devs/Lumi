@@ -1,0 +1,17 @@
+{
+  "title": "Guides",
+  "pages": [
+    "dashboard",
+    "moderation",
+    "automod",
+    "economy",
+    "welcome-and-goodbye",
+    "reaction-roles",
+    "temp-voice-channels",
+    "afk",
+    "logging",
+    "security",
+    "permits",
+    "custom-emojis"
+  ]
+}

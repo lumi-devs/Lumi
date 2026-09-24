@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";
-import type { GuildSettingsPayload } from "@lumi/contracts";
+import type { RpcInput } from "@lumi/contracts/rpc";
+import { SupportedLocales } from "@lumi/contracts/rpc";
 import { setGuildSettings } from "#/actions/guild-actions";
 import { SaveBar } from "#/components/save-bar";
 import {
@@ -13,35 +14,41 @@ import {
   CardTitle,
   CardDescription,
 } from "#/components/ui/card";
-import { Field, Input, Select } from "#/components/ui/input";
+import { Field, Input } from "#/components/ui/input";
+import { Select } from "#/components/ui/select";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
-import type { GuildSettings, DashboardRoleView } from "#/lib/dashboard-data";
+import type { GuildSettings } from "@lumi/contracts/views";
 
-type FormState = GuildSettingsPayload;
+type FormState = RpcInput<"guild.settings.set">;
 
 const FormKeys = [
   "prefix",
-  "muteRoleId",
   "locale",
-  "timezone",
 ] as const satisfies readonly (keyof FormState)[];
 
-const FieldLabels: Record<keyof FormState, string> = {
+const FieldLabels: Record<(typeof FormKeys)[number], string> = {
   prefix: "Command prefix",
-  muteRoleId: "Mute role",
   locale: "Locale",
-  timezone: "Timezone",
 };
 
-const NullableStringFields = new Set<keyof FormState>(["prefix", "muteRoleId"]);
+const NullableStringFields = new Set<keyof FormState>(["prefix"]);
+
+const LocaleOptions = SupportedLocales.map((locale) => ({
+  value: locale,
+  label: locale,
+}));
+
+function isSupportedLocale(
+  value: string,
+): value is (typeof SupportedLocales)[number] {
+  return (SupportedLocales as readonly string[]).includes(value);
+}
 
 function toFormState(settings: GuildSettings): FormState {
   return {
     prefix: settings.prefix ?? "",
-    muteRoleId: (settings["muteRoleId"]) ?? "",
-    locale: settings.locale ?? "en-US",
-    timezone: (settings["timezone"]) ?? "UTC",
+    locale: isSupportedLocale(settings.locale) ? settings.locale : "en-US",
   };
 }
 
@@ -56,11 +63,9 @@ type SyncMessage =
 export function GeneralSettingsForm({
   guildId,
   settings,
-  roles,
 }: {
   guildId: string;
   settings: GuildSettings;
-  roles: DashboardRoleView[];
 }) {
   const sectionsRef = useStaggerIn<HTMLDivElement>("> div");
   const [baseline, setBaseline] = useState<FormState>(() => toFormState(settings));
@@ -85,7 +90,7 @@ export function GeneralSettingsForm({
     (newBaseline: FormState) => {
       const oldBaseline = baselineRef.current;
       const currentForm = formRef.current;
-      const conflicts: (keyof FormState)[] = [];
+      const conflicts: (typeof FormKeys)[number][] = [];
       let changed = false;
       const next = { ...currentForm };
 
@@ -169,7 +174,7 @@ export function GeneralSettingsForm({
           const value = form[key];
           return [key, NullableStringFields.has(key) && value === "" ? null : value];
         }),
-      ) as GuildSettingsPayload;
+      ) as RpcInput<"guild.settings.set">;
 
       const res = await setGuildSettings(guildId, patch);
       if (!res.ok) {
@@ -219,18 +224,14 @@ export function GeneralSettingsForm({
                 onChange={(e) => field("prefix", e.target.value)}
               />
             </Field>
-            <Field label="Locale" htmlFor="locale" hint="BCP-47 tag, e.g. en-US.">
-              <Input
+            <Field label="Locale" htmlFor="locale" hint="More locales land via Crowdin.">
+              <Select
                 id="locale"
-                value={form.locale ?? ""}
-                onChange={(e) => field("locale", e.target.value)}
-              />
-            </Field>
-            <Field label="Timezone" htmlFor="timezone" hint="IANA name, e.g. Europe/Berlin.">
-              <Input
-                id="timezone"
-                value={form.timezone ?? ""}
-                onChange={(e) => field("timezone", e.target.value)}
+                value={form.locale ?? "en-US"}
+                onValueChange={(value) => {
+                  if (isSupportedLocale(value)) field("locale", value);
+                }}
+                options={LocaleOptions}
               />
             </Field>
           </CardBody>
@@ -257,20 +258,6 @@ export function GeneralSettingsForm({
           </CardHeader>
           {advancedOpen ? (
             <CardBody className="grid animate-in fade-in slide-in-from-top-1 grid-cols-1 gap-4 duration-200 sm:grid-cols-2">
-              <Field label="Mute role" htmlFor="muteRoleId">
-                <Select
-                  id="muteRoleId"
-                  value={form.muteRoleId ?? ""}
-                  onChange={(e) => field("muteRoleId", e.target.value || null)}
-                >
-                  <option value="">None</option>
-                  {roles.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
               <Field label="Ignored channels" htmlFor="ignored-channels-link">
                 <Link
                   id="ignored-channels-link"

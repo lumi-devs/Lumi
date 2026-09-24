@@ -1,12 +1,12 @@
 import { container } from "@sapphire/framework";
-import type { EconomyAccount } from "@prisma/client";
-import type { EconomyRepository } from "#lib/prisma/repositories/EconomyRepository.js";
+import type { EconomyAccount, EconomyTxnKind } from "@prisma/client";
+import type { EconomyRepository } from "#modules/economy/data/EconomyRepository.js";
 import {
   resolveSlotPayout,
   spinSlots,
   type SlotSpin,
-} from "../lib/slots.js";
-import type { EconomyConfig } from "../index.js";
+} from "./slots.js";
+import type { EconomyConfig } from "../config.js";
 
 export class EconomyError extends Error {
   public readonly code: string;
@@ -312,7 +312,7 @@ export class BankService {
     const current = vault === "wallet" ? account.wallet : account.bank;
     let walletDelta = 0;
     let bankDelta = 0;
-    let kind: string;
+    let kind: EconomyTxnKind;
     if (operation === "add") {
       const headroom = Math.max(
         0,

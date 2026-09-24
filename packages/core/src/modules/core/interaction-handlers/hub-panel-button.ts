@@ -3,8 +3,8 @@ import type { LumiT } from "#lib/i18n/index.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { restartChoiceRow } from "#lib/restart.js";
-import type { DownloaderUtility } from "#utilities/pieces/DownloaderUtility.js";
-import type { GuildSettingsUtility } from "#utilities/pieces/GuildSettingsUtility.js";
+import type { DownloaderUtility } from "../utilities/DownloaderUtility.js";
+import type { GuildSettingsUtility } from "../utilities/GuildSettingsUtility.js";
 import {
   accessDenied,
   hasAdminPermit,
@@ -13,8 +13,8 @@ import {
   renderPermissions,
   renderRepoModules,
   renderSettings,
-} from "#modules/core/lib/hub-panel.js";
-import { loadFeatures } from "#modules/core/lib/config-panel.js";
+} from "../services/hub-panel.js";
+import { loadFeatures } from "../services/config-panel.js";
 import {
   buildAddonInstalledView,
   buildAddonReposView,
@@ -25,14 +25,10 @@ import {
 import { DefaultPrefix } from "#modules/core/ui/hub.js";
 import { buildFeatureListView } from "#modules/core/ui/modules.js";
 import { buildPermitPickerView } from "#modules/core/ui/permissions.js";
-import { Emojis } from "#utilities/assets.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeInfoCard,
-  makeSuccessCard,
-} from "#utilities/cards.js";
-import { getCoreUpdateStatus, updateLumiCore } from "#utilities/self-update.js";
+import { Emojis } from "#lib/utilities/assets.js";
+import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard } from "#lib/ui/cards.js";
+import { getCoreUpdateStatus, updateLumiCore } from "#lib/utilities/self-update.js";
+import { HubAddonModalId, HubId } from "../constants.js";
 import {
   ActionRowBuilder,
   ModalBuilder,
@@ -63,8 +59,10 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
   }
 
   public override parse(interaction: ButtonInteraction) {
-    if (!interaction.customId.startsWith("lumi:")) return this.none();
-    const [, action, sub, ...rest] = interaction.customId.split(":");
+    const parsed = HubId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    const { action, rest: tail } = parsed;
+    const [sub, ...rest] = tail;
     return this.some({ action, sub, rest });
   }
 
@@ -559,7 +557,9 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
           .setPlaceholder(placeholder),
       );
 
-    const modal = new ModalBuilder().setCustomId(`lumi:addonmodal:${action}`);
+    const modal = new ModalBuilder().setCustomId(
+      HubAddonModalId.build({ action }),
+    );
 
     if (action === "add_repo") {
       modal

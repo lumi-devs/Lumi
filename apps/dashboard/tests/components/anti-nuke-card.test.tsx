@@ -1,22 +1,16 @@
-// @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { FieldType, type ConfigField } from "@lumi/contracts";
-import type { ActionResult } from "#/actions/guild-actions";
+import { guildActionsMock } from "../setup";
 
-const setGuildConfigField = vi.fn<() => Promise<ActionResult>>();
-const setManyGuildConfigFields = vi.fn<() => Promise<ActionResult>>();
-vi.mock("#/actions/guild-actions", () => ({
-  setGuildConfigField,
-  setManyGuildConfigFields,
-}));
+const { setGuildConfigField, setManyGuildConfigFields } = guildActionsMock;
 
 const { AntiNukeCard } = await import("#/components/guild/anti-nuke-card");
 
 const NukeResponses = ["log", "quarantine", "ban"];
 
 function num(key: string, label: string): ConfigField {
-  return { key, label, type: FieldType.Number, description: `${label} description.` };
+  return { key, label, type: FieldType.Number, description: `${label} description.`, group: "Nuke Limits" };
 }
 
 function response(key: string, label: string): ConfigField {
@@ -26,6 +20,7 @@ function response(key: string, label: string): ConfigField {
     type: FieldType.Enum,
     description: `${label} description.`,
     choices: NukeResponses,
+    group: "Nuke Limits",
   };
 }
 
@@ -33,10 +28,10 @@ function response(key: string, label: string): ConfigField {
  * `response_*` counterparts (vanity / permission grants / quarantine bypass
  * are limit-only). */
 const configFields: ConfigField[] = [
-  { key: "antinuke_enabled", label: "Anti-Nuke", type: FieldType.Boolean, description: "Watch the audit log." },
-  num("window_seconds", "Detection Window"),
-  { key: "trusted_role_ids", label: "Trusted Roles", type: FieldType.MultiRole, description: "Exempt roles." },
-  { key: "log_channel_id", label: "Security Log Channel", type: FieldType.Channel, description: "Alerts go here." },
+  { key: "antinuke_enabled", label: "Anti-Nuke", type: FieldType.Boolean, description: "Watch the audit log.", group: "Anti-Nuke" },
+  { key: "window_seconds", label: "Detection Window", type: FieldType.Number, description: "Detection Window description.", group: "Anti-Nuke" },
+  { key: "trusted_role_ids", label: "Trusted Roles", type: FieldType.MultiRole, description: "Exempt roles.", group: "Anti-Nuke" },
+  { key: "log_channel_id", label: "Security Log Channel", type: FieldType.Channel, description: "Alerts go here.", group: "Anti-Nuke" },
   num("max_bans", "Max Bans"),
   response("response_bans", "Response — Bans"),
   num("max_kicks", "Max Kicks"),
@@ -115,13 +110,16 @@ describe("AntiNukeCard (schema-driven nuke matrix)", () => {
 
   it("renders a response select only where the schema carries a response_* key", () => {
     renderCard();
-    expect(screen.getAllByDisplayValue("quarantine")).toHaveLength(5);
+    const triggers = screen.getAllByRole("combobox");
+    expect(triggers.filter((t) => t.textContent === "quarantine")).toHaveLength(5);
     expect(screen.getAllByText("—")).toHaveLength(3);
   });
 
   it("edits trusted roles through the roles directory, not free text", () => {
     renderCard();
-    expect(screen.getByRole("option", { name: "@Moderators" })).toBeInTheDocument();
+    expect(screen.getByText("@Moderators")).toBeInTheDocument();
+    fireEvent.focus(screen.getByRole("combobox", { name: "Trusted Roles" }));
+    expect(screen.getByRole("option", { name: "@Helpers" })).toBeInTheDocument();
     expect(screen.queryByText(/comma-separated/i)).not.toBeInTheDocument();
   });
 

@@ -2,7 +2,6 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { container } from "@sapphire/framework";
-import { Stopwatch } from "@sapphire/stopwatch";
 import { pgPoolSize, pgPoolUsed, pgPoolWaiting } from "@lumi/observability";
 
 import {
@@ -42,13 +41,13 @@ const createPrismaClient = (clientAdapter: PrismaPg) => {
     query: {
       $allModels: {
         async $allOperations({ operation, model, args, query }) {
-          const sw = new Stopwatch();
+          const start = performance.now();
           const result = await query(args);
-          sw.stop();
+          const elapsedMs = performance.now() - start;
 
-          if (sw.duration > 1000) {
+          if (elapsedMs > 1000) {
             container.logger?.warn(
-              `[Prisma Diagnostic] Query exceeded 1000ms: ${model}.${operation} took ${sw}`,
+              `[Prisma Diagnostic] Query exceeded 1000ms: ${model}.${operation} took ${Math.round(elapsedMs)}ms`,
             );
           }
 
@@ -89,8 +88,6 @@ export const prismaReader = replicaPool
   ? createPrismaClient(new PrismaPg(replicaPool))
   : prisma;
 
-export const hasReadReplica = replicaPool !== null;
-
 /** Drain both pools on shutdown; neither is closed anywhere else. */
 export async function disconnectDatabase(): Promise<void> {
   poolStatsTimer.close();
@@ -104,4 +101,3 @@ export async function disconnectDatabase(): Promise<void> {
 
 export type DatabaseClient = typeof prisma;
 
-export * from "@prisma/client";

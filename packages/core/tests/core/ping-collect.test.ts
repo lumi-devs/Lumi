@@ -1,17 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, spyOn } from "bun:test";
 import { container } from "@sapphire/framework";
-
-vi.mock("@sapphire/fetch", () => ({
-  fetch: vi.fn().mockResolvedValue("colo=LHR\n"),
-  FetchResultTypes: { Text: "text" },
-}));
-
-import { collectPingData, getRuntimeLabel } from "#modules/core/lib/ping-collect.js";
+import { collectPingData, getRuntimeLabel } from "#modules/core/services/ping-collect.js";
 
 const Semver = /^\d+\.\d+\.\d+/;
 
 describe("collectPingData", () => {
   beforeEach(() => {
+    spyOn(globalThis, "fetch").mockResolvedValue(new Response("colo=LHR\n"));
+
     container.logger = {
       info: vi.fn(),
       warn: vi.fn(),

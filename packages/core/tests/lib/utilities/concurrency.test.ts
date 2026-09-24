@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { mapWithConcurrency } from "../../../src/lib/utilities/concurrency.js";
 
 const tick = () => new Promise((r) => setTimeout(r, 1));

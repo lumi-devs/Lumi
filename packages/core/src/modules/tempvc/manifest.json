@@ -24,21 +24,77 @@
       "type": "NUMBER",
       "label": "Creation Cooldown (seconds)",
       "description": "How long a member must wait between creating temp channels.",
-      "default": 30
+      "default": 30,
+      "min": 0,
+      "max": 300
     },
     {
       "key": "max_generators",
       "type": "NUMBER",
       "label": "Max Generator Channels",
       "description": "How many trigger channels can exist in this server at once.",
-      "default": 25
+      "default": 25,
+      "min": 1,
+      "max": 25
     },
     {
       "key": "default_name_template",
       "type": "STRING",
       "label": "Default Channel Name Pattern",
       "description": "Used to pre-fill new generators. Supports {username}, {name}/{nickname}, {number}, {position} — see the Voice Generators page for details.",
-      "default": "{username}'s Channel"
+      "default": "{username}'s Channel",
+      "format": "template",
+      "templateVars": [
+        "username",
+        "name",
+        "nickname",
+        "number",
+        "position"
+      ]
+    },
+    {
+      "key": "panel_title",
+      "type": "STRING",
+      "label": "Control Panel Title",
+      "description": "Heading on the owner control panel posted in each temp channel.",
+      "default": "🔊 Voice Channel Controls"
+    },
+    {
+      "key": "panel_message",
+      "type": "STRING",
+      "label": "Control Panel Message",
+      "description": "Body of the owner control panel. Supports {channel}, {owner}, {limit} and {status}. The controls themselves are always attached below it.",
+      "default": "**Channel:** {channel}\n**Owner:** {owner}\n**Limit:** `{limit}`\n**Status:** {status}",
+      "format": "template",
+      "templateVars": [
+        "channel",
+        "owner",
+        "limit",
+        "status"
+      ]
+    },
+    {
+      "key": "panel_color",
+      "type": "STRING",
+      "label": "Control Panel Accent Color",
+      "description": "Hex accent for the control panel, like #5865F2. Empty uses the theme colour.",
+      "default": "",
+      "format": "color"
+    },
+    {
+      "key": "panel_rich_content",
+      "type": "COMPONENTS_V2_BLOCKS",
+      "label": "Advanced Layout",
+      "description": "Optional block-based layout (Section, Media Gallery, Separator) for the panel's title and body. When it has any blocks, it replaces the title and message above. The manage-channel menu and Claim Ownership button are always attached below regardless — they're what the panel's controls dispatch on, so they can't be removed here.",
+      "default": {
+        "blocks": []
+      },
+      "templateVars": [
+        "channel",
+        "owner",
+        "limit",
+        "status"
+      ]
     }
   ],
   "category": "System"

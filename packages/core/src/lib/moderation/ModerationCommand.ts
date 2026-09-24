@@ -1,23 +1,47 @@
-import { BaseCommand, type CommandContext } from "#lib/commands.js";
+import { BaseCommand } from "#lib/commands.js";
+import type { CommandContext } from "#lib/command-context.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
-import { confirmPrompt, type ConfirmPromptOptions } from "#lib/utilities/confirm.js";
+import {
+  confirmPrompt,
+  type ConfirmPromptContext,
+  type ConfirmPromptOptions,
+} from "#lib/utilities/confirm.js";
 import { logError } from "#lib/utilities/errors.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
-import { sleep } from "#lib/runtime.js";
 import { isNullish } from "@sapphire/utilities";
+import { Time } from "@sapphire/time-utilities";
 import { Result, container, type Awaitable } from "@sapphire/framework";
 import type { Guild, GuildMember, User } from "discord.js";
+import type { CaseAction } from "@prisma/client";
 
-const Root = LanguageKeys.Commands;
+const Root = "commands";
 
 function targetIdOf(target: ModerationCommand.TargetLike): string {
   return typeof target === "string" ? target : target.id;
 }
 
+/**
+ * The slice of {@linkcode CommandContext} {@linkcode checkHierarchy} needs -
+ * satisfied by a real `CommandContext` and also by a lightweight adapter for
+ * a flow that isn't a full command invocation (e.g. a context-menu command's
+ * follow-up modal), so that flow enforces the same hierarchy boundary instead
+ * of calling the punishment action directly.
+ */
+export interface HierarchyCheckContext {
+  guild: Guild | null;
+  member: GuildMember | null;
+}
+
+/** {@linkcode checkHierarchy}'s context plus what {@linkcode checkDuplicateCase} forwards into `confirmPrompt`. */
+export interface DuplicateCaseCheckContext
+  extends HierarchyCheckContext,
+    ConfirmPromptContext {}
+
 async function readReason(ctx: CommandContext, t: LumiT): Promise<string> {
-  return (await ctx.getString("reason", { rest: true })) ?? t(Root.ModNoReason);
+  return (
+    (await ctx.getString("reason", { rest: true })) ?? t(`${Root}:modNoReason`)
+  );
 }
 
 function replyFailure(
@@ -29,15 +53,15 @@ function replyFailure(
 
 function memberNotFound(t: LumiT): ModerationCommand.Reply {
   return {
-    title: t(Root.ModMemberNotFoundTitle),
-    body: t(Root.ModMemberNotFound),
+    title: t(`${Root}:modMemberNotFoundTitle`),
+    body: t(`${Root}:modMemberNotFound`),
   };
 }
 
 function actionFailed(t: LumiT): ModerationCommand.Reply {
   return {
-    title: t(Root.ModActionFailedTitle),
-    body: t(Root.ModActionFailed),
+    title: t(`${Root}:modActionFailedTitle`),
+    body: t(`${Root}:modActionFailed`),
   };
 }
 
@@ -68,9 +92,56 @@ async function checkPanicLock(
   if (state.actorId === moderator.id) return null;
 
   return {
-    title: t(Root.ModPanicLockedTitle),
-    body: t(Root.ModPanicLocked),
+    title: t(`${Root}:modPanicLockedTitle`),
+    body: t(`${Root}:modPanicLocked`),
   };
+}
+
+/**
+ * If a case matching `duplicateCaseAction` against this target was opened
+ * within the guild's configured window, shows a confirmation prompt instead
+ * of silently opening a second case. Returns `false` only when the prompt
+ * was shown and the invoker declined - every other outcome (no duplicate, no
+ * window configured, prompt confirmed) lets the run proceed.
+ */
+export async function checkDuplicateCase(
+  ctx: DuplicateCaseCheckContext,
+  t: LumiT,
+  targetId: string,
+  action: CaseAction,
+): Promise<boolean> {
+  const guild = ctx.guild;
+  if (!guild) return true;
+
+  const windowRaw = await container.db.config.getModuleConfig(
+    guild.id,
+    "mod",
+    "duplicate_case_window_minutes",
+  );
+  const windowMinutes = typeof windowRaw === "number" ? windowRaw : 5;
+  if (windowMinutes <= 0) return true;
+
+  const [recent] = await container.db.moderation.getModerationCases(
+    guild.id,
+    targetId,
+    action,
+  );
+  if (!recent) return true;
+
+  const ageMinutes = (Date.now() - recent.createdAt.getTime()) / Time.Minute;
+  if (ageMinutes > windowMinutes) return true;
+
+  const result = await confirmPrompt(ctx, {
+    title: t(`${Root}:modDuplicateCaseTitle`),
+    body: t(`${Root}:modDuplicateCaseBody`, {
+      caseNumber: recent.caseNumber,
+      user: `<@${targetId}>`,
+      minutes: Math.round(ageMinutes),
+      moderator: `<@${recent.moderatorId}>`,
+    }),
+    confirmLabel: t(`${Root}:modDuplicateCaseButton`),
+  });
+  return result.confirmed;
 }
 
 /**
@@ -82,8 +153,8 @@ async function checkPanicLock(
  *
  * @returns the reply to fail with, or null when the action may proceed.
  */
-async function checkHierarchy(
-  ctx: CommandContext,
+export async function checkHierarchy(
+  ctx: HierarchyCheckContext,
   target: ModerationCommand.TargetLike,
   t: LumiT,
 ): Promise<ModerationCommand.Reply | null> {
@@ -96,8 +167,8 @@ async function checkHierarchy(
   if (targetId === moderator.id) return null;
 
   const deny = (user: string): ModerationCommand.Reply => ({
-    title: t(Root.ModHierarchyTitle),
-    body: t(Root.ModHierarchy, { user }),
+    title: t(`${Root}:modHierarchyTitle`),
+    body: t(`${Root}:modHierarchy`, { user }),
   });
 
   if (targetId === guild.ownerId) return deny(`<@${targetId}>`);
@@ -257,10 +328,6 @@ export async function runModerationFlow<
     return replyFailure(ctx, flow.targetNotFound?.(t) ?? memberNotFound(t));
   }
 
-  const reason = flow.resolveReason
-    ? await flow.resolveReason(ctx, t)
-    : await readReason(ctx, t);
-
   const prepared: PreparedEntry<Target, Prepared>[] = [];
   const rejected: RejectedEntry<Target>[] = [];
 
@@ -282,6 +349,13 @@ export async function runModerationFlow<
     prepared.push({ target, prepared: result.unwrap() });
   }
 
+  // Last, because on a prefix invocation this consumes every remaining
+  // argument: reading it before `preHandle` would swallow the options
+  // `preHandle` still has to pick, such as a trailing duration.
+  const reason = flow.resolveReason
+    ? await flow.resolveReason(ctx, t)
+    : await readReason(ctx, t);
+
   if (prepared.length === 0) {
     // A single rejection keeps its specific reply (e.g. the hierarchy-denial
     // title/body); more than one must go through the aggregated card below,
@@ -290,6 +364,16 @@ export async function runModerationFlow<
       return replyFailure(ctx, rejected[0]!.reply);
     }
     return replyBatchResult(ctx, t, flow, [], rejected);
+  }
+
+  if (flow.duplicateCaseAction && prepared.length === 1) {
+    const proceed = await checkDuplicateCase(
+      ctx,
+      t,
+      targetIdOf(prepared[0]!.target),
+      flow.duplicateCaseAction,
+    );
+    if (!proceed) return;
   }
 
   if (flow.confirm) {
@@ -364,7 +448,7 @@ export async function runModerationFlow<
     // a 25-target `/ban` doesn't burst the guild's audit-log/ban rate limit.
     await mapWithConcurrency(prepared, DefaultBatchConcurrency, async (entry) => {
       await runOne(entry);
-      await sleep(BatchStaggerMs);
+      await Bun.sleep(BatchStaggerMs);
     });
   }
 
@@ -399,12 +483,16 @@ export abstract class ModerationCommand<
    */
   protected readonly logScope: string | undefined;
 
+  /** See {@linkcode ModerationCommand.Flow.duplicateCaseAction}. Subclasses that apply a punishment override this with their case `action` string. */
+  protected readonly duplicateCaseAction: CaseAction | undefined;
+
   public constructor(
     context: ModerationCommand.LoaderContext,
     options: ModerationCommand.Options,
   ) {
     super(context, options);
     this.logScope = options.logScope;
+    this.duplicateCaseAction = options.duplicateCaseAction;
   }
 
   public override run(ctx: CommandContext): Promise<void> {
@@ -496,6 +584,7 @@ export abstract class ModerationCommand<
   #flow(): ModerationCommand.Flow<Target, Outcome, Prepared> {
     return {
       logScope: this.logScope,
+      duplicateCaseAction: this.duplicateCaseAction,
       resolveTarget: (ctx, t) => this.resolveTarget(ctx, t),
       targetNotFound: (t) => this.targetNotFound(t),
       preHandle: (ctx, t, target) => this.preHandle(ctx, t, target),
@@ -514,6 +603,8 @@ export namespace ModerationCommand {
   export type Options = BaseCommand.Options & {
     /** See {@linkcode ModerationCommand.logScope}. */
     logScope?: string;
+    /** See {@linkcode ModerationCommand.duplicateCaseAction}. */
+    duplicateCaseAction?: CaseAction;
   };
   export type LoaderContext = BaseCommand.LoaderContext;
   export type Registry = BaseCommand.Registry;
@@ -554,6 +645,8 @@ export namespace ModerationCommand {
    */
   export interface Flow<Target extends TargetLike, Outcome, Prepared = null> {
     logScope?: string;
+    /** The case `action` string this flow's duplicate-case window check matches against (e.g. "kick", "warn"). Omit to skip the check. */
+    duplicateCaseAction?: CaseAction;
     resolveTarget(
       ctx: CommandContext,
       t: LumiT,

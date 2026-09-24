@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi } from "bun:test";
 import { container } from "@sapphire/framework";
 import {
   MaxMassTargets,

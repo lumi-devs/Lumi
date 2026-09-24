@@ -1,12 +1,12 @@
 import type { LumiT } from "#lib/i18n/index.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import type { GuildMember } from "discord.js";
-import { WarnAction } from "../actions/index.js";
+import type { AutocompleteInteraction, GuildMember } from "discord.js";
+import { WarnAction } from "#modules/mod/services/actions/WarnAction.js";
+import { respondWithReasonChoices } from "../services/reason-autocomplete.js";
 
-const Root = LanguageKeys.Commands;
+const Root = "commands";
 
 type Warned = Awaited<ReturnType<typeof WarnAction.apply>>;
 type Context = ModerationCommand.ActionContext<GuildMember>;
@@ -18,6 +18,7 @@ type Success = ModerationCommand.OutcomeContext<GuildMember, Warned>;
   preconditions: ["GuildOnly"],
   requiredPermit: "mod.*",
   prefixEnabled: true,
+  duplicateCaseAction: "warn",
 })
 export class WarnCommand extends ModerationCommand<GuildMember, Warned> {
   public override registerApplicationCommands(
@@ -29,9 +30,17 @@ export class WarnCommand extends ModerationCommand<GuildMember, Warned> {
           applyLocalizedBuilder(o, "commands:warnMember").setRequired(true),
         )
         .addStringOption((o) =>
-          applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
+          applyLocalizedBuilder(o, "commands:modReason")
+            .setRequired(false)
+            .setAutocomplete(true),
         ),
     );
+  }
+
+  public override async autocompleteRun(
+    interaction: AutocompleteInteraction,
+  ): Promise<void> {
+    return respondWithReasonChoices(interaction);
   }
 
   protected override resolveTarget(ctx: ModerationCommand.RunContext) {
@@ -47,8 +56,8 @@ export class WarnCommand extends ModerationCommand<GuildMember, Warned> {
     { target, reason, outcome }: Success,
   ) {
     return {
-      title: t(Root.WarnSuccessTitle),
-      body: t(Root.WarnSuccess, {
+      title: t(`${Root}:warnSuccessTitle`),
+      body: t(`${Root}:warnSuccess`, {
         user: target.user.username,
         reason,
         caseNumber: outcome.caseRecord.caseNumber,

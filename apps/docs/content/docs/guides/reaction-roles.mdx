@@ -1,0 +1,43 @@
+---
+title: Reaction Roles
+description: Self-serve role menus via buttons, a dropdown, or reactions.
+---
+
+The `reactionroles` module (🎭) offers self-serve role menus in three modes — button rows, a
+multi-pick dropdown (`select`), or raw message reactions — including exclusive (single-pick) and
+role-gated options.
+
+## Commands
+
+All under `/reactionroles`, requiring `reactionroles.manage`:
+
+| Command | Description |
+| :--- | :--- |
+| `/reactionroles menu create` | Create a new role menu. |
+| `/reactionroles menu delete` | Delete a role menu. |
+| `/reactionroles menu list` | List role menus for this server. |
+| `/reactionroles menu post` | Post a menu's embed/panel to a channel. |
+| `/reactionroles menu panel` | Open the menu's edit panel. |
+| `/reactionroles option add` | Add a role option to a menu. |
+| `/reactionroles option remove` | Remove a role option from a menu. |
+
+## Menu behavior
+
+- **Exclusive menus** cap a member to one role from the menu — picking a new option removes
+  their previous one from that menu.
+- **Gated options** can require a role (`requiredRoleId`) the member must already hold before
+  the option is selectable.
+- Button and dropdown menus hold a limited number of options; reaction menus are capped
+  similarly. Exceeding the cap is rejected with the number of options to remove.
+
+## Config
+
+| Key | Description | Default |
+| :--- | :--- | :--- |
+| `max_menus` | How many role menus can exist in this server at once. | 25 |
+
+## Data and privacy
+
+Role-menu definitions (titles, role IDs, gates) are stored per server. Role assignments
+themselves live on Discord and are removed by unassigning the role — see
+[Data and Privacy](/docs/reference/data-and-privacy).

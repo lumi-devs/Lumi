@@ -10,7 +10,8 @@
   },
   "scripts": {
     "start": "bun src/main.ts",
-    "dev": "bun --watch src/main.ts"
+    "dev": "bun --watch src/main.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@lumi/core": "workspace:*",

@@ -1,5 +1,4 @@
 import {
-  InteractionHandler,
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
@@ -10,50 +9,48 @@ import type {
 } from "discord.js";
 import { MessageFlags } from "discord.js";
 import { fetchTyped } from "#lib/commands.js";
-import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeSuccessCard,
-} from "#utilities/cards.js";
+import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
 import { logError } from "#lib/utilities/errors.js";
-import { isModuleEnabled } from "#lib/utilities/misc.js";
-import { Rr } from "#modules/reactionroles/keys.js";
+import { ReactionRolePickId } from "../constants.js";
 import type ReactionRolesUtility from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
 
-@ApplyOptions<InteractionHandler.Options>({
+@ApplyOptions<ModuleInteractionHandler.Options>({
   name: "reactionroles-pick-button",
   interactionHandlerType: InteractionHandlerTypes.Button,
+  module: "reactionroles",
 })
-export class ReactionRolesPickButtonHandler extends BaseInteractionHandler {
+export class ReactionRolesPickButtonHandler extends ModuleInteractionHandler<
+  ButtonInteraction,
+  { menuId: string; optionId: string }
+> {
   private get service(): ReactionRolesUtility {
     return getUtility("reactionroles");
   }
 
   public override parse(interaction: Interaction) {
     if (!interaction.isButton()) return this.none();
-    if (!interaction.customId.startsWith(`${Rr}:pick:`)) return this.none();
-    const [, , menuId, optionId] = interaction.customId.split(":");
-    if (!menuId || !optionId) return this.none();
-    return this.some({ menuId, optionId });
+    const parsed = ReactionRolePickId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    return this.some(parsed);
   }
 
-  public async run(
+  protected override async handle(
     interaction: ButtonInteraction,
     { menuId, optionId }: { menuId: string; optionId: string },
   ): Promise<void> {
-    if (!interaction.inGuild()) return;
+    const { guild } = interaction;
+    if (!guild) return;
     await interaction.deferReply({
       flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     });
     const t = await fetchTyped(interaction);
-    if (!(await isModuleEnabled(interaction.guildId, "reactionroles"))) return;
 
     const member = interaction.member as GuildMember;
     try {
       const result = await this.service.toggleOption(
-        interaction.guild!,
+        guild,
         member,
         menuId,
         optionId,

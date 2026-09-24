@@ -1,0 +1,25 @@
+---
+title: Introduction
+description: What Lumi is and how the pieces fit together.
+---
+
+Lumi is a self-hosted, modular Discord bot. One worker process — sharded with discord.js's
+`ShardingManager` — runs every built-in module, and a separate Next.js dashboard administers it
+over an internal HTTP RPC bridge. The dashboard never holds the bot token and never opens a
+database connection directly.
+
+Twelve built-in modules ship with Lumi: `afk`, `core`, `dashboard`, `economy`, `filter`,
+`logging`, `mod`, `reactionroles`, `security`, `tempvc`, `utility`, and `welcome`. `core` and
+`dashboard` are infrastructure and can't be disabled; the other ten are ordinary feature modules a
+server admin can turn on or off per guild. See the [module reference](/docs/reference/environment-variables)
+and [module guides](/docs/guides/dashboard) for what each one does.
+
+## Where to go next
+
+1. **[Prerequisites](/docs/getting-started/prerequisites)** — what you need installed before you boot anything.
+2. **[Quickstart](/docs/getting-started/quickstart)** — boot the stack with Nix and Docker Compose.
+3. **[Configuration](/docs/getting-started/configuration)** — the environment variables you'll actually set.
+4. **[First commands](/docs/getting-started/first-commands)** — invite the bot and enable a module.
+
+For how the pieces talk to each other once it's running, see
+[Architecture](/docs/reference/architecture).

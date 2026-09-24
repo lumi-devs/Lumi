@@ -1,9 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { DownloadCommand } from "#modules/core/commands/download.js";
+import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 
-vi.mock("#lib/module-system/Utility.js", async (importOriginal) => {
-  const actual: any = await importOriginal();
+const __actualModule2 = await import("#lib/module-system/Utility.js");
+vi.mock("#lib/module-system/Utility.js", () => {
+  const actual: any = __actualModule2;
   return { ...actual, getUtility: vi.fn() };
 });
 
@@ -11,8 +13,9 @@ vi.mock("#lib/utilities/confirm.js", () => ({
   confirmPrompt: vi.fn().mockResolvedValue({ confirmed: true, message: {} }),
 }));
 
-vi.mock("#lib/utilities/autocomplete.js", async (importOriginal) => {
-  const actual: any = await importOriginal();
+const __actualModule3 = await import("#lib/utilities/autocomplete.js");
+vi.mock("#lib/utilities/autocomplete.js", () => {
+  const actual: any = __actualModule3;
   return { ...actual, respondWithChoices: vi.fn().mockResolvedValue(undefined) };
 });
 
@@ -46,6 +49,7 @@ describe("DownloadCommand", () => {
       debug: vi.fn(),
     } as any;
     (container as any).client = { options: {} };
+    vi.spyOn(PermitResolver, "isBotOwner").mockReturnValue(true);
 
     command = new DownloadCommand(
       {
@@ -218,6 +222,8 @@ describe("DownloadCommand", () => {
       repoOption: string | null = null,
     ) {
       return {
+        user: { id: "owner-1" },
+        respond: vi.fn().mockResolvedValue(undefined),
         options: {
           getFocused: vi
             .fn()
@@ -299,6 +305,20 @@ describe("DownloadCommand", () => {
       expect(respondWithChoices).toHaveBeenCalledWith(expect.anything(), [
         "economy",
       ]);
+    });
+
+    it("responds empty and does not look up installed modules for a non-owner", async () => {
+      (PermitResolver.isBotOwner as any).mockReturnValue(false);
+      downloader.getInstalledModules.mockResolvedValue([
+        { moduleName: "economy" },
+      ]);
+      const interaction = autocompleteInteraction("module", "uninstall");
+
+      await command.autocompleteRun(interaction);
+
+      expect(interaction.respond).toHaveBeenCalledWith([]);
+      expect(respondWithChoices).not.toHaveBeenCalled();
+      expect(downloader.getInstalledModules).not.toHaveBeenCalled();
     });
   });
 });

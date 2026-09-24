@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi } from "bun:test";
 import { Result } from "@sapphire/framework";
 import { runModerationFlow } from "#lib/moderation/ModerationCommand.js";
 

@@ -1,0 +1,4 @@
+{
+  "title": "Deploy",
+  "pages": ["overview", "docker-compose", "kubernetes", "observability", "scaling"]
+}

@@ -3,14 +3,9 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { GuildMember } from "discord.js";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { logError } from "#lib/utilities/errors.js";
-import { loadWelcomeConfig } from "../lib/config.js";
-import { sendWelcomeCard } from "../lib/send.js";
-import {
-  buildDmWelcomeCard,
-  buildWelcomeCard,
-  renderWelcomeTemplate,
-  templateVarsFor,
-} from "../lib/template.js";
+import { loadWelcomeConfig } from "../services/welcome.js";
+import { sendWelcomeCard } from "../services/welcome.js";
+import { buildDmWelcomeCard, renderWelcomeCard, renderWelcomeTemplate, templateVarsFor } from "../services/welcome.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "welcomeMemberAdd",
@@ -27,22 +22,18 @@ export class WelcomeMemberAddListener extends ModuleListener<
       member.id,
       member.user.username,
       member.nickname,
+      member.displayAvatarURL(),
       member.guild.name,
+      member.guild.id,
+      member.guild.iconURL(),
       member.guild.memberCount,
     );
 
     if (config.welcomeEnabled && config.welcomeChannel) {
-      const autoRoleLine =
-        config.autoRoles.length > 0
-          ? `Auto-role${config.autoRoles.length === 1 ? "" : "s"}: ${config.autoRoles.map((id) => `<@&${id}>`).join(" ")}`
-          : undefined;
       await sendWelcomeCard(
         member.guild,
         config.welcomeChannel,
-        buildWelcomeCard(
-          renderWelcomeTemplate(config.welcomeTemplate, vars),
-          autoRoleLine,
-        ),
+        renderWelcomeCard(config, vars),
         "Welcome: Channel send failed",
       );
     }

@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { ChannelType } from "discord.js";
 import {
   resolveAnnounceChannel,
   runGlobalAnnounce,
   summarizeAnnounce,
-} from "../../../src/modules/core/lib/global-announce.js";
+} from "#modules/core/services/global-announce.js";
 
 interface FakeChannel {
   id: string;

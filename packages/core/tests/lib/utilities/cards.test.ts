@@ -1,14 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { MessageFlags } from "discord.js";
 import type { ContainerBuilder } from "@discordjs/builders";
-import {
-  makeListCard,
-  makeInfoCard,
-  ephemeralCard,
-  noPingCard,
-  fitLines,
-  TextDisplayLimit,
-} from "#lib/utilities/cards.js";
+import { makeListCard, makeInfoCard, ephemeralCard, noPingCard, fitLines, TextDisplayLimit } from "#lib/ui/cards.js";
 
 describe("cards utility makeListCard", () => {
   it("formats empty item list correctly", () => {

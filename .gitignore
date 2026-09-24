@@ -29,6 +29,7 @@ indirections.txt
 # Runtime-downloaded 3rd-party module repos (cloned by /repo at runtime). Contains
 # embedded git repos — never commit, never add as a submodule.
 /data/
+/packages/core/data/
 .agents/
 
 # Archives and binaries
@@ -42,3 +43,12 @@ indirections.txt
 .bug-hunter/
 apps/docs/AGENTS.md
 apps/docs/CLAUDE.md
+# Fumadocs build-time source collection and generated data (apps/docs).
+apps/docs/.source/
+apps/docs/src/generated/
+
+# Release working notes (audits, checkpoints, raw tool output). Scratch, not source.
+/.lumi-0.4/
+/.lumi-0.5/
+/ORIGINAL_REQUEST.md
+/PROJECT.md

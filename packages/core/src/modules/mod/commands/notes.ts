@@ -1,12 +1,11 @@
 import type { LumiT } from "#lib/i18n/index.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import type { GuildMember } from "discord.js";
-import { NotesAction } from "../actions/index.js";
+import { NotesAction } from "#modules/mod/services/actions/NotesAction.js";
 
-const Root = LanguageKeys.Commands;
+const Root = "commands";
 
 type Noted = Awaited<ReturnType<typeof NotesAction.apply>>;
 type Context = ModerationCommand.ActionContext<GuildMember>;
@@ -47,8 +46,8 @@ export class NotesCommand extends ModerationCommand<GuildMember, Noted> {
     { target, reason }: Success,
   ) {
     return {
-      title: t(Root.NotesSuccessTitle),
-      body: t(Root.NotesSuccess, {
+      title: t(`${Root}:notesSuccessTitle`),
+      body: t(`${Root}:notesSuccess`, {
         user: target.user.username,
         reason,
       }),

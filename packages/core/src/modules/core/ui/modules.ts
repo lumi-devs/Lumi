@@ -1,11 +1,8 @@
 import { chunk } from "@sapphire/utilities";
 import type { LumiT } from "#lib/i18n/index.js";
-import { PanelsKeys } from "#lib/i18n/keys.js";
-import {
-  FieldType,
-  type ConfigField,
-  type ModuleMeta,
-} from "#lib/module-system/Module.js";
+import { sectionsOf } from "@lumi/contracts";
+import { FieldType, type ConfigField } from "#lib/module-system/config-schema.js";
+import type { ModuleMeta } from "#lib/module-system/meta.js";
 import {
   formatFieldValue,
   formatPageFooter,
@@ -14,13 +11,9 @@ import {
   type Row,
 } from "#modules/core/ui/common.js";
 import { hubTabRow } from "#modules/core/ui/hub.js";
-import { Emojis } from "#utilities/assets.js";
-import {
-  resolveCardColor,
-  makeCard,
-  noPingCard,
-  type CardReply,
-} from "#utilities/cards.js";
+import { Emojis } from "#lib/utilities/assets.js";
+import { resolveCardColor } from "#lib/utilities/config.js";
+import { makeCard, noPingCard, type CardReply } from "#lib/ui/cards.js";
 import {
   buildSafeActionRows,
   createActionButton,
@@ -31,10 +24,11 @@ import {
   createStringSelectMenu,
   createUserSelectMenu,
   settingRow,
-} from "#utilities/panels.js";
+} from "#lib/ui/panels.js";
 import { StringSelectMenuOptionBuilder } from "@discordjs/builders";
 import { cutText } from "@sapphire/utilities";
 import { ButtonStyle, ChannelType } from "discord.js";
+import { ConfigButtonId } from "../constants.js";
 
 // Each settingRow is a Section with up to 2 text lines + 1 button = ~4 real
 // components once nested; card chrome (breadcrumbs/title/separator/status)
@@ -52,8 +46,8 @@ export interface FeatureListEntry {
 
 const formatStatusBadge = (status: "enabled" | "disabled", t?: LumiT) =>
   status === "enabled"
-    ? `${Emojis.Success} \`${t ? t(PanelsKeys.DetailEnabled) : "ENABLED"}\``
-    : `${Emojis.Error} \`${t ? t(PanelsKeys.DetailDisabled) : "DISABLED"}\``;
+    ? `${Emojis.Success} \`${t ? t("panels:detailEnabled") : "ENABLED"}\``
+    : `${Emojis.Error} \`${t ? t("panels:detailDisabled") : "DISABLED"}\``;
 
 /** True when the stored value (or schema default) counts as configured. */
 const hasStoredValue = (field: ConfigField, value: unknown): boolean => {
@@ -98,7 +92,7 @@ const detailRowLines = (
 ): string[] => {
   const required =
     field.required === true
-      ? ` *${t ? t(PanelsKeys.DetailRequired) : "(required)"}*`
+      ? ` *${t ? t("panels:detailRequired") : "(required)"}*`
       : "";
   return [
     `${statusGlyphFor(field, value)} **${field.label}**${required} - ${formatFieldValue(field, value)}`,
@@ -132,8 +126,12 @@ export function buildFeatureListView(
         `-# ${f.meta.description ? cutText(f.meta.description, 90) : "No description"}`,
       ],
       {
-        customId: `cfg:open:${f.meta.name}:${safePage}`,
-        label: t ? t(PanelsKeys.ModulesOpen) : "Open",
+        customId: ConfigButtonId.build({
+          action: "open",
+          moduleName: f.meta.name,
+          rest: [String(safePage)],
+        }),
+        label: t ? t("panels:modulesOpen") : "Open",
         style: ButtonStyle.Primary,
       },
     ),
@@ -153,11 +151,11 @@ export function buildFeatureListView(
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.Gear} ${t ? t(PanelsKeys.ModulesTitle) : "Feature Modules"}`,
+    `${Emojis.Gear} ${t ? t("panels:modulesTitle") : "Feature Modules"}`,
     pageFeatures.length
       ? ""
       : t
-        ? t(PanelsKeys.ModulesEmpty)
+        ? t("panels:modulesEmpty")
         : "*No features registered.*",
     {
       breadcrumbs: ["Hub", "Modules"],
@@ -165,13 +163,13 @@ export function buildFeatureListView(
       footer:
         totalPages > 1
           ? t
-            ? t(PanelsKeys.ModulesPageFooter, {
+            ? t("panels:modulesPageFooter", {
                 page: safePage + 1,
                 total: totalPages,
               })
             : formatPageFooter(safePage, totalPages, "Open a module to enable, disable, or configure it.")
           : t
-            ? t(PanelsKeys.ModulesFooter)
+            ? t("panels:modulesFooter")
             : "Open a module to enable, disable, or configure it.",
       actionRows: buildSafeActionRows(rows),
       separatorAboveActionRows: true,
@@ -201,23 +199,20 @@ function chunkSection(
   }));
 }
 
+/**
+ * Flattens the shared section/group split into the panel's one-level list.
+ * Discord has a component budget the web doesn't, so `chunkSection` still
+ * splits anything too long to fit on one card.
+ */
 function sectionsFor(fields: ConfigField[]): FieldSection[] {
-  if (fields.some((f) => f.group)) {
-    const order: string[] = [];
-    const map = new Map<string, ConfigField[]>();
-    for (const f of fields) {
-      const g = f.group ?? "General";
-      let arr = map.get(g);
-      if (!arr) {
-        arr = [];
-        map.set(g, arr);
-        order.push(g);
-      }
-      arr.push(f);
-    }
-    return order.flatMap((name) => chunkSection(name, map.get(name)!));
-  }
-  return chunkSection(null, fields);
+  return sectionsOf(fields).flatMap((section) =>
+    section.groups.flatMap((group) => {
+      const named = group.name ?? (section.groups.length > 1 ? "General" : null);
+      const label =
+        [section.name, named].filter((part) => part).join(" · ") || null;
+      return chunkSection(label, group.fields);
+    }),
+  );
 }
 
 /**
@@ -259,7 +254,11 @@ export function buildFeatureDetailView(
         field.default === undefined ? false : Boolean(field.default);
       const on = Boolean(config[field.key] ?? fallback);
       return settingRow(lines, {
-        customId: `cfg:bool:${meta.name}:${field.key}:${idx}`,
+        customId: ConfigButtonId.build({
+          action: "bool",
+          moduleName: meta.name,
+          rest: [field.key, String(idx)],
+        }),
         label: on ? Emojis.Check : Emojis.Cross,
         style: on ? ButtonStyle.Success : ButtonStyle.Secondary,
       });
@@ -267,16 +266,24 @@ export function buildFeatureDetailView(
 
     if (isTextField(field)) {
       return settingRow(lines, {
-        customId: `cfg:fedit:${meta.name}:${field.key}:${idx}`,
-        label: t ? t(PanelsKeys.DetailEdit) : "Edit",
+        customId: ConfigButtonId.build({
+          action: "fedit",
+          moduleName: meta.name,
+          rest: [field.key, String(idx)],
+        }),
+        label: t ? t("panels:detailEdit") : "Edit",
         emoji: Emojis.Edit,
         style: ButtonStyle.Secondary,
       });
     }
 
     return settingRow(lines, {
-      customId: `cfg:field:${meta.name}:${field.key}:${idx}`,
-      label: t ? t(PanelsKeys.DetailEdit) : "Edit",
+      customId: ConfigButtonId.build({
+        action: "field",
+        moduleName: meta.name,
+        rest: [field.key, String(idx)],
+      }),
+      label: t ? t("panels:detailEdit") : "Edit",
       emoji: Emojis.Edit,
       style: ButtonStyle.Secondary,
     });
@@ -285,7 +292,11 @@ export function buildFeatureDetailView(
   const rows: Row[] = enumFields.map((field) =>
     row(
       createStringSelectMenu({
-        customId: `cfg:enum:${meta.name}:${field.key}:${idx}`,
+        customId: ConfigButtonId.build({
+          action: "enum",
+          moduleName: meta.name,
+          rest: [field.key, String(idx)],
+        }),
         placeholder: cutText(field.label, 100),
         options: (field.choices ?? []).slice(0, MaxSelectOptions).map((choice) =>
           new StringSelectMenuOptionBuilder()
@@ -300,20 +311,28 @@ export function buildFeatureDetailView(
   rows.push(
     row(
       createActionButton({
-        customId: `cfg:tog:${meta.name}:${idx}`,
+        customId: ConfigButtonId.build({
+          action: "tog",
+          moduleName: meta.name,
+          rest: [String(idx)],
+        }),
         label: guildEnabled
           ? t
-            ? t(PanelsKeys.DetailDisable)
+            ? t("panels:detailDisable")
             : "Disable Module"
           : t
-            ? t(PanelsKeys.DetailEnable)
+            ? t("panels:detailEnable")
             : "Enable Module",
         emoji: guildEnabled ? Emojis.Cross : Emojis.Check,
         style: guildEnabled ? ButtonStyle.Danger : ButtonStyle.Success,
       }),
       createActionButton({
-        customId: `cfg:rst:${meta.name}:${idx}`,
-        label: t ? t(PanelsKeys.DetailReset) : "Reset",
+        customId: ConfigButtonId.build({
+          action: "rst",
+          moduleName: meta.name,
+          rest: [String(idx)],
+        }),
+        label: t ? t("panels:detailReset") : "Reset",
         emoji: Emojis.Uninstall,
         style: ButtonStyle.Secondary,
       }),
@@ -324,8 +343,12 @@ export function buildFeatureDetailView(
     rows.push(
       row(
         createStringSelectMenu({
-          customId: `cfg:gsel:${meta.name}`,
-          placeholder: t ? t(PanelsKeys.DetailJump) : "Jump to a section…",
+          customId: ConfigButtonId.build({
+            action: "gsel",
+            moduleName: meta.name,
+            rest: [],
+          }),
+          placeholder: t ? t("panels:detailJump") : "Jump to a section…",
           options: groups.slice(0, MaxSelectOptions).map((sec, i) =>
             new StringSelectMenuOptionBuilder()
               .setLabel(cutText(sec.name ?? "Settings", 100))
@@ -340,12 +363,16 @@ export function buildFeatureDetailView(
 
   const secondaryComponents = [
     createBackButton(
-      `cfg:back:0`,
-      t ? t(PanelsKeys.BackToModules) : "← Back to Modules",
+      ConfigButtonId.build({ action: "back", moduleName: "0", rest: [] }),
+      t ? t("panels:backToModules") : "← Back to Modules",
     ),
     createActionButton({
-      customId: `cfg:hist:${meta.name}:${idx}`,
-      label: t ? t(PanelsKeys.DetailHistory) : "History",
+      customId: ConfigButtonId.build({
+        action: "hist",
+        moduleName: meta.name,
+        rest: [String(idx)],
+      }),
+      label: t ? t("panels:detailHistory") : "History",
       emoji: Emojis.Clock,
       style: ButtonStyle.Secondary,
     }),
@@ -354,8 +381,12 @@ export function buildFeatureDetailView(
   if (meta.configOverrides) {
     secondaryComponents.push(
       createActionButton({
-        customId: `cfg:ovr:${meta.name}:${idx}`,
-        label: t ? t(PanelsKeys.DetailOverrides) : "Overrides",
+        customId: ConfigButtonId.build({
+          action: "ovr",
+          moduleName: meta.name,
+          rest: [String(idx)],
+        }),
+        label: t ? t("panels:detailOverrides") : "Overrides",
         emoji: Emojis.Shield,
         style: ButtonStyle.Secondary,
       }),
@@ -366,12 +397,12 @@ export function buildFeatureDetailView(
 
   const body = [
     formatSubtitle(meta.description || "No description provided."),
-    `**${t ? t(PanelsKeys.DetailStatus) : "Status"}:** ${statusBadge}`,
+    `**${t ? t("panels:detailStatus") : "Status"}:** ${statusBadge}`,
   ];
   if (multi && current.name) {
     body.push(
       t
-        ? t(PanelsKeys.DetailSection, {
+        ? t("panels:detailSection", {
             name: current.name,
             index: idx + 1,
             total: groups.length,
@@ -390,17 +421,8 @@ export function buildFeatureDetailView(
   );
 }
 
-const resolveChannelTypes = (f: ConfigField): ChannelType[] => {
-  if (f.channelTypes?.length) return f.channelTypes;
-  if (
-    f.key.includes("base") ||
-    f.key.includes("voice") ||
-    f.key.includes("lounge")
-  ) {
-    return [ChannelType.GuildVoice, ChannelType.GuildStageVoice];
-  }
-  return [ChannelType.GuildText];
-};
+const resolveChannelTypes = (f: ConfigField): ChannelType[] =>
+  f.channelTypes?.length ? f.channelTypes : [ChannelType.GuildText];
 
 /**
  * Per-field edit subpanel hosting the single native picker for the field, or
@@ -428,7 +450,11 @@ export function buildFieldEditView(
     rows.push(
       row(
         createChannelSelectMenu({
-          customId: `cfg:ch:${meta.name}:${field.key}:${fieldPage}`,
+          customId: ConfigButtonId.build({
+            action: "ch",
+            moduleName: meta.name,
+            rest: [field.key, String(fieldPage)],
+          }),
           placeholder: cutText(field.label, 100),
           channelTypes: resolveChannelTypes(field),
           minValues: 0,
@@ -444,7 +470,11 @@ export function buildFieldEditView(
     rows.push(
       row(
         createRoleSelectMenu({
-          customId: `cfg:role:${meta.name}:${field.key}:${fieldPage}`,
+          customId: ConfigButtonId.build({
+            action: "role",
+            moduleName: meta.name,
+            rest: [field.key, String(fieldPage)],
+          }),
           placeholder: cutText(field.label, 100),
           minValues: 0,
           maxValues: multi ? MaxMultiValues : 1,
@@ -459,7 +489,11 @@ export function buildFieldEditView(
     rows.push(
       row(
         createUserSelectMenu({
-          customId: `cfg:user:${meta.name}:${field.key}:${fieldPage}`,
+          customId: ConfigButtonId.build({
+            action: "user",
+            moduleName: meta.name,
+            rest: [field.key, String(fieldPage)],
+          }),
           placeholder: cutText(field.label, 100),
           minValues: 0,
           maxValues: multi ? MaxMultiValues : 1,
@@ -470,7 +504,11 @@ export function buildFieldEditView(
     rows.push(
       row(
         createStringSelectMenu({
-          customId: `cfg:enum:${meta.name}:${field.key}:${fieldPage}`,
+          customId: ConfigButtonId.build({
+            action: "enum",
+            moduleName: meta.name,
+            rest: [field.key, String(fieldPage)],
+          }),
           placeholder: cutText(field.label, 100),
           options: field.choices.slice(0, MaxSelectOptions).map((choice) =>
             new StringSelectMenuOptionBuilder()
@@ -485,8 +523,12 @@ export function buildFieldEditView(
     rows.push(
       row(
         createActionButton({
-          customId: `cfg:fedit:${meta.name}:${field.key}:${fieldPage}`,
-          label: t ? t(PanelsKeys.FieldEditEnterValue) : "Enter value…",
+          customId: ConfigButtonId.build({
+            action: "fedit",
+            moduleName: meta.name,
+            rest: [field.key, String(fieldPage)],
+          }),
+          label: t ? t("panels:fieldEditEnterValue") : "Enter value…",
           emoji: Emojis.Edit,
           style: ButtonStyle.Primary,
         }),
@@ -497,8 +539,12 @@ export function buildFieldEditView(
   rows.push(
     row(
       createBackButton(
-        `cfg:open:${meta.name}:${fieldPage}`,
-        t ? t(PanelsKeys.BackToFeature) : "← Back to Feature",
+        ConfigButtonId.build({
+          action: "open",
+          moduleName: meta.name,
+          rest: [String(fieldPage)],
+        }),
+        t ? t("panels:backToFeature") : "← Back to Feature",
       ),
     ),
   );
@@ -508,7 +554,7 @@ export function buildFieldEditView(
       resolveCardColor("primary"),
       `${meta.emoji} ${
         t
-          ? t(PanelsKeys.FieldEditTitle, {
+          ? t("panels:fieldEditTitle", {
               module: meta.displayName,
               field: field.label,
             })
@@ -516,8 +562,8 @@ export function buildFieldEditView(
       }`,
       [
         ...(field.description ? [formatSubtitle(field.description)] : []),
-        `**${t ? t(PanelsKeys.FieldEditCurrent) : "Current value"}:** ${formatFieldValue(field, config[field.key])}`,
-        `-# ${t ? t(PanelsKeys.FieldEditHint) : "Pick a new value below, or clear the selection to unset."}`,
+        `**${t ? t("panels:fieldEditCurrent") : "Current value"}:** ${formatFieldValue(field, config[field.key])}`,
+        `-# ${t ? t("panels:fieldEditHint") : "Pick a new value below, or clear the selection to unset."}`,
       ],
       { breadcrumbs: ["Hub", "Modules", meta.displayName, field.label], actionRows: buildSafeActionRows(rows) },
     ),

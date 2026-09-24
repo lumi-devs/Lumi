@@ -1,9 +1,10 @@
-import { BaseSubcommand, CommandContext } from "#lib/commands.js";
-import { Emojis } from "#utilities/assets.js";
+import { BaseSubcommand } from "#lib/commands.js";
+import { CommandContext } from "#lib/command-context.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import {
   getServerLockState,
   setServerLockState,
-} from "#modules/core/lib/server-lock.js";
+} from "../services/server-lock.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 

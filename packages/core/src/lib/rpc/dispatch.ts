@@ -1,25 +1,15 @@
 import { container } from "@sapphire/framework";
 import { Prisma } from "@prisma/client";
 import { runWithContext } from "@lumi/observability";
-import { logError, errorFrom } from "#lib/utilities/errors.js";
+import {
+  CodedRpcError,
+  RpcFailureCodes,
+  type RpcRequest,
+  type RpcResponse,
+} from "@lumi/contracts/rpc";
 import { handlePrismaError } from "#lib/prisma/errors.js";
-import type { RpcRequest, RpcResponse, RpcHandler } from "@lumi/contracts";
-
-export type { RpcRequest, RpcResponse, RpcHandler };
-
-export const rpcHandlers = new Map<string, RpcHandler<unknown, unknown>>();
-
-export function registerRpcHandler<TIn, TOut>(
-  action: string,
-  handler: RpcHandler<TIn, TOut>,
-): void {
-  if (rpcHandlers.has(action)) {
-    container.logger.error(
-      `[Rpc] Handler for action '${action}' is being replaced. If these are different owners, one of them is hijacking the other's RPC action.`,
-    );
-  }
-  rpcHandlers.set(action, handler as RpcHandler<unknown, unknown>);
-}
+import { getRpcHandler } from "#lib/rpc/registry.js";
+import { errorFrom, logError } from "#lib/utilities/errors.js";
 
 /**
  * The transport-agnostic core of RPC handling — handler lookup, the
@@ -31,13 +21,14 @@ export function registerRpcHandler<TIn, TOut>(
  * first (the HTTP transport requires `RPC_INTERNAL_TOKEN`). Any new transport
  * must do the same before calling in.
  */
-export async function dispatchRpc(req: RpcRequest<unknown>): Promise<RpcResponse<unknown>> {
-  const handler = rpcHandlers.get(req.action);
+export async function dispatchRpc(req: RpcRequest): Promise<RpcResponse> {
+  const handler = getRpcHandler(req.action);
   if (!handler) {
     return {
       id: req.id,
       ok: false,
       error: `No handler registered for action "${req.action}"`,
+      code: RpcFailureCodes.UnknownAction,
     };
   }
 
@@ -45,7 +36,12 @@ export async function dispatchRpc(req: RpcRequest<unknown>): Promise<RpcResponse
     req.guildId &&
     !(await container.db.config.isDashboardEnabled(req.guildId))
   ) {
-    return { id: req.id, ok: false, error: "Dashboard disabled" };
+    return {
+      id: req.id,
+      ok: false,
+      error: "Dashboard disabled",
+      code: RpcFailureCodes.DashboardDisabled,
+    };
   }
 
   return runWithContext(
@@ -56,7 +52,7 @@ export async function dispatchRpc(req: RpcRequest<unknown>): Promise<RpcResponse
       guildId: req.guildId,
       userId: req.actorId,
     },
-    async () => {
+    async (): Promise<RpcResponse> => {
       const startedAt = Date.now();
       try {
         const data = await handler(req);
@@ -82,6 +78,10 @@ export async function dispatchRpc(req: RpcRequest<unknown>): Promise<RpcResponse
           id: req.id,
           ok: false,
           error: safeErr.message ?? "Internal error",
+          code:
+            err instanceof CodedRpcError
+              ? err.code
+              : RpcFailureCodes.HandlerError,
         };
       }
     },

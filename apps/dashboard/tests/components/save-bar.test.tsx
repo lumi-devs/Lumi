@@ -1,5 +1,4 @@
-// @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi } from "bun:test";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { SaveBar } from "#/components/save-bar";
 
@@ -22,14 +21,14 @@ describe("SaveBar", () => {
     const onSave = vi.fn();
     render(<SaveBar dirty={true} saving={false} onSave={onSave} onReset={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
-    expect(onSave).toHaveBeenCalledOnce();
+    expect(onSave).toHaveBeenCalledTimes(1);
   });
 
   it("calls onReset when the Reset button is clicked", () => {
     const onReset = vi.fn();
     render(<SaveBar dirty={true} saving={false} onSave={vi.fn()} onReset={onReset} />);
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
-    expect(onReset).toHaveBeenCalledOnce();
+    expect(onReset).toHaveBeenCalledTimes(1);
   });
 
   it("disables both buttons while saving", () => {
@@ -50,7 +49,7 @@ describe("SaveBar", () => {
     render(<SaveBar dirty={true} saving={false} onSave={onSave} onReset={vi.fn()} />);
 
     fireEvent.keyDown(window, { key: "s", metaKey: true });
-    expect(onSave).toHaveBeenCalledOnce();
+    expect(onSave).toHaveBeenCalledTimes(1);
 
     fireEvent.keyDown(window, { key: "s", ctrlKey: true });
     expect(onSave).toHaveBeenCalledTimes(2);

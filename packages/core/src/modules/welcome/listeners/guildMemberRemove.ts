@@ -2,13 +2,9 @@ import { Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { GuildMember, PartialGuildMember } from "discord.js";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { loadWelcomeConfig } from "../lib/config.js";
-import { sendWelcomeCard } from "../lib/send.js";
-import {
-  buildGoodbyeCard,
-  renderWelcomeTemplate,
-  templateVarsFor,
-} from "../lib/template.js";
+import { loadWelcomeConfig } from "../services/welcome.js";
+import { sendWelcomeCard } from "../services/welcome.js";
+import { renderGoodbyeCard, templateVarsFor } from "../services/welcome.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "welcomeMemberRemove",
@@ -29,13 +25,16 @@ export class WelcomeMemberRemoveListener extends ModuleListener<
       member.id,
       member.user?.username ?? "Someone",
       member.nickname,
+      member.user?.displayAvatarURL() ?? "",
       member.guild.name,
+      member.guild.id,
+      member.guild.iconURL(),
       member.guild.memberCount,
     );
     await sendWelcomeCard(
       member.guild,
       config.goodbyeChannel,
-      buildGoodbyeCard(renderWelcomeTemplate(config.goodbyeTemplate, vars)),
+      renderGoodbyeCard(config, vars),
       "Welcome: Goodbye send failed",
     );
   }

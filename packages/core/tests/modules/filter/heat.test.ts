@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import {
   decayHeat,
   heatAction,
   secondsUntilCool,
   
-} from "#modules/filter/lib/heat.js";
+} from "#modules/filter/services/heat.js";
 
 const config = {
   enabled: true,

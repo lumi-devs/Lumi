@@ -1,15 +1,17 @@
 import Link from "next/link";
-import { PlugZap, SearchX } from "lucide-react";
+import { SearchX } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard, getGuildOverrides } from "#/lib/dashboard-fetch";
+import { getGuildEntities, getGuildModule, getGuildShell } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { OverridesBoard } from "#/components/guild/overrides-board";
 import { Badge } from "#/components/ui/badge";
 import { buttonVariants } from "#/components/ui/button-variants";
 import { Card, CardHeader, CardTitle, CardDescription } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
 import { FilterBar } from "#/components/ui/filter-bar";
+import { LoadFailure } from "#/components/ui/load-failure";
 import { PageHeader } from "#/components/ui/page-header";
-import type { ConfigOverrideView } from "#/lib/dashboard-data";
+import type { ConfigOverrideView } from "@lumi/contracts/views";
 import { single } from "#/lib/log-format";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -26,19 +28,29 @@ export default async function OverridesPage({
   const query = await searchParams;
   const moduleName = single(query["module"]);
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
+  const overridesPromise = rpc("guild.overrides.list", {
+    guildId,
+    actorId: session.userId,
+    data: moduleName ? { moduleName } : {},
+  });
+
+  const [shell, entities] = await Promise.all([
+    getGuildShell(guildId, session.userId),
+    getGuildEntities(guildId, session.userId),
+  ]);
 
   let overrides: ConfigOverrideView[] | null = null;
   let failure: string | null = null;
   try {
-    overrides = await getGuildOverrides(
-      guildId,
-      session.userId,
-      moduleName || undefined,
-    );
+    overrides = (await overridesPromise).overrides;
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }
+
+  const moduleReads = await Promise.all(
+    shell.modules.map((m) => getGuildModule(guildId, session.userId, m.name)),
+  );
+  const modules = moduleReads.flatMap((r) => (r.module ? [r.module] : []));
 
   return (
     <div className="flex flex-col gap-4">
@@ -70,7 +82,7 @@ export default async function OverridesPage({
                 name: "module",
                 label: "Module",
                 anyLabel: "All modules",
-                options: dashboard.modules.map((m) => ({
+                options: shell.modules.map((m) => ({
                   value: m.name,
                   label: m.displayName || m.name,
                 })),
@@ -88,12 +100,11 @@ export default async function OverridesPage({
               Nothing on this screen can be changed until the bot answers.
             </CardDescription>
           </CardHeader>
-          <EmptyState
-            compact
-            icon={PlugZap}
+          <LoadFailure
+            what="The overrides"
+            error={failure}
             title="The overrides couldn't be read"
             description="The bot answered with an error instead of the list. Check that it is online and connected to the message broker, then reload."
-            footnote={failure}
           />
         </Card>
       ) : moduleName && overrides && overrides.length === 0 ? (
@@ -116,11 +127,11 @@ export default async function OverridesPage({
         <OverridesBoard
           guildId={guildId}
           overrides={overrides ?? []}
-          modules={dashboard.modules}
+          modules={modules}
           directory={{
-            channels: dashboard.channels,
-            roles: dashboard.roles,
-            members: dashboard.members,
+            channels: entities.channels,
+            roles: entities.roles,
+            members: entities.members,
           }}
         />
       )}

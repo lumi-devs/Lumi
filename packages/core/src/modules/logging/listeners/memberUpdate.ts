@@ -4,7 +4,7 @@ import { Colors, type GuildMember, type PartialGuildMember } from "discord.js";
 import { roleMention, userMention } from "@discordjs/formatters";
 import { escapeMarkdown } from "@discordjs/formatters";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { isToggleEnabled, sendLog } from "../lib/send.js";
+import { isToggleEnabled, sendLog } from "../services/send.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "loggingMemberUpdate",

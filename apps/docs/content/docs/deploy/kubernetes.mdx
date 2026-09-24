@@ -1,0 +1,129 @@
+---
+title: Kubernetes
+description: Production Kubernetes manifests for a sharded worker fleet.
+---
+
+`deploy/k8s/` contains manifests for deploying Lumi as a sharded worker fleet with a shared
+Discord REST proxy. Lumi runs as application roles with no separate gateway process — each
+worker pod owns its own Discord WebSocket connection and runs command, module, and interaction
+logic in the same process, exactly as it does under Compose. See
+[Architecture](/docs/reference/architecture) for why there's no separate scheduler role: the
+worker holding shard `0` owns BullMQ scheduling in-process.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    subgraph External Services
+        Discord[Discord Gateway / REST API]
+        DB[(PostgreSQL / PgBouncer)]
+        Redis[(Redis)]
+        Prometheus[Prometheus Server]
+    end
+
+    subgraph Kubernetes Cluster (Namespace: lumi)
+        Job[migrate Job<br/>prisma migrate deploy]
+
+        subgraph Worker Fleet
+            W0[worker-0 StatefulSet Pod]
+            W1[worker-1 StatefulSet Pod]
+            WH[worker-headless Service<br/>Port 9090]
+        end
+
+        subgraph REST Layer
+            NP[nirn-proxy Deployment<br/>Service :8080]
+        end
+
+        Dash[dashboard Deployment]
+        PVC[(lumi-data PVC)]
+    end
+
+    Discord <-->|WebSocket| W0
+    Discord <-->|WebSocket| W1
+    NP -->|REST| Discord
+
+    W0 -->|REST via DISCORD_PROXY_URL| NP
+    W1 -->|REST via DISCORD_PROXY_URL| NP
+
+    W0 <-->|Shard telemetry & session state| Redis
+    W1 <-->|Shard telemetry & session state| Redis
+
+    W0 <-->|Queries| DB
+
+    Dash <-->|Internal HTTP RPC| W0
+
+    Prometheus -->|Scrape /metrics| WH
+
+    W0 <-->|Data Mount| PVC
+```
+
+## Prerequisites
+
+1. Kubernetes 1.28+.
+2. `kubectl`, configured with cluster admin permissions.
+3. A Prometheus Operator or server configured to scrape pods annotated
+   `prometheus.io/scrape: "true"`.
+4. External Postgres (or PgBouncer) and Redis, reachable from inside the cluster. The dashboard
+   talks to `worker` directly over an internal HTTP RPC port (`RPC_HTTP_PORT`, default 8091) —
+   no message broker involved.
+
+## Manifests
+
+| File | Kind | Name | Purpose |
+| :--- | :--- | :--- | :--- |
+| `namespace.yaml` | `Namespace` | `lumi` | Isolated namespace for all Lumi components. |
+| `configmap.yaml` | `ConfigMap` | `lumi-env` | Non-sensitive config (endpoints, ports, log settings, `DISCORD_PROXY_URL`, `CLUSTER_NAME`, Redis cluster/replica options). |
+| `secret.example.yaml` | `Secret` | `lumi-secrets` | Sensitive credential placeholders (`BOT_TOKEN`, database passwords, secret keys). Copy to `secret.yaml` and fill in before applying. |
+| `lumi-data-pvc.yaml` | `PersistentVolumeClaim` | `lumi-data` | Shared storage for persistent data and dynamic add-ons (`/app/data`). |
+| `migrate-job.yaml` | `Job` | `migrate` | Runs `bunx prisma migrate deploy` before application services start. |
+| `worker-statefulset.yaml` | `StatefulSet` + `Service` | `worker`, `worker-headless` | Sharded worker fleet. `StatefulSet`, not `Deployment`, because each pod owns per-shard state (WebSocket session, sequence number). Replica count is a shard-assignment decision, not an autoscaler target. |
+| `dashboard-deployment.yaml` | `Deployment` + `Service` | `dashboard` | Admin dashboard, reaching worker RPC over `worker-0`. |
+| `nirn-proxy-deployment.yaml` | `Deployment` + `Service` | `nirn-proxy` | Stateless shared Discord REST proxy. Every worker routes REST calls through it via `DISCORD_PROXY_URL` so rate-limit buckets stay coordinated across pods. |
+
+## Deployment sequence
+
+```bash title="1. Namespace and secrets"
+kubectl apply -f namespace.yaml
+
+cp secret.example.yaml secret.yaml
+# edit secret.yaml with real credentials
+
+kubectl apply -f configmap.yaml -f secret.yaml
+```
+
+```bash title="2. Storage and migration"
+kubectl apply -f lumi-data-pvc.yaml
+kubectl apply -f migrate-job.yaml
+kubectl -n lumi wait --for=condition=complete job/migrate --timeout=120s
+```
+
+```bash title="3. Applications"
+# REST proxy first — workers read DISCORD_PROXY_URL at boot
+kubectl apply -f nirn-proxy-deployment.yaml
+
+# Worker fleet — shard 0 assumes the primary role for RPC & BullMQ
+kubectl apply -f worker-statefulset.yaml
+
+# Dashboard
+kubectl apply -f dashboard-deployment.yaml
+```
+
+## Scaling
+
+See [Scaling](/docs/deploy/scaling) for how replica count relates to shard count.
+
+## Troubleshooting
+
+```bash title="Pod logs"
+kubectl -n lumi logs -l app=worker --tail=100 -f
+kubectl -n lumi logs -l app=nirn-proxy --tail=100 -f
+```
+
+```bash title="Force a migration re-run"
+kubectl -n lumi delete job migrate
+kubectl apply -f migrate-job.yaml
+```
+
+```bash title="Graceful restart of workers"
+kubectl -n lumi rollout restart statefulset/worker
+```

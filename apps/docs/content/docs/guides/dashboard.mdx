@@ -1,0 +1,58 @@
+---
+title: Dashboard
+description: Administer Lumi from the web, without it ever holding the bot token.
+---
+
+A Next.js App Router panel that administers the bot without ever holding its token or touching
+its database.
+
+## What it is
+
+`apps/dashboard` talks to the worker only over the internal HTTP RPC bridge
+(`apps/dashboard/src/lib/rpc.ts`, a `server-only` module reachable only from Server Components,
+Route Handlers, and Server Actions). It needs three things to run: its session secret, Discord
+OAuth2 credentials, and the worker RPC address — see
+[Configuration](/docs/getting-started/configuration).
+
+```bash title="Local dev"
+bun run --cwd apps/dashboard dev   # http://localhost:8080
+```
+
+## Authentication
+
+Sign-in is Discord OAuth2 via NextAuth v5; the session is a JWT encrypted with
+`DASHBOARD_SESSION_SECRET`. Whether the signed-in user is a bot owner is not a dashboard-side
+list — it comes from the `auth.whoami` RPC, which defers to the worker's permit resolver
+(`OWNER_IDS` plus the Discord application's actual owner). Owner status and the manageable-guild
+list are re-derived at most every five minutes. Register the callback URL on your Discord
+application:
+
+```text title="OAuth2 redirect"
+<dashboard-origin>/api/auth/callback/discord
+```
+
+Behind a reverse proxy that rewrites Host, set `AUTH_URL` to the externally visible origin.
+There is no secure-cookie variable — NextAuth picks the `__Secure-` prefix from the resolved
+scheme.
+
+## Security model
+
+- **IDOR guard**: `authorizedGuild()` is re-checked on every guild-scoped page render and every
+  guild-scoped Server Action — never trusted from client state.
+- **CSP in middleware, not config**: Next only nonces its inline flight scripts when it reads the
+  policy off the incoming request, so the `content-security-policy` header is set in
+  `src/middleware.ts`. A strict policy in `next.config.ts` would block hydration.
+- **CSRF**: Server Actions' built-in same-origin check — no hand-rolled token system.
+- **Headers**: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`,
+  `Strict-Transport-Security`, and `Permissions-Policy` from the Next config.
+
+## Routes and data flow
+
+Routes cover a landing page, `/login`, per-guild administration under `/guild/[guildId]/*`
+(overview, module grid, per-module settings forms, moderation, safety, history), and the
+bot-owner `/system/*` panel. Guild pages fetch through React-cache-deduped RPC readers;
+mutations are Server Actions, one file per domain (guild, moderation, security, tempvc,
+overrides, history, blocklist, advanced, system, user, auth).
+
+Every module a guild can toggle, and every RPC action the dashboard can call, is generated and
+listed in the [Reference](/docs/reference/rpc) section.

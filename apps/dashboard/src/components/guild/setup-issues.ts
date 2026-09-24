@@ -1,15 +1,15 @@
-import type { DashboardModuleView } from "#/lib/dashboard-data";
-
 export interface SetupIssue {
   id: string;
   title: string;
   detail: string;
 }
 
-export function buildSetupIssues(modules: DashboardModuleView[]): SetupIssue[] {
-  const security =
-    modules.find((m) => m.name === "security")?.config ?? {};
-  const mod = modules.find((m) => m.name === "mod")?.config ?? {};
+export function buildSetupIssues(
+  securityConfig: Record<string, unknown>,
+  modConfig: Record<string, unknown>,
+): SetupIssue[] {
+  const security = securityConfig;
+  const mod = modConfig;
   const issues: SetupIssue[] = [];
 
   if (!security["log_channel_id"]) {

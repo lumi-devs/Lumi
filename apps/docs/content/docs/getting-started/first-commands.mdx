@@ -1,0 +1,43 @@
+---
+title: First Commands
+description: Invite the bot, confirm it's alive, and enable a module.
+---
+
+## Invite the bot
+
+Generate an invite from your Discord application (OAuth2 URL Generator, `bot` and
+`applications.commands` scopes) and add it to your test server.
+
+## Confirm it's alive
+
+```text
+/ping
+```
+
+Checks the bot's status, latency, and system health. `/about` (aliases `/info`, `/stats`,
+`/botinfo`) shows detailed architecture and stats. `/help` lists every command available to you,
+paginated.
+
+## Enable a module for your server
+
+Every module ships enabled by default except where a guild has explicitly turned it off, but
+whether a module is available in this deployment at all, and whether your guild has it on, are
+two different switches:
+
+- **Per-guild toggle** — enable or disable a module for one server. This is the dashboard's job:
+  the guild's module grid calls `guild.module.toggle`. There's no slash command for this — it's
+  scoped per guild, not something a single command invocation naturally targets.
+- **System-wide toggle** — `/module enable` / `/module disable` (bot-owner only) turns a module
+  off across every guild on this deployment, not just yours. `/module list` and `/module info`
+  are read-only and safe to run to see what's installed.
+
+For a first run: open the dashboard, pick your guild, and toggle on the module you want to try —
+[Moderation](/docs/guides/moderation), [Economy](/docs/guides/economy),
+[Welcome](/docs/guides/welcome-and-goodbye), or any other from [Guides](/docs/guides/dashboard).
+
+## Server setup wizard
+
+`/setup` (requires Manage Server) launches an ephemeral setup wizard for a faster first
+configuration pass than clicking through the dashboard module-by-module.
+
+Next: [Updating](/docs/getting-started/updating), or jump into a module's own guide.

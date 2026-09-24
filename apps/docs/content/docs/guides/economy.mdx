@@ -1,0 +1,60 @@
+---
+title: Economy
+description: Wallet and bank balances, payday, transfers, slots, and an audited ledger.
+---
+
+The `economy` module (🪙) is a guild bank: wallet and vault balances, payday, taxed transfers,
+slots, and a fully audited transaction ledger. None of its commands require a permit — they're
+open to every member, gated only by whether the module is enabled.
+
+## Commands
+
+| Command | Description |
+| :--- | :--- |
+| `/balance` | Show your wallet and bank balances. |
+| `/pay` | Transfer currency to another member. A tax may apply. |
+| `/payday` | Claim free currency. A cooldown applies between claims. |
+| `/bank deposit` \| `withdraw` \| `set` \| `add` \| `remove` | Move currency between wallet and bank; `set`/`add`/`remove` are staff-only balance adjustments. |
+| `/leaderboard` | Show the richest members on this server. |
+| `/slots` | Bet wallet currency on the slot machine. |
+
+## Config
+
+Grouped fields, from the module manifest:
+
+**Currency**
+
+| Key | Description | Default |
+| :--- | :--- | :--- |
+| `currency_name` | Name shown on balances. | `credits` |
+| `currency_emoji` | Emoji shown next to amounts. | 🪙 |
+| `starting_wallet` | Wallet balance on a member's first account. | 100 |
+| `starting_bank` | Bank balance on a member's first account. | 0 |
+| `max_balance` | Wallet plus bank can never exceed this. | 1,000,000 |
+
+**Payday**
+
+| Key | Description | Default |
+| :--- | :--- | :--- |
+| `payday_amount` | Currency granted per claim. | 120 |
+| `payday_cooldown` | Wait between claims. | 5m |
+
+**Transfers**
+
+| Key | Description | Default |
+| :--- | :--- | :--- |
+| `transfer_tax_percent` | Percentage burned on every member-to-member transfer. | 0 |
+
+**Slots**
+
+| Key | Description | Default |
+| :--- | :--- | :--- |
+| `slot_min_bid` / `slot_max_bid` | Bid bounds. | 5 / 100 |
+| `slot_cooldown` | Wait between pulls. | 5s |
+| `slot_daily_cap` | Max total wagered per member per day. `0` disables the cap. | 1,000 |
+| `slot_payouts` | Multipliers as `key:multiplier` entries (`jackpot`, `cloverThree`, `cherriesThree`, `twoSix`, `cherriesTwo`, `threeKind`, `twoKind`). | see manifest |
+
+## Data and privacy
+
+User ID, wallet and bank balances, payday timestamps, and a transaction history are stored per
+server, and deleted on GDPR erasure. See [Data and Privacy](/docs/reference/data-and-privacy).

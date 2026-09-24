@@ -1,19 +1,22 @@
 import { ApplyOptions } from "@sapphire/decorators";
+import { Time } from "@sapphire/time-utilities";
 import { getUtility, tryGetUtility } from "#lib/module-system/Utility.js";
 import { Colors } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
 import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
 import type { GuildMessage } from "#lib/types/common.js";
 import type { FilterUtility } from "../utilities/FilterUtility.js";
-import { enforceHit, runRules, shouldScreen } from "../lib/enforce.js";
+import { enforceHit, runRules, shouldScreen } from "../services/enforce.js";
 import {
   containsLink,
   countEmoji,
   escalatedTimeoutMinutes,
   heatAction,
+  isZalgo,
   type HeatConfig,
-} from "../lib/heat.js";
+} from "../services/heat.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
+import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
 import { lockAllTextChannels } from "#lib/moderation/lockdown.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import { swallow } from "#lib/utilities/errors.js";
@@ -79,7 +82,7 @@ export class FilterMessageListener extends GuildMessageListener {
         { guildId: message.guildId },
         {
           repeated: false,
-          delay: config.lockdownDurationMinutes * 60_000,
+          delay: config.lockdownDurationMinutes * Time.Minute,
           customJobOptions: {
             jobId: `filter-auto-lockdown-unlock:${message.guildId}`,
             removeOnComplete: true,
@@ -127,7 +130,7 @@ export class FilterMessageListener extends GuildMessageListener {
         const reason =
           "Heat panic mode: flagged raider posted during the active raid window";
         await member
-          .timeout(config.timeoutMinutes * 60_000, reason)
+          .timeout(config.timeoutMinutes * Time.Minute, reason)
           .catch(swallow("Filter: heat panic timeout"));
         await this.#logHeat(message, "Heat Panic - Timeout", reason);
       }
@@ -147,11 +150,24 @@ export class FilterMessageListener extends GuildMessageListener {
     if (config.perLink > 0 && containsLink(message.content)) {
       points += config.perLink;
     }
-    if (
-      config.perDuplicate > 0 &&
-      (await this.filterService.isDuplicate(guildId, userId, message.content))
-    ) {
-      points += config.perDuplicate;
+    if (config.perDuplicate > 0 || config.perSimilar > 0) {
+      const { exact, similarity } = await this.filterService.checkDuplicate(
+        guildId,
+        userId,
+        message.content,
+      );
+      if (exact && config.perDuplicate > 0) {
+        points += config.perDuplicate;
+      } else if (
+        !exact &&
+        config.perSimilar > 0 &&
+        similarity >= config.similarityThreshold
+      ) {
+        points += config.perSimilar;
+      }
+    }
+    if (config.perZalgo > 0 && isZalgo(message.content)) {
+      points += config.perZalgo;
     }
     if (points <= 0) return;
 
@@ -170,6 +186,14 @@ export class FilterMessageListener extends GuildMessageListener {
     if (action === "none") return;
     if (!(await this.filterService.claimEscalation(guildId, userId, action)))
       return;
+
+    if (
+      (action === "quarantine" || action === "timeout") &&
+      member &&
+      (await isImmuneToAutomatedAction(this.container, guildId, member))
+    ) {
+      return;
+    }
 
     if (action === "quarantine" && member) {
       await this.filterService.clearHeat(guildId, userId);
@@ -191,7 +215,7 @@ export class FilterMessageListener extends GuildMessageListener {
       );
       const reason = `Heat escalation: reached ${Math.round(level)} heat (violation #${violations})`;
       await member
-        .timeout(minutes * 60_000, reason)
+        .timeout(minutes * Time.Minute, reason)
         .catch(swallow("Filter: heat timeout"));
       await this.#logHeat(message, "Heat - Timeout", reason);
     } else if (action === "warn") {

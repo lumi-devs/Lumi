@@ -82,7 +82,7 @@ src/
   app/                  App Router pages (landing, /login, /guild/[guildId]/*, /system/*)
   components/           UI primitives (components/ui), layout chrome, guild/system feature components
   lib/                  auth.ts (NextAuth config), rpc.ts (server-only RPC client), auth-guards.ts (IDOR/owner guards),
-                         env.ts, dashboard-fetch.ts (React.cache-deduped RPC fetchers), dashboard-data.ts (response types)
+                         env.ts, guild-reads.ts (React.cache-deduped RPC reads)
   actions/               Server Actions, one file per domain — guild, moderation, security,
                          tempvc, overrides, history, blocklist, advanced, system, user, auth
   types/next-auth.d.ts   Session/JWT module augmentation

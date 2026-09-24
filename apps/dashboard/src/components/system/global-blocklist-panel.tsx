@@ -22,8 +22,8 @@ import { ExportLogButton } from "#/components/ui/export-log-button";
 import { Field, Input } from "#/components/ui/input";
 import { globalBlocklistColumns } from "#/components/system/global-blocklist-columns";
 import { Pagination } from "#/components/ui/pagination";
-import type { BlocklistEntryView } from "#/lib/dashboard-data";
-import { isSnowflake } from "#/lib/log-format";
+import type { BlocklistEntryView } from "@lumi/contracts/views";
+import { isSnowflake } from "#/lib/moderation-cases";
 import { useServerAction } from "#/lib/use-server-action";
 
 // One row silences a user in every server Lumi is in, effective immediately —

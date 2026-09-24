@@ -2,24 +2,25 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { AutocompleteInteraction } from "discord.js";
-import { BaseSubcommand, CommandContext } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
+import { CommandContext } from "#lib/command-context.js";
 import { respondWithChoices } from "#lib/utilities/autocomplete.js";
 import {
   installedModuleChoices,
   repoModuleChoices,
   repoNameChoices,
-} from "#lib/downloader/autocomplete.js";
+} from "../services/downloader-autocomplete.js";
 import {
   ActionRowBuilder,
   ButtonBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import { makeInfoCard } from "#lib/utilities/cards.js";
+import { makeInfoCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
-import type { DownloaderUtility } from "#utilities/pieces/DownloaderUtility.js";
+import type { DownloaderUtility } from "../utilities/DownloaderUtility.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "download",

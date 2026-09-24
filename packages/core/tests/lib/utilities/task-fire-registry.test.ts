@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "bun:test";
 import { container } from "@sapphire/framework";
 import {
   registerTaskFireHandler,
   getRegisteredFireHandlers,
   TaskFireConsumer,
 } from "#lib/task-fire-registry.js";
-import type { EventBus } from "@lumi/event-bus";
+import type { EventBus } from "#lib/event-bus/types.js";
 
 describe("Task Fire Registry & Consumer", () => {
   let mockBus: any;
@@ -238,7 +238,6 @@ describe("Task Fire Registry & Consumer", () => {
         nack: vi.fn().mockResolvedValue(undefined),
       };
 
-      // Force invocation with task name that is not in global registry
       await (consumer as any).handle("nonExistentTask" as any, mockMsg);
 
       expect(container.logger.warn).toHaveBeenCalledWith(

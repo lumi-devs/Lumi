@@ -2,7 +2,7 @@
  * Offline in-memory Prisma mock for `bun test`.
  *
  * Mirrors the role `MockRedis` plays for `ioredis` in
- * `packages/core/tests/event-bus/event-bus.test.ts` / `packages/event-bus/tests/factory.spec.ts`:
+ * `packages/core/tests/lib/event-bus/{event-bus,factory}.test.ts`:
  * a small class that stands in for the real client so tests never need a live
  * backing service (here, a real Postgres instance via docker-compose).
  *
@@ -34,7 +34,7 @@
  * `event-bus.test.ts` swaps `ioredis`:
  *
  * ```ts
- * import { vi } from "vitest";
+ * import { vi } from "bun:test";
  * import { createMockPrismaClient } from "../mocks/prisma.js";
  *
  * const mockClient = createMockPrismaClient();
@@ -50,7 +50,8 @@
  * - No referential-integrity / cascade-delete enforcement.
  * - `where` filtering supports equality, the common scalar operators
  *   (`equals`, `not`, `in`, `notIn`, `lt(e)`, `gt(e)`, `contains`,
- *   `startsWith`, `endsWith`), `AND`/`OR`/`NOT`, and flattened compound keys
+ *   `startsWith`, `endsWith`), the array-containment operator (`has`),
+ *   `AND`/`OR`/`NOT`, and flattened compound keys
  *   (e.g. `where: { userId_guildId: { userId, guildId } }` for a
  *   `@@id([userId, guildId])` model) - not the full Prisma filter grammar.
  * - `update`'s `data` supports plain field assignment plus the numeric
@@ -80,6 +81,7 @@ const OPERATOR_KEYS = new Set([
   "startsWith",
   "endsWith",
   "mode",
+  "has",
 ]);
 
 function isPlainObject(v: unknown): v is Rec {
@@ -144,6 +146,9 @@ function matchesFieldFilter(actual: unknown, filter: unknown): boolean {
         break;
       case "mode":
         break; // case-sensitivity toggle - ignored, matches are already case-sensitive
+      case "has":
+        if (!Array.isArray(actual) || !actual.some((v) => scalarEquals(v, value))) return false;
+        break;
       default:
         break;
     }

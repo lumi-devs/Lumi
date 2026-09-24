@@ -1,0 +1,254 @@
+// @ts-expect-error - ahocorasick does not provide type declarations
+import AhoCorasick from "ahocorasick";
+import type { LumiT } from "#lib/i18n/index.js";
+import { MaxRegexLength } from "#lib/regex-worker/validate.js";
+
+interface AhoMatcher {
+  search(text: string): Array<[number, string[]]>;
+}
+
+/** Which rule fired and what it matched - drives the warning + log copy. */
+export interface FilterHit {
+  rule: "term" | "regex" | "invite" | "link" | "mentions" | "caps" | "phish";
+  /** The matched term/pattern/code/domain, or a human summary for counters. */
+  detail: string;
+}
+
+export interface RuleConfig {
+  terms: string[];
+  regexRules: string[];
+  blockInvites: boolean;
+  /** Invite codes that are always allowed (e.g. the guild's own). */
+  inviteAllowlist: string[];
+  blockLinks: boolean;
+  /** Domains (and their subdomains) exempt from the link rule. */
+  linkAllowlist: string[];
+  /** Max user+role mentions per message; 0 disables. */
+  maxMentions: number;
+  /** Delete when more than this % of letters are uppercase; 0 disables. */
+  maxCapsPercent: number;
+  /** Messages shorter than this never trip the caps rule. */
+  capsMinLength: number;
+}
+
+export interface CompiledRules {
+  matcher: AhoMatcher | null;
+  /**
+   * Validated pattern sources, *not* `RegExp` objects: guild regex only ever
+   * runs in the regex worker, so nothing here can backtrack on the event loop.
+   */
+  regexSources: string[];
+  config: RuleConfig;
+}
+
+/** Default for `capsMinLength` - avoids "OK" tripping the caps rule. */
+export const DefaultCapsMinLength = 12;
+
+/** Default transient warning; `{user}` and `{reason}` are substituted. */
+export const DefaultWarnMessage =
+  "{user}, your message was removed for containing {reason}.";
+
+export { MaxRegexLength };
+
+const InviteRe =
+  /(?:discord\.(?:gg|com\/invite)|discordapp\.com\/invite)\/([\w-]+)/i;
+
+const UrlRe = /https?:\/\/([^\s/<>"']+)/gi;
+
+/**
+ * Screen user-supplied regex rules: length-capped and syntax-checked, with
+ * invalid patterns reported via `onError` and dropped rather than throwing.
+ * The surviving *sources* are returned - compiling them is the worker's job.
+ */
+export function screenRegexRules(
+  patterns: string[],
+  onError?: (pattern: string, reason: string) => void,
+): string[] {
+  const out: string[] = [];
+  for (const pattern of patterns) {
+    if (pattern.length > MaxRegexLength) {
+      onError?.(pattern, `longer than ${MaxRegexLength} chars`);
+      continue;
+    }
+    try {
+      new RegExp(pattern, "iu");
+      out.push(pattern);
+    } catch (err) {
+      onError?.(pattern, err instanceof Error ? err.message : String(err));
+    }
+  }
+  return out;
+}
+
+/** Soft hyphen, the zero-width/bidi block, word joiner, invisible operators, BOM. */
+const InvisibleRe = /[\u00AD\u200B-\u200F\u2060-\u2064\uFEFF]/gu;
+
+/**
+ * Fold a string to its bare matchable form. Must be applied to both configured
+ * terms and message content, or the two sides stop agreeing and every term
+ * silently stops matching.
+ *
+ * NFKD splits accents and expands fullwidth/styled forms to ASCII; stripping
+ * \p{M} then drops the loose combining marks. Without this, a term list
+ * containing `bad` is evaded by inserting a zero-width space, by using the
+ * fullwidth forms, or by hanging a combining accent off the first letter.
+ *
+ * Does not cover cross-script homoglyphs (Cyrillic vs Latin `e`) - those are
+ * distinct codepoints and need a confusables table, tracked separately.
+ */
+function normalizeForMatch(input: string): string {
+  return input
+    .normalize("NFKD")
+    .replace(InvisibleRe, "")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase();
+}
+
+export function compileRules(
+  config: RuleConfig,
+  onRegexError?: (pattern: string, reason: string) => void,
+): CompiledRules {
+  return {
+    matcher:
+      config.terms.length > 0
+        ? (new AhoCorasick(
+            config.terms.map(normalizeForMatch).filter((t) => t.length > 0),
+          ) as AhoMatcher)
+        : null,
+    regexSources: screenRegexRules(config.regexRules, onRegexError),
+    config,
+  };
+}
+
+/** First invite code in `content` that isn't allowlisted, else null. */
+export function findBlockedInvite(
+  content: string,
+  allowlist: string[],
+): string | null {
+  const match = InviteRe.exec(content);
+  if (!match?.[1]) return null;
+  const code = match[1];
+  return allowlist.some((a) => a.toLowerCase() === code.toLowerCase())
+    ? null
+    : code;
+}
+
+/** First linked domain that isn't (a subdomain of) an allowlisted one. */
+export function findBlockedLink(
+  content: string,
+  allowlist: string[],
+): string | null {
+  for (const match of content.matchAll(UrlRe)) {
+    const host = match[1]?.split(":")[0]?.toLowerCase();
+    if (!host) continue;
+    const allowed = allowlist.some((domain) => {
+      const d = domain.toLowerCase();
+      return host === d || host.endsWith(`.${d}`);
+    });
+    if (!allowed) return host;
+  }
+  return null;
+}
+
+/** Percentage (0-100) of cased letters that are uppercase. */
+export function capsPercent(content: string): number {
+  let letters = 0;
+  let upper = 0;
+  for (const ch of content) {
+    const lower = ch.toLowerCase();
+    const upperCh = ch.toUpperCase();
+    if (lower === upperCh) continue;
+    letters++;
+    if (ch === upperCh) upper++;
+  }
+  return letters === 0 ? 0 : (upper / letters) * 100;
+}
+
+/** Aho-Corasick term match - linear in the input, safe on the event loop. */
+export function evaluateTerms(
+  rules: CompiledRules,
+  content: string,
+): FilterHit | null {
+  if (!rules.matcher) return null;
+  const results = rules.matcher.search(normalizeForMatch(content));
+  const term = results[0]?.[1]?.[0];
+  return term ? { rule: "term", detail: term } : null;
+}
+
+/**
+ * The bounded rules: invites, links, mentions and caps. All linear in the
+ * message length, so they stay inline. Regex rules are *not* here - they run in
+ * the regex worker (`FilterUtility.test`), between terms and these.
+ */
+export function evaluateStatic(
+  rules: CompiledRules,
+  content: string,
+  mentionCount: number,
+): FilterHit | null {
+  const { config } = rules;
+
+  if (config.blockInvites) {
+    const code = findBlockedInvite(content, config.inviteAllowlist);
+    if (code) return { rule: "invite", detail: code };
+  }
+
+  if (config.blockLinks) {
+    const host = findBlockedLink(content, config.linkAllowlist);
+    if (host) return { rule: "link", detail: host };
+  }
+
+  if (config.maxMentions > 0 && mentionCount > config.maxMentions) {
+    return {
+      rule: "mentions",
+      detail: `${mentionCount} mentions (limit ${config.maxMentions})`,
+    };
+  }
+
+  if (
+    config.maxCapsPercent > 0 &&
+    content.length >= config.capsMinLength &&
+    capsPercent(content) > config.maxCapsPercent
+  ) {
+    return {
+      rule: "caps",
+      detail: `${Math.round(capsPercent(content))}% caps (limit ${config.maxCapsPercent}%)`,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Every rule that can run synchronously, in priority order. `mentionCount` is
+ * the message's user+role mention total (computed by the listener - this module
+ * stays discord.js-free). The first hit wins.
+ */
+export function evaluate(
+  rules: CompiledRules,
+  content: string,
+  mentionCount: number,
+): FilterHit | null {
+  return (
+    evaluateTerms(rules, content) ??
+    evaluateStatic(rules, content, mentionCount)
+  );
+}
+
+export function getHitReason(t: LumiT, rule: FilterHit["rule"]): string {
+  switch (rule) {
+    case "term":
+      return t("filter:reasonFilteredTerm");
+    case "regex":
+      return t("filter:reasonFilteredPattern");
+    case "invite":
+      return t("filter:reasonInviteLink");
+    case "link":
+      return t("filter:reasonLinkNotAllowed");
+    case "mentions":
+      return t("filter:reasonTooManyMentions");
+    case "caps":
+      return t("filter:reasonExcessiveCaps");
+    case "phish":
+      return t("filter:reasonPhishingLink");
+  }
+}

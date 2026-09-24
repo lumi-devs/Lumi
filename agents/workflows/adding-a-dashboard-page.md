@@ -93,6 +93,13 @@ for inline-in-card use), `Badge`, `ExportLogButton` (wraps a Server Action for
 a downloadable JSON export). Reach for these before building a new one-off
 component — check `apps/dashboard/src/components/ui/` first.
 
+If the page renders a module's settings, stop and read
+`agents/domains/dashboard-design.md` first. Settings pages do not list their own
+sections, groups or field names — they derive them from the module's
+`configSchema` via `sectionsOf()` and render them with `SectionTabs` +
+`ConfigGroupCard`. Hardcoding a field or group name in a page is the mistake
+that doc exists to prevent.
+
 The actual data table (`GuildModNotesTable`) is its own component under
 `apps/dashboard/src/components/guild/`, receiving plain serializable props
 (`guildId`, `userId`, `notes`, `memberNames`) — it's a Client Component (any

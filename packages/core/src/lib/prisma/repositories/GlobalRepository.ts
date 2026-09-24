@@ -1,6 +1,6 @@
 import { Repository } from "./Repository.js";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
-import type { Global, Prisma } from "@prisma/client";
+import type { Global } from "@prisma/client";
 
 export interface UpdateGlobalInput {
   botName?: string;
@@ -9,7 +9,11 @@ export interface UpdateGlobalInput {
   maintenanceMessage?: string | null;
   inviteUrl?: string | null;
   supportGuildId?: string | null;
-  extra?: Prisma.InputJsonValue;
+  serverLockEnabled?: boolean;
+  serverLockGuildIds?: string[];
+  autoUpdateEnabled?: boolean;
+  autoUpdateIntervalMinutes?: number;
+  autoUpdateLastCheckedAt?: Date | null;
 }
 
 export class GlobalRepository extends Repository {

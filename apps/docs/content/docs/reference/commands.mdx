@@ -1,0 +1,14 @@
+---
+title: Commands
+description: Every command across every built-in module, generated from source.
+---
+
+import { CommandsTable, CommandCount } from "@/components/generated-tables";
+
+<CommandCount /> commands, extracted from each command's `@ApplyOptions` decorator across
+`packages/core/src/modules/*/commands/`. The **Permit** column is the permit node a member needs
+— see [Permits](/docs/reference/permits) for what each node means and
+[Permits guide](/docs/guides/permits) for how to grant one. A command with no permit listed has
+no `requiredPermit` set and is gated only by Discord's own default member permissions, if any.
+
+<CommandsTable />

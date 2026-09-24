@@ -1,10 +1,11 @@
 import { container } from "@sapphire/framework";
 import { Routes } from "discord-api-types/v10";
 import { DiscordSnowflake } from "@sapphire/snowflake";
+import { Time } from "@sapphire/time-utilities";
 
 const MaxBatch = 100;
-const FlushDelayMs = 1_500;
-const TwoWeeksMs = 14 * 24 * 60 * 60 * 1000;
+const FlushDelayMs = Time.Second * 1.5;
+const TwoWeeksMs = 14 * Time.Day;
 
 interface PendingEntry {
   messageId: string;

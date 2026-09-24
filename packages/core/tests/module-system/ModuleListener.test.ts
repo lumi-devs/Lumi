@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import * as misc from "#lib/utilities/misc.js";
 
@@ -45,20 +45,20 @@ describe("module-system ModuleListener", () => {
       module: "mod",
     });
 
-    vi.spyOn(misc, "isModuleEnabled").mockResolvedValue(true);
+    const isModuleEnabled = vi.spyOn(misc, "isModuleEnabled").mockResolvedValue(true);
 
     // No guildId resolved -> no handle
-    await listener.run({} as any);
+    await listener.run({});
     expect(listener.handleCalls).toHaveLength(0);
 
     // GuildId resolved and module enabled -> runs handle
-    await listener.run({ guildId: "g-100" } as any);
+    await listener.run({ guildId: "g-100" });
     expect(listener.handleCalls).toHaveLength(1);
     expect(misc.isModuleEnabled).toHaveBeenCalledWith("g-100", "mod");
 
     // Module disabled -> no handle
-    vi.mocked(misc.isModuleEnabled).mockResolvedValue(false);
-    await listener.run({ guildId: "g-100" } as any);
+    isModuleEnabled.mockResolvedValue(false);
+    await listener.run({ guildId: "g-100" });
     expect(listener.handleCalls).toHaveLength(1); // Call count unchanged
   });
 });

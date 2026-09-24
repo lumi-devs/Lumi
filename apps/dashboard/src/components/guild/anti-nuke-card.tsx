@@ -12,16 +12,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardBody } from "#/compon
 import { Field, Label } from "#/components/ui/input";
 import { Switch } from "#/components/ui/switch";
 import { useServerAction } from "#/lib/use-server-action";
-import type {
-  DashboardChannelView,
-  DashboardRoleView,
-} from "#/lib/dashboard-data";
+import type { DashboardChannelView, DashboardRoleView } from "@lumi/contracts/views";
 
 const SecurityModuleName = "security";
 const EnabledKey = "antinuke_enabled";
 
-/** Non-matrix anti-nuke fields rendered above the per-kind table. */
-const ExtraKeys = ["window_seconds", "trusted_role_ids", "log_channel_id"];
+const LimitsGroup = "Nuke Limits";
+const SettingsGroup = "Anti-Nuke";
 
 interface NukeRow {
   limit: ConfigField;
@@ -39,7 +36,7 @@ function responseKeyFor(limitKey: string): string {
 function nukeRowsFor(configFields: ConfigField[]): NukeRow[] {
   const byKey = new Map(configFields.map((f) => [f.key, f]));
   return configFields
-    .filter((f) => f.key.startsWith("max_"))
+    .filter((f) => f.group === LimitsGroup && f.key.startsWith("max_"))
     .map((limit) => ({
       limit,
       response: byKey.get(responseKeyFor(limit.key)) ?? null,
@@ -47,12 +44,12 @@ function nukeRowsFor(configFields: ConfigField[]): NukeRow[] {
     }));
 }
 
+/** Everything in the anti-nuke group except the master toggle, which the card
+ * header owns. Derived so a setting added to the group in core shows up here. */
 function extrasFor(configFields: ConfigField[]): ConfigField[] {
-  const byKey = new Map(configFields.map((f) => [f.key, f]));
-  return ExtraKeys.flatMap((key) => {
-    const field = byKey.get(key);
-    return field ? [field] : [];
-  });
+  return configFields.filter(
+    (f) => f.group === SettingsGroup && f.key !== EnabledKey,
+  );
 }
 
 export function AntiNukeCard({
@@ -146,7 +143,10 @@ export function AntiNukeCard({
         ) : null}
 
         {extras.length > 0 ? (
-          <CardBody className="grid grid-cols-1 gap-4 border-t border-border sm:grid-cols-3">
+          <CardBody
+            className="grid grid-cols-1 gap-4 border-t border-border sm:grid-cols-3 aria-disabled:pointer-events-none aria-disabled:opacity-50"
+            aria-disabled={!enabled}
+          >
             {extras.map((field) => (
               <Field
                 key={field.key}
@@ -160,13 +160,17 @@ export function AntiNukeCard({
                   onChange={(value) => set(field.key, value)}
                   roles={roles}
                   channels={channels}
+                  guildId={guildId}
                 />
               </Field>
             ))}
           </CardBody>
         ) : null}
 
-        <div className="divide-y divide-border border-t border-border">
+        <div
+          className="divide-y divide-border border-t border-border aria-disabled:pointer-events-none aria-disabled:opacity-50"
+          aria-disabled={!enabled}
+        >
           <div className="grid grid-cols-[1fr_7rem_10rem] gap-3 px-4 py-2 font-mono text-[11.5px] tracking-wide text-fg-subtle uppercase">
             <span>Action</span>
             <span>Limit</span>
@@ -188,6 +192,7 @@ export function AntiNukeCard({
                   onChange={(value) => set(row.limit.key, value)}
                   roles={roles}
                   channels={channels}
+                  guildId={guildId}
                 />
                 {response ? (
                   <ConfigFieldInput
@@ -196,6 +201,7 @@ export function AntiNukeCard({
                     onChange={(value) => set(response.key, value)}
                     roles={roles}
                     channels={channels}
+                    guildId={guildId}
                   />
                 ) : (
                   <span className="text-[14px] text-fg-subtle" title="No per-kind response in the schema — the worker default applies.">

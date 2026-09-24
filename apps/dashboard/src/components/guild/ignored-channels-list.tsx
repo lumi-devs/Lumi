@@ -12,12 +12,10 @@ import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
 import { EmptyState } from "#/components/ui/empty-state";
-import { Field, Select } from "#/components/ui/input";
+import { Field } from "#/components/ui/input";
+import { Select } from "#/components/ui/select";
 import { useStaggerIn } from "#/lib/animate";
-import type {
-  DashboardChannelView,
-  IgnoredChannelView,
-} from "#/lib/dashboard-data";
+import type { DashboardChannelView, IgnoredChannelView } from "@lumi/contracts/views";
 import { useServerAction } from "#/lib/use-server-action";
 
 const WholeServer = "__server__";
@@ -173,19 +171,20 @@ export function IgnoredChannelsList({
           >
             <Select
               id="ignore-channel"
+              aria-label="Ignore commands in"
               value={picked}
-              onChange={(e) => setPicked(e.target.value)}
-            >
-              <option value="">Pick a channel…</option>
-              {serverIgnored ? null : (
-                <option value={WholeServer}>The whole server</option>
-              )}
-              {options.map((channel) => (
-                <option key={channel.id} value={channel.id}>
-                  #{channel.name}
-                </option>
-              ))}
-            </Select>
+              onValueChange={(next) => setPicked(next)}
+              options={[
+                { value: "", label: "Pick a channel…" },
+                ...(serverIgnored
+                  ? []
+                  : [{ value: WholeServer, label: "The whole server" }]),
+                ...options.map((channel) => ({
+                  value: channel.id,
+                  label: `#${channel.name}`,
+                })),
+              ]}
+            />
           </Field>
           <div className="flex flex-col gap-1">
             {/* Invisible spacer matching Field's Label row, so the button -

@@ -1,8 +1,5 @@
-import {
-  FieldType,
-  type ConfigField,
-  type ModuleMeta,
-} from "#lib/module-system/Module.js";
+import { FieldType, type ConfigField } from "#lib/module-system/config-schema.js";
+import type { ModuleMeta } from "#lib/module-system/meta.js";
 import {
   FeaturesPerPage,
   FieldsPerPage,
@@ -10,9 +7,9 @@ import {
   buildFeatureListView,
   buildFieldEditView,
 } from "#modules/core/ui/modules.js";
-import type { CardReply } from "#utilities/cards.js";
-import { resolveCardColor } from "#utilities/cards.js";
-import { describe, expect, it } from "vitest";
+import type { CardReply } from "#lib/ui/cards.js";
+import { resolveCardColor } from "#lib/utilities/config.js";
+import { describe, expect, it } from "bun:test";
 
 type JsonNode = Record<string, any>;
 

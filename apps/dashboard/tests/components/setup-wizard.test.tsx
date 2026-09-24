@@ -1,13 +1,9 @@
-// @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { FieldType, type ConfigField } from "@lumi/contracts";
-import type { ActionResult } from "#/actions/guild-actions";
+import { guildActionsMock } from "../setup";
 
-const setManyGuildConfigFields = vi.fn<() => Promise<ActionResult>>();
-vi.mock("#/actions/guild-actions", () => ({
-  setManyGuildConfigFields,
-}));
+const { setManyGuildConfigFields } = guildActionsMock;
 
 const { SetupWizard } = await import("#/components/guild/setup-wizard");
 
@@ -104,15 +100,12 @@ describe("SetupWizard", () => {
       screen.getByRole("heading", { name: "Step 2 of 5: Log channels" }),
     ).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Security Log Channel"), {
-      target: { value: "chan-1" },
-    });
-    fireEvent.change(screen.getByLabelText("Mod Log Channel"), {
-      target: { value: "chan-2" },
-    });
-    fireEvent.change(screen.getByLabelText("Quarantine Role"), {
-      target: { value: "role-1" },
-    });
+    fireEvent.click(screen.getByLabelText("Security Log Channel"));
+    fireEvent.click(screen.getByRole("option", { name: "#logs" }));
+    fireEvent.click(screen.getByLabelText("Mod Log Channel"));
+    fireEvent.click(screen.getByRole("option", { name: "#mod-log" }));
+    fireEvent.click(screen.getByLabelText("Quarantine Role"));
+    fireEvent.click(screen.getByRole("option", { name: "Quarantined" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Save & continue" }));
 
@@ -174,9 +167,8 @@ describe("SetupWizard", () => {
     renderWizard();
 
     fireEvent.click(screen.getByRole("button", { name: "Get started" }));
-    fireEvent.change(screen.getByLabelText("Security Log Channel"), {
-      target: { value: "chan-1" },
-    });
+    fireEvent.click(screen.getByLabelText("Security Log Channel"));
+    fireEvent.click(screen.getByRole("option", { name: "#logs" }));
     fireEvent.click(screen.getByRole("button", { name: "Save & continue" }));
 
     await waitFor(() => expect(screen.getByText("Nope.")).toBeInTheDocument());

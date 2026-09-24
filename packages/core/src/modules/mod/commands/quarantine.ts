@@ -1,13 +1,13 @@
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
-import type { GuildMember } from "discord.js";
-import { QuarantineAction } from "../actions/index.js";
+import type { AutocompleteInteraction, GuildMember } from "discord.js";
+import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
+import { respondWithReasonChoices } from "../services/reason-autocomplete.js";
 
-const Root = LanguageKeys.Commands;
+const Root = "commands";
 
 type Flow = ModerationSubcommand.Flow<GuildMember, ModerationCase>;
 
@@ -17,35 +17,36 @@ function isSentinel(error: unknown, message: string): boolean {
 
 const QuarantineAdd: Flow = {
   logScope: "quarantine add",
+  duplicateCaseAction: "quarantine",
   resolveTarget: (ctx) => ctx.getMembers("member", { required: true }),
   confirm: (t, { target, reason }) => ({
-    title: t(Root.QuarantineConfirmTitle),
-    body: t(Root.QuarantineConfirmBody, {
+    title: t(`${Root}:quarantineConfirmTitle`),
+    body: t(`${Root}:quarantineConfirmBody`, {
       user: userMention(target.id),
       reason,
     }),
-    confirmLabel: t(Root.QuarantineConfirmButton),
+    confirmLabel: t(`${Root}:quarantineConfirmButton`),
   }),
   action: ({ guild, target, moderator, reason }) =>
     QuarantineAction.apply({ guild, targetMember: target, moderator, reason }),
   mapExpectedError: (t, error, { target }) => {
     if (isSentinel(error, "UNCONFIGURED")) {
       return {
-        title: t(Root.QuarantineUnconfiguredTitle),
-        body: t(Root.QuarantineUnconfigured),
+        title: t(`${Root}:quarantineUnconfiguredTitle`),
+        body: t(`${Root}:quarantineUnconfigured`),
       };
     }
     if (isSentinel(error, "ALREADY_QUARANTINED")) {
       return {
-        title: t(Root.QuarantineAlreadyTitle),
-        body: t(Root.QuarantineAlready, { user: target.user.username }),
+        title: t(`${Root}:quarantineAlreadyTitle`),
+        body: t(`${Root}:quarantineAlready`, { user: target.user.username }),
       };
     }
     return null;
   },
   buildSuccessMessage: (t, { target, reason, outcome }) => ({
-    title: t(Root.QuarantineSuccessTitle),
-    body: t(Root.QuarantineSuccess, {
+    title: t(`${Root}:quarantineSuccessTitle`),
+    body: t(`${Root}:quarantineSuccess`, {
       user: target.user.username,
       reason,
       caseNumber: outcome.caseNumber,
@@ -61,13 +62,13 @@ const QuarantineRemove: Flow = {
   mapExpectedError: (t, error, { target }) =>
     isSentinel(error, "NOT_QUARANTINED")
       ? {
-          title: t(Root.QuarantineNotTitle),
-          body: t(Root.QuarantineNot, { user: target.user.username }),
+          title: t(`${Root}:quarantineNotTitle`),
+          body: t(`${Root}:quarantineNot`, { user: target.user.username }),
         }
       : null,
   buildSuccessMessage: (t, { target, reason, outcome }) => ({
-    title: t(Root.QuarantineReleasedTitle),
-    body: t(Root.QuarantineReleased, {
+    title: t(`${Root}:quarantineReleasedTitle`),
+    body: t(`${Root}:quarantineReleased`, {
       user: target.user.username,
       reason,
       caseNumber: outcome.caseNumber,
@@ -100,7 +101,9 @@ export class QuarantineCommand extends ModerationSubcommand {
               ),
             )
             .addStringOption((o) =>
-              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason")
+                .setRequired(false)
+                .setAutocomplete(true),
             ),
         )
         .addSubcommand((s) =>
@@ -111,10 +114,18 @@ export class QuarantineCommand extends ModerationSubcommand {
               ),
             )
             .addStringOption((o) =>
-              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason")
+                .setRequired(false)
+                .setAutocomplete(true),
             ),
         ),
     );
+  }
+
+  public override async autocompleteRun(
+    interaction: AutocompleteInteraction,
+  ): Promise<void> {
+    return respondWithReasonChoices(interaction);
   }
 
   public add(ctx: ModerationSubcommand.RunContext) {

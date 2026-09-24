@@ -1,11 +1,23 @@
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
-import { mgetSafe } from "#lib/database/cluster-safe.js";
-import { container } from "@sapphire/framework";
-import { tryParseJSON } from "@sapphire/utilities";
+import { container, type ILogger } from "@sapphire/framework";
+import type { RedisClient } from "#lib/database/cluster-safe.js";
+import type { DatabaseClient } from "#lib/prisma/client.js";
+import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
+import type { ConfigRepository } from "#lib/prisma/repositories/ConfigRepository.js";
 
 /** Repository for global and guild-specific module enabled states. */
 export class ModuleRepository extends Repository {
+  public constructor(
+    prisma: DatabaseClient,
+    redis: RedisClient,
+    logger: ILogger,
+    db: DatabaseService,
+    private readonly config: ConfigRepository,
+  ) {
+    super(prisma, redis, logger, db);
+  }
+
   #isEssential(name: string): boolean {
     return Boolean(container.moduleStore && !container.moduleStore.isModuleDisableable(name));
   }
@@ -62,15 +74,6 @@ export class ModuleRepository extends Repository {
     });
   }
 
-  public async getGuildModuleStates(
-    guildId: string,
-  ): Promise<Map<string, boolean>> {
-    const rows = await this.prisma.guildModuleState.findMany({
-      where: { guildId },
-    });
-    return new Map(rows.map((r) => [r.moduleName, r.enabled]));
-  }
-
   public isModuleGuildEnabled(guildId: string, name: string): Promise<boolean> {
     if (this.#isEssential(name)) {
       return Promise.resolve(true);
@@ -88,9 +91,10 @@ export class ModuleRepository extends Repository {
   }
 
   /**
-   * Runs on essentially every guild command's precondition check, so the
-   * global+guild lookup goes through {@linkcode areModulesEnabled}'s single
-   * batched `mget` rather than two sequential Redis round trips.
+   * Runs on essentially every guild command's precondition check. Delegates
+   * to {@linkcode areModulesEnabled} so the global+guild lookup goes through
+   * the same per-key `getOrSet` calls - each individually L1-cached,
+   * negatively-cached, and single-flighted by `CacheStore`.
    */
   public async isModuleEnabled(
     guildId: string | null,
@@ -108,70 +112,37 @@ export class ModuleRepository extends Repository {
     return result.get(moduleName)!;
   }
 
-  /** Batched variant of isModuleEnabled checking multiple modules in one roundtrip. */
+  /**
+   * Batched variant of isModuleEnabled checking multiple modules at once.
+   * Each module's global and guild enabled flags are fetched via their own
+   * `getOrSet`-backed method, run in parallel - N individually cached reads
+   * rather than one uncached `MGET`.
+   */
   public async areModulesEnabled(
     guildId: string,
     moduleNames: string[],
   ): Promise<Map<string, boolean>> {
-    const globalKeys = moduleNames.map((n) => RedisKeys.moduleGlobalEnabled(n));
-    const guildKeys = moduleNames.map((n) =>
-      RedisKeys.moduleEnabled(n, guildId),
-    );
+    const [globalResults, guildResults] = await Promise.all([
+      Promise.all(moduleNames.map((n) => this.isModuleGlobalEnabled(n))),
+      Promise.all(moduleNames.map((n) => this.isModuleGuildEnabled(guildId, n))),
+    ]);
 
-    const raw = await mgetSafe(this.redis, [...globalKeys, ...guildKeys]);
-    const half = moduleNames.length;
-
-    const enabled = new Array<boolean>(half).fill(false);
-
-    const globalMisses: number[] = [];
-    const passedGlobal: number[] = [];
-    for (let i = 0; i < half; i++) {
-      const globalRaw = raw[i] ?? null;
-      if (globalRaw === null) {
-        globalMisses.push(i);
-      } else if (tryParseJSON(globalRaw) === true) {
-        passedGlobal.push(i);
-      }
-    }
-
-    const globalResolved = await Promise.all(
-      globalMisses.map((i) => this.isModuleGlobalEnabled(moduleNames[i]!)),
-    );
-    for (const [k, i] of globalMisses.entries()) {
-      if (globalResolved[k]) {
-        passedGlobal.push(i);
-      }
-    }
-
-    const guildMisses: number[] = [];
     const passedGuild: number[] = [];
-    for (const i of passedGlobal) {
-      const guildRaw = raw[half + i] ?? null;
-      if (guildRaw === null) {
-        guildMisses.push(i);
-      } else if (tryParseJSON(guildRaw) === true) {
-        passedGuild.push(i);
-      }
-    }
-
-    const guildResolved = await Promise.all(
-      guildMisses.map((i) => this.isModuleGuildEnabled(guildId, moduleNames[i]!)),
-    );
-    for (const [k, i] of guildMisses.entries()) {
-      if (guildResolved[k]) {
-        passedGuild.push(i);
-      }
+    for (let i = 0; i < moduleNames.length; i++) {
+      if (globalResults[i] && guildResults[i]) passedGuild.push(i);
     }
 
     const configResolved = await Promise.all(
       passedGuild.map((i) => this.#configLevelEnabled(guildId, moduleNames[i]!)),
     );
+
+    const enabled = new Array<boolean>(moduleNames.length).fill(false);
     for (const [k, i] of passedGuild.entries()) {
       enabled[i] = configResolved[k]!;
     }
 
     const result = new Map<string, boolean>();
-    for (let i = 0; i < half; i++) {
+    for (let i = 0; i < moduleNames.length; i++) {
       result.set(moduleNames[i]!, enabled[i]!);
     }
 
@@ -186,6 +157,7 @@ export class ModuleRepository extends Repository {
     if (!enabled && this.#isEssential(name)) {
       throw new Error(`Module '${name}' is essential and cannot be disabled.`);
     }
+    await this.db.ensureGuild(guildId);
     const updated = await this.prisma.guildModuleState.upsert({
       where: { guildId_moduleName: { guildId, moduleName: name } },
       update: { enabled },
@@ -197,7 +169,7 @@ export class ModuleRepository extends Repository {
 
   /** Resolves a module's config-level enable state. */
   async #configLevelEnabled(guildId: string, name: string): Promise<boolean> {
-    const configEnabled = await this.db.config.getModuleConfig(
+    const configEnabled = await this.config.getModuleConfig(
       guildId,
       name,
       "enabled",

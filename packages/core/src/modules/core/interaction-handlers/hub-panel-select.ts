@@ -1,8 +1,8 @@
 import { fetchTyped } from "#lib/commands.js";
 import { BaseInteractionHandler } from "#lib/interaction-handler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { GuildSettingsUtility } from "#utilities/pieces/GuildSettingsUtility.js";
-import type { PermissionUtility } from "#utilities/pieces/PermissionUtility.js";
+import type { GuildSettingsUtility } from "../utilities/GuildSettingsUtility.js";
+import type { PermissionUtility } from "../utilities/PermissionUtility.js";
 import {
   accessDenied,
   hasAdminPermit,
@@ -10,17 +10,18 @@ import {
   renderPermissions,
   renderRepoModules,
   renderSettings,
-} from "#modules/core/lib/hub-panel.js";
+} from "../services/hub-panel.js";
 import { buildAutoUpdateSettingsView } from "#modules/core/ui/addons.js";
 import {
   buildPermitAssignTargetView,
   type PermitKind,
 } from "#modules/core/ui/permissions.js";
+import { ephemeralCard, makeErrorCard, makeWarningCard } from "#lib/ui/cards.js";
 import {
-  ephemeralCard,
-  makeErrorCard,
-  makeWarningCard,
-} from "#utilities/cards.js";
+  HubAddonModActionId,
+  HubPermitAssignId,
+  HubPermitPickId,
+} from "../constants.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import {
   InteractionHandler,
@@ -50,13 +51,13 @@ export class HubPanelSelectHandler extends BaseInteractionHandler {
 
   public override parse(interaction: AnySelectMenuInteraction) {
     if (interaction.customId === "lumi:setlang") return this.some("lang");
-    if (interaction.customId.startsWith("lumi:permit:pick:"))
+    if (HubPermitPickId.parse(interaction.customId))
       return this.some("permit_pick");
-    if (interaction.customId.startsWith("lumi:permit:assign:"))
+    if (HubPermitAssignId.parse(interaction.customId))
       return this.some("permit_assign");
     if (interaction.customId === "lumi:addon:repo_pick")
       return this.some("addon_repo_pick");
-    if (interaction.customId.startsWith("lumi:addon:mod_action:"))
+    if (HubAddonModActionId.parse(interaction.customId))
       return this.some("addon_mod_action");
     if (interaction.customId === "lumi:addon:autoupdate_interval")
       return this.some("addon_autoupdate_interval");

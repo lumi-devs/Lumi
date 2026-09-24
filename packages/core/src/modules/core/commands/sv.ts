@@ -1,10 +1,10 @@
-import { BaseSubcommand, CommandContext } from "#lib/commands.js";
-import { Emojis } from "#utilities/assets.js";
+import { BaseSubcommand } from "#lib/commands.js";
+import { CommandContext } from "#lib/command-context.js";
+import { Emojis } from "#lib/utilities/assets.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
+import { isSnowflakeId } from "#lib/utilities/misc.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
-
-const GuildIdPattern = /^\d{17,20}$/;
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "sv",
@@ -39,7 +39,7 @@ export class SvCommand extends BaseSubcommand {
     await ctx.defer();
     const raw = (await ctx.getString("guild_id", { required: true }))!;
     const guildId = raw.replace(/\D/g, "");
-    if (!GuildIdPattern.test(guildId)) {
+    if (!isSnowflakeId(guildId)) {
       await ctx.replyError(
         `${Emojis.Cross} Invalid Server ID`,
         `\`${raw}\` is not a valid server ID.`,

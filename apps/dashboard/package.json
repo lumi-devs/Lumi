@@ -11,13 +11,12 @@
     "start": "next start -H \"${DASHBOARD_HOST:-0.0.0.0}\" -p \"${DASHBOARD_PORT:-8080}\"",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run"
+    "test": "bun test --parallel"
   },
   "dependencies": {
     "@lumi/contracts": "workspace:*",
     "@lumi/observability": "workspace:*",
     "@tanstack/react-table": "9.2.4",
-    "animejs": "^4.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -35,12 +34,11 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
+    "@happy-dom/global-registrator": "^20.14.3",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
-    "jsdom": "^30.0.1",
-    "tailwindcss": "^4.3.3",
-    "vitest": "^5.0.0"
+    "tailwindcss": "^4.3.3"
   }
 }

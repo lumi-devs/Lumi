@@ -13,7 +13,6 @@ import "server-only";
 const DiscordApi = "https://discord.com/api/v10";
 
 export type { OAuthGuild } from "./discord-format";
-export { canManage, userAvatarUrl, guildIconUrl } from "./discord-format";
 import type { OAuthGuild } from "./discord-format";
 
 /**

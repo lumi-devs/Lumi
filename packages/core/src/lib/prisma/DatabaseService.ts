@@ -2,7 +2,6 @@ import type { RedisClient } from "#lib/database/cluster-safe.js";
 import { scanKeysSafe } from "#lib/database/cluster-safe.js";
 import { type ILogger, container } from "@sapphire/framework";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
-import { Stopwatch } from "@sapphire/stopwatch";
 import { Prisma } from "@prisma/client";
 import {
   createGuildTransaction,
@@ -14,31 +13,20 @@ import { ModuleRepository } from "#lib/prisma/repositories/ModuleRepository.js";
 import { GuildKVRepository } from "#lib/prisma/repositories/GuildKVRepository.js";
 import { AccessRepository } from "#lib/prisma/repositories/AccessRepository.js";
 import { PermissionRepository } from "#lib/prisma/repositories/PermissionRepository.js";
-import { DownloaderRepository } from "#lib/prisma/repositories/DownloaderRepository.js";
+import { DownloaderRepository } from "#modules/core/data/DownloaderRepository.js";
 import { AuditRepository } from "#lib/prisma/repositories/AuditRepository.js";
-import { UserRepository } from "#lib/prisma/repositories/UserRepository.js";
 import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
 import { ConfigHistoryRepository } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
 import { ConfigOverrideRepository } from "#lib/prisma/repositories/ConfigOverrideRepository.js";
-import { AfkRepository } from "#lib/prisma/repositories/AfkRepository.js";
-import { ModNoteRepository } from "#lib/prisma/repositories/ModNoteRepository.js";
-import { AppealRepository } from "#lib/prisma/repositories/AppealRepository.js";
+import { AfkRepository } from "#modules/afk/data/AfkRepository.js";
+import { ModNoteRepository } from "#modules/mod/data/ModNoteRepository.js";
+import { AppealRepository } from "#modules/mod/data/AppealRepository.js";
 import { GlobalRepository } from "#lib/prisma/repositories/GlobalRepository.js";
-import { SecurityRepository } from "#lib/prisma/repositories/SecurityRepository.js";
-import { TempVcRepository } from "#lib/prisma/repositories/TempVcRepository.js";
-import { EconomyRepository } from "#lib/prisma/repositories/EconomyRepository.js";
+import { SecurityRepository } from "#modules/security/data/SecurityRepository.js";
+import { TempVcRepository } from "#modules/tempvc/data/TempVcRepository.js";
+import { EconomyRepository } from "#modules/economy/data/EconomyRepository.js";
+import { ReactionRoleRepository } from "#modules/reactionroles/data/ReactionRoleRepository.js";
 
-export type {
-  TargetPermitPayload,
-  PolarityBucket,
-  PermitKind,
-  PermitTargetType,
-  PermitPolarity,
-  PermitRecord,
-  PermitAssignmentRecord,
-  PermitWithAssignments,
-} from "#lib/prisma/repositories/PermissionRepository.js";
-export type { AuditLogPayload } from "#lib/prisma/repositories/AuditRepository.js";
 export type { ConfigHistoryEntry } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
 export type { ConfigOverrideEntry } from "#lib/prisma/repositories/ConfigOverrideRepository.js";
 
@@ -61,7 +49,6 @@ export class DatabaseService {
   public readonly permissions: PermissionRepository;
   public readonly downloader: DownloaderRepository;
   public readonly audit: AuditRepository;
-  public readonly users: UserRepository;
   public readonly moderation: ModerationRepository;
   public readonly configHistory: ConfigHistoryRepository;
   public readonly configOverrides: ConfigOverrideRepository;
@@ -71,6 +58,7 @@ export class DatabaseService {
   public readonly security: SecurityRepository;
   public readonly tempvc: TempVcRepository;
   public readonly economy: EconomyRepository;
+  public readonly reactionRoles: ReactionRoleRepository;
 
   public constructor(
     private readonly prisma: DatabaseClient,
@@ -80,21 +68,32 @@ export class DatabaseService {
     reader: DatabaseClient = prisma,
   ) {
     this.global = new GlobalRepository(prisma, redis, logger, this);
-    this.config = new ConfigRepository(prisma, redis, logger, this);
-    this.modules = new ModuleRepository(prisma, redis, logger, this);
-    this.guildKV = new GuildKVRepository(prisma, redis, logger, this);
-    this.access = new AccessRepository(prisma, redis, logger, this);
-    this.permissions = new PermissionRepository(prisma, redis, logger, this);
-    this.downloader = new DownloaderRepository(prisma, redis, logger, this);
-    this.audit = new AuditRepository(prisma, redis, logger, this);
-    this.users = new UserRepository(prisma, redis, logger, this);
-    this.moderation = new ModerationRepository(prisma, redis, logger, this, reader);
     this.configHistory = new ConfigHistoryRepository(
       prisma,
       redis,
       logger,
       this,
     );
+    this.config = new ConfigRepository(
+      prisma,
+      redis,
+      logger,
+      this,
+      this.configHistory,
+    );
+    this.modules = new ModuleRepository(
+      prisma,
+      redis,
+      logger,
+      this,
+      this.config,
+    );
+    this.guildKV = new GuildKVRepository(prisma, redis, logger, this);
+    this.access = new AccessRepository(prisma, redis, logger, this);
+    this.permissions = new PermissionRepository(prisma, redis, logger, this);
+    this.downloader = new DownloaderRepository(prisma, redis, logger, this);
+    this.audit = new AuditRepository(prisma, redis, logger, this);
+    this.moderation = new ModerationRepository(prisma, redis, logger, this, reader);
     this.configOverrides = new ConfigOverrideRepository(
       prisma,
       redis,
@@ -107,6 +106,7 @@ export class DatabaseService {
     this.security = new SecurityRepository(prisma, redis, logger, this);
     this.tempvc = new TempVcRepository(prisma, redis, logger, this);
     this.economy = new EconomyRepository(prisma, redis, logger, this);
+    this.reactionRoles = new ReactionRoleRepository(prisma, redis, logger, this);
   }
 
   /** Ensures a Guild row exists so dependent rows can satisfy their FK. */
@@ -116,6 +116,66 @@ export class DatabaseService {
       create: { id: guildId },
       update: {},
     });
+  }
+
+  /** Marks a guild as departed, starting its retention grace period. */
+  public async markGuildLeft(guildId: string): Promise<void> {
+    await this.prisma.guild
+      .update({
+        where: { id: guildId },
+        data: { leftAt: new Date() },
+      })
+      // The row may not exist if the bot left before ever writing one -
+      // nothing to mark departed in that case.
+      .catch(() => {});
+  }
+
+  /** Clears a departure mark on (re)join - upserts, a fresh guild has no row yet. */
+  public async markGuildRejoined(guildId: string): Promise<void> {
+    await this.prisma.guild.upsert({
+      where: { id: guildId },
+      create: { id: guildId },
+      update: { leftAt: null },
+    });
+  }
+
+  /** Of `guildIds`, the ones currently marked departed in Postgres. */
+  public async findDepartedGuildIds(guildIds: string[]): Promise<string[]> {
+    if (guildIds.length === 0) return [];
+    const rows = await this.prisma.guild.findMany({
+      where: { id: { in: guildIds }, leftAt: { not: null } },
+      select: { id: true },
+    });
+    return rows.map((row) => row.id);
+  }
+
+  /** Every guild id not currently marked departed. */
+  public async findActiveGuildIds(): Promise<string[]> {
+    const rows = await this.prisma.guild.findMany({
+      where: { leftAt: null },
+      select: { id: true },
+    });
+    return rows.map((row) => row.id);
+  }
+
+  /**
+   * Deletes every Guild row whose departure grace period has elapsed and
+   * returns the purged ids, so the caller can also evict their Redis state.
+   * Every child table's FK to Guild is `onDelete: Cascade`, so nothing else
+   * needs a manual delete.
+   */
+  public async purgeDepartedGuilds(cutoffDate: Date): Promise<string[]> {
+    const departed = await this.prisma.guild.findMany({
+      where: { leftAt: { lt: cutoffDate } },
+      select: { id: true },
+    });
+    if (departed.length === 0) return [];
+
+    await this.prisma.guild.deleteMany({
+      where: { leftAt: { lt: cutoffDate } },
+    });
+
+    return departed.map((row) => row.id);
   }
 
   public async publishBotStats(stats: Record<string, unknown>): Promise<void> {
@@ -131,9 +191,8 @@ export class DatabaseService {
    * hooks have run.  Spans several repositories' tables, so it lives on the
    * facade:
    *
-   *  - User        : delete the profile row
-   *  - Blocklist   : delete entries where this user is the subject
-   *  - AuditLedger : delete all action records for the user
+   *  - Blocklist/GlobalBlock : delete entries where this user is the subject
+   *  - AuditLedger           : delete all action records for the user
    *
    * IgnoreEntry has no userId column.  AfkEntry is handled by the AFK module
    * hook.  ModerationCase anonymization is handled by the mod module hook
@@ -147,8 +206,8 @@ export class DatabaseService {
         where: { targetType: "user", targetId: userId },
       }),
       this.prisma.blocklist.deleteMany({ where: { userId } }),
+      this.prisma.globalBlock.deleteMany({ where: { userId } }),
       this.prisma.auditLedger.deleteMany({ where: { userId } }),
-      this.prisma.user.deleteMany({ where: { id: userId } }),
     ]);
 
     const keys = await scanKeysSafe(
@@ -165,17 +224,17 @@ export class DatabaseService {
   public async exportUserData(
     userId: string,
   ): Promise<Record<string, unknown> | null> {
-    const [user, blocklist, auditLedger] = await Promise.all([
-      this.prisma.user.findUnique({ where: { id: userId } }),
+    const [blocklist, globalBlock, auditLedger] = await Promise.all([
       this.prisma.blocklist.findMany({ where: { userId } }),
+      this.prisma.globalBlock.findUnique({ where: { userId } }),
       this.prisma.auditLedger.findMany({ where: { userId } }),
     ]);
 
-    if (!user && blocklist.length === 0 && auditLedger.length === 0) {
+    if (!globalBlock && blocklist.length === 0 && auditLedger.length === 0) {
       return null;
     }
 
-    return { user, blocklist, auditLedger };
+    return { blocklist, globalBlock, auditLedger };
   }
 
   public transaction(guildId: string): Promise<GuildWriteTransaction> {
@@ -183,9 +242,9 @@ export class DatabaseService {
   }
 
   public async probePrisma(): Promise<number> {
-    const sw = new Stopwatch();
+    const start = performance.now();
     await this.prisma.$queryRaw(Prisma.sql`SELECT 1`);
-    return sw.stop().duration;
+    return performance.now() - start;
   }
 
   public async getPostgresStats(): Promise<{

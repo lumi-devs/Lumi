@@ -1,5 +1,4 @@
 import {
-  InteractionHandler,
   InteractionHandlerTypes,
   UserError,
 } from "@sapphire/framework";
@@ -13,17 +12,17 @@ import type {
 } from "discord.js";
 import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import { Emojis } from "#utilities/assets.js";
-import { makeSuccessCard } from "#utilities/cards.js";
-import { getVcRecord, removeVcRecord } from "#modules/tempvc/data.js";
-import { Tvc, TempVcKeys } from "#modules/tempvc/keys.js";
+import { Emojis } from "#lib/utilities/assets.js";
+import { makeSuccessCard } from "#lib/ui/cards.js";
+import { getVcRecord, removeVcRecord } from "#modules/tempvc/data/tempvc.js";
+import { TempVcKeys, TempVcPanelId } from "../constants.js";
 import {
   showLimitModal,
   showRenameModal,
-} from "#modules/tempvc/lib/panel-helpers.js";
-import { resolveOwnedVc, resolveVc } from "#modules/tempvc/panel-guard.js";
+} from "#modules/tempvc/services/panel-helpers.js";
+import { resolveOwnedVc, resolveVc } from "#modules/tempvc/services/panel-guard.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 import {
   buildBlockView,
@@ -36,34 +35,38 @@ import {
   buildUntrustView,
 } from "#modules/tempvc/ui/panel.js";
 
-@ApplyOptions<InteractionHandler.Options>({
+@ApplyOptions<ModuleInteractionHandler.Options>({
   name: "tempvc-panel-button",
   interactionHandlerType: InteractionHandlerTypes.Button,
+  module: "tempvc",
 })
-export class TempVcPanelButtonHandler extends BaseInteractionHandler {
+export class TempVcPanelButtonHandler extends ModuleInteractionHandler<
+  ButtonInteraction,
+  { action: string; channelId: string }
+> {
   private get service(): TempVcUtility {
     return getUtility("tempvc");
   }
 
   public override parse(interaction: Interaction) {
     if (!interaction.isButton()) return this.none();
-    if (!interaction.customId.startsWith(`${Tvc}:`)) return this.none();
-    const [, action, channelId] = interaction.customId.split(":");
-    if (!action || !channelId) return this.none();
-    return this.some({ action, channelId });
+    const parsed = TempVcPanelId.parse(interaction.customId);
+    if (!parsed) return this.none();
+    return this.some(parsed);
   }
 
-  public async run(
+  protected override async handle(
     interaction: ButtonInteraction,
     { action, channelId }: { action: string; channelId: string },
   ): Promise<void> {
-    if (!interaction.inGuild()) return;
+    const { guildId } = interaction;
+    if (!guildId) return;
 
     // showModal() must be the interaction's first response, so "name"/"limit"
     // can't defer first; every other action defers immediately to beat
     // Discord's 3s ack window before the i18n/Redis lookups below.
     const opensModal = action === "name" || action === "limit";
-    if (!opensModal) await interaction.deferUpdate();
+    if (!opensModal) await this.acknowledge(interaction);
 
     const t = await fetchTyped(interaction);
     const member = interaction.member as GuildMember;
@@ -81,7 +84,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
     if (action === "claim") {
       const { channel, record } = (await resolveVc(
         interaction.guild,
-        interaction.guildId,
+        guildId,
         channelId,
         notFound,
       ))!;
@@ -91,7 +94,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
 
     const { channel, record } = (await resolveOwnedVc(
       interaction.guild,
-      interaction.guildId,
+      guildId,
       channelId,
       this.service,
       member,
@@ -101,7 +104,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
 
     switch (action) {
       case "panel":
-        await interaction.editReply(buildPanel(channel, record, t));
+        await interaction.editReply(await buildPanel(channel, record, t));
         return;
       case "name":
         await showRenameModal(interaction, channel, t);
@@ -121,7 +124,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
           record,
           !record.locked,
         );
-        await interaction.editReply(buildPanel(channel, next, t));
+        await interaction.editReply(await buildPanel(channel, next, t));
         return;
       }
       case "hide": {
@@ -130,7 +133,7 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
           record,
           !record.hidden,
         );
-        await interaction.editReply(buildPanel(channel, next, t));
+        await interaction.editReply(await buildPanel(channel, next, t));
         return;
       }
       case "kick":
@@ -169,7 +172,9 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
     if (!deleted) {
       throw new UserError({
         identifier: "TempVcDeleteFailed",
-        message: `${Emojis.Cross} Failed to delete the voice channel. Try again.`,
+        message: `${Emojis.Cross} ${
+          t ? t("tempvc:deleteFailedMessage") : "Failed to delete the voice channel. Try again."
+        }`,
       });
     }
     if (guildId) await removeVcRecord(guildId, id);
@@ -221,6 +226,6 @@ export class TempVcPanelButtonHandler extends BaseInteractionHandler {
 
     const fullRecord = (await getVcRecord(interaction.guildId!, channel.id))!;
     const next = await this.service.setOwner(channel, fullRecord, member.id);
-    await interaction.editReply(buildPanel(channel, next, t));
+    await interaction.editReply(await buildPanel(channel, next, t));
   }
 }

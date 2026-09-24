@@ -1,6 +1,8 @@
+import { randomUUIDv7 } from "bun";
 import { Listener } from "@sapphire/framework";
 import type { Awaitable } from "@sapphire/utilities";
 import type { ClientEvents } from "discord.js";
+import { runWithContext } from "@lumi/observability";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 
 export interface ModuleListenerOptions extends Listener.Options {
@@ -29,8 +31,18 @@ export abstract class ModuleListener<
   public async run(...args: ClientEvents[E]): Promise<void> {
     const guildId = this.resolveGuildId(...args);
     if (!guildId) return;
-    if (!(await isModuleEnabled(guildId, this.#module))) return;
-    await this.handle(...args);
+    return runWithContext(
+      {
+        correlationId: randomUUIDv7(),
+        source: "event",
+        name: this.name,
+        guildId,
+      },
+      async () => {
+        if (!(await isModuleEnabled(guildId, this.#module))) return;
+        await this.handle(...args);
+      },
+    );
   }
 
   /** Resolves the guild ID from the event arguments. */

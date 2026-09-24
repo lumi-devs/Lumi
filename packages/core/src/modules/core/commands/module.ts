@@ -1,4 +1,5 @@
-import { BaseSubcommand, CommandContext } from "#lib/commands.js";
+import { BaseSubcommand } from "#lib/commands.js";
+import { CommandContext } from "#lib/command-context.js";
 import { paginateList } from "#lib/utilities/pagination.js";
 import {
   installProgressCard,
@@ -11,7 +12,7 @@ import {
   uninstallProgressCard,
   updateAllProgressCard,
   updateProgressCard,
-} from "#modules/core/lib/module-command/cards.js";
+} from "../ui/module-command-cards.js";
 import {
   installModule,
   pinModule,
@@ -21,14 +22,14 @@ import {
   unpinModule,
   updateAllModules,
   updateModule,
-} from "#modules/core/lib/module-command/operations.js";
-import { getModulePiecesInfo } from "#modules/core/lib/module-command/pieces.js";
-import { registerModuleCommand } from "#modules/core/lib/module-command/registry.js";
+} from "../services/module-command/operations.js";
+import { getModulePiecesInfo } from "../services/module-command/pieces.js";
+import { registerModuleCommand } from "../services/module-command/registry.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { AutocompleteInteraction } from "discord.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { DownloaderUtility } from "#utilities/pieces/DownloaderUtility.js";
+import type { DownloaderUtility } from "../utilities/DownloaderUtility.js";
 import {
   filterAutocompleteChoices,
   respondWithChoices,
@@ -37,7 +38,7 @@ import {
   installedModuleChoices,
   repoModuleChoices,
   repoNameChoices,
-} from "#lib/downloader/autocomplete.js";
+} from "../services/downloader-autocomplete.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "module",

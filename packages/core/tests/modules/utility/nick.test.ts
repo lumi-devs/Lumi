@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { UserCommand as NickCommand } from "../../../src/modules/utility/commands/nick.js";
 
@@ -48,7 +48,7 @@ describe("nick command hierarchy check", () => {
         path: "/path/to/nick.ts",
         root: "/path/to",
         store: { name: "commands" } as any,
-      } as any,
+      },
       {},
     );
   });

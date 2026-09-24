@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { AdministratorPrecondition } from "#lib/permissions/preconditions/Administrator.js";
 import { BotOwnerPrecondition } from "#lib/permissions/preconditions/BotOwner.js";
@@ -59,7 +59,7 @@ describe("Permissions Preconditions", () => {
 
   describe("AdministratorPrecondition", () => {
     const precondition = new AdministratorPrecondition(
-      { name: "Administrator", path: "", root: "", store: {} as any } as any,
+      { name: "Administrator", path: "", root: "", store: {} as any },
       {}
     );
 
@@ -89,7 +89,7 @@ describe("Permissions Preconditions", () => {
 
   describe("BotOwnerPrecondition", () => {
     const precondition = new BotOwnerPrecondition(
-      { name: "BotOwner", path: "", root: "", store: {} as any } as any,
+      { name: "BotOwner", path: "", root: "", store: {} as any },
       {}
     );
 
@@ -113,7 +113,7 @@ describe("Permissions Preconditions", () => {
 
   describe("GuildOwnerPrecondition", () => {
     const precondition = new GuildOwnerPrecondition(
-      { name: "GuildOwner", path: "", root: "", store: {} as any } as any,
+      { name: "GuildOwner", path: "", root: "", store: {} as any },
       {}
     );
 
@@ -130,7 +130,7 @@ describe("Permissions Preconditions", () => {
 
   describe("ModeratorPrecondition", () => {
     const precondition = new ModeratorPrecondition(
-      { name: "Moderator", path: "", root: "", store: {} as any } as any,
+      { name: "Moderator", path: "", root: "", store: {} as any },
       {}
     );
 
@@ -154,7 +154,7 @@ describe("Permissions Preconditions", () => {
 
   describe("ModuleEnabledPrecondition", () => {
     const precondition = new ModuleEnabledPrecondition(
-      { name: "ModuleEnabled", path: "", root: "", store: {} as any } as any,
+      { name: "ModuleEnabled", path: "", root: "", store: {} as any },
       {}
     );
 
@@ -175,7 +175,7 @@ describe("Permissions Preconditions", () => {
 
   describe("NotIgnoredPrecondition", () => {
     const precondition = new NotIgnoredPrecondition(
-      { name: "NotIgnored", path: "", root: "", store: {} as any } as any,
+      { name: "NotIgnored", path: "", root: "", store: {} as any },
       {}
     );
 
@@ -225,7 +225,7 @@ describe("Permissions Preconditions", () => {
 
   describe("MaintenanceModePrecondition", () => {
     const precondition = new MaintenanceModePrecondition(
-      { name: "MaintenanceMode", path: "", root: "", store: {} as any } as any,
+      { name: "MaintenanceMode", path: "", root: "", store: {} as any },
       {}
     );
 
@@ -245,7 +245,7 @@ describe("Permissions Preconditions", () => {
 
   describe("NotBlockedPrecondition", () => {
     const precondition = new NotBlockedPrecondition(
-      { name: "NotBlocked", path: "", root: "", store: {} as any } as any,
+      { name: "NotBlocked", path: "", root: "", store: {} as any },
       {}
     );
 

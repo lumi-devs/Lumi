@@ -1,9 +1,12 @@
-// @vitest-environment jsdom
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { render, screen } from "@testing-library/react";
 import type { Session } from "next-auth";
-import type { GuildSummaryView } from "@lumi/contracts";
+import type { GuildSummaryView } from "@lumi/contracts/rpc";
 import { GuildPicker } from "#/components/guild-picker";
+
+// GuildPicker refreshes the server list when the tab is returned to after an
+// invite; the router is not mounted in a bare render. `next/navigation` is
+// mocked globally in setup.ts.
 
 const ClientId = "client-123";
 

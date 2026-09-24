@@ -6,6 +6,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#/components/ui/dropdown-menu";
 import { SideNav, SideNavUser } from "#/components/layout/side-nav";
@@ -19,17 +21,6 @@ export interface SwitcherGuild {
   /** Raw Discord icon hash, resolved to a CDN URL here. */
   icon: string | null;
 }
-
-// Static UX default from the design — Discipline & Appeals and Safety & Security
-// start expanded (the categories most guilds touch), Community & Engagement,
-// Monitoring & Diagnostics start expanded, Configuration starts collapsed.
-// Independent of live alert state.
-const DefaultOpenCategories = new Set([
-  "Discipline & Appeals",
-  "Safety & Security",
-  "Community & Engagement",
-  "Monitoring & Diagnostics",
-]);
 
 export function GuildSideNav({
   guildId,
@@ -59,9 +50,8 @@ export function GuildSideNav({
     ...guildManagementGroups(guildId).map((group) => ({
       ...group,
       collapsible: true,
-      defaultOpen: DefaultOpenCategories.has(group.title),
       badge: group.links.length,
-      alertDot: group.title === "Safety & Security" ? Boolean(panicArmed) : false,
+      alertDot: group.id === "safety" ? Boolean(panicArmed) : false,
     })),
   ];
 
@@ -120,6 +110,7 @@ function GuildSwitcher({
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="start" className="max-h-80 w-64 overflow-y-auto">
+        <DropdownMenuLabel>Servers</DropdownMenuLabel>
         {guilds.map((g) => (
           <DropdownMenuItem key={g.id} asChild>
             <Link href={`/guild/${g.id}`}>
@@ -131,6 +122,7 @@ function GuildSwitcher({
             </Link>
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/guilds">
             <Layers3 aria-hidden />

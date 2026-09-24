@@ -1,9 +1,10 @@
-import { Module, DefineModule, cfg } from "#lib/module-system/Module.js";
+import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { cfg } from "#lib/module-system/config-schema.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
-import { invalidateThresholds } from "./lib/thresholds.js";
-import { scheduleCaseLift } from "./lib/helpers.js";
-import { handleModLiftFire } from "./lib/lift-handler.js";
-import { handleWarnDecayFire } from "./lib/warn-decay-handler.js";
+import { invalidateThresholds } from "./services/threshold-rules.js";
+import { scheduleCaseLift } from "./services/helpers.js";
+import { handleModLiftFire } from "./services/lift-handler.js";
+import { handleWarnDecayFire } from "./services/warn-decay-handler.js";
 
 @DefineModule({
   name: "mod",
@@ -18,6 +19,7 @@ import { handleWarnDecayFire } from "./lib/warn-decay-handler.js";
     log_channel_id: cfg.channel({
       label: "Mod Log Channel",
       description: "Channel where moderation action embeds are posted.",
+      claimable: true,
     }),
     quarantine_role_id: cfg.role({
       label: "Quarantine Role",
@@ -36,6 +38,24 @@ import { handleWarnDecayFire } from "./lib/warn-decay-handler.js";
       default: 10,
       min: 1,
       max: 25,
+    }),
+    predefined_reasons: cfg.stringList({
+      label: "Predefined Reasons",
+      description:
+        "Common punishment reasons to suggest as autocomplete on the reason field, one per line.",
+    }),
+    immune_role_ids: cfg.multiRole({
+      label: "Immune Role IDs",
+      description:
+        "Role IDs exempt from automated escalation (heat timeouts/quarantine, anti-nuke responses, warn-threshold auto-actions). Manual staff commands (/ban, /warn, etc.) always work regardless.",
+    }),
+    duplicate_case_window_minutes: cfg.number({
+      label: "Duplicate Case Window (minutes)",
+      description:
+        "Before opening a new case, warn staff if a similar case against the same member was opened within this many minutes. 0 disables the check.",
+      default: 5,
+      min: 0,
+      max: 1440,
     }),
   }),
 })

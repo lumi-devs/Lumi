@@ -10,24 +10,37 @@ import { getBotToken, getTotalShards, getShardList } from "@lumi/core/env";
 const token = getBotToken();
 const shardFile = fileURLToPath(new URL("./shard-client.ts", import.meta.url));
 
+const totalShards = getTotalShards();
+const shardList = getShardList();
+
+if (shardList !== "auto" && totalShards === "auto") {
+  throw new Error(
+    "[Manager] TOTAL_SHARDS must be explicitly configured when SHARD_LIST is specified.",
+  );
+}
+
 const manager = new ShardingManager(shardFile, {
   token,
-  totalShards: getTotalShards(),
-  shardList: getShardList(),
+  totalShards,
+  shardList,
   respawn: true,
 });
+
+let shuttingDown = false;
 
 manager.on("shardCreate", (shard) => {
   console.info(`[Manager] Launched shard ${shard.id}`);
   shard.on("death", () => {
-    console.error(`[Manager] Shard ${shard.id} process died; discord.js will respawn it`);
+    if (!shuttingDown && manager.respawn) {
+      console.error(`[Manager] Shard ${shard.id} process died; discord.js will respawn it`);
+    }
   });
 });
 
-let shuttingDown = false;
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
+  manager.respawn = false;
   const shards = [...manager.shards.values()];
   console.info(`[Manager] ${signal} received, forwarding to ${shards.length} shard(s)`);
 
@@ -57,5 +70,18 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
 process.once("SIGINT", () => void shutdown("SIGINT"));
 process.once("SIGTERM", () => void shutdown("SIGTERM"));
 
-await manager.spawn({ amount: "auto", timeout: -1 });
-console.info(`[Manager] All ${manager.totalShards} shard(s) spawned`);
+process.on("unhandledRejection", (reason) =>
+  console.error("[Manager] Unhandled promise rejection:", reason),
+);
+process.on("uncaughtException", (err) => {
+  console.error("[Manager] Uncaught exception - initiating shutdown:", err);
+  void shutdown("SIGTERM");
+});
+
+try {
+  await manager.spawn({ timeout: -1 });
+  console.info(`[Manager] All ${manager.totalShards} shard(s) spawned`);
+} catch (err) {
+  console.error("[Manager] Failed to spawn shards:", err);
+  await shutdown("SIGTERM");
+}

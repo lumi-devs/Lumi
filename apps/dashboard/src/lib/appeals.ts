@@ -1,7 +1,7 @@
 // Imported by both the server page and the client table so the two can't
 // drift in how they label or classify the same status — mirrors
 // `moderation-cases.ts`'s `CaseActionLabels` pattern.
-import { AppealStatuses, type AppealStatus } from "@lumi/contracts";
+import { AppealStatuses, type AppealStatus } from "@lumi/contracts/rpc";
 import type { BadgeProps } from "#/components/ui/badge";
 
 export const AppealStatusLabels: Record<AppealStatus, string> = {

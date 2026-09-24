@@ -8,7 +8,6 @@ import {
   Histogram,
   Registry,
 } from "prom-client";
-import { createServer, type Server } from "node:http";
 import { runReadinessProbes } from "./readiness";
 
 export const registry = new Registry();
@@ -202,71 +201,72 @@ export const cacheMisses = new Counter({
 });
 
 /** Start a tiny /metrics HTTP server. No-op (returns null) if METRICS_ENABLED=false. */
-export function startMetricsServer(port: number): Server | null {
+export function startMetricsServer(port: number): ReturnType<typeof Bun.serve> | null {
   if (process.env["METRICS_ENABLED"] === "false") return null;
-
-  const server = createServer((req, res) => {
-    if (req.url === "/metrics") {
-      registry
-        .metrics()
-        .then((body) => {
-          res.writeHead(200, { "Content-Type": registry.contentType });
-          res.end(body);
-        })
-        .catch(() => {
-          res.writeHead(500);
-          res.end();
-        });
-      return;
-    }
-    if (req.url === "/healthz") {
-      // Liveness: process is up. No deep checks - k8s uses this to decide
-      // whether to restart the container.
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end('{"status":"ok"}');
-      return;
-    }
-    if (req.url === "/readyz") {
-      // Readiness: gates traffic / shard assignment. 503 if any dependency
-      // probe fails so the orchestrator pulls us out of rotation without a
-      // restart.
-      runReadinessProbes()
-        .then((report) => {
-          res.writeHead(report.ready ? 200 : 503, {
-            "Content-Type": "application/json",
-          });
-          res.end(JSON.stringify(report));
-        })
-        .catch((err) => {
-          // Endpoint is unauthenticated: report a fixed classification and log
-          // the raw error, which can embed connection-string credentials.
-          process.stderr.write(
-            `[observability] readiness probes failed: ${String(err)}\n`,
-          );
-          res.writeHead(503, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ready: false, error: "probe error" }));
-        });
-      return;
-    }
-    res.writeHead(404);
-    res.end();
-  });
-
-  // Without this the bind failure surfaces as an uncaughtException and takes the
-  // whole service down — telemetry must never be able to kill its host.
-  server.on("error", (err: NodeJS.ErrnoException) => {
-    const detail =
-      err.code === "EADDRINUSE"
-        ? `port ${port} already in use — set METRICS_PORT for this service`
-        : String(err);
-    process.stderr.write(`[observability] metrics server disabled: ${detail}\n`);
-  });
 
   // `/metrics`, `/healthz` and `/readyz` are unauthenticated, so the server
   // binds to loopback unless a host is set explicitly. Deployments where the
   // scraper lives elsewhere (Prometheus on a container network, a k8s
   // ServiceMonitor) must set METRICS_HOST=0.0.0.0.
   const host = process.env["METRICS_HOST"] ?? "127.0.0.1";
-  server.listen(port, host);
-  return server;
+
+  try {
+    return Bun.serve({
+      hostname: host,
+      port,
+      async fetch(req) {
+        const { pathname } = new URL(req.url);
+        if (pathname === "/metrics") {
+          try {
+            const body = await registry.metrics();
+            return new Response(body, {
+              headers: { "Content-Type": registry.contentType },
+            });
+          } catch {
+            return new Response(null, { status: 500 });
+          }
+        }
+        if (pathname === "/healthz") {
+          // Liveness: process is up. No deep checks - k8s uses this to decide
+          // whether to restart the container.
+          return Response.json({ status: "ok" });
+        }
+        if (pathname === "/readyz") {
+          // Readiness: gates traffic / shard assignment. 503 if any dependency
+          // probe fails so the orchestrator pulls us out of rotation without a
+          // restart.
+          try {
+            const report = await runReadinessProbes();
+            return Response.json(report, { status: report.ready ? 200 : 503 });
+          } catch (err) {
+            // Endpoint is unauthenticated: report a fixed classification and
+            // log the raw error, which can embed connection-string credentials.
+            process.stderr.write(
+              `[observability] readiness probes failed: ${String(err)}\n`,
+            );
+            return Response.json(
+              { ready: false, error: "probe error" },
+              { status: 503 },
+            );
+          }
+        }
+        return new Response(null, { status: 404 });
+      },
+      error(err) {
+        process.stderr.write(
+          `[observability] metrics server request failed: ${String(err)}\n`,
+        );
+        return new Response(null, { status: 500 });
+      },
+    });
+  } catch (err: unknown) {
+    // Without this the bind failure takes the whole service down — telemetry
+    // must never be able to kill its host.
+    const detail =
+      err instanceof Error && err.message.includes("EADDRINUSE")
+        ? `port ${port} already in use — set METRICS_PORT for this service`
+        : String(err);
+    process.stderr.write(`[observability] metrics server disabled: ${detail}\n`);
+    return null;
+  }
 }

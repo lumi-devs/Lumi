@@ -1,4 +1,5 @@
 import { container } from "@sapphire/framework";
+import { Time } from "@sapphire/time-utilities";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { handleSendMessageFire } from "#lib/outbound/send-queue.js";
@@ -30,7 +31,8 @@ async function handleAddonAutoUpdateFire(): Promise<void> {
 
     const dueForCheck =
       config.lastCheckedAt === null ||
-      Date.now() - config.lastCheckedAt >= config.intervalMinutes * 60_000;
+      Date.now() - config.lastCheckedAt.getTime() >=
+        config.intervalMinutes * Time.Minute;
     if (!dueForCheck) return;
 
     const pending = await downloader.checkForUpdates();
@@ -46,7 +48,7 @@ async function handleAddonAutoUpdateFire(): Promise<void> {
       }
     }
 
-    await downloader.setAutoUpdateConfig({ lastCheckedAt: Date.now() });
+    await downloader.setAutoUpdateConfig({ lastCheckedAt: new Date() });
 
     if (restartNeeded) {
       scheduleProcessRestart("addon auto-update");

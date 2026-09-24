@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { validateAddon } from "./validate.js";
 
 const ValidInfo = JSON.stringify({
@@ -13,9 +13,21 @@ const ValidInfo = JSON.stringify({
   end_user_data_statement: "This addon does not store any user data.",
 });
 
+const ValidManifest = JSON.stringify({
+  name: "my-addon",
+  displayName: "My Addon",
+  emoji: "🧪",
+  description: "A test addon.",
+  version: "1.0.0",
+  targetUtility: "worker",
+  subStores: [],
+  configFields: [],
+});
+
 async function writeAddon(dir: string, indexSrc: string, infoJson = ValidInfo) {
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(path.join(dir, "info.json"), infoJson);
+  await fs.writeFile(path.join(dir, "manifest.json"), ValidManifest);
   await fs.writeFile(path.join(dir, "index.ts"), indexSrc);
 }
 
@@ -45,8 +57,8 @@ describe("validateAddon - lumi SDK import boundary", () => {
   it.each([
     "#core/module-system/Module.js",
     "#lib/commands.js",
-    "#utilities/cards.js",
-    "#database/redis.js",
+    "#lib/ui/cards.js",
+    "#lib/database/redis.js",
     "#root/foo.js",
   ])("hard-errors when the addon imports Lumi's internal path %s directly", async (internalPath) => {
     const dir = path.join(tmpRoot, "my-addon");

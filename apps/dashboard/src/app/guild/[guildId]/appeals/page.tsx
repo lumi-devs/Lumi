@@ -1,7 +1,8 @@
-import { Scale, PlugZap, SearchX } from "lucide-react";
+import { Scale, SearchX } from "lucide-react";
 import Link from "next/link";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildAppeals, getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildEntities } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { exportGuildAppeals } from "#/actions/guild-export-actions";
 import { GuildAppealsTable } from "#/components/guild/guild-appeals-table";
 import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
@@ -15,18 +16,14 @@ import {
   CardTitle,
 } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
+import { LoadFailure } from "#/components/ui/load-failure";
 import { ExportLogButton } from "#/components/ui/export-log-button";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
-import type { AppealsListData, AppealView } from "#/lib/dashboard-data";
+import type { AppealsListData, AppealView } from "@lumi/contracts/views";
 import { AppealStatusOptions, isAppealStatus } from "#/lib/appeals";
-import {
-  countBy,
-  extractMemberNames,
-  pageNumber,
-  single,
-} from "#/lib/log-format";
+import { countBy, extractMemberNames, pageNumber, single } from "#/lib/log-format";
 
 const PageSize = 25;
 
@@ -45,17 +42,24 @@ export default async function AppealsPage({
   const status = isAppealStatus(statusParam) ? statusParam : undefined;
   const page = pageNumber(single(query["page"]));
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
-  const memberNames = extractMemberNames(dashboard.members);
+  const entitiesPromise = getGuildEntities(guildId, session.userId);
+  const appealsPromise = rpc("guild.appeals.list", {
+    guildId,
+    actorId: session.userId,
+    data: {
+      page,
+      pageSize: PageSize,
+      ...(status ? { status } : {}),
+    },
+  });
+
+  const entities = await entitiesPromise;
+  const memberNames = extractMemberNames(entities.members);
 
   let data: AppealsListData | null = null;
   let failure: string | null = null;
   try {
-    data = await getGuildAppeals(guildId, session.userId, {
-      page,
-      pageSize: PageSize,
-      ...(status ? { status } : {}),
-    });
+    data = await appealsPromise;
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }
@@ -113,13 +117,7 @@ export default async function AppealsPage({
           </div>
 
           {failure !== null ? (
-            <EmptyState
-              compact
-              icon={PlugZap}
-              title="Appeals couldn't be loaded"
-              description="Check that the bot is online and connected to the message broker, then reload this page."
-              footnote={failure}
-            />
+            <LoadFailure what="Appeals" error={failure} />
           ) : data && data.appeals.length > 0 ? (
             <>
               {data.appeals.length > 1 ? (

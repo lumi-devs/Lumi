@@ -1,8 +1,7 @@
 "use server";
 
-import { RpcActions } from "@lumi/contracts";
 import { requireSession } from "#/lib/auth-guards";
-import { rpcCall } from "#/lib/rpc";
+import { rpc } from "#/lib/rpc";
 import { isRateLimited } from "#/lib/rate-limit";
 import { runAction, type ActionResult } from "#/lib/action-result";
 
@@ -21,7 +20,7 @@ export async function completeWebVerification(
     if (await isRateLimited(`verify-web:${session.userId}`, 10, 60_000)) {
       throw new Error("Too many attempts — slow down.");
     }
-    await rpcCall(RpcActions.guildVerificationWebComplete, {
+    await rpc("guild.verificationWeb.complete", {
       guildId,
       actorId: session.userId,
     });

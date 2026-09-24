@@ -1,0 +1,38 @@
+---
+title: FAQ
+description: Known gotchas worth knowing before you hit them.
+---
+
+### The dashboard Compose profile doesn't start
+
+The shared `Dockerfile` `runner` target has no `next build` stage for the dashboard and copies
+source only, while the `dashboard` Compose service runs `next start`, which needs a prebuilt
+`.next` directory — the container exits immediately with *"Could not find a production build in
+the '.next' directory."* Run the dashboard outside Docker for now:
+`bun run --cwd apps/dashboard dev`. See [Docker Compose](/docs/deploy/docker-compose).
+
+### The worker won't start — `RPC_INTERNAL_TOKEN` error
+
+This is deliberate, not a bug: an unset `RPC_INTERNAL_TOKEN` is a hard failure at boot rather
+than an insecure default that silently leaves the RPC bridge unauthenticated. Generate one with
+`openssl rand -hex 32` and set it on both the worker and the dashboard — see
+[Configuration](/docs/getting-started/configuration).
+
+### Can I set `LUMI_DEV_PATHS` in production?
+
+No. It's a local-development-only escape hatch for loading modules from outside the repo (the
+equivalent of RedBot's `--cog-path`), and it's env-only and non-persistent by design. Never set
+it on a production deployment. See [Distribution](/docs/addons/distribution).
+
+### Grafana and the docs dev server both want port 3001
+
+The `observability` Compose profile's Grafana listens on `127.0.0.1:3001`, and `bun run --filter
+@lumi/docs dev` also defaults to port 3001. Running both locally at once means one of them needs
+a different port — pass `next dev -p <port>` for the docs site, or remap Grafana's published
+port in `docker-compose.yml`.
+
+### Why doesn't the module list on this site read like a feature matrix?
+
+It deliberately doesn't. See each module's own guide under [Guides](/docs/guides/dashboard) for
+what it does, and [Reference](/docs/reference/commands) for the exhaustive, generated command
+and permit tables.

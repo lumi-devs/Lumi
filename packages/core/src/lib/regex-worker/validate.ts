@@ -8,7 +8,7 @@ export const MaxRegexLength = 256;
  * `(\w|\d)*!`, `(.*,)*` - within the probe budget. Each ends in a character the
  * pattern most likely cannot match, which is what forces exhaustive backtracking.
  */
-export const AdversarialInputs: readonly string[] = [
+const AdversarialInputs: readonly string[] = [
   `${"a".repeat(60)}!`,
   `${"ab".repeat(30)}!`,
   `${"1".repeat(60)}!`,

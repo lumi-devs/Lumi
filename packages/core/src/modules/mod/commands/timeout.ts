@@ -1,48 +1,50 @@
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
 import { formatDuration, parseDuration } from "#lib/utilities/time.js";
 import { ApplyOptions } from "@sapphire/decorators";
+import { Time } from "@sapphire/time-utilities";
 import { Result } from "@sapphire/framework";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
-import type { GuildMember } from "discord.js";
-import { MuteAction } from "../actions/index.js";
+import type { AutocompleteInteraction, GuildMember } from "discord.js";
+import { MuteAction } from "#modules/mod/services/actions/MuteAction.js";
+import { respondWithReasonChoices } from "../services/reason-autocomplete.js";
 
-const Root = LanguageKeys.Commands;
-const MaxTimeoutMs = 28 * 24 * 60 * 60 * 1000;
+const Root = "commands";
+const MaxTimeoutMs = 28 * Time.Day;
 
 type Flow = ModerationSubcommand.Flow<GuildMember, ModerationCase>;
 type TimedFlow = ModerationSubcommand.Flow<GuildMember, ModerationCase, number>;
 
 const TimeoutAdd: TimedFlow = {
   logScope: "timeout add",
+  duplicateCaseAction: "mute",
   resolveTarget: (ctx) => ctx.getMembers("member", { required: true }),
   preHandle: async (ctx, t) => {
     const input = await ctx.getString("duration");
     const durationMs = input ? parseDuration(input) : null;
     if (!durationMs) {
       return Result.err({
-        title: t(Root.TimeoutInvalidDurationTitle),
-        body: t(Root.TimeoutInvalidDuration),
+        title: t(`${Root}:timeoutInvalidDurationTitle`),
+        body: t(`${Root}:timeoutInvalidDuration`),
       });
     }
     if (durationMs > MaxTimeoutMs) {
       return Result.err({
-        title: t(Root.TimeoutTooLongTitle),
-        body: t(Root.TimeoutTooLong),
+        title: t(`${Root}:timeoutTooLongTitle`),
+        body: t(`${Root}:timeoutTooLong`),
       });
     }
     return Result.ok(durationMs);
   },
   confirm: (t, { target, reason, prepared }) => ({
-    title: t(Root.TimeoutConfirmTitle),
-    body: t(Root.TimeoutConfirmBody, {
+    title: t(`${Root}:timeoutConfirmTitle`),
+    body: t(`${Root}:timeoutConfirmBody`, {
       user: userMention(target.id),
       duration: formatDuration(prepared),
       reason,
     }),
-    confirmLabel: t(Root.TimeoutConfirmButton),
+    confirmLabel: t(`${Root}:timeoutConfirmButton`),
   }),
   action: ({ guild, target, moderator, reason, prepared }) =>
     MuteAction.apply({
@@ -53,8 +55,8 @@ const TimeoutAdd: TimedFlow = {
       durationMs: prepared,
     }),
   buildSuccessMessage: (t, { target, reason, prepared, outcome }) => ({
-    title: t(Root.TimeoutSuccessTitle),
-    body: t(Root.TimeoutSuccess, {
+    title: t(`${Root}:timeoutSuccessTitle`),
+    body: t(`${Root}:timeoutSuccess`, {
       user: target.user.username,
       duration: formatDuration(prepared),
       reason,
@@ -69,8 +71,8 @@ const TimeoutRemove: Flow = {
   action: ({ guild, target, moderator, reason }) =>
     MuteAction.undo({ guild, targetMember: target, moderator, reason }),
   buildSuccessMessage: (t, { target }) => ({
-    title: t(Root.TimeoutRemovedTitle),
-    body: t(Root.TimeoutRemoved, { user: target.user.username }),
+    title: t(`${Root}:timeoutRemovedTitle`),
+    body: t(`${Root}:timeoutRemoved`, { user: target.user.username }),
   }),
 };
 
@@ -104,7 +106,9 @@ export class TimeoutCommand extends ModerationSubcommand {
               ),
             )
             .addStringOption((o) =>
-              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason")
+                .setRequired(false)
+                .setAutocomplete(true),
             ),
         )
         .addSubcommand((s) =>
@@ -115,10 +119,18 @@ export class TimeoutCommand extends ModerationSubcommand {
               ),
             )
             .addStringOption((o) =>
-              applyLocalizedBuilder(o, "commands:modReason").setRequired(false),
+              applyLocalizedBuilder(o, "commands:modReason")
+                .setRequired(false)
+                .setAutocomplete(true),
             ),
         ),
     );
+  }
+
+  public override async autocompleteRun(
+    interaction: AutocompleteInteraction,
+  ): Promise<void> {
+    return respondWithReasonChoices(interaction);
   }
 
   public add(ctx: ModerationSubcommand.RunContext) {

@@ -1,0 +1,28 @@
+---
+title: AFK
+description: Set yourself AFK with mention notifications and a nickname prefix.
+---
+
+The `afk` module (💤) lets a member mark themselves AFK; anyone who mentions them afterward gets
+notified, and returning clears the status automatically.
+
+## Commands
+
+| Command | Permit | Description |
+| :--- | :--- | :--- |
+| `/afk` | — | Set yourself AFK with an optional reason. |
+| `/afklist` | `owner.*` | List users currently AFK in this server. |
+| `/afkclean` | `owner.*` | Remove AFK entries whose users are no longer cached. |
+| `/afkstats` | `owner.*` | Show AFK system stats. |
+
+## Config
+
+| Key | Description | Default |
+| :--- | :--- | :--- |
+| `nick_prefix_enabled` | Prepend `[AFK]` to the member's nickname while AFK. | on |
+
+## Data and privacy
+
+User ID, an optional AFK reason message, and timestamps are stored to notify others when
+mentioned. Cleared automatically when the member returns, or on GDPR erasure. See
+[Data and Privacy](/docs/reference/data-and-privacy).

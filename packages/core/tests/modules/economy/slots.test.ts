@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import {
   DefaultSlotPayouts,
   parseSlotPayouts,
@@ -6,7 +6,7 @@ import {
   resolveSlotPayout,
   spinSlots,
   type SlotRow,
-} from "#modules/economy/lib/slots.js";
+} from "#modules/economy/services/slots.js";
 
 describe("slots engine", () => {
   it("keeps Red's jackpot, cherry, and clover combos", () => {

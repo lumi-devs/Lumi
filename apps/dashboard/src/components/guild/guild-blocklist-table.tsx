@@ -14,7 +14,7 @@ import { DataTable } from "#/components/ui/data-table";
 import { EmptyState } from "#/components/ui/empty-state";
 import { Field, Input } from "#/components/ui/input";
 import { guildBlocklistColumns } from "#/components/guild/guild-blocklist-columns";
-import type { BlocklistEntryView } from "#/lib/dashboard-data";
+import type { BlocklistEntryView } from "@lumi/contracts/views";
 import { isSnowflake } from "#/lib/moderation-cases";
 import { useServerAction } from "#/lib/use-server-action";
 

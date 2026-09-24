@@ -1,14 +1,13 @@
 import type { LumiT } from "#lib/i18n/index.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Result } from "@sapphire/framework";
 import { userMention } from "@discordjs/formatters";
+import { isSnowflakeId } from "#lib/utilities/misc.js";
 import type { ModerationCase } from "@prisma/client";
-import { BanAction } from "../actions/index.js";
+import { BanAction } from "#modules/mod/services/actions/BanAction.js";
 
-const Root = LanguageKeys.Commands;
-const UserIdPattern = /^\d{17,20}$/;
+const Root = "commands";
 
 type Context = ModerationCommand.ActionContext<string>;
 type Success = ModerationCommand.OutcomeContext<string, ModerationCase>;
@@ -56,10 +55,10 @@ export class UnbanCommand extends ModerationCommand<string, ModerationCase> {
     t: LumiT,
     target: string,
   ) {
-    if (UserIdPattern.test(target)) return Result.ok(null);
+    if (isSnowflakeId(target)) return Result.ok(null);
     return Result.err({
-      title: t(Root.BanInvalidIdTitle),
-      body: t(Root.BanInvalidId),
+      title: t(`${Root}:banInvalidIdTitle`),
+      body: t(`${Root}:banInvalidId`),
     });
   }
 
@@ -69,15 +68,15 @@ export class UnbanCommand extends ModerationCommand<string, ModerationCase> {
 
   protected override buildFailureMessage(t: LumiT) {
     return {
-      title: t(Root.ModActionFailedTitle),
-      body: t(Root.BanRemoveFailed),
+      title: t(`${Root}:modActionFailedTitle`),
+      body: t(`${Root}:banRemoveFailed`),
     };
   }
 
   protected override buildSuccessMessage(t: LumiT, { target }: Success) {
     return {
-      title: t(Root.BanRemoveSuccessTitle),
-      body: t(Root.BanRemoveSuccess, { user: userMention(target) }),
+      title: t(`${Root}:banRemoveSuccessTitle`),
+      body: t(`${Root}:banRemoveSuccess`, { user: userMention(target) }),
     };
   }
 }

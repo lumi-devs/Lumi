@@ -1,8 +1,19 @@
 import { time, TimestampStyles, userMention } from "@discordjs/formatters";
 import { Colors } from "discord.js";
 import { isNullish } from "@sapphire/utilities";
-import { makeCard, noPingCard, type CardReply } from "#lib/utilities/cards.js";
-import type { AuditEntry } from "#lib/loggable.js";
+import { makeCard, noPingCard, type CardReply } from "#lib/ui/cards.js";
+
+export interface AuditEntry {
+  action: string;
+  targetId: string;
+  actorId: string;
+  guildId: string;
+  moduleName?: string;
+  reason?: string;
+  color?: number;
+  caseNumber?: number;
+  extra?: Record<string, unknown>;
+}
 
 /**
  * Cards for queued sends are rendered by the consumer, so the queue payload

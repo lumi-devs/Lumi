@@ -1,14 +1,19 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 import { container } from "@sapphire/framework";
 import {
   handleSendMessageFire,
   queueSend,
 } from "#lib/outbound/send-queue.js";
-import { scheduleTask } from "#lib/schedule-task.js";
+
+// bun:test has no `vi.mocked` type-narrowing helper, so the mocks are kept as
+// named references here and handed to the factory, rather than cast at the
+// call site after importing `#lib/schedule-task.js` normally.
+const scheduleTask = vi.fn().mockResolvedValue(undefined);
+const cancelTask = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("#lib/schedule-task.js", () => ({
-  scheduleTask: vi.fn().mockResolvedValue(undefined),
-  cancelTask: vi.fn().mockResolvedValue(undefined),
+  scheduleTask,
+  cancelTask,
 }));
 
 /** Records send start/finish order so overlap can be asserted. */
@@ -64,7 +69,7 @@ describe("queueSend", () => {
   it("sends inline when the queue is unreachable", async () => {
     const channel = makeChannel("c1", 0);
     channels.set("c1", channel);
-    vi.mocked(scheduleTask).mockRejectedValueOnce(new Error("redis down"));
+    scheduleTask.mockRejectedValueOnce(new Error("redis down"));
 
     await queueSend({ channelId: "c1", content: "hello" });
 

@@ -77,15 +77,24 @@ export function startTracing(opts: TracingOptions): boolean {
       import("@opentelemetry/instrumentation-http"),
       import("@opentelemetry/instrumentation-pg"),
       import("@opentelemetry/instrumentation-ioredis"),
-    ]).then(([http, pg, ioredis]) => {
-      registerInstrumentations({
-        instrumentations: [
-          new http.HttpInstrumentation(),
-          new pg.PgInstrumentation(),
-          new ioredis.IORedisInstrumentation(),
-        ],
+    ])
+      .then(([http, pg, ioredis]) => {
+        registerInstrumentations({
+          instrumentations: [
+            new http.HttpInstrumentation(),
+            new pg.PgInstrumentation(),
+            new ioredis.IORedisInstrumentation(),
+          ],
+        });
+      })
+      .catch((err) => {
+        if (process.env["OTEL_DIAG"] === "true") {
+          diag.warn(
+            "[observability] auto-instrumentation failed to load: " +
+              String(err),
+          );
+        }
       });
-    });
   } catch {
     /* manual spans still work without auto-instrumentation */
   }

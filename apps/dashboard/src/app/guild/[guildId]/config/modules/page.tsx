@@ -1,6 +1,6 @@
 import { Puzzle } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildShell, getGuildEntities, getGuildModule } from "#/lib/guild-reads";
 import { ModuleCardGrid } from "#/components/guild/module-card-grid";
 import { PageHeader } from "#/components/ui/page-header";
 import { Badge } from "#/components/ui/badge";
@@ -13,20 +13,23 @@ export default async function GuildModulesPage({
 }) {
   const { guildId } = await params;
   const session = await requireGuild(guildId);
-  const data = await getGuildDashboard(guildId, session.userId);
+  const [shell, entities, security, filter] = await Promise.all([
+    getGuildShell(guildId, session.userId),
+    getGuildEntities(guildId, session.userId),
+    getGuildModule(guildId, session.userId, "security"),
+    getGuildModule(guildId, session.userId, "filter"),
+  ]);
 
-  const modules = data.modules.filter((m) => !m.isAddon);
+  const modules = shell.modules.filter((m) => !m.isAddon);
   const enabled = modules.filter((m) => m.enabled || m.name === "core").length;
 
   // Failing health checks that map onto a specific module's settings page
   // become that module's "N alerts" line — no fabricated alert data.
-  const securityModule = data.modules.find((m) => m.name === "security");
-  const filterModule = data.modules.find((m) => m.name === "filter");
   const failingChecks = buildHealthChecks(
     guildId,
-    data.roles,
-    securityModule?.config,
-    filterModule,
+    entities.roles,
+    security.module?.config,
+    filter.module ?? undefined,
   ).filter((c) => !c.ok);
   const alertsByModule: Record<string, number> = {};
   for (const check of failingChecks) {

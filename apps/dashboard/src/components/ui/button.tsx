@@ -1,15 +1,16 @@
 "use client";
 
 import { Slot } from "radix-ui";
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, Ref } from "react";
 import type { VariantProps } from "class-variance-authority";
 import { buttonVariants } from "./button-variants";
 import { cn } from "#/lib/utils";
 
 export interface ButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "ref">,
+  extends ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 // Radix `Slot` for `asChild` (render as a Link/anchor while keeping button
@@ -20,12 +21,14 @@ export function Button({
   variant,
   size,
   asChild,
+  ref,
   ...props
 }: ButtonProps) {
   if (asChild) {
     // `asChild` merges styling onto a single child element (e.g. a `Link`).
     return (
       <Slot.Root
+        ref={ref}
         className={cn(buttonVariants({ variant, size }), className)}
         {...props}
       />
@@ -33,6 +36,7 @@ export function Button({
   }
   return (
     <button
+      ref={ref}
       className={cn(
         buttonVariants({ variant, size }),
         "transition-transform duration-100 active:scale-[0.97]",
@@ -43,4 +47,3 @@ export function Button({
   );
 }
 
-export { buttonVariants } from "./button-variants";

@@ -1,9 +1,10 @@
 # `@lumi/contracts`
 
-Shared wire contracts (bus events, RPC payloads, module manifest schemas, and config fields) shared across Lumi microservices and packages.
+Shared wire contracts for Lumi's worker, dashboard, docs and addon sandbox: the typed RPC router, dashboard views, module manifest schemas, config fields and message blocks.
 
 ## Usage
 
 ```typescript
-import { RPC_ACTIONS, type GuildDashboardData } from "@lumi/contracts";
+import { rpcRouter, type RpcInput, type RpcOutput } from "@lumi/contracts/rpc";
+import type { GuildShellData } from "@lumi/contracts/views";
 ```

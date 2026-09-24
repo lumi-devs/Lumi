@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "bun:test";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { container } from "@sapphire/framework";
 import { validateAddon, validateAddonOrRepo } from "#lib/downloader/validate.js";
 import { DownloadResolver, ModuleRoot } from "#lib/downloader/resolver.js";
-import { LumiInfo } from "#utilities/misc.js";
+import { LumiInfo } from "#lib/utilities/misc.js";
 import { fakeSpawnResult } from "../../helpers/mock-bun-spawn.js";
 
 describe("Downloader & Addon Helpers (validate & resolver)", () => {
@@ -83,7 +83,6 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       const addonDir = path.join(tmpDir, "my-addon");
       await fs.mkdir(addonDir, { recursive: true });
 
-      // Name mismatch and min_bot_version higher than 1.0.0
       const infoJson = {
         name: "wrong-name",
         author: ["Tester"],
@@ -120,6 +119,19 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
         end_user_data_statement: "Version addon privacy statement",
       };
       await fs.writeFile(path.join(addonDir, "info.json"), JSON.stringify(infoJson));
+      await fs.writeFile(
+        path.join(addonDir, "manifest.json"),
+        JSON.stringify({
+          name: "version-addon",
+          displayName: "Version",
+          emoji: "📦",
+          description: "Version test",
+          version: "1.0.0",
+          targetUtility: "worker",
+          subStores: [],
+          configFields: [],
+        })
+      );
       await fs.writeFile(
         path.join(addonDir, "index.ts"),
         `@DefineModule({ name: "version-addon" })\nexport class TestModule {}`
@@ -178,10 +190,10 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
 
       const result = await validateAddon(addonDir);
       expect(result.errors).toContain(
-        'Found a "tasks/" directory - BullMQ pieces MUST live in "scheduled-tasks/" (a "tasks/" directory is silently never scanned).'
+        'Found a "tasks/" directory, which is never scanned. A sandboxed addon cannot own a scheduled-task piece - call registerTaskFireHandler() from "lumi/scheduling" in index.ts instead.'
       );
       expect(result.errors.some((e) => e.includes("uses EmbedBuilder"))).toBe(true);
-      expect(result.errors.some((e) => e.includes("touches container.prisma"))).toBe(true);
+      expect(result.errors.some((e) => e.includes("does not exist in an addon process"))).toBe(true);
       expect(result.errors.some((e) => e.includes('imports another module via "#modules/afk/index.js"'))).toBe(true);
       expect(result.errors.some((e) => e.includes('relative import "../outside.js" escapes'))).toBe(true);
       expect(result.warnings.some((w) => w.includes("calls stores.registerPath"))).toBe(true);
@@ -309,7 +321,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
         );
 
         const modules = await resolver.getModulesInRepo(repoName);
-        expect(modules).toEqual(modulesData);
+        expect(modules).toEqual<typeof modulesData>(modulesData);
       } finally {
         await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
       }

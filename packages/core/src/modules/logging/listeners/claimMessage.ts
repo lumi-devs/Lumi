@@ -1,16 +1,18 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { container } from "@sapphire/framework";
-import { Colors, PermissionFlagsBits } from "discord.js";
+import { Colors } from "discord.js";
+import { fetchTyped } from "#lib/commands.js";
 import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
+import { memberRoleIds } from "#lib/permissions/subject.js";
 import type { GuildMessage } from "#lib/types/common.js";
-import { makeCard } from "#lib/utilities/cards.js";
+import { makeCard } from "#lib/ui/cards.js";
 import { logError } from "#lib/utilities/errors.js";
 import {
   consumeLogClaimCode,
   normalizeLogClaimCode,
   peekLogClaimCode,
   registerLogClaim,
-} from "#lib/logging/claims.js";
+} from "../services/claims.js";
 
 @ApplyOptions<GuildMessageListener.Options>({
   name: "loggingClaimMessage",
@@ -24,16 +26,43 @@ export default class LoggingClaimMessageListener extends GuildMessageListener {
     const guildId = message.guildId;
     if (!(await peekLogClaimCode(guildId, code))) return;
 
-    if (!message.member?.permissions.has(PermissionFlagsBits.ManageGuild)) {
-      return;
-    }
+    const hasPermit = await container.permitResolver.hasPermit({
+      guildId,
+      userId: message.author.id,
+      roleIds: memberRoleIds(message.member),
+      channelId: message.channelId,
+      permitNode: "logging.claim",
+      guildOwnerId: message.guild.ownerId,
+    });
+    if (!hasPermit) return;
     if (!(await consumeLogClaimCode(guildId, code))) return;
 
+    const t = await fetchTyped(message);
+    const channel = message.channel;
+    const channelId = channel?.isThread()
+      ? (channel.parentId ?? message.channelId)
+      : message.channelId;
+
+    const reply = await message
+      .reply({
+        ...makeCard(
+          Colors.Green,
+          t("logging:claimAddedTitle"),
+          t("logging:claimAddedMessage"),
+        ),
+      })
+      .catch((err: unknown) => {
+        logError("Logging: Claim confirmation reply failed", err);
+        return null;
+      });
+
     const claim = {
-      channelId: message.channelId,
+      channelId,
       authorId: message.author.id,
       messageId: message.id,
       claimedAt: new Date().toISOString(),
+      replyChannelId: message.channelId,
+      ...(reply ? { replyMessageId: reply.id } : {}),
     };
     await registerLogClaim(guildId, claim);
     await container.db.audit
@@ -46,18 +75,6 @@ export default class LoggingClaimMessageListener extends GuildMessageListener {
       })
       .catch((err: unknown) =>
         logError("Logging: Claim audit write failed", err),
-      );
-
-    await message
-      .reply({
-        ...makeCard(
-          Colors.Green,
-          "Channel claimed",
-          "This channel is pending as a log destination. A manager can confirm it on the dashboard.",
-        ),
-      })
-      .catch((err: unknown) =>
-        logError("Logging: Claim confirmation reply failed", err),
       );
   }
 }

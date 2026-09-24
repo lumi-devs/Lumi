@@ -1,22 +1,25 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
 
 // Backs the "do not break when refactoring" contract on
-// ModerationRepository.createModerationCase: the counter read-and-increment
-// MUST stay inside the same transaction as the case insert, so concurrent
-// creates for one guild serialize and hand out contiguous, unique case numbers.
+// ModerationRepository.createModerationCase: the counter reservation MUST stay
+// a single atomic statement, so concurrent creates for one guild never hand
+// out the same case number.
 //
-// We can't run a real Postgres row lock in a unit test, so we model the two
-// guarantees the implementation relies on:
-//   1. `$transaction(fn)` serializes its body against the counter row - modelled
-//      here with a per-guild async mutex held for the duration of the callback
-//      (mirrors SELECT … FOR UPDATE taken by the atomic `increment`).
-//   2. `(guildId, caseNumber)` is unique - `moderationCase.create` throws on a
-//      duplicate, exactly like the DB constraint would (P2002).
+// We can't run a real Postgres row lock in a unit test, so we model the
+// guarantee the implementation relies on: Postgres's own `ON CONFLICT ...
+// DO UPDATE ... RETURNING` locks the counter row for the duration of that one
+// statement, so two concurrent callers targeting the same guildId are
+// serialized by the database, not by application code. That's modelled here
+// with a per-guild async mutex held for the duration of the `$queryRaw` call
+// (mirrors the row lock `ON CONFLICT` takes), plus a real uniqueness check on
+// `(guildId, caseNumber)` in `moderationCase.create`, exactly like the DB
+// constraint would (P2002).
 //
-// If a refactor moves the counter read OUTSIDE the transaction, the read stops
-// being covered by the mutex, concurrent calls observe the same `next`, and the
-// unique check throws - failing this test. That's the regression guard.
+// If a refactor moves the counter reservation outside that single atomic
+// statement, two concurrent calls can observe the same `next` and either
+// collide on the unique check or silently duplicate a case number - failing
+// this test. That's the regression guard.
 
 class AsyncMutex {
   private tail: Promise<void> = Promise.resolve();
@@ -40,44 +43,34 @@ class FakePrisma {
   private counters = new Map<string, number>(); // guildId -> next
   private cases: Array<{ guildId: string; caseNumber: number; id: number }> = [];
   private seq = 0;
+  private locks = new Map<string, AsyncMutex>();
 
-  guildCaseCounter = {
-    upsert: async ({
-      where,
-      create,
-      update: _update,
-    }: {
-      where: { guildId: string };
-      create: { guildId: string; next: number };
-      update: { next: { increment: number } };
-    }) => {
+  private lockFor(guildId: string): AsyncMutex {
+    let lock = this.locks.get(guildId);
+    if (!lock) {
+      lock = new AsyncMutex();
+      this.locks.set(guildId, lock);
+    }
+    return lock;
+  }
+
+  // Models the single atomic `INSERT ... ON CONFLICT (guildId) DO UPDATE ...
+  // RETURNING` statement: the read-modify-write of the counter row is
+  // serialized per guildId, exactly like Postgres's own row-level lock.
+  $queryRaw = async (
+    sql: { values: readonly unknown[] },
+  ): Promise<{ caseNumber: number }[]> => {
+    const guildId = sql.values[0] as string;
+    return this.lockFor(guildId).run(async () => {
       await yieldOnce();
-      const g = where.guildId;
-      const existing = this.counters.get(g);
-      if (existing === undefined) {
-        this.counters.set(g, create.next);
-        return { guildId: g, next: create.next };
-      }
-      const next = existing + 1;
-      this.counters.set(g, next);
-      return { guildId: g, next };
-    },
+      const current = this.counters.get(guildId);
+      const next = current === undefined ? 2 : current + 1;
+      this.counters.set(guildId, next);
+      return [{ caseNumber: next - 1 }];
+    });
   };
 
   moderationCase = {
-    findFirst: async ({
-      where,
-    }: {
-      where: { guildId: string };
-      orderBy: { caseNumber: "desc" };
-      select: { caseNumber: boolean };
-    }) => {
-      await yieldOnce();
-      const guildCases = this.cases.filter((c) => c.guildId === where.guildId);
-      if (guildCases.length === 0) return null;
-      const sorted = [...guildCases].sort((a, b) => b.caseNumber - a.caseNumber);
-      return { caseNumber: sorted[0]!.caseNumber };
-    },
     create: async ({
       data,
     }: {
@@ -97,25 +90,16 @@ class FakePrisma {
       return row;
     },
   };
-
-  // Models the transactional row lock: the callback runs under the guild's
-  // mutex. We don't know the guildId until the body runs, so callers operating
-  // on different guilds still serialize through a single outer mutex - fine for
-  // this test, which hammers one guild.
-  $transaction = async <T>(fn: (tx: FakePrisma) => Promise<T>): Promise<T> => {
-    return this.globalLock.run(() => fn(this));
-  };
-  private globalLock = new AsyncMutex();
 }
 
 function makeRepo(prisma: FakePrisma): ModerationRepository {
-  // The repo only touches this.prisma in createModerationCase; the other
-  // constructor deps are unused on this path.
+  // The repo only touches this.prisma and this.db.ensureGuild in
+  // createModerationCase; the other constructor deps are unused on this path.
   return new ModerationRepository(
     prisma as unknown as never,
     {} as never,
     { error() {}, warn() {}, debug() {}, info() {} } as never,
-    {} as never,
+    { ensureGuild: async () => {} } as never,
   );
 }
 

@@ -1,4 +1,4 @@
-import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { Time } from "@sapphire/time-utilities";
 import { disconnectDatabase } from "#lib/prisma/client.js";
 import {
   envParseString,
@@ -6,13 +6,13 @@ import {
   isPrimaryShard,
 } from "#lib/env.js";
 import { registerCoreFireHandlers } from "#lib/core-fire-handlers.js";
-import type { RedisLock } from "#lib/redis-lock.js";
+import type { RedisLock } from "#lib/lock.js";
 import { acquireSchedulerLock } from "#lib/scheduler-lock.js";
 import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
-import { initCoreRpcHandlers } from "#lib/rpc/core-rpc.js";
+import { registerRpcHandlers } from "#lib/rpc/registry.js";
 import { startRpcHttpServer } from "#lib/rpc/http-server.js";
 import { TaskFireConsumer } from "#lib/task-fire-registry.js";
-import type { OwnedEventBus } from "@lumi/event-bus";
+import type { OwnedEventBus } from "#lib/event-bus/factory.js";
 import { failedJobsTotal } from "@lumi/observability";
 import {
   ApplicationCommandRegistries,
@@ -20,13 +20,15 @@ import {
   SapphireClient,
   container,
 } from "@sapphire/framework";
-import { tryParseJSON } from "@sapphire/utilities";
 import type { Message } from "discord.js";
-import { warnOnCleanupError } from "./cleanup.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { buildClientOptions } from "./client-options.js";
 import { installContainerServices } from "./container-services.js";
-import { PrefixCache } from "./PrefixCache.js";
 import { ReadinessProbes } from "./ReadinessProbes.js";
+
+// Teardown steps swallow their own failure so one unreachable resource can't strand the rest.
+const warnOnCleanupError = (what: string) => (err: unknown) =>
+  container.logger.warn(`[Client] ${what} failed:`, err);
 
 /**
  * The primary client for Lumi, extending {@linkcode SapphireClient}.
@@ -50,14 +52,17 @@ export class LumiClient extends SapphireClient {
   private _schedulerLock: RedisLock | null = null;
   private _bullWorker: { on(e: string, fn: (...a: unknown[]) => void): void; off(e: string, fn: (...a: unknown[]) => void): void } | null = null;
   private _bullFailedHandler: ((job: unknown, err: unknown) => void) | null = null;
-  private _prefixCache: PrefixCache = new PrefixCache();
-  private _prefixCacheUnbind: (() => void) | null = null;
+  private _repositoryCacheUnbind: (() => void) | null = null;
 
   public constructor(_options: LumiClient.Options = {}) {
     super(buildClientOptions());
 
+    if (!isPrimaryShard() && container.tasks) {
+      container.tasks.createRepeated = async () => {};
+    }
+
     this._ownedEventBus = installContainerServices(this);
-    this._prefixCacheUnbind = this._prefixCache.attachToInvalidationBus(
+    this._repositoryCacheUnbind = repositoryCache.attachToInvalidationBus(
       container.invalidation,
     );
 
@@ -73,6 +78,7 @@ export class LumiClient extends SapphireClient {
   public override async login(token?: string) {
     await container.prisma.$connect();
     await container.invalidation.start();
+    await container.signals.start();
 
     // Only one process per pod may bind RPC_HTTP_PORT. Under ShardingManager
     // that's whichever child holds shard 0; standalone (dev) it's always
@@ -82,7 +88,7 @@ export class LumiClient extends SapphireClient {
         container.logger.error("[Primary] Lost scheduler lock, exiting");
         process.exit(1);
       });
-      initCoreRpcHandlers();
+      registerRpcHandlers();
       this._rpcServer = await startRpcHttpServer((level, msg, meta) =>
         container.logger[level](msg, meta),
       );
@@ -138,7 +144,7 @@ export class LumiClient extends SapphireClient {
       } catch (err: unknown) {
         container.logger.error("[Database] Liveness check failed:", err);
       }
-    }, 60_000);
+    }, Time.Minute);
 
     new ReadinessProbes({
       isReady: () => this.isReady(),
@@ -149,13 +155,18 @@ export class LumiClient extends SapphireClient {
   }
 
   public override async destroy() {
-    if (this._prefixCacheUnbind) {
-      this._prefixCacheUnbind();
-      this._prefixCacheUnbind = null;
+    if (this._repositoryCacheUnbind) {
+      this._repositoryCacheUnbind();
+      this._repositoryCacheUnbind = null;
     }
     if (this._livenessInterval) {
       clearInterval(this._livenessInterval);
       this._livenessInterval = null;
+    }
+    if (container.tasks) {
+      await container.tasks
+        .close()
+        .catch(warnOnCleanupError("ScheduledTasks (BullMQ) close"));
     }
     if (this._bullWorker && this._bullFailedHandler) {
       this._bullWorker.off("failed", this._bullFailedHandler);
@@ -191,58 +202,35 @@ export class LumiClient extends SapphireClient {
     await container.invalidation
       .close()
       .catch(warnOnCleanupError("Invalidation close"));
+    await container.signals
+      .close()
+      .catch(warnOnCleanupError("Signals close"));
     await container.redis.quit().catch(warnOnCleanupError("Redis quit"));
     // $disconnect alone leaves the pg Pool open: the adapter is constructed from
     // a pool we own, so Prisma never ends it. Both pools drain here.
     await disconnectDatabase().catch(warnOnCleanupError("Database disconnect"));
   }
 
-  public get prefixCache(): PrefixCache {
-    return this._prefixCache;
-  }
-
   public override fetchPrefix = async (message: Message) => {
     if (message.guild) {
-      return this._prefixCache.getOrFetch(message.guild.id, async () => {
-        const cacheKey = RedisKeys.guildPrefixes(message.guild!.id);
-        const cachedL2 = await container.redis.get(cacheKey);
-        if (cachedL2) {
-          const parsed = tryParseJSON(cachedL2) as string[] | null;
-          if (Array.isArray(parsed)) {
-            return parsed;
-          }
-        }
-
-        const settings = await container.db.config.getGuildSettings(
-          message.guild!.id,
-        );
-        let prefixes: string[];
-        if (settings.prefix) {
-          prefixes = [settings.prefix];
-        } else {
-          const globalConfig = await container.db.global
-            .getGlobalConfig()
-            .catch(() => null);
-          const envFallback = envParseString("DEFAULT_PREFIX", ",");
-          prefixes = [globalConfig?.defaultPrefix ?? envFallback];
-        }
-
-        await container.redis.setex(
-          cacheKey,
-          RedisTTL.guildPrefix,
-          JSON.stringify(prefixes),
-        );
-        return prefixes;
-      });
-    }
-
-    return this._prefixCache.getOrFetchGlobal(async () => {
+      const settings = await container.db.config.getGuildSettings(
+        message.guild.id,
+      );
+      if (settings.prefix) {
+        return [settings.prefix];
+      }
       const globalConfig = await container.db.global
         .getGlobalConfig()
         .catch(() => null);
       const envFallback = envParseString("DEFAULT_PREFIX", ",");
-      return globalConfig?.defaultPrefix ?? envFallback;
-    });
+      return [globalConfig?.defaultPrefix ?? envFallback];
+    }
+
+    const globalConfig = await container.db.global
+      .getGlobalConfig()
+      .catch(() => null);
+    const envFallback = envParseString("DEFAULT_PREFIX", ",");
+    return globalConfig?.defaultPrefix ?? envFallback;
   };
 
   /**

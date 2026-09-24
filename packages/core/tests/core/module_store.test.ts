@@ -1,17 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'bun:test';
 import { container } from '@sapphire/framework';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+// bun:test has no `vi.mocked` type-narrowing helper, so the mocks are kept as
+// named references here and handed to the factory.
+const mockedReadManifest = vi.fn();
+const mockedMetaFromManifest = vi.fn();
+
 vi.mock('#lib/module-system/manifest.js', () => ({
-	readManifest: vi.fn(),
-	metaFromManifest: vi.fn()
+	readManifest: mockedReadManifest,
+	metaFromManifest: mockedMetaFromManifest
 }));
-
-import { readManifest, metaFromManifest } from '#lib/module-system/manifest.js';
-
-const mockedReadManifest = vi.mocked(readManifest);
-const mockedMetaFromManifest = vi.mocked(metaFromManifest);
 
 import { ModuleStore } from '#lib/module-system/ModuleStore.js';
 
@@ -207,7 +207,7 @@ describe('ModuleStore', () => {
 			await store.discover();
 			expect(store.getRecord('afk').enabled).toBe(true);
 
-			const unloadSpy = vi.spyOn(store, 'unload').mockResolvedValue({} as any);
+			const unloadSpy = vi.spyOn(store, 'unload').mockResolvedValue({});
 
 			await store.setEnabled('afk', false, 'abuse');
 
@@ -254,7 +254,7 @@ describe('ModuleStore', () => {
 			expect(store.getRecord('b').enabled).toBe(true);
 			expect(store.getRecord('c').enabled).toBe(true);
 
-			vi.spyOn(store, 'unload').mockResolvedValue({} as any);
+			vi.spyOn(store, 'unload').mockResolvedValue({});
 
 			await store.setEnabled('a', false, 'abuse');
 

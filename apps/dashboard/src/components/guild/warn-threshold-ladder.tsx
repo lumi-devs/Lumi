@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { WarnThresholdAction } from "@lumi/contracts";
+import type { WarnThresholdAction } from "@lumi/contracts/rpc";
 import {
   deleteWarnThreshold,
   setWarnThreshold,
@@ -12,9 +12,10 @@ import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { ConfirmDialog } from "#/components/ui/confirm-dialog";
 import { EmptyState } from "#/components/ui/empty-state";
-import { Field, Input, Select } from "#/components/ui/input";
+import { Field, Input } from "#/components/ui/input";
+import { Select } from "#/components/ui/select";
 import { TriangleAlert } from "lucide-react";
-import type { WarnThresholdView } from "#/lib/dashboard-data";
+import type { WarnThresholdView } from "@lumi/contracts/views";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
 
@@ -30,10 +31,12 @@ const Actions: {
   { value: "kick", label: "Kick", duration: "unused" },
   { value: "ban", label: "Ban", duration: "unused" },
   { value: "quarantine", label: "Quarantine", duration: "unused" },
-  { value: "vcmute", label: "Voice mute", duration: "required" },
+  { value: "voice_mute", label: "Voice mute", duration: "required" },
 ];
 
-const ActionByValue = new Map(Actions.map((a) => [a.value, a]));
+const ActionByValue = new Map<string, (typeof Actions)[number]>(
+  Actions.map((a) => [a.value, a]),
+);
 
 export function WarnThresholdLadder({
   guildId,
@@ -280,15 +283,11 @@ function RuleForm({
         <Field label="Lumi applies" htmlFor="threshold-action" className="w-44 gap-1">
           <Select
             id="threshold-action"
+            aria-label="Lumi applies"
             value={action}
-            onChange={(e) => setAction(e.target.value as WarnThresholdAction)}
-          >
-            {Actions.map((a) => (
-              <option key={a.value} value={a.value}>
-                {a.label}
-              </option>
-            ))}
-          </Select>
+            onValueChange={(next) => setAction(next as WarnThresholdAction)}
+            options={Actions.map((a) => ({ value: a.value, label: a.label }))}
+          />
         </Field>
 
         <Field label="For" htmlFor="threshold-duration" className="w-32 gap-1">

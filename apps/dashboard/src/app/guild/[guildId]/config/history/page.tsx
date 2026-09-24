@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { History, PlugZap, SearchX } from "lucide-react";
+import { History, SearchX } from "lucide-react";
 import { requireGuild } from "#/lib/auth-guards";
-import { getGuildConfigHistory, getGuildDashboard } from "#/lib/dashboard-fetch";
+import { getGuildShell, getGuildEntities } from "#/lib/guild-reads";
+import { rpc } from "#/lib/rpc";
 import { exportGuildConfigHistory } from "#/actions/guild-export-actions";
 import { ConfigHistoryList } from "#/components/guild/config-history-list";
 import { DataBreakdownChart } from "#/components/account/data-breakdown-chart";
@@ -16,20 +17,15 @@ import {
   CardTitle,
 } from "#/components/ui/card";
 import { EmptyState } from "#/components/ui/empty-state";
+import { LoadFailure } from "#/components/ui/load-failure";
 import { ExportLogButton } from "#/components/ui/export-log-button";
 import { FilterBar } from "#/components/ui/filter-bar";
 import { PageHeader } from "#/components/ui/page-header";
 import { Pagination } from "#/components/ui/pagination";
 import { buildModuleLabelIndex } from "#/lib/config-labels";
-import type { ConfigHistoryEntryView, ConfigHistoryListData } from "#/lib/dashboard-data";
-import {
-  countBy,
-  extractMemberNames,
-  filterHref,
-  isSnowflake,
-  pageNumber,
-  single,
-} from "#/lib/log-format";
+import type { ConfigHistoryEntryView, ConfigHistoryListData } from "@lumi/contracts/views";
+import { countBy, extractMemberNames, filterHref, pageNumber, single } from "#/lib/log-format";
+import { isSnowflake } from "#/lib/moderation-cases";
 
 const PageSize = 25;
 
@@ -53,20 +49,29 @@ export default async function HistoryPage({
 
   const badActorFilter = Boolean(actorId) && !isSnowflake(actorId);
 
-  const dashboard = await getGuildDashboard(guildId, session.userId);
-  const labels = buildModuleLabelIndex(dashboard.modules);
-  const memberNames = extractMemberNames(dashboard.members);
-
-  let data: ConfigHistoryListData | null = null;
-  let failure: string | null = null;
-  try {
-    data = await getGuildConfigHistory(guildId, session.userId, {
+  const historyPromise = rpc("guild.history.list", {
+    guildId,
+    actorId: session.userId,
+    data: {
       page,
       pageSize: PageSize,
       ...(moduleName ? { moduleName } : {}),
       ...(key ? { key } : {}),
       ...(actorId && !badActorFilter ? { actorId } : {}),
-    });
+    },
+  });
+
+  const [shell, entities] = await Promise.all([
+    getGuildShell(guildId, session.userId),
+    getGuildEntities(guildId, session.userId),
+  ]);
+  const labels = buildModuleLabelIndex(shell.modules);
+  const memberNames = extractMemberNames(entities.members);
+
+  let data: ConfigHistoryListData | null = null;
+  let failure: string | null = null;
+  try {
+    data = await historyPromise;
   } catch (err) {
     failure = err instanceof Error ? err.message : "The request failed.";
   }
@@ -121,7 +126,7 @@ export default async function HistoryPage({
                   name: "module",
                   label: "Module",
                   anyLabel: "All modules",
-                  options: dashboard.modules.map((m) => ({
+                  options: shell.modules.map((m) => ({
                     value: m.name,
                     label: m.displayName || m.name,
                   })),
@@ -151,12 +156,11 @@ export default async function HistoryPage({
           </div>
 
           {failure !== null ? (
-            <EmptyState
-              compact
-              icon={PlugZap}
+            <LoadFailure
+              what="The change log"
               title="The change log couldn't be read"
               description="The bot answered with an error instead of the history. Check that it is online and connected to the message broker, then reload."
-              footnote={failure}
+              error={failure}
             />
           ) : data && data.entries.length > 0 ? (
             <>

@@ -1,56 +1,61 @@
 import {
-  InteractionHandler,
   InteractionHandlerTypes,
   container,
 } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ButtonInteraction } from "discord.js";
-import { BaseInteractionHandler } from "#lib/interaction-handler.js";
+import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
 import { fetchTyped } from "#lib/commands.js";
-import { getUtility } from "#lib/module-system/Utility.js";
-import { PanelsKeys } from "#lib/i18n/keys.js";
-import { ephemeralCard, makeErrorCard } from "#lib/utilities/cards.js";
-import { memberRoleIds } from "#lib/permissions/preconditions/RequirePermit.js";
-import { PanicRevertId, buildPanicRevertedCard } from "../lib/panic-card.js";
+import { revertPanic } from "../services/panic.js";
+import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
+import { memberRoleIds } from "#lib/permissions/subject.js";
+import { PanicRevertId, buildPanicRevertedCard } from "../ui/panic-card.js";
 
-@ApplyOptions<InteractionHandler.Options>({
+@ApplyOptions<ModuleInteractionHandler.Options>({
   name: "security-panic-revert",
   interactionHandlerType: InteractionHandlerTypes.Button,
+  module: "security",
 })
-export class PanicRevertInteractionHandler extends BaseInteractionHandler {
+export class PanicRevertInteractionHandler extends ModuleInteractionHandler<
+  ButtonInteraction,
+  undefined
+> {
   public override parse(interaction: ButtonInteraction) {
     if (interaction.customId !== PanicRevertId) return this.none();
     return this.some();
   }
 
-  public async run(interaction: ButtonInteraction) {
-    if (!interaction.inGuild() || !interaction.guild) return;
-    await interaction.deferUpdate();
+  protected override async handle(interaction: ButtonInteraction) {
+    const { guild } = interaction;
+    if (!guild) return;
+    await this.acknowledge(interaction);
     const t = await fetchTyped(interaction);
 
     const hasPermit = await container.permitResolver.hasPermit({
-      guildId: interaction.guild.id,
+      guildId: guild.id,
       userId: interaction.user.id,
       roleIds: memberRoleIds(interaction.member),
       channelId: interaction.channelId,
       permitNode: "admin.*",
-      guildOwnerId: interaction.guild.ownerId,
+      guildOwnerId: guild.ownerId,
     });
     if (!hasPermit) {
-      return interaction.followUp(
+      await interaction.followUp(
         ephemeralCard(
-          makeErrorCard(t(PanelsKeys.PanicDeniedTitle), t(PanelsKeys.PanicDenied)),
+          makeErrorCard(t("panels:panicDeniedTitle"), t("panels:panicDenied")),
         ),
       );
+      return;
     }
 
-    const result = await getUtility("security").revertPanic(interaction.guild);
+    const result = await revertPanic(guild);
     if (!result) {
-      return interaction.editReply(
-        makeErrorCard(t(PanelsKeys.PanicNotActiveTitle), t(PanelsKeys.PanicNotActive)),
+      await interaction.editReply(
+        makeErrorCard(t("panels:panicNotActiveTitle"), t("panels:panicNotActive")),
       );
+      return;
     }
 
-    return interaction.editReply(buildPanicRevertedCard(t, result.restoredCount));
+    await interaction.editReply(buildPanicRevertedCard(t, result.restoredCount));
   }
 }

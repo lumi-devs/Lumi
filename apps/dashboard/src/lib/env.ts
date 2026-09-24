@@ -37,6 +37,21 @@ function resolveAuthSecret(): string {
   return "dummy_session_secret_for_nextjs_build_and_bootstrap_32chars_long";
 }
 
+function resolveRpcInternalToken(): string {
+  const provided = process.env["RPC_INTERNAL_TOKEN"];
+  if (provided) return provided;
+
+  const building = process.env["NEXT_PHASE"] === "phase-production-build";
+
+  if (process.env["NODE_ENV"] === "production" && !building) {
+    throw new Error(
+      "[ENV] Missing: RPC_INTERNAL_TOKEN — the dashboard refuses to start " +
+        "without a shared secret to authenticate its RPC calls to the worker.",
+    );
+  }
+  return "";
+}
+
 function resolveTrustedHops(): number {
   const raw = Number.parseInt(process.env["TRUSTED_PROXY_HOPS"] ?? "", 10);
   return Number.isInteger(raw) && raw > 0 ? raw : 1;
@@ -47,11 +62,17 @@ export const env = {
   rpcHttpUrl: envStr("RPC_HTTP_URL", "http://127.0.0.1:8091"),
   /** Shared secret sent as `Authorization: Bearer` on every RPC call. Must
    *  match the worker's `RPC_INTERNAL_TOKEN` — without it the worker rejects
-   *  the dashboard with 401. Optional only so a local dev worker without the
-   *  token still works. */
-  rpcInternalToken: envStr("RPC_INTERNAL_TOKEN", ""),
+   *  the dashboard with 401. Empty only in development/build, where no real
+   *  worker needs authenticating; production refuses to boot without it. */
+  rpcInternalToken: resolveRpcInternalToken(),
   discordClientId: envStr("DISCORD_OAUTH2_CLIENT_ID", "dummy_discord_client_id"),
   discordClientSecret: envStr("DISCORD_OAUTH2_CLIENT_SECRET", "dummy_discord_client_secret"),
+  /** Public origin of this dashboard, e.g. https://dash.example.com. Set it to
+   *  return the user here after a bot invite instead of leaving them on
+   *  Discord's dead-end "authorized" page. `<origin>/oauth/guild` must be
+   *  registered as an OAuth2 redirect on the Discord application first, or
+   *  Discord rejects the invite with "Invalid OAuth2 redirect URL". */
+  dashboardPublicUrl: envStr("DASHBOARD_PUBLIC_URL", ""),
   /** NextAuth session/JWT encryption secret. */
   authSecret: resolveAuthSecret(),
   host: envStr("DASHBOARD_HOST", "0.0.0.0"),
