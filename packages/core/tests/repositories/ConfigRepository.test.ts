@@ -42,7 +42,6 @@ describe("ConfigRepository", () => {
     repositoryCache.clear();
 
     const mockDb: any = {
-      configHistory: mockConfigHistory,
       ensureGuild: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -52,7 +51,13 @@ describe("ConfigRepository", () => {
       debug: vi.fn(),
     };
 
-    repo = new ConfigRepository(mockPrisma, mockRedis, mockLogger, mockDb);
+    repo = new ConfigRepository(
+      mockPrisma,
+      mockRedis,
+      mockLogger,
+      mockDb,
+      mockConfigHistory,
+    );
   });
 
   describe("setModuleConfig", () => {

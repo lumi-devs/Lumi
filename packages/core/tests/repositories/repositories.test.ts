@@ -265,7 +265,9 @@ describe('ConfigRepository Batch Operations', () => {
     (container as any).redis = mockRedis;
     repositoryCache.clear();
 
-    repo = new ConfigRepository(mockPrisma, mockRedis, mockLogger, mockDb);
+    repo = new ConfigRepository(mockPrisma, mockRedis, mockLogger, mockDb, {
+      logConfigChange: vi.fn().mockResolvedValue(undefined),
+    } as any);
   });
 
   it('getModuleConfigs returns empty object when keys array is empty', async () => {

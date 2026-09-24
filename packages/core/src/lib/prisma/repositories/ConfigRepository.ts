@@ -1,9 +1,24 @@
 import type { Guild, GuildModuleConfig, Prisma } from "@prisma/client";
+import { type ILogger } from "@sapphire/framework";
+import type { RedisClient } from "#lib/database/cluster-safe.js";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import type { DatabaseClient } from "#lib/prisma/client.js";
+import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
+import type { ConfigHistoryRepository } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
 
 /** Repository for guild settings and module configurations. */
 export class ConfigRepository extends Repository {
+  public constructor(
+    prisma: DatabaseClient,
+    redis: RedisClient,
+    logger: ILogger,
+    db: DatabaseService,
+    private readonly configHistory: ConfigHistoryRepository,
+  ) {
+    super(prisma, redis, logger, db);
+  }
+
   public async isDashboardEnabled(guildId: string): Promise<boolean> {
     const val = await this.getModuleConfig(
       guildId,
@@ -115,8 +130,8 @@ export class ConfigRepository extends Repository {
     });
     await this.invalidateModuleConfig(guildId, moduleName);
     if (actorId) {
-      this.db.configHistory
-        ?.logConfigChange({
+      this.configHistory
+        .logConfigChange({
           guildId,
           moduleName,
           key,

@@ -1,9 +1,23 @@
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
-import { container } from "@sapphire/framework";
+import { container, type ILogger } from "@sapphire/framework";
+import type { RedisClient } from "#lib/database/cluster-safe.js";
+import type { DatabaseClient } from "#lib/prisma/client.js";
+import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
+import type { ConfigRepository } from "#lib/prisma/repositories/ConfigRepository.js";
 
 /** Repository for global and guild-specific module enabled states. */
 export class ModuleRepository extends Repository {
+  public constructor(
+    prisma: DatabaseClient,
+    redis: RedisClient,
+    logger: ILogger,
+    db: DatabaseService,
+    private readonly config: ConfigRepository,
+  ) {
+    super(prisma, redis, logger, db);
+  }
+
   #isEssential(name: string): boolean {
     return Boolean(container.moduleStore && !container.moduleStore.isModuleDisableable(name));
   }
@@ -155,7 +169,7 @@ export class ModuleRepository extends Repository {
 
   /** Resolves a module's config-level enable state. */
   async #configLevelEnabled(guildId: string, name: string): Promise<boolean> {
-    const configEnabled = await this.db.config.getModuleConfig(
+    const configEnabled = await this.config.getModuleConfig(
       guildId,
       name,
       "enabled",

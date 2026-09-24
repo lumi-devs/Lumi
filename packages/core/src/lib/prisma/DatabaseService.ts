@@ -68,20 +68,32 @@ export class DatabaseService {
     reader: DatabaseClient = prisma,
   ) {
     this.global = new GlobalRepository(prisma, redis, logger, this);
-    this.config = new ConfigRepository(prisma, redis, logger, this);
-    this.modules = new ModuleRepository(prisma, redis, logger, this);
-    this.guildKV = new GuildKVRepository(prisma, redis, logger, this);
-    this.access = new AccessRepository(prisma, redis, logger, this);
-    this.permissions = new PermissionRepository(prisma, redis, logger, this);
-    this.downloader = new DownloaderRepository(prisma, redis, logger, this);
-    this.audit = new AuditRepository(prisma, redis, logger, this);
-    this.moderation = new ModerationRepository(prisma, redis, logger, this, reader);
     this.configHistory = new ConfigHistoryRepository(
       prisma,
       redis,
       logger,
       this,
     );
+    this.config = new ConfigRepository(
+      prisma,
+      redis,
+      logger,
+      this,
+      this.configHistory,
+    );
+    this.modules = new ModuleRepository(
+      prisma,
+      redis,
+      logger,
+      this,
+      this.config,
+    );
+    this.guildKV = new GuildKVRepository(prisma, redis, logger, this);
+    this.access = new AccessRepository(prisma, redis, logger, this);
+    this.permissions = new PermissionRepository(prisma, redis, logger, this);
+    this.downloader = new DownloaderRepository(prisma, redis, logger, this);
+    this.audit = new AuditRepository(prisma, redis, logger, this);
+    this.moderation = new ModerationRepository(prisma, redis, logger, this, reader);
     this.configOverrides = new ConfigOverrideRepository(
       prisma,
       redis,

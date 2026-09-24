@@ -5,7 +5,7 @@ import { Repository } from "#lib/prisma/repositories/Repository.js";
 /**
  * Access control: the global (`GlobalBlock`) and per-guild (`Blocklist`)
  * block tables, plus `IgnoreEntry` (per-channel) and `Guild.ignored`
- * (whole-guild), with their bespoke `"1"/"0"` Redis caches.
+ * (whole-guild), cached through the shared `getOrSet`/`CacheStore` primitive.
  */
 export class AccessRepository extends Repository {
   public async isUserBlocked(
@@ -79,6 +79,13 @@ export class AccessRepository extends Repository {
     return block !== null;
   }
 
+  /**
+   * Idempotent on the natural key (`userId` globally, `[userId, guildId]`
+   * per-guild) - a concurrent double-submit updates the existing row's
+   * `reason`/`blockedBy` instead of racing a duplicate-key error. Callers
+   * that want a "already blocklisted" error for the user surface it
+   * themselves via `isUserBlocklisted` before calling this.
+   */
   public async addBlocklistEntry(
     userId: string,
     blockedBy: string,
@@ -86,15 +93,19 @@ export class AccessRepository extends Repository {
     guildId?: string | null,
   ): Promise<Blocklist | GlobalBlock> {
     if (!guildId) {
-      const entry = await this.prisma.globalBlock.create({
-        data: { userId, blockedBy, reason },
+      const entry = await this.prisma.globalBlock.upsert({
+        where: { userId },
+        create: { userId, blockedBy, reason },
+        update: { blockedBy, reason },
       });
       await this.invalidate(RedisKeys.blocked(null, userId));
       return entry;
     }
     await this.db.ensureGuild(guildId);
-    const entry = await this.prisma.blocklist.create({
-      data: { userId, blockedBy, reason, guildId },
+    const entry = await this.prisma.blocklist.upsert({
+      where: { uq_blocklist_user_guild: { userId, guildId } },
+      create: { userId, blockedBy, reason, guildId },
+      update: { blockedBy, reason },
     });
     await this.invalidate(RedisKeys.blocked(guildId, userId));
     return entry;

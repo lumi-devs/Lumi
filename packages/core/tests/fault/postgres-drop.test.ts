@@ -133,7 +133,9 @@ describe("Chaos Suite: PostgreSQL Hard Drop & Pool Exhaustion", () => {
         await prisma.guild.upsert({ where: { id: guildId }, create: { id: guildId }, update: {} });
       },
     } as any;
-    configRepo = new ConfigRepository(prisma as any, redis, {} as any, db);
+    configRepo = new ConfigRepository(prisma as any, redis, {} as any, db, {
+      logConfigChange: async () => {},
+    } as any);
     modRepo = new ModerationRepository(prisma as any, redis, {} as any, db);
   });
 
