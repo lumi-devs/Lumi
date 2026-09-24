@@ -1,6 +1,13 @@
 import { container } from "@sapphire/framework";
 import { PermissionsBitField } from "discord.js";
-import { Routes, type APIChannel, type APIGuild, type APIGuildMember } from "discord-api-types/v10";
+import { calculateUserDefaultAvatarIndex } from "@discordjs/rest";
+import {
+  Routes,
+  type APIChannel,
+  type APIGuild,
+  type APIGuildMember,
+  type APIRole,
+} from "discord-api-types/v10";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { swallow } from "#lib/utilities/errors.js";
@@ -48,6 +55,52 @@ export async function fetchChannelRest(channelId: string): Promise<APIChannel | 
     () => container.client.rest.get(Routes.channel(channelId)) as Promise<APIChannel>,
     (data) => JSON.parse(data) as APIChannel,
   ).catch(swallow("discord-rest-lookup: channel fetch failed"));
+}
+
+export async function fetchGuildRolesRest(guildId: string): Promise<APIRole[] | null> {
+  return repositoryCache.getOrLoad<APIRole[] | null>(
+    RedisKeys.restGuildRoles(guildId),
+    RedisTTL.restGuildRoles * 1000,
+    () => container.client.rest.get(Routes.guildRoles(guildId)) as Promise<APIRole[]>,
+    (data) => JSON.parse(data) as APIRole[],
+  ).catch(swallow("discord-rest-lookup: guild roles fetch failed"));
+}
+
+export async function fetchGuildChannelsRest(guildId: string): Promise<APIChannel[] | null> {
+  return repositoryCache.getOrLoad<APIChannel[] | null>(
+    RedisKeys.restGuildChannels(guildId),
+    RedisTTL.restGuildChannels * 1000,
+    () => container.client.rest.get(Routes.guildChannels(guildId)) as Promise<APIChannel[]>,
+    (data) => JSON.parse(data) as APIChannel[],
+  ).catch(swallow("discord-rest-lookup: guild channels fetch failed"));
+}
+
+/**
+ * One page of up to `limit` members (Discord's own id-ascending order), not the full paginated
+ * roster: the dashboard only ever needed a bounded sample for a member picker, and looping the
+ * paginated `GET /guilds/{id}/members` endpoint to reconstruct "the whole cache" would be far
+ * more rate-limit-heavy than the gateway-cache read this replaces.
+ */
+export async function fetchGuildMembersSampleRest(
+  guildId: string,
+  limit: number,
+): Promise<APIGuildMember[] | null> {
+  return repositoryCache.getOrLoad<APIGuildMember[] | null>(
+    RedisKeys.restGuildMembersSample(guildId, limit),
+    RedisTTL.restGuildMembersSample * 1000,
+    () =>
+      container.client.rest.get(Routes.guildMembers(guildId), {
+        query: new URLSearchParams({ limit: String(limit) }),
+      }) as Promise<APIGuildMember[]>,
+    (data) => JSON.parse(data) as APIGuildMember[],
+  ).catch(swallow("discord-rest-lookup: guild members sample fetch failed"));
+}
+
+/** The bot's own member row, e.g. to find its highest role for an "is this the bot's role" flag. */
+export async function fetchBotMemberRest(guildId: string): Promise<APIGuildMember | null> {
+  const botId = container.client.user?.id;
+  if (!botId) return null;
+  return fetchGuildMemberRest(guildId, botId);
 }
 
 /** Sums the `@everyone` role plus every role the member holds - same algorithm discord.js's own `GuildMember.permissions` uses, minus channel overwrites (irrelevant for a guild-level check like ManageGuild). */
@@ -99,4 +152,15 @@ export function guildBannerUrl(guild: Pick<APIGuild, "id" | "banner">): string |
   return guild.banner ? container.client.rest.cdn.banner(guild.id, guild.banner) : null;
 }
 
-export { fetchGuildRest };
+/** Mirrors discord.js's `GuildMember#displayAvatarURL()` fallback order: guild-specific avatar, then the user's own, then the default. */
+export function memberAvatarUrl(
+  guildId: string,
+  member: Pick<APIGuildMember, "avatar" | "user">,
+): string {
+  const cdn = container.client.rest.cdn;
+  if (member.avatar) return cdn.guildMemberAvatar(guildId, member.user.id, member.avatar);
+  if (member.user.avatar) return cdn.avatar(member.user.id, member.user.avatar);
+  return cdn.defaultAvatar(calculateUserDefaultAvatarIndex(member.user.id));
+}
+
+export { fetchGuildRest, fetchGuildMemberRest };
