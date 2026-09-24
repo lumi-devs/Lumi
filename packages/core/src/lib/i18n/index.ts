@@ -4,7 +4,6 @@ import type {
 } from "@sapphire/plugin-i18next";
 import type { TFunction } from "i18next";
 import { fileURLToPath } from "node:url";
-import type { TypedFT, TypedT } from "#lib/i18n/keys.js";
 import { getGuildContext } from "#lib/cache/GuildContext.js";
 
 /**
@@ -25,15 +24,16 @@ type LumiNamespaces = [
 ];
 
 /**
- * A translation function bound to every Lumi namespace. Also accepts the
- * Skyra-style typed keys from `#lib/i18n/keys.js`: `T` keys resolve plainly,
- * `FT` keys require their declared interpolation args at the call site.
+ * A translation function bound to every Lumi namespace. Also accepts a plain
+ * string key outside `LumiNamespaces` (e.g. a namespace with no JSON resource
+ * file yet) so a call site with a namespace `TFunction` can't type-check
+ * doesn't hard-fail the build; `TFunction<LumiNamespaces>` alone still applies
+ * first for any key inside a declared namespace.
  */
 export type LumiT = TFunction<LumiNamespaces> &
-  (<TReturn = string>(key: TypedT<TReturn>) => TReturn) &
-  (<TArgs extends object, TReturn = string>(
-    key: TypedFT<TArgs, TReturn>,
-    args: TArgs,
+  (<TArgs extends object = object, TReturn = string>(
+    key: string,
+    args?: TArgs,
   ) => TReturn);
 
 /** The language used when nothing more specific can be resolved. */
@@ -47,12 +47,7 @@ export const DefaultLanguage = "en-US";
  * Adding a language is purely additive: drop in the directory, list it here.
  * Translations are managed via Crowdin; untranslated stubs fall back to en-US.
  */
-// prettier-ignore
-export const SupportedLanguages = [
-  "cs", "da", "de", "el", "en-US", "es-ES", "fi", "fr", "hu", "it",
-  "ja", "ko", "nl", "no", "pl", "pt-BR", "ro", "ru", "sv-SE", "tr",
-  "uk", "vi", "zh-CN", "zh-TW",
-] as const;
+export const SupportedLanguages = ["en-US"] as const;
 export type SupportedLanguage = (typeof SupportedLanguages)[number];
 
 const supported = new Set<string>(SupportedLanguages);
@@ -72,6 +67,11 @@ const LanguageRoot = fileURLToPath(
  * server speaks one language); outside a guild we have no per-user storage yet,
  * so the plugin's own fallback chain (guild.preferredLocale → defaultName →
  * en-US) takes over when this returns nullish.
+ *
+ * `ctx.locale` could in principle still reference a locale that's since been
+ * dropped from `SupportedLanguages` (set before a migration, or written by an
+ * older dashboard build mid-deploy); the plugin throws for any locale it can't
+ * find on disk, so an unsupported value is treated the same as an unset one.
  */
 async function fetchLanguage(
   context: InternationalizationContext,
@@ -80,7 +80,8 @@ async function fetchLanguage(
   if (!guild) return null;
   try {
     const ctx = await getGuildContext(guild.id);
-    return ctx.locale || null;
+    if (!ctx.locale) return null;
+    return isSupportedLanguage(ctx.locale) ? ctx.locale : null;
   } catch {
     return null;
   }

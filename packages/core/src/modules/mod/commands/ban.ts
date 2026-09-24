@@ -1,6 +1,5 @@
 import { respondWithReasonChoices } from "../services/reason-autocomplete.js";
 import type { AutocompleteInteraction } from "discord.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
 import { parseSnowflakeList, resolveUsers } from "#lib/moderation/multi-target.js";
 import { ApplyOptions } from "@sapphire/decorators";
@@ -12,7 +11,7 @@ import type { ModerationCase } from "@prisma/client";
 import type { User } from "discord.js";
 import { BanAction } from "#modules/mod/services/actions/BanAction.js";
 
-const Root = LanguageKeys.Commands;
+const Root = "commands";
 const SecondsPerDay = 86400;
 
 /** Merges the single `user` option with the `users` mass-target string, deduped and capped. */
@@ -40,9 +39,9 @@ const BanAdd: ModerationSubcommand.Flow<User, ModerationCase, number> = {
   preHandle: async (ctx) =>
     Result.ok(ctx.isSlash ? ((await ctx.getInteger("delete_days")) ?? 0) : 0),
   confirm: (t, { target, reason }) => ({
-    title: t(Root.BanConfirmTitle),
-    body: t(Root.BanConfirmBody, { user: userMention(target.id), reason }),
-    confirmLabel: t(Root.BanConfirmButton),
+    title: t(`${Root}:banConfirmTitle`),
+    body: t(`${Root}:banConfirmBody`, { user: userMention(target.id), reason }),
+    confirmLabel: t(`${Root}:banConfirmButton`),
   }),
   action: ({ guild, target, moderator, reason, prepared }) =>
     BanAction.apply({
@@ -53,8 +52,8 @@ const BanAdd: ModerationSubcommand.Flow<User, ModerationCase, number> = {
       deleteMessageSeconds: prepared * SecondsPerDay,
     }),
   buildSuccessMessage: (t, { target, reason, outcome }) => ({
-    title: t(Root.BanSuccessTitle),
-    body: t(Root.BanSuccess, {
+    title: t(`${Root}:banSuccessTitle`),
+    body: t(`${Root}:banSuccess`, {
       user: userMention(target.id),
       reason,
       caseNumber: outcome.caseNumber,
@@ -72,18 +71,18 @@ const BanRemove: ModerationSubcommand.Flow<string, ModerationCase> = {
     isSnowflakeId(target)
       ? Result.ok(null)
       : Result.err({
-          title: t(Root.BanInvalidIdTitle),
-          body: t(Root.BanInvalidId),
+          title: t(`${Root}:banInvalidIdTitle`),
+          body: t(`${Root}:banInvalidId`),
         }),
   action: ({ guild, target, moderator, reason }) =>
     BanAction.undo({ guild, targetId: target, moderator, reason }),
   buildFailureMessage: (t) => ({
-    title: t(Root.ModActionFailedTitle),
-    body: t(Root.BanRemoveFailed),
+    title: t(`${Root}:modActionFailedTitle`),
+    body: t(`${Root}:banRemoveFailed`),
   }),
   buildSuccessMessage: (t, { target }) => ({
-    title: t(Root.BanRemoveSuccessTitle),
-    body: t(Root.BanRemoveSuccess, { user: userMention(target) }),
+    title: t(`${Root}:banRemoveSuccessTitle`),
+    body: t(`${Root}:banRemoveSuccess`, { user: userMention(target) }),
   }),
 };
 

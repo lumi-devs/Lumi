@@ -11,7 +11,6 @@ import {
   startChallenge,
   advanceChallenge,
 } from "../services/verification.js";
-import { PanelsKeys } from "#lib/i18n/keys.js";
 import { getDashboardPublicUrl } from "#lib/env.js";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
 import { CaptchaButtonId } from "../constants.js";
@@ -72,8 +71,8 @@ export class VerifyInteractionHandler extends ModuleInteractionHandler<
         await interaction.editReply(
           ephemeralCard(
             makeErrorCard(
-              t(PanelsKeys.VerifyDisabledTitle),
-              t(PanelsKeys.VerifyDisabled),
+              t("panels:verifyDisabledTitle"),
+              t("panels:verifyDisabled"),
             ),
           ),
         );
@@ -83,7 +82,7 @@ export class VerifyInteractionHandler extends ModuleInteractionHandler<
         await grantVerified(guild, userId);
         await interaction.editReply(
           ephemeralCard(
-            makeSuccessCard(t(PanelsKeys.VerifyOkTitle), t(PanelsKeys.VerifyOk)),
+            makeSuccessCard(t("panels:verifyOkTitle"), t("panels:verifyOk")),
           ),
         );
         return;
@@ -95,8 +94,8 @@ export class VerifyInteractionHandler extends ModuleInteractionHandler<
           await interaction.editReply(
             ephemeralCard(
               makeErrorCard(
-                t(PanelsKeys.VerifyWebUnavailableTitle),
-                t(PanelsKeys.VerifyWebUnavailable),
+                t("panels:verifyWebUnavailableTitle"),
+                t("panels:verifyWebUnavailable"),
               ),
             ),
           );
@@ -117,8 +116,8 @@ export class VerifyInteractionHandler extends ModuleInteractionHandler<
     if (!result) {
       await interaction.editReply(
         makeErrorCard(
-          t(PanelsKeys.VerifyExpiredTitle),
-          t(PanelsKeys.VerifyExpired),
+          t("panels:verifyExpiredTitle"),
+          t("panels:verifyExpired"),
         ),
       );
       return;
@@ -129,7 +128,7 @@ export class VerifyInteractionHandler extends ModuleInteractionHandler<
       case "solved":
         await grantVerified(guild, userId);
         await interaction.editReply(
-          makeSuccessCard(t(PanelsKeys.VerifyOkTitle), t(PanelsKeys.VerifyOk)),
+          makeSuccessCard(t("panels:verifyOkTitle"), t("panels:verifyOk")),
         );
         return;
       case "progress":
@@ -141,8 +140,8 @@ export class VerifyInteractionHandler extends ModuleInteractionHandler<
       case "failed":
         await interaction.editReply(
           makeErrorCard(
-            t(PanelsKeys.VerifyFailedTitle),
-            t(PanelsKeys.VerifyFailed),
+            t("panels:verifyFailedTitle"),
+            t("panels:verifyFailed"),
           ),
         );
         return;

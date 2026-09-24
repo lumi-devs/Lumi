@@ -3,12 +3,23 @@ import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { InternationalizationHandler } from "@sapphire/plugin-i18next";
+import { rpcRouter } from "@lumi/contracts/rpc";
 import {
   buildI18nOptions,
   DefaultLanguage,
   isSupportedLanguage,
   SupportedLanguages,
 } from "#lib/i18n/index.js";
+
+/**
+ * `s.enum(...).optional()` builds a `UnionValidator` whose `validators` array
+ * is TS-private but a plain runtime property: a `LiteralValidator(undefined)`
+ * (from `.optional()`) followed by one `LiteralValidator` per allowed value,
+ * each carrying its literal on `.expected`.
+ */
+interface IntrospectableEnum {
+  readonly validators: readonly { readonly expected: unknown }[];
+}
 
 const LANGUAGE_ROOT = fileURLToPath(
   new URL("../../src/languages/", import.meta.url),
@@ -96,17 +107,36 @@ describe("i18n framework", () => {
     }
   });
 
-  it("keeps every language at key parity with en-US", async () => {
+  it("has no keys on disk that aren't also in en-US", async () => {
+    // A missing-key check, not a parity check: a locale short some keys of
+    // en-US is a normal in-progress Crowdin translation (fallbackLng covers
+    // it), but a key en-US doesn't have is a typo'd or orphaned key a
+    // translator introduced, and that's a real bug.
     const reference = await namespaceKeys(DefaultLanguage);
-    for (const lang of SupportedLanguages) {
-      if (lang === DefaultLanguage) continue;
+    const locales = (await readdir(LANGUAGE_ROOT)).filter(
+      (lang) => lang !== DefaultLanguage,
+    );
+    for (const lang of locales) {
       const candidate = await namespaceKeys(lang);
-      expect([...candidate.keys()].sort()).toEqual(
-        [...reference.keys()].sort(),
-      );
-      for (const [ns, keys] of reference) {
-        expect(candidate.get(ns)).toEqual(keys);
+      for (const [ns, keys] of candidate) {
+        const referenceKeys = reference.get(ns) ?? [];
+        for (const key of keys) {
+          expect(referenceKeys).toContain(key);
+        }
       }
     }
+  });
+
+  it("keeps the dashboard locale enum in sync with SupportedLanguages", () => {
+    const localeValidator = rpcRouter["guild.settings.set"].input as
+      | { shape: { locale: IntrospectableEnum } }
+      | undefined;
+    if (!localeValidator) throw new Error("guild.settings.set has no input validator");
+
+    const allowed = localeValidator.shape.locale.validators
+      .map((v) => v.expected)
+      .filter((value) => value !== undefined)
+      .sort();
+    expect(allowed).toEqual([...SupportedLanguages].sort());
   });
 });

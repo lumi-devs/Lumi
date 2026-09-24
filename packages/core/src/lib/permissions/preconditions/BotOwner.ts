@@ -1,6 +1,5 @@
 import { Precondition } from "@sapphire/framework";
 import type { ChatInputCommandInteraction, Message } from "discord.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 
 declare module "@sapphire/framework" {
@@ -24,7 +23,7 @@ export class BotOwnerPrecondition extends Precondition {
       : this.error({
           identifier: "PermissionDenied",
           message: "You need at least **Bot Owner** level to use this.",
-          context: { i18nKey: LanguageKeys.Preconditions.BotOwner },
+          context: { i18nKey: "preconditions:botOwner" },
         });
   }
 }

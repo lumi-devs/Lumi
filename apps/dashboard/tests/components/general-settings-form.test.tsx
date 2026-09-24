@@ -38,13 +38,13 @@ describe("GeneralSettingsForm (partial guild.settings.set save)", () => {
     setGuildSettings.mockResolvedValue({ ok: true });
     render(<GeneralSettingsForm guildId="101" settings={makeSettings()} />);
 
-    fireEvent.change(screen.getByLabelText("Locale"), {
-      target: { value: "fr-FR" },
+    fireEvent.change(screen.getByLabelText("Command prefix"), {
+      target: { value: "??" },
     });
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() =>
-      expect(setGuildSettings).toHaveBeenCalledWith("101", { locale: "fr-FR" }),
+      expect(setGuildSettings).toHaveBeenCalledWith("101", { prefix: "??" }),
     );
     expect(setGuildSettings).toHaveBeenCalledTimes(1);
   });
@@ -64,33 +64,12 @@ describe("GeneralSettingsForm (partial guild.settings.set save)", () => {
     expect(setGuildSettings).toHaveBeenCalledTimes(1);
   });
 
-  it("saves every changed field when more than one was edited", async () => {
-    setGuildSettings.mockResolvedValue({ ok: true });
-    render(<GeneralSettingsForm guildId="101" settings={makeSettings()} />);
-
-    fireEvent.change(screen.getByLabelText("Command prefix"), {
-      target: { value: "?" },
-    });
-    fireEvent.change(screen.getByLabelText("Locale"), {
-      target: { value: "fr-FR" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
-
-    await waitFor(() =>
-      expect(setGuildSettings).toHaveBeenCalledWith("101", {
-        prefix: "?",
-        locale: "fr-FR",
-      }),
-    );
-    expect(setGuildSettings).toHaveBeenCalledTimes(1);
-  });
-
   it("shows an error and keeps the save bar open when a save fails", async () => {
     setGuildSettings.mockResolvedValue({ ok: false, error: "Bad payload" });
     render(<GeneralSettingsForm guildId="101" settings={makeSettings()} />);
 
-    fireEvent.change(screen.getByLabelText("Locale"), {
-      target: { value: "fr-FR" },
+    fireEvent.change(screen.getByLabelText("Command prefix"), {
+      target: { value: "??" },
     });
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
@@ -107,45 +86,47 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
     expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
   });
 
+  // Locale is a fixed single-value enum (en-US only) until more locales land
+  // via Crowdin, so it can't stand in as the "changing" field anymore — prefix
+  // is the only field these generic dirty-tracking/merge tests can drive.
   it("adopts a remote settings-updated broadcast from another tab for untouched fields", async () => {
     render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} />);
-    expect(screen.getByLabelText("Locale")).toHaveValue("en-US");
+    expect(screen.getByLabelText("Command prefix")).toHaveValue("!");
 
     const otherTab = guildChannel("g1");
     otherTab.postMessage({
       type: "settings-updated",
-      settings: formState({ locale: "fr-FR" }),
+      settings: formState({ prefix: "?!" }),
     });
 
     await waitFor(() =>
-      expect(screen.getByLabelText("Locale")).toHaveValue("fr-FR"),
+      expect(screen.getByLabelText("Command prefix")).toHaveValue("?!"),
     );
     expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
 
     otherTab.close();
   });
 
-  it("keeps a locally-edited, unsaved field on remote conflict and surfaces an error, while still adopting other untouched fields", async () => {
+  it("keeps a locally-edited, unsaved field on remote conflict and surfaces an error", async () => {
     render(<GeneralSettingsForm guildId="g1" settings={makeSettings()} />);
 
-    fireEvent.change(screen.getByLabelText("Locale"), {
+    fireEvent.change(screen.getByLabelText("Command prefix"), {
       target: { value: "LOCAL-EDIT" },
     });
-    expect(screen.getByLabelText("Locale")).toHaveValue("LOCAL-EDIT");
+    expect(screen.getByLabelText("Command prefix")).toHaveValue("LOCAL-EDIT");
 
     const otherTab = guildChannel("g1");
     otherTab.postMessage({
       type: "settings-updated",
-      settings: formState({ locale: "REMOTE-CHANGE", prefix: "??" }),
+      settings: formState({ prefix: "REMOTE-CHANGE" }),
     });
 
-    await waitFor(() =>
-      expect(screen.getByLabelText("Command prefix")).toHaveValue("??"),
-    );
-    expect(screen.getByLabelText("Locale")).toHaveValue("LOCAL-EDIT");
-    const conflictMessage = screen.getByText(/changed in another tab/i);
-    expect(conflictMessage).toBeInTheDocument();
-    expect(conflictMessage).toHaveTextContent("Locale");
+    await waitFor(() => {
+      const conflictMessage = screen.getByText(/changed in another tab/i);
+      expect(conflictMessage).toBeInTheDocument();
+      expect(conflictMessage).toHaveTextContent("Command prefix");
+    });
+    expect(screen.getByLabelText("Command prefix")).toHaveValue("LOCAL-EDIT");
     expect(screen.getByText(/careful.*unsaved changes/i)).toBeInTheDocument();
 
     otherTab.close();
@@ -157,10 +138,10 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
     const otherTab = guildChannel("g1");
     otherTab.postMessage({
       type: "settings-updated",
-      settings: formState({ locale: "fr-FR" }),
+      settings: formState({ prefix: "?!" }),
     });
     await waitFor(() =>
-      expect(screen.getByLabelText("Locale")).toHaveValue("fr-FR"),
+      expect(screen.getByLabelText("Command prefix")).toHaveValue("?!"),
     );
 
     fireEvent.change(screen.getByLabelText("Command prefix"), {
@@ -169,7 +150,7 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
     expect(screen.getByText(/unsaved changes/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
     await waitFor(() => {
-      expect(screen.getByLabelText("Locale")).toHaveValue("fr-FR");
+      expect(screen.getByLabelText("Command prefix")).toHaveValue("?!");
       expect(screen.queryByText(/unsaved changes/i)).not.toBeInTheDocument();
     });
 
@@ -215,5 +196,31 @@ describe("GeneralSettingsForm (cross-tab sync)", () => {
     );
 
     existingTab.close();
+  });
+});
+
+describe("GeneralSettingsForm (locale)", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("shows the current locale and offers only the supported locales", () => {
+    render(<GeneralSettingsForm guildId="101" settings={makeSettings()} />);
+
+    const localeField = screen.getByLabelText("Locale");
+    expect(localeField).toHaveTextContent("en-US");
+
+    fireEvent.click(localeField);
+    expect(screen.getByRole("option", { name: "en-US" })).toBeInTheDocument();
+    expect(screen.queryAllByRole("option")).toHaveLength(1);
+  });
+
+  it("falls back to en-US when the guild's stored locale isn't a supported one", () => {
+    render(
+      <GeneralSettingsForm
+        guildId="101"
+        settings={makeSettings({ locale: "xx-YY" })}
+      />,
+    );
+
+    expect(screen.getByLabelText("Locale")).toHaveTextContent("en-US");
   });
 });

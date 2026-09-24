@@ -29,6 +29,14 @@ export const ConfigOverrideModelTypes = [
 
 export type ConfigOverrideModelType = (typeof ConfigOverrideModelTypes)[number];
 
+/**
+ * Locales the dashboard may set on a guild. Contracts can't import
+ * `SupportedLanguages` from `packages/core` (core depends on contracts, not
+ * the reverse), so this is a second, intentionally small, hand-kept-in-sync
+ * literal. `packages/core/tests/core/i18n.test.ts` asserts the two stay equal.
+ */
+export const SupportedLocales = ["en-US"] as const;
+
 /** Decorative only (icon/banner/member count) - not a substitute for `guild.shell.get`. */
 export interface GuildSummaryView {
   guildId: string;
@@ -107,7 +115,7 @@ export const dashboardRpc = {
   }>()({
     input: s.object({
       prefix: s.string().lengthLessThanOrEqual(5).nullable().optional(),
-      locale: s.string().optional(),
+      locale: s.enum(SupportedLocales).optional(),
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,

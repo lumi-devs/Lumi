@@ -1,4 +1,3 @@
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
 import { formatDuration, parseDuration } from "#lib/utilities/time.js";
 import { ApplyOptions } from "@sapphire/decorators";
@@ -11,7 +10,7 @@ import type { AutocompleteInteraction, GuildMember } from "discord.js";
 import { MuteAction } from "#modules/mod/services/actions/MuteAction.js";
 import { respondWithReasonChoices } from "../services/reason-autocomplete.js";
 
-const Root = LanguageKeys.Commands;
+const Root = "commands";
 const MaxTimeoutMs = 28 * Time.Day;
 
 type Flow = ModerationSubcommand.Flow<GuildMember, ModerationCase>;
@@ -26,26 +25,26 @@ const TimeoutAdd: TimedFlow = {
     const durationMs = input ? parseDuration(input) : null;
     if (!durationMs) {
       return Result.err({
-        title: t(Root.TimeoutInvalidDurationTitle),
-        body: t(Root.TimeoutInvalidDuration),
+        title: t(`${Root}:timeoutInvalidDurationTitle`),
+        body: t(`${Root}:timeoutInvalidDuration`),
       });
     }
     if (durationMs > MaxTimeoutMs) {
       return Result.err({
-        title: t(Root.TimeoutTooLongTitle),
-        body: t(Root.TimeoutTooLong),
+        title: t(`${Root}:timeoutTooLongTitle`),
+        body: t(`${Root}:timeoutTooLong`),
       });
     }
     return Result.ok(durationMs);
   },
   confirm: (t, { target, reason, prepared }) => ({
-    title: t(Root.TimeoutConfirmTitle),
-    body: t(Root.TimeoutConfirmBody, {
+    title: t(`${Root}:timeoutConfirmTitle`),
+    body: t(`${Root}:timeoutConfirmBody`, {
       user: userMention(target.id),
       duration: formatDuration(prepared),
       reason,
     }),
-    confirmLabel: t(Root.TimeoutConfirmButton),
+    confirmLabel: t(`${Root}:timeoutConfirmButton`),
   }),
   action: ({ guild, target, moderator, reason, prepared }) =>
     MuteAction.apply({
@@ -56,8 +55,8 @@ const TimeoutAdd: TimedFlow = {
       durationMs: prepared,
     }),
   buildSuccessMessage: (t, { target, reason, prepared, outcome }) => ({
-    title: t(Root.TimeoutSuccessTitle),
-    body: t(Root.TimeoutSuccess, {
+    title: t(`${Root}:timeoutSuccessTitle`),
+    body: t(`${Root}:timeoutSuccess`, {
       user: target.user.username,
       duration: formatDuration(prepared),
       reason,
@@ -72,8 +71,8 @@ const TimeoutRemove: Flow = {
   action: ({ guild, target, moderator, reason }) =>
     MuteAction.undo({ guild, targetMember: target, moderator, reason }),
   buildSuccessMessage: (t, { target }) => ({
-    title: t(Root.TimeoutRemovedTitle),
-    body: t(Root.TimeoutRemoved, { user: target.user.username }),
+    title: t(`${Root}:timeoutRemovedTitle`),
+    body: t(`${Root}:timeoutRemoved`, { user: target.user.username }),
   }),
 };
 

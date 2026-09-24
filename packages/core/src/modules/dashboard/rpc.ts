@@ -6,7 +6,6 @@ import {
 } from "@lumi/contracts/rpc";
 import type { DashboardModuleSummaryView } from "@lumi/contracts/views";
 import { ChannelType } from "discord.js";
-import { isSupportedLanguage } from "#lib/i18n/index.js";
 import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { implementRpc, requireGuildManager } from "#lib/rpc/implement.js";
@@ -185,10 +184,6 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
   },
 
   "guild.settings.set": async ({ guildId, input }) => {
-    if (input.locale !== undefined && !isSupportedLanguage(input.locale)) {
-      throw new Error(`Unsupported locale \`${input.locale}\`.`);
-    }
-
     const tx = await container.db.transaction(guildId);
     try {
       tx.write(input);

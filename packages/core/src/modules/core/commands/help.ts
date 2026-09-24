@@ -12,7 +12,6 @@ import type { ContainerBuilder } from "@discordjs/builders";
 import { BaseCommand, fetchTyped } from "#lib/commands.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { paginateContainer } from "#lib/utilities/pagination.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import type { LumiT } from "#lib/i18n/index.js";
 
 export function getCategories(containerInstance: typeof container) {
@@ -114,7 +113,7 @@ export class HelpCommand extends BaseCommand {
 
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `## ${Emojis.Shield} ${t(LanguageKeys.Commands.HelpTitle)}`,
+        `## ${Emojis.Shield} ${t("commands:helpTitle")}`,
       ),
     );
     c.addSeparatorComponents(
@@ -126,14 +125,14 @@ export class HelpCommand extends BaseCommand {
     const commandListText = categoryCommands
       .map((cmd) => {
         const desc =
-          cmd.description || t(LanguageKeys.Commands.HelpNoDescription);
+          cmd.description || t("commands:helpNoDescription");
         return `**\`/${cmd.name}\`** or **\`${prefix}${cmd.name}\`** — ${desc}`;
       })
       .join("\n");
 
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `### ${categoryEmoji} ${t(LanguageKeys.Commands.HelpModuleHeader, { category: categoryName })}\n\n${commandListText || t(LanguageKeys.Commands.HelpNoCommands)}`,
+        `### ${categoryEmoji} ${t("commands:helpModuleHeader", { category: categoryName })}\n\n${commandListText || t("commands:helpNoCommands")}`,
       ),
     );
 
@@ -145,7 +144,7 @@ export class HelpCommand extends BaseCommand {
 
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `-# ${t(LanguageKeys.Commands.HelpFooter, { page: data.pageIndex + 1, total: data.sortedCategories.length, count: data.totalCommandsCount })}`,
+        `-# ${t("commands:helpFooter", { page: data.pageIndex + 1, total: data.sortedCategories.length, count: data.totalCommandsCount })}`,
       ),
     );
   }

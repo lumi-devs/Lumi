@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import type { RpcInput } from "@lumi/contracts/rpc";
+import { SupportedLocales } from "@lumi/contracts/rpc";
 import { setGuildSettings } from "#/actions/guild-actions";
 import { SaveBar } from "#/components/save-bar";
 import {
@@ -14,6 +15,7 @@ import {
   CardDescription,
 } from "#/components/ui/card";
 import { Field, Input } from "#/components/ui/input";
+import { Select } from "#/components/ui/select";
 import { useServerAction } from "#/lib/use-server-action";
 import { useStaggerIn } from "#/lib/animate";
 import type { GuildSettings } from "@lumi/contracts/views";
@@ -32,10 +34,21 @@ const FieldLabels: Record<(typeof FormKeys)[number], string> = {
 
 const NullableStringFields = new Set<keyof FormState>(["prefix"]);
 
+const LocaleOptions = SupportedLocales.map((locale) => ({
+  value: locale,
+  label: locale,
+}));
+
+function isSupportedLocale(
+  value: string,
+): value is (typeof SupportedLocales)[number] {
+  return (SupportedLocales as readonly string[]).includes(value);
+}
+
 function toFormState(settings: GuildSettings): FormState {
   return {
     prefix: settings.prefix ?? "",
-    locale: settings.locale ?? "en-US",
+    locale: isSupportedLocale(settings.locale) ? settings.locale : "en-US",
   };
 }
 
@@ -211,11 +224,14 @@ export function GeneralSettingsForm({
                 onChange={(e) => field("prefix", e.target.value)}
               />
             </Field>
-            <Field label="Locale" htmlFor="locale" hint="BCP-47 tag, e.g. en-US.">
-              <Input
+            <Field label="Locale" htmlFor="locale" hint="More locales land via Crowdin.">
+              <Select
                 id="locale"
-                value={form.locale ?? ""}
-                onChange={(e) => field("locale", e.target.value)}
+                value={form.locale ?? "en-US"}
+                onValueChange={(value) => {
+                  if (isSupportedLocale(value)) field("locale", value);
+                }}
+                options={LocaleOptions}
               />
             </Field>
           </CardBody>

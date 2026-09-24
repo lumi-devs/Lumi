@@ -7,7 +7,6 @@ import type { ButtonInteraction } from "discord.js";
 import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
 import { fetchTyped } from "#lib/commands.js";
 import { revertPanic } from "../services/panic.js";
-import { PanelsKeys } from "#lib/i18n/keys.js";
 import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
 import { memberRoleIds } from "#lib/permissions/subject.js";
 import { PanicRevertId, buildPanicRevertedCard } from "../ui/panic-card.js";
@@ -43,7 +42,7 @@ export class PanicRevertInteractionHandler extends ModuleInteractionHandler<
     if (!hasPermit) {
       await interaction.followUp(
         ephemeralCard(
-          makeErrorCard(t(PanelsKeys.PanicDeniedTitle), t(PanelsKeys.PanicDenied)),
+          makeErrorCard(t("panels:panicDeniedTitle"), t("panels:panicDenied")),
         ),
       );
       return;
@@ -52,7 +51,7 @@ export class PanicRevertInteractionHandler extends ModuleInteractionHandler<
     const result = await revertPanic(guild);
     if (!result) {
       await interaction.editReply(
-        makeErrorCard(t(PanelsKeys.PanicNotActiveTitle), t(PanelsKeys.PanicNotActive)),
+        makeErrorCard(t("panels:panicNotActiveTitle"), t("panels:panicNotActive")),
       );
       return;
     }

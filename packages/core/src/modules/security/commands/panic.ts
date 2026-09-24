@@ -5,7 +5,6 @@ import type { CommandContext } from "#lib/command-context.js";
 import { enterPanic } from "../services/panic.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
-import { PanelsKeys } from "#lib/i18n/keys.js";
 import {
   buildPanicAlreadyActiveCard,
   buildPanicCancelledCard,
@@ -40,9 +39,9 @@ export class PanicCommand extends BaseCommand {
     }
 
     const { confirmed } = await confirmPrompt(ctx, {
-      title: t(PanelsKeys.PanicConfirmTitle),
-      body: t(PanelsKeys.PanicConfirmBody),
-      confirmLabel: t(PanelsKeys.PanicConfirmButton),
+      title: t("panels:panicConfirmTitle"),
+      body: t("panels:panicConfirmBody"),
+      confirmLabel: t("panels:panicConfirmButton"),
       time: 20_000,
     });
 

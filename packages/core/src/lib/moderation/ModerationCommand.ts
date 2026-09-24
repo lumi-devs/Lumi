@@ -1,7 +1,6 @@
 import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import {
   confirmPrompt,
   type ConfirmPromptContext,
@@ -16,7 +15,7 @@ import { Result, container, type Awaitable } from "@sapphire/framework";
 import type { Guild, GuildMember, User } from "discord.js";
 import type { CaseAction } from "@prisma/client";
 
-const Root = LanguageKeys.Commands;
+const Root = "commands";
 
 function targetIdOf(target: ModerationCommand.TargetLike): string {
   return typeof target === "string" ? target : target.id;
@@ -40,7 +39,9 @@ export interface DuplicateCaseCheckContext
     ConfirmPromptContext {}
 
 async function readReason(ctx: CommandContext, t: LumiT): Promise<string> {
-  return (await ctx.getString("reason", { rest: true })) ?? t(Root.ModNoReason);
+  return (
+    (await ctx.getString("reason", { rest: true })) ?? t(`${Root}:modNoReason`)
+  );
 }
 
 function replyFailure(
@@ -52,15 +53,15 @@ function replyFailure(
 
 function memberNotFound(t: LumiT): ModerationCommand.Reply {
   return {
-    title: t(Root.ModMemberNotFoundTitle),
-    body: t(Root.ModMemberNotFound),
+    title: t(`${Root}:modMemberNotFoundTitle`),
+    body: t(`${Root}:modMemberNotFound`),
   };
 }
 
 function actionFailed(t: LumiT): ModerationCommand.Reply {
   return {
-    title: t(Root.ModActionFailedTitle),
-    body: t(Root.ModActionFailed),
+    title: t(`${Root}:modActionFailedTitle`),
+    body: t(`${Root}:modActionFailed`),
   };
 }
 
@@ -91,8 +92,8 @@ async function checkPanicLock(
   if (state.actorId === moderator.id) return null;
 
   return {
-    title: t(Root.ModPanicLockedTitle),
-    body: t(Root.ModPanicLocked),
+    title: t(`${Root}:modPanicLockedTitle`),
+    body: t(`${Root}:modPanicLocked`),
   };
 }
 
@@ -131,14 +132,14 @@ export async function checkDuplicateCase(
   if (ageMinutes > windowMinutes) return true;
 
   const result = await confirmPrompt(ctx, {
-    title: t(Root.ModDuplicateCaseTitle),
-    body: t(Root.ModDuplicateCaseBody, {
+    title: t(`${Root}:modDuplicateCaseTitle`),
+    body: t(`${Root}:modDuplicateCaseBody`, {
       caseNumber: recent.caseNumber,
       user: `<@${targetId}>`,
       minutes: Math.round(ageMinutes),
       moderator: `<@${recent.moderatorId}>`,
     }),
-    confirmLabel: t(Root.ModDuplicateCaseButton),
+    confirmLabel: t(`${Root}:modDuplicateCaseButton`),
   });
   return result.confirmed;
 }
@@ -166,8 +167,8 @@ export async function checkHierarchy(
   if (targetId === moderator.id) return null;
 
   const deny = (user: string): ModerationCommand.Reply => ({
-    title: t(Root.ModHierarchyTitle),
-    body: t(Root.ModHierarchy, { user }),
+    title: t(`${Root}:modHierarchyTitle`),
+    body: t(`${Root}:modHierarchy`, { user }),
   });
 
   if (targetId === guild.ownerId) return deny(`<@${targetId}>`);

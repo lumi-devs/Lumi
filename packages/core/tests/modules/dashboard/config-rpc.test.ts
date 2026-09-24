@@ -384,7 +384,7 @@ describe("dashboard module config write RPC handlers", () => {
     it("rejects an unsupported locale before opening a transaction", async () => {
       await expect(
         call("guild.settings.set", { locale: "xx-XX" }),
-      ).rejects.toThrow("Unsupported locale");
+      ).rejects.toThrow("Bad payload");
 
       expect(container.db.transaction).not.toHaveBeenCalled();
     });

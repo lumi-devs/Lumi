@@ -1,6 +1,5 @@
 import { chunk } from "@sapphire/utilities";
 import type { LumiT } from "#lib/i18n/index.js";
-import { PanelsKeys } from "#lib/i18n/keys.js";
 import { sectionsOf } from "@lumi/contracts";
 import { FieldType, type ConfigField } from "#lib/module-system/config-schema.js";
 import type { ModuleMeta } from "#lib/module-system/meta.js";
@@ -47,8 +46,8 @@ export interface FeatureListEntry {
 
 const formatStatusBadge = (status: "enabled" | "disabled", t?: LumiT) =>
   status === "enabled"
-    ? `${Emojis.Success} \`${t ? t(PanelsKeys.DetailEnabled) : "ENABLED"}\``
-    : `${Emojis.Error} \`${t ? t(PanelsKeys.DetailDisabled) : "DISABLED"}\``;
+    ? `${Emojis.Success} \`${t ? t("panels:detailEnabled") : "ENABLED"}\``
+    : `${Emojis.Error} \`${t ? t("panels:detailDisabled") : "DISABLED"}\``;
 
 /** True when the stored value (or schema default) counts as configured. */
 const hasStoredValue = (field: ConfigField, value: unknown): boolean => {
@@ -93,7 +92,7 @@ const detailRowLines = (
 ): string[] => {
   const required =
     field.required === true
-      ? ` *${t ? t(PanelsKeys.DetailRequired) : "(required)"}*`
+      ? ` *${t ? t("panels:detailRequired") : "(required)"}*`
       : "";
   return [
     `${statusGlyphFor(field, value)} **${field.label}**${required} - ${formatFieldValue(field, value)}`,
@@ -132,7 +131,7 @@ export function buildFeatureListView(
           moduleName: f.meta.name,
           rest: [String(safePage)],
         }),
-        label: t ? t(PanelsKeys.ModulesOpen) : "Open",
+        label: t ? t("panels:modulesOpen") : "Open",
         style: ButtonStyle.Primary,
       },
     ),
@@ -152,11 +151,11 @@ export function buildFeatureListView(
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.Gear} ${t ? t(PanelsKeys.ModulesTitle) : "Feature Modules"}`,
+    `${Emojis.Gear} ${t ? t("panels:modulesTitle") : "Feature Modules"}`,
     pageFeatures.length
       ? ""
       : t
-        ? t(PanelsKeys.ModulesEmpty)
+        ? t("panels:modulesEmpty")
         : "*No features registered.*",
     {
       breadcrumbs: ["Hub", "Modules"],
@@ -164,13 +163,13 @@ export function buildFeatureListView(
       footer:
         totalPages > 1
           ? t
-            ? t(PanelsKeys.ModulesPageFooter, {
+            ? t("panels:modulesPageFooter", {
                 page: safePage + 1,
                 total: totalPages,
               })
             : formatPageFooter(safePage, totalPages, "Open a module to enable, disable, or configure it.")
           : t
-            ? t(PanelsKeys.ModulesFooter)
+            ? t("panels:modulesFooter")
             : "Open a module to enable, disable, or configure it.",
       actionRows: buildSafeActionRows(rows),
       separatorAboveActionRows: true,
@@ -272,7 +271,7 @@ export function buildFeatureDetailView(
           moduleName: meta.name,
           rest: [field.key, String(idx)],
         }),
-        label: t ? t(PanelsKeys.DetailEdit) : "Edit",
+        label: t ? t("panels:detailEdit") : "Edit",
         emoji: Emojis.Edit,
         style: ButtonStyle.Secondary,
       });
@@ -284,7 +283,7 @@ export function buildFeatureDetailView(
         moduleName: meta.name,
         rest: [field.key, String(idx)],
       }),
-      label: t ? t(PanelsKeys.DetailEdit) : "Edit",
+      label: t ? t("panels:detailEdit") : "Edit",
       emoji: Emojis.Edit,
       style: ButtonStyle.Secondary,
     });
@@ -319,10 +318,10 @@ export function buildFeatureDetailView(
         }),
         label: guildEnabled
           ? t
-            ? t(PanelsKeys.DetailDisable)
+            ? t("panels:detailDisable")
             : "Disable Module"
           : t
-            ? t(PanelsKeys.DetailEnable)
+            ? t("panels:detailEnable")
             : "Enable Module",
         emoji: guildEnabled ? Emojis.Cross : Emojis.Check,
         style: guildEnabled ? ButtonStyle.Danger : ButtonStyle.Success,
@@ -333,7 +332,7 @@ export function buildFeatureDetailView(
           moduleName: meta.name,
           rest: [String(idx)],
         }),
-        label: t ? t(PanelsKeys.DetailReset) : "Reset",
+        label: t ? t("panels:detailReset") : "Reset",
         emoji: Emojis.Uninstall,
         style: ButtonStyle.Secondary,
       }),
@@ -349,7 +348,7 @@ export function buildFeatureDetailView(
             moduleName: meta.name,
             rest: [],
           }),
-          placeholder: t ? t(PanelsKeys.DetailJump) : "Jump to a section…",
+          placeholder: t ? t("panels:detailJump") : "Jump to a section…",
           options: groups.slice(0, MaxSelectOptions).map((sec, i) =>
             new StringSelectMenuOptionBuilder()
               .setLabel(cutText(sec.name ?? "Settings", 100))
@@ -365,7 +364,7 @@ export function buildFeatureDetailView(
   const secondaryComponents = [
     createBackButton(
       ConfigButtonId.build({ action: "back", moduleName: "0", rest: [] }),
-      t ? t(PanelsKeys.BackToModules) : "← Back to Modules",
+      t ? t("panels:backToModules") : "← Back to Modules",
     ),
     createActionButton({
       customId: ConfigButtonId.build({
@@ -373,7 +372,7 @@ export function buildFeatureDetailView(
         moduleName: meta.name,
         rest: [String(idx)],
       }),
-      label: t ? t(PanelsKeys.DetailHistory) : "History",
+      label: t ? t("panels:detailHistory") : "History",
       emoji: Emojis.Clock,
       style: ButtonStyle.Secondary,
     }),
@@ -387,7 +386,7 @@ export function buildFeatureDetailView(
           moduleName: meta.name,
           rest: [String(idx)],
         }),
-        label: t ? t(PanelsKeys.DetailOverrides) : "Overrides",
+        label: t ? t("panels:detailOverrides") : "Overrides",
         emoji: Emojis.Shield,
         style: ButtonStyle.Secondary,
       }),
@@ -398,12 +397,12 @@ export function buildFeatureDetailView(
 
   const body = [
     formatSubtitle(meta.description || "No description provided."),
-    `**${t ? t(PanelsKeys.DetailStatus) : "Status"}:** ${statusBadge}`,
+    `**${t ? t("panels:detailStatus") : "Status"}:** ${statusBadge}`,
   ];
   if (multi && current.name) {
     body.push(
       t
-        ? t(PanelsKeys.DetailSection, {
+        ? t("panels:detailSection", {
             name: current.name,
             index: idx + 1,
             total: groups.length,
@@ -529,7 +528,7 @@ export function buildFieldEditView(
             moduleName: meta.name,
             rest: [field.key, String(fieldPage)],
           }),
-          label: t ? t(PanelsKeys.FieldEditEnterValue) : "Enter value…",
+          label: t ? t("panels:fieldEditEnterValue") : "Enter value…",
           emoji: Emojis.Edit,
           style: ButtonStyle.Primary,
         }),
@@ -545,7 +544,7 @@ export function buildFieldEditView(
           moduleName: meta.name,
           rest: [String(fieldPage)],
         }),
-        t ? t(PanelsKeys.BackToFeature) : "← Back to Feature",
+        t ? t("panels:backToFeature") : "← Back to Feature",
       ),
     ),
   );
@@ -555,7 +554,7 @@ export function buildFieldEditView(
       resolveCardColor("primary"),
       `${meta.emoji} ${
         t
-          ? t(PanelsKeys.FieldEditTitle, {
+          ? t("panels:fieldEditTitle", {
               module: meta.displayName,
               field: field.label,
             })
@@ -563,8 +562,8 @@ export function buildFieldEditView(
       }`,
       [
         ...(field.description ? [formatSubtitle(field.description)] : []),
-        `**${t ? t(PanelsKeys.FieldEditCurrent) : "Current value"}:** ${formatFieldValue(field, config[field.key])}`,
-        `-# ${t ? t(PanelsKeys.FieldEditHint) : "Pick a new value below, or clear the selection to unset."}`,
+        `**${t ? t("panels:fieldEditCurrent") : "Current value"}:** ${formatFieldValue(field, config[field.key])}`,
+        `-# ${t ? t("panels:fieldEditHint") : "Pick a new value below, or clear the selection to unset."}`,
       ],
       { breadcrumbs: ["Hub", "Modules", meta.displayName, field.label], actionRows: buildSafeActionRows(rows) },
     ),

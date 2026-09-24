@@ -2,7 +2,6 @@ import { ActionRowBuilder, type ButtonBuilder } from "@discordjs/builders";
 import { Time } from "@sapphire/time-utilities";
 import { ButtonStyle } from "discord.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { PanelsKeys } from "#lib/i18n/keys.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
@@ -26,17 +25,17 @@ export interface VerifyPanelContent {
 export function buildVerifyPanel(t: LumiT, content?: VerifyPanelContent): CardReply {
   const button = createActionButton({
     customId: VerifyButtonId,
-    label: t(PanelsKeys.VerifyButton),
+    label: t("panels:verifyButton"),
     style: ButtonStyle.Success,
     emoji: Emojis.parse("✅"),
   });
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
   return makeCard(
     resolveCardColor("success"),
-    content?.title || t(PanelsKeys.VerifyTitle),
-    content?.welcome || t(PanelsKeys.VerifyIntro),
+    content?.title || t("panels:verifyTitle"),
+    content?.welcome || t("panels:verifyIntro"),
     {
-      footer: content?.footer || t(PanelsKeys.VerifyFooter),
+      footer: content?.footer || t("panels:verifyFooter"),
       actionRows: buildSafeActionRows([row]),
     },
   );
@@ -46,8 +45,8 @@ export function buildVerifyPanel(t: LumiT, content?: VerifyPanelContent): CardRe
 export function buildChallengeCard(t: LumiT, state: CaptchaState): CardReply {
   const minutes = Math.max(1, Math.round((state.expiresAt - Date.now()) / Time.Minute));
   return makeInfoCard(
-    t(PanelsKeys.VerifyChallengeTitle),
-    t(PanelsKeys.VerifyChallenge, {
+    t("panels:verifyChallengeTitle"),
+    t("panels:verifyChallenge", {
       sequence: sequenceDisplay(state.sequence),
       attempts: state.attempts,
       minutes,
@@ -60,11 +59,11 @@ export function buildChallengeCard(t: LumiT, state: CaptchaState): CardReply {
 export function buildProgressCard(t: LumiT, state: CaptchaState): CardReply {
   const solved = new Set(state.sequence.slice(0, state.progress));
   return makeInfoCard(
-    t(PanelsKeys.VerifyProgressTitle, {
+    t("panels:verifyProgressTitle", {
       done: state.progress,
       total: state.sequence.length,
     }),
-    t(PanelsKeys.VerifyProgress, { sequence: sequenceDisplay(state.sequence) }),
+    t("panels:verifyProgress", { sequence: sequenceDisplay(state.sequence) }),
     { actionRows: buildCaptchaRows(state.buttons, solved) },
   );
 }
@@ -72,8 +71,8 @@ export function buildProgressCard(t: LumiT, state: CaptchaState): CardReply {
 /** After a wrong click with attempts remaining: reset to a clean board. */
 export function buildWrongCard(t: LumiT, state: CaptchaState): CardReply {
   return makeWarningCard(
-    t(PanelsKeys.VerifyWrongTitle),
-    t(PanelsKeys.VerifyWrong, {
+    t("panels:verifyWrongTitle"),
+    t("panels:verifyWrong", {
       sequence: sequenceDisplay(state.sequence),
       attempts: state.attempts,
     }),
@@ -86,11 +85,11 @@ export function buildWebPromptCard(t: LumiT, url: string): CardReply {
   const button = createActionButton({
     style: ButtonStyle.Link,
     url: url,
-    label: t(PanelsKeys.VerifyWebButton),
+    label: t("panels:verifyWebButton"),
     emoji: Emojis.parse("🔗"),
   });
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
-  return makeInfoCard(t(PanelsKeys.VerifyWebTitle), t(PanelsKeys.VerifyWebIntro), {
+  return makeInfoCard(t("panels:verifyWebTitle"), t("panels:verifyWebIntro"), {
     actionRows: buildSafeActionRows([row]),
   });
 }

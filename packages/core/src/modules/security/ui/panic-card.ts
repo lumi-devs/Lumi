@@ -2,7 +2,6 @@ import { ActionRowBuilder, type ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 import { time, TimestampStyles } from "@discordjs/formatters";
 import type { LumiT } from "#lib/i18n/index.js";
-import { PanelsKeys } from "#lib/i18n/keys.js";
 import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
 import { makeCard, makeSuccessCard, type CardReply } from "#lib/ui/cards.js";
@@ -21,8 +20,8 @@ const revertRow = (label: string): ActionRowBuilder<ButtonBuilder> =>
 export function buildPanicCancelledCard(t: LumiT): CardReply {
   return makeCard(
     resolveCardColor("info"),
-    t(PanelsKeys.PanicCancelledTitle),
-    t(PanelsKeys.PanicCancelledBody),
+    t("panels:panicCancelledTitle"),
+    t("panels:panicCancelledBody"),
   );
 }
 
@@ -33,16 +32,16 @@ export function buildPanicStatusCard(
 ): CardReply {
   return makeCard(
     resolveCardColor("error"),
-    t(PanelsKeys.PanicActiveTitle),
-    t(PanelsKeys.PanicActiveBody, {
+    t("panels:panicActiveTitle"),
+    t("panels:panicActiveBody", {
       locked: status.lockedCount,
       skipped:
         status.skippedCount > 0 ? `, skipped ${status.skippedCount}` : "",
       invites: status.invitesPaused
-        ? t(PanelsKeys.PanicInvitesPaused)
-        : t(PanelsKeys.PanicInvitesFailed),
+        ? t("panels:panicInvitesPaused")
+        : t("panels:panicInvitesFailed"),
     }),
-    { actionRows: buildSafeActionRows([revertRow(t(PanelsKeys.PanicRevertButton))]) },
+    { actionRows: buildSafeActionRows([revertRow(t("panels:panicRevertButton"))]) },
   );
 }
 
@@ -53,11 +52,11 @@ export function buildPanicAlreadyActiveCard(
 ): CardReply {
   return makeCard(
     resolveCardColor("error"),
-    t(PanelsKeys.PanicAlreadyActiveTitle),
-    t(PanelsKeys.PanicAlreadyActiveBody, {
+    t("panels:panicAlreadyActiveTitle"),
+    t("panels:panicAlreadyActiveBody", {
       since: time(startedAt, TimestampStyles.RelativeTime),
     }),
-    { actionRows: buildSafeActionRows([revertRow(t(PanelsKeys.PanicRevertButton))]) },
+    { actionRows: buildSafeActionRows([revertRow(t("panels:panicRevertButton"))]) },
   );
 }
 
@@ -66,7 +65,7 @@ export function buildPanicRevertedCard(
   restoredCount: number,
 ): CardReply {
   return makeSuccessCard(
-    t(PanelsKeys.PanicRevertedTitle),
-    t(PanelsKeys.PanicReverted, { restored: restoredCount }),
+    t("panels:panicRevertedTitle"),
+    t("panels:panicReverted", { restored: restoredCount }),
   );
 }

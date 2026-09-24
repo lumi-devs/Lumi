@@ -28,7 +28,6 @@ interface MediaRequestContext {
 }
 
 import { fetchT } from "@sapphire/plugin-i18next";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 
 export async function handleMediaRequest({
   context,
@@ -59,8 +58,8 @@ export async function handleMediaRequest({
     if (!claimed) {
       const remainingMs = await container.redis.pttl(cooldownKey);
       const timeLeft = (Math.max(remainingMs, 0) / 1000).toFixed(1);
-      const title = t(LanguageKeys.Commands.MediaCooldownTitle);
-      const reply = t(LanguageKeys.Commands.MediaCooldown, { timeLeft });
+      const title = t("commands:mediaCooldownTitle");
+      const reply = t("commands:mediaCooldown", { timeLeft });
 
       if (context instanceof Message) {
         const msg = await context.reply({
@@ -105,7 +104,7 @@ export async function handleMediaRequest({
     actionRows.push(
       new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
         new ButtonBuilder()
-          .setLabel(t(LanguageKeys.Commands.MediaLinkBtn, { mediaType: capitalizeFirstLetter(mediaType) }))
+          .setLabel(t("commands:mediaLinkBtn", { mediaType: capitalizeFirstLetter(mediaType) }))
           .setStyle(ButtonStyle.Link)
           .setURL(mediaUrl),
       ),
@@ -115,13 +114,13 @@ export async function handleMediaRequest({
       new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(UserMediaViewId.build({ userId: fetchedUser.id, type: mediaType }))
-          .setLabel(t(LanguageKeys.Commands.MediaViewBtn, { mediaType: capitalizeFirstLetter(mediaType) }))
+          .setLabel(t("commands:mediaViewBtn", { mediaType: capitalizeFirstLetter(mediaType) }))
           .setStyle(ButtonStyle.Primary),
       ),
     );
   }
 
-  const cardTitle = t(LanguageKeys.Commands.MediaCardTitle, { displayName, mediaType: capitalizeFirstLetter(mediaType) });
+  const cardTitle = t("commands:mediaCardTitle", { displayName, mediaType: capitalizeFirstLetter(mediaType) });
   const card = makeInfoCard(cardTitle, "", {
     actionRows,
     mediaGallery:

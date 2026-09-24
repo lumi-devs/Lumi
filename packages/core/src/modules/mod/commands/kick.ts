@@ -1,5 +1,4 @@
 import type { LumiT } from "#lib/i18n/index.js";
-import { LanguageKeys } from "#lib/i18n/keys.js";
 import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
 import { parseSnowflakeList, resolveMembers } from "#lib/moderation/multi-target.js";
 import type { ConfirmPromptOptions } from "#lib/utilities/confirm.js";
@@ -11,7 +10,7 @@ import type { AutocompleteInteraction, GuildMember } from "discord.js";
 import { KickAction } from "#modules/mod/services/actions/KickAction.js";
 import { respondWithReasonChoices } from "../services/reason-autocomplete.js";
 
-const Root = LanguageKeys.Commands;
+const Root = "commands";
 
 type Context = ModerationCommand.ActionContext<GuildMember>;
 type Success = ModerationCommand.OutcomeContext<GuildMember, ModerationCase>;
@@ -74,12 +73,12 @@ export class KickCommand extends ModerationCommand<
     { target, reason }: Context,
   ): ConfirmPromptOptions {
     return {
-      title: t(Root.KickConfirmTitle),
-      body: t(Root.KickConfirmBody, {
+      title: t(`${Root}:kickConfirmTitle`),
+      body: t(`${Root}:kickConfirmBody`, {
         user: userMention(target.id),
         reason,
       }),
-      confirmLabel: t(Root.KickConfirmButton),
+      confirmLabel: t(`${Root}:kickConfirmButton`),
     };
   }
 
@@ -92,8 +91,8 @@ export class KickCommand extends ModerationCommand<
     { target, reason, outcome }: Success,
   ) {
     return {
-      title: t(Root.KickSuccessTitle),
-      body: t(Root.KickSuccess, {
+      title: t(`${Root}:kickSuccessTitle`),
+      body: t(`${Root}:kickSuccess`, {
         user: target.user.username,
         reason,
         caseNumber: outcome.caseNumber,
