@@ -33,6 +33,7 @@ export function LoginForm({
   // effect so server and client render the same checkbox on first paint.
   const [autoLogin, setAutoLogin] = useState(true);
   const formRef = useRef<HTMLFormElement>(null);
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
   const reduce = useReducedMotion();
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -62,7 +63,7 @@ export function LoginForm({
     } catch {
       return;
     }
-    formRef.current?.requestSubmit();
+    formRef.current?.requestSubmit(submitButtonRef.current ?? undefined);
   }, []);
 
   function onSubmit() {
@@ -88,6 +89,7 @@ export function LoginForm({
         onMouseLeave={reduce ? undefined : onMouseLeave}
       >
       <Button
+        ref={submitButtonRef}
         type="submit"
         variant="primary"
         size="lg"
