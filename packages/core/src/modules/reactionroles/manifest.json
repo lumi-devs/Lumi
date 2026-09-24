@@ -5,7 +5,7 @@
   "description": "Self-serve role menus with buttons, a multi-pick dropdown, or raw message reactions, including exclusive and gated options.",
   "short": "Self-serve role menus via buttons, dropdown, or reactions.",
   "endUserDataStatement": "Stores role-menu definitions (titles, role IDs, gates) per server. Role assignments themselves live on Discord and are removed by unassigning the role.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "disableable": true,
   "dependencies": [],
   "conflicts": [],

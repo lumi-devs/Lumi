@@ -1,5 +1,21 @@
 # @lumi/core
 
+## 0.4.0
+
+### Minor Changes
+
+- 5d776e1: Add economy, welcome, and reaction-roles modules, extend moderation with mass-target ban/kick, channel lock/unlock, say/dm relay tools, and merge hackban into ban; write an `agents/` reference directory for AI coding agents and fix stale docs-site content
+- 9d45618: Harden security and concurrency, modernize docs site with sleek interactive showcases, and eliminate legacy shims
+
+### Patch Changes
+
+- 3031488: Trim redundant comments and dead code post-release cleanup
+- 237cd1e: Restore the OWNER_IDS env var name, which a constant rename had rewritten to a key nothing sets
+- @lumi/contracts@0.4.0
+  - @lumi/event-bus@0.4.0
+  - @lumi/observability@0.4.0
+  - @lumi/sharding@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes

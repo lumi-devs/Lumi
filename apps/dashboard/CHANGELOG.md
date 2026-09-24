@@ -1,5 +1,16 @@
 # @lumi/dashboard
 
+## 0.4.0
+
+### Minor Changes
+
+- 5d776e1: Add economy, welcome, and reaction-roles modules, extend moderation with mass-target ban/kick, channel lock/unlock, say/dm relay tools, and merge hackban into ban; write an `agents/` reference directory for AI coding agents and fix stale docs-site content
+
+### Patch Changes
+
+- @lumi/contracts@0.4.0
+  - @lumi/observability@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes
