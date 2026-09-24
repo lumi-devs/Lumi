@@ -9,3 +9,5 @@ export {
   installApiContainerServices,
   type ApiContainerServices,
 } from "./src/lib/client/api-container-services.js";
+export { registerRpcHandlers } from "./src/lib/rpc/registry.js";
+export { startRpcHttpServer } from "./src/lib/rpc/http-server.js";

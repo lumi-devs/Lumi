@@ -12,7 +12,9 @@ import { DefaultClusterName, readClusterShards } from "#lib/sharding/shard-telem
  * dependency a probe reports on already exists. Every process holds a real
  * gateway shard now, so the `discord` probe always applies; `scheduler-tasks`
  * only applies to the primary shard, the sole process BullMQ is wired up on
- * (see `setup.ts`).
+ * (see `setup.ts`). `rpc-server` only applies when a caller supplies
+ * `isRpcReady` at all - `apps/api` is the only process that does, since it's
+ * the only one that owns an RPC HTTP server (see the API extraction's Phase C).
  *
  * Probes reach their dependency through the suppliers passed in rather than
  * capturing it, because the client releases those handles during shutdown and
@@ -117,9 +119,14 @@ export class ReadinessProbes {
   }
 
   protected registerRpcProbe(): void {
-    if (!isPrimaryShard()) return;
+    // Registered only when a caller actually supplies `isRpcReady` - i.e.
+    // only for a process that owns an RPC HTTP server to report on
+    // (`apps/api` today; the worker stopped serving RPC in the API
+    // extraction's Phase C and no longer passes this option at all).
+    if (!this.isRpcReady) return;
+    const isRpcReady = this.isRpcReady;
     registerReadinessProbe("rpc-server", () =>
-      (this.isRpcReady ? this.isRpcReady() : true)
+      isRpcReady()
         ? { status: "ok" }
         : { status: "fail", detail: "rpc server not running" },
     );
