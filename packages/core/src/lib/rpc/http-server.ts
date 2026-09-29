@@ -8,7 +8,12 @@ import {
   isProduction,
 } from "#lib/env.js";
 import { logError } from "#lib/utilities/errors.js";
-import { RpcFailureCodes, type RpcRequest } from "@lumi/contracts/rpc";
+import {
+  CONTRACT_VERSION,
+  contractVersionsCompatible,
+  RpcFailureCodes,
+  type RpcRequest,
+} from "@lumi/contracts/rpc";
 
 /**
  * Internal-only HTTP entry point for the `dispatchRpc` pipeline — handler
@@ -74,9 +79,54 @@ export function readInternalToken(
   return null;
 }
 
+const ContractVersionHeader = "x-lumi-contract-version";
+let warnedMissingContractVersionHeader = false;
+
+/** Test-only: resets the "warn once" latch so each test starts from a clean slate. */
+export function resetContractVersionWarningForTests(): void {
+  warnedMissingContractVersionHeader = false;
+}
+
+/**
+ * Rejects a `/rpc` call whose caller built against an incompatible
+ * `@lumi/contracts` version — the dashboard and `apps/api` now ship (and
+ * version) independently, so this is the one place that can no longer
+ * assume they match. A missing header means an older dashboard build that
+ * predates this handshake: allowed through, but logged once so an operator
+ * notices they're running mismatched builds.
+ */
+function checkContractVersion(
+  req: Request,
+  log: (level: "info" | "warn" | "error", msg: string, meta?: object) => void,
+): Response | null {
+  const theirVersion = req.headers.get(ContractVersionHeader);
+  if (!theirVersion) {
+    if (!warnedMissingContractVersionHeader) {
+      warnedMissingContractVersionHeader = true;
+      log(
+        "warn",
+        `[RpcHttp] Request missing ${ContractVersionHeader} header — assuming an older dashboard build that predates the contract version handshake; accepting anyway.`,
+        { serverContractVersion: CONTRACT_VERSION },
+      );
+    }
+    return null;
+  }
+  if (contractVersionsCompatible(CONTRACT_VERSION, theirVersion)) return null;
+  return Response.json(
+    {
+      id: "",
+      ok: false,
+      error: `Contract version mismatch: caller is on @lumi/contracts@${theirVersion}, this server is on @lumi/contracts@${CONTRACT_VERSION}. Update one side to match.`,
+      code: RpcFailureCodes.ContractMismatch,
+    },
+    { status: 409 },
+  );
+}
+
 export async function handleRpcHttpRequest(
   req: Request,
   internalToken: string | null,
+  log: (level: "info" | "warn" | "error", msg: string, meta?: object) => void = () => {},
 ): Promise<Response> {
   const { pathname } = new URL(req.url);
   // Unauthenticated on purpose: liveness/readiness probes have no way to
@@ -111,6 +161,8 @@ export async function handleRpcHttpRequest(
       { status: 401 },
     );
   }
+  const contractMismatch = checkContractVersion(req, log);
+  if (contractMismatch) return contractMismatch;
   let body: RpcRequest<unknown>;
   try {
     body = (await req.json()) as RpcRequest<unknown>;
@@ -178,7 +230,7 @@ export async function startRpcHttpServer(
         hostname: host,
         port,
         fetch(req) {
-          return handleRpcHttpRequest(req, internalToken);
+          return handleRpcHttpRequest(req, internalToken, log);
         },
       });
       log("info", "[RpcHttp] Internal RPC HTTP server listening", {

@@ -8,8 +8,8 @@ import type {
   GuildSettings,
   GuildShellData,
   ModuleDataListData,
-} from "../views";
-import { rpcAction, RpcTimeouts } from "./define";
+} from "../views.js";
+import { rpcAction, RpcTimeouts } from "./define.js";
 import {
   AuditFilterShape,
   boundedArray,
@@ -18,7 +18,7 @@ import {
   PageSchema,
   PageSizeSchema,
   SnowflakeSchema,
-} from "./schemas";
+} from "./schemas.js";
 
 export const ConfigOverrideModelTypes = [
   "channel",

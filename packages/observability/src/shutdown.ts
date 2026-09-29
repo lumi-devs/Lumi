@@ -6,7 +6,7 @@
 // sequentially because closing order usually matters (detach WS handler → drain queue
 // → close bus → close redis).
 
-import { markDraining } from "./readiness";
+import { markDraining } from "./readiness.js";
 
 export interface DrainStep {
   name: string;

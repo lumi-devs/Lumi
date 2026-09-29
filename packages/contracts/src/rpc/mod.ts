@@ -5,9 +5,9 @@ import type {
   CasesListData,
   ModNoteView,
   WarnThresholdView,
-} from "../views";
-import { rpcAction, RpcTimeouts } from "./define";
-import { PageSchema, PageSizeSchema, SnowflakeSchema } from "./schemas";
+} from "../views.js";
+import { rpcAction, RpcTimeouts } from "./define.js";
+import { PageSchema, PageSizeSchema, SnowflakeSchema } from "./schemas.js";
 
 export const WarnThresholdActions = [
   "mute",
