@@ -1,6 +1,6 @@
 import { buildRestOptions } from "#lib/discord-rest.js";
-import { parseRedisConnectionOption } from "#lib/database/redis.js";
-import { envParseInteger, envParseString, getBotToken } from "#lib/env.js";
+import { getScheduledTasksConnectionOptions } from "#lib/client/scheduled-tasks-queue.js";
+import { envParseString, getBotToken } from "#lib/env.js";
 import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";
 import { SapphireClient } from "@sapphire/framework";
@@ -62,10 +62,7 @@ export async function installApiContainerServices(): Promise<ApiContainerService
     // deliberately never registers. See that file's comment.
     tasks: {
       bull: {
-        connection: {
-          ...parseRedisConnectionOption(),
-          db: envParseInteger("REDIS_TASK_DB", 1),
-        },
+        connection: getScheduledTasksConnectionOptions(),
       },
     },
   });
