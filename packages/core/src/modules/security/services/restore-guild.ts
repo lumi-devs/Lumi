@@ -8,7 +8,10 @@ import {
   type RESTPostAPIGuildRoleJSONBody,
 } from "discord-api-types/v10";
 import type { GuildBackupData } from "./backup-types.js";
-import { fetchGuildChannelsRest, fetchGuildRolesRest } from "#lib/rpc/discord-rest-lookup.js";
+import {
+  fetchGuildChannelsRestUncached,
+  fetchGuildRolesRestUncached,
+} from "#lib/rpc/discord-rest-lookup.js";
 
 interface LocalRoleOrder {
   id: string;
@@ -82,8 +85,12 @@ async function createRoleWithPosition(
  * Discord mutations go through raw REST routes (`container.client.rest`)
  * rather than the gateway-cached `Guild`'s convenience methods, so this can
  * run on a shard/process that doesn't own this guild's gateway connection -
- * as can the existence checks (`fetchGuildRolesRest`/`fetchGuildChannelsRest`),
- * also REST-sourced rather than `guild.roles.cache`/`guild.channels.cache`.
+ * as can the existence checks (`fetchGuildRolesRestUncached`/
+ * `fetchGuildChannelsRestUncached`), also REST-sourced rather than
+ * `guild.roles.cache`/`guild.channels.cache`. Both are deliberately
+ * uncached: this same function creates roles/channels as it goes, so no
+ * TTL-based cache-aside snapshot can stay correct mid-operation, and a stale
+ * hit on a retried restore (e.g. after a timeout) would recreate duplicates.
  */
 export async function restoreGuildFromBackup(
   guildId: string,
@@ -98,7 +105,7 @@ export async function restoreGuildFromBackup(
   let rolesRestored = 0;
   const roleIdMap = new Map<string, string>();
 
-  const existingRoles = (await fetchGuildRolesRest(guildId)) ?? [];
+  const existingRoles = (await fetchGuildRolesRestUncached(guildId)) ?? [];
   const existingRoleIds = new Set(existingRoles.map((role) => role.id));
   let roleOrder: LocalRoleOrder[] = sortRoleOrder(
     existingRoles.map((role) => ({ id: role.id, position: role.position })),
@@ -140,7 +147,7 @@ export async function restoreGuildFromBackup(
     a.type === ChannelType.GuildCategory ? -1 : b.type === ChannelType.GuildCategory ? 1 : 0,
   );
   const channelIdMap = new Map<string, string>();
-  const existingChannels = (await fetchGuildChannelsRest(guildId)) ?? [];
+  const existingChannels = (await fetchGuildChannelsRestUncached(guildId)) ?? [];
   const existingChannelIds = new Set(existingChannels.map((channel) => channel.id));
 
   for (const channel of ordered) {

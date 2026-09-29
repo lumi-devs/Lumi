@@ -105,8 +105,13 @@ export async function bootstrapApiApp(
         container.logger[level](`[Shutdown] ${msg}`, meta ?? "");
       log("info", `${sig} received`);
       const drainSteps = [
-        { name: "api-container-services", run: () => destroyApiContainerServices(services) },
+        // Stop accepting/draining external traffic (e.g. the RPC HTTP
+        // server) before tearing down the redis/db/event-bus connections it
+        // depends on - otherwise an in-flight request can hit a connection
+        // that's already been closed. `runDrainSequence` runs these strictly
+        // sequentially, so order here is the actual shutdown order.
         ...(options.extraDrainSteps ?? []),
+        { name: "api-container-services", run: () => destroyApiContainerServices(services) },
         { name: "tracing-shutdown", run: () => shutdownTracing() },
       ];
       try {

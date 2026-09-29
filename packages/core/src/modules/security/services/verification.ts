@@ -7,7 +7,7 @@ import { RedisKeys } from "#lib/database/redis.js";
 import {
   fetchChannelMessageRest,
   fetchChannelRest,
-  fetchGuildMemberRest,
+  fetchGuildMemberRestUncached,
   fetchGuildRest,
   GuildTextBasedChannelTypes,
 } from "#lib/rpc/discord-rest-lookup.js";
@@ -308,11 +308,15 @@ async function clearChallenge(guildId: string, userId: string): Promise<void> {
  * ultimately PATCHed - always carried `guild.id` alongside the member's real
  * assigned roles. `APIGuildMember.roles` from REST does not include it, so it
  * is added back explicitly to reproduce the exact same PATCH body.
+ *
+ * The role read is deliberately uncached (`fetchGuildMemberRestUncached`):
+ * this is a read-then-full-replace PATCH, so a stale 20s-cached role list
+ * would silently clobber any role change made elsewhere within that window.
  */
 export async function grantVerified(guildId: string, userId: string): Promise<boolean> {
   const config = await loadVerificationConfig(guildId);
   if (isNullish(config.verifiedRoleId)) return false;
-  const member = await fetchGuildMemberRest(guildId, userId);
+  const member = await fetchGuildMemberRestUncached(guildId, userId);
   if (isNullish(member)) return false;
   try {
     const nextRoles = new Set(member.roles);

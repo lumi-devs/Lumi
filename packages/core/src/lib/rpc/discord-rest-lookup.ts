@@ -49,6 +49,34 @@ async function fetchGuildMemberRest(
   ).catch(swallow("discord-rest-lookup: member fetch failed"));
 }
 
+/**
+ * Uncached counterpart of {@linkcode fetchGuildRest}, for callers where the
+ * 20s cache-aside TTL is actively wrong rather than merely stale-tolerant:
+ * a read that then feeds a full-replace PATCH (lost-update risk) or an
+ * authorization decision (a just-revoked permission staying valid for up to
+ * 20s). Same shape as {@linkcode fetchChannelMessageRest}'s existing
+ * uncached precedent.
+ */
+async function fetchGuildRestUncached(guildId: string): Promise<APIGuild | null> {
+  return (
+    container.client.rest.get(Routes.guild(guildId), {
+      query: new URLSearchParams({ with_counts: "true" }),
+    }) as Promise<APIGuild>
+  ).catch(() => null);
+}
+
+/** Uncached counterpart of {@linkcode fetchGuildMemberRest} - see {@linkcode fetchGuildRestUncached}. */
+async function fetchGuildMemberRestUncached(
+  guildId: string,
+  userId: string,
+): Promise<APIGuildMember | null> {
+  return (
+    container.client.rest.get(
+      Routes.guildMember(guildId, userId),
+    ) as Promise<APIGuildMember>
+  ).catch(() => null);
+}
+
 export async function fetchChannelRest(channelId: string): Promise<APIChannel | null> {
   return repositoryCache.getOrLoad<APIChannel | null>(
     RedisKeys.restChannel(channelId),
@@ -105,6 +133,28 @@ export async function fetchGuildChannelsRest(guildId: string): Promise<APIChanne
 }
 
 /**
+ * Uncached counterparts of {@linkcode fetchGuildRolesRest}/
+ * {@linkcode fetchGuildChannelsRest}, for a restore operation's "does this
+ * already exist" checks: the same restore call creates roles/channels as it
+ * goes, so no TTL-based cache can stay correct mid-operation, and a stale
+ * hit on a retried restore would recreate duplicates. See
+ * {@linkcode fetchGuildRestUncached}.
+ */
+export async function fetchGuildRolesRestUncached(guildId: string): Promise<APIRole[] | null> {
+  return (
+    container.client.rest.get(Routes.guildRoles(guildId)) as Promise<APIRole[]>
+  ).catch(() => null);
+}
+
+export async function fetchGuildChannelsRestUncached(
+  guildId: string,
+): Promise<APIChannel[] | null> {
+  return (
+    container.client.rest.get(Routes.guildChannels(guildId)) as Promise<APIChannel[]>
+  ).catch(() => null);
+}
+
+/**
  * One page of up to `limit` members (Discord's own id-ascending order), not the full paginated
  * roster: the dashboard only ever needed a bounded sample for a member picker, and looping the
  * paginated `GET /guilds/{id}/members` endpoint to reconstruct "the whole cache" would be far
@@ -153,17 +203,24 @@ export interface RestGuildManagerCheck {
  * REST equivalent of `cachedGuild(guildId).members.fetch(actorId)` +
  * permission check. Returns `null` for "guild not found" so the caller can
  * throw the same `GuildNotFound` error the old gateway-cache miss threw.
+ *
+ * Backs the `guildManager` RPC authorizer that gates every dashboard
+ * mutation - this is an authorization gate, not a display-staleness case, so
+ * both reads deliberately bypass the 20s cache-aside every other REST read
+ * here tolerates: pre-refactor this read the gateway member cache, updated
+ * near-real-time by `GUILD_MEMBER_UPDATE`, and a stale hit here would let a
+ * just-revoked manager keep privileged access for up to 20s.
  */
 export async function checkGuildManagerRest(
   guildId: string,
   actorId: string,
 ): Promise<RestGuildManagerCheck | null> {
-  const guild = await fetchGuildRest(guildId);
+  const guild = await fetchGuildRestUncached(guildId);
   if (!guild) return null;
 
   if (guild.owner_id === actorId) return { guild, isManager: true };
 
-  const member = await fetchGuildMemberRest(guildId, actorId);
+  const member = await fetchGuildMemberRestUncached(guildId, actorId);
   if (!member) return { guild, isManager: false };
 
   const permissions = computeGuildPermissions(guild, member);
@@ -192,4 +249,9 @@ export function memberAvatarUrl(
   return cdn.defaultAvatar(calculateUserDefaultAvatarIndex(member.user.id));
 }
 
-export { fetchGuildRest, fetchGuildMemberRest };
+export {
+  fetchGuildRest,
+  fetchGuildMemberRest,
+  fetchGuildRestUncached,
+  fetchGuildMemberRestUncached,
+};

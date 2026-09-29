@@ -11,3 +11,7 @@ export {
 } from "./src/lib/client/api-container-services.js";
 export { registerRpcHandlers } from "./src/lib/rpc/registry.js";
 export { startRpcHttpServer } from "./src/lib/rpc/http-server.js";
+export {
+  registerInfrastructureReadinessProbes,
+  registerRpcReadinessProbe,
+} from "./src/lib/client/ReadinessProbes.js";

@@ -9,7 +9,7 @@ import {
 } from "discord-api-types/v10";
 import { withSerializedWork } from "#lib/utilities/misc.js";
 import type { LockedChannelSnapshot } from "#modules/security/data/SecurityRepository.js";
-import { fetchGuildChannelsRest, fetchGuildRest } from "#lib/rpc/discord-rest-lookup.js";
+import { fetchGuildChannelsRest, fetchGuildRestUncached } from "#lib/rpc/discord-rest-lookup.js";
 import { isRestorePending, restoreFromBackup, clearRestorePending } from "./backup.js";
 
 export interface PanicResult {
@@ -35,11 +35,13 @@ function panicLockKey(guildId: string): string {
  * `this.features` off the gateway-cached `Guild` and PATCHes the full,
  * filtered feature list back (Discord's guild PATCH replaces `features`
  * wholesale, it isn't a partial diff) - reproduced here off a REST guild
- * fetch instead (`fetchGuildRest`, same 20s-stale cache-aside every other
- * REST read in this module tolerates).
+ * fetch instead. Deliberately uncached (`fetchGuildRestUncached`), unlike
+ * every other REST read in this module: this is a read-then-full-replace
+ * PATCH, so a stale 20s-cached feature list could silently clobber a
+ * feature change made elsewhere within that window.
  */
 async function setGuildInvitesDisabled(guildId: string, disabled: boolean): Promise<void> {
-  const guild = await fetchGuildRest(guildId);
+  const guild = await fetchGuildRestUncached(guildId);
   const currentFeatures: GuildFeature[] = guild?.features ?? [];
   const features: GuildFeature[] = currentFeatures.filter(
     (f) => f !== GuildFeature.InvitesDisabled,
