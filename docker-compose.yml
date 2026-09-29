@@ -27,7 +27,10 @@ x-lumi-service: &lumi-service
       required: false
   environment: &lumi-env
     REDIS_HOST: redis
-    POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
+    # Points straight at postgres by default (single-node tier, no pooler).
+    # Production/cluster tiers enable the `pgbouncer` profile and set this to
+    # postgresql://...@pgbouncer:6432/lumi in .env - see deploy/docker/README.md.
+    POSTGRES_URL: "${POSTGRES_URL:-postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi}"
     DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
     OTEL_ENABLED: "${OTEL_ENABLED:-true}"
     OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
@@ -40,8 +43,11 @@ x-lumi-service: &lumi-service
     DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-}"
     LUMI_DEV_PATHS: "${LUMI_DEV_PATHS:-/lumi-addons}"
   depends_on:
+    migrate:
+      condition: service_completed_successfully
     pgbouncer:
       condition: service_healthy
+      required: false
     postgres:
       condition: service_healthy
     redis:
@@ -61,6 +67,28 @@ x-lumi-service: &lumi-service
       max-file: "3"
 
 services:
+  # One-shot: applies pending Prisma migrations, then exits. worker/worker-scale/api
+  # wait on `service_completed_successfully` instead of each running migrate deploy
+  # on their own startup (that raced on every scaled replica before this).
+  migrate:
+    image: ghcr.io/lumi-devs/lumi:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrate
+    container_name: lumi-migrate
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lumi-net
+    restart: "no"
+
   worker:
     <<: *lumi-service
     container_name: lumi-worker
@@ -79,7 +107,7 @@ services:
         required: false
     environment:
       REDIS_HOST: redis
-      POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
+      POSTGRES_URL: "${POSTGRES_URL:-postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi}"
       DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
       OTEL_ENABLED: "${OTEL_ENABLED:-true}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
@@ -89,8 +117,11 @@ services:
       LOG_FORMAT: "${LOG_FORMAT:-pretty}"
       LOG_LEVEL: "${LOG_LEVEL:-debug}"
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       pgbouncer:
         condition: service_healthy
+        required: false
       postgres:
         condition: service_healthy
       redis:
@@ -112,6 +143,10 @@ services:
       <<: *lumi-env
       LUMI_CONSUMER_ID: "${LUMI_CONSUMER_ID:-worker-1}"
       METRICS_HOST: "0.0.0.0"
+      # Extra replicas mean extra DB connections - route through the pooler
+      # that the `scale` profile also starts, rather than the single-node
+      # POSTGRES_URL default.
+      POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
     profiles:
       - scale
 
@@ -230,6 +265,12 @@ services:
           memory: 64m
     ports:
       - "127.0.0.1:6432:6432"
+    # Opt-in: single-node tier talks to postgres directly. Enabling this
+    # profile only starts the pooler - point POSTGRES_URL at pgbouncer:6432
+    # in .env to actually use it (see deploy/docker/README.md).
+    profiles:
+      - pgbouncer
+      - scale
 
   redis:
     image: docker.io/library/redis:8.8-alpine
