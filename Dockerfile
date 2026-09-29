@@ -18,13 +18,6 @@ COPY tsconfig.base.json tsconfig.json prisma.config.ts ./
 COPY packages/ packages/
 COPY prisma/ prisma/
 
-FROM source AS migrate
-ENV NODE_ENV=production
-RUN chown -R bun:bun /app
-USER bun
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["bunx", "prisma", "migrate", "deploy"]
-
 FROM source AS worker
 ENV NODE_ENV=production
 COPY apps/worker/ apps/worker/

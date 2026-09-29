@@ -69,25 +69,19 @@ x-lumi-service: &lumi-service
 services:
   # One-shot: applies pending Prisma migrations, then exits. worker/worker-scale/api
   # wait on `service_completed_successfully` instead of each running migrate deploy
-  # on their own startup (that raced on every scaled replica before this).
+  # on their own startup (that raced on every scaled replica before this). Reuses the
+  # worker image/build (same tag, same `target: worker`) rather than a separate image -
+  # a distinct `migrate` tag would race the worker image for ownership of the same name
+  # on `compose build`, and pull-based users (CI only publishes worker/api/dashboard
+  # images) would get the worker image with no command override, i.e. it never exits.
   migrate:
-    image: ghcr.io/lumi-devs/lumi:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: migrate
+    <<: *lumi-service
     container_name: lumi-migrate
-    env_file:
-      - path: .env
-        required: false
-    environment:
-      DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
+    command: ["bunx", "prisma", "migrate", "deploy"]
+    restart: "no"
     depends_on:
       postgres:
         condition: service_healthy
-    networks:
-      - lumi-net
-    restart: "no"
 
   worker:
     <<: *lumi-service

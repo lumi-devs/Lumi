@@ -105,7 +105,6 @@ two independent final targets, `worker` and `dashboard`, based on `oven/bun:1-al
 graph LR
     base[base<br/>oven/bun:1-alpine] --> deps[deps<br/>bun install --frozen-lockfile]
     deps --> source[source<br/>+ packages/, prisma/]
-    source --> migrate[migrate target<br/>prisma migrate deploy]
     source --> worker[worker target<br/>prisma generate, runs main.ts]
     source --> api[api target<br/>prisma generate, runs main.ts]
     source --> dbuild[dashboard-build<br/>next build]
@@ -119,14 +118,15 @@ graph LR
 2. **`deps`**: Copies every workspace `package.json` and runs `bun install --frozen-lockfile`.
 3. **`source`**: Adds `tsconfig`/`prisma.config.ts`, the `packages/` workspaces, and the Prisma
    schema — shared by both final targets below.
-4. **`migrate`** (target `migrate`): no app code, just the `source` stage's Prisma CLI and
-   schema. Container start runs `bunx prisma migrate deploy` against `DIRECT_POSTGRES_URL`
-   and exits - this is the `migrate` compose service / k8s `Job`, never run as part of
-   `worker`/`api` startup.
-5. **`worker`** (`docker compose build` target `worker`): adds `apps/worker/`, runs
+4. **`worker`** (`docker compose build` target `worker`): adds `apps/worker/`, runs
    `bunx prisma generate`, switches to unprivileged user `bun`, and on container start runs
-   `bun apps/worker/src/main.ts` directly - no migration step (see `migrate` above).
-6. **`dashboard-build`** → **`dashboard`**: `dashboard-build` (from `source`) adds
+   `bun apps/worker/src/main.ts` directly - no migration step. There is no separate `migrate`
+   image/target: the compose `migrate` service and the k8s `migrate` `Job` both reuse this same
+   `worker`-target image, just with a `command` override (`bunx prisma migrate deploy` against
+   `DIRECT_POSTGRES_URL`) instead of the default `CMD` - a distinct image tag would otherwise
+   race the worker image for the same name on `compose build`, and pull-only users (CI doesn't
+   publish a `migrate` image) would get the worker image with no override, which never exits.
+5. **`dashboard-build`** → **`dashboard`**: `dashboard-build` (from `source`) adds
    `apps/dashboard/` and runs `bun run --filter=@lumi/dashboard build` (a real Next.js
    standalone build, with placeholder env values that only matter at build time); the final
    `dashboard` target (from `base`, not `source`) copies just `.next/standalone`, `.next/static`
@@ -173,7 +173,7 @@ cp .env.example .env
 | `POSTGRES_USER` | `lumi` | PostgreSQL database username. |
 | `POSTGRES_PASSWORD` | `lumi` | PostgreSQL database password. |
 | `POSTGRES_URL` | `postgresql://...@postgres:5432/lumi` | Pooled/app connection string. Defaults straight to `postgres` (no pooler). Override to `postgresql://...@pgbouncer:6432/lumi` when the `pgbouncer` profile is enabled - see [Deployment Tiers](#-deployment-tiers). |
-| `DIRECT_POSTGRES_URL` | `postgresql://...@postgres:5432/lumi` | Always points straight at `postgres`, never PgBouncer - Prisma migrations (`migrate` service/target) need DDL that pooled/transaction-mode connections can't run reliably. |
+| `DIRECT_POSTGRES_URL` | `postgresql://...@postgres:5432/lumi` | Always points straight at `postgres`, never PgBouncer - Prisma migrations (`migrate` service) need DDL that pooled/transaction-mode connections can't run reliably. |
 | `REDIS_PASSWORD` | `lumi` | Redis password authentication. |
 | `RPC_HTTP_PORT` | `8091` | Internal HTTP RPC server port the api service binds - never published to the host. |
 | `RPC_HTTP_URL` | `http://api:8091` | Internal RPC bridge URL the dashboard calls into the api service over. |
@@ -231,10 +231,13 @@ docker compose down -v
 ## 🧬 Database Migrations
 
 `worker`/`worker-scale`/`api` no longer run `prisma migrate deploy` on their own startup - a
-dedicated one-shot `migrate` service (built from the `migrate` Dockerfile target) runs it once
-and exits, and the app services wait on it (`depends_on: migrate: condition:
-service_completed_successfully`). This replaces every replica racing the same migration on
-every restart.
+dedicated one-shot `migrate` service runs it once and exits, and the app services wait on it
+(`depends_on: migrate: condition: service_completed_successfully`). This replaces every replica
+racing the same migration on every restart. `migrate` reuses the same image/build as `worker`
+(`target: worker`) with a `command` override rather than its own image or Dockerfile target -
+a distinct `migrate` image would race the worker image for the same tag on `compose build`, and
+pull-only users (CI doesn't publish a separate `migrate` image) would otherwise get the worker
+image with no command override, which runs the bot forever and never completes.
 
 - **Compose**: `docker compose up -d` runs `migrate` automatically before `worker`/`api` start.
   To run it standalone (e.g. to check exit status, or before a rolling update): `docker compose
@@ -245,8 +248,6 @@ every restart.
   docker run --rm --env-file .env ghcr.io/lumi-devs/lumi:latest bunx prisma migrate deploy
   docker run -d --env-file .env --name lumi-worker ghcr.io/lumi-devs/lumi:latest
   ```
-  (or build the `migrate` target directly: `docker build --target migrate -t lumi-migrate . &&
-  docker run --rm --env-file .env lumi-migrate`).
 - **Kubernetes**: unchanged - `deploy/k8s/migrate-job.yaml` is already a separate `batch/v1` Job
   applied before the `worker`/`api` Deployments (see `deploy/k8s/README.md`).
 
