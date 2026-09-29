@@ -245,6 +245,7 @@ const WORKER_ENV_FILES = [
   "packages/core/src/lib/rpc/http-server.ts",
   "packages/core/src/lib/permissions/PermitResolver.ts",
   "packages/core/src/lib/client/client-options.ts",
+  "packages/core/src/lib/client/scheduled-tasks-queue.ts",
   "prisma.config.ts",
 ];
 
