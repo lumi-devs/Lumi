@@ -1,5 +1,8 @@
-import { parseRedisConnectionOption } from "#lib/database/redis.js";
-import { envParseInteger } from "#lib/env.js";
+import {
+  getScheduledTasksConnectionOptions,
+  SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
+  SCHEDULED_TASKS_QUEUE_NAME,
+} from "#lib/client/scheduled-tasks-queue.js";
 import { container } from "@sapphire/framework";
 import type {
   ScheduledTaskHandler,
@@ -7,8 +10,6 @@ import type {
   ScheduledTasksTaskOptions,
 } from "@sapphire/plugin-scheduled-tasks";
 import { Queue, type JobsOptions } from "bullmq";
-
-const QueueName = "scheduled-tasks";
 
 function resolveTask(
   task: ScheduledTasksResolvable,
@@ -41,21 +42,13 @@ function resolveTask(
  * grepping every `container.tasks.*` call site.
  */
 export function installProducerOnlyTasks(): void {
-  const queue = new Queue(QueueName, {
-    connection: {
-      ...parseRedisConnectionOption(),
-      db: envParseInteger("REDIS_TASK_DB", 1),
-    },
-    defaultJobOptions: {
-      attempts: 5,
-      backoff: { type: "exponential", delay: 5_000 },
-      removeOnComplete: 1_000,
-      removeOnFail: 5_000,
-    },
+  const queue = new Queue(SCHEDULED_TASKS_QUEUE_NAME, {
+    connection: getScheduledTasksConnectionOptions(),
+    defaultJobOptions: SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
   });
 
   const handler = {
-    queue: QueueName,
+    queue: SCHEDULED_TASKS_QUEUE_NAME,
     async create(
       task: ScheduledTasksResolvable,
       options?: ScheduledTasksTaskOptions | number,

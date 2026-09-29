@@ -35,17 +35,25 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
   },
 
   "guild.panic.set": async ({ guildId, actorId, input }) => {
-    if (!input.active) {
-      const reverted = await revertPanic(guildId);
-      if (!reverted) throw new Error("Panic mode is not active");
-      return { success: true, active: false, ...reverted };
-    }
+    return withIdempotency(
+      "guild.panic.set",
+      guildId,
+      securityRpc["guild.panic.set"].timeoutMs,
+      input,
+      async () => {
+        if (!input.active) {
+          const reverted = await revertPanic(guildId);
+          if (!reverted) throw new Error("Panic mode is not active");
+          return { success: true, active: false, ...reverted };
+        }
 
-    if (await container.db.security.getPanicState(guildId)) {
-      throw new Error("Panic mode is already active");
-    }
-    const result = await enterPanic(guildId, actorId, input.channelIds ?? []);
-    return { success: true, active: true, ...result };
+        if (await container.db.security.getPanicState(guildId)) {
+          throw new Error("Panic mode is already active");
+        }
+        const result = await enterPanic(guildId, actorId, input.channelIds ?? []);
+        return { success: true, active: true, ...result };
+      },
+    );
   },
 
   "guild.verificationPanel.get": async ({ guildId }) => {
