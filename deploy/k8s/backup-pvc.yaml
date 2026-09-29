@@ -1,0 +1,13 @@
+# Dump storage for the backup CronJob. ReadWriteOnce is sufficient - only one
+# backup Job pod runs at a time (concurrencyPolicy: Forbid in backup-cronjob.yaml).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lumi-backup-data
+  namespace: lumi
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi

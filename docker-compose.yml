@@ -15,6 +15,7 @@ volumes:
   prometheus-data:
   grafana-data:
   tempo-data:
+  backup-data:
 
 x-lumi-service: &lumi-service
   image: ghcr.io/lumi-devs/lumi:latest
@@ -238,6 +239,44 @@ services:
           memory: 256m
     ports:
       - "127.0.0.1:5432:5432"
+
+  backup:
+    image: docker.io/library/postgres:18-alpine
+    container_name: lumi-backup
+    entrypoint: []
+    command: ["/scripts/backup.sh", "loop"]
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: lumi
+      POSTGRES_USER: ${POSTGRES_USER:-lumi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lumi}
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION: "${BACKUP_RETENTION:-7}"
+      BACKUP_INTERVAL_HOURS: "${BACKUP_INTERVAL_HOURS:-24}"
+    volumes:
+      - ./deploy/backup/backup.sh:/scripts/backup.sh:ro
+      - ./deploy/backup/restore-test.sh:/scripts/restore-test.sh:ro
+      - backup-data:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lumi-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    # Opt-in: talks straight to postgres (not pgbouncer - pg_dump/pg_restore
+    # need a direct, non-pooled connection). Default command loops on
+    # BACKUP_INTERVAL_HOURS. Run a one-off dump with
+    # `docker compose --profile backup run --rm backup /scripts/backup.sh once`,
+    # or verify the latest dump restores cleanly with
+    # `docker compose --profile backup run --rm backup /scripts/restore-test.sh`
+    # - see deploy/docker/README.md#-backups--restore-testing.
+    profiles:
+      - backup
 
   pgbouncer:
     image: docker.io/edoburu/pgbouncer:latest

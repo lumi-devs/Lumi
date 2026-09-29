@@ -104,6 +104,7 @@ Services are organized into distinct Compose **profiles** so you only run what y
 | `pgbouncer` | *(core)* | `127.0.0.1:6432:6432` | Transaction-level connection pooler. |
 | `redis` | *(core)* | `127.0.0.1:6379:6379` | Entity caching and event streams. |
 | `nirn-proxy` | `scale` | `127.0.0.1:18080`, `:19000` | Shared Discord REST rate-limiting proxy for multi-worker runs. |
+| `backup` | `backup` | — | Periodic `pg_dump -Fc` against `postgres` directly. See [Backups](#backups) below. |
 | `otel-collector` | `observability` | `127.0.0.1:4318:4318` | OpenTelemetry Collector endpoint (OTLP HTTP). |
 | `prometheus` | `observability` | `127.0.0.1:9091:9090` | Metrics collector and alerting engine. |
 | `tempo` | `observability` | — | Distributed tracing storage engine. |
@@ -159,6 +160,48 @@ docker compose --profile scale up -d
 docker compose down       # stop services
 docker compose down -v    # also remove persistent volume data
 ```
+
+## Backups
+
+The `backup` profile runs a container that dumps the database on a loop, connecting straight to
+`postgres` (never PgBouncer — `pg_dump` needs a direct, non-pooled connection). Dumps are
+`pg_dump -Fc` (custom format), written atomically to a `backup-data` volume as
+`lumi-<UTC-timestamp>.dump`, with old dumps pruned by count.
+
+`BACKUP_RETENTION` (default `7`) and `BACKUP_INTERVAL_HOURS` (default `24`) control how many
+dumps are kept and how often they run. These are Compose-only settings for the `backup`
+service — no application process reads them, so they don't appear in the
+[Environment Variables](/docs/reference/environment-variables) reference.
+
+```bash title="Start the recurring backup loop"
+docker compose --profile backup up -d backup
+```
+
+```bash title="One-off dump on demand"
+docker compose --profile backup run --rm backup /scripts/backup.sh once
+```
+
+```bash title="Verify the latest dump restores cleanly"
+docker compose --profile backup run --rm backup /scripts/restore-test.sh
+```
+
+`restore-test.sh` restores the dump into a throwaway `lumi_restore_test_<timestamp>` database,
+runs `pg_restore --exit-on-error`, checks `_prisma_migrations` exists and has rows, prints the
+restored table count, and drops the temporary database — nothing it does touches the real `lumi`
+database.
+
+To restore into the real database after a disaster, stop the app services first:
+
+```bash
+docker compose stop worker worker-scale api scheduler
+docker compose --profile backup run --rm backup \
+  pg_restore --exit-on-error -h postgres -U "${POSTGRES_USER:-lumi}" -d lumi --clean --if-exists \
+  /backups/lumi-20260101T000000Z.dump
+docker compose up -d
+```
+
+For the Kubernetes `CronJob` equivalent, see
+[`deploy/k8s/README.md`](https://github.com/lumi-devs/lumi/blob/main/deploy/k8s/README.md#backups--restore-testing).
 
 ## Observability stack
 
