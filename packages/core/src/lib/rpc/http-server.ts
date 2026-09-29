@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { dispatchRpc } from "#lib/rpc/dispatch.js";
+import { handleSseRequest } from "#lib/rpc/sse-server.js";
 import {
   envParseInteger,
   envParseString,
@@ -82,6 +83,19 @@ export async function handleRpcHttpRequest(
   // hold the secret, and it discloses nothing beyond "the process is up".
   if (req.method === "GET" && pathname === "/healthz") {
     return new Response("ok");
+  }
+  // SSE gets the identical bearer-token gate before it ever reaches
+  // `handleSseRequest`, then owns its own guild-scoping check from there -
+  // same transport-level authentication as `/rpc`, just a streaming response
+  // instead of a single JSON envelope.
+  if (req.method === "GET" && pathname === "/events") {
+    if (internalToken && !tokenMatches(internalToken, presentedToken(req))) {
+      return Response.json(
+        { ok: false, error: "Unauthorized", code: RpcFailureCodes.Unauthorized },
+        { status: 401 },
+      );
+    }
+    return handleSseRequest(req);
   }
   if (req.method !== "POST" || pathname !== "/rpc") {
     return new Response("not found", { status: 404 });

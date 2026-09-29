@@ -2,6 +2,7 @@ import "./telemetry.js";
 import "@lumi/core/setup-api";
 import {
   bootstrapApiApp,
+  closeAllSseConnections,
   destroyApiContainerServices,
   registerInfrastructureReadinessProbes,
   registerRpcHandlers,
@@ -20,6 +21,14 @@ let rpcServer: Awaited<ReturnType<typeof startRpcHttpServer>> = null;
 // `bootstrapApiApp`'s drain ordering in `api-bootstrap.ts`).
 const services = await bootstrapApiApp({
   extraDrainSteps: [
+    {
+      // Ahead of the HTTP server stop: each SSE connection's own cleanup
+      // (stop its event-bus consume loop, destroy its ephemeral consumer
+      // group) needs Redis still reachable, and needs to run under our own
+      // control rather than racing Bun.serve's own socket teardown.
+      name: "sse-connections",
+      run: () => closeAllSseConnections(),
+    },
     {
       name: "rpc-http-server",
       run: async () => {
