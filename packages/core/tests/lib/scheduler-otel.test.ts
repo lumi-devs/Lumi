@@ -22,10 +22,7 @@ describe("scheduler-otel", () => {
   });
 
   it("passes a plain payload through unwrapTraceContext unchanged", () => {
-    const result = unwrapTraceContext({ plain: true } as unknown as Record<
-      string,
-      unknown
-    >);
+    const result = unwrapTraceContext({ plain: true });
     expect(result.payload).toEqual({ plain: true });
     expect(result.context).toBeUndefined();
     expect(result.messageId).toBeUndefined();
