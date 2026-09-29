@@ -4,12 +4,29 @@ import { container } from "@sapphire/framework";
 import { resolver } from "#lib/downloader/resolver.js";
 import { promises as fs } from "node:fs";
 
+class MockRepoAlreadyInstalledError extends Error {
+  public sha: string | null;
+  public constructor(repoName: string, sha: string | null) {
+    super(`Repository ${repoName} is already installed`);
+    this.name = "RepoAlreadyInstalledError";
+    this.sha = sha;
+  }
+}
+
 vi.mock("#lib/downloader/resolver.js", () => ({
   resolver: {
-    addRepo: vi.fn().mockResolvedValue(undefined),
+    addRepo: vi.fn().mockResolvedValue(null),
+    updateRepo: vi.fn().mockResolvedValue({
+      oldSha: "old",
+      newSha: "new",
+      changed: true,
+      diffStat: "",
+      recloned: false,
+    }),
     installModule: vi.fn().mockResolvedValue({ version: "1.0.0" }),
     getModulesInRepo: vi.fn().mockResolvedValue([{ name: "test-module" }]),
   },
+  RepoAlreadyInstalledError: MockRepoAlreadyInstalledError,
   AddonModulesRoot: "/mock/addon_modules",
   ModuleRoot: "/mock/modules",
 }));
@@ -50,6 +67,7 @@ describe("DownloaderUtility", () => {
         writeInstalledDownloaderModule: vi.fn(),
         deleteInstalledDownloaderModule: vi.fn(),
         writeDownloaderRepo: vi.fn(),
+        updateDownloaderRepoCommit: vi.fn(),
         readAllDownloaderRepos: vi.fn(),
         readDownloaderRepoById: vi.fn(),
         updateInstalledDownloaderModuleCommit: vi.fn(),
@@ -267,10 +285,26 @@ describe("DownloaderUtility", () => {
   });
 
   describe("addRepo, updateRepo, listRepos, getModulesInRepo", () => {
-    it("addRepo adds repo via resolver and DB", async () => {
+    it("addRepo adds repo via resolver and DB, persisting the cloned commit", async () => {
+      (resolver.addRepo as any).mockResolvedValueOnce("abc1234");
       await service.addRepo("r1", "https://url", "main");
       expect(resolver.addRepo).toHaveBeenCalledWith("r1", "https://url", "main");
-      expect(mockDb.downloader.writeDownloaderRepo).toHaveBeenCalledWith("r1", "https://url", "main");
+      expect(mockDb.downloader.writeDownloaderRepo).toHaveBeenCalledWith(
+        "r1",
+        "https://url",
+        "main",
+        "abc1234",
+      );
+    });
+
+    it("addRepo surfaces a friendly already-installed error with the current SHA and does not touch the DB", async () => {
+      (resolver.addRepo as any).mockRejectedValueOnce(
+        new MockRepoAlreadyInstalledError("r1", "deadbeef"),
+      );
+      await expect(service.addRepo("r1", "https://url", "main")).rejects.toThrow(
+        /already installed at commit `deadbeef`.*,repo update r1/s,
+      );
+      expect(mockDb.downloader.writeDownloaderRepo).not.toHaveBeenCalled();
     });
 
     it("updateRepo throws error if repo missing in DB", async () => {
@@ -278,10 +312,29 @@ describe("DownloaderUtility", () => {
       await expect(service.updateRepo("r1")).rejects.toThrow("Repository **r1** not found");
     });
 
-    it("updateRepo updates repo via resolver", async () => {
-      mockDb.downloader.readDownloaderRepo.mockResolvedValue({ name: "r1", url: "http://url", branch: "dev" });
-      await service.updateRepo("r1");
-      expect(resolver.addRepo).toHaveBeenCalledWith("r1", "http://url", "dev");
+    it("updateRepo pulls via resolver.updateRepo and persists the new commit to the DB", async () => {
+      mockDb.downloader.readDownloaderRepo.mockResolvedValue({
+        id: "r1-id",
+        name: "r1",
+        url: "http://url",
+        branch: "dev",
+      });
+      (resolver.updateRepo as any).mockResolvedValueOnce({
+        oldSha: "old1234",
+        newSha: "new5678",
+        changed: true,
+        diffStat: "1 file changed",
+        recloned: false,
+      });
+
+      const result = await service.updateRepo("r1");
+
+      expect(resolver.updateRepo).toHaveBeenCalledWith("r1", "http://url", "dev");
+      expect(mockDb.downloader.updateDownloaderRepoCommit).toHaveBeenCalledWith(
+        "r1-id",
+        "new5678",
+      );
+      expect(result.newSha).toBe("new5678");
     });
 
     it("listRepos delegates to DB", async () => {

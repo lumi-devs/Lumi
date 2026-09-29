@@ -5,6 +5,8 @@ import {
   resolver,
   AddonModulesRoot,
   ModuleRoot,
+  RepoAlreadyInstalledError,
+  type RepoUpdateResult,
 } from "#lib/downloader/resolver.js";
 import { pathExists } from "#lib/downloader/validate.js";
 import { promises as fs } from "node:fs";
@@ -245,18 +247,33 @@ export class DownloaderUtility extends Utility {
   }
 
   public async addRepo(name: string, url: string, branch: string) {
-    await resolver.addRepo(name, url, branch);
-    await this.container.db.downloader.writeDownloaderRepo(name, url, branch);
+    let sha: string | null;
+    try {
+      sha = await resolver.addRepo(name, url, branch);
+    } catch (err: unknown) {
+      if (err instanceof RepoAlreadyInstalledError) {
+        throw new Error(
+          `Repository **${name}** is already installed${err.sha ? ` at commit \`${err.sha}\`` : ""}. Use \`,repo update ${name}\` to pull and validate the latest changes.`,
+        );
+      }
+      throw err;
+    }
+    await this.container.db.downloader.writeDownloaderRepo(name, url, branch, sha);
   }
 
-  public async updateRepo(name: string) {
+  public async updateRepo(name: string): Promise<RepoUpdateResult> {
     const repo = await this.container.db.downloader.readDownloaderRepo(name);
     if (!repo) {
       throw new Error(
         `Repository **${name}** not found. Add it first using \`,repo add\`.`,
       );
     }
-    await resolver.addRepo(repo.name, repo.url, repo.branch);
+    const result = await resolver.updateRepo(repo.name, repo.url, repo.branch);
+    await this.container.db.downloader.updateDownloaderRepoCommit(
+      repo.id,
+      result.newSha,
+    );
+    return result;
   }
 
   /** Read-only check: fetches and compares the repo's local HEAD against its remote branch, never pulls. */
@@ -369,7 +386,10 @@ export class DownloaderUtility extends Utility {
     try {
       await fs.access(repoPath);
     } catch {
-      await this.updateRepo(repo.name);
+      // Directory is missing entirely, not just stale - this is a repair
+      // clone, not a pull of new upstream commits, so it goes through
+      // addRepo() rather than updateRepo().
+      await this.addRepo(repo.name, repo.url, branch);
     }
 
     const fetchFailed = await execFileAsync("git", [

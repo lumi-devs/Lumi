@@ -1,6 +1,8 @@
 import { container } from "@sapphire/framework";
 import { Time } from "@sapphire/time-utilities";
 import { promises as fs } from "node:fs";
+import { randomUUID } from "node:crypto";
+import os from "node:os";
 import path from "node:path";
 import type { ModuleInfo } from "./types.js";
 import { validateAddon } from "./validate.js";
@@ -27,6 +29,31 @@ const execError =
       const msg = (err.stderr || err.message || String(err)).trim();
       throw new Error(`${context}${msg ? `: ${msg}` : ""}`);
     };
+
+/**
+ * Thrown by {@linkcode DownloadResolver.addRepo} when the target repo is
+ * already cloned on disk. Callers must go through
+ * {@linkcode DownloadResolver.updateRepo} to pull - "add" never mutates an
+ * existing checkout.
+ */
+export class RepoAlreadyInstalledError extends Error {
+  public readonly repoName: string;
+  public readonly sha: string | null;
+  public constructor(repoName: string, sha: string | null) {
+    super(`Repository ${repoName} is already installed${sha ? ` at ${sha}` : ""}.`);
+    this.name = "RepoAlreadyInstalledError";
+    this.repoName = repoName;
+    this.sha = sha;
+  }
+}
+
+export interface RepoUpdateResult {
+  oldSha: string | null;
+  newSha: string;
+  changed: boolean;
+  diffStat: string;
+  recloned: boolean;
+}
 
 
 const repoSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
@@ -79,16 +106,22 @@ export const AddonModulesRoot = path.join(
 );
 
 export class DownloadResolver {
+  /**
+   * Clones `name` if it isn't on disk yet. Never pulls an existing checkout -
+   * a repo that's already cloned must go through {@linkcode updateRepo}, so
+   * that pulling in new upstream commits is always an explicit, reviewable
+   * step rather than a side effect of re-running the "add" flow.
+   */
   public async addRepo(
     name: string,
     url: string,
     branch = "default",
-  ): Promise<void> {
+  ): Promise<string | null> {
     name = repoSchema.parse(name);
     url = parseUrl(url);
     branch = branchSchema.parse(branch);
 
-    await withSerializedWork(name, async () => {
+    return withSerializedWork(name, async () => {
       const repoPath = path.join(ModuleRoot, name);
       const gitFolder = path.join(repoPath, ".git");
 
@@ -105,34 +138,154 @@ export class DownloadResolver {
         (await this._exists(repoPath)) && (await this._exists(gitFolder));
 
       if (isExisting) {
-        container.logger?.info?.(`[Downloader] Updating repo: ${name}`);
-        const pullArgs =
-          branch === "default"
-            ? ["-C", repoPath, "pull"]
-            : ["-C", repoPath, "pull", "origin", branch];
-        await execGit(pullArgs).catch(async () => {
-          container.logger?.warn?.(
-            `[Downloader] Git pull failed for ${name}, attempting clean clone fallback...`,
-          );
-          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
-          const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
-          await execGit(cloneArgs).catch(async (cloneErr) => {
-            await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
-            execError("Git clone failed")(cloneErr);
-          });
-        });
-
-        await this._revalidateInstalledModules(name, repoPath);
-      } else {
-        container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
-        await fs.mkdir(ModuleRoot, { recursive: true });
-        const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
-        await execGit(cloneArgs).catch(async () => {
-          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
-          throw new Error("Git clone failed");
-        });
+        const sha = await this._getHeadSha(repoPath);
+        throw new RepoAlreadyInstalledError(name, sha);
       }
+
+      container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
+      await fs.mkdir(ModuleRoot, { recursive: true });
+      const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
+      await execGit(cloneArgs).catch(async () => {
+        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+        throw new Error("Git clone failed");
+      });
+
+      return this._getHeadSha(repoPath);
     });
+  }
+
+  /**
+   * Fetches the latest commit for an already-cloned repo, validates it in an
+   * isolated worktree BEFORE touching the live checkout, and only then fast
+   * -forwards. Unlike the old `addRepo`-does-both behavior (and unlike a
+   * plain "pull then validate"), the unvalidated revision is never on disk
+   * where a sandbox child respawn, a live reload, or dev-mode HMR could pick
+   * it up: if validation fails, the live checkout's HEAD was never moved.
+   */
+  public async updateRepo(
+    name: string,
+    url: string,
+    branch = "default",
+  ): Promise<RepoUpdateResult> {
+    name = repoSchema.parse(name);
+    url = parseUrl(url);
+    branch = branchSchema.parse(branch);
+
+    return withSerializedWork(name, async () => {
+      const repoPath = path.join(ModuleRoot, name);
+      const gitFolder = path.join(repoPath, ".git");
+
+      const isExisting =
+        (await this._exists(repoPath)) && (await this._exists(gitFolder));
+      if (!isExisting) {
+        throw new Error(
+          `Repository **${name}** is not cloned locally. Use \`,repo add\` first.`,
+        );
+      }
+
+      const oldSha = await this._getHeadSha(repoPath);
+
+      container.logger?.info?.(`[Downloader] Fetching updates for repo: ${name}`);
+      const fetchArgs =
+        branch === "default"
+          ? ["-C", repoPath, "fetch", "origin"]
+          : ["-C", repoPath, "fetch", "origin", branch];
+
+      let recloned = false;
+      await execGit(fetchArgs).catch(async () => {
+        container.logger?.warn?.(
+          `[Downloader] Git fetch failed for ${name}, attempting clean clone fallback...`,
+        );
+        recloned = true;
+        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+        const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
+        await execGit(cloneArgs).catch(async (cloneErr) => {
+          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+          execError("Git clone failed")(cloneErr);
+        });
+      });
+
+      if (recloned) {
+        // The clone fallback already replaced the live tree wholesale - there's
+        // no pre-fetch checkout left to validate-before-switching, so this is
+        // the one case that still validates in place, same as before.
+        const newSha = await this._getHeadSha(repoPath);
+        if (!newSha) {
+          throw new Error(
+            `Repository **${name}** has no resolvable HEAD after re-cloning - the checkout may be corrupt.`,
+          );
+        }
+        try {
+          await this._revalidateInstalledModules(name, repoPath, repoPath);
+        } catch (validationErr) {
+          throw new Error(
+            `${(validationErr as Error).message}\n\nThe previous commit could not be restored because the repo had to be freshly re-cloned. Run \`,repo remove ${name}\` and review it manually before adding it again.`,
+          );
+        }
+        return { oldSha, newSha, changed: oldSha !== newSha, diffStat: "", recloned };
+      }
+
+      const targetRef = await this._resolveFetchTarget(repoPath, branch);
+      const newSha = await execGit(["-C", repoPath, "rev-parse", targetRef])
+        .then(({ stdout }) => stdout.trim())
+        .catch(execError(`Could not resolve fetched revision for ${name}`));
+
+      const changed = oldSha !== newSha;
+      if (!changed) {
+        return { oldSha, newSha, changed: false, diffStat: "", recloned: false };
+      }
+
+      const diffStat = oldSha
+        ? await execGit(["-C", repoPath, "diff", "--stat", `${oldSha}..${newSha}`])
+            .then(({ stdout }) => stdout.trim())
+            .catch(() => "")
+        : "";
+
+      // Materialize the fetched revision into a throwaway worktree so the
+      // validator can run against it without ever checking it out live.
+      const tmpDir = path.join(
+        os.tmpdir(),
+        `lumi-repo-update-${name}-${randomUUID()}`,
+      );
+      try {
+        await execGit(["-C", repoPath, "worktree", "add", "--detach", tmpDir, newSha]).catch(
+          execError(`Failed to stage ${name}'s fetched revision for validation`),
+        );
+
+        await this._revalidateInstalledModules(name, repoPath, tmpDir);
+
+        // Validation passed - now, and only now, move the live checkout.
+        await execGit(["-C", repoPath, "reset", "--hard", newSha]).catch(
+          execError(`Failed to fast-forward ${name} to the validated revision`),
+        );
+      } finally {
+        await execGit(["-C", repoPath, "worktree", "remove", "--force", tmpDir]).catch(
+          () => fs.rm(tmpDir, { recursive: true, force: true }).catch(() => { }),
+        );
+        await execGit(["-C", repoPath, "worktree", "prune"]).catch(() => { });
+      }
+
+      return { oldSha, newSha, changed: true, diffStat, recloned: false };
+    });
+  }
+
+  /** Resolves the ref that a just-completed `git fetch` landed on, without a checkout. */
+  private async _resolveFetchTarget(
+    repoPath: string,
+    branch: string,
+  ): Promise<string> {
+    if (branch === "default") {
+      const { stdout } = await execGit([
+        "-C",
+        repoPath,
+        "rev-parse",
+        "--abbrev-ref",
+        "@{u}",
+      ]).catch(() => ({ stdout: "" }));
+      const upstream = stdout.trim();
+      if (upstream && !upstream.includes("@{u}")) return upstream;
+    }
+    return "FETCH_HEAD";
   }
 
   public async getModulesInRepo(repoName: string): Promise<ModuleInfo[]> {
@@ -373,9 +526,16 @@ export class DownloadResolver {
     return { ...info, commit };
   }
 
+  /**
+   * Re-validates every module symlinked from `repoPath`, but reads the actual
+   * files from `validateRoot` instead - so callers can point this at a
+   * throwaway worktree holding the fetched-but-not-yet-live revision, rather
+   * than duplicating the validator's own module-discovery logic.
+   */
   private async _revalidateInstalledModules(
     repoName: string,
     repoPath: string,
+    validateRoot: string,
   ): Promise<void> {
     if (!(await this._exists(AddonModulesRoot))) return;
 
@@ -394,7 +554,10 @@ export class DownloadResolver {
       }
       if (real !== repoPath && !real.startsWith(repoPath + path.sep)) continue;
 
-      const { errors } = await validateAddon(real);
+      const relative = path.relative(repoPath, real);
+      const targetPath = relative ? path.join(validateRoot, relative) : validateRoot;
+
+      const { errors } = await validateAddon(targetPath);
       if (errors.length) {
         failures.push(
           `**${entry.name}**:\n${errors.map((e) => `• ${e}`).join("\n")}`,
@@ -407,6 +570,12 @@ export class DownloadResolver {
         `Repo **${repoName}** update pulled in changes that fail addon validation for already-installed module(s):\n${failures.join("\n\n")}`,
       );
     }
+  }
+
+  private async _getHeadSha(repoPath: string): Promise<string | null> {
+    return execGit(["-C", repoPath, "rev-parse", "HEAD"])
+      .then(({ stdout }) => stdout.trim())
+      .catch(() => null);
   }
 
   private async _exists(filePath: string): Promise<boolean> {
