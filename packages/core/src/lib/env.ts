@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+
 export function envParseString(key: string, defaultValue?: string): string {
   const value = process.env[key];
   if (value !== undefined) return value;
@@ -297,6 +299,50 @@ export function getTotalShards(): number | "auto" {
     throw new Error(`[ENV] TOTAL_SHARDS=${raw} is not a positive integer (or "auto").`);
   }
   return n;
+}
+
+export type AddonSignaturePolicy = "off" | "warn" | "require";
+
+/**
+ * How strictly the Downloader enforces git commit-signature verification
+ * (`#lib/downloader/signature.js`) against `ADDON_ALLOWED_SIGNERS_FILE` before
+ * an addon repo/module revision goes live. `off` preserves the pre-signing
+ * behavior.
+ */
+export function getAddonSignaturePolicy(): AddonSignaturePolicy {
+  const raw = process.env["ADDON_SIGNATURE_POLICY"]?.trim();
+  if (!raw || raw === "off") return "off";
+  if (raw === "warn" || raw === "require") return raw;
+  throw new Error(
+    `[ENV] Invalid ADDON_SIGNATURE_POLICY: "${raw}" (expected off, warn, or require)`,
+  );
+}
+
+/** Path to a git `allowed_signers` file (`man git-config` gpg.ssh.allowedSignersFile). */
+export function getAddonAllowedSignersFile(): string | null {
+  const raw = process.env["ADDON_ALLOWED_SIGNERS_FILE"]?.trim();
+  return raw && raw.length > 0 ? raw : null;
+}
+
+/**
+ * Fails fast at startup when `ADDON_SIGNATURE_POLICY=require` has no usable
+ * allowed-signers file - a require policy that can never verify anything
+ * would otherwise silently behave like `off` the first time a repo is added.
+ */
+export function validateAddonSignatureConfig(): void {
+  if (getAddonSignaturePolicy() !== "require") return;
+
+  const file = getAddonAllowedSignersFile();
+  if (!file) {
+    throw new Error(
+      "[ENV] ADDON_SIGNATURE_POLICY=require requires ADDON_ALLOWED_SIGNERS_FILE to be set.",
+    );
+  }
+  if (!existsSync(file)) {
+    throw new Error(
+      `[ENV] ADDON_ALLOWED_SIGNERS_FILE (${file}) does not exist.`,
+    );
+  }
 }
 
 export function getShardList(): number[] | "auto" {

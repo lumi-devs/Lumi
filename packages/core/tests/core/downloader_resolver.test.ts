@@ -178,6 +178,8 @@ describe("DownloadResolver Edge Cases", () => {
         changed: true,
         diffStat: "1 file changed",
         recloned: false,
+        signedBy: null,
+        signatureWarning: null,
       });
 
       vi.restoreAllMocks();
@@ -420,7 +422,7 @@ describe("DownloadResolver Edge Cases", () => {
           subStores: ["commands"],
         }),
       );
-      expect(result).toEqual<typeof info & { commit: null }>({ ...info, commit: null });
+      expect(result).toEqual<typeof info & { commit: null; signedBy: null; signatureWarning: null }>({ ...info, commit: null, signedBy: null, signatureWarning: null });
     });
 
     it("symlinks the source module into the addon modules root on a successful install", async () => {
@@ -440,7 +442,7 @@ describe("DownloadResolver Edge Cases", () => {
 
       expect(writeManifest).not.toHaveBeenCalled();
       expect(symlinkSpy).toHaveBeenCalledWith(sourcePath, targetPath, "dir");
-      expect(result).toEqual<typeof info & { commit: null }>({ ...info, commit: null });
+      expect(result).toEqual<typeof info & { commit: null; signedBy: null; signatureWarning: null }>({ ...info, commit: null, signedBy: null, signatureWarning: null });
     });
 
     it("throws with the validation errors when the addon fails validation", async () => {

@@ -15,15 +15,17 @@ class MockRepoAlreadyInstalledError extends Error {
 
 vi.mock("#lib/downloader/resolver.js", () => ({
   resolver: {
-    addRepo: vi.fn().mockResolvedValue(null),
+    addRepo: vi.fn().mockResolvedValue({ sha: null, signedBy: null, signatureWarning: null }),
     updateRepo: vi.fn().mockResolvedValue({
       oldSha: "old",
       newSha: "new",
       changed: true,
       diffStat: "",
       recloned: false,
+      signedBy: null,
+      signatureWarning: null,
     }),
-    installModule: vi.fn().mockResolvedValue({ version: "1.0.0" }),
+    installModule: vi.fn().mockResolvedValue({ version: "1.0.0", signedBy: null, signatureWarning: null }),
     getModulesInRepo: vi.fn().mockResolvedValue([{ name: "test-module" }]),
     releasePinnedWorktreeIfUnused: vi.fn().mockResolvedValue(undefined),
   },
@@ -219,7 +221,7 @@ describe("DownloaderUtility", () => {
       expect(resolver.installModule).toHaveBeenCalledWith("r1", "m1");
       expect(mockModuleStore.discover).toHaveBeenCalledWith(true);
       expect(mockModuleStore.loadModule).toHaveBeenCalledWith("m1");
-      expect(mockDb.downloader.writeInstalledDownloaderModule).toHaveBeenCalledWith("r1-id", "m1", "1.0.0");
+      expect(mockDb.downloader.writeInstalledDownloaderModule).toHaveBeenCalledWith("r1-id", "m1", "1.0.0", null);
     });
 
     it("unloads module and unlinks on failure during load/sync", async () => {
@@ -239,6 +241,8 @@ describe("DownloaderUtility", () => {
       (resolver.installModule as any).mockResolvedValueOnce({
         version: "1.0.0",
         commit: "abc1234",
+        signedBy: null,
+        signatureWarning: null,
       });
 
       await service.installModule("r1", "m1", "abc1234");
@@ -248,6 +252,7 @@ describe("DownloaderUtility", () => {
         "r1-id",
         "m1",
         "abc1234",
+        null,
       );
     });
   });
@@ -288,7 +293,11 @@ describe("DownloaderUtility", () => {
 
   describe("addRepo, updateRepo, listRepos, getModulesInRepo", () => {
     it("addRepo adds repo via resolver and DB, persisting the cloned commit", async () => {
-      (resolver.addRepo as any).mockResolvedValueOnce("abc1234");
+      (resolver.addRepo as any).mockResolvedValueOnce({
+        sha: "abc1234",
+        signedBy: null,
+        signatureWarning: null,
+      });
       await service.addRepo("r1", "https://url", "main");
       expect(resolver.addRepo).toHaveBeenCalledWith("r1", "https://url", "main");
       expect(mockDb.downloader.writeDownloaderRepo).toHaveBeenCalledWith(
@@ -296,6 +305,7 @@ describe("DownloaderUtility", () => {
         "https://url",
         "main",
         "abc1234",
+        null,
       );
     });
 
@@ -327,6 +337,8 @@ describe("DownloaderUtility", () => {
         changed: true,
         diffStat: "1 file changed",
         recloned: false,
+        signedBy: null,
+        signatureWarning: null,
       });
 
       const result = await service.updateRepo("r1");
@@ -335,6 +347,7 @@ describe("DownloaderUtility", () => {
       expect(mockDb.downloader.updateDownloaderRepoCommit).toHaveBeenCalledWith(
         "r1-id",
         "new5678",
+        null,
       );
       expect(result.newSha).toBe("new5678");
     });
@@ -488,16 +501,19 @@ describe("DownloaderUtility", () => {
       (resolver.installModule as any).mockResolvedValueOnce({
         version: "1.0.0",
         commit: "pinnedhash",
+        signedBy: null,
+        signatureWarning: null,
       });
 
       const res = await service.updateModule("m1", "pinnedhash");
 
-      expect(res).toEqual({ updated: true, needsRestart: true });
+      expect(res).toEqual({ updated: true, needsRestart: true, signatureWarning: null });
       expect(resolver.installModule).toHaveBeenCalledWith("repo1", "m1", "pinnedhash");
       expect(mockDb.downloader.updateInstalledDownloaderModuleCommit).toHaveBeenCalledWith(
         "r1-id",
         "m1",
         "pinnedhash",
+        null,
       );
     });
   });
@@ -524,6 +540,8 @@ describe("DownloaderUtility", () => {
       (resolver.installModule as any).mockResolvedValueOnce({
         version: "1.0.0",
         commit: "oldhash",
+        signedBy: null,
+        signatureWarning: null,
       });
 
       const res = await service.rollbackModule("m1", "oldhash");
@@ -535,8 +553,9 @@ describe("DownloaderUtility", () => {
         "r1-id",
         "m1",
         "oldhash",
+        null,
       );
-      expect(res).toEqual({ commit: "oldhash", needsRestart: true });
+      expect(res).toEqual({ commit: "oldhash", needsRestart: true, signatureWarning: null });
     });
   });
 

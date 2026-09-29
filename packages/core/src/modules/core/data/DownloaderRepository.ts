@@ -25,16 +25,20 @@ export class DownloaderRepository extends Repository {
     url: string,
     branch: string,
     commit?: string | null,
+    signedBy?: string | null,
   ) {
     return this.prisma.downloaderRepo.upsert({
       where: { name },
-      update: { url, branch, commit: commit ?? null },
-      create: { name, url, branch, commit: commit ?? null },
+      update: { url, branch, commit: commit ?? null, signedBy: signedBy ?? null },
+      create: { name, url, branch, commit: commit ?? null, signedBy: signedBy ?? null },
     });
   }
 
-  public updateDownloaderRepoCommit(id: number, commit: string) {
-    return this.prisma.downloaderRepo.update({ where: { id }, data: { commit } });
+  public updateDownloaderRepoCommit(id: number, commit: string, signedBy?: string | null) {
+    return this.prisma.downloaderRepo.update({
+      where: { id },
+      data: { commit, signedBy: signedBy ?? null },
+    });
   }
 
   public deleteDownloaderRepo(name: string) {
@@ -51,11 +55,16 @@ export class DownloaderRepository extends Repository {
     repoId: number,
     moduleName: string,
     version?: string,
+    signedBy?: string | null,
   ) {
     return this.prisma.downloaderModule.upsert({
       where: { repoId_moduleName: { repoId, moduleName } },
-      update: { installedAt: new Date(), ...(version ? { version } : {}) },
-      create: { repoId, moduleName, version },
+      update: {
+        installedAt: new Date(),
+        ...(version ? { version } : {}),
+        signedBy: signedBy ?? null,
+      },
+      create: { repoId, moduleName, version, signedBy: signedBy ?? null },
     });
   }
 
@@ -83,10 +92,11 @@ export class DownloaderRepository extends Repository {
     repoId: number,
     moduleName: string,
     commit: string,
+    signedBy?: string | null,
   ) {
     return this.prisma.downloaderModule.update({
       where: { repoId_moduleName: { repoId, moduleName } },
-      data: { commit },
+      data: { commit, signedBy: signedBy ?? null },
     });
   }
 

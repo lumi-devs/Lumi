@@ -158,7 +158,7 @@ export class DownloaderUtility extends Utility {
     repoName: string,
     moduleName: string,
     revision?: string,
-  ) {
+  ): Promise<{ signatureWarning: string | null }> {
     const repo =
       await this.container.db.downloader.readDownloaderRepo(repoName);
     if (!repo) {
@@ -193,12 +193,14 @@ export class DownloaderUtility extends Utility {
         repo.id,
         moduleName,
         info.version,
+        info.signedBy,
       );
       if (info.commit) {
         await this.container.db.downloader.updateInstalledDownloaderModuleCommit(
           repo.id,
           moduleName,
           info.commit,
+          info.signedBy,
         );
       }
     } catch (err: unknown) {
@@ -210,6 +212,8 @@ export class DownloaderUtility extends Utility {
         .catch(() => undefined);
       throw err;
     }
+
+    return { signatureWarning: info.signatureWarning };
   }
 
   public async uninstallModule(moduleName: string) {
@@ -261,10 +265,16 @@ export class DownloaderUtility extends Utility {
       });
   }
 
-  public async addRepo(name: string, url: string, branch: string) {
+  public async addRepo(
+    name: string,
+    url: string,
+    branch: string,
+  ): Promise<{ sha: string | null; signatureWarning: string | null }> {
     let sha: string | null;
+    let signedBy: string | null;
+    let signatureWarning: string | null;
     try {
-      sha = await resolver.addRepo(name, url, branch);
+      ({ sha, signedBy, signatureWarning } = await resolver.addRepo(name, url, branch));
     } catch (err: unknown) {
       if (err instanceof RepoAlreadyInstalledError) {
         throw new Error(
@@ -273,7 +283,8 @@ export class DownloaderUtility extends Utility {
       }
       throw err;
     }
-    await this.container.db.downloader.writeDownloaderRepo(name, url, branch, sha);
+    await this.container.db.downloader.writeDownloaderRepo(name, url, branch, sha, signedBy);
+    return { sha, signatureWarning };
   }
 
   public async updateRepo(name: string): Promise<RepoUpdateResult> {
@@ -287,6 +298,7 @@ export class DownloaderUtility extends Utility {
     await this.container.db.downloader.updateDownloaderRepoCommit(
       repo.id,
       result.newSha,
+      result.signedBy,
     );
     return result;
   }
@@ -493,6 +505,7 @@ export class DownloaderUtility extends Utility {
     changelog?: string;
     needsRestart?: boolean;
     pinned?: boolean;
+    signatureWarning?: string | null;
   }> {
     const installed =
       await this.container.db.downloader.readInstalledDownloaderModule(
@@ -531,13 +544,14 @@ export class DownloaderUtility extends Utility {
           repo.id,
           moduleName,
           info.commit,
+          info.signedBy,
         );
       }
 
       this.container.logger.info(
         `[DownloaderUtility] ${moduleName} checked out to ${revision} (${info.commit ?? "unknown"}) at ${repoPath}.`,
       );
-      return { updated: true, needsRestart: true };
+      return { updated: true, needsRestart: true, signatureWarning: info.signatureWarning };
     }
 
     const check = await this.checkForModuleUpdate(moduleName);
@@ -581,7 +595,7 @@ export class DownloaderUtility extends Utility {
   public async rollbackModule(
     moduleName: string,
     revision: string,
-  ): Promise<{ commit: string | null; needsRestart: true }> {
+  ): Promise<{ commit: string | null; needsRestart: true; signatureWarning: string | null }> {
     const installed =
       await this.container.db.downloader.readInstalledDownloaderModule(
         moduleName,
@@ -614,13 +628,14 @@ export class DownloaderUtility extends Utility {
         repo.id,
         moduleName,
         info.commit,
+        info.signedBy,
       );
     }
 
     this.container.logger.info(
       `[DownloaderUtility] Rolled back ${moduleName} to ${revision} (${info.commit ?? "unknown"}).`,
     );
-    return { commit: info.commit, needsRestart: true };
+    return { commit: info.commit, needsRestart: true, signatureWarning: info.signatureWarning };
   }
 
   /** Read-only sweep across every installed module; Redis-cached to avoid hammering git on repeated calls. */

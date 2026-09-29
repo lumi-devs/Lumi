@@ -1,7 +1,11 @@
 import { container } from "@sapphire/framework";
 import { shutdownTracing, runDrainSequence } from "@lumi/observability";
 import { LumiClient } from "./LumiClient.js";
-import { envParseString, validateRequiredEnv } from "#lib/env.js";
+import {
+  envParseString,
+  validateAddonSignatureConfig,
+  validateRequiredEnv,
+} from "#lib/env.js";
 import { logError, errorFrom } from "#lib/utilities/errors.js";
 
 export interface BootstrapAppOptions extends LumiClient.Options {
@@ -50,6 +54,7 @@ export async function bootstrapClientApp(
 ): Promise<LumiClient> {
   try {
     validateRequiredEnv(["BOT_TOKEN", "APPEAL_TOKEN_SECRET"]);
+    validateAddonSignatureConfig();
   } catch (err: unknown) {
     console.error(
       `[Lumi] Fatal during bootstrap: ${err instanceof Error ? err.message : String(err)}`,
