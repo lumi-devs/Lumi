@@ -22,7 +22,7 @@ run_backup() {
         -p "${POSTGRES_PORT}" \
         -U "${POSTGRES_USER}" \
         -d "${POSTGRES_DB}" \
-        -f "${tmp}"
+        -f "${tmp}" || { rm -f "${tmp}"; return 1; }
     mv "${tmp}" "${dest}"
     echo "[backup] wrote ${dest}"
 
@@ -50,7 +50,7 @@ case "${1:-loop}" in
         ;;
     loop)
         while true; do
-            run_backup
+            run_backup || echo "[backup] dump failed; retrying next interval" >&2
             sleep "$((BACKUP_INTERVAL_HOURS * 3600))"
         done
         ;;
