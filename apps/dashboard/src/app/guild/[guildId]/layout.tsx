@@ -5,6 +5,7 @@ import { GuildSideNav } from "#/components/layout/guild-side-nav";
 import { Breadcrumbs } from "#/components/layout/breadcrumbs";
 import { InviteNeeded } from "#/components/invite-needed";
 import { GuildUnavailable } from "#/components/guild-unavailable";
+import { GuildEventsListener } from "#/components/guild-events-listener";
 import { isGuildMissing } from "#/lib/rpc";
 import type { GuildShellData } from "@lumi/contracts/views";
 
@@ -52,6 +53,7 @@ export default async function GuildLayout({
 
   return (
     <div className="flex min-h-svh">
+      <GuildEventsListener guildId={guildId} />
       {/* Only serializable values cross here; see side-nav.tsx. */}
       <GuildSideNav
         guildId={guildId}
