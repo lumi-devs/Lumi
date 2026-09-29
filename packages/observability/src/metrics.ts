@@ -184,6 +184,36 @@ export const pgPoolWaiting = new Gauge({
   registers: [registry],
 });
 
+// ── Prisma query latency ────────────────────────────────────────────────────
+
+export const dbQueryDuration = new Histogram({
+  name: "lumi_db_query_duration_seconds",
+  help: "Prisma query duration in seconds, by model and operation",
+  labelNames: ["model", "operation"] as const,
+  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+  registers: [registry],
+});
+
+export const dbSlowQueriesTotal = new Counter({
+  name: "lumi_db_slow_queries_total",
+  help: "Prisma queries exceeding DB_SLOW_QUERY_THRESHOLD_MS, by model and operation",
+  labelNames: ["model", "operation"] as const,
+  registers: [registry],
+});
+
+// ── Redis command latency ────────────────────────────────────────────────────
+
+// Command name only (bounded, ~200 possible values) - args/keys would be
+// unbounded cardinality. Blocking stream reads (XREAD/XREADGROUP with BLOCK)
+// are excluded by the caller since their wait time isn't latency.
+export const redisCommandDuration = new Histogram({
+  name: "lumi_redis_command_duration_seconds",
+  help: "ioredis command round-trip time in seconds, by command (excludes blocking reads)",
+  labelNames: ["command"] as const,
+  buckets: [0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
+  registers: [registry],
+});
+
 // ── Cache ─────────────────────────────────────────────────────────────────────
 
 export const cacheHits = new Counter({

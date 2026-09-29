@@ -153,6 +153,11 @@ export function resolvePgPoolSize(): number {
   return Math.max(2, Math.floor(total / getShardCount()));
 }
 
+/** Prisma queries slower than this log a warning and increment the slow-query counter. */
+export function resolveDbSlowQueryThresholdMs(): number {
+  return envParseInteger("DB_SLOW_QUERY_THRESHOLD_MS", 1000);
+}
+
 export function getConsumerId(): string {
   return (
     process.env["LUMI_CONSUMER_ID"] ??
