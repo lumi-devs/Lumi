@@ -19,6 +19,7 @@ import {
   guildIconUrl,
 } from "#lib/rpc/discord-rest-lookup.js";
 import { paginate } from "#lib/rpc/validation.js";
+import { publishDashboardEvent } from "#lib/rpc/dashboard-events.js";
 import type { APIRole } from "discord-api-types/v10";
 
 const GuildSummariesMax = 200;
@@ -181,7 +182,7 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
     return { summaries };
   },
 
-  "guild.module.toggle": async ({ guildId, input }) => {
+  "guild.module.toggle": async ({ guildId, actorId, input }) => {
     if (input.moduleName === "core") {
       throw new Error("Cannot disable the core module");
     }
@@ -193,6 +194,14 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
       input.moduleName,
       input.enabled,
     );
+    await publishDashboardEvent({
+      type: "module.stateChanged",
+      guildId,
+      moduleName: input.moduleName,
+      enabled: input.enabled,
+      actorId,
+      at: Date.now(),
+    });
     return { success: true, enabled: input.enabled };
   },
 
@@ -431,6 +440,14 @@ async function applyConfigSet(
 ): Promise<unknown> {
   if (value === null || value === undefined || value === "") {
     await container.db.config.deleteModuleConfigKey(guildId, moduleName, key);
+    await publishDashboardEvent({
+      type: "config.changed",
+      guildId,
+      moduleName,
+      key,
+      actorId,
+      at: Date.now(),
+    });
     return null;
   }
 
@@ -441,6 +458,14 @@ async function applyConfigSet(
     toRawConfigValue(value),
     actorId,
   );
+  await publishDashboardEvent({
+    type: "config.changed",
+    guildId,
+    moduleName,
+    key,
+    actorId,
+    at: Date.now(),
+  });
   return coerced;
 }
 
