@@ -1,7 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from "bun:test";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { container } from "@sapphire/framework";
+import {
+  trace,
+  context as otelContext,
+  TraceFlags,
+  type SpanContext,
+} from "@opentelemetry/api";
+import { startTracing, shutdownTracing } from "@lumi/observability";
 import { shouldRunNow, RelayTask } from "#lib/scheduled-tasks.js";
 import { taskFireStream } from "#lib/scheduler-bus.js";
+import { wrapWithTraceContext } from "#lib/scheduler-otel.js";
 
 describe("shouldRunNow", () => {
   it("runs when no payload is given", () => {
@@ -71,5 +79,50 @@ describe("RelayTask.run", () => {
     } as any);
 
     expect(container.eventBus.publish).not.toHaveBeenCalled();
+  });
+
+  describe("trace context propagation", () => {
+    const origOtel = process.env["OTEL_ENABLED"];
+
+    afterEach(async () => {
+      await shutdownTracing();
+      if (origOtel === undefined) delete process.env["OTEL_ENABLED"];
+      else process.env["OTEL_ENABLED"] = origOtel;
+    });
+
+    it("unwraps a traced payload before publishing, without leaking the carrier", async () => {
+      process.env["OTEL_ENABLED"] = "true";
+      startTracing({ service: "test-relay-task" });
+
+      // traceFlags NONE keeps the RelayTask-created consumer span
+      // non-recording, so it never reaches the batch exporter - this test
+      // asserts trace-id continuity and payload unwrapping, not export
+      // delivery, and a real OTLP export attempt here would try (and hang
+      // retrying) a real network call.
+      const fakeSpanContext: SpanContext = {
+        traceId: "0af7651916cd43dd8448eb211c80319c",
+        spanId: "b7ad6b7169203331",
+        traceFlags: TraceFlags.NONE,
+        isRemote: false,
+      };
+      const producerContext = trace.setSpanContext(
+        otelContext.active(),
+        fakeSpanContext,
+      );
+      const wrapped = otelContext.with(producerContext, () =>
+        wrapWithTraceContext({ foo: "bar" }),
+      );
+
+      const fakeTask = { name: "relay-test-task-traced" };
+      await RelayTask.prototype.run.call(fakeTask, wrapped as any);
+
+      expect(container.eventBus.publish).toHaveBeenCalledWith(
+        taskFireStream("relay-test-task-traced"),
+        expect.objectContaining({
+          name: "relay-test-task-traced",
+          payload: { foo: "bar" },
+        }),
+      );
+    });
   });
 });

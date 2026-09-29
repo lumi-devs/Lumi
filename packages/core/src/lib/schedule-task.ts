@@ -1,5 +1,6 @@
 import { container } from "@sapphire/framework";
 import type { ScheduledTasks } from "#lib/types/common.js";
+import { wrapWithTraceContext } from "#lib/scheduler-otel.js";
 
 /**
  * Forwarded verbatim to `container.tasks.create(task, options)`. Either a ms
@@ -33,7 +34,9 @@ export async function scheduleTask<N extends keyof ScheduledTasks>(
   options?: ScheduleOptions,
 ): Promise<void> {
   await container.tasks.create(
-    { name, payload },
+    { name, payload: wrapWithTraceContext(payload) } as Parameters<
+      typeof container.tasks.create
+    >[0],
     options as Parameters<typeof container.tasks.create>[1],
   );
 }
