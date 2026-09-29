@@ -35,10 +35,12 @@ describe("SSE endpoint (apps/api /events)", () => {
     capturedHandler = null;
     stopFn = vi.fn().mockResolvedValue(undefined);
     destroyGroupFn = vi.fn().mockResolvedValue(undefined);
-    consumeFn = vi.fn().mockImplementation(async (_streams: string[], _opts: unknown, handler: CapturedHandler) => {
-      capturedHandler = handler;
-      return stopFn;
-    });
+    consumeFn = vi
+      .fn()
+      .mockImplementation(async (_streams: string[], _opts: unknown, handler: CapturedHandler) => {
+        capturedHandler = handler;
+        return stopFn;
+      });
 
     container.logger = {
       info: vi.fn(),
@@ -57,6 +59,13 @@ describe("SSE endpoint (apps/api /events)", () => {
     restGet = vi.fn().mockImplementation((route: string) => {
       if (route === `/guilds/${GUILD_ID}`) {
         return Promise.resolve({ id: GUILD_ID, owner_id: OWNER_ID, roles: [everyoneRole()] });
+      }
+      if (route === `/guilds/${OTHER_GUILD_ID}`) {
+        return Promise.resolve({
+          id: OTHER_GUILD_ID,
+          owner_id: OWNER_ID,
+          roles: [{ id: OTHER_GUILD_ID, permissions: "0" }],
+        });
       }
       if (route === `/guilds/${GUILD_ID}/members/${INTRUDER_ID}`) {
         return Promise.resolve({ roles: [] });
@@ -77,10 +86,20 @@ describe("SSE endpoint (apps/api /events)", () => {
     return new Request(`http://127.0.0.1/events?${params.toString()}`);
   }
 
+  async function open(guildId: string, actorId: string) {
+    const res = await handleSseRequest(request(guildId, actorId));
+    // The shared subscription starts lazily and asynchronously on the
+    // connection's own start() tick - flush microtasks so `capturedHandler`
+    // (and, for later connections, the "already started" fast path) settle.
+    await Promise.resolve();
+    await Promise.resolve();
+    return res;
+  }
+
   it("rejects when guildId is missing or malformed", async () => {
     const res = await handleSseRequest(request(null, OWNER_ID));
     expect(res.status).toBe(400);
-    const body = await res.json();
+    const body = (await res.json()) as { code: string };
     expect(body.code).toBe("BAD_REQUEST");
   });
 
@@ -90,11 +109,22 @@ describe("SSE endpoint (apps/api /events)", () => {
     expect(consumeFn).not.toHaveBeenCalled();
   });
 
+  it("opens exactly one shared consume() subscription for many connections", async () => {
+    const res1 = await open(GUILD_ID, OWNER_ID);
+    const res2 = await open(GUILD_ID, OWNER_ID);
+    const res3 = await open(OTHER_GUILD_ID, OWNER_ID);
+
+    expect([res1, res2, res3].every((r) => r.status === 200)).toBe(true);
+    expect(consumeFn).toHaveBeenCalledTimes(1);
+    expect(_activeSseConnectionCount()).toBe(3);
+
+    await res1.body!.cancel();
+    await res2.body!.cancel();
+    await res3.body!.cancel();
+  });
+
   it("scopes delivered events to the subscribed guild only", async () => {
-    const res = await handleSseRequest(request(GUILD_ID, OWNER_ID));
-    expect(res.status).toBe(200);
-    await Promise.resolve();
-    await Promise.resolve();
+    const res = await open(GUILD_ID, OWNER_ID);
     expect(capturedHandler).not.toBeNull();
 
     const reader = res.body!.getReader();
@@ -115,8 +145,8 @@ describe("SSE endpoint (apps/api /events)", () => {
         at: Date.now(),
       },
     });
-    // Every delivered entry is acked regardless of guild match - the
-    // ephemeral per-connection group has no other consumer to redeliver to.
+    // Every delivered entry is acked at the shared-subscription level - fan-
+    // out to zero interested connections is still a successful delivery.
     expect(ackOther).toHaveBeenCalled();
 
     const ackMine = vi.fn().mockResolvedValue(undefined);
@@ -144,10 +174,8 @@ describe("SSE endpoint (apps/api /events)", () => {
     await reader.cancel();
   });
 
-  it("delivers a published event end-to-end through the consume callback", async () => {
-    const res = await handleSseRequest(request(GUILD_ID, OWNER_ID));
-    await Promise.resolve();
-    await Promise.resolve();
+  it("delivers a published event end-to-end through the shared consume callback", async () => {
+    const res = await open(GUILD_ID, OWNER_ID);
 
     const reader = res.body!.getReader();
     const decoder = new TextDecoder();
@@ -175,13 +203,55 @@ describe("SSE endpoint (apps/api /events)", () => {
     await reader.cancel();
   });
 
-  it("stops consuming and destroys the ephemeral consumer group on disconnect", async () => {
-    const res = await handleSseRequest(request(GUILD_ID, OWNER_ID));
-    await Promise.resolve();
-    await Promise.resolve();
+  it("a disconnected connection is dropped from fan-out without blocking delivery to others", async () => {
+    const resGood = await open(GUILD_ID, OWNER_ID);
+    const resBad = await open(GUILD_ID, OWNER_ID);
+    expect(_activeSseConnectionCount()).toBe(2);
+
+    const goodReader = resGood.body!.getReader();
+    const badReader = resBad.body!.getReader();
+    // Simulates the client going away mid-session: `cancel()` runs the same
+    // `close()` path a broken pipe would, synchronously dropping it from
+    // `connectionsByGuild` before the next fan-out - the other connection's
+    // delivery must not depend on this one, or see it throw.
+    await badReader.cancel();
+
+    const decoder = new TextDecoder();
+    const event = {
+      type: "module.stateChanged",
+      guildId: GUILD_ID,
+      moduleName: "afk",
+      enabled: false,
+      actorId: OWNER_ID,
+      at: Date.now(),
+    };
+    await capturedHandler!({
+      id: "4-0",
+      deliveryCount: 1,
+      ack: vi.fn().mockResolvedValue(undefined),
+      nack: vi.fn(),
+      body: event,
+    });
+
+    // The cancelled connection is gone; the still-open one still received it.
+    expect(_activeSseConnectionCount()).toBe(1);
+    const { value } = await goodReader.read();
+    expect(JSON.parse(decoder.decode(value).replace(/^data: /, "").trim())).toEqual(event);
+
+    await goodReader.cancel();
+  });
+
+  it("stops the shared subscription and destroys its group only once the last connection closes", async () => {
+    const res1 = await open(GUILD_ID, OWNER_ID);
+    const res2 = await open(GUILD_ID, OWNER_ID);
+    expect(consumeFn).toHaveBeenCalledTimes(1);
+
+    await res1.body!.cancel();
+    expect(stopFn).not.toHaveBeenCalled();
+    expect(destroyGroupFn).not.toHaveBeenCalled();
     expect(_activeSseConnectionCount()).toBe(1);
 
-    await res.body!.cancel();
+    await res2.body!.cancel();
     await Promise.resolve();
 
     expect(stopFn).toHaveBeenCalledTimes(1);
@@ -189,15 +259,30 @@ describe("SSE endpoint (apps/api /events)", () => {
     expect(_activeSseConnectionCount()).toBe(0);
   });
 
+  it("restarts the shared subscription for a connection after full idle teardown", async () => {
+    const res1 = await open(GUILD_ID, OWNER_ID);
+    await res1.body!.cancel();
+    await Promise.resolve();
+    expect(stopFn).toHaveBeenCalledTimes(1);
+
+    const res2 = await open(GUILD_ID, OWNER_ID);
+    expect(consumeFn).toHaveBeenCalledTimes(2);
+
+    await res2.body!.cancel();
+  });
+
   it("enforces the per-process connection cap", async () => {
     const responses: Response[] = [];
     for (let i = 0; i < MaxSseConnections; i++) {
-      responses.push(await handleSseRequest(request(GUILD_ID, OWNER_ID)));
+      responses.push(await open(GUILD_ID, OWNER_ID));
     }
     expect(responses.every((r) => r.status === 200)).toBe(true);
     expect(_activeSseConnectionCount()).toBe(MaxSseConnections);
+    expect(consumeFn).toHaveBeenCalledTimes(1);
 
     const overflow = await handleSseRequest(request(GUILD_ID, OWNER_ID));
     expect(overflow.status).toBe(503);
+
+    await Promise.all(responses.map((r) => r.body!.cancel()));
   });
 });
