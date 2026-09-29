@@ -118,7 +118,7 @@ describe("DownloadResolver Edge Cases", () => {
   });
 
   describe("updateRepo()", () => {
-    it("pulls, reports old/new SHA and diffstat, and validates before leaving the pull live", async () => {
+    it("fetches (never pulls), validates the fetched revision in a temp worktree, then fast-forwards and reports SHA + diffstat", async () => {
       const repoName = "existing_repo_update";
       const repoPath = path.join(ModuleRoot, repoName);
       const gitFolder = path.join(repoPath, ".git");
@@ -134,15 +134,14 @@ describe("DownloadResolver Edge Cases", () => {
         throw new Error(`unexpected readdir: ${p}`);
       });
 
-      let call = 0;
       spawnSpy.mockImplementation((args: any) => {
-        call += 1;
-        if (args[0] === "git" && args.includes("rev-parse") && args.includes("HEAD")) {
-          return fakeSpawnResult(call === 1 ? "oldsha1234567" : "newsha7654321") as any;
+        if (args.includes("HEAD")) return fakeSpawnResult("oldsha1234567") as any;
+        if (args.includes("fetch")) return fakeSpawnResult("") as any;
+        if (args.includes("--abbrev-ref")) return fakeSpawnResult("origin/main") as any;
+        if (args.includes("rev-parse") && args.includes("origin/main")) {
+          return fakeSpawnResult("newsha7654321") as any;
         }
-        if (args[0] === "git" && args.includes("diff")) {
-          return fakeSpawnResult(" 1 file changed") as any;
-        }
+        if (args.includes("diff")) return fakeSpawnResult(" 1 file changed") as any;
         return fakeSpawnResult("") as any;
       });
       (validateAddon as any).mockResolvedValue({ errors: [] });
@@ -152,8 +151,25 @@ describe("DownloadResolver Edge Cases", () => {
         "https://github.com/some-org/existing-repo.git",
       );
 
-      expect(spawnSpy).toHaveBeenCalledWith(
+      // Never a plain "pull" - fetch objects first, validate, only then move HEAD.
+      expect(spawnSpy).not.toHaveBeenCalledWith(
         ["git", "-C", repoPath, "pull"],
+        expect.any(Object),
+      );
+      expect(spawnSpy).toHaveBeenCalledWith(
+        ["git", "-C", repoPath, "fetch", "origin"],
+        expect.any(Object),
+      );
+      expect(spawnSpy).toHaveBeenCalledWith(
+        expect.arrayContaining(["worktree", "add", "--detach"]),
+        expect.any(Object),
+      );
+      expect(spawnSpy).toHaveBeenCalledWith(
+        ["git", "-C", repoPath, "reset", "--hard", "newsha7654321"],
+        expect.any(Object),
+      );
+      expect(spawnSpy).toHaveBeenCalledWith(
+        expect.arrayContaining(["worktree", "remove", "--force"]),
         expect.any(Object),
       );
       expect(result).toEqual({
@@ -168,7 +184,7 @@ describe("DownloadResolver Edge Cases", () => {
       vi.clearAllMocks();
     });
 
-    it("rolls back to the pre-pull SHA when the pulled code fails addon validation", async () => {
+    it("leaves the live checkout's HEAD untouched and removes the temp worktree when the fetched revision fails validation", async () => {
       const repoName = "existing_repo_revalidate";
       const moduleName = "economy";
       const repoPath = path.join(ModuleRoot, repoName);
@@ -195,11 +211,12 @@ describe("DownloadResolver Edge Cases", () => {
         throw new Error(`unexpected realpath: ${p}`);
       });
 
-      let call = 0;
       spawnSpy.mockImplementation((args: any) => {
-        if (args[0] === "git" && args.includes("rev-parse") && args.includes("HEAD")) {
-          call += 1;
-          return fakeSpawnResult(call === 1 ? "oldsha1234567" : "newsha7654321") as any;
+        if (args.includes("HEAD")) return fakeSpawnResult("oldsha1234567") as any;
+        if (args.includes("fetch")) return fakeSpawnResult("") as any;
+        if (args.includes("--abbrev-ref")) return fakeSpawnResult("origin/main") as any;
+        if (args.includes("rev-parse") && args.includes("origin/main")) {
+          return fakeSpawnResult("newsha7654321") as any;
         }
         return fakeSpawnResult("") as any;
       });
@@ -214,10 +231,20 @@ describe("DownloadResolver Edge Cases", () => {
         resolver.updateRepo(repoName, "https://github.com/some-org/existing-repo.git"),
       ).rejects.toThrow(/fail addon validation for already-installed module/);
 
-      expect(validateAddon).toHaveBeenCalledWith(modulePath);
-      // Rollback must reset the checkout back to the SHA it had before the pull.
+      // Validated against the temp worktree, never the live repoPath.
+      const [validatedPath] = (validateAddon as any).mock.calls[0];
+      expect(validatedPath).not.toBe(modulePath);
+      expect(validatedPath.endsWith(path.join("economy"))).toBe(true);
+      expect(validatedPath).toContain("lumi-repo-update-");
+
+      // The live checkout must never be moved when validation fails.
+      expect(spawnSpy).not.toHaveBeenCalledWith(
+        expect.arrayContaining(["reset", "--hard"]),
+        expect.any(Object),
+      );
+      // The throwaway worktree is cleaned up either way.
       expect(spawnSpy).toHaveBeenCalledWith(
-        ["git", "-C", repoPath, "reset", "--hard", "oldsha1234567"],
+        expect.arrayContaining(["worktree", "remove", "--force"]),
         expect.any(Object),
       );
 

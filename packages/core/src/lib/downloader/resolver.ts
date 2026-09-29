@@ -1,6 +1,8 @@
 import { container } from "@sapphire/framework";
 import { Time } from "@sapphire/time-utilities";
 import { promises as fs } from "node:fs";
+import { randomUUID } from "node:crypto";
+import os from "node:os";
 import path from "node:path";
 import type { ModuleInfo } from "./types.js";
 import { validateAddon } from "./validate.js";
@@ -153,12 +155,12 @@ export class DownloadResolver {
   }
 
   /**
-   * Pulls the latest commit for an already-cloned repo. Unlike the old
-   * `addRepo`-does-both behavior, this is the only path that ever mutates an
-   * existing checkout, and it validates the new revision before leaving it
-   * checked out: if any already-installed module now fails validation, the
-   * checkout is reset back to the pre-pull commit and the pulled code never
-   * stays live.
+   * Fetches the latest commit for an already-cloned repo, validates it in an
+   * isolated worktree BEFORE touching the live checkout, and only then fast
+   * -forwards. Unlike the old `addRepo`-does-both behavior (and unlike a
+   * plain "pull then validate"), the unvalidated revision is never on disk
+   * where a sandbox child respawn, a live reload, or dev-mode HMR could pick
+   * it up: if validation fails, the live checkout's HEAD was never moved.
    */
   public async updateRepo(
     name: string,
@@ -183,16 +185,16 @@ export class DownloadResolver {
 
       const oldSha = await this._getHeadSha(repoPath);
 
-      container.logger?.info?.(`[Downloader] Updating repo: ${name}`);
-      const pullArgs =
+      container.logger?.info?.(`[Downloader] Fetching updates for repo: ${name}`);
+      const fetchArgs =
         branch === "default"
-          ? ["-C", repoPath, "pull"]
-          : ["-C", repoPath, "pull", "origin", branch];
+          ? ["-C", repoPath, "fetch", "origin"]
+          : ["-C", repoPath, "fetch", "origin", branch];
 
       let recloned = false;
-      await execGit(pullArgs).catch(async () => {
+      await execGit(fetchArgs).catch(async () => {
         container.logger?.warn?.(
-          `[Downloader] Git pull failed for ${name}, attempting clean clone fallback...`,
+          `[Downloader] Git fetch failed for ${name}, attempting clean clone fallback...`,
         );
         recloned = true;
         await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
@@ -203,42 +205,87 @@ export class DownloadResolver {
         });
       });
 
-      const newSha = await this._getHeadSha(repoPath);
-      if (!newSha) {
-        throw new Error(
-          `Repository **${name}** has no resolvable HEAD after updating - the checkout may be corrupt.`,
-        );
-      }
-      const changed = oldSha !== newSha;
-
-      const diffStat =
-        !recloned && changed && oldSha
-          ? await execGit(["-C", repoPath, "diff", "--stat", `${oldSha}..${newSha}`])
-              .then(({ stdout }) => stdout.trim())
-              .catch(() => "")
-          : "";
-
-      try {
-        await this._revalidateInstalledModules(name, repoPath);
-      } catch (validationErr) {
-        if (recloned || !oldSha) {
+      if (recloned) {
+        // The clone fallback already replaced the live tree wholesale - there's
+        // no pre-fetch checkout left to validate-before-switching, so this is
+        // the one case that still validates in place, same as before.
+        const newSha = await this._getHeadSha(repoPath);
+        if (!newSha) {
+          throw new Error(
+            `Repository **${name}** has no resolvable HEAD after re-cloning - the checkout may be corrupt.`,
+          );
+        }
+        try {
+          await this._revalidateInstalledModules(name, repoPath, repoPath);
+        } catch (validationErr) {
           throw new Error(
             `${(validationErr as Error).message}\n\nThe previous commit could not be restored because the repo had to be freshly re-cloned. Run \`,repo remove ${name}\` and review it manually before adding it again.`,
           );
         }
-        await execGit(["-C", repoPath, "reset", "--hard", oldSha]).catch(
-          (rollbackErr: NodeJS.ErrnoException & { stderr?: string }) => {
-            container.logger?.error?.(
-              `[Downloader] Rollback to ${oldSha} failed for ${name} after a failed update - the repo may be left on the bad commit:`,
-              rollbackErr,
-            );
-          },
-        );
-        throw validationErr;
+        return { oldSha, newSha, changed: oldSha !== newSha, diffStat: "", recloned };
       }
 
-      return { oldSha, newSha, changed, diffStat, recloned };
+      const targetRef = await this._resolveFetchTarget(repoPath, branch);
+      const newSha = await execGit(["-C", repoPath, "rev-parse", targetRef])
+        .then(({ stdout }) => stdout.trim())
+        .catch(execError(`Could not resolve fetched revision for ${name}`));
+
+      const changed = oldSha !== newSha;
+      if (!changed) {
+        return { oldSha, newSha, changed: false, diffStat: "", recloned: false };
+      }
+
+      const diffStat = oldSha
+        ? await execGit(["-C", repoPath, "diff", "--stat", `${oldSha}..${newSha}`])
+            .then(({ stdout }) => stdout.trim())
+            .catch(() => "")
+        : "";
+
+      // Materialize the fetched revision into a throwaway worktree so the
+      // validator can run against it without ever checking it out live.
+      const tmpDir = path.join(
+        os.tmpdir(),
+        `lumi-repo-update-${name}-${randomUUID()}`,
+      );
+      try {
+        await execGit(["-C", repoPath, "worktree", "add", "--detach", tmpDir, newSha]).catch(
+          execError(`Failed to stage ${name}'s fetched revision for validation`),
+        );
+
+        await this._revalidateInstalledModules(name, repoPath, tmpDir);
+
+        // Validation passed - now, and only now, move the live checkout.
+        await execGit(["-C", repoPath, "reset", "--hard", newSha]).catch(
+          execError(`Failed to fast-forward ${name} to the validated revision`),
+        );
+      } finally {
+        await execGit(["-C", repoPath, "worktree", "remove", "--force", tmpDir]).catch(
+          () => fs.rm(tmpDir, { recursive: true, force: true }).catch(() => { }),
+        );
+        await execGit(["-C", repoPath, "worktree", "prune"]).catch(() => { });
+      }
+
+      return { oldSha, newSha, changed: true, diffStat, recloned: false };
     });
+  }
+
+  /** Resolves the ref that a just-completed `git fetch` landed on, without a checkout. */
+  private async _resolveFetchTarget(
+    repoPath: string,
+    branch: string,
+  ): Promise<string> {
+    if (branch === "default") {
+      const { stdout } = await execGit([
+        "-C",
+        repoPath,
+        "rev-parse",
+        "--abbrev-ref",
+        "@{u}",
+      ]).catch(() => ({ stdout: "" }));
+      const upstream = stdout.trim();
+      if (upstream && !upstream.includes("@{u}")) return upstream;
+    }
+    return "FETCH_HEAD";
   }
 
   public async getModulesInRepo(repoName: string): Promise<ModuleInfo[]> {
@@ -479,9 +526,16 @@ export class DownloadResolver {
     return { ...info, commit };
   }
 
+  /**
+   * Re-validates every module symlinked from `repoPath`, but reads the actual
+   * files from `validateRoot` instead - so callers can point this at a
+   * throwaway worktree holding the fetched-but-not-yet-live revision, rather
+   * than duplicating the validator's own module-discovery logic.
+   */
   private async _revalidateInstalledModules(
     repoName: string,
     repoPath: string,
+    validateRoot: string,
   ): Promise<void> {
     if (!(await this._exists(AddonModulesRoot))) return;
 
@@ -500,7 +554,10 @@ export class DownloadResolver {
       }
       if (real !== repoPath && !real.startsWith(repoPath + path.sep)) continue;
 
-      const { errors } = await validateAddon(real);
+      const relative = path.relative(repoPath, real);
+      const targetPath = relative ? path.join(validateRoot, relative) : validateRoot;
+
+      const { errors } = await validateAddon(targetPath);
       if (errors.length) {
         failures.push(
           `**${entry.name}**:\n${errors.map((e) => `• ${e}`).join("\n")}`,
