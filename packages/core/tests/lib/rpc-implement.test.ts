@@ -52,10 +52,12 @@ function mockLogger() {
 /** Wires `container.client.rest.get` to answer the guild/member REST routes `checkGuildManagerRest` calls. */
 function mockRest(opts: {
   guild?: { owner_id: string; roles: { id: string; permissions: string }[] } | null;
+  guildError?: Error;
   member?: unknown | Error;
 }) {
   const get = vi.fn().mockImplementation((route: string) => {
     if (route === `/guilds/${GUILD_ID}`) {
+      if (opts.guildError) return Promise.reject(opts.guildError);
       if (opts.guild === null || opts.guild === undefined) {
         return Promise.reject(discordApiError("Unknown Guild", 10004, 404));
       }
@@ -140,6 +142,14 @@ describe("RPC guild access under Discord API failures", () => {
       });
     });
 
+    it("propagates a guild-lookup 5xx instead of reporting GuildNotFound", async () => {
+      mockRest({ guildError: discordApiError("Service Unavailable", 0, 503) });
+
+      await expect(requireGuildManager(GUILD_ID, ACTOR_ID)).rejects.not.toMatchObject({
+        code: "GUILD_NOT_FOUND",
+      });
+    });
+
     it("lets the guild owner through without a member lookup", async () => {
       const get = mockRest({
         guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
@@ -201,15 +211,10 @@ describe("RPC guild access under Discord API failures", () => {
       );
     });
 
-    it.each([
-      ["a 404 unknown member", DiscordErrors.unknownMember],
-      ["a 403 missing access", DiscordErrors.missingAccess],
-      ["a 429 rate limit", DiscordErrors.rateLimited],
-      ["a connection timeout", DiscordErrors.timeout],
-    ])("denies rather than leaking %s", async (_label, makeError) => {
+    it("denies a confirmed-absent member (404 unknown member) rather than leaking", async () => {
       mockRest({
         guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
-        member: makeError(),
+        member: DiscordErrors.unknownMember(),
       });
 
       await expect(requireGuildManager(GUILD_ID, ACTOR_ID)).rejects.toThrow(
@@ -217,16 +222,24 @@ describe("RPC guild access under Discord API failures", () => {
       );
     });
 
-    it("does not surface the raw Discord message to the caller", async () => {
-      mockRest({
-        guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
-        member: DiscordErrors.rateLimited(),
-      });
+    it.each([
+      ["a 403 missing access", DiscordErrors.missingAccess],
+      ["a 429 rate limit", DiscordErrors.rateLimited],
+      ["a connection timeout", DiscordErrors.timeout],
+    ])(
+      "propagates %s instead of denying as if the member were absent",
+      async (_label, makeError) => {
+        const error = makeError();
+        mockRest({
+          guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+          member: error,
+        });
 
-      await expect(
-        requireGuildManager(GUILD_ID, ACTOR_ID),
-      ).rejects.not.toThrow(/rate limited/i);
-    });
+        await expect(requireGuildManager(GUILD_ID, ACTOR_ID)).rejects.not.toMatchObject(
+          { message: "Missing ManageGuild permission" },
+        );
+      },
+    );
 
     it("fails closed for an owner id that does not match the actor", async () => {
       mockRest({
