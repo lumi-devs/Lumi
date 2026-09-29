@@ -1,0 +1,64 @@
+# Mirrors deploy/backup/backup.sh (compose's long-running `backup` service)
+# as a scheduled one-shot Job instead of a loop - the schedule itself provides
+# the interval, so the container just runs backup.sh once and exits.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup
+  namespace: lumi
+spec:
+  schedule: "0 */24 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: docker.io/library/postgres:18-alpine
+              imagePullPolicy: IfNotPresent
+              command: ["/scripts/backup.sh", "once"]
+              env:
+                - name: POSTGRES_HOST
+                  value: "postgres.lumi.svc.cluster.local"
+                - name: POSTGRES_PORT
+                  value: "5432"
+                - name: POSTGRES_DB
+                  value: "lumi"
+                - name: POSTGRES_USER
+                  value: "lumi"
+                - name: BACKUP_DIR
+                  value: "/backups"
+                - name: BACKUP_RETENTION
+                  value: "7"
+              envFrom:
+                - secretRef:
+                    name: lumi-secrets
+              volumeMounts:
+                - name: backup-scripts
+                  mountPath: /scripts
+                  readOnly: true
+                - name: backup-data
+                  mountPath: /backups
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "256Mi"
+          volumes:
+            - name: backup-scripts
+              configMap:
+                name: lumi-backup-scripts
+                defaultMode: 0555
+            - name: backup-data
+              persistentVolumeClaim:
+                claimName: lumi-backup-data

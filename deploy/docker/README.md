@@ -22,6 +22,7 @@ This directory documents the containerization strategy, **Dockerfile multi-stage
 - [Execution & Operation Commands](#-execution--operation-commands)
 - [Database Migrations](#-database-migrations)
 - [Deployment Tiers](#-deployment-tiers)
+- [Backups & Restore Testing](#-backups--restore-testing)
 - [Observability Stack Setup](#-observability-stack-setup)
 
 ---
@@ -161,6 +162,7 @@ Services are organized into distinct Compose **profiles** so you only run what y
 | `pgbouncer` | `pgbouncer`, `scale` | `127.0.0.1:6432:6432` | PgBouncer transaction-level connection pooler. Opt-in - see [Deployment Tiers](#-deployment-tiers) below. |
 | `redis` | *(core)* | `127.0.0.1:6379:6379` | Redis 8 data store for entity caching and event streams. |
 | `nirn-proxy` | `scale` | `127.0.0.1:18080`, `:19000` | Shared Discord REST rate-limiting proxy for multi-worker runs. |
+| `backup` | `backup` | - | Periodic `pg_dump -Fc` against `postgres` directly (never PgBouncer). Opt-in - see [Backups & Restore Testing](#-backups--restore-testing). |
 | `otel-collector` | `observability` | `127.0.0.1:4318:4318` | OpenTelemetry Collector endpoint (OTLP HTTP). |
 | `prometheus` | `observability` | `127.0.0.1:9091:9090` | Prometheus metrics collector and alerting engine. |
 | `tempo` | `observability` | - | Grafana Tempo distributed tracing storage engine. |
@@ -279,6 +281,56 @@ The `scale` profile (`docker compose --profile scale up -d`) sits between produc
 cluster: it adds a second `worker-scale` replica, `nirn-proxy` (shared Discord REST rate-limit
 coordination), and PgBouncer (since extra replicas mean extra DB connections) - all still in one
 compose file, opted into by profile rather than a separate compose stack.
+
+---
+
+## 💾 Backups & Restore Testing
+
+The `backup` profile runs a long-lived container (`deploy/backup/backup.sh`) that dumps the
+database on a loop, connecting straight to `postgres` (never PgBouncer, since `pg_dump` needs a
+direct, non-pooled connection). Dumps are `pg_dump -Fc` (custom format, `pg_restore`-only),
+written atomically (`.tmp` then renamed) to the `backup-data` volume as
+`lumi-<UTC-timestamp>.dump`, with old dumps pruned by count.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `BACKUP_RETENTION` | `7` | Number of dumps to keep; older ones are deleted after each successful dump. |
+| `BACKUP_INTERVAL_HOURS` | `24` | Hours between dumps. |
+
+These are Compose-only knobs for the `backup` service - the worker/api/scheduler processes never
+read them, so they aren't part of `.env.example`'s app configuration.
+
+```bash
+# Start the recurring backup loop
+docker compose --profile backup up -d backup
+
+# One-off dump on demand
+docker compose --profile backup run --rm backup /scripts/backup.sh once
+
+# Verify the latest dump actually restores: creates a throwaway
+# lumi_restore_test_<timestamp> database, runs `pg_restore --exit-on-error`,
+# checks _prisma_migrations exists and has rows, prints the restored table
+# count, then drops the temporary database.
+docker compose --profile backup run --rm backup /scripts/restore-test.sh
+
+# Restore a specific dump instead of the latest one
+docker compose --profile backup run --rm backup /scripts/restore-test.sh /backups/lumi-20260101T000000Z.dump
+```
+
+To restore into the real `lumi` database after a disaster (stop the app services first so
+nothing writes during the restore):
+
+```bash
+docker compose stop worker worker-scale api scheduler
+docker compose --profile backup run --rm backup \
+  pg_restore --exit-on-error -h postgres -U "${POSTGRES_USER:-lumi}" -d lumi --clean --if-exists \
+  /backups/lumi-20260101T000000Z.dump
+docker compose up -d
+```
+
+See [`deploy/backup/`](../backup/) for the scripts, and
+[`deploy/k8s/README.md`](../k8s/README.md#backups--restore-testing) for the Kubernetes
+`CronJob` equivalent.
 
 ---
 

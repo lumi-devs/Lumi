@@ -127,6 +127,9 @@ flowchart TD
 | [`api-deployment.yaml`](./api-deployment.yaml) | `Deployment` + `Service` | `api` | Stateless RPC-serving process for the dashboard. |
 | [`dashboard-deployment.yaml`](./dashboard-deployment.yaml) | `Deployment` + `Service` | `dashboard` | Next.js admin dashboard web application (reaches `api`'s ClusterIP service). |
 | [`nirn-proxy-deployment.yaml`](./nirn-proxy-deployment.yaml) | `Deployment` + `Service` | `nirn-proxy` | Shared Discord REST rate-limit proxy for the worker fleet. |
+| [`backup-configmap.yaml`](./backup-configmap.yaml) | `ConfigMap` | `lumi-backup-scripts` | `backup.sh`/`restore-test.sh`, mirrored verbatim from [`deploy/backup/`](../backup/). |
+| [`backup-pvc.yaml`](./backup-pvc.yaml) | `PersistentVolumeClaim` | `lumi-backup-data` | Dump storage for the backup CronJob. |
+| [`backup-cronjob.yaml`](./backup-cronjob.yaml) | `CronJob` | `backup` | Scheduled `pg_dump` against `postgres` directly (never PgBouncer), same retention/interval knobs as the Compose `backup` profile. |
 
 ---
 
@@ -212,3 +215,45 @@ kubectl apply -f migrate-job.yaml
 ```bash
 kubectl -n lumi rollout restart statefulset/worker
 ```
+
+### Backups & Restore Testing
+
+```bash
+kubectl apply -f backup-configmap.yaml -f backup-pvc.yaml -f backup-cronjob.yaml
+```
+
+Runs `pg_dump -Fc` on the schedule in `backup-cronjob.yaml` (default: every 24h), straight
+against `postgres` (never PgBouncer), retaining the last `BACKUP_RETENTION` dumps on the
+`lumi-backup-data` PVC. To verify a dump restores cleanly, run the same image against the
+same PVC with `restore-test.sh` instead of `backup.sh`:
+
+```bash
+kubectl -n lumi run backup-restore-test --rm -it --restart=Never \
+  --image=docker.io/library/postgres:18-alpine \
+  --overrides='{
+    "spec": {
+      "containers": [{
+        "name": "restore-test",
+        "image": "docker.io/library/postgres:18-alpine",
+        "command": ["/scripts/restore-test.sh"],
+        "envFrom": [{"secretRef": {"name": "lumi-secrets"}}],
+        "env": [
+          {"name": "POSTGRES_HOST", "value": "postgres.lumi.svc.cluster.local"},
+          {"name": "POSTGRES_USER", "value": "lumi"}
+        ],
+        "volumeMounts": [
+          {"name": "backup-scripts", "mountPath": "/scripts"},
+          {"name": "backup-data", "mountPath": "/backups"}
+        ]
+      }],
+      "volumes": [
+        {"name": "backup-scripts", "configMap": {"name": "lumi-backup-scripts", "defaultMode": 365}},
+        {"name": "backup-data", "persistentVolumeClaim": {"claimName": "lumi-backup-data"}}
+      ]
+    }
+  }'
+```
+
+It restores the latest dump into a throwaway `lumi_restore_test_<timestamp>` database, checks
+`_prisma_migrations` exists and has rows, prints the restored table count, and drops the
+temporary database on exit.
