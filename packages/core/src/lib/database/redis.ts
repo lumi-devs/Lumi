@@ -135,10 +135,6 @@ export const RedisTTL = {
   restGuildChannels: 20,
   restGuildMembersSample: 20,
 
-  // Bounds how long a slow handler (e.g. a multi-request Discord restore)
-  // can hold the "in progress" lock before a genuinely stuck request stops
-  // blocking retries forever.
-  rpcIdempotencyPending: 2 * 60,
   // Replay window after completion - long enough to catch a dashboard
   // Server Action retry or a double-click's second request landing shortly
   // after the first finished, short enough that a legitimate later retry

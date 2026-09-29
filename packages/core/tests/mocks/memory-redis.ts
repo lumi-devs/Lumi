@@ -16,6 +16,7 @@ export function createMemoryRedis() {
       return "OK";
     }),
     del: vi.fn(async (key: string) => (store.delete(key) ? 1 : 0)),
+    pexpire: vi.fn(async (key: string, _ms: number) => (store.has(key) ? 1 : 0)),
     setex: vi.fn(async (key: string, _ttl: number, value: string) => {
       store.set(key, value);
       return "OK";

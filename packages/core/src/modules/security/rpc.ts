@@ -68,6 +68,7 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
     return withIdempotency(
       "guild.verificationPanel.set",
       guildId,
+      securityRpc["guild.verificationPanel.set"].timeoutMs,
       input,
       async () => {
         await container.db.ensureGuild(guildId);
@@ -120,9 +121,15 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
   },
 
   "guild.backups.restore": async ({ guildId, input }) =>
-    withIdempotency("guild.backups.restore", guildId, input, async () => {
-      const result = await restoreGuildFromBackup(guildId, input.backupId);
-      if (!result) throw new Error("No backup found to restore");
-      return { success: true, ...result };
-    }),
+    withIdempotency(
+      "guild.backups.restore",
+      guildId,
+      securityRpc["guild.backups.restore"].timeoutMs,
+      input,
+      async () => {
+        const result = await restoreGuildFromBackup(guildId, input.backupId);
+        if (!result) throw new Error("No backup found to restore");
+        return { success: true, ...result };
+      },
+    ),
 });
