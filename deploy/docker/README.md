@@ -20,6 +20,8 @@ This directory documents the containerization strategy, **Dockerfile multi-stage
 - [Docker Compose Services & Profiles](#-docker-compose-services--profiles)
 - [Configuration & Environment Variables](#-configuration--environment-variables)
 - [Execution & Operation Commands](#-execution--operation-commands)
+- [Database Migrations](#-database-migrations)
+- [Deployment Tiers](#-deployment-tiers)
 - [Observability Stack Setup](#-observability-stack-setup)
 
 ---
@@ -51,9 +53,9 @@ flowchart TD
     end
 
     subgraph Data Plane
-        PGB[lumi-pgbouncer<br/>:6432]
-        PG[(lumi-postgres<br/>PostgreSQL 17)]
-        Redis[(lumi-redis<br/>Redis 7)]
+        PGB[lumi-pgbouncer<br/>:6432<br/>optional: profile pgbouncer/scale]
+        PG[(lumi-postgres<br/>PostgreSQL 18)]
+        Redis[(lumi-redis<br/>Redis 8)]
     end
 
     subgraph Telemetry & Observability Stack
@@ -73,11 +75,12 @@ flowchart TD
 
     W <-->|Shard telemetry & session state| Redis
     WS <-->|Shard telemetry & session state| Redis
-    W <-->|PgBouncer Pool| PGB
+    W -.->|Queries, direct by default| PG
+    WS <-->|PgBouncer Pool, scale profile| PGB
     PGB <-->|Scram-SHA-256| PG
 
     Dash <-->|Internal HTTP RPC :8091| Api
-    Api <-->|Queries| PGB
+    Api -.->|Queries, direct by default| PG
     Api <-->|Cache & pub/sub| Redis
 
     W <-->|BullMQ Tasks, primary shard only| Redis
@@ -103,6 +106,7 @@ graph LR
     base[base<br/>oven/bun:1-alpine] --> deps[deps<br/>bun install --frozen-lockfile]
     deps --> source[source<br/>+ packages/, prisma/]
     source --> worker[worker target<br/>prisma generate, runs main.ts]
+    source --> api[api target<br/>prisma generate, runs main.ts]
     source --> dbuild[dashboard-build<br/>next build]
     base --> dashboard[dashboard target<br/>copies .next/standalone from dbuild]
     dbuild --> dashboard
@@ -116,7 +120,12 @@ graph LR
    schema — shared by both final targets below.
 4. **`worker`** (`docker compose build` target `worker`): adds `apps/worker/`, runs
    `bunx prisma generate`, switches to unprivileged user `bun`, and on container start runs
-   `prisma migrate deploy` then `bun apps/worker/src/main.ts`.
+   `bun apps/worker/src/main.ts` directly - no migration step. There is no separate `migrate`
+   image/target: the compose `migrate` service and the k8s `migrate` `Job` both reuse this same
+   `worker`-target image, just with a `command` override (`bunx prisma migrate deploy` against
+   `DIRECT_POSTGRES_URL`) instead of the default `CMD` - a distinct image tag would otherwise
+   race the worker image for the same name on `compose build`, and pull-only users (CI doesn't
+   publish a `migrate` image) would get the worker image with no override, which never exits.
 5. **`dashboard-build`** → **`dashboard`**: `dashboard-build` (from `source`) adds
    `apps/dashboard/` and runs `bun run --filter=@lumi/dashboard build` (a real Next.js
    standalone build, with placeholder env values that only matter at build time); the final
@@ -131,14 +140,15 @@ Services are organized into distinct Compose **profiles** so you only run what y
 
 | Service Name | Profile | Ports / Interfaces | Description |
 |---|---|---|---|
+| `migrate` | *(default)* | - | One-shot `bunx prisma migrate deploy`, then exits. `worker`/`worker-scale`/`api` wait on it (`depends_on: condition: service_completed_successfully`) instead of each running migrations on their own startup. |
 | `worker` | *(default)* | - | Default Lumi bot process. `ShardingManager` spawns one child per shard; the primary shard (id `0`) owns BullMQ job scheduling. |
 | `api` | *(default)* | - | Stateless internal RPC server for the dashboard - no Discord gateway connection, no BullMQ. |
 | `lumi-dev` | `development` | - | Interactive development container with live volume mounts and watch mode. |
-| `worker-scale` | `scale` | - | Additional worker replica claiming its own shard range. |
+| `worker-scale` | `scale` | - | Additional worker replica claiming its own shard range. Points `POSTGRES_URL` at `pgbouncer:6432` (extra replicas mean extra DB connections). |
 | `dashboard` | `dashboard` | `8080:8080` | Web Administration Dashboard UI, built from the `dashboard` Dockerfile target (Next.js standalone output). |
-| `postgres` | *(core)* | `127.0.0.1:5432:5432` | PostgreSQL 17 primary database server. |
-| `pgbouncer` | *(core)* | `127.0.0.1:6432:6432` | PgBouncer transaction-level connection pooler. |
-| `redis` | *(core)* | `127.0.0.1:6379:6379` | Redis 7 data store for entity caching and event streams. |
+| `postgres` | *(core)* | `127.0.0.1:5432:5432` | PostgreSQL 18 primary database server. |
+| `pgbouncer` | `pgbouncer`, `scale` | `127.0.0.1:6432:6432` | PgBouncer transaction-level connection pooler. Opt-in - see [Deployment Tiers](#-deployment-tiers) below. |
+| `redis` | *(core)* | `127.0.0.1:6379:6379` | Redis 8 data store for entity caching and event streams. |
 | `nirn-proxy` | `scale` | `127.0.0.1:18080`, `:19000` | Shared Discord REST rate-limiting proxy for multi-worker runs. |
 | `otel-collector` | `observability` | `127.0.0.1:4318:4318` | OpenTelemetry Collector endpoint (OTLP HTTP). |
 | `prometheus` | `observability` | `127.0.0.1:9091:9090` | Prometheus metrics collector and alerting engine. |
@@ -162,6 +172,8 @@ cp .env.example .env
 | `BOT_TOKEN` | - | Discord Bot Token (Required). |
 | `POSTGRES_USER` | `lumi` | PostgreSQL database username. |
 | `POSTGRES_PASSWORD` | `lumi` | PostgreSQL database password. |
+| `POSTGRES_URL` | `postgresql://...@postgres:5432/lumi` | Pooled/app connection string. Defaults straight to `postgres` (no pooler). Override to `postgresql://...@pgbouncer:6432/lumi` when the `pgbouncer` profile is enabled - see [Deployment Tiers](#-deployment-tiers). |
+| `DIRECT_POSTGRES_URL` | `postgresql://...@postgres:5432/lumi` | Always points straight at `postgres`, never PgBouncer - Prisma migrations (`migrate` service) need DDL that pooled/transaction-mode connections can't run reliably. |
 | `REDIS_PASSWORD` | `lumi` | Redis password authentication. |
 | `RPC_HTTP_PORT` | `8091` | Internal HTTP RPC server port the api service binds - never published to the host. |
 | `RPC_HTTP_URL` | `http://api:8091` | Internal RPC bridge URL the dashboard calls into the api service over. |
@@ -179,7 +191,7 @@ cp .env.example .env
 
 ### 1. Default Stack
 
-Run a single worker alongside PostgreSQL, PgBouncer, and Redis:
+Run a single worker alongside PostgreSQL and Redis (no PgBouncer - `migrate` runs once and exits before `worker`/`api` start):
 
 ```bash
 docker compose up -d
@@ -195,7 +207,7 @@ docker compose --profile development up
 
 ### 3. Scaled Production Stack
 
-Launch a second worker replica:
+Launch a second worker replica plus PgBouncer (also set `POSTGRES_URL` to the pgbouncer value in `.env` for the `worker`/`api` services if you want them pooled too - `worker-scale` already points there by default):
 
 ```bash
 docker compose --profile scale up -d
@@ -213,6 +225,49 @@ docker compose down
 # Stop services and remove persistent volume data
 docker compose down -v
 ```
+
+---
+
+## 🧬 Database Migrations
+
+`worker`/`worker-scale`/`api` no longer run `prisma migrate deploy` on their own startup - a
+dedicated one-shot `migrate` service runs it once and exits, and the app services wait on it
+(`depends_on: migrate: condition: service_completed_successfully`). This replaces every replica
+racing the same migration on every restart. `migrate` reuses the same image/build as `worker`
+(`target: worker`) with a `command` override rather than its own image or Dockerfile target -
+a distinct `migrate` image would race the worker image for the same tag on `compose build`, and
+pull-only users (CI doesn't publish a separate `migrate` image) would otherwise get the worker
+image with no command override, which runs the bot forever and never completes.
+
+- **Compose**: `docker compose up -d` runs `migrate` automatically before `worker`/`api` start.
+  To run it standalone (e.g. to check exit status, or before a rolling update): `docker compose
+  run --rm migrate`.
+- **Single-container `docker run` users** (no Compose): the image no longer migrates itself, so
+  run migrations explicitly once before starting the app container:
+  ```bash
+  docker run --rm --env-file .env ghcr.io/lumi-devs/lumi:latest bunx prisma migrate deploy
+  docker run -d --env-file .env --name lumi-worker ghcr.io/lumi-devs/lumi:latest
+  ```
+- **Kubernetes**: unchanged - `deploy/k8s/migrate-job.yaml` is already a separate `batch/v1` Job
+  applied before the `worker`/`api` Deployments (see `deploy/k8s/README.md`).
+
+---
+
+## 🧱 Deployment Tiers
+
+Three tiers, reusing the same `Dockerfile`/`docker-compose.yml`/`deploy/k8s/` artifacts rather
+than separate `docker-compose.*.yml` files per tier:
+
+| Tier | What it is | How to run |
+|---|---|---|
+| **Single-node** | One VPS, one bot process, no pooler. `POSTGRES_URL` defaults straight to `postgres:5432`. | `docker compose up -d` |
+| **Production** | Single node, but with the web dashboard and/or PgBouncer in front of Postgres for connection pooling. | `docker compose --profile dashboard --profile pgbouncer up -d`, with `POSTGRES_URL` in `.env` set to `postgresql://...@pgbouncer:6432/lumi` for any service you want pooled |
+| **Cluster** | Multiple worker replicas (static shard partitioning), horizontal `api` scaling, Kubernetes-managed. | `deploy/k8s/*.yaml` - see [`deploy/k8s/README.md`](../k8s/README.md). The `scale`/`pgbouncer` Compose profiles are the local equivalent for testing multi-replica behavior before moving to k8s. |
+
+The `scale` profile (`docker compose --profile scale up -d`) sits between production and
+cluster: it adds a second `worker-scale` replica, `nirn-proxy` (shared Discord REST rate-limit
+coordination), and PgBouncer (since extra replicas mean extra DB connections) - all still in one
+compose file, opted into by profile rather than a separate compose stack.
 
 ---
 

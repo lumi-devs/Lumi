@@ -10,6 +10,8 @@
 
 This directory contains production-ready **Kubernetes manifests** for deploying Lumi as a sharded worker fleet with a shared Discord REST proxy. There is no separate scheduler component — job scheduling is owned by one shard within the worker fleet itself (see below).
 
+This is the "cluster" tier of Lumi's three deployment tiers (single-node / production / cluster) — see [`deploy/docker/README.md`](../docker/README.md#-deployment-tiers) for the other two and how the Compose `scale` profile mirrors this setup for local testing.
+
 ---
 
 ## 📖 Table of Contents

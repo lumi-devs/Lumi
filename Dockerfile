@@ -24,7 +24,7 @@ COPY apps/worker/ apps/worker/
 RUN bunx prisma generate && mkdir -p /app/data && chown -R bun:bun /app
 USER bun
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["sh", "-c", "bunx prisma migrate deploy && exec bun apps/worker/src/main.ts"]
+CMD ["sh", "-c", "exec bun apps/worker/src/main.ts"]
 
 FROM source AS api
 ENV NODE_ENV=production
