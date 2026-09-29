@@ -27,6 +27,8 @@ export const RpcFailureCodes = {
   /** The bot is not in the guild (or cannot see it). */
   GuildNotFound: "GUILD_NOT_FOUND",
   ModuleNotLoaded: "MODULE_NOT_LOADED",
+  /** A duplicate submission of an in-flight or already-completed idempotent action. */
+  Conflict: "CONFLICT",
   /** The handler itself failed; `error` is meant for the user. */
   HandlerError: "HANDLER_ERROR",
   Internal: "INTERNAL",
