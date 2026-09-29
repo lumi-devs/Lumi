@@ -233,6 +233,12 @@ export class DownloaderUtility extends Utility {
     }
 
     const targetPath = path.join(AddonModulesRoot, moduleName);
+    const previousLink = await fs.readlink(targetPath).catch(() => null);
+    const previousSourcePath =
+      previousLink !== null
+        ? path.resolve(path.dirname(targetPath), previousLink)
+        : null;
+
     await fs.rm(targetPath, { recursive: true, force: true }).catch((err) => {
       this.container.logger.error(
         `[DownloaderUtility] failed to remove symlink/directory at ${targetPath}:`,
@@ -244,6 +250,15 @@ export class DownloaderUtility extends Utility {
       installedCheck.repoId,
       moduleName,
     );
+
+    await resolver
+      .releasePinnedWorktreeIfUnused(previousSourcePath)
+      .catch((err: unknown) => {
+        this.container.logger.warn(
+          `[DownloaderUtility] Failed to release pinned worktree for ${moduleName}:`,
+          err,
+        );
+      });
   }
 
   public async addRepo(name: string, url: string, branch: string) {

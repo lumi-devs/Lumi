@@ -140,43 +140,115 @@ describe("DownloadResolver - revision resolution & checkout", () => {
   describe("installModule with a revision (real ModuleRoot fixture)", () => {
     const repoName = `test-repo-revision-${Date.now()}`;
     const moduleName = "test-module";
+    const siblingModuleName = "sibling-module";
     let repoPath: string;
     let moduleDir: string;
+    let siblingModuleDir: string;
     let firstCommit: string;
+    let secondCommit: string;
 
     beforeEach(async () => {
       repoPath = path.join(ModuleRoot, repoName);
       moduleDir = path.join(repoPath, moduleName);
+      siblingModuleDir = path.join(repoPath, siblingModuleName);
       await fs.mkdir(repoPath, { recursive: true });
       await git(repoPath, "init", "-q");
       await git(repoPath, "config", "user.email", "test@example.com");
       await git(repoPath, "config", "user.name", "Test");
 
       await writeModuleInfo(moduleDir, "1.0.0");
+      await writeModuleInfo(siblingModuleDir, "1.0.0");
       await git(repoPath, "add", "-A");
       await git(repoPath, "commit", "-q", "-m", "v1");
       firstCommit = await git(repoPath, "rev-parse", "HEAD");
 
       await writeModuleInfo(moduleDir, "2.0.0");
+      await writeModuleInfo(siblingModuleDir, "2.0.0");
       await git(repoPath, "add", "-A");
       await git(repoPath, "commit", "-q", "-m", "v2");
+      secondCommit = await git(repoPath, "rev-parse", "HEAD");
     }, 45000);
 
     afterEach(async () => {
-      await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
       await fs
         .rm(path.join(AddonModulesRoot, moduleName), { recursive: true, force: true })
         .catch(() => {});
+      await fs
+        .rm(path.join(AddonModulesRoot, siblingModuleName), { recursive: true, force: true })
+        .catch(() => {});
+      execFileSync("git", ["-C", repoPath, "worktree", "prune"], { encoding: "utf8" });
+      await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+      await fs
+        .rm(path.join(ModuleRoot, ".lumi-pins", repoName), { recursive: true, force: true })
+        .catch(() => {});
     }, 45000);
 
-    it("checks out the given commit and returns info with the resolved commit", async () => {
+    it("checks out the given commit into its own pinned worktree, leaving the shared clone untouched", async () => {
       const info = await resolver.installModule(repoName, moduleName, firstCommit);
 
       expect(info.commit).toBe(firstCommit);
       expect(info.version).toBe("1.0.0");
 
       const head = await git(repoPath, "rev-parse", "HEAD");
-      expect(head).toBe(firstCommit);
+      expect(head).toBe(secondCommit);
+
+      const installedInfo = JSON.parse(
+        await fs.readFile(
+          path.join(AddonModulesRoot, moduleName, "info.json"),
+          "utf8",
+        ),
+      ) as { version: string };
+      expect(installedInfo.version).toBe("1.0.0");
+
+      const sharedCloneInfo = JSON.parse(
+        await fs.readFile(path.join(moduleDir, "info.json"), "utf8"),
+      ) as { version: string };
+      expect(sharedCloneInfo.version).toBe("2.0.0");
+    }, 45000);
+
+    it("does not change a sibling module served from the same repo", async () => {
+      await resolver.installModule(repoName, moduleName, firstCommit);
+      await resolver.installModule(repoName, siblingModuleName);
+
+      const pinnedInfo = JSON.parse(
+        await fs.readFile(
+          path.join(AddonModulesRoot, moduleName, "info.json"),
+          "utf8",
+        ),
+      ) as { version: string };
+      expect(pinnedInfo.version).toBe("1.0.0");
+
+      const siblingInfo = JSON.parse(
+        await fs.readFile(
+          path.join(AddonModulesRoot, siblingModuleName, "info.json"),
+          "utf8",
+        ),
+      ) as { version: string };
+      expect(siblingInfo.version).toBe("2.0.0");
+    }, 45000);
+
+    it("shares one worktree between two modules pinned to the same sha", async () => {
+      await resolver.installModule(repoName, moduleName, firstCommit);
+      await resolver.installModule(repoName, siblingModuleName, firstCommit);
+
+      const pinnedModuleReal = await fs.realpath(
+        path.join(AddonModulesRoot, moduleName),
+      );
+      const pinnedSiblingReal = await fs.realpath(
+        path.join(AddonModulesRoot, siblingModuleName),
+      );
+      expect(path.dirname(pinnedModuleReal)).toBe(path.dirname(pinnedSiblingReal));
+    }, 45000);
+
+    it("releases the pinned worktree once the last module using it is uninstalled", async () => {
+      await resolver.installModule(repoName, moduleName, firstCommit);
+      const pinnedReal = await fs.realpath(path.join(AddonModulesRoot, moduleName));
+      const pinPath = path.dirname(pinnedReal);
+
+      await fs.rm(path.join(AddonModulesRoot, moduleName), { recursive: true, force: true });
+      await resolver.releasePinnedWorktreeIfUnused(pinnedReal);
+
+      await expect(fs.access(pinPath)).rejects.toThrow();
     }, 45000);
   });
 });

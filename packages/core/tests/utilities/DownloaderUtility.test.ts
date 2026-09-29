@@ -25,6 +25,7 @@ vi.mock("#lib/downloader/resolver.js", () => ({
     }),
     installModule: vi.fn().mockResolvedValue({ version: "1.0.0" }),
     getModulesInRepo: vi.fn().mockResolvedValue([{ name: "test-module" }]),
+    releasePinnedWorktreeIfUnused: vi.fn().mockResolvedValue(undefined),
   },
   RepoAlreadyInstalledError: MockRepoAlreadyInstalledError,
   AddonModulesRoot: "/mock/addon_modules",
@@ -38,6 +39,7 @@ vi.mock("node:fs", () => ({
     rm: vi.fn().mockResolvedValue(undefined),
     symlink: vi.fn().mockResolvedValue(undefined),
     unlink: vi.fn().mockResolvedValue(undefined),
+    readlink: vi.fn().mockRejectedValue(new Error("ENOENT")),
   },
 }));
 
