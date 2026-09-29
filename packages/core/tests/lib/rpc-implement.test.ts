@@ -142,11 +142,12 @@ describe("RPC guild access under Discord API failures", () => {
       });
     });
 
-    it("propagates a guild-lookup 5xx instead of reporting GuildNotFound", async () => {
+    it("reports a guild-lookup 5xx as a retryable failure, not GuildNotFound", async () => {
       mockRest({ guildError: discordApiError("Service Unavailable", 0, 503) });
 
-      await expect(requireGuildManager(GUILD_ID, ACTOR_ID)).rejects.not.toMatchObject({
-        code: "GUILD_NOT_FOUND",
+      await expect(requireGuildManager(GUILD_ID, ACTOR_ID)).rejects.toMatchObject({
+        code: "HANDLER_ERROR",
+        message: expect.not.stringMatching(/Service Unavailable/),
       });
     });
 
@@ -227,7 +228,7 @@ describe("RPC guild access under Discord API failures", () => {
       ["a 429 rate limit", DiscordErrors.rateLimited],
       ["a connection timeout", DiscordErrors.timeout],
     ])(
-      "propagates %s instead of denying as if the member were absent",
+      "reports %s as a retryable failure without leaking the Discord message",
       async (_label, makeError) => {
         const error = makeError();
         mockRest({
@@ -235,8 +236,13 @@ describe("RPC guild access under Discord API failures", () => {
           member: error,
         });
 
-        await expect(requireGuildManager(GUILD_ID, ACTOR_ID)).rejects.not.toMatchObject(
-          { message: "Missing ManageGuild permission" },
+        const rejection = await requireGuildManager(GUILD_ID, ACTOR_ID).catch(
+          (err: unknown) => err,
+        );
+        expect(rejection).toMatchObject({ code: "HANDLER_ERROR" });
+        expect((rejection as Error).message).not.toBe(error.message);
+        expect((rejection as Error).message).not.toBe(
+          "Missing ManageGuild permission",
         );
       },
     );

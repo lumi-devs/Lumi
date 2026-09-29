@@ -62,7 +62,16 @@ export async function requireGuildManager(
   actorId: string | undefined,
 ): Promise<string> {
   if (!actorId) throw forbidden("actorId is required");
-  const check = await checkGuildManagerRest(guildId, actorId);
+  let check: Awaited<ReturnType<typeof checkGuildManagerRest>>;
+  try {
+    check = await checkGuildManagerRest(guildId, actorId);
+  } catch (err) {
+    container.logger.warn(`[RPC] guild manager check failed for ${guildId}`, err);
+    throw new CodedRpcError(
+      RpcFailureCodes.HandlerError,
+      "Could not verify your permissions with Discord right now. Try again shortly.",
+    );
+  }
   if (!check) {
     throw new CodedRpcError(
       RpcFailureCodes.GuildNotFound,
