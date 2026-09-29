@@ -68,4 +68,3 @@
           - 'bun.lockb'
           - 'bun.lock'
           - '.github/dependabot.yml'
-          - '.github/renovate.json'

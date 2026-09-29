@@ -52,8 +52,8 @@ called out in the changeset body instead (see below), not the commit header.
 
 `.github/workflows/changeset-check.yml` fails a PR if it touches any non-`.md`
 file under `packages/` or `apps/` and doesn't add a new file under `.changeset/`
-(excluding `.changeset/README.md`). Exemptions: bot-authored PRs (Dependabot,
-Renovate) and PRs labeled `docs-only`, `area:docs`, `area:ci`, or `area:deps`.
+(excluding `.changeset/README.md`). Exemptions: bot-authored PRs (Dependabot)
+and PRs labeled `docs-only`, `area:docs`, `area:ci`, or `area:deps`.
 Generate one with `bun changeset` (aliased `bun run changeset`), which prompts for
 affected packages and bump type, then commit the resulting markdown file. Real
 examples:
