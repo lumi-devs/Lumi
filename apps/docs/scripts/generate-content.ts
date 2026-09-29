@@ -192,6 +192,7 @@ const workerMeta: Record<string, EnvMeta> = {
   SWEEPER_MEMBERS_LIFETIME: { required: "no", fallback: "1800", about: "Seconds a cached non-self member survives before being swept." },
   DEFAULT_PREFIX: { required: "no", fallback: ",", about: "Legacy text-command prefix." },
   SERVICE_NAME: { required: "no", fallback: "lumi", about: "Service name reported to the logger and observability exporters." },
+  DB_SLOW_QUERY_THRESHOLD_MS: { required: "no", fallback: "1000", about: "Prisma queries slower than this log a warning and increment lumi_db_slow_queries_total." },
 };
 
 const dashboardMeta: Record<string, EnvMeta> = {
