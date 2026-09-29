@@ -1,8 +1,12 @@
 import { container } from "@sapphire/framework";
 import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
 import { Time } from "@sapphire/time-utilities";
+import { SpanKind } from "@opentelemetry/api";
+import { otelContext, withSpan } from "@lumi/observability";
 import type { ScheduledTasks } from "#lib/types/common.js";
 import { publishTaskFire } from "#lib/scheduler-bus.js";
+import { unwrapTraceContext } from "#lib/scheduler-otel.js";
+import { SCHEDULED_TASKS_QUEUE_NAME } from "#lib/client/scheduled-tasks-queue.js";
 
 /**
  * Catch-up metadata every Lumi scheduled-task payload may carry. Adapted from
@@ -66,8 +70,34 @@ export abstract class RelayTask<
     payload: ScheduledTasks[K] extends never ? undefined : ScheduledTasks[K],
   ): Promise<void> {
     const name = this.name as K;
-    const resolved = (payload ?? {}) as ScheduledTasks[K];
-    if (!shouldRunNow(name, resolved)) return;
-    await publishTaskFire(name, resolved);
+    const { payload: unwrapped, context, messageId } = unwrapTraceContext(
+      payload,
+    );
+    const resolved = (unwrapped ?? {}) as ScheduledTasks[K];
+    const fire = async (): Promise<void> => {
+      if (!shouldRunNow(name, resolved)) return;
+      await publishTaskFire(name, resolved);
+    };
+
+    if (!context) {
+      await fire();
+      return;
+    }
+
+    await otelContext.with(context, () =>
+      withSpan(
+        `job ${String(name)}`,
+        async (span) => {
+          span.setAttributes({
+            "messaging.system": "bullmq",
+            "messaging.destination.name": SCHEDULED_TASKS_QUEUE_NAME,
+            "messaging.operation": "process",
+            ...(messageId ? { "messaging.message.id": messageId } : {}),
+          });
+          await fire();
+        },
+        { kind: SpanKind.CONSUMER },
+      ),
+    );
   }
 }
