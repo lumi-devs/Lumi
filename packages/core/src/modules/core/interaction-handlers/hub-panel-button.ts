@@ -384,10 +384,18 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
       const repoName = rest.join(":");
       if (!repoName) return undefined;
       try {
-        await this.downloader.updateRepo(repoName);
+        const result = await this.downloader.updateRepo(repoName);
+        const shaLine = result.changed
+          ? `\`${(result.oldSha ?? "?").slice(0, 7)}\` → \`${result.newSha.slice(0, 7)}\``
+          : "Already up to date.";
         await interaction.followUp(
           ephemeralCard(
-            makeSuccessCard("Repository Updated", `**${repoName}** was updated.`),
+            makeSuccessCard(
+              "Repository Updated",
+              [`**${repoName}** was updated.`, shaLine, result.diffStat]
+                .filter(Boolean)
+                .join("\n\n"),
+            ),
           ),
         );
       } catch (err: unknown) {
@@ -489,6 +497,7 @@ export class HubPanelButtonHandler extends BaseInteractionHandler {
           name: repo.name,
           url: repo.url,
           branch: repo.branch,
+          commit: repo.commit,
           installedCount: installedByRepo.get(repo.id) ?? 0,
         })),
         t,

@@ -103,7 +103,7 @@ export class HubPanelModalHandler extends InteractionHandler {
           ephemeralCard(
             makeSuccessCard(
               "Repository Added",
-              `You're all set. **${name}** was added (or refreshed if it already existed).`,
+              `You're all set. **${name}** was cloned and added.`,
             ),
           ),
         );

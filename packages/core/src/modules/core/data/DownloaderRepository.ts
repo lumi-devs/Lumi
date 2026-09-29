@@ -20,12 +20,21 @@ export class DownloaderRepository extends Repository {
     return this.prisma.downloaderRepo.findMany();
   }
 
-  public writeDownloaderRepo(name: string, url: string, branch: string) {
+  public writeDownloaderRepo(
+    name: string,
+    url: string,
+    branch: string,
+    commit?: string | null,
+  ) {
     return this.prisma.downloaderRepo.upsert({
       where: { name },
-      update: { url, branch },
-      create: { name, url, branch },
+      update: { url, branch, commit: commit ?? null },
+      create: { name, url, branch, commit: commit ?? null },
     });
+  }
+
+  public updateDownloaderRepoCommit(id: number, commit: string) {
+    return this.prisma.downloaderRepo.update({ where: { id }, data: { commit } });
   }
 
   public deleteDownloaderRepo(name: string) {

@@ -245,14 +245,17 @@ export class RepoCommand extends BaseSubcommand {
     );
 
     try {
-      await this.downloaderService.updateRepo(name);
+      const result = await this.downloaderService.updateRepo(name);
       this.container.logger.info(
-        `[Repo] ${Emojis.Repo} Updated repository: ${name} by ${ctx.user.tag}`,
+        `[Repo] ${Emojis.Repo} Updated repository: ${name} by ${ctx.user.tag} (${result.oldSha ?? "?"} -> ${result.newSha})`,
       );
-      await ctx.replySuccess(
-        `${Emojis.Repo} ${t("core:repoUpdatedTitle")}`,
-        t("core:repoUpdatedText", { name }),
-      );
+      const shaLine = result.changed
+        ? `\`${(result.oldSha ?? "?").slice(0, 7)}\` → \`${result.newSha.slice(0, 7)}\``
+        : "Already up to date.";
+      const body = [t("core:repoUpdatedText", { name }), shaLine, result.diffStat]
+        .filter(Boolean)
+        .join("\n\n");
+      await ctx.replySuccess(`${Emojis.Repo} ${t("core:repoUpdatedTitle")}`, body);
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       this.container.logger.warn(
@@ -274,7 +277,8 @@ export class RepoCommand extends BaseSubcommand {
     }
 
     const list = repos.map(
-      (r) => `**${r.name}** (\`${r.branch}\`)\n<${r.url}>`,
+      (r) =>
+        `**${r.name}** (\`${r.branch}\`)${r.commit ? ` @ \`${r.commit.slice(0, 7)}\`` : ""}\n<${r.url}>`,
     );
     await paginateList({
       interactionOrMessage: ctx.source,

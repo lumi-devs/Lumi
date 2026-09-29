@@ -28,6 +28,31 @@ const execError =
       throw new Error(`${context}${msg ? `: ${msg}` : ""}`);
     };
 
+/**
+ * Thrown by {@linkcode DownloadResolver.addRepo} when the target repo is
+ * already cloned on disk. Callers must go through
+ * {@linkcode DownloadResolver.updateRepo} to pull - "add" never mutates an
+ * existing checkout.
+ */
+export class RepoAlreadyInstalledError extends Error {
+  public readonly repoName: string;
+  public readonly sha: string | null;
+  public constructor(repoName: string, sha: string | null) {
+    super(`Repository ${repoName} is already installed${sha ? ` at ${sha}` : ""}.`);
+    this.name = "RepoAlreadyInstalledError";
+    this.repoName = repoName;
+    this.sha = sha;
+  }
+}
+
+export interface RepoUpdateResult {
+  oldSha: string | null;
+  newSha: string;
+  changed: boolean;
+  diffStat: string;
+  recloned: boolean;
+}
+
 
 const repoSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
 const branchSchema = s.string().regex(/^[a-zA-Z0-9_.][a-zA-Z0-9_.-]*$/);
@@ -79,16 +104,22 @@ export const AddonModulesRoot = path.join(
 );
 
 export class DownloadResolver {
+  /**
+   * Clones `name` if it isn't on disk yet. Never pulls an existing checkout -
+   * a repo that's already cloned must go through {@linkcode updateRepo}, so
+   * that pulling in new upstream commits is always an explicit, reviewable
+   * step rather than a side effect of re-running the "add" flow.
+   */
   public async addRepo(
     name: string,
     url: string,
     branch = "default",
-  ): Promise<void> {
+  ): Promise<string | null> {
     name = repoSchema.parse(name);
     url = parseUrl(url);
     branch = branchSchema.parse(branch);
 
-    await withSerializedWork(name, async () => {
+    return withSerializedWork(name, async () => {
       const repoPath = path.join(ModuleRoot, name);
       const gitFolder = path.join(repoPath, ".git");
 
@@ -105,33 +136,108 @@ export class DownloadResolver {
         (await this._exists(repoPath)) && (await this._exists(gitFolder));
 
       if (isExisting) {
-        container.logger?.info?.(`[Downloader] Updating repo: ${name}`);
-        const pullArgs =
-          branch === "default"
-            ? ["-C", repoPath, "pull"]
-            : ["-C", repoPath, "pull", "origin", branch];
-        await execGit(pullArgs).catch(async () => {
-          container.logger?.warn?.(
-            `[Downloader] Git pull failed for ${name}, attempting clean clone fallback...`,
-          );
-          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
-          const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
-          await execGit(cloneArgs).catch(async (cloneErr) => {
-            await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
-            execError("Git clone failed")(cloneErr);
-          });
-        });
-
-        await this._revalidateInstalledModules(name, repoPath);
-      } else {
-        container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
-        await fs.mkdir(ModuleRoot, { recursive: true });
-        const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
-        await execGit(cloneArgs).catch(async () => {
-          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
-          throw new Error("Git clone failed");
-        });
+        const sha = await this._getHeadSha(repoPath);
+        throw new RepoAlreadyInstalledError(name, sha);
       }
+
+      container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
+      await fs.mkdir(ModuleRoot, { recursive: true });
+      const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
+      await execGit(cloneArgs).catch(async () => {
+        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+        throw new Error("Git clone failed");
+      });
+
+      return this._getHeadSha(repoPath);
+    });
+  }
+
+  /**
+   * Pulls the latest commit for an already-cloned repo. Unlike the old
+   * `addRepo`-does-both behavior, this is the only path that ever mutates an
+   * existing checkout, and it validates the new revision before leaving it
+   * checked out: if any already-installed module now fails validation, the
+   * checkout is reset back to the pre-pull commit and the pulled code never
+   * stays live.
+   */
+  public async updateRepo(
+    name: string,
+    url: string,
+    branch = "default",
+  ): Promise<RepoUpdateResult> {
+    name = repoSchema.parse(name);
+    url = parseUrl(url);
+    branch = branchSchema.parse(branch);
+
+    return withSerializedWork(name, async () => {
+      const repoPath = path.join(ModuleRoot, name);
+      const gitFolder = path.join(repoPath, ".git");
+
+      const isExisting =
+        (await this._exists(repoPath)) && (await this._exists(gitFolder));
+      if (!isExisting) {
+        throw new Error(
+          `Repository **${name}** is not cloned locally. Use \`,repo add\` first.`,
+        );
+      }
+
+      const oldSha = await this._getHeadSha(repoPath);
+
+      container.logger?.info?.(`[Downloader] Updating repo: ${name}`);
+      const pullArgs =
+        branch === "default"
+          ? ["-C", repoPath, "pull"]
+          : ["-C", repoPath, "pull", "origin", branch];
+
+      let recloned = false;
+      await execGit(pullArgs).catch(async () => {
+        container.logger?.warn?.(
+          `[Downloader] Git pull failed for ${name}, attempting clean clone fallback...`,
+        );
+        recloned = true;
+        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+        const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
+        await execGit(cloneArgs).catch(async (cloneErr) => {
+          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+          execError("Git clone failed")(cloneErr);
+        });
+      });
+
+      const newSha = await this._getHeadSha(repoPath);
+      if (!newSha) {
+        throw new Error(
+          `Repository **${name}** has no resolvable HEAD after updating - the checkout may be corrupt.`,
+        );
+      }
+      const changed = oldSha !== newSha;
+
+      const diffStat =
+        !recloned && changed && oldSha
+          ? await execGit(["-C", repoPath, "diff", "--stat", `${oldSha}..${newSha}`])
+              .then(({ stdout }) => stdout.trim())
+              .catch(() => "")
+          : "";
+
+      try {
+        await this._revalidateInstalledModules(name, repoPath);
+      } catch (validationErr) {
+        if (recloned || !oldSha) {
+          throw new Error(
+            `${(validationErr as Error).message}\n\nThe previous commit could not be restored because the repo had to be freshly re-cloned. Run \`,repo remove ${name}\` and review it manually before adding it again.`,
+          );
+        }
+        await execGit(["-C", repoPath, "reset", "--hard", oldSha]).catch(
+          (rollbackErr: NodeJS.ErrnoException & { stderr?: string }) => {
+            container.logger?.error?.(
+              `[Downloader] Rollback to ${oldSha} failed for ${name} after a failed update - the repo may be left on the bad commit:`,
+              rollbackErr,
+            );
+          },
+        );
+        throw validationErr;
+      }
+
+      return { oldSha, newSha, changed, diffStat, recloned };
     });
   }
 
@@ -407,6 +513,12 @@ export class DownloadResolver {
         `Repo **${repoName}** update pulled in changes that fail addon validation for already-installed module(s):\n${failures.join("\n\n")}`,
       );
     }
+  }
+
+  private async _getHeadSha(repoPath: string): Promise<string | null> {
+    return execGit(["-C", repoPath, "rev-parse", "HEAD"])
+      .then(({ stdout }) => stdout.trim())
+      .catch(() => null);
   }
 
   private async _exists(filePath: string): Promise<boolean> {

@@ -80,7 +80,7 @@ describe("DownloadResolver Edge Cases", () => {
     expect(exists).toBe(false);
   });
 
-  it("addRepo() pulls the latest changes for an already-cloned repo instead of re-cloning", async () => {
+  it("addRepo() refuses to pull an already-cloned repo and reports its current SHA instead", async () => {
     const repoName = "existing_repo";
     const repoPath = path.join(ModuleRoot, repoName);
     const gitFolder = path.join(repoPath, ".git");
@@ -93,63 +93,149 @@ describe("DownloadResolver Edge Cases", () => {
     });
     const rmSpy = vi.spyOn(fs, "rm").mockResolvedValue(undefined);
 
-    spawnSpy.mockImplementation(() => fakeSpawnResult("") as any);
+    spawnSpy.mockImplementation(() => fakeSpawnResult("deadbeefcafe") as any);
 
-    await resolver.addRepo(repoName, "https://github.com/some-org/existing-repo.git");
+    await expect(
+      resolver.addRepo(repoName, "https://github.com/some-org/existing-repo.git"),
+    ).rejects.toMatchObject({
+      name: "RepoAlreadyInstalledError",
+      sha: "deadbeefcafe",
+    });
 
+    // "add" on an existing repo must never touch git beyond reading HEAD -
+    // no pull, no clone, no cleanup.
     expect(spawnSpy).toHaveBeenCalledWith(
+      ["git", "-C", repoPath, "rev-parse", "HEAD"],
+      expect.any(Object),
+    );
+    expect(spawnSpy).not.toHaveBeenCalledWith(
       ["git", "-C", repoPath, "pull"],
       expect.any(Object),
     );
-    // A successful pull never falls back to deleting and re-cloning the repo.
     expect(rmSpy).not.toHaveBeenCalled();
 
     vi.restoreAllMocks();
   });
 
-  it("addRepo() re-validates already-installed modules sourced from an updated repo and rejects if the pulled code now fails validation", async () => {
-    const repoName = "existing_repo_revalidate";
-    const moduleName = "economy";
-    const repoPath = path.join(ModuleRoot, repoName);
-    const gitFolder = path.join(repoPath, ".git");
-    const modulePath = path.join(repoPath, moduleName);
-    const symlinkPath = path.join(AddonModulesRoot, moduleName);
+  describe("updateRepo()", () => {
+    it("pulls, reports old/new SHA and diffstat, and validates before leaving the pull live", async () => {
+      const repoName = "existing_repo_update";
+      const repoPath = path.join(ModuleRoot, repoName);
+      const gitFolder = path.join(repoPath, ".git");
 
-    vi.spyOn(fs, "access").mockImplementation((p: any) => {
-      if ([repoPath, gitFolder, AddonModulesRoot].includes(String(p))) {
-        return Promise.resolve(undefined);
-      }
-      const err: any = new Error("ENOENT");
-      err.code = "ENOENT";
-      throw err;
+      vi.spyOn(fs, "access").mockImplementation((p: any) => {
+        if (String(p) === repoPath || String(p) === gitFolder) return Promise.resolve(undefined);
+        const err: any = new Error("ENOENT");
+        err.code = "ENOENT";
+        throw err;
+      });
+      vi.spyOn(fs, "readdir").mockImplementation((p: any) => {
+        if (String(p) === AddonModulesRoot) return Promise.resolve([] as any);
+        throw new Error(`unexpected readdir: ${p}`);
+      });
+
+      let call = 0;
+      spawnSpy.mockImplementation((args: any) => {
+        call += 1;
+        if (args[0] === "git" && args.includes("rev-parse") && args.includes("HEAD")) {
+          return fakeSpawnResult(call === 1 ? "oldsha1234567" : "newsha7654321") as any;
+        }
+        if (args[0] === "git" && args.includes("diff")) {
+          return fakeSpawnResult(" 1 file changed") as any;
+        }
+        return fakeSpawnResult("") as any;
+      });
+      (validateAddon as any).mockResolvedValue({ errors: [] });
+
+      const result = await resolver.updateRepo(
+        repoName,
+        "https://github.com/some-org/existing-repo.git",
+      );
+
+      expect(spawnSpy).toHaveBeenCalledWith(
+        ["git", "-C", repoPath, "pull"],
+        expect.any(Object),
+      );
+      expect(result).toEqual({
+        oldSha: "oldsha1234567",
+        newSha: "newsha7654321",
+        changed: true,
+        diffStat: "1 file changed",
+        recloned: false,
+      });
+
+      vi.restoreAllMocks();
+      vi.clearAllMocks();
     });
-    vi.spyOn(fs, "readdir").mockImplementation((p: any) => {
-      if (String(p) === AddonModulesRoot) {
-        return Promise.resolve([{ name: moduleName }] as any);
-      }
-      throw new Error(`unexpected readdir: ${p}`);
+
+    it("rolls back to the pre-pull SHA when the pulled code fails addon validation", async () => {
+      const repoName = "existing_repo_revalidate";
+      const moduleName = "economy";
+      const repoPath = path.join(ModuleRoot, repoName);
+      const gitFolder = path.join(repoPath, ".git");
+      const modulePath = path.join(repoPath, moduleName);
+      const symlinkPath = path.join(AddonModulesRoot, moduleName);
+
+      vi.spyOn(fs, "access").mockImplementation((p: any) => {
+        if ([repoPath, gitFolder, AddonModulesRoot].includes(String(p))) {
+          return Promise.resolve(undefined);
+        }
+        const err: any = new Error("ENOENT");
+        err.code = "ENOENT";
+        throw err;
+      });
+      vi.spyOn(fs, "readdir").mockImplementation((p: any) => {
+        if (String(p) === AddonModulesRoot) {
+          return Promise.resolve([{ name: moduleName }] as any);
+        }
+        throw new Error(`unexpected readdir: ${p}`);
+      });
+      vi.spyOn<{ realpath: (path: string) => Promise<string> }, "realpath">(fs, "realpath").mockImplementation((p: any) => {
+        if (String(p) === symlinkPath) return Promise.resolve(modulePath);
+        throw new Error(`unexpected realpath: ${p}`);
+      });
+
+      let call = 0;
+      spawnSpy.mockImplementation((args: any) => {
+        if (args[0] === "git" && args.includes("rev-parse") && args.includes("HEAD")) {
+          call += 1;
+          return fakeSpawnResult(call === 1 ? "oldsha1234567" : "newsha7654321") as any;
+        }
+        return fakeSpawnResult("") as any;
+      });
+
+      (validateAddon as any).mockResolvedValue({
+        errors: [
+          `index.ts: imports Lumi's internal path "#core/database.js" directly - use the public API instead.`,
+        ],
+      });
+
+      await expect(
+        resolver.updateRepo(repoName, "https://github.com/some-org/existing-repo.git"),
+      ).rejects.toThrow(/fail addon validation for already-installed module/);
+
+      expect(validateAddon).toHaveBeenCalledWith(modulePath);
+      // Rollback must reset the checkout back to the SHA it had before the pull.
+      expect(spawnSpy).toHaveBeenCalledWith(
+        ["git", "-C", repoPath, "reset", "--hard", "oldsha1234567"],
+        expect.any(Object),
+      );
+
+      vi.restoreAllMocks();
+      vi.clearAllMocks();
     });
-    vi.spyOn<{ realpath: (path: string) => Promise<string> }, "realpath">(fs, "realpath").mockImplementation((p: any) => {
-      if (String(p) === symlinkPath) return Promise.resolve(modulePath);
-      throw new Error(`unexpected realpath: ${p}`);
+
+    it("refuses to update a repo that isn't cloned locally", async () => {
+      vi.spyOn(fs, "access").mockRejectedValue(
+        Object.assign(new Error("ENOENT"), { code: "ENOENT" }),
+      );
+
+      await expect(
+        resolver.updateRepo("not_cloned", "https://github.com/some-org/repo.git"),
+      ).rejects.toThrow(/not cloned locally/);
+
+      vi.restoreAllMocks();
     });
-
-    spawnSpy.mockImplementation(() => fakeSpawnResult("") as any);
-
-    (validateAddon as any).mockResolvedValue({
-      errors: [
-        `index.ts: imports Lumi's internal path "#core/database.js" directly - use the public API instead.`,
-      ],
-    });
-
-    await expect(
-      resolver.addRepo(repoName, "https://github.com/some-org/existing-repo.git"),
-    ).rejects.toThrow(/fail addon validation for already-installed module/);
-
-    expect(validateAddon).toHaveBeenCalledWith(modulePath);
-
-    vi.restoreAllMocks();
-    vi.clearAllMocks();
   });
 
   it("serializes concurrent addRepo calls for the same repo name so pulls/clones can't interleave", async () => {
@@ -183,7 +269,8 @@ describe("DownloadResolver Edge Cases", () => {
     ]);
 
     expect(maxActive).toBe(1);
-    expect(spawnSpy).toHaveBeenCalledTimes(2);
+    // Each addRepo call now does a clone + a rev-parse HEAD to report the new SHA.
+    expect(spawnSpy).toHaveBeenCalledTimes(4);
 
     vi.restoreAllMocks();
   });

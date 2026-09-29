@@ -91,6 +91,7 @@ describe("hub-panel view builders", () => {
         name: "community",
         url: "https://x",
         branch: "main",
+        commit: "abc1234",
         installedCount: 2,
       },
     ]);
