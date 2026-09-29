@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { validateRequiredEnv, defineEnv, envField } from "#lib/env.js";
+import {
+  validateRequiredEnv,
+  defineEnv,
+  envField,
+  resolveDbSlowQueryThresholdMs,
+} from "#lib/env.js";
 
 describe("validateRequiredEnv", () => {
   const original: Record<string, string | undefined> = {};
@@ -84,6 +89,26 @@ describe("defineEnv", () => {
         TEST_BOOL: envField.boolean(),
       }),
     ).toThrow("[ENV] Configuration errors:");
+  });
+});
+
+describe("resolveDbSlowQueryThresholdMs", () => {
+  const key = "DB_SLOW_QUERY_THRESHOLD_MS";
+  const original = process.env[key];
+
+  afterEach(() => {
+    if (original === undefined) delete process.env[key];
+    else process.env[key] = original;
+  });
+
+  it("defaults to 1000ms when unset", () => {
+    delete process.env[key];
+    expect(resolveDbSlowQueryThresholdMs()).toBe(1000);
+  });
+
+  it("uses the configured override", () => {
+    process.env[key] = "200";
+    expect(resolveDbSlowQueryThresholdMs()).toBe(200);
   });
 });
 

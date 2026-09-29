@@ -1,8 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
-import { container } from "@sapphire/framework";
 import { pgPoolSize, pgPoolUsed, pgPoolWaiting } from "@lumi/observability";
+import { recordQueryMetrics } from "#lib/prisma/query-metrics.js";
 
 import {
   getPostgresAppName,
@@ -43,14 +43,7 @@ const createPrismaClient = (clientAdapter: PrismaPg) => {
         async $allOperations({ operation, model, args, query }) {
           const start = performance.now();
           const result = await query(args);
-          const elapsedMs = performance.now() - start;
-
-          if (elapsedMs > 1000) {
-            container.logger?.warn(
-              `[Prisma Diagnostic] Query exceeded 1000ms: ${model}.${operation} took ${Math.round(elapsedMs)}ms`,
-            );
-          }
-
+          recordQueryMetrics(model, operation, performance.now() - start);
           return result;
         },
       },
