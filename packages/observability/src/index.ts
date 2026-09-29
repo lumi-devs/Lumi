@@ -7,17 +7,17 @@
 // identically for Bun/tsc, but Next.js's bundlers (apps/dashboard, which
 // imports this package from its instrumentation.ts) only resolve this
 // package's TS source correctly without an explicit ".js" extension.
-export * from "./boot";
-export * from "./context";
-export * from "./event-loop";
-export * from "./logger";
-export * from "./metrics";
-export * from "./readiness";
-export * from "./shutdown";
+export * from "./boot.js";
+export * from "./context.js";
+export * from "./event-loop.js";
+export * from "./logger.js";
+export * from "./metrics.js";
+export * from "./readiness.js";
+export * from "./shutdown.js";
 export {
   getTracer,
   withSpan,
   shutdownTracing,
   startTracing,
   type TracingOptions,
-} from "./tracing";
+} from "./tracing.js";

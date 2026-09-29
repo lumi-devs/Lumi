@@ -32,6 +32,8 @@ export const RpcFailureCodes = {
   /** The handler itself failed; `error` is meant for the user. */
   HandlerError: "HANDLER_ERROR",
   Internal: "INTERNAL",
+  /** Caller's `x-lumi-contract-version` header is incompatible with this server's `@lumi/contracts` build. */
+  ContractMismatch: "CONTRACT_MISMATCH",
 } as const;
 
 export type RpcFailureCode =

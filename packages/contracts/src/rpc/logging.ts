@@ -1,6 +1,6 @@
 import { s } from "@sapphire/shapeshift";
-import { rpcAction, RpcTimeouts } from "./define";
-import { SnowflakeSchema } from "./schemas";
+import { rpcAction, RpcTimeouts } from "./define.js";
+import { SnowflakeSchema } from "./schemas.js";
 
 /** One channel pending as a log destination, claimed by posting a claim code in Discord. */
 export interface LogClaimView {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FieldType, type ConfigField } from "@lumi/contracts";
+import { FieldType, splitOnSeparator, type ConfigField } from "@lumi/contracts";
 import { ChevronRight, Expand, X } from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { Input, Textarea } from "#/components/ui/input";
@@ -500,19 +500,10 @@ export function resolveTemplatePreview(template: string): string {
 }
 
 /** Splits on a lone `---` line into separate text components with a drawn
- * divider between them — mirrors `splitOnSeparator` in
- * packages/core/src/lib/message-content.ts, which the worker actually
- * renders with. */
+ * divider between them — uses the same `splitOnSeparator` the worker
+ * actually renders with (`@lumi/contracts`). */
 function textPreviewComponents(text: string): PreviewV2Component[] {
-  const parts = text.split("\n").reduce<string[]>((acc, line) => {
-    if (/^\s*---\s*$/.test(line)) {
-      acc.push("");
-      return acc;
-    }
-    if (acc.length === 0) acc.push(line);
-    else acc[acc.length - 1] += (acc[acc.length - 1] ? "\n" : "") + line;
-    return acc;
-  }, []);
+  const parts = splitOnSeparator(text);
   return parts.flatMap((part, i): PreviewV2Component[] =>
     i === 0
       ? [{ kind: "text", content: part }]
@@ -520,8 +511,9 @@ function textPreviewComponents(text: string): PreviewV2Component[] {
   );
 }
 
-// Mirrors WelcomeTemplateVars (packages/core/src/modules/welcome/lib/template.ts),
-// substituted by renderTemplate in packages/core/src/lib/utilities/template.ts.
+// Mirrors the welcome module's template variables, substituted server-side
+// when the message is actually sent — keep in sync with the worker's
+// `WelcomeTemplateVars` if that set of placeholders ever changes.
 const TemplateVariableGroups = [
   {
     label: "Member",

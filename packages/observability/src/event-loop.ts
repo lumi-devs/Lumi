@@ -4,7 +4,7 @@
 
 import { monitorEventLoopDelay, type ELDHistogram } from "node:perf_hooks";
 import { Gauge } from "prom-client";
-import { registry } from "./metrics";
+import { registry } from "./metrics.js";
 
 /** Sampling resolution; also the floor on what the histogram can report. */
 const ResolutionMs = 20;

@@ -8,7 +8,7 @@ import {
   Histogram,
   Registry,
 } from "prom-client";
-import { runReadinessProbes } from "./readiness";
+import { runReadinessProbes } from "./readiness.js";
 
 export const registry = new Registry();
 

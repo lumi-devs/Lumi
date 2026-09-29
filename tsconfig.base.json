@@ -4,6 +4,7 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "customConditions": ["bun"],
     "lib": ["ESNext"],
     "strict": true,
     "skipLibCheck": true,
@@ -29,6 +30,9 @@
     "noEmit": true,
     "paths": {
       "@lumi/contracts": ["./packages/contracts/src/index.ts"],
+      "@lumi/contracts/views": ["./packages/contracts/src/views.ts"],
+      "@lumi/contracts/rpc": ["./packages/contracts/src/rpc/index.ts"],
+      "@lumi/contracts/events": ["./packages/contracts/src/events.ts"],
       "@lumi/observability": ["./packages/observability/src/index.ts"],
       "@lumi/observability/tracing": ["./packages/observability/src/tracing.ts"],
       "@lumi/core": ["./packages/core/index.ts"],

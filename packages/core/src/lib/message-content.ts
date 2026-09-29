@@ -5,9 +5,12 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
+import { splitOnSeparator } from "@lumi/contracts";
 import { makeCard, type CardReply } from "#lib/ui/cards.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
 import { renderTemplate } from "#lib/utilities/template.js";
+
+export { splitOnSeparator };
 
 export interface MessageButton {
   label: string;
@@ -100,23 +103,6 @@ export const MessageTemplateVars: MessageTemplateVar[] = [
 
 export const MessageTemplateDocs =
   "Placeholders: {user} mention, {userId}, {username}, {nickname}, {userAvatarUrl}, {server}, {serverId}, {serverIconUrl}, {memberCount} (alias {memberNumber}). Unknown placeholders are left as-is. A line containing only --- inserts a divider.";
-
-/** A line consisting of exactly `---` inserts a visual divider — the same
- * marker `buildContainer` already draws between multi-part bodies, just
- * user-triggered instead of automatic. */
-const SeparatorLine = /^\s*---\s*$/;
-
-export function splitOnSeparator(text: string): string[] {
-  return text.split("\n").reduce<string[]>((parts, line) => {
-    if (SeparatorLine.test(line)) {
-      parts.push("");
-      return parts;
-    }
-    if (parts.length === 0) parts.push(line);
-    else parts[parts.length - 1] += (parts[parts.length - 1] ? "\n" : "") + line;
-    return parts;
-  }, []);
-}
 
 export function renderMessageContent(
   content: MessageContent,

@@ -1,6 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import {
+  CONTRACT_VERSION,
   parseRpcResponse,
   rpcRouter,
   RpcFailureCodes,
@@ -39,15 +40,25 @@ export function isGuildMissing(err: unknown): boolean {
   return err instanceof RpcError && err.code === RpcFailureCodes.GuildNotFound;
 }
 
+/**
+ * True when `apps/api` rejected this dashboard build's `@lumi/contracts`
+ * version as incompatible with its own. `err.message` already names both
+ * versions (built server-side, see `packages/core/src/lib/rpc/http-server.ts`)
+ * — this only tells a caller when to show that message instead of a generic
+ * "something went wrong".
+ */
+export function isContractMismatch(err: unknown): boolean {
+  return err instanceof RpcError && err.code === RpcFailureCodes.ContractMismatch;
+}
+
 type CallOptions<A extends RpcActionName> = {
   guildId?: string;
   actorId?: string;
 } & (RpcInput<A> extends undefined ? { data?: undefined } : { data: RpcInput<A> });
 
 /**
- * Talks to the worker's internal HTTP RPC server directly over the docker
- * network (see packages/core/src/lib/rpc/http-server.ts) — no message broker
- * in between.
+ * Talks to `apps/api`'s internal HTTP RPC server directly over the docker
+ * network — no message broker in between.
  *
  * `actorId` on the wire is an unsigned claim, so the worker only honours it
  * from callers holding the shared `RPC_INTERNAL_TOKEN`, sent here as a bearer
@@ -91,6 +102,7 @@ export class RpcClient {
         method: "POST",
         headers: {
           "content-type": "application/json",
+          "x-lumi-contract-version": CONTRACT_VERSION,
           ...(this.token ? { authorization: `Bearer ${this.token}` } : {}),
         },
         body: JSON.stringify(request),

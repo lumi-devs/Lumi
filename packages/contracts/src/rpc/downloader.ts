@@ -1,6 +1,6 @@
 import { s } from "@sapphire/shapeshift";
-import type { DownloaderRepoView, RepoModuleView } from "../views";
-import { rpcAction, RpcTimeouts } from "./define";
+import type { DownloaderRepoView, RepoModuleView } from "../views.js";
+import { rpcAction, RpcTimeouts } from "./define.js";
 
 const SafeNameSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
 

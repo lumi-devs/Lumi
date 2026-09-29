@@ -1,5 +1,5 @@
-import type { AddonCapabilities } from "./addon-sandbox";
-import type { ConfigField } from "./config";
+import type { AddonCapabilities } from "./addon-sandbox.js";
+import type { ConfigField } from "./config.js";
 
 // Serializable module manifest contract for discovery and lifecycle metadata.
 

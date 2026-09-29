@@ -3,15 +3,15 @@ import type {
   AuditListData,
   BlocklistListData,
   SystemDashboardData,
-} from "../views";
-import { rpcAction, RpcTimeouts } from "./define";
+} from "../views.js";
+import { rpcAction, RpcTimeouts } from "./define.js";
 import {
   AuditFilterShape,
   BlocklistAddSchema,
   BlocklistRemoveSchema,
   PaginationSchema,
   SnowflakeSchema,
-} from "./schemas";
+} from "./schemas.js";
 
 /** One reporting shard, as published by the process holding its WebSocket. */
 export interface ShardStateView {

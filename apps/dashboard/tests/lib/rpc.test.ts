@@ -7,7 +7,7 @@ import { rpcRouter } from "@lumi/contracts/rpc";
 // defaults for every field it reads, so it's fine to import for real rather
 // than mock (mocking it here would leak into every other test file too,
 // since bun:test's module mocks are process-wide, not per-file).
-const { RpcClient, isGuildMissing, RpcError } = await import("#/lib/rpc");
+const { RpcClient, isGuildMissing, isContractMismatch, RpcError } = await import("#/lib/rpc");
 
 function jsonResponse(body: RpcResponse, ok = true): Response {
   return {
@@ -218,6 +218,28 @@ describe("RpcClient", () => {
       }
       expect((caught as InstanceType<typeof RpcError>).code).toBe("FORBIDDEN");
       expect(isGuildMissing(caught)).toBe(false);
+    });
+
+    it("surfaces a contract version mismatch with the server's clear message", async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse({
+          id: "x",
+          ok: false,
+          error:
+            "Contract version mismatch: caller is on @lumi/contracts@0.4.0, this server is on @lumi/contracts@0.5.0. Update one side to match.",
+          code: "CONTRACT_MISMATCH",
+        }),
+      );
+
+      const client = new RpcClient("http://worker:8091");
+      let caught: unknown;
+      try {
+        await client.invoke("guild.shell.get", { guildId: "101", actorId: "1" });
+      } catch (err) {
+        caught = err;
+      }
+      expect(isContractMismatch(caught)).toBe(true);
+      expect((caught as Error).message).toContain("Contract version mismatch");
     });
 
     it("rejects ok:true without data", async () => {

@@ -2,27 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ConfigField } from "@lumi/contracts";
+import { resolveChannelTypeIds } from "@lumi/contracts";
 import { Check, Search } from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import { useServerAction } from "#/lib/use-server-action";
 import type { DashboardChannelView } from "@lumi/contracts/views";
 
-// Matches the Discord panel fallback (`resolveChannelTypes` in
-// `packages/core/src/modules/core/ui/modules.ts`): text channels unless the
-// field declares `channelTypes`, which always wins.
-const DefaultPickableChannelTypes = new Set([0]);
-
 export function channelOptionsFor(
   field: ConfigField,
   channels: DashboardChannelView[],
 ): DashboardChannelView[] {
-  const allow = field.channelTypes;
-  return channels.filter((c) =>
-    allow && allow.length > 0
-      ? allow.includes(c.type)
-      : DefaultPickableChannelTypes.has(c.type),
-  );
+  const allow = resolveChannelTypeIds(field);
+  return channels.filter((c) => allow.includes(c.type));
 }
 
 const ClaimPollIntervalMs = 3_000;

@@ -6,8 +6,10 @@ import {
   tokenMatches,
   presentedToken,
   readInternalToken,
+  resetContractVersionWarningForTests,
 } from "../../src/lib/rpc/http-server.js";
 import { registerRpcHandlers } from "../../src/lib/rpc/registry.js";
+import { CONTRACT_VERSION } from "@lumi/contracts/rpc";
 
 describe("RPC HTTP Server & Auth Verification", () => {
   const originalEnv = { ...process.env };
@@ -31,6 +33,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
     } as any;
 
     registerRpcHandlers();
+    resetContractVersionWarningForTests();
   });
 
   afterEach(() => {
@@ -285,6 +288,58 @@ describe("RPC HTTP Server & Auth Verification", () => {
         ok: true,
         data: { isBotOwner: false },
       });
+    });
+
+    it("accepts a matching x-lumi-contract-version header", async () => {
+      const req = new Request("http://127.0.0.1/rpc", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${TEST_TOKEN}`,
+          "x-lumi-contract-version": CONTRACT_VERSION,
+        },
+        body: JSON.stringify({ id: "req-match", action: "auth.whoami" }),
+      });
+      const res = await handleRpcHttpRequest(req, TEST_TOKEN);
+
+      expect(res.status).toBe(200);
+    });
+
+    it("returns 409 CONTRACT_MISMATCH when the caller's contract version is incompatible", async () => {
+      const req = new Request("http://127.0.0.1/rpc", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${TEST_TOKEN}`,
+          "x-lumi-contract-version": "999.0.0",
+        },
+        body: JSON.stringify({ id: "req-mismatch", action: "auth.whoami" }),
+      });
+      const res = await handleRpcHttpRequest(req, TEST_TOKEN);
+
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as { id: string; ok: boolean; code: string };
+      expect(json.ok).toBe(false);
+      expect(json.code).toBe("CONTRACT_MISMATCH");
+    });
+
+    it("allows a missing x-lumi-contract-version header and logs a warning once", async () => {
+      const req = new Request("http://127.0.0.1/rpc", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${TEST_TOKEN}`,
+        },
+        body: JSON.stringify({ id: "req-no-header", action: "auth.whoami" }),
+      });
+      const res = await handleRpcHttpRequest(req, TEST_TOKEN, mockLogger);
+
+      expect(res.status).toBe(200);
+      expect(mockLogger).toHaveBeenCalledWith(
+        "warn",
+        expect.stringContaining("x-lumi-contract-version"),
+        expect.anything(),
+      );
     });
 
     it("returns 500 without leaking internals when dispatch itself throws", async () => {

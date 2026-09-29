@@ -3,7 +3,7 @@
 
 import { createRequire } from "node:module";
 import { pino, type Logger as PinoLogger } from "pino";
-import { activeTraceIds, getRequestContext } from "./context";
+import { activeTraceIds, getRequestContext } from "./context.js";
 
 export interface PinoLoggerOptions {
   service: string;
