@@ -85,6 +85,14 @@
         "typescript": "^6.0.3",
       },
     },
+    "apps/scheduler": {
+      "name": "@lumi/scheduler",
+      "version": "0.1.0",
+      "dependencies": {
+        "@lumi/core": "workspace:*",
+        "@lumi/observability": "workspace:*",
+      },
+    },
     "apps/worker": {
       "name": "@lumi/worker",
       "version": "0.3.0",
@@ -130,6 +138,7 @@
         "@sapphire/time-utilities": "^1.7.14",
         "@sapphire/utilities": "^3.18.2",
         "ahocorasick": "^1.0.2",
+        "bullmq": "^5.58.7",
         "cluster-key-slot": "^1.1.2",
         "discord-api-types": "^0.38.55",
         "discord.js": "^14.27.0",
@@ -388,6 +397,8 @@
     "@lumi/docs": ["@lumi/docs@workspace:apps/docs"],
 
     "@lumi/observability": ["@lumi/observability@workspace:packages/observability"],
+
+    "@lumi/scheduler": ["@lumi/scheduler@workspace:apps/scheduler"],
 
     "@lumi/worker": ["@lumi/worker@workspace:apps/worker"],
 

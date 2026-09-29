@@ -10,11 +10,14 @@ import { DefaultClusterName, readClusterShards } from "#lib/sharding/shard-telem
  *
  * {@linkcode register} runs once, at the tail of `login()`, so that every
  * dependency a probe reports on already exists. Every process holds a real
- * gateway shard now, so the `discord` probe always applies; `scheduler-tasks`
- * only applies to the primary shard, the sole process BullMQ is wired up on
- * (see `setup.ts`). `rpc-server` only applies when a caller supplies
- * `isRpcReady` at all - `apps/api` is the only process that does, since it's
- * the only one that owns an RPC HTTP server (see the API extraction's Phase C).
+ * gateway shard now, so the `discord` probe always applies. `scheduler-tasks`
+ * no longer applies to any worker shard at all - BullMQ scheduling moved to
+ * the gateway-free `apps/scheduler` (see the scheduler extraction's Phase
+ * S1), which registers that probe itself via
+ * {@linkcode registerSchedulerReadinessProbe}. `rpc-server` only applies when
+ * a caller supplies `isRpcReady` at all - `apps/api` is the only process
+ * that does, since it's the only one that owns an RPC HTTP server (see the
+ * API extraction's Phase C).
  *
  * Probes reach their dependency through the suppliers passed in rather than
  * capturing it, because the client releases those handles during shutdown and
@@ -73,6 +76,21 @@ export function registerRpcReadinessProbe(isRpcReady: () => boolean): void {
   );
 }
 
+/**
+ * Declares the `scheduler-tasks` probe for `apps/scheduler` - the sole
+ * process that now holds the scheduler lock / BullMQ `Worker` (see the
+ * scheduler extraction's Phase S1). Pulled out for the same reason as
+ * {@linkcode registerRpcReadinessProbe}: a gateway-free process needs this
+ * probe without the gateway/`ReadinessProbes` class it never instantiates.
+ */
+export function registerSchedulerReadinessProbe(hasLock: () => boolean): void {
+  registerReadinessProbe("scheduler-tasks", () =>
+    hasLock()
+      ? { status: "ok" }
+      : { status: "fail", detail: "scheduler lock not held" },
+  );
+}
+
 export class ReadinessProbes {
   /** Whether the gateway connection is usable. */
   protected readonly isReady: () => boolean;
@@ -87,7 +105,6 @@ export class ReadinessProbes {
   public register(): void {
     this.registerInfrastructureProbes();
     this.registerDiscordProbe();
-    this.registerSchedulerProbe();
     this.registerRpcProbe();
   }
 
@@ -134,15 +151,6 @@ export class ReadinessProbes {
         return { status: "fail", detail: "cluster shard telemetry unreachable" };
       }
     });
-  }
-
-  protected registerSchedulerProbe(): void {
-    if (!isPrimaryShard()) return;
-    registerReadinessProbe("scheduler-tasks", () =>
-      container.tasks
-        ? { status: "ok" }
-        : { status: "fail", detail: "tasks store missing" },
-    );
   }
 
   protected registerRpcProbe(): void {

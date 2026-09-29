@@ -9,9 +9,18 @@ export {
   installApiContainerServices,
   type ApiContainerServices,
 } from "./src/lib/client/api-container-services.js";
+export {
+  bootstrapSchedulerApp,
+  destroySchedulerContainerServices,
+} from "./src/lib/client/scheduler-bootstrap.js";
+export {
+  installSchedulerContainerServices,
+  type SchedulerContainerServices,
+} from "./src/lib/client/scheduler-container-services.js";
 export { registerRpcHandlers } from "./src/lib/rpc/registry.js";
 export { startRpcHttpServer } from "./src/lib/rpc/http-server.js";
 export {
   registerInfrastructureReadinessProbes,
   registerRpcReadinessProbe,
+  registerSchedulerReadinessProbe,
 } from "./src/lib/client/ReadinessProbes.js";
