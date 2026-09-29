@@ -104,6 +104,15 @@ export const AddonModulesRoot = path.join(
   "data",
   "installed-modules",
 );
+/**
+ * Where revision-pinned installs get their own checkout, keyed by
+ * `<repoName>/<sha>`. Kept as a sibling of the per-repo clones under
+ * `ModuleRoot` rather than nested inside them, so a pin's worktree never
+ * looks like part of the shared clone's own working tree to git or to
+ * {@linkcode DownloadResolver._revalidateInstalledModules}'s path-prefix
+ * check.
+ */
+export const PinRoot = path.join(ModuleRoot, ".lumi-pins");
 
 export class DownloadResolver {
   /**
@@ -420,16 +429,24 @@ export class DownloadResolver {
     moduleName = repoSchema.parse(moduleName);
 
     const repoPath = path.join(ModuleRoot, repoName);
-    const sourcePath = path.join(ModuleRoot, repoName, moduleName);
     const targetPath = path.join(AddonModulesRoot, moduleName);
+
+    // A revision pin never touches the shared clone's working tree - that
+    // clone is symlinked into by every module the repo ships, so checking it
+    // out to a specific commit would silently change every sibling module's
+    // served code too. Instead the pin gets its own `git worktree`, keyed by
+    // sha, sharing objects with (but never mutating) the shared clone.
+    let commit: string | null = null;
+    let sourceRoot = repoPath;
+    if (revision) {
+      commit = await this.resolveRevision(repoPath, revision);
+      sourceRoot = await this._ensurePinWorktree(repoPath, repoName, commit);
+    }
+
+    const sourcePath = path.join(sourceRoot, moduleName);
 
     if (!(await this._exists(sourcePath))) {
       throw new Error(`Module ${moduleName} not found in repo ${repoName}`);
-    }
-
-    let commit: string | null = null;
-    if (revision) {
-      commit = await this.checkoutRevision(repoPath, revision);
     }
 
     const infoPath = path.join(sourcePath, "info.json");
@@ -506,11 +523,16 @@ export class DownloadResolver {
 
     // Two repos can each ship a module of the same name. Overwriting silently
     // would leave the DB claiming both are installed while only one is linked.
+    // A pinned reinstall of the *same* module legitimately moves the symlink
+    // from the shared clone (or a different sha's worktree) to a new pin
+    // worktree, so this compares repo identity rather than the exact path.
     const existingTarget = await fs.readlink(targetPath).catch(() => null);
-    if (
-      existingTarget !== null &&
-      path.resolve(path.dirname(targetPath), existingTarget) !== path.resolve(sourcePath)
-    ) {
+    const previousSourcePath =
+      existingTarget !== null
+        ? path.resolve(path.dirname(targetPath), existingTarget)
+        : null;
+
+    if (previousSourcePath !== null && !this._belongsToRepo(previousSourcePath, repoPath, repoName)) {
       throw new Error(
         `A module named "${moduleName}" is already installed from a different repository (${existingTarget}). Uninstall it before installing this one.`,
       );
@@ -519,11 +541,115 @@ export class DownloadResolver {
     await fs.rm(targetPath, { recursive: true, force: true }).catch(() => { });
     await fs.symlink(sourcePath, targetPath, "dir");
 
+    if (previousSourcePath !== null && previousSourcePath !== path.resolve(sourcePath)) {
+      await this._releasePinIfUnused(repoPath, previousSourcePath).catch((err: unknown) => {
+        container.logger?.warn?.(
+          `[Downloader] Failed to release stale pinned worktree for ${moduleName}: ${(err as Error).message}`,
+        );
+      });
+    }
+
     container.logger?.info?.(
       `[Downloader] Installed ${moduleName} from ${repoName}${commit ? ` @ ${commit}` : ""}`,
     );
 
     return { ...info, commit };
+  }
+
+  /**
+   * Whether `sourcePath` (an installed module's resolved symlink target) is
+   * served by `repoName`, either straight from its shared clone or from one
+   * of its own revision-pin worktrees under {@linkcode PinRoot}.
+   */
+  private _belongsToRepo(sourcePath: string, repoPath: string, repoName: string): boolean {
+    if (sourcePath === repoPath || sourcePath.startsWith(repoPath + path.sep)) return true;
+    const relative = path.relative(PinRoot, sourcePath);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) return false;
+    return relative.split(path.sep)[0] === repoName;
+  }
+
+  /**
+   * Creates (or reuses) the `git worktree` a revision-pinned install is
+   * served from, keyed by sha under {@linkcode PinRoot} so modules pinned to
+   * the same commit - even across different module names in the same repo -
+   * share one checkout instead of each getting their own.
+   */
+  private async _ensurePinWorktree(
+    repoPath: string,
+    repoName: string,
+    sha: string,
+  ): Promise<string> {
+    const pinPath = path.join(PinRoot, repoName, sha);
+
+    if (await this._exists(path.join(pinPath, ".git"))) {
+      return pinPath;
+    }
+
+    await fs.rm(pinPath, { recursive: true, force: true }).catch(() => { });
+    await fs.mkdir(path.dirname(pinPath), { recursive: true });
+    await execGit(["-C", repoPath, "worktree", "add", "--detach", pinPath, sha]).catch(
+      execError(`Failed to create a pinned checkout of ${repoName}@${sha}`),
+    );
+
+    return pinPath;
+  }
+
+  /**
+   * Tears down a revision-pin worktree once nothing under
+   * {@linkcode AddonModulesRoot} resolves into it any more - called both when
+   * a pinned install moves to a different revision and when the last module
+   * using a pin is uninstalled. Safe to call speculatively: it no-ops if the
+   * path isn't a pin, is still in use, or is already gone.
+   */
+  private async _releasePinIfUnused(repoPath: string, sourcePath: string): Promise<void> {
+    const relative = path.relative(PinRoot, sourcePath);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) return;
+    const [repoName, sha] = relative.split(path.sep);
+    if (!repoName || !sha) return;
+
+    const pinPath = path.join(PinRoot, repoName, sha);
+    if (!(await this._exists(pinPath))) return;
+
+    const stillUsed = await this._isPinStillUsed(pinPath);
+    if (stillUsed) return;
+
+    await execGit(["-C", repoPath, "worktree", "remove", "--force", pinPath]).catch(() =>
+      fs.rm(pinPath, { recursive: true, force: true }).catch(() => { }),
+    );
+    await execGit(["-C", repoPath, "worktree", "prune"]).catch(() => { });
+
+    const pinRepoDir = path.dirname(pinPath);
+    const remaining = await fs.readdir(pinRepoDir).catch(() => null);
+    if (remaining && remaining.length === 0) {
+      await fs.rmdir(pinRepoDir).catch(() => { });
+    }
+  }
+
+  private async _isPinStillUsed(pinPath: string): Promise<boolean> {
+    const entries = await fs.readdir(AddonModulesRoot, { withFileTypes: true }).catch(() => []);
+    for (const entry of entries) {
+      const linkPath = path.join(AddonModulesRoot, entry.name);
+      const real = await fs.realpath(linkPath).catch(() => null);
+      if (real && (real === pinPath || real.startsWith(pinPath + path.sep))) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Public entry point for {@linkcode DownloaderUtility.uninstallModule}: once
+   * an installed module's symlink is gone, release its pin worktree if this
+   * was the last module using it. `previousSourcePath` is the module's
+   * resolved symlink target as it existed just before removal, or `null` if
+   * it had none.
+   */
+  public async releasePinnedWorktreeIfUnused(previousSourcePath: string | null): Promise<void> {
+    if (previousSourcePath === null) return;
+    const relative = path.relative(PinRoot, previousSourcePath);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) return;
+    const repoName = relative.split(path.sep)[0];
+    if (!repoName) return;
+    const repoPath = path.join(ModuleRoot, repoName);
+    await this._releasePinIfUnused(repoPath, previousSourcePath);
   }
 
   /**
